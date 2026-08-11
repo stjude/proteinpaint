@@ -88,18 +88,18 @@ returns:
 
 const formatter = format('d')
 
-export default function barsRenderer(barsapp, holder) {
+export default function barsRenderer(barsapp: any, holder: any) {
 	holder.selectAll('*').remove() // clear holder
-	const hm = {},
-		computed = {}
-	const emptyObj = {} //used to represent any empty cell
+	const hm: any = {},
+		computed: any = {}
+	const emptyObj: any = {} //used to represent any empty cell
 	let chart
 	let chartTitle
 	let svg, mainG, series, collabels, rowlabels
 	let axisG, yAxis, yTitle, yLine, xAxis, xTitle, xLine
 	let currCell, currRects, currRowTexts, currColTexts
 	let defaults //will have key values in init
-	let currserieses = []
+	let currserieses: any[] = []
 	let prevBox
 
 	function main(_chart) {
@@ -400,18 +400,18 @@ export default function barsRenderer(barsapp, holder) {
 		return d.rowId + ' ' + d.colId //+' '+d.cellmateNum
 	}
 
-	function seriesExit() {
+	function seriesExit(this: any) {
 		select(this).remove()
 	}
 
-	function seriesUpdate(series) {
+	function seriesUpdate(this: any, series) {
 		const g = select(this).selectAll('.bars-cell').data(series.data.filter(filterData), cellKey)
 
 		g.exit().each(function () {
 			select(this).remove() //style("display", "none");
 		})
 
-		g.style('display', d => {
+		g.style('display', (d: any) => {
 			return hm.cols.includes(d.colId) ? 'block' : 'none'
 		})
 
@@ -419,10 +419,10 @@ export default function barsRenderer(barsapp, holder) {
 			.datum(d => d)
 			.transition()
 			.duration(hm.duration)
-			.attr('x', d => d.x)
-			.attr('y', d => d.y)
-			.attr('width', d => d.width)
-			.attr('height', d => d.height)
+			.attr('x', (d: any) => d.x)
+			.attr('y', (d: any) => d.y)
+			.attr('width', (d: any) => d.width)
+			.attr('height', (d: any) => d.height)
 			.attr('fill', hm.handlers.series.rectFill)
 			.attr('stroke', hm.handlers.series.strokeFill)
 
@@ -432,7 +432,7 @@ export default function barsRenderer(barsapp, holder) {
 		addAsterisks(g)
 	}
 
-	function seriesEnter(series) {
+	function seriesEnter(this: any, series) {
 		if (!series || !series.data.length) return
 		select(this)
 			.attr('class', 'bars-cell-grp')
@@ -443,11 +443,11 @@ export default function barsRenderer(barsapp, holder) {
 			.each(addCell)
 	}
 
-	function filterData(d) {
+	function filterData(d: any) {
 		return hm.rows.includes(d.dataId)
 	}
 
-	function addCell(d) {
+	function addCell(this: any, d: any) {
 		const g = select(this).attr('class', 'bars-cell').datum(d)
 
 		g.style('display', d => {
@@ -564,7 +564,7 @@ export default function barsRenderer(barsapp, holder) {
 		return 'translate(' + x + ',' + y + ')'
 	}
 
-	function addColLabel(d) {
+	function addColLabel(this: any, d) {
 		if (!this || d === undefined) return
 		const g = select(this).attr('transform', colLabelTransform).style('opacity', 0)
 
@@ -578,7 +578,7 @@ export default function barsRenderer(barsapp, holder) {
 		g.transition().delay(hm.delay).duration(hm.duration).style('opacity', 1)
 	}
 
-	function updateColLabel(d) {
+	function updateColLabel(this: any, d) {
 		const g = select(this).datum(d)
 
 		g.attr('transform', colLabelTransform)
@@ -609,7 +609,7 @@ export default function barsRenderer(barsapp, holder) {
 		return 'translate(' + x + ',' + y + ')'
 	}
 
-	function addRowLabel(d) {
+	function addRowLabel(this: any, d) {
 		if (!this || d === undefined) return
 		const g = select(this).attr('transform', rowLabelTransform).style('opacity', 0)
 
@@ -622,7 +622,7 @@ export default function barsRenderer(barsapp, holder) {
 		g.transition().delay(hm.delay).duration(hm.duration).style('opacity', 1)
 	}
 
-	function updateRowLabel(d) {
+	function updateRowLabel(this: any, d) {
 		const g = select(this).datum(d)
 
 		g.attr('transform', rowLabelTransform) //.transition().duration(hm.duration)

@@ -1,8 +1,9 @@
-import { Menu, renderTable } from '#dom'
+import { Menu, renderTable, type TableRow } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { mclass, dt2label } from '#shared/common.js'
 import { /*newpane,*/ export_data } from '#src/client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '#filter'
+import type { Filter } from '#types'
 import { rgb } from 'd3-color'
 import { create } from 'd3-selection'
 import { roundValueAuto } from '#shared/roundValue.js'
@@ -35,10 +36,10 @@ export default function getHandlers(self) {
 				event.stopPropagation()
 				const hasOverlay = self.config.term2 || self.hasMultiCategoryKeys
 				let percent = hasOverlay ? (d.total / d.seriesTotal) * 100 : (d.seriesTotal / d.chartTotal) * 100
-				percent = percent.toFixed(1)
+				percent = parseFloat(percent.toFixed(1))
 				const t1 = self.config.term.term
 				const t2 = self.config.term2 && self.config.term2.term
-				const term1unit = t1.unit
+				// const term1unit = t1.unit
 				const seriesLabel =
 					(t1.values && d.seriesId in t1.values ? t1.values[d.seriesId].label : d.seriesId) +
 					(t1.unit ? ' ' + t1.unit : '')
@@ -131,7 +132,7 @@ export default function getHandlers(self) {
 						)
 					}
 				}
-				if (!t1.type == 'condition' && (!t2 || !t2.type == 'condition')) {
+				if (t1.type != 'condition' && (!t2 || t2.type != 'condition')) {
 					rows.push(
 						`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px; text-align:center'>${(
 							(100 * d.total) /
@@ -248,12 +249,12 @@ export default function getHandlers(self) {
 	}
 }
 
-function handleColorClick(d, self, color) {
+function handleColorClick(d, self, color) { 
 	const termNum = d.type == 'col' ? 'term' : 'term2'
 	const term = self.config[termNum]
 	let dataId = d.dataId
 	if (term.term.values && !term.term.values?.[dataId])
-		for (const [key, value] of Object.entries(term.term.values)) if (value.label == d.dataId) dataId = key
+		for (const [key, value] of Object.entries(term.term.values)) if ((value as any).label == d.dataId) dataId = key
 	if (term.term.values?.[dataId]) term.term.values[dataId].color = color
 	if (term.term.type == 'geneVariant') {
 		let groupset
@@ -389,8 +390,8 @@ function handle_click(event, self, chart) {
 	// while bar data has all required data including seriesId
 	const term1 = self.config.term.term
 	const term2 = self.config.term2 ? self.config.term2.term : null
-	const uncomp_term1 = term1.values ? Object.values(term1.values).map(v => v.label) : []
-	const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v => v.label) : []
+	const uncomp_term1 = term1.values ? Object.values(term1.values).map((v: any) => v.label) : []
+	const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map((v: any) => v.label) : []
 	const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId || d.id) ? ' ' + term1.unit : ''
 	const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId || d.id) ? ' ' + term2.unit : ''
 	const seriesId = d.seriesId || d.id
@@ -409,7 +410,7 @@ function handle_click(event, self, chart) {
 
 	const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
 
-	const options = []
+	const options: unknown[] = []
 	if (self.opts.bar_click_opts.includes('hide_bar')) {
 		const chartId = chart.chartId === undefined ? '' : chart.chartId
 		const visibleSerieses = chart.visibleSerieses || self.charts.find(c => c.chartId === chartId)?.visibleSerieses || []
@@ -548,7 +549,7 @@ function handle_click(event, self, chart) {
 
 function getListSamplesArg(event, self, seriesId, dataId, chartId) {
 	const terms = [self.config.term]
-	const tvslst = {
+	const tvslst: any = {
 		type: 'tvslst',
 		in: true,
 		join: 'and',
@@ -600,7 +601,7 @@ function getTvs(termIndex, value, self, geneVariant) {
 			}
 		}
 	}
-	let tvs = {
+	let tvs: any = {
 		type: 'tvs',
 		tvs: {
 			term: term.term,
@@ -671,7 +672,7 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
 
 	// fill table rows with sample data
-	const rows = []
+	const rows: TableRow[] = []
 	const termIsNumeric = isNumericTw(self.config.term)
 	const term2isNumeric = self.config.term2 ? isNumericTw(self.config.term2) : false
 	const term0isNumeric = self.config.term0 ? isNumericTw(self.config.term0) : false
@@ -686,7 +687,7 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 		const pass = mayFilterByGeneVariant(sample, self, geneVariant)
 		if (!pass) continue
 		const sampleName = data.refs.bySampleId[sample.sample].label
-		const row = [{ value: sampleName }]
+		const row: TableRow = [{ value: sampleName }]
 		const urlTemplate = self.app.vocabApi.termdbConfig?.urlTemplates?.sample
 		if (urlTemplate) {
 			// sample url template is defined, use it to format sample name as url
@@ -796,7 +797,7 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 	}
 
 	rows.sort((a, b) => {
-		return a[0].value < b[0].value ? -1 : 1
+		return a[0].value! < b[0].value! ? -1 : 1
 	})
 
 	const renderedRows = rows.filter(r => !notRenderedVals.has(r))
@@ -816,7 +817,7 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 	if (notRenderedVals.size) {
 		// TODO: do not hardcode, make this dataset specific
 		const barOrChart = self.config.term0?.term.id.startsWith('case.diagnoses') ? 'bar or chart' : 'bar'
-		const matchedLabels = []
+		const matchedLabels: unknown[] = []
 		if (term?.term?.id?.startsWith('case.diagnoses')) matchedLabels.push(seriesId)
 		if (term2?.term?.id?.startsWith('case.diagnoses')) matchedLabels.push(dataId)
 		if (term0?.term?.id?.startsWith('case.diagnoses')) matchedLabels.push(chartId)
@@ -850,7 +851,7 @@ async function getSamples(arg) {
 		isSummary: true
 	}
 	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
-	const samples = []
+	const samples: unknown[] = []
 	for (const sample of data.lst) {
 		const pass = mayFilterByGeneVariant(sample, self, geneVariant)
 		if (!pass) continue
@@ -877,7 +878,7 @@ async function getSampleGrp(arg) {
 	const samples = await getSamples(arg)
 	const group = {
 		name: 'Group',
-		items: samples.map(s => {
+		items: samples.map((s: any) => {
 			return { sampleId: s.sample }
 		})
 	}
@@ -932,14 +933,14 @@ export function addGvRowVals(sample, tw, row, termdbmclass) {
 	if (gene2mlst.size == 1) {
 		// single gene, add its mutations to mutation column
 		const entry = gene2mlst.entries().next().value
-		const mlst = entry[1]
+		const mlst = entry![1]
 		const htmls = mlst2htmls(mlst, termdbmclass)
 		row.push({ html: htmls.join('<br>') })
 	} else {
 		// multiple genes, add each gene to gene column and its
 		// mutations to mutation column
-		const genes = []
-		const htmls = []
+		const genes: unknown[] = []
+		const htmls: unknown[] = []
 		for (const [gene, mlst] of gene2mlst) {
 			genes.push(...Array(mlst.length).fill(gene))
 			htmls.push(...mlst2htmls(mlst, termdbmclass))
@@ -1041,59 +1042,60 @@ function wrapTvs(tvs) {
 }
 
 /* 			TODO: add to cart and gp          */
+//***** Unused
+// function menuoption_listsamples(self, tvslst) {
+// 	const filterRoot = getNormalRoot({
+// 		type: 'tvslst',
+// 		join: 'and',
+// 		lst: [
+// 			self.state.termfilter.filter,
+// 			// create a copy of tvslst to not mutate the barchart state,
+// 			// such as when deleting tvs.tvs.term.values below
+// 			...tvslst.map(tvs => wrapTvs(JSON.parse(JSON.stringify(tvs))))
+// 		]
+// 	})
+// 	///////////// quick fix to delete term.values{} from stringified filter to reduce url length
+// 	normalizeProps(filterRoot, (f: any): void => {
+// 		delete f.tag
+// 		if (f.type == 'tvs' && f.tvs && f.tvs.term) delete f.tvs.term.values
+// 	})
+// 	const arg = [
+// 		'getsamples=1',
+// 		'genome=' + self.app.vocabApi.vocab.genome,
+// 		'dslabel=' + self.app.vocabApi.vocab.dslabel,
+// 		'filter=' + encodeURIComponent(JSON.stringify(filterRoot))
+// 	]
 
-function menuoption_listsamples(self, tvslst) {
-	const filterRoot = getNormalRoot({
-		type: 'tvslst',
-		join: 'and',
-		lst: [
-			self.state.termfilter.filter,
-			// create a copy of tvslst to not mutate the barchart state,
-			// such as when deleting tvs.tvs.term.values below
-			...tvslst.map(tvs => wrapTvs(JSON.parse(JSON.stringify(tvs))))
-		]
-	})
-	///////////// quick fix to delete term.values{} from stringified filter to reduce url length
-	normalizeProps(filterRoot, f => {
-		delete f.tag
-		if (f.type == 'tvs' && f.tvs && f.tvs.term) delete f.tvs.term.values
-	})
-	const arg = [
-		'getsamples=1',
-		'genome=' + self.app.vocabApi.vocab.genome,
-		'dslabel=' + self.app.vocabApi.vocab.dslabel,
-		'filter=' + encodeURIComponent(JSON.stringify(filterRoot))
-	]
+// 	dofetch3('termdb?' + arg.join('&')).then(data => {
+// 		export_data(data.samples.length + ' samples', [{ text: data.samples.join('\n') }])
+// 	})
+// }
 
-	dofetch3('termdb?' + arg.join('&')).then(data => {
-		export_data(data.samples.length + ' samples', [{ text: data.samples.join('\n') }])
-	})
-}
+//Unused
+// function menuoption_select_group_add_to_cart(self, tvslst) {
+// 	if (!tvslst || !tvslst.length) return
 
-function menuoption_select_group_add_to_cart(self, tvslst) {
-	if (!tvslst || !tvslst.length) return
+// 	const new_group: any = {}
+// 	new_group.is_termdb = true
+// 	new_group.terms = []
 
-	const new_group = {}
-	new_group.is_termdb = true
-	new_group.terms = []
+// 	for (const [i, term] of tvslst.entries()) {
+// 		new_group.terms.push(term)
+// 	}
 
-	for (const [i, term] of tvslst.entries()) {
-		new_group.terms.push(term)
-	}
+// 	if (!self.selected_groups) {
+// 		self.selected_groups = []
+// 	}
 
-	if (!self.selected_groups) {
-		self.selected_groups = []
-	}
-
-	self.selected_groups.push(new_group)
-	self.components.cart.main()
-}
+// 	self.selected_groups.push(new_group)
+// 	self.components.cart.main()
+// }
 
 function getTermValues(d, self) {
 	/*
 	d: clicked bar data
   */
-	const termValues = []
+	const termValues: any[] = []
 	if (self.state.nav?.header_mode == 'with_cohortHtmlSelect') {
 		// pass the cohort filter information back to calling app
 		// do not set the renderAs in here since that is decided by the calling app
@@ -1123,7 +1125,7 @@ function getTermValues(d, self) {
 			const groupset =
 				q.type == 'predefined-groupset' ? term.term.groupsetting.lst[q.predefined_groupset_idx] : q.customset
 			const group = groupset.groups.find(g => g.name === key)
-			const tvs = { term: term.term, values: group.values, groupset_label: group.name }
+			const tvs: any = { term: term.term, values: group.values, groupset_label: group.name }
 			if (term.term.type == 'condition') {
 				tvs.bar_by_children = term.q.bar_by_children
 				tvs.bar_by_grade = term.q.bar_by_grade
