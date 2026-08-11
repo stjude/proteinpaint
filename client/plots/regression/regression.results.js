@@ -3,7 +3,7 @@ import { axisBottom, axisTop } from 'd3-axis'
 import { first_genetrack_tolist } from '../common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
 import { sayerror, axisstyle, drawBoxplot, makeSsmLink, ColorScale, Menu } from '#dom'
-import { getEstimateMsg, refGrp_NA } from './regression/estimateMsg'
+import { getEstimateMsg, refGrp_NA } from './estimateMsg'
 
 /*************
 can dynamically add following attributes
