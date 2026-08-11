@@ -2,6 +2,15 @@ import type { Filter } from '../filter.ts'
 import type { TermWrapper } from '../terms/tw.ts'
 import type { Term } from '../terms/term.ts'
 
+type JsonObject = Record<string, unknown>
+
+type DeprecatedTermFields = {
+	q?: unknown
+	id?: string
+	$id?: string
+	type?: string
+}
+
 export type TermdbCumincRequest = {
 	genome: string
 	dslabel: string
@@ -20,44 +29,79 @@ export type TermdbCumincRequest = {
 	term2?: TermWrapper | Term
 
 	/** @deprecated post the term wrapper in term0 */
-	term0_q?: any
+	term0_q?: DeprecatedTermFields['q']
 	/** @deprecated post the term wrapper in term0 */
-	term0_id?: string
+	term0_id?: DeprecatedTermFields['id']
 	/** @deprecated post the term wrapper in term0 */
-	term0_$id?: string
+	term0_$id?: DeprecatedTermFields['$id']
 	/** @deprecated post the term wrapper in term0 */
-	term0_type?: string
+	term0_type?: DeprecatedTermFields['type']
 
 	/** @deprecated post the term wrapper in term1 */
-	term1_q?: any
+	term1_q?: DeprecatedTermFields['q']
 	/** @deprecated post the term wrapper in term1 */
-	term1_id?: string
+	term1_id?: DeprecatedTermFields['id']
 	/** @deprecated post the term wrapper in term1 */
-	term1_$id?: string
+	term1_$id?: DeprecatedTermFields['$id']
 	/** @deprecated post the term wrapper in term1 */
-	term1_type?: string
+	term1_type?: DeprecatedTermFields['type']
 
 	/** @deprecated post the term wrapper in term2 */
-	term2_q?: any
+	term2_q?: DeprecatedTermFields['q']
 	/** @deprecated post the term wrapper in term2 */
-	term2_id?: string
+	term2_id?: DeprecatedTermFields['id']
 	/** @deprecated post the term wrapper in term2 */
-	term2_$id?: string
+	term2_$id?: DeprecatedTermFields['$id']
 	/** @deprecated post the term wrapper in term2 */
-	term2_type?: string
+	term2_type?: DeprecatedTermFields['type']
 
 	filter?: Filter
-	filter0?: any
+	filter0?: JsonObject
 	minSampleSize: number | string
+}
+
+export type CumincEstimatePoint = {
+	time: number
+	est: number
+	lower?: number
+	upper?: number
+	nevent?: number
+	ncensor?: number
+	nrisk?: number
+}
+
+export type CumincSeriesMap = {
+	[seriesId: string]: CumincEstimatePoint[]
+}
+
+export type CumincGrayTest = {
+	series1: string
+	series2: string
+	pvalue: string
+}
+
+export type CumincChart = {
+	estimates: CumincSeriesMap
+	tests?: CumincGrayTest[]
+	chartId?: string
+	[key: string]: unknown
+}
+
+export type CumincRefs = {
+	bins?: unknown[]
+	byTermId?: unknown
+	orderedKeys?: {
+		chart?: string[]
+		series?: string[]
+	}
+	[key: string]: unknown
 }
 
 export type CumincResponse = {
 	data: {
-		[chartId: string]: any
+		[chartId: string]: CumincChart
 	}
-	refs?: {
-		bins?: any[]
-	}
+	refs?: CumincRefs
 	noEvents?: {
 		[chartId: string]: string[]
 	}
