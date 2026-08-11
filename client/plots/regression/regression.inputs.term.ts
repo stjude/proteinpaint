@@ -3,14 +3,43 @@ import { isDictionaryType, get_bin_label, isNumericTerm, getValueConversionFacto
 import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '#dom'
 import { select } from 'd3-selection'
-import { mayRunSnplstTask } from '../termsetting/handlers/snplst.sampleSum.ts'
+import { mayRunSnplstTask } from '../../termsetting/handlers/snplst.sampleSum.ts'
 import { get_defaultQ4fillTW, isLoneOutcome } from './Regression'
+import type { Div } from '../../types/d3'
 
 /*
 class instance is an input
 */
 
 export class InputTerm {
+	opts: any
+	section: any
+	term: any 
+	parent: any
+	vocabApi: any
+	dom!: {
+		holder: Div
+		termRow: Div
+		pillDiv: Div
+		interactionDiv: Div
+		err_div: Div
+		infoDiv: Div
+		tip: Menu
+	}
+	pill: any
+	setQ: any
+	valuesTable!: InputValuesTable
+	hasError!: boolean
+	termStatus!: {
+		topInfoStatus: string[]
+		bottomSummaryStatus: string | undefined
+		sampleCounts: any[] | undefined
+		excludeCounts: any[] | undefined
+		allowToSelectRefGrp: boolean
+
+	}
+	orderedLabels!: any[]
+
 	constructor(opts) {
 		// opts { section, term, parent }
 		this.opts = opts
@@ -148,10 +177,10 @@ export class InputTerm {
 		this.dom.err_div.style('display', 'none').text('')
 		this.hasError = false
 
-		const errors = []
+		const errors: unknown[] = []
 		try {
 			if (tw && this.setQ) {
-				const { app, state } = this.parent
+				const { /*app,*/ state } = this.parent
 				await this.setQ[tw.term.type](tw, this.vocabApi, this.parent.parent.filter, state)
 			}
 
@@ -169,7 +198,7 @@ export class InputTerm {
 			// TODO: should have a centralized location for filling in
 			// $id for non-dictionary terms
 			if (tw && !tw.$id) tw.$id = await get$id(this.vocabApi.getTwMinCopy(tw))
-			const e = (tw && tw.error) || this.pill.error
+			const e: any = (tw && tw.error) || this.pill.error
 			if (e) errors.push(e)
 			if (errors.length) throw errors
 		} catch (errors) {
@@ -278,7 +307,7 @@ export class InputTerm {
 				}
 				if (tw.q.scale && tw.q.scale != 1) this.termStatus.topInfoStatus.push(`Scale: Per ${tw.q.scale}`)
 				if (tw.q.mode == 'discrete') {
-					this.termStatus.topInfoStatus.push(`Discrete variable with ${this.termStatus.sampleCounts.length} bins`)
+					this.termStatus.topInfoStatus.push(`Discrete variable with ${this.termStatus?.sampleCounts?.length} bins`)
 				}
 				/* continuous and spline modes are analyzed in the term's converted unit
 				(see makeRinput() in server/src/routes/termdb.regression.ts), so report the unit
@@ -391,6 +420,7 @@ export class InputTerm {
 			return
 		}
 		const sc = this.termStatus.sampleCounts
+		if (!sc) throw new Error('termStatus.sampleCounts missing')
 		if (!('refGrp' in tw) || !sc.find(i => i.key == tw.refGrp)) {
 			// refGrp not defined or no longer exists according to sampleCounts[]
 			if (tw.term.type == 'geneVariant') {
@@ -405,7 +435,7 @@ export class InputTerm {
 			const o = this.orderedLabels
 			if (o && o.length) sc.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
 			else sc.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
-			tw.refGrp = sc[0].key
+			tw.refGrp = sc![0].key
 		}
 	}
 
@@ -477,8 +507,8 @@ export class InputTerm {
 			.style('display', 'inline')
 			.html(n == 0 ? 'Add interactions' : `${n} interaction${n > 1 ? 's' : ''}`)
 			.style('padding', '5px')
-			.style('background-color', n == 0 ? null : '#ececec')
-			.style('border-radius', n == 0 ? null : '6px')
+			.style('background-color', n == 0 ? '' : '#ececec')
+			.style('border-radius', n == 0 ? '' : '6px')
 			.style('color', n == 0 ? 'rgb(153, 153, 153)' : '#000')
 			.style('font-size', n == 0 ? '0.8em' : '')
 			.style('cursor', 'pointer')
@@ -507,9 +537,9 @@ export class InputTerm {
 			.enter()
 			.append('div')
 			.style('margin', '5px')
-			.each(function (tw) {
+			.each(function (tw: any) {
 				const elem = select(this).append('label')
-				const checkbox = elem
+				/*const checkbox =*/elem
 					.append('input')
 					.attr('type', 'checkbox')
 					.property('checked', self.term.interactions.includes(tw.$id))
@@ -524,7 +554,7 @@ export class InputTerm {
 			.on('click', () => {
 				self.dom.tip.hide()
 				self.term.interactions = []
-				self.dom.tip.d.selectAll('input').each(function (tw) {
+				self.dom.tip.d.selectAll('input').each(function (tw: any) {
 					if (select(this).property('checked')) self.term.interactions.push(tw.$id)
 				})
 				for (const tw of self.parent.config.independent) {
@@ -551,7 +581,7 @@ function getQSetter4outcome(regressionType) {
 
 // query backend for median and create custom 2 bins with median and boundry
 // for logistic independet numeric terms
-async function maySetTwoBins(tw, vocabApi, filter, state) {
+async function maySetTwoBins(tw, vocabApi, _, state) {
 	// if the bins are already binary, do not reset
 	if (tw.q.mode == 'binary' && tw.q.lst && tw.q.lst.length == 2) {
 		tw.q.mode = 'binary'
@@ -623,8 +653,8 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	const data = await vocabApi.getCategories(term, filter)
 	if (data.error) throw 'cannot get categories: ' + data.error
 	const category2samplecount = new Map() // k: category/grade, v: number of samples
-	const computableCategories = [] // list of computable keys
-	const uncomputableCategories = [] // list of computable keys
+	const computableCategories: string[] = [] // list of computable keys
+	const uncomputableCategories: string[] = [] // list of computable keys
 	for (const i of data.lst) {
 		category2samplecount.set(i.key, i.samplecount)
 		if (term.values && term.values[i.key] && term.values[i.key].uncomputable) uncomputableCategories.push(i.key)
