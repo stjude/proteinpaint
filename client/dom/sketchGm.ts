@@ -31,7 +31,7 @@ interface GeneModelWithDomains extends GeneModel {
  * Helper function to configure canvas for high-DPI (Retina) displays.
  * Sets the canvas backing store size to match device pixel ratio for crisp rendering.
  */
-function setupCanvas(canvas: HTMLCanvasElement, width: number, height: number): CanvasRenderingContext2D {
+export function setupCanvas(canvas: HTMLCanvasElement, width: number, height: number): CanvasRenderingContext2D {
 	const dpr = window.devicePixelRatio || 1
 
 	// Set display size (css pixels)

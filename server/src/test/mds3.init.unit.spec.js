@@ -3,6 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { filterByItem, filterByTvsLst, mayFilterByMaf, mayValidateBcfMafFilter, setFile } from '../mds3.init.js'
+import { toBreakpointPos } from '../svfusion.breakpoint.ts'
 import serverconfig from '../serverconfig.js'
 
 /*
@@ -16,6 +17,11 @@ Tests:
 	filterByItem: mname with origin
 	filterByItem: mname mcount single/multiple
 	filterByItem: mname restricted by gene
+	filterByItem: sv/fusion self breakpoint range
+	filterByItem: sv/fusion partner breakpoint range
+	filterByItem: self and partner breakpoint ranges apply to the same event
+	filterByItem: breakpoint range boundaries are inclusive
+	filterByItem: breakpoint range requires a sv/fusion tvs
 	filterByItem: sample not tested
 	filterByItem: wildtype sample matches wildtype filter
 	filterByItem: mutated sample does not match wildtype filter
@@ -38,6 +44,7 @@ Tests:
 	mayFilterByMaf: basic mafFilter, min allelic depth
 	mayFilterByMaf: mafFilter with child ids, min allelic depth
 	setFile: validates and resolves files
+	toBreakpointPos: parses breakpoint positions
 */
 
 test('\n', t => {
@@ -395,6 +402,218 @@ test('filterByItem: mname restricted by gene', t => {
 		filterByItem(filter, mlst, values)
 		t.deepEqual(values, [kras], 'values[] has only the matching gene mutation')
 	}
+})
+
+/*
+fusion fixtures below follow the real shape of a geneVariant value of a sv/fusion event
+(see mayGetGeneVariantData): .chr/.pos are the breakpoint on the queried gene, .mname is
+the partner gene, and .pairlst[0] holds both points with .pairlstIdx telling which of the
+two is the queried gene.
+
+modeled on TermdbTest_Fusion data, where the queried gene AKT1 (chr14:104779348) is fused
+to TP53 at two distinct breakpoints, chr17:7674289 and chr17:7674915 -- a miniature of the
+two breakpoint clusters that motivate breakpoint range filtering
+*/
+function makeFusion(selfPos, partnerPos, selfChr = 'chr14') {
+	return {
+		dt: 2,
+		class: 'Fuserna',
+		gene: 'AKT1',
+		chr: selfChr,
+		pos: selfPos,
+		mname: 'TP53',
+		pairlstIdx: 1, // the queried gene is the b{} point, so the partner is a{}
+		pairlst: [
+			{
+				a: { chr: 'chr17', pos: partnerPos, name: 'TP53' },
+				b: { chr: selfChr, pos: selfPos, name: 'AKT1' }
+			}
+		]
+	}
+}
+const akt1_tp53_a = makeFusion(104779348, 7674289)
+// same fusion in another sample, breakpoint of the partner gene is in the other cluster
+const akt1_tp53_b = makeFusion(104779348, 7674915)
+
+test('filterByItem: sv/fusion self breakpoint range', t => {
+	t.plan(6)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 2, type: 'dtfusion' },
+			values: [{ key: 'Fuserna', label: 'Fusion transcript', value: 'Fuserna' }],
+			genotype: 'variant',
+			mcount: 'any',
+			selfBreakpointRange: { chr: 'chr14', start: 104779000, stop: 104780000 }
+		}
+	}
+	{
+		const [pass, tested] = filterByItem(filter, [akt1_tp53_a])
+		t.equal(pass, true, 'breakpoint of queried gene within range passes')
+		t.equal(tested, true, 'sample is tested')
+	}
+	{
+		const [pass, tested] = filterByItem(filter, [makeFusion(104700000, 7674289)])
+		t.equal(pass, false, 'breakpoint outside range does not pass')
+		t.equal(tested, true, 'sample is still tested, a breakpoint range does not affect tested status')
+	}
+	{
+		// range of another chr, e.g. a range of a different gene of a geneset term
+		const [pass] = filterByItem(filter, [makeFusion(104779348, 7674289, 'chr9')])
+		t.equal(pass, false, 'breakpoint on another chr does not pass')
+	}
+	{
+		// events of a svfusion byname query may lack coordinates; such an event
+		// cannot be shown to satisfy the range, so must not pass
+		const [pass] = filterByItem(filter, [makeFusion(undefined, undefined)])
+		t.equal(pass, false, 'event without a breakpoint position does not pass')
+	}
+})
+
+test('filterByItem: sv/fusion partner breakpoint range', t => {
+	t.plan(6)
+	// select the AKT1::TP53 fusions of only the second TP53 breakpoint cluster
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 2, type: 'dtfusion' },
+			values: [
+				{
+					key: 'Fuserna',
+					label: 'TP53',
+					value: 'TP53',
+					mname: 'TP53',
+					partnerBreakpointRange: { chr: 'chr17', start: 7674900, stop: 7674930 }
+				}
+			],
+			genotype: 'variant',
+			mcount: 'any'
+		}
+	}
+	{
+		const [pass] = filterByItem(filter, [akt1_tp53_b])
+		t.equal(pass, true, 'partner breakpoint within range passes')
+	}
+	{
+		const [pass, tested] = filterByItem(filter, [akt1_tp53_a])
+		t.equal(pass, false, 'partner breakpoint of the other cluster does not pass')
+		t.equal(tested, true, 'sample is tested')
+	}
+	{
+		// the partner point is a{} when pairlstIdx=1 and b{} when 0; a wrong side
+		// would make the queried gene's own breakpoint be tested against the range
+		const flipped = { ...akt1_tp53_b, pairlstIdx: 0 }
+		const [pass] = filterByItem(filter, [flipped])
+		t.equal(pass, false, 'pairlstIdx decides which point is the partner')
+	}
+	{
+		// multi-gene pairlst is not yet supported by the getters (.mname is left
+		// unset there), so its partner cannot be identified and must not pass
+		const multi = { ...akt1_tp53_b, pairlst: [...akt1_tp53_b.pairlst, ...akt1_tp53_b.pairlst] }
+		const [pass] = filterByItem(filter, [multi])
+		t.equal(pass, false, 'event of an unsupported pairlst shape does not pass')
+	}
+	{
+		// a class-wide entry has no range and keeps matching any event of its class
+		const withClassEntry = structuredClone(filter)
+		withClassEntry.tvs.values.push({ key: 'Fuserna', label: 'Fusion transcript', value: 'Fuserna' })
+		const [pass] = filterByItem(withClassEntry, [akt1_tp53_a])
+		t.equal(pass, true, 'out-of-range event still matches a class-wide entry')
+	}
+})
+
+test('filterByItem: self and partner breakpoint ranges apply to the same event', t => {
+	t.plan(4)
+	/* the whole point of testing both ranges on one event: a sample carrying two
+	fusions, one satisfying the self range and the other the partner range, must NOT
+	pass, as no single fusion of it satisfies both */
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 2, type: 'dtfusion' },
+			values: [
+				{
+					key: 'Fuserna',
+					label: 'TP53',
+					value: 'TP53',
+					mname: 'TP53',
+					partnerBreakpointRange: { chr: 'chr17', start: 7674900, stop: 7674930 }
+				}
+			],
+			genotype: 'variant',
+			mcount: 'any',
+			selfBreakpointRange: { chr: 'chr14', start: 104779000, stop: 104780000 }
+		}
+	}
+	{
+		const [pass] = filterByItem(filter, [akt1_tp53_b])
+		t.equal(pass, true, 'one event satisfying both ranges passes')
+	}
+	{
+		// event 1: self in range, partner in the other cluster
+		// event 2: partner in range, self outside
+		const event2 = makeFusion(104700000, 7674915)
+		const [pass] = filterByItem(filter, [akt1_tp53_a, event2])
+		t.equal(pass, false, 'two events each satisfying one range do not pass')
+	}
+	{
+		const values = []
+		filterByItem(filter, [akt1_tp53_a, akt1_tp53_b], values)
+		t.deepEqual(values, [akt1_tp53_b], 'values[] has only the event satisfying both ranges')
+	}
+	{
+		// a range narrows the matching events before they are counted
+		const single = structuredClone(filter)
+		single.tvs.mcount = 'single'
+		const [pass] = filterByItem(single, [akt1_tp53_a, akt1_tp53_b])
+		t.equal(pass, true, 'mcount counts only the events left by the ranges')
+	}
+})
+
+test('filterByItem: breakpoint range boundaries are inclusive', t => {
+	t.plan(4)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 2, type: 'dtfusion' },
+			values: [{ key: 'Fuserna', label: 'Fusion transcript', value: 'Fuserna' }],
+			genotype: 'variant',
+			mcount: 'any',
+			selfBreakpointRange: { chr: 'chr14', start: 104779348, stop: 104779350 }
+		}
+	}
+	t.equal(filterByItem(filter, [akt1_tp53_a])[0], true, 'breakpoint at range start passes')
+	t.equal(filterByItem(filter, [makeFusion(104779350, 7674289)])[0], true, 'breakpoint at range stop passes')
+	t.equal(filterByItem(filter, [makeFusion(104779347, 7674289)])[0], false, 'breakpoint before start fails')
+	t.equal(filterByItem(filter, [makeFusion(104779351, 7674289)])[0], false, 'breakpoint after stop fails')
+})
+
+test('filterByItem: breakpoint range requires a sv/fusion tvs', t => {
+	t.plan(2)
+	// on another dt the range would silently filter e.g. snvindels by position
+	const selfRange = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+			genotype: 'variant',
+			mcount: 'any',
+			selfBreakpointRange: { chr: 'chr17', start: 7674900, stop: 7674930 }
+		}
+	}
+	t.throws(
+		() => filterByItem(selfRange, [{ dt: 1, class: 'M', mname: 'G12D', chr: 'chr17', pos: 7674915 }]),
+		/breakpoint range requires a sv\/fusion tvs/,
+		'self range on a snvindel tvs throws'
+	)
+	const partnerRange = structuredClone(selfRange)
+	delete partnerRange.tvs.selfBreakpointRange
+	partnerRange.tvs.values[0].partnerBreakpointRange = { chr: 'chr17', start: 7674900, stop: 7674930 }
+	t.throws(
+		() => filterByItem(partnerRange, [{ dt: 1, class: 'M', mname: 'G12D' }]),
+		/breakpoint range requires a sv\/fusion tvs/,
+		'partner range on a snvindel tvs throws'
+	)
 })
 
 test('filterByItem: sample not tested', t => {
@@ -1992,6 +2211,21 @@ test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t =>
 	}
 	t.doesNotThrow(() => mayValidateBcfMafFilter(q), 'GDC-shaped q (format on q.format) passes validation')
 	t.equal(q.mafFilter.terms.length, 3, 'auto-populated totalDepth + altDepth terms from q.format')
+})
+
+test('toBreakpointPos: parses breakpoint positions', t => {
+	t.plan(6)
+	// positions of the svfusion byname file are strings and must become numbers, so that
+	// a breakpoint of either file format can be compared against a range and tallied by
+	// the same key
+	t.equal(toBreakpointPos('130713016'), 130713016, 'numeric string converted to number')
+	t.equal(toBreakpointPos(130713016), 130713016, 'number kept as is')
+	// a breakpoint without position must stay undefined and not become 0, otherwise an
+	// event lacking coordinates would appear to have one at the start of the chromosome
+	t.equal(toBreakpointPos(''), undefined, 'empty string yields undefined')
+	t.equal(toBreakpointPos(undefined), undefined, 'undefined yields undefined')
+	t.equal(toBreakpointPos(null), undefined, 'null yields undefined')
+	t.equal(toBreakpointPos('n/a'), undefined, 'non-numeric string yields undefined')
 })
 
 const mafFilter = {

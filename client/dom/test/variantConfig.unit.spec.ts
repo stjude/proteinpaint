@@ -1,5 +1,6 @@
 import tape from 'tape'
 import { renderVariantConfig } from '../variantConfig'
+import { Menu } from '../menu'
 import type { TermValues, BaseValue } from '#types'
 import { select } from 'd3-selection'
 import { detectGt } from '../../test/test.helpers.js'
@@ -33,6 +34,15 @@ test sections:
 	- selected variant absent from current data is preserved
 	- preserved variant of a class absent from current data
 	- preserved variant with gene
+	- breakpoint controls are not offered for snvindel
+	- breakpoint controls need a gene model source
+	- breakpoint controls render for a sv term
+	- breakpoint control for a term of multiple genes
+	- registered breakpoint ranges are displayed
+	- breakpoint ranges are applied
+	- breakpoint range is not applied for an unchecked variant
+	- no breakpoint range key for a snvindel
+	- breakpoint menu does not hide the menu it is opened from
 */
 
 tape('\n', test => {
@@ -1150,3 +1160,263 @@ const mafFilter = {
 	],
 	active: activeMafFilter
 }
+
+/**************
+ * sv/fusion breakpoint range controls
+ **************/
+
+// classes and variants of a fusion term, where the mname is the partner gene and the
+// breakpoints are those of the events of that partner (see BreakpointEntry)
+const fusionValues: TermValues = {
+	Fuserna: { key: 'Fuserna', label: 'Fusion transcript' }
+}
+const fusionMnames = [
+	{
+		mname: 'ABL1',
+		class: 'Fuserna',
+		samplecount: 30,
+		breakpoints: [
+			{ pos: 23290100, partnerChr: 'chr9', partnerPos: 130713016, samplecount: 20 },
+			{ pos: 23183000, partnerChr: 'chr9', partnerPos: 130854000, samplecount: 10 }
+		]
+	},
+	// a partner without a charted breakpoint, e.g. of a query lacking coordinates
+	{ mname: 'FGFR1', class: 'Fuserna', samplecount: 2, noPositionCount: 2 }
+]
+const getGeneModels = async () => [
+	{
+		isoform: 'NM_004327',
+		chr: 'chr22',
+		start: 23180000,
+		stop: 23318000,
+		strand: '+',
+		isdefault: true,
+		exon: [
+			[23180000, 23180200],
+			[23290000, 23290300]
+		]
+	}
+]
+
+tape('breakpoint controls are not offered for snvindel', test => {
+	const holder = select(document.body).append('div')
+	renderVariantConfig({ holder, values, mnames, dt: 1, gene: 'KRAS', getGeneModels, callback: () => {} })
+	test.equal(
+		holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint"]').node(),
+		null,
+		'no breakpoint control for a snvindel term'
+	)
+	test.equal(
+		holder.selectAll('[data-testid="sjpp-variantConfig-partnerBreakpoint-btn"]').nodes().length,
+		0,
+		'no partner breakpoint column for a snvindel term'
+	)
+	holder.remove()
+	test.end()
+})
+
+tape('breakpoint controls need a gene model source', test => {
+	const holder = select(document.body).append('div')
+	// a caller that cannot look up isoform models, e.g. one without a genome, gets no
+	// breakpoint control rather than a chart it cannot draw
+	renderVariantConfig({ holder, values: fusionValues, mnames: fusionMnames, dt: 5, gene: 'BCR', callback: () => {} })
+	test.equal(
+		holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint"]').node(),
+		null,
+		'no breakpoint control without getGeneModels'
+	)
+	holder.remove()
+	test.end()
+})
+
+tape('breakpoint controls render for a sv term', test => {
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		callback: () => {}
+	})
+	const selfDiv = holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint"]')
+	test.ok(selfDiv.node(), 'renders the control for the breakpoint of the term gene')
+	test.ok(selfDiv.text().includes('BCR breakpoint'), 'names the gene of the term')
+	test.equal(
+		holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint-btn"]').text(),
+		'any position',
+		'no range is registered yet'
+	)
+	const partnerBtns = holder.selectAll('[data-testid="sjpp-variantConfig-partnerBreakpoint-btn"]').nodes()
+	test.equal(partnerBtns.length, 2, 'renders a partner breakpoint control for each variant')
+	test.equal((partnerBtns[0] as HTMLElement).textContent, 'any position', 'variant with breakpoints is selectable')
+	test.equal(
+		(partnerBtns[1] as HTMLElement).textContent,
+		'n/a',
+		'variant without a charted breakpoint cannot be restricted'
+	)
+	holder.remove()
+	test.end()
+})
+
+tape('breakpoint control for a term of multiple genes', test => {
+	const holder = select(document.body).append('div')
+	// a range on the term gene is not scoped to a gene, so the control is only offered
+	// when the term has one gene, which the caller signals by passing arg.gene
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		getGeneModels,
+		callback: () => {}
+	})
+	test.equal(
+		holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint"]').node(),
+		null,
+		'no control for the breakpoint of the term gene'
+	)
+	test.equal(
+		holder.selectAll('[data-testid="sjpp-variantConfig-partnerBreakpoint-btn"]').nodes().length,
+		2,
+		'partner breakpoints are still selectable, as each is scoped to its own variant'
+	)
+	holder.remove()
+	test.end()
+})
+
+tape('registered breakpoint ranges are displayed', test => {
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		selfBreakpointRange: { chr: 'chr22', start: 23180000, stop: 23200000 },
+		selectedValues: [
+			{
+				key: 'Fuserna',
+				label: 'ABL1',
+				value: 'ABL1',
+				mname: 'ABL1',
+				partnerBreakpointRange: { chr: 'chr9', start: 130713016, stop: 130887675 }
+			}
+		],
+		callback: () => {}
+	})
+	test.equal(
+		holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint-btn"]').text(),
+		'chr22:23,180,000-23,200,000',
+		'range of the term gene is displayed'
+	)
+	const partnerBtns = holder.selectAll('[data-testid="sjpp-variantConfig-partnerBreakpoint-btn"]').nodes()
+	test.equal(
+		(partnerBtns[0] as HTMLElement).textContent,
+		'chr9:130,713,016-130,887,675',
+		'range of the partner gene is displayed on its variant'
+	)
+	test.equal((partnerBtns[1] as HTMLElement).textContent, 'n/a', 'other variants are unaffected')
+	holder.remove()
+	test.end()
+})
+
+tape('breakpoint ranges are applied', test => {
+	const holder = select(document.body).append('div')
+	let config: any
+	const partnerRange = { chr: 'chr9', start: 130713016, stop: 130887675 }
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		selfBreakpointRange: { chr: 'chr22', start: 23180000, stop: 23200000 },
+		selectedValues: [
+			{ key: 'Fuserna', label: 'ABL1', value: 'ABL1', mname: 'ABL1', partnerBreakpointRange: partnerRange }
+		],
+		callback: c => (config = c)
+	})
+	;(holder.select('.sjpp_apply_btn').node() as HTMLButtonElement).click()
+	test.deepEqual(
+		config.selfBreakpointRange,
+		{ chr: 'chr22', start: 23180000, stop: 23200000 },
+		'range of the term gene is applied'
+	)
+	test.equal(config.values.length, 1, 'the checked variant is applied')
+	test.deepEqual(config.values[0].partnerBreakpointRange, partnerRange, 'range of the partner gene rides on it')
+	holder.remove()
+	test.end()
+})
+
+tape('breakpoint range is not applied for an unchecked variant', test => {
+	const holder = select(document.body).append('div')
+	let config: any
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		callback: c => (config = c)
+	})
+	// no variant is checked, so the class is applied and carries no partner range;
+	// the key is still present for the term gene, so that a cleared range can be told
+	// from a dt that has no such control at all
+	;(holder.select('.sjpp_apply_btn').node() as HTMLButtonElement).click()
+	test.equal(config.values.length, 1, 'the class is applied')
+	test.equal('partnerBreakpointRange' in config.values[0], false, 'the class carries no partner range')
+	test.equal('selfBreakpointRange' in config, true, 'the key of the term gene range is present')
+	test.equal(config.selfBreakpointRange, undefined, 'and is undefined when no range is registered')
+	holder.remove()
+	test.end()
+})
+
+tape('no breakpoint range key for a snvindel', test => {
+	const holder = select(document.body).append('div')
+	let config: any
+	renderVariantConfig({ holder, values, mnames, dt: 1, callback: c => (config = c) })
+	;(holder.select('.sjpp_apply_btn').node() as HTMLButtonElement).click()
+	test.equal('selfBreakpointRange' in config, false, 'no breakpoint range key for a dt without the control')
+	holder.remove()
+	test.end()
+})
+
+tape('breakpoint menu does not hide the menu it is opened from', async test => {
+	/* the ui is rendered inside a menu, e.g. the tvs edit menu. every Menu hides itself
+	on a mousedown outside of it, unless the clicked menu declares it as a parent or
+	ancestor (see setRelatedMenus in dom/menu.js). without that declaration, clicking a
+	non-interactive part of the breakpoint chart closed every other open menu */
+	const parentTip = new Menu({ padding: '0px' })
+	parentTip.show(100, 100)
+	const holder = parentTip.d.append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		callback: () => {}
+	})
+	;(holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint-btn"]').node() as HTMLElement).click()
+	// the chart is rendered after the isoform models are fetched
+	await new Promise(resolve => setTimeout(resolve, 0))
+	const menuDiv = [...document.querySelectorAll('.sja_menu_div')].find(d =>
+		d.querySelector('[data-testid="sjpp-isoformRangeSelect-marks"]')
+	) as HTMLElement
+	test.ok(menuDiv, 'the breakpoint chart is shown in a menu')
+	test.equal((menuDiv as any).parent_menu, parentTip.d.node(), 'the menu declares the one it was opened from')
+	// mousedown on a part of the chart with no handler of its own, which is the case
+	// that propagates to the document body and hides other menus
+	const info = menuDiv.querySelector('[data-testid="sjpp-isoformRangeSelect-info"]') as HTMLElement
+	info.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+	test.equal(parentTip.d.style('display'), 'block', 'the menu it was opened from stays open')
+	menuDiv.remove()
+	parentTip.destroy()
+	test.end()
+})

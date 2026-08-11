@@ -1,21 +1,42 @@
 import { make_radios, renderTable } from '#dom'
-import type { TermValues, BaseValue } from '#types'
+import { Menu } from './menu'
+import { isoformRangeSelect } from './isoformSelect'
+import type { GeneModel, BreakpointMarker } from './types/isoformSelect'
+import type { TermValues, BaseValue, BreakpointRange, BreakpointEntry } from '#types'
 import { filterInit } from '#filter'
-import { dt2label, dtsnvindel, mclass } from '#shared/common.js'
+import { dt2label, dtsnvindel, dtsv, dtfusionrna, mclass } from '#shared/common.js'
 
 // a selectable value: either a mutation class (no .mname) or a
 // specific variant, i.e. amino acid change (.mname set, .key is its class)
-type VariantValue = BaseValue & { value?: string; mname?: string; gene?: string }
+type VariantValue = BaseValue & {
+	value?: string
+	mname?: string
+	gene?: string
+	/** sv/fusion only: restricts the breakpoint on the partner gene named by .mname */
+	partnerBreakpointRange?: BreakpointRange
+}
 
 // an amino acid change of the term, from /termdb/categories
 // gene is present when the mutation data is annotated with it
-type MnameItem = { mname: string; class: string; samplecount: number; gene?: string }
+// for a sv/fusion, mname is the partner gene and breakpoints are those of its events
+type MnameItem = {
+	mname: string
+	class: string
+	samplecount: number
+	gene?: string
+	breakpoints?: BreakpointEntry[]
+	noPositionCount?: number
+}
 
 type Config = {
 	genotype: 'variant' | 'wt' | 'nt'
 	values: VariantValue[]
 	mcount?: 'any' | 'single' | 'multiple' | 'all'
 	mafFilter?: any
+	/** sv/fusion only: restricts the breakpoint on the term's own gene. always present
+	 * for a sv/fusion, and undefined when cleared, so that the caller can tell a cleared
+	 * range from an untouched one */
+	selfBreakpointRange?: BreakpointRange
 }
 
 type Arg = {
@@ -28,7 +49,20 @@ type Arg = {
 	dt: number // dt value, rendering of some elements are based on this value
 	mcount?: 'any' | 'single' | 'multiple' | 'all' // mutation count, when missing will default to 'any'
 	mafFilter?: any // maf filter
+	/** gene of the term, only when it has exactly one. a breakpoint range on the term's
+	 * own gene is not scoped to a gene, so the control is only offered for such a term */
+	gene?: string
+	/** returns the isoform models of a gene, to chart its breakpoints over. when missing,
+	 * the sv/fusion breakpoint controls are not offered */
+	getGeneModels?: (gene: string) => Promise<GeneModel[]>
+	/** breakpoint range already registered on the term's own gene */
+	selfBreakpointRange?: BreakpointRange
 	callback: (config: Config) => void
+}
+
+/** format a range the way it is shown on the controls and in a pill */
+export function breakpointRangeLabel(r: BreakpointRange) {
+	return `${r.chr}:${r.start.toLocaleString()}-${r.stop.toLocaleString()}`
 }
 
 export function renderVariantConfig(arg: Arg) {
@@ -65,6 +99,25 @@ export function renderVariantConfig(arg: Arg) {
 	if (!Number.isInteger(dt)) throw 'unexpected dt value'
 	const mcount = arg.mcount || 'any'
 	if (!['any', 'single', 'multiple', 'all'].includes(mcount)) throw 'invalid mcount'
+
+	/* a sv/fusion event has a breakpoint on the term's own gene and one on the partner
+	gene of the event, either of which may be restricted to a range. the breakpoints come
+	from the same tally as the mnames (see BreakpointEntry), so the controls are only
+	offered when the dt is a sv/fusion and the caller can supply isoform models to chart
+	them over */
+	const isSvFusion = dt == dtsv || dt == dtfusionrna
+	const canSelectBreakpoint = isSvFusion && !!arg.getGeneModels && mnames.some(m => m.breakpoints?.length)
+	// range on the term's own gene, undefined when there is none
+	let selfBreakpointRange = arg.selfBreakpointRange
+	// ranges on the partner gene of a variant, k: index of the variant in mnames[]
+	const partnerBreakpointRanges = new Map<number, BreakpointRange>()
+	for (const [i, m] of mnames.entries()) {
+		const selected = selectedMnames.find(s => s.mname == m.mname && s.key == m.class && (!s.gene || s.gene == m.gene))
+		if (selected?.partnerBreakpointRange) partnerBreakpointRanges.set(i, selected.partnerBreakpointRange)
+	}
+	/* one menu for both controls, so that opening one closes the other. created on first
+	use, as a menu attaches to the document body and this ui is rendered anew on each edit */
+	let breakpointTip: Menu | undefined
 
 	holder.style('margin', '10px')
 
@@ -111,7 +164,7 @@ export function renderVariantConfig(arg: Arg) {
 	// the list is rendered and invoked on class checkbox changes
 	let updateMnameRowDisplay = () => {}
 	// returns the specific variants (amino acid changes) checked in the list
-	let getCheckedMnames = (): MnameItem[] => []
+	let getCheckedMnames = (): { m: MnameItem; i: number }[] => []
 	// true when the variants span multiple genes, so labels name the gene
 	let showGeneInMnames = false
 	if (values.length) {
@@ -142,6 +195,49 @@ export function renderVariantConfig(arg: Arg) {
 			showLines: false,
 			selectedRows: selectedIdxs
 		})
+		if (canSelectBreakpoint && arg.gene) {
+			// control to restrict the breakpoint on the term's own gene, e.g. to select
+			// the cases of only one of the two BCR breakpoint clusters of BCR::ABL1
+			const selfDiv = classDiv
+				.append('div')
+				.attr('data-testid', 'sjpp-variantConfig-selfBreakpoint')
+				.style('margin', '8px 0 0 5px')
+				.style('font-size', '.8rem')
+			selfDiv.append('span').style('opacity', 0.7).text(`${arg.gene} breakpoint `)
+			const selfBtn = selfDiv
+				.append('span')
+				.attr('class', 'sja_clbtext')
+				.attr('data-testid', 'sjpp-variantConfig-selfBreakpoint-btn')
+				.style('cursor', 'pointer')
+			const updateSelfBtn = () => {
+				selfBtn
+					.style('color', selfBreakpointRange ? '#1e6edc' : '#858585')
+					.text(selfBreakpointRange ? breakpointRangeLabel(selfBreakpointRange) : 'any position')
+			}
+			updateSelfBtn()
+			selfBtn.on('click', (event: MouseEvent) => {
+				// only the breakpoints of the checked classes are charted, so that the
+				// range is placed over the events the tvs will actually match
+				const checkedClasses = getCheckedClasses()
+				const markers = collectMarkers(
+					mnames.filter(m => checkedClasses.has(m.class)),
+					m => m.breakpoints?.map(b => ({ pos: b.pos, samplecount: b.samplecount })) || []
+				)
+				openBreakpointMenu({
+					event,
+					gene: arg.gene as string,
+					markers,
+					range: selfBreakpointRange,
+					noPositionCount: mnames
+						.filter(m => checkedClasses.has(m.class))
+						.reduce((n, m) => n + (m.noPositionCount || 0), 0),
+					callback: range => {
+						selfBreakpointRange = range || undefined
+						updateSelfBtn()
+					}
+				})
+			})
+		}
 		if (mnames.length) {
 			// specific variants (amino acid changes, e.g. KRAS G12D) are
 			// available for this term, render as a collapsible checkbox list
@@ -185,6 +281,8 @@ export function renderVariantConfig(arg: Arg) {
 				if (!m.samplecount) countCell.dataTestId = 'sjpp-variantConfig-mname-absent'
 				const row = [{ value: m.mname }, { value: arg.values[m.class]?.label || m.class }, countCell]
 				if (showGene) row.unshift({ value: m.gene || '' })
+				// cell to fill with the breakpoint control of this variant after render
+				if (canSelectBreakpoint) row.push({ value: '' })
 				mnameRows.push(row)
 				// a selected value without .gene matches regardless of gene, so that
 				// a selection saved before gene was tracked still displays as checked
@@ -193,6 +291,7 @@ export function renderVariantConfig(arg: Arg) {
 			}
 			const mnameColumns: any[] = [{ label: 'Variant' }, { label: 'Class' }, { label: 'Samples', align: 'right' }]
 			if (showGene) mnameColumns.unshift({ label: 'Gene' })
+			if (canSelectBreakpoint) mnameColumns.push({ label: 'Breakpoint' })
 			renderTable({
 				rows: mnameRows,
 				columns: mnameColumns,
@@ -205,13 +304,56 @@ export function renderVariantConfig(arg: Arg) {
 				showLines: false,
 				selectedRows: selectedMnameIdxs
 			})
-			updateMnameRowDisplay = () => {
-				// classes currently checked in the class table
-				const classCheckboxes = tableDiv.select('tbody').selectAll('input').nodes()
-				const checkedClasses = new Set()
-				for (const [i, c] of classCheckboxes.entries()) {
-					if ((c as any).checked) checkedClasses.add(values[i].key)
+			if (canSelectBreakpoint) {
+				/* fill the breakpoint cell of each variant, to restrict the breakpoint on
+				the partner gene of that fusion, e.g. to select only the BCR::ABL1 cases
+				breaking in a given part of ABL1. the range is only applied when the
+				variant is checked, as only checked variants become tvs values */
+				for (const [i, row] of mnameRows.entries()) {
+					const m = mnames[i]
+					const cell = row[row.length - 1]
+					const btn = cell.__td
+						.append('span')
+						.attr('data-testid', 'sjpp-variantConfig-partnerBreakpoint-btn')
+						.style('font-size', '.9em')
+					const update = () => {
+						const r = partnerBreakpointRanges.get(i)
+						btn.style('color', r ? '#1e6edc' : '#858585').text(r ? breakpointRangeLabel(r) : 'any position')
+					}
+					update()
+					if (!m.breakpoints?.length) {
+						// no charted breakpoint of the partner gene to select a range over
+						btn.style('opacity', 0.4).text('n/a').attr('title', 'no breakpoint position for this variant')
+						continue
+					}
+					btn
+						.attr('class', 'sja_clbtext')
+						.style('cursor', 'pointer')
+						.on('click', (event: MouseEvent) => {
+							openBreakpointMenu({
+								event,
+								// the partner gene of a fusion is named by the mname
+								gene: m.mname,
+								markers: collectMarkers([m], e =>
+									(e.breakpoints || []).map(b => ({
+										pos: b.partnerPos,
+										chr: b.partnerChr,
+										samplecount: b.samplecount
+									}))
+								),
+								range: partnerBreakpointRanges.get(i),
+								noPositionCount: m.noPositionCount || 0,
+								callback: range => {
+									if (range) partnerBreakpointRanges.set(i, range)
+									else partnerBreakpointRanges.delete(i)
+									update()
+								}
+							})
+						})
 				}
+			}
+			updateMnameRowDisplay = () => {
+				const checkedClasses = getCheckedClasses()
 				// show only variants of checked classes; unchecking a class also
 				// clears its checked variants so a hidden selection cannot be applied
 				// NOTE: the checkbox value attribute is the original row index (see renderTable)
@@ -233,12 +375,14 @@ export function renderVariantConfig(arg: Arg) {
 				updateToggle()
 			}
 			getCheckedMnames = () => {
-				const checked: MnameItem[] = []
+				const checked: { m: MnameItem; i: number }[] = []
 				mnameListDiv
 					.select('tbody')
 					.selectAll('input[type=checkbox]')
 					.each(function (this: any) {
-						if (this.checked) checked.push(mnames[Number(this.value)])
+						// the checkbox value attribute is the index in mnames[], which also
+						// keys the breakpoint range of the variant
+						if (this.checked) checked.push({ m: mnames[Number(this.value)], i: Number(this.value) })
 					})
 				return checked
 			}
@@ -327,7 +471,7 @@ export function renderVariantConfig(arg: Arg) {
 					// specific variants are selected, they refine the selection and
 					// override the checked classes: each selected variant becomes a
 					// class-scoped value entry with .mname, and .gene when annotated
-					for (const m of checkedMnames) {
+					for (const { m, i } of checkedMnames) {
 						const v: VariantValue = {
 							key: m.class,
 							label: showGeneInMnames && m.gene ? `${m.gene} ${m.mname}` : m.mname,
@@ -335,6 +479,9 @@ export function renderVariantConfig(arg: Arg) {
 							mname: m.mname
 						}
 						if (m.gene) v.gene = m.gene
+						// a range on the partner gene only applies to this variant
+						const partnerRange = partnerBreakpointRanges.get(i)
+						if (partnerRange) v.partnerBreakpointRange = partnerRange
 						config.values.push(v)
 					}
 				} else {
@@ -355,7 +502,131 @@ export function renderVariantConfig(arg: Arg) {
 				} else {
 					config.mcount = 'any'
 				}
+				/* always set for a sv/fusion, so that the caller can tell a cleared range
+				(undefined) from a dt that does not have the control at all (absent key) */
+				if (isSvFusion) config.selfBreakpointRange = selfBreakpointRange
 			}
 			arg.callback(config)
 		})
+
+	/** classes currently checked in the class table */
+	function getCheckedClasses() {
+		const checked = new Set()
+		if (!classTableDiv) return checked
+		// NOTE: iterating position matches values[], as the class table is never filtered
+		const checkboxes = classTableDiv.select('tbody').selectAll('input').nodes()
+		for (const [i, c] of checkboxes.entries()) {
+			if ((c as any).checked) checked.add(values[i].key)
+		}
+		return checked
+	}
+
+	/* merge the breakpoints of the given variants at the same position, summing their
+	samples. NOTE the tally is per pair of breakpoints (see BreakpointEntry), so a sample
+	with two events at one position, to different partners, is counted once per event */
+	function collectMarkers(items: MnameItem[], get: (m: MnameItem) => MarkerInput[]): MarkerInput[] {
+		const byKey = new Map<string, MarkerInput>()
+		for (const m of items) {
+			for (const b of get(m)) {
+				if (!Number.isFinite(b.pos)) continue
+				const key = `${b.chr || ''}|${b.pos}`
+				const entry = byKey.get(key)
+				if (entry) entry.samplecount += b.samplecount
+				else byKey.set(key, { ...b })
+			}
+		}
+		return [...byKey.values()]
+	}
+
+	/** chr of most of the markers, by samples; markers of the term's own gene have none */
+	function mostCommonChr(markers: MarkerInput[]) {
+		const count = new Map<string, number>()
+		for (const m of markers) {
+			if (m.chr) count.set(m.chr, (count.get(m.chr) || 0) + m.samplecount)
+		}
+		let best: string | undefined
+		let bestCount = 0
+		for (const [chr, n] of count) {
+			if (n > bestCount) {
+				best = chr
+				bestCount = n
+			}
+		}
+		return best
+	}
+
+	/** chart the breakpoints of a gene in a menu and select a range of them */
+	async function openBreakpointMenu(a: {
+		event: MouseEvent
+		gene: string
+		markers: MarkerInput[]
+		range?: BreakpointRange
+		noPositionCount: number
+		callback: (range: BreakpointRange | null) => void
+	}) {
+		if (!breakpointTip)
+			breakpointTip = new Menu({
+				padding: '10px',
+				/* this ui is rendered inside a menu, e.g. the tvs edit menu. declaring that
+				menu as the parent keeps it, and its own ancestors, open when clicking inside
+				this one; without it every other open menu treats a click here as a click
+				outside itself and hides. same idiom as getDom() in termsetting/TermSetting.ts,
+				and the ancestors above the parent are picked up from it (see setRelatedMenus
+				in dom/menu.js) */
+				parent_menu: holder.node()?.closest('.sja_menu_div')
+			})
+		const tip = breakpointTip
+		tip.clear().showunder(a.event.target as HTMLElement)
+		const div = tip.d.append('div')
+		div.append('div').style('opacity', 0.6).text('Loading...')
+		let gmlst: GeneModel[] = []
+		try {
+			gmlst = (await arg.getGeneModels!(a.gene)) || []
+		} catch (e: any) {
+			// the isoform models are optional context: a gene without them, e.g. a fusion
+			// partner that is an unannotated locus, still has its breakpoints charted
+			console.warn(`no gene model for ${a.gene}: ${e?.message || e}`)
+		}
+		div.selectAll('*').remove()
+		/* the chr of the markers decides the locus, so that the range is on the same chr
+		as the events it will match; the breakpoints of the term's own gene carry no chr,
+		so fall back to its default isoform, which is also what the server resolves a gene
+		to when querying its events */
+		const chr = mostCommonChr(a.markers) || (gmlst.find(g => g.isdefault) || gmlst[0])?.chr
+		if (!chr) {
+			div.append('div').text(`Unknown chromosome of ${a.gene}`)
+			return
+		}
+		div
+			.append('div')
+			.style('margin-bottom', '5px')
+			.style('font-size', '.9em')
+			.style('opacity', 0.7)
+			.text(`${a.gene} breakpoints`)
+		if (a.noPositionCount) {
+			div
+				.append('div')
+				.style('font-size', '.75em')
+				.style('opacity', 0.6)
+				.style('margin-bottom', '5px')
+				.text(
+					`${a.noPositionCount} samples have events without a breakpoint position; they are not charted and do not match a range`
+				)
+		}
+		isoformRangeSelect({
+			holder: div.append('div'),
+			allgm: gmlst,
+			chr,
+			markers: a.markers.filter(m => !m.chr || m.chr == chr),
+			// a range of another chr is not of this locus, so is not shown as the current one
+			range: a.range?.chr == chr ? a.range : undefined,
+			callback: range => {
+				tip.hide()
+				a.callback(range)
+			}
+		})
+	}
 }
+
+/** a breakpoint to chart. .chr is only known for those on a partner gene */
+type MarkerInput = BreakpointMarker & { chr?: string; samplecount: number }

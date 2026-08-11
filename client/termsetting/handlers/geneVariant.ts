@@ -184,6 +184,9 @@ async function makeGroupUI(self: TermSetting, div) {
 	// not passing complete termdbConfig as presence of .allowedTermTypes will
 	// trigger term type toggles (see init() in termdb/TermTypeSearch.ts)
 	vocabApi.termdbConfig = { queries: self.vocabApi.termdbConfig.queries }
+	// genome is needed to look up the isoform models of a gene, to chart the breakpoints
+	// of a sv/fusion over (see fillMenu() in filter/tvs.dt.js)
+	vocabApi.vocab.genome = self.vocabApi.vocab?.genome
 
 	// filter prompt
 	const filterPrompt = await filterPromptInit({
