@@ -34,6 +34,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'cuminc':
 			return await import(`./cuminc/Cuminc.ts`)
+		
+		case 'dataDownload':
+			return await import(`./dataDownload.ts`)
 
 		case 'DEinput':
 			return await import(`./DEinput.ts`)
