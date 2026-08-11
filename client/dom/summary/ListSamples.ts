@@ -5,7 +5,7 @@ import type { TableColumn, TableRow } from '#dom'
 import { getSamplelstFilter } from '../../mass/groups.js'
 import { isNumericTerm, roundValueAuto, isStrictNumeric, isFractionTw, getFractionTvsTerm } from '#shared'
 import { filterJoin } from '#filter'
-import { addGvRowVals, addGvCols } from '#plots/barchart.events.js'
+import { addGvRowVals, addGvCols } from '#plots/barchart/barchart.events.js'
 import { defaultUiLabels } from '#plots/PlotBase.ts'
 
 /** Temp type scoped for this file.

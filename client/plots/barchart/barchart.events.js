@@ -1,7 +1,7 @@
 import { Menu, renderTable } from '#dom'
-import { dofetch3 } from '../common/dofetch'
+import { dofetch3 } from '#common/dofetch'
 import { mclass, dt2label } from '#shared/common.js'
-import { newpane, export_data } from '../src/client'
+import { /*newpane,*/ export_data } from '#src/client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '#filter'
 import { rgb } from 'd3-color'
 import { create } from 'd3-selection'
@@ -9,7 +9,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { isNumericTw } from '#shared/terms.js'
 import { isFractionTw, getFractionTvsTerm } from '#shared/termCollection.js'
 import { negateTermLabel } from './barchart'
-import { getSamplelstFilter, getSamplelstTW, getFilter, addNewGroup } from '../mass/groups.js'
+import { getSamplelstFilter, getSamplelstTW, getFilter, addNewGroup } from '#mass/groups'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
