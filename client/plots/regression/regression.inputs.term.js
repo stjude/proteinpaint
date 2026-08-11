@@ -4,7 +4,7 @@ import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '#dom'
 import { select } from 'd3-selection'
 import { mayRunSnplstTask } from '../termsetting/handlers/snplst.sampleSum.ts'
-import { get_defaultQ4fillTW, isLoneOutcome } from './regression'
+import { get_defaultQ4fillTW, isLoneOutcome } from './Regression'
 
 /*
 class instance is an input

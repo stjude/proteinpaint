@@ -1,12 +1,14 @@
 import { RegressionInputs } from './regression.inputs'
 import { RegressionResults } from './regression.results'
-import { getCompInit, copyMerge } from '../rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi, type AppApi } from '#rx'
 import { sayerror } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase } from '#plots/PlotBase.js'
 import { numericTypes, dictionaryNumericTypes } from '#shared'
 import { getActiveCohortStr } from '#mass/charts'
+import type { ClientGenome } from '../../types/clientGenome'
+import type { Filter } from '#types'
 
 /*
 Code architecture:
@@ -18,11 +20,18 @@ regression.js
 	regression.results.js
 */
 
-class Regression extends PlotBase {
+class Regression extends PlotBase implements RxComponent{
 	static type = 'regression'
 
-	constructor(opts) {
-		super(opts)
+	type: string
+	genomeObj: ClientGenome
+	inputs!: RegressionInputs
+	results!: RegressionResults
+	filter!: Filter
+	config: any
+
+	constructor(opts: any, api: ComponentApi) {
+		super(opts, api)
 		this.type = Regression.type
 		this.genomeObj = opts.app.opts.genome
 	}
@@ -55,7 +64,7 @@ class Regression extends PlotBase {
 		})
 	}
 
-	getState(appState, sub) {
+	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
@@ -89,7 +98,7 @@ class Regression extends PlotBase {
 			this.inputs.resetSubmitButton()
 			this.inputs.mayShowUnivariateCheckbox()
 			this.inputs.mayShowSubmitMsgs()
-		} catch (e) {
+		} catch (e: any) {
 			if (this.inputs.hasError) {
 				// will hide the results ui
 				this.results.main()
@@ -115,7 +124,7 @@ class Regression extends PlotBase {
 		// regression analysis may have multiple
 		// filters (e.g. term filter + restrict ancestry filter)
 		// so track all filters here
-		const filters = []
+		const filters: unknown[] = []
 
 		// term filter
 		if (this.state.termfilter?.filter) filters.push(this.state.termfilter.filter)
@@ -138,7 +147,7 @@ class Regression extends PlotBase {
 
 		// store filters
 		// vocabApi will use getNormalFilter() to remove any empty filters and convert a single entry tvslst into a tvs
-		this.filter = { type: 'tvslst', join: 'and', lst: filters }
+		this.filter = { type: 'tvslst', join: 'and', lst: filters as any } as Filter
 	}
 }
 
@@ -148,12 +157,12 @@ export const componentInit = regressionInit
 
 let _ID_ = 1
 
-export async function getPlotConfig(opts, app, activeCohort) {
+export async function getPlotConfig(opts: any, app: AppApi, activeCohort: number) {
 	// TODO need to supply term filter of app to fillTermWrapper
 	if (!opts.outcome) opts.outcome = mayGetLoneOutcome(opts.regressionType, app, activeCohort)
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
-	const config = { id }
+	const config: any = { id }
 	// without an outcome, config.outcome is left unset rather than "outcome:undefined",
 	// so that the input ui shows a blank outcome pill for user to fill in
 	if (opts.outcome) {
@@ -204,7 +213,7 @@ const coxOutcomeTypes = ['survival', 'condition']
 
 // returns termdbConfig.loneTermByType{} entry for the active cohort, or undefined when the ds has
 // no lone term or the cohort key cannot be determined
-function getLoneTermByType(termdbConfig, activeCohort) {
+function getLoneTermByType(termdbConfig, activeCohort?) {
 	if (!termdbConfig?.loneTermByType) return // no lone term in this dataset
 	// a caller may not know the active cohort (e.g. getPlotConfig() when restoring a session),
 	// in which case the cohort key cannot be determined for a ds with subcohorts
@@ -221,7 +230,7 @@ lone term of one type only proves there is no alternative if the ds has no term 
 at all; that is what allowedTermTypes[] reports. when in doubt "Replace" is kept, as offering it
 needlessly is much less confusing than withholding it while other outcome terms exist
 */
-export function isLoneOutcome(regressionType, termdbConfig, activeCohort) {
+export function isLoneOutcome(regressionType, termdbConfig, activeCohort?) {
 	if (regressionType != 'cox') return false // other methods also accept numeric/categorical terms
 	const byType = getLoneTermByType(termdbConfig, activeCohort)
 	if (!byType) return false
@@ -232,7 +241,7 @@ export function isLoneOutcome(regressionType, termdbConfig, activeCohort) {
 }
 
 export function get_defaultQ4fillTW(regressionType, useCase = '') {
-	const defaultQ = {}
+	const defaultQ: any = {}
 
 	// numeric term
 	defaultQ['numeric'] = regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'discrete' }
@@ -307,7 +316,7 @@ the outcome is filled in here rather than in getPlotConfig(), as "plot_prep" onl
 getPlotConfig() for a config holding nothing but the chart type (see plot_prep in mass/store.ts)
 */
 async function getPrepConfig(regressionType, chartsInstance) {
-	const config = { chartType: 'regression', regressionType, independent: [] }
+	const config: any = { chartType: 'regression', regressionType, independent: [] }
 	const { app, state } = chartsInstance
 	const outcome = mayGetLoneOutcome(regressionType, app, state.activeCohort)
 	if (!outcome) return config

@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { getGeneVariantWildtypeGrp } from '../regression.inputs.term.js'
-import { isLoneOutcome } from '../regression.js'
+import { isLoneOutcome } from '../Regression.ts'
 
 /*
 Tests:
