@@ -121,7 +121,15 @@ read_counts_time <- system.time({
   if (!length(samples)) fail("HDF5 dataset 'samples' contains no samples")
   if (anyNA(geneNames) || any(!nzchar(geneNames))) fail("HDF5 gene identifiers contain missing or empty values")
   if (anyNA(samples) || any(!nzchar(samples))) fail("HDF5 sample identifiers contain missing or empty values")
-  if (anyDuplicated(geneNames)) fail(paste0("HDF5 gene identifiers are duplicated: ", format_examples(geneNames[duplicated(geneNames)])))
+  # NOTE: duplicated geneNames are deliberately allowed. Counts files keyed on gene symbol rather
+  # than Ensembl id repeat the multi-copy loci (Y_RNA, Metazoa_SRP, U3/U6, snoRNAs), and those rows
+  # are distinct features with distinct counts. edgeR is fine with them: geneNames is passed to
+  # DGEList via genes=, so it becomes a y$genes column, not rownames (R only forbids duplicate
+  # row.names on data.frames), and every step after is positional -- verified by running edgeR end
+  # to end with repeated labels. The wilcoxon engine (rust DEanalysis) has no such restriction
+  # either, so re-adding this would reject via edgeR what wilcoxon accepts. Do not "fix" it with a
+  # fail(). The line below is a different matter: duplicated sample ids ARE fatal, because
+  # match(cases, samples) silently takes the first hit and would analyze the wrong column.
   if (anyDuplicated(samples)) fail(paste0("HDF5 sample identifiers are duplicated: ", format_examples(samples[duplicated(samples)])))
 
   # Find indices of case and control samples in the HDF5 file
