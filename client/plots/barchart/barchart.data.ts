@@ -129,7 +129,7 @@ function getCharts(q, data) {
 		seed: `{"values": []}`, // result seed
 		template: templateBar,
 		'=': {
-			idVal(row, /*context*/) {
+			idVal(row, _) {
 				const [chartId, chartVal] = idValFxns[q.term0.type](row.data, q.term0, q.term0_q, data)
 				const [seriesId, seriesVal] = idValFxns[q.term1.type](row.data, q.term1, q.term1_q, data)
 				const [dataId, dataVal] = idValFxns[q.term2.type](row.data, q.term2, q.term2_q, data)
@@ -145,7 +145,7 @@ function getCharts(q, data) {
 			prep(row) {
 				return sample_match_termvaluesetting(row.data, q.filter)
 			},
-			maxSeriesTotal(/*row,*/ context) {
+			maxSeriesTotal(_, context) {
 				let maxSeriesTotal = 0
 				for (const grp of context.self.serieses) {
 					if (grp && grp.total > maxSeriesTotal) {
@@ -154,7 +154,7 @@ function getCharts(q, data) {
 				}
 				return maxSeriesTotal
 			},
-			maxAcrossCharts(/*row,*/context) {
+			maxAcrossCharts(_, context) {
 				let maxAcrossCharts = 0
 				for (const chart of context.self.charts) {
 					if (chart.maxSeriesTotal > maxAcrossCharts) {
@@ -163,7 +163,7 @@ function getCharts(q, data) {
 				}
 				return maxAcrossCharts
 			},
-			boxplot(/*row,*/ context) {
+			boxplot(_, context) {
 				if (!context.self.values || !context.self.values.length) return
 				const values = context.self.values.filter(d => d !== null && !isNaN(d))
 				if (!values.length) return
@@ -178,7 +178,7 @@ function getCharts(q, data) {
 				if (isNaN(stat.sd)) stat.sd = null
 				return stat
 			},
-			numSamples(/*row,*/ context) {
+			numSamples(_, context) {
 				return context.self.samples.size
 			},
 			filterEmptySeries(result) {
