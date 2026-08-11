@@ -32,6 +32,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'correlationVolcano':
 			return await import(`./corrVolcano/CorrelationVolcano.ts`)
 
+		case 'cuminc':
+			return await import(`./cuminc/Cuminc.ts`)
+
 		case 'DEinput':
 			return await import(`./DEinput.ts`)
 
