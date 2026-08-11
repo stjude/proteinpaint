@@ -13,6 +13,9 @@ import { getSeriesTip, htmlLegend, Menu, renderAtRiskG, renderPvalues, sayerror 
 import Partjson from 'partjson'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
+import { defaultSettings } from './settings/defaults.ts'
+import type { CumincSettings } from './settings/Settings.ts'
+import { computeTickValues } from './processData.ts'
 
 /*
 class Cuminc
@@ -35,7 +38,7 @@ export class Cuminc extends PlotBase implements RxComponent {
 	legendRenderer: any
 	legendClick!: (f: any, f2: any, f3: any) => void
 	config: any
-	settings: any
+	settings!: CumincSettings
 	currData: any[] = []
 	uniqueSeriesIds: Set<any> = new Set()
 	tests: { [chartId: string]: any[] } = {}
@@ -1321,38 +1324,6 @@ function setInteractivity(self: any) {
 	}
 }
 
-const defaultSettings = JSON.stringify({
-	controls: {
-		term2: null, // the previous overlay value may be displayed as a convenience for toggling
-		term0: null
-	},
-	cuminc: {
-		minSampleSize: 10, // sent to server-side
-		minAtRisk: 10,
-		atRiskVisible: true,
-		atRiskLabelOffset: -10,
-		seriesTipDecimals: 0,
-		ciVisible: true,
-		radius: 5,
-		fill: '#fff',
-		stroke: '#000',
-		fillOpacity: 0,
-		chartMargin: 10,
-		svgw: 400,
-		svgh: 300,
-		svgPadding: {
-			top: 20,
-			left: 55,
-			right: 20,
-			bottom: 50
-		},
-		axisTitleFontSize: 16,
-		xAxisOffset: 5,
-		yAxisOffset: -5,
-		defaultColor: '#2077b4'
-	}
-})
-
 export async function getPlotConfig(opts: any, app: any) {
 	if (!opts.term) throw 'cuminc: opts.term{} missing'
 	try {
@@ -1377,7 +1348,7 @@ export async function getPlotConfig(opts: any, app: any) {
 	return copyMerge(config, opts)
 }
 
-function getPj(self: any) {
+function getPj(self: any): Partjson {
 	const pj = new Partjson({
 		template: {
 			xMin: '>=x()',
@@ -1521,24 +1492,4 @@ function getPj(self: any) {
 	})
 
 	return pj
-}
-
-function computeTickValues(min: number, max: number): number[] {
-	// compute width between ticks for a maximum of 5 ticks
-	const tickWidth = (max - min) / 5
-	// round tick width to the nearest 5
-	const log = Math.floor(Math.log10(tickWidth))
-	const tickWidth_rnd = Math.round(tickWidth / (5 * 10 ** log)) * (5 * 10 ** log) || 1 * 10 ** log
-	// compute tick values using tick width
-	const tickValues: number[] = []
-	let tick = min
-	while (tick <= Math.min(100, max + tickWidth_rnd)) {
-		// using max + tickWidth_rnd to ensure that
-		// the last tick will be greater than the max
-		// value of the data
-		tickValues.push(tick)
-		tick = tick + tickWidth_rnd
-	}
-	if (!tickValues.includes(0)) tickValues.unshift(0)
-	return tickValues
 }
