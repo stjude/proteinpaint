@@ -14,17 +14,27 @@ Tiles are Zoomify-compatible: geometry is copied from OpenLayers'
 ol/source/Zoomify.js 'default' tier math, so the client's tile requests and this
 script's crop geometry never disagree.
 
-Deps: openslide-python, pillow. Avoid writing non-fatal warnings to stderr (run_python() rejects on any stderr output).
+Formats: anything openslide opens (.svs etc.), plus pyramidal OME-TIFF
+(.ome.tif, e.g. Xenium morphology images) — those use JPEG-2000 TIFF
+compression (34712) that openslide cannot decode, so they are read via
+tifffile (pyramid structure) + PIL (per-tile JP2K decode) instead.
+
+Deps: openslide-python, pillow, tifffile, numpy. Avoid writing non-fatal
+warnings to stderr (run_python() rejects on any stderr output).
 
 Dev usage (bypasses stdin):  python wsi_tile.py --test
 """
 
+import io
 import json
 import math
+import re
 import sys
 import tempfile
 
+import numpy as np
 import openslide
+import tifffile
 from PIL import Image
 
 # huge whole-slide reads must not trip PIL's DecompressionBomb warning, which
@@ -58,10 +68,109 @@ def tile_region(w, h, z, x, y, tile=TILE_SIZE):
     return x0, y0, w0, h0, math.ceil(w0 / ds), math.ceil(h0 / ds)
 
 
+# --- OME-TIFF reader -------------------------------------------------------
+
+class OmeTiffSlide:
+    """Pyramidal OME-TIFF reader exposing the small slice of the OpenSlide API
+    used below (dimensions, level_count, level_downsamples,
+    get_best_level_for_downsample, read_region, properties, close).
+
+    Grayscale uint16 planes (DAPI etc.) are contrast-scaled to 8-bit using a
+    global percentile from the smallest pyramid level, so all tiles brighten
+    uniformly. For a 3D z-stack (e.g. morphology.ome.tif, axes ZYX) the middle
+    z-plane is shown, as it is typically the best-focused one.
+    """
+
+    def __init__(self, path):
+        self._tf = tifffile.TiffFile(path)
+        self._levels = self._tf.series[0].levels
+        self._plane = len(self._levels[0].pages) // 2  # middle z; 0 for 2D
+        # non-first z-planes are TiffFrame objects without tag attributes;
+        # .keyframe carries the geometry, which all planes of a level share
+        base = self._levels[0].pages[self._plane].keyframe
+        self.dimensions = (base.imagewidth, base.imagelength)
+        self.level_count = len(self._levels)
+        self.level_downsamples = [
+            self.dimensions[0] / lvl.pages[self._plane].keyframe.imagewidth for lvl in self._levels
+        ]
+        self.properties = {}
+        for axis, key in (("X", "openslide.mpp-x"), ("Y", "openslide.mpp-y")):
+            m = re.search(r'PhysicalSize%s="([\d.eE+-]+)"' % axis, self._tf.ome_metadata or "")
+            if m:
+                self.properties[key] = m.group(1)
+        self._scale = None  # lazy 8-bit contrast reference
+
+    def close(self):
+        self._tf.close()
+
+    def get_best_level_for_downsample(self, ds):
+        best = 0
+        for i, d in enumerate(self.level_downsamples):
+            if d <= ds + 0.01:
+                best = i
+        return best
+
+    def _decode_tile(self, page, index):
+        count = page.databytecounts[index]
+        if not count:
+            return None  # missing tile = background
+        fh = self._tf.filehandle
+        fh.seek(page.dataoffsets[index])
+        img = Image.open(io.BytesIO(fh.read(count)))  # JP2K codestream
+        img.load()
+        return np.asarray(img)
+
+    def _read_level(self, level, lx, ly, w, h):
+        """(lx,ly,w,h) in level coords -> 2D array, zero-padded at edges."""
+        page = self._levels[level].pages[self._plane]
+        kf = page.keyframe  # geometry lives on the keyframe (see __init__)
+        tw, th = kf.tilewidth, kf.tilelength
+        tiles_across = -(-kf.imagewidth // tw)
+        out = np.zeros((h, w), dtype=kf.dtype)
+        tx0, tx1 = max(0, lx) // tw, max(0, min(lx + w - 1, kf.imagewidth - 1)) // tw
+        ty0, ty1 = max(0, ly) // th, max(0, min(ly + h - 1, kf.imagelength - 1)) // th
+        for tr in range(ty0, ty1 + 1):
+            for tc in range(tx0, tx1 + 1):
+                arr = self._decode_tile(page, tr * tiles_across + tc)
+                if arr is None:
+                    continue
+                x0, y0 = tc * tw, tr * th
+                ix0, iy0 = max(lx, x0), max(ly, y0)
+                ix1 = min(lx + w, x0 + arr.shape[1])
+                iy1 = min(ly + h, y0 + arr.shape[0])
+                if ix1 <= ix0 or iy1 <= iy0:
+                    continue
+                out[iy0 - ly:iy1 - ly, ix0 - lx:ix1 - lx] = arr[iy0 - y0:iy1 - y0, ix0 - x0:ix1 - x0]
+        return out
+
+    def _get_scale(self):
+        if self._scale is None:
+            small = self._levels[-1].pages[self._plane].keyframe
+            arr = self._read_level(self.level_count - 1, 0, 0, small.imagewidth, small.imagelength)
+            p = float(np.percentile(arr, 99.5))
+            self._scale = p if p > 0 else 1.0
+        return self._scale
+
+    def read_region(self, location, level, size):
+        """OpenSlide semantics: location in level-0 coords, size in level coords."""
+        ds = self.level_downsamples[level]
+        lx, ly = int(location[0] / ds), int(location[1] / ds)
+        arr = self._read_level(level, lx, ly, size[0], size[1])
+        if arr.dtype != np.uint8:
+            arr = np.clip(arr.astype(np.float32) * (255.0 / self._get_scale()), 0, 255).astype(np.uint8)
+        return Image.fromarray(arr, "L").convert("RGB")
+
+
+def open_slide(path):
+    if path.lower().endswith((".ome.tif", ".ome.tiff")):
+        return OmeTiffSlide(path)
+    return openslide.OpenSlide(path)
+
+
 # --- jobs ------------------------------------------------------------------
 
 def meta(slide):
-    s = openslide.OpenSlide(slide)
+    s = open_slide(slide)
     try:
         mpp_x = s.properties.get("openslide.mpp-x")
         mpp_y = s.properties.get("openslide.mpp-y")
@@ -76,7 +185,7 @@ def meta(slide):
 
 
 def tile(slide, z, x, y, quality=80):
-    s = openslide.OpenSlide(slide)
+    s = open_slide(slide)
     try:
         reg = tile_region(*s.dimensions, z, x, y)
         if reg is None:

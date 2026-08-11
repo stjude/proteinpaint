@@ -37,6 +37,9 @@ export const api: RouteApi = {
 	}
 }
 
+/** slide formats wsi_tile.py can serve: openslide formats plus pyramidal OME-TIFF */
+const SLIDE_EXT = /\.(svs|ome\.tiff?)$/i
+
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
@@ -62,7 +65,7 @@ function init({ genomes }) {
 				for (const r of rows) {
 					const name = String((r as any).name)
 					const files = await readdir(path.join(base, name)).catch(() => [] as string[])
-					samples.push({ sampleId: name, count: files.filter(f => /\.svs$/i.test(f)).length })
+					samples.push({ sampleId: name, count: files.filter(f => SLIDE_EXT.test(f)).length })
 				}
 				res.status(200).json({ samples } satisfies WsiBySampleResponse)
 				return
@@ -78,7 +81,7 @@ function init({ genomes }) {
 			const fileNames = await readdir(sampleDir).catch(() => [] as string[])
 
 			const images: WsiImage[] = fileNames
-				.filter(f => /\.svs$/i.test(f))
+				.filter(f => SLIDE_EXT.test(f))
 				.map(fileName => ({
 					fileName,
 					// z=0 tile of the slide doubles as a thumbnail; client prepends host
