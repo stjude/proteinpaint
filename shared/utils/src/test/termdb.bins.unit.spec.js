@@ -493,8 +493,8 @@ tape('compute_bins() unbounded', function (test) {
 				startunbounded: true,
 				start: undefined,
 				stop: 22,
-				startinclusive: 1,
-				stopinclusive: 0,
+				startinclusive: true,
+				stopinclusive: false,
 				stopunbounded: true,
 				label: '<22'
 			}
