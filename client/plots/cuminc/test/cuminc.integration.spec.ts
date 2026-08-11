@@ -1,8 +1,8 @@
 import tape from 'tape'
-import * as helpers from '../../test/front.helpers.js'
-import { termjson } from '../../test/testdata/termjson'
-import { select, selectAll } from 'd3-selection'
-import { detectOne, detectGte } from '../../test/test.helpers.js'
+import * as helpers from '../../../test/front.helpers.js'
+import { termjson } from '../../../test/testdata/termjson'
+// import { select, selectAll } from 'd3-selection'
+import { /*detectOne,*/ detectGte } from '../../../test/test.helpers.js'
 
 /*
 Tests:
@@ -80,7 +80,7 @@ tape('term1=Cardiac dysrhythmia', function (test) {
 		test.equal(cumincDiv.selectAll('.sjpcb-cuminc-title').size(), 1, `Should render title above chart`)
 		test.equal(cumincDiv.selectAll('.sjpp-cuminc-atrisk').size(), 1, `Should render 'Number at risk' table below chart`)
 
-		if (test._ok) cuminc.Inner.app.destroy()
+		if (test['_ok']) cuminc.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -130,7 +130,7 @@ tape('term1=Cardiovascular System, filter=ALL', function (test) {
 			'should render 2 cuminc series paths for estimate line and 95% CI area'
 		)
 
-		if (test._ok) plot.Inner.app.destroy()
+		if (test['_ok']) plot.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -182,7 +182,7 @@ tape('term1=Cardiovascular System, term2=agedx', function (test) {
 			else test.pass(`Should display series = '${d.seriesId}' in both legend and 'Number at risk' table`)
 		}
 
-		if (test._ok) cuminc.Inner.app.destroy()
+		if (test['_ok']) cuminc.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -211,7 +211,7 @@ tape('term1=Cardiovascular System, term0=sex', test => {
 		cuminc.on('postRender.test', null)
 
 		const cumincDiv = cuminc.Inner.dom.chartsDiv
-		const term0Values = cuminc.Inner.config.term0.term.values
+		const term0Values: any = cuminc.Inner.config.term0.term.values
 
 		//Test all dom elements present
 		test.equal(
@@ -227,10 +227,11 @@ tape('term1=Cardiovascular System, term0=sex', test => {
 
 		const titleNodes = cumincDiv.selectAll('.sjpcb-cuminc-title').nodes()
 		for (const v of Object.values(term0Values)) {
-			if (!titleNodes.some(d => d.innerText == v.label)) test.fail(`Missing title for term0 value = ${v.label}`)
+			const val = v as any
+			if (!titleNodes.some(d => d.innerText == val.label)) test.fail(`Missing title for term0 value = ${val.label}`)
 		}
 
-		if (test._ok) cuminc.Inner.app.destroy()
+		if (test['_ok']) cuminc.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -327,7 +328,7 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test 
 		const foundNewLabels = numRiskRowLabels.filter(l => cuminc.Inner.uniqueSeriesIds.has(l.__data__.seriesId))
 		test.equal(foundNewLabels.length, expectedCount, `Should update ${expectedCount} labels in Number at risk table`)
 
-		if (test._ok) cuminc.Inner.app.destroy()
+		if (test['_ok']) cuminc.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -410,7 +411,7 @@ tape.skip('term1 = Cardiovascular System, term0 = agedx, numeric regular bins', 
 
 		//TODO: Need data in TermdbTest to process
 
-		// if (test._ok) cuminc.Inner.app.destroy()
+		// if (test['_ok']) cuminc.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -490,7 +491,7 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test =
 		const foundNewLabels = numRiskRowLabels.filter(l => inner.uniqueSeriesIds.has(l.__data__.seriesId))
 		test.equal(foundNewLabels.length, expectedCount, `Should update ${expectedCount} labels in Number at risk table`)
 
-		if (test._ok) inner.app.destroy()
+		if (test['_ok']) inner.app.destroy()
 		test.end()
 	}
 })
@@ -593,7 +594,7 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 
 		test.equal(cumincCurves.length, chartIds2Check.size, `Should update ${chartIds2Check.size} plots`)
 
-		if (test._ok) inner.app.destroy()
+		if (test['_ok']) inner.app.destroy()
 		test.end()
 	}
 })
@@ -629,7 +630,7 @@ tape('skipped series', function (test) {
 		//test.equal(skippedDivs && skippedDivs.size(), 2, 'should render 2 skipped series')
 		test.equal(skippedDivs && skippedDivs.size(), 1, 'should render 1 skipped series')
 
-		if (test._ok) cuminc.Inner.app.destroy()
+		if (test['_ok']) cuminc.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -722,7 +723,8 @@ tape.skip('term1 = Cardiovascular System, term2 = samplelst', function (test) {
 			.nodes()
 			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-atrisk-title')
 
-		for (const grp of Object.values(cuminc.Inner.config.term2.term.values)) {
+		for (const v of Object.values(cuminc.Inner.config.term2.term.values)) {
+			const grp = v as any
 			const findGrpLabel = numRiskRowLabels.some(d => d.__data__.seriesId == grp.key && d.innerHTML == grp.label)
 			if (!findGrpLabel) {
 				test.fail(`Missing group in 'Number at risk' table: group = ${grp.key}, label = ${grp.label}`)
@@ -731,7 +733,7 @@ tape.skip('term1 = Cardiovascular System, term2 = samplelst', function (test) {
 		}
 		if (numGrpLabelFails == 0) test.pass(`All custom groups display`)
 
-		if (test._ok) cuminc.Inner.app.destroy()
+		if (test['_ok']) cuminc.Inner.app.destroy()
 		test.end()
 	}
 })

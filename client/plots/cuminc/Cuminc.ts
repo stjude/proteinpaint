@@ -1,21 +1,16 @@
-import { getCompInit, copyMerge } from '../rx'
-import { controlsInit, renderTerm1Label } from './controls'
-import { getT0T2defaultQ } from './summaryQ.ts'
+import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
+import { controlsInit, renderTerm1Label } from '#plots/controls.js'
+import { getT0T2defaultQ } from '#plots/summaryQ.ts'
 import { fillTermWrapper } from '#termsetting'
 import { select } from 'd3-selection'
-import { sayerror } from '#dom'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisBottom } from 'd3-axis'
-import { line, area, curveStepAfter } from 'd3-shape'
+import { line, area, curveStepAfter, type Line } from 'd3-shape'
 import { rgb } from 'd3-color'
-import htmlLegend from '#dom/html.legend'
+import { getSeriesTip, htmlLegend, Menu, renderAtRiskG, renderPvalues, sayerror } from '#dom'
 import Partjson from 'partjson'
-import { getSeriesTip } from '#dom/svgSeriesTips'
-import { renderAtRiskG } from '#dom/renderAtRisk'
-import { renderPvalues } from '#dom/renderPvalueTable'
-import { Menu } from '#dom/menu'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 
@@ -28,12 +23,32 @@ class Cuminc
 	- no skipped series
 	- no skipped charts
 */
-export class Cuminc extends PlotBase {
+export class Cuminc extends PlotBase implements RxComponent {
 	static type = 'cuminc'
 
-	constructor(opts) {
+	type: string
+	pj: Partjson
+	state: any
+	tip: Menu
+	lineFxn: Line<[number, number]>
+	hidePlotTitle: boolean
+	legendRenderer: any
+	legendClick!: (f: any, f2: any, f3: any) => void
+	config: any
+	settings: any
+	currData: any[] = []
+	uniqueSeriesIds: Set<any> = new Set()
+	tests: { [chartId: string]: any[] } = {}
+	refs: any = {}
+	term2toColor: { [seriesId: string]: { orig: string; rgb: any; adjusted: string } } = {}
+	colorScale: any
+	legendData: any[] = []
+	render: () => void = () => {}
+
+
+	constructor(opts: any, api: ComponentApi) {
 		// this class is instantiated directly, not as an rx component, so there is no plot api
-		super(opts)
+		super(opts, api)
 		this.type = Cuminc.type
 		this.pj = getPj(this)
 		this.state = {
@@ -55,8 +70,8 @@ export class Cuminc extends PlotBase {
 		this.tip = new Menu({ padding: '5px' })
 		this.lineFxn = line()
 			.curve(curveStepAfter)
-			.x(c => c.scaledX)
-			.y(c => c.scaledY)
+			.x((c: any) => c.scaledX)
+			.y((c: any) => c.scaledY)
 
 		this.hidePlotTitle = true
 
@@ -74,7 +89,7 @@ export class Cuminc extends PlotBase {
 		})
 	}
 
-	main(results) {
+	main(results: any) {
 		this.config = structuredClone(this.state.config)
 		if (this.config.term.term.type != 'condition') throw 'cuminc term is not a condition term'
 		this.settings = this.config.settings.cuminc
@@ -87,7 +102,7 @@ export class Cuminc extends PlotBase {
 		this.render()
 	}
 
-	processResults(results) {
+	processResults(results: any) {
 		const chartIds = Object.keys(results)
 		if (chartIds.length != 1) throw 'must be a single chart'
 		const chartId = chartIds[0]
@@ -130,16 +145,16 @@ export class Cuminc extends PlotBase {
 		this.refs = {}
 	}
 
-	setTerm2Color(charts) {
+	setTerm2Color(charts: any) {
 		if (!charts) return
 		if (charts.length != 1) throw 'should be a single chart'
 		const chart = charts[0]
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
-		const legendItems = []
+		const legendItems: any[] = []
 		for (const series of chart.serieses) {
 			const color = this.config.term2?.term.values?.[series.seriesId]?.color
-			const c = {
+			const c: any = {
 				orig: color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
 			}
 			c.rgb = rgb(c.orig)
@@ -174,8 +189,8 @@ export class Cuminc extends PlotBase {
 			} else if (key.startsWith('series')) {
 				// series of test
 				const item = legendItems.find(item => item.seriesId == test[key].id)
-				test[key].color = item.color
-				test[key].text = item.text
+				test[key].color = item!.color
+				test[key].text = item!.text
 			} else {
 				// permutation flag
 				continue
@@ -192,7 +207,37 @@ class MassCumInc
 class MassCumInc extends PlotBase {
 	static type = 'cuminc'
 
-	constructor(opts, api) {
+	type: string
+	chartIncrement = 0
+	loadingWait = 0
+	tip!: Menu
+	pj!: any
+	lineFxn!: any
+	settings: any
+	config: any
+	legendRenderer: any
+	hiddenRenderer: any
+	legendClick: (d: any, x: any, y: any) => void = () => {}
+	hideLegendItem: (d: any) => void = () => {}
+	download: () => void = () => {}
+	render: () => void = () => {}
+	mouseover: (event: any) => void = () => {}
+	mouseout: () => void = () => {}
+	components: { [name: string]: any } = {}
+
+	uniqueSeriesIds: Set<any> = new Set()
+	currData: any[] = []
+	tests: { [chartId: string]: any[] } = {}
+	refs: any = {}
+	noData: string[] = []
+	lowSampleSize: { [chartId: string]: string[] } = {}
+	noEvents: { [chartId: string]: string[] } = {}
+	term2toColor: { [seriesId: string]: { orig: string; rgb: any; adjusted: string } } = {}
+	colorScale: any
+	legendData: any[] = []
+	hiddenData: any[] = []
+
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = MassCumInc.type
 		this.chartIncrement = 0
@@ -201,7 +246,7 @@ class MassCumInc extends PlotBase {
 		this.loadingWait = 0
 	}
 
-	async init(appState) {
+	async init(appState: any) {
 		const opts = this.opts
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
@@ -228,8 +273,8 @@ class MassCumInc extends PlotBase {
 		this.pj = getPj(this)
 		this.lineFxn = line()
 			.curve(curveStepAfter)
-			.x(c => c.scaledX)
-			.y(c => c.scaledY)
+			.x(c => (c as any).scaledX)
+			.y(c => (c as any).scaledY)
 		setInteractivity(this)
 		setRenderers(this)
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
@@ -255,12 +300,12 @@ class MassCumInc extends PlotBase {
 		await this.setControls(appState)
 	}
 
-	async setControls(appState) {
+	async setControls(appState: any) {
 		const config = appState.plots.find(p => p.id === this.id)
 		const controlLabels = config.controlLabels
 		if (!controlLabels) throw 'controls labels not found'
 		if (this.opts.controls) {
-			this.opts.controls.on('downloadClick.cuminc', this.download)
+			;(this.opts.controls as any).on('downloadClick.cuminc', this.download)
 		} else {
 			this.dom.holder
 				.attr('class', 'pp-termdb-plot-viz')
@@ -268,7 +313,7 @@ class MassCumInc extends PlotBase {
 				.style('min-width', '300px')
 				.style('margin-left', '50px')
 
-			const options = []
+			const options: { label: string; value: string }[] = []
 			for (const grade in config.term.term.values) {
 				//Fix for dropdown not displaying options
 				const v = config.term.term.values[grade]
@@ -384,11 +429,11 @@ class MassCumInc extends PlotBase {
 				})
 			}
 
-			this.components.controls.on('downloadClick.cuminc', this.download)
+			;(this.components.controls as any).on('downloadClick.cuminc', this.download)
 		}
 	}
 
-	getState(appState) {
+	getState(appState: any) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
@@ -427,7 +472,7 @@ class MassCumInc extends PlotBase {
 			this.settings.hidden = this.settings.customHidden || this.settings.defaultHidden
 			this.settings.xTitleLabel = 'Years since diagnosis' // TODO: do not harcode time unit (see survival.js)
 			const reqOpts = this.getDataRequestOpts()
-			const results = await this.vocabApi.getNestedChartSeriesData(reqOpts)
+			const results = await this.vocabApi!.getNestedChartSeriesData(reqOpts)
 			if (results.error) throw results.error
 			this.toggleLoadingDiv('none')
 			this.app.vocabApi.syncTermData(this.config, results)
@@ -444,7 +489,7 @@ class MassCumInc extends PlotBase {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
 		const c = this.config
-		const opts = {
+		const opts: any = {
 			chartType: 'cuminc',
 			term: c.term,
 			filter: this.state.termfilter.filter,
@@ -455,8 +500,8 @@ class MassCumInc extends PlotBase {
 		return opts
 	}
 
-	getDefaultHidden() {
-		const hidden = []
+	getDefaultHidden(): string[] {
+		const hidden: string[] = []
 		const term2 = this.config.term2
 		if (!term2) return hidden
 		const hiddenValues = term2.q.hiddenValues
@@ -469,7 +514,7 @@ class MassCumInc extends PlotBase {
 		return hidden
 	}
 
-	processResults(results) {
+	processResults(results: any) {
 		const s = this.settings
 		const c = this.config
 		const estimates = {}
@@ -578,7 +623,7 @@ class MassCumInc extends PlotBase {
 		}
 	}
 
-	sortSerieses(charts) {
+	sortSerieses(charts: any) {
 		if (!charts) return
 		for (const chart of charts) {
 			// sort series of chart by sorting series that are not hidden by
@@ -597,18 +642,18 @@ class MassCumInc extends PlotBase {
 		}
 	}
 
-	setTerm2Color(charts) {
+	setTerm2Color(charts: any) {
 		if (!charts) {
 			this.legendData = []
 			return
 		}
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
-		const legendItems = []
+		const legendItems: any[] = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
 				const color = this.config.term2?.term.values?.[series.seriesId]?.color
-				const c = {
+				const c: any = {
 					orig: color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
 				}
 				c.rgb = rgb(c.orig)
@@ -652,8 +697,8 @@ class MassCumInc extends PlotBase {
 					} else if (key.startsWith('series')) {
 						// series of test
 						const item = legendItems.find(item => item.seriesId == test[key].id)
-						test[key].color = item.color
-						test[key].text = item.text
+						test[key].color = item!.color
+						test[key].text = item!.text
 					} else {
 						// permutation flag
 						continue
@@ -666,7 +711,7 @@ class MassCumInc extends PlotBase {
 	// helper so that 'Loading...' does not flash when not needed;
 	// overrides PlotBase.toggleLoadingDiv(), which also toggles dom.renderedData
 	// that this plot does not have
-	toggleLoadingDiv(display = '') {
+	toggleLoadingDiv(display: string = '') {
 		if (display != 'none') {
 			this.dom.loadingDiv
 				.style('opacity', 0)
@@ -686,7 +731,7 @@ export const cumincInit = getCompInit(MassCumInc)
 // this alias will allow abstracted dynamic imports
 export const componentInit = cumincInit
 
-function setRenderers(self) {
+function setRenderers(self: any) {
 	self.render = function () {
 		const data = self.pj.tree.charts || []
 		if (self.noData?.length) {
@@ -791,7 +836,7 @@ function setRenderers(self) {
 				.select('.pp-cuminc-chartLegends')
 				.style('display', 'inline-block')
 				.append('div')
-				.style('margin-bottom', '30px')
+				.style('margin-bottom', '30px') as any
 			renderPvalues({
 				title: "Group comparisons (Gray's test)",
 				holder,
@@ -799,7 +844,7 @@ function setRenderers(self) {
 				tests: self.tests[chart.chartId],
 				s,
 				bins: self.refs.bins
-			})
+			} as any)
 		}
 
 		if (self.noEvents && chart.chartId in self.noEvents) {
@@ -883,7 +928,7 @@ function setRenderers(self) {
 				tests: self.tests[chart.chartId],
 				s,
 				bins: self.refs.bins
-			})
+			} as any)
 		}
 
 		if (self.noEvents && chart.chartId in self.noEvents) {
@@ -940,7 +985,7 @@ function setRenderers(self) {
 			.data(chart.visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
-		serieses.each(function (series, i) {
+		serieses.each(function (this: any, series: any) {
 			select(this).attr('data-testid', `sjpp-cuminc-series-${series.seriesId || ''}`)
 			renderSeries(select(this), series, s)
 		})
@@ -949,7 +994,7 @@ function setRenderers(self) {
 			.append('g')
 			.attr('class', 'sjpcb-cuminc-series')
 			.attr('data-testid', d => `sjpp-cuminc-series-${d.seriesId || ''}`)
-			.each(function (series, i) {
+			.each(function (this: any, series) {
 				renderSeries(select(this), series, s)
 			})
 
@@ -960,7 +1005,7 @@ function setRenderers(self) {
 			chart,
 			term2toColor: self.term2toColor,
 			onSerieClick: self.legendClick
-		})
+		} as any)
 
 		plotRect
 			.attr('x', 0)
@@ -1087,9 +1132,9 @@ function setRenderers(self) {
 				'd',
 				area()
 					.curve(curveStepAfter)
-					.x(c => c.scaledX)
-					.y0(c => c.scaledY[1])
-					.y1(c => c.scaledY[2])(series.data)
+					.x(c => (c as any).scaledX)
+					.y0(c => (c as any).scaledY[1])
+					.y1(c => (c as any).scaledY[2])(series.data)
 			)
 			.style('display', s.ciVisible ? '' : 'none')
 			.style('fill', self.term2toColor[series.seriesId].adjusted)
@@ -1150,7 +1195,7 @@ function setRenderers(self) {
 	}
 }
 
-function setInteractivity(self) {
+function setInteractivity(self: any) {
 	const labels = {
 		cuminc: 'Cumulative incidence',
 		low: 'Lower 95% CI',
@@ -1249,7 +1294,7 @@ function setInteractivity(self) {
 					menu.hide()
 				})
 		}
-		menu.show(event.clientX, event.clientY)
+		menu.show((event as MouseEvent).clientX, (event as MouseEvent).clientY)
 	}
 
 	self.hideLegendItem = function (d) {
@@ -1302,18 +1347,18 @@ const defaultSettings = JSON.stringify({
 	}
 })
 
-export async function getPlotConfig(opts, app) {
+export async function getPlotConfig(opts: any, app: any) {
 	if (!opts.term) throw 'cuminc: opts.term{} missing'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi, {
 			condition: { mode: 'cuminc' }
-		})
+		} as any)
 		// supply the default q if opts.term0/2.bins/q is undefined
 		// so that the default q does not override bins or q from user
 		if (opts.term2)
-			await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.bins || opts.term2.q ? null : getT0T2defaultQ(true))
+			await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.bins || opts.term2.q ? undefined : getT0T2defaultQ(true))
 		if (opts.term0)
-			await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.bins || opts.term0.q ? null : getT0T2defaultQ(true))
+			await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.bins || opts.term0.q ? undefined : getT0T2defaultQ(true))
 	} catch (e) {
 		throw `${e} [cuminc getPlotConfig()]`
 	}
@@ -1326,7 +1371,7 @@ export async function getPlotConfig(opts, app) {
 	return copyMerge(config, opts)
 }
 
-function getPj(self) {
+function getPj(self: any) {
 	const pj = new Partjson({
 		template: {
 			xMin: '>=x()',
@@ -1388,7 +1433,7 @@ function getPj(self) {
 				const value = self.config.term0.term.values[row.chartId]
 				return value && value.label ? value.label : row.chartId
 			},
-			seriesLabel(row, context) {
+			seriesLabel(/*row,*/ context) {
 				const t2 = self.config?.term2
 				if (!t2) return context.self.seriesId
 				const seriesId = context.self.seriesId
@@ -1408,7 +1453,7 @@ function getPj(self) {
 				if (self.settings.hidden?.includes(row.seriesId)) return
 				return self.settings.ciVisible ? row.high : row.cuminc
 			},
-			xTickValues(row, context) {
+			xTickValues(/*row,*/ context) {
 				const s = self.settings
 				if (s.xTickValues?.length) {
 					// custom x-tick values
@@ -1421,7 +1466,7 @@ function getPj(self) {
 					return computeTickValues(xMin, xMax)
 				}
 			},
-			xScale(row, context) {
+			xScale(/*row,*/ context) {
 				// scale axis according to tick values
 				const s = self.settings
 				const min = Math.min(...context.self.xTickValues)
@@ -1430,11 +1475,11 @@ function getPj(self) {
 					.domain([min, max])
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 			},
-			scaledX(row, context) {
+			scaledX(/*row,*/ context) {
 				const xScale = context.context.context.context.parent.xScale.clamp(false)
 				return xScale(context.self.x)
 			},
-			yTickValues(row, context) {
+			yTickValues(/*row,*/ context) {
 				const s = self.settings
 				if (s.yTickValues?.length) {
 					// custom y-tick values
@@ -1447,7 +1492,7 @@ function getPj(self) {
 					return computeTickValues(yMin, yMax)
 				}
 			},
-			yScale(row, context) {
+			yScale(/*row,*/ context) {
 				// scale axis according to tick values
 				const s = self.settings
 				const min = Math.min(...context.self.yTickValues)
@@ -1456,7 +1501,7 @@ function getPj(self) {
 					.domain([max, min])
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			},
-			scaledY(row, context) {
+			scaledY(/*row,*/ context) {
 				const yScale = context.context.context.context.parent.yScale.clamp(false)
 				const s = context.self
 				return [yScale(s.y), yScale(s.low), yScale(s.high)]
@@ -1472,14 +1517,14 @@ function getPj(self) {
 	return pj
 }
 
-function computeTickValues(min, max) {
+function computeTickValues(min: number, max: number): number[] {
 	// compute width between ticks for a maximum of 5 ticks
 	const tickWidth = (max - min) / 5
 	// round tick width to the nearest 5
 	const log = Math.floor(Math.log10(tickWidth))
 	const tickWidth_rnd = Math.round(tickWidth / (5 * 10 ** log)) * (5 * 10 ** log) || 1 * 10 ** log
 	// compute tick values using tick width
-	const tickValues = []
+	const tickValues: number[] = []
 	let tick = min
 	while (tick <= Math.min(100, max + tickWidth_rnd)) {
 		// using max + tickWidth_rnd to ensure that
