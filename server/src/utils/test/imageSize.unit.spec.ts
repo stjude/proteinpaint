@@ -260,6 +260,11 @@ tape('svg: dimensions from the root tag', test => {
 		/cannot determine its dimensions/,
 		'neither width/height nor viewBox'
 	)
+	test.deepEqual(
+		imageSize(svg('stroke-width="999" data-width="111" viewBox="0 0 50 25"')),
+		{ width: 50, height: 25, type: 'svg' },
+		'hyphenated attributes ending in -width/-height are not mistaken for the root width/height'
+	)
 	test.end()
 })
 
