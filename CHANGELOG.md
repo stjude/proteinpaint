@@ -25,6 +25,7 @@ Fixes:
 DevOps:
 - ppgdc unit tests cover the STAR-Counts tsv parser and the tar reader in dataset/gdc/geneCounts.ts.
 - gsea.py gains an offline selftest (python/test/gsea.unit.spec.js) pinning the infinity wire spelling and the FDR recomputation, and the client GSEAViewModel spec covers the reading half. The two are a cross-language contract whose failure mode is a silently blank column, not an error.
+- dropped the `image-size` dependency, which has a published vulnerability, in favor of an in-house header decoder (server/src/utils/imageSize.ts) for the png/jpeg/gif/svg dimensions the img and regression routes report. Both call sites already hold the file as a Buffer, so the dimensions are now read from that instead of re-reading the file from disk.
 
 
 ## 2.202.0

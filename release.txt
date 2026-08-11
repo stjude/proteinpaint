@@ -1,5 +1,1 @@
-Fixes:
-- server getCategories apply opts.withMnames to gate mname returning to cutdown matrix payload
 
-DevOps:
-- dropped the `image-size` dependency, which has a published vulnerability, in favor of an in-house header decoder (server/src/utils/imageSize.ts) for the png/jpeg/gif/svg dimensions the img and regression routes report. Both call sites already hold the file as a Buffer, so the dimensions are now read from that instead of re-reading the file from disk.
