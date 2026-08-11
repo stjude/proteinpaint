@@ -1,19 +1,19 @@
 import tape from 'tape'
 import { termjson } from '../../../test/testdata/termjson'
 import {
-	getSamplelstTw,
+	/*getSamplelstTw,*/
 	getCategoryGroupsetting,
 	getGeneVariantTw,
 	getGenesetMutTw,
-	getCategoricalTermcollectionTw,
+	getCategoricalTermcollectionTw, 
 	getScctTw,
 	getAgeCollectionFractionTw,
 	getIsoformExpCollectionFractionTw
 } from '../../../test/testdata/data.ts'
 import * as helpers from '../../../test/front.helpers.js'
-import { sleep, detectLst, detectGte, detectOne, Locator } from '../../../test/test.helpers.js'
+import { /*sleep,*/ detectLst, detectGte, detectOne, Locator } from '../../../test/test.helpers.js'
 import { getFilterItemByTag } from '#filter/filter'
-import * as vocabData from '../../../termdb/test/vocabData'
+// import * as vocabData from '../../../termdb/test/vocabData'
 import { hideCategory } from '../barchart.events.js'
 
 /*
@@ -101,9 +101,9 @@ tape('term1=categorical', function (test) {
 	function runTests(barchart) {
 		barchart.on('postRender.test', null)
 		testBarCount(barchart)
-		testAxisDimension(barchart)
-		testAxisTitle(barchart)
-		if (test._ok) barchart.Inner.app.destroy()
+		testAxisDimension(/*barchart*/)
+		testAxisTitle(/*barchart*/)
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -117,13 +117,13 @@ tape('term1=categorical', function (test) {
 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 
-	function testAxisDimension(barchart) {
+	function testAxisDimension(/*barchart*/) {
 		const xAxis = barDiv.select('.sjpcb-bar-chart-x-axis').node()
 		const seriesG = barDiv.select('.bars-series').node()
 		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
 	}
 
-	function testAxisTitle(barchart) {
+	function testAxisTitle(/*barchart*/) {
 		const chartTitle = barDiv.select('[data-testid="sjpp-massbarchart-horizontal-charttitle"]')
 		test.equal(chartTitle.text(), '# of samples (n=60)', 'sample type of barchart should be samples')
 	}
@@ -154,8 +154,8 @@ tape('term1=categorical (no values)', function (test) {
 		barchart.on('postRender.test', null)
 		testTw(barchart)
 		testBarCount(barchart)
-		testAxisDimension(barchart)
-		if (test._ok) barchart.Inner.app.destroy()
+		testAxisDimension(/*barchart*/)
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -177,7 +177,7 @@ tape('term1=categorical (no values)', function (test) {
 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 
-	function testAxisDimension(barchart) {
+	function testAxisDimension(/*barchart*/) {
 		const xAxis = barDiv.select('.sjpcb-bar-chart-x-axis').node()
 		const seriesG = barDiv.select('.bars-series').node()
 		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
@@ -208,9 +208,9 @@ tape('term1=categorical (patient-level)', function (test) {
 	function runTests(barchart) {
 		barchart.on('postRender.test', null)
 		testBarCount(barchart)
-		testAxisDimension(barchart)
-		testAxisTitle(barchart)
-		if (test._ok) barchart.Inner.app.destroy()
+		testAxisDimension(/*barchart*/)
+		testAxisTitle(/*barchart*/)
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -224,13 +224,13 @@ tape('term1=categorical (patient-level)', function (test) {
 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 
-	function testAxisDimension(barchart) {
+	function testAxisDimension(/*barchart*/) {
 		const xAxis = barDiv.select('.sjpcb-bar-chart-x-axis').node()
 		const seriesG = barDiv.select('.bars-series').node()
 		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
 	}
 
-	function testAxisTitle(barchart) {
+	function testAxisTitle(/*barchart*/) {
 		const chartTitle = barDiv.select('[data-testid="sjpp-massbarchart-horizontal-charttitle"]')
 		test.equal(chartTitle.text(), '# of patients (n=62)', 'sample type of barchart should be patients')
 	}
@@ -260,9 +260,9 @@ tape('term1=categorical (relapse-level)', function (test) {
 	function runTests(barchart) {
 		barchart.on('postRender.test', null)
 		testBarCount(barchart)
-		testAxisDimension(barchart)
-		testAxisTitle(barchart)
-		if (test._ok) barchart.Inner.app.destroy()
+		testAxisDimension(/*barchart*/)
+		testAxisTitle(/*barchart*/)
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -276,13 +276,13 @@ tape('term1=categorical (relapse-level)', function (test) {
 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 
-	function testAxisDimension(barchart) {
+	function testAxisDimension(/*barchart*/) {
 		const xAxis = barDiv.select('.sjpcb-bar-chart-x-axis').node()
 		const seriesG = barDiv.select('.bars-series').node()
 		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
 	}
 
-	function testAxisTitle(barchart) {
+	function testAxisTitle(/*barchart*/) {
 		const chartTitle = barDiv.select('[data-testid="sjpp-massbarchart-horizontal-charttitle"]')
 		test.equal(chartTitle.text(), '# of relapse samples (n=10)', 'sample type of barchart should be relapse samples')
 	}
@@ -307,7 +307,7 @@ tape('term1=termCollection categorical', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		testBarCount(barDiv)
 		testBarOrder(barDiv)
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -374,7 +374,7 @@ tape('term1=categorical, term2=defaultbins', function (test) {
 		await triggerUncomputableOverlay(barchart)
 		clickLegendToHideOverlay(barchart)
 		await testHiddenOverlayData(barchart)
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -393,15 +393,15 @@ tape('term1=categorical, term2=defaultbins', function (test) {
 		const legend_rows = barDiv.selectAll('.legend-row')
 		//flag to indicate unordered bars
 		let overlay_ordered = true
-		const legend_ids = []
-		legend_rows.each(d => legend_ids.push(d.dataId))
+		const legend_ids: any[] = []
+		legend_rows.each((d: any) => legend_ids.push(d.dataId))
 		//check if each stacked bar is in same order as legend
 		bars_grp.each(d => {
 			if (!overlay_ordered) return
 			const bar_ids = d.visibleData.map(d => d.dataId)
 			overlay_ordered = legend_ids
 				.filter(id => bar_ids.includes(id))
-				.reduce((bool, id, i) => bool && bar_ids[i] === id, overlay_ordered)
+				.reduce((bool: boolean, id: number, i: number) => bool && bar_ids[i] === id, overlay_ordered)
 		})
 		test.true(overlay_ordered, 'overlay order is same as legend')
 	}
@@ -478,7 +478,7 @@ tape('term0=defaultbins, term1=categorical', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts > 2, 'should have more than 2 charts by Age at Cancer Diagnosis')
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -508,7 +508,7 @@ tape('term1=categorical, term2=categorical (patient-level)', function (test) {
 		barDiv = barchart.Inner.dom.barDiv
 		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
 		testBarCount()
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -548,7 +548,7 @@ tape('term1=categorical (relapse-level), term2=categorical (patient-level)', fun
 		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
 		testBarCount()
 		testAxisTitle()
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -584,7 +584,7 @@ tape('term1=geneVariant with groups', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -612,7 +612,7 @@ tape('term1=geneVariant, term2=geneVariant using region but not gene', function 
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -640,7 +640,7 @@ tape('term1=geneVariant geneset with groups', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts == 1, 'Should have 1 chart from gene variant gene set')
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -668,7 +668,7 @@ tape('term1=categorical, term2=geneVariant', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts == 1, 'Should have 1 chart from categorical + gene variant term')
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -691,7 +691,7 @@ tape('term1=categorical, term2=age collection fraction', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts == 1, 'Should have 1 chart from categorical + age collection fraction')
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -713,7 +713,7 @@ tape('term1=categorical, term2=isoform collection fraction', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts == 1, 'Should have 1 chart from categorical + isoform collection fraction')
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -743,7 +743,7 @@ tape('term1=categorical (patient-level), term2=geneVariant', function (test) {
 		barDiv = barchart.Inner.dom.barDiv
 		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
 		testBarCount()
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -781,7 +781,7 @@ tape('term1=geneExp, term2=geneVariant', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts == 1, 'Should have 1 chart from geneExp + gene variant')
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -810,7 +810,7 @@ tape('term1=geneVariant, term2=geneExp', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -846,7 +846,7 @@ tape('term1=geneExp', function (test) {
 			'Should correctly render a bar chart for a gene expression term = TP53'
 		)
 
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -885,7 +885,7 @@ tape('term1=numeric term2=geneExp with default bins', function (test) {
 			'Should display the correct number of bars and table rows when overlaid by gene expression term.'
 		)
 
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -924,7 +924,7 @@ tape('term1=geneExp, term2=categorical', function (test) {
 			numBarCells.length >= tableRows.length - 1,
 			'Should display the correct number of cells and table rows when gene expression term is overlaid by a categorical term.'
 		)
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -960,7 +960,7 @@ tape('term1=geneExp, term2=categorical (patient-level)', function (test) {
 		barDiv = barchart.Inner.dom.barDiv
 		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
 		testBarCount()
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -1008,7 +1008,7 @@ tape('term1=condition, term2=gene exp with default bins', function (test) {
 			numBarCells.length >= tableRows.length - 1,
 			'Should display the correct number of cells and table rows when gene expression term is overlaid by a conditional term.'
 		)
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1047,7 +1047,7 @@ tape('term1=TP53 gene exp, term2=BCR gene exp, both terms with default bins', fu
 			numBarCells.length == tableRows.length - 1,
 			'Should display the correct number of cells and table rows when gene expression term is overlaid by a gene expression term.'
 		)
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1085,7 +1085,7 @@ tape('term1=categorical, term0=gene exp with default bins', function (test) {
 			8,
 			'Should display the correct number of barcharts when a categorical term is overlaid by a gene expression term.'
 		)
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1094,7 +1094,7 @@ tape('term1=scct', function (test) {
 	test.timeoutAfter(3000)
 
 	const scctTw = getScctTw()
-	scctTw.term.sample.name = 'UMAP'
+	scctTw.term.sample['name'] = 'UMAP'
 
 	runpp({
 		state: {
@@ -1118,7 +1118,7 @@ tape('term1=scct', function (test) {
 
 		const numBarchart = await detectGte({ elem: barDiv.node(), selector: '.pp-bars-svg', count })
 		test.equal(numBarchart.length, count, 'Should display a barchart for a single cell cell type term.')
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1161,7 +1161,7 @@ tape('series visibility - q.hiddenValues', function (test) {
 			bar.settings.cols.length - bar.settings.exclude.cols.length,
 			'should render the correct number of visible bars'
 		)
-		if (test._ok) bar.app.destroy()
+		if (test['_ok']) bar.app.destroy()
 		test.end()
 	}
 })
@@ -1253,7 +1253,7 @@ tape('series visibility - numeric', function (test) {
 	}
 
 	function triggerMenuClickToHide(barchart) {
-		const node = barchart.Inner.dom.holder
+		/*const node =*/ barchart.Inner.dom.holder
 			.selectAll('.bars-cell-grp')
 			.filter(d => d.seriesId == 'not exposed')
 			.node()
@@ -1269,7 +1269,7 @@ tape('series visibility - numeric', function (test) {
 		test.equal(
 			barchart.Inner.dom.legendDiv
 				.selectAll('.sjpp-htmlLegend')
-				.filter(function () {
+				.filter(function (this: any) {
 					return this.innerHTML.includes('not exposed')
 				})
 				.size(),
@@ -1317,7 +1317,7 @@ tape('series visibility and order - condition', function (test) {
 			['0: No condition', '2: Moderate', '3: Severe', '4: Life-threatening'],
 			'should render the bars in the expected order'
 		)
-		if (test._ok) bar.app.destroy()
+		if (test['_ok']) bar.app.destroy()
 		test.end()
 	}
 })
@@ -1361,7 +1361,7 @@ tape('single barchart, categorical filter', function (test) {
 		barDiv = barchart.Inner.dom.barDiv
 		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
 		testBarCount()
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -1414,7 +1414,7 @@ tape('single barchart, categorical filter (patient-level)', function (test) {
 		barDiv = barchart.Inner.dom.barDiv
 		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
 		testBarCount()
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -1467,7 +1467,7 @@ tape('single barchart (relapse-level), categorical filter (patient-level)', func
 		barDiv = barchart.Inner.dom.barDiv
 		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
 		testBarCount()
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -1522,7 +1522,7 @@ tape('single geneExp barchart, categorical filter (patient-level)', function (te
 		barDiv = barchart.Inner.dom.barDiv
 		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
 		testBarCount()
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -1585,7 +1585,7 @@ tape('single barchart (patient-level), compound filter (patient-level + sample-l
 			'1',
 			'should show one bar series that matches filter value'
 		)
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1624,7 +1624,7 @@ tape('genevariant barchart, compound filter', function (test) {
 			2,
 			'should show two bar series'
 		)
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1656,7 +1656,7 @@ tape('single barchart, TP53 mutation dtTerm filter', function (test) {
 			2,
 			'should show two bar series'
 		)
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1711,7 +1711,7 @@ tape('click non-group bar to add filter', function (test) {
 			matchAs: '>='
 		})
 		testTermValues(barchart)
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
@@ -1807,16 +1807,16 @@ tape('click custom categorical group bar to add filter', function (test) {
 		barDiv = barchart.Inner.dom.barDiv
 		helpers
 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
-			.run(triggerBarClick, { wait: 600 })
-			.use(triggerMenuClick, { wait: 500 })
-			.to(testTermValues, { wait: 100 })
+			.run(triggerBarClick, 600)
+			.use(triggerMenuClick, 500)
+			.to(testTermValues, 100)
 			.done(test)
 	}
 
-	let clickedData
-	function triggerBarClick(barchart) {
+	// let clickedData
+	function triggerBarClick(/*barchart*/) {
 		const elem = barDiv.node().querySelector('.bars-cell').querySelector('rect')
-		clickedData = elem.__data__
+		// clickedData = elem.__data__
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
@@ -1829,8 +1829,8 @@ tape('click custom categorical group bar to add filter', function (test) {
 	}
 
 	function testTermValues(barchart) {
-		const config = barchart.Inner.state.config
-		const currData = barchart.Inner.currServerData
+		// const config = barchart.Inner.state.config
+		// const currData = barchart.Inner.currServerData
 		const termfilter = barchart.Inner.app.Inner.state.termfilter
 		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
@@ -2154,7 +2154,7 @@ tape('numeric exclude range', function (test) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(numBars, 8, 'should have 8 bars')
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -2193,14 +2193,14 @@ tape('max number of bins: exceeded', test => {
 	async function runTests(barchart) {
 		barchart.on('postRender.test', null)
 		barDiv = barchart.Inner.dom.barDiv
-		testBarCount(barchart)
+		testBarCount(/*barchart*/)
 		triggerExceedMaxBin(barchart)
 		await testExceedMaxBin(barchart)
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 
-	function testBarCount(barchart) {
+	function testBarCount(/*barchart*/) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(numBars, 22, 'should have 22 age bars')
 	}
@@ -2343,7 +2343,7 @@ tape('minimum sample size', test => {
 		await testBarCount(3, 'with looser filter')
 		test.equal(errDiv.text(), '', 'should have an empty error message')
 		test.equal(errDiv.style('display'), 'none', 'should have a hidden red error div')
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -2387,7 +2387,7 @@ tape('no visible series data, no overlay', function (test) {
 
 		test.equal(await barLoc.shows('.sjpp-hidden-legend-item').length(), 1, 'should show a legend entry')
 
-		if (test._ok) barchart.Inner.app.destroy()
+		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
