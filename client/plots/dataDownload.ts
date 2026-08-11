@@ -1,35 +1,36 @@
-import { getCompInit, copyMerge } from '#rx'
+import type { MassState } from '#mass/types/mass'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '#plots/PlotBase.js'
 import { select } from 'd3-selection'
 import { sayerror } from '../dom/sayerror.ts'
 import { termsettingInit, fillTermWrapper } from '#termsetting'
+import type { ClientGenome } from '../types/clientGenome.ts'
 
-/*
 
-this {}
-	config {}
-		terms []
-			// each element { $id, id, isAtomic, tw, pill }
-			// list of TW tracked in state
-	activeSamples[]
-		{ sample:'1', sampleName:str, <$tid>:Value, ...}
-	genomeObj
-	pillBy$id
-	state{}
-	termdbConfig{}
-*/
-
-class DataDownload extends PlotBase {
+class DataDownload extends PlotBase implements RxComponent{
 	static type = 'dataDownload'
 
-	constructor(opts, api) {
+	type: string
+	config: any
+	activeSamples!: { sample: number, sampleName:string, [index/*<$tid>*/:string]: any}[]
+	genomeObj: ClientGenome
+	pillBy$id: { [tw$id: string]: any } // pill component for each term wrapper
+	state: any
+	termdbConfig: any
+	download: any
+	data: any
+	render!: () => void
+	addTerm!: (this: Element, d: any) => Promise<void>
+	renderTerm!: (this: Element, d: any) => Promise<void>
+
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = DataDownload.type
 		this.genomeObj = opts.app.opts.genome
 		this.pillBy$id = {}
 	}
 
-	async init(appState) {
+	async init(/*appState*/) {
 		setInteractivity(this) // in cases of static viz, you don't use interactivity code
 		setRenderers(this)
 
@@ -47,7 +48,7 @@ class DataDownload extends PlotBase {
 		this.dom.submitNote = this.dom.submitDiv.append('span').style('margin-left', '5px').style('font-style', 'italic')
 	}
 
-	getState(appState, sub) {
+	getState(appState: MassState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
@@ -75,14 +76,14 @@ class DataDownload extends PlotBase {
 			this.mayUpdateSandboxHeader()
 			if (this.mayRequireToken()) return
 			const reqOpts = await this.getDataRequestOpts()
-			this.data = await this.vocabApi.getAnnotatedSampleData(reqOpts)
+			this.data = await this.vocabApi?.getAnnotatedSampleData(reqOpts)
 			this.processData()
 			const n = this.activeSamples.length
 
 			this.dom.submitBtn.property('disabled', n < 1)
 			this.dom.submitNote.html(n ? `${n} samples` : 'no sample data')
 			this.render()
-		} catch (e) {
+		} catch (e: any) {
 			sayerror(this.dom.errordiv, 'Error: ' + (e.error || e))
 			if (e.stack) console.log(e.stack)
 		}
@@ -126,7 +127,7 @@ class DataDownload extends PlotBase {
 	}
 
 	processData() {
-		const { lst, bySampleId } = this.data
+		const { lst } = this.data
 		this.activeSamples = []
 		for (const d of lst) {
 			for (const tw of this.config.terms) {
@@ -138,7 +139,7 @@ class DataDownload extends PlotBase {
 		}
 	}
 
-	async getNewPill(holder, d) {
+	async getNewPill(holder: any, d: any) {
 		const pill = await termsettingInit({
 			placeholder: '+Add variable',
 			holder,
@@ -186,7 +187,7 @@ class DataDownload extends PlotBase {
 	}
 
 	getNoTermPromptOptions() {
-		const lst = []
+		const lst: unknown[] = []
 		if (this.termdbConfig.allowedTermTypes.includes('snplst')) {
 			lst.push({
 				termtype: 'snplst',
@@ -224,7 +225,7 @@ function getTw$id() {
 	return `${$id++}${idSuffix}`
 }
 
-function setRenderers(self) {
+function setRenderers(self: DataDownload) {
 	self.render = function () {
 		// duplicate the array, so as to insert blank term into array
 		const data = self.config.terms.map(tw => {
@@ -243,7 +244,7 @@ function setRenderers(self) {
 		terms.enter().append('div').attr('class', 'sja-data-download-term').each(self.addTerm)
 	}
 
-	self.addTerm = async function (d) {
+	self.addTerm = async function (this: Element, d: any) {
 		const div = select(this)
 			// allow to show blank prompt in a new line, where all selected terms are in one row
 			.style('display', d.tw?.term ? 'inline-block' : 'block')
@@ -261,7 +262,7 @@ function setRenderers(self) {
 		})
 	}
 
-	self.renderTerm = async function (d) {
+	self.renderTerm = async function (this: Element, d: any) {
 		// this should not happen, even empty terms have a pill
 		if (!d.pill) throw `no pill on update renderTerm()`
 
@@ -276,7 +277,7 @@ function setRenderers(self) {
 	}
 }
 
-function setInteractivity(self) {
+function setInteractivity(self: DataDownload) {
 	self.download = async () => {
 		const header = ['sample']
 		for (const tw of self.config.terms) {
@@ -341,7 +342,7 @@ function setInteractivity(self) {
 }
 
 let _ID_ = 1
-export async function getPlotConfig(opts, app) {
+export async function getPlotConfig(opts: any, app: any) {
 	// app = {vocabApi}
 	const id = 'id' in opts ? opts.id : `_DATADOWNLOAD_${_ID_++}`
 	const config = { id, terms: [] }

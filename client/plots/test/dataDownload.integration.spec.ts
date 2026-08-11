@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
-import { select, selectAll } from 'd3-selection'
-import { detectOne, detectGte } from '../../test/test.helpers.js'
+// import { select, selectAll } from 'd3-selection'
+import { /*detectOne,*/ detectGte } from '../../test/test.helpers.js'
 
 /* 
 Tests:
@@ -71,7 +71,7 @@ tape('Data download with no selected terms', test => {
 		)
 		test.ok(ddDom.submitBtn.node().disabled, `Should show Download button as disabled`)
 
-		if (test._ok) dataDownload.Inner.app.destroy()
+		if (test['_ok']) dataDownload.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -124,7 +124,7 @@ tape('Data download with terms selected', test => {
 			`Should render "${dataDownload.Inner.activeSamples.length} samples" next to Download button`
 		)
 
-		if (test._ok) dataDownload.Inner.app.destroy()
+		if (test['_ok']) dataDownload.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -166,7 +166,7 @@ tape('protected dataset', test => {
 			dataDownload.Inner.dom.titleDiv.text().includes('Requires sign-in'),
 			'should not open by default for protected dataset'
 		)
-		if (test._ok) dataDownload.Inner.app.destroy()
+		if (test['_ok']) dataDownload.Inner.app.destroy()
 		test.end()
 	}
 })
