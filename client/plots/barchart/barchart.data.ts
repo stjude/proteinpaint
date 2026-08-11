@@ -25,14 +25,15 @@ export function getBarchartData(_q, data) {
 	return pj.tree.results
 }
 
-function getTrackers() {
-	return {
-		joinFxns: { '': () => '' }, // keys are term0, term1, term2 names; ...
-		numValFxns: { '': () => {} }, // ... if key == empty string then the term is not specified
-		orderedLabels: [],
-		bins: []
-	}
-}
+//*** Unused */
+// function getTrackers() {
+// 	return {
+// 		joinFxns: { '': () => '' }, // keys are term0, term1, term2 names; ...
+// 		numValFxns: { '': () => {} }, // ... if key == empty string then the term is not specified
+// 		orderedLabels: [],
+// 		bins: []
+// 	}
+// }
 
 // template for partjson, already stringified so that it does not
 // have to be re-stringified within partjson refresh for every request
@@ -128,7 +129,7 @@ function getCharts(q, data) {
 		seed: `{"values": []}`, // result seed
 		template: templateBar,
 		'=': {
-			idVal(row, context) {
+			idVal(row, /*context*/) {
 				const [chartId, chartVal] = idValFxns[q.term0.type](row.data, q.term0, q.term0_q, data)
 				const [seriesId, seriesVal] = idValFxns[q.term1.type](row.data, q.term1, q.term1_q, data)
 				const [dataId, dataVal] = idValFxns[q.term2.type](row.data, q.term2, q.term2_q, data)
@@ -209,17 +210,18 @@ function getCharts(q, data) {
 	})
 }
 
-function setDatasetAnnotations(item) {
-	if (item.type == 'tvslst') {
-		for (const subitem of item.lst) {
-			setDatasetAnnotations(subitem)
-		}
-	} else {
-		if (item.tvs.term.type == 'categorical') {
-			item.tvs.valueset = new Set(item.tvs.values.map(i => i.key))
-		}
-	}
-}
+/*** Unused */
+// function setDatasetAnnotations(item) {
+// 	if (item.type == 'tvslst') {
+// 		for (const subitem of item.lst) {
+// 			setDatasetAnnotations(subitem)
+// 		}
+// 	} else {
+// 		if (item.tvs.term.type == 'categorical') {
+// 			item.tvs.valueset = new Set(item.tvs.values.map(i => i.key))
+// 		}
+// 	}
+// }
 
 /* 
 	Arguments: 
@@ -338,7 +340,7 @@ export function getCategoryData(q, data) {
 			prep(row) {
 				return sample_match_termvaluesetting(row.data, q.filter)
 			},
-			idVal(row, context) {
+			idVal(row, /*context*/) {
 				const [id, value] = getCategoricalIdVal(row.data, q.term)
 				return { id: id[0], value }
 			}
