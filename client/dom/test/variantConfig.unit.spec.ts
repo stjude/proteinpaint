@@ -30,6 +30,9 @@ test sections:
 	- variant list stays folded on class change; count ignores selection
 	- gene column for variants of a geneset term
 	- no gene column for a single gene term
+	- selected variant absent from current data is preserved
+	- preserved variant of a class absent from current data
+	- preserved variant with gene
 */
 
 tape('\n', test => {
@@ -902,6 +905,145 @@ tape('no gene column for a single gene term', test => {
 		newConfig.values,
 		[{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D', gene: 'KRAS' }],
 		'label should omit the gene, but the value should still carry it'
+	)
+
+	holder.remove()
+	test.end()
+})
+
+tape('selected variant absent from current data is preserved', test => {
+	const holder = select(document.body).append('div')
+	let newConfig
+
+	// G12D is selected but is not in the current variant list, e.g. because
+	// another filter term excludes all of its samples
+	const currentMnames = mnames.filter(m => m.mname != 'G12D')
+	renderVariantConfig({
+		holder,
+		values,
+		mnames: currentMnames,
+		selectedValues: [{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }],
+		dt: 1,
+		callback: config => (newConfig = config)
+	})
+
+	const section = holder.select('[data-testid="sjpp-variantConfig-mname"]')
+	const trs: any = section.select('tbody').selectAll('tr').nodes()
+	test.equal(trs.length, currentMnames.length + 1, 'preserved variant should be added to the list')
+
+	const preservedTr = trs[trs.length - 1]
+	const tds = preservedTr.querySelectorAll('td')
+	test.deepEqual(
+		[tds[1].textContent, tds[2].textContent, tds[3].textContent],
+		['G12D', 'MISSENSE', '0'],
+		'preserved variant should show a zero sample count'
+	)
+	test.ok(
+		preservedTr.querySelector('[data-testid="sjpp-variantConfig-mname-absent"]'),
+		'preserved variant should be flagged as absent from current data'
+	)
+	test.equal(preservedTr.querySelector('input[type="checkbox"]').checked, true, 'preserved variant should be checked')
+	// only class M is checked, so the frameshift variant is filtered out and
+	// the count is the missense variant plus the preserved one
+	const toggle: any = section.select('div').node()
+	test.ok(toggle.textContent.includes('(2)'), 'toggle count should include the preserved variant')
+	test.equal(window.getComputedStyle(preservedTr).display, 'table-row', 'preserved variant should be visible')
+
+	// applying without touching anything must not widen the selection to the class
+	const applyBtn: any = holder.select('button').node()
+	applyBtn.click()
+	test.deepEqual(
+		newConfig,
+		{
+			values: [{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }],
+			genotype: 'variant',
+			mcount: 'any'
+		},
+		'apply should keep the preserved variant instead of falling back to its class'
+	)
+
+	// unchecking it is a deliberate action and still falls back to the classes
+	preservedTr.querySelector('input[type="checkbox"]').click()
+	applyBtn.click()
+	test.deepEqual(
+		newConfig.values,
+		[{ key: 'M', label: 'MISSENSE', value: 'M' }],
+		'unchecking the preserved variant should fall back to the checked class'
+	)
+
+	holder.remove()
+	test.end()
+})
+
+tape('preserved variant of a class absent from current data', test => {
+	const holder = select(document.body).append('div')
+	let newConfig
+
+	// neither the variant nor its class is present in the current data
+	const otherClasses: TermValues = { F: { key: 'F', label: 'FRAMESHIFT' } }
+	renderVariantConfig({
+		holder,
+		values: otherClasses,
+		mnames: [{ mname: 'K100fs', class: 'F', samplecount: 1 }],
+		selectedValues: [{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }],
+		dt: 1,
+		callback: config => (newConfig = config)
+	})
+
+	// the class is preserved too, so that the variant can be displayed and kept
+	const classTrs: any = holder
+		.select('[data-testid="sjpp-variantConfig-class"]')
+		.select('tbody')
+		.selectAll('tr')
+		.nodes()
+	test.equal(classTrs.length, 2, 'the absent class should be added to the class list')
+	test.equal(classTrs[1].querySelector('input[type="checkbox"]').checked, true, 'the preserved class should be checked')
+
+	const applyBtn: any = holder.select('button').node()
+	applyBtn.click()
+	test.deepEqual(
+		newConfig.values,
+		[{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }],
+		'apply should keep the preserved variant'
+	)
+
+	holder.remove()
+	test.end()
+})
+
+tape('preserved variant with gene', test => {
+	const holder = select(document.body).append('div')
+	let newConfig
+
+	// NRAS G12D is selected but absent from the current data, while
+	// KRAS G12D is present; the two must not be conflated
+	const currentMnames = genesetMnames.filter(m => !(m.gene == 'NRAS' && m.mname == 'G12D'))
+	renderVariantConfig({
+		holder,
+		values,
+		mnames: currentMnames,
+		selectedValues: [{ key: 'M', label: 'NRAS G12D', value: 'G12D', mname: 'G12D', gene: 'NRAS' }],
+		dt: 1,
+		callback: config => (newConfig = config)
+	})
+
+	const section = holder.select('[data-testid="sjpp-variantConfig-mname"]')
+	const trs: any = section.select('tbody').selectAll('tr').nodes()
+	const checked = trs.filter((tr: any) => tr.querySelector('input[type="checkbox"]').checked)
+	test.equal(checked.length, 1, 'only the preserved variant should be checked')
+	const tds = checked[0].querySelectorAll('td')
+	test.deepEqual(
+		[tds[1].textContent, tds[2].textContent],
+		['NRAS', 'G12D'],
+		'the preserved variant should keep its gene'
+	)
+
+	const applyBtn: any = holder.select('button').node()
+	applyBtn.click()
+	test.deepEqual(
+		newConfig.values,
+		[{ key: 'M', label: 'NRAS G12D', value: 'G12D', mname: 'G12D', gene: 'NRAS' }],
+		'apply should keep the preserved gene-scoped variant'
 	)
 
 	holder.remove()
