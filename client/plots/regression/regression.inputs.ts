@@ -1,6 +1,7 @@
 import { select } from 'd3-selection'
 import { InputTerm } from './regression.inputs.term'
 import { make_one_checkbox, Menu } from '#dom'
+import type { ComponentApi } from '#rx'
 
 /*
 outcome and independent are two sections sharing same structure
@@ -49,7 +50,53 @@ const allNonDictionaryTerms = [
 ]
 
 export class RegressionInputs {
-	constructor(opts) {
+	opts: any
+	app: ComponentApi 
+	parent: any
+	initUI!: () => void
+	config!: any
+	state!: any
+	outcome!: {
+		heading: string
+		selectPrompt: string
+		placeholderIcon: string
+		configKey: string
+		limit: number
+		usecase: any
+		inputLst: InputTerm[]
+		dom: any
+	}
+	independent!: {
+		heading: string
+		selectPrompt: string
+		placeholderIcon: string
+		configKey: string
+		limit: number
+		usecase: any
+		inputLst: InputTerm[]
+		dom: any
+	}
+	hasError = false
+	submitMsgs!: { [key: string]: string }
+	dom!: {
+		div?: any
+		body?: any
+		foot?: any
+		submitBtn?: any
+		univariateCheckboxDiv?: any
+		univariateCheckbox?: any
+		submitMsgs?: any
+	}
+	sections!: any[]
+	disable_terms: any[] = []
+	renderSection!: (section: any) => void
+	resetSubmitButton!: () => void
+	mayShowUnivariateCheckbox!: () => void
+	mayShowSubmitMsgs!: () => void
+	editConfig!: (input: any, variable: any) => void
+	submit!: () => void
+
+	constructor(opts: any) {
 		this.opts = opts
 		this.app = opts.app
 		// reference to the parent component's mutable instance (not its API)
@@ -112,7 +159,7 @@ export class RegressionInputs {
 			this.state = this.parent.state
 			this.hasError = false
 			this.setDisableTerms()
-			const updates = []
+			const updates: Promise<any>[] = []
 			for (const section of this.sections) {
 				await this.renderSection(section)
 				for (const input of section.inputLst) {
@@ -156,8 +203,9 @@ export class RegressionInputs {
 		// okay for the array to be empty
 		// need to check if the dataset allows this
 		// if so, add to this array, to be shown as mini menu
-		const lst = []
-		for (const item of structuredClone(allNonDictionaryTerms)) {
+		const lst: unknown[] = []
+		for (const i of structuredClone(allNonDictionaryTerms)) {
+			const item = i as any
 			// TODO do this via vocab api
 			if (!this.state.allowedTermTypes.includes(item.termtype)) {
 				// not allowed by this dataset
@@ -373,13 +421,13 @@ function setRenderers(self) {
 		}
 	}
 
-	async function addInput(input) {
+	async function addInput(this: HTMLElement, input: any) {
 		await input.init(
 			select(this).style('width', 'fit-content').style('margin', '0px 15px 35px 25px').style('padding', '0px 5px')
 		)
 	}
 
-	function removeInput(input) {
+	function removeInput (this: HTMLElement, input){
 		/* NOTE: editConfig deletes this input from the section.inputLst array */
 		input.remove()
 		for (const key in input.dom) {
@@ -472,7 +520,7 @@ function setInteractivity(self) {
 			}
 		}
 
-		const selected = []
+		const selected: unknown[] = []
 		for (const i of input.section.inputLst) {
 			if (i.term) selected.push(i.term)
 		}
