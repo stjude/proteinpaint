@@ -9,6 +9,7 @@ Tests
 	getCategories: mnames partition by dt
 	getCategories: same mname in both origins
 	getCategories: origin bucket without mnames stays empty
+	getCategories: gene of variants in a geneset term
 */
 
 tape('\n', t => {
@@ -189,5 +190,35 @@ tape('getCategories: origin bucket without mnames stays empty', t => {
 	const snvindel = lst.find(e => e.dt == 1)
 	t.deepEqual(snvindel.mnames.byOrigin.somatic, [{ mname: 'G12D', class: 'M', samplecount: 1 }], 'somatic has mname')
 	t.deepEqual(snvindel.mnames.byOrigin.germline, [], 'germline bucket is an empty list')
+	t.end()
+})
+
+tape('getCategories: gene of variants in a geneset term', t => {
+	// a geneVariant term with multiple genes; the same mname in two genes
+	// must be reported as two entries, each with its gene
+	const data = {
+		samples: {
+			1: {
+				sample: 1,
+				[$id]: {
+					values: [
+						{ dt: 1, class: 'M', mname: 'G12D', gene: 'KRAS' },
+						{ dt: 1, class: 'M', mname: 'G12D', gene: 'NRAS' }
+					]
+				}
+			},
+			2: { sample: 2, [$id]: { values: [{ dt: 1, class: 'M', mname: 'G12D', gene: 'KRAS' }] } }
+		}
+	}
+	const [lst] = getCategories(data, getQ(), {}, $id)
+	const snvindel = lst.find(e => e.dt == 1)
+	t.deepEqual(
+		snvindel.mnames,
+		[
+			{ mname: 'G12D', class: 'M', samplecount: 2, gene: 'KRAS' },
+			{ mname: 'G12D', class: 'M', samplecount: 1, gene: 'NRAS' }
+		],
+		'same mname of different genes tallied separately, each with its gene'
+	)
 	t.end()
 })

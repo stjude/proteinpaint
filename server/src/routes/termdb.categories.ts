@@ -73,8 +73,11 @@ export function getCategories(data, q, ds, $id) {
 		// groupsetting is not in use
 		const samples = data.samples as { [sampleId: string]: any }
 		const dtClassMap = new Map()
-		// tally of amino acid changes (m.mname, e.g. "G12D") per dt/origin/class
-		// k: `${dt}|${origin}|${class}|${mname}`, v: { dt, origin, class, mname, samplecount }
+		// tally of amino acid changes (m.mname, e.g. "G12D") per dt/origin/class/gene
+		// k: `mname:${dt}|${origin}|${class}|${gene}|${mname}`
+		// v: { dt, origin, class, gene, mname, samplecount }
+		// gene is tracked so that variants of a geneVariant term with multiple
+		// genes can be told apart, e.g. KRAS G12D vs NRAS G12D
 		const mnameCountMap = new Map()
 		if (ds.assayAvailability?.byDt) {
 			for (const [dtType, _dtValue] of Object.entries(ds.assayAvailability.byDt)) {
@@ -125,9 +128,10 @@ export function getCategories(data, q, ds, $id) {
 				if (value.mname != undefined) {
 					// synthetic WT/Blank rows lack mname, so are naturally skipped
 					const origin = dtClasses.byOrigin ? value.origin : ''
-					const mnameKey = `mname:${value.dt}|${origin}|${value.class}|${value.mname}`
+					const gene = value.gene || ''
+					const mnameKey = `mname:${value.dt}|${origin}|${value.class}|${gene}|${value.mname}`
 					if (!sampleCountedFor.has(mnameKey)) {
-						// count each sample once per dt/origin/class/mname
+						// count each sample once per dt/origin/class/gene/mname
 						sampleCountedFor.add(mnameKey)
 						const entry = mnameCountMap.get(mnameKey)
 						if (entry) entry.samplecount += 1
@@ -136,6 +140,7 @@ export function getCategories(data, q, ds, $id) {
 								dt: value.dt,
 								origin,
 								class: value.class,
+								gene,
 								mname: value.mname,
 								samplecount: 1
 							})
@@ -148,16 +153,22 @@ export function getCategories(data, q, ds, $id) {
 			const mnameEntries = [...mnameCountMap.values()]
 				.filter(e => e.dt == dt)
 				.sort((a, b) => b.samplecount - a.samplecount)
+			// gene is only reported when annotated on the mutation data
+			const formatMname = (e: any) => {
+				const m: any = { mname: e.mname, class: e.class, samplecount: e.samplecount }
+				if (e.gene) m.gene = e.gene
+				return m
+			}
 			if (mnameEntries.length) {
 				if (classes.byOrigin) {
 					const byOrigin: { [origin: string]: any[] } = {}
 					for (const origin of Object.keys(classes.byOrigin)) byOrigin[origin] = []
 					for (const e of mnameEntries) {
-						byOrigin[e.origin]?.push({ mname: e.mname, class: e.class, samplecount: e.samplecount })
+						byOrigin[e.origin]?.push(formatMname(e))
 					}
 					entry.mnames = { byOrigin }
 				} else {
-					entry.mnames = mnameEntries.map(e => ({ mname: e.mname, class: e.class, samplecount: e.samplecount }))
+					entry.mnames = mnameEntries.map(formatMname)
 				}
 			}
 			lst.push(entry)

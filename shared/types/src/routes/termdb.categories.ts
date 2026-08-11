@@ -29,6 +29,9 @@ export type MnameEntry = {
 	mname: string
 	class: string
 	samplecount: number
+	/** gene of this variant, only present when annotated on the mutation data;
+	 * distinguishes variants of a geneVariant term with multiple genes */
+	gene?: string
 }
 
 /** per-dt entry returned for a geneVariant term without groupsetting */

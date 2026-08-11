@@ -15,6 +15,7 @@ Tests:
 	filterByItem: mname with maf filter
 	filterByItem: mname with origin
 	filterByItem: mname mcount single/multiple
+	filterByItem: mname restricted by gene
 	filterByItem: sample not tested
 	filterByItem: wildtype sample matches wildtype filter
 	filterByItem: mutated sample does not match wildtype filter
@@ -351,6 +352,48 @@ test('filterByItem: mname mcount single/multiple', t => {
 	{
 		const [pass] = filterByItem(filterMultiple, mlstOne)
 		t.equal(pass, false, 'mcount=multiple fails with one matching mutation')
+	}
+})
+
+test('filterByItem: mname restricted by gene', t => {
+	// for a geneVariant term with multiple genes, a value entry with .gene
+	// matches the amino acid change only in that gene
+	t.plan(4)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [{ key: 'M', label: 'KRAS G12D', value: 'G12D', mname: 'G12D', gene: 'KRAS' }],
+			genotype: 'variant',
+			mcount: 'any'
+		}
+	}
+	{
+		const mlst = [{ dt: 1, class: 'M', mname: 'G12D', gene: 'KRAS' }]
+		const [pass] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'G12D of the specified gene passes')
+	}
+	{
+		const mlst = [{ dt: 1, class: 'M', mname: 'G12D', gene: 'NRAS' }]
+		const [pass] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'same mname of another gene does not pass')
+	}
+	{
+		// value entry without .gene (e.g. saved before gene was tracked)
+		// matches the mname regardless of gene
+		const filterNoGene = structuredClone(filter)
+		delete filterNoGene.tvs.values[0].gene
+		const mlst = [{ dt: 1, class: 'M', mname: 'G12D', gene: 'NRAS' }]
+		const [pass] = filterByItem(filterNoGene, mlst)
+		t.equal(pass, true, 'value entry without gene matches any gene')
+	}
+	{
+		// values[] collects only the matching gene's mutation
+		const kras = { dt: 1, class: 'M', mname: 'G12D', gene: 'KRAS' }
+		const mlst = [kras, { dt: 1, class: 'M', mname: 'G12D', gene: 'NRAS' }]
+		const values = []
+		filterByItem(filter, mlst, values)
+		t.deepEqual(values, [kras], 'values[] has only the matching gene mutation')
 	}
 })
 

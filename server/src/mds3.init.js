@@ -3279,8 +3279,13 @@ export function filterByItem(filter, mlst, values, tw) {
 				// get mutations in sample that match tvs
 				mlst_intvs = mlst_tested.filter(m => {
 					// a value entry without .mname matches any mutation of its class;
-					// with .mname (e.g. "G12D") it matches only that amino acid change
-					if (tvs.values.some(v => v.key == m.class && (!v.mname || v.mname == m.mname))) {
+					// with .mname (e.g. "G12D") it matches only that amino acid change,
+					// further restricted to .gene when set (for geneset terms)
+					if (
+						tvs.values.some(
+							v => v.key == m.class && (!v.mname || (v.mname == m.mname && (!v.gene || v.gene == m.gene)))
+						)
+					) {
 						// mutation is in tvs
 						if (mayFilterByMaf(tvs.mafFilter, m)) {
 							// mutation passes maf cutoff of tvs

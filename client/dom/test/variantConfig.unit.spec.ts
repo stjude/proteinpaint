@@ -28,6 +28,8 @@ test sections:
 	- variant table cell content
 	- wildtype ignores checked variants
 	- variant list stays folded on class change; count ignores selection
+	- gene column for variants of a geneset term
+	- no gene column for a single gene term
 */
 
 tape('\n', test => {
@@ -827,6 +829,85 @@ tape('variant list stays folded on class change; count ignores selection', test 
 	test.end()
 })
 
+tape('gene column for variants of a geneset term', test => {
+	const holder = select(document.body).append('div')
+	let newConfig
+
+	renderVariantConfig({
+		holder,
+		values,
+		mnames: genesetMnames,
+		dt: 1,
+		callback: config => (newConfig = config)
+	})
+
+	const section = holder.select('[data-testid="sjpp-variantConfig-mname"]')
+	const tr: any = section.select('tbody').select('tr').node()
+	const tds = tr.querySelectorAll('td')
+	test.equal(tds.length, 5, 'row should have a checkbox cell plus 4 data cells')
+	test.deepEqual(
+		[tds[1].textContent, tds[2].textContent, tds[3].textContent, tds[4].textContent],
+		['KRAS', 'G12D', 'MISSENSE', '5'],
+		'cells should show gene, variant, class label and sample count'
+	)
+
+	// check KRAS G12D and NRAS G12D, which share the same amino acid change
+	const mnameCheckboxes: any = section.select('tbody').selectAll('input[type="checkbox"]').nodes()
+	mnameCheckboxes[0].click()
+	mnameCheckboxes[2].click()
+
+	const applyBtn: any = holder.select('button').node()
+	applyBtn.click()
+
+	const expectedConfig = {
+		values: [
+			{ key: 'M', label: 'KRAS G12D', value: 'G12D', mname: 'G12D', gene: 'KRAS' },
+			{ key: 'M', label: 'NRAS G12D', value: 'G12D', mname: 'G12D', gene: 'NRAS' }
+		],
+		genotype: 'variant',
+		mcount: 'any'
+	}
+	test.deepEqual(newConfig, expectedConfig, 'values should carry the gene of each selected variant')
+
+	holder.remove()
+	test.end()
+})
+
+tape('no gene column for a single gene term', test => {
+	const holder = select(document.body).append('div')
+	let newConfig
+
+	// all variants of one gene, the gene column would be redundant
+	const singleGeneMnames = genesetMnames.filter(m => m.gene == 'KRAS')
+	renderVariantConfig({
+		holder,
+		values,
+		mnames: singleGeneMnames,
+		dt: 1,
+		callback: config => (newConfig = config)
+	})
+
+	const section = holder.select('[data-testid="sjpp-variantConfig-mname"]')
+	const tr: any = section.select('tbody').select('tr').node()
+	const tds = tr.querySelectorAll('td')
+	test.equal(tds.length, 4, 'row should have a checkbox cell plus 3 data cells')
+	test.equal(tds[1].textContent, 'G12D', 'first data cell should be the variant')
+
+	const mnameCheckboxes: any = section.select('tbody').selectAll('input[type="checkbox"]').nodes()
+	mnameCheckboxes[0].click()
+	const applyBtn: any = holder.select('button').node()
+	applyBtn.click()
+
+	test.deepEqual(
+		newConfig.values,
+		[{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D', gene: 'KRAS' }],
+		'label should omit the gene, but the value should still carry it'
+	)
+
+	holder.remove()
+	test.end()
+})
+
 /*********
 Variables
 *********/
@@ -843,6 +924,14 @@ const mnames = [
 	{ mname: 'G12D', class: 'M', samplecount: 5 },
 	{ mname: 'G12V', class: 'M', samplecount: 3 },
 	{ mname: 'K100fs', class: 'F', samplecount: 1 }
+]
+
+// amino acid changes of a term with multiple genes, note the same
+// mname is present in two genes
+const genesetMnames = [
+	{ mname: 'G12D', class: 'M', samplecount: 5, gene: 'KRAS' },
+	{ mname: 'G12V', class: 'M', samplecount: 3, gene: 'KRAS' },
+	{ mname: 'G12D', class: 'M', samplecount: 2, gene: 'NRAS' }
 ]
 
 const values2: TermValues = {
