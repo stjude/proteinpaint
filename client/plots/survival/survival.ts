@@ -9,17 +9,11 @@ import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter } from 'd3-shape'
 import { rgb } from 'd3-color'
-import htmlLegend from '#dom/html.legend'
 import Partjson from 'partjson'
-import { rgb2hex } from '#src/client'
 import { fillTermWrapper } from '#termsetting'
-import { Menu } from '#dom/menu'
-import { getSeriesTip } from '#dom/svgSeriesTips'
-import { renderAtRiskG } from '#dom/renderAtRisk'
-import { renderPvalues } from '#dom/renderPvalueTable'
+import { DownloadMenu, getSeriesTip, htmlLegend, Menu, renderAtRiskG, renderPvalues } from '#dom'
 import { downloadChart } from '#common/svg.download'
 import { getCombinedTermFilter } from '#filter'
-import { DownloadMenu } from '#dom/downloadMenu'
 import { isNumericTerm } from '#shared/terms.js'
 
 class TdbSurvival extends PlotBase implements RxComponent {
@@ -492,7 +486,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 				const orig = color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
 				const _rgb = rgb(orig)
 				const adjusted = _rgb.toString()
-				const c = { orig, rgb: _rgb, adjusted, hex: rgb2hex(adjusted) }
+				const c = { orig, rgb: _rgb, adjusted, hex: rgb(adjusted).formatHex() }
 				this.term2toColor[series.seriesId] = c
 
 				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
