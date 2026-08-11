@@ -63,11 +63,12 @@ export type TermdbCumincRequest = {
 export type CumincEstimatePoint = {
 	time: number
 	est: number
-	lower?: number
-	upper?: number
-	nevent?: number
-	ncensor?: number
-	nrisk?: number
+	var: number
+	low: number
+	up: number
+	nrisk: number
+	nevent: number
+	ncensor: number
 }
 
 export type CumincSeriesMap = {
@@ -77,11 +78,12 @@ export type CumincSeriesMap = {
 export type CumincGrayTest = {
 	series1: string
 	series2: string
-	pvalue: string
+	pvalue: number | string
+	permutation: boolean
 }
 
 export type CumincChart = {
-	estimates: CumincSeriesMap
+	estimates?: CumincSeriesMap
 	tests?: CumincGrayTest[]
 	chartId?: string
 	[key: string]: unknown
