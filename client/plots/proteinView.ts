@@ -1,5 +1,5 @@
 import type { MassState, BasePlotConfig } from '#mass/types/mass'
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { axisstyle, to_svg } from '#src/client'
 import { Menu, table2col, LegendCircleReference, addGeneSearchbox, DataPointInteractions, make_radios } from '#dom'
 import { PlotBase } from './PlotBase'
@@ -37,7 +37,7 @@ class ProteinView extends PlotBase implements RxComponent {
 	}
 	components: any
 
-	constructor(opts: any, api) {
+	constructor(opts: any, api: ComponentApi ) {
 		super(opts, api)
 		this.type = ProteinView.type
 		this.components = {}

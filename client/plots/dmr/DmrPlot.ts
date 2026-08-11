@@ -1,5 +1,5 @@
 import { PlotBase } from '../PlotBase.ts'
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { sayerror } from '#dom'
 import type { DmrConfig, DmrDom } from './DmrTypes.ts'
 import { getDefaultDMRSettings } from './settings/defaults.ts'
@@ -9,6 +9,7 @@ import { DmrView } from './view/DmrView.ts'
 
 class DmrPlot extends PlotBase implements RxComponent {
 	static type = 'dmr'
+
 	type = DmrPlot.type
 	declare dom: DmrDom
 	blockInstance: InstanceType<any> | null = null
@@ -17,7 +18,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 	private model!: DmrModel
 	private genomeObj: any
 
-	constructor(opts: any, api: any) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		const wrapper = opts.holder.append('div').style('position', 'relative')
 		const loadingOverlay = wrapper

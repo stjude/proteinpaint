@@ -1,5 +1,5 @@
 import type { MassState, BasePlotConfig } from '#mass/types/mass'
-import { getCompInit, copyMerge, type RxComponent, type AppApi } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type AppApi, type ComponentApi } from '#rx'
 import { PlotBase } from '../PlotBase'
 import { fillTermWrapper } from '#termsetting'
 import { Menu, sayerror } from '#dom'
@@ -36,7 +36,7 @@ export class Volcano extends PlotBase implements RxComponent {
 	view!: VolcanoPlotView
 	termType: string
 
-	constructor(opts: VolcanoOpts, api) {
+	constructor(opts: VolcanoOpts, api: ComponentApi) {
 		super(opts, api)
 		if (this.opts.parentId) this.parentId = this.opts.parentId
 		this.type = Volcano.type

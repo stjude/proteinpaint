@@ -14,7 +14,8 @@ import { controlsInit } from '#plots/controls.js'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	static type = 'grin2'
-	readonly type = 'grin2'
+	
+	type: string
 	dom: GRIN2Dom
 	components: { controls: ComponentApi }
 	private model!: GRIN2Model
@@ -25,9 +26,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 	private inputPanelCollapsed = false
 	private cohortFilterSignature: string | null = null
 
-	constructor(opts: any, api) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
-		this.opts = opts
+		this.type = GRIN2.type
 		this.components = { controls: {} as ComponentApi }
 		opts.holder.classed('sjpp-grin2-main', true)
 		const massControls = opts.holder.append('div').style('display', 'inline-block')

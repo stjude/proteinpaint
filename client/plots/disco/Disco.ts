@@ -1,4 +1,5 @@
-import { getCompInit } from '#rx'
+import { getCompInit, type RxComponent, type ComponentApi } from '#rx'
+import { PlotBase } from '../PlotBase'
 import { DiscoRenderer } from './DiscoRenderer.ts'
 import { DiscoInteractions } from './interactions/DiscoInteractions.ts'
 import { ViewModelMapper } from './viewmodel/ViewModelMapper.ts'
@@ -23,15 +24,12 @@ import { InvalidDataUI } from '#dom'
 import { dtcnv, dtloh } from '#shared/common.js'
 import MutationWaterfallRenderer from './waterfall/MutationWaterfallRenderer.ts'
 
-export default class Disco {
+export default class Disco extends PlotBase implements RxComponent {
 	static type = 'Disco'
 
 	// following attributes are required by rx
-	private type: string
-	private opts: any
-	private state: any
-	private id: any
-	private app: any
+	type: string
+	state: any
 	private features: any
 	private isOpen: boolean
 	private discoInteractions: DiscoInteractions
@@ -42,9 +40,9 @@ export default class Disco {
 	private errorDiv: any
 	private svgDiv: any
 
-	constructor(opts: any) {
-		this.type = 'Disco'
-		this.opts = opts
+	constructor(opts: any, api: ComponentApi) {
+		super(opts, api)
+		this.type = Disco.type
 		this.isOpen = false
 		this.discoInteractions = new DiscoInteractions(this)
 	}

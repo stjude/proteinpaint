@@ -28,7 +28,7 @@ export class Model {
 		const data: ViolinBoxResponse = await this.app.vocabApi.getViolinBox(
 			this.setRequestOpts(),
 			{},
-			this.boxplot.api.getAbortSignal()
+			this.boxplot.api?.getAbortSignal()
 		)
 		return data
 	}

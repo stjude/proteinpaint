@@ -12,6 +12,7 @@ import { RunChart2View } from './view/View.ts'
 
 export class RunChart2 extends PlotBase implements RxComponent {
 	static type = 'runChart2'
+	
 	type: string
 	components: { controls: ComponentApi }
 	dom: any
@@ -20,7 +21,7 @@ export class RunChart2 extends PlotBase implements RxComponent {
 	view!: RunChart2View
 	configTermKeys = ['xtw', 'ytw']
 
-	constructor(opts: any, api: any) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.opts = opts
 		this.api = api

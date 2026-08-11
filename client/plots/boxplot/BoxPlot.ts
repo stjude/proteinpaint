@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getCombinedTermFilter } from '#filter'
@@ -18,6 +18,7 @@ import { isErrorResponse, type TermWrapper } from '#types'
 
 export class TdbBoxplot extends PlotBase implements RxComponent {
 	static type = 'boxplot'
+	
 	type: string
 	components: { controls: any }
 	dom: BoxPlotDom
@@ -25,13 +26,10 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 	interactions?: BoxPlotInteractions
 	private useDefaultSettings = true
 	parentId?: string
-	api: any
 	configTermKeys = ['term', 'term0', 'term2']
 
-	constructor(opts: TdbBoxPlotOpts, api: MassAppApi) {
-		super(opts)
-		this.opts = opts
-		this.api = api
+	constructor(opts: TdbBoxPlotOpts, api: ComponentApi) {
+		super(opts, api)
 		this.type = TdbBoxplot.type
 		this.components = {
 			controls: {}

@@ -67,7 +67,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		return ''
 	}
 
-	constructor(opts, api) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = TdbSurvival.type
 		this.settings = Object.assign({}, opts.settings)

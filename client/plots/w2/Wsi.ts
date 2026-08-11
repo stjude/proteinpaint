@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '../PlotBase'
 import type { BasePlotConfig, MassState } from '#mass/types/mass'
 import type Settings from './Settings.ts'
@@ -22,13 +22,14 @@ type WsiDom = {
 
 class Wsi extends PlotBase implements RxComponent {
 	static type = 'wsi'
-	readonly type = 'wsi'
+	
+	type: string
 	dom: WsiDom
 	interactions?: WsiInteractions
 
-	constructor(opts: any, api) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
-		this.opts = opts
+		this.type = Wsi.type
 		const holder = opts.holder.classed('sjpp-wsi-main', true)
 		const div = holder.append('div').style('padding', '5px')
 		this.dom = {

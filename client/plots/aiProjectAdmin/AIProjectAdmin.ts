@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '../PlotBase'
 import type { MassState } from '#mass/types/mass'
 import { getDefaultAIProjectAdminSettings } from './defaults'
@@ -13,7 +13,8 @@ import { sayerror } from '#dom'
 
 class AIProjectAdmin extends PlotBase implements RxComponent {
 	static type = 'AIProjectAdmin'
-	public type = 'AIProjectAdmin'
+
+	type: string	
 	prjtRepo: ProjectReposity
 	projects?: any[]
 	prjtAdminUI?: ProjectAdminRender
@@ -22,9 +23,9 @@ class AIProjectAdmin extends PlotBase implements RxComponent {
 		[name: string]: any
 	}
 
-	constructor(opts: any, api) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
-		this.opts = opts
+		this.type = AIProjectAdmin.type
 		this.dom = {
 			holder: opts.holder,
 			errorDiv: opts.holder.append('div').style('margin', '3px').attr('class', 'sjpp-ai-prjt-admin-error')

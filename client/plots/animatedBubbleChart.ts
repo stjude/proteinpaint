@@ -1,5 +1,5 @@
 import type { MassState, BasePlotConfig } from '#mass/types/mass'
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from './PlotBase'
 import { Menu, Tabs } from '#dom'
 import { dofetch3 } from '#common/dofetch'
@@ -59,6 +59,7 @@ type Bubble = {
 
 class AnimatedBubbleChart extends PlotBase implements RxComponent {
 	static type = 'animatedBubbleChart'
+
 	type: string
 	dom!: { holder: any; controls: any; body: any; tip: Menu; header?: any }
 	components: any
@@ -107,7 +108,7 @@ class AnimatedBubbleChart extends PlotBase implements RxComponent {
 		return Math.max(50, this.contentBbox.maxY - this.contentBbox.minY + 2 * this.BBOX_PAD)
 	}
 
-	constructor(opts: any, api) {
+	constructor(opts: any, api: ComponentApi ) {
 		super(opts, api)
 		this.type = AnimatedBubbleChart.type
 		this.components = {}

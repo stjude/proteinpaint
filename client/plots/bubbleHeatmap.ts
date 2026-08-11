@@ -1,5 +1,5 @@
 import type { MassState, BasePlotConfig } from '#mass/types/mass'
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from './PlotBase'
 import { Menu, addGeneSearchbox, LegendCircleReference } from '#dom'
 import { dofetch3 } from '#common/dofetch'
@@ -22,6 +22,7 @@ const NEG_LOG_FDR_CAP = 10
 
 class BubbleHeatmap extends PlotBase implements RxComponent {
 	static type = 'bubbleHeatmap'
+
 	type: string
 	dom!: { holder: any; body: any; tip: Menu; header?: any }
 	components: any
@@ -30,7 +31,7 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 	useAdjusted = false
 	gridHolder: any
 
-	constructor(opts: any, api) {
+	constructor(opts: any, api: ComponentApi ) {
 		super(opts, api)
 		this.type = BubbleHeatmap.type
 		this.components = {}
