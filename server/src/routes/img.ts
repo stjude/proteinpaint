@@ -2,7 +2,7 @@ import type { RoutePayload, imgResponse, RouteApi } from '#types'
 import path from 'path'
 import fs from 'fs'
 import * as utils from '#src/utils.js'
-import { imageSize } from 'image-size'
+import { imageSize } from '#src/utils/imageSize.ts'
 
 const payload: RoutePayload = {
 	init,
@@ -34,7 +34,7 @@ async function sendImage(req, res) {
 		if (e) throw 'invalid image file'
 		const data = await fs.promises.readFile(file)
 		const ext = path.extname(file).substring(1)
-		const { width, height } = imageSize(file)
+		const { width, height } = imageSize(data)
 		const image: imgResponse = {
 			src: `data:image/${ext};base64,${Buffer.from(data).toString('base64')}`,
 			size: `${width}x${height}`
