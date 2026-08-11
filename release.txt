@@ -1,1 +1,2 @@
-
+Fixes:
+- GDC BAM slice download will not save 403 error text as a .bam file
