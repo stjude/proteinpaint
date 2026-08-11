@@ -1340,6 +1340,10 @@ function mayGetCategories(data, q, ds) {
 	if (!twLst.length) return
 	const categories = {}
 	for (const tw of twLst) {
+		// deliberately not asking for the mname tally (withMnames): this runs for
+		// every geneVariant term of every data request and the result is attached
+		// to the response, where no consumer reads mnames. only the
+		// termdb/categories route needs them, for the term-editing UIs
 		const [lst, orderedLabels] = getCategories(data, { tw }, ds, tw.$id)
 		categories[tw.$id] = { lst, orderedLabels }
 	}

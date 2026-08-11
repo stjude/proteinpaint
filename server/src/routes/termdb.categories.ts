@@ -59,14 +59,21 @@ async function trigger_getcategories(
 
 	const data = await getData(arg, ds)
 	if (data.error) throw data.error
-	const [lst, orderedLabels] = getCategories(data, q, ds, $id)
+	// only this route serves the term-editing UIs that list amino acid changes,
+	// so it is the only caller that asks for the mname tally
+	const [lst, orderedLabels] = getCategories(data, q, ds, $id, { withMnames: true })
 	res.send({
 		lst: lst as any,
 		orderedLabels: orderedLabels as any
 	} satisfies CategoriesResponse)
 }
 
-export function getCategories(data, q, ds, $id) {
+/* opts.withMnames: tally the amino acid changes of each dt, in addition to the
+mutation classes. Off by default because getData() calls this for every
+geneVariant term of every matrix/barchart request (see mayGetCategories() in
+termdb.matrix.js), where the mname list is unused and can be large: it holds one
+entry per distinct dt/origin/class/gene/mname of the cohort */
+export function getCategories(data, q, ds, $id, opts: { withMnames?: boolean } = {}) {
 	const lst: any[] = []
 	if (q.tw.term.type == 'geneVariant' && q.tw.q.type != 'predefined-groupset' && q.tw.q.type != 'custom-groupset') {
 		// specialized data processing for geneVariant term when
@@ -125,7 +132,7 @@ export function getCategories(data, q, ds, $id) {
 						dtClasses[value.class] += 1
 					}
 				}
-				if (value.mname != undefined) {
+				if (opts.withMnames && value.mname != undefined) {
 					// synthetic WT/Blank rows lack mname, so are naturally skipped
 					const origin = dtClasses.byOrigin ? value.origin : ''
 					const gene = value.gene || ''
@@ -148,17 +155,17 @@ export function getCategories(data, q, ds, $id) {
 				}
 			}
 		}
+		// gene is only reported when annotated on the mutation data
+		const formatMname = (e: any) => {
+			const m: any = { mname: e.mname, class: e.class, samplecount: e.samplecount }
+			if (e.gene) m.gene = e.gene
+			return m
+		}
 		for (const [dt, classes] of dtClassMap) {
 			const entry: any = { dt, classes }
-			const mnameEntries = [...mnameCountMap.values()]
-				.filter(e => e.dt == dt)
-				.sort((a, b) => b.samplecount - a.samplecount)
-			// gene is only reported when annotated on the mutation data
-			const formatMname = (e: any) => {
-				const m: any = { mname: e.mname, class: e.class, samplecount: e.samplecount }
-				if (e.gene) m.gene = e.gene
-				return m
-			}
+			const mnameEntries = opts.withMnames
+				? [...mnameCountMap.values()].filter(e => e.dt == dt).sort((a, b) => b.samplecount - a.samplecount)
+				: []
 			if (mnameEntries.length) {
 				if (classes.byOrigin) {
 					const byOrigin: { [origin: string]: any[] } = {}

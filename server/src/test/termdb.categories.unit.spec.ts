@@ -10,6 +10,7 @@ Tests
 	getCategories: same mname in both origins
 	getCategories: origin bucket without mnames stays empty
 	getCategories: gene of variants in a geneset term
+	getCategories: mnames are omitted without withMnames
 */
 
 tape('\n', t => {
@@ -40,7 +41,7 @@ tape('getCategories: geneVariant classes and mnames tally', t => {
 			6: { sample: 6, [$id]: { values: [{ dt: 4, class: 'CNV_amp' }] } }
 		}
 	}
-	const [lst] = getCategories(data, getQ(), {}, $id)
+	const [lst] = getCategories(data, getQ(), {}, $id, { withMnames: true })
 	const snvindel = lst.find(e => e.dt == 1)
 	t.deepEqual(snvindel.classes, { M: 3, F: 1, WT: 1 }, 'classes tallied per sample')
 	t.deepEqual(
@@ -81,7 +82,7 @@ tape('getCategories: geneVariant tally with byOrigin', t => {
 			}
 		}
 	}
-	const [lst] = getCategories(data, getQ(), ds, $id)
+	const [lst] = getCategories(data, getQ(), ds, $id, { withMnames: true })
 	const snvindel = lst.find(e => e.dt == 1)
 	t.deepEqual(
 		snvindel.mnames.byOrigin,
@@ -109,7 +110,7 @@ tape('getCategories: mname sample-level dedupe', t => {
 			}
 		}
 	}
-	const [lst] = getCategories(data, getQ(), {}, $id)
+	const [lst] = getCategories(data, getQ(), {}, $id, { withMnames: true })
 	const snvindel = lst.find(e => e.dt == 1)
 	t.deepEqual(snvindel.mnames, [{ mname: 'G12D', class: 'M', samplecount: 1 }], 'sample counted once per mname')
 	t.end()
@@ -130,7 +131,7 @@ tape('getCategories: mnames partition by dt', t => {
 			}
 		}
 	}
-	const [lst] = getCategories(data, getQ(), {}, $id)
+	const [lst] = getCategories(data, getQ(), {}, $id, { withMnames: true })
 	const snvindel = lst.find(e => e.dt == 1)
 	const fusion = lst.find(e => e.dt == 2)
 	t.deepEqual(snvindel.mnames, [{ mname: 'G12D', class: 'M', samplecount: 1 }], 'snvindel entry has only its mname')
@@ -157,7 +158,7 @@ tape('getCategories: same mname in both origins', t => {
 			}
 		}
 	}
-	const [lst] = getCategories(data, getQ(), ds, $id)
+	const [lst] = getCategories(data, getQ(), ds, $id, { withMnames: true })
 	const snvindel = lst.find(e => e.dt == 1)
 	t.deepEqual(
 		snvindel.mnames.byOrigin,
@@ -186,10 +187,46 @@ tape('getCategories: origin bucket without mnames stays empty', t => {
 			}
 		}
 	}
-	const [lst] = getCategories(data, getQ(), ds, $id)
+	const [lst] = getCategories(data, getQ(), ds, $id, { withMnames: true })
 	const snvindel = lst.find(e => e.dt == 1)
 	t.deepEqual(snvindel.mnames.byOrigin.somatic, [{ mname: 'G12D', class: 'M', samplecount: 1 }], 'somatic has mname')
 	t.deepEqual(snvindel.mnames.byOrigin.germline, [], 'germline bucket is an empty list')
+	t.end()
+})
+
+tape('getCategories: mnames are omitted without withMnames', t => {
+	// the mname tally is opt-in, so that data requests (which call this for
+	// every geneVariant term and never read mnames) do not carry it
+	const data = {
+		samples: {
+			1: {
+				sample: 1,
+				[$id]: {
+					values: [
+						{ dt: 1, class: 'M', mname: 'G12D', gene: 'KRAS' },
+						{ dt: 1, class: 'WT' }
+					]
+				}
+			}
+		}
+	}
+	{
+		const [lst] = getCategories(data, getQ(), {}, $id)
+		const snvindel = lst.find(e => e.dt == 1)
+		t.deepEqual(snvindel.classes, { M: 1, WT: 1 }, 'classes are tallied as usual')
+		t.equal('mnames' in snvindel, false, 'no mnames property by default')
+	}
+	{
+		const ds = { assayAvailability: { byDt: { 1: { byOrigin: { germline: {}, somatic: {} } } } } }
+		const originData = {
+			samples: {
+				1: { sample: 1, [$id]: { values: [{ dt: 1, class: 'M', mname: 'G12D', origin: 'somatic' }] } }
+			}
+		}
+		const [lst] = getCategories(originData, getQ(), ds, $id)
+		const snvindel = lst.find(e => e.dt == 1)
+		t.equal('mnames' in snvindel, false, 'no mnames property by default, byOrigin dataset')
+	}
 	t.end()
 })
 
@@ -210,7 +247,7 @@ tape('getCategories: gene of variants in a geneset term', t => {
 			2: { sample: 2, [$id]: { values: [{ dt: 1, class: 'M', mname: 'G12D', gene: 'KRAS' }] } }
 		}
 	}
-	const [lst] = getCategories(data, getQ(), {}, $id)
+	const [lst] = getCategories(data, getQ(), {}, $id, { withMnames: true })
 	const snvindel = lst.find(e => e.dt == 1)
 	t.deepEqual(
 		snvindel.mnames,
