@@ -97,13 +97,13 @@ export default function barsRenderer(barsapp: any, holder: any) {
 	let chartTitle
 	let svg, mainG, series, collabels, rowlabels
 	let axisG, yAxis, yTitle, yLine, xAxis, xTitle, xLine
-	let currCell, currRects, currRowTexts, currColTexts
+	let currCell, /*currRects,*/ currRowTexts, currColTexts
 	let defaults //will have key values in init
 	let currserieses: any[] = []
 	let prevBox
 
 	function main(_chart) {
-		let prevOrientation = hm.orientation
+		const prevOrientation = hm.orientation
 		chart = _chart
 		Object.assign(hm, chart.settings)
 		hm.handlers = chart.handlers
@@ -156,7 +156,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 		r.each(updateRowLabel)
 		r.enter().append('g').each(addRowLabel)
 
-		currRects = series.selectAll('rect')
+		// currRects = series.selectAll('rect')
 		currColTexts = collabels.selectAll('text')
 		hm.delay = 0.35 * hm.duration
 		renderAxes(hm, prevOrientation, chart.visibleTotal)
@@ -245,7 +245,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 			delay: 0
 		}
 
-		for (let key in defaults) {
+		for (const key in defaults) {
 			if (!(key in hm) || key == 'cols' || key == 'rows') hm[key] = defaults[key]
 		}
 
@@ -548,7 +548,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 	}
 
 	function colLabelsTransform() {
-		let x = 5 + hm.colspace
+		const x = 5 + hm.colspace
 		let y = hm.colheadtop ? /*hm.collabelh -*/ hm.borderwidth + 1 : hm.svgh - hm.collabelh + 25
 		if (hm.legendontop) y += hm.legendh
 		return 'translate(' + x + ',' + y + ')'
@@ -788,7 +788,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 
 		const scale = hm.unit == 'log' ? scaleLog() : scaleLinear()
 		scale.domain(domain).range(range)
-		const tickFormatter = hm.unit == 'log' ? v => formatter(Math.pow(10, v)) : formatter
+		// const tickFormatter = hm.unit == 'log' ? v => formatter(Math.pow(10, v)) : formatter
 		if (hm.unit == 'log') {
 			const values = [1]
 			for (let i = 1; i < Math.log10(max); i++) {

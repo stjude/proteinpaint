@@ -1,9 +1,8 @@
 import { Menu, renderTable, type TableRow } from '#dom'
-import { dofetch3 } from '#common/dofetch'
+// import { dofetch3 } from '#common/dofetch'
 import { mclass, dt2label } from '#shared/common.js'
-import { /*newpane,*/ export_data } from '#src/client'
-import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '#filter'
-import type { Filter } from '#types'
+// import { /*newpane,*/ export_data } from '#src/client'
+import { filterJoin, getFilterItemByTag, /*getNormalRoot,*/ findItemByTermId, /*normalizeProps*/ } from '#filter'
 import { rgb } from 'd3-color'
 import { create } from 'd3-selection'
 import { roundValueAuto } from '#shared/roundValue.js'
@@ -324,7 +323,7 @@ function handleLegendClick(target, self) {
 			.text('Show all')
 			.on('click', () => {
 				menu.hide()
-				const config = {}
+				// const config = {}
 				const tw = structuredClone(term)
 				delete tw.q.hiddenValues
 
