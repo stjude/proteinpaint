@@ -405,7 +405,7 @@ class Facet extends PlotBase implements RxComponent{
 		const tmpStrings: string[] = []
 		for (const col of cols) {
 			const c = col.split(' to ')
-			const cx = c[0].replace(/[\>\≥\<\≤]/g, '')
+			const cx = c[0].replace(/[>≥<≤]/g, '')
 			const x = Number(cx)
 			if (!isNaN(x)) {
 				const key =
