@@ -30,7 +30,7 @@ TODOs:
 const runpp = helpers.getRunPp('mass', {
 	state: {
 		nav: {
-			header_mode: 'hide_search',
+			header_mode: 'hidden',
 			activeTab: 1
 		},
 		dslabel: 'TermdbTest',
@@ -570,10 +570,10 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 		const config = structuredClone(inner.config)
 
 		//Plot
-		const chartIds2Check = new Set()
+		const chartIds2Check = new Set<string>()
 		const cumincCurves = await detectGte({
 			target: div.node(),
-			selector: 'g.sjpcb-cuminc-mainG',
+			selector: '.sjpcb-cuminc-title',
 			async trigger() {
 				config.term0.q.lst[0] = { startunbounded: true, stop: 15, stopinclusive: false, label: '<15' }
 				config.term0.q.lst[1] = { start: 15, startinclusive: false, stopunbounded: true, label: '>15' }
@@ -584,11 +584,10 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 					config
 				})
 			},
-			matcher(mutations) {
-				const changedSeries = mutations.filter(
-					m => m.attributeName == 'transform' && chartIds2Check.has(m.target.__data__.chartId)
-				)
-				if (changedSeries.length >= chartIds2Check.size) return changedSeries.map(d => d.target)
+			matcher() {
+				const titleNodes = div.selectAll('.sjpcb-cuminc-title').nodes()
+				const found = titleNodes.filter(d => chartIds2Check.has((d.textContent || '').trim()))
+				if (found.length >= chartIds2Check.size) return found
 			}
 		})
 
