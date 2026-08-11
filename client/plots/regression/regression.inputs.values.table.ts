@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { getDefaultViolinSettings } from '#plots/violin.js'
-import { appInit } from '#plots/plot.app'
+import { appInit } from '#plots/plot.app.js'
 
 /*
 	dom elements for values table

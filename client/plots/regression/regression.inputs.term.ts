@@ -516,24 +516,24 @@ export class InputTerm {
 	}
 
 	renderInteractionOptions() {
-		const self = this
-		self.dom.tip.clear().showunder(self.dom.interactionDiv.node())
-		if (self.parent.config.includeUnivariate) {
-			const label = self.parent.dom.univariateCheckboxDiv.select('label').text().trim()
-			self.dom.tip.d.append('div').text(`Cannot add interactions. Please uncheck the "${label}" checkbox.`)
+		const self = this // captured for function() callbacks where 'this' is rebound to DOM element
+		this.dom.tip.clear().showunder(this.dom.interactionDiv.node())
+		if (this.parent.config.includeUnivariate) {
+			const label = this.parent.dom.univariateCheckboxDiv.select('label').text().trim()
+			this.dom.tip.d.append('div').text(`Cannot add interactions. Please uncheck the "${label}" checkbox.`)
 			return
 		}
-		self.dom.tip.d
+		this.dom.tip.d
 			.append('div')
 			.style('padding', '5px')
 			.style('font-size', '0.8em')
 			.style('color', 'rgb(153, 153, 153)')
 			.html(`Selected variables will each form pairwise interaction with ${this.term.term.name}`)
 
-		self.dom.tip.d
+		this.dom.tip.d
 			.append('div')
 			.selectAll('div')
-			.data(self.parent.config.independent.filter(tw => tw && tw.$id != self.term.$id && tw.q.mode != 'spline'))
+			.data(this.parent.config.independent.filter(tw => tw && tw.$id != this.term.$id && tw.q.mode != 'spline'))
 			.enter()
 			.append('div')
 			.style('margin', '5px')
@@ -547,22 +547,23 @@ export class InputTerm {
 				elem.append('span').text(' ' + tw.term.name)
 			})
 
-		self.dom.tip.d
+		this.dom.tip.d
 			.append('button')
 			.text('Apply')
 			.style('margin', '5px')
 			.on('click', () => {
-				self.dom.tip.hide()
-				self.term.interactions = []
-				self.dom.tip.d.selectAll('input').each(function (tw: any) {
+				this.dom.tip.hide()
+				this.term.interactions = []
+				this.dom.tip.d.selectAll('input').each(function (tw: any) {
 					if (select(this).property('checked')) self.term.interactions.push(tw.$id)
 				})
-				for (const tw of self.parent.config.independent) {
+				for (const tw of this.parent.config.independent) {
 					const interactions = new Set(tw.interactions)
-					self.term.interactions.includes(tw.$id) ? interactions.add(self.term.$id) : interactions.delete(self.term.$id)
+					if (this.term.interactions.includes(tw.$id)) interactions.add(this.term.$id)
+					else interactions.delete(this.term.$id)
 					tw.interactions = [...interactions]
 				}
-				self.parent.editConfig(self, self.term)
+				this.parent.editConfig(this, this.term)
 			})
 	}
 }
