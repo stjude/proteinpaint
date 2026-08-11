@@ -21,8 +21,27 @@ interface Entries {
 	label: string
 }
 
+/** number of samples per mutation class, k: mclass key (e.g. "M") */
+type DtClasses = { [mclass: string]: number }
+
+/** an amino acid change (e.g. "G12D") and its sample count, within a mutation class */
+export type MnameEntry = {
+	mname: string
+	class: string
+	samplecount: number
+}
+
+/** per-dt entry returned for a geneVariant term without groupsetting */
+export type GvCategoryEntry = {
+	dt: number
+	classes: DtClasses | { byOrigin: { [origin: string]: DtClasses } }
+	/** amino acid changes present for this dt, sorted by descending sample count;
+	 * only present when mutation data carries mname */
+	mnames?: MnameEntry[] | { byOrigin: { [origin: string]: MnameEntry[] } }
+}
+
 export type CategoriesResponse = {
-	lst: Entries[]
+	lst: Entries[] | GvCategoryEntry[]
 	orderedLabels?: []
 }
 
@@ -66,6 +85,24 @@ export const termdbCategoriesPayloadExamples = {
 						]
 					}
 				} // satisfies CategoriesRequest // TODO: use the type definition
+			},
+			response: {
+				header: { status: 200 }
+			}
+		},
+		{
+			// geneVariant term without groupsetting, returns per-dt entries
+			// with classes and mnames (amino acid changes), see GvCategoryEntry
+			request: {
+				body: {
+					genome: 'hg38-test',
+					dslabel: 'TermdbTest',
+					embedder: 'localhost',
+					tw: {
+						term: { type: 'geneVariant', name: 'TP53', genes: [{ kind: 'gene', gene: 'TP53' }] },
+						q: { type: 'values' }
+					}
+				}
 			},
 			response: {
 				header: { status: 200 }

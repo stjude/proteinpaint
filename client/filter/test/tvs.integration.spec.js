@@ -924,11 +924,14 @@ tape('tvs: Gene Variant - SNV/indel', async test => {
 		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
 
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
-		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 2, 'Should have a checkbox for each value')
-		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
+		// mutation classes are listed in the class section, separate from the
+		// specific variants (amino acid changes) section
+		const classDiv = tipd.select('[data-testid="sjpp-variantConfig-class"]')
+		test.equal(classDiv.selectAll("input[name^='sjpp-input']").size(), 2, 'Should have a checkbox for each value')
+		test.equal(classDiv.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
 
 		//trigger and test addition of new value
-		tipd.node().querySelectorAll("input[name^='sjpp-input']")[1].click()
+		classDiv.node().querySelectorAll("input[name^='sjpp-input']")[1].click()
 
 		// defer the execution of the next step to the next process loop "tick"
 		valueBtn = await detectChildText({
@@ -1013,8 +1016,9 @@ tape('tvs: Gene Variant - SNV/indel - Wildtype', async test => {
 		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
 
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
-		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 2, 'Should have a checkbox for each value')
-		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
+		const classDiv = tipd.select('[data-testid="sjpp-variantConfig-class"]')
+		test.equal(classDiv.selectAll("input[name^='sjpp-input']").size(), 2, 'Should have a checkbox for each value')
+		test.equal(classDiv.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
 
 		const genotypeDiv = tipd.select('[data-testid="sjpp-variantConfig-genotype"]')
 		const genotypeRadio = genotypeDiv.selectAll('input[type="radio"]').nodes()
@@ -1098,8 +1102,9 @@ tape('tvs: Gene Variant - CNV - categorical', async test => {
 		editOpt.click()
 		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
-		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 1, 'Should have a checkbox for each value')
-		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
+		const classDiv = tipd.select('[data-testid="sjpp-variantConfig-class"]')
+		test.equal(classDiv.selectAll("input[name^='sjpp-input']").size(), 1, 'Should have a checkbox for each value')
+		test.equal(classDiv.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}
@@ -1303,8 +1308,9 @@ tape('tvs: Gene Variant - Fusion', async test => {
 		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
 
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
-		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 1, 'Should have a checkbox for each value')
-		test.equal(tipd.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
+		const classDiv = tipd.select('[data-testid="sjpp-variantConfig-class"]')
+		test.equal(classDiv.selectAll("input[name^='sjpp-input']").size(), 1, 'Should have a checkbox for each value')
+		test.equal(classDiv.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}

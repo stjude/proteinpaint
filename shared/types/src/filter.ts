@@ -75,6 +75,10 @@ export type GeneVariantValue = {
 	mclasslst?: string[]
 	mclassExcludeLst?: string[]
 	origin?: string
+	/** amino acid change (e.g. "G12D"); when set, entry matches only mutations
+	 * of class=key that also carry this mname; when absent, entry matches any
+	 * mutation of class=key */
+	mname?: string
 }
 
 export type GeneVariantTvs = BaseTvs & {
