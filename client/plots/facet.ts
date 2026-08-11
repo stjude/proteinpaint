@@ -1,12 +1,10 @@
-import { getCompInit, copyMerge } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit } from './controls'
 import { getT0T2defaultQ } from './summaryQ.ts'
-import { select2Terms } from '#dom/select2Terms'
+import { Menu, select2Terms } from '#dom'
 import { isNumericTerm } from '#shared/terms.js'
-import { addNewGroup, getFilter, getSamplelstTW } from '../mass/groups'
-// import { filterJoin, getFilterItemByTag } from '#filter'
-import { Menu } from '#dom/menu'
+import { addNewGroup, getFilter, getSamplelstTW } from '#mass/groups'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase } from '#plots/PlotBase.js'
 import { roundValueAuto } from '#shared/roundValue.js'
@@ -21,11 +19,15 @@ facet table is always shown for secured or unsecured ds, as it does not reveal s
 click on table cells allow to select corresponding samples, this is only allowed when hasVerifiedToken() is true
 */
 
-class Facet extends PlotBase {
+class Facet extends PlotBase implements RxComponent{
 	static type = 'facet'
 
-	constructor(opts) {
-		super(opts)
+	type: string
+	config: any
+	hasTermCollection: any
+
+	constructor(opts: any, api: ComponentApi) {
+		super(opts, api)
 		this.type = Facet.type
 		const holder = opts.holder
 
@@ -41,7 +43,10 @@ class Facet extends PlotBase {
 		}
 	}
 
-	async init(appState) {}
+	async init() {
+		//Leaving a comment here so the linter does not complain about an empty function. 
+		// This is a required method for RxComponent interface.
+	}
 
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
@@ -96,7 +101,7 @@ class Facet extends PlotBase {
 				const label =
 					config.columnTw.term.type == 'termCollection'
 						? getTermCollectionName(config.columnTw, category)
-						: config.columnTw.term.values?.[category]?.label || category
+						: config.columnTw.term.values?.[category as string]?.label || category
 				this.addHeader(headerRow, label)
 			}
 			this.renderSampleTable(tbody, config, result, categories, categories2)
@@ -242,7 +247,7 @@ class Facet extends PlotBase {
 						type: 'plot_create',
 						config: {
 							chartType: 'sampleView',
-							samples: samples.map(d => ({
+							samples: samples.map((d: any) => ({
 								sampleId: d.sample,
 								sampleName: result.refs.bySampleId[d.sample].label
 							}))
@@ -254,7 +259,7 @@ class Facet extends PlotBase {
 				text: 'List samples',
 				callback: () => {
 					const samples = this.getSelectedSamples(categories, categories2, cells)
-					const sampleRows = samples.map(d => [
+					const sampleRows = samples.map((d: any) => [
 						result.refs.bySampleId[d.sample].label,
 						d[config.columnTw.$id].key,
 						d[config.rowTw.$id].key
@@ -333,7 +338,7 @@ class Facet extends PlotBase {
 	}
 
 	getSelectedSamples(categories, categories2, cells) {
-		const samples = []
+		const samples: unknown[] = []
 		for (const category2 of categories2) {
 			for (const category of categories) {
 				if (cells[category2][category].selected) {
@@ -345,17 +350,18 @@ class Facet extends PlotBase {
 	}
 
 	async getSampleTableData(config) {
-		const result = await this.vocabApi.getAnnotatedSampleData({
+		const result = await this.vocabApi?.getAnnotatedSampleData({
 			filter: this.state.termfilter.filter,
 			terms: [config.columnTw, config.rowTw]
 		})
+		if (!result || !result.lst || !result.lst.length) return { result: { lst: [] }, categories: [], categories2: [] }
 		const categories = this.getCategories(config.columnTw, result.lst)
 		const categories2 = this.getCategories(config.rowTw, result.lst)
 		return { result, categories, categories2 }
 	}
 
 	getCategories(tw, data) {
-		let categories = []
+		let categories: unknown[] = []
 		if (tw.term.type == 'termCollection') {
 			// termCollection
 			for (const sample of data) {
@@ -380,7 +386,7 @@ class Facet extends PlotBase {
 
 		if (isNumericTerm(tw.term)) {
 			if (tw.term.values) {
-				Object.values(tw.term.values).forEach(i => {
+				Object.values(tw.term.values).forEach((i: any) => {
 					if (i?.uncomputable) {
 						const index = categories.indexOf(i.label)
 						if (index > -1) categories.splice(index, 1)
@@ -395,8 +401,8 @@ class Facet extends PlotBase {
 
 	orderColNames(cols) {
 		//Show ranges first, then strings
-		const tmpNums = []
-		const tmpStrings = []
+		const tmpNums: {key: number, label: string}[] = []
+		const tmpStrings: string[] = []
 		for (const col of cols) {
 			const c = col.split(' to ')
 			const cx = c[0].replace(/[\>\≥\<\≤]/g, '')
@@ -466,14 +472,14 @@ class Facet extends PlotBase {
 		// 	}
 		// }
 
-		const opts = { term: config.columnTw, term2: config.rowTw, filter: this.state.termfilter.filter }
+		const opts: any = { term: config.columnTw, term2: config.rowTw, filter: this.state.termfilter.filter }
 		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
 
 		//Need to get the totals
 		await this.getDescrStats(opts.term)
 		await this.getDescrStats(opts.term2)
 
-		const result = await this.vocabApi.getNestedChartSeriesData(opts)
+		const result = await this.vocabApi?.getNestedChartSeriesData(opts)
 		const rows = new Map()
 
 		//These columns and rows are in the correct ascending order
@@ -495,7 +501,7 @@ class Facet extends PlotBase {
 
 	async getDescrStats(tw) {
 		if (isNumericTerm(tw.term)) {
-			const data = await this.vocabApi.getDescrStats(tw, this.state.termfilter)
+			const data = await this.vocabApi?.getDescrStats(tw, this.state.termfilter)
 			if (data.error) throw data.error
 			tw.q.descrStats = data.values
 		}
@@ -525,7 +531,7 @@ class Facet extends PlotBase {
 
 	async setControls() {
 		this.dom.controlsHolder.selectAll('*').remove()
-		const inputs = [
+		const inputs: unknown[] = [
 			{
 				type: 'term',
 				configKey: 'columnTw',
