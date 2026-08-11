@@ -21,6 +21,7 @@ Fixes:
 - dom/table: a barplot column renders the cell text when a value cannot be drawn as a bar (±Infinity, or a label such as 'NA'), instead of leaving the cell blank.
 - geneVariant tw and tvs allows selecting aachange as refinement of class
 - server getCategories apply opts.withMnames to gate mname returning to cutdown matrix payload
+- GDC BAM slice download will not save 403 error text as a .bam file
 
 DevOps:
 - ppgdc unit tests cover the STAR-Counts tsv parser and the tar reader in dataset/gdc/geneCounts.ts.
