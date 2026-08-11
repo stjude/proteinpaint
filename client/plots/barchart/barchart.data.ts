@@ -144,7 +144,7 @@ function getCharts(q, data) {
 			prep(row) {
 				return sample_match_termvaluesetting(row.data, q.filter)
 			},
-			maxSeriesTotal(row, context) {
+			maxSeriesTotal(/*row,*/ context) {
 				let maxSeriesTotal = 0
 				for (const grp of context.self.serieses) {
 					if (grp && grp.total > maxSeriesTotal) {
@@ -153,7 +153,7 @@ function getCharts(q, data) {
 				}
 				return maxSeriesTotal
 			},
-			maxAcrossCharts(row, context) {
+			maxAcrossCharts(/*row,*/context) {
 				let maxAcrossCharts = 0
 				for (const chart of context.self.charts) {
 					if (chart.maxSeriesTotal > maxAcrossCharts) {
@@ -162,12 +162,12 @@ function getCharts(q, data) {
 				}
 				return maxAcrossCharts
 			},
-			boxplot(row, context) {
+			boxplot(/*row,*/ context) {
 				if (!context.self.values || !context.self.values.length) return
 				const values = context.self.values.filter(d => d !== null && !isNaN(d))
 				if (!values.length) return
 				values.sort((i, j) => i - j)
-				const stat = boxplot_getvalue(values)
+				const stat: any = boxplot_getvalue(values)
 				stat.mean = context.self.sum / values.length
 				let s = 0
 				for (const v of values) {
@@ -177,7 +177,7 @@ function getCharts(q, data) {
 				if (isNaN(stat.sd)) stat.sd = null
 				return stat
 			},
-			numSamples(row, context) {
+			numSamples(/*row,*/ context) {
 				return context.self.samples.size
 			},
 			filterEmptySeries(result) {
@@ -194,7 +194,7 @@ function getCharts(q, data) {
 					result.rows.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
 				}
 			},
-			sortCharts(result) {},
+			sortCharts(/*result*/) {},
 			useColOrder() {
 				return q.term1_q.orderedLabels && q.term1_q.orderedLabels.length > 0
 			},
@@ -254,14 +254,15 @@ function getCategoricalIdVal(d, term) {
 function getNumericIdVal(d, term, q, rows) {
 	if (!('id' in term) || !(term.id in d)) return [[], undefined]
 	if (!q.computed_bins) {
-		const summary = {}
+		const summary: any = {}
 		rows.map(row => {
 			if (!isNumeric(row.data[term.id])) return
 			const v = +row.data[term.id]
 			if (!('min' in summary) || summary.min > v) summary.min = v
 			if (!('max' in summary) || summary.max < v) summary.max = v
 		})
-		q.computed_bins = compute_bins(q, percentiles => summary)
+		const percentiles = () => summary
+		q.computed_bins = compute_bins(q, percentiles)
 		q.orderedLabels = q.computed_bins.map(d => d.label)
 	}
 	const v = d[term.id]
@@ -271,7 +272,7 @@ function getNumericIdVal(d, term, q, rows) {
 	// ignore non-numeric values like empty string, ""
 	// which may occur naturally in a csv/tab-delimited input
 	if (isNumeric(d[term.id])) {
-		const ids = []
+		const ids: unknown[] = []
 		for (const b of q.computed_bins) {
 			if (b.startunbounded) {
 				if (v < b.stop) {

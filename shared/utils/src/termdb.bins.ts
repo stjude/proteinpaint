@@ -2,13 +2,28 @@ import { format } from 'd3-format'
 import { getColors } from './common.js'
 import { isNumeric, isStrictNumeric, convertUnits } from './helpers.js'
 
-export default function validate_bins(binconfig) {
+type BinConfig = {
+	type: 'custom-bin' | 'regular-bin'
+	lst?: any[]
+	bin_size?: number
+	startinclusive?: boolean | number
+	stopinclusive?: boolean | number
+	first_bin?: any
+	last_bin?: any
+	label_offset?: number
+	termtype?: string
+	use_as?: string
+	binLabelFormatter?: (d: number) => string
+	results?: any
+}
+
+export default function validate_bins(binconfig: BinConfig) {
 	// Number.isFinite('1') returns false, which is desired
 
 	const bc = binconfig
 	if (!bc || typeof bc !== 'object') throw 'bin schema must be an object'
 	// assign default type
-	if (!('type' in bc)) bc.type = 'regular-bin'
+	if (!('type' in bc)) (bc as BinConfig).type = 'regular-bin'
 
 	if (bc.type == 'custom-bin') {
 		if (!Array.isArray(bc.lst)) throw 'binconfig.lst must be an array'
@@ -63,7 +78,7 @@ export default function validate_bins(binconfig) {
 	} else if (bc.type == 'regular-bin') {
 		// required custom_bin parameter
 		if (!Number.isFinite(bc.bin_size)) throw 'non-numeric bin_size'
-		if (bc.bin_size <= 0) throw 'bin_size must be greater than 0'
+		if (!bc.bin_size || bc.bin_size <= 0) throw 'bin_size must be greater than 0'
 
 		if (!bc.startinclusive && !bc.stopinclusive) {
 			bc.startinclusive = 1
@@ -108,7 +123,7 @@ export default function validate_bins(binconfig) {
 
 const maxNumBins = 100 // hardcoded limit for now to not stress sqlite
 
-export function compute_bins(binconfig, summaryfxn, valueConversion) {
+export function compute_bins(binconfig: BinConfig, summaryfxn: (f?: any) => any, valueConversion?: any) {
 	/*
 	  Bins generator
 	  
@@ -270,12 +285,12 @@ export function compute_bins(binconfig, summaryfxn, valueConversion) {
 	return bins
 }
 
-function getNumDecimalsFormatter(bc) {
+function getNumDecimalsFormatter(bc: any) {
 	//return format('rounding' in bc ? bc.rounding : '')
-	return 'rounding' in bc ? format(bc.rounding) : d => d // default to labeling using the start/stop value as-is
+	return 'rounding' in bc ? format(bc.rounding) : (d: any) => d // default to labeling using the start/stop value as-is
 }
 
-export function get_bin_label(bin, binconfig, valueConversion?: any) {
+export function get_bin_label(bin: any, binconfig: any, valueConversion?: any) {
 	/*
 	  Generate a numeric bin label given a bin configuration and an optional term valueConversion object
 	*/
@@ -370,7 +385,7 @@ export function get_bin_label(bin, binconfig, valueConversion?: any) {
 
 // get bin range equation from bin label and bin properties
 // valueConversion, when given, states the range in the term's user-facing unit, as get_bin_label() does
-export function get_bin_range_equation(bin, binconfig, valueConversion?: any) {
+export function get_bin_range_equation(bin: any, binconfig: any, valueConversion?: any) {
 	const x = '<span style="font-family:Times;font-style:italic;">x</span>'
 	let range_eq
 	// should always use computed (not user-customized) bin label to determine bin range text
@@ -390,7 +405,7 @@ export function get_bin_range_equation(bin, binconfig, valueConversion?: any) {
 	return range_eq
 }
 
-export function target_percentiles(binconfig) {
+export function target_percentiles(binconfig: BinConfig) {
 	const percentiles: any[] = []
 	const f = binconfig.first_bin
 	if (f && isStrictNumeric(f.start_percentile)) percentiles.push(f.start_percentile)
