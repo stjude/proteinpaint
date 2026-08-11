@@ -22,6 +22,8 @@ Fixes:
 - geneVariant tw and tvs allows selecting aachange as refinement of class
 - server getCategories apply opts.withMnames to gate mname returning to cutdown matrix payload
 - GDC BAM slice download will not save 403 error text as a .bam file
+- don't let a non-EXIF APP1 segment clear a found orientation
+- tighten svgAttribute regex to a real attribute boundary
 
 DevOps:
 - ppgdc unit tests cover the STAR-Counts tsv parser and the tar reader in dataset/gdc/geneCounts.ts.
