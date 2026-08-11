@@ -1,1 +1,2 @@
-
+Fixes:
+- server getCategories apply opts.withMnames to gate mname returning to cutdown matrix payload
