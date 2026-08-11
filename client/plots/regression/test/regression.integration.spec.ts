@@ -1,6 +1,6 @@
 import tape from 'tape'
-import * as helpers from '../../test/front.helpers.js'
-import { detectGte, detectOne } from '../../test/test.helpers.js'
+import * as helpers from '../../../test/front.helpers.js'
+import { detectGte, detectOne } from '../../../test/test.helpers.js'
 
 /* 
 Tests:

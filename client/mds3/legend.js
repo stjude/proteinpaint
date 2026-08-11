@@ -16,7 +16,7 @@ import {
 	bplen
 } from '#shared/common.js'
 import { interpolateRgb } from 'd3-interpolate'
-import { showLDlegend } from '../plots/regression.results'
+import { showLDlegend } from '#plots/regression/regression.results.ts'
 import { rgb } from 'd3-color'
 import { renderShapePicker } from './leftlabel.variant'
 

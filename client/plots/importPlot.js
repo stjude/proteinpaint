@@ -80,13 +80,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'numericDictTermCluster':
 			return await import(`./numericDictTermCluster.ts`)
 
-		case 'report':
-			return await import(`./report/report.ts`)
-
-		case 'runChart2': //See frequencyChart
-		case 'frequencyChart':
-			return await import(`./runChart2/RunChart2.ts`)
-
 		case 'profileBarchart2':
 			return await import('./profile/barchart2.ts')
 
@@ -116,6 +109,16 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'ProteomeInput':
 			return await import('./ProteomeInput.ts')
+		
+		case 'regression':
+			return await import(`./regression/Regression.ts`)
+
+		case 'report':
+			return await import(`./report/report.ts`)
+
+		case 'runChart2': //See frequencyChart
+		case 'frequencyChart':
+			return await import(`./runChart2/RunChart2.ts`)
 
 		case 'sampleScatter':
 			return await import(`./scatter/scatter.js`)

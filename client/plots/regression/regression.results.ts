@@ -1,6 +1,6 @@
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
-import { first_genetrack_tolist } from '../common/1stGenetk'
+import { first_genetrack_tolist } from '#common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
 import { sayerror, axisstyle, drawBoxplot, makeSsmLink, ColorScale, Menu } from '#dom'
 import { getEstimateMsg, refGrp_NA } from './estimateMsg'
@@ -1562,7 +1562,7 @@ async function createGenomebrowser(self, input, resultLst) {
 			overrideTw.q.start = start
 			overrideTw.q.stop = stop
 			// call fillTW of snplocus.js to recompute tw.term.snps[] and cache file
-			const _ = await import('../termsetting/handlers/snplocus')
+			const _ = await import('../../termsetting/handlers/snplocus')
 			await _.fillTW(overrideTw, self.vocabApi)
 			/*
 			updated term info (term.snps[] and q.cacheid etc) are now in overrideTw
@@ -1625,7 +1625,7 @@ async function createGenomebrowser(self, input, resultLst) {
 	})
 
 	first_genetrack_tolist(self.parent.genomeObj, arg.tklst)
-	const _ = await import('../src/block')
+	const _ = await import('../../src/block')
 	return new _.Block(arg)
 }
 
