@@ -200,6 +200,18 @@ tape('jpeg: exif orientation', test => {
 		{ width: 400, height: 300, type: 'jpg' },
 		'a non-exif APP1 segment is ignored'
 	)
+	test.deepEqual(
+		imageSize(
+			jpeg(
+				// EXIF orientation first, then an XMP APP1 (as Photoshop/Lightroom write)
+				{ marker: 0xe1, payload: exif(6) },
+				{ marker: 0xe1, payload: Buffer.from('http://ns.adobe.com/xap/1.0/') },
+				{ marker: 0xc0, payload: sof(400, 300) }
+			)
+		),
+		{ width: 300, height: 400, type: 'jpg' },
+		'a later non-exif APP1 (eg. xmp) does not clear an orientation already found'
+	)
 	test.end()
 })
 

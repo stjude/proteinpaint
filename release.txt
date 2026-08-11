@@ -1,1 +1,2 @@
-
+Fixes:
+- don't let a non-EXIF APP1 segment clear a found orientation
