@@ -207,7 +207,7 @@ class MassCumInc
 - for general cumulative incidence analysis
 - input data is for one or more charts
 */
-class MassCumInc extends PlotBase {
+class MassCumInc extends PlotBase implements RxComponent {
 	static type = 'cuminc'
 
 	type: string
