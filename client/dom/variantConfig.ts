@@ -5,10 +5,11 @@ import { dt2label, dtsnvindel } from '#shared/common.js'
 
 // a selectable value: either a mutation class (no .mname) or a
 // specific variant, i.e. amino acid change (.mname set, .key is its class)
-type VariantValue = BaseValue & { value?: string; mname?: string }
+type VariantValue = BaseValue & { value?: string; mname?: string; gene?: string }
 
 // an amino acid change of the term, from /termdb/categories
-type MnameItem = { mname: string; class: string; samplecount: number }
+// gene is present when the mutation data is annotated with it
+type MnameItem = { mname: string; class: string; samplecount: number; gene?: string }
 
 type Config = {
 	genotype: 'variant' | 'wt' | 'nt'
@@ -93,6 +94,8 @@ export function renderVariantConfig(arg: Arg) {
 	let updateMnameRowDisplay = () => {}
 	// returns the specific variants (amino acid changes) checked in the list
 	let getCheckedMnames = (): MnameItem[] => []
+	// true when the variants span multiple genes, so labels name the gene
+	let showGeneInMnames = false
 	if (values.length) {
 		// variant data present, display class checklist and specific
 		// variants list (when available) side by side
@@ -152,15 +155,26 @@ export function renderVariantConfig(arg: Arg) {
 				.style('margin', '3px 0')
 				.text('Checked variants replace the class selection; classes apply when no variant is checked.')
 			const mnameListDiv = listWrapper.append('div').style('font-size', '0.8rem')
+			// when the term covers multiple genes (geneset), indicate the gene of
+			// each variant in its own column
+			const showGene = new Set(mnames.map(m => m.gene).filter(g => g)).size > 1
+			showGeneInMnames = showGene
 			const mnameRows: any[] = []
 			const selectedMnameIdxs: number[] = []
 			for (const [i, m] of mnames.entries()) {
-				mnameRows.push([{ value: m.mname }, { value: arg.values[m.class]?.label || m.class }, { value: m.samplecount }])
-				if (selectedMnames.some(s => s.mname == m.mname && s.key == m.class)) selectedMnameIdxs.push(i)
+				const row = [{ value: m.mname }, { value: arg.values[m.class]?.label || m.class }, { value: m.samplecount }]
+				if (showGene) row.unshift({ value: m.gene || '' })
+				mnameRows.push(row)
+				// a selected value without .gene matches regardless of gene, so that
+				// a selection saved before gene was tracked still displays as checked
+				if (selectedMnames.some(s => s.mname == m.mname && s.key == m.class && (!s.gene || s.gene == m.gene)))
+					selectedMnameIdxs.push(i)
 			}
+			const mnameColumns: any[] = [{ label: 'Variant' }, { label: 'Class' }, { label: 'Samples', align: 'right' }]
+			if (showGene) mnameColumns.unshift({ label: 'Gene' })
 			renderTable({
 				rows: mnameRows,
-				columns: [{ label: 'Variant' }, { label: 'Class' }, { label: 'Samples', align: 'right' }],
+				columns: mnameColumns,
 				div: mnameListDiv,
 				maxWidth: '40vw',
 				maxHeight: '30vh',
@@ -291,9 +305,16 @@ export function renderVariantConfig(arg: Arg) {
 				if (checkedMnames.length) {
 					// specific variants are selected, they refine the selection and
 					// override the checked classes: each selected variant becomes a
-					// class-scoped value entry with .mname
+					// class-scoped value entry with .mname, and .gene when annotated
 					for (const m of checkedMnames) {
-						config.values.push({ key: m.class, label: m.mname, value: m.mname, mname: m.mname })
+						const v: VariantValue = {
+							key: m.class,
+							label: showGeneInMnames && m.gene ? `${m.gene} ${m.mname}` : m.mname,
+							value: m.mname,
+							mname: m.mname
+						}
+						if (m.gene) v.gene = m.gene
+						config.values.push(v)
 					}
 				} else {
 					// no specific variant selected, use the checked mutation classes

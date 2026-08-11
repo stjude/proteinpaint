@@ -79,6 +79,9 @@ export type GeneVariantValue = {
 	 * of class=key that also carry this mname; when absent, entry matches any
 	 * mutation of class=key */
 	mname?: string
+	/** gene of the amino acid change; when set, restricts an mname entry to this
+	 * gene, so that e.g. KRAS G12D of a geneset term does not match NRAS G12D */
+	gene?: string
 }
 
 export type GeneVariantTvs = BaseTvs & {
