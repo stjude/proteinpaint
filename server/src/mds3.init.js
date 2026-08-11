@@ -7,6 +7,7 @@ import { spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
 import { validate_variant2samples } from './mds3.variant2samples.js'
+import { toBreakpointPos, isSelfBreakpointInRange, isPartnerBreakpointInRange } from './svfusion.breakpoint.ts'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
@@ -2780,8 +2781,13 @@ async function svfusionByNameGetter_file(ds, genome) {
 						//
 						pairlst = [
 							{
-								a: { chr: m['chr_a'], pos: m['position_a'], strand: m['strand_a'], name: m['gene_a'] },
-								b: { chr: m['chr_b'], pos: m['position_b'], strand, name: m['gene_b'] }
+								a: {
+									chr: m['chr_a'],
+									pos: toBreakpointPos(m['position_a']),
+									strand: m['strand_a'],
+									name: m['gene_a']
+								},
+								b: { chr: m['chr_b'], pos: toBreakpointPos(m['position_b']), strand, name: m['gene_b'] }
 							}
 						]
 					} else if (m['gene_b'].toLowerCase() == rName.toLowerCase()) {
@@ -2790,8 +2796,13 @@ async function svfusionByNameGetter_file(ds, genome) {
 						strand = m['strand_a']
 						pairlst = [
 							{
-								a: { chr: m['chr_a'], pos: m['position_a'], strand, name: m['gene_a'] },
-								b: { chr: m['chr_b'], pos: m['position_b'], strand: m['strand_b'], name: m['gene_b'] }
+								a: { chr: m['chr_a'], pos: toBreakpointPos(m['position_a']), strand, name: m['gene_a'] },
+								b: {
+									chr: m['chr_b'],
+									pos: toBreakpointPos(m['position_b']),
+									strand: m['strand_b'],
+									name: m['gene_b']
+								}
 							}
 						]
 					} else if (j.pairlst) {
@@ -2816,7 +2827,13 @@ async function svfusionByNameGetter_file(ds, genome) {
 						// for ds with sampleidmap, j.sample value should be integer
 						// XXX not guarding against file uses non-integer sample values in such case
 
-						sampleObj = { sample_id: j.sample }
+						sampleObj = {
+							sample_id: j.sample,
+							/* breakpoints of this sample; must be kept per sample as the
+							event-level pairlst only holds those of the first sample of the
+							aggregation key (see the byrange getter) */
+							_pairlst: pairlst
+						}
 						if (j.mattr) {
 							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
 							if (formatFilter) {
@@ -3041,7 +3058,15 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 							m2.key = s.GT
 						}
 					} else if (m.dt == dtfusionrna || m.dt == dtsv) {
-						m2.pairlst = m.pairlst
+						/* events are aggregated by [dt,chr,pos,strand,pairlstIdx,mname], which pins
+						down the breakpoint on the queried gene but not that on the partner gene.
+						thus m.pairlst is that of whichever sample was read first and must not be
+						used for a sample: use the sample's own _pairlst when available (a byname
+						query without sample-level breakpoints falls back to the event one) */
+						m2.pairlst = s._pairlst || m.pairlst
+						// index of the pairlst point that is on the queried gene, so that
+						// the partner point(s) of this event can be told apart from it
+						m2.pairlstIdx = m.pairlstIdx
 					}
 
 					if (!sample2mlst.has(s.sample_id)) sample2mlst.set(s.sample_id, [])
@@ -3231,6 +3256,11 @@ export function filterByItem(filter, mlst, values, tw) {
 	if (filter.type != 'tvs') throw 'unexpected filter.type'
 	const tvs = filter.tvs
 	if (!dtTermTypes.has(tvs.term.type)) throw 'tvs term is not dt term'
+	// a breakpoint range is only meaningful for a sv/fusion. guard against it being
+	// set on another dt, where it would silently filter e.g. snvindels by position
+	if (tvs.selfBreakpointRange || tvs.values?.some(v => v.partnerBreakpointRange)) {
+		if (tvs.term.dt != dtsv && tvs.term.dt != dtfusionrna) throw 'breakpoint range requires a sv/fusion tvs'
+	}
 	// get all tested mutations for the dt (and origin) of the filter
 	const mlst_tested = mlst.filter(m => {
 		if (tvs.term.dt != m.dt) return false
@@ -3280,13 +3310,22 @@ export function filterByItem(filter, mlst, values, tw) {
 				mlst_intvs = mlst_tested.filter(m => {
 					// a value entry without .mname matches any mutation of its class;
 					// with .mname (e.g. "G12D") it matches only that amino acid change,
-					// further restricted to .gene when set (for geneset terms)
+					// further restricted to .gene when set (for geneset terms).
+					// for a sv/fusion, an entry with .partnerBreakpointRange only matches
+					// an event whose breakpoint on the partner gene is in that range
 					if (
 						tvs.values.some(
-							v => v.key == m.class && (!v.mname || (v.mname == m.mname && (!v.gene || v.gene == m.gene)))
+							v =>
+								v.key == m.class &&
+								(!v.mname || (v.mname == m.mname && (!v.gene || v.gene == m.gene))) &&
+								(!v.partnerBreakpointRange || isPartnerBreakpointInRange(m, v.partnerBreakpointRange))
 						)
 					) {
 						// mutation is in tvs
+						// a sv/fusion may also be restricted by its breakpoint on the queried
+						// gene. tested on the same event as the partner range above, so that
+						// the two ranges cannot be satisfied by two different events of a sample
+						if (tvs.selfBreakpointRange && !isSelfBreakpointInRange(m, tvs.selfBreakpointRange)) return false
 						if (mayFilterByMaf(tvs.mafFilter, m)) {
 							// mutation passes maf cutoff of tvs
 							return true

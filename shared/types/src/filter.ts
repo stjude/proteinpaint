@@ -67,6 +67,15 @@ export type ConditionTvs = BaseTvs & {
 	values: { key: string | number; label?: string; [key: string]: any }[]
 }
 
+/** a genomic range constraining a breakpoint of a sv/fusion event.
+ * .start and .stop are both inclusive. a breakpoint on a different chr, or one
+ * lacking a position (e.g. events from a svfusion byname query), is out of range */
+export type BreakpointRange = {
+	chr: string
+	start: number
+	stop: number
+}
+
 export type GeneVariantValue = {
 	key?: string
 	label?: string | number
@@ -82,6 +91,12 @@ export type GeneVariantValue = {
 	/** gene of the amino acid change; when set, restricts an mname entry to this
 	 * gene, so that e.g. KRAS G12D of a geneset term does not match NRAS G12D */
 	gene?: string
+	/** for a sv/fusion entry, restricts the breakpoint on the partner gene (the
+	 * gene named by .mname) to this range. the gene is implied by .mname and is
+	 * not stored. must be satisfied by the same event that matches .mname, so
+	 * that this range and the tvs .selfBreakpointRange cannot be satisfied by
+	 * two different events of a sample */
+	partnerBreakpointRange?: BreakpointRange
 }
 
 export type GeneVariantTvs = BaseTvs & {
@@ -95,6 +110,10 @@ export type GeneVariantTvs = BaseTvs & {
 	/** FIXME following are quick fix to avoid tsc err. TODO define snvindel tsv type */
 	genotype?: 'variant' | 'nt' | 'wt'
 	mcount?: 'any' | 'single' | 'multiple' | 'all'
+	/** for a sv/fusion tvs, restricts the breakpoint on the term's own gene to
+	 * this range. only offered when the parent geneVariant term has a single
+	 * gene, so the gene is implied and is not stored */
+	selfBreakpointRange?: BreakpointRange
 	/** FIXME following are quick fix to avoid tsc err. TODO define cnv tsv type */
 	continuousCnv?: boolean
 	cnvLossCutoff?: number

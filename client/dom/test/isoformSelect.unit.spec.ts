@@ -1,5 +1,6 @@
 import tape from 'tape'
-import { allgm2sum } from '../isoformSelect'
+import { select } from 'd3-selection'
+import { allgm2sum, makeLinearScale, isoformRangeSelect } from '../isoformSelect'
 import type { GeneModel } from '../types/isoformSelect'
 
 /**
@@ -7,6 +8,8 @@ import type { GeneModel } from '../types/isoformSelect'
  *
  * Test Coverage:
  * - allgm2sum() function that merges exon regions across gene models
+ * - makeLinearScale() genomic-to-px scale of isoformRangeSelect()
+ * - isoformRangeSelect() breakpoint marks and range selection
  */
 
 /**************
@@ -361,5 +364,227 @@ tape('allgm2sum() - complex scenario with multiple chromosomes and strands', tes
 		chr1Regions.every(r => !r.reverse),
 		'chr1 regions should not be marked as reverse'
 	)
+	test.end()
+})
+
+/**************
+ * makeLinearScale() and isoformRangeSelect()
+ **************/
+
+/* modeled on BCR (chr22, plus strand) with the two breakpoint clusters that motivate
+range selection, and on a minus strand gene to cover the flipped scale */
+const bcr: GeneModel = {
+	isoform: 'NM_004327',
+	chr: 'chr22',
+	start: 23180000,
+	stop: 23318000,
+	strand: '+',
+	isdefault: true,
+	exon: [
+		[23180000, 23180200],
+		[23290000, 23290300],
+		[23317800, 23318000]
+	]
+}
+const bcrShort: GeneModel = {
+	isoform: 'NM_021574',
+	chr: 'chr22',
+	start: 23180000,
+	stop: 23290300,
+	strand: '+',
+	exon: [
+		[23180000, 23180200],
+		[23290000, 23290300]
+	]
+}
+const minusGm: GeneModel = {
+	isoform: 'NM_005157',
+	chr: 'chr9',
+	start: 130713000,
+	stop: 130887000,
+	strand: '-',
+	exon: [
+		[130713000, 130713200],
+		[130886800, 130887000]
+	]
+}
+const bcrMarkers = [
+	{ pos: 23183000, samplecount: 12 },
+	{ pos: 23290100, samplecount: 40 },
+	{ pos: 23290500, samplecount: 3 }
+]
+
+tape('makeLinearScale() - plus strand round trip', test => {
+	const scale = makeLinearScale({ chr: 'chr22', gms: [bcr], markers: [], pxwidth: 400 })
+	test.equal(scale.reverse, false, 'plus strand is not reversed')
+	test.ok(scale.start < bcr.start && scale.stop > bcr.stop, 'span is padded around the gene')
+	test.equal(scale.pos2px(scale.start), 0, 'first position maps to px 0')
+	test.equal(Math.round(scale.pos2px(scale.stop)), 400, 'last position maps to the full width')
+	test.ok(scale.pos2px(bcr.start) < scale.pos2px(bcr.stop), 'a higher position is further right')
+	// a position round trips within the resolution of one px
+	const bp = 23290100
+	const backAndForth = scale.px2pos(scale.pos2px(bp))
+	test.ok(Math.abs(backAndForth - bp) <= 1 / scale.exonsf, 'position round trips through px')
+	test.end()
+})
+
+tape('makeLinearScale() - minus strand flips the scale', test => {
+	const scale = makeLinearScale({ chr: 'chr9', gms: [minusGm], markers: [], pxwidth: 400 })
+	test.equal(scale.reverse, true, 'minus strand is reversed')
+	// the gene reads 5-prime to 3-prime left to right, as it does in isoformSelect()
+	test.equal(Math.round(scale.pos2px(scale.stop)), 0, 'last position maps to px 0')
+	test.equal(Math.round(scale.pos2px(scale.start)), 400, 'first position maps to the full width')
+	test.ok(scale.pos2px(minusGm.start) > scale.pos2px(minusGm.stop), 'a higher position is further left')
+	const bp = 130800000
+	const backAndForth = scale.px2pos(scale.pos2px(bp))
+	test.ok(Math.abs(backAndForth - bp) <= 1 / scale.exonsf, 'position round trips through px on the minus strand')
+	test.end()
+})
+
+tape('makeLinearScale() - span covers markers outside the gene', test => {
+	// a breakpoint may fall outside the gene, e.g. upstream of the promoter, and must
+	// still be visible and selectable
+	const upstream = { pos: bcr.start - 50000 }
+	const scale = makeLinearScale({ chr: 'chr22', gms: [bcr], markers: [upstream], pxwidth: 400 })
+	test.ok(scale.start < upstream.pos, 'span starts before the outside marker')
+	test.ok(scale.pos2px(upstream.pos) > 0, 'the outside marker is within the canvas')
+	test.equal(scale.px2pos(-10), scale.start, 'px before the canvas clamps to the first position')
+	test.equal(scale.px2pos(1000), scale.stop, 'px after the canvas clamps to the last position')
+	test.end()
+})
+
+tape('makeLinearScale() - scale without a gene model', test => {
+	// the partner of a fusion may be an unannotated locus, with breakpoints but no isoform
+	const scale = makeLinearScale({ chr: 'chr22', gms: [], markers: bcrMarkers, pxwidth: 400 })
+	test.equal(scale.reverse, false, 'defaults to the plus strand')
+	test.ok(scale.start < bcrMarkers[0].pos, 'span covers the markers')
+	test.throws(
+		() => makeLinearScale({ chr: 'chr22', gms: [], markers: [], pxwidth: 400 }),
+		/no gene model or marker/,
+		'throws without anything to scale'
+	)
+	test.end()
+})
+
+tape('isoformRangeSelect() - render', test => {
+	const holder = select(document.body).append('div')
+	isoformRangeSelect({
+		holder,
+		allgm: [bcr, bcrShort, minusGm],
+		chr: 'chr22',
+		markers: bcrMarkers,
+		callback: () => {}
+	})
+	test.ok(holder.select('[data-testid="sjpp-isoformRangeSelect-marks"]').node(), 'renders the breakpoint marks')
+	// one canvas of marks plus one sketch per isoform of the chr; the chr9 isoform is not shown
+	test.equal(holder.selectAll('canvas').nodes().length, 3, 'renders a sketch for each isoform of the chr')
+	test.equal(
+		holder.select('[data-testid="sjpp-isoformRangeSelect-overlay"]').style('display'),
+		'none',
+		'no selection highlight without an initial range'
+	)
+	test.equal(
+		(holder.select('[data-testid="sjpp-isoformRangeSelect-apply"]').node() as HTMLButtonElement).disabled,
+		true,
+		'apply is disabled without a selection'
+	)
+	test.ok(
+		holder.select('[data-testid="sjpp-isoformRangeSelect-info"]').text().includes('3 breakpoints'),
+		'reports the number of breakpoints'
+	)
+	holder.remove()
+	test.end()
+})
+
+tape('isoformRangeSelect() - initial range and apply', test => {
+	const holder = select(document.body).append('div')
+	let applied: any = 'not called'
+	const api = isoformRangeSelect({
+		holder,
+		allgm: [bcr],
+		chr: 'chr22',
+		markers: bcrMarkers,
+		range: { start: 23290000, stop: 23290300 },
+		callback: r => (applied = r)
+	})!
+	const overlay = holder.select('[data-testid="sjpp-isoformRangeSelect-overlay"]')
+	test.notEqual(overlay.style('display'), 'none', 'initial range is highlighted')
+	const inputs = holder.selectAll('[data-testid="sjpp-isoformRangeSelect-pos"]').nodes() as HTMLInputElement[]
+	test.equal(inputs[0].value, '23290000', 'start input has the initial range')
+	test.equal(inputs[1].value, '23290300', 'stop input has the initial range')
+	const info = holder.select('[data-testid="sjpp-isoformRangeSelect-info"]').text()
+	test.ok(info.includes('1 of 3 breakpoints'), 'counts the breakpoints of the range')
+	test.ok(info.includes('40 samples'), 'sums the samples of the breakpoints of the range')
+	;(holder.select('[data-testid="sjpp-isoformRangeSelect-apply"]').node() as HTMLButtonElement).click()
+	test.deepEqual(applied, { chr: 'chr22', start: 23290000, stop: 23290300 }, 'apply calls back with the range')
+	test.deepEqual(api.getRange(), { chr: 'chr22', start: 23290000, stop: 23290300 }, 'api reports the range')
+	holder.remove()
+	test.end()
+})
+
+tape('isoformRangeSelect() - typed coordinates and clear', test => {
+	const holder = select(document.body).append('div')
+	let applied: any = 'not called'
+	isoformRangeSelect({
+		holder,
+		allgm: [bcr],
+		chr: 'chr22',
+		markers: bcrMarkers,
+		callback: r => (applied = r)
+	})
+	const inputs = holder.selectAll('[data-testid="sjpp-isoformRangeSelect-pos"]').nodes() as HTMLInputElement[]
+	// a drag over a gene of a hundred kb is too coarse to place a cluster boundary,
+	// so the range may also be typed in
+	inputs[0].value = '23290400'
+	inputs[1].value = '23180000' // entered in reverse, must be sorted
+	inputs[1].dispatchEvent(new Event('change'))
+	const overlay = holder.select('[data-testid="sjpp-isoformRangeSelect-overlay"]')
+	test.notEqual(overlay.style('display'), 'none', 'typed range is highlighted')
+	test.equal(inputs[0].value, '23180000', 'typed range is sorted by position')
+	test.ok(
+		holder.select('[data-testid="sjpp-isoformRangeSelect-info"]').text().includes('2 of 3 breakpoints'),
+		'counts the breakpoints of the typed range'
+	)
+	;(holder.select('[data-testid="sjpp-isoformRangeSelect-clear"]').node() as HTMLButtonElement).click()
+	test.equal(overlay.style('display'), 'none', 'clear hides the highlight')
+	test.equal(applied, null, 'clear calls back with null')
+	test.equal(inputs[0].value, '', 'clear empties the inputs')
+	holder.remove()
+	test.end()
+})
+
+tape('isoformRangeSelect() - highlight of a minus strand range', test => {
+	const holder = select(document.body).append('div')
+	const api = isoformRangeSelect({
+		holder,
+		allgm: [minusGm],
+		chr: 'chr9',
+		markers: [{ pos: 130720000, samplecount: 5 }],
+		range: { start: 130720000, stop: 130780000 },
+		callback: () => {}
+	})!
+	const overlay = holder.select('[data-testid="sjpp-isoformRangeSelect-overlay"]')
+	// the scale is flipped, so the left edge of the highlight is the higher position
+	const left = Number(overlay.style('left').replace('px', ''))
+	test.equal(Math.round(left), Math.round(api.scale.pos2px(130780000)), 'left edge is at the stop position')
+	const width = Number(overlay.style('width').replace('px', ''))
+	test.ok(width > 0, 'highlight has a width')
+	holder.remove()
+	test.end()
+})
+
+tape('isoformRangeSelect() - nothing to display', test => {
+	const holder = select(document.body).append('div')
+	const api = isoformRangeSelect({
+		holder,
+		allgm: [minusGm], // of another chr
+		chr: 'chr22',
+		markers: [],
+		callback: () => {}
+	})
+	test.equal(api, undefined, 'returns nothing when there is neither a gene model nor a marker')
+	test.equal(holder.selectAll('canvas').nodes().length, 0, 'renders no canvas')
+	test.ok(holder.text().includes('No gene model or breakpoint'), 'says there is nothing to display')
+	holder.remove()
 	test.end()
 })

@@ -3,6 +3,8 @@ import type { CategoriesRequest, CategoriesResponse } from '#types'
 import type { ReqQueryAddons } from '../../routes/types.ts'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
+import { getSelfBreakpoint, getPartnerBreakpoints } from '#src/svfusion.breakpoint.ts'
+import { dtsv, dtfusionrna } from '#shared/common.js'
 
 export const payload: RoutePayload = {
 	init,
@@ -86,6 +88,15 @@ export function getCategories(data, q, ds, $id, opts: { withMnames?: boolean } =
 		// gene is tracked so that variants of a geneVariant term with multiple
 		// genes can be told apart, e.g. KRAS G12D vs NRAS G12D
 		const mnameCountMap = new Map()
+		/* tally of the breakpoints of the sv/fusion events of each mname entry, so that the
+		term-editing UIs can chart them and select a range (see BreakpointEntry)
+		k: `${mnameKey}|${pos}|${partnerChr}|${partnerPos}`
+		v: { mnameKey, pos, partnerChr, partnerPos, samplecount }
+		the tally is per distinct pair of breakpoints, so it is bounded by the number of
+		sv/fusion events of the queried gene in the cohort */
+		const breakpointCountMap = new Map()
+		// samples whose events of an mname entry lack a breakpoint coordinate, k: mnameKey
+		const noPositionCountMap = new Map()
 		if (ds.assayAvailability?.byDt) {
 			for (const [dtType, _dtValue] of Object.entries(ds.assayAvailability.byDt)) {
 				const dtValue: any = _dtValue
@@ -144,6 +155,7 @@ export function getCategories(data, q, ds, $id, opts: { withMnames?: boolean } =
 						if (entry) entry.samplecount += 1
 						else
 							mnameCountMap.set(mnameKey, {
+								key: mnameKey,
 								dt: value.dt,
 								origin,
 								class: value.class,
@@ -152,13 +164,65 @@ export function getCategories(data, q, ds, $id, opts: { withMnames?: boolean } =
 								samplecount: 1
 							})
 					}
+					/* tally the breakpoints of a sv/fusion. deliberately outside the
+					mnameKey dedup above, as a sample may have two events of the same
+					mname at different breakpoints and both are to be charted */
+					if (value.dt == dtsv || value.dt == dtfusionrna) {
+						const self = getSelfBreakpoint(value)
+						const partner = getPartnerBreakpoints(value)[0]
+						if (Number.isFinite(self.pos) && Number.isFinite(partner?.pos)) {
+							const bpKey = `${mnameKey}|${self.pos}|${partner!.chr}|${partner!.pos}`
+							if (!sampleCountedFor.has(bpKey)) {
+								// count each sample once per distinct pair of breakpoints
+								sampleCountedFor.add(bpKey)
+								const bp = breakpointCountMap.get(bpKey)
+								if (bp) bp.samplecount += 1
+								else
+									breakpointCountMap.set(bpKey, {
+										mnameKey,
+										pos: self.pos,
+										partnerChr: partner!.chr,
+										partnerPos: partner!.pos,
+										samplecount: 1
+									})
+							}
+						} else {
+							/* event has no breakpoint coordinate, e.g. from a svfusion byname
+							query, or of the not-yet-supported multi-gene pairlst shape. such an
+							event cannot be charted and cannot satisfy a breakpoint range, so is
+							counted separately for the ui to caveat the chart with */
+							const noPosKey = `nopos:${mnameKey}`
+							if (!sampleCountedFor.has(noPosKey)) {
+								sampleCountedFor.add(noPosKey)
+								noPositionCountMap.set(mnameKey, 1 + (noPositionCountMap.get(mnameKey) || 0))
+							}
+						}
+					}
 				}
 			}
+		}
+		// breakpoints of each mname entry, k: mnameKey, v: BreakpointEntry[]
+		const breakpointsByMname = new Map<string, any[]>()
+		for (const b of breakpointCountMap.values()) {
+			if (!breakpointsByMname.has(b.mnameKey)) breakpointsByMname.set(b.mnameKey, [])
+			breakpointsByMname.get(b.mnameKey)!.push({
+				pos: b.pos,
+				partnerChr: b.partnerChr,
+				partnerPos: b.partnerPos,
+				samplecount: b.samplecount
+			})
+		}
+		for (const lst of breakpointsByMname.values()) {
+			lst.sort((a, b) => a.pos - b.pos || a.partnerPos - b.partnerPos)
 		}
 		// gene is only reported when annotated on the mutation data
 		const formatMname = (e: any) => {
 			const m: any = { mname: e.mname, class: e.class, samplecount: e.samplecount }
 			if (e.gene) m.gene = e.gene
+			const breakpoints = breakpointsByMname.get(e.key)
+			if (breakpoints) m.breakpoints = breakpoints
+			const noPositionCount = noPositionCountMap.get(e.key)
+			if (noPositionCount) m.noPositionCount = noPositionCount
 			return m
 		}
 		for (const [dt, classes] of dtClassMap) {

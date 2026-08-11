@@ -1,7 +1,8 @@
 import { handler as _handler } from './tvs.categorical.js'
-import { renderVariantConfig } from '#dom'
-import { mclass, dtsnvindel } from '#shared/common.js'
+import { renderVariantConfig, breakpointRangeLabel } from '#dom'
+import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
 import { FrontendVocab } from '#termdb/FrontendVocab'
+import { dofetch3 } from '#common/dofetch'
 
 /*
 Base TVS handler for dt terms
@@ -28,6 +29,9 @@ async function fillMenu(self, div, tvs) {
 		callback: config => {
 			const new_tvs = structuredClone(tvs)
 			Object.assign(new_tvs, config)
+			// a cleared breakpoint range is undefined in config, so must be deleted
+			// rather than left as the value cloned from the previous tvs
+			if (!new_tvs.selfBreakpointRange) delete new_tvs.selfBreakpointRange
 			self.dom.tip.hide()
 			self.opts.callback(new_tvs)
 		}
@@ -37,6 +41,21 @@ async function fillMenu(self, div, tvs) {
 		// maf filter specified in dataset
 		mafFilter.active = tvs.mafFilter || mafFilter.filter
 		arg.mafFilter = mafFilter
+	}
+	const genome = self.opts.vocabApi.vocab?.genome
+	if ((term.dt == dtsv || term.dt == dtfusionrna) && genome) {
+		// sv/fusion events may be restricted to a breakpoint range, which is charted
+		// over the isoform models of the gene
+		arg.getGeneModels = async gene => {
+			const data = await dofetch3('genelookup', { body: { genome, input: gene, deep: 1 } })
+			if (data?.error) throw data.error
+			return data?.gmlst || []
+		}
+		// a range on the term's own gene is not scoped to a gene (see BreakpointRange),
+		// so is only offered when the term has a single gene
+		const genes = term.parentTerm?.genes
+		if (genes?.length == 1) arg.gene = genes[0].gene || genes[0].name
+		arg.selfBreakpointRange = tvs.selfBreakpointRange
 	}
 	renderVariantConfig(arg)
 }
@@ -57,6 +76,14 @@ function get_pill_label(tvs) {
 			if (tvs.term.dt == 1) txt = 'Mutated'
 			else txt = 'Altered'
 		}
+		// a breakpoint range restricts which events match, so must show in the pill,
+		// otherwise a restricted tvs reads the same as an unrestricted one
+		const ranges = []
+		if (tvs.selfBreakpointRange) ranges.push(breakpointRangeLabel(tvs.selfBreakpointRange))
+		for (const v of tvs.values) {
+			if (v.partnerBreakpointRange) ranges.push(breakpointRangeLabel(v.partnerBreakpointRange))
+		}
+		if (ranges.length) txt += ` @ ${ranges.join(', ')}`
 	} else if (tvs.genotype == 'wt') {
 		// wildtype genotype
 		txt = 'Wildtype'
