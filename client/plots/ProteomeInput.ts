@@ -18,7 +18,6 @@ export class ProteomeInput extends PlotBase implements RxComponent {
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = ProteomeInput.type
-		this.opts = opts
 		this.components = {}
 	}
 

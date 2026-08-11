@@ -26,7 +26,7 @@ export class Report extends PlotBase implements RxComponent {
 	state!: any
 	id!: string
 
-	constructor(opts, api) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = Report.type
 	}

@@ -1,5 +1,5 @@
 import type { MassState, BasePlotConfig } from '#mass/types/mass'
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from './PlotBase'
 import { Menu, addGeneSearchbox, LegendCircleReference } from '#dom'
 import { dofetch3 } from '#common/dofetch'
@@ -33,7 +33,7 @@ class CellTypeBubbleHeatmap extends PlotBase implements RxComponent {
 	currentIsoform = ''
 	gridHolder: any
 
-	constructor(opts: any, api) {
+	constructor(opts: any, api: ComponentApi ) {
 		super(opts, api)
 		this.type = CellTypeBubbleHeatmap.type
 	}

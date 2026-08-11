@@ -26,7 +26,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	_prevFilterSig?: string
 	configTermKeys = ['facetTw1', 'facetTw2', 'facetTw3']
 
-	constructor(opts, api) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = TdbGenomeBrowser.type
 		this.dom = this.getDom()

@@ -45,7 +45,7 @@ export class Scatter extends PlotBase implements RxComponent {
 	zoom: number
 	loadingWait: number
 
-	constructor(opts, api) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = Scatter.type
 		this.zoom = 1

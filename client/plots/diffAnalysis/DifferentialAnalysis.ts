@@ -1,6 +1,6 @@
 import type { BasePlotConfig, MassState } from '#mass/types/mass'
 import type { Div } from '../../types/d3'
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '../PlotBase'
 import { importPlot } from '../importPlot.js'
 import { Menu } from '#dom'
@@ -15,7 +15,8 @@ const { SINGLECELL_CELLTYPE } = DATermTypes
 
 class DifferentialAnalysis extends PlotBase implements RxComponent {
 	static type = 'differentialAnalysis'
-	readonly type = 'differentialAnalysis'
+	
+	type: string
 	components: {
 		plots: { [key: string]: any }
 	}
@@ -26,8 +27,9 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 	plotsControlsDiv: { [key: string]: Div }
 	termType: string
 
-	constructor(opts: any, api) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
+		this.type = DifferentialAnalysis.type
 		this.components = {
 			plots: {}
 		}

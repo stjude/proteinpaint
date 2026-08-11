@@ -8,10 +8,9 @@ class ImagePlot extends PlotBase implements RxComponent {
 
 	type: string
 
-	constructor(opts, api: ComponentApi) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.opts = opts
-		this.api = api
 		this.type = ImagePlot.type
 
 		if (this.opts?.header) {

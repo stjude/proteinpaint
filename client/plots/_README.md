@@ -6,13 +6,16 @@ Every plot component in the mass UI must extend `PlotBase` and implement `RxComp
 
 ```ts
 import { PlotBase } from '../PlotBase.ts'
-import { getCompInit, type RxComponent } from '#rx'
+import { getCompInit, type RxComponent, type ComponentApi } from '#rx'
 
 export class MyPlot extends PlotBase implements RxComponent {
 	static type = 'myPlot'
 
-	constructor(opts, api) {
+    type: string
+
+	constructor(opts: any, api: ComponentApi ) {
 		super(opts, api)
+        this.type = MyPlot.type
 		// set up dom, components, etc.
 	}
 

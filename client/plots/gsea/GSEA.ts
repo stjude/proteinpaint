@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '#plots/PlotBase.js'
 import { getCombinedTermFilter } from '#filter'
 import { PROTEOME_DAP, SINGLECELL_CELLTYPE } from '#types'
@@ -14,7 +14,6 @@ export class GSEA extends PlotBase implements RxComponent {
 
 	type: string
 	settings!: any
-	components!: { controls: any }
 	imageUrl: any
 	config!: any
 	testEnabled: boolean
@@ -23,10 +22,9 @@ export class GSEA extends PlotBase implements RxComponent {
 	viewModel!: GSEAViewModel
 	view!: GSEAView
 
-	constructor(opts) {
-		super(opts)
+	constructor(opts: any, api: ComponentApi) {
+		super(opts, api)
 		this.type = GSEA.type
-		this.opts = opts
 		this.components = {
 			controls: {}
 		}
@@ -128,7 +126,6 @@ export class GSEA extends PlotBase implements RxComponent {
 
 		await this.viewModel.processData()
 		this.view.update()
-		// render_gsea(this)
 	}
 }
 

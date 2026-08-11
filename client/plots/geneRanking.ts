@@ -1,6 +1,6 @@
 import { renderTable, sayerror, icons } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { getCompInit, copyMerge } from '#rx'
+import { getCompInit, copyMerge, type ComponentApi, type RxComponent  } from '#rx'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { PlotBase } from '#plots/PlotBase.js'
 import { scaleLinear } from 'd3-scale'
@@ -12,13 +12,13 @@ const MISSING_COLOR = '#d9d9d9'
 const SEQ_COLOR_LOW = '#08306b'
 const SEQ_COLOR_HIGH = '#f7fbff'
 
-class GeneRanking extends PlotBase {
+class GeneRanking extends PlotBase implements RxComponent {
 	static type = 'geneRanking'
 
+	type: string
 	loadingDiv: any
 	errDiv: any
 	tableDiv: any
-	type: string
 	state: any
 	config: any
 	dataKey?: string
@@ -41,8 +41,8 @@ class GeneRanking extends PlotBase {
 	/** identity-tag of the data the current heatmap was rendered for; used to abort stale responses */
 	heatmapRenderKey: string = ''
 
-	constructor(opts) {
-		super(opts)
+	constructor(opts: any, api: ComponentApi) {
+		super(opts, api)
 		this.type = GeneRanking.type
 		const main = opts.holder.append('div').style('padding', '12px').style('max-width', '95vw')
 		this.errDiv = main.append('div').style('color', 'red').style('display', 'none').style('padding', '8px')

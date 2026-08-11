@@ -1,5 +1,5 @@
 import type { MassState, BasePlotConfig } from '#mass/types/mass'
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from './PlotBase'
 import { Menu, renderTable, addGeneSearchbox } from '#dom'
 import type { TableColumn, TableRow } from '#dom'
@@ -74,7 +74,7 @@ class StudyCatalog extends PlotBase implements RxComponent {
 	/** number of cohorts currently passing the filters (shown when nothing is selected) */
 	filteredCount = 0
 
-	constructor(opts: any, api) {
+	constructor(opts: any, api: ComponentApi ) {
 		super(opts, api)
 		this.type = StudyCatalog.type
 	}

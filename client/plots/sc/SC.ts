@@ -2,7 +2,7 @@ import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { SCConfigOpts, SCDom, SCFormattedState, SCViewerOpts, SampleColumn } from './SCTypes'
 import type { SingleCellSample } from '#types'
 import { PlotBase } from '../PlotBase.ts'
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { SCModel } from './model/SCModel'
 import { SCViewModel } from './viewModel/SCViewModel'
 import { SCInteractions } from './interactions/SCInteractions'
@@ -26,7 +26,7 @@ export class SCViewer extends PlotBase implements RxComponent {
 	view!: SCViewRenderer
 	viewModel!: SCViewModel
 
-	constructor(opts: SCViewerOpts, api: any) {
+	constructor(opts: SCViewerOpts, api: ComponentApi) {
 		super(opts, api)
 		this.type = SCViewer.type
 		this.components = {
