@@ -169,6 +169,11 @@ export async function bamsliceui(
 	// show block & bam tk
 	const blockHolder = holder.append('div').style('display', 'none')
 
+	/* set to true when user has no access to the found file and app runs in download mode;
+	while true the submit button stays disabled no matter what any ui component requests. see setSubmitDisabled()
+	*/
+	let blockSubmitForNoAccess = false
+
 	/////////////////////////////////////////////////////
 	// create UI components in formdiv
 
@@ -195,6 +200,14 @@ export async function bamsliceui(
 	}
 
 	//////////////////////// helper functions
+
+	/* single point for toggling the submit button
+	callers request a state based on their own inputs (tab switch, gene search, ssm selection),
+	but blockSubmitForNoAccess always wins so that a user without access cannot submit
+	*/
+	function setSubmitDisabled(disabled) {
+		submitButton.property('disabled', disabled || blockSubmitForNoAccess)
+	}
 
 	function runCallbackAfterUIupdate() {
 		if (!callbacks.postRender) return
@@ -348,8 +361,11 @@ export async function bamsliceui(
 			noPermissionDiv.style('display', 'none')
 			submitButton.style('display', 'inline-block')
 
+			// new search; access to the previously found file says nothing about the file about to be found
+			blockSubmitForNoAccess = false
+
 			// disable submit button when a new case/file loaded, and delete previou ssmInput/coordInput
-			submitButton.property('disabled', true)
+			setSubmitDisabled(true)
 			delete gdc_args.coordInput
 			delete gdc_args.ssmInput
 
@@ -431,6 +447,13 @@ export async function bamsliceui(
 			// and if no access sets this flag
 			// will show the prompt here but will still allow rest of ui to show, just to showcase app's capability
 			userHasNoAccessDiv.style('display', data.userHasNoAccess ? 'block' : 'none')
+
+			/* in download mode the client streams the slice straight from the gdc api and never goes through pp
+			backend, thus the backend permission check guarding the visualization mode does not apply. must prevent
+			submission here, or the api replies 403 and the ui saves that error body as a .bam file
+			*/
+			blockSubmitForNoAccess = stream2download && !!data.userHasNoAccess
+			if (blockSubmitForNoAccess) setSubmitDisabled(true)
 
 			/*
 			in file_metadata[], each element is a bam file:
@@ -733,7 +756,7 @@ export async function bamsliceui(
 						callback: () => {
 							gdc_args.useSsmOrGene = 'gene'
 							// under Gene or position tab, only enable submit button when coordInput provided
-							submitButton.property('disabled', !gdc_args.coordInput?.chr)
+							setSubmitDisabled(!gdc_args.coordInput?.chr)
 						}
 					},
 					{
@@ -742,7 +765,7 @@ export async function bamsliceui(
 						callback: () => {
 							gdc_args.useSsmOrGene = 'unmapped'
 							// under Unmapped reads tab, should always eanble submit button
-							submitButton.property('disabled', false)
+							setSubmitDisabled(false)
 						}
 					}
 				]
@@ -766,7 +789,7 @@ export async function bamsliceui(
 				callback: () => {
 					gdc_args.useSsmOrGene = 'ssm'
 					// Under variants tab, only enable submit button when ssmInput provided
-					submitButton.property('disabled', !gdc_args.ssmInput?.chr)
+					setSubmitDisabled(!gdc_args.ssmInput?.chr)
 				}
 			},
 			{
@@ -775,7 +798,7 @@ export async function bamsliceui(
 				callback: () => {
 					gdc_args.useSsmOrGene = 'gene'
 					// Under Gene or position tab, only enable submit button when coordInput provided
-					submitButton.property('disabled', !gdc_args.coordInput?.chr)
+					setSubmitDisabled(!gdc_args.coordInput?.chr)
 				}
 			}
 		]
@@ -787,7 +810,7 @@ export async function bamsliceui(
 				callback: () => {
 					gdc_args.useSsmOrGene = 'unmapped'
 					// under Unmapped reads tab, should always eanble submit button
-					submitButton.property('disabled', false)
+					setSubmitDisabled(false)
 				}
 			})
 		}
@@ -833,7 +856,7 @@ export async function bamsliceui(
 					ref: m.ref,
 					alt: m.alt
 				}
-				submitButton.property('disabled', false)
+				setSubmitDisabled(false)
 			},
 			dataTestId: 'sjpp-gdcbam-ssmTable',
 			singleMode: true
@@ -851,7 +874,7 @@ export async function bamsliceui(
 							ref: m.ref,
 							alt: m.alt
 						}
-						submitButton.property('disabled', false)
+						setSubmitDisabled(false)
 					}
 				}
 			}
@@ -876,7 +899,7 @@ export async function bamsliceui(
 			row: div.append('div'),
 			allowVariant: true,
 			// after getting valid result from geneSearchbox, enable submit button
-			callback: () => submitButton.property('disabled', false)
+			callback: () => setSubmitDisabled(false)
 		}
 		if (urlp.has('gdc_pos')) {
 			const t = urlp.get('gdc_pos').split(/[:\-]/)
@@ -922,7 +945,7 @@ export async function bamsliceui(
 					saydiv.selectAll('*').remove()
 					validateInputs(gdc_args, genome, hideTokenInput)
 					submitButton.text('Loading ...')
-					submitButton.property('disabled', true)
+					setSubmitDisabled(true)
 					await sliceBamAndRender()
 				} catch (e) {
 					if (e == 'Permission denied') {
@@ -936,7 +959,7 @@ export async function bamsliceui(
 				}
 				// turn submit button back to active so ui can be reused later
 				submitButton.text('Submit')
-				submitButton.property('disabled', false)
+				setSubmitDisabled(false)
 			})
 
 		// 2nd <td> as notification holder
@@ -1015,13 +1038,31 @@ export async function bamsliceui(
 			}
 
 			if (stream2download) {
-				// detour
+				/* detour: slice is streamed to client directly from gdc api and does not go through pp backend.
+				thus the backend permission check done for the visualization mode does not apply here, and the
+				api response must be verified before it is saved to a file
+				*/
 
-				headers.compression = false
 				// cookie is domain based and will be automatically passed on all requests
+				// do not reuse headers{}: response is binary and must not ask for Accept: application/json
+				const dlHeaders = args.gdc_token ? { 'X-Auth-Token': args.gdc_token } : {}
 
 				const url = `${gdc_args.restapihost}/slicing/view/${file.file_id}?region=${body.gdcFilePosition}`
-				const response = await fetch(url, { method: 'GET', headers })
+				const response = await fetch(url, { method: 'GET', headers: dlHeaders })
+
+				/* fetch() does not reject on 4xx/5xx. without these checks the json error body from the api
+				(e.g. the "not authorized to download" message on 403) is saved to a file named .bam
+				*/
+				if (!response.ok) {
+					// signals makeSubmitAndNoPermissionDiv() to display the Access Alert
+					if (response.status == 401 || response.status == 403) throw 'Permission denied'
+					throw (await getApiErrMsg(response)) || `GDC API error ${response.status}`
+				}
+				if ((response.headers.get('content-type') || '').includes('application/json')) {
+					// status is ok but api replied with a message rather than binary data
+					throw (await getApiErrMsg(response)) || 'GDC API did not return BAM data'
+				}
+
 				const data = await response.blob()
 				// download the file to client
 				const a = document.createElement('a')
@@ -1165,6 +1206,19 @@ function geneSearchInstruction(d) {
 			</ul>
 		</li>
 		</ul>`)
+}
+
+/* extract the human readable message out of a failed gdc api response
+returns falsy when body is not json or carries no message, so caller can fall back to a status-based message
+*/
+async function getApiErrMsg(response) {
+	try {
+		const j = await response.json()
+		return j.message || j.error
+	} catch (e) {
+		// body is not json
+		return null
+	}
 }
 
 function show_input_check(holder, error_msg) {
