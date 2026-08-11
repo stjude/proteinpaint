@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
+import { getCompInit, copyMerge, type ComponentApi, type RxComponent, type AppApi} from '#rx'
 import { controlsInit, renderTerm1Label } from '#plots/controls.js'
 import { getT0T2defaultQ } from '#plots/summaryQ.ts'
 import { fillTermWrapper } from '#termsetting'
@@ -1075,11 +1075,11 @@ function setRenderers(self: any) {
 	}
 
 	function getSvgSubElems(svg, /*chart*/) {
-		let clipRect, clipG, mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, line
+		let clipRect, /*clipG,*/ mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, line
 		if (!svg.select('.sjpcb-cuminc-mainG').size()) {
 			const clipId = `${self.id}-${self.chartIncrement++}`
 			clipRect = svg.append('defs').append('clipPath').attr('id', clipId).append('rect')
-			clipG = svg.append('g').attr('class', 'sjpcb-cuminc-clipG')
+			// clipG = svg.append('g').attr('class', 'sjpcb-cuminc-clipG')
 			mainG = svg.append('g').attr('class', 'sjpcb-cuminc-mainG').attr('data-testid', 'sjpp-cuminc-main-g')
 			seriesesG = mainG.append('g').attr('class', 'sjpcb-cuminc-seriesesG').attr('clip-path', `url(#${clipId})`)
 			axisG = mainG.append('g').attr('class', 'sjpcb-cuminc-axis')
@@ -1097,7 +1097,7 @@ function setRenderers(self: any) {
 			plotRect = mainG.append('rect').attr('class', 'sjpcb-plot-tip-rect').style('fill', 'transparent')
 		} else {
 			clipRect = svg.select('defs clipPath rect')
-			clipG = svg.select('.sjpcb-cuminc-clipG')
+			// clipG = svg.select('.sjpcb-cuminc-clipG')
 			mainG = svg.select('.sjpcb-cuminc-mainG')
 			seriesesG = mainG.select('.sjpcb-cuminc-seriesesG')
 			axisG = mainG.select('.sjpcb-cuminc-axis')
@@ -1114,7 +1114,7 @@ function setRenderers(self: any) {
 			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip)
 		}
 
-		return [clipRect, clipG, mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect]
+		return [clipRect, /*clipG,*/ mainG, seriesesG, /*axisG,*/ xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect]
 	}
 
 	function renderSeries(g, series, s) {
@@ -1324,7 +1324,7 @@ function setInteractivity(self: any) {
 	}
 }
 
-export async function getPlotConfig(opts: any, app: any) {
+export async function getPlotConfig(opts: any, app: AppApi) {
 	if (!opts.term) throw 'cuminc: opts.term{} missing'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi, {
