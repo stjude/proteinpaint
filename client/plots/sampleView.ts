@@ -1,19 +1,50 @@
-import { getCompInit, copyMerge } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '#plots/PlotBase.js'
 import { select } from 'd3-selection'
-import { controlsInit } from './controls'
-import { getNormalRoot } from '#filter'
-import { dofetch3 } from '#common/dofetch'
+// import { controlsInit } from './controls'
+// import { getNormalRoot } from '#filter'
+// import { dofetch3 } from '#common/dofetch'
 import { DEFAULT_SAMPLE_TYPE, isNumericTerm, ROOT_SAMPLE_TYPE, getDateStrFromNumber } from '#shared/terms.js'
 import { sayerror } from '#dom'
 
 const root_ID = 'root'
 const samplesLimit = 15
 
-class SampleView extends PlotBase {
+class SampleView extends PlotBase implements RxComponent {
 	static type = 'sampleView'
 
-	constructor(opts, api) {
+	type: string
+	termsByCohort: any
+	dom!: {
+		header: any
+		holder: any
+		controlsDiv: any
+		sampleDiv: any
+		showPlotsDiv: any
+		loadingDiv: any
+		plotsDiv: any
+		noteDiv?: any
+		downloadbt?: any
+		tableDiv?: any
+		messageDiv?: any
+	}
+	vocabApi: any
+	samplesData!: any
+	sample!: { sampleId: any; sampleName: string }
+	config!: any
+	settings!: any
+	termsById!: Record<string, any>
+	sampleDataByTermId!: Record<string, any>
+	orderedVisibleTerms!: any[]
+	discoPlots!: any[]
+	singleSamplePlots!: Record<string, any[]>
+	brainPlots!: any[]
+	imagePlots!: any[]
+	wsiPlots!: any[]
+	visiblePlots!: boolean
+	renderSampleDictionary!: () => void
+
+	constructor(opts, api: ComponentApi) {
 		super(opts, api)
 		this.type = SampleView.type
 		this.setDom(opts)
@@ -51,7 +82,6 @@ class SampleView extends PlotBase {
 			sampleDiv,
 			showPlotsDiv,
 			loadingDiv,
-
 			plotsDiv
 		}
 	}
@@ -72,7 +102,7 @@ class SampleView extends PlotBase {
 		if (this.dom.header) this.dom.header.html(`Sample View`)
 
 		if (config.samples && config.samples.length > 1) {
-			const sampleLabel = sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
+			// const sampleLabel = sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
 
 			const select = sampleDiv
 				.insert('select')
@@ -99,9 +129,9 @@ class SampleView extends PlotBase {
 				)
 			if (config.samples.length > samplesLimit) this.dom.noteDiv.style('display', 'inline-block')
 
-			select.on('change', e => {
+			select.on('change', () => {
 				const options = select.node().options
-				const samples = []
+				const samples: unknown[] = []
 				let count = 0
 				for (const option of options) {
 					if (option.selected) {
@@ -123,7 +153,7 @@ class SampleView extends PlotBase {
 			if (Object.keys(this.samplesData).length == 0) throw 'No accessible samples found'
 			const callback = sampleName => {
 				if (this.samplesData[sampleName]) {
-					const samples = getSamplesRelated(this.samplesData, sampleName)
+					const samples = getSamplesRelated(this.samplesData, sampleName, null, undefined)
 
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 					this.dom.downloadbt.property('disabled', false)
@@ -146,8 +176,8 @@ class SampleView extends PlotBase {
 				}
 			}
 			const hasSampleAncestry = appState.termdbConfig.hasSampleAncestry
-			const sampleName = searchSampleInput(this.dom.sampleDiv, this.samplesData, hasSampleAncestry, callback)
-			this.sample = config.sample || { sampleId: this.samplesData[sampleName].id, sampleName }
+			const sampleName = searchSampleInput(this.dom.sampleDiv, this.samplesData, hasSampleAncestry, callback, undefined)
+			this.sample = config.sample || { sampleId: this.samplesData[sampleName!].id, sampleName: sampleName! }
 			// When the plot is opened for an already-chosen sample (config.sample, e.g. from the omnisearch
 			// or a scatter point click), show that name in the search box. Its data is rendered either way,
 			// but an empty box reads as "type a sample name to see details".
@@ -172,12 +202,28 @@ class SampleView extends PlotBase {
 
 	getState(appState) {
 		const config = appState.plots?.find(p => p.id === this.id)
-		let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.sampleName)
+let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.sampleName, null, undefined)
 
 		if (config.samples?.length > 15) samples = config.samples.filter((s, i) => i < 15)
 		const q = appState.termdbConfig.queries
 
-		const state = {
+		const state: {
+			config: any
+			termfilter: any
+			activeCohort: any
+			terms: any
+			expandedTermIds: any
+			samples: any
+			singleSampleGenomeQuantification: any
+			singleSampleMutation: any
+			NIdata: any
+			hasVerifiedToken: any
+			tokenVerificationPayload: any
+			termdbConfig: any
+			vocab: any
+			toSelectCohort?: boolean
+			cohortValuelst?: any
+		} = {
 			config,
 			termfilter: appState.termfilter,
 			// TODO: use state.config drectly, instead of having to extract
@@ -351,7 +397,7 @@ class SampleView extends PlotBase {
 		return this.termsByCohort[state.activeCohort]
 	}
 
-	async requestTermRecursive(term, _ancestry = [root_ID]) {
+	async requestTermRecursive(term: any, _ancestry: string[] = [root_ID]) {
 		/* will request child terms for this entire branch recursively
 
 		must synthesize request string (dataName) for every call
@@ -379,7 +425,7 @@ class SampleView extends PlotBase {
 			// do not throw exception; its children terms may have been filtered out
 			return []
 		}
-		const terms = []
+		const terms: any[] = []
 		const parent_id = _ancestry.slice(-1)[0]
 		for (const t of data.lst) {
 			t.parent_id = parent_id
@@ -424,9 +470,9 @@ class SampleView extends PlotBase {
 		return true
 	}
 
-	sortVisibleTerms(currParent, remainingTerms, currOrder = []) {
-		const unorderedTerms = []
-		const orderedTerms = []
+	sortVisibleTerms(currParent: any, remainingTerms: any[], currOrder: any[] = []) {
+		const unorderedTerms: any[] = []
+		const orderedTerms: any[] = []
 		for (const term of remainingTerms) {
 			if (term.parent_id == currParent.id) {
 				orderedTerms.push(term)
@@ -446,8 +492,8 @@ class SampleView extends PlotBase {
 		}
 	}
 
-	async fillSampleData(terms) {
-		const term_ids = []
+	async fillSampleData(terms: any[]) {
+		const term_ids: string[] = []
 		for (const term of terms) term_ids.push(term.id)
 		for (const sample of this.state.samples) {
 			const data = await this.vocabApi.getSingleSampleData({
@@ -602,7 +648,7 @@ class SampleView extends PlotBase {
 				let div = plotsDiv.append('div')
 				if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 				for (const sample of samples) {
-					const label = k.match(/[A-Z][a-z]+|[0-9]+/g).join(' ')
+					const label = (k.match(/[A-Z][a-z]+|[0-9]+/g) || []).join(' ')
 					const plotDiv = div.insert('div').style('display', 'table-cell').style('padding', '20px')
 					this.singleSamplePlots[k].push({ sample, cellDiv: plotDiv })
 					if (state.samples.length > 1)
@@ -703,7 +749,7 @@ function setRenderers(self) {
 		const tbody = table.append('tbody')
 		// use an array to support multiple visible samples,
 		// but prototyping with just one sample for now
-		const visibleSamples = []
+		const visibleSamples: any[] = []
 		for (const sample of self.state.samples) visibleSamples.push(self.sampleDataByTermId[sample.sampleId])
 		// for the column names, just need the first column name + sample data
 		self.renderTHead(['', ...self.state.samples.map(s => s.sampleName)], theadrow)
@@ -734,7 +780,7 @@ function setRenderers(self) {
 	self.renderTr = function (trData, trIndex) {
 		const tds = select(this)
 			.selectAll('td')
-			.data(trData, d => d)
+			.data(trData, (d: any) => d)
 		tds.exit().remove()
 		tds.each(self.renderTd)
 		tds
@@ -804,7 +850,7 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.toggleTerm = function () {
-		const d = select(this).datum()
+		const d = select(this).datum() as any
 		if (d.term.isleaf) return
 		const expandedTermIds = self.config.expandedTermIds.slice() // create a copy
 		const i = expandedTermIds.indexOf(d.term.id)
@@ -818,7 +864,7 @@ function setInteractivity(self) {
 	}
 }
 
-export async function getPlotConfig(opts, app) {
+export async function getPlotConfig(opts: any, app: any) {
 	const q = app.getState()?.termdbConfig?.queries
 	const settings = {
 		sampleView: {
@@ -836,9 +882,9 @@ export async function getPlotConfig(opts, app) {
 	return copyMerge(config, opts)
 }
 
-export function searchSampleInput(holder, samplesData, hasSampleAncestry, callback, keyUpCallback) {
+export function searchSampleInput(holder: any, samplesData: any, hasSampleAncestry: any, callback: (name: string) => void, keyUpCallback?: (str: string) => void) {
 	const limit = 100
-	const allSamples = []
+	const allSamples: string[] = []
 	for (const sample in samplesData) {
 		const sample_type = samplesData[sample].sample_type
 		if (
@@ -872,7 +918,7 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 		datalist.selectAll('*').remove()
 		const str = input.node().value.toLowerCase()
 		if (keyUpCallback) keyUpCallback(str)
-		const options = []
+		const options: string[] = []
 		for (const sample of allSamples) {
 			if (sample.toLowerCase().startsWith(str)) options.push(sample)
 			if (options.length == limit && allSamples.length > 10000) break
@@ -881,7 +927,7 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 			if (sample.toLowerCase().includes(str) && !options.includes(sample)) options.push(sample)
 			if (options.length == limit && allSamples.length > 10000) break
 		}
-		if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) addOptions(options, this)
+		if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) addOptions(options)
 	})
 	input.on('change', e => {
 		const sampleName = input.node().value
@@ -915,9 +961,9 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 		const rootChildren = childrenByParent.get(rootName) || []
 		if (rootChildren.length === 0) return sampleName
 
-		const parts = []
+		const parts: string[] = []
 		for (const child of rootChildren) {
-			let chain = [child]
+			let chain: string[] = [child]
 			let cur = child
 			while (true) {
 				const kids = childrenByParent.get(cur) || []
@@ -932,24 +978,24 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 	return sampleName
 }
 
-function buildHierarchy(samplesData) {
-	let childrenByParent = new Map()
-	let rootFor = new Map()
+function buildHierarchy(samplesData: any) {
+	let childrenByParent = new Map<string, string[]>()
+	let rootFor = new Map<string, string>()
 
 	// Build children map + find roots
-	for (const s of Object.values(samplesData)) {
-		const childName = s.name
-		const parentName = s.ancestor_name
+	for (const s of Object.values(samplesData) as any[]) {
+		const childName: string = s.name
+		const parentName: string = s.ancestor_name
 		if (parentName) {
 			if (!childrenByParent.has(parentName)) {
 				childrenByParent.set(parentName, [])
 			}
-			childrenByParent.get(parentName).push(childName)
+			childrenByParent.get(parentName)!.push(childName)
 		}
 
 		// find root for this sample
-		let root = childName
-		let curr = s
+		let root: string = childName
+		let curr: any = s
 		while (curr?.ancestor_name) {
 			root = curr.ancestor_name
 			curr = samplesData[root]
@@ -969,7 +1015,7 @@ function buildHierarchy(samplesData) {
 }
 
 //Get samples related through parent
-export function getSamplesRelated(samplesData, sampleName, childrenByParent = null, rootFor) {
+export function getSamplesRelated(samplesData: any, sampleName: string, childrenByParent: Map<string, any> | null = null, rootFor?: Map<string, string>) {
 	if (!samplesData[sampleName]) return []
 
 	// Fast path: use precomputed data when available
@@ -993,10 +1039,10 @@ export function getSamplesRelated(samplesData, sampleName, childrenByParent = nu
 	let kidsMap = childrenByParent
 	if (!kidsMap) {
 		kidsMap = new Map()
-		for (const s of Object.values(samplesData)) {
+		for (const s of Object.values(samplesData) as any[]) {
 			if (s.ancestor_name) {
 				if (!kidsMap.has(s.ancestor_name)) kidsMap.set(s.ancestor_name, [])
-				kidsMap.get(s.ancestor_name).push(s)
+				kidsMap.get(s.ancestor_name)!.push(s)
 			}
 		}
 
@@ -1012,22 +1058,22 @@ export function getSamplesRelated(samplesData, sampleName, childrenByParent = nu
 	}
 
 	// Collect in pre-order
-	const samples = []
-	const hasChildren = (kidsMap.get(rootName) || []).length > 0
+	const samples: { sampleId: any; sampleName: string }[] = []
+	const hasChildren = (kidsMap!.get(rootName!) || []).length > 0
 
 	// Include root only if it has no descendants or isn't just a grouping node
 	if (root.sample_type !== ROOT_SAMPLE_TYPE || !hasChildren) {
 		samples.push({ sampleId: root.id, sampleName: root.name })
 	}
 
-	function traverse(parentName) {
-		const kids = kidsMap.get(parentName) || []
+	function traverse(parentName: string) {
+		const kids = kidsMap!.get(parentName) || []
 		for (const kid of kids) {
 			samples.push({ sampleId: kid.id, sampleName: kid.name })
 			traverse(kid.name)
 		}
 	}
 
-	traverse(rootName)
+	traverse(rootName!)
 	return samples
 }

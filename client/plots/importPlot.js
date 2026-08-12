@@ -120,6 +120,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'frequencyChart':
 			return await import(`./runChart2/RunChart2.ts`)
 
+		case 'sampleView':
+			return await import(`./sampleView.ts`)
+
 		case 'sampleScatter':
 			return await import(`./scatter/scatter.js`)
 
