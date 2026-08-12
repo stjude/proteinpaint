@@ -48,7 +48,12 @@ async function makeCategoryMenu(self, div: any) {
 		const label = row.append('label')
 		const checkbox = label.append('input').attr('type', 'checkbox').property('checked', !self.q.hiddenValues?.[c.key])
 		checkboxes.set(c.key, checkbox)
-		label.append('span').html(` ${c.label || c.key} <span style="opacity:.6;font-size:.8em">n=${c.samplecount}</span>`)
+		label.append('span').text(` ${c.label || c.key} `)
+		label
+			.append('span')
+			.style('opacity', 0.6)
+			.style('font-size', '.8em')
+			.text(`n=${c.samplecount}`)
 	}
 
 	holder
