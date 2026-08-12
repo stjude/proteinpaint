@@ -90,7 +90,9 @@ export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any)
 async function processMemberTerm(term, q: TermdbAggregateMatrixRequest, ds: any, queries: Set<string>) {
     if (term.type === PSEUDOBULK) {
         const pseudobulk = ds.queries.singleCell.pseudobulk
-        const member = pseudobulk[term.assay][term.memberId]
+        const assay = pseudobulk[term.assay]
+        if (!assay) throw new Error(`Pseudobulk assay: ${term.assay} not found for term: ${term.id}`)
+        const member = assay[term.memberId]
         if (!member) throw new Error(`Member: ${term.memberId} not found for term: ${term.id} in pseudobulk assay: ${term.assay}`)
 
         const gradientFile = member.categories[term.id][`${q.gradientMethod}File`]
