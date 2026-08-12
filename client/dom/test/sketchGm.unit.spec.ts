@@ -176,6 +176,65 @@ tape('sketchGmsum renders gene model summary', test => {
 	test.end()
 })
 
+tape('sketchGmsum clips a gene model to a window of regions', test => {
+	/* the regions may be a window of a gene rather than the whole of it, e.g. the exons a
+	fusion breaks on and their context (see makeExonScale). the backbone of a gene model that
+	runs past the window is clipped to it: before, neither of its ends was held by a region
+	and the backbone was dropped, leaving the exons drawn with nothing joining them */
+	const holder = getHolder()
+	const gm = createSimpleGeneModel()
+	// the middle region alone, which neither gm.start (1000) nor gm.stop (5000) falls in
+	const windowRegions = [createExonRegions()[1]]
+	const pxwidth = windowRegions[0].width
+	sketchGmsum(holder, windowRegions, gm, 1, 10, pxwidth, 20, '#00ff00')
+
+	const canvas = holder.select('canvas').node() as HTMLCanvasElement
+	const ctx = canvas.getContext('2d')!
+	const dpr = canvas.width / pxwidth
+	// the backbone runs along the middle of the canvas, so read that row
+	const row = ctx.getImageData(0, Math.round(10 * dpr), canvas.width, 1).data
+	let drawn = 0
+	for (let x = 0; x < canvas.width; x++) if (row[x * 4 + 3] > 40) drawn++
+	test.ok(drawn > canvas.width * 0.9, 'the backbone spans the window rather than being dropped')
+	test.equal(Math.round(canvas.width / dpr), pxwidth, 'and is no wider than the window')
+
+	holder.remove()
+	test.end()
+})
+
+tape('sketchGmsum numbers the exons wide enough to hold a number', test => {
+	const holder = getHolder()
+	const gm = createSimpleGeneModel()
+	const rglst = createExonRegions()
+	// pixels drawn in the middle row, where a number would be, over the same sketch
+	const midRowPixels = (exonNumbers: boolean, exonsf: number) => {
+		const div = getHolder()
+		const width = 3 * 500 * exonsf + 20
+		sketchGmsum(div, rglst.map(r => ({ ...r, width: 500 * exonsf })) as any, gm, exonsf, 10, width, 20, '#00ff00', {
+			exonNumbers
+		})
+		const canvas = div.select('canvas').node() as HTMLCanvasElement
+		const dpr = canvas.width / width
+		const row = canvas.getContext('2d')!.getImageData(0, Math.round(10 * dpr), canvas.width, 1).data
+		let drawn = 0
+		/* the number is drawn white over a coding box; count only near-white pixels, as
+		neither the boxes ('#00ff00' coding, '#aaa' non-coding) nor the backbone is */
+		for (let x = 0; x < canvas.width; x++) {
+			if (row[x * 4 + 3] > 40 && row[x * 4] > 200 && row[x * 4 + 2] > 200) drawn++
+		}
+		div.remove()
+		return drawn
+	}
+	test.ok(midRowPixels(true, 1) > 0, 'a wide exon box carries its number')
+	test.equal(midRowPixels(false, 1), 0, 'not drawn unless asked for')
+	// the same gene laid out so that an exon is a few px wide, as a many-exon gene is when
+	// the whole of it is drawn: there is no room for a number and none is drawn
+	test.equal(midRowPixels(true, 0.01), 0, 'a box too narrow for its number is left alone')
+
+	holder.remove()
+	test.end()
+})
+
 tape('sketchGmsum handles missing coding regions', test => {
 	const holder = getHolder()
 	const gm = createSimpleGeneModel()

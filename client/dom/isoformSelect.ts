@@ -5,10 +5,14 @@ import type {
 	ExonRegion,
 	IsoformSelectOpts,
 	IsoformRangeSelectOpts,
+	IsoformPairRangeSelectOpts,
+	BreakpointMarker,
+	BreakpointLink,
 	LinearScale,
+	ScaleMode,
 	SelectedRange
 } from './types/isoformSelect'
-import type { Td } from '../types/d3'
+import type { Div, Td } from '../types/d3'
 
 /*
 Standalone reusable component for displaying and selecting gene model isoforms.
@@ -28,7 +32,9 @@ Multi-select (multiSelect: true):
   from multiple isoforms.
 
 See isoformRangeSelect() at the bottom of this file for a related component that
-marks breakpoints over the isoform structure and selects a genomic range of them.
+marks breakpoints over the isoform structure and selects a genomic range of them,
+and isoformPairRangeSelect() for the two-gene form of it, which links the paired
+breakpoints of sv/fusion events between the two genes they join.
 
 ******* required (both modes)
 .holder     d3 selection to render into
@@ -300,20 +306,83 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 	}
 }
 
-/**
- * Linear genomic scale over a chr region covering the gene models and markers, padded.
- *
- * Deliberately not the exon-collapsed layout of allgm2sum(): sv/fusion breakpoints are
- * mostly intronic (e.g. the two BCR breakpoint clusters of BCR::ABL1 sit in introns), so
- * a collapsed intron would squeeze them into a few px and make a dragged range
- * unmappable back to a genomic coordinate.
- */
-export function makeLinearScale(arg: {
+type ScaleArg = {
 	chr: string
 	gms: GeneModel[]
 	markers?: { pos: number }[]
 	pxwidth: number
-}): LinearScale {
+	/** range already selected on the gene. only used to keep it within a zoomed window */
+	range?: { start: number; stop: number }
+}
+
+/** exons of context kept on each side of the breakpoints when zooming (see focusRegions) */
+const zoomPadExons = 1
+/** a gene of fewer exons than this is not zoomed, as there is little width to win */
+const zoomMinExons = 6
+/** zoom only when the window leaves out at least this share of the exons: below it the
+ * width won does not repay the context lost */
+const zoomMinDropped = 1 / 3
+
+/**
+ * The exons to draw of a gene: the ones the breakpoints fall on, one exon of context on
+ * each side, and every exon between them.
+ *
+ * The window is one contiguous run, so it is a zoom of the gene rather than a splice of it:
+ * every gap within it is a real intron, and nothing inside it is left out. An exon of a
+ * many-exon gene is only a few px of the full width, too small to read a breakpoint on or
+ * to drag a range over; a window of them gets the whole width to share.
+ *
+ * The whole gene is kept when the window would leave out too little to repay the context.
+ */
+function focusRegions(
+	rglst: ExonRegion[],
+	markers: { pos: number }[] | undefined,
+	range: { start: number; stop: number } | undefined
+): ExonRegion[] {
+	if (rglst.length < zoomMinExons) return rglst
+	/* what the window must cover: the breakpoints, and the ends of a range already selected,
+	so that a window cannot silently narrow a saved selection when it is clamped (see the
+	setRange of each component) */
+	const positions: number[] = []
+	for (const m of markers || []) if (Number.isFinite(m.pos)) positions.push(m.pos)
+	if (range) positions.push(range.start, range.stop)
+	if (!positions.length) return rglst
+	const lo = Math.min(...positions)
+	const hi = Math.max(...positions)
+	// rglst runs 3' to 5' on the minus strand, so walk the regions by position instead
+	const byPos = [...rglst].sort((a, b) => a.start - b.start)
+	let first = 0
+	while (first < byPos.length - 1 && byPos[first].stop < lo) first++
+	let last = byPos.length - 1
+	while (last > first && byPos[last].start > hi) last--
+	first = Math.max(0, first - zoomPadExons)
+	last = Math.min(byPos.length - 1, last + zoomPadExons)
+	const kept = new Set(byPos.slice(first, last + 1))
+	if (kept.size > rglst.length * (1 - zoomMinDropped)) return rglst
+	return rglst.filter(r => kept.has(r))
+}
+
+/** compact locus of a zoomed track, e.g. chr22:23180-23240kb, to fit the label column it
+ * is shown in. the exact coordinates are in the range inputs below the chart */
+function locusLabel(chr: string, start: number, stop: number) {
+	if (stop - start >= 1e6) return `${chr}:${(start / 1e6).toFixed(2)}-${(stop / 1e6).toFixed(2)}Mb`
+	return `${chr}:${Math.round(start / 1000)}-${Math.round(stop / 1000)}kb`
+}
+
+/**
+ * Scale of a gene to place breakpoints and a range over, in the layout of the given mode
+ * (see ScaleMode): 'genomic' keeps introns at their real width, 'rna' collapses them.
+ *
+ * The mode follows the dt of the events being charted, not the gene: a genomic sv breaks
+ * mostly in introns, so collapsing them would squeeze its breakpoints into a few px, while
+ * a rna fusion joins transcripts at exon boundaries, where intronic space is only noise.
+ */
+export function makeScale(arg: ScaleArg & { mode?: ScaleMode }): LinearScale {
+	return arg.mode == 'rna' ? makeExonScale(arg) : makeLinearScale(arg)
+}
+
+/** Linear genomic scale over a chr region covering the gene models and markers, padded. */
+export function makeLinearScale(arg: ScaleArg): LinearScale {
 	const { chr, gms, pxwidth } = arg
 	const positions: number[] = []
 	for (const gm of gms) positions.push(gm.start, gm.stop)
@@ -332,12 +401,15 @@ export function makeLinearScale(arg: {
 	const rglst: ExonRegion[] = [{ chr, bstart: start, bstop: stop, start, stop, reverse, width: pxwidth }]
 	return {
 		chr,
+		mode: 'genomic',
+		zoomed: false,
 		start,
 		stop,
 		reverse,
 		pxwidth,
 		exonsf,
 		rglst,
+		intronpx: 0,
 		pos2px: (pos: number) => (reverse ? stop - pos : pos - start) * exonsf,
 		px2pos: (px: number) => {
 			const pos = Math.round(reverse ? stop - px / exonsf : start + px / exonsf)
@@ -347,10 +419,262 @@ export function makeLinearScale(arg: {
 }
 
 /**
+ * Scale over the exon structure of a gene, the exons of all its isoforms merged (see
+ * allgm2sum) and the introns between them collapsed to fixed narrow gaps.
+ *
+ * A position off the exon structure, i.e. in a collapsed intron or outside the gene, has no
+ * px of its own and maps to the start of the exon after it, which is also where a px of the
+ * gap it sits in maps back to; so a dragged range snaps to exon boundaries and an off-exon
+ * position stays put through a round trip. The range stays genomic, so it still covers the
+ * introns its ends span over: for a rna fusion nothing breaks there, and an event that did
+ * would be matched by the range but drawn at an exon edge.
+ *
+ * Falls back to makeLinearScale() for a gene with no isoform, e.g. a fusion partner that is
+ * an unannotated locus, as there is no exon structure to lay its breakpoints over.
+ */
+export function makeExonScale(arg: ScaleArg): LinearScale {
+	const { chr, gms, pxwidth } = arg
+	const [allrg] = allgm2sum(gms.filter(gm => gm.chr == chr))
+	if (!allrg.length) return makeLinearScale(arg)
+	// zoom to the exons the breakpoints fall on, when there is enough width to win by it
+	const rglst = focusRegions(allrg, arg.markers, arg.range)
+	const zoomed = rglst.length < allrg.length
+	// rglst is in display order, 5' to 3', so a minus strand gene runs right to left
+	const reverse = !!rglst[0].reverse
+	const gaps = rglst.length - 1
+	// a gap is a fixed 10px, narrowed for a gene of many exons so that the gaps together
+	// cannot take more than 40% of the width from the exons
+	const intronpx = gaps ? Math.min(10, (pxwidth * 0.4) / gaps) : 0
+	const exonlen = rglst.reduce((n, r) => n + r.stop - r.start, 0)
+	const exonsf = (pxwidth - intronpx * gaps) / exonlen
+	/* x of the left edge of each region, accumulated exactly as sketchGmsum() advances over
+	rglst, so that a mark and the sketch below it land on the same px. NOTE the widths are
+	kept unrounded for that reason */
+	const offsets: number[] = []
+	let x = 0
+	for (const r of rglst) {
+		r.width = (r.stop - r.start) * exonsf
+		offsets.push(x)
+		x += r.width + intronpx
+	}
+	const start = Math.min(...rglst.map(r => r.start))
+	const stop = Math.max(...rglst.map(r => r.stop))
+	// regions in ascending position, to find the one a position falls in or before
+	const byPos = rglst.map((r, i) => ({ r, offset: offsets[i] })).sort((a, b) => a.r.start - b.r.start)
+	return {
+		chr,
+		mode: 'rna',
+		zoomed,
+		start,
+		stop,
+		reverse,
+		pxwidth,
+		exonsf,
+		rglst,
+		intronpx,
+		pos2px: (pos: number) => {
+			const p = Math.max(start, Math.min(stop, pos))
+			for (const { r, offset } of byPos) {
+				if (p > r.stop) continue
+				// within this exon, or in the intron before it, which has no px of its own
+				const q = Math.max(p, r.start)
+				return offset + (reverse ? r.stop - q : q - r.start) * exonsf
+			}
+			// unreachable, as p is clamped to the last stop
+			return pxwidth
+		},
+		px2pos: (px: number) => {
+			const x = Math.max(0, Math.min(pxwidth, px))
+			for (const [i, r] of rglst.entries()) {
+				if (x > offsets[i] + r.width!) continue
+				// within this exon, or in the gap before it, which maps to its leading edge
+				const within = Math.max(0, x - offsets[i]) / exonsf
+				return Math.round(reverse ? r.stop - within : r.start + within)
+			}
+			const last = rglst[rglst.length - 1]
+			return reverse ? last.start : last.stop
+		}
+	}
+}
+
+/** color of a selected range and of the breakpoints falling within it */
+const selectColor = '#1e6edc'
+/** color of a breakpoint mark or link with no range to be in or out of */
+const markColor = '#5A5A5A'
+/** color of a breakpoint excluded by the range on its own gene */
+const outColor = '#b0b0b0'
+/** color of a breakpoint excluded by the range on the other gene of a pair. lighter than
+ * outColor, as it fails a constraint that is not editable in this component */
+const otherOutColor = '#d6d6d6'
+/** color of a hovered link, the same highlight as the default isoform label */
+const hoverColor = '#cc0000'
+
+/** direction breakpoint marks grow in from their baseline: 'up' for a track whose isoform
+ * sketches are below the marks, 'down' for one whose sketches are above them */
+type MarkDirection = 'up' | 'down'
+
+/** draw the breakpoint marks of one gene, their height scaled by sample count */
+function renderBreakpointMarks(a: {
+	canvas: HTMLCanvasElement
+	markers: BreakpointMarker[]
+	scale: LinearScale
+	pxwidth: number
+	height: number
+	direction: MarkDirection
+	/** color of each mark, defaults to markColor */
+	getColor?: (m: BreakpointMarker) => string
+}) {
+	const { canvas, markers, scale, pxwidth, height, direction } = a
+	const ctx = setupCanvas(canvas, pxwidth, height)
+	// baseline the marks stand on, at the level of the isoform sketches beside them
+	const baseY = direction == 'up' ? height - 0.5 : 0.5
+	ctx.strokeStyle = '#ccc'
+	ctx.beginPath()
+	ctx.moveTo(0, baseY)
+	ctx.lineTo(pxwidth, baseY)
+	ctx.stroke()
+	if (!markers.length) return
+	const maxCount = Math.max(...markers.map(m => m.samplecount || 1))
+	for (const m of markers) {
+		// sqrt scale, so that a few high-count breakpoints do not flatten the rest
+		const h = 5 + (height - 8) * Math.sqrt((m.samplecount || 1) / maxCount)
+		const x = Math.round(scale.pos2px(m.pos)) + 0.5
+		const y0 = direction == 'up' ? height - 1 : 1
+		ctx.strokeStyle = a.getColor ? a.getColor(m) : markColor
+		ctx.beginPath()
+		ctx.moveTo(x, y0)
+		ctx.lineTo(x, direction == 'up' ? y0 - h : y0 + h)
+		ctx.stroke()
+	}
+}
+
+/** one row per isoform, its name in the label column and its exon structure sketched
+ * over the scale in the graph column */
+function renderIsoformRows(a: {
+	labelCol: Div
+	graphCol: Div
+	gms: GeneModel[]
+	scale: LinearScale
+	pxwidth: number
+	rowHeight: number
+}) {
+	for (const gm of visibleGms(a.gms, a.scale)) {
+		a.labelCol
+			.append('div')
+			.style('height', a.rowHeight + 'px')
+			.style('overflow', 'hidden')
+			.style('white-space', 'nowrap')
+			.style('font-size', '.8em')
+			.style('color', gm.isdefault ? hoverColor : '#545454')
+			.attr('title', gm.isoform)
+			.text(gm.isoform)
+		const row = a.graphCol.append('div').style('height', a.rowHeight + 'px')
+		// the same intron width the scale accumulates its regions with, or the sketch would
+		// not line up with the marks and links placed over it
+		sketchGmsum(row, a.scale.rglst, gm, a.scale.exonsf, a.scale.intronpx, a.pxwidth, a.rowHeight - 2, exoncolor, {
+			// a zoomed layout gives an exon box the room for its number; an unzoomed one
+			// of a many-exon gene does not, and none is drawn
+			exonNumbers: true
+		})
+	}
+}
+
+/** the isoforms with something to draw over the scale. one lying outside a zoomed window
+ * has no exon and no backbone within it, so it would take a row to render nothing */
+function visibleGms(gms: GeneModel[], scale: LinearScale) {
+	return gms.filter(gm => gm.stop >= scale.start && gm.start <= scale.stop)
+}
+
+/** drag over an element to select a range of px on it, reported as [x0, x1] of that element */
+function attachRangeDrag(sel: any, pxwidth: number, onDrag: (x0: number, x1: number) => void) {
+	const clampPx = (px: number) => Math.max(0, Math.min(pxwidth, px))
+	sel.on('mousedown', (event: MouseEvent) => {
+		event.preventDefault()
+		const rect = (sel.node() as HTMLElement).getBoundingClientRect()
+		const x0 = clampPx(event.clientX - rect.left)
+		// listening on window so that a drag continuing outside the element still tracks
+		const onMove = (e: MouseEvent) => {
+			const x1 = clampPx(e.clientX - rect.left)
+			// below this the pointer has not really moved, e.g. the jitter of a click,
+			// which must not select a zero width range
+			if (Math.abs(x1 - x0) < 2) return
+			onDrag(x0, x1)
+		}
+		const onUp = () => {
+			window.removeEventListener('mousemove', onMove)
+			window.removeEventListener('mouseup', onUp)
+		}
+		window.addEventListener('mousemove', onMove)
+		window.addEventListener('mouseup', onUp)
+	})
+}
+
+/** coordinate inputs of the selected range, an exact way to place it that a drag cannot
+ * give, with the buttons to apply and clear it */
+function renderRangeControls(a: {
+	holder: Div
+	chr: string
+	/** a range typed into the inputs, sorted by position; undefined when an input was
+	 * emptied or is unparsable, which restores the displayed range */
+	onTyped: (r: { start: number; stop: number } | undefined) => void
+	onApply: () => void
+	onClear: () => void
+}) {
+	const controlDiv = a.holder.append('div').style('margin-top', '6px').style('font-size', '.8em')
+	controlDiv
+		.append('span')
+		.style('opacity', 0.7)
+		.text(a.chr + ':')
+	const startInput = addPosInput()
+	controlDiv.append('span').style('opacity', 0.7).text('-')
+	const stopInput = addPosInput()
+	const applyBtn = controlDiv
+		.append('button')
+		.attr('data-testid', 'sjpp-isoformRangeSelect-apply')
+		.style('margin-left', '8px')
+		.text('Apply')
+		.on('click', a.onApply)
+	const clearBtn = controlDiv
+		.append('button')
+		.attr('data-testid', 'sjpp-isoformRangeSelect-clear')
+		.style('margin-left', '5px')
+		.text('Clear')
+		.on('click', a.onClear)
+
+	return {
+		/** show the given range on the inputs, and enable the buttons only when there is one */
+		update(range: { start: number; stop: number } | null) {
+			startInput.property('value', range ? range.start : '')
+			stopInput.property('value', range ? range.stop : '')
+			applyBtn.property('disabled', !range)
+			clearBtn.property('disabled', !range)
+		}
+	}
+
+	function addPosInput() {
+		return controlDiv
+			.append('input')
+			.attr('type', 'number')
+			.attr('data-testid', 'sjpp-isoformRangeSelect-pos')
+			.style('width', '85px')
+			.style('margin', '0 3px')
+			.on('change', () => {
+				const start = Number(startInput.property('value'))
+				const stop = Number(stopInput.property('value'))
+				if (!Number.isFinite(start) || !Number.isFinite(stop)) {
+					a.onTyped(undefined)
+					return
+				}
+				a.onTyped({ start: Math.min(start, stop), stop: Math.max(start, stop) })
+			})
+	}
+}
+
+/**
  * Mark breakpoints over the isoform structure of a gene and select a genomic range of them.
  *
  * Renders a canvas of breakpoint marks on top of the isoform models, all on one linear
- * scale (see makeLinearScale), and allows dragging a range over them. The range may also
+ * scale (see makeScale, laid out per opts.mode), and allows dragging a range over them. The range may also
  * be typed in, as a drag over a gene of a hundred kb is too coarse to place a cluster
  * boundary. Calls callback(range) on apply and callback(null) when the range is cleared.
  *
@@ -370,7 +694,8 @@ export function isoformRangeSelect(opts: IsoformRangeSelectOpts) {
 		holder.append('div').style('opacity', 0.6).text('No gene model or breakpoint to display')
 		return
 	}
-	const scale = makeLinearScale({ chr, gms, markers, pxwidth })
+	// the range is passed so that a zoomed window cannot leave it out (see focusRegions)
+	const scale = makeScale({ chr, gms, markers, pxwidth, mode: opts.mode, range: opts.range })
 
 	// current selection, kept in genomic coordinates so that it survives a re-render
 	let range: { start: number; stop: number } | null = opts.range
@@ -396,29 +721,49 @@ export function isoformRangeSelect(opts: IsoformRangeSelectOpts) {
 		.style('position', 'relative')
 		.style('width', pxwidth + 'px')
 
-	// blank label cell to keep the isoform names aligned with their sketches
-	labelCol.append('div').style('height', markerHeight + 'px')
+	/* label cell beside the marks, keeping the isoform names aligned with their sketches. it
+	names the locus when only a window of the gene is drawn, so that the view is not taken
+	for the whole gene */
+	const locusCell = labelCol
+		.append('div')
+		.attr('data-testid', 'sjpp-isoformRangeSelect-locus')
+		.style('height', markerHeight + 'px')
+		.style('display', 'flex')
+		.style('align-items', 'flex-end')
+	if (scale.zoomed) {
+		locusCell
+			.append('div')
+			.style('font-size', '.7em')
+			.style('opacity', 0.6)
+			.style('overflow', 'hidden')
+			.style('white-space', 'nowrap')
+			.attr('title', `${chr}:${scale.start.toLocaleString()}-${scale.stop.toLocaleString()}`)
+			.text(locusLabel(chr, scale.start, scale.stop))
+	}
 
-	const markerCanvas = graphCol
+	/* the marks and the isoform sketches under them are one track, and a range is dragged
+	over the whole of it: the highlight spans it, so anything less would leave part of what
+	the drag selects looking inert */
+	const track = graphCol
+		.append('div')
+		.attr('data-testid', 'sjpp-isoformRangeSelect-track')
+		.attr('data-scale-mode', scale.mode)
+		.style('cursor', 'crosshair')
+	const markerCanvas = track
 		.append('canvas')
 		.attr('data-testid', 'sjpp-isoformRangeSelect-marks')
 		.style('display', 'block')
-		.style('cursor', 'crosshair')
-	renderMarks()
+	renderBreakpointMarks({
+		canvas: markerCanvas.node() as HTMLCanvasElement,
+		markers,
+		scale,
+		pxwidth,
+		height: markerHeight,
+		// the isoform sketches are below the marks, so the marks stand on them
+		direction: 'up'
+	})
 
-	for (const gm of gms) {
-		labelCol
-			.append('div')
-			.style('height', rowHeight + 'px')
-			.style('overflow', 'hidden')
-			.style('white-space', 'nowrap')
-			.style('font-size', '.8em')
-			.style('color', gm.isdefault ? '#cc0000' : '#545454')
-			.attr('title', gm.isoform)
-			.text(gm.isoform)
-		const row = graphCol.append('div').style('height', rowHeight + 'px')
-		sketchGmsum(row, scale.rglst, gm, scale.exonsf, 0, pxwidth, rowHeight - 2, exoncolor)
-	}
+	renderIsoformRows({ labelCol, graphCol: track, gms, scale, pxwidth, rowHeight })
 
 	// highlight of the selected range, spanning the marks and all isoform sketches
 	const overlay = graphCol
@@ -428,59 +773,27 @@ export function isoformRangeSelect(opts: IsoformRangeSelectOpts) {
 		.style('top', 0)
 		.style('bottom', 0)
 		.style('background', 'rgba(30,110,220,.18)')
-		.style('border-left', '1px solid #1e6edc')
-		.style('border-right', '1px solid #1e6edc')
+		.style('border-left', `1px solid ${selectColor}`)
+		.style('border-right', `1px solid ${selectColor}`)
 		.style('pointer-events', 'none')
 		.style('display', 'none')
 
-	// coordinate inputs, an exact way to place a range that a drag cannot give
-	const controlDiv = holder.append('div').style('margin-top', '6px').style('font-size', '.8em')
-	controlDiv
-		.append('span')
-		.style('opacity', 0.7)
-		.text(chr + ':')
-	const startInput = addPosInput()
-	controlDiv.append('span').style('opacity', 0.7).text('-')
-	const stopInput = addPosInput()
-	const applyBtn = controlDiv
-		.append('button')
-		.attr('data-testid', 'sjpp-isoformRangeSelect-apply')
-		.style('margin-left', '8px')
-		.text('Apply')
-		.on('click', () => {
+	const controls = renderRangeControls({
+		holder,
+		chr,
+		onTyped: r => setRange(r || range),
+		onApply: () => {
 			if (!range) return
 			callback({ chr, start: range.start, stop: range.stop })
-		})
-	const clearBtn = controlDiv
-		.append('button')
-		.attr('data-testid', 'sjpp-isoformRangeSelect-clear')
-		.style('margin-left', '5px')
-		.text('Clear')
-		.on('click', () => {
+		},
+		onClear: () => {
 			setRange(null)
 			callback(null)
-		})
-
-	// drag over the marks to select a range
-	markerCanvas.on('mousedown', (event: MouseEvent) => {
-		event.preventDefault()
-		const rect = (markerCanvas.node() as HTMLCanvasElement).getBoundingClientRect()
-		const x0 = clampPx(event.clientX - rect.left)
-		// listening on window so that a drag continuing outside the canvas still tracks
-		const onMove = (e: MouseEvent) => {
-			const x1 = clampPx(e.clientX - rect.left)
-			// below this the pointer has not really moved, e.g. the jitter of a click,
-			// which must not select a zero width range
-			if (Math.abs(x1 - x0) < 2) return
-			setRangeFromPx(x0, x1)
 		}
-		const onUp = () => {
-			window.removeEventListener('mousemove', onMove)
-			window.removeEventListener('mouseup', onUp)
-		}
-		window.addEventListener('mousemove', onMove)
-		window.addEventListener('mouseup', onUp)
 	})
+
+	// drag anywhere over the track, marks or isoforms alike, to select a range
+	attachRangeDrag(track, pxwidth, (x0, x1) => setRangeFromPx(x0, x1))
 
 	markerCanvas.on('mousemove', (event: MouseEvent) => {
 		const rect = (markerCanvas.node() as HTMLCanvasElement).getBoundingClientRect()
@@ -503,29 +816,6 @@ export function isoformRangeSelect(opts: IsoformRangeSelectOpts) {
 		setRange: (r: SelectedRange | null) => setRange(r)
 	}
 
-	function addPosInput() {
-		return controlDiv
-			.append('input')
-			.attr('type', 'number')
-			.attr('data-testid', 'sjpp-isoformRangeSelect-pos')
-			.style('width', '85px')
-			.style('margin', '0 3px')
-			.on('change', () => {
-				const start = Number(startInput.property('value'))
-				const stop = Number(stopInput.property('value'))
-				if (!Number.isFinite(start) || !Number.isFinite(stop)) {
-					// an emptied or unparsable input, restore the displayed range
-					setRange(range)
-					return
-				}
-				setRange({ start: Math.min(start, stop), stop: Math.max(start, stop) })
-			})
-	}
-
-	function clampPx(px: number) {
-		return Math.max(0, Math.min(pxwidth, px))
-	}
-
 	function setRangeFromPx(x0: number, x1: number) {
 		const a = scale.px2pos(x0)
 		const b = scale.px2pos(x1)
@@ -542,15 +832,10 @@ export function isoformRangeSelect(opts: IsoformRangeSelectOpts) {
 				.style('display', '')
 				.style('left', Math.min(x0, x1) + 'px')
 				.style('width', Math.max(1, Math.abs(x1 - x0)) + 'px')
-			startInput.property('value', range.start)
-			stopInput.property('value', range.stop)
 		} else {
 			overlay.style('display', 'none')
-			startInput.property('value', '')
-			stopInput.property('value', '')
 		}
-		applyBtn.property('disabled', !range)
-		clearBtn.property('disabled', !range)
+		controls.update(range)
 		updateInfo()
 	}
 
@@ -567,27 +852,392 @@ export function isoformRangeSelect(opts: IsoformRangeSelectOpts) {
 				(samples ? `, ${samples} samples` : '')
 		)
 	}
+}
 
-	function renderMarks() {
-		const canvas = markerCanvas.node() as HTMLCanvasElement
-		const ctx = setupCanvas(canvas, pxwidth, markerHeight)
-		// baseline the marks stand on, at the level of the isoform sketches below
-		ctx.strokeStyle = '#ccc'
-		ctx.beginPath()
-		ctx.moveTo(0, markerHeight - 0.5)
-		ctx.lineTo(pxwidth, markerHeight - 0.5)
-		ctx.stroke()
-		if (!markers.length) return
-		const maxCount = Math.max(...markers.map(m => m.samplecount || 1))
-		ctx.strokeStyle = '#5A5A5A'
-		for (const m of markers) {
-			// sqrt scale, so that a few high-count breakpoints do not flatten the rest
-			const h = 5 + (markerHeight - 8) * Math.sqrt((m.samplecount || 1) / maxCount)
-			const x = Math.round(scale.pos2px(m.pos)) + 0.5
-			ctx.beginPath()
-			ctx.moveTo(x, markerHeight - 1)
-			ctx.lineTo(x, markerHeight - 1 - h)
-			ctx.stroke()
-		}
+/**
+ * Chart the paired breakpoints of sv/fusion events over both genes they join, and select
+ * a genomic range on the partner gene.
+ *
+ * The two genes are stacked as parallel tracks, each on its own scale of its own
+ * chr (see makeScale, laid out per opts.mode), with a line between the two breakpoints of every distinct
+ * event: the term's own gene above, the partner below. The strength of a line is its
+ * sample count, so that a recurrent breakpoint pair, e.g. the major BCR::ABL1 junction,
+ * reads at a glance. Which breakpoint of one gene goes with which of the other is lost by
+ * charting either gene alone (see isoformRangeSelect), and is what this view recovers.
+ *
+ * Only the range on the partner gene is selected here, by dragging over its marks, typing
+ * coordinates, or clicking a link to take its breakpoint. The range on the term's own gene
+ * is owned by a separate control that applies term-wide (see variantConfig.ts), so it is
+ * shown as context only: it is highlighted, and the links failing it are dimmed, as those
+ * events cannot match however the partner range is placed.
+ *
+ * Returns undefined, having said so in the holder, when neither track can be scaled.
+ */
+export function isoformPairRangeSelect(opts: IsoformPairRangeSelectOpts) {
+	const { holder, self, partner, callback } = opts
+	const pxwidth = opts.pxwidth ?? 400
+	const labelWidth = opts.labelWidth ?? 110
+	const rowHeight = 18
+	// breathing room between the link band and the isoform sketches it runs to
+	const trackGap = 10
+	const linkHeight = 70
+
+	const selfGms = self.allgm.filter(gm => gm.chr == self.chr && !gm.hidden)
+	const partnerGms = partner.allgm.filter(gm => gm.chr == partner.chr && !gm.hidden)
+	// a pair missing a coordinate on either side cannot be drawn as a link
+	const links = opts.links.filter(l => Number.isFinite(l.selfPos) && Number.isFinite(l.partnerPos))
+	if (!links.length && (!selfGms.length || !partnerGms.length)) {
+		// without links, a track holds only its isoform sketches, and one of them has none
+		holder.append('div').style('opacity', 0.6).text('No gene model or breakpoint to display')
+		return
 	}
+	/* marks of a track are the distinct breakpoints of its gene, summing the samples of
+	every pair converging on the same position. NOTE that sums a sample with two events at
+	one position, to different breakpoints of the other gene, once per event */
+	const selfMarks = collapseMarks(l => l.selfPos)
+	const partnerMarks = collapseMarks(l => l.partnerPos)
+	// both genes are of the same events, so they are laid out the same way. each range is
+	// passed so that a zoomed window of its gene cannot leave it out (see focusRegions)
+	const selfScale = makeScale({
+		chr: self.chr,
+		gms: selfGms,
+		markers: selfMarks,
+		pxwidth,
+		mode: opts.mode,
+		range: self.range
+	})
+	const partnerScale = makeScale({
+		chr: partner.chr,
+		gms: partnerGms,
+		markers: partnerMarks,
+		pxwidth,
+		mode: opts.mode,
+		range: partner.range
+	})
+	const maxCount = Math.max(...links.map(l => l.samplecount || 1), 1)
+
+	// current selection on the partner gene, kept in genomic coordinates
+	let range: { start: number; stop: number } | null = partner.range
+		? { start: partner.range.start, stop: partner.range.stop }
+		: null
+	// link under the pointer, highlighted and read out while it is
+	let hoveredLink: BreakpointLink | undefined
+
+	// readout of the hovered link, or of the current selection when not hovering
+	const infoDiv = holder
+		.append('div')
+		.attr('data-testid', 'sjpp-isoformPairSelect-info')
+		.style('font-size', '.8em')
+		.style('opacity', 0.7)
+		.style('margin-bottom', '3px')
+		/* room for two lines, as a readout naming both genes may wrap: with the height
+		following the text, the chart would shift under the pointer on hovering a link */
+		.style('height', '2.4em')
+		.style('overflow', 'hidden')
+
+	const flexDiv = holder.append('div').style('display', 'flex')
+	const labelCol = flexDiv
+		.append('div')
+		.style('width', labelWidth + 'px')
+		.style('flex', '0 0 auto')
+	const graphCol = flexDiv
+		.append('div')
+		.style('position', 'relative')
+		.style('width', pxwidth + 'px')
+
+	/* the two genes, joined by the band of links. NOTE no strip of breakpoint marks between
+	a gene and the band: the links already converge on each breakpoint, so marks would draw
+	the same positions twice over and cost the chart the height of two more rows */
+	// the isoforms each track actually renders, which a zoomed window may narrow
+	const selfRows = visibleGms(selfGms, selfScale)
+	const partnerRows = visibleGms(partnerGms, partnerScale)
+	const selfTrack = graphCol
+		.append('div')
+		.attr('data-testid', 'sjpp-isoformPairSelect-selfTrack')
+		.attr('data-scale-mode', selfScale.mode)
+	renderIsoformRows({ labelCol, graphCol: selfTrack, gms: selfRows, scale: selfScale, pxwidth, rowHeight })
+	// breathing room either side of the band, so that the links do not run into the exon
+	// boxes they lead to, and so that a track of one isoform is still a fair drag target
+	selfTrack.append('div').style('height', trackGap + 'px')
+	labelCol.append('div').style('height', trackGap + 'px')
+
+	/* the gene names sit either side of the link band, each next to its own track. one label
+	cell holds both, so that they stay level with the band however tall it is */
+	const geneLabels = labelCol
+		.append('div')
+		.style('height', linkHeight + 'px')
+		.style('display', 'flex')
+		.style('flex-direction', 'column')
+		.style('justify-content', 'space-between')
+	addGeneLabel(geneLabels, self.gene, selfScale)
+	addGeneLabel(geneLabels, partner.gene, partnerScale)
+	const linkCanvas = graphCol
+		.append('canvas')
+		.attr('data-testid', 'sjpp-isoformPairSelect-links')
+		.style('display', 'block')
+
+	/* the range is dragged over the whole of the partner track, isoform sketches included:
+	its highlight spans them, and with no strip of marks to drag over they are all there is */
+	const partnerTrack = graphCol
+		.append('div')
+		.attr('data-testid', 'sjpp-isoformPairSelect-partnerTrack')
+		.attr('data-scale-mode', partnerScale.mode)
+		.style('cursor', 'crosshair')
+	partnerTrack.append('div').style('height', trackGap + 'px')
+	labelCol.append('div').style('height', trackGap + 'px')
+	renderIsoformRows({ labelCol, graphCol: partnerTrack, gms: partnerRows, scale: partnerScale, pxwidth, rowHeight })
+
+	// vertical extent of each track within the graph column, to place the highlights over
+	const selfHeight = selfRows.length * rowHeight + trackGap
+	const partnerTop = selfHeight + linkHeight
+	const partnerHeight = trackGap + partnerRows.length * rowHeight
+
+	/* the range on the term's own gene, shown as context. it is not editable here, so it
+	is drawn muted and dashed, to read differently from the selection below */
+	if (self.range) {
+		const overlay = graphCol
+			.append('div')
+			.attr('data-testid', 'sjpp-isoformPairSelect-selfOverlay')
+			.style('position', 'absolute')
+			.style('top', 0)
+			.style('height', selfHeight + 'px')
+			.style('background', 'rgba(120,120,120,.14)')
+			.style('border-left', '1px dashed #999')
+			.style('border-right', '1px dashed #999')
+			.style('pointer-events', 'none')
+		const x0 = selfScale.pos2px(Math.max(selfScale.start, self.range.start))
+		const x1 = selfScale.pos2px(Math.min(selfScale.stop, self.range.stop))
+		overlay.style('left', Math.min(x0, x1) + 'px').style('width', Math.max(1, Math.abs(x1 - x0)) + 'px')
+	}
+
+	// highlight of the selected range, spanning the marks and sketches of the partner only
+	const overlay = graphCol
+		.append('div')
+		.attr('data-testid', 'sjpp-isoformPairSelect-overlay')
+		.style('position', 'absolute')
+		.style('top', partnerTop + 'px')
+		.style('height', partnerHeight + 'px')
+		.style('background', 'rgba(30,110,220,.18)')
+		.style('border-left', `1px solid ${selectColor}`)
+		.style('border-right', `1px solid ${selectColor}`)
+		.style('pointer-events', 'none')
+		.style('display', 'none')
+
+	const controls = renderRangeControls({
+		holder,
+		chr: partner.chr,
+		onTyped: r => setRange(r || range),
+		onApply: () => {
+			if (!range) return
+			callback({ chr: partner.chr, start: range.start, stop: range.stop })
+		},
+		onClear: () => {
+			setRange(null)
+			callback(null)
+		}
+	})
+
+	// drag anywhere over the partner track, isoform sketches included, to select a range
+	attachRangeDrag(partnerTrack, pxwidth, (x0, x1) => {
+		const a = partnerScale.px2pos(x0)
+		const b = partnerScale.px2pos(x1)
+		// on the minus strand the left px is the higher position, so sort by position
+		setRange({ start: Math.min(a, b), stop: Math.max(a, b) })
+	})
+
+	partnerTrack.on('mousemove', (event: MouseEvent) => {
+		const rect = (partnerTrack.node() as HTMLElement).getBoundingClientRect()
+		const x = event.clientX - rect.left
+		// the breakpoints of the gene, which the links converging on them stand for
+		const hovered = partnerMarks.find(m => Math.abs(partnerScale.pos2px(m.pos) - x) <= 3)
+		if (hovered) {
+			infoDiv.text(
+				`${partner.gene} ${partner.chr}:${hovered.pos.toLocaleString()}` +
+					(hovered.samplecount ? ` · ${hovered.samplecount} samples` : '')
+			)
+		} else {
+			updateInfo()
+		}
+	})
+	partnerTrack.on('mouseleave', () => updateInfo())
+
+	// a link is the finest selection there is, so clicking one takes its breakpoint as the
+	// range; the bounds are inclusive, so a range of one position matches that breakpoint
+	linkCanvas.on('click', () => {
+		if (hoveredLink) setRange({ start: hoveredLink.partnerPos, stop: hoveredLink.partnerPos })
+	})
+	linkCanvas.on('mousemove', (event: MouseEvent) => {
+		const rect = (linkCanvas.node() as HTMLCanvasElement).getBoundingClientRect()
+		const hovered = findLink(event.clientX - rect.left, event.clientY - rect.top)
+		if (hovered != hoveredLink) {
+			hoveredLink = hovered
+			linkCanvas.style('cursor', hovered ? 'pointer' : 'default')
+			render()
+		}
+		if (hovered) infoDiv.text(linkLabel(hovered))
+		else updateInfo()
+	})
+	linkCanvas.on('mouseleave', () => {
+		if (hoveredLink) {
+			hoveredLink = undefined
+			render()
+		}
+		updateInfo()
+	})
+
+	setRange(range)
+
+	return {
+		selfScale,
+		partnerScale,
+		getRange: () => (range ? { chr: partner.chr, start: range.start, stop: range.stop } : null),
+		setRange: (r: SelectedRange | null) => setRange(r)
+	}
+
+	function collapseMarks(get: (l: BreakpointLink) => number): BreakpointMarker[] {
+		const byPos = new Map<number, number>()
+		for (const l of links) {
+			const pos = get(l)
+			byPos.set(pos, (byPos.get(pos) || 0) + (l.samplecount || 0))
+		}
+		return [...byPos].map(([pos, samplecount]) => ({ pos, samplecount }))
+	}
+
+	/** name and locus of one gene, beside the end of the link band that runs to its track */
+	function addGeneLabel(holder: Div, gene: string, scale: LinearScale) {
+		const div = holder.append('div')
+		div
+			.append('div')
+			.style('font-size', '.8em')
+			.style('font-weight', 'bold')
+			.style('overflow', 'hidden')
+			.style('white-space', 'nowrap')
+			.attr('title', gene)
+			.text(gene)
+		/* the locus when only a window of the gene is drawn, so that the view is not taken
+		for the whole gene; the chr alone when it is */
+		div
+			.append('div')
+			.attr('data-testid', 'sjpp-isoformPairSelect-locus')
+			.style('font-size', '.7em')
+			.style('opacity', 0.6)
+			.style('overflow', 'hidden')
+			.style('white-space', 'nowrap')
+			.attr('title', `${scale.chr}:${scale.start.toLocaleString()}-${scale.stop.toLocaleString()}`)
+			.text(scale.zoomed ? locusLabel(scale.chr, scale.start, scale.stop) : scale.chr)
+	}
+
+	function inPartnerRange(l: BreakpointLink) {
+		return !range || (l.partnerPos >= range.start && l.partnerPos <= range.stop)
+	}
+
+	function inSelfRange(l: BreakpointLink) {
+		return !self.range || (l.selfPos >= self.range.start && l.selfPos <= self.range.stop)
+	}
+
+	function linkColor(l: BreakpointLink) {
+		if (!inSelfRange(l)) return otherOutColor
+		if (!range) return markColor
+		return inPartnerRange(l) ? selectColor : outColor
+	}
+
+	/** nearest link within a few px of the point, in the coordinates of the link canvas */
+	function findLink(x: number, y: number) {
+		let best: BreakpointLink | undefined
+		let bestDist = 4
+		for (const l of links) {
+			const d = distToSegment(x, y, selfScale.pos2px(l.selfPos), 0, partnerScale.pos2px(l.partnerPos), linkHeight)
+			if (d < bestDist) {
+				bestDist = d
+				best = l
+			}
+		}
+		return best
+	}
+
+	function linkLabel(l: BreakpointLink) {
+		return (
+			`${self.gene} ${self.chr}:${l.selfPos.toLocaleString()} → ` +
+			`${partner.gene} ${partner.chr}:${l.partnerPos.toLocaleString()}` +
+			(l.samplecount ? ` · ${l.samplecount} samples` : '') +
+			(inSelfRange(l) ? '' : `, outside the ${self.gene} range`)
+		)
+	}
+
+	function setRange(r: { start: number; stop: number } | null) {
+		range = r ? { start: Math.max(partnerScale.start, r.start), stop: Math.min(partnerScale.stop, r.stop) } : null
+		if (range) {
+			const x0 = partnerScale.pos2px(range.start)
+			const x1 = partnerScale.pos2px(range.stop)
+			overlay
+				.style('display', '')
+				.style('left', Math.min(x0, x1) + 'px')
+				.style('width', Math.max(1, Math.abs(x1 - x0)) + 'px')
+		} else {
+			overlay.style('display', 'none')
+		}
+		controls.update(range)
+		render()
+		updateInfo()
+	}
+
+	function updateInfo() {
+		if (!range) {
+			infoDiv.text(`${links.length} breakpoint pairs · drag over ${partner.gene}, or click a link, to select a range`)
+			return
+		}
+		const inRange = links.filter(inPartnerRange)
+		const reachable = inRange.filter(inSelfRange)
+		const samples = reachable.reduce((n, l) => n + (l.samplecount || 0), 0)
+		infoDiv.text(
+			`${partner.chr}:${range.start.toLocaleString()}-${range.stop.toLocaleString()} · ` +
+				`${inRange.length} of ${links.length} breakpoint pairs` +
+				// the two ranges are applied together, so say when this one is not what narrows
+				(reachable.length == inRange.length ? '' : `, ${reachable.length} within the ${self.gene} range`) +
+				(samples ? `, ${samples} samples` : '')
+		)
+	}
+
+	/** redraw the links against the current selection */
+	function render() {
+		renderLinks()
+	}
+
+	function renderLinks() {
+		const ctx = setupCanvas(linkCanvas.node() as HTMLCanvasElement, pxwidth, linkHeight)
+		// draw the faint links first, so that a recurrent pair is not buried under the rest
+		const sorted = [...links].sort((a, b) => (a.samplecount || 1) - (b.samplecount || 1))
+		for (const l of sorted) {
+			if (l != hoveredLink) drawLink(ctx, l, linkColor(l))
+		}
+		// the hovered link is drawn last, so that it reads over the ones crossing it
+		if (hoveredLink) drawLink(ctx, hoveredLink, hoverColor)
+	}
+
+	function drawLink(ctx: CanvasRenderingContext2D, l: BreakpointLink, color: string) {
+		// sqrt scale, as for the mark heights, so that a few frequent pairs do not flatten
+		// the rest into hairlines
+		const strength = Math.sqrt((l.samplecount || 1) / maxCount)
+		ctx.strokeStyle = color
+		ctx.lineWidth = 0.75 + 3.25 * strength
+		/* the width alone carries the sample count: fading a link by its count as well
+		would make an infrequent pair that is still reachable look like an excluded one,
+		which is what the color says. slightly transparent, so that crossings are legible */
+		ctx.globalAlpha = l == hoveredLink ? 1 : 0.85
+		ctx.beginPath()
+		ctx.moveTo(selfScale.pos2px(l.selfPos), 0)
+		ctx.lineTo(partnerScale.pos2px(l.partnerPos), linkHeight)
+		ctx.stroke()
+		ctx.globalAlpha = 1
+	}
+}
+
+/** distance from a point to a line segment, to hit test the links */
+function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number) {
+	const dx = x2 - x1
+	const dy = y2 - y1
+	const len2 = dx * dx + dy * dy
+	// fraction along the segment of the point nearest to (px,py), clamped to its ends
+	const t = len2 ? Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / len2)) : 0
+	return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy))
 }

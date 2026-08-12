@@ -1198,7 +1198,7 @@ const fusionMnames = [
 	// a partner without a charted breakpoint, e.g. of a query lacking coordinates
 	{ mname: 'FGFR1', class: 'Fuserna', samplecount: 2, noPositionCount: 2 }
 ]
-const getGeneModels = async () => [
+const bcrModels = [
 	{
 		isoform: 'NM_004327',
 		chr: 'chr22',
@@ -1212,6 +1212,31 @@ const getGeneModels = async () => [
 		]
 	}
 ]
+const abl1Models = [
+	{
+		isoform: 'NM_005157',
+		chr: 'chr9',
+		start: 130713000,
+		stop: 130887000,
+		strand: '+',
+		isdefault: true,
+		exon: [
+			[130713000, 130713200],
+			[130886800, 130887000]
+		]
+	}
+]
+const getGeneModels = async () => bcrModels
+/** models of both genes of the fusion, as the paired breakpoint chart needs them */
+const getPairGeneModels = async (gene: string) =>
+	gene == 'BCR' ? bcrModels : gene == 'ABL1' ? abl1Models : ([] as any[])
+
+/** the menu holding the given chart, the last one opened when several are in the document */
+function getChartMenu(testid: string) {
+	return [...document.querySelectorAll('.sja_menu_div')]
+		.filter(d => d.querySelector(`[data-testid="${testid}"]`))
+		.pop() as HTMLElement
+}
 
 tape('breakpoint controls are not offered for snvindel', test => {
 	const holder = select(document.body).append('div')
@@ -1457,8 +1482,8 @@ tape('variants list is restricted by the range on the term gene', test => {
 	test.notEqual(rows[0].style.display, 'none', 'variant with a breakpoint in the range is listed')
 	test.equal(rows[1].style.display, 'none', 'variant without a charted breakpoint is not listed')
 	test.ok(
-		holder.select('[data-testid="sjpp-variantConfig-mname"] div').text().includes('(1)'),
-		'the count of the toggle is of the listed variants only'
+		holder.select('[data-testid="sjpp-variantConfig-mname"] div').text().includes('(1/2)'),
+		'the count of the toggle is of the listed variants, against the total'
 	)
 	test.ok(
 		holder
@@ -1467,6 +1492,87 @@ tape('variants list is restricted by the range on the term gene', test => {
 			.includes('chr22:23,290,000-23,290,200'),
 		'says the list is restricted by the range'
 	)
+	holder.remove()
+	test.end()
+})
+
+tape('sample counts are restated under the range on the term gene', test => {
+	/* a range narrows the events a variant still matches, so its sample count is no longer
+	the whole of it; showing the total alone would overstate what checking it would select */
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		// covers the ABL1 breakpoint at 23290100, of 20 of its 30 samples, not the other
+		selfBreakpointRange: { chr: 'chr22', start: 23290000, stop: 23290200 },
+		callback: () => {}
+	})
+	const counts = holder.selectAll('[data-testid="sjpp-variantConfig-mname-count"]').nodes() as HTMLElement[]
+	test.equal(counts[0].textContent, '20/30', 'the samples of the range are counted against the total')
+	test.ok(
+		counts[0].getAttribute('title')?.includes('20 of 30 samples have a BCR breakpoint in chr22:23,290,000-23,290,200'),
+		'and the two numbers are spelled out'
+	)
+	// a variant with no charted breakpoint keeps none of its samples under a range
+	test.equal(counts[1].textContent, '0/2', 'a variant the range excludes counts no sample')
+	holder.remove()
+	test.end()
+})
+
+tape('sample counts are the total when no range is set', test => {
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		callback: () => {}
+	})
+	const counts = holder.selectAll('[data-testid="sjpp-variantConfig-mname-count"]').nodes() as HTMLElement[]
+	test.equal(counts[0].textContent, '30', 'the sample count stands alone')
+	test.equal(counts[0].getAttribute('title'), null, 'with nothing to spell out')
+	test.ok(
+		holder.select('[data-testid="sjpp-variantConfig-mname"] div').text().includes('(2)'),
+		'and the toggle counts the variants alone'
+	)
+	holder.remove()
+	test.end()
+})
+
+tape('sample counts follow a range selected in the breakpoint menu', async test => {
+	// the counts are restated as the range changes, not only as it is passed in
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		callback: () => {}
+	})
+	const counts = holder.selectAll('[data-testid="sjpp-variantConfig-mname-count"]').nodes() as HTMLElement[]
+	test.equal(counts[0].textContent, '30', 'the whole count before a range is selected')
+	;(holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint-btn"]').node() as HTMLElement).click()
+	await new Promise(resolve => setTimeout(resolve, 0))
+	const menuDiv = getChartMenu('sjpp-isoformRangeSelect-marks')
+	const inputs = menuDiv.querySelectorAll('[data-testid="sjpp-isoformRangeSelect-pos"]') as any
+	inputs[0].value = '23290000'
+	inputs[1].value = '23290200'
+	inputs[1].dispatchEvent(new Event('change'))
+	;(menuDiv.querySelector('[data-testid="sjpp-isoformRangeSelect-apply"]') as HTMLButtonElement).click()
+	test.equal(counts[0].textContent, '20/30', 'the count follows the selected range')
+	test.ok(
+		holder.select('[data-testid="sjpp-variantConfig-mname"] div').text().includes('(1/2)'),
+		'and so does the toggle'
+	)
+	menuDiv.remove()
 	holder.remove()
 	test.end()
 })
@@ -1490,8 +1596,8 @@ tape('range on the term gene excluding every variant', test => {
 		'no variant is listed'
 	)
 	test.ok(
-		holder.select('[data-testid="sjpp-variantConfig-mname"] div').text().includes('(0)'),
-		'the toggle counts no variant'
+		holder.select('[data-testid="sjpp-variantConfig-mname"] div').text().includes('(0/2)'),
+		'the toggle counts no variant of the two'
 	)
 	holder.remove()
 	test.end()
@@ -1583,6 +1689,227 @@ tape('variants list follows a range selected in the breakpoint menu', async test
 	test.notEqual(rows[0].style.display, 'none', 'variant with a breakpoint in the range stays listed')
 	test.equal(rows[1].style.display, 'none', 'variant without one is dropped from the list')
 	menuDiv.remove()
+	holder.remove()
+	test.end()
+})
+
+tape('partner breakpoint menu charts both genes of the fusion', async test => {
+	/* the breakpoints of a variant are pairs of one on the term's own gene and one on the
+	partner (see BreakpointEntry), so which breakpoint of one goes with which of the other
+	is lost by charting the partner alone */
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels: getPairGeneModels,
+		callback: () => {}
+	})
+	const partnerBtn = holder
+		.selectAll('[data-testid="sjpp-variantConfig-partnerBreakpoint-btn"]')
+		.nodes()[0] as HTMLElement
+	partnerBtn.click()
+	// the chart is rendered after the isoform models of both genes are fetched
+	await new Promise(resolve => setTimeout(resolve, 0))
+	const menuDiv = getChartMenu('sjpp-isoformPairSelect-links')
+	test.ok(menuDiv, 'the breakpoints are charted as pairs, linking the two genes')
+	test.ok(
+		menuDiv.querySelector('[data-testid="sjpp-isoformPairSelect-selfTrack"]'),
+		'the term gene is charted as a track of its own'
+	)
+	test.equal(
+		menuDiv.querySelector('[data-testid="sjpp-isoformRangeSelect-marks"]'),
+		null,
+		'the partner gene is not charted alone'
+	)
+	test.ok(menuDiv.textContent!.includes('BCR :: ABL1 breakpoints'), 'both genes are named')
+	test.ok(menuDiv.textContent!.includes('select a range on ABL1'), 'says which gene the range is selected on')
+	test.ok(menuDiv.textContent!.includes('2 breakpoint pairs'), 'charts the breakpoint pairs of the variant')
+	menuDiv.remove()
+	holder.remove()
+	test.end()
+})
+
+tape('partner breakpoint menu shows the range on the term gene', async test => {
+	// the range on the term gene is not editable here, as it applies term-wide, but the
+	// pairs failing it cannot match however the partner range is placed
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels: getPairGeneModels,
+		selfBreakpointRange: { chr: 'chr22', start: 23290000, stop: 23290200 },
+		callback: () => {}
+	})
+	;(holder.selectAll('[data-testid="sjpp-variantConfig-partnerBreakpoint-btn"]').nodes()[0] as HTMLElement).click()
+	await new Promise(resolve => setTimeout(resolve, 0))
+	const menuDiv = getChartMenu('sjpp-isoformPairSelect-links')
+	test.ok(
+		menuDiv.querySelector('[data-testid="sjpp-isoformPairSelect-selfOverlay"]'),
+		'the range registered on the term gene is highlighted on its track'
+	)
+	menuDiv.remove()
+	holder.remove()
+	test.end()
+})
+
+tape('range selected in the partner menu is registered on its variant', async test => {
+	const holder = select(document.body).append('div')
+	let config: any
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels: getPairGeneModels,
+		selectedValues: [{ key: 'Fuserna', label: 'ABL1', value: 'ABL1', mname: 'ABL1' }],
+		callback: c => (config = c)
+	})
+	const partnerBtn = holder
+		.selectAll('[data-testid="sjpp-variantConfig-partnerBreakpoint-btn"]')
+		.nodes()[0] as HTMLElement
+	partnerBtn.click()
+	await new Promise(resolve => setTimeout(resolve, 0))
+	// a click in a row of the variants list toggles its checkbox (see renderTable), which
+	// must not happen for the control that restricts the breakpoints of that variant
+	test.equal(
+		(holder.select('[data-testid="sjpp-variantConfig-mname"] tbody input[type=checkbox]').node() as HTMLInputElement)
+			.checked,
+		true,
+		'opening the control leaves the variant checked'
+	)
+	const menuDiv = getChartMenu('sjpp-isoformPairSelect-links')
+	const inputs = menuDiv.querySelectorAll('[data-testid="sjpp-isoformRangeSelect-pos"]') as any
+	inputs[0].value = '130713000'
+	inputs[1].value = '130713200'
+	inputs[1].dispatchEvent(new Event('change'))
+	;(menuDiv.querySelector('[data-testid="sjpp-isoformRangeSelect-apply"]') as HTMLButtonElement).click()
+	test.equal(
+		partnerBtn.textContent,
+		'chr9:130,713,000-130,713,200',
+		'the range selected on the partner track is displayed on its variant'
+	)
+	getApplyBtn(holder).click()
+	test.deepEqual(
+		config.values[0].partnerBreakpointRange,
+		{ chr: 'chr9', start: 130713000, stop: 130713200 },
+		'and rides on the applied variant'
+	)
+	menuDiv.remove()
+	holder.remove()
+	test.end()
+})
+
+tape('partner breakpoint menu of a term of multiple genes', async test => {
+	// without a single gene of the term there is no second track to pair the partner
+	// with, so it is charted alone
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		getGeneModels: getPairGeneModels,
+		callback: () => {}
+	})
+	;(holder.selectAll('[data-testid="sjpp-variantConfig-partnerBreakpoint-btn"]').nodes()[0] as HTMLElement).click()
+	await new Promise(resolve => setTimeout(resolve, 0))
+	const menuDiv = getChartMenu('sjpp-isoformRangeSelect-marks')
+	test.ok(menuDiv, 'the partner gene is charted on its own')
+	test.equal(
+		menuDiv.querySelector('[data-testid="sjpp-isoformPairSelect-links"]'),
+		null,
+		'the breakpoints are not paired'
+	)
+	test.ok(menuDiv.textContent!.includes('ABL1 breakpoints'), 'the chart is of the partner gene')
+	menuDiv.remove()
+	holder.remove()
+	test.end()
+})
+
+tape('breakpoint charts are laid out by dt', async test => {
+	/* a rna fusion joins transcripts at exon boundaries, so the charts of a dtfusionrna term
+	collapse the introns between them; a genomic sv breaks mostly within introns, so the
+	charts of a dtsv term keep them at their real width */
+	for (const [dt, mode] of [
+		[2, 'rna'],
+		[5, 'genomic']
+	] as [number, string][]) {
+		const holder = select(document.body).append('div')
+		renderVariantConfig({
+			holder,
+			values: fusionValues,
+			mnames: fusionMnames,
+			dt,
+			gene: 'BCR',
+			getGeneModels: getPairGeneModels,
+			callback: () => {}
+		})
+		// the paired chart of a variant, and the chart of the term gene alone
+		;(holder.selectAll('[data-testid="sjpp-variantConfig-partnerBreakpoint-btn"]').nodes()[0] as HTMLElement).click()
+		await new Promise(resolve => setTimeout(resolve, 0))
+		const pairMenu = getChartMenu('sjpp-isoformPairSelect-links')
+		test.equal(
+			pairMenu.querySelector('[data-testid="sjpp-isoformPairSelect-selfTrack"]')!.getAttribute('data-scale-mode'),
+			mode,
+			`dt ${dt} lays the term gene of the paired chart out as ${mode}`
+		)
+		test.equal(
+			pairMenu.querySelector('[data-testid="sjpp-isoformPairSelect-partnerTrack"]')!.getAttribute('data-scale-mode'),
+			mode,
+			`dt ${dt} lays its partner gene out as ${mode}`
+		)
+		;(holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint-btn"]').node() as HTMLElement).click()
+		await new Promise(resolve => setTimeout(resolve, 0))
+		test.equal(
+			getChartMenu('sjpp-isoformRangeSelect-marks')
+				.querySelector('[data-testid="sjpp-isoformRangeSelect-track"]')!
+				.getAttribute('data-scale-mode'),
+			mode,
+			`dt ${dt} lays the chart of the term gene alone out as ${mode}`
+		)
+		getChartMenu('sjpp-isoformRangeSelect-marks').remove()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('isoform models are fetched once per gene', async test => {
+	// the term gene is charted against every variant whose partner breakpoints are, so
+	// without a cache it would be fetched anew for each of them
+	const holder = select(document.body).append('div')
+	const calls: string[] = []
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels: async (gene: string) => {
+			calls.push(gene)
+			return getPairGeneModels(gene)
+		},
+		callback: () => {}
+	})
+	const partnerBtn = holder
+		.selectAll('[data-testid="sjpp-variantConfig-partnerBreakpoint-btn"]')
+		.nodes()[0] as HTMLElement
+	partnerBtn.click()
+	await new Promise(resolve => setTimeout(resolve, 0))
+	test.deepEqual(calls, ['ABL1', 'BCR'], 'both genes of the pair are fetched')
+	;(holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint-btn"]').node() as HTMLElement).click()
+	await new Promise(resolve => setTimeout(resolve, 0))
+	test.deepEqual(calls, ['ABL1', 'BCR'], 'the term gene is not fetched again for its own chart')
+	partnerBtn.click()
+	await new Promise(resolve => setTimeout(resolve, 0))
+	test.deepEqual(calls, ['ABL1', 'BCR'], 'nor is either gene fetched again on reopening the pair')
+	getChartMenu('sjpp-isoformPairSelect-links')?.remove()
 	holder.remove()
 	test.end()
 })

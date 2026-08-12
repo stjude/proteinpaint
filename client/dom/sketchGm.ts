@@ -175,7 +175,44 @@ export function sketchSplicerna(holder: Div | Td, gm: GeneModelWithDomains, pxwi
 }
 
 /**
+ * px of a genomic position over the sketched regions of the given chr.
+ *
+ * A position outside them has no px of its own and takes the nearest edge of the layout, so
+ * that a gene model running past the regions is clipped to them rather than dropped: the
+ * regions may be a window of the gene, e.g. the exons a fusion breaks on and their context
+ * (see makeExonScale in isoformSelect.ts), which no gene model of it begins or ends within.
+ *
+ * Returns undefined only when no region is of the gene's chr, i.e. there is nothing to draw.
+ */
+function posToPx(rglst: ExonRegion[], chr: string, pos: number, exonsf: number, intronw: number) {
+	let x = 0
+	let nearest: number | undefined
+	let nearestDist = Infinity
+	for (const r of rglst) {
+		if (r.chr !== chr) {
+			x += r.width! + intronw
+			continue
+		}
+		if (pos >= r.start && pos <= r.stop) {
+			return x + (r.reverse ? r.stop - pos : pos - r.start) * exonsf
+		}
+		// keep the edge of the region nearest to it, for when no region holds it
+		const dist = pos < r.start ? r.start - pos : pos - r.stop
+		if (dist < nearestDist) {
+			nearestDist = dist
+			const edge = pos < r.start ? r.start : r.stop
+			nearest = x + (r.reverse ? r.stop - edge : edge - r.start) * exonsf
+		}
+		x += r.width! + intronw
+	}
+	return nearest
+}
+
+/**
  * Sketches a gene model summary across multiple regions.
+ *
+ * The regions are the whole of what is drawn: everything is clipped to them, so passing a
+ * window of a gene's exons sketches only that window.
  *
  * @param holder - D3 selection to append canvas to
  * @param rglst - List of exon regions
@@ -185,6 +222,7 @@ export function sketchSplicerna(holder: Div | Td, gm: GeneModelWithDomains, pxwi
  * @param pxwidth - Total width in pixels
  * @param h - Height in pixels
  * @param color - Color for coding regions
+ * @param opts.exonNumbers - number the exons, in those boxes wide enough to hold the number
  */
 export function sketchGmsum(
 	holder: Div | Td,
@@ -194,38 +232,15 @@ export function sketchGmsum(
 	intronw: number,
 	pxwidth: number,
 	h: number,
-	color: string
+	color: string,
+	opts: { exonNumbers?: boolean } = {}
 ): void {
 	const canvas = holder.append('canvas').node() as HTMLCanvasElement
 	const pad = Math.ceil(h / 5)
 	const ctx = setupCanvas(canvas, pxwidth, h)
 
-	let start: number | undefined
-	let x = 0
-	for (const r of rglst) {
-		if (r.chr !== gm.chr) {
-			x += r.width! + intronw
-			continue
-		}
-		if (gm.start >= r.start && gm.start <= r.stop) {
-			start = x + (r.reverse ? r.stop - gm.start : gm.start - r.start) * exonsf
-			break
-		}
-		x += r.width! + intronw
-	}
-	let stop: number | undefined
-	x = 0
-	for (const r of rglst) {
-		if (r.chr !== gm.chr) {
-			x += r.width! + intronw
-			continue
-		}
-		if (gm.stop >= r.start && gm.stop <= r.stop) {
-			stop = x + (r.reverse ? r.stop - gm.stop : gm.stop - r.start) * exonsf
-			break
-		}
-		x += r.width! + intronw
-	}
+	const start = posToPx(rglst, gm.chr, gm.start, exonsf, intronw)
+	const stop = posToPx(rglst, gm.chr, gm.stop, exonsf, intronw)
 
 	if (start !== undefined && stop !== undefined) {
 		ctx.strokeStyle = color
@@ -286,6 +301,61 @@ export function sketchGmsum(
 				x += r.width! + intronw
 			}
 		}
+	}
+
+	if (opts.exonNumbers) drawExonNumbers(ctx, rglst, gm, exonsf, intronw, h)
+}
+
+/**
+ * Number the exons of a gene model within its boxes, skipping any box too narrow to hold
+ * the number. Exon 1 is the 5' most, so the numbering runs against the genomic order on the
+ * minus strand.
+ *
+ * Only a wide box is labelled, which is what a zoomed layout gives (see makeExonScale in
+ * isoformSelect.ts): over a whole many-exon gene no box has the room and none is numbered.
+ */
+function drawExonNumbers(
+	ctx: CanvasRenderingContext2D,
+	rglst: ExonRegion[],
+	gm: GeneModelWithDomains,
+	exonsf: number,
+	intronw: number,
+	h: number
+) {
+	const ordered = [...gm.exon].sort((a, b) => a[0] - b[0])
+	ctx.textAlign = 'center'
+	ctx.textBaseline = 'middle'
+	ctx.font = `${Math.max(8, Math.min(10, h - 6))}px Arial`
+	for (const [i, e] of ordered.entries()) {
+		const label = String(gm.strand == '-' ? ordered.length - i : i + 1)
+		// the widest piece of the exon that is drawn, as a region may clip it
+		let bestX = 0
+		let bestW = 0
+		let bestCenter = 0
+		let x = 0
+		for (const r of rglst) {
+			if (r.chr !== gm.chr) {
+				x += r.width! + intronw
+				continue
+			}
+			const start = Math.max(e[0], r.start)
+			const stop = Math.min(e[1], r.stop)
+			const w = (stop - start) * exonsf
+			if (start < stop && w > bestW) {
+				bestW = w
+				bestX = x + (r.reverse ? (r.stop - stop) * exonsf : (start - r.start) * exonsf)
+				bestCenter = (start + stop) / 2
+			}
+			x += r.width! + intronw
+		}
+		// padded, so that a number never touches the edges of the box holding it
+		if (bestW < ctx.measureText(label).width + 4) continue
+		/* a coding box is filled dark and a non-coding one light, so read the number off
+		whichever the middle of it sits on: an exon may be part utr and part coding, and the
+		number is centered over the piece drawn, not over the coding within it */
+		const onCoding = gm.coding?.some(c => c[0] <= bestCenter && c[1] >= bestCenter)
+		ctx.fillStyle = onCoding ? '#fff' : '#333'
+		ctx.fillText(label, bestX + bestW / 2, h / 2)
 	}
 }
 

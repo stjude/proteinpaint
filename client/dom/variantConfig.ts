@@ -1,7 +1,7 @@
 import { make_radios, renderTable } from '#dom'
 import { Menu } from './menu'
-import { isoformRangeSelect } from './isoformSelect'
-import type { GeneModel, BreakpointMarker } from './types/isoformSelect'
+import { isoformRangeSelect, isoformPairRangeSelect } from './isoformSelect'
+import type { GeneModel, BreakpointMarker, ScaleMode } from './types/isoformSelect'
 import type { TermValues, BaseValue, BreakpointRange, BreakpointEntry } from '#types'
 import { filterInit } from '#filter'
 import { dt2label, dtsnvindel, dtsv, dtfusionrna, mclass } from '#shared/common.js'
@@ -106,6 +106,10 @@ export function renderVariantConfig(arg: Arg) {
 	offered when the dt is a sv/fusion and the caller can supply isoform models to chart
 	them over */
 	const isSvFusion = dt == dtsv || dt == dtfusionrna
+	/* how the isoform structure is laid out in the breakpoint charts (see ScaleMode). a rna
+	fusion joins transcripts at exon boundaries, so its introns are collapsed; a genomic sv
+	breaks mostly within introns, so theirs are kept at their real width */
+	const scaleMode: ScaleMode = dt == dtfusionrna ? 'rna' : 'genomic'
 	const canSelectBreakpoint = isSvFusion && !!arg.getGeneModels && mnames.some(m => m.breakpoints?.length)
 	/* a sv/fusion has a single mutation class, hardcoded per dt by the data query, so a
 	checklist of it is a checkbox with nothing to choose between. it is not rendered, and
@@ -123,6 +127,9 @@ export function renderVariantConfig(arg: Arg) {
 	/* one menu for both controls, so that opening one closes the other. created on first
 	use, as a menu attaches to the document body and this ui is rendered anew on each edit */
 	let breakpointTip: Menu | undefined
+	/* isoform models by gene, so that the term's own gene is not fetched again for every
+	variant whose partner breakpoints are charted against it */
+	const geneModelCache = new Map<string, Promise<GeneModel[]>>()
 
 	holder.style('margin', '10px')
 
@@ -267,7 +274,10 @@ export function renderVariantConfig(arg: Arg) {
 			// number of variants displayed in the list, quoted in the toggle label
 			let visibleMnameCount = mnames.length
 			const updateToggle = () => {
-				toggle.html(`${expanded ? '&#9660;' : '&#9658;'} Specific variants (${visibleMnameCount})`)
+				// under a range on the term's own gene the list is a subset, so quote it
+				// against the total rather than leaving the count to read as all there is
+				const count = selfBreakpointRange ? `${visibleMnameCount}/${mnames.length}` : `${visibleMnameCount}`
+				toggle.html(`${expanded ? '&#9660;' : '&#9658;'} Specific variants (${count})`)
 				listWrapper.style('display', expanded ? 'block' : 'none')
 			}
 			toggle.on('click', () => {
@@ -299,11 +309,17 @@ export function renderVariantConfig(arg: Arg) {
 			showGeneInMnames = showGene
 			const mnameRows: any[] = []
 			const selectedMnameIdxs: number[] = []
+			// count cell of each variant, k: index in mnames[]. refilled by
+			// updateMnameRowDisplay() as the range on the term's own gene changes
+			const countCells: any[] = []
 			for (const [i, m] of mnames.entries()) {
 				// a preserved entry is not in the current data, flag its count cell
 				// so it reads as absent rather than as a variant with no samples
-				const countCell: any = { value: m.samplecount }
-				if (!m.samplecount) countCell.dataTestId = 'sjpp-variantConfig-mname-absent'
+				const countCell: any = {
+					value: sampleCountLabel(m),
+					dataTestId: m.samplecount ? 'sjpp-variantConfig-mname-count' : 'sjpp-variantConfig-mname-absent'
+				}
+				countCells[i] = countCell
 				const row = [{ value: m.mname }, { value: arg.values[m.class]?.label || m.class }, countCell]
 				if (showGene) row.unshift({ value: m.gene || '' })
 				// cell to fill with the breakpoint control of this variant after render
@@ -355,6 +371,10 @@ export function renderVariantConfig(arg: Arg) {
 						.attr('class', 'sja_clbtext')
 						.style('cursor', 'pointer')
 						.on('click', (event: MouseEvent) => {
+							/* the control sits in a row of the variants list, and a click anywhere in
+							such a row toggles its checkbox (see renderTable). without this the control
+							would uncheck the very variant whose breakpoints it is opened to restrict */
+							event.stopPropagation()
 							openBreakpointMenu({
 								event,
 								// the partner gene of a fusion is named by the mname
@@ -368,6 +388,14 @@ export function renderVariantConfig(arg: Arg) {
 								),
 								range: partnerBreakpointRanges.get(i),
 								noPositionCount: m.noPositionCount || 0,
+								/* the breakpoints of this variant are pairs of one on the term's own
+								gene and one on the partner (see BreakpointEntry), so chart them over
+								both genes rather than the partner alone. the range on the own gene is
+								read here rather than captured, so that the chart reflects whatever it
+								is when the menu is opened */
+								pair: arg.gene
+									? { selfGene: arg.gene, selfRange: selfBreakpointRange, links: m.breakpoints! }
+									: undefined,
 								callback: range => {
 									if (range) partnerBreakpointRanges.set(i, range)
 									else partnerBreakpointRanges.delete(i)
@@ -399,6 +427,10 @@ export function renderVariantConfig(arg: Arg) {
 						return 'none'
 					})
 				visibleMnameCount = visibleCount
+				// the samples of a variant are those it keeps under the range, so restate them
+				for (const [i, m] of mnames.entries()) {
+					countCells[i]?.__td?.text(sampleCountLabel(m)).attr('title', sampleCountTitle(m))
+				}
 				updateToggle()
 				if (selfRangeNote) {
 					selfRangeNote
@@ -564,6 +596,36 @@ export function renderVariantConfig(arg: Arg) {
 		return !!m.breakpoints?.some(b => b.pos >= start && b.pos <= stop)
 	}
 
+	/* samples of a variant whose events break within the range on the term's own gene.
+	NOTE the breakpoint tally is per pair of breakpoints (see BreakpointEntry), so a sample
+	with two events of this variant breaking in the range is counted once per event: the sum
+	is an upper bound on the samples, capped here at the total so that it cannot read as more
+	samples than the variant has. an exact count would have to be tallied per position by the
+	server, which does not report it */
+	function samplesInSelfRange(m: MnameItem) {
+		if (!selfBreakpointRange) return m.samplecount
+		const { start, stop } = selfBreakpointRange
+		const n = (m.breakpoints || []).reduce((sum, b) => (b.pos >= start && b.pos <= stop ? sum + b.samplecount : sum), 0)
+		return Math.min(n, m.samplecount)
+	}
+
+	/** samples of a variant, as "in range / total" while a range on the term's own gene
+	 * narrows them, and as the total alone otherwise */
+	function sampleCountLabel(m: MnameItem) {
+		// a preserved entry is not in the current data, and has no samples either way
+		if (!selfBreakpointRange || !m.samplecount) return `${m.samplecount}`
+		return `${samplesInSelfRange(m)}/${m.samplecount}`
+	}
+
+	/** spells out what the two numbers of a count cell are, which the column cannot */
+	function sampleCountTitle(m: MnameItem) {
+		if (!selfBreakpointRange || !m.samplecount) return null
+		return (
+			`${samplesInSelfRange(m)} of ${m.samplecount} samples have a ${arg.gene} breakpoint ` +
+			`in ${breakpointRangeLabel(selfBreakpointRange)}`
+		)
+	}
+
 	/** classes currently checked in the class table, or all of them when it is not rendered */
 	function getCheckedClasses() {
 		const checked = new Set()
@@ -614,6 +676,32 @@ export function renderVariantConfig(arg: Arg) {
 		return best
 	}
 
+	/** isoform models of a gene, fetched once per gene. a gene without them, e.g. a fusion
+	 * partner that is an unannotated locus, still has its breakpoints charted, so a failed
+	 * lookup yields none rather than throwing; it is not cached, so that a transient
+	 * failure is retried the next time the gene is charted */
+	function loadGeneModels(gene: string): Promise<GeneModel[]> {
+		if (!geneModelCache.has(gene)) {
+			geneModelCache.set(
+				gene,
+				Promise.resolve(arg.getGeneModels!(gene))
+					.then(gmlst => gmlst || [])
+					.catch((e: any) => {
+						console.warn(`no gene model for ${gene}: ${e?.message || e}`)
+						geneModelCache.delete(gene)
+						return []
+					})
+			)
+		}
+		return geneModelCache.get(gene)!
+	}
+
+	/** chr a gene is charted on, from its default isoform. this is also what the server
+	 * resolves a gene to when querying its events */
+	function geneChr(gmlst: GeneModel[]) {
+		return (gmlst.find(g => g.isdefault) || gmlst[0])?.chr
+	}
+
 	/** chart the breakpoints of a gene in a menu and select a range of them */
 	async function openBreakpointMenu(a: {
 		event: MouseEvent
@@ -621,6 +709,10 @@ export function renderVariantConfig(arg: Arg) {
 		markers: MarkerInput[]
 		range?: BreakpointRange
 		noPositionCount: number
+		/** when given, the breakpoints are charted as pairs over two tracks, .selfGene above
+		 * and .gene below, linked by the events they occur in. the range is still selected
+		 * on .gene alone; .selfRange is context, owned by the control of the term's own gene */
+		pair?: { selfGene: string; selfRange?: BreakpointRange; links: BreakpointEntry[] }
 		callback: (range: BreakpointRange | null) => void
 	}) {
 		if (!breakpointTip)
@@ -638,47 +730,83 @@ export function renderVariantConfig(arg: Arg) {
 		tip.clear().showunder(a.event.target as HTMLElement)
 		const div = tip.d.append('div')
 		div.append('div').style('opacity', 0.6).text('Loading...')
-		let gmlst: GeneModel[] = []
-		try {
-			gmlst = (await arg.getGeneModels!(a.gene)) || []
-		} catch (e: any) {
-			// the isoform models are optional context: a gene without them, e.g. a fusion
-			// partner that is an unannotated locus, still has its breakpoints charted
-			console.warn(`no gene model for ${a.gene}: ${e?.message || e}`)
-		}
+		// both genes of a pair are fetched together, so that the menu is filled in one go
+		const [gmlst, selfGmlst] = await Promise.all([
+			loadGeneModels(a.gene),
+			a.pair ? loadGeneModels(a.pair.selfGene) : Promise.resolve([] as GeneModel[])
+		])
 		div.selectAll('*').remove()
 		/* the chr of the markers decides the locus, so that the range is on the same chr
 		as the events it will match; the breakpoints of the term's own gene carry no chr,
-		so fall back to its default isoform, which is also what the server resolves a gene
-		to when querying its events */
-		const chr = mostCommonChr(a.markers) || (gmlst.find(g => g.isdefault) || gmlst[0])?.chr
+		so fall back to its default isoform */
+		const chr = mostCommonChr(a.markers) || geneChr(gmlst)
 		if (!chr) {
 			div.append('div').text(`Unknown chromosome of ${a.gene}`)
 			return
 		}
-		div
-			.append('div')
-			.style('margin-bottom', '5px')
-			.style('font-size', '.9em')
-			.style('opacity', 0.7)
-			.text(`${a.gene} breakpoints`)
+		/* the header names whichever chart is rendered, so it is filled after the attempt at
+		the paired one; the notes are placed above the chart and below the header */
+		const headerDiv = div.append('div').style('margin-bottom', '5px').style('font-size', '.9em').style('opacity', 0.7)
+		const noteDiv = div.append('div')
+		const chartDiv = div.append('div')
+		const addNote = (text: string) =>
+			noteDiv.append('div').style('font-size', '.75em').style('opacity', 0.6).style('margin-bottom', '5px').text(text)
 		if (a.noPositionCount) {
-			div
-				.append('div')
-				.style('font-size', '.75em')
-				.style('opacity', 0.6)
-				.style('margin-bottom', '5px')
-				.text(
-					`${a.noPositionCount} samples have events without a breakpoint position; they are not charted and do not match a range`
-				)
+			addNote(
+				`${a.noPositionCount} samples have events without a breakpoint position; they are not charted and do not match a range`
+			)
 		}
+		// the breakpoints of the term's own gene carry no chr, so it is that of its models
+		const selfChr = a.pair ? geneChr(selfGmlst) : undefined
+		let paired = false
+		if (a.pair && selfChr) {
+			// a pair breaking on another chr of the partner is not of this locus
+			const links = a.pair.links.filter(l => l.partnerChr == chr)
+			const rendered = isoformPairRangeSelect({
+				holder: chartDiv,
+				self: {
+					gene: a.pair.selfGene,
+					chr: selfChr,
+					allgm: selfGmlst,
+					range: a.pair.selfRange?.chr == selfChr ? a.pair.selfRange : undefined
+				},
+				partner: {
+					gene: a.gene,
+					chr,
+					allgm: gmlst,
+					// a range of another chr is not of this locus, so is not the current one
+					range: a.range?.chr == chr ? a.range : undefined
+				},
+				links: links.map(l => ({ selfPos: l.pos, partnerPos: l.partnerPos, samplecount: l.samplecount })),
+				mode: scaleMode,
+				callback: range => {
+					tip.hide()
+					a.callback(range)
+				}
+			})
+			if (rendered) {
+				paired = true
+				const dropped = a.pair.links.length - links.length
+				if (dropped) {
+					addNote(`${dropped} breakpoint pairs are on another chromosome of ${a.gene}; they are not charted`)
+				}
+			} else {
+				// neither track could be charted, fall back to the partner gene alone
+				chartDiv.selectAll('*').remove()
+			}
+		}
+		headerDiv.text(
+			paired ? `${a.pair!.selfGene} :: ${a.gene} breakpoints, select a range on ${a.gene}` : `${a.gene} breakpoints`
+		)
+		if (paired) return
 		isoformRangeSelect({
-			holder: div.append('div'),
+			holder: chartDiv,
 			allgm: gmlst,
 			chr,
 			markers: a.markers.filter(m => !m.chr || m.chr == chr),
 			// a range of another chr is not of this locus, so is not shown as the current one
 			range: a.range?.chr == chr ? a.range : undefined,
+			mode: scaleMode,
 			callback: range => {
 				tip.hide()
 				a.callback(range)
