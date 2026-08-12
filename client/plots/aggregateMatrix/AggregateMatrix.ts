@@ -1,12 +1,12 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { getCombinedTermFilter } from '#filter'
-import type { Dom } from '../../types/d3'
 import { AggMatrixModel } from './model/AggMatrixModel'
 import { getAggregateMatrixSettings } from './settings/defaults.ts'
 import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
 import { setControls } from './view/setControls.ts'
+import { Menu } from '#dom/menu'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
@@ -16,7 +16,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
 
     type: string
     components: { controls: ComponentApi }
-    dom: Dom
+    dom: { [index: string]: any } 
     model!: AggMatrixModel
     viewModel!: AggMatrixViewModel
     view!: AggMatrixView
@@ -33,7 +33,8 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
             controls: dom.controls.attr('data-testid', 'sjpp-ag-matrix-controls'),
             errorDiv: dom.errdiv.attr('data-testid', 'sjpp-ag-matrix-error'),
             loadingDiv: dom.loadingDiv.attr('data-testid', 'sjpp-ag-matrix-loading'),
-            mainDiv: dom.charts.attr('data-testid', 'sjpp-ag-matrix-main').style('padding', '10px')
+            mainDiv: dom.charts.attr('data-testid', 'sjpp-ag-matrix-main').style('padding', '10px'),
+            tip: new Menu({ padding: '3px' })
         }
 
         //opts.header is the sandbox header
