@@ -120,22 +120,28 @@ export function getSampleGroups(data) {
 
 	for (const row of data.lst) {
 		if ($id in row) {
-			const key = row[$id].key
-			const name = key in values && values[key].label ? values[key].label : key
-			if (!sampleGroups.has(key)) {
-				const grp = {
-					name: `${name}`, // convert to a string
-					id: key,
-					lst: [],
-					tw: this.config.divideBy,
-					legendGroups: {},
-					isExcluded: exclude.includes(key)
+			// a membership multivalue divideBy cell may carry multiple {key} entries;
+			// the sample then appears in the group of each category it belongs to,
+			// same as the barchart/violin divide-by behavior
+			const cell = row[$id]
+			const keys = term.type == 'multivalue' && Array.isArray(cell.values) ? cell.values.map(v => v.key) : [cell.key]
+			for (const key of keys) {
+				const name = key in values && values[key].label ? values[key].label : key
+				if (!sampleGroups.has(key)) {
+					const grp = {
+						name: `${name}`, // convert to a string
+						id: key,
+						lst: [],
+						tw: this.config.divideBy,
+						legendGroups: {},
+						isExcluded: exclude.includes(key)
+					}
+					if (ref.bins && s.sortSampleGrpsBy == 'name') grp.order = ref.bins.findIndex(bin => bin.name == key)
+					else delete grp.order
+					sampleGroups.set(key, grp)
 				}
-				if (ref.bins && s.sortSampleGrpsBy == 'name') grp.order = ref.bins.findIndex(bin => bin.name == key)
-				else delete grp.order
-				sampleGroups.set(key, grp)
+				sampleGroups.get(key).lst.push(row)
 			}
-			sampleGroups.get(key).lst.push(row)
 		} else {
 			defaultSampleGrp.lst.push(row)
 		}

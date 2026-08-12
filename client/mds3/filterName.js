@@ -23,6 +23,7 @@ export function getFilterName(f) {
 
 		switch (tvs?.term?.type) {
 			case 'categorical':
+			case 'multivalue': // a membership tvs has the same {values: [{key}]} shape as categorical
 				if (!Array.isArray(tvs.values)) throw 'f.lst[0].tvs.values not array'
 
 				// only assess 1st category name; only use for display, not computing

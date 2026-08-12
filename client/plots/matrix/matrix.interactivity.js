@@ -256,6 +256,17 @@ export function setInteractivity(self) {
 						c1.html(`${colorSquare} ${renderedValue.label}`)
 						c2.html(`${renderedValue.value.toFixed(2)}%`)
 					}
+				} else if (d.term.type == 'multivalue') {
+					// a sample may belong to multiple categories, drawn as stacked sub-rects
+					// that share siblingCells[]; list every membership, not just the hovered one
+					const sibs = d.siblingCells?.filter(c => c.$id == d.$id)
+					const cells = sibs?.length ? sibs : [d]
+					for (const [i, c] of cells.entries()) {
+						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${c.fill}"></span>`
+						const [c1, c2] = table.addRow()
+						c1.html(i == 0 ? d.term.name : '')
+						c2.html(`${colorSquare} ${c.label}`)
+					}
 				} else {
 					const colorSquare =
 						(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
@@ -582,6 +593,17 @@ export function setInteractivity(self) {
 						c1.html(`${colorSquare} ${renderedValue.label}`)
 						c2.html(`${renderedValue.value.toFixed(2)}%`)
 					}
+				} else if (sampleData.term.type == 'multivalue') {
+					// a sample may belong to multiple categories, drawn as stacked sub-rects
+					// that share siblingCells[]; list every membership, not just the clicked one
+					const sibs = sampleData.siblingCells?.filter(c => c.$id == sampleData.$id)
+					const cells = sibs?.length ? sibs : [sampleData]
+					for (const [i, c] of cells.entries()) {
+						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${c.fill}"></span>`
+						const [c1, c2] = table.addRow()
+						c1.html(i == 0 ? sampleData.term.name : '')
+						c2.html(`${colorSquare} ${c.label}`)
+					}
 				} else {
 					const colorSquare =
 						(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
@@ -733,6 +755,8 @@ function setTermActions(self) {
 			? '{edit,replace,remove}'
 			: t.tw.term.type == 'termCollection'
 			? '{edit,replace,remove}'
+			: t.tw.term.type == 'multivalue'
+			? '{replace,remove}'
 			: '*'
 	}
 

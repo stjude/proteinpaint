@@ -744,26 +744,38 @@ export function parseValues(
 		/** Only use positive values for log scales */
 		if (isLog && value.value <= 0) continue
 
-		let chart: string | number = '' // chart containing violin plots
-		let plot: string | number = sampleType // violin plot
+		let charts: (string | number)[] = [''] // charts containing violin plots
+		let plots: (string | number)[] = [sampleType] // violin plots
 		if (divideTw) {
 			if (!val[divideTw.$id!]) continue
-			const value0 = val[divideTw.$id!]
-			trackUncomputable(divideTw, value0.key)
-			chart = value0.key
+			// any-cast: a membership multivalue cell carries {values: [{key}...]} instead of {key, value}
+			const value0 = val[divideTw.$id!] as any
+			if (divideTw.term?.type == 'multivalue' && Array.isArray(value0.values)) {
+				// membership multivalue divide: the sample belongs to multiple categories
+				// and contributes its value to the chart of each of them
+				for (const e of value0.values) trackUncomputable(divideTw, e.key)
+				charts = value0.values.map(e => e.key)
+			} else {
+				trackUncomputable(divideTw, value0.key)
+				charts = [value0.key]
+			}
 		}
 		if (overlayTw) {
 			if (!val[overlayTw.$id!]) continue
 			const value2 = val[overlayTw.$id!]
 			trackUncomputable(overlayTw, value2.key)
-			plot = value2.key
+			plots = [value2.key]
 		}
 
-		if (!chart2plot2values.has(chart)) chart2plot2values.set(chart, new Map())
-		const plot2values = chart2plot2values.get(chart)
-		if (!plot2values.has(plot)) plot2values.set(plot, [])
-		const values = plot2values.get(plot)
-		values.push(value.value)
+		for (const chart of charts) {
+			for (const plot of plots) {
+				if (!chart2plot2values.has(chart)) chart2plot2values.set(chart, new Map())
+				const plot2values = chart2plot2values.get(chart)
+				if (!plot2values.has(plot)) plot2values.set(plot, [])
+				const values = plot2values.get(plot)
+				values.push(value.value)
+			}
+		}
 
 		if (value.value < absMin) absMin = value.value
 		if (value.value > absMax) absMax = value.value

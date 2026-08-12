@@ -17,7 +17,7 @@ import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 import { rebaseGroupFilter } from '../../mass/groups.js'
 import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
 
-export class Barchart extends PlotBase implements RxComponent{
+export class Barchart extends PlotBase implements RxComponent {
 	static type = 'barchart'
 
 	type: string
@@ -48,7 +48,6 @@ export class Barchart extends PlotBase implements RxComponent{
 	totalsByDataId!: any
 	visibleCharts!: any
 	render!: () => void
-
 
 	constructor(opts: any, api: ComponentApi) {
 		// rx.getComponentInit() will set this.app, this.id, this.opts
@@ -446,7 +445,7 @@ export class Barchart extends PlotBase implements RxComponent{
 			}
 			this.chartsData = this.processData(this.currServerData)
 			this.toggleLoadingDiv('none')
-			this.render() 
+			this.render()
 			this.dom.renderedData.style('display', '')
 		} catch (e) {
 			if (this.app.isAbortError(e)) return
@@ -690,6 +689,14 @@ export class Barchart extends PlotBase implements RxComponent{
 				}
 				return true
 			})
+			if (t1.term.type == 'multivalue' && t1.term.valueMeaning == 'membership') {
+				// overlapping categories: a sample belonging to multiple categories appears in
+				// multiple bars, so summing bar totals would count it repeatedly.
+				// visibleDistinctTotal is server-computed per q.hiddenValues (distinct samples
+				// with >=1 visible membership); chart.total (all categories) is the fallback
+				if ('visibleDistinctTotal' in chart) chart.visibleTotal = chart.visibleDistinctTotal
+				else if ('total' in chart) chart.visibleTotal = chart.total
+			}
 			chart.settings.colLabels = chart.visibleSerieses.map(series => {
 				const id = series.seriesId
 				const label = t1.term.values && id in t1.term.values ? t1.term.values[id].label : id
@@ -1059,7 +1066,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.addChart = function (chart, /*i*/) {
+	self.addChart = function (chart /*i*/) {
 		const div = select(this)
 			.attr('class', 'pp-sbar-div')
 			.style('display', 'inline-block')
@@ -1177,7 +1184,7 @@ function setRenderers(self) {
 		}
 		//adding a title for the pvalue table
 		//title is "Group comparisons (Fisher's exact test)" if all tests are Fisher's exact test, otherwise title is 'Group comparisons (Chi-square test)'
-		/*const title = */holder
+		/*const title = */ holder
 			.append('div')
 			.style('font-weight', 'bold')
 			.style('padding-bottom', '0.5em')

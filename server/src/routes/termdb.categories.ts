@@ -251,8 +251,12 @@ export function getCategories(data, q, ds, $id, opts: { withMnames?: boolean } =
 		for (const sid in data.samples) {
 			const v = data.samples[sid][$id]
 			if (!v) continue
-			if (!('key' in v)) continue
-			key2count.set(v.key, 1 + (key2count.get(v.key) || 0))
+			// a sample with multiple values for the term (e.g. membership multivalue)
+			// carries them as {values: [{key}, ...]} instead of a single {key}
+			const entries = 'key' in v ? [v] : Array.isArray(v.values) ? v.values : []
+			for (const entry of entries) {
+				key2count.set(entry.key, 1 + (key2count.get(entry.key) || 0))
+			}
 		}
 		for (const [key, count] of key2count) {
 			lst.push({

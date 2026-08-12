@@ -149,6 +149,20 @@ function setCategoricalCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	return { ref: t.ref, group, value: anno.key, entry: { key, label: cell.label, fill: cell.fill } }
 }
 
+function setMultivalueCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
+	// a membership multivalue annotation carries one {key} entry (as anno.key/anno.value)
+	// or several (anno.values[]); render one stacked sub-rect per entry, colored by key
+	const key = value?.key ?? anno.key
+	const values = tw.term.values || {}
+	cell.key = key
+	cell.label = values[key]?.label || key
+	cell.fill = self.config.settings.matrix.twSpecificSettings?.[tw.$id]?.[key]?.color || values[key]?.color
+	cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+	cell.y = height * i
+	const group = tw.legend?.group || tw.$id
+	return { ref: t.ref, group, value: key, entry: { key, label: cell.label, fill: cell.fill } }
+}
+
 export function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
 	if (tw.q?.type == 'predefined-groupset' || tw.q?.type == 'custom-groupset') {
 		// groupsetting in use
@@ -390,6 +404,7 @@ export const setCellProps = {
 	// but leaving here for now since non-classed tw's may still use these
 	categorical: setCategoricalCellProps,
 	condition: setCategoricalCellProps,
+	multivalue: setMultivalueCellProps,
 	integer: setNumericCellProps,
 	float: setNumericCellProps,
 	survival: setSurvivalCellProps,
@@ -407,6 +422,7 @@ export const maySetEmptyCell = {
 	float: setNumericEmptyCell,
 	categorical: setDefaultEmptyCell,
 	condition: setDefaultEmptyCell,
+	multivalue: setDefaultEmptyCell,
 	survival: setNumericEmptyCell,
 	[TermTypes.GENE_EXPRESSION]: setNumericEmptyCell,
 	[TermTypes.METABOLITE_INTENSITY]: setNumericEmptyCell,

@@ -764,6 +764,26 @@ function get_condition(tvs, CTEname) {
 const validTvsJoin = new Set(['and', 'or'])
 
 function get_multivalue(tvs, CTEname, ds, mapParent2Children) {
+	if (tvs.withinValues) {
+		/* fail-closed access-control mode: keep a sample only if it has at least one
+		positive membership AND every positive membership is among tvs.values.
+		a membership outside the list hides the sample. Used by a dataset
+		getAdditionalFilter() to restrict samples to authorized categories */
+		if (!Array.isArray(tvs.values) || !tvs.values.length) throw 'tvs.values[] missing for withinValues'
+		const query = `SELECT sample
+			FROM anno_multivalue
+			WHERE term_id = ?
+			AND EXISTS (SELECT 1 FROM json_each(anno_multivalue.value) j WHERE j.value > 0)
+			AND NOT EXISTS (
+				SELECT 1 FROM json_each(anno_multivalue.value) j
+				WHERE j.value > 0 AND j.key NOT IN (${tvs.values.map(() => '?').join(',')})
+			)`
+		return {
+			CTEs: [` ${CTEname} AS (${isParentType(tvs.term, ds) && mapParent2Children ? getChildren(query) : query})`],
+			values: [tvs.term.id, ...tvs.values.map(v => v.key)],
+			CTEname
+		}
+	}
 	// default to join = 'or', more permissive/less likely to break,
 	// and also compatible with default join operator for categorical terms
 	if (!tvs.join) tvs.join = 'or'
@@ -773,17 +793,20 @@ function get_multivalue(tvs, CTEname, ds, mapParent2Children) {
 	}
 	// note that if there is only 1 tvs.values entry,
 	// tvs.join will not be needed or used to "join" values
-	const expectedValues = tvs.values
-		.map(v => `value->>'$.${v.key}' ${tvs.isnot ? 'IS NULL' : '> 0'}`)
+	// each key is tested via json_each with a bound parameter, so keys containing
+	// json-path or sql metacharacters (period, quote) are safe
+	const membershipTest = tvs.values
+		.map(() => `EXISTS (SELECT 1 FROM json_each(anno_multivalue.value) j WHERE j.key = ? AND j.value > 0)`)
 		.join(` ${tvs.join} `)
-
+	// isnot negates the whole membership test over annotated samples,
+	// matching the NOT IN semantics of categorical terms
 	let query = `SELECT sample
 	FROM anno_multivalue
-	WHERE term_id = ? AND ${expectedValues}`
+	WHERE term_id = ? AND ${tvs.isnot ? `NOT (${membershipTest})` : `(${membershipTest})`}`
 	if (isParentType(tvs.term, ds) && mapParent2Children) query = getChildren(query)
 	return {
 		CTEs: [` ${CTEname} AS (${query})`],
-		values: [tvs.term.id],
+		values: [tvs.term.id, ...tvs.values.map(v => v.key)],
 		CTEname
 	}
 }

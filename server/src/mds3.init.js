@@ -575,12 +575,15 @@ async function call_barchart_data(twLst, q, combination, ds, onlyChildren) {
 	// v: [], element is [category, totalCount]
 	for (const tw of twLst) {
 		if (!tw.term) continue
-		if (tw.term.type == 'categorical') {
+		if (tw.term.type == 'categorical' || tw.term.type == 'multivalue') {
 			// barchart_data() keys the sample data by tw.$id, so the caller must supply one;
 			// only the category names of the result are read below, so term.id serves as the key
+			// a membership multivalue term behaves like categorical here: one total per category.
+			// __protected__ is required by authApi.mayAdjustFilter() inside getData()
 			const _q = {
 				term1: { $id: tw.$id || tw.term.id, term: tw.term, q: { type: 'values' } },
-				filter
+				filter,
+				__protected__: q.__protected__
 			}
 
 			const out = await barchart_data(_q, ds, ds.cohort.termdb, onlyChildren)

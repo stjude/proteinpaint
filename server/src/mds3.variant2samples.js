@@ -4,6 +4,7 @@ import * as utils from './utils.js'
 import { dtsnvindel, dtcnv, dtitd, dtfusionrna, dtsv, mclassitd } from '#shared/common.js'
 import * as geneDbSearch from './gene.js'
 import { getSampleData_dictionaryTerms_termdb, getData } from './termdb.matrix.js'
+import { authApi } from './auth.js'
 import { ssmIdFieldsSeparator, guessSsmid } from '#shared/mds3tk.js'
 
 /*
@@ -283,8 +284,12 @@ async function queryMutatedSamples(q, ds) {
 	const q2 = {
 		ds,
 		// filterObj does not exist if query is from mass. still added it here in case it may come from mds3...
-		filter: q.filter || q.filterObj
+		filter: q.filter || q.filterObj,
+		__protected__: q.__protected__
 	}
+	// this lower-level getter bypasses getData() and its auth handling, so a ds
+	// getAdditionalFilter() must be applied here to restrict to authorized samples
+	authApi.mayAdjustFilter(q2, ds)
 	const out = await getSampleData_dictionaryTerms_termdb(q2, q.twLst)
 	// quick fix to reshape result data
 	const samples = []
@@ -296,7 +301,10 @@ async function queryMutatedSamples(q, ds) {
 
 		for (const tw of q.twLst) {
 			if (s[tw.term.id]) {
-				s[tw.term.id] = s[tw.term.id].key
+				const cell = s[tw.term.id]
+				// a membership multivalue cell may carry multiple {key} entries; keep the
+				// key list so summary/sunburst can count the sample under each category
+				s[tw.term.id] = tw.term.type == 'multivalue' && cell.values ? cell.values.map(v => v.key) : cell.key
 			}
 		}
 		samples.push(s)
@@ -391,7 +399,7 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 		throw new Error('unknown format of ssm id')
 	}
 
-	await mayAddSampleAnnotationByTwLst(samples, twLst, ds)
+	await mayAddSampleAnnotationByTwLst(samples, twLst, ds, q)
 
 	return { samples: [...samples.values()] }
 }
@@ -435,13 +443,15 @@ export function combineSamplesById(inlst, samples, ssmid) {
 	}
 }
 
-async function mayAddSampleAnnotationByTwLst(samples, twLst, ds) {
+async function mayAddSampleAnnotationByTwLst(samples, twLst, ds, q) {
 	if (!twLst || twLst.length == 0) return
 
 	// Get data for all terms at once.
 	// FIXME inefficient as it pulls data for all samples.
 	// FIXME hardcoded true as 3rd arg to obtain sample-level values for patient-level terms
-	const data = await getData({ terms: twLst }, ds, true)
+	// __protected__ from the route query is required by authApi.mayAdjustFilter() inside
+	// getData(), so that a ds getAdditionalFilter() can restrict to authorized samples
+	const data = await getData({ terms: twLst, __protected__: q?.__protected__ }, ds, true)
 	if (data.error) throw data.error
 
 	// For every term, append term values to each sample
@@ -450,7 +460,11 @@ async function mayAddSampleAnnotationByTwLst(samples, twLst, ds) {
 		if (sampleData) {
 			for (const tw of twLst) {
 				const v = sampleData[tw.$id]
-				if (v?.value !== undefined) {
+				if (tw.term.type == 'multivalue' && Array.isArray(v?.values)) {
+					// a membership multivalue cell carries multiple {key} entries;
+					// keep the key list so the sample is counted under each category
+					s[tw.term.id] = v.values.map(i => i.key)
+				} else if (v?.value !== undefined) {
 					s[tw.term.id] = v.value // only works for dictionary terms
 				}
 			}
@@ -491,15 +505,33 @@ async function queryServerFileByRglst(q, twLst, ds) {
 		}
 	}
 
-	await mayAddSampleAnnotationByTwLst(samples, twLst, ds)
+	await mayAddSampleAnnotationByTwLst(samples, twLst, ds, q)
 
 	return { samples: [...samples.values()] }
 }
 
 async function make_sunburst(mutatedSamples, ds, q) {
+	/* a membership multivalue term yields an array of categories per sample;
+	stratinput requires one scalar value per level, so expand such samples into
+	one item per category (cartesian across multiple multivalue rings), the same
+	subset semantics as divide-by: the sample appears in each category's wedge */
+	let lst = mutatedSamples
+	for (const tw of q.twLst) {
+		if (tw.term.type != 'multivalue') continue
+		const next = []
+		for (const item of lst) {
+			const v = item[tw.term.id]
+			if (Array.isArray(v)) {
+				for (const key of v) next.push(Object.assign({}, item, { [tw.term.id]: key }))
+			} else {
+				next.push(item)
+			}
+		}
+		lst = next
+	}
 	// to use stratinput, convert each attr to {k} where k is term id
 	const nodes = stratinput(
-		mutatedSamples,
+		lst,
 		q.twLst.map(tw => {
 			return { k: tw.term.id }
 		})
@@ -568,7 +600,8 @@ async function make_summary(mutatedSamples, ds, q) {
 
 	for (const tw of q.twLst) {
 		if (!tw.term) continue
-		if (tw.term.type == 'categorical') {
+		if (tw.term.type == 'categorical' || tw.term.type == 'multivalue') {
+			// a multivalue sample may carry multiple categories and is counted under each
 			const cat2count = make_summary_categorical(mutatedSamples, tw.term.id)
 			// k: category string, v: sample count
 
@@ -627,10 +660,14 @@ function make_summary_categorical(samples, termid) {
 		for (const s of samples) {
 			const c = s[termid]
 			if (!c) continue
-			if (!cat2count.has(c)) {
-				cat2count.set(c, new Set())
+			// a membership multivalue term yields an array of categories per sample;
+			// count the sample under each
+			for (const cat of Array.isArray(c) ? c : [c]) {
+				if (!cat2count.has(cat)) {
+					cat2count.set(cat, new Set())
+				}
+				cat2count.get(cat).add(s.sample_id)
 			}
-			cat2count.get(c).add(s.sample_id)
 		}
 		const map = new Map()
 		for (const [c, s] of cat2count) {

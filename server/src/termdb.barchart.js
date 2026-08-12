@@ -187,6 +187,12 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 									explodedItem.val2 = v.value
 									samplesMap.set(`${sampleId}_tc_${vi}`, explodedItem)
 								}
+							} else if (i == 0 && tw.term.type == 'multivalue' && value.values) {
+								// membership multivalue as chart-divide where the sample belongs to
+								// multiple categories: store the key list here, rows are exploded
+								// into one per category after this loop
+								item[`key${i}`] = value.values.map(v => v.key)
+								item[`val${i}`] = value.values.map(v => v.key)
 							} else {
 								// this series key will not deduplicate multi-valued samples (those that belong to multiple groups)
 								item[`key${i}`] = i != 1 ? value.key : value.values?.map(v => v.key) || [value.key]
@@ -203,6 +209,21 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 			}
 		}
 	}
+	// explode rows for samples with multiple memberships in a multivalue divide (key0)
+	// term, so each membership lands in its own chart. exploded rows keep the true
+	// sample id, so distinct sample totals are unaffected. only the multivalue branch
+	// above stores arrays at key0 (key1 arrays are fanned out by partjson '$key1[]')
+	for (const [mapKey, item] of [...samplesMap.entries()]) {
+		if (!item || !Array.isArray(item.key0)) continue
+		// key0 list must be captured before the first iteration overwrites item.key0
+		const key0lst = item.key0
+		for (const [vi, k0] of key0lst.entries()) {
+			const target = vi == 0 ? item : Object.assign({}, item)
+			target.key0 = k0
+			target.val0 = k0
+			if (vi > 0) samplesMap.set(`${mapKey}_mv_${vi}`, target)
+		}
+	}
 	q.results.lst = [...samplesMap.values()].filter(value => value !== null)
 	q.results.bins = bins
 	const sqlDone = +new Date()
@@ -211,6 +232,26 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 		pj.tree.results.times = {
 			sql: sqlDone - startTime,
 			pj: pj.times
+		}
+	}
+	{
+		/* membership multivalue term1: bars overlap, so the client cannot derive the
+		distinct visible-sample count by summing visible bars, and it has no sample ids
+		to dedupe with. compute it here per chart, honoring q.hiddenValues, while the
+		full data (including hidden series) is still returned for the legend */
+		const tw1 = map.get(1)
+		if (tw1?.term?.type == 'multivalue' && tw1.term.valueMeaning == 'membership' && pj.tree.results?.charts) {
+			const hidden = new Set(Object.keys(tw1.q?.hiddenValues || {}))
+			const chart2samples = new Map() // k: chartId (key0), v: Set of samples with >=1 visible membership
+			for (const item of q.results.lst) {
+				const keys = Array.isArray(item.key1) ? item.key1 : [item.key1]
+				if (!keys.some(k => !hidden.has(k))) continue
+				if (!chart2samples.has(item.key0)) chart2samples.set(item.key0, new Set())
+				chart2samples.get(item.key0).add(item.sample)
+			}
+			for (const chart of pj.tree.results.charts) {
+				chart.visibleDistinctTotal = chart2samples.get(chart.chartId)?.size || 0
+			}
 		}
 	}
 	const result = { data: pj.tree.results, bins, categories, sampleType: data.sampleType }
