@@ -121,12 +121,12 @@ class OmeTiffSlide:
         return np.asarray(img)
 
     def _read_level(self, level, lx, ly, w, h):
-        """(lx,ly,w,h) in level coords -> 2D array, zero-padded at edges."""
+        """(lx,ly,w,h) in level coords -> array, zero-padded at edges."""
         page = self._levels[level].pages[self._plane]
         kf = page.keyframe  # geometry lives on the keyframe (see __init__)
         tw, th = kf.tilewidth, kf.tilelength
         tiles_across = -(-kf.imagewidth // tw)
-        out = np.zeros((h, w), dtype=kf.dtype)
+        out = None
         tx0, tx1 = max(0, lx) // tw, max(0, min(lx + w - 1, kf.imagewidth - 1)) // tw
         ty0, ty1 = max(0, ly) // th, max(0, min(ly + h - 1, kf.imagelength - 1)) // th
         for tr in range(ty0, ty1 + 1):
@@ -134,6 +134,9 @@ class OmeTiffSlide:
                 arr = self._decode_tile(page, tr * tiles_across + tc)
                 if arr is None:
                     continue
+                if out is None:
+                    out_shape = (h, w) if arr.ndim == 2 else (h, w, arr.shape[2])
+                    out = np.zeros(out_shape, dtype=kf.dtype)
                 x0, y0 = tc * tw, tr * th
                 ix0, iy0 = max(lx, x0), max(ly, y0)
                 ix1 = min(lx + w, x0 + arr.shape[1])
@@ -141,7 +144,7 @@ class OmeTiffSlide:
                 if ix1 <= ix0 or iy1 <= iy0:
                     continue
                 out[iy0 - ly:iy1 - ly, ix0 - lx:ix1 - lx] = arr[iy0 - y0:iy1 - y0, ix0 - x0:ix1 - x0]
-        return out
+        return out if out is not None else np.zeros((h, w), dtype=kf.dtype)
 
     def _get_scale(self):
         if self._scale is None:
