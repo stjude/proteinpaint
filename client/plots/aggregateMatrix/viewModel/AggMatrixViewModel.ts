@@ -35,6 +35,7 @@ export class AggMatrixViewModel {
 
     constructor(ag: AggregateMatrix) {
         this.ag = ag
+        this.sizeScale = (value: number) => value
     }
 
     processData(data: ValidAggMatrixResponse) {
@@ -152,8 +153,7 @@ export class AggMatrixViewModel {
                 scale: () => '',
                 absMin: 0,
                 absMax: 0
-            },
-            sizeScale: () => 0
+            }
         }
     }
 
