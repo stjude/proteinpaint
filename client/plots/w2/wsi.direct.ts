@@ -8,6 +8,9 @@
  CSV columns: cell_id, vertex_x, vertex_y (µm); rows of one cell are contiguous
  and its first vertex is repeated last to close the polygon.
 
+ &annotation_level=n limits the overlays to the n most zoomed-in levels of the
+ viewer: zoomed out beyond that, the boundaries are hidden. Omit to always show.
+
  Bypasses datasets/samples: hits the wsitiles route with a direct slide path
  (resolved relative to serverconfig.tpmasterdir; gated by features.wsi.allowDirectSlidePath). Minimal
  pan/zoom viewer — the same OpenLayers Zoomify setup the full viewer uses.
@@ -25,7 +28,10 @@ import { Stroke, Style } from 'ol/style.js'
 import { dofetch3 } from '#common/dofetch'
 import { sayerror } from '#dom'
 
-export async function init(opts: { slide: string; cellBoundaries?: string; nucleusBoundaries?: string }, holder: any) {
+export async function init(
+	opts: { slide: string; cellBoundaries?: string; nucleusBoundaries?: string; annotationLevel?: string },
+	holder: any
+) {
 	const loading = holder.append('div').style('margin', '20px').text(`Loading ${opts.slide} …`)
 	try {
 		const slide = encodeURIComponent(opts.slide)
@@ -70,6 +76,16 @@ export async function init(opts: { slide: string; cellBoundaries?: string; nucle
 		// segmentation overlays: boundary CSVs are in µm, converted to level-0
 		// pixels via the slide's mpp (defaulting to 1 = coords already in px)
 		const [mppX, mppY] = Array.isArray(meta.mpp) && meta.mpp.length === 2 ? meta.mpp : [1, 1]
+
+		// annotation_level=n: show the overlays only within the n most zoomed-in
+		// levels. OL picks the tile level with resolution <= the view resolution,
+		// so "within the n finest levels" means view resolution < the (n+1)'th
+		// finest grid resolution — that becomes the layer's (exclusive) maxResolution.
+		const resolutions = grid.getResolutions()
+		const n = Number(opts.annotationLevel)
+		const maxResolution =
+			Number.isInteger(n) && n > 0 && n < resolutions.length ? resolutions[resolutions.length - 1 - n] : undefined
+
 		const overlays: Array<[string | undefined, string]> = [
 			[opts.cellBoundaries, 'rgba(0, 200, 80, 0.9)'],
 			[opts.nucleusBoundaries, 'rgba(0, 150, 255, 0.9)']
@@ -77,7 +93,7 @@ export async function init(opts: { slide: string; cellBoundaries?: string; nucle
 		for (const [file, color] of overlays) {
 			if (!file) continue
 			try {
-				map.addLayer(await boundaryLayer(host, slide, file, mppX, mppY, color))
+				map.addLayer(await boundaryLayer(host, slide, file, mppX, mppY, color, maxResolution))
 			} catch (e: any) {
 				sayerror(holder, `Error loading ${file}: ${e.message || e}`)
 			}
@@ -89,16 +105,18 @@ export async function init(opts: { slide: string; cellBoundaries?: string; nucle
 }
 
 /** Fetch a boundary CSV (from the slide's directory, via wsitiles/boundaries)
- and build one stroke-only vector layer holding every polygon.
- ponytail: all ~100k polygons in one MultiPolygon feature, always rendered —
- add zoom-gated visibility or vector tiling if panning ever feels sluggish. */
+ and build one stroke-only vector layer holding every polygon; maxResolution
+ (when set) hides the layer once the user zooms out beyond it.
+ ponytail: all ~100k polygons in one MultiPolygon feature — switch to vector
+ tiling if rendering within the visible zoom range ever feels sluggish. */
 async function boundaryLayer(
 	host: string,
 	slide: string,
 	file: string,
 	mppX: number,
 	mppY: number,
-	color: string
+	color: string,
+	maxResolution?: number
 ): Promise<VectorLayer> {
 	const res = await fetch(`${host}/wsitiles/boundaries?slide=${slide}&file=${encodeURIComponent(file)}`)
 	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
@@ -124,6 +142,7 @@ async function boundaryLayer(
 
 	return new VectorLayer({
 		source: new VectorSource({ features: [new Feature(new MultiPolygon(polygons))] }),
-		style: new Style({ stroke: new Stroke({ color, width: 1 }) })
+		style: new Style({ stroke: new Stroke({ color, width: 1 }) }),
+		maxResolution
 	})
 }

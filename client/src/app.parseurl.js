@@ -41,7 +41,9 @@ upon error, throw err message as a string
 				slide: urlp.get('svs'),
 				// optional Xenium segmentation overlays; CSV files in the slide's directory
 				cellBoundaries: urlp.get('cell_boundaries'),
-				nucleusBoundaries: urlp.get('nucleus_boundaries')
+				nucleusBoundaries: urlp.get('nucleus_boundaries'),
+				// optional: show overlays only within the n most zoomed-in levels
+				annotationLevel: urlp.get('annotation_level')
 			},
 			arg.holder
 		)
