@@ -104,6 +104,20 @@ function init({ genomes }) {
 			const q = req.query
 			const slide = slidePath(genomes, q)
 
+			if (req.params.action == 'boundaries') {
+				// serve a boundary CSV (e.g. Xenium cell/nucleus_boundaries.csv) that sits
+				// in the same directory as the slide; basename-only pattern prevents the
+				// query from reaching outside that directory
+				const file = String(q.file || '')
+				if (!/^[\w.-]+\.csv$/.test(file)) {
+					res.status(400).send({ status: 'error', error: 'invalid boundaries file name' })
+					return
+				}
+				const csv = await readFile(path.join(path.dirname(slide), file), 'utf8')
+				res.status(200).set('Content-Type', 'text/csv').set('Cache-Control', 'public, max-age=3600').send(csv)
+				return
+			}
+
 			if (req.params.action == 'meta') {
 				const out = await run_python('wsi_tile.py', JSON.stringify({ action: 'meta', slide }))
 				res.status(200).json(JSON.parse(out))
