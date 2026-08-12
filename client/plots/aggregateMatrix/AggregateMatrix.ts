@@ -6,7 +6,7 @@ import { getAggregateMatrixSettings } from './settings/defaults.ts'
 import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
 import { setControls } from './view/setControls.ts'
-import { Menu } from '#dom/menu'
+import { Menu } from '#dom'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
