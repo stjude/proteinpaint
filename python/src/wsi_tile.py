@@ -7,8 +7,9 @@ spawns it once per request, pipes a JSON job on stdin, and reads stdout.
 Two jobs (JSON on stdin, `action` selects):
   {"action":"meta","slide":"/abs/slide.svs"}
       -> stdout: {"slide_dimensions":[w,h],"mpp":..,"levels":..,"tileSize":256}
-  {"action":"tile","slide":"/abs/slide.svs","z":9,"x":0,"y":0}
+  {"action":"tile","slide":"/abs/slide.svs","z":9,"x":0,"y":0,"plane":3}
       -> writes ONE JPEG to a temp path, stdout: that path (node sends+deletes it)
+      (`plane` optional: z-plane of a 3D OME-TIFF stack; default = middle plane)
 
 Tiles are Zoomify-compatible: geometry is copied from OpenLayers'
 ol/source/Zoomify.js 'default' tier math, so the client's tile requests and this
@@ -77,14 +78,17 @@ class OmeTiffSlide:
 
     Grayscale uint16 planes (DAPI etc.) are contrast-scaled to 8-bit using a
     global percentile from the smallest pyramid level, so all tiles brighten
-    uniformly. For a 3D z-stack (e.g. morphology.ome.tif, axes ZYX) the middle
-    z-plane is shown, as it is typically the best-focused one.
+    uniformly. For a 3D z-stack (e.g. morphology.ome.tif, axes ZYX) `plane`
+    picks the z-plane; default is the middle one, typically best-focused.
     """
 
-    def __init__(self, path):
+    def __init__(self, path, plane=None):
         self._tf = tifffile.TiffFile(path)
         self._levels = self._tf.series[0].levels
-        self._plane = len(self._levels[0].pages) // 2  # middle z; 0 for 2D
+        self.plane_count = len(self._levels[0].pages)  # z-planes; 1 for 2D
+        self._plane = (
+            self.plane_count // 2 if plane is None else max(0, min(self.plane_count - 1, int(plane)))
+        )
         # non-first z-planes are TiffFrame objects without tag attributes;
         # .keyframe carries the geometry, which all planes of a level share
         base = self._levels[0].pages[self._plane].keyframe
@@ -164,10 +168,10 @@ class OmeTiffSlide:
         return Image.fromarray(arr, "L").convert("RGB")
 
 
-def open_slide(path):
+def open_slide(path, plane=None):
     if path.lower().endswith((".ome.tif", ".ome.tiff")):
-        return OmeTiffSlide(path)
-    return openslide.OpenSlide(path)
+        return OmeTiffSlide(path, plane)
+    return openslide.OpenSlide(path)  # single-plane formats ignore `plane`
 
 
 # --- jobs ------------------------------------------------------------------
@@ -182,13 +186,15 @@ def meta(slide):
             "mpp": [float(mpp_x), float(mpp_y)] if mpp_x and mpp_y else [],
             "levels": s.level_count,
             "tileSize": TILE_SIZE,
+            # z-planes of a 3D OME-TIFF stack; 1 for ordinary 2D slides
+            "planes": getattr(s, "plane_count", 1),
         }
     finally:
         s.close()
 
 
-def tile(slide, z, x, y, quality=80):
-    s = open_slide(slide)
+def tile(slide, z, x, y, quality=80, plane=None):
+    s = open_slide(slide, plane)
     try:
         reg = tile_region(*s.dimensions, z, x, y)
         if reg is None:
@@ -232,7 +238,8 @@ def main():
     if job["action"] == "meta":
         print(json.dumps(meta(job["slide"]), separators=(",", ":")))
     elif job["action"] == "tile":
-        print(tile(job["slide"], int(job["z"]), int(job["x"]), int(job["y"])))
+        plane = int(job["plane"]) if job.get("plane") is not None else None
+        print(tile(job["slide"], int(job["z"]), int(job["x"]), int(job["y"]), plane=plane))
     else:
         raise ValueError(f"unknown action {job.get('action')!r}")
 
