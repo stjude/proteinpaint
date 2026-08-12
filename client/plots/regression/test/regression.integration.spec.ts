@@ -242,11 +242,11 @@ tape('Linear: continuous outcome = "agedx", discrete independent = "aaclassic_5"
 		const regDom = regression.Inner.dom
 
 		//**** Results ****
-		let tableLabel, table, results
+		let results
 
 		//Coefficients table
-		tableLabel = 'coefficients table'
-		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
+		const tableLabel = 'coefficients table'
+		const table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
 
 		const $id = tid2$id('aaclassic_5', regression)
 
@@ -393,12 +393,9 @@ tape('Linear: continuous outcome = "agedx", independents = "sex" * "aaclassic_5"
 		const data = await getData(regression)
 		const regDom = regression.Inner.dom
 
-		//**** Results ****
-		let tableLabel, table, results
-
 		//Coefficients table
-		tableLabel = 'coefficients table'
-		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
+		const tableLabel = 'coefficients table'
+		const table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
 
 		const interactionRow = table[4]
 		test.equal(
@@ -414,8 +411,8 @@ tape('Linear: continuous outcome = "agedx", independents = "sex" * "aaclassic_5"
 			interaction => interaction.term1 == sex$id && interaction.term2 == aaclassic_5$id
 		)
 		if (!interaction) throw 'interaction not found'
-		interaction.categories[0].lst
-		results = checkOnlyRowValues(values2check, getCoefData(interaction.categories[0].lst))
+		// interaction.categories[0].lst
+		const results = checkOnlyRowValues(values2check, getCoefData(interaction.categories[0].lst))
 		test.equal(results, true, `Should render all interaction data in ${tableLabel}`)
 
 		if (test['_ok']) regression.Inner.app.destroy()
@@ -451,11 +448,11 @@ tape('Linear: continuous outcome = "agedx", geneVariant independent = "TP53"', t
 		const regDom = regression.Inner.dom
 
 		//**** Results ****
-		let tableLabel, table, results
+		let results
 
 		//Coefficients table
-		tableLabel = 'coefficients table'
-		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
+		const tableLabel = 'coefficients table'
+		const table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
 
 		const $id = tid2$id('TP53', regression)
 
@@ -510,8 +507,7 @@ tape('Logistic: continuous outcome = "hrtavg", continuous independent = "agedx"'
 		const regDom = regression.Inner.dom
 
 		//**** Results ****
-		let tableLabel, table, results, testTerm
-
+		let tableLabel, table, results
 		//Sample size
 		const sampleSizeDiv = regDom.results
 			.selectAll('div[name^="Sample size"] span')
@@ -544,7 +540,7 @@ tape('Logistic: continuous outcome = "hrtavg", continuous independent = "agedx"'
 		results = checkTableRow(table, 1, coefIntercept)
 		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
 
-		testTerm = 'Age (years) at Cancer Diagnosis'
+		const testTerm = 'Age (years) at Cancer Diagnosis'
 		const checkValues1 = [testTerm, '(continuous)']
 		checkValues1.push(...getCoefData(data.coefficients.terms[tid2$id('agedx', regression)].fields))
 		results = checkTableRow(table, 2, checkValues1)
@@ -606,7 +602,7 @@ tape('Logistic: categorical outcome = "diaggrp", continuous independent = "agedx
 		const regDom = regression.Inner.dom
 
 		//**** Results ****
-		let tableLabel, table, results, testTerm
+		let tableLabel, table, results
 
 		//Sample size
 		const sampleSizeDiv = regDom.results
@@ -640,7 +636,7 @@ tape('Logistic: categorical outcome = "diaggrp", continuous independent = "agedx
 		results = checkTableRow(table, 1, coefIntercept)
 		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
 
-		testTerm = 'Age (years) at Cancer Diagnosis'
+		const testTerm = 'Age (years) at Cancer Diagnosis'
 		const checkValues1 = [testTerm, '(continuous)']
 		checkValues1.push(...getCoefData(data.coefficients.terms[tid2$id('agedx', regression)].fields))
 		results = checkTableRow(table, 2, checkValues1)
@@ -703,7 +699,7 @@ tape('Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"', te
 		//#of events instead of residuals table, no intercept in coefficent, stats test table
 
 		//**** Results ****
-		let tableLabel, table, results, testTerm
+		let tableLabel, table, results
 
 		//Sample size
 		const sampleSizeDiv = regDom.results
@@ -744,7 +740,7 @@ tape('Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"', te
 		const coxHeaders = coefHeader.filter(d => d === 'HR' + String.fromCharCode(160) + 'ⓘ')
 		test.equal(coxHeaders.length, 1, `Should render headers specific to cox regression in ${tableLabel}`)
 
-		testTerm = 'Age (years) at Cancer Diagnosis'
+		const testTerm = 'Age (years) at Cancer Diagnosis'
 		const checkValues1 = [testTerm, '(continuous)']
 		data.coefficients.terms[$id].fields.splice(0, 2)
 		checkValues1.push(...getCoefData(data.coefficients.terms[$id].fields))
@@ -817,7 +813,7 @@ tape('Cox: survival outcome, continuous independent = "agedx"', test => {
 		//#of events instead of residuals table, no intercept in coefficent, stats test table
 
 		//**** Results ****
-		let tableLabel, table, results, testTerm
+		let tableLabel, table, results
 
 		//Sample size
 		const sampleSizeDiv = regDom.results
@@ -856,7 +852,7 @@ tape('Cox: survival outcome, continuous independent = "agedx"', test => {
 		const coxHeaders = coefHeader.filter(d => d === 'HR' + String.fromCharCode(160) + 'ⓘ')
 		test.equal(coxHeaders.length, 1, `Should render headers specific to cox regression in ${tableLabel}`)
 
-		testTerm = 'Age (years) at Cancer Diagnosis'
+		const testTerm = 'Age (years) at Cancer Diagnosis'
 		const checkValues1 = [testTerm, '(continuous)']
 		data.coefficients.terms[$id].fields.splice(0, 2)
 		checkValues1.push(...getCoefData(data.coefficients.terms[$id].fields))

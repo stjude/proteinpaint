@@ -254,7 +254,7 @@ function setRenderers(self) {
 	function trEnter(this: any, item) {
 		const tr = select(this)
 		const input = this.parentNode.__data__
-		const t = input.term
+		// const t = input.term
 		const maxBarWidth = 150
 
 		tr.style('text-align', 'left').style('cursor', input.termStatus.allowToSelectRefGrp ? 'pointer' : 'default')

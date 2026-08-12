@@ -88,19 +88,20 @@ const pgsCustomBin = {
 		]
 	}
 }
-const agedxRegularBin = {
-	id: 'agedx',
-	q: {
-		type: 'regular-bin',
-		startinclusive: true,
-		bin_size: 5,
-		first_bin: {
-			stop: 5,
-			startunbounded: true
-		}
-	},
-	refGrp: '<5'
-}
+// const agedxRegularBin = {
+// 	id: 'agedx',
+// 	q: {
+// 		type: 'regular-bin',
+// 		startinclusive: true,
+// 		bin_size: 5,
+// 		first_bin: {
+// 			stop: 5,
+// 			startunbounded: true
+// 		}
+// 	},
+// 	refGrp: '<5'
+// }
+
 const agedxCustomBin = {
 	id: 'agedx',
 	q: {
