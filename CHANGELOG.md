@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- improve sv/fusion tw and tvs edit ui to show geneA-geneB breakpoint diagram
+
 Fixes:
 - GDC differential expression: a full cache pool (CACHE_BUSY) now actually fails the run. mapConcurrent has allSettled semantics, so the throw only ended its own chunk and the affected cases were written to the counts matrix as all-zero columns, then cached under the cohort hash.
 - GDC differential expression: raised the gdcCounts cache pool from 100 to 200 pending entries, so a second concurrent DE run cannot exhaust it against a download concurrency of 60.
