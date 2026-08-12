@@ -16,7 +16,23 @@ import { appInit } from '#plots/plot.app.js'
 const row_hover_bgcolor = '#fff6dc'
 
 export class InputValuesTable {
-	constructor(opts) {
+	opts: any
+	input: any
+	setDOM!: (holder: any) => void
+	dom!: {
+		holder: any
+		loading_div: any
+		top_info_div: any
+		violin_div: any
+		table_div: any
+		bottom_info_div: any
+		excluded_div: any
+	}
+	plotAppApi!: any
+	violinApi!: any
+	render!: () => void
+
+	constructor(opts: any) {
 		// opts {holder, input, callback}
 		this.opts = opts
 		this.input = opts.input
@@ -235,7 +251,7 @@ function setRenderers(self) {
 		self.dom.excluded_div.selectAll('td').style('color', '#999')
 	}
 
-	function trEnter(item) {
+	function trEnter(this: any, item) {
 		const tr = select(this)
 		const input = this.parentNode.__data__
 		const t = input.term

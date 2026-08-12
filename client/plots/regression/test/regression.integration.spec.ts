@@ -147,7 +147,7 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 		const violinDiv = await detectOne({ selector: '.sjpp-vp-violinDiv', elem })
 		test.ok(violinDiv, `Should render violin plot for outcome variable`)
 
-		if (test._ok) regression.Inner.app.destroy()
+		if (test['_ok']) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -209,7 +209,7 @@ tape('Linear: continuous outcome = "agedx", continuous independent = "aaclassic_
 		results = checkOnlyRowValues(values2check2, data.type3.terms[tid2$id('aaclassic_5', regression)])
 		test.equal(results, true, `Should render all continous 'aaclassic_5' data in ${tableLabel}`)
 
-		if (test._ok) regression.Inner.app.destroy()
+		if (test['_ok']) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -267,7 +267,7 @@ tape('Linear: continuous outcome = "agedx", discrete independent = "aaclassic_5"
 
 		//TODO: necessary to check all other values?
 
-		if (test._ok) regression.Inner.app.destroy()
+		if (test['_ok']) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -357,7 +357,7 @@ tape('Linear: continuous outcome = "agedx", cubic spline independent = "aaclassi
 		results = checkTableRow(table, 1, data.nonlinearity.terms[$id])
 		test.equal(results, true, `Should render all spline variable data in ${tableLabel}`)
 
-		if (test._ok) regression.Inner.app.destroy()
+		if (test['_ok']) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -418,7 +418,7 @@ tape('Linear: continuous outcome = "agedx", independents = "sex" * "aaclassic_5"
 		results = checkOnlyRowValues(values2check, getCoefData(interaction.categories[0].lst))
 		test.equal(results, true, `Should render all interaction data in ${tableLabel}`)
 
-		if (test._ok) regression.Inner.app.destroy()
+		if (test['_ok']) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -476,7 +476,7 @@ tape('Linear: continuous outcome = "agedx", geneVariant independent = "TP53"', t
 
 		//TODO: necessary to check all other values?
 
-		if (test._ok) regression.Inner.app.destroy()
+		if (test['_ok']) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -572,7 +572,7 @@ tape('Logistic: continuous outcome = "hrtavg", continuous independent = "agedx"'
 			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
 		}
 
-		if (test._ok) regression.Inner.app.destroy()
+		if (test['_ok']) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -668,7 +668,7 @@ tape('Logistic: categorical outcome = "diaggrp", continuous independent = "agedx
 			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
 		}
 
-		if (test._ok) regression.Inner.app.destroy()
+		if (test['_ok']) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -780,7 +780,7 @@ tape('Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"', te
 			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
 		}
 
-		if (test._ok) regression.Inner.app.destroy()
+		if (test['_ok']) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -892,7 +892,7 @@ tape('Cox: survival outcome, continuous independent = "agedx"', test => {
 			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
 		}
 
-		if (test._ok) regression.Inner.app.destroy()
+		if (test['_ok']) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -950,7 +950,7 @@ tape('Cox: survival outcome, cubic spline independent = "agedx"', test => {
 			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
 		}
 
-		if (test._ok) regression.Inner.app.destroy()
+		if (test['_ok']) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -978,7 +978,7 @@ async function getData(regression) {
 
 	function getDataRequestOpts(regression) {
 		const c = regression.Inner.config
-		const opts = {
+		const opts: any = {
 			regressionType: c.regressionType,
 			outcome: c.outcome,
 			independent: c.independent
@@ -992,9 +992,9 @@ async function getData(regression) {
 }
 
 function checkTableRow(table, idx, dataArray) {
-	const checkArray = []
+	const checkArray: any[] = []
 	let issuesFound = 0
-	table[idx].childNodes.forEach(t => {
+	table[idx].childNodes.forEach((t: any) => {
 		checkArray.push(t.innerText)
 	})
 	dataArray.forEach(d => {
@@ -1007,7 +1007,7 @@ function checkTableRow(table, idx, dataArray) {
 }
 
 function checkOnlyRowValues(valueNodes, dataArray) {
-	const checkArray = []
+	const checkArray: any[] = []
 	let issuesFound = 0
 	valueNodes.forEach(t => {
 		checkArray.push(t.innerText)
