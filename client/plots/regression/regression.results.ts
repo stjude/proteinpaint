@@ -55,6 +55,26 @@ const forestcolor = '#126e08' // forest plot color
 const boxplotcolor = forestcolor
 
 export class RegressionResults {
+	opts: any
+	app: any
+	parent: any
+	vocabApi: any
+	type: string
+	dom: {
+		holder: any
+		err_div: any
+		snplocusBlockDiv: any
+		oneSetResultDiv: any
+		tip: Menu
+	}
+	config!: any
+	state!: any
+	hasUnsubmittedEdits_nullify_singleuse: any
+	snplocusBlock: any
+	displayResult!: (result: any) => Promise<void>
+	hasError!: boolean
+
+
 	constructor(opts) {
 		this.opts = opts
 		this.app = opts.app
@@ -65,7 +85,7 @@ export class RegressionResults {
 		// dispatch, such as closing another plot's sandbox, would cancel a pending analysis here.
 		this.vocabApi = this.parent.vocabApi
 		this.type = 'regression'
-		setInteractivity(this)
+		// setInteractivity(this)
 		setRenderers(this)
 
 		const holder = this.opts.holder
@@ -124,9 +144,10 @@ export class RegressionResults {
 
 			// scroll to results
 			const results_y = this.dom.holder.node().getBoundingClientRect().top + window.scrollY
-			const nav_height = document.querySelector('.sjpp-nav').getBoundingClientRect().height
+			const nav_height = document.querySelector('.sjpp-nav')?.getBoundingClientRect().height
+			if (!nav_height || isNaN(nav_height)) throw new Error('cannot get nav height')
 			window.scroll({ behavior: 'smooth', top: results_y - nav_height })
-		} catch (e) {
+		} catch (e: any) {
 			this.hasError = true
 			this.dom.holder.style('display', 'block')
 			this.dom.err_div.style('display', 'block')
@@ -141,7 +162,7 @@ export class RegressionResults {
 	// creates an opts object for the vocabApi.getRegressionData()
 	getDataRequestOpts() {
 		const c = this.config
-		const opts = {
+		const opts: any = {
 			regressionType: c.regressionType,
 			outcome: c.outcome,
 			independent: c.independent,
@@ -171,7 +192,7 @@ export class RegressionResults {
 					if (snp.snpid == tid) {
 						// tid matches with a snpid
 						// make up an object looking like an Input instance for this snp/variant
-						const tw = {
+						const tw: any = {
 							id: tid,
 							q: {
 								geneticModel: i.term.q.geneticModel
@@ -216,7 +237,7 @@ export class RegressionResults {
 	}
 }
 
-function setInteractivity(self) {}
+// function setInteractivity(self) {}
 
 function setRenderers(self) {
 	self.displayResult = async result => {
@@ -447,7 +468,7 @@ function setRenderers(self) {
 			// axis
 			{
 				const axisg = g.append('g').attr('transform', `translate(0,${boxplotHeight * 2 + vpad * 2})`)
-				const axis = axisBottom().scale(scale)
+				const axis = axisBottom(scale as any)
 				axisstyle({
 					axis: axisg.call(axis),
 					color: boxplotcolor,
@@ -585,7 +606,7 @@ function setRenderers(self) {
 			} else if (termdata.categories) {
 				// term has categories, create one sub-row for each category in coefficient tables
 
-				const orderedCategories = []
+				const orderedCategories: string[] = []
 				const input = self.getIndependentInput(tid)
 				if (input.orderedLabels) {
 					// reorder rows by predefined order
@@ -659,8 +680,8 @@ function setRenderers(self) {
 			// col 1: variable
 			{
 				const td = tr.append('td').style('padding', '8px')
-				fillTdName(td.append('div'), term1 ? term1.term.name + ' : ' : row.term1 + ' : ')
-				fillTdName(td.append('div'), term2 ? term2.term.name : row.term2)
+				fillTdName(td.append('div'), term1 ? term1.term.name + ' : ' : i.term1 + ' : ')
+				fillTdName(td.append('div'), term2 ? term2.term.name : i.term2)
 				td.attr('rowspan', i.categories.length).style('vertical-align', 'top')
 			}
 
@@ -819,7 +840,7 @@ function setRenderers(self) {
 			} else if (termdata.categories) {
 				// term has categories, create one sub-row for each category in coefficient tables
 
-				const orderedCategories = []
+				const orderedCategories: string[] = []
 				const input = self.getIndependentInput(tid)
 				if (input.orderedLabels) {
 					// reorder rows by predefined order
@@ -1207,7 +1228,7 @@ function setRenderers(self) {
 		}
 
 		// collect mid/CIlow/CIhigh numeric values into a flat array
-		const values = []
+		const values: number[] = []
 		for (const tid in terms) {
 			const d = terms[tid]
 			if (d.fields) {
@@ -1276,7 +1297,7 @@ function setRenderers(self) {
 				// had encountered a bug that '.1r' will print "20" at the tick of "15"
 				const tickFormat = self.config.regressionType == 'logistic' ? '.1r' : undefined
 
-				const axis = axisTop().ticks(4, tickFormat).scale(scale)
+				const axis = axisTop(scale as any).ticks(4, tickFormat)
 				axisstyle({
 					axis: g.call(axis),
 					color: forestcolor,
@@ -1375,7 +1396,7 @@ function fillTdName(td, name) {
 }
 function fillCoefficientTermname(tw, td) {
 	// fill column 1 <td> using term name
-	fillTdName(td, tw.term.name || tid)
+	fillTdName(td, tw.term.name || tw.term.id || '')
 	// fill refGrp or effect allele, if applicable
 	const hasRefGrp = 'refGrp' in tw && tw.refGrp != refGrp_NA && tw.q.mode != 'spline'
 	if (hasRefGrp || tw.effectAllele) {
@@ -1429,9 +1450,9 @@ function make_mds3_variants(tw, resultLst, regressionType) {
 
 	resultLst: [{data,id},{data,id},...]
 	*/
-	const mlst = []
+	const mlst: any[] = []
 	for (const snp of tw.term.snps) {
-		const m = {
+		const m: any = {
 			chr: snp.chr,
 			pos: snp.pos,
 			ssm_id: snp.snpid // needed for highlighting dot
@@ -1494,9 +1515,9 @@ function make_mds3_variants(tw, resultLst, regressionType) {
 			} else if (r.categories) {
 				// has categories{}: {C/T: Array(6), T/T: Array(6)}
 				// snp is used by genotype
-				const lst = []
+				const lst: string[] = []
 				for (const gt in r.categories) {
-					lst.push(gt + ':' + regressionType == 'cox' ? r.categories[gt][2] : r.categories[gt][0])
+					lst.push(`${gt}:${regressionType == 'cox' ? r.categories[gt][2] : r.categories[gt][0]}`)
 				}
 				m.regressionEstimate = ' ' + lst.join(' ')
 			} else {
@@ -1534,7 +1555,7 @@ function make_mds3_variants(tw, resultLst, regressionType) {
 async function createGenomebrowser(self, input, resultLst) {
 	// create block instance that harbors the mds3 track for showing variants from the snplocus term
 	// input is the snplocus Input instance
-	const arg = {
+	const arg: any = {
 		holder: self.dom.snplocusBlockDiv,
 		genome: self.parent.genomeObj,
 		chr: input.term.q.chr,
@@ -1563,7 +1584,7 @@ async function createGenomebrowser(self, input, resultLst) {
 			overrideTw.q.stop = stop
 			// call fillTW of snplocus.js to recompute tw.term.snps[] and cache file
 			const _ = await import('../../termsetting/handlers/snplocus')
-			await _.fillTW(overrideTw, self.vocabApi)
+			await _.fillTW(overrideTw as any, self.vocabApi)
 			/*
 			updated term info (term.snps[] and q.cacheid etc) are now in overrideTw
 			call pill.runCallback() with this override
@@ -1619,7 +1640,7 @@ async function createGenomebrowser(self, input, resultLst) {
 			self.displayResult_oneset(structuredClone(m.regressionResult.data))
 			await mayCheckLD(m, input, self)
 			const result_y = self.dom.oneSetResultDiv.node().getBoundingClientRect().top + window.scrollY
-			const nav_height = document.querySelector('.sjpp-nav').getBoundingClientRect().height
+			const nav_height = document.querySelector('.sjpp-nav')?.getBoundingClientRect().height || 0
 			window.scroll({ behavior: 'smooth', top: result_y - nav_height })
 		}
 	})
@@ -1702,14 +1723,14 @@ async function mayCheckLD(m, input, self) {
 
 		wait.html(input.term.q.restrictAncestry.name + ' LD r<sup>2</sup>')
 		showLDlegend(self.dom.LDresultDiv, LDcolorScale)
-	} catch (e) {
+	} catch (e: any) {
 		wait.text('Error: ' + (e.message || e))
 	}
 }
 
 export function showLDlegend(div, colorScale) {
 	const colorbardiv = div.append('span').style('margin-left', '10px')
-	const colorlst = []
+	const colorlst: string[] = []
 	for (let i = 0; i <= 1; i += 0.1) {
 		colorlst.push(colorScale(i))
 	}
@@ -1721,7 +1742,7 @@ export function showLDlegend(div, colorScale) {
 
 	/** ColorScale component requires the color and data array to be the same
 	 * length. This data array is purely to fulfill that requirement.*/
-	const domain = colorlst.map((d, i) => i / (colorlst.length - 1))
+	const domain = colorlst.map((_, i) => i / (colorlst.length - 1))
 
 	new ColorScale({
 		holder: colorbardiv,
@@ -1766,7 +1787,7 @@ function getSnpPvalueFromRegressionResults(d, snpid) {
 		// use p-value from type3 stats table
 		if (!d.type3.terms) throw '.data{type3:{terms}} missing'
 		if (!d.type3.terms[snpid]) throw snpid + ' missing in type3.terms{}'
-		if (!Array.isArray(d.type3.terms[snpid])) throw `type3.terms[${snp.snpid}] not array`
+		if (!Array.isArray(d.type3.terms[snpid])) throw `type3.terms[${snpid}] not array`
 		str = d.type3.terms[snpid][d.type3.terms[snpid].length - 1]
 	}
 	const v = Number(str) // p-value string can be 'NA'
@@ -1776,7 +1797,7 @@ function getSnpPvalueFromRegressionResults(d, snpid) {
 	return undefined
 }
 
-function fillColumn2coefficientsTable(div, tw, categoryKey) {
+function fillColumn2coefficientsTable(div, tw, categoryKey?: string) {
 	if (categoryKey) {
 		div.text(tw && tw.term.values && tw.term.values[categoryKey] ? tw.term.values[categoryKey].label : categoryKey)
 		return

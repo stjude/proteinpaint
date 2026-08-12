@@ -516,6 +516,8 @@ export class InputTerm {
 	}
 
 	renderInteractionOptions() {
+		//TODO: fix this
+		// eslint-disable-next-line
 		const self = this // captured for function() callbacks where 'this' is rebound to DOM element
 		this.dom.tip.clear().showunder(this.dom.interactionDiv.node())
 		if (this.parent.config.includeUnivariate) {

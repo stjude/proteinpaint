@@ -583,7 +583,7 @@ the test will check the number of headings in result
 the test will pass if there's no runtime error (client, server, R)
 */
 
-const activeTests = testList.filter(t => t.runthis)
+const activeTests = testList.filter((t: any) => t.runthis)
 
 for (const item of activeTests.length ? activeTests : testList) {
 	tape('(LINEAR) EF ~ ' + item.name, test => {

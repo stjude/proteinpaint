@@ -49,7 +49,7 @@ export class Cuminc extends PlotBase implements RxComponent {
 	render: () => void = () => {}
 
 
-	constructor(opts: any, api: ComponentApi) {
+	constructor(opts: any, api?: ComponentApi) {
 		// this class is instantiated directly, not as an rx component, so there is no plot api
 		super(opts, api)
 		this.type = Cuminc.type
