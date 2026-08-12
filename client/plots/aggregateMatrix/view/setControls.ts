@@ -4,9 +4,9 @@ import { validateMinMax } from '../settings/defaults.ts'
 import { capitalizeFirstLetter, DownloadMenu } from '#dom'
 
 
-export async function setControls(controlsDiv, ag: AggregateMatrix) {
-	const settings = ag.state.config.settings.aggregateMatrix
-	const chartType = ag.type
+export async function setControls(controlsDiv, ag: AggregateMatrix, initConfig: any) {
+	const settings = initConfig.settings.aggregateMatrix
+	const chartType = initConfig.chartType
 	const gradientLabel = capitalizeFirstLetter(settings.gradientMethod)
 
 	const inputs: any = [
