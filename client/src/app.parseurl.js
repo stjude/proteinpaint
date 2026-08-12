@@ -36,7 +36,15 @@ upon error, throw err message as a string
 		// ?SVS=SVS/slide.svs — direct whole-slide viewer, no dataset/genome
 		// (urlmap lowercases keys, so the URL's SVS is read here as 'svs')
 		const _ = await import('../plots/w2/wsi.direct')
-		await _.init({ slide: urlp.get('svs') }, arg.holder)
+		await _.init(
+			{
+				slide: urlp.get('svs'),
+				// optional Xenium segmentation overlays; CSV files in the slide's directory
+				cellBoundaries: urlp.get('cell_boundaries'),
+				nucleusBoundaries: urlp.get('nucleus_boundaries')
+			},
+			arg.holder
+		)
 		return
 	}
 
