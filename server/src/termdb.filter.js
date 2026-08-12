@@ -770,7 +770,7 @@ function get_multivalue(tvs, CTEname, ds, mapParent2Children) {
 		a membership outside the list hides the sample. Used by a dataset
 		getAdditionalFilter() to restrict samples to authorized categories */
 		if (!Array.isArray(tvs.values) || !tvs.values.length) throw 'tvs.values[] missing for withinValues'
-		const query = `SELECT sample
+		if (!tvs.values.every(v => v && v.key !== undefined)) throw 'tvs.values[].key missing for withinValues'
 			FROM anno_multivalue
 			WHERE term_id = ?
 			AND EXISTS (SELECT 1 FROM json_each(anno_multivalue.value) j WHERE j.value > 0)
