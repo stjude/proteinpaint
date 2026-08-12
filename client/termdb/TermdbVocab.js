@@ -1500,11 +1500,11 @@ export class TermdbVocab extends Vocab {
 			sizeMethod: opts.sizeMethod,
 			minDotSize: opts.minDotSize,
 			maxDotSize: opts.maxDotSize,
-			filter: getNormalRoot(opts.filter),
+			filter: opts.filter,
 			filter0: opts.filter0
 		}
 		const formatTw = term => {
-			if (isSingleCellTerm(term)) return term
+			if (isSingleCellTerm(term)) return { term, q: {} }
 			else return this.getTwMinCopy({ term: term, q: {} })
 		}
 		Object.keys(body.rows).forEach(section => {

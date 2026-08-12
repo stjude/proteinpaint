@@ -1,5 +1,5 @@
-import type { RoutePayload, TermdbAggregateMatrixRequest, TermdbAggregateMatrixResponse, RouteApi } from '#types'
-import { validGenomeDs } from '#routes/common.ts'
+import type { RoutePayload, TermdbAggregateMatrixRequest, TermdbAggregateMatrixResponse, RouteApi, Filter } from '#types'
+import { validGenomeDs, validString } from '#routes/common.ts'
 import { getAggMatrixData } from './getAggMatrixData.ts'
 
 export const payload: RoutePayload = {
@@ -22,7 +22,13 @@ export const api: RouteApi = {
 
 function validTermdbAggregateMatrixRequest(input) {
     return { 
-        ...validGenomeDs(input)
+        ...validGenomeDs(input),
+        gradientMethod: validString(input.gradientMethod),
+        sizeMethod: validString(input.sizeMethod),
+        rows: input.rows,
+        columns: input.columns,
+        filter: input.filter ? (input.filter as Filter) : undefined, // TODO: use a filter validator
+        filter0: input.filter0 as any,
     }
 }
 
