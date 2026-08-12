@@ -2,7 +2,14 @@ import test from 'tape'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { filterByItem, filterByTvsLst, mayFilterByMaf, mayValidateBcfMafFilter, setFile } from '../mds3.init.js'
+import {
+	filterByItem,
+	filterByTvsLst,
+	mayFilterByMaf,
+	mayValidateBcfMafFilter,
+	setFile,
+	svfusionByNameGetter_file
+} from '../mds3.init.js'
 import { toBreakpointPos } from '../svfusion.breakpoint.ts'
 import serverconfig from '../serverconfig.js'
 
@@ -45,6 +52,7 @@ Tests:
 	mayFilterByMaf: mafFilter with child ids, min allelic depth
 	setFile: validates and resolves files
 	toBreakpointPos: parses breakpoint positions
+	svfusionByNameGetter_file: breakpoint positions of the file
 */
 
 test('\n', t => {
@@ -2226,6 +2234,77 @@ test('toBreakpointPos: parses breakpoint positions', t => {
 	t.equal(toBreakpointPos(undefined), undefined, 'undefined yields undefined')
 	t.equal(toBreakpointPos(null), undefined, 'null yields undefined')
 	t.equal(toBreakpointPos('n/a'), undefined, 'non-numeric string yields undefined')
+})
+
+test('svfusionByNameGetter_file: breakpoint positions of the file', async t => {
+	/* the byname file may lack a breakpoint position on either gene of an event. such a
+	breakpoint must come out undefined, both on the event (read by getSelfBreakpoint) and
+	on the pairlst point of the same gene (read by getPartnerBreakpoints), so that the
+	event is reported as lacking a coordinate rather than placed at position 0 */
+	const tmpdir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pp-svfusion-byname-'))
+	try {
+		const file = path.join(tmpdir, 'fusion.txt')
+		const header = [
+			'sample_name',
+			'gene_a',
+			'chr_a',
+			'position_a',
+			'strand_a',
+			'gene_b',
+			'chr_b',
+			'position_b',
+			'strand_b',
+			'event_type',
+			'origin'
+		]
+		const rows = [
+			// queried gene is gene_a and has no position, the partner has one
+			['sample1', 'BCR', 'chr22', '', '+', 'ABL1', 'chr9', '130713016', '+', 'fusion', 'somatic'],
+			// both genes have a position
+			['sample2', 'BCR', 'chr22', '23290100', '+', 'ABL1', 'chr9', '130713016', '+', 'fusion', 'somatic'],
+			// queried gene is gene_b and has no position
+			['sample3', 'ABL1', 'chr9', '130713016', '+', 'BCR', 'chr22', '', '+', 'fusion', 'somatic']
+		]
+		await fs.promises.writeFile(file, [header, ...rows].map(l => l.join('\t')).join('\n') + '\n')
+
+		const ds = {
+			queries: { svfusion: { byname: { file } } },
+			// the file names samples, map each to the integer id of the term db
+			cohort: { termdb: { q: { sampleName2id: name => Number(name.replace('sample', '')) } } }
+		}
+		const genome = { chrlookup: { CHR22: { name: 'chr22', len: 50818468 } } }
+		const get = await svfusionByNameGetter_file(ds, genome)
+		const events = await get({ rglst: [{ chr: 'chr22', start: 23180000, stop: 23320000, name: 'BCR' }] })
+
+		t.equal(events.length, 3, 'an event is returned for each line')
+		// events are keyed by their breakpoint on the queried gene, find each by its sample
+		const bySample = new Map(events.map(e => [e.samples[0].sample_id, e]))
+
+		const noSelfPos = bySample.get(1)
+		t.equal(noSelfPos.pos, undefined, 'blank position of the queried gene yields no event position')
+		t.equal(noSelfPos.pairlst[0].a.pos, undefined, 'and none on its pairlst point')
+		t.equal(noSelfPos.pairlst[0].b.pos, 130713016, 'position of the partner gene is kept')
+
+		const bothPos = bySample.get(2)
+		t.equal(bothPos.pos, 23290100, 'position of the queried gene is converted to number')
+		t.equal(bothPos.pairlst[0].a.pos, 23290100, 'and is the same on its pairlst point')
+
+		// the queried gene is gene_b here, covering the other branch of the conversion
+		const noSelfPosB = bySample.get(3)
+		t.equal(noSelfPosB.pos, undefined, 'blank position yields none when the queried gene is gene_b')
+		t.equal(noSelfPosB.pairlst[0].b.pos, undefined, 'and none on its pairlst point')
+
+		/* the event position and the pairlst point of the queried gene are the same
+		breakpoint, so must be derived the same way; a mismatch would let an event without a
+		coordinate satisfy a breakpoint range */
+		for (const e of events) {
+			const self = e.pairlstIdx === 0 ? e.pairlst[0].a : e.pairlst[0].b
+			t.equal(e.pos, self.pos, `event position agrees with its pairlst point (sample${e.samples[0].sample_id})`)
+		}
+	} finally {
+		await fs.promises.rm(tmpdir, { recursive: true, force: true })
+		t.end()
+	}
 })
 
 const mafFilter = {

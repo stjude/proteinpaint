@@ -2688,7 +2688,8 @@ async function svfusionByRangeGetter_file(ds, genome) {
 }
 
 // this getter processes svfusion file with data that are lacking breakpoint positions, and will return events without coordinates
-async function svfusionByNameGetter_file(ds, genome) {
+// exported for testing
+export async function svfusionByNameGetter_file(ds, genome) {
 	const q = ds.queries.svfusion.byname
 	return async param => {
 		if (param.hiddenmclass?.has(dtsv) && param.hiddenmclass.has(dtfusionrna)) {
@@ -2737,11 +2738,15 @@ async function svfusionByNameGetter_file(ds, genome) {
 					if (m['gene_a'].toLowerCase() != rName.toLowerCase() && m['gene_b'].toLowerCase() != rName.toLowerCase())
 						continue
 
+					/* breakpoint on the queried gene, same conversion as the pairlst points below
+					so that a blank or missing position is undefined here too, rather than the 0
+					or NaN of Number(). such an event has no coordinate and must not be charted
+					or matched by a breakpoint range (see svfusion.breakpoint.ts) */
 					const pos =
 						m['gene_a'].toLowerCase() == rName.toLowerCase()
-							? Number(m['position_a'])
+							? toBreakpointPos(m['position_a'])
 							: m['gene_b'].toLowerCase() == rName.toLowerCase()
-							? Number(m['position_b'])
+							? toBreakpointPos(m['position_b'])
 							: undefined
 
 					const eventType = m['event_type']

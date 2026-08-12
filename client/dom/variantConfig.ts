@@ -215,7 +215,6 @@ export function renderVariantConfig(arg: Arg) {
 				.attr('data-testid', 'sjpp-variantConfig-selfBreakpoint')
 				// under the checklist when beside the variants list, above it when stacked
 				.style('margin', aboveDiv ? '0 0 8px 5px' : '8px 0 0 5px')
-				.style('font-size', '.8rem')
 			selfDiv.append('span').style('opacity', 0.7).text(`${arg.gene} breakpoint `)
 			const selfBtn = selfDiv
 				.append('span')
