@@ -11,7 +11,7 @@
  - Dataset (production): serverconfig.features.tileserver.mount as the slide
    root + ds.queries.WSImages.{imageBySampleFolder,aiToolImageFolder} sub-path.
    Query: genome, dslabel, wsimage, sample_id | ai_project_id.
- - Direct path (e.g. runpp ?SVS=SVS/slide.svs): query `slide`, resolved relative
+ - Direct path (e.g. runpp ?image_file=SVS/slide.svs): query `slide`, resolved relative
    to serverconfig.tpmasterdir (traversal outside it is rejected). Gated behind
    serverconfig.features.wsi.allowDirectSlidePath — a dev/testing switch.
 
@@ -105,15 +105,20 @@ function init({ genomes }) {
 			const slide = slidePath(genomes, q)
 
 			if (req.params.action == 'boundaries') {
-				// serve a boundary CSV (e.g. Xenium cell/nucleus_boundaries.csv) that sits
-				// in the same directory as the slide; basename-only pattern prevents the
-				// query from reaching outside that directory
+				// serve a boundary CSV (e.g. Xenium cell/nucleus_boundaries.csv);
+				// the file path is always relative to serverconfig.tpmasterdir
 				const file = String(q.file || '')
-				if (!/^[\w.-]+\.csv$/.test(file)) {
-					res.status(400).send({ status: 'error', error: 'invalid boundaries file name' })
+				if (!file.toLowerCase().endsWith('.csv')) {
+					res.status(400).send({ status: 'error', error: 'boundaries file must be a .csv' })
 					return
 				}
-				const csv = await readFile(path.join(path.dirname(slide), file), 'utf8')
+				const base = path.resolve(serverconfig.tpmasterdir)
+				const full = path.resolve(base, file)
+				if (!full.startsWith(base + path.sep)) {
+					res.status(400).send({ status: 'error', error: 'boundaries path escapes tpmasterdir' })
+					return
+				}
+				const csv = await readFile(full, 'utf8')
 				res.status(200).set('Content-Type', 'text/csv').set('Cache-Control', 'public, max-age=3600').send(csv)
 				return
 			}

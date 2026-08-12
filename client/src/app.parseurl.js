@@ -32,14 +32,15 @@ upon error, throw err message as a string
 	const urlp = urlmap()
 	const features = JSON.parse(sessionStorage.getItem('optionalFeatures'))
 
-	if (urlp.has('svs')) {
-		// ?SVS=SVS/slide.svs — direct whole-slide viewer, no dataset/genome
-		// (urlmap lowercases keys, so the URL's SVS is read here as 'svs')
+	if (urlp.has('image_file')) {
+		// ?image_file=SVS/slide.svs — direct whole-slide viewer, no dataset/genome.
+		// The format (SVS, OME-TIFF, ...) is deduced server-side from the file
+		// extension, case-insensitively (wsi_tile.py open_slide()).
 		const _ = await import('../plots/w2/wsi.direct')
 		await _.init(
 			{
-				slide: urlp.get('svs'),
-				// optional Xenium segmentation overlays; CSV files in the slide's directory
+				slide: urlp.get('image_file'),
+				// optional Xenium segmentation overlays; CSV paths relative to tpmasterdir
 				cellBoundaries: urlp.get('cell_boundaries'),
 				nucleusBoundaries: urlp.get('nucleus_boundaries'),
 				// optional: show overlays only within the n most zoomed-in levels
