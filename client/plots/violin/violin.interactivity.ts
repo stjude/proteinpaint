@@ -2,11 +2,17 @@ import { filterJoin, getFilterItemByTag } from '#filter'
 import { DownloadMenu, niceNumLabels, ListSamples, renderTable } from '#dom'
 import { SINGLECELL_GENE_EXPRESSION } from '#types'
 
-export function setInteractivity(self) {
-	self.getChartImages = function () {
-		const charts = []
+type MenuOption = {
+	label: string
+	testid?: string
+	callback: () => void | Promise<void>
+}
 
-		for (const [key, chart] of Object.entries(self.data.charts)) {
+export function setInteractivity(self: any) {
+	self.getChartImages = function () {
+		const charts: Array<{ name: string; svg: any }> = []
+
+		for (const [_key, chart] of Object.entries(self.data.charts as Record<string, any>)) {
 			const title = self.getChartTitle(chart.chartId)
 			const name = `${self.config.term.term.name}  ${title}`
 			const chartDiv = chart.chartDiv
@@ -15,19 +21,19 @@ export function setInteractivity(self) {
 		return charts
 	}
 
-	self.download = function (event) {
+	self.download = function (event: MouseEvent) {
 		if (!self.state) return
 		const name2svg = self.getChartImages()
 		const dm = new DownloadMenu(name2svg, self.config.term.term.name)
-		dm.show(event.clientX, event.clientY, event.target)
+		dm.show(event.clientX, event.clientY, undefined)
 	}
 
-	self.displayLabelClickMenu = function (t1, t2, plot, event) {
+	self.displayLabelClickMenu = function (t1: any, t2: any, plot: any, event: MouseEvent) {
 		if (!t2) return // when no term 2 do not show options on the sole violin label
 		if (self.config.term.term.type == SINGLECELL_GENE_EXPRESSION) return // is sc gene exp data, none of the options below work, thus disable
 
 		const label = t1.q.mode === 'continuous' ? 'term2' : 'term'
-		const options = []
+		const options: MenuOption[] = []
 		if (this.app.getState().nav.header_mode !== 'only_buttons')
 			options.push({
 				label: `Add filter: ${plot.label.split(',')[0]}`,
@@ -86,13 +92,13 @@ export function setInteractivity(self) {
 		self.displayMenu(event, options)
 	}
 
-	self.displayBrushMenu = function (t1, t2, self, plot, event, scale, isH) {
+	self.displayBrushMenu = function (t1: any, t2: any, self: any, plot: any, event: any, scale: any, isH: boolean) {
 		const selection = event.selection
 		const [start, end] = isH
 			? [scale.invert(selection[0]), scale.invert(selection[1])]
 			: [scale.invert(selection[1]), scale.invert(selection[0])]
 
-		const options = []
+		const options: MenuOption[] = []
 
 		if (this.app.getState().nav.header_mode === 'with_tabs')
 			options.push({
@@ -123,7 +129,7 @@ export function setInteractivity(self) {
 		self.displayMenu(event.sourceEvent, options, start, end)
 	}
 
-	self.displayMenu = function (event, options, start, end) {
+	self.displayMenu = function (event: MouseEvent, options: MenuOption[], start?: number, end?: number) {
 		const tip = self.dom.clicktip.clear().show(event.clientX, event.clientY)
 
 		const isBrush = start != null && end != null
@@ -144,16 +150,17 @@ export function setInteractivity(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.attr('data-testid', d => d.testid)
 			.text(d => d.label)
-			.on('click', async (event, d) => {
-				if (event.target._clicked) return
-				event.target._clicked = true
-				event.target.textContent = 'Loading...'
+			.on('click', async (event, d: MenuOption) => {
+				const target = event.target as HTMLElement & { _clicked?: boolean }
+				if (target._clicked) return
+				target._clicked = true
+				target.textContent = 'Loading...'
 				await d.callback()
 				tip.hide()
 			})
 	}
 
-	self.selectSamples = async function (plot, start, end, ss) {
+	self.selectSamples = async function (plot: any, start: number, end: number, ss: any) {
 		const ls = self.getSampleList(plot, start, end)
 		const data = await ls.getData()
 		const table = ls.setTableData(data)
@@ -165,7 +172,7 @@ export function setInteractivity(self) {
 	}
 
 	//get sample list for menu option callbacks
-	self.getSampleList = function (plot, start, end) {
+	self.getSampleList = function (plot: any, start?: number, end?: number) {
 		const { term, term2, term0 } = self.config
 		const bins = self.data.bins
 		const rangeStart = start !== undefined ? start : null
@@ -185,7 +192,7 @@ export function setInteractivity(self) {
 		return ls
 	}
 
-	self.callListSamples = async function (event, plot, start, end) {
+	self.callListSamples = async function (event: MouseEvent, plot: any, start: number, end: number) {
 		const ls = self.getSampleList(plot, start, end)
 		const data = await ls.getData()
 		const [rows, columns] = ls.setTableData(data)
@@ -204,13 +211,13 @@ export function setInteractivity(self) {
 		})
 	}
 
-	self.labelHideLegendClicking = function (t2, plot) {
+	self.labelHideLegendClicking = function (t2: any, plot: any) {
 		// whoever wrote this tangled mess needs to be fired
 		self.dom.legendDiv
 			.selectAll('.sjpp-htmlLegend')
 			.on('click', event => {
 				event.stopPropagation()
-				const d = event.target.__data__
+				const d = (event.target as HTMLElement & { __data__?: any }).__data__
 				const termNum =
 					t2?.term.type === 'condition' ||
 					t2?.term.type === 'samplelst' ||
@@ -240,7 +247,7 @@ export function setInteractivity(self) {
 				}
 			})
 			.on('mouseover', event => {
-				const q = event.target.__data__
+				const q = (event.target as HTMLElement & { __data__?: any }).__data__
 				if (q === undefined) return
 				if (q.isHidden === true && q.isClickable === true) {
 					self.dom.hovertip.clear().show(event.clientX, event.clientY).d.append('span').text('Click to unhide plot')
@@ -252,7 +259,7 @@ export function setInteractivity(self) {
 	}
 }
 
-function getAddFilterCallback(self, plot, rangeStart, rangeStop) {
+function getAddFilterCallback(self: any, plot: any, rangeStart?: number, rangeStop?: number) {
 	const ls = self.getSampleList(plot, rangeStart, rangeStop)
 
 	return () => {
@@ -266,7 +273,7 @@ function getAddFilterCallback(self, plot, rangeStart, rangeStop) {
 	}
 }
 
-function getUpdatedQfromClick(plot, term, isHidden = false) {
+function getUpdatedQfromClick(plot: any, term: any, isHidden = false) {
 	const label = plot.label
 	const valueId = term?.term?.values ? term?.term?.values?.[label]?.label : label
 	const id = !valueId ? label : valueId

@@ -3,22 +3,43 @@ import { scaleLinear, scaleLog } from 'd3-scale'
 import { curveBasis, line } from 'd3-shape'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable, getMaxLabelWidth, table2col } from '#dom'
-import { rgb } from 'd3'
+import { rgb } from 'd3-color'
 import { format as d3format } from 'd3-format'
 import { SINGLECELL_GENE_EXPRESSION } from '#types'
+import type { TermWrapper } from '#types'
 import { getValueConversionFactor, toUserUnit } from '#shared/helpers.js'
 
-const minSampleSize = 5 // a group below cutoff will not render a violin plot
+// const minSampleSize = 5 // a group below cutoff will not render a violin plot
+
+type ViolinDensityBin = {
+	x0: number
+	density: number
+}
+
+type LegendItem = {
+	text: string
+	noIcon: boolean
+	isHidden?: boolean
+	isClickable?: boolean
+	hiddenOpacity?: number
+}
+
+type LegendGroup = {
+	name: string
+	items: LegendItem[]
+}
+
+// const minSampleSize = 5 // a group below cutoff will not render a violin plot
 
 /* the term whose values the numeric axis is of. a term with valueConversion{} stores its values in
 one unit (e.g. day) and is read by users in another (e.g. year), so everything a user reads off this
 axis is converted. the scale that maps a value to a pixel is not: the violin marks, the median line
 and the range a brush turns into a filter all stay in the stored unit */
-function getNumericTerm(t1, t2) {
-	return t2?.q?.mode === 'continuous' ? t2.term : t1?.term
+function getNumericTerm(t1: TermWrapper, t2?: TermWrapper) {
+	return (t2 as any)?.q?.mode === 'continuous' ? (t2 as any).term : (t1 as any)?.term
 }
 
-export default function setViolinRenderer(self) {
+export default function setViolinRenderer(self: any) {
 	self.render = function () {
 		const settings = self.config.settings.violin
 		const isH = settings.orientation === 'horizontal'
@@ -26,20 +47,22 @@ export default function setViolinRenderer(self) {
 		const t2 = self.config.term2
 
 		//termsetting.js 'set_hiddenvalues()' adds uncomputable values from term.values to q.hiddenValues object. Since it will show up on the legend, delete that key-value pair from t2.q.hiddenValues object.
-		const termNum =
+		const termNum: TermWrapper =
 			t2?.term.type === 'condition' ||
 			t2?.term.type === 'samplelst' ||
 			t2?.term.type === 'categorical' ||
 			((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1.q.mode === 'continuous')
 				? t2
 				: t1
+		if (!(termNum as any)?.q.hiddenValues) (termNum as any).q.hiddenValues = {}
 
-		if (termNum && termNum.term?.values) {
-			for (const [k, v] of Object.entries(termNum.term.values)) {
+		if ((termNum as any)?.term?.values) {
+			for (const [k, val] of Object.entries((termNum as any).term.values)) {
+				const v = val as { label: string; uncomputable?: boolean }
 				if (v.uncomputable) {
-					if (termNum.q.hiddenValues[k]) {
-						termNum.q.hiddenValues[v.label] = 1
-						delete termNum.q.hiddenValues[k]
+					if ((termNum as any).q.hiddenValues[k]) {
+						(termNum as any).q.hiddenValues[v.label] = 1
+						delete (termNum as any).q.hiddenValues[k]
 					}
 				}
 			}
@@ -100,7 +123,7 @@ export default function setViolinRenderer(self) {
 			renderScale(t1, t2, settings, isH, svgData, self)
 			let y = 0
 			const thickness = self.settings.plotThickness || self.getAutoThickness()
-			for (const [plotIdx, plot] of plots.entries()) {
+			for (const [_plotIdx, plot] of plots.entries()) {
 				//R x values are not the same as the plot values, so we need to use a scale to map them to the plot values
 				// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
 				// Only one half of the image is computed and the other half is mirrored
@@ -111,12 +134,12 @@ export default function setViolinRenderer(self) {
 				//when doing this interpolation, the violin plot will be smoother and some padding may be added
 				//between the plot and the axis
 				if (isH) {
-					areaBuilder = line()
+					areaBuilder = line<ViolinDensityBin>()
 						.curve(curveBasis)
 						.x(d => svgData.axisScale(d.x0))
 						.y(d => wScale(d.density))
 				} else {
-					areaBuilder = line()
+					areaBuilder = line<ViolinDensityBin>()
 						.curve(curveBasis)
 						.x(d => wScale(d.density))
 						.y(d => svgData.axisScale(d.x0))
@@ -141,7 +164,11 @@ export default function setViolinRenderer(self) {
 		}
 	}
 
-	self.displaySummaryStats = function (d, event) {
+	self.displaySummaryStats = function (
+		data: { summaryStats: { key: string; label: string; value: number }[] },
+		event: MouseEvent
+	) {
+		const d = data as { summaryStats: { key: string; label: string; value: number }[] }
 		if (!d.summaryStats) return
 		self.dom.hovertip.clear().show(event.clientX, event.clientY)
 		const table = table2col({ holder: self.dom.hovertip.d.append('div') })
@@ -167,7 +194,7 @@ export default function setViolinRenderer(self) {
 		return plotThickness + self.settings.rowSpace
 	}
 
-	self.renderPvalueTable = function (chartDiv, chart) {
+	self.renderPvalueTable = function (chartDiv: any, chart: any) {
 		if (!chart.pvalues) return
 		const tableHolder = chartDiv
 			.append('div')
@@ -232,14 +259,14 @@ export default function setViolinRenderer(self) {
 		})
 	}
 
-	self.getChartTitle = function (chartId) {
+	self.getChartTitle = function (chartId: string) {
 		if (!self.config.term0) return chartId
 		return self.config.term0.term.values && chartId in self.config.term0.term.values
 			? self.config.term0.term.values[chartId].label
 			: chartId
 	}
 
-	function createMargins(labelsize, settings, isH, isMinimal) {
+	function createMargins(labelsize: number, settings: any, isH: boolean, isMinimal: boolean) {
 		let margins
 
 		if (isMinimal) {
@@ -254,7 +281,7 @@ export default function setViolinRenderer(self) {
 		return margins
 	}
 
-	function renderSvg(t1, plots, chartDiv, self, isH, settings) {
+	function renderSvg(t1: TermWrapper, plots: any[], chartDiv: any, self: any, isH: boolean, settings: any) {
 		const violinDiv = chartDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -287,7 +314,14 @@ export default function setViolinRenderer(self) {
 		return { margin: margin, svgG: svgG, axisScale: createNumericScale(self, settings, isH), violinSvg: violinSvg }
 	}
 
-	function renderScale(t1, t2, settings, isH, svg, self) {
+	function renderScale(
+		t1: TermWrapper,
+		t2: TermWrapper | undefined,
+		settings: any,
+		isH: boolean,
+		svg: any,
+		self: any
+	) {
 		// <g>: holder of numeric axis
 		const g = svg.svgG
 			.append('g')
@@ -305,22 +339,23 @@ export default function setViolinRenderer(self) {
 			  uiScale.ticks()
 
 		g.call(
-			(isH ? axisTop : axisLeft)()
+			(isH ? axisTop : axisLeft)(uiScale)
 				.scale(uiScale)
 				.tickFormat((d, i) => {
+					const value = Number(d)
 					if (settings.isLogScale) {
 						if (self.app.vocabApi.termdbConfig.logscaleBase2) {
 							if (ticks.length > 10 && i % 2 !== 0) return ''
-							if (d < 0.1) return d3format('.3f')(d)
-							return d3format('.1f')(d)
+							if (value < 0.1) return d3format('.3f')(value)
+							return d3format('.1f')(value)
 						} else {
 							if (ticks.length >= 12 && i % 5 !== 0) return ''
-							if (d < 50) return d
-							return d3format('.1s')(d)
+							if (value < 50) return String(value)
+							return d3format('.1s')(value)
 						}
 					}
 					if (ticks.length >= 12 && i % 2 !== 0) return ''
-					return d
+					return String(value)
 				})
 				.tickValues(ticks)
 		)
@@ -348,10 +383,14 @@ export default function setViolinRenderer(self) {
 		}
 	}
 
-	function renderViolinPlot(svgData, plot, isH, wScale, areaBuilder, y) {
+	function renderViolinPlot(svgData: any, plot: any, isH: boolean, wScale: any, areaBuilder: any, y: number) {
 		const label = plot.label?.split(',')[0]
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
-		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
+		const category = catTerm?.term.values
+			? ((Object.values(catTerm.term.values as Record<string, { label: string; color?: string }>).find(
+					o => o.label == label
+			  ) as { label: string; color?: string } | undefined) ?? null)
+			: null
 		let color
 		if (catTerm) {
 			if (catTerm.q.type == 'predefined-groupset' || catTerm.q.type == 'custom-groupset') {
@@ -404,17 +443,17 @@ export default function setViolinRenderer(self) {
 	}
 
 	// label for each violin (on left when horizontal)
-	function renderLabels(t1, t2, violinG, plot, isH, settings) {
+	function renderLabels(t1: any, t2: any, violinG: any, plot: any, isH: boolean, settings: any) {
 		violinG
 			.append('text')
 			.attr('data-testid', 'sjpp-violin-label')
 			.text(`${plot.label}, n=${plot.plotValueCount}`)
 			.style('cursor', 'pointer')
-			.on('click', function (event) {
+			.on('click', function (event: MouseEvent) {
 				if (!event) return
 				self.displayLabelClickMenu(t1, t2, plot, event)
 			})
-			.on('mouseover', function (event, d) {
+			.on('mouseover', function (event: MouseEvent, d: any) {
 				event.stopPropagation()
 				if (!event) return
 				self.displaySummaryStats(d, event)
@@ -431,7 +470,7 @@ export default function setViolinRenderer(self) {
 			.attr('transform', isH ? null : 'rotate(-90)')
 	}
 
-	function renderArea(violinG, plot, areaBuilder) {
+	function renderArea(violinG: any, plot: any, areaBuilder: any) {
 		if (plot.density.densityMax == 0) return
 		violinG
 			.append('path')
@@ -445,7 +484,7 @@ export default function setViolinRenderer(self) {
 			.attr('d', areaBuilder(plot.density.bins))
 	}
 
-	function renderSymbolImage(self, violinG, plot, isH) {
+	function renderSymbolImage(self: any, violinG: any, plot: any, isH: boolean) {
 		const i = violinG
 			.append('image')
 			.style('opacity', 0)
@@ -464,7 +503,7 @@ export default function setViolinRenderer(self) {
 		}
 	}
 
-	function renderMedian(violinG, isH, plot, svgData, self) {
+	function renderMedian(violinG: any, isH: boolean, plot: any, svgData: any, self: any) {
 		const s = self.config.settings.violin
 		//render median values on plots
 		const median = svgData.axisScale(plot.summaryStats.median.value)
@@ -482,7 +521,7 @@ export default function setViolinRenderer(self) {
 		} else return
 	}
 
-	function renderLines(violinG, isH, lines, svgData) {
+	function renderLines(violinG: any, isH: boolean, lines: number[] | undefined, svgData: any) {
 		// render straight lines on plot
 		const plotThickness = self.settings.plotThickness
 
@@ -500,7 +539,7 @@ export default function setViolinRenderer(self) {
 		}
 	}
 
-	function renderBrushing(t1, t2, violinG, settings, plot, isH, svgData) {
+	function renderBrushing(t1: any, t2: any, violinG: any, settings: any, plot: any, isH: boolean, svgData: any) {
 		//brushing on data points
 		if (settings.datasymbol === 'rug' || settings.datasymbol === 'bean') {
 			const br = isH
@@ -528,7 +567,7 @@ export default function setViolinRenderer(self) {
 			const brushG = violinG.append('g').classed('sjpp-brush', true).call(br)
 
 			// clear brush when clicking outside of it
-			const onClickOut = e => {
+			const onClickOut = (e: PointerEvent) => {
 				if (!brushG || !br) return
 				if (!brushG.node().contains(e.target)) br.clear(brushG)
 				document.body.removeEventListener('pointerdown', onClickOut, true)
@@ -551,8 +590,8 @@ export function createNumericScale(self, settings, isH) {
 	return axisScale
 }
 
-function getLegendGrps(termNum, self) {
-	const legendGrps = [],
+function getLegendGrps(termNum: TermWrapper, self: any) {
+	const legendGrps: LegendGroup[] = [],
 		t1 = self.config.term,
 		t2 = self.config.term2,
 		// changed color from #aaa to address Section 508 contrast issue
@@ -580,9 +619,10 @@ function getLegendGrps(termNum, self) {
 	return legendGrps
 }
 
-function addDescriptiveStats(term, legendGrps, headingStyle, self) {
-	if (term?.q.descrStats) {
-		const items = Object.values(term.q.descrStats).map(stat => {
+function addDescriptiveStats(term: TermWrapper, legendGrps: LegendGroup[], headingStyle: string, self: any) {
+	const descrStats = (term as any)?.q?.descrStats as Record<string, { label: string; value: number | string }> | undefined
+	if (descrStats) {
+		const items: LegendItem[] = Object.values(descrStats).map(stat => {
 			return {
 				text: `${stat.label}: ${stat.value}`,
 				noIcon: true
@@ -598,13 +638,21 @@ function addDescriptiveStats(term, legendGrps, headingStyle, self) {
 	}
 }
 
-function addUncomputableValues(term, legendGrps, headingStyle, self) {
+function addUncomputableValues(
+	term: TermWrapper | null,
+	legendGrps: LegendGroup[],
+	headingStyle: string,
+	self: any
+) {
 	if (term?.term.values) {
-		const items = []
-		for (const k in term.term.values) {
-			if (self.data.uncomputableValues?.[term.term.values[k]?.label]) {
+		const items: LegendItem[] = []
+		const values = term.term.values as Record<string, { label?: string }>
+		for (const k in values) {
+			const label = values[k]?.label
+			if (!label) continue
+			if (self.data.uncomputableValues?.[label]) {
 				items.push({
-					text: `${term.term.values[k].label}, n = ${self.data.uncomputableValues[term.term.values[k].label]}`,
+					text: `${label}, n = ${self.data.uncomputableValues[label]}`,
 					noIcon: true,
 					/** Need to specify that this is a hidden value for
 					 * text styling in the legend but not a plot to avoid
@@ -626,9 +674,9 @@ function addUncomputableValues(term, legendGrps, headingStyle, self) {
 	}
 }
 
-function addHiddenValues(term, legendGrps, headingStyle) {
-	const items = []
-	for (const key of Object.keys(term.q.hiddenValues)) {
+function addHiddenValues(term: TermWrapper, legendGrps: LegendGroup[], headingStyle: string) {
+	const items: LegendItem[] = []
+	for (const key of Object.keys(term.q.hiddenValues || {})) {
 		items.push({
 			text: `${key}`,
 			noIcon: true,

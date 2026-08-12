@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getRunPp } from '../../test/front.helpers.js'
+import { getRunPp } from '../../../test/front.helpers.js'
 import {
 	getSamplelstTw,
 	getCategoryGroupsetting,
@@ -8,11 +8,11 @@ import {
 	getGeneVariantTw,
 	getScgeneexpTw,
 	getScctTw
-} from '../../test/testdata/data.ts'
+} from '../../../test/testdata/data.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getFilterItemByTag, filterJoin } from '#filter'
-import { sleep, detectOne, detectGte, detectLst, whenVisible } from '../../test/test.helpers.js'
-import { testViolinByCount } from './helpers.spec'
+import { sleep, detectOne, detectGte, detectLst, whenVisible } from '../../../test/test.helpers.js'
+import { testViolinByCount } from '../../test/helpers.spec'
 import { SINGLECELL_CELLTYPE } from '#types'
 
 /**************
@@ -82,7 +82,7 @@ tape('agedx/sex, basic rendering', function (test) {
 		testPvalue(violin, violinDiv, violinDivData)
 		testDescrStats(violin, legendDiv)
 		await testMedianRendering(violin, violinDiv)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 
@@ -202,7 +202,7 @@ tape('agedx/sex, basic controls', function (test) {
 		await changeScaleToLog(violin, violinDiv) //test change in axis scale
 		await changeOverlayTerm(violin, violinDiv) //test change in term2/overlay term
 		await changeModeToDiscrete(violin) //test change in q: {mode: 'Discrete'} to display barchart
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 
@@ -364,7 +364,7 @@ tape('agedx/sex, basic controls', function (test) {
 		test.true(violin.Inner.app.Inner.state.plots[0].settings.violin.isLogScale, 'Axis scale rendered in log')
 	}
 
-	async function changeModeToDiscrete(violin, violinDiv) {
+	async function changeModeToDiscrete(violin) {
 		violin.Inner.app.dispatch({
 			id: violin.Inner.id,
 			type: 'plot_edit',
@@ -402,10 +402,10 @@ tape('test label clicking, filtering and hovering', function (test) {
 		// before filtering there are two violins, one for each sex
 		await testLabelHoverClick(test, violin, violinDiv, 2)
 		// filter to just one sex
-		await testFiltering(violin, violinSettings, violinDivData)
+		await testFiltering(violin)
 		// after filtering, just one sex is left
 		await testLabelHoverClick(test, violin, violinDiv, 1)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 
@@ -495,10 +495,10 @@ tape('test hide option on label clicking', function (test) {
 		const legendDiv = violin.Inner.dom.legendDiv
 		const violinDiv = violin.Inner.dom.violinDiv
 
-		testHideOption(violin, legendDiv) //test filter on label clicking
+		testHideOption(violin) //test filter on label clicking
 		await testHiddenValues(violin, legendDiv, violinDiv)
 
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 
@@ -573,7 +573,7 @@ tape('term1=categorical, term2=numeric', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testLabelHoverClick(test, violin, violinDiv, 7)
 		await testViolinByCount(test, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -601,7 +601,7 @@ tape('term1=numeric, term2=cat groupsetting', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testLabelHoverClick(test, violin, violinDiv, 2)
 		await testViolinByCount(test, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -628,7 +628,7 @@ tape('term1=numeric, term2=survival', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -655,7 +655,7 @@ tape('term1=numeric, term2=geneVariant', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 1)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -682,7 +682,7 @@ tape('term1=numeric, term2=geneVariant geneset', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 1)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -710,7 +710,7 @@ tape('term1=numeric, term2=condition', function (test) {
 		await testViolinByCount(test, violinDiv, 1)
 		await testConditionTermOrder(violin, violinDiv)
 		await testLabelHoverClick(test, violin, violinDiv, 5)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 	async function testConditionTermOrder(violin, violinDiv) {
@@ -745,7 +745,7 @@ tape('term1=geneExp, term2=categorical', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 7)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -775,7 +775,7 @@ tape('term1=geneExp, term2=cat groupsetting', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -805,7 +805,7 @@ tape('term1=geneExp, term2=geneVariant', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 1)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -835,7 +835,7 @@ tape('term1=geneExp, term2=geneVariant geneset', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 1)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -864,7 +864,7 @@ tape('term1=ssgsea, term2=categorical', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 7)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -891,7 +891,7 @@ tape('term1=ssgsea, term2=cat groupsetting', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -918,7 +918,7 @@ tape('term1=ssgsea, term2=geneVariant', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 1)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -945,7 +945,7 @@ tape('term1=ssgsea, term2=geneVariant geneset', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 1)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -977,7 +977,7 @@ tape.skip('term1=geneExp, term2=survival (SKIPPED)', function (test) {
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolin(violin, violinDiv)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 	async function testViolin(violin, violinDiv) {
@@ -1008,7 +1008,7 @@ tape('term1=numeric, term2=samplelst', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1037,7 +1037,7 @@ tape('term1=geneexp, term2=samplelst', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1063,7 +1063,7 @@ tape('term1=ssgsea, term2=samplelst', function (test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1108,7 +1108,7 @@ tape('term=agedx, term2=geneExp with regular bins', function (test) {
 		await testViolinByCount(test, violinDiv, 4)
 		// FIXME list sample breaks with tvs.ranges[] not found
 		//await testLabelHoverClick(test, violin, violinDiv, 8)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1166,7 +1166,7 @@ tape('term=agedx, term2=geneExp with custom bins', function (test) {
 		await testViolinByCount(test, violinDiv, 3)
 		// FIXME list sample breaks with tvs.ranges[] not found
 		//await testLabelHoverClick(test, violin, violinDiv, 3)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1198,7 +1198,7 @@ tape('term1=numeric, term0=categorical', function (test) {
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolin(violin, violinDiv)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 	async function testViolin(violin, violinDiv) {
@@ -1240,7 +1240,7 @@ tape('term1=numeric, term2=numeric, term0=categorical', function (test) {
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolin(violin, violinDiv)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 	async function testViolin(violin, violinDiv) {
@@ -1284,7 +1284,7 @@ tape('test uncomputable categories legend', function (test) {
 		violin.on('postRender.test', null)
 
 		await testUncomputableCategories(violin, legendDiv)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 
@@ -1341,7 +1341,7 @@ tape('Load linear regression-violin UI', function (test) {
 		regression.on('postRender.test', null)
 		// point to outcome tw holder and avoid searching whole regression ui, in case later input terms are also added
 		await testViolinByCount(test, regression.Inner.inputs.outcome.dom.holder, 1)
-		if (test._ok) regression.Inner.app.destroy()
+		if (test['_ok']) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1373,7 +1373,7 @@ tape('Test violin render with term1=singleCellExpression, term2=singleCellCellTy
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 3)
 		await testLabelHoverClick(test, violin, violinDiv, 3)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1404,7 +1404,7 @@ tape('Test violin rendering with term1=dnameth, term2=geneExp', function (test) 
 		const violinDiv = violin.Inner.dom.violinDiv
 		await testViolinByCount(test, violinDiv, 4)
 		await testLabelHoverClick(test, violin, violinDiv, 8)
-		if (test._ok) violin.Inner.app.destroy()
+		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 })
