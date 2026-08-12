@@ -1,4 +1,4 @@
-const orientation = ['horizontal' , 'vertical']
+export const orientation = ['horizontal' , 'vertical']
 
 export type ViolinSettings = {
     orientation: typeof orientation[number]

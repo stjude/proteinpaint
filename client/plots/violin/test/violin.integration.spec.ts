@@ -206,7 +206,7 @@ tape('agedx/sex, basic controls', function (test) {
 		test.end()
 	}
 
-	async function changeSvgw(violin, violinDiv) {
+	async function changeSvgw(violin, _violinDiv) {
 		const svgw = 333
 		await violin.Inner.app.dispatch({
 			type: 'plot_edit',
@@ -253,7 +253,7 @@ tape('agedx/sex, basic controls', function (test) {
 			'Should change Median thickness in state'
 		)
 	}
-	async function changeOrientation(violin, violinDiv) {
+	async function changeOrientation(violin, _violinDiv) {
 		await violin.Inner.app.dispatch({
 			type: 'plot_edit',
 			id: violin.Inner.id,
@@ -272,7 +272,7 @@ tape('agedx/sex, basic controls', function (test) {
 		)
 	}
 
-	async function changeDataSymbol(violin, violinDiv) {
+	async function changeDataSymbol(violin, _violinDiv) {
 		await violin.Inner.app.dispatch({
 			type: 'plot_edit',
 			id: violin.Inner.id,
@@ -328,7 +328,7 @@ tape('agedx/sex, basic controls', function (test) {
 		)
 	}
 
-	async function changeOverlayTerm(violin, violinDiv) {
+	async function changeOverlayTerm(violin, _violinDiv) {
 		const term2 = await fillTermWrapper({ id: 'genetic_race' }, violin.Inner.app.vocabApi)
 
 		await violin.Inner.app.dispatch({
@@ -396,8 +396,8 @@ tape('test label clicking, filtering and hovering', function (test) {
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
 		const violinDiv = violin.Inner.dom.violinDiv
-		const violinDivData = violin.Inner.data.charts[''].plots
-		const violinSettings = violin.Inner.config.settings.violin
+		// const violinDivData = violin.Inner.data.charts[''].plots
+		// const violinSettings = violin.Inner.config.settings.violin
 
 		// before filtering there are two violins, one for each sex
 		await testLabelHoverClick(test, violin, violinDiv, 2)
@@ -1450,7 +1450,7 @@ async function testLabelHoverClick(test, violin, violinDiv, labelcount) {
 	{
 		const tip = violin.Inner.dom.hovertip
 		await whenVisible(tip.d)
-		const table = await detectOne({ elem: tip.dnode, selector: '[data-testid="sja_simpletable"]' })
+		// const table = await detectOne({ elem: tip.dnode, selector: '[data-testid="sja_simpletable"]' })
 		test.pass('summary stat table found in hover tooltip')
 		tip.hide()
 	}

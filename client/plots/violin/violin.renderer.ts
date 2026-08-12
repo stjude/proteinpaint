@@ -123,7 +123,7 @@ export default function setViolinRenderer(self: any) {
 			renderScale(t1, t2, settings, isH, svgData, self)
 			let y = 0
 			const thickness = self.settings.plotThickness || self.getAutoThickness()
-			for (const [_plotIdx, plot] of plots.entries()) {
+			for (const plot of plots) {
 				//R x values are not the same as the plot values, so we need to use a scale to map them to the plot values
 				// The scale uses half of the plotThickness as the maximum value as the image is symmetrical
 				// Only one half of the image is computed and the other half is mirrored
@@ -365,7 +365,7 @@ export default function setViolinRenderer(self: any) {
 			const numTerm = getNumericTerm(t1, t2)
 			// name the unit the ticks are in, when it is not the one the values are stored in
 			const n = numTerm.valueConversion ? `${numTerm.name} (${numTerm.valueConversion.toUnit}s)` : numTerm.name
-			const lab = svg.svgG
+			/*const lab = */svg.svgG
 				.append('text')
 				.text(n)
 				.classed('sjpp-numeric-term-label', true)
@@ -435,7 +435,7 @@ export default function setViolinRenderer(self: any) {
 				.attr('y1', isH ? -s.medianLength : value)
 				.attr('y2', isH ? s.medianLength : value)
 		}
-		let height = self.getPlotThicknessWithPadding()
+		const height = self.getPlotThicknessWithPadding()
 		const translate = isH ? `translate(0, ${y + height / 2}) ` : `translate(${y + height / 2}, 0)`
 		violinG.attr('transform', translate)
 
@@ -579,14 +579,16 @@ export default function setViolinRenderer(self: any) {
 // creates numeric axis
 export function createNumericScale(self, settings, isH) {
 	let axisScale
-	settings.isLogScale
-		? (axisScale = scaleLog()
+	if (settings.isLogScale) {
+		axisScale = scaleLog()
 				.base(self.app.vocabApi.termdbConfig.logscaleBase2 ? 2 : 10)
 				.domain([self.data.min, self.data.max])
-				.range(isH ? [0, settings.svgw] : [settings.svgw, 0]))
-		: (axisScale = scaleLinear()
+				.range(isH ? [0, settings.svgw] : [settings.svgw, 0])
+	} else {
+		axisScale = scaleLinear()
 				.domain([self.data.min, self.data.max])
-				.range(isH ? [0, settings.svgw] : [settings.svgw, 0]))
+				.range(isH ? [0, settings.svgw] : [settings.svgw, 0])
+	}
 	return axisScale
 }
 

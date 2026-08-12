@@ -12,7 +12,7 @@ export function setInteractivity(self: any) {
 	self.getChartImages = function () {
 		const charts: Array<{ name: string; svg: any }> = []
 
-		for (const [_key, chart] of Object.entries(self.data.charts as Record<string, any>)) {
+		for (const chart of Object.values(self.data.charts as Record<string, any>)) {
 			const title = self.getChartTitle(chart.chartId)
 			const name = `${self.config.term.term.name}  ${title}`
 			const chartDiv = chart.chartDiv
