@@ -1,4 +1,4 @@
-import { Menu, table2col } from '#dom'
+import { table2col } from '#dom'
 import type { AggregateMatrix } from '../AggregateMatrix.ts'
 import type { AggMatrixDotPosition, AggMatrixViewData } from '../viewModel/ViewModelDataTypes.ts'
 import { LegendRender } from './LegendRender.ts'
@@ -8,7 +8,6 @@ export class AggMatrixView {
     ag: AggregateMatrix
     legendRender: LegendRender
     dom!: any
-
 
     constructor(ag: AggregateMatrix) {
         this.ag = ag
@@ -57,8 +56,7 @@ export class AggMatrixView {
             svg,
             rowLabels,
             colLabels,
-            legendDiv,
-            tip: new Menu({ padding: '3px' })
+            legendDiv
         }
     }
 
@@ -169,14 +167,14 @@ export class AggMatrixView {
                 .attr('r', dot.size)
                 .attr('fill', dot.color)
                 .on('mouseover', (event: MouseEvent) => {
-                    this.dom.tip.clear().show(event.clientX, event.clientY)
-                    const table = table2col({ holder: this.dom.tip.d })
+                    this.ag.dom.tip.clear().show(event.clientX, event.clientY)
+                    const table = table2col({ holder: this.ag.dom.tip.d })
                     for (const v of dot.tipData) {
                         addTableRow(table, v.label, v.value)
                     }
                 })
                 .on('mouseout', () => {
-                    this.dom.tip.clear().hide()
+                    this.ag.dom.tip.clear().hide()
                 })
                 .on('click', () => {
                     const config = this.ag.state.config
