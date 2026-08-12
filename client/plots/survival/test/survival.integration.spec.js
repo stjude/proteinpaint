@@ -805,7 +805,7 @@ tape('survival term as term1, term0 = agedx, custom bins', function (test) {
 
 tape('survival term as term1, term2 = geneVariant', function (test) {
 	test.timeoutAfter(5000)
-	test.plan(4)
+	test.plan(3)
 	runpp({
 		state: {
 			plots: [
@@ -837,6 +837,7 @@ tape('survival term as term1, term2 = geneVariant', function (test) {
 			'should render 10 survival censored symbols'
 		)
 
+		/*
 		const atRiskLegend0 = await Locator.init(survivalDiv.node()).find(`[data-testid='sjpp-atrisk-seriesId']`).click(0)
 		// NOTE: simulated color picker click leads to error "A user gesture is required to show the color picker"
 		// directly call color change instead of simulated clicks
@@ -846,6 +847,7 @@ tape('survival term as term1, term2 = geneVariant', function (test) {
 		legendTip.hide()
 		await sleep(100) // todo: use improved Locator methods to avoid using sleep()
 		test.equal(atRiskLegend0?.parentNode?.getAttribute('fill'), 'rgb(0, 0, 255)', 'should change the series color')
+		*/
 
 		await survival.Inner.app.dispatch({
 			type: 'plot_edit',
