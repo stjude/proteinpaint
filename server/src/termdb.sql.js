@@ -7,7 +7,7 @@ import { sampleLstSql } from './termdb.sql.samplelst.js'
 import { multivalueCTE } from './termdb.sql.multivalue.js'
 import { termCollectionCategorical, termCollectionNumeric } from './termdb.sql.termCollection.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
-import { DEFAULT_SAMPLE_TYPE, isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
+import { DEFAULT_SAMPLE_TYPE, isNumericTerm, dictionaryNumericTypes, getSampleType } from '#shared/terms.js'
 import { authApi } from '#src/auth.js'
 /*
 
@@ -478,6 +478,9 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 		later.  
 	*/
 	// TODO: investigate the utility of 'filter' argument (since get_rows() already performs filtering)
+	/* a term CTE that restricts its own rows by the filter must do so in the id space of the
+	table it reads, which is not always the id space the filter resolved to */
+	const termFilter = mayMapFilterToTermSamples(filter, q, term)
 	let CTE
 	if (term.type == 'categorical') {
 		const groupset = get_active_groupset(term, termq)
@@ -485,12 +488,12 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 	} else if (isNumericTerm(term)) {
 		const mode = termq.mode == 'spline' ? 'cubicSpline' : termq.mode || 'discrete'
 		// the error is coming from this
-		CTE = await numericSql[mode].getCTE(tablename, term, q.ds, termq, values, index, filter)
+		CTE = await numericSql[mode].getCTE(tablename, term, q.ds, termq, values, index, termFilter)
 	} else if (term.type == 'condition') {
 		const mode = termq.mode || 'discrete'
 		CTE = await conditionSql[mode].getCTE(tablename, term, q.ds, termq, values)
 	} else if (term.type == 'survival') {
-		CTE = makesql_survival(tablename, term, q, values, filter)
+		CTE = makesql_survival(tablename, term, q, values, termFilter)
 	} else if (term.type == 'samplelst') {
 		CTE = await sampleLstSql.getCTE(q.ds, tablename, termWrapper || { term, q: termq }, values)
 	} else if (term.type == 'multivalue') {
@@ -626,6 +629,38 @@ export function getUncomputableClause(term, q, tableAlias = '') {
 	return {
 		values,
 		clause: values.length ? `AND ${aliasValue} NOT IN (${values.map(() => '?').join(',')})` : ''
+	}
+}
+
+/*
+Resolve the filter into the id space of the table a term CTE reads from.
+
+When q.mapParent2Children is on, getFilterCTEs() resolves the filter down to child samples
+(q.sampleType) so that the child-level output of getAnnotationRows()/get_samples() can be
+restricted by it. A parent-level term (e.g. patient-level survival or age in a dataset whose
+mutation data is sample-level) is annotated against parent ids, so a CTE that restricts its
+own rows with `sample IN <filter>` would compare parent ids against child ids and match
+nothing -- silently emptying the term for every sample. Map the filtered child ids back to
+their parents for such terms; the caller still applies the child-level filter to the mapped
+output, so no sample escapes the filter.
+
+Returns the filter unchanged when there is nothing to map: no filter, no parent/child
+mapping in effect, or a term already annotating the query sample type.
+*/
+export function mayMapFilterToTermSamples(filter, q, term) {
+	if (!filter || !q?.mapParent2Children) return filter
+	const ds = q.ds
+	const querySampleType = ds?.cohort?.termdb?.sampleTypes?.[q.sampleType]
+	if (!querySampleType) return filter
+	const parentType = querySampleType.parent_id
+	if (parentType == undefined || parentType != getSampleType(term, ds)) return filter
+	// used as `sample IN <CTEname>`, thus the parentheses
+	return {
+		...filter,
+		CTEname: `(SELECT sa.ancestor_id
+			FROM sample_ancestry sa
+			JOIN sampleidmap sm ON sa.ancestor_id = sm.id
+			WHERE sa.sample_id IN ${filter.CTEname} AND sm.sample_type = ${parentType})`
 	}
 }
 
