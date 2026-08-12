@@ -250,6 +250,10 @@ export function renderVariantConfig(arg: Arg) {
 					noPositionCount: mnames
 						.filter(m => checkedClasses.has(m.class))
 						.reduce((n, m) => n + (m.noPositionCount || 0), 0),
+					/* the marks merge the breakpoints of every checked variant, so a sample with
+					events to two partners at one position is counted once per event and no total
+					here can be shown as an exact tally */
+					samplesAreUpperBound: true,
 					callback: range => {
 						selfBreakpointRange = range || undefined
 						updateSelfBtn()
@@ -388,6 +392,7 @@ export function renderVariantConfig(arg: Arg) {
 								),
 								range: partnerBreakpointRanges.get(i),
 								noPositionCount: m.noPositionCount || 0,
+								samplesAreUpperBound: !hasExactBreakpointCounts(m),
 								/* the breakpoints of this variant are pairs of one on the term's own
 								gene and one on the partner (see BreakpointEntry), so chart them over
 								both genes rather than the partner alone. the range on the own gene is
@@ -609,20 +614,35 @@ export function renderVariantConfig(arg: Arg) {
 		return Math.min(n, m.samplecount)
 	}
 
+	/* whether the breakpoints of a variant can be summed into an exact number of samples.
+	the tally counts a sample once per distinct pair of breakpoints (see BreakpointEntry), so
+	a sample with two events of this variant sits in two entries and would be counted twice.
+	when the entries and the events with no position together account for no more than the
+	variant's samples, no sample is in two of them, and any subset of them sums exactly */
+	function hasExactBreakpointCounts(m: MnameItem) {
+		const pairs = (m.breakpoints || []).reduce((n, b) => n + b.samplecount, 0)
+		return pairs + (m.noPositionCount || 0) <= m.samplecount
+	}
+
 	/** samples of a variant, as "in range / total" while a range on the term's own gene
-	 * narrows them, and as the total alone otherwise */
+	 * narrows them, and as the total alone otherwise. a sum that may have counted a sample
+	 * more than once is an upper bound, and is marked as one rather than read as a tally */
 	function sampleCountLabel(m: MnameItem) {
 		// a preserved entry is not in the current data, and has no samples either way
 		if (!selfBreakpointRange || !m.samplecount) return `${m.samplecount}`
-		return `${samplesInSelfRange(m)}/${m.samplecount}`
+		return `${hasExactBreakpointCounts(m) ? '' : '≤'}${samplesInSelfRange(m)}/${m.samplecount}`
 	}
 
 	/** spells out what the two numbers of a count cell are, which the column cannot */
 	function sampleCountTitle(m: MnameItem) {
 		if (!selfBreakpointRange || !m.samplecount) return null
+		const exact = hasExactBreakpointCounts(m)
 		return (
-			`${samplesInSelfRange(m)} of ${m.samplecount} samples have a ${arg.gene} breakpoint ` +
-			`in ${breakpointRangeLabel(selfBreakpointRange)}`
+			`${exact ? '' : 'Up to '}${samplesInSelfRange(m)} of ${m.samplecount} samples have a ${arg.gene} ` +
+			`breakpoint in ${breakpointRangeLabel(selfBreakpointRange)}` +
+			(exact
+				? ''
+				: '. Some samples have more than one event of this variant, which the breakpoint tally cannot tell apart')
 		)
 	}
 
@@ -684,7 +704,11 @@ export function renderVariantConfig(arg: Arg) {
 		if (!geneModelCache.has(gene)) {
 			geneModelCache.set(
 				gene,
-				Promise.resolve(arg.getGeneModels!(gene))
+				/* NOTE the getter is called inside then(), not as the argument of resolve():
+				there its own synchronous throw would escape before a promise existed to catch
+				it, leaving the menu on "Loading..." rather than degrading as documented */
+				Promise.resolve()
+					.then(() => arg.getGeneModels!(gene))
 					.then(gmlst => gmlst || [])
 					.catch((e: any) => {
 						console.warn(`no gene model for ${gene}: ${e?.message || e}`)
@@ -709,6 +733,8 @@ export function renderVariantConfig(arg: Arg) {
 		markers: MarkerInput[]
 		range?: BreakpointRange
 		noPositionCount: number
+		/** whether a sum of the .samplecount of the markers may hold one sample twice */
+		samplesAreUpperBound: boolean
 		/** when given, the breakpoints are charted as pairs over two tracks, .selfGene above
 		 * and .gene below, linked by the events they occur in. the range is still selected
 		 * on .gene alone; .selfRange is context, owned by the control of the term's own gene */
@@ -779,6 +805,7 @@ export function renderVariantConfig(arg: Arg) {
 				},
 				links: links.map(l => ({ selfPos: l.pos, partnerPos: l.partnerPos, samplecount: l.samplecount })),
 				mode: scaleMode,
+				samplesAreUpperBound: a.samplesAreUpperBound,
 				callback: range => {
 					tip.hide()
 					a.callback(range)
@@ -807,6 +834,7 @@ export function renderVariantConfig(arg: Arg) {
 			// a range of another chr is not of this locus, so is not shown as the current one
 			range: a.range?.chr == chr ? a.range : undefined,
 			mode: scaleMode,
+			samplesAreUpperBound: a.samplesAreUpperBound,
 			callback: range => {
 				tip.hide()
 				a.callback(range)

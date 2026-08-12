@@ -783,6 +783,79 @@ tape('isoformRangeSelect() - drag over the isoform sketches', test => {
 	test.end()
 })
 
+tape('isoformRangeSelect() - clearing a coordinate restores the range', test => {
+	/* a number input reports an emptied field as the empty string, which Number() turns into
+	0: a finite value that was taken as a typed coordinate and clamped to the start of the
+	scale, so clearing an input to retype it silently widened the range */
+	const holder = select(document.body).append('div')
+	let applied: any = 'not called'
+	const api = isoformRangeSelect({
+		holder,
+		allgm: [bcr],
+		chr: 'chr22',
+		markers: bcrMarkers,
+		range: { start: 23290000, stop: 23290300 },
+		callback: r => (applied = r)
+	})!
+	const inputs = holder.selectAll('[data-testid="sjpp-isoformRangeSelect-pos"]').nodes() as HTMLInputElement[]
+	inputs[0].value = ''
+	inputs[0].dispatchEvent(new Event('change'))
+	test.deepEqual(
+		api.getRange(),
+		{ chr: 'chr22', start: 23290000, stop: 23290300 },
+		'clearing the start coordinate leaves the range as it was'
+	)
+	test.equal(inputs[0].value, '23290000', 'and puts the coordinate back in the input')
+	// the same for the other end, and for a field the input cannot parse
+	inputs[1].value = ''
+	inputs[1].dispatchEvent(new Event('change'))
+	test.deepEqual(
+		api.getRange(),
+		{ chr: 'chr22', start: 23290000, stop: 23290300 },
+		'clearing the stop coordinate leaves the range as it was'
+	)
+	test.equal(applied, 'not called', 'and nothing is applied by it')
+	// a coordinate typed over the restored one still takes effect
+	inputs[0].value = '23180000'
+	inputs[0].dispatchEvent(new Event('change'))
+	test.deepEqual(api.getRange()!.start, 23180000, 'a typed coordinate still changes the range')
+	holder.remove()
+	test.end()
+})
+
+tape('isoformRangeSelect() - sample counts of an upper bound tally', test => {
+	// the markers may be tallied per pair of breakpoints, where a sample with two events is
+	// counted once per event, so their sums cannot be read as a number of samples
+	const holder = select(document.body).append('div')
+	isoformRangeSelect({
+		holder,
+		allgm: [bcr],
+		chr: 'chr22',
+		markers: bcrMarkers,
+		range: { start: 23180000, stop: 23300000 },
+		samplesAreUpperBound: true,
+		callback: () => {}
+	})
+	test.ok(
+		holder.select('[data-testid="sjpp-isoformRangeSelect-info"]').text().includes('up to 55 samples'),
+		'the count is reported as an upper bound'
+	)
+	const exact = select(document.body).append('div')
+	isoformRangeSelect({
+		holder: exact,
+		allgm: [bcr],
+		chr: 'chr22',
+		markers: bcrMarkers,
+		range: { start: 23180000, stop: 23300000 },
+		callback: () => {}
+	})
+	const text = exact.select('[data-testid="sjpp-isoformRangeSelect-info"]').text()
+	test.ok(text.includes('55 samples') && !text.includes('up to'), 'and as a count when the tally is exact')
+	exact.remove()
+	holder.remove()
+	test.end()
+})
+
 tape('isoformRangeSelect() - highlight of a minus strand range', test => {
 	const holder = select(document.body).append('div')
 	const api = isoformRangeSelect({
@@ -1158,6 +1231,29 @@ tape('isoformPairRangeSelect() - rna mode zooms each track to its own breakpoint
 	test.equal(loci[1].textContent, 'chr9', 'the other names its chr alone, not a window it is not showing')
 	// the link still meets the mark of its breakpoint, which the window is built around
 	test.ok(api.selfScale.pos2px(exonStart(5) + 200) > 0, 'the breakpoint is within the zoomed track')
+	holder.remove()
+	test.end()
+})
+
+tape('isoformPairRangeSelect() - sample counts of an upper bound tally', test => {
+	const holder = select(document.body).append('div')
+	const opts = pairOpts()
+	const api = isoformPairRangeSelect({
+		holder,
+		...opts,
+		partner: { ...opts.partner, range: { start: 130713000, stop: 130713200 } },
+		samplesAreUpperBound: true,
+		callback: () => {}
+	})!
+	test.ok(
+		holder.select('[data-testid="sjpp-isoformPairSelect-info"]').text().includes('up to 30 samples'),
+		'a sum over links is reported as an upper bound'
+	)
+	// a single link is one pair of breakpoints, so its own count is exact either way
+	const canvas = holder.select('[data-testid="sjpp-isoformPairSelect-links"]').node() as HTMLCanvasElement
+	canvas.dispatchEvent(new MouseEvent('mousemove', linkPoint(api, canvas, pairLinks[0], 0.85)))
+	const hover = holder.select('[data-testid="sjpp-isoformPairSelect-info"]').text()
+	test.ok(hover.includes('20 samples') && !hover.includes('up to'), 'the count of one link is not hedged')
 	holder.remove()
 	test.end()
 })

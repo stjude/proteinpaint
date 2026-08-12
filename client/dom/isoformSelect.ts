@@ -659,9 +659,16 @@ function renderRangeControls(a: {
 			.style('width', '85px')
 			.style('margin', '0 3px')
 			.on('change', () => {
-				const start = Number(startInput.property('value'))
-				const stop = Number(stopInput.property('value'))
-				if (!Number.isFinite(start) || !Number.isFinite(stop)) {
+				/* a number input reports an emptied field, and one holding something it cannot
+				parse, as the empty string. NOTE test the raw strings rather than what they
+				convert to: Number('') is 0, a finite value that would be taken as a typed
+				coordinate and clamp the range to the start of the scale, so clearing an input
+				to retype it silently widened the range instead of restoring it */
+				const startText = String(startInput.property('value')).trim()
+				const stopText = String(stopInput.property('value')).trim()
+				const start = Number(startText)
+				const stop = Number(stopText)
+				if (!startText || !stopText || !Number.isFinite(start) || !Number.isFinite(stop)) {
 					a.onTyped(undefined)
 					return
 				}
@@ -801,7 +808,7 @@ export function isoformRangeSelect(opts: IsoformRangeSelectOpts) {
 		const hovered = markers.find(m => Math.abs(scale.pos2px(m.pos) - x) <= 3)
 		if (hovered) {
 			const count = hovered.samplecount
-			infoDiv.text(`${chr}:${hovered.pos.toLocaleString()}${count ? ` · ${count} samples` : ''}`)
+			infoDiv.text(`${chr}:${hovered.pos.toLocaleString()}${count ? ` · ${sampleLabel(count)}` : ''}`)
 		} else {
 			updateInfo()
 		}
@@ -849,8 +856,14 @@ export function isoformRangeSelect(opts: IsoformRangeSelectOpts) {
 		infoDiv.text(
 			`${chr}:${range.start.toLocaleString()}-${range.stop.toLocaleString()} · ` +
 				`${inRange.length} of ${markers.length} breakpoints` +
-				(samples ? `, ${samples} samples` : '')
+				(samples ? `, ${sampleLabel(samples)}` : '')
 		)
+	}
+
+	/** a count of samples, said as an upper bound when the caller declares that the tally it
+	 * was summed from may hold one sample more than once (see opts.samplesAreUpperBound) */
+	function sampleLabel(n: number) {
+		return opts.samplesAreUpperBound ? `up to ${n} samples` : `${n} samples`
 	}
 }
 
@@ -1053,7 +1066,7 @@ export function isoformPairRangeSelect(opts: IsoformPairRangeSelectOpts) {
 		if (hovered) {
 			infoDiv.text(
 				`${partner.gene} ${partner.chr}:${hovered.pos.toLocaleString()}` +
-					(hovered.samplecount ? ` · ${hovered.samplecount} samples` : '')
+					(hovered.samplecount ? ` · ${sampleLabel(hovered.samplecount)}` : '')
 			)
 		} else {
 			updateInfo()
@@ -1194,8 +1207,15 @@ export function isoformPairRangeSelect(opts: IsoformPairRangeSelectOpts) {
 				`${inRange.length} of ${links.length} breakpoint pairs` +
 				// the two ranges are applied together, so say when this one is not what narrows
 				(reachable.length == inRange.length ? '' : `, ${reachable.length} within the ${self.gene} range`) +
-				(samples ? `, ${samples} samples` : '')
+				(samples ? `, ${sampleLabel(samples)}` : '')
 		)
+	}
+
+	/** a count of samples, said as an upper bound when the caller declares that the tally it
+	 * was summed from may hold one sample more than once (see opts.samplesAreUpperBound). a
+	 * single link is one pair of breakpoints, so its own count is exact either way */
+	function sampleLabel(n: number) {
+		return opts.samplesAreUpperBound ? `up to ${n} samples` : `${n} samples`
 	}
 
 	/** redraw the links against the current selection */

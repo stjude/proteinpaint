@@ -101,6 +101,10 @@ export type IsoformRangeSelectOpts = {
 	labelWidth?: number
 	/** layout of the isoform structure, default 'genomic' */
 	mode?: ScaleMode
+	/** set when the .samplecount of the markers may count one sample more than once, e.g.
+	 * when they are tallied per pair of breakpoints and a sample has two events. their sums
+	 * are then reported as an upper bound rather than as a number of samples */
+	samplesAreUpperBound?: boolean
 	/** called with the selected range on apply, and with null when it is cleared */
 	callback: (range: SelectedRange | null) => void
 }
@@ -142,6 +146,10 @@ export type IsoformPairRangeSelectOpts = {
 	labelWidth?: number
 	/** layout of the isoform structure of both tracks, default 'genomic' */
 	mode?: ScaleMode
+	/** set when the .samplecount of the links may count one sample more than once, i.e. when
+	 * a sample has two events of this gene pair. sums over links are then reported as an
+	 * upper bound rather than as a number of samples; a single link is exact either way */
+	samplesAreUpperBound?: boolean
 	/** called with the selected range on apply, and with null when it is cleared */
 	callback: (range: SelectedRange | null) => void
 }

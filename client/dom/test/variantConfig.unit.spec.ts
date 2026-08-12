@@ -1523,6 +1523,48 @@ tape('sample counts are restated under the range on the term gene', test => {
 	test.end()
 })
 
+tape('a sample count that may double count is marked as an upper bound', test => {
+	/* the breakpoint tally counts a sample once per distinct pair of breakpoints, so a
+	variant whose pairs account for more samples than it has must have one in two of them,
+	and no subset of them sums to an exact number of samples */
+	const holder = select(document.body).append('div')
+	const doubled = [
+		{
+			mname: 'PDGFRB',
+			class: 'Fuserna',
+			samplecount: 5,
+			// 4 + 3 of 5 samples, so at least two samples have two events of this variant
+			breakpoints: [
+				{ pos: 23290100, partnerChr: 'chr5', partnerPos: 150125000, samplecount: 4 },
+				{ pos: 23183000, partnerChr: 'chr5', partnerPos: 150130000, samplecount: 3 }
+			]
+		}
+	]
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: doubled,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		// covers the breakpoint of 4 of the 5 samples
+		selfBreakpointRange: { chr: 'chr22', start: 23290000, stop: 23290200 },
+		callback: () => {}
+	})
+	const count = holder.select('[data-testid="sjpp-variantConfig-mname-count"]').node() as HTMLElement
+	test.equal(count.textContent, '≤4/5', 'the count is marked as an upper bound')
+	test.ok(
+		count.getAttribute('title')?.startsWith('Up to 4 of 5 samples'),
+		'and the title says so rather than stating a tally'
+	)
+	test.ok(
+		count.getAttribute('title')?.includes('more than one event of this variant'),
+		'and says why it cannot be exact'
+	)
+	holder.remove()
+	test.end()
+})
+
 tape('sample counts are the total when no range is set', test => {
 	const holder = select(document.body).append('div')
 	renderVariantConfig({
@@ -1877,6 +1919,35 @@ tape('breakpoint charts are laid out by dt', async test => {
 		getChartMenu('sjpp-isoformRangeSelect-marks').remove()
 		holder.remove()
 	}
+	test.end()
+})
+
+tape('a gene model lookup that throws synchronously still fills the menu', async test => {
+	/* the getter is not required to be an async function, so it may throw synchronously.
+	called as the argument of Promise.resolve() its throw escaped before a promise existed to
+	catch it, and the menu was left on "Loading..." instead of degrading to no gene model */
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels: ((gene: string) => {
+			throw new Error(`no genome to look ${gene} up in`)
+		}) as any,
+		callback: () => {}
+	})
+	// the partner breakpoints carry a chr of their own, so the chart is drawn over them
+	// alone once neither gene resolves to a model
+	;(holder.selectAll('[data-testid="sjpp-variantConfig-partnerBreakpoint-btn"]').nodes()[0] as HTMLElement).click()
+	await new Promise(resolve => setTimeout(resolve, 0))
+	const menuDiv = getChartMenu('sjpp-isoformRangeSelect-marks')
+	test.ok(menuDiv, 'the breakpoints are charted without a gene model')
+	test.equal(menuDiv.textContent!.includes('Loading...'), false, 'the menu is not left loading')
+	test.ok(menuDiv.textContent!.includes('ABL1 breakpoints'), 'and names the gene it charts')
+	menuDiv.remove()
+	holder.remove()
 	test.end()
 })
 
