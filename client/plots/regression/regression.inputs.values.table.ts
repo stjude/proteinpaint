@@ -1,5 +1,5 @@
 import { select } from 'd3-selection'
-import { getDefaultViolinSettings } from '#plots/violin.js'
+import { getDefaultViolinSettings } from '.#plots/violin/settings/defaults'
 import { appInit } from '#plots/plot.app.js'
 
 /*
