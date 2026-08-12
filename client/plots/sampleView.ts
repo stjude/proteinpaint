@@ -115,8 +115,8 @@ class SampleView extends PlotBase implements RxComponent {
 				.enter()
 				.append('option')
 				.attr('value', d => d.sampleId)
-				.property('selected', (d, i) => i < samplesLimit)
-				.html((d, i) => d.sampleName)
+				.property('selected', (d, _i) => _i < samplesLimit)
+				.html((d, _) => d.sampleName)
 
 			this.dom.noteDiv = sampleDiv
 				.insert('div')
@@ -188,7 +188,7 @@ class SampleView extends PlotBase implements RxComponent {
 				.style('margin-left', '10px')
 				.style('vertical-align', 'top')
 				.text('Download')
-				.on('click', e => {
+				.on('click', () => {
 					this.downloadData()
 				})
 			this.dom.messageDiv = sampleDiv
@@ -339,11 +339,11 @@ let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.
 					.attr('type', 'checkbox')
 					.property('checked', true)
 					.attr('id', ssgqKey)
-					.on('change', e => {
+					.on('change', (e: Event) => {
 						this.app.dispatch({
 							type: 'plot_edit',
 							id: this.id,
-							config: { settings: { sampleView: { [ssgqKey]: e.target.checked } } }
+							config: { settings: { sampleView: { [ssgqKey]: (e.target as HTMLInputElement).checked } } }
 						})
 					})
 				this.dom.showPlotsDiv
@@ -453,7 +453,7 @@ let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.
 		return terms
 	}
 
-	getOrderedVisibleTerms(root) {
+	getOrderedVisibleTerms(_root) {
 		const visibleTerms = Object.values(this.termsById).filter(this.isVisibleTermId.bind(this))
 		const orderedVisibleTerms = []
 		this.sortVisibleTerms(this.termsById[root_ID], visibleTerms, orderedVisibleTerms)
@@ -602,9 +602,9 @@ let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.
 		this.brainPlots = []
 		this.imagePlots = []
 		this.wsiPlots = []
-		const q = state.termdbConfig.queries
+		// const q = state.termdbConfig.queries
 		if (state.termdbConfig.queries?.WSImages) {
-			let div = plotsDiv.append('div')
+			const div = plotsDiv.append('div')
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
@@ -615,7 +615,7 @@ let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.
 		}
 
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
-			let div = plotsDiv.append('div')
+			const div = plotsDiv.append('div')
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 			let someFound = false
 			for (const sample of samples) {
@@ -645,7 +645,7 @@ let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.
 			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
 				let someFound = false
 				this.singleSamplePlots[k] = []
-				let div = plotsDiv.append('div')
+				const div = plotsDiv.append('div')
 				if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 				for (const sample of samples) {
 					const label = (k.match(/[A-Z][a-z]+|[0-9]+/g) || []).join(' ')
@@ -671,11 +671,8 @@ let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.
 			}
 		}
 		if (state.termdbConfig.queries?.NIdata) {
-			let div = plotsDiv.append('div')
-			if (state.samples.length == 1) div.style('display', 'inline-block')
-
 			for (const k in state.termdbConfig.queries?.NIdata) {
-				let div = plotsDiv.append('div')
+				const div = plotsDiv.append('div')
 				if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 				for (const sample of samples) {
 					const plotDiv = div.insert('div').style('display', 'inline-block')
@@ -696,7 +693,7 @@ let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.
 			}
 		}
 		if (state.termdbConfig?.queries?.images) {
-			let div = plotsDiv.append('div')
+			const div = plotsDiv.append('div')
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
 			for (const sample of samples) {
 				const cellDiv = div.append('div').style('display', 'inline-block')
@@ -724,14 +721,14 @@ export function getTermValue(term, data) {
 
 	if (term.type == 'condition') {
 		const values = value.toString().split(' ')
-		let [years, status] = values
-		status = term.values[status].label || term.values[status].key
+		const [years, statusKey] = values
+		const status = term.values[statusKey].label || term.values[statusKey].key
 		return `Max grade: ${status}, Time to event: ${Number(years).toFixed(1)} years`
 	}
 	if (term.type == 'survival') {
 		const values = value.split(' ')
-		let [years, status] = values
-		status = term.values?.[status]?.label || term.values?.[status]?.key || status
+		const [years, statusKey] = values
+		const status = term.values?.[statusKey]?.label || term.values?.[statusKey]?.key || statusKey
 		return `${status} after ${Number(years).toFixed(1)} years`
 	}
 	return null
@@ -753,7 +750,7 @@ function setRenderers(self) {
 		for (const sample of self.state.samples) visibleSamples.push(self.sampleDataByTermId[sample.sampleId])
 		// for the column names, just need the first column name + sample data
 		self.renderTHead(['', ...self.state.samples.map(s => s.sampleName)], theadrow)
-		const tBodyData = self.orderedVisibleTerms.map((term, trIndex) => [
+		const tBodyData = self.orderedVisibleTerms.map((term, _trIndex) => [
 			{ term }, // first column, no sample data
 			// create data to bind for each sample column
 			...visibleSamples.map(sample => ({ term, sample }))
@@ -777,7 +774,7 @@ function setRenderers(self) {
 		trs.enter().append('tr').each(self.renderTr)
 	}
 
-	self.renderTr = function (trData, trIndex) {
+	self.renderTr = function (trData, _trIndex) {
 		const tds = select(this)
 			.selectAll('td')
 			.data(trData, (d: any) => d)
@@ -787,19 +784,19 @@ function setRenderers(self) {
 			.enter()
 			.append('td')
 			.style('border-bottom', 'solid 1px rgb(245,245,245)')
-			.style('text-align', (d, i) => (i === 0 ? 'left' : 'center'))
+			.style('text-align', (d, _i) => (_i === 0 ? 'left' : 'center'))
 			.style('padding', '2px 10px')
 			.each(self.renderTd)
 	}
 
-	self.renderTd = function (d, i) {
+	self.renderTd = function (d, _i) {
 		if (!d.sample) {
 			// first column for tree dict variables
 			self.renderTerm(select(this))
 			return
 		}
 		//const sampleId = Number(d.sample.sampleId)
-		const data = d.sample
+		// const data = d.sample
 		const term = d.term
 		const isNumeric = isNumericTerm(term)
 		const value = getTermValue(d.term, d.sample)
@@ -814,7 +811,7 @@ function setRenderers(self) {
 			td.append('button')
 				.style('margin-left', '5px')
 				.text('Plot')
-				.on('click', e => {
+				.on('click', () => {
 					const tw = { id: term.id, q: { mode: 'continuous' } }
 					self.app.dispatch({ type: 'plot_create', config: { chartType: 'violin', term: tw, value } })
 				})
@@ -839,7 +836,7 @@ function setRenderers(self) {
 		}
 		const leftIndent = (d.term.ancestry.length - 1) * 24
 		const span = td.select(':scope>span').style('margin-left', `${leftIndent}px`)
-		const btn = span
+		span
 			.select('button')
 			.style('display', d.term.isleaf ? 'none' : '')
 			.html(self.config.expandedTermIds.includes(d.term.id) ? '-' : '+')
@@ -914,7 +911,7 @@ export function searchSampleInput(holder: any, samplesData: any, hasSampleAncest
 	holder.style('opacity', '0.8')
 	const datalist = holder.append('datalist').attr('id', 'sampleDatalist')
 	addOptions(allSamples)
-	input.on('keyup', e => {
+	input.on('keyup', () => {
 		datalist.selectAll('*').remove()
 		const str = input.node().value.toLowerCase()
 		if (keyUpCallback) keyUpCallback(str)
@@ -929,7 +926,7 @@ export function searchSampleInput(holder: any, samplesData: any, hasSampleAncest
 		}
 		if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) addOptions(options)
 	})
-	input.on('change', e => {
+	input.on('change', () => {
 		const sampleName = input.node().value
 		callback(sampleName)
 	})
@@ -963,13 +960,13 @@ export function searchSampleInput(holder: any, samplesData: any, hasSampleAncest
 
 		const parts: string[] = []
 		for (const child of rootChildren) {
-			let chain: string[] = [child]
+			const chain: string[] = [child]
 			let cur = child
-			while (true) {
-				const kids = childrenByParent.get(cur) || []
-				if (kids.length === 0) break
+			let kids = childrenByParent.get(cur) || []
+			while (kids.length > 0) {
 				chain.push(kids[0])
 				cur = kids[0]
+				kids = childrenByParent.get(cur) || []
 			}
 			parts.push(chain.length > 1 ? chain.join(' > ') : child)
 		}
@@ -979,8 +976,8 @@ export function searchSampleInput(holder: any, samplesData: any, hasSampleAncest
 }
 
 function buildHierarchy(samplesData: any) {
-	let childrenByParent = new Map<string, string[]>()
-	let rootFor = new Map<string, string>()
+	const childrenByParent = new Map<string, string[]>()
+	const rootFor = new Map<string, string>()
 
 	// Build children map + find roots
 	for (const s of Object.values(samplesData) as any[]) {
