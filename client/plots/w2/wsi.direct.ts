@@ -41,22 +41,57 @@ export async function init(
 		const [w, h] = meta.slide_dimensions
 		const host = (sessionStorage.getItem('hostURL') || (window as any).testHost || '').replace(/\/+$/, '')
 
-		const source = new Zoomify({
-			// {z}/{x}/{y} hit wsitiles/tile; unused {TileGroup} satisfies OL's
-			// requirement that a {TileGroup}/{tileIndex} placeholder be present.
-			url: `${host}/wsitiles/tile/{z}/{x}/{y}?slide=${slide}&_={TileGroup}`,
-			size: [w, h],
-			crossOrigin: 'anonymous',
-			zDirection: -1
-		})
+		// z-planes of a 3D OME-TIFF stack (meta.planes = 1 for 2D slides);
+		// start on the middle plane, matching the server's default
+		const planes: number = meta.planes || 1
+		let plane = Math.floor(planes / 2)
+
+		const makeSource = (p: number) =>
+			new Zoomify({
+				// {z}/{x}/{y} hit wsitiles/tile; unused {TileGroup} satisfies OL's
+				// requirement that a {TileGroup}/{tileIndex} placeholder be present.
+				url: `${host}/wsitiles/tile/{z}/{x}/{y}?slide=${slide}${planes > 1 ? `&plane=${p}` : ''}&_={TileGroup}`,
+				size: [w, h],
+				crossOrigin: 'anonymous',
+				zDirection: -1
+			})
+		const source = makeSource(plane)
 		const grid = source.getTileGrid()!
 		const extent = grid.getExtent()
 
 		loading.remove()
+
+		const slideLayer = new TileLayer({ source })
+
+		// z-plane scroll bar ABOVE the map (the 90vh map pushes anything after
+		// it below the fold); swapping the tile source refetches visible tiles
+		// for the chosen plane, view position unchanged
+		if (planes > 1) {
+			const bar = holder.append('div').style('font', '12px system-ui').style('padding', '4px 8px')
+			bar.append('span').text('z-plane: ')
+			const label = () => `${plane + 1}/${planes}`
+			const planeText = bar.append('span').text(label())
+			bar
+				.append('input')
+				.attr('type', 'range')
+				.attr('min', 0)
+				.attr('max', planes - 1)
+				.attr('step', 1)
+				.property('value', plane)
+				.style('vertical-align', 'middle')
+				.style('margin-left', '8px')
+				.style('width', '200px')
+				.on('change', function (this: HTMLInputElement) {
+					plane = Number(this.value)
+					planeText.text(label())
+					slideLayer.setSource(makeSource(plane))
+				})
+		}
+
 		const mapDiv = holder.append('div').style('width', '100vw').style('height', '90vh')
 		const map = new Map({
 			target: mapDiv.node(),
-			layers: [new TileLayer({ source })],
+			layers: [slideLayer],
 			view: new View({ resolutions: grid.getResolutions(), extent })
 		})
 		map.getView().fit(extent)
