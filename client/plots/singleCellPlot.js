@@ -1353,13 +1353,6 @@ class singleCellPlot {
 		})
 	}
 
-	distance(x1, y1, x2, y2, plot) {
-		const x = plot.xAxisScale(x2) - plot.xAxisScale(x1)
-		const y = plot.yAxisScale(y2) - plot.yAxisScale(y1)
-		const distance = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))
-		return distance
-	}
-
 	showTooltip(event, plot) {
 		if (this.onClick && event.type == 'click') {
 			this.onClick = false

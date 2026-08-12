@@ -60,10 +60,8 @@ export class ScatterViewModelBase {
 			.style('opacity', 0)
 			.style('display', 'inline-block')
 			.attr('data-testid', `sjpp-scatter-chart-div-${chart?.id ?? 'Default'}`)
-		div.on('mouseover', event => {
-			if (!this.scatterTooltip.onClick) this.scatterTooltip.showTooltip(event, chart)
-		})
-		div.on('click', event => this.scatterTooltip.showTooltip(event, chart))
+		// hover/click are wired by ScatterTooltip onto chart.cover (see fillSvgSubElems), so that
+		// the cursor — not whichever dot happens to be painted on top — decides what is picked
 
 		chart.svg = div.select('svg').empty() ? div.append('svg') : div.select('svg')
 		this.renderSVG(chart, s, removePrevious)
@@ -151,6 +149,19 @@ export class ScatterViewModelBase {
 			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-scatter-series')
 
 			chart.regressionG = chart.mainG.append('g').attr('class', 'sjpcb-scatter-lowess')
+			// Hit area for hover/click, kept as the last child of mainG so it sits above the dots and
+			// receives the pointer anywhere in the plot area, not just on a painted dot. It lives in
+			// mainG (not serie) so the zoom transform doesn't drag it off the plot, and events still
+			// bubble to mainG where d3-zoom and the lasso are bound.
+			chart.cover = chart.mainG
+				.append('rect')
+				.attr('class', 'sjpp-scatter-cover')
+				.attr('x', this.model.axisOffset.x)
+				.attr('y', this.model.axisOffset.y)
+				.attr('width', this.scatter.settings.svgw)
+				.attr('height', this.scatter.settings.svgh)
+				.attr('fill', 'none')
+				.style('pointer-events', 'all')
 			chart.legendG = svg.append('g').attr('class', 'sjpcb-scatter-legend')
 			if (this.scatter.state.config.transform && chart.mainG.attr('transform') != this.scatter.state.config.transform) {
 				chart.mainG.attr('transform', this.scatter.state.config.transform)
@@ -161,6 +172,7 @@ export class ScatterViewModelBase {
 			chart.mainG = svg.select('.sjpcb-scatter-mainG')
 			chart.serie = chart.mainG.select('.sjpcb-scatter-series')
 			chart.regressionG = chart.mainG.select('.sjpcb-scatter-lowess')
+			chart.cover = chart.mainG.select('.sjpp-scatter-cover')
 			axisG = svg.select('.sjpcb-scatter-axis')
 			labelsG = svg.select('.sjpcb-scatter-labelsG')
 			chart.xAxis = axisG.select('.sjpcb-scatter-x-axis')
@@ -171,6 +183,8 @@ export class ScatterViewModelBase {
 
 		chart.axisG = axisG
 		chart.labelsG = labelsG
+		// svgw/svgh are user-adjustable, so keep the hit area in sync on re-render
+		chart.cover.attr('width', this.scatter.settings.svgw).attr('height', this.scatter.settings.svgh)
 		chart.xAxis.attr('transform', `translate(0, ${this.scatter.settings.svgh + this.model.axisOffset.y})`)
 
 		chart.legendG.attr('transform', `translate(${this.scatter.settings.svgw + this.model.axisOffset.x + 50}, 20)`)

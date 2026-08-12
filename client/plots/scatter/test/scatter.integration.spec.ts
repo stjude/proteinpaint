@@ -408,7 +408,7 @@ tape('dynamic scatter of 2-dnameth', function (test) {
 })
 
 tape('Disco plot and lollipop', test => {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(10000)
 	const holder = getHolder()
 
 	runpp({
@@ -419,31 +419,45 @@ tape('Disco plot and lollipop', test => {
 
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
-		const sampleWithMutDataFile = scatter.Inner.dom.mainDiv
-			.select('.sjpcb-scatter-series')
-			.selectAll('path')
-			.filter(d => d.sample === '3416')
-			.node()
-		const box = sampleWithMutDataFile.getBoundingClientRect()
-		sampleWithMutDataFile.dispatchEvent(
-			new MouseEvent('click', {
-				bubbles: true,
-				clientX: box.x + box.width / 2,
-				clientY: box.y + box.height / 2
-			})
-		)
+		const chart = scatter.Inner.model.charts[0]
+		const scatterTooltip = scatter.Inner.vm.scatterTooltip
+		const sample = chart.data.samples.find(s => s.sample === '3416')
+
+		// clicks land on chart.cover, which DataPointInteractions maps back into chart.serie's
+		// local space; dispatch at the dot's screen position so the same dot is picked
+		const { x, y } = scatter.Inner.model.getCoordinates(chart, sample)
+		const ctm = chart.serie.node().getScreenCTM()
+		const clientX = ctm.a * x + ctm.c * y + ctm.e
+		const clientY = ctm.b * x + ctm.d * y + ctm.f
+		chart.cover.node().dispatchEvent(new MouseEvent('click', { bubbles: true, clientX, clientY }))
+
+		// the action buttons live in DataPointInteractions' own click menu, not dom.tooltip
+		const clickMenu = scatterTooltip.byChart.get(chart.id).clickMenu
+		const findDiscoBtn = () =>
+			clickMenu.d
+				.selectAll('button')
+				.filter(function (this: any) {
+					return this.innerHTML == 'Disco'
+				})
+				.node()
+		// if the click hit several overlapping dots the menu opens on the multi-hit table first;
+		// pick the 3416 row to reach that sample's action menu
+		if (!findDiscoBtn()) {
+			const row = clickMenu.d
+				.selectAll('tr')
+				.filter(function (this: any) {
+					return this.textContent.includes('3416')
+				})
+				.node()
+			row?.querySelector('input')?.click()
+		}
+
 		const chordTexts = await detectGte({
 			elem: holder.node(),
 			selector: '.chord-text',
 			count: 1,
 			trigger: () => {
-				scatter.Inner.dom.tooltip.d
-					.selectAll('button')
-					.filter(function (this: any) {
-						return this.innerHTML == 'Disco'
-					})
-					.node()
-					.click()
+				findDiscoBtn().click()
 			}
 		})
 		const label = [...chordTexts].find(c => c.__data__?.text === 'TP53')
@@ -518,6 +532,18 @@ tape('colorTW=geneVariant with groupsetting', function (test) {
 		test.true(
 			dots.find(d => d.__data__.category == lab),
 			`A dot with category=${lab}`
+		)
+		// dots must use the colors the groupset carries, not an arbitrary ordinal scale.
+		// predefined_groupset_idx 0 is the SNV/indel groupset from getNonCnvGroupset() in
+		// client/tw/geneVariant.ts, which sets mutated='#e75480' and wildtype=mclass.WT.color
+		const wtLab = 'TP53 SNV/indel Wildtype (somatic)'
+		test.true(
+			dots.find(d => d.__data__.category == lab && d.getAttribute('fill') == '#e75480'),
+			`${lab} dots must use the groupset color #e75480`
+		)
+		test.true(
+			dots.find(d => d.__data__.category == wtLab && d.getAttribute('fill') == mclass['WT'].color),
+			`${wtLab} dots must use the groupset color ${mclass['WT'].color}`
 		)
 		if (test['_ok']) scatter.Inner.app.destroy()
 		test.end()

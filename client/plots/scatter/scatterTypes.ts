@@ -79,6 +79,8 @@ export type ScatterChart = {
 	axisLeft?: any
 	/** The d3 selection of data point elements */
 	serie?: any
+	/** Transparent rect over the plot area; the hover/click hit target */
+	cover?: any
 	/** The lasso selection tool instance */
 	lasso?: any
 	/** The computed min/max ranges for axes and scales */

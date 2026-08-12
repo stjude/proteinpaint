@@ -39,7 +39,8 @@ export function getDefaultScatterSettings(opts: any = {}): Settings {
 		maxXScale: null,
 		minYScale: null,
 		maxYScale: null,
-		itemLabel: opts?.singleCellPlot ? 'Cell' : 'Sample'
+		itemLabel: opts?.singleCellPlot ? 'Cell' : 'Sample',
+		maxTooltipRows: 5
 	}
 
 	return Object.assign(defaults, overrides)
