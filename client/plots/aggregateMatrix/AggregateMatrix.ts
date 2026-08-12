@@ -37,7 +37,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
         }
 
         //opts.header is the sandbox header
-		if (opts.header) opts.header.html(`AGGREGATE MATRIX`).style('font-size', '0.9em')
+        if (opts.header) opts.header.html(`AGGREGATE MATRIX`).style('font-size', '0.9em')
     }
 
     getState(appState: any) {
@@ -80,13 +80,13 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
             this.viewModel.processData(data)
         } catch (e: any) {
             if (e instanceof Error) console.error(`${e.message || e} [AggregateMatrix main()]`)
-			else if (e.stack) console.log(e.stack)
-			super.toggleLoadingDiv('none')
-			super.printError(e.message || e)
-			return
+            else if (e.stack) console.log(e.stack)
+            super.toggleLoadingDiv('none')
+            super.printError(e.message || e)
+            return
         }
         this.view.render(this.viewModel.viewData)
-        super.toggleLoadingDiv('none') 
+        super.toggleLoadingDiv('none')
     }
 }
 
@@ -109,5 +109,17 @@ export function getPlotConfig(opts: any) {
 export function validatePlotConfig(config: any) {
     if (!config || typeof config !== 'object') throw new Error(`Invalid config provided for AggregateMatrix plot`)
     if (!config.rows || !Object.keys(config.rows).length) throw new Error(`No rows provided for AggregateMatrix plot`)
+    let rowCount = 0
+    for (const section in config.rows) {
+        rowCount = rowCount + config.rows[section].length
+        if (rowCount > 2) break
+    }
+    if (rowCount < 2) throw new Error(`AggregateMatrix plot requires at least 2 rows`)
     if (!config.columns || !Object.keys(config.columns).length) throw new Error(`No columns provided for AggregateMatrix plot`)
+    let colCount = 0
+    for (const member in config.columns) {
+        colCount = colCount + config.columns[member].length
+        if (colCount > 2) break
+    }
+    if (colCount < 2) throw new Error(`AggregateMatrix plot requires at least 2 columns`)
 }
