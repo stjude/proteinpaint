@@ -769,9 +769,9 @@ function get_multivalue(tvs, CTEname, ds, mapParent2Children) {
 		positive membership AND every positive membership is among tvs.values.
 		a membership outside the list hides the sample. Used by a dataset
 		getAdditionalFilter() to restrict samples to authorized categories */
-		if (!Array.isArray(tvs.values) || !tvs.values.length) throw 'tvs.values[] missing for withinValues'
 		if (!tvs.values.every(v => v && v.key !== undefined)) throw 'tvs.values[].key missing for withinValues'
-			FROM anno_multivalue
+		const query = `SELECT sample	
+		    FROM anno_multivalue
 			WHERE term_id = ?
 			AND EXISTS (SELECT 1 FROM json_each(anno_multivalue.value) j WHERE j.value > 0)
 			AND NOT EXISTS (
