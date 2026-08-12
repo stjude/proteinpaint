@@ -1,10 +1,12 @@
 /*
  Direct whole-slide viewer for a single file, launched via runpp URL param:
-   http://localhost:3000/?SVS=SVS/slide.svs
+   http://localhost:3000/?image_file=SVS/slide.svs
+ The format (SVS, OME-TIFF, ...) is deduced from the file extension,
+ case-insensitively, by the server (wsi_tile.py open_slide()).
 
  Optional boundary overlays (Xenium segmentation), drawn when these params name
- CSV files that sit in the same directory as the slide:
-   &cell_boundaries=cell_boundaries.csv&nucleus_boundaries=nucleus_boundaries.csv
+ CSV files; like the slide itself, paths are relative to serverconfig.tpmasterdir:
+   &cell_boundaries=SVS/cell_boundaries.csv&nucleus_boundaries=SVS/nucleus_boundaries.csv
  CSV columns: cell_id, vertex_x, vertex_y (µm); rows of one cell are contiguous
  and its first vertex is repeated last to close the polygon.
 
