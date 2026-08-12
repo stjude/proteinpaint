@@ -31,8 +31,5 @@ export function validateMinMax(settings: AggregateMatrixSettings, min, max): str
     if (min > max) {
         return `Minimum dot size must be less than or equal to maximum dot size`
     }
-    if (max < min) {
-        return `Maximum dot size must be greater than or equal to minimum dot size`
-    }
     return null
 }
