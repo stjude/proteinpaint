@@ -1,31 +1,64 @@
-import { getCompInit, copyMerge } from '../rx'
-import { controlsInit, renderTerm1Label } from './controls'
-import { getT0T2defaultQ } from './summaryQ.ts'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
+import { controlsInit, renderTerm1Label } from '../controls'
+import { getT0T2defaultQ } from '../summaryQ.ts'
 import setViolinRenderer from './violin.renderer'
-//import htmlLegend from '../dom/html.legend'
 import { htmlLegend, Menu } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
-import { plotColor } from '#shared/common.js'
 import { isNumericTw } from '#shared/terms.js'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
+import { getDefaultViolinSettings } from './settings/defaults'
+import type { ViolinSettings } from './settings/Settings'
+import type { ViolinRequest } from '#types'
 /*
-when opts.mode = 'minimal', a minimal violin plot will be rendered that will have a single term and minimal features (i.e. no controls, legend, labels, brushing, transitions, etc.)
-
+when opts.mode = 'minimal', a minimal violin plot will be rendered that 
+will have a single term and minimal features (i.e. no controls, legend, 
+labels, brushing, transitions, etc.)
 */
 
-class ViolinPlot extends PlotBase {
+class ViolinPlot extends PlotBase implements RxComponent{
 	static type = 'violin'
 
-	constructor(opts) {
-		super(opts)
+	type: string
+	dom!: { 
+		hovertip: Menu
+		clicktip: Menu
+		sampletabletip: Menu
+		header: any
+		controls: any
+		banner: any
+		errdiv: any
+		loadingDiv: any
+		renderedData: any
+		violinDiv: any
+		legendDiv: any
+	}
+	settings!: ViolinSettings
+	legendRenderer!: any
+	render!: () => void
+	renderPvalueTable!: (chartDiv: any, chart: any) => void
+	getChartTitle!: (chartId: any) => string
+	data!: any
+	config!: any
+	displayLabelClickMenu!: (...args: any[]) => void
+	displayBrushMenu!: (...args: any[]) => void
+	displayMenu!: (...args: any[]) => void
+	selectSamples!: (...args: any[]) => Promise<void>
+	getSampleList!: (...args: any[]) => any[]
+	callListSamples!: (...args: any[]) => Promise<void>
+	labelHideLegendClicking!: (...args: any[]) => void
+	download!: (arg?: any) => void
+	getChartImages!: () => any
+
+	constructor(opts: any, api: ComponentApi) {
+		super(opts, api)
 		this.type = ViolinPlot.type
 	}
 
-	async init(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
+	async init() {
+		// const config = appState.plots.find(p => p.id === this.id)
 		const holder = this.opts.holder
 			.append('div')
 			//.style('display', 'inline-block')
@@ -344,11 +377,11 @@ class ViolinPlot extends PlotBase {
 		const existingMsg = this.dom.banner.style('display', 'none').select('span')
 		if (!existingMsg.empty()) existingMsg.remove()
 
-		const args = this.validateArgs()
+		const args: any = this.validateArgs()
 		let data
 		try {
 			this.toggleLoadingDiv('block', 'block')
-			data = await this.app.vocabApi.getViolinBox(args, null, this.api.getAbortSignal())
+			data = await this.app.vocabApi.getViolinBox(args, null, this.api?.getAbortSignal())
 		} catch (e) {
 			this.toggleLoadingDiv('none', 'none')
 			if (this.app.isAbortError(e)) return
@@ -371,10 +404,11 @@ class ViolinPlot extends PlotBase {
 		)
 	}
 
-	validateArgs() {
-		const { term, term2, term0, settings } = this.config
+	validateArgs(): ViolinRequest {
+		const { term, term2, term0, /*settings*/ } = this.config
 		const s = this.settings
-		const arg = {
+		// dslabel and genome are injected by vocabApi.getViolinBox
+		const arg: any = {
 			plotType: 'violin',
 			svgw: s.svgw,
 			orientation: s.orientation,
@@ -427,38 +461,12 @@ class ViolinPlot extends PlotBase {
 		}
 
 		if (term0) arg.divideTw = term0
-		return arg
+		return arg satisfies ViolinRequest ? arg : (arg as any)
 	}
 }
 
 export const violinInit = getCompInit(ViolinPlot)
 export const componentInit = violinInit
-
-export function getDefaultViolinSettings(app, overrides = {}) {
-	const defaults = {
-		orientation: 'horizontal',
-		rowlabelw: 250,
-		brushRange: null, //object with start and end if there is a brush selection
-		svgw: 500, // span length of a plot/svg, not including margin
-		datasymbol: 'rug',
-		radius: 10,
-		axisHeight: 60,
-		rightMargin: 50,
-		lines: [],
-		isLogScale: false, // false: linear scale, true: log scale
-		rowSpace: 10,
-		medianLength: 7,
-		medianColor: '#FF0000',
-		medianThickness: 3,
-		ticks: 15,
-		defaultColor: plotColor,
-		method: 0,
-		orderByMedian: false,
-		showStats: true,
-		showAssociationTests: true
-	}
-	return Object.assign(defaults, overrides)
-}
 
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'violin getPlotConfig: opts.term{} missing'
