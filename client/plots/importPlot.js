@@ -160,7 +160,7 @@ export async function importPlot(chartType, notFoundMessage = '') {
 			return await import(`./table.js`)
 
 		case 'violin':
-			return await import(`./violin.js`)
+			return await import(`./violin/Violin.ts`)
 
 		case 'volcano':
 			return await import(`./volcano/Volcano.ts`)
