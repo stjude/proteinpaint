@@ -37,7 +37,7 @@ export const api: RouteApi = {
 	}
 }
 
-/** slide formats wsi_tile.py can serve: openslide formats plus pyramidal OME-TIFF */
+/** slide formats listed by this endpoint: .svs plus pyramidal OME-TIFF (.ome.tif/.ome.tiff) */
 const SLIDE_EXT = /\.(svs|ome\.tiff?)$/i
 
 function init({ genomes }) {
