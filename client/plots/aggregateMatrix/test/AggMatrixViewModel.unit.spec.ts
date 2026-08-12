@@ -4,8 +4,8 @@ import { AggMatrixViewModel } from '../viewModel/AggMatrixViewModel'
 /*
 Tests:
     - Default ViewModel constructor
-
-See unit tests for #dom/boxplot for rendering unit tests
+    - Default view data structure
+    - setColorScale and getDotPositions
 */
 
 function getViewModel() {
@@ -116,7 +116,7 @@ tape('setColorScale and getDotPositions', function (test) {
     const dotPosition = viewModel.viewData.dotPositions[0]
     test.equal(dotPosition.x, 55, 'Should compute x position from horizontal padding, labels, and cell size')
     test.equal(dotPosition.y, 25, 'Should compute y position from top padding and cell size')
-    test.equal(dotPosition.size, 8, 'Should carry over dot size')
+    test.equal(dotPosition.size, 0.72, 'Should compute size from input size value')
     test.equal(dotPosition.row, 'TP53', 'Should carry over row id')
     test.equal(dotPosition.column, 'B cell', 'Should carry over column id')
     test.equal(dotPosition.tipData.length, 4, 'Should provide standard tooltip entries')

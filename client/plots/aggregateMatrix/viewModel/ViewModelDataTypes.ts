@@ -65,6 +65,5 @@ export type AggMatrixViewData = {
         scale: (value: number) => string | number
         absMin: number
         absMax: number
-    },
-    sizeScale: (value: number) => number
+    }
 }
