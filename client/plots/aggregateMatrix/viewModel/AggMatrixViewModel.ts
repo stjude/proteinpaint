@@ -260,8 +260,10 @@ export class AggMatrixViewModel {
                 const dotPos = {
                     x: this.lastX + (cellSize / 2),
                     y: this.lastY + (cellSize / 2),
-                    size: this.sizeScale(dot.sizeValue) ?? 0,
-                    color: this.viewData.colorScale.scale(dot?.colorValue) ?? 'white',
+                    /** Regardless if the size and color value are available, the dot will render.
+                     * This will allow the tooltip to appear, displaying the data or lack thereof.*/
+                    size: dot.sizeValue !== null ? this.sizeScale(dot.sizeValue) : settings.minDotSize,
+                    color: dot.colorValue !== null ? this.viewData.colorScale.scale(dot?.colorValue) : 'transparent',
                     row: dot.row,
                     rowSection: dot.rowSection,
                     column: dot.column,
@@ -278,12 +280,12 @@ export class AggMatrixViewModel {
                         {
                             // Show the color value
                             label: capitalizeFirstLetter(settings.gradientMethod),
-                            value: roundValueAuto(dot.colorValue) ?? 'N/A'
+                            value: roundValueAuto(dot.colorValue) ?? 'No available data'
                         },
                         {
                             // Show the size value
                             label: capitalizeFirstLetter(settings.sizeMethod),
-                            value: roundValueAuto(dot.sizeValue) ?? 'N/A'
+                            value: roundValueAuto(dot.sizeValue) ?? 'No available data'
                         }
                     ]
                 } satisfies AggMatrixDotPosition
