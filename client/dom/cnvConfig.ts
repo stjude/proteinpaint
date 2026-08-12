@@ -184,10 +184,8 @@ export function renderCnvConfig(arg: Arg) {
 	div
 		.append('div')
 		.append('button')
-		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-		.style('border-radius', '13px')
+		.attr('data-testid', 'sjpp-cnvConfig-apply')
 		.style('margin-top', '15px')
-		.style('font-size', '.8em')
 		.text('APPLY')
 		.on('click', () => {
 			const config: any = {}

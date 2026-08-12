@@ -43,6 +43,14 @@ test sections:
 	- breakpoint range is not applied for an unchecked variant
 	- no breakpoint range key for a snvindel
 	- breakpoint menu does not hide the menu it is opened from
+	- variants list is restricted by the range on the term gene
+	- range on the term gene excluding every variant
+	- range on the term gene keeps a preserved variant
+	- checked variant hidden by a range is not applied
+	- variants list follows a range selected in the breakpoint menu
+	- class checklist is hidden for a sv term
+	- class checklist is kept for a snvindel
+	- class checklist is kept for a sv term of several classes
 */
 
 tape('\n', test => {
@@ -1165,6 +1173,13 @@ const mafFilter = {
  * sv/fusion breakpoint range controls
  **************/
 
+/** the APPLY button of the ui, found by text as it carries no distinguishing class */
+function getApplyBtn(holder: any): HTMLButtonElement {
+	const btn = (holder.selectAll('button').nodes() as HTMLButtonElement[]).find(b => b.textContent == 'APPLY')
+	if (!btn) throw 'no APPLY button'
+	return btn
+}
+
 // classes and variants of a fusion term, where the mname is the partner gene and the
 // breakpoints are those of the events of that partner (see BreakpointEntry)
 const fusionValues: TermValues = {
@@ -1340,7 +1355,7 @@ tape('breakpoint ranges are applied', test => {
 		],
 		callback: c => (config = c)
 	})
-	;(holder.select('.sjpp_apply_btn').node() as HTMLButtonElement).click()
+	getApplyBtn(holder).click()
 	test.deepEqual(
 		config.selfBreakpointRange,
 		{ chr: 'chr22', start: 23180000, stop: 23200000 },
@@ -1367,7 +1382,7 @@ tape('breakpoint range is not applied for an unchecked variant', test => {
 	// no variant is checked, so the class is applied and carries no partner range;
 	// the key is still present for the term gene, so that a cleared range can be told
 	// from a dt that has no such control at all
-	;(holder.select('.sjpp_apply_btn').node() as HTMLButtonElement).click()
+	getApplyBtn(holder).click()
 	test.equal(config.values.length, 1, 'the class is applied')
 	test.equal('partnerBreakpointRange' in config.values[0], false, 'the class carries no partner range')
 	test.equal('selfBreakpointRange' in config, true, 'the key of the term gene range is present')
@@ -1380,7 +1395,7 @@ tape('no breakpoint range key for a snvindel', test => {
 	const holder = select(document.body).append('div')
 	let config: any
 	renderVariantConfig({ holder, values, mnames, dt: 1, callback: c => (config = c) })
-	;(holder.select('.sjpp_apply_btn').node() as HTMLButtonElement).click()
+	getApplyBtn(holder).click()
 	test.equal('selfBreakpointRange' in config, false, 'no breakpoint range key for a dt without the control')
 	holder.remove()
 	test.end()
@@ -1418,5 +1433,235 @@ tape('breakpoint menu does not hide the menu it is opened from', async test => {
 	test.equal(parentTip.d.style('display'), 'block', 'the menu it was opened from stays open')
 	menuDiv.remove()
 	parentTip.destroy()
+	test.end()
+})
+
+tape('variants list is restricted by the range on the term gene', test => {
+	/* a variant whose events all break outside the range can no longer match a sample,
+	so must not be listed as selectable. the same is true of one with no charted
+	breakpoint, as an event without a coordinate cannot satisfy a range on the server */
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		// covers only the ABL1 breakpoint at 23290100, not the one at 23183000
+		selfBreakpointRange: { chr: 'chr22', start: 23290000, stop: 23290200 },
+		callback: () => {}
+	})
+	const rows = holder.select('[data-testid="sjpp-variantConfig-mname"] tbody').selectAll('tr').nodes() as any[]
+	test.equal(rows.length, 2, 'both variants are rendered')
+	test.notEqual(rows[0].style.display, 'none', 'variant with a breakpoint in the range is listed')
+	test.equal(rows[1].style.display, 'none', 'variant without a charted breakpoint is not listed')
+	test.ok(
+		holder.select('[data-testid="sjpp-variantConfig-mname"] div').text().includes('(1)'),
+		'the count of the toggle is of the listed variants only'
+	)
+	test.ok(
+		holder
+			.select('[data-testid="sjpp-variantConfig-selfBreakpoint-note"]')
+			.text()
+			.includes('chr22:23,290,000-23,290,200'),
+		'says the list is restricted by the range'
+	)
+	holder.remove()
+	test.end()
+})
+
+tape('range on the term gene excluding every variant', test => {
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		// between the two breakpoint clusters, so no variant is reachable
+		selfBreakpointRange: { chr: 'chr22', start: 23200000, stop: 23250000 },
+		callback: () => {}
+	})
+	const rows = holder.select('[data-testid="sjpp-variantConfig-mname"] tbody').selectAll('tr').nodes() as any[]
+	test.ok(
+		rows.every(r => r.style.display == 'none'),
+		'no variant is listed'
+	)
+	test.ok(
+		holder.select('[data-testid="sjpp-variantConfig-mname"] div').text().includes('(0)'),
+		'the toggle counts no variant'
+	)
+	holder.remove()
+	test.end()
+})
+
+tape('range on the term gene keeps a preserved variant', test => {
+	// a variant absent from the current data is listed only to preserve a saved
+	// selection; hiding it would silently widen that selection to its class
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		selfBreakpointRange: { chr: 'chr22', start: 23200000, stop: 23250000 },
+		selectedValues: [{ key: 'Fuserna', label: 'PDGFRB', value: 'PDGFRB', mname: 'PDGFRB' }],
+		callback: () => {}
+	})
+	const rows = holder.select('[data-testid="sjpp-variantConfig-mname"] tbody').selectAll('tr').nodes() as any[]
+	test.equal(rows.length, 3, 'the preserved variant is rendered with the two of the data')
+	test.notEqual(rows[2].style.display, 'none', 'the preserved variant stays listed')
+	test.equal(
+		(rows[2].querySelector('input[type=checkbox]') as HTMLInputElement).checked,
+		true,
+		'and stays checked, so the saved selection is not widened'
+	)
+	holder.remove()
+	test.end()
+})
+
+tape('checked variant hidden by a range is not applied', test => {
+	const holder = select(document.body).append('div')
+	let config: any
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		selfBreakpointRange: { chr: 'chr22', start: 23200000, stop: 23250000 },
+		selectedValues: [{ key: 'Fuserna', label: 'ABL1', value: 'ABL1', mname: 'ABL1' }],
+		callback: c => (config = c)
+	})
+	getApplyBtn(holder).click()
+	// ABL1 is checked but out of the range, so it was unchecked when hidden and the
+	// class applies instead; the range is what narrows the events from here
+	test.equal(config.values.length, 1, 'one value is applied')
+	test.equal(config.values[0].mname, undefined, 'the hidden variant is not applied')
+	test.equal(config.values[0].key, 'Fuserna', 'the class is applied instead')
+	holder.remove()
+	test.end()
+})
+
+tape('variants list follows a range selected in the breakpoint menu', async test => {
+	// the same restriction, but through the chart rather than a range passed in
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		callback: () => {}
+	})
+	const rows = holder.select('[data-testid="sjpp-variantConfig-mname"] tbody').selectAll('tr').nodes() as any[]
+	test.ok(
+		rows.every(r => r.style.display != 'none'),
+		'both variants are listed before a range is selected'
+	)
+	;(holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint-btn"]').node() as HTMLElement).click()
+	await new Promise(resolve => setTimeout(resolve, 0))
+	const menuDiv = [...document.querySelectorAll('.sja_menu_div')].find(d =>
+		d.querySelector('[data-testid="sjpp-isoformRangeSelect-marks"]')
+	) as HTMLElement
+	const inputs = menuDiv.querySelectorAll('[data-testid="sjpp-isoformRangeSelect-pos"]') as any
+	inputs[0].value = '23290000'
+	inputs[1].value = '23290200'
+	inputs[1].dispatchEvent(new Event('change'))
+	;(menuDiv.querySelector('[data-testid="sjpp-isoformRangeSelect-apply"]') as HTMLButtonElement).click()
+	test.equal(
+		holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint-btn"]').text(),
+		'chr22:23,290,000-23,290,200',
+		'the selected range is registered'
+	)
+	test.notEqual(rows[0].style.display, 'none', 'variant with a breakpoint in the range stays listed')
+	test.equal(rows[1].style.display, 'none', 'variant without one is dropped from the list')
+	menuDiv.remove()
+	holder.remove()
+	test.end()
+})
+
+tape('class checklist is hidden for a sv term', test => {
+	/* a sv/fusion has a single mutation class, hardcoded per dt by the data query, so a
+	checklist of it offers no choice and is not rendered; the class is implied instead */
+	const holder = select(document.body).append('div')
+	let config: any
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		callback: c => (config = c)
+	})
+	test.equal(holder.select('[data-testid="sjpp-variantConfig-class"]').node(), null, 'no class column is rendered')
+	const selfDiv = holder.select('[data-testid="sjpp-variantConfig-selfBreakpoint"]').node() as HTMLElement
+	test.ok(selfDiv, 'the breakpoint control is still rendered')
+	// with no checklist to sit under, the control is stacked above the variants list
+	const mnameDiv = holder.select('[data-testid="sjpp-variantConfig-mname"]').node() as HTMLElement
+	test.ok(
+		selfDiv.compareDocumentPosition(mnameDiv) & Node.DOCUMENT_POSITION_FOLLOWING,
+		'the breakpoint control is placed above the variants list'
+	)
+	test.notEqual(
+		selfDiv.parentElement,
+		mnameDiv.parentElement,
+		'the breakpoint control is not a column of the row holding the variants list'
+	)
+	// the implied class must still be applied, and the variants of it still listed
+	test.ok(
+		holder.select('[data-testid="sjpp-variantConfig-mname"]').text().includes('(2)'),
+		'variants of the implied class are listed'
+	)
+	getApplyBtn(holder).click()
+	test.deepEqual(
+		config.values,
+		[{ key: 'Fuserna', label: 'Fusion transcript', value: 'Fuserna' }],
+		'the implied class is applied'
+	)
+	holder.remove()
+	test.end()
+})
+
+tape('class checklist is kept for a snvindel', test => {
+	// other dts have several classes to choose between, so keep the checklist
+	const holder = select(document.body).append('div')
+	renderVariantConfig({ holder, values, mnames, dt: 1, callback: () => {} })
+	const classDiv = holder.select('[data-testid="sjpp-variantConfig-class"]')
+	// the header of the table holds a select-all checkbox, so count the rows only,
+	// as the code itself does when reading the checked classes
+	test.equal(
+		classDiv.select('tbody').selectAll('input[type=checkbox]').nodes().length,
+		Object.keys(values).length,
+		'a checkbox is rendered for each class'
+	)
+	holder.remove()
+	test.end()
+})
+
+tape('class checklist is kept for a sv term of several classes', test => {
+	/* a selection saved with a class that the current data no longer has adds a second
+	class to the list, which is then a real choice again */
+	const holder = select(document.body).append('div')
+	renderVariantConfig({
+		holder,
+		values: fusionValues,
+		mnames: fusionMnames,
+		dt: 5,
+		gene: 'BCR',
+		getGeneModels,
+		selectedValues: [{ key: 'SV', label: 'BCR', value: 'BCR', mname: 'BCR' }],
+		callback: () => {}
+	})
+	const classDiv = holder.select('[data-testid="sjpp-variantConfig-class"]')
+	test.equal(classDiv.select('tbody').selectAll('input[type=checkbox]').nodes().length, 2, 'both classes are rendered')
+	holder.remove()
 	test.end()
 })
