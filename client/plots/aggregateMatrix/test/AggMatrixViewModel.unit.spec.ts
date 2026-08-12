@@ -104,8 +104,7 @@ tape('setColorScale and getDotPositions', function (test) {
                     column: 'B cell',
                     colSection: 'Cell type',
                     colorValue: 25,
-                    sizeValue: 0.72,
-                    dotSize: 8
+                    sizeValue: 0.72
                 }
             ]
         ],

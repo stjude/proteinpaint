@@ -60,14 +60,16 @@ export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any)
     for (const { terms, id: sectionId } of rowSections) {
         for (const { id: term } of terms) {
             const row: AggMatrixDot[] = columns.map(col => {
-                const sizeValue = col.sizeTmp[term] ?? 0
+                /** Return dot entry even for missing data.
+                 * Allows the user to see the tooltip for missing/
+                 * unavailable data, rather than assume a rendering mistake. */
                 return {
                     rowSection: sectionId,
                     row: term,
                     colSection: col.column,
                     column: col.termId,
-                    colorValue: col.colorTmp[term] ?? 0,
-                    sizeValue,
+                    colorValue: col.colorTmp[term] ?? null,
+                    sizeValue: col.sizeTmp[term] ?? null,
                 }
             })
             data.push(row)
@@ -94,7 +96,7 @@ async function processMemberTerm(term, q: TermdbAggregateMatrixRequest, ds: any,
         const gradientFile = member.categories[term.id][`${q.gradientMethod}File`]
         const gradientData = await getHDF5Data(Array.from(queries), gradientFile)
         const { tmp: colorTmp, min: colorMin, max: colorMax } = processHDF5Data(gradientData)
-
+        
         const sizeFile = member.categories[term.id][`${q.sizeMethod}File`]
         const sizeData = await getHDF5Data(Array.from(queries), sizeFile)
         const { tmp: sizeTmp, min: sizeMin, max: sizeMax } = processHDF5Data(sizeData)
@@ -116,7 +118,6 @@ async function getHDF5Data(queries, h5file) {
     mayLog('Time taken to query HDF5 file:', Date.now() - time1, 'ms')
 
     const result = JSON.parse(python_output)
-
     /** query_output = { [index/gene:string]: { dataId: string, samples: [Object]} 
      * Should be one entry per gene in query_output.*/
     const out = result.query_output
@@ -142,7 +143,7 @@ function processHDF5Data(data) {
         tmp[gene] = aggregate
     }
     if (min === Infinity || max === -Infinity) throw new Error(`No valid aggregate values found in HDF5 data`)
-    if (min === max) throw new Error(`All aggregate values are the same: ${min}. Cannot use idenitical data for scaling.`)
+    if (min === max) throw new Error(`All aggregate values are the same: ${min}. Cannot use identical data for scaling.`)
     return { tmp, min, max }
 }
 

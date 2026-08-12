@@ -23,10 +23,11 @@ export type AggMatrixDot = {
     column: string
     /** Section identifier for the column */
     colSection: string
-    /** Raw aggregate value mapped to color gradient */
-    colorValue: number
-    /** Raw aggregate value for size (returned for tooltip display) */
-    sizeValue: number
+    /** Raw aggregate value mapped to color gradient. 
+     * Maybe null if no data is available for this dot. */
+    colorValue: number | null
+    /** Raw aggregate value for size. Maybe null if no data is available for this dot. */
+    sizeValue: number | null
 }
 
 export type AxisTermEntry = { id: string, label: string }
