@@ -304,7 +304,9 @@ async function queryMutatedSamples(q, ds) {
 				const cell = s[tw.term.id]
 				// a membership multivalue cell may carry multiple {key} entries; keep the
 				// key list so summary/sunburst can count the sample under each category
-				s[tw.term.id] = tw.term.type == 'multivalue' && Array.isArray(cell.values) ? cell.values.map(v => v.key) : cell.key
+				s[tw.term.id] =
+					tw.term.type == 'multivalue' && Array.isArray(cell.values) ? cell.values.map(v => v.key) : cell.key
+			}
 		}
 		samples.push(s)
 	}
