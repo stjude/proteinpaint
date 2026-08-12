@@ -1,1 +1,2 @@
-
+Features:
+- improve sv/fusion tw and tvs edit ui to show geneA-geneB breakpoint diagram
