@@ -2,6 +2,12 @@
  Direct whole-slide viewer for a single file, launched via runpp URL param:
    http://localhost:3000/?SVS=SVS/slide.svs
 
+ Optional boundary overlays (Xenium segmentation), drawn when these params name
+ CSV files that sit in the same directory as the slide:
+   &cell_boundaries=cell_boundaries.csv&nucleus_boundaries=nucleus_boundaries.csv
+ CSV columns: cell_id, vertex_x, vertex_y (µm); rows of one cell are contiguous
+ and its first vertex is repeated last to close the polygon.
+
  Bypasses datasets/samples: hits the wsitiles route with a direct slide path
  (resolved relative to serverconfig.tpmasterdir; gated by features.wsi.allowDirectSlidePath). Minimal
  pan/zoom viewer — the same OpenLayers Zoomify setup the full viewer uses.
@@ -11,10 +17,15 @@ import Map from 'ol/Map.js'
 import View from 'ol/View.js'
 import TileLayer from 'ol/layer/Tile.js'
 import Zoomify from 'ol/source/Zoomify.js'
+import VectorLayer from 'ol/layer/Vector.js'
+import VectorSource from 'ol/source/Vector.js'
+import Feature from 'ol/Feature.js'
+import MultiPolygon from 'ol/geom/MultiPolygon.js'
+import { Stroke, Style } from 'ol/style.js'
 import { dofetch3 } from '#common/dofetch'
 import { sayerror } from '#dom'
 
-export async function init(opts: { slide: string }, holder: any) {
+export async function init(opts: { slide: string; cellBoundaries?: string; nucleusBoundaries?: string }, holder: any) {
 	const loading = holder.append('div').style('margin', '20px').text(`Loading ${opts.slide} …`)
 	try {
 		const slide = encodeURIComponent(opts.slide)
@@ -55,8 +66,64 @@ export async function init(opts: { slide: string }, holder: any) {
 						: ''
 				}, ${meta.levels} levels`
 			)
+
+		// segmentation overlays: boundary CSVs are in µm, converted to level-0
+		// pixels via the slide's mpp (defaulting to 1 = coords already in px)
+		const [mppX, mppY] = Array.isArray(meta.mpp) && meta.mpp.length === 2 ? meta.mpp : [1, 1]
+		const overlays: Array<[string | undefined, string]> = [
+			[opts.cellBoundaries, 'rgba(0, 200, 80, 0.9)'],
+			[opts.nucleusBoundaries, 'rgba(0, 150, 255, 0.9)']
+		]
+		for (const [file, color] of overlays) {
+			if (!file) continue
+			try {
+				map.addLayer(await boundaryLayer(host, slide, file, mppX, mppY, color))
+			} catch (e: any) {
+				sayerror(holder, `Error loading ${file}: ${e.message || e}`)
+			}
+		}
 	} catch (e: any) {
 		loading.remove()
 		sayerror(holder, `WSI error: ${e.message || e}`)
 	}
+}
+
+/** Fetch a boundary CSV (from the slide's directory, via wsitiles/boundaries)
+ and build one stroke-only vector layer holding every polygon.
+ ponytail: all ~100k polygons in one MultiPolygon feature, always rendered —
+ add zoom-gated visibility or vector tiling if panning ever feels sluggish. */
+async function boundaryLayer(
+	host: string,
+	slide: string,
+	file: string,
+	mppX: number,
+	mppY: number,
+	color: string
+): Promise<VectorLayer> {
+	const res = await fetch(`${host}/wsitiles/boundaries?slide=${slide}&file=${encodeURIComponent(file)}`)
+	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+	const text = await res.text()
+
+	// rows: "cell_id",vertex_x,vertex_y — one cell's vertices are contiguous.
+	// OL's Zoomify extent is [0,-h,w,0]: x in px to the right, y in px negated.
+	const polygons: number[][][][] = []
+	let ring: number[][] = []
+	let curId = ''
+	for (const line of text.split('\n')) {
+		const [id, xs, ys] = line.split(',')
+		const x = Number(xs)
+		if (!xs || Number.isNaN(x)) continue // header / blank line
+		if (id !== curId) {
+			if (ring.length > 2) polygons.push([ring])
+			ring = []
+			curId = id
+		}
+		ring.push([x / mppX, -Number(ys) / mppY])
+	}
+	if (ring.length > 2) polygons.push([ring])
+
+	return new VectorLayer({
+		source: new VectorSource({ features: [new Feature(new MultiPolygon(polygons))] }),
+		style: new Style({ stroke: new Stroke({ color, width: 1 }) })
+	})
 }
