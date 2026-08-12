@@ -287,7 +287,16 @@ async function colorAndShapeSamples(
 	// group colors live on the groupset (tw.q.customset or tw.term.groupsetting.lst[idx]), not on
 	// term.values. without this the groups fall through to the k2c() fallback below and the colors
 	// picked in the term edit menu are silently discarded
-	const colorGroupset = q.colorTW ? get_active_groupset(q.colorTW.term, q.colorTW.q) : undefined
+	// get_active_groupset() validates and throws on a malformed groupset. On the
+	// queries.snvindel.byisoform path (used by gdc) nothing upstream calls it, so this would be
+	// the first place to reach that validation — and a color lookup must not turn into a 500 for
+	// the whole scatter request. On a throw the groups just fall through to the fallback below.
+	let colorGroupset
+	try {
+		colorGroupset = q.colorTW ? get_active_groupset(q.colorTW.term, q.colorTW.q) : undefined
+	} catch (e) {
+		console.log('sampleScatter: could not resolve colorTW groupset for group colors:', e)
+	}
 	// eslint-disable-next-line
 	for (const [_, result] of Object.entries(results)) {
 		if (q.colorTW && q.colorTW.q.mode !== 'continuous') {

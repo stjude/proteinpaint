@@ -162,6 +162,15 @@ export class DataPointInteractions<T> {
 		this.opts.cover.on('click', (event: MouseEvent) => this.onClick(event))
 	}
 
+	/** Detach, then dispose of the click Menu. Use instead of `detach()` when this instance is
+	 * being discarded rather than paused — a Menu owns a div on `<body>` and a body-level
+	 * mousedown listener, so a caller that constructs a new DataPointInteractions per render
+	 * leaks both for every render unless it destroys the old one. Not reusable afterwards. */
+	destroy(): void {
+		this.detach()
+		this.clickMenu.destroy()
+	}
+
 	/** Detach event handlers and clear hover state. Quadtree is dropped. */
 	detach(): void {
 		this.opts.cover.on('mousemove', null)
