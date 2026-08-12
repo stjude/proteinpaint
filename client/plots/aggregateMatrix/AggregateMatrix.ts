@@ -15,7 +15,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
     static type = 'aggregateMatrix'
 
     type: string
-    components: { controls: any }
+    components: { controls: ComponentApi }
     dom: Dom
     model!: AggMatrixModel
     viewModel!: AggMatrixViewModel
@@ -25,7 +25,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
     constructor(opts: any, api: ComponentApi) {
         super(opts, api)
         this.type = AggregateMatrix.type
-        this.components = { controls: {} }
+        this.components = { controls: {} as ComponentApi }
 
         const dom = super.getStandardDomLayout(opts.holder)
         this.dom = {
@@ -55,10 +55,13 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
         }
     }
 
-    async init() {
+    async init(appState) {
         this.model = new AggMatrixModel(this)
         this.viewModel = new AggMatrixViewModel(this)
         this.view = new AggMatrixView(this)
+        
+        const config = this.getState(appState).config
+        await setControls(this.dom.controls, this, config)
     }
 
     async main() {
@@ -75,8 +78,6 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
                 super.printError(data?.error || 'No data returned from server')
                 return
             }
-            (this.dom.controls as any).selectAll('*').remove()
-            await setControls(this.dom.controls, this)
             this.viewModel.processData(data)
         } catch (e: any) {
             if (e instanceof Error) console.error(`${e.message || e} [AggregateMatrix main()]`)
