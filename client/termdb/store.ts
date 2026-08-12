@@ -222,7 +222,11 @@ TdbStore.prototype.actions = {
 				expandedTermIds.push(...term.__ancestors)
 			}
 
-			if (isUsableTerm(term, {}, this.state.termdbConfig).has('plot')) {
+			/* must judge the term with the app's actual usecase (e.g. {target:'filter'}),
+			not an empty one: an empty usecase falls to the default rule, which excludes
+			term types that a specific usecase may deliberately allow (e.g. multivalue in
+			the filter), and would wrongly treat a clicked term as a branch and reset the tree */
+			if (isUsableTerm(term, this.state.tree.usecase || {}, this.state.termdbConfig).has('plot')) {
 				Object.assign(this.state.submenu, action.submenu)
 			} else {
 				expandedTermIds.push(term.id)

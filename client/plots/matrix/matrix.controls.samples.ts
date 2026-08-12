@@ -82,6 +82,10 @@ export function setSamplesBtn(self: MatrixControls, s: any) {
 			type: 'term',
 			chartType: 'matrix',
 			configKey: 'divideBy',
+			// without an explicit usecase the term tree falls to the 'default' rule,
+			// which excludes multivalue; the matrix supports multivalue divideBy
+			// (a sample renders in each group it belongs to)
+			usecase: { target: 'matrix', detail: 'divideBy' },
 			vocabApi: self.opts.app.vocabApi,
 			state: {
 				vocab: self.opts.vocab

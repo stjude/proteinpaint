@@ -232,7 +232,12 @@ function setRenderers(self) {
 			const bar_td = `<div style='margin:1px 10px;width:${barWidth}px;height:15px;background-color:#ddd'>`
 			rows.push([{ value: label }, { html: bar_td }])
 			let checked = false
-			if (tvs.term.type == 'categorical' || tvs.term.type == 'survival' || dtTermTypes.has(tvs.term.type))
+			if (
+				tvs.term.type == 'categorical' ||
+				tvs.term.type == 'survival' ||
+				tvs.term.type == 'multivalue' ||
+				dtTermTypes.has(tvs.term.type)
+			)
 				checked = tvs.values.find(a => a.key === value.key)
 			else if (tvs.term.type == 'float' || tvs.term.type == 'integer')
 				checked = tvs.ranges.find(a => String(a.value) === value.value.toString())

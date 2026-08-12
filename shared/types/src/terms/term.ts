@@ -7,6 +7,7 @@ import type { SnpsTerm } from './snps.js'
 import type { QualTerm } from './qualitative.ts'
 import type { TermCollection } from './termCollection.ts'
 import type { JunctionTerm } from './junction.ts'
+import type { MultivalueTerm } from './multivalue.ts'
 
 /**
  * @param id      term.id for dictionary terms, undefined for non-dictionary terms
@@ -50,7 +51,17 @@ export type BaseTerm = {
 
 // NumericTerm includes integer, float, date, geneExpression, metaboliteIntensity, proteomeAbundance, and other non-dict terms
 export type Term = BaseTerm &
-	(NumericTerm | JunctionTerm | ConditionTerm | SampleLstTerm | SnpsTerm | GvTerm | QualTerm | TermCollection)
+	(
+		| NumericTerm
+		| JunctionTerm
+		| ConditionTerm
+		| SampleLstTerm
+		| SnpsTerm
+		| GvTerm
+		| QualTerm
+		| TermCollection
+		| MultivalueTerm
+	)
 
 /*** types supporting Term types ***/
 

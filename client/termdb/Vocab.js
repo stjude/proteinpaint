@@ -240,6 +240,7 @@ export class Vocab {
 				if (tw.term.termlst) copy.term.termlst = tw.term.termlst
 				if (tw.term.propsByTermId) copy.term.propsByTermId = tw.term.propsByTermId
 				if (tw.term.isCustom) copy.term.isCustom = tw.term.isCustom
+				if (tw.term.valueMeaning) copy.term.valueMeaning = tw.term.valueMeaning
 			} else {
 				// non-dictionary term
 				// pass entire tw.term because non-dictionary terms

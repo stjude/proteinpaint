@@ -28,7 +28,8 @@ export const graphableTypes = new Set([
 	SINGLECELL_CELLTYPE,
 	TermTypes.SNP,
 	TermTypes.TERM_COLLECTION,
-	TermTypes.COHORT
+	TermTypes.COHORT,
+	TermTypes.MULTIVALUE
 ])
 
 /*
@@ -87,15 +88,23 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 		case 'barchart':
 		case 'violin':
 		case 'boxplot':
-		case 'summary':
-			if (term.type && term.type !== 'survival') uses.add('plot')
-			if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
+		case 'summary': {
+			// multivalue is excluded as overlay (term2): a sample can belong to multiple
+			// categories, which inflates stacked segments past the bar's sample count and
+			// invalidates the term1-term2 association tests. it remains allowed as term1
+			// and as divide-by (term0), where each chart is a self-contained subset
+			const excluded = usecase.detail == 'term2' ? ['survival', 'multivalue'] : ['survival']
+			if (term.type && !excluded.includes(term.type)) uses.add('plot')
+			if (hasAllowedChildTypes(child_types, excluded)) uses.add('branch')
 			return uses
+		}
 
 		case 'summaryInput':
 			if (usecase.detail === 'term2' || usecase.detail == 'term0') {
-				if (term.type && term.type !== 'survival') uses.add('plot')
-				if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
+				// same overlay exclusion as the barchart/violin/boxplot/summary case above
+				const excluded = usecase.detail === 'term2' ? ['survival', 'multivalue'] : ['survival']
+				if (term.type && !excluded.includes(term.type)) uses.add('plot')
+				if (hasAllowedChildTypes(child_types, excluded)) uses.add('branch')
 				return uses
 			} else {
 				if (graphableTypes.has(term.type)) uses.add('plot')
@@ -130,7 +139,9 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 			// 		}
 			// }
 			else {
-				if (graphableTypes.has(term.type)) uses.add('plot')
+				// multivalue is excluded: a sample belonging to multiple categories
+				// cannot be assigned a single color/shape
+				if (graphableTypes.has(term.type) && term.type != 'multivalue') uses.add('plot')
 				if (!term.isleaf) uses.add('branch')
 			}
 			return uses
@@ -146,7 +157,8 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 				}
 				if (hasNumericChild(child_types)) uses.add('branch')
 			} else {
-				if (graphableTypes.has(term.type)) uses.add('plot')
+				// multivalue is excluded: overlapping categories are not supported by this chart
+				if (graphableTypes.has(term.type) && term.type != 'multivalue') uses.add('plot')
 				if (!term.isleaf) uses.add('branch')
 			}
 			return uses
@@ -189,8 +201,11 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 				return uses
 			}
 			if (usecase.detail === 'term2' || usecase.detail == 'term0') {
-				if (term.type && term.type != 'condition' && term.type != 'survival') uses.add('plot')
-				if (hasAllowedChildTypes(child_types, ['condition', 'survival'])) uses.add('branch')
+				// multivalue is excluded: a sample can belong to multiple groups at once,
+				// which would place it on multiple incidence curves and invalidate group comparison
+				if (term.type && term.type != 'condition' && term.type != 'survival' && term.type != 'multivalue')
+					uses.add('plot')
+				if (hasAllowedChildTypes(child_types, ['condition', 'survival', 'multivalue'])) uses.add('branch')
 				return uses
 			}
 			return uses
@@ -202,8 +217,10 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 				return uses
 			}
 			if (usecase.detail === 'term2' || usecase.detail == 'term0') {
-				if (term.type && term.type != 'survival') uses.add('plot')
-				if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
+				// multivalue is excluded: overlapping group membership would place a sample
+				// on multiple survival curves and invalidate group comparison
+				if (term.type && term.type != 'survival' && term.type != 'multivalue') uses.add('plot')
+				if (hasAllowedChildTypes(child_types, ['survival', 'multivalue'])) uses.add('branch')
 				return uses
 			}
 			return uses
@@ -216,8 +233,9 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 					return uses
 				}
 				if (usecase.regressionType == 'logistic') {
-					if (term.type && term.type != 'survival') uses.add('plot')
-					if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
+					// multivalue is excluded: overlapping group membership cannot define a binary outcome
+					if (term.type && term.type != 'survival' && term.type != 'multivalue') uses.add('plot')
+					if (hasAllowedChildTypes(child_types, ['survival', 'multivalue'])) uses.add('branch')
 					return uses
 				} else if (usecase.regressionType == 'cox') {
 					if (term.type == 'condition' || term.type == 'survival') uses.add('plot')
@@ -255,7 +273,8 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 				}
 				if (hasNumericChild(child_types)) uses.add('branch')
 			} else {
-				if (graphableTypes.has(term.type)) uses.add('plot')
+				// multivalue is excluded: overlapping categories are not supported by this chart
+				if (graphableTypes.has(term.type) && term.type != 'multivalue') uses.add('plot')
 				if (!term.isleaf) uses.add('branch')
 			}
 			return uses
@@ -265,8 +284,18 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 			if (child_types.includes(TermTypes.PROTEOME_ABUNDANCE)) uses.add('branch')
 			return uses
 
-		default:
+		case 'dictionary':
+			// dictionary browsing must show every graphable term, including multivalue
 			if (graphableTypes.has(term.type)) uses.add('plot')
+			if (!term.isleaf) uses.add('branch')
+			return uses
+
+		default:
+			/* multivalue is excluded by default: a sample can belong to multiple
+			categories at once, which a chart must explicitly support (see the
+			barchart/violin/matrix cases above). a new chart type that wants
+			multivalue terms must add its own case rather than rely on default */
+			if (graphableTypes.has(term.type) && term.type != 'multivalue') uses.add('plot')
 			if (!term.isleaf) uses.add('branch')
 			return uses
 	}
