@@ -16,6 +16,7 @@ import type {
 } from '#types'
 import type { ReqQueryAddons } from './types.js'
 import { getData } from '#src/termdb.matrix.js'
+import { get_active_groupset } from '#src/termdb.sql.js'
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
@@ -282,6 +283,11 @@ async function colorAndShapeSamples(
 	for (const [_, result] of Object.entries(results)) max = Math.max(max, Object.keys(result.colorMap).length)
 	const k2c = getColors(max)
 	const scheme = schemeCategory20
+	// when the color term is grouped, categories are keyed by group name and the user-assigned
+	// group colors live on the groupset (tw.q.customset or tw.term.groupsetting.lst[idx]), not on
+	// term.values. without this the groups fall through to the k2c() fallback below and the colors
+	// picked in the term edit menu are silently discarded
+	const colorGroupset = q.colorTW ? get_active_groupset(q.colorTW.term, q.colorTW.q) : undefined
 	// eslint-disable-next-line
 	for (const [_, result] of Object.entries(results)) {
 		if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
@@ -294,8 +300,13 @@ async function colorAndShapeSamples(
 					tvalue = q.colorTW.term.values?.[value.key]
 				}
 
+				const groupColor = colorGroupset?.groups?.find(g => g.name == category)?.color
+
 				if (tvalue && 'color' in tvalue) {
+					// a recolor from the plot legend writes term.values[key].color, so it wins over the groupset
 					value.color = tvalue.color
+				} else if (groupColor) {
+					value.color = groupColor
 				} else if (isNumericTerm(q.colorTW.term)) {
 					// TODO: supporting q.colorTW.term.id since term.id is still
 					// used as key of byTermId{} for gdc (see mayApplyBinning() in ppgdc gdc/queries.js)

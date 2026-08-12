@@ -47,6 +47,15 @@ export interface DataPointInteractionsOpts<T> {
 	getX: (d: T) => number
 	/** Quadtree y accessor (and the y used for distance / per-dot filtering). */
 	getY: (d: T) => number
+	/**
+	 * Optional: map a mouse event to the same coordinate space as `getX`/`getY`.
+	 * Needed when the points live inside a transformed (zoomed/panned) `<g>`, since
+	 * cover-local pixels then diverge from the quadtree's coordinates —
+	 * `e => pointer(e, seriesG.node())` inverts the full screen CTM and lands back
+	 * in the untransformed space the quadtree was built in.
+	 * Default: pixels relative to the cover's bounding rect.
+	 */
+	toLocalCoords?: (event: MouseEvent) => [number, number]
 
 	/**
 	 * Broad-query radius for the quadtree pre-filter, in cover-local pixels.
@@ -122,7 +131,9 @@ export interface ClickContext {
 export class DataPointInteractions<T> {
 	private opts: DataPointInteractionsOpts<T>
 	private qt: Quadtree<T> | null = null
-	private clickMenu: Menu
+	/** The menu opened on click. Also handed to `onSingleClick`/`onMultiClick` overrides
+	 * via `ClickContext`; public so callers and tests can reach it directly. */
+	readonly clickMenu: Menu
 	private clickMenuIsShown = false
 
 	constructor(opts: DataPointInteractionsOpts<T>) {
@@ -168,11 +179,15 @@ export class DataPointInteractions<T> {
 		return typeof r === 'function' ? r() : r
 	}
 
+	private localCoords(event: MouseEvent): [number, number] {
+		if (this.opts.toLocalCoords) return this.opts.toLocalCoords(event)
+		const rect = (this.opts.cover.node() as Element).getBoundingClientRect()
+		return [event.clientX - rect.left, event.clientY - rect.top]
+	}
+
 	private findCandidates(event: MouseEvent): T[] {
 		if (!this.qt) return []
-		const rect = (this.opts.cover.node() as Element).getBoundingClientRect()
-		const mx = event.clientX - rect.left
-		const my = event.clientY - rect.top
+		const [mx, my] = this.localCoords(event)
 		const hits = findPointsInRadius<T>(this.qt, mx, my, this.resolveHitRadius(), this.opts.getX, this.opts.getY)
 
 		const buffer = this.opts.perDotBuffer ?? 0

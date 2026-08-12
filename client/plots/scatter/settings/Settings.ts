@@ -97,4 +97,8 @@ export type Settings = {
 	if given, won't overwrite and use as-is
 	*/
 	itemLabel: string
+	/** Rows shown in the hover tooltip when several dots overlap; the rest collapse into
+	 * an "and N more..." footer. Dense maps can stack far more dots than the default 5,
+	 * so a dataset may want to raise it (cf. manhattan's maxTooltipGenes) */
+	maxTooltipRows: number
 }

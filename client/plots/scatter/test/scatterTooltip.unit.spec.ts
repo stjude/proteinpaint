@@ -1,24 +1,63 @@
 import tape from 'tape'
-import { distance } from '../viewmodel/scatterTooltip.ts'
 import { scaleLinear as d3Linear } from 'd3-scale'
+import { ScatterTooltip } from '../viewmodel/scatterTooltip.ts'
+import { ScatterModel } from '../model/scatterModel.ts'
+import { getDefaultScatterSettings } from '../settings/defaults.ts'
+import { xAxisOffSet, yAxisOffSet } from '#shared'
 
 /** Tests:
- * 	- Distance() should return the correct value when in range
- * 	- Distance() should return in range value for out-of-bounds x value
- * 	- Distance() should return in range value for out-of-bounds y value
+ * 	- dotRadius() tracks the rendered dot size
+ * 	- Neighbours are the dots whose rendered circles overlap
+ * 	- scaleDotTW dots get a neighbourhood matching their larger radius
+ * 	- isVisible() excludes hidden dots and the suppressed reference cloud
+ *
+ * These cover what the deleted distance() got wrong. It clamped both points into
+ * [xAxisScale.invert(0), xAxisScale.invert(svgw)] — but the axis range starts at
+ * xAxisOffSet, so invert(svgw) fell short of the domain max and every sample in the
+ * rightmost ~80px collapsed onto one x, reporting unrelated samples as neighbours.
+ * It also used a fixed 5/zoom threshold unrelated to the rendered dot size. The old
+ * spec's mock (range [0,500] with width 600) is what hid the first bug, so the
+ * geometry below deliberately uses the real offsets.
  */
 
-const mockChart = {
-	xAxisScale: d3Linear().domain([0, 100]).range([0, 500]),
-	yAxisScale: d3Linear().domain([0, 100]).range([500, 0]),
-	width: 600,
-	height: 600
+const svgw = 500
+const svgh = 500
+
+/** Minimal stand-in for the Scatter component. ScatterModel and ScatterTooltip both only
+ * read settings/config/model off it, so the real getScale/getCoordinates/getOpacity run. */
+function getScatterStub(settingsOverrides: any = {}, config: any = {}) {
+	const scatter: any = {
+		settings: Object.assign(getDefaultScatterSettings(), settingsOverrides),
+		config,
+		view: {}
+	}
+	scatter.model = new ScatterModel(scatter)
+	return scatter
 }
 
-const xMin = mockChart.xAxisScale.invert(0)
-const xMax = mockChart.xAxisScale.invert(mockChart.width)
-const yMin = mockChart.yAxisScale.invert(mockChart.height)
-const yMax = mockChart.yAxisScale.invert(0)
+/** `zoom` is the on-screen scale d3-zoom applies to chart.serie; hoverRingFactor() reads it
+ * back off the composite CTM, so the stub exposes it the same way. */
+function getChart(scatter, zoom = 1) {
+	return {
+		id: 'Default',
+		serie: { node: () => ({ getScreenCTM: () => ({ a: zoom }) }) },
+		// same construction as ScatterModelBase.initAxes(): the range is offset by the axis gutter
+		xAxisScale: d3Linear()
+			.domain([0, 100])
+			.range([xAxisOffSet, svgw + xAxisOffSet]),
+		yAxisScale: d3Linear()
+			.domain([100, 0])
+			.range([yAxisOffSet, svgh + yAxisOffSet]),
+		ranges: { scaleMin: 0, scaleMax: 100 },
+		data: { samples: [] },
+		cohortSamples: [],
+		colorLegend: new Map(),
+		shapeLegend: new Map(),
+		_scatter: scatter
+	}
+}
+
+const sample = (x, y, extra: any = {}) => Object.assign({ sampleId: 1, x, y, hidden: {} }, extra)
 
 /**************
  test sections
@@ -29,48 +68,128 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Distance() should return the correct value when in range', function (test) {
+tape('dotRadius() tracks the rendered dot size', function (test) {
 	test.timeoutAfter(100)
 
-	const x1 = 10
-	const y1 = 20
-	const x2 = 30
-	const y2 = 40
+	const scatter = getScatterStub()
+	const tooltip = new ScatterTooltip(scatter)
+	const chart = getChart(scatter)
 
-	const expected = 141.4213562373095
-	const dist = distance(x1, y1, x2, y2, mockChart, xMin, xMax, yMin, yMax)
+	// transform() draws each shape in a 16x16 box scaled by getScale(), so r = 8 * scale
+	// and scale = settings.size / 3
+	test.equal(tooltip.dotRadius(chart, sample(0, 0)), (8 * 0.8) / 3, 'default size 0.8 gives r = 2.13')
 
-	test.ok(typeof dist === 'number', 'distance should return a number')
-	test.equal(dist, expected, 'Should return the correct value for distance')
+	const bigger = getScatterStub({ size: 1.6 })
+	test.equal(
+		new ScatterTooltip(bigger).dotRadius(getChart(bigger), sample(0, 0)),
+		(8 * 1.6) / 3,
+		'doubling settings.size doubles the radius'
+	)
+
+	const ref = getScatterStub({ refSize: 3 })
+	test.equal(
+		new ScatterTooltip(ref).dotRadius(getChart(ref), { x: 0, y: 0, hidden: {} }),
+		(8 * 3) / 3,
+		'a reference dot (no sampleId) uses refSize'
+	)
 	test.end()
 })
 
-tape('Distance() should return in range value for out-of-bounds x value', function (test) {
+tape('Neighbours are the dots whose rendered circles overlap', function (test) {
 	test.timeoutAfter(100)
 
-	const x1 = 10
-	const y1 = 20
-	const x2 = 105
-	const y2 = 40
-	const expected = 485.41219597368996
-	const dist = distance(x1, y1, x2, y2, mockChart, xMin, xMax, yMin, yMax)
+	const scatter = getScatterStub()
+	const tooltip = new ScatterTooltip(scatter)
+	const chart = getChart(scatter)
 
-	test.ok(typeof dist === 'number', 'distance should return a number')
-	test.equal(dist, expected, 'Should return the correct value for distance')
+	// the domain spans 100 over svgw px, so 1 domain unit = 5px
+	const seed = sample(100, 50) // hard against the right edge of the domain
+	const near = sample(99.5, 50) // 2.5px away — the two r=2.13 circles touch
+	const far = sample(90, 50) // 50px away — visibly separate
+
+	test.true(tooltip.overlaps(chart, seed, near), 'a dot 2.5px away overlaps the seed')
+	test.false(
+		tooltip.overlaps(chart, seed, far),
+		'a dot 50px away at the right edge is not a neighbour (the old clamp collapsed both onto one x)'
+	)
+	test.true(tooltip.overlaps(chart, seed, seed), 'the seed overlaps itself')
+
+	// the same pair near the bottom edge, where the old yAxisOffSet clamp misfired
+	const low = sample(50, 0)
+	test.false(tooltip.overlaps(chart, low, sample(50, 10)), 'a dot 50px away at the bottom edge is not a neighbour')
 	test.end()
 })
 
-tape('Distance() should return in range value for out-of-bounds y value', function (test) {
+tape('scaleDotTW dots get a neighbourhood matching their larger radius', function (test) {
 	test.timeoutAfter(100)
 
-	const x1 = 10
-	const y1 = 120
-	const x2 = 30
-	const y2 = 40
-	const expected = 316.22776601683796
-	const dist = distance(x1, y1, x2, y2, mockChart, xMin, xMax, yMin, yMax)
+	const scatter = getScatterStub({ maxShapeSize: 4, minShapeSize: 4 }, { scaleDotTW: { term: { name: 'agedx' } } })
+	const tooltip = new ScatterTooltip(scatter)
+	const chart = getChart(scatter)
 
-	test.ok(typeof dist === 'number', 'distance should return a number')
-	test.equal(dist, expected, 'Should return the correct value for distance')
+	// scale is interpolated to maxShapeSize=minShapeSize=4, so r = 8 * 4/3 = 10.67 each,
+	// giving a 21.3px reach vs 2.13/4.27px for a default-sized dot
+	const seed = sample(100, 50, { scale: 50 })
+	const gap20px = sample(96, 50, { scale: 50 }) // 4 domain units = 20px
+
+	test.equal(tooltip.dotRadius(chart, seed), (8 * 4) / 3, 'scaleDotTW radius comes from the shape size range')
+	test.true(tooltip.overlaps(chart, seed, gap20px), 'a 20px gap IS a neighbour once the dots are that big')
+
+	// the same pair at the default dot size is not — the reach follows the rendered size,
+	// which is the whole point of dropping the fixed 5/zoom threshold
+	const small = getScatterStub()
+	test.false(
+		new ScatterTooltip(small).overlaps(getChart(small), sample(100, 50), sample(96, 50)),
+		'the same 20px gap is NOT a neighbour at the default dot size'
+	)
+	test.end()
+})
+
+tape('Hover ring keeps a constant screen gap at any zoom', function (test) {
+	test.timeoutAfter(100)
+
+	// settings.size 2 as in the ALL-pharmacotyping example, where a fixed 1.6x ring read as a
+	// fat halo once zoomed in: the gap has to be measured in screen px, not dot radii
+	const scatter = getScatterStub({ size: 2 })
+	const tooltip = new ScatterTooltip(scatter)
+	const dot = sample(50, 50)
+
+	/** gap between the dot edge and the ring, in screen px */
+	const gapAtZoom = zoom => {
+		const chart = getChart(scatter, zoom)
+		const r = tooltip.dotRadius(chart, dot)
+		return (tooltip.hoverRingFactor(chart, dot) * r - r) * zoom
+	}
+
+	for (const zoom of [0.2, 1, 3.4, 10]) {
+		test.ok(Math.abs(gapAtZoom(zoom) - 2) < 1e-9, `gap stays 2 screen px at zoom ${zoom}`)
+	}
+
+	// a fixed multiple would have grown with the dot; confirm the factor shrinks instead
+	test.true(
+		tooltip.hoverRingFactor(getChart(scatter, 10), dot) < tooltip.hoverRingFactor(getChart(scatter, 1), dot),
+		'the ring factor tightens as zoom grows'
+	)
+	test.end()
+})
+
+tape('isVisible() excludes hidden dots and the suppressed reference cloud', function (test) {
+	test.timeoutAfter(100)
+
+	const scatter = getScatterStub()
+	const tooltip = new ScatterTooltip(scatter)
+
+	test.true(tooltip.isVisible(sample(1, 1)), 'a plain cohort sample is visible')
+	test.false(
+		tooltip.isVisible(sample(1, 1, { hidden: { category: true } })),
+		'a dot hidden by a color legend click is excluded'
+	)
+	test.true(tooltip.isVisible({ x: 1, y: 1, hidden: {} }), 'a reference dot is visible by default')
+
+	const noRef = new ScatterTooltip(getScatterStub({ showRef: false }))
+	test.false(noRef.isVisible({ x: 1, y: 1, hidden: {} }), 'reference dots are excluded when showRef is off')
+
+	const zeroRef = new ScatterTooltip(getScatterStub({ refSize: 0 }))
+	test.false(zeroRef.isVisible({ x: 1, y: 1, hidden: {} }), 'reference dots are excluded when refSize is 0')
 	test.end()
 })

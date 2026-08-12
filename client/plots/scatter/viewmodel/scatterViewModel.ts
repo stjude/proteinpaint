@@ -23,6 +23,8 @@ export class ScatterViewModel extends ScatterViewModelBase {
 	renderSerie(chart, removePrevious) {
 		super.renderSerie(chart, removePrevious)
 		if (this.scatter.settings.showContour) this.renderContours(chart)
+		// rebuild the hover quadtree against the dots just rendered
+		this.scatterTooltip.attachTo(chart)
 	}
 
 	renderContours(chart) {

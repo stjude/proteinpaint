@@ -52,9 +52,22 @@ tape('\n', function (test) {
 	test.end()
 })
 
+/** Hovering is driven by the cursor over chart.cover, not by landing on a painted dot, so
+ * this dispatches a real mousemove at a dot's screen position. That exercises the whole
+ * coordinate round trip — getCoordinates() builds the quadtree in chart.serie's local space,
+ * and DataPointInteractions maps the event back into it with pointer(event, serieNode). */
+function mousemoveOverDot(scatter, chart, dot) {
+	const { x, y } = scatter.Inner.model.getCoordinates(chart, dot)
+	const ctm = chart.serie.node().getScreenCTM()
+	const clientX = ctm.a * x + ctm.c * y + ctm.e
+	const clientY = ctm.b * x + ctm.d * y + ctm.f
+	chart.cover.node().dispatchEvent(new MouseEvent('mousemove', { clientX, clientY, bubbles: true }))
+	return { clientX, clientY }
+}
+
 tape('Show tooltip for sample', function (test) {
 	test.timeoutAfter(8000)
-	test.plan(2)
+	test.plan(4)
 	const holder = getHolder()
 	runpp({
 		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
@@ -69,13 +82,27 @@ tape('Show tooltip for sample', function (test) {
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
 		const chart = scatter.Inner.model.charts[0]
-		const sample = mockGroups[0].items[0]
-		scatter.Inner.vm.scatterTooltip.showSampleTooltip(sample, 100, 100, chart)
+		const scatterTooltip = scatter.Inner.vm.scatterTooltip
+		const dot = chart.data.samples.find(s => 'sampleId' in s && scatterTooltip.isVisible(s))
+
+		mousemoveOverDot(scatter, chart, dot)
+
 		const tooltipDiv = scatter.Inner.view.dom.tooltip.d.node()
-		const tree = scatter.Inner.vm.scatterTooltip.tree
-		const parentNode = tree.find(n => n.id == 'Acute lymphoblastic leukemia' && n.samples.length == 3)
-		test.true(parentNode != null, 'Tooltip should have 3 samples for Acute lymphoblastic leukemia')
-		test.true(tooltipDiv != null, 'Tooltip should be shown')
+		test.true(tooltipDiv?.innerHTML.length > 0, 'Tooltip should be shown with content')
+		test.true(tooltipDiv.textContent.includes(dot.sample), `Tooltip should name the hovered sample ${dot.sample}`)
+
+		// every ringed dot must be one whose rendered circle overlaps the hovered dot, and all
+		// such dots must be ringed (capped at the module's maxTooltipRows)
+		const expected = chart.data.samples.filter(
+			s => scatterTooltip.isVisible(s) && scatterTooltip.overlaps(chart, dot, s)
+		)
+		const rings = chart.serie.select('g.sjpp-scatter-hover').selectAll('path').nodes()
+		test.true(rings.length > 0, 'Hovered dot should be ringed')
+		test.equal(
+			rings.length,
+			Math.min(expected.length, scatter.Inner.settings.maxTooltipRows),
+			`Ring count should match the ${expected.length} overlapping dot(s), capped at ${scatter.Inner.settings.maxTooltipRows}`
+		)
 		scatter.Inner.view.dom.tooltip.hide()
 
 		if (test['_ok']) holder.remove()
