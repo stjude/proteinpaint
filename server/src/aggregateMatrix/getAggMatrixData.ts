@@ -2,7 +2,6 @@ import type { TermdbAggregateMatrixRequest, ValidAggMatrixResponse, AggMatrixDot
 import { PSEUDOBULK, GENE_EXPRESSION } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
-import { scaleLinear } from 'd3-scale'
 
 type ColData = {
     column: string
@@ -57,9 +56,6 @@ export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any)
 
     // One inner array per entry term (row), each containing one dot per column
     const data: AggMatrixDot[][] = []
-    const sizeScale = scaleLinear()
-        .domain([sizeMin, sizeMax])
-        .range([q.minDotSize, q.maxDotSize])
 
     for (const { terms, id: sectionId } of rowSections) {
         for (const { id: term } of terms) {
@@ -72,7 +68,6 @@ export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any)
                     column: col.termId,
                     colorValue: col.colorTmp[term] ?? 0,
                     sizeValue,
-                    dotSize: sizeScale(sizeValue)
                 }
             })
             data.push(row)
@@ -81,6 +76,7 @@ export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any)
 
     return {
         colorScale: { min: colorMin, max: colorMax },
+        sizeScale: { min: sizeMin, max: sizeMax },
         data,
         axesLayout: {
             rows: { sections: rowSections, rowCount, longestLabel: rowLongest },

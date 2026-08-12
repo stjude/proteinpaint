@@ -21,6 +21,7 @@ export class AggMatrixViewModel {
     lastY!: number
     rowSectionRotateFlags: boolean[] = []
     colSectionRotateFlags: boolean[] = []
+    sizeScale!: (value: number) => number
 
     readonly topPad = 20
     readonly hoziPad = 20
@@ -75,6 +76,9 @@ export class AggMatrixViewModel {
         this.getPlotDimensions()
         this.getAxisLabelPositions(rowData, colData, cellSize)
         this.setColorScale(settings, data.colorScale)
+        this.sizeScale = scaleLinear()
+            .domain([data.sizeScale.min, data.sizeScale.max])
+            .range([settings.minDotSize, settings.maxDotSize]).clamp(true)
         this.getDotPositions(data.data, cellSize, settings)
     }
 
@@ -148,7 +152,8 @@ export class AggMatrixViewModel {
                 scale: () => '',
                 absMin: 0,
                 absMax: 0
-            }
+            },
+            sizeScale: () => 0
         }
     }
 
@@ -255,7 +260,7 @@ export class AggMatrixViewModel {
                 const dotPos = {
                     x: this.lastX + (cellSize / 2),
                     y: this.lastY + (cellSize / 2),
-                    size: dot.dotSize,
+                    size: this.sizeScale(dot.sizeValue) ?? 0,
                     color: this.viewData.colorScale.scale(dot?.colorValue) ?? 'white',
                     row: dot.row,
                     rowSection: dot.rowSection,

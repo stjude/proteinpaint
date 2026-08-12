@@ -10,10 +10,6 @@ export type TermdbAggregateMatrixRequest = {
     gradientMethod: string
     /** Aggregation method to determine the dot sizes. */
     sizeMethod: string
-    /** Min size of the dots in pixels */
-    minDotSize: number
-    /** Max size of the dots in pixels */
-    maxDotSize: number
     filter?: any
     filter0?: any
 }
@@ -31,8 +27,6 @@ export type AggMatrixDot = {
     colorValue: number
     /** Raw aggregate value for size (returned for tooltip display) */
     sizeValue: number
-    /** Computed dot size in pixels */
-    dotSize: number
 }
 
 export type AxisTermEntry = { id: string, label: string }
@@ -69,6 +63,8 @@ export type AxesLayout = {
 export type ValidAggMatrixResponse = {
     /** Min and max raw values for the color gradient */
     colorScale: { min: number, max: number }
+    /** Min and max raw values for the dot sizes */
+    sizeScale: { min: number, max: number }
     /** Array of rows, each row is an array of dots ordered left to right by column */
     data: AggMatrixDot[][]
     /** Axes structure for generating x/y axis labels */
