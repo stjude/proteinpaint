@@ -445,11 +445,8 @@ export function isoformRangeSelect(opts: IsoformRangeSelectOpts) {
 	const applyBtn = controlDiv
 		.append('button')
 		.attr('data-testid', 'sjpp-isoformRangeSelect-apply')
-		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-		.style('border-radius', '13px')
 		.style('margin-left', '8px')
-		.style('font-size', '.9em')
-		.text('APPLY')
+		.text('Apply')
 		.on('click', () => {
 			if (!range) return
 			callback({ chr, start: range.start, stop: range.stop })
@@ -458,7 +455,6 @@ export function isoformRangeSelect(opts: IsoformRangeSelectOpts) {
 		.append('button')
 		.attr('data-testid', 'sjpp-isoformRangeSelect-clear')
 		.style('margin-left', '5px')
-		.style('font-size', '.9em')
 		.text('Clear')
 		.on('click', () => {
 			setRange(null)

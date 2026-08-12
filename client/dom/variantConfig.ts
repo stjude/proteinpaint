@@ -107,6 +107,11 @@ export function renderVariantConfig(arg: Arg) {
 	them over */
 	const isSvFusion = dt == dtsv || dt == dtfusionrna
 	const canSelectBreakpoint = isSvFusion && !!arg.getGeneModels && mnames.some(m => m.breakpoints?.length)
+	/* a sv/fusion has a single mutation class, hardcoded per dt by the data query, so a
+	checklist of it is a checkbox with nothing to choose between. it is not rendered, and
+	the class is implied to be selected instead: classTableDiv stays undefined, which both
+	getCheckedClasses() and the apply handler read as all classes being selected */
+	const hideClassList = isSvFusion && values.length == 1
 	// range on the term's own gene, undefined when there is none
 	let selfBreakpointRange = arg.selfBreakpointRange
 	// ranges on the partner gene of a variant, k: index of the variant in mnames[]
@@ -165,43 +170,51 @@ export function renderVariantConfig(arg: Arg) {
 	let updateMnameRowDisplay = () => {}
 	// returns the specific variants (amino acid changes) checked in the list
 	let getCheckedMnames = (): { m: MnameItem; i: number }[] => []
+	// note saying the variants list is restricted by the range on the term's own gene
+	let selfRangeNote: any
 	// true when the variants span multiple genes, so labels name the gene
 	let showGeneInMnames = false
 	if (values.length) {
-		// variant data present, display class checklist and specific
-		// variants list (when available) side by side
+		/* variant data present, display class checklist and specific variants list (when
+		available) side by side. with the checklist hidden (see hideClassList) its column
+		would hold the breakpoint control alone, next to a variants list that the control
+		filters; the control is stacked above the list instead */
+		const aboveDiv = hideClassList ? variantsDiv.append('div') : undefined
 		const flexDiv = variantsDiv.append('div').style('display', 'flex').style('gap', '25px')
-		const classDiv = flexDiv.append('div').attr('data-testid', 'sjpp-variantConfig-class')
-		classDiv.append('div').style('opacity', 0.7).style('margin-bottom', '5px').text(dt2label[dt])
-		const tableDiv = classDiv.append('div').style('margin-left', '5px').style('font-size', '0.8rem')
-		classTableDiv = tableDiv
-		const rows: any[] = []
-		const selectedIdxs: number[] = []
-		for (const [i, m] of values.entries()) {
-			const label = m.label || m.key
-			rows.push([{ value: label }])
-			if (selectedValues.find(s => s.key == m.key)) selectedIdxs.push(i)
+		const classDiv = hideClassList ? undefined : flexDiv.append('div').attr('data-testid', 'sjpp-variantConfig-class')
+		if (!hideClassList) {
+			classDiv.append('div').style('opacity', 0.7).style('margin-bottom', '5px').text(dt2label[dt])
+			const tableDiv = classDiv.append('div').style('margin-left', '5px').style('font-size', '0.8rem')
+			classTableDiv = tableDiv
+			const rows: any[] = []
+			const selectedIdxs: number[] = []
+			for (const [i, m] of values.entries()) {
+				const label = m.label || m.key
+				rows.push([{ value: label }])
+				if (selectedValues.find(s => s.key == m.key)) selectedIdxs.push(i)
+			}
+			const columns: any[] = [{ label: 'tvs' }]
+			renderTable({
+				rows,
+				columns,
+				div: tableDiv,
+				maxWidth: '40vw',
+				maxHeight: '40vh',
+				noButtonCallback: () => updateMnameRowDisplay(),
+				showHeader: false,
+				striped: false,
+				showLines: false,
+				selectedRows: selectedIdxs
+			})
 		}
-		const columns: any[] = [{ label: 'tvs' }]
-		renderTable({
-			rows,
-			columns,
-			div: tableDiv,
-			maxWidth: '40vw',
-			maxHeight: '40vh',
-			noButtonCallback: () => updateMnameRowDisplay(),
-			showHeader: false,
-			striped: false,
-			showLines: false,
-			selectedRows: selectedIdxs
-		})
 		if (canSelectBreakpoint && arg.gene) {
 			// control to restrict the breakpoint on the term's own gene, e.g. to select
 			// the cases of only one of the two BCR breakpoint clusters of BCR::ABL1
-			const selfDiv = classDiv
+			const selfDiv = (aboveDiv || classDiv)
 				.append('div')
 				.attr('data-testid', 'sjpp-variantConfig-selfBreakpoint')
-				.style('margin', '8px 0 0 5px')
+				// under the checklist when beside the variants list, above it when stacked
+				.style('margin', aboveDiv ? '0 0 8px 5px' : '8px 0 0 5px')
 				.style('font-size', '.8rem')
 			selfDiv.append('span').style('opacity', 0.7).text(`${arg.gene} breakpoint `)
 			const selfBtn = selfDiv
@@ -234,6 +247,8 @@ export function renderVariantConfig(arg: Arg) {
 					callback: range => {
 						selfBreakpointRange = range || undefined
 						updateSelfBtn()
+						// the variants list only holds those still reachable under the range
+						updateMnameRowDisplay()
 					}
 				})
 			})
@@ -267,6 +282,17 @@ export function renderVariantConfig(arg: Arg) {
 				.style('opacity', 0.6)
 				.style('margin', '3px 0')
 				.text('Checked variants replace the class selection; classes apply when no variant is checked.')
+			// says that the list is restricted by the range on the term's own gene,
+			// filled by updateMnameRowDisplay()
+			if (canSelectBreakpoint && arg.gene) {
+				selfRangeNote = listWrapper
+					.append('div')
+					.attr('data-testid', 'sjpp-variantConfig-selfBreakpoint-note')
+					.style('font-size', '.75em')
+					.style('opacity', 0.6)
+					.style('margin', '3px 0')
+					.style('display', 'none')
+			}
 			const mnameListDiv = listWrapper.append('div').style('font-size', '0.8rem')
 			// when the term covers multiple genes (geneset), indicate the gene of
 			// each variant in its own column
@@ -354,8 +380,10 @@ export function renderVariantConfig(arg: Arg) {
 			}
 			updateMnameRowDisplay = () => {
 				const checkedClasses = getCheckedClasses()
-				// show only variants of checked classes; unchecking a class also
-				// clears its checked variants so a hidden selection cannot be applied
+				// show only variants of checked classes, and of the range on the term's
+				// own gene when one is set; unchecking a class or narrowing the range also
+				// clears the checked variants it hides, so that a hidden selection cannot
+				// be applied
 				// NOTE: the checkbox value attribute is the original row index (see renderTable)
 				let visibleCount = 0
 				mnameListDiv
@@ -364,7 +392,7 @@ export function renderVariantConfig(arg: Arg) {
 					.style('display', function (this: any) {
 						const checkbox = this.querySelector('input[type=checkbox]')
 						const m = mnames[Number(checkbox.value)]
-						if (checkedClasses.has(m.class)) {
+						if (checkedClasses.has(m.class) && isInSelfBreakpointRange(m)) {
 							visibleCount++
 							return ''
 						}
@@ -373,6 +401,17 @@ export function renderVariantConfig(arg: Arg) {
 					})
 				visibleMnameCount = visibleCount
 				updateToggle()
+				if (selfRangeNote) {
+					selfRangeNote
+						.style('display', selfBreakpointRange ? 'block' : 'none')
+						.text(
+							selfBreakpointRange
+								? `Only variants with a ${arg.gene} breakpoint in ${breakpointRangeLabel(
+										selfBreakpointRange
+								  )} are listed.`
+								: ''
+						)
+				}
 			}
 			getCheckedMnames = () => {
 				const checked: { m: MnameItem; i: number }[] = []
@@ -452,10 +491,8 @@ export function renderVariantConfig(arg: Arg) {
 	const applyBtn = holder
 		.append('div')
 		.append('button')
-		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-		.style('border-radius', '13px')
+		.attr('data-testid', 'sjpp-variantConfig-apply')
 		.style('margin-top', '15px')
-		.style('font-size', '.8em')
 		.property('disabled', genotype == 'variant' && !values.length)
 		.text('APPLY')
 		.on('click', () => {
@@ -484,13 +521,18 @@ export function renderVariantConfig(arg: Arg) {
 						if (partnerRange) v.partnerBreakpointRange = partnerRange
 						config.values.push(v)
 					}
-				} else {
+				} else if (classTableDiv) {
 					// no specific variant selected, use the checked mutation classes
 					// NOTE: the checkbox value attribute is the original row index (see renderTable)
-					const checkboxes = classTableDiv ? classTableDiv.select('tbody').selectAll('input').nodes() : []
+					const checkboxes = classTableDiv.select('tbody').selectAll('input').nodes()
 					for (const c of checkboxes) {
 						if (c.checked) config.values.push(values[Number(c.value)])
 					}
+				} else {
+					// the checklist is not rendered, so its classes are all selected. for a
+					// sv/fusion this is its single class (see hideClassList); with no variant
+					// data at all there is no class to apply and values[] is empty
+					config.values.push(...values)
 				}
 				if (dt == dtsnvindel) {
 					// get mutation count
@@ -509,10 +551,28 @@ export function renderVariantConfig(arg: Arg) {
 			arg.callback(config)
 		})
 
-	/** classes currently checked in the class table */
+	/* whether a variant still has an event under the range on the term's own gene, i.e.
+	whether checking it could match any sample. a variant whose events all break outside
+	the range, or that has no charted breakpoint at all, has none: an event without a
+	coordinate cannot satisfy a range on the server either (see isSelfBreakpointInRange
+	in server/src/svfusion.breakpoint.ts).
+	an entry absent from the current data is exempt, as it is only listed to preserve a
+	saved selection, and hiding it would silently widen that selection to its class */
+	function isInSelfBreakpointRange(m: MnameItem) {
+		if (!selfBreakpointRange) return true
+		if (!m.samplecount) return true
+		const { start, stop } = selfBreakpointRange
+		return !!m.breakpoints?.some(b => b.pos >= start && b.pos <= stop)
+	}
+
+	/** classes currently checked in the class table, or all of them when it is not rendered */
 	function getCheckedClasses() {
 		const checked = new Set()
-		if (!classTableDiv) return checked
+		if (!classTableDiv) {
+			// no checklist to read, e.g. the single class of a sv/fusion (see hideClassList)
+			for (const v of values) checked.add(v.key)
+			return checked
+		}
 		// NOTE: iterating position matches values[], as the class table is never filtered
 		const checkboxes = classTableDiv.select('tbody').selectAll('input').nodes()
 		for (const [i, c] of checkboxes.entries()) {

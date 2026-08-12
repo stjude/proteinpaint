@@ -33,6 +33,11 @@ APPLY rendered by renderTable(), which is still styled with the .sjpp_apply_btn 
 The DELETE sibling in the same cell is excluded. */
 const rangeApplySelector = 'table button:not(.sjpp_delete_btn)'
 
+/* The APPLY buttons of the gene variant menus are also vanilla <button>, so they are
+found by the data-testid set by dom/variantConfig.ts and dom/cnvConfig.ts */
+const variantApplySelector = '[data-testid="sjpp-variantConfig-apply"]'
+const cnvApplySelector = '[data-testid="sjpp-cnvConfig-apply"]'
+
 function getOpts(_opts = {}) {
 	const holder = d3s
 		.select('body')
@@ -921,7 +926,7 @@ tape('tvs: Gene Variant - SNV/indel', async test => {
 		// --- trigger and check tip menu ---
 		pill.click()
 		editOpt.click()
-		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+		const applyBtn = await detectOne({ target: tipd.node(), selector: variantApplySelector })
 
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
 		// mutation classes are listed in the class section, separate from the
@@ -1013,7 +1018,7 @@ tape('tvs: Gene Variant - SNV/indel - Wildtype', async test => {
 		// --- trigger and check tip menu ---
 		pill.click()
 		editOpt.click()
-		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+		const applyBtn = await detectOne({ target: tipd.node(), selector: variantApplySelector })
 
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
 		const classDiv = tipd.select('[data-testid="sjpp-variantConfig-class"]')
@@ -1100,7 +1105,7 @@ tape('tvs: Gene Variant - CNV - categorical', async test => {
 		// --- trigger and check tip menu ---
 		pill.click()
 		editOpt.click()
-		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+		const applyBtn = await detectOne({ target: tipd.node(), selector: variantApplySelector })
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
 		const classDiv = tipd.select('[data-testid="sjpp-variantConfig-class"]')
 		test.equal(classDiv.selectAll("input[name^='sjpp-input']").size(), 1, 'Should have a checkbox for each value')
@@ -1217,7 +1222,7 @@ tape('tvs: Gene Variant - CNV - continuous', async test => {
 		const genotypeRadio = tipd.selectAll("input[type='radio']").nodes()
 		test.equal(genotypeRadio.length, 2, 'Should have 2 genotype radio buttons')
 
-		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+		const applyBtn = await detectOne({ target: tipd.node(), selector: cnvApplySelector })
 		test.ok(applyBtn, 'Should have 1 button to apply changes')
 
 		genotypeRadio[1].checked = true
@@ -1305,12 +1310,13 @@ tape('tvs: Gene Variant - Fusion', async test => {
 		// --- trigger and check tip menu ---
 		pill.click()
 		editOpt.click()
-		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+		const applyBtn = await detectOne({ target: tipd.node(), selector: variantApplySelector })
 
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
+		/* a fusion has a single mutation class, hardcoded per dt by the data query, so the
+		class checklist offers no choice and is not rendered; the class is implied instead */
 		const classDiv = tipd.select('[data-testid="sjpp-variantConfig-class"]')
-		test.equal(classDiv.selectAll("input[name^='sjpp-input']").size(), 1, 'Should have a checkbox for each value')
-		test.equal(classDiv.selectAll("input[name^='sjpp-input']:checked").size(), 1, 'Should have 1 box checked')
+		test.equal(classDiv.selectAll("input[name^='sjpp-input']").size(), 0, 'Should not have a class checkbox')
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}
