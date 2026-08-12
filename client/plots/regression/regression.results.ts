@@ -1085,7 +1085,7 @@ function setRenderers(self) {
 			// get term data
 			const termdata = result.type3.terms[tid]
 			const tw = self.getIndependentInput(tid).term
-			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 			// col 1: variable
 			const termNameTd = tr.append('td').style('padding', '8px')
 			fillTdName(termNameTd, tw.term.name)
