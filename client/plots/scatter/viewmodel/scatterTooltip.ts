@@ -1,16 +1,17 @@
 import { mclass } from '#shared/common.js'
-import { roundValueAuto } from '#shared/roundValue.js'
-import { getDateStrFromNumber } from '#shared/terms.js'
-import { SINGLECELL_GENE_EXPRESSION } from '#types'
 import { rgb } from 'd3-color'
 import { pointer } from 'd3-selection'
 import type { Scatter } from '../scatter'
 import { table2col, shapesArray, DataPointInteractions, type ActionMenuItem } from '#dom'
+import { getCategoryValue, buildSampleTableData } from './scatterSampleTable'
 
-/** Forgiveness margin, in serie-local px, around each dot's rendered radius. */
-const HIT_BUFFER_PX = 2
-/** Gap between a picked dot's edge and its hover ring, in SCREEN px. */
-const HOVER_RING_MARGIN_PX = 2
+/** Forgiveness margin around each dot's rendered edge, in SCREEN px. Kept in screen units
+ * so the grab area feels the same at any zoom — in serie-local units it would inflate along
+ * with the dots, reaching 30px of slop at 10x. */
+export const HIT_BUFFER_PX = 3
+/** Gap between a picked dot's edge and its hover ring, in SCREEN px. Slightly tighter than
+ * HIT_BUFFER_PX: the ring marks the dot, it is not meant to trace the whole hit zone. */
+export const HOVER_RING_MARGIN_PX = 2
 
 /**
  * Adapter between the scatter plot and the shared cover -> quadtree -> hover ring ->
@@ -43,12 +44,21 @@ export class ScatterTooltip {
 		return 8 * this.scatter.model.getScale(chart, s)
 	}
 
-	/** Largest radius any dot in this chart can have — the broad quadtree query must not
-	 * under-select before the per-dot filter runs. */
-	maxDotRadius(chart) {
-		let max = 0
-		for (const s of chart.data.samples) max = Math.max(max, this.dotRadius(chart, s))
-		return max
+	/** Projected center + rendered radius of every dot, built once per attach. Hover fires on
+	 * every mousemove, so recomputing this per event turned plain cursor movement into an O(n)
+	 * sweep of d3 scale calls over up to maxSvgSamplesCutoff (20k) samples. Everything it
+	 * depends on — the axis scales and the size settings — is fixed for the life of an attach,
+	 * and any change to them re-renders, which re-attaches. */
+	buildGeom(chart) {
+		const geom = new Map<any, { x: number; y: number; r: number }>()
+		let maxR = 0
+		for (const s of chart.data.samples) {
+			const { x, y } = this.scatter.model.getCoordinates(chart, s)
+			const r = this.dotRadius(chart, s)
+			if (r > maxR) maxR = r
+			geom.set(s, { x, y, r })
+		}
+		return { geom, maxR }
 	}
 
 	isVisible(s) {
@@ -57,21 +67,43 @@ export class ScatterTooltip {
 		return this.scatter.model.getOpacity(s) > 0
 	}
 
-	/** Do the two dots' rendered circles touch? This is the definition of "neighbour": dots
-	 * that visually sit on top of each other. Both radii and both centers are in serie-local
-	 * px, so the answer does not change with zoom — unlike the fixed 5/zoom threshold this
-	 * replaced, which caught ~12 dot radii when zoomed out and only coincident dots when
-	 * zoomed in. */
-	overlaps(chart, a, b) {
+	/** Is `b` inside the hover neighbourhood of `a`? The reach is the two dots' radii added
+	 * together — "close enough that they would overlap at 100%" — but held constant in SCREEN
+	 * px, so it does not stretch as you zoom.
+	 *
+	 * Plain circle overlap looks zoom-invariant (uniform scaling preserves it) but is not what
+	 * the eye sees: the dots themselves grow with zoom, so at 11x a pair that merely touches
+	 * spans ~48 screen px and the tooltip reports dots strewn right across the plot. Dividing
+	 * the reach by the current scale pins it at ~4px on screen at any zoom, matching the
+	 * screen-constant neighbourhood the old 5/zoom threshold happened to give. At 1x this is
+	 * exactly circle overlap; it only bites once zoom would have inflated it.
+	 *
+	 * `scale` is screenScale(chart), hoisted by the caller — it is a layout read, and this runs
+	 * once per sample. */
+	isNeighbour(chart, a, b, scale = this.screenScale(chart)) {
 		const ca = this.scatter.model.getCoordinates(chart, a)
 		const cb = this.scatter.model.getCoordinates(chart, b)
-		return Math.hypot(ca.x - cb.x, ca.y - cb.y) <= this.dotRadius(chart, a) + this.dotRadius(chart, b)
+		const reach = (this.dotRadius(chart, a) + this.dotRadius(chart, b)) / scale
+		return Math.hypot(ca.x - cb.x, ca.y - cb.y) <= reach
 	}
 
 	/** Screen px per serie-local px. Reads the composite CTM rather than the zoom state so it
 	 * stays right no matter which ancestor carries the transform. */
 	screenScale(chart) {
 		return chart.serie?.node()?.getScreenCTM()?.a || 1
+	}
+
+	/** Serie-local px that a constant SCREEN-px length occupies at the current zoom. */
+	fromScreenPx(chart, px) {
+		return px / this.screenScale(chart)
+	}
+
+	/** How close the cursor must get to a dot's center to pick it, in serie-local px: the
+	 * radius you can see, plus a forgiveness margin that stays the same size on screen at any
+	 * zoom. Leaving the margin in serie-local px would inflate it with everything else — at
+	 * 10x zoom a 3px slop becomes 30 screen px of grab area around every dot. */
+	hitRadiusFor(chart, s) {
+		return this.dotRadius(chart, s) + this.fromScreenPx(chart, HIT_BUFFER_PX)
 	}
 
 	/** Scale factor passed to model.transform() to draw the hover ring. The gap is a constant
@@ -91,13 +123,16 @@ export class ScatterTooltip {
 		return g
 	}
 
+	/** destroy() rather than detach(): attachTo() builds a fresh DataPointInteractions on every
+	 * renderSerie, and each one owns a Menu that adds a div to <body> plus a body-level
+	 * mousedown listener. detach() alone would leave both behind on every render. */
 	detach(chartId?: string) {
 		if (chartId == undefined) {
-			for (const dpi of this.byChart.values()) dpi.detach()
+			for (const dpi of this.byChart.values()) dpi.destroy()
 			this.byChart.clear()
 			return
 		}
-		this.byChart.get(chartId)?.detach()
+		this.byChart.get(chartId)?.destroy()
 		this.byChart.delete(chartId)
 	}
 
@@ -107,6 +142,7 @@ export class ScatterTooltip {
 		if (this.scatter.config.lassoOn) return
 		if (!chart.cover || !chart.data?.samples?.length) return
 		const model = this.scatter.model
+		const { geom, maxR } = this.buildGeom(chart)
 
 		const dpi = new DataPointInteractions<any>({
 			cover: chart.cover,
@@ -114,15 +150,32 @@ export class ScatterTooltip {
 			hoverTip: this.view.dom.tooltip,
 			points: chart.data.samples,
 			toLocalCoords: event => pointer(event, chart.serie.node()) as [number, number],
-			getX: s => model.getCoordinates(chart, s).x,
-			getY: s => model.getCoordinates(chart, s).y,
-			hitRadius: () => this.maxDotRadius(chart) + HIT_BUFFER_PX,
-			perDotRadius: s => this.dotRadius(chart, s),
-			perDotBuffer: HIT_BUFFER_PX,
+			getX: s => geom.get(s)!.x,
+			getY: s => geom.get(s)!.y,
+			// broad quadtree query; must not under-select before the per-dot filter runs
+			hitRadius: () => maxR + this.fromScreenPx(chart, HIT_BUFFER_PX),
+			perDotRadius: s => geom.get(s)!.r + this.fromScreenPx(chart, HIT_BUFFER_PX),
 			isHidden: s => !this.isVisible(s),
 			// the cursor picks the nearest dot; the cluster then adds every dot whose rendered
-			// circle overlaps that one, so "neighbour" means "visibly on top of each other"
-			getCluster: (seed, all) => all.filter(s => this.isVisible(s) && this.overlaps(chart, seed, s)),
+			// circle overlaps that one, so "neighbour" means "visibly on top of each other".
+			// sorted nearest-first because the module truncates this list to maxTooltipRows —
+			// in chart.data.samples order the dot actually under the cursor could be cut.
+			getCluster: (seed, all) => {
+				const a = geom.get(seed)!
+				// one layout read for the whole sweep, not one per sample
+				const scale = this.screenScale(chart)
+				return all
+					.filter(s => {
+						if (!this.isVisible(s)) return false
+						const b = geom.get(s)!
+						return Math.hypot(a.x - b.x, a.y - b.y) <= (a.r + b.r) / scale
+					})
+					.sort((s1, s2) => {
+						const b1 = geom.get(s1)!,
+							b2 = geom.get(s2)!
+						return Math.hypot(a.x - b1.x, a.y - b1.y) - Math.hypot(a.x - b2.x, a.y - b2.y)
+					})
+			},
 			toHoverSpec: s => ({
 				path: model.getShape(chart, s),
 				transform: model.transform(chart, s, this.hoverRingFactor(chart, s)),
@@ -138,6 +191,8 @@ export class ScatterTooltip {
 			getRowKey: s => s.sample || s.cellId || String(s.sampleId ?? `${s.x},${s.y}`)
 		})
 		dpi.attach()
+		// namespaced so it sits alongside the module's own click handler rather than replacing it
+		chart.cover.on('click.sjpp-scatter-searchmenu', () => this.scatter.interactivity.searchMenu?.hide())
 		this.byChart.set(chart.id, dpi)
 	}
 
@@ -227,43 +282,9 @@ export class ScatterTooltip {
 			.attr('fill', fontColor)
 	}
 
-	/** Flat table for the multi-hit hover tooltip and click menu. Mirrors the column set the
-	 * lasso's sample table already uses. */
+	/** Flat table for the multi-hit hover tooltip and click menu. */
 	buildTableData(dots) {
-		const config = this.scatter.config
-		const labels = config.controlLabels
-		const hasName = dots.some(d => d.sample || d.cellId)
-		const hasInfo = dots.some(d => 'info' in d)
-
-		const columns: any[] = []
-		if (hasName) columns.push({ label: labels?.Sample || this.scatter.settings.itemLabel })
-		if (config.term) columns.push({ label: config.term.term.name })
-		if (config.term2) columns.push({ label: config.term2.term.name })
-		if (config.colorTW) columns.push({ label: config.colorTW.term.name })
-		if (config.shapeTW) columns.push({ label: config.shapeTW.term.name })
-		if (config.scaleDotTW) columns.push({ label: config.scaleDotTW.term.name, sortable: true })
-		if (hasInfo) columns.push({ label: 'Info' })
-
-		const rows = dots.map(d => {
-			const row: any[] = []
-			if (hasName) row.push({ value: d.sample || d.cellId || '' })
-			if (config.term) row.push({ value: this.getCategoryValue('x', d, config.term) })
-			if (config.term2) row.push({ value: this.getCategoryValue('y', d, config.term2) })
-			if (config.colorTW) row.push({ value: this.getCategoryValue('category', d, config.colorTW) })
-			if (config.shapeTW) row.push({ value: this.getCategoryValue('shape', d, config.shapeTW) })
-			if (config.scaleDotTW) row.push({ value: this.getCategoryValue('scale', d, config.scaleDotTW) })
-			if (hasInfo)
-				row.push({
-					value:
-						'info' in d
-							? Object.entries(d.info)
-									.map(([k, v]) => `${k}: ${v}`)
-									.join(', ')
-							: ''
-				})
-			return row
-		})
-		return { columns, rows }
+		return buildSampleTableData(this.scatter.config, this.scatter.settings.itemLabel, dots)
 	}
 
 	getActions(sample): ActionMenuItem[] {
@@ -271,11 +292,15 @@ export class ScatterTooltip {
 		const interactivity = this.scatter.interactivity
 		const actions: ActionMenuItem[] = []
 
-		if (config.colorTW?.term.type == 'geneVariant')
-			actions.push({ label: 'Lollipop', onClick: () => interactivity.openLollipop(config.colorTW.term.name) })
-
-		// the plots below are enabled for cohort samples only, and not in the single cell plot
+		// reference-cloud dots carry no mutation data, so none of these apply to them; the plots
+		// below are also for cohort samples only, and not in the single cell plot
 		if (!('sampleId' in sample) || config.singleCellPlot) return actions
+
+		// the gene may be carried by either term — the old tooltip offered Lollipop from
+		// whichever of the color/shape rows happened to be a geneVariant
+		const geneTW = [config.colorTW, config.shapeTW].find(tw => tw?.term.type == 'geneVariant')
+		if (geneTW) actions.push({ label: 'Lollipop', onClick: () => interactivity.openLollipop(geneTW.term.name) })
+
 		const queries = this.scatter.state.termdbConfig.queries
 		if (this.scatter.state.currentCohortChartTypes.includes('sampleView'))
 			actions.push({ label: 'Sample view', onClick: () => interactivity.openSampleView(sample) })
@@ -287,26 +312,6 @@ export class ScatterTooltip {
 	}
 
 	getCategoryValue(category, d, tw, includeMutation = false) {
-		if (category == '') return ''
-		let value = d[category]
-		if (tw?.term.type == 'geneVariant' && tw.q?.type == 'values') {
-			const mutation = value.split(', ')[0]
-			for (const id in mclass) {
-				const class_info = mclass[id]
-				if (mutation == class_info.label) {
-					const mname = d.cat_info[category].find(m => m.class == class_info.key).mname
-					if (mname && includeMutation) value = `${mname} ${value}`
-				}
-			}
-		}
-		if (tw?.term.type == 'date') value = getDateStrFromNumber(value)
-		/** Not all scge terms will have a geneExp value, such as when the scge term
-		 * is a coordTW. When no geneExp value, value = d[category] is the correct value. */ else if (
-			tw?.term.type == SINGLECELL_GENE_EXPRESSION &&
-			Number.isFinite(d.geneExp)
-		) {
-			value = roundValueAuto(d.geneExp)
-		} else if (typeof value == 'number' && value % 1 != 0) value = roundValueAuto(value)
-		return value
+		return getCategoryValue(category, d, tw, includeMutation)
 	}
 }

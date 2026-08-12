@@ -256,9 +256,12 @@ export class Menu {
 		if (x + p.width > width) this.d.style('left', '').style('right', '5px')
 		else this.d.style('left', x + 'px').style('right', '')
 
-		// for now, the users have to scroll down to see the entire menu if there is not enough height for the menu
-		// TODO: reposition the menu to make it at least partially visible.
-		this.d.style('top', y + 'px').style('bottom', '')
+		// does not fit to the bottom: flip above the point, matching show(down=false). without
+		// this a menu opened near the window bottom runs off-screen and cannot be scrolled to
+		// when the page itself does not scroll (e.g. a hover tooltip over a tall plot)
+		if (height - _y < middley && _y - window.scrollY > p.height) {
+			this.d.style('top', `${y - p.height}px`).style('bottom', '')
+		} else this.d.style('top', y + 'px').style('bottom', '')
 		this.d.transition().style('opacity', 1)
 
 		if (opts.elem) this.setTabNavigation(opts.elem)
@@ -526,6 +529,9 @@ export class Menu {
 
 	destroy() {
 		this.stopObserver()
+		// the constructor registers a uniquely-namespaced mousedown listener on <body>; without
+		// removing it here every discarded Menu leaks a listener that outlives its own div
+		d3select(document.body).on('mousedown.menu' + this.typename, null)
 		//For testing to remove completely from the document.body without using d3select()
 		this.d.remove()
 	}

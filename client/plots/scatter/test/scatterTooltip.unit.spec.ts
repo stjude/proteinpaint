@@ -1,13 +1,13 @@
 import tape from 'tape'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { ScatterTooltip } from '../viewmodel/scatterTooltip.ts'
+import { ScatterTooltip, HIT_BUFFER_PX, HOVER_RING_MARGIN_PX } from '../viewmodel/scatterTooltip.ts'
 import { ScatterModel } from '../model/scatterModel.ts'
 import { getDefaultScatterSettings } from '../settings/defaults.ts'
 import { xAxisOffSet, yAxisOffSet } from '#shared'
 
 /** Tests:
  * 	- dotRadius() tracks the rendered dot size
- * 	- Neighbours are the dots whose rendered circles overlap
+ * 	- Neighbours are the dots that overlap at 100% zoom, held constant in screen px
  * 	- scaleDotTW dots get a neighbourhood matching their larger radius
  * 	- isVisible() excludes hidden dots and the suppressed reference cloud
  *
@@ -95,7 +95,7 @@ tape('dotRadius() tracks the rendered dot size', function (test) {
 	test.end()
 })
 
-tape('Neighbours are the dots whose rendered circles overlap', function (test) {
+tape('Neighbours are the dots that overlap at 100% zoom', function (test) {
 	test.timeoutAfter(100)
 
 	const scatter = getScatterStub()
@@ -107,16 +107,16 @@ tape('Neighbours are the dots whose rendered circles overlap', function (test) {
 	const near = sample(99.5, 50) // 2.5px away — the two r=2.13 circles touch
 	const far = sample(90, 50) // 50px away — visibly separate
 
-	test.true(tooltip.overlaps(chart, seed, near), 'a dot 2.5px away overlaps the seed')
+	test.true(tooltip.isNeighbour(chart, seed, near), 'a dot 2.5px away overlaps the seed')
 	test.false(
-		tooltip.overlaps(chart, seed, far),
+		tooltip.isNeighbour(chart, seed, far),
 		'a dot 50px away at the right edge is not a neighbour (the old clamp collapsed both onto one x)'
 	)
-	test.true(tooltip.overlaps(chart, seed, seed), 'the seed overlaps itself')
+	test.true(tooltip.isNeighbour(chart, seed, seed), 'the seed overlaps itself')
 
 	// the same pair near the bottom edge, where the old yAxisOffSet clamp misfired
 	const low = sample(50, 0)
-	test.false(tooltip.overlaps(chart, low, sample(50, 10)), 'a dot 50px away at the bottom edge is not a neighbour')
+	test.false(tooltip.isNeighbour(chart, low, sample(50, 10)), 'a dot 50px away at the bottom edge is not a neighbour')
 	test.end()
 })
 
@@ -133,14 +133,71 @@ tape('scaleDotTW dots get a neighbourhood matching their larger radius', functio
 	const gap20px = sample(96, 50, { scale: 50 }) // 4 domain units = 20px
 
 	test.equal(tooltip.dotRadius(chart, seed), (8 * 4) / 3, 'scaleDotTW radius comes from the shape size range')
-	test.true(tooltip.overlaps(chart, seed, gap20px), 'a 20px gap IS a neighbour once the dots are that big')
+	test.true(tooltip.isNeighbour(chart, seed, gap20px), 'a 20px gap IS a neighbour once the dots are that big')
 
 	// the same pair at the default dot size is not — the reach follows the rendered size,
 	// which is the whole point of dropping the fixed 5/zoom threshold
 	const small = getScatterStub()
 	test.false(
-		new ScatterTooltip(small).overlaps(getChart(small), sample(100, 50), sample(96, 50)),
+		new ScatterTooltip(small).isNeighbour(getChart(small), sample(100, 50), sample(96, 50)),
 		'the same 20px gap is NOT a neighbour at the default dot size'
+	)
+	test.end()
+})
+
+tape('Neighbourhood reach stays a constant screen distance at any zoom', function (test) {
+	test.timeoutAfter(100)
+
+	const scatter = getScatterStub()
+	const tooltip = new ScatterTooltip(scatter)
+	const seed = sample(50, 50)
+
+	// two default dots (r = 2.13 each) reach 4.27px on screen. plain circle overlap looks
+	// zoom-invariant, but the dots grow with zoom, so at 11x that same rule spans ~47 screen px
+	// and the tooltip starts listing dots strewn across the plot
+	const reach = 2 * ((8 * 0.8) / 3)
+
+	for (const zoom of [0.2, 1, 3.4, 11]) {
+		const chart = getChart(scatter, zoom)
+		// 1 domain unit = 5 serie-local px, so convert the probe distance through both
+		const justInside = sample(50 + (reach / zoom / 5) * 0.99, 50)
+		const justOutside = sample(50 + (reach / zoom / 5) * 1.01, 50)
+		test.true(
+			tooltip.isNeighbour(chart, seed, justInside),
+			`${reach.toFixed(1)} screen px still reaches at zoom ${zoom}`
+		)
+		test.false(tooltip.isNeighbour(chart, seed, justOutside), `and stops just past it at zoom ${zoom}`)
+	}
+	test.end()
+})
+
+tape('Cursor detection margin stays a constant screen distance at any zoom', function (test) {
+	test.timeoutAfter(100)
+
+	const scatter = getScatterStub({ size: 2 })
+	const tooltip = new ScatterTooltip(scatter)
+	const dot = sample(50, 50)
+
+	/** how far past the dot's visible edge the cursor can be and still pick it, in screen px */
+	const marginAtZoom = zoom => {
+		const chart = getChart(scatter, zoom)
+		return (tooltip.hitRadiusFor(chart, dot) - tooltip.dotRadius(chart, dot)) * zoom
+	}
+
+	// asserted against the constant, not a literal: the property under test is that the margin
+	// does not change with zoom, whatever it is set to
+	for (const zoom of [0.2, 1, 3.4, 10]) {
+		test.ok(
+			Math.abs(marginAtZoom(zoom) - HIT_BUFFER_PX) < 1e-9,
+			`margin stays ${HIT_BUFFER_PX} screen px at zoom ${zoom}`
+		)
+	}
+
+	// the dot's own area still counts, so a bigger dot is still easier to hit — only the
+	// forgiveness beyond its edge is pinned
+	test.true(
+		tooltip.hitRadiusFor(getChart(scatter, 1), dot) > tooltip.dotRadius(getChart(scatter, 1), dot),
+		'the hit radius is larger than the dot itself'
 	)
 	test.end()
 })
@@ -162,7 +219,10 @@ tape('Hover ring keeps a constant screen gap at any zoom', function (test) {
 	}
 
 	for (const zoom of [0.2, 1, 3.4, 10]) {
-		test.ok(Math.abs(gapAtZoom(zoom) - 2) < 1e-9, `gap stays 2 screen px at zoom ${zoom}`)
+		test.ok(
+			Math.abs(gapAtZoom(zoom) - HOVER_RING_MARGIN_PX) < 1e-9,
+			`gap stays ${HOVER_RING_MARGIN_PX} screen px at zoom ${zoom}`
+		)
 	}
 
 	// a fixed multiple would have grown with the dot; confirm the factor shrinks instead

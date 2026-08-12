@@ -124,6 +124,10 @@ export class Scatter extends PlotBase implements RxComponent {
 			return
 		}
 
+		// a new view model means a new ScatterTooltip with an empty byChart, so the outgoing one
+		// has to release its interactions first — otherwise its click menu survives the
+		// re-render (and could act on a sample that is no longer plotted) and its Menu leaks
+		this.vm?.scatterTooltip?.detach()
 		if (this.model.is3D) this.vm = new ScatterViewModel3D(this)
 		else if (this.model.is2DLarge) this.vm = new ScatterViewModel2DLarge(this)
 		else this.vm = new ScatterViewModel(this)

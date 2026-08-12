@@ -94,7 +94,7 @@ tape('Show tooltip for sample', function (test) {
 		// every ringed dot must be one whose rendered circle overlaps the hovered dot, and all
 		// such dots must be ringed (capped at the module's maxTooltipRows)
 		const expected = chart.data.samples.filter(
-			s => scatterTooltip.isVisible(s) && scatterTooltip.overlaps(chart, dot, s)
+			s => scatterTooltip.isVisible(s) && scatterTooltip.isNeighbour(chart, dot, s)
 		)
 		const rings = chart.serie.select('g.sjpp-scatter-hover').selectAll('path').nodes()
 		test.true(rings.length > 0, 'Hovered dot should be ringed')

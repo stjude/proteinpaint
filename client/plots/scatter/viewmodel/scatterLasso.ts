@@ -1,7 +1,8 @@
 import { getSamplelstTW, getFilter, addNewGroup } from '../../../mass/groups.js'
 import { getId } from '#mass/nav'
 import type { Scatter } from '../scatter'
-import { renderTable, type TableCell, type TableColumn, type TableRow } from '#dom'
+import { buildSampleTableData } from './scatterSampleTable'
+import { renderTable } from '#dom'
 
 export class ScatterLasso {
 	scatter: Scatter
@@ -172,40 +173,13 @@ export class ScatterLasso {
 		}
 	}
 
-	getCategoryInfo(d, category) {
-		if (!(category in d)) return ''
-		return d[category]
-	}
-
 	showTable(group, x, y, addGroup) {
-		const rows: TableRow[] = []
-		const columns: TableColumn[] = []
-		const first = group.items[0]
-		const labels = this.scatter.config.controlLabels
-		if ('sample' in first) columns.push(formatCell(labels.Sample, 'label'))
-		if (this.scatter.config.term) columns.push(formatCell(this.scatter.config.term.term.name, 'label'))
-		if (this.scatter.config.term2) columns.push(formatCell(this.scatter.config.term2.term.name, 'label'))
-		if (this.scatter.config.colorTW) columns.push(formatCell(this.scatter.config.colorTW.term.name, 'label'))
-		if (this.scatter.config.shapeTW) columns.push(formatCell(this.scatter.config.shapeTW.term.name, 'label'))
-		let info = false
+		// same samples and same columns as the hover/click table, so both come from one builder.
+		// this also picks up value formatting (geneVariant mname, dates, rounding) that the
+		// hand-rolled version here did not do, and pads the Info cell on rows that have none —
+		// previously those rows came out one cell short and shifted under the header
+		const { columns, rows } = buildSampleTableData(this.scatter.config, this.scatter.settings.itemLabel, group.items)
 		const hasSampleName = 'sample' in group.items[0]
-
-		for (const item of group.items) {
-			const row: TableCell[] = []
-			if (hasSampleName) row.push(formatCell(item.sample))
-			if (this.scatter.config.term) row.push(formatCell(this.getCategoryInfo(item, 'x')))
-			if (this.scatter.config.term2) row.push(formatCell(this.getCategoryInfo(item, 'y')))
-			if (this.scatter.config.colorTW) row.push(formatCell(this.getCategoryInfo(item, 'category')))
-			if (this.scatter.config.shapeTW) row.push(formatCell(this.getCategoryInfo(item, 'shape')))
-			if ('info' in item) {
-				info = true
-				const values: any = []
-				for (const [k, v] of Object.entries(item.info)) values.push(`${k}: ${v}`)
-				row.push(formatCell(values.join(', ')))
-			}
-			rows.push(row)
-		}
-		if (info) columns.push(formatCell('Info', 'label'))
 
 		this.view.dom.tip.clear()
 		const div = this.view.dom.tip.d.append('div').style('padding', '5px')
@@ -272,11 +246,5 @@ export class ScatterLasso {
 		})
 
 		this.view.dom.tip.show(x, y, false, false)
-
-		function formatCell(column: string, name = 'value'): any {
-			const dict = {}
-			dict[name] = column
-			return dict
-		}
 	}
 }
