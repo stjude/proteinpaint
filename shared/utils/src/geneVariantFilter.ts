@@ -190,10 +190,12 @@ export function filterVariantValues(values: VariantValue[], filter: any): Varian
 
 /*
 A short label for what a filter selects, to distinguish rows of the same gene.
-Prefers the amino acid changes, e.g. "G12D/G12V", and falls back to the mutation
-class labels. Only the selected, i.e. not negated, entries are named; returns an
-empty string when there is nothing nameable, in which case the caller should keep
-the plain term name.
+Each entry is named by its amino acid change when it has one, e.g. "G12D", and by
+its mutation class label otherwise, e.g. "FRAMESHIFT". Naming a specific variant
+by its class would overstate the row, since the class also covers variants that
+the filter does not select. Only the selected, i.e. not negated, entries are
+named; returns an empty string when there is nothing nameable, in which case the
+caller should keep the plain term name.
 
 mclassOverride: dataset/chart-level mclass overrides, see the comment in
                 client/plots/matrix/matrix.js
@@ -201,17 +203,23 @@ mclassOverride: dataset/chart-level mclass overrides, see the comment in
 export function variantFilterLabel(filter: any, mclassOverride?: { [k: string]: any }, maxItems = 3): string {
 	if (!filter) return ''
 	const entries: { key: string; mname?: string }[] = []
-	collect(filter)
-	function collect(f: any) {
+	collect(filter, false)
+	/* negated tracks the effective sense of the enclosing lists: a tvslst with
+	in=false renders the complement of what it lists, and nesting flips it again,
+	as matchFilter() applies it. a leaf is only nameable when the lists and its own
+	isnot agree, otherwise a row rendering everything *except* G12D would be
+	labeled "KRAS G12D" */
+	function collect(f: any, negated: boolean) {
+		const flipped = f.in === false ? !negated : negated
 		for (const item of f.lst) {
-			if (item.type == 'tvslst') collect(item)
-			else if (!item.tvs.isnot) entries.push(...item.tvs.values)
+			if (item.type == 'tvslst') collect(item, flipped)
+			else if (flipped === !!item.tvs.isnot) entries.push(...item.tvs.values)
 		}
 	}
 	if (!entries.length) return ''
 	const classes = mclass as { [k: string]: any }
-	const names = entries.every(e => e.mname)
-		? [...new Set(entries.map(e => e.mname as string))]
-		: [...new Set(entries.map(e => mclassOverride?.[e.key]?.label || classes[e.key]?.label || e.key))]
+	const names = [
+		...new Set(entries.map(e => e.mname || mclassOverride?.[e.key]?.label || classes[e.key]?.label || e.key))
+	]
 	return names.length > maxItems ? `${names.slice(0, maxItems).join('/')}…` : names.join('/')
 }

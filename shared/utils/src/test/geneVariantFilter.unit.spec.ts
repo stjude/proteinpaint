@@ -183,11 +183,38 @@ tape('variantFilterLabel() names what a row selects', test => {
 		'Missense',
 		'uses a dataset mclass override when given'
 	)
+	// naming the G12D entry by its class would claim the row shows every missense
+	test.equal(
+		variantFilterLabel(getFilter([{ key: 'M', mname: 'G12D' }, { key: 'F' }])),
+		'G12D/FRAMESHIFT',
+		'resolves each entry on its own when a specific variant is mixed with a class'
+	)
 	test.equal(
 		variantFilterLabel(getFilter([{ key: 'M', mname: 'G12D' }], dtsnvindel, { isnot: true })),
 		'',
 		'names nothing when every entry is negated'
 	)
 	test.equal(variantFilterLabel(undefined), '', 'tolerates a missing filter')
+	test.end()
+})
+
+/* the list-level negation that matchFilter() applies must reach the label too, or
+a row rendering the complement of a variant would be named after that variant */
+tape('variantFilterLabel() propagates the negation of enclosing lists', test => {
+	const excluded = getFilter([{ key: 'M', mname: 'G12D' }])
+	excluded.in = false
+	test.equal(variantFilterLabel(excluded), '', 'names nothing for a list that renders the complement of its entries')
+
+	const doubleNegated = getFilter([{ key: 'M', mname: 'G12D' }], dtsnvindel, { isnot: true })
+	doubleNegated.in = false
+	test.equal(variantFilterLabel(doubleNegated), 'G12D', 'a negated entry of an excluding list is selected again')
+
+	const nested: any = {
+		type: 'tvslst',
+		in: false,
+		join: '',
+		lst: [{ type: 'tvslst', in: false, join: '', lst: getFilter([{ key: 'M', mname: 'G12D' }]).lst }]
+	}
+	test.equal(variantFilterLabel(nested), 'G12D', 'nesting flips the sense again')
 	test.end()
 })
