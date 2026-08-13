@@ -321,7 +321,7 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: 'Single Cell Plot',
+			label: 'Single Cell',
 			clickTo: self.prepPlot,
 			chartType: 'sc',
 			config: {
@@ -460,6 +460,12 @@ function getChartTypeList(self, state) {
 			label: 'GeneExp vs Survival',
 			chartType: 'summarizeGeneexpSurvival',
 			usecase: { target: 'summarizeGeneexpSurvival' },
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'Aggregate Matrix',
+			chartType: 'aggregateMatrix',
+			usecase: { target: 'aggregateMatrix' },
 			clickTo: self.loadChartSpecificMenu
 		}
 	]
