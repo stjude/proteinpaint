@@ -85,7 +85,14 @@ args:
 	if caseObj data is returned by /cases/, use 0
 */
 export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
-	if (Array.isArray(caseObj.diagnoses)) {
+	const fields = tw.term.id.split('.')
+
+	/* the diagnoses decision tree below only governs terms whose value is read out of diagnoses[];
+	it must not be allowed to abort terms that have nothing to do with diagnoses (case.project.project_id,
+	case.disease_type, case.demographic.*, ...). this function is called once per tw, so an unscoped
+	bailout blanked every term of a case, which in the mds3 sample table surfaced as empty Disease type/
+	Primary site cells and -- via the missing case.project.project_id -- a bogus "Controlled" access label */
+	if (fields.includes('diagnoses') && Array.isArray(caseObj.diagnoses)) {
 		// There may be multiple diagnosis entries, choose only one for summary plot,
 		// but the selected entry must be deterministic and always render the same plot
 		// for a given diagnoses array with entries in assumed arbitrary, random order.
@@ -104,7 +111,6 @@ export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 		caseObj.diagnoses = diagnoses[0]
 	}
 
-	const fields = tw.term.id.split('.')
 	query(fields, sample, tw, caseObj, startIdx)
 
 	/* done searching; if available, a new value is now assigned to sample[term.id]
@@ -193,6 +199,20 @@ function query(fields, sample, tw, current, i) {
 	query(fields, sample, tw, next, i + 1)
 }
 
+/* diagnosis_is_primary_disease must never be compared to a boolean literal!
+gdc declares it as a "keyword" (string) field -- see /cases/_mapping, whose facet buckets are
+keyed "true"/"false". the /cases endpoint happens to coerce it to a json boolean on output, but
+/ssm_occurrences returns the raw string, so `=== true`/`=== false` silently failed on every case
+loaded by the mds3 lollipop. these two helpers accept either representation. */
+function isPrimaryDisease(d) {
+	const v = d.diagnosis_is_primary_disease
+	return v === true || v === 'true'
+}
+function isNotPrimaryDisease(d) {
+	const v = d.diagnosis_is_primary_disease
+	return v === false || v === 'false'
+}
+
 // see the decision tree in https://gdc-ctds.atlassian.net/browse/SV-2770
 function diagnosisFilter(d) {
 	// strict equality, undefined and other non-null empty values are not matched,
@@ -202,7 +222,7 @@ function diagnosisFilter(d) {
 	// as of 4/1/2026, 14 CPTAC cases have diagnoses entries that all match the condition below;
 	// it looks like the GDC API does not return these samples when the fieldset is diagnoses.*,
 	// but will still filter here nonetheless
-	if (d.diagnosis_is_primary_disease === false) return false
+	if (isNotPrimaryDisease(d)) return false
 	return true
 }
 
@@ -210,7 +230,7 @@ function diagnosisFilter(d) {
 // this filter is meant to be applied ONLY when there are multiple diagnoses[] entries,
 // it's okay for a single-entry diagnoses[] to have diagnosis_is_primary_disease === null
 function diagnosisIsPrimaryDisease(d) {
-	return d.diagnosis_is_primary_disease === true
+	return isPrimaryDisease(d)
 }
 
 function primaryDiseasesIsDefined(d) {
@@ -218,8 +238,9 @@ function primaryDiseasesIsDefined(d) {
 }
 
 function diagnosisSort(a, b) {
-	if (a.diagnosis_is_primary_disease) return -1
-	if (b.diagnosis_is_primary_disease) return 1
+	// must use the helper and not a truthy test: the string "false" is truthy
+	if (isPrimaryDisease(a)) return -1
+	if (isPrimaryDisease(b)) return 1
 	if (a.age_at_diagnosis === null && b.age_at_diagnosis === null) {
 		// submitter_id are guaranteed to be different between 2 entries,
 		// with the suffix being DIAG, relapse, etc

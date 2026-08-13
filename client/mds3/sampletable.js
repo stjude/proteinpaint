@@ -440,7 +440,12 @@ export async function samples2columnsRows(samples, tk) {
 		}
 
 		if (has_caseAccess) {
-			row.push({ value: sample.caseIsOpenAccess ? 'Open' : 'Controlled' })
+			// has_caseAccess is true when ANY sample carries the flag, so a sample lacking it must
+			// render blank rather than fall through to 'Controlled' and misreport an open-access case.
+			// matches the single-sample view above, which tests `'caseIsOpenAccess' in s`
+			row.push({
+				value: 'caseIsOpenAccess' in sample ? (sample.caseIsOpenAccess ? 'Open' : 'Controlled') : ''
+			})
 		}
 
 		if (tk.mds.variant2samples.twLst) {
