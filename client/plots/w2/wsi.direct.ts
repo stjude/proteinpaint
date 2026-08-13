@@ -14,10 +14,16 @@
  viewer: zoomed out beyond that, the boundaries are hidden. Omit to always show.
 
  Gene expression overlay (needs cell_boundaries):
-   &gene_expression_file=SVS/cell_feature_matrix.h5&gene_expression=ACE2
- fills each cell boundary with a shade of red proportional to that gene's
- transcript count in the cell (10x cell_feature_matrix HDF5; cell ids match the
- boundary CSV's). An unknown gene name surfaces an error in the UI.
+   &gene_expression_file=SVS/cell_feature_matrix.h5&gene_expression=ACE2,ACTA2
+ draws one fill overlay per comma-separated gene, each in its own color (see
+ GENE_COLORS), shaded by that gene's transcript count in the cell (10x
+ cell_feature_matrix HDF5; cell ids match the boundary CSV's). A legend below
+ the map maps color to gene; cells expressing several genes blend their fills.
+ An unknown gene name surfaces an error in the UI (other genes still render).
+
+ &gene_groups=g1,g2,g3 instead sums each cell's counts over all listed genes
+ and draws ONE overlay of the totals in a single color. Can be combined with
+ gene_expression (the group takes the next unused palette color).
 
  Bypasses datasets/samples: hits the wsitiles route with a direct slide path
  (resolved relative to serverconfig.tpmasterdir; gated by features.wsi.allowDirectSlidePath). Minimal
@@ -44,6 +50,7 @@ export async function init(
 		annotationLevel?: string
 		geneExpression?: string
 		geneExpressionFile?: string
+		geneGroups?: string
 	},
 	holder: any
 ) {
@@ -152,17 +159,66 @@ export async function init(
 			}
 		}
 
-		if (opts.geneExpression) {
+		const geneList = (s?: string) =>
+			(s || '')
+				.split(',')
+				.map(t => t.trim())
+				.filter(Boolean)
+		const exprGenes = geneList(opts.geneExpression)
+		const groupGenes = geneList(opts.geneGroups)
+		if (exprGenes.length || groupGenes.length) {
 			try {
-				if (!opts.geneExpressionFile) throw new Error('gene_expression requires gene_expression_file=<h5 file>')
-				if (!cellPolys) throw new Error('gene_expression requires cell_boundaries=<csv file>')
-				const r = await dofetch3(
-					`wsitiles/genecounts?slide=${slide}&file=${encodeURIComponent(
-						opts.geneExpressionFile
-					)}&gene=${encodeURIComponent(opts.geneExpression)}`
+				if (!opts.geneExpressionFile)
+					throw new Error('gene_expression/gene_groups requires gene_expression_file=<h5 file>')
+				if (!cellPolys) throw new Error('gene_expression/gene_groups requires cell_boundaries=<csv file>')
+				// one genecounts request per gene, expr + group genes together
+				const results = await Promise.all(
+					[...exprGenes, ...groupGenes].map(gene =>
+						dofetch3(
+							`wsitiles/genecounts?slide=${slide}&file=${encodeURIComponent(
+								opts.geneExpressionFile!
+							)}&gene=${encodeURIComponent(gene)}`
+						).catch((e: any) => ({ error: e.message || String(e) }))
+					)
 				)
-				if (!r || r.error) throw new Error(r?.error || 'failed to load gene expression')
-				map.addLayer(expressionLayer(cellPolys, r.cells, r.max, maxResolution))
+				const legend = holder.append('div').style('font', '12px system-ui').style('padding', '0 8px 4px')
+				const addLegend = (rgb: string, text: string) =>
+					legend.append('span').style('color', `rgb(${rgb})`).style('margin-right', '14px').text(text)
+
+				// gene_expression: one layer per gene, each its own color
+				let colorIdx = 0
+				for (const [i, gene] of exprGenes.entries()) {
+					const r = results[i]
+					if (!r || r.error) {
+						sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`)
+						continue
+					}
+					const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length]
+					map.addLayer(expressionLayer(cellPolys, r.cells, r.max, rgb, maxResolution))
+					addLegend(rgb, `■ ${gene} (max ${r.max})`)
+				}
+
+				// gene_groups: sum each cell's counts over the group, one layer/color
+				if (groupGenes.length) {
+					const total: { [id: string]: number } = {}
+					const found: string[] = []
+					for (const [i, gene] of groupGenes.entries()) {
+						const r = results[exprGenes.length + i]
+						if (!r || r.error) {
+							sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`)
+							continue
+						}
+						found.push(gene)
+						for (const id in r.cells) total[id] = (total[id] || 0) + r.cells[id]
+					}
+					if (found.length) {
+						let max = 0
+						for (const id in total) if (total[id] > max) max = total[id]
+						const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length]
+						map.addLayer(expressionLayer(cellPolys, total, max, rgb, maxResolution))
+						addLegend(rgb, `■ ${found.join('+')} (max ${max})`)
+					}
+				}
 			} catch (e: any) {
 				sayerror(holder, `Gene expression error: ${e.message || e}`)
 			}
@@ -222,30 +278,35 @@ function strokeLayer(cells: CellPoly[], color: string, maxResolution?: number): 
 
 const SHADES = 8
 
-/** Fill each expressing cell with red whose opacity scales with the cell's
+// fill colors ("r, g, b") cycled per gene; green/blue-ish avoided so fills
+// stay distinguishable from the cell (green) and nucleus (blue) strokes
+const GENE_COLORS = ['255, 0, 0', '0, 90, 255', '255, 165, 0', '160, 0, 200', '0, 160, 160', '200, 160, 0']
+
+/** Fill each expressing cell with `rgb` at an opacity scaling with the cell's
  transcript count for the chosen gene; zero-count cells stay unfilled. Cells
  are bucketed into SHADES opacity steps so the layer is a handful of
- MultiPolygon features instead of one per cell.
- ponytail: linear count->shade scale; switch to log if one hot cell washes
- out the rest. */
+ MultiPolygon features instead of one per cell. Counts are log-normalized
+ (log1p(n)/log1p(max)) so a few hot cells don't push everything else into
+ the faintest shade. */
 function expressionLayer(
 	cells: CellPoly[],
 	counts: { [id: string]: number },
 	max: number,
+	rgb: string,
 	maxResolution?: number
 ): VectorLayer {
 	const buckets: number[][][][][] = Array.from({ length: SHADES }, () => [])
 	for (const c of cells) {
 		const n = counts[c.id]
 		if (!n || !max) continue
-		buckets[Math.min(SHADES - 1, Math.floor((n / max) * SHADES))].push([c.ring])
+		buckets[Math.min(SHADES - 1, Math.floor((Math.log1p(n) / Math.log1p(max)) * SHADES))].push([c.ring])
 	}
 	const features: Feature[] = []
 	for (const [i, polys] of buckets.entries()) {
 		if (!polys.length) continue
 		const f = new Feature(new MultiPolygon(polys))
 		const alpha = 0.15 + (0.75 * (i + 1)) / SHADES
-		f.setStyle(new Style({ fill: new Fill({ color: `rgba(255, 0, 0, ${alpha.toFixed(2)})` }) }))
+		f.setStyle(new Style({ fill: new Fill({ color: `rgba(${rgb}, ${alpha.toFixed(2)})` }) }))
 		features.push(f)
 	}
 	return new VectorLayer({ source: new VectorSource({ features }), maxResolution })
