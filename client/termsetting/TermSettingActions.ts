@@ -15,11 +15,11 @@ export class TermSettingActions {
 
 	async cancelGroupsetting() {
 		const self = this.termsetting
-		self.opts.callback({
-			id: self.term.id,
-			term: self.term,
-			q: { mode: 'discrete', type: 'values', isAtomic: true }
-		})
+		// reset q{} and hand off to runCallback(), which assembles the tw with a $id;
+		// calling opts.callback() directly here would emit a tw without $id, and since
+		// a tw is atomic it would replace the previous tw in plot config, $id and all
+		self.q = { mode: 'discrete', type: 'values', isAtomic: true }
+		await self.api.runCallback()
 	}
 
 	async clickNoPillDiv(event) {
