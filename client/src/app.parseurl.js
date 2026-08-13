@@ -44,7 +44,11 @@ upon error, throw err message as a string
 				cellBoundaries: urlp.get('cell_boundaries'),
 				nucleusBoundaries: urlp.get('nucleus_boundaries'),
 				// optional: show overlays only within the n most zoomed-in levels
-				annotationLevel: urlp.get('annotation_level')
+				annotationLevel: urlp.get('annotation_level'),
+				// optional: fill cell boundaries with red shaded by this gene's
+				// per-cell count from a 10x cell_feature_matrix HDF5
+				geneExpression: urlp.get('gene_expression'),
+				geneExpressionFile: urlp.get('gene_expression_file')
 			},
 			arg.holder
 		)
