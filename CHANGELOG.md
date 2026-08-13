@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Fixes a false-positive cohort-change message on initial matrix render and corrects the message placement.
+
+
 ## 2.203.0
 
 Features:
