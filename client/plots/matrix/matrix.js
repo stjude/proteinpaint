@@ -39,9 +39,6 @@ export class Matrix extends PlotBase {
 		this.setDom(opts)
 
 		this.config = appState.plots.find(p => p.id === this.id)
-		// the cohort that this matrix is created with is the baseline for detecting a cohort change later;
-		// must be set before setControls(), which calls getState()
-		this.prevFilter0 = appState.termfilter.filter0
 		this.settings = Object.assign({}, this.config.settings.matrix)
 		this.computed = {} // will hold settings/configuration/data that are computed or derived from other data
 		if (this.dom.header) this.dom.header.html(this.config.preBuiltPlotTitle || this.holderTitle)
@@ -138,10 +135,11 @@ export class Matrix extends PlotBase {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		const filter0 = appState.termfilter.filter0
-		// will be used to detect cohort change; this.state is not set before the first update,
-		// in which case the baseline set in init() must be kept, so that the initial render of a
-		// matrix that is created with a filter0 is not detected as a cohort change
+		// will be used to detect cohort change. this.state is not set before the first update,
+		// in which case the cohort that this matrix is created with becomes the baseline, so that
+		// the initial render of a matrix that is created with a filter0 is not detected as a change
 		if (this.state) this.prevFilter0 = this.state.filter0
+		else if (this.prevFilter0 === undefined) this.prevFilter0 = filter0
 
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
 		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
