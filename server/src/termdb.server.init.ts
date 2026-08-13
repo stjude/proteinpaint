@@ -886,7 +886,8 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	alternative:
 	- assess availability of snvindel/cnv/svfusion etc
 	*/
-	grin2: ({ ds }) => ds.queries?.singleSampleMutation
+	grin2: ({ ds }) => ds.queries?.singleSampleMutation,
+	aggregateMatrix: ({ ds }) => ds.queries?.singleCell?.geneExpression || ds.queries?.singleCell?.pseudobulk
 }
 
 export function listDbTables(cn) {

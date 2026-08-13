@@ -257,13 +257,15 @@ export class AggMatrixViewModel {
 
         for (const [i, row] of data.entries()) {
             for (const dot of row) {
+                const hasData = dot.colorValue !== null && dot.sizeValue !== null
                 const dotPos = {
                     x: this.lastX + (cellSize / 2),
                     y: this.lastY + (cellSize / 2),
                     /** Regardless if the size and color value are available, the dot will render.
-                     * This will allow the tooltip to appear, displaying the data or lack thereof.*/
-                    size: dot.sizeValue !== null ? this.sizeScale(dot.sizeValue) : settings.maxDotSize,
-                    color: dot.colorValue !== null ? this.viewData.colorScale.scale(dot?.colorValue) : 'transparent',
+                     * This will allow the tooltip to appear, displaying the data or lack thereof
+                     * to the user. */
+                    size: hasData ? this.sizeScale(dot.sizeValue!) : settings.maxDotSize,
+                    color: hasData ? this.viewData.colorScale.scale(dot.colorValue!) : 'transparent',
                     row: dot.row,
                     rowSection: dot.rowSection,
                     column: dot.column,

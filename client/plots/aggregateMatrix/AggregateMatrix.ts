@@ -7,6 +7,7 @@ import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
 import { setControls } from './view/setControls.ts'
 import { Menu } from '#dom'
+import { makeAggMatrixInput } from './view/aggMatrixInput.ts'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
@@ -16,7 +17,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
 
     type: string
     components: { controls: ComponentApi }
-    dom: { [index: string]: any } 
+    dom: { [index: string]: any }
     model!: AggMatrixModel
     viewModel!: AggMatrixViewModel
     view!: AggMatrixView
@@ -60,7 +61,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
         this.model = new AggMatrixModel(this)
         this.viewModel = new AggMatrixViewModel(this)
         this.view = new AggMatrixView(this)
-        
+
         const config = this.getState(appState).config
         await setControls(this.dom.controls, this, config)
     }
@@ -124,4 +125,8 @@ export function validatePlotConfig(config: any) {
         if (colCount > 2) break
     }
     if (colCount < 2) throw new Error(`AggregateMatrix plot requires at least 2 columns`)
+}
+
+export function makeChartBtnMenu(holder: any, /*chartsInstance: any*/) {
+    makeAggMatrixInput(holder)
 }
