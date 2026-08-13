@@ -1,4 +1,5 @@
 import { sample_match_termvaluesetting } from '#shared/filter.js'
+import { filterVariantValues } from '#shared/geneVariantFilter.js'
 import { getSampleSorter, getTermSorter, getSampleGroupSorter, getMclassSorter } from './matrix.sort'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
 
@@ -224,8 +225,17 @@ Given the anno of a term for a sample, generate the
     renderedValues (values rendered on matrix)
 */
 export function classifyValues(anno, tw, grp, s, sample) {
-	const values = 'value' in anno ? [anno.value] : anno.values
+	let values = 'value' in anno ? [anno.value] : anno.values
 	if (!values) return { filteredValues: null, countedValues: null, renderedValues: null }
+
+	if (tw.term.type == 'geneVariant' && tw.q?.type == 'values' && tw.q.variantFilter) {
+		/* a per-row variant filter, e.g. to show only KRAS G12D in this row while
+		another row of the same gene shows G12V. applied here, at the head of the
+		one function that classifies an annotation, so that the rendered cells, the
+		row sample counts, the sample sorting and the legend counts all see the same
+		values. see shared/utils/src/geneVariantFilter.ts */
+		values = filterVariantValues(values, tw.q.variantFilter)
+	}
 
 	// isSpecific is the filter that is specific to the term
 	const isSpecific = [tw.valueFilter || grp.valueFilter].filter(v => v && true)

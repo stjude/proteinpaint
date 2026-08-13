@@ -31,7 +31,14 @@ export class TwBase {
 	// TwBase will be type checked
 	setCellProps!: SetCellPropsSignature
 
-	// TODO: may need to track these matrix specific tw props elsewhere
+	/* TODO: may need to track these matrix specific tw props elsewhere.
+	!!! NOTE !!! A prop that is not copied in the constructor below is silently
+	lost the next time a plot hydrates its config, since PlotBase.getMutableConfig()
+	replaces every routed tw with an instance of this class. That is what made an
+	edited matrix row label not stick. */
+	label?: string
+	legend?: any
+	exclude?: any[]
 	sortSamples?: any
 	minNumSamples?: number
 	valueFilter?: any
@@ -42,6 +49,13 @@ export class TwBase {
 		this.type = tw.type
 		this.isAtomic = true
 		this.$id = typeof tw.$id == 'string' ? tw.$id : get$id()
+		// a display-only override of the term name, so it is deliberately not part
+		// of getMinCopy() and thus does not affect the $id or the data request
+		if (tw.label) this.label = tw.label
+		// merges this tw's legend items into a shared legend group, see matrix.cells.js
+		if (tw.legend) this.legend = tw.legend
+		// sample group keys of a matrix divideBy tw that are not rendered, see getSampleGroups()
+		if (tw.exclude) this.exclude = tw.exclude
 		if (tw.sortSamples) this.sortSamples = tw.sortSamples
 		if (tw.minNumSamples) this.minNumSamples = tw.minNumSamples
 		if (tw.valueFilter) this.valueFilter = tw.valueFilter

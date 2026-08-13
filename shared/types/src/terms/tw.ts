@@ -13,7 +13,12 @@ export type BaseTW = {
 	isAtomic?: true
 	// plot-specific customizations that are applied to a tw copy
 	// todo: should rethink these
+	/** overrides the term name where the tw is rendered, e.g. a matrix row label
+	 * that a user edited. must be carried by TwBase, see the comment there */
+	label?: string
 	legend?: any
+	/** keys of the sample groups that a matrix divideBy tw does not render */
+	exclude?: any[]
 	settings?: {
 		[key: string]: any
 	}
