@@ -10,15 +10,17 @@
  CSV columns: cell_id, vertex_x, vertex_y (µm); rows of one cell are contiguous
  and its first vertex is repeated last to close the polygon.
 
- &annotation_level=n limits the overlays to the n most zoomed-in levels of the
- viewer: zoomed out beyond that, the boundaries are hidden. Omit to always show.
+ &annotation_level=n limits the boundary strokes to the n most zoomed-in levels
+ of the viewer: zoomed out beyond that, the boundaries are hidden. Omit to
+ always show. Gene expression fills are not affected — they show at all zooms.
 
  Gene expression overlay (needs cell_boundaries):
    &gene_expression_file=SVS/cell_feature_matrix.h5&gene_expression=ACE2,ACTA2
  draws one fill overlay per comma-separated gene, each in its own color (see
  GENE_COLORS), shaded by that gene's transcript count in the cell (10x
- cell_feature_matrix HDF5; cell ids match the boundary CSV's). A legend below
- the map maps color to gene; cells expressing several genes blend their fills.
+ cell_feature_matrix HDF5; cell ids match the boundary CSV's). A legend
+ overlaid on the map's top-right corner shows each gene's color gradient and
+ count range; cells expressing several genes blend their fills.
  An unknown gene name surfaces an error in the UI (other genes still render).
 
  &gene_groups=g1,g2,g3 instead sums each cell's counts over all listed genes
@@ -181,9 +183,37 @@ export async function init(
 						).catch((e: any) => ({ error: e.message || String(e) }))
 					)
 				)
-				const legend = holder.append('div').style('font', '12px system-ui').style('padding', '0 8px 4px')
-				const addLegend = (rgb: string, text: string) =>
-					legend.append('span').style('color', `rgb(${rgb})`).style('margin-right', '14px').text(text)
+				// legend overlaid on the map's top-right corner — anything appended
+				// below the 90vh map div lands below the fold and is never seen.
+				// Created lazily so an all-errors run doesn't leave an empty box.
+				let legend: any
+				const addLegend = (rgb: string, name: string, max: number) => {
+					if (!legend) {
+						mapDiv.style('position', 'relative')
+						legend = mapDiv
+							.append('div')
+							.style('position', 'absolute')
+							.style('top', '8px')
+							.style('right', '8px')
+							.style('z-index', '10')
+							.style('background', 'rgba(255,255,255,0.85)')
+							.style('padding', '6px 10px')
+							.style('border-radius', '4px')
+							.style('font', '12px system-ui')
+					}
+					const row = legend.append('div').style('margin', '2px 0')
+					row.append('span').style('margin-right', '6px').text(name)
+					// alpha range mirrors expressionLayer's shades (log-scaled counts)
+					row
+						.append('span')
+						.style('display', 'inline-block')
+						.style('width', '80px')
+						.style('height', '10px')
+						.style('vertical-align', 'middle')
+						.style('border', '1px solid #ccc')
+						.style('background', `linear-gradient(to right, rgba(${rgb}, 0.15), rgba(${rgb}, 0.9))`)
+					row.append('span').style('margin-left', '4px').text(`1–${max}`)
+				}
 
 				// gene_expression: one layer per gene, each its own color
 				let colorIdx = 0
@@ -194,8 +224,8 @@ export async function init(
 						continue
 					}
 					const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length]
-					map.addLayer(expressionLayer(cellPolys, r.cells, r.max, rgb, maxResolution))
-					addLegend(rgb, `■ ${gene} (max ${r.max})`)
+					map.addLayer(expressionLayer(cellPolys, r.cells, r.max, rgb))
+					addLegend(rgb, gene, r.max)
 				}
 
 				// gene_groups: sum each cell's counts over the group, one layer/color
@@ -215,8 +245,8 @@ export async function init(
 						let max = 0
 						for (const id in total) if (total[id] > max) max = total[id]
 						const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length]
-						map.addLayer(expressionLayer(cellPolys, total, max, rgb, maxResolution))
-						addLegend(rgb, `■ ${found.join('+')} (max ${max})`)
+						map.addLayer(expressionLayer(cellPolys, total, max, rgb))
+						addLegend(rgb, found.join('+'), max)
 					}
 				}
 			} catch (e: any) {
@@ -287,14 +317,9 @@ const GENE_COLORS = ['255, 0, 0', '0, 90, 255', '255, 165, 0', '160, 0, 200', '0
  are bucketed into SHADES opacity steps so the layer is a handful of
  MultiPolygon features instead of one per cell. Counts are log-normalized
  (log1p(n)/log1p(max)) so a few hot cells don't push everything else into
- the faintest shade. */
-function expressionLayer(
-	cells: CellPoly[],
-	counts: { [id: string]: number },
-	max: number,
-	rgb: string,
-	maxResolution?: number
-): VectorLayer {
+ the faintest shade. Shown at every zoom level — annotation_level only
+ gates the boundary strokes, not the expression fills. */
+function expressionLayer(cells: CellPoly[], counts: { [id: string]: number }, max: number, rgb: string): VectorLayer {
 	const buckets: number[][][][][] = Array.from({ length: SHADES }, () => [])
 	for (const c of cells) {
 		const n = counts[c.id]
@@ -309,5 +334,5 @@ function expressionLayer(
 		f.setStyle(new Style({ fill: new Fill({ color: `rgba(${rgb}, ${alpha.toFixed(2)})` }) }))
 		features.push(f)
 	}
-	return new VectorLayer({ source: new VectorSource({ features }), maxResolution })
+	return new VectorLayer({ source: new VectorSource({ features }) })
 }
