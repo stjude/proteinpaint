@@ -13,6 +13,9 @@ export function setMatrixDom(opts) {
 		.style('left', '50px')
 	const errdiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
 	const warningDiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
+	// kept separate from loadingDiv, which is offset to center a transient message over a hidden or faded svg;
+	// this message is displayed above an already rendered matrix and so must not be offset over the svg
+	const cohortMsgDiv = holder.append('div').style('display', 'none').style('margin', '5px 0 0 45px')
 	const svg = holder
 		.append('svg')
 		.attr('data-testid', 'sjpp-matrix-svg')
@@ -46,6 +49,7 @@ export function setMatrixDom(opts) {
 		controls,
 		errorDiv,
 		loadingDiv,
+		cohortMsgDiv,
 		svg,
 		clipRect: svg
 			.append('defs')

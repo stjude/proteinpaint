@@ -39,6 +39,9 @@ export class Matrix extends PlotBase {
 		this.setDom(opts)
 
 		this.config = appState.plots.find(p => p.id === this.id)
+		// the cohort that this matrix is created with is the baseline for detecting a cohort change later;
+		// must be set before setControls(), which calls getState()
+		this.prevFilter0 = appState.termfilter.filter0
 		this.settings = Object.assign({}, this.config.settings.matrix)
 		this.computed = {} // will hold settings/configuration/data that are computed or derived from other data
 		if (this.dom.header) this.dom.header.html(this.config.preBuiltPlotTitle || this.holderTitle)
@@ -135,7 +138,10 @@ export class Matrix extends PlotBase {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		const filter0 = appState.termfilter.filter0
-		this.prevFilter0 = this.state?.filter0 // will be used to detect cohort change
+		// will be used to detect cohort change; this.state is not set before the first update,
+		// in which case the baseline set in init() must be kept, so that the initial render of a
+		// matrix that is created with a filter0 is not detected as a cohort change
+		if (this.state) this.prevFilter0 = this.state.filter0
 
 		const parentConfig = appState.plots.find(p => p.id === this.parentId)
 		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
@@ -174,6 +180,8 @@ export class Matrix extends PlotBase {
 
 			this.dom.loadingDiv.selectAll('*').remove()
 			this.dom.loadingDiv.html('').style('display', '').style('position', 'relative').style('left', '45%')
+			// clear a message from a previous cohort change, in case this update returns early before it may be reshown
+			this.dom.cohortMsgDiv.html('').style('display', 'none')
 			this.dom.svg.style('opacity', 0.1).style('pointer-events', 'none')
 
 			// reset highlighted top/left dendrogram children to black when data request is triggered
@@ -236,6 +244,8 @@ export class Matrix extends PlotBase {
 			this.dom.loadingDiv.html('Rendering ...')
 			if (this.plotDendrogramHclust) this.plotDendrogramHclust()
 			this.render()
+			// the transient loading message is no longer needed once the matrix is rendered
+			this.dom.loadingDiv.style('display', 'none')
 			this.mayDisplayCohortMessage()
 			this.dom.svg.style('display', '').style('opacity', 1).style('pointer-events', '')
 
@@ -361,13 +371,8 @@ export class Matrix extends PlotBase {
 	mayDisplayCohortMessage() {
 		const msg = deepEqual(this.state.filter0, this.prevFilter0) ? '' : 'The gene list is persisted across cohorts.'
 		if (msg) {
-			this.dom.loadingDiv.html('')
-			const div = this.dom.loadingDiv
-				.append('div')
-				.style('display', 'inline-block')
-				.style('text-align', 'center')
-				.style('position', 'relative')
-				.style('left', '-150px')
+			this.dom.cohortMsgDiv.html('')
+			const div = this.dom.cohortMsgDiv.append('div').style('display', 'inline-block')
 			div.append('div').html(msg)
 
 			if (this.settings.matrix.showHints?.includes('genesetEdit')) {
@@ -398,7 +403,7 @@ export class Matrix extends PlotBase {
 					})
 			}
 		}
-		this.dom.loadingDiv.style('display', msg ? '' : 'none')
+		this.dom.cohortMsgDiv.style('display', msg ? '' : 'none')
 	}
 
 	sampleKey(s) {
