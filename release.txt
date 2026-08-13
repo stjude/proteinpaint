@@ -1,2 +1,2 @@
 Fixes:
-- matrix false positive of prevFilter0 fixed for showing cohortMsgDiv, also fixed placement bug
+- Fixes a false-positive cohort-change message on initial matrix render and corrects the message placement.
