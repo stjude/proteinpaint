@@ -4,12 +4,15 @@ wsi_tile.py — standalone WSI tile/metadata CLI for the ProteinPaint WSI viewer
 Replaces the tile server + redis: no server, no state. Node's run_python()
 spawns it once per request, pipes a JSON job on stdin, and reads stdout.
 
-Two jobs (JSON on stdin, `action` selects):
+Jobs (JSON on stdin, `action` selects):
   {"action":"meta","slide":"/abs/slide.svs"}
       -> stdout: {"slide_dimensions":[w,h],"mpp":..,"levels":..,"tileSize":256}
   {"action":"tile","slide":"/abs/slide.svs","z":9,"x":0,"y":0,"plane":3}
       -> writes ONE JPEG to a temp path, stdout: that path (node sends+deletes it)
       (`plane` optional: z-plane of a 3D OME-TIFF stack; default = middle plane)
+  {"action":"genecounts","h5":"/abs/cell_feature_matrix.h5","gene":"ACE2"}
+      -> stdout: {"cells":{cell_id:count,...},"max":..} — per-cell counts of one
+      gene from a 10x cell_feature_matrix HDF5; {"error":..} if gene not found
 
 Tiles are Zoomify-compatible: geometry is copied from OpenLayers'
 ol/source/Zoomify.js 'default' tier math, so the client's tile requests and this
@@ -20,7 +23,7 @@ Formats: anything openslide opens (.svs etc.), plus pyramidal OME-TIFF
 compression (34712) that openslide cannot decode, so they are read via
 tifffile (pyramid structure) + PIL (per-tile JP2K decode) instead.
 
-Deps: openslide-python, pillow, tifffile, numpy. Avoid writing non-fatal
+Deps: openslide-python, pillow, tifffile, numpy, h5py. Avoid writing non-fatal
 warnings to stderr (run_python() rejects on any stderr output).
 
 Dev usage (bypasses stdin):  python wsi_tile.py --test
@@ -216,6 +219,29 @@ def tile(slide, z, x, y, quality=80, plane=None):
         s.close()
 
 
+def genecounts(h5, gene):
+    """Per-cell counts of one gene from a 10x cell_feature_matrix HDF5 (CSC
+    sparse, genes x cells). Zero-count cells are omitted. Returns {"error":..}
+    (not an exception) when the gene is absent, so the UI gets a clean message
+    instead of a traceback."""
+    import os
+    import h5py
+    with h5py.File(h5, "r") as f:
+        names = f["matrix/features/name"][:].astype(str)
+        hit = np.nonzero(names == gene)[0]
+        if hit.size == 0:
+            return {"error": f"gene '{gene}' not found in {os.path.basename(h5)}"}
+        mask = f["matrix/indices"][:] == hit[0]
+        vals = f["matrix/data"][:][mask]
+        # row index k of the CSC arrays belongs to the cell whose indptr range contains k
+        cols = np.searchsorted(f["matrix/indptr"][:], np.nonzero(mask)[0], side="right") - 1
+        barcodes = f["matrix/barcodes"][:].astype(str)
+    return {
+        "cells": dict(zip(barcodes[cols].tolist(), vals.astype(int).tolist())),
+        "max": int(vals.max()) if vals.size else 0,
+    }
+
+
 def _test():
     W, H = 124712, 78731
     tiers = num_tiers(W, H)
@@ -240,6 +266,8 @@ def main():
     elif job["action"] == "tile":
         plane = int(job["plane"]) if job.get("plane") is not None else None
         print(tile(job["slide"], int(job["z"]), int(job["x"]), int(job["y"]), plane=plane))
+    elif job["action"] == "genecounts":
+        print(json.dumps(genecounts(job["h5"], job["gene"]), separators=(",", ":")))
     else:
         raise ValueError(f"unknown action {job.get('action')!r}")
 

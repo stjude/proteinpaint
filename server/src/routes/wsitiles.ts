@@ -123,6 +123,29 @@ function init({ genomes }) {
 				return
 			}
 
+			if (req.params.action == 'genecounts') {
+				// per-cell counts of one gene from a 10x cell_feature_matrix HDF5
+				// (?file= relative to tpmasterdir, ?gene= gene name); python answers
+				// {cells:{cell_id:count},max} or {error} when the gene is absent
+				const file = String(q.file || '')
+				if (!file.toLowerCase().endsWith('.h5')) {
+					res.status(400).send({ status: 'error', error: 'gene expression file must be a .h5' })
+					return
+				}
+				const base = path.resolve(serverconfig.tpmasterdir)
+				const full = path.resolve(base, file)
+				if (!full.startsWith(base + path.sep)) {
+					res.status(400).send({ status: 'error', error: 'gene expression path escapes tpmasterdir' })
+					return
+				}
+				const out = await run_python(
+					'wsi_tile.py',
+					JSON.stringify({ action: 'genecounts', h5: full, gene: String(q.gene || '') })
+				)
+				res.status(200).json(JSON.parse(out))
+				return
+			}
+
 			if (req.params.action == 'meta') {
 				const out = await run_python('wsi_tile.py', JSON.stringify({ action: 'meta', slide }))
 				res.status(200).json(JSON.parse(out))
