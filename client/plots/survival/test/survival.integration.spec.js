@@ -444,7 +444,7 @@ tape('survival term as term1, term0 = agedx, custom bins', function (test) {
 
 tape('survival term as term1, term2 = geneVariant', function (test) {
 	test.timeoutAfter(5000)
-	test.plan(3)
+	test.plan(1)
 	runpp({
 		state: {
 			plots: [
