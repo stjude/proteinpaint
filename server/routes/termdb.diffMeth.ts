@@ -74,6 +74,9 @@ function dmKeyInputs(req: DiffMethRequest) {
 		samplelst: canonicalizeSamplelst(req.samplelst),
 		min_samples_per_group: req.min_samples_per_group ?? null,
 		exclude_sex_chr: req.exclude_sex_chr ?? null,
+		ebayes_trend: req.ebayes_trend ?? null,
+		ebayes_robust: req.ebayes_robust ?? null,
+		array_weights: req.array_weights ?? null,
 		tw: req.tw ?? null,
 		tw2: req.tw2 ?? null,
 		filter: (req as any).filter ?? null,
@@ -107,6 +110,9 @@ type DiffMethInput = {
 	input_file: string
 	min_samples_per_group?: number
 	exclude_sex_chr?: boolean
+	ebayes_trend?: boolean
+	ebayes_robust?: boolean
+	array_weights?: boolean
 	conf1?: any[]
 	conf1_mode?: 'continuous' | 'discrete'
 	conf2?: any[]
@@ -130,7 +136,10 @@ async function runDmFresh(
 		control: groups.group1names.join(','),
 		input_file: q.file,
 		min_samples_per_group: param.min_samples_per_group,
-		exclude_sex_chr: param.exclude_sex_chr
+		exclude_sex_chr: param.exclude_sex_chr,
+		ebayes_trend: param.ebayes_trend,
+		ebayes_robust: param.ebayes_robust,
+		array_weights: param.array_weights
 	}
 
 	if (param.tw) {
@@ -148,6 +157,39 @@ async function runDmFresh(
 	const time1 = Date.now()
 	const result = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethInput)))
 	mayLog('Time taken to run diffMeth:', formatElapsedTime(Date.now() - time1))
+
+	/* Surface the arrayWeights result. The point of the option is to reveal whether one
+	sample is dominating a group, which the weights answer and the promoter rows do not.
+	Report PER GROUP: a whole-run min/max cannot answer that question, because a high weight
+	is only alarming when it lands in the small arm. With few samples the residuals are taken
+	around a mean estimated from those same few points, so that group's variance is
+	underestimated, arrayWeights over-weights it, and significance inflates. Only present when
+	the option ran. */
+	if (Array.isArray(result.sample_weights) && result.sample_weights.length) {
+		const ws = result.sample_weights as { sample: string; weight: number }[]
+		const byName = new Map(ws.map(w => [w.sample, w.weight]))
+		const summarize = (label: string, names: string[]) => {
+			const vals = names.map(n => byName.get(n)).filter((v): v is number => Number.isFinite(v as number))
+			if (!vals.length) return `${label}: no weights`
+			const sorted = [...vals].sort((a, b) => a - b)
+			const median = sorted[Math.floor(sorted.length / 2)]
+			const head = `${label} (n=${sorted.length}): min=${sorted[0].toFixed(3)} median=${median.toFixed(3)} max=${sorted[
+				sorted.length - 1
+			].toFixed(3)}`
+			/* Small groups get every weight printed. That is the whole diagnostic when a group
+			is small enough for one sample to carry it, and it is a handful of numbers. */
+			if (sorted.length <= 10) {
+				return `${head} | all: ${names
+					.filter(n => byName.has(n))
+					.map(n => `${n}=${(byName.get(n) as number).toFixed(3)}`)
+					.join(', ')}`
+			}
+			const low = names.filter(n => (byName.get(n) as number) < 0.5)
+			return head + (low.length ? ` | ${low.length} under 0.5` : ' | none under 0.5')
+		}
+		mayLog('diffMeth arrayWeights ' + summarize('group1/control', groups.group1names))
+		mayLog('diffMeth arrayWeights ' + summarize('group2/case', groups.group2names))
+	}
 
 	const cacheResult: DmCacheResult = {
 		promoterRows: result.promoter_data,

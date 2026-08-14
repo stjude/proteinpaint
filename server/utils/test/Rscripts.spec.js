@@ -19,6 +19,9 @@ Active tests:
 	- diffMeth.R: output values are valid numbers
 	- diffMeth.R: reproducible output across runs
 	- diffMeth.R: confounder support
+	- diffMeth.R: exclude_sex_chr drops chrX/chrY promoters
+	- diffMeth.R: eBayes trend/robust move p-values but not fold-changes
+	- diffMeth.R: array_weights reweights samples and moves fold-changes
 	- diffMeth.R: error on too few samples
 	- diffMeth.R: error on invalid sample name
 	- edge_newh5.R limma
@@ -569,6 +572,139 @@ tape('diffMeth.R: exclude_sex_chr drops chrX/chrY promoters', async function (te
 			.map(d => d.promoter_id)
 			.sort(),
 		'surviving promoters should be exactly the non-sex-chromosome ones'
+	)
+
+	test.end()
+})
+
+tape('diffMeth.R: delta_beta and the group mean betas', async function (test) {
+	test.timeoutAfter(30000)
+	const out = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput)))
+	const rows = out.promoter_data
+
+	test.ok(
+		rows.every(
+			d =>
+				Number.isFinite(d.mean_beta_control) &&
+				d.mean_beta_control >= 0 &&
+				d.mean_beta_control <= 1 &&
+				Number.isFinite(d.mean_beta_case) &&
+				d.mean_beta_case >= 0 &&
+				d.mean_beta_case <= 1
+		),
+		'both group mean betas are finite and within [0,1]'
+	)
+	test.ok(
+		rows.every(d => Number.isFinite(d.delta_beta) && d.delta_beta >= -1 && d.delta_beta <= 1),
+		'delta_beta is finite and within [-1,1]'
+	)
+	// Pins the sign convention (case - control) and that the three columns cannot drift apart.
+	test.ok(
+		rows.every(d => Math.abs(d.delta_beta - (d.mean_beta_case - d.mean_beta_control)) < 1e-9),
+		'delta_beta equals mean_beta_case - mean_beta_control'
+	)
+	/* beta is monotonic in M and both quantities are case - control, so a row where these
+	disagree in sign means the beta vectors were paired with the wrong promoters. */
+	test.ok(
+		rows.every(d => d.delta_beta === 0 || d.fold_change === 0 || Math.sign(d.delta_beta) === Math.sign(d.fold_change)),
+		'delta_beta and fold_change agree in sign on every row'
+	)
+	test.end()
+})
+
+/* Swapping which arm is case and which is control must negate every delta_beta exactly and
+swap the two group means. That pins three things a single run cannot: the case - control sign
+convention, that case_cols/control_cols address the arms they claim to, and that the beta
+vectors are paired with the promoters they were computed from.
+
+Note what is deliberately NOT used here: permuting samples WITHIN a group. That leaves every
+group mean, variance and p-value untouched, so such a test passes no matter what the code
+does. */
+tape('diffMeth.R: swapping case and control negates delta_beta and swaps the group means', async function (test) {
+	test.timeoutAfter(45000)
+
+	const forward = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput)))
+	const swapped = JSON.parse(
+		await run_R(
+			'diffMeth.R',
+			JSON.stringify({ ...diffMethBaseInput, case: diffMethControlSamples, control: diffMethCaseSamples })
+		)
+	)
+
+	const byId = rs => Object.fromEntries(rs.map(d => [d.promoter_id, d]))
+	const f = byId(forward.promoter_data)
+	const s = byId(swapped.promoter_data)
+	test.deepEqual(Object.keys(f).sort(), Object.keys(s).sort(), 'same promoters returned either way')
+	for (const id of Object.keys(f)) {
+		test.ok(Math.abs(f[id].delta_beta + s[id].delta_beta) < 1e-9, `${id} delta_beta negated under the swap`)
+		test.ok(
+			Math.abs(f[id].mean_beta_case - s[id].mean_beta_control) < 1e-9 &&
+				Math.abs(f[id].mean_beta_control - s[id].mean_beta_case) < 1e-9,
+			`${id} group means swapped rather than changing value`
+		)
+	}
+	test.end()
+})
+
+tape('diffMeth.R: eBayes trend/robust move p-values but not fold-changes', async function (test) {
+	test.timeoutAfter(45000)
+
+	const base = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput)))
+	const tuned = JSON.parse(
+		await run_R('diffMeth.R', JSON.stringify({ ...diffMethBaseInput, ebayes_trend: true, ebayes_robust: true }))
+	)
+
+	const byId = rows => Object.fromEntries(rows.map(d => [d.promoter_id, d]))
+	const b = byId(base.promoter_data)
+	const t = byId(tuned.promoter_data)
+
+	test.deepEqual(Object.keys(b).sort(), Object.keys(t).sort(), 'same promoters returned either way')
+
+	/* eBayes moderates the variance, never the fitted coefficient, so fold-changes must be
+	byte-identical. If these drift, the flags are reaching lmFit or the design matrix by
+	mistake rather than the moderation step. */
+	for (const id of Object.keys(b)) {
+		test.equal(t[id].fold_change, b[id].fold_change, `fold_change unchanged for ${id}`)
+	}
+
+	// ...and the moderated p-values must move, which is what proves the flags were threaded
+	// through at all. A silently-dropped flag would leave these identical.
+	test.ok(
+		Object.keys(b).some(id => t[id].original_p_value !== b[id].original_p_value),
+		'at least one p-value differs, so the flags reached eBayes()'
+	)
+
+	test.end()
+})
+
+tape('diffMeth.R: array_weights reweights samples and moves fold-changes', async function (test) {
+	test.timeoutAfter(60000)
+
+	const base = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput)))
+	const weighted = JSON.parse(await run_R('diffMeth.R', JSON.stringify({ ...diffMethBaseInput, array_weights: true })))
+
+	const byId = rows => Object.fromEntries(rows.map(d => [d.promoter_id, d]))
+	const b = byId(base.promoter_data)
+	const w = byId(weighted.promoter_data)
+
+	test.deepEqual(Object.keys(b).sort(), Object.keys(w).sort(), 'same promoters returned either way')
+
+	/* The contrast with the eBayes options, which must NOT move fold-changes: weighted least
+	squares makes each group mean a weighted mean, so the coefficient itself changes. If these
+	came back identical the weights never reached lmFit. */
+	test.ok(
+		Object.keys(b).some(id => w[id].fold_change !== b[id].fold_change),
+		'at least one fold_change differs, so the weights reached lmFit()'
+	)
+
+	// The weights are the diagnostic the option exists to produce, so they must come back.
+	test.notOk(base.sample_weights, 'no sample_weights emitted when the option is off')
+	test.ok(Array.isArray(weighted.sample_weights), 'sample_weights emitted when the option is on')
+	const nSamples = diffMethCaseSamples.split(',').length + diffMethControlSamples.split(',').length
+	test.equal(weighted.sample_weights.length, nSamples, 'one weight per sample')
+	test.ok(
+		weighted.sample_weights.every(s => typeof s.sample == 'string' && Number.isFinite(s.weight) && s.weight > 0),
+		'every weight is a finite positive number tagged with its sample name'
 	)
 
 	test.end()

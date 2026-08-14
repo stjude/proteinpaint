@@ -1294,6 +1294,13 @@ type Mds3Queries = {
 			file: string
 			/** unit label for promoter values (e.g. 'Average M-value') */
 			unit: string
+			/** Substring of a sample name marking samples to withhold from differential
+			 * methylation. Use when the matrix pools specimen types whose methylomes are
+			 * not comparable (e.g. a different tissue compartment), since silently pooling
+			 * them makes the compartment difference show up as the contrast. The h5 itself
+			 * is untouched; only the set DM draws from shrinks. The startup log reports how
+			 * many samples matched, and warns if none did. */
+			excludeSampleNamesMatching?: string
 		}
 	}
 	rnaseqGeneCount?: RnaseqGeneCount

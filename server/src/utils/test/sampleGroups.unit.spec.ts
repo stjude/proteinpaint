@@ -1,5 +1,10 @@
 import tape from 'tape'
-import { resolveDaContext, buildGroupValues, canonicalizeSamplelst } from '#src/utils/sampleGroups.ts'
+import {
+	resolveDaContext,
+	buildGroupValues,
+	canonicalizeSamplelst,
+	withholdSampleNames
+} from '#src/utils/sampleGroups.ts'
 import { init as initTestDs } from '#src/test/load.testds.js'
 import { server_init_db_queries } from '#src/termdb.server.init.ts'
 
@@ -18,6 +23,9 @@ buildGroupValues skips when name is not in allSampleSet
 buildGroupValues skips when tw is configured but term_results has no row for that sample
 buildGroupValues skips when tw2 is configured but term_results2 has no row for that sample
 buildGroupValues reads .value for continuous mode and .key otherwise
+withholdSampleNames removes matching names and reports the count
+withholdSampleNames reports 0 when the pattern matches nothing
+withholdSampleNames is a no-op without a pattern
 buildGroupValues populates conf2 from tw2 with the same continuous/discrete split
 resolveDaContext throws when the request genome is not in the genomes map
 resolveDaContext returns ds with empty term_results when neither tw nor tw2 is set
@@ -231,6 +239,36 @@ tape('buildGroupValues reads .value for continuous mode and .key otherwise', asy
 		[]
 	)
 	t.deepEqual(outDisc.conf1, ['M', 'F'], 'non-continuous mode used v.key')
+	t.end()
+})
+
+tape('withholdSampleNames removes matching names and reports the count', t => {
+	const set = new Set(['MMRF_1_1_BM_CD138pos', 'MMRF_2_1_PB_CD138pos', 'MMRF_3_1_BM_CD138pos'])
+	const withheld = withholdSampleNames(set, '_PB_')
+	t.equal(withheld, 1, 'returns how many were withheld')
+	t.deepEqual(
+		[...set].sort(),
+		['MMRF_1_1_BM_CD138pos', 'MMRF_3_1_BM_CD138pos'],
+		'only the matching name left the set, and it was mutated in place'
+	)
+	t.end()
+})
+
+/* A pattern that matches nothing is the failure mode this guards: the exclusion looks like it
+worked from every downstream angle. The count is what lets the caller warn instead of proceeding
+quietly, so pin that it comes back 0 rather than throwing or silently succeeding. */
+tape('withholdSampleNames reports 0 when the pattern matches nothing', t => {
+	const set = new Set(['MMRF_1_1_BM_CD138pos', 'MMRF_3_1_BM_CD138pos'])
+	t.equal(withholdSampleNames(set, '_PB_'), 0, 'nothing matched, so nothing was withheld')
+	t.equal(set.size, 2, 'set untouched')
+	t.end()
+})
+
+tape('withholdSampleNames is a no-op without a pattern', t => {
+	const set = new Set(['a', 'b'])
+	t.equal(withholdSampleNames(set, undefined), 0, 'no pattern means no filtering')
+	t.equal(withholdSampleNames(set, ''), 0, 'an empty pattern must not match every name')
+	t.equal(set.size, 2, 'set untouched')
 	t.end()
 })
 

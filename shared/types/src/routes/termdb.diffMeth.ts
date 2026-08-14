@@ -17,6 +17,18 @@ export type DiffMethRequest = {
 	 * chrX methylation strongly sex-dependent, so a sex-imbalanced comparison produces
 	 * chrX hits that are sex rather than the grouping variable. */
 	exclude_sex_chr?: boolean
+	/** Fit the eBayes prior variance as a function of average M-value (default false).
+	 * M-value variance is mean-dependent, so a single prior over- and under-shrinks
+	 * opposite ends of the methylation range. */
+	ebayes_trend?: boolean
+	/** Robust eBayes moderation (default false): down-weight variance outliers when
+	 * estimating hyperparameters so a few wild promoters cannot drag the prior. */
+	ebayes_robust?: boolean
+	/** Per-sample REML weights via limma arrayWeights() (default false). Unlike the two
+	 * eBayes options this acts across samples rather than across promoters, and it does
+	 * change the fitted fold-changes. Guards against a single aberrant sample dominating
+	 * a small group, and against unequal variance between two very unbalanced arms. */
+	array_weights?: boolean
 	/** Term for confounding variable 1 (if present) */
 	tw?: any
 	/** Term for confounding variable 2 (if present) */
@@ -58,6 +70,16 @@ export type DiffMethEntry = DataEntry & {
 	start: number
 	/** Promoter end coordinate (exclusive) */
 	stop: number
+	/** Group 1 (control) mean beta, over observed cells only */
+	mean_beta_control: number
+	/** Group 2 (case) mean beta, over observed cells only */
+	mean_beta_case: number
+	/** mean_beta_case - mean_beta_control. The interpretable effect size: fold_change is a
+	 * difference of M-values (a logit), so it does not say how much methylation changed.
+	 * Same sign as fold_change, since both are case - control. Derived by back-transforming
+	 * the stored M-values, which yields the alpha-smoothed beta and so shrinks the difference
+	 * toward zero by 2/(depth+2) — under 1% at this cohort's typical promoter depth. */
+	delta_beta: number
 }
 
 // TODO: write payload examples to help with automated testing and documentation, for non-prod use only
