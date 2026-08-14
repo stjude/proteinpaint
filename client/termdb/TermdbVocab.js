@@ -474,10 +474,12 @@ export class TermdbVocab extends Vocab {
 
 	async getViolinBox(arg, _body = {}, signal = undefined) {
 		const headers = await this.mayGetAuthHeaders('termdb')
-		arg.tw = this.getTwMinCopy(arg.tw)
-		arg.tw.q.mode = 'continuous'
-		if (arg.overlayTw) arg.overlayTw = this.getTwMinCopy(arg.overlayTw)
-		if (arg.divideTw) arg.divideTw = this.getTwMinCopy(arg.divideTw)
+		/* the min copies go into the request body, and arg.tw is deliberately left as
+		the caller's tw: Violin.ts assigns the response descrStats onto arg.tw.q after
+		this resolves, and the legend renders from config.term.q.descrStats. replacing
+		arg.tw here would send that assignment to a throwaway object */
+		const twCopy = this.getTwMinCopy(arg.tw)
+		twCopy.q.mode = 'continuous'
 
 		// Set chartType based on plotType argument
 		if (!arg.plotType) throw new Error('plotType is required: must be "violin" or "box"')
@@ -493,8 +495,12 @@ export class TermdbVocab extends Vocab {
 				filter: arg.filter || this.state.termfilter?.filter,
 				filter0: this.state.termfilter?.filter0
 			},
-			arg
+			arg,
+			// override the tws spread in from arg with their min copies
+			{ tw: twCopy }
 		)
+		if (arg.overlayTw) body.overlayTw = this.getTwMinCopy(arg.overlayTw)
+		if (arg.divideTw) body.divideTw = this.getTwMinCopy(arg.divideTw)
 
 		// Add violin-specific defaults
 		if (arg.plotType === 'violin') {
@@ -1396,9 +1402,11 @@ export class TermdbVocab extends Vocab {
 
 		//Add more args here (e.g. filter, etc. )
 		arg.featureTw = this.getTwMinCopy(arg.featureTw)
-		for (const tw of arg.variableTwLst) {
-			this.getTwMinCopy(tw)
-		}
+		/* the return value must be assigned. this used to be a loop that discarded it,
+		which only had any effect because getTwMinCopy() mutated the tw it was given, so
+		the variable tws were sent in full. the server puts these through the same
+		getData() call as featureTw, which has always been min-copied */
+		arg.variableTwLst = arg.variableTwLst.map(tw => this.getTwMinCopy(tw))
 
 		const body = Object.assign(
 			{

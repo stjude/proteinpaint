@@ -6,6 +6,7 @@ import { testAppInit } from '../../test/test.helpers'
 Tests:
     mayFillCategories: single term
     mayFillCategories: multiple terms
+    getViolinBox: shapes the request without touching the caller tws
  */
 
 const state = {
@@ -127,6 +128,49 @@ tape('mayFillCategories: multiple terms', test => {
 		opts.term2.term.categories,
 		expectedCategories,
 		'term.categories should get filled change when term is in categories'
+	)
+	test.end()
+})
+
+tape('getViolinBox: shapes the request without touching the caller tws', async test => {
+	const vocabApi: any = await getTermdbVocabApi()
+	let sentBody: any
+	vocabApi.dofetch3 = async (_route: string, init: any) => {
+		sentBody = init.body
+		return { descrStats: { total: { label: 'Total', value: 3 } } }
+	}
+
+	const tw: any = {
+		$id: 'tw1',
+		type: 'NumTWCont',
+		term: { id: 'agedx', type: 'float', name: 'Age' },
+		q: { isAtomic: true, mode: 'discrete' }
+	}
+	const overlayTw: any = {
+		$id: 'tw2',
+		type: 'QualTWValues',
+		term: { id: 'sex', type: 'categorical', name: 'Sex' },
+		q: { isAtomic: true, type: 'values' }
+	}
+	const arg: any = { plotType: 'violin', tw, overlayTw }
+
+	await vocabApi.getViolinBox(arg)
+
+	/* Violin.ts assigns the response descrStats onto arg.tw.q once this resolves, and the
+	legend renders from config.term.q.descrStats, so arg.tw must remain the caller's tw */
+	test.equal(arg.tw, tw, 'should leave arg.tw as the caller object')
+	test.equal(arg.overlayTw, overlayTw, 'should leave arg.overlayTw as the caller object')
+	test.equal(tw.q.mode, 'discrete', 'should not force q.mode onto the caller tw')
+	test.equal(tw.q.isAtomic, true, 'should not strip q.isAtomic from the caller tw')
+
+	// the min copies are what gets sent
+	test.equal(sentBody.tw.q.mode, 'continuous', 'should send q.mode=continuous')
+	test.equal('isAtomic' in sentBody.tw.q, false, 'should strip q.isAtomic from the sent tw')
+	test.equal('isAtomic' in sentBody.overlayTw.q, false, 'should strip q.isAtomic from the sent overlayTw')
+	test.deepEqual(
+		sentBody.tw.term,
+		{ id: 'agedx', name: 'Age', type: 'float' },
+		'should send a minimum copy of a dictionary term'
 	)
 	test.end()
 })

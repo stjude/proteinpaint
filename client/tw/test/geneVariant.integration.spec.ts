@@ -334,15 +334,14 @@ tape('getTwMinCopy(): trims without mutating the source term', async test => {
 		q: { isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: 0 }
 	}
 	const fullTw: any = await GvBase.fill(tw, { vocabApi })
-	const beforeTerm = JSON.stringify(fullTw.term)
+	const before = JSON.stringify(fullTw)
 	const copy: any = vocabApi.getTwMinCopy(fullTw)
 
 	test.equal('childTerms' in copy.term, false, 'should remove term.childTerms[] on this path too')
 	test.ok(copy.term.groupsetting.lst[copy.q.predefined_groupset_idx], 'should keep the selected groupset')
-	/* only tw.term is asserted: getTwMinCopy() holds tw.q by reference and deletes
-	q.isAtomic from it, which is a separate pre-existing issue. tw.term is what the
-	trim touches, and it must stay untouched on the source */
-	test.equal(JSON.stringify(fullTw.term), beforeTerm, 'should not mutate the source tw.term')
+	test.equal('isAtomic' in copy.q, false, 'should strip q.isAtomic from the copy')
+	test.equal(fullTw.q.isAtomic, true, 'should leave q.isAtomic on the source, which rx copyMerge() reads')
+	test.equal(JSON.stringify(fullTw), before, 'should not mutate the source tw')
 	test.end()
 })
 
