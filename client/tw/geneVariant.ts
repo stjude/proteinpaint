@@ -23,6 +23,7 @@ import { getWrappedTvslst } from '#filter/filter'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getChildTerms, addParentTerm } from '../termdb/handlers/geneVariant'
 import { getColors, dtcnv, dtsnvindel, mclass } from '#shared/common.js'
+import { validateVariantFilter } from '#shared/geneVariantFilter.js'
 import { getDtsFromGroups } from '../termsetting/handlers/geneVariant'
 import { rgb } from 'd3-color'
 
@@ -188,6 +189,9 @@ export class GvValues extends GvBase {
 		// only where a groupset is cleared, so that a tw of a session saved with
 		// the stale property is also corrected
 		delete (q as any).dtLst
+		// throws on a filter that cannot be honored one variant at a time, so that
+		// a bad filter fails here rather than quietly showing the wrong variants
+		validateVariantFilter((q as any).variantFilter, term)
 		set_hiddenvalues(q, term)
 		return tw as GvValuesTW
 	}
@@ -224,6 +228,11 @@ export class GvPredefinedGS extends GvBase {
 
 		// get predefined groupsets
 		await getPredefinedGroupsets(tw.term, opts.vocabApi)
+
+		// a groupset filters through its own group filters, so a variantFilter is
+		// only meaningful for a values q. it must not survive here, otherwise it
+		// would silently come back into effect when the groupset is later cleared
+		delete (tw.q as any).variantFilter
 
 		const { term, q } = tw
 		if (!term.groupsetting?.lst?.length) throw 'term.groupsetting.lst[] is empty'
@@ -284,6 +293,9 @@ export class GvCustomGS extends GvBase {
 
 		if (tw.term.type != 'geneVariant') throw `expecting tw.term.type='geneVariant', got '${tw.term.type}'`
 		if (tw.q.type != 'custom-groupset') throw `expecting tw.q.type='custom-groupset', got '${tw.q.type}'`
+
+		// see the same deletion in GvPredefinedGS.fill()
+		delete (tw.q as any).variantFilter
 
 		const { term, q } = tw
 		if (!q.customset) throw 'missing tw.q.customset'

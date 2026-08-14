@@ -252,11 +252,14 @@ function getSortSamplesByDt(st, self, rows, s) {
 			dt.set(row.sample, nextRound)
 			return
 		}
-		if (sortSamples.filter && !findMatchingValue(row[$id].values, sortSamples.filter.values)) {
+		// use the classified values, as getSortSamplesByClass() does, so that a row
+		// with a tw.q.variantFilter is sorted by the variants it actually shows
+		const values = row[$id].filteredValues || row[$id].values
+		if (sortSamples.filter && !findMatchingValue(values, sortSamples.filter.values)) {
 			dt.set(row.sample, nextRound)
 			return
 		}
-		const indices = row[$id].values.map(v => order.indexOf(v.dt)).filter(i => i !== -1)
+		const indices = values.map(v => order.indexOf(v.dt)).filter(i => i !== -1)
 		dt.set(row.sample, indices.length ? Math.min(...indices) : nextRound)
 	}
 

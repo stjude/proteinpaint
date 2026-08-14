@@ -10,7 +10,13 @@ export type GvBaseQ = MinBaseQ & {
 	cnvLossCutoff?: number
 }
 
-type RawGvValuesQ = GvBaseQ & { type?: 'values' }
+/** a per-row filter over the variants of the term, so that two rows of the same
+ * gene, e.g. KRAS G12D and KRAS G12V, can each show only their own variants. a
+ * tvslst over the child dt terms, see shared/utils/src/geneVariantFilter.ts.
+ * only meaningful for a 'values' q; a groupset filters through its groups */
+type VariantFilterQ = { variantFilter?: any }
+
+type RawGvValuesQ = GvBaseQ & VariantFilterQ & { type?: 'values' }
 type RawGvPredefinedGsQ = GvBaseQ & {
 	type: 'predefined-groupset'
 	predefined_groupset_idx?: number
@@ -23,7 +29,7 @@ type RawGvCustomGsQ = GvBaseQ & {
 }
 export type RawGvQ = RawGvValuesQ | RawGvPredefinedGsQ | RawGvCustomGsQ
 
-export type GvValuesQ = GvBaseQ & { type: 'values' }
+export type GvValuesQ = GvBaseQ & VariantFilterQ & { type: 'values' }
 export type GvPredefinedGsQ = GvBaseQ & {
 	type: 'predefined-groupset'
 	predefined_groupset_idx: number
