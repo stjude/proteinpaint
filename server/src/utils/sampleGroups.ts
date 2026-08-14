@@ -64,6 +64,26 @@ export async function resolveDaContext(
 	return { ds, term_results, term_results2 }
 }
 
+/** Remove sample names containing `pattern` from `allSampleSet`, in place, and return how
+ * many went. Lets a dataset withhold a non-comparable specimen type from a two-group
+ * analysis by shrinking the eligibility set the analysis already filters through
+ * (buildGroupValues below), instead of adding a check to every call site.
+ *
+ * Returns the count so the caller can be loud about a pattern that matched nothing: a
+ * silently-ineffective exclusion is the exact failure this is meant to prevent, and it
+ * looks identical to a working one from the outside. No pattern means no filtering. */
+export function withholdSampleNames(allSampleSet: Set<string>, pattern?: string): number {
+	if (!pattern) return 0
+	let withheld = 0
+	for (const name of allSampleSet) {
+		if (name.includes(pattern)) {
+			allSampleSet.delete(name)
+			withheld++
+		}
+	}
+	return withheld
+}
+
 /** Walk one sample group's values and collect names + confounder values.
  * A name is included iff every configured confounder (tw, tw2) has data
  * for that sample — the two early-return guards enforce that without a

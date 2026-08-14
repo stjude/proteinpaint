@@ -55,6 +55,13 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>) {
 	// Off by default so existing analyses are unchanged and chrX remains usable as a
 	// positive control. Recommended on for mixed-sex cohorts -- see the checkbox title.
 	defaults.excludeSexChr = false
+	// Also off by default: both change every p-value, so turning either on silently
+	// would invalidate previously reported methylation results.
+	defaults.eBayesTrend = false
+	defaults.eBayesRobust = false
+	// Off by default like the other two, and additionally because it is the slowest of the
+	// three -- arrayWeights runs an iterative REML fit over the whole matrix.
+	defaults.arrayWeights = false
 }
 
 /*********** Setting Validation Functions ***********

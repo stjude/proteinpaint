@@ -299,6 +299,17 @@ export class VolcanoViewModel {
 								{ value: d.adjusted_p_value != undefined ? roundValueAuto(d.adjusted_p_value) : '' }
 						  ]
 				if (this.termType == tt.DNA_METHYLATION) {
+					/* Two splices, in this order, mirroring setPTableColumns exactly: the beta cells
+					go in after fold-change (index 1) while it is still at index 0, then the
+					Promoter/Gene prefix shifts everything right. Swapping the order puts Δβ under the
+					wrong header. */
+					row.splice(
+						1,
+						0,
+						{ value: roundValueAuto((d as any).delta_beta) },
+						{ value: roundValueAuto((d as any).mean_beta_control) },
+						{ value: roundValueAuto((d as any).mean_beta_case) }
+					)
 					row.splice(0, 0, { value: formatPromoterLabel(d as any) }, { value: d.gene_name || '' })
 				} else if (this.termType == tt.PROTEOME_DAP) {
 					row.splice(0, 0, { value: d.gene_name || '' }, { value: d.gene || '' })
@@ -395,6 +406,18 @@ export class VolcanoViewModel {
 
 	setPTableColumns() {
 		if (this.termType == tt.DNA_METHYLATION) {
+			/* Δβ sits next to log₂(fold-change) so the two effect sizes read as a pair: the
+			fold-change is a logit difference and does not say how much methylation moved, Δβ does.
+			The group means follow because a Δβ of 0.2 means something different at 0.1→0.3 than at
+			0.7→0.9. Insert at 1 (after fold-change) BEFORE the Promoter/Gene prefix shifts indices —
+			setPointData splices its cells in the same order for the same reason. */
+			this.pValueTable.columns.splice(
+				1,
+				0,
+				{ label: 'Δβ', sortable: true },
+				{ label: 'Mean β (group 1)', sortable: true },
+				{ label: 'Mean β (group 2)', sortable: true }
+			)
 			this.pValueTable.columns.splice(0, 0, { label: 'Promoter', sortable: true }, { label: 'Gene(s)', sortable: true })
 		} else if (this.termType == tt.PROTEOME_DAP) {
 			this.pValueTable.columns.splice(0, 0, { label: 'Identifier', sortable: true }, { label: 'Gene', sortable: true })

@@ -47,6 +47,13 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	minSamplesPerGroup: number
 	/** Drop chrX/chrY promoters before testing */
 	excludeSexChr: boolean
+	/** Fit the eBayes prior variance as a function of average M-value */
+	eBayesTrend: boolean
+	/** Robust eBayes moderation against variance outliers */
+	eBayesRobust: boolean
+	/** Per-sample REML weights via limma arrayWeights(). Changes fold-changes, unlike the
+	 * two eBayes options. */
+	arrayWeights: boolean
 }
 
 export type SCCTVolcanoSettings = DefaultVolcanoSettings & {}

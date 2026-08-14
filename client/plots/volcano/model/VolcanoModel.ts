@@ -96,6 +96,9 @@ export class VolcanoModel {
 			filter0: state.termfilter.filter0,
 			min_samples_per_group: this.settings.minSamplesPerGroup,
 			exclude_sex_chr: this.settings.excludeSexChr,
+			ebayes_trend: this.settings.eBayesTrend,
+			ebayes_robust: this.settings.eBayesRobust,
+			array_weights: this.settings.arrayWeights,
 			volcanoRender: this.getVolcanoRender()
 		} as Partial<DiffMethRequest>
 

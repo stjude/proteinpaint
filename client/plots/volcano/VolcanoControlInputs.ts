@@ -217,6 +217,33 @@ export class VolcanoControlInputs {
 				boxLabel: '',
 				title:
 					'Drop chrX/chrY promoters. Recommended for mixed-sex cohorts — X-inactivation makes chrX methylation strongly sex-dependent, so a sex-imbalanced comparison reports sex rather than the grouping variable.'
+			},
+			{
+				label: 'Mean-variance trend',
+				type: 'checkbox',
+				chartType: 'volcano',
+				settingsKey: 'eBayesTrend',
+				boxLabel: '',
+				title:
+					'limma eBayes(trend=TRUE): fit the prior variance as a function of average M-value instead of assuming one constant prior. M-value variance is mean-dependent — promoters at intermediate methylation are much noisier than fully methylated or unmethylated ones.'
+			},
+			{
+				label: 'Robust variance moderation',
+				type: 'checkbox',
+				chartType: 'volcano',
+				settingsKey: 'eBayesRobust',
+				boxLabel: '',
+				title:
+					'limma eBayes(robust=TRUE): down-weight promoters whose variance is a gross outlier when estimating hyperparameters, so a few wild rows cannot drag the prior. Recommended together with the mean-variance trend when the two groups are very unbalanced.'
+			},
+			{
+				label: 'Per-sample weights',
+				type: 'checkbox',
+				chartType: 'volcano',
+				settingsKey: 'arrayWeights',
+				boxLabel: '',
+				title:
+					'limma arrayWeights(): estimate one weight per sample and down-weight consistently noisy samples. Unlike the two options above this acts across samples, not across promoters, and it does change fold-changes. Use it when a group is small enough that one aberrant sample could dominate it, or when the two arms may have unequal variance. Slowest of the three — it runs an iterative REML fit.'
 			}
 		]
 		this.inputs.splice(0, 0, ...dmInputs)

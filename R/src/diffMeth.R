@@ -65,6 +65,9 @@ pkg_load_mem <- mem_probe()
 #   input_file:            absolute path to the promoter-level M-value HDF5 file
 #   min_samples_per_group: (optional, default 3) minimum non-NA samples required per group
 #   exclude_sex_chr:       (optional, default FALSE) drop chrX/chrY promoters before testing
+#   ebayes_trend:          (optional, default FALSE) fit a mean-variance trend in eBayes()
+#   ebayes_robust:         (optional, default FALSE) robust eBayes moderation (variance outliers)
+#   array_weights:         (optional, default FALSE) per-sample REML weights via arrayWeights()
 #   conf1:                 (optional) array of confounding variable 1 values, one per sample
 #   conf1_mode:            (optional) "continuous" or "discrete" — type of conf1
 #   conf2:                 (optional) array of confounding variable 2 values
@@ -261,6 +264,43 @@ design_time <- system.time({
 design_mem <- mem_probe()
 
 ###############################################################################
+# Step 5b: Group mean betas and delta-beta (the interpretable effect size)
+###############################################################################
+# fold_change is a difference of M-values -- a logit difference, which says
+# nothing about how much methylation actually changed. Delta-beta is the
+# quantity biologists read and the one the collaborators' DSS output thresholds
+# on (minDiff0.2), so emit it alongside.
+#
+# The matrix holds M = log2((sum_m + alpha)/(sum_u + alpha)) with alpha=1
+# (build_promoter_matrix.py), so the back-transform is exact:
+#
+#   beta_hat = 2^M/(1 + 2^M) = (sum_m + 1)/(n + 2),  n = sum_m + sum_u
+#
+# i.e. the Laplace-smoothed beta rather than sum_m/n. The per-cell bias is
+# (1-2*beta)/(n+2); for a DIFFERENCE of group means at comparable depth that
+# collapses to a multiplicative shrinkage toward zero of 2/(n+2). It is
+# conservative -- it never inflates a difference -- and at this cohort's
+# measured median promoter-cell depth of ~230 reads it is 0.86%, i.e. a true
+# delta-beta of 0.20 reports as 0.198. That is why no separate beta matrix is
+# loaded: the correction is smaller than the quantity is ever read to.
+#
+# Computed BEFORE the imputation below, with na.rm, so these describe observed
+# data only. Imputation fills M-value cells with a group mean, and because beta
+# is nonlinear in M, averaging beta over imputed cells is not the observed-data
+# mean. (Once the imputation is dropped the two coincide.)
+beta_time <- system.time({
+  case_cols_b <- 1:n_cases
+  control_cols_b <- (n_cases + 1):(n_cases + n_controls)
+  m2b <- function(m) 2^m / (1 + 2^m)
+  mean_beta_case_all <- rowMeans(m2b(mvalues[, case_cols_b, drop = FALSE]), na.rm = TRUE)
+  mean_beta_control_all <- rowMeans(m2b(mvalues[, control_cols_b, drop = FALSE]), na.rm = TRUE)
+  # case - control, matching fold_change (case = group2 = "Diseased") and the
+  # DMR path's group2-minus-group1 convention, so positive means hyper in both.
+  delta_beta_all <- mean_beta_case_all - mean_beta_control_all
+})
+beta_mem <- mem_probe()
+
+###############################################################################
 # Step 6: Impute remaining NAs with group means
 ###############################################################################
 # After filtering (Step 4), some promoters may still have NAs in individual
@@ -309,11 +349,51 @@ impute_mem <- mem_probe()
 # estimates, especially important when sample sizes are small. It shrinks
 # each promoter's variance toward a common prior, which improves the
 # reliability of the t-statistics and p-values.
+#
+# Two optional refinements to that moderation, both off by default so existing
+# results are reproducible:
+#
+#   ebayes_trend  - fit the prior variance as a function of average M-value
+#     instead of assuming one constant prior. M-value variance is strongly
+#     mean-dependent: promoters sitting at intermediate methylation are far
+#     noisier than fully methylated or fully unmethylated ones. With a single
+#     prior, the intermediate promoters are shrunk too hard and the extreme ones
+#     not hard enough.
+#
+#   ebayes_robust - down-weight promoters whose variance is a gross outlier when
+#     estimating the hyperparameters, so a handful of wild rows cannot drag the
+#     prior (and therefore every promoter's moderated t) with them.
+#
+# Both matter most when the two groups are unbalanced: with one arm much smaller
+# than the other, a mis-estimated prior variance biases the moderated t-statistic
+# in the same direction for every promoter, which shows up as an implausibly
+# large number of significant results rather than as a changed fold-change.
+# array_weights is a third, separate refinement, and it addresses a different axis
+# than the two above. Both eBayes options act ACROSS PROMOTERS (how the prior variance
+# is estimated); arrayWeights acts ACROSS SAMPLES, estimating one weight per sample by
+# REML and down-weighting samples that are consistently noisier than their peers.
+#
+# That is the remedy for two things the eBayes options cannot touch:
+#   - a single aberrant sample carrying undue leverage. With a 4-sample group each
+#     sample is 25% of that group's mean, so one outlier moves every promoter.
+#   - unequal variance BETWEEN the two arms. With one arm far larger, the pooled
+#     variance is essentially the big arm's, so a noisier small arm gets a standard
+#     error that is too small and p-values that run anti-conservative.
+#
+# Note this one DOES change the fitted coefficients: weighted least squares makes each
+# group mean a weighted mean, so fold-changes move. The eBayes options never do.
+ebayes_trend <- isTRUE(input$ebayes_trend)
+ebayes_robust <- isTRUE(input$ebayes_robust)
+array_weights <- isTRUE(input$array_weights)
 fit_time <- system.time({
   suppressWarnings({
     suppressMessages({
-      fit <- lmFit(mvalues, design) # Ordinary least squares fit per promoter
-      fit <- eBayes(fit) # Empirical Bayes shrinkage of variances
+      # NULL weights is lmFit's default, so the un-weighted path needs no branch.
+      # Safe to run here: step 6 already imputed the remaining NAs.
+      sample_weights <- if (array_weights) arrayWeights(mvalues, design) else NULL
+      fit <- lmFit(mvalues, design, weights = sample_weights) # per-promoter least squares fit
+      # Empirical Bayes shrinkage of variances
+      fit <- eBayes(fit, trend = ebayes_trend, robust = ebayes_robust)
     })
   })
 })
@@ -356,6 +436,12 @@ output_time <- system.time({
   result_chrs <- chrs_filtered[result_indices]
   result_starts <- starts_filtered[result_indices]
   result_stops <- stops_filtered[result_indices]
+  # Same reindex as the metadata above, and for the same reason: top_table is
+  # sorted by p-value, so these vectors (built in matrix row order) would be
+  # silently paired with the wrong promoters if carried over as-is.
+  result_mean_beta_case <- mean_beta_case_all[result_indices]
+  result_mean_beta_control <- mean_beta_control_all[result_indices]
+  result_delta_beta <- delta_beta_all[result_indices]
 
   # Assemble the output data frame. Field names are kept agnostic since these are
   # promoter-level results (not gene-level like DE): the primary ID is an ENCODE
@@ -367,6 +453,9 @@ output_time <- system.time({
     start = result_starts, # Promoter start coordinate (0-based)
     stop = result_stops, # Promoter end coordinate (exclusive)
     fold_change = top_table$logFC, # M-value difference (positive = hypermethylated in cases)
+    mean_beta_control = result_mean_beta_control, # group1 mean beta, observed cells only
+    mean_beta_case = result_mean_beta_case, # group2 mean beta, observed cells only
+    delta_beta = result_delta_beta, # case - control, same sign as fold_change
     original_p_value = top_table$P.Value, # Raw p-value from moderated t-test
     adjusted_p_value = top_table$adj.P.Val # FDR-adjusted p-value (Benjamini-Hochberg)
   )
@@ -376,6 +465,17 @@ output_time <- system.time({
   # The server route for differential methylation will need to handle this key.
   final_output <- list()
   final_output$promoter_data <- output
+
+  # Emit the per-sample weights when arrayWeights ran. Without these the option is a
+  # black box: the number that actually matters is WHICH sample got down-weighted.
+  # colnames(mvalues) is c(cases, controls), so the order lines up with the groups.
+  if (!is.null(sample_weights)) {
+    final_output$sample_weights <- data.frame(
+      sample = colnames(mvalues),
+      weight = as.numeric(sample_weights),
+      stringsAsFactors = FALSE
+    )
+  }
 })
 output_mem <- mem_probe()
 
@@ -389,6 +489,7 @@ final_output$timings <- list(
   read_data = elapsed(read_data_time), # h5read of metadata + M-value matrix
   filter = elapsed(filter_time), # NA-count and variance filtering
   design = elapsed(design_time), # build conditions + design matrix
+  beta = elapsed(beta_time), # group mean betas + delta-beta
   impute = elapsed(impute_time), # group-mean NA imputation
   fit = elapsed(fit_time), # lmFit + eBayes
   results = elapsed(results_time), # topTable
@@ -406,6 +507,7 @@ final_output$memory_mb <- list(
   read_data = mem(read_data_mem),
   filter = mem(filter_mem),
   design = mem(design_mem),
+  beta = mem(beta_mem),
   impute = mem(impute_mem),
   fit = mem(fit_mem),
   results = mem(results_mem),

@@ -255,6 +255,58 @@ tape('setPointData: rowKeys map rows to the dot identity', function (test) {
 	test.end()
 })
 
+/* The methylation table builds its columns in setPTableColumns and its cells in setPointData,
+in two separate splices that must agree on ordinal position. Nothing enforces that structurally,
+and getting it wrong renders Δβ under the "Mean β" header — wrong but entirely plausible on
+screen. So assert the pairing by looking each value up through its own column label rather than
+by a hardcoded index, which is also what the sort and download helpers do. */
+tape('setPointData: methylation cells line up with their column headers', function (test) {
+	test.timeoutAfter(100)
+
+	const dmDot = {
+		promoter_id: 'NKAP.p4_chrX:119943104-119945251',
+		gene_name: 'NKAP',
+		chr: 'chrX',
+		start: 119943104,
+		stop: 119945251,
+		fold_change: 0.6196,
+		mean_beta_control: 0.42,
+		mean_beta_case: 0.61,
+		delta_beta: 0.19,
+		original_p_value: 0.0001,
+		adjusted_p_value: 0.001,
+		pixel_x: 350,
+		pixel_y: 100
+	}
+	const vm = new VolcanoViewModel(
+		{ ...mockConfig, termType: 'dnaMethylation' } as any,
+		{ ...mockResponse, data: { ...mockResponse.data, dots: [dmDot] as any } },
+		mockSettings as any
+	)
+	vm.setPointData(vm.setPlotDimensions(), 'red', 'blue')
+	const row = vm.pValueTable.rows[0]
+	const cols = vm.pValueTable.columns
+
+	test.equal(cols.length, row.length, 'one cell per column')
+	const cellFor = (label: string) => row[cols.findIndex(c => c.label == label)]?.value
+
+	test.equal(cellFor('Δβ'), 0.19, 'Δβ cell sits under the Δβ header')
+	test.equal(cellFor('Mean β (group 1)'), 0.42, 'group 1 mean beta is the control mean')
+	test.equal(cellFor('Mean β (group 2)'), 0.61, 'group 2 mean beta is the case mean')
+	// 0.62, not 0.6196: table cells are passed through roundValueAuto for display
+	test.equal(cellFor('log₂(fold-change)'), 0.62, 'fold-change stayed put when the beta columns were inserted')
+	test.equal(cellFor('Adjusted p-value'), 0.001, 'the p-value columns shifted right rather than being overwritten')
+
+	// Δβ is the interpretable effect size and must sit beside the fold-change, not off in the tail
+	test.equal(
+		cols.findIndex(c => c.label == 'Δβ') - cols.findIndex(c => c.label == 'log₂(fold-change)'),
+		1,
+		'Δβ is immediately after log₂(fold-change)'
+	)
+
+	test.end()
+})
+
 tape('setStatsData', function (test) {
 	test.timeoutAfter(100)
 

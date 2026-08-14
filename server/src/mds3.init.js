@@ -12,6 +12,7 @@ import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
 import { getH5samples } from './utils/h5samples.ts'
+import { withholdSampleNames } from './utils/sampleGroups.ts'
 import { compute_mclass } from './vcf.mclass.js'
 import serverconfig from './serverconfig.js'
 import {
@@ -2094,6 +2095,24 @@ async function validate_query_dnaMethylation(ds, genome) {
 			if (!Array.isArray(samples)) throw new Error('samples not array')
 			if (!samples?.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
 			q.promoter.allSampleSet = new Set(samples)
+			/* Withhold non-comparable specimen types from differential methylation. This is the
+			single gate every DM path already filters through (buildGroupValues, the preAnalysis
+			counts, and the sample list handed to diffMeth.R), so shrinking it here covers them
+			all without a per-route check. Loud on purpose: a pattern that matches nothing would
+			otherwise be a silent no-op, which is the failure this exists to prevent. */
+			const excludePattern = q.promoter.excludeSampleNamesMatching
+			if (excludePattern) {
+				const excluded = withholdSampleNames(q.promoter.allSampleSet, excludePattern)
+				if (excluded) {
+					console.log(
+						`${ds.label}: dnaMethylation promoter — ${excluded} sample(s) matching "${excludePattern}" withheld from differential methylation, ${q.promoter.allSampleSet.size} remain`
+					)
+				} else {
+					console.warn(
+						`${ds.label}: WARNING dnaMethylation promoter excludeSampleNamesMatching="${excludePattern}" matched no sample; nothing was withheld`
+					)
+				}
+			}
 			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, samples.length)
 		}
 	} catch (error) {
