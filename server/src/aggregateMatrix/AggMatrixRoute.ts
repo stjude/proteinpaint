@@ -1,5 +1,5 @@
-import type { RoutePayload, TermdbAggregateMatrixRequest, TermdbAggregateMatrixResponse, RouteApi, Filter } from '#types'
-import { validGenomeDs, validString } from '#routes/common.ts'
+import { type RoutePayload, type TermdbAggregateMatrixRequest, type TermdbAggregateMatrixResponse, type RouteApi, type Filter, availableAggregateMethods } from '#types'
+import { validGenomeDs } from '#routes/common.ts'
 import { getAggMatrixData } from './getAggMatrixData.ts'
 
 export const payload: RoutePayload = {
@@ -21,10 +21,14 @@ export const api: RouteApi = {
 }
 
 function validTermdbAggregateMatrixRequest(input) {
+    if (input.gradientMethod === input.sizeMethod) throw `.gradientMethod and .sizeMethod must be different`
+    if (!availableAggregateMethods.includes(input.gradientMethod)) throw `invalid .gradientMethod: ${input.gradientMethod}`
+    if (!availableAggregateMethods.includes(input.sizeMethod)) throw `invalid .sizeMethod: ${input.sizeMethod}`
+
     return { 
         ...validGenomeDs(input),
-        gradientMethod: validString(input.gradientMethod),
-        sizeMethod: validString(input.sizeMethod),
+        gradientMethod: input.gradientMethod,
+        sizeMethod: input.sizeMethod,
         rows: input.rows,
         columns: input.columns,
         filter: input.filter ? (input.filter as Filter) : undefined, // TODO: use a filter validator

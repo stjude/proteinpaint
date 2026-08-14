@@ -1,15 +1,18 @@
 import type { ErrorResponse } from './errorResponse.ts'
 import type { TermWrapper } from '../terms/tw.ts'
 
+/** This is a sanity check.  */
+export const availableAggregateMethods = [ 'mean', 'percent' ] as const
+
 export type TermdbAggregateMatrixRequest = {
     genome: string
     dslabel: string
     rows: { [section: string]: TermWrapper[] }
     columns: { [member: string]: TermWrapper[] }
     /** Aggregation method to determine the color gradient. */
-    gradientMethod: string
+    gradientMethod: (typeof availableAggregateMethods)[number]
     /** Aggregation method to determine the dot sizes. */
-    sizeMethod: string
+    sizeMethod: (typeof availableAggregateMethods)[number]
     filter?: any
     filter0?: any
 }
