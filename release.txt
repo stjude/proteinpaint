@@ -1,1 +1,2 @@
-
+Fixes:
+- reduce test plan count for geneVariant survival term test
