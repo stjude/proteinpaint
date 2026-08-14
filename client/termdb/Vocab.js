@@ -222,7 +222,13 @@ export class Vocab {
 	// for better GET caching by the browser
 	getTwMinCopy(tw) {
 		if (!tw) return
-		const copy = { type: tw.type, term: {}, q: tw.q }
+		/* q must be cloned, not referenced: this method shapes a request payload and
+		must not reach back into the tw held in state. isAtomic is deleted below, and
+		rx copyMerge() reads that flag to decide whether to replace an object or merge
+		into it (see client/rx/src/utils.ts), so stripping it from the state tw would
+		make a later edit merge a stale q instead of replacing it. TwBase.getMinCopy()
+		already clones for the same reason */
+		const copy = { type: tw.type, term: {}, q: structuredClone(tw.q) }
 		delete copy.q.isAtomic
 		if (tw.$id) copy.$id = tw.$id
 		if (tw.term) {
