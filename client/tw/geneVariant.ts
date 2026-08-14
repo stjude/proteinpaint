@@ -232,7 +232,11 @@ export class GvPredefinedGS extends GvBase {
 
 		if (tw.term.type != 'geneVariant') throw `expecting tw.term.type='geneVariant', got '${tw.term.type}'`
 		if (tw.q.type != 'predefined-groupset') throw `expecting tw.q.type='predefined-groupset', got '${tw.q.type}'`
-		if (!Object.keys(tw.q).includes('predefined_groupset_idx')) tw.q.predefined_groupset_idx = 0
+		/* an index that is already on the raw q is the selected groupset, while q.dtLst is
+		derived from it below. tracked here, before the index is defaulted, so that the two
+		can be told apart when resolving the selection */
+		const hasIdx = Object.keys(tw.q).includes('predefined_groupset_idx')
+		if (!hasIdx) tw.q.predefined_groupset_idx = 0
 		if (!Number.isInteger(tw.q.predefined_groupset_idx)) throw 'invalid tw.q.predefined_groupset_idx'
 
 		// list the predefined groupsets. only names and dts are filled in, which is all
@@ -246,9 +250,15 @@ export class GvPredefinedGS extends GvBase {
 
 		const { term, q } = tw
 		if (!term.groupsetting?.lst?.length) throw 'term.groupsetting.lst[] is empty'
-		if (q.dtLst?.length) {
-			// query dts specified
-			// select the groupset that has the query dts
+		if (!hasIdx && q.dtLst?.length) {
+			/* query dts specified without an index, by an entry point that knows a dt but not
+			a groupset index (see launchGeneVariantPlot() in client/mass/search.ts). select the
+			groupset that has the query dts.
+
+			only done when no index was supplied: q.dtLst does not identify a groupset uniquely,
+			since the somatic and germline SNV/indel groupsets both report dt=1, so resolving a
+			filled-in tw this way would reselect the first groupset of the dt and silently turn
+			a saved germline tw into a somatic one */
 			const groupsetIdx = term.groupsetting.lst.findIndex(groupset => {
 				const dts = getGroupsetDts(groupset)
 				if (!dts?.length) return false
@@ -258,12 +268,15 @@ export class GvPredefinedGS extends GvBase {
 			})
 			if (groupsetIdx == -1) throw new Error('groupset with query dt(s) not found')
 			q.predefined_groupset_idx = groupsetIdx
+			q.dtLst = getGroupsetDts(term.groupsetting.lst[groupsetIdx])
 		} else {
-			// query dts not specified
-			// set the query dts to be the dts of the selected groupset
+			/* the index is the selection, so always re-derive the query dts from it, rather
+			than trusting a q.dtLst that may be left over from a previously selected groupset
+			and would otherwise limit the dts queried (see getDtsToQuery() in mds3.init.js) */
 			// TODO: remove these type assertions
 			const idx = q.predefined_groupset_idx as number
 			const lst = term.groupsetting.lst as any[]
+			if (!lst[idx]) throw 'q.predefined_groupset_idx out of bound'
 			q.dtLst = getGroupsetDts(lst[idx])
 		}
 		// only the selected groupset needs its groups[], see fillGroupsetGroups()

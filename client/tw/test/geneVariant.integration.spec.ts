@@ -15,6 +15,19 @@ async function getVocabApi() {
 	return vocabApi
 }
 
+/* a single-gene raw tw, for the tests that vary only the groupset q */
+function getGsTw(q: any) {
+	return {
+		term: {
+			name: 'TP53',
+			genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', type: 'geneVariant' }],
+			type: 'geneVariant'
+		},
+		isAtomic: true,
+		q
+	}
+}
+
 function testCnvGroupset(groupset, test) {
 	test.ok(groupset.groups.length > 0, 'groupset should have at least one group')
 }
@@ -243,6 +256,60 @@ tape('fill(): predefined groupset of each dt', async test => {
 			test.fail('unexpected groupset')
 		}
 	}
+	test.end()
+})
+
+tape('fill(): selects a predefined groupset by q.dtLst', async test => {
+	// an entry point may know a dt but not a groupset index, see launchGeneVariantPlot()
+	// in client/mass/search.ts and the summarize* plots
+	const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', dtLst: [dtcnv] })
+	const fullTw: any = await GvBase.fill(tw, { vocabApi })
+	const idx = fullTw.q.predefined_groupset_idx
+	test.equal(fullTw.term.groupsetting.lst[idx].name, 'CNV', 'should select the groupset of the query dt')
+	test.ok(fullTw.term.groupsetting.lst[idx].groups, 'should build the selected groupset')
+	test.deepEqual(fullTw.q.dtLst, [dtcnv], 'should keep q.dtLst')
+	test.end()
+})
+
+tape('fill(): rehydrated predefined groupset', async test => {
+	/* the somatic and germline SNV/indel groupsets both report dt=1, so a filled-in q.dtLst
+	does not identify which of the two is selected. re-filling must not reselect by dt,
+	otherwise a saved germline tw comes back as a somatic one */
+	const germlineIdx = 1
+	const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: germlineIdx })
+	const fullTw: any = await GvBase.fill(tw, { vocabApi })
+	test.equal(
+		fullTw.term.groupsetting.lst[germlineIdx].name,
+		'SNV/indel (germline)',
+		'should select the germline groupset'
+	)
+	test.deepEqual(fullTw.q.dtLst, [dtsnvindel], 'should derive q.dtLst from the selected groupset')
+
+	// a saved session is rehydrated by re-filling its serialized tw, see init() in mass/store.ts
+	const rehydrated: any = await GvBase.fill(JSON.parse(JSON.stringify(fullTw)), { vocabApi })
+	test.equal(rehydrated.q.predefined_groupset_idx, germlineIdx, 'should keep q.predefined_groupset_idx')
+	test.equal(
+		rehydrated.term.groupsetting.lst[rehydrated.q.predefined_groupset_idx].name,
+		'SNV/indel (germline)',
+		'should keep the germline groupset selected'
+	)
+	test.end()
+})
+
+tape('fill(): q.type=predefined-groupset, stale q.dtLst', async test => {
+	// dtLst of the previously selected groupset would otherwise limit the dts queried
+	// for the term (see getDtsToQuery() in server/src/mds3.init.js)
+	const cnvIdx = 2
+	const tw: any = getGsTw({
+		isAtomic: true,
+		type: 'predefined-groupset',
+		predefined_groupset_idx: cnvIdx,
+		dtLst: [dtsnvindel]
+	})
+	const fullTw: any = await GvBase.fill(tw, { vocabApi })
+	test.equal(fullTw.term.groupsetting.lst[cnvIdx].name, 'CNV', 'should keep the selected groupset')
+	test.equal(fullTw.q.predefined_groupset_idx, cnvIdx, 'should keep q.predefined_groupset_idx')
+	test.deepEqual(fullTw.q.dtLst, [dtcnv], 'should re-derive q.dtLst from the selected groupset')
 	test.end()
 })
 
@@ -520,21 +587,9 @@ function getAllelicVocabApi() {
 	}
 }
 
-function getAllelicTw(q: any) {
-	return {
-		term: {
-			name: 'TP53',
-			genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', type: 'geneVariant' }],
-			type: 'geneVariant'
-		},
-		isAtomic: true,
-		q
-	}
-}
-
 tape('fill(): lists the bi-/mono-allelic groupset with its dts', async test => {
 	const vocabApi: any = getAllelicVocabApi()
-	const tw: any = getAllelicTw({ isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: 0 })
+	const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: 0 })
 	const fullTw: any = await GvBase.fill(tw, { vocabApi })
 	const lst = fullTw.term.groupsetting.lst
 	const allelic = lst[lst.length - 1]
@@ -555,7 +610,7 @@ tape('fill(): selects and builds the allelic groupset by dtLst', async test => {
 		return orig(term, filter, body)
 	}
 	// a two-dt q.dtLst can only match the allelic groupset
-	const tw: any = getAllelicTw({ isAtomic: true, type: 'predefined-groupset', dtLst: [dtsnvindel, dtcnv] })
+	const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', dtLst: [dtsnvindel, dtcnv] })
 	const fullTw: any = await GvBase.fill(tw, { vocabApi })
 	const lst = fullTw.term.groupsetting.lst
 	const idx = fullTw.q.predefined_groupset_idx
