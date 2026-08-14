@@ -46,10 +46,10 @@ const exists = (p: string) =>
 // Flat .jpg files under the CacheManager-registered 'wsitiles' subdir of
 // serverconfig.cachedir, so the existing TTL sweep evicts them (it is
 // non-recursive, hence a flat name rather than nested z/x/y dirs).
-// potential pitfall: keyed by slide path only — replacing a slide file in place would
-// serve stale tiles until the tiles age out; clear the subdir if that happens.
-function tileCachePath(slide: string, plane: string, z: string, x: string, y: string): string {
-	const key = createHash('sha1').update(slide).digest('hex')
+// Keyed by slide path + mtime, so regenerating a slide file in place starts a
+// fresh tile set instead of serving stale tiles of the old file.
+function tileCachePath(slide: string, mtime: number, plane: string, z: string, x: string, y: string): string {
+	const key = createHash('sha1').update(`${slide}:${mtime}`).digest('hex')
 	return path.join(serverconfig.cachedir, 'wsitiles', `${key}_${plane}_${z}_${x}_${y}.jpg`)
 }
 
@@ -147,8 +147,11 @@ function init({ genomes }) {
 			}
 
 			if (req.params.action == 'meta') {
-				const out = await run_python('wsi_tile.py', JSON.stringify({ action: 'meta', slide }))
-				res.status(200).json(JSON.parse(out))
+				const out = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'meta', slide })))
+				// version: the client puts it in tile URLs, so a regenerated slide
+				// also busts the browser's immutable tile cache
+				out.version = (await stat(slide)).mtimeMs
+				res.status(200).json(out)
 				return
 			}
 
@@ -170,6 +173,7 @@ function init({ genomes }) {
 				// zoom-in from flooding the server with slow per-tile spawns.
 				const cacheFile = tileCachePath(
 					slide,
+					(await stat(slide)).mtimeMs,
 					plane === undefined ? '' : String(plane),
 					String(zi),
 					String(xi),

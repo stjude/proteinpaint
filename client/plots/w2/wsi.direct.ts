@@ -74,7 +74,11 @@ export async function init(
 			new Zoomify({
 				// {z}/{x}/{y} hit wsitiles/tile; unused {TileGroup} satisfies OL's
 				// requirement that a {TileGroup}/{tileIndex} placeholder be present.
-				url: `${host}/wsitiles/tile/{z}/{x}/{y}?slide=${slide}${planes > 1 ? `&plane=${p}` : ''}&_={TileGroup}`,
+				// v=<slide mtime>: regenerating the slide file in place busts the
+				// browser's immutable tile cache (the server's disk cache keys on it too)
+				url: `${host}/wsitiles/tile/{z}/{x}/{y}?slide=${slide}${planes > 1 ? `&plane=${p}` : ''}&v=${
+					meta.version || 0
+				}&_={TileGroup}`,
 				size: [w, h],
 				crossOrigin: 'anonymous',
 				zDirection: -1
