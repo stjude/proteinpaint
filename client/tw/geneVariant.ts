@@ -13,6 +13,7 @@ import type {
 	RawGvTW,
 	GvTW,
 	RawGvTerm,
+	GvGroupset,
 	VocabApi,
 	TermValues
 } from '#types'
@@ -23,9 +24,8 @@ import { getWrappedTvslst } from '#filter/filter'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getChildTerms, addParentTerm } from '../termdb/handlers/geneVariant'
 import { getColors, dtcnv, dtsnvindel, mclass } from '#shared/common.js'
-import { trimGvTermCopy, clearDtTermMnames } from '#shared/terms.js'
+import { trimGvTermCopy, clearDtTermMnames, getDtsFromGroups } from '#shared/terms.js'
 import { validateVariantFilter } from '#shared/geneVariantFilter.js'
-import { getDtsFromGroups } from '../termsetting/handlers/geneVariant'
 import { rgb } from 'd3-color'
 
 let colorScale = getColors(3)
@@ -235,8 +235,9 @@ export class GvPredefinedGS extends GvBase {
 		if (!Object.keys(tw.q).includes('predefined_groupset_idx')) tw.q.predefined_groupset_idx = 0
 		if (!Number.isInteger(tw.q.predefined_groupset_idx)) throw 'invalid tw.q.predefined_groupset_idx'
 
-		// get predefined groupsets
-		await getPredefinedGroupsets(tw.term, opts.vocabApi)
+		// list the predefined groupsets. only names and dts are filled in, which is all
+		// that is needed to resolve the selected index below
+		listPredefinedGroupsets(tw.term, opts.vocabApi)
 
 		// a groupset filters through its own group filters, so a variantFilter is
 		// only meaningful for a values q. it must not survive here, otherwise it
@@ -249,7 +250,7 @@ export class GvPredefinedGS extends GvBase {
 			// query dts specified
 			// select the groupset that has the query dts
 			const groupsetIdx = term.groupsetting.lst.findIndex(groupset => {
-				const dts = Number.isInteger(groupset.dt) ? [groupset.dt] : getDtsFromGroups(groupset.groups)
+				const dts = getGroupsetDts(groupset)
 				if (!dts?.length) return false
 				if (dts.length != q.dtLst?.length) return false
 				if (dts.some(dt => !q.dtLst?.includes(dt))) return false
@@ -263,9 +264,10 @@ export class GvPredefinedGS extends GvBase {
 			// TODO: remove these type assertions
 			const idx = q.predefined_groupset_idx as number
 			const lst = term.groupsetting.lst as any[]
-			const groupset = lst[idx]
-			q.dtLst = Number.isInteger(groupset.dt) ? [groupset.dt] : getDtsFromGroups(groupset.groups)
+			q.dtLst = getGroupsetDts(lst[idx])
 		}
+		// only the selected groupset needs its groups[], see fillGroupsetGroups()
+		await fillGroupsetGroups(term, q.predefined_groupset_idx as number, opts.vocabApi)
 		set_hiddenvalues(q, term)
 		return tw as GvPredefinedGsTW
 	}
@@ -325,22 +327,67 @@ export class GvCustomGS extends GvBase {
 	}
 }
 
-async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
+const allelicGroupsetName = 'Bi-/mono-allelic'
+
+/*
+List the predefined groupsets of a geneVariant term, filling in only each groupset's
+name and dt(s). The groups[] of the selected groupset are built separately, by
+fillGroupsetGroups().
+
+Keeping the two apart matters: building a groupset requires querying the mutation
+classes of its dt term in the dataset, so building all of them cost one request per
+child dt term on every fill (6 for a dataset with all dts), for groupsets that are
+then never read. Only lst[q.predefined_groupset_idx] is consumed, by the client
+legend/edit code and by get_active_groupset() on the server.
+*/
+function listPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 	if (!term.childTerms?.length) throw 'term.childTerms[] is missing'
-	// build predefined groupsets based on child dt terms
-	term.groupsetting = { disabled: false }
-	term.groupsetting.lst = []
-	for (const dtTerm of term.childTerms) {
-		// fill dt term values with mutation classes of gene in dataset
-		await getDtTermValues(dtTerm, vocabApi.state.termfilter?.filter, vocabApi)
-		const groupset: any = { name: dtTerm.name, dt: dtTerm.dt }
+	const lst: GvGroupset[] = term.childTerms.map((dtTerm: any) => {
+		const groupset: GvGroupset = { name: dtTerm.name, dt: dtTerm.dt }
 		if (dtTerm.origin) groupset.origin = dtTerm.origin
+		return groupset
+	})
+	// this groupset spans two dts, so it declares them instead of carrying a single .dt
+	if (isEligibleForAllelicGroupset(term, vocabApi)) {
+		lst.push({ name: allelicGroupsetName, dts: [dtsnvindel, dtcnv] })
+	}
+	term.groupsetting = { disabled: false, lst }
+}
+
+/* the dts a groupset queries, resolvable from its listing entry alone, so that the
+selected index can be matched to q.dtLst without building any groups[].
+returns any[] rather than number[] to match q.dtLst, since getDtsFromGroups() is untyped */
+function getGroupsetDts(groupset: GvGroupset): any[] {
+	if (!groupset) throw 'groupset is missing'
+	if (groupset.dts) return groupset.dts
+	if (Number.isInteger(groupset.dt)) return [groupset.dt as number]
+	// a groupset that declares neither must already be built, see GvGroupset
+	if (!groupset.groups) throw 'groupset has neither dt(s) nor groups[]'
+	return getDtsFromGroups(groupset.groups)
+}
+
+/* build the groups[] of one groupset, in place. requires querying the mutation classes
+of the gene for the dt term(s) of that groupset, so it is only done for the groupset
+that is actually in use. see listPredefinedGroupsets() */
+export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi: VocabApi) {
+	const groupset: GvGroupset | undefined = term.groupsetting?.lst?.[idx]
+	if (!groupset) throw 'q.predefined_groupset_idx out of bound'
+	if (groupset.groups) return // already built
+	if (!term.childTerms?.length) throw 'term.childTerms[] is missing'
+	const filter = vocabApi.state.termfilter?.filter
+
+	if (groupset.name == allelicGroupsetName) {
+		await getAllelicGroupset(groupset)
+	} else {
+		const dtTerm: any = term.childTerms.find(
+			(t: any) => t.dt == groupset.dt && (groupset.origin ? t.origin == groupset.origin : !t.origin)
+		)
+		if (!dtTerm) throw 'child dt term of the selected groupset not found'
+		// fill dt term values with mutation classes of gene in dataset
+		await getDtTermValues(dtTerm, filter, vocabApi)
 		if (dtTerm.dt == dtcnv) getCnvGroupset(groupset, dtTerm, term.name, vocabApi)
 		else getNonCnvGroupset(groupset, dtTerm, term.name)
-		term.groupsetting.lst.push(groupset)
 	}
-
-	mayGetAllelicGroupset(term, vocabApi)
 
 	// function to get cnv groupset
 	// will route to appropriate function depending on mode of cnv data
@@ -518,15 +565,14 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 	}
 
 	// build predefined groupset for biallelic vs. monoallelic alteration
-	function mayGetAllelicGroupset(term, vocabApi) {
-		if (!isEligibleForAllelicGroupset(term, vocabApi)) {
-			// term and/or dataset is not eligible for building the groupset
-			return
-		}
-
-		// can build biallelic vs. monoallelic groupset
-		const snvIndelTerm = term.childTerms.find(t => t.dt == dtsnvindel)
-		const cnvTerm = term.childTerms.find(t => t.dt == dtcnv)
+	async function getAllelicGroupset(groupset) {
+		// eligibility was already checked when the groupset was listed
+		const snvIndelTerm: any = term.childTerms!.find((t: any) => t.dt == dtsnvindel)
+		const cnvTerm: any = term.childTerms!.find((t: any) => t.dt == dtcnv)
+		if (!snvIndelTerm || !cnvTerm) throw 'child dt terms of the allelic groupset not found'
+		// the mutated groups are built from the snvindel mutation classes of the gene
+		await getDtTermValues(snvIndelTerm, filter, vocabApi)
+		await getDtTermValues(cnvTerm, filter, vocabApi)
 
 		// homozygous deletion tvs
 		const homoDel = {
@@ -617,13 +663,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 			color: '#7489d2'
 		}
 
-		// build groupset
-		const groupset: any = {
-			name: 'Bi-/mono-allelic',
-			groups: [biallelicGroup, monoallelicGroup]
-		}
-
-		term.groupsetting.lst.push(groupset)
+		groupset.groups = [biallelicGroup, monoallelicGroup]
 	}
 }
 

@@ -1,4 +1,29 @@
-import type { MinBaseQ, BaseTerm, TermGroupSetting, BaseTW, TermValues, BaseGroupSet } from '../index.ts'
+import type { MinBaseQ, BaseTerm, BaseTW, TermValues, BaseGroupSet, GroupEntry } from '../index.ts'
+
+/* A predefined groupset of a geneVariant term.
+
+Unlike the groupsets of other term types, these are built lazily: groups[] is only
+filled in for the groupset that q.predefined_groupset_idx selects, because building one
+requires querying the dataset for the mutation classes of its dt term(s). The rest are
+listings of name and dt(s), which is all that is needed to pick one. See
+listPredefinedGroupsets() and fillGroupsetGroups() in client/tw/geneVariant.ts.
+
+So groups[] must be checked before it is read, or the groupset built first. */
+export type GvGroupset = {
+	name: string
+	/** dt of a groupset over a single dt */
+	dt?: number
+	/** dts of a groupset that spans more than one, e.g. bi-/mono-allelic */
+	dts?: number[]
+	origin?: string
+	/** absent until this groupset is the selected one */
+	groups?: GroupEntry[]
+}
+
+export type GvGroupSetting = {
+	disabled: boolean
+	lst?: GvGroupset[]
+}
 
 // q types
 export type GvBaseQ = MinBaseQ & {
@@ -73,12 +98,12 @@ type GvBaseTerm = BaseTerm &
 	}
 
 export type RawGvTerm = GvBaseTerm & {
-	groupsetting?: TermGroupSetting
+	groupsetting?: GvGroupSetting
 	childTerms?: DtTerm[]
 }
 
 export type GvTerm = GvBaseTerm & {
-	groupsetting: TermGroupSetting
+	groupsetting: GvGroupSetting
 	childTerms: DtTerm[]
 }
 
