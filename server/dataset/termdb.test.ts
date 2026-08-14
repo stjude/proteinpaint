@@ -480,7 +480,19 @@ export default function (): Mds3 {
 			// w2 plot: each sample with images is a subfolder of this directory,
 			// holding that sample's .svs files (folder/<sample>/<fileName>)
 			w2: {
-				folder: 'files/hg38/TermdbTest/wsimages'
+				folder: 'files/hg38/TermdbTest/wsimages',
+				// spatial (Xenium) bundle per sample: file names inside the sample's
+				// folder, plus viewer settings (genes to overlay, annotation level)
+				spatial: {
+					'TCGA-22-1017': {
+						fileName: 'morphology.trimmed.ome.tif',
+						cellBoundaries: 'cell_boundaries.trimmed.csv',
+						nucleusBoundaries: 'nucleus_boundaries.trimmed.csv',
+						geneExpressionFile: 'cell_feature_matrix.trimmed.h5',
+						geneExpression: 'PTPRC',
+						annotationLevel: 1
+					}
+				}
 			},
 			trackLst: {
 				jsonFile: 'files/hg38/TermdbTest/trackLst/facet.json',

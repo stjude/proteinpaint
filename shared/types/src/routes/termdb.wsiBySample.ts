@@ -14,6 +14,8 @@ export type WsiSampleSummary = {
 }
 
 export type WsiImage = {
+	/** discriminates the WsiImage | SpatialImage union */
+	type: 'wsi'
 	fileName: string
 	/** relative URL of a small preview (the slide's z=0 tile); client prepends host */
 	thumbnail?: string
@@ -21,9 +23,33 @@ export type WsiImage = {
 	metadata?: string
 }
 
+/** A spatial (Xenium) slide: the morphology image plus its companion overlay
+ files found in the same sample folder. Fields mirror the direct-viewer URL
+ params (?image_file=&cell_boundaries=&nucleus_boundaries=
+ &gene_expression_file=&gene_expression=&annotation_level=). Companion file
+ paths are relative to serverconfig.tpmasterdir, matching the wsitiles
+ boundaries/genecounts ?file= param. */
+export type SpatialImage = {
+	type: 'spatial'
+	/** = image_file: slide file name inside the sample's folder */
+	fileName: string
+	/** = cell_boundaries: cell segmentation CSV */
+	cellBoundaries?: string
+	/** = nucleus_boundaries: nucleus segmentation CSV */
+	nucleusBoundaries?: string
+	/** = gene_expression_file: 10x cell_feature_matrix HDF5 */
+	geneExpressionFile?: string
+	/** = gene_expression: comma-separated genes to overlay */
+	geneExpression?: string
+	/** = annotation_level: show boundary strokes only in the n most zoomed-in levels */
+	annotationLevel?: number
+	/** relative URL of a small preview (the slide's z=0 tile); client prepends host */
+	thumbnail?: string
+}
+
 export type WsiBySampleResponse = {
 	/** present when sample_id was given: that sample's images */
-	images?: WsiImage[]
+	images?: (WsiImage | SpatialImage)[]
 	/** present when sample_id was omitted: every sample with an image folder */
 	samples?: WsiSampleSummary[]
 	status?: string
