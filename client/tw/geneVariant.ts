@@ -13,6 +13,7 @@ import type {
 	RawGvTW,
 	GvTW,
 	RawGvTerm,
+	GvGroupset,
 	VocabApi,
 	TermValues
 } from '#types'
@@ -341,8 +342,8 @@ legend/edit code and by get_active_groupset() on the server.
 */
 function listPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 	if (!term.childTerms?.length) throw 'term.childTerms[] is missing'
-	const lst: any[] = term.childTerms.map((dtTerm: any) => {
-		const groupset: any = { name: dtTerm.name, dt: dtTerm.dt }
+	const lst: GvGroupset[] = term.childTerms.map((dtTerm: any) => {
+		const groupset: GvGroupset = { name: dtTerm.name, dt: dtTerm.dt }
 		if (dtTerm.origin) groupset.origin = dtTerm.origin
 		return groupset
 	})
@@ -353,13 +354,15 @@ function listPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 	term.groupsetting = { disabled: false, lst }
 }
 
-// the dts a groupset queries, resolvable from its listing entry alone, so that the
-// selected index can be matched to q.dtLst without building any groups[]
-// returns any[] rather than number[] to match q.dtLst, since getDtsFromGroups() is untyped
-function getGroupsetDts(groupset: any): any[] {
+/* the dts a groupset queries, resolvable from its listing entry alone, so that the
+selected index can be matched to q.dtLst without building any groups[].
+returns any[] rather than number[] to match q.dtLst, since getDtsFromGroups() is untyped */
+function getGroupsetDts(groupset: GvGroupset): any[] {
 	if (!groupset) throw 'groupset is missing'
 	if (groupset.dts) return groupset.dts
-	if (Number.isInteger(groupset.dt)) return [groupset.dt]
+	if (Number.isInteger(groupset.dt)) return [groupset.dt as number]
+	// a groupset that declares neither must already be built, see GvGroupset
+	if (!groupset.groups) throw 'groupset has neither dt(s) nor groups[]'
 	return getDtsFromGroups(groupset.groups)
 }
 
@@ -367,7 +370,7 @@ function getGroupsetDts(groupset: any): any[] {
 of the gene for the dt term(s) of that groupset, so it is only done for the groupset
 that is actually in use. see listPredefinedGroupsets() */
 export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi: VocabApi) {
-	const groupset: any = (term.groupsetting?.lst as any[])?.[idx]
+	const groupset: GvGroupset | undefined = term.groupsetting?.lst?.[idx]
 	if (!groupset) throw 'q.predefined_groupset_idx out of bound'
 	if (groupset.groups) return // already built
 	if (!term.childTerms?.length) throw 'term.childTerms[] is missing'

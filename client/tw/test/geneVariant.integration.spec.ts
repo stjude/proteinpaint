@@ -2,6 +2,7 @@ import tape from 'tape'
 import type { GvTW } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { GvBase, GvPredefinedGS } from '../geneVariant'
+import { dtsnvindel, dtcnv } from '#shared/common.js'
 
 /*************************
  reusable helper functions
@@ -491,3 +492,89 @@ const customGsQ = {
 		]
 	}
 }
+
+/*
+The bi-/mono-allelic groupset needs a dataset with snvindel + continuous cnv + a maf
+filter, which no in-repo test dataset has (TermdbTest cnv is log2ratio with no cutoffs).
+So the branch is driven with a stub vocabApi. It is the only groupset that spans two
+dts, so it is listed with .dts[] instead of .dt and needs both dt terms queried.
+*/
+function getAllelicVocabApi() {
+	const queries = {
+		snvindel: {
+			mafFilter: {
+				filter: { type: 'tvslst', join: '', in: true, lst: [] },
+				terms: [{ id: 'maf', name: 'MAF', type: 'float', default: true }]
+			}
+		},
+		cnv: { cnvGainCutoff: 0.3, cnvLossCutoff: -0.3, cnvMaxLength: 2000000 }
+	}
+	const classesByDt = { 1: { M: 1, F: 1, WT: 1 }, 4: { CNV_amp: 1, WT: 1 } }
+	return {
+		termdbConfig: { queries },
+		state: { termfilter: { filter: undefined } },
+		getCategories: async (_term, _filter, body) => {
+			const dt = body.term1_q.dtLst[0]
+			return { lst: [{ dt, classes: classesByDt[dt] }] }
+		}
+	}
+}
+
+function getAllelicTw(q: any) {
+	return {
+		term: {
+			name: 'TP53',
+			genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', type: 'geneVariant' }],
+			type: 'geneVariant'
+		},
+		isAtomic: true,
+		q
+	}
+}
+
+tape('fill(): lists the bi-/mono-allelic groupset with its dts', async test => {
+	const vocabApi: any = getAllelicVocabApi()
+	const tw: any = getAllelicTw({ isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: 0 })
+	const fullTw: any = await GvBase.fill(tw, { vocabApi })
+	const lst = fullTw.term.groupsetting.lst
+	const allelic = lst[lst.length - 1]
+
+	test.equal(allelic.name, 'Bi-/mono-allelic', 'should append the allelic groupset to the listing')
+	test.deepEqual(allelic.dts, [dtsnvindel, dtcnv], 'should list it with .dts[] of snvindel and cnv')
+	test.equal(allelic.dt, undefined, 'should not give it a single .dt')
+	test.equal(allelic.groups, undefined, 'should not build it when another groupset is selected')
+	test.end()
+})
+
+tape('fill(): selects and builds the allelic groupset by dtLst', async test => {
+	const vocabApi: any = getAllelicVocabApi()
+	const queriedDts: number[] = []
+	const orig = vocabApi.getCategories
+	vocabApi.getCategories = async (term: any, filter: any, body: any) => {
+		queriedDts.push(body.term1_q.dtLst[0])
+		return orig(term, filter, body)
+	}
+	// a two-dt q.dtLst can only match the allelic groupset
+	const tw: any = getAllelicTw({ isAtomic: true, type: 'predefined-groupset', dtLst: [dtsnvindel, dtcnv] })
+	const fullTw: any = await GvBase.fill(tw, { vocabApi })
+	const lst = fullTw.term.groupsetting.lst
+	const idx = fullTw.q.predefined_groupset_idx
+
+	test.equal(lst[idx].name, 'Bi-/mono-allelic', 'should select the allelic groupset from q.dtLst')
+	test.equal(lst[idx].groups?.length, 2, 'should build its two groups')
+	test.deepEqual(
+		lst[idx].groups.map(g => g.name),
+		['Bi-allelic alteration', 'Mono-allelic alteration'],
+		'should build the bi- and mono-allelic groups'
+	)
+	test.deepEqual(
+		[...new Set(queriedDts)].sort(),
+		[dtsnvindel, dtcnv].sort(),
+		'should query both dt terms, unlike a single-dt groupset'
+	)
+	test.ok(
+		lst.slice(0, idx).every(gs => !gs.groups),
+		'should leave the single-dt groupsets unbuilt'
+	)
+	test.end()
+})
