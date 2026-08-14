@@ -5,6 +5,7 @@ import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
 import { colorDelta, getInterpolatedDomainRange, removeInterpolatedOutliers, removeOutliers } from '#dom'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { variantFilterLabel } from '#shared/geneVariantFilter.js'
 
 const MINCOLWSPACED = 7
 
@@ -292,6 +293,12 @@ export function setLabelsAndScales() {
 			t.label = t.tw.label
 		} else if (t.grp.type == 'hierCluster') {
 			t.label = t.tw.term.gene || t.tw.term.name
+		} else if (t.tw.q?.variantFilter) {
+			// name what the row's variant filter selects, e.g. "KRAS G12D", otherwise
+			// two filtered rows of the same gene would carry the same label. an
+			// explicit tw.label above still wins
+			const selected = variantFilterLabel(t.tw.q.variantFilter, this.mclass)
+			t.label = selected ? `${t.tw.term.name} ${selected}` : t.tw.term.name
 		} else {
 			t.label = t.tw.term.name
 		}

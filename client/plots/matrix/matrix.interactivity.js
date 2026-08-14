@@ -820,7 +820,7 @@ function setTermActions(self) {
 				.append('button')
 				.style('display', 'none')
 				.style('margin-left', '5px')
-				.html('submit')
+				.html('Submit')
 				.on('click', () => {
 					if (twlabel != self.dom.twLabelInput.property('value').trim()) self.updateTermLabel()
 					self.dom.tip.hide()
@@ -2020,7 +2020,7 @@ function setTermGroupActions(self) {
 			.append('button')
 			.style('display', 'none')
 			.style('margin-left', '5px')
-			.html('submit')
+			.html('Submit')
 			.on('click', () => {
 				self.updateTermGrpName()
 				self.dom.tip.hide()

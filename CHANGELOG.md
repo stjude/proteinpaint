@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Fixes a false-positive cohort-change message on initial matrix render and corrects the message placement.
+- matrix row-label editing is re-enabled. for geneVariant rows, allow per-row tw.q customizaton
 
 
 ## 2.203.0
