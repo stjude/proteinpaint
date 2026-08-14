@@ -67,10 +67,14 @@ export function init({ genomes }) {
 /** The subset of a DiffMethRequest that determines the cache identity.
  * Passed to cacheOrRecompute as the computeArgument.
  * preAnalysis is also excluded because it short-circuits before any cache lookup happens. */
-function dmKeyInputs(req: DiffMethRequest) {
+function dmKeyInputs(req: DiffMethRequest, imputeMissing: boolean) {
 	return {
 		genome: req.genome,
 		dslabel: req.dslabel,
+		/* Derived from ds config rather than sent by the client, but it still belongs in the
+		key: flipping a dataset's platform changes every p-value, and without it the on-disk
+		cache would keep serving results computed under the old missingness model. */
+		impute_missing: imputeMissing,
 		samplelst: canonicalizeSamplelst(req.samplelst),
 		min_samples_per_group: req.min_samples_per_group ?? null,
 		exclude_sex_chr: req.exclude_sex_chr ?? null,
@@ -92,13 +96,18 @@ export async function getDmCacheResult(
 	req: DiffMethRequest,
 	genomes: any
 ): Promise<{ result: DmCacheResult; cacheId: string }> {
+	/* Cheap map lookup so the platform can reach the cache key without paying for
+	resolveDaContext on a cache hit. Absent platform means 'array', keeping every existing
+	dataset on the imputing path it was validated under. */
+	const imputeMissing = genomes?.[req.genome]?.datasets?.[req.dslabel]?.queries?.dnaMethylation?.platform != 'wgbs'
+
 	// ─── cache lookup or recompute ─── //
 	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof dmKeyInputs>, DmCacheResult>({
-		computeArgument: dmKeyInputs(req),
+		computeArgument: dmKeyInputs(req, imputeMissing),
 		cacheSubdir: 'dm',
 		computeFresh: async () => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
-			return runDmFresh(req, ds, term_results, term_results2)
+			return runDmFresh(req, ds, term_results, term_results2, imputeMissing)
 		}
 	})
 	return { result, cacheId }
@@ -110,6 +119,7 @@ type DiffMethInput = {
 	input_file: string
 	min_samples_per_group?: number
 	exclude_sex_chr?: boolean
+	impute_missing?: boolean
 	ebayes_trend?: boolean
 	ebayes_robust?: boolean
 	array_weights?: boolean
@@ -123,7 +133,8 @@ async function runDmFresh(
 	param: DiffMethRequest,
 	ds: any,
 	term_results: any,
-	term_results2: any
+	term_results2: any,
+	imputeMissing: boolean
 ): Promise<DmCacheResult> {
 	const groups = await resolveDmSampleGroups(param, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
@@ -137,6 +148,8 @@ async function runDmFresh(
 		input_file: q.file,
 		min_samples_per_group: param.min_samples_per_group,
 		exclude_sex_chr: param.exclude_sex_chr,
+		// ds-derived, not a user setting: see the platform field on queries.dnaMethylation
+		impute_missing: imputeMissing,
 		ebayes_trend: param.ebayes_trend,
 		ebayes_robust: param.ebayes_robust,
 		array_weights: param.array_weights

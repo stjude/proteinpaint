@@ -22,6 +22,7 @@ Active tests:
 	- diffMeth.R: exclude_sex_chr drops chrX/chrY promoters
 	- diffMeth.R: eBayes trend/robust move p-values but not fold-changes
 	- diffMeth.R: array_weights reweights samples and moves fold-changes
+	- diffMeth.R: impute_missing changes the fit but never delta_beta
 	- diffMeth.R: error on too few samples
 	- diffMeth.R: error on invalid sample name
 	- edge_newh5.R limma
@@ -399,9 +400,14 @@ tape('\n', function (test) {
 // Uses the same sample set from utils/termdb/imports/samples as all other TermdbTest genomic data
 //
 // Fixture shape: 5 promoters (EH38E_TEST_0000..0004) x 100 samples of M-values.
-// meta/chr is ['chr17','chr17','chr17','chrX','chrY'] -- the two sex-chromosome rows
-// exist so the exclude_sex_chr filter is testable. Nothing asserts specific chr values
-// beyond that test, so rows may be relabelled with h5py if more coverage is needed.
+// Two deliberate properties, both load-bearing for tests that would otherwise pass vacuously:
+//   - meta/chr is ['chr17','chr17','chr17','chrX','chrY'], so exclude_sex_chr has something
+//     to exclude.
+//   - beta/values carries 10 scattered NaN cells across the first four promoters (both arms,
+//     48 non-NaN per arm at worst), so the impute_missing branch is reachable.
+// Nothing asserts specific chr values or exact statistics, so the matrix may be edited with
+// h5py if more coverage is needed -- but keep those two properties or the matching tests stop
+// testing anything.
 const diffMethFixturePath = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest/dnaMethPromoterMvalue.h5')
 const diffMethCaseSamples =
 	'1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,2646,2660,2674,2688,2702,2716,2730,2744,2758,2772'
@@ -643,6 +649,41 @@ tape('diffMeth.R: swapping case and control negates delta_beta and swaps the gro
 			`${id} group means swapped rather than changing value`
 		)
 	}
+	test.end()
+})
+
+/* impute_missing is how the array and sequencing platforms diverge: arrays keep the group-mean
+imputation, WGBS skips it and lets limma fit each row on its finite observations. The fixture
+carries a handful of NaNs specifically so this branch is reachable — without them both runs
+would be identical and the test would pass no matter what the code did.
+
+The delta_beta assertion is the load-bearing one: it is computed before the imputation step, so
+it must report the same observed-data quantity on both platforms. If it ever starts tracking the
+imputation, the effect size stops being comparable across datasets. */
+tape('diffMeth.R: impute_missing changes the fit but never delta_beta', async function (test) {
+	test.timeoutAfter(45000)
+
+	const imputed = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput)))
+	const raw = JSON.parse(await run_R('diffMeth.R', JSON.stringify({ ...diffMethBaseInput, impute_missing: false })))
+
+	const byId = rs => Object.fromEntries(rs.map(d => [d.promoter_id, d]))
+	const a = byId(imputed.promoter_data)
+	const b = byId(raw.promoter_data)
+	test.deepEqual(Object.keys(a).sort(), Object.keys(b).sort(), 'same promoters returned either way')
+
+	// The branch has to actually be live -- guards against the fixture losing its NaNs.
+	test.ok(
+		Object.keys(a).some(id => a[id].fold_change !== b[id].fold_change),
+		'skipping imputation changes the fit, so the fixture still has missing cells to skip'
+	)
+
+	for (const id of Object.keys(a)) {
+		test.ok(
+			Math.abs(a[id].delta_beta - b[id].delta_beta) < 1e-12,
+			`${id} delta_beta is identical, so it is measured before imputation on both platforms`
+		)
+	}
+
 	test.end()
 })
 
