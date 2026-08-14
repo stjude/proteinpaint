@@ -212,6 +212,49 @@ tape('setPointData', function (test) {
 	test.end()
 })
 
+tape('setPointData: rowKeys map rows to the dot identity', function (test) {
+	test.timeoutAfter(100)
+
+	// Gene expression: the Gene Name cell already IS the identity.
+	const geVm = new VolcanoViewModel(mockConfig as any, mockResponse, mockSettings as any)
+	geVm.setPointData(geVm.setPlotDimensions(), 'red', 'blue')
+	const geRow = geVm.pValueTable.rows[0]
+	test.equal(geVm.pValueTable.rowKeys.get(geRow), 'C1orf159', 'gene expression row should key on gene_name')
+
+	/* DNA methylation: the Promoter cell shows a formatted label, so the identity is
+	only recoverable through rowKeys. This is the regression -- hover/click highlighting
+	compared the label against promoter_id and never matched a dot. */
+	const dmDot = {
+		promoter_id: 'NKAP.p4_chrX:119943104-119945251',
+		gene_name: 'NKAP',
+		chr: 'chrX',
+		start: 119943104,
+		stop: 119945251,
+		fold_change: 0.6196,
+		original_p_value: 0.0001,
+		adjusted_p_value: 0.001,
+		pixel_x: 350,
+		pixel_y: 100
+	}
+	const dmVm = new VolcanoViewModel(
+		{ ...mockConfig, termType: 'dnaMethylation' } as any,
+		{ ...mockResponse, data: { ...mockResponse.data, dots: [dmDot] as any } },
+		mockSettings as any
+	)
+	dmVm.setPointData(dmVm.setPlotDimensions(), 'red', 'blue')
+	const dmRow = dmVm.pValueTable.rows[0]
+
+	test.equal(dmRow[0].value, 'p4 · chrX:119943104-119945251', 'Promoter cell should show the formatted label')
+	test.equal(
+		dmVm.pValueTable.rowKeys.get(dmRow),
+		'NKAP.p4_chrX:119943104-119945251',
+		'methylation row should key on the raw promoter_id, not the displayed label'
+	)
+	test.notEqual(dmRow[0].value, dmVm.pValueTable.rowKeys.get(dmRow), 'label and identity must be distinct here')
+
+	test.end()
+})
+
 tape('setStatsData', function (test) {
 	test.timeoutAfter(100)
 

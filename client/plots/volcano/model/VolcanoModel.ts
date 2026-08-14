@@ -95,6 +95,7 @@ export class VolcanoModel {
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
 			min_samples_per_group: this.settings.minSamplesPerGroup,
+			exclude_sex_chr: this.settings.excludeSexChr,
 			volcanoRender: this.getVolcanoRender()
 		} as Partial<DiffMethRequest>
 

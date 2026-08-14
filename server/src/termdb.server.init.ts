@@ -822,7 +822,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 			ds.queries?.metaboliteIntensity ||
 			ds.queries?.proteome ||
 			ds.queries?.ssGSEA ||
-			ds.queries?.dnaMethylation
+			ds.queries?.dnaMethylation?.file
 		)
 			return true
 		if (cohortTermTypes.numeric > 1) return true // numeric is always prefilled for convenience, does not have to check if property exists
@@ -837,7 +837,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 			ds.queries?.metaboliteIntensity ||
 			ds.queries?.proteome ||
 			ds.queries?.ssGSEA ||
-			ds.queries?.dnaMethylation
+			ds.queries?.dnaMethylation?.file
 		)
 			return true
 		if (cohortTermTypes.numeric > 1) return true // numeric is always prefilled for convenience, does not have to check if property exists
@@ -865,7 +865,9 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	cellTypeBubbleHeatmap: ({ ds }) => ds.queries?.proteome?.cellTypeBubbleHeatmap,
 	studyCatalog: ({ ds }) => ds.queries?.proteome?.studyCatalog,
 	proteomeCohortCompare: ({ ds }) => ds.queries?.proteome?.studyCatalog,
-	DA: ({ ds }) => ds.queries?.rnaseqGeneCount,
+	// differential analysis covers gene expression (needs raw counts for edgeR) and
+	// DNA methylation (needs the promoter matrix); either one is enough to offer it
+	DA: ({ ds }) => ds.queries?.rnaseqGeneCount || ds.queries?.dnaMethylation?.promoter,
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
 	WSIViewer: ({ ds }) => ds.queries?.WSImages,
 	wsi: ({ ds }) => ds.queries?.w2,

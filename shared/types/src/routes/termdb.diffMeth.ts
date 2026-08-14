@@ -13,6 +13,10 @@ export type DiffMethRequest = {
 	samplelst: any
 	/** Minimum non-NA samples required per group (default 3) */
 	min_samples_per_group?: number
+	/** Drop chrX/chrY promoters before testing (default false). X-inactivation makes
+	 * chrX methylation strongly sex-dependent, so a sex-imbalanced comparison produces
+	 * chrX hits that are sex rather than the grouping variable. */
+	exclude_sex_chr?: boolean
 	/** Term for confounding variable 1 (if present) */
 	tw?: any
 	/** Term for confounding variable 2 (if present) */

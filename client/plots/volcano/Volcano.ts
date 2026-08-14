@@ -12,7 +12,7 @@ import { VolcanoInteractions } from './interactions/VolcanoInteractions'
 import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
-import { GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#types'
+import { GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION } from '#types'
 import { uiLabel } from '#shared'
 
 /* Below this many samples in the smaller group, the wilcoxon p-values are worth a caveat.
@@ -199,8 +199,10 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 		termType: opts.termType
 	}
 
-	//Define Gene Expression config
-	if (opts.termType == GENE_EXPRESSION) {
+	//Define Gene Expression and DNA Methylation config. Both run confounder-adjusted
+	//two-group analyses off a samplelst, so both need their confounder tws filled here
+	//-- otherwise a session rehydrated with confounders already set carries unfilled tws.
+	if (opts.termType == GENE_EXPRESSION || opts.termType == DNA_METHYLATION) {
 		if (opts.confounderTws) {
 			try {
 				for (const tw of opts.confounderTws) {

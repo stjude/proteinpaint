@@ -10,6 +10,7 @@ import type { DEFullResponse } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSampleNum } from '../settings/defaults'
+import { formatPromoterLabel } from '../promoterLabel'
 import { getGroupColors } from '../colors'
 import { DATermTypes as tt, enabledTermTypes } from '../../diffAnalysis/enabledTermTypes'
 
@@ -74,6 +75,7 @@ export class VolcanoViewModel {
 			/** Filled in setPointData(), one row per threshold-passing dot. Populated even when the
 			 * table is hidden — the download reads it. */
 			rows: [],
+			rowKeys: new Map(),
 			height: settings.height + this.topPad
 		}
 		this.settings = settings
@@ -276,6 +278,7 @@ export class VolcanoViewModel {
 		// rebuilt from scratch on every call, like pointData below -- appending would double the rows
 		// if this ever ran twice on one view model
 		this.pValueTable.rows = []
+		this.pValueTable.rowKeys.clear()
 		const dataCopy: any = structuredClone(this.dataRows)
 		for (const d of dataCopy) {
 			const highlightKey = this.termType === tt.DNA_METHYLATION ? d.promoter_id : d.gene_name
@@ -296,7 +299,7 @@ export class VolcanoViewModel {
 								{ value: d.adjusted_p_value != undefined ? roundValueAuto(d.adjusted_p_value) : '' }
 						  ]
 				if (this.termType == tt.DNA_METHYLATION) {
-					row.splice(0, 0, { value: d.promoter_id || '' }, { value: d.gene_name || '' })
+					row.splice(0, 0, { value: formatPromoterLabel(d as any) }, { value: d.gene_name || '' })
 				} else if (this.termType == tt.PROTEOME_DAP) {
 					row.splice(0, 0, { value: d.gene_name || '' }, { value: d.gene || '' })
 				} else {
@@ -306,6 +309,12 @@ export class VolcanoViewModel {
 				reads these rows, and gating them on showPValueTable made that download emit a
 				header with no rows. `row` above is built either way, so this only adds the push. */
 				this.pValueTable.rows.push(row)
+				/* Record the dot identity for this row. The methylation Promoter cell shows a
+				formatted label (formatPromoterLabel), so row[0].value can no longer be used to
+				find the dot -- hover/click highlighting must go through this map instead. Reuses
+				the same highlightKey compared against config.highlightedData above, so the three
+				stay in lock-step by construction. */
+				this.pValueTable.rowKeys.set(row, highlightKey)
 			} else {
 				this.numNonSignificant++
 			}

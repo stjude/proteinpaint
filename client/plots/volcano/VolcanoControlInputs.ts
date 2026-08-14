@@ -208,6 +208,15 @@ export class VolcanoControlInputs {
 				title: 'Minimum non-NA samples required per group for a promoter to be tested',
 				min: 1,
 				max: 100
+			},
+			{
+				label: 'Exclude sex chromosomes',
+				type: 'checkbox',
+				chartType: 'volcano',
+				settingsKey: 'excludeSexChr',
+				boxLabel: '',
+				title:
+					'Drop chrX/chrY promoters. Recommended for mixed-sex cohorts — X-inactivation makes chrX methylation strongly sex-dependent, so a sex-imbalanced comparison reports sex rather than the grouping variable.'
 			}
 		]
 		this.inputs.splice(0, 0, ...dmInputs)

@@ -1280,11 +1280,15 @@ type Mds3Queries = {
 	/** dna methylation beta value matrix
 	 */
 	dnaMethylation?: {
-		/** path to h5 file */
-		file: string
-		/** dna methylation unit (e.g. 'Average Beta Value') */
-		unit: string
-		/** promoter-by-sample matrix, values are average M-value */
+		/** path to CpG/probe-level h5 file. Optional: powers the dnaMethylation term
+		 * type (region picker, violin) and the DMR drill-down. WGBS cohorts may omit
+		 * it and supply only .promoter, since a CpG-level matrix at whole-genome
+		 * scale is very large. At least one of .file / .promoter must be set. */
+		file?: string
+		/** dna methylation unit (e.g. 'Average Beta Value'); required with .file */
+		unit?: string
+		/** promoter-by-sample matrix, values are average M-value.
+		 * Required for differential methylation (termdb/diffMeth). */
 		promoter?: {
 			/** path to h5 file */
 			file: string

@@ -377,7 +377,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		}
 	}
 	if (q.dnaMethylation) {
-		q2.dnaMethylation = { unit: q.dnaMethylation.unit }
+		// .file (CpG-level) and .promoter are independent; a WGBS dataset may be
+		// promoter-only, in which case there is no CpG-level unit to advertise
+		q2.dnaMethylation = {}
+		if (q.dnaMethylation.file) q2.dnaMethylation.unit = q.dnaMethylation.unit
 		if (q.dnaMethylation.promoter) {
 			q2.dnaMethylation.promoter = { unit: q.dnaMethylation.promoter.unit }
 		}
@@ -487,7 +490,9 @@ export function getDsAllowedTermTypes(ds) {
 	if (ds.queries?.metaboliteIntensity) typeSet.add(METABOLITE_INTENSITY)
 	if (ds.queries?.proteome) typeSet.add(PROTEOME_ABUNDANCE)
 	if (ds.queries?.ssGSEA) typeSet.add(SSGSEA)
-	if (ds.queries?.dnaMethylation) typeSet.add(DNA_METHYLATION)
+	// the dnaMethylation term type is CpG/probe-level and needs the .file HDF5;
+	// a promoter-only dataset supports differential methylation but not the term type
+	if (ds.queries?.dnaMethylation?.file) typeSet.add(DNA_METHYLATION)
 	if (ds.queries?.junction) typeSet.add(JUNCTION)
 	if (ds.queries?.singleCell) {
 		typeSet.add(SINGLECELL_CELLTYPE)
