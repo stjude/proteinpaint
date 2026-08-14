@@ -2,6 +2,7 @@ import type { Mclass } from './Mclass.ts'
 import type { BaseTerm } from './terms/term.ts'
 import type { CategoryKey } from './terms/termCollection.ts'
 import type { WSImage } from './routes/samplewsimages.ts'
+import type { SpatialImage } from './routes/termdb.wsiBySample.ts'
 import type { WSISample } from './routes/wsisamples.ts'
 import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from './routes/deleteWSITileSelection.ts'
@@ -1319,6 +1320,13 @@ type Mds3Queries = {
 	 * one subfolder per sample holding slide files: folder/<sample_id>/<fileName> */
 	w2?: {
 		folder: string
+		/** per-sample spatial (Xenium) bundles keyed by sample name: fileName is
+		 * the slide, companion file names live in the same sample folder, the
+		 * rest are viewer settings. Declaring a sample here makes that slide a
+		 * SpatialImage in the wsiBySample response. */
+		spatial?: {
+			[sampleId: string]: Omit<SpatialImage, 'type' | 'thumbnail'>
+		}
 	}
 	images?: Images
 	chat?: any

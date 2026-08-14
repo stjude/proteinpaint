@@ -46,20 +46,33 @@ import { sayerror } from '#dom'
 
 export async function init(
 	opts: {
-		slide: string
+		/** direct slide path relative to tpmasterdir (runpp ?image_file=) */
+		slide?: string
+		/** alternative to slide: raw wsitiles query addressing the slide through a
+		 dataset (wsimage=&dslabel=&genome=&sample_id=), already URI-encoded —
+		 lets the w2 plot reuse this viewer for spatial images without the
+		 allowDirectSlidePath gate */
+		slideQuery?: string
+		/** display name when slide is not given (e.g. the spatial image fileName) */
+		label?: string
 		cellBoundaries?: string
 		nucleusBoundaries?: string
-		annotationLevel?: string
+		annotationLevel?: string | number
 		geneExpression?: string
 		geneExpressionFile?: string
 		geneGroups?: string
+		/** map div size; defaults fit the full-window direct viewer */
+		width?: string
+		height?: string
 	},
 	holder: any
 ) {
-	const loading = holder.append('div').style('margin', '20px').text(`Loading ${opts.slide} …`)
+	const name = opts.slide ?? opts.label ?? 'slide'
+	const loading = holder.append('div').style('margin', '20px').text(`Loading ${name} …`)
 	try {
-		const slide = encodeURIComponent(opts.slide)
-		const meta = await dofetch3(`wsitiles/meta?slide=${slide}`)
+		// every wsitiles request carries this query to address the slide
+		const sq = opts.slideQuery ?? `slide=${encodeURIComponent(opts.slide!)}`
+		const meta = await dofetch3(`wsitiles/meta?${sq}`)
 		if (!meta || meta.error || meta.status === 'error') throw meta?.error || 'failed to load slide metadata'
 
 		const [w, h] = meta.slide_dimensions
@@ -76,7 +89,7 @@ export async function init(
 				// requirement that a {TileGroup}/{tileIndex} placeholder be present.
 				// v=<slide mtime>: regenerating the slide file in place busts the
 				// browser's immutable tile cache (the server's disk cache keys on it too)
-				url: `${host}/wsitiles/tile/{z}/{x}/{y}?slide=${slide}${planes > 1 ? `&plane=${p}` : ''}&v=${
+				url: `${host}/wsitiles/tile/{z}/{x}/{y}?${sq}${planes > 1 ? `&plane=${p}` : ''}&v=${
 					meta.version || 0
 				}&_={TileGroup}`,
 				size: [w, h],
@@ -116,7 +129,10 @@ export async function init(
 				})
 		}
 
-		const mapDiv = holder.append('div').style('width', '100vw').style('height', '90vh')
+		const mapDiv = holder
+			.append('div')
+			.style('width', opts.width ?? '100vw')
+			.style('height', opts.height ?? '90vh')
 		const map = new Map({
 			target: mapDiv.node(),
 			layers: [slideLayer],
@@ -129,7 +145,7 @@ export async function init(
 			.style('font', '12px system-ui')
 			.style('padding', '4px 8px')
 			.text(
-				`${opts.slide} — ${w}×${h}px${
+				`${name} — ${w}×${h}px${
 					Array.isArray(meta.mpp) && meta.mpp.length === 2
 						? `, ${meta.mpp[0].toFixed(3)}×${meta.mpp[1].toFixed(3)} µm/px`
 						: ''
@@ -157,7 +173,7 @@ export async function init(
 		for (const [file, color] of overlays) {
 			if (!file) continue
 			try {
-				const polys = await fetchBoundaries(host, slide, file, mppX, mppY)
+				const polys = await fetchBoundaries(host, sq, file, mppX, mppY)
 				if (file === opts.cellBoundaries) cellPolys = polys
 				map.addLayer(strokeLayer(polys, color, maxResolution))
 			} catch (e: any) {
@@ -181,9 +197,9 @@ export async function init(
 				const results = await Promise.all(
 					[...exprGenes, ...groupGenes].map(gene =>
 						dofetch3(
-							`wsitiles/genecounts?slide=${slide}&file=${encodeURIComponent(
-								opts.geneExpressionFile!
-							)}&gene=${encodeURIComponent(gene)}`
+							`wsitiles/genecounts?${sq}&file=${encodeURIComponent(opts.geneExpressionFile!)}&gene=${encodeURIComponent(
+								gene
+							)}`
 						).catch((e: any) => ({ error: e.message || String(e) }))
 					)
 				)
@@ -269,12 +285,13 @@ type CellPoly = { id: string; ring: number[][] }
  ring per cell, keyed by the unquoted cell_id (matches h5 barcodes). */
 async function fetchBoundaries(
 	host: string,
-	slide: string,
+	/** wsitiles query addressing the slide (slide= or dataset params) */
+	sq: string,
 	file: string,
 	mppX: number,
 	mppY: number
 ): Promise<CellPoly[]> {
-	const res = await fetch(`${host}/wsitiles/boundaries?slide=${slide}&file=${encodeURIComponent(file)}`)
+	const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}`)
 	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
 	const text = await res.text()
 

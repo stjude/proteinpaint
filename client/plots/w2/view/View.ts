@@ -5,7 +5,7 @@ import OlMap from 'ol/Map.js'
 import OlView from 'ol/View.js'
 import TileLayer from 'ol/layer/Tile.js'
 import Zoomify from 'ol/source/Zoomify.js'
-import type { WsiImage } from '#types'
+import type { SpatialImage, WsiImage } from '#types'
 import type Settings from '../Settings.ts'
 import type { ViewData } from '../viewModel/ViewModel.ts'
 import type { WsiInteractions } from '../interactions/WsiInteractions.ts'
@@ -18,7 +18,7 @@ export class View {
 		readonly dom: { table: any; viewer: any; error: any },
 		readonly viewData: ViewData,
 		/** the selected sample's images from termdb/wsiBySample */
-		readonly images: WsiImage[],
+		readonly images: (WsiImage | SpatialImage)[],
 		readonly settings: Settings,
 		readonly interactions: WsiInteractions,
 		readonly vocab: { genome: string; dslabel: string }
@@ -59,6 +59,27 @@ export class View {
 		const params = `wsimage=${encodeURIComponent(image.fileName)}&dslabel=${this.vocab.dslabel}&genome=${
 			this.vocab.genome
 		}&sample_id=${encodeURIComponent(sample.sampleId)}`
+
+		if (image.type == 'spatial') {
+			// spatial (Xenium) image: reuse the direct viewer, which draws the
+			// boundary/expression overlays, addressing the slide via the dataset
+			const direct = await import('../wsi.direct')
+			await direct.init(
+				{
+					slideQuery: params,
+					label: image.fileName,
+					cellBoundaries: image.cellBoundaries,
+					nucleusBoundaries: image.nucleusBoundaries,
+					geneExpressionFile: image.geneExpressionFile,
+					geneExpression: image.geneExpression,
+					annotationLevel: image.annotationLevel,
+					width: '100%',
+					height: this.settings.viewerHeight
+				},
+				holder
+			)
+			return
+		}
 
 		// slide dimensions are needed before tiles can be requested
 		const meta = await dofetch3(`wsitiles/meta?${params}`)
