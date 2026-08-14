@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { termjson } from '#test/testdata/termjson.ts'
 import * as helpers from '#test/front.helpers.js'
-import { detectGte, Locator, sleep } from '#test/test.helpers.js'
+import { detectGte, sleep } from '#test/test.helpers.js'
 import { getAgeCollectionFractionTw } from '#test/testdata/data.ts'
 
 /*
@@ -49,331 +49,6 @@ tape('\n', function (test) {
 	test.comment('-***- plots/survival -***-')
 	test.end()
 })
-
-// tape('survival term as term1', function (test) {
-// 	test.timeoutAfter(10000)
-// 	runpp({
-// 		state: {
-// 			plots: [
-// 				{
-// 					chartType: 'survival',
-// 					term: {
-// 						id: 'efs'
-// 					}
-// 				}
-// 			]
-// 		},
-// 		survival: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	let survivalDiv
-// 	async function runTests(survival) {
-// 		survivalDiv = survival.Inner.dom.chartsDiv
-// 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 1, 'should render 1 surv series g')
-// 		// please advice if to remove below tests using "circle" which is no longered rendered
-// 		test.equal(
-// 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
-// 			10,
-// 			'should render 10 survival censored symbols'
-// 		)
-
-// 		if (test._ok) survival.Inner.app.destroy()
-// 		test.end()
-// 	}
-// })
-
-// tape('survival term as term1, with categorical overlay', function (test) {
-// 	test.timeoutAfter(10000)
-// 	runpp({
-// 		state: {
-// 			plots: [
-// 				{
-// 					chartType: 'survival',
-// 					term: {
-// 						id: 'efs'
-// 					},
-// 					term2: {
-// 						id: 'diaggrp'
-// 					}
-// 				}
-// 			]
-// 		},
-// 		survival: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	let survivalDiv
-// 	async function runTests(survival) {
-// 		survivalDiv = survival.Inner.dom.chartsDiv
-// 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 7, 'should render 7 surv series g')
-// 		test.equal(
-// 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
-// 			10,
-// 			'should render 9 survival censored symbols'
-// 		)
-
-// 		if (test._ok) survival.Inner.app.destroy()
-// 		test.end()
-// 	}
-// })
-
-// tape('survival term as term1, with numeric overlay', function (test) {
-// 	test.timeoutAfter(10000)
-// 	runpp({
-// 		state: {
-// 			plots: [
-// 				{
-// 					chartType: 'survival',
-// 					term: {
-// 						id: 'efs'
-// 					},
-// 					term2: {
-// 						id: 'agedx'
-// 					}
-// 				}
-// 			]
-// 		},
-// 		survival: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	let survivalDiv
-// 	async function runTests(survival) {
-// 		survivalDiv = survival.Inner.dom.chartsDiv
-// 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 2, 'should render 2 surv series g')
-// 		test.equal(
-// 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
-// 			10,
-// 			'should render 10 survival censored symbols'
-// 		)
-
-// 		if (test._ok) survival.Inner.app.destroy()
-// 		test.end()
-// 	}
-// })
-
-// tape('survival term as term1, with condition overlay (some samples have missing values)', function (test) {
-// 	test.timeoutAfter(10000)
-// 	runpp({
-// 		state: {
-// 			plots: [
-// 				{
-// 					chartType: 'survival',
-// 					term: {
-// 						id: 'efs'
-// 					},
-// 					term2: {
-// 						id: 'Auditory System'
-// 					}
-// 				}
-// 			]
-// 		},
-// 		survival: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	let survivalDiv
-// 	async function runTests(survival) {
-// 		survivalDiv = survival.Inner.dom.chartsDiv
-// 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 5, 'should render 5 surv series g')
-// 		test.equal(
-// 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
-// 			3,
-// 			'should render 3 survival censored symbols'
-// 		)
-
-// 		if (test._ok) survival.Inner.app.destroy()
-// 		test.end()
-// 	}
-// })
-
-// tape('survival term as overlay', function (test) {
-// 	test.timeoutAfter(10000)
-// 	runpp({
-// 		state: {
-// 			plots: [
-// 				{
-// 					chartType: 'survival',
-// 					term: {
-// 						id: 'diaggrp'
-// 					},
-// 					term2: {
-// 						id: 'efs'
-// 					}
-// 				}
-// 			]
-// 		},
-// 		survival: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	let survivalDiv
-// 	async function runTests(survival) {
-// 		survivalDiv = survival.Inner.dom.chartsDiv
-// 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 7, 'should render 7 surv series g')
-// 		test.equal(
-// 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
-// 			10,
-// 			'should render 10 survival censored symbols'
-// 		)
-
-// 		if (test._ok) survival.Inner.app.destroy()
-// 		test.end()
-// 	}
-// })
-
-// tape('survival term as term1, with categorical divide by', function (test) {
-// 	test.timeoutAfter(10000)
-// 	runpp({
-// 		state: {
-// 			plots: [
-// 				{
-// 					chartType: 'survival',
-// 					term: {
-// 						id: 'efs'
-// 					},
-// 					term0: {
-// 						id: 'genetic_race'
-// 					}
-// 				}
-// 			]
-// 		},
-// 		survival: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	async function runTests(survival) {
-// 		const inner = survival.Inner
-// 		const survivalDiv = inner.dom.chartsDiv
-// 		const term0Values = inner.state.config.term0.term.values
-
-// 		//Test all dom elements present
-// 		test.equal(survivalDiv.selectAll('.pp-survival-chart').size(), 3, `Should render 3 survival charts`)
-
-// 		test.equal(
-// 			survivalDiv.selectAll('.sjpp-survival-atrisk').size(),
-// 			3,
-// 			`Should render 'Number at risk' tables below each chart`
-// 		)
-
-// 		const term0Labels = Object.values(term0Values).map(v => v.label)
-// 		const titleNodes = survivalDiv.selectAll('.sjpp-survival-title').nodes()
-// 		for (const d of titleNodes) {
-// 			if (!term0Labels.includes(d.innerText)) test.fail(`Unexpected title: ${d.innerText}`)
-// 		}
-
-// 		if (test._ok) survival.Inner.app.destroy()
-// 		test.end()
-// 	}
-// })
-
-// tape('survival term as term1, with numeric divide by', function (test) {
-// 	test.timeoutAfter(10000)
-// 	runpp({
-// 		state: {
-// 			plots: [
-// 				{
-// 					chartType: 'survival',
-// 					term: {
-// 						id: 'efs'
-// 					},
-// 					term0: {
-// 						id: 'agedx'
-// 					}
-// 				}
-// 			]
-// 		},
-// 		survival: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	async function runTests(survival) {
-// 		const inner = survival.Inner
-// 		const survivalDiv = inner.dom.chartsDiv
-
-// 		//Test all dom elements present
-// 		test.equal(survivalDiv.selectAll('.pp-survival-chart').size(), 2, `Should render 2 survival charts`)
-
-// 		test.equal(
-// 			survivalDiv.selectAll('.sjpp-survival-atrisk').size(),
-// 			2,
-// 			`Should render 'Number at risk' tables below each chart`
-// 		)
-
-// 		if (test._ok) survival.Inner.app.destroy()
-// 		test.end()
-// 	}
-// })
-
-// tape('survival term as term1, with condition divide by (some samples have missing values)', function (test) {
-// 	test.timeoutAfter(10000)
-// 	runpp({
-// 		state: {
-// 			plots: [
-// 				{
-// 					chartType: 'survival',
-// 					term: {
-// 						id: 'efs'
-// 					},
-// 					term0: {
-// 						id: 'Auditory System'
-// 					}
-// 				}
-// 			]
-// 		},
-// 		survival: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	async function runTests(survival) {
-// 		const inner = survival.Inner
-// 		const survivalDiv = inner.dom.chartsDiv
-// 		const term0Values = inner.state.config.term0.term.values
-
-// 		//Test all dom elements present
-// 		test.equal(survivalDiv.selectAll('.pp-survival-chart').size(), 5, `Should render 5 survival charts`)
-
-// 		test.equal(
-// 			survivalDiv.selectAll('.sjpp-survival-atrisk').size(),
-// 			5,
-// 			`Should render 'Number at risk' tables below each chart`
-// 		)
-
-// 		const term0Labels = Object.values(term0Values).map(v => v.label)
-// 		const titleNodes = survivalDiv.selectAll('.sjpp-survival-title').nodes()
-// 		for (const d of titleNodes) {
-// 			if (!term0Labels.includes(d.innerText)) test.fail(`Unexpected title: ${d.innerText}`)
-// 		}
-
-// 		if (test._ok) survival.Inner.app.destroy()
-// 		test.end()
-// 	}
-// })
 
 tape('survival term as term1, term2 = genetic_race, categorical groupsetting', function (test) {
 	test.timeoutAfter(3000)
@@ -432,20 +107,6 @@ tape('survival term as term1, term2 = genetic_race, categorical groupsetting', f
 			JSON.stringify(groups),
 			`Should correctly pass customset groups for term2`
 		)
-
-		// const numOfTerms = Object.keys(inner.term2toColor).length
-		// test.equal(
-		// 	inner.dom.chartsDiv.selectAll('.sjpp-survival-series').size(),
-		// 	numOfTerms,
-		// 	`Should render ${numOfTerms} surv series g`
-		// )
-
-		// const censoredSym = inner.currData.filter(d => d.ncensor)
-		// test.equal(
-		// 	inner.dom.chartsDiv.selectAll('.sjpp-survival-censored-x').size(),
-		// 	censoredSym.length,
-		// 	`should render ${censoredSym.length} survival censored symbols`
-		// )
 
 		if (test._ok) survival.Inner.app.destroy()
 		test.end()
@@ -510,25 +171,6 @@ tape('survival term as term1, term0 = genetic_race, categorical groupsetting', f
 			JSON.stringify(groups),
 			`Should correctly pass customset groups for term0`
 		)
-
-		//Test all dom elements present
-		// const termNum = inner.serverData.refs.orderedKeys.chart
-		// test.equal(
-		// 	inner.dom.chartsDiv.selectAll('.pp-survival-chart').size(),
-		// 	termNum.length,
-		// 	`Should render ${termNum.length} survival charts`
-		// )
-
-		// test.equal(
-		// 	inner.dom.chartsDiv.selectAll('.sjpp-survival-atrisk').size(),
-		// 	termNum.length,
-		// 	`Should render 'Number at risk' tables below each chart`
-		// )
-
-		// const titleNodes = inner.dom.chartsDiv.selectAll('.sjpp-survival-title').nodes()
-		// termNum.forEach(v => {
-		// 	if (!titleNodes.some(d => d.innerText == v)) test.fail(`Missing title for term0 value = ${v}`)
-		// })
 
 		if (test._ok) survival.Inner.app.destroy()
 		test.end()
@@ -692,8 +334,6 @@ tape('survival term as term1, term2 = agedx, custom bins', function (test) {
 			}
 		})
 
-		// test.equal(survCurves.length, expectedCount, `Should display the correct num of bins = ${expectedCount}`)
-
 		if (test._ok) inner.app.destroy()
 		test.end()
 	}
@@ -796,7 +436,6 @@ tape('survival term as term1, term0 = agedx, custom bins', function (test) {
 				})
 			}
 		})
-		// test.equal(survCurves.length, expectedCount, `Should display the correct num of bins = ${expectedCount}`)
 
 		if (test._ok) inner.app.destroy()
 		test.end()
@@ -830,24 +469,6 @@ tape('survival term as term1, term2 = geneVariant', function (test) {
 		survival.on('postRender.test', null)
 		const { chartsDiv, legendTip } = survival.Inner.dom
 		survivalDiv = chartsDiv
-		// test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 2, 'should render 2 surv series g')
-		// test.equal(
-		// 	survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
-		// 	10,
-		// 	'should render 10 survival censored symbols'
-		// )
-
-		/*
-		const atRiskLegend0 = await Locator.init(survivalDiv.node()).find(`[data-testid='sjpp-atrisk-seriesId']`).click(0)
-		// NOTE: simulated color picker click leads to error "A user gesture is required to show the color picker"
-		// directly call color change instead of simulated clicks
-		const colorInput = await Locator.init(legendTip.d).shows('input[type="color"]').get(0)
-		colorInput.value = '#0000ff'
-		colorInput.dispatchEvent(new Event('change', { cancelable: true }))
-		legendTip.hide()
-		await sleep(100) // todo: use improved Locator methods to avoid using sleep()
-		test.equal(atRiskLegend0?.parentNode?.getAttribute('fill'), 'rgb(0, 0, 255)', 'should change the series color')
-		*/
 
 		await survival.Inner.app.dispatch({
 			type: 'plot_edit',
@@ -874,40 +495,6 @@ tape('survival term as term1, term2 = geneVariant', function (test) {
 		test.end()
 	}
 })
-
-// tape('survival term as term1, term2 = geneExpression', function (test) {
-// 	test.timeoutAfter(8000)
-// 	runpp({
-// 		state: {
-// 			plots: [
-// 				{
-// 					chartType: 'survival',
-// 					term: { id: 'efs' },
-// 					term2: { term: { type: 'geneExpression', gene: 'TP53' } }
-// 				}
-// 			]
-// 		},
-// 		survival: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	let survivalDiv
-// 	async function runTests(survival) {
-// 		survivalDiv = survival.Inner.dom.chartsDiv
-// 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 2, 'should render 2 surv series g')
-// 		test.equal(
-// 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
-// 			10,
-// 			'should render 10 survival censored symbols'
-// 		)
-
-// 		if (test._ok) survival.Inner.app.destroy()
-// 		test.end()
-// 	}
-// })
 
 tape('survival term as term1, term2 = ssGSEA', function (test) {
 	test.timeoutAfter(8000)
