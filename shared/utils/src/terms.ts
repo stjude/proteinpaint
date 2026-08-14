@@ -247,6 +247,27 @@ export function trimGvTermCopy(term: any, q: any) {
 	return term
 }
 
+/* the dts queried by a set of groups, read off the dt term of each tvs of their filters */
+export function getDtsFromGroups(groups: any[]): any[] {
+	const dts = new Set<any>()
+	for (const group of groups) {
+		for (const dt of getDtsFromFilter(group.filter)) dts.add(dt)
+	}
+	return [...dts]
+}
+
+function getDtsFromFilter(filter: any): Set<any> {
+	const dts = new Set<any>()
+	for (const item of filter.lst) {
+		if (item.type == 'tvslst') {
+			for (const dt of getDtsFromFilter(item)) dts.add(dt)
+		} else {
+			dts.add(item.tvs.term.dt)
+		}
+	}
+	return dts
+}
+
 /*
 delete the amino acid change tally from every dt term nested in a groupset or filter.
 

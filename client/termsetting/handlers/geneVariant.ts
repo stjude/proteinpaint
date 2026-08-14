@@ -5,6 +5,8 @@ import type { TermSetting } from '../TermSetting.ts'
 import { vocabInit } from '#termdb/vocabulary'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getColors } from '#shared/common.js'
+import { getDtsFromGroups } from '#shared/terms.js'
+import { fillGroupsetGroups } from '../../tw/geneVariant'
 import { rgb } from 'd3-color'
 
 const colorScale = getColors(5)
@@ -112,31 +114,6 @@ async function makeEditMenu(self: TermSetting, _div: any) {
 		})
 }
 
-export function getDtsFromGroups(groups) {
-	const dts = new Set()
-	for (const group of groups) {
-		const filter = group.filter
-		for (const dt of getDtsFromFilter(filter)) {
-			dts.add(dt)
-		}
-	}
-	const dtLst = [...dts]
-	return dtLst
-}
-
-function getDtsFromFilter(filter) {
-	const dts = new Set()
-	for (const item of filter.lst) {
-		if (item.type == 'tvslst') {
-			for (const dt of getDtsFromFilter(item)) dts.add(dt)
-		} else {
-			const tvs = item.tvs
-			dts.add(tvs.term.dt)
-		}
-	}
-	return dts
-}
-
 // make UI for grouping variants
 async function makeGroupUI(self: TermSetting, div) {
 	div.style('display', 'block')
@@ -163,6 +140,10 @@ async function makeGroupUI(self: TermSetting, div) {
 		if (q.type == 'predefined-groupset') {
 			const groupsetting = self.term.groupsetting
 			if (!groupsetting.lst?.length) throw 'no predefined groupsets found'
+			/* a groupset only carries groups[] once it has been selected, and this UI can be
+			opened on a q whose index was not the one the term was last filled for, so build
+			on demand rather than assume (see listPredefinedGroupsets() in tw/geneVariant.ts) */
+			await fillGroupsetGroups(self.term, q.predefined_groupset_idx, self.vocabApi as any)
 			groupset = groupsetting.lst[q.predefined_groupset_idx]
 		} else {
 			groupset = q.customset

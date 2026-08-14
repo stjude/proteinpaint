@@ -196,8 +196,38 @@ tape('fill(): q.type=predefined-groupset', async test => {
 	test.equal(fullTw.q.predefined_groupset_idx, 0, 'should fill q.predefined_groupset_idx to be 0')
 	test.equal(fullTw.term.childTerms.length, 6, 'should create 6 child dt terms')
 	if (!fullTw.term.groupsetting.lst) throw 'term.groupsetting.lst is missing'
-	test.equal(fullTw.term.groupsetting.lst.length, 6, 'should get 6 predefined groupsets')
-	for (const groupset of fullTw.term.groupsetting.lst) {
+	test.equal(fullTw.term.groupsetting.lst.length, 6, 'should list 6 predefined groupsets')
+
+	/* only the selected groupset carries groups[]; the rest are name/dt listings, since
+	building a groupset costs a data request per dt term (see listPredefinedGroupsets) */
+	const lst = fullTw.term.groupsetting.lst as any[]
+	test.ok(lst[0].groups, 'should build the groups[] of the selected groupset')
+	test.ok(
+		lst.slice(1).every(groupset => !groupset.groups),
+		'should not build the groups[] of the unselected groupsets'
+	)
+	test.ok(
+		lst.slice(1).every(groupset => groupset.name && Number.isInteger(groupset.dt)),
+		'should list the unselected groupsets with a name and dt'
+	)
+	test.end()
+})
+
+tape('fill(): predefined groupset of each dt', async test => {
+	// each groupset is only built when it is the selected one, so fill once per index
+	for (let idx = 0; idx < 6; idx++) {
+		const tw: any = {
+			term: {
+				name: 'TP53',
+				genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', type: 'geneVariant' }],
+				type: 'geneVariant'
+			},
+			isAtomic: true,
+			q: { isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: idx }
+		}
+		const fullTw: any = await GvBase.fill(tw, { vocabApi })
+		const groupset = fullTw.term.groupsetting.lst[idx]
+		test.ok(groupset.groups, `should build the groups[] of groupset ${idx} when selected`)
 		if (groupset.dt == 1) {
 			testSnvIndelGroupset(groupset, test)
 		} else if (groupset.dt == 2) {
