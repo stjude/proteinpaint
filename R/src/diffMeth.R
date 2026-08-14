@@ -70,6 +70,8 @@ pkg_load_mem <- mem_probe()
 #   ebayes_trend:          (optional, default FALSE) fit a mean-variance trend in eBayes()
 #   ebayes_robust:         (optional, default FALSE) robust eBayes moderation (variance outliers)
 #   array_weights:         (optional, default FALSE) per-sample REML weights via arrayWeights()
+#   array_weights_max_rows:(optional, default 10000) promoters used to ESTIMATE those weights;
+#                          the fit itself always uses all of them. See step 7
 #   conf1:                 (optional) array of confounding variable 1 values, one per sample
 #   conf1_mode:            (optional) "continuous" or "discrete" — type of conf1
 #   conf2:                 (optional) array of confounding variable 2 values
@@ -398,15 +400,44 @@ impute_mem <- mem_probe()
 #
 # Note this one DOES change the fitted coefficients: weighted least squares makes each
 # group mean a weighted mean, so fold-changes move. The eBayes options never do.
+#
+# arrayWeights is estimated on at most array_weights_max_rows promoters, because it is
+# expensive in exactly the case this pipeline is in. limma fits every promoter in one
+# vectorized call only when the matrix is entirely finite (lm.series checks
+# all(is.finite(M))); with sequencing data the depth threshold leaves NAs scattered such
+# that essentially every row has one, so it falls back to a per-promoter R loop -- and
+# arrayWeights reruns that loop on every REML iteration. Measured at this cohort's shape
+# (263 samples, 8.7% missing): ~0.3 min over a complete matrix, ~4.5 min over the real one.
+#
+# The cap is sound rather than merely cheap: arrayWeights estimates one number per sample,
+# so 10,000 promoters is already ~38 rows per parameter. Benchmarked against the full
+# matrix, weights from 10,000 rows correlate 0.9999 (max per-sample deviation 0.16 on
+# weights spanning ~0.1-3) while taking about a tenth of the time. The FIT still uses every
+# promoter; only the weight estimation is subsampled.
+#
+# Rows are taken at even spacing rather than at random: no RNG means the result is
+# reproducible by construction, with no seed to thread through, and because the matrix is
+# ordered by genomic position an even stride also spans every chromosome.
 ebayes_trend <- isTRUE(input$ebayes_trend)
 ebayes_robust <- isTRUE(input$ebayes_robust)
 array_weights <- isTRUE(input$array_weights)
+aw_max_rows <- if (!is.null(input$array_weights_max_rows)) input$array_weights_max_rows else 10000
+aw_rows_used <- 0
 fit_time <- system.time({
   suppressWarnings({
     suppressMessages({
+      sample_weights <- NULL
+      if (array_weights) {
+        n_rows <- nrow(mvalues)
+        aw_idx <- if (n_rows > aw_max_rows) {
+          unique(as.integer(seq(1, n_rows, length.out = aw_max_rows)))
+        } else {
+          seq_len(n_rows)
+        }
+        aw_rows_used <- length(aw_idx)
+        sample_weights <- arrayWeights(mvalues[aw_idx, , drop = FALSE], design)
+      }
       # NULL weights is lmFit's default, so the un-weighted path needs no branch.
-      # Safe to run here: step 6 already imputed the remaining NAs.
-      sample_weights <- if (array_weights) arrayWeights(mvalues, design) else NULL
       fit <- lmFit(mvalues, design, weights = sample_weights) # per-promoter least squares fit
       # Empirical Bayes shrinkage of variances
       fit <- eBayes(fit, trend = ebayes_trend, robust = ebayes_robust)
@@ -491,6 +522,10 @@ output_time <- system.time({
       weight = as.numeric(sample_weights),
       stringsAsFactors = FALSE
     )
+    # How many promoters actually backed the estimate, so a subsampled run says so rather
+    # than passing for a full one.
+    final_output$array_weights_rows <- unbox(aw_rows_used)
+    final_output$array_weights_total <- unbox(nrow(mvalues))
   }
 })
 output_mem <- mem_probe()

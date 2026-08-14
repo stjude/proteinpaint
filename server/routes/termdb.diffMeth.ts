@@ -200,6 +200,13 @@ async function runDmFresh(
 			const low = names.filter(n => (byName.get(n) as number) < 0.5)
 			return head + (low.length ? ` | ${low.length} under 0.5` : ' | none under 0.5')
 		}
+		/* Say when the estimate was subsampled. The weights are reported per sample either way,
+		so without this a 10k-row estimate is indistinguishable from a full-matrix one. */
+		if (result.array_weights_rows && result.array_weights_rows < result.array_weights_total) {
+			mayLog(
+				`diffMeth arrayWeights estimated on ${result.array_weights_rows.toLocaleString()} of ${result.array_weights_total.toLocaleString()} promoters (evenly spaced); the fit uses all of them`
+			)
+		}
 		mayLog('diffMeth arrayWeights ' + summarize('group1/control', groups.group1names))
 		mayLog('diffMeth arrayWeights ' + summarize('group2/case', groups.group2names))
 	}

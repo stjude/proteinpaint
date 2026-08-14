@@ -22,6 +22,7 @@ Active tests:
 	- diffMeth.R: exclude_sex_chr drops chrX/chrY promoters
 	- diffMeth.R: eBayes trend/robust move p-values but not fold-changes
 	- diffMeth.R: array_weights reweights samples and moves fold-changes
+	- diffMeth.R: array_weights row cap is applied, reported, and deterministic
 	- diffMeth.R: impute_missing changes the fit but never delta_beta
 	- diffMeth.R: error on too few samples
 	- diffMeth.R: error on invalid sample name
@@ -649,6 +650,44 @@ tape('diffMeth.R: swapping case and control negates delta_beta and swaps the gro
 			`${id} group means swapped rather than changing value`
 		)
 	}
+	test.end()
+})
+
+/* The weight estimate is capped at array_weights_max_rows promoters because arrayWeights
+reruns limma's per-promoter loop on every REML iteration, which is minutes rather than seconds
+once missing cells disable the vectorized path. Reproducibility is the property that matters:
+the rows are chosen at even spacing rather than sampled, so there is no RNG and no seed, and
+two identical requests must return byte-identical weights. The fixture is far smaller than the
+real default, so the cap is lowered here to reach the branch at all. */
+tape('diffMeth.R: array_weights row cap is applied, reported, and deterministic', async function (test) {
+	test.timeoutAfter(45000)
+
+	const capped = { ...diffMethBaseInput, array_weights: true, array_weights_max_rows: 3 }
+	const a = JSON.parse(await run_R('diffMeth.R', JSON.stringify(capped)))
+	const b = JSON.parse(await run_R('diffMeth.R', JSON.stringify(capped)))
+	const full = JSON.parse(await run_R('diffMeth.R', JSON.stringify({ ...diffMethBaseInput, array_weights: true })))
+
+	test.equal(a.array_weights_rows, 3, 'reports the capped row count it actually used')
+	test.equal(a.array_weights_total, 5, 'reports the full promoter count alongside it')
+	test.equal(
+		full.array_weights_rows,
+		full.array_weights_total,
+		'an uncapped run reports using every promoter, so the log can tell the two apart'
+	)
+
+	test.deepEqual(
+		a.sample_weights.map(w => w.weight),
+		b.sample_weights.map(w => w.weight),
+		'two identical capped runs give identical weights, so row choice carries no RNG'
+	)
+	// Guards the fixture: if the cap silently stopped engaging these would coincide.
+	test.ok(
+		a.sample_weights.some((w, i) => w.weight !== full.sample_weights[i].weight),
+		'capping changed the weights, so the subsample branch really ran'
+	)
+	// The cap must never reach the fit itself -- every promoter is still tested.
+	test.equal(a.promoter_data.length, full.promoter_data.length, 'the fit still covers every promoter')
+
 	test.end()
 })
 
