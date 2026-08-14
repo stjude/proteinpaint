@@ -7,7 +7,7 @@ import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
 import { setControls } from './view/setControls.ts'
 import { Menu } from '#dom'
-import { makeAggMatrixInput } from './view/aggMatrixInput.ts'
+import { AggMatrixInput } from './view/AggMatrixInput'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
@@ -127,6 +127,6 @@ export function validatePlotConfig(config: any) {
     if (colCount < 2) throw new Error(`AggregateMatrix plot requires at least 2 columns`)
 }
 
-export function makeChartBtnMenu(holder: any, /*chartsInstance: any*/) {
-    makeAggMatrixInput(holder)
+export function makeChartBtnMenu(holder: any, chartsInstance: any) {
+    new AggMatrixInput(holder, chartsInstance)
 }
