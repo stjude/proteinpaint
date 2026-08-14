@@ -28,7 +28,10 @@ function init({ genomes }) {
 			if (!genome) throw 'unknown genome'
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'unknown ds'
-			if (!ds.queries?.dnaMethylation) throw new Error('This dataset does not support DNA methylation analysis.')
+			// DMR calling reads the CpG/probe-level HDF5; a promoter-only dataset
+			// supports the volcano but cannot drill into a region
+			if (!ds.queries?.dnaMethylation?.file)
+				throw new Error('This dataset does not support DNA methylation region analysis.')
 
 			if (!Array.isArray(q.group1) || q.group1.length == 0)
 				throw new Error('Group 1 has no samples. Please select at least one sample.')

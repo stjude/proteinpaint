@@ -2064,19 +2064,28 @@ async function validate_query_dnaMethylation(ds, genome) {
 	const q = ds.queries.dnaMethylation
 	if (!q) return
 	try {
-		if (!q.file) throw '.file missing'
-		q.file = path.join(serverconfig.tpmasterdir, q.file)
-		q.samples = [] // array of sample ids
-		await utils.file_is_readable(q.file)
-		const samples = await getH5samples(q.file, '/meta/samples/names')
-		if (!Array.isArray(samples)) throw new Error('samples not array')
-		if (!samples.length) throw 'No samples from hdf5 file: ' + q.file
-		for (const sn of samples) {
-			const si = ds.cohort.termdb.q.sampleName2id(sn)
-			if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
-			q.samples.push(si)
+		/* Two independent HDF5s, and a dataset may supply either or both:
+		   .file          CpG/probe-level, powers the dnaMethylation term type
+		                  (region picker, violin) and the DMR drill-down
+		   .promoter.file promoter-level, powers differential methylation (diffMeth.R)
+		   WGBS cohorts can be promoter-only: the CpG-level matrix for 16.4M sites x
+		   415 samples is ~27GB, which is not worth materializing just to light up the
+		   term type. Callers that need the CpG matrix must check q.file themselves. */
+		if (!q.file && !q.promoter) throw 'either .file or .promoter must be set'
+		if (q.file) {
+			q.file = path.join(serverconfig.tpmasterdir, q.file)
+			q.samples = [] // array of sample ids
+			await utils.file_is_readable(q.file)
+			const samples = await getH5samples(q.file, '/meta/samples/names')
+			if (!Array.isArray(samples)) throw new Error('samples not array')
+			if (!samples.length) throw 'No samples from hdf5 file: ' + q.file
+			for (const sn of samples) {
+				const si = ds.cohort.termdb.q.sampleName2id(sn)
+				if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
+				q.samples.push(si)
+			}
+			console.log(`${ds.label}: dnaMethylation HDF5 file validated. Samples:`, samples.length)
 		}
-		console.log(`${ds.label}: dnaMethylation HDF5 file validated. Samples:`, samples.length)
 		if (q.promoter) {
 			if (!q.promoter.file) throw '.promoter.file missing'
 			q.promoter.file = path.join(serverconfig.tpmasterdir, q.promoter.file)
@@ -2090,6 +2099,11 @@ async function validate_query_dnaMethylation(ds, genome) {
 	} catch (error) {
 		throw `${ds.label}: Failed to validate dnaMethylation HDF5 file: ${error}`
 	}
+
+	// The getter serves the dnaMethylation term type, which is CpG/probe-level. With
+	// no .file there is nothing for it to read, so leave q.get unset; callers gate the
+	// term type on its presence rather than on the query object existing.
+	if (!q.file) return
 
 	// HDF5 validation successful, set up the getter function
 	q.get = async param => {

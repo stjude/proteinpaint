@@ -45,6 +45,8 @@ export type GEVolcanoSettings = DefaultVolcanoSettings & {
 export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	/** Minimum non-NA samples required per group */
 	minSamplesPerGroup: number
+	/** Drop chrX/chrY promoters before testing */
+	excludeSexChr: boolean
 }
 
 export type SCCTVolcanoSettings = DefaultVolcanoSettings & {}

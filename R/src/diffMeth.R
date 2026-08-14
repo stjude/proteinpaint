@@ -64,6 +64,7 @@ pkg_load_mem <- mem_probe()
 #   control:               comma-separated sample names for the reference / control group
 #   input_file:            absolute path to the promoter-level M-value HDF5 file
 #   min_samples_per_group: (optional, default 3) minimum non-NA samples required per group
+#   exclude_sex_chr:       (optional, default FALSE) drop chrX/chrY promoters before testing
 #   conf1:                 (optional) array of confounding variable 1 values, one per sample
 #   conf1_mode:            (optional) "continuous" or "discrete" — type of conf1
 #   conf2:                 (optional) array of confounding variable 2 values
@@ -156,6 +157,12 @@ read_data_mem <- mem_probe()
 #      is NA would produce unreliable differential estimates.
 #   2. Promoters with zero variance across all selected samples are uninformative
 #      (limma can't estimate differential methylation if all values are identical).
+#   3. Optionally (exclude_sex_chr), chrX/chrY promoters. X-inactivation leaves Xi
+#      CpG-island promoters methylated in XX samples and unmethylated in XY, so any
+#      sex imbalance between the groups yields a wall of chrX hits that report sex
+#      rather than the grouping variable (Inkster et al., Epigenetics Chromatin 2023).
+#      Off by default: existing analyses keep their results, and chrX stays available
+#      as a positive control when validating the pipeline against known sex effects.
 filter_time <- system.time({
   # Use the input parameter if provided, otherwise default to 3
   min_samples_per_group <- if (!is.null(input$min_samples_per_group)) {
@@ -186,6 +193,12 @@ filter_time <- system.time({
   # var() in R for every row.
   row_vars <- rowVars(mvalues, na.rm = TRUE)
   keep <- keep & !is.na(row_vars) & (row_vars > 0)
+
+  # Optional sex-chromosome exclusion (see criterion 3 above). `chrs` was read from
+  # meta/chr in Step 3 and is indexed identically to the matrix rows.
+  if (isTRUE(input$exclude_sex_chr)) {
+    keep <- keep & !(chrs %in% c("chrX", "chrY"))
+  }
 
   # Subset the matrix and metadata vectors to only the promoters that passed filtering
   mvalues <- mvalues[keep, , drop = FALSE]

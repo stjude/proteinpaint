@@ -52,6 +52,9 @@ function addGEDefaults(termType: string, defaults: Partial<GEVolcanoSettings>) {
 function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>) {
 	if (termType != tt.DNA_METHYLATION) return
 	defaults.minSamplesPerGroup = 3
+	// Off by default so existing analyses are unchanged and chrX remains usable as a
+	// positive control. Recommended on for mixed-sex cohorts -- see the checkbox title.
+	defaults.excludeSexChr = false
 }
 
 /*********** Setting Validation Functions ***********

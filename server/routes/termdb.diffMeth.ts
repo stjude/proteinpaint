@@ -73,6 +73,7 @@ function dmKeyInputs(req: DiffMethRequest) {
 		dslabel: req.dslabel,
 		samplelst: canonicalizeSamplelst(req.samplelst),
 		min_samples_per_group: req.min_samples_per_group ?? null,
+		exclude_sex_chr: req.exclude_sex_chr ?? null,
 		tw: req.tw ?? null,
 		tw2: req.tw2 ?? null,
 		filter: (req as any).filter ?? null,
@@ -105,6 +106,7 @@ type DiffMethInput = {
 	control: string
 	input_file: string
 	min_samples_per_group?: number
+	exclude_sex_chr?: boolean
 	conf1?: any[]
 	conf1_mode?: 'continuous' | 'discrete'
 	conf2?: any[]
@@ -127,7 +129,8 @@ async function runDmFresh(
 		case: groups.group2names.join(','),
 		control: groups.group1names.join(','),
 		input_file: q.file,
-		min_samples_per_group: param.min_samples_per_group
+		min_samples_per_group: param.min_samples_per_group,
+		exclude_sex_chr: param.exclude_sex_chr
 	}
 
 	if (param.tw) {
@@ -179,7 +182,7 @@ export async function resolveDmSampleGroups(
 
 	const g1 = await buildGroupValues(
 		param.samplelst.groups[0].values,
-		q,
+		q.allSampleSet,
 		ds,
 		param.tw,
 		param.tw2,
@@ -188,7 +191,7 @@ export async function resolveDmSampleGroups(
 	)
 	const g2 = await buildGroupValues(
 		param.samplelst.groups[1].values,
-		q,
+		q.allSampleSet,
 		ds,
 		param.tw,
 		param.tw2,

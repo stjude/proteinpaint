@@ -6,6 +6,7 @@ import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
+import { formatPromoterLabel } from '../promoterLabel'
 
 export class VolcanoPlotView {
 	dom: VolcanoDom
@@ -375,9 +376,11 @@ export class VolcanoPlotView {
 			noButtonCallback: (i: number) => {
 				//On click, persistently highlight the data point
 				// if (this.termType != GENE_EXPRESSION) return
-				const gene = this.viewData.pValueTableData.rows[i][0].value as string
-				if (!gene) return
-				this.interactions.highlightDataPoint(gene)
+				// Index into the same array handed to renderTable: it sorts rows in place, so
+				// the unsliced pValueTableData.rows would be misindexed once a header is sorted.
+				const key = this.viewData.pValueTableData.rowKeys.get(rows[i])
+				if (!key) return
+				this.interactions.highlightDataPoint(key)
 			},
 			hoverEffects: (tr, row) => {
 				//May restrict termTypes later
@@ -385,8 +388,9 @@ export class VolcanoPlotView {
 				//Highlight the data point when hovering over the table row
 				//Previously highlighted data points are not affected
 				const circles = this.volcanoDom.plot.selectAll('circle').nodes()
+				const key = this.viewData.pValueTableData.rowKeys.get(row)
 				const dataKey = this.termType === tt.DNA_METHYLATION ? 'promoter_id' : 'gene_name'
-				const circle = circles.find((d: any) => d.__data__[dataKey] == row[0].value) as any
+				const circle = circles.find((d: any) => d.__data__[dataKey] == key) as any
 				if (!circle || circle.__data__.highlighted) return
 
 				/** Circles may render behind several other circles, making it hard
@@ -513,7 +517,7 @@ export class VolcanoPlotView {
 			const fc = { value: roundValueAuto(d.fold_change) }
 			const pval = { value: roundValueAuto(d[pField]) }
 			if (isDM) {
-				return [{ value: (d as any).promoter_id || '' }, { value: d.gene_name || '' }, fc, pval]
+				return [{ value: formatPromoterLabel(d as any) }, { value: d.gene_name || '' }, fc, pval]
 			}
 			if (isDAP) {
 				return [{ value: d.gene_name || '' }, { value: (d as any).gene || '' }, fc, pval]
@@ -572,7 +576,7 @@ export class VolcanoPlotView {
 	 * (gene/promoter, fold-change, original + adjusted p-values). */
 	private addTooltipRows(d: DataPointEntry, table: any) {
 		if (this.termType === tt.DNA_METHYLATION) {
-			if ('promoter_id' in d) addTooltipRow(table, 'Promoter', (d as any).promoter_id)
+			if ('promoter_id' in d) addTooltipRow(table, 'Promoter', formatPromoterLabel(d as any))
 			if (d.gene_name) addTooltipRow(table, 'Gene(s)', d.gene_name)
 		} else if (this.termType === tt.PROTEOME_DAP) {
 			addTooltipRow(table, 'Identifier', d.gene_name)

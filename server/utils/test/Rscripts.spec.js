@@ -394,6 +394,11 @@ tape('\n', function (test) {
 })
 
 // Uses the same sample set from utils/termdb/imports/samples as all other TermdbTest genomic data
+//
+// Fixture shape: 5 promoters (EH38E_TEST_0000..0004) x 100 samples of M-values.
+// meta/chr is ['chr17','chr17','chr17','chrX','chrY'] -- the two sex-chromosome rows
+// exist so the exclude_sex_chr filter is testable. Nothing asserts specific chr values
+// beyond that test, so rows may be relabelled with h5py if more coverage is needed.
 const diffMethFixturePath = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest/dnaMethPromoterMvalue.h5')
 const diffMethCaseSamples =
 	'1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,2646,2660,2674,2688,2702,2716,2730,2744,2758,2772'
@@ -527,6 +532,44 @@ tape('diffMeth.R: confounder support', async function (test) {
 
 	test.ok(out.promoter_data, 'confounder run should produce promoter_data')
 	test.ok(out.promoter_data.length > 0, 'confounder run should return results')
+
+	test.end()
+})
+
+tape('diffMeth.R: exclude_sex_chr drops chrX/chrY promoters', async function (test) {
+	test.timeoutAfter(30000)
+
+	const withSex = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput)))
+	const withoutSex = JSON.parse(
+		await run_R('diffMeth.R', JSON.stringify({ ...diffMethBaseInput, exclude_sex_chr: true }))
+	)
+
+	// Guard the fixture assumption: without the flag, sex chromosomes must be present,
+	// otherwise the assertions below would pass vacuously.
+	test.ok(
+		withSex.promoter_data.some(d => d.chr == 'chrX') && withSex.promoter_data.some(d => d.chr == 'chrY'),
+		'fixture should contain chrX and chrY promoters when the flag is off'
+	)
+
+	test.deepEqual(
+		withoutSex.promoter_data.filter(d => d.chr == 'chrX' || d.chr == 'chrY'),
+		[],
+		'no chrX/chrY promoter should survive exclude_sex_chr'
+	)
+	test.ok(
+		withoutSex.promoter_data.length < withSex.promoter_data.length,
+		`exclude_sex_chr should return fewer promoters (${withoutSex.promoter_data.length} < ${withSex.promoter_data.length})`
+	)
+	// The autosomal rows must be untouched -- catches a misaligned chrs/matrix index,
+	// which would drop the wrong rows while still satisfying the assertions above.
+	test.deepEqual(
+		withoutSex.promoter_data.map(d => d.promoter_id).sort(),
+		withSex.promoter_data
+			.filter(d => d.chr != 'chrX' && d.chr != 'chrY')
+			.map(d => d.promoter_id)
+			.sort(),
+		'surviving promoters should be exactly the non-sex-chromosome ones'
+	)
 
 	test.end()
 })

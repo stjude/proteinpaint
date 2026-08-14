@@ -126,6 +126,11 @@ export type VolcanoDom = {
 export type VolcanoPValueTableData = {
 	columns: TableColumn[]
 	rows: TableCell[][]
+	/** Row -> the identity used to match a table row back to its volcano dot
+	 * (promoter_id for DNA methylation, gene_name otherwise). Keyed by the row
+	 * array itself rather than by index, because renderTable sorts rows in place
+	 * and the first cell's value is a formatted display label, not the identity. */
+	rowKeys: Map<TableCell[], string>
 	height: number
 }
 
