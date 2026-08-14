@@ -114,10 +114,13 @@ export async function getDtTermValues(dtTerm, filter, vocabApi, opts = {}) {
 		// in termsetting/handlers/geneVariant.ts). falling back to whatever is already
 		// on the dt term supports a vocab whose terms carry their own values
 		const vocabTerm = vocabApi.vocab?.terms?.find(t => t.id == dtTerm.id)
-		if (vocabTerm) {
-			dtTerm.values = vocabTerm.values
-			dtTerm.mnames = vocabTerm.mnames
-		}
+		if (vocabTerm) dtTerm.values = vocabTerm.values
+		// the tally is only assigned on opt-in, same as the db path below. deliberately
+		// NOT deleted otherwise: a frontend vocab cannot re-query it, so a stale tally is
+		// preferable to permanently dropping one that an embedder supplied. this is the
+		// one asymmetry with the db path, where deleting is free because fillMenu()
+		// re-queries before rendering
+		if (opts.withMnames && vocabTerm) dtTerm.mnames = vocabTerm.mnames
 		return
 	}
 

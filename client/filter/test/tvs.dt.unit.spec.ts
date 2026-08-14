@@ -13,6 +13,8 @@ test sections:
 	- getDtTermValues: stale mnames cleared without opt-in
 	- getDtTermValues: frontend vocab keeps cached values
 	- getDtTermValues: frontend vocab fills from matching vocab term
+	- getDtTermValues: frontend vocab, mnames are opt-in
+	- getDtTermValues: frontend vocab keeps an unqueryable stale tally
 	- getDtTermValues: frontend vocab without a matching term
 	- get_pill_label: mname values
 */
@@ -188,7 +190,7 @@ tape('getDtTermValues: frontend vocab keeps cached values', async test => {
 	;(vocabApi as any).getCategories = async () => {
 		queried = true
 	}
-	await getDtTermValues(dtTerm, undefined, vocabApi)
+	await getDtTermValues(dtTerm, undefined, vocabApi, { withMnames: true })
 
 	test.equal(queried, false, 'getCategories should not be queried')
 	test.equal(dtTerm.values, cachedValues, 'cached values should be preserved')
@@ -206,10 +208,38 @@ tape('getDtTermValues: frontend vocab fills from matching vocab term', async tes
 	const vocabApi = new FrontendVocab({ state: { vocab: { terms: [vocabTerm] } } })
 
 	const dtTerm = getDtTerm()
-	await getDtTermValues(dtTerm, undefined, vocabApi)
+	await getDtTermValues(dtTerm, undefined, vocabApi, { withMnames: true })
 
 	test.deepEqual(dtTerm.values, vocabTerm.values, 'values should come from the matching vocab term')
 	test.deepEqual(dtTerm.mnames, vocabTerm.mnames, 'mnames should come from the matching vocab term')
+	test.end()
+})
+
+tape('getDtTermValues: frontend vocab, mnames are opt-in', async test => {
+	const vocabTerm = getDtTerm()
+	vocabTerm.values = { M: { key: 'M', label: 'MISSENSE' } }
+	vocabTerm.mnames = [{ mname: 'G12D', class: 'M', samplecount: 2 }]
+	const vocabApi = new FrontendVocab({ state: { vocab: { terms: [vocabTerm] } } })
+
+	const dtTerm = getDtTerm()
+	await getDtTermValues(dtTerm, undefined, vocabApi)
+
+	test.deepEqual(dtTerm.values, vocabTerm.values, 'values should still come from the matching vocab term')
+	test.equal(dtTerm.mnames, undefined, 'mnames should not be copied without opts.withMnames')
+	test.end()
+})
+
+tape('getDtTermValues: frontend vocab keeps an unqueryable stale tally', async test => {
+	// unlike the db path, a frontend vocab cannot re-query the tally, so an existing one
+	// is left alone rather than deleted, to avoid dropping embedder-supplied data
+	const staleMnames = [{ mname: 'G12D', class: 'M', samplecount: 2 }]
+	const dtTerm = getDtTerm()
+	dtTerm.mnames = staleMnames
+	const vocabApi = new FrontendVocab({ state: { vocab: { terms: [] } } })
+
+	await getDtTermValues(dtTerm, undefined, vocabApi)
+
+	test.equal(dtTerm.mnames, staleMnames, 'an existing tally should survive when it cannot be re-queried')
 	test.end()
 })
 
