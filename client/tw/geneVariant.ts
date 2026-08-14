@@ -23,6 +23,7 @@ import { getWrappedTvslst } from '#filter/filter'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getChildTerms, addParentTerm } from '../termdb/handlers/geneVariant'
 import { getColors, dtcnv, dtsnvindel, mclass } from '#shared/common.js'
+import { trimGvTermCopy, clearDtTermMnames } from '#shared/terms.js'
 import { validateVariantFilter } from '#shared/geneVariantFilter.js'
 import { getDtsFromGroups } from '../termsetting/handlers/geneVariant'
 import { rgb } from 'd3-color'
@@ -36,6 +37,14 @@ export class GvBase extends TwBase {
 	constructor(tw: GvTW, opts: TwOpts) {
 		super(tw, opts)
 		this.term = tw.term
+	}
+
+	/* a filled-in geneVariant term is mostly derived properties that no data
+	request needs, see trimGvTermCopy() */
+	getMinCopy(override: any = {}) {
+		const copy = super.getMinCopy(override)
+		trimGvTermCopy(copy.term, copy.q)
+		return copy
 	}
 
 	/** tw.term must already be filled-in at this point */
@@ -300,6 +309,12 @@ export class GvCustomGS extends GvBase {
 		const { term, q } = tw
 		if (!q.customset) throw 'missing tw.q.customset'
 		if (!q.customset.groups.length) throw 'customset.groups[] is empty'
+		// an mname tally is only read by the variant config UI, which re-queries it, so it
+		// must not survive on a customset, where it is stored once per tvs. cleared on fill
+		// rather than only where a customset is built, so that a customset of a session
+		// saved before mnames became opt-in is also corrected. a predefined groupset needs
+		// no equivalent, since getPredefinedGroupsets() rebuilds it on every fill
+		clearDtTermMnames(q.customset)
 		if (!q.dtLst?.length) q.dtLst = getDtsFromGroups(q.customset.groups)
 		set_hiddenvalues(q, term)
 		return tw as GvCustomGsTW

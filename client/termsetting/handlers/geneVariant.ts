@@ -172,13 +172,19 @@ async function makeGroupUI(self: TermSetting, div) {
 		self.groups = structuredClone(groupset.groups)
 	}
 
-	// fill values of child dt terms with mutation classes of gene in dataset
-	for (const dtTerm of self.term.childTerms) {
-		await getDtTermValues(dtTerm, self.filter, self.vocabApi)
+	// fill values of child dt terms with mutation classes of gene in dataset.
+	// filled into copies rather than self.term.childTerms[], because each of those
+	// is shared by reference with the tvs of every groupset, and the mname tally
+	// requested here would then be serialized once per tvs into the saved term
+	const dtTerms = structuredClone(self.term.childTerms)
+	for (const dtTerm of dtTerms) {
+		await getDtTermValues(dtTerm, self.filter, self.vocabApi, { withMnames: true })
 	}
 
-	// build frontend vocab using child dt terms
-	const vocabApi: any = vocabInit({ vocab: { terms: self.term.childTerms } })
+	// build frontend vocab using child dt terms. it is the only source of values and
+	// mnames for the tvs of this UI, since a frontend vocab cannot query the db
+	// (see getDtTermValues() in filter/tvs.dt.js)
+	const vocabApi: any = vocabInit({ vocab: { terms: dtTerms } })
 	// need termdbConfig.queries for cnv tvs (see getDtCnvType() in filter/tvs.js and
 	// fillMenu() in filter/tvs.dtcnv.continuous.js)
 	// not passing complete termdbConfig as presence of .allowedTermTypes will
