@@ -65,6 +65,8 @@ pkg_load_mem <- mem_probe()
 #   input_file:            absolute path to the promoter-level M-value HDF5 file
 #   min_samples_per_group: (optional, default 3) minimum non-NA samples required per group
 #   exclude_sex_chr:       (optional, default FALSE) drop chrX/chrY promoters before testing
+#   impute_missing:        (optional, default TRUE) fill remaining NAs with group means. Set
+#                          FALSE for sequencing platforms; see step 6 for why
 #   ebayes_trend:          (optional, default FALSE) fit a mean-variance trend in eBayes()
 #   ebayes_robust:         (optional, default FALSE) robust eBayes moderation (variance outliers)
 #   array_weights:         (optional, default FALSE) per-sample REML weights via arrayWeights()
@@ -287,7 +289,8 @@ design_mem <- mem_probe()
 # Computed BEFORE the imputation below, with na.rm, so these describe observed
 # data only. Imputation fills M-value cells with a group mean, and because beta
 # is nonlinear in M, averaging beta over imputed cells is not the observed-data
-# mean. (Once the imputation is dropped the two coincide.)
+# mean. Computing here rather than after means delta-beta reports the same
+# observed-data quantity on both platforms, whether or not imputation runs.
 beta_time <- system.time({
   case_cols_b <- 1:n_cases
   control_cols_b <- (n_cases + 1):(n_cases + n_controls)
@@ -314,8 +317,21 @@ beta_mem <- mem_probe()
 # inflating false positives. Step 4 already guarantees at least
 # min_samples_per_group non-NA values per group, so group means are always
 # computable.
+#
+# Skipped when impute_missing is FALSE, which the server sets for sequencing-based
+# platforms. The justification above is specific to arrays: a missing probe there is
+# structural, the same probes missing for every sample of that array type, and dropping
+# those promoters would lose real biology. Under WGBS a missing cell only means that one
+# sample-region fell below the depth threshold. That is rarer, closer to random, and limma
+# already handles it correctly -- lm.series fits each row on its finite observations, so the
+# residual degrees of freedom shrink to match the data that actually exists. Imputing instead
+# hands limma invented observations at full weight, which understates the variance.
+#
+# Safe either way: step 4 guarantees min_samples_per_group non-NA values per group, so no
+# promoter reaching this point is short of data.
+impute_missing <- !identical(input$impute_missing, FALSE)
 impute_time <- system.time({
-  na_mask <- is.na(mvalues)
+  na_mask <- if (impute_missing) is.na(mvalues) else FALSE
   if (any(na_mask)) {
     # Compute each row's group mean once (NA-aware), then build a fill matrix
     # the same shape as mvalues by recycling the per-row means across the

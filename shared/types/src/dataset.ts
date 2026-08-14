@@ -1287,6 +1287,16 @@ type Mds3Queries = {
 		file?: string
 		/** dna methylation unit (e.g. 'Average Beta Value'); required with .file */
 		unit?: string
+		/** How the methylation was measured. Defaults to 'array' when absent, so existing
+		 * array-based datasets keep their behavior.
+		 *
+		 * This is a property of the data, not a preference, and it decides how missingness is
+		 * treated. On arrays a missing value is structural — 450K/EPIC/EPIC2 cover different
+		 * probe sets, so a sample is missing whole probes for reasons unrelated to its biology,
+		 * and imputing is the standard remedy. Under WGBS a missing value only means that
+		 * sample-region fell below the depth threshold, which is much rarer and closer to
+		 * random; imputing there adds no information and is slightly anticonservative. */
+		platform?: 'array' | 'wgbs'
 		/** promoter-by-sample matrix, values are average M-value.
 		 * Required for differential methylation (termdb/diffMeth). */
 		promoter?: {
