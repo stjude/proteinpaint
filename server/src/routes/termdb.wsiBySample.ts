@@ -1,6 +1,7 @@
 import type {
 	RouteApi,
 	RoutePayload,
+	SpatialImage,
 	WsiBySampleRequest,
 	WsiBySampleResponse,
 	WsiImage,
@@ -80,15 +81,32 @@ function init({ genomes }) {
 			// a sample without a folder simply has no images
 			const fileNames = await readdir(sampleDir).catch(() => [] as string[])
 
-			const images: WsiImage[] = fileNames
+			// ds.queries.w2.spatial[sample] declares the sample's Xenium bundle: its
+			// slide becomes a SpatialImage whose companion file names (inside the
+			// sample folder) are rewritten relative to tpmasterdir, matching the
+			// wsitiles boundaries/genecounts ?file= param
+			const sp = ds.queries.w2.spatial?.[sampleId]
+			const rel = (f?: string) => (f ? path.join(folder, sampleId, f) : undefined)
+
+			const images: (WsiImage | SpatialImage)[] = fileNames
 				.filter(f => SLIDE_EXT.test(f))
-				.map(fileName => ({
-					fileName,
+				.map(fileName => {
 					// z=0 tile of the slide doubles as a thumbnail; client prepends host
-					thumbnail: `wsitiles/tile/0/0/0?wsimage=${encodeURIComponent(fileName)}&dslabel=${q.dslabel}&genome=${
+					const thumbnail = `wsitiles/tile/0/0/0?wsimage=${encodeURIComponent(fileName)}&dslabel=${q.dslabel}&genome=${
 						q.genome
 					}&sample_id=${encodeURIComponent(sampleId)}`
-				}))
+					if (sp && fileName == sp.fileName)
+						return {
+							...sp,
+							type: 'spatial' as const,
+							fileName,
+							cellBoundaries: rel(sp.cellBoundaries),
+							nucleusBoundaries: rel(sp.nucleusBoundaries),
+							geneExpressionFile: rel(sp.geneExpressionFile),
+							thumbnail
+						}
+					return { type: 'wsi' as const, fileName, thumbnail }
+				})
 
 			res.status(200).json({ images } satisfies WsiBySampleResponse)
 		} catch (e: any) {
