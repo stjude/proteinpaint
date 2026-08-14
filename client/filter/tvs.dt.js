@@ -13,9 +13,10 @@ TODO: may move dom/variantConfig here
 export const handler = Object.assign({}, _handler, { fillMenu, term_name_gen, get_pill_label })
 
 async function fillMenu(self, div, tvs) {
-	// get mutations from dataset
+	// get mutations from dataset. the variant config lists the amino acid changes,
+	// so this is one of the few callers that needs the mname tally
 	const term = structuredClone(tvs.term)
-	await getDtTermValues(term, self.filter, self.opts.vocabApi)
+	await getDtTermValues(term, self.filter, self.opts.vocabApi, { withMnames: true })
 	// render variant config
 	const arg = {
 		holder: div,
@@ -96,13 +97,27 @@ function get_pill_label(tvs) {
 	return { txt }
 }
 
-// get mutation classes of dt term
-// will store these classes in term.values,
-// and amino acid changes (when present) in term.mnames
-export async function getDtTermValues(dtTerm, filter, vocabApi) {
+/*
+get mutation classes of dt term, stored in dtTerm.values{}
+
+opts.withMnames: also store the amino acid changes (when present) in dtTerm.mnames[].
+Only the variant config UI reads mnames. The predefined groupset builder does not,
+and the dt term it fills is shared by reference with every tvs of every groupset
+(see getPredefinedGroupsets() in tw/geneVariant.ts), so an mname tally left on it is
+re-serialized once per tvs into the request payload and the saved state. Callers that
+render the variant config must opt in; everyone else gets values only.
+*/
+export async function getDtTermValues(dtTerm, filter, vocabApi, opts = {}) {
 	if (vocabApi instanceof FrontendVocab) {
-		// geneVariant frontend vocab, cannot get values from db
-		// use values/mnames already present on dt term
+		// frontend vocab, cannot query values from the db. take them from the matching
+		// vocab term, which the custom groupset UI seeds with mnames (see makeGroupUI()
+		// in termsetting/handlers/geneVariant.ts). falling back to whatever is already
+		// on the dt term supports a vocab whose terms carry their own values
+		const vocabTerm = vocabApi.vocab?.terms?.find(t => t.id == dtTerm.id)
+		if (vocabTerm) {
+			dtTerm.values = vocabTerm.values
+			dtTerm.mnames = vocabTerm.mnames
+		}
 		return
 	}
 
@@ -125,6 +140,12 @@ export async function getDtTermValues(dtTerm, filter, vocabApi) {
 				return [k, { key: k, label: vocabApi.termdbConfig.mclass?.[k]?.label || mclass[k].label }]
 			})
 	)
+	if (!opts.withMnames) {
+		// deleted rather than simply left unset, so that a tally carried by a tw of a
+		// session saved before mnames became opt-in is also cleared
+		delete dtTerm.mnames
+		return
+	}
 	// store amino acid changes (e.g. "G12D") in term.mnames
 	// entries are { mname, class, samplecount }, sorted by descending sample count
 	const mnames = byOrigin ? data.mnames?.byOrigin?.[dtTerm.origin] : data.mnames

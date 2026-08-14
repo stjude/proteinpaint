@@ -239,6 +239,37 @@ tape('fill(): q.type=custom-groupset', async test => {
 	test.end()
 })
 
+tape('fill(): q.type=custom-groupset, stale mnames', async test => {
+	// simulates a customset of a session saved before the mname tally became opt-in,
+	// where it was stored on the dt term of every tvs
+	const q: any = structuredClone(customGsQ)
+	const tvsTerms = q.customset.groups.map(g => g.filter.lst[0].tvs.term)
+	for (const t of tvsTerms) {
+		t.mnames = [{ mname: 'R273H', class: 'M', samplecount: 1 }]
+	}
+	const tw: any = {
+		term: {
+			name: 'TP53',
+			genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', type: 'geneVariant' }],
+			type: 'geneVariant'
+		},
+		isAtomic: true,
+		q
+	}
+	const fullTw: any = await GvBase.fill(tw, { vocabApi })
+	const filled = fullTw.q.customset.groups.map(g => g.filter.lst[0].tvs.term)
+	test.equal(filled.length, tvsTerms.length, 'should keep every customset group')
+	test.ok(
+		filled.every(t => !('mnames' in t)),
+		'should delete the stale mname tally from every tvs of the customset'
+	)
+	test.ok(
+		filled.every(t => t.values && Object.keys(t.values).length),
+		'should leave the tvs term values intact'
+	)
+	test.end()
+})
+
 /**********
  variables
 ***********/

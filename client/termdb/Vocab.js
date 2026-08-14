@@ -1,5 +1,5 @@
 import { dofetch3, isInSession, getRequiredAuth, getSavedToken, setTokenByDsRoute } from '#common/dofetch'
-import { isDictionaryType } from '#shared/terms.js'
+import { isDictionaryType, trimGvTermCopy } from '#shared/terms.js'
 
 export class Vocab {
 	termdbConfig = {}
@@ -248,6 +248,8 @@ export class Vocab {
 				copy.term = structuredClone(tw.term)
 				// dummy preset bins should not affect the uniqueness of a request payload
 				if (copy.term.bins?.default?.isDummyPreset) delete copy.term.bins
+				// a geneVariant term carries derived properties that no data request needs
+				trimGvTermCopy(copy.term, copy.q)
 			}
 		}
 		return copy

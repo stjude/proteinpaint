@@ -9,7 +9,11 @@ test sections:
 	- getDtTermValues: classes and mnames, no byOrigin
 	- getDtTermValues: response without mnames
 	- getDtTermValues: empty mname list for origin
+	- getDtTermValues: mnames are opt-in
+	- getDtTermValues: stale mnames cleared without opt-in
 	- getDtTermValues: frontend vocab keeps cached values
+	- getDtTermValues: frontend vocab fills from matching vocab term
+	- getDtTermValues: frontend vocab without a matching term
 	- get_pill_label: mname values
 */
 
@@ -86,7 +90,7 @@ Tests
 
 tape('getDtTermValues: classes and mnames, byOrigin', async test => {
 	const dtTerm = getDtTerm('somatic')
-	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesByOrigin, true))
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesByOrigin, true), { withMnames: true })
 
 	test.deepEqual(
 		dtTerm.values,
@@ -109,7 +113,7 @@ tape('getDtTermValues: classes and mnames, byOrigin', async test => {
 
 tape('getDtTermValues: classes and mnames, no byOrigin', async test => {
 	const dtTerm = getDtTerm()
-	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesFlat))
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesFlat), { withMnames: true })
 
 	test.deepEqual(
 		dtTerm.values,
@@ -130,7 +134,7 @@ tape('getDtTermValues: classes and mnames, no byOrigin', async test => {
 tape('getDtTermValues: response without mnames', async test => {
 	const categories = { lst: [{ dt: 1, classes: { WT: 5, M: 2 } }] }
 	const dtTerm = getDtTerm()
-	await getDtTermValues(dtTerm, undefined, getVocabApi(categories))
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categories), { withMnames: true })
 
 	test.deepEqual(dtTerm.values, { M: { key: 'M', label: mclass.M.label } }, 'values should still be filled')
 	test.equal(dtTerm.mnames, undefined, 'mnames should be undefined when absent from response')
@@ -141,9 +145,32 @@ tape('getDtTermValues: empty mname list for origin', async test => {
 	const categories = structuredClone(categoriesByOrigin)
 	categories.lst[0].mnames.byOrigin.germline = []
 	const dtTerm = getDtTerm('germline')
-	await getDtTermValues(dtTerm, undefined, getVocabApi(categories, true))
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categories, true), { withMnames: true })
 
 	test.equal(dtTerm.mnames, undefined, 'mnames should be undefined when origin list is empty')
+	test.end()
+})
+
+tape('getDtTermValues: mnames are opt-in', async test => {
+	const dtTerm = getDtTerm()
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesFlat))
+
+	test.deepEqual(dtTerm.values, { M: { key: 'M', label: mclass.M.label } }, 'values should be filled')
+	test.equal(
+		dtTerm.mnames,
+		undefined,
+		'mnames should not be stored without opts.withMnames, even when present in response'
+	)
+	test.end()
+})
+
+tape('getDtTermValues: stale mnames cleared without opt-in', async test => {
+	const dtTerm = getDtTerm()
+	// simulates a dt term of a session saved before mnames became opt-in
+	dtTerm.mnames = [{ mname: 'G12D', class: 'M', samplecount: 2 }]
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesFlat))
+
+	test.equal(dtTerm.mnames, undefined, 'a previously stored mname tally should be cleared')
 	test.end()
 })
 
@@ -166,6 +193,35 @@ tape('getDtTermValues: frontend vocab keeps cached values', async test => {
 	test.equal(queried, false, 'getCategories should not be queried')
 	test.equal(dtTerm.values, cachedValues, 'cached values should be preserved')
 	test.equal(dtTerm.mnames, cachedMnames, 'cached mnames should be preserved')
+	test.end()
+})
+
+tape('getDtTermValues: frontend vocab fills from matching vocab term', async test => {
+	// the custom groupset ui seeds its frontend vocab with values/mnames, while the tvs
+	// it edits carry a dt term without them (see makeGroupUI() in
+	// termsetting/handlers/geneVariant.ts)
+	const vocabTerm = getDtTerm()
+	vocabTerm.values = { M: { key: 'M', label: 'MISSENSE' } }
+	vocabTerm.mnames = [{ mname: 'G12D', class: 'M', samplecount: 2 }]
+	const vocabApi = new FrontendVocab({ state: { vocab: { terms: [vocabTerm] } } })
+
+	const dtTerm = getDtTerm()
+	await getDtTermValues(dtTerm, undefined, vocabApi)
+
+	test.deepEqual(dtTerm.values, vocabTerm.values, 'values should come from the matching vocab term')
+	test.deepEqual(dtTerm.mnames, vocabTerm.mnames, 'mnames should come from the matching vocab term')
+	test.end()
+})
+
+tape('getDtTermValues: frontend vocab without a matching term', async test => {
+	const cachedValues = { M: { key: 'M', label: 'MISSENSE' } }
+	const dtTerm = getDtTerm()
+	dtTerm.values = cachedValues
+	const vocabApi = new FrontendVocab({ state: { vocab: { terms: [] } } })
+
+	await getDtTermValues(dtTerm, undefined, vocabApi)
+
+	test.equal(dtTerm.values, cachedValues, 'should fall back to the values already on the dt term')
 	test.end()
 })
 
