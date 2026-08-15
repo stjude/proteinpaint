@@ -75,10 +75,6 @@ export class TermSetting {
 	error: string | undefined
 	filter: Filter | undefined
 	groups?: any
-	/** name of the term groups[] was built for. this instance is reused across terms
-	 * (see main() in TermSettingApi.ts), so groups[] must be discarded when it no
-	 * longer matches, see makeGroupUI() in handlers/geneVariant.ts */
-	groupsTermName?: string
 
 	constructor(opts: TermSettingOpts) {
 		this.opts = this.validateOpts(opts)

@@ -51,6 +51,13 @@ async function makeEditMenu(self: TermSetting, _div: any) {
 	/* TODO: instead of directly modifying self.q here, should create a separate property on the handler to store pending user
 	configurations (similar to numeric continuous/discrete switching)
 	const handler = self.handlerByType.geneVariant */
+	/* groups[] is scratch state of this menu, held only so that edits survive the re-render
+	that each change to it triggers, see makeGroupUI(). it must not outlive the menu: the
+	termsetting instance is reused across tws (see main() in TermSettingApi.ts, and the pill
+	shared by every matrix row in matrix.interactivity.js), and nothing on a cached groups[]
+	says which tw it was built for. this runs once per opening of the menu, while every
+	makeGroupUI() call descends from it */
+	delete self.groups
 	const div = _div.append('div').style('margin', '10px')
 	div.append('div').style('font-size', '1.2rem').text(self.term.name)
 	const optsDiv = div.append('div').style('margin-top', '10px').style('margin-bottom', '1px')
@@ -135,14 +142,9 @@ async function makeGroupUI(self: TermSetting, div) {
 	const q = self.q as any // TODO: migrate this handler to use client/tw code
 	// get groups
 	if (q.type != 'predefined-groupset' && q.type != 'custom-groupset') throw 'unexpected q.type'
-	/* groups[] is cached on the termsetting instance so that edits survive the re-render
-	that every change to it triggers. but the instance is reused when the pill is switched
-	to another term (see main() in TermSettingApi.ts), and the groups of a geneVariant term
-	are gene-specific: the gene is in every group name and in the parentTerm of every tvs.
-	so a cache built for another term is dropped rather than applied to this one */
-	if (self.groups && self.groupsTermName != self.term.name) delete self.groups
+	// groups[] is built once per opening of the edit menu, which cleared it, and is
+	// then reused across the re-renders that the edits below trigger
 	if (!self.groups) {
-		self.groupsTermName = self.term.name
 		let groupset
 		if (q.type == 'predefined-groupset') {
 			const groupsetting = self.term.groupsetting
