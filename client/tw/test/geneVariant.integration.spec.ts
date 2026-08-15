@@ -3,6 +3,7 @@ import type { GvTW } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { GvBase, GvPredefinedGS } from '../geneVariant'
 import { dtsnvindel, dtcnv } from '#shared/common.js'
+import { trimGvTermsForSave } from '#shared/terms.js'
 
 /*************************
  reusable helper functions
@@ -292,6 +293,61 @@ tape('fill(): rehydrated predefined groupset', async test => {
 		rehydrated.term.groupsetting.lst[rehydrated.q.predefined_groupset_idx].name,
 		'SNV/indel (germline)',
 		'should keep the germline groupset selected'
+	)
+	test.end()
+})
+
+tape('trimGvTermsForSave(): a trimmed tw refills to the same tw', async test => {
+	/* a session is serialized without the derived properties of a geneVariant term, so
+	whatever is dropped there has to be rebuilt by fill() when the session is opened */
+	for (const idx of [0, 1, 2, 3, 4, 5]) {
+		const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: idx })
+		const fullTw: any = await GvBase.fill(tw, { vocabApi })
+
+		// what sessionBtn.getSavableState() writes, then what opening the session reads
+		const saved = trimGvTermsForSave({ term: structuredClone(fullTw) }).term
+		const reopened: any = await GvBase.fill(JSON.parse(JSON.stringify(saved)), { vocabApi })
+
+		test.deepEqual(reopened, fullTw, `groupset ${idx}: should refill to the same tw as before the trim`)
+	}
+	test.end()
+})
+
+tape('trimGvTermsForSave(): shrinks a saved geneVariant tw', async test => {
+	// the ratio is measured on a real filled-in tw, since the redundancy that dominates it
+	// (a parentTerm per child dt term, a dt term per tvs of the selected groupset) only
+	// shows up at the size the dataset actually fills in
+	const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: 0 })
+	const fullTw: any = await GvBase.fill(tw, { vocabApi })
+	const before = JSON.stringify(fullTw).length
+	const after = JSON.stringify(trimGvTermsForSave({ term: structuredClone(fullTw) }).term).length
+	test.comment(
+		`single-gene tw: ${before} -> ${after} bytes (${Math.round((100 * (before - after)) / before)}% smaller)`
+	)
+	test.ok(after < before * 0.2, `should cut a single-gene tw by more than 80% (${before} -> ${after} bytes)`)
+
+	/* term.genes[] is serialized once per childTerm.parentTerm and once per tvs of the
+	selected groupset, so both the untrimmed size and the saving grow with the gene count,
+	while the trimmed tw grows by just the one copy of genes[] that it keeps */
+	const setTw: any = {
+		term: {
+			name: 'my gene set',
+			genes: ['TP53', 'KRAS'].map(name => ({ kind: 'gene', id: name, gene: name, name, type: 'geneVariant' })),
+			type: 'geneVariant'
+		},
+		isAtomic: true,
+		q: { isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: 0 }
+	}
+	const fullSetTw: any = await GvBase.fill(setTw, { vocabApi })
+	const setBefore = JSON.stringify(fullSetTw).length
+	const setAfter = JSON.stringify(trimGvTermsForSave({ term: structuredClone(fullSetTw) }).term).length
+	const growthBefore = setBefore - before
+	const growthAfter = setAfter - after
+	test.comment(`2-gene tw: ${setBefore} -> ${setAfter} bytes`)
+	test.comment(`cost of the 2nd gene: ${growthBefore} bytes untrimmed vs ${growthAfter} bytes trimmed`)
+	test.ok(
+		growthBefore > growthAfter * 5,
+		`each added gene should cost several times more untrimmed, since genes[] is serialized once per parentTerm and per tvs (${growthBefore} vs ${growthAfter} bytes)`
 	)
 	test.end()
 })

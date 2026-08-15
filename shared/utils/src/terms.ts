@@ -247,6 +247,38 @@ export function trimGvTermCopy(term: any, q: any) {
 	return term
 }
 
+/*
+Strip every derived property of a geneVariant term from a state that is about to be
+serialized into a saved session, in place. Walks any object and trims the term of each
+geneVariant tw it finds, so it accepts a whole state, a state.plots[], or one plot config.
+
+This goes further than trimGvTermCopy() above, which shapes a request payload and so has
+to keep whatever the server reads. Nothing here has to survive, because a saved session is
+always re-filled before it is rendered:
+- a session opened by url is filled by getPlotConfig() in init(), see client/mass/store.ts
+- a session opened in a running app is filled by preprocessState(), see client/mass/sessionBtn.js
+and GvBase.fill() rebuilds term.childTerms[] from termdbConfig, term.groupsetting from the
+child terms, and each childTerm.parentTerm from the term itself.
+
+Between them these are ~91% of a serialized single-gene tw, and the ratio climbs with the
+gene count: term.genes[] is serialized once per childTerm.parentTerm and once per tvs of the
+selected groupset, so a 200-gene tw carries ~9 copies of it.
+
+A tw is identified by a term{} paired with a q{}, so that the dt term of a tvs, which does
+need its parentTerm server-side, is never mistaken for one. q is left alone: q.customset is
+user-authored and no fill() rebuilds it.
+*/
+export function trimGvTermsForSave(obj: any) {
+	if (!obj || typeof obj != 'object') return obj
+	if (obj.q && obj.term?.type == GENE_VARIANT) {
+		delete obj.term.childTerms
+		// deleting rather than emptying, since GvBase.fill() recreates it from scratch
+		delete obj.term.groupsetting
+	}
+	for (const k in obj) trimGvTermsForSave(obj[k])
+	return obj
+}
+
 /* the dts queried by a set of groups, read off the dt term of each tvs of their filters */
 export function getDtsFromGroups(groups: any[]): any[] {
 	const dts = new Set<any>()

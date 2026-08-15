@@ -5,6 +5,7 @@ import { dofetch3 } from '#common/dofetch'
 import { parentCorsMessage } from '#common/embedder-helpers'
 import { select } from 'd3-selection'
 import { importPlot } from '#plots/importPlot.js'
+import { trimGvTermsForSave } from '#shared/terms.js'
 
 class MassSessionBtn {
 	static type = 'sessionBtn'
@@ -293,7 +294,7 @@ class MassSessionBtn {
 			)
 			.on('click', () => {
 				this.sessionName = input.property('value') || placeholder
-				this.savedSessions[this.sessionName] = this.app.getState()
+				this.savedSessions[this.sessionName] = this.getSavableState()
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
 				this.confirmAction(`Cached '<b>${this.sessionName}</b>' in browser`)
 			})
@@ -308,7 +309,7 @@ class MassSessionBtn {
 			)
 			.on('click', () => {
 				const name = input.property('value') || placeholder
-				this.savedSessions[name] = this.app.getState()
+				this.savedSessions[name] = this.getSavableState()
 				this.download(name)
 				this.confirmAction(`Downloaded '<b>${name}</b>'`)
 			})
@@ -332,13 +333,28 @@ class MassSessionBtn {
 						return
 					}
 					const name = input.property('value') || placeholder
-					this.savedSessions[name] = this.app.getState()
+					this.savedSessions[name] = this.getSavableState()
 					const res = await this.getSessionUrl(name)
 					if (res.id != name) throw `error saving ${name}`
 					// this.download(name)
 					this.confirmAction(`Saved '<b>${name}</b>' on the server`)
 				})
 		}
+	}
+
+	/* the state to serialize into a saved session: a detached copy of the app state, since
+	getState() returns a deeply frozen one, minus everything that opening the session
+	rebuilds anyway */
+	getSavableState() {
+		const state = structuredClone(this.app.getState())
+		/* the dataset config, not session data, and the largest thing in a saved session by
+		far. a saved copy is never read back: init() in mass/store.ts re-fetches it before
+		any consumer runs, and preprocessState() below deletes it outright. keeping it would
+		also pin a session to the ds config of the day it was saved */
+		delete state.termdbConfig
+		// the derived properties of a geneVariant term, which every path that opens a
+		// session re-fills, see trimGvTermsForSave()
+		return trimGvTermsForSave(state)
 	}
 
 	download(name = '') {
@@ -350,7 +366,7 @@ class MassSessionBtn {
 
 	async getSessionUrl(filename = '') {
 		const headers = await this.app.vocabApi.mayGetAuthHeaders('termdb')
-		const state = structuredClone(this.app.getState())
+		const state = this.getSavableState()
 		const { protocol, host, search, origin, href } = window.location
 		state.embedder = { protocol, host, search, origin, href }
 		if (filename) {

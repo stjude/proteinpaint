@@ -1,1 +1,2 @@
-
+Fixes:
+- cut down geneVariant tw size in state using trimGvTermsForSave as chokepoint
