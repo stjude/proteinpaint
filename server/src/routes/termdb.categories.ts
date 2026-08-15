@@ -164,6 +164,8 @@ export function getCategories(data, q, ds, $id, opts: { withMnames?: boolean } =
 								origin,
 								class: value.class,
 								gene,
+								// the query entry, so that a selection can be scoped back to it
+								region: value.region,
 								mname: value.mname,
 								samplecount: 1
 							})
@@ -219,10 +221,13 @@ export function getCategories(data, q, ds, $id, opts: { withMnames?: boolean } =
 		for (const lst of breakpointsByMname.values()) {
 			lst.sort((a, b) => a.pos - b.pos || a.partnerPos - b.partnerPos)
 		}
-		// gene is only reported when annotated on the mutation data
+		/* the query entry an mname was found through is reported so that selecting it can be
+		scoped back, see matchesGvQueryEntry(). A gene entry names its gene; one over a region
+		has no gene and names the region instead. Only one of the two is ever set. */
 		const formatMname = (e: any) => {
 			const m: any = { mname: e.mname, class: e.class, samplecount: e.samplecount }
 			if (e.gene) m.gene = e.gene
+			else if (e.region) m.region = e.region
 			const breakpoints = breakpointsByMname.get(e.key)
 			if (breakpoints) m.breakpoints = breakpoints
 			const noPositionCount = noPositionCountMap.get(e.key)

@@ -1,4 +1,5 @@
 import { mclass } from './common.js'
+import { matchesGvQueryEntry } from './terms.js'
 
 /*
 tw.q.variantFilter of a geneVariant termwrapper, i.e. the per-row variant filter
@@ -118,13 +119,11 @@ function matchTvs(v: VariantValue, tvs: VariantTvs): boolean {
 	let match = false
 	if (v.dt == tvs.term.dt && (!tvs.term.origin || v.origin == tvs.term.origin)) {
 		/* an entry without .mname matches any variant of its class; with .mname
-		(e.g. "G12D") it matches only that amino acid change, further restricted to
-		.gene when set, for a term over a gene set. mirrors filterByItem() in
+		(e.g. "G12D") it matches only that amino acid change, further restricted to the
+		gene or region it names, see matchesGvQueryEntry(). mirrors filterByItem() in
 		server/src/mds3.init.js, so that the same tvs means the same thing on both
 		sides */
-		match = tvs.values.some(
-			e => e.key == v.class && (!e.mname || (e.mname == v.mname && (!e.gene || e.gene == v.gene)))
-		)
+		match = tvs.values.some(e => e.key == v.class && (!e.mname || (e.mname == v.mname && matchesGvQueryEntry(e, v))))
 	}
 	return tvs.isnot ? !match : match
 }

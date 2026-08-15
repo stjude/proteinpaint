@@ -47,6 +47,7 @@ Tests:
 	filterByTvsLst: in=false
 	filterByTvsLst: nested tvslst
 	filterByItem: cnv overlap is measured against the value's own region
+	filterByItem: an mname entry is scoped to its queried region
 	filterByTvsLst: values[] only collects mutations of a matching tvs
 	mayFilterByMaf: basic mafFilter
 	mayFilterByMaf: mafFilter with child ids
@@ -2594,3 +2595,40 @@ const mafFilter_childIds = {
 		}
 	]
 }
+
+test('filterByItem: an mname entry is scoped to its queried region', t => {
+	t.plan(5)
+	/* two queried regions can carry the same amino acid change, and a values[] entry naming
+	one must not match the other. .gene used to hold the entry's name, so a coordinate string
+	scoped this by accident; a region entry does it explicitly now, see matchesGvQueryEntry() */
+	const tal1 = { chr: 'chr1', start: 47213990, stop: 47318918 }
+	const lmo2 = { chr: 'chr11', start: 33859000, stop: 33913000 }
+	const inTal1 = { dt: 1, class: 'M', mname: 'R100C', region: tal1 }
+	const inLmo2 = { dt: 1, class: 'M', mname: 'R100C', region: lmo2 }
+
+	const scoped = region => ({
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [{ key: 'M', label: 'MISSENSE', value: 'M', mname: 'R100C', region }],
+			genotype: 'variant',
+			mcount: 'any'
+		}
+	})
+	t.equal(filterByItem(scoped(tal1), [inTal1])[0], true, 'matches the change of the region it names')
+	t.equal(filterByItem(scoped(tal1), [inLmo2])[0], false, 'does not match the same change of another region')
+	t.equal(filterByItem(scoped(lmo2), [inLmo2])[0], true, 'and the other way round')
+
+	// an entry naming no region stays unscoped, as a single-region term emits
+	const unscoped = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [{ key: 'M', label: 'MISSENSE', value: 'M', mname: 'R100C' }],
+			genotype: 'variant',
+			mcount: 'any'
+		}
+	}
+	t.equal(filterByItem(unscoped, [inTal1])[0], true, 'an unscoped entry matches either region')
+	t.equal(filterByItem(unscoped, [inLmo2])[0], true, 'an unscoped entry matches either region')
+})

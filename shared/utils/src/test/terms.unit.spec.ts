@@ -3,6 +3,7 @@ import { DTCNV, DTFUSION, DTITD, DTSNVINDEL, DTSV, TermTypes } from '#types'
 import {
 	dtTermTypes,
 	getGvQueryKey,
+	matchesGvQueryEntry,
 	internGvQueryEntry,
 	restoreGvQueryEntry,
 	setGroupsetParentTerms,
@@ -16,6 +17,7 @@ trimGvTermsForSave()
 setGroupsetParentTerms()
 query entry wire format: round trip
 query entry wire format: values without an entry
+matchesGvQueryEntry()
 */
 
 // a filled-in geneVariant tw, reduced to the properties the trim reads
@@ -313,5 +315,37 @@ tape('query entry wire format: values without an entry', t => {
 	t.equal(restoreGvQueryEntry(values[0], queries), false, 'should restore nothing')
 	t.equal(restoreGvQueryEntry({ $q: 0 }, undefined), false, 'should restore nothing without queries[]')
 	t.equal(getGvQueryKey({}), '', 'a value with no entry has no key')
+	t.end()
+})
+
+tape('matchesGvQueryEntry()', t => {
+	const kras = { gene: 'KRAS', region: { chr: 'chr12', start: 25205245, stop: 25250928 } }
+	const nras = { gene: 'NRAS', region: { chr: 'chr1', start: 114704468, stop: 114716770 } }
+	const tal1 = { region: { chr: 'chr1', start: 47213990, stop: 47318918 } }
+	const lmo2 = { region: { chr: 'chr11', start: 33859000, stop: 33913000 } }
+
+	// an entry naming neither is unscoped, which is what a single-entry term emits
+	t.equal(matchesGvQueryEntry({}, kras), true, 'an unscoped entry matches a gene value')
+	t.equal(matchesGvQueryEntry({}, tal1), true, 'an unscoped entry matches a region value')
+
+	// a gene entry, as a gene-set term emits
+	t.equal(matchesGvQueryEntry({ gene: 'KRAS' }, kras), true, 'a gene entry matches its gene')
+	t.equal(matchesGvQueryEntry({ gene: 'KRAS' }, nras), false, 'a gene entry does not match another gene')
+	t.equal(matchesGvQueryEntry({ gene: 'KRAS' }, tal1), false, 'a gene entry does not match a region value')
+
+	/* a region entry, as a term over several queried regions emits. Before .gene stopped
+	holding a coordinate string this had no equivalent, so such an entry matched everywhere */
+	t.equal(matchesGvQueryEntry({ region: tal1.region }, tal1), true, 'a region entry matches its region')
+	t.equal(matchesGvQueryEntry({ region: tal1.region }, lmo2), false, 'a region entry does not match another region')
+	t.equal(
+		matchesGvQueryEntry({ region: kras.region }, kras),
+		true,
+		'a region entry matches on the region even when the value also has a gene'
+	)
+	t.equal(
+		matchesGvQueryEntry({ region: { chr: 'chr1', start: 47213990, stop: 47318918 } }, tal1),
+		true,
+		'a region entry is compared by value, not by identity'
+	)
 	t.end()
 })

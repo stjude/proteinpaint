@@ -54,7 +54,7 @@ import {
 } from './aiProjectAdmin/aiProjectSelectedWSImages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
-import { dtTermTypes, getGvQueryRegion, getGvQueryKey } from '#shared/terms.js'
+import { dtTermTypes, getGvQueryRegion, getGvQueryKey, matchesGvQueryEntry } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { isNumeric } from '#shared/helpers.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
@@ -3349,7 +3349,7 @@ export function filterByItem(filter, mlst, values) {
 						tvs.values.some(
 							v =>
 								v.key == m.class &&
-								(!v.mname || (v.mname == m.mname && (!v.gene || v.gene == m.gene))) &&
+								(!v.mname || (v.mname == m.mname && matchesGvQueryEntry(v, m))) &&
 								(!v.partnerBreakpointRange || isPartnerBreakpointInRange(m, v.partnerBreakpointRange))
 						)
 					) {

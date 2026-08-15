@@ -355,6 +355,25 @@ export function restoreGvQueryEntry(v: any, queries: any[] | undefined) {
 }
 
 /*
+Whether a values[] entry of a tvs, naming an amino acid change, is scoped to the query entry
+a variant came from.
+
+An entry may name a .gene, so that KRAS G12D of a gene-set term does not match NRAS G12D, or
+a .region for the same reason over a term of several queried regions. Naming neither leaves
+it unscoped, matching that change wherever it was found -- which is what a single-entry term
+wants, and what the variant config emits for one.
+
+Both matchers call this so a tvs means the same thing on either side: filterByItem() in
+server/src/mds3.init.js and matchTvs() in geneVariantFilter.ts.
+*/
+export function matchesGvQueryEntry(entry: any, v: any) {
+	if (entry.gene) return entry.gene == v.gene
+	const r = entry.region
+	if (r) return !!v.region && r.chr == v.region.chr && r.start == v.region.start && r.stop == v.region.stop
+	return true
+}
+
+/*
 The dt term of a tvs carries a parentTerm, but for two unrelated reasons:
 
 - a tvs of a mass filter stands alone, so its parentTerm is the only record of which gene
