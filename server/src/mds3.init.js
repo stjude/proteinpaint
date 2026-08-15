@@ -3506,11 +3506,13 @@ function mayFilterCnvByOverlap(cnv, tvs) {
 	if (!tvs.fractionOverlap) return true
 	if (!Number.isFinite(tvs.fractionOverlap)) throw new Error('tvs.fractionOverlap is non-numeric')
 	if (tvs.fractionOverlap < 0 || tvs.fractionOverlap > 1) throw new Error('tvs.fractionOverlap is out of range')
+	/* Gene-level cnv never reaches here. A ds reporting it (ds.queries.geneCnv, as gdc does)
+	returns calls with no coordinates, which the caller drops on `if (!cnvLength) return false`
+	two lines above -- so this is only ever handed a segment. That also means mapping the query
+	to coordinates for such a ds would not help: there would still be no segment to measure. */
 	const query = cnv.region
-	if (!query) throw new Error('cnv value has no .region to measure the overlap against')
-	for (const v of [query.start, query.stop, cnv.start, cnv.stop]) {
-		if (!Number.isInteger(v)) throw new Error(`${v} is not an integer`)
-	}
+	if (!Number.isInteger(query?.start) || !Number.isInteger(query?.stop))
+		throw new Error('tvs.fractionOverlap needs the queried region, which this cnv value does not carry')
 	const queryLength = query.stop - query.start
 	const overlapLength = Math.max(0, Math.min(query.stop, cnv.stop) - Math.max(query.start, cnv.start))
 	const fractionOverlap = overlapLength / queryLength

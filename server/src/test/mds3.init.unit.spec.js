@@ -1755,7 +1755,7 @@ test('filterByTvsLst: nested tvslst', t => {
 })
 
 test("filterByItem: cnv overlap is measured against the value's own region", t => {
-	t.plan(7)
+	t.plan(9)
 	/* a cnv value records the region that was queried as .region, distinct from its own
 	start/stop, so the overlap needs no lookup and no tw. See mayGetGeneVariantData() */
 	const cnvTvs = {
@@ -1797,7 +1797,20 @@ test("filterByItem: cnv overlap is measured against the value's own region", t =
 	}
 	{
 		const seg = { dt: 4, gene: 'TP53', value: -1, start: 0, stop: 100 }
-		t.throws(() => filterByItem(cnvTvs, [seg]), /no .region/, 'throws on a value carrying no region')
+		t.throws(
+			() => filterByItem(cnvTvs, [seg]),
+			/needs the queried region/,
+			'throws on a segment carrying no queried region'
+		)
+	}
+	{
+		/* gene-level cnv, as ds.queries.geneCnv returns it: a call with neither coordinates nor
+		a region. It never reaches the overlap, being dropped by the caller's cnvLength guard,
+		so a ds on gene-level cnv cannot hit the region error above */
+		const call = { dt: 4, gene: 'TP53', class: 'CNV_loss' }
+		const [pass, tested] = filterByItem(cnvTvs, [call])
+		t.equal(pass, false, 'a gene-level cnv call is excluded rather than measured')
+		t.equal(tested, true, 'and the sample still counts as tested')
 	}
 	{
 		// a nested sublist, as a custom groupset that mixes joins produces. No tw is
