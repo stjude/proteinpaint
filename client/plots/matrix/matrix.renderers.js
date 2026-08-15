@@ -203,18 +203,31 @@ export function setRenderers(self) {
 			side.box.selectAll(cls).remove()
 
 			if (s.sortBySampleAncestry && side.prefix == 'sample' && relatedSamples.length) {
+				side.box.selectAll(cls).remove()
 				const a = side.box.selectAll(cls).data(relatedSamples)
+				console.log(206, relatedSamples, self)
 
 				a.enter()
-					.append('rect')
-					.attr('class', cls.slice(1))
-					.attr('transform', a => a.transform)
-					.attr('x', -d.colw + 5)
-					.attr('y', -2)
-					.attr('width', a => d.colw * a.samples.length - 3)
-					.attr('height', 0.5)
-					.attr('stroke', '#000')
-					.attr('stroke-width', 0.5) //rgba(255, 100, 100, 0.1)`); console.log(208, side.box.select(cls).node())
+					.append('g')
+					.each(function (r) {
+						console.log(211, r)
+						const g = select(this).attr('class', cls.slice(1)).attr('transform', r.transform)
+
+						const y = getSpanYpos(r)
+						const xw = d.colw * (r.samples.length - 1)
+						g.append('line')
+							.attr('x1', -d.colw + 5)
+							.attr('x2', xw + 1)
+							.attr('y1', y)
+							.attr('y2', y)
+							.attr('stroke', '#000')
+							.attr('stroke-width', 1) //rgba(255, 100, 100, 0.1)`); console.log(208, side.box.select(cls).node())
+
+						g.append('text')
+							.attr('text-anchor', 'end')
+							.attr('transform', `translate(${xw / 2},${y + 3})rotate(-90)`)
+							.text(r.ancestor_id)
+					})
 			}
 
 			function renderLabel(lab) {
@@ -308,13 +321,23 @@ export function setRenderers(self) {
 					g.select('.sjpp-matrix-cell-axis').remove()
 				}
 
-				const id = side.prefix === 'sample' && lab.row?._ref_?.ancestors?.[0]?.ancestor_id
-				if (id && lab.grp.relatedSamples?.[id] && !relatedSamplesByAncestorId[id]) {
-					relatedSamplesByAncestorId[id] = {
-						ancestor_id: id,
-						row: lab.row,
-						transform: side.attr.labelGTransform(lab),
-						samples: lab.grp.relatedSamples[id]
+				if (lab.row?._ref_?.ancestors) {
+					for (const a of lab.row._ref_.ancestors) {
+						const id = side.prefix === 'sample' && a.ancestor_id
+						if (id && lab.grp.relatedSamples?.[id]) {
+							if (!relatedSamplesByAncestorId[id])
+								relatedSamplesByAncestorId[id] = {
+									ancestor_id: id,
+									row: lab.row,
+									transform: side.attr.labelGTransform(lab),
+									samples: lab.grp.relatedSamples[id],
+									maxTextLengthByAncestorDistance: {},
+									direction
+								}
+							const textBox = text.node().getBBox()
+							const m = relatedSamplesByAncestorId[id]?.maxTextLengthByAncestorDistance
+							if (m && (!m[a.distance] || textBox.width > m[a.distance])) m[a.distance] = textBox.width
+						}
 					}
 				}
 			}
@@ -330,6 +353,11 @@ export function setRenderers(self) {
 			}
 			function getTspanText(d) {
 				return d.text
+			}
+			function getSpanYpos(d) {
+				const l = d.maxTextLengthByAncestorDistance
+				console.log(345, l)
+				return d.direction == 'btm' ? l[1] + 3 : -l[1] - 3
 			}
 		}
 	}
