@@ -3238,8 +3238,13 @@ export function filterByTvsLst(filter, mlst, values, tw) {
 	if (filter.type != 'tvslst') throw 'unexpected filter.type'
 	const passLst = []
 	const testedLst = []
+	/* matching mutations are collected here rather than pushed into values[] directly,
+	so that they only reach the caller when this list is what assigned the sample to the
+	group. a list that fails, and one that is negated with .in=false, contributed no
+	positive evidence, and its matches must not be drawn as the variants of the group */
+	const matched = values ? [] : undefined
 	for (const item of filter.lst) {
-		const [pass, tested] = filterByItem(item, mlst, values, tw)
+		const [pass, tested] = filterByItem(item, mlst, matched, tw)
 		passLst.push(pass)
 		testedLst.push(tested)
 	}
@@ -3255,12 +3260,15 @@ export function filterByTvsLst(filter, mlst, values, tw) {
 		return [false, false]
 	}
 	const passFilter = filter.in ? passFilterLst : !passFilterLst
+	if (values && passFilterLst && filter.in) values.push(...matched)
 	return [passFilter, allTested]
 }
 
 // function to filter a sample based on its mlst and a filter item
 export function filterByItem(filter, mlst, values, tw) {
-	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst, values)
+	// tw must be passed along: a cnv tvs nested in a sublist still needs it to
+	// resolve the coordinates of the queried gene, see mayFilterCnvByOverlap()
+	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst, values, tw)
 	if (filter.type != 'tvs') throw 'unexpected filter.type'
 	const tvs = filter.tvs
 	if (!dtTermTypes.has(tvs.term.type)) throw 'tvs term is not dt term'
@@ -3308,7 +3316,11 @@ export function filterByItem(filter, mlst, values, tw) {
 			})
 			const sampleHasCnv = mlst_genotype.length > 0
 			pass = tvs.cnvWT ? !sampleHasCnv : sampleHasCnv
-			if (values) values.push(...mlst_genotype)
+			// only a tvs that the sample matched contributes its mutations. for a
+			// wildtype cnv tvs the matching segments are the reason the sample failed,
+			// so reporting them would draw the sample as altered in the very group that
+			// requires it to be neutral
+			if (values && pass) values.push(...mlst_genotype)
 		} else {
 			// categorical mutation data
 			let mlst_intvs, intvs
@@ -3375,7 +3387,9 @@ export function filterByItem(filter, mlst, values, tw) {
 				throw 'unexpected tvs.genotype'
 			}
 			pass = tvs.isnot ? !intvs : intvs
-			if (values) values.push(...mlst_intvs)
+			// see the same guard in the continuous cnv branch above. for a negated tvs
+			// the matching mutations are what excluded the sample, not what included it
+			if (values && pass) values.push(...mlst_intvs)
 		}
 	} else {
 		// sample is not tested for the dt of the filter
