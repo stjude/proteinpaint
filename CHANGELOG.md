@@ -8,6 +8,7 @@ Fixes:
 - Fixes a false-positive cohort-change message on initial matrix render and corrects the message placement.
 - matrix row-label editing is re-enabled. for geneVariant rows, allow per-row tw.q customizaton
 - reduce test plan count for geneVariant survival term test
+- cut down geneVariant tw size in state using trimGvTermsForSave as chokepoint
 
 
 ## 2.203.0
