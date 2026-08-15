@@ -3488,11 +3488,16 @@ function mayFilterCnvByOverlap(cnv, tvs, tw) {
 	if (!tvs.fractionOverlap) return true
 	if (!Number.isFinite(tvs.fractionOverlap)) throw new Error('tvs.fractionOverlap is non-numeric')
 	if (tvs.fractionOverlap < 0 || tvs.fractionOverlap > 1) throw new Error('tvs.fractionOverlap is out of range')
-	let gene = tvs.term.parentTerm.genes.find(g => g.gene == cnv.gene)
-	if (!gene.hasOwnProperty('start') || !gene.hasOwnProperty('stop')) {
-		// start/stop may not be annotated on tvs.term, but rather on tw.term
-		gene = tw.term.genes.find(g => g.gene == cnv.gene)
-	}
+	/* the queried gene comes off tw.term, whose genes[] mayMapGeneName2coord() annotated
+	with the coordinates when the cnv query ran. a groupset tvs is evaluated against the tw
+	that holds the groupset and carries no parentTerm of its own (see setGroupsetParentTerms()
+	in shared/utils/src/terms.ts), so there the tw is the only source. a standalone tvs of a
+	mass filter has no tw, and falls back to its own parentTerm, which is the term its caller
+	queried with and so is annotated the same way, see get_dtTerm() in termdb.filter.js */
+	const term = tw?.term || tvs.term.parentTerm
+	if (!term?.genes) throw new Error('cnv tvs has neither a tw nor a parentTerm to resolve the gene from')
+	const gene = term.genes.find(g => g.gene == cnv.gene)
+	if (!gene) throw new Error(`no queried gene matches cnv.gene='${cnv.gene}'`)
 	for (const v of [gene.start, gene.stop, cnv.start, cnv.stop]) {
 		if (!Number.isInteger(v)) throw new Error(`${v} is not an integer`)
 	}

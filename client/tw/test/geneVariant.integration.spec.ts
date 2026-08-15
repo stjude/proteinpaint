@@ -424,6 +424,84 @@ tape('fill(): q.type=custom-groupset, stale mnames', async test => {
 	test.end()
 })
 
+tape('fill(): q.type=custom-groupset, re-attaches the parentTerm of each tvs', async test => {
+	/* a termsetting instance is reused when the pill is switched to another term, so a
+	customset can arrive naming a gene the tw is not about. it can also arrive with no
+	parentTerm at all, since a saved session is trimmed of them */
+	const q: any = structuredClone(customGsQ)
+	const tvsTerms = q.customset.groups.map(g => g.filter.lst[0].tvs.term)
+	tvsTerms[0].parentTerm = {
+		name: 'KRAS',
+		type: 'geneVariant',
+		genes: [{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant' }]
+	}
+	delete tvsTerms[1].parentTerm
+	const tw: any = {
+		term: {
+			name: 'TP53',
+			genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', type: 'geneVariant' }],
+			type: 'geneVariant'
+		},
+		isAtomic: true,
+		q
+	}
+	const fullTw: any = await GvBase.fill(tw, { vocabApi })
+	const filled = fullTw.q.customset.groups.map(g => g.filter.lst[0].tvs.term)
+	test.deepEqual(
+		filled.map(t => t.parentTerm?.name),
+		['TP53', 'TP53'],
+		'should attach the term of the tw as the parentTerm of every tvs'
+	)
+	test.equal(
+		filled[0].parentTerm.childTerms,
+		undefined,
+		'should not nest the derived childTerms[] in an attached parentTerm'
+	)
+	test.end()
+})
+
+tape('fill(): q.type=custom-groupset, stale q.dtLst', async test => {
+	// a dtLst that disagrees with the groups would limit the dts queried for the term,
+	// so a group of a dt missing from it would never match, see getDtsToQuery()
+	const q: any = structuredClone(customGsQ)
+	q.dtLst = [dtcnv]
+	const tw: any = {
+		term: {
+			name: 'TP53',
+			genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', type: 'geneVariant' }],
+			type: 'geneVariant'
+		},
+		isAtomic: true,
+		q
+	}
+	const fullTw: any = await GvBase.fill(tw, { vocabApi })
+	test.deepEqual(fullTw.q.dtLst, [dtsnvindel], 'should re-derive q.dtLst from the customset groups')
+	test.end()
+})
+
+tape('fill(): q.type=custom-groupset, a tvs that does not filter by dt', async test => {
+	// the groups of a geneVariant groupset can only filter by dt; the server would
+	// otherwise reject the customset deep in filterByItem()
+	const q: any = structuredClone(customGsQ)
+	q.customset.groups[0].filter.lst[0].tvs.term = { id: 'sex', type: 'categorical' }
+	const tw: any = {
+		term: {
+			name: 'TP53',
+			genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', type: 'geneVariant' }],
+			type: 'geneVariant'
+		},
+		isAtomic: true,
+		q
+	}
+	try {
+		await GvBase.fill(tw, { vocabApi })
+		test.fail('should throw on a customset tvs that is not a dt term')
+	} catch (e: any) {
+		test.ok(String(e).includes('not a dt term'), 'should throw on a customset tvs that is not a dt term')
+	}
+	test.end()
+})
+
 tape('getMinCopy(): trims the derived term properties', async test => {
 	const tw: any = {
 		term: {
@@ -466,9 +544,11 @@ tape('getMinCopy(): trims the derived term properties', async test => {
 		tvsTerms.every(t => !('mnames' in t)),
 		'should remove mnames from every tvs term'
 	)
+	/* the parent of a groupset tvs is the term of this very tw, which the payload already
+	carries. the server reads the gene off tw.term, see mayFilterCnvByOverlap() */
 	test.ok(
-		tvsTerms.every(t => t.parentTerm?.genes?.length),
-		'should keep tvs.term.parentTerm, which get_dtTerm() reads server-side'
+		tvsTerms.every(t => !('parentTerm' in t)),
+		'should remove parentTerm from every tvs term'
 	)
 
 	// the trim is destructive, so it must only ever run on the copy

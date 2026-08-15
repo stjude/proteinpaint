@@ -222,16 +222,17 @@ None of it is needed to answer a data request:
 - dtTerm.mnames[] (the amino acid change tally) is only read by the tvs edit UI,
   which re-queries it in fillMenu() before rendering
 
-Trimming these shrinks a single-gene request payload by ~80%. Do NOT trim
-tvs.term.parentTerm: it is read by get_dtTerm() in server/src/termdb.filter.js
-and by the cnv gene lookup in server/src/mds3.init.js.
+Trimming these shrinks a single-gene request payload by ~80%.
 
-term{} is mutated in place, so only call this on a copy that is about to be
-serialized into a request payload, never on a tw held in state.
+term{} and q{} are mutated in place, so only call this on a copy that is about to
+be serialized into a request payload, never on a tw held in state.
 */
 export function trimGvTermCopy(term: any, q: any) {
 	if (term?.type != GENE_VARIANT) return term
 	delete term.childTerms
+	/* the parent of a groupset tvs is this very term, and the server reads it off the
+	tw rather than off the tvs, see setGroupsetParentTerms() */
+	if (q?.customset) clearGroupsetParentTerms(q.customset)
 	const lst = term.groupsetting?.lst
 	if (!lst?.length) return term
 	if (q?.type == 'predefined-groupset') {
@@ -240,6 +241,7 @@ export function trimGvTermCopy(term: any, q: any) {
 		const idx = q.predefined_groupset_idx
 		term.groupsetting.lst = lst.map((groupset: any, i: number) => (i === idx ? groupset : null))
 		clearDtTermMnames(term.groupsetting.lst[idx])
+		clearGroupsetParentTerms(term.groupsetting.lst[idx])
 	} else {
 		// no predefined groupset is in use, so no entry of lst[] is read server-side
 		delete term.groupsetting.lst
@@ -264,9 +266,10 @@ Between them these are ~91% of a serialized single-gene tw, and the ratio climbs
 gene count: term.genes[] is serialized once per childTerm.parentTerm and once per tvs of the
 selected groupset, so a 200-gene tw carries ~9 copies of it.
 
-A tw is identified by a term{} paired with a q{}, so that the dt term of a tvs, which does
-need its parentTerm server-side, is never mistaken for one. q is left alone: q.customset is
-user-authored and no fill() rebuilds it.
+A tw is identified by a term{} paired with a q{}, so that the dt term of a tvs of a mass
+filter, which does need its own parentTerm, is never mistaken for one. Of q{}, only the
+parentTerm of a customset tvs is trimmed, which GvCustomGS.fill() re-attaches; the rest of
+q.customset is user-authored and no fill() rebuilds it.
 */
 export function trimGvTermsForSave(obj: any) {
 	if (!obj || typeof obj != 'object') return obj
@@ -274,9 +277,71 @@ export function trimGvTermsForSave(obj: any) {
 		delete obj.term.childTerms
 		// deleting rather than emptying, since GvBase.fill() recreates it from scratch
 		delete obj.term.groupsetting
+		if (obj.q.customset) clearGroupsetParentTerms(obj.q.customset)
 	}
 	for (const k in obj) trimGvTermsForSave(obj[k])
 	return obj
+}
+
+/*
+The dt term of a tvs carries a parentTerm, but for two unrelated reasons:
+
+- a tvs of a mass filter stands alone, so its parentTerm is the only record of which gene
+  it is about. get_dtTerm() in server/src/termdb.filter.js reads it to run the query, and
+  the tvs edit UI reads it to label the pill. it must be kept.
+- a tvs of a groupset (q.customset, or term.groupsetting.lst[]) has no such need: its
+  parent is by definition the term of the tw that holds the groupset. storing one there is
+  a copy of term.genes[] per tvs that nothing keeps in sync with the term it was copied
+  from, and a termsetting instance is reused across terms, so it does go stale (see
+  makeGroupUI() in client/termsetting/handlers/geneVariant.ts).
+
+So a groupset gets its parentTerms rebuilt on every fill() instead of storing them, which
+lets both trims above drop them, and lets the server read the gene off tw.term (see
+mayFilterCnvByOverlap() in server/src/mds3.init.js).
+
+One snapshot is shared by reference across the tvs, as the child dt terms of a predefined
+groupset already are. That is only safe because the trims drop it before it is ever
+serialized, which would turn the one shared copy back into one copy per tvs.
+
+Throws on a tvs whose term is not a dt term: the groups of a geneVariant groupset can only
+filter by dt, and the server would otherwise fail deep in filterByItem().
+*/
+export function setGroupsetParentTerms(groupset: any, term: any) {
+	if (term?.type != GENE_VARIANT) throw 'parent of a groupset tvs must be a geneVariant term'
+	const parentTerm = structuredClone(term)
+	// the parent of a dt term is the gene(s), not the derived properties of the term
+	delete parentTerm.childTerms
+	delete parentTerm.groupsetting
+	walkTvs(groupset, (tvs: any) => {
+		if (!dtTermTypes.has(tvs.term?.type)) throw `groupset tvs term is not a dt term`
+		tvs.term.parentTerm = parentTerm
+	})
+	return groupset
+}
+
+/* drop what setGroupsetParentTerms() re-attaches. tolerates a malformed tvs, since a trim
+must never be the thing that throws on the way into a request or a saved session */
+function clearGroupsetParentTerms(groupset: any) {
+	walkTvs(groupset, (tvs: any) => {
+		if (tvs.term) delete tvs.term.parentTerm
+	})
+	return groupset
+}
+
+/* run fn on every tvs of a groupset, a group, or a filter.
+
+A tvs is a leaf: a nested tvslst is a sibling of it in filter.lst[], never inside it. Not
+descending matters, because a tvs can hold a filter of its own that is not part of the
+groupset structure -- tvs.mafFilter wraps a maf term, which is a dictionary term rather
+than a dt term (see getMafFilter() in client/tw/geneVariant.ts). getDtsFromFilter() above
+reads a filter the same way. */
+function walkTvs(obj: any, fn: (tvs: any) => void) {
+	if (!obj || typeof obj != 'object') return
+	if (obj.type == 'tvs' && obj.tvs) {
+		fn(obj.tvs)
+		return
+	}
+	for (const k in obj) walkTvs(obj[k], fn)
 }
 
 /* the dts queried by a set of groups, read off the dt term of each tvs of their filters */
@@ -309,9 +374,9 @@ that is re-serialized once per tvs. Walks any object, so it accepts a groupset, 
 or a filter.
 */
 export function clearDtTermMnames(obj: any) {
-	if (!obj || typeof obj != 'object') return obj
-	if (obj.type == 'tvs' && obj.tvs?.term) delete obj.tvs.term.mnames
-	for (const k in obj) clearDtTermMnames(obj[k])
+	walkTvs(obj, (tvs: any) => {
+		if (tvs.term) delete tvs.term.mnames
+	})
 	return obj
 }
 

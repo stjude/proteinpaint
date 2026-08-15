@@ -47,6 +47,7 @@ Tests:
 	filterByTvsLst: in=false
 	filterByTvsLst: nested tvslst
 	filterByTvsLst: nested cnv tvs resolves gene coords from the tw
+	filterByItem: standalone cnv tvs resolves gene coords from its parentTerm
 	filterByTvsLst: values[] only collects mutations of a matching tvs
 	mayFilterByMaf: basic mafFilter
 	mayFilterByMaf: mafFilter with child ids
@@ -1756,15 +1757,10 @@ test('filterByTvsLst: nested tvslst', t => {
 
 test('filterByTvsLst: nested cnv tvs resolves gene coords from the tw', t => {
 	t.plan(4)
-	/* a cnv tvs built by the config ui always carries fractionOverlap, and the parentTerm
-	it carries never has gene coords: those are only annotated onto tw.term when the cnv
-	query runs. so the tw has to reach the tvs even when it sits in a sublist, as it does
-	in a custom groupset that mixes joins */
-	const parentTerm = {
-		name: 'TP53',
-		type: 'geneVariant',
-		genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53' }]
-	}
+	/* a cnv tvs built by the config ui always carries fractionOverlap, and a groupset tvs
+	carries no parentTerm of its own, so the tw is the only source of the queried gene. it
+	has to reach the tvs even when it sits in a sublist, as it does in a custom groupset
+	that mixes joins */
 	const tw = {
 		term: {
 			name: 'TP53',
@@ -1775,7 +1771,7 @@ test('filterByTvsLst: nested cnv tvs resolves gene coords from the tw', t => {
 	const cnvTvs = {
 		type: 'tvs',
 		tvs: {
-			term: { dt: 4, type: 'dtcnv', parentTerm },
+			term: { dt: 4, type: 'dtcnv' },
 			values: [],
 			continuousCnv: true,
 			cnvGainCutoff: 0.5,
@@ -1818,6 +1814,48 @@ test('filterByTvsLst: nested cnv tvs resolves gene coords from the tw', t => {
 		const [pass, tested] = filterByTvsLst(filter, mlst, undefined, tw)
 		t.equal(pass, false, 'Sample fails when the nested cnv segment is under the overlap')
 		t.equal(tested, true, 'Sample is tested')
+	}
+})
+
+test('filterByItem: standalone cnv tvs resolves gene coords from its parentTerm', t => {
+	t.plan(3)
+	/* a tvs of a mass filter is not evaluated against a tw. get_dtTerm() in termdb.filter.js
+	queries with tvs.term.parentTerm, so that is the term annotated with the coordinates */
+	const parentTerm = {
+		name: 'TP53',
+		type: 'geneVariant',
+		genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', chr: 'chr17', start: 0, stop: 100 }]
+	}
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 4, type: 'dtcnv', parentTerm },
+			values: [],
+			continuousCnv: true,
+			cnvGainCutoff: 0.5,
+			cnvLossCutoff: -0.5,
+			cnvMaxLength: null,
+			fractionOverlap: 0.8
+		}
+	}
+	{
+		const [pass] = filterByItem(filter, [{ dt: 4, gene: 'TP53', value: 1, start: 0, stop: 100 }])
+		t.equal(pass, true, 'Sample passes when the cnv segment meets the overlap')
+	}
+	{
+		const [pass] = filterByItem(filter, [{ dt: 4, gene: 'TP53', value: 1, start: 0, stop: 10 }])
+		t.equal(pass, false, 'Sample fails when the cnv segment is under the overlap')
+	}
+	{
+		// a gene the tvs was not built for cannot be measured against, and used to be
+		// read as a TypeError on the undefined result of the lookup
+		const noParent = structuredClone(filter)
+		delete noParent.tvs.term.parentTerm
+		t.throws(
+			() => filterByItem(noParent, [{ dt: 4, gene: 'TP53', value: 1, start: 0, stop: 100 }]),
+			/neither a tw nor a parentTerm/,
+			'throws when the queried gene cannot be resolved'
+		)
 	}
 })
 
