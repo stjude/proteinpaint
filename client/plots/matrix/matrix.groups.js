@@ -52,18 +52,17 @@ export function getTermOrder(data) {
 					}
 				}
 
-				const id = sd._ref_?.ancestors?.[0]?.ancestor_id
-				if (id) {
-					if (!this.samplesByAncestorId.has(id)) this.samplesByAncestorId.set(id, new Set())
-					this.samplesByAncestorId.get(id).add(sd)
+				if (sd._ref_?.ancestors) {
+					for (const a of sd._ref_?.ancestors) {
+						const id = a.ancestor_id
+						if (id === undefined) continue
+						if (!this.samplesByAncestorId.has(id)) this.samplesByAncestorId.set(id, new Set())
+						this.samplesByAncestorId.get(id).add(sd)
+					}
 				}
 			}
 			if (grp.type != 'hierCluster' || counts.samples) lst.push({ tw, counts, index })
 			if (grp.type == 'hierCluster') numClusterTerms++
-		}
-
-		for (const [ancestor_id, samples] of this.samplesByAncestorId.entries()) {
-			if (samples.size < 2) this.samplesByAncestorId.delete(ancestor_id)
 		}
 
 		// may override the settings.sortTermsBy with a sorter that is specific to a term group
@@ -111,6 +110,11 @@ export function getTermOrder(data) {
 		totalIndex += processedLst.length
 		visibleGrpIndex += 1
 	}
+
+	for (const [ancestor_id, samples] of this.samplesByAncestorId.entries()) {
+		if (samples.size < 2) this.samplesByAncestorId.delete(ancestor_id)
+	}
+
 	this.numTerms = termOrder.length
 	this.numClusterTerms = numClusterTerms
 	return termOrder
@@ -206,16 +210,20 @@ export function getSampleGroups(data) {
 			reorderedByAncestor.add(s)
 			lstCopy.delete(s)
 			currentRelated = [s]
-			const id = s._ref_?.ancestors?.[0]?.ancestor_id
-			for (const c of lstCopy) {
-				if (c._ref_?.ancestors?.[0]?.ancestor_id === id) {
-					reorderedByAncestor.add(c)
-					lstCopy.delete(c)
-					currentRelated.push(c)
+			if (s._ref_?.ancestors) {
+				for (const a of s._ref_?.ancestors) {
+					const id = a.ancestor_id
+					for (const c of lstCopy) {
+						if (c._ref_?.ancestors?.[0]?.ancestor_id === id) {
+							reorderedByAncestor.add(c)
+							lstCopy.delete(c)
+							currentRelated.push(c)
+						}
+					}
+					if (currentRelated.length > 1) grp.relatedSamples[id] = currentRelated
 				}
+				grp.lst = [...reorderedByAncestor]
 			}
-			if (currentRelated.length > 1) grp.relatedSamples[id] = currentRelated
-			grp.lst = [...reorderedByAncestor]
 		}
 	}
 	const sampleGrpSorter = getSampleGroupSorter(this)
