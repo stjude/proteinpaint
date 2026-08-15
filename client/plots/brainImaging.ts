@@ -2,21 +2,22 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { PlotBase } from '#plots/PlotBase.ts'
 import { controlsInit } from './controls'
 import { getT0T2defaultQ } from './summaryQ.ts'
+import { fillTermWrapper } from '#termsetting'
 import { dofetch3 } from '#common/dofetch'
 import { Menu, renderTable, type TableRow, type TableColumn } from '#dom'
 import svgLegend from '#dom/svg.legend'
 import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
 
-type ImgData ={ data: any; td: any; dataUrls: any }
+type ImgData = { data: any; td: any; dataUrls: any }
 
-class BrainImaging extends PlotBase implements RxComponent{
+class BrainImaging extends PlotBase implements RxComponent {
 	static type = 'brainImaging'
 
 	type: string
 	components: { controls: any }
 	legendLabelMouseup!: any
-	imagesData!: {[index: string]: ImgData }
+	imagesData!: { [index: string]: ImgData }
 	legendRenderer!: any
 	legendItems!: any
 	legendValues!: { [index: string]: { color: string; maxLength: number; crossedOut: boolean } }
@@ -25,7 +26,7 @@ class BrainImaging extends PlotBase implements RxComponent{
 	dom!: any
 
 	constructor(opts: any, api: ComponentApi) {
-        super(opts, api)
+		super(opts, api)
 		this.type = BrainImaging.type
 		this.components = { controls: {} }
 		setInteractivity(this)
@@ -398,12 +399,18 @@ export function makeChartBtnMenu(holder, chartsInstance: any) {
 export const brainImaging = getCompInit(BrainImaging)
 export const componentInit = brainImaging
 
-export async function getPlotConfig(opts) {
+export async function getPlotConfig(opts, app) {
 	const settings = {
 		brainImaging: { brainImageL: 76, brainImageF: 116, brainImageT: 80 }
 	}
-	const config = { chartType: 'brainImaging', settings, hidePlotFilter: true }
-	return copyMerge(config, opts)
+	const config: any = { chartType: 'brainImaging', settings, hidePlotFilter: true }
+	copyMerge(config, opts)
+	/* a tw of a saved session is only raw until it is filled here, same as every other
+	chart type. required, since a session is serialized without the derived properties
+	of a geneVariant term, see trimGvTermsForSave() */
+	if (config.overlayTW) config.overlayTW = await fillTermWrapper(config.overlayTW, app.vocabApi)
+	if (config.divideByTW) config.divideByTW = await fillTermWrapper(config.divideByTW, app.vocabApi)
+	return config
 }
 
 async function getTableData(self, samples, state, refKey): Promise<[TableRow[], TableColumn[]]> {
