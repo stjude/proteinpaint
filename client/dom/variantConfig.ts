@@ -2,9 +2,10 @@ import { make_radios, renderTable } from '#dom'
 import { Menu } from './menu'
 import { isoformRangeSelect, isoformPairRangeSelect } from './isoformSelect'
 import type { GeneModel, BreakpointMarker, ScaleMode } from './types/isoformSelect'
-import type { TermValues, BaseValue, BreakpointRange, BreakpointEntry } from '#types'
+import type { TermValues, BaseValue, BreakpointRange, BreakpointEntry, GvQueryRegion } from '#types'
 import { filterInit } from '#filter'
 import { dt2label, dtsnvindel, dtsv, dtfusionrna, mclass } from '#shared/common.js'
+import { matchesGvQueryEntry } from '#shared/terms.js'
 
 // a selectable value: either a mutation class (no .mname) or a
 // specific variant, i.e. amino acid change (.mname set, .key is its class)
@@ -12,6 +13,9 @@ type VariantValue = BaseValue & {
 	value?: string
 	mname?: string
 	gene?: string
+	/** the queried region an mname was found in, for a term that has no gene to name.
+	 * scopes the entry the way .gene does, see matchesGvQueryEntry() */
+	region?: GvQueryRegion
 	/** sv/fusion only: restricts the breakpoint on the partner gene named by .mname */
 	partnerBreakpointRange?: BreakpointRange
 }
@@ -24,8 +28,17 @@ type MnameItem = {
 	class: string
 	samplecount: number
 	gene?: string
+	region?: GvQueryRegion
 	breakpoints?: BreakpointEntry[]
 	noPositionCount?: number
+}
+
+/* what an mname was found through, as a label: a gene names itself, a region names its
+coordinates 1-based, the way a region term is named elsewhere. Empty when the data carries
+neither, which is the single-gene case where there is nothing to disambiguate. */
+function scopeLabel(m: { gene?: string; region?: GvQueryRegion }) {
+	if (m.gene) return m.gene
+	return m.region ? `${m.region.chr}:${m.region.start + 1}-${m.region.stop}` : ''
 }
 
 type Config = {
@@ -83,10 +96,11 @@ export function renderVariantConfig(arg: Arg) {
 	// zero-count entry so that it stays checked and is not silently widened to
 	// its class on apply
 	const preservedMnames: MnameItem[] = selectedMnames
-		.filter(s => !arg.mnames?.some(m => m.mname == s.mname && m.class == s.key && (!s.gene || s.gene == m.gene)))
+		.filter(s => !arg.mnames?.some(m => m.mname == s.mname && m.class == s.key && matchesGvQueryEntry(s, m)))
 		.map(s => {
 			const m: MnameItem = { mname: s.mname as string, class: s.key as string, samplecount: 0 }
 			if (s.gene) m.gene = s.gene
+			else if (s.region) m.region = s.region
 			return m
 		})
 	const mnames: MnameItem[] = [...(arg.mnames || []), ...preservedMnames]
@@ -121,7 +135,7 @@ export function renderVariantConfig(arg: Arg) {
 	// ranges on the partner gene of a variant, k: index of the variant in mnames[]
 	const partnerBreakpointRanges = new Map<number, BreakpointRange>()
 	for (const [i, m] of mnames.entries()) {
-		const selected = selectedMnames.find(s => s.mname == m.mname && s.key == m.class && (!s.gene || s.gene == m.gene))
+		const selected = selectedMnames.find(s => s.mname == m.mname && s.key == m.class && matchesGvQueryEntry(s, m))
 		if (selected?.partnerBreakpointRange) partnerBreakpointRanges.set(i, selected.partnerBreakpointRange)
 	}
 	/* one menu for both controls, so that opening one closes the other. created on first
@@ -307,9 +321,10 @@ export function renderVariantConfig(arg: Arg) {
 					.style('display', 'none')
 			}
 			const mnameListDiv = listWrapper.append('div').style('font-size', '0.8rem')
-			// when the term covers multiple genes (geneset), indicate the gene of
-			// each variant in its own column
-			const showGene = new Set(mnames.map(m => m.gene).filter(g => g)).size > 1
+			/* when the term covers more than one gene or region, name the one each variant
+			was found through in its own column, so that two identical amino acid changes of
+			different query entries can be told apart */
+			const showGene = new Set(mnames.map(scopeLabel).filter(s => s)).size > 1
 			showGeneInMnames = showGene
 			const mnameRows: any[] = []
 			const selectedMnameIdxs: number[] = []
@@ -325,17 +340,17 @@ export function renderVariantConfig(arg: Arg) {
 				}
 				countCells[i] = countCell
 				const row = [{ value: m.mname }, { value: arg.values[m.class]?.label || m.class }, countCell]
-				if (showGene) row.unshift({ value: m.gene || '' })
+				if (showGene) row.unshift({ value: scopeLabel(m) })
 				// cell to fill with the breakpoint control of this variant after render
 				if (canSelectBreakpoint) row.push({ value: '' })
 				mnameRows.push(row)
 				// a selected value without .gene matches regardless of gene, so that
 				// a selection saved before gene was tracked still displays as checked
-				if (selectedMnames.some(s => s.mname == m.mname && s.key == m.class && (!s.gene || s.gene == m.gene)))
+				if (selectedMnames.some(s => s.mname == m.mname && s.key == m.class && matchesGvQueryEntry(s, m)))
 					selectedMnameIdxs.push(i)
 			}
 			const mnameColumns: any[] = [{ label: 'Variant' }, { label: 'Class' }, { label: 'Samples', align: 'right' }]
-			if (showGene) mnameColumns.unshift({ label: 'Gene' })
+			if (showGene) mnameColumns.unshift({ label: mnames.some(m => m.gene) ? 'Gene' : 'Region' })
 			if (canSelectBreakpoint) mnameColumns.push({ label: 'Breakpoint' })
 			renderTable({
 				rows: mnameRows,
@@ -547,11 +562,13 @@ export function renderVariantConfig(arg: Arg) {
 					for (const { m, i } of checkedMnames) {
 						const v: VariantValue = {
 							key: m.class,
-							label: showGeneInMnames && m.gene ? `${m.gene} ${m.mname}` : m.mname,
+							label: showGeneInMnames && scopeLabel(m) ? `${scopeLabel(m)} ${m.mname}` : m.mname,
 							value: m.mname,
 							mname: m.mname
 						}
+						// scope the selection to the query entry it was found through
 						if (m.gene) v.gene = m.gene
+						else if (m.region) v.region = m.region
 						// a range on the partner gene only applies to this variant
 						const partnerRange = partnerBreakpointRanges.get(i)
 						if (partnerRange) v.partnerBreakpointRange = partnerRange

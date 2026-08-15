@@ -76,6 +76,14 @@ export type BreakpointRange = {
 	stop: number
 }
 
+/** the region a geneVariant query entry covers, carried by every value found through it.
+ * A kind='gene' entry also has a .gene naming it; a kind='coord' entry has only this */
+export type GvQueryRegion = {
+	chr: string
+	start: number
+	stop: number
+}
+
 export type GeneVariantValue = {
 	key?: string
 	label?: string | number
@@ -91,6 +99,10 @@ export type GeneVariantValue = {
 	/** gene of the amino acid change; when set, restricts an mname entry to this
 	 * gene, so that e.g. KRAS G12D of a geneset term does not match NRAS G12D */
 	gene?: string
+	/** region the amino acid change was found in; the equivalent of .gene for a term
+	 * over queried regions, which have no gene. Only one of the two is ever set,
+	 * see matchesGvQueryEntry() in shared/utils/src/terms.ts */
+	region?: GvQueryRegion
 	/** for a sv/fusion entry, restricts the breakpoint on the partner gene (the
 	 * gene named by .mname) to this range. the gene is implied by .mname and is
 	 * not stored. must be satisfied by the same event that matches .mname, so
