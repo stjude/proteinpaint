@@ -9,6 +9,7 @@ Fixes:
 - matrix row-label editing is re-enabled. for geneVariant rows, allow per-row tw.q customizaton
 - reduce test plan count for geneVariant survival term test
 - cut down geneVariant tw size in state using trimGvTermsForSave as chokepoint
+- remove unused concurrently devDependency
 
 
 ## 2.203.0
