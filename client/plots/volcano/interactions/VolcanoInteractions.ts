@@ -14,6 +14,8 @@ export class VolcanoInteractions {
 	/** Significant rows before maxInteractiveDots capped them. Only the capped subset is
 	 * downloadable, so the download says so when the two differ. */
 	totalSignificantRows: number
+	/** Groups, sample sizes and result-affecting settings, written into downloads. */
+	provenance: string
 
 	constructor(app: MassAppApi, id: string, dom: VolcanoDom) {
 		this.app = app
@@ -22,6 +24,7 @@ export class VolcanoInteractions {
 		this.pValueTableData = []
 		this.data = []
 		this.totalSignificantRows = 0
+		this.provenance = ''
 	}
 
 	/** Launches a multi-term select tree
@@ -90,11 +93,18 @@ export class VolcanoInteractions {
 					/* The server returns only the most-significant maxInteractiveDots rows, so a big result
 					silently downloads as a subset. The on-screen table prints that; without this the file
 					did not, and nothing in it revealed that "how many were significant" is unanswerable. */
-					const note =
+					const subsetNote =
 						this.totalSignificantRows > rows.length
 							? `Top ${rows.length.toLocaleString()} of ${this.totalSignificantRows.toLocaleString()} significant results, selected by adjusted p-value and sorted by fold-change. This file is not the complete result set.`
 							: undefined
-					downloadTable(rows, this.pValueTableData.columns, `${label}-table-${date}.tsv`, note)
+					/* Provenance rides along with the rows. Comparing two exports months apart is
+					otherwise guesswork: differing counts could be a code change, a settings change or a
+					different group definition, and nothing in the file distinguishes them.
+					Joined with ' | ' rather than a newline because downloadTable collapses newlines to
+					keep the note on one '#' line -- writing '\n' here would look intentional and quietly
+					become a space. */
+					const note = [subsetNote, this.provenance && `Run: ${this.provenance}`].filter(Boolean).join(' | ')
+					downloadTable(rows, this.pValueTableData.columns, `${label}-table-${date}.tsv`, note || undefined)
 				}
 			}
 		]

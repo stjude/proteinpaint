@@ -153,6 +153,9 @@ export type VolcanoViewData = {
 	pointData: DataPointEntry[]
 	pValueTableData: VolcanoPValueTableData
 	statsData: { label: string; value: number }[]
+	/** One-line record of the groups, sample sizes and result-affecting settings behind this
+	 * run. Written into exported tables so a file can be traced back to how it was produced. */
+	provenance: string
 	/** special logic per termtype for userActions */
 	userActions: {
 		noShow: Set<string>

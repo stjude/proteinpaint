@@ -99,6 +99,7 @@ export class VolcanoViewModel {
 			pointData,
 			pValueTableData: this.pValueTable,
 			statsData: this.setStatsData(),
+			provenance: this.setProvenance(),
 			userActions: this.setUserActions(),
 			volcanoPng: response.data.volcanoPng,
 			plotExtent: response.data.plotExtent
@@ -354,6 +355,49 @@ export class VolcanoViewModel {
 			if (controlColor && caseColor) d.color = d.fold_change > 0 ? caseColor : controlColor
 			else d.color = this.settings.defaultSignColor
 		} else d.color = this.settings.defaultNonSignColor
+	}
+
+	/** One line describing what produced this result: which groups, how many samples actually
+	 * entered the model, and every setting that changes the numbers.
+	 *
+	 * This exists because an exported table is the artifact that outlives the session. Re-running
+	 * a contrast months later and getting different counts is impossible to diagnose when the
+	 * original run's group sizes and options were never written down anywhere -- the file, the
+	 * screenshot and the memory of it all look identical regardless of how it was configured.
+	 * Only settings that can change the result are listed; cosmetic ones are deliberately left
+	 * out so the line stays readable and a difference in it always means a real difference. */
+	setProvenance(): string {
+		const s = this.settings
+		const parts: string[] = []
+
+		if (this.config.samplelst?.groups?.length == 2) {
+			const [g1, g2] = this.config.samplelst.groups
+			// The sizes reported by the server are post-filtering -- what the model actually used,
+			// not what the group nominally contained.
+			parts.push(`group1 (control) "${g1.name}" n=${this.response.sample_size1}`)
+			parts.push(`group2 (case) "${g2.name}" n=${this.response.sample_size2}`)
+		}
+
+		const conf = this.config.confounderTws?.map((t: any) => t?.term?.name || t?.term?.id).filter(Boolean)
+		parts.push(`confounders: ${conf?.length ? conf.join(' + ') : 'none'}`)
+
+		if (this.termType == tt.DNA_METHYLATION) {
+			parts.push(`min samples per group: ${s.minSamplesPerGroup}`)
+			parts.push(`exclude sex chromosomes: ${s.excludeSexChr ? 'yes' : 'no'}`)
+			parts.push(`mean-variance trend: ${s.eBayesTrend ? 'on' : 'off'}`)
+			parts.push(`robust variance moderation: ${s.eBayesRobust ? 'on' : 'off'}`)
+			parts.push(`per-sample weights: ${s.arrayWeights ? 'on' : 'off'}`)
+		} else if (this.termType == tt.GENE_EXPRESSION) {
+			parts.push(`method: ${s.method}`)
+		}
+
+		parts.push(
+			`significance: ${s.pValueType} p < ${roundValueAuto(Math.pow(10, -s.pValue))}, |log2(fold-change)| > ${
+				s.foldChangeCutoff
+			}`
+		)
+
+		return parts.join('; ')
 	}
 
 	setStatsData() {
