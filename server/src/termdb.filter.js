@@ -601,7 +601,8 @@ async function get_dtTerm(tvs, CTEname, ds) {
 		const mlst = value[$id]?.values
 		if (!mlst) throw 'mlst is missing'
 		const filter = { type: 'tvs', tvs }
-		const [pass, tested] = filterByItem(filter, mlst)
+		// the tw is what a cnv tvs resolves the queried gene from, see mayFilterCnvByOverlap()
+		const [pass, tested] = filterByItem(filter, mlst, undefined, tw)
 		if (pass) samples.push(sample)
 	}
 

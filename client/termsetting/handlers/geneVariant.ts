@@ -135,7 +135,14 @@ async function makeGroupUI(self: TermSetting, div) {
 	const q = self.q as any // TODO: migrate this handler to use client/tw code
 	// get groups
 	if (q.type != 'predefined-groupset' && q.type != 'custom-groupset') throw 'unexpected q.type'
+	/* groups[] is cached on the termsetting instance so that edits survive the re-render
+	that every change to it triggers. but the instance is reused when the pill is switched
+	to another term (see main() in TermSettingApi.ts), and the groups of a geneVariant term
+	are gene-specific: the gene is in every group name and in the parentTerm of every tvs.
+	so a cache built for another term is dropped rather than applied to this one */
+	if (self.groups && self.groupsTermName != self.term.name) delete self.groups
 	if (!self.groups) {
+		self.groupsTermName = self.term.name
 		let groupset
 		if (q.type == 'predefined-groupset') {
 			const groupsetting = self.term.groupsetting

@@ -1,11 +1,12 @@
 import tape from 'tape'
 import { DTCNV, DTFUSION, DTITD, DTSNVINDEL, DTSV, TermTypes } from '#types'
-import { dtTermTypes, trimGvTermsForSave } from '../terms.js'
+import { dtTermTypes, setGroupsetParentTerms, trimGvTermsForSave } from '../terms.js'
 
 /* test sections
 
 dt term types are declared in TermTypes
 trimGvTermsForSave()
+setGroupsetParentTerms()
 */
 
 // a filled-in geneVariant tw, reduced to the properties the trim reads
@@ -130,11 +131,80 @@ tape('trimGvTermsForSave(): terms it must not trim', t => {
 	trimGvTermsForSave(state)
 
 	t.ok(state.plots[0].term.q.customset.groups.length, 'should keep q.customset of a custom groupset')
-	t.ok(
+	t.equal(
 		state.plots[0].term.q.customset.groups[0].filter.lst[0].tvs.term.parentTerm,
-		'should keep the parentTerm of a customset tvs term'
+		undefined,
+		'should drop the parentTerm of a customset tvs term, which GvCustomGS.fill() re-attaches'
 	)
 	t.ok(state.termfilter.filter.lst[0].tvs.term.parentTerm, 'should keep the parentTerm of a filter tvs term')
+	t.end()
+})
+
+tape('setGroupsetParentTerms()', t => {
+	const tw: any = getFilledGvTw()
+	// a customset built against another term, as a termsetting instance reused across
+	// terms produces (see makeGroupUI() in client/termsetting/handlers/geneVariant.ts)
+	const staleTerm = { type: 'geneVariant', id: 'KRAS', name: 'KRAS', genes: [{ kind: 'gene', gene: 'KRAS' }] }
+	/* a snvindel tvs of a dataset with a maf filter nests a tvs of its own, over a maf term
+	rather than a dt term. it is not part of the groupset structure and must be left alone,
+	see getNonCnvGroupset() in client/tw/geneVariant.ts */
+	const mafFilter = {
+		type: 'tvslst',
+		join: '',
+		in: true,
+		lst: [{ type: 'tvs', tvs: { term: { id: 'AD', type: 'float' }, ranges: [{ start: 0.6 }] } }]
+	}
+	const tvs1: any = { term: { type: 'dtsnvindel', dt: DTSNVINDEL, parentTerm: staleTerm }, values: [], mafFilter }
+	const tvs2: any = { term: { type: 'dtcnv', dt: DTCNV }, values: [] }
+	const customset = {
+		groups: [
+			{ name: 'g1', type: 'filter', filter: { type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: tvs1 }] } },
+			{
+				name: 'g2',
+				type: 'filter',
+				filter: {
+					type: 'tvslst',
+					in: true,
+					join: 'or',
+					// a tvs nested in a sublist must be reached too
+					lst: [{ type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: tvs2 }] }]
+				}
+			}
+		]
+	}
+	setGroupsetParentTerms(customset, tw.term)
+
+	t.equal(tvs1.term.parentTerm.name, 'TP53', 'should replace a parentTerm of another term')
+	t.equal(tvs2.term.parentTerm.name, 'TP53', 'should attach a parentTerm to a tvs of a sublist')
+	t.equal(tvs1.term.parentTerm.childTerms, undefined, 'should not nest childTerms[] in the parentTerm')
+	t.equal(tvs1.term.parentTerm.groupsetting, undefined, 'should not nest groupsetting in the parentTerm')
+	t.equal(tvs1.term.parentTerm, tvs2.term.parentTerm, 'should share one parentTerm across the tvs')
+	t.notEqual(tvs1.term.parentTerm, tw.term, 'should attach a copy, not the term itself')
+	t.equal(
+		tvs1.mafFilter.lst[0].tvs.term.parentTerm,
+		undefined,
+		'should not reach the tvs of a maf filter nested in a tvs'
+	)
+
+	const notDt = {
+		groups: [
+			{
+				name: 'g',
+				type: 'filter',
+				filter: {
+					type: 'tvslst',
+					in: true,
+					join: '',
+					lst: [{ type: 'tvs', tvs: { term: { id: 'sex', type: 'categorical' }, values: [] } }]
+				}
+			}
+		]
+	}
+	t.throws(
+		() => setGroupsetParentTerms(notDt, tw.term),
+		/not a dt term/,
+		'should throw on a groupset tvs that does not filter by dt'
+	)
 	t.end()
 })
 

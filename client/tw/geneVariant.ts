@@ -24,7 +24,7 @@ import { getWrappedTvslst } from '#filter/filter'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getChildTerms, addParentTerm } from '../termdb/handlers/geneVariant'
 import { getColors, dtcnv, dtsnvindel, mclass } from '#shared/common.js'
-import { trimGvTermCopy, clearDtTermMnames, getDtsFromGroups } from '#shared/terms.js'
+import { trimGvTermCopy, clearDtTermMnames, getDtsFromGroups, setGroupsetParentTerms } from '#shared/terms.js'
 import { validateVariantFilter } from '#shared/geneVariantFilter.js'
 import { rgb } from 'd3-color'
 
@@ -330,7 +330,16 @@ export class GvCustomGS extends GvBase {
 		// saved before mnames became opt-in is also corrected. a predefined groupset needs
 		// no equivalent, since getPredefinedGroupsets() rebuilds it on every fill
 		clearDtTermMnames(q.customset)
-		if (!q.dtLst?.length) q.dtLst = getDtsFromGroups(q.customset.groups)
+		/* the parent of every customset tvs is this term. re-attached rather than trusted,
+		so that a customset built against another term cannot survive here, and validates
+		that each tvs filters by a dt. also throws on a customset whose tvs terms are not
+		dt terms, which the server would otherwise reject deep in filterByItem() */
+		setGroupsetParentTerms(q.customset, term)
+		/* always re-derived, never trusted: a dtLst that disagrees with the groups silently
+		limits the dts queried for the term, dropping a group's data (see getDtsToQuery() in
+		server/src/mds3.init.js). same reason GvPredefinedGS.fill() re-derives it from the
+		selected index, and GvValues.fill() deletes it outright */
+		q.dtLst = getDtsFromGroups(q.customset.groups)
 		set_hiddenvalues(q, term)
 		return tw as GvCustomGsTW
 	}
