@@ -5,6 +5,7 @@ import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
 import { getSelfBreakpoint, getPartnerBreakpoints } from '#src/svfusion.breakpoint.ts'
 import { dtsv, dtfusionrna } from '#shared/common.js'
+import { getGvQueryKey } from '#shared/terms.js'
 
 export const payload: RoutePayload = {
 	init,
@@ -146,8 +147,11 @@ export function getCategories(data, q, ds, $id, opts: { withMnames?: boolean } =
 				if (opts.withMnames && value.mname != undefined) {
 					// synthetic WT/Blank rows lack mname, so are naturally skipped
 					const origin = dtClasses.byOrigin ? value.origin : ''
+					/* keyed on the query entry, not on .gene alone: a region entry has no gene,
+					and two of them would otherwise share a key. See getGvQueryKey() */
 					const gene = value.gene || ''
-					const mnameKey = `mname:${value.dt}|${origin}|${value.class}|${gene}|${value.mname}`
+					const queryKey = getGvQueryKey(value)
+					const mnameKey = `mname:${value.dt}|${origin}|${value.class}|${queryKey}|${value.mname}`
 					if (!sampleCountedFor.has(mnameKey)) {
 						// count each sample once per dt/origin/class/gene/mname
 						sampleCountedFor.add(mnameKey)

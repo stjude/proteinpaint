@@ -46,8 +46,7 @@ Tests:
 	filterByTvsLst: multiple tvs, AND join
 	filterByTvsLst: in=false
 	filterByTvsLst: nested tvslst
-	filterByTvsLst: nested cnv tvs resolves gene coords from the tw
-	filterByItem: standalone cnv tvs resolves gene coords from its parentTerm
+	filterByItem: cnv overlap is measured against the value's own region
 	filterByTvsLst: values[] only collects mutations of a matching tvs
 	mayFilterByMaf: basic mafFilter
 	mayFilterByMaf: mafFilter with child ids
@@ -1755,107 +1754,76 @@ test('filterByTvsLst: nested tvslst', t => {
 	}
 })
 
-test('filterByTvsLst: nested cnv tvs resolves gene coords from the tw', t => {
-	t.plan(4)
-	/* a cnv tvs built by the config ui always carries fractionOverlap, and a groupset tvs
-	carries no parentTerm of its own, so the tw is the only source of the queried gene. it
-	has to reach the tvs even when it sits in a sublist, as it does in a custom groupset
-	that mixes joins */
-	const tw = {
-		term: {
-			name: 'TP53',
-			type: 'geneVariant',
-			genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', chr: 'chr17', start: 0, stop: 100 }]
-		}
-	}
+test("filterByItem: cnv overlap is measured against the value's own region", t => {
+	t.plan(7)
+	/* a cnv value records the region that was queried as .region, distinct from its own
+	start/stop, so the overlap needs no lookup and no tw. See mayGetGeneVariantData() */
 	const cnvTvs = {
 		type: 'tvs',
 		tvs: {
 			term: { dt: 4, type: 'dtcnv' },
 			values: [],
 			continuousCnv: true,
-			cnvGainCutoff: 0.5,
-			cnvLossCutoff: -0.5,
+			cnvGainCutoff: 0.1,
+			cnvLossCutoff: -0.1,
 			cnvMaxLength: null,
 			fractionOverlap: 0.8
 		}
 	}
-	const snvTvs = {
-		type: 'tvs',
-		tvs: {
-			term: { dt: 1, type: 'dtsnvindel' },
-			values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
-			genotype: 'variant',
-			mcount: 'any'
-		}
-	}
-	const filter = {
-		type: 'tvslst',
-		in: true,
-		join: 'and',
-		lst: [snvTvs, { type: 'tvslst', in: true, join: 'or', lst: [cnvTvs] }]
+	// a value found through a gene entry: .gene is the symbol, .region its coordinates
+	const geneRegion = { chr: 'chr17', start: 0, stop: 100 }
+	{
+		const seg = { dt: 4, gene: 'TP53', region: geneRegion, value: -1, start: 0, stop: 100 }
+		const [pass, tested] = filterByItem(cnvTvs, [seg])
+		t.equal(pass, true, 'segment spanning the queried gene passes')
+		t.equal(tested, true, 'sample is tested')
 	}
 	{
-		// segment spans the whole gene
-		const mlst = [
-			{ dt: 1, class: 'M' },
-			{ dt: 4, gene: 'TP53', value: 1, start: 0, stop: 100 }
-		]
-		const [pass, tested] = filterByTvsLst(filter, mlst, undefined, tw)
-		t.equal(pass, true, 'Sample passes when the nested cnv segment meets the overlap')
-		t.equal(tested, true, 'Sample is tested')
+		const seg = { dt: 4, gene: 'TP53', region: geneRegion, value: -1, start: 0, stop: 10 }
+		t.equal(filterByItem(cnvTvs, [seg])[0], false, 'segment under the overlap fails')
 	}
-	{
-		// segment spans 10% of the gene, under the 0.8 fraction
-		const mlst = [
-			{ dt: 1, class: 'M' },
-			{ dt: 4, gene: 'TP53', value: 1, start: 0, stop: 10 }
-		]
-		const [pass, tested] = filterByTvsLst(filter, mlst, undefined, tw)
-		t.equal(pass, false, 'Sample fails when the nested cnv segment is under the overlap')
-		t.equal(tested, true, 'Sample is tested')
-	}
-})
 
-test('filterByItem: standalone cnv tvs resolves gene coords from its parentTerm', t => {
-	t.plan(3)
-	/* a tvs of a mass filter is not evaluated against a tw. get_dtTerm() in termdb.filter.js
-	queries with tvs.term.parentTerm, so that is the term annotated with the coordinates */
-	const parentTerm = {
-		name: 'TP53',
-		type: 'geneVariant',
-		genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', chr: 'chr17', start: 0, stop: 100 }]
+	/* a value found through a kind='coord' entry has no .gene at all. Matching a queried
+	gene by name used to be the only way to size the overlap, so a region term threw */
+	const region = { chr: 'chr1', start: 47213990, stop: 47318918 }
+	{
+		const seg = { dt: 4, region, value: -1, start: 47213990, stop: 47318918 }
+		t.equal(filterByItem(cnvTvs, [seg])[0], true, 'segment spanning the queried region passes')
 	}
-	const filter = {
-		type: 'tvs',
-		tvs: {
-			term: { dt: 4, type: 'dtcnv', parentTerm },
-			values: [],
-			continuousCnv: true,
-			cnvGainCutoff: 0.5,
-			cnvLossCutoff: -0.5,
-			cnvMaxLength: null,
-			fractionOverlap: 0.8
+	{
+		// a focal deletion, ~10kb of a ~105kb region
+		const seg = { dt: 4, region, value: -1, start: 47213990, stop: 47223990 }
+		t.equal(filterByItem(cnvTvs, [seg])[0], false, 'focal segment is under the overlap')
+	}
+	{
+		const seg = { dt: 4, gene: 'TP53', value: -1, start: 0, stop: 100 }
+		t.throws(() => filterByItem(cnvTvs, [seg]), /no .region/, 'throws on a value carrying no region')
+	}
+	{
+		// a nested sublist, as a custom groupset that mixes joins produces. No tw is
+		// threaded anywhere, since the value carries everything the overlap needs
+		const filter = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { dt: 1, type: 'dtsnvindel' },
+						values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+						genotype: 'variant',
+						mcount: 'any'
+					}
+				},
+				{ type: 'tvslst', in: true, join: 'or', lst: [cnvTvs] }
+			]
 		}
-	}
-	{
-		const [pass] = filterByItem(filter, [{ dt: 4, gene: 'TP53', value: 1, start: 0, stop: 100 }])
-		t.equal(pass, true, 'Sample passes when the cnv segment meets the overlap')
-	}
-	{
-		const [pass] = filterByItem(filter, [{ dt: 4, gene: 'TP53', value: 1, start: 0, stop: 10 }])
-		t.equal(pass, false, 'Sample fails when the cnv segment is under the overlap')
-	}
-	{
-		// a gene the tvs was not built for cannot be measured against, and used to be
-		// read as a TypeError on the undefined result of the lookup
-		const noParent = structuredClone(filter)
-		delete noParent.tvs.term.parentTerm
-		t.throws(
-			() => filterByItem(noParent, [{ dt: 4, gene: 'TP53', value: 1, start: 0, stop: 100 }]),
-			/neither a tw nor a parentTerm/,
-			'throws when the queried gene cannot be resolved'
-		)
+		const mlst = [
+			{ dt: 1, class: 'M', gene: 'TP53', region: geneRegion },
+			{ dt: 4, gene: 'TP53', region: geneRegion, value: -1, start: 0, stop: 100 }
+		]
+		t.equal(filterByTvsLst(filter, mlst)[0], true, 'a cnv tvs nested in a sublist is measured the same way')
 	}
 })
 

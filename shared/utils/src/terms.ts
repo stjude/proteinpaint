@@ -284,6 +284,37 @@ export function trimGvTermsForSave(obj: any) {
 }
 
 /*
+A geneVariant term is queried per entry of term.genes[], and every value it yields records
+which entry it came from. That record used to be a single .gene holding the entry's NAME,
+which for a kind='coord' entry is a coordinate string -- so consumers reading .gene as a
+gene symbol got a region, e.g. a matrix export labelling a variant "chr1:47213991-47318918".
+
+The two things are now separate: .gene is a gene symbol and is simply absent for a region,
+while .region below is what was queried and is present either way. The helpers here are the
+one place that knows the shape.
+*/
+
+/* the region a query entry covers, which every value found through it carries. Distinct
+from the value's own .start/.stop, which are the event's -- a cnv segment is not the region
+that found it.
+
+Coordinates are annotated onto a gene entry by mayMapGeneName2coord() when a query needing
+them runs, so this is undefined for a gene only queried by dts that never map coords. A
+coord entry always carries them, since fill() requires them. */
+export function getGvQueryRegion(gene: any) {
+	if (!gene?.chr || !Number.isInteger(gene.start) || !Number.isInteger(gene.stop)) return
+	return { chr: gene.chr, start: gene.start, stop: gene.stop }
+}
+
+/* identity of the query entry a value came from, for grouping and de-duplicating the values
+of a term over several genes or regions. The gene symbol when there is one, else the region. */
+export function getGvQueryKey(v: any) {
+	if (v?.gene) return v.gene
+	const r = v?.region
+	return r ? `${r.chr}:${r.start}-${r.stop}` : ''
+}
+
+/*
 The dt term of a tvs carries a parentTerm, but for two unrelated reasons:
 
 - a tvs of a mass filter stands alone, so its parentTerm is the only record of which gene
