@@ -154,6 +154,8 @@ export class Volcano extends PlotBase implements RxComponent {
 			this.interactions.data = response.data.dots
 			//pre-cap count, so the download can disclose that its rows are a subset
 			this.interactions.totalSignificantRows = response.data.totalSignificantRows
+			//groups, sample sizes and settings, so a downloaded table records how it was produced
+			this.interactions.provenance = viewModel.viewData.provenance
 
 			/** Render formatted data */
 			this.view.render(settings, viewModel.viewData)

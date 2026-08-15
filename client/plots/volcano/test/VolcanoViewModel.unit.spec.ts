@@ -260,6 +260,40 @@ in two separate splices that must agree on ordinal position. Nothing enforces th
 and getting it wrong renders Δβ under the "Mean β" header — wrong but entirely plausible on
 screen. So assert the pairing by looking each value up through its own column label rather than
 by a hardcoded index, which is also what the sort and download helpers do. */
+/* The provenance line is what lets a downloaded table be traced back to the run that made it, so
+its value is entirely in completeness: a setting that silently stops appearing turns two files
+that differ for a real reason into two files that look identically configured. Assert each field
+is present rather than matching the whole string, so wording can change but a dropped field
+fails. */
+tape('setProvenance records groups, sizes and every result-affecting setting', function (test) {
+	test.timeoutAfter(100)
+
+	const settings = {
+		...mockSettings,
+		minSamplesPerGroup: 3,
+		excludeSexChr: false,
+		eBayesTrend: true,
+		eBayesRobust: false,
+		arrayWeights: true
+	}
+	const vm = new VolcanoViewModel({ ...mockConfig, termType: 'dnaMethylation' } as any, mockResponse, settings as any)
+	const p = vm.viewData.provenance
+
+	test.ok(p.includes('Sensitive') && p.includes('Resistant'), 'names both groups')
+	test.ok(p.includes('n=3'), 'records the sample size the model actually used')
+	test.ok(/group1 \(control\)/.test(p) && /group2 \(case\)/.test(p), 'labels which arm is control vs case')
+	test.ok(p.includes('confounders: none'), 'states confounders explicitly rather than omitting them when absent')
+	test.ok(p.includes('min samples per group: 3'), 'records minSamplesPerGroup')
+	test.ok(p.includes('exclude sex chromosomes: no'), 'records excludeSexChr')
+	test.ok(p.includes('mean-variance trend: on'), 'records eBayesTrend')
+	test.ok(p.includes('robust variance moderation: off'), 'records eBayesRobust')
+	test.ok(p.includes('per-sample weights: on'), 'records arrayWeights')
+	// pValue is stored as -log10, so the line must show the p a reader would recognise
+	test.ok(p.includes('adjusted p < 0.05'), 'converts the -log10 threshold back to a readable p-value')
+
+	test.end()
+})
+
 tape('setPointData: methylation cells line up with their column headers', function (test) {
 	test.timeoutAfter(100)
 
