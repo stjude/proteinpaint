@@ -315,6 +315,46 @@ export function getGvQueryKey(v: any) {
 }
 
 /*
+The wire format for the query entry of a value, as the two halves that must stay inverse of
+each other: get_matrix.js interns on the way out, TermdbVocab.js restores on the way in.
+
+A term's values repeat their query entry endlessly -- one .region object per value, tens of
+thousands of them in a matrix request -- so the distinct entries are collected once into
+refs.byTermId[$id].queries[] and each value keeps only its index in .$q.
+
+Both live here so the format has one definition and can be round-tripped in a test.
+*/
+
+/** replace a value's query entry with its index into queries[], interning it if new.
+ * returns false for a value that records no query entry, which is left untouched */
+export function internGvQueryEntry(v: any, queries: any[], idxByKey: Map<string, number>) {
+	const key = getGvQueryKey(v)
+	if (!key) return false
+	let i = idxByKey.get(key)
+	if (i === undefined) {
+		i = queries.length
+		const entry: any = {}
+		if (v.gene) entry.gene = v.gene
+		if (v.region) entry.region = v.region
+		queries.push(entry)
+		idxByKey.set(key, i)
+	}
+	v.$q = i
+	delete v.gene
+	delete v.region
+	return true
+}
+
+/** the inverse: put the query entry back on a value. returns false when there is nothing
+ * to restore, e.g. a term whose values carry no query entry */
+export function restoreGvQueryEntry(v: any, queries: any[] | undefined) {
+	if (!queries || v?.$q === undefined) return false
+	Object.assign(v, queries[v.$q])
+	delete v.$q
+	return true
+}
+
+/*
 The dt term of a tvs carries a parentTerm, but for two unrelated reasons:
 
 - a tvs of a mass filter stands alone, so its parentTerm is the only record of which gene

@@ -4,7 +4,7 @@ import { authApi } from './auth.js'
 import { Readable, pipeline } from 'stream'
 import zlib from 'zlib'
 import { mclass } from '#shared/common.js'
-import { getGvQueryKey } from '#shared/terms.js'
+import { getGvQueryKey, internGvQueryEntry } from '#shared/terms.js'
 
 // based on a 64-bit hard constraint in V8 for string processing
 const maxStrLength = 5.12e8 - 1e5 // subtract 100KB for error message, etc
@@ -63,39 +63,25 @@ for (const [code, m] of Object.entries($codes.objAssign)) {
 Object.freeze($objAssign)
 
 /*
-Intern the geneVariant query entry of a value.
+Intern the geneVariant query entry of a value into refs.byTermId[$id].queries[].
 
-Every value records the entry of term.genes[] it was found through, as .gene and/or .region
-(see getGvQueryRegion() in shared/utils/src/terms.ts). Those repeat across every value of
-every sample, and a .region object is far bigger than the index that replaces it, so the
-distinct entries are collected once into refs.byTermId[$id].queries[] and each value keeps
-only its index in .$q. TermdbVocab.js reverses this on arrival.
-
-This supersedes keying by one gene per term, which mislabelled the values of every gene but
-the first, and could not compress a term over a queried region at all since it has no gene.
+The format itself lives in shared/utils/src/terms.ts, paired with the restore that
+TermdbVocab.js applies, so that the two stay inverse and can be round-tripped in a test.
+This only owns the per-term bookkeeping: queries[] is created on the first value that has
+an entry, so a term whose values have none never grows an empty array.
 
 refs is pushed to the stream only after every sample has been walked, so filling queries[]
 as values are visited is safe.
 */
 function internQueryEntry(ref, queryIdxByTerm, termId, v) {
-	const key = getGvQueryKey(v)
-	if (!key) return
-	if (!ref.queries) ref.queries = []
-	let idxByKey = queryIdxByTerm.get(termId)
-	if (!idxByKey) {
-		idxByKey = new Map()
-		queryIdxByTerm.set(termId, idxByKey)
+	if (!getGvQueryKey(v)) return
+	let ctx = queryIdxByTerm.get(termId)
+	if (!ctx) {
+		ctx = { queries: [], idxByKey: new Map() }
+		queryIdxByTerm.set(termId, ctx)
+		ref.queries = ctx.queries
 	}
-	let i = idxByKey.get(key)
-	if (i === undefined) {
-		i = ref.queries.length
-		const entry = {}
-		if (v.gene) entry.gene = v.gene
-		if (v.region) entry.region = v.region
-		ref.queries.push(entry)
-		idxByKey.set(key, i)
-	}
-	return i
+	internGvQueryEntry(v, ctx.queries, ctx.idxByKey)
 }
 
 export async function get_matrix(q, req, res, ds, genome) {
@@ -162,7 +148,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 	res.setHeader('Content-Encoding', 'gzip')
 	res.status(200)
 
-	// termId -> Map(query key -> index into refs.byTermId[termId].queries[])
+	// termId -> { queries[], idxByKey } shared with refs.byTermId[termId].queries
 	const queryIdxByTerm = new Map()
 
 	let jsonStrlen = 0,
@@ -214,12 +200,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 					for (const v of d.values) {
 						delete v._SAMPLEID_ // not needed in client code
 						// intern the query entry, see internQueryEntry()
-						const qi = internQueryEntry(byTermId[termId], queryIdxByTerm, termId, v)
-						if (qi !== undefined) {
-							v.$q = qi
-							delete v.gene
-							delete v.region
-						}
+						internQueryEntry(byTermId[termId], queryIdxByTerm, termId, v)
 						const code = v.dt && $objAssign[v.class]?.[v.origin || '']
 						if (!code) continue
 						// these props can be rehydrated from refs.$codes.objAssign[code]

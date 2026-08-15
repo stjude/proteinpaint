@@ -1,12 +1,21 @@
 import tape from 'tape'
 import { DTCNV, DTFUSION, DTITD, DTSNVINDEL, DTSV, TermTypes } from '#types'
-import { dtTermTypes, setGroupsetParentTerms, trimGvTermsForSave } from '../terms.js'
+import {
+	dtTermTypes,
+	getGvQueryKey,
+	internGvQueryEntry,
+	restoreGvQueryEntry,
+	setGroupsetParentTerms,
+	trimGvTermsForSave
+} from '../terms.js'
 
 /* test sections
 
 dt term types are declared in TermTypes
 trimGvTermsForSave()
 setGroupsetParentTerms()
+query entry wire format: round trip
+query entry wire format: values without an entry
 */
 
 // a filled-in geneVariant tw, reduced to the properties the trim reads
@@ -217,5 +226,92 @@ tape('trimGvTermsForSave(): leaves other term types alone', t => {
 	const copy = structuredClone(state)
 	trimGvTermsForSave(state)
 	t.deepEqual(state, copy, 'should not modify a non-geneVariant tw')
+	t.end()
+})
+
+/* The geneVariant query entry is stripped from every value on the way out of
+termdb.get_matrix.js and put back on the way in by TermdbVocab.js. The two halves are
+exercised together here, over a term holding BOTH gene and coordinate entries, which is
+what distinguishes the format from the single-gene-per-term keying it replaced. */
+
+// values of a term over KRAS, NRAS and a region, as mayGetGeneVariantData() emits them
+function getMixedValues() {
+	const kras = { chr: 'chr12', start: 25205245, stop: 25250928 }
+	const nras = { chr: 'chr1', start: 114704468, stop: 114716770 }
+	const tal1 = { chr: 'chr1', start: 47213990, stop: 47318918 }
+	return [
+		{ dt: DTSNVINDEL, class: 'M', mname: 'G12D', gene: 'KRAS', region: { ...kras } },
+		{ dt: DTCNV, class: 'CNV_loss', value: -0.4, start: 25200000, stop: 25260000, gene: 'KRAS', region: { ...kras } },
+		{ dt: DTSNVINDEL, class: 'M', mname: 'G12D', gene: 'NRAS', region: { ...nras } },
+		// a coord entry has no gene at all, which is the case the old keying could not carry
+		{ dt: DTCNV, class: 'CNV_loss', value: -0.6, start: 47220000, stop: 47230000, region: { ...tal1 } },
+		{ dt: DTSNVINDEL, class: 'insertion', region: { ...tal1 } },
+		// a second value of an entry already seen must reuse its index, not add one
+		{ dt: DTSNVINDEL, class: 'M', mname: 'G12V', gene: 'KRAS', region: { ...kras } }
+	]
+}
+
+tape('query entry wire format: round trip', t => {
+	const original = getMixedValues()
+	const values = structuredClone(original)
+
+	// --- server half, as termdb.get_matrix.js applies it
+	const queries: any[] = []
+	const idxByKey = new Map()
+	const interned = values.map(v => internGvQueryEntry(v, queries, idxByKey))
+
+	t.ok(interned.every(Boolean), 'should intern every value that records a query entry')
+	t.deepEqual(
+		queries,
+		[
+			{ gene: 'KRAS', region: { chr: 'chr12', start: 25205245, stop: 25250928 } },
+			{ gene: 'NRAS', region: { chr: 'chr1', start: 114704468, stop: 114716770 } },
+			{ region: { chr: 'chr1', start: 47213990, stop: 47318918 } }
+		],
+		'should collect one entry per distinct gene or region, in first-seen order'
+	)
+	t.deepEqual(
+		values.map(v => v.$q),
+		// KRAS, KRAS, NRAS, region, region, KRAS
+		[0, 0, 1, 2, 2, 0],
+		'should index each value to its own entry, reusing an index already seen'
+	)
+	t.ok(
+		values.every(v => !('gene' in v) && !('region' in v)),
+		'should strip the query entry from every value'
+	)
+
+	// --- client half, as TermdbVocab.js applies it
+	const restored = values.map(v => restoreGvQueryEntry(v, queries))
+	t.ok(restored.every(Boolean), 'should restore every interned value')
+	t.ok(
+		values.every(v => !('$q' in v)),
+		'should leave no index behind'
+	)
+	t.deepEqual(values, original, 'should round trip to exactly the values the server produced')
+
+	// the region objects are shared with queries[] after a restore, so a term over one
+	// region no longer pays for a copy per value
+	t.equal(values[3].region, values[4].region, 'values of one entry should share its region object')
+	t.end()
+})
+
+tape('query entry wire format: values without an entry', t => {
+	// a non-geneVariant term's values record no query entry and must pass through untouched
+	const values: any[] = [
+		{ key: 'F', value: 1 },
+		{ key: 'M', value: 2 }
+	]
+	const before = structuredClone(values)
+	const queries: any[] = []
+	const idxByKey = new Map()
+
+	t.equal(values.map(v => internGvQueryEntry(v, queries, idxByKey)).filter(Boolean).length, 0, 'should intern nothing')
+	t.equal(queries.length, 0, 'should not create a queries[] entry')
+	t.deepEqual(values, before, 'should leave the values untouched')
+
+	t.equal(restoreGvQueryEntry(values[0], queries), false, 'should restore nothing')
+	t.equal(restoreGvQueryEntry({ $q: 0 }, undefined), false, 'should restore nothing without queries[]')
+	t.equal(getGvQueryKey({}), '', 'a value with no entry has no key')
 	t.end()
 })

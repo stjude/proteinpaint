@@ -2,7 +2,7 @@ import { Vocab } from './Vocab'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
-import { isDictionaryType, isSingleCellTerm } from '#shared/terms.js'
+import { isDictionaryType, isSingleCellTerm, restoreGvQueryEntry } from '#shared/terms.js'
 
 export class TermdbVocab extends Vocab {
 	// getAbortSignal() will be used to cancel async fetch requests or canvas rendering that may
@@ -906,12 +906,10 @@ export class TermdbVocab extends Vocab {
 
 									if (d.values) {
 										for (const v of d.values) {
-											// the query entry this value was found through. Applies to
-											// every value, not only the class-coded ones below
-											if (queries && v.$q !== undefined) {
-												Object.assign(v, queries[v.$q])
-												delete v.$q
-											}
+											/* the query entry this value was found through, the inverse of
+											the interning in termdb.get_matrix.js. Applies to every value,
+											not only the class-coded ones below */
+											restoreGvQueryEntry(v, queries)
 											if (!v.class && v.$) {
 												// rehydrate stripped props
 												Object.assign(v, $objAssign[v.$])
