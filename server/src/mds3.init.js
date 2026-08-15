@@ -54,7 +54,7 @@ import {
 } from './aiProjectAdmin/aiProjectSelectedWSImages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
-import { dtTermTypes } from '#shared/terms.js'
+import { dtTermTypes, getGvQueryRegion, getGvQueryKey } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { isNumeric } from '#shared/helpers.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
@@ -3025,7 +3025,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					if (s.sample_id === null || s.sample_id === undefined) continue
 					// create new m2{} for each mutation in each sample
 					const m2 = {
-						gene: gene.name,
 						isoform: m.isoform,
 						dt: m.dt,
 						chr: gene.chr,
@@ -3033,6 +3032,12 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 						mname: m.mname,
 						label: termdbmclass?.[m.class]?.label || mclass[m.class].label
 					}
+					/* which entry of term.genes[] this value came from. .gene is a symbol and
+					is absent for a queried region, which has none; .region carries the query
+					either way. See getGvQueryRegion() in shared/utils/src/terms.ts */
+					if (gene.gene) m2.gene = gene.gene
+					const queryRegion = getGvQueryRegion(gene)
+					if (queryRegion) m2.region = queryRegion
 					if (m.start) m2.start = m.start
 					if (m.stop) m2.stop = m.stop
 					if (m.pos) m2.pos = m.pos
@@ -3117,7 +3122,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					if (group.type != 'filter') throw 'unexpected group.type'
 					values = []
 					const filter = group.filter
-					const [pass, tested] = filterByTvsLst(filter, mlst, values, tw)
+					const [pass, tested] = filterByTvsLst(filter, mlst, values)
 					return pass
 				})
 
@@ -3217,24 +3222,33 @@ function addDataAvailability(sid, sample2mlst, dtKey, c, origin, sampleFilter, g
 	if (sampleFilter && !sampleFilter.has(sid)) return
 	if (!sample2mlst.has(sid)) sample2mlst.set(sid, [])
 	const mlst = sample2mlst.get(sid)
+	// a status value records its query entry the same way a mutation does, see the m2{}
+	// built in mayGetGeneVariantData()
+	const status = { dt: Number(dtKey), class: c, label: mclass[c].label, _SAMPLEID_: sid }
+	if (gene.gene) status.gene = gene.gene
+	const queryRegion = getGvQueryRegion(gene)
+	if (queryRegion) status.region = queryRegion
+	// matched on the query entry rather than on a name, so that a term over several genes
+	// or regions gets one status per entry
+	const key = getGvQueryKey(status)
 	if (origin) {
-		if (!mlst.some(m => m.gene == gene.name && m.dt == dtKey && m.origin == origin)) {
+		if (!mlst.some(m => getGvQueryKey(m) == key && m.dt == dtKey && m.origin == origin)) {
 			// sample does not have a mutation with this origin for this dt
 			// sample will be annotated with the given class for the given origin
-			mlst.push({ gene: gene.name, dt: Number(dtKey), class: c, label: mclass[c].label, origin, _SAMPLEID_: sid })
+			mlst.push({ ...status, origin })
 		}
 	} else {
-		if (!mlst.some(m => m.gene == gene.name && m.dt == dtKey)) {
+		if (!mlst.some(m => getGvQueryKey(m) == key && m.dt == dtKey)) {
 			// sample does not have a mutation for this dt
 			// sample will be annotated with the given class
-			mlst.push({ gene: gene.name, dt: Number(dtKey), class: c, label: mclass[c].label, _SAMPLEID_: sid })
+			mlst.push(status)
 		}
 	}
 	sample2mlst.set(sid, mlst)
 }
 
 // function to filter a sample based on its mlst and a tvslst
-export function filterByTvsLst(filter, mlst, values, tw) {
+export function filterByTvsLst(filter, mlst, values) {
 	if (filter.type != 'tvslst') throw 'unexpected filter.type'
 	const passLst = []
 	const testedLst = []
@@ -3244,7 +3258,7 @@ export function filterByTvsLst(filter, mlst, values, tw) {
 	positive evidence, and its matches must not be drawn as the variants of the group */
 	const matched = values ? [] : undefined
 	for (const item of filter.lst) {
-		const [pass, tested] = filterByItem(item, mlst, matched, tw)
+		const [pass, tested] = filterByItem(item, mlst, matched)
 		passLst.push(pass)
 		testedLst.push(tested)
 	}
@@ -3265,10 +3279,8 @@ export function filterByTvsLst(filter, mlst, values, tw) {
 }
 
 // function to filter a sample based on its mlst and a filter item
-export function filterByItem(filter, mlst, values, tw) {
-	// tw must be passed along: a cnv tvs nested in a sublist still needs it to
-	// resolve the coordinates of the queried gene, see mayFilterCnvByOverlap()
-	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst, values, tw)
+export function filterByItem(filter, mlst, values) {
+	if (filter.type == 'tvslst') return filterByTvsLst(filter, mlst, values)
 	if (filter.type != 'tvs') throw 'unexpected filter.type'
 	const tvs = filter.tvs
 	if (!dtTermTypes.has(tvs.term.type)) throw 'tvs term is not dt term'
@@ -3303,7 +3315,7 @@ export function filterByItem(filter, mlst, values, tw) {
 				const cnvLength = m.stop - m.start
 				if (!cnvLength) return false
 				if (tvs.cnvMaxLength && cnvLength > tvs.cnvMaxLength) return false
-				if (tvs.fractionOverlap && !mayFilterCnvByOverlap(m, tvs, tw)) return false
+				if (tvs.fractionOverlap && !mayFilterCnvByOverlap(m, tvs)) return false
 				let intvs
 				if (m.value > 0) {
 					// cnv gain
@@ -3483,26 +3495,24 @@ function addAlleleCnts(m, mafFieldId, alleleCnts) {
 	return true
 }
 
-// may filter cnv segment by a minimum overlap with query
-function mayFilterCnvByOverlap(cnv, tvs, tw) {
+/* may filter cnv segment by a minimum overlap with the region that was queried.
+
+The region comes off the segment itself, which records it as .region (see the m2{} built in
+mayGetGeneVariantData). Nothing has to be looked up: this used to search the tw's genes[]
+for the entry whose name matched cnv.gene, which coupled the filter to a term it is not
+otherwise given, and silently failed for a kind='coord' entry -- those have no .gene, so a
+region term never matched and every cnv tvs carrying a fractionOverlap threw. */
+function mayFilterCnvByOverlap(cnv, tvs) {
 	if (!tvs.fractionOverlap) return true
 	if (!Number.isFinite(tvs.fractionOverlap)) throw new Error('tvs.fractionOverlap is non-numeric')
 	if (tvs.fractionOverlap < 0 || tvs.fractionOverlap > 1) throw new Error('tvs.fractionOverlap is out of range')
-	/* the queried gene comes off tw.term, whose genes[] mayMapGeneName2coord() annotated
-	with the coordinates when the cnv query ran. a groupset tvs is evaluated against the tw
-	that holds the groupset and carries no parentTerm of its own (see setGroupsetParentTerms()
-	in shared/utils/src/terms.ts), so there the tw is the only source. a standalone tvs of a
-	mass filter has no tw, and falls back to its own parentTerm, which is the term its caller
-	queried with and so is annotated the same way, see get_dtTerm() in termdb.filter.js */
-	const term = tw?.term || tvs.term.parentTerm
-	if (!term?.genes) throw new Error('cnv tvs has neither a tw nor a parentTerm to resolve the gene from')
-	const gene = term.genes.find(g => g.gene == cnv.gene)
-	if (!gene) throw new Error(`no queried gene matches cnv.gene='${cnv.gene}'`)
-	for (const v of [gene.start, gene.stop, cnv.start, cnv.stop]) {
+	const query = cnv.region
+	if (!query) throw new Error('cnv value has no .region to measure the overlap against')
+	for (const v of [query.start, query.stop, cnv.start, cnv.stop]) {
 		if (!Number.isInteger(v)) throw new Error(`${v} is not an integer`)
 	}
-	const queryLength = gene.stop - gene.start
-	const overlapLength = Math.max(0, Math.min(gene.stop, cnv.stop) - Math.max(gene.start, cnv.start))
+	const queryLength = query.stop - query.start
+	const overlapLength = Math.max(0, Math.min(query.stop, cnv.stop) - Math.max(query.start, cnv.start))
 	const fractionOverlap = overlapLength / queryLength
 	return fractionOverlap >= tvs.fractionOverlap
 }

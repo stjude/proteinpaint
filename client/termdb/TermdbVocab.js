@@ -865,7 +865,9 @@ export class TermdbVocab extends Vocab {
 						const $objAssign = data.refs.$codes.objAssign || {}
 
 						for (const tw of copies) {
-							const { shortId, gene } = data.refs.byTermId[tw.$id] || frozenEmptyObj // avoid unnecessarily creating placeholder objects
+							// queries[] holds the distinct geneVariant query entries of the term,
+							// which each value references by index, see internQueryEntry()
+							const { shortId, queries } = data.refs.byTermId[tw.$id] || frozenEmptyObj // avoid unnecessarily creating placeholder objects
 							const origTw = opts.terms.find(o => o.$id === tw.$id)
 
 							for (const [sampleId, sample] of Object.entries(data.samples)) {
@@ -902,10 +904,15 @@ export class TermdbVocab extends Vocab {
 									// rehydrate stripped props
 									if (d.$) d[$copyAs[d.$]] = d.key
 
-									if (gene && d.values) {
+									if (d.values) {
 										for (const v of d.values) {
+											// the query entry this value was found through. Applies to
+											// every value, not only the class-coded ones below
+											if (queries && v.$q !== undefined) {
+												Object.assign(v, queries[v.$q])
+												delete v.$q
+											}
 											if (!v.class && v.$) {
-												v.gene = gene
 												// rehydrate stripped props
 												Object.assign(v, $objAssign[v.$])
 												delete v.$
