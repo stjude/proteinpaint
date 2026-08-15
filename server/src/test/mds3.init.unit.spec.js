@@ -46,6 +46,8 @@ Tests:
 	filterByTvsLst: multiple tvs, AND join
 	filterByTvsLst: in=false
 	filterByTvsLst: nested tvslst
+	filterByTvsLst: nested cnv tvs resolves gene coords from the tw
+	filterByTvsLst: values[] only collects mutations of a matching tvs
 	mayFilterByMaf: basic mafFilter
 	mayFilterByMaf: mafFilter with child ids
 	mayFilterByMaf: basic mafFilter, min allelic depth
@@ -1749,6 +1751,155 @@ test('filterByTvsLst: nested tvslst', t => {
 		const [pass, tested] = filterByTvsLst(filter, mlst)
 		t.equal(pass, true, 'Sample passes filter')
 		t.equal(tested, false, 'Sample is not tested')
+	}
+})
+
+test('filterByTvsLst: nested cnv tvs resolves gene coords from the tw', t => {
+	t.plan(4)
+	/* a cnv tvs built by the config ui always carries fractionOverlap, and the parentTerm
+	it carries never has gene coords: those are only annotated onto tw.term when the cnv
+	query runs. so the tw has to reach the tvs even when it sits in a sublist, as it does
+	in a custom groupset that mixes joins */
+	const parentTerm = {
+		name: 'TP53',
+		type: 'geneVariant',
+		genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53' }]
+	}
+	const tw = {
+		term: {
+			name: 'TP53',
+			type: 'geneVariant',
+			genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', chr: 'chr17', start: 0, stop: 100 }]
+		}
+	}
+	const cnvTvs = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 4, type: 'dtcnv', parentTerm },
+			values: [],
+			continuousCnv: true,
+			cnvGainCutoff: 0.5,
+			cnvLossCutoff: -0.5,
+			cnvMaxLength: null,
+			fractionOverlap: 0.8
+		}
+	}
+	const snvTvs = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+			genotype: 'variant',
+			mcount: 'any'
+		}
+	}
+	const filter = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [snvTvs, { type: 'tvslst', in: true, join: 'or', lst: [cnvTvs] }]
+	}
+	{
+		// segment spans the whole gene
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 4, gene: 'TP53', value: 1, start: 0, stop: 100 }
+		]
+		const [pass, tested] = filterByTvsLst(filter, mlst, undefined, tw)
+		t.equal(pass, true, 'Sample passes when the nested cnv segment meets the overlap')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		// segment spans 10% of the gene, under the 0.8 fraction
+		const mlst = [
+			{ dt: 1, class: 'M' },
+			{ dt: 4, gene: 'TP53', value: 1, start: 0, stop: 10 }
+		]
+		const [pass, tested] = filterByTvsLst(filter, mlst, undefined, tw)
+		t.equal(pass, false, 'Sample fails when the nested cnv segment is under the overlap')
+		t.equal(tested, true, 'Sample is tested')
+	}
+})
+
+test('filterByTvsLst: values[] only collects mutations of a matching tvs', t => {
+	t.plan(6)
+	// values[] is rendered as the variants of the group a sample was assigned to,
+	// so a tvs that did not match must not contribute to it
+	const mutTvs = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+			genotype: 'variant',
+			mcount: 'any'
+		}
+	}
+	const wtTvs = {
+		type: 'tvs',
+		tvs: { term: { dt: 1, type: 'dtsnvindel' }, values: [], genotype: 'wt' }
+	}
+	const cnvGainTvs = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 4, type: 'dtcnv' },
+			values: [],
+			continuousCnv: true,
+			cnvGainCutoff: 0.5,
+			cnvLossCutoff: -0.5
+		}
+	}
+	// a neutral cnv tvs matches a sample that has no qualifying segment, so the
+	// segments it does find are why it failed, not evidence that it matched
+	const cnvWtTvs = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 4, type: 'dtcnv' },
+			values: [],
+			continuousCnv: true,
+			cnvGainCutoff: 0.5,
+			cnvLossCutoff: -0.5,
+			cnvWT: true
+		}
+	}
+	const snv = { dt: 1, class: 'M' }
+	const gain = { dt: 4, value: 1, start: 0, stop: 50 }
+
+	{
+		// "mutated OR cnv neutral": the snvindel tvs assigns the sample, the cnv tvs
+		// fails, so its gain segment is not a variant of the group
+		const filter = { type: 'tvslst', in: true, join: 'or', lst: [mutTvs, cnvWtTvs] }
+		const values = []
+		const [pass] = filterByTvsLst(filter, [snv, gain], values)
+		t.equal(pass, true, 'Sample passes on the matching tvs of an or join')
+		t.deepEqual(values, [snv], 'should collect the mutation of the matching tvs only')
+	}
+	{
+		// a sublist that fails contributes nothing, even though its own cnv tvs matched
+		const filter = {
+			type: 'tvslst',
+			in: true,
+			join: 'or',
+			lst: [mutTvs, { type: 'tvslst', in: true, join: 'and', lst: [cnvGainTvs, wtTvs] }]
+		}
+		const values = []
+		const [pass] = filterByTvsLst(filter, [snv, gain], values)
+		t.equal(pass, true, 'Sample passes on the matching tvs of an or join')
+		t.deepEqual(values, [snv], 'should discard the mutations of a failing sublist')
+	}
+	{
+		/* the gain segment matches the cnv tvs of the negated sublist, which is exactly
+		why that sublist rejects the sample. the sample is assigned by the snvindel tvs
+		of the or join instead, so the segment is not a variant of the group */
+		const filter = {
+			type: 'tvslst',
+			in: true,
+			join: 'or',
+			lst: [mutTvs, { type: 'tvslst', in: false, join: '', lst: [cnvGainTvs] }]
+		}
+		const values = []
+		const [pass] = filterByTvsLst(filter, [snv, gain], values)
+		t.equal(pass, true, 'Sample passes on the matching tvs of an or join')
+		t.deepEqual(values, [snv], 'should discard the mutations matched by a negated sublist')
 	}
 })
 
