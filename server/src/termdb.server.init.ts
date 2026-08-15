@@ -134,25 +134,42 @@ export function server_init_db_queries(ds) {
 
 		const fakeAncestors = {
 			// !!! TODO: remove this test code !!!
-			41: 1,
-			42: 2,
-			43: 3,
-			47: 1,
-			48: 2
+			41: [
+				{ ancestor_id: 40, distance: 1 },
+				{ ancestor_id: 30, distance: 2 }
+			],
+			42: [
+				{ ancestor_id: 40, distance: 1 },
+				{ ancestor_id: 30, distance: 2 }
+			],
+			43: [
+				{ ancestor_id: 40, distance: 1 },
+				{ ancestor_id: 30, distance: 2 }
+			],
+
+			47: [
+				{ ancestor_id: 46, distance: 1 },
+				{ ancestor_id: 30, distance: 2 }
+			],
+			48: [
+				{ ancestor_id: 46, distance: 1 },
+				{ ancestor_id: 30, distance: 2 }
+			]
+
+			// 40: [{ ancestor_id: 30, distance: 1 }],
+			// 46: [{ ancestor_id: 30, distance: 1 }]
 		}
 
 		if (ds.cohort.termdb.hasSampleAncestry) {
 			const rows = cn.prepare('SELECT * FROM sample_ancestry').all()
 			for (const { sample_id, ancestor_id, distance } of rows) {
-				if (fakeAncestors[sample_id]) console.log('-------00------', sample_id, ancestor_id, fakeAncestors[sample_id])
-				const id = sample_id
-				if (!i2ancestors.has(id)) i2ancestors.set(id, [])
-				const ancestor = {
-					ancestor_id: ancestor_id - (fakeAncestors[sample_id] || 0), // !!! TODO: remove this adjustment for testing !!!
-					distance: distance
+				if (!i2ancestors.has(sample_id)) i2ancestors.set(sample_id, [])
+				if (fakeAncestors[sample_id]) {
+					i2ancestors.get(sample_id).push(...fakeAncestors[sample_id])
+					console.log('-------00------', sample_id, ancestor_id, i2ancestors.get(sample_id))
+				} else {
+					i2ancestors.get(sample_id).push({ ancestor_id: sample_id, distance })
 				}
-				if (fakeAncestors[sample_id]) console.log('---', sample_id, ancestor)
-				i2ancestors.get(id).push(ancestor)
 			}
 		}
 
