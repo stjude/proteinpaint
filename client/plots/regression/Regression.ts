@@ -20,7 +20,7 @@ regression.js
 	regression.results.js
 */
 
-class Regression extends PlotBase implements RxComponent{
+class Regression extends PlotBase implements RxComponent {
 	static type = 'regression'
 
 	type: string
@@ -166,7 +166,7 @@ export async function getPlotConfig(opts: any, app: AppApi, activeCohort: number
 	// without an outcome, config.outcome is left unset rather than "outcome:undefined",
 	// so that the input ui shows a blank outcome pill for user to fill in
 	if (opts.outcome) {
-		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(opts.regressionType, 'outcome'))
+		await fillTermWrapper(opts.outcome, app.vocabApi, getDefaultQ4tw(opts.outcome, opts.regressionType, 'outcome'))
 		config.outcome = opts.outcome
 	}
 
@@ -176,7 +176,7 @@ export async function getPlotConfig(opts: any, app: AppApi, activeCohort: number
 			await fillTermWrapper(
 				t,
 				app.vocabApi,
-				t.q?.mode ? undefined : get_defaultQ4fillTW(opts.regressionType, 'independent')
+				t.q?.mode ? undefined : getDefaultQ4tw(t, opts.regressionType, 'independent')
 			)
 		}
 		config.independent = opts.independent
@@ -272,9 +272,28 @@ export function get_defaultQ4fillTW(regressionType, useCase = '') {
 		}
 	}
 
-	// geneVariant term
+	/* geneVariant term. only a grouped geneVariant tw is usable here, so one arriving with no
+	grouping of its own gets the first predefined groupset. see getDefaultQ4tw() for why this
+	must not reach a tw that already has a groupset */
 	defaultQ['geneVariant'] = { type: 'predefined-groupset' }
 
+	return defaultQ
+}
+
+/*
+The defaultQ for filling one tw, which is the shared one above minus any entry that would
+overwrite what this tw already says.
+
+fill() copyMerges the defaultQ into tw.q, so an entry only means "default" for a tw that has
+not made the choice itself. The callers test tw.q.mode for that, which a geneVariant tw never
+has: it states its grouping in q.type. Without dropping the geneVariant entry here, a tw
+carrying a custom groupset -- from a url, or from a saved session being rehydrated by
+getPlotConfig() -- is silently replaced by the predefined groupset on every fill, so the
+analysis that comes back is not the one the tw asked for.
+*/
+function getDefaultQ4tw(tw, regressionType, useCase) {
+	const defaultQ = get_defaultQ4fillTW(regressionType, useCase)
+	if (tw?.term?.type == 'geneVariant' && tw.q?.type) delete defaultQ.geneVariant
 	return defaultQ
 }
 

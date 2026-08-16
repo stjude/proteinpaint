@@ -3342,7 +3342,8 @@ export function filterByItem(filter, mlst, values) {
 				mlst_intvs = mlst_tested.filter(m => {
 					// a value entry without .mname matches any mutation of its class;
 					// with .mname (e.g. "G12D") it matches only that amino acid change,
-					// further restricted to .gene when set (for geneset terms).
+					// further restricted to the gene or region it names, see
+					// matchesGvQueryEntry() in shared/utils/src/terms.ts.
 					// for a sv/fusion, an entry with .partnerBreakpointRange only matches
 					// an event whose breakpoint on the partner gene is in that range
 					if (
