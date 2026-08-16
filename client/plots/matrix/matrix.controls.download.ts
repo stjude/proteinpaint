@@ -94,7 +94,11 @@ export function setDownloadBtn(self: MatrixControls) {
 												(v.origin ? `${v.origin} ` : '') +
 													(hasAssayAvailability ? `${dt2label[v.dt]}:` : '') +
 													`${mclass[v.class]?.label}` +
-													(v.gene && v.mname ? `(${v.gene}::${v.mname})` : '')
+													/* mname is the partner gene of the fusion, so it is emitted whenever
+													present. The queried gene prefixes it as the usual BCR::ABL1 notation;
+													a queried region has no gene to name, and its coordinates are not put
+													in an export, so the partner stands alone there */
+													(v.mname ? `(${v.gene ? `${v.gene}::` : ''}${v.mname})` : '')
 											)
 										} else {
 											allVariant.push(`DO NOT SUPPORT dt='${v.dt}'`)
