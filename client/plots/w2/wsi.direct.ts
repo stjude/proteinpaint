@@ -56,6 +56,8 @@ export async function init(
 		/** display name when slide is not given (e.g. the spatial image fileName) */
 		label?: string
 		cellBoundaries?: string
+		/** fetch cellBoundaries (expression fills need the polygons) but don't draw their strokes */
+		hideCellStrokes?: boolean
 		nucleusBoundaries?: string
 		annotationLevel?: string | number
 		geneExpression?: string
@@ -174,7 +176,10 @@ export async function init(
 			if (!file) continue
 			try {
 				const polys = await fetchBoundaries(host, sq, file, mppX, mppY)
-				if (file === opts.cellBoundaries) cellPolys = polys
+				if (file === opts.cellBoundaries) {
+					cellPolys = polys
+					if (opts.hideCellStrokes) continue
+				}
 				map.addLayer(strokeLayer(polys, color, maxResolution))
 			} catch (e: any) {
 				sayerror(holder, `Error loading ${file}: ${e.message || e}`)
