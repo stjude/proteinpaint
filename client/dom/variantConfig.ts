@@ -326,6 +326,12 @@ export function renderVariantConfig(arg: Arg) {
 			different query entries can be told apart */
 			const showGene = new Set(mnames.map(scopeLabel).filter(s => s)).size > 1
 			showGeneInMnames = showGene
+			/* the column can hold either kind, so it is only headed Gene or Region when every
+			row is of that kind. A term mixing the two gets both, rather than heading a column
+			of coordinates as genes */
+			const hasGeneScope = mnames.some(m => m.gene)
+			const hasRegionScope = mnames.some(m => !m.gene && m.region)
+			const scopeColumnLabel = hasGeneScope && hasRegionScope ? 'Gene/Region' : hasRegionScope ? 'Region' : 'Gene'
 			const mnameRows: any[] = []
 			const selectedMnameIdxs: number[] = []
 			// count cell of each variant, k: index in mnames[]. refilled by
@@ -350,7 +356,7 @@ export function renderVariantConfig(arg: Arg) {
 					selectedMnameIdxs.push(i)
 			}
 			const mnameColumns: any[] = [{ label: 'Variant' }, { label: 'Class' }, { label: 'Samples', align: 'right' }]
-			if (showGene) mnameColumns.unshift({ label: mnames.some(m => m.gene) ? 'Gene' : 'Region' })
+			if (showGene) mnameColumns.unshift({ label: scopeColumnLabel })
 			if (canSelectBreakpoint) mnameColumns.push({ label: 'Breakpoint' })
 			renderTable({
 				rows: mnameRows,
