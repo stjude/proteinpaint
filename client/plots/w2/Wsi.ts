@@ -1,6 +1,8 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '../PlotBase'
 import type { BasePlotConfig, MassState } from '#mass/types/mass'
+import type { SpatialImage } from '#types'
+import { controlsInit } from '../controls'
 import type Settings from './Settings.ts'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
@@ -14,6 +16,7 @@ import { WsiInteractions } from './interactions/WsiInteractions'
  interactions dispatching state edits. */
 type WsiDom = {
 	div: any
+	controls: any
 	error: any
 	table: any
 	viewer: any
@@ -34,6 +37,8 @@ class Wsi extends PlotBase implements RxComponent {
 		const div = holder.append('div').style('padding', '5px')
 		this.dom = {
 			div,
+			// burger menu for spatial viewer settings; hidden until a spatial image is shown
+			controls: div.append('div').attr('id', 'sjpp-wsi-controls').style('display', 'none'),
 			error: div.append('div').attr('id', 'sjpp-wsi-error').style('opacity', 0.75),
 			table: div.append('div').attr('id', 'sjpp-wsi-table'),
 			viewer: div.append('div').attr('id', 'sjpp-wsi-viewer')
@@ -83,7 +88,69 @@ class Wsi extends PlotBase implements RxComponent {
 		const selectedSample = viewModel.viewData.selectedSample
 		const images = selectedSample ? (await model.getImages(selectedSample.sampleId)).images ?? [] : []
 
+		// spatial image: rename the sandbox header and show the burger menu
+		const isSpatial = images[0]?.type == 'spatial'
+		this.dom.header?.text(isSpatial ? 'SPATIAL VIEWER' : 'WHOLE SLIDE IMAGES')
+		if (isSpatial && !this.components.controls) await this.setControls(images[0] as SpatialImage)
+		this.dom.controls.style('display', isSpatial ? 'inline-block' : 'none')
+
 		await new View(this.dom, viewModel.viewData, images, settings, this.interactions, this.state.vocab).render()
+	}
+
+	/** Burger menu with the spatial overlay settings; dataset values (shown as
+	 placeholders) apply until the user edits a field. */
+	private async setControls(image: SpatialImage) {
+		this.components.controls = await controlsInit({
+			app: this.app,
+			id: this.id,
+			holder: this.dom.controls,
+			inputs: [
+				{
+					label: 'Nucleus boundaries',
+					title: 'Show or hide the nucleus segmentation overlay',
+					type: 'checkbox',
+					chartType: 'wsi',
+					settingsKey: 'showNucleusBoundaries',
+					boxLabel: 'show'
+				},
+				{
+					label: 'Cell boundaries',
+					title: 'Show or hide the cell segmentation overlay',
+					type: 'checkbox',
+					chartType: 'wsi',
+					settingsKey: 'showCellBoundaries',
+					boxLabel: 'show'
+				},
+				{
+					label: 'Gene expression',
+					title: 'Comma-separated gene names to overlay; clear the field for no overlay',
+					type: 'text',
+					chartType: 'wsi',
+					settingsKey: 'geneExpression',
+					placeholder: image.geneExpression || 'gene1,gene2,…'
+				},
+				{
+					label: 'Overlay mode',
+					title: 'Color each gene separately (gene_expression), or sum all genes into one overlay (gene_groups)',
+					type: 'radio',
+					chartType: 'wsi',
+					settingsKey: 'spatialMode',
+					options: [
+						{ label: 'Per gene', value: 'gene_expression' },
+						{ label: 'Gene group', value: 'gene_groups' }
+					]
+				},
+				{
+					label: 'Annotation level',
+					title: 'Show boundaries only within the n most zoomed-in levels; 0 = always show',
+					type: 'number',
+					chartType: 'wsi',
+					settingsKey: 'annotationLevel',
+					min: 0,
+					step: 1
+				}
+			]
+		})
 	}
 }
 
@@ -93,7 +160,13 @@ export const componentInit = wsiInit
 export function getDefaultWsiSettings(overrides = {}): Settings {
 	const defaults: Settings = {
 		selectedSampleIndex: 0, // first sample selected on launch
-		viewerHeight: '70vh'
+		viewerHeight: '70vh',
+		// spatial overlay settings; null = fall back to the dataset's values
+		showCellBoundaries: true,
+		showNucleusBoundaries: true,
+		geneExpression: null,
+		annotationLevel: null,
+		spatialMode: 'gene_expression'
 	}
 	return Object.assign(defaults, overrides)
 }

@@ -62,17 +62,23 @@ export class View {
 
 		if (image.type == 'spatial') {
 			// spatial (Xenium) image: reuse the direct viewer, which draws the
-			// boundary/expression overlays, addressing the slide via the dataset
+			// boundary/expression overlays, addressing the slide via the dataset.
+			// Burger-menu settings override the dataset's values (null = not edited yet)
+			const s = this.settings
+			const genes = s.geneExpression ?? image.geneExpression
 			const direct = await import('../wsi.direct')
 			await direct.init(
 				{
 					slideQuery: params,
 					label: image.fileName,
-					cellBoundaries: image.cellBoundaries,
-					nucleusBoundaries: image.nucleusBoundaries,
+					// expression fills need the cell polygons even when their strokes are hidden
+					cellBoundaries: s.showCellBoundaries || genes ? image.cellBoundaries : undefined,
+					hideCellStrokes: !s.showCellBoundaries,
+					nucleusBoundaries: s.showNucleusBoundaries ? image.nucleusBoundaries : undefined,
 					geneExpressionFile: image.geneExpressionFile,
-					geneExpression: image.geneExpression,
-					annotationLevel: image.annotationLevel,
+					geneExpression: s.spatialMode == 'gene_groups' ? undefined : genes,
+					geneGroups: s.spatialMode == 'gene_groups' ? genes : undefined,
+					annotationLevel: s.annotationLevel ?? image.annotationLevel,
 					width: '100%',
 					height: this.settings.viewerHeight
 				},
