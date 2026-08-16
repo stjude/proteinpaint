@@ -386,8 +386,9 @@ The dt term of a tvs carries a parentTerm, but for two unrelated reasons:
   makeGroupUI() in client/termsetting/handlers/geneVariant.ts).
 
 So a groupset gets its parentTerms rebuilt on every fill() instead of storing them, which
-lets both trims above drop them, and lets the server read the gene off tw.term (see
-mayFilterCnvByOverlap() in server/src/mds3.init.js).
+lets both trims above drop them: a groupset tvs is evaluated against the tw that holds it,
+and get_dtTerm() in server/src/termdb.filter.js is the only server-side reader of a
+parentTerm, so nothing there misses the one a groupset does not store.
 
 One snapshot is shared by reference across the tvs, as the child dt terms of a predefined
 groupset already are. That is only safe because the trims drop it before it is ever
