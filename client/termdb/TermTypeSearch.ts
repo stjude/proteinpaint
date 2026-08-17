@@ -1,6 +1,6 @@
 import { Tabs } from '#dom'
 import { type AppApi, getCompInit } from '../rx'
-import { TermTypeGroups, typeGroup, numericTypes, isSingleCellTerm } from '#shared/terms.js'
+import { TermTypeGroups, typeGroup, numericTypes, isSingleCellTerm, isNonDictionaryType } from '#shared/terms.js'
 import { TermTypes, type Term } from '#types'
 import type { ClientGenome } from '../types/clientGenome'
 import { select } from 'd3-selection'
@@ -633,10 +633,9 @@ export function getAllowedTermTypesForUseCase(state, app) {
 		if (target == 'regression') {
 			//regression snplst/snplocus cases will be handled when the search handler is added
 			if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
-			if (type == TermTypes.GENE_VARIANT && detail != 'independent') continue
-			if (type == TermTypes.GENE_EXPRESSION && detail != 'independent') continue
-			if (type == TermTypes.DNA_METHYLATION && detail != 'independent') continue
-			if (type == TermTypes.SSGSEA && detail != 'independent') continue
+			/* the outcome variable must be a dictionary term, as enforced by
+			TermdbVocab.getRegressionData(); non-dictionary terms are only offered as independent */
+			if (detail != 'independent' && isNonDictionaryType(type)) continue
 		}
 
 		if (target == 'sampleScatter') {

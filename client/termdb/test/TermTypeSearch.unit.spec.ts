@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { getAllowedTermTypesForUseCase, getAllowedTabs, useCasesExcluded } from '../TermTypeSearch'
-import { TermTypeGroups } from '#shared/terms.js'
+import { TermTypeGroups, typeGroup } from '#shared/terms.js'
 import { TermTypes } from '#types'
 
 /*
@@ -9,6 +9,7 @@ Tests:
 	getAllowedTabs() - SNP_LIST and SNP_LOCUS exclusion
 	getAllowedTabs() - usecase filtering for survival with detail=term
 	getAllowedTabs() - usecase filtering for regression with detail=independent
+	getAllowedTabs() - regression should only allow non-dictionary term types as independent variables
 	getAllowedTabs() - usecase filtering for dataDownload
 	getAllowedTabs() - usecase filtering for sampleScatter with numeric detail
 	getAllowedTabs() - term type group deduplication
@@ -190,6 +191,43 @@ tape('getAllowedTabs() - usecase filtering for regression with detail=outcome', 
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		'Should exclude GENE_VARIANT and GENE_EXPRESSION when detail != independent'
 	)
+
+	test.end()
+})
+
+tape('getAllowedTabs() - regression should only allow non-dictionary term types as independent variables', test => {
+	/* the regression outcome must be a dictionary term, so the tabs of these non-dictionary
+	types must only show for detail=independent. listed literally, instead of derived from
+	isNonDictionaryType(), so that the expected term types are asserted and not just restated */
+	const independentOnlyTypes = [
+		TermTypes.GENE_VARIANT,
+		TermTypes.GENE_EXPRESSION,
+		TermTypes.ISOFORM_EXPRESSION,
+		TermTypes.DNA_METHYLATION,
+		TermTypes.SSGSEA,
+		TermTypes.METABOLITE_INTENSITY,
+		TermTypes.PROTEOME_ABUNDANCE,
+		TermTypes.PSEUDOBULK,
+		TermTypes.JUNCTION
+	]
+	const opts = {
+		allowedTermTypes: [TermTypes.CATEGORICAL, ...independentOnlyTypes],
+		queries: { snvindel: { dt: 1 } } // required for the GENE_VARIANT tab to be labeled
+	}
+
+	for (const detail of ['outcome', 'independent']) {
+		const { self, state } = mockSelfAndState(opts, { tree: { usecase: { target: 'regression', detail } } })
+		const groups = getAllowedTabs(state, self).map(t => t.termTypeGroup)
+
+		test.ok(groups.includes(TermTypeGroups.DICTIONARY_VARIABLES), `Should include DICTIONARY_VARIABLES for ${detail}`)
+		for (const type of independentOnlyTypes) {
+			test.equal(
+				groups.includes(typeGroup[type]),
+				detail == 'independent',
+				`Should ${detail == 'independent' ? 'include' : 'exclude'} ${typeGroup[type]} for regression ${detail}`
+			)
+		}
+	}
 
 	test.end()
 })
