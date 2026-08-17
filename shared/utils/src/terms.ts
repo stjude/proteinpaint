@@ -602,10 +602,12 @@ export function getBin(lst: any[], value: number) {
 		)
 	return bin
 }
-//Terms may  have a sample type associated to them, in datasets with multiple types of samples.
-//For example the gender is associated to the patient while the age is associated to the type sample. This function is used
-//for example when calling getData or getFilter, to return either the parent or the child samples, depending on the use case.
-export function getSampleType(term: any, ds: any) {
+
+// get sample type of term
+export function getSampleType(tw: any, ds: any) {
+	if (!tw) return null
+	if (tw.q?.sampleType) return tw.q.sampleType
+	const term = tw.term
 	if (!term) return null
 	//non dict terms annotate only samples, eg: gene expression, metabolite intensity, gene variant.
 	//Their sample type is the default sample type that may or may not have a parent type, depending on the dataset
@@ -640,7 +642,7 @@ export function getParentType(types: Set<string>, ds: any) {
 // whether the term annotates parent samples
 export function isParentType(term: any, ds: any) {
 	if (!ds.cohort.termdb.hasSampleAncestry) return false
-	const sampleType = getSampleType(term, ds)
+	const sampleType = getSampleType({ term }, ds)
 	if (!sampleType) throw 'sample type is not defined'
 	const sampleTypeObj = ds.cohort.termdb.sampleTypes[sampleType]
 	if (!sampleTypeObj) throw 'invalid sample type'

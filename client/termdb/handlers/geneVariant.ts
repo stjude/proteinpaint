@@ -165,6 +165,7 @@ export class SearchHandler {
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: this.opts.genomeObj,
+			termdbConfig: this.opts.app.vocabApi.termdbConfig,
 			row: this.dom.searchDiv,
 			/* only allowing gene search for now because:
 			- coordinate search is not yet supported for gdc
@@ -222,9 +223,11 @@ export class SearchHandler {
 		} else {
 			throw 'no gene or position specified'
 		}
+		if (geneSearch.sampleType) this.q.sampleType = geneSearch.sampleType
 		await this.runCallback()
 	}
 
+	// TODO: support sample type selection here too
 	searchGeneSet() {
 		this.dom.searchDiv.selectAll('*').remove()
 		this.dom.searchDiv.style('margin-top', '0px')

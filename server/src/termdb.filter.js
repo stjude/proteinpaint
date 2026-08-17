@@ -57,8 +57,6 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleType, 
 	// cumulative values
 	const values = []
 	for (const [i, item] of filter.lst.entries()) {
-		const sample_type = getSampleType(item.tvs?.term, ds)
-
 		if (item.tvs?.term?.id && (!item.tvs.term.type || !item.tvs.term.name)) {
 			// handle stripped-down dictionary termwrapper
 			item.tvs.term = ds.cohort.termdb.q.termjsonByOneid(item.tvs.term.id)
@@ -159,7 +157,7 @@ function get_categorical(tvs, CTEname, ds, mapParent2Children, sampleType) {
 	FROM anno_categorical 
 	WHERE term_id = ?
 	AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
-	if (mapParent2Children && ds.cohort.termdb.sampleTypes[sampleType].parent_id == getSampleType(tvs.term, ds))
+	if (mapParent2Children && ds.cohort.termdb.sampleTypes[sampleType].parent_id == getSampleType({ term: tvs.term }, ds))
 		query = getChildren(query, sampleType)
 	return {
 		CTEs: [` ${CTEname} AS (${query})`],
@@ -201,7 +199,7 @@ function get_samplelst(tvs, CTEname, ds, mapParent2Children, sampleType) {
 				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${samplesString}) `
 
 	values.push(...samples.map(i => i.sampleId || i.sample))
-	if (mapParent2Children && ds.cohort.termdb.sampleTypes[sampleType].parent_id == getSampleType(tvs.term, ds))
+	if (mapParent2Children && ds.cohort.termdb.sampleTypes[sampleType].parent_id == getSampleType({ term: tvs.term }, ds))
 		query = getChildren(query, sampleType)
 	return {
 		CTEs: [
@@ -689,7 +687,7 @@ so here need to allow both string and number as range.value
 					${combinedClauses ? 'AND (' + combinedClauses + ')' : ''}
 					${excludevalues && excludevalues.length ? `AND value NOT IN (${excludevalues.map(d => '?').join(',')}) ` : ''}`
 
-	if (mapParent2Children && ds.cohort.termdb.sampleTypes[sampleType].parent_id == getSampleType(tvs.term, ds))
+	if (mapParent2Children && ds.cohort.termdb.sampleTypes[sampleType].parent_id == getSampleType({ term: tvs.term }, ds))
 		query = getChildren(query, sampleType)
 
 	return {

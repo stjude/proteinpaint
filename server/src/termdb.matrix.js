@@ -685,6 +685,7 @@ export function maySetMapParent2Children(q, ds, mapParent2Children) {
 		const type = types[0]
 		if (!ds.cohort.termdb.sampleTypes[type]) throw 'invalid sample type'
 		q.mapParent2Children = false
+		q.sampleType = type
 	} else {
 		// multiple sample types, need to map parent to children
 		q.mapParent2Children = true
@@ -837,7 +838,7 @@ function getSampleTypes(q, ds) {
 function getTwSampleTypes(twLst, ds) {
 	const types = new Set()
 	for (const tw of twLst) {
-		const type = getSampleType(tw.term, ds)
+		const type = getSampleType(tw, ds)
 		types.add(type)
 	}
 	return types
@@ -851,7 +852,7 @@ function getFilterSampleTypes(filter, ds) {
 			for (const type of getFilterSampleTypes(item, ds)) types.add(type)
 		} else {
 			if (item.tag == 'cohortFilter') continue
-			const type = getSampleType(item.tvs.term, ds)
+			const type = getSampleType({ term: item.tvs.term }, ds)
 			if (Number.isInteger(type)) types.add(type)
 		}
 	}
@@ -872,7 +873,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 		${CTEs.map((t, i) => {
 			const tw = termWrappers[i]
 			let query
-			const sampleType = getSampleType(tw.term, q.ds)
+			const sampleType = getSampleType(tw, q.ds)
 			if (q.mapParent2Children && q.ds.cohort.termdb.sampleTypes[q.sampleType].parent_id == sampleType) {
 				// need to map parent annotations onto child samples and
 				// term sample type is parent of query sample type
