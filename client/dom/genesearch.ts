@@ -98,6 +98,16 @@ type GeneSearchBoxArg = {
 	hideInputBeforeCallback?: boolean
 	/** option to disable the input, useful in demo mode */
 	disableInput?: boolean
+	/**
+	 * optional termdb config object (e.g. from appState.termdbConfig or cohort.termdb).
+	 * When provided and termdbConfig.hasSampleAncestry is true, a sample type
+	 * drop-down will be rendered next to the search box. The options are taken from
+	 * termdbConfig.sampleTypes[].name / .plural_name.
+	 */
+	termdbConfig?: {
+		hasSampleAncestry?: boolean
+		sampleTypes?: { [key: number]: { name: string; plural_name: string; parent_id: number | null } }
+	}
 	/** if true, allow user to type in a sequence mutation
 	partial support of hgvs https://varnomen.hgvs.org/recommendations/DNA/
 	limited to substitution/insertion/deletion on "g."
@@ -154,6 +164,9 @@ type Result = Partial<GeneOrSNPResult> &
 		 *  Useful for recovering exact coordinates when string2pos() expands
 		 *  small ranges to a 400bp minimum span for the genome browser. */
 		actualposition?: { position: number; len: number }
+		/** Selected sample type. Present when the sample type drop-down is
+		 *  rendered (i.e. termdbConfig.hasSampleAncestry is true). */
+		sampleType?: string
 	}
 
 export const debounceDelay = 500
@@ -165,6 +178,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	const tip = arg.tip,
 		row = arg.row
 	const result: Result = {}
+	let sampleType
 
 	// validate arg
 	try {
@@ -204,6 +218,25 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			placeholder += ', variant'
 			width += 40
 		}
+	}
+
+	// if dataset contains multiple sample types, display menu for selecting sample type to query
+	if (arg.termdbConfig?.hasSampleAncestry) {
+		const sampleTypes = arg.termdbConfig.sampleTypes
+		if (!sampleTypes) throw 'sampleTypes{} is missing'
+		const select = row
+			.append('select')
+			.attr('data-testid', 'sjpp-genesearch-sampletype-select')
+			.style('margin-right', '8px')
+		select.append('option').attr('value', '').attr('disabled', true).attr('selected', true).text('Sample type')
+		for (const [k, v] of Object.entries(sampleTypes)) {
+			select.append('option').attr('value', k).text(v.name)
+		}
+		// initialise result with the selected option
+		sampleType = select.property('value')
+		select.on('change', function (this: HTMLSelectElement) {
+			sampleType = this.value
+		})
 	}
 
 	const searchbox = row
@@ -632,6 +665,9 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		// useful when user enters isoform accession and matches to genesymbol,
 		// and wants to be able to refer back to which isoform was entered
 		result.fromWhat = fromWhat
+
+		// sample type to query
+		if (sampleType) result.sampleType = sampleType
 
 		if (r && arg.callback) {
 			if (arg.hideInputBeforeCallback) {

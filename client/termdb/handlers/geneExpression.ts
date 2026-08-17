@@ -12,16 +12,21 @@ export class SearchHandler {
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: opts.genomeObj,
+			termdbConfig: opts.app.vocabApi.termdbConfig,
 			row: holder,
 			searchOnly: 'gene',
-			callback: () => this.selectGene(geneSearch.geneSymbol)
+			callback: () => this.selectGene(geneSearch)
 		})
 	}
 
-	async selectGene(gene) {
+	async selectGene(geneSearch) {
+		const gene = geneSearch.geneSymbol
 		const unit = getGEunit(this.app.vocabApi)
 		const name = `${gene} ${unit}`
 		if (!gene) throw new Error('No gene selected')
-		this.callback({ gene, name, type: TermTypes.GENE_EXPRESSION })
+		this.callback({
+			q: { sampleType: geneSearch.sampleType },
+			term: { gene, name, type: TermTypes.GENE_EXPRESSION }
+		})
 	}
 }

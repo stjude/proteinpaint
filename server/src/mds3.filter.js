@@ -26,22 +26,32 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 
 	const filter = combinePPfilterAndTid2value(param, ds) // pp filter
 	const filter0 = getFilter0(param, ds)
-
-	if (!filter && !filter0) return // no filtering, use all samples
-
-	const q = { filter, filter0, mapParent2Children: param.mapParent2Children, sampleType: param.sampleType }
+	const sampleType = getSampleType(param)
 
 	let filterSamples
-	if (ds.cohort?.db) {
-		// dataset has sqlite db
-		if (!q.filter) return // no pp filtering, use all samples
-		// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
-		filterSamples = new Set((await get_samples(q, ds)).map(i => i.id))
-	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
-		// ds-supplied filter method
-		filterSamples = await ds.cohort.termdb.filterSamples(q, ds)
-	} else {
-		throw new Error('no method available to get samples')
+	if (filter || filter0) {
+		// filter samples by supplied filter(s)
+		const q = { filter, filter0, mapParent2Children: param.mapParent2Children, sampleType }
+		if (ds.cohort?.db) {
+			// dataset has sqlite db
+			if (!q.filter) return // no pp filtering, use all samples
+			// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
+			filterSamples = new Set((await get_samples(q, ds)).map(i => i.id))
+		} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
+			// ds-supplied filter method
+			filterSamples = await ds.cohort.termdb.filterSamples(q, ds)
+		} else {
+			throw new Error('no method available to get samples')
+		}
+	}
+
+	if (sampleType) {
+		// filter samples by sample type
+		const sampleTypeSamples = new Set()
+		for (const [sampleId, type] of ds.sampleId2Type) {
+			if (type == sampleType) sampleTypeSamples.add(sampleId)
+		}
+		filterSamples = filterSamples ? filterSamples.intersection(sampleTypeSamples) : sampleTypeSamples
 	}
 
 	if (!filterSamples) return // no filtering done, use all samples
@@ -112,4 +122,18 @@ function getFilter0(param, ds) {
 	// has filter0. ds must supply the validator
 	if (typeof ds.validate_filter0 != 'function') throw new Error('filter0 used but ds.validate_filter0 not func')
 	return ds.validate_filter0(param.filter0)
+}
+
+function getSampleType(param) {
+	if (param.sampleType) return param.sampleType
+	if (!param.terms) return
+	let sampleType
+	for (const tw of param.terms) {
+		if (sampleType) {
+			if (sampleType != tw.q.sampleType) throw 'multiple query sample types specified'
+		} else {
+			sampleType = tw.q.sampleType
+		}
+	}
+	return sampleType
 }
