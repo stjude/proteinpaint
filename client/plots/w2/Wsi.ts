@@ -91,15 +91,36 @@ class Wsi extends PlotBase implements RxComponent {
 		// spatial image: rename the sandbox header and show the burger menu
 		const isSpatial = images[0]?.type == 'spatial'
 		this.dom.header?.text(isSpatial ? 'SPATIAL VIEWER' : 'WHOLE SLIDE IMAGES')
-		if (isSpatial && !this.components.controls) await this.setControls(images[0] as SpatialImage)
+		if (isSpatial) {
+			// seed the burger menu's gene/level fields with the dataset's defaults
+			// (null = never edited) so the shown values match the overlay and can
+			// be edited or cleared; re-renders once with the seeded state
+			const image = images[0] as SpatialImage
+			if (settings.geneExpression == null && image.geneExpression != null) {
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: {
+						settings: {
+							wsi: {
+								geneExpression: image.geneExpression,
+								annotationLevel: settings.annotationLevel ?? image.annotationLevel
+							}
+						}
+					}
+				})
+				return
+			}
+			if (!this.components.controls) await this.setControls()
+		}
 		this.dom.controls.style('display', isSpatial ? 'inline-block' : 'none')
 
 		await new View(this.dom, viewModel.viewData, images, settings, this.interactions, this.state.vocab).render()
 	}
 
-	/** Burger menu with the spatial overlay settings; dataset values (shown as
-	 placeholders) apply until the user edits a field. */
-	private async setControls(image: SpatialImage) {
+	/** Burger menu with the spatial overlay settings; fields are pre-seeded
+	 with the dataset's defaults by main() before this runs. */
+	private async setControls() {
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
@@ -123,11 +144,19 @@ class Wsi extends PlotBase implements RxComponent {
 				},
 				{
 					label: 'Gene expression',
-					title: 'Comma-separated gene names to overlay; clear the field for no overlay',
+					title: 'Show or hide the gene expression overlay',
+					type: 'checkbox',
+					chartType: 'wsi',
+					settingsKey: 'showGeneExpression',
+					boxLabel: 'show'
+				},
+				{
+					label: 'Genes',
+					title: 'Comma-separated gene names to overlay',
 					type: 'text',
 					chartType: 'wsi',
 					settingsKey: 'geneExpression',
-					placeholder: image.geneExpression || 'gene1,gene2,…'
+					placeholder: 'gene1,gene2,…'
 				},
 				{
 					label: 'Overlay mode',
@@ -164,6 +193,7 @@ export function getDefaultWsiSettings(overrides = {}): Settings {
 		// spatial overlay settings; null = fall back to the dataset's values
 		showCellBoundaries: true,
 		showNucleusBoundaries: true,
+		showGeneExpression: true,
 		geneExpression: null,
 		annotationLevel: null,
 		spatialMode: 'gene_expression'
