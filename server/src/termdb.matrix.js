@@ -44,10 +44,7 @@ not assume an integer id space, so it tries the raw id first (string ids, e.g. u
 the Number()-coerced id (integer-id datasets whose samples{} key is a stringified integer). */
 export function id2sampleRef(id, ds) {
 	const q = ds?.cohort?.termdb?.q
-	if (q?.id2sampleRefs) {
-		const ref = q.id2sampleRefs(Number(id))
-		return ref || q.id2sampleRefs(id)
-	}
+	if (q?.id2sampleRefs) return q.id2sampleRefs(id)
 	if (q?.id2sampleName) return { label: q.id2sampleName(id) ?? q.id2sampleName(Number(id)) }
 	return undefined
 }
