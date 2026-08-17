@@ -99,8 +99,10 @@ export class View {
 
 		const source = new Zoomify({
 			// {z}/{x}/{y} hit wsitiles/tile; the unused {TileGroup} token only satisfies
-			// OpenLayers' requirement that a {TileGroup}/{tileIndex} placeholder be present
-			url: `${host}/wsitiles/tile/{z}/{x}/{y}?${params}&_={TileGroup}`,
+			// OpenLayers' requirement that a {TileGroup}/{tileIndex} placeholder be present.
+			// v=<slide mtime>: tiles are served immutable, so a regenerated slide must
+			// change the URL to bust the browser cache
+			url: `${host}/wsitiles/tile/{z}/{x}/{y}?${params}&v=${meta.version || 0}&_={TileGroup}`,
 			size: [w, h],
 			crossOrigin: 'anonymous',
 			zDirection: -1

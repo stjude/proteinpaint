@@ -7,7 +7,7 @@ import type {
 	WsiImage,
 	WsiSampleSummary
 } from '#types'
-import { readdir } from 'fs/promises'
+import { readdir, stat } from 'fs/promises'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 
@@ -88,25 +88,29 @@ function init({ genomes }) {
 			const sp = ds.queries.w2.spatial?.[sampleId]
 			const rel = (f?: string) => (f ? path.join(folder, sampleId, f) : undefined)
 
-			const images: (WsiImage | SpatialImage)[] = fileNames
-				.filter(f => SLIDE_EXT.test(f))
-				.map(fileName => {
-					// z=0 tile of the slide doubles as a thumbnail; client prepends host
-					const thumbnail = `wsitiles/tile/0/0/0?wsimage=${encodeURIComponent(fileName)}&dslabel=${q.dslabel}&genome=${
-						q.genome
-					}&sample_id=${encodeURIComponent(sampleId)}`
-					if (sp && fileName == sp.fileName)
-						return {
-							...sp,
-							type: 'spatial' as const,
-							fileName,
-							cellBoundaries: rel(sp.cellBoundaries),
-							nucleusBoundaries: rel(sp.nucleusBoundaries),
-							geneExpressionFile: rel(sp.geneExpressionFile),
-							thumbnail
-						}
-					return { type: 'wsi' as const, fileName, thumbnail }
-				})
+			const images: (WsiImage | SpatialImage)[] = []
+			for (const fileName of fileNames.filter(f => SLIDE_EXT.test(f))) {
+				// z=0 tile of the slide doubles as a thumbnail; client prepends host.
+				// v=<slide mtime>: tiles are served immutable, so a regenerated slide
+				// must change the URL to bust the browser cache
+				const v = (await stat(path.join(sampleDir, fileName))).mtimeMs
+				const thumbnail = `wsitiles/tile/0/0/0?wsimage=${encodeURIComponent(fileName)}&dslabel=${q.dslabel}&genome=${
+					q.genome
+				}&sample_id=${encodeURIComponent(sampleId)}&v=${v}`
+				images.push(
+					sp && fileName == sp.fileName
+						? {
+								...sp,
+								type: 'spatial' as const,
+								fileName,
+								cellBoundaries: rel(sp.cellBoundaries),
+								nucleusBoundaries: rel(sp.nucleusBoundaries),
+								geneExpressionFile: rel(sp.geneExpressionFile),
+								thumbnail
+						  }
+						: { type: 'wsi' as const, fileName, thumbnail }
+				)
+			}
 
 			res.status(200).json({ images } satisfies WsiBySampleResponse)
 		} catch (e: any) {
