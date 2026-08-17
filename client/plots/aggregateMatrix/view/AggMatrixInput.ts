@@ -7,7 +7,7 @@ export class AggMatrixInput {
     chartsInstance: any /*MassCharts instance*/
     rowSections: any[] = []
     colSections: any[] = []
-    startOpt = ''
+    startOpt = '-- Select --'
 
     constructor(holder: any, chartsInstance: any) {
         this.holder = holder
@@ -20,14 +20,15 @@ export class AggMatrixInput {
         const sizeSelect = this.renderMethodDropdown(wrapper, 'size')
         const gradSelect = this.renderMethodDropdown(wrapper, 'gradient')
 
-        const rowWrapper = wrapper.append('div').style('margin-bottom', '10px')
-        const rowHeader = rowWrapper.append('div')
+        const axisWrapper = wrapper.append('div').style('display', 'flex').style('margin-bottom', '10px')
+        const rowWrapper = axisWrapper.append('div').style('margin-right', '10px').style('border-right', '1px solid #ddd')
+        const rowHeader = rowWrapper.append('div').style('border-bottom', '0.5px solid #ddd').style('padding','5px')
         // .style('display', 'flex').style('align-items', 'center')
         rowHeader.append('span').style('margin-right', '5px').text('Row sections:')
         this.renderAddSectionBtn(rowHeader, rowWrapper, 'Row', this.chartsInstance)
 
-        const colWrapper = wrapper.append('div').style('margin-bottom', '10px')
-        const colHeader = colWrapper.append('div')
+        const colWrapper = axisWrapper.append('div')
+        const colHeader = colWrapper.append('div').style('border-bottom', '0.5px solid #ddd').style('padding','5px')
         // .style('display', 'flex').style('align-items', 'center')
         colHeader.append('span').style('margin-right', '5px').text('Column sections:')
         this.renderAddSectionBtn(colHeader, colWrapper, 'Column', this.chartsInstance)
@@ -39,7 +40,8 @@ export class AggMatrixInput {
             .style('border-width', 'medium')
             .style('border-style', 'none')
             .style('border-radius', '20px')
-            .style('padding', '10px 15px')
+            .style('padding', '5px 10px')
+            .style('font-size', '0.9em')
             .text('Submit')
             .on('click', () => {
                 const sizeMethod = sizeSelect.node().value
@@ -59,8 +61,8 @@ export class AggMatrixInput {
         const opts = [this.startOpt].concat(availableAggregateMethods)
         const wrapper = holder
             .append('div')
-            .style('margin-bottom', '5px')
-            .style('display', 'flex')
+            .style('margin', '5px')
+            .style('display', 'inline-flex')
             .style('align-items', 'center')
         wrapper
             .append('label')
@@ -90,9 +92,10 @@ export class AggMatrixInput {
             .attr('data-testid', 'sjpp-agg-matrix-add-section-btn')
             .style('border-width', 'medium')
             .style('border-style', 'none')
-            .style('border-radius', '5px')
+            .style('border-radius', '10px')
             .style('padding', '5px 10px')
-            .text(`Add ${sectionType} Section`)
+            .style('background-color', '#cfe2f3')
+            .text(`+`)
             .on('click', () => {
                 this.addSection(sectionsHolder, sectionType, chartsInstance)
             })
@@ -103,7 +106,7 @@ export class AggMatrixInput {
             .attr('data-testid', `sjpp-agg-matrix-${sectionType.toLowerCase()}-section`)
             .style('margin', '8px 0 0 15px')
             .style('padding', '8px')
-            .style('border-left', '2px solid #ddd')
+            // .style('border-left', '2px solid #ddd')
 
         const nameId = `sjpp-agg-matrix-${sectionType.toLowerCase()}-section-name-${Date.now()}-${Math.random()}`
         const nameRow = section.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '5px')
@@ -115,7 +118,7 @@ export class AggMatrixInput {
             .attr('type', 'text')
             .attr('required', true)
 
-        const termsHolder = section.append('div').attr('data-testid', 'sjpp-agg-matrix-section-terms')
+        const termsHolder = section.append('div').attr('data-testid', 'sjpp-agg-matrix-section-terms').style('margin-left', '10px')
         let selectedTerms: any[] = []
 
         const renderSection = (sectionName: string) => {
@@ -126,7 +129,8 @@ export class AggMatrixInput {
                 .append('button')
                 .attr('type', 'button')
                 .attr('data-testid', 'sjpp-agg-matrix-remove-section-btn')
-                .text('Delete section')
+                .text('×')
+                .attr('aria-label', `Remove ${sectionName}`)
                 .on('click', () => section.remove())
 
             section
@@ -141,21 +145,24 @@ export class AggMatrixInput {
                         .style('display', 'flex')
                         .style('align-items', 'center')
                         .style('gap', '5px')
-                        .style('margin-top', '5px')
+                        .style('margin', '5px')
                     row.append('span').text((term: any) => term.name || term.id)
-                    row
-                        .append('button')
-                        .attr('type', 'button')
-                        .attr('aria-label', (term: any) => `Remove ${term.name || term.id}`)
-                        .attr('data-testid', 'sjpp-agg-matrix-remove-term-btn')
-                        .text('×')
-                        .on('click', (_event: MouseEvent, term: any) => {
-                            selectedTerms = selectedTerms.filter(t => t !== term)
-                            renderSection(sectionName)
-                        })
+                    //Disable for now. Visual clutter. Can be re-enabled if needed in the future.
+                    // row
+                    //     .append('button')
+                    //     .attr('type', 'button')
+                    //     .attr('aria-label', (term: any) => `Remove ${term.name || term.id}`)
+                    //     .attr('data-testid', 'sjpp-agg-matrix-remove-term-btn')
+                    //     .text('×')
+                    //     .on('click', (_event: MouseEvent, term: any) => {
+                    //         selectedTerms = selectedTerms.filter(t => t !== term)
+                    //         renderSection(sectionName)
+                    //     })
                     return row
                 })
         }
+        
+        const disable_terms = this.rowSections.concat(this.colSections).flatMap(section => section.terms || [])
 
         appInit({
             holder: termsHolder,
@@ -168,7 +175,7 @@ export class AggMatrixInput {
                 tree: { usecase: { target: 'aggregateMatrix' } }
             },
             tree: {
-                //TODO: may need to be two
+                // disable_terms,
                 minTermsToSubmit: 1,
                 submit_lst: termlst => {
                     selectedTerms = termlst
