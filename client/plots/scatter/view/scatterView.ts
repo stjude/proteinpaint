@@ -7,7 +7,8 @@ import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.js'
 
 export const minShapeSize = 0.2
 export const maxShapeSize = 6
-
+const chartSizeMin = 200
+const chartSizeMax = 800
 export class ScatterView {
 	opts: any
 	dom: any
@@ -116,7 +117,8 @@ export class ScatterView {
 			chartType,
 			settingsKey: 'size',
 			title: `${itemLabel} size, represents the factor used to scale the ${itemLabel.toLowerCase()}`,
-			min: 0,
+			min: minShapeSize,
+			max: maxShapeSize,
 			step: 0.1
 		}
 		const step = (maxShapeSize - minShapeSize) / 10
@@ -157,6 +159,7 @@ export class ScatterView {
 			settingsKey: 'refSize',
 			title: 'Set the area of the reference symbol in square pixels.',
 			min: 0,
+			max: maxShapeSize,
 			step: 0.1
 		}
 		const showAxes = {
@@ -202,12 +205,18 @@ export class ScatterView {
 				label: 'Chart width',
 				type: 'number',
 				chartType,
+				min: chartSizeMin,
+				max: chartSizeMax,
+				step: 10,
 				settingsKey: 'svgw'
 			},
 			{
 				label: 'Chart height',
 				type: 'number',
 				chartType,
+				min: chartSizeMin,
+				max: chartSizeMax,
+				step: 10,
 				settingsKey: 'svgh'
 			},
 			{
@@ -390,6 +399,7 @@ export class ScatterView {
 					]
 				})
 			} else {
+				// TODO set min and max
 				inputs.push({
 					label: 'Chart depth',
 					type: 'number',

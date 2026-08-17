@@ -16,6 +16,8 @@ import { downloadChart } from '#common/svg.download'
 import { getCombinedTermFilter } from '#filter'
 import { isNumericTerm } from '#shared/terms.js'
 
+const chartSizeMin = 200
+const chartSizeMax = 800
 class TdbSurvival extends PlotBase implements RxComponent {
 	static type = 'survival'
 
@@ -176,6 +178,9 @@ class TdbSurvival extends PlotBase implements RxComponent {
 						{
 							label: 'Chart width',
 							type: 'number',
+							min: chartSizeMin,
+							max: chartSizeMax,
+							step: 10,
 							chartType: 'survival',
 							settingsKey: 'svgw',
 							title: 'The internal width of the chart plot'
@@ -183,6 +188,9 @@ class TdbSurvival extends PlotBase implements RxComponent {
 						{
 							label: 'Chart height',
 							type: 'number',
+							min: chartSizeMin,
+							max: chartSizeMax,
+							step: 10,
 							chartType: 'survival',
 							settingsKey: 'svgh',
 							title: 'The internal height of the chart plot'
@@ -219,6 +227,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							type: 'number',
 							chartType: 'survival',
 							settingsKey: 'maxTimeToEvent',
+							min: 0,
 							title:
 								'The maximum time-to-event to be displayed in the survival plot, affects only the visual representation and does not impact other analyses. All available data is still used to compute p-values. If this value is left empty or set to 0, no cutoff will be applied.'
 						},

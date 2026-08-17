@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, type ComponentApi, type RxComponent, type AppApi} from '#rx'
+import { getCompInit, copyMerge, type ComponentApi, type RxComponent, type AppApi } from '#rx'
 import { controlsInit, renderTerm1Label } from '#plots/controls.js'
 import { getT0T2defaultQ } from '#plots/summaryQ.ts'
 import { fillTermWrapper } from '#termsetting'
@@ -47,7 +47,6 @@ export class Cuminc extends PlotBase implements RxComponent {
 	colorScale: any
 	legendData: any[] = []
 	render: () => void = () => {}
-
 
 	constructor(opts: any, api?: ComponentApi) {
 		// this class is instantiated directly, not as an rx component, so there is no plot api
@@ -369,11 +368,13 @@ class MassCumInc extends PlotBase implements RxComponent {
 							label: 'Minimum sample size of series',
 							type: 'number',
 							chartType: 'cuminc',
+							min: 0,
 							settingsKey: 'minSampleSize'
 						},
 						{
 							label: 'Minimum at-risk count of event',
 							type: 'number',
+							min: 0,
 							chartType: 'cuminc',
 							settingsKey: 'minAtRisk'
 						},
@@ -431,7 +432,6 @@ class MassCumInc extends PlotBase implements RxComponent {
 					]
 				})
 			}
-
 			;(this.components.controls as any).on('downloadClick.cuminc', this.download)
 		}
 	}
@@ -971,10 +971,11 @@ function setRenderers(self: any) {
 			.style('overflow', 'visible')
 			.style('padding-left', '20px')
 
-		const [clipRect, /*clipG,*/ mainG, seriesesG, /*axisG,*/ xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(
-			svg,
-			/*chart*/
-		)
+		const [clipRect, /*clipG,*/ mainG, seriesesG, /*axisG,*/ xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] =
+			getSvgSubElems(
+				svg
+				/*chart*/
+			)
 
 		// set dimensions of clipRect
 		// will be same as those of plotRect
@@ -1074,7 +1075,7 @@ function setRenderers(self: any) {
 			.text(d => d)
 	}
 
-	function getSvgSubElems(svg, /*chart*/) {
+	function getSvgSubElems(svg /*chart*/) {
 		let clipRect, /*clipG,*/ mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, line
 		if (!svg.select('.sjpcb-cuminc-mainG').size()) {
 			const clipId = `${self.id}-${self.chartIncrement++}`
@@ -1185,7 +1186,7 @@ function setRenderers(self: any) {
 		const yTitleLabel = 'Cumulative Incidence (%)'
 		yTitle.select('text, title').remove()
 
-		/*const yText = */yTitle
+		/*const yText = */ yTitle
 			.attr(
 				'transform',
 				'translate(' +
@@ -1333,9 +1334,17 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 		// supply the default q if opts.term0/2.bins/q is undefined
 		// so that the default q does not override bins or q from user
 		if (opts.term2)
-			await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.bins || opts.term2.q ? undefined : getT0T2defaultQ(true))
+			await fillTermWrapper(
+				opts.term2,
+				app.vocabApi,
+				opts.term2.bins || opts.term2.q ? undefined : getT0T2defaultQ(true)
+			)
 		if (opts.term0)
-			await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.bins || opts.term0.q ? undefined : getT0T2defaultQ(true))
+			await fillTermWrapper(
+				opts.term0,
+				app.vocabApi,
+				opts.term0.bins || opts.term0.q ? undefined : getT0T2defaultQ(true)
+			)
 	} catch (e) {
 		throw `${e} [cuminc getPlotConfig()]`
 	}
