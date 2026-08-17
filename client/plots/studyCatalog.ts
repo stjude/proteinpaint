@@ -206,17 +206,24 @@ class StudyCatalog extends PlotBase implements RxComponent {
 		// dataset query config, used to gate each facet's chart button on what the chart needs
 		const queries = this.app.vocabApi.termdbConfig?.queries
 
-		// single-select facets always have exactly one active value; default to the first value
-		// (also reapplied after "clear all"), so the table never mixes e.g. species
+		// single-select facets always have exactly one active value; default to the first available value
+		// under the other active filters (also reapplied after "clear all"), so the table never mixes e.g. species
 		const singleSelect = new Set(ui.singleSelectFacets || [])
 		for (const facet of singleSelect) {
 			if (!ui.facets.includes(facet)) continue
-			if (this.activeFilters.get(facet)?.size === 1) continue
-			const values = [...new Set(this.rows.map(r => r[facet]).filter(Boolean))].sort((a, b) =>
+			// available values given the other active filters (exclude this facet itself)
+			const scope = this.filteredRows(facet)
+			const values = [...new Set(scope.map(r => r[facet]).filter(Boolean))].sort((a, b) =>
 				a.localeCompare(b, undefined, { numeric: true })
 			)
-			if (values.length) this.activeFilters.set(facet, new Set([values[0]]))
-			else this.activeFilters.delete(facet)
+			if (!values.length) {
+				this.activeFilters.delete(facet)
+				continue
+			}
+			const active = this.activeFilters.get(facet)
+			const activeValue = active && active.size === 1 ? [...active][0] : null
+			if (activeValue && values.includes(activeValue)) continue
+			this.activeFilters.set(facet, new Set([values[0]]))
 		}
 
 		const header = div
