@@ -428,6 +428,8 @@ export function renderTable({
 						.text(cell.value || cell.value == 0 ? cell.value : cell.url) //Fix for if .value missing, url does not display
 						.attr('href', cell.url)
 						.attr('target', '_blank')
+						// prevent reverse tabnabbing: the opened page must not get window.opener, nor the referrer
+						.attr('rel', 'noopener noreferrer')
 				} else if (cell.html) {
 					td.html(cell.html)
 				} else if ('value' in cell) {
