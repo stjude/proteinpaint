@@ -1,1 +1,2 @@
-
+Fixes:
+- bump fast-uri to resolve 2 dependabot alerts
