@@ -257,8 +257,6 @@ async function getSampleData(q, ds) {
 		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
 			const sampleFilterSet = await mayGetSampleFilterSet4snplst(q, nonDictTerms) // conditionally returns a set of sample ids, FIXME *only* for snplst and snplocus data download in supported ds, not for anything else. TODO remove this bad quick fix
 
-			tw.type = tw.term.type // required by regression code
-
 			const _samples = new Map()
 			await getSampleData_snplstOrLocus(tw, _samples, true)
 
@@ -1090,7 +1088,8 @@ async function findListOfBins(q, tw, ds) {
 
 /*
 tw{}
-	type
+	term{}
+		type
 	q{}
 		cacheid
 		alleleType: 0/1
@@ -1171,7 +1170,7 @@ async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
 	}
 
 	// imputation
-	if (tw.type == 'snplst' && !useAllSamples) {
+	if (tw.term.type == 'snplst' && !useAllSamples) {
 		doImputation(snp2sample, tw, cachesampleheader, sampleinfilter)
 	}
 

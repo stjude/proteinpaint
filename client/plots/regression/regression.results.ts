@@ -74,7 +74,6 @@ export class RegressionResults {
 	displayResult!: (result: any) => Promise<void>
 	hasError!: boolean
 
-
 	constructor(opts) {
 		this.opts = opts
 		this.app = opts.app
@@ -153,6 +152,7 @@ export class RegressionResults {
 			this.dom.err_div.style('display', 'block')
 			sayerror(this.dom.err_div, 'Error: ' + (e.error || e))
 			this.parent.inputs.dom.submitBtn.property('disabled', true)
+			if (e.stack) console.log(e.stack)
 			console.error(e)
 		} finally {
 			this.parent.dom.inputs.style('opacity', 1).style('pointer-events', 'auto')
