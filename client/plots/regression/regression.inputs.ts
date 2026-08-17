@@ -51,7 +51,7 @@ const allNonDictionaryTerms = [
 
 export class RegressionInputs {
 	opts: any
-	app: ComponentApi 
+	app: ComponentApi
 	parent: any
 	initUI!: () => void
 	config!: any
@@ -119,7 +119,7 @@ export class RegressionInputs {
 			heading: 'Outcome variable',
 			selectPrompt:
 				this.opts.regressionType == 'linear' ? 'Select continuous outcome variable' : 'Select outcome variable',
-			placeholderIcon: '',
+			placeholderIcon: '+',
 			configKey: 'outcome',
 			limit: 1,
 			usecase: { target: 'regression', regressionType: this.opts.regressionType, detail: 'outcome' },
@@ -136,7 +136,7 @@ export class RegressionInputs {
 			/*** static configuration ***/
 			heading: 'Independent variable(s)',
 			selectPrompt: 'Add independent variable',
-			placeholderIcon: '',
+			placeholderIcon: '+',
 			configKey: 'independent',
 			limit: 10,
 			usecase: { target: 'regression', regressionType: this.opts.regressionType, detail: 'independent' },
@@ -427,7 +427,7 @@ function setRenderers(self) {
 		)
 	}
 
-	function removeInput (this: HTMLElement, input){
+	function removeInput(this: HTMLElement, input) {
 		/* NOTE: editConfig deletes this input from the section.inputLst array */
 		input.remove()
 		for (const key in input.dom) {
