@@ -118,7 +118,18 @@ function init({ genomes }) {
 					res.status(400).send({ status: 'error', error: 'boundaries path escapes tpmasterdir' })
 					return
 				}
-				const csv = await readFile(full, 'utf8')
+				let csv: string
+				try {
+					csv = await readFile(full, 'utf8')
+				} catch (e: any) {
+					res
+						.status(e?.code === 'ENOENT' ? 404 : 500)
+						.send({
+							status: 'error',
+							error: e?.code === 'ENOENT' ? 'boundaries file not found' : e.message || String(e)
+						})
+					return
+				}
 				res.status(200).set('Content-Type', 'text/csv').set('Cache-Control', 'public, max-age=3600').send(csv)
 				return
 			}
