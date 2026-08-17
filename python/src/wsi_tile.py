@@ -168,7 +168,7 @@ class OmeTiffSlide:
         arr = self._read_level(level, lx, ly, size[0], size[1])
         if arr.dtype != np.uint8:
             arr = np.clip(arr.astype(np.float32) * (255.0 / self._get_scale()), 0, 255).astype(np.uint8)
-        return Image.fromarray(arr, "L").convert("RGB")
+        return Image.fromarray(arr).convert("RGB")
 
 
 def open_slide(path, plane=None):
