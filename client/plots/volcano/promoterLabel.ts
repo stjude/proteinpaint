@@ -4,7 +4,7 @@ import type { DiffMethEntry } from '#types'
  *
  * promoter_id is built at ingest as `<gene>.p<n>_<chr>:<start>-<stop>` (or
  * `<gene>_<chr>:<start>-<stop>` when the gene has a single promoter) — see
- * utils/dnaMeth/build_promoter_matrix.py. It is an identifier, not a label: it
+ * utils/dnaMeth/build_element_matrix.py. It is an identifier, not a label: it
  * is the highlight key and the handle for the DMR drill-down, so it is never
  * rewritten, only formatted for display.
  *
@@ -22,6 +22,33 @@ import type { DiffMethEntry } from '#types'
  * Only the `p<n>` segment is recovered from the id, and only when the id really
  * has that shape — anything unexpected falls back to the raw id unchanged.
  */
+/** Noun for the rows of a differential methylation result, for counts and column
+ * headers: "35,584 DM promoters" is wrong when the run tested eQTM blocks.
+ *
+ * Derived from the selected element class rather than from the server response, so
+ * it needs no extra plumbing: the picker already knows which class was requested,
+ * and an absent or 'promoter' value is the legacy single-matrix case.
+ *
+ * Deliberately not a lookup keyed by every possible class name. Dataset configs can
+ * declare arbitrary keys, so an unrecognised one falls back to the neutral
+ * "elements" instead of mislabelling rows as promoters. Add a case here only for a
+ * class whose singular/plural reads badly as the generic term.
+ */
+export function elementNoun(elementType?: string): { one: string; many: string } {
+	switch (elementType) {
+		case undefined:
+		case '':
+		case 'promoter':
+			return { one: 'Promoter', many: 'promoters' }
+		case 'eqtm_block':
+			return { one: 'eQTM block', many: 'eQTM blocks' }
+		case 'enhancer':
+			return { one: 'Enhancer', many: 'enhancers' }
+		default:
+			return { one: 'Element', many: 'elements' }
+	}
+}
+
 export function formatPromoterLabel(d: Partial<DiffMethEntry> | undefined): string {
 	if (!d) return ''
 	const id = d.promoter_id || ''

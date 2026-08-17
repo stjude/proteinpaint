@@ -76,6 +76,22 @@ pkg_load_mem <- mem_probe()
 #   conf1_mode:            (optional) "continuous" or "discrete" — type of conf1
 #   conf2:                 (optional) array of confounding variable 2 values
 #   conf2_mode:            (optional) "continuous" or "discrete" — type of conf2
+#   element_class:         (optional) comma-separated element classes to restrict to, for a
+#                          mixed-class H5 (e.g. "enhancer" or "promoter,enhancer"). Ignored
+#                          when the file holds a single class. Element identity is resolved
+#                          from meta/element/elementID, meta/element_id, or (legacy)
+#                          meta/promoter/promoterID — see step 3. The output carries
+#                          element_class per row plus an element_meta block naming what was
+#                          tested, so a promoter run and an enhancer run are distinguishable.
+#   pair_id:               (optional) array of block labels, one per sample, CASES FIRST then
+#                          controls — i.e. aligned to c(case, control) as given. Turns the test
+#                          into a paired/blocked comparison: each block gets its own intercept
+#                          so the group effect is estimated from within-block contrasts only.
+#                          Use it for same-patient sample pairs (e.g. marrow vs blood at one
+#                          visit, diagnosis vs relapse) and for repeat visits from one patient.
+#                          Blocks present in only one arm are dropped (they carry no within-block
+#                          contrast); the names dropped are reported in the output as
+#                          paired.dropped_samples. See step 5 for the degrees-of-freedom cost.
 read_json_time <- system.time({
   con <- file("stdin", "r") # Open a connection to stdin
   json <- readLines(con, warn = FALSE) # Read all lines (the JSON is a single line)
@@ -83,6 +99,39 @@ read_json_time <- system.time({
   input <- fromJSON(json) # Parse JSON string into an R list
   cases <- unlist(strsplit(input$case, ",")) # Split comma-separated case sample names into a vector
   controls <- unlist(strsplit(input$control, ",")) # Split comma-separated control sample names into a vector
+
+  # Optional paired/blocked design. pair_id arrives aligned to c(cases, controls)
+  # as the caller supplied them, so it must be pruned in lockstep with the sample
+  # vectors here -- before the H5 read uses them to pick columns.
+  pair_id <- NULL # NULL keeps every downstream branch on the unpaired path
+  paired_dropped <- character(0)
+  n_blocks <- 0L
+  if (length(input$pair_id) > 0) {
+    pair_id <- as.character(input$pair_id)
+    n_supplied <- length(cases) + length(controls)
+    if (length(pair_id) != n_supplied) {
+      stop(paste0(
+        "pair_id has ", length(pair_id), " entries but ", n_supplied,
+        " samples were given (", length(cases), " case + ", length(controls),
+        " control). Supply exactly one block label per sample, cases first."
+      ))
+    }
+    arm <- c(rep("case", length(cases)), rep("control", length(controls)))
+    # A block is only usable if it appears in BOTH arms. A block on one side only
+    # contributes no within-block contrast and makes the design rank-deficient,
+    # so such samples are dropped rather than silently distorting the fit.
+    usable <- intersect(unique(pair_id[arm == "case"]), unique(pair_id[arm == "control"]))
+    keep_sample <- pair_id %in% usable
+    if (!any(keep_sample)) {
+      stop("pair_id defines no block containing both a case and a control sample -- nothing to compare within blocks.")
+    }
+    supplied <- c(cases, controls)
+    paired_dropped <- supplied[!keep_sample]
+    cases <- supplied[keep_sample & arm == "case"]
+    controls <- supplied[keep_sample & arm == "control"]
+    pair_id <- pair_id[keep_sample] # stays aligned to the new c(cases, controls)
+    n_blocks <- length(usable)
+  }
 })
 read_json_mem <- mem_probe()
 
@@ -103,11 +152,97 @@ read_data_time <- system.time({
 
   # Read metadata vectors we need:
   all_samples <- h5read(h5_file, "meta/samples/names") # All 1,544 sample names in the H5
-  gene_names <- h5read(h5_file, "meta/gene_names") # Gene annotation per promoter (e.g. "TP53" or "TP53,TP53-AS1")
-  promoter_ids <- h5read(h5_file, "meta/promoter/promoterID") # ENCODE CRE ID per promoter (used as row identifier)
-  chrs <- h5read(h5_file, "meta/chr") # Chromosome per promoter (e.g. "chr1")
-  starts <- h5read(h5_file, "meta/start") # Promoter start coordinate (0-based)
-  stops <- h5read(h5_file, "meta/stop") # Promoter end coordinate (exclusive)
+  gene_names <- h5read(h5_file, "meta/gene_names") # Gene annotation per element (e.g. "TP53" or "TP53,TP53-AS1")
+  chrs <- h5read(h5_file, "meta/chr") # Chromosome per element (e.g. "chr1")
+  starts <- h5read(h5_file, "meta/start") # Element start coordinate (0-based)
+  stops <- h5read(h5_file, "meta/stop") # Element end coordinate (exclusive)
+
+  # Row identifiers are resolved generically so one code path serves every element
+  # class (promoters, enhancers/cCREs, CpG islands, gene bodies, eQTM blocks, and
+  # promoter sub-window tiles). Existing promoter H5 files predate the generic
+  # layout, so the promoter-specific path is tried LAST and still works untouched:
+  #
+  #   meta/element/elementID  — generic layout (preferred for new builds)
+  #   meta/element_id         — flat generic variant
+  #   meta/promoter/promoterID — original promoter-only layout (back-compatible)
+  #
+  # element_class travels alongside so a mixed-class H5 can be filtered, and so the
+  # output says what was tested rather than assuming "promoter".
+  h5_paths <- h5ls(h5_file)
+  has_path <- function(p) {
+    parts <- strsplit(p, "/", fixed = TRUE)[[1]]
+    leaf <- parts[length(parts)]
+    grp <- if (length(parts) > 1) paste0("/", paste(parts[-length(parts)], collapse = "/")) else "/"
+    any(h5_paths$group == grp & h5_paths$name == leaf)
+  }
+
+  if (has_path("meta/element/elementID")) {
+    element_ids <- h5read(h5_file, "meta/element/elementID")
+    id_source <- "meta/element/elementID"
+  } else if (has_path("meta/element_id")) {
+    element_ids <- h5read(h5_file, "meta/element_id")
+    id_source <- "meta/element_id"
+  } else if (has_path("meta/promoter/promoterID")) {
+    element_ids <- h5read(h5_file, "meta/promoter/promoterID")
+    id_source <- "meta/promoter/promoterID"
+  } else {
+    stop(paste(
+      "no element identifier found in", h5_file,
+      "- expected one of meta/element/elementID, meta/element_id,",
+      "or meta/promoter/promoterID"
+    ))
+  }
+
+  # Element class: explicit when the builder recorded it, otherwise inferred from
+  # which identifier path existed. Never guessed from coordinates or ID format.
+  if (has_path("meta/element_class")) {
+    element_classes <- h5read(h5_file, "meta/element_class")
+    # A scalar/length-1 value means the whole file is one class.
+    if (length(element_classes) == 1) {
+      element_class_label <- as.character(element_classes[1])
+      element_classes <- rep(element_class_label, length(element_ids))
+    } else {
+      element_class_label <- if (length(unique(element_classes)) == 1) {
+        as.character(element_classes[1])
+      } else {
+        "mixed"
+      }
+    }
+  } else {
+    element_class_label <- if (id_source == "meta/promoter/promoterID") "promoter" else "element"
+    element_classes <- rep(element_class_label, length(element_ids))
+  }
+
+  # Optional sub-window index (from build_element_matrix.py --tiles). Present only
+  # in tile matrices; carried through to the output so a caller can tell which
+  # sub-window of an element a result belongs to.
+  tile_indices <- if (has_path("meta/tile_index")) {
+    h5read(h5_file, "meta/tile_index")
+  } else {
+    NULL
+  }
+
+  # Retain the old name so the rest of the script is unchanged. `promoter_ids` is
+  # now "one row identifier per element", whatever the element class.
+  #
+  # For a TILED matrix the element ID repeats once per sub-window, so it cannot serve
+  # as a row key: limma's topTable is reordered by p-value and the metadata is
+  # recovered by match() on rownames, which returns the FIRST hit and would assign
+  # every tile of an element the metadata of its tile 0. The row key must therefore
+  # be composite. `element_id` in the output still carries the bare element ID.
+  if (!is.null(tile_indices)) {
+    promoter_ids <- paste0(element_ids, "::tile", tile_indices)
+  } else {
+    promoter_ids <- element_ids
+    if (anyDuplicated(promoter_ids) > 0) {
+      stop(paste0(
+        "element identifiers in ", id_source, " are not unique (",
+        sum(duplicated(promoter_ids)), " duplicates) and no meta/tile_index is present; ",
+        "results cannot be mapped back to rows unambiguously"
+      ))
+    }
+  }
+  element_ids_bare <- element_ids
 
   # match() returns the positional index of each case/control sample within all_samples.
   # These indices are used to read only the relevant columns from the H5 matrix,
@@ -207,13 +342,29 @@ filter_time <- system.time({
     keep <- keep & !(chrs %in% c("chrX", "chrY"))
   }
 
-  # Subset the matrix and metadata vectors to only the promoters that passed filtering
+  # Optional element-class restriction. Only meaningful for a mixed-class H5; on a
+  # single-class file an unmatched value is an error rather than a silent empty result.
+  if (!is.null(input$element_class)) {
+    wanted <- unlist(strsplit(input$element_class, ",", fixed = TRUE))
+    if (!any(element_classes %in% wanted)) {
+      stop(paste0(
+        "element_class '", input$element_class, "' matches no rows; file contains: ",
+        paste(unique(element_classes), collapse = ", ")
+      ))
+    }
+    keep <- keep & (element_classes %in% wanted)
+  }
+
+  # Subset the matrix and metadata vectors to only the elements that passed filtering
   mvalues <- mvalues[keep, , drop = FALSE]
   gene_names_filtered <- gene_names[keep]
   promoter_ids_filtered <- promoter_ids[keep]
   chrs_filtered <- chrs[keep]
   starts_filtered <- starts[keep]
   stops_filtered <- stops[keep]
+  element_classes_filtered <- element_classes[keep]
+  element_ids_bare_filtered <- element_ids_bare[keep]
+  tile_indices_filtered <- if (is.null(tile_indices)) NULL else tile_indices[keep]
 })
 filter_mem <- mem_probe()
 
@@ -235,13 +386,36 @@ design_time <- system.time({
     levels = c("Control", "Diseased")
   )
 
+  # A paired design adds one intercept per block (patient, visit pair, ...) so the
+  # conditions coefficient is estimated from WITHIN-block differences only. That is
+  # what makes an 11-pair marrow-vs-blood contrast detectable: between-patient
+  # variance, which swamps a small consistent shift in an unpaired test, is absorbed
+  # by the block terms instead of inflating the residual.
+  #
+  # The cost is degrees of freedom: an unpaired n-vs-n fit has 2n-2 residual df,
+  # the blocked version has n-1. With few blocks that is a real loss of power, so
+  # pairing helps only when the within-block effect is genuinely more consistent
+  # than the between-block spread -- which is the whole point of using it.
+  #
+  # A block factor is used rather than duplicateCorrelation() because these blocks
+  # are small and few: duplicateCorrelation estimates ONE global consensus
+  # correlation across all blocks and is at its best with many blocks of modest
+  # effect, whereas explicit intercepts make no such assumption and cost only df.
+  pair_block <- if (!is.null(pair_id)) factor(pair_id) else NULL
+
   # The design matrix encodes the statistical model for limma.
   # Without confounders: ~ conditions (simple two-group comparison)
   # With confounders: ~ conditions + conf1 (+ conf2) to adjust for batch effects,
   #   age, sex, etc. This is the same design matrix approach used in edge.R.
+  # With pair_id: pair_block is appended to whichever of those models applies, so
+  #   pairing and confounder adjustment compose rather than exclude each other.
   if (length(input$conf1) == 0) {
     # No confounding variables — simple case vs control comparison
-    design <- model.matrix(~conditions)
+    design <- if (is.null(pair_block)) {
+      model.matrix(~conditions)
+    } else {
+      model.matrix(~ conditions + pair_block)
+    }
   } else {
     # First confounding variable is present
     if (input$conf1_mode == "continuous") {
@@ -252,7 +426,11 @@ design_time <- system.time({
 
     if (length(input$conf2) == 0) {
       # Only one confounding variable
-      design <- model.matrix(~ conditions + conf1)
+      design <- if (is.null(pair_block)) {
+        model.matrix(~ conditions + conf1)
+      } else {
+        model.matrix(~ conditions + conf1 + pair_block)
+      }
     } else {
       # Second confounding variable is also present
       if (input$conf2_mode == "continuous") {
@@ -261,8 +439,31 @@ design_time <- system.time({
         conf2 <- as.factor(input$conf2)
       }
       # Model adjusts for both confounders simultaneously
-      design <- model.matrix(~ conditions + conf1 + conf2)
+      design <- if (is.null(pair_block)) {
+        model.matrix(~ conditions + conf1 + conf2)
+      } else {
+        model.matrix(~ conditions + conf1 + conf2 + pair_block)
+      }
     }
+  }
+
+  # Guard against a rank-deficient design before limma sees it. A confounder that is
+  # constant within every block (sex, say, when blocks are patients) is collinear with
+  # the block intercepts, and lmFit would silently return NA coefficients for it.
+  design_rank <- qr(design)$rank
+  if (design_rank < ncol(design)) {
+    stop(paste0(
+      "design matrix is rank-deficient (rank ", design_rank, " < ", ncol(design),
+      " columns). A confounder is likely constant within each pair_id block, making it",
+      " collinear with the block intercepts -- drop that confounder, or drop pair_id."
+    ))
+  }
+  residual_df <- nrow(design) - design_rank
+  if (residual_df < 1) {
+    stop(paste0(
+      "no residual degrees of freedom left (", nrow(design), " samples, ", design_rank,
+      " model terms). A paired design spends one df per block; add more pairs or drop terms."
+    ))
   }
 })
 design_mem <- mem_probe()
@@ -276,7 +477,7 @@ design_mem <- mem_probe()
 # on (minDiff0.2), so emit it alongside.
 #
 # The matrix holds M = log2((sum_m + alpha)/(sum_u + alpha)) with alpha=1
-# (build_promoter_matrix.py), so the back-transform is exact:
+# (build_element_matrix.py), so the back-transform is exact:
 #
 #   beta_hat = 2^M/(1 + 2^M) = (sum_m + 1)/(n + 2),  n = sum_m + sum_u
 #
@@ -494,11 +695,19 @@ output_time <- system.time({
   # promoter-level results (not gene-level like DE): the primary ID is an ENCODE
   # CRE promoter ID, not a gene ID.
   output <- data.frame(
-    promoter_id = result_promoter_ids, # ENCODE CRE ID (e.g. "EH38E3756858")
+    # `promoter_id` is kept as the column name for backward compatibility with the
+    # server route and every existing caller; for a non-promoter element class it
+    # holds that class's identifier (cCRE ID, island ID, eQTM block ID, ...).
+    # `element_id` is emitted as an alias so new callers can use the generic name.
+    # For a tiled run promoter_id is the composite row key ("<id>::tile<N>") while
+    # element_id is the bare element ID, so rows stay unique AND groupable by element.
+    promoter_id = result_promoter_ids,
+    element_id = element_ids_bare_filtered[result_indices],
+    element_class = element_classes_filtered[result_indices], # promoter | enhancer | cgi | ...
     gene_name = result_gene_names, # Gene symbol(s) (e.g. "TP53" or "TP53,TP53-AS1" or "")
     chr = result_chrs, # Chromosome (e.g. "chr1")
-    start = result_starts, # Promoter start coordinate (0-based)
-    stop = result_stops, # Promoter end coordinate (exclusive)
+    start = result_starts, # Element start coordinate (0-based)
+    stop = result_stops, # Element end coordinate (exclusive)
     fold_change = top_table$logFC, # M-value difference (positive = hypermethylated in cases)
     mean_beta_control = result_mean_beta_control, # group1 mean beta, observed cells only
     mean_beta_case = result_mean_beta_case, # group2 mean beta, observed cells only
@@ -512,6 +721,34 @@ output_time <- system.time({
   # The server route for differential methylation will need to handle this key.
   final_output <- list()
   final_output$promoter_data <- output
+
+  # Sub-window index, only when the input was a tile matrix. Kept out of the main
+  # data.frame construction above so a non-tile run's output shape is unchanged.
+  if (!is.null(tile_indices_filtered)) {
+    final_output$promoter_data$tile_index <- as.integer(tile_indices_filtered[result_indices])
+  }
+
+  # Declare what was actually tested. Without this a caller cannot distinguish a
+  # promoter run from an enhancer run from a tile run, since all three use the same
+  # column names.
+  final_output$element_meta <- list(
+    element_class = unbox(element_class_label),
+    id_source = unbox(id_source),
+    is_tiled = unbox(!is.null(tile_indices_filtered)),
+    n_elements_tested = unbox(nrow(output))
+  )
+
+  # Report the paired design when one ran. Without this the caller cannot tell a
+  # paired fit from an unpaired one, nor see which samples the block pruning removed
+  # -- and a silently-dropped sample changes what the contrast actually tested.
+  if (!is.null(pair_id)) {
+    final_output$paired <- list(
+      n_blocks = unbox(n_blocks), # blocks contributing a within-block contrast
+      n_samples_used = unbox(length(pair_id)),
+      residual_df = unbox(residual_df), # 2n-2 unpaired vs n-1 here; see step 5
+      dropped_samples = if (length(paired_dropped) > 0) paired_dropped else character(0)
+    )
+  }
 
   # Emit the per-sample weights when arrayWeights ran. Without these the option is a
   # black box: the number that actually matters is WHICH sample got down-weighted.

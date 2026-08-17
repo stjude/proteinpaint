@@ -54,6 +54,12 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	/** Per-sample REML weights via limma arrayWeights(). Changes fold-changes, unlike the
 	 * two eBayes options. */
 	arrayWeights: boolean
+	/** Which regulatory-element matrix to test, keying into
+	 * ds.queries.dnaMethylation.elements server-side. 'promoter' is the default and is
+	 * what the legacy single-matrix config resolves to. Changing this changes the rows
+	 * being tested -- promoters, eQTM blocks, and cCRE classes are different features
+	 * with different coordinates -- so it is not a display option. */
+	elementType: string
 }
 
 export type SCCTVolcanoSettings = DefaultVolcanoSettings & {}

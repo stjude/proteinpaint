@@ -1312,6 +1312,34 @@ type Mds3Queries = {
 			 * many samples matched, and warns if none did. */
 			excludeSampleNamesMatching?: string
 		}
+		/** Element-class map: one matrix per regulatory-element class. Each entry is a
+		 * matrix built by build_element_matrix.py and converted by
+		 * createHdf5ForDnaMeth.py; diffMeth.R reads the element class out of the h5
+		 * itself, so no per-class code exists anywhere.
+		 *
+		 * The key is what the client sends as `element_type`. `promoter` above is the
+		 * legacy single-class form and stays honoured: a dataset that sets only
+		 * `promoter` behaves exactly as before, and a dataset setting `elements` should
+		 * include a `promoter` entry so it remains the default. Every entry needs its
+		 * own excludeSampleNamesMatching -- the exclusion is a property of the cohort,
+		 * not of one matrix, and dropping it on a new class would let the withheld
+		 * specimen type contaminate that class's contrasts.
+		 *
+		 * Note that a matrix may hold more than one class (build_element_matrix.py
+		 * --element-classes takes a list); diffMeth.R then reports
+		 * element_meta.element_class as 'mixed' and each row carries its own class. */
+		elements?: {
+			[elementClass: string]: {
+				/** path to h5 file */
+				file: string
+				/** unit label (e.g. 'Average M-value') */
+				unit?: string
+				/** label for the element-type picker (e.g. 'eQTM blocks (55,336)') */
+				label?: string
+				/** see promoter.excludeSampleNamesMatching */
+				excludeSampleNamesMatching?: string
+			}
+		}
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene

@@ -10,7 +10,7 @@ import type { DEFullResponse } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSampleNum } from '../settings/defaults'
-import { formatPromoterLabel } from '../promoterLabel'
+import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { getGroupColors } from '../colors'
 import { DATermTypes as tt, enabledTermTypes } from '../../diffAnalysis/enabledTermTypes'
 
@@ -108,7 +108,12 @@ export class VolcanoViewModel {
 
 	setDataType() {
 		if (this.termType == tt.GENE_EXPRESSION) return 'genes'
-		if (this.termType == tt.DNA_METHYLATION) return 'promoters'
+		/* Methylation rows are only promoters when the promoter class was tested. With an
+		element class selected they are eQTM blocks or cCREs, and calling them promoters
+		misreports what was analysed in the stats panel, the row count, and the p-value
+		table header. Taken from the selected class rather than the server response so no
+		extra field has to be plumbed through. */
+		if (this.termType == tt.DNA_METHYLATION) return elementNoun(this.settings?.elementType).many
 		if (this.termType == tt.SINGLECELL_CELLTYPE) return 'genes'
 		if (this.termType == tt.PROTEOME_DAP) return 'proteins'
 		if (this.termType == tt.SINGLECELL_GENE_EXPRESSION) return 'cells'
@@ -462,7 +467,14 @@ export class VolcanoViewModel {
 				{ label: 'Mean β (group 1)', sortable: true },
 				{ label: 'Mean β (group 2)', sortable: true }
 			)
-			this.pValueTable.columns.splice(0, 0, { label: 'Promoter', sortable: true }, { label: 'Gene(s)', sortable: true })
+			/* This column header is what lands in the downloaded p-value table, so a block
+			run exported a column titled "Promoter" holding block coordinates. */
+			this.pValueTable.columns.splice(
+				0,
+				0,
+				{ label: elementNoun(this.settings?.elementType).one, sortable: true },
+				{ label: 'Gene(s)', sortable: true }
+			)
 		} else if (this.termType == tt.PROTEOME_DAP) {
 			this.pValueTable.columns.splice(0, 0, { label: 'Identifier', sortable: true }, { label: 'Gene', sortable: true })
 		} else {

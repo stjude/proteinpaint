@@ -64,6 +64,52 @@ export function init({ genomes }) {
 	}
 }
 
+/** Resolve which element matrix a request refers to.
+ *
+ * Single point of truth for the promoter/elements config shapes, used by the cache key,
+ * the fresh run, and the sample-group resolver. They MUST agree: if the key and the run
+ * disagree about which matrix was used, the cache silently serves the wrong element type's
+ * results, which no error surfaces.
+ *
+ * Absent element_type means 'promoter'. A dataset with only the legacy `promoter` key
+ * behaves exactly as before, and its cache entries stay valid because 'promoter' is also
+ * what the key defaults to.
+ */
+export function resolveElementQuery(ds: any, elementType: string | undefined): { key: string; q: any } {
+	const key = elementType ?? 'promoter'
+	const dm = ds?.queries?.dnaMethylation
+	if (!dm) throw new Error('This dataset does not have methylation data configured.')
+
+	const q = dm.elements?.[key] ?? (key === 'promoter' ? dm.promoter : undefined)
+	if (!q) {
+		const available = [
+			...Object.keys(dm.elements ?? {}),
+			...(dm.promoter && !dm.elements?.promoter ? ['promoter'] : [])
+		]
+		throw new Error(
+			available.length
+				? `Unknown element type '${key}'. This dataset offers: ${available.join(', ')}.`
+				: 'This dataset does not have element-level methylation data configured.'
+		)
+	}
+	if (!q.file) throw new Error(`Methylation matrix file is not configured for element type '${key}'.`)
+	return { key, q }
+}
+
+/** The element types this dataset can serve, with display labels, for a client picker. */
+export function listElementTypes(ds: any): { key: string; label: string }[] {
+	const dm = ds?.queries?.dnaMethylation
+	if (!dm) return []
+	const out: { key: string; label: string }[] = []
+	for (const [key, e] of Object.entries<any>(dm.elements ?? {})) {
+		if (e?.file) out.push({ key, label: e.label || key })
+	}
+	if (dm.promoter?.file && !dm.elements?.promoter) {
+		out.unshift({ key: 'promoter', label: dm.promoter.label || 'Promoters' })
+	}
+	return out
+}
+
 /** The subset of a DiffMethRequest that determines the cache identity.
  * Passed to cacheOrRecompute as the computeArgument.
  * preAnalysis is also excluded because it short-circuits before any cache lookup happens. */
@@ -71,6 +117,11 @@ function dmKeyInputs(req: DiffMethRequest, imputeMissing: boolean) {
 	return {
 		genome: req.genome,
 		dslabel: req.dslabel,
+		/* Which element matrix was tested. Without this field a block request with the
+		same sample groups as an earlier promoter request hashes to the same key and is
+		served the promoter result — wrong rows, wrong coordinates, no error. Defaulting
+		to 'promoter' rather than null keeps pre-existing cache entries valid on deploy. */
+		element_type: req.element_type ?? 'promoter',
 		/* Derived from ds config rather than sent by the client, but it still belongs in the
 		key: flipping a dataset's platform changes every p-value, and without it the on-disk
 		cache would keep serving results computed under the old missingness model. */
@@ -139,7 +190,7 @@ async function runDmFresh(
 	const groups = await resolveDmSampleGroups(param, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 
-	const q = ds.queries.dnaMethylation.promoter
+	const { q } = resolveElementQuery(ds, param.element_type)
 
 	const diffMethInput: DiffMethInput = {
 		// Group 1 is control, group 2 is case (same convention as DE).
@@ -238,9 +289,11 @@ export async function resolveDmSampleGroups(
 	if (param.samplelst.groups[1].values?.length < 1)
 		throw new Error('Group 2 has no samples. Please select at least one sample.')
 
-	const q = ds.queries.dnaMethylation?.promoter
-	if (!q) throw new Error('This dataset does not have promoter-level methylation data configured.')
-	if (!q.file) throw new Error('Promoter methylation data file is not configured for this dataset.')
+	/* Same resolver the cache key and the fresh run use, so the sample set a group is
+	built against always comes from the matrix that will actually be tested. Each element
+	entry carries its own allSampleSet (built at startup in mds3.init.js), because the
+	matrices need not hold identical sample sets. */
+	const { q } = resolveElementQuery(ds, param.element_type)
 
 	const g1 = await buildGroupValues(
 		param.samplelst.groups[0].values,
