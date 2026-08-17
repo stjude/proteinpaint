@@ -871,10 +871,15 @@ export type ProteomeAbundanceQuery = {
 		timepoints: string[]
 	}
 	studyCatalog?: {
-		/** table columns, in display order; `key` is the derived/override field name */
-		columns: { key: string; label: string }[]
+		/** table columns, in display order; `key` is the derived/override field name.
+		 *  urlBase renders the cell as a link to urlBase+value (e.g. a PubMed ID column) */
+		columns: { key: string; label: string; urlBase?: string }[]
 		/** column keys exposed as left-rail filters */
 		facets: string[]
+		/** facet keys rendered as radio buttons instead of checkboxes: exactly one value is
+		 *  active at all times (defaulting to the facet's first value), so the catalog table
+		 *  never shows rows of two values at once, e.g. human and mouse cohorts */
+		singleSelectFacets?: string[]
 	}
 	/** organism-keyed structure (new format) */
 	organisms?: {

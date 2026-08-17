@@ -8,7 +8,7 @@ import { scaleLinear, axisBottom, axisLeft } from 'd3'
 /*
 proteomeCohortCompare — cross-cohort comparison of standardized fold change (log2FC-z).
 
-Launched from the Sample Sets catalog when ≥2 cohorts are selected. Fetches the aligned z matrix
+Launched from the Studies catalog when ≥2 cohorts are selected. Fetches the aligned z matrix
 from termdb/proteomeCohortCompare and renders (view switchable in the controls):
   - 2 cohorts  → a concordance scatter (z vs z); points colored by shared DAP direction
   - ≥3 cohorts → a protein × cohort clustered heatmap (default), a cohort correlation matrix, or a
@@ -17,8 +17,6 @@ from termdb/proteomeCohortCompare and renders (view switchable in the controls):
   - a series   → an age/progression trajectory: when the selection contains ≥1 ordered series
                  (cohorts sharing dataset trajectory.series), one panel per k-means cluster showing
                  the member proteins' relative-abundance trajectories + a thick eigengene trend line
-
-A cross-species toggle appears when the selection spans organisms (off by default).
 */
 
 const defaultConfig = { chartType: 'proteomeCohortCompare' }
@@ -48,7 +46,6 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		header?: any
 	}
 	cohorts: CohortRef[] = []
-	crossSpecies = false
 	matrixMetric: 'spearman' | 'pearson' = 'spearman'
 	/** DAP thresholds (scatter coloring + heatmap row selection) */
 	zThresh = Z_THRESH
@@ -100,10 +97,9 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 			this.dom.body.append('div').style('color', '#666').text('Select at least two cohorts to compare.')
 			return
 		}
-		// initialize view + crossSpecies once from config; afterwards the in-plot toggles own them
-		// (they don't dispatch config changes, so re-reading config here would clobber the user's choice)
+		// initialize view once; afterwards the in-plot toggle owns it
+		// (it doesn't dispatch config changes, so re-reading config here would clobber the user's choice)
 		if (!this.viewInitialized) {
-			this.crossSpecies = !!config.crossSpecies
 			this.view = this.cohorts.length > 2 ? 'heatmap' : 'default'
 			this.viewInitialized = true
 		}
@@ -118,10 +114,6 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 
 	cohortLabel(c: CohortRef) {
 		return c.label || c.cohort
-	}
-
-	spansSpecies() {
-		return new Set(this.cohorts.map(c => c.organism)).size > 1
 	}
 
 	/** number of ordered series with ≥3 distinct timepoints among the response cohorts — gates the
@@ -149,7 +141,6 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 				genome: this.app.opts.state.vocab.genome,
 				dslabel: this.app.opts.state.vocab.dslabel,
 				cohorts: this.cohorts,
-				crossSpecies: this.crossSpecies,
 				heatmap: this.view === 'heatmap',
 				overlap: this.view === 'overlap',
 				trajectory: this.view === 'trajectory',
@@ -227,25 +218,6 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 				const o = sel.append('option').attr('value', val).text(txt)
 				if (val === this.view) o.property('selected', true)
 			}
-		}
-
-		// cross-species toggle — only relevant when the selection spans organisms
-		if (this.spansSpecies()) {
-			const label = div
-				.append('label')
-				.style('font-size', '0.85em')
-				.style('cursor', 'pointer')
-				.style('margin-right', '16px')
-			label
-				.append('input')
-				.attr('type', 'checkbox')
-				.property('checked', this.crossSpecies)
-				.style('margin-right', '5px')
-				.on('change', (event: any) => {
-					this.crossSpecies = event.target.checked
-					this.reload()
-				})
-			label.append('span').text('Cross-species (match by ortholog symbol)')
 		}
 
 		// correlation-metric toggle — only for the correlation-matrix view (not the heatmap)
@@ -550,7 +522,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 	openPair(a: CohortRef, b: CohortRef) {
 		this.app.dispatch({
 			type: 'plot_create',
-			config: { chartType: 'proteomeCohortCompare', cohorts: [a, b], crossSpecies: this.crossSpecies }
+			config: { chartType: 'proteomeCohortCompare', cohorts: [a, b] }
 		})
 	}
 

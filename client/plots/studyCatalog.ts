@@ -39,10 +39,14 @@ const defaultConfig = {
 	chartType: 'studyCatalog'
 }
 
-type CatalogColumn = { key: string; label: string }
+/** urlBase renders the cell as a link to urlBase+value (e.g. a PubMed ID column) */
+type CatalogColumn = { key: string; label: string; urlBase?: string }
 type CatalogUiConfig = {
 	columns: CatalogColumn[]
 	facets: string[]
+	/** facets rendered as radio buttons instead of checkboxes: exactly one value is active at
+	 *  all times (defaults to the first value), so rows of different values never mix in the table */
+	singleSelectFacets?: string[]
 }
 type CatalogRow = { [key: string]: string } & { organism: string; assay: string; cohort: string }
 
@@ -93,7 +97,7 @@ class StudyCatalog extends PlotBase implements RxComponent {
 			tip: new Menu({ padding: '' }),
 			header: this.opts.header
 		}
-		if (this.dom.header) this.dom.header.html('Sample Sets')
+		if (this.dom.header) this.dom.header.html('Studies')
 	}
 
 	getState(appState: MassState) {
@@ -202,13 +206,27 @@ class StudyCatalog extends PlotBase implements RxComponent {
 		// dataset query config, used to gate each facet's chart button on what the chart needs
 		const queries = this.app.vocabApi.termdbConfig?.queries
 
+		// single-select facets always have exactly one active value; default to the first value
+		// (also reapplied after "clear all"), so the table never mixes e.g. species
+		const singleSelect = new Set(ui.singleSelectFacets || [])
+		for (const facet of singleSelect) {
+			if (!ui.facets.includes(facet)) continue
+			if (this.activeFilters.get(facet)?.size === 1) continue
+			const values = [...new Set(this.rows.map(r => r[facet]).filter(Boolean))].sort((a, b) =>
+				a.localeCompare(b, undefined, { numeric: true })
+			)
+			if (values.length) this.activeFilters.set(facet, new Set([values[0]]))
+			else this.activeFilters.delete(facet)
+		}
+
 		const header = div
 			.append('div')
 			.style('display', 'flex')
 			.style('align-items', 'center')
 			.style('margin-bottom', '8px')
 		header.append('span').style('font-weight', 'bold').text('Filter by')
-		const anyActive = [...this.activeFilters.values()].some(s => s.size > 0)
+		// single-select facets are always active by design, so they don't count towards "clear all"
+		const anyActive = [...this.activeFilters.entries()].some(([f, s]) => !singleSelect.has(f) && s.size > 0)
 		header
 			.append('span')
 			.style('margin-left', 'auto')
@@ -256,6 +274,7 @@ class StudyCatalog extends PlotBase implements RxComponent {
 					.on('click', (event: any) => this.openChartMenu(chart, event))
 			}
 
+			const single = singleSelect.has(facet)
 			const active = this.activeFilters.get(facet) || new Set<string>()
 			const values = [...counts.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
 			for (const value of values) {
@@ -269,14 +288,20 @@ class StudyCatalog extends PlotBase implements RxComponent {
 					.style('padding', '1px 0')
 				line
 					.append('input')
-					.attr('type', 'checkbox')
+					.attr('type', single ? 'radio' : 'checkbox')
+					.attr('name', single ? `sjpp-studyCatalog-facet-${this.id}-${facet}` : null)
 					.property('checked', active.has(value))
 					.on('change', (event: any) => {
-						const set = this.activeFilters.get(facet) || new Set<string>()
-						if (event.target.checked) set.add(value)
-						else set.delete(value)
-						if (set.size) this.activeFilters.set(facet, set)
-						else this.activeFilters.delete(facet)
+						if (single) {
+							// radio: picking a value replaces the facet's single active value
+							this.activeFilters.set(facet, new Set([value]))
+						} else {
+							const set = this.activeFilters.get(facet) || new Set<string>()
+							if (event.target.checked) set.add(value)
+							else set.delete(value)
+							if (set.size) this.activeFilters.set(facet, set)
+							else this.activeFilters.delete(facet)
+						}
 						this.renderFacets(ui)
 						this.renderTable(ui)
 					})
@@ -303,7 +328,13 @@ class StudyCatalog extends PlotBase implements RxComponent {
 		this.updateActionBtn()
 
 		const columns: TableColumn[] = ui.columns.map(c => ({ label: c.label, sortable: true }))
-		const tableRows: TableRow[] = rows.map(row => ui.columns.map(c => ({ value: row[c.key] ?? '' })) as TableRow)
+		const tableRows: TableRow[] = rows.map(
+			row =>
+				ui.columns.map(c => {
+					const value = row[c.key] ?? ''
+					return c.urlBase && value ? { value, url: c.urlBase + value } : { value }
+				}) as TableRow
+		)
 
 		renderTable({
 			columns,
@@ -431,8 +462,7 @@ class StudyCatalog extends PlotBase implements RxComponent {
 			type: 'plot_create',
 			config: {
 				chartType: 'proteomeCohortCompare',
-				cohorts: selected.map(r => ({ organism: r.organism, assay: r.assay, cohort: r.cohort, label: r.cohort })),
-				crossSpecies: false
+				cohorts: selected.map(r => ({ organism: r.organism, assay: r.assay, cohort: r.cohort, label: r.cohort }))
 			}
 		})
 	}
