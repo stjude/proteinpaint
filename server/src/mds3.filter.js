@@ -26,12 +26,11 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 
 	const filter = combinePPfilterAndTid2value(param, ds) // pp filter
 	const filter0 = getFilter0(param, ds)
-	const sampleType = getSampleType(param)
 
 	let filterSamples
 	if (filter || filter0) {
 		// filter samples by supplied filter(s)
-		const q = { filter, filter0, mapParent2Children: param.mapParent2Children, sampleType }
+		const q = { filter, filter0, mapParent2Children: param.mapParent2Children, sampleType: param.sampleType }
 		if (ds.cohort?.db) {
 			// dataset has sqlite db
 			if (!q.filter) return // no pp filtering, use all samples
@@ -45,11 +44,11 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 		}
 	}
 
-	if (sampleType) {
+	if (param.sampleType) {
 		// filter samples by sample type
 		const sampleTypeSamples = new Set()
-		for (const [sampleId, type] of ds.sampleId2Type) {
-			if (type == sampleType) sampleTypeSamples.add(sampleId)
+		for (const [sampleId, sampleType] of ds.sampleId2Type) {
+			if (sampleType == param.sampleType) sampleTypeSamples.add(sampleId)
 		}
 		filterSamples = filterSamples ? filterSamples.intersection(sampleTypeSamples) : sampleTypeSamples
 	}
@@ -122,18 +121,4 @@ function getFilter0(param, ds) {
 	// has filter0. ds must supply the validator
 	if (typeof ds.validate_filter0 != 'function') throw new Error('filter0 used but ds.validate_filter0 not func')
 	return ds.validate_filter0(param.filter0)
-}
-
-function getSampleType(param) {
-	if (param.sampleType) return param.sampleType
-	if (!param.terms) return
-	let sampleType
-	for (const tw of param.terms) {
-		if (sampleType) {
-			if (sampleType != tw.q.sampleType) throw 'multiple query sample types specified'
-		} else {
-			sampleType = tw.q.sampleType
-		}
-	}
-	return sampleType
 }
