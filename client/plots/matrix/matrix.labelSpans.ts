@@ -13,9 +13,9 @@ export type LabelAncestry = {
 export const SPANCLS = 'sjpp-matrix-label-span'
 export const SPANSELECTOR = `.${SPANCLS}`
 
-// gap (in px) added between each successive nested ancestor span level,
-// so that a distance-2 ancestor span is rendered beyond the distance-1 spans
-const SPANLEVELGAP = 24
+// small gap (in px) between a span line and adjacent text: the sample labels next to it,
+// its own ancestor label, and the next nested level's line
+const SPANLABELPAD = 3
 
 export function trackLabelSpanData(
 	lab,
@@ -66,37 +66,104 @@ export function renderLabelSpans(relatedSamplesByAncestorId, side, d) {
 	// only render a span when it covers more than one sample
 	const relatedSamples = [...relatedSamplesByAncestorId.values()].filter(r => r.samples.length > 1)
 	side.box.selectAll(SPANSELECTOR).remove()
-	const a = side.box.selectAll(SPANSELECTOR).data(relatedSamples)
 
-	a.enter()
+	// Render each ancestor label text first, so its rendered size can be measured. A label
+	// is drawn horizontally (upright) when its width fits within the horizontal extent of
+	// its descendant sample columns (samples.length * colw); otherwise it is rotated
+	// vertical. The vertical extent that a label occupies away from its line (its width when
+	// rotated, but only its height when horizontal) determines how far out the next nested
+	// level must be placed, avoiding overlap that a constant per-level gap could not handle.
+	const groups = side.box
+		.selectAll(SPANSELECTOR)
+		.data(relatedSamples)
+		.enter()
 		.append('g')
-		.each(function (this: SVGGElement, r) {
-			const g = select(this).attr('class', SPANCLS).attr('transform', r.transform)
+		.attr('class', SPANCLS)
+		.attr('transform', r => r.transform)
 
-			const y = getSpanYpos(r)
-			const xw = d.colw * (r.samples.length - 1)
-			g.append('line')
-				.attr('x1', -d.colw + 5)
-				.attr('x2', xw + 1)
-				.attr('y1', y)
-				.attr('y2', y)
-				.attr('stroke', '#000')
-				.attr('stroke-width', 1) //rgba(255, 100, 100, 0.1)`); console.log(208, side.box.select(cls).node())
+	const layoutByEntry = new Map<any, { horizontal: boolean; verticalExtent: number }>()
+	groups.each(function (this: SVGGElement, r) {
+		const box = select(this).append('text').text(r.ancestor_id).node()?.getBBox() || { width: 0, height: 0 }
+		const availableWidth = r.samples.length * d.colw
+		const horizontal = box.width <= availableWidth
+		layoutByEntry.set(r, { horizontal, verticalExtent: horizontal ? box.height : box.width })
+	})
 
-			g.append('text')
-				.attr('text-anchor', 'end')
-				.attr('transform', `translate(${xw / 2},${y + 3})rotate(-90)`)
-				.text(r.ancestor_id)
-		})
+	const lineOffsetByLevel = getLineOffsetByLevel(relatedSamples, layoutByEntry)
+
+	// position the line span and its ancestor label using the measured per-level offsets
+	groups.each(function (this: SVGGElement, r) {
+		// when the sample labels are rendered at the top of the matrix, the span and its
+		// ancestor label are placed above (negative y) and extend upward, away from the
+		// matrix; otherwise (bottom) they are placed below and extend downward
+		const isTop = getDirection(r, side) === 'top'
+		const level = (r.distance || 1) - 1
+		const y = isTop ? -lineOffsetByLevel[level] : lineOffsetByLevel[level]
+		const xw = d.colw * (r.samples.length - 1)
+		const g = select(this)
+		// insert the line before the text so it stays behind the ancestor label
+		g.insert('line', 'text')
+			.attr('x1', -d.colw + 5)
+			.attr('x2', xw + 1)
+			.attr('y1', y)
+			.attr('y2', y)
+			.attr('stroke', '#000')
+			.attr('stroke-width', 1)
+
+		const textY = y + (isTop ? -SPANLABELPAD : SPANLABELPAD)
+		const text = g.select('text').attr('transform', null)
+		if (layoutByEntry.get(r)?.horizontal) {
+			// upright, centered over the span, just beyond the line
+			text
+				.attr('text-anchor', 'middle')
+				.attr('dominant-baseline', isTop ? 'auto' : 'hanging')
+				.attr('transform', `translate(${xw / 2},${textY})`)
+		} else {
+			// rotated vertical, reading away from the matrix
+			text
+				.attr('text-anchor', isTop ? 'start' : 'end')
+				.attr('dominant-baseline', 'auto')
+				.attr('transform', `translate(${xw / 2},${textY})rotate(-90)`)
+		}
+	})
 }
 
-function getSpanYpos(d) {
-	const l = d.maxTextLengthByAncestorDistance
-	//console.log(345, l)
-	// base extent = how far the (rotated) sample labels reach; nested ancestor
-	// levels are pushed further out by SPANLEVELGAP per ancestor distance level
-	const labelLen = Math.max(0, ...Object.values(l).map(Number))
-	const level = (d.distance || 1) - 1
-	const offset = labelLen + 3 + level * SPANLEVELGAP
-	return d.direction == 'btm' ? offset : -offset
+// The side's direction is the source of truth when available; otherwise fall back to
+// the direction tracked per ancestor entry. This keeps production behavior unchanged
+// (the layout side object has no `direction`, so the tracked entry direction is used)
+// while allowing a caller/test to drive the placement via side.direction.
+function getDirection(d, side) {
+	return side.direction ?? d.direction
+}
+
+// Compute the positive line-offset magnitude for each nesting level. Level 0 sits just
+// past the sample labels; each deeper level sits past the previous level's line AND the
+// vertical extent of its ancestor label, so a wide (rotated) label pushes the next level
+// proportionally out, while an upright label only reserves its (small) text height.
+function getLineOffsetByLevel(relatedSamples, layoutByEntry: Map<any, { verticalExtent: number }>) {
+	// how far the rotated sample labels reach (max across all ancestors)
+	const sampleLabelExtent = Math.max(
+		0,
+		...relatedSamples.map(r => Math.max(0, ...Object.values(r.maxTextLengthByAncestorDistance).map(Number)))
+	)
+	// the largest label extent at each level determines the spacing to the next level
+	const maxLabelExtentByLevel: { [level: number]: number } = {}
+	for (const r of relatedSamples) {
+		const level = (r.distance || 1) - 1
+		const ext = layoutByEntry.get(r)?.verticalExtent || 0
+		if (!(level in maxLabelExtentByLevel) || ext > maxLabelExtentByLevel[level]) maxLabelExtentByLevel[level] = ext
+	}
+
+	const offsetByLevel: { [level: number]: number } = {}
+	let extent = sampleLabelExtent
+	for (const level of Object.keys(maxLabelExtentByLevel)
+		.map(Number)
+		.sort((a, b) => a - b)) {
+		// place this level's line a small pad beyond the current extent
+		offsetByLevel[level] = extent + SPANLABELPAD
+		// the ancestor label at this level extends outward from its line by its vertical
+		// extent (with a pad between line and text); the next level must clear that
+		extent = offsetByLevel[level] + SPANLABELPAD + maxLabelExtentByLevel[level]
+	}
+	return offsetByLevel
 }
