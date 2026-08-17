@@ -6,13 +6,16 @@ import { select } from 'd3-selection'
  reusable helper functions
 **************************/
 
-function getSvg(opts: { [key: string]: any } = {}) {
+function getSvg(_opts: { [key: string]: any } = {}) {
+	const defaultOpts = { direction: 'btm' }
+	const opts = { ...defaultOpts, ..._opts }
+
 	const g = select('body')
 		.append('svg')
 		.attr('width', 200)
-		.attr('heigth', 200)
+		.attr('heigth', 300)
 		.append('g')
-		.attr('transform', 'translate(50,50)')
+		.attr('transform', `translate(50,${opts.direction == 'btm' ? 0 : 150})`)
 
 	const relatedSamplesByAncestorId = new Map()
 
@@ -24,7 +27,7 @@ function getSvg(opts: { [key: string]: any } = {}) {
 			sampleType: 2,
 			ancestors: [
 				{
-					ancestor_id: 40,
+					ancestor_id: 40404040,
 					distance: 1
 				},
 				{
@@ -43,7 +46,7 @@ function getSvg(opts: { [key: string]: any } = {}) {
 			sampleType: 2,
 			ancestors: [
 				{
-					ancestor_id: 40,
+					ancestor_id: 40404040,
 					distance: 1
 				},
 				{
@@ -62,7 +65,7 @@ function getSvg(opts: { [key: string]: any } = {}) {
 			sampleType: 2,
 			ancestors: [
 				{
-					ancestor_id: 40,
+					ancestor_id: 40404040,
 					distance: 1
 				},
 				{
@@ -255,7 +258,7 @@ function getSvg(opts: { [key: string]: any } = {}) {
 
 	const side = {
 		prefix: 'sample',
-		direction: opts.direction || 'btm',
+		direction: opts.direction,
 		attr: {
 			transform: d => d.transform,
 			labelGTransform: d => d.transform
@@ -270,7 +273,11 @@ function getSvg(opts: { [key: string]: any } = {}) {
 		.attr('class', 'sjpp-matrix-label')
 		.each(function (lab) {
 			const g = select(this).attr('transform', lab.transform)
-			const text = g.append('text').attr('transform', 'rotate(-90)').attr('text-anchor', 'end').text(lab.label)
+			const text = g
+				.append('text')
+				.attr('transform', 'rotate(-90)')
+				.attr('text-anchor', opts.direction === 'btm' ? 'end' : 'start')
+				.text(lab.label)
 			trackLabelSpanData(lab, side, 'btm', text, relatedSamplesByAncestorId)
 		})
 
@@ -287,7 +294,55 @@ function getSvg(opts: { [key: string]: any } = {}) {
 	renderLabelSpans(relatedSamplesByAncestorId, side, { colw: 16 })
 
 	return {
-		g
+		g,
+		relatedSamplesByAncestorId
+	}
+}
+
+// parse the y translation from a `translate(x,y)rotate(...)` transform string
+function getTranslateY(transform: string): number {
+	const match = /translate\([^,]+,\s*([^)]+)\)/.exec(transform)
+	return match ? +match[1] : NaN
+}
+
+// the applicable max sample-label length that getSpanYpos() uses to offset a span,
+// i.e. the largest tracked text length across the ancestor's distances
+function getApplicableMaxTextLength(entry): number {
+	return Math.max(0, ...Object.values(entry.maxTextLengthByAncestorDistance).map(Number))
+}
+
+// assert that every rendered span line and ancestor-label text sits beyond the sample
+// labels: below them (y greater than the max label length) for the bottom direction,
+// and above them (y less than the max label length) for the top direction
+function assertSpanYpositions(test, g, relatedSamplesByAncestorId, direction: string) {
+	const entriesByAncestorId = new Map([...relatedSamplesByAncestorId.values()].map(e => [`${e.ancestor_id}`, e]))
+	const spanNodes = g.selectAll(SPANSELECTOR).nodes()
+	for (const node of spanNodes) {
+		const span = select(node)
+		const ancestor_id = span.select('text').text()
+		const entry = entriesByAncestorId.get(ancestor_id)
+		const maxTextLength = getApplicableMaxTextLength(entry)
+		const lineY = +span.select('line').attr('y1')
+		const textY = getTranslateY(span.select('text').attr('transform'))
+		if (direction === 'btm') {
+			test.ok(
+				lineY > maxTextLength,
+				`[btm ${ancestor_id}] span line y (${lineY}) should be greater than the max label length (${maxTextLength})`
+			)
+			test.ok(
+				textY > maxTextLength,
+				`[btm ${ancestor_id}] ancestor label text y (${textY}) should be greater than the max label length (${maxTextLength})`
+			)
+		} else {
+			test.ok(
+				lineY < maxTextLength,
+				`[top ${ancestor_id}] span line y (${lineY}) should be less than the max label length (${maxTextLength})`
+			)
+			test.ok(
+				textY < maxTextLength,
+				`[top ${ancestor_id}] ancestor label text y (${textY}) should be less than the max label length (${maxTextLength})`
+			)
+		}
 	}
 }
 
@@ -295,8 +350,8 @@ function getSvg(opts: { [key: string]: any } = {}) {
  test sections
 ***************/
 
-tape('renderLabelSpans()', test => {
-	const { g } = getSvg()
+tape('renderLabelSpans() btm direction', test => {
+	const { g, relatedSamplesByAncestorId } = getSvg()
 
 	test.equal(
 		g.selectAll(SPANSELECTOR).selectAll('text').size(),
@@ -322,5 +377,41 @@ tape('renderLabelSpans()', test => {
 		colw * (9 - 1) + 1,
 		'the ancestor 30 span line should extend across all 9 descendant samples (2-10)'
 	)
+
+	// spans and ancestor labels are rendered below the sample labels (greater y)
+	assertSpanYpositions(test, g, relatedSamplesByAncestorId, 'btm')
+	test.end()
+})
+
+tape(`renderLabelSpans({direction: 'top')`, test => {
+	const { g, relatedSamplesByAncestorId } = getSvg({ direction: 'top' })
+
+	test.equal(
+		g.selectAll(SPANSELECTOR).selectAll('text').size(),
+		3,
+		'there should be 3 rendered ancestor label texts (40, 46, and the nested 30 spanning both)'
+	)
+	test.equal(
+		g.selectAll(SPANSELECTOR).selectAll('line').size(),
+		3,
+		'there should be 3 rendered ancestor line spans (40, 46, and the nested 30 spanning both)'
+	)
+
+	// ancestor 30 spans samples 2-10 (its 6 distance-2 descendants under 40 and 46,
+	// plus its 3 distance-1 direct children 8-10), so its line covers all 9 samples
+	const colw = 16
+	const span30 = g
+		.selectAll(SPANSELECTOR)
+		.nodes()
+		.find(node => select(node).select('text').text() === '30')
+	test.ok(span30, 'there should be a rendered span for ancestor 30')
+	test.equal(
+		+select(span30!).select('line').attr('x2'),
+		colw * (9 - 1) + 1,
+		'the ancestor 30 span line should extend across all 9 descendant samples (2-10)'
+	)
+
+	// spans and ancestor labels are rendered above the sample labels (lesser y)
+	assertSpanYpositions(test, g, relatedSamplesByAncestorId, 'top')
 	test.end()
 })
