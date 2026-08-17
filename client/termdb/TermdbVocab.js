@@ -297,26 +297,22 @@ export class TermdbVocab extends Vocab {
 		Generate regression analysis results
 		config{}
 		.regressionType: 'linear' | 'logistic'
-		.outcome {id, term, q, refGrp}
-		.independent[ {id, term, q, refGrp}, ... ]
+		.outcome {term, q, refGrp}
+		.independent[ {term, q, refGrp}, ... ]
 	*/
 	async getRegressionData(opts) {
 		if (!isDictionaryType(opts.outcome.term.type)) throw 'outcome must be dictionary term'
+		/* every variable is sent as the plain min copy of its tw. the server reads term.id and
+		term.type off it and rehydrates the term, so there is no need to flatten id/type/values
+		onto the tw, nor to prune q (continuous mode ignores the bin config server-side).
+		refGrp, nonRefGrp and interactions are regression-only tw properties that
+		getTwMinCopy() does not carry, so they are added here; refGrp is already 'NA' for
+		continuous mode, see maySet_refGrp() in regression.inputs.term.ts */
 		const outcome = this.getTwMinCopy(opts.outcome)
-		outcome.id = outcome.term.id
-		outcome.q = structuredClone(opts.outcome.q)
-		outcome.type = outcome.term.type // TODO: refactor backend to not require outcome.type (similar issue with independent variables, see below)
+		// q.mode is required to select the CTE constructor server-side; a linear outcome is continuous
 		if (!outcome.q.mode && opts.regressionType == 'linear') outcome.q.mode = 'continuous'
-		const contQkeys = ['mode', 'scale']
-		outcome.refGrp = outcome.q.mode == 'continuous' ? 'NA' : opts.outcome.refGrp
+		outcome.refGrp = opts.outcome.refGrp
 		if (opts.outcome.nonRefGrp) outcome.nonRefGrp = opts.outcome.nonRefGrp
-
-		if (outcome.q.mode == 'continuous') {
-			// remove unneeded parameters from q
-			for (const key in outcome.q) {
-				if (!contQkeys.includes(key)) delete outcome.q[key]
-			}
-		}
 
 		const body = {
 			genome: this.vocab.genome,
@@ -326,30 +322,10 @@ export class TermdbVocab extends Vocab {
 			regressionType: opts.regressionType,
 			outcome,
 			independent: opts.independent.map(tw => {
-				const t = this.getTwMinCopy(tw)
-				t.refGrp = tw.refGrp
-				t.interactions = tw.interactions
-				const q = JSON.parse(JSON.stringify(t.q))
-				delete q.values
-				delete q.totalCount
-				if (t.q.mode == 'continuous') {
-					// remove unneeded parameters from q
-					for (const key in q) {
-						if (!contQkeys.includes(key)) delete q[key]
-					}
-				}
-				return {
-					// TODO: refactor backend code to not have to pass
-					// term.id, term.type, and term.values separately
-					$id: tw.$id,
-					id: t.term.id,
-					q,
-					term: t.term,
-					type: t.term.type,
-					refGrp: t.q.mode == 'continuous' ? 'NA' : t.refGrp,
-					interactions: t.interactions || [],
-					values: t.term.values
-				}
+				const copy = this.getTwMinCopy(tw)
+				copy.refGrp = tw.refGrp
+				copy.interactions = tw.interactions || []
+				return copy
 			})
 		}
 		const filterData = getNormalRoot(opts.filter)

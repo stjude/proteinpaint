@@ -13,8 +13,8 @@ import { isDictionaryType } from '#shared/terms.js'
 import { getData } from '../termdb.matrix.js'
 
 type TermWrapperLike = {
-	id?: string
 	$id?: string
+	/** the term wrapper type, e.g. 'NumTWCont'; branch on term.type for the term type */
 	type?: string
 	term?: any
 	q: Record<string, any>
@@ -160,18 +160,20 @@ the object is used through out the script, and can be modified at various steps
 q {}
 .regressionType
 .filter
+every variable is a minimum tw copy, see vocabApi.getTwMinCopy()
 .outcome{}
-	.id
-	.type // type will be required later to support molecular datatypes
+	.$id
+	.type // tw type e.g. 'NumTWCont', NOT the term type; use tw.term.type to branch by term type
 	.term{} // rehydrated
 	.q{}
 		.scale
 		.computableValuesOnly:true // always added
 	.refGrp
+	.nonRefGrp
 .independent[{}]
-	.id
-	.type
-	.term{} // rehydrated
+	.$id
+	.type // same as above, a tw type and not a term type
+	.term{} // rehydrated for dictionary terms
 	.q{}
 		.scale
 		.computableValuesOnly:true // always added
@@ -281,40 +283,43 @@ function parse_q(q, ds) {
 	if (!q.regressionType) throw 'regressionType missing'
 	if (!regressionTypes.includes(q.regressionType)) throw 'unknown regressionType'
 
-	// outcome
+	// outcome, a minimum tw copy like the independent variables below
 	if (!q.outcome) throw `missing 'outcome' parameter`
-	if (!('id' in q.outcome)) throw 'outcome.id missing'
+	if (!q.outcome.term?.id) throw 'outcome.term.id missing'
 	if (!q.outcome.q) throw 'outcome.q missing'
 	// outcome is always a dictionary term
 	// set this flag to prevent appending uncomputable values in CTE constructors
 	q.outcome.q.computableValuesOnly = true
-	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
-	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
-	// no longer need outcome.id now that outcome.term is rehydrated
-	delete q.outcome.id
+	const outcomeTerm = ds.cohort.termdb.q.termjsonByOneid(q.outcome.term.id)
+	if (!outcomeTerm) throw 'invalid outcome term: ' + q.outcome.term.id
+	// rehydrate to the server copy, which carries attributes the min tw copy drops (e.g. valueConversion)
+	q.outcome.term = outcomeTerm
 
 	// independent
 	if (!q.independent) throw 'independent[] missing'
 	if (!Array.isArray(q.independent) || q.independent.length == 0) throw 'q.independent is not non-empty array'
-	// tw: term wrapper
+	// tw: term wrapper, a minimum copy from the client; term type is at tw.term.type
+	// (tw.type is the term wrapper type, e.g. 'NumTWCont')
 	for (const tw of q.independent) {
-		if (!tw.q) throw `missing q for independent term '${tw.id}'`
+		if (!tw.term?.type) throw 'tw.term.type missing for an independent variable'
+		if (!tw.q) throw `missing q for independent term '${tw.term.id || tw.$id}'`
 
 		checkTwAncestryRestriction(tw, q, ds)
 
-		if (isDictionaryType(tw.type)) {
+		if (isDictionaryType(tw.term.type)) {
 			// dictionary term
 			tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
-			if (tw.type != 'samplelst') {
-				if (!tw.id) throw 'tw.id missing'
-				tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
-				if (!tw.term) throw `invalid independent term='${tw.id}'`
-				// no longer need tw.id now that tw.term is rehydrated
-				delete tw.id
+			if (tw.term.type != 'samplelst') {
+				// samplelst terms are client-made and cannot be rehydrated
+				if (!tw.term.id) throw 'tw.term.id missing'
+				const term = ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
+				if (!term) throw `invalid independent term='${tw.term.id}'`
+				// rehydrate to the server copy, which carries attributes the min tw copy drops (e.g. valueConversion)
+				tw.term = term
 			}
 		} else {
 			// non-dictionary term
-			if (tw.type == 'snplst' || tw.type == 'snplocus') {
+			if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
 				if (!tw.q.cacheid) throw 'q.cacheid missing'
 				if (serverconfig.cache_snpgt.fileNameRegexp.test(tw.q.cacheid)) throw 'invalid cacheid'
 				if (typeof tw.q.snp2effAle != 'object') throw 'q.snp2effAle{} is not object'
@@ -323,7 +328,7 @@ function parse_q(q, ds) {
 				if (tw.q.geneticModel == 3) {
 					if (typeof tw.q.snp2refGrp != 'object') throw 'q.snp2refGrp{} is not object when geneticMode=3'
 				}
-				if (tw.type == 'snplst') {
+				if (tw.term.type == 'snplst') {
 					// missingGenotype is not needed for snplocus
 					if (!Number.isInteger(tw.q.missingGenotype)) throw 'q.missingGenotype is not integer for snplst'
 				}
@@ -458,7 +463,7 @@ function makeRinput(q: RegressionQuery, sampledata: SampleDataEntry[]): RInput {
 	// independent variables
 	const independent: RIndependentVariable[] = []
 	for (const tw of q.independent) {
-		if (tw.type == 'snplst' || tw.type == 'snplocus') {
+		if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
 			makeRvariable_snps(tw, independent, q)
 		} else {
 			makeRvariable_dictionaryTerm(tw, independent, q, id2scaleFactor)
@@ -476,13 +481,13 @@ function makeRinput(q: RegressionQuery, sampledata: SampleDataEntry[]): RInput {
 		if (!out) continue
 		for (const tw of q.independent) {
 			// tw = termWrapper
-			if (tw.type == 'snplocus') {
+			if (tw.term.type == 'snplocus') {
 				// snplocus snps are analyzed separately from each other
 				// therefore samples need to be filtered separately for each snplocus snp
 				// this filtering will be done in the R script
 				continue
 			}
-			if (tw.type == 'snplst') {
+			if (tw.term.type == 'snplst') {
 				if (!tw.$id) {
 					skipsample = true
 					break
@@ -584,7 +589,7 @@ function makeRvariable_dictionaryTerm(
 ) {
 	// tw is a dictionary term
 	const thisTerm: RIndependentVariable = {
-		id: tw.$id || tw.id || '',
+		id: tw.$id || tw.term.id || '',
 		name: tw.term.name,
 		type: tw.q.mode == 'spline' ? 'spline' : 'other',
 		rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor'
@@ -607,10 +612,10 @@ function makeRvariable_dictionaryTerm(
 		for (const id of interactions) {
 			const tw2 = q.independent.find(i => i.$id == id)
 			if (!tw2) continue
-			if (tw2.type == 'snplst') {
+			if (tw2.term.type == 'snplst') {
 				// this term is interacting with a snplst term, fill in all snps from this list into thisTerm.interactions
 				for (const s of tw2.highAFsnps.keys()) thisTerm.interactions.push(s)
-			} else if (tw2.type == 'snplocus') {
+			} else if (tw2.term.type == 'snplocus') {
 				// snplocus interactions should not be handled here because each snp needs to be analyzed separately
 				// snplocus interactions will be specified separately for each snp in makeRvariable_snps()
 				continue
@@ -626,7 +631,7 @@ function makeRvariable_dictionaryTerm(
 		thisTerm.spline = {
 			knots: tw.q.knots.map(x => Number(x.value) * scaleFactor)
 		}
-		if (!q.independent.find(i => i.type == 'snplocus')) {
+		if (!q.independent.find(i => i.term.type == 'snplocus')) {
 			// when there isn't a snplocus variable, can make spline plot
 			thisTerm.spline.plot = true
 		}
@@ -649,7 +654,7 @@ function makeRvariable_snps(tw: TermWrapperLike, independent: RIndependentVariab
 			$id: tw.$id, // need this to retrieve data from getData() output
 			id: snpid, // need this to discriminate between snps
 			name: snpid,
-			type: tw.type || 'snplst',
+			type: tw.term.type,
 			rtype: 'numeric',
 			interactions: structuredClone(tw.interactions)
 		}
@@ -821,7 +826,7 @@ async function parseRoutput(
 			// client will rely on this id to associate this result to a variant
 			analysisResult.id = snpid
 
-			const tw = q.independent.find(i => i.type == 'snplocus')
+			const tw = q.independent.find(i => i.term.type == 'snplocus')
 			if (!tw) throw 'snplocus term missing'
 
 			// copy AF to it, for showing by m dot hovering
@@ -954,7 +959,7 @@ async function parseRoutput(
 		// add warnings for snplst variants that are either
 		// monomorphic or have effect allele frequency below the cutoff
 		// because these variants were discarded from the analysis.
-		const snplst = q.independent.find(v => v.type == 'snplst')
+		const snplst = q.independent.find(v => v.term.type == 'snplst')
 		if (snplst) {
 			// snplst is in q.independent
 			if (snplst.lowAFsnps && snplst.lowAFsnps.size) {
@@ -982,7 +987,7 @@ async function snplocusPostprocess(
 	Rinput: RInput,
 	result: RegressionResponse
 ) {
-	const tw = q.independent.find(i => i.type == 'snplocus')
+	const tw = q.independent.find(i => i.term.type == 'snplocus')
 	if (!tw) return
 	stime = new Date().getTime()
 	addResult4monomorphic(tw, result)

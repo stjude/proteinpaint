@@ -108,19 +108,16 @@ export type TermdbRegressionRequest = {
 	filter?: Filter
 	includeUnivariate?: boolean
 	regressionType: 'linear' | 'logistic' | 'cox'
+	/** a minimum tw copy, see vocabApi.getTwMinCopy(); term type is read from tw.term.type */
 	outcome: TermWrapper & {
-		id?: string
-		type?: string
 		refGrp?: string
 		nonRefGrp?: string
 	}
+	/** minimum tw copies, same as the outcome above */
 	independent: Array<
 		TermWrapper & {
-			id?: string
-			type?: string
 			refGrp?: string
 			interactions?: string[]
-			values?: unknown
 		}
 	>
 }
