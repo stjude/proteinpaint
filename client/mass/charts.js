@@ -405,7 +405,7 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Sample Sets',
+			label: 'Studies',
 			chartType: 'studyCatalog',
 			clickTo: self.plotCreate,
 			config: { chartType: 'studyCatalog' }

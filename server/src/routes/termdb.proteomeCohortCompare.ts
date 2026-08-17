@@ -32,8 +32,8 @@ type CohortRef = { organism: string; assay: string; cohort: string; label?: stri
 type GeneStat = { fc: number; fdr: number; z: number }
 
 /** collapse a cohort's DAP to one most-significant row per gene, then z-standardize the log2FC.
- *  geneKeyed by the raw gene symbol, or upper-cased when crossSpecies. Returns null if unreadable. */
-async function loadCohortZ(filePath: string, crossSpecies: boolean): Promise<Map<string, GeneStat> | null> {
+ *  Keyed by the raw gene symbol. Returns null if unreadable. */
+async function loadCohortZ(filePath: string): Promise<Map<string, GeneStat> | null> {
 	let content: string
 	try {
 		content = await fs.readFile(filePath, 'utf8')
@@ -52,9 +52,8 @@ async function loadCohortZ(filePath: string, crossSpecies: boolean): Promise<Map
 		if (!Number.isFinite(fc)) continue
 		const fdr = Number(parts[4])
 		if (!Number.isFinite(fdr)) continue
-		const key = crossSpecies ? geneRaw.toUpperCase() : geneRaw
-		const cur = best.get(key)
-		if (!cur || fdr < cur.fdr) best.set(key, { fc, fdr })
+		const cur = best.get(geneRaw)
+		if (!cur || fdr < cur.fdr) best.set(geneRaw, { fc, fdr })
 	}
 	if (best.size === 0) return null
 
@@ -488,15 +487,14 @@ function init({ genomes }) {
 
 			const cohorts: CohortRef[] = typeof q.cohorts === 'string' ? JSON.parse(q.cohorts) : q.cohorts
 			if (!Array.isArray(cohorts) || cohorts.length < 2) throw 'at least two cohorts are required'
-			const crossSpecies = q.crossSpecies === true || q.crossSpecies === 'true'
 
-			// species guard — refuse silent cross-species mixing unless opted in
+			// species guard — the catalog UI can no longer produce a mixed-species selection,
+			// but a direct API call still could; refuse it
 			const speciesSet = new Set(cohorts.map(c => c.organism))
-			if (speciesSet.size > 1 && !crossSpecies) {
+			if (speciesSet.size > 1) {
 				throw {
 					status: 400,
-					error:
-						'Selected cohorts span multiple species. Enable cross-species comparison to compare them by ortholog symbol.'
+					error: 'Selected cohorts span multiple species; cross-species comparison is not supported.'
 				}
 			}
 
@@ -508,7 +506,7 @@ function init({ genomes }) {
 			for (const c of cohorts) {
 				const cc = organisms[c.organism]?.assays?.[c.assay]?.cohorts?.[c.cohort]
 				if (!cc?.DAPfile) throw `no DAPfile for ${c.organism}/${c.assay}/${c.cohort}`
-				maps.push(await loadCohortZ(path.join(serverconfig.tpmasterdir, cc.DAPfile), crossSpecies))
+				maps.push(await loadCohortZ(path.join(serverconfig.tpmasterdir, cc.DAPfile)))
 				trajOf.push(cc.trajectory || null)
 				catalogOf.push(cc.catalog || null)
 			}
@@ -580,7 +578,6 @@ function init({ genomes }) {
 			res.send({
 				// attach each cohort's trajectory config so the client can offer the trajectory view
 				cohorts: cohorts.map((c, i) => ({ ...c, geneCount: maps[i]!.size, trajectory: trajOf[i] })),
-				crossSpecies,
 				genes: shared,
 				sharedGeneCount: shared.length,
 				z,
