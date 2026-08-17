@@ -6,208 +6,314 @@ import { appInit } from '../termdb/app.js'
 
 const chartType = 'aggMatrixInput'
 
-class AggMatrixInput extends PlotBase implements RxComponent{
-    static type = chartType
+type SectionType = 'row' | 'column'
+type Section = { name: string; terms: any[] }
+type SectionView = {
+	holder: any
+	nameInput: any
+	termsHolder: any
+	disabledTerms: any[]
+	disabledTermIds: string
+	termdbApi?: any
+}
 
-    type: string
+class AggMatrixInput extends PlotBase implements RxComponent {
+	static type = chartType
 
-    // holder: any
-    // chartsInstance: any /*MassCharts instance*/
-    rowSections: any[] = []
-    colSections: any[] = []
-    startOpt = '-- Select --'
+	type: string
+	config: any
+	startOpt = '-- Select --'
+	sizeMethod = ''
+	gradientMethod = ''
+	nextSectionViewId = 0
+	sectionViews = new Map<string, SectionView>()
 
-    constructor(opts, api: ComponentApi) {
-        super(opts, api)
-        this.type = AggMatrixInput.type
-        // this.holder = opts.holder
-        // this.render()
-    }
+	constructor(opts:any, api: ComponentApi) {
+		super(opts, api)
+		this.type = AggMatrixInput.type
+	}
 
-    async init(){}
+	getState(appState) {
+		const config = appState.plots.find(plot => plot.id === this.id)
+		if (!config) throw new Error(`No plot with id='${this.id}' found`)
+		return { config, activeCohort: appState.activeCohort }
+	}
 
-    main(){}
+	async init() {
+		const wrapper = this.opts.holder
+			.append('div')
+			.style('padding', '10px')
+			.attr('data-testid', 'sjpp-agg-matrix-input-wrapper')
 
+		this.dom.methodSelects = {}
+		for (const method of ['size', 'gradient']) {
+			const methodKey = `${method}Method`
+			const methodWrapper = wrapper
+				.append('div')
+				.style('margin', '5px')
+				.style('display', 'inline-flex')
+				.style('align-items', 'center')
+			methodWrapper
+				.append('label')
+				.attr('for', `sjpp-agg-matrix-${method}-method-select`)
+				.style('margin-right', '5px')
+				.text(`${capitalizeFirstLetter(method)} method:`)
+			this.dom.methodSelects[methodKey] = methodWrapper
+				.append('select')
+				.attr('id', `sjpp-agg-matrix-${method}-method-select`)
+				.attr('name', `sjpp-agg-matrix-${method}-method-select`)
+				.on('change', async event => {
+					this[methodKey] = event.target.value === this.startOpt ? '' : event.target.value
+					await this.main()
+				})
+			this.dom.methodSelects[methodKey]
+				.selectAll('option')
+				.data([this.startOpt, ...availableAggregateMethods])
+				.join('option')
+				.attr('value', value => value)
+				.text(value => value)
+		}
 
-//     render() {
-//         const wrapper = this.holder.append('div').style('padding', '10px').attr('data-testid', 'sjpp-agg-matrix-input-wrapper')
-//         const sizeSelect = this.renderMethodDropdown(wrapper, 'size')
-//         const gradSelect = this.renderMethodDropdown(wrapper, 'gradient')
+		const axisWrapper = wrapper.append('div').style('display', 'flex').style('margin-bottom', '10px')
+		this.dom.sectionHolders = {}
+		for (const [type, label] of [
+			['row', 'Row'],
+			['column', 'Column']
+		] as [SectionType, string][]) {
+			const axis = axisWrapper
+				.append('div')
+				.style('margin-right', type === 'row' ? '10px' : '')
+				.style('border-right', type === 'row' ? '1px solid #ddd' : '')
+			const header = axis.append('div').style('border-bottom', '0.5px solid #ddd').style('padding', '5px')
+			header.append('span').style('margin-right', '5px').text(`${label} sections:`)
+			header
+				.append('button')
+				.attr('type', 'button')
+				.attr('data-testid', 'sjpp-agg-matrix-add-section-btn')
+				.style('border', 'none')
+				.style('border-radius', '10px')
+				.style('padding', '5px 10px')
+				.style('background-color', '#cfe2f3')
+				.text('+')
+				.on('click', () => this.addSection(type))
+			this.dom.sectionHolders[type] = axis.append('div')
+		}
 
-//         const axisWrapper = wrapper.append('div').style('display', 'flex').style('margin-bottom', '10px')
-//         const rowWrapper = axisWrapper.append('div').style('margin-right', '10px').style('border-right', '1px solid #ddd')
-//         const rowHeader = rowWrapper.append('div').style('border-bottom', '0.5px solid #ddd').style('padding','5px')
-//         // .style('display', 'flex').style('align-items', 'center')
-//         rowHeader.append('span').style('margin-right', '5px').text('Row sections:')
-//         this.renderAddSectionBtn(rowHeader, rowWrapper, 'Row', this.chartsInstance)
+		this.dom.submit = wrapper
+			.append('button')
+			.attr('data-testid', 'sjpp-agg-matrix-submit-btn')
+			.attr('type', 'button')
+			.property('disabled', true)
+			.style('border', 'none')
+			.style('border-radius', '20px')
+			.style('padding', '5px 10px')
+			.style('font-size', '0.9em')
+			.text('Submit')
+			.on('click', () => this.submit())
+	}
 
-//         const colWrapper = axisWrapper.append('div')
-//         const colHeader = colWrapper.append('div').style('border-bottom', '0.5px solid #ddd').style('padding','5px')
-//         // .style('display', 'flex').style('align-items', 'center')
-//         colHeader.append('span').style('margin-right', '5px').text('Column sections:')
-//         this.renderAddSectionBtn(colHeader, colWrapper, 'Column', this.chartsInstance)
+	async main() {
+		this.config = this.state.config
+		for (const method of ['sizeMethod', 'gradientMethod']) {
+			this.dom.methodSelects[method].property('value', this[method] || this.startOpt)
+		}
 
-//         /** Submit button */
-//         wrapper
-//             .append('button')
-//             .attr('data-testid', 'sjpp-agg-matrix-submit-btn')
-//             .style('border-width', 'medium')
-//             .style('border-style', 'none')
-//             .style('border-radius', '20px')
-//             .style('padding', '5px 10px')
-//             .style('font-size', '0.9em')
-//             .text('Submit')
-//             .on('click', () => {
-//                 const sizeMethod = sizeSelect.node().value
-//                 const gradMethod = gradSelect.node().value
-//                 if (!sizeMethod || !gradMethod || sizeMethod === this.startOpt || gradMethod === this.startOpt) {
-//                     alert('Please select both size and gradient methods')
-//                     return
-//                 }
-//                 if (sizeMethod === gradMethod) {
-//                     alert('Size and gradient methods must be different')
-//                     return
-//                 }
-//             })
-//     }
+		await this.renderSections('row', this.config.rowSections || [])
+		await this.renderSections('column', this.config.colSections || [])
 
-//     renderMethodDropdown(holder: any, method: string) {
-//         const opts = [this.startOpt].concat(availableAggregateMethods)
-//         const wrapper = holder
-//             .append('div')
-//             .style('margin', '5px')
-//             .style('display', 'inline-flex')
-//             .style('align-items', 'center')
-//         wrapper
-//             .append('label')
-//             .attr('for', `sjpp-agg-matrix-${method}-method-select`)
-//             .style('margin-right', '5px')
-//             .text(`${capitalizeFirstLetter(method)} method:`)
+		const allTerms = [...(this.config.rowSections || []), ...(this.config.colSections || [])].flatMap(
+			section => section.terms || []
+		)
+		for (const view of this.sectionViews.values()) {
+			const disabledTermIds = allTerms.map(term => term.id || term.name).join('|')
+			if (view.disabledTermIds !== disabledTermIds) {
+				view.disabledTerms.splice(0, view.disabledTerms.length, ...allTerms)
+				view.disabledTermIds = disabledTermIds
+				await view.termdbApi?.dispatch({ type: 'app_refresh' })
+			}
+		}
 
-//         const selectMethod = wrapper
-//             .append('select')
-//             .attr('id', `sjpp-agg-matrix-${method}-method-select`)
-//             .attr('name', `sjpp-agg-matrix-${method}-method-select`)
+		const rowCount = (this.config.rowSections || []).reduce((count, section) => count + (section.terms?.length || 0), 0)
+		const colCount = (this.config.colSections || []).reduce((count, section) => count + (section.terms?.length || 0), 0)
+		const hasValidSectionNames = sections => {
+			const names = sections.map(section => (section.name || '').trim())
+			return names.every(Boolean) && new Set(names).size === names.length
+		}
+		const validSectionNames =
+			hasValidSectionNames(this.config.rowSections || []) && hasValidSectionNames(this.config.colSections || [])
+		const validMethods =
+			availableAggregateMethods.some(method => method === this.sizeMethod) &&
+			availableAggregateMethods.some(method => method === this.gradientMethod) &&
+			this.sizeMethod !== this.gradientMethod
+		const enabled = rowCount >= 2 && colCount >= 2 && validSectionNames && validMethods
+		this.dom.submit.property('disabled', !enabled).style('cursor', enabled ? 'pointer' : 'default')
+	}
 
-//         selectMethod
-//             .selectAll('option')
-//             .data(opts)
-//             .join('option')
-//             .attr('value', d => d)
-//             .text(d => d)
+	async renderSections(type: SectionType, sections: Section[]) {
+		const holder = this.dom.sectionHolders[type]
+		for (const [key, view] of this.sectionViews) {
+			const index = Number(key.slice(type.length + 1))
+			if (key.startsWith(`${type}:`) && index >= sections.length) {
+				view.termdbApi?.destroy?.()
+				view.holder.remove()
+				this.sectionViews.delete(key)
+			}
+		}
 
-//         return selectMethod
-//     }
+		for (const [index, section] of sections.entries()) {
+			const key = `${type}:${index}`
+			let view = this.sectionViews.get(key)
+			if (!view) {
+				view = await this.createSectionView(holder, type, index, section)
+				this.sectionViews.set(key, view)
+			}
+			const hasName = !!(section.name || '').trim()
+			view.nameInput
+				.property('value', section.name)
+				.attr('aria-invalid', hasName ? null : 'true')
+				.attr('title', hasName ? null : 'A section name is required')
+				.style('border-color', hasName ? null : '#c33')
+			view.holder
+				.select('[data-testid="sjpp-agg-matrix-section-term-list"]')
+				.selectAll('div')
+				.data(section.terms || [], term => term.id || term.name)
+				.join('div')
+				.attr('data-testid', 'sjpp-agg-matrix-section-term')
+				.style('margin', '5px')
+				.text(term => term.name || term.id)
+			view.termsHolder.style('display', section.terms?.length ? 'none' : '')
+			holder.node().appendChild(view.holder.node())
+		}
+	}
 
-//     renderAddSectionBtn(holder: any, sectionsHolder: any, sectionType: string, chartsInstance: any) {
-//         holder
-//             .append('button')
-//             .attr('data-testid', 'sjpp-agg-matrix-add-section-btn')
-//             .style('border-width', 'medium')
-//             .style('border-style', 'none')
-//             .style('border-radius', '10px')
-//             .style('padding', '5px 10px')
-//             .style('background-color', '#cfe2f3')
-//             .text(`+`)
-//             .on('click', () => {
-//                 this.addSection(sectionsHolder, sectionType, chartsInstance)
-//             })
-//     }
-//     addSection(holder: any, sectionType: string, chartsInstance: any) {
-//         const section = holder
-//             .append('div')
-//             .attr('data-testid', `sjpp-agg-matrix-${sectionType.toLowerCase()}-section`)
-//             .style('margin', '8px 0 0 15px')
-//             .style('padding', '8px')
-//             // .style('border-left', '2px solid #ddd')
+	async createSectionView(holder, type: SectionType, index: number, section: Section): Promise<SectionView> {
+		const sectionHolder = holder
+			.append('div')
+			.attr('data-testid', `sjpp-agg-matrix-${type}-section`)
+			.style('margin', '8px 0 0 15px')
+			.style('padding', '8px')
+		const header = sectionHolder
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '5px')
+		const nameId = `sjpp-agg-matrix-${type}-section-name-${this.nextSectionViewId++}`
+		header.append('label').attr('for', nameId).text('Section name *:')
+		const nameInput = header
+			.append('input')
+			.attr('id', nameId)
+			.attr('data-testid', 'sjpp-agg-matrix-section-name-input')
+			.attr('type', 'text')
+			.attr('required', true)
+			.attr('aria-required', 'true')
+			.attr('placeholder', 'Required')
+			.on('change', event => this.updateSection(type, index, { name: event.target.value }))
+		header
+			.append('button')
+			.attr('type', 'button')
+			.attr('data-testid', 'sjpp-agg-matrix-remove-section-btn')
+			.attr('aria-label', `Remove ${type} section`)
+			.text('×')
+			.on('click', () => this.removeSection(type, index))
 
-//         const nameId = `sjpp-agg-matrix-${sectionType.toLowerCase()}-section-name-${Date.now()}-${Math.random()}`
-//         const nameRow = section.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '5px')
-//         nameRow.append('label').attr('for', nameId).text('Section name:')
-//         const nameInput = nameRow
-//             .append('input')
-//             .attr('id', nameId)
-//             .attr('data-testid', 'sjpp-agg-matrix-section-name-input')
-//             .attr('type', 'text')
-//             .attr('required', true)
+		sectionHolder.append('div').attr('data-testid', 'sjpp-agg-matrix-section-term-list').style('margin-left', '10px')
+		const termsHolder = sectionHolder.append('div').attr('data-testid', 'sjpp-agg-matrix-section-terms')
+		const disabledTerms = [...(this.config.rowSections || []), ...(this.config.colSections || [])].flatMap(
+			section => section.terms || []
+		)
+		const disabledTermIds = disabledTerms.map(term => term.id || term.name).join('|')
+		const view: SectionView = { holder: sectionHolder, nameInput, termsHolder, disabledTerms, disabledTermIds }
+		view.termdbApi = await appInit({
+			holder: termsHolder,
+			vocabApi: this.app.vocabApi,
+			state: {
+				activeCohort: this.state.activeCohort,
+				selectedTerms: section.terms || [],
+				nav: { header_mode: 'search_only' },
+				tree: { usecase: { target: 'aggregateMatrix' } }
+			},
+			tree: {
+				minTermsToSubmit: 1,
+				submit_lst: terms => this.updateSection(type, index, { terms })
+			}
+		})
+		return view
+	}
 
-//         const termsHolder = section.append('div').attr('data-testid', 'sjpp-agg-matrix-section-terms').style('margin-left', '10px')
-//         let selectedTerms: any[] = []
+	addSection(type: SectionType) {
+		const key = type === 'row' ? 'rowSections' : 'colSections'
+		const sections = structuredClone(this.config[key] || [])
+		sections.push({ name: '', terms: [] })
+		this.editConfig({ [key]: sections })
+	}
 
-//         const renderSection = (sectionName: string) => {
-//             section.html('')
-//             const header = section.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '10px')
-//             header.append('strong').text(sectionName)
-//             header
-//                 .append('button')
-//                 .attr('type', 'button')
-//                 .attr('data-testid', 'sjpp-agg-matrix-remove-section-btn')
-//                 .text('×')
-//                 .attr('aria-label', `Remove ${sectionName}`)
-//                 .on('click', () => section.remove())
+	updateSection(type: SectionType, index: number, edits: Partial<Section>) {
+		const key = type === 'row' ? 'rowSections' : 'colSections'
+		const sections = structuredClone(this.config[key] || [])
+		const section = sections[index]
+		if (!section) return
+		Object.assign(section, edits)
+		this.editConfig({ [key]: sections })
+	}
 
-//             section
-//                 .append('div')
-//                 .attr('data-testid', 'sjpp-agg-matrix-section-terms')
-//                 .selectAll('div')
-//                 .data(selectedTerms, (term: any) => term.id || term.name)
-//                 .join(enter => {
-//                     const row = enter
-//                         .append('div')
-//                         .attr('data-testid', 'sjpp-agg-matrix-section-term')
-//                         .style('display', 'flex')
-//                         .style('align-items', 'center')
-//                         .style('gap', '5px')
-//                         .style('margin', '5px')
-//                     row.append('span').text((term: any) => term.name || term.id)
-//                     //Disable for now. Visual clutter. Can be re-enabled if needed in the future.
-//                     // row
-//                     //     .append('button')
-//                     //     .attr('type', 'button')
-//                     //     .attr('aria-label', (term: any) => `Remove ${term.name || term.id}`)
-//                     //     .attr('data-testid', 'sjpp-agg-matrix-remove-term-btn')
-//                     //     .text('×')
-//                     //     .on('click', (_event: MouseEvent, term: any) => {
-//                     //         selectedTerms = selectedTerms.filter(t => t !== term)
-//                     //         renderSection(sectionName)
-//                     //     })
-//                     return row
-//                 })
-//         }
-        
-//         const disable_terms = this.rowSections.concat(this.colSections).flatMap(section => section.terms || [])
+	removeSection(type: SectionType, index: number) {
+		const key = type === 'row' ? 'rowSections' : 'colSections'
+		const sections = structuredClone(this.config[key] || [])
+		sections.splice(index, 1)
+		this.destroySectionViews(type)
+		this.editConfig({ [key]: sections })
+	}
 
-//         appInit({
-//             holder: termsHolder,
-//             vocabApi: chartsInstance.app.vocabApi,
-//             state: {
-//                 activeCohort: chartsInstance.state.activeCohort,
-//                 nav: {
-//                     header_mode: 'search_only'
-//                 },
-//                 tree: { usecase: { target: 'aggregateMatrix' } }
-//             },
-//             tree: {
-//                 // disable_terms,
-//                 minTermsToSubmit: 1,
-//                 submit_lst: termlst => {
-//                     selectedTerms = termlst
-//                     renderSection(nameInput.property('value') || `${sectionType} section`)
-//                 }
-//             }
-//         })
-//     }
+	destroySectionViews(type: SectionType) {
+		for (const [key, view] of this.sectionViews) {
+			if (!key.startsWith(`${type}:`)) continue
+			view.termdbApi?.destroy?.()
+			view.holder.remove()
+			this.sectionViews.delete(key)
+		}
+	}
+
+	editConfig(config: any) {
+		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
+	}
+
+	submit() {
+		const toAxis = (sections: Section[]) =>
+			Object.fromEntries(
+				sections.map(section => [section.name, section.terms.map(term => ({ term: structuredClone(term), q: {} }))])
+			)
+		this.app.dispatch({
+			type: 'app_refresh',
+			subactions: [
+				{
+					type: 'plot_create',
+					config: {
+						chartType: 'aggregateMatrix',
+						rows: toAxis(this.config.rowSections),
+						columns: toAxis(this.config.colSections),
+						settings: {
+							aggregateMatrix: {
+								sizeMethod: this.sizeMethod,
+								gradientMethod: this.gradientMethod
+							}
+						}
+					}
+				},
+				{ type: 'plot_delete', id: this.id }
+			]
+		})
+	}
 }
 
 export const AggMatrixInputInit = getCompInit(AggMatrixInput)
 export const componentInit = AggMatrixInputInit
 
 export async function getPlotConfig(opts) {
-    const config = {
-        chartType,
-        /** Hide local filter for now. Need to check in testing
-         * filter and filter0 work in aggregateMatrix route.*/
-        hidePlotFilter: true
-    }
-    return copyMerge(config, opts)
+	const config = {
+		chartType,
+		hidePlotFilter: true,
+		rowSections: [],
+		colSections: []
+	}
+	return copyMerge(config, opts)
 }
