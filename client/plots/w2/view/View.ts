@@ -65,7 +65,7 @@ export class View {
 			// boundary/expression overlays, addressing the slide via the dataset.
 			// Burger-menu settings override the dataset's values (null = not edited yet)
 			const s = this.settings
-			const genes = s.geneExpression ?? image.geneExpression
+			const genes = s.showGeneExpression ? s.geneExpression ?? image.geneExpression : undefined
 			const direct = await import('../wsi.direct')
 			await direct.init(
 				{
