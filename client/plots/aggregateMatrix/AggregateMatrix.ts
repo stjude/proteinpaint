@@ -110,21 +110,24 @@ export function getPlotConfig(opts: any) {
 }
 
 export function validatePlotConfig(config: any) {
-    if (!config || typeof config !== 'object') throw new Error(`Invalid config provided for AggregateMatrix plot`)
-    if (!config.rows || !Object.keys(config.rows).length) throw new Error(`No rows provided for AggregateMatrix plot`)
+    if (!config || typeof config !== 'object') throw new Error(`Invalid config provided for aggregate matrix plot`)
+    if (!config.rows || !Object.keys(config.rows).length) throw new Error(`No rows provided for aggregate matrix plot`)
     let rowCount = 0
     for (const section in config.rows) {
         rowCount = rowCount + config.rows[section].length
         if (rowCount > 2) break
     }
-    if (rowCount < 2) throw new Error(`AggregateMatrix plot requires at least 2 rows`)
-    if (!config.columns || !Object.keys(config.columns).length) throw new Error(`No columns provided for AggregateMatrix plot`)
+    if (rowCount < 2) throw new Error(`Aggregate matrix plot requires at least 2 rows`)
+    if (!config.columns || !Object.keys(config.columns).length) throw new Error(`No columns provided for aggregate matrix plot`)
     let colCount = 0
     for (const member in config.columns) {
         colCount = colCount + config.columns[member].length
         if (colCount > 2) break
     }
-    if (colCount < 2) throw new Error(`AggregateMatrix plot requires at least 2 columns`)
+    if (colCount < 2) throw new Error(`Aggregate matrix plot requires at least 2 columns`)
+
+    const settings = config.settings.aggregateMatrix
+    if (settings.gradientMethod == settings.sizeMethod) throw new Error('Aggregate method for the color gradient cannot be the same as the aggregate method for the dot size.')
 }
 
 export function makeChartBtnMenu(holder: any, chartsInstance: any) {
