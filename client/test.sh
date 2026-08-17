@@ -69,7 +69,7 @@ ENV=test node esbuild.config.mjs
 
 rm -f passedTests.txt
 # rm -rf .coverage
-tsx --conditions=sjpp/dev test/puppet.js "$PATTERNSLIST" "$TESTPORT"
+npx tsx --conditions=sjpp/dev test/puppet.js "$PATTERNSLIST" "$TESTPORT"
 
 # if [[ -d .coverage && -f .coverage/coverage-summary.json ]]; then
 #   cp .coverage/coverage-summary.json branch_coverage.json
