@@ -4,6 +4,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 	switch (chartType) {
 		case 'aggregateMatrix':
 			return await import('./aggregateMatrix/AggregateMatrix.ts')
+		
+		case 'aggMatrixInput':
+			return await import('./AggMatrixInput.ts')
 
 		case 'AIProjectAdmin':
 			return await import('./aiProjectAdmin/AIProjectAdmin.ts')

@@ -7,7 +7,6 @@ import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
 import { setControls } from './view/setControls.ts'
 import { Menu } from '#dom'
-import { AggMatrixInput } from './view/AggMatrixInput'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
@@ -128,8 +127,4 @@ export function validatePlotConfig(config: any) {
 
     const settings = config.settings.aggregateMatrix
     if (settings.gradientMethod == settings.sizeMethod) throw new Error('Aggregate method for the color gradient cannot be the same as the aggregate method for the dot size.')
-}
-
-export function makeChartBtnMenu(holder: any, chartsInstance: any) {
-    new AggMatrixInput(holder, chartsInstance)
 }

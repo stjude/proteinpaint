@@ -464,9 +464,11 @@ function getChartTypeList(self, state) {
 		},
 		{
 			label: 'Aggregate Matrix',
-			chartType: 'aggregateMatrix',
-			usecase: { target: 'aggregateMatrix' },
-			clickTo: self.loadChartSpecificMenu
+			chartType: 'aggMatrixInput',
+			clickTo: self.prepPlot,
+			config: {
+				chartType: 'aggMatrixInput'
+			}
 		}
 	]
 
