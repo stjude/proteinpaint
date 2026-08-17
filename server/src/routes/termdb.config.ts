@@ -384,6 +384,40 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		if (q.dnaMethylation.promoter) {
 			q2.dnaMethylation.promoter = { unit: q.dnaMethylation.promoter.unit }
 		}
+		/* Regulatory-element classes available for differential methylation, as
+		{key, label} for the element-type picker. Only file paths are withheld -- the
+		keys must reach the client because they are what it sends back as
+		element_type.
+
+		Two things this deliberately does:
+
+		1. It also emits a `promoter` entry when the dataset uses the legacy
+		   .promoter key, so the picker always has the default to select and the
+		   client never has to special-case the legacy shape.
+
+		2. It sets q2.dnaMethylation.promoter when an .elements map declares a
+		   promoter entry but the legacy key is absent. The DA menu option in
+		   client/mass/groups.js gates on queries.dnaMethylation.promoter, so an
+		   elements-only dataset would otherwise hide differential methylation
+		   entirely -- the analysis would be configured and unreachable. */
+		const elements = q.dnaMethylation.elements
+		if (elements && Object.keys(elements).length) {
+			q2.dnaMethylation.elementTypes = Object.entries<any>(elements)
+				.filter(([, e]) => e?.file)
+				.map(([key, e]) => ({ key, label: e.label || key }))
+			if (!q2.dnaMethylation.promoter && elements.promoter?.file) {
+				q2.dnaMethylation.promoter = { unit: elements.promoter.unit }
+			}
+		}
+		if (q.dnaMethylation.promoter?.file) {
+			const promoterEntry = {
+				key: 'promoter',
+				label: q.dnaMethylation.promoter.label || 'Promoters'
+			}
+			if (!q2.dnaMethylation.elementTypes) q2.dnaMethylation.elementTypes = [promoterEntry]
+			else if (!q2.dnaMethylation.elementTypes.some(e => e.key === 'promoter'))
+				q2.dnaMethylation.elementTypes.unshift(promoterEntry)
+		}
 	}
 	if (q.ld) {
 		q2.ld = structuredClone(q.ld)

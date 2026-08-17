@@ -551,7 +551,13 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			})
 	}
 
-	if (self.app.vocabApi.termdbConfig.queries?.dnaMethylation?.promoter) {
+	/* Show the DM option when the dataset has EITHER the legacy promoter matrix or any
+	element class. termdb.config.ts backfills .promoter from an elements.promoter entry,
+	so this is belt-and-braces for a dataset that offers only non-promoter classes --
+	without the elementTypes check such a dataset would have differential methylation
+	fully configured server-side and no way to reach it. */
+	const dmQuery = self.app.vocabApi.termdbConfig.queries?.dnaMethylation
+	if (dmQuery?.promoter || dmQuery?.elementTypes?.length) {
 		const itemDiv = div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')

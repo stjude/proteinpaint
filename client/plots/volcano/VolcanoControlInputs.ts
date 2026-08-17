@@ -25,10 +25,15 @@ export class VolcanoControlInputs {
 	termType: string
 	/** control inputs for controls init */
 	inputs: ControlInputEntry[]
-	constructor(config: VolcanoPlotConfig, termType: string) {
+	/** Regulatory-element classes this dataset can test, from
+	 * termdbConfig.queries.dnaMethylation.elementTypes. Empty or single-entry means
+	 * there is nothing to choose between, and the element picker stays hidden. */
+	elementTypes: { key: string; label: string }[]
+	constructor(config: VolcanoPlotConfig, termType: string, elementTypes?: { key: string; label: string }[]) {
 		this.config = config
 		if (this.config.termType == GENE_EXPRESSION) this.sampleNum = getSampleNum(config)
 		this.termType = termType
+		this.elementTypes = elementTypes || []
 		//Populated with the default controls for the volcano plot
 		this.inputs = [
 			{
@@ -199,7 +204,29 @@ export class VolcanoControlInputs {
 
 	addDNAMethControlInputs() {
 		if (this.termType !== DNA_METHYLATION) return
-		const dmInputs = [
+		const dmInputs: any[] = [
+			/* Element class comes FIRST because it is categorically different from the
+			controls below it: those tune how the test is run, this one changes what is
+			being tested. Promoters, eQTM blocks, and cCRE classes are different genomic
+			features with different coordinates and different test counts, so switching
+			produces a different analysis rather than a refined one.
+
+			Hidden unless the dataset offers a genuine choice -- a single class means
+			there is nothing to pick, and a dataset using the legacy promoter-only config
+			gets no new UI at all. */
+			...(this.elementTypes.length > 1
+				? [
+						{
+							label: 'Element class',
+							type: 'dropdown',
+							chartType: 'volcano',
+							settingsKey: 'elementType',
+							options: this.elementTypes.map(e => ({ value: e.key, label: e.label })),
+							title:
+								'Which regulatory elements to test. This changes the features being analysed, not just the thresholds: promoters are TSS windows, eQTM blocks are runs of CpGs whose methylation correlates with a gene, and cCRE classes are ENCODE annotations. Hit counts are not comparable across classes because the number of tests differs.'
+						}
+				  ]
+				: []),
 			{
 				label: 'Min samples per group',
 				type: 'number',

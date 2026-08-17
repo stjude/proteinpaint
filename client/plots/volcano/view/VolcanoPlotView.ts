@@ -6,7 +6,7 @@ import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
-import { formatPromoterLabel } from '../promoterLabel'
+import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 
 export class VolcanoPlotView {
 	dom: VolcanoDom
@@ -104,11 +104,15 @@ export class VolcanoPlotView {
 			},
 			{ whenOpen: 'Hide statistics' }
 		)
+		/* Must match the label the view model built from the same helper, otherwise the
+		find() below silently misses and the count disappears from the action bar. */
+		const dmNoun = elementNoun(this.settings?.elementType)
 		const sigLabel =
-			this.termType == tt.DNA_METHYLATION ? 'Number of significant promoters' : 'Number of significant genes'
+			this.termType == tt.DNA_METHYLATION ? `Number of significant ${dmNoun.many}` : 'Number of significant genes'
 		const numSigGenes = this.viewData.statsData.find(d => d.label == sigLabel)?.value
 		if (numSigGenes) {
-			const sigText = this.termType == tt.DNA_METHYLATION ? `${numSigGenes} DM promoters:` : `${numSigGenes} DE genes:`
+			const sigText =
+				this.termType == tt.DNA_METHYLATION ? `${numSigGenes} DM ${dmNoun.many}:` : `${numSigGenes} DE genes:`
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
 
 			const pValueTableButtonText = this.settings.showPValueTable ? 'Hide p-value table' : 'Show p-value table'
@@ -500,7 +504,7 @@ export class VolcanoPlotView {
 		const pField = (isDAP ? 'original_p_value' : `${pValueType}_p_value`) as 'original_p_value' | 'adjusted_p_value'
 		const columns = isDM
 			? [
-					{ label: 'Promoter' },
+					{ label: elementNoun(this.settings?.elementType).one },
 					{ label: 'Gene(s)' },
 					{ label: 'log₂(FC)', sortable: true },
 					{ label: pLabel, sortable: true }
@@ -576,7 +580,8 @@ export class VolcanoPlotView {
 	 * (gene/promoter, fold-change, original + adjusted p-values). */
 	private addTooltipRows(d: DataPointEntry, table: any) {
 		if (this.termType === tt.DNA_METHYLATION) {
-			if ('promoter_id' in d) addTooltipRow(table, 'Promoter', formatPromoterLabel(d as any))
+			if ('promoter_id' in d)
+				addTooltipRow(table, elementNoun(this.settings?.elementType).one, formatPromoterLabel(d as any))
 			if (d.gene_name) addTooltipRow(table, 'Gene(s)', d.gene_name)
 		} else if (this.termType === tt.PROTEOME_DAP) {
 			addTooltipRow(table, 'Identifier', d.gene_name)

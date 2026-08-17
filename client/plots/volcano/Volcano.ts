@@ -93,7 +93,11 @@ export class Volcano extends PlotBase implements RxComponent {
 
 	async setControls() {
 		const plotConfig = this.app.getState().plots.find((p: any) => p.id === this.id)
-		const controls = new VolcanoControlInputs(plotConfig, this.termType)
+		const controls = new VolcanoControlInputs(
+			plotConfig,
+			this.termType,
+			this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.elementTypes
+		)
 
 		this.components.controls = await controlsInit({
 			app: this.app,

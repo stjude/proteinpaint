@@ -2072,7 +2072,7 @@ async function validate_query_dnaMethylation(ds, genome) {
 		   WGBS cohorts can be promoter-only: the CpG-level matrix for 16.4M sites x
 		   415 samples is ~27GB, which is not worth materializing just to light up the
 		   term type. Callers that need the CpG matrix must check q.file themselves. */
-		if (!q.file && !q.promoter) throw 'either .file or .promoter must be set'
+		if (!q.file && !q.promoter && !q.elements) throw 'one of .file, .promoter, or .elements must be set'
 		if (q.file) {
 			q.file = path.join(serverconfig.tpmasterdir, q.file)
 			q.samples = [] // array of sample ids
@@ -2087,33 +2087,46 @@ async function validate_query_dnaMethylation(ds, genome) {
 			}
 			console.log(`${ds.label}: dnaMethylation HDF5 file validated. Samples:`, samples.length)
 		}
-		if (q.promoter) {
-			if (!q.promoter.file) throw '.promoter.file missing'
-			q.promoter.file = path.join(serverconfig.tpmasterdir, q.promoter.file)
-			await utils.file_is_readable(q.promoter.file)
-			const samples = await getH5samples(q.promoter.file, '/meta/samples/names')
+		/* Validate every element matrix, not just the promoter one. The legacy .promoter
+		key and the .elements map go through the SAME loop so a non-promoter class cannot
+		skip the sample gate below: each entry gets its own allSampleSet with its own
+		exclusion applied, because the matrices need not hold identical sample sets and the
+		exclusion is a property of the cohort rather than of one matrix. A dataset setting
+		only .promoter is unaffected. */
+		const dmEntries = []
+		if (q.promoter) dmEntries.push(['promoter', q.promoter])
+		for (const [cls, e] of Object.entries(q.elements || {})) {
+			if (cls === 'promoter' && q.promoter)
+				throw 'dnaMethylation: promoter is declared both as .promoter and in .elements'
+			dmEntries.push([cls, e])
+		}
+		for (const [elementClass, qe] of dmEntries) {
+			if (!qe.file) throw `dnaMethylation ${elementClass}: .file missing`
+			qe.file = path.join(serverconfig.tpmasterdir, qe.file)
+			await utils.file_is_readable(qe.file)
+			const samples = await getH5samples(qe.file, '/meta/samples/names')
 			if (!Array.isArray(samples)) throw new Error('samples not array')
-			if (!samples?.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
-			q.promoter.allSampleSet = new Set(samples)
+			if (!samples?.length) throw `No samples from ${elementClass} hdf5 file: ` + qe.file
+			qe.allSampleSet = new Set(samples)
 			/* Withhold non-comparable specimen types from differential methylation. This is the
 			single gate every DM path already filters through (buildGroupValues, the preAnalysis
 			counts, and the sample list handed to diffMeth.R), so shrinking it here covers them
 			all without a per-route check. Loud on purpose: a pattern that matches nothing would
 			otherwise be a silent no-op, which is the failure this exists to prevent. */
-			const excludePattern = q.promoter.excludeSampleNamesMatching
+			const excludePattern = qe.excludeSampleNamesMatching
 			if (excludePattern) {
-				const excluded = withholdSampleNames(q.promoter.allSampleSet, excludePattern)
+				const excluded = withholdSampleNames(qe.allSampleSet, excludePattern)
 				if (excluded) {
 					console.log(
-						`${ds.label}: dnaMethylation promoter — ${excluded} sample(s) matching "${excludePattern}" withheld from differential methylation, ${q.promoter.allSampleSet.size} remain`
+						`${ds.label}: dnaMethylation ${elementClass} — ${excluded} sample(s) matching "${excludePattern}" withheld from differential methylation, ${qe.allSampleSet.size} remain`
 					)
 				} else {
 					console.warn(
-						`${ds.label}: WARNING dnaMethylation promoter excludeSampleNamesMatching="${excludePattern}" matched no sample; nothing was withheld`
+						`${ds.label}: WARNING dnaMethylation ${elementClass} excludeSampleNamesMatching="${excludePattern}" matched no sample; nothing was withheld`
 					)
 				}
 			}
-			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, samples.length)
+			console.log(`${ds.label}: dnaMethylation ${elementClass} HDF5 file validated. Samples:`, samples.length)
 		}
 	} catch (error) {
 		throw `${ds.label}: Failed to validate dnaMethylation HDF5 file: ${error}`

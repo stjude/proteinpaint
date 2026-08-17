@@ -1,11 +1,11 @@
 import tape from 'tape'
-import { formatPromoterLabel } from '../promoterLabel'
+import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 
 /*
 Tests formatPromoterLabel(), which turns the ingest-generated promoter_id into a
 readable label. The id shape is `<gene>.p<n>_<chr>:<start>-<stop>` (or without
 the `.p<n>` when a gene has one promoter) — see
-utils/dnaMeth/build_promoter_matrix.py.
+utils/dnaMeth/build_element_matrix.py.
 
 The cases that matter are the ones where naive parsing would silently produce a
 wrong region: gene symbols containing '.', '_' or ':' are real (e.g. MIR1-1HG-AS1,
@@ -78,5 +78,32 @@ tape('formatPromoterLabel: handles missing input', t => {
 tape('formatPromoterLabel: start of 0 is a valid coordinate', t => {
 	// guard against a truthiness check on start
 	t.equal(formatPromoterLabel({ promoter_id: 'G_chr1:0-500', chr: 'chr1', start: 0, stop: 500 } as any), 'chr1:0-500')
+	t.end()
+})
+
+tape('elementNoun: absent or promoter class reads as promoters', t => {
+	// The legacy single-matrix case sends no element_type at all, so undefined and the
+	// explicit 'promoter' must agree -- otherwise a pre-existing run relabels itself.
+	t.deepEqual(elementNoun(undefined), { one: 'Promoter', many: 'promoters' })
+	t.deepEqual(elementNoun(''), { one: 'Promoter', many: 'promoters' })
+	t.deepEqual(elementNoun('promoter'), { one: 'Promoter', many: 'promoters' })
+	t.end()
+})
+
+tape('elementNoun: eQTM blocks are not called promoters', t => {
+	const n = elementNoun('eqtm_block')
+	t.equal(n.many, 'eQTM blocks', 'count text says eQTM blocks')
+	t.equal(n.one, 'eQTM block', 'column header says eQTM block')
+	t.end()
+})
+
+tape('elementNoun: unknown class falls back to neutral, never to promoter', t => {
+	// Dataset configs can declare arbitrary keys (allccre, cPLS, ...). Mislabelling those
+	// rows as promoters would misreport what was tested, so the fallback is generic.
+	for (const k of ['allccre', 'cPLS', 'something_new']) {
+		const n = elementNoun(k)
+		t.equal(n.many, 'elements', `${k} -> elements`)
+		t.notEqual(n.many, 'promoters', `${k} is not mislabelled as promoters`)
+	}
 	t.end()
 })

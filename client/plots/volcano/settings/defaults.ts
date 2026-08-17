@@ -62,6 +62,10 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>) {
 	// Off by default like the other two, and additionally because it is the slowest of the
 	// three -- arrayWeights runs an iterative REML fit over the whole matrix.
 	defaults.arrayWeights = false
+	// Promoters stay the default element class. The server resolves an absent or
+	// 'promoter' element_type to the legacy single-matrix config, so this default
+	// reproduces existing behaviour exactly for datasets that declare no elements map.
+	defaults.elementType = 'promoter'
 }
 
 /*********** Setting Validation Functions ***********
@@ -109,5 +113,12 @@ function validateDMSettings(termType: string, settings?: DMVolcanoSettings) {
 	const min = settings.minSamplesPerGroup
 	if (!Number.isFinite(min) || !Number.isInteger(min) || min < 3) {
 		settings.minSamplesPerGroup = 3
+	}
+	/* A saved session or hand-edited URL can carry an elementType the current dataset no
+	longer offers -- a class renamed, or a matrix retired. Falling back to 'promoter'
+	means the plot loads with the default class rather than erroring out of the route,
+	and the picker then shows what is actually available. */
+	if (typeof settings.elementType != 'string' || !settings.elementType) {
+		settings.elementType = 'promoter'
 	}
 }

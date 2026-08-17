@@ -99,6 +99,15 @@ export class VolcanoModel {
 			ebayes_trend: this.settings.eBayesTrend,
 			ebayes_robust: this.settings.eBayesRobust,
 			array_weights: this.settings.arrayWeights,
+			/* Omitted rather than sent as 'promoter' when it is the default, so a request
+			from a promoter-only dataset is byte-identical to what this client sent before
+			the element picker existed. The server resolves an absent element_type to
+			'promoter'. This does NOT preserve cache keys -- the key object gained the
+			field server-side, so every pre-existing dm/ entry is orphaned on deploy
+			regardless of what the client sends. */
+			...(this.settings.elementType && this.settings.elementType != 'promoter'
+				? { element_type: this.settings.elementType }
+				: {}),
 			volcanoRender: this.getVolcanoRender()
 		} as Partial<DiffMethRequest>
 

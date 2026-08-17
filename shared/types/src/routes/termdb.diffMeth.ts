@@ -29,6 +29,12 @@ export type DiffMethRequest = {
 	 * change the fitted fold-changes. Guards against a single aberrant sample dominating
 	 * a small group, and against unequal variance between two very unbalanced arms. */
 	array_weights?: boolean
+	/** Which regulatory-element class to test, keying into
+	 * ds.queries.dnaMethylation.elements. Absent means 'promoter', which keeps every
+	 * existing client request and cache entry valid. The available keys and their
+	 * display labels come from the dataset config, so the picker is data-driven rather
+	 * than a hardcoded list. */
+	element_type?: string
 	/** Term for confounding variable 1 (if present) */
 	tw?: any
 	/** Term for confounding variable 2 (if present) */
