@@ -1322,7 +1322,7 @@ type Mds3Queries = {
 		 * image per subfolder, containing the slide and its annotation files,
 		 * located by the *FileSuffix fields (matched with endsWith) */
 		folder: string
-		/** plain whole-slide images root: wsiFolder/<sample_id>/wsi/<imageName>/
+		/** plain whole-slide images root: wsiFolder/<sample_id>/<imageName>/
 		 * holds one image per subfolder, containing that image's slide file */
 		wsiFolder?: string
 		/** suffix of the spatial slide file (e.g. 'morphology_ome.tif'); an image

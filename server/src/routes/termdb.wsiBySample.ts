@@ -18,7 +18,7 @@ import serverconfig from '#src/serverconfig.js'
    folder     spatial (Xenium) images: folder/<sample>/<imageName>/ holds one
               image per subfolder; the slide and its annotation files inside are
               located by the *FileSuffix fields (endsWith match)
-   wsiFolder  plain slides: wsiFolder/<sample>/wsi/<imageName>/<slide file>
+   wsiFolder  plain slides: wsiFolder/<sample>/<imageName>/<slide file>
 
  Everything is listed straight from disk — the wsimages sql table only names
  the candidate samples, so a stale db record without files shows 0 images.
@@ -102,17 +102,16 @@ function init({ genomes }) {
 					})
 				}
 
-				// plain wsi: one image per subfolder of <sample>/wsi/
+				// plain wsi: one image per subfolder of the sample's directory
 				if (wsiBase) {
 					const wsiSampleDir = path.resolve(wsiBase, sampleId)
 					if (!wsiSampleDir.startsWith(wsiBase + path.sep)) throw new Error('invalid sample_id')
-					const wsiDir = path.join(wsiSampleDir, 'wsi')
-					for (const img of await subdirs(wsiDir)) {
-						const files = await readdir(path.join(wsiDir, img)).catch(() => [] as string[])
+					for (const img of await subdirs(wsiSampleDir)) {
+						const files = await readdir(path.join(wsiSampleDir, img)).catch(() => [] as string[])
 						const slide = files.find(f => SLIDE_EXT.test(f))
 						if (!slide) continue
-						const fileName = path.join('wsi', img, slide)
-						const v = (await stat(path.join(wsiDir, img, slide))).mtimeMs
+						const fileName = path.join(img, slide)
+						const v = (await stat(path.join(wsiSampleDir, img, slide))).mtimeMs
 						images.push({ type: 'wsi' as const, fileName, thumbnail: thumbnail(fileName, v) })
 					}
 				}

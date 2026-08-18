@@ -17,7 +17,7 @@ export type WsiImage = {
 	/** discriminates the WsiImage | SpatialImage union */
 	type: 'wsi'
 	/** slide path relative to the sample's folder under ds.queries.w2.wsiFolder
-	 (wsi/<imageName>/<slide file>); used as the wsitiles wsimage= param */
+	 (<imageName>/<slide file>); used as the wsitiles wsimage= param */
 	fileName: string
 	/** relative URL of a small preview (the slide's z=0 tile); client prepends host */
 	thumbnail?: string
