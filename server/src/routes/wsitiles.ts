@@ -74,13 +74,18 @@ function slidePath(genomes: any, q: any): string {
 
 	// w2 plot: wsimage is relative to the sample's subfolder in either root —
 	// folder (spatial) or wsiFolder (plain), both laid out as
-	// <sample>/<imageName>/<file>; the first root holding the file wins.
-	// A dataset may configure either root or both
+	// <sample>/<imageName>/<file>. imageType ('spatial'|'wsi', carried from the
+	// image's type in the wsiBySample response) pins the lookup to that root, so
+	// same-named paths in both roots can't select the wrong slide; without it
+	// (older links) the first root holding the file wins
 	if (ds.queries?.w2?.folder || ds.queries?.w2?.wsiFolder) {
+		const w2 = ds.queries.w2
 		const w2sample = q.sample_id ?? q.sampleId
 		if (!w2sample) throw new Error('sample_id required with ds.queries.w2')
+		const roots =
+			q.imageType == 'spatial' ? [w2.folder] : q.imageType == 'wsi' ? [w2.wsiFolder] : [w2.folder, w2.wsiFolder]
 		let full: string | undefined
-		for (const root of [ds.queries.w2.folder, ds.queries.w2.wsiFolder].filter(Boolean)) {
+		for (const root of roots.filter(Boolean)) {
 			const base = path.resolve(serverconfig.tpmasterdir, root)
 			// String(): numeric-looking sample names arrive as numbers from query parsing
 			const p = path.resolve(base, String(w2sample), wsimage)
@@ -88,7 +93,8 @@ function slidePath(genomes: any, q: any): string {
 			full = p
 			if (existsSync(p)) return p
 		}
-		return full! // let downstream produce the not-found error for the last candidate
+		if (!full) throw new Error(`no ${q.imageType} root configured in ds.queries.w2`)
+		return full // let downstream produce the not-found error for the last candidate
 	}
 
 	const sampleId = q.sample_id ?? q.sampleId

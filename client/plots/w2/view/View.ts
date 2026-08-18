@@ -71,11 +71,12 @@ export class View {
 		}).main()
 
 		// query params match the wsitiles route (server/src/routes/wsitiles.ts);
-		// the server resolves the file inside the sample's subfolder of the
-		// configured w2 root (ds.queries.w2.folder or .wsiFolder)
+		// the server resolves the file inside the sample's subfolder of the w2
+		// root matching imageType (folder for spatial, wsiFolder for wsi), so
+		// same-named paths in both roots can't select the wrong slide
 		const params = `wsimage=${encodeURIComponent(image.fileName)}&dslabel=${this.vocab.dslabel}&genome=${
 			this.vocab.genome
-		}&sample_id=${encodeURIComponent(sample.sampleId)}`
+		}&sample_id=${encodeURIComponent(sample.sampleId)}&imageType=${image.type}`
 
 		if (image.type == 'spatial') {
 			// spatial (Xenium) image: reuse the direct viewer, which draws the
