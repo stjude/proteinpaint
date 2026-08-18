@@ -17,7 +17,7 @@ import { HandlerBase } from './HandlerBase.ts'
 import { TermSettingView } from './TermSettingView.ts'
 import { TermSettingActions } from './TermSettingActions.ts'
 
-type MenuOptions = string // 'edit|replace|save|remove'
+type MenuOptions = string // 'edit|replace|remove'
 type MenuLayout = 'vertical' | 'horizontal'
 type CustomMenuOptions = { label: string; callback: (tw: TermWrapper) => void }
 

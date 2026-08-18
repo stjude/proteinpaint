@@ -19,7 +19,6 @@ class MassPlot {
 	}
 
 	reactsTo(action) {
-		if (action.type.includes('cache_termq')) return true
 		if (action.type.endsWith('_group')) return true
 		if (action.type.startsWith('plot_')) {
 			// action.parentId == this.id is a special case to react when deleting a child plot of this plot,

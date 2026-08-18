@@ -128,7 +128,6 @@ class TdbNav {
 	}
 
 	reactsTo(action) {
-		if (action.type.includes('cache_termq')) return true
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type.startsWith('tab')) return true

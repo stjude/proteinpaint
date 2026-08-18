@@ -55,7 +55,6 @@ export class RunChart2 extends PlotBase implements RxComponent {
 	}
 
 	reactsTo(action: any) {
-		if (action.type.includes('cache_termq')) return true
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
