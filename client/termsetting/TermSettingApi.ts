@@ -3,7 +3,7 @@ import { TermSetting } from './TermSetting.ts'
 import type { Term, TermWrapper, Filter } from '#types'
 import { call_fillTW, get$id, fillTermWrapper } from './utils.ts'
 import { minimatch } from 'minimatch'
-import { copyMerge, deepEqual, sleep } from '#rx'
+import { copyMerge, sleep } from '#rx'
 import { select } from 'd3-selection'
 import { TwRouter, QualitativeBase, NumericBase, routedTermTypes } from '#tw'
 
@@ -99,12 +99,6 @@ export class TermSettingApi {
 		*/
 		const arg: any = self.term ? { term: self.term, q: self.q, isAtomic: true } : {}
 		arg.$id = '$id' in this ? this.$id : await get$id(arg)
-		if (arg.q?.reuseId && arg.q.reuseId === self.data.q?.reuseId) {
-			if (!deepEqual(arg.q, self.data.q)) {
-				delete arg.q.reuseId
-				delete arg.q.name
-			}
-		}
 		const otw = overrideTw ? JSON.parse(JSON.stringify(overrideTw)) : {}
 		const tw = overrideTw ? copyMerge(JSON.stringify(arg), otw) : arg
 		if (routedTermTypes.has(tw.term.type)) self.tw = await TwRouter.initRaw(tw, self.opts)
@@ -265,12 +259,6 @@ export class TermSettingApi {
 				})
 			}
 		}
-
-		// Restored the reuse menu option for now, due to failing integration tests that will require more code changes to fix
-		// Instead of deleting the reuse code, may move the Reuse to the edit menu for recovering saved grouping/bin config
-		// if (minimatch('reuse', self.opts.menuOptions)) {
-		// 	options.push({ label: 'Reuse', callback: self.showReuseMenu } as opt)
-		// }
 
 		if (minimatch('replace', self.opts.menuOptions)) {
 			options.push({

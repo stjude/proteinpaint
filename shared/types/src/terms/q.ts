@@ -15,7 +15,6 @@ export type MinBaseQ = {
 	/**indicates this object should not be extended by a copy-merge tool */
 	isAtomic?: true
 	name?: string
-	reuseId?: string
 }
 
 export type CategoricalBaseQ = MinBaseQ & {

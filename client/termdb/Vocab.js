@@ -261,44 +261,6 @@ export class Vocab {
 		return copy
 	}
 
-	cacheTermQ(term, q) {
-		// only save q with a user or automatically assigned name
-		if (!q.reuseId) throw `missing term q.reuseId for term.id='${term.id}'`
-		this.app.dispatch({
-			type: 'cache_termq',
-			termId: term.id,
-			q
-		})
-	}
-
-	async uncacheTermQ(term, q) {
-		await this.app.dispatch({
-			type: 'uncache_termq',
-			term,
-			q
-		})
-	}
-
-	getCustomTermQLst(term) {
-		if (term.id) {
-			const cache = this.state.reuse.customTermQ.byId[term.id] || {}
-			const qlst = Object.values(cache).map(q => JSON.parse(JSON.stringify(q)))
-			// find a non-conflicting reuseId for saving a new term.q
-			for (let i = qlst.length + 1; i < 1000; i++) {
-				const nextReuseId = `Setting #${i}`
-				if (!qlst.find(q => q.reuseId === nextReuseId)) {
-					qlst.nextReuseId = nextReuseId
-					break
-				}
-			}
-			// last resort to use a random reuseId that is harder to read
-			if (!qlst.nextReuseId) {
-				qlst.nextReuseId = btoa((+new Date()).toString()).slice(10, -3)
-			}
-			return qlst
-		} else return []
-	}
-
 	async addCustomTerm(obj) {
 		// save one custom term
 		// obj = { name:str, term:{} }

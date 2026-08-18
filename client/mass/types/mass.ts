@@ -40,12 +40,6 @@ export type MassState = {
 		/** if true, plots omit the Documentation button. for a ds with no applicable user guide */
 		hidePlotDocumentation?: boolean
 	}
-	reuse?: {
-		customTermQ?: {
-			byId?: any
-			byName?: any
-		}
-	}
 	search: {
 		isVisible?: boolean
 	}

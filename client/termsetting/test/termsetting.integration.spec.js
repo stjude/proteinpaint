@@ -10,7 +10,6 @@ import { getScctTw } from '../../test/testdata/data'
 /*
 Tests:
 	menuOptions
-	Reuse option
 	use_bins_less
 	Categorical term
 	Numerical term: range boundaries
@@ -61,15 +60,7 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
 	const vocab = opts.vocab ? opts.vocab : { route: 'termdb', genome, dslabel }
 	const state = {
 		vocab,
-		termfilter: {},
-		reuse: {
-			customTermQ: {
-				byId: {},
-				// non-dictionary terms do not have a term.id,
-				// save by term.type + name?
-				byName: {}
-			}
-		}
+		termfilter: {}
 	}
 	const app = Object.assign(_opts.app || {}, {
 		getState() {

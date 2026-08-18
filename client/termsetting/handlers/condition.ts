@@ -50,7 +50,7 @@ export function getHandler(self) {
 }
 
 function getPillStatus(self) {
-	const text: string | undefined = self.q?.name || self.q?.reuseId
+	const text: string | undefined = self.q?.name
 	if (text) return { text }
 	if (self.q.mode == 'discrete') {
 		if (self.q.breaks?.length) {
