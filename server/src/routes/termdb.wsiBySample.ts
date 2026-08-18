@@ -20,11 +20,12 @@ import serverconfig from '#src/serverconfig.js'
               located by the *FileSuffix fields (endsWith match)
    wsiFolder  plain slides: wsiFolder/<sample>/<imageName>/<slide file>
 
- Everything is listed straight from disk — the wsimages sql table only names
- the candidate samples, so a stale db record without files shows 0 images.
+ Everything is listed straight from disk: samples are the subfolders of the
+ configured roots. The legacy wsimages sql table (when present) is unioned in,
+ so a stale db record without files shows 0 images.
 
- With sample_id: that sample's images. Without: every sample from the wsimages
- table, with its image count (drives the plot's sample table).
+ With sample_id: that sample's images. Without: every sample discovered on
+ disk or named in the db, with its image count (drives the plot's sample table).
 */
 
 export const payload: RoutePayload = {
@@ -124,16 +125,23 @@ function init({ genomes }) {
 			}
 
 			if (!q.sample_id) {
-				// no sample given: the wsimages db table says which samples are supposed
-				// to have images; disk says how many actually exist
-				const sql = `SELECT DISTINCT sampleidmap.name AS name
-					 FROM wsimages INNER JOIN sampleidmap ON wsimages.sample = sampleidmap.id
-					 ORDER BY sampleidmap.name`
-				const rows = ds.cohort.db.connection.prepare(sql).all()
+				// no sample given: sample ids are the subfolders of the configured
+				// roots on disk, unioned with the legacy wsimages db table (if any)
+				// so a db-listed sample whose files are gone still shows with 0
+				const ids = new Set<string>()
+				for (const base of [spatialBase, wsiBase]) {
+					if (base) for (const name of await subdirs(base)) ids.add(name)
+				}
+				try {
+					const sql = `SELECT DISTINCT sampleidmap.name AS name
+						 FROM wsimages INNER JOIN sampleidmap ON wsimages.sample = sampleidmap.id`
+					for (const r of ds.cohort.db.connection.prepare(sql).all()) ids.add(String((r as any).name))
+				} catch (_) {
+					// dataset without a wsimages table: disk-only listing
+				}
 
 				const samples: WsiSampleSummary[] = []
-				for (const r of rows) {
-					const name = String((r as any).name)
+				for (const name of [...ids].sort()) {
 					samples.push({ sampleId: name, count: (await getImages(name)).length })
 				}
 				res.status(200).json({ samples } satisfies WsiBySampleResponse)
