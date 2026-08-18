@@ -266,6 +266,7 @@ export class AggMatrixViewModel {
                      * to the user. */
                     size: hasData ? this.sizeScale(dot.sizeValue!) : settings.maxDotSize,
                     color: hasData ? this.viewData.colorScale.scale(dot.colorValue!) : 'transparent',
+                    hasData,
                     row: dot.row,
                     rowSection: dot.rowSection,
                     column: dot.column,
