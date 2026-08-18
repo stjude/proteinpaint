@@ -127,21 +127,53 @@ export function server_init_db_queries(ds) {
 	}
 	if (tables.has('sampleidmap')) {
 		const i2s = new Map(),
-			s2i = new Map()
+			s2i = new Map(),
+			i2type = new Map()
 		const rows = cn.prepare('SELECT * FROM sampleidmap').all()
 		let totalCount = 0
-		for (const { id, name } of rows) {
+		for (const { id, name, sample_type } of rows) {
 			i2s.set(id, name)
 			s2i.set(name, id)
+			i2type.set(id, sample_type)
 			totalCount++ //for dbs without cohorts or types
 		}
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
+		q.id2sampleType = id => i2type.get(id)
+
+		// when the dataset has sample ancestry, store each sample's ancestors in its ref,
+		// so downstream (e.g. matrix) can group/label samples by ancestry. Built once here.
+		const i2ancestors = new Map()
+		if (ds.cohort.termdb.hasSampleAncestry && tables.has('sample_ancestry')) {
+			const rows = cn.prepare('SELECT sample_id, ancestor_id, distance FROM sample_ancestry').all()
+			for (const { sample_id, ancestor_id, distance } of rows) {
+				if (!i2ancestors.has(sample_id)) i2ancestors.set(sample_id, [])
+				i2ancestors.get(sample_id).push({
+					ancestor_id,
+					ancestor_name: i2s.get(ancestor_id),
+					sample_type: i2type.get(ancestor_id),
+					distance
+				})
+			}
+			// sort each sample's ancestors by lowest distance first, so samples can be
+			// grouped/sorted by ancestry "tree" from the nearest ancestor outward
+			for (const ancestors of i2ancestors.values()) ancestors.sort(sortByAncestorDistance)
+		}
+
 		// centralized id->display resolution (see termdb.matrix.js id2sampleRef()), wrapping id2sampleName.
 		// native sample ids are integer PKs (sampleidmap.id), so Number() only normalizes a stringified
 		// map key and never NaNs a real id; non-integer id spaces (e.g. gdc case uuids) never reach here —
 		// they use their own id2sampleRefs (gdc.buildDictionary.ts) with no coercion.
-		q.id2sampleRefs = id => ({ label: i2s.get(Number(id)) })
+		// returns a fresh object per call as some callers (e.g. matrix) mutate the returned ref.
+		q.id2sampleRefs = id => {
+			const key = Number(id)
+			const name = i2s.get(key)
+			if (name === undefined) return undefined
+			const refs: any = { label: name, sample: key, sampleType: i2type.get(key) }
+			const ancestors = i2ancestors.get(key)
+			if (ancestors) refs.ancestors = structuredClone(ancestors)
+			return refs
+		}
 		if (tables.has('cohort_sample_types')) {
 			const rows = cn.prepare('SELECT * from cohort_sample_types').all()
 			q.getCohortSampleCount = cohortKey => {
@@ -598,6 +630,10 @@ export function server_init_db_queries(ds) {
 		const rows = sql.all()
 		return rows
 	}
+}
+
+function sortByAncestorDistance(a, b) {
+	return a.distance - b.distance
 }
 
 /*

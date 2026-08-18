@@ -3203,6 +3203,98 @@ tape('apply "show only" and "show all" legend filters to a survival terms', func
 	}
 })
 
+tape('sample ancestry labels and line spans', function (test) {
+	test.timeoutAfter(8000)
+	// leaf samples 1-9 have a designed 2-level ancestry in the TermdbTest sample_ancestry table:
+	//   1_patient (101) is the direct parent of samples 1,2,3
+	//   2_patient (102) is the direct parent of samples 4,5,6
+	//   3_patient (103) is the grandparent (distance 2) of samples 1-6 AND the direct parent of 7,8,9
+	// so the matrix should render 3 ancestor line spans (101, 102, and the nested 103 spanning all 9)
+	const ancestrySampleIds = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+	const filter = {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [
+			{
+				type: 'tvs',
+				noEdit: true,
+				tvs: {
+					term: {
+						name: 'ancestry test samples',
+						type: 'samplelst',
+						values: { grp: { key: 'grp', list: ancestrySampleIds.map(id => ({ sampleId: id })) } }
+					}
+				}
+			}
+		]
+	}
+
+	runpp({
+		state: {
+			// samples 1-9 belong to the XYZ cohort (index 1); the store ANDs the active
+			// cohort filter with the samplelst filter below to yield exactly samples 1-9
+			activeCohort: 1,
+			termfilter: { filter },
+			plots: [
+				{
+					chartType: 'matrix',
+					settings: {
+						matrix: {
+							availContentWidth: 1200,
+							sortBySampleAncestry: 'last'
+						}
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [{ id: 'diaggrp' }]
+						}
+					]
+				}
+			]
+		},
+		matrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(matrix) {
+		matrix.on('postRender.test', null)
+		test.equal(matrix.Inner.sampleOrder.length, 9, 'should render the 9 filtered samples')
+
+		const spanNodes = matrix.Inner.dom.svg.selectAll('.sjpp-matrix-label-span').nodes()
+		test.equal(spanNodes.length, 3, 'should render 3 ancestor spans (1_patient, 2_patient, and the nested 3_patient)')
+
+		const lineX2ByLabel = {}
+		for (const node of spanNodes) {
+			const label = node.querySelector('text')?.textContent
+			lineX2ByLabel[label] = +node.querySelector('line')?.getAttribute('x2')
+		}
+		test.deepEqual(
+			Object.keys(lineX2ByLabel).sort(),
+			['101', '102', '103'],
+			'ancestor span labels should be the ancestor ids 101 (1_patient), 102 (2_patient), 103 (3_patient)'
+		)
+		test.equal(
+			matrix.Inner.dom.svg.selectAll('.sjpp-matrix-label-span line').size(),
+			3,
+			'should render 3 ancestor line spans'
+		)
+		// 3_patient (103) is the grandparent spanning all 9 samples, while 1_patient (101) and
+		// 2_patient (102) each span only their 3 direct children, so its line must be the widest
+		test.ok(
+			lineX2ByLabel['103'] > lineX2ByLabel['101'] && lineX2ByLabel['103'] > lineX2ByLabel['102'],
+			'the nested grandparent span (103) should be wider than the parent spans (101, 102)'
+		)
+
+		if (test._ok) matrix.Inner.app.destroy()
+		test.end()
+	}
+})
+
 /*************************
  reusable helper functions
 **************************/

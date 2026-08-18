@@ -195,7 +195,7 @@ tape('ListSamples.getData() for term=numeric and term2=categorical returns the c
 		typeof data == 'object' && data.lst && data.refs && data.samples,
 		'Should return data object from getData() with a list, references, and sample info'
 	)
-	const expected = 58
+	const expected = 61 // 58 samples + 3 ancestors
 	test.equal(
 		data.lst.length,
 		expected,
