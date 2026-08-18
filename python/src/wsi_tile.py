@@ -18,10 +18,11 @@ Tiles are Zoomify-compatible: geometry is copied from OpenLayers'
 ol/source/Zoomify.js 'default' tier math, so the client's tile requests and this
 script's crop geometry never disagree.
 
-Formats: anything openslide opens (.svs etc.), plus pyramidal OME-TIFF
-(.ome.tif, e.g. Xenium morphology images) — those use JPEG-2000 TIFF
-compression (34712) that openslide cannot decode, so they are read via
-tifffile (pyramid structure) + PIL (per-tile JP2K decode) instead.
+Formats: anything openslide opens (.svs etc.), plus OME-TIFF (.ome.tif, e.g.
+Xenium morphology images), read via tifffile: JPEG-2000 segments (34712 etc.,
+which openslide cannot decode) through PIL, all other compressions and striped
+layouts through tifffile's own segment decoder, which rejects codecs it cannot
+decode with a clear error.
 
 Deps: openslide-python, pillow, tifffile, numpy, h5py. Avoid writing non-fatal
 warnings to stderr (run_python() rejects on any stderr output).
@@ -117,21 +118,35 @@ class OmeTiffSlide:
                 best = i
         return best
 
+    # TIFF compression codes whose segments are standalone JPEG-2000
+    # codestreams that PIL opens directly (Aperio 33003/33005, JP2K 34712)
+    _JP2K = {33003, 33004, 33005, 34712}
+
     def _decode_tile(self, page, index):
         count = page.databytecounts[index]
         if not count:
             return None  # missing tile = background
         fh = self._tf.filehandle
         fh.seek(page.dataoffsets[index])
-        img = Image.open(io.BytesIO(fh.read(count)))  # JP2K codestream
-        img.load()
-        return np.asarray(img)
+        data = fh.read(count)
+        kf = page.keyframe
+        if int(kf.compression) in self._JP2K:
+            img = Image.open(io.BytesIO(data))  # JP2K codestream
+            img.load()
+            return np.asarray(img)
+        # any other compression (raw, LZW, Deflate, ...): tifffile's own segment
+        # decoder, which raises a clear error for codecs it cannot decode
+        arr = kf.decode(data, index)[0]  # (depth, h, w, samples)
+        arr = arr.reshape(arr.shape[-3], arr.shape[-2], arr.shape[-1])
+        return arr[:, :, 0] if arr.shape[2] == 1 else arr
 
     def _read_level(self, level, lx, ly, w, h):
         """(lx,ly,w,h) in level coords -> array, zero-padded at edges."""
         page = self._levels[level].pages[self._plane]
         kf = page.keyframe  # geometry lives on the keyframe (see __init__)
-        tw, th = kf.tilewidth, kf.tilelength
+        # tiled layout, or striped (tilewidth 0): a strip is a full-width tile
+        tw = kf.tilewidth or kf.imagewidth
+        th = kf.tilelength or min(kf.rowsperstrip, kf.imagelength)
         tiles_across = -(-kf.imagewidth // tw)
         out = None
         tx0, tx1 = max(0, lx) // tw, max(0, min(lx + w - 1, kf.imagewidth - 1)) // tw
