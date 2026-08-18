@@ -16,10 +16,10 @@ To enable this dataset on your pp instance, have this entry in hg38-test dataset
 Files are hosted at the specified locations under tp/
 
 NOTE: genome/hg38.test.js 
-		- uses copyDataFilesFromRepo2Tp() to create <tp>/files/hg38/TermdbTest
-		  dir files or symlink, if the <tp> dir is writable
-		- will add a ProtectedTest entry as needed, to simplify the setup of 
-				serverconfig dataset entries in local dev and github CI
+                - uses copyDataFilesFromRepo2Tp() to create <tp>/files/hg38/TermdbTest
+                  dir files or symlink, if the <tp> dir is writable
+                - will add a ProtectedTest entry as needed, to simplify the setup of 
+                                serverconfig dataset entries in local dev and github CI
 */
 
 // MAF fields in bcf file, expressed as term objects
@@ -477,22 +477,22 @@ export default function (): Mds3 {
 				type: 'H&E',
 				imageBySampleFolder: 'files/hg38/TermdbTest/wsimages'
 			},
-			// w2 plot: each sample with images is a subfolder of this directory,
-			// holding that sample's .svs files (folder/<sample>/<fileName>)
+			// w2 plot. folder: spatial images, one per subfolder of the sample's
+			// directory (folder/<sample>/<imageName>/), files inside found by the
+			// *FileSuffix fields. wsiFolder: plain whole-slide images, laid out as
+			// wsiFolder/<sample>/wsi/<imageName>/<slide file>
 			w2: {
-				folder: 'files/hg38/TermdbTest/wsimages',
-				// spatial (Xenium) bundle per sample: file names inside the sample's
-				// folder, plus viewer settings (genes to overlay, annotation level)
-				spatial: {
-					'TCGA-22-1017': {
-						fileName: 'morphology.trimmed.ome.tif',
-						cellBoundaries: 'cell_boundaries.trimmed.csv',
-						nucleusBoundaries: 'nucleus_boundaries.trimmed.csv',
-						geneExpressionFile: 'cell_feature_matrix.trimmed.h5',
-						geneExpression: 'PTPRC',
-						annotationLevel: 1
-					}
-				}
+				folder: 'files/hg38/TermdbTest/spatial',
+				wsiFolder: 'files/hg38/TermdbTest/wsimages',
+				// .ome.tif extension is required for the JPEG-2000 OME-TIFF reader
+				// in wsi_tile.py open_slide() to engage
+				tiffFileSuffix: 'morphology.ome.tif',
+				nucleusBoundariesFileSuffix: 'nucleus_boundaries.csv',
+				cellBoundariesFileSuffix: 'cell_boundaries.csv',
+				geneExpressionFileSuffix: 'gene_expression.h5',
+				// default viewer settings, overridable in the burger menu
+				geneExpression: 'PTPRC',
+				annotationLevel: 1
 			},
 			trackLst: {
 				jsonFile: 'files/hg38/TermdbTest/trackLst/facet.json',

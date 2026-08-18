@@ -22,6 +22,7 @@
 import type { RouteApi, RoutePayload } from '#types'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { readFile, unlink, copyFile, mkdir, stat } from 'fs/promises'
+import { existsSync } from 'fs'
 import { createHash } from 'crypto'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
@@ -71,16 +72,22 @@ function slidePath(genomes: any, q: any): string {
 	const wsimage = q.wsimage
 	if (!wsimage) throw new Error('No wsimage param provided')
 
-	// w2 plot: ds.queries.w2.folder (relative to tpmasterdir) holds one subfolder
-	// per sample, containing that sample's slide files: folder/<sample>/<fileName>
+	// w2 plot: wsimage is relative to the sample's subfolder in either root —
+	// folder (spatial: <sample>/<imageName>/<tif>) or wsiFolder (plain:
+	// <sample>/wsi/<imageName>/<slide>); the first root holding the file wins
 	if (ds.queries?.w2?.folder) {
 		const w2sample = q.sample_id ?? q.sampleId
 		if (!w2sample) throw new Error('sample_id required with ds.queries.w2')
-		const base = path.resolve(serverconfig.tpmasterdir, ds.queries.w2.folder)
-		// String(): numeric-looking sample names arrive as numbers from query parsing
-		const full = path.resolve(base, String(w2sample), wsimage)
-		if (!full.startsWith(base + path.sep)) throw new Error('slide path escapes w2 folder')
-		return full
+		let full: string | undefined
+		for (const root of [ds.queries.w2.folder, ds.queries.w2.wsiFolder].filter(Boolean)) {
+			const base = path.resolve(serverconfig.tpmasterdir, root)
+			// String(): numeric-looking sample names arrive as numbers from query parsing
+			const p = path.resolve(base, String(w2sample), wsimage)
+			if (!p.startsWith(base + path.sep)) throw new Error('slide path escapes w2 folder')
+			full = p
+			if (existsSync(p)) return p
+		}
+		return full! // let downstream produce the not-found error for the last candidate
 	}
 
 	const sampleId = q.sample_id ?? q.sampleId
@@ -122,12 +129,10 @@ function init({ genomes }) {
 				try {
 					csv = await readFile(full, 'utf8')
 				} catch (e: any) {
-					res
-						.status(e?.code === 'ENOENT' ? 404 : 500)
-						.send({
-							status: 'error',
-							error: e?.code === 'ENOENT' ? 'boundaries file not found' : e.message || String(e)
-						})
+					res.status(e?.code === 'ENOENT' ? 404 : 500).send({
+						status: 'error',
+						error: e?.code === 'ENOENT' ? 'boundaries file not found' : e.message || String(e)
+					})
 					return
 				}
 				res.status(200).set('Content-Type', 'text/csv').set('Cache-Control', 'public, max-age=3600').send(csv)

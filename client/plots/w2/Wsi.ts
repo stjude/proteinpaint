@@ -89,22 +89,23 @@ class Wsi extends PlotBase implements RxComponent {
 		const images = selectedSample ? (await model.getImages(selectedSample.sampleId)).images ?? [] : []
 
 		// spatial image: rename the sandbox header and show the burger menu
-		const isSpatial = images[0]?.type == 'spatial'
+		const image = images[settings.selectedImageIndex] ?? images[0]
+		const isSpatial = image?.type == 'spatial'
 		this.dom.header?.text(isSpatial ? 'SPATIAL VIEWER' : 'WHOLE SLIDE IMAGES')
 		if (isSpatial) {
 			// seed the burger menu's gene/level fields with the dataset's defaults
 			// (null = never edited) so the shown values match the overlay and can
 			// be edited or cleared; re-renders once with the seeded state
-			const image = images[0] as SpatialImage
-			if (settings.geneExpression == null && image.geneExpression != null) {
+			const spImage = image as SpatialImage
+			if (settings.geneExpression == null && spImage.geneExpression != null) {
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
 					config: {
 						settings: {
 							wsi: {
-								geneExpression: image.geneExpression,
-								annotationLevel: settings.annotationLevel ?? image.annotationLevel
+								geneExpression: spImage.geneExpression,
+								annotationLevel: settings.annotationLevel ?? spImage.annotationLevel
 							}
 						}
 					}
@@ -189,6 +190,7 @@ export const componentInit = wsiInit
 export function getDefaultWsiSettings(overrides = {}): Settings {
 	const defaults: Settings = {
 		selectedSampleIndex: 0, // first sample selected on launch
+		selectedImageIndex: 0, // the sample's first image displayed by default
 		viewerHeight: '70vh',
 		// spatial overlay settings; null = fall back to the dataset's values
 		showCellBoundaries: true,
