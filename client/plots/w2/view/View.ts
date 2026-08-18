@@ -1,4 +1,4 @@
-import { renderTable } from '#dom'
+import { renderTable, Tabs } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import 'ol/ol.css'
 import OlMap from 'ol/Map.js'
@@ -10,9 +10,10 @@ import type Settings from '../Settings.ts'
 import type { ViewData } from '../viewModel/ViewModel.ts'
 import type { WsiInteractions } from '../interactions/WsiInteractions.ts'
 
-/** Renders the sample table and, when a sample is selected, an OpenLayers
- pan/zoom viewer for the sample's first whole-slide image via the
- openslide-backed wsitiles route (no tile server sidecar, no auth). */
+/** Renders the sample table and, when a sample is selected, tabs for its
+ images (one per image folder on disk, shown when there are several) and an
+ OpenLayers pan/zoom viewer for the selected image via the openslide-backed
+ wsitiles route (no tile server sidecar, no auth). */
 export class View {
 	constructor(
 		readonly dom: { table: any; viewer: any; error: any },
@@ -49,10 +50,25 @@ export class View {
 		const holder = this.dom.viewer
 		holder.selectAll('*').remove()
 
-		// simply display the sample's first image for now
 		const sample = this.viewData.selectedSample
-		const image = this.images[0]
+		const selected = this.settings.selectedImageIndex
+		const image = this.images[selected] ?? this.images[0]
 		if (!sample || !image) return
+
+		// a tab per image (labelled by its folder name on disk), mirroring the
+		// singleCell chart's per-sample tabs; always shown so the user sees how
+		// many images the sample has, and picking one re-renders the viewer
+		// fileName is <imageName>/<file> (spatial) or wsi/<imageName>/<file> (wsi)
+		const imageName = (f: string) => f.split('/').slice(-2)[0] || f
+		new Tabs({
+			holder: holder.append('div'),
+			tabsPosition: 'horizontal',
+			tabs: this.images.map((img, i) => ({
+				label: imageName(img.fileName),
+				active: i == (this.images[selected] ? selected : 0),
+				callback: () => this.interactions.selectImage(i)
+			}))
+		}).main()
 
 		// query params match the wsitiles route (server/src/routes/wsitiles.ts);
 		// the server resolves the file as ds.queries.w2.folder/<sample>/<fileName>

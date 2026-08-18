@@ -9,13 +9,15 @@ export type WsiBySampleRequest = {
 /** one sample that has whole-slide images on disk */
 export type WsiSampleSummary = {
 	sampleId: string
-	/** number of .svs files in the sample's folder */
+	/** number of images (spatial + plain) in the sample's folders */
 	count: number
 }
 
 export type WsiImage = {
 	/** discriminates the WsiImage | SpatialImage union */
 	type: 'wsi'
+	/** slide path relative to the sample's folder under ds.queries.w2.wsiFolder
+	 (wsi/<imageName>/<slide file>); used as the wsitiles wsimage= param */
 	fileName: string
 	/** relative URL of a small preview (the slide's z=0 tile); client prepends host */
 	thumbnail?: string
@@ -23,15 +25,17 @@ export type WsiImage = {
 	metadata?: string
 }
 
-/** A spatial (Xenium) slide: the morphology image plus its companion overlay
- files found in the same sample folder. Fields mirror the direct-viewer URL
- params (?image_file=&cell_boundaries=&nucleus_boundaries=
+/** A spatial (Xenium) image: the morphology slide plus its companion overlay
+ files found in the same image folder (located by the ds.queries.w2 *FileSuffix
+ fields). Fields mirror the direct-viewer URL params
+ (?image_file=&cell_boundaries=&nucleus_boundaries=
  &gene_expression_file=&gene_expression=&annotation_level=). Companion file
  paths are relative to serverconfig.tpmasterdir, matching the wsitiles
  boundaries/genecounts ?file= param. */
 export type SpatialImage = {
 	type: 'spatial'
-	/** = image_file: slide file name inside the sample's folder */
+	/** = image_file: slide path relative to the sample's folder under
+	 ds.queries.w2.folder (<imageName>/<tif file>); used as the wsitiles wsimage= param */
 	fileName: string
 	/** = cell_boundaries: cell segmentation CSV */
 	cellBoundaries?: string

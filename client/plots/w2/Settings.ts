@@ -1,6 +1,8 @@
 type Settings = {
 	/** index of the selected row in the sample table; -1 = no sample selected */
 	selectedSampleIndex: number
+	/** index of the viewed image among the selected sample's images */
+	selectedImageIndex: number
 	/** viewer height, any CSS length */
 	viewerHeight: string
 	/** spatial images only — burger-menu overrides of the dataset's viewer settings */
