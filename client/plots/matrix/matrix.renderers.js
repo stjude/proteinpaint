@@ -295,7 +295,11 @@ export function setRenderers(self) {
 					g.select('.sjpp-matrix-cell-axis').remove()
 				}
 
-				if (side.prefix == 'sample') trackLabelSpanData(lab, side, direction, text, relatedSamplesByAncestorId)
+				// only track ancestry span data (which does a per-label getBBox) when the
+				// feature is enabled; matches the renderLabelSpans() guard above, so a
+				// disabled plot does no DOM measurement in the label loop
+				if (s.sortBySampleAncestry && side.prefix == 'sample')
+					trackLabelSpanData(lab, side, direction, text, relatedSamplesByAncestorId)
 			}
 
 			function getTspanCls(d) {
