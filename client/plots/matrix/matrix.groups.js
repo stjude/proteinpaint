@@ -2,6 +2,7 @@ import { sample_match_termvaluesetting } from '#shared/filter.js'
 import { filterVariantValues } from '#shared/geneVariantFilter.js'
 import { getSampleSorter, getTermSorter, getSampleGroupSorter, getMclassSorter } from './matrix.sort'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
+import { setRelatedSamples } from './matrix.labelSpans.ts'
 
 export function getTermOrder(data) {
 	const s = this.settings.matrix
@@ -197,34 +198,7 @@ export function getSampleGroups(data) {
 		grp.lst = grp.lst.filter(dataFilter)
 		grp.totalCountedValues = grp.lst.reduce(countHits, 0)
 		grp.lst.sort(grpLstSampleSorter)
-
-		if (this.config.chartType != 'matrix' || !s.sortBySampleAncestry) continue
-		grp.relatedSamples = {}
-		// at this point, samples have already been sorted by grpLstSampleSorter (mutation, CNV, values, etc),
-		// only now pull ancestor-related samples to be grouped with the left-most related sample
-		const reorderedByAncestor = new Set()
-		const lstCopy = new Set(grp.lst)
-		let currentRelated = [grp.lst[0]]
-		for (const s of grp.lst) {
-			if (reorderedByAncestor.has(s)) continue
-			reorderedByAncestor.add(s)
-			lstCopy.delete(s)
-			currentRelated = [s]
-			if (s._ref_?.ancestors) {
-				for (const a of s._ref_?.ancestors) {
-					const id = a.ancestor_id
-					for (const c of lstCopy) {
-						if (c._ref_?.ancestors?.[0]?.ancestor_id === id) {
-							reorderedByAncestor.add(c)
-							lstCopy.delete(c)
-							currentRelated.push(c)
-						}
-					}
-					if (currentRelated.length > 1) grp.relatedSamples[id] = currentRelated
-				}
-				grp.lst = [...reorderedByAncestor]
-			}
-		}
+		if (this.config.chartType == 'matrix' && s.sortBySampleAncestry) setRelatedSamples(grp)
 	}
 	const sampleGrpSorter = getSampleGroupSorter(this)
 	return sampleGrpsArr.sort(sampleGrpSorter)
@@ -241,7 +215,7 @@ export function getSampleOrder(data) {
 		if (grp.isExcluded) numHiddenGrps++
 		let processedLst = grp.lst
 		for (const [index, row] of processedLst.entries()) {
-			// track ancestors with #descendants > 1 to render rects around related samples
+			// track ancestors with #descendants > 1 to render line spans across related samples
 			sampleOrder.push({
 				grp,
 				grpIndex: grpIndex - numHiddenGrps, // : this.sampleGroups.length,

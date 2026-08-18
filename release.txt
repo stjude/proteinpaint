@@ -1,1 +1,2 @@
-
+Features:
+- support rendering matrix sample ancestor label and line spans across descendant sample labels
