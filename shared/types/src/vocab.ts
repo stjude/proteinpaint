@@ -15,6 +15,8 @@ export type VocabApi = {
 	//Methods
 	findTerm: (f: string, activeCohort: number, usecase: UseCase, x: string) => { lst: Term[] }
 	getCategories: (term: Term, filter?: Filter, body?: any) => any
+	/** settings remembered for the gene(s) of a geneVariant term, most recent first */
+	getGvQLst: (term: Term) => { label: string; q: any }[]
 	getPercentile: (term: Term, percentile_lst: number[], termfilter?) => any
 	getterm: (f: any) => Term
 	getTerms: (f: any) => any

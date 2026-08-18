@@ -2,11 +2,13 @@ import tape from 'tape'
 import { DTCNV, DTFUSION, DTITD, DTSNVINDEL, DTSV, TermTypes } from '#types'
 import {
 	dtTermTypes,
+	getGvGeneKey,
 	getGvQueryKey,
 	matchesGvQueryEntry,
 	internGvQueryEntry,
 	restoreGvQueryEntry,
 	setGroupsetParentTerms,
+	trimGvQForCache,
 	trimGvTermsForSave
 } from '../terms.js'
 
@@ -15,6 +17,8 @@ import {
 dt term types are declared in TermTypes
 trimGvTermsForSave()
 setGroupsetParentTerms()
+getGvGeneKey()
+trimGvQForCache()
 query entry wire format: round trip
 query entry wire format: values without an entry
 matchesGvQueryEntry()
@@ -228,6 +232,82 @@ tape('trimGvTermsForSave(): leaves other term types alone', t => {
 	const copy = structuredClone(state)
 	trimGvTermsForSave(state)
 	t.deepEqual(state, copy, 'should not modify a non-geneVariant tw')
+	t.end()
+})
+
+tape('getGvGeneKey()', t => {
+	const gene = (name: string) => ({ kind: 'gene', id: name, gene: name, name, type: 'geneVariant' })
+	t.equal(getGvGeneKey({ type: 'geneVariant', genes: [gene('BCR')] }), 'BCR', 'keys a single gene by its symbol')
+	t.equal(
+		getGvGeneKey({ type: 'geneVariant', genes: [gene('BCR'), gene('ABL1')] }),
+		getGvGeneKey({ type: 'geneVariant', genes: [gene('ABL1'), gene('BCR')] }),
+		'keys the same genes picked in a different order alike'
+	)
+	t.notEqual(
+		getGvGeneKey({ type: 'geneVariant', id: 'myset', name: 'myset', genes: [gene('BCR')] }),
+		getGvGeneKey({ type: 'geneVariant', id: 'myset', name: 'myset', genes: [gene('BCR'), gene('ABL1')] }),
+		'keys two gene sets of the same user-typed name apart, since the key is not the name'
+	)
+	t.equal(
+		getGvGeneKey({ type: 'geneVariant', name: 'BCR', gene: 'BCR' }),
+		'BCR',
+		'keys a legacy term that describes its gene at the top level'
+	)
+	t.equal(
+		getGvGeneKey({
+			type: 'geneVariant',
+			genes: [{ kind: 'gene', gene: 'BCR', name: 'BCR', chr: 'chr22', start: 1, stop: 2 }]
+		}),
+		'BCR',
+		'keys a gene entry by symbol even once coordinates are annotated onto it'
+	)
+	t.equal(
+		getGvGeneKey({
+			type: 'geneVariant',
+			genes: [{ kind: 'coord', chr: 'chr1', start: 100, stop: 200, name: 'chr1:101-200' }]
+		}),
+		'chr1:101-200',
+		'keys a coord entry by its coordinate string'
+	)
+	t.equal(getGvGeneKey({ type: 'geneVariant', genes: [{ kind: 'gene' }] }), '', 'returns no key for an unnamed entry')
+	t.equal(
+		getGvGeneKey({ type: 'geneVariant', genes: [gene('BCR'), { kind: 'gene' }] }),
+		'',
+		'returns no key rather than a partial one that another term could share'
+	)
+	t.end()
+})
+
+tape('trimGvQForCache()', t => {
+	const tw = getFilledGvTw()
+	const dtTerm = structuredClone(tw.term.childTerms[0])
+	dtTerm.mnames = ['G12D']
+	const q = {
+		type: 'custom-groupset',
+		isAtomic: true,
+		dtLst: [DTSNVINDEL],
+		hiddenValues: { x: 1 },
+		customset: {
+			groups: [
+				{
+					name: 'BCR-ABL1 fusion',
+					type: 'filter',
+					filter: { type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term: dtTerm, values: [] } }] }
+				}
+			]
+		}
+	}
+	const original = structuredClone(q)
+	const trimmed = trimGvQForCache(q)
+
+	t.deepEqual(q, original, 'does not modify the q it is given')
+	t.equal('isAtomic' in trimmed, false, 'drops isAtomic')
+	t.equal('hiddenValues' in trimmed, false, 'drops hiddenValues, which set_hiddenvalues() refills')
+	t.equal('dtLst' in trimmed, false, 'drops dtLst, which fill() always re-derives from the groups')
+	const trimmedTvsTerm = trimmed.customset.groups[0].filter.lst[0].tvs.term
+	t.equal('mnames' in trimmedTvsTerm, false, 'drops the mname tally of a customset tvs')
+	t.equal('parentTerm' in trimmedTvsTerm, false, 'drops the parent term of a customset tvs')
+	t.equal(trimmed.customset.groups[0].name, 'BCR-ABL1 fusion', 'keeps the user-authored groups')
 	t.end()
 })
 

@@ -1,5 +1,5 @@
 import { dofetch3, isInSession, getRequiredAuth, getSavedToken, setTokenByDsRoute } from '#common/dofetch'
-import { isDictionaryType, trimGvTermCopy } from '#shared/terms.js'
+import { isDictionaryType, trimGvTermCopy, getGvGeneKey } from '#shared/terms.js'
 
 export class Vocab {
 	termdbConfig = {}
@@ -259,6 +259,17 @@ export class Vocab {
 			}
 		}
 		return copy
+	}
+
+	/* The settings remembered for the gene(s) of a geneVariant term, most recent first, as
+	{label, q} entries -- see mayRememberGvQ() in client/mass/store.ts.
+
+	Returns [] in a host app whose store does not track them, since only the mass store does,
+	and copies so that a caller can hand a q to fillTermWrapper(), which fills in place. */
+	getGvQLst(term) {
+		const key = getGvGeneKey(term)
+		const lst = key && this.state.reuse?.gvQByGene?.[key]
+		return lst ? structuredClone(lst) : []
 	}
 
 	async addCustomTerm(obj) {
