@@ -100,7 +100,7 @@ tape('Multiple sections and categories aggregate matrix', async function (test) 
 						'Genes': [
 							{ name: 'TP53', gene: 'TP53', type: 'geneExpression' },
 							{ name: 'KRAS', gene: 'KRAS', type: 'geneExpression' },
-							{ name: 'EFGR', gene: 'EGFR', type: 'geneExpression' },
+							{ name: 'EGFR', gene: 'EGFR', type: 'geneExpression' },
 							{ name: 'BRAF', gene: 'BRAF', type: 'geneExpression' }
 						],
 						'Really long row section label for testing': [
@@ -110,7 +110,7 @@ tape('Multiple sections and categories aggregate matrix', async function (test) 
 							{ name: 'SDC1', gene: 'SDC1', type: 'geneExpression' },
 							{ name: 'NRAS', gene: 'NRAS', type: 'geneExpression' },
 							//Should show a blank line with functioning tooltips
-							{ name: 'Not a real gene', gene: 'Not a real gene', type: 'geneExpression' } 
+							{ name: 'Not a real gene', gene: 'Not a real gene', type: 'geneExpression' }
 						]
 					},
 					columns: {
