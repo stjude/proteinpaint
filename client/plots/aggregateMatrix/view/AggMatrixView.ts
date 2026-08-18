@@ -2,7 +2,7 @@ import { table2col } from '#dom'
 import type { AggregateMatrix } from '../AggregateMatrix.ts'
 import type { AggMatrixDotPosition, AggMatrixViewData } from '../viewModel/ViewModelDataTypes.ts'
 import { LegendRender } from './LegendRender.ts'
-import { PSEUDOBULK } from '#types' 
+import { PSEUDOBULK } from '#types'
 
 export class AggMatrixView {
     ag: AggregateMatrix
@@ -36,7 +36,7 @@ export class AggMatrixView {
             .attr('width', plotDim.svg.width)
             .attr('height', plotDim.svg.height)
             .attr('data-testid', 'sjpp-ag-matrix-svg')
-        
+
         const rowLabels = svg.append('g')
             .attr('class', 'sjpp-ag-matrix-row-labels')
             .attr('transform', `translate(${plotDim.rowLabels.x}, ${plotDim.rowLabels.y}) `)
@@ -44,7 +44,7 @@ export class AggMatrixView {
         const colLabels = svg.append('g')
             .attr('class', 'sjpp-ag-matrix-col-labels')
             .attr('transform', `translate(${plotDim.colLabels.x}, ${plotDim.colLabels.y})`)
-        
+
         const legendDiv = mainDiv.append('div')
             .attr('class', 'sjpp-ag-matrix-legend')
             .attr('data-testid', 'sjpp-ag-matrix-legend')
@@ -159,7 +159,7 @@ export class AggMatrixView {
 
     renderDots(dotPositions: AggMatrixDotPosition[]) {
         for (const dot of dotPositions) {
-            this.dom.svg.append('circle')
+            const circle = this.dom.svg.append('circle')
                 .attr('class', 'sjpp-ag-matrix-dot')
                 .attr('data-testid', `sjpp-ag-matrix-dot-${dot.row}-${dot.column}`)
                 .attr('cx', dot.x)
@@ -176,14 +176,15 @@ export class AggMatrixView {
                 .on('mouseout', () => {
                     this.ag.dom.tip.clear().hide()
                 })
-                .on('click', () => {
+            if (dot.hasData) {
+                circle.on('click', () => {
                     const config = this.ag.state.config
                     const colTerms = config.columns?.[dot.colSection] || []
                     const colTerm = colTerms.find(term => term.id === dot.column)
                     if (!colTerm) return
                     if (colTerm.type !== PSEUDOBULK) return
                     const tmp = structuredClone(colTerm)
-                    
+
                     //TODO: Move this to interactions
                     const idName = `geneExpression ${dot.row} ${dot.column}`
                     tmp.gene = dot.row
@@ -196,11 +197,12 @@ export class AggMatrixView {
                             chartType: 'summary',
                             term: {
                                 term: tmp,
-                                q: { mode: 'continuous'}
+                                q: { mode: 'continuous' }
                             }
                         }
                     })
                 })
+            }
         }
     }
 }

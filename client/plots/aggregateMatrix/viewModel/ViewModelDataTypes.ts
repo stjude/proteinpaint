@@ -35,6 +35,8 @@ export type AggMatrixDotPosition = {
     column: string
     colSection: string
     tipData: DotTipEntry[]
+    /** Flag on indicate whether data is available or not */
+    hasData: boolean
 }
 
 type PlotDimensions = {
