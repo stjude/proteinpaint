@@ -17,6 +17,67 @@ export const SPANSELECTOR = `.${SPANCLS}`
 // its own ancestor label, and the next nested level's line
 const SPANLABELPAD = 3
 
+export function setRelatedSamples(grp) {
+	grp.relatedSamples = {}
+	// at this point, samples have already been sorted by grpLstSampleSorter (mutation, CNV, values, etc),
+	// only now pull ancestor-related samples to be grouped with the left-most related sample
+	const reorderedByAncestor = new Set()
+	const lstCopy: Set<any> = new Set(grp.lst)
+	let currentRelated = [grp.lst[0]]
+	for (const s of grp.lst) {
+		if (reorderedByAncestor.has(s)) continue
+		reorderedByAncestor.add(s)
+		lstCopy.delete(s)
+		currentRelated = [s]
+		if (s._ref_?.ancestors) {
+			for (const a of s._ref_.ancestors) {
+				const id = a.ancestor_id
+				for (const c of lstCopy) {
+					// TODO: support multi-level ancestry instead of just the immediate sample parent
+					if (c._ref_?.ancestors?.[0]?.ancestor_id === id) {
+						reorderedByAncestor.add(c)
+						lstCopy.delete(c)
+						currentRelated.push(c)
+					}
+				}
+				if (currentRelated.length > 1) grp.relatedSamples[id] = currentRelated
+			}
+			grp.lst = [...reorderedByAncestor]
+		}
+	}
+}
+
+type SampleAncestorList = {
+	ancestor_id: string
+	distance: number
+}[]
+
+export function getSortSamplesByAncestry(self) {
+	return (a, b) => {
+		const aid = a._ref_.ancestors?.[0]?.ancestor_id
+		const bid = b._ref_.ancestors?.[0]?.ancestor_id
+		if (!aid && !bid) return 0
+		if (!aid) return 1
+		if (!bid) return -1
+		const alen = self.samplesByAncestorId.get(aid)?.size
+		const blen = self.samplesByAncestorId.get(bid)?.size
+		if (!alen && !blen) return 0
+		if (!alen) return 1
+		if (!blen) return -1
+
+		const aa: SampleAncestorList = a._ref_.ancestors || []
+		const bb: SampleAncestorList = b._ref_.ancestors || []
+
+		if (aa.length > bb.length) return -1
+		if (aa.length < bb.length) return 1
+		for (const [i, a] of Object.entries(aa)) {
+			if (a.ancestor_id < bb[i].ancestor_id) return -1
+			if (a.ancestor_id > bb[i].ancestor_id) return 1
+		}
+		return 0
+	}
+}
+
 export function trackLabelSpanData(
 	lab,
 	side,
@@ -83,6 +144,7 @@ export function renderLabelSpans(relatedSamplesByAncestorId, side, d) {
 
 	const layoutByEntry = new Map<any, { horizontal: boolean; verticalExtent: number }>()
 	groups.each(function (this: SVGGElement, r) {
+		// TODO: .text() should use ancestor label, not id
 		const box = select(this).append('text').text(r.ancestor_id).node()?.getBBox() || { width: 0, height: 0 }
 		const availableWidth = r.samples.length * d.colw
 		const horizontal = box.width <= availableWidth
