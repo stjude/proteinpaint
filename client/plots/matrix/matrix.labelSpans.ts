@@ -2,9 +2,9 @@ import { select } from 'd3-selection'
 import type { SvgText } from '../../types/d3'
 
 export type LabelAncestry = {
-	ancestor_id: string
+	ancestor_id: string | number
 	transform: string //side.attr.labelGTransform(lab),
-	samples: string[] //lab.grp.relatedSamples[id],
+	samples: any[] //lab.row entries, used for span length/extent
 	maxTextLengthByAncestorDistance: { [key: number]: number }
 	direction: string
 	distance: number // ancestor distance, used to stack nested spans by level
@@ -19,11 +19,12 @@ const SPANLABELPAD = 3
 
 export function setRelatedSamples(grp) {
 	grp.relatedSamples = {}
+	if (!grp.lst?.length) return
 	// at this point, samples have already been sorted by grpLstSampleSorter (mutation, CNV, values, etc),
 	// only now pull ancestor-related samples to be grouped with the left-most related sample
 	const reorderedByAncestor = new Set()
 	const lstCopy: Set<any> = new Set(grp.lst)
-	let currentRelated = [grp.lst[0]]
+	let currentRelated: any[] = []
 	for (const s of grp.lst) {
 		if (reorderedByAncestor.has(s)) continue
 		reorderedByAncestor.add(s)
@@ -42,9 +43,13 @@ export function setRelatedSamples(grp) {
 				}
 				if (currentRelated.length > 1) grp.relatedSamples[id] = currentRelated
 			}
-			grp.lst = [...reorderedByAncestor]
 		}
 	}
+	// reassign only after the loop, so every visited sample (each added to
+	// reorderedByAncestor above) is retained; reassigning inside the loop would
+	// leave grp.lst as the snapshot from the last ancestor-bearing sample and
+	// silently drop any trailing samples iterated after it
+	grp.lst = [...reorderedByAncestor]
 }
 
 type SampleAncestorList = {
