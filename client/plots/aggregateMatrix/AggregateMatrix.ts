@@ -97,8 +97,6 @@ export const aggMatrixInit = getCompInit(AggregateMatrix)
 export const componentInit = aggMatrixInit
 
 export function getPlotConfig(opts: any) {
-    validatePlotConfig(opts)
-
     const config = {
         hidePlotFilter: true,
         settings: {
@@ -106,7 +104,10 @@ export function getPlotConfig(opts: any) {
         }
     }
 
-    return copyMerge(config, opts)
+    const returnConfig = copyMerge(config, opts)
+    validatePlotConfig(returnConfig)
+
+    return returnConfig
 }
 
 export function validatePlotConfig(config: any) {

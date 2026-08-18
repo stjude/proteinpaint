@@ -5,7 +5,7 @@ export function getAggregateMatrixSettings(overrides = {}): AggregateMatrixSetti
         startColor: '#ff9400',
         stopColor: '#0080ff',
         gradientMethod: 'mean',
-        sizeMethod: 'mean',
+        sizeMethod: 'percent',
         minDotSize: 5,
         maxDotSize: 20,
         dotInputMin: 2,
