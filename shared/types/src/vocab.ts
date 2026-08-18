@@ -9,16 +9,12 @@ VocabApi
 
 */
 
-//type QLst = [Partial<{ nextReuseId?: string }>, ...Q[]]
-
 export type VocabApi = {
 	termdbConfig: any
 	state?: any
 	//Methods
-	cacheTermQ: (term: Term, q: any) => any
 	findTerm: (f: string, activeCohort: number, usecase: UseCase, x: string) => { lst: Term[] }
 	getCategories: (term: Term, filter?: Filter, body?: any) => any
-	getCustomTermQLst: (f: Term) => any
 	getPercentile: (term: Term, percentile_lst: number[], termfilter?) => any
 	getterm: (f: any) => Term
 	getTerms: (f: any) => any
@@ -27,7 +23,6 @@ export type VocabApi = {
 	getDefaultBins: (args: any) => any
 	setTermBins(tw: TermWrapper): any
 	getTwMinCopy(tw: TermWrapper): any
-	uncacheTermQ: (term: Term, q: any) => any
 	hasVerifiedToken: () => boolean
 	tokenVerificationMessage: string
 	tokenVerificationPayload?: {

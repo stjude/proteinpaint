@@ -67,22 +67,3 @@ export class TermSettingActions {
 		// load the input ui for this term type
 	}
 }
-
-// // do not consider irrelevant q attributes when
-// // computing the deep equality of two term.q's
-// function equivalentQs(q0: Q, q1: Q) {
-// 	const qlst = [q0, q1].map(q => JSON.parse(JSON.stringify(q)))
-// 	for (const q of qlst) {
-// 		delete q.binLabelFormatter
-// 		if (q.reuseId === 'Default') delete q.reuseId
-// 		// TODO: may need to delete non-relevant q attributes
-// 		// when setting defaults in regression.inputs.term.js
-// 		if (q.mode === 'continuous') delete q.mode
-// 		if (q.mode === 'discrete' && q.type == 'custom-bin' && q.lst) {
-// 			for (const bin of q.lst) {
-// 				delete bin.range
-// 			}
-// 		}
-// 	}
-// 	return deepEqual(qlst[0], qlst[1])
-// }

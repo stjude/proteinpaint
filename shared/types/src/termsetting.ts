@@ -193,7 +193,6 @@ export type TermSettingInstance = {
 	setHandler?: (f: string) => any
 	showGeneSearch: (clickedElem: Element | null, event: MouseEvent) => void
 	showMenu: (event: MouseEvent, clickedElem: string | null, menuHolder: any) => void
-	showReuseMenu?: (div: any) => void
 	showTree: (holder: Selection, event?: MouseEvent) => void
 	tabCallback?: (event: any, tab: any) => void
 	updatePill?: () => void
