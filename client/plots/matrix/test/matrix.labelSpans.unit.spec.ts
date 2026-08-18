@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { trackLabelSpanData, renderLabelSpans, SPANSELECTOR } from '../matrix.labelSpans'
+import { trackLabelSpanData, renderLabelSpans, setRelatedSamples, SPANSELECTOR } from '../matrix.labelSpans'
 import { select } from 'd3-selection'
 
 /*************************
@@ -13,7 +13,7 @@ function getSvg(_opts: { [key: string]: any } = {}) {
 	const g = select('body')
 		.append('svg')
 		.attr('width', 200)
-		.attr('heigth', 300)
+		.attr('height', 300)
 		.append('g')
 		.attr('transform', `translate(50,${opts.direction == 'btm' ? 0 : 150})`)
 
@@ -413,5 +413,39 @@ tape(`renderLabelSpans({direction: 'top')`, test => {
 
 	// spans and ancestor labels are rendered above the sample labels (lesser y)
 	assertSpanYpositions(test, g, relatedSamplesByAncestorId, 'top')
+	test.end()
+})
+
+tape('setRelatedSamples() retains all samples', test => {
+	// s0 and s1 share ancestor 'A'; s2 and s3 have no ancestors and are iterated AFTER
+	// the last ancestor-bearing sample. A previous bug reassigned grp.lst inside the loop
+	// only on ancestor-bearing samples, so trailing non-ancestor samples were dropped.
+	const s0 = { sample: 's0', _ref_: { ancestors: [{ ancestor_id: 'A', distance: 1 }] } }
+	const s1 = { sample: 's1', _ref_: { ancestors: [{ ancestor_id: 'A', distance: 1 }] } }
+	const s2 = { sample: 's2' } // no _ref_.ancestors
+	const s3 = { sample: 's3' } // no _ref_.ancestors
+	const grp: any = { lst: [s0, s1, s2, s3] }
+
+	setRelatedSamples(grp)
+
+	const samples = grp.lst.map((s: any) => s.sample)
+	test.equal(grp.lst.length, 4, 'grp.lst should retain all 4 samples')
+	test.deepEqual(
+		[...samples].sort(),
+		['s0', 's1', 's2', 's3'],
+		'no sample should be dropped, including trailing non-ancestor samples s2 and s3'
+	)
+	test.deepEqual(
+		grp.relatedSamples['A'].map((s: any) => s.sample),
+		['s0', 's1'],
+		'ancestor A should relate its two descendant samples'
+	)
+
+	// an empty group is handled without error and stays empty
+	const empty: any = { lst: [] }
+	setRelatedSamples(empty)
+	test.equal(empty.lst.length, 0, 'an empty grp.lst should remain empty')
+	test.deepEqual(empty.relatedSamples, {}, 'an empty group should have no related samples')
+
 	test.end()
 })
