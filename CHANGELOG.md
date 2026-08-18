@@ -10,6 +10,7 @@ Fixes:
 - reduce test plan count for geneVariant survival term test
 - cut down geneVariant tw size in state using trimGvTermsForSave as chokepoint
 - remove unused concurrently devDependency
+- bump fast-uri to resolve 2 dependabot alerts
 
 
 ## 2.203.0
