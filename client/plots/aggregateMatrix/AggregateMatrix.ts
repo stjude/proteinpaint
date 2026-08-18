@@ -7,6 +7,7 @@ import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
 import { setControls } from './view/setControls.ts'
 import { Menu } from '#dom'
+import { availableAggregateMethods } from '#types'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
@@ -125,6 +126,12 @@ export function validatePlotConfig(config: any) {
     }
     if (colCount < 2) throw new Error(`Aggregate matrix plot requires at least 2 columns`)
 
-    const settings = config.settings.aggregateMatrix
+    const settings = config.settings?.aggregateMatrix || {}
+    if (!availableAggregateMethods.includes(settings.sizeMethod)) {
+        throw new Error(`Invalid aggregate method for dot size`)
+    }
+    if (!availableAggregateMethods.includes(settings.gradientMethod)) {
+        throw new Error(`Invalid aggregate method for color gradient`)
+    }
     if (settings.gradientMethod == settings.sizeMethod) throw new Error('Aggregate method for the color gradient cannot be the same as the aggregate method for the dot size.')
 }
