@@ -111,18 +111,24 @@ function init({ genomes }) {
 			const q = req.query
 			const slide = slidePath(genomes, q)
 
+			// companion files (?file=, relative to tpmasterdir) must stay inside the
+			// selected slide's own image folder in dataset mode — companions are
+			// co-located with their slide by layout, and this stops a valid slide
+			// query from reading arbitrary csv/h5 files of other datasets under
+			// tpmasterdir. The gated direct-path mode keeps the tpmasterdir scope,
+			// since its URL contract takes arbitrary tpmasterdir-relative paths.
+			const companionBase = q.slide ? path.resolve(serverconfig.tpmasterdir) : path.dirname(slide)
+
 			if (req.params.action == 'boundaries') {
-				// serve a boundary CSV (e.g. Xenium cell/nucleus_boundaries.csv);
-				// the file path is always relative to serverconfig.tpmasterdir
+				// serve a boundary CSV (e.g. Xenium cell/nucleus_boundaries.csv)
 				const file = String(q.file || '')
 				if (!file.toLowerCase().endsWith('.csv')) {
 					res.status(400).send({ status: 'error', error: 'boundaries file must be a .csv' })
 					return
 				}
-				const base = path.resolve(serverconfig.tpmasterdir)
-				const full = path.resolve(base, file)
-				if (!full.startsWith(base + path.sep)) {
-					res.status(400).send({ status: 'error', error: 'boundaries path escapes tpmasterdir' })
+				const full = path.resolve(serverconfig.tpmasterdir, file)
+				if (!full.startsWith(companionBase + path.sep)) {
+					res.status(400).send({ status: 'error', error: 'boundaries path escapes the slide folder' })
 					return
 				}
 				let csv: string
@@ -148,10 +154,9 @@ function init({ genomes }) {
 					res.status(400).send({ status: 'error', error: 'gene expression file must be a .h5' })
 					return
 				}
-				const base = path.resolve(serverconfig.tpmasterdir)
-				const full = path.resolve(base, file)
-				if (!full.startsWith(base + path.sep)) {
-					res.status(400).send({ status: 'error', error: 'gene expression path escapes tpmasterdir' })
+				const full = path.resolve(serverconfig.tpmasterdir, file)
+				if (!full.startsWith(companionBase + path.sep)) {
+					res.status(400).send({ status: 'error', error: 'gene expression path escapes the slide folder' })
 					return
 				}
 				const out = await run_python(
