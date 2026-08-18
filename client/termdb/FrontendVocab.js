@@ -285,6 +285,12 @@ export class FrontendVocab extends Vocab {
 		const data = getCategoryData(q, this.datarows)
 		return data
 	}
+
+	/** same split as TermdbVocab: a caller holding a whole wrapper passes it here. a frontend vocab
+	tallies the rows it was handed, so nothing beyond the term is read yet */
+	async getTwCategories(tw, filter, lst = null) {
+		return await this.getCategories(tw.term, filter, lst)
+	}
 	getNumericUncomputableCategories(term, filter) {
 		throw 'to be implemented!! getNumericUncomputableCategories'
 	}

@@ -586,8 +586,28 @@ export class TermdbVocab extends Vocab {
 	accepts one term of any type, including categorical, non-categorical, and non-dictionary
 	return number of samples per category/bin/grade/group etc
 	optionally, caller can supply a {term1_q: {...}} key-object value in _body to customize categories
+
+	for a caller that holds a term but no wrapper, e.g. a filter tvs editor: a tvs is not a tw, and
+	its q-shaped fields are assembled into term1_q here rather than a wrapper being faked for it.
+	a caller that does hold a wrapper must call getTwCategories() instead
 	*/
 	async getCategories(term, filter, _body = {}) {
+		// destructured rather than deleted: _body may be an object the caller reuses across calls
+		const { term1_q, ...body } = _body
+		return await this.getTwCategories({ term, q: term1_q || {} }, filter, body)
+	}
+
+	/*
+	same as getCategories(), for a caller that holds the whole term wrapper.
+
+	tw.type is what makes this more than a convenience: it decides how the server reduces the term
+	to categories, and the term alone does not imply it. a fraction termCollection resolves to one
+	number per sample only for tw.type='TermCollectionTWFraction'; without it the collection stays
+	one value per member term and the server returns one "category" per sample rather than the
+	fraction's bins
+	*/
+	async getTwCategories(tw, filter, _body = {}) {
+		const term = tw.term
 		const signal = this.getAbortSignal()
 		const headers = await this.mayGetAuthHeaders()
 		if (term.type == 'snplst' || term.type == 'snplocus') {
@@ -631,8 +651,6 @@ export class TermdbVocab extends Vocab {
 		}
 
 		// no need to supply tw.$id: 1) this method is one term only and no need to distinguish multiple terms 2) backend will auto fill $id before retrieving data
-		const tw = { term, q: _body.term1_q || {} }
-		delete _body.term1_q // is now tw.q, so no longer needed
 		const body = {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
