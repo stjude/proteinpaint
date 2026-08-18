@@ -14,7 +14,25 @@ export function getTermOrder(data) {
 		numClusterTerms = 0
 
 	this.mclassSorter = getMclassSorter(this)
+
+	// Build the ancestor -> samples Map in a single pass over the full cohort. This is
+	// term-independent, so scanning here (instead of repeating inside the per-term loop
+	// below) avoids re-scanning every sample once per term. Dedupe by sample id to match
+	// the per-term de-duplication (countedSamples) that previously guarded this block.
 	this.samplesByAncestorId = new Map()
+	const seenAncestorSamples = new Set()
+	for (const sd of data.lst) {
+		if (seenAncestorSamples.has(sd.sample)) continue
+		seenAncestorSamples.add(sd.sample)
+		if (!sd._ref_?.ancestors) continue
+		for (const a of sd._ref_.ancestors) {
+			const id = a.ancestor_id
+			if (id === undefined) continue
+			if (!this.samplesByAncestorId.has(id)) this.samplesByAncestorId.set(id, new Set())
+			this.samplesByAncestorId.get(id).add(sd)
+		}
+	}
+
 	for (const [grpIndex, grp] of this.termGroups.entries()) {
 		const lst = [] // will derive a mutable copy of grp.lst
 		for (const [index, tw] of grp.lst.entries()) {
@@ -50,15 +68,6 @@ export function getTermOrder(data) {
 							if (!('minval' in counts) || counts.minval > v) counts.minval = v
 							if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
 						}
-					}
-				}
-
-				if (sd._ref_?.ancestors) {
-					for (const a of sd._ref_?.ancestors) {
-						const id = a.ancestor_id
-						if (id === undefined) continue
-						if (!this.samplesByAncestorId.has(id)) this.samplesByAncestorId.set(id, new Set())
-						this.samplesByAncestorId.get(id).add(sd)
 					}
 				}
 			}
