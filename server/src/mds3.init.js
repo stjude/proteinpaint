@@ -3162,7 +3162,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		const data = new Map() // to return
 		// get samples/cases that pass filter
 		// will be used in addDataAvailability() to filter samples
-		const sampleFilter = await filterSamples4assayAvailability(q, ds)
+		const sampleFilter = await mayLimitSamples(q, null, ds)
 
 		// collect dts to query
 		const dts = getDtsToQuery(tw, ds)
@@ -3410,6 +3410,11 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 			const dt = _dt.byOrigin[o]
 			dts.push({ ...dt, origin: o })
 		}
+	} else if (_dt.bySampleType) {
+		for (const st in _dt.bySampleType) {
+			const dt = _dt.bySampleType[st]
+			dts.push({ ...dt, sampleType: st })
+		}
 	} else {
 		dts.push({ ..._dt })
 	}
@@ -3426,18 +3431,6 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 			// annotate the sample as not tested
 			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter, gene)
 		}
-	}
-}
-
-async function filterSamples4assayAvailability(q, ds) {
-	if (ds.cohort?.db) {
-		// sql-based dataset
-		if (q.filter && q.filter.lst.length) {
-			return new Set((await get_samples(q, ds)).map(i => i.id))
-		}
-	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
-		// ds-supplied filter method
-		return await ds.cohort.termdb.filterSamples(q, ds)
 	}
 }
 
@@ -3936,16 +3929,18 @@ async function mayValidateAssayAvailability(ds) {
 			if (!dt2label[key]) throw 'unknown dt in assayAvailability.byDt: ' + key
 			const dt = ds.assayAvailability.byDt[key]
 
-			if (dt.byOrigin) {
-				for (const oname in dt.byOrigin) {
-					const sub_dt = dt.byOrigin[oname]
+			if (dt.byOrigin || dt.bySampleType) {
+				const by = dt.byOrigin || dt.bySampleType
+				const byWhat = dt.byOrigin ? 'byOrigin' : 'bySampleType'
+				for (const name in by) {
+					const sub_dt = by[name]
 					if (!sub_dt.yes || !sub_dt.no || !sub_dt.term_id)
-						throw 'ds.assayAvailability.byDt.*.byOrigin requires {term_id, yes{}, no{}}'
+						throw `ds.assayAvailability.byDt.*.${byWhat} requires {term_id, yes{}, no{}}`
 					await getAssayAvailablility(ds, sub_dt)
 					console.log(
 						ds.label + ': assayAvailability',
 						dt2label[key],
-						oname,
+						dt.byOrigin ? name : ds.cohort.termdb.sampleTypes[name].plural_name,
 						'yes',
 						sub_dt.yesSamples.size,
 						'no',
@@ -3953,7 +3948,7 @@ async function mayValidateAssayAvailability(ds) {
 					)
 				}
 			} else {
-				// not by origin
+				// not by origin or by sample type
 				if (!dt.yes || !dt.no || !dt.term_id) throw 'ds.assayAvailability.byDt requires {term_id, yes{}, no{}} or get()'
 				await getAssayAvailablility(ds, dt)
 				console.log(ds.label + ': assayAvailability', dt2label[key], 'yes', dt.yesSamples.size, 'no', dt.noSamples.size)
