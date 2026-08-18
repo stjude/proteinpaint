@@ -1,5 +1,5 @@
 import { termsettingInit, get$id } from '#termsetting'
-import { isDictionaryType, get_bin_label, isNumericTerm, getValueConversionFactor, roundValue } from '#shared'
+import { isDictionaryType, get_bin_label, isNumericTw, getValueConversionFactor, roundValue } from '#shared'
 import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '#dom'
 import { select } from 'd3-selection'
@@ -14,7 +14,7 @@ class instance is an input
 export class InputTerm {
 	opts: any
 	section: any
-	term: any 
+	term: any
 	parent: any
 	vocabApi: any
 	dom!: {
@@ -36,7 +36,6 @@ export class InputTerm {
 		sampleCounts: any[] | undefined
 		excludeCounts: any[] | undefined
 		allowToSelectRefGrp: boolean
-
 	}
 	orderedLabels!: any[]
 
@@ -233,15 +232,17 @@ export class InputTerm {
 			else tw.q.mode = 'continuous'
 		}
 
-		// need to supply tw.q in body, otherwise getCategories() will
-		// generate a default .q for the term
-		const body = tw.term.type == 'snplst' || tw.term.type == 'snplocus' ? { cacheid: tw.q.cacheid } : { term1_q: tw.q }
+		// cacheid identifies the genotype file of a snplst/snplocus term, which is queried by
+		// a route of its own rather than by the term's own q{}
+		const body = tw.term.type == 'snplst' || tw.term.type == 'snplocus' ? { cacheid: tw.q.cacheid } : {}
 
-		// get term categories
-		const wait = this.dom.holder.append('div').style('padding', '5px').text('Loading...') // getCategories may wait long time e.g. gdc. adding this to indicate its loading to avoid just showing a nopill prompt
+		/* get term categories. the whole wrapper is passed, not term + q: tw.type decides how the
+		term is reduced to categories, and a fraction termCollection is listed one category per
+		sample without it */
+		const wait = this.dom.holder.append('div').style('padding', '5px').text('Loading...') // getTwCategories may wait long time e.g. gdc. adding this to indicate its loading to avoid just showing a nopill prompt
 		let data
 		try {
-			data = await this.vocabApi.getCategories(tw.term, this.parent.parent.filter, body)
+			data = await this.vocabApi.getTwCategories(tw, this.parent.parent.filter, body)
 			if (!data) throw `no data for term.id='${tw.term.id}'`
 			if (data.error) throw data.error
 		} finally {
@@ -301,7 +302,10 @@ export class InputTerm {
 
 			this.summarizeSample(tw, data.lst)
 
-			if (isNumericTerm(tw.term)) {
+			/* isNumericTw(), not isNumericTerm(): a fraction termCollection resolves to one numeric
+			value per sample, so it is analyzed exactly like a numeric term here — binned into
+			reference-group categories, or used raw in continuous/spline mode */
+			if (isNumericTw(tw)) {
 				if (tw.q.mode != 'continuous' && tw.q.mode != 'spline') {
 					this.termStatus.allowToSelectRefGrp = true
 				}
@@ -541,7 +545,7 @@ export class InputTerm {
 			.style('margin', '5px')
 			.each(function (tw: any) {
 				const elem = select(this).append('label')
-				/*const checkbox =*/elem
+				/*const checkbox =*/ elem
 					.append('input')
 					.attr('type', 'checkbox')
 					.property('checked', self.term.interactions.includes(tw.$id))

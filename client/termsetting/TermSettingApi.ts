@@ -20,6 +20,21 @@ const testClickTermDelay = 0 // 5000
  */
 const fractionOverlayTargets = new Set(['barchart', 'violin', 'boxplot', 'survival'])
 
+/** True when this pill can consume a numeric term collection reduced to a scalar fraction, which
+is what turns the fraction chooser on: see handlers/termCollectionFractionSelection.ts, and
+allowsCollectionFraction() in TermTypeSearch.ts, where the mode doubles as the permission to offer
+collections for a usecase that otherwise excludes them. */
+function allowsCollectionFraction(usecase: { target: string; detail?: string }): boolean {
+	/* all summary childTypes, not just barchart: selecting a continuous overlay switches childType
+	(see plots/summary.ts mayAdjustConfig), so the same pill is later opened with the violin/boxplot
+	usecase and must still offer collections as fractions */
+	if (fractionOverlayTargets.has(usecase.target)) return usecase.detail === 'term2' || usecase.detail === 'term0'
+	/* a regression variable is one number per sample, which a fraction supplies; the outcome is
+	excluded because it must be a dictionary term, per TermdbVocab.getRegressionData() */
+	if (usecase.target === 'regression') return usecase.detail === 'independent'
+	return false
+}
+
 export class TermSettingApi {
 	#termsetting: TermSetting
 	Inner?: TermSetting
@@ -118,14 +133,7 @@ export class TermSettingApi {
 			},
 			tree: {
 				disable_terms: self.disable_terms,
-				/* all summary childTypes, not just barchart: selecting a continuous overlay switches
-				childType (see plots/summary.ts mayAdjustConfig), so the same pill is later opened
-				with the violin/boxplot usecase and must still offer collections as fractions */
-				termCollectionSelectionMode:
-					fractionOverlayTargets.has(self.usecase.target) &&
-					(self.usecase.detail === 'term2' || self.usecase.detail === 'term0')
-						? 'fraction'
-						: undefined,
+				termCollectionSelectionMode: allowsCollectionFraction(self.usecase) ? 'fraction' : undefined,
 				click_term: async t => {
 					self.dom.nopilldiv.style('display', 'none')
 					self.dom.pilldiv.style('display', 'none')

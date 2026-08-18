@@ -10,6 +10,7 @@ import { boxplot_getvalue } from '#shared/boxplot.js'
 import { getValueConversionFactor } from '#shared/helpers.js'
 import { runCumincR } from './termdb.cuminc.ts'
 import { isDictionaryType } from '#shared/terms.js'
+import { FRACTION_TW_TYPE, validateTermCollectionFraction } from '#shared/termCollection.js'
 import { getData } from '../termdb.matrix.js'
 
 type TermWrapperLike = {
@@ -222,6 +223,8 @@ snplocusPostprocess
 
 // list of supported types
 const regressionTypes = ['linear', 'logistic', 'cox']
+// q.modes of a fraction term collection that resolve to a usable regression variable
+const fractionModes = new Set(['continuous', 'spline', 'discrete'])
 // minimum number of samples to run analysis
 const minimumSample = 1
 
@@ -309,7 +312,21 @@ function parse_q(q, ds) {
 		if (isDictionaryType(tw.term.type)) {
 			// dictionary term
 			tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
-			if (tw.term.type != 'samplelst') {
+			if (tw.term.type == 'termCollection') {
+				/* a termCollection has no term.id to rehydrate by: it is identified by its name and its
+				member terms, which the client posts whole. only the fraction wrapper reduces the collection
+				to one value per sample, as a regression variable requires; the other wrappers keep one
+				value per member term, which has no meaning as a single model variable */
+				if (tw.type != FRACTION_TW_TYPE)
+					throw `independent variable '${tw.term.name}' is a term collection and must be a fraction`
+				// getData() validates this too, but only after a full sample query
+				validateTermCollectionFraction(tw.q as any, tw.term)
+				/* getData() returns the raw fraction for every mode but 'discrete', which it bins.
+				continuous and spline analyze that number directly; any other mode would hand R the
+				unbinned fraction as a factor level, i.e. one category per sample */
+				if (!fractionModes.has(tw.q.mode))
+					throw `term collection '${tw.term.name}' cannot be analyzed in q.mode='${tw.q.mode}'`
+			} else if (tw.term.type != 'samplelst') {
 				// samplelst terms are client-made and cannot be rehydrated
 				if (!tw.term.id) throw 'tw.term.id missing'
 				const term = ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
@@ -1312,9 +1329,16 @@ Returns an array with elemenents:
 		},
 */
 async function getSampleData(q: RegressionQuery, ds: any): Promise<SampleDataEntry[]> {
+	/* keep the request tws in a local array rather than reading them back off q2.terms:
+	getData() replaces q.terms with the expanded member tws of a custom termCollection, so the
+	collection tw itself, which is the key its resolved value is returned under, is no longer there */
+	const terms = [q.outcome, ...q.independent]
 	const q2 = Object.assign({}, q)
-	q2.terms = [q.outcome, ...q.independent]
+	q2.terms = terms
 	const result = await getData(q2, ds)
+	/* an error from getData() is not thrown, and leaves result.samples undefined: without this
+	the analysis proceeds on zero samples and reports 'too few samples to fit model' instead */
+	if (result.error) throw result.error
 
 	const filteredSamples = mayProcessSampleByCoxOutcome(q, ds, result.samples) // array of objects, same shape as result.samples{} values
 	const samples: any[] = [] // collect reshaped sample objs and return
@@ -1326,8 +1350,9 @@ async function getSampleData(q: RegressionQuery, ds: any): Promise<SampleDataEnt
 			id2value: new Map<string, any>()
 		}
 
-		for (const tw of q2.terms) {
-			if (tw.$id in sample) {
+		for (const tw of terms) {
+			// a tw without $id has no key to read its sample data by; makeRinput() drops such a variable
+			if (tw.$id && tw.$id in sample) {
 				obj.id2value.set(tw.$id, sample[tw.$id])
 				mayAddAncestryPCs(tw, obj, ds)
 			}

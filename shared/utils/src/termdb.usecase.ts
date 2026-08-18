@@ -245,6 +245,17 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 			}
 
 			if (usecase.detail == 'independent') {
+				/* a term collection holds one value per member term, which is not a model variable.
+				only a numeric collection is offered, and only as a fraction: selecting it opens the
+				numerator/denominator chooser (client/termdb/handlers/termCollectionFractionSelection.ts),
+				which reduces the collection to one numeric value per sample. a categorical collection
+				has no such scalar form. the outcome is excluded above: it must be a dictionary term,
+				as enforced by TermdbVocab.getRegressionData() */
+				if (term.type == TermTypes.TERM_COLLECTION) {
+					// memberType is read directly: isNumTermCollection() does not yet test it
+					if (term.memberType == 'numeric') uses.add('plot')
+					return uses
+				}
 				if (term.type == 'float' || term.type == 'integer' || term.type == 'categorical' || term.type == 'samplelst')
 					uses.add('plot')
 				if (hasChildTypes(child_types, ['categorical', 'float', 'integer'])) uses.add('branch')
