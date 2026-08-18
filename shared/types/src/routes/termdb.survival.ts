@@ -72,6 +72,17 @@ export type SurvivalTest = {
 	pvalue: string
 }
 
+export type SurvivalKeys =
+	| 'chartId'
+	| 'seriesId'
+	| 'time'
+	| 'survival'
+	| 'lower'
+	| 'upper'
+	| 'nevent'
+	| 'ncensor'
+	| 'nrisk'
+
 export type SurvivalResponse = {
 	keys: ['chartId', 'seriesId', 'time', 'survival', 'lower', 'upper', 'nevent', 'ncensor', 'nrisk']
 	case: SurvivalCaseRow[]
