@@ -10,10 +10,10 @@ param={}
 	.filter = pp filter
 	.filter0 = gdc/mmrf filter
 	.mapParent2Children = whether to map parent term annotations onto child samples
-_allSamples=[]
-	whole list of samples, each ele: {name: int}
-	presumably the set of samples from a bcf file or tabix file
-	NOTE new format is list of integer sample ids!
+_allSamples=[{name: int}] (NOTE new format: [int])
+	set of samples to use (e.g. samples from bcf/tabix file)
+	if provided, then only filtered samples in this set are returned
+	if not provided, then all filtered samples are returned
 ds={}
 
 output:
@@ -21,8 +21,10 @@ if filter is applied, return set of sample id
 if not filtering, undefined
 */
 export async function mayLimitSamples(param, _allSamples, ds) {
-	if (!_allSamples) return // no samples from this big file
-	const allSamples = typeof _allSamples[0] === 'object' ? new Set(_allSamples.map(i => i.name)) : new Set(_allSamples)
+	let allSamples
+	if (_allSamples) {
+		allSamples = typeof _allSamples[0] === 'object' ? new Set(_allSamples.map(i => i.name)) : new Set(_allSamples)
+	}
 
 	const filter = combinePPfilterAndTid2value(param, ds) // pp filter
 	const filter0 = getFilter0(param, ds)
@@ -55,13 +57,14 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 
 	if (!filterSamples) return // no filtering done, use all samples
 
-	// filterSamples is the set of samples in dataset that match filter/filter0
-	// allSamples (from bcf etc) may be a subset of what's in dataset, so must
-	// only use those from allSamples
-	const useSet = new Set()
-	for (const i of filterSamples) {
-		if (allSamples.has(i)) useSet.add(i)
+	let useSet = filterSamples
+	if (allSamples) {
+		useSet = new Set()
+		for (const i of filterSamples) {
+			if (allSamples.has(i)) useSet.add(i)
+		}
 	}
+
 	return useSet
 }
 
