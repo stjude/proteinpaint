@@ -58,9 +58,10 @@ function init({ genomes }) {
 			if (!g) throw new Error('invalid genome name')
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw new Error('invalid dataset name')
+			// a dataset may have spatial images (folder), plain slides (wsiFolder), or both
 			const w2 = ds.queries?.w2
-			if (!w2?.folder) throw new Error('ds.queries.w2 missing')
-			const spatialBase = path.resolve(serverconfig.tpmasterdir, w2.folder)
+			if (!w2?.folder && !w2?.wsiFolder) throw new Error('ds.queries.w2 missing folder/wsiFolder')
+			const spatialBase = w2.folder ? path.resolve(serverconfig.tpmasterdir, w2.folder) : undefined
 			const wsiBase = w2.wsiFolder ? path.resolve(serverconfig.tpmasterdir, w2.wsiFolder) : undefined
 
 			/** the sample's images from both roots. fileName is relative to the
@@ -77,29 +78,31 @@ function init({ genomes }) {
 					}&sample_id=${encodeURIComponent(sampleId)}&v=${mtime}`
 
 				// spatial: one image per subfolder of the sample's directory
-				const spSampleDir = path.resolve(spatialBase, sampleId)
-				if (!spSampleDir.startsWith(spatialBase + path.sep)) throw new Error('invalid sample_id')
-				for (const img of await subdirs(spSampleDir)) {
-					const files = await readdir(path.join(spSampleDir, img)).catch(() => [] as string[])
-					const bySuffix = (suffix?: string) => (suffix ? files.find(f => f.endsWith(suffix)) : undefined)
-					const tif = bySuffix(w2.tiffFileSuffix)
-					if (!tif) continue // not an image folder
-					// companion paths are relative to tpmasterdir, matching the
-					// wsitiles boundaries/genecounts ?file= param
-					const rel = (f?: string) => (f ? path.join(w2.folder, sampleId, img, f) : undefined)
-					const fileName = path.join(img, tif)
-					const v = (await stat(path.join(spSampleDir, img, tif))).mtimeMs
-					images.push({
-						type: 'spatial' as const,
-						fileName,
-						cellBoundaries: rel(bySuffix(w2.cellBoundariesFileSuffix)),
-						nucleusBoundaries: rel(bySuffix(w2.nucleusBoundariesFileSuffix)),
-						geneExpressionFile: rel(bySuffix(w2.geneExpressionFileSuffix)),
-						// dataset-level viewer defaults; the client's burger menu overrides them
-						geneExpression: w2.geneExpression,
-						annotationLevel: w2.annotationLevel,
-						thumbnail: thumbnail(fileName, v)
-					})
+				if (spatialBase) {
+					const spSampleDir = path.resolve(spatialBase, sampleId)
+					if (!spSampleDir.startsWith(spatialBase + path.sep)) throw new Error('invalid sample_id')
+					for (const img of await subdirs(spSampleDir)) {
+						const files = await readdir(path.join(spSampleDir, img)).catch(() => [] as string[])
+						const bySuffix = (suffix?: string) => (suffix ? files.find(f => f.endsWith(suffix)) : undefined)
+						const tif = bySuffix(w2.tiffFileSuffix)
+						if (!tif) continue // not an image folder
+						// companion paths are relative to tpmasterdir, matching the
+						// wsitiles boundaries/genecounts ?file= param
+						const rel = (f?: string) => (f ? path.join(w2.folder!, sampleId, img, f) : undefined)
+						const fileName = path.join(img, tif)
+						const v = (await stat(path.join(spSampleDir, img, tif))).mtimeMs
+						images.push({
+							type: 'spatial' as const,
+							fileName,
+							cellBoundaries: rel(bySuffix(w2.cellBoundariesFileSuffix)),
+							nucleusBoundaries: rel(bySuffix(w2.nucleusBoundariesFileSuffix)),
+							geneExpressionFile: rel(bySuffix(w2.geneExpressionFileSuffix)),
+							// dataset-level viewer defaults; the client's burger menu overrides them
+							geneExpression: w2.geneExpression,
+							annotationLevel: w2.annotationLevel,
+							thumbnail: thumbnail(fileName, v)
+						})
+					}
 				}
 
 				// plain wsi: one image per subfolder of the sample's directory

@@ -71,7 +71,8 @@ export class View {
 		}).main()
 
 		// query params match the wsitiles route (server/src/routes/wsitiles.ts);
-		// the server resolves the file as ds.queries.w2.folder/<sample>/<fileName>
+		// the server resolves the file inside the sample's subfolder of the
+		// configured w2 root (ds.queries.w2.folder or .wsiFolder)
 		const params = `wsimage=${encodeURIComponent(image.fileName)}&dslabel=${this.vocab.dslabel}&genome=${
 			this.vocab.genome
 		}&sample_id=${encodeURIComponent(sample.sampleId)}`
