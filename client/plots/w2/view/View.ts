@@ -58,7 +58,7 @@ export class View {
 		// a tab per image (labelled by its folder name on disk), mirroring the
 		// singleCell chart's per-sample tabs; always shown so the user sees how
 		// many images the sample has, and picking one re-renders the viewer
-		// fileName is <imageName>/<file> (spatial) or wsi/<imageName>/<file> (wsi)
+		// fileName is <imageName>/<file> in both roots
 		const imageName = (f: string) => f.split('/').slice(-2)[0] || f
 		new Tabs({
 			holder: holder.append('div'),

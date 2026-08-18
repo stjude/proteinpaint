@@ -480,7 +480,7 @@ export default function (): Mds3 {
 			// w2 plot. folder: spatial images, one per subfolder of the sample's
 			// directory (folder/<sample>/<imageName>/), files inside found by the
 			// *FileSuffix fields. wsiFolder: plain whole-slide images, laid out as
-			// wsiFolder/<sample>/wsi/<imageName>/<slide file>
+			// wsiFolder/<sample>/<imageName>/<slide file>
 			w2: {
 				folder: 'files/hg38/TermdbTest/spatial',
 				wsiFolder: 'files/hg38/TermdbTest/wsimages',
