@@ -70,12 +70,14 @@ function init({ genomes }) {
 				const images: (WsiImage | SpatialImage)[] = []
 
 				// v=<slide mtime>: tiles are served immutable, so a regenerated slide
-				// must change the URL to bust the browser cache. z=0 tile doubles as
-				// a thumbnail; client prepends host
-				const thumbnail = (fileName: string, mtime: number) =>
+				// must change the URL to bust the browser cache. imageType pins slide
+				// resolution to the image's root, in case both roots hold the same
+				// <sample>/<imageName>/<file> path. z=0 tile doubles as a thumbnail;
+				// client prepends host
+				const thumbnail = (fileName: string, mtime: number, imageType: 'spatial' | 'wsi') =>
 					`wsitiles/tile/0/0/0?wsimage=${encodeURIComponent(fileName)}&dslabel=${q.dslabel}&genome=${
 						q.genome
-					}&sample_id=${encodeURIComponent(sampleId)}&v=${mtime}`
+					}&sample_id=${encodeURIComponent(sampleId)}&imageType=${imageType}&v=${mtime}`
 
 				// spatial: one image per subfolder of the sample's directory
 				if (spatialBase) {
@@ -100,7 +102,7 @@ function init({ genomes }) {
 							// dataset-level viewer defaults; the client's burger menu overrides them
 							geneExpression: w2.geneExpression,
 							annotationLevel: w2.annotationLevel,
-							thumbnail: thumbnail(fileName, v)
+							thumbnail: thumbnail(fileName, v, 'spatial')
 						})
 					}
 				}
@@ -115,7 +117,7 @@ function init({ genomes }) {
 						if (!slide) continue
 						const fileName = path.join(img, slide)
 						const v = (await stat(path.join(wsiSampleDir, img, slide))).mtimeMs
-						images.push({ type: 'wsi' as const, fileName, thumbnail: thumbnail(fileName, v) })
+						images.push({ type: 'wsi' as const, fileName, thumbnail: thumbnail(fileName, v, 'wsi') })
 					}
 				}
 				return images
