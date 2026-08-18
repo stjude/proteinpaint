@@ -40,6 +40,11 @@ export type MassState = {
 		/** if true, plots omit the Documentation button. for a ds with no applicable user guide */
 		hidePlotDocumentation?: boolean
 	}
+	reuse: {
+		/** settings remembered per geneVariant term, keyed by gene(s) and most recent first,
+		 * see mayRememberGvQ() in client/mass/store.ts */
+		gvQByGene: { [geneKey: string]: { label: string; q: any }[] }
+	}
 	search: {
 		isVisible?: boolean
 	}

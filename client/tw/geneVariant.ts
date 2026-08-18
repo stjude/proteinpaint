@@ -703,6 +703,44 @@ export function isEligibleForAllelicGroupset(term: RawGvTerm, vocabApi: VocabApi
 	return true
 }
 
+/*
+Whether a geneVariant q is a setting the user built, rather than one that picking the gene
+again would produce anyway. Only these are remembered for reuse, see mayRememberGvQ() in
+client/mass/store.ts.
+
+A predefined groupset is deliberately excluded: it is what the mutation type radio of the
+gene search UI already selects (see SearchHandler in client/termdb/handlers/geneVariant.ts),
+so remembering it would fill the menu of every gene with a choice that is one click away,
+and bury the settings that are not.
+*/
+export function isCustomizedGvQ(q: any): boolean {
+	if (q?.type == 'custom-groupset') return !!q.customset?.groups?.length
+	// a values q is the default, and is only a setting of its own once it filters variants
+	if (!q?.type || q.type == 'values') return !!q?.variantFilter
+	return false
+}
+
+/*
+A short summary of what a geneVariant q does, to name it in a menu of remembered settings.
+
+Deliberately more specific than the pill status in client/termsetting/handlers/geneVariant.ts,
+which reports any custom groupset as "Divided into N groups": the whole point of the menu is
+to tell two settings of the same gene apart, e.g. a BCR-ABL1 fusion grouping from a BCR-JAK2
+one.
+*/
+export function getGvQLabel(term: any, q: any): string {
+	if (q?.type == 'custom-groupset') {
+		const names = q.customset?.groups?.map((group: any) => group.name).filter((name: any) => name)
+		return names?.length ? names.join(' / ') : 'custom groups'
+	}
+	if (q?.type == 'predefined-groupset') {
+		// a listing entry carries its name before any groups[] are built, see listPredefinedGroupsets()
+		const groupset = term?.groupsetting?.lst?.[q.predefined_groupset_idx]
+		return groupset?.name || 'predefined groups'
+	}
+	return q?.variantFilter ? 'filtered variants' : 'any variant class'
+}
+
 // build maf filter according to genotype (homozygous or heterozygous)
 function getMafFilter(genotype: string, vocabApi: any) {
 	const mafFilter = vocabApi.termdbConfig.queries.snvindel.mafFilter

@@ -1,9 +1,11 @@
-import { StoreApi, StoreBase, type AppApi, type RxStore } from '#rx'
+import { StoreApi, StoreBase, deepEqual, type AppApi, type RxStore } from '#rx'
 import { getFilterItemByTag, findParent } from '#filter/filter'
 import { getSamplelstTW, getFilter } from './groups.js'
 import { rehydrateFilter } from '../filter/rehydrateFilter.js'
 import { importPlot } from '#plots/importPlot.js'
 import { CustomError } from '#shared/helpers.js'
+import { getGvGeneKey, trimGvQForCache } from '#shared/terms.js'
+import { getGvQLabel, isCustomizedGvQ } from '../tw/geneVariant'
 
 /*
 tmp comment on plot state. later properly define it in typescript
@@ -72,10 +74,22 @@ const defaultState = {
 			lst: []
 		}
 	},
+	reuse: {
+		/* settings a user has built for a geneVariant term, keyed by gene(s) and most recent
+		first, so that a term built later for the same gene can offer them, see mayRememberGvQ().
+		Filled automatically from every plot edit, unlike the removed Reuse menu that required
+		the user to save a setting by hand before it could be reused. */
+		gvQByGene: {}
+	},
 	groups: [], // element: {name=str, filter={}}, to show in Groups tab
 	customTerms: [], // element: {name=str, term={}}, able to attach more attr to object if needed
 	autoSave: true
 }
+
+/* how many settings are remembered per gene, and for how many genes. bounds what a long
+session accumulates, since state.reuse is serialized into every session saved from it */
+const maxGvQPerGene = 5
+const maxGvQGenes = 30
 
 // one store for the whole MASS app
 class MassStore extends StoreBase implements RxStore {
@@ -165,6 +179,9 @@ class MassStore extends StoreBase implements RxStore {
 					this.plotAdjusters.set(plot, plot.mayAdjustConfig)
 					delete plot.mayAdjustConfig
 				}
+				/* so that the settings of a reopened session are offered by its own gene searches,
+				not only the ones made after it was opened */
+				this.mayRememberGvQ(plot)
 			}
 			if (invalidPlots.length) {
 				for (const i of invalidPlots) {
@@ -251,6 +268,66 @@ class MassStore extends StoreBase implements RxStore {
 		}
 		await Promise.all(lst)
 	}
+
+	/*
+	Remember the geneVariant settings that a plot config carries, keyed by gene, so that a
+	geneVariant term built later for the same gene can offer them instead of making the user
+	rebuild the same grouping. Called wherever a plot config enters or changes in the state.
+
+	Only settings the user built are kept, see isCustomizedGvQ(). A setting the user returns to
+	moves back to the front of its gene rather than being stored twice, so the list reads as
+	most recent first.
+
+	Keyed by gene and not shared across genes on purpose: the tvs of a custom groupset filter by
+	the dt terms of that gene, so a BCR-ABL1 fusion grouping is meaningless on another gene.
+	*/
+	mayRememberGvQ(plot) {
+		const cache = this.state.reuse.gvQByGene
+		for (const tw of findGvTws(plot)) {
+			if (!isCustomizedGvQ(tw.q)) continue
+			const key = getGvGeneKey(tw.term)
+			if (!key) continue // a term whose genes cannot be named, see getGvGeneKey()
+			const q = trimGvQForCache(tw.q)
+			const lst = cache[key] || []
+			const i = lst.findIndex(entry => deepEqual(entry.q, q))
+			if (i != -1) lst.splice(i, 1)
+			lst.unshift({ label: getGvQLabel(tw.term, tw.q), q })
+			if (lst.length > maxGvQPerGene) lst.length = maxGvQPerGene
+			/* re-inserted rather than assigned in place, so that the gene keys are also in
+			recency order and the eviction below drops the least recently used gene */
+			delete cache[key]
+			cache[key] = lst
+			const keys = Object.keys(cache)
+			if (keys.length > maxGvQGenes) delete cache[keys[0]]
+		}
+	}
+}
+
+/*
+Every geneVariant tw nested anywhere in a plot config, so that mayRememberGvQ() does not need
+a per-chartType getter listing where that chart keeps its tws -- which is what the deleted
+getTwsByChartType{} was, and it only ever knew 5 of them. Walks a config the way
+trimGvTermsForSave() walks a state.
+
+A tw is a term{} paired with a q{}: an entry of term.genes[] also carries type='geneVariant'
+but no q, and the parentTerm of a dt term is a geneVariant term that is not a tw of this plot.
+
+Neither kind of geneVariant subtree is descended into, since a geneVariant term cannot contain
+a tw and both are large: a filled term carries childTerms[], a groupsetting listing, and one
+copy of genes[] per tvs of the selected groupset -- ~91% of a serialized tw, and more as the
+gene count climbs (see trimGvTermCopy()). This runs on every plot_edit, which a chart can
+dispatch on any control change.
+*/
+function findGvTws(obj: any, tws: any[] = []) {
+	if (!obj || typeof obj != 'object') return tws
+	if (obj.q && obj.term?.type == 'geneVariant') {
+		tws.push(obj)
+		return tws
+	}
+	// a geneVariant term with no q of its own, e.g. the parentTerm of a dt term
+	if (obj.type == 'geneVariant') return tws
+	for (const k in obj) findGvTws(obj[k], tws)
+	return tws
 }
 
 /*
@@ -376,9 +453,11 @@ MassStore.prototype.actions = {
 					const config = await _.getPlotConfig(p, this.app, this.state.activeCohort)
 					// Move nested state.plot[i].plots[] into the root state.plots[] array
 					this.state.plots.push(config)
+					this.mayRememberGvQ(config)
 				}
 			}
 		}
+		this.mayRememberGvQ(plot)
 	},
 
 	plot_edit(this: MassStore, action) {
@@ -400,6 +479,7 @@ MassStore.prototype.actions = {
 		} else {
 			delete plot.cutoff
 		}
+		this.mayRememberGvQ(plot)
 
 		// action.parentId may be used in reactsTo() code
 		if (!action.parentId && plot.parentId) action.parentId = plot.parentId
@@ -430,6 +510,7 @@ MassStore.prototype.actions = {
 			const obj = edit.nestedKeys.reduce((obj, key) => obj[key], plot)
 			obj[lastKey] = edit.value
 		}
+		this.mayRememberGvQ(plot)
 		// action.parentId may be used in reactsTo() code
 		if (!action.parentId && plot.parentId) action.parentId = plot.parentId
 	},

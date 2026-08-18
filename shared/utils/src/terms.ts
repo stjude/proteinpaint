@@ -284,6 +284,61 @@ export function trimGvTermsForSave(obj: any) {
 }
 
 /*
+The identity of the gene(s) a geneVariant term queries, which keys the settings remembered
+for that term, see mayRememberGvQ() in client/mass/store.ts.
+
+Built from the gene entries rather than from term.id or term.name, which for a gene set are
+a name the user typed: two gene sets over the same genes would key apart, while a gene set
+someone named "BCR" would collide with the gene. Sorted, so that the same genes picked in a
+different order are one key.
+
+Returns '' for a term whose entries cannot all be named, rather than a partial key that two
+different terms could share.
+*/
+export function getGvGeneKey(term: any): string {
+	// a term saved before term.genes[] existed describes its single gene at the top level,
+	// and may reach here before GvBase.fill() normalizes it
+	const genes = term?.genes?.length ? term.genes : term ? [term] : []
+	const names = genes
+		.map((gene: any) => {
+			/* the symbol of a gene entry, which fill() also sets as its name, and the name of a
+			coord entry, which fill() sets to its 1-based coordinate string. reading the name of a
+			gene entry rather than its coordinates matters: coordinates are annotated onto a gene
+			entry only by a query that needs them (see mayMapGeneName2coord()), so keying by them
+			would give one gene two keys */
+			if (gene.gene || gene.name) return gene.gene || gene.name
+			const region = getGvQueryRegion(gene)
+			return region ? `${region.chr}:${region.start + 1}-${region.stop}` : undefined
+		})
+		.filter((name: any) => typeof name == 'string' && name)
+	if (!names.length || names.length != genes.length) return ''
+	return names.sort().join(',')
+}
+
+/*
+A copy of a geneVariant q, reduced to what is worth remembering as a reusable setting, see
+mayRememberGvQ() in client/mass/store.ts.
+
+Everything dropped is re-derived when a tw is filled with this q, so keeping it would only
+bloat the app state and every session saved from it, and would make two equivalent settings
+compare as different when de-duplicating:
+- hiddenValues is refilled by set_hiddenvalues()
+- dtLst is always re-derived from the groups rather than trusted, see GvCustomGS.fill()
+- the mname tally and parent term of every customset tvs are re-attached on fill
+*/
+export function trimGvQForCache(q: any) {
+	const copy = structuredClone(q)
+	delete copy.isAtomic
+	delete copy.hiddenValues
+	delete copy.dtLst
+	if (copy.customset) {
+		clearDtTermMnames(copy.customset)
+		clearGroupsetParentTerms(copy.customset)
+	}
+	return copy
+}
+
+/*
 A geneVariant term is queried per entry of term.genes[], and every value it yields records
 which entry it came from. That record used to be a single .gene holding the entry's NAME,
 which for a kind='coord' entry is a coordinate string -- so consumers reading .gene as a
