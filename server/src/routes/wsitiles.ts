@@ -74,8 +74,9 @@ function slidePath(genomes: any, q: any): string {
 
 	// w2 plot: wsimage is relative to the sample's subfolder in either root —
 	// folder (spatial) or wsiFolder (plain), both laid out as
-	// <sample>/<imageName>/<file>; the first root holding the file wins
-	if (ds.queries?.w2?.folder) {
+	// <sample>/<imageName>/<file>; the first root holding the file wins.
+	// A dataset may configure either root or both
+	if (ds.queries?.w2?.folder || ds.queries?.w2?.wsiFolder) {
 		const w2sample = q.sample_id ?? q.sampleId
 		if (!w2sample) throw new Error('sample_id required with ds.queries.w2')
 		let full: string | undefined

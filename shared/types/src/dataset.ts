@@ -1316,18 +1316,20 @@ type Mds3Queries = {
 	singleSampleGbtk?: SingleSampleGbtk
 	WSImages?: WSImages
 	/** w2 whole-slide image plot. All paths are relative to tpmasterdir; samples and
-	 * images are discovered from disk, never listed in the dataset. */
+	 * images are discovered from disk, never listed in the dataset. At least one
+	 * of folder (spatial) / wsiFolder (plain) is required — a dataset may have
+	 * either kind of image, or both. */
 	w2?: {
 		/** spatial (Xenium) images root: folder/<sample_id>/<imageName>/ holds one
 		 * image per subfolder, containing the slide and its annotation files,
 		 * located by the *FileSuffix fields (matched with endsWith) */
-		folder: string
+		folder?: string
 		/** plain whole-slide images root: wsiFolder/<sample_id>/<imageName>/
 		 * holds one image per subfolder, containing that image's slide file */
 		wsiFolder?: string
-		/** suffix of the spatial slide file (e.g. 'morphology_ome.tif'); an image
-		 * subfolder without it is skipped */
-		tiffFileSuffix: string
+		/** suffix of the spatial slide file (e.g. 'morphology.ome.tif'); an image
+		 * subfolder without it is skipped. Required with folder */
+		tiffFileSuffix?: string
 		/** suffix of the cell segmentation CSV */
 		cellBoundariesFileSuffix?: string
 		/** suffix of the nucleus segmentation CSV */
