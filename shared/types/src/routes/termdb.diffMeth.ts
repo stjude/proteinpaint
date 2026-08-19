@@ -39,6 +39,18 @@ export type DiffMethRequest = {
 	tw?: any
 	/** Term for confounding variable 2 (if present) */
 	tw2?: any
+	/** Block the design by each sample's parent entity (default false), turning the two-group
+	 * comparison into a paired one: every block gets its own intercept, so the group effect is
+	 * estimated from WITHIN-block contrasts only. The intended use is a longitudinal contrast
+	 * (baseline vs relapse) where both samples come from one patient and the between-patient
+	 * spread is far larger than the within-patient effect.
+	 *
+	 * The block label comes from ds.sampleName2blockLabel(), which a dataset supplies; requests
+	 * against a dataset without it are rejected rather than silently running unpaired. Samples
+	 * whose block appears in only one arm are dropped by diffMeth.R, since they carry no
+	 * within-block contrast. Pairing costs one residual degree of freedom per block, so it is
+	 * a loss when the within-block effect is not more consistent than the between-block spread. */
+	pair_by_parent?: boolean
 	/** Option to return early with actual number of samples with methylation values */
 	preAnalysis?: boolean
 	/** Parameters for the server-side `da` Rust renderer. Always required — the

@@ -365,6 +365,18 @@ filter_time <- system.time({
   element_classes_filtered <- element_classes[keep]
   element_ids_bare_filtered <- element_ids_bare[keep]
   tile_indices_filtered <- if (is.null(tile_indices)) NULL else tile_indices[keep]
+
+  # element_class_label was computed over ALL rows, before filtering. On a mixed-class
+  # file restricted to one class it would still report "mixed", which is what the client
+  # displays and labels its axes with -- so recompute it over the rows actually tested.
+  # Reported classes are always observed in the retained rows, never taken from the
+  # request: a two-class restriction on a file holding only one of them must report the
+  # one class present, not the pair that was asked for.
+  element_class_label <- if (length(unique(element_classes_filtered)) == 1) {
+    as.character(element_classes_filtered[1])
+  } else {
+    "mixed"
+  }
 })
 filter_mem <- mem_probe()
 

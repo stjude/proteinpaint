@@ -223,7 +223,7 @@ export class VolcanoControlInputs {
 							settingsKey: 'elementType',
 							options: this.elementTypes.map(e => ({ value: e.key, label: e.label })),
 							title:
-								'Which regulatory elements to test. This changes the features being analysed, not just the thresholds: promoters are TSS windows, eQTM blocks are runs of CpGs whose methylation correlates with a gene, and cCRE classes are ENCODE annotations. Hit counts are not comparable across classes because the number of tests differs.'
+								'Which regulatory elements to test. This changes the features being analysed, not just the thresholds: promoters are TSS windows (-1500/+500 bp, the 450K array definition), cCRE promoters are the ~349 bp ENCODE promoter-like elements (the CpG-island core, no shores), eQTM blocks are runs of CpGs whose methylation correlates with a gene, and the other cCRE classes are ENCODE enhancer and CTCF annotations. Hit counts are not comparable across classes because the number of tests and the genes covered both differ. Narrow elements recover focal signal that a wide window averages away; wide windows do better on broad marks.'
 						}
 				  ]
 				: []),
@@ -244,6 +244,15 @@ export class VolcanoControlInputs {
 				boxLabel: '',
 				title:
 					'Drop chrX/chrY promoters. Recommended for mixed-sex cohorts — X-inactivation makes chrX methylation strongly sex-dependent, so a sex-imbalanced comparison reports sex rather than the grouping variable.'
+			},
+			{
+				label: 'Paired by patient',
+				type: 'checkbox',
+				chartType: 'volcano',
+				settingsKey: 'pairByParent',
+				boxLabel: '',
+				title:
+					'Block the design by each sample’s parent entity (the patient), so the group effect is estimated from within-patient differences only. For longitudinal contrasts such as baseline vs relapse. Samples whose patient is not represented in both groups are dropped, so this fails loudly on two groups made of different patients.'
 			},
 			{
 				label: 'Mean-variance trend',

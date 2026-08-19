@@ -51,7 +51,11 @@ export function getDNAMethUnit(genomicFeatureType: string, vocabApi: VocabApi) {
 		case 'gene':
 			return vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
 		default:
-			return 'Average Beta Value'
+			/* A region term (the coordinate/gene-browser picker) is served by whatever matrix the
+			dataset nominates, which may hold M-values rather than betas -- so take the dataset's
+			declared unit and only fall back to beta when it declares none. Hardcoding beta here
+			mislabelled every region term on a WGBS element cohort. */
+			return vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
 	}
 }
 

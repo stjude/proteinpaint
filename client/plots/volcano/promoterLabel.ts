@@ -40,10 +40,27 @@ export function elementNoun(elementType?: string): { one: string; many: string }
 		case '':
 		case 'promoter':
 			return { one: 'Promoter', many: 'promoters' }
+		/* Two different promoter DEFINITIONS, deliberately given distinct nouns. 'promoter' is
+		the TSS -1500/+500 window (Bibikova 2011 / Sandoval 2011 -- the 450K array's
+		TSS1500+TSS200 categories); 'promoter_pls' is the ENCODE cCRE promoter-like element,
+		~349 bp, i.e. the CpG-island core with the shores removed. They cover different numbers
+		of genes and their hit counts are NOT comparable, so the UI must never call both
+		"promoters". */
+		case 'promoter_pls':
+			return { one: 'cCRE promoter', many: 'cCRE promoters' }
 		case 'eqtm_block':
 			return { one: 'eQTM block', many: 'eQTM blocks' }
 		case 'enhancer':
 			return { one: 'Enhancer', many: 'enhancers' }
+		/* Distal and proximal are separate ENCODE classes and separate hypotheses -- dELS are
+		the intronic/intergenic enhancers where myeloma hypermethylation concentrates, pELS sit
+		within 2 kb of a TSS and behave more promoter-like. There are 4.5x as many dELS, so their
+		hit counts are not comparable to each other either. Naming them apart keeps a reader from
+		reading two runs as the same analysis. */
+		case 'enhancer_distal':
+			return { one: 'Distal enhancer', many: 'distal enhancers' }
+		case 'enhancer_proximal':
+			return { one: 'Proximal enhancer', many: 'proximal enhancers' }
 		default:
 			return { one: 'Element', many: 'elements' }
 	}

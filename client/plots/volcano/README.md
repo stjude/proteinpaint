@@ -7,7 +7,16 @@ added to the volcano as of this writing.
 ## Supported Term Types
 
 - **Gene Expression**: Data points are genes. P-value table shows Gene Name column. Highlight key is `gene_name`.
-- **DNA Methylation**: Data points are promoters (ENCODE cCRE regions). P-value table shows separate Promoter and Gene(s) columns. Highlight key is `promoter_id`. Tooltips show both promoter ID and associated gene name(s).
+- **DNA Methylation**: Data points are regulatory elements of whichever **element class** the run selected — NOT one fixed definition. P-value table shows separate element and Gene(s) columns; the element column's label comes from `elementNoun()` in `promoterLabel.ts`, so it reads "Promoter", "cCRE promoter", "eQTM block", etc. Highlight key is `promoter_id` (named before the plot became element-generic; it carries the element ID for every class). Tooltips show both the element ID and associated gene name(s).
+
+  **"Promoter" is ambiguous and the UI must keep the two apart.** A dataset can offer both:
+
+  | Element class | Definition | Count (mmrf) |
+  | --- | --- | --- |
+  | `promoter` | TSS −1500/+500 window, the 450K array's TSS1500+TSS200 categories | 114,875 |
+  | `promoter_pls` | ENCODE cCRE promoter-like element, ~349 bp — the CpG-island core, no shores | 7,345 |
+
+  These are different features and **hit counts are not comparable across classes**: the same contrast yields ~36,000 significant elements on `promoter` and ~2,300 on `promoter_pls`, because the wider window averages more CpGs and there are 15x as many of them. Any recorded result must name its element class or it cannot be reproduced — which is why the run provenance line records `element class:` first.
 
 ## Add a term type
 
@@ -21,5 +30,5 @@ Ensure the following are completed. This is not a comprehensive list. Modify as 
 
 ### Version history
 
-Last updated: 7 May 26
+Last updated: 18 Aug 26
 Authored: 13 Mar 25

@@ -283,6 +283,12 @@ tape('setProvenance records groups, sizes and every result-affecting setting', f
 	test.ok(p.includes('n=3'), 'records the sample size the model actually used')
 	test.ok(/group1 \(control\)/.test(p) && /group2 \(case\)/.test(p), 'labels which arm is control vs case')
 	test.ok(p.includes('confounders: none'), 'states confounders explicitly rather than omitting them when absent')
+	/* The setting that changes WHAT was tested rather than how. Without it an exported
+	p-value table cannot be attributed to an element matrix after the fact, and two runs on
+	different matrices look interchangeable. Defaults to 'promoter' so a legacy
+	single-matrix run is still labelled rather than blank. */
+	test.ok(p.includes('element class: promoter'), 'records elementType, defaulting when unset')
+	test.ok(p.includes('paired by patient: no'), 'records pairByParent')
 	test.ok(p.includes('min samples per group: 3'), 'records minSamplesPerGroup')
 	test.ok(p.includes('exclude sex chromosomes: no'), 'records excludeSexChr')
 	test.ok(p.includes('mean-variance trend: on'), 'records eBayesTrend')
