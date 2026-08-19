@@ -5,10 +5,8 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '../../serverconfig.js'
-import notifier from 'node-notifier'
 
 const __dirname = import.meta.dirname
-notifier.notify({ title: 'PP server', message: 'restarted' })
 
 const sse = serverconfig.features.sse && path.join(serverconfig.binpath, '.sse')
 const serverEntry = path.join(process.cwd(), 'server.ts')

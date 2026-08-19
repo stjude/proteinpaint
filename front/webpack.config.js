@@ -1,4 +1,3 @@
-const WebpackNotifierPlugin = require('webpack-notifier')
 const path = require('path')
 const fs = require('fs')
 const webpack = require('webpack')

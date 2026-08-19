@@ -75,7 +75,6 @@
     "jspdf": "^4.2.1",
     "minimatch": "^10.0.1",
     "monocart-coverage-reports": "^2.12.1",
-    "node-notifier": "^9.0.1",
     "normalize.css": "^8.0.1",
     "ol": "^10.0.0",
     "ol-ext": "^4.0.21",
@@ -95,8 +94,7 @@
     "three": "^0.152.2",
     "webpack": "^5.90.3",
     "webpack-cli": "^4.10.0",
-    "webpack-node-externals": "^3.0.0",
-    "webpack-notifier": "^1.15.0"
+    "webpack-node-externals": "^3.0.0"
   },
   "repository": {
     "type": "git",
