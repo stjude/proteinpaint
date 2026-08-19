@@ -12,6 +12,8 @@ Tests:
     Change mutation type
     Gene set input
 	Gene set input - custom name
+	Remembered settings are offered for the picked gene
+	Remembered settings are not offered where the q would be dropped
 */
 
 /*************************
@@ -38,8 +40,9 @@ async function initializeSearchHandler(opts) {
 	const callback = opts.callback || (() => {})
 	await handler.init({
 		holder: opts.holder,
-		app: { vocabApi },
+		app: { vocabApi: opts.vocabApi || vocabApi },
 		genomeObj: hg38,
+		keepsQ: opts.keepsQ,
 		callback
 	})
 }
@@ -191,6 +194,123 @@ tape('Gene set input - custom name', async test => {
 	await sleep(100) // wait until tw is populated
 	test.equal(tw.term.genes.length, 2, 'term.genes[] should have length of 2')
 	test.equal(tw.term.name, 'Test gene set', 'term.name should be custom name')
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+/* the settings a mass store remembers for a gene, see remember_gvq() in client/mass/store.ts.
+Supplied through a derived vocabApi, so that the shared one is left alone */
+function getVocabApiWithRememberedQ(lst) {
+	return Object.assign(Object.create(vocabApi), { getGvQLst: () => structuredClone(lst) })
+}
+
+const rememberedLst = [
+	{ label: 'TP53 missense', q: { type: 'custom-groupset', customset: { groups: [{ name: 'TP53 missense' }] } } },
+	{ label: 'TP53 truncating', q: { type: 'custom-groupset', customset: { groups: [{ name: 'TP53 truncating' }] } } }
+]
+
+async function pickGene(holder, gene = 'TP53') {
+	const geneSearchInput: any = holder
+		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
+		.select('input[type="search"]')
+		.node()
+	geneSearchInput.value = gene
+	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
+	await sleep(100)
+}
+
+tape('Remembered settings are offered for the picked gene', async test => {
+	let tw
+	const holder = getHolder()
+	await initializeSearchHandler({
+		holder,
+		callback: _tw => (tw = _tw),
+		vocabApi: getVocabApiWithRememberedQ(rememberedLst),
+		keepsQ: true
+	})
+	await pickGene(holder)
+
+	test.equal(tw, undefined, 'should not apply the mutation type while the settings are offered')
+	const remembered = holder.selectAll('[data-testid="sjpp-genevariant-rememberedQ"]')
+	test.equal(remembered.size(), 2, 'should offer both remembered settings')
+	test.deepEqual(
+		remembered.nodes().map((n: any) => n.textContent),
+		['TP53 missense', 'TP53 truncating'],
+		'should label each by its remembered label'
+	)
+	const options: any[] = holder.selectAll('.sja_menuoption').nodes()
+	test.equal(options.length, 3, 'should offer a way to continue with the mutation type instead')
+	test.ok(
+		options.every((n: any) => n.getAttribute('tabindex') == '0'),
+		'should make every option keyboard focusable'
+	)
+	test.equal(document.activeElement, options[0], 'should focus the most recent setting')
+
+	// arrowing moves within the options and wraps, so focus cannot leave them by accident
+	options[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+	test.equal(document.activeElement, options[1], 'should move focus down')
+	options[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
+	test.equal(document.activeElement, options[0], 'should move focus up')
+	options[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
+	test.equal(document.activeElement, options[2], 'should wrap to the last option')
+
+	/* activating on keydown and not keyup: the gene above is picked by pressing Enter in the
+	search box, whose keyup would otherwise land on the option focused here */
+	options[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+	await sleep(100)
+	test.equal(tw?.q?.type, 'predefined-groupset', 'should continue with the mutation type on Enter')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Remembered settings are applied on Enter', async test => {
+	let tw
+	const holder = getHolder()
+	await initializeSearchHandler({
+		holder,
+		callback: _tw => (tw = _tw),
+		vocabApi: getVocabApiWithRememberedQ(rememberedLst),
+		keepsQ: true
+	})
+	await pickGene(holder)
+
+	const first: any = holder.selectAll('[data-testid="sjpp-genevariant-rememberedQ"]').nodes()[0]
+	first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+	await sleep(100)
+	test.equal(tw.q.type, 'custom-groupset', 'should apply the remembered q')
+	test.deepEqual(
+		tw.q.customset.groups.map((g: any) => g.name),
+		['TP53 missense'],
+		'should apply the groups of the setting that was focused'
+	)
+	test.equal(tw.term.name, 'TP53', 'should apply it to the gene that was picked')
+	test.equal(
+		holder.select('[data-testid="sjpp-genevariant-rememberedQ"]').empty(),
+		true,
+		'should clear the offered settings once one is applied'
+	)
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Remembered settings are not offered where the q would be dropped', async test => {
+	let tw
+	const holder = getHolder()
+	// a consumer that keeps only the term{}, see keepsQ in client/termdb/TermTypeSearch.ts
+	await initializeSearchHandler({
+		holder,
+		callback: _tw => (tw = _tw),
+		vocabApi: getVocabApiWithRememberedQ(rememberedLst)
+	})
+	await pickGene(holder)
+
+	test.equal(
+		holder.select('[data-testid="sjpp-genevariant-rememberedQ"]').empty(),
+		true,
+		'should offer no remembered setting'
+	)
+	test.equal(tw.q.type, 'predefined-groupset', 'should apply the mutation type directly')
 	if (test['_ok']) holder.remove()
 	test.end()
 })
