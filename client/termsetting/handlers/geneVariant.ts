@@ -112,6 +112,11 @@ async function makeEditMenu(self: TermSetting, _div: any) {
 					// groups created, assign to custom groupset
 					const dtLst = getDtsFromGroups(self.groups)
 					Object.assign(q, { type: 'custom-groupset', customset: { groups: self.groups }, dtLst })
+					/* remember this grouping, so that a term built later for the same gene can offer
+					it back, e.g. the BCR-ABL1 fusion grouping of a barchart overlay when the same
+					gene is picked as the overlay of a survival plot. Only the mass store tracks
+					these, see rememberGvQ() in client/termdb/Vocab.js */
+					self.vocabApi.rememberGvQ?.(self.term, q)
 				}
 			} else {
 				// no groupsetting

@@ -269,6 +269,32 @@ tape('getGvGeneKey()', t => {
 		'chr1:101-200',
 		'keys a coord entry by its coordinate string'
 	)
+	/* fill() only auto-names a coord entry that has no name, so a supplied label must not be
+	what a coord entry keys by */
+	t.equal(
+		getGvGeneKey({
+			type: 'geneVariant',
+			genes: [{ kind: 'coord', chr: 'chr1', start: 100, stop: 200, name: 'my region' }]
+		}),
+		'chr1:101-200',
+		'keys a named coord entry by its region, not its name'
+	)
+	t.notEqual(
+		getGvGeneKey({
+			type: 'geneVariant',
+			genes: [{ kind: 'coord', chr: 'chr1', start: 100, stop: 200, name: 'my region' }]
+		}),
+		getGvGeneKey({
+			type: 'geneVariant',
+			genes: [{ kind: 'coord', chr: 'chr9', start: 500, stop: 600, name: 'my region' }]
+		}),
+		'keys two different regions sharing a label apart, so neither is offered the other setting'
+	)
+	t.equal(
+		getGvGeneKey({ type: 'geneVariant', genes: [{ chr: 'chr1', start: 100, stop: 200 }] }),
+		'chr1:101-200',
+		'keys a coord entry that predates term.kind, inferring the kind as fill() does'
+	)
 	t.equal(getGvGeneKey({ type: 'geneVariant', genes: [{ kind: 'gene' }] }), '', 'returns no key for an unnamed entry')
 	t.equal(
 		getGvGeneKey({ type: 'geneVariant', genes: [gene('BCR'), { kind: 'gene' }] }),

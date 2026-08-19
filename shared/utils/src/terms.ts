@@ -285,39 +285,56 @@ export function trimGvTermsForSave(obj: any) {
 
 /*
 The identity of the gene(s) a geneVariant term queries, which keys the settings remembered
-for that term, see mayRememberGvQ() in client/mass/store.ts.
+for that term, see remember_gvq() in client/mass/store.ts.
 
 Built from the gene entries rather than from term.id or term.name, which for a gene set are
 a name the user typed: two gene sets over the same genes would key apart, while a gene set
 someone named "BCR" would collide with the gene. Sorted, so that the same genes picked in a
 different order are one key.
 
-Returns '' for a term whose entries cannot all be named, rather than a partial key that two
-different terms could share.
+Each entry is keyed by what identifies it and not by its label:
+- a gene entry by its symbol, never by its coordinates, which are annotated onto it only by
+  a query that needs them (see mayMapGeneName2coord()), so keying by them would give one
+  gene two keys depending on what had been queried
+- a coord entry by its region, never by its name: GvBase.fill() only auto-names one that
+  has no name, so a supplied label would key the same region twice, and two regions sharing
+  a label would collide into one key -- which is worse, since a setting built for one region
+  would be offered for the other
+
+Returns '' for a term whose entries cannot all be identified, rather than a partial key that
+two different terms could share.
 */
 export function getGvGeneKey(term: any): string {
 	// a term saved before term.genes[] existed describes its single gene at the top level,
 	// and may reach here before GvBase.fill() normalizes it
 	const genes = term?.genes?.length ? term.genes : term ? [term] : []
-	const names = genes
+	const keys = genes
 		.map((gene: any) => {
-			/* the symbol of a gene entry, which fill() also sets as its name, and the name of a
-			coord entry, which fill() sets to its 1-based coordinate string. reading the name of a
-			gene entry rather than its coordinates matters: coordinates are annotated onto a gene
-			entry only by a query that needs them (see mayMapGeneName2coord()), so keying by them
-			would give one gene two keys */
-			if (gene.gene || gene.name) return gene.gene || gene.name
-			const region = getGvQueryRegion(gene)
-			return region ? `${region.chr}:${region.start + 1}-${region.stop}` : undefined
+			if (getGvGeneKind(gene) == 'coord') {
+				const region = getGvQueryRegion(gene)
+				// the same string fill() would auto-name the entry, so an auto-named coord
+				// entry keys identically whether or not it has been filled
+				return region ? `${region.chr}:${region.start + 1}-${region.stop}` : undefined
+			}
+			return gene.gene || gene.name
 		})
-		.filter((name: any) => typeof name == 'string' && name)
-	if (!names.length || names.length != genes.length) return ''
-	return names.sort().join(',')
+		.filter((key: any) => typeof key == 'string' && key)
+	if (!keys.length || keys.length != genes.length) return ''
+	return keys.sort().join(',')
+}
+
+/** the kind of a geneVariant gene entry, inferred exactly as GvBase.fill() infers it for an
+ * entry that predates term.kind, so that a term keys the same before and after it is filled */
+function getGvGeneKind(gene: any): string | undefined {
+	if (gene?.kind) return gene.kind
+	if (gene?.gene || (gene?.name && !gene.chr)) return 'gene'
+	if (gene?.chr) return 'coord'
+	return undefined
 }
 
 /*
 A copy of a geneVariant q, reduced to what is worth remembering as a reusable setting, see
-mayRememberGvQ() in client/mass/store.ts.
+remember_gvq() in client/mass/store.ts.
 
 Everything dropped is re-derived when a tw is filled with this q, so keeping it would only
 bloat the app state and every session saved from it, and would make two equivalent settings

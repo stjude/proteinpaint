@@ -705,19 +705,20 @@ export function isEligibleForAllelicGroupset(term: RawGvTerm, vocabApi: VocabApi
 
 /*
 Whether a geneVariant q is a setting the user built, rather than one that picking the gene
-again would produce anyway. Only these are remembered for reuse, see mayRememberGvQ() in
+again would produce anyway. Only these are remembered for reuse, see remember_gvq() in
 client/mass/store.ts.
 
 A predefined groupset is deliberately excluded: it is what the mutation type radio of the
 gene search UI already selects (see SearchHandler in client/termdb/handlers/geneVariant.ts),
 so remembering it would fill the menu of every gene with a choice that is one click away,
 and bury the settings that are not.
+
+A values q with a tw.q.variantFilter is arguably a setting too, but no client UI authors one
+yet -- matrix only reads it, see shared/utils/src/geneVariantFilter.ts -- so it is left out
+until there is a UI to remember it from.
 */
 export function isCustomizedGvQ(q: any): boolean {
-	if (q?.type == 'custom-groupset') return !!q.customset?.groups?.length
-	// a values q is the default, and is only a setting of its own once it filters variants
-	if (!q?.type || q.type == 'values') return !!q?.variantFilter
-	return false
+	return q?.type == 'custom-groupset' && !!q.customset?.groups?.length
 }
 
 /*
@@ -738,7 +739,7 @@ export function getGvQLabel(term: any, q: any): string {
 		const groupset = term?.groupsetting?.lst?.[q.predefined_groupset_idx]
 		return groupset?.name || 'predefined groups'
 	}
-	return q?.variantFilter ? 'filtered variants' : 'any variant class'
+	return 'any variant class'
 }
 
 // build maf filter according to genotype (homozygous or heterozygous)
