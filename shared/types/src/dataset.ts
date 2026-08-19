@@ -1283,8 +1283,7 @@ type Mds3Queries = {
 		/** path to CpG/probe-level h5 file. Optional: powers the dnaMethylation term
 		 * type (region picker, violin) and the DMR drill-down. WGBS cohorts may omit
 		 * it and supply only .promoter, since a CpG-level matrix at whole-genome
-		 * scale is very large. At least one of .file / .promoter must be set. */
-		file?: string
+		 * scale is very large. At least one of .file / .promoter / .elements must be set. */
 		/** dna methylation unit (e.g. 'Average Beta Value'); required with .file */
 		unit?: string
 		/** How the methylation was measured. Defaults to 'array' when absent, so existing
