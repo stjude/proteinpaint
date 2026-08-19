@@ -6,6 +6,7 @@ h5py==3.15.1
 httpx==0.28.1
 langchain-openai==1.1.14
 langgraph==1.0.2
+langgraph==1.0.10
 matplotlib==3.10.3
 nibabel==5.3.2
 numba==0.66.0
