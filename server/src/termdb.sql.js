@@ -539,7 +539,7 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 		const mode = termq.mode || 'discrete'
 		CTE = await conditionSql[mode].getCTE(tablename, term, q.ds, termq, values)
 	} else if (term.type == 'survival') {
-		CTE = makesql_survival(tablename, term, q, values, filter)
+		CTE = makesql_survival(tablename, term, q, values)
 	} else if (term.type == 'samplelst') {
 		CTE = await sampleLstSql.getCTE(q.ds, tablename, termWrapper || { term, q: termq }, values)
 	} else if (term.type == 'multivalue') {
@@ -678,14 +678,13 @@ export function getUncomputableClause(term, q, tableAlias = '') {
 	}
 }
 
-function makesql_survival(tablename, term, q, values, filter) {
+function makesql_survival(tablename, term, q, values) {
 	values.push(term.id)
 	return {
 		sql: `${tablename} AS (
 			SELECT sample, exit_code as key, tte AS value
 			FROM survival s
 			WHERE s.term_id=?
-			${filter ? 'AND s.sample IN ' + filter.CTEname : ''}
 		)`,
 		tablename
 	}
