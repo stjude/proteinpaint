@@ -2262,7 +2262,7 @@ A term carries coordinates but not an element class, so the choice cannot come f
 request -- one matrix has to be nominated. Order: an explicit .elementForTerms wins;
 otherwise the first configured non-promoter entry is used (declaration order), falling
 back to elements.promoter and finally the legacy .promoter entry so promoter-only
-datasets keep working.
+datasets keep working. */
 export function resolveElementEntryForTerms(q) {
 	const elements = q.elements || {}
 	if (q.elementForTerms) {
