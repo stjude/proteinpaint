@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - support rendering matrix sample ancestor label and line spans across descendant sample labels
+- New input form for aggregate matrix. This input form will be expanded in later iterations to handle more term types and usecases.
 
 
 ## 2.203.1
