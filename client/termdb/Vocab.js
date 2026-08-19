@@ -1,5 +1,5 @@
 import { dofetch3, isInSession, getRequiredAuth, getSavedToken, setTokenByDsRoute } from '#common/dofetch'
-import { isDictionaryType, trimGvTermCopy, getGvGeneKey } from '#shared/terms.js'
+import { isDictionaryType, trimGvTermCopy, getGvQCacheKey } from '#shared/terms.js'
 
 export class Vocab {
 	termdbConfig = {}
@@ -278,12 +278,11 @@ export class Vocab {
 	Returns [] in a host app whose store does not track them, and copies so that a caller can
 	hand a q to fillTermWrapper(), which fills in place. */
 	getGvQLst(term) {
-		const key = getGvGeneKey(term)
+		/* the key is prefixed, so a gene named like an inherited property (__proto__,
+		constructor, ...) cannot read one off this plain object, see getGvQCacheKey() */
+		const key = getGvQCacheKey(term)
 		const cache = this.state.reuse?.gvQByGene
-		/* own entries only: the key is a gene name a url or an embedder can supply, and one
-		that collides with an inherited name (constructor, ...) would read Object.prototype
-		off this plain object, see setGvQLst() in client/mass/store.ts */
-		const lst = key && cache && Object.prototype.hasOwnProperty.call(cache, key) && cache[key]
+		const lst = key && cache?.[key]
 		return lst ? structuredClone(lst) : []
 	}
 

@@ -3,6 +3,7 @@ import { DTCNV, DTFUSION, DTITD, DTSNVINDEL, DTSV, TermTypes } from '#types'
 import {
 	dtTermTypes,
 	getGvGeneKey,
+	getGvQCacheKey,
 	getGvQueryKey,
 	matchesGvQueryEntry,
 	internGvQueryEntry,
@@ -18,6 +19,7 @@ dt term types are declared in TermTypes
 trimGvTermsForSave()
 setGroupsetParentTerms()
 getGvGeneKey()
+getGvQCacheKey()
 trimGvQForCache()
 query entry wire format: round trip
 query entry wire format: values without an entry
@@ -300,6 +302,36 @@ tape('getGvGeneKey()', t => {
 		getGvGeneKey({ type: 'geneVariant', genes: [gene('BCR'), { kind: 'gene' }] }),
 		'',
 		'returns no key rather than a partial one that another term could share'
+	)
+	t.end()
+})
+
+tape('getGvQCacheKey()', t => {
+	const gene = (name: string) => ({ kind: 'gene', id: name, gene: name, name, type: 'geneVariant' })
+	const cache = {}
+	/* gene names a url or an embedder can supply. Kept out of the namespace of the plain
+	object the cache is, so that a read finds nothing rather than an inherited property, and
+	so that a saved session carries no key that copyMerge() would resolve to Object.prototype
+	when it is reopened, see the round trip test in client/mass/test/store.integration.spec.ts */
+	for (const name of ['__proto__', 'constructor', 'toString', 'hasOwnProperty', '0']) {
+		const key = getGvQCacheKey({ type: 'geneVariant', genes: [gene(name)] })
+		t.equal(key, `gv:${name}`, `prefixes the key of a gene named '${name}'`)
+		t.equal(key in cache, false, `does not name an inherited property for a gene named '${name}'`)
+	}
+	t.equal(
+		getGvQCacheKey({ type: 'geneVariant', genes: [gene('BCR'), gene('ABL1')] }),
+		'gv:ABL1,BCR',
+		'prefixes the whole key of a multi-gene term once'
+	)
+	t.equal(
+		getGvQCacheKey({ type: 'geneVariant', genes: [{ chr: 'chr1', start: 100, stop: 200 }] }),
+		'gv:chr1:101-200',
+		'prefixes the key of a coord entry'
+	)
+	t.equal(
+		getGvQCacheKey({ type: 'geneVariant', genes: [{ kind: 'gene' }] }),
+		'',
+		'returns no key, not a bare prefix, for a term that cannot be keyed'
 	)
 	t.end()
 })

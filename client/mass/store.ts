@@ -4,7 +4,7 @@ import { getSamplelstTW, getFilter } from './groups.js'
 import { rehydrateFilter } from '../filter/rehydrateFilter.js'
 import { importPlot } from '#plots/importPlot.js'
 import { CustomError } from '#shared/helpers.js'
-import { forEachGvTw, getGvGeneKey, trimGvQForCache } from '#shared/terms.js'
+import { forEachGvTw, getGvQCacheKey, trimGvQForCache } from '#shared/terms.js'
 import { getGvQLabel, isCustomizedGvQ } from '../tw/geneVariant'
 
 /*
@@ -79,7 +79,13 @@ const defaultState = {
 		first, so that a term built later for the same gene can offer them, see remember_gvq().
 		Filled as a side effect of building one, unlike the removed Reuse menu that required the
 		user to save a setting by hand before it could be reused, and seeded from the settings
-		the opened plots already carry, see seedGvQCache(). */
+		the opened plots already carry, see seedGvQCache().
+
+		Has to stay a plain object, since state.reuse is serialized into saved sessions, while
+		it is keyed by gene names a url or an embedder can supply. Both the reads and the writes
+		below are therefore plain property access on a key that getGvQCacheKey() has prefixed
+		out of the namespace of Object.prototype -- see there for what an unprefixed '__proto__'
+		would do to a reopened session. */
 		gvQByGene: {}
 	},
 	groups: [], // element: {name=str, filter={}}, to show in Groups tab
@@ -91,19 +97,6 @@ const defaultState = {
 session accumulates, since state.reuse is serialized into every session saved from it */
 const maxGvQPerGene = 5
 const maxGvQGenes = 30
-
-/* The cache is keyed by gene names a url or an embedder can supply (see getGvGeneKey()),
-while it has to stay a plain object, since state.reuse is serialized into saved sessions.
-A key that collides with an inherited name must therefore never be read through the
-prototype -- 'constructor' would read a function whose .some()/.findIndex() throws -- so
-every read checks hasGvQKey() first. Inserting goes through defineProperty because
-assigning to '__proto__' would replace the cache's prototype instead of storing the list. */
-function hasGvQKey(cache: any, key: string) {
-	return Object.prototype.hasOwnProperty.call(cache, key)
-}
-function setGvQLst(cache: any, key: string, lst: any) {
-	Object.defineProperty(cache, key, { value: lst, enumerable: true, writable: true, configurable: true })
-}
 
 // one store for the whole MASS app
 class MassStore extends StoreBase implements RxStore {
@@ -225,11 +218,11 @@ class MassStore extends StoreBase implements RxStore {
 		const cache = this.state.reuse.gvQByGene
 		forEachGvTw(this.state.plots, ({ term, q }) => {
 			if (!isCustomizedGvQ(q)) return
-			const key = getGvGeneKey(term)
+			const key = getGvQCacheKey(term)
 			if (!key) return // a term whose genes cannot all be named, see getGvGeneKey()
-			if (!hasGvQKey(cache, key)) {
+			if (!cache[key]) {
 				if (Object.keys(cache).length >= maxGvQGenes) return
-				setGvQLst(cache, key, [])
+				cache[key] = []
 			}
 			const lst = cache[key]
 			if (lst.length >= maxGvQPerGene) return
@@ -515,11 +508,11 @@ MassStore.prototype.actions = {
 	remember_gvq(this: MassStore, { term, q }) {
 		// the caller is a UI, so a q that is not a setting of its own is ignored rather than an error
 		if (!isCustomizedGvQ(q)) return
-		const key = getGvGeneKey(term)
+		const key = getGvQCacheKey(term)
 		if (!key) return // a term whose genes cannot all be named, see getGvGeneKey()
 		const cache = this.state.reuse.gvQByGene
 		const trimmed = trimGvQForCache(q)
-		const lst = hasGvQKey(cache, key) ? cache[key] : []
+		const lst = cache[key] || []
 		const i = lst.findIndex(entry => deepEqual(entry.q, trimmed))
 		if (i != -1) lst.splice(i, 1)
 		lst.unshift({ label: getGvQLabel(term, q), q: trimmed })
@@ -527,7 +520,7 @@ MassStore.prototype.actions = {
 		/* re-inserted rather than assigned in place, so that the gene keys are in recency
 		order too and the eviction below drops the least recently used gene */
 		delete cache[key]
-		setGvQLst(cache, key, lst)
+		cache[key] = lst
 		const keys = Object.keys(cache)
 		if (keys.length > maxGvQGenes) delete cache[keys[0]]
 	},
