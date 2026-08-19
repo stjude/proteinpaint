@@ -4,7 +4,7 @@ import { getSamplelstTW, getFilter } from './groups.js'
 import { rehydrateFilter } from '../filter/rehydrateFilter.js'
 import { importPlot } from '#plots/importPlot.js'
 import { CustomError } from '#shared/helpers.js'
-import { forEachGvTw, getGvQCacheKey, trimGvQForCache } from '#shared/terms.js'
+import { forEachGvTw, getGvQCacheKey, gvQCacheKeyPrefix, trimGvQForCache } from '#shared/terms.js'
 import { getGvQLabel, isCustomizedGvQ } from '../tw/geneVariant'
 
 /*
@@ -85,7 +85,8 @@ const defaultState = {
 		it is keyed by gene names a url or an embedder can supply. Both the reads and the writes
 		below are therefore plain property access on a key that getGvQCacheKey() has prefixed
 		out of the namespace of Object.prototype -- see there for what an unprefixed '__proto__'
-		would do to a reopened session. */
+		would do to a reopened session, and withMigratedGvQCache() for the incoming states that
+		have to be normalized before they are merged. */
 		gvQByGene: {}
 	},
 	groups: [], // element: {name=str, filter={}}, to show in Groups tab
@@ -97,6 +98,44 @@ const defaultState = {
 session accumulates, since state.reuse is serialized into every session saved from it */
 const maxGvQPerGene = 5
 const maxGvQGenes = 30
+
+/*
+Normalize the gvQ cache of a state that arrives from outside this store -- a url, an
+embedder, a saved session -- into keys this store can hold, and return the state to merge.
+
+Required before copyMerge(), not merely nice to have: copyMerge() walks the parsed keys of
+its source with for..in and recurses into a matching object target, so an own '__proto__'
+key resolves through the getter to Object.prototype and the list under it is written onto
+that global prototype, while the entry itself is dropped. A session saved before the keys
+were prefixed carries exactly such a key when a gene was named '__proto__', so prefixing the
+accesses in this store is not enough on its own -- the key has to be gone before the merge.
+
+Legacy keys are migrated rather than dropped, so that the settings a user built before the
+prefix stay readable instead of sitting unreadable under the cap. The caps are applied here
+too, since an incoming state is not otherwise bounded by remember_gvq().
+
+Returns a copy: the state belongs to the caller, which may be an embedder holding it.
+*/
+function withMigratedGvQCache(state: any) {
+	const cache = state?.reuse?.gvQByGene
+	if (!cache || typeof cache != 'object' || Array.isArray(cache)) return state
+	const migrated: { [key: string]: any } = {}
+	// own properties only, read by descriptor so that no accessor of the prototype chain runs
+	for (const key of Object.getOwnPropertyNames(cache)) {
+		const lst = Object.getOwnPropertyDescriptor(cache, key)?.value
+		// a hand-edited or crafted session may hold anything here
+		if (!Array.isArray(lst)) continue
+		const migratedKey = key.startsWith(gvQCacheKeyPrefix) ? key : gvQCacheKeyPrefix + key
+		/* a legacy key and its prefixed form may both be present, in which case the later one
+		is re-inserted rather than kept in place, so that the keys stay in recency order */
+		delete migrated[migratedKey]
+		migrated[migratedKey] = lst.slice(0, maxGvQPerGene)
+	}
+	// least recently used first, the order that the eviction in remember_gvq() relies on
+	const keys = Object.keys(migrated)
+	for (const key of keys.slice(0, keys.length - maxGvQGenes)) delete migrated[key]
+	return { ...state, reuse: { ...state.reuse, gvQByGene: migrated } }
+}
 
 // one store for the whole MASS app
 class MassStore extends StoreBase implements RxStore {
@@ -131,7 +170,12 @@ class MassStore extends StoreBase implements RxStore {
 			// okay to ignore error of not being able to recover state
 			savedState = {}
 		}
-		this.state = this.copyMerge(this.toJson(defaultState), opts.state, savedState)
+		// both states are supplied from outside this store, see withMigratedGvQCache()
+		this.state = this.copyMerge(
+			this.toJson(defaultState),
+			withMigratedGvQCache(opts.state),
+			withMigratedGvQCache(savedState)
+		)
 		this.prevGeneratedId = 0
 	}
 
@@ -325,7 +369,8 @@ MassStore.prototype.actions = {
 		// without action.state as the current state at the
 		// initial render is not meant to be modified yet
 		//
-		this.state = this.copyMerge(this.toJson(this.state), action.state || {})
+		// action.state may be a session reopened in this app, see withMigratedGvQCache()
+		this.state = this.copyMerge(this.toJson(this.state), withMigratedGvQCache(action.state || {}))
 
 		// Subactions cause existing action methods to be called in parallel,
 		// to update unrelated parts of the state.

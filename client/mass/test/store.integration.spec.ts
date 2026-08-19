@@ -7,12 +7,15 @@ import { getGvQCacheKey } from '#shared/terms.js'
  reusable helper functions
 **************************/
 
-async function getStore() {
+/* opts.state{} is what a url, an embedder, or a session supplies to the app, so a test that
+covers what the store does with an incoming state passes it here */
+async function getStore(optsState: any = {}) {
 	const state = {
 		vocab: {
 			genome: 'hg38-test',
 			dslabel: 'TermdbTest'
-		}
+		},
+		...optsState
 	}
 
 	const app: any = { state, opts: {} }
@@ -296,6 +299,77 @@ tape('a remembered geneVariant setting survives a saved session round trip', asy
 	)
 	const unrelated: any = {}
 	test.equal(unrelated[0], undefined, 'leaves an unrelated plain object unpolluted')
+	test.end()
+})
+
+/* what a session saved before the keys were prefixed holds, and what a crafted one can hold:
+JSON.parse() turns the '__proto__' entry into an own key of the cache, which copyMerge()
+would resolve to Object.prototype. Written as text rather than as an object literal, since a
+literal's '__proto__' would set the prototype instead of creating that key. */
+function getLegacySession() {
+	const lst = (label: string) => `[{"label":"${label} / Others","q":{"type":"custom-groupset"}}]`
+	return JSON.parse(`{
+		"plots": [],
+		"reuse": { "gvQByGene": { "BCR": ${lst('legacy')}, "__proto__": ${lst('crafted')} } }
+	}`)
+}
+
+/* the numeric own properties that the entries of a cached list are written as, when
+copyMerge() recurses into Object.prototype rather than into a cache entry */
+function getPollutedProps() {
+	return Object.getOwnPropertyNames(Object.prototype).filter(k => /^\d+$/.test(k))
+}
+
+tape('a session saved before the gvQ cache keys were prefixed is migrated', async test => {
+	// supplied by a url or an embedder, merged by the store constructor
+	const constructed = await getStore(getLegacySession())
+	// the same session reopened in a running app, merged by app_refresh
+	const reopened = await getStore()
+	await reopened.actions.app_refresh.call(reopened, { type: 'app_refresh', state: getLegacySession() })
+
+	for (const [path, store] of [
+		['constructor', constructed],
+		['app_refresh', reopened]
+	] as [string, any][]) {
+		const cache = store.state.reuse.gvQByGene
+		test.deepEqual(
+			Object.keys(cache),
+			[gvKey('BCR'), gvKey('__proto__')],
+			`${path}: migrates every legacy key to its prefixed form`
+		)
+		test.deepEqual(
+			cache[gvKey('BCR')].map(entry => entry.label),
+			['legacy / Others'],
+			`${path}: keeps a legacy setting readable rather than dropping it`
+		)
+		test.deepEqual(
+			cache[gvKey('__proto__')].map(entry => entry.label),
+			['crafted / Others'],
+			`${path}: keeps the setting of a gene named '__proto__' under an own key`
+		)
+		test.equal(Object.getPrototypeOf(cache), Object.prototype, `${path}: leaves the cache a plain object`)
+	}
+	test.deepEqual(getPollutedProps(), [], 'writes no cached list entry onto Object.prototype')
+	const unrelated: any = {}
+	test.equal(unrelated[0], undefined, 'leaves an unrelated plain object unpolluted')
+	test.end()
+})
+
+tape('an incoming gvQ cache is bounded and holds only lists', async test => {
+	const entry = { label: 'legacy / Others', q: { type: 'custom-groupset' } }
+	const gvQByGene: any = { notAList: 'dropped', alsoNotAList: { label: 'dropped' } }
+	// an incoming state is not otherwise bounded, since remember_gvq() never saw it
+	for (let i = 0; i < 40; i++) gvQByGene[`GENE${i}`] = Array.from({ length: 8 }, () => entry)
+	const store = await getStore({ reuse: { gvQByGene } })
+
+	const cache = store.state.reuse.gvQByGene
+	const keys = Object.keys(cache)
+	test.equal(keys.length, 30, 'keeps at most 30 genes')
+	test.equal(keys.includes(gvKey('GENE39')), true, 'keeps the most recently used gene')
+	test.equal(keys.includes(gvKey('GENE0')), false, 'drops the least recently used gene')
+	test.equal(cache[gvKey('GENE39')].length, 5, 'keeps at most 5 settings per gene')
+	test.equal(gvKey('notAList') in cache, false, 'drops a key whose value is not a list of settings')
+	test.equal(gvKey('alsoNotAList') in cache, false, 'drops a key whose value is an object')
 	test.end()
 })
 
