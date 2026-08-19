@@ -31,18 +31,18 @@
  (resolved relative to serverconfig.tpmasterdir; gated by features.wsi.allowDirectSlidePath). Minimal
  pan/zoom viewer — the same OpenLayers Zoomify setup the full viewer uses.
 */
-import 'ol/ol.css'
-import Map from 'ol/Map.js'
-import View from 'ol/View.js'
-import TileLayer from 'ol/layer/Tile.js'
-import Zoomify from 'ol/source/Zoomify.js'
-import VectorLayer from 'ol/layer/Vector.js'
-import VectorSource from 'ol/source/Vector.js'
-import Feature from 'ol/Feature.js'
-import MultiPolygon from 'ol/geom/MultiPolygon.js'
-import { Fill, Stroke, Style } from 'ol/style.js'
-import { dofetch3 } from '#common/dofetch'
-import { sayerror } from '#dom'
+import 'ol/ol.css' // OpenLayers base styles
+import Map from 'ol/Map.js' // the pan/zoom map widget
+import View from 'ol/View.js' // its camera (resolutions + extent)
+import TileLayer from 'ol/layer/Tile.js' // mosaics the slide tiles
+import Zoomify from 'ol/source/Zoomify.js' // tile source matching wsi_tile.py's tier math
+import VectorLayer from 'ol/layer/Vector.js' // boundary strokes / expression fills
+import VectorSource from 'ol/source/Vector.js' // holds the polygon features
+import Feature from 'ol/Feature.js' // one drawable geometry + style
+import MultiPolygon from 'ol/geom/MultiPolygon.js' // many cell rings in one feature
+import { Fill, Stroke, Style } from 'ol/style.js' // polygon styling primitives
+import { dofetch3 } from '#common/dofetch' // fetch wrapper for meta/genecounts
+import { sayerror } from '#dom' // inline error banner
 
 export async function init(
 	opts: {
@@ -69,15 +69,16 @@ export async function init(
 	},
 	holder: any
 ) {
-	const name = opts.slide ?? opts.label ?? 'slide'
-	const loading = holder.append('div').style('margin', '20px').text(`Loading ${name} …`)
+	const name = opts.slide ?? opts.label ?? 'slide' // display name in messages
+	const loading = holder.append('div').style('margin', '20px').text(`Loading ${name} …`) // placeholder while meta loads
 	try {
 		// every wsitiles request carries this query to address the slide
 		const sq = opts.slideQuery ?? `slide=${encodeURIComponent(opts.slide!)}`
-		const meta = await dofetch3(`wsitiles/meta?${sq}`)
+		const meta = await dofetch3(`wsitiles/meta?${sq}`) // geometry first: tiles need it
 		if (!meta || meta.error || meta.status === 'error') throw meta?.error || 'failed to load slide metadata'
 
-		const [w, h] = meta.slide_dimensions
+		const [w, h] = meta.slide_dimensions // level-0 slide size in px
+		// server origin for tile URLs ('' when same-origin); trailing slashes trimmed
 		const host = (sessionStorage.getItem('hostURL') || (window as any).testHost || '').replace(/\/+$/, '')
 
 		// z-planes of a 3D OME-TIFF stack (meta.planes = 1 for 2D slides);
@@ -94,17 +95,17 @@ export async function init(
 				url: `${host}/wsitiles/tile/{z}/{x}/{y}?${sq}${planes > 1 ? `&plane=${p}` : ''}&v=${
 					meta.version || 0
 				}&_={TileGroup}`,
-				size: [w, h],
-				crossOrigin: 'anonymous',
-				zDirection: -1
+				size: [w, h], // OL derives the tier count from this, same math as wsi_tile.py
+				crossOrigin: 'anonymous', // tiles come from the API origin, not the page's
+				zDirection: -1 // pick the sharper tier when between two zoom levels
 			})
-		const source = makeSource(plane)
-		const grid = source.getTileGrid()!
-		const extent = grid.getExtent()
+		const source = makeSource(plane) // start on the default (middle) plane
+		const grid = source.getTileGrid()! // the z/x/y grid OL computed from [w, h]
+		const extent = grid.getExtent() // slide bounds in map coordinates
 
-		loading.remove()
+		loading.remove() // meta arrived; the map replaces the placeholder
 
-		const slideLayer = new TileLayer({ source })
+		const slideLayer = new TileLayer({ source }) // bottom layer: the slide tiles
 
 		// z-plane scroll bar ABOVE the map (the 90vh map pushes anything after
 		// it below the fold); swapping the tile source refetches visible tiles
@@ -112,35 +113,35 @@ export async function init(
 		if (planes > 1) {
 			const bar = holder.append('div').style('font', '12px system-ui').style('padding', '4px 8px')
 			bar.append('span').text('z-plane: ')
-			const label = () => `${plane + 1}/${planes}`
+			const label = () => `${plane + 1}/${planes}` // 1-based display, e.g. '3/5'
 			const planeText = bar.append('span').text(label())
 			bar
 				.append('input')
-				.attr('type', 'range')
+				.attr('type', 'range') // native slider, one notch per plane
 				.attr('min', 0)
 				.attr('max', planes - 1)
 				.attr('step', 1)
-				.property('value', plane)
+				.property('value', plane) // start at the default (middle) plane
 				.style('vertical-align', 'middle')
 				.style('margin-left', '8px')
 				.style('width', '200px')
 				.on('change', function (this: HTMLInputElement) {
-					plane = Number(this.value)
-					planeText.text(label())
-					slideLayer.setSource(makeSource(plane))
+					plane = Number(this.value) // slider position = plane index
+					planeText.text(label()) // update the '3/5' readout
+					slideLayer.setSource(makeSource(plane)) // refetch visible tiles for this plane
 				})
 		}
 
 		const mapDiv = holder
 			.append('div')
-			.style('width', opts.width ?? '100vw')
+			.style('width', opts.width ?? '100vw') // full-window unless the w2 plot passes a size
 			.style('height', opts.height ?? '90vh')
 		const map = new Map({
-			target: mapDiv.node(),
-			layers: [slideLayer],
-			view: new View({ resolutions: grid.getResolutions(), extent })
+			target: mapDiv.node(), // mount the map into the holder
+			layers: [slideLayer], // overlays are addLayer'd on top below
+			view: new View({ resolutions: grid.getResolutions(), extent }) // camera locked to the pyramid
 		})
-		map.getView().fit(extent)
+		map.getView().fit(extent) // start fully zoomed out, whole slide visible
 
 		holder
 			.append('div')
@@ -162,27 +163,28 @@ export async function init(
 		// levels. OL picks the tile level with resolution <= the view resolution,
 		// so "within the n finest levels" means view resolution < the (n+1)'th
 		// finest grid resolution — that becomes the layer's (exclusive) maxResolution.
-		const resolutions = grid.getResolutions()
-		const n = Number(opts.annotationLevel)
+		const resolutions = grid.getResolutions() // per-tier map resolutions, coarse -> fine
+		const n = Number(opts.annotationLevel) // boundaries visible in the n finest tiers
 		const maxResolution =
 			Number.isInteger(n) && n > 0 && n < resolutions.length ? resolutions[resolutions.length - 1 - n] : undefined
 
+		// the two boundary overlays with their stroke colors (cell green, nucleus blue)
 		const overlays: Array<[string | undefined, string]> = [
 			[opts.cellBoundaries, 'rgba(0, 200, 80, 0.9)'],
 			[opts.nucleusBoundaries, 'rgba(0, 150, 255, 0.9)']
 		]
-		let cellPolys: CellPoly[] | undefined
+		let cellPolys: CellPoly[] | undefined // kept for the expression fills below
 		for (const [file, color] of overlays) {
-			if (!file) continue
+			if (!file) continue // that overlay was not requested
 			try {
-				const polys = await fetchBoundaries(host, sq, file, mppX, mppY)
+				const polys = await fetchBoundaries(host, sq, file, mppX, mppY) // csv -> px polygons
 				if (file === opts.cellBoundaries) {
-					cellPolys = polys
-					if (opts.hideCellStrokes) continue
+					cellPolys = polys // expression fills reuse these rings
+					if (opts.hideCellStrokes) continue // polygons fetched, strokes suppressed
 				}
-				map.addLayer(strokeLayer(polys, color, maxResolution))
+				map.addLayer(strokeLayer(polys, color, maxResolution)) // draw on top of the slide
 			} catch (e: any) {
-				sayerror(holder, `Error loading ${file}: ${e.message || e}`)
+				sayerror(holder, `Error loading ${file}: ${e.message || e}`) // one overlay failing kills nothing else
 			}
 		}
 
@@ -191,8 +193,8 @@ export async function init(
 				.split(',')
 				.map(t => t.trim())
 				.filter(Boolean)
-		const exprGenes = geneList(opts.geneExpression)
-		const groupGenes = geneList(opts.geneGroups)
+		const exprGenes = geneList(opts.geneExpression) // one overlay per gene
+		const groupGenes = geneList(opts.geneGroups) // summed into a single overlay
 		if (exprGenes.length || groupGenes.length) {
 			try {
 				if (!opts.geneExpressionFile)
@@ -241,37 +243,37 @@ export async function init(
 				}
 
 				// gene_expression: one layer per gene, each its own color
-				let colorIdx = 0
+				let colorIdx = 0 // next palette slot; shared with the group overlay
 				for (const [i, gene] of exprGenes.entries()) {
-					const r = results[i]
+					const r = results[i] // this gene's genecounts answer
 					if (!r || r.error) {
 						sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`)
-						continue
+						continue // one bad gene doesn't block the others
 					}
-					const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length]
-					map.addLayer(expressionLayer(cellPolys, r.cells, r.max, rgb))
-					addLegend(rgb, gene, r.max)
+					const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length] // this gene's fill color
+					map.addLayer(expressionLayer(cellPolys, r.cells, r.max, rgb)) // fill the expressing cells
+					addLegend(rgb, gene, r.max) // gradient + count range in the legend
 				}
 
 				// gene_groups: sum each cell's counts over the group, one layer/color
 				if (groupGenes.length) {
-					const total: { [id: string]: number } = {}
-					const found: string[] = []
+					const total: { [id: string]: number } = {} // per-cell sum across the group
+					const found: string[] = [] // genes that actually answered
 					for (const [i, gene] of groupGenes.entries()) {
-						const r = results[exprGenes.length + i]
+						const r = results[exprGenes.length + i] // group answers follow the expr ones
 						if (!r || r.error) {
 							sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`)
-							continue
+							continue // skip the missing gene, keep summing the rest
 						}
 						found.push(gene)
-						for (const id in r.cells) total[id] = (total[id] || 0) + r.cells[id]
+						for (const id in r.cells) total[id] = (total[id] || 0) + r.cells[id] // accumulate per cell
 					}
 					if (found.length) {
-						let max = 0
+						let max = 0 // the summed overlay's own count ceiling
 						for (const id in total) if (total[id] > max) max = total[id]
-						const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length]
-						map.addLayer(expressionLayer(cellPolys, total, max, rgb))
-						addLegend(rgb, found.join('+'), max)
+						const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length] // next unused palette color
+						map.addLayer(expressionLayer(cellPolys, total, max, rgb)) // ONE overlay of the totals
+						addLegend(rgb, found.join('+'), max) // e.g. 'PTPRC+EPCAM'
 					}
 				}
 			} catch (e: any) {
@@ -296,27 +298,28 @@ async function fetchBoundaries(
 	mppX: number,
 	mppY: number
 ): Promise<CellPoly[]> {
-	const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}`)
+	const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}`) // raw csv text
 	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
 	const text = await res.text()
 
 	// rows: "cell_id",vertex_x,vertex_y — one cell's vertices are contiguous.
 	// OL's Zoomify extent is [0,-h,w,0]: x in px to the right, y in px negated.
-	const cells: CellPoly[] = []
-	let ring: number[][] = []
-	let curId = ''
+	const cells: CellPoly[] = [] // finished polygons
+	let ring: number[][] = [] // vertices of the cell being read
+	let curId = '' // the cell those vertices belong to
 	for (const line of text.split('\n')) {
-		const [id, xs, ys] = line.split(',')
+		const [id, xs, ys] = line.split(',') // one vertex per row
 		const x = Number(xs)
 		if (!xs || Number.isNaN(x)) continue // header / blank line
 		if (id !== curId) {
+			// a new cell_id starts: close out the previous cell's ring
 			if (ring.length > 2) cells.push({ id: curId.replace(/"/g, ''), ring })
 			ring = []
 			curId = id
 		}
-		ring.push([x / mppX, -Number(ys) / mppY])
+		ring.push([x / mppX, -Number(ys) / mppY]) // µm -> level-0 px, y negated for OL
 	}
-	if (ring.length > 2) cells.push({ id: curId.replace(/"/g, ''), ring })
+	if (ring.length > 2) cells.push({ id: curId.replace(/"/g, ''), ring }) // don't drop the last cell
 	return cells
 }
 
@@ -326,12 +329,14 @@ async function fetchBoundaries(
  tiling if rendering within the visible zoom range ever feels sluggish. */
 function strokeLayer(cells: CellPoly[], color: string, maxResolution?: number): VectorLayer {
 	return new VectorLayer({
+		// every ring wrapped into a single MultiPolygon feature
 		source: new VectorSource({ features: [new Feature(new MultiPolygon(cells.map(c => [c.ring])))] }),
-		style: new Style({ stroke: new Stroke({ color, width: 1 }) }),
-		maxResolution
+		style: new Style({ stroke: new Stroke({ color, width: 1 }) }), // outline only, no fill
+		maxResolution // undefined = visible at every zoom
 	})
 }
 
+// number of opacity steps for the expression fills
 const SHADES = 8
 
 // fill colors ("r, g, b") cycled per gene; green/blue-ish avoided so fills
@@ -346,19 +351,20 @@ const GENE_COLORS = ['255, 0, 0', '0, 90, 255', '255, 165, 0', '160, 0, 200', '0
  the faintest shade. Shown at every zoom level — annotation_level only
  gates the boundary strokes, not the expression fills. */
 function expressionLayer(cells: CellPoly[], counts: { [id: string]: number }, max: number, rgb: string): VectorLayer {
-	const buckets: number[][][][][] = Array.from({ length: SHADES }, () => [])
+	const buckets: number[][][][][] = Array.from({ length: SHADES }, () => []) // one polygon list per shade
 	for (const c of cells) {
-		const n = counts[c.id]
-		if (!n || !max) continue
+		const n = counts[c.id] // this cell's transcript count
+		if (!n || !max) continue // zero count (or empty result): no fill
+		// log-normalize the count into a shade index 0..SHADES-1
 		buckets[Math.min(SHADES - 1, Math.floor((Math.log1p(n) / Math.log1p(max)) * SHADES))].push([c.ring])
 	}
-	const features: Feature[] = []
+	const features: Feature[] = [] // one MultiPolygon feature per non-empty shade
 	for (const [i, polys] of buckets.entries()) {
-		if (!polys.length) continue
-		const f = new Feature(new MultiPolygon(polys))
-		const alpha = 0.15 + (0.75 * (i + 1)) / SHADES
+		if (!polys.length) continue // no cell landed in this shade
+		const f = new Feature(new MultiPolygon(polys)) // all of this shade's cells at once
+		const alpha = 0.15 + (0.75 * (i + 1)) / SHADES // faintest 0.24 .. strongest 0.90
 		f.setStyle(new Style({ fill: new Fill({ color: `rgba(${rgb}, ${alpha.toFixed(2)})` }) }))
 		features.push(f)
 	}
-	return new VectorLayer({ source: new VectorSource({ features }) })
+	return new VectorLayer({ source: new VectorSource({ features }) }) // fills only, no strokes
 }

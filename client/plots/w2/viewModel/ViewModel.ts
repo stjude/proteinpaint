@@ -17,9 +17,9 @@ export class ViewModel {
 
 	constructor(samples: WsiSampleSummary[], settings: Settings) {
 		this.viewData = {
-			columns: [{ label: 'Sample' }, { label: 'Images' }],
-			rows: samples.map(s => [{ value: s.sampleId }, { value: String(s.count) }]),
-			selectedSample: samples[settings.selectedSampleIndex]
+			columns: [{ label: 'Sample' }, { label: 'Images' }], // two-column table
+			rows: samples.map(s => [{ value: s.sampleId }, { value: String(s.count) }]), // one row per sample
+			selectedSample: samples[settings.selectedSampleIndex] // undefined when index is -1
 		}
 	}
 }

@@ -1,10 +1,10 @@
-import { renderTable, Tabs } from '#dom'
-import { dofetch3 } from '#common/dofetch'
-import 'ol/ol.css'
-import OlMap from 'ol/Map.js'
-import OlView from 'ol/View.js'
-import TileLayer from 'ol/layer/Tile.js'
-import Zoomify from 'ol/source/Zoomify.js'
+import { renderTable, Tabs } from '#dom' // sample table + per-image tab strip
+import { dofetch3 } from '#common/dofetch' // fetch wrapper for the meta request
+import 'ol/ol.css' // OpenLayers base styles (zoom buttons etc.)
+import OlMap from 'ol/Map.js' // the pan/zoom map widget
+import OlView from 'ol/View.js' // its camera (resolutions + extent)
+import TileLayer from 'ol/layer/Tile.js' // layer that mosaics the fetched tiles
+import Zoomify from 'ol/source/Zoomify.js' // tile source matching wsi_tile.py's tier math
 import type { SpatialImage, WsiImage } from '#types'
 import type Settings from '../Settings.ts'
 import type { ViewData } from '../viewModel/ViewModel.ts'
@@ -26,12 +26,12 @@ export class View {
 	) {}
 
 	async render() {
-		this.renderSampleTable()
-		await this.renderViewer()
+		this.renderSampleTable() // the pick-a-sample table
+		await this.renderViewer() // tabs + map for the selected sample/image
 	}
 
 	private renderSampleTable() {
-		this.dom.table.selectAll('*').remove()
+		this.dom.table.selectAll('*').remove() // full re-render on every state change
 		renderTable({
 			div: this.dom.table,
 			columns: this.viewData.columns,
@@ -48,27 +48,27 @@ export class View {
 
 	private async renderViewer() {
 		const holder = this.dom.viewer
-		holder.selectAll('*').remove()
+		holder.selectAll('*').remove() // discard the previous map/tabs
 
-		const sample = this.viewData.selectedSample
-		const selected = this.settings.selectedImageIndex
-		const image = this.images[selected] ?? this.images[0]
-		if (!sample || !image) return
+		const sample = this.viewData.selectedSample // row picked in the table
+		const selected = this.settings.selectedImageIndex // tab picked by the user
+		const image = this.images[selected] ?? this.images[0] // fall back to the first image
+		if (!sample || !image) return // nothing to show
 
 		// a tab per image (labelled by its folder name on disk), mirroring the
 		// singleCell chart's per-sample tabs; always shown so the user sees how
 		// many images the sample has, and picking one re-renders the viewer
 		// fileName is <imageName>/<file> in both roots
-		const imageName = (f: string) => f.split('/').slice(-2)[0] || f
+		const imageName = (f: string) => f.split('/').slice(-2)[0] || f // the image's folder name
 		new Tabs({
-			holder: holder.append('div'),
+			holder: holder.append('div'), // tab strip sits above the map
 			tabsPosition: 'horizontal',
 			tabs: this.images.map((img, i) => ({
-				label: imageName(img.fileName),
-				active: i == (this.images[selected] ? selected : 0),
-				callback: () => this.interactions.selectImage(i)
+				label: imageName(img.fileName), // e.g. 'image1'
+				active: i == (this.images[selected] ? selected : 0), // highlight the shown image
+				callback: () => this.interactions.selectImage(i) // dispatch -> re-render with image i
 			}))
-		}).main()
+		}).main() // render the tabs now
 
 		// query params match the wsitiles route (server/src/routes/wsitiles.ts);
 		// the server resolves the file inside the sample's subfolder of the w2
@@ -83,8 +83,9 @@ export class View {
 			// boundary/expression overlays, addressing the slide via the dataset.
 			// Burger-menu settings override the dataset's values (null = not edited yet)
 			const s = this.settings
+			// gene list to overlay: checkbox off = none; field never edited = dataset default
 			const genes = s.showGeneExpression ? s.geneExpression ?? image.geneExpression : undefined
-			const direct = await import('../wsi.direct')
+			const direct = await import('../wsi.direct') // lazy-load the overlay viewer
 			await direct.init(
 				{
 					slideQuery: params,
@@ -112,7 +113,8 @@ export class View {
 			return
 		}
 
-		const [w, h] = meta.slide_dimensions
+		const [w, h] = meta.slide_dimensions // level-0 slide size in px
+		// server origin for tile URLs ('' when same-origin); trailing slashes trimmed
 		const host = (sessionStorage.getItem('hostURL') || (window as any).testHost || '').replace(/\/+$/, '')
 
 		const source = new Zoomify({
@@ -121,18 +123,18 @@ export class View {
 			// v=<slide mtime>: tiles are served immutable, so a regenerated slide must
 			// change the URL to bust the browser cache
 			url: `${host}/wsitiles/tile/{z}/{x}/{y}?${params}&v=${meta.version || 0}&_={TileGroup}`,
-			size: [w, h],
-			crossOrigin: 'anonymous',
-			zDirection: -1
+			size: [w, h], // OL derives the tier count from this, same math as wsi_tile.py
+			crossOrigin: 'anonymous', // tiles come from the API origin, not the page's
+			zDirection: -1 // pick the sharper tier when between two zoom levels
 		})
-		const grid = source.getTileGrid()!
-		const extent = grid.getExtent()
+		const grid = source.getTileGrid()! // the z/x/y grid OL computed from [w, h]
+		const extent = grid.getExtent() // slide bounds in map coordinates
 
 		const mapDiv = holder.append('div').style('width', '100%').style('height', this.settings.viewerHeight)
 		const map = new OlMap({
-			target: mapDiv.node(),
-			layers: [new TileLayer({ source })],
-			view: new OlView({ resolutions: grid.getResolutions(), extent })
+			target: mapDiv.node(), // mount the map into the plot's viewer div
+			layers: [new TileLayer({ source })], // OL fetches+mosaics tiles as the user pans/zooms
+			view: new OlView({ resolutions: grid.getResolutions(), extent }) // camera locked to the pyramid
 		})
 		map.getView().fit(extent) // start fully zoomed out, whole slide visible
 	}

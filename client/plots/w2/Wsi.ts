@@ -63,18 +63,18 @@ class Wsi extends PlotBase implements RxComponent {
 	}
 
 	async main() {
-		const config = structuredClone(this.state.config)
-		if (config.childType != this.type && config.chartType != this.type) return
+		const config = structuredClone(this.state.config) // this plot's slice of app state
+		if (config.childType != this.type && config.chartType != this.type) return // not for this plot
 		if (!this.interactions) throw 'Interactions not initialized [wsi main()]'
 
-		const settings: Settings = config.settings.wsi
-		this.dom.error.text('')
+		const settings: Settings = config.settings.wsi // selection + overlay settings
+		this.dom.error.text('') // clear any previous error banner
 
 		// which samples have whole-slide images on disk?
 		const model = new Model(this.state.vocab.genome, this.state.vocab.dslabel)
-		const data = await model.getData()
+		const data = await model.getData() // termdb/wsiBySample sample listing
 		if (!data || data.error || !data.samples?.length) {
-			this.dom.table.selectAll('*').remove()
+			this.dom.table.selectAll('*').remove() // nothing to show; clear the ui
 			this.dom.viewer.selectAll('*').remove()
 			this.dom.error.style('padding', '20px').text(data?.error || 'No samples with whole-slide images.')
 			return
@@ -89,8 +89,8 @@ class Wsi extends PlotBase implements RxComponent {
 		const images = selectedSample ? (await model.getImages(selectedSample.sampleId)).images ?? [] : []
 
 		// spatial image: rename the sandbox header and show the burger menu
-		const image = images[settings.selectedImageIndex] ?? images[0]
-		const isSpatial = image?.type == 'spatial'
+		const image = images[settings.selectedImageIndex] ?? images[0] // the image being viewed
+		const isSpatial = image?.type == 'spatial' // drives header text + burger visibility
 		this.dom.header?.text(isSpatial ? 'SPATIAL VIEWER' : 'WHOLE SLIDE IMAGES')
 		if (isSpatial) {
 			// seed the burger menu's gene/level fields with the dataset's defaults
