@@ -635,7 +635,7 @@ function setRenderers(self) {
 			.style('margin', '5px')
 			.append('div')
 			.attr('class', 'sjpp-survival-title')
-			.attr('data-testid', 'sjpp-survival-plotTitle')
+			.attr('data-testid', 'sjpp-survival-plotTitle' + '-' + chart.rawChartId)
 			.style('display', 'inline-block')
 			.style('width', 'fit-content')
 			.datum(chart)
@@ -800,7 +800,7 @@ function setRenderers(self) {
 		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left + 10 //adding 10 avoids clipping of the svg when downloading
 		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
 		const setSeriesDataID = series => {
-			return `sjpp-survival-series-${series.seriesLabel ?? series.seriesId ?? 'unknown'}`
+			return `sjpp-survival-series-${series.seriesId ?? series.seriesLabel ?? 'unknown'}`
 		}
 		const serieses = seriesesG
 			.selectAll('.sjpp-survival-series')
@@ -905,9 +905,10 @@ function setRenderers(self) {
 			processedData = series.data.filter(d => d.x <= s.maxTimeToEvent)
 		}
 		// todo: allow update of exiting path instead of replacing
+		console.log(series)
 		g.selectAll('path').remove()
 		g.append('path')
-			.attr('data-testid', `sjpp-survival-ci-${series.seriesLabel ?? series.seriesId ?? 'unknown'}`)
+			.attr('data-testid', `sjpp-survival-ci-${series.seriesId ?? series.seriesLabel ?? 'unknown'}`)
 			.attr(
 				'd',
 				area()
@@ -920,7 +921,6 @@ function setRenderers(self) {
 			.style('fill', self.term2toColor[series.seriesId].adjusted)
 			.style('opacity', '0.15')
 			.style('stroke', 'none')
-
 		renderSubseries(
 			s,
 			g,
@@ -990,7 +990,7 @@ function setRenderers(self) {
 		const color = self.term2toColor[data[0].seriesId].adjusted
 		if (seriesName == 'survival') {
 			g.append('path')
-				.attr('data-testid', `sjpp-survival-curve-${data[0].seriesLabel ?? data[0].seriesId ?? 'unknown'}`)
+				.attr('data-testid', `sjpp-survival-curve-${data[0].seriesId ?? data[0].seriesLabel ?? 'unknown'}`)
 				.attr('d', self.lineFxn(lineData))
 				.style('fill', 'none')
 				.style('stroke', color)
@@ -1000,7 +1000,6 @@ function setRenderers(self) {
 
 		const subg1 = g.append('g').attr('class', 'sjpp-survival-censored')
 		const censored = subg1.selectAll('.sjpp-survival-censored-x').data(censoredData, d => d.x)
-
 		censored.exit().remove()
 
 		censored

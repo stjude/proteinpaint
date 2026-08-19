@@ -166,6 +166,7 @@ function renderAtRiskTick(g, chart, xTickValues, s, atRiskGroup) {
 		.append('text')
 		.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
 		.attr('text-anchor', 'middle')
+		.attr('data-testid', `sjpp-atrisk-text-count-${seriesId}`)
 		.attr('font-size', `${s.axisTitleFontSize - 4}px`)
 		.attr('cursor', 'pointer')
 		.each(renderAtRiskLabel)
