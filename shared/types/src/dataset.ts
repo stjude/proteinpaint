@@ -1284,7 +1284,10 @@ type Mds3Queries = {
 		 * type (region picker, violin) and the DMR drill-down. WGBS cohorts may omit
 		 * it and supply only .promoter, since a CpG-level matrix at whole-genome
 		 * scale is very large. At least one of .file / .promoter / .elements must be set. */
-		/** dna methylation unit (e.g. 'Average Beta Value'); required with .file */
+		file?: string
+		/** dna methylation unit (e.g. 'Average Beta Value'); required with .file.
+		 * Also set at init from the element matrix that serves terms when there is no .file,
+		 * so the client can label a region term with the unit it will actually receive. */
 		unit?: string
 		/** How the methylation was measured. Defaults to 'array' when absent, so existing
 		 * array-based datasets keep their behavior.
