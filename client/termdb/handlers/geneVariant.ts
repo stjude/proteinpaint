@@ -273,21 +273,53 @@ export class SearchHandler {
 			.style('opacity', 0.65)
 			.style('font-size', '.9em')
 			.text(`Previously used for ${this.term.name}`)
-		for (const entry of lst) {
-			div
+
+		/* these options are rendered after the enclosing menu has already wired its own tab
+		navigation, which only covers what existed when the menu opened (see setTabNavigation()
+		in client/dom/menu.js), so each one makes itself keyboard operable */
+		const options: any[] = []
+		const addOption = (label: string, callback: () => Promise<void>) => {
+			const option = div
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.attr('data-testid', 'sjpp-genevariant-rememberedQ')
-				.text(entry.label)
-				.on('click', async () => await this.applyRememberedQ(entry.q))
+				.attr('tabindex', 0)
+				.attr('role', 'button')
+				.text(label)
+				.on('click', callback)
+				.on('keydown', (event: KeyboardEvent) => {
+					/* activating on keydown rather than keyup: the gene above is picked by pressing
+					Enter in the search box, and the keyup of that same press would otherwise land on
+					the option focused below and apply it without the user choosing it */
+					if (event.key == 'Enter' || event.key == ' ') {
+						event.preventDefault()
+						;(event.target as HTMLElement).click()
+						return
+					}
+					const step = event.key == 'ArrowDown' ? 1 : event.key == 'ArrowUp' ? -1 : 0
+					if (!step) return
+					// wraps, so that arrowing past either end stays within the options
+					const i = options.indexOf(option)
+					options[(i + step + options.length) % options.length].node().focus()
+					event.preventDefault() // arrowing moves the focus, it does not scroll the menu
+				})
+			options.push(option)
+			return option
+		}
+
+		for (const entry of lst) {
+			addOption(entry.label, async () => await this.applyRememberedQ(entry.q)).attr(
+				'data-testid',
+				'sjpp-genevariant-rememberedQ'
+			)
 		}
 		const idx = Number(this.mutationTypeRadio.inputs.nodes().find(r => r.checked).value)
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.style('margin-top', '8px')
-			.text(`Continue with ${this.mutationTypeTerms[idx].name}`)
-			.on('click', async () => await this.applyMutationType())
+		addOption(`Continue with ${this.mutationTypeTerms[idx].name}`, async () => await this.applyMutationType()).style(
+			'margin-top',
+			'8px'
+		)
+
+		// the most recent setting is the likely choice, so it starts focused
+		options[0].node().focus()
 		return true
 	}
 
