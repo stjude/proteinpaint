@@ -324,6 +324,51 @@ const zoomMinExons = 6
 const zoomMinDropped = 1 / 3
 
 /**
+ * What a window over a gene must cover: the breakpoints, and the ends of a range already
+ * selected, so that neither a zoom nor an isoform filter can silently narrow a saved
+ * selection when it is clamped (see the setRange of each component).
+ *
+ * Returns null when there is no position to span, e.g. a gene with no breakpoint of its
+ * own, which is then drawn whole.
+ */
+function markerSpan(
+	markers: { pos: number }[] | undefined,
+	range: { start: number; stop: number } | undefined
+): [number, number] | null {
+	const positions: number[] = []
+	for (const m of markers || []) if (Number.isFinite(m.pos)) positions.push(m.pos)
+	if (range) positions.push(range.start, range.stop)
+	if (!positions.length) return null
+	return [Math.min(...positions), Math.max(...positions)]
+}
+
+/**
+ * The isoforms of a gene that a breakpoint can fall on: the ones overlapping the span of
+ * the marks.
+ *
+ * An isoform outside the span, e.g. one of the short fragment transcripts annotated over a
+ * locus, costs the chart twice over: it takes a row to draw a model no event of the chart
+ * falls on, and its exons join the merged layout every isoform is drawn over (see
+ * allgm2sum), so they widen the span the breakpoints must share the width with. Dropping
+ * them first is what lets the layout, and the zoom of focusRegions below it, follow the
+ * isoforms the events are actually on.
+ *
+ * Every isoform is kept when none of them overlaps the span, as a track of no isoform draws
+ * nothing; the marks are then laid over the whole gene, as before.
+ */
+export function breakpointGms(
+	gms: GeneModel[],
+	markers: { pos: number }[] | undefined,
+	range: { start: number; stop: number } | undefined
+): GeneModel[] {
+	const span = markerSpan(markers, range)
+	if (!span) return gms
+	const [lo, hi] = span
+	const kept = gms.filter(gm => gm.stop >= lo && gm.start <= hi)
+	return kept.length ? kept : gms
+}
+
+/**
  * The exons to draw of a gene: the ones the breakpoints fall on, one exon of context on
  * each side, and every exon between them.
  *
@@ -340,15 +385,9 @@ function focusRegions(
 	range: { start: number; stop: number } | undefined
 ): ExonRegion[] {
 	if (rglst.length < zoomMinExons) return rglst
-	/* what the window must cover: the breakpoints, and the ends of a range already selected,
-	so that a window cannot silently narrow a saved selection when it is clamped (see the
-	setRange of each component) */
-	const positions: number[] = []
-	for (const m of markers || []) if (Number.isFinite(m.pos)) positions.push(m.pos)
-	if (range) positions.push(range.start, range.stop)
-	if (!positions.length) return rglst
-	const lo = Math.min(...positions)
-	const hi = Math.max(...positions)
+	const span = markerSpan(markers, range)
+	if (!span) return rglst
+	const [lo, hi] = span
 	// rglst runs 3' to 5' on the minus strand, so walk the regions by position instead
 	const byPos = [...rglst].sort((a, b) => a.start - b.start)
 	let first = 0
@@ -685,6 +724,9 @@ function renderRangeControls(a: {
  * be typed in, as a drag over a gene of a hundred kb is too coarse to place a cluster
  * boundary. Calls callback(range) on apply and callback(null) when the range is cleared.
  *
+ * Only the isoforms a breakpoint can fall on are drawn (see breakpointGms), as in the paired
+ * chart below.
+ *
  * Used by variantConfig.ts to restrict a sv/fusion tvs to breakpoints of a range, e.g. to
  * select the cases of only one of the two BCR breakpoint clusters of BCR::ABL1.
  */
@@ -695,8 +737,11 @@ export function isoformRangeSelect(opts: IsoformRangeSelectOpts) {
 	const rowHeight = 18
 	const markerHeight = 40
 
-	const gms = opts.allgm.filter(gm => gm.chr == chr && !gm.hidden)
 	const markers = (opts.markers || []).filter(m => Number.isFinite(m.pos))
+	const allgm = opts.allgm.filter(gm => gm.chr == chr && !gm.hidden)
+	// only the isoforms a breakpoint can fall on, picked before the scale so that the layout
+	// follows them alone (see breakpointGms)
+	const gms = breakpointGms(allgm, markers, opts.range)
 	if (!gms.length && !markers.length) {
 		holder.append('div').style('opacity', 0.6).text('No gene model or breakpoint to display')
 		return
@@ -895,20 +940,31 @@ export function isoformPairRangeSelect(opts: IsoformPairRangeSelectOpts) {
 	const trackGap = 10
 	const linkHeight = 70
 
-	const selfGms = self.allgm.filter(gm => gm.chr == self.chr && !gm.hidden)
-	const partnerGms = partner.allgm.filter(gm => gm.chr == partner.chr && !gm.hidden)
 	// a pair missing a coordinate on either side cannot be drawn as a link
 	const links = opts.links.filter(l => Number.isFinite(l.selfPos) && Number.isFinite(l.partnerPos))
-	if (!links.length && (!selfGms.length || !partnerGms.length)) {
-		// without links, a track holds only its isoform sketches, and one of them has none
-		holder.append('div').style('opacity', 0.6).text('No gene model or breakpoint to display')
-		return
-	}
 	/* marks of a track are the distinct breakpoints of its gene, summing the samples of
 	every pair converging on the same position. NOTE that sums a sample with two events at
 	one position, to different breakpoints of the other gene, once per event */
 	const selfMarks = collapseMarks(l => l.selfPos)
 	const partnerMarks = collapseMarks(l => l.partnerPos)
+	/* the isoforms of each gene the breakpoints of that gene can fall on, picked before the
+	scales so that the layout of a track follows them alone (see breakpointGms). both genes
+	are filtered the same way: a fusion partner is the term's own gene of the other end */
+	const selfGms = breakpointGms(
+		self.allgm.filter(gm => gm.chr == self.chr && !gm.hidden),
+		selfMarks,
+		self.range
+	)
+	const partnerGms = breakpointGms(
+		partner.allgm.filter(gm => gm.chr == partner.chr && !gm.hidden),
+		partnerMarks,
+		partner.range
+	)
+	if (!links.length && (!selfGms.length || !partnerGms.length)) {
+		// without links, a track holds only its isoform sketches, and one of them has none
+		holder.append('div').style('opacity', 0.6).text('No gene model or breakpoint to display')
+		return
+	}
 	// both genes are of the same events, so they are laid out the same way. each range is
 	// passed so that a zoomed window of its gene cannot leave it out (see focusRegions)
 	const selfScale = makeScale({

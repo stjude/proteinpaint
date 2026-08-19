@@ -2,6 +2,7 @@ import tape from 'tape'
 import { select } from 'd3-selection'
 import {
 	allgm2sum,
+	breakpointGms,
 	makeLinearScale,
 	makeExonScale,
 	makeScale,
@@ -19,6 +20,7 @@ import type { GeneModel } from '../types/isoformSelect'
  * - makeExonScale() exon-collapsed scale, the 'rna' layout, and makeScale() dispatching
  * - isoformRangeSelect() breakpoint marks and range selection
  * - isoformPairRangeSelect() paired breakpoints of two genes and range selection
+ * - breakpointGms() dropping the isoforms no breakpoint of the chart falls on
  */
 
 /**************
@@ -493,6 +495,69 @@ tape('makeLinearScale() - scale without a gene model', test => {
 })
 
 /**************
+ * breakpointGms(), the isoforms a breakpoint can fall on
+ **************/
+
+/* short fragment transcripts annotated over the BCR locus, off either end of the gene, of
+the kind that fill the track with rows no event of the chart falls on */
+const bcrHead: GeneModel = {
+	isoform: 'ENST_head',
+	chr: 'chr22',
+	start: 23150000,
+	stop: 23150200,
+	strand: '+',
+	exon: [[23150000, 23150200]]
+}
+const bcrTail: GeneModel = {
+	isoform: 'ENST_tail',
+	chr: 'chr22',
+	start: 23350000,
+	stop: 23350200,
+	strand: '+',
+	exon: [[23350000, 23350200]]
+}
+
+tape('breakpointGms() - drops the isoforms outside the span of the marks', test => {
+	const gms = [bcr, bcrShort, bcrHead, bcrTail]
+	// the mark falls on the second exon of BCR, which neither fragment reaches
+	const kept = breakpointGms(gms, [{ pos: 23290100 }], undefined)
+	test.deepEqual(
+		kept.map(gm => gm.isoform),
+		[bcr.isoform, bcrShort.isoform],
+		'keeps the isoforms the breakpoints fall on'
+	)
+	// an isoform ending before the first mark, or starting after the last, carries none of them
+	const spanning = breakpointGms(gms, [{ pos: 23150100 }, { pos: 23350100 }], undefined)
+	test.equal(spanning.length, 4, 'a span reaching both ends keeps every isoform')
+	test.end()
+})
+
+tape('breakpointGms() - a range already selected is within the span', test => {
+	/* the range is on the tail fragment, which no mark is on: it must still be drawn, or the
+	track would not show what a saved selection covers */
+	const kept = breakpointGms([bcr, bcrHead, bcrTail], [{ pos: 23290100 }], { start: 23350000, stop: 23350200 })
+	test.ok(
+		kept.some(gm => gm.isoform == bcrTail.isoform),
+		'keeps an isoform of the selected range'
+	)
+	test.equal(
+		kept.some(gm => gm.isoform == bcrHead.isoform),
+		false,
+		'and still drops one outside both the marks and the range'
+	)
+	test.end()
+})
+
+tape('breakpointGms() - keeps every isoform when there is nothing to span', test => {
+	const gms = [bcr, bcrHead, bcrTail]
+	test.equal(breakpointGms(gms, [], undefined).length, 3, 'a gene with no breakpoint of its own is drawn whole')
+	test.equal(breakpointGms(gms, [{ pos: NaN }], undefined).length, 3, 'a breakpoint of no position does not span')
+	// nothing to draw is worse than drawing an isoform no breakpoint is on
+	test.equal(breakpointGms([bcrHead], [{ pos: 23290100 }], undefined).length, 1, 'a track is never emptied')
+	test.end()
+})
+
+/**************
  * makeExonScale(), the 'rna' layout
  **************/
 
@@ -876,6 +941,27 @@ tape('isoformRangeSelect() - highlight of a minus strand range', test => {
 	test.end()
 })
 
+tape('isoformRangeSelect() - drops the isoforms no breakpoint is on', test => {
+	/* the fragment transcripts of a locus lie off either end of the breakpoints: drawn, they
+	would fill the chart with rows no mark falls on, and stretch the layout over their exons */
+	const holder = select(document.body).append('div')
+	const api = isoformRangeSelect({
+		holder,
+		allgm: [bcr, bcrHead, bcrTail],
+		chr: 'chr22',
+		markers: bcrMarkers,
+		callback: () => {}
+	})!
+	// one canvas of marks, and a sketch of the one isoform the breakpoints are on
+	test.equal(holder.selectAll('canvas').nodes().length, 2, 'a fragment off the breakpoints is not sketched')
+	test.equal(holder.text().includes('ENST_head'), false, 'nor is it named')
+	test.ok(holder.text().includes(bcr.isoform), 'the isoform of the breakpoints is')
+	test.ok(api.scale.start > bcrHead.stop, 'the layout is not stretched over a fragment before the gene')
+	test.ok(api.scale.stop < bcrTail.start, 'nor over one after it')
+	holder.remove()
+	test.end()
+})
+
 tape('isoformRangeSelect() - nothing to display', test => {
 	const holder = select(document.body).append('div')
 	const api = isoformRangeSelect({
@@ -1041,6 +1127,38 @@ function linkPoint(api: any, canvas: HTMLCanvasElement, link: any, fraction: num
 		bubbles: true
 	}
 }
+
+tape('isoformPairRangeSelect() - both tracks drop the isoforms no breakpoint is on', test => {
+	const holder = select(document.body).append('div')
+	/* the fragment transcripts of each locus lie outside the breakpoints of pairLinks: the
+	BCR ones before its first breakpoint or after its last, the ABL1 one past its second exon */
+	const abl1Tail: GeneModel = {
+		isoform: 'ENST_abl1_tail',
+		chr: 'chr9',
+		start: 130950000,
+		stop: 130950200,
+		strand: '+',
+		exon: [[130950000, 130950200]]
+	}
+	const opts = pairOpts()
+	const api = isoformPairRangeSelect({
+		holder,
+		self: { ...opts.self, allgm: [bcr, bcrHead, bcrTail] },
+		partner: { ...opts.partner, allgm: [abl1, abl1Tail] },
+		links: opts.links,
+		callback: () => {}
+	})!
+	const sketches = (testid: string) => holder.select(`[data-testid="${testid}"]`).selectAll('canvas').nodes().length
+	test.equal(sketches('sjpp-isoformPairSelect-selfTrack'), 1, 'the term gene keeps only the isoform of its breakpoints')
+	test.equal(sketches('sjpp-isoformPairSelect-partnerTrack'), 1, 'and the partner only the isoform of its own')
+	// the dropped isoforms are out of the layout too, not merely undrawn
+	test.ok(api.selfScale.start > bcrHead.stop, 'the term track is not stretched over a fragment before it')
+	test.ok(api.selfScale.stop < bcrTail.start, 'nor over one after it')
+	test.ok(api.partnerScale.stop < abl1Tail.start, 'and neither is the partner track')
+	test.equal(holder.text().includes('ENST_head'), false, 'a dropped isoform is not labelled either')
+	holder.remove()
+	test.end()
+})
 
 tape('isoformPairRangeSelect() - render', test => {
 	const holder = select(document.body).append('div')
