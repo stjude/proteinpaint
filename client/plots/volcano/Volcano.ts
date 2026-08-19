@@ -199,7 +199,9 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 
 	const config = {
 		settings: {
-			volcano: getDefaultVolcanoSettings(opts.overrides, opts)
+			// app is passed through so the defaults can read the dataset's preferred starting
+			// element class from termdbConfig; opts alone does not carry it
+			volcano: getDefaultVolcanoSettings(opts.overrides, { ...opts, app })
 		},
 		highlightedData: opts.highlightedData || [],
 		termType: opts.termType

@@ -130,10 +130,14 @@ export async function renderVolcano<T extends DataEntry>(
 	type Pt = { fc: number; p: number; y: number; significant: boolean }
 	const points: Pt[] = new Array(rows.length)
 	let minNonZeroP = Infinity
+	/* Which field is the x coordinate. Defaults to fold_change so every existing caller is
+	unchanged; differential methylation may ask for delta_beta instead. foldChangeCutoff above is
+	already in this field's units -- the client sends the cutoff that matches the axis. */
+	const xField = req.xField ?? 'fold_change'
 	for (let i = 0; i < rows.length; i++) {
 		const row = rows[i] as any
-		const fc = row.fold_change
-		if (typeof fc !== 'number' || !Number.isFinite(fc)) throw new Error(`row ${i} fold_change is not finite (${fc})`)
+		const fc = row[xField]
+		if (typeof fc !== 'number' || !Number.isFinite(fc)) throw new Error(`row ${i} ${xField} is not finite (${fc})`)
 		const p = row[pField]
 		if (typeof p !== 'number' || !Number.isFinite(p) || p < 0)
 			throw new Error(`row ${i} ${pField} must be a finite value >= 0 (got ${p})`)

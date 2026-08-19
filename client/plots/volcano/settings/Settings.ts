@@ -65,6 +65,15 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	 * For longitudinal contrasts such as baseline vs relapse. Samples whose patient is not
 	 * present in both groups are dropped server-side. */
 	pairByParent: boolean
+	/** Which quantity the x axis shows. 'fold_change' is the difference of M-values (a logit);
+	 * 'delta_beta' is the difference in average beta, i.e. how much methylation actually changed,
+	 * on the 0-1 scale the biology is discussed in. Both are case minus control, so the sign and
+	 * the ordering agree — only the units differ. */
+	xAxis: 'fold_change' | 'delta_beta'
+	/** Effect-size cutoff applied when xAxis is 'delta_beta'. Kept separate from
+	 * foldChangeCutoff because the two are not interchangeable: 0.3 is a modest logit shift but
+	 * a 30-percentage-point methylation change, which almost nothing clears. */
+	deltaBetaCutoff: number
 }
 
 export type SCCTVolcanoSettings = DefaultVolcanoSettings & {}

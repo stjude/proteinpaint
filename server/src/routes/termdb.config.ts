@@ -403,6 +403,13 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		   client/mass/groups.js gates on queries.dnaMethylation.promoter, so an
 		   elements-only dataset would otherwise hide differential methylation
 		   entirely -- the analysis would be configured and unreachable. */
+		/* Which class the client should start on. Only emitted when it names a configured entry,
+		so a stale or mistyped key cannot leave the plot defaulting to a class the dataset does not
+		serve -- it silently falls back to 'promoter' instead. */
+		const dEl = q.dnaMethylation.defaultElementType
+		if (dEl && (q.dnaMethylation.elements?.[dEl]?.file || (dEl == 'promoter' && q.dnaMethylation.promoter?.file))) {
+			q2.dnaMethylation.defaultElementType = dEl
+		}
 		const elements = q.dnaMethylation.elements
 		if (elements && Object.keys(elements).length) {
 			q2.dnaMethylation.elementTypes = Object.entries<any>(elements)

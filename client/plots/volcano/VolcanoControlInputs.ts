@@ -246,6 +246,29 @@ export class VolcanoControlInputs {
 					'Drop chrX/chrY promoters. Recommended for mixed-sex cohorts — X-inactivation makes chrX methylation strongly sex-dependent, so a sex-imbalanced comparison reports sex rather than the grouping variable.'
 			},
 			{
+				label: 'X axis',
+				type: 'radio',
+				chartType: 'volcano',
+				settingsKey: 'xAxis',
+				options: [
+					{ label: 'log₂(fold-change)', value: 'fold_change' },
+					{ label: 'Δβ', value: 'delta_beta' }
+				],
+				title:
+					'What the x axis plots. log₂(fold-change) is the difference of M-values — what the model tests on, but a logit, so its magnitude does not say how much methylation changed. Δβ is the difference in average beta: the actual change on the 0–1 scale. Both are case minus control, so the sign and the ranking are the same; only the units differ. Switching also switches the effect-size cutoff to the matching setting, since a threshold in the wrong units would not correspond to the line drawn.'
+			},
+			{
+				label: 'Min Δβ',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'deltaBetaCutoff',
+				title:
+					'Effect-size cutoff used when the x axis shows Δβ. 0.1 is a 10-percentage-point change in methylation, the conventional floor for calling a region differentially methylated. Kept separate from the log₂ cutoff because the two are not interchangeable.',
+				min: 0,
+				max: 1,
+				step: 0.01
+			},
+			{
 				label: 'Paired by patient',
 				type: 'checkbox',
 				chartType: 'volcano',

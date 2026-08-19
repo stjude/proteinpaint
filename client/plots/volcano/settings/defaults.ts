@@ -31,7 +31,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 	} satisfies DefaultVolcanoSettings
 
 	addGEDefaults(opts.termType, defaults)
-	addDMDefaults(opts.termType, defaults)
+	addDMDefaults(opts.termType, defaults, opts)
 
 	return Object.assign(defaults, overrides)
 }
@@ -49,7 +49,7 @@ function addGEDefaults(termType: string, defaults: Partial<GEVolcanoSettings>) {
 	defaults.rankBy = 'abs(foldChange)'
 }
 
-function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>) {
+function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, opts?: any) {
 	if (termType != tt.DNA_METHYLATION) return
 	defaults.minSamplesPerGroup = 3
 	// Off by default so existing analyses are unchanged and chrX remains usable as a
@@ -62,13 +62,23 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>) {
 	// Off by default like the other two, and additionally because it is the slowest of the
 	// three -- arrayWeights runs an iterative REML fit over the whole matrix.
 	defaults.arrayWeights = false
-	// Promoters stay the default element class. The server resolves an absent or
-	// 'promoter' element_type to the legacy single-matrix config, so this default
-	// reproduces existing behaviour exactly for datasets that declare no elements map.
-	defaults.elementType = 'promoter'
+	/* Starting element class comes from the dataset when it names one, otherwise 'promoter'.
+	The server resolves an absent or 'promoter' element_type to the legacy single-matrix config,
+	so the fallback reproduces existing behaviour exactly for datasets declaring no elements map.
+	A dataset offering several classes can lead with the one it prefers -- MMRF starts on the
+	ENCODE cCRE promoter-like elements rather than the wider TSS windows. */
+	defaults.elementType = opts?.app?.vocabApi?.termdbConfig?.queries?.dnaMethylation?.defaultElementType || 'promoter'
 	// Off by default: pairing changes the design matrix, and on a cohort whose two groups
 	// hold different patients it removes every sample rather than adding power.
 	defaults.pairByParent = false
+	// M-value fold change stays the default axis: it is what the model tests on, so the plot
+	// matches the statistics unless the user asks otherwise.
+	defaults.xAxis = 'fold_change'
+	/* 0.1 = a 10-percentage-point change in methylation, the conventional biological-significance
+	floor for a DMR, and roughly where this cohort's hits start being interpretable. Deliberately
+	not 0.3: that is the log2FC default and would be a 30-point shift here, which almost nothing
+	clears. */
+	defaults.deltaBetaCutoff = 0.1
 }
 
 /*********** Setting Validation Functions ***********

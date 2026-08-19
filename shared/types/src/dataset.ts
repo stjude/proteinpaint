@@ -1365,6 +1365,14 @@ type Mds3Queries = {
 		 * user is pointing at. Ignored when a CpG-level .file is present, since that serves
 		 * terms itself. */
 		elementForTerms?: string
+		/** Which `elements` key differential methylation starts on. Defaults to 'promoter', the
+		 * legacy single-matrix behaviour, so a dataset that declares nothing here is unchanged.
+		 *
+		 * Set it when the dataset's best default is not the legacy promoter matrix — e.g. a cohort
+		 * offering both TSS-window promoters and the stricter ENCODE cCRE promoter-like elements,
+		 * where the cCRE definition is the one to lead with. The client uses this as the initial
+		 * element_type; the user can still switch classes in the picker. */
+		defaultElementType?: string
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene
