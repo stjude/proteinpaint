@@ -188,13 +188,15 @@ function init({ genomes }) {
 				return
 			}
 
-			if (req.params.action == 'genecounts') {
-				// per-cell counts of one gene from a 10x cell_feature_matrix HDF5
-				// (?file= relative to tpmasterdir, ?gene= gene name); python answers
-				// {cells:{cell_id:count},max} or {error} when the gene is absent
+			if (req.params.action == 'genecounts' || req.params.action == 'genenames') {
+				// both actions read the 10x cell_feature_matrix HDF5 (?file= relative
+				// to tpmasterdir). genecounts (+ ?gene=) answers per-cell counts of
+				// one gene: {cells:{cell_id:count},max} or {error} when the gene is
+				// absent; genenames answers {genes:[...]} — every gene in the file,
+				// letting the client discover/validate genes instead of trusting config
 				const file = String(q.file || '') // tpmasterdir-relative h5 path
 				if (!file.toLowerCase().endsWith('.h5')) {
-					// only hdf5 files may be queried by this action
+					// only hdf5 files may be queried by these actions
 					res.status(400).send({ status: 'error', error: 'gene expression file must be a .h5' })
 					return
 				}
@@ -204,11 +206,12 @@ function init({ genomes }) {
 					res.status(400).send({ status: 'error', error: 'gene expression path escapes the slide folder' })
 					return
 				}
-				// hand the h5 + gene to python; its stdout is the JSON answer
-				const out = await run_python(
-					'wsi_tile.py',
-					JSON.stringify({ action: 'genecounts', h5: full, gene: String(q.gene || '') })
-				)
+				// hand the h5 (+ gene for genecounts) to python; its stdout is the JSON answer
+				const job =
+					req.params.action == 'genecounts'
+						? { action: 'genecounts', h5: full, gene: String(q.gene || '') }
+						: { action: 'genenames', h5: full }
+				const out = await run_python('wsi_tile.py', JSON.stringify(job))
 				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim
 				return
 			}

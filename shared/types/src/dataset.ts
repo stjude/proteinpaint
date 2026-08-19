@@ -1336,8 +1336,11 @@ type Mds3Queries = {
 		nucleusBoundariesFileSuffix?: string
 		/** suffix of the 10x cell feature matrix HDF5 */
 		geneExpressionFileSuffix?: string
-		/** default comma-separated gene(s) overlaid on spatial images; the viewer's
-		 * burger menu is seeded with this and can override it */
+		/** optional override for the spatial viewer's default gene overlay
+		 * (comma-separated). Gene names are discovered from the expression h5 at
+		 * runtime; this value is filtered to genes actually present there, and
+		 * when absent (or naming only absent genes) the file's first gene is the
+		 * default. The burger menu can always override it. */
 		geneExpression?: string
 		/** default: show boundary strokes only in the n most zoomed-in levels */
 		annotationLevel?: number
