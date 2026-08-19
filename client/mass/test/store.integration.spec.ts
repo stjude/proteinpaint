@@ -47,6 +47,12 @@ function getCustomGsQ(groupNames: string[]) {
 	}
 }
 
+/* a plot config as it is once getPlotConfig() has filled its tws, reduced to the tw that
+seedGvQCache() walks it for */
+function getGvPlot(gene: string, groupNames: string[], q?: any) {
+	return { chartType: 'summary', term: { term: getGvTerm(gene), q: q || getCustomGsQ(groupNames) } }
+}
+
 function rememberGvQ(store, gene: string, groupNames: string[], q?: any) {
 	store.actions.remember_gvq.call(store, {
 		type: 'remember_gvq',
@@ -175,5 +181,70 @@ tape('remembered geneVariant settings are bounded', async test => {
 	test.equal(keys.length, 30, 'keeps at most 30 genes')
 	test.equal(keys.includes('BCR'), false, 'evicts the least recently used gene')
 	test.equal(keys.includes('GENE39'), true, 'keeps the most recently used gene')
+	test.end()
+})
+
+tape('seedGvQCache remembers the geneVariant settings that opened plots carry', async test => {
+	const store = await getStore()
+	store.state.plots = [
+		getGvPlot('BCR', ['BCR-ABL1 fusion', 'Others']),
+		// a tw nested deeper than plot.term, as in a matrix termgroup
+		{
+			chartType: 'matrix',
+			termgroups: [{ lst: [{ term: getGvTerm('KRAS'), q: getCustomGsQ(['KRAS G12D', 'Wildtype']) }] }]
+		},
+		// not a setting of its own, see isCustomizedGvQ()
+		getGvPlot('TP53', [], { type: 'predefined-groupset', predefined_groupset_idx: 0 })
+	]
+	store.seedGvQCache()
+
+	const cache = store.state.reuse.gvQByGene
+	test.deepEqual(Object.keys(cache), ['BCR', 'KRAS'], 'seeds a gene per plot tw that carries a setting')
+	test.equal(cache.BCR[0].label, 'BCR-ABL1 fusion / Others', 'labels a seeded entry by its groups')
+	test.equal('isAtomic' in cache.KRAS[0].q, false, 'stores a trimmed q')
+	test.deepEqual(
+		cache.KRAS[0].q.customset.groups.map(g => g.name),
+		['KRAS G12D', 'Wildtype'],
+		'stores the groups of a tw that a plot carries'
+	)
+	test.equal('TP53' in cache, false, 'ignores a q that picking the gene again would produce')
+	test.end()
+})
+
+tape('seeded geneVariant settings follow the remembered ones', async test => {
+	const store = await getStore()
+	// a setting built by hand in this app, or one that a recovered session carries
+	rememberGvQ(store, 'BCR', ['BCR-JAK2 fusion', 'Others'])
+	store.state.plots = [
+		getGvPlot('BCR', ['BCR-ABL1 fusion', 'Others']),
+		getGvPlot('BCR', ['BCR-JAK2 fusion', 'Others']), // already remembered
+		getGvPlot('BCR', ['BCR-PDGFRA fusion', 'Others'])
+	]
+	store.seedGvQCache()
+
+	test.deepEqual(
+		store.state.reuse.gvQByGene.BCR.map(entry => entry.label),
+		['BCR-JAK2 fusion / Others', 'BCR-ABL1 fusion / Others', 'BCR-PDGFRA fusion / Others'],
+		'appends the seeded settings in plot order, behind a remembered one that is not stored twice'
+	)
+	test.end()
+})
+
+tape('seeding never evicts a remembered geneVariant setting', async test => {
+	const store = await getStore()
+	for (let i = 0; i < 5; i++) rememberGvQ(store, 'BCR', [`group ${i}`, 'Others'])
+	for (let i = 0; i < 29; i++) rememberGvQ(store, `GENE${i}`, ['mutated', 'Others'])
+	store.state.plots = [getGvPlot('BCR', ['seeded', 'Others']), getGvPlot('NEWGENE', ['seeded', 'Others'])]
+	store.seedGvQCache()
+
+	const cache = store.state.reuse.gvQByGene
+	test.equal(cache.BCR.length, 5, 'keeps at most 5 settings per gene')
+	test.equal(
+		cache.BCR.some(entry => entry.label == 'seeded / Others'),
+		false,
+		'drops a seeded setting rather than a remembered one'
+	)
+	test.equal(Object.keys(cache).length, 30, 'keeps at most 30 genes')
+	test.equal('NEWGENE' in cache, false, 'drops a seeded gene rather than a remembered one')
 	test.end()
 })
