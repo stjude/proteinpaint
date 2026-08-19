@@ -44,6 +44,7 @@ tape('multi-site: SC line + POC columns + zones render', function (test) {
 	renderResponseDistribution({
 		holder,
 		id: 'test-multi',
+		groupLabel: 'Clinicians',
 		maxScore: 10,
 		// reference mock-up SC + POC counts
 		scDistribution: dist([1, 5, 4, 5, 6, 7, 11, 8, 1, 1]),
@@ -68,6 +69,7 @@ tape('single-site SC (total = 1): a point, no line', function (test) {
 	renderResponseDistribution({
 		holder,
 		id: 'test-single',
+		groupLabel: 'Clinicians',
 		maxScore: 10,
 		scDistribution: dist([0, 0, 0, 0, 0, 0, 1, 0, 0, 0]), // one SC response at rating 7
 		pocDistribution: dist([2, 3, 5, 8, 9, 7, 6, 4, 1, 0]),

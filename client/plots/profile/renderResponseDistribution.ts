@@ -30,6 +30,10 @@ export type ResponseDistributionArgs = {
 	// d3 selection of the div that will hold this chart's own <svg> (inside profilePlot.dom.rightDiv).
 	holder: any
 	id: any
+	// This chart's responder group, e.g. 'Clinicians'. Suffixes the svg's data-testid so a module's
+	// groups are told apart within a plot; queries still scope to the card, since a comparison plot
+	// renders a second card for the same group.
+	groupLabel: string
 	maxScore: number
 	// Shared SC frequency distribution (site counts per rating) — the line series.
 	scDistribution: RatingBin[]
@@ -66,9 +70,10 @@ export function renderResponseDistribution(a: ResponseDistributionArgs) {
 
 	const svgW = MARGIN.left + PLOT_W + MARGIN.right
 	const svgH = MARGIN.top + PLOT_H + MARGIN.bottom // the legend is the card's, not this chart's
+	// Suffixed with the responder group so a module's groups are told apart within a plot.
 	const svg = a.holder
 		.append('svg')
-		.attr('data-testid', 'sjpp-profileForms-distribution')
+		.attr('data-testid', `sjpp-profileForms-distribution-${a.groupLabel.toLowerCase().replace(/\s/g, '-')}`)
 		.attr('width', svgW)
 		.attr('height', svgH)
 	const plot = svg.append('g').attr('transform', `translate(${MARGIN.left}, ${MARGIN.top})`)

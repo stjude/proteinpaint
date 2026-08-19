@@ -65,6 +65,10 @@ export type ImpressionThermometerArgs = {
 	holder: Div
 	// Unique per rendered thermometer (one per responder group); prefixes this svg's defs ids.
 	id: string
+	// This chart's responder group, e.g. 'Clinicians'. Suffixes the svg's data-testid so a module's
+	// groups are told apart within a plot; queries still scope to the card, since a comparison plot
+	// renders a second card for the same group.
+	groupLabel: string
 	// Shared SC median across eligible sites + the site count (n) — the left (module-color) fill.
 	sc: { median: number | null; total: number }
 	// This group's POC median/total, or null for SC-only modules — the right (grey) fill.
@@ -221,9 +225,10 @@ export function renderImpressionThermometer(a: ImpressionThermometerArgs) {
 	const pocMedian: number | null = a.poc?.median ?? null
 	const pocTotal: number = a.poc?.total || 0
 
+	// Suffixed with the responder group so a module's groups are told apart within a plot.
 	const svg = a.holder
 		.append('svg')
-		.attr('data-testid', 'sjpp-profileForms-thermometer')
+		.attr('data-testid', `sjpp-profileForms-thermometer-${a.groupLabel.toLowerCase().replace(/\s/g, '-')}`)
 		.attr('width', SVG_W)
 		.attr('height', SVG_H)
 	const root = svg.append('g')
