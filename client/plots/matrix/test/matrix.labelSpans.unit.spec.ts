@@ -378,7 +378,7 @@ tape('renderLabelSpans() btm direction', test => {
 
 	// spans and ancestor labels are rendered below the sample labels (greater y)
 	assertSpanYpositions(test, g, relatedSamplesByAncestorId, 'btm')
-	if (test._ok) svg.remove()
+	if ((test as any)._ok) svg.remove()
 	test.end()
 })
 
@@ -412,7 +412,7 @@ tape(`renderLabelSpans({direction: 'top')`, test => {
 
 	// spans and ancestor labels are rendered above the sample labels (lesser y)
 	assertSpanYpositions(test, g, relatedSamplesByAncestorId, 'top')
-	if (test._ok) svg.remove()
+	if ((test as any)._ok) svg.remove()
 	test.end()
 })
 
@@ -501,6 +501,6 @@ tape('renderLabelSpans() sizes the span by the real column pitch, not colw', tes
 		colw * (rows.length - 1) + 1,
 		'span line should not be sized by colw when the real pitch is larger'
 	)
-	if (test._ok) svg.remove()
+	if ((test as any)._ok) svg.remove()
 	test.end()
 })
