@@ -1,6 +1,6 @@
 import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI, table2col } from '#dom'
 import type { VocabApi } from '#types'
-import { dtTerms, dtcnv } from '#shared/common.js'
+import { dtTerms, dtcnv, dtsnvindel } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
 import { mayShowRememberedGvQ } from './rememberedGvQ.ts'
 
@@ -59,9 +59,12 @@ export class SearchHandler {
 		const mutationTypeTerms = structuredClone(this.term.childTerms)
 		// add in bi/mono-allelic mutation type, if applicable
 		if (isEligibleForAllelicGroupset(this.term, this.opts.app.vocabApi))
-			mutationTypeTerms.push({ name: 'Bi/mono-allelic' })
+			/* unlike the child dt terms above, this one spans two dts, so it declares them rather
+			than carrying a single .dt -- the same way its groupset does, see
+			listPredefinedGroupsets() in client/tw/geneVariant.ts. Read by mayShowRememberedQ() */
+			mutationTypeTerms.push({ name: 'Bi/mono-allelic', dts: [dtsnvindel, dtcnv] })
 
-		// kept to name the selected mutation type in mayShowRememberedQ()
+		// kept to name and match the selected mutation type in mayShowRememberedQ()
 		this.mutationTypeTerms = mutationTypeTerms
 
 		// get index of mutation type term to select in mutation type radios
@@ -268,15 +271,20 @@ export class SearchHandler {
 
 	Only offered where the q of the selected term reaches the consumer, see keepsQ in
 	client/termdb/TermTypeSearch.ts.
+
+	The selected mutation type is handed over as well, so that a setting built for that same
+	mutation type leads the options rather than the way to continue with it, see there.
 	*/
 	mayShowRememberedQ(): boolean {
 		if (!this.opts.keepsQ) return false
 		const idx = Number(this.mutationTypeRadio.inputs.nodes().find(r => r.checked).value)
+		const mutationType = this.mutationTypeTerms[idx]
 		const shown = mayShowRememberedGvQ({
 			holder: this.dom.reuseDiv,
 			vocabApi: this.opts.app.vocabApi,
 			term: this.term,
-			skipLabel: `Continue with ${this.mutationTypeTerms[idx].name}`,
+			mutationType,
+			skipLabel: `Continue with ${mutationType.name}`,
 			callback: async q => (q ? await this.applyRememberedQ(q) : await this.applyMutationType())
 		})
 		/* a caller's message tells the user what picking a gene does, e.g. "Hit ENTER to launch

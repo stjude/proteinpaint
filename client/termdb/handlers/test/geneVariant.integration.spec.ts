@@ -1,6 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { SearchHandler } from '../geneVariant.ts'
+import { dtsnvindel } from '#shared/common.js'
 import { hg38 } from '../../../test/testdata/genomes'
 import { sleep } from '../../../test/test.helpers.js'
 import { vocabInit } from '../../vocabulary'
@@ -13,6 +14,8 @@ Tests:
     Gene set input
 	Gene set input - custom name
 	Remembered settings are offered for the picked gene
+	Remembered settings are applied on Enter
+	Remembered settings of another mutation type do not lead
 	Remembered settings are not offered where the q would be dropped
 */
 
@@ -205,9 +208,30 @@ function getVocabApiWithRememberedQ(lst) {
 	return Object.assign(Object.create(vocabApi), { getGvQLst: () => structuredClone(lst) })
 }
 
+/* a grouping of the first mutation type of this dataset, SNV/indel (somatic), as it is
+remembered: a customset whose group filter carries the dt term of each tvs */
+function getRememberedQ(name) {
+	return {
+		type: 'custom-groupset',
+		customset: {
+			groups: [
+				{
+					name,
+					filter: {
+						type: 'tvslst',
+						join: '',
+						in: true,
+						lst: [{ type: 'tvs', tvs: { term: { id: 'snvindel_somatic', dt: dtsnvindel, origin: 'somatic' } } }]
+					}
+				}
+			]
+		}
+	}
+}
+
 const rememberedLst = [
-	{ label: 'TP53 missense', q: { type: 'custom-groupset', customset: { groups: [{ name: 'TP53 missense' }] } } },
-	{ label: 'TP53 truncating', q: { type: 'custom-groupset', customset: { groups: [{ name: 'TP53 truncating' }] } } }
+	{ label: 'TP53 missense', q: getRememberedQ('TP53 missense') },
+	{ label: 'TP53 truncating', q: getRememberedQ('TP53 truncating') }
 ]
 
 async function pickGene(holder, gene = 'TP53') {
@@ -298,6 +322,39 @@ tape('Remembered settings are applied on Enter', async test => {
 		true,
 		'should clear the offered settings once one is applied'
 	)
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Remembered settings of another mutation type do not lead', async test => {
+	let tw
+	const holder = getHolder()
+	await initializeSearchHandler({
+		holder,
+		callback: _tw => (tw = _tw),
+		vocabApi: getVocabApiWithRememberedQ(rememberedLst),
+		keepsQ: true
+	})
+	// the settings above group SNV/indel (somatic) variants, so select CNV instead
+	const cnvRadio: any = holder
+		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
+		.selectAll('input[type="radio"]')
+		.nodes()[2]
+	cnvRadio.click()
+	await pickGene(holder)
+
+	const options: any[] = holder.selectAll('.sja_menuoption').nodes()
+	test.deepEqual(
+		options.map((n: any) => n.textContent),
+		['Continue with CNV', 'TP53 missense', 'TP53 truncating'],
+		'should lead with the selected mutation type, followed by the settings of other mutation types'
+	)
+	test.equal(document.activeElement, options[0], 'should focus the way to continue with the mutation type')
+
+	options[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+	await sleep(100)
+	test.equal(tw?.q?.predefined_groupset_idx, 2, 'should continue with the selected mutation type on Enter')
+
 	if (test['_ok']) holder.remove()
 	test.end()
 })
