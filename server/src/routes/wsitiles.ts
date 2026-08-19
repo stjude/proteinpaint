@@ -22,7 +22,12 @@
 import type { RouteApi, RoutePayload } from '#types'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { readFile, unlink, copyFile, mkdir, stat } from 'fs/promises'
-import { existsSync } from 'fs'
+import { existsSync, statSync } from 'fs'
+
+/** slide formats accepted from the w2 wsiFolder root (matches the
+ wsiBySample listing) plus OME-TIFF, the spatial fallback when no
+ tiffFileSuffix is configured */
+const W2_SLIDE_EXT = /\.(svs|ome\.tiff?)$/i
 import { createHash } from 'crypto'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
@@ -82,18 +87,36 @@ function slidePath(genomes: any, q: any): string {
 		const w2 = ds.queries.w2
 		const w2sample = q.sample_id ?? q.sampleId
 		if (!w2sample) throw new Error('sample_id required with ds.queries.w2')
-		const roots =
-			q.imageType == 'spatial' ? [w2.folder] : q.imageType == 'wsi' ? [w2.wsiFolder] : [w2.folder, w2.wsiFolder]
+		// require the documented <imageName>/<slide file> shape: exactly two plain
+		// segments. Otherwise wsimage='.' would resolve to the sample directory
+		// itself, pass the existence check, and widen the companion-file scope
+		// (dirname of the slide) to a whole image root
+		const segs = path.normalize(String(wsimage)).split(path.sep)
+		if (segs.length != 2 || segs.some(s => !s || s == '.' || s == '..'))
+			throw new Error('wsimage must be <imageName>/<slide file>')
+		// the file must be the kind of slide its root serves
+		const isSpatialSlide = (f: string) => (w2.tiffFileSuffix ? f.endsWith(w2.tiffFileSuffix) : W2_SLIDE_EXT.test(f))
+		const isWsiSlide = (f: string) => W2_SLIDE_EXT.test(f)
+		const roots: Array<[string | undefined, (f: string) => boolean]> =
+			q.imageType == 'spatial'
+				? [[w2.folder, isSpatialSlide]]
+				: q.imageType == 'wsi'
+				? [[w2.wsiFolder, isWsiSlide]]
+				: [
+						[w2.folder, isSpatialSlide],
+						[w2.wsiFolder, isWsiSlide]
+				  ]
 		let full: string | undefined
-		for (const root of roots.filter(Boolean)) {
+		for (const [root, isSlide] of roots) {
+			if (!root || !isSlide(segs[1])) continue
 			const base = path.resolve(serverconfig.tpmasterdir, root)
 			// String(): numeric-looking sample names arrive as numbers from query parsing
-			const p = path.resolve(base, String(w2sample), wsimage)
+			const p = path.resolve(base, String(w2sample), segs[0], segs[1])
 			if (!p.startsWith(base + path.sep)) throw new Error('slide path escapes w2 folder')
 			full = p
-			if (existsSync(p)) return p
+			if (existsSync(p) && statSync(p).isFile()) return p
 		}
-		if (!full) throw new Error(`no ${q.imageType} root configured in ds.queries.w2`)
+		if (!full) throw new Error('wsimage is not a slide file of the requested image type')
 		return full // let downstream produce the not-found error for the last candidate
 	}
 
