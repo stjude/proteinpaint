@@ -2251,6 +2251,13 @@ type DtAssayAvailabilityByOrigin = {
 	}
 }
 
+type DtAssayAvailabilityBySampleType = {
+	bySampleType: {
+		/** each key is a sample type */
+		[index: number]: DtAssayAvailabilityTerm
+	}
+}
+
 /** assay availability can be set up as below, during server init it will query by assay dictionary terms to populate yes/no samples for each dt
 or as in gdc, it is entirely setup ad-hoc
 */
@@ -2258,7 +2265,7 @@ type Mds3AssayAvailability = {
 	/** object of key-value pairs. keys are dt values */
 	byDt: {
 		/** each index is a dt value */
-		[index: number]: DtAssayAvailabilityByOrigin | DtAssayAvailabilityTerm
+		[index: number]: DtAssayAvailabilityByOrigin | DtAssayAvailabilityBySampleType | DtAssayAvailabilityTerm
 	}
 }
 
@@ -2269,7 +2276,7 @@ type Mds3AssayAvailabilityGet = {
 	/** object of key-value pairs. keys are dt values */
 	byDt?: {
 		/** each index is a dt value */
-		[index: number]: DtAssayAvailabilityByOrigin | DtAssayAvailabilityTerm
+		[index: number]: DtAssayAvailabilityByOrigin | DtAssayAvailabilityBySampleType | DtAssayAvailabilityTerm
 	}
 }
 

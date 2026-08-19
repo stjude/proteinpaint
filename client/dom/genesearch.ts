@@ -106,7 +106,7 @@ type GeneSearchBoxArg = {
 	 */
 	termdbConfig?: {
 		hasSampleAncestry?: boolean
-		sampleTypes?: { [key: number]: { name: string; plural_name: string; parent_id: number | null } }
+		sampleTypes?: SampleTypeConfig
 	}
 	/** if true, allow user to type in a sequence mutation
 	partial support of hgvs https://varnomen.hgvs.org/recommendations/DNA/
@@ -141,6 +141,10 @@ type GeneSearchBoxArg = {
 		parse to chr5.171410539.-.TCTG
 	*/
 	allowVariant?: boolean
+}
+
+type SampleTypeConfig = {
+	[key: number]: { name: string; plural_name: string; parent_id: number | null }
 }
 
 /** "start/stop" are included when entered a coordinate or the coord is mapped from a gene/snp */
@@ -222,32 +226,34 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	}
 
 	if (arg.termdbConfig?.hasSampleAncestry) {
-		// dataset has sample ancestry
-		// genomic data are assumed to be annotated for child sample types (diagnosis, relapse, PDX, etc.)
-		// if multiple child sample types are present, then display menu for selecting which to query
-		const childSampleTypes = {}
+		// dataset has sample ancestry, display menu for selecting sample type to query
+		// will assume that genomic data are only annotated for non-root/child sample types (e.g. diagnosis, relapse, PDX etc.)
+		// so display menu if multiple child sample types are defined
+		if (!arg.termdbConfig.sampleTypes) throw new Error('sampleTypes{} is missing')
+		const childSampleTypes: SampleTypeConfig = {}
 		for (const [k, v] of Object.entries(arg.termdbConfig.sampleTypes)) {
 			if (Number.isInteger(v.parent_id)) childSampleTypes[k] = v
 		}
-		if (Object.keys(childSampleTypes).length < 2) return
-		sampleTypeSelect = row
-			.append('select')
-			.attr('class', 'sjpp-genesearch-sampletype-select')
-			.style('margin-right', '8px')
-		sampleTypeSelect
-			.append('option')
-			.attr('value', '')
-			.attr('disabled', true)
-			.attr('selected', true)
-			.text('Sample type')
-		for (const [k, v] of Object.entries(childSampleTypes)) {
-			sampleTypeSelect.append('option').attr('value', k).text(v.name)
+		if (Object.keys(childSampleTypes).length > 1) {
+			sampleTypeSelect = row
+				.append('select')
+				.attr('class', 'sjpp-genesearch-sampletype-select')
+				.style('margin-right', '8px')
+			sampleTypeSelect
+				.append('option')
+				.attr('value', '')
+				.attr('disabled', true)
+				.attr('selected', true)
+				.text('Sample type')
+			for (const [k, v] of Object.entries(childSampleTypes)) {
+				sampleTypeSelect.append('option').attr('value', k).text(v.name)
+			}
+			// initialise result with the selected option
+			sampleType = sampleTypeSelect.property('value')
+			sampleTypeSelect.on('change', function (this: HTMLSelectElement) {
+				sampleType = this.value
+			})
 		}
-		// initialise result with the selected option
-		sampleType = sampleTypeSelect.property('value')
-		sampleTypeSelect.on('change', function (this: HTMLSelectElement) {
-			sampleType = this.value
-		})
 	}
 
 	const searchbox = row
