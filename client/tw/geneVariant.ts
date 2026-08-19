@@ -54,8 +54,14 @@ export class GvBase extends TwBase {
 
 		if (opts.defaultQ != null) {
 			opts.defaultQ.isAtomic = true
-			// merge defaultQ into tw.q
-			copyMerge(tw.q, opts.defaultQ)
+			/* merge defaultQ into tw.q, except for a q.type that the caller already set, which
+			is a decision and not a gap for a default to fill. Without this, handing a filled q
+			to a pill converts it to whatever that pill defaults to: a remembered custom groupset
+			passed to a summary term2 becomes a predefined groupset, since getT0T2defaultQ() in
+			client/plots/summaryQ.ts declares one (see mayShowRememberedQ() in
+			client/termdb/handlers/geneVariant.ts) */
+			const defaultQ = tw.q?.type ? { ...opts.defaultQ, type: tw.q.type } : opts.defaultQ
+			copyMerge(tw.q, defaultQ)
 		}
 
 		if (!tw.term.genes?.length) {

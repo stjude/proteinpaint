@@ -26,6 +26,7 @@ Tests:
 	samplelst term
 	geneVariant term
 	geneVariant term: turning off grouping clears q.dtLst
+	geneVariant term: reuse a remembered setting from the pill menu
 
  */
 
@@ -1402,6 +1403,74 @@ tape('geneVariant term: turning off grouping clears q.dtLst', async test => {
 	test.equal(opts.tsData.q.type, 'values', 'q.type should be values')
 	test.equal('dtLst' in opts.tsData.q, false, 'q.dtLst should be deleted')
 	test.equal('predefined_groupset_idx' in opts.tsData.q, false, 'q.predefined_groupset_idx should be deleted')
+
+	if (test._ok) opts.pill.destroy()
+	test.end()
+})
+
+tape('geneVariant term: reuse a remembered setting from the pill menu', async test => {
+	const opts = await getOpts({ tsData: structuredClone(geneVariantTw) })
+	await opts.pill.main(opts.tsData)
+
+	/* a setting the user built earlier for this gene, shaped as vocabApi.getGvQLst() returns
+	one in a mass app, see remember_gvq() in client/mass/store.ts. The parent term of the tvs
+	is absent, as it is in a remembered q, and GvCustomGS.fill() re-attaches it */
+	const dtTerm = structuredClone(geneVariantTw.term.childTerms[0])
+	delete dtTerm.parentTerm
+	const remembered = {
+		label: 'TP53 missense',
+		q: {
+			type: 'custom-groupset',
+			customset: {
+				groups: [
+					{
+						name: 'TP53 missense',
+						type: 'filter',
+						filter: {
+							type: 'tvslst',
+							in: true,
+							join: '',
+							lst: [{ type: 'tvs', tvs: { term: dtTerm, values: [{ key: 'M', label: 'MISSENSE' }] } }]
+						}
+					}
+				]
+			}
+		}
+	}
+	// only the mass store remembers these, so the pill's vocabApi supplies them here
+	opts.pill.Inner.vocabApi.getGvQLst = () => [structuredClone(remembered)]
+
+	const pill = opts.holder.select('.ts_pill')
+	pill.node().click()
+	const tip = opts.pill.Inner.dom.tip
+	const menuOptions = tip.d.selectAll('.sja_menuoption.sja_sharp_border')
+	test.equal(menuOptions.size(), 7, 'Should add one menu option for the remembered setting')
+	const reuseOption = menuOptions.nodes().find(o => o.textContent == 'Reuse: TP53 missense')
+	test.ok(reuseOption, 'Should label the option by the remembered setting')
+
+	reuseOption.click()
+	await sleep(300)
+	test.equal(opts.tsData.q.type, 'custom-groupset', 'Should apply the remembered q')
+	test.deepEqual(
+		opts.tsData.q.customset.groups.map(g => g.name),
+		['TP53 missense'],
+		'Should apply the groups the user had built'
+	)
+	test.equal(
+		opts.tsData.q.customset.groups[0].filter.lst[0].tvs.term.parentTerm?.name,
+		'TP53',
+		'Should re-attach the parent term that a remembered q does not carry'
+	)
+	test.equal(opts.holder.select('.ts_summary_btn').text(), 'Divided into 1 groups', 'Should update the pill')
+
+	// the setting now in use is not offered back
+	pill.node().click()
+	const optionsInUse = tip.d.selectAll('.sja_menuoption.sja_sharp_border')
+	test.equal(
+		optionsInUse.nodes().find(o => o.textContent.startsWith('Reuse:')),
+		undefined,
+		'Should not offer the setting that the pill already uses'
+	)
 
 	if (test._ok) opts.pill.destroy()
 	test.end()

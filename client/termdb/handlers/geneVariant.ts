@@ -11,6 +11,9 @@ type Opts = {
 	genomeObj: any
 	dt?: number // dt to search, if missing will use first available dt in ds
 	msg?: string // message to be displayed below search bar
+	/** true when the consumer keeps the q of the selected term, see SearchHandlerOpts in
+	 * client/termdb/TermTypeSearch.ts. Remembered settings are only offered when it does */
+	keepsQ?: boolean
 	callback: (tw: any) => Promise<void>
 }
 
@@ -18,6 +21,7 @@ export class SearchHandler {
 	opts: any
 	dom: any
 	mutationTypeRadio: any
+	mutationTypeTerms!: any[]
 	inputTypeRadio: any
 	term: any // tw.term
 	q: any // tw.q
@@ -37,6 +41,8 @@ export class SearchHandler {
 			.append('div')
 			.attr('data-testid', 'sjpp-genevariant-geneSearchDiv')
 			.style('padding-left', '3px')
+		// settings remembered for the gene(s) just picked, filled in by mayShowRememberedQ()
+		this.dom.reuseDiv = opts.holder.append('div').style('display', 'none').style('margin-top', '10px')
 		this.dom.msgDiv = opts.holder
 			.append('div')
 			.style('display', 'none')
@@ -53,6 +59,9 @@ export class SearchHandler {
 		// add in bi/mono-allelic mutation type, if applicable
 		if (isEligibleForAllelicGroupset(this.term, this.opts.app.vocabApi))
 			mutationTypeTerms.push({ name: 'Bi/mono-allelic' })
+
+		// kept to name the selected mutation type in mayShowRememberedQ()
+		this.mutationTypeTerms = mutationTypeTerms
 
 		// get index of mutation type term to select in mutation type radios
 		const mutationTypeTermIdx = opts.dt ? mutationTypeTerms.findIndex(t => t.dt == opts.dt) : 0
@@ -232,13 +241,72 @@ export class SearchHandler {
 	}
 
 	async runCallback() {
-		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
+		this.dom.reuseDiv.style('display', 'none').selectAll('*').remove()
 		// add parent geneVariant term to each child term now
 		// that gene(s) have been selected
 		addParentTerm(this.term)
+		// a setting the user built for this gene before is worth offering, and is only known
+		// once the gene is picked, so the selected mutation type is not applied until the user
+		// either picks one of those settings or skips them
+		if (this.mayShowRememberedQ()) return
+		await this.applyMutationType()
+	}
+
+	/*
+	Offer the settings the user built earlier for the gene(s) just picked, see remember_gvq()
+	in client/mass/store.ts. Returns true when the choices are rendered, so that runCallback()
+	waits for a click rather than applying the mutation type radio behind them.
+
+	Nothing is offered where the q would not survive the selection, see keepsQ in
+	client/termdb/TermTypeSearch.ts, nor outside a mass app, whose store is the only one that
+	remembers these.
+	*/
+	mayShowRememberedQ(): boolean {
+		if (!this.opts.keepsQ) return false
+		const lst = this.opts.app.vocabApi.getGvQLst?.(this.term) || []
+		if (!lst.length) return false
+
+		const div = this.dom.reuseDiv.style('display', 'block')
+		div
+			.append('div')
+			.style('margin-bottom', '5px')
+			.style('opacity', 0.65)
+			.style('font-size', '.9em')
+			.text(`Previously used for ${this.term.name}`)
+		for (const entry of lst) {
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('data-testid', 'sjpp-genevariant-rememberedQ')
+				.text(entry.label)
+				.on('click', async () => await this.applyRememberedQ(entry.q))
+		}
+		const idx = Number(this.mutationTypeRadio.inputs.nodes().find(r => r.checked).value)
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.style('margin-top', '8px')
+			.text(`Continue with ${this.mutationTypeTerms[idx].name}`)
+			.on('click', async () => await this.applyMutationType())
+		return true
+	}
+
+	/** apply the mutation type that the radios select, which is the default for a new term */
+	async applyMutationType() {
 		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
 		this.q.predefined_groupset_idx = Number(selectedMutationType.value)
-		await this.callback({ term: this.term, q: this.q })
+		await this.submit(this.q)
+	}
+
+	async applyRememberedQ(q) {
+		// copied, since the same entry may be picked again for another plot
+		await this.submit({ ...structuredClone(q), isAtomic: true })
+	}
+
+	async submit(q) {
+		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
+		await this.callback({ term: this.term, q })
+		this.dom.reuseDiv.style('display', 'none').selectAll('*').remove()
 		this.dom.msgDiv.style('display', 'none')
 	}
 }

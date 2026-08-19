@@ -443,7 +443,12 @@ export class TermTypeSearch {
 			callback: term => this.selectTerm(term),
 			details,
 			usecase,
-			termCollectionSelectionMode: this.termCollectionSelectionMode
+			termCollectionSelectionMode: this.termCollectionSelectionMode,
+			/* whether the q of the selected term reaches the consumer, so that a handler does
+			not offer a q that would be dropped on the way. Only click_term takes a whole tw,
+			see selectTerm() below: submit_lst keeps just the term, and the tvs path requires a
+			predefined groupset, see getDtTerm() */
+			keepsQ: !!this.click_term
 		})
 	}
 	//This callback will be called by the handlers when a term is selected
@@ -497,6 +502,8 @@ export type SearchHandlerOpts = {
 	details: any
 	usecase: { target: string; detail: string; [index: string]: any }
 	termCollectionSelectionMode?: 'fraction'
+	/** true when the consumer keeps the q of the selected term, not just its term{} */
+	keepsQ?: boolean
 }
 
 /*
