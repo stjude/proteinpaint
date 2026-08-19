@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+# UNUSED: nothing in this repo imports or invokes this file; the live chatbot
+# pipeline is server/src/chat/route.ts. Kept for reference only. The
+# langgraph/langchain-openai dependencies this was built on have been removed
+# from requirements.txt, so this will raise NameError on import as-is.
 import sys, os, json, httpx
 from typing import Optional, Literal, List
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
-from langchain_openai import ChatOpenAI
-from langgraph.graph import StateGraph, START, END
 
 # ──────────────────────────────────────────────────────────────────────────────
 # LLM setup (you need to set OPENAI_API_KEY as env variable)
