@@ -4,6 +4,7 @@ import { getNormalRoot } from '#filter/filter'
 import { NumericModes } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { importPlot } from '#plots/importPlot.js'
+import { capitalizeFirstLetter } from '#dom'
 
 class MassCharts {
 	static type = 'charts'
@@ -70,7 +71,7 @@ class MassCharts {
 		if (lst.includes('cox')) ms.push('cox')
 		if (ms.length > 1) return 'Regression Analysis' // more than 1 methods. return general name
 		// only 1 method
-		return `${ms[0] == 'linear' ? 'Linear' : ms[0] == 'cox' ? 'Cox' : 'Logistic'} Regression`
+		return `${capitalizeFirstLetter(ms[0])} Regression`
 	}
 	getBtnLabel_sampleScatter(state) {
 		// define button label
@@ -93,6 +94,13 @@ class MassCharts {
 		if (state.termdbConfig.queries.svfusion) t.push('Fusion')
 		// todo customize Diagnosis
 		return `${t.length > 2 ? 'Alterations' : t.join('/')} vs ${phrase}`
+	}
+	getBtnLabel_geneExpression(state){
+		const l: string[] = []
+		if (state.termdbConfig?.queries?.geneExpression) l.push('Gene Expression')
+		if (state.termdbConfig?.termType2terms?.Pseudobulk) l.push('Pseudobulk Gene Expression')
+		if (l.length > 1) return 'Gene Expression'
+		return l[0]
 	}
 }
 
@@ -294,14 +302,6 @@ function getChartTypeList(self, state) {
 			chartType: 'genomeBrowser',
 			clickTo: self.loadChartSpecificMenu
 		},
-
-		// Commenting out this button since DE does not work without specifying two groups
-		//{
-		//	label: 'Differential Expression',
-		//	chartType: 'DEanalysis',
-		//	clickTo: self.loadChartSpecificMenu
-		//},
-
 		{
 			label: 'Data Download',
 			clickTo: self.prepPlot,
@@ -336,13 +336,11 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			//This chart may be later on extended to support other gene expression data types
-			label: 'Gene Expression',
+			label: self.getBtnLabel_geneExpression(state),
 			chartType: 'GeneExpInput',
 			clickTo: self.prepPlot,
 			config: {
-				chartType: 'GeneExpInput',
-				termType: TermTypes.GENE_EXPRESSION
+				chartType: 'GeneExpInput'
 			}
 		},
 		{
@@ -502,7 +500,7 @@ function setRenderers(self) {
 			.style('border-radius', '20px')
 			.style('border-color', '#ededed')
 			.html(d => d.label)
-			.on('click', function (this: any, chart) {
+			.on('click', function (this, event, chart) {
 				self.dom.tip.clear().showunder(this)
 				chart.clickTo(chart, this)
 			})
