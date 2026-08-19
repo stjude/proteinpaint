@@ -687,10 +687,7 @@ export function maySetMapParent2Children(q, ds, mapParent2Children) {
 		q.mapParent2Children = false
 		q.sampleType = type
 	} else {
-		// multiple sample types, need to map parent to children
-		q.mapParent2Children = true
-		// map to the leaf sample type (i.e. sample type that is not
-		// a parent of any other sample type)
+		// multiple sample types
 		const config = {}
 		for (const type of types) {
 			config[type] = ds.cohort.termdb.sampleTypes[type]
@@ -701,10 +698,13 @@ export function maySetMapParent2Children(q, ds, mapParent2Children) {
 				.filter(Number.isInteger)
 		)
 		if (!parentTypes.size) throw 'parent sample types missing'
-		const leafTypes = types.filter(type => !parentTypes.has(type))
-		if (leafTypes.length != 1) throw 'should have a single leaf sample type'
-		// set the query sample type to be the leaf sample type
-		q.sampleType = leafTypes[0]
+		if (types.some(type => parentTypes.has(type))) {
+			// some query sample types are parents of others, so map parent to children
+			q.mapParent2Children = true
+			const childTypes = types.filter(type => !parentTypes.has(type))
+			if (childTypes.length != 1) throw 'should have a single child sample type'
+			q.sampleType = childTypes[0]
+		}
 	}
 }
 
