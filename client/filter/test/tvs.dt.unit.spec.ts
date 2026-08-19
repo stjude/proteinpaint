@@ -97,10 +97,10 @@ tape('getDtTermValues: classes and mnames, byOrigin', async test => {
 	test.deepEqual(
 		dtTerm.values,
 		{
-			M: { key: 'M', label: mclass.M.label },
-			F: { key: 'F', label: mclass.F.label }
+			M: { key: 'M', label: mclass.M.label, samplecount: 2 },
+			F: { key: 'F', label: mclass.F.label, samplecount: 1 }
 		},
-		'values should have somatic classes, excluding WT and Blank'
+		'values should have somatic classes with their sample counts, excluding WT and Blank'
 	)
 	test.deepEqual(
 		dtTerm.mnames,
@@ -119,8 +119,8 @@ tape('getDtTermValues: classes and mnames, no byOrigin', async test => {
 
 	test.deepEqual(
 		dtTerm.values,
-		{ M: { key: 'M', label: mclass.M.label } },
-		'values should have classes, excluding WT and Blank'
+		{ M: { key: 'M', label: mclass.M.label, samplecount: 2 } },
+		'values should have classes with their sample counts, excluding WT and Blank'
 	)
 	test.deepEqual(
 		dtTerm.mnames,
@@ -138,7 +138,11 @@ tape('getDtTermValues: response without mnames', async test => {
 	const dtTerm = getDtTerm()
 	await getDtTermValues(dtTerm, undefined, getVocabApi(categories), { withMnames: true })
 
-	test.deepEqual(dtTerm.values, { M: { key: 'M', label: mclass.M.label } }, 'values should still be filled')
+	test.deepEqual(
+		dtTerm.values,
+		{ M: { key: 'M', label: mclass.M.label, samplecount: 2 } },
+		'values should still be filled'
+	)
 	test.equal(dtTerm.mnames, undefined, 'mnames should be undefined when absent from response')
 	test.end()
 })
@@ -157,7 +161,11 @@ tape('getDtTermValues: mnames are opt-in', async test => {
 	const dtTerm = getDtTerm()
 	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesFlat))
 
-	test.deepEqual(dtTerm.values, { M: { key: 'M', label: mclass.M.label } }, 'values should be filled')
+	test.deepEqual(
+		dtTerm.values,
+		{ M: { key: 'M', label: mclass.M.label } },
+		'values should be filled, without the per-class sample count'
+	)
 	test.equal(
 		dtTerm.mnames,
 		undefined,

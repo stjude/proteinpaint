@@ -12,6 +12,8 @@ test sections:
     - callback
     - unselect values
     - preselected values
+	- class sample counts
+	- preserved class has no sample count
     - wildtype toggle
 	- not tested toggle
 	- no mutations
@@ -228,6 +230,84 @@ tape('preselected values', test => {
 	}
 
 	test.deepEqual(newConfig, expectedConfig, 'config should have 2 variants')
+
+	holder.remove()
+	test.end()
+})
+
+tape('class sample counts', test => {
+	const holder = select(document.body).append('div')
+	let newConfig: any
+
+	// a caller that supplies the per-class tally (see getDtTermValues in filter/tvs.dt.js)
+	renderVariantConfig({
+		holder,
+		values: {
+			M: { key: 'M', label: 'MISSENSE', samplecount: 5 },
+			F: { key: 'F', label: 'FRAMESHIFT', samplecount: 12 }
+		},
+		dt: 1,
+		callback: config => (newConfig = config)
+	})
+
+	const trs: any = holder.select('table').select('tbody').selectAll('tr').nodes()
+	const cellText = trs.map((tr: any) => [...tr.querySelectorAll('td')].slice(1).map((td: any) => td.textContent))
+	test.deepEqual(
+		cellText,
+		[
+			['FRAMESHIFT', '12'],
+			['MISSENSE', '5']
+		],
+		'each class should show its sample count, listed by descending count'
+	)
+	const countCells = holder.selectAll('[data-testid="sjpp-variantConfig-class-count"]').nodes() as HTMLElement[]
+	test.equal(countCells.length, 2, 'count cells should be flagged as counts')
+	test.equal(countCells[0].style.textAlign, 'right', 'counts should be right-aligned')
+
+	const applyBtn: any = holder.select('button').node()
+	applyBtn.click()
+	test.deepEqual(
+		newConfig.values,
+		[
+			{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
+			{ key: 'M', label: 'MISSENSE', value: 'M' }
+		],
+		'applied values should follow the displayed order and carry no sample count'
+	)
+
+	holder.remove()
+	test.end()
+})
+
+tape('preserved class has no sample count', test => {
+	const holder = select(document.body).append('div')
+
+	// the class of the selected variant is absent from the current data and is only
+	// listed to preserve the selection, so it cannot show a count of the tally
+	renderVariantConfig({
+		holder,
+		values: { F: { key: 'F', label: 'FRAMESHIFT', samplecount: 3 } },
+		mnames: [{ mname: 'K100fs', class: 'F', samplecount: 1 }],
+		selectedValues: [{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }],
+		dt: 1,
+		callback: () => {}
+	})
+
+	const classDiv = holder.select('[data-testid="sjpp-variantConfig-class"]')
+	const trs: any = classDiv.select('tbody').selectAll('tr').nodes()
+	const cellText = trs.map((tr: any) => [...tr.querySelectorAll('td')].slice(1).map((td: any) => td.textContent))
+	test.deepEqual(
+		cellText,
+		[
+			['FRAMESHIFT', '3'],
+			['MISSENSE', '0']
+		],
+		'the preserved class should show no samples, after the classes of the data'
+	)
+	test.ok(
+		trs[1].querySelector('[data-testid="sjpp-variantConfig-class-absent"]'),
+		'the preserved class should be flagged as absent from current data'
+	)
 
 	holder.remove()
 	test.end()
