@@ -10,12 +10,9 @@ function getSvg(_opts: { [key: string]: any } = {}) {
 	const defaultOpts = { direction: 'btm' }
 	const opts = { ...defaultOpts, ..._opts }
 
-	const g = select('body')
-		.append('svg')
-		.attr('width', 200)
-		.attr('height', 300)
-		.append('g')
-		.attr('transform', `translate(50,${opts.direction == 'btm' ? 0 : 150})`)
+	const svg = select('body').append('svg').attr('width', 200).attr('height', 300)
+
+	const g = svg.append('g').attr('transform', `translate(50,${opts.direction == 'btm' ? 0 : 150})`)
 
 	const relatedSamplesByAncestorId = new Map()
 
@@ -294,6 +291,7 @@ function getSvg(_opts: { [key: string]: any } = {}) {
 	renderLabelSpans(relatedSamplesByAncestorId, side, { colw: 16 })
 
 	return {
+		svg,
 		g,
 		relatedSamplesByAncestorId
 	}
@@ -351,7 +349,7 @@ function assertSpanYpositions(test, g, relatedSamplesByAncestorId, direction: st
 ***************/
 
 tape('renderLabelSpans() btm direction', test => {
-	const { g, relatedSamplesByAncestorId } = getSvg()
+	const { svg, g, relatedSamplesByAncestorId } = getSvg()
 
 	test.equal(
 		g.selectAll(SPANSELECTOR).selectAll('text').size(),
@@ -380,11 +378,12 @@ tape('renderLabelSpans() btm direction', test => {
 
 	// spans and ancestor labels are rendered below the sample labels (greater y)
 	assertSpanYpositions(test, g, relatedSamplesByAncestorId, 'btm')
+	if (test._ok) svg.remove()
 	test.end()
 })
 
 tape(`renderLabelSpans({direction: 'top')`, test => {
-	const { g, relatedSamplesByAncestorId } = getSvg({ direction: 'top' })
+	const { svg, g, relatedSamplesByAncestorId } = getSvg({ direction: 'top' })
 
 	test.equal(
 		g.selectAll(SPANSELECTOR).selectAll('text').size(),
@@ -413,6 +412,7 @@ tape(`renderLabelSpans({direction: 'top')`, test => {
 
 	// spans and ancestor labels are rendered above the sample labels (lesser y)
 	assertSpanYpositions(test, g, relatedSamplesByAncestorId, 'top')
+	if (test._ok) svg.remove()
 	test.end()
 })
 
@@ -457,7 +457,8 @@ tape('renderLabelSpans() sizes the span by the real column pitch, not colw', tes
 	// the last descendant instead of stopping short.
 	const dx = 20
 	const colw = 16
-	const g = select('body').append('svg').append('g')
+	const svg = select('body').append('svg')
+	const g = svg.append('g')
 	const relatedSamplesByAncestorId = new Map()
 
 	const rows = [0, 1, 2].map(i => ({
@@ -500,5 +501,6 @@ tape('renderLabelSpans() sizes the span by the real column pitch, not colw', tes
 		colw * (rows.length - 1) + 1,
 		'span line should not be sized by colw when the real pitch is larger'
 	)
+	if (test._ok) svg.remove()
 	test.end()
 })
