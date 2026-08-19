@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- support rendering matrix sample ancestor label and line spans across descendant sample labels
+
 
 ## 2.203.1
 
