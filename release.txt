@@ -1,1 +1,2 @@
-
+Fixes:
+- bump esbuild to 0.28.2 to resolve arbitrary file read alert
