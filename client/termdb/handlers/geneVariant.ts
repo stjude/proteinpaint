@@ -88,6 +88,8 @@ export class SearchHandler {
 					}),
 					callback: v => {
 						this.toggleGeneSetRadioDisplay(v)
+						// return focus to the gene search box so the user can type a gene right away
+						this.focusSearchbox()
 					}
 				})
 			}
@@ -158,7 +160,13 @@ export class SearchHandler {
 			searchOnly: 'gene',
 			callback: async () => await this.selectGene(geneSearch)
 		})
+		this.dom.searchbox = geneSearch.searchbox
 		this.dom.searchDiv.select('.sja_genesearchinput').style('margin', '0px')
+	}
+
+	/** focus on the search box of the current gene input (single gene or gene set) */
+	focusSearchbox() {
+		this.dom.searchbox?.node()?.focus()
 	}
 
 	async selectGene(geneSearch) {
@@ -206,7 +214,7 @@ export class SearchHandler {
 	searchGeneSet() {
 		this.dom.searchDiv.selectAll('*').remove()
 		this.dom.searchDiv.style('margin-top', '0px')
-		new GeneSetEditUI({
+		const ui = new GeneSetEditUI({
 			holder: this.dom.searchDiv.append('div'),
 			genome: this.opts.genomeObj,
 			vocabApi: this.opts.app.vocabApi,
@@ -214,6 +222,7 @@ export class SearchHandler {
 			maxNumGenes: this.maxNumGenes,
 			callback: async result => await this.selectGeneSet(result)
 		})
+		this.dom.searchbox = ui.geneSearch?.searchbox
 		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px').style('margin-top', '-10px')
 	}
 
