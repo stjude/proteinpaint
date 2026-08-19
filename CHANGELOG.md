@@ -8,6 +8,12 @@ Features:
 - support rendering matrix sample ancestor label and line spans across descendant sample labels
 - New input form for aggregate matrix. This input form will be expanded in later iterations to handle more term types and usecases.
 
+Fixes:
+- bump esbuild to 0.28.2 to resolve arbitrary file read alert
+- bump dompurify to 3.4.14 to resolve 2 dependabot alerts
+- bump js-yaml to 4.3.1 to resolve quadratic CPU DoS alert (#240)
+- bump postcss to 8.5.26 to resolve 2 dependabot alerts
+
 
 ## 2.203.1
 
