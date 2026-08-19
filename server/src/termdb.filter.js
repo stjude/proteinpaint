@@ -549,8 +549,8 @@ async function get_ssGSEA(tvs, CTEname, ds) {
 }
 async function get_dnaMethylation(tvs, CTEname, ds) {
 	const q = ds.queries?.dnaMethylation
-	// q.get only exists when the CpG-level .file HDF5 is configured; a promoter-only
-	// dataset never surfaces this term type, so reaching here means a stale request
+	// q.get exists only when the dataset has a dnaMethylation term getter configured (CpG-level .file
+	// or an element-matrix-backed fallback). If missing, the term type is not supported (or the request is stale)
 	if (!q?.get) throw 'dnaMethylation not supported'
 	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))

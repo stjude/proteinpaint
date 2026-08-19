@@ -2260,10 +2260,9 @@ CpG-level .file.
 
 A term carries coordinates but not an element class, so the choice cannot come from the
 request -- one matrix has to be nominated. Order: an explicit .elementForTerms wins;
-otherwise the widest matrix is preferred, because a class-mixed matrix (all cCREs) can
-answer for every class it contains while a promoter-only matrix cannot, and a coordinate
-query against the wider one is strictly more likely to return the element the user meant.
-The legacy .promoter entry is the last resort so promoter-only datasets keep working. */
+otherwise the first configured non-promoter entry is used (declaration order), falling
+back to elements.promoter and finally the legacy .promoter entry so promoter-only
+datasets keep working.
 export function resolveElementEntryForTerms(q) {
 	const elements = q.elements || {}
 	if (q.elementForTerms) {
