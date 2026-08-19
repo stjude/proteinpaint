@@ -674,7 +674,9 @@ class SampleView extends PlotBase implements RxComponent {
 			// find which of the samples actually have imaging files, to skip the ones without
 			let available = new Set()
 			try {
-				available = await getBrainImagingSampleSet(state.vocab.genome, state.vocab.dslabel, k)
+			available = k
+				? await getBrainImagingSampleSet(state.vocab.genome, state.vocab.dslabel, k)
+				: new Set<string>()
 			} catch (e) {
 				// on error keep the empty set: no brain imaging plots are shown
 				console.error('brainImagingSamples request failed:', e)
