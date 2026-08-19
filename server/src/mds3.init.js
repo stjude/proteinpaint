@@ -726,6 +726,7 @@ function sort_mclass(set) {
 async function validate_query_NIdata(ds) {
 	const q = ds.queries.NIdata
 	if (!q) return
+	if (!Object.keys(q).length) throw `NIdata has no reference entries`
 	for (const refKey in q) {
 		const ref = q[refKey]
 		if (!ref.referenceFile) throw `NIdata['${refKey}'].referenceFile missing`
