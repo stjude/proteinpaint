@@ -42,7 +42,7 @@ const textWidth = (sel: any) => (sel.node() as SVGTextElement).getBBox().width
 
 export function renderImpressionLegend(a: ImpressionLegendArgs) {
 	const holder = a.holder.style('display', 'flex').style('justify-content', 'center').style('padding-top', '8px')
-	const svg = holder.append('svg')
+	const svg = holder.append('svg').attr('data-testid', 'sjpp-profileForms-impression-legend')
 	const g = svg.append('g')
 
 	// Row 1 — series swatches (SC / POC). Laid out from x=0, then the whole row is centered below.
