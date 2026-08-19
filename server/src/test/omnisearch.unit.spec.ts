@@ -63,7 +63,7 @@ const ds: any = {
 			}
 		}
 	},
-	queries: { snvindel: {}, cnv: {}, svfusion: {}, dnaMethylation: {} }
+	queries: { snvindel: {}, cnv: {}, svfusion: {}, dnaMethylation: { get: async () => ({}) } }
 }
 
 /**************

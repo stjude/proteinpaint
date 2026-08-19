@@ -60,6 +60,11 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	 * being tested -- promoters, eQTM blocks, and cCRE classes are different features
 	 * with different coordinates -- so it is not a display option. */
 	elementType: string
+	/** Block the design by each sample's parent entity (the patient), making the two-group
+	 * comparison paired: the group effect is estimated from within-patient differences only.
+	 * For longitudinal contrasts such as baseline vs relapse. Samples whose patient is not
+	 * present in both groups are dropped server-side. */
+	pairByParent: boolean
 }
 
 export type SCCTVolcanoSettings = DefaultVolcanoSettings & {}

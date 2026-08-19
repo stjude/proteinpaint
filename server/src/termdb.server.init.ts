@@ -822,7 +822,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 			ds.queries?.metaboliteIntensity ||
 			ds.queries?.proteome ||
 			ds.queries?.ssGSEA ||
-			ds.queries?.dnaMethylation?.file
+			ds.queries?.dnaMethylation?.get
 		)
 			return true
 		if (cohortTermTypes.numeric > 1) return true // numeric is always prefilled for convenience, does not have to check if property exists
@@ -837,7 +837,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 			ds.queries?.metaboliteIntensity ||
 			ds.queries?.proteome ||
 			ds.queries?.ssGSEA ||
-			ds.queries?.dnaMethylation?.file
+			ds.queries?.dnaMethylation?.get
 		)
 			return true
 		if (cohortTermTypes.numeric > 1) return true // numeric is always prefilled for convenience, does not have to check if property exists
@@ -867,7 +867,13 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	proteomeCohortCompare: ({ ds }) => ds.queries?.proteome?.studyCatalog,
 	// differential analysis covers gene expression (needs raw counts for edgeR) and
 	// DNA methylation (needs the promoter matrix); either one is enough to offer it
-	DA: ({ ds }) => ds.queries?.rnaseqGeneCount || ds.queries?.dnaMethylation?.promoter,
+	// Any element matrix is enough, not just the legacy .promoter key -- an elements-only
+	// dataset has differential methylation fully configured, and gating on .promoter would
+	// leave it configured and unreachable. Mirrors the same allowance in termdb.config.ts.
+	DA: ({ ds }) =>
+		ds.queries?.rnaseqGeneCount ||
+		ds.queries?.dnaMethylation?.promoter ||
+		(ds.queries?.dnaMethylation?.elements && Object.keys(ds.queries.dnaMethylation.elements).length),
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
 	WSIViewer: ({ ds }) => ds.queries?.WSImages,
 	wsi: ({ ds }) => ds.queries?.w2,

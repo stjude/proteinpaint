@@ -132,6 +132,11 @@ export function validate_correlationVolcano(ds: any) {
 			if (!ds.queries?.geneExpression) throw 'geneExpression cv.feature is not supported'
 		} else if (t == 'ssGSEA') {
 			if (!ds.queries?.ssGSEA) throw 'ssGSEA cv.feature is not supported'
+		} else if (t == 'dnaMethylation') {
+			/* Gated on the getter, matching getDsAllowedTermTypes(): the feature is read through
+			getData(), which routes a dnaMethylation term to this getter, so a dataset without
+			one would validate here and then fail on every request. */
+			if (!ds.queries?.dnaMethylation?.get) throw 'dnaMethylation cv.feature is not supported'
 		} else {
 			throw 'unknown cv.feature.termType'
 		}

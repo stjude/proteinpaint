@@ -2108,6 +2108,12 @@ async function validate_query_dnaMethylation(ds, genome) {
 			if (!Array.isArray(samples)) throw new Error('samples not array')
 			if (!samples?.length) throw `No samples from ${elementClass} hdf5 file: ` + qe.file
 			qe.allSampleSet = new Set(samples)
+			/* Kept before the exclusion below mutates allSampleSet. The exclusion is scoped to
+			differential methylation -- excludeSampleNamesMatching withholds specimen types that
+			must not be POOLED into a two-group contrast, which says nothing about reading one
+			element's value for one sample. The term getter therefore reads this full list, so a
+			withheld specimen is still plottable and inspectable on its own. */
+			qe.allSampleNames = samples.slice()
 			/* Withhold non-comparable specimen types from differential methylation. This is the
 			single gate every DM path already filters through (buildGroupValues, the preAnalysis
 			counts, and the sample list handed to diffMeth.R), so shrinking it here covers them
@@ -2132,10 +2138,30 @@ async function validate_query_dnaMethylation(ds, genome) {
 		throw `${ds.label}: Failed to validate dnaMethylation HDF5 file: ${error}`
 	}
 
-	// The getter serves the dnaMethylation term type, which is CpG/probe-level. With
-	// no .file there is nothing for it to read, so leave q.get unset; callers gate the
-	// term type on its presence rather than on the query object existing.
-	if (!q.file) return
+	/* The getter serves the dnaMethylation term type. Two backings, and .file wins when both
+	are present because it is the finer one:
+
+	  .file      CpG/probe-level. A term's coordinates select CpGs, whose betas are averaged.
+	  elements   pre-aggregated element matrix (promoters, cCREs, eQTM blocks). A term's
+	             coordinates select OVERLAPPING ELEMENTS, whose stored values are averaged.
+
+	Before this branch existed, a promoter-only cohort left q.get unset and the term type was
+	simply unavailable -- which for a WGBS dataset meant no way to read one element's value for
+	one sample, and so no violin by subgroup and no correlation against expression, even though
+	the numbers were already sitting in the element H5 that differential methylation reads.
+	Materializing the CpG matrix just to light up the term type is not an option at ~27GB. */
+	if (!q.file) {
+		const entry = resolveElementEntryForTerms(q)
+		if (!entry) return // no CpG file and no element matrix: term type stays unavailable
+		/* Advertise the unit the TERM getter actually returns. Without this the client falls
+		back to 'Average Beta Value' for a region term, and an element matrix holding M-values
+		would be plotted on an axis labelled beta -- values near -6 on a 0-1 scale. The numbers
+		would still be right (the getter reads this same entry.unit to decide whether to
+		logit-transform); only the label would lie, which is worse than an error. */
+		q.unit = q.unit || entry.unit
+		q.get = makeElementMethylationGetter(q, entry, ds)
+		return
+	}
 
 	// HDF5 validation successful, set up the getter function
 	q.get = async param => {
@@ -2225,6 +2251,115 @@ async function validate_query_dnaMethylation(ds, genome) {
 
 		if (term2sample2value.size == 0) throw 'No data available for the input'
 
+		return { term2sample2value, byTermId, bySampleId }
+	}
+}
+
+/* Pick which element matrix answers dnaMethylation term queries on a dataset that has no
+CpG-level .file.
+
+A term carries coordinates but not an element class, so the choice cannot come from the
+request -- one matrix has to be nominated. Order: an explicit .elementForTerms wins;
+otherwise the widest matrix is preferred, because a class-mixed matrix (all cCREs) can
+answer for every class it contains while a promoter-only matrix cannot, and a coordinate
+query against the wider one is strictly more likely to return the element the user meant.
+The legacy .promoter entry is the last resort so promoter-only datasets keep working. */
+export function resolveElementEntryForTerms(q) {
+	const elements = q.elements || {}
+	if (q.elementForTerms) {
+		const e = elements[q.elementForTerms] || (q.elementForTerms == 'promoter' ? q.promoter : undefined)
+		if (!e?.file) throw `dnaMethylation.elementForTerms='${q.elementForTerms}' names no configured element matrix`
+		return e
+	}
+	// A mixed-class matrix is identifiable only by config here, so fall back to "most rows
+	// wins" indirectly: prefer any non-promoter element entry, then promoter.
+	const nonPromoter = Object.entries(elements).find(([k, e]) => k != 'promoter' && e?.file)
+	if (nonPromoter) return nonPromoter[1]
+	if (elements.promoter?.file) return elements.promoter
+	if (q.promoter?.file) return q.promoter
+	return undefined
+}
+
+/* Serve dnaMethylation terms out of a pre-aggregated element matrix.
+
+Contract matches the CpG-level getter above (term2sample2value / byTermId / bySampleId) so
+getData() and every caller downstream are unchanged. Two deliberate differences:
+
+  - No beta->M conversion. The CpG getter logit-transforms because it reads betas; an
+    element matrix built from promoter_avg_mval.tsv already holds M-values. Converting
+    again would silently logit a logit. Driven off the configured unit rather than assumed.
+  - Averaging happens across ELEMENTS overlapping the term, not across CpGs. For a term
+    that names one element this is a no-op; for a pasted gene span it is a mean over the
+    elements in that span, which is the same semantics the CpG path gives for a span. */
+function makeElementMethylationGetter(q, entry, ds) {
+	// Sample ids for this matrix, resolved once. Unknown names are skipped rather than
+	// fatal: a methylation cohort is routinely a subset of the dataset's samples.
+	const sampleIds = []
+	const sampleNames = []
+	for (const sn of entry.allSampleNames || []) {
+		const si = ds.cohort.termdb.q.sampleName2id(sn)
+		if (si === undefined || si === null) continue
+		sampleIds.push(si)
+		sampleNames.push(sn)
+	}
+
+	// Stored values are already M-values unless the entry says otherwise.
+	const storesBeta = /beta/i.test(entry.unit || '')
+
+	return async param => {
+		const limitSamples = await mayLimitSamples(param, sampleIds, ds)
+		if (limitSamples?.size == 0) return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
+
+		const bySampleId = {}
+		const queryNames = []
+		for (const [i, sid] of sampleIds.entries()) {
+			if (limitSamples && !limitSamples.has(sid)) continue
+			bySampleId[sid] = { label: sampleNames[i] }
+			queryNames.push(sampleNames[i])
+		}
+
+		const term2sample2value = new Map()
+		const byTermId = {}
+		const tws = param.terms.filter(tw => tw.term.type == TermTypes.DNA_METHYLATION)
+		if (!tws.length || !queryNames.length) return { term2sample2value, byTermId, bySampleId }
+
+		for (const tw of tws) {
+			/* Located by coordinates, which every dnaMethylation term carries. The query script
+			also accepts element IDs, but no term type holds one today, so there is nothing to
+			pass -- wire that up if a term ever gains an element identifier. */
+			const input = { h: entry.file, s: queryNames.join(','), q: `${tw.term.chr}:${tw.term.start}-${tw.term.stop}` }
+			if (entry.element_class) input.c = entry.element_class
+			const out = JSON.parse(await run_python('query_element_values.py', JSON.stringify(input)))
+			if (!Array.isArray(out?.values)) throw new Error('element methylation query returned unexpected format')
+			if (!out.values.length) continue // term matched no element in this matrix; other terms may still resolve
+
+			const s2v = {}
+			for (const [i, sname] of queryNames.entries()) {
+				const sid = ds.cohort.termdb.q.sampleName2id(sname)
+				if (sid === undefined || sid === null) continue
+				// Average over the matched elements, skipping nulls so one uncovered element
+				// does not void a sample that the others do cover.
+				let sum = 0,
+					n = 0
+				for (const row of out.values) {
+					const v = row[i]
+					if (!Number.isFinite(v)) continue
+					sum += v
+					n++
+				}
+				if (!n) continue
+				const avg = sum / n
+				if (storesBeta) {
+					const clamped = Math.min(Math.max(avg, 1e-6), 1 - 1e-6)
+					s2v[sid] = Math.log2(clamped / (1 - clamped))
+				} else {
+					s2v[sid] = avg
+				}
+			}
+			if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v)
+		}
+
+		if (term2sample2value.size == 0) throw 'No data available for the input'
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }

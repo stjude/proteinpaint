@@ -66,6 +66,9 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>) {
 	// 'promoter' element_type to the legacy single-matrix config, so this default
 	// reproduces existing behaviour exactly for datasets that declare no elements map.
 	defaults.elementType = 'promoter'
+	// Off by default: pairing changes the design matrix, and on a cohort whose two groups
+	// hold different patients it removes every sample rather than adding power.
+	defaults.pairByParent = false
 }
 
 /*********** Setting Validation Functions ***********

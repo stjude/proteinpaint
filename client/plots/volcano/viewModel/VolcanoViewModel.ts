@@ -387,6 +387,14 @@ export class VolcanoViewModel {
 		parts.push(`confounders: ${conf?.length ? conf.join(' + ') : 'none'}`)
 
 		if (this.termType == tt.DNA_METHYLATION) {
+			/* Recorded FIRST because it is the only setting that changes what was tested rather
+			than how: promoters, cCRE promoters, eQTM blocks and the full cCRE set are different
+			features with different coordinates and wildly different test counts, so two exports
+			are not comparable without it. Everything else here was already recorded; this was
+			the one missing field, which made a saved p-value table impossible to attribute to a
+			matrix after the fact. */
+			parts.push(`element class: ${s.elementType || 'promoter'}`)
+			parts.push(`paired by patient: ${s.pairByParent ? 'yes' : 'no'}`)
 			parts.push(`min samples per group: ${s.minSamplesPerGroup}`)
 			parts.push(`exclude sex chromosomes: ${s.excludeSexChr ? 'yes' : 'no'}`)
 			parts.push(`mean-variance trend: ${s.eBayesTrend ? 'on' : 'off'}`)

@@ -134,6 +134,9 @@ function dmKeyInputs(req: DiffMethRequest, imputeMissing: boolean) {
 		array_weights: req.array_weights ?? null,
 		tw: req.tw ?? null,
 		tw2: req.tw2 ?? null,
+		/* Changes the design matrix and therefore every p-value, so it must be part of the
+		cache identity. Defaulting to false keeps pre-existing entries valid on deploy. */
+		pair_by_parent: req.pair_by_parent ?? false,
 		filter: (req as any).filter ?? null,
 		filter0: (req as any).filter0 ?? null
 	}
@@ -168,6 +171,13 @@ type DiffMethInput = {
 	case: string
 	control: string
 	input_file: string
+	/* Restrict a mixed-class matrix to one element class, so several element types can be
+	served from ONE h5 rather than one file each. That is what makes cCRE promoter-like (PLS)
+	free to offer: its rows already sit in the all-cCRE matrix as element_class='promoter'.
+	Comes from the ds config entry, never from the client — the client picks an element_type
+	and the server decides which file and which class that means. diffMeth.R errors rather
+	than returning an empty result when the value matches no rows. */
+	element_class?: string
 	min_samples_per_group?: number
 	exclude_sex_chr?: boolean
 	impute_missing?: boolean
@@ -178,6 +188,9 @@ type DiffMethInput = {
 	conf1_mode?: 'continuous' | 'discrete'
 	conf2?: any[]
 	conf2_mode?: 'continuous' | 'discrete'
+	/* One block label per sample, CASES FIRST then controls -- the order diffMeth.R
+	requires, and the same order conf1/conf2 are assembled in below. */
+	pair_id?: string[]
 }
 
 async function runDmFresh(
@@ -197,6 +210,9 @@ async function runDmFresh(
 		case: groups.group2names.join(','),
 		control: groups.group1names.join(','),
 		input_file: q.file,
+		// Omitted entirely when the entry does not set it, so an unfiltered request stays
+		// byte-identical to what it was before this field existed.
+		...(q.element_class ? { element_class: q.element_class } : {}),
 		min_samples_per_group: param.min_samples_per_group,
 		exclude_sex_chr: param.exclude_sex_chr,
 		// ds-derived, not a user setting: see the platform field on queries.dnaMethylation
@@ -216,6 +232,39 @@ async function runDmFresh(
 		diffMethInput.conf2 = [...groups.conf2_group2, ...groups.conf2_group1]
 		diffMethInput.conf2_mode = param.tw2.q.mode
 		if (new Set(diffMethInput.conf2).size === 1) throw new Error('Confounding variable 2 has only one value')
+	}
+
+	if (param.pair_by_parent) {
+		/* Block labels are a pure function of sample NAME, so they are derived here from the
+		resolved group names rather than threaded through buildGroupValues alongside the
+		confounders. Same case-then-control order as conf1/conf2 above, which is the order
+		diffMeth.R documents for pair_id. */
+		const toBlock = ds.sampleName2blockLabel
+		if (typeof toBlock != 'function') {
+			throw new Error('This dataset does not support paired analysis: no parent entity is defined for its samples.')
+		}
+		const names = [...groups.group2names, ...groups.group1names]
+		const pair_id = names.map(n => toBlock(n))
+		/* An unresolvable name would otherwise become "undefined", quietly forming one giant
+		block that pools unrelated samples -- worse than refusing, and invisible in the output. */
+		const unresolved = names.filter((_, i) => !pair_id[i])
+		if (unresolved.length) {
+			throw new Error(
+				`Paired analysis: no parent entity found for ${unresolved.length} sample(s), e.g. ${unresolved
+					.slice(0, 3)
+					.join(', ')}.`
+			)
+		}
+		/* diffMeth.R drops single-arm blocks, but if NO block spans both arms it stops with an
+		error after the H5 read. Catching it here costs one Set and keeps the failure cheap and
+		specific: the usual cause is two groups that hold different patients entirely. */
+		const g2 = new Set(pair_id.slice(0, groups.group2names.length))
+		if (!pair_id.slice(groups.group2names.length).some(b => g2.has(b))) {
+			throw new Error(
+				'Paired analysis: no parent entity has a sample in both groups, so there is nothing to compare within blocks.'
+			)
+		}
+		diffMethInput.pair_id = pair_id
 	}
 
 	const time1 = Date.now()

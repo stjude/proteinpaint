@@ -168,7 +168,7 @@ tape('getDsAllowedTermTypes() - with dnaMethylation query', function (test) {
 			}
 		},
 		queries: {
-			dnaMethylation: { unit: 'beta' }
+			dnaMethylation: { unit: 'beta', get: async () => ({}) }
 		}
 	}
 	const result = getDsAllowedTermTypes(ds)
@@ -274,7 +274,7 @@ tape('getDsAllowedTermTypes() - comprehensive dataset', function (test) {
 			geneExpression: { unit: 'TPM' },
 			isoformExpression: { unit: 'TPM' },
 			proteome: { assays: { someAssay: {} } },
-			dnaMethylation: { unit: 'beta' },
+			dnaMethylation: { unit: 'beta', get: async () => ({}) },
 			ssGSEA: {},
 			singleCell: {
 				samples: {},
