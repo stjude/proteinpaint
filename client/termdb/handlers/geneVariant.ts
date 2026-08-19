@@ -2,6 +2,7 @@ import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI, table2col } from '#
 import type { VocabApi } from '#types'
 import { dtTerms, dtcnv } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
+import { mayShowRememberedGvQ } from './rememberedGvQ.ts'
 
 // TODO: output of this handler should not be q.predefined_groupset_idx, instead should be q.dt and q.origin. Then, in client/tw/geneVariant.ts, should fill in q.predefined_groupset_idx based on q.dt and q.origin. This will also allow easy specification of desired dt/origin in url. Will need to make separate radio buttons for dt and origin to support the different q properties.
 
@@ -241,7 +242,6 @@ export class SearchHandler {
 	}
 
 	async runCallback() {
-		this.dom.reuseDiv.style('display', 'none').selectAll('*').remove()
 		// add parent geneVariant term to each child term now
 		// that gene(s) have been selected
 		addParentTerm(this.term)
@@ -253,74 +253,28 @@ export class SearchHandler {
 	}
 
 	/*
-	Offer the settings the user built earlier for the gene(s) just picked, see remember_gvq()
-	in client/mass/store.ts. Returns true when the choices are rendered, so that runCallback()
-	waits for a click rather than applying the mutation type radio behind them.
+	Offer the settings the user built earlier for the gene(s) just picked, so that the mutation
+	type behind them is not applied until the user chooses, see mayShowRememberedGvQ() in
+	./rememberedGvQ.ts.
 
-	Nothing is offered where the q would not survive the selection, see keepsQ in
-	client/termdb/TermTypeSearch.ts, nor outside a mass app, whose store is the only one that
-	remembers these.
+	Only offered where the q of the selected term reaches the consumer, see keepsQ in
+	client/termdb/TermTypeSearch.ts.
 	*/
 	mayShowRememberedQ(): boolean {
 		if (!this.opts.keepsQ) return false
-		const lst = this.opts.app.vocabApi.getGvQLst?.(this.term) || []
-		if (!lst.length) return false
-
-		const div = this.dom.reuseDiv.style('display', 'block')
-		div
-			.append('div')
-			.style('margin-bottom', '5px')
-			.style('opacity', 0.65)
-			.style('font-size', '.9em')
-			.text(`Previously used for ${this.term.name}`)
-
-		/* these options are rendered after the enclosing menu has already wired its own tab
-		navigation, which only covers what existed when the menu opened (see setTabNavigation()
-		in client/dom/menu.js), so each one makes itself keyboard operable */
-		const options: any[] = []
-		const addOption = (label: string, callback: () => Promise<void>) => {
-			const option = div
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.attr('tabindex', 0)
-				.attr('role', 'button')
-				.text(label)
-				.on('click', callback)
-				.on('keydown', (event: KeyboardEvent) => {
-					/* activating on keydown rather than keyup: the gene above is picked by pressing
-					Enter in the search box, and the keyup of that same press would otherwise land on
-					the option focused below and apply it without the user choosing it */
-					if (event.key == 'Enter' || event.key == ' ') {
-						event.preventDefault()
-						;(event.target as HTMLElement).click()
-						return
-					}
-					const step = event.key == 'ArrowDown' ? 1 : event.key == 'ArrowUp' ? -1 : 0
-					if (!step) return
-					// wraps, so that arrowing past either end stays within the options
-					const i = options.indexOf(option)
-					options[(i + step + options.length) % options.length].node().focus()
-					event.preventDefault() // arrowing moves the focus, it does not scroll the menu
-				})
-			options.push(option)
-			return option
-		}
-
-		for (const entry of lst) {
-			addOption(entry.label, async () => await this.applyRememberedQ(entry.q)).attr(
-				'data-testid',
-				'sjpp-genevariant-rememberedQ'
-			)
-		}
 		const idx = Number(this.mutationTypeRadio.inputs.nodes().find(r => r.checked).value)
-		addOption(`Continue with ${this.mutationTypeTerms[idx].name}`, async () => await this.applyMutationType()).style(
-			'margin-top',
-			'8px'
-		)
-
-		// the most recent setting is the likely choice, so it starts focused
-		options[0].node().focus()
-		return true
+		const shown = mayShowRememberedGvQ({
+			holder: this.dom.reuseDiv,
+			vocabApi: this.opts.app.vocabApi,
+			term: this.term,
+			skipLabel: `Continue with ${this.mutationTypeTerms[idx].name}`,
+			callback: async q => (q ? await this.applyRememberedQ(q) : await this.applyMutationType())
+		})
+		/* a caller's message tells the user what picking a gene does, e.g. "Hit ENTER to launch
+		plot." in client/plots/summarizeMutationSurvival.ts, which is no longer what happens
+		while these options wait for a choice */
+		if (shown) this.dom.msgDiv.style('display', 'none')
+		return shown
 	}
 
 	/** apply the mutation type that the radios select, which is the default for a new term */

@@ -43,6 +43,7 @@ async function initializeSearchHandler(opts) {
 		app: { vocabApi: opts.vocabApi || vocabApi },
 		genomeObj: hg38,
 		keepsQ: opts.keepsQ,
+		msg: opts.msg,
 		callback
 	})
 }
@@ -226,11 +227,18 @@ tape('Remembered settings are offered for the picked gene', async test => {
 		holder,
 		callback: _tw => (tw = _tw),
 		vocabApi: getVocabApiWithRememberedQ(rememberedLst),
-		keepsQ: true
+		keepsQ: true,
+		// as client/plots/summarizeMutationSurvival.ts supplies it
+		msg: 'Hit ENTER to launch plot.'
 	})
 	await pickGene(holder)
 
 	test.equal(tw, undefined, 'should not apply the mutation type while the settings are offered')
+	const msgDiv: any = holder
+		.selectAll('div')
+		.nodes()
+		.find((n: any) => n.textContent == 'Hit ENTER to launch plot.')
+	test.equal(msgDiv?.style.display, 'none', 'should hide a caller message that no longer describes what happens')
 	const remembered = holder.selectAll('[data-testid="sjpp-genevariant-rememberedQ"]')
 	test.equal(remembered.size(), 2, 'should offer both remembered settings')
 	test.deepEqual(
