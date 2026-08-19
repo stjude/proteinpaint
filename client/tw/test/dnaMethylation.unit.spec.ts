@@ -77,16 +77,31 @@ tape('getDNAMethUnit() should return configured unit for promoter type', test =>
 	test.end()
 })
 
-tape('getDNAMethUnit() should return default unit for unknown genomicFeatureType', test => {
+/* A region term -- what the coordinate/genome-browser picker produces -- is served by whichever
+matrix the dataset nominates, and that matrix may hold M-values rather than betas. So the
+fallthrough case takes the dataset's declared unit and only defaults to beta when none is set,
+matching the 'gene' case above. Hardcoding beta here mislabelled every region term on a WGBS
+element cohort: values near -6 plotted on an axis claiming a 0-1 scale. */
+tape('getDNAMethUnit() should return configured unit for unknown genomicFeatureType', test => {
 	test.equal(
 		getDNAMethUnit('region', mockVocabApi as any),
-		'Average Beta Value',
-		'Should return default unit for region type'
+		'Configured Beta Value',
+		'Should return configured unit from termdbConfig for region'
 	)
 	test.equal(
 		getDNAMethUnit('enhancer', mockVocabApi as any),
+		'Configured Beta Value',
+		'Should return configured unit from termdbConfig for enhancer'
+	)
+	test.equal(
+		getDNAMethUnit('region', mockVocabApiNoUnit as any),
 		'Average Beta Value',
-		'Should return default unit for enhancer type'
+		'Should fallback to default unit for region when config is missing'
+	)
+	test.equal(
+		getDNAMethUnit('enhancer', mockVocabApiNoUnit as any),
+		'Average Beta Value',
+		'Should fallback to default unit for enhancer when config is missing'
 	)
 	test.end()
 })
