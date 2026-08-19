@@ -1,10 +1,12 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
+import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
 import { mayShowRememberedGvQ } from '../rememberedGvQ.ts'
 
 /* test sections
 
 renders the remembered settings of a term
+orders the settings by the selected mutation type
 picks a setting, or declines them
 renders nothing when there is nothing to offer
 
@@ -18,6 +20,27 @@ const lst = [
 	{ label: 'BCR-ABL1 fusion / Others', q: { type: 'custom-groupset', customset: { groups: [{ name: 'BCR-ABL1' }] } } },
 	{ label: 'BCR-JAK2 fusion / Others', q: { type: 'custom-groupset', customset: { groups: [{ name: 'BCR-JAK2' }] } } }
 ]
+
+/* a grouping of one or more dt terms, as it is remembered: a customset whose group filters
+carry the dt term of each tvs, see trimGvQForCache() in shared/utils/src/terms.ts */
+function getQ(dtTerms: { dt: number; origin?: string }[]) {
+	return {
+		type: 'custom-groupset',
+		customset: {
+			groups: [
+				{
+					name: 'Group 1',
+					filter: {
+						type: 'tvslst',
+						join: 'and',
+						in: true,
+						lst: dtTerms.map(t => ({ type: 'tvs', tvs: { term: { id: 'dt', ...t }, values: [] } }))
+					}
+				}
+			]
+		}
+	}
+}
 
 // only a host app whose store remembers these defines getGvQLst(), see remember_gvq() in client/mass/store.ts
 function getVocabApi(remembered?: any[]) {
@@ -66,6 +89,91 @@ tape('renders the remembered settings of a term', test => {
 	test.equal(document.activeElement, options[2], 'should wrap when arrowing past the first option')
 
 	holder.remove()
+	test.end()
+})
+
+tape('orders the settings by the selected mutation type', test => {
+	// built for another mutation type than the one selected below, and remembered more recently
+	const cnvEntry = { label: 'CNV groups', q: getQ([{ dt: dtcnv }]) }
+	const snvindelEntry = { label: 'Somatic SNV/indel groups', q: getQ([{ dt: dtsnvindel, origin: 'somatic' }]) }
+	const allelicEntry = { label: 'Bi-allelic / Mono-allelic', q: getQ([{ dt: dtsnvindel }, { dt: dtcnv }]) }
+	const remembered = [cnvEntry, snvindelEntry, allelicEntry]
+	const getLabels = (holder: any) =>
+		holder
+			.selectAll('.sja_menuoption')
+			.nodes()
+			.map((n: any) => n.textContent)
+
+	{
+		const holder = getHolder()
+		mayShowRememberedGvQ({
+			holder,
+			vocabApi: getVocabApi(remembered),
+			term,
+			mutationType: { dt: dtsnvindel, origin: 'somatic' },
+			skipLabel: 'Continue with SNV/indel (somatic)',
+			callback: () => {}
+		})
+		test.deepEqual(
+			getLabels(holder),
+			['Somatic SNV/indel groups', 'CNV groups', 'Bi-allelic / Mono-allelic', 'Continue with SNV/indel (somatic)'],
+			'should lead with the setting built for the selected mutation type, keeping the rest in order'
+		)
+		test.equal(
+			document.activeElement,
+			holder.selectAll('.sja_menuoption').nodes()[0],
+			'should focus the leading setting'
+		)
+		holder.remove()
+	}
+
+	{
+		// a mutation type spanning two dts, as the Bi/mono-allelic groupset does
+		const holder = getHolder()
+		mayShowRememberedGvQ({
+			holder,
+			vocabApi: getVocabApi(remembered),
+			term,
+			mutationType: { dts: [dtsnvindel, dtcnv] },
+			skipLabel: 'Continue with Bi/mono-allelic',
+			callback: () => {}
+		})
+		test.deepEqual(
+			getLabels(holder)[0],
+			'Bi-allelic / Mono-allelic',
+			'should lead with the setting filtering by the same dts as a multi-dt mutation type'
+		)
+		holder.remove()
+	}
+
+	{
+		const holder = getHolder()
+		mayShowRememberedGvQ({
+			holder,
+			vocabApi: getVocabApi(remembered),
+			term,
+			mutationType: { dt: dtfusionrna },
+			skipLabel: 'Continue with Fusion RNA',
+			callback: () => {}
+		})
+		test.deepEqual(
+			getLabels(holder),
+			['Continue with Fusion RNA', 'CNV groups', 'Somatic SNV/indel groups', 'Bi-allelic / Mono-allelic'],
+			'should lead with the mutation type when nothing was remembered for it'
+		)
+		test.equal(
+			document.activeElement,
+			holder.selectAll('.sja_menuoption').nodes()[0],
+			'should focus the way to continue with the mutation type'
+		)
+		test.equal(
+			holder.selectAll('[data-testid="sjpp-genevariant-rememberedQ"]').size(),
+			3,
+			'should still mark only the remembered settings'
+		)
+		holder.remove()
+	}
+
 	test.end()
 })
 

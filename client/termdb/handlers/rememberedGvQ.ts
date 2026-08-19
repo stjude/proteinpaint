@@ -23,6 +23,11 @@ type RememberedQOpts = {
 	vocabApi: any
 	/** the geneVariant term just picked */
 	term: any
+	/** the mutation type the caller has selected, so that a setting built for that same
+	 * mutation type can lead -- a dt term, or an entry declaring the dts[] it spans as the
+	 * Bi/mono-allelic groupset does. Omitted by a UI that offers no such choice, which leaves
+	 * the remembered settings in the order they arrived */
+	mutationType?: { dt?: number; origin?: string; dts?: number[] }
 	/** names the option that declines the remembered settings, in the caller's own terms,
 	 * e.g. 'Continue with SNV/indel (somatic)' */
 	skipLabel: string
@@ -33,7 +38,7 @@ type RememberedQOpts = {
 /** True when settings were offered, so that the caller waits for a choice instead of
  * proceeding with the q it would otherwise have built */
 export function mayShowRememberedGvQ(opts: RememberedQOpts): boolean {
-	const { holder, vocabApi, term, skipLabel, callback } = opts
+	const { holder, vocabApi, term, mutationType, skipLabel, callback } = opts
 	holder.style('display', 'none').selectAll('*').remove()
 
 	// getGvQLst() is only defined by a host app whose store remembers these
@@ -41,12 +46,6 @@ export function mayShowRememberedGvQ(opts: RememberedQOpts): boolean {
 	if (!lst.length) return false
 
 	const div = holder.style('display', 'block')
-	div
-		.append('div')
-		.style('margin-bottom', '5px')
-		.style('opacity', 0.65)
-		.style('font-size', '.9em')
-		.text(`Previously used for ${term.name}`)
 
 	/* these options are rendered after any enclosing menu has already wired its own tab
 	navigation, which only covers what existed when the menu opened (see setTabNavigation()
@@ -80,12 +79,79 @@ export function mayShowRememberedGvQ(opts: RememberedQOpts): boolean {
 		return option
 	}
 
-	for (const entry of lst) {
-		addOption(entry.label, async () => await callback(entry.q)).attr('data-testid', 'sjpp-genevariant-rememberedQ')
+	const addHeader = () =>
+		div
+			.append('div')
+			.style('margin-bottom', '5px')
+			.style('opacity', 0.65)
+			.style('font-size', '.9em')
+			.text(`Previously used for ${term.name}`)
+	const addRemembered = (entries: any[]) => {
+		for (const entry of entries) {
+			addOption(entry.label, async () => await callback(entry.q)).attr('data-testid', 'sjpp-genevariant-rememberedQ')
+		}
 	}
-	addOption(skipLabel, async () => await callback()).style('margin-top', '8px')
+	const addSkip = () => addOption(skipLabel, async () => await callback())
 
-	// the most recent setting is the likely choice, so it starts focused
+	/* a setting built for the mutation type the caller has selected is what the user would
+	otherwise rebuild by hand, so it leads; the settings of other mutation types keep their
+	place behind it, most recent first */
+	const matched = lst.filter((entry: any) => matchesMutationType(entry.q, mutationType))
+	if (matched.length) {
+		addHeader()
+		addRemembered([...matched, ...lst.filter((entry: any) => !matched.includes(entry))])
+		addSkip().style('margin-top', '8px')
+	} else {
+		/* nothing was remembered for the selected mutation type, so continuing with it is the
+		likely choice and leads, with what was built for other mutation types offered below */
+		addSkip()
+		addHeader().style('margin-top', '12px')
+		addRemembered(lst)
+	}
+
+	// the leading option is the likely choice, so it starts focused
 	options[0].node().focus()
 	return true
+}
+
+/*
+Whether a remembered setting was built for the mutation type the caller has selected: it
+filters by exactly the dt term(s) of that type, e.g. a grouping of SNV/indel (somatic)
+classes when that radio is selected, or one spanning snvindel and cnv for Bi/mono-allelic.
+Origin counts, since a dataset that separates somatic from germline offers a mutation type,
+and hence a grouping, for each.
+
+A caller that names no mutation type matches everything, leaving the settings in the order
+it found them.
+*/
+function matchesMutationType(q: any, mutationType?: RememberedQOpts['mutationType']): boolean {
+	if (!mutationType) return true
+	// a mutation type that names no dt cannot be matched against, so nothing leads
+	if (!mutationType.dts?.length && !Number.isInteger(mutationType.dt)) return false
+	const selected = new Set(
+		mutationType.dts?.length
+			? mutationType.dts.map(dt => getDtKey(dt))
+			: [getDtKey(mutationType.dt, mutationType.origin)]
+	)
+	const filtered = getFilteredDtKeys(q)
+	return filtered.size == selected.size && [...filtered].every(key => selected.has(key))
+}
+
+const getDtKey = (dt?: number, origin?: string) => `${dt}|${origin || ''}`
+
+/* the dt term(s) a remembered setting filters by, as dt+origin keys.
+
+Reads the tvs of each group filter rather than every nested tvs, the way getDtsFromGroups()
+in shared/utils/src/terms.ts does: the maf filter nested in a bi/mono-allelic tvs wraps a
+dictionary term, which is not a dt the setting filters by. */
+function getFilteredDtKeys(q: any): Set<string> {
+	const keys = new Set<string>()
+	const readFilter = (filter: any) => {
+		for (const item of filter?.lst || []) {
+			if (item.type == 'tvslst') readFilter(item)
+			else if (item.tvs?.term) keys.add(getDtKey(item.tvs.term.dt, item.tvs.term.origin))
+		}
+	}
+	for (const group of q?.customset?.groups || []) readFilter(group.filter)
+	return keys
 }
