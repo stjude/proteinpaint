@@ -2,3 +2,4 @@ Fixes:
 - bump esbuild to 0.28.2 to resolve arbitrary file read alert
 - bump dompurify to 3.4.14 to resolve 2 dependabot alerts
 - bump js-yaml to 4.3.1 to resolve quadratic CPU DoS alert (#240)
+- bump postcss to 8.5.26 to resolve 2 dependabot alerts
