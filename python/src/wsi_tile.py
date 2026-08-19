@@ -90,9 +90,12 @@ class OmeTiffSlide:
         self._tf = tifffile.TiffFile(path)
         self._levels = self._tf.series[0].levels
         self.plane_count = len(self._levels[0].pages)  # z-planes; 1 for 2D
-        self._plane = (
-            self.plane_count // 2 if plane is None else max(0, min(self.plane_count - 1, int(plane)))
-        )
+        # reject rather than clamp: node caches tiles under the *requested*
+        # plane value, so silently mapping many planes to one would fill the
+        # cache with duplicate JPEGs under distinct keys
+        if plane is not None and not 0 <= int(plane) < self.plane_count:
+            raise ValueError(f"plane {plane} out of range [0, {self.plane_count})")
+        self._plane = self.plane_count // 2 if plane is None else int(plane)
         # non-first z-planes are TiffFrame objects without tag attributes;
         # .keyframe carries the geometry, which all planes of a level share
         base = self._levels[0].pages[self._plane].keyframe
@@ -212,8 +215,12 @@ def meta(slide):
 
 
 def tile(slide, z, x, y, quality=80, plane=None):
-    s = open_slide(slide, plane)
+    s = open_slide(slide, plane)  # OmeTiffSlide rejects out-of-range planes itself
     try:
+        # openslide formats ignore `plane` (plane_count 1): reject any plane
+        # other than 0 so distinct plane values can't cache duplicate tiles
+        if plane is not None and not 0 <= int(plane) < getattr(s, "plane_count", 1):
+            raise ValueError(f"plane {plane} out of range [0, {getattr(s, 'plane_count', 1)})")
         reg = tile_region(*s.dimensions, z, x, y)
         if reg is None:
             raise ValueError(f"tile z={z} x={x} y={y} out of range")
