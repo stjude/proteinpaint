@@ -3,7 +3,8 @@ import { TermSetting } from './TermSetting.ts'
 import type { Term, TermWrapper, Filter } from '#types'
 import { call_fillTW, get$id, fillTermWrapper } from './utils.ts'
 import { minimatch } from 'minimatch'
-import { copyMerge, sleep } from '#rx'
+import { copyMerge, deepEqual, sleep } from '#rx'
+import { trimGvQForCache } from '#shared/terms.js'
 import { select } from 'd3-selection'
 import { TwRouter, QualitativeBase, NumericBase, routedTermTypes } from '#tw'
 
@@ -253,6 +254,25 @@ export class TermSettingApi {
 							term: self.term,
 							q: { type: 'predefined-groupset', predefined_groupset_idx: i, isAtomic: true }
 						}
+						await call_fillTW(tw, self.vocabApi)
+						self.opts.callback(tw)
+					}
+				})
+			}
+		}
+
+		if (self.term.type == 'geneVariant' && minimatch('edit', self.opts.menuOptions)) {
+			/* settings the user built earlier for this gene, so that one can be applied without
+			rebuilding it, see remember_gvq() in client/mass/store.ts. Empty outside a mass app,
+			whose store is the only one that remembers them */
+			const inUse = q?.type == 'custom-groupset' ? trimGvQForCache(q) : null
+			for (const entry of self.vocabApi.getGvQLst?.(self.term) || []) {
+				if (inUse && deepEqual(entry.q, inUse)) continue // already applied to this pill
+				options.push({
+					label: `Reuse: ${entry.label}`,
+					callback: async () => {
+						// tw.type is derived from q.type by GvBase.fill()
+						const tw: any = { isAtomic: true, term: self.term, q: { ...entry.q, isAtomic: true } }
 						await call_fillTW(tw, self.vocabApi)
 						self.opts.callback(tw)
 					}

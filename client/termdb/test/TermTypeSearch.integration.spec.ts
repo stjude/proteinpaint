@@ -15,6 +15,7 @@ Tests:
 	- selectTerm() should append and replace selected terms correctly in submit mode
 	- renderTermsSelected() click should remove selected term
 	- getDtTerm() should return child term and throw on invalid input
+	- initActiveHandler() should tell a handler whether the q survives the selection
 */
 
 /*************************
@@ -65,6 +66,8 @@ async function getNewTermTypeSearch(opts: {
 		state: getDefaultState(opts.appState || {}),
 		click_term: opts.click_term,
 		tree: {
+			// TermTypeSearch reads both from opts.tree, see appInit() in client/termdb/app.ts
+			click_term: opts.click_term,
 			submit_lst: opts.submit_lst
 		}
 	})
@@ -248,5 +251,29 @@ tape('getDtTerm() should return child term and throw on invalid input', async te
 		'Should throw when child dt term is missing'
 	)
 	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('initActiveHandler() should tell a handler whether the q survives the selection', async test => {
+	/* a handler that offers a q the consumer would drop, such as a remembered geneVariant
+	setting, would mislead the user, see mayShowRememberedQ() in termdb/handlers/geneVariant.ts.
+	selectTerm() above keeps a whole tw only for click_term */
+	for (const [mode, opts, expected] of [
+		['click_term', { click_term: () => {} }, true],
+		['submit_lst', { submit_lst: () => {} }, false],
+		['neither, i.e. the tvs path', {}, false]
+	] as [string, any, boolean][]) {
+		const { termTypeSearch, holder } = await getNewTermTypeSearch(opts)
+		const initOpts: any[] = []
+		termTypeSearch.handlerByType = { [TermTypes.GENE_VARIANT]: { init: async (o: any) => initOpts.push(o) } }
+		termTypeSearch.activeHandler = {
+			type: TermTypes.GENE_VARIANT,
+			holder: d3s.select('body').append('div'),
+			details: {}
+		}
+		await termTypeSearch.initActiveHandler()
+		test.equal(initOpts[0]?.keepsQ, expected, `should pass keepsQ=${expected} for ${mode}`)
+		if (test['_ok']) holder.remove()
+	}
 	test.end()
 })

@@ -228,6 +228,46 @@ tape('fill(): q.type=predefined-groupset', async test => {
 	test.end()
 })
 
+tape('fill(): a defaultQ must not override an explicit q.type', async test => {
+	/* a pill declares a defaultQ for the term types it accepts, e.g. getT0T2defaultQ() in
+	client/plots/summaryQ.ts declares a predefined groupset for a summary term2. That is a
+	default for a q that does not say, and must not rewrite one that does -- otherwise a
+	remembered custom groupset handed to that pill silently becomes a predefined groupset,
+	see mayShowRememberedQ() in client/termdb/handlers/geneVariant.ts */
+	const customset = {
+		groups: [
+			{
+				name: 'TP53 mutated',
+				type: 'filter',
+				filter: {
+					type: 'tvslst',
+					in: true,
+					join: '',
+					lst: [
+						{
+							type: 'tvs',
+							tvs: {
+								term: { id: 'snvindel_somatic', type: 'dtsnvindel', dt: dtsnvindel, origin: 'somatic' },
+								values: [{ key: 'M' }]
+							}
+						}
+					]
+				}
+			}
+		]
+	}
+	const tw: any = getGsTw({ isAtomic: true, type: 'custom-groupset', customset })
+	const fullTw: GvTW = await GvBase.fill(tw, { vocabApi, defaultQ: { type: 'predefined-groupset' } })
+	test.equal(fullTw.q.type, 'custom-groupset', 'should keep the q.type the caller set')
+	test.equal(fullTw.type, 'GvCustomGsTW', 'should route by the kept q.type')
+
+	// a q that does not declare a type still takes the default
+	const tw2: any = getGsTw({ isAtomic: true })
+	const fullTw2: GvTW = await GvBase.fill(tw2, { vocabApi, defaultQ: { type: 'predefined-groupset' } })
+	test.equal(fullTw2.q.type, 'predefined-groupset', 'should apply the default to a q with no type')
+	test.end()
+})
+
 tape('fill(): predefined groupset of each dt', async test => {
 	// each groupset is only built when it is the selected one, so fill once per index
 	for (let idx = 0; idx < 6; idx++) {
