@@ -513,7 +513,7 @@ export async function getPlotConfig(opts, app) {
 	/* default slice positions come from the template's dataset-configured
 	parameters (NIdata[queryKey].parameters in e.g. DISCOVER.hg38.ts); a ds
 	that omits parameters falls back to the volume midpoint (dimensions are
-	read from the NIfTI header at server launch), then to historical numbers */
+	read from the NIfTI header at server launch), then to default numbers */
 	const ref = app.vocabApi?.termdbConfig?.queries?.NIdata?.[opts.queryKey]
 	const parameters = ref?.parameters
 	const dims = ref?.dimensions
