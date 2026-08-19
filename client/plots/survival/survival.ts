@@ -905,7 +905,6 @@ function setRenderers(self) {
 			processedData = series.data.filter(d => d.x <= s.maxTimeToEvent)
 		}
 		// todo: allow update of exiting path instead of replacing
-		console.log(series)
 		g.selectAll('path').remove()
 		g.append('path')
 			.attr('data-testid', `sjpp-survival-ci-${series.seriesId ?? series.seriesLabel ?? 'unknown'}`)
