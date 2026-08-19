@@ -1304,6 +1304,11 @@ type Mds3Queries = {
 			file: string
 			/** unit label for promoter values (e.g. 'Average M-value') */
 			unit: string
+			/** Label for the element-type picker. Defaults to 'Promoters' when absent. Worth
+			 * setting when a dataset also offers cCRE promoter-like elements, since "promoter"
+			 * then means two different things -- this entry is the TSS window, the other is the
+			 * ~349 bp PLS core -- and their hit counts are not comparable. */
+			label?: string
 			/** Substring of a sample name marking samples to withhold from differential
 			 * methylation. Use when the matrix pools specimen types whose methylomes are
 			 * not comparable (e.g. a different tissue compartment), since silently pooling
@@ -1338,8 +1343,28 @@ type Mds3Queries = {
 				label?: string
 				/** see promoter.excludeSampleNamesMatching */
 				excludeSampleNamesMatching?: string
+				/** Restrict a mixed-class matrix to one element class, so several entries can be
+				 * served from ONE h5 rather than one file each. That is what makes cCRE
+				 * promoter-like (PLS) and the enhancer classes free to offer: their rows already
+				 * sit in the all-cCRE matrix under their own element_class. Comes from this
+				 * config, never from the client — the client picks an element_type and the server
+				 * decides which file and which class that means. diffMeth.R errors rather than
+				 * returning an empty result when the value matches no row. Omit for a matrix that
+				 * should be tested whole. */
+				element_class?: string
 			}
 		}
+		/** Which `elements` entry answers dnaMethylation TERM queries — a single element's value
+		 * per sample, for a violin or scatter — as opposed to differential methylation, which
+		 * picks its matrix per request from the client's element_type.
+		 *
+		 * A term carries coordinates but no element class, so one matrix has to be nominated.
+		 * Absent, the resolver prefers the first non-promoter entry and falls back to promoter,
+		 * which on a dataset declaring several classes is unlikely to be the intended one. Name
+		 * the widest matrix here: a coordinate query against it can return whichever class the
+		 * user is pointing at. Ignored when a CpG-level .file is present, since that serves
+		 * terms itself. */
+		elementForTerms?: string
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene
