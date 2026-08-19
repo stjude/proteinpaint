@@ -1,7 +1,7 @@
 import { select } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { isNumericTerm } from '#shared/terms.js'
-import { trackLabelSpanData, renderLabelSpans } from './matrix.labelSpans.ts'
+import { trackLabelSpanData, renderLabelSpans, SPANSELECTOR } from './matrix.labelSpans.ts'
 
 export function setRenderers(self) {
 	self.render = function () {
@@ -199,10 +199,16 @@ export function setRenderers(self) {
 			labels.each(renderLabel)
 			labels.enter().append('g').attr('class', 'sjpp-matrix-label').each(renderLabel)
 
-			const cls = '.sjpp-matrix-label-related-sample-rect'
-			side.box.selectAll(cls).remove()
+			// unconditionally clear any previously rendered ancestor spans from this side box;
+			// renderLabelSpans() below re-adds them only when applicable, so stale spans are
+			// removed when the feature is disabled, the chart is transposed (sample labels move
+			// to a different side box), or the chart is a hierCluster
+			side.box.selectAll(SPANSELECTOR).remove()
 
-			if (s.sortBySampleAncestry && side.prefix == 'sample') renderLabelSpans(relatedSamplesByAncestorId, side, d)
+			// ancestor spans are a matrix-only feature; hierCluster orders samples by the
+			// dendrogram, not ancestry (see the chartType guards in matrix.groups/matrix.sort)
+			if (self.config.chartType == 'matrix' && s.sortBySampleAncestry && side.prefix == 'sample')
+				renderLabelSpans(relatedSamplesByAncestorId, side, d)
 
 			function renderLabel(lab) {
 				const g = select(this)
@@ -296,9 +302,9 @@ export function setRenderers(self) {
 				}
 
 				// only track ancestry span data (which does a per-label getBBox) when the
-				// feature is enabled; matches the renderLabelSpans() guard above, so a
-				// disabled plot does no DOM measurement in the label loop
-				if (s.sortBySampleAncestry && side.prefix == 'sample')
+				// feature is enabled and applicable; matches the renderLabelSpans() guard
+				// above, so a disabled plot (or a hierCluster) does no DOM measurement here
+				if (self.config.chartType == 'matrix' && s.sortBySampleAncestry && side.prefix == 'sample')
 					trackLabelSpanData(lab, side, direction, text, relatedSamplesByAncestorId)
 			}
 

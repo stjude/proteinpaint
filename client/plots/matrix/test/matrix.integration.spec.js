@@ -3292,8 +3292,22 @@ tape('sample ancestry labels and line spans', function (test) {
 			'the nested grandparent span (3_patient) should be wider than the parent spans (1_patient, 2_patient)'
 		)
 
-		if (test._ok) matrix.Inner.app.destroy()
-		test.end()
+		// disabling the ancestry feature must clear the previously rendered spans
+		matrix.on('postRender.disableTest', () => {
+			matrix.on('postRender.disableTest', null)
+			test.equal(
+				matrix.Inner.dom.svg.selectAll('.sjpp-matrix-label-span').size(),
+				0,
+				'ancestor spans should be removed after sortBySampleAncestry is disabled'
+			)
+			if (test._ok) matrix.Inner.app.destroy()
+			test.end()
+		})
+		matrix.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: matrix.Inner.id,
+			config: { settings: { matrix: { sortBySampleAncestry: false } } }
+		})
 	}
 })
 

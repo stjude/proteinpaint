@@ -6,9 +6,21 @@ export type LabelAncestry = {
 	ancestor_name?: string // display label; falls back to ancestor_id when absent
 	transform: string //side.attr.labelGTransform(lab),
 	samples: any[] //lab.row entries, used for span length/extent
+	// leftmost/rightmost rendered x of this ancestor's descendant labels, relative to the
+	// label box; used to size the span across the real column pitch (colw+colspace) and any
+	// sample-group gaps (colgspace), which a plain colw*(n-1) estimate would miss
+	startX: number
+	endX: number
 	maxTextLengthByAncestorDistance: { [key: number]: number }
 	direction: string
 	distance: number // ancestor distance, used to stack nested spans by level
+}
+
+// parse the x translation from a `translate(x,y)...` transform string; NaN if absent
+function getTranslateX(transform: string | null | undefined): number {
+	if (!transform) return NaN
+	const match = /translate\(\s*(-?[\d.]+)/.exec(transform)
+	return match ? Number(match[1]) : NaN
 }
 
 export const SPANCLS = 'sjpp-matrix-label-span'
@@ -94,6 +106,11 @@ export function trackLabelSpanData(
 	if (side.prefix !== 'sample') return
 	if (!lab.row?._ref_?.ancestors) return
 
+	// rendered x of this sample's label; already encodes the column pitch (colw+colspace)
+	// and any sample-group gaps (colgspace), so span widths derived from it are accurate
+	const gTransform = side.attr.labelGTransform(lab)
+	const gx = getTranslateX(gTransform)
+
 	for (const a of lab.row._ref_.ancestors) {
 		const id = a.ancestor_id
 		if (id === undefined || id === null) continue
@@ -104,8 +121,10 @@ export function trackLabelSpanData(
 				ancestor_id: id,
 				ancestor_name: a.ancestor_name,
 				//row: lab.row,
-				transform: side.attr.labelGTransform(lab),
+				transform: gTransform,
 				samples: [],
+				startX: gx,
+				endX: gx,
 				maxTextLengthByAncestorDistance: {},
 				direction,
 				distance: a.distance
@@ -123,6 +142,11 @@ export function trackLabelSpanData(
 		// (e.g. a direct parent of some and a grandparent of others); stack its span
 		// at the outermost nesting level using the largest observed distance
 		if (a.distance > entry.distance) entry.distance = a.distance
+		// widen the tracked horizontal extent to this descendant's rendered position
+		if (!Number.isNaN(gx)) {
+			if (Number.isNaN(entry.startX) || gx < entry.startX) entry.startX = gx
+			if (Number.isNaN(entry.endX) || gx > entry.endX) entry.endX = gx
+		}
 
 		const textBox = text.node()?.getBBox() || { width: 0 }
 		const m = entry.maxTextLengthByAncestorDistance
@@ -157,7 +181,9 @@ export function renderLabelSpans(relatedSamplesByAncestorId, side, d) {
 			.text(r.ancestor_name ?? r.ancestor_id)
 			.node()
 			?.getBBox() || { width: 0, height: 0 }
-		const availableWidth = r.samples.length * d.colw
+		// the horizontal extent available to the label = the span across its descendant
+		// columns plus one column width (from the first column's left to the last column's right)
+		const availableWidth = getSpanWidth(r, d) + d.colw
 		const horizontal = box.width <= availableWidth
 		layoutByEntry.set(r, { horizontal, verticalExtent: horizontal ? box.height : box.width })
 	})
@@ -172,7 +198,7 @@ export function renderLabelSpans(relatedSamplesByAncestorId, side, d) {
 		const isTop = getDirection(r, side) === 'top'
 		const level = (r.distance || 1) - 1
 		const y = isTop ? -lineOffsetByLevel[level] : lineOffsetByLevel[level]
-		const xw = d.colw * (r.samples.length - 1)
+		const xw = getSpanWidth(r, d)
 		const g = select(this)
 		// insert the line before the text so it stays behind the ancestor label
 		g.insert('line', 'text')
@@ -207,6 +233,15 @@ export function renderLabelSpans(relatedSamplesByAncestorId, side, d) {
 // while allowing a caller/test to drive the placement via side.direction.
 function getDirection(d, side) {
 	return side.direction ?? d.direction
+}
+
+// Horizontal span width from the first to the last descendant column, using their real
+// rendered x-positions (which already include the column pitch colw+colspace and any
+// sample-group gaps colgspace). Falls back to a colw*(n-1) estimate when positions are
+// unavailable (e.g. no labelGTransform), so the span still renders.
+function getSpanWidth(r, d) {
+	const w = r.endX - r.startX
+	return Number.isFinite(w) && w > 0 ? w : d.colw * (r.samples.length - 1)
 }
 
 // Compute the positive line-offset magnitude for each nesting level. Level 0 sits just
