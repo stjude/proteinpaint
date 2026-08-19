@@ -13,7 +13,7 @@ export type DiffMethRequest = {
 	samplelst: any
 	/** Minimum non-NA samples required per group (default 3) */
 	min_samples_per_group?: number
-	/** Drop chrX/chrY promoters before testing (default false). X-inactivation makes
+	/** Drop chrX/chrY elements before testing (default false). X-inactivation makes
 	 * chrX methylation strongly sex-dependent, so a sex-imbalanced comparison produces
 	 * chrX hits that are sex rather than the grouping variable. */
 	exclude_sex_chr?: boolean
@@ -22,10 +22,10 @@ export type DiffMethRequest = {
 	 * opposite ends of the methylation range. */
 	ebayes_trend?: boolean
 	/** Robust eBayes moderation (default false): down-weight variance outliers when
-	 * estimating hyperparameters so a few wild promoters cannot drag the prior. */
+	 * estimating hyperparameters so a few wild elements cannot drag the prior. */
 	ebayes_robust?: boolean
 	/** Per-sample REML weights via limma arrayWeights() (default false). Unlike the two
-	 * eBayes options this acts across samples rather than across promoters, and it does
+	 * eBayes options this acts across samples rather than across elements, and it does
 	 * change the fitted fold-changes. Guards against a single aberrant sample dominating
 	 * a small group, and against unequal variance between two very unbalanced arms. */
 	array_weights?: boolean
@@ -66,7 +66,7 @@ export type DiffMethPreAnalysisResponse = {
 
 /** Response for a full differential methylation run (preAnalysis absent/false). */
 export type DiffMethFullResponse = {
-	/** The volcano payload — per-promoter interactive dots + PNG + extents +
+	/** The volcano payload — per-element interactive dots + PNG + extents +
 	 * totals. See VolcanoData for details. */
 	data: VolcanoData<DiffMethEntry>
 	/** Effective sample size for group 1 */
@@ -77,16 +77,36 @@ export type DiffMethFullResponse = {
 
 export type DiffMethResponse = DiffMethPreAnalysisResponse | DiffMethFullResponse
 
+/** One tested regulatory element. Despite the field names, this is NOT promoter-specific:
+ * the same shape describes promoters, cCRE classes, eQTM blocks and promoter sub-window tiles.
+ * `promoter_id` keeps its name only for backward compatibility with existing clients — read
+ * `element_class` to know what a row actually is. */
 export type DiffMethEntry = DataEntry & {
-	/** ENCODE CRE promoter ID (e.g. EH38E3756858) */
+	/** Row key, unique within a result. For an untiled run this equals `element_id`; for a
+	 * tiled run it is the composite "<element_id>::tile<N>", so rows stay unique while
+	 * `element_id` remains groupable. Named `promoter_id` for backward compatibility from when
+	 * the analysis was promoter-only. */
 	promoter_id: string
-	/** Gene symbol(s) associated with the promoter (comma-separated if multiple) */
+	/** The bare element identifier, without any tile suffix — e.g. an ENCODE cCRE accession
+	 * (EH38E3756858) for cCRE builds, or the builder's own id for eQTM blocks. Resolved from
+	 * meta/element/elementID, meta/element_id, or legacy meta/promoter/promoterID. */
+	element_id: string
+	/** Which class this row belongs to: 'promoter', 'enhancer_distal', 'eqtm_block', etc.
+	 * Present per row because one matrix may hold several classes, in which case the run-level
+	 * label is 'mixed' while each row still names its own. */
+	element_class: string
+	/** Sub-window index within the element, 5'->3'. Only present when the input was a tile
+	 * matrix (build_element_matrix.py --tiles N); absent otherwise, so a non-tiled run's shape
+	 * is unchanged. */
+	tile_index?: number
+	/** Gene symbol(s) associated with the element (comma-separated if multiple, may be empty) */
 	gene_name: string
 	/** Chromosome (e.g. "chr1") */
 	chr: string
-	/** Promoter start coordinate (0-based) */
+	/** Element start coordinate (0-based). For a tile row this is the tile's own span, not the
+	 * parent element's. */
 	start: number
-	/** Promoter end coordinate (exclusive) */
+	/** Element end coordinate (exclusive) */
 	stop: number
 	/** Group 1 (control) mean beta, over observed cells only */
 	mean_beta_control: number
@@ -98,6 +118,26 @@ export type DiffMethEntry = DataEntry & {
 	 * the stored M-values, which yields the alpha-smoothed beta and so shrinks the difference
 	 * toward zero by 2/(depth+2) — under 1% at this cohort's typical promoter depth. */
 	delta_beta: number
+}
+
+/** What diffMeth.R actually tested, as opposed to what was asked for. Emitted by the R script
+ * alongside the rows; NOT currently forwarded to the client by termdb.diffMeth.ts, which passes
+ * only `promoter_data` through. Documented here because the R output is a shared contract and a
+ * caller reading it directly (or a future route that does forward it) needs the shape.
+ *
+ * It exists because promoter, enhancer and tile runs all use identical column names, so without
+ * it a result is indistinguishable from any other. */
+export type DiffMethElementMeta = {
+	/** The class tested, or 'mixed' when the retained rows span more than one. Computed over the
+	 * rows that survived filtering, not over the whole matrix. */
+	element_class: string
+	/** Which h5 path supplied the row ids — meta/element/elementID, meta/element_id, or
+	 * meta/promoter/promoterID. Distinguishes a new build from a legacy promoter-only one. */
+	id_source: string
+	/** Whether the input was a tile matrix, i.e. whether rows carry tile_index. */
+	is_tiled: boolean
+	/** Elements that passed filtering and entered the model. */
+	n_elements_tested: number
 }
 
 // TODO: write payload examples to help with automated testing and documentation, for non-prod use only
