@@ -131,9 +131,10 @@ function excludeSpecFiles(pattern) {
 }
 
 function nodeLibToBrowser() {
-	// NOTE: These polyfills are installed by node-polyfill-webpack-plugin,
-	// and will still be required as devDependencies after removing webpack
-	// and its plugins post-esbuild migration
+	// NOTE: path-browserify and stream-browserify are explicit devDependencies
+	// (node-polyfill-webpack-plugin, which used to install these transitively,
+	// has been removed entirely -- it also pulled in elliptic, which had an
+	// unpatched vulnerability, for a crypto polyfill nothing here ever used)
 	const replace =
 		ENV == 'test'
 			? {

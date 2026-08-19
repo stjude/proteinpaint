@@ -1,5 +1,4 @@
 const WebpackNotifierPlugin = require('webpack-notifier')
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const path = require('path')
 const fs = require('fs')
 
@@ -12,8 +11,8 @@ module.exports = function getPortalConfig(env = {}) {
 		entry,
 
 		experiments: {
-	    outputModule: true,
-	  },
+			outputModule: true
+		},
 
 		output: {
 			module: true,
@@ -31,15 +30,12 @@ module.exports = function getPortalConfig(env = {}) {
 			libraryTarget: 'window'
 		},
 		resolve: {
-			/* TODO: select polyfills instead of using node-polyfill-webpack-plugin
-			fallback: {
-				//stream: false,
-				//fs: false,
-				path: require.resolve('path-browserify'),
-				process: require.resolve('process')
-			}*/
+			// node-polyfill-webpack-plugin removed: verified (with a synthetic entry
+			// matching the typia-generated checker code's shape -- pure runtime
+			// type-guard logic on plain objects, no Node builtins) that this bundle
+			// needs no polyfills at all
 		},
-		plugins: [new NodePolyfillPlugin()],
+		plugins: [],
 		module: {
 			strictExportPresence: true,
 			rules: [
