@@ -1,5 +1,5 @@
 import { select } from 'd3-selection'
-import { ColorScale, computeTicks } from '#dom'
+import { ColorScale, computeTicks, getMaxLabelWidth } from '#dom'
 
 export default function svgLegend(opts) {
 	let currlinex = 0
@@ -211,6 +211,18 @@ export default function svgLegend(opts) {
 			const max = d.domain[d.domain.length - 1]
 			const domainRange = Math.abs(max - min)
 
+			/* cap the tick count by how many labels physically fit on the bar,
+			so large domains (e.g. hundreds of samples) do not render overlapping numbers.
+			measure the min/max labels (covers negative domains); getMaxLabelWidth returns
+			0 when the svg is not visible, in which case fall back to a per-character
+			estimate of roughly 0.6em per character */
+			const tickFontSize = 0.82 * settings.fontsize
+			const tickLabels = [`${min}`, `${max}`]
+			const maxLabelLen = Math.max(...tickLabels.map(l => l.length))
+			const measured = getMaxLabelWidth(g, tickLabels, tickFontSize / 16)
+			const maxTickLabelWidth = (measured || maxLabelLen * 0.6 * tickFontSize) + 0.6 * tickFontSize
+			const fitTicks = Math.max(2, Math.floor(width / maxTickLabelWidth))
+
 			const opts = {
 				barwidth: width,
 				barheight: settings.iconh,
@@ -223,7 +235,7 @@ export default function svgLegend(opts) {
 				holder: g.append('g'),
 				id: colorGradientId,
 				position: `${bbox.width + 25},${yPos}`,
-				ticks: computeTicks(domainRange, 2),
+				ticks: Math.min(computeTicks(domainRange, 2), fitTicks),
 				tickSize: 2,
 				topTicks: true
 			}

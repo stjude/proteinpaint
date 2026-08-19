@@ -457,8 +457,9 @@ type SingleSampleMutationQuery = {
 }
 
 type NIdataQuery = {
-	/** Reference obj for NI data query. */
-	Ref1: NIdataQueryRef
+	/** Reference objs for NI data query, keyed by reference name.
+	Each key is shown to users as a template option in the brain imaging chart menu */
+	[refKey: string]: NIdataQueryRef
 }
 
 type NIdataQueryRef = {
@@ -466,6 +467,9 @@ type NIdataQueryRef = {
 	referenceFile: string
 	/** file path for the sample file */
 	samples: string
+	/** voxel counts of the reference volume per plane, read from the NIfTI header at
+	server launch; client uses them as slider ranges */
+	dimensions?: NIdataQueryRefParams
 	/** Parameters for slice indices in the mass brain imaging plot */
 	parameters?: NIdataQueryRefParams
 	/** optional terms to show as table columns and annotate samples */

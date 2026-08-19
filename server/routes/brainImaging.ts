@@ -1,7 +1,9 @@
+import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import type { QualTW, BrainImagingRequest, BrainImagingResponse, FilesByCategory } from '#types'
 import { getData } from '../src/termdb.matrix.js'
+import { filterSampleNamesByAccess } from '#src/termdb.sql.js'
 import { isNumericTerm } from '#shared'
 import { getColors } from '#shared'
 import { run_python } from '@sjcrh/proteinpaint-python'
@@ -19,11 +21,12 @@ export function init({ genomes }) {
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets[query.dslabel]
 			if (!ds) throw 'invalid dataset name'
+			// must not test truthiness: slice index 0 (first slice) is valid
 			let plane, index
-			if (query.l) {
+			if (query.l != undefined) {
 				plane = 'L'
 				index = query.l
-			} else if (query.f) {
+			} else if (query.f != undefined) {
 				plane = 'F'
 				index = query.f
 			} //(query.t)
@@ -36,7 +39,12 @@ export function init({ genomes }) {
 			res.send({ brainImage, plane, legend } satisfies BrainImagingResponse)
 		} catch (e: any) {
 			console.log(e)
-			res.status(404).send('Sample brain image not found')
+			/* send the error as plain text, NOT a json object: dofetch3 caches json
+			response bodies for the page lifetime, so a transient failure would be
+			replayed forever for this request body; string responses are not kept
+			in that cache, keeping errors retryable. clients treat a string
+			response from this route as the error message */
+			res.status(404).send(typeof e == 'string' ? e : 'Sample brain image not found')
 		}
 	}
 }
@@ -56,9 +64,22 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 		if (divideByTW) terms.push(divideByTW)
 		if (overlayTW) terms.push(overlayTW)
 
-		const selectedSampleNames = query.selectedSampleFileNames.map(s => s.split('.nii')[0])
+		let selectedSampleNames = query.selectedSampleFileNames.map(s => s.split('.nii')[0])
 
-		const data = await getData({ terms }, ds)
+		// sample view and matrix may request any sample, including ones without imaging data;
+		// keep only samples that actually have an imaging file
+		const existingFiles = new Set(await fs.promises.readdir(dirPath))
+		selectedSampleNames = selectedSampleNames.filter(s => existingFiles.has(s + '.nii'))
+		if (!selectedSampleNames.length) throw 'no brain imaging data for the requested sample(s)'
+
+		// restrict rendered samples by the combined global+local filter and access control
+		selectedSampleNames = await filterSampleNamesByAccess(query, ds, selectedSampleNames)
+		// covers both a user filter excluding all selected samples and access control;
+		// an explicit message beats rendering a bare template with no explanation
+		if (!selectedSampleNames.length) throw 'no selected samples pass the current filter'
+
+		const data = await getData({ terms, __protected__: query.__protected__ }, ds)
+		if (data.error) throw data.error
 
 		/*
 		divideByCat's structure, When no divideByTW given, one fake divideByTwCat 'default' will be used.
@@ -95,15 +116,17 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 		const uniqueOverlayTwCats = new Set()
 		for (const sampleName of selectedSampleNames) {
 			const sampleId = ds.sampleName2Id.get(sampleName)
+			// sampleData may be undefined for a sample with an imaging file but no
+			// annotation for the divide/overlay terms; it then stays in 'default'
 			const sampleData = data.samples[sampleId]
 			const samplePath = path.join(dirPath, sampleName) + '.nii'
 			let divideCategory = 'default'
 			let overlayCategory = 'default'
-			if (divideByTW) {
+			if (divideByTW && sampleData) {
 				const value = sampleData[divideByTW.$id!]
 				if (value) divideCategory = divideByTW.term.values?.[value.key]?.label || value.key // for numeric terms key has the bin label, for geneVariant terms, key is the group
 			}
-			if (overlayTW) {
+			if (overlayTW && sampleData) {
 				const value = sampleData[overlayTW.$id!]
 				if (value) {
 					overlayCategory = overlayTW.term.values?.[value.key]?.label || value.key

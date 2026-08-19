@@ -189,6 +189,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_singleCell(ds, genome)
 			await validate_query_TopVariablyExpressedGenes(ds)
 			await validate_query_trackLst(ds, genome)
+			await validate_query_NIdata(ds)
 
 			await validate_variant2samples(ds)
 			await validate_ssm2canonicalisoform(ds)
@@ -720,6 +721,47 @@ function sort_mclass(set) {
 	}
 	lst.sort((i, j) => j[1] - i[1])
 	return lst
+}
+
+async function validate_query_NIdata(ds) {
+	const q = ds.queries.NIdata
+	if (!q) return
+	for (const refKey in q) {
+		const ref = q[refKey]
+		if (!ref.referenceFile) throw `NIdata['${refKey}'].referenceFile missing`
+		if (!ref.samples) throw `NIdata['${refKey}'].samples missing`
+		const file = path.join(serverconfig.tpmasterdir, ref.referenceFile)
+		/* read the template's voxel grid from its NIfTI-1 header: sizeof_hdr (int32 at
+		byte 0, always 348, also reveals endianness) and dim[8] (int16[8] at byte 40,
+		dim[1..3] = x/y/z voxel counts). the client uses the counts as slice slider
+		ranges, so any template grid works without hardcoding dimensions anywhere */
+		const buf = Buffer.alloc(348)
+		const fh = await fs.promises.open(file, 'r')
+		let bytesRead
+		try {
+			bytesRead = (await fh.read(buf, 0, 348, 0)).bytesRead
+		} finally {
+			await fh.close()
+		}
+		if (buf[0] == 0x1f && buf[1] == 0x8b) throw `referenceFile is gzipped, please decompress it: ${ref.referenceFile}`
+		// dim[3] ends at byte 48; a shorter file cannot be a NIfTI-1 volume
+		if (bytesRead < 48) throw `not a NIfTI-1 file: ${ref.referenceFile}`
+		const littleEndian = buf.readInt32LE(0) == 348
+		if (!littleEndian && buf.readInt32BE(0) != 348) throw `not a NIfTI-1 file: ${ref.referenceFile}`
+		const readInt16 = offset => (littleEndian ? buf.readInt16LE(offset) : buf.readInt16BE(offset))
+		ref.dimensions = { l: readInt16(42), f: readInt16(44), t: readInt16(46) }
+		for (const [plane, count] of Object.entries(ref.dimensions)) {
+			if (!Number.isInteger(count) || count <= 0) throw `invalid ${plane} dimension in ${ref.referenceFile}`
+			// dataset-authored default slice index must be within the volume
+			if (ref.parameters && ref.parameters[plane] >= count)
+				throw `NIdata['${refKey}'].parameters.${plane}=${ref.parameters[plane]} out of range (volume has ${count} slices)`
+		}
+		// catch sampleColumns termid typos at launch instead of failing every table request
+		for (const c of ref.sampleColumns || []) {
+			if (!ds.cohort?.termdb?.q?.termjsonByOneid(c.termid))
+				throw `invalid termid '${c.termid}' in NIdata['${refKey}'].sampleColumns`
+		}
+	}
 }
 
 async function validate_query_geneCnv(ds, genome) {
