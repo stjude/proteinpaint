@@ -269,6 +269,14 @@ def tile(slide, z, x, y, quality=80, plane=None):
         s.close()  # always release the slide
 
 
+def genenames(h5):
+    """All gene names present in a 10x cell_feature_matrix HDF5, in file order.
+    Lets the client discover/validate genes instead of trusting configuration."""
+    import h5py
+    with h5py.File(h5, "r") as f:
+        return {"genes": f["matrix/features/name"][:].astype(str).tolist()}
+
+
 def genecounts(h5, gene):
     """Per-cell counts of one gene from a 10x cell_feature_matrix HDF5 (CSC
     sparse, genes x cells). Zero-count cells are omitted. Returns {"error":..}
@@ -320,6 +328,8 @@ def main():
         print(tile(job["slide"], int(job["z"]), int(job["x"]), int(job["y"]), plane=plane))  # temp jpg path
     elif job["action"] == "genecounts":
         print(json.dumps(genecounts(job["h5"], job["gene"]), separators=(",", ":")))
+    elif job["action"] == "genenames":
+        print(json.dumps(genenames(job["h5"]), separators=(",", ":")))
     else:
         raise ValueError(f"unknown action {job.get('action')!r}")
 

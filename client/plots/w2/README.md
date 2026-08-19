@@ -50,8 +50,9 @@ roots, both laid out as `<root>/<sample_id>/<imageName>/<files>`:
 The route lists samples (subfolder names of the roots, unioned with the legacy
 `wsimages` sql table when present) and, per sample, its images. Each image is
 returned as `WsiImage` (`type:'wsi'`) or `SpatialImage` (`type:'spatial'`,
-plus tpmasterdir-relative companion paths and dataset-level viewer defaults
-`geneExpression`/`annotationLevel`).
+plus tpmasterdir-relative companion paths and the optional dataset-level
+viewer overrides `geneExpression`/`annotationLevel` — the actual gene
+defaults are discovered from the expression file at runtime, see step 4).
 
 ### 2. Slide resolution & tile serving — `server/src/routes/wsitiles.ts`
 
@@ -70,10 +71,10 @@ All viewer traffic hits `wsitiles/:action`:
   (`cachedir/wsitiles/<sha1(slide:mtime)>_<plane>_<z>_<x>_<y>.jpg`); on a miss
   spawns `wsi_tile.py tile`, copies the produced JPEG into the cache, and
   serves it with `Cache-Control: immutable`.
-- **`/boundaries` and `/genecounts`** (spatial only): serve a companion CSV /
-  per-cell gene counts from the companion HDF5. `?file=` is scoped to the
-  selected slide's own image folder, so a valid slide query cannot read other
-  samples' or datasets' files.
+- **`/boundaries`, `/genecounts`, `/genenames`** (spatial only): serve a
+  companion CSV / per-cell counts of one gene / the list of all genes present
+  in the companion HDF5. `?file=` is scoped to the selected slide's own image
+  folder, so a valid slide query cannot read other samples' or datasets' files.
 
 ### 3. Decoding & tile production — `python/src/wsi_tile.py`
 
@@ -108,14 +109,20 @@ For a `tile` job the flow is (identical for both formats, because
 
 `meta` returns the geometry the client needs before it can ask for tiles;
 `genecounts` reads the 10x `cell_feature_matrix` HDF5 (CSC sparse) and returns
-per-cell counts for one gene.
+per-cell counts for one gene; `genenames` returns every gene name in that
+file, in file order.
 
 ### 4. Client rendering — `client/plots/w2/`
 
 - **`Wsi.ts`** — the mass "Whole Slide Images" plot (rx component). Fetches
   the sample list, renders the burger-menu controls for spatial images (via
-  `controlsInit`), seeds them with the dataset defaults, and swaps the sandbox
-  header to SPATIAL VIEWER when the shown image is spatial.
+  `controlsInit`), and swaps the sandbox header to SPATIAL VIEWER when the
+  shown image is spatial. Gene defaults are **discovered from the data**: it
+  calls `/genenames` on the image's expression h5, filters the dataset's
+  optional `geneExpression` override to genes actually in the file (falling
+  back to the file's first gene), seeds the Genes field with that, and
+  attaches the full gene list to the field as a native `<datalist>` so typing
+  autocompletes to real genes.
 - **`model/Model.ts` / `viewModel/ViewModel.ts`** — thin data layer: query
   `termdb/wsiBySample` and shape the sample table rows.
 - **`view/View.ts`** — renders the sample table, one tab per image

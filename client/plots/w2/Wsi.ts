@@ -2,6 +2,7 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { PlotBase } from '../PlotBase'
 import type { BasePlotConfig, MassState } from '#mass/types/mass'
 import type { SpatialImage } from '#types'
+import { dofetch3 } from '#common/dofetch' // gene-name discovery from the expression h5
 import { controlsInit } from '../controls'
 import type Settings from './Settings.ts'
 import { Model } from './model/Model'
@@ -93,18 +94,28 @@ class Wsi extends PlotBase implements RxComponent {
 		const isSpatial = image?.type == 'spatial' // drives header text + burger visibility
 		this.dom.header?.text(isSpatial ? 'SPATIAL VIEWER' : 'WHOLE SLIDE IMAGES')
 		if (isSpatial) {
-			// seed the burger menu's gene/level fields with the dataset's defaults
-			// (null = never edited) so the shown values match the overlay and can
-			// be edited or cleared; re-renders once with the seeded state
 			const spImage = image as SpatialImage
-			if (settings.geneExpression == null && spImage.geneExpression != null) {
+			// gene names discovered from the expression h5 itself, so the burger
+			// menu offers/validates genes that actually exist in the data
+			const genes = await this.fetchGeneNames(spImage, selectedSample!.sampleId)
+			// seed the burger menu's gene/level fields once (null = never edited)
+			// so the shown values match the overlay and can be edited or cleared;
+			// re-renders once with the seeded state
+			if (settings.geneExpression == null) {
+				// the dataset's configured default is only an override: keep the
+				// genes of it that exist in the file, else fall back to the file's
+				// first gene, so the default is never a gene the data lacks
+				const configured = (spImage.geneExpression || '')
+					.split(',')
+					.map(s => s.trim())
+					.filter(g => genes.includes(g))
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.id,
 					config: {
 						settings: {
 							wsi: {
-								geneExpression: spImage.geneExpression,
+								geneExpression: configured.join(',') || genes[0] || '',
 								annotationLevel: settings.annotationLevel ?? spImage.annotationLevel
 							}
 						}
@@ -113,14 +124,58 @@ class Wsi extends PlotBase implements RxComponent {
 				return
 			}
 			if (!this.components.controls) await this.setControls()
+			this.addGeneDatalist() // autocomplete on the Genes field from the discovered names
 		}
 		this.dom.controls.style('display', isSpatial ? 'inline-block' : 'none')
 
 		await new View(this.dom, viewModel.viewData, images, settings, this.interactions, this.state.vocab).render()
 	}
 
+	/** gene names available in the current image's expression h5, cached per file */
+	private geneNames: string[] = []
+	private geneNamesFile?: string
+
+	/** Discover the genes present in the image's cell_feature_matrix h5 via
+	 wsitiles/genenames (same slide-scoped access checks as genecounts).
+	 Returns [] when the image has no expression file or the request fails. */
+	private async fetchGeneNames(image: SpatialImage, sampleId: string): Promise<string[]> {
+		if (!image.geneExpressionFile) return []
+		if (this.geneNamesFile == image.geneExpressionFile) return this.geneNames // cached
+		const v = this.state.vocab
+		const params =
+			`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${v.dslabel}&genome=${v.genome}` +
+			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&file=${encodeURIComponent(
+				image.geneExpressionFile
+			)}`
+		const r = await dofetch3(`wsitiles/genenames?${params}`).catch(() => null)
+		this.geneNames = Array.isArray(r?.genes) ? r.genes : [] // failure = no discovery, config still works
+		this.geneNamesFile = image.geneExpressionFile
+		return this.geneNames
+	}
+
+	/** Attach the discovered gene names to the Genes text input as a native
+	 datalist, so typing autocompletes to genes that exist in the data.
+	 (Autocomplete applies to the whole field, i.e. the first gene of a
+	 comma-separated list — later genes are typed without suggestions.) */
+	private addGeneDatalist() {
+		if (!this.geneNames.length) return
+		const input = this.dom.controls.select('input[type=text]').node() as HTMLInputElement | null
+		if (!input) return // controls not rendered (shouldn't happen)
+		const id = `sjpp-wsi-genes-${this.id}`
+		document.getElementById(id)?.remove() // rebuild when the image (and its genes) changed
+		const dl = document.createElement('datalist')
+		dl.id = id
+		for (const g of this.geneNames) {
+			const opt = document.createElement('option')
+			opt.value = g
+			dl.appendChild(opt)
+		}
+		input.after(dl)
+		input.setAttribute('list', id) // link the input to its suggestions
+	}
+
 	/** Burger menu with the spatial overlay settings; fields are pre-seeded
-	 with the dataset's defaults by main() before this runs. */
+	 with defaults discovered from the data by main() before this runs. */
 	private async setControls() {
 		this.components.controls = await controlsInit({
 			app: this.app,
