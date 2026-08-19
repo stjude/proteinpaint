@@ -245,8 +245,8 @@ export function renderVariantConfig(arg: Arg) {
 				rows.push(row)
 				if (selectedValues.find(s => s.key == m.key)) selectedIdxs.push(i)
 			}
-			const columns: any[] = [{ label: 'tvs' }]
-			if (showClassCount) columns.push({ label: 'Samples', align: 'right' })
+			const columns: any[] = [{ label: 'Class' }]
+			if (showClassCount) columns.push({ label: 'Samples' })
 			renderTable({
 				rows,
 				columns,
@@ -254,7 +254,6 @@ export function renderVariantConfig(arg: Arg) {
 				maxWidth: '40vw',
 				maxHeight: '40vh',
 				noButtonCallback: () => updateMnameRowDisplay(),
-				showHeader: false,
 				striped: false,
 				showLines: false,
 				selectedRows: selectedIdxs
@@ -387,7 +386,7 @@ export function renderVariantConfig(arg: Arg) {
 				if (selectedMnames.some(s => s.mname == m.mname && s.key == m.class && matchesGvQueryEntry(s, m)))
 					selectedMnameIdxs.push(i)
 			}
-			const mnameColumns: any[] = [{ label: 'Variant' }, { label: 'Class' }, { label: 'Samples', align: 'right' }]
+			const mnameColumns: any[] = [{ label: 'Variant' }, { label: 'Class' }, { label: 'Samples' }]
 			if (showGene) mnameColumns.unshift({ label: scopeColumnLabel })
 			if (canSelectBreakpoint) mnameColumns.push({ label: 'Breakpoint' })
 			renderTable({
@@ -397,7 +396,6 @@ export function renderVariantConfig(arg: Arg) {
 				maxWidth: '40vw',
 				maxHeight: '30vh',
 				noButtonCallback: () => updateMnameRowDisplay(),
-				showHeader: false,
 				striped: false,
 				showLines: false,
 				selectedRows: selectedMnameIdxs
