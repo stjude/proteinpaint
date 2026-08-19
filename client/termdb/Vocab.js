@@ -279,7 +279,11 @@ export class Vocab {
 	hand a q to fillTermWrapper(), which fills in place. */
 	getGvQLst(term) {
 		const key = getGvGeneKey(term)
-		const lst = key && this.state.reuse?.gvQByGene?.[key]
+		const cache = this.state.reuse?.gvQByGene
+		/* own entries only: the key is a gene name a url or an embedder can supply, and one
+		that collides with an inherited name (constructor, ...) would read Object.prototype
+		off this plain object, see setGvQLst() in client/mass/store.ts */
+		const lst = key && cache && Object.prototype.hasOwnProperty.call(cache, key) && cache[key]
 		return lst ? structuredClone(lst) : []
 	}
 

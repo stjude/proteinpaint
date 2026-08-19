@@ -264,7 +264,8 @@ cycle reaches this walk (see setGroupsetParentTerms()).
 export function forEachGvTw(obj: any, callback: (tw: any) => void) {
 	if (!obj || typeof obj != 'object') return
 	if (obj.q && obj.term?.type == GENE_VARIANT) callback(obj)
-	for (const k in obj) forEachGvTw(obj[k], callback)
+	// own values only, to not descend into inherited props/methods, as in StoreBase.deepFreeze()
+	for (const value of Object.values(obj)) forEachGvTw(value, callback)
 }
 
 /*
