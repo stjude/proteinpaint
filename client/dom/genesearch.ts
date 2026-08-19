@@ -179,6 +179,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		row = arg.row
 	const result: Result = {}
 	let sampleType
+	let sampleTypeSelect
 
 	// validate arg
 	try {
@@ -220,21 +221,31 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		}
 	}
 
-	// if dataset contains multiple sample types, display menu for selecting sample type to query
 	if (arg.termdbConfig?.hasSampleAncestry) {
-		const sampleTypes = arg.termdbConfig.sampleTypes
-		if (!sampleTypes) throw 'sampleTypes{} is missing'
-		const select = row
+		// dataset has sample ancestry
+		// genomic data are assumed to be annotated for child sample types (diagnosis, relapse, PDX, etc.)
+		// if multiple child sample types are present, then display menu for selecting which to query
+		const childSampleTypes = {}
+		for (const [k, v] of Object.entries(arg.termdbConfig.sampleTypes)) {
+			if (Number.isInteger(v.parent_id)) childSampleTypes[k] = v
+		}
+		if (Object.keys(childSampleTypes).length < 2) return
+		sampleTypeSelect = row
 			.append('select')
-			.attr('data-testid', 'sjpp-genesearch-sampletype-select')
+			.attr('class', 'sjpp-genesearch-sampletype-select')
 			.style('margin-right', '8px')
-		select.append('option').attr('value', '').attr('disabled', true).attr('selected', true).text('Sample type')
-		for (const [k, v] of Object.entries(sampleTypes)) {
-			select.append('option').attr('value', k).text(v.name)
+		sampleTypeSelect
+			.append('option')
+			.attr('value', '')
+			.attr('disabled', true)
+			.attr('selected', true)
+			.text('Sample type')
+		for (const [k, v] of Object.entries(childSampleTypes)) {
+			sampleTypeSelect.append('option').attr('value', k).text(v.name)
 		}
 		// initialise result with the selected option
-		sampleType = select.property('value')
-		select.on('change', function (this: HTMLSelectElement) {
+		sampleType = sampleTypeSelect.property('value')
+		sampleTypeSelect.on('change', function (this: HTMLSelectElement) {
 			sampleType = this.value
 		})
 	}
@@ -414,7 +425,10 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	// focusOff fix for jerky (unsmooth) app drawer sliding.
 	// App drawer slide animation very jerky when .focus() is applied to any
 	// input box. Set focusOff: true to smoothly execute animations.
-	if (!arg.focusOff) searchbox.node().focus()
+	if (!arg.focusOff) {
+		if (sampleTypeSelect) sampleTypeSelect.node().focus()
+		else searchbox.node().focus()
+	}
 	const searchStat = {
 		mark: row.append('span').style('margin-left', '5px'),
 		word: row.append('span').style('margin-left', '5px').style('font-size', '.8em').style('opacity', 0.6)

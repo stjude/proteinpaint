@@ -160,13 +160,14 @@ export class SearchHandler {
 	}
 
 	searchGene() {
-		this.dom.searchDiv.selectAll('*').remove()
-		this.dom.searchDiv.style('margin', '10px 0px')
-		const geneSearch = addGeneSearchbox({
+		const searchDiv = this.dom.searchDiv
+		searchDiv.selectAll('*').remove()
+		searchDiv.style('margin', '10px 0px')
+		const geneSearch: any = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: this.opts.genomeObj,
 			termdbConfig: this.opts.app.vocabApi.termdbConfig,
-			row: this.dom.searchDiv,
+			row: searchDiv,
 			/* only allowing gene search for now because:
 			- coordinate search is not yet supported for gdc
 			- for other datasets, even though coordinate search is supported, it is not compatible with input type radios (single gene vs. geneset) because a coordinate may include one or more genes.
@@ -176,7 +177,9 @@ export class SearchHandler {
 			callback: async () => await this.selectGene(geneSearch)
 		})
 		this.dom.searchbox = geneSearch.searchbox
-		this.dom.searchDiv.select('.sja_genesearchinput').style('margin', '0px')
+		if (!searchDiv.select('.sjpp-genesearch-sampletype-select').node()) {
+			searchDiv.select('.sja_genesearchinput').style('margin', '0px')
+		}
 	}
 
 	/** focus on the search box of the current gene input (single gene or gene set) */
