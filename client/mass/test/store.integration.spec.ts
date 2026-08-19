@@ -230,6 +230,27 @@ tape('seeded geneVariant settings follow the remembered ones', async test => {
 	test.end()
 })
 
+tape('a gene named like an inherited object property is cached as an own key', async test => {
+	const store = await getStore()
+	const cache = store.state.reuse.gvQByGene
+	// the key comes from a gene name a url or an embedder supplies, see setGvQLst()
+	for (const gene of ['constructor', '__proto__', 'toString']) {
+		store.state.plots = [getGvPlot(gene, ['seeded', 'Others'])]
+		store.seedGvQCache()
+		rememberGvQ(store, gene, ['remembered', 'Others'])
+	}
+	test.deepEqual(Object.keys(cache), ['constructor', '__proto__', 'toString'], 'stores each gene as an own key')
+	for (const gene of ['constructor', '__proto__', 'toString']) {
+		test.deepEqual(
+			cache[gene].map(entry => entry.label),
+			['remembered / Others', 'seeded / Others'],
+			`keeps both the seeded and the remembered setting of ${gene}`
+		)
+	}
+	test.equal(Object.getPrototypeOf(cache), Object.prototype, 'never assigns through the __proto__ setter')
+	test.end()
+})
+
 tape('seeding never evicts a remembered geneVariant setting', async test => {
 	const store = await getStore()
 	for (let i = 0; i < 5; i++) rememberGvQ(store, 'BCR', [`group ${i}`, 'Others'])

@@ -92,6 +92,19 @@ session accumulates, since state.reuse is serialized into every session saved fr
 const maxGvQPerGene = 5
 const maxGvQGenes = 30
 
+/* The cache is keyed by gene names a url or an embedder can supply (see getGvGeneKey()),
+while it has to stay a plain object, since state.reuse is serialized into saved sessions.
+A key that collides with an inherited name must therefore never be read through the
+prototype -- 'constructor' would read a function whose .some()/.findIndex() throws -- so
+every read checks hasGvQKey() first. Inserting goes through defineProperty because
+assigning to '__proto__' would replace the cache's prototype instead of storing the list. */
+function hasGvQKey(cache: any, key: string) {
+	return Object.prototype.hasOwnProperty.call(cache, key)
+}
+function setGvQLst(cache: any, key: string, lst: any) {
+	Object.defineProperty(cache, key, { value: lst, enumerable: true, writable: true, configurable: true })
+}
+
 // one store for the whole MASS app
 class MassStore extends StoreBase implements RxStore {
 	static type = 'store'
@@ -214,8 +227,11 @@ class MassStore extends StoreBase implements RxStore {
 			if (!isCustomizedGvQ(q)) return
 			const key = getGvGeneKey(term)
 			if (!key) return // a term whose genes cannot all be named, see getGvGeneKey()
-			if (!(key in cache) && Object.keys(cache).length >= maxGvQGenes) return
-			const lst = cache[key] || (cache[key] = [])
+			if (!hasGvQKey(cache, key)) {
+				if (Object.keys(cache).length >= maxGvQGenes) return
+				setGvQLst(cache, key, [])
+			}
+			const lst = cache[key]
 			if (lst.length >= maxGvQPerGene) return
 			const trimmed = trimGvQForCache(q)
 			if (lst.some(entry => deepEqual(entry.q, trimmed))) return
@@ -503,7 +519,7 @@ MassStore.prototype.actions = {
 		if (!key) return // a term whose genes cannot all be named, see getGvGeneKey()
 		const cache = this.state.reuse.gvQByGene
 		const trimmed = trimGvQForCache(q)
-		const lst = cache[key] || []
+		const lst = hasGvQKey(cache, key) ? cache[key] : []
 		const i = lst.findIndex(entry => deepEqual(entry.q, trimmed))
 		if (i != -1) lst.splice(i, 1)
 		lst.unshift({ label: getGvQLabel(term, q), q: trimmed })
@@ -511,7 +527,7 @@ MassStore.prototype.actions = {
 		/* re-inserted rather than assigned in place, so that the gene keys are in recency
 		order too and the eviction below drops the least recently used gene */
 		delete cache[key]
-		cache[key] = lst
+		setGvQLst(cache, key, lst)
 		const keys = Object.keys(cache)
 		if (keys.length > maxGvQGenes) delete cache[keys[0]]
 	},
