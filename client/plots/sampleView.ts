@@ -1,9 +1,7 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '#plots/PlotBase.js'
 import { select } from 'd3-selection'
-// import { controlsInit } from './controls'
-// import { getNormalRoot } from '#filter'
-// import { dofetch3 } from '#common/dofetch'
+import { getBrainImagingSampleSet } from './getBrainImagingSampleSet.ts'
 import { DEFAULT_SAMPLE_TYPE, isNumericTerm, ROOT_SAMPLE_TYPE, getDateStrFromNumber } from '#shared/terms.js'
 import { sayerror } from '#dom'
 
@@ -202,7 +200,7 @@ class SampleView extends PlotBase implements RxComponent {
 
 	getState(appState) {
 		const config = appState.plots?.find(p => p.id === this.id)
-let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.sampleName, null, undefined)
+		let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.sampleName, null, undefined)
 
 		if (config.samples?.length > 15) samples = config.samples.filter((s, i) => i < 15)
 		const q = appState.termdbConfig.queries
@@ -671,10 +669,21 @@ let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.
 			}
 		}
 		if (state.termdbConfig.queries?.NIdata) {
-			for (const k in state.termdbConfig.queries?.NIdata) {
+			// show a single brain imaging plot per sample, using the first template as the default
+			const k = Object.keys(state.termdbConfig.queries.NIdata)[0]
+			// find which of the samples actually have imaging files, to skip the ones without
+			let available = new Set()
+			try {
+				available = await getBrainImagingSampleSet(state.vocab.genome, state.vocab.dslabel, k)
+			} catch (e) {
+				// on error keep the empty set: no brain imaging plots are shown
+				console.error('brainImagingSamples request failed:', e)
+			}
+			const samplesWithImaging = samples.filter(s => available.has(s.sampleName))
+			if (samplesWithImaging.length) {
 				const div = plotsDiv.append('div')
 				if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
-				for (const sample of samples) {
+				for (const sample of samplesWithImaging) {
 					const plotDiv = div.insert('div').style('display', 'inline-block')
 					this.brainPlots.push({ sample, cellDiv: plotDiv })
 					if (state.samples.length > 1)
@@ -879,7 +888,13 @@ export async function getPlotConfig(opts: any, app: any) {
 	return copyMerge(config, opts)
 }
 
-export function searchSampleInput(holder: any, samplesData: any, hasSampleAncestry: any, callback: (name: string) => void, keyUpCallback?: (str: string) => void) {
+export function searchSampleInput(
+	holder: any,
+	samplesData: any,
+	hasSampleAncestry: any,
+	callback: (name: string) => void,
+	keyUpCallback?: (str: string) => void
+) {
 	const limit = 100
 	const allSamples: string[] = []
 	for (const sample in samplesData) {
@@ -1012,7 +1027,12 @@ function buildHierarchy(samplesData: any) {
 }
 
 //Get samples related through parent
-export function getSamplesRelated(samplesData: any, sampleName: string, childrenByParent: Map<string, any> | null = null, rootFor?: Map<string, string>) {
+export function getSamplesRelated(
+	samplesData: any,
+	sampleName: string,
+	childrenByParent: Map<string, any> | null = null,
+	rootFor?: Map<string, string>
+) {
 	if (!samplesData[sampleName]) return []
 
 	// Fast path: use precomputed data when available

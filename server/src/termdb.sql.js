@@ -9,6 +9,26 @@ import { termCollectionCategorical, termCollectionNumeric } from './termdb.sql.t
 import { boxplot_getvalue } from '#shared/boxplot.js'
 import { DEFAULT_SAMPLE_TYPE, isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
 import { authApi } from '#src/auth.js'
+// circular import with termdb.matrix.js (it imports get_samples etc from this file); safe
+// because the binding is only dereferenced at runtime, never during module evaluation
+import { maySetMapParent2Children } from './termdb.matrix.js'
+
+/* a ds with sample ancestry may annotate terms at different levels (e.g. patient vs sample).
+CTEs of parent-level filter terms must be mapped down to leaf-level samples, otherwise
+intersecting them with child-level CTEs (e.g. a ds access-control filter on a sample-level
+term) matches nothing and silently yields an empty result. detect from the filter contents
+when the caller did not set q.mapParent2Children */
+function mayDetectSampleLevels(q, ds) {
+	if (q.mapParent2Children !== undefined) return
+	if (!ds.cohort?.termdb?.hasSampleAncestry) return
+	if (!q.filter?.lst?.length) return
+	try {
+		maySetMapParent2Children(q, ds)
+	} catch (e) {
+		// fall back to no mapping (previous behavior) on filters whose sample types cannot be detected
+		console.warn('mayDetectSampleLevels():', e.message || e)
+	}
+}
 /*
 
 ********************** EXPORTED
@@ -45,6 +65,32 @@ get_label4key
 
 */
 //in the future we may need to pass the sample type when there are more types than root and not root
+/* resolve a client-supplied termdb filter to the set of sample ids passing it.
+shared by routes that restrict file-based sample listings (e.g. brain imaging) by a filter.
+q: {filter, __protected__}. mayAdjustFilter() merges in any dataset access-control filter,
+same as getData() does (idempotent if the app middleware already adjusted the filter).
+file-based sample names are leaf-level, so on a ds with sample ancestry always map
+parent-level filter results down to leaf samples; without this, a filter of only
+parent-level terms would return parent ids that intersect no file name */
+export async function getFilterSampleIdSet(q, ds) {
+	authApi.mayAdjustFilter(q, ds, undefined)
+	if (ds.cohort?.termdb?.hasSampleAncestry) maySetMapParent2Children(q, ds, true)
+	return new Set((await get_samples(q, ds)).map(i => i.id))
+}
+
+/* restrict a list of file-derived sample names by the client-supplied termdb filter AND
+any dataset access-control filter. single owner of the guard for file-based routes
+(e.g. brain imaging): access control must also run when the client filter is empty,
+since such routes are not necessarily covered by the middleware's filter injection —
+skipping it would let an unauthenticated request access restricted samples by name.
+returns the input list unchanged when there is nothing to filter by */
+export async function filterSampleNamesByAccess(query, ds, sampleNames) {
+	if (!query.filter?.lst?.length && !ds.cohort?.termdb?.getAdditionalFilter) return sampleNames
+	const fq = { filter: structuredClone(query.filter), __protected__: query.__protected__ }
+	const allowedIds = await getFilterSampleIdSet(fq, ds)
+	return sampleNames.filter(s => allowedIds.has(ds.cohort.termdb.q.sampleName2id(s)))
+}
+
 export async function get_samples(q, ds, canDisplay = false) {
 	if (!ds.cohort?.db?.connection?.prepare) {
 		// avoid crashing server on clicking "sample view" btn in gdc corr plot
@@ -61,6 +107,7 @@ export async function get_samples(q, ds, canDisplay = false) {
 	q.__protected__.ignoreTermIds is modified or if routeTwLst can be supplied at this point
 	*/
 
+	mayDetectSampleLevels(q, ds)
 	const filter = await getFilterCTEs(q.filter, ds, q.mapParent2Children, q.sampleType) // if q.filter is blank, it returns null
 	const sql = filter
 		? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
@@ -130,7 +177,9 @@ export async function get_samplecount(q, ds) {
 		throw 'q.filter not obj or str'
 	}
 
-	const filter = await getFilterCTEs(j, ds)
+	const fq = { filter: j }
+	mayDetectSampleLevels(fq, ds)
+	const filter = await getFilterCTEs(j, ds, fq.mapParent2Children, fq.sampleType)
 	let statement, row
 	let sample_type
 	//the filters either return a sample type or none as the samples are converted to the common type.

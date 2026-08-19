@@ -12,8 +12,6 @@ import json
 try:
 	# Read raw input from stdin
 	input_data = sys.stdin.read()
-	print("python3 input_data")
-	print(input_data)
 
 	# Check if input is empty
 	if not input_data.strip():
@@ -86,15 +84,16 @@ ax.imshow(slice, 'gray', filternorm=False, vmin=0, vmax=100)
 for key, value in sampleFiles.items():
 	if(len(value["samples"]) == 0) :
 		continue
-	# Load all sample files
-	sample_data = [nib.load(file_path).get_fdata() for file_path in value["samples"]]
-
-	# Initialize the result array with zeros
-	labels = np.zeros_like(sample_data[0])
-
-	# Sum all sample data
-	for data in sample_data:
-		labels += data
+	# Sum the sample masks one file at a time. Loading all volumes at once
+	labels = None
+	for file_path in value["samples"]:
+		img = nib.load(file_path)
+		data = img.get_fdata(dtype=np.float32)
+		if labels is None:
+			labels = data
+		else:
+			labels += data
+		del img, data
 
 	labels = np.ma.masked_where(labels == 0, labels) # Mask labels where they are 0
 
@@ -119,7 +118,6 @@ for key, value in sampleFiles.items():
 	alpha = 0.6
 
 	color = value['color']
-	print(color)
 	cmap = mcolors.LinearSegmentedColormap.from_list('my_cmap', ['white', color])
 	ax.imshow(label, cmap, alpha=alpha, filternorm=False,vmin=0,vmax=vmaxSamples)
 	ax.axis('off')

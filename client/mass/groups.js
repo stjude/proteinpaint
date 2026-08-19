@@ -17,6 +17,7 @@ import { isNumericTerm, termType2label } from '#shared/terms.js'
 import { uiLabel } from '#shared'
 import { TermTypes } from '#types'
 import { dofetch3 } from '#common/dofetch'
+import { getBrainImagingSampleSet } from '#plots/getBrainImagingSampleSet.ts'
 import { maxSampleCutoff, maxGESampleCutoff } from '../plots/volcano/settings/defaults.ts'
 import { getGEunit } from '#tw/geneExpression'
 
@@ -241,6 +242,7 @@ class MassGroups {
 		mayAddMatrixMenuItems(menuDiv, 'Matrix', this.tip2, samplelstTW, id, this, this.state, true, () => this.newId)
 		mayAddSamplescatterOption(menuDiv, this, samplelstTW)
 		mayAddGenomebrowserOption(menuDiv, this, samplelstTW)
+		mayAddBrainImagingOption(menuDiv, this, samplelstTW)
 
 		//show option to delete custom variable
 		menuDiv
@@ -308,6 +310,109 @@ function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
 				config
 			})
 		})
+}
+
+function mayAddBrainImagingOption(menuDiv, self, samplelstTW) {
+	// offered when the ds has neuroimaging data (e.g. tumor masks on a brain template)
+	const NIdata = self.app.vocabApi.termdbConfig?.queries?.NIdata
+	if (!NIdata) return
+	const d = menuDiv
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.attr('data-testid', 'sjpp-brain-imaging-option')
+		.text('Compare brain imaging')
+		.on('click', async () => {
+			const tip = self.tip2
+			tip.clear().showunderoffset(d.node())
+			const submenu = tip.d.append('div')
+			const wait = submenu.append('div').style('margin', '5px').style('opacity', 0.5).text('Loading...')
+
+			/* unique explicitly-listed samples of this samplelst variable.
+			a complement group ("Not in X", in:false) reuses the primary group's list
+			to mark "everyone else"; its list entries are not its own members, so skip it
+			to avoid sending (and summing) the same sample twice */
+			const seen = new Set()
+			const sampleNames = []
+			let listedItemCount = 0
+			for (const grp of Object.values(samplelstTW.term.values)) {
+				if (grp.in === false) continue
+				for (const item of grp.list || []) {
+					listedItemCount++
+					if (!item.sample || seen.has(item.sample)) continue
+					seen.add(item.sample)
+					sampleNames.push(item.sample)
+				}
+			}
+			// the divide-by samplelst term buckets any extra sample into the complement
+			// group server-side (NOT IN sql), so a "vs others" comparison works by
+			// sending every imaging sample rather than only the listed ones
+			const hasComplement = Object.values(samplelstTW.term.values).some(g => g.in === false)
+			if (!sampleNames.length) {
+				// distinguish an empty variable from sample names hidden by permissions
+				wait.text(listedItemCount ? 'Sample names are not accessible' : 'No samples in this variable')
+				return
+			}
+
+			// let user select a template; show imaging availability per template.
+			// per-template try/catch: one broken template must not hide the others
+			const entries = await Promise.all(
+				Object.keys(NIdata).map(async refKey => {
+					try {
+						const available = await getBrainImagingSampleSet(
+							self.app.vocabApi.vocab.genome,
+							self.app.vocabApi.vocab.dslabel,
+							refKey
+						)
+						return { refKey, available }
+					} catch (e) {
+						return { refKey, error: e.message || e }
+					}
+				})
+			)
+			wait.remove()
+
+			for (const { refKey, available, error } of entries) {
+				if (error) {
+					sayerror(submenu, `${refKey}: ${error}`)
+					continue
+				}
+				const groupNames = sampleNames.filter(name => available.has(name))
+				const otherCount = hasComplement ? available.size - groupNames.length : 0
+				const row = submenu
+					.append('div')
+					.text(
+						`${refKey} (${groupNames.length} of ${sampleNames.length} with imaging` +
+							(otherCount ? `, vs ${otherCount} others)` : ')')
+					)
+				if (!groupNames.length) {
+					row.attr('class', 'sja_menuoption_not_interactive').style('opacity', 0.5)
+					continue
+				}
+				// with a complement group, send all imaging samples so the "others"
+				// panel is populated; otherwise only the variable's own samples
+				const names = hasComplement ? [...available] : groupNames
+				row.attr('class', 'sja_menuoption sja_sharp_border').on('click', async () => {
+					self.tip.hide()
+					tip.hide()
+					// use the custom variable as the divide-by term, so each group
+					// renders as its own panel on the shared template
+					const divideByTW = structuredClone(samplelstTW)
+					await fillTermWrapper(divideByTW, self.app.vocabApi)
+					// default slice positions are resolved by getPlotConfig()
+					// from the template's dataset-configured parameters
+					self.app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'brainImaging',
+							queryKey: refKey,
+							selectedSampleFileNames: names.map(name => name + '.nii'),
+							divideByTW
+						}
+					})
+				})
+			}
+		})
+	d.insert('div').html('›').style('float', 'right')
 }
 
 function makeFiltersFromTwoSampleGroups(tw) {

@@ -4,7 +4,10 @@ import { controlsInit } from './controls'
 import { getT0T2defaultQ } from './summaryQ.ts'
 import { fillTermWrapper } from '#termsetting'
 import { dofetch3 } from '#common/dofetch'
-import { Menu, renderTable, type TableRow, type TableColumn } from '#dom'
+import { Menu, renderTable, sayerror, type TableRow, type TableColumn } from '#dom'
+import { debounce } from 'debounce'
+import { getCombinedTermFilter } from '#filter'
+import { fetchBrainImagingSamples } from './getBrainImagingSampleSet.ts'
 import svgLegend from '#dom/svg.legend'
 import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
@@ -35,11 +38,16 @@ class BrainImaging extends PlotBase implements RxComponent {
 	async init(appState) {
 		const state = this.getState(appState)
 		const holder = this.opts.holder
-		if (this.opts.header)
+		if (this.opts.header) {
+			const fileNames = state.config.selectedSampleFileNames
+			// show individual sample names only for small selections; otherwise show the count
+			const samplesLabel =
+				fileNames.length < 3 ? fileNames.map(f => f.split('.nii')[0]).join(', ') : `${fileNames.length} samples`
 			this.opts.header
 				.style('padding-left', '7px')
 				.style('color', 'rgb(85, 85, 85)')
-				.html(`Brain Imaging: ${state.config.queryKey}/${state.config.selectedSampleFileNames.join(' ')}`)
+				.html(`Brain Imaging: ${state.config.queryKey}/${samplesLabel}`)
+		}
 		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const rightDiv = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const headerHolder = rightDiv
@@ -67,7 +75,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 			legendHolder,
 			legendMenu
 		}
-		this.addSliders(state.config.settings.brainImaging)
+		this.addSliders(state)
 
 		const configInputsOptions = this.getConfigInputsOptions(state)
 
@@ -91,7 +99,15 @@ class BrainImaging extends PlotBase implements RxComponent {
 		this.legendRenderer = svgLegend({ holder: this.dom.legendHolder })
 	}
 
-	addSliders(settings) {
+	addSliders(state) {
+		const settings = state.config.settings.brainImaging
+		/* slice index ranges come from the template's voxel counts, read from the NIfTI
+		header at server launch */
+		const dims = state.RefNIdata?.dimensions
+		const maxL = (dims?.l || 193) - 1
+		const maxF = (dims?.f || 229) - 1
+		const maxT = (dims?.t || 193) - 1
+
 		const tr = this.dom.headerTr
 		let td = tr.append('td')
 		td.append('label').attr('for', 'saggital').text('Sagittal:')
@@ -100,7 +116,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 			.attr('id', 'saggital')
 			.attr('type', 'range')
 			.attr('min', 0)
-			.attr('max', 192)
+			.attr('max', maxL)
 			.attr('value', settings.brainImageL)
 			.on('change', e => {
 				this.editBrainImage('brainImageL', e.target.value)
@@ -109,7 +125,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 			.append('input')
 			.attr('type', 'number')
 			.attr('min', 0)
-			.attr('max', 192)
+			.attr('max', maxL)
 			.attr('value', settings.brainImageL)
 			.on('change', e => {
 				this.editBrainImage('brainImageL', e.target.value)
@@ -123,7 +139,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 			.append('input')
 			.attr('type', 'range')
 			.attr('min', 0)
-			.attr('max', 228)
+			.attr('max', maxF)
 			.attr('value', settings.brainImageF)
 			.on('change', e => {
 				this.editBrainImage('brainImageF', e.target.value)
@@ -132,7 +148,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 			.append('input')
 			.attr('type', 'number')
 			.attr('min', 0)
-			.attr('max', 192)
+			.attr('max', maxF)
 			.attr('value', settings.brainImageF)
 			.on('change', e => {
 				this.editBrainImage('brainImageF', e.target.value)
@@ -147,7 +163,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 			.attr('id', 'axial')
 			.attr('type', 'range')
 			.attr('min', 0)
-			.attr('max', 192)
+			.attr('max', maxT)
 			.attr('value', settings.brainImageT)
 			.on('change', e => {
 				this.editBrainImage('brainImageT', e.target.value)
@@ -156,7 +172,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 			.append('input')
 			.attr('type', 'number')
 			.attr('min', 0)
-			.attr('max', 192)
+			.attr('max', maxT)
 			.attr('value', settings.brainImageT)
 			.on('change', e => {
 				this.editBrainImage('brainImageT', e.target.value)
@@ -222,8 +238,13 @@ class BrainImaging extends PlotBase implements RxComponent {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 
+		// global mass filter combined with this plot's local filter (config.filter,
+		// set by the plot wrapper's filter UI); restricts which selected samples render
+		const termfilter = getCombinedTermFilter(appState, config.filter)
+
 		return {
 			config,
+			termfilter,
 			dslabel: appState.vocab.dslabel,
 			genome: appState.vocab.genome,
 			RefNIdata: appState.termdbConfig.queries.NIdata[config.queryKey]
@@ -242,11 +263,26 @@ class BrainImaging extends PlotBase implements RxComponent {
 		this.dom.axialSlider.property('value', this.settings.brainImageT)
 		this.dom.axialInput.property('value', this.settings.brainImageT)
 
-		const data = await Promise.all([
-			this.requestImage('l', this.settings.brainImageL),
-			this.requestImage('f', this.settings.brainImageF),
-			this.requestImage('t', this.settings.brainImageT)
-		])
+		let data
+		try {
+			data = await Promise.all([
+				this.requestImage('l', this.settings.brainImageL),
+				this.requestImage('f', this.settings.brainImageF),
+				this.requestImage('t', this.settings.brainImageT)
+			])
+		} catch (e: any) {
+			this.showNoImage(e?.message || e)
+			return
+		}
+		// e.g. none of the requested samples has an imaging file (sample view and
+		// matrix may request any sample); show the message instead of crashing.
+		// the route sends errors as a plain string, so it is not cached by dofetch3
+		const failedIdx = data.findIndex(d => !d || typeof d == 'string' || d.error || !d.brainImage)
+		if (failedIdx != -1) {
+			const failed = data[failedIdx]
+			this.showNoImage((typeof failed == 'string' && failed) || failed?.error || 'no brain imaging data')
+			return
+		}
 
 		this.imagesData = {
 			brainImageL: { dataUrls: {}, td: this.dom.tdL, data: data[0] },
@@ -259,6 +295,18 @@ class BrainImaging extends PlotBase implements RxComponent {
 		this.renderLegend()
 	}
 
+	// shown when image data could not be generated, e.g. the sample has no imaging file
+	showNoImage(message: any) {
+		for (const td of [this.dom.tdL, this.dom.tdF, this.dom.tdT]) td.selectAll('*').remove()
+		this.dom.tdL
+			.append('div')
+			.style('color', 'white')
+			.style('padding', '20px')
+			.style('white-space', 'nowrap')
+			.text(String(message))
+		this.dom.legendHolder.selectAll('*').remove()
+	}
+
 	async requestImage(key, value) {
 		const body = {
 			genome: this.state.genome,
@@ -268,7 +316,8 @@ class BrainImaging extends PlotBase implements RxComponent {
 			selectedSampleFileNames: this.state.config.selectedSampleFileNames,
 			divideByTW: this.state.config.divideByTW,
 			overlayTW: this.state.config.overlayTW,
-			legendFilter: this.state.config.legendFilter
+			legendFilter: this.state.config.legendFilter,
+			filter: this.state.termfilter?.filter
 		}
 		return await dofetch3('brainImaging', { body })
 	}
@@ -304,7 +353,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 			const scale = scaleLinear([0, v.maxLength], [rgb('white').formatHex(), v.color]).clamp(true)
 			legendItems.push({
 				text: label == 'default' ? 'Combined Intensity' : label,
-				width: 100,
+				width: 140,
 				scale,
 				colors: ['white', v.color],
 				domain: [0, v.maxLength],
@@ -336,61 +385,122 @@ export function makeChartBtnMenu(holder, chartsInstance: any) {
 	chartsInstance.dom.tip.clear()
 	const menuDiv = holder.append('div')
 	if (chartsInstance.state.termdbConfig.queries.NIdata) {
-		for (const [refKey, ref] of Object.entries(chartsInstance.state.termdbConfig.queries.NIdata)) {
+		// track each template's div so that once one is chosen, the others can be hidden
+		const refDivs: any[] = []
+		for (const refKey of Object.keys(chartsInstance.state.termdbConfig.queries.NIdata)) {
 			const refDiv = menuDiv.append('div')
+			refDivs.push(refDiv)
 
 			const refOption = refDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(refKey)
 				.on('click', async () => {
-					refOption.attr('class', 'sja_menuoption_not_interactive')
+					// a template is chosen: hide the other template options,
+					// and show the chosen one as a plain label
+					for (const d of refDivs) if (d !== refDiv) d.style('display', 'none')
+					refOption.attr('class', '').style('font-weight', 'bold').style('padding', '5px')
 					refOption.on('click', null)
 					const body = {
 						genome: chartsInstance.opts.vocab.genome,
 						dslabel: chartsInstance.opts.vocab.dslabel,
 						refKey,
-						samplesOnly: true
+						// restrict the sample table by the current cohort filter, if one is set
+						filter: chartsInstance.state.filter
 					}
-					const result = await dofetch3('brainImagingSamples', { body })
-					const samples = result.samples
+					let samples: any[]
+					try {
+						const result = await fetchBrainImagingSamples(body)
+						samples = result.samples || []
+					} catch (e: any) {
+						sayerror(refDiv, e?.message || String(e))
+						return
+					}
 
-					const [rows, columns] = await getTableData(chartsInstance, samples, chartsInstance.state, refKey)
+					const columns = await getTableColumns(chartsInstance, refKey)
+
+					// samples currently shown in the table (narrowed by the search box)
+					let shownSamples = samples
+					// sample names checked by the user; persists across search box re-renders
+					const selectedSamples = new Set<string>()
+
+					/* update selections from the checked row indexes renderTable reports;
+					indexes point into the rows array passed to renderTable, i.e. into
+					shownSamples, also after sorting. rows hidden by the search keep
+					their recorded state, so selections persist across searches */
+					const updateSelections = (idxlst: number[]) => {
+						const checked = new Set(idxlst.map(i => shownSamples[i]?.sample))
+						for (const s of shownSamples) {
+							if (!s.sample) continue
+							if (checked.has(s.sample)) selectedSamples.add(s.sample)
+							else selectedSamples.delete(s.sample)
+						}
+					}
+
+					// debounce: re-rendering a large table on every keystroke is janky
+					const debouncedRenderRows = debounce(() => renderRows(), 200)
+					const searchDiv = refDiv.append('div').style('padding', '5px 0px')
+					const searchInput = searchDiv
+						.append('input')
+						.attr('type', 'search')
+						.attr('placeholder', 'Search samples')
+						.style('width', '200px')
+						.on('input', debouncedRenderRows)
+					const countLabel = searchDiv.append('span').style('margin-left', '10px').style('opacity', 0.6)
+					const tableDiv = refDiv.append('div')
 
 					const applybt = {
 						text: 'APPLY',
 						class: 'sjpp_apply_btn sja_filter_tag_btn',
-						callback: indexes => {
+						/* fires on every checkbox change: keeps selectedSamples current, and
+						overrides the table's own disabling (which only considers visible rows)
+						so APPLY stays usable when checked samples are hidden by the search */
+						onChange: (idxlst: number[], button: any) => {
+							updateSelections(idxlst)
+							if (button) button.disabled = !selectedSamples.size
+						},
+						callback: (indexes: number[]) => {
+							updateSelections(indexes)
+							if (!selectedSamples.size) return
 							chartsInstance.dom.tip.hide()
-							const selectedSampleFileNames = indexes.map(i => samples[i].sample + '.nii')
-							const config = {
-								chartType: 'brainImaging',
-								queryKey: refKey,
-								settings: {
-									brainImaging: {
-										brainImageL: (ref as any).parameters.l,
-										brainImageF: (ref as any).parameters.f,
-										brainImageT: (ref as any).parameters.t
-									}
-								},
-								selectedSampleFileNames
-							}
+							const selectedSampleFileNames = [...selectedSamples].map(s => s + '.nii')
+							// default slice positions are resolved by getPlotConfig()
+							// from the template's dataset-configured parameters
 							chartsInstance.app.dispatch({
 								type: 'plot_create',
-								config
+								config: {
+									chartType: 'brainImaging',
+									queryKey: refKey,
+									selectedSampleFileNames
+								}
 							})
 						}
 					}
 
-					renderTable({
-						rows,
-						columns,
-						resize: true,
-						singleMode: false,
-						div: refDiv.append('div'),
-						maxHeight: '40vh',
-						buttons: [applybt]
-					})
+					const renderRows = () => {
+						const str = searchInput.property('value').trim().toLowerCase()
+						shownSamples = !str
+							? samples
+							: samples.filter(s => Object.values(s).some(v => v != undefined && String(v).toLowerCase().includes(str)))
+						countLabel.text(
+							(str ? `${shownSamples.length} of ${samples.length} samples` : `${samples.length} samples`) +
+								(selectedSamples.size ? `; ${selectedSamples.size} selected` : '')
+						)
+						const rows = getTableRows(shownSamples, chartsInstance.state, refKey)
+						tableDiv.selectAll('*').remove()
+						renderTable({
+							rows,
+							columns,
+							resize: true,
+							singleMode: false,
+							div: tableDiv,
+							maxHeight: '40vh',
+							header: { allowSort: true },
+							selectedRows: shownSamples.map((s, i) => (selectedSamples.has(s.sample) ? i : -1)).filter(i => i >= 0),
+							buttons: [applybt]
+						})
+					}
+					renderRows()
 				})
 		}
 	}
@@ -400,10 +510,21 @@ export const brainImaging = getCompInit(BrainImaging)
 export const componentInit = brainImaging
 
 export async function getPlotConfig(opts, app) {
+	/* default slice positions come from the template's dataset-configured
+	parameters (NIdata[queryKey].parameters in e.g. DISCOVER.hg38.ts); a ds
+	that omits parameters falls back to the volume midpoint (dimensions are
+	read from the NIfTI header at server launch), then to historical numbers */
+	const ref = app.vocabApi?.termdbConfig?.queries?.NIdata?.[opts.queryKey]
+	const parameters = ref?.parameters
+	const dims = ref?.dimensions
 	const settings = {
-		brainImaging: { brainImageL: 76, brainImageF: 116, brainImageT: 80 }
+		brainImaging: {
+			brainImageL: parameters?.l ?? (dims ? Math.floor(dims.l / 2) : 98),
+			brainImageF: parameters?.f ?? (dims ? Math.floor(dims.f / 2) : 81),
+			brainImageT: parameters?.t ?? (dims ? Math.floor(dims.t / 2) : 53)
+		}
 	}
-	const config: any = { chartType: 'brainImaging', settings, hidePlotFilter: true }
+	const config: any = { chartType: 'brainImaging', settings }
 	copyMerge(config, opts)
 	/* a tw of a saved session is only raw until it is filled here, same as every other
 	chart type. required, since a session is serialized without the derived properties
@@ -413,7 +534,7 @@ export async function getPlotConfig(opts, app) {
 	return config
 }
 
-async function getTableData(self, samples, state, refKey): Promise<[TableRow[], TableColumn[]]> {
+function getTableRows(samples, state, refKey): TableRow[] {
 	const rows: TableRow[] = []
 	for (const sample of samples) {
 		// first cell is sample name
@@ -425,18 +546,22 @@ async function getTableData(self, samples, state, refKey): Promise<[TableRow[], 
 		}
 		rows.push(row)
 	}
+	return rows
+}
 
+async function getTableColumns(self, refKey): Promise<TableColumn[]> {
 	// first column is sample and is hardcoded
-	const columns: TableColumn[] = [{ label: 'Sample' }]
+	const columns: TableColumn[] = [{ label: 'Sample', sortable: true }]
 
 	// add in optional sample columns
-	for (const c of state.termdbConfig.queries.NIdata[refKey].sampleColumns || []) {
+	for (const c of self.state.termdbConfig.queries.NIdata[refKey].sampleColumns || []) {
 		columns.push({
-			label: (await self.app.vocabApi.getterm(c.termid)).name
+			label: (await self.app.vocabApi.getterm(c.termid)).name,
+			sortable: true
 		})
 	}
 
-	return [rows, columns]
+	return columns
 }
 
 function setInteractivity(self) {

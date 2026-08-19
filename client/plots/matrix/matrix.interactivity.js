@@ -3,6 +3,7 @@ import { format as d3format } from 'd3-format'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons, newSandboxDiv, Menu, renderTable, table2col, renderCnvConfig } from '#dom'
 import { dofetch3 } from '#common/dofetch'
+import { getBrainImagingSampleSet } from '#plots/getBrainImagingSampleSet.ts'
 import { isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import {
@@ -392,32 +393,44 @@ export function setInteractivity(self) {
 		}
 
 		if (q.NIdata) {
-			for (const [queryKey, ref] of Object.entries(q.NIdata)) {
-				const menuDiv = self.dom.clickMenu.d
-					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text('Neuro Image: ' + queryKey)
-					.on('click', async () => {
-						self.dom.clickMenu.clear()
+			/* append the neuro-image options asynchronously so the rest of the click menu
+			shows immediately instead of waiting on the availability requests; the
+			container div keeps the options' position in the menu. options are only
+			offered when this sample has an imaging file */
+			const niOptionsDiv = self.dom.clickMenu.d.append('div')
+			Promise.all(
+				Object.keys(q.NIdata).map(async queryKey => {
+					try {
+						const available = await getBrainImagingSampleSet(
+							self.state.vocab.genome,
+							self.state.vocab.dslabel,
+							queryKey
+						)
+						if (!available.has(sample.sample_id)) return
+						niOptionsDiv
+							.append('div')
+							.attr('class', 'sja_menuoption sja_sharp_border')
+							.text('Neuro Image: ' + queryKey)
+							.on('click', () => {
+								self.dom.clickMenu.clear()
 
-						const config = {
-							chartType: 'brainImaging',
-							queryKey,
-							settings: {
-								brainImaging: {
-									brainImageL: ref.parameters.l,
-									brainImageF: ref.parameters.f,
-									brainImageT: ref.parameters.t
+								// default slice positions are resolved by getPlotConfig()
+								// from the template's dataset-configured parameters
+								const config = {
+									chartType: 'brainImaging',
+									queryKey,
+									selectedSampleFileNames: [sample.sample_id + '.nii']
 								}
-							},
-							selectedSampleFileNames: [sample.sample_id + '.nii']
-						}
-						self.app.dispatch({
-							type: 'plot_create',
-							config
-						})
-					})
-			}
+								self.app.dispatch({
+									type: 'plot_create',
+									config
+								})
+							})
+					} catch (e) {
+						console.error('brainImagingSamples request failed:', e)
+					}
+				})
+			)
 		}
 
 		const l = self.settings.matrix.controlLabels

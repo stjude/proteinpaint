@@ -1,4 +1,5 @@
 import type { QualTW } from '../terms/qualitative.ts'
+import type { Filter } from '../filter.ts'
 
 export type BrainImagingRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
@@ -19,6 +20,11 @@ export type BrainImagingRequest = {
 	overlayTW?: QualTW
 	/* the term categories that were filtered out */
 	legendFilter?: string[]
+	/** optional termdb filter (global mass filter combined with the plot's local filter);
+	when provided, only selected samples passing the filter are rendered */
+	filter?: Filter
+	/** injected by server middleware for access control */
+	__protected__?: any
 }
 
 export type BrainImagingResponse = {
