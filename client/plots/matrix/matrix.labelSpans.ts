@@ -3,6 +3,7 @@ import type { SvgText } from '../../types/d3'
 
 export type LabelAncestry = {
 	ancestor_id: string | number
+	ancestor_name?: string // display label; falls back to ancestor_id when absent
 	transform: string //side.attr.labelGTransform(lab),
 	samples: any[] //lab.row entries, used for span length/extent
 	maxTextLengthByAncestorDistance: { [key: number]: number }
@@ -101,6 +102,7 @@ export function trackLabelSpanData(
 		if (!entry) {
 			entry = {
 				ancestor_id: id,
+				ancestor_name: a.ancestor_name,
 				//row: lab.row,
 				transform: side.attr.labelGTransform(lab),
 				samples: [],
@@ -149,8 +151,12 @@ export function renderLabelSpans(relatedSamplesByAncestorId, side, d) {
 
 	const layoutByEntry = new Map<any, { horizontal: boolean; verticalExtent: number }>()
 	groups.each(function (this: SVGGElement, r) {
-		// TODO: .text() should use ancestor label, not id
-		const box = select(this).append('text').text(r.ancestor_id).node()?.getBBox() || { width: 0, height: 0 }
+		// prefer the human-readable ancestor name, falling back to the ancestor id
+		const box = select(this)
+			.append('text')
+			.text(r.ancestor_name ?? r.ancestor_id)
+			.node()
+			?.getBBox() || { width: 0, height: 0 }
 		const availableWidth = r.samples.length * d.colw
 		const horizontal = box.width <= availableWidth
 		layoutByEntry.set(r, { horizontal, verticalExtent: horizontal ? box.height : box.width })

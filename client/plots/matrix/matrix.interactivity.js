@@ -327,11 +327,12 @@ export function setInteractivity(self) {
 		delete self.imgBox
 		const sampleData = data || event.target.__data__
 
-		if (!sampleData) return // !!! it's undefined when dragging on the sample names
+		// TODO: support click handling on sample ancestor labels
+		if (!sampleData || sampleData.ancestor_name) return // !!! it's undefined when dragging on the sample names
 		const s = self.config.settings.matrix
 		// preliminary fix: assign string sample name for "sample_id", which is used by data queries below
 		const sample = {
-			sample_id: sampleData.row._ref_.label
+			sample_id: sampleData.row._ref_?.label
 		}
 		//when clicking a cell in SV, CNV, mutation panels
 		const geneName = sampleData.term?.type == 'geneVariant' ? sampleData.term.name : null

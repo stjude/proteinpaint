@@ -3206,10 +3206,11 @@ tape('apply "show only" and "show all" legend filters to a survival terms', func
 tape('sample ancestry labels and line spans', function (test) {
 	test.timeoutAfter(8000)
 	// leaf samples 1-9 have a designed 2-level ancestry in the TermdbTest sample_ancestry table:
-	//   1_patient (101) is the direct parent of samples 1,2,3
-	//   2_patient (102) is the direct parent of samples 4,5,6
-	//   3_patient (103) is the grandparent (distance 2) of samples 1-6 AND the direct parent of 7,8,9
-	// so the matrix should render 3 ancestor line spans (101, 102, and the nested 103 spanning all 9)
+	//   1_patient is the direct parent of samples 1,2,3
+	//   2_patient is the direct parent of samples 4,5,6
+	//   3_patient is the grandparent (distance 2) of samples 1-6 AND the direct parent of 7,8,9
+	// so the matrix should render 3 ancestor line spans (1_patient, 2_patient, and the nested
+	// 3_patient spanning all 9), labeled by ancestor name
 	const ancestrySampleIds = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 	const filter = {
 		type: 'tvslst',
@@ -3275,19 +3276,20 @@ tape('sample ancestry labels and line spans', function (test) {
 		}
 		test.deepEqual(
 			Object.keys(lineX2ByLabel).sort(),
-			['101', '102', '103'],
-			'ancestor span labels should be the ancestor ids 101 (1_patient), 102 (2_patient), 103 (3_patient)'
+			['1_patient', '2_patient', '3_patient'],
+			'ancestor spans should be labeled by ancestor name (1_patient, 2_patient, 3_patient)'
 		)
 		test.equal(
 			matrix.Inner.dom.svg.selectAll('.sjpp-matrix-label-span line').size(),
 			3,
 			'should render 3 ancestor line spans'
 		)
-		// 3_patient (103) is the grandparent spanning all 9 samples, while 1_patient (101) and
-		// 2_patient (102) each span only their 3 direct children, so its line must be the widest
+		// 3_patient is the grandparent spanning all 9 samples, while 1_patient and 2_patient
+		// each span only their 3 direct children, so its line must be the widest
 		test.ok(
-			lineX2ByLabel['103'] > lineX2ByLabel['101'] && lineX2ByLabel['103'] > lineX2ByLabel['102'],
-			'the nested grandparent span (103) should be wider than the parent spans (101, 102)'
+			lineX2ByLabel['3_patient'] > lineX2ByLabel['1_patient'] &&
+				lineX2ByLabel['3_patient'] > lineX2ByLabel['2_patient'],
+			'the nested grandparent span (3_patient) should be wider than the parent spans (1_patient, 2_patient)'
 		)
 
 		if (test._ok) matrix.Inner.app.destroy()
