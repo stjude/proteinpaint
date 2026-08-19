@@ -209,6 +209,7 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			.append('button')
 			.attr('type', 'button')
 			.attr('data-testid', 'sjpp-agg-matrix-edit-section-btn')
+			.attr('aria-label', `Edit ${type} section`)
 			.style('display', 'none')
 			.style('border', 'none')
 			.style('background', 'transparent')
