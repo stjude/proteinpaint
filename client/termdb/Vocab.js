@@ -261,11 +261,22 @@ export class Vocab {
 		return copy
 	}
 
-	/* The settings remembered for the gene(s) of a geneVariant term, most recent first, as
-	{label, q} entries -- see mayRememberGvQ() in client/mass/store.ts.
+	/* Remember a geneVariant setting the user just built, see remember_gvq() in
+	client/mass/store.ts. A no-op in a host app whose store does not track them, since only
+	the mass store does, so that the same termsetting UI works in every host. */
+	rememberGvQ(term, q) {
+		if (!this.state?.reuse?.gvQByGene || !this.app?.dispatch) return
+		/* copied because dispatch() is async while the caller is a UI holding this q as live
+		state: the termsetting handler keeps editing self.q, so the action must see the q as
+		it was when Apply was clicked */
+		this.app.dispatch({ type: 'remember_gvq', term, q: structuredClone(q) })
+	}
 
-	Returns [] in a host app whose store does not track them, since only the mass store does,
-	and copies so that a caller can hand a q to fillTermWrapper(), which fills in place. */
+	/* The settings remembered for the gene(s) of a geneVariant term, most recent first, as
+	{label, q} entries -- see remember_gvq() in client/mass/store.ts.
+
+	Returns [] in a host app whose store does not track them, and copies so that a caller can
+	hand a q to fillTermWrapper(), which fills in place. */
 	getGvQLst(term) {
 		const key = getGvGeneKey(term)
 		const lst = key && this.state.reuse?.gvQByGene?.[key]

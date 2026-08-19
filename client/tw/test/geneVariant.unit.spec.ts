@@ -34,10 +34,9 @@ tape('isCustomizedGvQ()', t => {
 	t.equal(isCustomizedGvQ({ type: 'values' }), false, 'a plain values q is the default, not a setting')
 	t.equal(
 		isCustomizedGvQ({ type: 'values', variantFilter: { type: 'tvslst', lst: [] } }),
-		true,
-		'a values q becomes a setting once it filters variants'
+		false,
+		'a variantFilter is left out until a UI authors one'
 	)
-	t.equal(isCustomizedGvQ({ variantFilter: {} }), true, 'a q with no type is treated as a values q')
 	t.equal(isCustomizedGvQ(undefined), false, 'tolerates a missing q')
 	t.end()
 })
@@ -65,10 +64,5 @@ tape('getGvQLabel()', t => {
 		'falls back when the term carries no groupset listing, e.g. before it is filled'
 	)
 	t.equal(getGvQLabel(term, { type: 'values' }), 'any variant class', 'names a plain values q')
-	t.equal(
-		getGvQLabel(term, { type: 'values', variantFilter: { type: 'tvslst', lst: [] } }),
-		'filtered variants',
-		'distinguishes a values q that filters variants'
-	)
 	t.end()
 })
