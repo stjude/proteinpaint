@@ -8,7 +8,14 @@ import { importPlot } from '#plots/importPlot.js'
 class MassCharts {
 	static type = 'charts'
 
-	constructor(opts = {}) {
+	type: string
+	stickyAncestor: HTMLElement
+	makeButtons!: (state: any) => void
+	dom!: any
+	opts!: any
+	state!: any
+
+	constructor(opts: any = {}) {
 		this.type = MassCharts.type
 		// stickyAncestor will attached to button data, to be used by menu.stickyPosition()
 		// when showing the menu tip near a clicked chart button
@@ -29,7 +36,7 @@ class MassCharts {
 	// TODO later add reactsTo() to react to filter change
 
 	getState(appState) {
-		const state = {
+		const state: { [index: string]: any} = {
 			vocab: appState.vocab, // TODO delete it as vocabApi should be used instead
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
@@ -57,7 +64,7 @@ class MassCharts {
 		*/
 		const lst = getCurrentCohortChartTypes(state)
 		if (!lst.includes('regression')) return '' // plot not supported. label doesn't matter as button will be hidden
-		const ms = []
+		const ms: string[] = []
 		if (lst.includes('linear')) ms.push('linear')
 		if (lst.includes('logistic')) ms.push('logistic')
 		if (lst.includes('cox')) ms.push('cox')
@@ -80,7 +87,7 @@ class MassCharts {
 	}
 	getBtnLabel_summarizeMutationTerm(state, phrase) {
 		if (!state.termdbConfig.queries) return 'Not supported!' // the function always runs for all ds, thus must detect and guard against it; in such case the btn should not be shown
-		const t = []
+		const t: string[] = []
 		if (state.termdbConfig.queries.snvindel) t.push('Mutation')
 		if (state.termdbConfig.queries.cnv) t.push('CNV')
 		if (state.termdbConfig.queries.svfusion) t.push('Fusion')
@@ -165,7 +172,7 @@ function getChartTypeList(self, state) {
 	TODO order of buttons is hardcoded, may allow to customize order
 	*/
 
-	const buttons = [
+	const buttons: any = [
 		////////////////////// PROFILE PLOTS START //////////////////////
 		{
 			label: 'Polar',
@@ -495,7 +502,7 @@ function setRenderers(self) {
 			.style('border-radius', '20px')
 			.style('border-color', '#ededed')
 			.html(d => d.label)
-			.on('click', function (event, chart) {
+			.on('click', function (this: any, chart) {
 				self.dom.tip.clear().showunder(this)
 				chart.clickTo(chart, this)
 			})
@@ -538,7 +545,7 @@ function setRenderers(self) {
 				.html(chart.usecase.label)
 		}
 
-		const action = {
+		const action: { [index: string]: any} = {
 			type: 'plot_create',
 			id: getId(),
 			config: { chartType: chart.chartType, activeCohort: self.state.activeCohort }
@@ -643,7 +650,7 @@ function setRenderers(self) {
 // the random string is in case this code is bundled as independent code in
 // different chunks
 const idPrefix = '_CHART_AUTOID_' + Math.random().toString().slice(-6) + '_'
-let id = Date.now().toString().slice(-6)
+let id: any = Date.now().toString().slice(-6)
 
 function getId() {
 	return idPrefix + id++
