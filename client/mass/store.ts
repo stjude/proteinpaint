@@ -4,7 +4,7 @@ import { getSamplelstTW, getFilter } from './groups.js'
 import { rehydrateFilter } from '../filter/rehydrateFilter.js'
 import { importPlot } from '#plots/importPlot.js'
 import { CustomError } from '#shared/helpers.js'
-import { getGvGeneKey, trimGvQForCache } from '#shared/terms.js'
+import { forEachGvTw, getGvGeneKey, trimGvQForCache } from '#shared/terms.js'
 import { getGvQLabel, isCustomizedGvQ } from '../tw/geneVariant'
 
 /*
@@ -78,7 +78,8 @@ const defaultState = {
 		/* settings a user has built for a geneVariant term, keyed by gene(s) and most recent
 		first, so that a term built later for the same gene can offer them, see remember_gvq().
 		Filled as a side effect of building one, unlike the removed Reuse menu that required the
-		user to save a setting by hand before it could be reused. */
+		user to save a setting by hand before it could be reused, and seeded from the settings
+		the opened plots already carry, see seedGvQCache(). */
 		gvQByGene: {}
 	},
 	groups: [], // element: {name=str, filter={}}, to show in Groups tab
@@ -185,10 +186,41 @@ class MassStore extends StoreBase implements RxStore {
 					this.state.plots.splice(i, 1)
 				}
 			}
+			// after the loop above, so that every tw walked has been filled by getPlotConfig()
+			this.seedGvQCache()
 		} catch (e) {
 			console.log('store.init() error', e)
 			throw e
 		}
+	}
+
+	/*
+	Remember the geneVariant settings that the plots this app opened with already carry, so
+	that one supplied by a url, by an embedder, or by a session saved before these were
+	remembered can be offered for a term built later, the same as one built by hand here.
+	Without this, only the Apply button of the edit menu fills the cache, see remember_gvq().
+
+	Appended rather than unshifted, and skipped when already remembered, since a setting that
+	merely arrived in the opened state has no recency to claim over what a recovered session
+	carries in state.reuse: the entries a user built stay in front, and the seeded ones follow
+	in the order the plots list them.
+
+	Neither cap evicts here for the same reason -- a remembered setting is never dropped to
+	make room for a seeded one.
+	*/
+	seedGvQCache() {
+		const cache = this.state.reuse.gvQByGene
+		forEachGvTw(this.state.plots, ({ term, q }) => {
+			if (!isCustomizedGvQ(q)) return
+			const key = getGvGeneKey(term)
+			if (!key) return // a term whose genes cannot all be named, see getGvGeneKey()
+			if (!(key in cache) && Object.keys(cache).length >= maxGvQGenes) return
+			const lst = cache[key] || (cache[key] = [])
+			if (lst.length >= maxGvQPerGene) return
+			const trimmed = trimGvQForCache(q)
+			if (lst.some(entry => deepEqual(entry.q, trimmed))) return
+			lst.push({ label: getGvQLabel(term, q), q: trimmed })
+		})
 	}
 
 	setId(item) {
@@ -458,7 +490,8 @@ MassStore.prototype.actions = {
 	and rememberGvQ() in client/termdb/Vocab.js.
 
 	A setting the user returns to moves back to the front of its gene rather than being stored
-	twice, so each list reads as most recent first.
+	twice, so each list reads as most recent first. The settings that arrive already built, in
+	the plots of an opened state, are seeded behind these by seedGvQCache().
 
 	Keyed by gene and never shared across genes: the tvs of a custom groupset filter by the dt
 	terms of that gene, so a BCR-ABL1 fusion grouping is meaningless on another gene.

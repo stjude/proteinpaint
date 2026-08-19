@@ -99,6 +99,7 @@ async function makeEditMenu(self: TermSetting, _div: any) {
 		.append('div')
 		.style('margin-top', '25px')
 		.append('button')
+		.attr('data-testid', 'sjpp-ts-gv-editui-applyBtn')
 		.text('Apply')
 		.on('click', () => {
 			const q = self.q as any // TODO: migrate this handler to use client/tw code
