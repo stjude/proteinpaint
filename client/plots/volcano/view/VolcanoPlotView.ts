@@ -242,7 +242,15 @@ export class VolcanoPlotView {
 		)
 
 		this.volcanoDom.xAxisLabel.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
-		this.setSvgSubscriptLabel(this.volcanoDom.xAxisLabel, 'log', '2', '(fold-change)')
+		/* The axis must name what it is actually plotting. Delta-beta has no subscript, so it is
+		written as plain text rather than forced through the log-subscript helper. */
+		if (this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta') {
+			this.volcanoDom.xAxisLabel.selectAll('*').remove()
+			this.volcanoDom.xAxisLabel.text('Δβ (case − control)')
+		} else {
+			this.volcanoDom.xAxisLabel.text(null)
+			this.setSvgSubscriptLabel(this.volcanoDom.xAxisLabel, 'log', '2', '(fold-change)')
+		}
 
 		this.renderScale(plotDim.xScale)
 		this.renderScale(plotDim.yScale, true)

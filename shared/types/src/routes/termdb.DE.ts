@@ -51,6 +51,16 @@ export type SignificanceThresholds = {
 /** Options the client sends when it wants the server to render the volcano PNG. */
 export type VolcanoRenderRequest = {
 	significanceThresholds: SignificanceThresholds
+	/** Which row field supplies the x coordinate. Defaults to 'fold_change'.
+	 *
+	 * Differential methylation can plot 'delta_beta' instead: fold_change there is a difference
+	 * of M-values, a logit, so it orders elements correctly but its magnitude does not say how
+	 * much methylation changed. Delta-beta does, on the 0-1 scale the biology is discussed in.
+	 *
+	 * Whichever field is chosen, significanceThresholds.foldChangeCutoff is interpreted in THAT
+	 * field's units -- the caller sends the cutoff matching the axis it asked for. Otherwise the
+	 * threshold lines would sit at coordinates unrelated to what is classified significant. */
+	xField?: 'fold_change' | 'delta_beta'
 	/** Target PNG width in pixels. */
 	pixelWidth: number
 	/** Target PNG height in pixels. */

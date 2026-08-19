@@ -394,6 +394,9 @@ export class VolcanoViewModel {
 			the one missing field, which made a saved p-value table impossible to attribute to a
 			matrix after the fact. */
 			parts.push(`element class: ${s.elementType || 'promoter'}`)
+			// Which effect size the run was thresholded on. Two exports with the same p cutoff but
+			// different axes are not comparable, and nothing else in the line would reveal it.
+			parts.push(`x axis: ${s.xAxis === 'delta_beta' ? 'delta-beta' : 'log2(fold-change)'}`)
 			parts.push(`paired by patient: ${s.pairByParent ? 'yes' : 'no'}`)
 			parts.push(`min samples per group: ${s.minSamplesPerGroup}`)
 			parts.push(`exclude sex chromosomes: ${s.excludeSexChr ? 'yes' : 'no'}`)
@@ -404,11 +407,11 @@ export class VolcanoViewModel {
 			parts.push(`method: ${s.method}`)
 		}
 
-		parts.push(
-			`significance: ${s.pValueType} p < ${roundValueAuto(Math.pow(10, -s.pValue))}, |log2(fold-change)| > ${
-				s.foldChangeCutoff
-			}`
-		)
+		// Name the effect-size measure the cutoff was applied to, not just its number — the
+		// threshold moves to deltaBetaCutoff when the axis does, and "0.1" alone is ambiguous.
+		const onDeltaBeta = this.termType == tt.DNA_METHYLATION && s.xAxis === 'delta_beta'
+		const effect = onDeltaBeta ? `|delta-beta| > ${s.deltaBetaCutoff}` : `|log2(fold-change)| > ${s.foldChangeCutoff}`
+		parts.push(`significance: ${s.pValueType} p < ${roundValueAuto(Math.pow(10, -s.pValue))}, ${effect}`)
 
 		return parts.join('; ')
 	}

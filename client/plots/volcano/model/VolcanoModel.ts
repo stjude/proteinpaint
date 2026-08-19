@@ -128,12 +128,18 @@ export class VolcanoModel {
 		// Resolve case/control colors via the shared helper (see colors.ts) so the
 		// PNG and the SVG overlay paint each side with the exact same hex string.
 		const { caseColor, controlColor } = getGroupColors(this.config)
+		/* Only differential methylation carries delta_beta, and only it offers the axis toggle, so
+		other term types always fall through to fold_change. The cutoff sent must be in the units
+		of the field sent -- otherwise the server draws threshold lines that do not correspond to
+		what it classified. */
+		const useDeltaBeta = this.termType === tt.DNA_METHYLATION && this.settings.xAxis == 'delta_beta'
 		return {
 			significanceThresholds: {
 				pValueCutoff: this.settings.pValue,
 				pValueType: this.settings.pValueType,
-				foldChangeCutoff: this.settings.foldChangeCutoff
+				foldChangeCutoff: useDeltaBeta ? this.settings.deltaBetaCutoff : this.settings.foldChangeCutoff
 			},
+			...(useDeltaBeta ? { xField: 'delta_beta' as const } : {}),
 			pixelWidth: this.settings.width,
 			pixelHeight: this.settings.height,
 			colorSignificant: toHex(this.settings.defaultSignColor, 'red'),

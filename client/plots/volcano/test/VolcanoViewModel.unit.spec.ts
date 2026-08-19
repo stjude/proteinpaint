@@ -289,6 +289,11 @@ tape('setProvenance records groups, sizes and every result-affecting setting', f
 	single-matrix run is still labelled rather than blank. */
 	test.ok(p.includes('element class: promoter'), 'records elementType, defaulting when unset')
 	test.ok(p.includes('paired by patient: no'), 'records pairByParent')
+	/* Which effect size the run was thresholded on. Two exports sharing a p cutoff but plotted on
+	different axes are not comparable, and the cutoff number alone does not disambiguate them —
+	0.1 is a plausible value in either unit. */
+	test.ok(p.includes('x axis: log2(fold-change)'), 'records xAxis, defaulting when unset')
+	test.ok(p.includes('|log2(fold-change)| >'), 'names the effect-size measure the cutoff applies to')
 	test.ok(p.includes('min samples per group: 3'), 'records minSamplesPerGroup')
 	test.ok(p.includes('exclude sex chromosomes: no'), 'records excludeSexChr')
 	test.ok(p.includes('mean-variance trend: on'), 'records eBayesTrend')
