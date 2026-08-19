@@ -34,6 +34,11 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			genomeObj: chartsInstance.app.opts.genome!,
 			app: chartsInstance.app, // required to supply "opts.app.vocabApi" for the search ui
 			msg: 'Hit ENTER to launch plot.',
+			/* the geneTw below is used as it comes, so a grouping the user built for this gene
+			elsewhere can be offered here, e.g. a BCR-ABL1 fusion grouping built as a barchart
+			overlay is worth having as the overlay of this survival plot too. See keepsQ in
+			client/termdb/TermTypeSearch.ts */
+			keepsQ: true,
 			callback: async geneTw => {
 				await fillTermWrapper(geneTw, chartsInstance.app.vocabApi)
 				launchPlot({

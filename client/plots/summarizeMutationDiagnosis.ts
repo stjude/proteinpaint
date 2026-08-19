@@ -40,6 +40,9 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			app: chartsInstance.app, // required to supply "opts.app.vocabApi" for the search ui
 			genomeObj: chartsInstance.app.opts.genome!,
 			msg: 'Hit ENTER to launch plot.',
+			/* the geneTw below is used as it comes, so a grouping the user built for this gene
+			elsewhere can be offered here, see keepsQ in client/termdb/TermTypeSearch.ts */
+			keepsQ: true,
 			callback: async geneTw => {
 				await fillTermWrapper(geneTw, chartsInstance.app.vocabApi)
 				launchPlot({
