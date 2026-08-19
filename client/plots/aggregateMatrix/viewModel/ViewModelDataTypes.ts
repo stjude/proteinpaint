@@ -35,7 +35,8 @@ export type AggMatrixDotPosition = {
     column: string
     colSection: string
     tipData: DotTipEntry[]
-    /** Flag on indicate whether data is available or not */
+    /** Flag to indicate whether data is available for both 
+     * gradient and size. If false, tooltip is disabled. */
     hasData: boolean
 }
 
