@@ -683,8 +683,8 @@ tape('makeExonScale() - the window covers the selected range', test => {
 	test.end()
 })
 
-tape('makeExonScale() - keeps the whole gene when zooming would not pay', test => {
-	// breakpoints spread over the gene leave too little out to repay the context lost
+tape('makeExonScale() - keeps the whole gene only when the flanks reach its ends', test => {
+	// the flanking exons of breakpoints on the second and second to last exon are its ends
 	const spread = makeExonScale({
 		chr: 'chr1',
 		gms: [manyExons],
@@ -693,10 +693,25 @@ tape('makeExonScale() - keeps the whole gene when zooming would not pay', test =
 	})
 	test.equal(spread.zoomed, false, 'a gene whose breakpoints span it is not zoomed')
 	test.equal(spread.rglst.length, 12, 'every exon is kept')
-	// and a gene of few exons has little width to win by it
+	// and a gene of few exons has little width to win by zooming
 	const few = makeExonScale({ chr: 'chr22', gms: [bcr], markers: bcrMarkers, pxwidth: 400 })
 	test.equal(few.zoomed, false, 'a gene of few exons is not zoomed')
 	test.equal(few.rglst.length, bcr.exon.length, 'every exon is kept')
+	test.end()
+})
+
+tape('makeExonScale() - only one flanking exon is kept, however little that leaves out', test => {
+	/* an exon no breakpoint is on, and no range can be dragged over without covering the
+	flank before it, is width taken from the exons the chart is about: it is left out even
+	when it is the only one, rather than kept as context for a share of the width */
+	const scale = makeExonScale({
+		chr: 'chr1',
+		gms: [manyExons],
+		markers: [{ pos: exonStart(2) + 100 }, { pos: exonStart(10) + 100 }],
+		pxwidth: 400
+	})
+	test.equal(scale.zoomed, true, 'the window leaving out one exon is still a zoom')
+	test.deepEqual(keptExons(scale), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 'the first exon is left out')
 	test.end()
 })
 

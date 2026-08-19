@@ -319,9 +319,6 @@ type ScaleArg = {
 const zoomPadExons = 1
 /** a gene of fewer exons than this is not zoomed, as there is little width to win */
 const zoomMinExons = 6
-/** zoom only when the window leaves out at least this share of the exons: below it the
- * width won does not repay the context lost */
-const zoomMinDropped = 1 / 3
 
 /**
  * What a window over a gene must cover: the breakpoints, and the ends of a range already
@@ -377,7 +374,12 @@ export function breakpointGms(
  * many-exon gene is only a few px of the full width, too small to read a breakpoint on or
  * to drag a range over; a window of them gets the whole width to share.
  *
- * The whole gene is kept when the window would leave out too little to repay the context.
+ * The context kept is the one flanking exon on each side and no more, whatever share of the
+ * gene that leaves out: an exon no breakpoint is on, and no range can be dragged over
+ * without covering the flank before it, is width taken from the exons the chart is about.
+ * So the whole gene is kept only when the flanks reach its ends, or when it has too few
+ * exons to win width by zooming. The locus of a zoomed window is labelled (see locusLabel),
+ * as the view is then of a part of the gene.
  */
 function focusRegions(
 	rglst: ExonRegion[],
@@ -397,7 +399,6 @@ function focusRegions(
 	first = Math.max(0, first - zoomPadExons)
 	last = Math.min(byPos.length - 1, last + zoomPadExons)
 	const kept = new Set(byPos.slice(first, last + 1))
-	if (kept.size > rglst.length * (1 - zoomMinDropped)) return rglst
 	return rglst.filter(r => kept.has(r))
 }
 
