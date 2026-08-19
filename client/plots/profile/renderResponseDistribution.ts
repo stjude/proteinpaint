@@ -66,7 +66,11 @@ export function renderResponseDistribution(a: ResponseDistributionArgs) {
 
 	const svgW = MARGIN.left + PLOT_W + MARGIN.right
 	const svgH = MARGIN.top + PLOT_H + MARGIN.bottom // the legend is the card's, not this chart's
-	const svg = a.holder.append('svg').attr('width', svgW).attr('height', svgH)
+	const svg = a.holder
+		.append('svg')
+		.attr('data-testid', 'sjpp-profileForms-distribution')
+		.attr('width', svgW)
+		.attr('height', svgH)
 	const plot = svg.append('g').attr('transform', `translate(${MARGIN.left}, ${MARGIN.top})`)
 
 	// ~15% headroom above the tallest value on each axis so the line/columns don't touch the top edge.

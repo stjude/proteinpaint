@@ -63,7 +63,7 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 		super(opts)
 		this.type = type
 		this.downloadCount = 0
-		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15 })
+		this.tip = new Menu({ padding: '4px', offsetX: 10, offsetY: 15, testid: 'sjpp-profile-tooltip' })
 		this.scoreTerms = []
 		this.scScoreTerms = []
 		this.isRadarFacility = false

@@ -323,6 +323,7 @@ export class profileForms extends profilePlot {
 			const block = holder
 				.append('div')
 				.attr('class', 'sjpp-impression-card')
+				.attr('data-testid', 'sjpp-profileForms-impression-card')
 				.attr('data-group-label', g.groupLabel || texts.legend.sc)
 				.style('width', 'fit-content')
 				.style('max-width', '100%')
@@ -334,6 +335,7 @@ export class profileForms extends profilePlot {
 			const header = block.append('div').style('text-align', 'center')
 			header
 				.append('div')
+				.attr('data-testid', 'sjpp-profileForms-impression-title')
 				.style('font-size', '1.25rem')
 				.style('font-weight', 'bold')
 				.style('padding', '4px 0')
@@ -341,6 +343,7 @@ export class profileForms extends profilePlot {
 			if (g.poc)
 				header
 					.append('div')
+					.attr('data-testid', 'sjpp-profileForms-impression-comparison')
 					.style('font-size', '1.05rem')
 					.style('font-weight', 'bold')
 					.text(texts.comparisonTitle.replace('{group}', g.groupLabel))
@@ -372,9 +375,10 @@ export class profileForms extends profilePlot {
 			// A panel holds a title, the chart svg (vertically centered in the stretched height), and the
 			// chart's own two-row legend at the bottom. `divider` draws the vertical line to the next
 			// panel as a right border on this one.
-			const chartPanel = (title: string, divider: boolean) => {
+			const chartPanel = (title: string, divider: boolean, testid: string) => {
 				const panel = body
 					.append('div')
+					.attr('data-testid', testid)
 					.style('padding', '12px 18px')
 					.style('display', 'flex')
 					.style('flex-direction', 'column')
@@ -398,7 +402,7 @@ export class profileForms extends profilePlot {
 			}
 
 			// Thermometer panel (left); a divider follows it only when a distribution panel does.
-			const thermo = chartPanel(texts.chartTitles.thermometer, !!g.poc)
+			const thermo = chartPanel(texts.chartTitles.thermometer, !!g.poc, 'sjpp-profileForms-thermometer-panel')
 			renderImpressionThermometer({
 				holder: thermo.chartHolder,
 				id: `${this.id}-g${i}`,
@@ -419,7 +423,7 @@ export class profileForms extends profilePlot {
 			})
 
 			if (g.poc) {
-				const dist = chartPanel(texts.chartTitles.distribution, false)
+				const dist = chartPanel(texts.chartTitles.distribution, false, 'sjpp-profileForms-distribution-panel')
 				renderResponseDistribution({
 					holder: dist.chartHolder,
 					id: `${this.id}-dist-g${i}`,

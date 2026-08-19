@@ -221,7 +221,11 @@ export function renderImpressionThermometer(a: ImpressionThermometerArgs) {
 	const pocMedian: number | null = a.poc?.median ?? null
 	const pocTotal: number = a.poc?.total || 0
 
-	const svg = a.holder.append('svg').attr('width', SVG_W).attr('height', SVG_H)
+	const svg = a.holder
+		.append('svg')
+		.attr('data-testid', 'sjpp-profileForms-thermometer')
+		.attr('width', SVG_W)
+		.attr('height', SVG_H)
 	const root = svg.append('g')
 	const defs = root.append('defs')
 	const vessel = vesselPath()
@@ -347,6 +351,7 @@ export function renderImpressionThermometer(a: ImpressionThermometerArgs) {
 		const scFill = liquidG
 			.append('path')
 			.attr('class', 'sc-fill')
+			.attr('data-testid', 'sjpp-profileForms-sc-fill')
 			.attr('d', liquidPath(yOf(scMedian), 'left'))
 			.attr('fill', scColor)
 			.style('transition', `fill ${HOVER_MS}ms ease-out`)
@@ -360,6 +365,7 @@ export function renderImpressionThermometer(a: ImpressionThermometerArgs) {
 		const pocFill = liquidG
 			.append('path')
 			.attr('class', 'poc-fill')
+			.attr('data-testid', 'sjpp-profileForms-poc-fill')
 			.attr('d', liquidPath(yOf(pocMedian), 'right'))
 			.attr('fill', POC_FILL)
 			.style('transition', `fill ${HOVER_MS}ms ease-out`)
