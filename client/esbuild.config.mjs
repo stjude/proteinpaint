@@ -4,7 +4,6 @@ import { promisify } from 'node:util'
 import child_process from 'node:child_process'
 import { context } from 'esbuild'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
-import notifier from 'node-notifier'
 import { getCodeText } from './emitImports.mjs'
 import postcss from 'postcss'
 import escapeFix from './postcss-escape-fix.mjs'
@@ -85,7 +84,6 @@ function logRebuild() {
 					if (result.errors.length) {
 						numErrs = result.errors.length
 						const message = `${numErrs} esbuild error(s)`
-						notifier.notify({ title: 'client', message })
 						const data = JSON.stringify({
 							key: 'client',
 							message,
@@ -95,8 +93,6 @@ function logRebuild() {
 					} /*if (numErrs)*/ else {
 						numErrs = 0
 						const message = 'success, esbuild ok'
-						// only notify of success if recovering from a bundling error
-						notifier.notify({ title: 'client', message })
 						const data = JSON.stringify({
 							key: 'client',
 							message,
