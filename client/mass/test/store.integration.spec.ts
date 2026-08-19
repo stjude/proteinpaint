@@ -1,6 +1,7 @@
 import tape from 'tape'
 import { storeInit } from '../store.ts'
 import { vocabInit } from '#termdb/vocabulary'
+import { getGvQCacheKey } from '#shared/terms.js'
 
 /*************************
  reusable helper functions
@@ -51,6 +52,12 @@ function getCustomGsQ(groupNames: string[]) {
 seedGvQCache() walks it for */
 function getGvPlot(gene: string, groupNames: string[], q?: any) {
 	return { chartType: 'summary', term: { term: getGvTerm(gene), q: q || getCustomGsQ(groupNames) } }
+}
+
+/* the cache key of a single-gene term, prefixed the same way the store keys it, so that the
+assertions below read by gene without repeating the prefix, see getGvQCacheKey() */
+function gvKey(gene: string) {
+	return getGvQCacheKey(getGvTerm(gene))
 }
 
 function rememberGvQ(store, gene: string, groupNames: string[], q?: any) {
@@ -129,7 +136,7 @@ tape('remember_gvq remembers a geneVariant setting by gene', async test => {
 	const store = await getStore()
 	rememberGvQ(store, 'BCR', ['BCR-ABL1 fusion', 'Others'])
 
-	const lst = store.state.reuse.gvQByGene.BCR
+	const lst = store.state.reuse.gvQByGene[gvKey('BCR')]
 	test.equal(lst?.length, 1, 'remembers the setting under the gene of the term')
 	test.equal(lst[0].label, 'BCR-ABL1 fusion / Others', 'labels the entry by its groups')
 	test.equal('isAtomic' in lst[0].q, false, 'stores a trimmed q')
@@ -141,10 +148,10 @@ tape('remember_gvq remembers a geneVariant setting by gene', async test => {
 
 	// a predefined groupset is what the gene search radio already offers, see isCustomizedGvQ()
 	rememberGvQ(store, 'KRAS', [], { type: 'predefined-groupset', predefined_groupset_idx: 0, isAtomic: true })
-	test.equal('KRAS' in store.state.reuse.gvQByGene, false, 'ignores a predefined groupset')
+	test.equal(gvKey('KRAS') in store.state.reuse.gvQByGene, false, 'ignores a predefined groupset')
 
 	rememberGvQ(store, 'TP53', [], { type: 'custom-groupset', customset: { groups: [] } })
-	test.equal('TP53' in store.state.reuse.gvQByGene, false, 'ignores a custom groupset with no groups')
+	test.equal(gvKey('TP53') in store.state.reuse.gvQByGene, false, 'ignores a custom groupset with no groups')
 	test.end()
 })
 
@@ -152,7 +159,7 @@ tape('remembered geneVariant settings de-duplicate and stay in recency order', a
 	const store = await getStore()
 	rememberGvQ(store, 'BCR', ['BCR-ABL1 fusion', 'Others'])
 	rememberGvQ(store, 'BCR', ['BCR-JAK2 fusion', 'Others'])
-	let lst = store.state.reuse.gvQByGene.BCR
+	let lst = store.state.reuse.gvQByGene[gvKey('BCR')]
 	test.deepEqual(
 		lst.map(entry => entry.label),
 		['BCR-JAK2 fusion / Others', 'BCR-ABL1 fusion / Others'],
@@ -164,7 +171,7 @@ tape('remembered geneVariant settings de-duplicate and stay in recency order', a
 	again.hiddenValues = { WT: 1 }
 	again.dtLst = [2]
 	rememberGvQ(store, 'BCR', [], again)
-	lst = store.state.reuse.gvQByGene.BCR
+	lst = store.state.reuse.gvQByGene[gvKey('BCR')]
 	test.equal(lst.length, 2, 'does not store an equivalent setting twice')
 	test.equal(lst[0].label, 'BCR-ABL1 fusion / Others', 'moves a setting the user returned to back to the front')
 	test.end()
@@ -173,14 +180,14 @@ tape('remembered geneVariant settings de-duplicate and stay in recency order', a
 tape('remembered geneVariant settings are bounded', async test => {
 	const store = await getStore()
 	for (let i = 0; i < 8; i++) rememberGvQ(store, 'BCR', [`group ${i}`, 'Others'])
-	test.equal(store.state.reuse.gvQByGene.BCR.length, 5, 'keeps at most 5 settings per gene')
-	test.equal(store.state.reuse.gvQByGene.BCR[0].label, 'group 7 / Others', 'keeps the most recent ones')
+	test.equal(store.state.reuse.gvQByGene[gvKey('BCR')].length, 5, 'keeps at most 5 settings per gene')
+	test.equal(store.state.reuse.gvQByGene[gvKey('BCR')][0].label, 'group 7 / Others', 'keeps the most recent ones')
 
 	for (let i = 0; i < 40; i++) rememberGvQ(store, `GENE${i}`, ['mutated', 'Others'])
 	const keys = Object.keys(store.state.reuse.gvQByGene)
 	test.equal(keys.length, 30, 'keeps at most 30 genes')
-	test.equal(keys.includes('BCR'), false, 'evicts the least recently used gene')
-	test.equal(keys.includes('GENE39'), true, 'keeps the most recently used gene')
+	test.equal(keys.includes(gvKey('BCR')), false, 'evicts the least recently used gene')
+	test.equal(keys.includes(gvKey('GENE39')), true, 'keeps the most recently used gene')
 	test.end()
 })
 
@@ -199,15 +206,15 @@ tape('seedGvQCache remembers the geneVariant settings that opened plots carry', 
 	store.seedGvQCache()
 
 	const cache = store.state.reuse.gvQByGene
-	test.deepEqual(Object.keys(cache), ['BCR', 'KRAS'], 'seeds a gene per plot tw that carries a setting')
-	test.equal(cache.BCR[0].label, 'BCR-ABL1 fusion / Others', 'labels a seeded entry by its groups')
-	test.equal('isAtomic' in cache.KRAS[0].q, false, 'stores a trimmed q')
+	test.deepEqual(Object.keys(cache), [gvKey('BCR'), gvKey('KRAS')], 'seeds a gene per plot tw that carries a setting')
+	test.equal(cache[gvKey('BCR')][0].label, 'BCR-ABL1 fusion / Others', 'labels a seeded entry by its groups')
+	test.equal('isAtomic' in cache[gvKey('KRAS')][0].q, false, 'stores a trimmed q')
 	test.deepEqual(
-		cache.KRAS[0].q.customset.groups.map(g => g.name),
+		cache[gvKey('KRAS')][0].q.customset.groups.map(g => g.name),
 		['KRAS G12D', 'Wildtype'],
 		'stores the groups of a tw that a plot carries'
 	)
-	test.equal('TP53' in cache, false, 'ignores a q that picking the gene again would produce')
+	test.equal(gvKey('TP53') in cache, false, 'ignores a q that picking the gene again would produce')
 	test.end()
 })
 
@@ -223,31 +230,72 @@ tape('seeded geneVariant settings follow the remembered ones', async test => {
 	store.seedGvQCache()
 
 	test.deepEqual(
-		store.state.reuse.gvQByGene.BCR.map(entry => entry.label),
+		store.state.reuse.gvQByGene[gvKey('BCR')].map(entry => entry.label),
 		['BCR-JAK2 fusion / Others', 'BCR-ABL1 fusion / Others', 'BCR-PDGFRA fusion / Others'],
 		'appends the seeded settings in plot order, behind a remembered one that is not stored twice'
 	)
 	test.end()
 })
 
+/* the gene names below are ones a url or an embedder can supply, see getGvQCacheKey():
+'__proto__' and 'constructor' name inherited properties of the plain object the cache is,
+and '0' is integer-like, which Object.keys() would sort ahead of the rest and break the
+least-recently-used eviction that reads those keys as insertion order */
+const hazardousGenes = ['constructor', '__proto__', 'toString', '0']
+
 tape('a gene named like an inherited object property is cached as an own key', async test => {
 	const store = await getStore()
 	const cache = store.state.reuse.gvQByGene
-	// the key comes from a gene name a url or an embedder supplies, see setGvQLst()
-	for (const gene of ['constructor', '__proto__', 'toString']) {
+	for (const gene of hazardousGenes) {
 		store.state.plots = [getGvPlot(gene, ['seeded', 'Others'])]
 		store.seedGvQCache()
 		rememberGvQ(store, gene, ['remembered', 'Others'])
 	}
-	test.deepEqual(Object.keys(cache), ['constructor', '__proto__', 'toString'], 'stores each gene as an own key')
-	for (const gene of ['constructor', '__proto__', 'toString']) {
+	test.deepEqual(Object.keys(cache), hazardousGenes.map(gvKey), 'stores each gene as an own key, in insertion order')
+	for (const gene of hazardousGenes) {
 		test.deepEqual(
-			cache[gene].map(entry => entry.label),
+			cache[gvKey(gene)].map(entry => entry.label),
 			['remembered / Others', 'seeded / Others'],
 			`keeps both the seeded and the remembered setting of ${gene}`
 		)
 	}
 	test.equal(Object.getPrototypeOf(cache), Object.prototype, 'never assigns through the __proto__ setter')
+	test.end()
+})
+
+/* state.reuse is serialized into every saved session, and reopening one merges the parsed
+state into a store: by construction when a url supplies it (see the MassStore constructor),
+or by an app_refresh carrying the full state (see sessionBtn.js). Both go through
+copyMerge(), which walks the parsed keys with for..in and recurses into a matching object
+target -- so an unprefixed '__proto__' key would survive JSON.parse() as an own key whose
+target resolves to Object.prototype through the getter, and the cached list would be written
+onto that global prototype while the cache entry itself was dropped. */
+tape('a remembered geneVariant setting survives a saved session round trip', async test => {
+	const store = await getStore()
+	for (const gene of hazardousGenes) rememberGvQ(store, gene, ['remembered', 'Others'])
+	const savedSession = JSON.parse(store.toJson(store.state))
+
+	// reopened in a new app, as clicking a saved session does
+	const reopened = await getStore()
+	await reopened.actions.app_refresh.call(reopened, { type: 'app_refresh', state: savedSession })
+	const cache = reopened.state.reuse.gvQByGene
+
+	test.deepEqual(Object.keys(cache), hazardousGenes.map(gvKey), 'keeps every cached gene through the round trip')
+	for (const gene of hazardousGenes) {
+		test.deepEqual(
+			cache[gvKey(gene)].map(entry => entry.label),
+			['remembered / Others'],
+			`keeps the remembered setting of ${gene}`
+		)
+	}
+	test.equal(Object.getPrototypeOf(cache), Object.prototype, 'leaves the reopened cache a plain object')
+	test.deepEqual(
+		Object.getOwnPropertyNames(Object.prototype).filter(k => /^\d+$/.test(k)),
+		[],
+		'writes no cached list entry onto Object.prototype'
+	)
+	const unrelated: any = {}
+	test.equal(unrelated[0], undefined, 'leaves an unrelated plain object unpolluted')
 	test.end()
 })
 
@@ -259,13 +307,13 @@ tape('seeding never evicts a remembered geneVariant setting', async test => {
 	store.seedGvQCache()
 
 	const cache = store.state.reuse.gvQByGene
-	test.equal(cache.BCR.length, 5, 'keeps at most 5 settings per gene')
+	test.equal(cache[gvKey('BCR')].length, 5, 'keeps at most 5 settings per gene')
 	test.equal(
-		cache.BCR.some(entry => entry.label == 'seeded / Others'),
+		cache[gvKey('BCR')].some(entry => entry.label == 'seeded / Others'),
 		false,
 		'drops a seeded setting rather than a remembered one'
 	)
 	test.equal(Object.keys(cache).length, 30, 'keeps at most 30 genes')
-	test.equal('NEWGENE' in cache, false, 'drops a seeded gene rather than a remembered one')
+	test.equal(gvKey('NEWGENE') in cache, false, 'drops a seeded gene rather than a remembered one')
 	test.end()
 })

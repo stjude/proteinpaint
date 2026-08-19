@@ -340,6 +340,31 @@ export function getGvGeneKey(term: any): string {
 	return keys.sort().join(',')
 }
 
+/*
+The key a remembered geneVariant setting is cached under, see remember_gvq() in
+client/mass/store.ts. Returns '' for a term that getGvGeneKey() cannot key.
+
+Prefixed because the cache is a plain object keyed by gene names a url or an embedder can
+supply, and is serialized into every session saved from the state:
+
+- an unprefixed gene named '__proto__' or 'constructor' would name an inherited property of
+  the cache, so a read would resolve to Object.prototype or to a function instead of missing
+- worse, such a key survives JSON.parse() as an own key that copyMerge() then walks when a
+  session is reopened, resolving target['__proto__'] to Object.prototype through the getter
+  and writing the cached list onto it, see copyMerge() in client/rx/src/StoreBase.ts
+
+- an unprefixed integer-like gene name would also sort ahead of the rest in Object.keys(),
+  which the least-recently-used eviction in remember_gvq() reads as insertion order
+
+The prefix cannot itself be produced by getGvGeneKey(), since a gene symbol or a coord
+region never starts with it, so prefixed keys stay one-to-one with the terms they key.
+*/
+export const gvQCacheKeyPrefix = 'gv:'
+export function getGvQCacheKey(term: any): string {
+	const key = getGvGeneKey(term)
+	return key ? gvQCacheKeyPrefix + key : ''
+}
+
 /** the kind of a geneVariant gene entry, inferred exactly as GvBase.fill() infers it for an
  * entry that predates term.kind, so that a term keys the same before and after it is filled */
 function getGvGeneKind(gene: any): string | undefined {
