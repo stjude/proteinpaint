@@ -790,11 +790,11 @@ function setRenderers(self: any) {
 			.style('text-align', 'center')
 			.style('vertical-align', 'top')
 			.style('background', s.orderChartsBy == 'organ-system' ? chart.color : '')
-
+		console.log('chart', chart)
 		div
 			.append('div')
 			.attr('class', 'sjpcb-cuminc-title')
-			.attr('data-testid', 'sjpp-cuminc-plotTitle')
+			.attr('data-testid', 'sjpp-cuminc-plotTitle-' + chart.chartId)
 			.style('text-align', 'center')
 			.style('width', `${s.svgw + 50}px`)
 			.style('height', s.chartTitleDivHt + 'px')
