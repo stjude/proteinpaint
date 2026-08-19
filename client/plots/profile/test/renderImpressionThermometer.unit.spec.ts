@@ -36,6 +36,7 @@ function render(holder: any, over: Partial<ImpressionThermometerArgs> = {}) {
 	renderImpressionThermometer({
 		holder,
 		id: 'test-thermo',
+		groupLabel: 'Clinicians',
 		sc: { median: 7, total: 12 },
 		poc: { median: 5, total: 340 },
 		ratingAxisLabel: 'Impression Rating',

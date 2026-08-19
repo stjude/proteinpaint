@@ -285,6 +285,9 @@ export class profileForms extends profilePlot {
 		// The whole view is driven off this config block (zones, titles, legend, axis labels), so a
 		// dataset missing it fails here with a named cause rather than downstream on a member access.
 		if (!texts) throw `Missing impression config for the plot ${this.type} in this dataset`
+		// legend.sc names the SC series and doubles as the group label for an SC-only module, which the
+		// card attribute and the chart testids are both derived from.
+		if (!texts.legend?.sc) throw `Missing impression.legend.sc for the plot ${this.type} in this dataset`
 		const scColor = this.impressionScColor || '#888'
 		const data = this.data
 
@@ -320,11 +323,14 @@ export class profileForms extends profilePlot {
 			comparison line, and the applied-filters + n line, above a single bordered box holding the two
 			charts. Tagged so getChartImages() can collect this block's svgs for download and name them.
 			*/
+			// The group's display name, falling back to the SC legend label for an SC-only module. One
+			// source for the card's attribute and for the testid suffix each chart svg carries.
+			const groupLabel = g.groupLabel || texts.legend.sc
 			const block = holder
 				.append('div')
 				.attr('class', 'sjpp-impression-card')
 				.attr('data-testid', 'sjpp-profileForms-impression-card')
-				.attr('data-group-label', g.groupLabel || texts.legend.sc)
+				.attr('data-group-label', groupLabel)
 				.style('width', 'fit-content')
 				.style('max-width', '100%')
 				.style('margin', '18px auto')
@@ -406,6 +412,7 @@ export class profileForms extends profilePlot {
 			renderImpressionThermometer({
 				holder: thermo.chartHolder,
 				id: `${this.id}-g${i}`,
+				groupLabel,
 				sc: { median: data.scMedian, total: data.scTotal },
 				poc: g.poc,
 				ratingAxisLabel: texts.ratingAxisLabel,
@@ -427,6 +434,7 @@ export class profileForms extends profilePlot {
 				renderResponseDistribution({
 					holder: dist.chartHolder,
 					id: `${this.id}-dist-g${i}`,
+					groupLabel,
 					maxScore: IMPRESSION_MAX_SCORE,
 					scDistribution: data.scDistribution || [],
 					pocDistribution: g.pocDistribution,

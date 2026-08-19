@@ -60,6 +60,11 @@ export function getCodeText(namePattern = '*.spec.*') {
 	// to prevent an early-loaded and very fast test from closing the
 	// tape harness and ignoring late-loaded tests 
 	let assertAllTestLoaded
+	// set when the imports settle before tape gets around to running the callback below, which is
+	// what happens when no spec matched the requested dir/name: Promise.all([]) resolves on the
+	// microtask queue while assertAllTestLoaded is still undefined. Without this the assertion is
+	// never made and the run reports a timeout failure rather than "nothing matched".
+	let allTestsLoaded = false
 	tape('loading of all import(spec)', test => {
 		const exp = 5000
 		test.timeoutAfter(exp)
@@ -71,6 +76,7 @@ export function getCodeText(namePattern = '*.spec.*') {
 			// else the timeoutAfter will be triggered without an assertion
 			test.end()
 		}
+		if (allTestsLoaded) assertAllTestLoaded()
 	})
 	`
 	// only keep an initial test open if there are matching specs to test
@@ -85,7 +91,13 @@ export function getCodeText(namePattern = '*.spec.*') {
 
 	output.push(`// this resolves after all test modules are loaded, 
 	// but likely before all test code are fully evaluated and completed 
-	Promise.all(promises).then(()=>assertAllTestLoaded?.()).catch(e => {throw e})
+	Promise.all(promises).then(()=>{
+		// a name/dir that matches nothing is a mistyped invocation, not a passing run — say so, since
+		// the spec name must match the whole filename before '.spec', e.g. 'foo.unit' or 'foo*'
+		if (!specsMatched.length) console.log('NOTE: no spec file matched the requested dir/name')
+		allTestsLoaded = true
+		assertAllTestLoaded?.()
+	}).catch(e => {throw e})
 	`)
 
 	output.push(`export function getSpecs() { return specsMatched }`)
