@@ -449,3 +449,56 @@ tape('setRelatedSamples() retains all samples', test => {
 
 	test.end()
 })
+
+tape('renderLabelSpans() sizes the span by the real column pitch, not colw', test => {
+	// three samples share ancestor 50 and are rendered at a 20px column pitch (e.g. colw 16
+	// + colspace 4), while renderLabelSpans is called with colw=16. The span must be sized
+	// from the rendered label x-positions (20px pitch), not colw*(n-1), so its line reaches
+	// the last descendant instead of stopping short.
+	const dx = 20
+	const colw = 16
+	const g = select('body').append('svg').append('g')
+	const relatedSamplesByAncestorId = new Map()
+
+	const rows = [0, 1, 2].map(i => ({
+		sample: `${i}`,
+		_ref_: { sample: i, label: `s${i}`, ancestors: [{ ancestor_id: 50, ancestor_name: 'root', distance: 1 }] }
+	}))
+	const sampleLabelData = rows.map((row, i) => ({ transform: `translate(${i * dx},0)`, row }))
+
+	const side = {
+		prefix: 'sample',
+		direction: 'btm',
+		attr: { labelGTransform: d => d.transform },
+		box: g
+	}
+
+	g.selectAll('.sjpp-matrix-label')
+		.data(sampleLabelData)
+		.enter()
+		.append('g')
+		.attr('class', 'sjpp-matrix-label')
+		.each(function (this: SVGGElement, lab) {
+			const text = select(this)
+				.attr('transform', lab.transform)
+				.append('text')
+				.attr('transform', 'rotate(-90)')
+				.text(lab.row._ref_.label)
+			trackLabelSpanData(lab, side, 'btm', text, relatedSamplesByAncestorId)
+		})
+
+	renderLabelSpans(relatedSamplesByAncestorId, side, { colw })
+
+	const line = g.select(SPANSELECTOR).select('line')
+	test.equal(
+		+line.attr('x2'),
+		dx * (rows.length - 1) + 1,
+		'span line should extend across the real 20px column pitch (to the last descendant)'
+	)
+	test.notEqual(
+		+line.attr('x2'),
+		colw * (rows.length - 1) + 1,
+		'span line should not be sized by colw when the real pitch is larger'
+	)
+	test.end()
+})

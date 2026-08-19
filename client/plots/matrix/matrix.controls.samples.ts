@@ -169,10 +169,10 @@ export function setSamplesBtn(self: MatrixControls, s: any) {
 			const basicDiv = input.dom.inputTd.append('div').style('display', controls.activeTab == 'basic' ? '' : 'none')
 
 			if (self.parent.config.chartType == 'matrix' && parent.app.vocabApi.termdbConfig.hasSampleAncestry) {
-				const ancestryDiv = basicDiv
-					.append('div')
-					.attr('title', 'sort by ancestry')
-					.style('display', m.showMatrixCNV != 'none' && !m.allMatrixCNVHidden ? 'block' : 'none')
+				// visibility depends only on the ancestry feature (guarded above), not on CNV
+				// state — the CNV display gate was copied here by mistake and would hide the
+				// control (including its 'disable' option) whenever all CNV classes are hidden
+				const ancestryDiv = basicDiv.append('div').attr('title', 'sort by ancestry').style('display', 'block')
 
 				ancestryDiv.append('span').html('Ancestry')
 
