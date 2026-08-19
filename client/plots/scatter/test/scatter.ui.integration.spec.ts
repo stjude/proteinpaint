@@ -512,7 +512,7 @@ tape('Change symbol and reference size from menu', function (test) {
 		}
 	})
 
-	const testSymSize = 300
+	const testSymSize = 4
 	const testRefSize = 1
 
 	async function runTests(scatter) {
