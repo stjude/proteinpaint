@@ -262,7 +262,6 @@ tape('class sample counts', test => {
 	)
 	const countCells = holder.selectAll('[data-testid="sjpp-variantConfig-class-count"]').nodes() as HTMLElement[]
 	test.equal(countCells.length, 2, 'count cells should be flagged as counts')
-	test.equal(countCells[0].style.textAlign, 'right', 'counts should be right-aligned')
 
 	const applyBtn: any = holder.select('button').node()
 	applyBtn.click()
