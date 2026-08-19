@@ -1,4 +1,3 @@
-import NodePolyfillPlugin from 'node-polyfill-webpack-plugin'
 import path from 'path'
 import fs from 'fs'
 import webpack from 'webpack'
@@ -37,7 +36,23 @@ export default {
 		outputModule: true
 	},
 
-	plugins: [new NodePolyfillPlugin()],
+	// explicit, scoped polyfills only for what tape's bundle actually needs -- verified
+	// by removing node-polyfill-webpack-plugin's blanket polyfilling entirely: webpack's
+	// module resolution needed path/stream (added below), and a live-browser load of the
+	// bundle additionally caught a runtime-only "process is not defined" (a bare global
+	// reference, which resolve.fallback doesn't cover -- it needs its own global binding)
+	plugins: [
+		new webpack.ProvidePlugin({
+			process: 'process/browser'
+		})
+	],
+
+	resolve: {
+		fallback: {
+			path: 'path-browserify',
+			stream: 'stream-browserify'
+		}
+	},
 
 	module: {
 		strictExportPresence: true,

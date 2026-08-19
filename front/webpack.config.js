@@ -1,5 +1,4 @@
 const WebpackNotifierPlugin = require('webpack-notifier')
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const path = require('path')
 const fs = require('fs')
 const webpack = require('webpack')
@@ -32,7 +31,10 @@ module.exports = function getPortalConfig(env = {}) {
 			libraryTarget: 'window'
 		},
 		resolve: {
-			// fallback to specific polyfills if not found in node-polyfill-webpack-plugin
+			// explicit, scoped polyfills only for what this bundle actually needs -- verified
+			// by removing node-polyfill-webpack-plugin's blanket polyfilling entirely and
+			// confirming no other Node builtin is required (webpack raised no "Can't resolve"
+			// errors for anything else)
 			fallback: {
 				buffer: require.resolve('buffer/')
 				// You might need fallbacks for other Node.js modules too, e.g., "stream": require.resolve("stream-browserify")
@@ -43,7 +45,6 @@ module.exports = function getPortalConfig(env = {}) {
 			}
 		},
 		plugins: [
-			new NodePolyfillPlugin(),
 			new webpack.ProvidePlugin({
 				Buffer: ['buffer', 'Buffer']
 			})

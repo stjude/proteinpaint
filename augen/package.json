@@ -26,7 +26,6 @@
   "devDependencies": {
     "esbuild": "^0.28.1",
     "express": "^4.17.1",
-    "node-polyfill-webpack-plugin": "^4.0.0",
     "tape": "^5.2.2",
     "tsx": "^4.7.1"
   },
