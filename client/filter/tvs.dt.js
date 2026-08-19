@@ -100,7 +100,8 @@ function get_pill_label(tvs) {
 /*
 get mutation classes of dt term, stored in dtTerm.values{}
 
-opts.withMnames: also store the amino acid changes (when present) in dtTerm.mnames[].
+opts.withMnames: also store the amino acid changes (when present) in dtTerm.mnames[],
+and the sample count of each class on dtTerm.values[k].samplecount.
 Only the variant config UI reads mnames. The predefined groupset builder does not,
 and the dt term it fills is shared by reference with every tvs of every groupset
 (see getPredefinedGroupsets() in tw/geneVariant.ts), so an mname tally left on it is
@@ -140,7 +141,12 @@ export async function getDtTermValues(dtTerm, filter, vocabApi, opts = {}) {
 		Object.keys(classes)
 			.filter(k => k != 'Blank' && k != 'WT')
 			.map(k => {
-				return [k, { key: k, label: vocabApi.termdbConfig.mclass?.[k]?.label || mclass[k].label }]
+				const value = { key: k, label: vocabApi.termdbConfig.mclass?.[k]?.label || mclass[k].label }
+				// the per-class sample tally is only displayed by the variant config UI,
+				// so it rides on the same opt-in as mnames and stays off the dt terms
+				// that groupset builders serialize into state
+				if (opts.withMnames) value.samplecount = classes[k]
+				return [k, value]
 			})
 	)
 	if (!opts.withMnames) {

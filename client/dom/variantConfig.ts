@@ -2,7 +2,7 @@ import { make_radios, renderTable } from '#dom'
 import { Menu } from './menu'
 import { isoformRangeSelect, isoformPairRangeSelect } from './isoformSelect'
 import type { GeneModel, BreakpointMarker, ScaleMode } from './types/isoformSelect'
-import type { TermValues, BaseValue, BreakpointRange, BreakpointEntry, GvQueryRegion } from '#types'
+import type { BaseValue, BreakpointRange, BreakpointEntry, GvQueryRegion } from '#types'
 import { filterInit } from '#filter'
 import { dt2label, dtsnvindel, dtsv, dtfusionrna, mclass } from '#shared/common.js'
 import { matchesGvQueryEntry } from '#shared/terms.js'
@@ -19,6 +19,11 @@ type VariantValue = BaseValue & {
 	/** sv/fusion only: restricts the breakpoint on the partner gene named by .mname */
 	partnerBreakpointRange?: BreakpointRange
 }
+
+// a mutation class of the term as supplied by the caller. samplecount is the samples
+// of the class in the current data, from the same tally as the mnames; shown in the
+// checklist, and only when the caller supplies it (see getDtTermValues in filter/tvs.dt.js)
+type ClassValue = BaseValue & { samplecount?: number }
 
 // an amino acid change of the term, from /termdb/categories
 // gene is present when the mutation data is annotated with it
@@ -55,7 +60,7 @@ type Config = {
 type Arg = {
 	holder: any // D3 holder where UI is rendered
 	header?: string // UI header
-	values: TermValues // mutation classes of term
+	values: { [key: string]: ClassValue } // mutation classes of term
 	mnames?: MnameItem[] // amino acid changes of term, sorted by descending sample count
 	selectedValues?: VariantValue[] // selected mutation classes/variants, when missing will default to all classes of term
 	genotype?: 'variant' | 'wt' | 'nt' // genotype (variant, wildtype, not tested)
@@ -85,6 +90,13 @@ export function renderVariantConfig(arg: Arg) {
 	const values: VariantValue[] = Object.entries(arg.values).map(([k, v]) => {
 		return { key: k, label: v.label, value: k }
 	})
+	/* samples of each class in the current data, when the caller supplies the tally.
+	held apart from values[], whose entries become the applied tvs values, so that a
+	count is displayed but never serialized into the saved selection */
+	const classSampleCount = new Map<string, number>()
+	for (const [k, v] of Object.entries(arg.values)) {
+		if (Number.isFinite(v.samplecount)) classSampleCount.set(k, v.samplecount as number)
+	}
 	// selected specific variants (amino acid changes)
 	const selectedMnames = (arg.selectedValues || []).filter(v => v.mname)
 	// a class is selected when it appears in any selected value, either
@@ -109,6 +121,12 @@ export function renderVariantConfig(arg: Arg) {
 	for (const m of preservedMnames) {
 		if (!values.some(v => v.key == m.class))
 			values.push({ key: m.class, label: mclass[m.class]?.label || m.class, value: m.class })
+	}
+	/* with a tally, list the classes by descending sample count, the order the variants
+	list already uses. a class kept only to preserve a saved selection has no samples in
+	the current data and sorts last. without a tally the caller's order is kept */
+	if (classSampleCount.size) {
+		values.sort((a, b) => (classSampleCount.get(b.key as string) || 0) - (classSampleCount.get(a.key as string) || 0))
 	}
 	if (!Number.isInteger(dt)) throw 'unexpected dt value'
 	const mcount = arg.mcount || 'any'
@@ -209,12 +227,26 @@ export function renderVariantConfig(arg: Arg) {
 			classTableDiv = tableDiv
 			const rows: any[] = []
 			const selectedIdxs: number[] = []
+			// the count column is only rendered when the caller supplied a tally, so
+			// that a caller without one does not show a column of zeroes
+			const showClassCount = classSampleCount.size > 0
 			for (const [i, m] of values.entries()) {
 				const label = m.label || m.key
-				rows.push([{ value: label }])
+				const row: any[] = [{ value: label }]
+				if (showClassCount) {
+					const n = classSampleCount.get(m.key as string)
+					// a class kept only to preserve a saved selection is not in the current
+					// data, flag its cell so it reads as absent rather than as no samples
+					row.push({
+						value: `${n || 0}`,
+						dataTestId: n ? 'sjpp-variantConfig-class-count' : 'sjpp-variantConfig-class-absent'
+					})
+				}
+				rows.push(row)
 				if (selectedValues.find(s => s.key == m.key)) selectedIdxs.push(i)
 			}
 			const columns: any[] = [{ label: 'tvs' }]
+			if (showClassCount) columns.push({ label: 'Samples', align: 'right' })
 			renderTable({
 				rows,
 				columns,
