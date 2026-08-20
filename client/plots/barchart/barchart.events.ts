@@ -2,7 +2,7 @@ import { Menu, renderTable, type TableRow } from '#dom'
 // import { dofetch3 } from '#common/dofetch'
 import { mclass, dt2label } from '#shared/common.js'
 // import { /*newpane,*/ export_data } from '#src/client'
-import { filterJoin, getFilterItemByTag, /*getNormalRoot,*/ findItemByTermId, /*normalizeProps*/ } from '#filter'
+import { filterJoin, getFilterItemByTag, /*getNormalRoot,*/ findItemByTermId /*normalizeProps*/ } from '#filter'
 import { rgb } from 'd3-color'
 import { create } from 'd3-selection'
 import { roundValueAuto } from '#shared/roundValue.js'
@@ -33,7 +33,7 @@ export default function getHandlers(self) {
 		series: {
 			mouseover(event, d) {
 				event.stopPropagation()
-				const hasOverlay = self.config.term2 || self.hasMultiCategoryKeys
+				const hasOverlay = self.config.term2 || self.hasMultiCategoryKeys || self.hasMembershipOverlay
 				let percent = hasOverlay ? (d.total / d.seriesTotal) * 100 : (d.seriesTotal / d.chartTotal) * 100
 				percent = parseFloat(percent.toFixed(1))
 				const t1 = self.config.term.term
@@ -248,7 +248,7 @@ export default function getHandlers(self) {
 	}
 }
 
-function handleColorClick(d, self, color) { 
+function handleColorClick(d, self, color) {
 	const termNum = d.type == 'col' ? 'term' : 'term2'
 	const term = self.config[termNum]
 	let dataId = d.dataId
@@ -298,6 +298,9 @@ function handleLegendClick(target, self) {
 	const d = target.__data__
 	if (d === undefined) return
 	if (!('type' in d)) return
+	// overlay rows from a synthetic overlay (no term2, e.g. membership multivalue
+	// or termCollection) have no term2.q to store hide/color edits in
+	if (d.type == 'row' && !self.config.term2) return
 	const termNum = d.type == 'col' ? 'term' : 'term2'
 	const term = self.config[termNum]
 	const isHidden =
@@ -436,7 +439,9 @@ function handle_click(event, self, chart) {
 		}
 
 		const hasMultipleCells = visibleSerieses.some(s => s.visibleData.length > 1)
-		if (hasMultipleCells && (data.dataId || data.dataId === 0)) {
+		// the hide callback edits config.term2.q, so a synthetic overlay (dataId
+		// present without a term2, e.g. membership multivalue) cannot offer it
+		if (self.config.term2 && hasMultipleCells && (data.dataId || data.dataId === 0)) {
 			options.push({
 				label: 'Hide "' + dataLabel + '" ' + icon,
 				callback: () => {

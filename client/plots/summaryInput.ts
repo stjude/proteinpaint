@@ -82,6 +82,13 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 						if (term0_surv && term0_surv.term.name != term0?.term?.name)
 							config.term0 = { term: structuredClone(term0_surv.term), q: {} }
 					}
+					// a membership multivalue primary term cannot take an overlay: overlapping
+					// bars invalidate the barchart's Fisher/chi-square tests, and its overlay
+					// pill is hidden. drop any overlay carried over from the previous term (must
+					// run after the branches above, which may restore one). divide-by stays
+					if (editedType == 'multivalue' && config.term?.term?.valueMeaning == 'membership') {
+						if (term2 || config.term2) config.term2 = null
+					}
 				}
 			},
 			{
@@ -93,7 +100,14 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 				usecase: { target: 'summaryInput', detail: 'term2' },
 				label: controlLabels.term2.label,
 				defaultQ4fillTW: getT0T2defaultQ(),
-				getDisplayStyle: plot => (plot.config.term?.term.type == 'survival' ? 'none' : 'table-row')
+				// hidden for survival term1 and for
+				// membership multivalue term1 (overlapping bars invalidate the barchart's
+				// association tests, so no real overlay is offered)
+				getDisplayStyle: plot =>
+					plot.config.term?.term.type == 'survival' ||
+					(plot.config.term?.term.type == 'multivalue' && plot.config.term.term.valueMeaning == 'membership')
+						? 'none'
+						: 'table-row'
 			},
 			{
 				type: 'term',
