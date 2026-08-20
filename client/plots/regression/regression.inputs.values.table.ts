@@ -14,6 +14,8 @@ import { appInit } from '#plots/plot.app.js'
 */
 
 const row_hover_bgcolor = '#fff6dc'
+// changed color from #999 to address Section 508 contrast issue
+const graytextcolor = '#555'
 
 export class InputValuesTable {
 	opts: any
@@ -89,7 +91,7 @@ function setRenderers(self) {
 				.style('margin', '10px')
 				.style('font-size', '.8em')
 				.style('text-align', 'left')
-				.style('color', '#999'),
+				.style('color', graytextcolor),
 
 			loading_div: holder.append('div').text('Loading..').style('display', 'none'),
 
@@ -248,7 +250,7 @@ function setRenderers(self) {
 		//trs.each(trUpdate)
 		trs.enter().append('tr').each(trEnter)
 
-		self.dom.excluded_div.selectAll('td').style('color', '#999')
+		self.dom.excluded_div.selectAll('td').style('color', graytextcolor)
 	}
 
 	function trEnter(this: any, item) {
@@ -322,7 +324,7 @@ function setRenderers(self) {
 				.style('padding', '2px 10px')
 				.style('border', item.key === t.refGrp && hover_flag ? '1px solid #bbb' : '')
 				.style('border-radius', '10px')
-				.style('color', '#999')
+				.style('color', graytextcolor)
 				.style('font-size', '.7em')
 				.text('REFERENCE')
 

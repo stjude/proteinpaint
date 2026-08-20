@@ -327,7 +327,8 @@ function setRenderers(self) {
 				.append('div')
 				.style('margin', '3px 5px 20px 5px')
 				.style('font-size', '17px')
-				.style('color', '#bbb')
+				// changed color from #bbb to address Section 508 contrast issue
+				.style('color', '#555')
 				.text(section.heading),
 
 			inputsDiv: div.append('div')
