@@ -199,6 +199,13 @@ function getChartTypeList(self, state) {
 			// entry for this chart type (e.g. Abbreviated PrOFILE has no template config).
 			plotConfigByCohort_unavailableMessage: 'No templates are currently available for this cohort.'
 		},
+		{
+			// Menu only — renders the data-driven Template Mapping view (Module → Domain → templates)
+			// from termdbConfig.plotConfigByCohort[cohort].template3. See plots/profile/form3.ts.
+			label: 'Templates 3',
+			chartType: 'profileForms3',
+			clickTo: self.loadChartSpecificMenu
+		},
 		////////////////////// PROFILE PLOTS END //////////////////////
 		//       rest are general plots applicable to all ds
 		{
