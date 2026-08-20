@@ -21,8 +21,8 @@ handler:
 addRangeTableNoDensity() // for terms without desnity table, show brushes but without density_plot on blank svg
 addRangeTable() // add table for existing ranges or start with empty_range with brush in center 
 enterRange() // add row for each range, for existing readonly and for new or edit, show inputs
-makeRangeButtons() // add buttons for  APPLY / DELETE 
-mergeOverlapRanges() // when APPLY is pressed, check if ranges are overlapping, if so, merge them
+makeRangeButtons() // add buttons for  Apply / DELETE 
+mergeOverlapRanges() // when Apply is pressed, check if ranges are overlapping, if so, merge them
 showCheckList_numeric() // so checklist of uncomputable values
 validateNumericTvs() // validate tvs before sending it to callback
 
@@ -281,7 +281,7 @@ function addRangeTableNoDensity(self, tvs) {
 	}
 
 	function addApplyButton(holder) {
-		return holder.append('button').text('APPLY').on('click', clickApply)
+		return holder.append('button').text('Apply').on('click', clickApply)
 	}
 
 	function clickApply() {
@@ -403,7 +403,7 @@ function enterRange(self, tr, brush, i) {
 		brush.apply_btn = buttons_td
 			.append('button')
 			.style('margin-left', '10px')
-			.text('APPLY')
+			.text('Apply')
 			.on('click', async () => {
 				self.dom.tip.hide()
 				const new_range = brush.rangeInput.parseRange()

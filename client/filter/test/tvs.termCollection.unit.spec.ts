@@ -169,7 +169,7 @@ tape('fillMenu() defaults a new filter to x>0.1 on the first member', async test
 		[true, true, true],
 		'checks every member as denominator'
 	)
-	test.equal(holder.selectAll('button').size(), 1, 'renders the APPLY control as the only <button>')
+	test.equal(holder.selectAll('button').size(), 1, 'renders the Apply control as the only <button>')
 	test.equal(holder.selectAll('table').size(), 1, 'lays out the range input without a table, only the member table')
 	;(holder.select('button').node() as HTMLButtonElement).click()
 	test.equal(applied?.ranges[0].start, 0.1, 'applies a range starting at 0.1')
@@ -181,7 +181,7 @@ tape('fillMenu() defaults a new filter to x>0.1 on the first member', async test
 	test.end()
 })
 
-tape('fillMenu() only applies the filter from the APPLY button', async test => {
+tape('fillMenu() only applies the filter from the Apply button', async test => {
 	const holder = d3s.select('body').append('div')
 	let applied: any
 	let hidden = false
@@ -208,9 +208,9 @@ tape('fillMenu() only applies the filter from the APPLY button', async test => {
 	test.equal(applied, undefined, 'selecting a numerator does not apply the filter')
 	test.equal(hidden, false, 'selecting a numerator does not close the menu')
 	;(holder.select('button').node() as HTMLButtonElement).click()
-	test.equal(applied?.ranges[0].start, 0.2, 'APPLY applies the edited range')
-	test.deepEqual(applied?.term.numerators, ['ENST01', 'ENST02'], 'APPLY applies the edited numerators')
-	test.equal(hidden, true, 'APPLY closes the menu')
+	test.equal(applied?.ranges[0].start, 0.2, 'Apply applies the edited range')
+	test.deepEqual(applied?.term.numerators, ['ENST01', 'ENST02'], 'Apply applies the edited numerators')
+	test.equal(hidden, true, 'Apply closes the menu')
 
 	if (test['_ok']) holder.remove()
 	test.end()

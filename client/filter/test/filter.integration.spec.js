@@ -104,7 +104,7 @@ async function addDemographicSexFilter(opts, btn) {
 	sexPill.querySelectorAll('.termlabel')[0].click()
 	const detectSelect = await detectLst({ elem: tipd, selector: "input[type='checkbox']", count: 1, matchAs: '>=' })
 	detectSelect[0].click()
-	const applyBtn = await detectOne({ elem: tipd, selector: '.sjpp_apply_btn' })
+	const applyBtn = await detectOne({ elem: tipd, selector: '[data-testid="sjpp-tvs-apply"]' })
 	applyBtn.click()
 }
 
@@ -655,7 +655,10 @@ tape('pill Edit interaction', async test => {
 		'none',
 		'should display the tree tip when clicking the edit option'
 	)
-	const applyBtn = await detectOne({ elem: opts.filter.Inner.dom.treeTip.d.node(), selector: '.sjpp_apply_btn' })
+	const applyBtn = await detectOne({
+		elem: opts.filter.Inner.dom.treeTip.d.node(),
+		selector: '[data-testid="sjpp-tvs-apply"]'
+	})
 	test.ok(applyBtn, 'should display an apply button in the edit menu')
 
 	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))

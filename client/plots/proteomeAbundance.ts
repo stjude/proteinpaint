@@ -200,12 +200,11 @@ export function makeChartBtnMenu(holder: any, chartsInstance: any): void {
 
 	let selectedProteomeDetails: Partial<ProteomeDetails> | undefined
 
-	const toolsBtnHolder = menuDiv.append('div').style('text-align', 'center')
+	const toolsBtnHolder = menuDiv.append('div')
 	const toolsBtn = toolsBtnHolder
 		.append('button')
-		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn sja_sharp_border')
 		.style('display', 'block')
-		.style('margin', '10px auto 10px')
+		.style('margin', '10px 0')
 		.text('Analytics Tools')
 		.on('click', () => {
 			const current = selectedProteomeDetails

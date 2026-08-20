@@ -450,11 +450,12 @@ export function makeChartBtnMenu(holder, chartsInstance: any) {
 					const tableDiv = refDiv.append('div')
 
 					const applybt = {
-						text: 'APPLY',
-						class: 'sjpp_apply_btn sja_filter_tag_btn',
+						text: 'Apply',
+						// unstyled button, found by testid since it carries no distinguishing class
+						dataTestId: 'sjpp-brainImaging-apply',
 						/* fires on every checkbox change: keeps selectedSamples current, and
 						overrides the table's own disabling (which only considers visible rows)
-						so APPLY stays usable when checked samples are hidden by the search */
+						so Apply stays usable when checked samples are hidden by the search */
 						onChange: (idxlst: number[], button: any) => {
 							updateSelections(idxlst)
 							if (button) button.disabled = !selectedSamples.size
@@ -497,7 +498,8 @@ export function makeChartBtnMenu(holder, chartsInstance: any) {
 							maxHeight: '40vh',
 							header: { allowSort: true },
 							selectedRows: shownSamples.map((s, i) => (selectedSamples.has(s.sample) ? i : -1)).filter(i => i >= 0),
-							buttons: [applybt]
+							buttons: [applybt],
+							buttonsToLeft: true
 						})
 					}
 					renderRows()

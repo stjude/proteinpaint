@@ -293,6 +293,6 @@ async function addDemographicSexFilter(opts, btn) {
 	sexPill.querySelectorAll('.termlabel')[0].click()
 	const detectSelect = await detectLst({ elem: tipd, selector: "input[type='checkbox']", count: 1, matchAs: '>=' }) //; console.log(32, detectSelect); throw 'test'
 	detectSelect[1].click()
-	const applyBtn = await detectOne({ elem: tipd, selector: '.sjpp_apply_btn' })
+	const applyBtn = await detectOne({ elem: tipd, selector: '[data-testid="sjpp-tvs-apply"]' })
 	applyBtn.click()
 }

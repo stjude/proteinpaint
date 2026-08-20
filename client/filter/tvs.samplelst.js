@@ -20,15 +20,11 @@ async function fillMenu(self, div, tvs) {
 	}
 	div
 		.append('div')
-		.append('div')
-		.style('display', 'inline-block')
-		.style('float', 'right')
-		.style('padding', '6px 20px')
+		.style('padding', '6px')
 		.append('button')
-		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
+		.attr('data-testid', 'sjpp-tvs-samplelst-apply')
 		.text('Apply')
 		.on('click', () => {
-			let firstGroup
 			for (const field in tvs.term.values) {
 				const value = tvs.term.values[field]
 
