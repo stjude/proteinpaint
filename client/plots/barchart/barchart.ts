@@ -41,6 +41,7 @@ export class Barchart extends PlotBase implements RxComponent {
 	bins!: any
 	chartid2dtterm!: any
 	hasMultiCategoryKeys!: any
+	hasMembershipOverlay!: boolean
 	currCombinedTermIds!: any
 	seriesOrder!: any
 	barSorter!: any
@@ -152,7 +153,9 @@ export class Barchart extends PlotBase implements RxComponent {
 					vocabApi: this.app.vocabApi,
 					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 					defaultQ4fillTW: getT0T2defaultQ(),
-					getDisplayStyle: () => (this.isCategoricalTermCollection() ? 'none' : ''),
+					// no overlay for membership multivalue term1: overlapping bars invalidate
+					// the association tests, same reason multivalue is banned as overlay term
+					getDisplayStyle: () => (this.isCategoricalTermCollection() || this.isMembershipMultivalue() ? 'none' : ''),
 					processConfig: config => {
 						//config.settings not usually passed for logic check below
 						const s = this.state.config.settings.barchart
@@ -239,22 +242,51 @@ export class Barchart extends PlotBase implements RxComponent {
 
 				{
 					label: 'Deduplicate',
-					title: 'Use separate bars samples that has multiple values or belong to multiple groups',
-					type: 'checkbox',
-					chartType: 'barchart',
+					title: 'Show samples that belong to multiple categories as their own bar, so each sample is counted once',
+					type: 'custom',
+					// registry key only; the state lives in config.term.q.deduplicate, not in settings
 					settingsKey: 'dedup',
-					boxLabel: 'Yes',
-					getDisplayStyle: /*plot*/ () =>
-						this.chartsData?.charts.find(
-							c =>
-								c.dedupedSerieses?.length &&
-								!deepEqual(
-									c.serieses.map(s => s.seriesId),
-									c.dedupedSerieses.map(s => s.seriesId)
-								)
-						)
-							? 'table-row'
-							: 'none'
+					init: input => {
+						const label = input.dom.inputTd.append('label')
+						const checkbox = label
+							.append('input')
+							.attr('type', 'checkbox')
+							.attr('data-testid', 'sjpp-barchart-dedup')
+							.on('change', () => {
+								const term = this.config.term
+								this.app.dispatch({
+									type: 'plot_edit',
+									id: this.id,
+									config: {
+										term: {
+											$id: term.$id,
+											id: term.id,
+											isAtomic: true,
+											term: term.term,
+											q: { ...term.q, deduplicate: checkbox.property('checked') }
+										}
+									}
+								})
+							})
+						label.append('span').html('&nbsp;Yes')
+						return {
+							main: plot => {
+								checkbox.property('checked', !!plot.term?.q?.deduplicate)
+								const show =
+									plot.term?.term?.type == 'multivalue' &&
+									plot.term.term.valueMeaning == 'membership' &&
+									this.chartsData?.charts.find(
+										c =>
+											c.dedupedSerieses?.length &&
+											!deepEqual(
+												c.serieses.map(s => s.seriesId),
+												c.dedupedSerieses.map(s => s.seriesId)
+											)
+									)
+								input.dom.row.style('display', show ? 'table-row' : 'none')
+							}
+						}
+					}
 				}
 			]
 			if (isNumericTw(this.config.term))
@@ -436,10 +468,11 @@ export class Barchart extends PlotBase implements RxComponent {
 			this.term1toColor = {}
 			this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
 			this.hasMultiCategoryKeys = this.isCategoricalTermCollection()
+			this.hasMembershipOverlay = this.isMembershipMultivalue()
 			this.updateSettings(this.config)
 			for (const chart of data.charts) {
 				const categoriesPerSerie = chart.serieses.map(s => s.data.length)
-				const hasOverlay = this.config.term2 || this.hasMultiCategoryKeys
+				const hasOverlay = this.config.term2 || this.hasMultiCategoryKeys || this.hasMembershipOverlay
 				const numColors = hasOverlay ? Math.max(...categoriesPerSerie) : chart.serieses.length
 				chart.colorScale = getColors(numColors)
 			}
@@ -493,7 +526,7 @@ export class Barchart extends PlotBase implements RxComponent {
 			multiTestingCorr: config.settings.barchart.multiTestingCorr,
 			defaultColor: config.settings.barchart.defaultColor,
 			colorBars: config.settings.barchart.colorBars,
-			dedup: config.settings.barchart.dedup,
+			dedup: !!config.term.q?.deduplicate,
 			plotLength: config.settings.barchart.plotLength,
 			// normalize bar thickness regardless of orientation
 			colw: config.settings.barchart.barwidth,
@@ -762,7 +795,7 @@ export class Barchart extends PlotBase implements RxComponent {
 	}
 
 	setTerm2Color(chart, result) {
-		if (this.hasMultiCategoryKeys && !this.config.term2) {
+		if ((this.hasMultiCategoryKeys || this.hasMembershipOverlay) && !this.config.term2) {
 			this.term2toColor[result.dataId] = rgb(chart.colorScale(result.dataId)).toString()
 			return
 		}
@@ -773,6 +806,11 @@ export class Barchart extends PlotBase implements RxComponent {
 	isCategoricalTermCollection() {
 		const t1 = this.config.term
 		return t1?.term?.type === 'termCollection' && t1.term.memberType === 'categorical'
+	}
+
+	isMembershipMultivalue() {
+		const t1 = this.config.term
+		return t1?.term?.type === 'multivalue' && t1.term.valueMeaning === 'membership'
 	}
 
 	getCategoryKeyLabel(t1, t2, dataId) {
@@ -939,7 +977,8 @@ export class Barchart extends PlotBase implements RxComponent {
 				})
 			}
 		}
-		const showOverlayLegend = (t2 || this.hasMultiCategoryKeys) && Object.keys(this.term2toColor).length
+		const showOverlayLegend =
+			(t2 || this.hasMultiCategoryKeys || this.hasMembershipOverlay) && Object.keys(this.term2toColor).length
 		if (s.rows && !s.hidelegend && showOverlayLegend) {
 			const value_by_label =
 				!t2 || t2.term.type != 'condition' || !t2.q
@@ -949,13 +988,26 @@ export class Barchart extends PlotBase implements RxComponent {
 					: t2.q.value_by_most_recent
 					? 'most recent'
 					: ''
-			const legendName =
-				this.hasMultiCategoryKeys && !t2 ? 'Category' : t2.term.type == 'geneVariant' ? '' : t2.term.name
+			const legendName = !t2
+				? this.hasMembershipOverlay
+					? t1.term.name
+					: 'Category'
+				: t2.term.type == 'geneVariant'
+				? ''
+				: t2.term.name
 			legendGrps.push({
 				name: `<span style="${headingStyle}">` + legendName + (value_by_label ? ', ' + value_by_label : '') + '</span>',
 				items: s.rows
 					.flatMap(d => {
-						const total = chart ? this.totalsByDataId[d]?.[chart.chartId] : this.totalsByDataId[d]
+						// for the synthetic membership overlay, a shared sample sits in several
+						// bars, so summed segment totals overcount; use the server's distinct
+						// per-segment counts instead (fall back to the sums if absent)
+						const total =
+							!t2 && this.hasMembershipOverlay
+								? this.currServerData.distinctSegmentTotals?.[d] ?? this.totalsByDataId[d]
+								: chart
+								? this.totalsByDataId[d]?.[chart.chartId]
+								: this.totalsByDataId[d]
 						if (this.visibleCharts.length && !total) return []
 						const ntotal = total ? ', n=' + total : ''
 						const label = this.getCategoryKeyLabel(t1, t2, d)
@@ -1381,7 +1433,6 @@ export function getDefaultBarSettings(app) {
 		defaultColor: plotColor,
 		colorBars: false,
 		colorUsing: 'all',
-		dedup: false,
 		showStats: true,
 		showAssociationTests: true,
 		showPercent: false

@@ -197,8 +197,34 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 								// this series key will not deduplicate multi-valued samples (those that belong to multiple groups)
 								item[`key${i}`] = i != 1 ? value.key : value.values?.map(v => v.key) || [value.key]
 								item[`val${i}`] = value.value
-								// the dedupkey1 will separate out multi-valued samples
-								if (i === 1) item.dedupkey1 = value.values ? [`${value.values.length}-value samples`] : [value.key]
+								if (i === 1) {
+									if (term.type == 'multivalue' && term.valueMeaning == 'membership') {
+										/* membership term1. hidden categories count as absent for both the
+										dedup collapse and the overlay classification (a hide edits q and
+										refetches), so a 2-membership sample with one category hidden is
+										treated as single-membership */
+										const visibleKeys = q?.hiddenValues ? item.key1.filter(k => !q.hiddenValues[k]) : item.key1
+										// deduplicate: only samples with >1 visible membership collapse into
+										// the synthetic "N-value samples" bar; with one visible membership
+										// the sample belongs in that category's exclusive bar
+										item.dedupkey1 =
+											visibleKeys.length > 1
+												? [`${visibleKeys.length}-value samples`]
+												: [visibleKeys[0] ?? item.key1[0]]
+										// membership bars overlap: synthesize an overlay key so each bar
+										// stacks exclusive apart from shared samples; the i==2 pass keeps
+										// it via the 'key2' in item guard above
+										if (!map.get(2))
+											item.key2 = item.val2 = visibleKeys.length > 1 ? 'In multiple categories' : 'In one category'
+									} else {
+										/* deduplication is a membership-multivalue-only feature. every row
+										still needs dedupkey1: the partjson template builds dedupedSerieses
+										unconditionally, and mirroring key1 keeps it identical to serieses so
+										the Deduplicate toggle stays hidden and a stray q.deduplicate cannot
+										select an empty series set. */
+										item.dedupkey1 = value.values?.map(v => v.key) || [value.key]
+									}
+								}
 							}
 						}
 					} else {
@@ -243,14 +269,30 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 		if (tw1?.term?.type == 'multivalue' && tw1.term.valueMeaning == 'membership' && pj.tree.results?.charts) {
 			const hidden = new Set(Object.keys(tw1.q?.hiddenValues || {}))
 			const chart2samples = new Map() // k: chartId (key0), v: Set of samples with >=1 visible membership
+			// distinct sample count per synthesized overlay segment (key2), for the
+			// legend: summing per-bar segment totals would count a shared sample once
+			// per bar it appears in. only present when key2 was synthesized (no term2)
+			const segment2samples = !map.get(2) ? new Map() : null
 			for (const item of q.results.lst) {
 				const keys = Array.isArray(item.key1) ? item.key1 : [item.key1]
 				if (!keys.some(k => !hidden.has(k))) continue
+				// in dedup view the sample's one bar is its dedup key; hiding that bar
+				// (e.g. "2-value samples", a synthetic key that never matches key1)
+				// must remove the sample from the distinct totals
+				if (tw1.q?.deduplicate && item.dedupkey1 && hidden.has(item.dedupkey1[0])) continue
 				if (!chart2samples.has(item.key0)) chart2samples.set(item.key0, new Set())
 				chart2samples.get(item.key0).add(item.sample)
+				if (segment2samples && item.key2) {
+					if (!segment2samples.has(item.key2)) segment2samples.set(item.key2, new Set())
+					segment2samples.get(item.key2).add(item.sample)
+				}
 			}
 			for (const chart of pj.tree.results.charts) {
 				chart.visibleDistinctTotal = chart2samples.get(chart.chartId)?.size || 0
+			}
+			if (segment2samples?.size) {
+				pj.tree.results.distinctSegmentTotals = {}
+				for (const [key2, samples] of segment2samples) pj.tree.results.distinctSegmentTotals[key2] = samples.size
 			}
 		}
 	}

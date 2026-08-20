@@ -1,4 +1,4 @@
-import type { BaseTerm, TermValues } from '../index.ts'
+import type { BaseTerm, MinBaseQ, TermValues } from '../index.ts'
 
 /*
 For term type 'multivalue'
@@ -24,3 +24,12 @@ export type MultivalueTerm = BaseTerm & {
 }
 
 export type RawMultivalueTerm = MultivalueTerm
+
+export type MultivalueQ = MinBaseQ & {
+	type?: 'values'
+	/** membership terms only: instead of counting a multi-membership sample under each
+	 * of its categories (overlapping bars), collapse such samples into a synthetic
+	 * "N-value samples" category so the categories partition the cohort and each sample
+	 * is counted once. */
+	deduplicate?: boolean
+}
