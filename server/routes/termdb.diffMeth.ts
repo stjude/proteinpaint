@@ -129,14 +129,8 @@ function dmKeyInputs(req: DiffMethRequest, imputeMissing: boolean) {
 		samplelst: canonicalizeSamplelst(req.samplelst),
 		min_samples_per_group: req.min_samples_per_group ?? null,
 		exclude_sex_chr: req.exclude_sex_chr ?? null,
-		ebayes_trend: req.ebayes_trend ?? null,
-		ebayes_robust: req.ebayes_robust ?? null,
-		array_weights: req.array_weights ?? null,
 		tw: req.tw ?? null,
 		tw2: req.tw2 ?? null,
-		/* Changes the design matrix and therefore every p-value, so it must be part of the
-		cache identity. Defaulting to false keeps pre-existing entries valid on deploy. */
-		pair_by_parent: req.pair_by_parent ?? false,
 		filter: (req as any).filter ?? null,
 		filter0: (req as any).filter0 ?? null
 	}
@@ -181,16 +175,10 @@ type DiffMethInput = {
 	min_samples_per_group?: number
 	exclude_sex_chr?: boolean
 	impute_missing?: boolean
-	ebayes_trend?: boolean
-	ebayes_robust?: boolean
-	array_weights?: boolean
 	conf1?: any[]
 	conf1_mode?: 'continuous' | 'discrete'
 	conf2?: any[]
 	conf2_mode?: 'continuous' | 'discrete'
-	/* One block label per sample, CASES FIRST then controls -- the order diffMeth.R
-	requires, and the same order conf1/conf2 are assembled in below. */
-	pair_id?: string[]
 }
 
 async function runDmFresh(
@@ -216,10 +204,7 @@ async function runDmFresh(
 		min_samples_per_group: param.min_samples_per_group,
 		exclude_sex_chr: param.exclude_sex_chr,
 		// ds-derived, not a user setting: see the platform field on queries.dnaMethylation
-		impute_missing: imputeMissing,
-		ebayes_trend: param.ebayes_trend,
-		ebayes_robust: param.ebayes_robust,
-		array_weights: param.array_weights
+		impute_missing: imputeMissing
 	}
 
 	if (param.tw) {
@@ -234,82 +219,9 @@ async function runDmFresh(
 		if (new Set(diffMethInput.conf2).size === 1) throw new Error('Confounding variable 2 has only one value')
 	}
 
-	if (param.pair_by_parent) {
-		/* Block labels are a pure function of sample NAME, so they are derived here from the
-		resolved group names rather than threaded through buildGroupValues alongside the
-		confounders. Same case-then-control order as conf1/conf2 above, which is the order
-		diffMeth.R documents for pair_id. */
-		const toBlock = ds.sampleName2blockLabel
-		if (typeof toBlock != 'function') {
-			throw new Error('This dataset does not support paired analysis: no parent entity is defined for its samples.')
-		}
-		const names = [...groups.group2names, ...groups.group1names]
-		const pair_id = names.map(n => toBlock(n))
-		/* An unresolvable name would otherwise become "undefined", quietly forming one giant
-		block that pools unrelated samples -- worse than refusing, and invisible in the output. */
-		const unresolved = names.filter((_, i) => !pair_id[i])
-		if (unresolved.length) {
-			throw new Error(
-				`Paired analysis: no parent entity found for ${unresolved.length} sample(s), e.g. ${unresolved
-					.slice(0, 3)
-					.join(', ')}.`
-			)
-		}
-		/* diffMeth.R drops single-arm blocks, but if NO block spans both arms it stops with an
-		error after the H5 read. Catching it here costs one Set and keeps the failure cheap and
-		specific: the usual cause is two groups that hold different patients entirely. */
-		const g2 = new Set(pair_id.slice(0, groups.group2names.length))
-		if (!pair_id.slice(groups.group2names.length).some(b => g2.has(b))) {
-			throw new Error(
-				'Paired analysis: no parent entity has a sample in both groups, so there is nothing to compare within blocks.'
-			)
-		}
-		diffMethInput.pair_id = pair_id
-	}
-
 	const time1 = Date.now()
 	const result = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethInput)))
 	mayLog('Time taken to run diffMeth:', formatElapsedTime(Date.now() - time1))
-
-	/* Surface the arrayWeights result. The point of the option is to reveal whether one
-	sample is dominating a group, which the weights answer and the promoter rows do not.
-	Report PER GROUP: a whole-run min/max cannot answer that question, because a high weight
-	is only alarming when it lands in the small arm. With few samples the residuals are taken
-	around a mean estimated from those same few points, so that group's variance is
-	underestimated, arrayWeights over-weights it, and significance inflates. Only present when
-	the option ran. */
-	if (Array.isArray(result.sample_weights) && result.sample_weights.length) {
-		const ws = result.sample_weights as { sample: string; weight: number }[]
-		const byName = new Map(ws.map(w => [w.sample, w.weight]))
-		const summarize = (label: string, names: string[]) => {
-			const vals = names.map(n => byName.get(n)).filter((v): v is number => Number.isFinite(v as number))
-			if (!vals.length) return `${label}: no weights`
-			const sorted = [...vals].sort((a, b) => a - b)
-			const median = sorted[Math.floor(sorted.length / 2)]
-			const head = `${label} (n=${sorted.length}): min=${sorted[0].toFixed(3)} median=${median.toFixed(3)} max=${sorted[
-				sorted.length - 1
-			].toFixed(3)}`
-			/* Small groups get every weight printed. That is the whole diagnostic when a group
-			is small enough for one sample to carry it, and it is a handful of numbers. */
-			if (sorted.length <= 10) {
-				return `${head} | all: ${names
-					.filter(n => byName.has(n))
-					.map(n => `${n}=${(byName.get(n) as number).toFixed(3)}`)
-					.join(', ')}`
-			}
-			const low = names.filter(n => (byName.get(n) as number) < 0.5)
-			return head + (low.length ? ` | ${low.length} under 0.5` : ' | none under 0.5')
-		}
-		/* Say when the estimate was subsampled. The weights are reported per sample either way,
-		so without this a 10k-row estimate is indistinguishable from a full-matrix one. */
-		if (result.array_weights_rows && result.array_weights_rows < result.array_weights_total) {
-			mayLog(
-				`diffMeth arrayWeights estimated on ${result.array_weights_rows.toLocaleString()} of ${result.array_weights_total.toLocaleString()} promoters (evenly spaced); the fit uses all of them`
-			)
-		}
-		mayLog('diffMeth arrayWeights ' + summarize('group1/control', groups.group1names))
-		mayLog('diffMeth arrayWeights ' + summarize('group2/case', groups.group2names))
-	}
 
 	const cacheResult: DmCacheResult = {
 		promoterRows: result.promoter_data,

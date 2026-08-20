@@ -67,11 +67,6 @@ pkg_load_mem <- mem_probe()
 #   exclude_sex_chr:       (optional, default FALSE) drop chrX/chrY promoters before testing
 #   impute_missing:        (optional, default TRUE) fill remaining NAs with group means. Set
 #                          FALSE for sequencing platforms; see step 6 for why
-#   ebayes_trend:          (optional, default FALSE) fit a mean-variance trend in eBayes()
-#   ebayes_robust:         (optional, default FALSE) robust eBayes moderation (variance outliers)
-#   array_weights:         (optional, default FALSE) per-sample REML weights via arrayWeights()
-#   array_weights_max_rows:(optional, default 10000) promoters used to ESTIMATE those weights;
-#                          the fit itself always uses all of them. See step 7
 #   conf1:                 (optional) array of confounding variable 1 values, one per sample
 #   conf1_mode:            (optional) "continuous" or "discrete" — type of conf1
 #   conf2:                 (optional) array of confounding variable 2 values
@@ -83,15 +78,6 @@ pkg_load_mem <- mem_probe()
 #                          meta/promoter/promoterID — see step 3. The output carries
 #                          element_class per row plus an element_meta block naming what was
 #                          tested, so a promoter run and an enhancer run are distinguishable.
-#   pair_id:               (optional) array of block labels, one per sample, CASES FIRST then
-#                          controls — i.e. aligned to c(case, control) as given. Turns the test
-#                          into a paired/blocked comparison: each block gets its own intercept
-#                          so the group effect is estimated from within-block contrasts only.
-#                          Use it for same-patient sample pairs (e.g. marrow vs blood at one
-#                          visit, diagnosis vs relapse) and for repeat visits from one patient.
-#                          Blocks present in only one arm are dropped (they carry no within-block
-#                          contrast); the names dropped are reported in the output as
-#                          paired.dropped_samples. See step 5 for the degrees-of-freedom cost.
 read_json_time <- system.time({
   con <- file("stdin", "r") # Open a connection to stdin
   json <- readLines(con, warn = FALSE) # Read all lines (the JSON is a single line)
@@ -100,38 +86,6 @@ read_json_time <- system.time({
   cases <- unlist(strsplit(input$case, ",")) # Split comma-separated case sample names into a vector
   controls <- unlist(strsplit(input$control, ",")) # Split comma-separated control sample names into a vector
 
-  # Optional paired/blocked design. pair_id arrives aligned to c(cases, controls)
-  # as the caller supplied them, so it must be pruned in lockstep with the sample
-  # vectors here -- before the H5 read uses them to pick columns.
-  pair_id <- NULL # NULL keeps every downstream branch on the unpaired path
-  paired_dropped <- character(0)
-  n_blocks <- 0L
-  if (length(input$pair_id) > 0) {
-    pair_id <- as.character(input$pair_id)
-    n_supplied <- length(cases) + length(controls)
-    if (length(pair_id) != n_supplied) {
-      stop(paste0(
-        "pair_id has ", length(pair_id), " entries but ", n_supplied,
-        " samples were given (", length(cases), " case + ", length(controls),
-        " control). Supply exactly one block label per sample, cases first."
-      ))
-    }
-    arm <- c(rep("case", length(cases)), rep("control", length(controls)))
-    # A block is only usable if it appears in BOTH arms. A block on one side only
-    # contributes no within-block contrast and makes the design rank-deficient,
-    # so such samples are dropped rather than silently distorting the fit.
-    usable <- intersect(unique(pair_id[arm == "case"]), unique(pair_id[arm == "control"]))
-    keep_sample <- pair_id %in% usable
-    if (!any(keep_sample)) {
-      stop("pair_id defines no block containing both a case and a control sample -- nothing to compare within blocks.")
-    }
-    supplied <- c(cases, controls)
-    paired_dropped <- supplied[!keep_sample]
-    cases <- supplied[keep_sample & arm == "case"]
-    controls <- supplied[keep_sample & arm == "control"]
-    pair_id <- pair_id[keep_sample] # stays aligned to the new c(cases, controls)
-    n_blocks <- length(usable)
-  }
 })
 read_json_mem <- mem_probe()
 
@@ -398,36 +352,13 @@ design_time <- system.time({
     levels = c("Control", "Diseased")
   )
 
-  # A paired design adds one intercept per block (patient, visit pair, ...) so the
-  # conditions coefficient is estimated from WITHIN-block differences only. That is
-  # what makes an 11-pair marrow-vs-blood contrast detectable: between-patient
-  # variance, which swamps a small consistent shift in an unpaired test, is absorbed
-  # by the block terms instead of inflating the residual.
-  #
-  # The cost is degrees of freedom: an unpaired n-vs-n fit has 2n-2 residual df,
-  # the blocked version has n-1. With few blocks that is a real loss of power, so
-  # pairing helps only when the within-block effect is genuinely more consistent
-  # than the between-block spread -- which is the whole point of using it.
-  #
-  # A block factor is used rather than duplicateCorrelation() because these blocks
-  # are small and few: duplicateCorrelation estimates ONE global consensus
-  # correlation across all blocks and is at its best with many blocks of modest
-  # effect, whereas explicit intercepts make no such assumption and cost only df.
-  pair_block <- if (!is.null(pair_id)) factor(pair_id) else NULL
-
   # The design matrix encodes the statistical model for limma.
   # Without confounders: ~ conditions (simple two-group comparison)
   # With confounders: ~ conditions + conf1 (+ conf2) to adjust for batch effects,
   #   age, sex, etc. This is the same design matrix approach used in edge.R.
-  # With pair_id: pair_block is appended to whichever of those models applies, so
-  #   pairing and confounder adjustment compose rather than exclude each other.
   if (length(input$conf1) == 0) {
     # No confounding variables — simple case vs control comparison
-    design <- if (is.null(pair_block)) {
-      model.matrix(~conditions)
-    } else {
-      model.matrix(~ conditions + pair_block)
-    }
+    design <- model.matrix(~conditions)
   } else {
     # First confounding variable is present
     if (input$conf1_mode == "continuous") {
@@ -438,11 +369,7 @@ design_time <- system.time({
 
     if (length(input$conf2) == 0) {
       # Only one confounding variable
-      design <- if (is.null(pair_block)) {
-        model.matrix(~ conditions + conf1)
-      } else {
-        model.matrix(~ conditions + conf1 + pair_block)
-      }
+      design <- model.matrix(~ conditions + conf1)
     } else {
       # Second confounding variable is also present
       if (input$conf2_mode == "continuous") {
@@ -451,30 +378,26 @@ design_time <- system.time({
         conf2 <- as.factor(input$conf2)
       }
       # Model adjusts for both confounders simultaneously
-      design <- if (is.null(pair_block)) {
-        model.matrix(~ conditions + conf1 + conf2)
-      } else {
-        model.matrix(~ conditions + conf1 + conf2 + pair_block)
-      }
+      design <- model.matrix(~ conditions + conf1 + conf2)
     }
   }
 
   # Guard against a rank-deficient design before limma sees it. A confounder that is
-  # constant within every block (sex, say, when blocks are patients) is collinear with
-  # the block intercepts, and lmFit would silently return NA coefficients for it.
+  # collinear with the group split (or with another confounder) would otherwise make
+  # lmFit silently return NA coefficients for it.
   design_rank <- qr(design)$rank
   if (design_rank < ncol(design)) {
     stop(paste0(
       "design matrix is rank-deficient (rank ", design_rank, " < ", ncol(design),
-      " columns). A confounder is likely constant within each pair_id block, making it",
-      " collinear with the block intercepts -- drop that confounder, or drop pair_id."
+      " columns). A confounder is likely collinear with the group split or with another",
+      " confounder -- drop that confounder."
     ))
   }
   residual_df <- nrow(design) - design_rank
   if (residual_df < 1) {
     stop(paste0(
       "no residual degrees of freedom left (", nrow(design), " samples, ", design_rank,
-      " model terms). A paired design spends one df per block; add more pairs or drop terms."
+      " model terms). Add more samples or drop confounders."
     ))
   }
 })
@@ -581,79 +504,12 @@ impute_mem <- mem_probe()
 # each promoter's variance toward a common prior, which improves the
 # reliability of the t-statistics and p-values.
 #
-# Two optional refinements to that moderation, both off by default so existing
-# results are reproducible:
-#
-#   ebayes_trend  - fit the prior variance as a function of average M-value
-#     instead of assuming one constant prior. M-value variance is strongly
-#     mean-dependent: promoters sitting at intermediate methylation are far
-#     noisier than fully methylated or fully unmethylated ones. With a single
-#     prior, the intermediate promoters are shrunk too hard and the extreme ones
-#     not hard enough.
-#
-#   ebayes_robust - down-weight promoters whose variance is a gross outlier when
-#     estimating the hyperparameters, so a handful of wild rows cannot drag the
-#     prior (and therefore every promoter's moderated t) with them.
-#
-# Both matter most when the two groups are unbalanced: with one arm much smaller
-# than the other, a mis-estimated prior variance biases the moderated t-statistic
-# in the same direction for every promoter, which shows up as an implausibly
-# large number of significant results rather than as a changed fold-change.
-# array_weights is a third, separate refinement, and it addresses a different axis
-# than the two above. Both eBayes options act ACROSS PROMOTERS (how the prior variance
-# is estimated); arrayWeights acts ACROSS SAMPLES, estimating one weight per sample by
-# REML and down-weighting samples that are consistently noisier than their peers.
-#
-# That is the remedy for two things the eBayes options cannot touch:
-#   - a single aberrant sample carrying undue leverage. With a 4-sample group each
-#     sample is 25% of that group's mean, so one outlier moves every promoter.
-#   - unequal variance BETWEEN the two arms. With one arm far larger, the pooled
-#     variance is essentially the big arm's, so a noisier small arm gets a standard
-#     error that is too small and p-values that run anti-conservative.
-#
-# Note this one DOES change the fitted coefficients: weighted least squares makes each
-# group mean a weighted mean, so fold-changes move. The eBayes options never do.
-#
-# arrayWeights is estimated on at most array_weights_max_rows promoters, because it is
-# expensive in exactly the case this pipeline is in. limma fits every promoter in one
-# vectorized call only when the matrix is entirely finite (lm.series checks
-# all(is.finite(M))); with sequencing data the depth threshold leaves NAs scattered such
-# that essentially every row has one, so it falls back to a per-promoter R loop -- and
-# arrayWeights reruns that loop on every REML iteration. Measured at this cohort's shape
-# (263 samples, 8.7% missing): ~0.3 min over a complete matrix, ~4.5 min over the real one.
-#
-# The cap is sound rather than merely cheap: arrayWeights estimates one number per sample,
-# so 10,000 promoters is already ~38 rows per parameter. Benchmarked against the full
-# matrix, weights from 10,000 rows correlate 0.9999 (max per-sample deviation 0.16 on
-# weights spanning ~0.1-3) while taking about a tenth of the time. The FIT still uses every
-# promoter; only the weight estimation is subsampled.
-#
-# Rows are taken at even spacing rather than at random: no RNG means the result is
-# reproducible by construction, with no seed to thread through, and because the matrix is
-# ordered by genomic position an even stride also spans every chromosome.
-ebayes_trend <- isTRUE(input$ebayes_trend)
-ebayes_robust <- isTRUE(input$ebayes_robust)
-array_weights <- isTRUE(input$array_weights)
-aw_max_rows <- if (!is.null(input$array_weights_max_rows)) input$array_weights_max_rows else 10000
-aw_rows_used <- 0
 fit_time <- system.time({
   suppressWarnings({
     suppressMessages({
-      sample_weights <- NULL
-      if (array_weights) {
-        n_rows <- nrow(mvalues)
-        aw_idx <- if (n_rows > aw_max_rows) {
-          unique(as.integer(seq(1, n_rows, length.out = aw_max_rows)))
-        } else {
-          seq_len(n_rows)
-        }
-        aw_rows_used <- length(aw_idx)
-        sample_weights <- arrayWeights(mvalues[aw_idx, , drop = FALSE], design)
-      }
-      # NULL weights is lmFit's default, so the un-weighted path needs no branch.
-      fit <- lmFit(mvalues, design, weights = sample_weights) # per-promoter least squares fit
-      # Empirical Bayes shrinkage of variances
-      fit <- eBayes(fit, trend = ebayes_trend, robust = ebayes_robust)
+      fit <- lmFit(mvalues, design) # per-promoter least squares fit
+      # Empirical Bayes shrinkage of variances, with limma's defaults
+      fit <- eBayes(fit)
     })
   })
 })
@@ -750,32 +606,7 @@ output_time <- system.time({
     n_elements_tested = unbox(nrow(output))
   )
 
-  # Report the paired design when one ran. Without this the caller cannot tell a
-  # paired fit from an unpaired one, nor see which samples the block pruning removed
-  # -- and a silently-dropped sample changes what the contrast actually tested.
-  if (!is.null(pair_id)) {
-    final_output$paired <- list(
-      n_blocks = unbox(n_blocks), # blocks contributing a within-block contrast
-      n_samples_used = unbox(length(pair_id)),
-      residual_df = unbox(residual_df), # 2n-2 unpaired vs n-1 here; see step 5
-      dropped_samples = if (length(paired_dropped) > 0) paired_dropped else character(0)
-    )
-  }
 
-  # Emit the per-sample weights when arrayWeights ran. Without these the option is a
-  # black box: the number that actually matters is WHICH sample got down-weighted.
-  # colnames(mvalues) is c(cases, controls), so the order lines up with the groups.
-  if (!is.null(sample_weights)) {
-    final_output$sample_weights <- data.frame(
-      sample = colnames(mvalues),
-      weight = as.numeric(sample_weights),
-      stringsAsFactors = FALSE
-    )
-    # How many promoters actually backed the estimate, so a subsampled run says so rather
-    # than passing for a full one.
-    final_output$array_weights_rows <- unbox(aw_rows_used)
-    final_output$array_weights_total <- unbox(nrow(mvalues))
-  }
 })
 output_mem <- mem_probe()
 
