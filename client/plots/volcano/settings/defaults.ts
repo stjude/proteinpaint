@@ -55,25 +55,18 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	// Off by default so existing analyses are unchanged and chrX remains usable as a
 	// positive control. Recommended on for mixed-sex cohorts -- see the checkbox title.
 	defaults.excludeSexChr = false
-	// Also off by default: both change every p-value, so turning either on silently
-	// would invalidate previously reported methylation results.
-	defaults.eBayesTrend = false
-	defaults.eBayesRobust = false
-	// Off by default like the other two, and additionally because it is the slowest of the
-	// three -- arrayWeights runs an iterative REML fit over the whole matrix.
-	defaults.arrayWeights = false
 	/* Starting element class comes from the dataset when it names one, otherwise 'promoter'.
 	The server resolves an absent or 'promoter' element_type to the legacy single-matrix config,
 	so the fallback reproduces existing behaviour exactly for datasets declaring no elements map.
 	A dataset offering several classes can lead with the one it prefers -- MMRF starts on the
 	ENCODE cCRE promoter-like elements rather than the wider TSS windows. */
 	defaults.elementType = opts?.app?.vocabApi?.termdbConfig?.queries?.dnaMethylation?.defaultElementType || 'promoter'
-	// Off by default: pairing changes the design matrix, and on a cohort whose two groups
-	// hold different patients it removes every sample rather than adding power.
-	defaults.pairByParent = false
-	// M-value fold change stays the default axis: it is what the model tests on, so the plot
-	// matches the statistics unless the user asks otherwise.
-	defaults.xAxis = 'fold_change'
+	/* Differential methylation always plots delta-beta. log2 fold change is a difference of
+	M-values -- correct to test on, but a logit, so its magnitude says nothing about how much
+	methylation changed, which is the only thing a reader wants from a methylation result. The
+	axis is fixed rather than offered as a choice, and the log2 cutoff control is hidden for this
+	term type, so a DM run cannot be thresholded in units it does not display. */
+	defaults.xAxis = 'delta_beta'
 	/* 0.1 = a 10-percentage-point change in methylation, the conventional biological-significance
 	floor for a DMR, and roughly where this cohort's hits start being interpretable. Deliberately
 	not 0.3: that is the log2FC default and would be a 30-point shift here, which almost nothing

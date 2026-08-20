@@ -397,12 +397,8 @@ export class VolcanoViewModel {
 			// Which effect size the run was thresholded on. Two exports with the same p cutoff but
 			// different axes are not comparable, and nothing else in the line would reveal it.
 			parts.push(`x axis: ${s.xAxis === 'delta_beta' ? 'delta-beta' : 'log2(fold-change)'}`)
-			parts.push(`paired by patient: ${s.pairByParent ? 'yes' : 'no'}`)
 			parts.push(`min samples per group: ${s.minSamplesPerGroup}`)
 			parts.push(`exclude sex chromosomes: ${s.excludeSexChr ? 'yes' : 'no'}`)
-			parts.push(`mean-variance trend: ${s.eBayesTrend ? 'on' : 'off'}`)
-			parts.push(`robust variance moderation: ${s.eBayesRobust ? 'on' : 'off'}`)
-			parts.push(`per-sample weights: ${s.arrayWeights ? 'on' : 'off'}`)
 		} else if (this.termType == tt.GENE_EXPRESSION) {
 			parts.push(`method: ${s.method}`)
 		}

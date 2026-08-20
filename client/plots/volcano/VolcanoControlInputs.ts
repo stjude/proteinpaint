@@ -67,15 +67,22 @@ export class VolcanoControlInputs {
 					{ label: 'Original', value: 'original' }
 				]
 			},
-			{
-				label: 'Fold change (log₂)',
-				type: 'number',
-				chartType: 'volcano',
-				settingsKey: 'foldChangeCutoff',
-				title: 'The fold change threshold to determine biological significance',
-				min: -10,
-				max: 10
-			},
+			/* Hidden for differential methylation: a DM run plots and thresholds on delta-beta,
+			so a log2 cutoff would set a limit in units the plot never shows. Every other term
+			type still gets it. */
+			...(this.termType === DNA_METHYLATION
+				? []
+				: [
+						{
+							label: 'Fold change (log₂)',
+							type: 'number',
+							chartType: 'volcano',
+							settingsKey: 'foldChangeCutoff',
+							title: 'The fold change threshold to determine biological significance',
+							min: -10,
+							max: 10
+						}
+				  ]),
 			{
 				label: 'Max interactive dots',
 				type: 'number',
@@ -246,63 +253,15 @@ export class VolcanoControlInputs {
 					'Drop chrX/chrY promoters. Recommended for mixed-sex cohorts — X-inactivation makes chrX methylation strongly sex-dependent, so a sex-imbalanced comparison reports sex rather than the grouping variable.'
 			},
 			{
-				label: 'X axis',
-				type: 'radio',
-				chartType: 'volcano',
-				settingsKey: 'xAxis',
-				options: [
-					{ label: 'log₂(fold-change)', value: 'fold_change' },
-					{ label: 'Δβ', value: 'delta_beta' }
-				],
-				title:
-					'What the x axis plots. log₂(fold-change) is the difference of M-values — what the model tests on, but a logit, so its magnitude does not say how much methylation changed. Δβ is the difference in average beta: the actual change on the 0–1 scale. Both are case minus control, so the sign and the ranking are the same; only the units differ. Switching also switches the effect-size cutoff to the matching setting, since a threshold in the wrong units would not correspond to the line drawn.'
-			},
-			{
 				label: 'Min Δβ',
 				type: 'number',
 				chartType: 'volcano',
 				settingsKey: 'deltaBetaCutoff',
 				title:
-					'Effect-size cutoff used when the x axis shows Δβ. 0.1 is a 10-percentage-point change in methylation, the conventional floor for calling a region differentially methylated. Kept separate from the log₂ cutoff because the two are not interchangeable.',
+					'Effect-size cutoff for differential methylation, applied to Δβ. 0.1 is a 10-percentage-point change in methylation, the conventional floor for calling a region differentially methylated. Kept separate from the log₂ cutoff because the two are not interchangeable.',
 				min: 0,
 				max: 1,
 				step: 0.01
-			},
-			{
-				label: 'Paired by patient',
-				type: 'checkbox',
-				chartType: 'volcano',
-				settingsKey: 'pairByParent',
-				boxLabel: '',
-				title:
-					'Block the design by each sample’s parent entity (the patient), so the group effect is estimated from within-patient differences only. For longitudinal contrasts such as baseline vs relapse. Samples whose patient is not represented in both groups are dropped, so this fails loudly on two groups made of different patients.'
-			},
-			{
-				label: 'Mean-variance trend',
-				type: 'checkbox',
-				chartType: 'volcano',
-				settingsKey: 'eBayesTrend',
-				boxLabel: '',
-				title:
-					'limma eBayes(trend=TRUE): fit the prior variance as a function of average M-value instead of assuming one constant prior. M-value variance is mean-dependent — promoters at intermediate methylation are much noisier than fully methylated or unmethylated ones.'
-			},
-			{
-				label: 'Robust variance moderation',
-				type: 'checkbox',
-				chartType: 'volcano',
-				settingsKey: 'eBayesRobust',
-				boxLabel: '',
-				title:
-					'limma eBayes(robust=TRUE): down-weight promoters whose variance is a gross outlier when estimating hyperparameters, so a few wild rows cannot drag the prior. Recommended together with the mean-variance trend when the two groups are very unbalanced.'
-			},
-			{
-				label: 'Per-sample weights',
-				type: 'checkbox',
-				chartType: 'volcano',
-				settingsKey: 'arrayWeights',
-				boxLabel: '',
-				title:
-					'limma arrayWeights(): estimate one weight per sample and down-weight consistently noisy samples. Unlike the two options above this acts across samples, not across promoters, and it does change fold-changes. Use it when a group is small enough that one aberrant sample could dominate it, or when the two arms may have unequal variance. Slowest of the three — it runs an iterative REML fit.'
 			}
 		]
 		this.inputs.splice(0, 0, ...dmInputs)

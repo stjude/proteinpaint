@@ -137,7 +137,11 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DiffAnalysisInit
 
-export function getPlotConfig(opts: any) {
+/* `app` is supplied by the mass store (store.ts calls getPlotConfig(savedPlot, app, activeCohort))
+and is threaded into the volcano defaults below, which read the dataset's preferred starting
+element class off termdbConfig. Without it that lookup silently returns undefined and every
+dataset falls back to the legacy 'promoter' matrix. */
+export function getPlotConfig(opts: any, app?: any) {
 	if (!opts.termType) throw new Error('.termType is required')
 	if (!enabledTermTypes.has(opts.termType))
 		throw new Error(`termType = '${opts.termType}' not supported by Differential Analysis`)
@@ -164,7 +168,7 @@ export function getPlotConfig(opts: any) {
 		})
 	}
 
-	config.settings.volcano = getDefaultVolcanoSettings(opts.overrides, opts)
+	config.settings.volcano = getDefaultVolcanoSettings(opts.overrides, { ...opts, app: opts.app || app })
 	config.settings.gsea = getDefaultGseaSettings(opts.overrides, opts)
 
 	validateVolcanoSettings(config, opts)

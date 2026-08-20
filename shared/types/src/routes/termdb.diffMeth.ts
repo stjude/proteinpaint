@@ -17,18 +17,6 @@ export type DiffMethRequest = {
 	 * chrX methylation strongly sex-dependent, so a sex-imbalanced comparison produces
 	 * chrX hits that are sex rather than the grouping variable. */
 	exclude_sex_chr?: boolean
-	/** Fit the eBayes prior variance as a function of average M-value (default false).
-	 * M-value variance is mean-dependent, so a single prior over- and under-shrinks
-	 * opposite ends of the methylation range. */
-	ebayes_trend?: boolean
-	/** Robust eBayes moderation (default false): down-weight variance outliers when
-	 * estimating hyperparameters so a few wild elements cannot drag the prior. */
-	ebayes_robust?: boolean
-	/** Per-sample REML weights via limma arrayWeights() (default false). Unlike the two
-	 * eBayes options this acts across samples rather than across elements, and it does
-	 * change the fitted fold-changes. Guards against a single aberrant sample dominating
-	 * a small group, and against unequal variance between two very unbalanced arms. */
-	array_weights?: boolean
 	/** Which regulatory-element class to test, keying into
 	 * ds.queries.dnaMethylation.elements. Absent means 'promoter', which keeps every
 	 * existing client request and cache entry valid. The available keys and their
@@ -39,18 +27,6 @@ export type DiffMethRequest = {
 	tw?: any
 	/** Term for confounding variable 2 (if present) */
 	tw2?: any
-	/** Block the design by each sample's parent entity (default false), turning the two-group
-	 * comparison into a paired one: every block gets its own intercept, so the group effect is
-	 * estimated from WITHIN-block contrasts only. The intended use is a longitudinal contrast
-	 * (baseline vs relapse) where both samples come from one patient and the between-patient
-	 * spread is far larger than the within-patient effect.
-	 *
-	 * The block label comes from ds.sampleName2blockLabel(), which a dataset supplies; requests
-	 * against a dataset without it are rejected rather than silently running unpaired. Samples
-	 * whose block appears in only one arm are dropped by diffMeth.R, since they carry no
-	 * within-block contrast. Pairing costs one residual degree of freedom per block, so it is
-	 * a loss when the within-block effect is not more consistent than the between-block spread. */
-	pair_by_parent?: boolean
 	/** Option to return early with actual number of samples with methylation values */
 	preAnalysis?: boolean
 	/** Parameters for the server-side `da` Rust renderer. Always required — the

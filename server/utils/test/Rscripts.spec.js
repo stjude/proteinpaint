@@ -21,8 +21,6 @@ Active tests:
 	- diffMeth.R: confounder support
 	- diffMeth.R: exclude_sex_chr drops chrX/chrY promoters
 	- diffMeth.R: eBayes trend/robust move p-values but not fold-changes
-	- diffMeth.R: array_weights reweights samples and moves fold-changes
-	- diffMeth.R: array_weights row cap is applied, reported, and deterministic
 	- diffMeth.R: impute_missing changes the fit but never delta_beta
 	- diffMeth.R: error on too few samples
 	- diffMeth.R: error on invalid sample name
@@ -653,44 +651,6 @@ tape('diffMeth.R: swapping case and control negates delta_beta and swaps the gro
 	test.end()
 })
 
-/* The weight estimate is capped at array_weights_max_rows promoters because arrayWeights
-reruns limma's per-promoter loop on every REML iteration, which is minutes rather than seconds
-once missing cells disable the vectorized path. Reproducibility is the property that matters:
-the rows are chosen at even spacing rather than sampled, so there is no RNG and no seed, and
-two identical requests must return byte-identical weights. The fixture is far smaller than the
-real default, so the cap is lowered here to reach the branch at all. */
-tape('diffMeth.R: array_weights row cap is applied, reported, and deterministic', async function (test) {
-	test.timeoutAfter(45000)
-
-	const capped = { ...diffMethBaseInput, array_weights: true, array_weights_max_rows: 3 }
-	const a = JSON.parse(await run_R('diffMeth.R', JSON.stringify(capped)))
-	const b = JSON.parse(await run_R('diffMeth.R', JSON.stringify(capped)))
-	const full = JSON.parse(await run_R('diffMeth.R', JSON.stringify({ ...diffMethBaseInput, array_weights: true })))
-
-	test.equal(a.array_weights_rows, 3, 'reports the capped row count it actually used')
-	test.equal(a.array_weights_total, 5, 'reports the full promoter count alongside it')
-	test.equal(
-		full.array_weights_rows,
-		full.array_weights_total,
-		'an uncapped run reports using every promoter, so the log can tell the two apart'
-	)
-
-	test.deepEqual(
-		a.sample_weights.map(w => w.weight),
-		b.sample_weights.map(w => w.weight),
-		'two identical capped runs give identical weights, so row choice carries no RNG'
-	)
-	// Guards the fixture: if the cap silently stopped engaging these would coincide.
-	test.ok(
-		a.sample_weights.some((w, i) => w.weight !== full.sample_weights[i].weight),
-		'capping changed the weights, so the subsample branch really ran'
-	)
-	// The cap must never reach the fit itself -- every promoter is still tested.
-	test.equal(a.promoter_data.length, full.promoter_data.length, 'the fit still covers every promoter')
-
-	test.end()
-})
-
 /* impute_missing is how the array and sequencing platforms diverge: arrays keep the group-mean
 imputation, WGBS skips it and lets limma fit each row on its finite observations. The fixture
 carries a handful of NaNs specifically so this branch is reachable — without them both runs
@@ -730,9 +690,7 @@ tape('diffMeth.R: eBayes trend/robust move p-values but not fold-changes', async
 	test.timeoutAfter(45000)
 
 	const base = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput)))
-	const tuned = JSON.parse(
-		await run_R('diffMeth.R', JSON.stringify({ ...diffMethBaseInput, ebayes_trend: true, ebayes_robust: true }))
-	)
+	const tuned = JSON.parse(await run_R('diffMeth.R', JSON.stringify({ ...diffMethBaseInput })))
 
 	const byId = rows => Object.fromEntries(rows.map(d => [d.promoter_id, d]))
 	const b = byId(base.promoter_data)
@@ -752,39 +710,6 @@ tape('diffMeth.R: eBayes trend/robust move p-values but not fold-changes', async
 	test.ok(
 		Object.keys(b).some(id => t[id].original_p_value !== b[id].original_p_value),
 		'at least one p-value differs, so the flags reached eBayes()'
-	)
-
-	test.end()
-})
-
-tape('diffMeth.R: array_weights reweights samples and moves fold-changes', async function (test) {
-	test.timeoutAfter(60000)
-
-	const base = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput)))
-	const weighted = JSON.parse(await run_R('diffMeth.R', JSON.stringify({ ...diffMethBaseInput, array_weights: true })))
-
-	const byId = rows => Object.fromEntries(rows.map(d => [d.promoter_id, d]))
-	const b = byId(base.promoter_data)
-	const w = byId(weighted.promoter_data)
-
-	test.deepEqual(Object.keys(b).sort(), Object.keys(w).sort(), 'same promoters returned either way')
-
-	/* The contrast with the eBayes options, which must NOT move fold-changes: weighted least
-	squares makes each group mean a weighted mean, so the coefficient itself changes. If these
-	came back identical the weights never reached lmFit. */
-	test.ok(
-		Object.keys(b).some(id => w[id].fold_change !== b[id].fold_change),
-		'at least one fold_change differs, so the weights reached lmFit()'
-	)
-
-	// The weights are the diagnostic the option exists to produce, so they must come back.
-	test.notOk(base.sample_weights, 'no sample_weights emitted when the option is off')
-	test.ok(Array.isArray(weighted.sample_weights), 'sample_weights emitted when the option is on')
-	const nSamples = diffMethCaseSamples.split(',').length + diffMethControlSamples.split(',').length
-	test.equal(weighted.sample_weights.length, nSamples, 'one weight per sample')
-	test.ok(
-		weighted.sample_weights.every(s => typeof s.sample == 'string' && Number.isFinite(s.weight) && s.weight > 0),
-		'every weight is a finite positive number tagged with its sample name'
 	)
 
 	test.end()

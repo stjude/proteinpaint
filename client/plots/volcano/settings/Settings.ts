@@ -47,24 +47,12 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	minSamplesPerGroup: number
 	/** Drop chrX/chrY promoters before testing */
 	excludeSexChr: boolean
-	/** Fit the eBayes prior variance as a function of average M-value */
-	eBayesTrend: boolean
-	/** Robust eBayes moderation against variance outliers */
-	eBayesRobust: boolean
-	/** Per-sample REML weights via limma arrayWeights(). Changes fold-changes, unlike the
-	 * two eBayes options. */
-	arrayWeights: boolean
 	/** Which regulatory-element matrix to test, keying into
 	 * ds.queries.dnaMethylation.elements server-side. 'promoter' is the default and is
 	 * what the legacy single-matrix config resolves to. Changing this changes the rows
 	 * being tested -- promoters, eQTM blocks, and cCRE classes are different features
 	 * with different coordinates -- so it is not a display option. */
 	elementType: string
-	/** Block the design by each sample's parent entity (the patient), making the two-group
-	 * comparison paired: the group effect is estimated from within-patient differences only.
-	 * For longitudinal contrasts such as baseline vs relapse. Samples whose patient is not
-	 * present in both groups are dropped server-side. */
-	pairByParent: boolean
 	/** Which quantity the x axis shows. 'fold_change' is the difference of M-values (a logit);
 	 * 'delta_beta' is the difference in average beta, i.e. how much methylation actually changed,
 	 * on the 0-1 scale the biology is discussed in. Both are case minus control, so the sign and

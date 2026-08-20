@@ -96,10 +96,6 @@ export class VolcanoModel {
 			filter0: state.termfilter.filter0,
 			min_samples_per_group: this.settings.minSamplesPerGroup,
 			exclude_sex_chr: this.settings.excludeSexChr,
-			ebayes_trend: this.settings.eBayesTrend,
-			ebayes_robust: this.settings.eBayesRobust,
-			array_weights: this.settings.arrayWeights,
-			pair_by_parent: this.settings.pairByParent,
 			/* Omitted rather than sent as 'promoter' when it is the default, so a request
 			from a promoter-only dataset is byte-identical to what this client sent before
 			the element picker existed. The server resolves an absent element_type to

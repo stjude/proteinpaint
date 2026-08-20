@@ -272,9 +272,8 @@ tape('setProvenance records groups, sizes and every result-affecting setting', f
 		...mockSettings,
 		minSamplesPerGroup: 3,
 		excludeSexChr: false,
-		eBayesTrend: true,
-		eBayesRobust: false,
-		arrayWeights: true
+		xAxis: 'delta_beta',
+		deltaBetaCutoff: 0.1
 	}
 	const vm = new VolcanoViewModel({ ...mockConfig, termType: 'dnaMethylation' } as any, mockResponse, settings as any)
 	const p = vm.viewData.provenance
@@ -288,17 +287,13 @@ tape('setProvenance records groups, sizes and every result-affecting setting', f
 	different matrices look interchangeable. Defaults to 'promoter' so a legacy
 	single-matrix run is still labelled rather than blank. */
 	test.ok(p.includes('element class: promoter'), 'records elementType, defaulting when unset')
-	test.ok(p.includes('paired by patient: no'), 'records pairByParent')
-	/* Which effect size the run was thresholded on. Two exports sharing a p cutoff but plotted on
-	different axes are not comparable, and the cutoff number alone does not disambiguate them —
-	0.1 is a plausible value in either unit. */
-	test.ok(p.includes('x axis: log2(fold-change)'), 'records xAxis, defaulting when unset')
-	test.ok(p.includes('|log2(fold-change)| >'), 'names the effect-size measure the cutoff applies to')
+	/* Differential methylation always plots and thresholds on delta-beta, so the provenance must
+	say so in both places — the axis and the cutoff. A bare "0.1" is ambiguous, since it is a
+	plausible value in either unit. */
+	test.ok(p.includes('x axis: delta-beta'), 'records that DM plots delta-beta')
+	test.ok(p.includes('|delta-beta| > 0.1'), 'names the effect-size measure the cutoff applies to')
 	test.ok(p.includes('min samples per group: 3'), 'records minSamplesPerGroup')
 	test.ok(p.includes('exclude sex chromosomes: no'), 'records excludeSexChr')
-	test.ok(p.includes('mean-variance trend: on'), 'records eBayesTrend')
-	test.ok(p.includes('robust variance moderation: off'), 'records eBayesRobust')
-	test.ok(p.includes('per-sample weights: on'), 'records arrayWeights')
 	// pValue is stored as -log10, so the line must show the p a reader would recognise
 	test.ok(p.includes('adjusted p < 0.05'), 'converts the -log10 threshold back to a readable p-value')
 
