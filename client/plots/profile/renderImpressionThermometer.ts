@@ -16,6 +16,19 @@ const FALLBACK_COLOR = '#888'
 export const POC_FILL = '#9e9e9e'
 
 /*
+Responder group -> the suffix its chart svgs carry in data-testid, so a module's groups are told
+apart within a plot. Every run of non-alphanumerics collapses to one hyphen: real group names carry
+punctuation ('PHO & Nurses' -> 'pho-nurses'), which has no business inside an attribute value.
+Exported so the distribution chart derives the suffix the same way rather than repeating the rule.
+*/
+export function impressionTestIdSuffix(groupLabel: string): string {
+	return groupLabel
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-|-$/g, '')
+}
+
+/*
 Hover cue for a liquid column: the fill eases to a lighter shade and back, so the column reads as
 responding rather than having a border drawn around it. The easing is declared as a CSS transition
 on the element itself, so the shared profilePlot delegation — which only sets the attribute —
@@ -228,7 +241,7 @@ export function renderImpressionThermometer(a: ImpressionThermometerArgs) {
 	// Suffixed with the responder group so a module's groups are told apart within a plot.
 	const svg = a.holder
 		.append('svg')
-		.attr('data-testid', `sjpp-profileForms-thermometer-${a.groupLabel.toLowerCase().replace(/\s/g, '-')}`)
+		.attr('data-testid', `sjpp-profileForms-thermometer-${impressionTestIdSuffix(a.groupLabel)}`)
 		.attr('width', SVG_W)
 		.attr('height', SVG_H)
 	const root = svg.append('g')

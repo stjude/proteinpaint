@@ -2,7 +2,7 @@ import { scaleBand, scaleLinear } from 'd3-scale'
 import { axisBottom, axisLeft, axisRight } from 'd3-axis'
 import { line } from 'd3-shape'
 import { axisstyle } from '../../dom/axisstyle.js'
-import type { ImpressionZone } from './renderImpressionThermometer.js'
+import { impressionTestIdSuffix, type ImpressionZone } from './renderImpressionThermometer.js'
 
 /*
 Response-distribution combo chart, one per POC responder group. x = impression rating
@@ -73,7 +73,7 @@ export function renderResponseDistribution(a: ResponseDistributionArgs) {
 	// Suffixed with the responder group so a module's groups are told apart within a plot.
 	const svg = a.holder
 		.append('svg')
-		.attr('data-testid', `sjpp-profileForms-distribution-${a.groupLabel.toLowerCase().replace(/\s/g, '-')}`)
+		.attr('data-testid', `sjpp-profileForms-distribution-${impressionTestIdSuffix(a.groupLabel)}`)
 		.attr('width', svgW)
 		.attr('height', svgH)
 	const plot = svg.append('g').attr('transform', `translate(${MARGIN.left}, ${MARGIN.top})`)

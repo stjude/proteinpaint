@@ -8,7 +8,20 @@ the right axis, three performance zones as background bands).
 
   • multi-site SC → an SC line (path.sc-line) plus a grey POC column per rating and 3 zone bands
   • single-site SC (total = 1) → a single SC point, no line
+  • data-testid → the svg carries the group-derived suffix, for every real responder group label
 */
+
+/*
+The responder group labels the live db actually produces, with the suffix each must yield — the same
+set the thermometer spec pins, since both charts derive their testid from the same group. Written out
+rather than computed so this pins the rule instead of restating it.
+*/
+const GROUP_LABELS = [
+	{ label: 'Clinicians', suffix: 'clinicians' },
+	{ label: 'PHO', suffix: 'pho' },
+	{ label: 'PHO & PHOE', suffix: 'pho-phoe' },
+	{ label: 'PHO & Nurses', suffix: 'pho-nurses' }
+]
 
 const ZONES = [
 	{ label: 'Weak', min: 1, max: 5, color: '#f4cccc' },
@@ -44,7 +57,7 @@ tape('multi-site: SC line + POC columns + zones render', function (test) {
 	renderResponseDistribution({
 		holder,
 		id: 'test-multi',
-		groupLabel: 'Clinicians',
+		groupLabel: 'PHO & Nurses',
 		maxScore: 10,
 		// reference mock-up SC + POC counts
 		scDistribution: dist([1, 5, 4, 5, 6, 7, 11, 8, 1, 1]),
@@ -69,7 +82,7 @@ tape('single-site SC (total = 1): a point, no line', function (test) {
 	renderResponseDistribution({
 		holder,
 		id: 'test-single',
-		groupLabel: 'Clinicians',
+		groupLabel: 'PHO & Nurses',
 		maxScore: 10,
 		scDistribution: dist([0, 0, 0, 0, 0, 0, 1, 0, 0, 0]), // one SC response at rating 7
 		pocDistribution: dist([2, 3, 5, 8, 9, 7, 6, 4, 1, 0]),
@@ -82,5 +95,30 @@ tape('single-site SC (total = 1): a point, no line', function (test) {
 	test.equal(holder.selectAll('circle.sc-point').size(), 1, 'exactly one SC point is drawn')
 	test.equal(holder.selectAll('rect.poc-column').size(), 10, 'POC columns still render for all ratings')
 	holder.remove()
+	test.end()
+})
+
+tape('data-testid carries the responder group suffix', function (test) {
+	for (const { label, suffix } of GROUP_LABELS) {
+		const holder = select('body').append('div')
+		renderResponseDistribution({
+			holder,
+			id: `test-${suffix}`,
+			groupLabel: label,
+			maxScore: 10,
+			scDistribution: dist([1, 5, 4, 5, 6, 7, 11, 8, 1, 1]),
+			pocDistribution: dist([14, 21, 58, 70, 99, 105, 121, 63, 24, 8]),
+			texts: TEXTS,
+			zones: ZONES,
+			colors: { sc: '#2381c3' },
+			attachTip
+		})
+		test.equal(
+			holder.selectAll(`svg[data-testid="sjpp-profileForms-distribution-${suffix}"]`).size(),
+			1,
+			`group '${label}' renders the distribution chart as sjpp-profileForms-distribution-${suffix}`
+		)
+		holder.remove()
+	}
 	test.end()
 })
