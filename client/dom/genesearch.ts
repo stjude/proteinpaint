@@ -169,8 +169,8 @@ type Result = Partial<GeneOrSNPResult> &
 		 *  small ranges to a 400bp minimum span for the genome browser. */
 		actualposition?: { position: number; len: number }
 		/** Selected sample type. Present when the sample type drop-down is
-		 *  rendered (i.e. termdbConfig.hasSampleAncestry is true). */
-		sampleType?: string
+		 *  rendered. */
+		sampleType?: number
 	}
 
 export const debounceDelay = 500
