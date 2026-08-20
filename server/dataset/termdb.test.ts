@@ -448,8 +448,8 @@ export default function (): Mds3 {
 			},
 			singleCell: {
 				samples: {
-					sampleColumns: [{ termid: 'sex' }],
-					extraSampleTabLabel: 'sex'
+					sampleColumns: [{ termid: 'diaggrp' }],
+					extraSampleTabLabel: 'diaggrp'
 				},
 				data: {
 					sameLegend: true,

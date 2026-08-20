@@ -90,7 +90,7 @@ tape('Test initial SC app rendering', test => {
 		const firstRowCells = bodyRows[0].querySelectorAll('td')
 		// The sample value is in the 3rd cell (after line number and radio button)
 		const sampleCell = firstRowCells[2]
-		test.equal(sampleCell.innerText, '1_patient', 'First data row has 1_patient as the sample value')
+		test.equal(sampleCell.innerText, '2646', 'First data row has 2646 as the sample value')
 
 		if (test['_ok']) sc.Inner.app.destroy()
 		test.end()

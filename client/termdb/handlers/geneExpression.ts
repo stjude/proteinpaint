@@ -20,10 +20,10 @@ export class SearchHandler {
 	}
 
 	async selectGene(geneSearch) {
-		const gene = geneSearch.geneSymbol
+		const gene = geneSearch?.geneSymbol
+		if (!gene) throw new Error('No gene selected')
 		const unit = getGEunit(this.app.vocabApi)
 		const name = `${gene} ${unit}`
-		if (!gene) throw new Error('No gene selected')
 		this.callback({
 			q: { sampleType: geneSearch.sampleType },
 			term: { gene, name, type: TermTypes.GENE_EXPRESSION }
