@@ -53,6 +53,11 @@ main
 
 const forestcolor = '#126e08' // forest plot color
 const boxplotcolor = forestcolor
+// changed color from #999 to address Section 508 contrast issue
+const graytextcolor = '#555'
+// increased opacity, previously 0.3/0.4, to address Section 508 contrast issue;
+// used to deemphasize table header/label text while keeping it legible
+const graytextopacity = 0.75
 
 export class RegressionResults {
 	opts: any
@@ -93,7 +98,7 @@ export class RegressionResults {
 			.style('margin-top', '10px')
 			.style('padding-top', '20px')
 			.style('font-size', '1.2em')
-			.style('opacity', 0.3)
+			.style('opacity', graytextopacity)
 			.html('Results')
 
 		this.dom = {
@@ -263,7 +268,7 @@ function setRenderers(self) {
 				self.dom.snplocusBlockDiv
 					.append('div')
 					.style('margin-top', '30px')
-					.style('opacity', 0.3)
+					.style('opacity', graytextopacity)
 					.text('Click on a variant within the browser to view its regression results')
 				self.snplocusBlock = await createGenomebrowser(self, snplocusInput, result.resultLst)
 			} else {
@@ -391,7 +396,7 @@ function setRenderers(self) {
 		if (!result.residuals) return
 		const div = self.newDiv(result.residuals.label)
 		const table = div.append('table').style('border-spacing', '8px').attr('name', 'sjpp-residuals-table') //For integration tests
-		const tr1 = table.append('tr').style('opacity', 0.4)
+		const tr1 = table.append('tr').style('opacity', graytextopacity)
 		const tr2 = table.append('tr')
 		for (let i = 0; i < result.residuals.header.length; i++) {
 			tr1.append('td').text(result.residuals.header[i])
@@ -740,7 +745,7 @@ function setRenderers(self) {
 
 		// header row
 		{
-			const tr_label = table.append('tr').style('opacity', 0.4) // labels displayed above header row
+			const tr_label = table.append('tr').style('opacity', graytextopacity) // labels displayed above header row
 			const tr = table.append('tr') // header row
 
 			const header_uni = result.coefficients_uni.header
@@ -1027,7 +1032,7 @@ function setRenderers(self) {
 
 		// header row
 		{
-			const tr = table.append('tr').style('opacity', 0.4)
+			const tr = table.append('tr').style('opacity', graytextopacity)
 			for (const v of result.totalSnpEffect.header) {
 				tr.append('td').text(v).style('padding', '8px')
 			}
@@ -1053,7 +1058,7 @@ function setRenderers(self) {
 			.style('margin', '20px 0px 20px 10px')
 			.style('font-size', '.8em')
 			.style('text-align', 'left')
-			.style('color', '#999')
+			.style('color', graytextcolor)
 			.text(bottomInfo)
 	}
 
@@ -1064,7 +1069,7 @@ function setRenderers(self) {
 
 		// header row
 		{
-			const tr = table.append('tr').style('opacity', 0.4)
+			const tr = table.append('tr').style('opacity', graytextopacity)
 			for (const v of result.type3.header) {
 				tr.append('td').text(v).style('padding', '8px')
 			}
@@ -1118,7 +1123,7 @@ function setRenderers(self) {
 
 		// header row
 		{
-			const tr = table.append('tr').style('opacity', 0.4)
+			const tr = table.append('tr').style('opacity', graytextopacity)
 			for (const v of result.nonlinearity.header) {
 				tr.append('td').text(v).style('padding', '8px')
 			}
@@ -1141,7 +1146,7 @@ function setRenderers(self) {
 			.append('div')
 			.style('margin', '10px 0px 0px 0px')
 			.style('font-size', '.8em')
-			.style('color', '#999')
+			.style('color', graytextcolor)
 			.text(
 				'Comparison of the cubic spline fit against a linear fit of the same variable. A small p-value indicates the effect of the variable departs from linearity.'
 			)
@@ -1151,7 +1156,7 @@ function setRenderers(self) {
 		if (!result.tests || self.app.vocabApi.termdbConfig.regression?.settings?.hideTests) return
 		const div = self.newDiv(result.tests.label)
 		const table = div.append('table').style('border-spacing', '0px')
-		const header = table.append('tr').style('opacity', 0.4)
+		const header = table.append('tr').style('opacity', graytextopacity)
 		for (const cell of result.tests.header) {
 			header.append('td').text(cell).style('padding', '8px')
 		}
@@ -1170,7 +1175,7 @@ function setRenderers(self) {
 		const table = div.append('table').style('border-spacing', '8px')
 		for (let i = 0; i < result.other.header.length; i++) {
 			const tr = table.append('tr')
-			tr.append('td').style('opacity', 0.4).text(result.other.header[i])
+			tr.append('td').style('opacity', graytextopacity).text(result.other.header[i])
 			tr.append('td').text(result.other.rows[i])
 		}
 	}
@@ -1803,7 +1808,7 @@ function fillColumn2coefficientsTable(div, tw, categoryKey?: string) {
 		return
 	}
 	// the term doesn't have category, so indicate helpful status
-	div.style('opacity', 0.3) // also gray out text to differentiate it from a category
+	div.style('opacity', graytextopacity) // also gray out text to differentiate it from a category
 	if ('geneticModel' in tw.q) {
 		const v = tw.q.geneticModel
 		div.text(v == 0 ? '(additive)' : v == 1 ? '(dominant)' : '(recessive)')

@@ -11,6 +11,9 @@ import type { Div } from '../../types/d3'
 class instance is an input
 */
 
+// changed color from rgb(153,153,153) to address Section 508 contrast issue
+const graytextcolor = '#555'
+
 export class InputTerm {
 	opts: any
 	section: any
@@ -513,7 +516,7 @@ export class InputTerm {
 			.style('padding', '5px')
 			.style('background-color', n == 0 ? '' : '#ececec')
 			.style('border-radius', n == 0 ? '' : '6px')
-			.style('color', n == 0 ? 'rgb(153, 153, 153)' : '#000')
+			.style('color', n == 0 ? graytextcolor : '#000')
 			.style('font-size', n == 0 ? '0.8em' : '')
 			.style('cursor', 'pointer')
 			.on('click', () => this.renderInteractionOptions())
@@ -533,7 +536,7 @@ export class InputTerm {
 			.append('div')
 			.style('padding', '5px')
 			.style('font-size', '0.8em')
-			.style('color', 'rgb(153, 153, 153)')
+			.style('color', graytextcolor)
 			.html(`Selected variables will each form pairwise interaction with ${this.term.term.name}`)
 
 		this.dom.tip.d
