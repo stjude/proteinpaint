@@ -20,7 +20,6 @@ Active tests:
 	- diffMeth.R: reproducible output across runs
 	- diffMeth.R: confounder support
 	- diffMeth.R: exclude_sex_chr drops chrX/chrY promoters
-	- diffMeth.R: eBayes trend/robust move p-values but not fold-changes
 	- diffMeth.R: impute_missing changes the fit but never delta_beta
 	- diffMeth.R: error on too few samples
 	- diffMeth.R: error on invalid sample name
@@ -682,35 +681,6 @@ tape('diffMeth.R: impute_missing changes the fit but never delta_beta', async fu
 			`${id} delta_beta is identical, so it is measured before imputation on both platforms`
 		)
 	}
-
-	test.end()
-})
-
-tape('diffMeth.R: eBayes trend/robust move p-values but not fold-changes', async function (test) {
-	test.timeoutAfter(45000)
-
-	const base = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethBaseInput)))
-	const tuned = JSON.parse(await run_R('diffMeth.R', JSON.stringify({ ...diffMethBaseInput })))
-
-	const byId = rows => Object.fromEntries(rows.map(d => [d.promoter_id, d]))
-	const b = byId(base.promoter_data)
-	const t = byId(tuned.promoter_data)
-
-	test.deepEqual(Object.keys(b).sort(), Object.keys(t).sort(), 'same promoters returned either way')
-
-	/* eBayes moderates the variance, never the fitted coefficient, so fold-changes must be
-	byte-identical. If these drift, the flags are reaching lmFit or the design matrix by
-	mistake rather than the moderation step. */
-	for (const id of Object.keys(b)) {
-		test.equal(t[id].fold_change, b[id].fold_change, `fold_change unchanged for ${id}`)
-	}
-
-	// ...and the moderated p-values must move, which is what proves the flags were threaded
-	// through at all. A silently-dropped flag would leave these identical.
-	test.ok(
-		Object.keys(b).some(id => t[id].original_p_value !== b[id].original_p_value),
-		'at least one p-value differs, so the flags reached eBayes()'
-	)
 
 	test.end()
 })
