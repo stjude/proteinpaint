@@ -91,6 +91,11 @@ export class SearchHandler {
 					}),
 					callback: v => {
 						this.toggleGeneSetRadioDisplay(v)
+						/* any remembered settings still waiting for a choice were offered against the
+						mutation type selected when the gene was picked -- both their order and their
+						"Continue with ..." option, see mayShowRememberedQ() -- so a changed radio leaves
+						them stale. Cleared rather than re-rendered, since the gene is picked again below */
+						this.clearRememberedQ()
 						// return focus to the gene search box so the user can type a gene right away
 						this.focusSearchbox()
 					}
@@ -112,7 +117,13 @@ export class SearchHandler {
 						},
 						{ label: 'Gene Set', value: 'geneset', checked: false, testid: 'sjpp-genevarianttermdbhandler-geneset' }
 					],
-					callback: v => (v == 'single' ? this.searchGene() : this.searchGeneSet())
+					callback: v => {
+						// the gene input is rebuilt empty, so any settings offered for the gene that
+						// was in it are waiting on a choice the user can no longer make sense of
+						this.clearRememberedQ()
+						if (v == 'single') this.searchGene()
+						else this.searchGeneSet()
+					}
 				})
 			}
 		}
@@ -294,6 +305,13 @@ export class SearchHandler {
 		return shown
 	}
 
+	/** clear the remembered settings offered for the gene last picked, and put back any caller
+	message that mayShowRememberedQ() hid while they waited for a choice */
+	clearRememberedQ() {
+		this.dom.reuseDiv.style('display', 'none').selectAll('*').remove()
+		if (this.opts.msg) this.dom.msgDiv.style('display', 'block').text(this.opts.msg)
+	}
+
 	/** apply the mutation type that the radios select, which is the default for a new term */
 	async applyMutationType() {
 		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
@@ -309,7 +327,7 @@ export class SearchHandler {
 	async submit(q) {
 		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
 		await this.callback({ term: this.term, q })
-		this.dom.reuseDiv.style('display', 'none').selectAll('*').remove()
+		this.clearRememberedQ()
 		this.dom.msgDiv.style('display', 'none')
 	}
 }

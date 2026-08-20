@@ -16,6 +16,8 @@ Tests:
 	Remembered settings are offered for the picked gene
 	Remembered settings are applied on Enter
 	Remembered settings of another mutation type do not lead
+	Remembered settings are cleared on changing the mutation type
+	Remembered settings are cleared on changing the input type
 	Remembered settings are not offered where the q would be dropped
 */
 
@@ -354,6 +356,75 @@ tape('Remembered settings of another mutation type do not lead', async test => {
 	options[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
 	await sleep(100)
 	test.equal(tw?.q?.predefined_groupset_idx, 2, 'should continue with the selected mutation type on Enter')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Remembered settings are cleared on changing the mutation type', async test => {
+	let tw
+	const holder = getHolder()
+	await initializeSearchHandler({
+		holder,
+		callback: _tw => (tw = _tw),
+		vocabApi: getVocabApiWithRememberedQ(rememberedLst),
+		keepsQ: true,
+		msg: 'Hit ENTER to launch plot.'
+	})
+	await pickGene(holder)
+	test.equal(holder.selectAll('.sja_menuoption').size(), 3, 'should offer the settings of the picked gene')
+
+	// the options were offered against the mutation type selected above, so they no longer apply
+	const cnvRadio: any = holder
+		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
+		.selectAll('input[type="radio"]')
+		.nodes()[2]
+	cnvRadio.click()
+	await sleep(100)
+
+	test.equal(holder.selectAll('.sja_menuoption').size(), 0, 'should clear the offered settings')
+	test.equal(tw, undefined, 'should not apply anything on its own')
+	const msgDiv: any = holder
+		.selectAll('div')
+		.nodes()
+		.find((n: any) => n.textContent == 'Hit ENTER to launch plot.')
+	test.equal(msgDiv?.style.display, 'block', 'should put back the caller message that describes picking a gene again')
+
+	// the gene is picked again, now against the mutation type that was just selected
+	await pickGene(holder)
+	const options: any[] = holder.selectAll('.sja_menuoption').nodes()
+	test.equal(
+		options[0]?.textContent,
+		'Continue with CNV',
+		'should offer the settings against the mutation type now selected'
+	)
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Remembered settings are cleared on changing the input type', async test => {
+	let tw
+	const holder = getHolder()
+	await initializeSearchHandler({
+		holder,
+		callback: _tw => (tw = _tw),
+		vocabApi: getVocabApiWithRememberedQ(rememberedLst),
+		keepsQ: true
+	})
+	await pickGene(holder)
+	test.equal(holder.selectAll('.sja_menuoption').size(), 3, 'should offer the settings of the picked gene')
+
+	// the gene input is rebuilt empty, so the settings offered for the gene it held no longer apply
+	const geneSetRadio: any = holder
+		.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
+		.selectAll('input[type="radio"]')
+		.nodes()[1]
+	geneSetRadio.click()
+	await sleep(100)
+
+	test.equal(holder.selectAll('.sja_menuoption').size(), 0, 'should clear the offered settings')
+	test.equal(tw, undefined, 'should not apply anything on its own')
 
 	if (test['_ok']) holder.remove()
 	test.end()
