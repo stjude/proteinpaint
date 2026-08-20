@@ -356,7 +356,6 @@ export class ProteomeInput extends PlotBase implements RxComponent {
 
 		holder
 			.append('button')
-			.attr('class', 'sjpp_apply_btn sja_filter_tag_btn sja_sharp_border')
 			.text('Launch Volcano')
 			.on('click', async () => {
 				await this.dispatchEdits({

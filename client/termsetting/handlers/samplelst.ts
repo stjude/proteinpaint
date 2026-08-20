@@ -20,12 +20,9 @@ export function getHandler(self: TermSetting) {
 				}
 				div
 					.append('div')
-					.append('div')
-					.style('display', 'inline-block')
-					.style('float', 'right')
-					.style('padding', '6px 20px')
+					.style('padding', '6px')
 					.append('button')
-					.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
+					.attr('data-testid', 'sjpp-ts-samplelst-apply')
 					.text('Apply')
 					.on('click', () => {
 						for (const group of groups)

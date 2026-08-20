@@ -136,7 +136,6 @@ class StudyCatalog extends PlotBase implements RxComponent {
 			.style('padding-left', `${FACET_WIDTH + PANEL_GAP}px`)
 		this.dom.actionBtn = topBar
 			.append('button')
-			.attr('class', 'sjpp_apply_btn sja_sharp_border')
 			.property('disabled', true)
 			.text('Analyze Cohort')
 			.on('click', () => this.onAction())

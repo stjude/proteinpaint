@@ -186,7 +186,7 @@ export function renderCnvConfig(arg: Arg) {
 		.append('button')
 		.attr('data-testid', 'sjpp-cnvConfig-apply')
 		.style('margin-top', '15px')
-		.text('APPLY')
+		.text('Apply')
 		.on('click', () => {
 			const config: any = {}
 			if (cnvGainInput) config.cnvGainCutoff = Number(cnvGainInput.property('value'))

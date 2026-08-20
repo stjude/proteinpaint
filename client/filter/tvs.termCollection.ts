@@ -59,12 +59,12 @@ function renderRangeInput(div, tvs, applyRange) {
 	range.max = 1
 	// the input fires 'change' when it loses focus with an edited value, e.g. on clicking a
 	// checkbox in the member table below. So it may only parse the entry: applying the filter
-	// closes the menu, and must be left to the APPLY button.
+	// closes the menu, and must be left to the Apply button.
 	const rangeInput = new NumericRangeInput(num_div, range, () => {})
 
 	num_div
 		.append('button')
-		.text('APPLY')
+		.text('Apply')
 		.on('click', () => {
 			try {
 				rangeInput.parseRange()

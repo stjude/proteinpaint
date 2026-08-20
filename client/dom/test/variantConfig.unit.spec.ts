@@ -1252,10 +1252,10 @@ const mafFilter = {
  * sv/fusion breakpoint range controls
  **************/
 
-/** the APPLY button of the ui, found by text as it carries no distinguishing class */
+/** the Apply button of the ui, found by text as it carries no distinguishing class */
 function getApplyBtn(holder: any): HTMLButtonElement {
-	const btn = (holder.selectAll('button').nodes() as HTMLButtonElement[]).find(b => b.textContent == 'APPLY')
-	if (!btn) throw 'no APPLY button'
+	const btn = (holder.selectAll('button').nodes() as HTMLButtonElement[]).find(b => b.textContent == 'Apply')
+	if (!btn) throw 'no Apply button'
 	return btn
 }
 

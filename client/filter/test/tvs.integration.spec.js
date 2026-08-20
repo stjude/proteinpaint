@@ -28,12 +28,11 @@ the direct functional testing of the component, without the use of runpp()
  reusable helper functions
 **************************/
 
-/* The APPLY button of a numeric range row is a vanilla <button>, unlike the value table
-APPLY rendered by renderTable(), which is still styled with the .sjpp_apply_btn class.
+/* The Apply button of a numeric range row is a vanilla <button> without a testid.
 The DELETE sibling in the same cell is excluded. */
 const rangeApplySelector = 'table button:not(.sjpp_delete_btn)'
 
-/* The APPLY buttons of the gene variant menus are also vanilla <button>, so they are
+/* The Apply buttons of the gene variant menus are also vanilla <button>, so they are
 found by the data-testid set by dom/variantConfig.ts and dom/cnvConfig.ts */
 const variantApplySelector = '[data-testid="sjpp-variantConfig-apply"]'
 const cnvApplySelector = '[data-testid="sjpp-cnvConfig-apply"]'
@@ -194,7 +193,7 @@ tape('tvs (common): buttons', async test => {
 
 		const isNotInput = await detectOne({ target: tipd.node(), selector: 'input[name=sja_filter_isnot_input]' })
 		isNotInput.click()
-		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+		const applyBtn = await detectOne({ target: tipd.node(), selector: '[data-testid="sjpp-tvs-apply"]' })
 
 		/*
 			For DOM events, where the event listener/callback cannot be 
@@ -301,7 +300,7 @@ tape('tvs: Categorical', async test => {
 		// --- trigger and check tip menu ---
 		pill.click()
 		editOpt.click()
-		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+		const applyBtn = await detectOne({ target: tipd.node(), selector: '[data-testid="sjpp-tvs-apply"]' })
 
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
 		test.equal(tipd.selectAll("input[name^='sjpp-input']").size(), 10, 'Should have a checkbox for each value')
@@ -402,7 +401,7 @@ tape('tvs: Numeric', async test => {
 		editOpt.click()
 		// the range apply is a vanilla <button>, the value table apply is rendered by renderTable();
 		// the value table renders after the range table, so detect it to know both are rendered
-		const valueApplyBtn = await detectLst({ target: tipnode, selector: '.sjpp_apply_btn', count: 1 })
+		const valueApplyBtn = await detectLst({ target: tipnode, selector: '[data-testid="sjpp-tvs-apply"]', count: 1 })
 
 		test.equal(
 			valueApplyBtn.length + tipd.selectAll(rangeApplySelector).size(),
@@ -466,7 +465,7 @@ tape('tvs: Numeric', async test => {
 					)
 				},
 				trigger() {
-					tipnode.querySelector('.sjpp_apply_btn').click()
+					tipnode.querySelector('[data-testid="sjpp-tvs-apply"]').click()
 				}
 			})
 
@@ -488,7 +487,7 @@ tape('tvs: Numeric', async test => {
 	// 	})
 	// 	addRangeBtn.click()
 
-	// 	test.equal(tipd.selectAll('table .sjpp_apply_btn').size(), 2, 'Should have button to apply new range')
+	// 	test.equal(tipd.selectAll('table [data-testid="sjpp-tvs-apply"]').size(), 2, 'Should have button to apply new range')
 	// 	test.equal(tipd.selectAll('table .sjpp_delete_btn').size(), 2, 'Should have buttons to delete the ranges')
 	// 	test.equal(tipd.selectAll('table .note_tr').size(), 1, 'Should have note to select new range')
 	// }
@@ -521,7 +520,7 @@ tape('tvs: Numeric', async test => {
 	// 	const rangeInputs = tipnode.querySelectorAll('input[name="rangeInput"]')
 	// 	const range = parseRange(rangeInputs[0].value)
 	// 	rangeInputs[1].value = `${range.stop - 400} <= x <= 5000`
-	// 	const applybts = tipnode.querySelectorAll('table .sjpp_apply_btn')
+	// 	const applybts = tipnode.querySelectorAll('table [data-testid="sjpp-tvs-apply"]')
 
 	// 	const valueBtn = await detectChildText({
 	// 		target: filternode,
@@ -572,8 +571,8 @@ tape('tvs: Numeric', async test => {
 		})
 
 		test.true(
-			/* HTML entity code does not work in this instance (like in the above .sjpp_apply_btn
-				test) for some reason. Test fails everytime. */
+			/* HTML entity code does not work in this instance (like in the above value table
+				apply test) for some reason. Test fails everytime. */
 			// .innerHTML.includes('&ge; 0'),
 			//Fix for displayed value changing to the lowest value, not '0'
 			valueBtn[0].innerText.includes('> 900'),
@@ -645,7 +644,7 @@ tape('tvs: Condition', async test => {
 	{
 		pill.click()
 		editOpt.click()
-		const applyBtn = await detectGte({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+		const applyBtn = await detectGte({ target: tipd.node(), selector: '[data-testid="sjpp-tvs-apply"]' })
 		const body = { term1_q: { bar_by_grade: 1, value_by_max_grade: 1 } }
 		const termCat = await opts.filter.Inner.vocabApi.getCategories(opts.filterData.lst[0].tvs.term, '', body)
 		test.equal(applyBtn.length, 1, 'Should have 1 button to apply value change')
@@ -661,7 +660,7 @@ tape('tvs: Condition', async test => {
 	{
 		tipd.node().querySelectorAll("input[name^='sjpp-input']")[1].click()
 
-		const applyBtn = await detectGte({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+		const applyBtn = await detectGte({ target: tipd.node(), selector: '[data-testid="sjpp-tvs-apply"]' })
 		const valueBtn = await detectChildText({
 			target: filternode,
 			selector: '.value_btn',
@@ -683,7 +682,7 @@ tape('tvs: Condition', async test => {
 
 		const gradeSelect = await detectOne({ target: tipd.node(), selector: '.grade_select' })
 		gradeSelect.selectedIndex = 1
-		const applyBtn = await detectOne({ target: tipd.node(), selector: '.sjpp_apply_btn' })
+		const applyBtn = await detectOne({ target: tipd.node(), selector: '[data-testid="sjpp-tvs-apply"]' })
 		applyBtn.click()
 		test.equal(gradeSelect.value, 'recent', 'should have grade type changed')
 	}
@@ -709,7 +708,7 @@ tape('tvs: Condition', async test => {
 
 	tipd
 		.node()
-		.querySelector('.sjpp_apply_btn')
+		.querySelector('[data-testid="sjpp-tvs-apply"]')
 		.click()
 
 	await sleep(800)

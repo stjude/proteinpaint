@@ -246,8 +246,9 @@ function setRenderers(self) {
 		}
 		const columns = [{ label: 'tvs' }, { label: 'bar' }]
 		const applybt = {
-			text: 'APPLY',
-			class: 'sjpp_apply_btn sja_filter_tag_btn',
+			text: 'Apply',
+			// unstyled button, found by testid since it no longer carries a distinguishing class
+			dataTestId: 'sjpp-tvs-apply',
 			callback: indexes => {
 				if (callback) callback(indexes)
 			}
@@ -260,6 +261,7 @@ function setRenderers(self) {
 			maxWidth: '40vw',
 			maxHeight: '40vh',
 			buttons: [applybt],
+			buttonsToLeft: true,
 			showHeader: false,
 			striped: false,
 			showLines: false,

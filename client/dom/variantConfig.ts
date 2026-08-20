@@ -581,7 +581,7 @@ export function renderVariantConfig(arg: Arg) {
 		.attr('data-testid', 'sjpp-variantConfig-apply')
 		.style('margin-top', '15px')
 		.property('disabled', genotype == 'variant' && !values.length)
-		.text('APPLY')
+		.text('Apply')
 		.on('click', () => {
 			// get genotype
 			const selectedGenotype: any = genotypeRadio.inputs.nodes().find(r => r.checked)
