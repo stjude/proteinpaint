@@ -2,11 +2,6 @@
 
 set -e
 
-# This hook uses eslintrc-only CLI options such as --env. An eslint.config.js
-# in the parent repository would otherwise enable flat config, where those
-# options are unavailable.
-export ESLINT_USE_FLAT_CONFIG=false
-
 STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
 
 # doing per GDC requirements
@@ -27,14 +22,9 @@ if [[ "$FILES" != "" ]]; then
 	# Add back the modified/prettified files to staging
 	echo "$FILES" | xargs git add
 
-	# lint against team preferences
+	# lint against team preferences (flat config: eslint.config.js, node-based, no --env)
 	echo "Linting ..."
-	echo "$FILES" | grep "shared\/" | grep "\.ts" | xargs env LINT_ENV=shared npx eslint
-	echo "$FILES" | grep "client\/" | grep "\.ts" | xargs env LINT_ENV=browser npx eslint
-	echo "$FILES" | grep "front\/" | grep "\.ts" | xargs env LINT_ENV=browser npx eslint
-	echo "$FILES" | grep "rust\/" | grep "\.ts" | xargs npx eslint
-	echo "$FILES" | grep "server\/" | grep "\.ts" | xargs npx eslint
-	echo "$FILES" | grep "/R\/" | grep "\.ts" | xargs npx eslint
+	echo "$FILES" | grep "\.ts$" | xargs -r npx eslint
 
 	# check for invalid use of .Inner reference
 	echo "checking for forbidden .Inner. usage"
