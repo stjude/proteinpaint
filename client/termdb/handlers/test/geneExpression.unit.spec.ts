@@ -43,10 +43,10 @@ tape('selectGene() should call callback with configured unit from termdbConfig',
 		}
 	} as any
 
-	await handler.selectGene('TP53')
-	test.equal(selected?.gene, 'TP53', 'Should pass selected gene')
-	test.equal(selected?.name, 'TP53 log2 TPM', 'Should include configured unit in term name')
-	test.equal(selected?.type, TermTypes.GENE_EXPRESSION, 'Should set type to geneExpression')
+	await handler.selectGene({ geneSymbol: 'TP53' })
+	test.equal(selected?.term.gene, 'TP53', 'Should pass selected gene')
+	test.equal(selected?.term.name, 'TP53 log2 TPM', 'Should include configured unit in term name')
+	test.equal(selected?.term.type, TermTypes.GENE_EXPRESSION, 'Should set type to geneExpression')
 
 	test.end()
 })
@@ -66,10 +66,10 @@ tape('selectGene() should use default unit when not configured', async test => {
 		}
 	} as any
 
-	await handler.selectGene('BRCA1')
-	test.equal(selected?.gene, 'BRCA1', 'Should pass selected gene')
-	test.equal(selected?.name, 'BRCA1 Gene Expression', 'Should use default unit when config unit is not provided')
-	test.equal(selected?.type, TermTypes.GENE_EXPRESSION, 'Should set type to geneExpression')
+	await handler.selectGene({ geneSymbol: 'BRCA1' })
+	test.equal(selected?.term.gene, 'BRCA1', 'Should pass selected gene')
+	test.equal(selected?.term.name, 'BRCA1 Gene Expression', 'Should use default unit when config unit is not provided')
+	test.equal(selected?.term.type, TermTypes.GENE_EXPRESSION, 'Should set type to geneExpression')
 
 	test.end()
 })
