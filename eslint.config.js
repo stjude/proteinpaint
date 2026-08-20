@@ -66,6 +66,6 @@ export default tseslint.config(
 	},
 	{
 		files: ['shared/**/*.ts'],
-		languageOptions: { globals: { ...globals.node, ...globals.browser } }
+		languageOptions: { globals: globals['shared-node-browser'] }
 	}
 )
