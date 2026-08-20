@@ -18,7 +18,24 @@ Tests for the impression thermometer (one welded glass vessel, two liquid column
   • null SC median → the POC fill only
   • both medians null → the empty vessel still renders
   • two instances in one holder → no defs id collision
+  • data-testid → the svg carries the group-derived suffix, for every real responder group label
 */
+
+/*
+The responder group labels the live db actually produces, with the suffix each must yield. Taken from
+the POCFimpression_* term names after the server strips the leading 'Impression ', plus the
+'Site Coordinator' fallback an SC-only module (Patients and Outcomes) renders with.
+
+The suffixes are written out rather than computed, so this pins the rule: deriving them by calling
+impressionTestIdSuffix() here would pass no matter what that function became.
+*/
+const GROUP_LABELS = [
+	{ label: 'Clinicians', suffix: 'clinicians' },
+	{ label: 'PHO', suffix: 'pho' },
+	{ label: 'PHO & PHOE', suffix: 'pho-phoe' },
+	{ label: 'PHO & Nurses', suffix: 'pho-nurses' },
+	{ label: 'Site Coordinator', suffix: 'site-coordinator' }
+]
 
 const ZONES = [
 	{ label: 'Weak', min: 1, max: 5, color: '#f4cccc' },
@@ -36,7 +53,7 @@ function render(holder: any, over: Partial<ImpressionThermometerArgs> = {}) {
 	renderImpressionThermometer({
 		holder,
 		id: 'test-thermo',
-		groupLabel: 'Clinicians',
+		groupLabel: 'PHO & Nurses',
 		sc: { median: 7, total: 12 },
 		poc: { median: 5, total: 340 },
 		ratingAxisLabel: 'Impression Rating',
@@ -411,6 +428,40 @@ tape('two thermometers in one holder: defs ids do not collide', function (test) 
 	test.equal(holder.selectAll('clipPath#grp-0-vessel-clip').size(), 1, 'the first group owns its own vessel clip')
 	test.equal(holder.selectAll('clipPath#grp-1-vessel-clip').size(), 1, 'the second group owns its own vessel clip')
 
+	holder.remove()
+	test.end()
+})
+
+tape('data-testid carries the responder group suffix', function (test) {
+	for (const { label, suffix } of GROUP_LABELS) {
+		const holder = select('body').append('div')
+		render(holder, { groupLabel: label })
+		test.equal(
+			holder.selectAll(`svg[data-testid="sjpp-profileForms-thermometer-${suffix}"]`).size(),
+			1,
+			`group '${label}' renders the thermometer as sjpp-profileForms-thermometer-${suffix}`
+		)
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('two responder groups in one holder get distinct testids', function (test) {
+	// the reason the suffix exists: a module renders one card per group, so a fixed testid would repeat
+	const holder = select('body').append('div')
+	render(holder.append('div'), { id: 'g0', groupLabel: 'PHO & Nurses' })
+	render(holder.append('div'), { id: 'g1', groupLabel: 'Clinicians' })
+
+	test.equal(
+		holder.selectAll('svg[data-testid="sjpp-profileForms-thermometer-pho-nurses"]').size(),
+		1,
+		'the PHO & Nurses thermometer is uniquely addressable'
+	)
+	test.equal(
+		holder.selectAll('svg[data-testid="sjpp-profileForms-thermometer-clinicians"]').size(),
+		1,
+		'the Clinicians thermometer is uniquely addressable'
+	)
 	holder.remove()
 	test.end()
 })
