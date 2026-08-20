@@ -43,7 +43,8 @@ tape('selectGene() should call callback with configured unit from termdbConfig',
 		}
 	} as any
 
-	await handler.selectGene({ geneSymbol: 'TP53' })
+	await handler.selectGene({ geneSymbol: 'TP53', sampleType: 'tumor' })
+	test.equal(selected?.q?.sampleType, 'tumor', 'Should pass selected sampleType in q payload')
 	test.equal(selected?.term.gene, 'TP53', 'Should pass selected gene')
 	test.equal(selected?.term.name, 'TP53 log2 TPM', 'Should include configured unit in term name')
 	test.equal(selected?.term.type, TermTypes.GENE_EXPRESSION, 'Should set type to geneExpression')
@@ -67,6 +68,7 @@ tape('selectGene() should use default unit when not configured', async test => {
 	} as any
 
 	await handler.selectGene({ geneSymbol: 'BRCA1' })
+	test.equal(selected?.q?.sampleType, undefined, 'Should include sampleType key with undefined value when not provided')
 	test.equal(selected?.term.gene, 'BRCA1', 'Should pass selected gene')
 	test.equal(selected?.term.name, 'BRCA1 Gene Expression', 'Should use default unit when config unit is not provided')
 	test.equal(selected?.term.type, TermTypes.GENE_EXPRESSION, 'Should set type to geneExpression')
