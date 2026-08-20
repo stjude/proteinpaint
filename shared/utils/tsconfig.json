@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    // eslint 10 bundles its own types, which clash with @types/eslint-scope (pulled in by webpack).
+    // Skip type-checking of node_modules .d.ts files, matching the root and augen tsconfigs.
+    "skipLibCheck": true,
     "strictNullChecks": true,
     "baseUrl": "./",
     "rootDir": "./",
