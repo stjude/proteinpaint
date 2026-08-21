@@ -161,7 +161,10 @@ export function setInteractivity(self: any) {
 					// menu callbacks are fire-and-forget, so a request that was canceled by app.destroy()
 					// or a superseding action must be swallowed here, or it surfaces as an unhandled rejection.
 					// a rethrown abort reason may be rewrapped as an Error, so also test the message.
-					if (self.app.isAbortError(e) || self.app.isAbortError(e?.message)) return
+					if (self.app.isAbortError(e) || self.app.isAbortError(e?.message)) {
+						tip.hide()
+						return
+					}
 					throw e
 				}
 				tip.hide()
