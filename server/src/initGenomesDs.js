@@ -11,7 +11,6 @@ import * as mds3_init from './mds3.init.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 import { clinsig } from '../dataset/clinvar.ts'
 import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
-import { SelectionPrefixes, createSelectionID, FlagStatus } from '#types'
 import { mayLog } from './helpers.ts'
 import { mapConcurrent } from './utils/concurrencyLimiter.ts'
 // server-internal utilities that GDC query code depends on; injected so that code can move to
@@ -36,10 +35,7 @@ const dsHelpers = {
 	run_python,
 	cacheOrRecompute,
 	cacheFilePath,
-	generateHash,
-	createSelectionID,
-	SelectionPrefixes,
-	FlagStatus
+	generateHash
 }
 
 export const genomes = {} // { hg19: {...}, ... }
