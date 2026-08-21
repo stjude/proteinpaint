@@ -106,8 +106,6 @@ type OtherBlockLevelArgs = {
 	twodmaf?: TwoDMAF
 	/** Width of the block */
 	width?: number
-	/** Inits the mass WSI viewer plot */
-	wsiViewer?: WSIViewer
 	/** Callback function that runs after the application has loaded */
 	onloadalltk_always?: () => void
 }
@@ -228,12 +226,6 @@ type JunctionByMatrix = {
 
 type DiscoPlot = {
 	/** Opens a sample disco plot within a dataset */
-	sample_id?: string
-	//TODO: add types for this
-}
-
-type WSIViewer = {
-	/** Extracted from URL? */
 	sample_id?: string
 	//TODO: add types for this
 }

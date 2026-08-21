@@ -1478,18 +1478,6 @@ export class TermdbVocab extends Vocab {
 		return await this.dofetch3('termdb', { method: 'GET', body })
 	}
 
-	async getFilteredAiImages(project, filter) {
-		const body = {
-			genome: this.vocab.genome,
-			dslabel: this.vocab.dslabel,
-			// make a copy of the project object
-			project: Object.assign({}, project, { filter: getNormalRoot(filter) }),
-			for: 'filterImages'
-		}
-
-		return await this.dofetch3('aiProjectAdmin', { body })
-	}
-
 	async getAggregateMatrixData(opts) {
 		const body = {
 			genome: this.vocab.genome,

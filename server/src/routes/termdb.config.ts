@@ -451,11 +451,6 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			q2.NIdata[k] = JSON.parse(JSON.stringify(q.NIdata[k]))
 		}
 	}
-	if (q.WSImages && serverconfig.features.showWSImages) {
-		q2.WSImages = {
-			type: q.WSImages.type
-		}
-	}
 	if (q.singleSampleGbtk) {
 		q2.singleSampleGbtk = {}
 		for (const k in q.singleSampleGbtk) {

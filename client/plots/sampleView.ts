@@ -38,7 +38,6 @@ class SampleView extends PlotBase implements RxComponent {
 	singleSamplePlots!: Record<string, any[]>
 	brainPlots!: any[]
 	imagePlots!: any[]
-	wsiPlots!: any[]
 	visiblePlots!: boolean
 	renderSampleDictionary!: () => void
 
@@ -278,8 +277,7 @@ class SampleView extends PlotBase implements RxComponent {
 
 	async setControls(state) {
 		const q = state.termdbConfig.queries
-		const hasPlots =
-			q?.singleSampleMutation || q?.singleSampleGenomeQuantification || q?.NIdata || q?.images || q?.WSImages
+		const hasPlots = q?.singleSampleMutation || q?.singleSampleGenomeQuantification || q?.NIdata || q?.images
 		if (hasPlots) {
 			this.dom.showPlotsDiv
 				.append('input')
@@ -294,22 +292,6 @@ class SampleView extends PlotBase implements RxComponent {
 					})
 				})
 			this.dom.showPlotsDiv.append('label').text('Show Dictionary').attr('for', 'showDictionary')
-		}
-
-		if (q?.WSImages) {
-			this.dom.showPlotsDiv
-				.append('input')
-				.attr('id', 'showWsi')
-				.attr('type', 'checkbox')
-				.property('checked', true)
-				.on('change', e => {
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { settings: { sampleView: { showWsi: e.target.checked } } }
-					})
-				})
-			this.dom.showPlotsDiv.append('label').attr('for', 'showWsi').text('Show WSI images')
 		}
 
 		if (q?.singleSampleMutation) {
@@ -578,7 +560,6 @@ class SampleView extends PlotBase implements RxComponent {
 			this.showPlotsFromCategory(this.singleSamplePlots[ssgqKey], ssgqKey)
 		this.showPlotsFromCategory(this.brainPlots, 'showBrain')
 		this.showPlotsFromCategory(this.imagePlots, 'showImages')
-		this.showPlotsFromCategory(this.wsiPlots, 'showWsi')
 		if (this.state.samples.length == 1 && this.visiblePlots)
 			this.dom.tableDiv.style('max-width', '48vw').style('max-height', '40vw').attr('class', 'sjpp_show_scrollbar')
 		else this.dom.tableDiv.style('max-width', '').style('max-height', '').attr('class', '')
@@ -599,19 +580,7 @@ class SampleView extends PlotBase implements RxComponent {
 		this.singleSamplePlots = {}
 		this.brainPlots = []
 		this.imagePlots = []
-		this.wsiPlots = []
 		// const q = state.termdbConfig.queries
-		if (state.termdbConfig.queries?.WSImages) {
-			const div = plotsDiv.append('div')
-			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
-			for (const sample of samples) {
-				const cellDiv = div.append('div').style('display', 'inline-block')
-				this.wsiPlots.push({ sample, cellDiv })
-				const wsiViewer = await import('./wsiviewer/plot.wsi.js')
-				wsiViewer.default(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName)
-			}
-		}
-
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
 			const div = plotsDiv.append('div')
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
@@ -674,9 +643,7 @@ class SampleView extends PlotBase implements RxComponent {
 			// find which of the samples actually have imaging files, to skip the ones without
 			let available = new Set()
 			try {
-			available = k
-				? await getBrainImagingSampleSet(state.vocab.genome, state.vocab.dslabel, k)
-				: new Set<string>()
+				available = k ? await getBrainImagingSampleSet(state.vocab.genome, state.vocab.dslabel, k) : new Set<string>()
 			} catch (e) {
 				// on error keep the empty set: no brain imaging plots are shown
 				console.error('brainImagingSamples request failed:', e)
@@ -879,8 +846,7 @@ export async function getPlotConfig(opts: any, app: any) {
 			showDictionary: true,
 			showDisco: true,
 			showBrain: true,
-			showImages: true,
-			showWsi: true
+			showImages: true
 		}
 	}
 	if (q)

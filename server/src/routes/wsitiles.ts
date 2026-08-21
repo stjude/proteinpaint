@@ -5,12 +5,11 @@
  reads the file, sends it to the client, and deletes it.
 
  The OpenLayers `Zoomify` client works unchanged — only the tile URL and the
- metadata source move here from the old tileserver.ts / wsimages.ts.
+ metadata source live here (the tiatoolbox tileserver/wsimages stack is gone).
 
  Two ways to point at a slide:
- - Dataset (production): serverconfig.features.tileserver.mount as the slide
-   root + ds.queries.WSImages.{imageBySampleFolder,aiToolImageFolder} sub-path.
-   Query: genome, dslabel, wsimage, sample_id | ai_project_id.
+ - Dataset (production): ds.queries.w2 roots (folder/wsiFolder, relative to
+   tpmasterdir). Query: genome, dslabel, wsimage, sample_id, imageType.
  - Direct path (e.g. runpp ?image_file=SVS/slide.svs): query `slide`, resolved relative
    to serverconfig.tpmasterdir (traversal outside it is rejected). Gated behind
    serverconfig.features.wsi.allowDirectSlidePath — a dev/testing switch.
@@ -35,7 +34,7 @@ import serverconfig from '#src/serverconfig.js' // tpmasterdir, cachedir, featur
 // register this module as a route; request/response shapes are loose (any)
 export const payload: RoutePayload = {
 	init,
-	request: { typeId: 'WSImagesRequest' },
+	request: { typeId: 'any' },
 	response: { typeId: 'any' }
 }
 
@@ -127,21 +126,7 @@ function slidePath(genomes: any, q: any): string {
 		return full // let downstream produce the not-found error for the last candidate
 	}
 
-	// legacy WSImages datasets: slides live under a tileserver mount, not tpmasterdir
-	const sampleId = q.sample_id ?? q.sampleId // per-sample slide folder
-	const aiProjectId = q.ai_project_id ?? q.aiProjectId // or an AI-tool project folder
-	if (!sampleId && !aiProjectId) throw new Error('sample_id/sampleId or ai_project_id/aiProjectId required')
-	const mount = serverconfig.features?.tileserver?.mount // the slide root for this mode
-	if (!mount) throw new Error('No mount configured (serverconfig.features.tileserver.mount)')
-	const w = ds.queries.WSImages // per-dataset subfolders under the mount
-	const sub = sampleId
-		? path.join(`${w.imageBySampleFolder}/${sampleId}`, wsimage) // sample-addressed slide
-		: path.join(`${w.aiToolImageFolder}/`, wsimage) // project-addressed slide
-	const base = path.resolve(mount) // absolute mount root
-	const full = path.resolve(base, sub) // resolve, collapsing any ../
-	// traversal guard: resolved path must stay inside the mount
-	if (full !== base && !full.startsWith(base + path.sep)) throw new Error('slide path escapes mount')
-	return full
+	throw new Error('ds.queries.w2 not configured for this dataset')
 }
 
 function init({ genomes }) {

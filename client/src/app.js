@@ -4,7 +4,6 @@
 import './style-normalize-scoped.css'
 import 'highlight.js/styles/github.css'
 import './style.css'
-import './style-zoomify-scoped.css'
 import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import * as client from './client'
 import { dofetch3, setAuth, clearServerDataCache } from '#common/dofetch'
@@ -624,10 +623,6 @@ async function parseEmbedThenUrl(arg, app) {
 
 	if (arg.disco) {
 		return await launchDisco(arg, app)
-	}
-
-	if (arg.wsiViewer) {
-		return await launchWsiViewer(arg, app)
 	}
 
 	if (arg.parseurl && location.search.length) {
@@ -1486,20 +1481,4 @@ async function launchDisco(arg, app) {
 		const _ = await import('#plots/disco/launch.adhoc.ts')
 		return await _.launch(arg.disco, genomeObj, app.holder0)
 	}
-}
-
-async function launchWsiViewer(arg, app) {
-	if (!arg.genome) throw '"genome" parameter missing'
-	const genomeObj = app.genomes[arg.genome]
-	if (!genomeObj) throw 'unknown genome'
-	const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
-
-	// Extract sample-id from the URL
-	const urlParams = new URLSearchParams(window.location.search)
-	const sampleId = urlParams.get('sample_id')
-	if (!sampleId) {
-		throw 'sample-id parameter missing'
-	}
-
-	wsiViewer.default(arg.dslabel, app.holder, genomeObj, sampleId)
 }
