@@ -155,7 +155,15 @@ export function setInteractivity(self: any) {
 				if (target._clicked) return
 				target._clicked = true
 				target.textContent = 'Loading...'
-				await d.callback()
+				try {
+					await d.callback()
+				} catch (e: any) {
+					// menu callbacks are fire-and-forget, so a request that was canceled by app.destroy()
+					// or a superseding action must be swallowed here, or it surfaces as an unhandled rejection.
+					// a rethrown abort reason may be rewrapped as an Error, so also test the message.
+					if (self.app.isAbortError(e) || self.app.isAbortError(e?.message)) return
+					throw e
+				}
 				tip.hide()
 			})
 	}
@@ -194,16 +202,8 @@ export function setInteractivity(self: any) {
 
 	self.callListSamples = async function (event: MouseEvent, plot: any, start: number, end: number) {
 		const ls = self.getSampleList(plot, start, end)
-		let data
-		try {
-			data = await ls.getData()
-		} catch (e: any) {
-			// this menu callback is fire-and-forget, so a request that was canceled by app.destroy()
-			// or a superseding action must be swallowed here, or it surfaces as an unhandled rejection.
-			// ListSamples.getData() may rewrap a non-Error abort reason, so also test the message.
-			if (self.app.isAbortError(e) || self.app.isAbortError(e?.message)) return
-			throw e
-		}
+		// aborted requests are handled by the menu option click handler in self.displayMenu()
+		const data = await ls.getData()
 		const [rows, columns] = ls.setTableData(data)
 
 		const tip = self.dom.sampletabletip
