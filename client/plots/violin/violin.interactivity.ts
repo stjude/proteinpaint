@@ -194,7 +194,16 @@ export function setInteractivity(self: any) {
 
 	self.callListSamples = async function (event: MouseEvent, plot: any, start: number, end: number) {
 		const ls = self.getSampleList(plot, start, end)
-		const data = await ls.getData()
+		let data
+		try {
+			data = await ls.getData()
+		} catch (e: any) {
+			// this menu callback is fire-and-forget, so a request that was canceled by app.destroy()
+			// or a superseding action must be swallowed here, or it surfaces as an unhandled rejection.
+			// ListSamples.getData() may rewrap a non-Error abort reason, so also test the message.
+			if (self.app.isAbortError(e) || self.app.isAbortError(e?.message)) return
+			throw e
+		}
 		const [rows, columns] = ls.setTableData(data)
 
 		const tip = self.dom.sampletabletip
