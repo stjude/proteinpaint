@@ -4,12 +4,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 	switch (chartType) {
 		case 'aggregateMatrix':
 			return await import('./aggregateMatrix/AggregateMatrix.ts')
-		
+
 		case 'aggMatrixInput':
 			return await import('./AggMatrixInput.ts')
-
-		case 'AIProjectAdmin':
-			return await import('./aiProjectAdmin/AIProjectAdmin.ts')
 
 		case 'animatedBubbleChart':
 			return await import(`./animatedBubbleChart.ts`)
@@ -28,7 +25,7 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'bubbleHeatmap':
 			return await import('./bubbleHeatmap.ts')
-		
+
 		case 'cellTypeBubbleHeatmap':
 			return await import('./cellTypeBubbleHeatmap.ts')
 
@@ -37,7 +34,7 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'cuminc':
 			return await import(`./cuminc/Cuminc.ts`)
-		
+
 		case 'dataDownload':
 			return await import(`./dataDownload.ts`)
 
@@ -112,7 +109,7 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'ProteomeInput':
 			return await import('./ProteomeInput.ts')
-		
+
 		case 'regression':
 			return await import(`./regression/Regression.ts`)
 
@@ -170,12 +167,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'wsi':
 			return await import('./w2/Wsi.ts')
-
-		case 'WSISamplesPlot':
-			return await import('./wsisamples/WsiSamplesPlot.ts')
-
-		case 'WSIViewer':
-			return await import('./wsiviewer/WSIViewer.ts')
 
 		default:
 			// temporary option to force an error, to bypass the default filename matching

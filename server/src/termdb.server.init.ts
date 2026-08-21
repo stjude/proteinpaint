@@ -875,7 +875,6 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 		ds.queries?.dnaMethylation?.promoter ||
 		(ds.queries?.dnaMethylation?.elements && Object.keys(ds.queries.dnaMethylation.elements).length),
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
-	WSIViewer: ({ ds }) => ds.queries?.WSImages,
 	wsi: ({ ds }) => ds.queries?.w2,
 	imagePlot: ({ ds }) => ds.queries?.images,
 	dataDownload: ({ forbiddenRoutes }) => {
