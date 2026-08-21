@@ -58,14 +58,17 @@ export default tseslint.config(
 	// per-workspace environment globals (browser vs node vs shared)
 	{
 		files: ['client/**/*.ts', 'front/**/*.ts'],
-		languageOptions: { globals: globals.browser }
+		languageOptions: { globals: globals.browser },
+		rules: { 'no-undef': 'error' }
 	},
 	{
 		files: ['server/**/*.ts', 'rust/**/*.ts', 'python/**/*.ts', 'R/**/*.ts'],
-		languageOptions: { globals: globals.node }
+		languageOptions: { globals: globals.node },
+		rules: { 'no-undef': 'error' }
 	},
 	{
 		files: ['shared/**/*.ts'],
-		languageOptions: { globals: globals['shared-node-browser'] }
+		languageOptions: { globals: globals['shared-node-browser'] },
+		rules: { 'no-undef': 'error' }
 	}
 )
