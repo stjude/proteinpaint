@@ -72,6 +72,9 @@ export default tseslint.config(
 		files: ['shared/**/*.ts'],
 		// shared type code references DOM types (Element/MouseEvent/Selection) not in the intersection; whitelist for no-undef
 		languageOptions: {
+			// TODO: shared code should not expect browser globals like Element, MouseEvent, Selection,
+			// see the comment in shared/types/src/termsetting.ts to move these browser-specific type declarations
+			// to client/termsetting/types.ts instead
 			globals: { ...globals['shared-node-browser'], Element: 'readonly', MouseEvent: 'readonly', Selection: 'readonly' }
 		},
 		rules: { 'no-undef': 'error' }
