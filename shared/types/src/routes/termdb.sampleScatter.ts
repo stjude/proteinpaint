@@ -30,11 +30,11 @@ export type ScatterSample = {
 	geneExp?: number
 }
 
-type ColorObject = { color: string; sampleCount: number; key: string }
+export type ColorObject = { color: string; sampleCount: number; key: string }
 export type ColorLegendEntry = [string, ColorObject]
 export type ColorMap = { [index: string]: ColorObject }
 
-type ShapeObject = { shape: number; sampleCount: number; key: string }
+export type ShapeObject = { shape: number; sampleCount: number; key: string }
 export type ShapeLegendEntry = [string, ShapeObject]
 export type ShapeMap = { [index: string]: ShapeObject }
 
