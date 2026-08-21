@@ -244,7 +244,9 @@ export class ScatterLegend {
 			offsetY = 60
 			title = `${getTitle(this.scatter.config.shapeTW.term.name, 40)}`
 			if (this.scatter.config.shapeTW.term.type == 'geneVariant' && this.scatter.config.shapeTW.q.type == 'values') {
-				this.renderGeneVariantLegend(
+				// keep offsetY in sync with what was drawn, so legendHeight below (and the scale-dot
+				// legend placed under it) accounts for the gene variant rows
+				offsetY = this.renderGeneVariantLegend(
 					chart,
 					offsetX,
 					offsetY,

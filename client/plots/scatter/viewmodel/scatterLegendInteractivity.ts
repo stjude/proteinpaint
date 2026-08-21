@@ -119,8 +119,10 @@ export class ScatterLegendInteractivity {
 	hideCategory(tw, key, hide) {
 		if (!tw.q) tw.q = {}
 		if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
+		// term.values may be missing entirely (e.g. a binned gene expression term, where the legend
+		// key is the bin label); fall back to a {key,label} stub rather than throwing
 		const value =
-			!(tw.term.type == 'geneVariant' && tw.q.type == 'values') && tw.term.values[key]
+			!(tw.term.type == 'geneVariant' && tw.q.type == 'values') && tw.term.values?.[key]
 				? tw.term.values[key]
 				: { key: key, label: key }
 
