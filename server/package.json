@@ -82,7 +82,6 @@
     "minimatch": "^10.0.1",
     "node-fetch": "^2.6.1",
     "partjson": "^0.58.2",
-    "redis": "^4.7.0",
     "skia-canvas": "~3.0.8",
     "tiny-async-pool": "^1.2.0",
     "tough-cookie": "^4.1.4"

@@ -1,11 +1,6 @@
 import type { Mclass } from './Mclass.ts'
 import type { BaseTerm } from './terms/term.ts'
 import type { CategoryKey } from './terms/termCollection.ts'
-import type { WSImage } from './routes/samplewsimages.ts'
-import type { WSISample } from './routes/wsisamples.ts'
-import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
-import type { DeleteWSITileSelectionRequest } from './routes/deleteWSITileSelection.ts'
-import type { Prediction } from './routes/aiProjectSelectedWSImages.ts'
 import type { TermdbSingleCellSamplesRequest } from './index.ts'
 /*** General usage types ***/
 type FileObj = {
@@ -1398,7 +1393,6 @@ type Mds3Queries = {
 	singleCell?: SingleCellQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
-	WSImages?: WSImages
 	/** w2 whole-slide image plot. All paths are relative to tpmasterdir; samples and
 	 * images are discovered from disk, never listed in the dataset. At least one
 	 * of folder (spatial) / wsiFolder (plain) is required — a dataset may have
@@ -1445,56 +1439,6 @@ type Images = {
 	/** folder where the per-sample image files are stored */
 	folder: string
 }
-
-/** deep zoom image shown via tiatoolbox, covers any big image files including whole-slide image.
-image file to sample mapping is stored in wsimages table
-*/
-export type WSImages = {
-	db?: { file: string }
-	// type of the image, e.g. H&E
-	type: string
-
-	/* path to the folder where sample images are stored
-	required; for both cases where image files are hosted locally, or loaded from remote via ds-supplied getter
-	*/
-	imageBySampleFolder?: string
-
-	aiToolImageFolder?: string
-
-	activePatchColor?: string
-	predictionColor?: Array<number>
-	annotationsColor?: Array<number>
-	tileSize?: number
-	uncertainty?: { color: string; label?: string }[]
-
-	/** dynamically added on launch with built in logic */
-	saveWSIAnnotation?: (annotation: SaveWSIAnnotationRequest) => Promise<void>
-
-	/** dynamically added on launch with built in logic */
-	deleteWSIAnnotation?: (annotation: DeleteWSITileSelectionRequest) => Promise<void>
-
-	/** dynamically added on launch with built in logic - returns all image filenames for a project */
-	getAllWSImages?: (projectId: string) => Promise<string[]>
-
-	/** either ds supplied or dynamically added on launch with built in logic (retrieve the sample list from the wsimages table) */
-	getSamples?: () => Promise<Array<WSISample>>
-	/** either ds supplied or dynamically added on launch with built in logic */
-	getWSImages?: (sampleName: string) => Promise<WSImage[]>
-	/**  ds supplied */
-	getWSIPredictionPatches?: (projectId: string, wsiImage: string) => Promise<Prediction[]>
-	/**  ds supplied */
-	getWSIAnnotations?: (projectId: string, wsiImage: string) => Promise<string[]>
-	/**  ds supplied */
-	getPredictionLayers?: (projectId: string, wsiImage: string) => Promise<Map<string, string> | undefined>
-	/**  ds supplied */
-	getAnnotationClasses?: (projectId: string) => Promise<WSIClass[] | undefined>
-	/**  ds supplied */
-	retrainModel?: (projectId: string, wsimages: string[]) => Promise<void>
-	/**  ds supplied */
-	selectWSIImages?: () => Promise<string[]>
-}
-
-export type WSIClass = { id: number; key_shortcut: string; label: string; color: string }
 
 /*** types supporting Termdb ***/
 

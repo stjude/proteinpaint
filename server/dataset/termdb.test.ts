@@ -473,10 +473,6 @@ export default function (): Mds3 {
 					folder: 'files/hg38/TermdbTest/scrna/geneExpHdf5'
 				}
 			},
-			WSImages: {
-				type: 'H&E',
-				imageBySampleFolder: 'files/hg38/TermdbTest/wsimages'
-			},
 			// w2 plot. folder: spatial images, one per subfolder of the sample's
 			// directory (folder/<sample>/<imageName>/), files inside found by the
 			// *FileSuffix fields. wsiFolder: plain whole-slide images, laid out as
