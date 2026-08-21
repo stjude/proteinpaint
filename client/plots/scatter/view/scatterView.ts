@@ -1,7 +1,7 @@
 import { fillTermWrapper } from '#termsetting'
 import { Menu } from '#dom'
 import type { Scatter } from '../scatter.js'
-import { isNumericTerm } from '#shared/terms.js'
+import { isNumericTerm, numericTypes, dictionaryNumericTypes } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.js'
 
@@ -9,6 +9,23 @@ export const minShapeSize = 0.2
 export const maxShapeSize = 6
 const chartSizeMin = 200
 const chartSizeMax = 800
+
+/* defaultQ for a newly selected shape term, keyed by term type (see TwRouter.fill()).
+
+Only a handful of shapes are available and they are hard to tell apart, so a numeric shape term
+must not default to the many bins a regular-bin scheme produces. Non-dictionary numeric terms
+(gene expression and the other molecular types) have no dataset-curated bins, so the bins would
+be computed from the data range and easily yield 8+ shapes; default them instead to two bins
+split at the median, the same default used for a survival/cuminc overlay term. Dictionary
+numeric terms (integer/float/date) keep their curated preset bins. */
+function getShapeDefaultQ() {
+	const defaultQ: { [termType: string]: any } = {}
+	for (const type of numericTypes) {
+		if (dictionaryNumericTypes.has(type)) continue
+		defaultQ[type] = { mode: 'discrete', type: 'custom-bin', preferredBins: 'median' }
+	}
+	return defaultQ
+}
 export class ScatterView {
 	opts: any
 	dom: any
@@ -96,6 +113,9 @@ export class ScatterView {
 			label: 'Shape',
 			vocabApi: this.scatter.app.vocabApi,
 			numericEditMenuVersion: ['discrete'],
+			// only applies when a term is first picked from the tree, so a user-chosen binning
+			// from the pill's edit menu is not overridden
+			defaultQ4fillTW: getShapeDefaultQ(),
 			//Eventually this will be corrected with usecase.detail
 			//When single cell, only relevant terms will be displayed
 			//in the tree
@@ -107,6 +127,7 @@ export class ScatterView {
 				if (isNumericTerm(tw?.term)) {
 					if (!tw.q) tw.q = {}
 					tw.q.mode = 'discrete' //use discrete mode by default, but preserve other q properties like type
+					// no defaultQ here: it would re-apply the median bins over the q the user just edited
 					await fillTermWrapper(tw, this.scatter.app.vocabApi)
 				}
 			}
