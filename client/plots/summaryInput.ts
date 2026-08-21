@@ -19,7 +19,9 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 		[name: string]: ComponentApi | { [name: string]: ComponentApi }
 	} = {}
 	// expected class-specific props
-	configTermKeys = ['term', 'term0', 'term2']
+	// the *_surv keys are the overlay/divide-by held aside for a survival term1, and are
+	// filled by getPlotConfig() like the others, so they route the same way
+	configTermKeys = ['term', 'term0', 'term2', 'term0_surv', 'term2_surv']
 	config: any
 
 	constructor(opts: any, api: ComponentApi) {
@@ -237,6 +239,20 @@ export async function getPlotConfig(opts, app) {
 		if (opts.term0) {
 			const defaultQ = opts.term0.bins || opts.term0.q ? undefined : getT0T2defaultQ(asBinary)
 			await fillTermWrapper(opts.term0, app.vocabApi, defaultQ)
+		}
+		/* term2_surv/term0_surv hold the overlay/divide-by kept aside for when term1 is a
+		survival term, and are rendered by their own pills just like term2/term0. they must be
+		filled here too: a pill is handed the tw as-is (see setTermInput() in controls.config.js),
+		so an unfilled one either renders blank, or throws when its handler reads a property that
+		only fill() derives, e.g. term.groupsetting of a geneVariant predefined groupset.
+		always binary, since these keys only apply when a survival plot will be launched */
+		if (opts.term2_surv) {
+			const defaultQ = opts.term2_surv.bins || opts.term2_surv.q ? undefined : getT0T2defaultQ(true)
+			await fillTermWrapper(opts.term2_surv, app.vocabApi, defaultQ)
+		}
+		if (opts.term0_surv) {
+			const defaultQ = opts.term0_surv.bins || opts.term0_surv.q ? undefined : getT0T2defaultQ(true)
+			await fillTermWrapper(opts.term0_surv, app.vocabApi, defaultQ)
 		}
 	} catch (e: any) {
 		if (e.stack) console.log(e.stack)
