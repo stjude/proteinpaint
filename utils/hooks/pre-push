@@ -8,5 +8,9 @@ echo "number of files to be checked=$(echo "$FILES" | wc -w)"
 pre-commit run --files $FILES
 # run linter on ts files
 echo "linting ..."
-echo "$FILES" | grep "\.ts$" | xargs -r npx eslint
+# only run eslint when there are changed .ts files (guard is portable across GNU and BSD)
+TSFILES=$(echo "$FILES" | grep "\.ts$" || true)
+if [ -n "$TSFILES" ]; then
+	echo "$TSFILES" | xargs npx eslint
+fi
 exit 0

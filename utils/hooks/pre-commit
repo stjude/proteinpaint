@@ -24,7 +24,11 @@ if [[ "$FILES" != "" ]]; then
 
 	# lint against team preferences (flat config: eslint.config.js, node-based, no --env)
 	echo "Linting ..."
-	echo "$FILES" | grep "\.ts$" | xargs -r npx eslint
+	# only run eslint when there are staged .ts files (guard is portable across GNU and BSD)
+	TSFILES=$(echo "$FILES" | grep "\.ts$" || true)
+	if [ -n "$TSFILES" ]; then
+		echo "$TSFILES" | xargs npx eslint
+	fi
 
 	# check for invalid use of .Inner reference
 	echo "checking for forbidden .Inner. usage"
