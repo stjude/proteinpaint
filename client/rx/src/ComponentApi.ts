@@ -282,7 +282,7 @@ export class ComponentApi {
 		}
 		for (const c of this.#abortControllers.values()) {
 			try {
-				c.abort()
+				c.abort('stale sequenceId')
 				this.#abortControllers.delete(c)
 			} catch (e) {
 				// ok to

@@ -241,10 +241,11 @@ export class AppApi {
 		if (reason) console.info(`triggerAbort()`, reason)
 		if (signal) {
 			if (signal.aborted) return
-			if (this.#abortController && signal === this.#abortController?.signal) this.#abortController.abort()
+			if (this.#abortController && signal === this.#abortController?.signal)
+				this.#abortController.abort('stale sequenceId')
 			else {
 				const abortCtrl = this.#trackedAbortContrlsBySignal.get(signal)
-				if (abortCtrl) abortCtrl.abort()
+				if (abortCtrl) abortCtrl.abort('stale sequenceId')
 			}
 			return
 		}
@@ -294,7 +295,9 @@ export class AppApi {
 	}
 
 	destroy() {
-		this.#abortController?.abort()
+		// always abort with a reason: a bare abort() rejects pending fetches with an opaque
+		// "AbortError: signal is aborted without reason" DOMException
+		this.#abortController?.abort('stale sequenceId')
 		const self = this.#App
 		// delete references to other objects to make it easier
 		// for automatic garbage collection to find unreferenced objects
