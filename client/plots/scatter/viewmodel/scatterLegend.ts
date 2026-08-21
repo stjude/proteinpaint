@@ -228,6 +228,7 @@ export class ScatterLegend {
 				const refText = legendG
 					.append('g')
 					.append('text')
+					.attr('name', 'sjpp-scatter-legend-label')
 					.attr('x', offsetX + 20)
 					.attr('y', offsetY + 4)
 					.text(`n=${colorRefCategory.sampleCount}`)
@@ -276,6 +277,7 @@ export class ScatterLegend {
 
 					itemG
 						.append('path')
+						.attr('data-testid', 'sjpp-legend-shape')
 						.attr('transform', () => `translate(${offsetX}, ${offsetY - 4}) scale(${scale + 0.1})`) //shapes are a bit smaller than the circle shape
 						.style('pointer-events', 'bounding-box')
 						.style('fill', color)
@@ -284,6 +286,7 @@ export class ScatterLegend {
 
 					itemG
 						.append('text')
+						.attr('name', 'sjpp-scatter-legend-label')
 						.attr('x', offsetX + 25)
 						.attr('y', offsetY + 4)
 						.text(`${name}, n=${count}`)
@@ -381,6 +384,7 @@ export class ScatterLegend {
 					const index = category.shape % shapes.length
 					itemG
 						.append('path')
+						.attr('data-testid', 'sjpp-legend-shape')
 						.attr('transform', () => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(${scale})`)
 						.style('fill', 'gray')
 						.style('pointer-events', 'bounding-box')
