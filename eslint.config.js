@@ -58,17 +58,22 @@ export default tseslint.config(
 	// per-workspace environment globals (browser vs node vs shared)
 	{
 		files: ['client/**/*.ts', 'front/**/*.ts'],
-		languageOptions: { globals: globals.browser },
+		// RequestInfo/RequestInit are TS type-only aliases (not in globals.browser); whitelist so no-undef doesn't flag type usage
+		languageOptions: { globals: { ...globals.browser, RequestInfo: 'readonly', RequestInit: 'readonly' } },
 		rules: { 'no-undef': 'error' }
 	},
 	{
 		files: ['server/**/*.ts', 'rust/**/*.ts', 'python/**/*.ts', 'R/**/*.ts'],
-		languageOptions: { globals: globals.node },
+		// NodeJS namespace + webpack's __non_webpack_require__ aren't in globals.node; whitelist for no-undef
+		languageOptions: { globals: { ...globals.node, NodeJS: 'readonly', __non_webpack_require__: 'readonly' } },
 		rules: { 'no-undef': 'error' }
 	},
 	{
 		files: ['shared/**/*.ts'],
-		languageOptions: { globals: globals['shared-node-browser'] },
+		// shared type code references DOM types (Element/MouseEvent/Selection) not in the intersection; whitelist for no-undef
+		languageOptions: {
+			globals: { ...globals['shared-node-browser'], Element: 'readonly', MouseEvent: 'readonly', Selection: 'readonly' }
+		},
 		rules: { 'no-undef': 'error' }
 	}
 )
