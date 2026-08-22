@@ -549,8 +549,10 @@ override={}
 returns:
 	db connector
 */
+const tpdir = serverconfig.features?.tp_native_dir || serverconfig.tpmasterdir
+
 export function connect_db(file, override = {}) {
-	const dbfile = file[0] == '/' ? file : path.join(serverconfig.tpmasterdir, file)
+	const dbfile = file[0] == '/' ? file : path.join(tpdir, file)
 	try {
 		return new bettersqlite(dbfile, Object.assign({ readonly: true, fileMustExist: true }, override))
 	} catch (e) {
