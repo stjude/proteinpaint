@@ -1,5 +1,4 @@
 import tape from 'tape'
-import fetch from 'node-fetch'
 import path from 'path'
 import fs from 'fs'
 import serverconfig from '../serverconfig.js'

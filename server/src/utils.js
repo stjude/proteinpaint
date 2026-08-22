@@ -4,7 +4,7 @@ import { spawn } from 'child_process'
 import readline from 'readline'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
-import fetch from 'node-fetch'
+import ky from 'ky'
 import bettersqlite from 'better-sqlite3'
 import serverconfig from './serverconfig.js'
 import { Readable } from 'stream'
@@ -185,11 +185,11 @@ async function download_index(url, tofile) {
 	if either is true, should not 
 	*/
 	try {
-		const res = await fetch(url)
+		const res = await ky(url, { throwHttpErrors: false })
 		if (res.status != 200) {
 			throw 'index file not accessible from url with status code ' + res.status
 		}
-		await stream2file(res.body, tofile)
+		await stream2file(Readable.fromWeb(res.body), tofile)
 	} catch (e) {
 		// fetch thrown, must be invalid url
 		throw 'cannot download from url'
