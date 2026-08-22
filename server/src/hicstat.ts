@@ -1,6 +1,6 @@
 import fs from 'fs'
 import util from 'util'
-import got from 'got'
+import ky from 'ky'
 // import { exec } from 'child_process'
 import type { HicstatResponse } from '#types'
 
@@ -222,11 +222,9 @@ export async function do_hicstat(file: string, isurl: boolean): Promise<HicstatR
 	async function readHicUrl(url: string, position: number, length: number) {
 		try {
 			const range = position + '-' + (position + length - 1)
-			const response = await got(url, {
+			const arrayBuffer = await ky(url, {
 				headers: { Range: 'bytes=' + range }
-			}).buffer()
-			// convert buffer to arrayBuffer
-			const arrayBuffer = response.buffer //.slice(position, position + length)
+			}).arrayBuffer()
 
 			return arrayBuffer
 		} catch (error: any) {

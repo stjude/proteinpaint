@@ -9,7 +9,7 @@ import { createCanvas } from 'canvas'
 import * as bamcommon from './bam.common.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import crypto from 'crypto'
-import got from 'got'
+import ky from 'ky'
 import { interpolateRgb } from 'd3-interpolate'
 import { match_complexvariant_rust } from './bam.kmer.indel.js'
 import { basecolor, bplen } from '#shared/common.js'
@@ -3754,7 +3754,8 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 		if (await utils.file_not_exist(fullpath)) {
 			// bam file not found. download
 
-			const sourceStream = got.stream(url, { method: 'GET', headers })
+			const response = await ky(url, { method: 'GET', headers, throwHttpErrors: false, retry: 0, timeout: false })
+			const sourceStream = Readable.fromWeb(response.body)
 			const writeStream = fs.createWriteStream(fullpath)
 			let totalBytes = 0
 

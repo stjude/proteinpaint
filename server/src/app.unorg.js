@@ -30,7 +30,7 @@ import serverconfig from './serverconfig.js'
 import util from 'util'
 import fs from 'fs'
 import path from 'path'
-import got from 'got'
+import ky from 'ky'
 import child_process from 'child_process'
 import { spawn } from 'child_process'
 import { createCanvas } from 'canvas'
@@ -310,10 +310,10 @@ async function handle_urltextfile(req, res) {
 	downgrading to http. 
 	*/
 	try {
-		const response = await got(url)
-		switch (response.statusCode) {
+		const response = await ky(url, { throwHttpErrors: false })
+		switch (response.status) {
 			case 200:
-				res.send({ text: utils.stripJsScript(response.body) })
+				res.send({ text: utils.stripJsScript(await response.text()) })
 				return
 			case 404:
 				res.send({ error: 'File not found: ' + url })

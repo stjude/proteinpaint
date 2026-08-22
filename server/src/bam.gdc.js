@@ -1,4 +1,4 @@
-import got from 'got'
+import { xfetch } from './xfetch.js'
 import path from 'path'
 import { fileSize } from '#shared/fileSize.js'
 
@@ -347,11 +347,9 @@ function getQueryApi(ds) {
 			fields: api.fields.join(',')
 		}
 
-		const response = await got(end_point, { method: 'POST', headers, body: JSON.stringify(data) })
-
 		let re
 		try {
-			re = JSON.parse(response.body)
+			re = await xfetch(end_point, { method: 'POST', headers, json: data })
 		} catch (e) {
 			throw 'invalid JSON from ' + api.end_point
 		}
@@ -387,30 +385,13 @@ export async function gdcCheckPermission(gdcFileUUID, ds, reqQuery) {
 	// since the expected response is binary data, should not set Accept: application/json as a request header
 	// also no body is submitted with a GET request, should not set a Content-type request header
 	headers.Range = 'bytes=0-0'
+	// prevents an 'Accept-encoding: gz' request header from being set,
+	// which may not be handled properly by the GDC API in qa-uat
+	// per Phil, should only be used as a temporary workaround
+	headers['Accept-Encoding'] = 'identity'
 	const url = host.rest + '/data/' + gdcFileUUID
 	try {
-		// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
-		// which may not be handled properly by the GDC API in qa-uat
-		// per Phil, should only be used as a temporary workaround
-		const response = await got(url, { headers, decompress: false })
-		if (response.statusCode >= 200 && response.statusCode < 400) {
-			// permission okay
-		} else {
-			console.log(`gdcCheckPermission() error for got(${url})`, response)
-			throw 'Invalid status code: ' + response.statusCode
-		}
-		/* 
-		// 
-		// TODO: may use node-fetch if it provides more informative error status and/or messages
-		// for example, got sometimes emits non_2XX_3XX_status status instead of the more informative Status 400
-		//
-		const fetch = require('node-fetch')
-		const response = await fetch(url, { headers, compress: false }); 
-		const body = await response.text(); console.log(3267, body, response, Object.fromEntries(response.headers), response.disturbed, response.error)
-		if (response.status > 399) { console.log(3268, Object.fromEntries(response.headers))
-			throw 'Invalid status code: ' + response.status
-		}
-		*/
+		await xfetch(url, { headers })
 	} catch (e) {
 		console.log('gdcCheckPermission error: ', e?.code || e)
 		// TODO refer to e.code
