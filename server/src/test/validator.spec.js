@@ -1,5 +1,4 @@
 import tape from 'tape'
-import fetch from 'node-fetch'
 import serverconfig from '../serverconfig.js'
 
 const host = `http://localhost:${serverconfig.port}`
