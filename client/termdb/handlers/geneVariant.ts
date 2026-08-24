@@ -1,4 +1,4 @@
-import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI, table2col } from '#dom'
+import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI, table2col, renderSampleTypeSelect } from '#dom'
 import type { VocabApi } from '#types'
 import { dtTerms, dtcnv, dtsnvindel } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
@@ -126,6 +126,12 @@ export class SearchHandler {
 					}
 				})
 			}
+			// create select menu for sample type
+			{
+				const [td1, td2] = table.addRow()
+				td1.text('Sample type')
+				this.sampleTypeSelect = renderSampleTypeSelect(td2, this.opts.app.vocabApi.termdbConfig)
+			}
 		}
 		this.toggleGeneSetRadioDisplay(mutationTypeTermIdx)
 		this.searchGene()
@@ -166,7 +172,6 @@ export class SearchHandler {
 		const geneSearch: any = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: this.opts.genomeObj,
-			termdbConfig: this.opts.app.vocabApi.termdbConfig,
 			row: searchDiv,
 			/* only allowing gene search for now because:
 			- coordinate search is not yet supported for gdc
@@ -177,9 +182,7 @@ export class SearchHandler {
 			callback: async () => await this.selectGene(geneSearch)
 		})
 		this.dom.searchbox = geneSearch.searchbox
-		if (!searchDiv.select('.sjpp-genesearch-sampletype-select').node()) {
-			searchDiv.select('.sja_genesearchinput').style('margin', '0px')
-		}
+		searchDiv.select('.sja_genesearchinput').style('margin', '0px')
 	}
 
 	/** focus on the search box of the current gene input (single gene or gene set) */
@@ -226,7 +229,6 @@ export class SearchHandler {
 		} else {
 			throw 'no gene or position specified'
 		}
-		if (geneSearch.sampleType) this.q.sampleType = geneSearch.sampleType
 		await this.runCallback()
 	}
 
@@ -278,6 +280,7 @@ export class SearchHandler {
 		// once the gene is picked, so the selected mutation type is not applied until the user
 		// either picks one of those settings or skips them
 		if (this.mayShowRememberedQ()) return
+		this.mayApplySampleType()
 		await this.applyMutationType()
 	}
 
@@ -323,6 +326,11 @@ export class SearchHandler {
 		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
 		this.q.predefined_groupset_idx = Number(selectedMutationType.value)
 		await this.submit(this.q)
+	}
+
+	mayApplySampleType() {
+		if (!this.sampleTypeSelect) return
+		this.q.sampleType = this.sampleTypeSelect.property('value')
 	}
 
 	async applyRememberedQ(q) {

@@ -98,16 +98,6 @@ type GeneSearchBoxArg = {
 	hideInputBeforeCallback?: boolean
 	/** option to disable the input, useful in demo mode */
 	disableInput?: boolean
-	/**
-	 * optional termdb config object (e.g. from appState.termdbConfig or cohort.termdb).
-	 * When provided and termdbConfig.hasSampleAncestry is true, a sample type
-	 * drop-down will be rendered next to the search box. The options are taken from
-	 * termdbConfig.sampleTypes[].name / .plural_name.
-	 */
-	termdbConfig?: {
-		hasSampleAncestry?: boolean
-		sampleTypes?: SampleTypeConfig
-	}
 	/** if true, allow user to type in a sequence mutation
 	partial support of hgvs https://varnomen.hgvs.org/recommendations/DNA/
 	limited to substitution/insertion/deletion on "g."
@@ -143,10 +133,6 @@ type GeneSearchBoxArg = {
 	allowVariant?: boolean
 }
 
-type SampleTypeConfig = {
-	[key: number]: { name: string; plural_name: string; parent_id: number | null }
-}
-
 /** "start/stop" are included when entered a coordinate or the coord is mapped from a gene/snp */
 type GeneOrSNPResult = { start: number; stop: number; ref?: string; alt?: string[] | string }
 /** "pos/ref/alt" are included when entered a variant */
@@ -168,9 +154,6 @@ type Result = Partial<GeneOrSNPResult> &
 		 *  Useful for recovering exact coordinates when string2pos() expands
 		 *  small ranges to a 400bp minimum span for the genome browser. */
 		actualposition?: { position: number; len: number }
-		/** Selected sample type. Present when the sample type drop-down is
-		 *  rendered. */
-		sampleType?: number
 	}
 
 export const debounceDelay = 500
@@ -182,8 +165,6 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	const tip = arg.tip,
 		row = arg.row
 	const result: Result = {}
-	let sampleType
-	let sampleTypeSelect
 
 	// validate arg
 	try {
@@ -222,37 +203,6 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		if (arg.allowVariant) {
 			placeholder += ', variant'
 			width += 40
-		}
-	}
-
-	if (arg.termdbConfig?.hasSampleAncestry) {
-		// dataset has sample ancestry, display menu for selecting sample type to query
-		// will assume that genomic data are only annotated for non-root/child sample types (e.g. diagnosis, relapse, PDX etc.)
-		// so display menu if multiple child sample types are defined
-		if (!arg.termdbConfig.sampleTypes) throw new Error('sampleTypes{} is missing')
-		const childSampleTypes: SampleTypeConfig = {}
-		for (const [k, v] of Object.entries(arg.termdbConfig.sampleTypes)) {
-			if (Number.isInteger(v.parent_id)) childSampleTypes[k] = v
-		}
-		if (Object.keys(childSampleTypes).length > 1) {
-			sampleTypeSelect = row
-				.append('select')
-				.attr('class', 'sjpp-genesearch-sampletype-select')
-				.style('margin-right', '8px')
-			sampleTypeSelect
-				.append('option')
-				.attr('value', '')
-				.attr('disabled', true)
-				.attr('selected', true)
-				.text('Sample type')
-			for (const [k, v] of Object.entries(childSampleTypes)) {
-				sampleTypeSelect.append('option').attr('value', k).text(v.name)
-			}
-			// initialise result with the selected option
-			sampleType = sampleTypeSelect.property('value')
-			sampleTypeSelect.on('change', function (this: HTMLSelectElement) {
-				sampleType = this.value
-			})
 		}
 	}
 
@@ -432,8 +382,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	// App drawer slide animation very jerky when .focus() is applied to any
 	// input box. Set focusOff: true to smoothly execute animations.
 	if (!arg.focusOff) {
-		if (sampleTypeSelect) sampleTypeSelect.node().focus()
-		else searchbox.node().focus()
+		searchbox.node().focus()
 	}
 	const searchStat = {
 		mark: row.append('span').style('margin-left', '5px'),
@@ -685,9 +634,6 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		// useful when user enters isoform accession and matches to genesymbol,
 		// and wants to be able to refer back to which isoform was entered
 		result.fromWhat = fromWhat
-
-		// sample type to query
-		if (sampleType) result.sampleType = sampleType
 
 		if (r && arg.callback) {
 			if (arg.hideInputBeforeCallback) {
