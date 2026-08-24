@@ -52,7 +52,6 @@ import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import { dtTermTypes, getGvQueryRegion, getGvQueryKey, matchesGvQueryEntry } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { isNumeric } from '#shared/helpers.js'
-import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_junction } from './j2/validate.ts'
 
 /*
@@ -168,7 +167,6 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_getTopTermsByType(ds, genome)
 			await validate_query_getTopMutatedGenes(ds, genome)
 			await validate_query_getSampleImages(ds, genome)
-			await makeAdHocDicTermdbQueries(ds)
 			await validate_query_rnaseqGeneCount(ds, genome)
 			await validate_query_singleSampleMutation(ds, genome)
 			await validate_query_singleSampleGenomeQuantification(ds, genome)
