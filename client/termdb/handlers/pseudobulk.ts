@@ -1,6 +1,6 @@
 import type { AppApi } from '#rx'
 import { TermTypeGroups, termType2label } from '#shared/terms.js'
-import { Tabs, type TabsInputEntry, make_radios, type OptionEntry, Menu, addGeneSearchbox } from '#dom'
+import { Tabs, type TabsInputEntry, make_radios, type OptionEntry, Menu, addGeneSearchbox, make_one_checkbox } from '#dom'
 import type { ClientGenome } from 'types/clientGenome'
 import type { PseudobulkTerm } from '#types'
 
@@ -17,8 +17,11 @@ export class SearchHandler {
 	genome!: ClientGenome
 	map?: Map<string, Map<string, any[]>>
 	selectedTerm?: PseudobulkSelection
+	multiSelect!: boolean
+	termSelection: any[] = []
+	memberTabs!: any
 
-	constructor() {}
+	constructor() { }
 
 	async init(opts) {
 		const pseudobulkTerms = this.validateOpts(opts)
@@ -26,6 +29,8 @@ export class SearchHandler {
 		this.app = opts.app
 		this.genome = opts.genomeObj
 		const holder = opts.holder.append('div').style('padding', '10px 0px')
+		this.multiSelect = opts?.usecase?.target == "aggregateMatrix"
+		this.selectedTerm = undefined
 
 		this.map = this.buildRenderingDataMap(pseudobulkTerms)
 		this.renderPseudobulkSearch(holder)
@@ -66,12 +71,12 @@ export class SearchHandler {
 		if (this.map.size === 1) {
 			// only one assay
 			const label = termType2label(this.map.keys().next().value!)
-			holder.append('div').text('Single-cell pseudobulk ' + label)
+			holder.append('div').style('padding-bottom', '10px').text('Single-cell pseudobulk ' + label)
 			this.renderMemberIdsByAssay(holder.append('div'), this.map)
 			return
 		}
 		const tabs = this.buildTabsOpts(this.map)
-		new Tabs({ holder, tabs, linePosition: 'right', tabsPosition: 'vertical' }).main()
+		new Tabs({ holder, tabs, tabsPosition: 'vertical' }).main()
 	}
 
 	buildTabsOpts(map) {
@@ -105,7 +110,10 @@ export class SearchHandler {
 	renderPseudobulkTerms(holder, memberIdMap, geneSearchHolder) {
 		if (memberIdMap.size === 1) {
 			const [memberId, terms] = memberIdMap.entries().next().value
-			this.renderCategoryRadios(holder, memberId, terms, geneSearchHolder)
+			if (this.multiSelect) {
+				this.renderCategoriesAsTerms(holder, terms)
+			}
+			else this.renderCategoryRadios(holder, memberId, terms, geneSearchHolder)
 			return
 		}
 
@@ -115,18 +123,18 @@ export class SearchHandler {
 			active: false,
 			testid: `sjpp-pseudobulk-member-${memberId}`,
 			callback: (_, tab) => {
-				this.selectedTerm = undefined
 				geneSearchHolder.selectAll('*').remove()
 				tab.contentHolder.selectAll('*').remove()
-				this.renderCategoryRadios(tab.contentHolder, memberId, terms, geneSearchHolder)
+				if (this.multiSelect) this.renderCategoriesAsTerms(tab.contentHolder, terms)
+				else this.renderCategoryRadios(tab.contentHolder, memberId, terms, geneSearchHolder)
 			}
 		}))
-		new Tabs({ holder, tabs }).main()
+		this.memberTabs = new Tabs({ holder, tabs, tabsPosition: 'vertical' })
+		this.memberTabs.main()
 	}
 
 	renderCategoryRadios(holder, memberId, terms, geneSearchHolder) {
 		if (!terms || terms.length < 1) throw new Error('No terms found for memberId')
-		holder.append('div').style('opacity', 0.7).text(`Select from ${memberId}:`)
 
 		const options: OptionEntry[] = terms.map(term => ({
 			label: term.name,
@@ -161,6 +169,93 @@ export class SearchHandler {
 				this.callback(createPseudobulkTerm(this.selectedTerm, geneSearch.geneSymbol))
 			}
 		})
+	}
+
+	/** Mimics the style and functionality of pills created in tree.js. 
+	 * Returns the term object(s) from termdbConfig.termType2terms.[TermTypeGroups.PSEUDOBULK]
+	 * without the gene. */
+	renderCategoriesAsTerms(holder: any, terms: PseudobulkTerm[]) {
+		holder.style('padding', '0px 10px')
+
+		const isSelected = term =>
+			this.app
+				.getState()
+				.selectedTerms.some(selected => selected.id === term.id && selected.type === term.type)
+
+		const setSelected = async (term, selected) => {
+			if (isSelected(term) === selected) return
+
+			term.selected = selected
+			this.callback(term)
+
+			if (!selected) {
+				const selectedTerms = this.app.getState().selectedTerms
+				const selectedIndex = selectedTerms.findIndex(selectedTerm => selectedTerm.id === term.id && selectedTerm.type === term.type)
+				if (selectedIndex !== -1) {
+					const nextSelectedTerms = selectedTerms.slice()
+					nextSelectedTerms.splice(selectedIndex, 1)
+					this.app.dispatch({
+						type: 'app_refresh',
+						state: { selectedTerms: nextSelectedTerms }
+					})
+				}
+			}
+			await new Promise(resolve => setTimeout(resolve, 0))
+		}
+
+		const selectAll = make_one_checkbox({
+			holder,
+			labeltext: 'Select all',
+			divstyle: { opacity: '0.7' },
+			callback: async () => {
+				const checked = selectAll.property('checked')
+				const changedTerms = terms.filter(term => isSelected(term) !== checked)
+				for (const term of changedTerms) {
+					await setSelected(term, checked)
+				}
+				update()
+			}
+		})
+
+		const wrapper = holder.append('div').style('display', 'block').style('padding', '10px 15px 0px')
+
+		const termRows = wrapper
+			.selectAll('.pseudobulk-term')
+			.data(terms, term => term.id)
+			.join(enter => {
+				const row = enter.append('div').attr('class', 'pseudobulk-term')
+
+				row
+					.append('div')
+					.attr('class', 'termlabel sja_filter_tag_btn sja_tree_click_term ts_pill')
+					.style('padding', '5px 8px')
+					.style('margin', '1px 0px')
+					.style('border-radius', '6px')
+					.text(term => term.name)
+
+				row.append('div').attr('class', 'termcheck').style('color', '#008000').html('&check;')
+
+				return row
+			})
+
+		termRows.select('.ts_pill').on('click', async (_, term) => {
+			await setSelected(term, !isSelected(term))
+			update()
+		})
+
+		const update = () => {
+			termRows
+				.select('.ts_pill')
+				.style('background-color', term => (isSelected(term) ? '#FFC20A80' : '#cfe2f3'))
+
+			termRows.select('.termcheck').style('display', term => (isSelected(term) ? 'inline-block' : 'none'))
+			const selectedCount = terms.filter(isSelected).length
+			selectAll
+				.property('checked', terms.length > 0 && selectedCount === terms.length)
+				.property('indeterminate', selectedCount > 0 && selectedCount < terms.length)
+		}
+
+		update()
 	}
 }
 
