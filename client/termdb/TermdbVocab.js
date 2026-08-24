@@ -1469,15 +1469,6 @@ export class TermdbVocab extends Vocab {
 		if (tw.term.id && (!tw.term.type || isDictionaryType(tw.term.type))) tw.term = { id: tw.term.id }
 	}
 
-	async buildAdHocDictionary() {
-		const body = {
-			dslabel: this.vocab.dslabel,
-			genome: this.vocab.genome,
-			for: 'buildAdHocDictionary'
-		}
-		return await this.dofetch3('termdb', { method: 'GET', body })
-	}
-
 	async getAggregateMatrixData(opts) {
 		const body = {
 			genome: this.vocab.genome,
