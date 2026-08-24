@@ -58,6 +58,9 @@ export async function init(
 		cellBoundaries?: string
 		/** fetch cellBoundaries (expression fills need the polygons) but don't draw their strokes */
 		hideCellStrokes?: boolean
+		/** fill each cell by the cell_type column of the boundaries CSV (when
+		 present), one categorical color per type, with a legend */
+		showCellTypes?: boolean
 		nucleusBoundaries?: string
 		annotationLevel?: string | number
 		geneExpression?: string
@@ -173,18 +176,60 @@ export async function init(
 			[opts.cellBoundaries, 'rgba(0, 200, 80, 0.9)'],
 			[opts.nucleusBoundaries, 'rgba(0, 150, 255, 0.9)']
 		]
-		let cellPolys: CellPoly[] | undefined // kept for the expression fills below
+		let cellPolys: CellPoly[] | undefined // kept for the expression/type fills below
+		let cellTypes: { [id: string]: string } | undefined // cell_id -> annotated type
 		for (const [file, color] of overlays) {
 			if (!file) continue // that overlay was not requested
 			try {
-				const polys = await fetchBoundaries(host, sq, file, mppX, mppY) // csv -> px polygons
+				const { polys, cellTypes: types } = await fetchBoundaries(host, sq, file, mppX, mppY) // csv -> px polygons
 				if (file === opts.cellBoundaries) {
-					cellPolys = polys // expression fills reuse these rings
+					cellPolys = polys // expression/type fills reuse these rings
+					cellTypes = types // annotation column of the same csv, if present
 					if (opts.hideCellStrokes) continue // polygons fetched, strokes suppressed
 				}
 				map.addLayer(strokeLayer(polys, color, maxResolution)) // draw on top of the slide
 			} catch (e: any) {
 				sayerror(holder, `Error loading ${file}: ${e.message || e}`) // one overlay failing kills nothing else
+			}
+		}
+
+		// cell-type overlay: fill each annotated cell in its type's categorical
+		// color, with its own legend (top-left; the gene legend uses top-right).
+		// No-op when the boundaries csv carries no cell_type column.
+		if (opts.showCellTypes && cellPolys && cellTypes && Object.keys(cellTypes).length) {
+			// types ordered by abundance so colors go to the biggest populations first
+			const counts: { [t: string]: number } = {}
+			for (const id in cellTypes) counts[cellTypes[id]] = (counts[cellTypes[id]] || 0) + 1
+			const types = Object.keys(counts).sort((a, b) => counts[b] - counts[a])
+			const typeColor: { [t: string]: string } = {}
+			for (const [i, t] of types.entries()) typeColor[t] = CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
+			map.addLayer(cellTypeLayer(cellPolys, cellTypes, typeColor))
+
+			mapDiv.style('position', 'relative')
+			const legend = mapDiv
+				.append('div')
+				.style('position', 'absolute')
+				.style('top', '8px')
+				.style('left', '8px')
+				.style('z-index', '10')
+				.style('background', 'rgba(255,255,255,0.85)')
+				.style('padding', '6px 10px')
+				.style('border-radius', '4px')
+				.style('font', '12px system-ui')
+				.style('max-height', '60%')
+				.style('overflow-y', 'auto')
+			legend.append('div').style('font-weight', 'bold').style('margin-bottom', '2px').text('Cell type')
+			for (const t of types) {
+				const row = legend.append('div').style('margin', '2px 0')
+				row
+					.append('span')
+					.style('display', 'inline-block')
+					.style('width', '10px')
+					.style('height', '10px')
+					.style('margin-right', '6px')
+					.style('border', '1px solid #ccc')
+					.style('background', `rgb(${typeColor[t]})`)
+				row.append('span').text(`${t} (${counts[t]})`)
 			}
 		}
 
@@ -297,18 +342,26 @@ async function fetchBoundaries(
 	file: string,
 	mppX: number,
 	mppY: number
-): Promise<CellPoly[]> {
+): Promise<{ polys: CellPoly[]; cellTypes?: { [id: string]: string } }> {
 	const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}`) // raw csv text
 	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
 	const text = await res.text()
 
-	// rows: "cell_id",vertex_x,vertex_y — one cell's vertices are contiguous.
+	// rows: "cell_id",vertex_x,vertex_y[,...annotations] — one cell's vertices
+	// are contiguous. An optional cell_type header column (added by merging a
+	// per-cell annotation export into the CSV) labels every vertex row of the
+	// cell with its assigned type; captured per cell for the type overlay.
 	// OL's Zoomify extent is [0,-h,w,0]: x in px to the right, y in px negated.
+	const lines = text.split('\n')
+	const unquote = (s?: string) => (s || '').replace(/"/g, '').trim()
+	const typeIdx = lines[0] ? lines[0].split(',').findIndex(h => unquote(h) == 'cell_type') : -1
+	const cellTypes: { [id: string]: string } | undefined = typeIdx > 2 ? {} : undefined
 	const cells: CellPoly[] = [] // finished polygons
 	let ring: number[][] = [] // vertices of the cell being read
 	let curId = '' // the cell those vertices belong to
-	for (const line of text.split('\n')) {
-		const [id, xs, ys] = line.split(',') // one vertex per row
+	for (const line of lines) {
+		const fields = line.split(',') // one vertex per row
+		const [id, xs, ys] = fields
 		const x = Number(xs)
 		if (!xs || Number.isNaN(x)) continue // header / blank line
 		if (id !== curId) {
@@ -316,11 +369,16 @@ async function fetchBoundaries(
 			if (ring.length > 2) cells.push({ id: curId.replace(/"/g, ''), ring })
 			ring = []
 			curId = id
+			if (cellTypes) {
+				// annotation columns never contain commas, so the type is at its header index
+				const t = unquote(fields[typeIdx])
+				if (t) cellTypes[unquote(id)] = t // QC-filtered cells have an empty field
+			}
 		}
 		ring.push([x / mppX, -Number(ys) / mppY]) // µm -> level-0 px, y negated for OL
 	}
 	if (ring.length > 2) cells.push({ id: curId.replace(/"/g, ''), ring }) // don't drop the last cell
-	return cells
+	return { polys: cells, cellTypes }
 }
 
 /** One stroke-only vector layer holding every polygon; maxResolution (when
@@ -342,6 +400,53 @@ const SHADES = 8
 // fill colors ("r, g, b") cycled per gene; green/blue-ish avoided so fills
 // stay distinguishable from the cell (green) and nucleus (blue) strokes
 const GENE_COLORS = ['255, 0, 0', '0, 90, 255', '255, 165, 0', '160, 0, 200', '0, 160, 160', '200, 160, 0']
+
+// categorical palette ("r, g, b") for the cell-type overlay, most-abundant
+// type first; ~tableau20 order, cycled if a sample has more types
+const CELL_TYPE_COLORS = [
+	'31, 119, 180',
+	'255, 127, 14',
+	'44, 160, 44',
+	'214, 39, 40',
+	'148, 103, 189',
+	'140, 86, 75',
+	'227, 119, 194',
+	'127, 127, 127',
+	'188, 189, 34',
+	'23, 190, 207',
+	'174, 199, 232',
+	'255, 187, 120',
+	'152, 223, 138',
+	'255, 152, 150',
+	'197, 176, 213',
+	'196, 156, 148',
+	'247, 182, 210',
+	'199, 199, 199',
+	'219, 219, 141',
+	'158, 218, 229'
+]
+
+/** One fill layer for the cell-type overlay: cells grouped by type, one
+ MultiPolygon feature per type in that type's color at a fixed opacity.
+ Unannotated (QC-filtered) cells stay unfilled. */
+function cellTypeLayer(
+	cells: CellPoly[],
+	cellTypes: { [id: string]: string },
+	typeColor: { [t: string]: string }
+): VectorLayer {
+	const byType: { [t: string]: number[][][][] } = {} // polygon lists per type
+	for (const c of cells) {
+		const t = cellTypes[c.id]
+		if (t) (byType[t] ||= []).push([c.ring])
+	}
+	const features: Feature[] = [] // one feature per type
+	for (const t in byType) {
+		const f = new Feature(new MultiPolygon(byType[t]))
+		f.setStyle(new Style({ fill: new Fill({ color: `rgba(${typeColor[t]}, 0.45)` }) }))
+		features.push(f)
+	}
+	return new VectorLayer({ source: new VectorSource({ features }) })
+}
 
 /** Fill each expressing cell with `rgb` at an opacity scaling with the cell's
  transcript count for the chosen gene; zero-count cells stay unfilled. Cells

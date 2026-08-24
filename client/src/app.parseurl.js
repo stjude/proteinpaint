@@ -51,7 +51,9 @@ upon error, throw err message as a string
 				geneExpression: urlp.get('gene_expression'),
 				geneExpressionFile: urlp.get('gene_expression_file'),
 				// optional: sum per-cell counts over these genes into ONE overlay
-				geneGroups: urlp.get('gene_groups')
+				geneGroups: urlp.get('gene_groups'),
+				// optional: fill cells by the cell_type column of the boundaries CSV
+				showCellTypes: urlp.has('cell_types')
 			},
 			arg.holder
 		)

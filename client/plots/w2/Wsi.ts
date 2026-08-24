@@ -199,6 +199,14 @@ class Wsi extends PlotBase implements RxComponent {
 					boxLabel: 'show'
 				},
 				{
+					label: 'Cell types',
+					title: 'Fill cells by the cell_type annotation of the boundaries CSV (when present)',
+					type: 'checkbox',
+					chartType: 'wsi',
+					settingsKey: 'showCellTypes',
+					boxLabel: 'show'
+				},
+				{
 					label: 'Gene expression',
 					title: 'Show or hide the gene expression overlay',
 					type: 'checkbox',
@@ -251,6 +259,8 @@ export function getDefaultWsiSettings(overrides = {}): Settings {
 		showCellBoundaries: true,
 		showNucleusBoundaries: true,
 		showGeneExpression: true,
+		showCellTypes: false, // opt-in: fills all annotated cells, visually heavy
+
 		geneExpression: null,
 		annotationLevel: null,
 		spatialMode: 'gene_expression'

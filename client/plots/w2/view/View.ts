@@ -91,8 +91,9 @@ export class View {
 					slideQuery: params,
 					label: image.fileName,
 					// expression fills need the cell polygons even when their strokes are hidden
-					cellBoundaries: s.showCellBoundaries || genes ? image.cellBoundaries : undefined,
+					cellBoundaries: s.showCellBoundaries || s.showCellTypes || genes ? image.cellBoundaries : undefined,
 					hideCellStrokes: !s.showCellBoundaries,
+					showCellTypes: s.showCellTypes,
 					nucleusBoundaries: s.showNucleusBoundaries ? image.nucleusBoundaries : undefined,
 					geneExpressionFile: image.geneExpressionFile,
 					geneExpression: s.spatialMode == 'gene_groups' ? undefined : genes,
