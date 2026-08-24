@@ -454,6 +454,7 @@ export class ScatterLegend {
 		const shift = 30
 		minG
 			.append('path')
+			.attr('data-testid', 'sjpp-legend-min-scale-dot')
 			.attr('d', shapes[0])
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
@@ -468,6 +469,7 @@ export class ScatterLegend {
 
 		maxG
 			.append('path')
+			.attr('data-testid', 'sjpp-legend-max-scale-dot')
 			.attr('d', shapes[0])
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
@@ -519,14 +521,16 @@ export class ScatterLegend {
 				div.append('label').text('Min:')
 				const minInput: any = div
 					.append('input')
+					.attr('data-testid', 'sjpp-legend-min-scale-input')
 					.attr('type', 'number')
 					.attr('min', minShapeSize)
 					.attr('step', '0.5')
 					.attr('max', maxShapeSize)
 					.style('width', '50px')
-					.attr('value', this.scatter.settings.minShapeSize)
+					.property('value', this.scatter.settings.minShapeSize)
 					.on('change', () => {
-						const value = parseFloat(minInput.node().value)
+						const value = clampValue(parseFloat(minInput.node().value), minShapeSize, maxShapeSize)
+						minInput.property('value', value)
 						this.scatter.config.settings.sampleScatter.minShapeSize = value
 						this.scatter.app.dispatch({
 							type: 'plot_edit',
@@ -537,14 +541,16 @@ export class ScatterLegend {
 				div.append('label').text('Max:')
 				const maxInput: any = div
 					.append('input')
+					.attr('data-testid', 'sjpp-legend-max-scale-input')
 					.attr('type', 'number')
 					.attr('step', '0.5')
 					.attr('min', minShapeSize)
 					.attr('max', maxShapeSize)
 					.style('width', '50px')
-					.attr('value', this.scatter.settings.maxShapeSize)
+					.property('value', this.scatter.settings.maxShapeSize)
 					.on('change', () => {
-						const value: any = parseFloat(maxInput.node().value)
+						const value: any = clampValue(parseFloat(maxInput.node().value), minShapeSize, maxShapeSize)
+						maxInput.property('value', value)
 						this.scatter.config.settings.sampleScatter.maxShapeSize = value
 						this.scatter.app.dispatch({
 							type: 'plot_edit',
@@ -589,7 +595,11 @@ export class ScatterLegend {
 		})
 	}
 }
-
+function clampValue(inputValue: number, minValue: number, maxValue: number): number {
+	if (maxValue < inputValue) inputValue = maxValue
+	if (minValue > inputValue) inputValue = minValue
+	return inputValue
+}
 export function getTitle(name, size = 30, complete = false) {
 	if (name.length > size && !complete) name = name.slice(0, size) + '...'
 	return name
