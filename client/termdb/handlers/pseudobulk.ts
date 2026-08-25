@@ -18,10 +18,6 @@ export class SearchHandler {
 	map?: Map<string, Map<string, any[]>>
 	selectedTerm?: PseudobulkSelection
 	multiSelect!: boolean
-	termSelection: any[] = []
-	memberTabs!: any
-
-	constructor() { }
 
 	async init(opts) {
 		const pseudobulkTerms = this.validateOpts(opts)
@@ -101,9 +97,26 @@ export class SearchHandler {
 	}
 
 	renderTermdByMemberId(holder, memberIdMap) {
-		const layout = holder.append('div').style('display', 'flex').style('align-items', 'flex-start').style('gap', '30px')
-		const pseudoTermsWrapper = layout.append('div').attr('data-testid', 'sjpp-pseudobulk-terms-wrapper')
-		const geneSearchWrapper = layout.append('div').attr('data-testid', 'sjpp-pseudobulk-gene-search-wrapper')
+		const layout = holder
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'flex-start')
+			.style('gap', '30px')
+			.style('width', '100%')
+			.style('min-width', '0')
+
+		const pseudoTermsWrapper = layout
+			.append('div')
+			.attr('data-testid', 'sjpp-pseudobulk-terms-wrapper')
+			.style('flex', '1 1 0')
+			.style('min-width', '0')
+
+		const geneSearchWrapper = layout
+			.append('div')
+			.attr('data-testid', 'sjpp-pseudobulk-gene-search-wrapper')
+			.style('flex', '1 1 0')
+			.style('min-width', '0')
+
 		this.renderPseudobulkTerms(pseudoTermsWrapper, memberIdMap, geneSearchWrapper)
 	}
 
@@ -129,8 +142,7 @@ export class SearchHandler {
 				else this.renderCategoryRadios(tab.contentHolder, memberId, terms, geneSearchHolder)
 			}
 		}))
-		this.memberTabs = new Tabs({ holder, tabs, tabsPosition: 'vertical' })
-		this.memberTabs.main()
+		new Tabs({ holder, tabs, tabsPosition: 'vertical' }).main()
 	}
 
 	renderCategoryRadios(holder, memberId, terms, geneSearchHolder) {
@@ -171,36 +183,22 @@ export class SearchHandler {
 		})
 	}
 
-	/** Mimics the style and functionality of pills created in tree.js. 
+	/** Mimics the style and functionality of pills created in tree.js.
 	 * Returns the term object(s) from termdbConfig.termType2terms.[TermTypeGroups.PSEUDOBULK]
 	 * without the gene. */
 	renderCategoriesAsTerms(holder: any, terms: PseudobulkTerm[]) {
 		holder.style('padding', '0px 10px')
 
-		const isSelected = term =>
-			this.app
-				.getState()
-				.selectedTerms.some(selected => selected.id === term.id && selected.type === term.type)
+		const isSameTerm = (a, b) => a.id === b.id && a.type === b.type
+		const isSelected = term => this.app.getState().selectedTerms.some(selected => isSameTerm(selected, term))
 
 		const setSelected = async (term, selected) => {
-			if (isSelected(term) === selected) return
-
-			term.selected = selected
-			this.callback(term)
-
-			if (!selected) {
-				const selectedTerms = this.app.getState().selectedTerms
-				const selectedIndex = selectedTerms.findIndex(selectedTerm => selectedTerm.id === term.id && selectedTerm.type === term.type)
-				if (selectedIndex !== -1) {
-					const nextSelectedTerms = selectedTerms.slice()
-					nextSelectedTerms.splice(selectedIndex, 1)
-					this.app.dispatch({
-						type: 'app_refresh',
-						state: { selectedTerms: nextSelectedTerms }
-					})
-				}
-			}
-			await new Promise(resolve => setTimeout(resolve, 0))
+			const selectedTerms = this.app.getState().selectedTerms
+			if (selectedTerms.some(selectedTerm => isSameTerm(selectedTerm, term)) === selected) return
+			const nextSelectedTerms = selected
+				? [...selectedTerms, term]
+				: selectedTerms.filter(selectedTerm => !isSameTerm(selectedTerm, term))
+			await this.app.dispatch({ type: 'app_refresh', state: { selectedTerms: nextSelectedTerms } })
 		}
 
 		const selectAll = make_one_checkbox({
@@ -209,10 +207,11 @@ export class SearchHandler {
 			divstyle: { opacity: '0.7' },
 			callback: async () => {
 				const checked = selectAll.property('checked')
-				const changedTerms = terms.filter(term => isSelected(term) !== checked)
-				for (const term of changedTerms) {
-					await setSelected(term, checked)
-				}
+				const selectedTerms = this.app.getState().selectedTerms
+				const nextSelectedTerms = checked
+					? [...selectedTerms, ...terms.filter(term => !selectedTerms.some(selected => isSameTerm(selected, term)))]
+					: selectedTerms.filter(selected => !terms.some(term => isSameTerm(selected, term)))
+				await this.app.dispatch({ type: 'app_refresh', state: { selectedTerms: nextSelectedTerms } })
 				update()
 			}
 		})
@@ -223,7 +222,7 @@ export class SearchHandler {
 			.selectAll('.pseudobulk-term')
 			.data(terms, term => term.id)
 			.join(enter => {
-				const row = enter.append('div').attr('class', 'pseudobulk-term')
+				const row = enter .append('div').attr('class', 'pseudobulk-term')
 
 				row
 					.append('div')
