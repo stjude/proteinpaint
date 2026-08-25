@@ -30,6 +30,9 @@ class Wsi extends PlotBase implements RxComponent {
 	type: string
 	dom: WsiDom
 	interactions?: WsiInteractions
+	/** showCellTypes of the previous render, to tell which exclusive fill
+	 checkbox was just toggled when both end up checked */
+	private prevShowCellTypes = false
 
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
@@ -69,6 +72,19 @@ class Wsi extends PlotBase implements RxComponent {
 		if (!this.interactions) throw 'Interactions not initialized [wsi main()]'
 
 		const settings: Settings = config.settings.wsi // selection + overlay settings
+
+		// the cell-type and gene-expression FILLS are mutually exclusive
+		// (unreadable on top of each other): when both boxes end up checked, the
+		// one just toggled wins and the other is unchecked. Unchecked 'Gene
+		// expression' only hides the fills — hover counts stay (View.ts).
+		if (settings.showCellTypes && settings.showGeneExpression) {
+			// whichever was already on before this edit is the one to turn off
+			const off = this.prevShowCellTypes ? 'showCellTypes' : 'showGeneExpression'
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { wsi: { [off]: false } } } })
+			return
+		}
+		this.prevShowCellTypes = settings.showCellTypes
+
 		this.dom.error.text('') // clear any previous error banner
 
 		// which samples have whole-slide images on disk?
@@ -119,8 +135,11 @@ class Wsi extends PlotBase implements RxComponent {
 							wsi: {
 								geneExpression: configured.join(',') || genes[0] || '',
 								annotationLevel: settings.annotationLevel ?? spImage.annotationLevel,
-								// dataset default (w2.cellTypes); the burger checkbox overrides after
-								showCellTypes: spImage.cellTypes ?? settings.showCellTypes
+								// dataset default (w2.cellTypes); the burger checkbox overrides
+								// after. Fills are mutually exclusive, so cell types on means
+								// expression fills off (hover counts stay either way)
+								showCellTypes: spImage.cellTypes ?? settings.showCellTypes,
+								showGeneExpression: spImage.cellTypes ? false : settings.showGeneExpression
 							}
 						}
 					}

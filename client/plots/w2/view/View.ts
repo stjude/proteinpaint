@@ -83,8 +83,9 @@ export class View {
 			// boundary/expression overlays, addressing the slide via the dataset.
 			// Burger-menu settings override the dataset's values (null = not edited yet)
 			const s = this.settings
-			// gene list to overlay: checkbox off = none; field never edited = dataset default
-			const genes = s.showGeneExpression ? s.geneExpression ?? image.geneExpression : undefined
+			// genes always load so the hover tooltip reports their counts; the
+			// 'Gene expression' checkbox only controls the fill overlay
+			const genes = s.geneExpression ?? image.geneExpression
 			const direct = await import('../wsi.direct') // lazy-load the overlay viewer
 			await direct.init(
 				{
@@ -99,6 +100,7 @@ export class View {
 					geneExpressionFile: image.geneExpressionFile,
 					geneExpression: s.spatialMode == 'gene_groups' ? undefined : genes,
 					geneGroups: s.spatialMode == 'gene_groups' ? genes : undefined,
+					hideExpressionFills: !s.showGeneExpression,
 					annotationLevel: s.annotationLevel ?? image.annotationLevel,
 					width: '100%',
 					height: this.settings.viewerHeight

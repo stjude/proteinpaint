@@ -30,6 +30,8 @@
  overlaid on the map's top-right corner shows each gene's color gradient and
  count range; cells expressing several genes blend their fills.
  An unknown gene name surfaces an error in the UI (other genes still render).
+ When the cell-type overlay is shown, expression fills/legend are suppressed
+ (never both fills at once) — counts still appear in the hover tooltip.
 
  &gene_groups=g1,g2,g3 instead sums each cell's counts over all listed genes
  and draws ONE overlay of the totals in a single color. Can be combined with
@@ -78,6 +80,9 @@ export async function init(
 		geneExpression?: string
 		geneExpressionFile?: string
 		geneGroups?: string
+		/** fetch the gene counts (hover tooltip reports them) but draw no
+		 expression fills/legend — the mass burger's unchecked 'Gene expression' */
+		hideExpressionFills?: boolean
 		/** map div size; defaults fit the full-window direct viewer */
 		width?: string
 		height?: string
@@ -170,6 +175,25 @@ export async function init(
 				}, ${meta.levels} levels`
 			)
 
+		// legends are absolute-positioned at the map's top corners, but the map is
+		// taller than what's usually on screen: scrolling down moves the map's top
+		// (legend included) above the viewport while the image still fills it.
+		// Pin: push each legend down by however much of the map's top is hidden,
+		// clamped so it never pokes out of the map's bottom either. Capture-phase
+		// scroll listener also catches scrolling ancestors (mass sandbox), not
+		// just the window.
+		const pinned: any[] = [] // legend selections to keep in view
+		const repin = () => {
+			const node = mapDiv.node()
+			if (!node.isConnected) return window.removeEventListener('scroll', repin, true) // viewer re-rendered
+			const r = node.getBoundingClientRect()
+			for (const box of pinned) {
+				const top = Math.min(Math.max(8, 8 - r.top), Math.max(8, r.height - box.node().offsetHeight - 8))
+				box.style('top', `${top}px`)
+			}
+		}
+		window.addEventListener('scroll', repin, { capture: true, passive: true })
+
 		// segmentation overlays: boundary CSVs are in µm, converted to level-0
 		// pixels via the slide's mpp (defaulting to 1 = coords already in px)
 		const [mppX, mppY] = Array.isArray(meta.mpp) && meta.mpp.length === 2 ? meta.mpp : [1, 1]
@@ -208,7 +232,11 @@ export async function init(
 		// cell-type overlay: fill each annotated cell in its type's categorical
 		// color, with its own legend (top-left; the gene legend uses top-right).
 		// No-op when the boundaries csv carries no cell_type column.
-		if (opts.showCellTypes && cellPolys && cellTypes && Object.keys(cellTypes).length) {
+		// While it is shown, the gene expression FILLS are suppressed below (the
+		// two fills are unreadable on top of each other) — gene counts are still
+		// fetched so hovering a cell reports its expression.
+		const typesShown = !!(opts.showCellTypes && cellPolys && cellTypes && Object.keys(cellTypes).length)
+		if (typesShown && cellPolys && cellTypes) {
 			// types ordered by abundance so colors go to the biggest populations first
 			const counts: { [t: string]: number } = {}
 			for (const id in cellTypes) counts[cellTypes[id]] = (counts[cellTypes[id]] || 0) + 1
@@ -230,7 +258,7 @@ export async function init(
 				.append('div')
 				.style('position', 'absolute')
 				.style('top', '8px')
-				.style('left', '8px')
+				.style('left', '40px') // clear of the OL zoom buttons (~31px wide at left 8px)
 				.style('z-index', '10')
 				.style('background', 'rgba(255,255,255,0.85)')
 				.style('padding', '6px 10px')
@@ -251,6 +279,8 @@ export async function init(
 					.style('background', `rgb(${typeColor[t]})`)
 				row.append('span').text(`${t} (${counts[t]})`)
 			}
+			pinned.push(legend) // keep in view when the page scrolls
+			repin()
 		}
 
 		// per-gene count maps kept for the hover tooltip below
@@ -295,6 +325,8 @@ export async function init(
 							.style('padding', '6px 10px')
 							.style('border-radius', '4px')
 							.style('font', '12px system-ui')
+						pinned.push(legend) // keep in view when the page scrolls
+						repin()
 					}
 					const row = legend.append('div').style('margin', '2px 0')
 					row.append('span').style('margin-right', '6px').text(name)
@@ -318,10 +350,12 @@ export async function init(
 						sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`)
 						continue // one bad gene doesn't block the others
 					}
+					geneCounts.push({ gene, cells: r.cells }) // tooltip shows this gene's per-cell count
+					// cell-type fills win / fills unchecked; counts stay hover-only
+					if (typesShown || opts.hideExpressionFills) continue
 					const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length] // this gene's fill color
 					map.addLayer(expressionLayer(cellPolys, r.cells, r.max, rgb)) // fill the expressing cells
 					addLegend(rgb, gene, r.max) // gradient + count range in the legend
-					geneCounts.push({ gene, cells: r.cells }) // tooltip shows this gene's per-cell count
 				}
 
 				// gene_groups: sum each cell's counts over the group, one layer/color
@@ -338,12 +372,15 @@ export async function init(
 						for (const id in r.cells) total[id] = (total[id] || 0) + r.cells[id] // accumulate per cell
 					}
 					if (found.length) {
-						let max = 0 // the summed overlay's own count ceiling
-						for (const id in total) if (total[id] > max) max = total[id]
-						const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length] // next unused palette color
-						map.addLayer(expressionLayer(cellPolys, total, max, rgb)) // ONE overlay of the totals
-						addLegend(rgb, found.join('+'), max) // e.g. 'PTPRC+EPCAM'
 						geneCounts.push({ gene: found.join('+'), cells: total }) // summed count in the tooltip
+						if (!typesShown && !opts.hideExpressionFills) {
+							// cell-type fills win; the summed counts stay hover-only
+							let max = 0 // the summed overlay's own count ceiling
+							for (const id in total) if (total[id] > max) max = total[id]
+							const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length] // next unused palette color
+							map.addLayer(expressionLayer(cellPolys, total, max, rgb)) // ONE overlay of the totals
+							addLegend(rgb, found.join('+'), max) // e.g. 'PTPRC+EPCAM'
+						}
 					}
 				}
 			} catch (e: any) {
@@ -394,10 +431,10 @@ export async function init(
 					tip.style('display', 'none')
 					return
 				}
-				const rows = [`cell ${hit.id}`]
+				const rows = [`cell id: ${hit.id}`]
 				const t = cellTypes?.[hit.id]
-				if (t) rows.push(t)
-				for (const g of geneCounts) rows.push(`${g.gene}: ${g.cells[hit.id] || 0}`)
+				if (t) rows.push(`cell type: ${t}`)
+				for (const g of geneCounts) rows.push(`${g.gene} expression: ${(g.cells[hit.id] || 0).toFixed(1)}`)
 				tip
 					.style('display', 'block')
 					.style('left', `${evt.pixel[0] + 12}px`)
