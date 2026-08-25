@@ -273,7 +273,7 @@ export class ScatterViewModelBase {
 			.transition()
 			.duration(duration)
 			.attr('name', 'serie')
-			.attr('data-testid', c => 'scatter-dot-' + (c.sample ?? ''))
+			.attr('data-testid', c => 'scatter-dot-' + (c.sample ?? c.sampleId ?? ''))
 			.attr('transform', c => this.model.transform(chart, c))
 			.attr('d', c => this.model.getShape(chart, c))
 			.attr('fill', c => this.model.getColor(c, chart))
@@ -284,7 +284,7 @@ export class ScatterViewModelBase {
 			.enter()
 			.append('path')
 			.attr('name', 'serie')
-			.attr('data-testid', c => 'scatter-dot-' + (c.sample ?? ''))
+			.attr('data-testid', c => 'scatter-dot-' + (c.sample ?? c.sampleId ?? ''))
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
 			.attr('transform', c => this.model.transform(chart, c))
 			.attr('d', c => this.model.getShape(chart, c))
