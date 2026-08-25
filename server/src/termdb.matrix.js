@@ -688,12 +688,15 @@ export function setSampleLstData(termWrappers, samples, scopedSamples) {
 		const groups = tw.q?.groups
 		if (!Array.isArray(groups)) throw 'samplelst tw.q.groups[] is not an array'
 		for (const group of groups) {
-			/* ids are request data: normalize to string so that a numeric sample id still matches the
-			always-string keys that for..in yields below, and drop the blanks -- including '', which no
-			sampleidmap row can carry and which would otherwise become an empty-named sample */
+			/* sampleId || sample, deliberately the same falsy-fallback rule as sampleLstSql.getCTE():
+			the two paths read the same client tw, so a divergence here would let one dataset annotate
+			a sample that another drops. ids are request data, so also normalize to string -- a numeric
+			id must still match the always-string keys that for..in yields below -- and drop the blanks,
+			including '', which no sampleidmap row can carry and which would otherwise become an
+			empty-named sample. */
 			const ids = new Set(
 				(group.values || [])
-					.map(v => v?.sampleId ?? v?.sample)
+					.map(v => v?.sampleId || v?.sample)
 					.filter(id => id !== undefined && id !== null && id !== '')
 					.map(String)
 			)

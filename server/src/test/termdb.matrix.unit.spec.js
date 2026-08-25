@@ -1,11 +1,13 @@
 import tape from 'tape'
 import {
 	divideTerms,
+	getData,
 	id2sampleRef,
 	setSampleLstData,
 	isNegatedSampleLstOnlyRequest,
 	hasFilterTermsUnsupportedByFilterSamples
 } from '../termdb.matrix.js'
+import { getAuthApi, authApi } from '../auth.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
 
@@ -30,6 +32,9 @@ setSampleLstData: handles multiple samplelst terms and empty/missing group value
 setSampleLstData: throws when q.groups is not an array
 isNegatedSampleLstOnlyRequest: only fires when a negation has no universe to subtract from
 hasFilterTermsUnsupportedByFilterSamples: detects filter terms filterSamples() cannot resolve
+getData: samplelst overlay resolves on a dataset without a sqlite db
+getData: an untrustworthy scope adds no absent group member
+getData: a request of only a negated samplelst group is rejected
 */
 
 tape('id2sampleRef(): prefers id2sampleRefs, else id2sampleName raw-then-Number, no NaN on string ids', test => {
@@ -477,15 +482,21 @@ tape('setSampleLstData: normalizes ids and ignores values without one', t => {
 	setSampleLstData([blanks], samples2)
 	t.deepEqual(Object.keys(samples2), ['3'], 'blank values are dropped, numeric id is keyed as a string')
 
-	// '' cannot be matched through sampleidmap on the sql path, so it must not become a row here
-	const empty = {
+	/* the falsy-fallback rule is sampleLstSql.getCTE()'s: '' falls through to value.sample, and a
+	0 id resolves to nothing on either path. '' must never become a row -- no sampleidmap row can
+	carry it */
+	const fallback = {
 		$id: 'g',
 		term: { type: 'samplelst', name: 'E' },
-		q: { groups: [{ name: 'G1', values: [{ sampleId: '' }, { sampleId: 0 }] }] }
+		q: { groups: [{ name: 'G1', values: [{ sampleId: '', sample: 'c1' }, { sampleId: 0 }, { sample: '' }] }] }
 	}
 	const samples3 = {}
-	setSampleLstData([empty], samples3)
-	t.deepEqual(Object.keys(samples3), ['0'], 'an empty-string id is dropped while a 0 id is kept')
+	setSampleLstData([fallback], samples3)
+	t.deepEqual(
+		Object.keys(samples3),
+		['c1'],
+		'an empty sampleId falls through to value.sample, and 0 / blank ids create no row'
+	)
 	t.end()
 })
 
@@ -599,5 +610,134 @@ tape('hasFilterTermsUnsupportedByFilterSamples: detects filter terms filterSampl
 		false,
 		'a tvs without a term type is skipped rather than thrown on'
 	)
+	t.end()
+})
+
+/* ---- getData() orchestration for a dataset without a sqlite db ----
+The helper specs above cover the pieces in isolation; these drive the whole path the way a
+violin request off the DE volcano does: samplelst is split out of dictTerms, the gene-expression
+query supplies the samples, the scope is resolved, and the groups are annotated onto the result.
+*/
+
+// getData calls authApi.mayAdjustFilter(). Assign the shared open-access api once, the same
+// idempotent way omnisearch.unit.spec.ts does -- for a ds with no credentials it is a no-op.
+async function ensureOpenAuth() {
+	if (authApi) return
+	const app = { doNotFreezeAuthApi: true, get() {}, post() {}, all() {}, use() {} }
+	await getAuthApi(app, {}, {}, true)
+}
+
+const geneTw = () => ({
+	$id: 'exp',
+	term: { gene: 'CLN8', name: 'CLN8', type: 'geneExpression' },
+	q: { mode: 'continuous' }
+})
+
+// 'outsider' is listed by the client but is not in the dataset's filtered scope below
+const sampleLstTw = () => ({
+	$id: 'grp',
+	term: {
+		name: 'Male vs Female',
+		type: 'samplelst',
+		values: { Male: { key: 'Male', label: 'Male' }, Female: { key: 'Female', label: 'Female' } }
+	},
+	q: {
+		type: 'custom-samplelst',
+		groups: [
+			{ name: 'Male', in: true, values: [{ sampleId: 'c1' }, { sampleId: 'c2' }] },
+			{ name: 'Female', in: true, values: [{ sampleId: 'c3' }, { sampleId: 'outsider' }] }
+		]
+	}
+})
+
+/* a gdc-like ds: no cohort.db, dictionary terms come from a ds getter, gene expression from
+ds.queries, and the authorized sample scope from ds.cohort.termdb.filterSamples() */
+function makeNoDbDs({ scope = new Set(['c1', 'c2', 'c3']), expValues = { c1: 5, c2: 6, c3: 7 }, dictCalls } = {}) {
+	return {
+		label: 'MockNoDb',
+		genomename: 'hg38',
+		cohort: {
+			termdb: {
+				dictionary: {
+					get: async (q, twLst) => {
+						dictCalls?.push(twLst.map(tw => tw.term.type))
+						return [{}, {}]
+					}
+				},
+				filterSamples: async () => scope,
+				q: { id2sampleName: id => 'submitter-' + id }
+			}
+		},
+		queries: {
+			geneExpression: {
+				get: async args => ({ term2sample2value: new Map([[args.terms[0].$id, expValues]]) })
+			}
+		}
+	}
+}
+
+const emptyFilter = () => ({ type: 'tvslst', in: true, join: '', lst: [] })
+
+tape('getData: samplelst overlay resolves on a dataset without a sqlite db', async t => {
+	await ensureOpenAuth()
+	const dictCalls = []
+	const q = { terms: [geneTw(), sampleLstTw()], filter: emptyFilter() }
+	const data = await getData(q, makeNoDbDs({ dictCalls }))
+
+	t.equal(data.error, undefined, 'no error')
+	// the original bug: samplelst reached the ds dictionary getter, which cannot know the term,
+	// so every sample came back without a group and the overlay matched nothing
+	t.deepEqual(dictCalls, [], 'the samplelst term is never handed to the dictionary getter')
+	t.deepEqual(
+		data.samples.c1,
+		{ sample: 'c1', exp: { key: 5, value: 5 }, grp: { key: 'Male', value: 'Male' } },
+		'a sample carries both its expression value and its group'
+	)
+	t.equal(data.samples.c3.grp.key, 'Female', 'the second group is annotated')
+	t.deepEqual(Object.keys(data.samples).sort(), ['c1', 'c2', 'c3'], 'only in-scope samples are returned')
+	t.equal('outsider' in data.samples, false, 'a listed member outside the authorized scope is not added')
+	t.equal('outsider' in data.refs.bySampleId, false, 'and it cannot be echoed back through bySampleId')
+	t.equal(data.refs.bySampleId.c1.label, 'submitter-c1', 'in-scope samples still resolve their display ref')
+	t.end()
+})
+
+tape('getData: an untrustworthy scope adds no absent group member', async t => {
+	await ensureOpenAuth()
+	// c4 is in the dataset scope but has no expression value, so it is only ever added by the
+	// samplelst annotation itself
+	const scope = new Set(['c1', 'c2', 'c3', 'c4'])
+	const withC4 = () => {
+		const tw = sampleLstTw()
+		tw.q.groups[0].values.push({ sampleId: 'c4' })
+		return tw
+	}
+
+	const ok = await getData({ terms: [geneTw(), withC4()], filter: emptyFilter() }, makeNoDbDs({ scope }))
+	t.equal(ok.samples.c4?.grp?.key, 'Male', 'an in-scope member with no other data is still added')
+
+	/* filterSamples() cannot resolve a geneVariant tvs -- gdc defers it to post-processing -- so the
+	scope it reports is wider than the request's real result set and must not be trusted */
+	const filter = {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [{ type: 'tvs', tvs: { term: { type: 'geneVariant', id: 'TP53' } } }]
+	}
+	const guarded = await getData({ terms: [geneTw(), withC4()], filter }, makeNoDbDs({ scope }))
+	t.equal('c4' in guarded.samples, false, 'with such a filter active, no absent member is added')
+	t.equal(guarded.samples.c1.grp.key, 'Male', 'samples the queries did return are still annotated')
+	t.end()
+})
+
+tape('getData: a request of only a negated samplelst group is rejected', async t => {
+	await ensureOpenAuth()
+	const tw = sampleLstTw()
+	tw.q.groups = [{ name: 'Others', in: false, values: [{ sampleId: 'c1' }] }]
+	const data = await getData({ terms: [tw], filter: emptyFilter() }, makeNoDbDs())
+
+	// nothing in the request defines the universe to subtract from, so this would otherwise
+	// resolve to an empty result with no explanation
+	t.ok(data.error, 'an error is returned')
+	t.ok(/not in/.test(data.error), `the error names the unsupported shape: ${data.error}`)
 	t.end()
 })
