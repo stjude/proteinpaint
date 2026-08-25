@@ -4,6 +4,8 @@ import * as helpers from '../../test/front.helpers.js'
 /*
 Tests:
 	- DEinput with two prebuilt groups
+	- DEinput with autoSubmit
+	- DEinput renders a group name as text
 	- DEinput rejects an invalid config.groups[]
  */
 
@@ -109,6 +111,106 @@ tape('DEinput with two prebuilt groups', test => {
 			'should not re-seed the groups when main() runs again'
 		)
 
+		// the lone remaining group is compared against all other samples
+		const submitGroups = self.getSubmitGroups()
+		test.deepEqual(
+			submitGroups.map(g => g.name),
+			['Male', 'Not in Male'],
+			'should synthesize a complement group when only 1 group is left'
+		)
+		test.notDeepEqual(
+			submitGroups[1].filter,
+			self.groups[0].filter,
+			'should negate the filter of the lone group for its complement'
+		)
+
+		if (test['_ok']) self.app.destroy()
+		test.end()
+	}
+})
+
+tape('DEinput with autoSubmit', test => {
+	test.timeoutAfter(10000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'DEinput',
+					groups: structuredClone(groups),
+					autoSubmit: true
+				}
+			]
+		},
+		DEinput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(deinput) {
+		const self = deinput.Inner
+
+		test.equal(self.autoSubmitted, true, 'should submit the seeded groups without a click')
+		test.deepEqual(
+			self.getSubmitGroups().map(g => g.name),
+			['Male', 'Female'],
+			'should submit both seeded groups'
+		)
+		const rows = [...self.dom.preAnalysis.node().querySelectorAll('table.sja_simpletable tr')]
+		test.equal(rows.length, groups.length, 'should render a pre-analysis row for each submitted group')
+		test.ok(
+			rows[0].textContent.includes('Male') && rows[1].textContent.includes('Female'),
+			'should render both group names in the pre-analysis table'
+		)
+
+		// only the first main() may submit: every state change reruns main(), and each submission is a
+		// request to termdb/DE
+		let resubmitted = false
+		self.clickSubmit = async () => (resubmitted = true)
+		await self.main()
+		test.equal(resubmitted, false, 'should not submit again when main() runs again')
+
+		if (test['_ok']) self.app.destroy()
+		test.end()
+	}
+})
+
+tape('DEinput renders a group name as text', test => {
+	test.timeoutAfter(10000)
+
+	// a group name is supplied by an embedder or typed by a user, and must not be rendered as markup
+	const name = `<img src=x onerror="window.__deinputXss = true">`
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'DEinput',
+					groups: [
+						{ name, filter: getGroupFilter('1', 'Male') },
+						{ name: 'Female', filter: getGroupFilter('2', 'Female') }
+					],
+					autoSubmit: true
+				}
+			]
+		},
+		DEinput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(deinput) {
+		const self = deinput.Inner
+		const panel = self.dom.preAnalysis.node()
+
+		test.equal(panel.querySelector('img'), null, 'should not render a group name as markup')
+		test.ok(panel.textContent.includes(name), 'should render a group name as text')
+		test.equal(window['__deinputXss'], undefined, 'should not execute a script in a group name')
+
 		if (test['_ok']) self.app.destroy()
 		test.end()
 	}
@@ -143,6 +245,22 @@ tape('DEinput rejects an invalid config.groups[]', async test => {
 		test.fail('should throw on duplicate group names')
 	} catch (e: any) {
 		test.equal(e, `duplicate config.groups[].name='Male'`, 'should throw on duplicate group names')
+	}
+
+	{
+		// a color is rendered as a css value, so only a parsable color may be stored
+		const color = `red" onmouseover="window.__deinputXss = true`
+		try {
+			await _.getPlotConfig({ groups: [{ name: 'Male', filter: getGroupFilter('1', 'Male'), color }] })
+			test.fail('should throw on an unparsable group color')
+		} catch (e: any) {
+			test.equal(e, `invalid config.groups[].color='${color}'`, 'should throw on an unparsable group color')
+		}
+	}
+
+	{
+		const c = await _.getPlotConfig({ groups: [{ name: 'Male', filter: getGroupFilter('1', 'Male'), color: 'red' }] })
+		test.equal(c.groups[0].color, '#ff0000', 'should store a group color as hex')
 	}
 
 	test.end()

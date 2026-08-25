@@ -611,28 +611,8 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 				const menuDiv = tip.d.append('div')
 				const table = table2col({ holder: menuDiv })
 				table.table.style('margin-left', '5px').style('padding', '5px 10px')
-				{
-					const controlGColor = samplelstTW.term.values[samplelstTW.q.groups[0].name].color
-					const colorSquareCtrl = controlGColor
-						? `<span style="display:inline-block; width:12px; height:12px; background-color:${controlGColor}" ></span>`
-						: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
-					const [c1, c2] = table.addRow()
-					c1.html(
-						`<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${colorSquareCtrl} ${samplelstTW.q.groups[0].name}`
-					)
-					c2.html(`${numControl} ${sampleLabel}`)
-				}
-				{
-					const caseGColor = samplelstTW.term.values[samplelstTW.q.groups[1].name].color
-					const colorSquareCase = caseGColor
-						? `<span style="display:inline-block; width:12px; height:12px; background-color:${caseGColor}" ></span>`
-						: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
-					const [c1, c2] = table.addRow()
-					c1.html(
-						`<span style="font-size:.8em;font-weight:bold">CASE</span> ${colorSquareCase} ${samplelstTW.q.groups[1].name}`
-					)
-					c2.html(`${numCase} ${sampleLabel}`)
-				}
+				addGroupCountRow(table, 'CONTROL', samplelstTW, 0, numControl, sampleLabel)
+				addGroupCountRow(table, 'CASE', samplelstTW, 1, numCase, sampleLabel)
 
 				const alertDiv = menuDiv.append('div')
 				if (preAnalysisData.data.alert) {
@@ -674,16 +654,49 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 		div.append('div').text('DA should support whole proteome abundance')
 	}
 	// small text to explain which is case/control. always show this for all DA
-	div
+	const noteDiv = div
 		.append('div')
-		.html(
-			`<span style="font-size:.8em;font-weight:bold">CASE</span> ${samplelstTW.q.groups[1].name}
-		&nbsp;
-		<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${samplelstTW.q.groups[0].name}`
-		)
 		.style('font-size', '0.8em')
 		.style('opacity', 0.8)
 		.style('padding', '3px 3px 3px 10px')
+	for (const [role, i] of [
+		['CASE', 1],
+		['CONTROL', 0]
+	]) {
+		noteDiv.append('span').style('font-size', '.8em').style('font-weight', 'bold').text(role)
+		// group name is set as text, see addGroupCountRow()
+		noteDiv.append('span').style('margin', '0 10px 0 4px').text(samplelstTW.q.groups[i].name)
+	}
+}
+
+/* one row of a case/control table, showing a group's color, name, and number of samples with data
+
+table: a table2col() instance
+role: 'CASE' or 'CONTROL'
+samplelstTW: the samplelst tw of the compared groups, .term.values[] is keyed by group name
+i: index of the group in samplelstTW.q.groups[]
+count: number of samples in this group that have data for the analysis
+sampleLabel: what the dataset calls a sample, e.g. 'cases' on gdc
+
+the group name and color are supplied by the user or an embedder -- a name is typed into the groups
+table, and plots/DEinput.ts accepts prebuilt groups from runpp -- so both are set as text and style
+properties, and must not be interpolated into markup
+*/
+function addGroupCountRow(table, role, samplelstTW, i, count, sampleLabel) {
+	const name = samplelstTW.q.groups[i].name
+	const color = samplelstTW.term.values[name].color
+	const [c1, c2] = table.addRow()
+	c1.append('span').style('font-size', '.8em').style('font-weight', 'bold').text(role)
+	const square = c1.append('span').style('display', 'inline-block').style('margin', '0 4px')
+	if (color) square.style('width', '12px').style('height', '12px').style('background-color', color)
+	else
+		square
+			.style('width', '11px')
+			.style('height', '11px')
+			.style('background-color', '#fff')
+			.style('border', '0.1px solid black')
+	c1.append('span').text(name)
+	c2.text(`${count} ${sampleLabel}`)
 }
 
 export function renderPreAnalysisData(arg) {
@@ -720,28 +733,8 @@ export function renderPreAnalysisData(arg) {
 		.text(`${uiLabels?.Samples || 'Samples'} with gene expression data:`)
 	const table = table2col({ holder: menuDiv })
 	table.table.style('margin-left', '5px').style('padding', '5px 10px')
-	{
-		const controlGColor = samplelstTW.term.values[samplelstTW.q.groups[0].name].color
-		const colorSquareCtrl = controlGColor
-			? `<span style="display:inline-block; width:12px; height:12px; background-color:${controlGColor}" ></span>`
-			: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
-		const [c1, c2] = table.addRow()
-		c1.html(
-			`<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${colorSquareCtrl} ${samplelstTW.q.groups[0].name}`
-		)
-		c2.html(`${numControl} ${sampleLabel}`)
-	}
-	{
-		const caseGColor = samplelstTW.term.values[samplelstTW.q.groups[1].name].color
-		const colorSquareCase = caseGColor
-			? `<span style="display:inline-block; width:12px; height:12px; background-color:${caseGColor}" ></span>`
-			: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
-		const [c1, c2] = table.addRow()
-		c1.html(
-			`<span style="font-size:.8em;font-weight:bold">CASE</span> ${colorSquareCase} ${samplelstTW.q.groups[1].name}`
-		)
-		c2.html(`${numCase} ${sampleLabel}`)
-	}
+	addGroupCountRow(table, 'CONTROL', samplelstTW, 0, numControl, sampleLabel)
+	addGroupCountRow(table, 'CASE', samplelstTW, 1, numCase, sampleLabel)
 
 	// display errors
 	const alertDiv = menuDiv.append('div')

@@ -10,7 +10,7 @@ import {
 } from '#filter/filter'
 import { rehydrateFilter } from '#filter/rehydrateFilter'
 import { getColors } from '#shared/common.js'
-import { rgb } from 'd3-color'
+import { color as d3color, rgb } from 'd3-color'
 import { make_radios, renderTable, Tabs } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { renderPreAnalysisData } from '#mass/groups'
@@ -515,7 +515,15 @@ async function getValidGroups(groups, app) {
 		if (!filter.lst.length) throw 'config.groups[] entry has a blank .filter{}'
 		// allows a hand-coded filter to supply only term.id, like the mass filter and groups allow
 		if (app?.vocabApi) await Promise.all(rehydrateFilter(filter, app.vocabApi))
-		validated.push(Object.assign({}, g, { filter }))
+		const valid = Object.assign({}, g, { filter })
+		if ('color' in g) {
+			/* store the parsed hex, not what was supplied: the color is rendered by code that may set
+			it as a css value, so only a value that d3 recognizes as a color may be kept */
+			const c = d3color(g.color)
+			if (!c) throw `invalid config.groups[].color='${g.color}'`
+			valid.color = c.formatHex()
+		}
+		validated.push(valid)
 	}
 	return validated
 }
