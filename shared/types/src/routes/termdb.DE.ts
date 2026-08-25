@@ -189,7 +189,11 @@ export type ExpressionInput = {
  * counts (keyed by group name) plus an optional validation alert. No volcano
  * is rendered; the client uses this to show counts before the user submits. */
 export type DEPreAnalysisResponse = {
-	data: Record<string, number | string>
+	/** number of samples with expression data, keyed by group name. a group name is
+	 * user-supplied, so it must not share this object with any other property */
+	data: Record<string, number>
+	/** validation message; the client hides the run button while it is present */
+	alert?: string
 }
 
 /** Response for a full DE run (DERequest.preAnalysis absent/false). */

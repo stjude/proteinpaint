@@ -37,7 +37,11 @@ export type DiffMethRequest = {
 /** Response when DiffMethRequest.preAnalysis === true. Returns per-group
  * sample counts (keyed by group name) plus an optional validation alert. */
 export type DiffMethPreAnalysisResponse = {
-	data: Record<string, number | string>
+	/** number of samples with methylation data, keyed by group name. a group name is
+	 * user-supplied, so it must not share this object with any other property */
+	data: Record<string, number>
+	/** validation message; the client hides the run button while it is present */
+	alert?: string
 }
 
 /** Response for a full differential methylation run (preAnalysis absent/false). */

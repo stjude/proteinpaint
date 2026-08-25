@@ -6,6 +6,7 @@ Tests:
 	- DEinput with two prebuilt groups
 	- DEinput with autoSubmit
 	- DEinput renders a group name as text
+	- DEinput with a group named alert
 	- DEinput rejects an invalid config.groups[]
  */
 
@@ -216,6 +217,51 @@ tape('DEinput renders a group name as text', test => {
 	}
 })
 
+tape('DEinput with a group named alert', test => {
+	test.timeoutAfter(10000)
+
+	/* the pre-analysis response keys its sample counts by group name, and used to carry its own alert
+	message in the same object: the count of a group named 'alert' was then read as an error, which hid
+	the button that runs the analysis */
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'DEinput',
+					groups: [
+						{ name: 'alert', filter: getGroupFilter('1', 'Male') },
+						{ name: 'Female', filter: getGroupFilter('2', 'Female') }
+					],
+					autoSubmit: true
+				}
+			]
+		},
+		DEinput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(deinput) {
+		const self = deinput.Inner
+		const panel = self.dom.preAnalysis.node()
+
+		const rows = [...panel.querySelectorAll('table.sja_simpletable tr')]
+		test.equal(rows.length, 2, 'should render a pre-analysis row for each group')
+		const count = Number(rows[0].querySelectorAll('td')[1].textContent.split(' ')[0])
+		test.ok(count > 0, 'should report the sample count of a group named alert')
+		test.equal(
+			panel.querySelectorAll('button').length,
+			1,
+			'should offer to run the analysis, not mistake the count of a group named alert for an error'
+		)
+
+		if (test['_ok']) self.app.destroy()
+		test.end()
+	}
+})
+
 tape('DEinput rejects an invalid config.groups[]', async test => {
 	test.timeoutAfter(5000)
 
@@ -261,6 +307,18 @@ tape('DEinput rejects an invalid config.groups[]', async test => {
 	{
 		const c = await _.getPlotConfig({ groups: [{ name: 'Male', filter: getGroupFilter('1', 'Male'), color: 'red' }] })
 		test.equal(c.groups[0].color, '#ff0000', 'should store a group color as hex')
+	}
+
+	{
+		// the default name of the unnamed group must not collide with the name of the group after it
+		const c = await _.getPlotConfig({
+			groups: [{ filter: getGroupFilter('1', 'Male') }, { name: 'New group', filter: getGroupFilter('2', 'Female') }]
+		})
+		test.deepEqual(
+			c.groups.map(g => g.name),
+			['New group 1', 'New group'],
+			'should not reuse a supplied name when naming an unnamed group'
+		)
 	}
 
 	test.end()

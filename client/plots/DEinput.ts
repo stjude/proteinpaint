@@ -500,22 +500,31 @@ async function getValidGroups(groups, app) {
 	if (!Array.isArray(groups)) throw 'config.groups must be an array'
 	// mayRenderSubmit() has no ui for more than 2 groups
 	if (groups.length > 2) throw 'config.groups[] cannot exceed 2 groups'
+	/* every supplied name is reserved before any default name is filled in below. a group table row is
+	found by name on edit and delete, and the samplelst tw of the analysis is keyed by name, so two
+	groups must never end up with the same name -- including a default name that happens to match the
+	name supplied by a later entry */
 	const names = new Set()
-	const validated: any[] = []
 	for (const g of groups) {
 		if (!g?.filter) throw 'config.groups[] entry is missing .filter{}'
 		if ('name' in g && typeof g.name != 'string') throw 'config.groups[].name must be a string'
-		// a duplicate name would break the group table, which finds a group by name on edit and delete
-		if (g.name) {
-			if (names.has(g.name)) throw `duplicate config.groups[].name='${g.name}'`
-			names.add(g.name)
-		}
+		if (!g.name) continue
+		if (names.has(g.name)) throw `duplicate config.groups[].name='${g.name}'`
+		names.add(g.name)
+	}
+
+	const validated: any[] = []
+	for (const g of groups) {
 		// also detaches the filter from a frozen state or from the caller's object
 		const filter = getNormalRoot(g.filter)
 		if (!filter.lst.length) throw 'config.groups[] entry has a blank .filter{}'
 		// allows a hand-coded filter to supply only term.id, like the mass filter and groups allow
 		if (app?.vocabApi) await Promise.all(rehydrateFilter(filter, app.vocabApi))
-		const valid = Object.assign({}, g, { filter })
+		// name a group here, not in addNewGroup(), which only avoids the names of the groups added
+		// before it and so could reuse a name that a later entry supplies
+		const name = g.name || getUnusedGroupName(names)
+		names.add(name)
+		const valid = Object.assign({}, g, { filter, name })
 		if ('color' in g) {
 			/* store the parsed hex, not what was supplied: the color is rendered by code that may set
 			it as a css value, so only a value that d3 recognizes as a color may be kept */
@@ -526,4 +535,13 @@ async function getValidGroups(groups, app) {
 		validated.push(valid)
 	}
 	return validated
+}
+
+/** the first unused name of the 'New group', 'New group 1', ... series, matching addNewGroup() */
+function getUnusedGroupName(names) {
+	const base = 'New group'
+	for (let i = 0; ; i++) {
+		const name = base + (i === 0 ? '' : ' ' + i)
+		if (!names.has(name)) return name
+	}
 }
