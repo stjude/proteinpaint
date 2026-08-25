@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { divideTerms, id2sampleRef } from '../termdb.matrix.js'
+import { divideTerms, id2sampleRef, setSampleLstData } from '../termdb.matrix.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
 
@@ -13,6 +13,12 @@ divideTerms: drops role-restricted dict terms via isTermVisible
 divideTerms: shorthand dict terms (no type, just id) are also gated by isTermVisible
 divideTerms: q.__protected__ is forwarded to the isTermVisible hook
 divideTerms: termCollection visibility decided by member terms (term.termlst)
+setSampleLstData: annotates group members, adds missing samples
+setSampleLstData: negated group covers the samples that are not listed
+setSampleLstData: an explicit membership is not overwritten by a later negated group
+setSampleLstData: accepts value.sample as well as value.sampleId
+setSampleLstData: handles multiple samplelst terms and empty/missing group values
+setSampleLstData: throws when q.groups is not an array
 */
 
 tape('id2sampleRef(): prefers id2sampleRefs, else id2sampleName raw-then-Number, no NaN on string ids', test => {
@@ -303,5 +309,126 @@ tape('divideTerms: termCollection with a non-object member is dropped, not throw
 	t.doesNotThrow(() => divideTerms(q, ds), 'does not throw on null/number member')
 	const [dict] = divideTerms(q, ds)
 	t.deepEqual(dict, [], 'collection with an unresolvable member is dropped')
+	t.end()
+})
+
+/* setSampleLstData() annotates a samplelst term from its own tw.q.groups[], for datasets
+that cannot express those groups in SQL. It must match what sampleLstSql.getCTE() produces
+for a ds with a sqlite db, so these specs pin the group semantics rather than the mechanics. */
+
+tape('setSampleLstData: annotates group members, adds missing samples', t => {
+	const tw = {
+		$id: 'grp',
+		term: { type: 'samplelst', name: 'Male vs Female' },
+		q: {
+			groups: [
+				{ name: 'Male', in: true, values: [{ sampleId: 'c1' }, { sampleId: 'c2' }] },
+				{ name: 'Female', in: true, values: [{ sampleId: 'c3' }] }
+			]
+		}
+	}
+	// c1 and c3 already carry a value from another term of the same request; c2 does not
+	const samples = {
+		c1: { sample: 'c1', geneExp: { key: 1, value: 1 } },
+		c3: { sample: 'c3', geneExp: { key: 3, value: 3 } }
+	}
+	setSampleLstData([tw], samples)
+
+	t.deepEqual(samples.c1.grp, { key: 'Male', value: 'Male' }, 'listed sample is annotated with its group name')
+	t.deepEqual(samples.c3.grp, { key: 'Female', value: 'Female' }, 'second group is annotated too')
+	t.deepEqual(
+		samples.c2,
+		{ sample: 'c2', grp: { key: 'Male', value: 'Male' } },
+		'a group member absent from samples{} is added, mirroring the sqlite CTE'
+	)
+	t.deepEqual(samples.c1.geneExp, { key: 1, value: 1 }, 'values from other terms are left alone')
+	t.end()
+})
+
+tape('setSampleLstData: negated group covers the samples that are not listed', t => {
+	// in:false is the SQL "NOT IN" group. Without a db there is no sample universe to negate
+	// against, so it resolves against the samples the rest of the request returned.
+	const tw = {
+		$id: 'grp',
+		term: { type: 'samplelst', name: 'In vs out' },
+		q: { groups: [{ name: 'Others', in: false, values: [{ sampleId: 'c1' }] }] }
+	}
+	const samples = { c1: { sample: 'c1' }, c2: { sample: 'c2' }, c3: { sample: 'c3' } }
+	setSampleLstData([tw], samples)
+
+	t.equal(samples.c1.grp, undefined, 'a listed sample is excluded from a negated group')
+	t.deepEqual(samples.c2.grp, { key: 'Others', value: 'Others' }, 'unlisted sample joins the negated group')
+	t.deepEqual(samples.c3.grp, { key: 'Others', value: 'Others' }, 'every other queried sample joins it')
+	t.end()
+})
+
+tape('setSampleLstData: an explicit membership is not overwritten by a later negated group', t => {
+	const tw = {
+		$id: 'grp',
+		term: { type: 'samplelst', name: 'Cases vs rest' },
+		q: {
+			groups: [
+				{ name: 'Cases', in: true, values: [{ sampleId: 'c1' }] },
+				{ name: 'Rest', in: false, values: [{ sampleId: 'c2' }] }
+			]
+		}
+	}
+	const samples = { c1: { sample: 'c1' }, c2: { sample: 'c2' }, c3: { sample: 'c3' } }
+	setSampleLstData([tw], samples)
+
+	t.deepEqual(samples.c1.grp, { key: 'Cases', value: 'Cases' }, 'c1 keeps the group it was explicitly listed in')
+	t.equal(samples.c2.grp, undefined, 'c2 is excluded by the negated group it is listed in')
+	t.deepEqual(samples.c3.grp, { key: 'Rest', value: 'Rest' }, 'c3 falls into the negated group')
+	t.end()
+})
+
+tape('setSampleLstData: accepts value.sample as well as value.sampleId', t => {
+	// sampleLstSql.getCTE() reads value.sampleId || value.sample; both shapes reach the server
+	const tw = {
+		$id: 'grp',
+		term: { type: 'samplelst', name: 'One group' },
+		q: { groups: [{ name: 'G1', values: [{ sample: 'c1' }, { sampleId: 'c2' }] }] }
+	}
+	const samples = {}
+	setSampleLstData([tw], samples)
+
+	t.deepEqual(samples.c1.grp, { key: 'G1', value: 'G1' }, 'value.sample is read')
+	t.deepEqual(samples.c2.grp, { key: 'G1', value: 'G1' }, 'value.sampleId is read')
+	t.end()
+})
+
+tape('setSampleLstData: handles multiple samplelst terms and empty/missing group values', t => {
+	const tw1 = {
+		$id: 'a',
+		term: { type: 'samplelst', name: 'A' },
+		q: { groups: [{ name: 'A1', values: [{ sampleId: 'c1' }] }] }
+	}
+	const tw2 = {
+		$id: 'b',
+		term: { type: 'samplelst', name: 'B' },
+		q: { groups: [{ name: 'B1', values: [{ sampleId: 'c1' }] }, { name: 'B2' }, { name: 'B3', values: [] }] }
+	}
+	const samples = { c1: { sample: 'c1' } }
+	t.doesNotThrow(() => setSampleLstData([tw1, tw2], samples), 'a group without values[] does not throw')
+
+	t.deepEqual(samples.c1.a, { key: 'A1', value: 'A1' }, 'first term is annotated under its own $id')
+	t.deepEqual(samples.c1.b, { key: 'B1', value: 'B1' }, 'second term is annotated independently')
+	t.equal(Object.keys(samples).length, 1, 'empty groups add no samples')
+	t.end()
+})
+
+tape('setSampleLstData: throws when q.groups is not an array', t => {
+	const samples = {}
+	t.throws(
+		() => setSampleLstData([{ $id: 'grp', term: { type: 'samplelst' }, q: {} }], samples),
+		/groups/,
+		'missing q.groups is reported, not silently skipped'
+	)
+	t.throws(
+		() => setSampleLstData([{ $id: 'grp', term: { type: 'samplelst' }, q: { groups: {} } }], samples),
+		/groups/,
+		'non-array q.groups is reported'
+	)
+	t.deepEqual(setSampleLstData([], samples), undefined, 'an empty tw list is a no-op')
 	t.end()
 })
