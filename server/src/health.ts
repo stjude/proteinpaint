@@ -98,10 +98,18 @@ const codedate = get_codedate()
 const revFile = path.join(process.cwd(), 'public/rev.txt')
 const hash = fs.existsSync(revFile) && fs.readFileSync(revFile, { encoding: 'utf8' }).split(' ')[1]
 
+// host-specific image name, e.g. "pp-irt:v2.204.0-92b3ab96", stamped into public/host-image.txt
+// (as "<host>:<version> <date>") at build time (sjpp/build/build.sh). Only host images built with a
+// version carry this file, so it is reported optionally.
+const hostImageFile = path.join(process.cwd(), 'public/host-image.txt')
+const hostImage =
+	fs.existsSync(hostImageFile) && fs.readFileSync(hostImageFile, { encoding: 'utf8' }).trim().split(/\s+/)[0]
+
 export const versionInfo: VersionInfo = {
 	pkgver: pkg.version + '-' + (hash || codedate),
 	codedate, // still useful to know the package build/publish date in the response payload, even if it's not displayed
 	launchdate: new Date(Date.now()).toString().split(' ').slice(0, 5).join(' '),
+	...(hostImage ? { hostImage } : {}),
 	deps: {}
 }
 

@@ -10,6 +10,9 @@ export type VersionInfo = {
 	pkgver: string
 	codedate: string
 	launchdate: string
+	/** host-specific image name from public/host-image.txt (e.g. "pp-irt:v2.204.0-92b3ab96");
+	 * absent when the file is not present (e.g. a non-host-image container or local dev) */
+	hostImage?: string
 	deps: {
 		[pkgName: string]: {
 			/** the version as found in node_modules/[package]/package.json */
