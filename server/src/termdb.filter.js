@@ -2,7 +2,7 @@ import {
 	getBin,
 	dictionaryNumericTypes,
 	isParentType,
-	getSampleType,
+	getTwSampleTypes,
 	dtTermTypes,
 	isNonDictionaryType
 } from '#shared/terms.js'
@@ -27,7 +27,7 @@ A superCTE is made to cap this level, with name "CTEname"
 // dummy $id for making up tw from tvs ({$id,term:tvs:term}) as required by getters
 const $id = 'xx'
 
-export async function getFilterCTEs(filter, ds, mapParent2Children, sampleType, CTEname = 'f') {
+export async function getFilterCTEs(filter, ds, mapParent2Children, sampleTypes, CTEname = 'f') {
 	if (!filter) return
 	if (filter.type != 'tvslst') throw 'filter.type is not "tvslst" but: ' + filter.type
 	if (!Array.isArray(filter.lst)) throw 'filter.lst must be an array'
@@ -68,7 +68,7 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleType, 
 		if (item.type == 'tvslst') {
 			if (item.lst.length == 0) continue // do not process blank list
 
-			f = await getFilterCTEs(item, ds, mapParent2Children, sampleType, CTEname_i)
+			f = await getFilterCTEs(item, ds, mapParent2Children, sampleTypes, CTEname_i)
 			// .filters: str, the CTE cascade, not used here!
 			// .CTEs: [] list of individual CTE string
 			// .values: []
@@ -94,16 +94,16 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleType, 
 		} else if (dtTermTypes.has(item.tvs.term.type)) {
 			f = await get_dtTerm(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'categorical') {
-			f = get_categorical(item.tvs, CTEname_i, ds, mapParent2Children, sampleType)
+			f = get_categorical(item.tvs, CTEname_i, ds, mapParent2Children, sampleTypes)
 			// .CTEs: []
 			// .values:[]
 			// .CTEname
 		} else if (item.tvs.term.type == 'survival') {
 			f = get_survival(item.tvs, CTEname_i, ds, mapParent2Children)
 		} else if (item.tvs.term.type == 'samplelst') {
-			f = get_samplelst(item.tvs, CTEname_i, ds, mapParent2Children, sampleType)
+			f = get_samplelst(item.tvs, CTEname_i, ds, mapParent2Children, sampleTypes)
 		} else if (dictionaryNumericTypes.has(item.tvs.term.type)) {
-			f = get_numerical(item.tvs, CTEname_i, ds, mapParent2Children, sampleType)
+			f = get_numerical(item.tvs, CTEname_i, ds, mapParent2Children, sampleTypes)
 		} else if (item.tvs.term.type == 'condition') {
 			f = get_condition(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'geneVariant') {
@@ -152,13 +152,17 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleType, 
 // put here instead of inside makesql_by_tvsfilter
 // to parse function once at server start instead of
 // multiple times per server request
-function get_categorical(tvs, CTEname, ds, mapParent2Children, sampleType) {
+function get_categorical(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	let query = `SELECT sample
 	FROM anno_categorical 
 	WHERE term_id = ?
 	AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
-	if (mapParent2Children && ds.cohort.termdb.sampleTypes[sampleType].parent_id == getSampleType({ term: tvs.term }, ds))
-		query = getChildren(query, sampleType)
+	if (
+		mapParent2Children &&
+		sampleTypes?.length &&
+		ds.cohort.termdb.sampleTypes[sampleTypes[0]].parent_id == getTwSampleTypes({ term: tvs.term }, ds)?.[0]
+	)
+		query = getChildren(query, sampleTypes)
 	return {
 		CTEs: [` ${CTEname} AS (${query})`],
 		values: [tvs.term.id, ...tvs.values.map(i => i.key)],
@@ -186,7 +190,7 @@ function get_survival(tvs, CTEname, ds, mapParent2Children) {
 	}
 }
 
-function get_samplelst(tvs, CTEname, ds, mapParent2Children, sampleType) {
+function get_samplelst(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	const samples = []
 	for (const field in tvs.term.values) {
 		const list = tvs.term.values[field].list
@@ -199,8 +203,12 @@ function get_samplelst(tvs, CTEname, ds, mapParent2Children, sampleType) {
 				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${samplesString}) `
 
 	values.push(...samples.map(i => i.sampleId || i.sample))
-	if (mapParent2Children && ds.cohort.termdb.sampleTypes[sampleType].parent_id == getSampleType({ term: tvs.term }, ds))
-		query = getChildren(query, sampleType)
+	if (
+		mapParent2Children &&
+		sampleTypes?.length &&
+		ds.cohort.termdb.sampleTypes[sampleTypes[0]].parent_id == getTwSampleTypes({ term: tvs.term }, ds)?.[0]
+	)
+		query = getChildren(query, sampleTypes)
 	return {
 		CTEs: [
 			`
@@ -634,7 +642,7 @@ async function get_dtTerm(tvs, CTEname, ds) {
 	return result
 }
 
-function get_numerical(tvs, CTEname, ds, mapParent2Children, sampleType) {
+function get_numerical(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	/*
 for the case e.g. '0' is for "Not exposed", range.value can be either '0' or 0, string or number
 as it cannot be decided what client will provide
@@ -699,8 +707,12 @@ so here need to allow both string and number as range.value
 					${combinedClauses ? 'AND (' + combinedClauses + ')' : ''}
 					${excludevalues && excludevalues.length ? `AND value NOT IN (${excludevalues.map(d => '?').join(',')}) ` : ''}`
 
-	if (mapParent2Children && ds.cohort.termdb.sampleTypes[sampleType].parent_id == getSampleType({ term: tvs.term }, ds))
-		query = getChildren(query, sampleType)
+	if (
+		mapParent2Children &&
+		sampleTypes?.length &&
+		ds.cohort.termdb.sampleTypes[sampleTypes[0]].parent_id == getTwSampleTypes({ term: tvs.term }, ds)?.[0]
+	)
+		query = getChildren(query, sampleTypes)
 
 	return {
 		CTEs: [
@@ -823,10 +835,11 @@ function get_multivalue(tvs, CTEname, ds, mapParent2Children) {
 	}
 }
 
-function getChildren(query, sampleType) {
+function getChildren(query, sampleTypes) {
+	const sampleTypeFilter = sampleTypes?.length ? `AND sm.sample_type IN (${sampleTypes.join(',')})` : ''
 	return `SELECT sa.sample_id as sample
 	FROM sample_ancestry sa
 	JOIN sampleidmap sm ON sa.sample_id = sm.id
 	WHERE sa.ancestor_id in (${query})
-	${sampleType ? `AND sm.sample_type = ${sampleType}` : ''}`
+	${sampleTypeFilter}`
 }

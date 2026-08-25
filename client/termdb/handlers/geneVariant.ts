@@ -24,6 +24,7 @@ export class SearchHandler {
 	mutationTypeRadio: any
 	mutationTypeTerms!: any[]
 	inputTypeRadio: any
+	sampleTypeSelect?: any
 	term: any // tw.term
 	q: any // tw.q
 	callback: any
@@ -330,7 +331,10 @@ export class SearchHandler {
 
 	mayApplySampleType() {
 		if (!this.sampleTypeSelect) return
-		this.q.sampleType = this.sampleTypeSelect.property('value')
+		const sampleTypes = this.sampleTypeSelect
+			.filter(checkbox => checkbox.property('checked'))
+			.map(checkbox => checkbox.property('value'))
+		this.q.sampleTypes = sampleTypes
 	}
 
 	async applyRememberedQ(q) {

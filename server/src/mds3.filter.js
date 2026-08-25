@@ -32,7 +32,7 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 	let filterSamples
 	if (filter || filter0) {
 		// filter samples by supplied filter(s)
-		const q = { filter, filter0, mapParent2Children: param.mapParent2Children, sampleType: param.sampleType }
+		const q = { filter, filter0, mapParent2Children: param.mapParent2Children, sampleTypes: param.sampleTypes }
 		if (ds.cohort?.db) {
 			// dataset has sqlite db
 			if (!q.filter) return // no pp filtering, use all samples
@@ -46,11 +46,11 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 		}
 	}
 
-	if (param.sampleType) {
-		// filter samples by sample type
+	if (param.sampleTypes?.length) {
+		// filter samples by sample types
 		const sampleTypeSamples = new Set()
 		for (const [sampleId, sampleType] of ds.sampleId2Type) {
-			if (sampleType == param.sampleType) sampleTypeSamples.add(sampleId)
+			if (param.sampleTypes.includes(sampleType)) sampleTypeSamples.add(sampleId)
 		}
 		filterSamples = filterSamples ? filterSamples.intersection(sampleTypeSamples) : sampleTypeSamples
 	}

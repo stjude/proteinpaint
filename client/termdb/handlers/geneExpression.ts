@@ -25,7 +25,7 @@ export class SearchHandler {
 		const unit = getGEunit(this.app.vocabApi)
 		const name = `${gene} ${unit}`
 		this.callback({
-			q: { sampleType: geneSearch.sampleType },
+			q: { sampleTypes: geneSearch.sampleType ? [geneSearch.sampleType] : undefined },
 			term: { gene, name, type: TermTypes.GENE_EXPRESSION }
 		})
 	}

@@ -603,25 +603,30 @@ export function getBin(lst: any[], value: number) {
 	return bin
 }
 
-// get sample type of term
-export function getSampleType(tw: any, ds: any) {
-	if (!tw) return null
-	if (tw.q?.sampleType) return tw.q.sampleType
+// get sample types of termwrapper
+export function getTwSampleTypes(tw: any, ds: any) {
+	if (!tw) return []
+	if (tw.q?.sampleTypes) return tw.q.sampleTypes
 	const term = tw.term
-	if (!term) return null
+	if (!term) return []
 	//non dict terms annotate only samples, eg: gene expression, metabolite intensity, gene variant.
 	//Their sample type is the default sample type that may or may not have a parent type, depending on the dataset
-	if (term.type && isNonDictionaryType(term.type)) return DEFAULT_SAMPLE_TYPE
+	if (term.type && isNonDictionaryType(term.type)) return [DEFAULT_SAMPLE_TYPE]
 	//dictionary terms may annotate different types of samples, eg: patient and sample or mouse and crop.
-	if (term.id) return ds.cohort.termdb.term2SampleType.get(term.id)
+	if (term.id) {
+		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
+		return sampleType != null ? [sampleType] : []
+	}
 	if (term.type == 'samplelst') {
 		const key = Object.keys(term.values)[0]
 		const sampleId = term.values[key].list[0]?.sampleId
-		if (sampleId) return ds.sampleId2Type.get(Number(sampleId) || sampleId)
-		else return DEFAULT_SAMPLE_TYPE
+		if (sampleId) {
+			const sampleType = ds.sampleId2Type.get(Number(sampleId) || sampleId)
+			return sampleType != null ? [sampleType] : []
+		} else return [DEFAULT_SAMPLE_TYPE]
 	}
 	// samplelst or non dict terms
-	return DEFAULT_SAMPLE_TYPE //later own term needs to know what type annotates based on the samples
+	return [DEFAULT_SAMPLE_TYPE] //later own term needs to know what type annotates based on the samples
 }
 
 export function getParentType(types: Set<string>, ds: any) {
@@ -642,7 +647,7 @@ export function getParentType(types: Set<string>, ds: any) {
 // whether the term annotates parent samples
 export function isParentType(term: any, ds: any) {
 	if (!ds.cohort.termdb.hasSampleAncestry) return false
-	const sampleType = getSampleType({ term }, ds)
+	const sampleType = getTwSampleTypes({ term }, ds)?.[0]
 	if (!sampleType) throw 'sample type is not defined'
 	const sampleTypeObj = ds.cohort.termdb.sampleTypes[sampleType]
 	if (!sampleTypeObj) throw 'invalid sample type'
