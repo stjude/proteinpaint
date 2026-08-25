@@ -98,6 +98,7 @@ class MassCharts {
 	getBtnLabel_geneExpression(state){
 		const l: string[] = []
 		if (state.termdbConfig?.queries?.geneExpression) l.push('Gene Expression')
+		if (state.termdbConfig?.queries?.singleCell?.geneExpression) l.push('Single-cell Gene Expression')
 		if (state.termdbConfig?.termType2terms?.Pseudobulk) l.push('Pseudobulk Gene Expression')
 		if (l.length > 1 || !l.length ) return 'Gene Expression'
 		return l[0]
@@ -338,10 +339,7 @@ function getChartTypeList(self, state) {
 		{
 			label: self.getBtnLabel_geneExpression(state),
 			chartType: 'GeneExpInput',
-			clickTo: self.prepPlot,
-			config: {
-				chartType: 'GeneExpInput'
-			}
+			clickTo: self.loadChartSpecificMenu
 		},
 		{
 			label: 'Metabolite Intensity',

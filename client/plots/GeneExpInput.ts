@@ -1,10 +1,10 @@
 import { PlotBase } from './PlotBase.ts'
 import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
 import { typeGroup } from '#shared/terms.js'
-import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION, SSGSEA } from '#types'
+import { GENE_EXPRESSION, PSEUDOBULK, SINGLECELL_GENE_EXPRESSION, SSGSEA } from '#types'
 import { getGEunit } from '../tw/geneExpression'
 import { getSCGEunit } from '../tw/singleCellGeneExpression'
-import { addGeneSearchbox, GeneSetEditUI, Menu, sayerror, Tabs } from '#dom'
+import { addGeneSearchbox, GeneSetEditUI, Menu, sayerror, Tabs, make_radios } from '#dom'
 import type { ClientGenome } from '../types/clientGenome'
 import { getCurrentCohortChartTypes } from '../mass/charts.js'
 import { importPlot } from '#plots/importPlot.js'
@@ -38,9 +38,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		super(opts, api)
 		this.type = GeneExpInput.type
 		this.opts = opts
-		this.components = {
-			plots: {}
-		}
+		this.components = { plots: {} }
 	}
 
 	makeTerm(_term) {
@@ -72,15 +70,51 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		const state = this.getState(appState)
 		this.genome = this.app.opts.genome
 		this.termType = state.config.termType
-		this.unit = this.getUnit()
 		this.dom = this.initDom()
+		this.unit = getUnit(this.termType, this.app.vocabApi)
 
 		const chartTypes = new Set(getCurrentCohortChartTypes(appState))
+		this.tabs = this.getTabOpts(state, chartTypes)
 
-		this.tabs = [
+		const chartTabs = new Tabs({
+			holder: this.dom.tabs,
+			tabs: this.tabs,
+			tabsPosition: 'vertical'
+		})
+		await chartTabs.main()
+	}
+
+	initDom() {
+		const headerText = this.opts.headerText ? `${this.opts.headerText} ` : ''
+		const dom: { [index: string]: any } = {
+			header: {
+				title: this.opts.header
+					.append('span')
+					.style('padding-right', '5px')
+					.text(headerText)
+					.attr('data-testid', 'sjpp-gene-exp-input-headerText'),
+				plot: this.opts.header
+					.append('span')
+					.text(typeGroup[this.termType].toUpperCase())
+					.style('font-size', '0.7em')
+					.style('opacity', '0.6')
+					.attr('data-testid', 'sjpp-gene-exp-input-termType')
+			},
+			tabs: this.opts.holder
+				.append('div')
+				.style('margin', '10px')
+				.attr('data-testid', 'sjpp-gene-exp-input-tabs-wrapper')
+		}
+
+		return dom
+	}
+
+	getTabOpts(state, chartTypes) {
+		return [
 			{
 				label: 'One gene',
-				isVisible: () => true,
+				//TODO: enable for pseudobulk
+				isVisible: () => this.termType !== PSEUDOBULK,
 				callback: (event, tab) => {
 					this.renderGeneSelect(tab)
 					delete tab.callback
@@ -88,7 +122,8 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			},
 			{
 				label: 'Two genes',
-				isVisible: () => true,
+				//TODO: enable for pseudobulk
+				isVisible: () => this.termType !== PSEUDOBULK,
 				callback: (event, tab) => {
 					this.renderTwoGeneSelect(tab)
 					delete tab.callback
@@ -106,7 +141,8 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				label: `Differential ${typeGroup[this.termType].toLowerCase()} analysis`,
 				//Only enabling for gene expression for now
 				chartType: 'DEinput',
-				isVisible: () => chartTypes.has('DA') && this.termType === GENE_EXPRESSION,
+				//TODO: add whether or not a total file is available for pseudobulk to enable DA
+				isVisible: () => chartTypes.has('DA') && (this.termType === GENE_EXPRESSION /*|| this.termType === PSEUDOBULK*/),
 				callback: async (event, tab) => {
 					await this.app.dispatch({
 						type: 'plot_create',
@@ -133,42 +169,6 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				}
 			}
 		]
-
-		const chartTabs = new Tabs({
-			holder: this.dom.tabs,
-			tabs: this.tabs,
-			tabsPosition: 'vertical'
-		})
-		await chartTabs.main()
-	}
-
-	getUnit() {
-		return this.termType === GENE_EXPRESSION ? getGEunit(this.app.vocabApi) : getSCGEunit(this.app.vocabApi)
-	}
-
-	initDom() {
-		const headerText = this.opts.headerText ? `${this.opts.headerText} ` : ''
-		const dom: { [index: string]: any } = {
-			header: {
-				title: this.opts.header
-					.append('span')
-					.style('padding-right', '5px')
-					.text(headerText)
-					.attr('data-testid', 'sjpp-gene-exp-input-headerText'),
-				plot: this.opts.header
-					.append('span')
-					.text(typeGroup[this.termType].toUpperCase())
-					.style('font-size', '0.7em')
-					.style('opacity', '0.6')
-					.attr('data-testid', 'sjpp-gene-exp-input-termType')
-			},
-			tabs: this.opts.holder
-				.append('div')
-				.style('margin', '10px')
-				.attr('data-testid', 'sjpp-gene-exp-input-tabs-wrapper')
-		}
-
-		return dom
 	}
 
 	async main() {
@@ -375,11 +375,17 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	}
 }
 
+export function getUnit(termType, vocabApi) {
+	return termType === GENE_EXPRESSION ? getGEunit(vocabApi) : getSCGEunit(vocabApi)
+}
+
+
+
 export const geneExpInputInit = getCompInit(GeneExpInput)
 export const componentInit = geneExpInputInit
 
 //Sanity check
-const enabledTermTypes = new Set([GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION])
+const enabledTermTypes = new Set([GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION, PSEUDOBULK])
 
 export function getPlotConfig(opts) {
 	if (!opts?.termType) throw new Error('termType is required in opts')
@@ -392,4 +398,40 @@ export function getPlotConfig(opts) {
 	}
 
 	return copyMerge(config, opts)
+}
+
+function getPossibleGETermTypes(termdbConfig) {
+	return Array.from(enabledTermTypes).filter(termtype => termdbConfig.allowedTermTypes.includes(termtype))
+}
+
+/** If more than one gene expression data type available, allow the user to 
+ * select data type. If not, launch plot. */
+export function makeChartBtnMenu(holder: any, chartsInstance: any){
+	const possTermTypes = getPossibleGETermTypes(chartsInstance.app.vocabApi?.termdbConfig)
+	if (possTermTypes.length > 1) {
+		holder.style('padding', '10px')
+		holder.append('div').style('padding-bottom', '5px').text('Please select the data type:')
+		make_radios({
+			holder: holder.append('div').style('padding-left', '10px'),
+			options: possTermTypes.map(termType => ({ value: termType, label: typeGroup[termType]})) ,
+			callback: value => {
+				chartsInstance.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'GeneExpInput',
+						termType: value
+					}
+				})
+				holder.remove()
+			}
+		})
+	} else {
+		chartsInstance.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'GeneExpInput',
+				termType: possTermTypes[0]
+			}
+		})
+	}
 }
