@@ -830,22 +830,20 @@ export function maySetMapParent2Children(q, ds, mapParent2Children) {
 		q.sampleTypes = [type]
 	} else {
 		// multiple sample types
-		const config = {}
-		for (const type of types) {
-			config[type] = ds.cohort.termdb.sampleTypes[type]
-		}
 		const parentTypes = new Set(
-			Object.values(config)
-				.map(d => d.parent_id)
-				.filter(Number.isInteger)
+			types.map(type => ds.cohort.termdb.sampleTypes[type]?.parent_id).filter(Number.isInteger)
 		)
 		if (!parentTypes.size) throw 'parent sample types missing'
 		if (types.some(type => parentTypes.has(type))) {
-			// some query sample types are parents of others, so map parent to children
-			q.mapParent2Children = true
+			// query sample types have parent-child relationship
+			// map parent to children
 			const childTypes = types.filter(type => !parentTypes.has(type))
-			if (childTypes.length != 1) throw 'should have a single child sample type'
+			if (!childTypes.length) throw 'child sample types missing'
+			q.mapParent2Children = true
 			q.sampleTypes = childTypes
+		} else {
+			// query sample types do not have parent-child relationship
+			q.sampleTypes = types
 		}
 	}
 }
@@ -1015,20 +1013,18 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 		${CTEs.map((t, i) => {
 			const tw = termWrappers[i]
 			let query
-			const sampleType = getTwSampleTypes(tw, q.ds)?.[0]
-			if (
-				q.mapParent2Children &&
-				q.sampleTypes &&
-				q.sampleTypes[0] &&
-				q.ds.cohort.termdb.sampleTypes[q.sampleTypes[0]].parent_id == sampleType
-			) {
+			const twSampleTypes = getTwSampleTypes(tw, q.ds)
+			const isParent = q.sampleTypes.some(qSampleType =>
+				twSampleTypes.some(twSampleType => q.ds.cohort.termdb.sampleTypes[qSampleType].parent_id == twSampleType)
+			)
+			if (q.mapParent2Children && isParent) {
 				// need to map parent annotations onto child samples and
 				// term sample type is parent of query sample type
 				query = `SELECT sa.sample_id as sample, key, value, ? as term_id
 				FROM sample_ancestry sa
 				JOIN ${t.tablename} ON sa.ancestor_id = sample
 				JOIN sampleidmap sm ON sa.sample_id = sm.id
-				WHERE sm.sample_type = ${q.sampleTypes[0]}
+				WHERE sm.sample_type IN (${q.sampleTypes.join(',')})
 				${filter ? `AND sa.sample_id IN ${filter.CTEname}` : ''}`
 			} else {
 				// query annotations directly
