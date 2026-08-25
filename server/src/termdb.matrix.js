@@ -156,6 +156,14 @@ async function getSampleData(q, ds) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, geneVariantTws, nonDictTerms] = divideTerms(q, ds)
 
+	/* a samplelst term carries its own annotation in tw.q.groups[] and has no data source to
+	query. a ds with a sqlite db turns those groups into a CTE (termdb.sql.samplelst.js), but a
+	ds without one (e.g. GDC) has no such path: its dictionary getter is handed a term it cannot
+	know, every sample comes back unannotated, and an overlay of custom groups then matches no
+	sample at all. Split them out of dictTerms and annotate them here from the group lists. */
+	const sampleLstTws = ds.cohort.db ? [] : dictTerms.filter(tw => tw.term.type == 'samplelst')
+	for (const tw of sampleLstTws) dictTerms.splice(dictTerms.indexOf(tw), 1)
+
 	// query dictionary term data
 	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms)
 	/* samples={}
@@ -406,6 +414,10 @@ async function getSampleData(q, ds) {
 		}
 	}
 
+	// annotate the groups of samplelst terms last, so that a negated group ("not in this list")
+	// can be resolved against the samples the other terms of this request actually returned
+	setSampleLstData(sampleLstTws, samples)
+
 	// resolve each id -> display refs via the dataset's id2sampleRefs() (see id2sampleRef())
 	const bySampleId = {}
 	for (const sid in samples) {
@@ -582,6 +594,38 @@ async function mayGetSampleFilterSet4snplst(q, nonDictTerms) {
 	}
 	if (!q.filter) return // no filter, allow snplst/snplocus to return data for all samples
 	return new Set((await get_samples(q, q.ds)).map(i => i.id))
+}
+
+/*
+Annotate samples with the groups of samplelst terms, for datasets that cannot express those
+groups in SQL (see the sampleLstTws comment in getSampleData). Mirrors sampleLstSql.getCTE():
+each group writes {key,value} = group.name onto its samples, and a group with in:false covers
+the samples that are *not* listed. A sample already annotated for this term is left alone, so
+an explicit membership is never overwritten by a later negated group.
+
+samples{} is modified in place; group members missing from it are added, so that a group is
+still reported when no other term of the request returned that sample.
+*/
+export function setSampleLstData(termWrappers, samples) {
+	for (const tw of termWrappers) {
+		const groups = tw.q?.groups
+		if (!Array.isArray(groups)) throw 'samplelst tw.q.groups[] is not an array'
+		for (const group of groups) {
+			const ids = new Set((group.values || []).map(v => v.sampleId ?? v.sample))
+			if (group.in === false) {
+				for (const sampleId in samples) {
+					if (ids.has(sampleId) || samples[sampleId][tw.$id]) continue
+					samples[sampleId][tw.$id] = { key: group.name, value: group.name }
+				}
+				continue
+			}
+			for (const sampleId of ids) {
+				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				if (samples[sampleId][tw.$id]) continue
+				samples[sampleId][tw.$id] = { key: group.name, value: group.name }
+			}
+		}
+	}
 }
 
 export function divideTerms(q, ds) {
