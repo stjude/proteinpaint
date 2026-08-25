@@ -201,7 +201,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							type: 'checkbox',
 							chartType: 'survival',
 							settingsKey: 'ciVisible',
-							testid: 'ciVisible',
+							testid: 'sjpp-survival-control-ciVisible',
 							title: 'Display the 95% confidence interval'
 						},
 						{
@@ -259,7 +259,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							type: 'checkbox',
 							chartType: 'survival',
 							settingsKey: 'atRiskVisible',
-							testid: 'atRiskVisible',
+							testid: 'sjpp-survival-control-atRiskVisible',
 							title: 'Display the at-risk counts'
 						},
 						//{label: 'At-risk label offset', type: 'numeric', chartType: 'survival', settingsKey: 'atRiskLabelOffset'},
