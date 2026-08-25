@@ -450,7 +450,10 @@ export class ScatterLegend {
 		const maxSize = defaultSize * maxScale
 		const minRadius = minSize / 2
 		const maxRadius = maxSize / 2
-		const minG = scaleG.append('g').attr('transform', `translate(${x},${y})`)
+		const minG = scaleG
+			.append('g')
+			.attr('transform', `translate(${x},${y})`)
+			.attr('data-testid', 'sjpp-legend-min-scale-g')
 		const shift = 30
 		minG
 			.append('path')
