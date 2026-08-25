@@ -1,7 +1,6 @@
 import { PlotBase } from './PlotBase.ts'
 import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
 import { typeGroup } from '#shared/terms.js'
-import { dofetch3 } from '#src/client'
 import { GENE_EXPRESSION, PSEUDOBULK, SINGLECELL_GENE_EXPRESSION, SSGSEA } from '#types'
 import { getGEunit } from '../tw/geneExpression'
 import { getSCGEunit } from '../tw/singleCellGeneExpression'
@@ -9,7 +8,6 @@ import { addGeneSearchbox, GeneSetEditUI, Menu, sayerror, Tabs, make_radios } fr
 import type { ClientGenome } from '../types/clientGenome'
 import { getCurrentCohortChartTypes } from '../mass/charts.js'
 import { importPlot } from '#plots/importPlot.js'
-import { getNormalRoot } from '#filter'
 
 type GeneExpInputOpts = {
 	/** sandbox header
@@ -36,18 +34,16 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	unit!: string
 	dom!: { [index: string]: any }
 	tabs!: any
-	termProperties!: { [key: string]: any }
 
 	constructor(opts: GeneExpInputOpts, api: ComponentApi) {
 		super(opts, api)
 		this.type = GeneExpInput.type
 		this.components = { plots: {} }
-		this.termProperties = {}
 	}
 
 	makeTerm(_term) {
-		this.termProperties = Object.assign(this.termProperties, this.state.config?.termProperties)
-		const term = { ..._term, ...this.termProperties, type: this.termType, unit: this.unit }
+		const termProperties = this.state.config?.termProperties || {}
+		const term = { ..._term, ...termProperties, type: this.termType, unit: this.unit }
 		return term
 	}
 
@@ -101,10 +97,6 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 					.style('opacity', '0.6')
 					.attr('data-testid', 'sjpp-gene-exp-input-termType')
 			},
-			termTypeInputs: this.opts.holder
-				.append('div')
-				.style('margin', '10px')
-				.attr('data-testid', 'sjpp-gene-exp-input-termType-inputs'),
 			tabs: this.opts.holder
 				.append('div')
 				.style('margin', '10px')
@@ -137,8 +129,6 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 
 		this.dom.header.plot.text(typeGroup[this.termType as string].toUpperCase())
 		this.dom.tabs.selectAll('*').remove()
-
-		await this.renderTermDependentInputs(state.config)
 
 		const chartTypes = new Set(getCurrentCohortChartTypes(this.app.getState()))
 		this.tabs = this.getTabOpts(state, chartTypes)
@@ -389,55 +379,6 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		})
 	}
 
-	async renderTermDependentInputs(config) {
-		const state = this.app.getState()
-		if (this.termType == SINGLECELL_GENE_EXPRESSION) {
-			console.log(config)
-			if (config.sample) return
-			try {
-				const body = {
-					genome: state.vocab.genome,
-					dslabel: state.vocab.dslabel,
-					filter: getNormalRoot(state.termfilter.filter),
-					filter0: state.termfilter.filter0
-				}
-
-				const data = await dofetch3('termdb/singlecellSamples', { body, signal: this.api?.getAbortSignal() })
-				if (!data || !data.samples || !data.samples.length) throw new Error('No single cell samples found')
-				if (data.samples.length == 1) {
-					this.termProperties.sample = data.samples[0]
-					return
-				}
-				else {
-					this.dom.termTypeInputs
-						.append('label')
-						.attr('for', `sjpp-scge-sample-select`)
-						.style('margin-right', '5px')
-						.text('Select a sample:')
-					const select = this.dom.termTypeInputs
-						.append('select')
-						.attr('id', `sjpp-scge-sample-select`)
-						.attr('name', `sjpp-scge-sample-selectt`)
-						.on('change', async event => {
-							const value = event.target.value
-							const sample = data.samples.find(s => s.sample === value)
-							console.log(this)
-							this.termProperties.sample = sample
-
-						})
-					select
-						.selectAll('option')
-						.data(data.samples.map(s => s.sample))
-						.join('option')
-						.attr('value', value => value)
-						.text(value => value)
-				}
-			} catch (e: any) {
-				throw new Error(e.message || e)
-			}
-		}
-	}
-
 	async initSubplotInTab(subplot) {
 		const holder = this.tabs.find(tab => tab.chartType === subplot.chartType)?.contentHolder
 		if (!holder) throw new Error(`No tab found for chart type ${subplot.chartType}`)
@@ -498,6 +439,7 @@ export function getPlotConfig(opts, app) {
 	return copyMerge(config, opts)
 }
 
+/** Scge is enabled for this but sequestered to only the sc app. */
 function getPossibleGETermTypes(termdbConfig) {
-	return Array.from(enabledTermTypes).filter(termtype => termdbConfig.allowedTermTypes.includes(termtype))
+	return Array.from(enabledTermTypes).filter(termtype => termtype !== SINGLECELL_GENE_EXPRESSION && termdbConfig.allowedTermTypes.includes(termtype))
 }
