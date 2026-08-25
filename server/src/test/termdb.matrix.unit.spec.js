@@ -13,10 +13,13 @@ divideTerms: drops role-restricted dict terms via isTermVisible
 divideTerms: shorthand dict terms (no type, just id) are also gated by isTermVisible
 divideTerms: q.__protected__ is forwarded to the isTermVisible hook
 divideTerms: termCollection visibility decided by member terms (term.termlst)
-setSampleLstData: annotates group members, adds missing samples
+setSampleLstData: annotates group members, adds missing samples when unfiltered
+setSampleLstData: scopedSamples bounds which missing samples may be added
 setSampleLstData: negated group covers the samples that are not listed
 setSampleLstData: an explicit membership is not overwritten by a later negated group
 setSampleLstData: accepts value.sample as well as value.sampleId
+setSampleLstData: normalizes ids and ignores values without one
+setSampleLstData: a prototype-named sample id cannot write outside samples{}
 setSampleLstData: handles multiple samplelst terms and empty/missing group values
 setSampleLstData: throws when q.groups is not an array
 */
@@ -316,7 +319,7 @@ tape('divideTerms: termCollection with a non-object member is dropped, not throw
 that cannot express those groups in SQL. It must match what sampleLstSql.getCTE() produces
 for a ds with a sqlite db, so these specs pin the group semantics rather than the mechanics. */
 
-tape('setSampleLstData: annotates group members, adds missing samples', t => {
+tape('setSampleLstData: annotates group members, adds missing samples when unfiltered', t => {
 	const tw = {
 		$id: 'grp',
 		term: { type: 'samplelst', name: 'Male vs Female' },
@@ -332,16 +335,47 @@ tape('setSampleLstData: annotates group members, adds missing samples', t => {
 		c1: { sample: 'c1', geneExp: { key: 1, value: 1 } },
 		c3: { sample: 'c3', geneExp: { key: 3, value: 3 } }
 	}
-	setSampleLstData([tw], samples)
+	// undefined scope = the ds reported that no filter applies, so every member is in scope
+	setSampleLstData([tw], samples, undefined)
 
 	t.deepEqual(samples.c1.grp, { key: 'Male', value: 'Male' }, 'listed sample is annotated with its group name')
 	t.deepEqual(samples.c3.grp, { key: 'Female', value: 'Female' }, 'second group is annotated too')
 	t.deepEqual(
 		samples.c2,
 		{ sample: 'c2', grp: { key: 'Male', value: 'Male' } },
-		'a group member absent from samples{} is added, mirroring the sqlite CTE'
+		'with no filter applied, a group member absent from samples{} is added'
 	)
 	t.deepEqual(samples.c1.geneExp, { key: 1, value: 1 }, 'values from other terms are left alone')
+	t.end()
+})
+
+tape('setSampleLstData: scopedSamples bounds which missing samples may be added', t => {
+	// the group lists are client-supplied. The sqlite path intersects them with q.filter in the
+	// samplelst CTE, so a no-db ds must not invent a row for a sample the filter excluded.
+	const makeTw = () => ({
+		$id: 'grp',
+		term: { type: 'samplelst', name: 'G' },
+		q: { groups: [{ name: 'Cases', in: true, values: [{ sampleId: 'inScope' }, { sampleId: 'outOfScope' }] }] }
+	})
+
+	const samples = {}
+	setSampleLstData([makeTw()], samples, new Set(['inScope']))
+	t.deepEqual(Object.keys(samples), ['inScope'], 'only the in-scope member is added')
+	t.deepEqual(samples.inScope.grp, { key: 'Cases', value: 'Cases' }, 'the in-scope member is annotated')
+
+	// a sample the filtered queries already returned is in scope by construction
+	const returned = { outOfScope: { sample: 'outOfScope', geneExp: { key: 2, value: 2 } } }
+	setSampleLstData([makeTw()], returned, new Set(['inScope']))
+	t.deepEqual(
+		returned.outOfScope.grp,
+		{ key: 'Cases', value: 'Cases' },
+		'a sample already in samples{} is annotated regardless of the scope set'
+	)
+
+	// an empty set is how getSampleData fails closed for a ds that cannot report its scope
+	const none = {}
+	setSampleLstData([makeTw()], none, new Set())
+	t.deepEqual(none, {}, 'an empty scope set adds nothing')
 	t.end()
 })
 
@@ -394,6 +428,56 @@ tape('setSampleLstData: accepts value.sample as well as value.sampleId', t => {
 
 	t.deepEqual(samples.c1.grp, { key: 'G1', value: 'G1' }, 'value.sample is read')
 	t.deepEqual(samples.c2.grp, { key: 'G1', value: 'G1' }, 'value.sampleId is read')
+	t.end()
+})
+
+tape('setSampleLstData: normalizes ids and ignores values without one', t => {
+	// for..in below yields string keys, so a numeric sample id must be compared as a string or a
+	// listed sample would fall into its own negated group
+	const negated = {
+		$id: 'g',
+		term: { type: 'samplelst', name: 'N' },
+		q: { groups: [{ name: 'Others', in: false, values: [{ sampleId: 1 }] }] }
+	}
+	const samples = { 1: { sample: '1' }, 2: { sample: '2' } }
+	setSampleLstData([negated], samples)
+	t.equal(samples[1].g, undefined, 'a numeric id listed in a negated group is excluded from it')
+	t.deepEqual(samples[2].g, { key: 'Others', value: 'Others' }, 'the unlisted sample still joins')
+
+	// a value carrying neither sampleId nor sample must not become an "undefined" row
+	const blanks = {
+		$id: 'g',
+		term: { type: 'samplelst', name: 'B' },
+		q: { groups: [{ name: 'G1', values: [{}, null, { sampleId: 3 }] }] }
+	}
+	const samples2 = {}
+	setSampleLstData([blanks], samples2)
+	t.deepEqual(Object.keys(samples2), ['3'], 'blank values are dropped, numeric id is keyed as a string')
+	t.end()
+})
+
+tape('setSampleLstData: a prototype-named sample id cannot write outside samples{}', t => {
+	// sampleId and $id are unvalidated request data on this route
+	const tw = name => ({
+		$id: 'polluted',
+		term: { type: 'samplelst', name: 'P' },
+		q: { groups: [{ name: 'G', values: [{ sampleId: name }] }] }
+	})
+
+	const samples = {}
+	setSampleLstData([tw('__proto__')], samples)
+	t.equal({}.polluted, undefined, '__proto__ as a sample id does not reach Object.prototype')
+	t.equal(Object.getPrototypeOf(samples), Object.prototype, 'and does not re-point the prototype of samples{}')
+	t.deepEqual(samples, {}, 'no row is created for it')
+
+	const samples2 = {}
+	setSampleLstData([tw('constructor')], samples2)
+	t.equal(Object.polluted, undefined, 'constructor as a sample id does not write onto the Object constructor')
+	t.deepEqual(
+		samples2.constructor,
+		{ sample: 'constructor', polluted: { key: 'G', value: 'G' } },
+		'it becomes an ordinary own row instead'
+	)
 	t.end()
 })
 
