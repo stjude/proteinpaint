@@ -487,7 +487,7 @@ export default function (): Mds3 {
 				cellBoundariesFileSuffix: 'cell_boundaries.csv',
 				geneExpressionFileSuffix: 'gene_expression.h5',
 				// default viewer settings, overridable in the burger menu
-				geneExpression: 'PTPRC',
+				cellTypes: true,
 				annotationLevel: 1
 			},
 			trackLst: {

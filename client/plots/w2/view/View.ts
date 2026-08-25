@@ -94,6 +94,7 @@ export class View {
 					cellBoundaries: s.showCellBoundaries || s.showCellTypes || genes ? image.cellBoundaries : undefined,
 					hideCellStrokes: !s.showCellBoundaries,
 					showCellTypes: s.showCellTypes,
+					cellTypeFilter: s.cellTypeFilter ?? undefined,
 					nucleusBoundaries: s.showNucleusBoundaries ? image.nucleusBoundaries : undefined,
 					geneExpressionFile: image.geneExpressionFile,
 					geneExpression: s.spatialMode == 'gene_groups' ? undefined : genes,

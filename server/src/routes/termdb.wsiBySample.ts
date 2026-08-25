@@ -106,6 +106,7 @@ function init({ genomes }) {
 							// dataset-level viewer defaults; the client's burger menu overrides them
 							geneExpression: w2.geneExpression,
 							annotationLevel: w2.annotationLevel,
+							cellTypes: w2.cellTypes,
 							thumbnail: thumbnail(fileName, v, 'spatial')
 						})
 					}

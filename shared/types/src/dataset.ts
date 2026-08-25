@@ -1494,6 +1494,9 @@ type Mds3Queries = {
 		geneExpression?: string
 		/** default: show boundary strokes only in the n most zoomed-in levels */
 		annotationLevel?: number
+		/** default: fill cells by the cell_type column of the boundaries CSV.
+		 * The burger menu can always override it. */
+		cellTypes?: boolean
 	}
 	images?: Images
 	chat?: any

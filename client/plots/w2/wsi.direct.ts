@@ -10,6 +10,10 @@
  CSV columns: cell_id, vertex_x, vertex_y (µm); rows of one cell are contiguous
  and its first vertex is repeated last to close the polygon.
 
+ &cell_types=1 fills every cell by its cell_type column (when the boundaries
+ CSV has one); &cell_types=Tumor,B cells fills only the listed types. Colors
+ are assigned over all types, so a type keeps its color across filters.
+
  &annotation_level=n limits the boundary strokes to the n most zoomed-in levels
  of the viewer: zoomed out beyond that, the boundaries are hidden. Omit to
  always show. Gene expression fills are not affected — they show at all zooms.
@@ -65,6 +69,10 @@ export async function init(
 		/** fill each cell by the cell_type column of the boundaries CSV (when
 		 present), one categorical color per type, with a legend */
 		showCellTypes?: boolean
+		/** comma-separated cell types to fill; empty/undefined = all types.
+		 Colors are assigned over ALL types by abundance, so a type keeps its
+		 color when the filter changes */
+		cellTypeFilter?: string
 		nucleusBoundaries?: string
 		annotationLevel?: string | number
 		geneExpression?: string
@@ -207,7 +215,15 @@ export async function init(
 			const types = Object.keys(counts).sort((a, b) => counts[b] - counts[a])
 			const typeColor: { [t: string]: string } = {}
 			for (const [i, t] of types.entries()) typeColor[t] = CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
-			map.addLayer(cellTypeLayer(cellPolys, cellTypes, typeColor))
+			// optional filter: fill + legend only these types (colors unchanged)
+			const wanted = (opts.cellTypeFilter || '')
+				.split(',')
+				.map(s => s.trim())
+				.filter(Boolean)
+			const shown = wanted.length ? types.filter(t => wanted.includes(t)) : types
+			const shownColor: { [t: string]: string } = {}
+			for (const t of shown) shownColor[t] = typeColor[t]
+			map.addLayer(cellTypeLayer(cellPolys, cellTypes, shownColor))
 
 			mapDiv.style('position', 'relative')
 			const legend = mapDiv
@@ -223,7 +239,7 @@ export async function init(
 				.style('max-height', '60%')
 				.style('overflow-y', 'auto')
 			legend.append('div').style('font-weight', 'bold').style('margin-bottom', '2px').text('Cell type')
-			for (const t of types) {
+			for (const t of shown) {
 				const row = legend.append('div').style('margin', '2px 0')
 				row
 					.append('span')
@@ -519,7 +535,7 @@ function cellTypeLayer(
 	const byType: { [t: string]: number[][][][] } = {} // polygon lists per type
 	for (const c of cells) {
 		const t = cellTypes[c.id]
-		if (t) (byType[t] ||= []).push([c.ring])
+		if (t && typeColor[t]) (byType[t] ||= []).push([c.ring]) // typeColor doubles as the filter
 	}
 	const features: Feature[] = [] // one feature per type
 	for (const t in byType) {

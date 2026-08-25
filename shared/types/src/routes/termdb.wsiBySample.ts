@@ -47,6 +47,8 @@ export type SpatialImage = {
 	geneExpression?: string
 	/** = annotation_level: show boundary strokes only in the n most zoomed-in levels */
 	annotationLevel?: number
+	/** = cell_types: fill cells by the cell_type column of the boundaries CSV by default */
+	cellTypes?: boolean
 	/** relative URL of a small preview (the slide's z=0 tile); client prepends host */
 	thumbnail?: string
 }

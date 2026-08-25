@@ -98,6 +98,8 @@ class Wsi extends PlotBase implements RxComponent {
 			// gene names discovered from the expression h5 itself, so the burger
 			// menu offers/validates genes that actually exist in the data
 			const genes = await this.fetchGeneNames(spImage, selectedSample!.sampleId)
+			// cell types discovered by the meta request, for the type-filter dropdowns
+			await this.fetchCellTypes(spImage, selectedSample!.sampleId)
 			// seed the burger menu's gene/level fields once (null = never edited)
 			// so the shown values match the overlay and can be edited or cleared;
 			// re-renders once with the seeded state
@@ -116,7 +118,9 @@ class Wsi extends PlotBase implements RxComponent {
 						settings: {
 							wsi: {
 								geneExpression: configured.join(',') || genes[0] || '',
-								annotationLevel: settings.annotationLevel ?? spImage.annotationLevel
+								annotationLevel: settings.annotationLevel ?? spImage.annotationLevel,
+								// dataset default (w2.cellTypes); the burger checkbox overrides after
+								showCellTypes: spImage.cellTypes ?? settings.showCellTypes
 							}
 						}
 					}
@@ -151,6 +155,29 @@ class Wsi extends PlotBase implements RxComponent {
 		this.geneNames = Array.isArray(r?.genes) ? r.genes : [] // failure = no discovery, config still works
 		this.geneNamesFile = image.geneExpressionFile
 		return this.geneNames
+	}
+
+	/** cell types available in the current image's boundaries CSV, cached per file */
+	private cellTypeNames: string[] = []
+	private cellTypesFile?: string
+
+	/** Discover the distinct cell_type values of the image's boundaries CSV via
+	 the meta request (?cellBoundaries= makes wsitiles/meta parse the column).
+	 Returns [] when the image has no boundaries file, the CSV has no cell_type
+	 column, or the request fails. */
+	private async fetchCellTypes(image: SpatialImage, sampleId: string): Promise<string[]> {
+		if (!image.cellBoundaries) return []
+		if (this.cellTypesFile == image.cellBoundaries) return this.cellTypeNames // cached
+		const v = this.state.vocab
+		const params =
+			`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${v.dslabel}&genome=${v.genome}` +
+			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&cellBoundaries=${encodeURIComponent(
+				image.cellBoundaries
+			)}`
+		const r = await dofetch3(`wsitiles/meta?${params}`).catch(() => null)
+		this.cellTypeNames = Array.isArray(r?.cellTypes) ? r.cellTypes : [] // failure = no dropdowns, overlay still works
+		this.cellTypesFile = image.cellBoundaries
+		return this.cellTypeNames
 	}
 
 	/** Attach the discovered gene names to the Genes text input as a native
@@ -207,6 +234,71 @@ class Wsi extends PlotBase implements RxComponent {
 					boxLabel: 'show'
 				},
 				{
+					// chained dropdowns: one per selected type, plus an add-dropdown of
+					// the remaining types that appears once the previous is picked.
+					// No selection = all types. Hidden when the overlay is off or the
+					// image's CSV has no cell_type column.
+					label: 'Types shown',
+					title: 'Fill only the selected cell types; no selection = all types',
+					type: 'custom',
+					settingsKey: 'cellTypeFilter',
+					init: (self: any) => ({
+						main: (plot: any) => {
+							const td = self.dom.inputTd
+							td.selectAll('*').remove()
+							const types = this.cellTypeNames // discovered by fetchCellTypes for the shown image
+							const s: Settings = plot.settings.wsi
+							if (!s.showCellTypes || !types.length) {
+								self.dom.row.style('display', 'none')
+								return
+							}
+							self.dom.row.style('display', 'table-row')
+							// drop stale selections when the image (and its types) changed
+							const selected = (s.cellTypeFilter || '')
+								.split(',')
+								.map(t => t.trim())
+								.filter(t => types.includes(t))
+							const dispatch = (list: string[]) =>
+								this.app.dispatch({
+									type: 'plot_edit',
+									id: this.id,
+									config: { settings: { wsi: { cellTypeFilter: list.join(',') } } }
+								})
+							const addSelect = () =>
+								td.append('select').style('display', 'block').style('margin', '2px 0').style('max-width', '180px')
+							// one dropdown per chosen type: change replaces it, blank removes it
+							for (const [i, t] of selected.entries()) {
+								const sel = addSelect().on('change', function (this: HTMLSelectElement) {
+									const next = selected.slice()
+									if (this.value) next[i] = this.value
+									else next.splice(i, 1)
+									dispatch(next)
+								})
+								sel.append('option').attr('value', '').text('× remove')
+								for (const ty of types)
+									if (ty == t || !selected.includes(ty))
+										sel
+											.append('option')
+											.attr('value', ty)
+											.property('selected', ty == t)
+											.text(ty)
+							}
+							// the next dropdown, offering the not-yet-selected types
+							const remaining = types.filter(ty => !selected.includes(ty))
+							if (remaining.length) {
+								const add = addSelect().on('change', function (this: HTMLSelectElement) {
+									if (this.value) dispatch([...selected, this.value])
+								})
+								add
+									.append('option')
+									.attr('value', '')
+									.text(selected.length ? 'Add type…' : 'All types')
+								for (const ty of remaining) add.append('option').attr('value', ty).text(ty)
+							}
+						}
+					})
+				},
+				{
 					label: 'Gene expression',
 					title: 'Show or hide the gene expression overlay',
 					type: 'checkbox',
@@ -260,6 +352,7 @@ export function getDefaultWsiSettings(overrides = {}): Settings {
 		showNucleusBoundaries: true,
 		showGeneExpression: true,
 		showCellTypes: false, // opt-in: fills all annotated cells, visually heavy
+		cellTypeFilter: null, // null/'' = fill every annotated type
 
 		geneExpression: null,
 		annotationLevel: null,
