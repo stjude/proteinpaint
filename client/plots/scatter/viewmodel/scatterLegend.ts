@@ -532,7 +532,9 @@ export class ScatterLegend {
 					.style('width', '50px')
 					.property('value', this.scatter.settings.minShapeSize)
 					.on('change', () => {
-						const value = clampValue(parseFloat(minInput.node().value), minShapeSize, maxShapeSize)
+						let value = parseFloat(minInput.node().value)
+						if (!Number.isFinite(value)) return
+						value = clampValue(value, minShapeSize, maxShapeSize)
 						minInput.property('value', value)
 						this.scatter.config.settings.sampleScatter.minShapeSize = value
 						this.scatter.app.dispatch({
@@ -552,7 +554,9 @@ export class ScatterLegend {
 					.style('width', '50px')
 					.property('value', this.scatter.settings.maxShapeSize)
 					.on('change', () => {
-						const value: any = clampValue(parseFloat(maxInput.node().value), minShapeSize, maxShapeSize)
+						let value = parseFloat(maxInput.node().value)
+						if (!Number.isFinite(value)) return
+						value = clampValue(value, minShapeSize, maxShapeSize)
 						maxInput.property('value', value)
 						this.scatter.config.settings.sampleScatter.maxShapeSize = value
 						this.scatter.app.dispatch({
