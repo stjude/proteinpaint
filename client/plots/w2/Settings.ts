@@ -1,3 +1,4 @@
+/** the w2 plot's settings slice (config.settings.wsi) */
 type Settings = {
 	/** index of the selected row in the sample table; -1 = no sample selected */
 	selectedSampleIndex: number
@@ -7,6 +8,7 @@ type Settings = {
 	viewerHeight: string
 	/** spatial images only — burger-menu overrides of the dataset's viewer settings */
 	showCellBoundaries: boolean
+	/** blue nucleus outlines */
 	showNucleusBoundaries: boolean
 	/** master switch for the gene expression overlay */
 	showGeneExpression: boolean

@@ -54,6 +54,7 @@ import { Fill, Stroke, Style } from 'ol/style.js' // polygon styling primitives
 import { dofetch3 } from '#common/dofetch' // fetch wrapper for meta/genecounts
 import { sayerror } from '#dom' // inline error banner
 
+/** Build the viewer in `holder`; opts mirror the URL params documented above */
 export async function init(
 	opts: {
 		/** direct slide path relative to tpmasterdir (runpp ?image_file=) */
@@ -65,6 +66,7 @@ export async function init(
 		slideQuery?: string
 		/** display name when slide is not given (e.g. the spatial image fileName) */
 		label?: string
+		/** = cell_boundaries: cell segmentation CSV, tpmasterdir-relative */
 		cellBoundaries?: string
 		/** fetch cellBoundaries (expression fills need the polygons) but don't draw their strokes */
 		hideCellStrokes?: boolean
@@ -75,10 +77,15 @@ export async function init(
 		 Colors are assigned over ALL types by abundance, so a type keeps its
 		 color when the filter changes */
 		cellTypeFilter?: string
+		/** = nucleus_boundaries: nucleus segmentation CSV, tpmasterdir-relative */
 		nucleusBoundaries?: string
+		/** = annotation_level: strokes only in the n most zoomed-in levels */
 		annotationLevel?: string | number
+		/** = gene_expression: comma-separated genes, one fill overlay per gene */
 		geneExpression?: string
+		/** = gene_expression_file: 10x cell_feature_matrix HDF5 */
 		geneExpressionFile?: string
+		/** = gene_groups: genes summed into ONE fill overlay */
 		geneGroups?: string
 		/** fetch the gene counts (hover tooltip reports them) but draw no
 		 expression fills/legend — the mass burger's unchecked 'Gene expression' */
@@ -87,6 +94,7 @@ export async function init(
 		width?: string
 		height?: string
 	},
+	/** d3 selection the viewer renders into */
 	holder: any
 ) {
 	const name = opts.slide ?? opts.label ?? 'slide' // display name in messages
@@ -103,10 +111,12 @@ export async function init(
 
 		// z-planes of a 3D OME-TIFF stack (meta.planes = 1 for 2D slides);
 		// start on the middle plane, matching the server's default
-		const planes: number = meta.planes || 1
-		let plane = Math.floor(planes / 2)
+		const planes: number = meta.planes || 1 // how many z-planes the stack has
+		let plane = Math.floor(planes / 2) // the plane currently shown
 
-		const makeSource = (p: number) =>
+		const makeSource = (
+			p: number // one tile source per z-plane; swapped by the slider
+		) =>
 			new Zoomify({
 				// {z}/{x}/{y} hit wsitiles/tile; unused {TileGroup} satisfies OL's
 				// requirement that a {TileGroup}/{tileIndex} placeholder be present.
@@ -131,16 +141,16 @@ export async function init(
 		// it below the fold); swapping the tile source refetches visible tiles
 		// for the chosen plane, view position unchanged
 		if (planes > 1) {
-			const bar = holder.append('div').style('font', '12px system-ui').style('padding', '4px 8px')
-			bar.append('span').text('z-plane: ')
+			const bar = holder.append('div').style('font', '12px system-ui').style('padding', '4px 8px') // the bar itself
+			bar.append('span').text('z-plane: ') // static label
 			const label = () => `${plane + 1}/${planes}` // 1-based display, e.g. '3/5'
-			const planeText = bar.append('span').text(label())
+			const planeText = bar.append('span').text(label()) // live readout next to the slider
 			bar
 				.append('input')
 				.attr('type', 'range') // native slider, one notch per plane
-				.attr('min', 0)
-				.attr('max', planes - 1)
-				.attr('step', 1)
+				.attr('min', 0) // first plane
+				.attr('max', planes - 1) // last plane
+				.attr('step', 1) // whole planes only
 				.property('value', plane) // start at the default (middle) plane
 				.style('vertical-align', 'middle')
 				.style('margin-left', '8px')
@@ -152,7 +162,7 @@ export async function init(
 				})
 		}
 
-		const mapDiv = holder
+		const mapDiv = holder // the map's container; legends/tooltip position against it
 			.append('div')
 			.style('width', opts.width ?? '100vw') // full-window unless the w2 plot passes a size
 			.style('height', opts.height ?? '90vh')
@@ -163,6 +173,7 @@ export async function init(
 		})
 		map.getView().fit(extent) // start fully zoomed out, whole slide visible
 
+		// info line under the map: name, pixel size, µm/px, level count
 		holder
 			.append('div')
 			.style('font', '12px system-ui')
@@ -184,12 +195,13 @@ export async function init(
 		// just the window.
 		const pinned: any[] = [] // legend selections to keep in view
 		const repin = () => {
-			const node = mapDiv.node()
+			const node = mapDiv.node() // the positioning parent of every legend
 			if (!node.isConnected) return window.removeEventListener('scroll', repin, true) // viewer re-rendered
-			const r = node.getBoundingClientRect()
+			const r = node.getBoundingClientRect() // where the map sits in the viewport
 			for (const box of pinned) {
+				// 8 - r.top = the hidden amount + 8px margin; clamp to the map's bottom edge
 				const top = Math.min(Math.max(8, 8 - r.top), Math.max(8, r.height - box.node().offsetHeight - 8))
-				box.style('top', `${top}px`)
+				box.style('top', `${top}px`) // move the legend to stay visible
 			}
 		}
 		window.addEventListener('scroll', repin, { capture: true, passive: true })
@@ -238,22 +250,23 @@ export async function init(
 		const typesShown = !!(opts.showCellTypes && cellPolys && cellTypes && Object.keys(cellTypes).length)
 		if (typesShown && cellPolys && cellTypes) {
 			// types ordered by abundance so colors go to the biggest populations first
-			const counts: { [t: string]: number } = {}
-			for (const id in cellTypes) counts[cellTypes[id]] = (counts[cellTypes[id]] || 0) + 1
-			const types = Object.keys(counts).sort((a, b) => counts[b] - counts[a])
-			const typeColor: { [t: string]: string } = {}
+			const counts: { [t: string]: number } = {} // cells per type, for ordering + legend
+			for (const id in cellTypes) counts[cellTypes[id]] = (counts[cellTypes[id]] || 0) + 1 // tally
+			const types = Object.keys(counts).sort((a, b) => counts[b] - counts[a]) // most abundant first
+			const typeColor: { [t: string]: string } = {} // type -> its stable palette color
 			for (const [i, t] of types.entries()) typeColor[t] = CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
 			// optional filter: fill + legend only these types (colors unchanged)
-			const wanted = (opts.cellTypeFilter || '')
+			const wanted = (opts.cellTypeFilter || '') // comma-separated filter into a clean list
 				.split(',')
 				.map(s => s.trim())
 				.filter(Boolean)
-			const shown = wanted.length ? types.filter(t => wanted.includes(t)) : types
-			const shownColor: { [t: string]: string } = {}
-			for (const t of shown) shownColor[t] = typeColor[t]
-			map.addLayer(cellTypeLayer(cellPolys, cellTypes, shownColor))
+			const shown = wanted.length ? types.filter(t => wanted.includes(t)) : types // empty filter = all
+			const shownColor: { [t: string]: string } = {} // color subset acting as the fill filter
+			for (const t of shown) shownColor[t] = typeColor[t] // only shown types get a fill
+			map.addLayer(cellTypeLayer(cellPolys, cellTypes, shownColor)) // draw the type fills
 
-			mapDiv.style('position', 'relative')
+			mapDiv.style('position', 'relative') // make the map the legend's offset parent
+			// the type legend box, top-left of the map
 			const legend = mapDiv
 				.append('div')
 				.style('position', 'absolute')
@@ -266,10 +279,10 @@ export async function init(
 				.style('font', '12px system-ui')
 				.style('max-height', '60%')
 				.style('overflow-y', 'auto')
-			legend.append('div').style('font-weight', 'bold').style('margin-bottom', '2px').text('Cell type')
+			legend.append('div').style('font-weight', 'bold').style('margin-bottom', '2px').text('Cell type') // title
 			for (const t of shown) {
-				const row = legend.append('div').style('margin', '2px 0')
-				row
+				const row = legend.append('div').style('margin', '2px 0') // one legend row per type
+				row // the type's color swatch
 					.append('span')
 					.style('display', 'inline-block')
 					.style('width', '10px')
@@ -277,7 +290,7 @@ export async function init(
 					.style('margin-right', '6px')
 					.style('border', '1px solid #ccc')
 					.style('background', `rgb(${typeColor[t]})`)
-				row.append('span').text(`${t} (${counts[t]})`)
+				row.append('span').text(`${t} (${counts[t]})`) // type name + its cell count
 			}
 			pinned.push(legend) // keep in view when the page scrolls
 			repin()
@@ -286,7 +299,9 @@ export async function init(
 		// per-gene count maps kept for the hover tooltip below
 		const geneCounts: { gene: string; cells: { [id: string]: number } }[] = []
 
-		const geneList = (s?: string) =>
+		const geneList = (
+			s?: string // comma-separated param -> clean gene name list
+		) =>
 			(s || '')
 				.split(',')
 				.map(t => t.trim())
@@ -296,8 +311,9 @@ export async function init(
 		if (exprGenes.length || groupGenes.length) {
 			try {
 				if (!opts.geneExpressionFile)
+					// counts live in the h5; genes without it can't render
 					throw new Error('gene_expression/gene_groups requires gene_expression_file=<h5 file>')
-				if (!cellPolys) throw new Error('gene_expression/gene_groups requires cell_boundaries=<csv file>')
+				if (!cellPolys) throw new Error('gene_expression/gene_groups requires cell_boundaries=<csv file>') // no polygons to fill
 				// one genecounts request per gene, expr + group genes together
 				const results = await Promise.all(
 					[...exprGenes, ...groupGenes].map(gene =>
@@ -315,7 +331,7 @@ export async function init(
 				const addLegend = (rgb: string, name: string, max: number) => {
 					if (!legend) {
 						mapDiv.style('position', 'relative')
-						legend = mapDiv
+						legend = mapDiv // the gene legend box, top-right of the map
 							.append('div')
 							.style('position', 'absolute')
 							.style('top', '8px')
@@ -328,8 +344,8 @@ export async function init(
 						pinned.push(legend) // keep in view when the page scrolls
 						repin()
 					}
-					const row = legend.append('div').style('margin', '2px 0')
-					row.append('span').style('margin-right', '6px').text(name)
+					const row = legend.append('div').style('margin', '2px 0') // one legend row per gene
+					row.append('span').style('margin-right', '6px').text(name) // the gene's name
 					// alpha range mirrors expressionLayer's shades (log-scaled counts)
 					row
 						.append('span')
@@ -339,7 +355,7 @@ export async function init(
 						.style('vertical-align', 'middle')
 						.style('border', '1px solid #ccc')
 						.style('background', `linear-gradient(to right, rgba(${rgb}, 0.15), rgba(${rgb}, 0.9))`)
-					row.append('span').style('margin-left', '4px').text(`1–${max}`)
+					row.append('span').style('margin-left', '4px').text(`1–${max}`) // the count range the gradient spans
 				}
 
 				// gene_expression: one layer per gene, each its own color
@@ -347,7 +363,7 @@ export async function init(
 				for (const [i, gene] of exprGenes.entries()) {
 					const r = results[i] // this gene's genecounts answer
 					if (!r || r.error) {
-						sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`)
+						sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`) // surface it
 						continue // one bad gene doesn't block the others
 					}
 					geneCounts.push({ gene, cells: r.cells }) // tooltip shows this gene's per-cell count
@@ -365,18 +381,18 @@ export async function init(
 					for (const [i, gene] of groupGenes.entries()) {
 						const r = results[exprGenes.length + i] // group answers follow the expr ones
 						if (!r || r.error) {
-							sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`)
+							sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`) // surface it
 							continue // skip the missing gene, keep summing the rest
 						}
-						found.push(gene)
+						found.push(gene) // this gene contributes to the sum
 						for (const id in r.cells) total[id] = (total[id] || 0) + r.cells[id] // accumulate per cell
 					}
 					if (found.length) {
 						geneCounts.push({ gene: found.join('+'), cells: total }) // summed count in the tooltip
 						if (!typesShown && !opts.hideExpressionFills) {
-							// cell-type fills win; the summed counts stay hover-only
+							// fills allowed (no cell-type overlay, checkbox on): draw the sum
 							let max = 0 // the summed overlay's own count ceiling
-							for (const id in total) if (total[id] > max) max = total[id]
+							for (const id in total) if (total[id] > max) max = total[id] // find it
 							const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length] // next unused palette color
 							map.addLayer(expressionLayer(cellPolys, total, max, rgb)) // ONE overlay of the totals
 							addLegend(rgb, found.join('+'), max) // e.g. 'PTPRC+EPCAM'
@@ -384,7 +400,7 @@ export async function init(
 					}
 				}
 			} catch (e: any) {
-				sayerror(holder, `Gene expression error: ${e.message || e}`)
+				sayerror(holder, `Gene expression error: ${e.message || e}`) // config errors from the throws above
 			}
 		}
 
@@ -396,11 +412,12 @@ export async function init(
 			// ponytail: linear scan over ~100k bboxes per mousemove — swap in an
 			// rbush index if hovering ever feels laggy
 			const boxes = cellPolys.map(c => {
-				const xs = c.ring.map(v => v[0])
-				const ys = c.ring.map(v => v[1])
-				return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]
+				const xs = c.ring.map(v => v[0]) // ring x coordinates
+				const ys = c.ring.map(v => v[1]) // ring y coordinates
+				return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] // [minX,minY,maxX,maxY]
 			})
-			mapDiv.style('position', 'relative')
+			mapDiv.style('position', 'relative') // make the map the tooltip's offset parent
+			// the tooltip box, following the cursor
 			const tip = mapDiv
 				.append('div')
 				.style('position', 'absolute')
@@ -413,29 +430,29 @@ export async function init(
 				.style('font', '12px system-ui')
 				.style('white-space', 'pre') // one datum per line via \n
 			map.on('pointermove', (evt: any) => {
-				const res = map.getView().getResolution()
+				const res = map.getView().getResolution() // current zoom, in map units/px
 				if (evt.dragging || (maxResolution !== undefined && !(typeof res == 'number' && res < maxResolution))) {
 					tip.style('display', 'none') // panning, or zoomed out past annotation_level
 					return
 				}
-				const [x, y] = evt.coordinate
-				let hit: CellPoly | undefined
+				const [x, y] = evt.coordinate // pointer position in map (level-0 px) coords
+				let hit: CellPoly | undefined // the cell under the pointer, if any
 				for (const [i, b] of boxes.entries()) {
-					if (x < b[0] || y < b[1] || x > b[2] || y > b[3]) continue
+					if (x < b[0] || y < b[1] || x > b[2] || y > b[3]) continue // cheap bbox reject
 					if (pointInRing(x, y, cellPolys![i].ring)) {
-						hit = cellPolys![i]
-						break
+						hit = cellPolys![i] // exact polygon hit
+						break // first match wins
 					}
 				}
 				if (!hit) {
-					tip.style('display', 'none')
+					tip.style('display', 'none') // pointer over no cell
 					return
 				}
-				const rows = [`cell id: ${hit.id}`]
-				const t = cellTypes?.[hit.id]
-				if (t) rows.push(`cell type: ${t}`)
-				for (const g of geneCounts) rows.push(`${g.gene} expression: ${(g.cells[hit.id] || 0).toFixed(1)}`)
-				tip
+				const rows = [`cell id: ${hit.id}`] // tooltip line 1: the cell's id
+				const t = cellTypes?.[hit.id] // its annotated type, if the CSV has one
+				if (t) rows.push(`cell type: ${t}`) // line 2: the type
+				for (const g of geneCounts) rows.push(`${g.gene} expression: ${(g.cells[hit.id] || 0).toFixed(1)}`) // per gene
+				tip // place the box just below-right of the cursor and fill it
 					.style('display', 'block')
 					.style('left', `${evt.pixel[0] + 12}px`)
 					.style('top', `${evt.pixel[1] + 12}px`)
@@ -443,42 +460,49 @@ export async function init(
 			})
 		}
 	} catch (e: any) {
-		loading.remove()
-		sayerror(holder, `WSI error: ${e.message || e}`)
+		loading.remove() // drop the placeholder before showing the error
+		sayerror(holder, `WSI error: ${e.message || e}`) // anything fatal: meta failure, bad slide path
 	}
 }
 
+/** one cell's polygon: unquoted cell_id + closed vertex ring in map coords */
 type CellPoly = { id: string; ring: number[][] }
 
 /** even-odd ray cast: is (x, y) inside the closed ring? (exported for tests) */
 export function pointInRing(x: number, y: number, ring: number[][]): boolean {
-	let inside = false
+	let inside = false // parity of edge crossings so far
 	for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-		const [xi, yi] = ring[i]
-		const [xj, yj] = ring[j]
+		const [xi, yi] = ring[i] // edge endpoint i
+		const [xj, yj] = ring[j] // edge endpoint j (previous vertex)
+		// edge spans y; flip parity when the ray to the left crosses it
 		if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside
 	}
-	return inside
+	return inside // odd crossings = inside
 }
 
 /** Fetch a boundary CSV (via wsitiles/boundaries) and parse it into one closed
  ring per cell, keyed by the unquoted cell_id (matches h5 barcodes). */
 async function fetchBoundaries(
+	/** server origin ('' when same-origin) */
 	host: string,
 	/** wsitiles query addressing the slide (slide= or dataset params) */
 	sq: string,
+	/** the boundaries CSV, tpmasterdir-relative */
 	file: string,
+	/** µm per pixel, x and y, from meta.mpp */
 	mppX: number,
 	mppY: number
 ): Promise<{ polys: CellPoly[]; cellTypes?: { [id: string]: string } }> {
 	const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}`) // raw csv text
-	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
-	return parseBoundaries(await res.text(), mppX, mppY)
+	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`) // http failure = overlay error banner
+	return parseBoundaries(await res.text(), mppX, mppY) // csv -> polygons (+ cell types)
 }
 
 /** Parse a boundary CSV into one closed ring per cell (exported for tests). */
 export function parseBoundaries(
+	/** the CSV's full text */
 	text: string,
+	/** µm per pixel, x and y; 1 = coords already in px */
 	mppX: number,
 	mppY: number
 ): { polys: CellPoly[]; cellTypes?: { [id: string]: string } } {
@@ -487,23 +511,23 @@ export function parseBoundaries(
 	// per-cell annotation export into the CSV) labels every vertex row of the
 	// cell with its assigned type; captured per cell for the type overlay.
 	// OL's Zoomify extent is [0,-h,w,0]: x in px to the right, y in px negated.
-	const lines = text.split('\n')
-	const unquote = (s?: string) => (s || '').replace(/"/g, '').trim()
-	const typeIdx = lines[0] ? lines[0].split(',').findIndex(h => unquote(h) == 'cell_type') : -1
-	const cellTypes: { [id: string]: string } | undefined = typeIdx > 2 ? {} : undefined
+	const lines = text.split('\n') // one vertex row per line
+	const unquote = (s?: string) => (s || '').replace(/"/g, '').trim() // strip csv quoting
+	const typeIdx = lines[0] ? lines[0].split(',').findIndex(h => unquote(h) == 'cell_type') : -1 // header lookup
+	const cellTypes: { [id: string]: string } | undefined = typeIdx > 2 ? {} : undefined // only when the column exists
 	const cells: CellPoly[] = [] // finished polygons
 	let ring: number[][] = [] // vertices of the cell being read
 	let curId = '' // the cell those vertices belong to
 	for (const line of lines) {
 		const fields = line.split(',') // one vertex per row
-		const [id, xs, ys] = fields
-		const x = Number(xs)
+		const [id, xs, ys] = fields // cell id + µm coordinates
+		const x = Number(xs) // numeric x doubles as the row-validity check
 		if (!xs || Number.isNaN(x)) continue // header / blank line
 		if (id !== curId) {
 			// a new cell_id starts: close out the previous cell's ring
 			if (ring.length > 2) cells.push({ id: curId.replace(/"/g, ''), ring })
-			ring = []
-			curId = id
+			ring = [] // start collecting the new cell's vertices
+			curId = id // remember whose they are
 			if (cellTypes) {
 				// annotation columns never contain commas, so the type is at its header index
 				const t = unquote(fields[typeIdx])
@@ -565,22 +589,25 @@ const CELL_TYPE_COLORS = [
  MultiPolygon feature per type in that type's color at a fixed opacity.
  Unannotated (QC-filtered) cells stay unfilled. */
 function cellTypeLayer(
+	/** every cell polygon of the slide */
 	cells: CellPoly[],
+	/** cell_id -> annotated type */
 	cellTypes: { [id: string]: string },
+	/** type -> fill color; a type absent here is not drawn */
 	typeColor: { [t: string]: string }
 ): VectorLayer {
 	const byType: { [t: string]: number[][][][] } = {} // polygon lists per type
 	for (const c of cells) {
-		const t = cellTypes[c.id]
+		const t = cellTypes[c.id] // this cell's annotation, if any
 		if (t && typeColor[t]) (byType[t] ||= []).push([c.ring]) // typeColor doubles as the filter
 	}
 	const features: Feature[] = [] // one feature per type
 	for (const t in byType) {
-		const f = new Feature(new MultiPolygon(byType[t]))
-		f.setStyle(new Style({ fill: new Fill({ color: `rgba(${typeColor[t]}, 0.45)` }) }))
+		const f = new Feature(new MultiPolygon(byType[t])) // all of this type's cells at once
+		f.setStyle(new Style({ fill: new Fill({ color: `rgba(${typeColor[t]}, 0.45)` }) })) // fixed-opacity fill
 		features.push(f)
 	}
-	return new VectorLayer({ source: new VectorSource({ features }) })
+	return new VectorLayer({ source: new VectorSource({ features }) }) // fills only, no strokes
 }
 
 /** Fill each expressing cell with `rgb` at an opacity scaling with the cell's
@@ -603,7 +630,7 @@ function expressionLayer(cells: CellPoly[], counts: { [id: string]: number }, ma
 		if (!polys.length) continue // no cell landed in this shade
 		const f = new Feature(new MultiPolygon(polys)) // all of this shade's cells at once
 		const alpha = 0.15 + (0.75 * (i + 1)) / SHADES // faintest 0.24 .. strongest 0.90
-		f.setStyle(new Style({ fill: new Fill({ color: `rgba(${rgb}, ${alpha.toFixed(2)})` }) }))
+		f.setStyle(new Style({ fill: new Fill({ color: `rgba(${rgb}, ${alpha.toFixed(2)})` }) })) // the shade's fill
 		features.push(f)
 	}
 	return new VectorLayer({ source: new VectorSource({ features }) }) // fills only, no strokes

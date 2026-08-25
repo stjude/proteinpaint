@@ -1,14 +1,14 @@
-import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
-import { PlotBase } from '../PlotBase'
-import type { BasePlotConfig, MassState } from '#mass/types/mass'
-import type { SpatialImage } from '#types'
-import { dofetch3 } from '#common/dofetch' // gene-name discovery from the expression h5
-import { controlsInit } from '../controls'
-import type Settings from './Settings.ts'
-import { Model } from './model/Model'
-import { ViewModel } from './viewModel/ViewModel'
-import { View } from './view/View'
-import { WsiInteractions } from './interactions/WsiInteractions'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx' // rx plumbing
+import { PlotBase } from '../PlotBase' // shared mass-plot base class
+import type { BasePlotConfig, MassState } from '#mass/types/mass' // app state shapes
+import type { SpatialImage } from '#types' // spatial image entry from wsiBySample
+import { dofetch3 } from '#common/dofetch' // gene-name/cell-type discovery requests
+import { controlsInit } from '../controls' // burger-menu builder
+import type Settings from './Settings.ts' // this plot's settings shape
+import { Model } from './model/Model' // server data access
+import { ViewModel } from './viewModel/ViewModel' // shapes data for rendering
+import { View } from './view/View' // renders table + viewer
+import { WsiInteractions } from './interactions/WsiInteractions' // state-edit dispatchers
 
 /** Mass plot listing every sample in the dataset that has whole-slide images
  (the wsisamples route performs the per-sample check), with a pan/zoom viewer
@@ -16,56 +16,61 @@ import { WsiInteractions } from './interactions/WsiInteractions'
  Model (server data) -> ViewModel (view data) -> View (render), with
  interactions dispatching state edits. */
 type WsiDom = {
-	div: any
-	controls: any
-	error: any
-	table: any
-	viewer: any
-	header?: any
+	div: any // the plot's outer container
+	controls: any // burger menu holder (spatial only)
+	error: any // inline error banner
+	table: any // pick-a-sample table
+	viewer: any // tabs + map
+	header?: any // sandbox header, renamed per image kind
 }
 
 class Wsi extends PlotBase implements RxComponent {
-	static type = 'wsi'
+	static type = 'wsi' // rx chart type name
 
-	type: string
-	dom: WsiDom
-	interactions?: WsiInteractions
+	type: string // instance copy of the chart type
+	dom: WsiDom // the divs built in the constructor
+	interactions?: WsiInteractions // created in init()
 	/** showCellTypes of the previous render, to tell which exclusive fill
 	 checkbox was just toggled when both end up checked */
 	private prevShowCellTypes = false
 
 	constructor(opts: any, api: ComponentApi) {
-		super(opts, api)
-		this.type = Wsi.type
-		const holder = opts.holder.classed('sjpp-wsi-main', true)
-		const div = holder.append('div').style('padding', '5px')
+		super(opts, api) // PlotBase wires app/id/opts
+		this.type = Wsi.type // rx uses this to route state updates
+		const holder = opts.holder.classed('sjpp-wsi-main', true) // sandbox mount point
+		const div = holder.append('div').style('padding', '5px') // the plot's own container
 		this.dom = {
 			div,
 			// burger menu for spatial viewer settings; hidden until a spatial image is shown
 			controls: div.append('div').attr('id', 'sjpp-wsi-controls').style('display', 'none'),
-			error: div.append('div').attr('id', 'sjpp-wsi-error').style('opacity', 0.75),
-			table: div.append('div').attr('id', 'sjpp-wsi-table'),
-			viewer: div.append('div').attr('id', 'sjpp-wsi-viewer')
+			error: div.append('div').attr('id', 'sjpp-wsi-error').style('opacity', 0.75), // inline errors
+			table: div.append('div').attr('id', 'sjpp-wsi-table'), // sample table mount
+			viewer: div.append('div').attr('id', 'sjpp-wsi-viewer') // tabs + map mount
 		}
 		if (opts.header)
+			// sandbox title; main() renames it to SPATIAL VIEWER for spatial images
 			this.dom.header = opts.header.text('WHOLE SLIDE IMAGES').style('font-size', '0.7em').style('opacity', 0.6)
 	}
 
+	/** the app-state slice this plot reacts to */
 	getState(appState: MassState) {
-		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
+		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id) // this plot's config
 		if (!config) {
+			// the plot was registered wrong; fail loudly
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			vocab: appState.vocab,
-			config
+			vocab: appState.vocab, // genome + dslabel for server requests
+			config // the plot's own settings
 		}
 	}
 
+	/** rx lifecycle: one-time setup before the first main() */
 	async init() {
-		this.interactions = new WsiInteractions(this.app, this.id)
+		this.interactions = new WsiInteractions(this.app, this.id) // dispatchers used by the view
 	}
 
+	/** rx lifecycle: re-renders the whole plot on every relevant state change */
 	async main() {
 		const config = structuredClone(this.state.config) // this plot's slice of app state
 		if (config.childType != this.type && config.chartType != this.type) return // not for this plot
@@ -92,8 +97,8 @@ class Wsi extends PlotBase implements RxComponent {
 		const data = await model.getData() // termdb/wsiBySample sample listing
 		if (!data || data.error || !data.samples?.length) {
 			this.dom.table.selectAll('*').remove() // nothing to show; clear the ui
-			this.dom.viewer.selectAll('*').remove()
-			this.dom.error.style('padding', '20px').text(data?.error || 'No samples with whole-slide images.')
+			this.dom.viewer.selectAll('*').remove() // and any stale viewer
+			this.dom.error.style('padding', '20px').text(data?.error || 'No samples with whole-slide images.') // say why
 			return
 		}
 
@@ -110,7 +115,7 @@ class Wsi extends PlotBase implements RxComponent {
 		const isSpatial = image?.type == 'spatial' // drives header text + burger visibility
 		this.dom.header?.text(isSpatial ? 'SPATIAL VIEWER' : 'WHOLE SLIDE IMAGES')
 		if (isSpatial) {
-			const spImage = image as SpatialImage
+			const spImage = image as SpatialImage // narrowed: spatial images carry companion paths
 			// gene names discovered from the expression h5 itself, so the burger
 			// menu offers/validates genes that actually exist in the data
 			const genes = await this.fetchGeneNames(spImage, selectedSample!.sampleId)
@@ -123,11 +128,12 @@ class Wsi extends PlotBase implements RxComponent {
 				// the dataset's configured default is only an override: keep the
 				// genes of it that exist in the file, else fall back to the file's
 				// first gene, so the default is never a gene the data lacks
-				const configured = (spImage.geneExpression || '')
+				const configured = (spImage.geneExpression || '') // dataset's comma-separated default genes
 					.split(',')
 					.map(s => s.trim())
-					.filter(g => genes.includes(g))
+					.filter(g => genes.includes(g)) // keep only genes the h5 actually has
 				this.app.dispatch({
+					// one-time seeding edit; triggers a re-render with the seeded values
 					type: 'plot_edit',
 					id: this.id,
 					config: {
@@ -146,56 +152,56 @@ class Wsi extends PlotBase implements RxComponent {
 				})
 				return
 			}
-			if (!this.components.controls) await this.setControls()
+			if (!this.components.controls) await this.setControls() // build the burger menu once
 			this.addGeneDatalist() // autocomplete on the Genes field from the discovered names
 		}
-		this.dom.controls.style('display', isSpatial ? 'inline-block' : 'none')
+		this.dom.controls.style('display', isSpatial ? 'inline-block' : 'none') // burger only for spatial
 
-		await new View(this.dom, viewModel.viewData, images, settings, this.interactions, this.state.vocab).render()
+		await new View(this.dom, viewModel.viewData, images, settings, this.interactions, this.state.vocab).render() // draw
 	}
 
 	/** gene names available in the current image's expression h5, cached per file */
 	private geneNames: string[] = []
-	private geneNamesFile?: string
+	private geneNamesFile?: string // the h5 the cache was built from
 
 	/** Discover the genes present in the image's cell_feature_matrix h5 via
 	 wsitiles/genenames (same slide-scoped access checks as genecounts).
 	 Returns [] when the image has no expression file or the request fails. */
 	private async fetchGeneNames(image: SpatialImage, sampleId: string): Promise<string[]> {
-		if (!image.geneExpressionFile) return []
+		if (!image.geneExpressionFile) return [] // no h5, nothing to discover
 		if (this.geneNamesFile == image.geneExpressionFile) return this.geneNames // cached
-		const v = this.state.vocab
-		const params =
+		const v = this.state.vocab // genome + dslabel for the request
+		const params = // standard wsitiles slide addressing + the h5 file
 			`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${v.dslabel}&genome=${v.genome}` +
 			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&file=${encodeURIComponent(
 				image.geneExpressionFile
 			)}`
 		const r = await dofetch3(`wsitiles/genenames?${params}`).catch(() => null)
 		this.geneNames = Array.isArray(r?.genes) ? r.genes : [] // failure = no discovery, config still works
-		this.geneNamesFile = image.geneExpressionFile
+		this.geneNamesFile = image.geneExpressionFile // remember which file the cache is for
 		return this.geneNames
 	}
 
 	/** cell types available in the current image's boundaries CSV, cached per file */
 	private cellTypeNames: string[] = []
-	private cellTypesFile?: string
+	private cellTypesFile?: string // the CSV the cache was built from
 
 	/** Discover the distinct cell_type values of the image's boundaries CSV via
 	 the meta request (?cellBoundaries= makes wsitiles/meta parse the column).
 	 Returns [] when the image has no boundaries file, the CSV has no cell_type
 	 column, or the request fails. */
 	private async fetchCellTypes(image: SpatialImage, sampleId: string): Promise<string[]> {
-		if (!image.cellBoundaries) return []
+		if (!image.cellBoundaries) return [] // no boundaries CSV, nothing to discover
 		if (this.cellTypesFile == image.cellBoundaries) return this.cellTypeNames // cached
-		const v = this.state.vocab
-		const params =
+		const v = this.state.vocab // genome + dslabel for the request
+		const params = // standard wsitiles slide addressing + the boundaries CSV to scan
 			`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${v.dslabel}&genome=${v.genome}` +
 			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&cellBoundaries=${encodeURIComponent(
 				image.cellBoundaries
 			)}`
 		const r = await dofetch3(`wsitiles/meta?${params}`).catch(() => null)
 		this.cellTypeNames = Array.isArray(r?.cellTypes) ? r.cellTypes : [] // failure = no dropdowns, overlay still works
-		this.cellTypesFile = image.cellBoundaries
+		this.cellTypesFile = image.cellBoundaries // remember which file the cache is for
 		return this.cellTypeNames
 	}
 
@@ -204,19 +210,19 @@ class Wsi extends PlotBase implements RxComponent {
 	 (Autocomplete applies to the whole field, i.e. the first gene of a
 	 comma-separated list — later genes are typed without suggestions.) */
 	private addGeneDatalist() {
-		if (!this.geneNames.length) return
-		const input = this.dom.controls.select('input[type=text]').node() as HTMLInputElement | null
+		if (!this.geneNames.length) return // nothing discovered, no suggestions
+		const input = this.dom.controls.select('input[type=text]').node() as HTMLInputElement | null // the Genes field
 		if (!input) return // controls not rendered (shouldn't happen)
-		const id = `sjpp-wsi-genes-${this.id}`
+		const id = `sjpp-wsi-genes-${this.id}` // per-plot-instance datalist id
 		document.getElementById(id)?.remove() // rebuild when the image (and its genes) changed
-		const dl = document.createElement('datalist')
-		dl.id = id
+		const dl = document.createElement('datalist') // native autocomplete source
+		dl.id = id // the id the input's list attribute points to
 		for (const g of this.geneNames) {
-			const opt = document.createElement('option')
-			opt.value = g
+			const opt = document.createElement('option') // one suggestion per gene
+			opt.value = g // the text autocomplete inserts
 			dl.appendChild(opt)
 		}
-		input.after(dl)
+		input.after(dl) // datalist must be in the DOM to work
 		input.setAttribute('list', id) // link the input to its suggestions
 	}
 
@@ -224,11 +230,12 @@ class Wsi extends PlotBase implements RxComponent {
 	 with defaults discovered from the data by main() before this runs. */
 	private async setControls() {
 		this.components.controls = await controlsInit({
-			app: this.app,
-			id: this.id,
-			holder: this.dom.controls,
+			app: this.app, // rx app the inputs dispatch through
+			id: this.id, // this plot's id in app state
+			holder: this.dom.controls, // the burger-menu div
 			inputs: [
 				{
+					// checkbox: toggle the blue nucleus outlines
 					label: 'Nucleus boundaries',
 					title: 'Show or hide the nucleus segmentation overlay',
 					type: 'checkbox',
@@ -237,6 +244,7 @@ class Wsi extends PlotBase implements RxComponent {
 					boxLabel: 'show'
 				},
 				{
+					// checkbox: toggle the green cell outlines
 					label: 'Cell boundaries',
 					title: 'Show or hide the cell segmentation overlay',
 					type: 'checkbox',
@@ -245,6 +253,8 @@ class Wsi extends PlotBase implements RxComponent {
 					boxLabel: 'show'
 				},
 				{
+					// checkbox: toggle the categorical cell-type fills (mutually
+					// exclusive with the gene expression fills, enforced in main())
 					label: 'Cell types',
 					title: 'Fill cells by the cell_type annotation of the boundaries CSV (when present)',
 					type: 'checkbox',
@@ -263,61 +273,66 @@ class Wsi extends PlotBase implements RxComponent {
 					settingsKey: 'cellTypeFilter',
 					init: (self: any) => ({
 						main: (plot: any) => {
-							const td = self.dom.inputTd
-							td.selectAll('*').remove()
+							const td = self.dom.inputTd // the row's input cell
+							td.selectAll('*').remove() // rebuild the dropdowns on every state change
 							const types = this.cellTypeNames // discovered by fetchCellTypes for the shown image
-							const s: Settings = plot.settings.wsi
+							const s: Settings = plot.settings.wsi // current settings from state
 							if (!s.showCellTypes || !types.length) {
-								self.dom.row.style('display', 'none')
+								self.dom.row.style('display', 'none') // overlay off / no annotation column
 								return
 							}
-							self.dom.row.style('display', 'table-row')
+							self.dom.row.style('display', 'table-row') // show the row
 							// drop stale selections when the image (and its types) changed
 							const selected = (s.cellTypeFilter || '')
 								.split(',')
 								.map(t => t.trim())
 								.filter(t => types.includes(t))
 							const dispatch = (list: string[]) =>
+								// write the new selection back to state; re-render redraws the dropdowns
 								this.app.dispatch({
 									type: 'plot_edit',
 									id: this.id,
 									config: { settings: { wsi: { cellTypeFilter: list.join(',') } } }
 								})
 							const addSelect = () =>
+								// one stacked <select> per row of the chain
 								td.append('select').style('display', 'block').style('margin', '2px 0').style('max-width', '180px')
 							// one dropdown per chosen type: change replaces it, blank removes it
 							for (const [i, t] of selected.entries()) {
 								const sel = addSelect().on('change', function (this: HTMLSelectElement) {
-									const next = selected.slice()
-									if (this.value) next[i] = this.value
-									else next.splice(i, 1)
+									const next = selected.slice() // edit a copy of the selection
+									if (this.value) next[i] = this.value // picked a type = replace this slot
+									else next.splice(i, 1) // picked the blank option = remove this slot
 									dispatch(next)
 								})
-								sel.append('option').attr('value', '').text('× remove')
+								sel.append('option').attr('value', '').text('× remove') // the blank remove option
+								// offer this slot's own type plus every type no other slot holds
 								for (const ty of types)
 									if (ty == t || !selected.includes(ty))
 										sel
 											.append('option')
 											.attr('value', ty)
-											.property('selected', ty == t)
+											.property('selected', ty == t) // current choice pre-selected
 											.text(ty)
 							}
 							// the next dropdown, offering the not-yet-selected types
 							const remaining = types.filter(ty => !selected.includes(ty))
 							if (remaining.length) {
 								const add = addSelect().on('change', function (this: HTMLSelectElement) {
-									if (this.value) dispatch([...selected, this.value])
+									if (this.value) dispatch([...selected, this.value]) // append the picked type
 								})
 								add
 									.append('option')
-									.attr('value', '')
+									.attr('value', '') // placeholder, selecting it changes nothing
 									.text(selected.length ? 'Add type…' : 'All types')
-								for (const ty of remaining) add.append('option').attr('value', ty).text(ty)
+								for (const ty of remaining) add.append('option').attr('value', ty).text(ty) // the candidates
 							}
 						}
 					})
 				},
 				{
+					// checkbox: toggle the expression FILLS only — hover counts stay
+					// either way (View.ts always loads the genes)
 					label: 'Gene expression',
 					title: 'Show or hide the gene expression overlay',
 					type: 'checkbox',
@@ -326,6 +341,7 @@ class Wsi extends PlotBase implements RxComponent {
 					boxLabel: 'show'
 				},
 				{
+					// text field: which genes to load, with datalist autocomplete
 					label: 'Genes',
 					title: 'Comma-separated gene names to overlay',
 					type: 'text',
@@ -334,6 +350,7 @@ class Wsi extends PlotBase implements RxComponent {
 					placeholder: 'gene1,gene2,…'
 				},
 				{
+					// radio: per-gene overlays vs one summed gene-group overlay
 					label: 'Overlay mode',
 					title: 'Color each gene separately (gene_expression), or sum all genes into one overlay (gene_groups)',
 					type: 'radio',
@@ -345,6 +362,7 @@ class Wsi extends PlotBase implements RxComponent {
 					]
 				},
 				{
+					// number: how many zoomed-in levels show the boundary strokes
 					label: 'Annotation level',
 					title: 'Show boundaries only within the n most zoomed-in levels; 0 = always show',
 					type: 'number',
@@ -358,35 +376,37 @@ class Wsi extends PlotBase implements RxComponent {
 	}
 }
 
-export const wsiInit = getCompInit(Wsi)
-export const componentInit = wsiInit
+export const wsiInit = getCompInit(Wsi) // the rx component factory
+export const componentInit = wsiInit // alias the plot loader expects
 
+/** the plot's default settings, with optional per-dataset overrides */
 export function getDefaultWsiSettings(overrides = {}): Settings {
 	const defaults: Settings = {
 		selectedSampleIndex: 0, // first sample selected on launch
 		selectedImageIndex: 0, // the sample's first image displayed by default
-		viewerHeight: '70vh',
+		viewerHeight: '70vh', // map height in the sandbox
 		// spatial overlay settings; null = fall back to the dataset's values
-		showCellBoundaries: true,
-		showNucleusBoundaries: true,
-		showGeneExpression: true,
+		showCellBoundaries: true, // green cell outlines on
+		showNucleusBoundaries: true, // blue nucleus outlines on
+		showGeneExpression: true, // expression fills on (seeding may flip this off)
 		showCellTypes: false, // opt-in: fills all annotated cells, visually heavy
 		cellTypeFilter: null, // null/'' = fill every annotated type
 
-		geneExpression: null,
-		annotationLevel: null,
-		spatialMode: 'gene_expression'
+		geneExpression: null, // null = seed from the data on first spatial render
+		annotationLevel: null, // null = dataset default
+		spatialMode: 'gene_expression' // per-gene overlays by default
 	}
-	return Object.assign(defaults, overrides)
+	return Object.assign(defaults, overrides) // dataset overrides win
 }
 
+/** initial plot config when the chart is launched */
 export async function getPlotConfig(opts: any, _app: any) {
 	const config = {
-		chartType: 'wsi',
+		chartType: 'wsi', // routes state updates to this component
 		settings: {
-			wsi: getDefaultWsiSettings(opts.overrides)
+			wsi: getDefaultWsiSettings(opts.overrides) // defaults + dataset overrides
 		},
-		hidePlotFilter: true
+		hidePlotFilter: true // the mass filter UI doesn't apply to slides
 	}
-	return copyMerge(config, opts)
+	return copyMerge(config, opts) // launch-time opts win over defaults
 }

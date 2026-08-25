@@ -51,8 +51,9 @@ The route lists samples (subfolder names of the roots, unioned with the legacy
 `wsimages` sql table when present) and, per sample, its images. Each image is
 returned as `WsiImage` (`type:'wsi'`) or `SpatialImage` (`type:'spatial'`,
 plus tpmasterdir-relative companion paths and the optional dataset-level
-viewer overrides `geneExpression`/`annotationLevel` — the actual gene
-defaults are discovered from the expression file at runtime, see step 4).
+viewer overrides `geneExpression`/`annotationLevel`/`cellTypes` — the actual
+gene defaults are discovered from the expression file at runtime, see step 4;
+`cellTypes: true` opens the spatial viewer with the cell-type overlay on).
 
 ### 2. Slide resolution & tile serving — `server/src/routes/wsitiles.ts`
 
@@ -66,7 +67,10 @@ All viewer traffic hits `wsitiles/:action`:
   A separate gated mode (`?slide=`, dev-only) takes a tpmasterdir-relative path.
 - **`/meta`**: spawns `wsi_tile.py meta` → dimensions, mpp, level count,
   z-plane count, plus `version` (slide mtime) which the client bakes into tile
-  URLs so a regenerated slide busts the immutable browser cache.
+  URLs so a regenerated slide busts the immutable browser cache. With
+  `?cellBoundaries=<csv>` it also scans that CSV's `cell_type` column and adds
+  `cellTypes: [...]` (sorted distinct values) — how the client discovers the
+  types for its filter dropdowns before downloading the full CSV.
 - **`/tile/z/x/y`**: checks the disk cache
   (`cachedir/wsitiles/<sha1(slide:mtime)>_<plane>_<z>_<x>_<y>.jpg`); on a miss
   spawns `wsi_tile.py tile`, copies the produced JPEG into the cache, and
@@ -133,22 +137,75 @@ file, in file order.
   and zooms — this is where tiles are **combined on screen**. For a
   **spatial** image it delegates to `wsi.direct.ts`, passing the burger-menu
   settings.
-- **`wsi.direct.ts`** — the spatial/direct viewer. Same Zoomify map, plus:
-  a z-plane slider (from `meta.planes`), boundary overlays (fetches the
-  cell/nucleus CSVs via `/boundaries`, converts µm→px with `meta.mpp`, draws
-  them as OpenLayers vector layers, hidden beyond `annotationLevel` zooms),
-  gene-expression fills (per-gene `/genecounts` requests; each cell
-  polygon filled with a log-scaled opacity, one color per gene or one summed
-  `gene_groups` overlay, with a legend on the map), and an optional
-  **cell-type overlay**: when the cell boundaries CSV carries an extra
-  `cell_type` column (per-cell annotations merged into the Xenium export),
-  each annotated cell is filled in its type's categorical color with its own
-  legend (top-left; genes keep top-right). Off by default — toggled by the
-  "Cell types" burger-menu checkbox in the mass plot, or `&cell_types=1` on a
-  direct-viewer URL. A CSV without the column makes the toggle a no-op.
+- **`wsi.direct.ts`** — the spatial/direct viewer. Same Zoomify map, plus a
+  z-plane slider (from `meta.planes`) and the overlay/hover system described
+  in the next section. Both entry points converge here: the direct URL
+  (`?image_file=…`) and the mass plot (via `View.ts`), so overlay behavior is
+  identical in both.
 - **`Settings.ts` / `interactions/WsiInteractions.ts`** — the plot settings
-  (selected sample/image, overlay toggles, genes, annotation level) and the
-  dispatchers that write them back into app state, triggering a re-render.
+  (selected sample/image, overlay toggles, genes, cell-type filter,
+  annotation level) and the dispatchers that write them back into app state,
+  triggering a re-render.
+
+### 5. Overlays — `client/plots/w2/wsi.direct.ts`
+
+All overlays are OpenLayers vector layers drawn over the tile layer, built
+from the cell/nucleus boundary CSVs (`/boundaries`, µm→px via `meta.mpp`).
+
+- **Boundary strokes** — cell outlines green, nucleus outlines blue.
+  `annotation_level=n` (burger: "Annotation level") shows them only within
+  the n most zoomed-in levels; zoomed out beyond that they hide. Fills are
+  not affected by this gate.
+- **Gene expression fills** — one `/genecounts` request per gene
+  (`gene_expression=g1,g2`, or the burger's Genes field). Each expressing
+  cell is filled in the gene's color with opacity log-scaled to its
+  transcript count, bucketed into 8 shades. `gene_groups` ("Gene group"
+  mode) instead sums the listed genes per cell into ONE overlay. A gradient
+  legend sits at the map's top-right.
+- **Cell-type fills** — when the cell boundaries CSV carries a `cell_type`
+  column (per-cell annotations merged into the Xenium export), each
+  annotated cell is filled in its type's categorical color, with a legend at
+  the top-left (cell counts per type in parentheses), placed clear of the
+  zoom buttons. Toggled by the "Cell types" checkbox or `&cell_types=1`;
+  a CSV without the column makes the toggle a no-op.
+- **Cell-type filter** — fill only some types: `&cell_types=Tumor,B cells`
+  on a URL, or the burger's "Types shown" chained dropdowns (one dropdown
+  per selected type plus an "Add type…" dropdown of the remaining ones;
+  no selection = all types). The available types are discovered up front by
+  the meta request — `wsitiles/meta?cellBoundaries=<csv>` scans the column
+  and returns `cellTypes:[…]`. Colors are assigned over ALL types by
+  abundance, so a type keeps its color when the filter changes.
+- **Mutual exclusion** — cell-type fills and expression fills never draw
+  together (unreadable on top of each other). While cell types are shown the
+  expression fills/legend are suppressed, and in the mass plot the two
+  checkboxes uncheck each other (last one toggled wins). The "Gene
+  expression" checkbox only controls the *fills*: genes stay loaded either
+  way so the hover tooltip always reports their counts.
+- **Legend pinning** — the legends are absolutely positioned at the map's
+  top corners; a scroll listener pushes them down by however much of the
+  map's top is scrolled out of view (clamped to the map's bottom), so they
+  stay visible as long as any of the image is.
+- **Dataset defaults** — `ds.queries.w2` can set `cellTypes: true` to open
+  the spatial viewer with the cell-type overlay on (seeded once into the
+  burger settings, expression fills off; the checkboxes override after).
+
+### 6. Cell hover — `client/plots/w2/wsi.direct.ts`
+
+Whenever cell boundaries are loaded, hovering over a cell shows a tooltip
+next to the cursor:
+
+```
+cell id: aaabkgcd-1
+cell type: Tumor          (when the CSV has a cell_type column)
+PTPRC expression: 12.0    (one line per loaded gene / gene group)
+```
+
+The hit test is a per-cell bounding-box scan plus an even-odd ray cast
+(`pointInRing`, unit-tested). The tooltip obeys the same zoom gate as the
+boundary strokes: with `annotation_level` set it only appears within the n
+most zoomed-in levels. Expression lines come from the same `/genecounts`
+data as the fills, so they work even when the fills are hidden (cell types
+shown, or "Gene expression" unchecked).
 
 ## SVS vs OME-TIFF: what actually differs
 

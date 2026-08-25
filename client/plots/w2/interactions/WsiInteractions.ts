@@ -1,7 +1,7 @@
 /** User interactions for the wsi plot; each one dispatches a plot_edit so the
  change flows through app state and main() re-renders. */
 export class WsiInteractions {
-	constructor(readonly app: any, readonly id: string) {}
+	constructor(readonly app: any, readonly id: string) {} // rx app + this plot's id, for dispatching
 
 	/** a sample row was picked in the table; image selection resets to its first image */
 	selectSample(index: number) {
