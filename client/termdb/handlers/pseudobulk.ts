@@ -97,26 +97,9 @@ export class SearchHandler {
 	}
 
 	renderTermdByMemberId(holder, memberIdMap) {
-		const layout = holder
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'flex-start')
-			.style('gap', '30px')
-			.style('width', '100%')
-			.style('min-width', '0')
-
-		const pseudoTermsWrapper = layout
-			.append('div')
-			.attr('data-testid', 'sjpp-pseudobulk-terms-wrapper')
-			.style('flex', '1 1 0')
-			.style('min-width', '0')
-
-		const geneSearchWrapper = layout
-			.append('div')
-			.attr('data-testid', 'sjpp-pseudobulk-gene-search-wrapper')
-			.style('flex', '1 1 0')
-			.style('min-width', '0')
-
+		const layout = holder.append('div').style('display', 'flex').style('align-items', 'flex-start').style('gap', '30px')
+		const pseudoTermsWrapper = layout.append('div').attr('data-testid', 'sjpp-pseudobulk-terms-wrapper')
+		const geneSearchWrapper = layout.append('div').attr('data-testid', 'sjpp-pseudobulk-gene-search-wrapper')
 		this.renderPseudobulkTerms(pseudoTermsWrapper, memberIdMap, geneSearchWrapper)
 	}
 
