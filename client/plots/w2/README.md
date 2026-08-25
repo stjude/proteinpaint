@@ -137,9 +137,15 @@ file, in file order.
   a z-plane slider (from `meta.planes`), boundary overlays (fetches the
   cell/nucleus CSVs via `/boundaries`, converts µm→px with `meta.mpp`, draws
   them as OpenLayers vector layers, hidden beyond `annotationLevel` zooms),
-  and gene-expression fills (per-gene `/genecounts` requests; each cell
+  gene-expression fills (per-gene `/genecounts` requests; each cell
   polygon filled with a log-scaled opacity, one color per gene or one summed
-  `gene_groups` overlay, with a legend on the map).
+  `gene_groups` overlay, with a legend on the map), and an optional
+  **cell-type overlay**: when the cell boundaries CSV carries an extra
+  `cell_type` column (per-cell annotations merged into the Xenium export),
+  each annotated cell is filled in its type's categorical color with its own
+  legend (top-left; genes keep top-right). Off by default — toggled by the
+  "Cell types" burger-menu checkbox in the mass plot, or `&cell_types=1` on a
+  direct-viewer URL. A CSV without the column makes the toggle a no-op.
 - **`Settings.ts` / `interactions/WsiInteractions.ts`** — the plot settings
   (selected sample/image, overlay toggles, genes, annotation level) and the
   dispatchers that write them back into app state, triggering a re-render.

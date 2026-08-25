@@ -345,8 +345,15 @@ async function fetchBoundaries(
 ): Promise<{ polys: CellPoly[]; cellTypes?: { [id: string]: string } }> {
 	const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}`) // raw csv text
 	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
-	const text = await res.text()
+	return parseBoundaries(await res.text(), mppX, mppY)
+}
 
+/** Parse a boundary CSV into one closed ring per cell (exported for tests). */
+export function parseBoundaries(
+	text: string,
+	mppX: number,
+	mppY: number
+): { polys: CellPoly[]; cellTypes?: { [id: string]: string } } {
 	// rows: "cell_id",vertex_x,vertex_y[,...annotations] — one cell's vertices
 	// are contiguous. An optional cell_type header column (added by merging a
 	// per-cell annotation export into the CSV) labels every vertex row of the
