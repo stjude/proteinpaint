@@ -1,5 +1,11 @@
 import tape from 'tape'
-import { divideTerms, id2sampleRef, setSampleLstData } from '../termdb.matrix.js'
+import {
+	divideTerms,
+	id2sampleRef,
+	setSampleLstData,
+	isNegatedSampleLstOnlyRequest,
+	hasFilterTermsUnsupportedByFilterSamples
+} from '../termdb.matrix.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
 
@@ -22,6 +28,8 @@ setSampleLstData: normalizes ids and ignores values without one
 setSampleLstData: a prototype-named sample id cannot write outside samples{}
 setSampleLstData: handles multiple samplelst terms and empty/missing group values
 setSampleLstData: throws when q.groups is not an array
+isNegatedSampleLstOnlyRequest: only fires when a negation has no universe to subtract from
+hasFilterTermsUnsupportedByFilterSamples: detects filter terms filterSamples() cannot resolve
 */
 
 tape('id2sampleRef(): prefers id2sampleRefs, else id2sampleName raw-then-Number, no NaN on string ids', test => {
@@ -376,6 +384,21 @@ tape('setSampleLstData: scopedSamples bounds which missing samples may be added'
 	const none = {}
 	setSampleLstData([makeTw()], none, new Set())
 	t.deepEqual(none, {}, 'an empty scope set adds nothing')
+
+	// a ds that keys its scope by integer still matches the stringified group id
+	const numericScope = {}
+	setSampleLstData(
+		[
+			{
+				$id: 'grp',
+				term: { type: 'samplelst', name: 'G' },
+				q: { groups: [{ name: 'Cases', values: [{ sampleId: 7 }, { sampleId: 8 }] }] }
+			}
+		],
+		numericScope,
+		new Set([7])
+	)
+	t.deepEqual(Object.keys(numericScope), ['7'], 'an integer-keyed scope set matches the stringified id')
 	t.end()
 })
 
@@ -453,6 +476,16 @@ tape('setSampleLstData: normalizes ids and ignores values without one', t => {
 	const samples2 = {}
 	setSampleLstData([blanks], samples2)
 	t.deepEqual(Object.keys(samples2), ['3'], 'blank values are dropped, numeric id is keyed as a string')
+
+	// '' cannot be matched through sampleidmap on the sql path, so it must not become a row here
+	const empty = {
+		$id: 'g',
+		term: { type: 'samplelst', name: 'E' },
+		q: { groups: [{ name: 'G1', values: [{ sampleId: '' }, { sampleId: 0 }] }] }
+	}
+	const samples3 = {}
+	setSampleLstData([empty], samples3)
+	t.deepEqual(Object.keys(samples3), ['0'], 'an empty-string id is dropped while a 0 id is kept')
 	t.end()
 })
 
@@ -514,5 +547,57 @@ tape('setSampleLstData: throws when q.groups is not an array', t => {
 		'non-array q.groups is reported'
 	)
 	t.deepEqual(setSampleLstData([], samples), undefined, 'an empty tw list is a no-op')
+	t.end()
+})
+
+tape('isNegatedSampleLstOnlyRequest: only fires when a negation has no universe to subtract from', t => {
+	const negated = { q: { groups: [{ name: 'Others', in: false, values: [] }] } }
+	const listed = { q: { groups: [{ name: 'Cases', in: true, values: [] }] } }
+	const geneExp = { term: { type: 'geneExpression' } }
+
+	t.equal(isNegatedSampleLstOnlyRequest([negated], [negated]), true, 'a lone negated samplelst term is rejected')
+	t.equal(
+		isNegatedSampleLstOnlyRequest([negated, geneExp], [negated]),
+		false,
+		'another term in the request supplies the universe, so it is allowed'
+	)
+	t.equal(isNegatedSampleLstOnlyRequest([listed], [listed]), false, 'a lone in:true samplelst term is fine')
+	t.equal(
+		isNegatedSampleLstOnlyRequest([negated, listed], [negated, listed]),
+		true,
+		'a second samplelst term is not a universe either'
+	)
+	t.equal(isNegatedSampleLstOnlyRequest([geneExp], []), false, 'no samplelst term, nothing to reject')
+	t.end()
+})
+
+tape('hasFilterTermsUnsupportedByFilterSamples: detects filter terms filterSamples() cannot resolve', t => {
+	const tvs = type => ({ type: 'tvs', tvs: { term: { type, id: 'x' } } })
+
+	t.equal(hasFilterTermsUnsupportedByFilterSamples(undefined), false, 'no filter is supported')
+	t.equal(hasFilterTermsUnsupportedByFilterSamples({ lst: [] }), false, 'an empty filter is supported')
+	t.equal(
+		hasFilterTermsUnsupportedByFilterSamples({ lst: [tvs('categorical'), tvs('float')] }),
+		false,
+		'dictionary terms are resolved by filterSamples'
+	)
+	// filter2GDCfilter() skips each of these and defers them to post-processing
+	for (const type of ['geneVariant', 'geneExpression', 'survival']) {
+		t.equal(
+			hasFilterTermsUnsupportedByFilterSamples({ lst: [tvs('categorical'), tvs(type)] }),
+			true,
+			`${type} makes the scope untrustworthy`
+		)
+	}
+	t.equal(
+		hasFilterTermsUnsupportedByFilterSamples({ lst: [{ type: 'tvslst', lst: [tvs('geneVariant')] }] }),
+		true,
+		'a nested filter is inspected too'
+	)
+	t.equal(
+		hasFilterTermsUnsupportedByFilterSamples({ lst: [{ type: 'tvs', tvs: {} }] }),
+		false,
+		'a tvs without a term type is skipped rather than thrown on'
+	)
 	t.end()
 })

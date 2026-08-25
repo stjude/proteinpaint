@@ -164,6 +164,13 @@ async function getSampleData(q, ds) {
 	const sampleLstTws = ds.cohort.db ? [] : dictTerms.filter(tw => tw.term.type == 'samplelst')
 	for (const tw of sampleLstTws) dictTerms.splice(dictTerms.indexOf(tw), 1)
 
+	/* a negated group ("everyone not in this list") needs a sample universe to subtract from. the
+	sqlite path takes it from sampleidmap; here the only universe is what the other terms of this
+	request return, so a request carrying nothing but negated groups would come back silently
+	empty. throw before any query work rather than return a wrong answer. */
+	if (isNegatedSampleLstOnlyRequest(q.terms, sampleLstTws))
+		throw 'a samplelst term with a "not in" group requires another term in the same request, which this dataset needs to define the sample universe'
+
 	// query dictionary term data
 	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms)
 	/* samples={}
@@ -421,15 +428,7 @@ async function getSampleData(q, ds) {
 	members may be *added* to samples{}: the group lists come straight from the client, and the
 	sqlite path intersects them with q.filter in getAnnotationRows(), so this path must not hand
 	back a sample that the filter, filter0 or authApi.mayAdjustFilter() excluded. */
-	let scopedSamples // undefined = no filtering applies, so every group member is in scope
-	if (sampleLstTws.length) {
-		scopedSamples =
-			typeof ds.cohort.termdb.filterSamples == 'function'
-				? await ds.cohort.termdb.filterSamples(q, ds)
-				: // scope cannot be established for this ds: fail closed and annotate only the samples
-				  // that the filtered queries above already returned
-				  new Set()
-	}
+	const scopedSamples = sampleLstTws.length ? await getSampleLstScope(q, ds) : undefined
 	setSampleLstData(sampleLstTws, samples, scopedSamples)
 
 	// resolve each id -> display refs via the dataset's id2sampleRefs() (see id2sampleRef())
@@ -611,18 +610,76 @@ async function mayGetSampleFilterSet4snplst(q, nonDictTerms) {
 }
 
 /*
+True when the request has nothing but samplelst terms and at least one of their groups is
+negated. See the call site: such a request has no sample universe for the negation to subtract
+from, and would silently resolve to no samples at all.
+*/
+export function isNegatedSampleLstOnlyRequest(terms, sampleLstTws) {
+	if (!sampleLstTws.length || sampleLstTws.length != terms?.length) return false
+	return sampleLstTws.some(tw => tw.q?.groups?.some(g => g.in === false))
+}
+
+/*
+True when q.filter carries a term type that ds.cohort.termdb.filterSamples() does not resolve.
+gdc's filter2GDCfilter() silently skips geneVariant/geneExpression/survival tvs -- they are
+applied later, in post-processing that filterSamples() never runs -- so with one of them active
+its answer is broader than the request's real result set. get_samplecount() (termdb.sql.js)
+refuses to use filterSamples for exactly this reason.
+
+survival is a dictionary type, so it is named separately from the isNonDictionaryType() check.
+*/
+export function hasFilterTermsUnsupportedByFilterSamples(filter) {
+	if (!Array.isArray(filter?.lst)) return false
+	for (const item of filter.lst) {
+		if (item.type == 'tvslst') {
+			if (hasFilterTermsUnsupportedByFilterSamples(item)) return true
+			continue
+		}
+		const type = item.tvs?.term?.type
+		if (!type) continue // isNonDictionaryType() throws on a missing type
+		if (type == 'survival' || isNonDictionaryType(type)) return true
+	}
+	return false
+}
+
+/*
+The set of sample ids this request is authorized to see. It bounds which samplelst group members
+may be added to samples{} (see setSampleLstData): the group lists come straight from the client,
+and the sqlite path intersects them with q.filter in getAnnotationRows(), so this path must not
+hand back a sample that q.filter, q.filter0 or authApi.mayAdjustFilter() excluded.
+
+Returns an empty Set when no trustworthy bound can be established, which annotates only the
+samples the filtered queries already returned. Returns undefined only when the ds reports no
+bound at all, in which case every listed member is accepted.
+*/
+async function getSampleLstScope(q, ds) {
+	if (hasFilterTermsUnsupportedByFilterSamples(q.filter)) return new Set() // see above, fail closed
+	if (typeof ds.cohort.termdb.filterSamples != 'function') return new Set() // ds cannot report a scope
+	/* returnAllSamples: with no filter in play the authorized scope is the whole cohort, not
+	"whatever the client names", so an id that exists in no cohort is still rejected. a ds that
+	does not implement the flag returns undefined here and stays permissive. */
+	return await ds.cohort.termdb.filterSamples(q, ds, true)
+}
+
+/* Scope ids and samples{} keys are strings for every current no-db ds (gdc case uuid, mmrf
+submitter id). The Number() fallback mirrors id2sampleRef() above, so a ds that keys its scope
+by integer still matches the stringified id. */
+function isInSampleLstScope(scopedSamples, sampleId) {
+	if (!scopedSamples) return true // ds reported no bound
+	return scopedSamples.has(sampleId) || scopedSamples.has(Number(sampleId))
+}
+
+/*
 Annotate samples with the groups of samplelst terms, for datasets that cannot express those
 groups in SQL (see the sampleLstTws comment in getSampleData). Each group writes
 {key,value} = group.name onto its samples, and a group with in:false covers the samples that are
 *not* listed. A sample already annotated for this term is left alone, so an explicit membership
 is never overwritten by a later negated group.
 
-scopedSamples: Set of sample ids this request is authorized to see, or undefined when the
-dataset reported that no filtering applies. A listed group member that is absent from samples{}
-is added only when it is in scope -- the sqlite path gets this by intersecting the samplelst CTE
-with the filter (see getAnnotationRows()), and without it a client could name any sample id and
-have it echoed back, e.g. through refs.bySampleId. Samples already in samples{} were returned by
-the filtered queries, so they are annotated regardless.
+scopedSamples: see getSampleLstScope(). A listed group member that is absent from samples{} is
+added only when it is in scope; without that a client could name any sample id and have it
+echoed back, e.g. through refs.bySampleId. Samples already in samples{} were returned by the
+filtered queries, so they are annotated regardless.
 
 samples{} is modified in place.
 */
@@ -632,12 +689,12 @@ export function setSampleLstData(termWrappers, samples, scopedSamples) {
 		if (!Array.isArray(groups)) throw 'samplelst tw.q.groups[] is not an array'
 		for (const group of groups) {
 			/* ids are request data: normalize to string so that a numeric sample id still matches the
-			always-string keys that for..in yields below, and drop blanks so that a value without an
-			id cannot become an "undefined" sample */
+			always-string keys that for..in yields below, and drop the blanks -- including '', which no
+			sampleidmap row can carry and which would otherwise become an empty-named sample */
 			const ids = new Set(
 				(group.values || [])
 					.map(v => v?.sampleId ?? v?.sample)
-					.filter(id => id !== undefined && id !== null)
+					.filter(id => id !== undefined && id !== null && id !== '')
 					.map(String)
 			)
 			if (group.in === false) {
@@ -654,7 +711,7 @@ export function setSampleLstData(termWrappers, samples, scopedSamples) {
 				// Object.hasOwn(), not `in`: an id such as 'constructor' matches an inherited property,
 				// which would skip row creation and write the annotation onto Object itself
 				if (!Object.hasOwn(samples, sampleId)) {
-					if (scopedSamples && !scopedSamples.has(sampleId)) continue // out of scope, see above
+					if (!isInSampleLstScope(scopedSamples, sampleId)) continue // out of scope, see above
 					samples[sampleId] = { sample: sampleId }
 				}
 				if (samples[sampleId][tw.$id]) continue
