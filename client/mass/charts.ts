@@ -339,7 +339,8 @@ function getChartTypeList(self, state) {
 		{
 			label: self.getBtnLabel_geneExpression(state),
 			chartType: 'GeneExpInput',
-			clickTo: self.loadChartSpecificMenu
+			clickTo: self.plotCreate,
+			config: { chartType: 'GeneExpInput' }
 		},
 		{
 			label: 'Metabolite Intensity',
