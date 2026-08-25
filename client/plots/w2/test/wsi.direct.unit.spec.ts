@@ -1,9 +1,10 @@
 import tape from 'tape'
-import { parseBoundaries } from '../wsi.direct'
+import { parseBoundaries, pointInRing } from '../wsi.direct'
 
 /* Tests
     parseBoundaries: plain csv (no cell_type column)
     parseBoundaries: csv with annotation columns
+    pointInRing: hover hit test
 */
 
 // two cells, µm coords; mpp 0.5 doubles px values, y negated for OL
@@ -58,5 +59,33 @@ tape('csv with annotation columns', test => {
 	test.equal(polys.length, 3, 'all cells parsed regardless of annotation')
 	test.deepEqual(cellTypes, { 'cell-1': 'Tumor', 'cell-3': 'B cells' }, 'types keyed by unquoted cell_id')
 	test.false(cellTypes && 'cell-2' in cellTypes, 'QC-filtered cell (empty field) has no type')
+	test.end()
+})
+
+tape('pointInRing hover hit test', test => {
+	// unit square, first vertex repeated last as in the boundary CSVs
+	const ring = [
+		[0, 0],
+		[10, 0],
+		[10, 10],
+		[0, 10],
+		[0, 0]
+	]
+	test.true(pointInRing(5, 5, ring), 'center is inside')
+	test.false(pointInRing(15, 5, ring), 'point beside the ring is outside')
+	test.false(pointInRing(5, -5, ring), 'point above the ring is outside')
+	// concave ring: a notch cut into the square's right side
+	const concave = [
+		[0, 0],
+		[10, 0],
+		[10, 4],
+		[4, 5],
+		[10, 6],
+		[10, 10],
+		[0, 10],
+		[0, 0]
+	]
+	test.false(pointInRing(8, 5, concave), 'point in the notch is outside')
+	test.true(pointInRing(2, 5, concave), 'point left of the notch is inside')
 	test.end()
 })

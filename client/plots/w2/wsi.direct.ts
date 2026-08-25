@@ -14,6 +14,10 @@
  of the viewer: zoomed out beyond that, the boundaries are hidden. Omit to
  always show. Gene expression fills are not affected — they show at all zooms.
 
+ While the boundaries are visible (within annotation_level), hovering over a
+ cell shows a tooltip with its id, its cell_type (when the CSV carries one),
+ and its per-gene transcript counts (when gene overlays are loaded).
+
  Gene expression overlay (needs cell_boundaries):
    &gene_expression_file=SVS/cell_feature_matrix.h5&gene_expression=ACE2,ACTA2
  draws one fill overlay per comma-separated gene, each in its own color (see
@@ -233,6 +237,9 @@ export async function init(
 			}
 		}
 
+		// per-gene count maps kept for the hover tooltip below
+		const geneCounts: { gene: string; cells: { [id: string]: number } }[] = []
+
 		const geneList = (s?: string) =>
 			(s || '')
 				.split(',')
@@ -298,6 +305,7 @@ export async function init(
 					const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length] // this gene's fill color
 					map.addLayer(expressionLayer(cellPolys, r.cells, r.max, rgb)) // fill the expressing cells
 					addLegend(rgb, gene, r.max) // gradient + count range in the legend
+					geneCounts.push({ gene, cells: r.cells }) // tooltip shows this gene's per-cell count
 				}
 
 				// gene_groups: sum each cell's counts over the group, one layer/color
@@ -319,11 +327,67 @@ export async function init(
 						const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length] // next unused palette color
 						map.addLayer(expressionLayer(cellPolys, total, max, rgb)) // ONE overlay of the totals
 						addLegend(rgb, found.join('+'), max) // e.g. 'PTPRC+EPCAM'
+						geneCounts.push({ gene: found.join('+'), cells: total }) // summed count in the tooltip
 					}
 				}
 			} catch (e: any) {
 				sayerror(holder, `Gene expression error: ${e.message || e}`)
 			}
+		}
+
+		// hover tooltip: cell id, annotated type, per-gene counts. Active only
+		// while the boundary strokes are visible, i.e. zoomed within
+		// annotation_level (always, when that param is not set).
+		if (cellPolys) {
+			// per-cell bounding boxes so most cells are rejected without the ray cast
+			// ponytail: linear scan over ~100k bboxes per mousemove — swap in an
+			// rbush index if hovering ever feels laggy
+			const boxes = cellPolys.map(c => {
+				const xs = c.ring.map(v => v[0])
+				const ys = c.ring.map(v => v[1])
+				return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]
+			})
+			mapDiv.style('position', 'relative')
+			const tip = mapDiv
+				.append('div')
+				.style('position', 'absolute')
+				.style('display', 'none')
+				.style('z-index', '20')
+				.style('pointer-events', 'none') // never steal the pointer from the map
+				.style('background', 'rgba(255,255,255,0.9)')
+				.style('padding', '4px 8px')
+				.style('border-radius', '4px')
+				.style('font', '12px system-ui')
+				.style('white-space', 'pre') // one datum per line via \n
+			map.on('pointermove', (evt: any) => {
+				const res = map.getView().getResolution()
+				if (evt.dragging || (maxResolution !== undefined && !(typeof res == 'number' && res < maxResolution))) {
+					tip.style('display', 'none') // panning, or zoomed out past annotation_level
+					return
+				}
+				const [x, y] = evt.coordinate
+				let hit: CellPoly | undefined
+				for (const [i, b] of boxes.entries()) {
+					if (x < b[0] || y < b[1] || x > b[2] || y > b[3]) continue
+					if (pointInRing(x, y, cellPolys![i].ring)) {
+						hit = cellPolys![i]
+						break
+					}
+				}
+				if (!hit) {
+					tip.style('display', 'none')
+					return
+				}
+				const rows = [`cell ${hit.id}`]
+				const t = cellTypes?.[hit.id]
+				if (t) rows.push(t)
+				for (const g of geneCounts) rows.push(`${g.gene}: ${g.cells[hit.id] || 0}`)
+				tip
+					.style('display', 'block')
+					.style('left', `${evt.pixel[0] + 12}px`)
+					.style('top', `${evt.pixel[1] + 12}px`)
+					.text(rows.join('\n'))
+			})
 		}
 	} catch (e: any) {
 		loading.remove()
@@ -332,6 +396,17 @@ export async function init(
 }
 
 type CellPoly = { id: string; ring: number[][] }
+
+/** even-odd ray cast: is (x, y) inside the closed ring? (exported for tests) */
+export function pointInRing(x: number, y: number, ring: number[][]): boolean {
+	let inside = false
+	for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+		const [xi, yi] = ring[i]
+		const [xj, yj] = ring[j]
+		if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside
+	}
+	return inside
+}
 
 /** Fetch a boundary CSV (via wsitiles/boundaries) and parse it into one closed
  ring per cell, keyed by the unquoted cell_id (matches h5 barcodes). */
