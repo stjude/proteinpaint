@@ -31,12 +31,14 @@ export function init({ genomes }) {
 				const groups = await resolveDmSampleGroups(q, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
+				// the alert is a sibling of data{}, not a key in it: data{} is keyed by group name, and a
+				// group named 'alert' would otherwise be indistinguishable from this message
 				res.send({
 					data: {
 						[group1Name]: groups.group1names.length,
-						[group2Name]: groups.group2names.length,
-						...(groups.alerts.length ? { alert: groups.alerts.join(' | ') } : {})
-					}
+						[group2Name]: groups.group2names.length
+					},
+					...(groups.alerts.length ? { alert: groups.alerts.join(' | ') } : {})
 				})
 				return
 			}

@@ -595,12 +595,12 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 				const numCase = preAnalysisData.data[samplelstTW.q.groups[1].name]
 
 				if (numControl + numCase > maxSampleCutoff) {
-					if (preAnalysisData.data.alert)
-						preAnalysisData.data.alert += ` | Sample size ${
+					if (preAnalysisData.alert)
+						preAnalysisData.alert += ` | Sample size ${
 							numControl + numCase
 						} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
 					else
-						preAnalysisData.data.alert = `Sample size ${
+						preAnalysisData.alert = `Sample size ${
 							numControl + numCase
 						} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
 				}
@@ -615,11 +615,11 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 				addGroupCountRow(table, 'CASE', samplelstTW, 1, numCase, sampleLabel)
 
 				const alertDiv = menuDiv.append('div')
-				if (preAnalysisData.data.alert) {
-					sayerror(alertDiv, preAnalysisData.data.alert)
+				if (preAnalysisData.alert) {
+					sayerror(alertDiv, preAnalysisData.alert)
 				}
 
-				if (!preAnalysisData.data.alert) {
+				if (!preAnalysisData.alert) {
 					const launchDiv = menuDiv.append('div').style('margin', '8px 5px').style('padding', '5px 10px')
 					launchDiv
 						.append('button')
@@ -708,12 +708,12 @@ export function renderPreAnalysisData(arg) {
 	const numCase = preAnalysisData.data[samplelstTW.q.groups[1].name]
 
 	if (numControl + numCase > maxSampleCutoff) {
-		if (preAnalysisData.data.alert)
-			preAnalysisData.data.alert += ` | Sample size ${
+		if (preAnalysisData.alert)
+			preAnalysisData.alert += ` | Sample size ${
 				numControl + numCase
 			} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
 		else
-			preAnalysisData.data.alert = `Sample size ${
+			preAnalysisData.alert = `Sample size ${
 				numControl + numCase
 			} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
 	}
@@ -738,13 +738,13 @@ export function renderPreAnalysisData(arg) {
 
 	// display errors
 	const alertDiv = menuDiv.append('div')
-	if (preAnalysisData.data.alert) {
-		sayerror(alertDiv, preAnalysisData.data.alert)
+	if (preAnalysisData.alert) {
+		sayerror(alertDiv, preAnalysisData.alert)
 	}
 
 	// option to launch DE
 	const sample_size_limit = 8
-	if (!preAnalysisData.data.alert) {
+	if (!preAnalysisData.alert) {
 		const options =
 			numControl + numCase >= maxGESampleCutoff
 				? [{ label: 'Wilcoxon', value: 'wilcoxon' }]

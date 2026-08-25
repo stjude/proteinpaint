@@ -61,12 +61,14 @@ export function init({ genomes }) {
 					const noun = ds.cohort?.termdb?.uiLabels?.samples || 'samples'
 					alerts.push(`${total} ${noun} selected exceeds the limit of ${maxSamples} per run. Please narrow the cohort.`)
 				}
+				// the alert is a sibling of data{}, not a key in it: data{} is keyed by group name, and a
+				// group named 'alert' would otherwise be indistinguishable from this message
 				res.send({
 					data: {
 						[group1Name]: groups.group1names.length,
-						[group2Name]: groups.group2names.length,
-						...(alerts.length ? { alert: alerts.join(' | ') } : {})
-					}
+						[group2Name]: groups.group2names.length
+					},
+					...(alerts.length ? { alert: alerts.join(' | ') } : {})
 				})
 				return
 			}
