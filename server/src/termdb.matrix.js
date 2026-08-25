@@ -414,9 +414,23 @@ async function getSampleData(q, ds) {
 		}
 	}
 
-	// annotate the groups of samplelst terms last, so that a negated group ("not in this list")
-	// can be resolved against the samples the other terms of this request actually returned
-	setSampleLstData(sampleLstTws, samples)
+	/* annotate the groups of samplelst terms last, so that a negated group ("not in this list")
+	can be resolved against the samples the other terms of this request actually returned.
+
+	scopedSamples is the set of sample ids this request is allowed to see, and bounds which group
+	members may be *added* to samples{}: the group lists come straight from the client, and the
+	sqlite path intersects them with q.filter in getAnnotationRows(), so this path must not hand
+	back a sample that the filter, filter0 or authApi.mayAdjustFilter() excluded. */
+	let scopedSamples // undefined = no filtering applies, so every group member is in scope
+	if (sampleLstTws.length) {
+		scopedSamples =
+			typeof ds.cohort.termdb.filterSamples == 'function'
+				? await ds.cohort.termdb.filterSamples(q, ds)
+				: // scope cannot be established for this ds: fail closed and annotate only the samples
+				  // that the filtered queries above already returned
+				  new Set()
+	}
+	setSampleLstData(sampleLstTws, samples, scopedSamples)
 
 	// resolve each id -> display refs via the dataset's id2sampleRefs() (see id2sampleRef())
 	const bySampleId = {}
@@ -598,20 +612,34 @@ async function mayGetSampleFilterSet4snplst(q, nonDictTerms) {
 
 /*
 Annotate samples with the groups of samplelst terms, for datasets that cannot express those
-groups in SQL (see the sampleLstTws comment in getSampleData). Mirrors sampleLstSql.getCTE():
-each group writes {key,value} = group.name onto its samples, and a group with in:false covers
-the samples that are *not* listed. A sample already annotated for this term is left alone, so
-an explicit membership is never overwritten by a later negated group.
+groups in SQL (see the sampleLstTws comment in getSampleData). Each group writes
+{key,value} = group.name onto its samples, and a group with in:false covers the samples that are
+*not* listed. A sample already annotated for this term is left alone, so an explicit membership
+is never overwritten by a later negated group.
 
-samples{} is modified in place; group members missing from it are added, so that a group is
-still reported when no other term of the request returned that sample.
+scopedSamples: Set of sample ids this request is authorized to see, or undefined when the
+dataset reported that no filtering applies. A listed group member that is absent from samples{}
+is added only when it is in scope -- the sqlite path gets this by intersecting the samplelst CTE
+with the filter (see getAnnotationRows()), and without it a client could name any sample id and
+have it echoed back, e.g. through refs.bySampleId. Samples already in samples{} were returned by
+the filtered queries, so they are annotated regardless.
+
+samples{} is modified in place.
 */
-export function setSampleLstData(termWrappers, samples) {
+export function setSampleLstData(termWrappers, samples, scopedSamples) {
 	for (const tw of termWrappers) {
 		const groups = tw.q?.groups
 		if (!Array.isArray(groups)) throw 'samplelst tw.q.groups[] is not an array'
 		for (const group of groups) {
-			const ids = new Set((group.values || []).map(v => v.sampleId ?? v.sample))
+			/* ids are request data: normalize to string so that a numeric sample id still matches the
+			always-string keys that for..in yields below, and drop blanks so that a value without an
+			id cannot become an "undefined" sample */
+			const ids = new Set(
+				(group.values || [])
+					.map(v => v?.sampleId ?? v?.sample)
+					.filter(id => id !== undefined && id !== null)
+					.map(String)
+			)
 			if (group.in === false) {
 				for (const sampleId in samples) {
 					if (ids.has(sampleId) || samples[sampleId][tw.$id]) continue
@@ -620,7 +648,15 @@ export function setSampleLstData(termWrappers, samples) {
 				continue
 			}
 			for (const sampleId of ids) {
-				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				// assigning to '__proto__' would run the prototype setter rather than create a row,
+				// and the write that follows would then land outside samples{}. no sample is named this
+				if (sampleId == '__proto__') continue
+				// Object.hasOwn(), not `in`: an id such as 'constructor' matches an inherited property,
+				// which would skip row creation and write the annotation onto Object itself
+				if (!Object.hasOwn(samples, sampleId)) {
+					if (scopedSamples && !scopedSamples.has(sampleId)) continue // out of scope, see above
+					samples[sampleId] = { sample: sampleId }
+				}
 				if (samples[sampleId][tw.$id]) continue
 				samples[sampleId][tw.$id] = { key: group.name, value: group.name }
 			}
