@@ -145,16 +145,18 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		return [
 			{
 				label: 'One gene',
-				//TODO: enable for pseudobulk
-				isVisible: () => this.termType !== PSEUDOBULK,
-				callback: (event, tab) => {
-					this.renderGeneSelect(tab)
+				isVisible: () => true,
+				callback: async (event, tab) => {
+					if (this.termType === PSEUDOBULK) {
+						await this.renderPseudobulkSearch(tab.contentHolder)
+					}
+					else this.renderGeneSelect(tab)
 					delete tab.callback
 				}
 			},
 			{
 				label: 'Two genes',
-				//TODO: enable for pseudobulk
+				/** TODO: Does this make sense to enable for pseudobulk? */
 				isVisible: () => this.termType !== PSEUDOBULK,
 				callback: (event, tab) => {
 					this.renderTwoGeneSelect(tab)
@@ -165,7 +167,12 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				label: 'Hierarchical clustering',
 				isVisible: () => chartTypes.has('matrix'),
 				callback: (event, tab) => {
-					this.renderGeneMultiSelect(tab)
+					if (this.termType !== GENE_EXPRESSION && typeof this.termType === 'string') {
+						tab.contentHolder.append('div')
+							.style('padding', '15px')
+							.text(`Hierarchical clustering for ${typeGroup[this.termType]} data is currently in development. Please check back later.`)
+					}
+					else this.renderGeneMultiSelect(tab)
 					delete tab.callback
 				}
 			},
@@ -206,9 +213,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	async main() {
 		const state = this.getState(this.app.getState())
 
-		if (!this.tabs && state.config.termType) {
-			await this.renderTermTypeUI(state)
-		}
+		if (!this.tabs && state.config.termType) await this.renderTermTypeUI(state)
 
 		for (const subplot of state.subplots || []) {
 			if (!this.components.plots[subplot.id]) await this.initSubplotInTab(subplot)
@@ -230,6 +235,25 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 						name: `${geneSearch.geneSymbol} ${this.unit}`
 					})
 				}
+				const config = this.makeConfig({
+					chartType: 'summary',
+					term: tw
+				})
+				await this.dispatchEdits(config)
+			}
+		})
+	}
+
+	async renderPseudobulkSearch(holder) {
+		const _ = await import('../termdb/handlers/pseudobulk.ts')
+		const searchHandler = new _.SearchHandler()
+		await searchHandler.init({
+			holder: holder.style('padding-left', '10px'),
+			app: this.app,
+			genomeObj: this.genome,
+			usecase: { target: 'GeneExpInput', detail: 'pseudobulk' },
+			callback: async _term => {
+				const tw = { term: this.makeTerm(_term) }
 				const config = this.makeConfig({
 					chartType: 'summary',
 					term: tw
@@ -427,7 +451,7 @@ export function getPlotConfig(opts, app) {
 	if (opts?.termType && !enabledTermTypes.has(opts.termType)) throw new Error(`Invalid termType: ${opts.termType}`)
 
 	const possTermTypes = getPossibleGETermTypes(app.vocabApi.termdbConfig)
-	if (!possTermTypes.length) throw new Error('No gene expression data types are available for this cohort')
+	if (!possTermTypes.length && !opts?.termType) throw new Error('No gene expression data types are available for this cohort')
 
 	const config = {
 		chartType: 'GeneExpInput',
