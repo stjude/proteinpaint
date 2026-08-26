@@ -11,11 +11,15 @@ export class VolcanoInteractions {
 	id: string
 	pValueTableData: any
 	data: any
-	/** Significant rows before maxInteractiveDots capped them. Only the capped subset is
-	 * downloadable, so the download says so when the two differ. */
+	/** Significant rows before maxInteractiveDots capped them. When this exceeds the rows on
+	 * screen, the download re-fetches the uncapped set via fetchAllRows(). */
 	totalSignificantRows: number
 	/** Groups, sample sizes and result-affecting settings, written into downloads. */
 	provenance: string
+	/** Re-requests the current contrast with the maxInteractiveDots cap lifted and returns the
+	 * full significance table, formatted by the same view model the on-screen table uses.
+	 * Set by Volcano.main() after each fetch; absent until the first response arrives. */
+	fetchAllRows?: () => Promise<{ rows: any[]; columns: any[] }>
 
 	constructor(app: MassAppApi, id: string, dom: VolcanoDom) {
 		this.app = app
@@ -84,33 +88,66 @@ export class VolcanoInteractions {
 			{
 				// DAP volcanoes report a single FDR rather than a p-value.
 				text: termType === PROTEOME_DAP ? 'Download FDR table' : 'Download p-value table',
-				callback: () => {
-					// name the file after what is in it and when it was run -- these downloads pile up in
-					// one folder across cohorts and reruns
-					const date = fileDateStamp()
-					const label = termType === PROTEOME_DAP ? 'fdr' : 'p-value'
-					const rows = this.pValueTableData.rows
-					/* The server returns only the most-significant maxInteractiveDots rows, so a big result
-					silently downloads as a subset. The on-screen table prints that; without this the file
-					did not, and nothing in it revealed that "how many were significant" is unanswerable. */
-					const subsetNote =
-						this.totalSignificantRows > rows.length
-							? `Top ${rows.length.toLocaleString()} of ${this.totalSignificantRows.toLocaleString()} significant results, selected by adjusted p-value and sorted by fold-change. This file is not the complete result set.`
-							: undefined
-					/* Provenance rides along with the rows. Comparing two exports months apart is
-					otherwise guesswork: differing counts could be a code change, a settings change or a
-					different group definition, and nothing in the file distinguishes them.
-					Joined with ' | ' rather than a newline because downloadTable collapses newlines to
-					keep the note on one '#' line -- writing '\n' here would look intentional and quietly
-					become a space. */
-					const note = [subsetNote, this.provenance && `Run: ${this.provenance}`].filter(Boolean).join(' | ')
-					downloadTable(rows, this.pValueTableData.columns, `${label}-table-${date}.tsv`, note || undefined)
-				}
+				callback: (itemDiv: any) => this.downloadPvalueTable(termType, itemDiv)
 			}
 		]
 		for (const opt of opts) {
-			this.dom.actionsTip.d.append('div').attr('class', 'sja_menuoption').text(opt.text).on('click', opt.callback)
+			const itemDiv = this.dom.actionsTip.d.append('div').attr('class', 'sja_menuoption').text(opt.text)
+			itemDiv.on('click', () => opt.callback(itemDiv))
 		}
+	}
+
+	/* The interactive table only holds the most-significant maxInteractiveDots rows, because the
+	dot overlay has to stay responsive. The download has no such constraint, so it should be the
+	COMPLETE set of significant rows: when the two differ, re-request with the cap lifted and write
+	those rows instead.
+
+	That second request is cheap. volcanoRender is deliberately not part of the DA cache key (see
+	dmKeyInputs in server/routes/termdb.diffMeth.ts), so lifting the cap re-uses the cached R result
+	and pays only for a re-render.
+
+	If the re-request fails the download still happens, with the capped rows and a note saying so --
+	losing the file entirely would be a worse outcome than a disclosed subset. */
+	async downloadPvalueTable(termType: string, itemDiv?: any) {
+		// name the file after what is in it and when it was run -- these downloads pile up in
+		// one folder across cohorts and reruns
+		const date = fileDateStamp()
+		const label = termType === PROTEOME_DAP ? 'fdr' : 'p-value'
+		let { rows, columns } = this.pValueTableData
+		let subsetNote: string | undefined
+
+		/* Without a note, nothing in a capped file reveals that "how many were significant" is
+		unanswerable from it. Only reachable now when the full fetch is unavailable or fails. */
+		const cappedNote = (reason: string) =>
+			`Top ${rows.length.toLocaleString()} of ${this.totalSignificantRows.toLocaleString()} significant results, ` +
+			`selected by adjusted p-value and sorted by fold-change. This file is not the complete result set (${reason}).`
+
+		if (this.totalSignificantRows > rows.length) {
+			if (!this.fetchAllRows) subsetNote = cappedNote('complete set unavailable')
+			else {
+				// a full table can be tens of thousands of rows; say something before the wait
+				const restore = itemDiv?.text()
+				itemDiv?.text(`Preparing ${this.totalSignificantRows.toLocaleString()} rows...`)
+				try {
+					const full = await this.fetchAllRows()
+					rows = full.rows
+					columns = full.columns
+				} catch (e: any) {
+					subsetNote = cappedNote(`could not retrieve the complete set: ${e?.message || e}`)
+				} finally {
+					if (restore) itemDiv?.text(restore)
+				}
+			}
+		}
+
+		/* Provenance rides along with the rows. Comparing two exports months apart is
+		otherwise guesswork: differing counts could be a code change, a settings change or a
+		different group definition, and nothing in the file distinguishes them.
+		Joined with ' | ' rather than a newline because downloadTable collapses newlines to
+		keep the note on one '#' line -- writing '\n' here would look intentional and quietly
+		become a space. */
+		const note = [subsetNote, this.provenance && `Run: ${this.provenance}`].filter(Boolean).join(' | ')
+		downloadTable(rows, columns, `${label}-table-${date}.tsv`, note || undefined)
 	}
 
 	async highlightDataPoint(value: string) {

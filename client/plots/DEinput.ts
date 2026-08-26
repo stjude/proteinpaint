@@ -15,10 +15,21 @@ import { make_radios, renderTable, Tabs } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { renderPreAnalysisData } from '#mass/groups'
 import { TermTypeGroups, termType2label } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { uiLabel } from '#shared'
 
 const colorScale = getColors(5)
 
+/* Group-building submission UI for a two-group differential analysis.
+
+Serves both differential gene expression and differential DNA methylation, selected by
+config.termType (default gene expression, so existing callers are unchanged). The two differ
+in only three places, all branched on `isGE` below: which ds query proves the assay exists,
+which server route the pre-analysis hits, and the expression-source tabs (methylation has no
+pseudobulk counterpart). The group table, filter prompt and submit flow are shared.
+
+The results view is a separate chart, 'differentialAnalysis'; this plot only builds groups
+and hands them over via renderPreAnalysisData(). */
 class DEinputPlot extends PlotBase implements RxComponent {
 	static type = 'DEinput'
 
@@ -42,6 +53,10 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	groupsSeeded?: boolean
 	/** set once config.autoSubmit has triggered clickSubmit() */
 	autoSubmitted?: boolean
+	/** geneExpression (default) or dnaMethylation. Resolved in init() from state.config, NOT from
+	 * opts: mass/plot.js hands the component only {app, holder, header, id, ...}, so config fields
+	 * are not on opts and reading it in the constructor would silently always be undefined. */
+	termType!: string
 
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
@@ -50,8 +65,13 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		this.groups = []
 	}
 
+	get isGE() {
+		return this.termType == TermTypes.GENE_EXPRESSION
+	}
+
 	getDom() {
-		const header = this.opts?.header?.html('Differential Gene Expression') || undefined
+		// header text is set in init(), once state.config.termType is known
+		const header = this.opts?.header || undefined
 		const holder = this.opts.holder.append('div').style('margin', '10px')
 		const expressionSource = holder.append('div').style('margin-bottom', '15px')
 		const table = holder.append('div')
@@ -85,12 +105,21 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		}
 	}
 
-	async init() {
+	async init(appState) {
+		const state = this.getState(appState)
+		this.termType = state.config.termType || TermTypes.GENE_EXPRESSION
+		this.dom.header?.html(`Differential ${termType2label(this.termType)}`)
 		await this.renderExpressionSourceUI()
 	}
 
 	// TODO: handle errors
 	async main() {
+		/* The expression-source tabs are built during init(), and Tabs.main() fires the active tab's
+		callback immediately -- which calls main() before rx has assigned this.state. Bail out here
+		rather than let maySeedGroups() throw on this.state.config: it sets groupsSeeded=true first,
+		so the throw permanently skips seeding and config.groups[] silently never appears. The
+		framework calls main() again right after init(), so nothing is lost by returning. */
+		if (!this.state) return
 		this.dom.preAnalysis.selectAll('*').remove()
 		if (!this.expressionSource || (this.expressionSource === 'pseudobulk' && !this.pseudobulk)) {
 			this.dom.table.style('display', 'none')
@@ -156,6 +185,19 @@ class DEinputPlot extends PlotBase implements RxComponent {
 
 	async renderExpressionSourceUI() {
 		const config = this.app.vocabApi.termdbConfig
+
+		/* methylation has one source, the element matrices, and no pseudobulk counterpart, so there
+		is nothing to choose -- skip the tabs entirely. the ds gate mirrors the one the Groups menu
+		applies (mass/groups.js): a promoter matrix OR any element type is enough, so a ds offering
+		only non-promoter classes is still reachable. */
+		if (!this.isGE) {
+			const dm = config.queries?.dnaMethylation
+			if (!dm?.promoter && !dm?.elementTypes?.length)
+				throw new Error('No DNA methylation data configured for differential analysis')
+			this.expressionSource = 'bulk'
+			return
+		}
+
 		const hasBulk = !!config.queries?.rnaseqGeneCount
 		const terms = config.termType2terms?.[TermTypeGroups.PSEUDOBULK] || []
 		const hasPseudobulk = terms.length > 0
@@ -450,7 +492,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			}
 		}
 
-		// get actual numbers of samples with rnaseq count
+		// get actual numbers of samples with data for this assay
 		const body: any = {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
@@ -460,7 +502,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			preAnalysis: true
 		}
 		if (this.expressionSource === 'pseudobulk') body.pseudobulk = this.pseudobulk
-		const preAnalysisData = await dofetch3('termdb/DE', { body })
+		// both routes accept the same preAnalysis body and answer with the same {data:{groupName:n}}
+		const preAnalysisData = await dofetch3(this.isGE ? 'termdb/DE' : 'termdb/diffMeth', { body })
 
 		this.dom.loading.style('display', 'none')
 
@@ -472,6 +515,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			samplelstTW,
 			groups: samplelstTW.q.groups,
 			holder: this.dom.preAnalysis,
+			termType: this.termType,
 			self: this
 		})
 	}
@@ -480,9 +524,15 @@ class DEinputPlot extends PlotBase implements RxComponent {
 export const DEinputInit = getCompInit(DEinputPlot)
 export const componentInit = DEinputInit
 
+const supportedTermTypes = new Set([TermTypes.GENE_EXPRESSION, TermTypes.DNA_METHYLATION])
+
 export async function getPlotConfig(opts, app?) {
+	if (opts.termType && !supportedTermTypes.has(opts.termType))
+		throw new Error(`termType='${opts.termType}' is not supported by DEinput`)
 	const config = {
 		chartType: 'DEinput',
+		// default keeps every existing caller on gene expression without passing anything
+		termType: opts.termType || TermTypes.GENE_EXPRESSION,
 		settings: {}
 	}
 

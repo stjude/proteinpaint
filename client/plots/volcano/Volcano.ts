@@ -156,10 +156,20 @@ export class Volcano extends PlotBase implements RxComponent {
 			//Pass table data for downloading
 			this.interactions.pValueTableData = viewModel.viewData.pValueTableData
 			this.interactions.data = response.data.dots
-			//pre-cap count, so the download can disclose that its rows are a subset
+			//pre-cap count, so the download knows whether the on-screen rows are a subset
 			this.interactions.totalSignificantRows = response.data.totalSignificantRows
 			//groups, sample sizes and settings, so a downloaded table records how it was produced
 			this.interactions.provenance = viewModel.viewData.provenance
+			/* Lets the download write every significant row while the interactive table keeps only
+			the most-significant maxInteractiveDots (the dot overlay does not scale past that).
+			maxInteractiveDots null tells renderVolcano to keep them all; it is not part of the DA
+			cache key, so this re-uses the cached analysis and only re-renders. Rebuilt on each
+			response so it closes over the current config/settings rather than a stale pair. */
+			this.interactions.fetchAllRows = async () => {
+				const full = await this.model!.getData(config, { ...settings, maxInteractiveDots: null })
+				if (!full || full.error || !full.data?.dots) throw new Error(full?.error || 'no rows returned')
+				return new VolcanoViewModel(config, full, settings).viewData.pValueTableData
+			}
 
 			/** Render formatted data */
 			this.view.render(settings, viewModel.viewData)
