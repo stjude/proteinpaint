@@ -43,8 +43,13 @@ tape('selectGene() should call callback with configured unit from termdbConfig',
 		}
 	} as any
 
-	await handler.selectGene({ geneSymbol: 'TP53', sampleType: 'tumor' })
-	test.deepEqual(selected?.q?.sampleTypes, ['tumor'], 'Should pass selected sampleTypes in q payload as array')
+	handler.sampleTypeSelect = [
+		{ property: key => (key == 'checked' ? true : 1) },
+		{ property: key => (key == 'checked' ? false : 2) }
+	] as any
+
+	await handler.selectGene({ geneSymbol: 'TP53' })
+	test.deepEqual(selected?.q?.sampleTypes, [1], 'Should pass selected sampleTypes in q payload as array')
 	test.equal(selected?.term.gene, 'TP53', 'Should pass selected gene')
 	test.equal(selected?.term.name, 'TP53 log2 TPM', 'Should include configured unit in term name')
 	test.equal(selected?.term.type, TermTypes.GENE_EXPRESSION, 'Should set type to geneExpression')
@@ -77,5 +82,34 @@ tape('selectGene() should use default unit when not configured', async test => {
 	test.equal(selected?.term.name, 'BRCA1 Gene Expression', 'Should use default unit when config unit is not provided')
 	test.equal(selected?.term.type, TermTypes.GENE_EXPRESSION, 'Should set type to geneExpression')
 
+	test.end()
+})
+
+tape('selectGene() should require at least one sample type when selector is rendered', async test => {
+	const handler = new SearchHandler()
+	let called = false
+	let alertMsg = ''
+	const oldAlert = window.alert
+
+	handler.callback = () => {
+		called = true
+	}
+	handler.app = {
+		vocabApi: {
+			termdbConfig: {
+				queries: {}
+			}
+		}
+	} as any
+	handler.sampleTypeSelect = [{ property: key => (key == 'checked' ? false : 1) }] as any
+
+	window.alert = (msg: any) => {
+		alertMsg = msg
+	}
+	await handler.selectGene({ geneSymbol: 'BRCA1' })
+	window.alert = oldAlert
+
+	test.equal(called, false, 'Should not call callback when no sample type is selected')
+	test.equal(alertMsg, 'Must select at least one sample type', 'Should notify user to select sample type')
 	test.end()
 })

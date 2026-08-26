@@ -2,28 +2,28 @@ type SampleTypeConfig = {
 	[key: string]: { name: string; plural_name: string; parent_id: number | null }
 }
 
-/**
- * Renders sample type checkboxes when the dataset has sample ancestry and
- * at least two child sample types.
- *
- * @param row - D3 selection element to append the checkbox list to
- * @param termdbConfig - Termdb configuration containing sample ancestry and sample types
- * @returns The rendered checkbox controls, or undefined when a selector is not needed
- */
+// helper for determining whether to render sample type select
+// returns true when dataset has sample ancestry and at least two child sample types.
+export function mayRenderSampleTypeSelect(termdbConfig?: {
+	hasSampleAncestry?: boolean
+	sampleTypes?: SampleTypeConfig
+}) {
+	if (!termdbConfig?.hasSampleAncestry) return
+	const sampleTypes = termdbConfig.sampleTypes
+	if (!sampleTypes) throw new Error('sampleTypes{} is missing')
+	const childSampleTypes = getChildSampleTypes(sampleTypes)
+	return Object.keys(childSampleTypes).length >= 2
+}
+
+// renders sample type checkboxes
 export function renderSampleTypeSelect(
 	row: any,
 	termdbConfig?: { hasSampleAncestry?: boolean; sampleTypes?: SampleTypeConfig }
 ) {
-	if (!termdbConfig?.hasSampleAncestry) return
-	const sampleTypes = termdbConfig.sampleTypes
+	if (!mayRenderSampleTypeSelect(termdbConfig)) return
+	const sampleTypes = termdbConfig?.sampleTypes
 	if (!sampleTypes) throw new Error('sampleTypes{} is missing')
-
-	const childSampleTypes: SampleTypeConfig = {}
-	for (const [k, v] of Object.entries(sampleTypes)) {
-		if (Number.isInteger(v.parent_id)) childSampleTypes[k] = v
-	}
-
-	if (Object.keys(childSampleTypes).length < 2) return
+	const childSampleTypes = getChildSampleTypes(sampleTypes)
 
 	const sampleTypeCheckboxDiv = row
 		.append('div')
@@ -44,4 +44,20 @@ export function renderSampleTypeSelect(
 	}
 
 	return sampleTypeCheckboxes
+}
+
+// returns selected sample type ids from checkbox controls created by renderSampleTypeSelect().
+export function getSelectedSampleTypes(sampleTypeSelect?: any[]) {
+	if (!sampleTypeSelect) return
+	return sampleTypeSelect
+		.filter(checkbox => checkbox.property('checked'))
+		.map(checkbox => Number(checkbox.property('value')))
+}
+
+function getChildSampleTypes(sampleTypes: SampleTypeConfig) {
+	const childSampleTypes: SampleTypeConfig = {}
+	for (const [k, v] of Object.entries(sampleTypes)) {
+		if (Number.isInteger(v.parent_id)) childSampleTypes[k] = v
+	}
+	return childSampleTypes
 }

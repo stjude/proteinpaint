@@ -1,4 +1,13 @@
-import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI, table2col, renderSampleTypeSelect } from '#dom'
+import {
+	Menu,
+	make_radios,
+	addGeneSearchbox,
+	GeneSetEditUI,
+	table2col,
+	renderSampleTypeSelect,
+	mayRenderSampleTypeSelect,
+	getSelectedSampleTypes
+} from '#dom'
 import type { VocabApi } from '#types'
 import { dtTerms, dtcnv, dtsnvindel } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
@@ -127,10 +136,10 @@ export class SearchHandler {
 					}
 				})
 			}
-			// create select menu for sample type
-			{
+			if (mayRenderSampleTypeSelect(this.opts.app.vocabApi.termdbConfig)) {
+				// render sample type select
 				const [td1, td2] = table.addRow()
-				td1.text('Sample type')
+				td1.text('Sample Type')
 				this.sampleTypeSelect = renderSampleTypeSelect(td2, this.opts.app.vocabApi.termdbConfig)
 			}
 		}
@@ -334,11 +343,7 @@ export class SearchHandler {
 	}
 
 	mayApplySampleType() {
-		if (!this.sampleTypeSelect) return
-		const sampleTypes = this.sampleTypeSelect
-			.filter(checkbox => checkbox.property('checked'))
-			.map(checkbox => Number(checkbox.property('value')))
-		this.q.sampleTypes = sampleTypes
+		this.q.sampleTypes = getSelectedSampleTypes(this.sampleTypeSelect)
 	}
 
 	async applyRememberedQ(q) {
