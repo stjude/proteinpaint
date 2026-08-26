@@ -774,6 +774,11 @@ tape('getData: custom bins of a non-dict numeric term come back colored and dist
 	// the other half of what the bin list feeds: sample values are keyed by their bin label
 	t.equal(data.samples.c1.exp.key, '<6', 'a sample below the cutoff is keyed by the first bin')
 	t.equal(data.samples.c3.exp.key, '≥6', 'a sample at or above the cutoff is keyed by the last bin')
+
+	/* the response bins are a copy: callers go on to mutate them (termdb.barchart.js overlays
+	q.binColored on them), which must not write back into the request */
+	t.notEqual(bins[0], tw.q.lst[0], 'the response bins are not the request bins')
+	t.equal(tw.q.lst.filter(b => 'color' in b).length, 0, 'no color leaks onto the request q.lst[]')
 	t.end()
 })
 
@@ -807,5 +812,6 @@ tape('getData: custom bins of a single-cell gene expression term come back color
 	// the other half of what the bin list feeds: cell values are keyed by their bin label
 	t.equal(data.samples.cell1.scexp.key, '<6', 'a cell below the cutoff is keyed by the first bin')
 	t.equal(data.samples.cell2.scexp.key, '≥6', 'a cell at or above the cutoff is keyed by the last bin')
+	t.equal(tw.q.lst.filter(b => 'color' in b).length, 0, 'no color leaks onto the request q.lst[]')
 	t.end()
 })

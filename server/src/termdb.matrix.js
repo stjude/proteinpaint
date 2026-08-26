@@ -350,8 +350,8 @@ async function getSampleData(q, ds) {
 				} else {
 					if (!tw.q.lst) throw 'q.type is not discrete and q.lst[] is missing'
 					// custom bins are used as given and never go through compute_bins(), so they must be
-					// colored here, same as in findListOfBins()
-					lst = assignBinColors(tw.q.lst)
+					// colored here, same as in findListOfBins() -- and on a copy, for the same reason
+					lst = assignBinColors(tw.q.lst.map(bin => ({ ...bin })))
 				}
 				byTermId[tw.$id] = { bins: lst }
 			}
@@ -1192,7 +1192,12 @@ async function findListOfBins(q, tw, ds) {
 		// (e.g. the scatter color legend) fall back to a scheme of their own that can yield nearly
 		// identical bin colors. dictionary numeric terms are already colored this way, as their bins
 		// are always computed via get_bins() in termdb.sql.js
-		return assignBinColors(tw.q.lst)
+		//
+		// color a per-bin copy rather than q.lst[] itself: the returned list is handed straight to
+		// the response as refs.byTermId[$id].bins, and callers go on to mutate those bins (e.g.
+		// termdb.barchart.js overlays q.binColored on them), which would otherwise write back into
+		// the request. compute_bins() likewise returns a copy for a custom-bin config
+		return assignBinColors(tw.q.lst.map(bin => ({ ...bin })))
 	}
 	if (tw.q.type == 'regular-bin') {
 		// is regular bin. must compute the bins from tw.term.bins

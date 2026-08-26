@@ -986,6 +986,18 @@ tape('assignBinColors()', function (test) {
 		'the nth bin gets the same color whether or not it is labeled'
 	)
 
+	/* a pre-existing color is deliberately overwritten, not preserved: a client that echoes back a
+	bin list it was served would otherwise keep a color drawn from a scale of a different size.
+	user-chosen bin colors travel as q.binColored[], not on q.lst[] */
+	const stale = [{ label: 'a', color: '#123456' }, { label: 'b' }]
+	b.assignBinColors(stale)
+	test.notEqual(stale[0].color, '#123456', 'a stale bin color is replaced, not kept')
+	test.equal(new Set(stale.map(bin => bin.color)).size, 2, 'the recolored bins are still distinct')
+
+	// bins are colored in place, so callers that must not touch their input have to copy first
+	const input = [{ label: 'a' }, { label: 'b' }]
+	test.equal(b.assignBinColors(input), input, 'the same array is returned, colored in place')
+
 	test.end()
 })
 

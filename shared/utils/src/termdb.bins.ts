@@ -307,7 +307,11 @@ used by compute_bins(), and by callers that use a q.lst[] as-is without computin
 the ordinal scale is keyed by bin index, not bin.label: label is optional on a bin and is often
 only derived later by get_bin_label(), so keying by label would hand every unlabeled bin the same
 color. for distinctly labeled bins the two are equivalent, as an ordinal scale hands out range
-entries in order of first appearance */
+entries in order of first appearance.
+any pre-existing bin.color is deliberately overwritten, so that the palette always matches the
+current bin count: a client that echoes back a bin list it was served would otherwise keep colors
+drawn from a scale of a different size. user-chosen bin colors are not carried on q.lst[] -- they
+travel separately as q.binColored[] and are applied downstream of getData() */
 export function assignBinColors(lst: any[]) {
 	const k2c = getColors(lst.length)
 	for (const [i, bin] of lst.entries()) bin.color = k2c(String(i))
