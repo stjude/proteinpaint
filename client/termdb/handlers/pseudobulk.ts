@@ -11,6 +11,11 @@ type PseudobulkSelection = Omit<PseudobulkTerm, 'category' | 'gene'> & {
 	category?: string
 }
 
+/** A category id is only unique within its assay and member grouping. */
+export function isSamePseudobulkSelection(a: PseudobulkSelection, b: PseudobulkSelection) {
+	return a.type === b.type && a.assay === b.assay && a.memberId === b.memberId && a.id === b.id
+}
+
 export class SearchHandler {
 	callback!: (f?: any) => void
 	app!: AppApi
@@ -172,15 +177,15 @@ export class SearchHandler {
 	renderCategoriesAsTerms(holder: any, terms: PseudobulkTerm[]) {
 		holder.style('padding', '0px 10px')
 
-		const isSameTerm = (a, b) => a.id === b.id && a.type === b.type
-		const isSelected = term => this.app.getState().selectedTerms.some(selected => isSameTerm(selected, term))
+		const isSelected = term =>
+			this.app.getState().selectedTerms.some(selected => isSamePseudobulkSelection(selected, term))
 
 		const setSelected = async (term, selected) => {
 			const selectedTerms = this.app.getState().selectedTerms
-			if (selectedTerms.some(selectedTerm => isSameTerm(selectedTerm, term)) === selected) return
+			if (selectedTerms.some(selectedTerm => isSamePseudobulkSelection(selectedTerm, term)) === selected) return
 			const nextSelectedTerms = selected
 				? [...selectedTerms, term]
-				: selectedTerms.filter(selectedTerm => !isSameTerm(selectedTerm, term))
+				: selectedTerms.filter(selectedTerm => !isSamePseudobulkSelection(selectedTerm, term))
 			await this.app.dispatch({ type: 'app_refresh', state: { selectedTerms: nextSelectedTerms } })
 		}
 
@@ -192,8 +197,15 @@ export class SearchHandler {
 				const checked = selectAll.property('checked')
 				const selectedTerms = this.app.getState().selectedTerms
 				const nextSelectedTerms = checked
-					? [...selectedTerms, ...terms.filter(term => !selectedTerms.some(selected => isSameTerm(selected, term)))]
-					: selectedTerms.filter(selected => !terms.some(term => isSameTerm(selected, term)))
+					? [
+							...selectedTerms,
+							...terms.filter(
+								term => !selectedTerms.some(selected => isSamePseudobulkSelection(selected, term))
+							)
+						]
+					: selectedTerms.filter(
+							selected => !terms.some(term => isSamePseudobulkSelection(selected, term))
+						)
 				await this.app.dispatch({ type: 'app_refresh', state: { selectedTerms: nextSelectedTerms } })
 				update()
 			}
