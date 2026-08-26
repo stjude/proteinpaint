@@ -49,6 +49,14 @@ export function id2sampleRef(id, ds) {
 	return undefined
 }
 
+export function shouldMapParent2Children(tw, ds, mapParent2Children, sampleTypes) {
+	if (!mapParent2Children || !sampleTypes?.length) return false
+	const twSampleTypes = getTwSampleTypes(tw, ds)
+	return sampleTypes.some(qSampleType =>
+		twSampleTypes.some(twSampleType => ds.cohort.termdb.sampleTypes[qSampleType].parent_id == twSampleType)
+	)
+}
+
 /*
 for a list of termwrappers, get the sample annotation data to these terms, by obeying categorization method defined in tw.q{}
 
@@ -1013,11 +1021,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 		${CTEs.map((t, i) => {
 			const tw = termWrappers[i]
 			let query
-			const twSampleTypes = getTwSampleTypes(tw, q.ds)
-			const isParent = q.sampleTypes.some(qSampleType =>
-				twSampleTypes.some(twSampleType => q.ds.cohort.termdb.sampleTypes[qSampleType].parent_id == twSampleType)
-			)
-			if (q.mapParent2Children && isParent) {
+			if (shouldMapParent2Children(tw, q.ds, q.mapParent2Children, q.sampleTypes)) {
 				// need to map parent annotations onto child samples and
 				// term sample type is parent of query sample type
 				query = `SELECT sa.sample_id as sample, key, value, ? as term_id
