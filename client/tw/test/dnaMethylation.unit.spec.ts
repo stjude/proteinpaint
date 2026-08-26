@@ -113,6 +113,14 @@ tape('getDNAMethTermName() should format name for promoter type', test => {
 		'Promoter Average M-value (chr1:100-200)',
 		'Should format promoter name with unit and id'
 	)
+	/* A dataset serving several element classes keeps promoter_id as the identifier column for
+	all of them, so genomicFeatureType is 'promoter' even for a distal enhancer. A caller that
+	knows the class supplies its noun rather than mislabelling the term a promoter. */
+	test.equal(
+		getDNAMethTermName(term as any, undefined, 'Distal enhancer'),
+		'Distal enhancer Average M-value (chr1:100-200)',
+		'Should use the supplied element noun in place of "Promoter"'
+	)
 	test.end()
 })
 

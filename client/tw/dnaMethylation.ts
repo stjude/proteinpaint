@@ -59,8 +59,15 @@ export function getDNAMethUnit(genomicFeatureType: string, vocabApi: VocabApi) {
 	}
 }
 
-/** Function standardizes DNA methylation term name */
-export function getDNAMethTermName(term: RawDnaMethylationTerm, termUnit?: string) {
+/** Function standardizes DNA methylation term name
+ *
+ * `noun` names the kind of element the term covers, for a dataset whose methylation matrices
+ * hold more than promoters. genomicFeatureType cannot carry this on its own: the differential
+ * methylation rows keep `promoter_id` as their identifier column for every element class
+ * (backward compatibility with the promoter-only era), so a distal enhancer arrives here
+ * looking exactly like a promoter and was labelled "Promoter ... (chr9:...)". Callers that know
+ * the class pass its noun; everything else keeps the previous wording. */
+export function getDNAMethTermName(term: RawDnaMethylationTerm, termUnit?: string, noun?: string) {
 	const unit = term.unit || termUnit
 	if (!unit) throw 'Unit is required to generate term name'
 	const id = term.id || makeDNAMethTermId(term)
@@ -68,7 +75,7 @@ export function getDNAMethTermName(term: RawDnaMethylationTerm, termUnit?: strin
 
 	switch (term.genomicFeatureType) {
 		case 'promoter':
-			return `Promoter ${unit} (${id})`
+			return `${noun || 'Promoter'} ${unit} (${id})`
 		case 'gene':
 			return `${featureName} - Promoter ${unit} (${id})`
 		default:

@@ -4,6 +4,8 @@ import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION } from '#types'
 import { getGEunit } from '#tw/geneExpression'
+import { getDNAMethUnit, getDNAMethTermName } from '#tw/dnaMethylation'
+import { elementNoun } from '../promoterLabel'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -302,6 +304,25 @@ export class VolcanoInteractions {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const genomicFeatureType = d.promoter_id ? 'promoter' : 'gene'
 		const featureName = genomicFeatureType === 'gene' ? d.gene_name?.split(',')[0]?.trim() || '' : ''
+		const term: any = {
+			genomicFeatureType,
+			featureName,
+			type: DNA_METHYLATION,
+			chr: d.chr,
+			start: d.start,
+			stop: d.stop
+		}
+		/* Name the term after the element class actually tested. Every class carries its id in
+		promoter_id, so genomicFeatureType is 'promoter' for a distal enhancer too and the sandbox
+		header read "Promoter Average M-value (chr9:...)" for something that is not a promoter.
+		Built here, where the selected class is known, rather than left to the tw fill step, which
+		only sees the term. */
+		if (genomicFeatureType === 'promoter') {
+			const noun = elementNoun(config?.settings?.volcano?.elementType).one
+			const unit = getDNAMethUnit(genomicFeatureType, this.app.vocabApi)
+			term.unit = unit
+			term.name = getDNAMethTermName(term, unit, noun)
+		}
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
@@ -309,14 +330,7 @@ export class VolcanoInteractions {
 				childType: 'violin',
 				term: {
 					q: { mode: 'continuous' },
-					term: {
-						genomicFeatureType,
-						featureName,
-						type: DNA_METHYLATION,
-						chr: d.chr,
-						start: d.start,
-						stop: d.stop
-					}
+					term
 				},
 				term2: {
 					q: { groups: config.tw.q.groups, type: 'custom-samplelst' },

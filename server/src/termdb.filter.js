@@ -584,7 +584,7 @@ function numericSampleData2tvs(tvs, CTEname, termData) {
 		const value = termData[sample]
 		// -1 means the value fell in none of tvs.ranges
 		const inRanges = getBin(tvs.ranges, value) != -1
-		if (inRanges != !!tvs.isnot) samples.push(sample)
+		if (tvs.isnot ? !inRanges : inRanges) samples.push(sample)
 	}
 
 	const query = `SELECT id as sample
