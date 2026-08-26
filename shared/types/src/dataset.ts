@@ -790,10 +790,13 @@ type ProteomeFilter = {
 }
 
 type ProteomeCohortConfig = {
-	prior?: { d0: number; s0sq: number }
+	/** case/control sample filters over the abundance db: used for sample lists, sample
+	 *  counts and per-sample values (violins, clustering) — never for statistics */
 	controlFilter: ProteomeFilter[]
 	caseFilter: ProteomeFilter[]
-	DAPfile?: string
+	/** precomputed differential-abundance file (acc, identifier, gene, log2FC, FDR[, pValue]),
+	 *  the single source of every fold change and significance */
+	DAPfile: string
 	catalog?: { [columnKey: string]: string }
 	/** age/progression trajectory membership. Cohorts sharing `series` form one ordered series;
 	 *  `value` is the numeric x-axis position (e.g. months) giving true spacing; `label` is the tick text. */

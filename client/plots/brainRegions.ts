@@ -4,7 +4,7 @@ import { PlotBase } from './PlotBase'
 import { Menu, addGeneSearchbox } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { scaleLinear } from 'd3'
-import { loadBrainAssets, renderBrainSvg, type BrainAssets } from './brainRegions.svg'
+import { loadBrainAssets, renderBrainSvg, makeDiseaseTabs, type BrainAssets } from './brainRegions.svg'
 
 const defaultConfig = {
 	chartType: 'brainRegions'
@@ -98,14 +98,33 @@ class BrainRegions extends PlotBase implements RxComponent {
 		const controlRow = this.dom.body.append('div').style('margin-bottom', '15px')
 		controlRow.append('span').style('font-weight', 'bold').text('Isoform: ')
 
-		const selectedIsoform = isoformIds[0]
+		let selectedIsoform = isoformIds[0]
+		// one brain at a time, disease chosen via tabs (same UI as the
+		// proteinView brain-region tile)
+		let selectedDisease: string = data.diseases[0]
+		const tabsHolder = this.dom.body.append('div')
+		const redraw = () => this.renderBrains(data, selectedIsoform, selectedDisease, brainAssets)
+		if (data.diseases.length > 1) {
+			makeDiseaseTabs(
+				tabsHolder,
+				data.diseases,
+				selectedDisease,
+				(d: string) => {
+					selectedDisease = d
+					redraw()
+				},
+				'.9em'
+			)
+		}
+
 		if (isoformIds.length > 1) {
 			const sel = controlRow
 				.append('select')
 				.style('margin-left', '5px')
 				.style('padding', '3px 6px')
 				.on('change', () => {
-					this.renderBrains(data, sel.node().value, brainAssets)
+					selectedIsoform = sel.node().value
+					redraw()
 				})
 
 			sel
@@ -122,10 +141,10 @@ class BrainRegions extends PlotBase implements RxComponent {
 				.text(`${data.isoforms[selectedIsoform].gene_name} — ${selectedIsoform}`)
 		}
 
-		this.renderBrains(data, selectedIsoform, brainAssets)
+		redraw()
 	}
 
-	renderBrains(data: any, selectedIsoform: string, brainAssets: BrainAssets) {
+	renderBrains(data: any, selectedIsoform: string, selectedDisease: string, brainAssets: BrainAssets) {
 		const existing = this.dom.body.select('.sjpp-brain-regions-container')
 		if (!existing.empty()) existing.remove()
 
@@ -139,14 +158,11 @@ class BrainRegions extends PlotBase implements RxComponent {
 		const isoformData = data.isoforms[selectedIsoform]
 		if (!isoformData) return
 
+		// color scale is scoped to the selected disease only
+		const regionData = isoformData.data[selectedDisease] || {}
 		const allFCs: number[] = []
-		for (const disease of data.diseases) {
-			const regionData = isoformData.data[disease] || {}
-			for (const entry of Object.values(regionData) as any[]) {
-				if (entry.p_value < P_VALUE_THRESHOLD) {
-					allFCs.push(entry.fold_change)
-				}
-			}
+		for (const entry of Object.values(regionData) as any[]) {
+			if (entry.p_value < P_VALUE_THRESHOLD) allFCs.push(entry.fold_change)
 		}
 
 		const maxAbsFC = allFCs.length > 0 ? Math.max(...allFCs.map(v => Math.abs(v))) : 1
@@ -155,41 +171,54 @@ class BrainRegions extends PlotBase implements RxComponent {
 			.range(['#2166ac', '#f7f7f7', '#b2182b'])
 			.clamp(true)
 
-		for (const disease of data.diseases) {
-			const regionData = isoformData.data[disease] || {}
-			renderBrainSvg({
-				holder: container,
-				width: BRAIN_RENDER_W,
-				templateUrl: data.templateUrl,
-				assets: brainAssets,
-				regions: data.regions,
-				title: disease,
-				tip: this.dom.tip,
-				fillByRegion: (code: string) => {
-					const entry = regionData[code]
-					if (entry && entry.p_value < P_VALUE_THRESHOLD) return colorScale(entry.fold_change) as string
-					return NONSIG_COLOR
-				},
-				tooltipByRegion: (code: string, label: string) => {
-					const entry = regionData[code]
-					if (!entry) return `${label} (${code})\nNo data`
-					const fc = entry.fold_change.toFixed(4)
-					const p = entry.p_value >= 0.0001 ? entry.p_value.toFixed(4) : entry.p_value.toExponential(3)
-					return `${label} (${code})\nlog₂ fold change: ${fc}\np-value: ${p}`
-				}
-			})
-		}
+		renderBrainSvg({
+			holder: container,
+			width: BRAIN_RENDER_W,
+			templateUrl: data.templateUrl,
+			assets: brainAssets,
+			regions: data.regions,
+			title: selectedDisease,
+			tip: this.dom.tip,
+			fillByRegion: (code: string) => {
+				const entry = regionData[code]
+				if (entry && entry.p_value < P_VALUE_THRESHOLD) return colorScale(entry.fold_change) as string
+				return NONSIG_COLOR
+			},
+			tooltipByRegion: (code: string, label: string) => {
+				const entry = regionData[code]
+				if (!entry) return `${label} (${code})\nNo data`
+				const fc = entry.fold_change.toFixed(4)
+				const fmt = (v: number) => (v >= 0.0001 ? v.toFixed(4) : v.toExponential(3))
+				const fdr = Number.isFinite(entry.fdr) ? `\nFDR: ${fmt(entry.fdr)}` : ''
+				return `${label} (${code})\nlog₂ fold change: ${fc}\np-value: ${fmt(entry.p_value)}${fdr}`
+			}
+		})
 
-		this.renderLegend(container, colorScale, maxAbsFC)
+		this.renderLegend(container, colorScale, maxAbsFC, allFCs.length, selectedDisease)
 	}
 
-	renderLegend(container: any, colorScale: any, maxAbsFC: number) {
+	renderLegend(container: any, colorScale: any, maxAbsFC: number, nSig: number, disease: string) {
 		const legendDiv = container
 			.append('div')
 			.style('display', 'flex')
 			.style('flex-direction', 'column')
 			.style('justify-content', 'center')
 			.style('padding', '10px')
+
+		if (!nSig) {
+			// no region passes the threshold: a gradient would only show the ±1 fallback
+			// domain, which means nothing. Say so instead.
+			legendDiv
+				.append('div')
+				.style('font-size', '13px')
+				.style('color', '#666')
+				.style('max-width', '220px')
+				.style('line-height', '1.4')
+				.html(
+					`<span style="display:inline-block;width:14px;height:14px;background:${NONSIG_COLOR};border:1px solid #999;vertical-align:middle;margin-right:4px"></span> No region reaches p &lt; ${P_VALUE_THRESHOLD} for this isoform in ${disease}.`
+				)
+			return
+		}
 
 		legendDiv
 			.append('div')

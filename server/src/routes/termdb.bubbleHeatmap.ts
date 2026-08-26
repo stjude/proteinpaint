@@ -22,8 +22,8 @@ export const api: RouteApi = {
 // FDR threshold below which a site is significant.
 const SIGNIFICANCE_THRESHOLD = 0.05
 
-/** one parsed DAPfile row (the file is: acc \t identifier \t gene \t log2FC \t FDR) */
-type DapRow = {
+/** one parsed DAPfile row (the file is: acc \t identifier \t gene \t log2FC \t FDR [\t pValue]) */
+export type DapRow = {
 	acc: string
 	/** base UniProt accession (isoform suffix stripped), e.g. P10636 from sp|P10636-8|TAU_HUMAN */
 	baseAcc: string
@@ -33,6 +33,8 @@ type DapRow = {
 	fc: number
 	/** FDR (adjusted p-value) */
 	fdr: number
+	/** nominal p-value, only when the file carries a 6th column */
+	p?: number
 }
 
 /** sp|P10636-8|TAU_HUMAN → P10636 ; falls back to the raw acc when it doesn't parse */
@@ -50,7 +52,7 @@ function baseUniProtAcc(acc: string): string {
  * touches. Returns null when the file is missing/unreadable so the caller leaves
  * the cell empty.
  */
-async function readGeneRows(filePath: string, geneLower: string): Promise<DapRow[] | null> {
+export async function readGeneRows(filePath: string, geneLower: string): Promise<DapRow[] | null> {
 	let content: string
 	try {
 		content = await fs.readFile(filePath, 'utf8')
@@ -70,7 +72,9 @@ async function readGeneRows(filePath: string, geneLower: string): Promise<DapRow
 		if (!Number.isFinite(fc)) continue
 		const fdr = Number(parts[4])
 		if (!Number.isFinite(fdr)) continue
-		rows.push({ acc, baseAcc: baseUniProtAcc(acc), identifier: parts[1] || acc, gene, fc, fdr })
+		const row: DapRow = { acc, baseAcc: baseUniProtAcc(acc), identifier: parts[1] || acc, gene, fc, fdr }
+		if (parts.length > 5 && Number.isFinite(Number(parts[5]))) row.p = Number(parts[5])
+		rows.push(row)
 	}
 	return rows
 }

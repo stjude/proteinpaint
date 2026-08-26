@@ -463,3 +463,43 @@ export function renderBrainSvg(opts: RenderBrainSvgOpts): SVGSVGElement {
 
 	return svg.node() as SVGSVGElement
 }
+
+// clickable disease tabs (e.g. AD | LBD); active one bold + underlined.
+// Shared by the standalone brainRegions plot and the proteinView tile so
+// disease selection behaves the same in both.
+export function makeDiseaseTabs(
+	holder: any,
+	diseases: string[],
+	initial: string,
+	onChange: (d: string) => void,
+	fontSize = '.8em'
+) {
+	const row = holder
+		.append('div')
+		.style('display', 'flex')
+		.style('gap', '12px')
+		.style('margin-bottom', '4px')
+		.style('font-size', fontSize)
+	let active = initial
+	const update = () => {
+		row.selectAll('*').remove()
+		for (const d of diseases) {
+			row
+				.append('span')
+				.attr('role', 'tab')
+				.attr('aria-selected', String(d === active))
+				.text(d)
+				.style('cursor', 'pointer')
+				.style('font-weight', d === active ? '600' : '400')
+				.style('text-decoration', d === active ? 'underline' : 'none')
+				.style('color', d === active ? '#111827' : '#6b7280')
+				.on('click', () => {
+					if (d === active) return
+					active = d
+					update()
+					onChange(d)
+				})
+		}
+	}
+	update()
+}
