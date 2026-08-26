@@ -25,7 +25,7 @@ import {
 	PSEUDOBULK,
 	JUNCTION
 } from '#types'
-import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
+import { get_bin_label, compute_bins, assignBinColors } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from './routes/termdb.categories.ts'
 import { authApi } from '#src/auth.js'
@@ -1184,8 +1184,13 @@ function normalizeLegacyHierClusterDataType(config) {
 async function findListOfBins(q, tw, ds) {
 	// for non-dict terms which may lack tw.term.bins
 	if (tw.q.type == 'custom-bin') {
-		if (Array.isArray(tw.q.lst)) return tw.q.lst
-		throw 'q.type is custom-bin but q.lst is missing' // when mode is custom bin, q.lst must always be present
+		if (!Array.isArray(tw.q.lst)) throw 'q.type is custom-bin but q.lst is missing' // when mode is custom bin, q.lst must always be present
+		// custom bins are used as given and never go through compute_bins(), which is where bins
+		// are colored. without this they reach the client colorless and consumers that color by bin
+		// (e.g. the scatter color legend) fall back to a scheme of their own that can yield nearly
+		// identical bin colors. dictionary numeric terms are already colored this way, as their bins
+		// are always computed via get_bins() in termdb.sql.js
+		return assignBinColors(tw.q.lst)
 	}
 	if (tw.q.type == 'regular-bin') {
 		// is regular bin. must compute the bins from tw.term.bins

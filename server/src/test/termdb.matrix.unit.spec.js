@@ -35,6 +35,7 @@ hasFilterTermsUnsupportedByFilterSamples: detects filter terms filterSamples() c
 getData: samplelst overlay resolves on a dataset without a sqlite db
 getData: an untrustworthy scope adds no absent group member
 getData: a request of only a negated samplelst group is rejected
+getData: custom bins of a non-dict numeric term come back colored and distinct
 */
 
 tape('id2sampleRef(): prefers id2sampleRefs, else id2sampleName raw-then-Number, no NaN on string ids', test => {
@@ -739,5 +740,30 @@ tape('getData: a request of only a negated samplelst group is rejected', async t
 	// resolve to an empty result with no explanation
 	t.ok(data.error, 'an error is returned')
 	t.ok(/not in/.test(data.error), `the error names the unsupported shape: ${data.error}`)
+	t.end()
+})
+
+tape('getData: custom bins of a non-dict numeric term come back colored and distinct', async t => {
+	await ensureOpenAuth()
+	const tw = geneTw()
+	tw.q = {
+		mode: 'binary',
+		type: 'custom-bin',
+		lst: [
+			{ startunbounded: true, stopinclusive: false, stop: 6, label: '<6' },
+			{ start: 6, startinclusive: true, stopunbounded: true, label: '≥6' }
+		]
+	}
+	const data = await getData({ terms: [tw], filter: emptyFilter() }, makeNoDbDs())
+	const bins = data.refs.byTermId.exp.bins
+
+	/* custom bins are used as given and never go through compute_bins(), which is where bins are
+	colored. without a color of their own, consumers that color by bin (e.g. the scatter color
+	legend) fall back to a scheme of their own that can yield nearly identical bin colors */
+	t.equal(bins.filter(b => b.color).length, 2, 'every bin carries a color')
+	t.equal(new Set(bins.map(b => b.color)).size, 2, 'the two bins are colored differently')
+	// the other half of what the bin list feeds: sample values are keyed by their bin label
+	t.equal(data.samples.c1.exp.key, '<6', 'a sample below the cutoff is keyed by the first bin')
+	t.equal(data.samples.c3.exp.key, '≥6', 'a sample at or above the cutoff is keyed by the last bin')
 	t.end()
 })
