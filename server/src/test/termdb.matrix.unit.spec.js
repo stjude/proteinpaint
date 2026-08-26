@@ -36,6 +36,7 @@ getData: samplelst overlay resolves on a dataset without a sqlite db
 getData: an untrustworthy scope adds no absent group member
 getData: a request of only a negated samplelst group is rejected
 getData: custom bins of a non-dict numeric term come back colored and distinct
+getData: custom bins of a single-cell gene expression term come back colored and distinct
 */
 
 tape('id2sampleRef(): prefers id2sampleRefs, else id2sampleName raw-then-Number, no NaN on string ids', test => {
@@ -653,8 +654,13 @@ const sampleLstTw = () => ({
 
 /* a gdc-like ds: no cohort.db, dictionary terms come from a ds getter, gene expression from
 ds.queries, and the authorized sample scope from ds.cohort.termdb.filterSamples() */
-function makeNoDbDs({ scope = new Set(['c1', 'c2', 'c3']), expValues = { c1: 5, c2: 6, c3: 7 }, dictCalls } = {}) {
-	return {
+function makeNoDbDs({
+	scope = new Set(['c1', 'c2', 'c3']),
+	expValues = { c1: 5, c2: 6, c3: 7 },
+	dictCalls,
+	scExpValues
+} = {}) {
+	const ds = {
 		label: 'MockNoDb',
 		genomename: 'hg38',
 		cohort: {
@@ -675,6 +681,9 @@ function makeNoDbDs({ scope = new Set(['c1', 'c2', 'c3']), expValues = { c1: 5, 
 			}
 		}
 	}
+	// single cell gene expression is keyed by cell, not sample, and is served by its own query
+	if (scExpValues) ds.queries.singleCell = { geneExpression: { get: async () => scExpValues } }
+	return ds
 }
 
 const emptyFilter = () => ({ type: 'tvslst', in: true, join: '', lst: [] })
@@ -765,5 +774,38 @@ tape('getData: custom bins of a non-dict numeric term come back colored and dist
 	// the other half of what the bin list feeds: sample values are keyed by their bin label
 	t.equal(data.samples.c1.exp.key, '<6', 'a sample below the cutoff is keyed by the first bin')
 	t.equal(data.samples.c3.exp.key, '≥6', 'a sample at or above the cutoff is keyed by the last bin')
+	t.end()
+})
+
+tape('getData: custom bins of a single-cell gene expression term come back colored and distinct', async t => {
+	await ensureOpenAuth()
+	// this term type does not route through findListOfBins(), so it needs its own coloring guard
+	const tw = {
+		$id: 'scexp',
+		term: {
+			type: 'singleCellGeneExpression',
+			gene: 'CLN8',
+			name: 'CLN8',
+			sample: { sID: 'sample1' },
+			bins: { min: 0, max: 10 }
+		},
+		q: {
+			mode: 'discrete',
+			type: 'custom-bin',
+			lst: [
+				{ startunbounded: true, stopinclusive: false, stop: 6, label: '<6' },
+				{ start: 6, startinclusive: true, stopunbounded: true, label: '≥6' }
+			]
+		}
+	}
+	const ds = makeNoDbDs({ scExpValues: { cell1: 5, cell2: 7 } })
+	const data = await getData({ terms: [tw], filter: emptyFilter() }, ds)
+	const bins = data.refs.byTermId.scexp.bins
+
+	t.equal(bins.filter(b => b.color).length, 2, 'every bin carries a color')
+	t.equal(new Set(bins.map(b => b.color)).size, 2, 'the two bins are colored differently')
+	// the other half of what the bin list feeds: cell values are keyed by their bin label
+	t.equal(data.samples.cell1.scexp.key, '<6', 'a cell below the cutoff is keyed by the first bin')
+	t.equal(data.samples.cell2.scexp.key, '≥6', 'a cell at or above the cutoff is keyed by the last bin')
 	t.end()
 })
