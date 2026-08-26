@@ -1482,6 +1482,9 @@ type Mds3Queries = {
 		tiffFileSuffix?: string
 		/** suffix of the cell segmentation CSV */
 		cellBoundariesFileSuffix?: string
+		/** suffix of the per-cell annotations CSV (cell_id,cell_type — one row
+		 * per cell), the source of the cell-type overlay */
+		cellAnnotationsFileSuffix?: string
 		/** suffix of the nucleus segmentation CSV */
 		nucleusBoundariesFileSuffix?: string
 		/** suffix of the 10x cell feature matrix HDF5 */
@@ -1494,7 +1497,7 @@ type Mds3Queries = {
 		geneExpression?: string
 		/** default: show boundary strokes only in the n most zoomed-in levels */
 		annotationLevel?: number
-		/** default: fill cells by the cell_type column of the boundaries CSV.
+		/** default: fill cells by their cell_type from the annotations CSV.
 		 * The burger menu can always override it. */
 		cellTypes?: boolean
 	}

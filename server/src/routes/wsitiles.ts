@@ -129,22 +129,26 @@ function slidePath(genomes: any, q: any): string {
 	throw new Error('ds.queries.w2 not configured for this dataset')
 }
 
-/** Distinct non-empty values of a boundaries CSV's cell_type column, sorted;
- undefined when the header has no such column. (exported for tests) */
+/** Distinct non-empty values of a per-cell annotations CSV's cell_type column
+ (cell_id,cell_type — one row per cell), sorted; undefined when the header has
+ no such column. (exported for tests) */
 export function distinctCellTypes(csv: string): string[] | undefined {
 	const unquote = (s: string) => s.replace(/"/g, '').trim()
 	const lines = csv.split('\n')
-	const typeIdx = lines[0] ? lines[0].split(',').findIndex(h => unquote(h) == 'cell_type') : -1
-	if (typeIdx < 0) return undefined
-	const types = new Set<string>()
-	// ponytail: full scan of every vertex row on each meta request — cache by
-	// file mtime if boundary CSVs ever get big enough for this to show up
+	const typeIdx = lines[0] ? lines[0].split(',').findIndex(h => unquote(h) == 'cell_type') : -1 // header lookup
+	if (typeIdx < 0) return undefined // no cell_type column
+	const types = new Set<string>() // distinct values seen
 	for (let i = 1; i < lines.length; i++) {
-		const t = unquote(lines[i].split(',')[typeIdx] || '')
-		if (t) types.add(t)
+		const t = unquote(lines[i].split(',')[typeIdx] || '') // this row's type
+		if (t) types.add(t) // QC-filtered cells have an empty field
 	}
 	return [...types].sort()
 }
+
+// distinct cell_type answers cached per annotations CSV, valid while its
+// mtime is unchanged — the file is small (one row per cell), the cache just
+// avoids re-reading it on every meta request
+const cellTypesCache = new Map<string, { mtime: number; types?: string[] }>()
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
@@ -224,17 +228,23 @@ function init({ genomes }) {
 				// version: the client puts it in tile URLs, so a regenerated slide
 				// also busts the browser's immutable tile cache
 				out.version = (await stat(slide)).mtimeMs
-				// ?cellBoundaries=<csv>: also report the distinct cell_type values of
-				// that boundaries CSV (same scoping as the boundaries action), so the
-				// client can build a type picker before downloading the full CSV.
+				// ?cellAnnotations=<csv>: also report the distinct cell_type values of
+				// that per-cell annotations CSV (same scoping as the boundaries
+				// action), so the client can build a type picker up front.
 				// Absent column / unreadable file = no cellTypes field, meta still works.
-				if (q.cellBoundaries) {
+				if (q.cellAnnotations) {
 					try {
-						const full = path.resolve(serverconfig.tpmasterdir, String(q.cellBoundaries))
-						if (!String(q.cellBoundaries).toLowerCase().endsWith('.csv')) throw new Error('not a csv')
+						const full = path.resolve(serverconfig.tpmasterdir, String(q.cellAnnotations))
+						if (!String(q.cellAnnotations).toLowerCase().endsWith('.csv')) throw new Error('not a csv')
 						if (!full.startsWith(companionBase + path.sep)) throw new Error('path escapes the slide folder')
-						const types = distinctCellTypes(await readFile(full, 'utf8'))
-						if (types) out.cellTypes = types
+						// scan the CSV only when its mtime changed; else answer from cache
+						const mtime = (await stat(full)).mtimeMs
+						let hit = cellTypesCache.get(full)
+						if (!hit || hit.mtime !== mtime) {
+							hit = { mtime, types: distinctCellTypes(await readFile(full, 'utf8')) }
+							cellTypesCache.set(full, hit) // one entry per annotations CSV
+						}
+						if (hit.types) out.cellTypes = hit.types
 					} catch (e: any) {
 						console.warn(`meta cellTypes: ${e.message || e}`) // non-fatal, geometry is the answer
 					}

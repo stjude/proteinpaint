@@ -10,9 +10,12 @@
  CSV columns: cell_id, vertex_x, vertex_y (µm); rows of one cell are contiguous
  and its first vertex is repeated last to close the polygon.
 
- &cell_types=1 fills every cell by its cell_type column (when the boundaries
- CSV has one); &cell_types=Tumor,B cells fills only the listed types. Colors
- are assigned over all types, so a type keeps its color across filters.
+ &cell_annotations=SVS/cell_annotations.csv names the per-cell annotations CSV
+ (cell_id,cell_type — ONE row per cell, not per vertex), the source of the
+ cell-type overlay and the tooltip's cell type. &cell_types=1 fills every
+ annotated cell by its type; &cell_types=Tumor,B cells fills only the listed
+ types. Colors are assigned over all types, so a type keeps its color across
+ filters.
 
  &annotation_level=n limits the boundary strokes to the n most zoomed-in levels
  of the viewer: zoomed out beyond that, the boundaries are hidden. Omit to
@@ -68,9 +71,12 @@ export async function init(
 		label?: string
 		/** = cell_boundaries: cell segmentation CSV, tpmasterdir-relative */
 		cellBoundaries?: string
+		/** = cell_annotations: per-cell annotations CSV (cell_id,cell_type),
+		 tpmasterdir-relative — feeds the cell-type overlay and the tooltip */
+		cellAnnotations?: string
 		/** fetch cellBoundaries (expression fills need the polygons) but don't draw their strokes */
 		hideCellStrokes?: boolean
-		/** fill each cell by the cell_type column of the boundaries CSV (when
+		/** fill each cell by its cell_type from the annotations CSV (when
 		 present), one categorical color per type, with a legend */
 		showCellTypes?: boolean
 		/** comma-separated cell types to fill; empty/undefined = all types.
@@ -225,14 +231,12 @@ export async function init(
 			[opts.nucleusBoundaries, 'rgba(0, 150, 255, 0.9)']
 		]
 		let cellPolys: CellPoly[] | undefined // kept for the expression/type fills below
-		let cellTypes: { [id: string]: string } | undefined // cell_id -> annotated type
 		for (const [file, color] of overlays) {
 			if (!file) continue // that overlay was not requested
 			try {
-				const { polys, cellTypes: types } = await fetchBoundaries(host, sq, file, mppX, mppY) // csv -> px polygons
+				const polys = await fetchBoundaries(host, sq, file, mppX, mppY) // csv -> px polygons
 				if (file === opts.cellBoundaries) {
 					cellPolys = polys // expression/type fills reuse these rings
-					cellTypes = types // annotation column of the same csv, if present
 					if (opts.hideCellStrokes) continue // polygons fetched, strokes suppressed
 				}
 				map.addLayer(strokeLayer(polys, color, maxResolution)) // draw on top of the slide
@@ -241,9 +245,23 @@ export async function init(
 			}
 		}
 
+		// per-cell annotations: a small separate CSV (one row per cell), fetched
+		// through the same boundaries action; feeds the type fills + tooltip.
+		// Useless without the cell polygons, so skipped when those are absent.
+		let cellTypes: { [id: string]: string } | undefined // cell_id -> annotated type
+		if (opts.cellAnnotations && cellPolys) {
+			try {
+				const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(opts.cellAnnotations)}`)
+				if (!res.ok) throw new Error(`${res.status} ${res.statusText}`) // http failure = error banner
+				cellTypes = parseCellAnnotations(await res.text()) // csv -> id->type map
+			} catch (e: any) {
+				sayerror(holder, `Error loading ${opts.cellAnnotations}: ${e.message || e}`) // overlay lost, viewer lives
+			}
+		}
+
 		// cell-type overlay: fill each annotated cell in its type's categorical
 		// color, with its own legend (top-left; the gene legend uses top-right).
-		// No-op when the boundaries csv carries no cell_type column.
+		// No-op when no annotations CSV was given (or it held no types).
 		// While it is shown, the gene expression FILLS are suppressed below (the
 		// two fills are unreadable on top of each other) — gene counts are still
 		// fetched so hovering a cell reports its expression.
@@ -492,10 +510,29 @@ async function fetchBoundaries(
 	/** µm per pixel, x and y, from meta.mpp */
 	mppX: number,
 	mppY: number
-): Promise<{ polys: CellPoly[]; cellTypes?: { [id: string]: string } }> {
+): Promise<CellPoly[]> {
 	const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}`) // raw csv text
 	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`) // http failure = overlay error banner
-	return parseBoundaries(await res.text(), mppX, mppY) // csv -> polygons (+ cell types)
+	return parseBoundaries(await res.text(), mppX, mppY) // csv -> polygons
+}
+
+/** Parse a per-cell annotations CSV (cell_id,cell_type — one row per cell)
+ into cell_id -> type; QC-filtered cells (empty type) are omitted.
+ (exported for tests) */
+export function parseCellAnnotations(text: string): { [id: string]: string } {
+	const unquote = (s?: string) => (s || '').replace(/"/g, '').trim() // strip csv quoting
+	const lines = text.split('\n') // one cell per line
+	const header = lines[0] ? lines[0].split(',').map(unquote) : [] // column names
+	const idIdx = header.indexOf('cell_id') // where the ids live
+	const typeIdx = header.indexOf('cell_type') // where the types live
+	const out: { [id: string]: string } = {} // the id -> type map
+	if (idIdx < 0 || typeIdx < 0) return out // not the expected format: no annotations
+	for (let i = 1; i < lines.length; i++) {
+		const fields = lines[i].split(',') // annotation values never contain commas
+		const t = unquote(fields[typeIdx]) // this cell's type
+		if (t) out[unquote(fields[idIdx])] = t // empty type = QC-filtered, skip
+	}
+	return out
 }
 
 /** Parse a boundary CSV into one closed ring per cell (exported for tests). */
@@ -505,22 +542,16 @@ export function parseBoundaries(
 	/** µm per pixel, x and y; 1 = coords already in px */
 	mppX: number,
 	mppY: number
-): { polys: CellPoly[]; cellTypes?: { [id: string]: string } } {
-	// rows: "cell_id",vertex_x,vertex_y[,...annotations] — one cell's vertices
-	// are contiguous. An optional cell_type header column (added by merging a
-	// per-cell annotation export into the CSV) labels every vertex row of the
-	// cell with its assigned type; captured per cell for the type overlay.
+): CellPoly[] {
+	// rows: "cell_id",vertex_x,vertex_y — one cell's vertices are contiguous.
+	// Per-cell annotations live in a separate cell_annotations CSV, not here.
 	// OL's Zoomify extent is [0,-h,w,0]: x in px to the right, y in px negated.
 	const lines = text.split('\n') // one vertex row per line
-	const unquote = (s?: string) => (s || '').replace(/"/g, '').trim() // strip csv quoting
-	const typeIdx = lines[0] ? lines[0].split(',').findIndex(h => unquote(h) == 'cell_type') : -1 // header lookup
-	const cellTypes: { [id: string]: string } | undefined = typeIdx > 2 ? {} : undefined // only when the column exists
 	const cells: CellPoly[] = [] // finished polygons
 	let ring: number[][] = [] // vertices of the cell being read
 	let curId = '' // the cell those vertices belong to
 	for (const line of lines) {
-		const fields = line.split(',') // one vertex per row
-		const [id, xs, ys] = fields // cell id + µm coordinates
+		const [id, xs, ys] = line.split(',') // cell id + µm coordinates
 		const x = Number(xs) // numeric x doubles as the row-validity check
 		if (!xs || Number.isNaN(x)) continue // header / blank line
 		if (id !== curId) {
@@ -528,16 +559,11 @@ export function parseBoundaries(
 			if (ring.length > 2) cells.push({ id: curId.replace(/"/g, ''), ring })
 			ring = [] // start collecting the new cell's vertices
 			curId = id // remember whose they are
-			if (cellTypes) {
-				// annotation columns never contain commas, so the type is at its header index
-				const t = unquote(fields[typeIdx])
-				if (t) cellTypes[unquote(id)] = t // QC-filtered cells have an empty field
-			}
 		}
 		ring.push([x / mppX, -Number(ys) / mppY]) // µm -> level-0 px, y negated for OL
 	}
 	if (ring.length > 2) cells.push({ id: curId.replace(/"/g, ''), ring }) // don't drop the last cell
-	return { polys: cells, cellTypes }
+	return cells
 }
 
 /** One stroke-only vector layer holding every polygon; maxResolution (when

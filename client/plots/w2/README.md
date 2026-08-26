@@ -42,8 +42,8 @@ roots, both laid out as `<root>/<sample_id>/<imageName>/<files>`:
 
 - `folder` — spatial (Xenium) images. Inside each image folder the slide and
   its companion files are found by suffix match (`tiffFileSuffix`,
-  `cellBoundariesFileSuffix`, `nucleusBoundariesFileSuffix`,
-  `geneExpressionFileSuffix`).
+  `cellBoundariesFileSuffix`, `cellAnnotationsFileSuffix`,
+  `nucleusBoundariesFileSuffix`, `geneExpressionFileSuffix`).
 - `wsiFolder` — plain whole-slide images (`.svs` / `.ome.tif`), one slide per
   image folder.
 
@@ -68,9 +68,10 @@ All viewer traffic hits `wsitiles/:action`:
 - **`/meta`**: spawns `wsi_tile.py meta` → dimensions, mpp, level count,
   z-plane count, plus `version` (slide mtime) which the client bakes into tile
   URLs so a regenerated slide busts the immutable browser cache. With
-  `?cellBoundaries=<csv>` it also scans that CSV's `cell_type` column and adds
-  `cellTypes: [...]` (sorted distinct values) — how the client discovers the
-  types for its filter dropdowns before downloading the full CSV.
+  `?cellAnnotations=<csv>` it also scans that per-cell annotations CSV's
+  `cell_type` column and adds `cellTypes: [...]` (sorted distinct values,
+  cached by file mtime) — how the client discovers the types for its filter
+  dropdowns up front.
 - **`/tile/z/x/y`**: checks the disk cache
   (`cachedir/wsitiles/<sha1(slide:mtime)>_<plane>_<z>_<x>_<y>.jpg`); on a miss
   spawns `wsi_tile.py tile`, copies the produced JPEG into the cache, and
@@ -162,17 +163,20 @@ from the cell/nucleus boundary CSVs (`/boundaries`, µm→px via `meta.mpp`).
   transcript count, bucketed into 8 shades. `gene_groups` ("Gene group"
   mode) instead sums the listed genes per cell into ONE overlay. A gradient
   legend sits at the map's top-right.
-- **Cell-type fills** — when the cell boundaries CSV carries a `cell_type`
-  column (per-cell annotations merged into the Xenium export), each
-  annotated cell is filled in its type's categorical color, with a legend at
-  the top-left (cell counts per type in parentheses), placed clear of the
-  zoom buttons. Toggled by the "Cell types" checkbox or `&cell_types=1`;
-  a CSV without the column makes the toggle a no-op.
+- **Cell-type fills** — per-cell annotations live in their own small CSV
+  (`cell_annotations.csv`: `cell_id,cell_type`, ONE row per cell — not
+  duplicated across vertex rows), named by `&cell_annotations=` on a URL or
+  `cellAnnotationsFileSuffix` in the dataset config, and served through the
+  same `/boundaries` action. Each annotated cell is filled in its type's
+  categorical color, with a legend at the top-left (cell counts per type in
+  parentheses), placed clear of the zoom buttons. Toggled by the "Cell
+  types" checkbox or `&cell_types=1`; without the annotations file the
+  toggle is a no-op. A QC-filtered cell (empty `cell_type`) stays unfilled.
 - **Cell-type filter** — fill only some types: `&cell_types=Tumor,B cells`
   on a URL, or the burger's "Types shown" chained dropdowns (one dropdown
   per selected type plus an "Add type…" dropdown of the remaining ones;
   no selection = all types). The available types are discovered up front by
-  the meta request — `wsitiles/meta?cellBoundaries=<csv>` scans the column
+  the meta request — `wsitiles/meta?cellAnnotations=<csv>` scans the file
   and returns `cellTypes:[…]`. Colors are assigned over ALL types by
   abundance, so a type keeps its color when the filter changes.
 - **Mutual exclusion** — cell-type fills and expression fills never draw
@@ -196,7 +200,7 @@ next to the cursor:
 
 ```
 cell id: aaabkgcd-1
-cell type: Tumor          (when the CSV has a cell_type column)
+cell type: Tumor          (when a cell_annotations CSV is loaded)
 PTPRC expression: 12.0    (one line per loaded gene / gene group)
 ```
 

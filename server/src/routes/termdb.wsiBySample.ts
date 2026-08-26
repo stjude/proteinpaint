@@ -101,6 +101,7 @@ function init({ genomes }) {
 							type: 'spatial' as const,
 							fileName,
 							cellBoundaries: rel(bySuffix(w2.cellBoundariesFileSuffix)),
+							cellAnnotations: rel(bySuffix(w2.cellAnnotationsFileSuffix)),
 							nucleusBoundaries: rel(bySuffix(w2.nucleusBoundariesFileSuffix)),
 							geneExpressionFile: rel(bySuffix(w2.geneExpressionFileSuffix)),
 							// dataset-level viewer defaults; the client's burger menu overrides them

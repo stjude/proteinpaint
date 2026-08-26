@@ -1,14 +1,14 @@
 import tape from 'tape'
-import { parseBoundaries, pointInRing } from '../wsi.direct'
+import { parseBoundaries, parseCellAnnotations, pointInRing } from '../wsi.direct'
 
 /* Tests
-    parseBoundaries: plain csv (no cell_type column)
-    parseBoundaries: csv with annotation columns
+    parseBoundaries: boundary csv -> one ring per cell
+    parseCellAnnotations: per-cell annotations csv -> id->type map
     pointInRing: hover hit test
 */
 
 // two cells, µm coords; mpp 0.5 doubles px values, y negated for OL
-const plain = `"cell_id","vertex_x","vertex_y"
+const boundaries = `"cell_id","vertex_x","vertex_y"
 "cell-1",1,2
 "cell-1",3,4
 "cell-1",5,6
@@ -17,25 +17,20 @@ const plain = `"cell_id","vertex_x","vertex_y"
 "cell-2",11,12
 `
 
-const annotated = `"cell_id","vertex_x","vertex_y","leiden","cell_type"
-"cell-1",1,2,"0","Tumor"
-"cell-1",3,4,"0","Tumor"
-"cell-1",5,6,"0","Tumor"
-"cell-2",7,8,,
-"cell-2",9,10,,
-"cell-2",11,12,,
-"cell-3",1,1,"2","B cells"
-"cell-3",2,2,"2","B cells"
-"cell-3",3,3,"2","B cells"
+// one row per cell; cell-2 is QC-filtered (empty type)
+const annotations = `"cell_id","cell_type"
+"cell-1","Tumor"
+"cell-2",
+"cell-3","B cells"
 `
 
 tape('\n', function (test) {
-	test.comment('-***- plots/w2/wsi.direct parseBoundaries -***-')
+	test.comment('-***- plots/w2/wsi.direct parsers -***-')
 	test.end()
 })
 
-tape('plain csv (no cell_type column)', test => {
-	const { polys, cellTypes } = parseBoundaries(plain, 0.5, 0.5)
+tape('boundary csv -> one ring per cell', test => {
+	const polys = parseBoundaries(boundaries, 0.5, 0.5)
 	test.equal(polys.length, 2, 'two cells parsed')
 	test.deepEqual(
 		polys[0],
@@ -50,15 +45,16 @@ tape('plain csv (no cell_type column)', test => {
 		'µm scaled to px by mpp, y negated, id unquoted'
 	)
 	test.equal(polys[1].id, 'cell-2', 'last cell not dropped')
-	test.equal(cellTypes, undefined, 'no cellTypes without a cell_type column')
 	test.end()
 })
 
-tape('csv with annotation columns', test => {
-	const { polys, cellTypes } = parseBoundaries(annotated, 1, 1)
-	test.equal(polys.length, 3, 'all cells parsed regardless of annotation')
-	test.deepEqual(cellTypes, { 'cell-1': 'Tumor', 'cell-3': 'B cells' }, 'types keyed by unquoted cell_id')
-	test.false(cellTypes && 'cell-2' in cellTypes, 'QC-filtered cell (empty field) has no type')
+tape('per-cell annotations csv -> id->type map', test => {
+	test.deepEqual(
+		parseCellAnnotations(annotations),
+		{ 'cell-1': 'Tumor', 'cell-3': 'B cells' },
+		'types keyed by unquoted cell_id; QC-filtered cell (empty type) omitted'
+	)
+	test.deepEqual(parseCellAnnotations('"foo","bar"\n"a","b"\n'), {}, 'unexpected header = empty map')
 	test.end()
 })
 

@@ -182,30 +182,32 @@ class Wsi extends PlotBase implements RxComponent {
 		return this.geneNames
 	}
 
-	/** cell types available in the current image's boundaries CSV, cached per file */
+	/** cell types available in the current image's annotations CSV, cached per file */
 	private cellTypeNames: string[] = []
 	private cellTypesFile?: string // the CSV the cache was built from
 
-	/** Discover the distinct cell_type values of the image's boundaries CSV via
-	 the meta request (?cellBoundaries= makes wsitiles/meta parse the column).
-	 Returns [] when the image has no boundaries file, the CSV has no cell_type
-	 column, or the request fails. */
+	/** Discover the distinct cell_type values of the image's per-cell
+	 annotations CSV via the meta request (?cellAnnotations= makes
+	 wsitiles/meta scan it). Returns [] when the image has no annotations
+	 file or the request fails. */
 	private async fetchCellTypes(image: SpatialImage, sampleId: string): Promise<string[]> {
-if (!image.cellBoundaries) {
+		if (!image.cellAnnotations) {
+			// this image has no annotations: clear the cache so stale types
+			// from a previously shown image don't populate the dropdowns
 			this.cellTypeNames = []
 			this.cellTypesFile = undefined
 			return this.cellTypeNames
 		}
-		if (this.cellTypesFile == image.cellBoundaries) return this.cellTypeNames // cached
+		if (this.cellTypesFile == image.cellAnnotations) return this.cellTypeNames // cached
 		const v = this.state.vocab // genome + dslabel for the request
-		const params = // standard wsitiles slide addressing + the boundaries CSV to scan
+		const params = // standard wsitiles slide addressing + the annotations CSV to scan
 			`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${v.dslabel}&genome=${v.genome}` +
-			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&cellBoundaries=${encodeURIComponent(
-				image.cellBoundaries
+			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&cellAnnotations=${encodeURIComponent(
+				image.cellAnnotations
 			)}`
 		const r = await dofetch3(`wsitiles/meta?${params}`).catch(() => null)
 		this.cellTypeNames = Array.isArray(r?.cellTypes) ? r.cellTypes : [] // failure = no dropdowns, overlay still works
-		this.cellTypesFile = image.cellBoundaries // remember which file the cache is for
+		this.cellTypesFile = image.cellAnnotations // remember which file the cache is for
 		return this.cellTypeNames
 	}
 
@@ -260,7 +262,7 @@ if (!image.cellBoundaries) {
 					// checkbox: toggle the categorical cell-type fills (mutually
 					// exclusive with the gene expression fills, enforced in main())
 					label: 'Cell types',
-					title: 'Fill cells by the cell_type annotation of the boundaries CSV (when present)',
+					title: 'Fill cells by their cell_type from the annotations CSV (when present)',
 					type: 'checkbox',
 					chartType: 'wsi',
 					settingsKey: 'showCellTypes',
@@ -298,7 +300,7 @@ if (!image.cellBoundaries) {
 									id: this.id,
 									config: { settings: { wsi: { cellTypeFilter: list.join(',') } } }
 								})
-const addSelect = () =>
+							const addSelect = () =>
 								td
 									.append('select')
 									.attr('aria-label', 'Cell type filter')

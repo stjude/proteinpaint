@@ -39,6 +39,8 @@ export type SpatialImage = {
 	fileName: string
 	/** = cell_boundaries: cell segmentation CSV */
 	cellBoundaries?: string
+	/** = cell_annotations: per-cell annotations CSV (cell_id,cell_type) */
+	cellAnnotations?: string
 	/** = nucleus_boundaries: nucleus segmentation CSV */
 	nucleusBoundaries?: string
 	/** = gene_expression_file: 10x cell_feature_matrix HDF5 */

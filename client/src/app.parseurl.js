@@ -52,7 +52,9 @@ upon error, throw err message as a string
 				geneExpressionFile: urlp.get('gene_expression_file'),
 				// optional: sum per-cell counts over these genes into ONE overlay
 				geneGroups: urlp.get('gene_groups'),
-				// optional: fill cells by the cell_type column of the boundaries CSV;
+				// optional: per-cell annotations CSV (cell_id,cell_type, one row per cell)
+				cellAnnotations: urlp.get('cell_annotations'),
+				// optional: fill cells by their annotated type;
 				// =1 fills all types, =Tumor,B cells fills only the listed types
 				showCellTypes: urlp.has('cell_types'),
 				cellTypeFilter: urlp.get('cell_types') == '1' ? undefined : urlp.get('cell_types')

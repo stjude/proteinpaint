@@ -485,6 +485,7 @@ export default function (): Mds3 {
 				tiffFileSuffix: 'morphology.ome.tif',
 				nucleusBoundariesFileSuffix: 'nucleus_boundaries.csv',
 				cellBoundariesFileSuffix: 'cell_boundaries.csv',
+				cellAnnotationsFileSuffix: 'cell_annotations.csv',
 				geneExpressionFileSuffix: 'gene_expression.h5',
 				// default viewer settings, overridable in the burger menu
 				cellTypes: true,

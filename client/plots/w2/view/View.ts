@@ -99,6 +99,7 @@ export class View {
 					// expression fills need the cell polygons even when their strokes are hidden
 					cellBoundaries: s.showCellBoundaries || s.showCellTypes || genes ? image.cellBoundaries : undefined,
 					hideCellStrokes: !s.showCellBoundaries, // polygons without their green outlines
+					cellAnnotations: image.cellAnnotations, // per-cell annotations CSV (type fills + tooltip)
 					showCellTypes: s.showCellTypes, // fill cells by their cell_type annotation
 					cellTypeFilter: s.cellTypeFilter ?? undefined, // 'Types shown' dropdowns; ''/null = all
 					nucleusBoundaries: s.showNucleusBoundaries ? image.nucleusBoundaries : undefined,
