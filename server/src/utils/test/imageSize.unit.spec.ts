@@ -55,7 +55,7 @@ type JpegSegment = {
 /** A jpeg: SOI followed by the given segments, each with its length prefix
  * computed here. */
 function jpeg(...segments: JpegSegment[]): Buffer {
-	const parts = [Buffer.from([0xff, 0xd8])]
+	const parts: Buffer[] = [Buffer.from([0xff, 0xd8])]
 	for (const s of segments) {
 		if (s.fill) parts.push(Buffer.alloc(s.fill, 0xff))
 		parts.push(Buffer.from([0xff, s.marker]))
