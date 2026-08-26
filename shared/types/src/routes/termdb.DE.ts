@@ -78,8 +78,10 @@ export type VolcanoRenderRequest = {
 	dotRadius?: number
 	/** Maximum number of interactive rows to return in `data` (the overlay).
 	 * The server still renders every row into `volcanoPng`; this only caps the
-	 * interactive list. Capped to the most-significant rows (smallest p-value). */
-	maxInteractiveDots?: number
+	 * interactive list. Capped to the most-significant rows (smallest p-value).
+	 * `null` lifts the cap and returns every significant row -- what the table
+	 * download sends, so the file is complete while the overlay stays capped. */
+	maxInteractiveDots?: number | null
 	/** Hi-DPI scale factor from `window.devicePixelRatio` (e.g. 2.0 on retina).
 	 * The PNG is rasterized at `pixelWidth*dpr × pixelHeight*dpr` device pixels
 	 * but reported (and rendered in the SVG) at the CSS-space dimensions, so

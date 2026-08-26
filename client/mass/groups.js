@@ -591,58 +591,17 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					throw new Error('no data returned from pre-analysis request')
 				}
 
-				const numControl = preAnalysisData.data[samplelstTW.q.groups[0].name]
-				const numCase = preAnalysisData.data[samplelstTW.q.groups[1].name]
-
-				if (numControl + numCase > maxSampleCutoff) {
-					if (preAnalysisData.alert)
-						preAnalysisData.alert += ` | Sample size ${
-							numControl + numCase
-						} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
-					else
-						preAnalysisData.alert = `Sample size ${
-							numControl + numCase
-						} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
-				}
-
 				tip.clear().showunderoffset(itemDiv.node())
-				// gdc etc. call them cases, not samples
-				const sampleLabel = self.app.vocabApi.termdbConfig?.uiLabels?.samples || 'samples'
-				const menuDiv = tip.d.append('div')
-				const table = table2col({ holder: menuDiv })
-				table.table.style('margin-left', '5px').style('padding', '5px 10px')
-				addGroupCountRow(table, 'CONTROL', samplelstTW, 0, numControl, sampleLabel)
-				addGroupCountRow(table, 'CASE', samplelstTW, 1, numCase, sampleLabel)
-
-				const alertDiv = menuDiv.append('div')
-				if (preAnalysisData.alert) {
-					sayerror(alertDiv, preAnalysisData.alert)
-				}
-
-				if (!preAnalysisData.alert) {
-					const launchDiv = menuDiv.append('div').style('margin', '8px 5px').style('padding', '5px 10px')
-					launchDiv
-						.append('button')
-						.style('border', 'none')
-						.style('border-radius', '20px')
-						.style('padding', '10px 15px')
-						.text(`Run Differential ${termType2label(TermTypes.DNA_METHYLATION)} Analysis`)
-						.on('click', async () => {
-							const config = {
-								chartType: 'differentialAnalysis',
-								state: self.state,
-								samplelst: { groups },
-								termType: TermTypes.DNA_METHYLATION,
-								tw: samplelstTW
-							}
-							tip.hide()
-							self.tip.hide()
-							self.app.dispatch({
-								type: 'plot_create',
-								config
-							})
-						})
-				}
+				// shared with differential expression; termType selects the label and drops the
+				// method radios, which do not apply to methylation
+				renderPreAnalysisData({
+					preAnalysisData,
+					samplelstTW,
+					groups,
+					tip,
+					termType: TermTypes.DNA_METHYLATION,
+					self
+				})
 			})
 	}
 
@@ -699,8 +658,18 @@ function addGroupCountRow(table, role, samplelstTW, i, count, sampleLabel) {
 	c2.text(`${count} ${sampleLabel}`)
 }
 
+/* Renders the group sample counts and the "Run Differential X Analysis" button, for both
+differential gene expression and differential DNA methylation.
+
+arg.termType selects the assay; it defaults to gene expression so existing callers are
+unchanged. Only two things actually differ between the two: the label on the counts header,
+and the analysis-method radios, which exist for expression alone (diffMeth.R is the only
+methylation engine, so there is nothing to choose). Everything else -- the counts table, the
+sample-size cap, the alert, and the plot_create dispatch -- is shared. */
 export function renderPreAnalysisData(arg) {
 	const { preAnalysisData, samplelstTW, groups, holder, tip, self } = arg
+	const termType = arg.termType || TermTypes.GENE_EXPRESSION
+	const isGE = termType == TermTypes.GENE_EXPRESSION
 
 	if (!preAnalysisData?.data) return
 
@@ -718,19 +687,20 @@ export function renderPreAnalysisData(arg) {
 			} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
 	}
 
-	// display actual numbers of samples with rnaseq count
+	// display actual numbers of samples with assay data
 	// gdc etc. call them cases, not samples
 	const uiLabels = self?.app?.vocabApi?.termdbConfig?.uiLabels
 	const sampleLabel = uiLabels?.samples || 'samples'
 	const menuDiv = tip ? tip.d.append('div') : holder.append('div')
 	/* these counts are a subset of the group sizes shown in the groups table: only the samples that
-	actually have expression data can be compared. without this header the two numbers look like a
+	actually have data for this assay can be compared. without this header the two numbers look like a
 	bug (e.g. a GDC group of 1570 cases showing as 626 here). */
 	menuDiv
 		.append('div')
 		.style('font-weight', 'bold')
 		.style('margin', '5px 0 0 5px')
-		.text(`${uiLabels?.Samples || 'Samples'} with gene expression data:`)
+		// label kept in its natural case: lowercasing turns "DNA Methylation" into "dna methylation"
+		.text(`${uiLabels?.Samples || 'Samples'} with ${termType2label(termType)} data:`)
 	const table = table2col({ holder: menuDiv })
 	table.table.style('margin-left', '5px').style('padding', '5px 10px')
 	addGroupCountRow(table, 'CONTROL', samplelstTW, 0, numControl, sampleLabel)
@@ -742,22 +712,23 @@ export function renderPreAnalysisData(arg) {
 		sayerror(alertDiv, preAnalysisData.alert)
 	}
 
-	// option to launch DE
+	// option to launch the analysis
 	const sample_size_limit = 8
 	if (!preAnalysisData.alert) {
-		const options =
-			numControl + numCase >= maxGESampleCutoff
-				? [{ label: 'Wilcoxon', value: 'wilcoxon' }]
-				: numControl <= sample_size_limit && numCase <= sample_size_limit
-				? [
-						{ label: 'edgeR', value: 'edgeR' },
-						{ label: 'Limma', value: 'limma' }
-				  ]
-				: [
-						{ label: 'edgeR', value: 'edgeR' },
-						{ label: 'Wilcoxon', value: 'wilcoxon' },
-						{ label: 'Limma', value: 'limma' }
-				  ]
+		const options = !isGE
+			? []
+			: numControl + numCase >= maxGESampleCutoff
+			? [{ label: 'Wilcoxon', value: 'wilcoxon' }]
+			: numControl <= sample_size_limit && numCase <= sample_size_limit
+			? [
+					{ label: 'edgeR', value: 'edgeR' },
+					{ label: 'Limma', value: 'limma' }
+			  ]
+			: [
+					{ label: 'edgeR', value: 'edgeR' },
+					{ label: 'Wilcoxon', value: 'wilcoxon' },
+					{ label: 'Limma', value: 'limma' }
+			  ]
 
 		/* a ds may prefer one method: gdc sets wilcoxon because its cohorts are large enough that
 		edgeR's estimateDisp dominates (measured ~25x slower on a 1370-case cohort). this only moves
@@ -771,48 +742,53 @@ export function renderPreAnalysisData(arg) {
 		}
 
 		const launchDEDiv = menuDiv.append('div').style('margin', '8px 5px').style('padding', '5px 10px')
-		const radioRow = launchDEDiv.append('tr')
-		let selectedMethod = options[0].value
+		let selectedMethod = options[0]?.value
 
-		radioRow
-			.append('td')
-			.html('Method')
-			.attr('aria-label', 'DE Method')
-			.attr('class', 'sja-termdb-config-row-label')
-			.style('padding', '5px')
+		// methylation has a single engine (diffMeth.R), so there is no method to choose
+		if (options.length) {
+			const radioRow = launchDEDiv.append('tr')
+			radioRow
+				.append('td')
+				.html('Method')
+				.attr('aria-label', 'DE Method')
+				.attr('class', 'sja-termdb-config-row-label')
+				.style('padding', '5px')
 
-		const cell = radioRow.append('td')
-		const radioBtnDiv = cell.append('div')
+			const cell = radioRow.append('td')
+			const radioBtnDiv = cell.append('div')
 
-		make_radios({
-			holder: radioBtnDiv,
-			inputName: `de-method-${Date.now()}`,
-			options: options.map((o, i) => ({
-				...o,
-				title: `${o.label} method`,
-				checked: i === 0 // preselect first option
-			})),
-			styles: {
-				display: 'inline-block',
-				padding: '0 12px 0 0'
-			},
-			callback: v => (selectedMethod = v)
-		})
+			make_radios({
+				holder: radioBtnDiv,
+				inputName: `de-method-${Date.now()}`,
+				options: options.map((o, i) => ({
+					...o,
+					title: `${o.label} method`,
+					checked: i === 0 // preselect first option
+				})),
+				styles: {
+					display: 'inline-block',
+					padding: '0 12px 0 0'
+				},
+				callback: v => (selectedMethod = v)
+			})
+		}
 
 		launchDEDiv
 			.append('button')
 			.style('border', 'none')
 			.style('border-radius', '20px')
 			.style('padding', '10px 15px')
-			.text(`Run Differential ${termType2label(TermTypes.GENE_EXPRESSION)} Analysis`)
+			.attr('data-testid', 'sjpp-da-run-btn')
+			.text(`Run Differential ${termType2label(termType)} Analysis`)
 			.on('click', async () => {
 				const config = {
 					chartType: 'differentialAnalysis',
 					state: self.state,
 					samplelst: { groups },
-					termType: TermTypes.GENE_EXPRESSION,
+					termType,
 					tw: samplelstTW,
-					settings: { volcano: { method: selectedMethod } }
+					// only expression carries a method; passing an undefined one would fail volcano settings validation
+					...(selectedMethod ? { settings: { volcano: { method: selectedMethod } } } : {})
 				}
 				if (tip) tip.hide()
 				if (self.tip) self.tip.hide()

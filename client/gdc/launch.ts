@@ -53,6 +53,10 @@ export async function mayLaunchGdcPlotFromRunpp(arg, app) {
 		const _ = await import('./DE.ts')
 		return await _.init(arg, app.holder0, app.genomes)
 	}
+	if (arg.launchGdcDM) {
+		const _ = await import('./DM.ts')
+		return await _.init(arg, app.holder0, app.genomes)
+	}
 	if (arg.gdcbamslice) {
 		const _ = await import('./bam.js')
 		arg.gdcbamslice.filter0 = arg.filter0

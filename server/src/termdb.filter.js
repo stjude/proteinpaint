@@ -566,13 +566,25 @@ async function get_pseudobulk(tvs, CTEname, ds) {
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 
+/* Shared by every non-dictionary numeric term type (geneExpression, isoformExpression,
+metaboliteIntensity, proteomeAbundance, ssGSEA, dnaMethylation, junction, pseudobulk).
+
+tvs.isnot inverts the membership test, exactly as isInRange() does for the paths above. Without
+it a negated filter matched the SAME samples as the un-negated one, so an auto-generated
+complement group ("Not in X", built by negateFilter() flipping tvs.isnot) came back identical to
+the group it was supposed to complement -- surfacing downstream as "N samples appear in both
+groups" in the two-group analyses.
+
+A sample with no value for the term is absent from termData and so joins neither the group nor
+its complement. That is deliberate: missing data is unknown, not "outside the range". */
 function numericSampleData2tvs(tvs, CTEname, termData) {
 	const samples = []
 
 	for (const sample in termData) {
 		const value = termData[sample]
-		const filterBin = getBin(tvs.ranges, value)
-		if (filterBin != -1) samples.push(sample)
+		// -1 means the value fell in none of tvs.ranges
+		const inRanges = getBin(tvs.ranges, value) != -1
+		if (tvs.isnot ? !inRanges : inRanges) samples.push(sample)
 	}
 
 	const query = `SELECT id as sample
