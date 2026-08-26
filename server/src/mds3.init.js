@@ -3953,6 +3953,7 @@ async function getAssayAvailablility(ds, dt) {
 		else if (dt.no.value.includes(value)) dt.noSamples.add(sample)
 		//else throw `value of term ${dt.term_id} is invalid`
 	}
+	dt.hasSamples = dt.yesSamples.size > 0
 }
 
 /*

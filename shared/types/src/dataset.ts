@@ -987,6 +987,8 @@ export type GeneExpressionQuery = {
 	file?: string
 	/** dynamically added during server launch, list of sample integer IDs from file */
 	samples?: number[]
+	/** unique list of sample types present in samples[] */
+	sampleTypes?: any[]
 	/** dynamically added flag during launch */
 	nochr?: boolean
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
@@ -2258,6 +2260,8 @@ type DtAssayAvailabilityTerm = {
 	*/
 	yesSamples?: Set<string | number>
 	noSamples?: Set<string | number>
+	/** whether yesSamples is non-empty, consumed by client-side code */
+	hasSamples?: boolean
 }
 
 type DtAssayAvailabilityByOrigin = {

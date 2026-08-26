@@ -1,38 +1,22 @@
-type SampleTypeConfig = {
-	[key: string]: { name: string; plural_name: string; parent_id: number | null }
-}
-
-// helper for determining whether to render sample type select
-// returns true when dataset has sample ancestry and at least two child sample types.
-export function mayRenderSampleTypeSelect(termdbConfig?: {
-	hasSampleAncestry?: boolean
-	sampleTypes?: SampleTypeConfig
-}) {
-	if (!termdbConfig?.hasSampleAncestry) return
-	const sampleTypes = termdbConfig.sampleTypes
-	if (!sampleTypes) throw new Error('sampleTypes{} is missing')
-	const childSampleTypes = getChildSampleTypes(sampleTypes)
-	return Object.keys(childSampleTypes).length >= 2
-}
-
 // renders sample type checkboxes
-export function renderSampleTypeSelect(
-	row: any,
-	termdbConfig?: { hasSampleAncestry?: boolean; sampleTypes?: SampleTypeConfig }
-) {
-	if (!mayRenderSampleTypeSelect(termdbConfig)) return
-	const sampleTypes = termdbConfig?.sampleTypes
-	if (!sampleTypes) throw new Error('sampleTypes{} is missing')
-	const childSampleTypes = getChildSampleTypes(sampleTypes)
+export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, termdbConfig?: any) {
+	if (!Array.isArray(querySampleTypes) || querySampleTypes.length < 2) return
 
-	const sampleTypeCheckboxDiv = row
+	holder.selectAll('*').remove()
+
+	const sampleTypeConfig = {}
+	for (const sampleType of querySampleTypes) {
+		sampleTypeConfig[sampleType] = termdbConfig.sampleTypes[sampleType]
+	}
+
+	const sampleTypeCheckboxDiv = holder
 		.append('div')
 		.attr('class', 'sjpp-genesearch-sampletype-checkboxes')
 		.style('margin-right', '8px')
 
 	const sampleTypeCheckboxes: any[] = []
 
-	for (const [k, v] of Object.entries(childSampleTypes)) {
+	for (const [k, v] of Object.entries(sampleTypeConfig)) {
 		const label = sampleTypeCheckboxDiv
 			.append('label')
 			.style('display', 'inline-flex')
@@ -46,18 +30,10 @@ export function renderSampleTypeSelect(
 	return sampleTypeCheckboxes
 }
 
-// returns selected sample type ids from checkbox controls created by renderSampleTypeSelect().
+// returns selected sample types from checkboxes created by renderSampleTypeSelect().
 export function getSelectedSampleTypes(sampleTypeSelect?: any[]) {
 	if (!sampleTypeSelect) return
 	return sampleTypeSelect
 		.filter(checkbox => checkbox.property('checked'))
 		.map(checkbox => Number(checkbox.property('value')))
-}
-
-function getChildSampleTypes(sampleTypes: SampleTypeConfig) {
-	const childSampleTypes: SampleTypeConfig = {}
-	for (const [k, v] of Object.entries(sampleTypes)) {
-		if (Number.isInteger(v.parent_id)) childSampleTypes[k] = v
-	}
-	return childSampleTypes
 }

@@ -294,7 +294,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		}
 	}
 	if (q.geneExpression) {
-		q2.geneExpression = { unit: q.geneExpression.unit }
+		q2.geneExpression = { unit: q.geneExpression.unit, sampleTypes: q.geneExpression.sampleTypes }
 	}
 	if (q.isoformExpression) {
 		q2.isoformExpression = { unit: q.isoformExpression.unit }

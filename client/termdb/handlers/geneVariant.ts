@@ -5,7 +5,6 @@ import {
 	GeneSetEditUI,
 	table2col,
 	renderSampleTypeSelect,
-	mayRenderSampleTypeSelect,
 	getSelectedSampleTypes
 } from '#dom'
 import type { VocabApi } from '#types'
@@ -101,6 +100,17 @@ export class SearchHandler {
 					}),
 					callback: v => {
 						this.toggleGeneSetRadioDisplay(v)
+						if (this.dom.sampleTypeSelectHolder) {
+							const querySampleTypes = this.getQuerySampleTypes()
+							if (Array.isArray(querySampleTypes) && querySampleTypes.length >= 2) {
+								// multiple query sample types, render sample type select
+								this.sampleTypeSelect = renderSampleTypeSelect(
+									this.dom.sampleTypeSelectHolder,
+									querySampleTypes,
+									this.opts.app.vocabApi.termdbConfig
+								)
+							}
+						}
 						/* any remembered settings still waiting for a choice were offered against the
 						mutation type selected when the gene was picked -- both their order and their
 						"Continue with ..." option, see mayShowRememberedQ() -- so a changed radio leaves
@@ -136,15 +146,38 @@ export class SearchHandler {
 					}
 				})
 			}
-			if (mayRenderSampleTypeSelect(this.opts.app.vocabApi.termdbConfig)) {
-				// render sample type select
+			const querySampleTypes = this.getQuerySampleTypes()
+			if (Array.isArray(querySampleTypes) && querySampleTypes.length >= 2) {
+				// multiple query sample types, render sample type select
 				const [td1, td2] = table.addRow()
 				td1.text('Sample Type')
-				this.sampleTypeSelect = renderSampleTypeSelect(td2, this.opts.app.vocabApi.termdbConfig)
+				this.dom.sampleTypeSelectHolder = td2
+				this.sampleTypeSelect = renderSampleTypeSelect(
+					this.dom.sampleTypeSelectHolder,
+					querySampleTypes,
+					this.opts.app.vocabApi.termdbConfig
+				)
 			}
 		}
 		this.toggleGeneSetRadioDisplay(mutationTypeTermIdx)
 		this.searchGene()
+	}
+
+	// get sample types that are present in the selected data type
+	getQuerySampleTypes() {
+		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
+		if (!selectedMutationType) return
+		const mutationTypeIdx = Number(selectedMutationType.value)
+		if (!Number.isInteger(mutationTypeIdx)) return
+		const dt = this.mutationTypeTerms[mutationTypeIdx]?.dt
+		if (!Number.isInteger(dt)) return
+		const bySampleType = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.bySampleType
+		if (!bySampleType) return
+		const querySampleTypes: number[] = []
+		for (const [k, v] of Object.entries(bySampleType)) {
+			if (v.hasSamples) querySampleTypes.push(Number(k))
+		}
+		return querySampleTypes
 	}
 
 	// hide gene set radio when mutation type is cnv

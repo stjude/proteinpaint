@@ -1,11 +1,4 @@
-import {
-	Menu,
-	addGeneSearchbox,
-	renderSampleTypeSelect,
-	mayRenderSampleTypeSelect,
-	getSelectedSampleTypes,
-	table2col
-} from '#dom'
+import { Menu, addGeneSearchbox, renderSampleTypeSelect, getSelectedSampleTypes, table2col } from '#dom'
 import { TermTypes } from '#types'
 import { getGEunit } from '#tw/geneExpression'
 
@@ -17,13 +10,14 @@ export class SearchHandler {
 		this.callback = opts.callback
 		this.app = opts.app
 		const holder = opts.holder.append('div').style('padding', '10px 0px')
-		if (mayRenderSampleTypeSelect(this.app.vocabApi.termdbConfig)) {
-			// render sample type select
+		const querySampleTypes = this.app.vocabApi.termdbConfig?.queries.geneExpression.sampleTypes
+		if (Array.isArray(querySampleTypes) && querySampleTypes.length >= 2) {
+			// multiple query sample types, render sample type select
 			const sampleTypeDiv = holder.append('div')
 			const table = table2col({ holder: sampleTypeDiv, margin: '0px 0px 15px 0px' })
 			const [td1, td2] = table.addRow()
 			td1.text('Sample Type')
-			this.sampleTypeSelect = renderSampleTypeSelect(td2, this.app.vocabApi.termdbConfig)
+			this.sampleTypeSelect = renderSampleTypeSelect(td2, querySampleTypes, this.app.vocabApi.termdbConfig)
 		}
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
