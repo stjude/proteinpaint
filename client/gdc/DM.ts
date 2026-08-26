@@ -1,7 +1,7 @@
 import { appInit } from '#mass/app'
 
 /*
-launches submission UI for differental methylation
+launches submission UI for differential methylation
 */
 
 interface InitArg {

@@ -166,7 +166,10 @@ export class Volcano extends PlotBase implements RxComponent {
 			cache key, so this re-uses the cached analysis and only re-renders. Rebuilt on each
 			response so it closes over the current config/settings rather than a stale pair. */
 			this.interactions.fetchAllRows = async () => {
-				const full = await this.model!.getData(config, { ...settings, maxInteractiveDots: null })
+				const full = await new VolcanoModel(this, this.termType).getData(config, {
+					...settings,
+					maxInteractiveDots: null
+				})
 				if (!full || full.error || !full.data?.dots) throw new Error(full?.error || 'no rows returned')
 				return new VolcanoViewModel(config, full, settings).viewData.pValueTableData
 			}
