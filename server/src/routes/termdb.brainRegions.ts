@@ -1,7 +1,16 @@
+import path from 'path'
 import type { RouteApi, RoutePayload } from '#types'
 import type { BrainRegionsRequest, BrainRegionsIsoform } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
-import { getCohortStats, queryDbRows } from '../../routes/termdb.proteome.ts'
+import serverconfig from '#src/serverconfig.js'
+import { readGeneRows } from './termdb.bubbleHeatmap.ts'
+
+/*
+Brain Regional Proteome: per-region differential abundance of one gene's isoforms.
+For every configured disease × region, the matching cohort (found by its case filter) serves
+its precomputed DAPfile (log2FC + FDR [+ nominal p]), the same source as every other
+fold-change view in the portal. No statistics are computed here.
+*/
 
 export const payload: RoutePayload = {
 	init,
@@ -45,20 +54,10 @@ function init({ genomes }) {
 
 			const gene = q.gene?.trim()
 			if (!gene) throw 'gene is required'
+			const geneLower = gene.toLowerCase()
 
-			const db = proteomeConfig.db
-			if (!db) throw 'proteome database not available'
-
-			// Every proteome query must include the organism + assay filter prefix
-			// (matches the organism + assay prefix queryDbRows uses in termdb.proteome.ts)
-			const orgAssayFilter: Filter[] = [
-				{ columnIdx: organismConfig.columnIdx, columnValue: organismConfig.columnValue },
-				{ columnIdx: assayConfig.columnIdx, columnValue: assayConfig.columnValue }
-			]
-
-			// Find the cohort whose caseFilter matches (disease, region) — plus any
-			// optional extra filters in brConfig.cohortFilter — so we can reuse its
-			// controlFilter / caseFilter / prior without duplicating them in config.
+			// Find the cohort for a disease/region pair by matching its case filter on the
+			// disease + region columns, plus any extra filters in brConfig.cohortFilter.
 			const findCohort = (disease: string, region: string) => {
 				const required: Filter[] = [
 					{ columnIdx: brConfig.diseaseColumnIdx, columnValue: disease },
@@ -79,46 +78,13 @@ function init({ genomes }) {
 			for (const disease of brConfig.diseases) {
 				for (const region of Object.keys(brConfig.regions)) {
 					const cohort = findCohort(disease, region)
-					if (!cohort) continue
-
-					const caseRows = queryDbRows(db, 'gene', gene, [...orgAssayFilter, ...cohort.caseFilter])
-					const controlRows = queryDbRows(db, 'gene', gene, [...orgAssayFilter, ...cohort.controlFilter])
-					if (caseRows.length === 0 && controlRows.length === 0) continue
-
-					// Group sample→value per isoform across both case and control rows.
-					const perIsoform: {
-						[id: string]: { geneName: string; s2v: { [sample: string]: number } }
-					} = {}
-					const controlSampleIds = new Set<string>()
-
-					const addRow = (row: any, isControl: boolean) => {
-						const id = row.identifier
-						if (!id) return
-						const v = Number(row.value)
-						if (!Number.isFinite(v)) return
-						if (!perIsoform[id]) perIsoform[id] = { geneName: row.gene || id, s2v: {} }
-						perIsoform[id].s2v[row.sample] = v
-						if (isControl) controlSampleIds.add(String(row.sample))
-					}
-					for (const r of controlRows) addRow(r, true)
-					for (const r of caseRows) addRow(r, false)
-
-					for (const id in perIsoform) {
-						const { geneName, s2v } = perIsoform[id]
-						const stats = getCohortStats(s2v, controlSampleIds, cohort.prior)
-						if (stats.foldChange == null || stats.pValue == null) continue
-						// getCohortStats returns testedMean/controlMean (raw ratio). The
-						// brain-regions plot expects log2 FC (legend says "Fold Change (log₂)",
-						// color scale is centered at 0).
-						if (!(stats.foldChange > 0)) continue
-						const log2FC = Math.log2(stats.foldChange)
-
-						if (!isoforms[id]) isoforms[id] = { gene_name: geneName, data: {} }
-						if (!isoforms[id].data[disease]) isoforms[id].data[disease] = {}
-						isoforms[id].data[disease][region] = {
-							fold_change: log2FC,
-							p_value: stats.pValue
-						}
+					if (!cohort?.DAPfile) continue
+					const rows = await readGeneRows(path.join(serverconfig.tpmasterdir, cohort.DAPfile), geneLower)
+					if (!rows?.length) continue
+					for (const r of rows) {
+						if (!isoforms[r.identifier]) isoforms[r.identifier] = { gene_name: r.gene, data: {} }
+						if (!isoforms[r.identifier].data[disease]) isoforms[r.identifier].data[disease] = {}
+						isoforms[r.identifier].data[disease][region] = { fold_change: r.fc, p_value: r.p ?? r.fdr, fdr: r.fdr }
 					}
 				}
 			}

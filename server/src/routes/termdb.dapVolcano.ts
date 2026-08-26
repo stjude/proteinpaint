@@ -5,7 +5,7 @@ import type { DapVolcanoRequest, DapEntry } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import { renderVolcano } from '#src/renderVolcano.ts'
 import serverconfig from '#src/serverconfig.js'
-import { countDistinctSamples } from '../../routes/termdb.proteome.ts'
+import { listCohortSamples } from '../../routes/termdb.proteome.ts'
 
 export const payload: RoutePayload = {
 	init,
@@ -45,8 +45,13 @@ function init({ genomes }) {
 			const organismFilter = [{ columnIdx: organismConfig.columnIdx, columnValue: organismConfig.columnValue }]
 			const assayFilter = [{ columnIdx: assayConfig.columnIdx, columnValue: assayConfig.columnValue }]
 			const db = proteomeConfig.db
-			const controlCount = countDistinctSamples(db, [...organismFilter, ...assayFilter, ...cohortConfig.controlFilter])
-			const caseCount = countDistinctSamples(db, [...organismFilter, ...assayFilter, ...cohortConfig.caseFilter])
+			// sample lists are memoized per cohort (they don't depend on the gene)
+			const controlCount = listCohortSamples(db, [
+				...organismFilter,
+				...assayFilter,
+				...cohortConfig.controlFilter
+			]).length
+			const caseCount = listCohortSamples(db, [...organismFilter, ...assayFilter, ...cohortConfig.caseFilter]).length
 
 			if (q.countsOnly) {
 				res.send({ sample_size1: controlCount, sample_size2: caseCount })

@@ -1,17 +1,29 @@
+import path from 'path'
 import { get_ds_tdb } from '#src/termdb.js'
 import * as utils from '#src/utils.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
+import serverconfig from '#src/serverconfig.js'
+import { readGeneRows } from '../src/routes/termdb.bubbleHeatmap.ts'
 
-// sp|P10636-8|TAU_HUMAN → P10636 ; falls back to the raw acc when it doesn't parse.
-// Kept in sync with termdb.bubbleHeatmap.ts so PTM sites and whole-proteome rows
-// collapse to the same base UniProt accession for matching.
+// sp|P10636-8|TAU_HUMAN → P10636 ; also handles the dotted DAP-file form
+// sp.P10636.TAU_HUMAN / sp.P10636.3.TAU_HUMAN → P10636. Falls back to the raw
+// acc when it doesn't parse. Kept in sync with termdb.bubbleHeatmap.ts so PTM
+// sites and whole-proteome rows collapse to the same base UniProt accession.
 function baseUniProtAcc(acc: string): string {
 	if (!acc) return ''
-	const parts = acc.split('|')
-	const id = parts.length >= 2 ? parts[1] : acc
-	const dash = id.indexOf('-')
-	return dash > 0 ? id.slice(0, dash) : id
+	if (acc.includes('|')) {
+		const parts = acc.split('|')
+		const id = parts.length >= 2 ? parts[1] : acc
+		const dash = id.indexOf('-')
+		return dash > 0 ? id.slice(0, dash) : id
+	}
+	// dotted DAP form: sp.ACC.NAME or sp.ACC.isoformN.NAME
+	const parts = acc.split('.')
+	if (parts.length >= 3 && (parts[0] === 'sp' || parts[0] === 'tr')) return parts[1]
+	return acc
 }
+
+const missingDapWarned = new Set<string>()
 
 export function init({ genomes }) {
 	return async (req, res) => {
@@ -20,8 +32,7 @@ export function init({ genomes }) {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const [ds] = get_ds_tdb(genome, q)
-			// get() is attached to proteome, all organism, assay type, and cohorts share the same get().
-			if (!ds.queries?.proteome?.get) throw 'queries.proteome.get() missing'
+			if (!ds.queries?.proteome?.organisms) throw 'queries.proteome not configured'
 			const term = q.term?.term || q.term
 			if (!term?.name) throw 'term.name missing'
 
@@ -32,61 +43,108 @@ export function init({ genomes }) {
 			// is independent of which isoform/cohort dot it appears in, so it's recorded once
 			// in the response instead of being repeated on every dot.
 			const sampleRegions: { [sid: string]: string } = {}
+			const identifierAnno = new Map<string, Map<string, { modsite: string | null; isoform: string | null }>>()
 			for (const organismName in ds.queries.proteome.organisms) {
 				const organism = ds.queries.proteome.organisms[organismName]
 				for (const assayName in organism.assays) {
 					const assay = organism.assays[assayName]
 					for (const cohortName in assay.cohorts || {}) {
-						const details = {
-							dbfile: ds.queries.proteome.dbfile,
-							organism: organismName,
-							assay: assayName,
-							cohort: cohortName
-						}
-						const tw = {
-							$id: '_',
-							term: {
-								name: term.name,
-								type: 'proteomeAbundance',
-								dataTypeDetails: details
+						const cohortCfg = assay.cohorts[cohortName]
+						// Every cohort serves its stats from the precomputed DAPfile (published
+						// log2FC + FDR, the same source as the bubble heatmap, volcano and
+						// cohort-compare tools). The abundance db only supplies the sample
+						// lists: case/control counts and, for the brain panel, which samples
+						// (and brain regions) each dot represents.
+						const dapPath = path.join(serverconfig.tpmasterdir, cohortCfg.DAPfile)
+						const rows = await readGeneRows(dapPath, String(term.name).toLowerCase())
+						if (!rows) {
+							// unreadable file (typically a deploy without the data): the cohort
+							// silently disappears from every plot, so make it visible once
+							if (!missingDapWarned.has(dapPath)) {
+								missingDapWarned.add(dapPath)
+								console.warn(
+									`proteome: DAPfile missing or unreadable for ${organismName}/${assayName}/${cohortName}: ${dapPath}`
+								)
 							}
+							continue
 						}
-						// request data for each cohort
-						const cohortData = await ds.queries.proteome.get({
-							terms: [tw],
-							dataTypeDetails: details,
-							filter: q.filter,
-							filter0: q.filter0,
-							for: 'proteinView',
-							__abortSignal: q.__abortSignal
-						})
-						const controlSampleIds = cohortData.controlSampleIds || new Set()
-
-						const prior = assay.cohorts[cohortName].prior
-						for (const entry of cohortData.allEntries || []) {
-							const s2v = entry.s2v
-							const sampleRegionsRaw = entry.sampleRegionsRaw || {}
-							const stats = getCohortStats(s2v, controlSampleIds, prior)
-							delete entry.s2v
-							delete entry.sampleRegionsRaw
-							entry.foldChange = stats.foldChange
-							entry.pValue = stats.pValue
-							entry.testedN = stats.testedN
-							entry.controlN = stats.controlN
+						if (!rows.length) continue
+						const organismFilter = [{ columnIdx: organism.columnIdx, columnValue: organism.columnValue }]
+						const assayFilter = [{ columnIdx: assay.columnIdx, columnValue: assay.columnValue }]
+						let caseSamples: string[] = []
+						let controlSamples: string[] = []
+						try {
+							caseSamples = listCohortSamples(ds.queries.proteome.db, [
+								...organismFilter,
+								...assayFilter,
+								...cohortCfg.caseFilter
+							])
+							controlSamples = listCohortSamples(ds.queries.proteome.db, [
+								...organismFilter,
+								...assayFilter,
+								...cohortCfg.controlFilter
+							])
+						} catch {
+							// sample lists are cosmetic (tooltips, brain-panel counts); don't fail the request over them
+						}
+						// per-identifier annotation from the abundance db (modification site, RefSeq
+						// isoform) for the PTM lollipop; looked up once per organism/assay
+						const annoKey = `${organismName}|${assayName}`
+						if (!identifierAnno.has(annoKey)) {
+							let m = new Map<string, { modsite: string | null; isoform: string | null }>()
+							try {
+								m = listIdentifierAnnotations(ds.queries.proteome.db, term.name, [...organismFilter, ...assayFilter])
+							} catch {
+								// annotation is optional
+							}
+							identifierAnno.set(annoKey, m)
+						}
+						const anno = identifierAnno.get(annoKey)!
+						const sampleIds: string[] = brConfig ? [...caseSamples, ...controlSamples] : []
+						if (brConfig) {
+							// a brain-region cohort selects its samples by the region column, so the
+							// region is read off the cohort's own filter (no per-row db lookup needed)
+							const regionOf = (filters: { columnIdx: number; columnValue: string | number }[]) => {
+								const f = filters.find(f => f.columnIdx === brConfig.regionColumnIdx)
+								if (!f) return undefined
+								const code = regionRemap[String(f.columnValue)] ?? String(f.columnValue)
+								return brConfig.regions[code] !== undefined ? code : undefined
+							}
+							const caseRegion = regionOf(cohortCfg.caseFilter)
+							const controlRegion = regionOf(cohortCfg.controlFilter)
+							if (caseRegion) for (const sid of caseSamples) sampleRegions[sid] = caseRegion
+							if (controlRegion) for (const sid of controlSamples) sampleRegions[sid] = controlRegion
+						}
+						for (const row of rows) {
+							const entry: any = {
+								organism: organismName,
+								assayName,
+								cohortName,
+								uniqueIdentifier: row.identifier,
+								proteinAccession: row.acc,
+								geneName: term.name,
+								// client computes log2(foldChange); DAP stores log2FC directly
+								foldChange: Math.pow(2, row.fc),
+								// significance is the DAP file's FDR (BH-adjusted p), consistent with
+								// the other DAP-driven tools. pValue is a deprecated alias of fdr kept
+								// for existing clients; new code should read fdr.
+								fdr: row.fdr,
+								pValue: row.fdr,
+								testedN: caseSamples.length,
+								controlN: controlSamples.length
+							}
+							const a = anno.get(row.identifier)
+							if (a?.isoform) entry.isoform = a.isoform // refSeq transcript ID mapped from protein_accession
+							if (assay.PTMType) {
+								entry.PTMType = assay.PTMType
+								if (a?.modsite) entry.modSites = a.modsite
+							}
 							if (assay.mclassOverride) entry.mclassOverride = assay.mclassOverride
 							if (organism.genomeName) entry.genomeName = organism.genomeName
 							// Per-dot sample identity so the brain plot can count exactly the samples
 							// this volcano dot represents (case + control); each sample's region is
 							// recorded once in the response-level sampleRegions map.
-							if (brConfig) {
-								entry.sampleIds = Object.keys(s2v)
-								for (const sid in sampleRegionsRaw) {
-									const raw = sampleRegionsRaw[sid]
-									if (raw == null) continue
-									const code = regionRemap[String(raw)] ?? String(raw)
-									if (brConfig.regions[code] !== undefined) sampleRegions[sid] = code
-								}
-							}
+							if (brConfig) entry.sampleIds = sampleIds.slice() // own copy per entry
 							cohorts.push(entry)
 						}
 					}
@@ -129,159 +187,6 @@ export function init({ genomes }) {
 	}
 }
 
-export function getCohortStats(allS2v, controlSampleIds, prior: { d0: number; s0sq: number }) {
-	if (!allS2v || typeof allS2v != 'object') return { foldChange: null, pValue: null, testedN: 0, controlN: 0 }
-	const controlValues: number[] = []
-	const testedValues: number[] = []
-
-	for (const sampleId in allS2v) {
-		const v = Number(allS2v[sampleId])
-		if (!Number.isFinite(v)) continue
-		if (controlSampleIds.has(String(sampleId))) controlValues.push(v)
-		else testedValues.push(v)
-	}
-
-	const controlMean = controlValues?.length ? controlValues.reduce((sum, v) => sum + v, 0) / controlValues.length : null
-	const testedMean = testedValues?.length ? testedValues.reduce((sum, v) => sum + v, 0) / testedValues.length : null
-	const foldChange =
-		testedMean != null &&
-		controlMean != null &&
-		Number.isFinite(testedMean) &&
-		Number.isFinite(controlMean) &&
-		controlMean !== 0
-			? testedMean / controlMean
-			: null
-	if (!Number.isFinite(prior?.d0) || prior.d0 <= 0 || !Number.isFinite(prior?.s0sq) || prior.s0sq <= 0) {
-		throw 'prior with finite positive d0 and s0sq is required for moderated t-test'
-	}
-	const pValue = getModeratedPValue(testedValues, controlValues, prior)
-	return {
-		foldChange,
-		pValue,
-		testedN: testedValues.length,
-		controlN: controlValues.length
-	}
-}
-
-function getModeratedPValue(a, b, prior: { d0: number; s0sq: number }) {
-	const n1 = a.length
-	const n2 = b.length
-	if (n1 < 2 || n2 < 2) return null
-
-	const mean1 = a.reduce((s, v) => s + v, 0) / n1
-	const mean2 = b.reduce((s, v) => s + v, 0) / n2
-
-	// pooled sample variance
-	let ss1 = 0
-	for (const v of a) {
-		const d = v - mean1
-		ss1 += d * d
-	}
-	let ss2 = 0
-	for (const v of b) {
-		const d = v - mean2
-		ss2 += d * d
-	}
-	const dfResidual = n1 + n2 - 2
-	const pooledVar = (ss1 + ss2) / dfResidual
-
-	// posterior (moderated) variance: shrink toward prior
-	const { d0, s0sq } = prior
-	const sTildeSq = (d0 * s0sq + dfResidual * pooledVar) / (d0 + dfResidual)
-
-	const se = Math.sqrt(sTildeSq * (1 / n1 + 1 / n2))
-	if (!(se > 0)) {
-		if (mean1 === mean2) return 1
-		return 1e-300
-	}
-
-	const t = (mean1 - mean2) / se
-	const df = d0 + dfResidual
-	if (!Number.isFinite(df) || df < 0.1) return null
-
-	const p = 2 * tCdfTail(Math.abs(t), df)
-	if (!Number.isFinite(p)) return null
-	return Math.max(1e-300, Math.min(1, p))
-}
-
-function tCdfTail(t, df) {
-	const x = df / (df + t * t)
-	return 0.5 * regularizedBetaIncomplete(df / 2, 0.5, x)
-}
-
-function regularizedBetaIncomplete(a, b, x) {
-	if (x <= 0) return 0
-	if (x >= 1) return 1
-
-	if (x > (a + 1) / (a + b + 2)) {
-		return 1 - regularizedBetaIncomplete(b, a, 1 - x)
-	}
-
-	const lnPrefactor = lnBetaPrefactor(a, b, x)
-	const maxIter = 200
-	const eps = 1e-14
-	let f = 1e-30
-	let C = 1e-30
-	let D = 0
-
-	for (let m = 0; m <= maxIter; m++) {
-		let numerator
-		if (m === 0) {
-			numerator = 1
-		} else {
-			const k = m
-			if (k % 2 === 1) {
-				const i = (k - 1) / 2
-				numerator = (-(a + i) * (a + b + i) * x) / ((a + 2 * i) * (a + 2 * i + 1))
-			} else {
-				const i = k / 2
-				numerator = (i * (b - i) * x) / ((a + 2 * i - 1) * (a + 2 * i))
-			}
-		}
-
-		D = 1 + numerator * D
-		if (Math.abs(D) < 1e-30) D = 1e-30
-		D = 1 / D
-
-		C = 1 + numerator / C
-		if (Math.abs(C) < 1e-30) C = 1e-30
-
-		const delta = C * D
-		f *= delta
-
-		if (m > 0 && Math.abs(delta - 1) < eps) break
-	}
-
-	return (Math.exp(lnPrefactor) * f) / a
-}
-
-function lnBetaPrefactor(a, b, x) {
-	return a * Math.log(x) + b * Math.log(1 - x) - lnBeta(a, b)
-}
-
-function lnBeta(a, b) {
-	return lnGamma(a) + lnGamma(b) - lnGamma(a + b)
-}
-
-function lnGamma(z) {
-	if (z < 0.5) {
-		return Math.log(Math.PI / Math.sin(Math.PI * z)) - lnGamma(1 - z)
-	}
-	z -= 1
-	const g = 7
-	// Standard Lanczos coefficients used by the lnGamma() approximation.
-	const coef = [
-		0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059,
-		12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
-	]
-	let x = coef[0]
-	for (let i = 1; i < coef.length; i++) {
-		x += coef[i] / (z + i)
-	}
-	const t = z + g + 0.5
-	return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x)
-}
-
 export async function validate_query_proteome(ds) {
 	const q = ds.queries.proteome
 	if (!q) return
@@ -321,16 +226,22 @@ export async function validate_query_proteome(ds) {
 						throw `Missing controlFilter in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
 					if (!cohort.caseFilter)
 						throw `Missing caseFilter in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
-					// cohorts serving a precomputed DAPfile (log2FC + p-value already computed) don't
-					// need prior; prior is only used to compute DAP on the fly
-					if (!cohort.DAPfile && (!cohort.prior?.d0 || !cohort.prior?.s0sq))
-						throw `Missing prior.d0 and prior.s0sq in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
+					// every fold change / significance shown for a cohort comes from its DAPfile;
+					// nothing is computed from the per-sample values
+					if (!cohort.DAPfile)
+						throw `Missing DAPfile in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
 				}
 			} else {
 				throw `Invalid assay structure for "${assayName}". Must have .cohorts`
 			}
 		}
 	}
+
+	const geneIndexHint = q.db
+		.prepare(`SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'proteome_abundance_gene'`)
+		.get()
+		? ' INDEXED BY proteome_abundance_gene'
+		: ''
 
 	q.find = async arg => {
 		const proteins = arg?.proteins
@@ -376,7 +287,11 @@ export async function validate_query_proteome(ds) {
 
 			if (filters?.length) {
 				const { conditions, params } = buildFilterClause(filters)
-				const sql = `SELECT DISTINCT gene, identifier FROM proteome_abundance WHERE gene >= ? COLLATE NOCASE AND gene < ? COLLATE NOCASE AND ${conditions.join(
+				// INDEXED BY: with a cohort filter the planner otherwise walks the whole
+				// cohort (10M+ rows for the human cohorts, 15-20s) looking for the gene
+				// prefix; the gene index answers the same query in well under a second.
+				// Only forced when the db actually has that index (SQLite errors otherwise).
+				const sql = `SELECT DISTINCT gene, identifier FROM proteome_abundance${geneIndexHint} WHERE gene >= ? COLLATE NOCASE AND gene < ? COLLATE NOCASE AND ${conditions.join(
 					' AND '
 				)} LIMIT ${MAX_FIND_RESULTS}`
 				rawRows.push(...q.db.prepare(sql).all(token, upperToken, ...params))
@@ -435,35 +350,56 @@ function buildFilterClause(filters: { columnIdx: number; columnValue: string | n
 	return { conditions, params }
 }
 
-export function countDistinctSamples(db: any, filters: { columnIdx: number; columnValue: string | number }[]) {
-	if (!filters?.length) throw 'countDistinctSamples: filters must not be empty'
+/** distinct sample names matching a cohort's filters. Selects only columns of the
+ *  (organism, tech1, cohort, disease, brain_region, sample) index so the query is
+ *  index-covered and stays fast on the multi-million-row human cohorts. */
+export function listCohortSamples(db: any, filters: { columnIdx: number; columnValue: string | number }[]): string[] {
+	if (!filters?.length) throw 'listCohortSamples: filters must not be empty'
+	// a cohort's sample list does not depend on the gene, so it is computed once per
+	// db + filter set and reused by every later request
+	let perDb = cohortSampleCache.get(db)
+	if (!perDb) cohortSampleCache.set(db, (perDb = new Map()))
+	const key = JSON.stringify(filters)
+	const hit = perDb.get(key)
+	if (hit) return hit
 	const { conditions, params } = buildFilterClause(filters)
-	const row = db
-		.prepare(`SELECT COUNT(DISTINCT sample) as cnt FROM proteome_abundance WHERE ${conditions.join(' AND ')}`)
-		.get(...params)
-	return row?.cnt || 0
+	const samples: string[] = db
+		.prepare(`SELECT DISTINCT sample FROM proteome_abundance WHERE ${conditions.join(' AND ')}`)
+		.all(...params)
+		.map((r: any) => String(r.sample))
+	perDb.set(key, samples)
+	return samples
 }
+const cohortSampleCache = new WeakMap<object, Map<string, string[]>>()
 
-export function queryDbRows(
-	db,
-	matchColumn: 'gene' | 'identifier',
-	matchValue: string,
+/** identifier → modification site + RefSeq isoform for one gene within an organism/assay */
+export function listIdentifierAnnotations(
+	db: any,
+	gene: string,
 	filters: { columnIdx: number; columnValue: string | number }[]
 ) {
 	const { conditions, params } = buildFilterClause(filters)
-	const allConditions = [`${matchColumn} = ? COLLATE NOCASE`, ...conditions]
+	const rows = db
+		.prepare(
+			`SELECT identifier, modsite, isoform FROM proteome_abundance WHERE gene = ? COLLATE NOCASE${
+				conditions.length ? ' AND ' + conditions.join(' AND ') : ''
+			} GROUP BY identifier`
+		)
+		.all(gene, ...params) as { identifier: string; modsite: string | null; isoform: string | null }[]
+	return new Map(rows.map(r => [r.identifier, { modsite: r.modsite, isoform: r.isoform }]))
+}
+
+export function queryDbRows(db, identifier: string, filters: { columnIdx: number; columnValue: string | number }[]) {
+	const { conditions, params } = buildFilterClause(filters)
+	const allConditions = [`identifier = ? COLLATE NOCASE`, ...conditions]
 	const sql = `SELECT organism, disease, identifier, protein_accession, isoform, modsite, gene, sample, value, brain_region
 		FROM proteome_abundance
 		WHERE ${allConditions.join(' AND ')}`
-	return db.prepare(sql).all(matchValue, ...params)
+	return db.prepare(sql).all(identifier, ...params)
 }
 
 async function getProteomeValuesFromCohort(ds, param, q) {
 	const db = ds.queries.proteome.db
-	// Only collect per-sample brain regions when the dataset configures brainRegions;
-	// otherwise it's wasted work that the proteome route would discard. (brain_region
-	// is a standard proteome_abundance column, so the SELECT always includes it.)
-	const hasBrainRegions = !!q.brainRegions
 	const { assay, cohort, organism } = param.dataTypeDetails
 	const organismConfig = q.organisms?.[organism]
 
@@ -475,7 +411,6 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 	//assay type
 	const assayConfig = organismConfig.assays?.[assay]
 	if (!assayConfig) throw `queries.proteome.get invalid assay: ${assay}`
-	const PTMType = assayConfig.PTMType
 	const assayColumnIdx = assayConfig.columnIdx
 	const assayColumnValue = assayConfig.columnValue
 
@@ -491,7 +426,6 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 	const assayFilter = [{ columnIdx: assayColumnIdx, columnValue: assayColumnValue }]
 
 	const term2sample2value = new Map()
-	const allEntries: any[] = []
 	const controlSampleIds = new Set<string>()
 
 	for (const tw of param.terms) {
@@ -500,23 +434,12 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 		const fullGeneName = tw.term.name
 		const identifier = fullGeneName.split(':')[1]?.trim()
 		const geneName = fullGeneName.split(':')[0]?.trim()
-		if (param.for === 'proteinView') {
-			if (!geneName) throw 'invalid term name for proteome query, gene name missing'
-		} else {
-			if (!identifier || !geneName)
-				throw 'invalid term name for proteome query, must be in format geneName: uniqueIdentifier'
-		}
-
-		const matchColumn = param.for === 'proteinView' ? 'gene' : 'identifier'
-		const matchValue = param.for === 'proteinView' ? geneName : identifier
+		if (!identifier || !geneName)
+			throw 'invalid term name for proteome query, must be in format geneName: uniqueIdentifier'
 
 		// Query case and control samples from DB using organism filter + assay filter + cohort-specific filters
-		const caseRows = queryDbRows(db, matchColumn, matchValue, [...organismFilter, ...assayFilter, ...cohortCaseFilter])
-		const controlRows = queryDbRows(db, matchColumn, matchValue, [
-			...organismFilter,
-			...assayFilter,
-			...cohortControlFilter
-		])
+		const caseRows = queryDbRows(db, identifier, [...organismFilter, ...assayFilter, ...cohortCaseFilter])
+		const controlRows = queryDbRows(db, identifier, [...organismFilter, ...assayFilter, ...cohortControlFilter])
 
 		// Identify control sample IDs
 		for (const row of controlRows) {
@@ -541,63 +464,21 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
 		}
 
-		if (param.for === 'proteinView') {
-			// Group rows by identifier, building s2v map for each
-			const entryMap = new Map<string, any>()
-			for (const row of allRows) {
-				const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
-				if (sid === undefined) continue
-				if (allowedSampleIds && !allowedSampleIds.has(sid)) continue
-
-				if (!entryMap.has(row.identifier)) {
-					entryMap.set(row.identifier, {
-						organism: row.organism,
-						disease: row.disease,
-						uniqueIdentifier: row.identifier,
-						assayName: assay,
-						cohortName: cohort,
-						PTMType,
-						modSites: PTMType ? row.modsite || undefined : undefined,
-						proteinAccession: row.protein_accession,
-						isoform: row.isoform, // refSeq transcript ID mapped from protein_accession
-						geneName: row.gene,
-						s2v: {},
-						// raw brain_region per sample id (only when brainRegions is configured);
-						// remapped + finalized into entry.sampleRegions in the route's init().
-						sampleRegionsRaw: hasBrainRegions ? {} : undefined
-					})
-				}
-				entryMap.get(row.identifier).s2v[sid] = row.value
-				if (hasBrainRegions) entryMap.get(row.identifier).sampleRegionsRaw[sid] = row.brain_region
-			}
-			for (const entry of entryMap.values()) allEntries.push(entry)
-		} else {
-			// For non-proteinView, accumulate sample values into a single s2v
-			const s2v = {}
-			for (const row of allRows) {
-				const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
-				if (sid === undefined) continue
-				if (allowedSampleIds && !allowedSampleIds.has(sid)) continue
-				s2v[sid] = row.value
-			}
-			if (Object.keys(s2v).length) {
-				term2sample2value.set(tw.$id, s2v)
-			}
+		// accumulate sample values into a single s2v
+		const s2v = {}
+		for (const row of allRows) {
+			const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
+			if (sid === undefined) continue
+			if (allowedSampleIds && !allowedSampleIds.has(sid)) continue
+			s2v[sid] = row.value
+		}
+		if (Object.keys(s2v).length) {
+			term2sample2value.set(tw.$id, s2v)
 		}
 	}
 
 	// Build bySampleId from the samples we actually have data for
 	const bySampleId = {}
-	if (param.for === 'proteinView') {
-		const sampleIds = new Set<number>()
-		for (const entry of allEntries) {
-			for (const sid of Object.keys(entry.s2v)) sampleIds.add(Number(sid))
-		}
-		for (const sid of sampleIds) {
-			bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-		}
-		return { allEntries, controlSampleIds, bySampleId }
-	}
 
 	if (term2sample2value.size == 0) {
 		throw `No data available for: ${param.terms?.map(t => t.term.name).join(', ')}`

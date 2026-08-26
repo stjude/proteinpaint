@@ -11,7 +11,12 @@ Cross-cohort proteome comparison via standardized fold change (log2FC-z).
 For each selected cohort we read its DAPfile (acc \t identifier \t gene \t log2FC \t FDR),
 collapse to one row per gene by keeping the most-significant row (lowest FDR), then standardize:
 
-	z = (log2FC − μ) / σ        (definition (a): μ, σ = mean & SD of the cohort's log2FC)
+	z = log2FC / σ90        (σ90 = SD of the central 90% of the cohort's log2FC values)
+This is the log2FC-z definition of Shrestha et al. (Cell 2026, the PanNDA human cohorts):
+the SD is estimated from the 5th–95th percentile band so that the strong DAPs themselves
+don't inflate the reference SD, which keeps |z| comparable across cohorts with very different
+numbers of changed proteins. (A full-SD, mean-centred z runs ~1.5–2.2× smaller depending on
+the cohort's DAP load.) No mean-centring: the log2FC distributions are centred at ~0 already.
 
 Cohorts are aligned on the shared gene axis (intersection). Same-species matches by the gene
 symbol as-is; cross-species (opt-in) matches by upper-cased symbol (human APP ↔ mouse App).
@@ -42,6 +47,7 @@ async function loadCohortZ(filePath: string): Promise<Map<string, GeneStat> | nu
 	}
 	// one most-significant row per gene key
 	const best = new Map<string, { fc: number; fdr: number }>()
+	const allFc: number[] = [] // every row's log2FC, for the SD (the papers standardize per row, before any gene collapse)
 	const lines = content.trim().split('\n')
 	for (let i = 1; i < lines.length; i++) {
 		const parts = lines[i].split('\t')
@@ -52,23 +58,40 @@ async function loadCohortZ(filePath: string): Promise<Map<string, GeneStat> | nu
 		if (!Number.isFinite(fc)) continue
 		const fdr = Number(parts[4])
 		if (!Number.isFinite(fdr)) continue
+		allFc.push(fc)
 		const cur = best.get(geneRaw)
 		if (!cur || fdr < cur.fdr) best.set(geneRaw, { fc, fdr })
 	}
 	if (best.size === 0) return null
 
-	// standardize log2FC across the cohort's genes (definition (a): mean & SD)
-	let sum = 0
-	for (const v of best.values()) sum += v.fc
-	const mean = sum / best.size
-	let ss = 0
-	for (const v of best.values()) ss += (v.fc - mean) ** 2
-	const sd = Math.sqrt(ss / best.size)
+	// standardize log2FC: z = log2FC / SD(central 90% of all rows' log2FC), as in
+	// Shrestha et al. Cell 2026 (see header comment)
+	const sd = centralSd(allFc)
 
 	//the DAP file's FDR column is used directly as significance
 	const out = new Map<string, GeneStat>()
-	for (const [g, v] of best) out.set(g, { fc: v.fc, fdr: v.fdr, z: sd > 0 ? (v.fc - mean) / sd : 0 })
+	for (const [g, v] of best) out.set(g, { fc: v.fc, fdr: v.fdr, z: sd > 0 ? v.fc / sd : 0 })
 	return out
+}
+
+/** sample SD (n−1) of the values between the 5th and 95th percentiles (linear interpolation,
+ *  R type-7 / numpy default) — a robust noise estimate unaffected by the true DAPs in the tails */
+function centralSd(values: number[]): number {
+	const v = values.filter(Number.isFinite).sort((a, b) => a - b)
+	if (v.length < 3) return 0
+	const q = (p: number) => {
+		const h = (v.length - 1) * p
+		const lo = Math.floor(h)
+		return v[lo] + (h - lo) * (v[Math.min(lo + 1, v.length - 1)] - v[lo])
+	}
+	const lo = q(0.05)
+	const hi = q(0.95)
+	const w = v.filter(x => x >= lo && x <= hi)
+	if (w.length < 2) return 0
+	const mean = w.reduce((s, x) => s + x, 0) / w.length
+	let ss = 0
+	for (const x of w) ss += (x - mean) ** 2
+	return Math.sqrt(ss / (w.length - 1))
 }
 
 function pearson(a: number[], b: number[]): number {
