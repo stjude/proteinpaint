@@ -488,7 +488,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			samplelstTW.term.values[g.name] = {
 				color: g.color,
 				key: g.name,
-				label: g.name
+				label: g.name,
+				list: sampleIds //samples need to be passed for the samplelst filter to work
 			}
 		}
 
