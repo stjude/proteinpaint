@@ -1,1 +1,2 @@
-
+Fixes:
+- GDC: Enable hier clustering in volcano
