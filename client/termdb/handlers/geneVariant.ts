@@ -282,6 +282,10 @@ export class SearchHandler {
 		// either picks one of those settings or skips them
 		if (this.mayShowRememberedQ()) return
 		this.mayApplySampleType()
+		if (this.sampleTypeSelect && !this.q.sampleTypes?.length) {
+			window.alert('Must select at least one sample type')
+			return
+		}
 		await this.applyMutationType()
 	}
 
@@ -333,7 +337,7 @@ export class SearchHandler {
 		if (!this.sampleTypeSelect) return
 		const sampleTypes = this.sampleTypeSelect
 			.filter(checkbox => checkbox.property('checked'))
-			.map(checkbox => checkbox.property('value'))
+			.map(checkbox => Number(checkbox.property('value')))
 		this.q.sampleTypes = sampleTypes
 	}
 

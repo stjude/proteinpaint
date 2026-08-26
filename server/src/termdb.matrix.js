@@ -452,7 +452,14 @@ async function getSampleData(q, ds) {
 	let sampleType
 	if (q.sampleTypes) {
 		// query sample types defined
-		sampleType = q.ds.cohort.termdb.sampleTypes[q.sampleTypes[0]]
+		const names = []
+		const plural_names = []
+		for (const st of q.sampleTypes) {
+			const config = q.ds.cohort.termdb.sampleTypes[st]
+			names.push(config.name)
+			plural_names.push(config.plural_name)
+		}
+		sampleType = { name: names.join(' / '), plural_name: plural_names.join(' / ') }
 	} else if (processedSingleCellTerm === true) {
 		// work around for single cell cases
 		// TODO: may support single cell as another
