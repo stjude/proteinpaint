@@ -349,7 +349,9 @@ async function getSampleData(q, ds) {
 					})
 				} else {
 					if (!tw.q.lst) throw 'q.type is not discrete and q.lst[] is missing'
-					lst = tw.q.lst
+					// custom bins are used as given and never go through compute_bins(), so they must be
+					// colored here, same as in findListOfBins()
+					lst = assignBinColors(tw.q.lst)
 				}
 				byTermId[tw.$id] = { bins: lst }
 			}

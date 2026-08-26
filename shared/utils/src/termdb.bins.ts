@@ -301,12 +301,16 @@ export function compute_bins(binconfig: BinConfig, summaryfxn: (f?: any) => any,
 	return bins
 }
 
-/* assign a default color to each bin, so that consumers coloring by bin do not have to
-fall back to a scheme of their own. bins are colored in place and returned.
-used by compute_bins(), and by callers that use a q.lst[] as-is without computing bins */
+/* assign a default color to each bin, so that consumers coloring by bin do not have to fall back
+to a scheme of their own. bins are colored in place and returned.
+used by compute_bins(), and by callers that use a q.lst[] as-is without computing bins.
+the ordinal scale is keyed by bin index, not bin.label: label is optional on a bin and is often
+only derived later by get_bin_label(), so keying by label would hand every unlabeled bin the same
+color. for distinctly labeled bins the two are equivalent, as an ordinal scale hands out range
+entries in order of first appearance */
 export function assignBinColors(lst: any[]) {
 	const k2c = getColors(lst.length)
-	for (const bin of lst) bin.color = k2c(bin.label)
+	for (const [i, bin] of lst.entries()) bin.color = k2c(String(i))
 	return lst
 }
 
