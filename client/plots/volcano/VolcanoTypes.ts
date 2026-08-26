@@ -160,6 +160,11 @@ export type VolcanoViewData = {
 	userActions: {
 		noShow: Set<string>
 	}
+	/** x-axis label for the delta-beta axis, naming the two groups in subtraction order
+	 * (e.g. "Δβ (NSD2 Higher − NSD2 Lower)") so the direction of the effect is readable off the
+	 * plot. undefined when group names are unavailable; the view then falls back to the
+	 * role-based "Δβ (case − control)". */
+	deltaBetaAxisLabel?: string
 	/** Base64-encoded PNG of the full scatter, rendered by the `da` Rust binary. */
 	volcanoPng: string
 	/** Coordinate extents used by the server-drawn PNG. The view's scales and

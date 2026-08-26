@@ -111,8 +111,9 @@ export class VolcanoPlotView {
 			this.termType == tt.DNA_METHYLATION ? `Number of significant ${dmNoun.many}` : 'Number of significant genes'
 		const numSigGenes = this.viewData.statsData.find(d => d.label == sigLabel)?.value
 		if (numSigGenes) {
-			const sigText =
-				this.termType == tt.DNA_METHYLATION ? `${numSigGenes} DM ${dmNoun.many}:` : `${numSigGenes} DE genes:`
+			// grouped: these run to five and six figures, and "84302" vs "8430" is hard to tell apart at a glance
+			const n = numSigGenes.toLocaleString()
+			const sigText = this.termType == tt.DNA_METHYLATION ? `${n} DM ${dmNoun.many}:` : `${n} DE genes:`
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
 
 			const pValueTableButtonText = this.settings.showPValueTable ? 'Hide p-value table' : 'Show p-value table'
@@ -246,7 +247,10 @@ export class VolcanoPlotView {
 		written as plain text rather than forced through the log-subscript helper. */
 		if (this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta') {
 			this.volcanoDom.xAxisLabel.selectAll('*').remove()
-			this.volcanoDom.xAxisLabel.text('Δβ (case − control)')
+			/* Prefer the group-named form built by the view model ("Δβ (NSD2 Higher − NSD2 Lower)"):
+			case/control are slot names, so the role-based wording does not say which direction a
+			positive value points. Fall back to it only when the names are unavailable. */
+			this.volcanoDom.xAxisLabel.text(this.viewData.deltaBetaAxisLabel || 'Δβ (case − control)')
 		} else {
 			this.volcanoDom.xAxisLabel.text(null)
 			this.setSvgSubscriptLabel(this.volcanoDom.xAxisLabel, 'log', '2', '(fold-change)')
@@ -355,7 +359,11 @@ export class VolcanoPlotView {
 		for (const d of this.viewData.statsData) {
 			const [td1, td2] = table.addRow()
 			td1.text(d.label)
-			td2.style('text-align', 'end').text(d.value)
+			/* Group the counts, but only the counts: statsData also carries a percentage that the
+			view model already put through roundValueAuto(), and toLocaleString() would re-round it
+			to three decimals. Integer test rather than a per-label check so a row added later is
+			formatted correctly without touching this. */
+			td2.style('text-align', 'end').text(Number.isInteger(d.value) ? d.value.toLocaleString() : d.value)
 		}
 	}
 
