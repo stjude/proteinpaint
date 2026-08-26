@@ -191,7 +191,11 @@ class Wsi extends PlotBase implements RxComponent {
 	 Returns [] when the image has no boundaries file, the CSV has no cell_type
 	 column, or the request fails. */
 	private async fetchCellTypes(image: SpatialImage, sampleId: string): Promise<string[]> {
-		if (!image.cellBoundaries) return [] // no boundaries CSV, nothing to discover
+if (!image.cellBoundaries) {
+			this.cellTypeNames = []
+			this.cellTypesFile = undefined
+			return this.cellTypeNames
+		}
 		if (this.cellTypesFile == image.cellBoundaries) return this.cellTypeNames // cached
 		const v = this.state.vocab // genome + dslabel for the request
 		const params = // standard wsitiles slide addressing + the boundaries CSV to scan
@@ -294,9 +298,13 @@ class Wsi extends PlotBase implements RxComponent {
 									id: this.id,
 									config: { settings: { wsi: { cellTypeFilter: list.join(',') } } }
 								})
-							const addSelect = () =>
-								// one stacked <select> per row of the chain
-								td.append('select').style('display', 'block').style('margin', '2px 0').style('max-width', '180px')
+const addSelect = () =>
+								td
+									.append('select')
+									.attr('aria-label', 'Cell type filter')
+									.style('display', 'block')
+									.style('margin', '2px 0')
+									.style('max-width', '180px')
 							// one dropdown per chosen type: change replaces it, blank removes it
 							for (const [i, t] of selected.entries()) {
 								const sel = addSelect().on('change', function (this: HTMLSelectElement) {
