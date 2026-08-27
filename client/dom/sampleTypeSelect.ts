@@ -1,8 +1,8 @@
 // renders sample type checkboxes
 export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, termdbConfig?: any) {
-	if (!Array.isArray(querySampleTypes) || querySampleTypes.length < 2) return
-
 	holder.selectAll('*').remove()
+
+	if (!Array.isArray(querySampleTypes) || querySampleTypes.length < 2) return
 
 	const sampleTypeConfig = {}
 	for (const sampleType of querySampleTypes) {

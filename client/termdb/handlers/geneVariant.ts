@@ -100,17 +100,7 @@ export class SearchHandler {
 					}),
 					callback: v => {
 						this.toggleGeneSetRadioDisplay(v)
-						if (this.dom.sampleTypeSelectHolder) {
-							const querySampleTypes = this.getQuerySampleTypes()
-							if (Array.isArray(querySampleTypes) && querySampleTypes.length >= 2) {
-								// multiple query sample types, render sample type select
-								this.sampleTypeSelect = renderSampleTypeSelect(
-									this.dom.sampleTypeSelectHolder,
-									querySampleTypes,
-									this.opts.app.vocabApi.termdbConfig
-								)
-							}
-						}
+						this.updateSampleTypeSelect()
 						/* any remembered settings still waiting for a choice were offered against the
 						mutation type selected when the gene was picked -- both their order and their
 						"Continue with ..." option, see mayShowRememberedQ() -- so a changed radio leaves
@@ -146,21 +136,26 @@ export class SearchHandler {
 					}
 				})
 			}
-			const querySampleTypes = this.getQuerySampleTypes()
-			if (Array.isArray(querySampleTypes) && querySampleTypes.length >= 2) {
-				// multiple query sample types, render sample type select
-				const [td1, td2] = table.addRow()
-				td1.text('Sample Type')
-				this.dom.sampleTypeSelectHolder = td2
-				this.sampleTypeSelect = renderSampleTypeSelect(
-					this.dom.sampleTypeSelectHolder,
-					querySampleTypes,
-					this.opts.app.vocabApi.termdbConfig
-				)
+			{
+				this.dom.sampleTypeSelectRow = table.addRow()
+				this.updateSampleTypeSelect()
 			}
 		}
 		this.toggleGeneSetRadioDisplay(mutationTypeTermIdx)
 		this.searchGene()
+	}
+
+	updateSampleTypeSelect() {
+		const [td1, td2] = this.dom.sampleTypeSelectRow
+		const querySampleTypes = this.getQuerySampleTypes()
+		this.sampleTypeSelect = renderSampleTypeSelect(td2, querySampleTypes, this.opts.app.vocabApi.termdbConfig)
+		if (this.sampleTypeSelect) {
+			td1.style('display', null).text('Sample Type')
+			td2.style('display', null)
+		} else {
+			td1.style('display', 'none')
+			td2.style('display', 'none')
+		}
 	}
 
 	// get sample types that are present in the selected data type
@@ -323,11 +318,6 @@ export class SearchHandler {
 		// once the gene is picked, so the selected mutation type is not applied until the user
 		// either picks one of those settings or skips them
 		if (this.mayShowRememberedQ()) return
-		this.mayApplySampleType()
-		if (this.sampleTypeSelect && !this.q.sampleTypes?.length) {
-			window.alert('Must select at least one sample type')
-			return
-		}
 		await this.applyMutationType()
 	}
 
@@ -370,6 +360,11 @@ export class SearchHandler {
 
 	/** apply the mutation type that the radios select, which is the default for a new term */
 	async applyMutationType() {
+		this.mayApplySampleType()
+		if (this.sampleTypeSelect && !this.q.sampleTypes?.length) {
+			window.alert('Must select at least one sample type')
+			return
+		}
 		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
 		this.q.predefined_groupset_idx = Number(selectedMutationType.value)
 		await this.submit(this.q)

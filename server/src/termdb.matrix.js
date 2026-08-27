@@ -816,33 +816,33 @@ export function divideTerms(q, ds) {
 	return [dict, geneVariantTws, nonDict]
 }
 
-// function to set the mapParent2Children flag, which controls
-// whether to map parent-level data onto child samples
+/* function will set:
+- q.mapParent2Children: flag for whether to map parent-level data onto child samples
+- q.sampleTypes: query sample types
+TODO: may rename to maySetSampleTypes() */
 export function maySetMapParent2Children(q, ds, mapParent2Children) {
 	if (!ds.cohort?.termdb?.hasSampleAncestry) {
 		// no sample ancestry, so should not map parent to children
 		q.mapParent2Children = false
 		return
 	}
+	// ds has sample ancestry
+	// determine query sample types
+	const sampleTypes = getSampleTypes(q, ds)
+	const types = [...sampleTypes]
 	if (typeof mapParent2Children === 'boolean') {
 		// flag supplied by caller
 		q.mapParent2Children = mapParent2Children
-		// set query sample types to default
-		q.sampleTypes = [DEFAULT_SAMPLE_TYPE]
+		q.sampleTypes = types
 		return
 	}
-	// ds has sample ancestry and mapParent2Children is undefined
-	// determine sample types that are being queried
-	const sampleTypes = getSampleTypes(q, ds)
-	const types = [...sampleTypes]
 	if (!types.length) {
 		throw 'no sample types found'
 	} else if (types.length == 1) {
 		// single sample type, no need to map parent to children
-		const type = types[0]
-		if (!ds.cohort.termdb.sampleTypes[type]) throw 'invalid sample type'
+		if (!ds.cohort.termdb.sampleTypes[types[0]]) throw 'invalid sample type'
 		q.mapParent2Children = false
-		q.sampleTypes = [type]
+		q.sampleTypes = types
 	} else {
 		// multiple sample types
 		const parentTypes = new Set(
