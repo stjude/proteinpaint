@@ -122,7 +122,7 @@ const TermdbSingleCellPlotsRequestExample = {
 	dslabel: 'TermdbTest',
 	singleCellPlot: {
 		name: 'umap',
-		sample: { sID: 'sample1' }
+		sample: { sID: '2646' }
 	},
 	filter: {
 		type: 'tvslst',
@@ -159,7 +159,7 @@ const TermdbSingleCellPlotsRequestExample = {
 			name: 'Cell Type',
 			plot: 'UMAP',
 			type: 'singleCellCellType',
-			sample: { sID: '1_patient' },
+			sample: { sID: '2646' },
 			groupsetting: { disabled: false },
 			values: {}
 		},

@@ -609,7 +609,7 @@ tape('Single cell scatter properly renders when colorTW = scct term', function (
 				{
 					chartType: 'sampleScatter',
 					colorTW: getScctTw(),
-					singleCellPlot: { name: 'UMAP', sample: { sID: '1_patient' } }
+					singleCellPlot: { name: 'UMAP', sample: { sID: '2646' } }
 				}
 			]
 		},
@@ -631,7 +631,7 @@ tape('Single cell scatter properly renders when colorTW = scge term', function (
 				{
 					chartType: 'sampleScatter',
 					colorTW: getScgeneexpTw(),
-					singleCellPlot: { name: 'UMAP', sample: { sID: '1_patient' } }
+					singleCellPlot: { name: 'UMAP', sample: { sID: '2646' } }
 				}
 			]
 		},
@@ -654,7 +654,7 @@ tape('Single cell scatter properly renders when coordTWs [scge TP53, scge KRAS] 
 					chartType: 'sampleScatter',
 					term: getScgeneexpTw('TP53'),
 					term2: getScgeneexpTw(),
-					singleCellPlot: { name: 'UMAP', sample: { sID: '1_patient' } }
+					singleCellPlot: { name: 'UMAP', sample: { sID: '2646' } }
 				}
 			]
 		},
