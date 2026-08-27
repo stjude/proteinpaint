@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.205.0
 
 General:
 - the mmrf dataset keeps its own copy of the numeric filter code because it has no sqlite termdb, and is fixed separately in the sjpp repo; both changes must ship together or mmrf and the db-backed datasets will disagree about whether a complement group works
