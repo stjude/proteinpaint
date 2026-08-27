@@ -359,9 +359,12 @@ export class SearchHandler {
 	}
 
 	/** apply the mutation type that the radios select, which is the default for a new term */
+	// TODO: this seems to be a general helper for submitting changes. Should
+	// rename this function and evaluate whether the submission process can be
+	// more streamlined/centralized
 	async applyMutationType() {
 		this.mayApplySampleType()
-		if (this.sampleTypeSelect && !this.q.sampleTypes?.length) {
+		if (this.sampleTypeSelect && !this.term.sampleTypes?.length) {
 			window.alert('Must select at least one sample type')
 			return
 		}
@@ -371,7 +374,7 @@ export class SearchHandler {
 	}
 
 	mayApplySampleType() {
-		this.q.sampleTypes = getSelectedSampleTypes(this.sampleTypeSelect)
+		this.term.sampleTypes = getSelectedSampleTypes(this.sampleTypeSelect)
 	}
 
 	async applyRememberedQ(q) {

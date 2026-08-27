@@ -241,7 +241,7 @@ tape('Sample type selection is cleared when changing to a mutation type without 
 	test.equal(sampleTypeCheckboxes.size(), 2, 'should render sample type choices for SNV/indel')
 	sampleTypeCheckboxes.nodes()[0].checked = true
 	await pickGene(holder)
-	test.deepEqual(tw.q.sampleTypes, [1], 'should submit the selected sample type')
+	test.deepEqual(tw.term.sampleTypes, [1], 'should submit the selected sample type')
 
 	const cnvRadio: any = holder
 		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
@@ -254,13 +254,13 @@ tape('Sample type selection is cleared when changing to a mutation type without 
 		'should remove stale sample type choices'
 	)
 	await pickGene(holder, 'KRAS')
-	test.equal(tw.q.sampleTypes, undefined, 'should not carry sample types into CNV')
+	test.equal(tw.term.sampleTypes, undefined, 'should not carry sample types into CNV')
 
 	if (test['_ok']) holder.remove()
 	test.end()
 })
 
-/* The initial selection writes sampleTypes to the handler q. A remembered setting on the
+/* The initial selection writes sampleTypes to the handler term. A remembered setting on the
 next selection exercises the "Continue with ..." path, which must replace those values. */
 tape('Continuing past remembered settings does not retain sample types from another mutation type', async test => {
 	let tw
@@ -277,7 +277,7 @@ tape('Continuing past remembered settings does not retain sample types from anot
 	})
 	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].checked = true
 	await pickGene(holder)
-	test.deepEqual(tw.q.sampleTypes, [1], 'should submit the selected SNV/indel sample type')
+	test.deepEqual(tw.term.sampleTypes, [1], 'should submit the selected SNV/indel sample type')
 
 	const cnvRadio: any = holder
 		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
@@ -288,7 +288,7 @@ tape('Continuing past remembered settings does not retain sample types from anot
 	const continueWithCnv: any = holder.selectAll('.sja_menuoption').nodes()[0]
 	continueWithCnv.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
 	await sleep(100)
-	test.equal(tw.q.sampleTypes, undefined, 'should not retain the prior SNV/indel sample type')
+	test.equal(tw.term.sampleTypes, undefined, 'should not retain the prior SNV/indel sample type')
 
 	if (test['_ok']) holder.remove()
 	test.end()

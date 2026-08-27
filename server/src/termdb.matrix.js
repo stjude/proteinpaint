@@ -845,6 +845,7 @@ export function maySetMapParent2Children(q, ds, mapParent2Children) {
 		q.sampleTypes = types
 	} else {
 		// multiple sample types
+		// determine parent sample types of query sample types
 		const parentTypes = new Set(
 			types.map(type => ds.cohort.termdb.sampleTypes[type]?.parent_id).filter(Number.isInteger)
 		)

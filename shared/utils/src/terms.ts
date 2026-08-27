@@ -605,17 +605,13 @@ export function getBin(lst: any[], value: number) {
 
 // get sample types of termwrapper
 export function getTwSampleTypes(tw: any, ds: any) {
-	if (!tw) return []
-	if (tw.q?.sampleTypes) return tw.q.sampleTypes
-	const term = tw.term
+	const term = tw?.term
 	if (!term) return []
-	//non dict terms annotate only samples, eg: gene expression, metabolite intensity, gene variant.
-	//Their sample type is the default sample type that may or may not have a parent type, depending on the dataset
-	if (term.type && isNonDictionaryType(term.type)) return [DEFAULT_SAMPLE_TYPE]
-	//dictionary terms may annotate different types of samples, eg: patient and sample or mouse and crop.
-	if (term.id) {
-		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
-		return sampleType != null ? [sampleType] : []
+	if (term.sampleTypes) {
+		return term.sampleTypes
+	}
+	if (ds.cohort.termdb.term2SampleType.has(term.id)) {
+		return [ds.cohort.termdb.term2SampleType.get(term.id)]
 	}
 	if (term.type == 'samplelst') {
 		const key = Object.keys(term.values)[0]
@@ -625,7 +621,6 @@ export function getTwSampleTypes(tw: any, ds: any) {
 			return sampleType != null ? [sampleType] : []
 		} else return [DEFAULT_SAMPLE_TYPE]
 	}
-	// samplelst or non dict terms
 	return [DEFAULT_SAMPLE_TYPE] //later own term needs to know what type annotates based on the samples
 }
 
