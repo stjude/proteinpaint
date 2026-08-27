@@ -81,7 +81,7 @@ export class ScatterLegend {
 		const fontSize = this.getFontSize(chart, chart.colorLegend)
 		const scale = chart.colorLegend.size > 20 || chart.shapeLegend.size > 20 ? 0.6 : 0.7 //if many categories, reduce size
 
-		const colorG = legendG.append('g').style('font-size', `${fontSize}em`)
+		const colorG = legendG.append('g').style('font-size', `${fontSize}em`).attr('data-testid', 'sjpp-color-legend')
 		offsetY += step + 20
 		if (this.scatter.config.colorTW || this.scatter.config.colorColumn) {
 			title = `${getTitle(
@@ -259,7 +259,10 @@ export class ScatterLegend {
 					scale
 				)
 			} else {
-				const shapeG = legendG.append('g').style('font-size', `${this.getFontSize(chart, chart.shapeLegend)}em`)
+				const shapeG = legendG
+					.append('g')
+					.style('font-size', `${this.getFontSize(chart, chart.shapeLegend)}em`)
+					.attr('data-testid', 'sjpp-shape-legend')
 
 				this.addLegendTitle(legendG, title, offsetX, offsetY, this.scatter.config.shapeTW, 'SHAPE')
 
@@ -302,7 +305,10 @@ export class ScatterLegend {
 		}
 
 		if (this.scatter.config.scaleDotTW) {
-			chart.scaleG = legendG.append('g').attr('transform', `translate(${0},${legendHeight + 50})`)
+			chart.scaleG = legendG
+				.append('g')
+				.attr('transform', `translate(${0},${legendHeight + 50})`)
+				.attr('data-testid', 'sjpp-scale-legend')
 			this.drawScaleDotLegend(chart)
 		}
 	}
