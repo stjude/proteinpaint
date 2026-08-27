@@ -38,9 +38,7 @@ export class SearchHandler {
 		}
 		const unit = getGEunit(this.app.vocabApi)
 		const name = `${gene} ${unit}`
-		this.callback({
-			q: {},
-			term: { gene, name, type: TermTypes.GENE_EXPRESSION, sampleTypes }
-		})
+		const term = { gene, name, type: TermTypes.GENE_EXPRESSION, sampleTypes }
+		this.callback(term)
 	}
 }

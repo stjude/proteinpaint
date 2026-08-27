@@ -283,7 +283,11 @@ tape('GENE_EXPRESSION should open TVS when no selection callback is defined', as
 	const { termTypeSearch, holder, dispatched } = await getNewTermTypeSearch({
 		termdbConfig: {
 			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.GENE_EXPRESSION],
-			queries: { geneExpression: { unit: 'log2 TPM' } }
+			queries: { geneExpression: { unit: 'log2 TPM', sampleTypes: [1, 2] } },
+			sampleTypes: {
+				1: { name: 'Tumor' },
+				2: { name: 'Normal' }
+			}
 		}
 	})
 
@@ -291,10 +295,9 @@ tape('GENE_EXPRESSION should open TVS when no selection callback is defined', as
 	test.ok(geneExpressionTab, 'Should create a GENE_EXPRESSION tab')
 	await geneExpressionTab?.callback()
 
-	await termTypeSearch.handlerByType[TermTypes.GENE_EXPRESSION].selectGene({
-		geneSymbol: 'EGFR',
-		sampleType: 'tumor'
-	})
+	const geneExpressionHandler = termTypeSearch.handlerByType[TermTypes.GENE_EXPRESSION]
+	geneExpressionHandler.sampleTypeSelect[0].property('checked', true)
+	await geneExpressionHandler.selectGene({ geneSymbol: 'EGFR' })
 	await sleep(1)
 
 	const action = dispatched[dispatched.length - 1]
@@ -303,7 +306,12 @@ tape('GENE_EXPRESSION should open TVS when no selection callback is defined', as
 		action.submenu,
 		{
 			type: 'tvs',
-			term: { gene: 'EGFR', name: 'EGFR log2 TPM', type: TermTypes.GENE_EXPRESSION }
+			term: {
+				gene: 'EGFR',
+				name: 'EGFR log2 TPM',
+				type: TermTypes.GENE_EXPRESSION,
+				sampleTypes: [1]
+			}
 		},
 		'Should open TVS with the selected gene-expression term'
 	)
