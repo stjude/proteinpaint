@@ -54,6 +54,7 @@ import VectorSource from 'ol/source/Vector.js' // holds the polygon features
 import Feature from 'ol/Feature.js' // one drawable geometry + style
 import MultiPolygon from 'ol/geom/MultiPolygon.js' // many cell rings in one feature
 import { Fill, Stroke, Style } from 'ol/style.js' // polygon styling primitives
+import RBush from 'ol/structs/RBush.js' // spatial index for the hover hit test
 import { dofetch3 } from '#common/dofetch' // fetch wrapper for meta/genecounts
 import { sayerror } from '#dom' // inline error banner
 
@@ -463,14 +464,23 @@ export async function init(
 		// while the boundary strokes are visible, i.e. zoomed within
 		// annotation_level (always, when that param is not set).
 		if (cellPolys) {
-			// per-cell bounding boxes so most cells are rejected without the ray cast
-			// ponytail: linear scan over ~100k bboxes per mousemove — swap in an
-			// rbush index if hovering ever feels laggy
-			const boxes = cellPolys.map(c => {
-				const xs = c.ring.map(v => v[0]) // ring x coordinates
-				const ys = c.ring.map(v => v[1]) // ring y coordinates
-				return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] // [minX,minY,maxX,maxY]
-			})
+			// spatial index over the cell bounding boxes, built once: each
+			// pointermove queries only the handful of cells whose bbox contains
+			// the pointer instead of scanning all ~100k (OL's bundled rbush)
+			const index = new RBush<CellPoly>()
+			for (const c of cellPolys) {
+				let minX = Infinity, // the ring's bounding box
+					minY = Infinity,
+					maxX = -Infinity,
+					maxY = -Infinity
+				for (const [vx, vy] of c.ring) {
+					if (vx < minX) minX = vx
+					if (vx > maxX) maxX = vx
+					if (vy < minY) minY = vy
+					if (vy > maxY) maxY = vy
+				}
+				index.insert([minX, minY, maxX, maxY], c) // bbox -> its cell
+			}
 			// the tooltip box, following the cursor; fixed and placed from the
 			// map's viewport rectangle, immune to the surrounding page's layout
 			const tip = mapDiv
@@ -497,10 +507,10 @@ export async function init(
 				}
 				const [x, y] = evt.coordinate // pointer position in map (level-0 px) coords
 				let hit: CellPoly | undefined // the cell under the pointer, if any
-				for (const [i, b] of boxes.entries()) {
-					if (x < b[0] || y < b[1] || x > b[2] || y > b[3]) continue // cheap bbox reject
-					if (pointInRing(x, y, cellPolys![i].ring)) {
-						hit = cellPolys![i] // exact polygon hit
+				for (const c of index.getInExtent([x, y, x, y])) {
+					// only cells whose bbox contains the pointer reach the ray cast
+					if (pointInRing(x, y, c.ring)) {
+						hit = c // exact polygon hit
 						break // first match wins
 					}
 				}
