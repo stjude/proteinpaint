@@ -274,7 +274,7 @@ export class SearchHandler {
 	searchGeneSet() {
 		this.dom.searchDiv.selectAll('*').remove()
 		this.dom.searchDiv.style('margin-top', '0px')
-		const ui = new GeneSetEditUI({
+		this.dom.geneSetEditUI = new GeneSetEditUI({
 			holder: this.dom.searchDiv.append('div'),
 			genome: this.opts.genomeObj,
 			vocabApi: this.opts.app.vocabApi,
@@ -282,7 +282,7 @@ export class SearchHandler {
 			maxNumGenes: this.maxNumGenes,
 			callback: async result => await this.selectGeneSet(result)
 		})
-		this.dom.searchbox = ui.geneSearch?.searchbox
+		this.dom.searchbox = this.dom.geneSetEditUI.geneSearch?.searchbox
 		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px').style('margin-top', '-10px')
 	}
 
@@ -359,13 +359,20 @@ export class SearchHandler {
 	}
 
 	/** apply the mutation type that the radios select, which is the default for a new term */
-	// TODO: this seems to be a general helper for submitting changes. Should
-	// rename this function and evaluate whether the submission process can be
+	// TODO: this seems to be a submit helper. Should rename this
+	// function and evaluate whether the submission process can be
 	// more streamlined/centralized
 	async applyMutationType() {
 		this.mayApplySampleType()
 		if (this.sampleTypeSelect && !this.term.sampleTypes?.length) {
 			window.alert('Must select at least one sample type')
+			const geneSetEditUI = this.dom.geneSetEditUI
+			if (geneSetEditUI) {
+				// the gene set edit UI's submit button was disabled on
+				// click to prevent repeated submissions, so it must be
+				// re-enabled here since the submission was aborted
+				geneSetEditUI.api.dom.submitBtn.property('disabled', false).text('Submit')
+			}
 			return
 		}
 		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
