@@ -16,6 +16,7 @@ Fixes:
 - tvs.isnot is honored for non-dictionary numeric filters, which covers geneExpression, isoformExpression, metaboliteIntensity, proteomeAbundance, ssGSEA, dnaMethylation, junction and pseudobulk. A negated filter previously selected the same samples as the un-negated one, so the auto-generated complement group built by flipping that flag came back identical to the group it complements, and a two-group analysis reported every sample as belonging to both. A sample with no value for the term joins neither side, since missing data is unknown rather than out-of-range.
 - Prebuilt groups passed to the differential-analysis submission UI as config.groups[] are no longer silently dropped on any dataset offering both bulk and single-cell pseudobulk. The expression-source tabs render during init and fire their active tab's callback before the component's state is assigned, and the group-seeding step marked itself done before throwing on that missing state, so the seeded groups never appeared and no error surfaced.
 - Element and gene counts in the volcano action bar and statistics panel are thousands-separated, so five- and six-figure counts are legible at a glance. The percentage in that panel is left alone rather than re-rounded.
+- GDC: Enable hier clustering in volcano
 
 
 ## 2.204.0
