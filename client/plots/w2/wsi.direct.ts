@@ -192,25 +192,45 @@ export async function init(
 				}, ${meta.levels} levels`
 			)
 
-		// legends are absolute-positioned at the map's top corners, but the map is
-		// taller than what's usually on screen: scrolling down moves the map's top
-		// (legend included) above the viewport while the image still fills it.
-		// Pin: push each legend down by however much of the map's top is hidden,
-		// clamped so it never pokes out of the map's bottom either. Capture-phase
-		// scroll listener also catches scrolling ancestors (mass sandbox), not
-		// just the window.
-		const pinned: any[] = [] // legend selections to keep in view
+		// Legends are position:fixed and placed from the map's live viewport
+		// rectangle, so they are confined to the map's on-screen area no matter
+		// what surrounds the viewer: they can never overlap UI outside the map.
+		// Scrolling past the map's top pins them near the viewport top while any
+		// of the map is visible — but sticky chrome (the mass header/tabs) may
+		// float exactly there, over the map, so each pin position is probed with
+		// elementFromPoint and slid down until the point actually hits the map
+		// (i.e. nothing else covers it). When no uncovered spot remains, the
+		// legend hides. Capture-phase scroll listener also catches scrolling
+		// ancestors, not just the window.
+		const pinned: Array<{ box: any; side: 'left' | 'right' }> = [] // legends + which map corner they hug
 		const repin = () => {
-			const node = mapDiv.node() // the positioning parent of every legend
-			if (!node.isConnected) return window.removeEventListener('scroll', repin, true) // viewer re-rendered
+			const node = mapDiv.node() // the map the legends are placed against
+			if (!node.isConnected) {
+				// viewer re-rendered: this render's listeners are dead weight
+				window.removeEventListener('scroll', repin, true)
+				window.removeEventListener('resize', repin)
+				return
+			}
 			const r = node.getBoundingClientRect() // where the map sits in the viewport
-			for (const box of pinned) {
-				// 8 - r.top = the hidden amount + 8px margin; clamp to the map's bottom edge
-				const top = Math.min(Math.max(8, 8 - r.top), Math.max(8, r.height - box.node().offsetHeight - 8))
-				box.style('top', `${top}px`) // move the legend to stay visible
+			for (const p of pinned) {
+				const el = p.box.node() // the legend's DOM node, for its size
+				const left = p.side == 'left' ? r.left + 40 : r.right - el.offsetWidth - 8 // 40: clear of OL zoom buttons
+				const maxTop = r.bottom - el.offsetHeight - 8 // never poke out of the map's bottom
+				let top = Math.max(r.top + 8, 8) // inside the map; viewport top once scrolled past
+				// probe downward past anything covering the map at the pin spot
+				// (visibility:hidden keeps the legend itself out of the probe)
+				p.box.style('visibility', 'hidden')
+				while (top <= maxTop) {
+					const hit = document.elementFromPoint(left + 1, top) // topmost element at the corner
+					if (hit && node.contains(hit)) break // the map itself: spot is uncovered
+					top += 24 // slide below the covering chrome and retry
+				}
+				if (top > maxTop) continue // no uncovered spot big enough: stay hidden
+				p.box.style('visibility', 'visible').style('top', `${top}px`).style('left', `${left}px`)
 			}
 		}
 		window.addEventListener('scroll', repin, { capture: true, passive: true })
+		window.addEventListener('resize', repin) // map rectangle moves on resize too
 
 		// segmentation overlays: boundary CSVs are in µm, converted to level-0
 		// pixels via the slide's mpp (defaulting to 1 = coords already in px)
@@ -283,19 +303,16 @@ export async function init(
 			for (const t of shown) shownColor[t] = typeColor[t] // only shown types get a fill
 			map.addLayer(cellTypeLayer(cellPolys, cellTypes, shownColor)) // draw the type fills
 
-			mapDiv.style('position', 'relative') // make the map the legend's offset parent
-			// the type legend box, top-left of the map
+			// the type legend box, over the map's top-left; repin() places it
 			const legend = mapDiv
 				.append('div')
-				.style('position', 'absolute')
-				.style('top', '8px')
-				.style('left', '40px') // clear of the OL zoom buttons (~31px wide at left 8px)
+				.style('position', 'fixed') // viewport-placed by repin(), confined to the map's rectangle
 				.style('z-index', '10')
 				.style('background', 'rgba(255,255,255,0.85)')
 				.style('padding', '6px 10px')
 				.style('border-radius', '4px')
 				.style('font', '12px system-ui')
-				.style('max-height', '60%')
+				.style('max-height', '50vh')
 				.style('overflow-y', 'auto')
 			legend.append('div').style('font-weight', 'bold').style('margin-bottom', '2px').text('Cell type') // title
 			for (const t of shown) {
@@ -310,8 +327,8 @@ export async function init(
 					.style('background', `rgb(${typeColor[t]})`)
 				row.append('span').text(`${t} (${counts[t]})`) // type name + its cell count
 			}
-			pinned.push(legend) // keep in view when the page scrolls
-			repin()
+			pinned.push({ box: legend, side: 'left' }) // top-left corner, clear of the zoom buttons
+			repin() // place it now; scrolling keeps it placed
 		}
 
 		// per-gene count maps kept for the hover tooltip below
@@ -348,19 +365,15 @@ export async function init(
 				let legend: any
 				const addLegend = (rgb: string, name: string, max: number) => {
 					if (!legend) {
-						mapDiv.style('position', 'relative')
-						legend = mapDiv // the gene legend box, top-right of the map
+						legend = mapDiv // the gene legend box, over the map's top-right; repin() places it
 							.append('div')
-							.style('position', 'absolute')
-							.style('top', '8px')
-							.style('right', '8px')
+							.style('position', 'fixed') // viewport-placed by repin(), confined to the map's rectangle
 							.style('z-index', '10')
 							.style('background', 'rgba(255,255,255,0.85)')
 							.style('padding', '6px 10px')
 							.style('border-radius', '4px')
 							.style('font', '12px system-ui')
-						pinned.push(legend) // keep in view when the page scrolls
-						repin()
+						pinned.push({ box: legend, side: 'right' }) // hug the map's top-right corner
 					}
 					const row = legend.append('div').style('margin', '2px 0') // one legend row per gene
 					row.append('span').style('margin-right', '6px').text(name) // the gene's name
@@ -374,6 +387,7 @@ export async function init(
 						.style('border', '1px solid #ccc')
 						.style('background', `linear-gradient(to right, rgba(${rgb}, 0.15), rgba(${rgb}, 0.9))`)
 					row.append('span').style('margin-left', '4px').text(`1–${max}`) // the count range the gradient spans
+					repin() // re-place: each added row changes the legend's size
 				}
 
 				// gene_expression: one layer per gene, each its own color
@@ -434,11 +448,11 @@ export async function init(
 				const ys = c.ring.map(v => v[1]) // ring y coordinates
 				return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] // [minX,minY,maxX,maxY]
 			})
-			mapDiv.style('position', 'relative') // make the map the tooltip's offset parent
-			// the tooltip box, following the cursor
+			// the tooltip box, following the cursor; fixed and placed from the
+			// map's viewport rectangle, immune to the surrounding page's layout
 			const tip = mapDiv
 				.append('div')
-				.style('position', 'absolute')
+				.style('position', 'fixed')
 				.style('display', 'none')
 				.style('z-index', '20')
 				.style('pointer-events', 'none') // never steal the pointer from the map
@@ -475,10 +489,11 @@ export async function init(
 				const t = cellTypes?.[hit.id] // its annotated type, if the CSV has one
 				if (t) rows.push(`cell type: ${t}`) // line 2: the type
 				for (const g of geneCounts) rows.push(`${g.gene} expression: ${(g.cells[hit.id] || 0).toFixed(1)}`) // per gene
+				const mr = mapDiv.node().getBoundingClientRect() // map rect: OL pixel -> viewport coords
 				tip // place the box just below-right of the cursor and fill it
 					.style('display', 'block')
-					.style('left', `${evt.pixel[0] + 12}px`)
-					.style('top', `${evt.pixel[1] + 12}px`)
+					.style('left', `${mr.left + evt.pixel[0] + 12}px`)
+					.style('top', `${mr.top + evt.pixel[1] + 12}px`)
 					.text(rows.join('\n'))
 			})
 		}
