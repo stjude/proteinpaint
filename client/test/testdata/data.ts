@@ -652,7 +652,7 @@ export function getScgeneexpTw(gene = 'KRAS') {
 			gene,
 			name: gene,
 			sample: {
-				sID: '1_patient'
+				sID: '2646'
 			}
 		},
 		q: {
@@ -667,7 +667,7 @@ export function getScctTw() {
 			id: 'CellType',
 			name: 'Cell Type',
 			sample: {
-				sID: '1_patient'
+				sID: '2646'
 			},
 			plot: 'UMAP',
 			colorBy: 'CellType',
