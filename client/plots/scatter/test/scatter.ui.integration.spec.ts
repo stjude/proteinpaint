@@ -388,6 +388,8 @@ tape('Render color groups', function (test) {
 					colorTW: {
 						id: 'genetic_race',
 						q: {
+							mode: 'discrete',
+							type: 'custom-groupset',
 							customset: {
 								groups: [
 									{
@@ -432,7 +434,7 @@ tape('Render color groups', function (test) {
 	async function testColorLegend(scatter) {
 		const legendLabels = await detectGte({
 			elem: scatter.Inner.model.charts[0].chartDiv.node(),
-			selector: 'text[name="sjpp-scatter-legend-label"]'
+			selector: 'text[data-testid="sjpp-scatter-color-legend-label"]'
 		})
 
 		const groups: { label: string; samples: string[] }[] = []
