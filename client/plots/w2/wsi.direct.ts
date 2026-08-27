@@ -447,6 +447,11 @@ export async function init(
 				.style('border-radius', '4px')
 				.style('font', '12px system-ui')
 				.style('white-space', 'pre') // one datum per line via \n
+			// zooming without moving the mouse fires no pointermove, which would
+			// leave a stale tooltip up (e.g. wheel-zooming out past
+			// annotation_level); hide on every zoom change — the next pointermove
+			// re-shows it when a cell is under the cursor and the zoom allows
+			map.getView().on('change:resolution', () => tip.style('display', 'none'))
 			map.on('pointermove', (evt: any) => {
 				const res = map.getView().getResolution() // current zoom, in map units/px
 				if (evt.dragging || (maxResolution !== undefined && !(typeof res == 'number' && res < maxResolution))) {
