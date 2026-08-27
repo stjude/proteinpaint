@@ -69,6 +69,11 @@ export async function init(
 		slideQuery?: string
 		/** display name when slide is not given (e.g. the spatial image fileName) */
 		label?: string
+		/** = spatial_data: consolidated spatial .h5ad, tpmasterdir-relative.
+		 When set it becomes the single source for cell/nucleus boundaries,
+		 cell-type annotations AND gene expression, overriding the four
+		 per-file opts below (the server regenerates each piece from it) */
+		spatialData?: string
 		/** = cell_boundaries: cell segmentation CSV, tpmasterdir-relative */
 		cellBoundaries?: string
 		/** = cell_annotations: per-cell annotations CSV (cell_id,cell_type),
@@ -103,6 +108,18 @@ export async function init(
 	/** d3 selection the viewer renders into */
 	holder: any
 ) {
+	if (opts.spatialData) {
+		// the consolidated h5ad is the single source: reroute the companion
+		// fetches to it and let the server derive the piece each asks for.
+		// The mass plot (slideQuery) chooses which overlays to load by
+		// setting/omitting the boundary opts, so only replace the ones it
+		// asked for; a direct URL passing spatial_data gets all of them
+		const all = !opts.slideQuery
+		if (all || opts.cellBoundaries) opts.cellBoundaries = opts.spatialData
+		if (all || opts.nucleusBoundaries) opts.nucleusBoundaries = opts.spatialData
+		opts.cellAnnotations = opts.spatialData
+		opts.geneExpressionFile = opts.spatialData
+	}
 	const name = opts.slide ?? opts.label ?? 'slide' // display name in messages
 	const loading = holder.append('div').style('margin', '20px').text(`Loading ${name} …`) // placeholder while meta loads
 	try {
@@ -245,17 +262,20 @@ export async function init(
 		const maxResolution =
 			Number.isInteger(n) && n > 0 && n < resolutions.length ? resolutions[resolutions.length - 1 - n] : undefined
 
-		// the two boundary overlays with their stroke colors (cell green, nucleus blue)
-		const overlays: Array<[string | undefined, string]> = [
-			[opts.cellBoundaries, 'rgba(0, 200, 80, 0.9)'],
-			[opts.nucleusBoundaries, 'rgba(0, 150, 255, 0.9)']
+		// the two boundary overlays: file, kind (h5ad piece selector — with a
+		// consolidated store both files are the SAME h5ad, so kind, not the
+		// file name, identifies the overlay), and stroke color (cell green,
+		// nucleus blue)
+		const overlays: Array<[string | undefined, 'cell' | 'nucleus', string]> = [
+			[opts.cellBoundaries, 'cell', 'rgba(0, 200, 80, 0.9)'],
+			[opts.nucleusBoundaries, 'nucleus', 'rgba(0, 150, 255, 0.9)']
 		]
 		let cellPolys: CellPoly[] | undefined // kept for the expression/type fills below
-		for (const [file, color] of overlays) {
+		for (const [file, kind, color] of overlays) {
 			if (!file) continue // that overlay was not requested
 			try {
-				const polys = await fetchBoundaries(host, sq, file, mppX, mppY) // csv -> px polygons
-				if (file === opts.cellBoundaries) {
+				const polys = await fetchBoundaries(host, sq, file, kind, mppX, mppY) // csv -> px polygons
+				if (kind == 'cell') {
 					cellPolys = polys // expression/type fills reuse these rings
 					if (opts.hideCellStrokes) continue // polygons fetched, strokes suppressed
 				}
@@ -265,13 +285,16 @@ export async function init(
 			}
 		}
 
-		// per-cell annotations: a small separate CSV (one row per cell), fetched
-		// through the same boundaries action; feeds the type fills + tooltip.
+		// per-cell annotations (one row per cell), fetched through the same
+		// boundaries action — from the annotations CSV, or regenerated out of
+		// the consolidated h5ad (kind=annotations); feeds type fills + tooltip.
 		// Useless without the cell polygons, so skipped when those are absent.
 		let cellTypes: { [id: string]: string } | undefined // cell_id -> annotated type
 		if (opts.cellAnnotations && cellPolys) {
 			try {
-				const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(opts.cellAnnotations)}`)
+				const res = await fetch(
+					`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(opts.cellAnnotations)}&kind=annotations`
+				)
 				if (!res.ok) throw new Error(`${res.status} ${res.statusText}`) // http failure = error banner
 				cellTypes = parseCellAnnotations(await res.text()) // csv -> id->type map
 			} catch (e: any) {
@@ -525,13 +548,15 @@ async function fetchBoundaries(
 	host: string,
 	/** wsitiles query addressing the slide (slide= or dataset params) */
 	sq: string,
-	/** the boundaries CSV, tpmasterdir-relative */
+	/** the boundaries CSV — or the consolidated .h5ad the server regenerates it from */
 	file: string,
+	/** which polygons when file is an h5ad (csv sources ignore it) */
+	kind: 'cell' | 'nucleus',
 	/** µm per pixel, x and y, from meta.mpp */
 	mppX: number,
 	mppY: number
 ): Promise<CellPoly[]> {
-	const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}`) // raw csv text
+	const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}&kind=${kind}`) // raw csv text
 	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`) // http failure = overlay error banner
 	return parseBoundaries(await res.text(), mppX, mppY) // csv -> polygons
 }

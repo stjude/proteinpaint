@@ -483,10 +483,10 @@ export default function (): Mds3 {
 				// .ome.tif extension is required for the JPEG-2000 OME-TIFF reader
 				// in wsi_tile.py open_slide() to engage
 				tiffFileSuffix: 'morphology.ome.tif',
-				nucleusBoundariesFileSuffix: 'nucleus_boundaries.csv',
-				cellBoundariesFileSuffix: 'cell_boundaries.csv',
-				cellAnnotationsFileSuffix: 'cell_annotations.csv',
-				geneExpressionFileSuffix: 'gene_expression.h5',
+				// consolidated h5ad: the single source for boundaries, annotations
+				// and expression (the per-file *FileSuffix fallbacks exist for
+				// datasets without one; this fixture's companion CSVs/h5 were removed)
+				spatialDataFileSuffix: 'spatial.h5ad',
 				// default viewer settings, overridable in the burger menu
 				cellTypes: true,
 				annotationLevel: 1

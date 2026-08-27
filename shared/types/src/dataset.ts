@@ -1480,6 +1480,11 @@ type Mds3Queries = {
 		/** suffix of the spatial slide file (e.g. 'morphology.ome.tif'); an image
 		 * subfolder without it is skipped. Required with folder */
 		tiffFileSuffix?: string
+		/** suffix of the consolidated spatial .h5ad (expression X, obs cell_type,
+		 * uns cell/nucleus boundary polygons). When an image folder has one, it
+		 * becomes the single source for boundaries, annotations and expression,
+		 * overriding the per-file suffixes below */
+		spatialDataFileSuffix?: string
 		/** suffix of the cell segmentation CSV */
 		cellBoundariesFileSuffix?: string
 		/** suffix of the per-cell annotations CSV (cell_id,cell_type — one row

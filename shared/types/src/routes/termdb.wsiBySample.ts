@@ -37,6 +37,9 @@ export type SpatialImage = {
 	/** = image_file: slide path relative to the sample's folder under
 	 ds.queries.w2.folder (<imageName>/<tif file>); used as the wsitiles wsimage= param */
 	fileName: string
+	/** = spatial_data: consolidated .h5ad; single source for boundaries,
+	 annotations and expression when present */
+	spatialData?: string
 	/** = cell_boundaries: cell segmentation CSV */
 	cellBoundaries?: string
 	/** = cell_annotations: per-cell annotations CSV (cell_id,cell_type) */

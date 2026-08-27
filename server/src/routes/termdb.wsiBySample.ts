@@ -100,6 +100,7 @@ function init({ genomes }) {
 						images.push({
 							type: 'spatial' as const,
 							fileName,
+							spatialData: rel(bySuffix(w2.spatialDataFileSuffix)),
 							cellBoundaries: rel(bySuffix(w2.cellBoundariesFileSuffix)),
 							cellAnnotations: rel(bySuffix(w2.cellAnnotationsFileSuffix)),
 							nucleusBoundaries: rel(bySuffix(w2.nucleusBoundariesFileSuffix)),

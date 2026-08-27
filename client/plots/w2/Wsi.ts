@@ -168,17 +168,16 @@ class Wsi extends PlotBase implements RxComponent {
 	 wsitiles/genenames (same slide-scoped access checks as genecounts).
 	 Returns [] when the image has no expression file or the request fails. */
 	private async fetchGeneNames(image: SpatialImage, sampleId: string): Promise<string[]> {
-		if (!image.geneExpressionFile) return [] // no h5, nothing to discover
-		if (this.geneNamesFile == image.geneExpressionFile) return this.geneNames // cached
+		const src = image.spatialData ?? image.geneExpressionFile // consolidated h5ad wins over the 10x h5
+		if (!src) return [] // no expression source, nothing to discover
+		if (this.geneNamesFile == src) return this.geneNames // cached
 		const v = this.state.vocab // genome + dslabel for the request
-		const params = // standard wsitiles slide addressing + the h5 file
+		const params = // standard wsitiles slide addressing + the expression file
 			`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${v.dslabel}&genome=${v.genome}` +
-			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&file=${encodeURIComponent(
-				image.geneExpressionFile
-			)}`
+			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&file=${encodeURIComponent(src)}`
 		const r = await dofetch3(`wsitiles/genenames?${params}`).catch(() => null)
 		this.geneNames = Array.isArray(r?.genes) ? r.genes : [] // failure = no discovery, config still works
-		this.geneNamesFile = image.geneExpressionFile // remember which file the cache is for
+		this.geneNamesFile = src // remember which file the cache is for
 		return this.geneNames
 	}
 
@@ -191,23 +190,22 @@ class Wsi extends PlotBase implements RxComponent {
 	 wsitiles/meta scan it). Returns [] when the image has no annotations
 	 file or the request fails. */
 	private async fetchCellTypes(image: SpatialImage, sampleId: string): Promise<string[]> {
-		if (!image.cellAnnotations) {
+		const src = image.spatialData ?? image.cellAnnotations // consolidated h5ad wins over the csv
+		if (!src) {
 			// this image has no annotations: clear the cache so stale types
 			// from a previously shown image don't populate the dropdowns
 			this.cellTypeNames = []
 			this.cellTypesFile = undefined
 			return this.cellTypeNames
 		}
-		if (this.cellTypesFile == image.cellAnnotations) return this.cellTypeNames // cached
+		if (this.cellTypesFile == src) return this.cellTypeNames // cached
 		const v = this.state.vocab // genome + dslabel for the request
-		const params = // standard wsitiles slide addressing + the annotations CSV to scan
+		const params = // standard wsitiles slide addressing + the annotations source to scan
 			`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${v.dslabel}&genome=${v.genome}` +
-			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&cellAnnotations=${encodeURIComponent(
-				image.cellAnnotations
-			)}`
+			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&cellAnnotations=${encodeURIComponent(src)}`
 		const r = await dofetch3(`wsitiles/meta?${params}`).catch(() => null)
 		this.cellTypeNames = Array.isArray(r?.cellTypes) ? r.cellTypes : [] // failure = no dropdowns, overlay still works
-		this.cellTypesFile = image.cellAnnotations // remember which file the cache is for
+		this.cellTypesFile = src // remember which file the cache is for
 		return this.cellTypeNames
 	}
 

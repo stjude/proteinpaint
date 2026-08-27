@@ -52,6 +52,9 @@ upon error, throw err message as a string
 				geneExpressionFile: urlp.get('gene_expression_file'),
 				// optional: sum per-cell counts over these genes into ONE overlay
 				geneGroups: urlp.get('gene_groups'),
+				// optional: consolidated spatial .h5ad — single source for boundaries,
+				// annotations and expression, overriding the per-file params
+				spatialData: urlp.get('spatial_data'),
 				// optional: per-cell annotations CSV (cell_id,cell_type, one row per cell)
 				cellAnnotations: urlp.get('cell_annotations'),
 				// optional: fill cells by their annotated type;
