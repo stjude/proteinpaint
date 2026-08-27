@@ -229,6 +229,7 @@ export class ScatterLegend {
 					.append('g')
 					.append('text')
 					.attr('name', 'sjpp-scatter-legend-label')
+					.attr('data-testid', 'sjpp-scatter-ref-legend-label')
 					.attr('x', offsetX + 20)
 					.attr('y', offsetY + 4)
 					.text(`n=${colorRefCategory.sampleCount}`)
@@ -287,6 +288,7 @@ export class ScatterLegend {
 					itemG
 						.append('text')
 						.attr('name', 'sjpp-scatter-legend-label')
+						.attr('data-testid', 'sjpp-scatter-shape-legend-label')
 						.attr('x', offsetX + 25)
 						.attr('y', offsetY + 4)
 						.text(`${name}, n=${count}`)
@@ -319,6 +321,7 @@ export class ScatterLegend {
 		itemG
 			.append('text')
 			.attr('name', 'sjpp-scatter-legend-label')
+			.attr('data-testid', 'sjpp-scatter-color-legend-label')
 			.attr('x', x + 20)
 			.attr('y', y + 4)
 			.text(`${name}, n=${category.sampleCount}`)
@@ -408,6 +411,7 @@ export class ScatterLegend {
 					.attr('x', offsetX - step + 24)
 					.attr('y', offsetY + 4)
 					.attr('name', 'sjpp-scatter-legend-label')
+					.attr('data-testid', cname == 'shape' ? 'sjpp-scatter-shape-legend-label' : 'sjpp-scatter-color-legend-label')
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.text(text)
 					.on('click', event =>
