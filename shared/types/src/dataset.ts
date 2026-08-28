@@ -1,7 +1,7 @@
 import type { Mclass } from './Mclass.ts'
 import type { BaseTerm } from './terms/term.ts'
 import type { CategoryKey } from './terms/termCollection.ts'
-import type { TermdbSingleCellSamplesRequest } from './index.ts'
+import type { TermdbSingleCellSamplesRequest, CountsFilePreview } from './index.ts'
 /*** General usage types ***/
 type FileObj = {
 	file: string
@@ -753,7 +753,15 @@ type RnaseqGeneCount = {
 	 * from open-access STAR-Counts files). called by the DE route only after the sample groups are
 	 * resolved, since the matrix is built for exactly the samples in the two groups. returns the
 	 * h5 path plus the samples that actually landed in it, which may be fewer than requested. */
-	buildCountsFile?: (samples: string[], q: any) => Promise<{ file: string; samples: string[] }>
+	buildCountsFile?: (
+		samples: string[],
+		q: any
+	) => Promise<{ file: string; samples: string[]; countsFiles?: CountsFilePreview }>
+	/** describe the counts files behind a run without building it, so preAnalysis can tell the user
+	 * which files back the cohort and how much of the fetch is already cached. costs one metadata
+	 * query and no downloads. only for datasets with buildCountsFile; may throw, and the DE route
+	 * treats a throw as "no preview" rather than a failed pre-analysis. */
+	previewCountsFiles?: (samples: string[], q: any) => Promise<CountsFilePreview>
 	/** max samples one DE run may build a matrix for. reported during preAnalysis so the client can
 	 * warn before the user submits, and enforced by buildCountsFile itself */
 	maxSamples?: number

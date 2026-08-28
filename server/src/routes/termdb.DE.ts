@@ -1,5 +1,5 @@
 import type { RoutePayload, RouteApi } from '#types'
-import type { DEFullResponse, DEImage, DERequest, ExpressionInput, GeneDEEntry } from '#types'
+import type { CountsFilePreview, DEFullResponse, DEImage, DERequest, ExpressionInput, GeneDEEntry } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
@@ -47,7 +47,7 @@ export function init({ genomes }) {
 			// preAnalysis short-circuit: just sample counts, no cache touch.
 			if ((q as any).preAnalysis) {
 				const { ds, term_results, term_results2 } = await resolveDaContext(q, genomes)
-				const { allSampleSet, maxSamples } = resolveDE(q, ds)
+				const { allSampleSet, maxSamples, previewCountsFiles } = resolveDE(q, ds)
 				const groups = await resolveSampleGroups(q, allSampleSet, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
@@ -61,6 +61,18 @@ export function init({ genomes }) {
 					const noun = ds.cohort?.termdb?.uiLabels?.samples || 'samples'
 					alerts.push(`${total} ${noun} selected exceeds the limit of ${maxSamples} per run. Please narrow the cohort.`)
 				}
+				/* describe the counts files this run would use. skipped when an alert already stands,
+				since the client hides the run button and the preview costs a live metadata query.
+				a throw here is not a failed pre-analysis -- the counts are the answer, this is only
+				provenance -- so it degrades to no countsFiles{} in the response. */
+				let countsFiles: CountsFilePreview | undefined
+				if (previewCountsFiles && !alerts.length) {
+					try {
+						countsFiles = await previewCountsFiles([...groups.group1names, ...groups.group2names], q)
+					} catch (e: any) {
+						mayLog('[DE] counts file preview failed:', e?.message || e)
+					}
+				}
 				// the alert is a sibling of data{}, not a key in it: data{} is keyed by group name, and a
 				// group named 'alert' would otherwise be indistinguishable from this message
 				res.send({
@@ -68,7 +80,8 @@ export function init({ genomes }) {
 						[group1Name]: groups.group1names.length,
 						[group2Name]: groups.group2names.length
 					},
-					...(alerts.length ? { alert: alerts.join(' | ') } : {})
+					...(alerts.length ? { alert: alerts.join(' | ') } : {}),
+					...(countsFiles ? { countsFiles } : {})
 				})
 				return
 			}
@@ -153,7 +166,18 @@ export async function getDeCacheResult(
 	return { result, cacheId }
 }
 
-function resolveDE(req, ds) {
+/* the pseudobulk branch below fills in only the first two, so the rest are optional. named
+because the two returns have different shapes and the union would otherwise hide the
+builder-only fields from callers */
+type ResolvedDE = {
+	countsFile?: string
+	allSampleSet: Set<string>
+	buildCountsFile?: (samples: string[], q: any) => Promise<{ file: string; samples: string[] }>
+	previewCountsFiles?: (samples: string[], q: any) => Promise<CountsFilePreview>
+	maxSamples?: number
+}
+
+function resolveDE(req, ds): ResolvedDE {
 	if (req.pseudobulk) {
 		const co =
 			ds.queries?.singleCell?.pseudobulk?.[req.pseudobulk.assay]?.[req.pseudobulk.memberId]?.categories?.[
@@ -161,7 +185,7 @@ function resolveDE(req, ds) {
 			]
 		if (!co) throw 'pseudobulk category obj not found for DE'
 		if (!co.totalFile) throw 'pseudobulk category obj totalFile not found'
-		return { countsFile: co.totalFile, allSampleSet: co.totalSampleset }
+		return { countsFile: co.totalFile, allSampleSet: co.totalSampleset } as ResolvedDE
 	}
 	const c = ds.queries?.rnaseqGeneCount
 	if (!c) throw 'no rnaseqGeneCount for DE'
@@ -172,6 +196,7 @@ function resolveDE(req, ds) {
 		countsFile: c.file,
 		allSampleSet: c.allSampleSet,
 		buildCountsFile: c.buildCountsFile,
+		previewCountsFiles: c.previewCountsFiles,
 		maxSamples: c.maxSamples
 	}
 }
