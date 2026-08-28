@@ -1,4 +1,5 @@
 import * as tt from '#types'
+import { scTestSample } from '#shared'
 /* 
 exports a set of functions, each returns a TermdbTest-based term/tw/tvs that is complex and lengthy
 that are used in unit/integration tests so to simplify test and avoid code duplication
@@ -652,7 +653,7 @@ export function getScgeneexpTw(gene = 'KRAS') {
 			gene,
 			name: gene,
 			sample: {
-				sID: '2646'
+				sID: scTestSample
 			}
 		},
 		q: {
@@ -667,7 +668,7 @@ export function getScctTw() {
 			id: 'CellType',
 			name: 'Cell Type',
 			sample: {
-				sID: '2646'
+				sID: scTestSample
 			},
 			plot: 'UMAP',
 			colorBy: 'CellType',

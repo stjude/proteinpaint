@@ -3,6 +3,11 @@ import type { ErrorResponse } from './errorResponse.ts'
 import type { ColorLegendEntry, ShapeLegendEntry } from './termdb.sampleScatter.ts'
 import type { TermWrapper } from '../terms/tw.ts'
 
+/** Test sample ID for single cell plots.
+ * Recreated here from utils/src/testData.ts so 
+ * es-lint doesn't complain. */
+const scTestSample = '2646'
+
 export type TermdbSingleCellPlotsRequest = {
 	/** Genome id */
 	genome: string
@@ -122,7 +127,7 @@ const TermdbSingleCellPlotsRequestExample = {
 	dslabel: 'TermdbTest',
 	singleCellPlot: {
 		name: 'umap',
-		sample: { sID: '2646' }
+		sample: { sID: scTestSample }
 	},
 	filter: {
 		type: 'tvslst',
@@ -159,7 +164,7 @@ const TermdbSingleCellPlotsRequestExample = {
 			name: 'Cell Type',
 			plot: 'UMAP',
 			type: 'singleCellCellType',
-			sample: { sID: '2646' },
+			sample: { sID: scTestSample },
 			groupsetting: { disabled: false },
 			values: {}
 		},

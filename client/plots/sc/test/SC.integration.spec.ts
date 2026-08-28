@@ -1,5 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
+import { scTestSample } from '#shared'
 
 /*
 Tests:
@@ -84,13 +85,13 @@ tape('Test initial SC app rendering', test => {
 			`First th in header row equals the settings.sc.columns.sample value`
 		)
 
-		// Test: Table body has one row with 2646 under the sample column
+		// Test: Table body has one row with scTestSample (2646) under the sample column
 		const bodyRows = table.querySelectorAll('tbody tr')
 		test.ok(bodyRows.length >= 1, 'Table has at least one data row')
 		const firstRowCells = bodyRows[0].querySelectorAll('td')
 		// The sample value is in the 3rd cell (after line number and radio button)
 		const sampleCell = firstRowCells[2]
-		test.equal(sampleCell.innerText, '2646', 'First data row has 2646 as the sample value')
+		test.equal(sampleCell.innerText, scTestSample, `First data row has ${scTestSample} as the sample value`)
 
 		if (test['_ok']) sc.Inner.app.destroy()
 		test.end()
