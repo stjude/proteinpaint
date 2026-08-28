@@ -37,6 +37,18 @@ upon error, throw err message as a string
 		// The format (SVS, OME-TIFF, ...) is deduced server-side from the file
 		// extension, case-insensitively (wsi_tile.py open_slide()).
 		const _ = await import('../plots/w2/wsi.direct')
+		// cell_types= value -> the type filter list. =1 fills all types. A JSON
+		// array (cell_types=["Tumor","T cell, activated"]) is the unambiguous
+		// form — urlmap() already parses it, so type names may contain commas.
+		// A bare value is comma-split for convenience (=Tumor,B cells), which
+		// cannot express a comma-containing name — use the JSON form for those.
+		const cellTypesValue = urlp.get('cell_types')
+		const cellTypeFilter =
+			!cellTypesValue || cellTypesValue == 1
+				? undefined
+				: (Array.isArray(cellTypesValue) ? cellTypesValue : String(cellTypesValue).split(','))
+						.map(t => String(t).trim())
+						.filter(Boolean)
 		await _.init(
 			{
 				slide: urlp.get('image_file'),
@@ -50,19 +62,9 @@ upon error, throw err message as a string
 				geneExpression: urlp.get('gene_expression'),
 				// optional: sum per-cell counts over these genes into ONE overlay
 				geneGroups: urlp.get('gene_groups'),
-				// optional: fill cells by their annotated type;
-				// =1 fills all types, =Tumor,B cells fills only the listed types.
-				// The URL form is comma-split, so a type name containing a comma
-				// cannot be filtered here — the mass burger's dropdowns can
+				// optional: fill cells by their annotated type (list built above)
 				showCellTypes: urlp.has('cell_types'),
-				cellTypeFilter:
-					!urlp.get('cell_types') || urlp.get('cell_types') == '1'
-						? undefined
-						: urlp
-								.get('cell_types')
-								.split(',')
-								.map(t => t.trim())
-								.filter(Boolean)
+				cellTypeFilter
 			},
 			arg.holder
 		)

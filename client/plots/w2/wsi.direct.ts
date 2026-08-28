@@ -11,9 +11,12 @@
  per-cell cell_type annotations, and the gene expression matrix — the server
  derives each piece from it (see wsitiles.ts).
 
- &cell_types=1 fills every annotated cell by its type; &cell_types=Tumor,B
- cells fills only the listed types. Colors are assigned over all types, so a
- type keeps its color across filters.
+ &cell_types=1 fills every annotated cell by its type. To fill only some
+ types, pass a JSON array — &cell_types=["Tumor","T cell, activated"] — the
+ unambiguous form, since type names are free text and may contain commas; a
+ bare comma list (&cell_types=Tumor,B cells) also works for names without
+ commas. Colors are assigned over all types, so a type keeps its color
+ across filters.
 
  &annotation_level=n limits the boundary strokes to the n most zoomed-in levels
  of the viewer: zoomed out beyond that, the boundaries are hidden. Omit to
@@ -303,15 +306,15 @@ export async function init(
 		const typesShown = !!(opts.showCellTypes && cellPolys && cellTypes && Object.keys(cellTypes).length)
 		if (typesShown && cellPolys && cellTypes) {
 			// types ordered by abundance so colors go to the biggest populations first
-			const counts: { [t: string]: number } = {} // cells per type, for ordering + legend
+			const counts: { [t: string]: number } = Object.create(null) // cells per type, for ordering + legend
 			for (const id in cellTypes) counts[cellTypes[id]] = (counts[cellTypes[id]] || 0) + 1 // tally
 			const types = Object.keys(counts).sort((a, b) => counts[b] - counts[a]) // most abundant first
-			const typeColor: { [t: string]: string } = {} // type -> its stable palette color
+			const typeColor: { [t: string]: string } = Object.create(null) // type -> its stable palette color
 			for (const [i, t] of types.entries()) typeColor[t] = CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
 			// optional filter: fill + legend only these types (colors unchanged)
 			const wanted = opts.cellTypeFilter || [] // the requested type list
 			const shown = wanted.length ? types.filter(t => wanted.includes(t)) : types // empty filter = all
-			const shownColor: { [t: string]: string } = {} // color subset acting as the fill filter
+			const shownColor: { [t: string]: string } = Object.create(null) // color subset acting as the fill filter
 			for (const t of shown) shownColor[t] = typeColor[t] // only shown types get a fill
 			map.addLayer(cellTypeLayer(cellPolys, cellTypes, shownColor)) // draw the type fills
 
