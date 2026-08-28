@@ -467,5 +467,5 @@ export function getPlotConfig(opts, app) {
 /** Scge is enabled for this but sequestered to only the sc app. 
  * Scge terms require a sample obj which is supplied in the SC app. */
 export function getSelectableGETermTypes(termdbConfig) {
-	return Array.from(enabledTermTypes).filter(termtype => termtype !== SINGLECELL_GENE_EXPRESSION && termdbConfig.allowedTermTypes.includes(termtype))
+	return Array.from(enabledTermTypes).filter(termtype => termtype !== SINGLECELL_GENE_EXPRESSION && (termdbConfig?.allowedTermTypes || [])?.includes(termtype))
 }
