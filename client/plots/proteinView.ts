@@ -4,10 +4,21 @@ import { axisstyle, to_svg } from '#src/client'
 import { Menu, table2col, LegendCircleReference, addGeneSearchbox, DataPointInteractions, make_radios } from '#dom'
 import { PlotBase } from './PlotBase'
 import { dofetch3 } from '#common/dofetch'
-import { drawBrainRegionSamples } from './brainRegions.samples'
+import {
+	prepareTileData,
+	renderStudyTiles,
+	renderPlaceholderTiles,
+	makeTileGrid,
+	renderCoverageLine,
+	renderPTMSummaryCard,
+	renderOverviewVolcanoCard,
+	closeTilePanes,
+	getTileConfig,
+	launchViolinPlot,
+	getLog2Ratio
+} from './proteinView.tiles'
 import { axisBottom, axisLeft, scaleLinear, rgb, select, creator } from 'd3'
 import { shapeSelector, shapes } from '../dom/shapes.js'
-import { NumericModes } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { aa2gmcoord } from '#src/coord'
 import { mclass, getColors } from '#shared/common.js'
@@ -83,19 +94,24 @@ class ProteinView extends PlotBase implements RxComponent {
 		const data = await dofetch3('termdb/proteome', { body })
 		if (data.error) throw data.error
 		this.dom.body.selectAll('*').remove()
+		// expanded-tile panes drawn from the previous data must not outlive it
+		closeTilePanes(this)
 
-		const topRow = this.dom.body
-			.append('div')
-			.style('display', 'flex')
-			.style('gap', '16px')
-			.style('align-items', 'flex-start')
-			.style('flex-wrap', 'wrap')
-		const volcanoApi = renderCohortVolcano(topRow, data, this)
+		// per-study tiles: each answers one question and renders only when its
+		// data requirement is met; the coverage line explains missing tiles
+		const tileData = prepareTileData(data, this)
+		renderCoverageLine(this.dom.body, tileData)
+		const grid = makeTileGrid(this.dom.body)
 
-		const termdbConfig = this.app.vocabApi.termdbConfig
-		if (termdbConfig?.queries?.proteome?.brainRegions) {
-			await renderBrainRegionSamplesPanel(topRow, data, this, volcanoApi)
-		}
+		// overview volcano leads the grid; its expand pane hosts the full
+		// interactive volcano
+		renderOverviewVolcanoCard(grid, data, this, {
+			onExpandRender: (holder: any) => {
+				renderCohortVolcano(holder, data, this, tileData.ptmSiteCount)
+			}
+		})
+
+		const { missing: missingTiles } = renderStudyTiles(grid, tileData, this)
 
 		// group PTM cohorts by organism first, then isoform.
 		const ptmDataByOrganism = new Map<string, Map<string, any[]>>()
@@ -120,8 +136,6 @@ class ProteinView extends PlotBase implements RxComponent {
 				sections.push({ organism, isoform, cohorts, genomeName: cohorts[0].genomeName })
 			}
 		}
-		if (sections.length === 0) return
-
 		let allGenomes: any = null
 		const baseGenome = this.app.opts.genome
 		const getGenome = async (genomeName: string) => {
@@ -145,381 +159,250 @@ class ProteinView extends PlotBase implements RxComponent {
 			return g
 		}
 
-		if (sections.length === 1) {
-			const s = sections[0]
-			const genome = await getGenome(s.genomeName)
-			await renderPTMLollipop(this.dom.body.append('div'), s.cohorts, this, s.isoform, genome)
-			return
-		}
-
-		const keyOf = (s: LollipopSection) => `${s.organism}\u0001${s.isoform}`
-		const selectedKeys = new Set<string>([keyOf(sections[0])])
-		let compareMode = false
-
-		const layoutDiv = this.dom.body
-			.append('div')
-			.style('display', 'flex')
-			.style('gap', '16px')
-			.style('margin-top', '10px')
-			.style('margin-left', '70px')
-			.style('align-items', 'flex-start')
-		const sidebar = layoutDiv
-			.append('div')
-			.style('flex', '0 0 220px')
-			.style('border', '1px solid #e5e7eb')
-			.style('border-radius', '4px')
-			.style('padding', '8px')
-			.style('font-size', '.85em')
-			.style('position', 'sticky')
-			.style('top', '8px')
-			.style('margin-top', '20px')
-			.style('max-height', '85vh')
-			.style('overflow', 'auto')
-		const rightPane = layoutDiv.append('div').style('flex', '1 1 auto').style('min-width', '0')
-
-		const sidebarHeader = sidebar
-			.append('div')
-			.style('display', 'flex')
-			.style('flex-direction', 'column')
-			.style('gap', '6px')
-			.style('margin-bottom', '8px')
-		sidebarHeader
-			.append('span')
-			.style('font-weight', '600')
-			.style('font-size', '1.5em')
-			.style('text-transform', 'uppercase')
-			.text('Isoforms')
-
-		const modeToggle = sidebarHeader
-			.append('div')
-			.style('display', 'inline-flex')
-			.style('align-items', 'center')
-			.style('gap', '6px')
-		modeToggle.append('span').style('color', '#6b7280').text('Mode:')
-		make_radios({
-			holder: modeToggle.append('div').attr('aria-label', 'Isoform view mode'),
-			options: [
-				{ label: 'Single', value: 'single', checked: true },
-				{ label: 'Compare', value: 'compare' }
-			],
-			styles: { display: 'inline-block' },
-			callback: (value: string) => {
-				const asCompare = value === 'compare'
-				if (asCompare === compareMode) return
-				compareMode = asCompare
-				if (!compareMode && selectedKeys.size > 1) {
-					const first = selectedKeys.values().next().value as string
-					selectedKeys.clear()
-					selectedKeys.add(first)
-				}
-				renderSidebar()
-				void renderRight()
+		// full lollipop UI (single track, or isoform sidebar with compare mode),
+		// rendered on demand into the PTM card's expanded pane
+		const renderPTMSectionsInto = async (holder: any) => {
+			if (sections.length === 1) {
+				const s = sections[0]
+				const genome = await getGenome(s.genomeName)
+				await renderPTMLollipop(holder.append('div'), s.cohorts, this, s.isoform, genome)
+				return
 			}
-		})
 
-		const sidebarList = sidebar.append('div')
-		const sectionsByOrganism = new Map<string, LollipopSection[]>()
-		for (const s of sections) {
-			const arr = sectionsByOrganism.get(s.organism) || []
-			arr.push(s)
-			sectionsByOrganism.set(s.organism, arr)
-		}
-		const showOrganismHeading = sectionsByOrganism.size > 1
+			const keyOf = (s: LollipopSection) => `${s.organism}\u0001${s.isoform}`
+			const selectedKeys = new Set<string>([keyOf(sections[0])])
+			let compareMode = false
 
-		const renderSidebar = () => {
-			sidebarList.selectAll('*').remove()
-			for (const [organism, items] of sectionsByOrganism) {
-				if (showOrganismHeading) {
-					sidebarList
-						.append('div')
-						.text(organism)
-						.style('font-weight', '600')
-						.style('color', '#374151')
-						.style('margin', '6px 0 4px 0')
-				}
-				for (const s of items) {
-					const key = keyOf(s)
-					const isSelected = selectedKeys.has(key)
-					const isSoleSelection = isSelected && selectedKeys.size === 1
-					const toggleSelection = () => {
-						if (compareMode) {
-							if (selectedKeys.has(key)) {
-								if (selectedKeys.size > 1) selectedKeys.delete(key)
-								else return // keep at least one
-							} else selectedKeys.add(key)
-						} else {
-							if (selectedKeys.has(key) && selectedKeys.size === 1) return
-							selectedKeys.clear()
-							selectedKeys.add(key)
-						}
-						renderSidebar()
-						void renderRight()
-					}
-					const row = sidebarList
-						.append('div')
-						.attr('role', compareMode ? 'checkbox' : 'radio')
-						.attr('aria-checked', String(isSelected))
-						.attr('aria-label', `${s.organism} ${s.isoform}`)
-						.attr('tabindex', '0')
-						.style('display', 'flex')
-						.style('align-items', 'center')
-						.style('gap', '6px')
-						.style('padding', '3px 4px')
-						.style('border-radius', '3px')
-						.style('background', isSelected ? '#eff6ff' : 'transparent')
-						.style('cursor', 'pointer')
-						.on('click', toggleSelection)
-						.on('keydown', (event: KeyboardEvent) => {
-							if (event.key === 'Enter' || event.key === ' ') {
-								event.preventDefault()
-								toggleSelection()
-							}
-						})
-					if (compareMode) {
-						row
-							.append('input')
-							.attr('type', 'checkbox')
-							.attr('tabindex', '-1')
-							.attr('aria-hidden', 'true')
-							.property('checked', isSelected)
-							.property('disabled', isSoleSelection)
-							.style('margin', '0')
-							.style('cursor', isSoleSelection ? 'not-allowed' : 'pointer')
-							.on('click', (event: Event) => {
-								event.stopPropagation()
-								toggleSelection()
-							})
-					}
-					row.append('span').text(s.isoform)
-					row.append('span').style('color', '#6b7280').style('margin-left', 'auto').text(String(s.cohorts.length))
-				}
-			}
-		}
+			const layoutDiv = holder
+				.append('div')
+				.style('display', 'flex')
+				.style('gap', '16px')
+				.style('margin-top', '10px')
+				.style('margin-left', '70px')
+				.style('align-items', 'flex-start')
+			const sidebar = layoutDiv
+				.append('div')
+				.style('flex', '0 0 220px')
+				.style('border', '1px solid #e5e7eb')
+				.style('border-radius', '4px')
+				.style('padding', '8px')
+				.style('font-size', '.85em')
+				.style('position', 'sticky')
+				.style('top', '8px')
+				.style('margin-top', '20px')
+				.style('max-height', '85vh')
+				.style('overflow', 'auto')
+			const rightPane = layoutDiv.append('div').style('flex', '1 1 auto').style('min-width', '0')
 
-		const renderRight = async () => {
-			rightPane.selectAll('*').remove()
-			const selected = sections.filter(s => selectedKeys.has(keyOf(s)))
-			if (!selected.length) return
-			const cols = rightPane
+			const sidebarHeader = sidebar
 				.append('div')
 				.style('display', 'flex')
 				.style('flex-direction', 'column')
-				.style('gap', '16px')
-			for (const s of selected) {
-				const col = cols.append('div').style('min-width', '0')
-				try {
-					const genome = await getGenome(s.genomeName)
-					await renderPTMLollipop(col, s.cohorts, this, s.isoform, genome)
-				} catch (err: any) {
-					col
-						.append('div')
-						.style('color', '#b91c1c')
-						.style('padding', '6px')
-						.text(`Failed to render ${s.organism} · ${s.isoform}: ${err?.message || err}`)
-				}
-			}
-		}
+				.style('gap', '6px')
+				.style('margin-bottom', '8px')
+			sidebarHeader
+				.append('span')
+				.style('font-weight', '600')
+				.style('font-size', '1.5em')
+				.style('text-transform', 'uppercase')
+				.text('Isoforms')
 
-		renderSidebar()
-		await renderRight()
-	}
-}
-
-// Draws the brain "sample distribution" panel next to the cohort volcano, kept in
-// sync with it: the brain counts the exact samples the visible volcano dots represent,
-// and clicking a region hides the dots whose samples fall only in hidden regions.
-async function renderBrainRegionSamplesPanel(holder: any, data: any, self: ProteinView, volcanoApi: VolcanoApi) {
-	const brConfig = self.app.vocabApi.termdbConfig?.queries?.proteome?.brainRegions
-	if (!brConfig?.regions) return
-	const regions: { [code: string]: string } = brConfig.regions
-	const allRegionCodes = Object.keys(regions)
-	// Global sample-id → region-code map (deduped, sent once by the proteome route).
-	const sampleRegionById: { [sid: string]: string } = data?.sampleRegions || {}
-
-	// Each volcano dot is a proteome cohort entry carrying its own sample ids; a
-	// sample's region is looked up in sampleRegionById. Driving the brain from these
-	// (instead of a separate endpoint) makes the brain's counts match the volcano exactly.
-	const allDots: any[] = (data?.cohorts || []).filter((d: any) => Array.isArray(d.sampleIds) && d.sampleIds.length)
-	if (!allDots.length) return
-
-	// Created lazily on the first redraw so a stub volcano (no valid dots, hence no
-	// visibility callback) doesn't leave an empty panel div behind.
-	let panel: any
-
-	// Sentinel for samples that carry no configured brain-region annotation. Held
-	// in hiddenRegions only by "Show only" (and cleared by "Show all"), so a dot
-	// made up of unannotated samples is hidden when isolating a single region but
-	// stays visible under a plain per-region Hide.
-	const NO_REGION = '__no_region__'
-
-	const hiddenRegions = new Set<string>()
-	// Overwritten by the immediate onVisibilityChange fire below, before the first redraw.
-	let visibleDots: any[] = []
-
-	// Count DISTINCT samples (case + control) per region across the given dots.
-	// Distinct is required because isoform dots of one cohort share samples.
-	// unmappedCount = distinct samples whose region isn't one of the configured
-	// regions (so they're absent from the brain), surfaced as a legend note.
-	const countFromDots = (dotList: any[]) => {
-		const seen = new Set<string>()
-		const counts: { [code: string]: number } = {}
-		for (const code of allRegionCodes) counts[code] = 0
-		let totalSamples = 0
-		for (const dot of dotList) {
-			for (const sid of dot.sampleIds) {
-				if (seen.has(sid)) continue
-				seen.add(sid)
-				const code = sampleRegionById[sid]
-				if (code && counts[code] !== undefined) {
-					counts[code]++
-					totalSamples++
-				}
-			}
-		}
-		return { counts, totalSamples, unmappedCount: seen.size - totalSamples }
-	}
-
-	// A cohort is hidden if every region its samples occupy is hidden. Collect
-	// those cohort names to drive the volcano's external hide (the volcano hides
-	// by cohort name). Region-pinned cohorts map to a single region, so hiding a
-	// region hides exactly its cohorts.
-	const deriveHiddenCohorts = (): Set<string> => {
-		const hidden = new Set<string>()
-		if (!hiddenRegions.size) return hidden
-		const regionsByCohort = new Map<string, Set<string>>()
-		for (const dot of allDots) {
-			const set = regionsByCohort.get(dot.cohortName) || new Set<string>()
-			for (const sid of dot.sampleIds) {
-				// unannotated samples count as NO_REGION so "Show only" can hide them.
-				set.add(sampleRegionById[sid] || NO_REGION)
-			}
-			regionsByCohort.set(dot.cohortName, set)
-		}
-		for (const [cohort, set] of regionsByCohort) {
-			if (!set.size) continue
-			let allHidden = true
-			for (const code of set) {
-				if (!hiddenRegions.has(code)) {
-					allHidden = false
-					break
-				}
-			}
-			if (allHidden) hidden.add(cohort)
-		}
-		return hidden
-	}
-
-	// Separate Menu so the click popup doesn't fight with hover tooltips.
-	const regionMenu = new Menu({ padding: '0px' })
-
-	const applyHiddenRegions = () => {
-		volcanoApi.setExternallyHiddenCohorts(deriveHiddenCohorts())
-	}
-
-	const openRegionMenu = (code: string, event: MouseEvent) => {
-		self.dom.tip.hide()
-		regionMenu.clear()
-		const list = regionMenu.d.append('div').style('min-width', '140px').style('font-size', '13px')
-		const addItem = (label: string, action: () => void) => {
-			list
+			const modeToggle = sidebarHeader
 				.append('div')
-				.style('padding', '6px 12px')
-				.style('cursor', 'pointer')
-				.style('user-select', 'none')
-				.text(label)
-				.on('mouseover', function (this: HTMLDivElement) {
-					this.style.background = '#f3f4f6'
-				})
-				.on('mouseout', function (this: HTMLDivElement) {
-					this.style.background = ''
-				})
-				.on('click', () => {
-					regionMenu.hide()
-					action()
-				})
-		}
-		const isHidden = hiddenRegions.has(code)
-		if (isHidden) {
-			addItem(`Show ${code}`, () => {
-				hiddenRegions.delete(code)
-				applyHiddenRegions()
+				.style('display', 'inline-flex')
+				.style('align-items', 'center')
+				.style('gap', '6px')
+			modeToggle.append('span').style('color', '#6b7280').text('Mode:')
+			make_radios({
+				holder: modeToggle.append('div').attr('aria-label', 'Isoform view mode'),
+				options: [
+					{ label: 'Single', value: 'single', checked: true },
+					{ label: 'Compare', value: 'compare' }
+				],
+				styles: { display: 'inline-block' },
+				callback: (value: string) => {
+					const asCompare = value === 'compare'
+					if (asCompare === compareMode) return
+					compareMode = asCompare
+					if (!compareMode && selectedKeys.size > 1) {
+						const first = selectedKeys.values().next().value as string
+						selectedKeys.clear()
+						selectedKeys.add(first)
+					}
+					renderSidebar()
+					void renderRight()
+				}
 			})
-		} else {
-			addItem(`Hide ${code}`, () => {
-				hiddenRegions.add(code)
-				applyHiddenRegions()
-			})
+
+			const sidebarList = sidebar.append('div')
+			const sectionsByOrganism = new Map<string, LollipopSection[]>()
+			for (const s of sections) {
+				const arr = sectionsByOrganism.get(s.organism) || []
+				arr.push(s)
+				sectionsByOrganism.set(s.organism, arr)
+			}
+			const showOrganismHeading = sectionsByOrganism.size > 1
+
+			const renderSidebar = () => {
+				sidebarList.selectAll('*').remove()
+				for (const [organism, items] of sectionsByOrganism) {
+					if (showOrganismHeading) {
+						sidebarList
+							.append('div')
+							.text(organism)
+							.style('font-weight', '600')
+							.style('color', '#374151')
+							.style('margin', '6px 0 4px 0')
+					}
+					for (const s of items) {
+						const key = keyOf(s)
+						const isSelected = selectedKeys.has(key)
+						const isSoleSelection = isSelected && selectedKeys.size === 1
+						const toggleSelection = () => {
+							if (compareMode) {
+								if (selectedKeys.has(key)) {
+									if (selectedKeys.size > 1) selectedKeys.delete(key)
+									else return // keep at least one
+								} else selectedKeys.add(key)
+							} else {
+								if (selectedKeys.has(key) && selectedKeys.size === 1) return
+								selectedKeys.clear()
+								selectedKeys.add(key)
+							}
+							renderSidebar()
+							void renderRight()
+						}
+						const row = sidebarList
+							.append('div')
+							.attr('role', compareMode ? 'checkbox' : 'radio')
+							.attr('aria-checked', String(isSelected))
+							.attr('aria-label', `${s.organism} ${s.isoform}`)
+							.attr('tabindex', '0')
+							.style('display', 'flex')
+							.style('align-items', 'center')
+							.style('gap', '6px')
+							.style('padding', '3px 4px')
+							.style('border-radius', '3px')
+							.style('background', isSelected ? '#eff6ff' : 'transparent')
+							.style('cursor', 'pointer')
+							.on('click', toggleSelection)
+							.on('keydown', (event: KeyboardEvent) => {
+								if (event.key === 'Enter' || event.key === ' ') {
+									event.preventDefault()
+									toggleSelection()
+								}
+							})
+						if (compareMode) {
+							row
+								.append('input')
+								.attr('type', 'checkbox')
+								.attr('tabindex', '-1')
+								.attr('aria-hidden', 'true')
+								.property('checked', isSelected)
+								.property('disabled', isSoleSelection)
+								.style('margin', '0')
+								.style('cursor', isSoleSelection ? 'not-allowed' : 'pointer')
+								.on('click', (event: Event) => {
+									event.stopPropagation()
+									toggleSelection()
+								})
+						}
+						row.append('span').text(s.isoform)
+						row.append('span').style('color', '#6b7280').style('margin-left', 'auto').text(String(s.cohorts.length))
+					}
+				}
+			}
+
+			const renderRight = async () => {
+				rightPane.selectAll('*').remove()
+				const selected = sections.filter(s => selectedKeys.has(keyOf(s)))
+				if (!selected.length) return
+				const cols = rightPane
+					.append('div')
+					.style('display', 'flex')
+					.style('flex-direction', 'column')
+					.style('gap', '16px')
+				for (const s of selected) {
+					const col = cols.append('div').style('min-width', '0')
+					try {
+						const genome = await getGenome(s.genomeName)
+						await renderPTMLollipop(col, s.cohorts, this, s.isoform, genome)
+					} catch (err: any) {
+						col
+							.append('div')
+							.style('color', '#b91c1c')
+							.style('padding', '6px')
+							.text(`Failed to render ${s.organism} · ${s.isoform}: ${err?.message || err}`)
+					}
+				}
+			}
+
+			renderSidebar()
+			await renderRight()
 		}
-		addItem(`Show only ${code}`, () => {
-			hiddenRegions.clear()
-			for (const r of allRegionCodes) if (r !== code) hiddenRegions.add(r)
-			// also hide dots whose samples have no brain-region annotation
-			hiddenRegions.add(NO_REGION)
-			applyHiddenRegions()
-		})
-		if (hiddenRegions.size) {
-			addItem('Show all', () => {
-				hiddenRegions.clear()
-				applyHiddenRegions()
-			})
+
+		if (sections.length) {
+			renderPTMSummaryCard(
+				grid,
+				(data.cohorts || []).filter((c: any) => c.PTMType),
+				this,
+				{ onExpandRender: renderPTMSectionsInto }
+			)
 		}
-		regionMenu.show(event.clientX, event.clientY)
+
+		// data-first ordering: greyed no-data placeholders come after every live card.
+		// the PTM card is not in the study-tile registry (its data is site-level, rendered
+		// separately above), so add its placeholder here when the protein has no PTM sites
+		const ptmCfg = getTileConfig(this, 'ptm')
+		const placeholders: { title: string; note?: string }[] = missingTiles.map(t => ({ title: t.title }))
+		if (!sections.length && ptmCfg && ptmAssaysConfigured(this)) placeholders.push({ title: ptmCfg.title })
+		renderPlaceholderTiles(grid, placeholders)
 	}
 
-	const redraw = async () => {
-		if (!panel) panel = holder.append('div').style('margin-bottom', '14px')
-		panel.selectAll('*').remove()
-		const { counts, totalSamples, unmappedCount } = countFromDots(visibleDots)
-		await drawBrainRegionSamples(panel, {
-			regions,
-			counts,
-			totalSamples,
-			unmappedCount,
-			templateUrl: brConfig.templateUrl,
-			svgUrl: brConfig.svgUrl,
-			tip: self.dom.tip,
-			onRegionClick: openRegionMenu,
-			// A region with no visible-dot samples has count 0, which is exactly when it
-			// should be dimmed — so no separate "visible regions" set is needed.
-			isRegionDimmed: (code: string) => hiddenRegions.has(code) || (counts[code] ?? 0) === 0
-		})
+	/** rx calls this when the plot is deleted: expanded-tile panes live on document.body
+	 *  and would otherwise outlive the plot with handlers bound to a dead instance */
+	destroy() {
+		closeTilePanes(this)
 	}
-
-	// Fires once immediately with the initial visible dots, then on every change.
-	volcanoApi.onVisibilityChange(({ dots }) => {
-		visibleDots = dots
-		redraw()
-	})
 }
 
-function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
+/** does the dataset configure any PTM (site-level) assay, marked by PTMType */
+function ptmAssaysConfigured(self: ProteinView): boolean {
+	const organisms = self.app.vocabApi.termdbConfig?.queries?.proteome?.organisms || {}
+	for (const org of Object.values(organisms) as any[]) {
+		for (const assay of Object.values(org?.assays || {}) as any[]) if (assay?.PTMType) return true
+	}
+	return false
+}
+
+function renderCohortVolcano(holder: any, data: any, self: ProteinView, ptmSiteCount = 0) {
 	const dots: any[] = []
 	// Global sample-id → region-code map (deduped, sent once by the proteome route).
 	const sampleRegionById: { [sid: string]: string } = data?.sampleRegions || {}
 
 	for (const cohortData of data?.cohorts || []) {
+		// site-level PTM fold changes are a different quantity than protein
+		// abundance (confounded by protein level); they live in the PTM track
+		if (cohortData.PTMType) continue
 		const log2fc = getLog2Ratio(cohortData.foldChange)
-		const pValue = Number(cohortData.pValue)
+		const fdr = Number(cohortData.fdr)
 		const testedN = Number(cohortData.testedN)
 		const controlN = Number(cohortData.controlN)
-		if (log2fc === null || !Number.isFinite(pValue) || pValue <= 0) continue
+		if (log2fc === null || !Number.isFinite(fdr) || fdr <= 0) continue
 		dots.push({
 			organismName: cohortData.organism,
 			disease: cohortData.disease,
 			assayName: cohortData.assayName,
 			cohortName: cohortData.cohortName,
-			PTMType: cohortData.PTMType,
-			modSites: cohortData.modSites,
 			proteinAccession: cohortData.proteinAccession,
 			uniqueIdentifier: cohortData.uniqueIdentifier,
 			log2fc,
-			pValue,
-			score: -Math.log10(Math.max(pValue, 1e-300)),
+			fdr,
+			score: -Math.log10(Math.max(fdr, 1e-300)),
 			testedN: Number.isFinite(testedN) ? testedN : 0,
 			controlN: Number.isFinite(controlN) ? controlN : 0,
 			// per-dot sample identity (case + control); each sample's region comes from the
-			// response-level sampleRegions map, used to count brain-region samples that
-			// exactly match the visible dots.
+			// response-level sampleRegions map and is listed in the dot's tooltip
 			sampleIds: Array.isArray(cohortData.sampleIds) ? cohortData.sampleIds : []
 		})
 	}
@@ -534,7 +417,15 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 
 	const downloadBtn = header.append('div').style('display', 'inline-block')
 
-	header.append('div').style('font-weight', 600).text('Sample Set Volcano')
+	if (ptmSiteCount) {
+		header
+			.append('div')
+			.style('font-size', '.75em')
+			.style('color', '#6b7280')
+			.text(
+				`${ptmSiteCount} site-level PTM measurement${ptmSiteCount === 1 ? '' : 's'} excluded — see the PTM track below.`
+			)
+	}
 
 	if (!dots.length) {
 		downloadBtn.style('display', 'none')
@@ -542,8 +433,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 			.append('div')
 			.style('font-size', '.85em')
 			.style('color', '#666')
-			.text('No cohorts with valid fold-change and p-value to plot.')
-		return { setExternallyHiddenCohorts() {}, onVisibilityChange() {} }
+			.text('No cohorts with valid fold-change and FDR to plot.')
+		return
 	}
 
 	const width = 500
@@ -732,22 +623,27 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const getCustomShapeGroupItems = (mode: ShapeMode) => {
 		return [...customShapeGroupsByMode[mode].keys()].sort().map(name => makeCustomShapeGroupKey(name))
 	}
+	// Number of distinct sample sets (cohorts) represented by one legend item.
+	// Dots are accession-level (one per isoform per cohort), so counting dots
+	// would overstate; distinct cohorts matches the header's "sample sets".
 	const getLegendItemSampleCount = (mode: ColorMode | ShapeMode, item: string, dotsToCount: any[] = dots) => {
+		let matched: any[]
 		if (isCustomGroupKey(item)) {
 			const groupName = getCustomGroupNameFromKey(item)
-			return dotsToCount.filter(
+			matched = dotsToCount.filter(
 				d => getCustomGroupOfValue(mode as ColorMode, getBaseColorValue(d, mode as ColorMode)) === groupName
-			).length
-		}
-
-		if (isCustomShapeGroupKey(item)) {
+			)
+		} else if (isCustomShapeGroupKey(item)) {
 			const groupName = getCustomShapeGroupNameFromKey(item)
-			return dotsToCount.filter(
+			matched = dotsToCount.filter(
 				d => getCustomShapeGroupOfValue(mode as ShapeMode, getBaseColorValue(d, mode as ColorMode)) === groupName
-			).length
+			)
+		} else {
+			matched = dotsToCount.filter(d => getBaseColorValue(d, mode as ColorMode) === item)
 		}
-
-		return dotsToCount.filter(d => getBaseColorValue(d, mode as ColorMode) === item).length
+		// a sample set's identity is organism+assay+cohort: cohort names repeat
+		// across assays (e.g. whole vs insoluble both have an 'AD' cohort)
+		return new Set(matched.map(d => `${d.organismName}|${d.assayName}|${d.cohortName}`)).size
 	}
 	const getColor = (d: any) => {
 		const customGroup = getCustomGroupOfDot(d, colorMode)
@@ -817,10 +713,6 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	})
 	const hiddenColor = makeHiddenState()
 	const hiddenShape = makeHiddenState()
-	// Cohorts hidden by an external driver (the brain plot). Kept separate from
-	// hiddenColor so manual hide/show in the legend doesn't fight with it.
-	let externalHiddenCohorts: Set<string> = new Set()
-	const visibilityChangeListeners: ((v: { dots: any[] }) => void)[] = []
 	const getColorValueByMode = (d: any, mode: ColorMode) => {
 		switch (mode) {
 			case 'organism':
@@ -864,11 +756,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const isDotHidden = (d: any) => {
 		const colorValue = getColorValueByMode(d, colorMode)
 		const shapeValue = getShapeValueByMode(d, shapeMode)
-		return (
-			hiddenColor[colorMode].has(colorValue) ||
-			hiddenShape[shapeMode].has(shapeValue) ||
-			externalHiddenCohorts.has(d.cohortName)
-		)
+		return hiddenColor[colorMode].has(colorValue) || hiddenShape[shapeMode].has(shapeValue)
 	}
 	const getDotDistancePx = (d1: any, d2: any) => {
 		const x = xScale(d1.log2fc) - xScale(d2.log2fc)
@@ -905,32 +793,22 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 			.sort((a, b) => getDotDistancePx(a, seed) - getDotDistancePx(b, seed))
 	}
 	const buildClusterTableData = (clusterDots: any[]): { columns: any[]; rows: any[] } => {
-		// Union semantics: PTM dots and non-PTM dots have different attribute
-		// keys (PTM Type, Modified Site, PTM identifier vs Isoform identifier),
-		// so include any column whose underlying field is present on at least
-		// one row in the cluster. Cells for rows that don't have that field
-		// render as blank.
-		const hasPtm = clusterDots.some(d => d.PTMType)
-		const hasNonPtm = clusterDots.some(d => !d.PTMType)
-		const hasModSites = clusterDots.some(d => d.modSites)
-
-		const columns: any[] = [{ label: 'Organism' }, { label: 'Assay' }, { label: 'Sample Set' }]
-		if (hasPtm) columns.push({ label: 'PTM Type' })
-		if (hasModSites) columns.push({ label: 'Modified Site' })
-		if (hasPtm) columns.push({ label: 'PTM' })
-		if (hasNonPtm) columns.push({ label: 'Isoform' })
-		columns.push({ label: 'log₂(FC)', sortable: true }, { label: 'p-value', sortable: true })
-
-		const rows = clusterDots.map(d => {
-			const isPtm = !!d.PTMType
-			const row: any[] = [{ value: d.organismName || '' }, { value: d.assayName || '' }, { value: d.cohortName || '' }]
-			if (hasPtm) row.push({ value: isPtm ? d.PTMType || '' : '' })
-			if (hasModSites) row.push({ value: d.modSites || '' })
-			if (hasPtm) row.push({ value: isPtm ? d.uniqueIdentifier || '' : '' })
-			if (hasNonPtm) row.push({ value: !isPtm ? d.uniqueIdentifier || '' : '' })
-			row.push({ value: roundValue(d.log2fc, 3) }, { value: d.pValue.toExponential(2) })
-			return row
-		})
+		const columns: any[] = [
+			{ label: 'Organism' },
+			{ label: 'Assay' },
+			{ label: 'Sample Set' },
+			{ label: 'Isoform' },
+			{ label: 'log₂(FC)', sortable: true },
+			{ label: 'FDR', sortable: true }
+		]
+		const rows = clusterDots.map(d => [
+			{ value: d.organismName || '' },
+			{ value: d.assayName || '' },
+			{ value: d.cohortName || '' },
+			{ value: d.uniqueIdentifier || '' },
+			{ value: roundValue(d.log2fc, 3) },
+			{ value: d.fdr.toExponential(2) }
+		])
 		return { columns, rows }
 	}
 
@@ -1010,13 +888,13 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.attr('y', innerH + 44)
 		.attr('text-anchor', 'middle')
 		.style('font-weight', 600)
-		.text('log2 fold change (disease / control)')
+		.text('log2 fold change')
 
 	g.append('text')
 		.attr('transform', `translate(${-50},${innerH / 2}) rotate(-90)`)
 		.attr('text-anchor', 'middle')
 		.style('font-weight', 600)
-		.text('-log10(p-value)')
+		.text('-log10(FDR)')
 
 	// Points
 	const cohortDots = g
@@ -1077,16 +955,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 			)
 		}
 		tbl.addRow('Protein Accession', d.proteinAccession)
-		if (d.PTMType) {
-			tbl.addRow('PTM Type', d.PTMType)
-			tbl.addRow('Modified Site', d.modSites)
-			tbl.addRow('PTM', d.uniqueIdentifier)
-		} else {
-			tbl.addRow('Isoform', d.uniqueIdentifier)
-		}
+		tbl.addRow('Isoform', d.uniqueIdentifier)
 		tbl.addRow('log2 fold change', roundValue(d.log2fc, 3))
-		tbl.addRow('p value', d.pValue.toExponential(2))
-		tbl.addRow('-log10(p)', roundValue(d.score, 3))
+		tbl.addRow('FDR', d.fdr.toExponential(2))
+		tbl.addRow('-log10(FDR)', roundValue(d.score, 3))
 		tbl.addRow('Case samples', d.testedN)
 		tbl.addRow('Control samples', d.controlN)
 	}
@@ -1165,10 +1037,6 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		updateDots()
 		renderColorLegend()
 		renderSizeLegend()
-		if (visibilityChangeListeners.length) {
-			const visibleDots = getVisibleDots()
-			for (const cb of visibilityChangeListeners) cb({ dots: visibleDots })
-		}
 	}
 
 	const termName = self.state.config?.tw?.term?.name || ''
@@ -1323,11 +1191,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}
 
 		const makeLegendItems = (items: string[], colorMap: Map<string, string>) => {
-			// Filter dots to exclude those hidden by shape filtering or by the brain
-			// plot's region hide (externalHiddenCohorts), so legend n= reflects both.
-			const dotsVisibleByShape = dots.filter(
-				d => !hiddenShape[shapeMode].has(getShapeValueByMode(d, shapeMode)) && !externalHiddenCohorts.has(d.cohortName)
-			)
+			// exclude dots hidden by shape filtering so legend counts reflect it
+			const dotsVisibleByShape = dots.filter(d => !hiddenShape[shapeMode].has(getShapeValueByMode(d, shapeMode)))
 			const openColorMenu = (event: any, name: string, swatch: any) => {
 				const menu = new Menu({ padding: '0px' })
 				const div = menu.d.append('div')
@@ -1442,7 +1307,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				swatch.on('click', (event: any) => openColorMenu(event, name, swatch))
 				row
 					.append('span')
-					.text(`${displayName}, n=${sampleCount}`)
+					.text(`${displayName}, ${sampleCount} sample set${sampleCount === 1 ? '' : 's'}`)
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.style('cursor', 'pointer')
 					.on('click', (event: any) => openColorMenu(event, name, swatch))
@@ -1617,11 +1482,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}
 
 		const drawShapeLegend = (items: string[], shapeMap: Map<string, number>) => {
-			// Filter dots to exclude those hidden by color filtering or by the brain
-			// plot's region hide (externalHiddenCohorts), so legend n= reflects both.
-			const dotsVisibleByColor = dots.filter(
-				d => !hiddenColor[colorMode].has(getColorValueByMode(d, colorMode)) && !externalHiddenCohorts.has(d.cohortName)
-			)
+			// exclude dots hidden by color filtering so legend counts reflect it
+			const dotsVisibleByColor = dots.filter(d => !hiddenColor[colorMode].has(getColorValueByMode(d, colorMode)))
 			const openShapeMenu = (event: any, name: string) => {
 				const menu = new Menu({ padding: '0px' })
 				const activeShapeMap = isCustomShapeGroupKey(name) ? customShapeIndicesByMode[shapeMode] : getShapeMapInUse()
@@ -1742,7 +1604,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				icon.on('click', (event: any) => openShapeMenu(event, name))
 				row
 					.append('span')
-					.text(`${displayName}, n=${sampleCount}`)
+					.text(`${displayName}, ${sampleCount} sample set${sampleCount === 1 ? '' : 's'}`)
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.style('cursor', 'pointer')
 					.on('click', (event: any) => openShapeMenu(event, name))
@@ -1876,63 +1738,6 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	updateRadiusScaleForVisibleDots()
 	renderColorLegend()
 	renderSizeLegend()
-
-	const api: VolcanoApi = {
-		setExternallyHiddenCohorts(cohorts: Set<string>) {
-			externalHiddenCohorts = cohorts
-			refreshAfterVisibilityChange()
-		},
-		onVisibilityChange(cb) {
-			visibilityChangeListeners.push(cb)
-			// Fire once immediately so the subscriber gets the initial state.
-			cb({ dots: getVisibleDots() })
-		}
-	}
-	return api
-}
-
-export type VolcanoApi = {
-	// Set the list of cohort names to hide externally (e.g. driven by the brain
-	// plot). Replaces any previously-set external hides.
-	setExternallyHiddenCohorts(cohorts: Set<string>): void
-	// Subscribe to visibility changes. Called once on subscribe with the current
-	// state, then on every subsequent change. `dots` is the currently-visible dot
-	// list (each carrying sampleIds) so subscribers can count the exact samples the
-	// volcano represents (region per sample comes from the response sampleRegions map).
-	onVisibilityChange(cb: (v: { dots: any[] }) => void): void
-}
-
-function launchViolinPlot(
-	self: ProteinView,
-	organismName: string,
-	assayName: string,
-	cohortName: string,
-	isoform: string
-) {
-	const selectedProtein = self.state.config?.tw?.term
-	if (!selectedProtein) throw new Error('proteinView: selected protein term is missing')
-
-	const action: any = {
-		type: 'plot_create',
-		config: {
-			chartType: 'summary'
-		}
-	}
-	action.config.assayCohortTitle = `${organismName} ${assayName}: ${cohortName}`
-	action.config.proteomeDetails = { organism: organismName, assay: assayName, cohort: cohortName }
-
-	const termdbConfig = self.app.vocabApi.termdbConfig
-	const proteomeOverlayTerm = termdbConfig?.queries?.proteome?.organisms?.[organismName]?.overlayTerm
-	const t = structuredClone(selectedProtein)
-	t.name = `${t.name}: ${isoform}`
-	t.dataTypeDetails = { organism: organismName, assay: assayName, cohort: cohortName }
-	action.config.term = { term: t, q: { mode: NumericModes.continuous } }
-
-	if (proteomeOverlayTerm) {
-		action.config.term2 = { term: structuredClone(proteomeOverlayTerm), q: {} }
-	}
-
-	self.app.dispatch(action)
 }
 
 async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView, isoform: string, genome: any) {
@@ -1948,7 +1753,7 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 		const logValue = getLog2Ratio(ptm.foldChange)
 		const wholeProteomeLog2 = getLog2Ratio(ptm.proteinFoldChange)
 		const normalizedLog2 = logValue != null && wholeProteomeLog2 != null ? logValue - wholeProteomeLog2 : null
-		const pValue = Number(ptm.pValue)
+		const fdr = Number(ptm.fdr)
 		const testedN = Number(ptm.testedN)
 		const controlN = Number(ptm.controlN)
 
@@ -1970,7 +1775,7 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 			logValue,
 			wholeProteomeLog2,
 			normalizedLog2,
-			pValue,
+			fdr,
 			testedN: Number.isFinite(testedN) ? testedN : null,
 			controlN: Number.isFinite(controlN) ? controlN : null,
 			organism: ptm.organism || null,
@@ -2013,7 +1818,7 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 				byAttribute: 'logValue',
 				label: 'Log2FC',
 				tooltipPrintValue: m => {
-					const p = Number(m.pValue)
+					const p = Number(m.fdr)
 					return [
 						{ k: 'Organism', v: m.organism ?? 'NA' },
 						{ k: 'Assay', v: m.assayName ?? 'NA' },
@@ -2028,7 +1833,7 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 							k: 'Normalized Log2 FC',
 							v: Number.isFinite(m.normalizedLog2) ? roundValue(m.normalizedLog2, 3) : 'NA'
 						},
-						{ k: 'P value', v: Number.isFinite(p) && p > 0 ? p.toExponential(2) : 'NA' },
+						{ k: 'FDR', v: Number.isFinite(p) && p > 0 ? p.toExponential(2) : 'NA' },
 						{ k: 'Case samples', v: Number.isFinite(m.testedN) ? m.testedN : 'NA' },
 						{ k: 'Control samples', v: Number.isFinite(m.controlN) ? m.controlN : 'NA' },
 						{ k: 'Protein accession', v: m.proteinAccession ?? 'NA' }
@@ -2089,11 +1894,6 @@ async function getGmForPTM(geneName: string, genomeName: string, isoform: string
 		d.gmlst.find((i: any) => i.isdefault) ||
 		d.gmlst[0]
 	return gm
-}
-
-function getLog2Ratio(foldChange: number) {
-	if (!Number.isFinite(foldChange) || foldChange <= 0) return null
-	return Math.log2(foldChange)
 }
 
 export async function getPlotConfig(opts: any) {

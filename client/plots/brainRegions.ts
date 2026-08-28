@@ -4,14 +4,21 @@ import { PlotBase } from './PlotBase'
 import { Menu, addGeneSearchbox } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { scaleLinear } from 'd3'
-import { loadBrainAssets, renderBrainSvg, makeDiseaseTabs, type BrainAssets } from './brainRegions.svg'
+import {
+	loadBrainAssets,
+	renderBrainSvg,
+	makeDiseaseTabs,
+	makeBrainFcScale,
+	brainFillByRegion,
+	brainTooltipByRegion,
+	BRAIN_P_THRESHOLD as P_VALUE_THRESHOLD,
+	BRAIN_NONSIG_COLOR as NONSIG_COLOR,
+	type BrainAssets
+} from './brainRegions.svg'
 
 const defaultConfig = {
 	chartType: 'brainRegions'
 }
-
-const P_VALUE_THRESHOLD = 0.05
-const NONSIG_COLOR = '#ccc'
 
 const BRAIN_RENDER_W = 520
 
@@ -158,18 +165,10 @@ class BrainRegions extends PlotBase implements RxComponent {
 		const isoformData = data.isoforms[selectedIsoform]
 		if (!isoformData) return
 
-		// color scale is scoped to the selected disease only
+		// color scale is scoped to the selected disease only; thresholding and
+		// tooltip rules are shared with the proteinView brain tile
 		const regionData = isoformData.data[selectedDisease] || {}
-		const allFCs: number[] = []
-		for (const entry of Object.values(regionData) as any[]) {
-			if (entry.p_value < P_VALUE_THRESHOLD) allFCs.push(entry.fold_change)
-		}
-
-		const maxAbsFC = allFCs.length > 0 ? Math.max(...allFCs.map(v => Math.abs(v))) : 1
-		const colorScale = scaleLinear<string>()
-			.domain([-maxAbsFC, 0, maxAbsFC])
-			.range(['#2166ac', '#f7f7f7', '#b2182b'])
-			.clamp(true)
+		const { maxAbsFC, colorScale, nSig } = makeBrainFcScale(regionData)
 
 		renderBrainSvg({
 			holder: container,
@@ -179,22 +178,11 @@ class BrainRegions extends PlotBase implements RxComponent {
 			regions: data.regions,
 			title: selectedDisease,
 			tip: this.dom.tip,
-			fillByRegion: (code: string) => {
-				const entry = regionData[code]
-				if (entry && entry.p_value < P_VALUE_THRESHOLD) return colorScale(entry.fold_change) as string
-				return NONSIG_COLOR
-			},
-			tooltipByRegion: (code: string, label: string) => {
-				const entry = regionData[code]
-				if (!entry) return `${label} (${code})\nNo data`
-				const fc = entry.fold_change.toFixed(4)
-				const fmt = (v: number) => (v >= 0.0001 ? v.toFixed(4) : v.toExponential(3))
-				const fdr = Number.isFinite(entry.fdr) ? `\nFDR: ${fmt(entry.fdr)}` : ''
-				return `${label} (${code})\nlog₂ fold change: ${fc}\np-value: ${fmt(entry.p_value)}${fdr}`
-			}
+			fillByRegion: brainFillByRegion(regionData, colorScale),
+			tooltipByRegion: brainTooltipByRegion(regionData)
 		})
 
-		this.renderLegend(container, colorScale, maxAbsFC, allFCs.length, selectedDisease)
+		this.renderLegend(container, colorScale, maxAbsFC, nSig, selectedDisease)
 	}
 
 	renderLegend(container: any, colorScale: any, maxAbsFC: number, nSig: number, disease: string) {
@@ -292,7 +280,7 @@ class BrainRegions extends PlotBase implements RxComponent {
 			.style('font-size', '12px')
 			.style('color', '#666')
 			.html(
-				`<span style="display:inline-block;width:14px;height:14px;background:${NONSIG_COLOR};border:1px solid #999;vertical-align:middle;margin-right:4px"></span> Not significant (p ≥ 0.05)`
+				`<span style="display:inline-block;width:14px;height:14px;background:${NONSIG_COLOR};border:1px solid #999;vertical-align:middle;margin-right:4px"></span> Not significant (p ≥ ${P_VALUE_THRESHOLD})`
 			)
 	}
 }

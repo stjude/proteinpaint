@@ -301,6 +301,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	}
 	if (q.proteome) {
 		q2.proteome = {}
+		if (q.proteome.proteinView) {
+			// self-contained tile config for the client Protein View
+			q2.proteome.proteinView = JSON.parse(JSON.stringify(q.proteome.proteinView))
+		}
 		if (q.proteome.brainRegions) {
 			const br = q.proteome.brainRegions
 			q2.proteome.brainRegions = {
@@ -336,6 +340,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 						if (orgSrc.assays[assay].proteomeLabel) {
 							// per-assay proteome label; the studyCatalog derives the Proteome column from it
 							q2.proteome.organisms[organism].assays[assay].proteomeLabel = orgSrc.assays[assay].proteomeLabel
+						}
+						if (orgSrc.assays[assay].PTMType) {
+							// marks site-level (PTM) assays so the client never has to infer it from labels
+							q2.proteome.organisms[organism].assays[assay].PTMType = orgSrc.assays[assay].PTMType
 						}
 						if (orgSrc.assays[assay].cohorts) {
 							q2.proteome.organisms[organism].assays[assay].cohorts = {}
@@ -373,7 +381,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			rankings: Object.fromEntries(Object.keys(q.geneRanking.rankings).map(k => [k, true])),
 			modalities: q.geneRanking.modalities,
 			description: q.geneRanking.description,
-			appName: q.geneRanking.appName
+			appName: q.geneRanking.appName,
+			integrativeColumn: q.geneRanking.integrativeColumn,
+			statColumns: q.geneRanking.statColumns,
+			labels: q.geneRanking.labels
 		}
 	}
 	if (q.dnaMethylation) {

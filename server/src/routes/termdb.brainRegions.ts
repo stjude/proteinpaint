@@ -84,7 +84,11 @@ function init({ genomes }) {
 					for (const r of rows) {
 						if (!isoforms[r.identifier]) isoforms[r.identifier] = { gene_name: r.gene, data: {} }
 						if (!isoforms[r.identifier].data[disease]) isoforms[r.identifier].data[disease] = {}
-						isoforms[r.identifier].data[disease][region] = { fold_change: r.fc, p_value: r.p ?? r.fdr, fdr: r.fdr }
+						isoforms[r.identifier].data[disease][region] = {
+							fold_change: r.fc,
+							fdr: r.fdr,
+							...(r.p !== undefined ? { p_value: r.p } : {})
+						}
 					}
 				}
 			}

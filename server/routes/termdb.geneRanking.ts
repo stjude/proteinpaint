@@ -21,7 +21,14 @@ export function init({ genomes }) {
 	}
 }
 
-type ParsedFile = { columns: string[]; rows: (string | number | null)[][] }
+type ParsedFile = {
+	columns: string[]
+	rows: (string | number | null)[][]
+	/** per column, the number of rows with a value; column 0 (gene) = row count */
+	counts: number[]
+	/** lower-cased gene symbol → row index, for the single-gene lookup */
+	geneIndex: Map<string, number>
+}
 type CacheEntry = { parsed: ParsedFile; mtimeMs: number }
 const fileCache: Map<string, CacheEntry> = new Map()
 
@@ -33,7 +40,7 @@ function stripQuotes(s: string): string {
 async function parseTsv(absPath: string): Promise<ParsedFile> {
 	const text = await fs.promises.readFile(absPath, 'utf8')
 	const lines = text.split(/\r?\n/).filter(l => l.length > 0)
-	if (lines.length === 0) return { columns: [], rows: [] }
+	if (lines.length === 0) return { columns: [], rows: [], counts: [], geneIndex: new Map() }
 	const columns = lines[0].split('\t').map(stripQuotes)
 	const rows: (string | number | null)[][] = []
 	for (let i = 1; i < lines.length; i++) {
@@ -49,7 +56,18 @@ async function parseTsv(absPath: string): Promise<ParsedFile> {
 		})
 		rows.push(row)
 	}
-	return { columns, rows }
+	// file-invariant derivatives, computed once per parse rather than per request
+	const counts = columns.map((_, c) =>
+		c === 0 ? rows.length : rows.filter(r => r[c] !== null && r[c] !== undefined).length
+	)
+	const geneIndex = new Map<string, number>()
+	for (const [i, r] of rows.entries()) {
+		if (typeof r[0] === 'string') {
+			const g = (r[0] as string).toLowerCase()
+			if (!geneIndex.has(g)) geneIndex.set(g, i)
+		}
+	}
+	return { columns, rows, counts, geneIndex }
 }
 
 /**
@@ -86,6 +104,36 @@ async function handleData(q: any, res, genomes): Promise<void> {
 		| undefined
 	if (!cfg || !cfg.rankings) throw 'geneRanking not configured for this dataset'
 
+	// single-gene lookup across every ranking: that gene's row per ranking plus the
+	// number of ranked genes per column, so a rank can be read as "#114 of 7,583"
+	if (q.gene) {
+		const wanted = String(q.gene).trim().toLowerCase()
+		const geneRanks: NonNullable<GeneRankingResponse['geneRanks']> = {}
+		// rankings are independent files: load them concurrently, and one missing or
+		// unreadable file must not take the others down with it
+		const keys = Object.keys(cfg.rankings)
+		const loaded = await Promise.all(
+			keys.map(key =>
+				loadRanking(q, cfg.rankings[key], key).catch(e => {
+					console.log(`geneRanking: cannot load ranking "${key}": ${e?.message || e}`)
+					return null
+				})
+			)
+		)
+		for (const [i, parsed] of loaded.entries()) {
+			if (!parsed) continue
+			const ri = parsed.geneIndex.get(wanted)
+			geneRanks[keys[i]] = {
+				columns: parsed.columns,
+				row: ri === undefined ? null : parsed.rows[ri],
+				counts: parsed.counts,
+				total: parsed.rows.length
+			}
+		}
+		res.send({ geneRanks } satisfies GeneRankingResponse)
+		return
+	}
+
 	if (!q.key) {
 		res.send({ keys: Object.keys(cfg.rankings) } satisfies GeneRankingResponse)
 		return
@@ -93,20 +141,25 @@ async function handleData(q: any, res, genomes): Promise<void> {
 
 	const relPath = cfg.rankings[q.key]
 	if (!relPath) throw 'invalid key'
-	if (path.isAbsolute(relPath) || relPath.split(/[\\/]/).includes('..')) throw 'invalid file path'
+	const parsed = await loadRanking(q, relPath, q.key)
+	res.send({ columns: parsed.columns, rows: parsed.rows } satisfies GeneRankingResponse)
+}
 
+/** parse (with mtime-aware caching) one ranking TSV, guarding the path to the tp dir */
+async function loadRanking(q: any, relPath: string, key: string): Promise<ParsedFile> {
+	if (path.isAbsolute(relPath) || relPath.split(/[\\/]/).includes('..')) throw 'invalid file path'
 	const absPath = path.resolve(serverconfig.tpmasterdir, relPath)
 	const tpRoot = path.resolve(serverconfig.tpmasterdir) + path.sep
 	if (!absPath.startsWith(tpRoot)) throw 'invalid file path'
 
 	const stat = await fs.promises.stat(absPath)
-	const cacheKey = `${q.genome}|${q.dslabel}|${q.key}`
+	const cacheKey = `${q.genome}|${q.dslabel}|${key}`
 	let entry = fileCache.get(cacheKey)
 	if (!entry || entry.mtimeMs !== stat.mtimeMs) {
 		entry = { parsed: await parseTsv(absPath), mtimeMs: stat.mtimeMs }
 		fileCache.set(cacheKey, entry)
 	}
-	res.send({ columns: entry.parsed.columns, rows: entry.parsed.rows } satisfies GeneRankingResponse)
+	return entry.parsed
 }
 
 async function handleCluster(q: any, res): Promise<void> {

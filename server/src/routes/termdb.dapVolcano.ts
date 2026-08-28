@@ -84,6 +84,21 @@ function init({ genomes }) {
 				})
 			}
 
+			// lightweight all-gene mode for client-side joins (e.g. the proteinView
+			// concordance tile): one row per gene, keeping the most significant
+			// accession, no volcano rendering
+			if (q.rowsOnly) {
+				const byGene = new Map<string, { gene: string; log2FC: number; fdr: number }>()
+				for (const r of rustRows) {
+					const fdr = r.adjusted_p_value ?? r.original_p_value
+					if (fdr === undefined || !Number.isFinite(fdr)) continue
+					const cur = byGene.get(r.gene)
+					if (!cur || fdr < cur.fdr) byGene.set(r.gene, { gene: r.gene, log2FC: r.fold_change, fdr })
+				}
+				res.send({ rows: [...byGene.values()], sample_size1: controlCount, sample_size2: caseCount })
+				return
+			}
+
 			const rendered = await renderVolcano(rustRows, q.volcanoRender)
 			res.send({
 				data: rendered as any,

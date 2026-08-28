@@ -4,16 +4,26 @@ import { PlotBase } from './PlotBase'
 import { Menu } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { scaleLinear, axisBottom, axisLeft } from 'd3'
+import {
+	makeTileGrid,
+	makeTileCard,
+	renderPlaceholderTiles,
+	renderTileError,
+	toggleTilePane,
+	closeTilePane,
+	closeTilePanes
+} from './proteinView.tiles'
 
 /*
 proteomeCohortCompare — cross-cohort comparison of standardized fold change (log2FC-z).
 
 Launched from the Studies catalog when ≥2 cohorts are selected. Fetches the aligned z matrix
-from termdb/proteomeCohortCompare and renders (view switchable in the controls):
+from termdb/proteomeCohortCompare and renders:
   - 2 cohorts  → a concordance scatter (z vs z); points colored by shared DAP direction
-  - ≥3 cohorts → a protein × cohort clustered heatmap (default), a cohort correlation matrix, or a
-                 shared-vs-specific DAP overlap (an UpSet per up/down direction), each intersection
-                 click-through to its protein list
+  - ≥3 cohorts → one live tile card per tool (as in the Protein View): a cohort correlation matrix,
+                 a protein × cohort clustered heatmap, a shared-vs-specific DAP overlap (an UpSet
+                 per up/down direction, each intersection click-through to its protein list), and
+                 the trajectory below; ⤢ opens the full interactive tool in a pane
   - a series   → an age/progression trajectory: when the selection contains ≥1 ordered series
                  (cohorts sharing dataset trajectory.series), one panel per k-means cluster showing
                  the member proteins' relative-abundance trajectories + a thick eigengene trend line
@@ -35,12 +45,71 @@ const NEUTRAL = '#cccccc' // not a shared DAP
 const Z_THRESH = 2
 const FDR_THRESH = 0.05
 
+type ViewKey = 'default' | 'heatmap' | 'overlap' | 'trajectory'
+
+/** the comparison tools for ≥3 cohorts. Each is a live tile card (Protein View style): the
+ *  card face shows the tool rendered at a reduced scale with its side panels hidden, ⤢ opens
+ *  the full interactive tool in a floating pane. `available` gates the tile on the current
+ *  selection; an unavailable tool is shown as a greyed placeholder that says what it needs. */
+type ToolTile = {
+	key: ViewKey
+	title: string
+	subtitle: string
+	available: (self: ProteomeCohortCompare, data: any) => boolean
+	unavailableNote: string
+	render: (self: ProteomeCohortCompare, data: any) => void
+	/** optional tool-specific controls, rendered unscaled in the tile card (between subtitle and
+	 *  face) and at the top of the expanded pane, so they belong to the tool rather than the plot */
+	controls?: (self: ProteomeCohortCompare, holder: any) => void
+}
+
+/** side panels (cutoff controls, legends, gene lists) carry this class so the tile face can hide them */
+const PANEL_CLASS = 'sjpp-cc-panel'
+/** the card face: inner box the scaled tool is fitted into */
+const FACE_W = 206
+const FACE_H = 170
+
+const TOOL_TILES: ToolTile[] = [
+	{
+		key: 'default',
+		title: 'Correlation matrix',
+		subtitle: 'Cohort × cohort concordance of log2FC-z',
+		available: () => true,
+		unavailableNote: '',
+		render: (self, data) => self.renderMatrix(data),
+		controls: (self, holder) => self.renderMatrixMetricSelect(holder)
+	},
+	{
+		key: 'heatmap',
+		title: 'Protein heatmap',
+		subtitle: 'Clustered protein × cohort log2FC-z',
+		available: (_, data) => !!data.heatmap,
+		unavailableNote: 'Heatmap unavailable for this selection',
+		render: (self, data) => self.renderHeatmap(data.heatmap)
+	},
+	{
+		key: 'overlap',
+		title: 'UpSet',
+		subtitle: 'Shared vs cohort-specific DAPs',
+		available: (_, data) => !!data.overlap,
+		unavailableNote: 'Overlap unavailable for this selection',
+		render: (self, data) => self.renderOverlap(data.overlap)
+	},
+	{
+		key: 'trajectory',
+		title: 'Trajectory',
+		subtitle: 'Protein clusters over age / progression',
+		available: (self, data) => self.trajectorySeriesCount(data.cohorts) > 0 && Array.isArray(data.trajectory),
+		unavailableNote: 'Needs an ordered series (≥3 timepoints) in the selection',
+		render: (self, data) => self.renderTrajectory(data.trajectory)
+	}
+]
+
 class ProteomeCohortCompare extends PlotBase implements RxComponent {
 	static type = 'proteomeCohortCompare'
 	type: string
 	dom!: {
 		holder: any
-		controls: any
 		body: any
 		tip: Menu
 		header?: any
@@ -50,11 +119,6 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 	/** DAP thresholds (scatter coloring + heatmap row selection) */
 	zThresh = Z_THRESH
 	fdrThresh = FDR_THRESH
-	/** which view: the default (scatter for 2 / correlation matrix for ≥3), the protein heatmap,
-	 *  the shared-vs-specific DAP overlap (UpSet), or the age/progression trajectory.
-	 *  Initialized in main(): heatmap by default when >2 cohorts, scatter when exactly 2. */
-	view: 'default' | 'heatmap' | 'overlap' | 'trajectory' = 'default'
-	viewInitialized = false
 	/** max heatmap rows (DAP-union capped by cross-cohort variance) */
 	maxRows = 30
 	/** number of k-means clusters in the trajectory view */
@@ -65,6 +129,9 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 	data: any = null
 	/** signature of the current cohort selection — used to reset the trajectory drill-down when it changes */
 	cohortKey = ''
+	/** open expanded-tool panes (owned by the tiles module), keyed by tool; re-filled on reload
+	 *  so their controls stay live */
+	panes = new Map<ViewKey, any>()
 
 	constructor(opts: any, api) {
 		super(opts, api)
@@ -75,7 +142,6 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		const holder = this.opts.holder.append('div').style('padding', '10px')
 		this.dom = {
 			holder,
-			controls: holder.append('div').style('margin-bottom', '10px'),
 			body: holder.append('div'),
 			tip: new Menu({ padding: '' }),
 			header: this.opts.header
@@ -93,15 +159,10 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		const config: any = this.state.config
 		this.cohorts = config.cohorts || []
 		if (this.cohorts.length < 2) {
+			this.closePanes()
 			this.dom.body.selectAll('*').remove()
 			this.dom.body.append('div').style('color', '#666').text('Select at least two cohorts to compare.')
 			return
-		}
-		// initialize view once; afterwards the in-plot toggle owns it
-		// (it doesn't dispatch config changes, so re-reading config here would clobber the user's choice)
-		if (!this.viewInitialized) {
-			this.view = this.cohorts.length > 2 ? 'heatmap' : 'default'
-			this.viewInitialized = true
 		}
 		// reset the trajectory drill-down when the cohort selection changes (its si/pi would be stale)
 		const key = this.cohorts.map(c => `${c.organism}|${c.assay}|${c.cohort}`).join(';')
@@ -133,26 +194,29 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 	}
 
 	async reload() {
-		// exactly 2 cohorts only support the scatter — drop any stale heatmap/overlap/trajectory view
-		if (this.cohorts.length <= 2 && this.view !== 'default') this.view = 'default'
+		const multi = this.cohorts.length > 2
 		this.dom.body.selectAll('*').remove()
 		const data = await dofetch3('termdb/proteomeCohortCompare', {
 			body: {
 				genome: this.app.opts.state.vocab.genome,
 				dslabel: this.app.opts.state.vocab.dslabel,
 				cohorts: this.cohorts,
-				heatmap: this.view === 'heatmap',
-				overlap: this.view === 'overlap',
-				trajectory: this.view === 'trajectory',
+				// ≥3 cohorts: every tool is rendered as a tile, so fetch them all in one request
+				heatmap: multi,
+				overlap: multi,
+				trajectory: multi,
 				zThresh: this.zThresh,
 				fdrThresh: this.fdrThresh,
 				maxRows: this.maxRows,
 				nClusters: this.nClusters
 			}
 		})
+		// panes drawn from previous data must not outlive it; only the multi-tool
+		// path below keeps them (and refreshes them in place)
+		const keepPanes = data && !data.error && multi && data.sharedGeneCount >= 3
+		if (!keepPanes) this.closePanes()
 		// guard: a missing/failed endpoint (e.g. 404) returns no z matrix — fail clearly, don't crash
 		if (!data || data.error || !Array.isArray(data.z) || typeof data.sharedGeneCount !== 'number') {
-			this.renderControls({ error: true })
 			this.dom.body
 				.append('div')
 				.style('padding', '12px')
@@ -164,14 +228,6 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 			return
 		}
 		this.data = data
-		// the trajectory view needs ≥1 ordered series in the current selection; if that no longer
-		// holds (e.g. the selection changed), fall back to the heatmap and refetch for it
-		if (this.view === 'trajectory' && this.trajectorySeriesCount(data.cohorts) === 0) {
-			this.view = 'heatmap'
-			this.trajSelected = null
-			return this.reload() // awaited by the caller so the refetch completes before main() resolves
-		}
-		this.renderControls(data)
 		if (data.sharedGeneCount < 3) {
 			this.dom.body
 				.append('div')
@@ -180,11 +236,135 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 				.text('Too few shared proteins to compare.')
 			return
 		}
-		if (this.view === 'trajectory') this.renderTrajectory(data.trajectory)
-		else if (this.view === 'overlap') this.renderOverlap(data.overlap)
-		else if (this.view === 'heatmap') this.renderHeatmap(data.heatmap)
-		else if (this.cohorts.length === 2) this.renderScatter(data)
-		else this.renderMatrix(data)
+		if (!multi) {
+			this.renderScatter(data)
+			return
+		}
+		this.renderToolTiles(data)
+		this.refreshPanes(data)
+	}
+
+	/** run a renderer (which draws into this.dom.body) against another holder */
+	renderInto(holder: any, draw: () => void) {
+		const body = this.dom.body
+		this.dom.body = holder
+		try {
+			draw()
+		} finally {
+			this.dom.body = body
+		}
+	}
+
+	/** one live tile card per tool (same cards as the Protein View study tiles): the face is the
+	 *  tool drawn at full size then scaled to fit, side panels hidden; ⤢ opens the full tool in a
+	 *  floating pane. Tools without data render as greyed placeholders after the live ones. */
+	renderToolTiles(data: any) {
+		const grid = makeTileGrid(this.dom.body)
+		const missing: ToolTile[] = []
+		for (const tile of TOOL_TILES) {
+			if (!tile.available(this, data)) {
+				missing.push(tile)
+				continue
+			}
+			const body = makeTileCard(grid, {
+				title: tile.title,
+				subtitle: tile.subtitle,
+				uniform: true,
+				onExpand: () => this.togglePane(tile)
+			})
+			if (tile.controls) {
+				tile.controls(this, body.append('div').style('margin-top', '2px'))
+			}
+			// fixed viewport the scaled drawing is fitted into
+			const face = body
+				.append('div')
+				.style('width', `${FACE_W}px`)
+				.style('height', `${FACE_H}px`)
+				.style('overflow', 'hidden')
+				.style('margin-top', '4px')
+				.style('cursor', 'pointer')
+				.attr('title', `Expand ${tile.title}`)
+				.on('click', () => this.togglePane(tile))
+			const inner = face.append('div').style('display', 'inline-block').style('transform-origin', 'top left')
+			try {
+				this.renderInto(inner, () => tile.render(this, data))
+				inner.selectAll(`.${PANEL_CLASS}`).style('display', 'none')
+				// fit: measure the unscaled drawing and scale it down to the face
+				const node = inner.node() as HTMLElement
+				const w = node.scrollWidth || node.offsetWidth
+				const h = node.scrollHeight || node.offsetHeight
+				const k = w && h ? Math.min(1, FACE_W / w, FACE_H / h) : 1
+				inner.style('transform', `scale(${k})`)
+				// center the scaled drawing in the face (transform doesn't affect layout, so offset
+				// by the leftover space around the scaled box) instead of pinning it top-left
+				inner
+					.style('margin-left', `${Math.max(0, (FACE_W - w * k) / 2)}px`)
+					.style('margin-top', `${Math.max(0, (FACE_H - h * k) / 2)}px`)
+				// the face is a preview: swallow clicks that would drill down from the mini drawing
+				inner.style('pointer-events', 'none')
+			} catch (err: any) {
+				renderTileError(face, err, this)
+			}
+		}
+		renderPlaceholderTiles(
+			grid,
+			missing.map(t => ({ title: t.title, note: t.unavailableNote }))
+		)
+	}
+
+	/** ⤢: open the full interactive tool in a draggable pane; a second click closes it */
+	togglePane(tile: ToolTile) {
+		const pane = toggleTilePane(
+			this,
+			tile.key,
+			`Cohort comparison — ${tile.title}`,
+			() => {}, // body is filled by fillPane so refreshPanes can redraw it in place
+			() => this.panes.delete(tile.key)
+		)
+		if (!pane) return
+		this.panes.set(tile.key, pane)
+		this.fillPane(tile, pane, this.data)
+	}
+
+	fillPane(tile: ToolTile, pane: any, data: any) {
+		pane.body.selectAll('*').remove()
+		const body = pane.body.append('div').style('padding', '12px 16px')
+		body
+			.append('div')
+			.style('font-size', '.8em')
+			.style('color', '#6b7280')
+			.style('margin-bottom', '6px')
+			.text(tile.subtitle)
+		if (tile.controls) tile.controls(this, body.append('div').style('margin-bottom', '8px'))
+		try {
+			this.renderInto(body.append('div'), () => tile.render(this, data))
+		} catch (err: any) {
+			renderTileError(body, err, this)
+		}
+	}
+
+	/** after a refetch (cutoff change from inside a pane, new selection) redraw every open pane
+	 *  in place so its controls keep working; drop panes whose tool is no longer available */
+	refreshPanes(data: any) {
+		for (const [key, pane] of [...this.panes]) {
+			const tile = TOOL_TILES.find(t => t.key === key)
+			if (!tile || !tile.available(this, data)) {
+				closeTilePane(this, key) // onClose drops it from this.panes
+				continue
+			}
+			this.fillPane(tile, pane, data)
+		}
+	}
+
+	closePanes() {
+		closeTilePanes(this)
+		this.panes.clear()
+	}
+
+	/** rx calls this when the plot is deleted: floating panes live on document.body
+	 *  and would otherwise outlive the plot with handlers bound to a dead instance */
+	destroy() {
+		this.closePanes()
 	}
 
 	/** re-render just the scatter (e.g. after a threshold change) without refetching */
@@ -194,47 +374,33 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		this.renderScatter(this.data)
 	}
 
-	renderControls(data: any) {
-		const div = this.dom.controls
-		div.selectAll('*').remove()
-
-		// view toggle — only offered for >2 cohorts (exactly 2 cohorts always shows the scatter).
-		// ≥3 cohorts: correlation matrix, protein heatmap, the shared-vs-specific UpSet, and — when
-		// the selection contains ≥1 ordered series (≥3 timepoints) — the age/progression trajectory.
-		if (!data.error && this.cohorts.length > 2) {
-			const viewOptions: [string, string][] = [
-				['default', 'Correlation matrix'],
-				['heatmap', 'Protein heatmap'],
-				['overlap', 'UpSet']
-			]
-			if (this.trajectorySeriesCount(data.cohorts) > 0) viewOptions.push(['trajectory', 'Trajectory'])
-			const label = div.append('label').style('font-size', '0.85em').style('margin-right', '16px').text('View: ')
-			const sel = label.append('select').on('change', (event: any) => {
-				this.view = event.target.value
-				this.trajSelected = null // reset trajectory drill-down on any view switch
-				this.reload()
-			})
-			for (const [val, txt] of viewOptions) {
-				const o = sel.append('option').attr('value', val).text(txt)
-				if (val === this.view) o.property('selected', true)
-			}
-		}
-
-		// correlation-metric toggle — only for the correlation-matrix view (not the heatmap)
-		if (this.cohorts.length > 2 && !data.error && this.view === 'default') {
-			const label = div.append('label').style('font-size', '0.85em').style('margin-right', '6px').text('Correlation: ')
-			const sel = label.append('select').on('change', (event: any) => {
+	/** Spearman/Pearson toggle for the correlation matrix. The response carries both matrices,
+	 *  so switching only redraws the tiles and open panes — no refetch. */
+	renderMatrixMetricSelect(holder: any) {
+		const label = holder.append('label').style('font-size', '0.8em').style('color', '#374151')
+		label.append('span').style('margin-right', '6px').text('Correlation:')
+		const sel = label
+			.append('select')
+			.style('font-size', '1em')
+			.on('change', (event: any) => {
 				this.matrixMetric = event.target.value
-				this.reload()
+				this.redrawTools()
 			})
-			for (const m of ['spearman', 'pearson']) {
-				const o = sel
-					.append('option')
-					.attr('value', m)
-					.text(m[0].toUpperCase() + m.slice(1))
-				if (m === this.matrixMetric) o.property('selected', true)
-			}
+		for (const m of ['spearman', 'pearson']) {
+			const o = sel
+				.append('option')
+				.attr('value', m)
+				.text(m[0].toUpperCase() + m.slice(1))
+			if (m === this.matrixMetric) o.property('selected', true)
 		}
+	}
+
+	/** re-render the tool tiles and open panes from the cached response (no refetch) */
+	redrawTools() {
+		if (!this.data) return
+		this.dom.body.selectAll('*').remove()
+		this.renderToolTiles(this.data)
+		this.refreshPanes(this.data)
 	}
 
 	renderScatter(data: any) {
@@ -370,7 +536,12 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 			.text(`${this.cohortLabel(cb)}  (log2FC-z)`)
 
 		// --- right panel: stats, DAP-cutoff controls, legend ---
-		const panel = row.append('div').style('font-size', '0.85em').style('padding-top', '4px').style('min-width', '190px')
+		const panel = row
+			.append('div')
+			.classed(PANEL_CLASS, true)
+			.style('font-size', '0.85em')
+			.style('padding-top', '4px')
+			.style('min-width', '190px')
 
 		const statBox = panel.append('div').style('margin-bottom', '12px').style('line-height', '1.6')
 		statBox
@@ -448,7 +619,10 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		const labels = order.map(i => this.cohortLabel(this.cohorts[i]))
 
 		const cell = Math.max(26, Math.min(48, Math.floor(360 / n)))
-		const labelPad = 120
+		// label gutter sized to the longest label (≈6.5px/char at 11px) so short names don't
+		// leave a blank strip on the left that throws the tile preview off-center
+		const maxLabelLen = Math.max(...labels.map(l => l.length))
+		const labelPad = Math.min(120, Math.max(40, Math.ceil(maxLabelLen * 6.5) + 12))
 		const svg = this.dom.body
 			.append('svg')
 			.attr('width', labelPad + n * cell + 60)
@@ -512,6 +686,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 
 		this.dom.body
 			.append('div')
+			.classed(PANEL_CLASS, true)
 			.style('font-size', '0.8em')
 			.style('color', '#777')
 			.style('margin-top', '6px')
@@ -540,7 +715,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 			.style('gap', '18px')
 			.style('align-items', 'flex-end')
 		const left = wrap.append('div')
-		const panel = wrap.append('div').style('font-size', '0.85em').style('min-width', '160px')
+		const panel = wrap.append('div').classed(PANEL_CLASS, true).style('font-size', '0.85em').style('min-width', '160px')
 
 		// DAP-cutoff + row-cap controls — changing any recomputes rows/clustering on the server
 		panel.append('div').style('font-weight', '600').style('margin-bottom', '3px').text('DAP cutoffs')
@@ -793,7 +968,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		}
 		const row = body.append('div').style('display', 'flex').style('gap', '24px').style('align-items', 'flex-start')
 		const left = row.append('div')
-		const panel = row.append('div').style('font-size', '0.85em').style('min-width', '170px')
+		const panel = row.append('div').classed(PANEL_CLASS, true).style('font-size', '0.85em').style('min-width', '170px')
 
 		// controls (all refetch, and reset the drill-down since cluster identities change)
 		panel.append('div').style('font-weight', '600').style('margin-bottom', '3px').text('DAP cutoffs')
@@ -1024,7 +1199,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		// plots on the left, DAP-cutoff controls on the right
 		const row = wrap.append('div').style('display', 'flex').style('gap', '24px').style('align-items', 'flex-start')
 		const left = row.append('div')
-		const panel = row.append('div').style('font-size', '0.85em').style('min-width', '150px')
+		const panel = row.append('div').classed(PANEL_CLASS, true).style('font-size', '0.85em').style('min-width', '150px')
 
 		// DAP-cutoff controls (shared with the other views) — changing refetches
 		panel.append('div').style('font-weight', '600').style('margin-bottom', '3px').text('DAP cutoffs')

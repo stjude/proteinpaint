@@ -9,6 +9,8 @@ export type DapVolcanoRequest = {
 	cohort: string
 	volcanoRender?: VolcanoRenderRequest
 	countsOnly?: boolean
+	/** return one {gene, log2FC, fdr} row per gene (most significant accession) instead of a rendered volcano */
+	rowsOnly?: boolean
 }
 
 export type DapEntry = DataEntry & {
@@ -22,4 +24,6 @@ export type DapVolcanoResponse =
 			sample_size1: number
 			sample_size2: number
 			data?: VolcanoData<DapEntry>
+			/** rowsOnly mode */
+			rows?: { gene: string; log2FC: number; fdr: number }[]
 	  }

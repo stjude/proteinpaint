@@ -9,8 +9,8 @@ export type BrainRegionsRequest = {
 export type BrainRegionsEntry = {
 	/** log2 fold change, case vs control, from the cohort's DAP file */
 	fold_change: number
-	/** nominal p-value (DAP file column 6); falls back to the FDR when the file has no p column */
-	p_value: number
+	/** nominal p-value (DAP file column 6); absent when the file has no p column */
+	p_value?: number
 	/** BH-adjusted p-value (DAP file column 5) */
 	fdr: number
 }

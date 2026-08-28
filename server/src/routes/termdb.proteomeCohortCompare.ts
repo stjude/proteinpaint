@@ -1,4 +1,5 @@
 import path from 'path'
+import { pearsonCorrelation } from '#shared/helpers.js'
 import fs from 'fs/promises'
 import type { RouteApi, RoutePayload } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
@@ -94,29 +95,7 @@ function centralSd(values: number[]): number {
 	return Math.sqrt(ss / (w.length - 1))
 }
 
-function pearson(a: number[], b: number[]): number {
-	const n = a.length
-	if (n < 2) return NaN
-	let ma = 0,
-		mb = 0
-	for (let i = 0; i < n; i++) {
-		ma += a[i]
-		mb += b[i]
-	}
-	ma /= n
-	mb /= n
-	let num = 0,
-		da = 0,
-		db = 0
-	for (let i = 0; i < n; i++) {
-		const x = a[i] - ma,
-			y = b[i] - mb
-		num += x * y
-		da += x * x
-		db += y * y
-	}
-	return da > 0 && db > 0 ? num / Math.sqrt(da * db) : NaN
-}
+const pearson = pearsonCorrelation
 
 /** fractional ranks (ties → average rank), for Spearman */
 function ranks(arr: number[]): number[] {

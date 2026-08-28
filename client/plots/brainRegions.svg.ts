@@ -1,4 +1,5 @@
 import type { Menu } from '#dom'
+import { scaleLinear } from 'd3'
 
 export type RegionGeom = { d: string; transform: string | null }
 
@@ -502,4 +503,53 @@ export function makeDiseaseTabs(
 		}
 	}
 	update()
+}
+
+/************ region coloring shared by the standalone plot and the proteinView tile ************/
+
+// brain-region DAP files usually carry a nominal p column; the region map is
+// thresholded on that (FDR is too conservative here to color any region). When
+// a file has no p column the server omits p_value and the FDR is used instead,
+// so a significant region never silently turns grey.
+export const BRAIN_P_THRESHOLD = 0.05
+export const BRAIN_NONSIG_COLOR = '#ccc'
+export const BRAIN_NEG_COLOR = '#2166ac'
+export const BRAIN_ZERO_COLOR = '#f7f7f7'
+export const BRAIN_POS_COLOR = '#b2182b'
+
+export type BrainRegionEntry = { fold_change: number; fdr: number; p_value?: number }
+export type BrainRegionData = { [code: string]: BrainRegionEntry }
+
+export const brainSigValue = (e: BrainRegionEntry) => e.p_value ?? e.fdr
+export const isBrainRegionSig = (e: BrainRegionEntry | undefined) => !!e && brainSigValue(e) < BRAIN_P_THRESHOLD
+
+/** fold-change color scale over the significant regions of one isoform × disease */
+export function makeBrainFcScale(regionData: BrainRegionData) {
+	const sigFCs: number[] = []
+	for (const entry of Object.values(regionData)) if (isBrainRegionSig(entry)) sigFCs.push(entry.fold_change)
+	const maxAbsFC = sigFCs.length ? Math.max(...sigFCs.map(v => Math.abs(v))) : 1
+	const colorScale = scaleLinear<string>()
+		.domain([-maxAbsFC, 0, maxAbsFC])
+		.range([BRAIN_NEG_COLOR, BRAIN_ZERO_COLOR, BRAIN_POS_COLOR])
+		.clamp(true)
+	return { maxAbsFC, colorScale, nSig: sigFCs.length }
+}
+
+export function brainFillByRegion(regionData: BrainRegionData, colorScale: (v: number) => string) {
+	return (code: string) => {
+		const entry = regionData[code]
+		return isBrainRegionSig(entry) ? colorScale(entry.fold_change) : BRAIN_NONSIG_COLOR
+	}
+}
+
+export function brainTooltipByRegion(regionData: BrainRegionData) {
+	const fmt = (v: number) => (v >= 0.0001 ? v.toFixed(4) : v.toExponential(3))
+	return (code: string, label: string) => {
+		const entry = regionData[code]
+		if (!entry) return `${label} (${code})\nNo data`
+		const p = Number.isFinite(entry.p_value) ? fmt(entry.p_value as number) : 'NA'
+		return `${label} (${code})\nlog₂ fold change: ${entry.fold_change.toFixed(4)}\np-value: ${p}\nFDR: ${fmt(
+			entry.fdr
+		)}`
+	}
 }
