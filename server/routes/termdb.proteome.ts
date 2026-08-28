@@ -113,7 +113,7 @@ export function init({ genomes }) {
 								// the other DAP-driven tools; a nominal p is only present when the
 								// DAP file carries one (6th column)
 								fdr: row.fdr,
-								pValue: row.p,
+pValue: row.fdr,
 								testedN: caseSamples.length,
 								controlN: controlSamples.length
 							}
