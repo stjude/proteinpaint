@@ -120,7 +120,26 @@ class Wsi extends PlotBase implements RxComponent {
 			// menu offers/validates genes that actually exist in the data
 			const genes = await this.fetchGeneNames(spImage, selectedSample!.sampleId)
 			// cell types discovered by the meta request, for the type-filter dropdowns
-			await this.fetchCellTypes(spImage, selectedSample!.sampleId)
+			const cellTypes = await this.fetchCellTypes(spImage, selectedSample!.sampleId)
+			// switching images can leave cellTypeFilter naming types the new
+			// image lacks: the dropdowns would show 'All types' while the viewer
+			// filters every cell out. Persist the cleaned selection instead
+			// (only when discovery succeeded — [] may just mean the request failed)
+			if (settings.cellTypeFilter && cellTypes.length) {
+				const cleaned = settings.cellTypeFilter
+					.split(',')
+					.map(t => t.trim())
+					.filter(t => cellTypes.includes(t)) // keep only types this image has
+					.join(',')
+				if (cleaned != settings.cellTypeFilter) {
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { wsi: { cellTypeFilter: cleaned } } }
+					})
+					return // re-renders with the reconciled filter
+				}
+			}
 			// seed the burger menu's gene/level fields once (null = never edited)
 			// so the shown values match the overlay and can be edited or cleared;
 			// re-renders once with the seeded state
@@ -286,7 +305,9 @@ class Wsi extends PlotBase implements RxComponent {
 								return
 							}
 							self.dom.row.style('display', 'table-row') // show the row
-							// drop stale selections when the image (and its types) changed
+							// defensive only: main() reconciles cellTypeFilter to this
+							// image's types before rendering, so this filter is a no-op
+							// unless a render sneaks in mid-reconciliation
 							const selected = (s.cellTypeFilter || '')
 								.split(',')
 								.map(t => t.trim())
