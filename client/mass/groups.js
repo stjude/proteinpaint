@@ -658,6 +658,64 @@ function addGroupCountRow(table, role, samplelstTW, i, count, sampleLabel) {
 	c2.text(`${count} ${sampleLabel}`)
 }
 
+/* Provenance for datasets that assemble their counts matrix per run (gdc today): which files
+back the cohort, how the one-file-per-case choice was made, and how much of the fetch is
+already cached. Absent for datasets with a static counts file, so this renders nothing.
+
+The counts above say how many cases are comparable; this says what data those cases resolve
+to. Both are needed to read a result: a case with three rna-seq aliquots contributes exactly
+one column, and which one is not obvious from the case count alone.
+
+ponytail: summary only. countsFiles.multiCases[] carries the per-case candidate lists and is
+not shown -- render it in an expandable table if someone actually needs to audit a specific
+case, and drop it from the payload if nobody does. */
+function renderCountsFileInfo(holder, preview, sampleLabel) {
+	if (!preview) return
+
+	/* every line is stated even when it is unremarkable. "0 cases had more than one file" and
+	"all Tumor" are the answers a reader needs; suppressing them as boring leaves the reader unable
+	to tell a clean cohort from a report that skipped the check. */
+	const lines = []
+
+	const missing = preview.casesRequested - preview.cases
+	lines.push(
+		`${preview.cases} of ${preview.casesRequested} ${sampleLabel} resolve to a counts file` +
+			(missing > 0 ? ` — ${missing} have no open-access file` : '')
+	)
+	lines.push(
+		`${preview.candidateFiles} candidate ${preview.candidateFiles == 1 ? 'file' : 'files'}; ` +
+			`${preview.casesWithMultiple} ${sampleLabel} had more than one`
+	)
+	lines.push(
+		'Aliquots: ' +
+			Object.entries(preview.byTissueType)
+				.map(([t, n]) => `${n} ${t}`)
+				.join(', ')
+	)
+
+	/* only when the dataset knows what its cache is keyed on. matrixCached is the decisive case --
+	an assembled cohort fetches nothing regardless of the per-file counts -- so it is worded as a
+	fact, while the per-file numbers are a disk probe and are worded as what the run would do */
+	if (preview.axisKnown && preview.toDownload != null)
+		lines.push(
+			preview.matrixCached
+				? 'Fetch: none, this cohort is already assembled'
+				: preview.toDownload
+				? `Fetch: ${preview.cached} cached, ${preview.toDownload} to download`
+				: 'Fetch: none, every file is already cached'
+		)
+
+	lines.push(`Rule: ${preview.selectionRule}`)
+
+	const div = holder
+		.append('div')
+		.style('margin', '2px 0 0 5px')
+		.style('padding', '0 10px')
+		.style('font-size', '.85em')
+		.style('opacity', 0.65)
+	for (const l of lines) div.append('div').text(l)
+}
+
 /* Renders the group sample counts and the "Run Differential X Analysis" button, for both
 differential gene expression and differential DNA methylation.
 
@@ -705,6 +763,8 @@ export function renderPreAnalysisData(arg) {
 	table.table.style('margin-left', '5px').style('padding', '5px 10px')
 	addGroupCountRow(table, 'CONTROL', samplelstTW, 0, numControl, sampleLabel)
 	addGroupCountRow(table, 'CASE', samplelstTW, 1, numCase, sampleLabel)
+
+	renderCountsFileInfo(menuDiv, preAnalysisData.countsFiles, sampleLabel)
 
 	// display errors
 	const alertDiv = menuDiv.append('div')
