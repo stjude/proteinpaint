@@ -269,12 +269,23 @@ def tile(slide, z, x, y, quality=80, plane=None):
         s.close()  # always release the slide
 
 
+def _h5ad_index(f, df):
+    """The index values of an AnnData dataframe group (obs/var) in an open
+    .h5ad. The index dataset's name is stored in the group's _index attribute
+    and is NOT required to be the literal '_index' — a named pandas index
+    writes its own name (e.g. 'gene_id')."""
+    key = f[df].attrs.get("_index", "_index")     # where the index lives
+    if isinstance(key, bytes):
+        key = key.decode()                        # h5py may hand the attr back as bytes
+    return f[df][key][:].astype(str)
+
+
 def genenames(h5ad):
-    """All gene names of a spatial .h5ad, in file order (var/_index). Lets the
-    client discover/validate genes instead of trusting configuration."""
+    """All gene names of a spatial .h5ad, in file order (the var index). Lets
+    the client discover/validate genes instead of trusting configuration."""
     import h5py
     with h5py.File(h5ad, "r") as f:
-        return {"genes": f["var/_index"][:].astype(str).tolist()}
+        return {"genes": _h5ad_index(f, "var").tolist()}
 
 
 def genecounts(h5ad, gene):
@@ -286,7 +297,7 @@ def genecounts(h5ad, gene):
     import os
     import h5py
     with h5py.File(h5ad, "r") as f:
-        names = f["var/_index"][:].astype(str)            # all gene names
+        names = _h5ad_index(f, "var")                     # all gene names
         hit = np.nonzero(names == gene)[0]                # index of the gene
         if hit.size == 0:
             return {"error": f"gene '{gene}' not found in {os.path.basename(h5ad)}"}
@@ -311,7 +322,7 @@ def genecounts(h5ad, gene):
             vals = X["data"][s:e]
         else:
             return {"error": f"unsupported X encoding '{enc}' in {os.path.basename(h5ad)}"}
-        barcodes = f["obs/_index"][:].astype(str)         # cell ids, obs order
+        barcodes = _h5ad_index(f, "obs")                  # cell ids, obs order
     return {
         "cells": dict(zip(barcodes[cells].tolist(), vals.astype(int).tolist())),
         "max": int(vals.max()) if vals.size else 0,  # legend upper bound
@@ -325,7 +336,7 @@ def h5ad_annotations(h5ad):
     import h5py
     with h5py.File(h5ad, "r") as f:
         types = _h5ad_cell_types(f)                       # one string per cell, '' = untyped
-        ids = f["obs/_index"][:].astype(str)              # cell ids, obs order
+        ids = _h5ad_index(f, "obs")                       # cell ids, obs order
     return {"cells": {i: t for i, t in zip(ids.tolist(), types.tolist()) if t}}
 
 
@@ -335,6 +346,12 @@ def _h5ad_cell_types(f):
     -1 = NaN) and a plain string dataset; anything else raises with the
     encountered layout named."""
     import h5py
+    if "obs/cell_type" not in f:
+        obs = f["obs"]
+        index_key = obs.attrs.get("_index", "_index")
+        if isinstance(index_key, bytes):
+            index_key = index_key.decode()
+        return np.full(obs[index_key].shape[0], "", dtype=str)
     ct = f["obs/cell_type"]
     if isinstance(ct, h5py.Group):
         cats = np.append(ct["categories"][:].astype(str), "")  # -1 codes -> ''
