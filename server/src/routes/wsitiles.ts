@@ -177,8 +177,12 @@ function init({ genomes }) {
 					// file (same print-a-path contract as tile jobs)
 					const kind = q.kind == 'nucleus' ? 'nucleus' : 'cell' // which polygon set
 					const tmp = (await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_csv', h5ad: full, kind }))).trim()
-					const csv = await readFile(tmp, 'utf8') // the regenerated csv
-					await unlink(tmp).catch(() => {}) // python's temp file is no longer needed
+					let csv: string
+					try {
+						csv = await readFile(tmp, 'utf8') // the regenerated csv
+					} finally {
+						await unlink(tmp).catch(() => {}) // always remove the generated temp file
+					}
 					// cacheable for an hour; the h5ad changes with the slide, rarely
 					res.status(200).set('Content-Type', 'text/csv').set('Cache-Control', 'public, max-age=3600').send(csv)
 				} catch (e: any) {

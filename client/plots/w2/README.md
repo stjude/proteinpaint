@@ -178,7 +178,7 @@ from the h5ad's cell/nucleus polygons (`/boundaries`, µm→px via `meta.mpp`).
   on a URL, or the burger's "Types shown" chained dropdowns (one dropdown
   per selected type plus an "Add type…" dropdown of the remaining ones;
   no selection = all types). The available types are discovered up front by
-  the meta request — `wsitiles/meta?cellAnnotations=<csv>` scans the file
+  the meta request — `wsitiles/meta?cellAnnotations=<h5ad>` scans the file
   and returns `cellTypes:[…]`. Colors are assigned over ALL types by
   abundance, so a type keeps its color when the filter changes.
 - **Mutual exclusion** — cell-type fills and expression fills never draw
