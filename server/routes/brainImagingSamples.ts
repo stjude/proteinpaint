@@ -76,9 +76,12 @@ async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: 
 				if (sampleData) {
 					for (const term of q[key].sampleColumns) {
 						const v = sampleData[term.termid]
-						if (v?.value !== undefined) {
-							annoForOneS[term.termid] = v.value
-						}
+						if (!v) continue
+						/* a sample with several values for one term (e.g. a membership
+						multivalue term, one row per trial) comes back as {values:[{key,value},..]}
+						instead of {key,value}; show all of them in the cell */
+						if (v.values) annoForOneS[term.termid] = v.values.map(x => x.key).join(', ')
+						else if (v.value !== undefined) annoForOneS[term.termid] = v.value
 					}
 				}
 				samples[s] = annoForOneS

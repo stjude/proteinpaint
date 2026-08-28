@@ -116,40 +116,53 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 		*/
 		const divideByCat: { [key: string]: FilesByCategory } = {}
 		const uniqueOverlayTwCats = new Set()
+		/* a sample with several values for one term (e.g. a membership multivalue
+		term) comes back as {values:[{key,value},..]} instead of {key,value}; this
+		lists the category label(s) of a term value */
+		const getCategories = (tw: QualTW, value: any): string[] => {
+			const keys = value.values ? value.values.map(v => v.key) : [value.key]
+			// for numeric terms key has the bin label, for geneVariant terms, key is the group
+			return keys.map(k => tw.term.values?.[k]?.label || k)
+		}
 		for (const sampleName of selectedSampleNames) {
 			const sampleId = ds.sampleName2Id.get(sampleName)
 			// sampleData may be undefined for a sample with an imaging file but no
 			// annotation for the divide/overlay terms; it then stays in 'default'
 			const sampleData = data.samples[sampleId]
 			const samplePath = path.join(dirPath, sampleName) + '.nii'
-			let divideCategory = 'default'
+			// divide-by: a multi-member sample is rendered in each of its groups
+			let divideCategories = ['default']
 			let overlayCategory = 'default'
 			if (divideByTW && sampleData) {
 				const value = sampleData[divideByTW.$id!]
-				if (value) divideCategory = divideByTW.term.values?.[value.key]?.label || value.key // for numeric terms key has the bin label, for geneVariant terms, key is the group
+				if (value) divideCategories = getCategories(divideByTW, value)
 			}
 			if (overlayTW && sampleData) {
 				const value = sampleData[overlayTW.$id!]
+				/* multivalue is not offered as overlay (see termdb.usecase.ts); a stale saved
+				session may still carry one, then its memberships are joined into one category */
 				if (value) {
-					overlayCategory = overlayTW.term.values?.[value.key]?.label || value.key
+					overlayCategory = getCategories(overlayTW, value).join(', ')
 					uniqueOverlayTwCats.add(overlayCategory)
 				}
 			}
-			if (!divideByCat[divideCategory]) divideByCat[divideCategory] = {}
+			for (const divideCategory of divideCategories) {
+				if (!divideByCat[divideCategory]) divideByCat[divideCategory] = {}
 
-			if (!query.legendFilter?.includes(overlayCategory)) {
-				if (!divideByCat[divideCategory][overlayCategory]) {
-					let color = overlayTW?.term?.values?.[overlayCategory]?.color
-					if (overlayTW && isNumericTerm(overlayTW.term)) {
-						const bins = data.refs.byTermId[overlayTW.$id!].bins
-						color = bins.find(b => b.label == overlayCategory).color
+				if (!query.legendFilter?.includes(overlayCategory)) {
+					if (!divideByCat[divideCategory][overlayCategory]) {
+						let color = overlayTW?.term?.values?.[overlayCategory]?.color
+						if (overlayTW && isNumericTerm(overlayTW.term)) {
+							const bins = data.refs.byTermId[overlayTW.$id!].bins
+							color = bins.find(b => b.label == overlayCategory).color
+						}
+						divideByCat[divideCategory][overlayCategory] = {
+							samples: [],
+							color
+						}
 					}
-					divideByCat[divideCategory][overlayCategory] = {
-						samples: [],
-						color
-					}
+					divideByCat[divideCategory][overlayCategory].samples.push(samplePath)
 				}
-				divideByCat[divideCategory][overlayCategory].samples.push(samplePath)
 			}
 		}
 
