@@ -1,9 +1,8 @@
 import tape from 'tape'
-import { parseBoundaries, parseCellAnnotations, pointInRing } from '../wsi.direct'
+import { parseBoundaries, pointInRing } from '../wsi.direct'
 
 /* Tests
     parseBoundaries: boundary csv -> one ring per cell
-    parseCellAnnotations: per-cell annotations csv -> id->type map
     pointInRing: hover hit test
 */
 
@@ -15,13 +14,6 @@ const boundaries = `"cell_id","vertex_x","vertex_y"
 "cell-2",7,8
 "cell-2",9,10
 "cell-2",11,12
-`
-
-// one row per cell; cell-2 is QC-filtered (empty type)
-const annotations = `"cell_id","cell_type"
-"cell-1","Tumor"
-"cell-2",
-"cell-3","B cells"
 `
 
 tape('\n', function (test) {
@@ -45,16 +37,6 @@ tape('boundary csv -> one ring per cell', test => {
 		'µm scaled to px by mpp, y negated, id unquoted'
 	)
 	test.equal(polys[1].id, 'cell-2', 'last cell not dropped')
-	test.end()
-})
-
-tape('per-cell annotations csv -> id->type map', test => {
-	test.deepEqual(
-		parseCellAnnotations(annotations),
-		{ 'cell-1': 'Tumor', 'cell-3': 'B cells' },
-		'types keyed by unquoted cell_id; QC-filtered cell (empty type) omitted'
-	)
-	test.deepEqual(parseCellAnnotations('"foo","bar"\n"a","b"\n'), {}, 'unexpected header = empty map')
 	test.end()
 })
 

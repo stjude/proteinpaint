@@ -96,18 +96,11 @@ export class View {
 				{
 					slideQuery: params, // addresses the slide through the dataset (no direct-path gate)
 					label: image.fileName, // display name in the info line
-					// expression fills need the cell polygons even when their strokes are hidden
-					cellBoundaries:
-						s.showCellBoundaries || s.showCellTypes || genes
-							? image.spatialData ?? image.cellBoundaries // h5ad-only datasets have no csv
-							: undefined,
+					spatialData: image.spatialData, // the consolidated h5ad, source of every overlay
 					hideCellStrokes: !s.showCellBoundaries, // polygons without their green outlines
-					spatialData: image.spatialData, // consolidated h5ad; overrides the per-file sources below
-					cellAnnotations: image.cellAnnotations, // per-cell annotations CSV (type fills + tooltip)
+					hideNucleusStrokes: !s.showNucleusBoundaries, // skip the nucleus overlay entirely
 					showCellTypes: s.showCellTypes, // fill cells by their cell_type annotation
 					cellTypeFilter: s.cellTypeFilter ?? undefined, // 'Types shown' dropdowns; ''/null = all
-					nucleusBoundaries: s.showNucleusBoundaries ? image.spatialData ?? image.nucleusBoundaries : undefined,
-					geneExpressionFile: image.geneExpressionFile, // 10x h5 the counts come from
 					geneExpression: s.spatialMode == 'gene_groups' ? undefined : genes, // one overlay per gene
 					geneGroups: s.spatialMode == 'gene_groups' ? genes : undefined, // or one summed overlay
 					hideExpressionFills: !s.showGeneExpression, // checkbox off = hover counts only, no fills

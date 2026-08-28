@@ -168,7 +168,7 @@ class Wsi extends PlotBase implements RxComponent {
 	 wsitiles/genenames (same slide-scoped access checks as genecounts).
 	 Returns [] when the image has no expression file or the request fails. */
 	private async fetchGeneNames(image: SpatialImage, sampleId: string): Promise<string[]> {
-		const src = image.spatialData ?? image.geneExpressionFile // consolidated h5ad wins over the 10x h5
+		const src = image.spatialData // the consolidated h5ad holds the expression matrix
 		if (!src) return [] // no expression source, nothing to discover
 		if (this.geneNamesFile == src) return this.geneNames // cached
 		const v = this.state.vocab // genome + dslabel for the request
@@ -190,7 +190,7 @@ class Wsi extends PlotBase implements RxComponent {
 	 wsitiles/meta scan it). Returns [] when the image has no annotations
 	 file or the request fails. */
 	private async fetchCellTypes(image: SpatialImage, sampleId: string): Promise<string[]> {
-		const src = image.spatialData ?? image.cellAnnotations // consolidated h5ad wins over the csv
+		const src = image.spatialData // the consolidated h5ad holds the annotations
 		if (!src) {
 			// this image has no annotations: clear the cache so stale types
 			// from a previously shown image don't populate the dropdowns

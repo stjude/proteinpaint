@@ -40,23 +40,16 @@ upon error, throw err message as a string
 		await _.init(
 			{
 				slide: urlp.get('image_file'),
-				// optional Xenium segmentation overlays; CSV paths relative to tpmasterdir
-				cellBoundaries: urlp.get('cell_boundaries'),
-				nucleusBoundaries: urlp.get('nucleus_boundaries'),
+				// optional: consolidated spatial .h5ad, tpmasterdir-relative — the
+				// single source of boundaries, annotations and expression
+				spatialData: urlp.get('spatial_data'),
 				// optional: show overlays only within the n most zoomed-in levels
 				annotationLevel: urlp.get('annotation_level'),
 				// optional: fill cell boundaries with one color per gene (comma-
-				// separated list), shaded by the per-cell count from a 10x
-				// cell_feature_matrix HDF5
+				// separated list), shaded by the per-cell count from the h5ad
 				geneExpression: urlp.get('gene_expression'),
-				geneExpressionFile: urlp.get('gene_expression_file'),
 				// optional: sum per-cell counts over these genes into ONE overlay
 				geneGroups: urlp.get('gene_groups'),
-				// optional: consolidated spatial .h5ad — single source for boundaries,
-				// annotations and expression, overriding the per-file params
-				spatialData: urlp.get('spatial_data'),
-				// optional: per-cell annotations CSV (cell_id,cell_type, one row per cell)
-				cellAnnotations: urlp.get('cell_annotations'),
 				// optional: fill cells by their annotated type;
 				// =1 fills all types, =Tumor,B cells fills only the listed types
 				showCellTypes: urlp.has('cell_types'),

@@ -4,34 +4,30 @@
  The format (SVS, OME-TIFF, ...) is deduced from the file extension,
  case-insensitively, by the server (wsi_tile.py open_slide()).
 
- Optional boundary overlays (Xenium segmentation), drawn when these params name
- CSV files; like the slide itself, paths are relative to serverconfig.tpmasterdir:
-   &cell_boundaries=SVS/cell_boundaries.csv&nucleus_boundaries=SVS/nucleus_boundaries.csv
- CSV columns: cell_id, vertex_x, vertex_y (µm); rows of one cell are contiguous
- and its first vertex is repeated last to close the polygon.
+ All spatial companion data comes from ONE consolidated .h5ad (like the slide,
+ the path is relative to serverconfig.tpmasterdir):
+   &spatial_data=SVS/spatial.h5ad
+ It supplies the cell/nucleus boundary polygons (drawn as strokes), the
+ per-cell cell_type annotations, and the gene expression matrix — the server
+ derives each piece from it (see wsitiles.ts).
 
- &cell_annotations=SVS/cell_annotations.csv names the per-cell annotations CSV
- (cell_id,cell_type — ONE row per cell, not per vertex), the source of the
- cell-type overlay and the tooltip's cell type. &cell_types=1 fills every
- annotated cell by its type; &cell_types=Tumor,B cells fills only the listed
- types. Colors are assigned over all types, so a type keeps its color across
- filters.
+ &cell_types=1 fills every annotated cell by its type; &cell_types=Tumor,B
+ cells fills only the listed types. Colors are assigned over all types, so a
+ type keeps its color across filters.
 
  &annotation_level=n limits the boundary strokes to the n most zoomed-in levels
  of the viewer: zoomed out beyond that, the boundaries are hidden. Omit to
  always show. Gene expression fills are not affected — they show at all zooms.
 
  While the boundaries are visible (within annotation_level), hovering over a
- cell shows a tooltip with its id, its cell_type (when the CSV carries one),
- and its per-gene transcript counts (when gene overlays are loaded).
+ cell shows a tooltip with its id, its cell_type (when annotated), and its
+ per-gene transcript counts (when genes are loaded).
 
- Gene expression overlay (needs cell_boundaries):
-   &gene_expression_file=SVS/cell_feature_matrix.h5&gene_expression=ACE2,ACTA2
- draws one fill overlay per comma-separated gene, each in its own color (see
- GENE_COLORS), shaded by that gene's transcript count in the cell (10x
- cell_feature_matrix HDF5; cell ids match the boundary CSV's). A legend
- overlaid on the map's top-right corner shows each gene's color gradient and
- count range; cells expressing several genes blend their fills.
+ Gene expression overlay: &gene_expression=ACE2,ACTA2 draws one fill overlay
+ per comma-separated gene, each in its own color (see GENE_COLORS), shaded by
+ that gene's transcript count in the cell. A legend overlaid on the map's
+ top-right corner shows each gene's color gradient and count range; cells
+ expressing several genes blend their fills.
  An unknown gene name surfaces an error in the UI (other genes still render).
  When the cell-type overlay is shown, expression fills/legend are suppressed
  (never both fills at once) — counts still appear in the hover tooltip.
@@ -70,33 +66,26 @@ export async function init(
 		slideQuery?: string
 		/** display name when slide is not given (e.g. the spatial image fileName) */
 		label?: string
-		/** = spatial_data: consolidated spatial .h5ad, tpmasterdir-relative.
-		 When set it becomes the single source for cell/nucleus boundaries,
-		 cell-type annotations AND gene expression, overriding the four
-		 per-file opts below (the server regenerates each piece from it) */
+		/** = spatial_data: the consolidated spatial .h5ad, tpmasterdir-relative —
+		 the single source of cell/nucleus boundaries, cell-type annotations and
+		 gene expression (the server derives each piece from it) */
 		spatialData?: string
-		/** = cell_boundaries: cell segmentation CSV, tpmasterdir-relative */
-		cellBoundaries?: string
-		/** = cell_annotations: per-cell annotations CSV (cell_id,cell_type),
-		 tpmasterdir-relative — feeds the cell-type overlay and the tooltip */
-		cellAnnotations?: string
-		/** fetch cellBoundaries (expression fills need the polygons) but don't draw their strokes */
+		/** fetch the cell polygons (type/expression fills need them) but don't
+		 draw their strokes */
 		hideCellStrokes?: boolean
-		/** fill each cell by its cell_type from the annotations CSV (when
-		 present), one categorical color per type, with a legend */
+		/** skip the nucleus boundary overlay entirely */
+		hideNucleusStrokes?: boolean
+		/** fill each cell by its annotated cell_type (when present), one
+		 categorical color per type, with a legend */
 		showCellTypes?: boolean
 		/** comma-separated cell types to fill; empty/undefined = all types.
 		 Colors are assigned over ALL types by abundance, so a type keeps its
 		 color when the filter changes */
 		cellTypeFilter?: string
-		/** = nucleus_boundaries: nucleus segmentation CSV, tpmasterdir-relative */
-		nucleusBoundaries?: string
 		/** = annotation_level: strokes only in the n most zoomed-in levels */
 		annotationLevel?: string | number
 		/** = gene_expression: comma-separated genes, one fill overlay per gene */
 		geneExpression?: string
-		/** = gene_expression_file: 10x cell_feature_matrix HDF5 */
-		geneExpressionFile?: string
 		/** = gene_groups: genes summed into ONE fill overlay */
 		geneGroups?: string
 		/** fetch the gene counts (hover tooltip reports them) but draw no
@@ -109,18 +98,6 @@ export async function init(
 	/** d3 selection the viewer renders into */
 	holder: any
 ) {
-	if (opts.spatialData) {
-		// the consolidated h5ad is the single source: reroute the companion
-		// fetches to it and let the server derive the piece each asks for.
-		// The mass plot (slideQuery) chooses which overlays to load by
-		// setting/omitting the boundary opts, so only replace the ones it
-		// asked for; a direct URL passing spatial_data gets all of them
-		const all = !opts.slideQuery
-		if (all || opts.cellBoundaries) opts.cellBoundaries = opts.spatialData
-		if (all || opts.nucleusBoundaries) opts.nucleusBoundaries = opts.spatialData
-		opts.cellAnnotations = opts.spatialData
-		opts.geneExpressionFile = opts.spatialData
-	}
 	const name = opts.slide ?? opts.label ?? 'slide' // display name in messages
 	const loading = holder.append('div').style('margin', '20px').text(`Loading ${name} …`) // placeholder while meta loads
 	try {
@@ -267,45 +244,58 @@ export async function init(
 		// consolidated store both files are the SAME h5ad, so kind, not the
 		// file name, identifies the overlay), and stroke color (cell green,
 		// nucleus blue)
-		const overlays: Array<[string | undefined, 'cell' | 'nucleus', string]> = [
-			[opts.cellBoundaries, 'cell', 'rgba(0, 200, 80, 0.9)'],
-			[opts.nucleusBoundaries, 'nucleus', 'rgba(0, 150, 255, 0.9)']
+		const geneList = (
+			s?: string // comma-separated param -> clean gene name list
+		) =>
+			(s || '')
+				.split(',')
+				.map(t => t.trim())
+				.filter(Boolean)
+		const exprGenes = geneList(opts.geneExpression) // one overlay per gene
+		const groupGenes = geneList(opts.geneGroups) // summed into a single overlay
+
+		// which overlays need the h5ad: cell polygons serve the strokes, the
+		// type/expression fills and the hover tooltip; nucleus polygons only
+		// their own strokes
+		const needCellPolys =
+			!!opts.spatialData &&
+			(!opts.hideCellStrokes || opts.showCellTypes || exprGenes.length > 0 || groupGenes.length > 0)
+		const overlays: Array<['cell' | 'nucleus', boolean, string]> = [
+			['cell', needCellPolys, 'rgba(0, 200, 80, 0.9)'],
+			['nucleus', !!opts.spatialData && !opts.hideNucleusStrokes, 'rgba(0, 150, 255, 0.9)']
 		]
 		let cellPolys: CellPoly[] | undefined // kept for the expression/type fills below
-		for (const [file, kind, color] of overlays) {
-			if (!file) continue // that overlay was not requested
+		for (const [kind, wanted, color] of overlays) {
+			if (!wanted) continue // that overlay was not requested
 			try {
-				const polys = await fetchBoundaries(host, sq, file, kind, mppX, mppY) // csv -> px polygons
+				const polys = await fetchBoundaries(host, sq, opts.spatialData!, kind, mppX, mppY) // h5ad -> px polygons
 				if (kind == 'cell') {
 					cellPolys = polys // expression/type fills reuse these rings
 					if (opts.hideCellStrokes) continue // polygons fetched, strokes suppressed
 				}
 				map.addLayer(strokeLayer(polys, color, maxResolution)) // draw on top of the slide
 			} catch (e: any) {
-				sayerror(holder, `Error loading ${file}: ${e.message || e}`) // one overlay failing kills nothing else
+				sayerror(holder, `Error loading ${kind} boundaries: ${e.message || e}`) // one overlay failing kills nothing else
 			}
 		}
 
-		// per-cell annotations (one row per cell), fetched through the same
-		// boundaries action — from the annotations CSV, or regenerated out of
-		// the consolidated h5ad (kind=annotations); feeds type fills + tooltip.
-		// Useless without the cell polygons, so skipped when those are absent.
+		// per-cell annotations from the h5ad, as JSON {cells:{cell_id:type}} —
+		// cell types are free text, so they never travel as CSV; feeds the
+		// type fills + tooltip. Useless without the cell polygons.
 		let cellTypes: { [id: string]: string } | undefined // cell_id -> annotated type
-		if (opts.cellAnnotations && cellPolys) {
+		if (opts.spatialData && cellPolys) {
 			try {
-				const res = await fetch(
-					`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(opts.cellAnnotations)}&kind=annotations`
-				)
-				if (!res.ok) throw new Error(`${res.status} ${res.statusText}`) // http failure = error banner
-				cellTypes = parseCellAnnotations(await res.text()) // csv -> id->type map
+				const r = await dofetch3(`wsitiles/annotations?${sq}&file=${encodeURIComponent(opts.spatialData)}`)
+				if (!r || r.error) throw new Error(r?.error || 'failed to load annotations')
+				cellTypes = r.cells // the id->type map, served ready to use
 			} catch (e: any) {
-				sayerror(holder, `Error loading ${opts.cellAnnotations}: ${e.message || e}`) // overlay lost, viewer lives
+				sayerror(holder, `Error loading annotations: ${e.message || e}`) // overlay lost, viewer lives
 			}
 		}
 
 		// cell-type overlay: fill each annotated cell in its type's categorical
 		// color, with its own legend (top-left; the gene legend uses top-right).
-		// No-op when no annotations CSV was given (or it held no types).
+		// No-op when the h5ad held no cell types.
 		// While it is shown, the gene expression FILLS are suppressed below (the
 		// two fills are unreadable on top of each other) — gene counts are still
 		// fetched so hovering a cell reports its expression.
@@ -358,28 +348,17 @@ export async function init(
 		// per-gene count maps kept for the hover tooltip below
 		const geneCounts: { gene: string; cells: { [id: string]: number } }[] = []
 
-		const geneList = (
-			s?: string // comma-separated param -> clean gene name list
-		) =>
-			(s || '')
-				.split(',')
-				.map(t => t.trim())
-				.filter(Boolean)
-		const exprGenes = geneList(opts.geneExpression) // one overlay per gene
-		const groupGenes = geneList(opts.geneGroups) // summed into a single overlay
 		if (exprGenes.length || groupGenes.length) {
 			try {
-				if (!opts.geneExpressionFile)
-					// counts live in the h5; genes without it can't render
-					throw new Error('gene_expression/gene_groups requires gene_expression_file=<h5 file>')
-				if (!cellPolys) throw new Error('gene_expression/gene_groups requires cell_boundaries=<csv file>') // no polygons to fill
+				if (!opts.spatialData)
+					// counts live in the h5ad; genes without it can't render
+					throw new Error('gene_expression/gene_groups requires spatial_data=<h5ad file>')
+				if (!cellPolys) throw new Error('gene_expression/gene_groups needs the cell polygons') // nothing to fill
 				// one genecounts request per gene, expr + group genes together
 				const results = await Promise.all(
 					[...exprGenes, ...groupGenes].map(gene =>
 						dofetch3(
-							`wsitiles/genecounts?${sq}&file=${encodeURIComponent(opts.geneExpressionFile!)}&gene=${encodeURIComponent(
-								gene
-							)}`
+							`wsitiles/genecounts?${sq}&file=${encodeURIComponent(opts.spatialData!)}&gene=${encodeURIComponent(gene)}`
 						).catch((e: any) => ({ error: e.message || String(e) }))
 					)
 				)
@@ -551,16 +530,16 @@ export function pointInRing(x: number, y: number, ring: number[][]): boolean {
 	return inside // odd crossings = inside
 }
 
-/** Fetch a boundary CSV (via wsitiles/boundaries) and parse it into one closed
- ring per cell, keyed by the unquoted cell_id (matches h5 barcodes). */
+/** Fetch one polygon set of the h5ad (via wsitiles/boundaries) and parse it
+ into one closed ring per cell, keyed by the unquoted cell_id. */
 async function fetchBoundaries(
 	/** server origin ('' when same-origin) */
 	host: string,
 	/** wsitiles query addressing the slide (slide= or dataset params) */
 	sq: string,
-	/** the boundaries CSV — or the consolidated .h5ad the server regenerates it from */
+	/** the consolidated .h5ad the server regenerates the CSV from */
 	file: string,
-	/** which polygons when file is an h5ad (csv sources ignore it) */
+	/** which polygon set */
 	kind: 'cell' | 'nucleus',
 	/** µm per pixel, x and y, from meta.mpp */
 	mppX: number,
@@ -569,25 +548,6 @@ async function fetchBoundaries(
 	const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}&kind=${kind}`) // raw csv text
 	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`) // http failure = overlay error banner
 	return parseBoundaries(await res.text(), mppX, mppY) // csv -> polygons
-}
-
-/** Parse a per-cell annotations CSV (cell_id,cell_type — one row per cell)
- into cell_id -> type; QC-filtered cells (empty type) are omitted.
- (exported for tests) */
-export function parseCellAnnotations(text: string): { [id: string]: string } {
-	const unquote = (s?: string) => (s || '').replace(/"/g, '').trim() // strip csv quoting
-	const lines = text.split('\n') // one cell per line
-	const header = lines[0] ? lines[0].split(',').map(unquote) : [] // column names
-	const idIdx = header.indexOf('cell_id') // where the ids live
-	const typeIdx = header.indexOf('cell_type') // where the types live
-	const out: { [id: string]: string } = {} // the id -> type map
-	if (idIdx < 0 || typeIdx < 0) return out // not the expected format: no annotations
-	for (let i = 1; i < lines.length; i++) {
-		const fields = lines[i].split(',') // annotation values never contain commas
-		const t = unquote(fields[typeIdx]) // this cell's type
-		if (t) out[unquote(fields[idIdx])] = t // empty type = QC-filtered, skip
-	}
-	return out
 }
 
 /** Parse a boundary CSV into one closed ring per cell (exported for tests). */
@@ -599,7 +559,9 @@ export function parseBoundaries(
 	mppY: number
 ): CellPoly[] {
 	// rows: "cell_id",vertex_x,vertex_y — one cell's vertices are contiguous.
-	// Per-cell annotations live in a separate cell_annotations CSV, not here.
+	// Splitting on commas is safe here BECAUSE of what the columns hold: a
+	// Xenium cell id and two numbers, never quoted free text (cell types,
+	// which are free text, travel as JSON via wsitiles/annotations instead).
 	// OL's Zoomify extent is [0,-h,w,0]: x in px to the right, y in px negated.
 	const lines = text.split('\n') // one vertex row per line
 	const cells: CellPoly[] = [] // finished polygons

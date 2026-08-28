@@ -101,10 +101,6 @@ function init({ genomes }) {
 							type: 'spatial' as const,
 							fileName,
 							spatialData: rel(bySuffix(w2.spatialDataFileSuffix)),
-							cellBoundaries: rel(bySuffix(w2.cellBoundariesFileSuffix)),
-							cellAnnotations: rel(bySuffix(w2.cellAnnotationsFileSuffix)),
-							nucleusBoundaries: rel(bySuffix(w2.nucleusBoundariesFileSuffix)),
-							geneExpressionFile: rel(bySuffix(w2.geneExpressionFileSuffix)),
 							// dataset-level viewer defaults; the client's burger menu overrides them
 							geneExpression: w2.geneExpression,
 							annotationLevel: w2.annotationLevel,

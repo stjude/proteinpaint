@@ -41,9 +41,9 @@ is the contract that makes the whole pipeline line up.
 roots, both laid out as `<root>/<sample_id>/<imageName>/<files>`:
 
 - `folder` — spatial (Xenium) images. Inside each image folder the slide and
-  its companion files are found by suffix match (`tiffFileSuffix`,
-  `cellBoundariesFileSuffix`, `cellAnnotationsFileSuffix`,
-  `nucleusBoundariesFileSuffix`, `geneExpressionFileSuffix`).
+  its consolidated data store are found by suffix match (`tiffFileSuffix`,
+  `spatialDataFileSuffix` — the spatial.h5ad holding boundaries, annotations
+  and expression).
 - `wsiFolder` — plain whole-slide images (`.svs` / `.ome.tif`), one slide per
   image folder.
 
@@ -68,18 +68,22 @@ All viewer traffic hits `wsitiles/:action`:
 - **`/meta`**: spawns `wsi_tile.py meta` → dimensions, mpp, level count,
   z-plane count, plus `version` (slide mtime) which the client bakes into tile
   URLs so a regenerated slide busts the immutable browser cache. With
-  `?cellAnnotations=<csv>` it also scans that per-cell annotations CSV's
-  `cell_type` column and adds `cellTypes: [...]` (sorted distinct values,
-  cached by file mtime) — how the client discovers the types for its filter
-  dropdowns up front.
+  `?cellAnnotations=<h5ad>` it also reads the distinct `cell_type` values out
+  of the consolidated store and adds `cellTypes: [...]` (sorted, cached by
+  file mtime) — how the client discovers the types for its filter dropdowns
+  up front.
 - **`/tile/z/x/y`**: checks the disk cache
   (`cachedir/wsitiles/<sha1(slide:mtime)>_<plane>_<z>_<x>_<y>.jpg`); on a miss
   spawns `wsi_tile.py tile`, copies the produced JPEG into the cache, and
   serves it with `Cache-Control: immutable`.
-- **`/boundaries`, `/genecounts`, `/genenames`** (spatial only): serve a
-  companion CSV / per-cell counts of one gene / the list of all genes present
-  in the companion HDF5. `?file=` is scoped to the selected slide's own image
-  folder, so a valid slide query cannot read other samples' or datasets' files.
+- **`/boundaries`, `/annotations`, `/genecounts`, `/genenames`** (spatial
+  only): all read the image's consolidated spatial.h5ad (`?file=`).
+  `/boundaries` regenerates a polygon CSV (`?kind=cell|nucleus` — safe as CSV:
+  ids and numbers only); `/annotations` answers `{cells:{cell_id:type}}` as
+  JSON, since cell types are free text that CSV comma-splitting would corrupt;
+  the gene actions answer per-cell counts of one gene / every gene name in the
+  file. `?file=` is scoped to the selected slide's own image folder, so a
+  valid slide query cannot read other samples' or datasets' files.
 
 ### 3. Decoding & tile production — `python/src/wsi_tile.py`
 
@@ -151,7 +155,7 @@ file, in file order.
 ### 5. Overlays — `client/plots/w2/wsi.direct.ts`
 
 All overlays are OpenLayers vector layers drawn over the tile layer, built
-from the cell/nucleus boundary CSVs (`/boundaries`, µm→px via `meta.mpp`).
+from the h5ad's cell/nucleus polygons (`/boundaries`, µm→px via `meta.mpp`).
 
 - **Boundary strokes** — cell outlines green, nucleus outlines blue.
   `annotation_level=n` (burger: "Annotation level") shows them only within
@@ -163,11 +167,9 @@ from the cell/nucleus boundary CSVs (`/boundaries`, µm→px via `meta.mpp`).
   transcript count, bucketed into 8 shades. `gene_groups` ("Gene group"
   mode) instead sums the listed genes per cell into ONE overlay. A gradient
   legend sits at the map's top-right.
-- **Cell-type fills** — per-cell annotations live in their own small CSV
-  (`cell_annotations.csv`: `cell_id,cell_type`, ONE row per cell — not
-  duplicated across vertex rows), named by `&cell_annotations=` on a URL or
-  `cellAnnotationsFileSuffix` in the dataset config, and served through the
-  same `/boundaries` action. Each annotated cell is filled in its type's
+- **Cell-type fills** — per-cell annotations come from the h5ad's
+  `obs.cell_type`, fetched as JSON via `/annotations` (one entry per
+  annotated cell). Each annotated cell is filled in its type's
   categorical color, with a legend at the top-left (cell counts per type in
   parentheses), placed clear of the zoom buttons. Toggled by the "Cell
   types" checkbox or `&cell_types=1`; without the annotations file the
@@ -200,7 +202,7 @@ next to the cursor:
 
 ```
 cell id: aaabkgcd-1
-cell type: Tumor          (when a cell_annotations CSV is loaded)
+cell type: Tumor          (when the h5ad carries annotations)
 PTPRC expression: 12.0    (one line per loaded gene / gene group)
 ```
 

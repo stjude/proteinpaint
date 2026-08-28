@@ -269,64 +269,64 @@ def tile(slide, z, x, y, quality=80, plane=None):
         s.close()  # always release the slide
 
 
-def genenames(h5):
-    """All gene names, in file order, from a 10x cell_feature_matrix HDF5 or a
-    consolidated spatial .h5ad (AnnData; genes live in var/_index). Lets the
+def genenames(h5ad):
+    """All gene names of a spatial .h5ad, in file order (var/_index). Lets the
     client discover/validate genes instead of trusting configuration."""
     import h5py
-    with h5py.File(h5, "r") as f:
-        key = "var/_index" if h5.endswith(".h5ad") else "matrix/features/name"
-        return {"genes": f[key][:].astype(str).tolist()}
+    with h5py.File(h5ad, "r") as f:
+        return {"genes": f["var/_index"][:].astype(str).tolist()}
 
 
-def genecounts(h5, gene):
-    """Per-cell counts of one gene. Source is either a 10x cell_feature_matrix
-    HDF5 (CSC sparse, genes x cells) or a spatial .h5ad, whose X (cells x
-    genes) may be CSR, CSC or dense — dispatched on AnnData's encoding-type
-    attribute; anything else is rejected with a clear error, as is an absent
-    gene, so the UI gets a message instead of a traceback. Zero-count cells
-    are omitted."""
+def genecounts(h5ad, gene):
+    """Per-cell counts of one gene from a spatial .h5ad. X (cells x genes) may
+    be CSR, CSC or dense — dispatched on AnnData's encoding-type attribute;
+    anything else is rejected with a clear error, as is an absent gene, so
+    the UI gets a message instead of a traceback. Zero-count cells are
+    omitted."""
     import os
     import h5py
-    h5ad = h5.endswith(".h5ad")  # which of the two layouts to read
-    with h5py.File(h5, "r") as f:
-        names = f["var/_index" if h5ad else "matrix/features/name"][:].astype(str)
+    with h5py.File(h5ad, "r") as f:
+        names = f["var/_index"][:].astype(str)            # all gene names
         hit = np.nonzero(names == gene)[0]                # index of the gene
         if hit.size == 0:
-            return {"error": f"gene '{gene}' not found in {os.path.basename(h5)}"}
-        gi = int(hit[0])                                  # the gene's column/row index
-        if not h5ad:
-            # 10x layout: one fixed shape, CSC genes x cells
-            g = f["matrix"]
-            mask = g["indices"][:] == gi                  # nonzero entries of that gene
-            vals = g["data"][:][mask]                     # their counts
+            return {"error": f"gene '{gene}' not found in {os.path.basename(h5ad)}"}
+        gi = int(hit[0])                                  # the gene's column index
+        X = f["X"]                                        # cells x genes, encoding varies
+        enc = str(X.attrs.get("encoding-type", ""))
+        if isinstance(X, h5py.Dataset):
+            # dense X: the gene's column, nonzero cells only
+            col = X[:, gi]
+            cells = np.nonzero(col)[0]
+            vals = col[cells]
+        elif enc == "csr_matrix":
+            # cell-major: scan the column indices for this gene's entries
+            mask = X["indices"][:] == gi
+            vals = X["data"][:][mask]
             # entry k belongs to the cell whose indptr range contains k
-            cells = np.searchsorted(g["indptr"][:], np.nonzero(mask)[0], side="right") - 1
+            cells = np.searchsorted(X["indptr"][:], np.nonzero(mask)[0], side="right") - 1
+        elif enc == "csc_matrix":
+            # gene-major: the gene's column is one contiguous slice
+            s, e = X["indptr"][gi : gi + 2]
+            cells = X["indices"][s:e]
+            vals = X["data"][s:e]
         else:
-            X = f["X"]                                    # cells x genes, encoding varies
-            enc = str(X.attrs.get("encoding-type", ""))
-            if isinstance(X, h5py.Dataset):
-                # dense X: the gene's column, nonzero cells only
-                col = X[:, gi]
-                cells = np.nonzero(col)[0]
-                vals = col[cells]
-            elif enc == "csr_matrix":
-                # cell-major: scan the column indices for this gene's entries
-                mask = X["indices"][:] == gi
-                vals = X["data"][:][mask]
-                cells = np.searchsorted(X["indptr"][:], np.nonzero(mask)[0], side="right") - 1
-            elif enc == "csc_matrix":
-                # gene-major: the gene's column is one contiguous slice
-                s, e = X["indptr"][gi : gi + 2]
-                cells = X["indices"][s:e]
-                vals = X["data"][s:e]
-            else:
-                return {"error": f"unsupported X encoding '{enc}' in {os.path.basename(h5)}"}
-        barcodes = f["obs/_index" if h5ad else "matrix/barcodes"][:].astype(str)
+            return {"error": f"unsupported X encoding '{enc}' in {os.path.basename(h5ad)}"}
+        barcodes = f["obs/_index"][:].astype(str)         # cell ids, obs order
     return {
         "cells": dict(zip(barcodes[cells].tolist(), vals.astype(int).tolist())),
         "max": int(vals.max()) if vals.size else 0,  # legend upper bound
     }
+
+
+def h5ad_annotations(h5ad):
+    """Every annotated cell's type from a spatial .h5ad, as JSON — cell types
+    are free text (may contain commas/quotes), so they travel as JSON, never
+    CSV. QC-filtered cells ('' type) are omitted."""
+    import h5py
+    with h5py.File(h5ad, "r") as f:
+        types = _h5ad_cell_types(f)                       # one string per cell, '' = untyped
+        ids = f["obs/_index"][:].astype(str)              # cell ids, obs order
+    return {"cells": {i: t for i, t in zip(ids.tolist(), types.tolist()) if t}}
 
 
 def _h5ad_cell_types(f):
@@ -345,35 +345,27 @@ def _h5ad_cell_types(f):
 
 
 def h5ad_csv(h5ad, kind):
-    """Regenerate one of the viewer's companion CSVs from a consolidated
-    spatial .h5ad, so the client's CSV parsers work unchanged whatever the
-    storage. kind: 'cell' | 'nucleus' (boundary polygons from
-    uns/{kind}_boundaries: cell_id[i] owns vertices[indptr[i]:indptr[i+1]]) or
-    'annotations' (obs/cell_type categorical -> cell_id,cell_type rows).
-    Writes the CSV to a temp file and returns its path (large output; same
-    print-a-path contract as tile()).
+    """Regenerate a boundary CSV from a spatial .h5ad's ragged polygon store
+    (uns/{kind}_boundaries: cell_id[i] owns vertices[indptr[i]:indptr[i+1]]).
+    kind: 'cell' | 'nucleus'. CSV is safe as this wire format because every
+    column is a Xenium cell id or a number — never free text (cell types are
+    served as JSON by h5ad_annotations instead). Writes the CSV to a temp
+    file and returns its path (large output; same print-a-path contract as
+    tile()).
     ponytail: boundaries regenerate on every request (~1s for ~700k rows);
     node caches per h5ad mtime on disk if this ever shows up."""
     import os
     import h5py
     fd, out = tempfile.mkstemp(suffix=".csv", prefix="wsih5ad_")
     with h5py.File(h5ad, "r") as f, os.fdopen(fd, "w") as w:
-        if kind == "annotations":
-            types = _h5ad_cell_types(f)                          # one string per cell, '' = untyped
-            ids = f["obs/_index"][:].astype(str)                 # cell ids, obs order
-            w.write('"cell_id","cell_type"\n')
-            for i, t in enumerate(types):
-                if t:                                            # '' = QC-filtered, omit
-                    w.write(f'"{ids[i]}","{t}"\n')
-        else:
-            b = f[f"uns/{kind}_boundaries"]                      # the ragged polygon store
-            ids = b["cell_id"][:].astype(str)                    # one id per polygon
-            indptr = b["indptr"][:]                              # ring offsets into vertices
-            verts = b["vertices"][:]                             # (N, 2) um coordinates
-            w.write('"cell_id","vertex_x","vertex_y"\n')
-            for i, cid in enumerate(ids):
-                for x, y in verts[indptr[i]:indptr[i + 1]]:
-                    w.write(f'"{cid}",{x:.4f},{y:.4f}\n')
+        b = f[f"uns/{kind}_boundaries"]                      # the ragged polygon store
+        ids = b["cell_id"][:].astype(str)                    # one id per polygon
+        indptr = b["indptr"][:]                              # ring offsets into vertices
+        verts = b["vertices"][:]                             # (N, 2) um coordinates
+        w.write('"cell_id","vertex_x","vertex_y"\n')
+        for i, cid in enumerate(ids):
+            for x, y in verts[indptr[i]:indptr[i + 1]]:
+                w.write(f'"{cid}",{x:.4f},{y:.4f}\n')
     return out  # node reads, serves, deletes
 
 
@@ -417,6 +409,8 @@ def main():
         print(json.dumps(genenames(job["h5"]), separators=(",", ":")))
     elif job["action"] == "h5ad_csv":
         print(h5ad_csv(job["h5ad"], job["kind"]))  # temp csv path
+    elif job["action"] == "h5ad_annotations":
+        print(json.dumps(h5ad_annotations(job["h5ad"]), separators=(",", ":")))
     elif job["action"] == "h5ad_celltypes":
         print(json.dumps(h5ad_celltypes(job["h5ad"]), separators=(",", ":")))
     else:

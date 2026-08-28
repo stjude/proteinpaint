@@ -38,7 +38,8 @@ export const payload: RoutePayload = {
 	response: { typeId: 'any' }
 }
 
-// one endpoint, `action` selects meta/tile/boundaries/genecounts; z/x/y only for tile
+// one endpoint, `action` selects meta/tile/boundaries/annotations/genecounts/
+// genenames; z/x/y only for tile
 export const api: RouteApi = {
 	endpoint: `wsitiles/:action/:z?/:x?/:y?`,
 	methods: { get: payload, post: payload }
@@ -129,25 +130,8 @@ function slidePath(genomes: any, q: any): string {
 	throw new Error('ds.queries.w2 not configured for this dataset')
 }
 
-/** Distinct non-empty values of a per-cell annotations CSV's cell_type column
- (cell_id,cell_type — one row per cell), sorted; undefined when the header has
- no such column. (exported for tests) */
-export function distinctCellTypes(csv: string): string[] | undefined {
-	const unquote = (s: string) => s.replace(/"/g, '').trim()
-	const lines = csv.split('\n')
-	const typeIdx = lines[0] ? lines[0].split(',').findIndex(h => unquote(h) == 'cell_type') : -1 // header lookup
-	if (typeIdx < 0) return undefined // no cell_type column
-	const types = new Set<string>() // distinct values seen
-	for (let i = 1; i < lines.length; i++) {
-		const t = unquote(lines[i].split(',')[typeIdx] || '') // this row's type
-		if (t) types.add(t) // QC-filtered cells have an empty field
-	}
-	return [...types].sort()
-}
-
-// distinct cell_type answers cached per annotations CSV, valid while its
-// mtime is unchanged — the file is small (one row per cell), the cache just
-// avoids re-reading it on every meta request
+// distinct cell_type answers cached per h5ad, valid while its mtime is
+// unchanged — avoids re-spawning python on every meta request
 const cellTypesCache = new Map<string, { mtime: number; types?: string[] }>()
 
 function init({ genomes }) {
@@ -164,62 +148,59 @@ function init({ genomes }) {
 			// since its URL contract takes arbitrary tpmasterdir-relative paths.
 			const companionBase = q.slide ? path.resolve(serverconfig.tpmasterdir) : path.dirname(slide)
 
-			if (req.params.action == 'boundaries') {
-				// serve a companion CSV: either a real one (Xenium
-				// cell/nucleus_boundaries.csv, cell_annotations.csv), or the same CSV
-				// regenerated from a consolidated spatial .h5ad (?kind= picks which:
-				// cell | nucleus | annotations) — the client's parsers never know the
-				// difference
-				const file = String(q.file || '') // tpmasterdir-relative companion path
-				const isH5ad = file.toLowerCase().endsWith('.h5ad') // consolidated store vs plain csv
-				if (!isH5ad && !file.toLowerCase().endsWith('.csv')) {
-					// only csv/h5ad files may be served by this action
-					res.status(400).send({ status: 'error', error: 'boundaries file must be a .csv or .h5ad' })
+			if (req.params.action == 'boundaries' || req.params.action == 'annotations') {
+				// both read the image's consolidated spatial .h5ad (?file=, relative
+				// to tpmasterdir). boundaries regenerates a polygon CSV (?kind=
+				// cell | nucleus; safe as CSV — ids and numbers only); annotations
+				// answers {cells:{cell_id:type}} as JSON, since cell types are free
+				// text that CSV comma-splitting would corrupt
+				const file = String(q.file || '') // tpmasterdir-relative h5ad path
+				if (!file.toLowerCase().endsWith('.h5ad')) {
+					// only consolidated h5ad stores may be queried by these actions
+					res.status(400).send({ status: 'error', error: `${req.params.action} file must be a .h5ad` })
 					return
 				}
 				const full = path.resolve(serverconfig.tpmasterdir, file) // absolute path of the request
 				if (!full.startsWith(companionBase + path.sep)) {
 					// outside the slide's image folder (or tpmasterdir in direct mode)
-					res.status(400).send({ status: 'error', error: 'boundaries path escapes the slide folder' })
+					res.status(400).send({ status: 'error', error: `${req.params.action} path escapes the slide folder` })
 					return
 				}
-				let csv: string
 				try {
-					if (isH5ad) {
-						// python regenerates the requested CSV from the h5ad into a temp
-						// file (same print-a-path contract as tile jobs)
-						const kind = ['cell', 'nucleus', 'annotations'].includes(String(q.kind)) ? String(q.kind) : 'cell'
-						const tmp = (
-							await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_csv', h5ad: full, kind }))
-						).trim()
-						csv = await readFile(tmp, 'utf8') // the regenerated csv
-						await unlink(tmp).catch(() => {}) // python's temp file is no longer needed
-					} else {
-						csv = await readFile(full, 'utf8') // whole csv into memory (they are small)
+					if (req.params.action == 'annotations') {
+						// python's stdout is the JSON answer; relay verbatim
+						const out = await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad: full }))
+						res.status(200).set('Cache-Control', 'public, max-age=3600').json(JSON.parse(out))
+						return
 					}
+					// python regenerates the polygon CSV from the h5ad into a temp
+					// file (same print-a-path contract as tile jobs)
+					const kind = q.kind == 'nucleus' ? 'nucleus' : 'cell' // which polygon set
+					const tmp = (await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_csv', h5ad: full, kind }))).trim()
+					const csv = await readFile(tmp, 'utf8') // the regenerated csv
+					await unlink(tmp).catch(() => {}) // python's temp file is no longer needed
+					// cacheable for an hour; the h5ad changes with the slide, rarely
+					res.status(200).set('Content-Type', 'text/csv').set('Cache-Control', 'public, max-age=3600').send(csv)
 				} catch (e: any) {
 					// distinguish a missing file (404) from a read failure (500)
 					res.status(e?.code === 'ENOENT' ? 404 : 500).send({
 						status: 'error',
-						error: e?.code === 'ENOENT' ? 'boundaries file not found' : e.message || String(e)
+						error: e?.code === 'ENOENT' ? `${req.params.action} file not found` : e.message || String(e)
 					})
-					return
 				}
-				// cacheable for an hour; boundary files change with the slide, rarely
-				res.status(200).set('Content-Type', 'text/csv').set('Cache-Control', 'public, max-age=3600').send(csv)
 				return
 			}
 
 			if (req.params.action == 'genecounts' || req.params.action == 'genenames') {
-				// both actions read the 10x cell_feature_matrix HDF5 (?file= relative
+				// both actions read the consolidated spatial .h5ad (?file= relative
 				// to tpmasterdir). genecounts (+ ?gene=) answers per-cell counts of
 				// one gene: {cells:{cell_id:count},max} or {error} when the gene is
 				// absent; genenames answers {genes:[...]} — every gene in the file,
 				// letting the client discover/validate genes instead of trusting config
-				const file = String(q.file || '') // tpmasterdir-relative h5/h5ad path
-				if (!file.toLowerCase().endsWith('.h5') && !file.toLowerCase().endsWith('.h5ad')) {
-					// only hdf5 files (10x matrix or consolidated h5ad) may be queried
-					res.status(400).send({ status: 'error', error: 'gene expression file must be a .h5 or .h5ad' })
+				const file = String(q.file || '') // tpmasterdir-relative h5ad path
+				if (!file.toLowerCase().endsWith('.h5ad')) {
+					// only consolidated h5ad stores may be queried by these actions
+					res.status(400).send({ status: 'error', error: 'gene expression file must be a .h5ad' })
 					return
 				}
 				const full = path.resolve(serverconfig.tpmasterdir, file) // absolute path of the request
@@ -244,26 +225,24 @@ function init({ genomes }) {
 				// version: the client puts it in tile URLs, so a regenerated slide
 				// also busts the browser's immutable tile cache
 				out.version = (await stat(slide)).mtimeMs
-				// ?cellAnnotations=<csv|h5ad>: also report the distinct cell_type
-				// values of that per-cell annotations source (same scoping as the
-				// boundaries action), so the client can build a type picker up front.
-				// Absent column / unreadable file = no cellTypes field, meta still works.
+				// ?cellAnnotations=<h5ad>: also report the distinct cell_type values
+				// of that consolidated store (same scoping as the boundaries action),
+				// so the client can build a type picker up front. Unreadable file /
+				// no types = no cellTypes field, meta still works.
 				if (q.cellAnnotations) {
 					try {
-						const src = String(q.cellAnnotations) // annotations csv or consolidated h5ad
-						const isH5ad = src.toLowerCase().endsWith('.h5ad')
+						const src = String(q.cellAnnotations) // the consolidated h5ad
 						const full = path.resolve(serverconfig.tpmasterdir, src)
-						if (!isH5ad && !src.toLowerCase().endsWith('.csv')) throw new Error('not a csv/h5ad')
+						if (!src.toLowerCase().endsWith('.h5ad')) throw new Error('not a .h5ad')
 						if (!full.startsWith(companionBase + path.sep)) throw new Error('path escapes the slide folder')
 						// scan the file only when its mtime changed; else answer from cache
 						const mtime = (await stat(full)).mtimeMs
 						let hit = cellTypesCache.get(full)
 						if (!hit || hit.mtime !== mtime) {
-							const types = isH5ad
-								? // python reads the categorical's categories from the h5ad
-								  JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_celltypes', h5ad: full })))
-										.cellTypes
-								: distinctCellTypes(await readFile(full, 'utf8'))
+							// python reads the distinct types out of the h5ad
+							const types = JSON.parse(
+								await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_celltypes', h5ad: full }))
+							).cellTypes
 							hit = { mtime, types }
 							cellTypesCache.set(full, hit) // one entry per annotations source
 						}

@@ -1481,28 +1481,19 @@ type Mds3Queries = {
 		 * subfolder without it is skipped. Required with folder */
 		tiffFileSuffix?: string
 		/** suffix of the consolidated spatial .h5ad (expression X, obs cell_type,
-		 * uns cell/nucleus boundary polygons). When an image folder has one, it
-		 * becomes the single source for boundaries, annotations and expression,
-		 * overriding the per-file suffixes below */
+		 * uns cell/nucleus boundary polygons) — the single source of an image's
+		 * boundaries, annotations and expression. Required for the spatial
+		 * overlays; an image folder without one shows the bare slide */
 		spatialDataFileSuffix?: string
-		/** suffix of the cell segmentation CSV */
-		cellBoundariesFileSuffix?: string
-		/** suffix of the per-cell annotations CSV (cell_id,cell_type — one row
-		 * per cell), the source of the cell-type overlay */
-		cellAnnotationsFileSuffix?: string
-		/** suffix of the nucleus segmentation CSV */
-		nucleusBoundariesFileSuffix?: string
-		/** suffix of the 10x cell feature matrix HDF5 */
-		geneExpressionFileSuffix?: string
 		/** optional override for the spatial viewer's default gene overlay
-		 * (comma-separated). Gene names are discovered from the expression h5 at
+		 * (comma-separated). Gene names are discovered from the h5ad at
 		 * runtime; this value is filtered to genes actually present there, and
 		 * when absent (or naming only absent genes) the file's first gene is the
 		 * default. The burger menu can always override it. */
 		geneExpression?: string
 		/** default: show boundary strokes only in the n most zoomed-in levels */
 		annotationLevel?: number
-		/** default: fill cells by their cell_type from the annotations CSV.
+		/** default: fill cells by their annotated cell_type.
 		 * The burger menu can always override it. */
 		cellTypes?: boolean
 	}
