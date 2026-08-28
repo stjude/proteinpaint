@@ -464,6 +464,7 @@ export async function init(
 			// map's viewport rectangle, immune to the surrounding page's layout
 			const tip = mapDiv
 				.append('div')
+				.attr('data-testid', 'sjpp-wsi-tooltip') // stable hook for e2e tests
 				.style('position', 'fixed')
 				.style('display', 'none')
 				.style('z-index', '20')
@@ -497,10 +498,7 @@ export async function init(
 					tip.style('display', 'none') // pointer over no cell
 					return
 				}
-				const rows = [`cell id: ${hit.id}`] // tooltip line 1: the cell's id
-				const t = cellTypes?.[hit.id] // its annotated type, if the CSV has one
-				if (t) rows.push(`cell type: ${t}`) // line 2: the type
-				for (const g of geneCounts) rows.push(`${g.gene} expression: ${(g.cells[hit.id] || 0).toFixed(1)}`) // per gene
+				const rows = tooltipRows(hit.id, cellTypes, geneCounts) // the tooltip's lines
 				const mr = mapDiv.node().getBoundingClientRect() // map rect: OL pixel -> viewport coords
 				tip // place the box just below-right of the cursor and fill it
 					.style('display', 'block')
@@ -517,6 +515,24 @@ export async function init(
 
 /** one cell's polygon: unquoted cell_id + closed vertex ring in map coords */
 type CellPoly = { id: string; ring: number[][] }
+
+/** The hover tooltip's lines for one cell: its id, its annotated type (line
+ omitted when the cell is unannotated), and one count per loaded gene overlay
+ (0.0 when the cell doesn't express it). (exported for tests) */
+export function tooltipRows(
+	/** the hovered cell's id */
+	id: string,
+	/** cell_id -> annotated type, when annotations loaded */
+	cellTypes: { [id: string]: string } | undefined,
+	/** one entry per loaded gene overlay, with its per-cell counts */
+	geneCounts: { gene: string; cells: { [id: string]: number } }[]
+): string[] {
+	const rows = [`cell id: ${id}`] // line 1: the cell's id
+	const t = cellTypes?.[id] // its annotated type, if any
+	if (t) rows.push(`cell type: ${t}`) // line 2: the type
+	for (const g of geneCounts) rows.push(`${g.gene} expression: ${(g.cells[id] || 0).toFixed(1)}`) // per gene
+	return rows
+}
 
 /** even-odd ray cast: is (x, y) inside the closed ring? (exported for tests) */
 export function pointInRing(x: number, y: number, ring: number[][]): boolean {

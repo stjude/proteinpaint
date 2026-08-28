@@ -1,9 +1,10 @@
 import tape from 'tape'
-import { parseBoundaries, pointInRing } from '../wsi.direct'
+import { parseBoundaries, pointInRing, tooltipRows } from '../wsi.direct'
 
 /* Tests
     parseBoundaries: boundary csv -> one ring per cell
     pointInRing: hover hit test
+    tooltipRows: hover tooltip content
 */
 
 // two cells, µm coords; mpp 0.5 doubles px values, y negated for OL
@@ -65,5 +66,25 @@ tape('pointInRing hover hit test', test => {
 	]
 	test.false(pointInRing(8, 5, concave), 'point in the notch is outside')
 	test.true(pointInRing(2, 5, concave), 'point left of the notch is inside')
+	test.end()
+})
+
+tape('tooltipRows hover tooltip content', test => {
+	const types = { 'cell-1': 'T cell, activated' } // free text, commas allowed
+	const counts: { gene: string; cells: { [id: string]: number } }[] = [
+		{ gene: 'PTPRC', cells: { 'cell-1': 5 } },
+		{ gene: 'ACE2', cells: {} } // cell absent = zero count
+	]
+	test.deepEqual(
+		tooltipRows('cell-1', types, counts),
+		['cell id: cell-1', 'cell type: T cell, activated', 'PTPRC expression: 5.0', 'ACE2 expression: 0.0'],
+		'id, annotated type (commas intact), one count line per gene, 0.0 when absent'
+	)
+	test.deepEqual(
+		tooltipRows('cell-2', types, counts),
+		['cell id: cell-2', 'PTPRC expression: 0.0', 'ACE2 expression: 0.0'],
+		'unannotated cell: no type line'
+	)
+	test.deepEqual(tooltipRows('cell-1', undefined, []), ['cell id: cell-1'], 'no annotations, no genes: id only')
 	test.end()
 })
