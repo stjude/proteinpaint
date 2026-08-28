@@ -1,5 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
+import { scTestSample } from '#shared'
 
 /*
 Tests:
@@ -84,21 +85,13 @@ tape('Test initial SC app rendering', test => {
 			`First th in header row equals the settings.sc.columns.sample value`
 		)
 
-		/* NOTE: skipping for now because for datasets with multiple sample types (e.g. TermdbTest), data are now queried by sample type. For
-		single-cell data, the data are assumed to be at sample-level (see
-		getFilteredSingleCellSamples() in
-		server/src/singleCell/samplesRoute.ts), but the "1_patient" sample
-		is at patient-level, so no data will get returned. This test can be
-		fixed by replacing "1_patient" in the umap file name with a
-		sample-level sample (e.g. "2646"), but this will also require
-		replacing a lot of hardcoded instances of "1_patient".
-		// Test: Table body has one row with 1_patient under the sample column
+		// Test: Table body has one row with scTestSample (2646) under the sample column
 		const bodyRows = table.querySelectorAll('tbody tr')
 		test.ok(bodyRows.length >= 1, 'Table has at least one data row')
 		const firstRowCells = bodyRows[0].querySelectorAll('td')
 		// The sample value is in the 3rd cell (after line number and radio button)
 		const sampleCell = firstRowCells[2]
-		test.equal(sampleCell.innerText, '1_patient', 'First data row has 1_patient as the sample value')*/
+		test.equal(sampleCell.innerText, scTestSample, `First data row has ${scTestSample} as the sample value`)
 
 		if (test['_ok']) sc.Inner.app.destroy()
 		test.end()

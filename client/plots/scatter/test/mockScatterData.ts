@@ -1,4 +1,5 @@
 import { getScgeneexpTw } from '../../../test/testdata/data.ts'
+import { scTestSample } from '#shared'
 
 export const state = {
 	plots: [
@@ -109,7 +110,7 @@ export const mockGroups = [
 		name: 'Test group 1',
 		items: [
 			{
-				sample: '2646',
+				sample: scTestSample,
 				x: -103.141543,
 				y: 73.31223702,
 				sampleId: 41,

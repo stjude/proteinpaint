@@ -20,6 +20,7 @@ import {
 	state2dnameth,
 	state3DContour
 } from './mockScatterData.ts'
+import { scTestSample } from '#shared'
 
 /* Include tests for different term types in this file. 
 Please add tests for UI interactions in scatter.ui.integration.spec.ts 
@@ -609,7 +610,7 @@ tape('Single cell scatter properly renders when colorTW = scct term', function (
 				{
 					chartType: 'sampleScatter',
 					colorTW: getScctTw(),
-					singleCellPlot: { name: 'UMAP', sample: { sID: '1_patient' } }
+					singleCellPlot: { name: 'UMAP', sample: { sID: scTestSample } }
 				}
 			]
 		},
@@ -631,7 +632,7 @@ tape('Single cell scatter properly renders when colorTW = scge term', function (
 				{
 					chartType: 'sampleScatter',
 					colorTW: getScgeneexpTw(),
-					singleCellPlot: { name: 'UMAP', sample: { sID: '1_patient' } }
+					singleCellPlot: { name: 'UMAP', sample: { sID: scTestSample } }
 				}
 			]
 		},
@@ -654,7 +655,7 @@ tape('Single cell scatter properly renders when coordTWs [scge TP53, scge KRAS] 
 					chartType: 'sampleScatter',
 					term: getScgeneexpTw('TP53'),
 					term2: getScgeneexpTw(),
-					singleCellPlot: { name: 'UMAP', sample: { sID: '1_patient' } }
+					singleCellPlot: { name: 'UMAP', sample: { sID: scTestSample } }
 				}
 			]
 		},
