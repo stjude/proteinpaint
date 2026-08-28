@@ -72,7 +72,7 @@ class MassCharts {
 		if (lst.includes('cox')) ms.push('cox')
 		if (ms.length > 1) return 'Regression Analysis' // more than 1 methods. return general name
 		// only 1 method
-		return `${capitalizeFirstLetter(ms[0])} Regression`
+		return `${capitalizeFirstLetter(ms[0] || 'logistic')} Regression`
 	}
 	getBtnLabel_sampleScatter(state) {
 		// define button label
