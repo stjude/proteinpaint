@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.206.0
 
 Features:
 - GDC: Added detailed reporting to DE pre-analysis panel
