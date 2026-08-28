@@ -412,6 +412,30 @@ tape('Remembered settings are applied on Enter', async test => {
 	test.end()
 })
 
+tape('Applying remembered settings applies the selected sample type', async test => {
+	let tw
+	const holder = getHolder()
+	const sampleTypeVocabApi = getVocabApiWithSampleTypes()
+	await initializeSearchHandler({
+		holder,
+		callback: _tw => (tw = _tw),
+		vocabApi: Object.assign(Object.create(sampleTypeVocabApi), {
+			getGvQLst: () => structuredClone(rememberedLst)
+		}),
+		keepsQ: true
+	})
+	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[1].checked = true
+	await pickGene(holder)
+
+	const first: any = holder.selectAll('[data-testid="sjpp-genevariant-rememberedQ"]').nodes()[0]
+	first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+	await sleep(100)
+	test.deepEqual(tw.term.sampleTypes, [2], 'should apply the selected sample type with the remembered q')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
 tape('Remembered settings of another mutation type do not lead', async test => {
 	let tw
 	const holder = getHolder()

@@ -363,7 +363,13 @@ export class SearchHandler {
 	// function and evaluate whether the submission process can be
 	// more streamlined/centralized
 	async applyMutationType() {
-		this.mayApplySampleType()
+		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
+		this.q.predefined_groupset_idx = Number(selectedMutationType.value)
+		await this.submit(this.q)
+	}
+
+	mayApplySampleType() {
+		this.term.sampleTypes = getSelectedSampleTypes(this.sampleTypeSelect)
 		if (this.sampleTypeSelect && !this.term.sampleTypes?.length) {
 			window.alert('Must select at least one sample type')
 			const geneSetEditUI = this.dom.geneSetEditUI
@@ -373,15 +379,9 @@ export class SearchHandler {
 				// re-enabled here since the submission was aborted
 				geneSetEditUI.api.dom.submitBtn.property('disabled', false).text('Submit')
 			}
-			return
+			return false
 		}
-		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
-		this.q.predefined_groupset_idx = Number(selectedMutationType.value)
-		await this.submit(this.q)
-	}
-
-	mayApplySampleType() {
-		this.term.sampleTypes = getSelectedSampleTypes(this.sampleTypeSelect)
+		return true
 	}
 
 	async applyRememberedQ(q) {
@@ -390,6 +390,7 @@ export class SearchHandler {
 	}
 
 	async submit(q) {
+		if (!this.mayApplySampleType()) return
 		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
 		await this.callback({ term: this.term, q })
 		this.clearRememberedQ()
