@@ -348,6 +348,11 @@ class BrainImaging extends PlotBase implements RxComponent {
 	}
 
 	renderLegend() {
+		// with a single sample the intensity color scale carries no information; skip it
+		if (this.state.config.selectedSampleFileNames?.length == 1) {
+			this.dom.legendHolder.selectAll('*').remove()
+			return
+		}
 		const legendItems: any[] = []
 		for (const [label, v] of Object.entries(this.legendValues)) {
 			const scale = scaleLinear([0, v.maxLength], [rgb('white').formatHex(), v.color]).clamp(true)
