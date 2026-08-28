@@ -91,11 +91,12 @@ class ProteinView extends PlotBase implements RxComponent {
 		}
 
 		this.maySetSandboxHeader()
+		// expanded-tile panes drawn from the previous data must not outlive it —
+		// close them before the fetch so a failed request can't leave them behind
+		closeTilePanes(this)
 		const data = await dofetch3('termdb/proteome', { body })
 		if (data.error) throw data.error
 		this.dom.body.selectAll('*').remove()
-		// expanded-tile panes drawn from the previous data must not outlive it
-		closeTilePanes(this)
 
 		// per-study tiles: each answers one question and renders only when its
 		// data requirement is met; the coverage line explains missing tiles

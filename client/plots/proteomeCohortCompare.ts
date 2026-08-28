@@ -196,6 +196,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 	async reload() {
 		const multi = this.cohorts.length > 2
 		this.dom.body.selectAll('*').remove()
+		// a rejected request must not leave panes from the previous data behind
 		const data = await dofetch3('termdb/proteomeCohortCompare', {
 			body: {
 				genome: this.app.opts.state.vocab.genome,
@@ -210,6 +211,9 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 				maxRows: this.maxRows,
 				nClusters: this.nClusters
 			}
+		}).catch(e => {
+			this.closePanes()
+			throw e
 		})
 		// panes drawn from previous data must not outlive it; only the multi-tool
 		// path below keeps them (and refreshes them in place)
