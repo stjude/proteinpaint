@@ -2114,6 +2114,11 @@ keep this setting here for reason of:
 	 *   config.
 	 * - Skipped when undefined. */
 	pruneTermdbConfig?: (c: any, q: any, ds: any) => void
+	/** (server-side) dataset-level access rule for brain imaging (queries.NIdata). Receives the
+	 * route query (with q.__protected__.clientAuthResult) and throws when the caller may not use
+	 * brain imaging at all; the brainImaging and brainImagingSamples routes call it before serving.
+	 * Skipped when undefined (feature is open to all callers). */
+	checkNIdataAccess?: (q: any) => void
 	hiddenIds?: string[]
 	/* (server-side) when this returns a truthy value, a survival request carrying a stratification
 	term (term0 divide-by, or an overlay/series term2) is rejected. Return a non-empty string to use

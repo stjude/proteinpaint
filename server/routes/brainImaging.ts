@@ -52,6 +52,8 @@ export function init({ genomes }) {
 async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: string, index: number): Promise<any> {
 	const ds = genomes[query.genome].datasets[query.dslabel]
 	const q = ds.queries.NIdata
+	// dataset-level access rule (e.g. sign-in required); throws for callers who may not use brain imaging
+	ds.cohort?.termdb?.checkNIdataAccess?.(query)
 	const key = query.refKey
 	if (q[key].referenceFile && q[key].samples) {
 		const refFile = path.join(serverconfig.tpmasterdir, q[key].referenceFile)
