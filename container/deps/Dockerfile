@@ -26,6 +26,14 @@ RUN apt-get update && apt-get install --allow-downgrades -y \
 	libgsl0-dev \
 	libhdf5-dev \
 	hdf5-tools \
+	# Runtime HDF5 for the rust binaries, which are compiled elsewhere (container/rust/Dockerfile)
+	# and copied in by pack.sh. They link libhdf5_serial.so.310, but this image is based on r-base,
+	# which tracks Debian sid/testing -- so libhdf5-dev above now resolves to HDF5 2.x and provides
+	# only .320. Nothing then loads DEanalysis or dmrcate, and the failure surfaces as a dead child
+	# process on a live request. The package name IS the soname, so this pins what actually matters.
+	# The two versions co-install; -dev stays for anything needing headers. Must move in lockstep
+	# with the HDF5 the rust builder compiles against (hdf5-metno 0.9 accepts only 1.x).
+	libhdf5-310 \
 	liblzma-dev \
     libdatrie1=0.2.14-2 \
 	libncurses5-dev \
@@ -143,6 +151,36 @@ RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz 
       npm install /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz; \
     else \
       npm install @sjcrh/proteinpaint-server@${SERVERPKGVER}; \
+    fi
+
+# The rust binaries are compiled in a different image (container/rust/Dockerfile, Debian trixie) and
+# arrive here inside the npm package, so this is the first point where they meet the libraries they
+# will actually run against. This image is based on r-base, which tracks Debian sid, so an apt bump
+# can silently withdraw a soname they link -- exactly how a build once shipped binaries that could
+# not load and 502'd every wilcoxon DE request. An unloadable binary must not reach a published
+# image, so fail the build here rather than at request time.
+#
+# Note the equivalent check in rust/extract_binaries.sh only proves the BUILDER is self-consistent;
+# because the builder deliberately does NOT share this base (hdf5-metno 0.9 cannot compile against
+# the HDF5 2.x that r-base provides), this is the check that actually catches drift.
+RUN bindir=node_modules/@sjcrh/proteinpaint-rust/target/release; \
+    if [ ! -d "$bindir" ]; then \
+      echo "WARNING: $bindir not found, skipping shared library check" >&2; \
+    else \
+      unresolved=0; \
+      for bin in "$bindir"/*; do \
+        [ -f "$bin" ] && [ -x "$bin" ] || continue; \
+        if ldd "$bin" 2>/dev/null | grep -q "not found"; then \
+          echo "ERROR: $bin cannot resolve:" >&2; \
+          ldd "$bin" 2>/dev/null | grep "not found" >&2; \
+          unresolved=1; \
+        fi; \
+      done; \
+      if [ "$unresolved" -ne 0 ]; then \
+        echo "unloadable rust binaries: this image lacks a shared library they were linked against" >&2; \
+        exit 1; \
+      fi; \
+      echo "all rust binaries resolve their shared libraries"; \
     fi
 
 # enable ssh into this stage, for troubleshooting
