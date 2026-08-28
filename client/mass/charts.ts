@@ -5,6 +5,7 @@ import { NumericModes } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { importPlot } from '#plots/importPlot.js'
 import { capitalizeFirstLetter } from '#dom'
+import { getSelectableGETermTypes } from '#plots/GeneExpInput.ts'
 
 class MassCharts {
 	static type = 'charts'
@@ -51,7 +52,7 @@ class MassCharts {
 	}
 
 	main() {
-		this.dom.btns.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
+		this.dom.btns.style('display', d => (d.isVisible ? d.isVisible() : this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
 
 	getBtnLabel_dict(state) {
@@ -175,7 +176,18 @@ function getChartTypeList(self, state) {
 		to be attached to action and used by store
 
 	.updateActionBySelectedTerms:
-		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) based on number of selected terms. this callback will update the action based on selected terms to do the routing
+		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types 
+		which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) 
+		based on number of selected terms. this callback will update the action based on selected terms 
+		to do the routing
+
+	.isVisible: 
+		optional callback that determines if the chart button should be visible.
+		Should return a boolean value. If not provided, visibility will be determined 
+		by the default logic based on currentCohortChartTypes. Only use this if a chart type 
+		should be enabled and must be in currentCohortChartTypes but it's not
+		appropriate to show the chart button (i.e. GeneExpInput works in the SC app but 
+		should not always be shown).
 
 	TODO order of buttons is hardcoded, may allow to customize order
 	*/
@@ -338,8 +350,14 @@ function getChartTypeList(self, state) {
 		{
 			label: self.getBtnLabel_geneExpression(state),
 			chartType: 'GeneExpInput',
-			clickTo: self.plotCreate,
-			config: { chartType: 'GeneExpInput' }
+			clickTo: self.loadChartSpecificMenu,
+			isVisible: () => {
+				/** Ds may only contain scge data, allowing the GeneExpInput form
+				 * to be visible within the SC app but not appropriate to show here. 
+				 * Limit its visibility to appropriate contexts. */
+				const isAvailable = getSelectableGETermTypes(state.termdbConfig)
+				return isAvailable.length > 0
+			}
 		},
 		{
 			label: 'Metabolite Intensity',
@@ -469,6 +487,7 @@ function getChartTypeList(self, state) {
 			label: 'Aggregate Matrix',
 			chartType: 'aggMatrixInput',
 			clickTo: self.prepPlot,
+			usecase: { target: 'aggregateMatrix' },
 			config: {
 				chartType: 'aggMatrixInput'
 			}

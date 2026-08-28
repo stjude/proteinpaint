@@ -326,8 +326,8 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				await this.dispatchEdits(config)
 			})
 	}
-	// /** Render the GeneSetEdit UI for selection and then
-	//  * launch the hierarchical clustering on submit.*/
+	 /** Render the GeneSetEdit UI for selection and then
+	  * launch the hierarchical clustering on submit.*/
 	renderGeneMultiSelect(tab) {
 		const holder = tab.contentHolder.style('padding', '10px')
 		const grpWrapper = holder.append('div').style('padding', '10px')
@@ -450,7 +450,8 @@ const enabledTermTypes = new Set([GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION, P
 export function getPlotConfig(opts, app) {
 	if (opts?.termType && !enabledTermTypes.has(opts.termType)) throw new Error(`Invalid termType: ${opts.termType}`)
 
-	const possTermTypes = getPossibleGETermTypes(app.vocabApi.termdbConfig)
+	const possTermTypes = opts.possTermTypes || getSelectableGETermTypes(app.vocabApi.termdbConfig)
+	/** Allow scge to be passed even though it's not a selectable type */
 	if (!possTermTypes.length && !opts?.termType) throw new Error('No gene expression data types are available for this cohort')
 
 	const config = {
@@ -463,7 +464,8 @@ export function getPlotConfig(opts, app) {
 	return copyMerge(config, opts)
 }
 
-/** Scge is enabled for this but sequestered to only the sc app. */
-function getPossibleGETermTypes(termdbConfig) {
+/** Scge is enabled for this but sequestered to only the sc app. 
+ * Scge terms require a sample obj which is supplied in the SC app. */
+export function getSelectableGETermTypes(termdbConfig) {
 	return Array.from(enabledTermTypes).filter(termtype => termtype !== SINGLECELL_GENE_EXPRESSION && termdbConfig.allowedTermTypes.includes(termtype))
 }
