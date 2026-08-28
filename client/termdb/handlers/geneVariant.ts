@@ -32,7 +32,8 @@ export class SearchHandler {
 	mutationTypeRadio: any
 	mutationTypeTerms!: any[]
 	inputTypeRadio: any
-	sampleTypeSelect?: any
+	querySampleTypes?: any[]
+	sampleTypeSelect?: any[]
 	term: any // tw.term
 	q: any // tw.q
 	callback: any
@@ -147,8 +148,8 @@ export class SearchHandler {
 
 	updateSampleTypeSelect() {
 		const [td1, td2] = this.dom.sampleTypeSelectRow
-		const querySampleTypes = this.getQuerySampleTypes()
-		this.sampleTypeSelect = renderSampleTypeSelect(td2, querySampleTypes, this.opts.app.vocabApi.termdbConfig)
+		this.getQuerySampleTypes()
+		this.sampleTypeSelect = renderSampleTypeSelect(td2, this.querySampleTypes, this.opts.app.vocabApi.termdbConfig)
 		if (this.sampleTypeSelect) {
 			td1.style('display', null).text('Sample Type')
 			td2.style('display', null)
@@ -172,7 +173,7 @@ export class SearchHandler {
 		for (const [k, v] of Object.entries(bySampleType)) {
 			if (v.hasSamples) querySampleTypes.push(Number(k))
 		}
-		return querySampleTypes
+		this.querySampleTypes = querySampleTypes
 	}
 
 	// hide gene set radio when mutation type is cnv
@@ -366,7 +367,7 @@ export class SearchHandler {
 	}
 
 	mayApplySampleType() {
-		this.term.sampleTypes = getSelectedSampleTypes(this.sampleTypeSelect)
+		this.term.sampleTypes = getSelectedSampleTypes(this.sampleTypeSelect) || this.querySampleTypes
 		if (this.sampleTypeSelect && !this.term.sampleTypes?.length) {
 			window.alert('Must select at least one sample type')
 			const geneSetEditUI = this.dom.geneSetEditUI
