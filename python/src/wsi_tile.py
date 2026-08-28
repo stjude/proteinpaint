@@ -368,9 +368,8 @@ def h5ad_csv(h5ad, kind):
     column is a Xenium cell id or a number — never free text (cell types are
     served as JSON by h5ad_annotations instead). Writes the CSV to a temp
     file and returns its path (large output; same print-a-path contract as
-    tile()).
-    ponytail: boundaries regenerate on every request (~1s for ~700k rows);
-    node caches per h5ad mtime on disk if this ever shows up."""
+    tile()). Node caches the result per (h5ad mtime, kind) on disk, so this
+    ~700k-row extraction runs once per h5ad version, not per request."""
     import os
     import h5py
     # read (and thereby validate) the store BEFORE creating the temp file, so
