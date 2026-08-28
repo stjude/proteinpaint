@@ -346,6 +346,7 @@ export function makeTileCard(
 			.append('span')
 			.attr('title', 'Expand')
 			.attr('role', 'button')
+			.attr('tabindex', '0')
 			.attr('aria-label', `Expand ${opts.title}`)
 			.style('margin-left', 'auto')
 			.style('cursor', 'pointer')
@@ -360,6 +361,12 @@ export function makeTileCard(
 				select(this).style('color', '#9ca3af')
 			})
 			.on('click', opts.onExpand)
+			.on('keydown', (event: KeyboardEvent) => {
+				if (event.key === 'Enter' || event.key === ' ') {
+					event.preventDefault()
+					opts.onExpand?.()
+				}
+			})
 	}
 	if (opts.subtitle) {
 		card
