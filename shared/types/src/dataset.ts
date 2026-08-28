@@ -2184,6 +2184,59 @@ type PlotConfigByCohort = {
 	}
 }
 
+/*
+Data-driven Module → Domain → chart-template mapping (e.g. PrOFILE's "Templates 3" view).
+Generic config contract: a dataset generates this from a source spreadsheet and the client renders it
+verbatim, so module names, domain names, template labels, colors, chart types, form labels and ordering
+all live in the data — never in client code.
+*/
+/** One of the fixed chart-template families a domain can offer. */
+export type TemplateChart = 'heatmap' | 'stacked_bar' | 'thermometer'
+
+/** Metadata for a template id, resolved from the top-level `templates` dictionary. */
+export type TemplateMeta = {
+	label: string
+	chart: TemplateChart
+	/** true when a single consolidated chart spans all domains/forms referencing this template (e.g. policyEnablers). */
+	aggregate?: true
+	/** planned-but-not-yet-built templates render disabled. */
+	status?: 'NEW'
+}
+
+/** A form code's display metadata; SC is Objective, all other respondent forms are Subjective. */
+export type TemplateFormLegend = {
+	label: string
+	dataType: 'Objective' | 'Subjective'
+}
+
+/** A domain row within a module: the forms feeding it and how many charts of each template it maps to. */
+export type TemplateDomain = {
+	domain: string
+	forms: string[]
+	/** key is a template id present in TemplateMapping.templates; value is the chart count. */
+	templates: { [templateKey: string]: number }
+}
+
+/** A module section, rendered in array order with its own background/text colors. */
+export type TemplateModule = {
+	name: string
+	/** section background, `#RRGGBB`. */
+	color: string
+	/** header text color, `#RRGGBB`. */
+	textColor: string
+	domains: TemplateDomain[]
+}
+
+export type TemplateMapping = {
+	dashboard: string
+	legend: {
+		forms: { [formCode: string]: TemplateFormLegend }
+		notes?: { [key: string]: string }
+	}
+	templates: { [templateKey: string]: TemplateMeta }
+	modules: TemplateModule[]
+}
+
 /** A single location pin for the `geomap` chart. */
 export type GeomapSite = {
 	/** display name shown in the pin tooltip */
