@@ -78,10 +78,11 @@ export async function init(
 		/** fill each cell by its annotated cell_type (when present), one
 		 categorical color per type, with a legend */
 		showCellTypes?: boolean
-		/** comma-separated cell types to fill; empty/undefined = all types.
-		 Colors are assigned over ALL types by abundance, so a type keeps its
-		 color when the filter changes */
-		cellTypeFilter?: string
+		/** cell types to fill, as a list (type names are free text and may
+		 contain commas); empty/undefined = all types. Colors are assigned over
+		 ALL types by abundance, so a type keeps its color when the filter
+		 changes */
+		cellTypeFilter?: string[]
 		/** = annotation_level: strokes only in the n most zoomed-in levels */
 		annotationLevel?: string | number
 		/** = gene_expression: comma-separated genes, one fill overlay per gene */
@@ -308,10 +309,7 @@ export async function init(
 			const typeColor: { [t: string]: string } = {} // type -> its stable palette color
 			for (const [i, t] of types.entries()) typeColor[t] = CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
 			// optional filter: fill + legend only these types (colors unchanged)
-			const wanted = (opts.cellTypeFilter || '') // comma-separated filter into a clean list
-				.split(',')
-				.map(s => s.trim())
-				.filter(Boolean)
+			const wanted = opts.cellTypeFilter || [] // the requested type list
 			const shown = wanted.length ? types.filter(t => wanted.includes(t)) : types // empty filter = all
 			const shownColor: { [t: string]: string } = {} // color subset acting as the fill filter
 			for (const t of shown) shownColor[t] = typeColor[t] // only shown types get a fill

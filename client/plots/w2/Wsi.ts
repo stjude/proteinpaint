@@ -125,13 +125,9 @@ class Wsi extends PlotBase implements RxComponent {
 			// image lacks: the dropdowns would show 'All types' while the viewer
 			// filters every cell out. Persist the cleaned selection instead
 			// (only when discovery succeeded — [] may just mean the request failed)
-			if (settings.cellTypeFilter && cellTypes.length) {
-				const cleaned = settings.cellTypeFilter
-					.split(',')
-					.map(t => t.trim())
-					.filter(t => cellTypes.includes(t)) // keep only types this image has
-					.join(',')
-				if (cleaned != settings.cellTypeFilter) {
+			if (settings.cellTypeFilter?.length && cellTypes.length) {
+				const cleaned = settings.cellTypeFilter.filter(t => cellTypes.includes(t)) // types this image has
+				if (cleaned.length != settings.cellTypeFilter.length) {
 					this.app.dispatch({
 						type: 'plot_edit',
 						id: this.id,
@@ -308,16 +304,15 @@ class Wsi extends PlotBase implements RxComponent {
 							// defensive only: main() reconciles cellTypeFilter to this
 							// image's types before rendering, so this filter is a no-op
 							// unless a render sneaks in mid-reconciliation
-							const selected = (s.cellTypeFilter || '')
-								.split(',')
-								.map(t => t.trim())
-								.filter(t => types.includes(t))
+							const selected = (s.cellTypeFilter || []).filter(t => types.includes(t))
 							const dispatch = (list: string[]) =>
-								// write the new selection back to state; re-render redraws the dropdowns
+								// write the new selection back to state; re-render redraws the
+								// dropdowns. Stored as a LIST: type names are free text and may
+								// contain commas, so a joined string would corrupt them
 								this.app.dispatch({
 									type: 'plot_edit',
 									id: this.id,
-									config: { settings: { wsi: { cellTypeFilter: list.join(',') } } }
+									config: { settings: { wsi: { cellTypeFilter: list } } }
 								})
 							const addSelect = () =>
 								td
@@ -419,7 +414,7 @@ export function getDefaultWsiSettings(overrides = {}): Settings {
 		showNucleusBoundaries: true, // blue nucleus outlines on
 		showGeneExpression: true, // expression fills on (seeding may flip this off)
 		showCellTypes: false, // opt-in: fills all annotated cells, visually heavy
-		cellTypeFilter: null, // null/'' = fill every annotated type
+		cellTypeFilter: null, // null/[] = fill every annotated type
 
 		geneExpression: null, // null = seed from the data on first spatial render
 		annotationLevel: null, // null = dataset default

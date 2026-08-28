@@ -100,7 +100,7 @@ export class View {
 					hideCellStrokes: !s.showCellBoundaries, // polygons without their green outlines
 					hideNucleusStrokes: !s.showNucleusBoundaries, // skip the nucleus overlay entirely
 					showCellTypes: s.showCellTypes, // fill cells by their cell_type annotation
-					cellTypeFilter: s.cellTypeFilter ?? undefined, // 'Types shown' dropdowns; ''/null = all
+					cellTypeFilter: s.cellTypeFilter ?? undefined, // 'Types shown' dropdowns; []/null = all
 					geneExpression: s.spatialMode == 'gene_groups' ? undefined : genes, // one overlay per gene
 					geneGroups: s.spatialMode == 'gene_groups' ? genes : undefined, // or one summed overlay
 					hideExpressionFills: !s.showGeneExpression, // checkbox off = hover counts only, no fills

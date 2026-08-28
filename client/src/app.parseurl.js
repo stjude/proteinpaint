@@ -51,9 +51,18 @@ upon error, throw err message as a string
 				// optional: sum per-cell counts over these genes into ONE overlay
 				geneGroups: urlp.get('gene_groups'),
 				// optional: fill cells by their annotated type;
-				// =1 fills all types, =Tumor,B cells fills only the listed types
+				// =1 fills all types, =Tumor,B cells fills only the listed types.
+				// The URL form is comma-split, so a type name containing a comma
+				// cannot be filtered here — the mass burger's dropdowns can
 				showCellTypes: urlp.has('cell_types'),
-				cellTypeFilter: urlp.get('cell_types') == '1' ? undefined : urlp.get('cell_types')
+				cellTypeFilter:
+					!urlp.get('cell_types') || urlp.get('cell_types') == '1'
+						? undefined
+						: urlp
+								.get('cell_types')
+								.split(',')
+								.map(t => t.trim())
+								.filter(Boolean)
 			},
 			arg.holder
 		)
