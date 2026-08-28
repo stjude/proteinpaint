@@ -69,7 +69,7 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleTypes,
 		} else if (!item.tvs) {
 			throw `filter item should have a 'tvs' or 'lst' property`
 		} else if (item.tvs.term.type == TermTypes.GENE_EXPRESSION) {
-			f = await get_geneExpression(item.tvs, CTEname_i, ds)
+			f = await get_geneExpression(item.tvs, CTEname_i, ds, mapParent2Children, sampleTypes)
 		} else if (item.tvs.term.type == TermTypes.ISOFORM_EXPRESSION) {
 			f = await get_isoformExpression(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.METABOLITE_INTENSITY) {
@@ -85,7 +85,7 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleTypes,
 		} else if (item.tvs.term.type == TermTypes.PSEUDOBULK) {
 			f = await get_pseudobulk(item.tvs, CTEname_i, ds)
 		} else if (dtTermTypes.has(item.tvs.term.type)) {
-			f = await get_dtTerm(item.tvs, CTEname_i, ds)
+			f = await get_dtTerm(item.tvs, CTEname_i, ds, mapParent2Children, sampleTypes)
 		} else if (item.tvs.term.type == 'categorical') {
 			f = get_categorical(item.tvs, CTEname_i, ds, mapParent2Children, sampleTypes)
 			// .CTEs: []
@@ -520,10 +520,10 @@ async function get_snp(tvs, CTEname, ds) {
 	return result
 }
 
-async function get_geneExpression(tvs, CTEname, ds) {
+async function get_geneExpression(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	const q = ds.queries?.geneExpression
 	if (!q) throw 'not supported' // guard against request to unsupported data. FIXME may improve filterui to gracefully handle such and avoid showing completely broken mass ui when the request comes from handwrite state or url
-	const data = await q.get({ terms: [{ $id, term: tvs.term }] }, ds)
+	const data = await q.get({ terms: [{ $id, term: tvs.term }], mapParent2Children, sampleTypes }, ds)
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 async function get_isoformExpression(tvs, CTEname, ds) {
@@ -609,9 +609,9 @@ function numericSampleData2tvs(tvs, CTEname, termData) {
 	return result
 }
 
-async function get_dtTerm(tvs, CTEname, ds) {
+async function get_dtTerm(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	const tw = { $id, term: tvs.term.parentTerm, q: { dtLst: [tvs.term.dt] } }
-	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename })
+	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename, mapParent2Children, sampleTypes })
 
 	const samples = []
 	for (const [sample, value] of data) {
