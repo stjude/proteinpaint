@@ -1,3 +1,9 @@
+# Must stay on a base whose libhdf5-dev is 1.14.x. hdf5-metno 0.9 hardcodes the accepted HDF5
+# versions (build.rs: `^(1)\.(8|10|12|14)\.`) and panics with `Invalid H5_VERSION` on anything 2.x.
+# Do NOT "align" this with the runtime image (r-base, in container/deps/Dockerfile): r-base tracks
+# Debian sid/testing and installs HDF5 2.x, which this crate cannot compile against at all.
+# The two images are matched at the *soname* instead -- deps installs libhdf5-310 so the runtime
+# carries the .310 these binaries link. See the comment there before changing either.
 FROM debian:trixie
 
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
