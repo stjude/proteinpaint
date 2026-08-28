@@ -73,10 +73,19 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		this.dom = this.initDom()
 
 		if (!this.termType) {
-			this.renderTermTypeSelect(state.config.possTermTypes)
+			const possTermTypes = getSelectableGETermTypes(state.termdbConfig)
+			if (!possTermTypes || !possTermTypes.length) throw new Error('No selectable data type.')
+			if (possTermTypes.length === 1) {
+				await this.app.save({
+					type: 'plot_edit',
+					id: this.id,
+					config: { termType: possTermTypes[0] }
+				})
+				return
+			}
+			this.renderTermTypeSelect(possTermTypes)
 			return
 		}
-
 		await this.renderTermTypeUI(state)
 	}
 
@@ -147,11 +156,11 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				label: 'One gene',
 				isVisible: () => true,
 				callback: async (event, tab) => {
+					delete tab.callback
 					if (this.termType === PSEUDOBULK) {
 						await this.renderPseudobulkSearch(tab.contentHolder)
 					}
 					else this.renderGeneSelect(tab)
-					delete tab.callback
 				}
 			},
 			{
@@ -447,17 +456,12 @@ const enabledTermTypes = new Set([GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION, P
 
 /** termType is optional: when more than one data type is available for the
  * current cohort, the sandbox will prompt the user to choose one. */
-export function getPlotConfig(opts, app) {
+export function getPlotConfig(opts) {
 	if (opts?.termType && !enabledTermTypes.has(opts.termType)) throw new Error(`Invalid termType: ${opts.termType}`)
-
-	const possTermTypes = opts.possTermTypes || getSelectableGETermTypes(app.vocabApi.termdbConfig)
-	/** Allow scge to be passed even though it's not a selectable type */
-	if (!possTermTypes.length && !opts?.termType) throw new Error('No gene expression data types are available for this cohort')
 
 	const config = {
 		chartType: 'GeneExpInput',
-		termType: opts?.termType || (possTermTypes.length === 1 ? possTermTypes[0] : undefined),
-		possTermTypes,
+		termType: opts?.termType,
 		hidePlotFilter: true
 	}
 
