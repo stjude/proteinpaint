@@ -1,2 +1,1 @@
-Features:
-- GDC: Added detailed reporting to DE pre-analysis panel
+
