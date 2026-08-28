@@ -7,7 +7,7 @@ import {
 	renderSampleTypeSelect,
 	getSelectedSampleTypes
 } from '#dom'
-import type { VocabApi } from '#types'
+import type { VocabApi, DtAssayAvailabilityTerm } from '#types'
 import { dtTerms, dtcnv, dtsnvindel } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
 import { mayShowRememberedGvQ } from './rememberedGvQ.ts'
@@ -25,6 +25,8 @@ type Opts = {
 	keepsQ?: boolean
 	callback: (tw: any) => Promise<void>
 }
+
+type BySampleType = { [index: number]: DtAssayAvailabilityTerm }
 
 export class SearchHandler {
 	opts: any
@@ -167,7 +169,7 @@ export class SearchHandler {
 		if (!Number.isInteger(mutationTypeIdx)) return
 		const dt = this.mutationTypeTerms[mutationTypeIdx]?.dt
 		if (!Number.isInteger(dt)) return
-		const bySampleType = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.bySampleType
+		const bySampleType: BySampleType = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.bySampleType
 		if (!bySampleType) return
 		const querySampleTypes: number[] = []
 		for (const [k, v] of Object.entries(bySampleType)) {

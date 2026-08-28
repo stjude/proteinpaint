@@ -2037,7 +2037,7 @@ keep this setting here for reason of:
 	 * Supports the About tab in mass UI
 	 */
 	hasSampleAncestry?: boolean
-	sampleTypes?: SampleType[]
+	sampleTypes?: SampleTypes
 	/** ui labels used for plot controls and tooltips */
 	uiLabels?: UiLabels
 
@@ -2171,10 +2171,12 @@ type CategoricalTermCollection = TermCollectionBase & {
 
 type TermCollection = NumericTermCollection | CategoricalTermCollection
 
-type SampleType = {
-	name: string
-	plural_name: string
-	parent_id: string
+export type SampleTypes = {
+	[sampleType: number]: {
+		name: string
+		plural_name: string
+		parent_id: string
+	}
 }
 
 /** predefined configuration objects per subcohort per plot type */
@@ -2246,7 +2248,7 @@ type MutationSet = {
 
 /** different methods to return samples with assay availability info */
 /** using dictionary term */
-type DtAssayAvailabilityTerm = {
+export type DtAssayAvailabilityTerm = {
 	/** id of this assay term for this dt */
 	term_id: string
 	/** optional label */

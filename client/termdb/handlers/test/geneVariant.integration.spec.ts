@@ -237,7 +237,7 @@ tape('Sample type selection is cleared when changing to a mutation type without 
 		callback: _tw => (tw = _tw),
 		vocabApi: getVocabApiWithSampleTypes()
 	})
-	const sampleTypeCheckboxes = holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input')
+	const sampleTypeCheckboxes: any = holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input')
 	test.equal(sampleTypeCheckboxes.size(), 2, 'should render sample type choices for SNV/indel')
 	sampleTypeCheckboxes.nodes()[0].checked = true
 	await pickGene(holder)
@@ -264,7 +264,7 @@ tape('Sample type selection is cleared when changing to a mutation type without 
 next selection exercises the "Continue with ..." path, which must replace those values. */
 tape('Continuing past remembered settings does not retain sample types from another mutation type', async test => {
 	let tw
-	const holder = getHolder()
+	const holder: any = getHolder()
 	const sampleTypeVocabApi = getVocabApiWithSampleTypes()
 	const vocabApiWithRememberedKrasQ = Object.assign(Object.create(sampleTypeVocabApi), {
 		getGvQLst: (term: any) => (term.name == 'KRAS' ? structuredClone(rememberedLst) : [])
@@ -414,7 +414,7 @@ tape('Remembered settings are applied on Enter', async test => {
 
 tape('Applying remembered settings applies the selected sample type', async test => {
 	let tw
-	const holder = getHolder()
+	const holder: any = getHolder()
 	const sampleTypeVocabApi = getVocabApiWithSampleTypes()
 	await initializeSearchHandler({
 		holder,

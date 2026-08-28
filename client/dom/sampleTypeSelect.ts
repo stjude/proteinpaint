@@ -1,10 +1,12 @@
+import type { SampleTypes } from '#types'
+
 // renders sample type checkboxes
 export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, termdbConfig?: any) {
 	holder.selectAll('*').remove()
 
 	if (!Array.isArray(querySampleTypes) || querySampleTypes.length < 2) return
 
-	const sampleTypeConfig = {}
+	const sampleTypeConfig: SampleTypes = {}
 	for (const sampleType of querySampleTypes) {
 		sampleTypeConfig[sampleType] = termdbConfig.sampleTypes[sampleType]
 	}
