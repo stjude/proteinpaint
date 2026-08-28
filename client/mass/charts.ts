@@ -350,7 +350,8 @@ function getChartTypeList(self, state) {
 		{
 			label: self.getBtnLabel_geneExpression(state),
 			chartType: 'GeneExpInput',
-			clickTo: self.loadChartSpecificMenu,
+			clickTo: self.prepPlot,
+			config: { chartType: 'GeneExpInput' },
 			isVisible: () => {
 				/** Ds may only contain scge data, allowing the GeneExpInput form
 				 * to be visible within the SC app but not appropriate to show here. 
