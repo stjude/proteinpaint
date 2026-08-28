@@ -1976,8 +1976,9 @@ export function renderPTMSummaryCard(
 		const pos = firstModSitePos(e.modSites)
 		const log2fc = getLog2Ratio(e.foldChange)
 		const mclass: any = Object.values(e.mclassOverride || {})[0]
-		const color = mclass?.color || PTM_FALLBACK_PALETTE[typeCounts.size % PTM_FALLBACK_PALETTE.length]
-		const tc = typeCounts.get(e.PTMType) || { count: 0, color }
+		const existing = typeCounts.get(e.PTMType)
+		const color = existing?.color || mclass?.color || PTM_FALLBACK_PALETTE[typeCounts.size % PTM_FALLBACK_PALETTE.length]
+		const tc = existing || { count: 0, color }
 		tc.count++
 		typeCounts.set(e.PTMType, tc)
 		if (pos === null || log2fc === null) continue
