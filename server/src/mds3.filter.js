@@ -37,9 +37,9 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 			filter0,
 			mapParent2Children: param.mapParent2Children,
 			sampleTypes: param.sampleTypes,
-			sessionid: q.sessionid,
-			__protected__: q.__protected__,
-			token: q.token
+			sessionid: param.sessionid,
+			__protected__: param.__protected__,
+			token: param.token
 		}
 		if (ds.cohort?.db) {
 			// dataset has sqlite db

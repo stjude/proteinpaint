@@ -817,8 +817,8 @@ export function divideTerms(q, ds) {
 }
 
 /* function will set:
-- q.mapParent2Children: flag for whether to map parent-level data onto child samples
-- q.sampleTypes: query sample types
+- q.mapParent2Children: flag for whether to map term data onto child samples
+- q.sampleTypes: sample types to query for
 TODO: may rename to maySetSampleTypes() */
 export function maySetMapParent2Children(q, ds, mapParent2Children) {
 	if (!ds.cohort?.termdb?.hasSampleAncestry) {
@@ -827,15 +827,15 @@ export function maySetMapParent2Children(q, ds, mapParent2Children) {
 		return
 	}
 	// ds has sample ancestry
-	// determine query sample types
-	const sampleTypes = getSampleTypes(q, ds)
-	const types = [...sampleTypes]
 	if (typeof mapParent2Children === 'boolean') {
 		// flag supplied by caller
 		q.mapParent2Children = mapParent2Children
-		q.sampleTypes = types
+		q.sampleTypes = [DEFAULT_SAMPLE_TYPE]
 		return
 	}
+	// determine query sample types
+	const sampleTypes = getSampleTypes(q, ds)
+	const types = [...sampleTypes]
 	if (!types.length) {
 		throw 'no sample types found'
 	} else if (types.length == 1) {
