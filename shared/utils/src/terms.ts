@@ -621,6 +621,11 @@ export function getTwSampleTypes(tw: any, ds: any) {
 			return sampleType != null ? [sampleType] : []
 		} else return [DEFAULT_SAMPLE_TYPE]
 	}
+	if (dtTermTypes.has(term.type)) {
+		if (term.parentTerm.sampleTypes) {
+			return term.parentTerm.sampleTypes
+		}
+	}
 	return [DEFAULT_SAMPLE_TYPE] //later own term needs to know what type annotates based on the samples
 }
 

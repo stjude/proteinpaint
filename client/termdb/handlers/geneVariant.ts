@@ -311,9 +311,6 @@ export class SearchHandler {
 	}
 
 	async runCallback() {
-		// add parent geneVariant term to each child term now
-		// that gene(s) have been selected
-		addParentTerm(this.term)
 		// a setting the user built for this gene before is worth offering, and is only known
 		// once the gene is picked, so the selected mutation type is not applied until the user
 		// either picks one of those settings or skips them
@@ -392,6 +389,8 @@ export class SearchHandler {
 	async submit(q) {
 		if (!this.mayApplySampleType()) return
 		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
+		// add geneVariant term to each child term
+		addParentTerm(this.term)
 		await this.callback({ term: this.term, q })
 		this.clearRememberedQ()
 		this.dom.msgDiv.style('display', 'none')
