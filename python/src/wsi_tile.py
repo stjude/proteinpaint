@@ -437,6 +437,8 @@ def main():
         print(json.dumps(h5ad_annotations(job["h5ad"]), separators=(",", ":")))
     elif job["action"] == "h5ad_celltypes":
         print(json.dumps(h5ad_celltypes(job["h5ad"]), separators=(",", ":")))
+    elif job["action"] == "selftest":
+        _test()  # tier-math self-check as a job, for the node unit spec
     else:
         raise ValueError(f"unknown action {job.get('action')!r}")
 
