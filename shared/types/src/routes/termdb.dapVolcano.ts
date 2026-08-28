@@ -9,13 +9,22 @@ export type DapVolcanoRequest = {
 	cohort: string
 	volcanoRender?: VolcanoRenderRequest
 	countsOnly?: boolean
-	/** return one {gene, log2FC, fdr} row per gene (most significant accession) instead of a rendered volcano */
-	rowsOnly?: boolean
+	/** concordance mode: join this cohort's DAP with another's on upper-cased gene and
+	 *  return the log2FC points plus their Pearson correlation (R cor.test) instead of a volcano */
+	concordanceWith?: { organism: string; assay: string; cohort: string }
 }
 
 export type DapEntry = DataEntry & {
 	gene_name: string
 	gene: string
+}
+
+export type DapConcordance = {
+	points: { gene: string; x: number; y: number }[]
+	/** null when R reports NA or n < 3 */
+	r: number | null
+	p: number | null
+	n: number
 }
 
 export type DapVolcanoResponse =
@@ -24,6 +33,6 @@ export type DapVolcanoResponse =
 			sample_size1: number
 			sample_size2: number
 			data?: VolcanoData<DapEntry>
-			/** rowsOnly mode */
-			rows?: { gene: string; log2FC: number; fdr: number }[]
+			/** concordanceWith mode */
+			concordance?: DapConcordance
 	  }

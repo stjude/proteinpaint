@@ -6,6 +6,7 @@ import { get_ds_tdb } from '#src/termdb.js'
 import { renderVolcano } from '#src/renderVolcano.ts'
 import serverconfig from '#src/serverconfig.js'
 import { listCohortSamples } from '../../routes/termdb.proteome.ts'
+import { run_R } from '@sjcrh/proteinpaint-r'
 
 export const payload: RoutePayload = {
 	init,
@@ -19,6 +20,38 @@ export const api: RouteApi = {
 		get: payload,
 		post: payload
 	}
+}
+
+/** parse a DAP file (acc \t identifier \t gene \t log2FC \t FDR) into volcano entries.
+ *  The file carries a single significance value (FDR); it is stored in both
+ *  original_p_value and adjusted_p_value so the generic volcano renderer can
+ *  threshold on either pValueType without special-casing this route
+ *  (renderVolcano defaults to pValueType 'adjusted' when none is requested). */
+async function readDap(DAPfile: string): Promise<DapEntry[]> {
+	const content = await fs.readFile(path.join(serverconfig.tpmasterdir, DAPfile), 'utf8')
+	const lines = content.trim().split('\n')
+	const rows: DapEntry[] = []
+	for (let i = 1; i < lines.length; i++) {
+		const parts = lines[i].split('\t')
+		if (parts.length < 5 || !parts[2]) continue
+		const fc = Number(parts[3])
+		if (!Number.isFinite(fc)) continue
+		const fdr = Number(parts[4])
+		if (!Number.isFinite(fdr)) continue
+		rows.push({ gene_name: parts[1], gene: parts[2], fold_change: fc, original_p_value: fdr, adjusted_p_value: fdr })
+	}
+	return rows
+}
+
+/** one most-significant row per upper-cased gene symbol */
+function bestPerGene(rows: DapEntry[]): Map<string, DapEntry> {
+	const best = new Map<string, DapEntry>()
+	for (const r of rows) {
+		const g = r.gene.toUpperCase()
+		const cur = best.get(g)
+		if (!cur || (r.adjusted_p_value ?? Infinity) < (cur.adjusted_p_value ?? Infinity)) best.set(g, r)
+	}
+	return best
 }
 
 function init({ genomes }) {
@@ -58,44 +91,42 @@ function init({ genomes }) {
 				return
 			}
 
-			const filePath = path.join(serverconfig.tpmasterdir, cohortConfig.DAPfile)
-			const content = await fs.readFile(filePath, 'utf8')
-			const lines = content.trim().split('\n')
+			const rustRows = await readDap(cohortConfig.DAPfile)
 
-			// DAP file columns: acc, identifier, gene, log2FC, FDR.
-			// The file carries a single significance value (FDR). Store it in both
-			// original_p_value and adjusted_p_value so the generic volcano renderer can
-			// threshold on either pValueType without special-casing this route
-			// (renderVolcano defaults to pValueType 'adjusted' when none is requested).
-			const rustRows: DapEntry[] = []
-			for (let i = 1; i < lines.length; i++) {
-				const parts = lines[i].split('\t')
-				if (parts.length < 5) continue
-				const fc = Number(parts[3])
-				if (!Number.isFinite(fc)) continue
-				const fdr = Number(parts[4])
-				if (!Number.isFinite(fdr)) continue
-				rustRows.push({
-					gene_name: parts[1],
-					gene: parts[2],
-					fold_change: fc,
-					original_p_value: fdr,
-					adjusted_p_value: fdr
-				})
-			}
-
-			// lightweight all-gene mode for client-side joins (e.g. the proteinView
-			// concordance tile): one row per gene, keeping the most significant
-			// accession, no volcano rendering
-			if (q.rowsOnly) {
-				const byGene = new Map<string, { gene: string; log2FC: number; fdr: number }>()
-				for (const r of rustRows) {
-					const fdr = r.adjusted_p_value ?? r.original_p_value
-					if (fdr === undefined || !Number.isFinite(fdr)) continue
-					const cur = byGene.get(r.gene)
-					if (!cur || fdr < cur.fdr) byGene.set(r.gene, { gene: r.gene, log2FC: r.fold_change, fdr })
+			// concordance mode (proteinView concordance tile): join this cohort's DAP with
+			// another's on upper-cased gene (human APP ↔ mouse App), one most-significant row
+			// per gene, and correlate log2FC across the shared genes with R's cor.test (corr.R)
+			if (q.concordanceWith) {
+				const w = typeof q.concordanceWith === 'string' ? JSON.parse(q.concordanceWith) : q.concordanceWith
+				const wc = proteomeConfig.organisms?.[w?.organism]?.assays?.[w?.assay]?.cohorts?.[w?.cohort]
+				if (!wc?.DAPfile) throw `no DAPfile for ${w?.organism}/${w?.assay}/${w?.cohort}`
+				const yRows = await readDap(wc.DAPfile)
+				const x = bestPerGene(rustRows)
+				const y = bestPerGene(yRows)
+				const points: { gene: string; x: number; y: number }[] = []
+				for (const [gene, vx] of x) {
+					const vy = y.get(gene)
+					if (vy) points.push({ gene, x: vx.fold_change, y: vy.fold_change })
 				}
-				res.send({ rows: [...byGene.values()], sample_size1: controlCount, sample_size2: caseCount })
+				let r: number | null = null
+				let p: number | null = null
+				// cor.test needs ≥3 observations; NA (e.g. a constant side) comes back as a string
+				if (points.length >= 3) {
+					const input = {
+						method: 'pearson',
+						terms: [{ id: 'xy', v1: points.map(pt => pt.x), v2: points.map(pt => pt.y) }]
+					}
+					const [out] = JSON.parse(await run_R('corr.R', JSON.stringify(input)))
+					const rv = Number(out?.correlation)
+					const pv = Number(out?.original_p_value)
+					r = Number.isFinite(rv) ? rv : null
+					p = Number.isFinite(pv) ? pv : null
+				}
+				res.send({
+					sample_size1: controlCount,
+					sample_size2: caseCount,
+					concordance: { points, r, p, n: points.length }
+				})
 				return
 			}
 

@@ -416,6 +416,10 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		const genes: string[] = data.genes
 		const rho: number = data.spearman[0][1]
 		const r: number = data.pearson[0][1]
+		const rhoP: number | null = data.spearmanP?.[0]?.[1] ?? null
+		const rP: number | null = data.pearsonP?.[0]?.[1] ?? null
+		const fmtP = (p: number | null) =>
+			p === null || !Number.isFinite(p) ? '' : `, p = ${p < 1e-4 ? p.toExponential(1) : p.toFixed(4)}`
 		const n: number = data.sharedGeneCount
 		const zT = this.zThresh
 		const fT = this.fdrThresh
@@ -555,11 +559,11 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		statBox
 			.append('div')
 			.attr('title', 'Spearman rank correlation of log2FC-z (robust; no linearity assumption)')
-			.html(`<b>ρ</b> (Spearman) = ${rho.toFixed(3)}`)
+			.html(`<b>ρ</b> (Spearman) = ${rho.toFixed(3)}${fmtP(rhoP)}`)
 		statBox
 			.append('div')
 			.attr('title', 'Pearson correlation of log2FC-z (linear agreement; the papers’ R)')
-			.html(`<b>r</b> (Pearson) = ${r.toFixed(3)}`)
+			.html(`<b>r</b> (Pearson) = ${r.toFixed(3)}${fmtP(rP)}`)
 
 		// DAP-cutoff controls — recolor without refetching
 		const cutoffs = panel.append('div').style('margin-bottom', '12px')

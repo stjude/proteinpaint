@@ -1,6 +1,7 @@
 import { Menu, table2col } from '#dom'
 import { axisstyle, newpane } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
+import type { DapConcordance } from '#types'
 import {
 	loadBrainAssets,
 	renderBrainSvg,
@@ -14,7 +15,6 @@ import {
 import { axisBottom, axisLeft, scaleLinear, scaleBand, scalePoint, scaleSqrt, line as d3line, select } from 'd3'
 import { NumericModes } from '#shared/terms.js'
 import { roundValue } from '#shared/roundValue.js'
-import { pearsonCorrelation } from '#shared/helpers.js'
 
 /*********************************************************************
  * proteinView study tiles
@@ -1418,18 +1418,25 @@ function renderMultiomicRankTile(body: any, _td: TileData, self: any, _cfg: Tile
 // other. High R (> 0.5): largely the same changes; ~0.2–0.3: only a subset
 // moves in concert; ≈ 0: no global relationship.
 // Answers: "Does the mouse model reproduce the human change for this protein — and for the proteome as a whole?"
-type DapGeneRow = { gene: string; log2FC: number; fdr: number }
 type CohortRef = { organism: string; assay: string; cohort: string; label: string }
 type ConcordancePair = { key: string; label: string; x: CohortRef; y: CohortRef }
-
-function getDapRows(self: any, ref: CohortRef): Promise<DapGeneRow[]> {
+// server joins the two DAP files on upper-cased gene and runs R's cor.test (R/src/corr.R)
+function getConcordance(self: any, x: CohortRef, y: CohortRef): Promise<DapConcordance> {
 	const [genome, dslabel] = vocabKey(self).split('|')
-	return cachedFetch(`dapRows|${vocabKey(self)}|${ref.organism}|${ref.assay}|${ref.cohort}`, async () => {
+	const refKey = (r: CohortRef) => `${r.organism}|${r.assay}|${r.cohort}`
+	return cachedFetch(`dapConcordance|${vocabKey(self)}|${refKey(x)}|${refKey(y)}`, async () => {
 		const data = await dofetch3('termdb/dapVolcano', {
-			body: { genome, dslabel, organism: ref.organism, assay: ref.assay, cohort: ref.cohort, rowsOnly: true }
+			body: {
+				genome,
+				dslabel,
+				organism: x.organism,
+				assay: x.assay,
+				cohort: x.cohort,
+				concordanceWith: { organism: y.organism, assay: y.assay, cohort: y.cohort }
+			}
 		})
 		if (data.error) throw data.error
-		return data.rows || []
+		return data.concordance
 	})
 }
 
@@ -1489,26 +1496,10 @@ function concordancePairs(self: any, cfg: TileCfg, age = defaultConcordanceAge(s
 	return pairs
 }
 
-const pearson = (xs: number[], ys: number[]) => {
-	const r = xs.length < 3 ? NaN : pearsonCorrelation(xs, ys)
-	return Number.isFinite(r) ? r : null
-}
-
 async function drawConcordance(holder: any, self: any, pair: ConcordancePair, gene: string, expanded: boolean) {
-	const [xRows, yRows] = await Promise.all([getDapRows(self, pair.x), getDapRows(self, pair.y)])
-	const yByGene = new Map<string, DapGeneRow>()
-	for (const r of yRows) yByGene.set(r.gene.toUpperCase(), r)
-	const pts: Array<{ x: number; y: number; gene: string }> = []
-	for (const r of xRows) {
-		const m = yByGene.get(r.gene.toUpperCase())
-		if (m) pts.push({ x: r.log2FC, y: m.log2FC, gene: r.gene.toUpperCase() })
-	}
+	const { points: pts, r: R, p: P } = await getConcordance(self, pair.x, pair.y)
 	const target = gene.toUpperCase()
 	const hit = pts.find(p => p.gene === target)
-	const R = pearson(
-		pts.map(p => p.x),
-		pts.map(p => p.y)
-	)
 
 	const margin = expanded ? { top: 14, right: 16, bottom: 44, left: 52 } : { top: 8, right: 10, bottom: 32, left: 38 }
 	const innerW = expanded ? 380 : 150
@@ -1569,6 +1560,7 @@ async function drawConcordance(holder: any, self: any, pair: ConcordancePair, ge
 		.attr('text-anchor', 'end')
 		.style('font-size', expanded ? '11px' : '9px')
 		.style('fill', '#374151')
+		.attr('title', P === null ? null : `Pearson cor.test p = ${P < 1e-4 ? P.toExponential(1) : P.toFixed(4)}`)
 		.text(`R = ${R === null ? 'NA' : R.toFixed(2)} · n = ${pts.length.toLocaleString()}`)
 	if (!hit) {
 		holder
