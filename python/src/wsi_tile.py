@@ -281,10 +281,11 @@ def genenames(h5):
 
 def genecounts(h5, gene):
     """Per-cell counts of one gene. Source is either a 10x cell_feature_matrix
-    HDF5 (CSC sparse, genes x cells) or a consolidated spatial .h5ad (X is CSR,
-    cells x genes; obs/_index holds the cell ids). Zero-count cells are
-    omitted. Returns {"error":..} (not an exception) when the gene is absent,
-    so the UI gets a clean message instead of a traceback."""
+    HDF5 (CSC sparse, genes x cells) or a spatial .h5ad, whose X (cells x
+    genes) may be CSR, CSC or dense — dispatched on AnnData's encoding-type
+    attribute; anything else is rejected with a clear error, as is an absent
+    gene, so the UI gets a message instead of a traceback. Zero-count cells
+    are omitted."""
     import os
     import h5py
     h5ad = h5.endswith(".h5ad")  # which of the two layouts to read
@@ -293,18 +294,54 @@ def genecounts(h5, gene):
         hit = np.nonzero(names == gene)[0]                # index of the gene
         if hit.size == 0:
             return {"error": f"gene '{gene}' not found in {os.path.basename(h5)}"}
-        g = f["X"] if h5ad else f["matrix"]               # the sparse matrix group
-        mask = g["indices"][:] == hit[0]                  # nonzero entries of that gene
-        vals = g["data"][:][mask]                         # their counts
-        # entry k of the sparse arrays belongs to the cell whose indptr range
-        # contains k: the cell is the major axis in both layouts (CSC column =
-        # 10x cell, CSR row = h5ad cell), so the same searchsorted applies
-        cells = np.searchsorted(g["indptr"][:], np.nonzero(mask)[0], side="right") - 1
+        gi = int(hit[0])                                  # the gene's column/row index
+        if not h5ad:
+            # 10x layout: one fixed shape, CSC genes x cells
+            g = f["matrix"]
+            mask = g["indices"][:] == gi                  # nonzero entries of that gene
+            vals = g["data"][:][mask]                     # their counts
+            # entry k belongs to the cell whose indptr range contains k
+            cells = np.searchsorted(g["indptr"][:], np.nonzero(mask)[0], side="right") - 1
+        else:
+            X = f["X"]                                    # cells x genes, encoding varies
+            enc = str(X.attrs.get("encoding-type", ""))
+            if isinstance(X, h5py.Dataset):
+                # dense X: the gene's column, nonzero cells only
+                col = X[:, gi]
+                cells = np.nonzero(col)[0]
+                vals = col[cells]
+            elif enc == "csr_matrix":
+                # cell-major: scan the column indices for this gene's entries
+                mask = X["indices"][:] == gi
+                vals = X["data"][:][mask]
+                cells = np.searchsorted(X["indptr"][:], np.nonzero(mask)[0], side="right") - 1
+            elif enc == "csc_matrix":
+                # gene-major: the gene's column is one contiguous slice
+                s, e = X["indptr"][gi : gi + 2]
+                cells = X["indices"][s:e]
+                vals = X["data"][s:e]
+            else:
+                return {"error": f"unsupported X encoding '{enc}' in {os.path.basename(h5)}"}
         barcodes = f["obs/_index" if h5ad else "matrix/barcodes"][:].astype(str)
     return {
         "cells": dict(zip(barcodes[cells].tolist(), vals.astype(int).tolist())),
         "max": int(vals.max()) if vals.size else 0,  # legend upper bound
     }
+
+
+def _h5ad_cell_types(f):
+    """obs/cell_type of an open .h5ad as one string per cell: handles the
+    categorical group anndata usually writes (categories + integer codes,
+    -1 = NaN) and a plain string dataset; anything else raises with the
+    encountered layout named."""
+    import h5py
+    ct = f["obs/cell_type"]
+    if isinstance(ct, h5py.Group):
+        cats = np.append(ct["categories"][:].astype(str), "")  # -1 codes -> ''
+        return cats[ct["codes"][:]]
+    if isinstance(ct, h5py.Dataset):
+        return ct[:].astype(str)
+    raise ValueError(f"unsupported obs/cell_type layout {type(ct).__name__}")
 
 
 def h5ad_csv(h5ad, kind):
@@ -322,13 +359,12 @@ def h5ad_csv(h5ad, kind):
     fd, out = tempfile.mkstemp(suffix=".csv", prefix="wsih5ad_")
     with h5py.File(h5ad, "r") as f, os.fdopen(fd, "w") as w:
         if kind == "annotations":
-            cats = f["obs/cell_type/categories"][:].astype(str)  # the distinct types
-            codes = f["obs/cell_type/codes"][:]                  # per-cell category index
+            types = _h5ad_cell_types(f)                          # one string per cell, '' = untyped
             ids = f["obs/_index"][:].astype(str)                 # cell ids, obs order
             w.write('"cell_id","cell_type"\n')
-            for i, c in enumerate(codes):
-                if c >= 0 and cats[c]:                           # '' / NaN = QC-filtered, omit
-                    w.write(f'"{ids[i]}","{cats[c]}"\n')
+            for i, t in enumerate(types):
+                if t:                                            # '' = QC-filtered, omit
+                    w.write(f'"{ids[i]}","{t}"\n')
         else:
             b = f[f"uns/{kind}_boundaries"]                      # the ragged polygon store
             ids = b["cell_id"][:].astype(str)                    # one id per polygon
@@ -346,8 +382,7 @@ def h5ad_celltypes(h5ad):
     request's type discovery for the client's filter dropdowns."""
     import h5py
     with h5py.File(h5ad, "r") as f:
-        cats = f["obs/cell_type/categories"][:].astype(str)
-    return {"cellTypes": sorted(c for c in cats if c)}
+        return {"cellTypes": sorted(set(t for t in _h5ad_cell_types(f) if t))}
 
 
 def _test():
