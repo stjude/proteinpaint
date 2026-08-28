@@ -479,6 +479,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 		const searchInput = toolbar
 			.append('input')
 			.attr('type', 'search')
+			.attr('aria-label', 'Search samples')
 			.attr('placeholder', 'Search samples')
 			.style('width', '200px')
 			.on('input', debouncedRenderRows)
