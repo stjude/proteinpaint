@@ -824,6 +824,57 @@ type ProteomeAssayConfig = {
 	mclassOverride?: Mclass
 }
 
+/** Selects proteome cohorts by organism/assay and their catalog metadata. Every given
+ *  condition must hold: `catalog` values equal, `with` keys present (non-empty), `without`
+ *  keys absent. */
+export type ProteomeCohortMatch = {
+	organism?: string
+	assay?: string
+	catalog?: { [catalogKey: string]: string }
+	with?: string[]
+	without?: string[]
+}
+
+export type ProteinViewTileConfig = {
+	/** renderer key: crossDisease | insoluble | brainRegions | mouseModels | cellTypes |
+	 *  plaque | multiomicRank | concordance | ptm */
+	key: string
+	title: string
+	subtitle: string
+	/** cohorts feeding this tile; a cohort goes to the first tile (in array order) it matches */
+	cohortMatch?: ProteomeCohortMatch
+	/** key of another tile whose entries are the reference side of a paired tile (e.g. the
+	 * whole-proteome tile for the insoluble dumbbell); paired by cohort name */
+	referenceTile?: string
+	/** axis titles for tiles with a categorical/age x axis (mouseModels, plaque) */
+	xLabel?: string
+	yLabel?: string
+	/** concordance tile: cohort pairs to scatter against each other. A side with ageVaries
+	 *  additionally matches catalog.ageGroup against the selected age (defaultAge first). */
+	pairs?: {
+		key: string
+		label: string
+		x: ProteomeCohortMatch & { label: string; ageVaries?: boolean }
+		y: ProteomeCohortMatch & { label: string; ageVaries?: boolean }
+	}[]
+	defaultAge?: string
+	/** footnote shown in the expanded pane */
+	note?: string
+}
+
+export type ProteinViewConfig = {
+	/** disease code → display; key order is the axis order. specificityControl entries
+	 *  (e.g. psychiatric controls) render muted after a separator */
+	diseases?: { [code: string]: { name: string; label?: string; specificityControl?: boolean } }
+	/** header over the specificityControl group in the cross-disease tile */
+	specificityControlLabel?: string
+	/** model → color; key order is the legend/column order */
+	models?: { [model: string]: { color?: string } }
+	/** cell type → optional footnote; key order is the row order */
+	cellTypes?: { [cellType: string]: { note?: string } }
+	tiles: ProteinViewTileConfig[]
+}
+
 export type ProteomeAbundanceQuery = {
 	/** database file path */
 	dbfile?: string
@@ -832,6 +883,10 @@ export type ProteomeAbundanceQuery = {
 	 *  assay). Used by both the bubble heatmap and the Protein View PTM lollipop. When
 	 *  omitted, no adjustment/normalization is offered. */
 	proteinReferenceAssay?: string
+	/** Protein View study-tile config: the dataset's vocabulary (diseases, models, cell
+	 *  types) and the ordered tiles with the cohort-routing rule feeding each. Without it
+	 *  the Protein View shows only the overview volcano and PTM track. */
+	proteinView?: ProteinViewConfig
 	/** Brain-region visualization config: powers the Brain Regional Proteome chart
 	 *  and the Protein View sample-distribution panel */
 	brainRegions?: {
@@ -1396,6 +1451,12 @@ type Mds3Queries = {
 		rankings: { [key: string]: string }
 		/** column names of modalities to include in the heatmap, in display order */
 		modalities: string[]
+		/** column holding the integrative (combined) rank, shown as "#n of N" in the Protein View */
+		integrativeColumn?: string
+		/** extra statistic columns to list per ranking in the expanded Protein View tile */
+		statColumns?: string[]
+		/** short display label per ranking key (e.g. "AD multiomics" → "AD"); defaults to the key */
+		labels?: { [key: string]: string }
 		/** intro text shown above the table */
 		description?: string
 		/** optional override for the chart-menu label; defaults to "Gene Ranking" */

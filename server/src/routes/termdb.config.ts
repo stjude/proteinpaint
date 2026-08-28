@@ -289,7 +289,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	if (q.singleSampleGenomeQuantification) {
 		q2.singleSampleGenomeQuantification = {}
 		for (const k in q.singleSampleGenomeQuantification) {
-			q2.singleSampleGenomeQuantification[k] = JSON.parse(JSON.stringify(q.singleSampleGenomeQuantification[k]))
+			q2.singleSampleGenomeQuantification[k] = structuredClone(q.singleSampleGenomeQuantification[k])
 			delete q2.singleSampleGenomeQuantification[k].folder
 		}
 	}
@@ -301,6 +301,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	}
 	if (q.proteome) {
 		q2.proteome = {}
+		if (q.proteome.proteinView) {
+			// self-contained tile config for the client Protein View
+			q2.proteome.proteinView = structuredClone(q.proteome.proteinView)
+		}
 		if (q.proteome.brainRegions) {
 			const br = q.proteome.brainRegions
 			q2.proteome.brainRegions = {
@@ -312,11 +316,11 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		}
 		if (q.proteome.studyCatalog) {
 			// self-contained table config; pass through as-is for the client studyCatalog plot
-			q2.proteome.studyCatalog = JSON.parse(JSON.stringify(q.proteome.studyCatalog))
+			q2.proteome.studyCatalog = structuredClone(q.proteome.studyCatalog)
 		}
 		if (q.proteome.cellTypeBubbleHeatmap) {
 			// presence-only: lets the studyCatalog gate its "Cell-type Bubble Heatmap" button
-			q2.proteome.cellTypeBubbleHeatmap = JSON.parse(JSON.stringify(q.proteome.cellTypeBubbleHeatmap))
+			q2.proteome.cellTypeBubbleHeatmap = structuredClone(q.proteome.cellTypeBubbleHeatmap)
 		}
 		if (q.proteome.organisms) {
 			q2.proteome.organisms = {}
@@ -324,7 +328,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 				q2.proteome.organisms[organism] = {}
 				const orgSrc = q.proteome.organisms[organism]
 				if (orgSrc.overlayTerm) {
-					q2.proteome.organisms[organism].overlayTerm = JSON.parse(JSON.stringify(orgSrc.overlayTerm))
+					q2.proteome.organisms[organism].overlayTerm = structuredClone(orgSrc.overlayTerm)
 				}
 				if (orgSrc.genomeName) {
 					q2.proteome.organisms[organism].genomeName = orgSrc.genomeName
@@ -337,14 +341,18 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 							// per-assay proteome label; the studyCatalog derives the Proteome column from it
 							q2.proteome.organisms[organism].assays[assay].proteomeLabel = orgSrc.assays[assay].proteomeLabel
 						}
+						if (orgSrc.assays[assay].PTMType) {
+							// marks site-level (PTM) assays so the client never has to infer it from labels
+							q2.proteome.organisms[organism].assays[assay].PTMType = orgSrc.assays[assay].PTMType
+						}
 						if (orgSrc.assays[assay].cohorts) {
 							q2.proteome.organisms[organism].assays[assay].cohorts = {}
 							for (const cohort in orgSrc.assays[assay].cohorts) {
 								q2.proteome.organisms[organism].assays[assay].cohorts[cohort] = {}
 								const src = orgSrc.assays[assay].cohorts[cohort]
 								if ('controlFilter' in src) {
-									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].controlFilter = JSON.parse(
-										JSON.stringify(src.controlFilter)
+									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].controlFilter = structuredClone(
+										src.controlFilter
 									)
 								}
 								if ('caseFilter' in src) {
@@ -373,7 +381,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			rankings: Object.fromEntries(Object.keys(q.geneRanking.rankings).map(k => [k, true])),
 			modalities: q.geneRanking.modalities,
 			description: q.geneRanking.description,
-			appName: q.geneRanking.appName
+			appName: q.geneRanking.appName,
+			integrativeColumn: q.geneRanking.integrativeColumn,
+			statColumns: q.geneRanking.statColumns,
+			labels: q.geneRanking.labels
 		}
 	}
 	if (q.dnaMethylation) {
@@ -448,13 +459,13 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	if (q.NIdata && serverconfig.features.showBrainImaging) {
 		q2.NIdata = {}
 		for (const k in q.NIdata) {
-			q2.NIdata[k] = JSON.parse(JSON.stringify(q.NIdata[k]))
+			q2.NIdata[k] = structuredClone(q.NIdata[k])
 		}
 	}
 	if (q.singleSampleGbtk) {
 		q2.singleSampleGbtk = {}
 		for (const k in q.singleSampleGbtk) {
-			q2.singleSampleGbtk[k] = JSON.parse(JSON.stringify(q.singleSampleGbtk[k]))
+			q2.singleSampleGbtk[k] = structuredClone(q.singleSampleGbtk[k])
 			delete q2.singleSampleGbtk[k].folder
 		}
 	}

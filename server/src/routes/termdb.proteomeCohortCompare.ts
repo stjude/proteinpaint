@@ -20,7 +20,7 @@ the cohort's DAP load.) No mean-centring: the log2FC distributions are centred a
 
 Cohorts are aligned on the shared gene axis (intersection). Same-species matches by the gene
 symbol as-is; cross-species (opt-in) matches by upper-cased symbol (human APP ↔ mouse App).
-Returns the aligned z matrix plus pairwise Pearson (on z) and Spearman (on ranks) correlations,
+Returns the aligned z matrix plus pairwise Pearson and Spearman correlations (R/src/corr.R),
 and a clustered heatmap, a shared-vs-specific DAP overlap (UpSet), and an
 age/progression trajectory (per-series k-means clusters of protein trajectories).
 */
@@ -94,43 +94,29 @@ function centralSd(values: number[]): number {
 	return Math.sqrt(ss / (w.length - 1))
 }
 
-function pearson(a: number[], b: number[]): number {
-	const n = a.length
-	if (n < 2) return NaN
-	let ma = 0,
-		mb = 0
-	for (let i = 0; i < n; i++) {
-		ma += a[i]
-		mb += b[i]
+/**
+ * Pairwise correlation (and p-value) matrices of the rows of `m` via R's cor.test
+ * (R/src/corr.R), one term per unordered pair; the diagonal is r=1, p=0. Entries are NaN
+ * when R reports NA (e.g. a constant row) or when there are too few shared genes for
+ * cor.test (n < 3).
+ */
+async function corrMatrix(m: number[][], method: 'pearson' | 'spearman'): Promise<{ r: number[][]; p: number[][] }> {
+	const n = m.length
+	const r: number[][] = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 1 : NaN)))
+	const p: number[][] = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 0 : NaN)))
+	if (n < 2 || (m[0]?.length ?? 0) < 3) return { r, p }
+	const terms: { id: string; v1: number[]; v2: number[] }[] = []
+	for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) terms.push({ id: `${i}_${j}`, v1: m[i], v2: m[j] })
+	const R: { id: string; correlation: number | string; original_p_value: number | string }[] = JSON.parse(
+		await run_R('corr.R', JSON.stringify({ method, terms }))
+	)
+	for (const t of R) {
+		const [i, j] = t.id.split('_').map(Number)
+		// corr.R reports NA/NaN as strings (toJSON na='string'); Number() turns those into NaN
+		r[i][j] = r[j][i] = Number(t.correlation)
+		p[i][j] = p[j][i] = Number(t.original_p_value)
 	}
-	ma /= n
-	mb /= n
-	let num = 0,
-		da = 0,
-		db = 0
-	for (let i = 0; i < n; i++) {
-		const x = a[i] - ma,
-			y = b[i] - mb
-		num += x * y
-		da += x * x
-		db += y * y
-	}
-	return da > 0 && db > 0 ? num / Math.sqrt(da * db) : NaN
-}
-
-/** fractional ranks (ties → average rank), for Spearman */
-function ranks(arr: number[]): number[] {
-	const idx = arr.map((v, i) => [v, i] as [number, number]).sort((x, y) => x[0] - y[0])
-	const r = new Array<number>(arr.length)
-	let i = 0
-	while (i < idx.length) {
-		let j = i
-		while (j + 1 < idx.length && idx[j + 1][0] === idx[i][0]) j++
-		const avg = (i + j) / 2 + 1
-		for (let k = i; k <= j; k++) r[idx[k][1]] = avg
-		i = j + 1
-	}
-	return r
+	return { r, p }
 }
 
 /** hclust output for one axis, in the client-friendly shape */
@@ -550,18 +536,8 @@ function init({ genomes }) {
 			const fc: number[][] = maps.map(m => shared.map(g => m!.get(g)!.fc))
 			const fdr: number[][] = maps.map(m => shared.map(g => m!.get(g)!.fdr))
 
-			// pairwise correlations
-			const zr = z.map(ranks)
-			const pearsonM: number[][] = []
-			const spearmanM: number[][] = []
-			for (let i = 0; i < z.length; i++) {
-				pearsonM[i] = []
-				spearmanM[i] = []
-				for (let j = 0; j < z.length; j++) {
-					pearsonM[i][j] = i === j ? 1 : pearson(z[i], z[j])
-					spearmanM[i][j] = i === j ? 1 : pearson(zr[i], zr[j])
-				}
-			}
+			// pairwise correlations (R cor.test; Spearman ranks inside R)
+			const [pearsonR, spearmanR] = await Promise.all([corrMatrix(z, 'pearson'), corrMatrix(z, 'spearman')])
 
 			// DAP cutoffs, shared by the heatmap and overlap views.
 			// finite-check (not `||`) so a user-supplied 0 (e.g. |z| ≥ 0) isn't swallowed by the default
@@ -606,8 +582,11 @@ function init({ genomes }) {
 				z,
 				fc,
 				fdr,
-				pearson: pearsonM,
-				spearman: spearmanM,
+				pearson: pearsonR.r,
+				spearman: spearmanR.r,
+				// cor.test p-values (unadjusted), same layout as the r matrices
+				pearsonP: pearsonR.p,
+				spearmanP: spearmanR.p,
 				heatmap,
 				overlap,
 				trajectory

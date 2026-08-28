@@ -3,25 +3,7 @@ import { get_ds_tdb } from '#src/termdb.js'
 import * as utils from '#src/utils.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import serverconfig from '#src/serverconfig.js'
-import { readGeneRows } from '../src/routes/termdb.bubbleHeatmap.ts'
-
-// sp|P10636-8|TAU_HUMAN → P10636 ; also handles the dotted DAP-file form
-// sp.P10636.TAU_HUMAN / sp.P10636.3.TAU_HUMAN → P10636. Falls back to the raw
-// acc when it doesn't parse. Kept in sync with termdb.bubbleHeatmap.ts so PTM
-// sites and whole-proteome rows collapse to the same base UniProt accession.
-function baseUniProtAcc(acc: string): string {
-	if (!acc) return ''
-	if (acc.includes('|')) {
-		const parts = acc.split('|')
-		const id = parts.length >= 2 ? parts[1] : acc
-		const dash = id.indexOf('-')
-		return dash > 0 ? id.slice(0, dash) : id
-	}
-	// dotted DAP form: sp.ACC.NAME or sp.ACC.isoformN.NAME
-	const parts = acc.split('.')
-	if (parts.length >= 3 && (parts[0] === 'sp' || parts[0] === 'tr')) return parts[1]
-	return acc
-}
+import { readGeneRows, baseUniProtAcc } from '../src/routes/termdb.bubbleHeatmap.ts'
 
 const missingDapWarned = new Set<string>()
 
@@ -118,6 +100,8 @@ export function init({ genomes }) {
 						for (const row of rows) {
 							const entry: any = {
 								organism: organismName,
+								// the study catalog (dataset config) is the authority on disease
+								disease: cohortCfg.catalog?.disease,
 								assayName,
 								cohortName,
 								uniqueIdentifier: row.identifier,
@@ -126,10 +110,10 @@ export function init({ genomes }) {
 								// client computes log2(foldChange); DAP stores log2FC directly
 								foldChange: Math.pow(2, row.fc),
 								// significance is the DAP file's FDR (BH-adjusted p), consistent with
-								// the other DAP-driven tools. pValue is a deprecated alias of fdr kept
-								// for existing clients; new code should read fdr.
+								// the other DAP-driven tools; a nominal p is only present when the
+								// DAP file carries one (6th column)
 								fdr: row.fdr,
-								pValue: row.fdr,
+pValue: row.fdr,
 								testedN: caseSamples.length,
 								controlN: controlSamples.length
 							}
@@ -165,7 +149,7 @@ export function init({ genomes }) {
 					const baseAcc = baseUniProtAcc(e.proteinAccession)
 					if (!baseAcc) continue
 					const key = `${e.organism}|${e.cohortName}|${baseAcc}`
-					const p = Number.isFinite(e.pValue) ? e.pValue : Infinity
+					const p = Number.isFinite(e.fdr) ? e.fdr : Infinity
 					const cur = refFcByKey.get(key)
 					if (!cur || p < cur.p) refFcByKey.set(key, { fc: e.foldChange, p })
 				}

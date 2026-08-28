@@ -37,12 +37,25 @@ export type DapRow = {
 	p?: number
 }
 
-/** sp|P10636-8|TAU_HUMAN → P10636 ; falls back to the raw acc when it doesn't parse */
-function baseUniProtAcc(acc: string): string {
-	const parts = acc.split('|')
-	const id = parts.length >= 2 ? parts[1] : acc
-	const dash = id.indexOf('-')
-	return dash > 0 ? id.slice(0, dash) : id
+/**
+ * sp|P10636-8|TAU_HUMAN → P10636 ; also handles the dotted DAP-file form
+ * sp.P10636.TAU_HUMAN / sp.P10636.3.TAU_HUMAN → P10636. Falls back to the raw
+ * acc when it doesn't parse. Shared by every DAP consumer (bubble heatmap,
+ * proteome/protein view, brain regions) so PTM sites and whole-proteome rows
+ * collapse to the same base UniProt accession.
+ */
+export function baseUniProtAcc(acc: string): string {
+	if (!acc) return ''
+	if (acc.includes('|')) {
+		const parts = acc.split('|')
+		const id = parts.length >= 2 ? parts[1] : acc
+		const dash = id.indexOf('-')
+		return dash > 0 ? id.slice(0, dash) : id
+	}
+	// dotted DAP form: sp.ACC.NAME or sp.ACC.isoformN.NAME
+	const parts = acc.split('.')
+	if (parts.length >= 3 && (parts[0] === 'sp' || parts[0] === 'tr')) return parts[1]
+	return acc
 }
 
 /**
@@ -73,7 +86,11 @@ export async function readGeneRows(filePath: string, geneLower: string): Promise
 		const fdr = Number(parts[4])
 		if (!Number.isFinite(fdr)) continue
 		const row: DapRow = { acc, baseAcc: baseUniProtAcc(acc), identifier: parts[1] || acc, gene, fc, fdr }
-		if (parts.length > 5 && Number.isFinite(Number(parts[5]))) row.p = Number(parts[5])
+		const pText = parts[5]?.trim()
+		if (pText) {
+			const p = Number(pText)
+			if (Number.isFinite(p)) row.p = p
+		}
 		rows.push(row)
 	}
 	return rows
