@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.205.1
 
 Fixes:
 - Improve run_rust so server error gets reported
