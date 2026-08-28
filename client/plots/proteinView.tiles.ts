@@ -1357,7 +1357,7 @@ function renderMultiomicRankTile(body: any, _td: TileData, self: any, _cfg: Tile
 				head
 					.append('span')
 					.style('color', typeof intRank === 'number' ? '#111827' : '#9ca3af')
-					.text(typeof intRank === 'number' ? `#${fmt(intRank)} of ${fmt(r.total)}` : 'no integrative rank')
+					.text(typeof intRank === 'number' ? `#${fmt(intRank)} of ${fmt(r.counts[intIdx!])}` : 'no integrative rank')
 
 				// per-modality ranks: strip on the face, table when expanded
 				const mods = modalities.filter(m => colIdx.has(m))
