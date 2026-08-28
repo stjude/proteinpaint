@@ -1471,7 +1471,15 @@ function concordanceAges(self: any, cfg: TileCfg): string[] {
 	return [...ages].sort(byAge)
 }
 
-function concordancePairs(self: any, cfg: TileCfg, age = cfg.defaultAge || ''): ConcordancePair[] {
+// age used when none is selected: the configured defaultAge if cohorts exist at
+// it, else the first age that has any; '' only when no side varies by age
+function defaultConcordanceAge(self: any, cfg: TileCfg): string {
+	const ages = concordanceAges(self, cfg)
+	if (cfg.defaultAge && ages.includes(cfg.defaultAge)) return cfg.defaultAge
+	return ages[0] || cfg.defaultAge || ''
+}
+
+function concordancePairs(self: any, cfg: TileCfg, age = defaultConcordanceAge(self, cfg)): ConcordancePair[] {
 	const pairs: ConcordancePair[] = []
 	for (const p of cfg.pairs || []) {
 		const x = findPairCohort(self, p.x, age)
@@ -1581,7 +1589,7 @@ async function drawConcordance(holder: any, self: any, pair: ConcordancePair, ge
 function renderConcordanceTile(body: any, _td: TileData, self: any, cfg: TileCfg, opts: TileRenderOpts = {}) {
 	const expanded = !!opts.expanded
 	const gene = self.state?.config?.tw?.term?.name || ''
-	let age = cfg.defaultAge || ''
+	let age = defaultConcordanceAge(self, cfg)
 	let pairs = concordancePairs(self, cfg, age)
 	if (!pairs.length) return
 	let pair = pairs[0]
@@ -1977,7 +1985,8 @@ export function renderPTMSummaryCard(
 		const log2fc = getLog2Ratio(e.foldChange)
 		const mclass: any = Object.values(e.mclassOverride || {})[0]
 		const existing = typeCounts.get(e.PTMType)
-		const color = existing?.color || mclass?.color || PTM_FALLBACK_PALETTE[typeCounts.size % PTM_FALLBACK_PALETTE.length]
+		const color =
+			existing?.color || mclass?.color || PTM_FALLBACK_PALETTE[typeCounts.size % PTM_FALLBACK_PALETTE.length]
 		const tc = existing || { count: 0, color }
 		tc.count++
 		typeCounts.set(e.PTMType, tc)
