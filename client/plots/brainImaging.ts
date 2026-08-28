@@ -319,7 +319,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 			legendFilter: this.state.config.legendFilter,
 			filter: this.state.termfilter?.filter
 		}
-		return await dofetch3('brainImaging', { body })
+		return await dofetch3('termdb/brainImaging', { body })
 	}
 
 	renderImages({ data, td, dataUrls }: ImgData) {

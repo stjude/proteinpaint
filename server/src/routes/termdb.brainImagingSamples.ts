@@ -11,7 +11,7 @@ export const payload: RoutePayload = {
 given one or more samples, map the sample(s) to brain template and return the image
 */
 export const api: RouteApi = {
-	endpoint: 'brainImagingSamples',
+	endpoint: 'termdb/brainImagingSamples',
 	methods: {
 		get: payload
 	}

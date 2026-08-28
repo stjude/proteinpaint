@@ -8,7 +8,7 @@ export const payload: RoutePayload = {
 }
 
 export const api: RouteApi = {
-	endpoint: 'brainImaging',
+	endpoint: 'termdb/brainImaging',
 	methods: {
 		get: payload,
 		post: payload
