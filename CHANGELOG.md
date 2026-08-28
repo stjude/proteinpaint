@@ -7,6 +7,12 @@ All notable changes to this project will be documented in this file.
 Features:
 - GDC: Added detailed reporting to DE pre-analysis panel
 
+Fixes:
+- GDC differential expression with the wilcoxon method failed with a 502. The server image now installs libhdf5-310, the HDF5 runtime the rust binaries are linked against; its base image (r-base) tracks Debian sid, where libhdf5-dev has moved on to HDF5 2.x and no longer provides that soname.
+
+DevOps:
+- The rust build now fails if any extracted binary has unresolved shared libraries, instead of shipping one that cannot load.
+
 
 ## 2.205.1
 
