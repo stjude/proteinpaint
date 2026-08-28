@@ -356,16 +356,23 @@ def h5ad_csv(h5ad, kind):
     node caches per h5ad mtime on disk if this ever shows up."""
     import os
     import h5py
-    fd, out = tempfile.mkstemp(suffix=".csv", prefix="wsih5ad_")
-    with h5py.File(h5ad, "r") as f, os.fdopen(fd, "w") as w:
+    # read (and thereby validate) the store BEFORE creating the temp file, so
+    # a missing/corrupt h5ad can't leak an orphan into the temp directory
+    with h5py.File(h5ad, "r") as f:
         b = f[f"uns/{kind}_boundaries"]                      # the ragged polygon store
         ids = b["cell_id"][:].astype(str)                    # one id per polygon
         indptr = b["indptr"][:]                              # ring offsets into vertices
         verts = b["vertices"][:]                             # (N, 2) um coordinates
-        w.write('"cell_id","vertex_x","vertex_y"\n')
-        for i, cid in enumerate(ids):
-            for x, y in verts[indptr[i]:indptr[i + 1]]:
-                w.write(f'"{cid}",{x:.4f},{y:.4f}\n')
+    fd, out = tempfile.mkstemp(suffix=".csv", prefix="wsih5ad_")
+    try:
+        with os.fdopen(fd, "w") as w:                        # closes the fd, error or not
+            w.write('"cell_id","vertex_x","vertex_y"\n')
+            for i, cid in enumerate(ids):
+                for x, y in verts[indptr[i]:indptr[i + 1]]:
+                    w.write(f'"{cid}",{x:.4f},{y:.4f}\n')
+    except BaseException:
+        os.unlink(out)                                       # a failed write never leaks the file
+        raise
     return out  # node reads, serves, deletes
 
 
