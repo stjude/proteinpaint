@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.206.1
 
 Fixes:
 - in routes/termdb.config.ts, revert the change to sturcturedClone() from JSON.parse(JSON.stringify())
