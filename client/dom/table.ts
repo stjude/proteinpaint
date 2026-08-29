@@ -280,9 +280,11 @@ export function renderTable({
 			// NOTE: a title attribute, wrapping with a label element, or other solutions are possible,
 			// but using aria-labelled by is less likely to conflict with existing elem attributes or layout
 			const ariaLabelledBy = row.ariaLabelledBy || row[0]?.elemId || getUniqueNameOrId('td')
-			// by default, assume that the first data cell should be used to label the input to its left,
+			// by default, assume that the first data cell with text should be used to label the input to its left,
 			// and should create an element id on it as needed
-			if (!row.ariaLabelledBy && row[0] && !row[0].elemId) row[0].elemId = ariaLabelledBy
+			const nextColumnWithText = row.find(c => c.value !== '')
+			if (!row.ariaLabelledBy && nextColumnWithText && !nextColumnWithText.elemId)
+				nextColumnWithText.elemId = ariaLabelledBy
 
 			if (buttons || noButtonCallback) {
 				const clickHandler = (e: any) => {
