@@ -276,15 +276,16 @@ export function renderTable({
 			const tr = tbody.append('tr').attr('class', 'sjpp_row_wrapper').attr('tabindex', 0)
 			if (striped && rowIdx % 2 == 1) tr.style('background-color', 'rgb(245,245,245)')
 
+			// by default, assume that the first data cell with text should be used to label the input to its left,
+			// and should create an element id on it as needed
+			const labelCell = row.find(c => c.value !== '')
 			// for Section 508 compliance: always create an aria-labelledby attribute on an input
 			// NOTE: a title attribute, wrapping with a label element, or other solutions are possible,
 			// but using aria-labelled by is less likely to conflict with existing elem attributes or layout
-			const ariaLabelledBy = row.ariaLabelledBy || row[0]?.elemId || getUniqueNameOrId('td')
-			// by default, assume that the first data cell with text should be used to label the input to its left,
-			// and should create an element id on it as needed
-			const nextColumnWithText = row.find(c => c.value !== '')
-			if (!row.ariaLabelledBy && nextColumnWithText && !nextColumnWithText.elemId)
-				nextColumnWithText.elemId = ariaLabelledBy
+			// derive the reference from the label cell itself, so an existing id is reused instead of
+			// duplicated and a generated id is always attached to the cell it points to
+			const ariaLabelledBy = row.ariaLabelledBy || labelCell?.elemId || getUniqueNameOrId('td')
+			if (!row.ariaLabelledBy && labelCell && !labelCell.elemId) labelCell.elemId = ariaLabelledBy
 
 			if (buttons || noButtonCallback) {
 				const clickHandler = (e: any) => {
