@@ -414,6 +414,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 		}
 
 		const columns = await getTableColumns(this, refKey)
+		if (requestNum != this.sampleRequestNum) return
 
 		// samples currently shown in the table (narrowed by the search box)
 		let shownSamples = samples
