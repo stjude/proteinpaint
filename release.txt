@@ -1,1 +1,2 @@
-
+Fixes:
+- in routes/termdb.config.ts, revert the change to sturcturedClone() from JSON.parse(JSON.stringify())
