@@ -73,6 +73,9 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	 whole-transcriptome sample leaves this unset and searches the genome
 	 gene db as usual */
 	sampleGeneList?: string[]
+	/** the sc sample's declared assay type, shown to the user next to the
+	 gene search so the search scope is explicit */
+	assayType?: 'panel' | 'wholeTranscriptome'
 
 	async init(appState) {
 		const state = this.getState(appState)
@@ -257,14 +260,34 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				}
 			})
 			// only a panel-based sample restricts search to its own gene list
+			this.assayType = r?.assay
 			if (r?.assay == 'panel' && Array.isArray(r.genes)) this.sampleGeneList = r.genes
 		} catch (e) {
 			console.warn('failed to list the sample genes, falling back to the genome gene db', e)
 		}
 	}
 
+	/** Say per sample what the gene search covers: a panel-based sample
+	 searches only its assayed genes (from its expression store); a
+	 whole-transcriptome sample searches the genome gene db */
+	renderAssayNote(holder) {
+		if (!this.assayType) return // not single-cell, or the listing failed
+		holder
+			.append('div')
+			.attr('data-testid', 'sjpp-geneexp-assay-note')
+			.style('padding', '2px 5px')
+			.style('opacity', 0.65)
+			.style('font-size', '.9em')
+			.text(
+				this.assayType == 'panel'
+					? `Panel-based assay: search among the ${this.sampleGeneList?.length} genes measured for this sample`
+					: 'Whole-transcriptome assay: search all genes'
+			)
+	}
+
 	renderGeneSelect(tab) {
 		const row = tab.contentHolder.style('padding', '15px')
+		this.renderAssayNote(row)
 		row.append('span').style('padding', '5px').text('Select a gene:')
 		const geneSearch = addGeneSearchbox({
 			row,
@@ -310,6 +333,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	/** Guide the user to select the first gene then
 	 * a second to launch the summary plot on submit.*/
 	renderTwoGeneSelect(tab) {
+		this.renderAssayNote(tab.contentHolder)
 		const term: any = {}
 		const term2: any = {}
 
