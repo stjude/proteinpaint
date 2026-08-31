@@ -52,10 +52,7 @@ tape('spatial OME-TIFF image renders the map with overlays and the burger menu',
 					settings: {
 						wsi: {
 							selectedSampleIndex: 1, // samples sort as ['2660', 'TCGA-22-1017']
-							// preset '' skips the one-time seeding dispatch; the fixture's
-							// spatial h5ad carries no expression (sc expression lives in
-							// scrna/geneExpHdf5), so no genes are requested
-							geneExpression: '',
+							geneExpression: 'PTPRC', // preset: skips the one-time seeding dispatch
 							showCellTypes: true, // cell-type fills + legend on
 							showGeneExpression: false, // fills are mutually exclusive with cell types
 							annotationLevel: 0 // strokes/tooltip at every zoom

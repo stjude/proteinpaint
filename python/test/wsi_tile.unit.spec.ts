@@ -3,11 +3,9 @@ Unit test for 'python/src/wsi_tile.py', driven through the same node->python
 bridge the server uses (run_python pipes one JSON job on stdin, reads stdout).
 
 Covers the offline tier-math self-check ({"action":"selftest"}, the former
---test-only check), every h5ad action against the committed TermdbTest
-fixture (image1_spatial.h5ad: 791 cells, 5 cell types, 31 QC-filtered cells
-with no type — and NO expression: single-cell expression lives in
-scrna/geneExpHdf5 instead), and the expression actions against the small
-wsi_tile.test.h5ad fixture beside this spec (4 cells x 3 genes, CSR).
+--test-only check) and every h5ad action against the committed TermdbTest
+fixture (image1_spatial.h5ad: 791 cells, 5 cell types, genes
+ACE2/ACTA2/PTPRC, 31 QC-filtered cells with no type).
 
 Run as follows (from 'proteinpaint/'):
     node python/test/wsi_tile.unit.spec.ts
@@ -26,8 +24,6 @@ if (process.env.PP_PYTHON) setPythonBinPath(process.env.PP_PYTHON)
 
 // the committed spatial fixture; the spec runs from the repo root
 const h5ad = path.resolve('server/test/tp/files/hg38/TermdbTest/spatial/TCGA-22-1017/image1/image1_spatial.h5ad')
-// small expression-bearing h5ad, for the X-reading actions
-const exprH5ad = path.resolve('python/test/wsi_tile.test.h5ad')
 
 tape('selftest: Zoomify tier math', async t => {
 	const out = await run_python('wsi_tile.py', JSON.stringify({ action: 'selftest' }))
@@ -35,30 +31,28 @@ tape('selftest: Zoomify tier math', async t => {
 	t.end()
 })
 
-tape('genenames lists the expression fixture genes in file order', async t => {
-	const out = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'genenames', h5: exprH5ad })))
-	t.deepEqual(out.genes, ['G1', 'G2', 'G3'], 'the three fixture genes')
-	t.end()
-})
-
-tape('genenames on an expression-less spatial h5ad is empty, not an error', async t => {
+tape('genenames lists the fixture genes in file order', async t => {
 	const out = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'genenames', h5: h5ad })))
-	t.deepEqual(out.genes, [], 'no genes: the spatial store carries no expression')
+	t.deepEqual(out.genes, ['ACE2', 'ACTA2', 'PTPRC'], 'the three fixture genes')
 	t.end()
 })
 
 tape('genecounts answers per-cell counts of one gene', async t => {
 	const out = JSON.parse(
-		await run_python('wsi_tile.py', JSON.stringify({ action: 'genecounts', h5: exprH5ad, gene: 'G2' }))
+		await run_python('wsi_tile.py', JSON.stringify({ action: 'genecounts', h5: h5ad, gene: 'PTPRC' }))
 	)
-	t.deepEqual(out.cells, { c1: 3, c3: 5 }, 'per-cell counts, zero-count cells omitted')
-	t.equal(out.max, 5, 'the highest count')
+	t.equal(Object.keys(out.cells).length, 594, '594 fixture cells express PTPRC')
+	t.equal(out.max, 9, 'their highest count is 9')
+	t.ok(
+		Object.values(out.cells).every(n => Number.isInteger(n) && (n as number) > 0),
+		'every reported count is a positive integer (zero-count cells omitted)'
+	)
 	t.end()
 })
 
 tape('genecounts reports an unknown gene as a clean error', async t => {
 	const out = JSON.parse(
-		await run_python('wsi_tile.py', JSON.stringify({ action: 'genecounts', h5: exprH5ad, gene: 'NOPE' }))
+		await run_python('wsi_tile.py', JSON.stringify({ action: 'genecounts', h5: h5ad, gene: 'NOPE' }))
 	)
 	t.ok(String(out.error).includes("gene 'NOPE' not found"), 'error names the missing gene')
 	t.end()
