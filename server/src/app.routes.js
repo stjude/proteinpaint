@@ -31,6 +31,7 @@ export const routeFiles = [
 	import('./routes/hicgenome.ts'),
 	import('./routes/hicstat.ts'),
 	import('./routes/img.ts'),
+	import('./routes/mcpCreateSummaryPlot.ts'),
 	import('./routes/isoformlst.ts'),
 	import('./routes/ntseq.ts'),
 	import('./routes/pdomain.ts'),

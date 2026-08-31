@@ -56,6 +56,7 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@sjcrh/augen": "2.204.0",
     "@sjcrh/proteinpaint-python": "2.204.0",
     "@sjcrh/proteinpaint-r": "2.204.0",
@@ -79,9 +80,11 @@
     "micromatch": "^4.0.5",
     "minimatch": "^10.0.1",
     "partjson": "^0.58.2",
+    "puppeteer": "^25.8.0",
     "skia-canvas": "~3.0.8",
     "tiny-async-pool": "^1.2.0",
-    "tough-cookie": "^4.1.4"
+    "tough-cookie": "^4.1.4",
+    "zod": "^3.25.76"
   },
   "repository": {
     "type": "git",
