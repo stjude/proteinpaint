@@ -37,16 +37,15 @@ export type SpatialImage = {
 	/** = image_file: slide path relative to the sample's folder under
 	 ds.queries.w2.folder (<imageName>/<tif file>); used as the wsitiles wsimage= param */
 	fileName: string
-	/** = cell_boundaries: cell segmentation CSV */
-	cellBoundaries?: string
-	/** = nucleus_boundaries: nucleus segmentation CSV */
-	nucleusBoundaries?: string
-	/** = gene_expression_file: 10x cell_feature_matrix HDF5 */
-	geneExpressionFile?: string
+	/** = spatial_data: the consolidated .h5ad — the single source of the
+	 image's boundaries, cell-type annotations and gene expression */
+	spatialData?: string
 	/** = gene_expression: comma-separated genes to overlay */
 	geneExpression?: string
 	/** = annotation_level: show boundary strokes only in the n most zoomed-in levels */
 	annotationLevel?: number
+	/** = cell_types: fill cells by their annotated type by default */
+	cellTypes?: boolean
 	/** relative URL of a small preview (the slide's z=0 tile); client prepends host */
 	thumbnail?: string
 }

@@ -37,21 +37,34 @@ upon error, throw err message as a string
 		// The format (SVS, OME-TIFF, ...) is deduced server-side from the file
 		// extension, case-insensitively (wsi_tile.py open_slide()).
 		const _ = await import('../plots/w2/wsi.direct')
+		// cell_types= value -> the type filter list. =1 fills all types. A JSON
+		// array (cell_types=["Tumor","T cell, activated"]) is the unambiguous
+		// form — urlmap() already parses it, so type names may contain commas.
+		// A bare value is comma-split for convenience (=Tumor,B cells), which
+		// cannot express a comma-containing name — use the JSON form for those.
+		const cellTypesValue = urlp.get('cell_types')
+		const cellTypeFilter =
+			!cellTypesValue || cellTypesValue == 1
+				? undefined
+				: (Array.isArray(cellTypesValue) ? cellTypesValue : String(cellTypesValue).split(','))
+						.map(t => String(t).trim())
+						.filter(Boolean)
 		await _.init(
 			{
 				slide: urlp.get('image_file'),
-				// optional Xenium segmentation overlays; CSV paths relative to tpmasterdir
-				cellBoundaries: urlp.get('cell_boundaries'),
-				nucleusBoundaries: urlp.get('nucleus_boundaries'),
+				// optional: consolidated spatial .h5ad, tpmasterdir-relative — the
+				// single source of boundaries, annotations and expression
+				spatialData: urlp.get('spatial_data'),
 				// optional: show overlays only within the n most zoomed-in levels
 				annotationLevel: urlp.get('annotation_level'),
 				// optional: fill cell boundaries with one color per gene (comma-
-				// separated list), shaded by the per-cell count from a 10x
-				// cell_feature_matrix HDF5
+				// separated list), shaded by the per-cell count from the h5ad
 				geneExpression: urlp.get('gene_expression'),
-				geneExpressionFile: urlp.get('gene_expression_file'),
 				// optional: sum per-cell counts over these genes into ONE overlay
-				geneGroups: urlp.get('gene_groups')
+				geneGroups: urlp.get('gene_groups'),
+				// optional: fill cells by their annotated type (list built above)
+				showCellTypes: urlp.has('cell_types'),
+				cellTypeFilter
 			},
 			arg.holder
 		)
