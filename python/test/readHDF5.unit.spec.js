@@ -17,7 +17,10 @@
 
 // Import necessary modules
 import tape from 'tape'
-import { run_python } from '@sjcrh/proteinpaint-python'
+import { run_python, setPythonBinPath } from '@sjcrh/proteinpaint-python'
+
+// local convenience: use the same interpreter the dev server is configured with
+if (process.env.PP_PYTHON) setPythonBinPath(process.env.PP_PYTHON)
 
 const HDF5_FILE = 'server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5'
 const python_script = 'readHDF5.py'

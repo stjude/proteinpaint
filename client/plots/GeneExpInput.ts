@@ -5,6 +5,7 @@ import { GENE_EXPRESSION, PSEUDOBULK, SINGLECELL_GENE_EXPRESSION, SSGSEA } from 
 import { getGEunit } from '../tw/geneExpression'
 import { getSCGEunit } from '../tw/singleCellGeneExpression'
 import { addGeneSearchbox, GeneSetEditUI, Menu, sayerror, Tabs, make_radios } from '#dom'
+import { dofetch3 } from '#common/dofetch'
 import type { ClientGenome } from '../types/clientGenome'
 import { getCurrentCohortChartTypes } from '../mass/charts.js'
 import { importPlot } from '#plots/importPlot.js'
@@ -65,6 +66,13 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			subplots
 		}
 	}
+
+	/** set only when this sample's single-cell expression store declares
+	 itself panel-based: the search boxes then offer/validate exactly the
+	 assayed genes, which the genome gene db may not contain. A
+	 whole-transcriptome sample leaves this unset and searches the genome
+	 gene db as usual */
+	sampleGeneList?: string[]
 
 	async init(appState) {
 		const state = this.getState(appState)
@@ -135,6 +143,9 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	async renderTermTypeUI(state) {
 		this.termType = state.config.termType
 		this.unit = getUnit(this.termType, this.app.vocabApi)
+		// a panel-based sc sample restricts gene search to its assayed genes;
+		// must run here, where termType is settled, before the tabs render
+		if (this.termType === SINGLECELL_GENE_EXPRESSION) await this.fetchSampleGeneList(state)
 
 		this.dom.header.plot.text(typeGroup[this.termType as string].toUpperCase())
 		this.dom.tabs.selectAll('*').remove()
@@ -229,12 +240,36 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		}
 	}
 
+	/** Fetch the sample's own gene list from its expression store; on failure
+	 the search boxes silently fall back to genome gene db matching */
+	async fetchSampleGeneList(state) {
+		try {
+			const sample = state.config.termProperties?.sample || state.config.sample
+			if (!sample?.sID) return
+			const v = this.app.vocabApi.vocab
+			const r: any = await dofetch3('termdb/singlecellData', {
+				body: {
+					genome: v.genome,
+					dslabel: v.dslabel,
+					sample: { sID: sample.sID, eID: sample.eID },
+					plots: [],
+					listGenes: true
+				}
+			})
+			// only a panel-based sample restricts search to its own gene list
+			if (r?.assay == 'panel' && Array.isArray(r.genes)) this.sampleGeneList = r.genes
+		} catch (e) {
+			console.warn('failed to list the sample genes, falling back to the genome gene db', e)
+		}
+	}
+
 	renderGeneSelect(tab) {
 		const row = tab.contentHolder.style('padding', '15px')
 		row.append('span').style('padding', '5px').text('Select a gene:')
 		const geneSearch = addGeneSearchbox({
 			row,
 			genome: this.genome,
+			geneList: this.sampleGeneList, // sc: only the sample's assayed genes
 			tip: new Menu({ padding: '0px' }),
 			searchOnly: 'gene',
 			callback: async () => {
@@ -288,6 +323,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		const geneSearch1 = addGeneSearchbox({
 			row: gene1row,
 			genome: this.genome,
+			geneList: this.sampleGeneList, // sc panel: only the sample's assayed genes
 			tip: new Menu({ padding: '0px' }),
 			searchOnly: 'gene',
 			callback: async () => {
@@ -302,6 +338,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		const geneSearch2 = addGeneSearchbox({
 			row: gene2row,
 			genome: this.genome,
+			geneList: this.sampleGeneList, // sc panel: only the sample's assayed genes
 			tip: new Menu({ padding: '0px' }),
 			searchOnly: 'gene',
 			callback: async () => {

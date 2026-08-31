@@ -1031,6 +1031,12 @@ export type SingleCellGeneExpression = {
 	unauthenticated headers. sample and gene are explicit since callers query by a term's sample/gene,
 	which is not the request's. */
 	get?: (q: any, sample: any, gene: string) => any
+	/** the sample's assay type and, when panel-based, its assayed gene list;
+	added on init() by validateGeneExpressionNative(). The store's own 'assay'
+	attribute declares the type per sample: panel samples get their gene list
+	served for search boxes, whole-transcriptome samples stay on the genome
+	gene db */
+	listGenes?: (sample: any) => Promise<{ assay: 'panel' | 'wholeTranscriptome'; genes?: string[] }>
 	/** cached gene exp bins, seeded on init() in validate_query_singleCell() */
 	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
 	/** gene expression unit (e.g. 'FPKM') */

@@ -30,6 +30,7 @@ function validTermdbSingleCellDataRequest(input): TermdbSingleCellDataRequest {
 		plots: Array.isArray(input.plots) ? input.plots.map(validString) : [],
 		checkPlotAvailability: input.checkPlotAvailability ? validBoolean(input.checkPlotAvailability) : undefined,
 		gene: input.gene ? validString(input.gene) : undefined,
+		listGenes: input.listGenes ? validBoolean(input.listGenes) : undefined,
 		colorBy: input.colorBy ? validString(input.colorBy) : undefined,
 		colorMap: typeof input.colorMap === 'object' && input.colorMap !== null ? input.colorMap : undefined,
 		singleCellPlot: input.singleCellPlot
@@ -46,11 +47,18 @@ function init({ genomes }) {
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw new Error('invalid dataset name')
 			if (!ds.queries?.singleCell) throw new Error('no single cell data on this dataset')
-			if (!ds.queries.singleCell.data?.get) throw new Error('dataset has no single cell data get() function')
-			/** data.get() not defined in ds file, defined in
-			 * ppgdc gdc/queries.js for gdc. For native ds,
-			 * validateDataNative() in samplesRoute.ts */
-			result = await ds.queries.singleCell.data.get(q)
+			if (q.listGenes) {
+				// list the genes of this sample's expression store, not plot data
+				const G = ds.queries.singleCell.geneExpression
+				if (!G?.listGenes) throw new Error('gene listing not supported by this dataset')
+				result = await G.listGenes(q.sample) // {assay, genes?}; validSampleId picks the file name
+			} else {
+				if (!ds.queries.singleCell.data?.get) throw new Error('dataset has no single cell data get() function')
+				/** data.get() not defined in ds file, defined in
+				 * ppgdc gdc/queries.js for gdc. For native ds,
+				 * validateDataNative() in samplesRoute.ts */
+				result = await ds.queries.singleCell.data.get(q)
+			}
 		} catch (e: any) {
 			if (e.stack) console.log(e)
 			result = {
