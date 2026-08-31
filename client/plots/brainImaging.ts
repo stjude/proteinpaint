@@ -268,7 +268,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 			dslabel: appState.vocab.dslabel,
 			genome: appState.vocab.genome,
 			termdbConfig: appState.termdbConfig,
-			RefNIdata: appState.termdbConfig.queries.NIdata[config.queryKey]
+			RefNIdata: appState.termdbConfig.queries.NIdata.references[config.queryKey]
 		}
 	}
 
@@ -376,7 +376,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 	is edited: the table is rebuilt from a fresh sample query and checked rows are reset */
 	async renderSampleTable() {
 		const NIdata = this.state.termdbConfig.queries.NIdata
-		const refKeys = Object.keys(NIdata)
+		const refKeys = Object.keys(NIdata.references)
 		/* the template to render the selected samples on; a radio in the toolbar switches it,
 		which refetches the samples and rebuilds the table with that template's sampleColumns
 		(templates may differ in samples dir and columns) */
@@ -581,10 +581,10 @@ export const componentInit = brainImaging
 
 export async function getPlotConfig(opts, app) {
 	/* default slice positions come from the template's dataset-configured
-	parameters (NIdata[queryKey].parameters in e.g. DISCOVER.hg38.ts); a ds
+	parameters (NIdata.references[queryKey].parameters in e.g. DISCOVER.hg38.ts); a ds
 	that omits parameters falls back to the volume midpoint (dimensions are
 	read from the NIfTI header at server launch), then to default numbers */
-	const ref = app.vocabApi?.termdbConfig?.queries?.NIdata?.[opts.queryKey]
+	const ref = app.vocabApi?.termdbConfig?.queries?.NIdata?.references?.[opts.queryKey]
 	const parameters = ref?.parameters
 	const dims = ref?.dimensions
 	const settings = {
@@ -611,7 +611,7 @@ function getTableRows(samples, state, refKey): TableRow[] {
 		const row = [{ value: sample.sample }]
 
 		// optional sample columns
-		for (const c of state.termdbConfig.queries.NIdata[refKey].sampleColumns || []) {
+		for (const c of state.termdbConfig.queries.NIdata.references[refKey].sampleColumns || []) {
 			row.push({ value: sample[c.termid] })
 		}
 		rows.push(row)
@@ -624,7 +624,7 @@ async function getTableColumns(self, refKey): Promise<TableColumn[]> {
 	const columns: TableColumn[] = [{ label: 'Sample', sortable: true }]
 
 	// add in optional sample columns
-	for (const c of self.state.termdbConfig.queries.NIdata[refKey].sampleColumns || []) {
+	for (const c of self.state.termdbConfig.queries.NIdata.references[refKey].sampleColumns || []) {
 		columns.push({
 			label: (await self.app.vocabApi.getterm(c.termid)).name,
 			sortable: true

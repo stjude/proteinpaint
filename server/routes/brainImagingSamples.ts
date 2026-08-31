@@ -36,9 +36,10 @@ async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: 
 		if (!q.checkDataAccess(query)) throw 'no access'
 	}
 	// else: no ds-supplied checker, allow access
-	const key = query.refKey
-	if (q[key].referenceFile && q[key].samples) {
-		const dirPath = path.join(serverconfig.tpmasterdir, q[key].samples)
+	const ref = q.references[query.refKey]
+	if (!ref) throw 'invalid refKey'
+	if (ref.referenceFile && ref.samples) {
+		const dirPath = path.join(serverconfig.tpmasterdir, ref.samples)
 		// one async readdir instead of a sync stat per file: this route is on a hot path
 		// (matrix click menus, sample view renders)
 		const files = (await fs.promises.readdir(dirPath, { withFileTypes: true }))
@@ -54,9 +55,9 @@ async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: 
 		// can skip the annotation query below
 		if (query.samplesOnly) return sampleNames.map(name => ({ sample: name }))
 
-		if (q[key].sampleColumns) {
+		if (ref.sampleColumns) {
 			// Build term wrappers for getData
-			const terms = q[key].sampleColumns.map(term => {
+			const terms = ref.sampleColumns.map(term => {
 				const termjson = ds.cohort.termdb.q.termjsonByOneid(term.termid)
 				return {
 					$id: term.termid,
@@ -77,7 +78,7 @@ async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: 
 				// Extract values from getData result
 				const sampleData = data.samples?.[sid]
 				if (sampleData) {
-					for (const term of q[key].sampleColumns) {
+					for (const term of ref.sampleColumns) {
 						const v = sampleData[term.termid]
 						if (!v) continue
 						/* a sample with several values for one term (e.g. a membership

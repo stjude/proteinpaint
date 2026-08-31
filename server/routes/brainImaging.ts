@@ -57,10 +57,11 @@ async function getBrainImage(query: BrainImagingRequest, genomes: any, plane: st
 		if (!q.checkDataAccess(query)) throw 'no access'
 	}
 	// else: no ds-supplied checker, allow access
-	const key = query.refKey
-	if (q[key].referenceFile && q[key].samples) {
-		const refFile = path.join(serverconfig.tpmasterdir, q[key].referenceFile)
-		const dirPath = path.join(serverconfig.tpmasterdir, q[key].samples)
+	const ref = q.references[query.refKey]
+	if (!ref) throw 'invalid refKey'
+	if (ref.referenceFile && ref.samples) {
+		const refFile = path.join(serverconfig.tpmasterdir, ref.referenceFile)
+		const dirPath = path.join(serverconfig.tpmasterdir, ref.samples)
 
 		const terms: QualTW[] = []
 		const divideByTW: QualTW | undefined = query.divideByTW

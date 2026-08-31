@@ -459,7 +459,7 @@ type NIdataQuery = {
 	checkDataAccess?: (q: any) => boolean
 	/** Reference objs for NI data query, keyed by reference name.
 	Each key is shown to users as a template option in the brain imaging chart menu */
-	[refKey: string]: NIdataQueryRef | ((q: any) => boolean) | undefined
+	references: { [refKey: string]: NIdataQueryRef }
 }
 
 type NIdataQueryRef = {

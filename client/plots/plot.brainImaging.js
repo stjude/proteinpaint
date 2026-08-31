@@ -6,7 +6,7 @@ export default async function (termdbConfig, dslabel, queryKey, sample, holder, 
 	try {
 		// must do this check to make sure this ds supports brainImaging
 		if (typeof termdbConfig?.queries?.NIdata != 'object') throw 'termdbConfig.queries.NIdata{} not object'
-		const q = termdbConfig.queries.NIdata[queryKey]
+		const q = termdbConfig.queries.NIdata.references[queryKey]
 		if (!q) throw 'invalid queryKey'
 		if (typeof sample != 'object') throw 'sample{} not object'
 		if (typeof genomeObj != 'object') throw 'genomeObj{} not object'
