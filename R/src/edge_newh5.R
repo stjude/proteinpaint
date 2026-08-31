@@ -142,12 +142,28 @@ read_counts_time <- system.time({
   if (length(missing_controls)) fail(paste0(length(missing_controls), " control sample(s) are absent from HDF5 'samples': ", format_examples(missing_controls)))
 
   samples_indices <- c(case_indices, control_indices)
-  raw_counts <- read_h5_dataset(input$input_file, "matrix", list(samples_indices, seq_along(geneNames)))
-  if (!is.numeric(raw_counts)) fail("HDF5 dataset 'matrix' must be numeric raw counts")
-  if (length(raw_counts) != length(samples_indices) * length(geneNames)) {
+  # Read one contiguous hyperslab spanning min..max of the selected (unsorted) sample indices,
+  # then pick out and reorder the needed rows in memory, rather than handing the scattered
+  # samples_indices straight to h5read/H5Sselect_hyperslab. A non-contiguous index selection makes
+  # the HDF5 library issue one access per discontiguous run in the selection; on local disk (page
+  # cache) that's negligible, but when input_file sits on S3-backed storage each such access can
+  # cost a separate network round trip, so a scattered per-sample selection turns into many slow
+  # S3 reads instead of one. This mirrors the fix already applied to the wilcoxon engine, see the
+  # comment above read_slice_2d in rust/src/DEanalysis.rs.
+  first_index <- min(samples_indices)
+  last_index <- max(samples_indices)
+  raw_counts_span <- read_h5_dataset(input$input_file, "matrix", list(first_index:last_index, seq_along(geneNames)))
+  if (!is.numeric(raw_counts_span)) fail("HDF5 dataset 'matrix' must be numeric raw counts")
+  span_len <- last_index - first_index + 1
+  if (length(raw_counts_span) != span_len * length(geneNames)) {
     fail(sprintf("HDF5 matrix dimensions do not match %d selected samples and %d genes", length(samples_indices), length(geneNames)))
   }
-  raw_counts <- matrix(raw_counts, nrow = length(samples_indices), ncol = length(geneNames))
+  raw_counts_span <- matrix(raw_counts_span, nrow = span_len, ncol = length(geneNames))
+  # local_indices maps each entry of samples_indices (case/control order) to its row within the
+  # just-read span, so the resulting matrix is reordered exactly as case_indices/control_indices
+  # dictated before this optimization.
+  local_indices <- samples_indices - first_index + 1
+  raw_counts <- raw_counts_span[local_indices, , drop = FALSE]
   read_counts <- as.data.frame(t(raw_counts))
   colnames(read_counts) <- c(cases, controls)
 
