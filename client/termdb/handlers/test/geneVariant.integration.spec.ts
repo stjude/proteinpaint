@@ -235,7 +235,7 @@ tape('Sample types are derived from current assay availability', async test => {
 	test.deepEqual(handler.getQuerySampleTypes(), [1, 2], 'should return available SNV/indel sample types')
 
 	delete handler.opts.app.vocabApi.termdbConfig.assayAvailability.byDt[dtsnvindel].bySampleType
-	test.deepEqual(handler.getQuerySampleTypes(), [], 'should not retain sample types after availability is removed')
+	test.equal(handler.getQuerySampleTypes(), undefined, 'should not retain sample types after availability is removed')
 
 	if (test['_ok']) holder.remove()
 	test.end()
