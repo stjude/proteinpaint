@@ -63,7 +63,7 @@ jobs:
     uses: ./.github/workflows/CD-rust-build.yml
 
   docker-with-rust:
-    needs: [rust-build]
+    needs: [build, rust-build]
     if: needs.build.outputs.updated_rust == 'true'
     runs-on: ubuntu-22.04
     steps:
