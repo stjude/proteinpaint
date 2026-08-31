@@ -42,6 +42,10 @@ export type TermdbSingleCellDataRequest = {
 	/** Gene name to retrieve expression data for all cells of the given sample, and to overlay on maps */
 	gene?: string
 	genes?: string[]
+	/** List the gene names present in this sample's expression store (e.g. to
+	offer/validate exactly the sample's assayed genes in a search box, which
+	may differ from the genome gene db) instead of returning plot data */
+	listGenes?: boolean
 	/** in each plot, what Column name to color by 
 	key: plot.name, value: column name
 	if missing, use default setting of the plot
@@ -62,6 +66,17 @@ export type NodataResponse = {
 	nodata: boolean
 }
 
-export type TermdbSingleCellDataResponse = NodataResponse | ErrorResponse | HasdataResponse
+export type GeneListResponse = {
+	/** answer to listGenes: the sample's assay type, declared by the store's
+	own 'assay' attribute. 'panel' = a small assayed subset of the genome,
+	'wholeTranscriptome' = all genes (the default for stores without the
+	attribute) */
+	assay: 'panel' | 'wholeTranscriptome'
+	/** the assayed genes; present only for a panel-based sample — a
+	whole-transcriptome sample keeps gene search on the genome gene db */
+	genes?: string[]
+}
+
+export type TermdbSingleCellDataResponse = NodataResponse | ErrorResponse | HasdataResponse | GeneListResponse
 
 // TODO: write payload examples to help with automated testing and documentation, for non-prod use only

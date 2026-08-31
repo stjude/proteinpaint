@@ -147,6 +147,10 @@ def _parse_input(stdin_text: str) -> dict[str, Any]:
 		raise FileNotFoundError(f"{hdf5_filename} could not be found")
 	if not h5py.is_hdf5(hdf5_filename):
 		raise ValueError(f"{hdf5_filename} is not a valid hdf5")
+	if payload.get("list_items"):
+		# list every item name in the file instead of querying values, e.g.
+		# to offer only the genes actually present for a sample
+		return {"hdf5_file": hdf5_filename, "list_items": True}
 	items = _parse_item_names(payload.get("query"))
 	return {
 		"hdf5_file": hdf5_filename,
@@ -163,6 +167,16 @@ def main() -> int:
 
 		input_data = _parse_input(input_text)
 		hdf5_filename = input_data["hdf5_file"]
+		if input_data.get("list_items"):
+			# item-name listing mode: no matrix values are read. The file's
+			# 'assay' root attribute declares whether it is panel-based
+			# ('panel') or whole-transcriptome (absent/other)
+			with h5py.File(hdf5_filename, "r") as f:
+				assay = f.attrs.get("assay")
+				if isinstance(assay, bytes):
+					assay = assay.decode()
+				_json_out({"items": _decode_string_array(f[ROW_NAME][...]), "assay": assay})
+			return 0
 		items = input_data.get("items",None)
 		validation_results = check_hdf5_file(hdf5_filename)
 		if validation_results["status"] == "success":

@@ -94,6 +94,11 @@ type GeneSearchBoxArg = {
 	geneSymbol?: string
 	/** option to automatically trigger a search when a geneSymbol is specified */
 	triggerSearch?: boolean
+	/** when provided, gene matching runs against this list (case-insensitive
+	 prefix) instead of the genome gene db — for panel/assay gene sets (e.g.
+	 the genes measured for one sample) that the db may not contain.
+	 Only meaningful with searchOnly 'gene'/'genes' */
+	geneList?: string[]
 	/** option to hide the search input after search results are generated */
 	hideInputBeforeCallback?: boolean
 	/** option to disable the input, useful in demo mode */
@@ -415,6 +420,33 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 
 		// see if input is gene
 		if (arg?.searchOnly != 'snp') {
+			if (arg.geneList) {
+				// match against the supplied list (e.g. the genes assayed for one
+				// sample) instead of the genome gene db — panel/assay gene sets
+				// may not exist in the db at all
+				const vlc = v.toLowerCase()
+				const hits = arg.geneList.filter(g => g.toLowerCase().startsWith(vlc)).slice(0, 20)
+				if (!hits.length) {
+					tip.d.append('div').style('margin', '5px').text('No match among this sample’s genes')
+					return
+				}
+				// same markup as the genelookup hits below, so the Enter-key
+				// path (.sja_menuoption[isgene='1']) works identically
+				tip.d
+					.selectAll('div')
+					.data(hits)
+					.join('div')
+					.text(d => d)
+					.attr('class', 'sja_menuoption')
+					.attr('data-testid', d => `sjpp-genesearch-gene-hit-${d.toLowerCase().replace(/\s/g, '-')}`)
+					.style('border-radius', '0px')
+					.attr('isgene', 1)
+					.on('click', (event, d) => {
+						getResult({ geneSymbol: d }, d)
+						tip.hide()
+					})
+				return
+			}
 			const gene = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: v } })
 			if (gene.error) {
 				tip.d.append('div').style('margin', '5px').text(gene.error)

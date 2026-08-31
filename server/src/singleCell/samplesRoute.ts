@@ -511,6 +511,20 @@ function validateGeneExpressionNative(G: SingleCellGeneExpression): void {
 
 		return out
 	}
+
+	G.listGenes = async (sample: any) => {
+		// per-sample assay type comes from the store's own 'assay' attribute:
+		// a panel-based sample answers its assayed gene list, so a search box
+		// offers/validates exactly those; a whole-transcriptome sample (no
+		// attribute — every pre-existing file) answers no list, and gene
+		// search stays on the genome gene db
+		const h5file = path.join(serverconfig.tpmasterdir, G.folder!, validSampleId(sample) + '.h5')
+		await file_is_readable(h5file)
+		const out = JSON.parse(await run_python('readHDF5.py', JSON.stringify({ hdf5_file: h5file, list_items: true })))
+		if (!Array.isArray(out.items)) throw new Error(out.message || 'failed to list the expression store genes')
+		if (out.assay != 'panel') return { assay: 'wholeTranscriptome' as const }
+		return { assay: 'panel' as const, genes: out.items }
+	}
 }
 
 function colorColumn2terms(plots: SingleCellPlot[], ds: any): void {
