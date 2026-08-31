@@ -664,6 +664,7 @@ function copy_queries(ds, dscopy) {
 	if (ds.queries.NIdata) {
 		copy.NIdata = {}
 		for (const k in ds.queries.NIdata) {
+			if (typeof ds.queries.NIdata[k] == 'function') continue
 			copy.NIdata[k] = JSON.parse(JSON.stringify(ds.queries.NIdata[k]))
 		}
 	}
@@ -711,8 +712,11 @@ function sort_mclass(set) {
 async function validate_query_NIdata(ds) {
 	const q = ds.queries.NIdata
 	if (!q) return
-	if (!Object.keys(q).length) throw `NIdata has no reference entries`
-	for (const refKey in q) {
+	if (q.checkDataAccess && typeof q.checkDataAccess != 'function') throw `NIdata.checkDataAccess is not a function`
+	// non-function keys are reference entries; checkDataAccess is a server-side hook, not a ref
+	const refKeys = Object.keys(q).filter(k => typeof q[k] != 'function')
+	if (!refKeys.length) throw `NIdata has no reference entries`
+	for (const refKey of refKeys) {
 		const ref = q[refKey]
 		if (!ref.referenceFile) throw `NIdata['${refKey}'].referenceFile missing`
 		if (!ref.samples) throw `NIdata['${refKey}'].samples missing`
