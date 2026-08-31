@@ -229,6 +229,18 @@ function getVocabApiWithSampleTypes() {
 	return Object.assign(Object.create(vocabApi), { termdbConfig })
 }
 
+tape('Sample types are derived from current assay availability', async test => {
+	const holder = getHolder()
+	const handler = await initializeSearchHandler({ holder, vocabApi: getVocabApiWithSampleTypes() })
+	test.deepEqual(handler.getQuerySampleTypes(), [1, 2], 'should return available SNV/indel sample types')
+
+	delete handler.opts.app.vocabApi.termdbConfig.assayAvailability.byDt[dtsnvindel].bySampleType
+	test.deepEqual(handler.getQuerySampleTypes(), [], 'should not retain sample types after availability is removed')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
 tape('Sample type selection is cleared when changing to a mutation type without a selector', async test => {
 	let tw
 	const holder = getHolder()

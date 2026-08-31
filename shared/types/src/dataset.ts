@@ -2175,7 +2175,7 @@ export type SampleTypes = {
 	[sampleType: number]: {
 		name: string
 		plural_name: string
-		parent_id: string
+		parent_id: number | null
 	}
 }
 
