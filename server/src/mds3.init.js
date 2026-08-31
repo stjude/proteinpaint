@@ -3761,7 +3761,7 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 			sessionid: q.sessionid,
 			__abortSignal: q.__abortSignal,
 			mapParent2Children: q.mapParent2Children,
-			sampleType: q.sampleType
+			sampleTypes: q.sampleTypes
 		},
 		ds.mayGetGeneVariantDataParam || {}
 	)
@@ -3791,7 +3791,7 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 		mapParent2Children: q.mapParent2Children,
-		sampleType: q.sampleType,
+		sampleTypes: q.sampleTypes,
 		sessionid: q.sessionid
 	}
 	if (ds.queries.svfusion.byrange && ds.queries.svfusion.byname) {
@@ -3825,7 +3825,7 @@ async function getCnvByTw(ds, tw, genome, q) {
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 		mapParent2Children: q.mapParent2Children,
-		sampleType: q.sampleType,
+		sampleTypes: q.sampleTypes,
 		sessionid: q.sessionid,
 		...(tw?.q?.type === 'values' && {
 			cnvMaxLength: tw?.q?.cnvMaxLength,
@@ -3844,7 +3844,7 @@ async function getGenecnvByTerm(ds, term, genome, q) {
 	const arg = {
 		filter0: q.filter0,
 		mapParent2Children: q.mapParent2Children,
-		sampleType: q.sampleType,
+		sampleTypes: q.sampleTypes,
 		sessionid: q.sessionid,
 		__abortSignal: q.__abortSignal
 	}
@@ -3863,7 +3863,7 @@ async function getItdByTerm(ds, term, genome, q) {
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 		mapParent2Children: q.mapParent2Children,
-		sampleType: q.sampleType,
+		sampleTypes: q.sampleTypes,
 		sessionid: q.sessionid
 	}
 	await mayMapGeneName2coord(term, genome)
@@ -3953,6 +3953,7 @@ async function getAssayAvailablility(ds, dt) {
 		else if (dt.no.value.includes(value)) dt.noSamples.add(sample)
 		//else throw `value of term ${dt.term_id} is invalid`
 	}
+	dt.hasSamples = dt.yesSamples.size > 0
 }
 
 /*

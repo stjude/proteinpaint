@@ -16,6 +16,7 @@ Tests:
 	- renderTermsSelected() click should remove selected term
 	- getDtTerm() should return child term and throw on invalid input
 	- initActiveHandler() should tell a handler whether the q survives the selection
+	- GENE_EXPRESSION should open TVS when no selection callback is defined
 */
 
 /*************************
@@ -275,5 +276,46 @@ tape('initActiveHandler() should tell a handler whether the q survives the selec
 		test.equal(initOpts[0]?.keepsQ, expected, `should pass keepsQ=${expected} for ${mode}`)
 		if (test['_ok']) holder.remove()
 	}
+	test.end()
+})
+
+tape('GENE_EXPRESSION should open TVS when no selection callback is defined', async test => {
+	const { termTypeSearch, holder, dispatched } = await getNewTermTypeSearch({
+		termdbConfig: {
+			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.GENE_EXPRESSION],
+			queries: { geneExpression: { unit: 'log2 TPM', sampleTypes: [1, 2] } },
+			sampleTypes: {
+				1: { name: 'Tumor' },
+				2: { name: 'Normal' }
+			}
+		}
+	})
+
+	const geneExpressionTab = termTypeSearch.tabs.find(tab => tab.termType == TermTypes.GENE_EXPRESSION)
+	test.ok(geneExpressionTab, 'Should create a GENE_EXPRESSION tab')
+	await geneExpressionTab?.callback()
+
+	const geneExpressionHandler = termTypeSearch.handlerByType[TermTypes.GENE_EXPRESSION]
+	geneExpressionHandler.sampleTypeSelect[0].property('checked', true)
+	await geneExpressionHandler.selectGene({ geneSymbol: 'EGFR' })
+	await sleep(1)
+
+	const action = dispatched[dispatched.length - 1]
+	test.equal(action.type, 'submenu_set', 'Should dispatch submenu_set for the TVS path')
+	test.deepEqual(
+		action.submenu,
+		{
+			type: 'tvs',
+			term: {
+				gene: 'EGFR',
+				name: 'EGFR log2 TPM',
+				type: TermTypes.GENE_EXPRESSION,
+				sampleTypes: [1]
+			}
+		},
+		'Should open TVS with the selected gene-expression term'
+	)
+
+	if (test['_ok']) holder.remove()
 	test.end()
 })

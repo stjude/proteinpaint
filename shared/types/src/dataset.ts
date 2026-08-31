@@ -987,6 +987,8 @@ export type GeneExpressionQuery = {
 	file?: string
 	/** dynamically added during server launch, list of sample integer IDs from file */
 	samples?: number[]
+	/** unique list of sample types present in samples[] */
+	sampleTypes?: any[]
 	/** dynamically added flag during launch */
 	nochr?: boolean
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
@@ -2037,7 +2039,7 @@ keep this setting here for reason of:
 	 * Supports the About tab in mass UI
 	 */
 	hasSampleAncestry?: boolean
-	sampleTypes?: SampleType[]
+	sampleTypes?: SampleTypes
 	/** ui labels used for plot controls and tooltips */
 	uiLabels?: UiLabels
 
@@ -2171,10 +2173,12 @@ type CategoricalTermCollection = TermCollectionBase & {
 
 type TermCollection = NumericTermCollection | CategoricalTermCollection
 
-type SampleType = {
-	name: string
-	plural_name: string
-	parent_id: string
+export type SampleTypes = {
+	[sampleType: number]: {
+		name: string
+		plural_name: string
+		parent_id: number | null
+	}
 }
 
 /** predefined configuration objects per subcohort per plot type */
@@ -2246,7 +2250,7 @@ type MutationSet = {
 
 /** different methods to return samples with assay availability info */
 /** using dictionary term */
-type DtAssayAvailabilityTerm = {
+export type DtAssayAvailabilityTerm = {
 	/** id of this assay term for this dt */
 	term_id: string
 	/** optional label */
@@ -2260,6 +2264,8 @@ type DtAssayAvailabilityTerm = {
 	*/
 	yesSamples?: Set<string | number>
 	noSamples?: Set<string | number>
+	/** whether yesSamples is non-empty, consumed by client-side code */
+	hasSamples?: boolean
 }
 
 type DtAssayAvailabilityByOrigin = {

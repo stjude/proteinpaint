@@ -1,5 +1,13 @@
-import { Menu, make_radios, addGeneSearchbox, GeneSetEditUI, table2col } from '#dom'
-import type { VocabApi } from '#types'
+import {
+	Menu,
+	make_radios,
+	addGeneSearchbox,
+	GeneSetEditUI,
+	table2col,
+	renderSampleTypeSelect,
+	getSelectedSampleTypes
+} from '#dom'
+import type { VocabApi, DtAssayAvailabilityTerm } from '#types'
 import { dtTerms, dtcnv, dtsnvindel } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
 import { mayShowRememberedGvQ } from './rememberedGvQ.ts'
@@ -18,12 +26,15 @@ type Opts = {
 	callback: (tw: any) => Promise<void>
 }
 
+type BySampleType = { [index: number]: DtAssayAvailabilityTerm }
+
 export class SearchHandler {
 	opts: any
 	dom: any
 	mutationTypeRadio: any
 	mutationTypeTerms!: any[]
 	inputTypeRadio: any
+	sampleTypeSelect?: any[]
 	term: any // tw.term
 	q: any // tw.q
 	callback: any
@@ -91,6 +102,7 @@ export class SearchHandler {
 					}),
 					callback: v => {
 						this.toggleGeneSetRadioDisplay(v)
+						this.updateSampleTypeSelect()
 						/* any remembered settings still waiting for a choice were offered against the
 						mutation type selected when the gene was picked -- both their order and their
 						"Continue with ..." option, see mayShowRememberedQ() -- so a changed radio leaves
@@ -126,9 +138,43 @@ export class SearchHandler {
 					}
 				})
 			}
+			{
+				this.dom.sampleTypeSelectRow = table.addRow()
+				this.updateSampleTypeSelect()
+			}
 		}
 		this.toggleGeneSetRadioDisplay(mutationTypeTermIdx)
 		this.searchGene()
+	}
+
+	updateSampleTypeSelect() {
+		const [td1, td2] = this.dom.sampleTypeSelectRow
+		const querySampleTypes = this.getQuerySampleTypes()
+		this.sampleTypeSelect = renderSampleTypeSelect(td2, querySampleTypes, this.opts.app.vocabApi.termdbConfig)
+		if (this.sampleTypeSelect) {
+			td1.style('display', null).text('Sample Type')
+			td2.style('display', null)
+		} else {
+			td1.style('display', 'none')
+			td2.style('display', 'none')
+		}
+	}
+
+	// get sample types that are present in the selected data type
+	getQuerySampleTypes(): number[] | undefined {
+		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
+		if (!selectedMutationType) return
+		const mutationTypeIdx = Number(selectedMutationType.value)
+		if (!Number.isInteger(mutationTypeIdx)) return
+		const dt = this.mutationTypeTerms[mutationTypeIdx]?.dt
+		if (!Number.isInteger(dt)) return
+		const bySampleType: BySampleType = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.bySampleType
+		if (!bySampleType) return
+		const querySampleTypes: number[] = []
+		for (const [k, v] of Object.entries(bySampleType)) {
+			if (v.hasSamples) querySampleTypes.push(Number(k))
+		}
+		return querySampleTypes
 	}
 
 	// hide gene set radio when mutation type is cnv
@@ -166,7 +212,6 @@ export class SearchHandler {
 		const geneSearch: any = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: this.opts.genomeObj,
-			termdbConfig: this.opts.app.vocabApi.termdbConfig,
 			row: searchDiv,
 			/* only allowing gene search for now because:
 			- coordinate search is not yet supported for gdc
@@ -177,9 +222,7 @@ export class SearchHandler {
 			callback: async () => await this.selectGene(geneSearch)
 		})
 		this.dom.searchbox = geneSearch.searchbox
-		if (!searchDiv.select('.sjpp-genesearch-sampletype-select').node()) {
-			searchDiv.select('.sja_genesearchinput').style('margin', '0px')
-		}
+		searchDiv.select('.sja_genesearchinput').style('margin', '0px')
 	}
 
 	/** focus on the search box of the current gene input (single gene or gene set) */
@@ -226,7 +269,6 @@ export class SearchHandler {
 		} else {
 			throw 'no gene or position specified'
 		}
-		if (geneSearch.sampleType) this.q.sampleType = geneSearch.sampleType
 		await this.runCallback()
 	}
 
@@ -234,7 +276,7 @@ export class SearchHandler {
 	searchGeneSet() {
 		this.dom.searchDiv.selectAll('*').remove()
 		this.dom.searchDiv.style('margin-top', '0px')
-		const ui = new GeneSetEditUI({
+		this.dom.geneSetEditUI = new GeneSetEditUI({
 			holder: this.dom.searchDiv.append('div'),
 			genome: this.opts.genomeObj,
 			vocabApi: this.opts.app.vocabApi,
@@ -242,7 +284,7 @@ export class SearchHandler {
 			maxNumGenes: this.maxNumGenes,
 			callback: async result => await this.selectGeneSet(result)
 		})
-		this.dom.searchbox = ui.geneSearch?.searchbox
+		this.dom.searchbox = this.dom.geneSetEditUI.geneSearch?.searchbox
 		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px').style('margin-top', '-10px')
 	}
 
@@ -271,9 +313,6 @@ export class SearchHandler {
 	}
 
 	async runCallback() {
-		// add parent geneVariant term to each child term now
-		// that gene(s) have been selected
-		addParentTerm(this.term)
 		// a setting the user built for this gene before is worth offering, and is only known
 		// once the gene is picked, so the selected mutation type is not applied until the user
 		// either picks one of those settings or skips them
@@ -319,10 +358,29 @@ export class SearchHandler {
 	}
 
 	/** apply the mutation type that the radios select, which is the default for a new term */
+	// TODO: this seems to be a submit helper. Should rename this
+	// function and evaluate whether the submission process can be
+	// more streamlined/centralized
 	async applyMutationType() {
 		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
 		this.q.predefined_groupset_idx = Number(selectedMutationType.value)
 		await this.submit(this.q)
+	}
+
+	mayApplySampleType() {
+		this.term.sampleTypes = getSelectedSampleTypes(this.sampleTypeSelect) || this.getQuerySampleTypes()
+		if (this.sampleTypeSelect && !this.term.sampleTypes?.length) {
+			window.alert('Must select at least one sample type')
+			const geneSetEditUI = this.dom.geneSetEditUI
+			if (geneSetEditUI) {
+				// the gene set edit UI's submit button was disabled on
+				// click to prevent repeated submissions, so it must be
+				// re-enabled here since the submission was aborted
+				geneSetEditUI.api.dom.submitBtn.property('disabled', false).text('Submit')
+			}
+			return false
+		}
+		return true
 	}
 
 	async applyRememberedQ(q) {
@@ -331,7 +389,10 @@ export class SearchHandler {
 	}
 
 	async submit(q) {
+		if (!this.mayApplySampleType()) return
 		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
+		// add geneVariant term to each child term
+		addParentTerm(this.term)
 		await this.callback({ term: this.term, q })
 		this.clearRememberedQ()
 		this.dom.msgDiv.style('display', 'none')

@@ -47,6 +47,8 @@ export type BaseTerm = {
 		toUnit: string
 		scaleFactor: string
 	}
+	/** query sample types */
+	sampleTypes?: number[]
 }
 
 // NumericTerm includes integer, float, date, geneExpression, metaboliteIntensity, proteomeAbundance, and other non-dict terms

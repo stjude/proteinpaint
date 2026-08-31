@@ -476,12 +476,7 @@ export class TermTypeSearch {
 				type: 'submenu_set',
 				submenu: {
 					type: 'tvs',
-					term:
-						term.term?.type == 'geneVariant'
-							? this.getDtTerm(term)
-							: term.term?.type == 'geneExpression'
-							? term.term
-							: term
+					term: term.term?.type == 'geneVariant' ? this.getDtTerm(term) : term
 				}
 			})
 		}
