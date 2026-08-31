@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.207.0
 
 General:
 - Requires a rebuilt dependencies image. The matplotlib bump only reaches production once "Publish Dependencies Image" has run, and that workflow does not trigger on a merge to master: it fires on pushes to the deps-image branch, and requirements.txt matches its '**.txt' paths-ignore in any case. Start it manually with workflow_dispatch, then cut the release once it has committed the new deps tag into container/server/Dockerfile.
