@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Pseudobulk termdb handler allows selecting multiple terms at a time. Terms are displayed like pills and works with '.submit_lst()`
+- This new handler functionality allows the aggMatrixInput and GeneExpInput transient plots to work with pseudobulk data as intended.
+
 
 ## 2.206.1
 
