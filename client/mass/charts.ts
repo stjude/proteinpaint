@@ -4,11 +4,20 @@ import { getNormalRoot } from '#filter/filter'
 import { NumericModes } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { importPlot } from '#plots/importPlot.js'
+import { capitalizeFirstLetter } from '#dom'
+import { getSelectableGETermTypes } from '#plots/GeneExpInput.ts'
 
 class MassCharts {
 	static type = 'charts'
 
-	constructor(opts = {}) {
+	type: string
+	stickyAncestor: HTMLElement
+	makeButtons!: (state: any) => void
+	dom!: any
+	opts!: any
+	state!: any
+
+	constructor(opts: any = {}) {
 		this.type = MassCharts.type
 		// stickyAncestor will attached to button data, to be used by menu.stickyPosition()
 		// when showing the menu tip near a clicked chart button
@@ -29,7 +38,7 @@ class MassCharts {
 	// TODO later add reactsTo() to react to filter change
 
 	getState(appState) {
-		const state = {
+		const state: { [index: string]: any} = {
 			vocab: appState.vocab, // TODO delete it as vocabApi should be used instead
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
@@ -43,7 +52,7 @@ class MassCharts {
 	}
 
 	main() {
-		this.dom.btns.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
+		this.dom.btns.style('display', d => (d.isVisible ? d.isVisible() : this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
 
 	getBtnLabel_dict(state) {
@@ -57,13 +66,13 @@ class MassCharts {
 		*/
 		const lst = getCurrentCohortChartTypes(state)
 		if (!lst.includes('regression')) return '' // plot not supported. label doesn't matter as button will be hidden
-		const ms = []
+		const ms: string[] = []
 		if (lst.includes('linear')) ms.push('linear')
 		if (lst.includes('logistic')) ms.push('logistic')
 		if (lst.includes('cox')) ms.push('cox')
 		if (ms.length > 1) return 'Regression Analysis' // more than 1 methods. return general name
 		// only 1 method
-		return `${ms[0] == 'linear' ? 'Linear' : ms[0] == 'cox' ? 'Cox' : 'Logistic'} Regression`
+		return `${capitalizeFirstLetter(ms[0] || 'logistic')} Regression`
 	}
 	getBtnLabel_sampleScatter(state) {
 		// define button label
@@ -80,12 +89,19 @@ class MassCharts {
 	}
 	getBtnLabel_summarizeMutationTerm(state, phrase) {
 		if (!state.termdbConfig.queries) return 'Not supported!' // the function always runs for all ds, thus must detect and guard against it; in such case the btn should not be shown
-		const t = []
+		const t: string[] = []
 		if (state.termdbConfig.queries.snvindel) t.push('Mutation')
 		if (state.termdbConfig.queries.cnv) t.push('CNV')
 		if (state.termdbConfig.queries.svfusion) t.push('Fusion')
 		// todo customize Diagnosis
 		return `${t.length > 2 ? 'Alterations' : t.join('/')} vs ${phrase}`
+	}
+	getBtnLabel_geneExpression(state){
+		const l: string[] = []
+		if (state.termdbConfig?.queries?.geneExpression) l.push('Gene Expression')
+		if (state.termdbConfig?.termType2terms?.Pseudobulk) l.push('Pseudobulk Gene Expression')
+		if (l.length > 1 || !l.length ) return 'Gene Expression'
+		return l[0]
 	}
 }
 
@@ -160,12 +176,23 @@ function getChartTypeList(self, state) {
 		to be attached to action and used by store
 
 	.updateActionBySelectedTerms:
-		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) based on number of selected terms. this callback will update the action based on selected terms to do the routing
+		optional callback. used for geneExpression and metabolicIntensity "intermediary" chart types 
+		which do not correspond to actual chart, but will route to an actual chart (summary/scatter/hierclust) 
+		based on number of selected terms. this callback will update the action based on selected terms 
+		to do the routing
+
+	.isVisible: 
+		optional callback that determines if the chart button should be visible.
+		Should return a boolean value. If not provided, visibility will be determined 
+		by the default logic based on currentCohortChartTypes. Only use this if a chart type 
+		should be enabled and must be in currentCohortChartTypes but it's not
+		appropriate to show the chart button (i.e. GeneExpInput works in the SC app but 
+		should not always be shown).
 
 	TODO order of buttons is hardcoded, may allow to customize order
 	*/
 
-	const buttons = [
+	const buttons: any = [
 		////////////////////// PROFILE PLOTS START //////////////////////
 		{
 			label: 'Polar',
@@ -287,14 +314,6 @@ function getChartTypeList(self, state) {
 			chartType: 'genomeBrowser',
 			clickTo: self.loadChartSpecificMenu
 		},
-
-		// Commenting out this button since DE does not work without specifying two groups
-		//{
-		//	label: 'Differential Expression',
-		//	chartType: 'DEanalysis',
-		//	clickTo: self.loadChartSpecificMenu
-		//},
-
 		{
 			label: 'Data Download',
 			clickTo: self.prepPlot,
@@ -329,13 +348,16 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			//This chart may be later on extended to support other gene expression data types
-			label: 'Gene Expression',
+			label: self.getBtnLabel_geneExpression(state),
 			chartType: 'GeneExpInput',
 			clickTo: self.prepPlot,
-			config: {
-				chartType: 'GeneExpInput',
-				termType: TermTypes.GENE_EXPRESSION
+			config: { chartType: 'GeneExpInput' },
+			isVisible: () => {
+				/** Ds may only contain scge data, allowing the GeneExpInput form
+				 * to be visible within the SC app but not appropriate to show here. 
+				 * Limit its visibility to appropriate contexts. */
+				const isAvailable = getSelectableGETermTypes(state.termdbConfig)
+				return isAvailable.length > 0
 			}
 		},
 		{
@@ -466,6 +488,7 @@ function getChartTypeList(self, state) {
 			label: 'Aggregate Matrix',
 			chartType: 'aggMatrixInput',
 			clickTo: self.prepPlot,
+			usecase: { target: 'aggregateMatrix' },
 			config: {
 				chartType: 'aggMatrixInput'
 			}
@@ -495,7 +518,7 @@ function setRenderers(self) {
 			.style('border-radius', '20px')
 			.style('border-color', '#ededed')
 			.html(d => d.label)
-			.on('click', function (event, chart) {
+			.on('click', function (this, event, chart) {
 				self.dom.tip.clear().showunder(this)
 				chart.clickTo(chart, this)
 			})
@@ -538,7 +561,7 @@ function setRenderers(self) {
 				.html(chart.usecase.label)
 		}
 
-		const action = {
+		const action: { [index: string]: any} = {
 			type: 'plot_create',
 			id: getId(),
 			config: { chartType: chart.chartType, activeCohort: self.state.activeCohort }
@@ -643,7 +666,7 @@ function setRenderers(self) {
 // the random string is in case this code is bundled as independent code in
 // different chunks
 const idPrefix = '_CHART_AUTOID_' + Math.random().toString().slice(-6) + '_'
-let id = Date.now().toString().slice(-6)
+let id: any = Date.now().toString().slice(-6)
 
 function getId() {
 	return idPrefix + id++
