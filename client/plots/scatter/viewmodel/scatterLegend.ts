@@ -115,7 +115,7 @@ export class ScatterLegend {
 					// We filter out any values that are explicitly defined in the term values
 					// This gives us the raw numerical data we need for scaling
 					const colorValues = chart.colorValues
-					const scaleG = colorG.append('g')
+					const scaleG = colorG.append('g').attr('data-testid', 'sjpp-scale-legend')
 					// Create a ColorScale component with enhanced mode functionality
 					const colorScale = new ColorScale({
 						// Basic visual configuration
@@ -305,10 +305,8 @@ export class ScatterLegend {
 		}
 
 		if (this.scatter.config.scaleDotTW) {
-			chart.scaleG = legendG
-				.append('g')
-				.attr('transform', `translate(${0},${legendHeight + 50})`)
-				.attr('data-testid', 'sjpp-scale-legend')
+			chart.scaleG = legendG.append('g').attr('transform', `translate(${0},${legendHeight + 50})`)
+
 			this.drawScaleDotLegend(chart)
 		}
 	}
