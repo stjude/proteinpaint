@@ -275,7 +275,8 @@ async function runDeFresh(
 		mayLog('Time taken to run edgeR:', formatElapsedTime(Date.now() - time1))
 		// edge_newh5.R reports per-stage elapsed seconds and peak MB in its JSON. Logged
 		// unconditionally (not mayLog) because the point is diagnosing slow runs on deployed
-		// servers, where debugmode is off. One line per DE run, and DE runs are rare.
+		// servers, where debugmode is off. One line per DE run, and DE runs are rare. Absent from
+		// the log means the result came from the de/ cache and the R script never ran.
 		console.log(
 			`[DE] ${groups.group1names.length}v${groups.group2names.length} samples, stages(s):`,
 			JSON.stringify(result.timings),
