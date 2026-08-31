@@ -4,7 +4,11 @@ on:
   schedule:
     - cron: '0 6 * * *'
   workflow_dispatch:
-  workflow_call: {}
+  workflow_call: {} #Let other workflows in this repo invoke this one as a reusable job
+  pull_request: #run on every PR
+    types: [opened, synchronize, reopened, ready_for_review]
+  merge_group: #run again when the PR enters the merge queue
+    types: [checks_requested]
 
 jobs:
   
@@ -95,5 +99,17 @@ jobs:
         with:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  integration-tests-complete:
+    if: always()
+    needs: [docker-with-rust, docker-without-rust]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Fail if any integration tests failed
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "Integration tests failed"
+            exit 1
+          fi
 
 
