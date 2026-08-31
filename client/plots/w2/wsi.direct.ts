@@ -321,6 +321,7 @@ export async function init(
 			// the type legend box, over the map's top-left; repin() places it
 			const legend = mapDiv
 				.append('div')
+				.attr('data-testid', 'sjpp-wsi-typelegend') // stable hook for tests
 				.style('position', 'fixed') // viewport-placed by repin(), confined to the map's rectangle
 				.style('z-index', '10')
 				.style('background', 'rgba(255,255,255,0.85)')
