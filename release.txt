@@ -1,1 +1,5 @@
+General:
+- Requires a rebuilt dependencies image. The matplotlib bump only reaches production once "Publish Dependencies Image" has run, and that workflow does not trigger on a merge to master: it fires on pushes to the deps-image branch, and requirements.txt matches its '**.txt' paths-ignore in any case. Start it manually with workflow_dispatch, then cut the release once it has committed the new deps tag into container/server/Dockerfile.
 
+Fixes:
+- GDC gene set enrichment: clicking a pathway returned a long RecursionError instead of the running-sum image. matplotlib 3.10.3 recurses forever in Path.__deepcopy__ on python 3.14, which breaks every savefig, not just this one; pinned to 3.10.7, where the in-progress copy is registered in the memo dict before recursing (matplotlib #29157, fixed by #30198). 3.10.3 also ships no cp314 wheel and was being built from source, so the image build stayed green and it failed at runtime instead.
