@@ -50,15 +50,19 @@ RUN apt-get update && apt-get install --allow-downgrades -y \
 	g++ \
     pkg-config \
     cmake \
-    # python3=3.13.9-1 \
-    # python3-venv=3.13.7-1 \
-    # python3-pip=25.2+dfsg-1 \
-    # In case the python3 pin breaks the build use:
-    python3 \
-    python3-dev \
-    python3-pip \
-    python3-venv \
-    # and read the versions and pin again.
+    # r-base tracks debian testing/sid, so an unpinned python3 floats. it floated from
+    # 3.13 to 3.14 and broke matplotlib's savefig at runtime (see python/requirements.txt),
+    # after floating once before and breaking the hdf5 soname the rust binaries link against.
+    # pinned so that drift fails the build here instead of surfacing in production.
+    # python3-dev must match python3 exactly or apt refuses to resolve the pair.
+    # these versions rotate out of the archive: when the build fails on a missing version,
+    # read the new ones and re-pin, do NOT drop the pins --
+    #   docker run --rm --platform linux/amd64 r-base:4.5.0 bash -c \
+    #     'apt-get update -qq >/dev/null 2>&1; apt-cache policy python3 python3-dev python3-venv python3-pip'
+    python3=3.14.6-1 \
+    python3-dev=3.14.6-1 \
+    python3-venv=3.14.6-1 \
+    python3-pip=26.1.2+dfsg-1 \
     x11-common \
     libx11-dev \
     libx11-data \

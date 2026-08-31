@@ -203,7 +203,9 @@ function resolveDE(req, ds): ResolvedDE {
 
 /** Run DE fresh and return the cache result; `cacheOrRecompute` persists
  * it. Mutates param.method to the canonical label ('edgeR' or 'wilcoxon')
- * to match the pipeline that actually ran. For edgeR/limma, R hands the
+ * so the response names the pipeline that actually ran — note this happens
+ * after the R call, so it does not shape what R receives; `pickDeEngine`
+ * decides that up front. For edgeR/limma, R hands the
  * diagnostic PNGs back inline (base64) in its stdout JSON, so no
  * intermediate files touch disk. */
 async function runDeFresh(
@@ -239,13 +241,16 @@ async function runDeFresh(
 			throw new Error('no gene count data available for one of the groups')
 	}
 
+	// must be decided before expression_input is built; see pickDeEngine
+	const { engine, DE_method } = pickDeEngine(param.method, groups.group1names.length, groups.group2names.length)
+
 	const expression_input = {
 		case: groups.group2names.join(','),
 		control: groups.group1names.join(','),
 		data_type: 'do_DE',
 		input_file,
 		cachedir: serverconfig.cachedir,
-		DE_method: param.method,
+		DE_method,
 		mds_cutoff: 10000,
 		min_count: param.min_count,
 		min_total_count: param.min_total_count,
@@ -264,16 +269,19 @@ async function runDeFresh(
 		if (new Set(expression_input.conf2).size === 1) throw new Error('Confounding variable 2 has only one value')
 	}
 
-	// Pick the engine. Below 8 samples per group, edgeR (parametric) is
-	// used even when wilcoxon was requested — small groups don't have
-	// enough degrees of freedom for the non-parametric test.
-	const small = groups.group1names.length <= 8 && groups.group2names.length <= 8
-	const engine: 'edgeR' | 'wilcoxon' =
-		small || param.method === 'edgeR' || param.method === 'limma' ? 'edgeR' : 'wilcoxon'
 	if (engine === 'edgeR') {
 		const time1 = new Date().valueOf()
 		const result = JSON.parse(await run_R('edge_newh5.R', JSON.stringify(expression_input)))
 		mayLog('Time taken to run edgeR:', formatElapsedTime(Date.now() - time1))
+		// edge_newh5.R reports per-stage elapsed seconds and peak MB in its JSON. Logged
+		// unconditionally (not mayLog) because the point is diagnosing slow runs on deployed
+		// servers, where debugmode is off. One line per DE run, and DE runs are rare.
+		console.log(
+			`[DE] ${groups.group1names.length}v${groups.group2names.length} samples, stages(s):`,
+			JSON.stringify(result.timings),
+			'peakMB:',
+			JSON.stringify(result.memory_mb)
+		)
 		param.method = 'edgeR'
 
 		const qlImage = deImageFromB64(result.ql_image_b64, 'ql_image')
@@ -306,6 +314,30 @@ async function runDeFresh(
 }
 
 // ─── helpers ─── //
+
+/** Decide which pipeline runs, and the DE_method label handed to R.
+ *
+ * Below 8 samples per group, edgeR (parametric) is used even when wilcoxon was requested —
+ * small groups don't have enough degrees of freedom for the non-parametric test.
+ *
+ * The two are returned together, and are resolved before expression_input is built, because
+ * that object is serialized at the run_R call: a DE_method assigned afterwards never reaches
+ * R. edge_newh5.R requires DE_method and rejects anything other than edgeR/limma, so a run
+ * forced off wilcoxon by the rule above used to die inside R on the client's own word for it.
+ * `method` is optional too, and JSON.stringify drops undefined keys rather than sending null,
+ * which R reports as a missing argument. Sending the engine that actually runs avoids both.
+ *
+ * limma is an edgeR-branch method in its own right, so it is preserved rather than flattened
+ * to 'edgeR'. The rust wilcoxon pipeline never reads DE_method, so labelling it costs nothing. */
+export function pickDeEngine(
+	method: string | undefined,
+	group1Size: number,
+	group2Size: number
+): { engine: 'edgeR' | 'wilcoxon'; DE_method: 'edgeR' | 'limma' | 'wilcoxon' } {
+	const small = group1Size <= 8 && group2Size <= 8
+	const engine: 'edgeR' | 'wilcoxon' = small || method === 'edgeR' || method === 'limma' ? 'edgeR' : 'wilcoxon'
+	return { engine, DE_method: engine === 'edgeR' && method === 'limma' ? 'limma' : engine }
+}
 
 /** Resolve the two sample groups + any confounder value arrays for DE.
  * Wraps the shared `buildGroupValues` with DE-specific dataset query

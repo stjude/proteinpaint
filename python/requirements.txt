@@ -4,7 +4,12 @@ blitzgsea==1.3.47
 biopython==1.87
 h5py==3.15.1
 httpx==0.28.1
-matplotlib==3.10.3
+# 3.10.5 is the floor: Path.__deepcopy__ recursed forever on python 3.14 before it
+# (matplotlib #29157, fixed by #30198), which killed every savefig -- gsea.py's pathway
+# image among them. the container's python3 apt pin is commented out in
+# container/deps/Dockerfile, so the base floated 3.13 -> 3.14 and this surfaced in
+# production only. 3.10.3 also has no cp314 wheel and was being built from source.
+matplotlib==3.10.7
 nibabel==5.3.2
 numba==0.66.0
 numpy>=1.22
