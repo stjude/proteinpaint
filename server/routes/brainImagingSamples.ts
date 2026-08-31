@@ -31,9 +31,15 @@ export function init({ genomes }) {
 async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: any): Promise<BrainSample[]> {
 	const ds = genomes[query.genome].datasets[query.dslabel]
 	const q = ds.queries.NIdata
-	const key = query.refKey
-	if (q[key].referenceFile && q[key].samples) {
-		const dirPath = path.join(serverconfig.tpmasterdir, q[key].samples)
+	if (q.checkDataAccess) {
+		// dataset-level access rule (e.g. sign-in required)
+		if (!q.checkDataAccess(query)) throw 'no access'
+	}
+	// else: no ds-supplied checker, allow access
+	const ref = q.references[query.refKey]
+	if (!ref) throw 'invalid refKey'
+	if (ref.referenceFile && ref.samples) {
+		const dirPath = path.join(serverconfig.tpmasterdir, ref.samples)
 		// one async readdir instead of a sync stat per file: this route is on a hot path
 		// (matrix click menus, sample view renders)
 		const files = (await fs.promises.readdir(dirPath, { withFileTypes: true }))
@@ -49,9 +55,9 @@ async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: 
 		// can skip the annotation query below
 		if (query.samplesOnly) return sampleNames.map(name => ({ sample: name }))
 
-		if (q[key].sampleColumns) {
+		if (ref.sampleColumns) {
 			// Build term wrappers for getData
-			const terms = q[key].sampleColumns.map(term => {
+			const terms = ref.sampleColumns.map(term => {
 				const termjson = ds.cohort.termdb.q.termjsonByOneid(term.termid)
 				return {
 					$id: term.termid,
@@ -72,11 +78,14 @@ async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: 
 				// Extract values from getData result
 				const sampleData = data.samples?.[sid]
 				if (sampleData) {
-					for (const term of q[key].sampleColumns) {
+					for (const term of ref.sampleColumns) {
 						const v = sampleData[term.termid]
-						if (v?.value !== undefined) {
-							annoForOneS[term.termid] = v.value
-						}
+						if (!v) continue
+						/* a sample with several values for one term (e.g. a membership
+						multivalue term, one row per trial) comes back as {values:[{key,value},..]}
+						instead of {key,value}; show all of them in the cell */
+						if (v.values) annoForOneS[term.termid] = v.values.map(x => x.key).join(', ')
+						else if (v.value !== undefined) annoForOneS[term.termid] = v.value
 					}
 				}
 				samples[s] = annoForOneS

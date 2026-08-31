@@ -457,9 +457,15 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		q2.chat = {}
 	}
 	if (q.NIdata && serverconfig.features.showBrainImaging) {
-		q2.NIdata = {}
-		for (const k in q.NIdata) {
-			q2.NIdata[k] = JSON.parse(JSON.stringify(q.NIdata[k]))
+		q2.NIdata = { references: {} }
+		for (const [refKey, ref] of Object.entries(q.NIdata.references)) {
+			q2.NIdata.references[refKey] = JSON.parse(
+				JSON.stringify({
+					dimensions: ref.dimensions,
+					parameters: ref.parameters,
+					sampleColumns: ref.sampleColumns
+				})
+			)
 		}
 	}
 	if (q.singleSampleGbtk) {

@@ -333,7 +333,8 @@ function getChartTypeList(self, state) {
 		},
 		{
 			label: 'Brain Imaging',
-			clickTo: self.loadChartSpecificMenu,
+			// launches a sandbox with the sample table; the plot itself handles sample/template selection
+			clickTo: self.prepPlot,
 			chartType: 'brainImaging',
 			config: {
 				chartType: 'brainImaging'

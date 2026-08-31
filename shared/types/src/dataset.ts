@@ -452,9 +452,14 @@ type SingleSampleMutationQuery = {
 }
 
 type NIdataQuery = {
+	/** (server-side) optional dataset-level access rule for brain imaging. Receives the route
+	query (auth info at q.__protected__.clientAuthResult) and returns false to deny; the
+	brainImaging and brainImagingSamples routes call it before serving and reject with a
+	generic message. When undefined the feature is open to all callers. */
+	checkDataAccess?: (q: any) => boolean
 	/** Reference objs for NI data query, keyed by reference name.
 	Each key is shown to users as a template option in the brain imaging chart menu */
-	[refKey: string]: NIdataQueryRef
+	references: { [refKey: string]: NIdataQueryRef }
 }
 
 type NIdataQueryRef = {

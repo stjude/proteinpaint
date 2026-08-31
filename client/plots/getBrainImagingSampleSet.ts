@@ -17,7 +17,7 @@ const cache = new Map<string, Promise<Set<string>>>()
 the route sends errors as a plain string (so they are not retained by dofetch3's
 response cache and stay retryable); a string response IS the error message */
 export async function fetchBrainImagingSamples(body: any): Promise<any> {
-	const result: any = await dofetch3('brainImagingSamples', { body })
+	const result: any = await dofetch3('termdb/brainImagingSamples', { body })
 	if (typeof result == 'string') throw result
 	if (result.error) throw result.error
 	return result

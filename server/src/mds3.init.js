@@ -661,13 +661,6 @@ function copy_queries(ds, dscopy) {
 		}
 	}
 
-	if (ds.queries.NIdata) {
-		copy.NIdata = {}
-		for (const k in ds.queries.NIdata) {
-			copy.NIdata[k] = JSON.parse(JSON.stringify(ds.queries.NIdata[k]))
-		}
-	}
-
 	const qs = ds.queries.snvindel
 	if (qs) {
 		dscopy.has_skewer = true
@@ -711,11 +704,14 @@ function sort_mclass(set) {
 async function validate_query_NIdata(ds) {
 	const q = ds.queries.NIdata
 	if (!q) return
-	if (!Object.keys(q).length) throw `NIdata has no reference entries`
-	for (const refKey in q) {
-		const ref = q[refKey]
-		if (!ref.referenceFile) throw `NIdata['${refKey}'].referenceFile missing`
-		if (!ref.samples) throw `NIdata['${refKey}'].samples missing`
+	if (q.checkDataAccess && typeof q.checkDataAccess != 'function') throw `NIdata.checkDataAccess is not a function`
+	if (!q.references) throw `NIdata.references{} missing`
+	const refKeys = Object.keys(q.references)
+	if (!refKeys.length) throw `NIdata.references has no entries`
+	for (const refKey of refKeys) {
+		const ref = q.references[refKey]
+		if (!ref.referenceFile) throw `NIdata.references['${refKey}'].referenceFile missing`
+		if (!ref.samples) throw `NIdata.references['${refKey}'].samples missing`
 		const file = path.join(serverconfig.tpmasterdir, ref.referenceFile)
 		/* read the template's voxel grid from its NIfTI-1 header: sizeof_hdr (int32 at
 		byte 0, always 348, also reveals endianness) and dim[8] (int16[8] at byte 40,
@@ -740,12 +736,12 @@ async function validate_query_NIdata(ds) {
 			if (!Number.isInteger(count) || count <= 0) throw `invalid ${plane} dimension in ${ref.referenceFile}`
 			// dataset-authored default slice index must be within the volume
 			if (ref.parameters && ref.parameters[plane] >= count)
-				throw `NIdata['${refKey}'].parameters.${plane}=${ref.parameters[plane]} out of range (volume has ${count} slices)`
+				throw `NIdata.references['${refKey}'].parameters.${plane}=${ref.parameters[plane]} out of range (volume has ${count} slices)`
 		}
 		// catch sampleColumns termid typos at launch instead of failing every table request
 		for (const c of ref.sampleColumns || []) {
 			if (!ds.cohort?.termdb?.q?.termjsonByOneid(c.termid))
-				throw `invalid termid '${c.termid}' in NIdata['${refKey}'].sampleColumns`
+				throw `invalid termid '${c.termid}' in NIdata.references['${refKey}'].sampleColumns`
 		}
 	}
 }

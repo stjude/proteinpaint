@@ -356,7 +356,7 @@ function mayAddBrainImagingOption(menuDiv, self, samplelstTW) {
 			// let user select a template; show imaging availability per template.
 			// per-template try/catch: one broken template must not hide the others
 			const entries = await Promise.all(
-				Object.keys(NIdata).map(async refKey => {
+				Object.keys(NIdata.references).map(async refKey => {
 					try {
 						const available = await getBrainImagingSampleSet(
 							self.app.vocabApi.vocab.genome,
