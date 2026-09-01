@@ -136,6 +136,82 @@ tape('AuthApi.canDisplaySampleIds: returns false when user is not logged in', fu
 	test.end()
 })
 
+tape(
+	'AuthApi.canDisplaySampleIds: evaluates a function displaySampleIds policy against the request role',
+	function (test) {
+		test.timeoutAfter(500)
+		test.plan(3)
+
+		// no creds => the samples-route login gate (isUserLoggedIn) passes, isolating the policy evaluation.
+		// A truthy function object must NOT be treated as an unconditional allow: it is evaluated for the
+		// request's clientAuthResult and must fail closed when the role is denied.
+		const authApi = new AuthApi({}, makeMockApp(), {}, { port: 3000, cachedir: '/tmp' })
+		const policy = (clientAuthResult: any) => clientAuthResult?.role == 'admin'
+		const ds = { cohort: { termdb: { displaySampleIds: policy } }, label: dslabel }
+
+		const adminReq = {
+			query: { embedder, dslabel, __protected__: { clientAuthResult: { role: 'admin' } } },
+			headers: {},
+			path: '/termdb/sampleScatter',
+			cookies: {}
+		}
+		const nonAdminReq = {
+			query: { embedder, dslabel, __protected__: { clientAuthResult: { role: 'public' } } },
+			headers: {},
+			path: '/termdb/sampleScatter',
+			cookies: {}
+		}
+		const noRoleReq = {
+			query: { embedder, dslabel, __protected__: { clientAuthResult: {} } },
+			headers: {},
+			path: '/termdb/sampleScatter',
+			cookies: {}
+		}
+
+		test.equal(
+			authApi.canDisplaySampleIds(adminReq, ds as any),
+			true,
+			'should allow when the policy returns true for the role'
+		)
+		test.equal(
+			authApi.canDisplaySampleIds(nonAdminReq, ds as any),
+			false,
+			'should deny an authenticated non-admin whose policy returns false'
+		)
+		test.equal(
+			authApi.canDisplaySampleIds(noRoleReq, ds as any),
+			false,
+			'should deny when clientAuthResult carries no role'
+		)
+		test.end()
+	}
+)
+
+tape('AuthApi.canDisplaySampleIds: fails closed when the displaySampleIds policy throws', function (test) {
+	test.timeoutAfter(500)
+	test.plan(1)
+
+	const authApi = new AuthApi({}, makeMockApp(), {}, { port: 3000, cachedir: '/tmp' })
+	const ds = {
+		cohort: {
+			termdb: {
+				displaySampleIds: () => {
+					throw new Error('policy blew up')
+				}
+			}
+		},
+		label: dslabel
+	}
+	const req = {
+		query: { embedder, dslabel, __protected__: { clientAuthResult: {} } },
+		headers: {},
+		path: '/termdb/sampleScatter',
+		cookies: {}
+	}
+	test.equal(authApi.canDisplaySampleIds(req, ds as any), false, 'should return false when the policy throws')
+	test.end()
+})
+
 tape('AuthApi.getDsAuth: returns empty array when no active genomes', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)

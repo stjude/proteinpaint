@@ -37,8 +37,22 @@ export class AuthApi implements AuthInterface {
 	}
 
 	canDisplaySampleIds(req, ds) {
-		if (!ds.cohort.termdb.displaySampleIds) return false
-		return this.isUserLoggedIn(req, ds, this.#auth.protectedRoutes.samples)
+		const displaySampleIds = ds?.cohort?.termdb?.displaySampleIds
+		if (!displaySampleIds) return false
+		// the sample-id-bearing routes require the request to be logged in
+		if (!this.isUserLoggedIn(req, ds, this.#auth.protectedRoutes.samples)) return false
+		// displaySampleIds may be a boolean or a per-request policy (a function of the request's
+		// clientAuthResult). A truthy non-function value is an unconditional allow; a function must be
+		// evaluated for THIS request's role and fail closed, so a role the dataset denies never leaks
+		// names even when the request is authenticated (e.g. a non-admin whose policy returns false).
+		if (typeof displaySampleIds != 'function') return true
+		try {
+			const clientAuthResult =
+				req?.query?.__protected__?.clientAuthResult ?? this.getNonsensitiveInfo(req)?.clientAuthResult ?? {}
+			return !!displaySampleIds(clientAuthResult)
+		} catch {
+			return false
+		}
 	}
 
 	/*

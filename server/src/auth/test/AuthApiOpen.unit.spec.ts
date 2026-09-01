@@ -68,8 +68,16 @@ tape('AuthApiOpen.isUserLoggedIn: always returns true', function (test) {
 	test.timeoutAfter(500)
 	test.plan(2)
 
-	test.equal(AuthApiOpen.isUserLoggedIn({} as any, null as any, null as any), true, 'should return true for any request')
-	test.equal(AuthApiOpen.isUserLoggedIn({} as any, {} as any, []), true, 'should always return true regardless of arguments')
+	test.equal(
+		AuthApiOpen.isUserLoggedIn({} as any, null as any, null as any),
+		true,
+		'should return true for any request'
+	)
+	test.equal(
+		AuthApiOpen.isUserLoggedIn({} as any, {} as any, []),
+		true,
+		'should always return true regardless of arguments'
+	)
 	test.end()
 })
 
@@ -108,9 +116,57 @@ tape('AuthApiOpen.canDisplaySampleIds: respects ds.cohort.termdb.displaySampleId
 	const dsWithoutFlag = { cohort: { termdb: {} } }
 	const dsFalseFlag = { cohort: { termdb: { displaySampleIds: false } } }
 
-	test.equal(AuthApiOpen.canDisplaySampleIds({} as any, dsWithFlag as any), true, 'should return true when displaySampleIds is truthy')
-	test.equal(AuthApiOpen.canDisplaySampleIds({} as any, dsWithoutFlag as any), false, 'should return false when displaySampleIds is not set')
-	test.equal(AuthApiOpen.canDisplaySampleIds({} as any, dsFalseFlag as any), false, 'should return false when displaySampleIds is false')
+	test.equal(
+		AuthApiOpen.canDisplaySampleIds({} as any, dsWithFlag as any),
+		true,
+		'should return true when displaySampleIds is truthy'
+	)
+	test.equal(
+		AuthApiOpen.canDisplaySampleIds({} as any, dsWithoutFlag as any),
+		false,
+		'should return false when displaySampleIds is not set'
+	)
+	test.equal(
+		AuthApiOpen.canDisplaySampleIds({} as any, dsFalseFlag as any),
+		false,
+		'should return false when displaySampleIds is false'
+	)
+	test.end()
+})
+
+tape('AuthApiOpen.canDisplaySampleIds: evaluates a function displaySampleIds policy and fails closed', function (test) {
+	test.timeoutAfter(500)
+	test.plan(3)
+
+	const ds = { cohort: { termdb: { displaySampleIds: (car: any) => car?.role == 'admin' } } }
+	const adminReq = { query: { __protected__: { clientAuthResult: { role: 'admin' } } } }
+	const publicReq = { query: { __protected__: { clientAuthResult: { role: 'public' } } } }
+
+	test.equal(
+		AuthApiOpen.canDisplaySampleIds(adminReq as any, ds as any),
+		true,
+		'should allow when the policy returns true'
+	)
+	test.equal(
+		AuthApiOpen.canDisplaySampleIds(publicReq as any, ds as any),
+		false,
+		'should deny when the policy returns false'
+	)
+
+	const throwingDs = {
+		cohort: {
+			termdb: {
+				displaySampleIds: () => {
+					throw new Error('policy blew up')
+				}
+			}
+		}
+	}
+	test.equal(
+		AuthApiOpen.canDisplaySampleIds({ query: {} } as any, throwingDs as any),
+		false,
+		'should fail closed when the policy throws'
+	)
 	test.end()
 })
 
@@ -144,7 +200,9 @@ tape('AuthApiOpen.maySetAuthRoutes: sets a global middleware that adds __protect
 	const req: any = { query: {}, cookies: {} }
 	const res: any = {}
 	let nextCalled = false
-	function next() { nextCalled = true }
+	function next() {
+		nextCalled = true
+	}
 
 	registeredMiddlewares[0](req, res, next)
 
