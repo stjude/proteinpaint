@@ -1,158 +1,157 @@
-import type { TermdbAggregateMatrixRequest, ValidAggMatrixResponse, AggMatrixDot, AxisSection } from '#types'
-import { PSEUDOBULK, GENE_EXPRESSION } from '#types'
-import { mayLog } from '#src/helpers.ts'
-import { run_python } from '@sjcrh/proteinpaint-python'
+import type {
+	AggMatrixDot,
+	AxisSection,
+	TermdbAggregateMatrixRequest,
+	ValidAggMatrixResponse,
+	ValidGetDataResponse
+} from '#types'
+import { PSEUDOBULK } from '#types'
+import { getData } from '../termdb.matrix.js'
 
-type ColData = {
-    column: string
-    termId: string
-    colorTmp: Record<string, number | null>
-    sizeTmp: Record<string, number | null>
-}
+type ValueByGene = Record<string, number | null>
+type ColData = { column: string; termId: string; colorTmp: ValueByGene; sizeTmp: ValueByGene }
+type ProcessedData = { values: ValueByGene; min: number; max: number }
 
 export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any): Promise<ValidAggMatrixResponse> {
-    const queries = new Set<string>()
-    const rowSections: AxisSection[] = []
-    let rowCount = 0, rowLongest = ''
+	const queryGenes = new Set<string>()
+	const rowSections: AxisSection[] = []
+	let rowCount = 0
+	let rowLongest = ''
 
-    for (const section in q.rows) {
-        const terms = q.rows[section].map(tw => {
-            const rowId = tw.term?.['gene'] || tw.term.id
-            if (tw.term.type == GENE_EXPRESSION) queries.add(rowId)
-            //TODO: Add logic for other term types here
-            const label = tw.term.name || rowId
-            if (label.length > rowLongest.length) rowLongest = label
-            rowCount++
-            return { id: rowId, label }
-        })
-        rowSections.push({ id: section, terms })
-    }
+	for (const section in q.rows) {
+		const terms = q.rows[section].map(tw => {
+			const gene = tw.term?.['gene']
+			if (gene) queryGenes.add(gene)
+			const rowId = gene || tw.term.id
+			const label = tw.term.name || rowId
+			if (label.length > rowLongest.length) rowLongest = label
+			rowCount++
+			return { id: rowId, label }
+		})
+		rowSections.push({ id: section, terms })
+	}
+	if (!queryGenes.size) throw new Error('No genes found in aggregate matrix rows')
 
-    const columns: ColData[] = []
-    const colMembers: AxisSection[] = []
-    let colorMin = Infinity, colorMax = -Infinity
-    let sizeMin = Infinity, sizeMax = -Infinity
-    let colCount = 0, colLongest = ''
+	const genes = Array.from(queryGenes)
+	const columns: ColData[] = []
+	const colSections: AxisSection[] = []
+	let colorMin = Infinity
+	let colorMax = -Infinity
+	let sizeMin = Infinity
+	let sizeMax = -Infinity
+	let colCount = 0
+	let colLongest = ''
 
-    for (const col in q.columns) {
-        const tmpColTerms = q.columns[col].map(tw => {
-            const label = tw.term.name || tw.term.id
-            if (label.length > colLongest.length) colLongest = label
-            colCount++
-            return { id: tw.term.id, label }
-        })
-        colMembers.push({ id: col, terms: tmpColTerms })
+	/* Each category has its own HDF5 files. Process them sequentially so each batched-gene
+	 * response can be collected before the next category is loaded. */
+	for (const section in q.columns) {
+		const sectionColumns = q.columns[section]
+		const terms = sectionColumns.map(tw => {
+			const label = tw.term.name || tw.term.id
+			if (label.length > colLongest.length) colLongest = label
+			colCount++
+			return { id: tw.term.id, label }
+		})
+		colSections.push({ id: section, terms })
 
-        for (const tw of q.columns[col]) {
-            const { colorTmp, sizeTmp, colorMin: cMin, colorMax: cMax, sizeMin: sMin, sizeMax: sMax }
-                = await processMemberTerm(tw.term, q, ds, queries)
-            if (cMin < colorMin) colorMin = cMin
-            if (cMax > colorMax) colorMax = cMax
-            if (sMin < sizeMin) sizeMin = sMin
-            if (sMax > sizeMax) sizeMax = sMax
-            columns.push({ column: col, termId: tw.term.id, colorTmp, sizeTmp })
-        }
-    }
+		for (const tw of sectionColumns) {
+			const colorData = await getColumnData(tw, genes, q.gradientMethod, q, ds)
+			const sizeData = await getColumnData(tw, genes, q.sizeMethod, q, ds)
+			colorMin = Math.min(colorMin, colorData.min)
+			colorMax = Math.max(colorMax, colorData.max)
+			sizeMin = Math.min(sizeMin, sizeData.min)
+			sizeMax = Math.max(sizeMax, sizeData.max)
+			columns.push({
+				column: section,
+				termId: tw.term.id,
+				colorTmp: colorData.values,
+				sizeTmp: sizeData.values
+			})
+		}
+	}
 
-    // One inner array per entry term (row), each containing one dot per column
-    const data: AggMatrixDot[][] = []
+	const data: AggMatrixDot[][] = []
+	for (const { terms, id: rowSection } of rowSections) {
+		for (const { id: row } of terms) {
+			data.push(
+				columns.map(col => ({
+					rowSection,
+					row,
+					colSection: col.column,
+					column: col.termId,
+					colorValue: col.colorTmp[row] ?? null,
+					sizeValue: col.sizeTmp[row] ?? null
+				}))
+			)
+		}
+	}
 
-    for (const { terms, id: sectionId } of rowSections) {
-        for (const { id: term } of terms) {
-            const row: AggMatrixDot[] = columns.map(col => {
-                /** Return dot entry even for missing data.
-                 * Allows the user to see the tooltip for missing/
-                 * unavailable data, rather than assume a rendering mistake. */
-                return {
-                    rowSection: sectionId,
-                    row: term,
-                    colSection: col.column,
-                    column: col.termId,
-                    colorValue: col.colorTmp[term] ?? null,
-                    sizeValue: col.sizeTmp[term] ?? null,
-                }
-            })
-            data.push(row)
-        }
-    }
-
-    return {
-        colorScale: { min: colorMin, max: colorMax },
-        sizeScale: { min: sizeMin, max: sizeMax },
-        data,
-        axesLayout: {
-            rows: { sections: rowSections, rowCount, longestLabel: rowLongest },
-            columns: { sections: colMembers, colCount, longestLabel: colLongest }
-        }
-    }
+	return {
+		colorScale: { min: colorMin, max: colorMax },
+		sizeScale: { min: sizeMin, max: sizeMax },
+		data,
+		axesLayout: {
+			rows: { sections: rowSections, rowCount, longestLabel: rowLongest },
+			columns: { sections: colSections, colCount, longestLabel: colLongest }
+		}
+	}
 }
 
-async function processMemberTerm(term, q: TermdbAggregateMatrixRequest, ds: any, queries: Set<string>) {
-    if (term.type === PSEUDOBULK) {
-        const pseudobulk = ds.queries.singleCell.pseudobulk
-        const assay = pseudobulk[term.assay]
-        if (!assay) throw new Error(`Pseudobulk assay: ${term.assay} not found for term: ${term.id}`)
-        const member = assay[term.memberId]
-        if (!member) throw new Error(`Member: ${term.memberId} not found for term: ${term.id} in pseudobulk assay: ${term.assay}`)
+async function getColumnData(
+	tw: any,
+	genes: string[],
+	method: TermdbAggregateMatrixRequest['gradientMethod'],
+	q: TermdbAggregateMatrixRequest,
+	ds: any
+): Promise<ProcessedData> {
+	const columnTerm = tw.term
+	if (columnTerm.type !== PSEUDOBULK) {
+		throw new Error(`Term type: ${columnTerm.type} not supported in aggregate matrix route.`)
+	}
+	const term = {
+		...tw,
+		term: {
+			...columnTerm,
+			category: columnTerm.category || columnTerm.id,
+			dataTypeDetails: { genes, method }
+		}
+	}
 
-        const gradientFile = member.categories[term.id][`${q.gradientMethod}File`]
-        const gradientData = await getHDF5Data(Array.from(queries), gradientFile)
-        const { tmp: colorTmp, min: colorMin, max: colorMax } = processHDF5Data(gradientData)
-        
-        const sizeFile = member.categories[term.id][`${q.sizeMethod}File`]
-        const sizeData = await getHDF5Data(Array.from(queries), sizeFile)
-        const { tmp: sizeTmp, min: sizeMin, max: sizeMax } = processHDF5Data(sizeData)
-
-        return { colorTmp, sizeTmp, colorMin, colorMax, sizeMin, sizeMax }
-    } 
-    //TODO: Add logic for other term types here
-    else throw new Error(`Term type: ${term.type} not supported in aggregate matrix route.`)
+	const response = await getData({ terms: [term], filter: q.filter, filter0: q.filter0 }, ds, false)
+	if ('error' in response) throw new Error(response.error)
+	return processGetDataResponse(response, genes)
 }
 
-/** 
- * @queries array of gene names to query in the HDF5 file
- * @h5file full path to the HDF5 file to query
- */
-async function getHDF5Data(queries, h5file) {
-    const readHdf5Input = { query: queries, hdf5_file: h5file }
-    const time1 = Date.now()
-    const python_output = await run_python('readHDF5.py', JSON.stringify(readHdf5Input))
-    mayLog('Time taken to query HDF5 file:', Date.now() - time1, 'ms')
+/** Aggregate every queried gene in one sparse pass over a validated getData response. */
+function processGetDataResponse(data: ValidGetDataResponse, genes: string[]): ProcessedData {
+	const geneSet = new Set(genes)
+	const sums: Record<string, number> = {}
+	const counts: Record<string, number> = {}
 
-    const result = JSON.parse(python_output)
-    /** query_output = { [index/gene:string]: { dataId: string, samples: [Object]} 
-     * Should be one entry per gene in query_output.*/
-    const out = result.query_output
+	for (const sample of Object.values(data.samples)) {
+		for (const [gene, entry] of Object.entries(sample)) {
+			if (!geneSet.has(gene) || !entry || typeof entry !== 'object') continue
+			const value = (entry as { value?: unknown }).value
+			if (typeof value !== 'number' || !Number.isFinite(value)) continue
+			sums[gene] = (sums[gene] || 0) + value
+			counts[gene] = (counts[gene] || 0) + 1
+		}
+	}
 
-    if (!out) throw new Error(`No expression data for ${queries}`)
-    return out
-}
+	const values: ValueByGene = {}
+	let min = Infinity
+	let max = -Infinity
+	for (const gene of genes) {
+		const count = counts[gene] || 0
+		const aggregate = count ? sums[gene] / count : null
+		values[gene] = aggregate
+		if (aggregate !== null) {
+			min = Math.min(min, aggregate)
+			max = Math.max(max, aggregate)
+		}
+	}
 
-function processHDF5Data(data) {
-    //TODO: Need to filter out samples if filter0
-    const tmp = {}
-    let min = Infinity
-    let max = -Infinity
-
-    for (const gene in data) {
-        const values = Object.values(data[gene].samples)
-        if (!values.length) throw new Error(`No samples found for gene: ${gene}`)
-        const aggregate = getAggregate(values)
-        if (aggregate !== null) {
-            if (aggregate < min) min = aggregate
-            if (aggregate > max) max = aggregate
-        }
-        tmp[gene] = aggregate
-    }
-    if (min === Infinity || max === -Infinity) throw new Error(`No valid aggregate values found in HDF5 data`)
-    if (min === max) throw new Error(`All aggregate values are the same: ${min}. Cannot use identical data for scaling.`)
-    return { tmp, min, max }
-}
-
-/** Return aggregate mean of numeric values in the array  */
-function getAggregate(data: unknown[]): number | null {
-    const values = data.filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
-    if (values.length === 0) return null
-    const sum = values.reduce((acc, value) => acc + value, 0)
-    return sum / values.length
+	if (min === Infinity || max === -Infinity) throw new Error('No valid aggregate values found in getData response')
+	if (min === max) throw new Error(`All aggregate values are the same: ${min}. Cannot use identical data for scaling.`)
+	return { values, min, max }
 }
