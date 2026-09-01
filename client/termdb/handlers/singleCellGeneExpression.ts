@@ -1,24 +1,30 @@
 import { Menu, addGeneSearchbox } from '#dom'
 import type { AppApi } from '#rx'
 import { SINGLECELL_GENE_EXPRESSION } from '#types'
-import { getSCGEunit } from '#tw/singleCellGeneExpression'
+import { getSCGEunit, getSampleAssayInfo } from '#tw/singleCellGeneExpression'
 import type { SearchHandlerOpts } from '../TermTypeSearch.js'
 
 export class SearchHandler {
 	callback?: (arg0: { gene: string; name: string; type: string; sample: object }) => void
 	app?: AppApi
 
-	init(opts: SearchHandlerOpts) {
+	async init(opts: SearchHandlerOpts) {
 		this.validateOpts(opts)
 		this.callback = opts.callback
 		this.app = opts.app
+		const sample = opts.usecase?.specialCase?.config?.sample
+		// a panel-based sample's search offers/validates exactly the genes in
+		// its expression store; a whole-transcriptome sample (no genes here)
+		// searches the genome gene db as usual
+		const { genes: geneList } = await getSampleAssayInfo(this.app!.vocabApi, sample)
 		const holder = opts.holder.append('div').style('padding', '10px 0px')
 		const geneSearch = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: opts.genomeObj,
+			geneList,
 			row: holder,
 			searchOnly: 'gene',
-			callback: () => this.selectGene(geneSearch.geneSymbol, opts.usecase?.specialCase?.config?.sample)
+			callback: () => this.selectGene(geneSearch.geneSymbol, sample)
 		})
 	}
 
