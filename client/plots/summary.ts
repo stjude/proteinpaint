@@ -214,7 +214,11 @@ class SummaryPlot extends PlotBase implements RxComponent {
 				label: 'Scatter',
 				disabled: () => false,
 				isVisible: () => {
-					return isNumericTw(this.config?.term) && isNumericTw(this.config?.term2)
+					const cohortLabel =
+						this.app.vocabApi.termdbConfig.selectCohort?.values?.[this.app.getState().activeCohort]?.shortLabel
+					const isSupportedChart =
+						this.app.vocabApi.termdbConfig.supportedChartTypes?.[cohortLabel || '']?.includes('sampleScatter')
+					return isSupportedChart && isNumericTw(this.config?.term) && isNumericTw(this.config?.term2)
 				},
 				getConfig: async () => {
 					const _term = await this.getWrappedTermCopy(this.config?.term, 'continuous')
