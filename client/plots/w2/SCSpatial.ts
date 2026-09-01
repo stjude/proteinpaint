@@ -48,6 +48,10 @@ class SCSpatial extends PlotBase implements RxComponent {
 		// plot decides when several exist
 		const firstMap = appState.plots.find((p: any) => p.chartType == 'sampleScatter')
 		const colorGene = firstMap?.colorTW?.term?.type == SINGLECELL_GENE_EXPRESSION ? firstMap.colorTW.term.gene : null
+		// in cell-type mode, the map's colorTW + plot name let this subplot
+		// fetch the exact category colors the map shows, for consistency
+		const mapColorTW = colorGene ? null : firstMap?.colorTW || null
+		const mapPlotName = firstMap?.singleCellPlot?.name || null
 		const hiddenTypes = new Set<string>()
 		for (const p of appState.plots) {
 			if (p.chartType != 'sampleScatter') continue // only the sc map plots
@@ -57,6 +61,8 @@ class SCSpatial extends PlotBase implements RxComponent {
 			vocab: appState.vocab, // genome + dslabel for server requests
 			config, // the subplot's own config (carries the sample)
 			colorGene, // non-null = mirror the maps' gene expression coloring
+			mapColorTW, // the map's cell-type term, for matching its colors
+			mapPlotName, // which sc plot's legend to match
 			hiddenTypes: [...hiddenTypes].sort() // sorted for stable state diffing
 		}
 	}
@@ -76,7 +82,9 @@ class SCSpatial extends PlotBase implements RxComponent {
 			const gene: string | null = state.colorGene
 			const hidden = new Set<string>(state.hiddenTypes)
 			const shown = this.allTypes.filter(t => !hidden.has(t))
-			const renderKey = JSON.stringify([sID, gene, shown]) // what this render depends on
+			// in cell-type mode, use the same per-type colors the map shows
+			const typeColors = gene ? undefined : await this.fetchMapColors(sID, state)
+			const renderKey = JSON.stringify([sID, gene, shown, typeColors]) // what this render depends on
 			if (renderKey == this.lastRenderKey) return // nothing changed for the viewer
 			this.lastRenderKey = renderKey
 
@@ -96,6 +104,8 @@ class SCSpatial extends PlotBase implements RxComponent {
 					showCellTypes: !gene,
 					// filter only when something is hidden, so colors stay stable
 					cellTypeFilter: !gene && hidden.size ? shown : undefined,
+					cellTypeColors: typeColors, // match the map's legend colors
+
 					geneExpression: gene || undefined, // the maps' colored gene, when any
 					hideExpressionFills: !gene, // hover counts unaffected either way
 					annotationLevel: this.image.annotationLevel, // dataset default
@@ -107,6 +117,53 @@ class SCSpatial extends PlotBase implements RxComponent {
 		} catch (e: any) {
 			sayerror(this.dom.error, e.message || String(e)) // surface, keep the app alive
 		}
+	}
+
+	/** cached per-type colors matching the map plot's legend */
+	private mapColors?: { key: string; colors?: { [type: string]: string } }
+
+	/** The exact category colors the map plot shows, from the same server
+	 route that assigned them (termdb/singleCellPlots), so both views color a
+	 cell type identically — including user recolors saved into the map's
+	 colorTW.term.values. No map plot (or a failure) = undefined = the
+	 viewer's built-in palette. */
+	private async fetchMapColors(sID: string, state: any): Promise<{ [type: string]: string } | undefined> {
+		if (!state.mapColorTW || !state.mapPlotName) return
+		// hiddenValues churn constantly (the hide sync); colors only depend on
+		// the term's values (user recolors) and the plot, so key on those
+		const key = JSON.stringify([sID, state.mapPlotName, state.mapColorTW.term?.values])
+		if (this.mapColors?.key == key) return this.mapColors.colors
+		let colors: { [type: string]: string } | undefined
+		try {
+			const v = state.vocab // genome + dslabel
+			const r: any = await dofetch3('termdb/singleCellPlots', {
+				body: {
+					genome: v.genome,
+					dslabel: v.dslabel,
+					colorTW: state.mapColorTW,
+					singleCellPlot: { name: state.mapPlotName, sample: { sID } },
+					// the route requires concrete canvas numbers even though only
+					// the legend is used here; matches the route's own defaults
+					canvasSettings: {
+						cutoff: 10000,
+						width: 800,
+						height: 600,
+						radius: 3,
+						startColor: '#d3d3d3',
+						stopColor: '#ff0000'
+					}
+				}
+			})
+			const legend = r?.result?.Default?.colorLegend // [category, {color}] entries
+			if (Array.isArray(legend)) {
+				colors = {}
+				for (const [category, item] of legend) colors[category] = item?.color
+			}
+		} catch (e) {
+			console.warn('failed to fetch the map colors, using the built-in palette', e)
+		}
+		this.mapColors = { key, colors }
+		return colors
 	}
 
 	/** the sample's first spatial image and its cell types, fetched once */
