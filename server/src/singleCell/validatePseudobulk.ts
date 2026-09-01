@@ -117,10 +117,23 @@ export async function validatePseudobulk(ds: any) {
 		}
 	}
 
-	pseudobulk.get = async (param: { terms: any[], method?: string }) => {
+	/** Get pseudobulk data for the specified terms and genes, using the specified aggregation method.
+	 * @param param 
+	 *  - terms: Pseudobulk terms. May or maynot include the gene names. 
+	 * 	- dataTypeDetails: {
+	 * 		- genes Optional. An array of gene names to include in the pseudobulk aggregation.
+	 * 		- method: Optional. The aggregation method to use (e.g., 'mean', 'total', 'percent'). 
+	 * }
+	 *  - filter: Optional. 
+	 * 	- filter0: Optional. An additional filter parameter.
+	 *  - mapParent2Children: Optional. See mayLimitSamples 
+	 *  - sampleTypes: Optional. See mayLimitSamples 
+	 * @returns An object containing term-to-sample values, and mappings by term ID and by sample ID.
+	 */
+	pseudobulk.get = async (param: { terms: any[], dataTypeDetails?: { genes?: [], method?: string }, filter?: any, filter0?: any, mapParent2Children?: boolean, sampleTypes?: any }) => {
 		//Set default to mean for most requests
-		const method = param?.method || 'mean'
-		if (!enabledMethods.has(method)) throw new Error (`Invalid method.`)
+		const method = param?.dataTypeDetails?.method || 'mean'
+		if (!enabledMethods.has(method)) throw new Error(`Invalid method.`)
 		if (!Array.isArray(param.terms)) throw new Error('.terms[] not array')
 		// all terms needs to be by the same HDF5 file! TODO validate and reject otherwise
 		const _t = param.terms[0]?.term
@@ -155,11 +168,17 @@ export async function validatePseudobulk(ds: any) {
 
 		// First, collect all gene names
 		const geneNames: string[] = []
-		for (const tw of param.terms) {
-			if (tw.term.gene) {
-				geneNames.push(tw.term.gene)
+		if (param.dataTypeDetails?.genes) {
+			/** This allows for non-terms or entities to be used in this getter */
+			geneNames.push(...param.dataTypeDetails.genes)
+		} else {
+			for (const tw of param.terms) {
+				if (tw.term.gene) {
+					geneNames.push(tw.term.gene)
+				}
 			}
 		}
+
 
 		if (geneNames.length === 0) {
 			console.log('No genes to query')
