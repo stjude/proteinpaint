@@ -129,8 +129,9 @@ export async function validatePseudobulk(ds: any) {
 	 *  - mapParent2Children: Optional. See mayLimitSamples 
 	 *  - sampleTypes: Optional. See mayLimitSamples 
 	 * @returns An object containing term-to-sample values, and mappings by term ID and by sample ID.
+	 * When dataTypeDetails.genes is supplied, each gene is used as the term ID in term2sample2value.
 	 */
-	pseudobulk.get = async (param: { terms: any[], dataTypeDetails?: { genes?: [], method?: string }, filter?: any, filter0?: any, mapParent2Children?: boolean, sampleTypes?: any }) => {
+	pseudobulk.get = async (param: { terms: any[], dataTypeDetails?: { genes?: string[], method?: string }, filter?: any, filter0?: any, mapParent2Children?: boolean, sampleTypes?: any }) => {
 		//Set default to mean for most requests
 		const method = param?.dataTypeDetails?.method || 'mean'
 		if (!enabledMethods.has(method)) throw new Error(`Invalid method.`)
@@ -191,13 +192,15 @@ export async function validatePseudobulk(ds: any) {
 
 		const genesData = result.query_output || {}
 		if (!genesData) throw 'No expression data returned from HDF5 query'
-		for (const tw of param.terms) {
-			if (!tw.term.gene) continue
-
+		const hasGenesArg = Array.isArray(param.dataTypeDetails?.genes)
+		const requestedGenes = hasGenesArg
+			? geneNames.map(gene => ({ gene, id: gene }))
+			: param.terms.filter(tw => tw.term.gene).map(tw => ({ gene: tw.term.gene, id: tw.$id }))
+		for (const { gene, id } of requestedGenes) {
 			// Get this gene's data from the batch response
-			const geneResult = genesData[tw.term.gene]
+			const geneResult = genesData[gene]
 			if (!geneResult) {
-				console.warn(`No data found for gene ${tw.term.gene} in the response`)
+				console.warn(`No data found for gene ${gene} in the response`)
 				continue
 			}
 
@@ -215,11 +218,11 @@ export async function validatePseudobulk(ds: any) {
 			}
 
 			if (Object.keys(s2v).length) {
-				term2sample2value.set(tw.$id, s2v)
+				term2sample2value.set(id, s2v)
 			}
 		}
 		if (term2sample2value.size == 0) {
-			throw 'No data available for the input ' + param.terms?.map(tw => tw.term.gene).join(', ')
+			throw 'No data available for the input ' + geneNames.join(', ')
 		}
 
 		return { term2sample2value, byTermId, bySampleId }
