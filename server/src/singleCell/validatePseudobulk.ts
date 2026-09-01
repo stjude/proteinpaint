@@ -18,6 +18,10 @@ import { validString } from '#src/routes/common.js'
  * 3. Adds ds.queries.singleCell.pseudobulk.get()
  *
  */
+
+//This is a sanity check
+const enabledMethods = new Set(['mean', 'total', 'percent'])
+
 export async function validatePseudobulk(ds: any) {
 	const pseudobulk = ds.queries.singleCell.pseudobulk
 
@@ -26,14 +30,14 @@ export async function validatePseudobulk(ds: any) {
 		try {
 			termType2label(assayKey)
 		} catch (_) {
-			throw 'unknown pseudobulk[assay]: ' + assayKey
+			throw new Error('unknown pseudobulk[assay]: ' + assayKey)
 		}
 
 		if (typeof pseudobulk[assayKey] != 'object') throw new Error(`singleCell.pseudobulk.${assayKey} is not object`)
 
 		/**
 		 * each member makes a term
-		 * In termdb.config, these terms are added to termdbConfig.termType2terms.pseudobulk
+		 * In termdb.config, these terms are added to termdbConfig.termType2terms.Pseudobulk
 		 * for access on the client. */
 		if (!ds.queries.singleCell.terms) ds.queries.singleCell.terms = []
 
@@ -73,85 +77,58 @@ export async function validatePseudobulk(ds: any) {
 					}
 				})
 
-				// validate "mean value" h5 file
-				co.meanSamples = [] as any[]
-				const meanFile = path.join(serverconfig.tpmasterdir, member.folder, category + member.meanExt)
-				co.meanFile = meanFile
-				await file_is_readable(meanFile)
-				const samples = await getH5samples(meanFile)
-				if (!Array.isArray(samples)) throw new Error('meanFile samples not array')
-				if (!samples.length) throw 'meanFile HDF5 file has no samples, please check file.'
-				for (const sn of samples) {
-					const si = ds.cohort.termdb.q.sampleName2id(sn)
-					if (si === undefined) {
-						// samples in hdf5 file must be in sync with db
-						throw `unknown sample ${sn} from HDF5 ${meanFile}`
+				const validateMethodFile = async (method) => {
+					co[`${method}Samples`] = [] as any[]
+					const methodFile = path.join(serverconfig.tpmasterdir, member.folder, category + member[`${method}Ext`])
+					co[`${method}File`] = methodFile
+					await file_is_readable(co[`${method}File`])
+					const samples = await getH5samples(methodFile)
+					if (!Array.isArray(samples)) throw new Error(`${method}File samples not array`)
+					if (!samples.length) throw new Error(`${method}File HDF5 file has no samples, please check file.`)
+					for (const sn of samples) {
+						const si = ds.cohort.termdb.q.sampleName2id(sn)
+						if (si === undefined) {
+							// samples in hdf5 file must be in sync with db
+							throw `unknown sample ${sn} from HDF5 ${methodFile}`
+						}
+						co[`${method}Samples`].push(si)
 					}
-					co.meanSamples.push(si)
+					// sample names (not ids); used by the termdb/DE route as its allSampleSet
+					co[`${method}Sampleset`] = new Set(samples)
+					console.log(
+						`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} ${method.toUpperCase()} HDF5 samples:`,
+						co[`${method}Samples`].length
+					)
 				}
-				console.log(
-					`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} MEAN HDF5 samples:`,
-					co.meanSamples.length
-				)
-
+				/** Always validate "mean value" h5 file
+				 * If validated, category object will have .meanSamples[], .meanSampleset, and .meanFile:str properties populated */
+				validateMethodFile('mean')
 				/** NOTE: Validing total and percent file as optional for now.
 				 * Will decided later if either is required. */
 				if (member.totalExt !== undefined) {
-					// validate "total value" h5 file
-					const totalFile = path.join(serverconfig.tpmasterdir, member.folder, category + member.totalExt)
-					co.totalFile = totalFile
-					await file_is_readable(totalFile)
-					{
-						const samples = await getH5samples(totalFile)
-						if (!Array.isArray(samples)) throw new Error('totalFile samples not array')
-						if (!samples.length) throw 'totalFile HDF5 file has no samples, please check file.'
-						for (const sn of samples) {
-							const si = ds.cohort.termdb.q.sampleName2id(sn)
-							if (si === undefined) throw `unknown sample ${sn} from HDF5 ${totalFile}`
-						}
-						/** Used in the termdb/DE route */
-						co.totalSampleset = new Set(samples)
-					}
-					console.log(
-						`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} TOTAL HDF5 samples:`,
-						co.totalSampleset.size
-					)
+					/** If validated, category object will have .totalSamples[], .totalSampleset, and totalFile:str properties populated */
+					validateMethodFile('total')
 				}
 				if (member.percentExt !== undefined) {
-					// validate "percent value" h5 file
-					const percentFile = path.join(serverconfig.tpmasterdir, member.folder, category + member.percentExt)
-					co.percentFile = percentFile
-					await file_is_readable(percentFile)
-					{
-						const samples = await getH5samples(percentFile)
-						if (!Array.isArray(samples)) throw new Error('percentFile samples not array')
-						if (!samples.length) throw 'percentFile HDF5 file has no samples, please check file.'
-						for (const sn of samples) {
-							const si = ds.cohort.termdb.q.sampleName2id(sn)
-							if (si === undefined) throw `unknown sample ${sn} from HDF5 ${percentFile}`
-						}
-						/** Not used anywhere yet. Will be used in new, planned aggregate matrix plot. */
-						co.percentSampleset = new Set(samples)
-					}
-					console.log(
-						`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} PERCENT HDF5 samples:`,
-						co.percentSampleset.size
-					)
+					/** If validated, category object will have .percentSamples[], .percentSampleset, and percentFile:str properties populated */
+					validateMethodFile('percent')
 				}
 			}
 		}
 	}
 
-	// this getter is only for mean value and used by getData to make gene variable
-	pseudobulk.get = async (param: any) => {
+	pseudobulk.get = async (param: { terms: any[], method?: string }) => {
+		//Set default to mean for most requests
+		const method = param?.method || 'mean'
+		if (!enabledMethods.has(method)) throw new Error (`Invalid method.`)
 		if (!Array.isArray(param.terms)) throw new Error('.terms[] not array')
 		// all terms needs to be by the same HDF5 file! TODO validate and reject otherwise
 		const _t = param.terms[0]?.term
 		if (!_t) throw new Error('param.terms[0].term missing')
 		const thisCategory = pseudobulk[_t.assay]?.[_t.memberId]?.categories?.[_t.category]
-		if (!thisCategory) throw 'pseudobulk[_t.assay]?.[_t.memberId]?.categories?.[_t.category] missing'
+		if (!thisCategory) throw new Error(`pseudobulk[${_t.assay}]?.[${_t.memberId}]?.categories?.[${_t.category}] missing`)
 
-		const limitSamples = await mayLimitSamples(param, thisCategory.meanSamples, ds)
+		const limitSamples = await mayLimitSamples(param, thisCategory[`${method}Samples`], ds)
 		if (limitSamples?.size == 0) {
 			// Got 0 sample after filtering, must still return expected structure with no data
 			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
@@ -159,17 +136,8 @@ export async function validatePseudobulk(ds: any) {
 
 		// Set up sample IDs and labels
 		const bySampleId = {}
-		const samples = thisCategory.meanSamples || []
-		if (limitSamples) {
-			for (const sid of limitSamples) {
-				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
-					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
-				} else {
-					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-				}
-			}
-		} else {
-			// Use all samples with exp data
+		const samples = thisCategory[`${method}Samples`] || []
+		const formatSamples = (samples: string[]) => {
 			for (const sid of samples) {
 				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
 					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
@@ -178,6 +146,8 @@ export async function validatePseudobulk(ds: any) {
 				}
 			}
 		}
+		if (limitSamples) formatSamples(limitSamples)
+		else formatSamples(samples) // Use all samples with exp data
 
 		// Initialize data structure
 		const term2sample2value = new Map()
@@ -197,7 +167,7 @@ export async function validatePseudobulk(ds: any) {
 		}
 
 		const result = JSON.parse(
-			await run_python('readHDF5.py', JSON.stringify({ hdf5_file: thisCategory.meanFile, query: geneNames }))
+			await run_python('readHDF5.py', JSON.stringify({ hdf5_file: thisCategory[`${method}File`], query: geneNames }))
 		)
 
 		const genesData = result.query_output || {}
