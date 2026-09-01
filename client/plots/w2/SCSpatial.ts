@@ -2,13 +2,17 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { PlotBase } from '../PlotBase' // shared mass-plot base class
 import { dofetch3 } from '#common/dofetch' // image discovery requests
 import { sayerror } from '#dom' // inline error banner
+import { SINGLECELL_GENE_EXPRESSION } from '#types' // the gene-colored map term type
 
 /** Spatial viewer subplot of the single-cell app: for a sample that has a
- spatial image, renders the w2 direct viewer with the cell-type fills on.
- The cell types HIDDEN in the app's sibling map plots (tSNE/UMAP, i.e.
- sampleScatter legends — clicking a legend item stores the category in
- colorTW.q.hiddenValues) are hidden here too: the viewer re-renders with a
- cellTypeFilter of the remaining types whenever that hidden set changes. */
+ spatial image, renders the w2 direct viewer mirroring the sibling map
+ plots (tSNE/UMAP, i.e. sampleScatter):
+ - their Color pill decides the overlay — the cell-type term shows the
+   cell-type fills, a gene expression term shows that gene's expression
+   fills instead, switching whenever the user toggles the pill;
+ - in cell-type mode, the cell types HIDDEN in the map legends (clicking a
+   legend item stores the category in colorTW.q.hiddenValues) are hidden
+   here too, via a cellTypeFilter of the remaining types. */
 class SCSpatial extends PlotBase implements RxComponent {
 	static type = 'scSpatial' // rx chart type name
 
@@ -38,6 +42,12 @@ class SCSpatial extends PlotBase implements RxComponent {
 		if (!config) throw `No plot with id='${this.id}' found [scSpatial getState()]`
 		// union of the cell types hidden in the app's map plots (tSNE/UMAP):
 		// their legends store hidden categories in colorTW.q.hiddenValues
+		// the map plots' Color pill decides this viewer's overlay: a gene
+		// expression term shows that gene's spatial expression fills, anything
+		// else (the cell-type term) shows the cell-type fills. The first map
+		// plot decides when several exist
+		const firstMap = appState.plots.find((p: any) => p.chartType == 'sampleScatter')
+		const colorGene = firstMap?.colorTW?.term?.type == SINGLECELL_GENE_EXPRESSION ? firstMap.colorTW.term.gene : null
 		const hiddenTypes = new Set<string>()
 		for (const p of appState.plots) {
 			if (p.chartType != 'sampleScatter') continue // only the sc map plots
@@ -46,6 +56,7 @@ class SCSpatial extends PlotBase implements RxComponent {
 		return {
 			vocab: appState.vocab, // genome + dslabel for server requests
 			config, // the subplot's own config (carries the sample)
+			colorGene, // non-null = mirror the maps' gene expression coloring
 			hiddenTypes: [...hiddenTypes].sort() // sorted for stable state diffing
 		}
 	}
@@ -59,11 +70,13 @@ class SCSpatial extends PlotBase implements RxComponent {
 			if (!this.image) await this.fetchImage(sID) // discover the spatial image once
 			if (!this.image) throw new Error(`no spatial image for sample ${sID}`)
 
-			// hide the types hidden in the sibling map plots; no hidden types =
-			// no filter = every annotated type filled
+			// gene mode when the maps color by a gene, cell-type mode otherwise;
+			// in cell-type mode, hide the types hidden in the sibling map plots
+			// (no hidden types = no filter = every annotated type filled)
+			const gene: string | null = state.colorGene
 			const hidden = new Set<string>(state.hiddenTypes)
 			const shown = this.allTypes.filter(t => !hidden.has(t))
-			const renderKey = JSON.stringify([sID, shown]) // what this render depends on
+			const renderKey = JSON.stringify([sID, gene, shown]) // what this render depends on
 			if (renderKey == this.lastRenderKey) return // nothing changed for the viewer
 			this.lastRenderKey = renderKey
 
@@ -78,10 +91,13 @@ class SCSpatial extends PlotBase implements RxComponent {
 						`&sample_id=${encodeURIComponent(sID)}&imageType=spatial`,
 					label: this.image.fileName, // display name in the info line
 					spatialData: this.image.spatialData, // the consolidated h5ad
-					showCellTypes: true, // the cell-type fills are this subplot's point
+					// mirror the maps' Color pill: cell-type fills, or the colored
+					// gene's expression fills (never both — mutually exclusive)
+					showCellTypes: !gene,
 					// filter only when something is hidden, so colors stay stable
-					cellTypeFilter: hidden.size ? shown : undefined,
-					hideExpressionFills: true, // no gene overlays here; hover counts unaffected
+					cellTypeFilter: !gene && hidden.size ? shown : undefined,
+					geneExpression: gene || undefined, // the maps' colored gene, when any
+					hideExpressionFills: !gene, // hover counts unaffected either way
 					annotationLevel: this.image.annotationLevel, // dataset default
 					width: '100%', // fill the sandbox
 					height: '70vh'
