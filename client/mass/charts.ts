@@ -52,7 +52,12 @@ class MassCharts {
 	}
 
 	main() {
-		this.dom.btns.style('display', d => (d.isVisible ? d.isVisible() : this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
+		this.dom.btns.style('display', d => {
+			if (this.state.currentCohortChartTypes.includes(d.chartType)) {
+				if (d.isVisible) return d.isVisible() 
+				else return ''
+			} else return 'none'
+		})
 	}
 
 	getBtnLabel_dict(state) {
@@ -358,7 +363,7 @@ function getChartTypeList(self, state) {
 				 * to be visible within the SC app but not appropriate to show here. 
 				 * Limit its visibility to appropriate contexts. */
 				const isAvailable = getSelectableGETermTypes(state.termdbConfig)
-				return isAvailable.length > 0
+				return isAvailable.length > 0 ? '' : 'none'
 			}
 		},
 		{
