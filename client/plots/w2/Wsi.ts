@@ -271,10 +271,20 @@ class Wsi extends PlotBase implements RxComponent {
 					settingsKey: 'showCellBoundaries',
 					boxLabel: 'show'
 				},
-				// NOTE: showCellTypes has no burger checkbox — the fills follow the
-				// dataset default (w2.cellTypes) and, in the single-cell app's
-				// spatial subplot, the map-plot legends. The mutual exclusion with
-				// the gene expression fills is still enforced in main().
+				{
+					// checkbox: toggle the categorical cell-type fills (mutually
+					// exclusive with the gene expression fills, enforced in main()).
+					// This burger only exists in the mass Whole Slide Images plot —
+					// a sample may have spatial data but no umap/tsne, so the toggle
+					// is needed here; the single-cell app's spatial subplot instead
+					// follows its map-plot legends and never shows this burger.
+					label: 'Cell types',
+					title: 'Fill cells by their cell_type from the annotations CSV (when present)',
+					type: 'checkbox',
+					chartType: 'wsi',
+					settingsKey: 'showCellTypes',
+					boxLabel: 'show'
+				},
 				{
 					// chained dropdowns: one per selected type, plus an add-dropdown of
 					// the remaining types that appears once the previous is picked.

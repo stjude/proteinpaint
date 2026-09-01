@@ -30,7 +30,7 @@ function validTermdbSingleCellDataRequest(input): TermdbSingleCellDataRequest {
 		plots: Array.isArray(input.plots) ? input.plots.map(validString) : [],
 		checkPlotAvailability: input.checkPlotAvailability ? validBoolean(input.checkPlotAvailability) : undefined,
 		gene: input.gene ? validString(input.gene) : undefined,
-		listGenes: input.listGenes ? validBoolean(input.listGenes) : undefined,
+		listGenes: input.listGenes ? validBoolean(input.listGenes) : false, // required: absent = plot data as usual
 		colorBy: input.colorBy ? validString(input.colorBy) : undefined,
 		colorMap: typeof input.colorMap === 'object' && input.colorMap !== null ? input.colorMap : undefined,
 		singleCellPlot: input.singleCellPlot
@@ -50,7 +50,10 @@ function init({ genomes }) {
 			if (q.listGenes) {
 				// list the genes of this sample's expression store, not plot data
 				const G = ds.queries.singleCell.geneExpression
-				if (!G?.listGenes) throw new Error('gene listing not supported by this dataset')
+				if (!G) throw new Error('no single cell gene expression on this dataset')
+				if (typeof G.listGenes != 'function')
+					// ds supplies its own getters (e.g. gdc) without a listGenes
+					throw new Error('gene listing not supported by this dataset')
 				result = await G.listGenes(q.sample) // {assay, genes?}; validSampleId picks the file name
 			} else {
 				if (!ds.queries.singleCell.data?.get) throw new Error('dataset has no single cell data get() function')
