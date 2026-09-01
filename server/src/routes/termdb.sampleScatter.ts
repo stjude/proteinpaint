@@ -115,7 +115,7 @@ export function init({ genomes }) {
 				const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
 				if (!plot) throw new Error(`plot not found with plotName ${q.plotName}`)
 
-				const tmp = await getSamples(ds, plot)
+				const tmp = await getSamples(req, ds, plot)
 				refSamples = tmp[0]
 				cohortSamples = tmp[1]
 
@@ -185,17 +185,18 @@ export function init({ genomes }) {
 	}
 }
 
-async function getSamples(ds: any, plot: any) {
+export async function getSamples(req: any, ds: any, plot: any) {
 	if (!plot.filterableSamples) await loadFile(plot, ds) // this is the first time the plot is accessed. load the data in mem
 
+	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	return [readSamples(plot.referenceSamples), readSamples(plot.filterableSamples)]
 
 	function readSamples(samples) {
 		const result: number[] = []
 		// must make in-memory duplication of the objects as they will be modified by assigning .color/shape
 		for (const i of JSON.parse(JSON.stringify(samples))) {
-			//When reading from a file coordinates can be displayed
-			//if (!authApi.canDisplaySampleIds(req, ds)) delete i.sample
+			// only expose the sample name/id when the request is authorized to display sample ids
+			if (!canDisplay) delete i.sample
 			result.push(i)
 		}
 		return result

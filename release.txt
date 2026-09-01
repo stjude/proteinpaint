@@ -1,1 +1,2 @@
-
+Fixes:
+- do not show sample IDs in /termdb/sampleScatter route
