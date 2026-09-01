@@ -3,9 +3,8 @@ import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx
 import { typeGroup } from '#shared/terms.js'
 import { GENE_EXPRESSION, PSEUDOBULK, SINGLECELL_GENE_EXPRESSION, SSGSEA } from '#types'
 import { getGEunit } from '../tw/geneExpression'
-import { getSCGEunit } from '../tw/singleCellGeneExpression'
+import { getSCGEunit, getSampleAssayInfo } from '../tw/singleCellGeneExpression'
 import { addGeneSearchbox, GeneSetEditUI, Menu, sayerror, Tabs, make_radios } from '#dom'
-import { dofetch3 } from '#common/dofetch'
 import type { ClientGenome } from '../types/clientGenome'
 import { getCurrentCohortChartTypes } from '../mass/charts.js'
 import { importPlot } from '#plots/importPlot.js'
@@ -173,8 +172,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 					delete tab.callback
 					if (this.termType === PSEUDOBULK) {
 						await this.renderPseudobulkSearch(tab.contentHolder)
-					}
-					else this.renderGeneSelect(tab)
+					} else this.renderGeneSelect(tab)
 				}
 			},
 			{
@@ -191,11 +189,15 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				isVisible: () => chartTypes.has('matrix'),
 				callback: (event, tab) => {
 					if (this.termType !== GENE_EXPRESSION && typeof this.termType === 'string') {
-						tab.contentHolder.append('div')
+						tab.contentHolder
+							.append('div')
 							.style('padding', '15px')
-							.text(`Hierarchical clustering for ${typeGroup[this.termType]} data is currently in development. Please check back later.`)
-					}
-					else this.renderGeneMultiSelect(tab)
+							.text(
+								`Hierarchical clustering for ${
+									typeGroup[this.termType]
+								} data is currently in development. Please check back later.`
+							)
+					} else this.renderGeneMultiSelect(tab)
 					delete tab.callback
 				}
 			},
@@ -204,7 +206,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				//Only enabling for gene expression for now
 				chartType: 'DEinput',
 				//TODO: add whether or not a total file is available for pseudobulk to enable DA
-				isVisible: () => chartTypes.has('DA') && (this.termType === GENE_EXPRESSION /*|| this.termType === PSEUDOBULK*/),
+				isVisible: () => chartTypes.has('DA') && this.termType === GENE_EXPRESSION /*|| this.termType === PSEUDOBULK*/,
 				callback: async (event, tab) => {
 					await this.app.dispatch({
 						type: 'plot_create',
@@ -243,28 +245,13 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		}
 	}
 
-	/** Fetch the sample's own gene list from its expression store; on failure
-	 the search boxes silently fall back to genome gene db matching */
+	/** Fetch the sample's assay type and (panel only) its gene list; on
+	 failure the search boxes silently fall back to genome gene db matching */
 	async fetchSampleGeneList(state) {
-		try {
-			const sample = state.config.termProperties?.sample || state.config.sample
-			if (!sample?.sID) return
-			const v = this.app.vocabApi.vocab
-			const r: any = await dofetch3('termdb/singlecellData', {
-				body: {
-					genome: v.genome,
-					dslabel: v.dslabel,
-					sample: { sID: sample.sID, eID: sample.eID },
-					plots: [],
-					listGenes: true
-				}
-			})
-			// only a panel-based sample restricts search to its own gene list
-			this.assayType = r?.assay
-			if (r?.assay == 'panel' && Array.isArray(r.genes)) this.sampleGeneList = r.genes
-		} catch (e) {
-			console.warn('failed to list the sample genes, falling back to the genome gene db', e)
-		}
+		const sample = state.config.termProperties?.sample || state.config.sample
+		const { assay, genes } = await getSampleAssayInfo(this.app.vocabApi, sample)
+		this.assayType = assay
+		this.sampleGeneList = genes // present only for a panel-based sample
 	}
 
 	/** Say per sample what the gene search covers: a panel-based sample
@@ -396,8 +383,8 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				await this.dispatchEdits(config)
 			})
 	}
-	 /** Render the GeneSetEdit UI for selection and then
-	  * launch the hierarchical clustering on submit.*/
+	/** Render the GeneSetEdit UI for selection and then
+	 * launch the hierarchical clustering on submit.*/
 	renderGeneMultiSelect(tab) {
 		const holder = tab.contentHolder.style('padding', '10px')
 		const grpWrapper = holder.append('div').style('padding', '10px')
@@ -529,8 +516,10 @@ export function getPlotConfig(opts) {
 	return copyMerge(config, opts)
 }
 
-/** Scge is enabled for this but sequestered to only the sc app. 
+/** Scge is enabled for this but sequestered to only the sc app.
  * Scge terms require a sample obj which is supplied in the SC app. */
 export function getSelectableGETermTypes(termdbConfig) {
-	return Array.from(enabledTermTypes).filter(termtype => termtype !== SINGLECELL_GENE_EXPRESSION && (termdbConfig?.allowedTermTypes || [])?.includes(termtype))
+	return Array.from(enabledTermTypes).filter(
+		termtype => termtype !== SINGLECELL_GENE_EXPRESSION && (termdbConfig?.allowedTermTypes || [])?.includes(termtype)
+	)
 }
