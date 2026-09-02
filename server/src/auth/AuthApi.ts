@@ -79,7 +79,15 @@ export class AuthApi implements AuthInterface {
 					if (embedderHostPattern != '*' && !isMatch(embedder, embedderHostPattern)) continue
 					const cred: any = _cred
 					const query = Object.assign({}, req.query, { dslabel: dslabelPattern })
-					const id = this.#auth.getSessionId({ query, headers: req.headers, cookies: req.cookies }, cred)
+					// path must be included: getSessionId -> mayAddSessionFromJwt matches
+					// req.path against cred.route, and without it the bearer-jwt branch
+					// throws and is discarded, leaving only the session cookie to prove
+					// insession — a cookie some browsers (webkit) won't send over plain
+					// http since it is flagged Secure
+					const id = this.#auth.getSessionId(
+						{ query, headers: req.headers, cookies: req.cookies, path: req.path },
+						cred
+					)
 					const activeSession = this.#auth.sessions[dslabelPattern]?.[id]
 					const sessionStart = activeSession?.time || 0
 					// support a dataset-specific override to maxSessionAge
