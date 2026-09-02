@@ -4,11 +4,12 @@ import type { AggregateMethodOption } from '#types'
 import { capitalizeFirstLetter, icons } from '#dom'
 import { appInit } from '../termdb/app.js'
 import { validatePlotConfig } from './aggregateMatrix/AggregateMatrix.ts'
+import { isNonDictionaryType } from '#shared/terms.js'
 
 const chartType = 'aggMatrixInput'
 
 type SectionType = 'row' | 'column'
-type Section = { name: string; terms: any[] }
+type Section = { name: string; termType?: string; terms: any[] }
 type SectionView = {
 	holder: any
 	nameLabel: any
@@ -214,25 +215,26 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 				this.sectionViews.set(key, view)
 			}
 			const hasName = !!(section.name || '').trim()
-			const isSubmitted = !!section.terms?.length
-			view.nameLabel.style('display', isSubmitted ? 'none' : '')
+			const termType = this.getSectionTermType(section)
+			const isDictionary = !!termType && !isNonDictionaryType(termType)
+			view.nameLabel.style('display', isDictionary ? 'none' : '')
 			view.nameInput
 				.property('value', section.name)
 				.attr('aria-invalid', hasName ? null : 'true')
 				.attr('title', hasName ? null : 'A section name is required')
 				.style('border-color', hasName ? null : '#c33')
-				.style('display', isSubmitted ? 'none' : '')
-			view.displayName.style('display', isSubmitted ? '' : 'none').text(section.name)
-			view.editButton.style('display', isSubmitted ? '' : 'none')
+				.style('display', isDictionary ? 'none' : '')
+			view.displayName.style('display', isDictionary ? '' : 'none').text(section.name)
+			view.editButton.style('display', isDictionary ? '' : 'none')
 			view.holder
 				.select('[data-testid="sjpp-agg-matrix-section-term-list"]')
 				.selectAll('div')
-				.data(section.terms || [], term => term.id || term.name)
+				.data(section.terms || [], term => term.term?.id || term.id || term.term?.name || term.name)
 				.join('div')
 				.attr('data-testid', 'sjpp-agg-matrix-section-term')
 				.style('margin', '5px')
-				.text(term => term.name || term.id)
-			view.termsHolder.style('display', section.terms?.length ? 'none' : '')
+				.text(term => term.term?.name || term.name || term.term?.id || term.id)
+			view.termsHolder.style('display', isDictionary ? 'none' : '')
 			holder.node().appendChild(view.holder.node())
 		}
 	}
@@ -298,23 +300,12 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			vocabApi: this.app.vocabApi,
 			state: {
 				activeCohort: this.state.activeCohort,
-				selectedTerms: section.terms || [],
+				selectedTerms: [],
+				allowedTermTypes: this.getSectionTermType(section) ? [this.getSectionTermType(section)!] : undefined,
 				nav: { header_mode: 'search_only' },
 				tree: { usecase: { target: 'aggregateMatrix' } }
 			},
-			tree: {
-				//TODO: Cannot disable terms previously used in current tree set up. 
-				//Need to investigate why or come up with work around. 
-				minTermsToSubmit: 1,
-				submit_lst: terms => {
-					const name = nameInput.property('value').trim()
-					if (!name) {
-						nameInput.node().reportValidity()
-						return
-					}
-					this.updateSection(type, idx, { name, terms })
-				}
-			}
+			tree: { click_term: term => this.selectSectionTerm(type, idx, term, nameInput) }
 		})
 		return view
 	}
@@ -322,8 +313,47 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 	addSection(type: SectionType) {
 		const key = type === 'row' ? 'rowSections' : 'colSections'
 		const sections = structuredClone(this.config[key] || [])
-		sections.push({ name: '', terms: [] })
+		sections.push({ name: '', termType: undefined, terms: [] })
 		this.editConfig({ [key]: sections })
+	}
+
+	selectSectionTerm(type: SectionType, idx: number, selected: any, nameInput: any) {
+		const key = type === 'row' ? 'rowSections' : 'colSections'
+		const section: Section | undefined = this.config[key]?.[idx]
+		if (!section) return
+		const term = selected.term || selected
+		if (!term?.type) throw new Error('Selected term has no type')
+		const sectionTermType = this.getSectionTermType(section)
+		if (sectionTermType && sectionTermType != term.type) {
+			this.dom.validationMessage.text(`A section can only contain ${sectionTermType} terms.`)
+			return
+		}
+
+		if (!isNonDictionaryType(term.type)) {
+			this.destroySectionView(type, idx)
+			this.updateSection(type, idx, { name: term.name || term.id, termType: term.type, terms: [term] })
+			return
+		}
+
+		const name = nameInput.property('value').trim()
+		if (!name) {
+			nameInput.node().reportValidity()
+			return
+		}
+		const terms = section.terms || []
+		const id = term.id || term.gene || term.name
+		if (
+			terms.some(item => {
+				const existing = item.term || item
+				return existing.type == term.type && (existing.id || existing.gene || existing.name) == id
+			})
+		) return
+		this.destroySectionView(type, idx)
+		this.updateSection(type, idx, { name, termType: term.type, terms: [...terms, term] })
+	}
+
+	getSectionTermType(section: Section) {
+		return section.termType || (section.terms[0]?.term || section.terms[0])?.type
 	}
 
 	updateSection(type: SectionType, idx: number, edits: Partial<Section>) {
@@ -336,7 +366,17 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 	}
 
 	editSection(type: SectionType, idx: number) {
-		this.updateSection(type, idx, { terms: [] })
+		this.destroySectionView(type, idx)
+		this.updateSection(type, idx, { name: '', termType: undefined, terms: [] })
+	}
+
+	destroySectionView(type: SectionType, idx: number) {
+		const key = `${type}:${idx}`
+		const view = this.sectionViews.get(key)
+		if (!view) return
+		view.termdb?.destroy?.()
+		view.holder.remove()
+		this.sectionViews.delete(key)
 	}
 
 	removeSection(type: SectionType, idx: number) {
@@ -388,6 +428,15 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			const names = sections.map(section => (section.name || '').trim())
 			if (names.some(name => !name)) return 'Every section requires a name.'
 			if (new Set(names).size !== names.length) return 'Section names must be unique within each axis.'
+			for (const section of sections as Section[]) {
+				if (!section.terms.length) continue
+				const types = new Set(section.terms.map(item => (item.term || item).type))
+				const termType = this.getSectionTermType(section)
+				if (types.size != 1 || !termType || !types.has(termType)) return 'Every section must contain exactly one term type.'
+				if (!isNonDictionaryType(termType) && section.terms.length != 1) {
+					return 'Dictionary sections can contain only one term.'
+				}
+			}
 		}
 		if (this.methodsError) return `Unable to load aggregate methods: ${this.methodsError}`
 		if (this.getTerms('rowSections').length && this.getTerms('colSections').length) {
