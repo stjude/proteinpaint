@@ -6,6 +6,8 @@ import { xAxisOffSet, yAxisOffSet } from '#shared'
 /** Tests:
  *  - getVertices maps larger data-y to a higher WebGL clip-space y (not inverted)
  *  - getVertices does not mutate the shared chart axis scales
+ *  - renderAxes maps the data range onto the plot-area pixels with a non-inverted y-axis
+ *  - renderAxes scales the axes about the plot center by the zoom factor
  */
 
 /**************
@@ -87,5 +89,93 @@ tape('getVertices does not mutate the shared chart axis scales', function (test)
 		'Should leave chart.yAxisScale range intact for the axis, zoom and hover quadtree.'
 	)
 	test.deepEqual(chart.xAxisScale.range(), xRangeBefore, 'Should leave chart.xAxisScale range intact.')
+	test.end()
+})
+
+/** renderAxes only reads this.axisChart, this.scatter.settings/vm.scatterZoom and this.model.axisOffset,
+ * and calls chart.xAxis/yAxis.call(chart.axisBottom/Left.scale(newScale)). Capture the scale handed to
+ * each axis so we can assert where data values land in plot-area pixels. */
+function getAxisMockViewModel(zoom = 1) {
+	const vm: any = Object.create(ScatterViewModel2DLarge.prototype)
+	vm.model = { axisOffset: { x: xAxisOffSet, y: yAxisOffSet } }
+	vm.scatter = {
+		settings: { svgw: 600, svgh: 600 },
+		vm: { scatterZoom: { zoom } }
+	}
+	return vm
+}
+
+function getAxisMockChart() {
+	const capture: any = {}
+	// an axis generator stub: .scale(s) records the scale and returns itself for chaining
+	const makeAxis = () => ({
+		scale(s: any) {
+			;(this as any)._scale = s
+			return this
+		}
+	})
+	return {
+		// domain like ScatterModelBase.initAxes(): x normal, y flipped (yMax first) for SVG's downward y
+		xAxisScale: d3Linear()
+			.domain([0, 10])
+			.range([xAxisOffSet, 600 + xAxisOffSet]),
+		yAxisScale: d3Linear()
+			.domain([100, 0])
+			.range([yAxisOffSet, 600 + yAxisOffSet]),
+		axisBottom: makeAxis(),
+		axisLeft: makeAxis(),
+		xAxis: {
+			call(gen: any) {
+				capture.x = gen._scale
+			}
+		},
+		yAxis: {
+			call(gen: any) {
+				capture.y = gen._scale
+			}
+		},
+		_capture: capture
+	}
+}
+
+tape('renderAxes maps the data range onto the plot-area pixels with a non-inverted y-axis', function (test) {
+	test.timeoutAfter(100)
+	const vm = getAxisMockViewModel(1)
+	const chart = getAxisMockChart()
+	vm.axisChart = chart
+
+	vm.renderAxes()
+
+	const xScale = chart._capture.x
+	const yScale = chart._capture.y
+
+	test.equal(xScale(0), xAxisOffSet, 'Should place the x minimum at the left plot edge (offsetX).')
+	test.equal(xScale(10), 600 + xAxisOffSet, 'Should place the x maximum at the right plot edge (svgw + offsetX).')
+	test.equal(yScale(100), yAxisOffSet, 'Should place the y maximum at the top plot edge (offsetY).')
+	test.equal(yScale(0), 600 + yAxisOffSet, 'Should place the y minimum at the bottom plot edge (svgh + offsetY).')
+	test.ok(yScale(100) < yScale(0), 'Should map the larger y value higher (smaller pixel), not inverted.')
+	test.equal(vm.currentAxisZoom, 1, 'Should record the zoom the axes were drawn at.')
+	test.end()
+})
+
+tape('renderAxes scales the axes about the plot center by the zoom factor', function (test) {
+	test.timeoutAfter(100)
+	const vm = getAxisMockViewModel(2)
+	const chart = getAxisMockChart()
+	vm.axisChart = chart
+
+	vm.renderAxes()
+
+	const xScale = chart._capture.x
+	const cx = xAxisOffSet + 600 / 2
+	const cy = yAxisOffSet + 600 / 2
+	const yScale = chart._capture.y
+
+	// value 5 is the domain center and must stay fixed at the plot center under zoom
+	test.equal(xScale(5), cx, 'Should keep the plot center fixed under zoom (x).')
+	test.equal(yScale(50), cy, 'Should keep the plot center fixed under zoom (y).')
+	// range half-width doubles at zoom 2: xScale(0) = cx - 2*(svgw/2) = cx - 600
+	test.equal(xScale(0), cx - 600, 'Should widen the x range about the center by the zoom factor.')
+	test.equal(vm.currentAxisZoom, 2, 'Should record the current zoom.')
 	test.end()
 })

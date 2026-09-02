@@ -1,6 +1,5 @@
 import { ScatterModelBase } from './ScatterModelBase'
 import type { Scatter } from '../scatter'
-import { maxSvgSamplesCutoff, noExpColor, expColor } from '../settings/defaults'
 import { rgb } from 'd3-color'
 import type { TermdbSingleCellPlotsResponse } from '#types'
 
@@ -29,7 +28,7 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
 			canvasSettings: {
-				cutoff: maxSvgSamplesCutoff,
+				cutoff: this.scatter.settings.maxSvgSamplesCutoff,
 				width: this.scatter.settings.svgw,
 				height: this.scatter.settings.svgh,
 				radius: this.scatter.settings.size,
@@ -37,8 +36,8 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 				maxXScale: this.scatter.settings.maxXScale,
 				minYScale: this.scatter.settings.minYScale,
 				maxYScale: this.scatter.settings.maxYScale,
-				startColor: c.startColor?.['Default'] || rgb(noExpColor).toString(),
-				stopColor: c.stopColor?.['Default'] || rgb(expColor).toString(),
+				startColor: c.startColor?.['Default'] || rgb(this.scatter.settings.noExpColor).toString(),
+				stopColor: c.stopColor?.['Default'] || rgb(this.scatter.settings.expColor).toString(),
 				opacity: this.scatter.settings.opacity,
 				devicePixelRatio: window.devicePixelRatio || 1
 			}

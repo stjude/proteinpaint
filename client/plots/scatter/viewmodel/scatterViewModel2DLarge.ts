@@ -1,10 +1,15 @@
 import { rgb } from 'd3-color'
+import { select } from 'd3-selection'
 import * as THREE from 'three'
 import { ScatterViewModel } from './scatterViewModel'
 import type { Scatter } from '../scatter'
 
 export class ScatterViewModel2DLarge extends ScatterViewModel {
 	isSingleCell: boolean = false
+	/** the chart whose x/y axes this view model keeps in sync with the WebGL zoom */
+	axisChart: any
+	/** the zoom level the axes were last drawn at, so animate() only redraws on change */
+	currentAxisZoom: number | null = null
 
 	constructor(scatter: Scatter) {
 		super(scatter)
@@ -17,23 +22,40 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 			return
 		}
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
-		this.view.dom.mainDiv.selectAll('*').remove()
+		const s = this.scatter.settings
+		const offsetX = this.model.axisOffset.x
+		const offsetY = this.model.axisOffset.y
 
-		this.canvas = this.view.dom.mainDiv.insert('div').style('display', 'inline-block').append('canvas').node()
-		this.canvas.width = this.scatter.settings.svgw
-		this.canvas.height = this.scatter.settings.svgh
-		chart.chartDiv.style('margin', '20px 20px')
+		// fillSvgSubElems() has already drawn the x/y axes, axis titles and legend into chart.svg;
+		// keep that svg and overlay the WebGL canvas on the plot area (offset by the axis margins)
+		// so the axes remain visible around the point cloud, instead of wiping the whole mainDiv.
+		const div = select(chart.svg.node().parentNode)
+		div.style('position', 'relative')
+		div.selectAll('canvas').remove()
+		this.canvas = div
+			.append('canvas')
+			.style('position', 'absolute')
+			.style('left', `${offsetX}px`)
+			.style('top', `${offsetY}px`)
+			.node()
+		this.canvas.width = s.svgw
+		this.canvas.height = s.svgh
 
-		const fov = this.scatter.settings.threeFOV
+		const fov = s.threeFOV
 		const near = 0.1
 		const far = 1000
 		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
 		const scene = new THREE.Scene()
-		camera.position.set(0, 0, 1.5)
+		// Place the camera so the data range (mapped to world [-1, 1] by getVertices) exactly fills
+		// the canvas: with a vertical fov, the visible half-height at the data plane is
+		// distance * tan(fov/2), so distance = 1 / tan(fov/2) makes that half-height equal 1. This
+		// keeps the point cloud aligned with the SVG axes, which map the same data range to the same
+		// plot-area pixels.
+		camera.position.set(0, 0, 1 / Math.tan((fov * Math.PI) / 180 / 2))
 		camera.lookAt(scene.position)
 		camera.updateMatrix()
-		const whiteColor = new THREE.Color('rgb(255,255,255)')
-		scene.background = whiteColor
+		// leave the scene background unset so the canvas is transparent and the underlying svg
+		// (its plot-area background and the x/y axis spines) shows through around the points
 
 		const geometry = new THREE.BufferGeometry()
 		const { vertices, colors } = this.getVertices(chart)
@@ -53,24 +75,63 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		const particles = new THREE.Points(geometry, material)
 
 		scene.add(particles)
-		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: this.canvas, preserveDrawingBuffer: true })
+		const renderer = new THREE.WebGLRenderer({
+			antialias: true,
+			canvas: this.canvas,
+			preserveDrawingBuffer: true,
+			alpha: true
+		})
+		renderer.setClearColor(0x000000, 0) // fully transparent clear so the svg shows through
 		renderer.setSize(this.scatter.settings.svgw, this.scatter.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
 
 		new DragControls.DragControls([particles], camera, renderer.domElement)
 
-		document.addEventListener('mousewheel', (event: any) => {
-			if (event.ctrlKey) camera.position.z += event.deltaY / 500
+		// drive zoom through the shared scatterZoom so the WebGL camera and the SVG axes stay in sync
+		this.canvas.addEventListener('wheel', (event: any) => {
+			if (!event.ctrlKey) return
+			event.preventDefault()
+			const zoomState = this.scatter.vm.scatterZoom
+			const factor = event.deltaY < 0 ? 1.1 : 0.9
+			zoomState.zoom = Math.max(0.1, Math.min(10, zoomState.zoom * factor))
 		})
 
-		this.addLegendSVG(chart)
+		this.axisChart = chart
+		this.currentAxisZoom = null
+		this.renderAxes()
 		this.animate(camera, scene, renderer)
 	}
 
+	/** Redraw the x/y axes to match the current WebGL zoom. The point cloud is scaled about the
+	 * canvas center by camera.zoom, so scale each axis range about the same center by the same
+	 * factor — mirroring how ScatterZoom.handleZoom() rescales the svg axes for the small plots. */
+	renderAxes() {
+		const chart = this.axisChart
+		if (!chart?.axisBottom || !chart?.axisLeft || !chart.xAxis || !chart.yAxis) return
+		const s = this.scatter.settings
+		const k = this.scatter.vm.scatterZoom.zoom || 1
+		const offsetX = this.model.axisOffset.x
+		const offsetY = this.model.axisOffset.y
+		const cx = offsetX + s.svgw / 2
+		const cy = offsetY + s.svgh / 2
+		const halfW = (s.svgw / 2) * k
+		const halfH = (s.svgh / 2) * k
+		const xScale = chart.xAxisScale.copy().range([cx - halfW, cx + halfW])
+		const yScale = chart.yAxisScale.copy().range([cy - halfH, cy + halfH])
+		chart.xAxis.call(chart.axisBottom.scale(xScale))
+		chart.yAxis.call(chart.axisLeft.scale(yScale))
+		this.currentAxisZoom = k
+	}
+
 	animate(camera, scene, renderer) {
+		// a re-render replaces scatter.vm with a fresh view model; stop this now-stale loop so old
+		// loops don't keep rendering to a detached canvas or fight over the shared axes
+		if (this.scatter.vm !== this) return
 		requestAnimationFrame(() => this.animate(camera, scene, renderer))
-		camera.zoom = this.scatter.vm.scatterZoom.zoom
+		const k = this.scatter.vm.scatterZoom.zoom
+		camera.zoom = k
 		camera.updateProjectionMatrix()
+		if (k !== this.currentAxisZoom) this.renderAxes()
 		renderer.render(scene, camera)
 	}
 

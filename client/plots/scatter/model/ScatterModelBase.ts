@@ -6,7 +6,6 @@ import { regressionPoly } from 'd3-regression'
 import type { Scatter } from '../scatter'
 import { getDateFromNumber } from '#shared/terms.js'
 import type { ColorLegendItem, ScatterChart, ScatterDataResult, ScatterRanges, ShapeLegendItem } from '../scatterTypes'
-import { maxSvgSamplesCutoff, noExpColor, expColor } from '../settings/defaults'
 import { type SingleCellPlotDataResult, SINGLECELL_GENE_EXPRESSION } from '#types'
 import { xAxisOffSet, yAxisOffSet, getCoordinate, calculatePadding } from '#shared'
 
@@ -39,7 +38,7 @@ export abstract class ScatterModelBase {
 		// isRef marks reference-cloud dots; the server sets it once (from sampleId presence, before any
 		// anonymization) so a denied request that drops sampleId still classifies cohort dots correctly.
 		const cohortSamples: any[] = data.samples ? data.samples.filter(sample => !sample.isRef) : []
-		if (cohortSamples.length > maxSvgSamplesCutoff) this.is2DLarge = true
+		if (cohortSamples.length > this.scatter.settings.maxSvgSamplesCutoff) this.is2DLarge = true
 		const colorLegend: Map<string, ColorLegendItem> = new Map(data.colorLegend)
 		const shapeLegend: Map<string, ShapeLegendItem> = new Map(data.shapeLegend)
 		const chart: ScatterChart = { id, data, cohortSamples, colorLegend, shapeLegend }
@@ -70,7 +69,7 @@ export abstract class ScatterModelBase {
 			}
 			return
 		}
-		if (samples.length > maxSvgSamplesCutoff) this.is2DLarge = true
+		if (samples.length > settings.maxSvgSamplesCutoff) this.is2DLarge = true
 		const s0 = samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax, geMin, geMax] = samples.reduce(
 			(s, d) => [
@@ -176,8 +175,8 @@ export abstract class ScatterModelBase {
 	getColor(c, chart) {
 		if (this.scatter.config.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION) {
 			let color
-			if (!c.geneExp) color = noExpColor
-			else if (c.geneExp > chart.ranges.geMax) color = expColor
+			if (!c.geneExp) color = this.scatter.settings.noExpColor
+			else if (c.geneExp > chart.ranges.geMax) color = this.scatter.settings.expColor
 			else color = chart.colorGenerator(c.geneExp)
 			return color
 		}
@@ -276,14 +275,14 @@ export abstract class ScatterModelBase {
 		if (!config.startColor[chart.id]) {
 			config.startColor[chart.id] =
 				config.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION
-					? noExpColor
+					? settings.noExpColor
 					: config.colorTW?.term.continuousColorScale?.minColor || gradientColor.brighter().brighter().toString()
 		}
 
 		if (!config.stopColor[chart.id]) {
 			config.stopColor[chart.id] =
 				config.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION
-					? expColor
+					? settings.expColor
 					: config.colorTW?.term.continuousColorScale?.maxColor || gradientColor.darker().toString()
 		}
 		// Handle continuous color scaling when color term wrapper is in continuous mode

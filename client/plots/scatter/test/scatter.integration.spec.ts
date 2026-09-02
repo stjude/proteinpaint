@@ -33,6 +33,7 @@ Tests:
     - Render TermdbTest scatter plot adding age as Z to render a 3D plot
     - Render 3D plot with age as Z and showContour set to true to apply contour on 3D plot
     - dynamic scatter of agedx & hrtavg
+    - 2D large (webgl) scatter renders a canvas with x/y axes
     - dynamic scatter of 2-gene expression
     - dynamic scatter of 2-ssgsea
     - dynamic scatter of 2-dnameth
@@ -355,6 +356,47 @@ tape('dynamic scatter of agedx & hrtavg', function (test) {
 			contourG != null,
 			'Scatter should have contour showing the density of points after selecting show contour'
 		)
+		if (test['_ok']) holder.remove()
+		test.end()
+	}
+})
+
+tape('2D large (webgl) scatter renders a canvas with x/y axes', function (test) {
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+	runpp({
+		holder,
+		state: {
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					term: { id: 'agedx', q: { mode: 'continuous' } },
+					term2: { id: 'hrtavg', q: { mode: 'continuous' } },
+					// lower the cutoff so the small TermdbTest cohort renders via the webgl/canvas path
+					settings: { sampleScatter: { maxSvgSamplesCutoff: 1 } }
+				}
+			]
+		},
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+		test.true(
+			scatter.Inner.model.is2DLarge,
+			'Should switch to 2D large (webgl) rendering when the cohort exceeds the lowered maxSvgSamplesCutoff'
+		)
+		// the webgl canvas is overlaid on the plot area within the same div as the axis svg
+		const canvas = await detectGte({ elem: holder.node(), selector: 'canvas' })
+		test.equal(canvas.length, 1, 'Should render a single webgl canvas for the 2D large scatter')
+		const yTicks = await detectGte({ elem: holder.node(), selector: '.sjpcb-scatter-y-axis .tick' })
+		test.true(yTicks.length > 0, 'Should render y-axis ticks around the 2D large canvas')
+		const xTicks = await detectGte({ elem: holder.node(), selector: '.sjpcb-scatter-x-axis .tick' })
+		test.true(xTicks.length > 0, 'Should render x-axis ticks around the 2D large canvas')
 		if (test['_ok']) holder.remove()
 		test.end()
 	}
