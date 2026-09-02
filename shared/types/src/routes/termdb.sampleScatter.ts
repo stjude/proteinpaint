@@ -21,7 +21,7 @@ export type TermdbSampleScatterRequest = {
 
 export type ScatterSample = {
 	category: string
-	sample: string
+	sample?: string
 	/** real db sample id (or a non-numeric anonymous surrogate when the request may not display sample ids) */
 	sampleId?: number | string
 	/** set by the server (anonymizeSampleIds) when this cohort sample's id has been anonymized. The client
