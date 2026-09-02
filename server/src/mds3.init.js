@@ -39,6 +39,7 @@ import { mayInitiateMatrixplots, mayInitiateNumericDictionaryTermplots } from '.
 import { add_bcf_variant_filter } from './termdb.snp.js'
 import { validate_correlationVolcano } from './routes/correlationVolcano.ts'
 import { validate_query_singleCell } from './singleCell/samplesRoute.ts'
+import { initAggregateMethods } from './aggregateMatrix/aggregateMethods.ts'
 import { validate_query_proteome } from '../routes/termdb.proteome.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
@@ -186,6 +187,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 
 		await mayValidateAssayAvailability(ds)
 		await mayValidateViewModes(ds)
+		initAggregateMethods(ds)
 
 		// uncomment below to manually trigger server crash if there is only 1 dataset;
 		// make sure that serverconfig only has one genome and datasets[] entry,
