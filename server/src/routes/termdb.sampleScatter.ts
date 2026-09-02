@@ -227,6 +227,7 @@ export function anonymizeSampleIds(result: { [index: string]: { samples: any[] }
 	let n = 0
 	for (const divideBy in result) {
 		for (const sample of result[divideBy].samples || []) {
+			delete sample.sample
 			if ('sampleId' in sample) {
 				sample.sampleId = `anonymous-${n++}`
 				sample.hideSampleId = true

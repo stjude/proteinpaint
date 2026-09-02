@@ -184,13 +184,15 @@ tape('getSamples: hides sample names when displaying sample ids is not allowed',
 
 tape('anonymizeSampleIds: replaces real sampleId with an anonymous surrogate while keeping the key', t => {
 	// a response shape as built after annotation: cohort entries carry a real sampleId, reference entries
-	// (e.g. the "Ref" cloud) carry none.
+	// (e.g. the "Ref" cloud) carry none. Each entry here still carries a .sample name — this models the
+	// fail-closed case where the name was copied into result while the request was authorized, then the
+	// final auth decision at the response boundary is "denied" (see the fail-closed test below).
 	const result: any = {
 		Default: {
 			samples: [
-				{ sampleId: 41, x: 3, y: 4 },
-				{ sampleId: 52, x: 5, y: 6 },
-				{ x: 7, y: 8 } // reference dot, no sampleId
+				{ sampleId: 41, sample: 'SampleA', x: 3, y: 4 },
+				{ sampleId: 52, sample: 'SampleB', x: 5, y: 6 },
+				{ sample: 'RefName', x: 7, y: 8 } // reference dot, no sampleId
 			]
 		}
 	}
@@ -214,7 +216,11 @@ tape('anonymizeSampleIds: replaces real sampleId with an anonymous surrogate whi
 		samples.slice(0, 2).every((s: any) => s.hideSampleId === true),
 		'each anonymized cohort dot should be flagged with hideSampleId so the client gates sample actions'
 	)
-	t.notOk('sampleId' in samples[2], 'a reference dot without a sampleId should be left untouched')
+	t.notOk(
+		samples.some((s: any) => 'sample' in s),
+		'no sample name should survive, on cohort or reference dots (fail-closed at the response boundary)'
+	)
+	t.notOk('sampleId' in samples[2], 'a reference dot without a sampleId should keep no sampleId key')
 	t.notOk('hideSampleId' in samples[2], 'a reference dot should not be flagged with hideSampleId')
 	t.deepEqual(
 		samples.map((s: any) => [s.x, s.y]),
@@ -225,6 +231,22 @@ tape('anonymizeSampleIds: replaces real sampleId with an anonymous surrogate whi
 		],
 		'coordinates should be preserved'
 	)
+	t.end()
+})
+
+tape('anonymizeSampleIds: is fail-closed — deletes sample names even when sampleId was already anonymized', t => {
+	// Guards the response-boundary sanitizer. Authorization is evaluated twice: once while building samples
+	// and again here at the boundary. If a session expires (or a function policy flips) between those two
+	// points, names may already have been copied into result. anonymizeSampleIds must strip .sample
+	// unconditionally so the final denied decision wins — rewriting only sampleId is not enough.
+	const result: any = {
+		Group1: { samples: [{ sampleId: 7, sample: 'Alice', x: 1, y: 2 }] },
+		Group2: { samples: [{ sample: 'Bob', x: 3, y: 4 }] } // a name with no sampleId must also be removed
+	}
+	anonymizeSampleIds(result)
+	t.notOk('sample' in result.Group1.samples[0], 'a cohort name copied in before the auth flip should be removed')
+	t.notOk('sample' in result.Group2.samples[0], 'a name without a sampleId should be removed too')
+	t.equal(result.Group1.samples[0].sampleId, 'anonymous-0', 'the sampleId should still be anonymized')
 	t.end()
 })
 
