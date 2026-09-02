@@ -87,8 +87,8 @@ export class SCModel {
 	}
 
 	/** whether a sample has a spatial image (with the consolidated h5ad the
-	 spatial subplot needs), keyed by sID; one termdb/wsiBySample probe per
-	 sample. Failures = false, app unaffected. Drives the Spatial plot button. */
+	 spatial subplot needs), keyed by sID. Successful probes are cached;
+	 failures return false for the current render and may be retried. */
 	sampleHasSpatial: { [sID: string]: boolean } = {}
 	async hasSpatialImage(sID: string): Promise<boolean> {
 		if (!(sID in this.sampleHasSpatial)) {
@@ -99,7 +99,7 @@ export class SCModel {
 				})
 				this.sampleHasSpatial[sID] = !!(r?.images || []).some((i: any) => i.type == 'spatial' && i.spatialData)
 			} catch (_) {
-				this.sampleHasSpatial[sID] = false // dataset without w2 images
+				return false
 			}
 		}
 		return this.sampleHasSpatial[sID]
