@@ -210,7 +210,12 @@ tape('anonymizeSampleIds: replaces real sampleId with an anonymous surrogate whi
 		'surrogates should be non-numeric so they cannot resolve back to a real (integer) sample id'
 	)
 	t.equal(new Set(samples.slice(0, 2).map((s: any) => s.sampleId)).size, 2, 'surrogates should be unique')
+	t.ok(
+		samples.slice(0, 2).every((s: any) => s.hideSampleId === true),
+		'each anonymized cohort dot should be flagged with hideSampleId so the client gates sample actions'
+	)
 	t.notOk('sampleId' in samples[2], 'a reference dot without a sampleId should be left untouched')
+	t.notOk('hideSampleId' in samples[2], 'a reference dot should not be flagged with hideSampleId')
 	t.deepEqual(
 		samples.map((s: any) => [s.x, s.y]),
 		[

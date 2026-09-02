@@ -19,6 +19,7 @@ Tests:
     - Show tooltip for sample
     - Test scale dot
     - Test lasso menus options
+    - Lasso menu is suppressed for anonymized samples (hideSampleId)
     - (commented out) Test continuous mode with age color
     - Test legend
     - Render color groups
@@ -220,6 +221,40 @@ tape('Test lasso menus options', function (test) {
 		test.equal(samples2Check.length, foundSamples, `Should render all samples for ${group.name}`)
 
 		scatter.Inner.view.dom.tip.hide()
+	}
+})
+
+tape('Lasso menu is suppressed for anonymized samples (hideSampleId)', function (test) {
+	test.timeoutAfter(8000)
+
+	runpp({
+		state,
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+
+		// Simulate the response to a request that may not display sample ids: the server
+		// (anonymizeSampleIds) replaces each real sampleId with a non-numeric surrogate and flags
+		// hideSampleId. Because a surrogate id cannot resolve to a real sample, none of the
+		// sample-specific lasso actions (list, grouping, filtering, sample view) should be offered.
+		const anonymizedItems = mockGroups[0].items.map((it, i) => {
+			const clone: any = { ...it, sampleId: `anonymous-${i}`, hideSampleId: true }
+			delete clone.sample
+			return clone
+		})
+		scatter.Inner.vm.scatterLasso.showLassoMenu(new PointerEvent('click'), anonymizedItems)
+
+		const options = scatter.Inner.view.dom.tip.d.selectAll('div.sja_menuoption').nodes()
+		test.equal(options.length, 0, 'Should not render any lasso menu option for anonymized samples')
+
+		if (test['_ok']) scatter.Inner.app.destroy()
+		test.end()
 	}
 })
 
