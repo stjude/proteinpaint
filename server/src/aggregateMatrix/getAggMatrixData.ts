@@ -7,153 +7,190 @@ import type {
 } from '#types'
 import { PSEUDOBULK } from '#types'
 import { getData } from '../termdb.matrix.js'
+import { calculateSampleBasedMethods } from './aggregateMethods.ts'
 
-type ValueByGene = Record<string, number | null>
-type ColData = { column: string; termId: string; colorTmp: ValueByGene; sizeTmp: ValueByGene }
-type ProcessedData = { values: ValueByGene; min: number; max: number }
+type ValueByRow = Record<string, number | null>
+type RowData = { id: string; label: string; section: string; tw: any; queryId: string }
+type ColData = { section: string; id: string; colorValues: ValueByRow; sizeValues: ValueByRow }
+type ProcessedData = { values: ValueByRow; min: number; max: number }
 export type AggregateMatrixDataRequest = TermdbAggregateMatrixRequest &
 	Required<Pick<TermdbAggregateMatrixRequest, 'rows' | 'gradientMethod' | 'sizeMethod'>>
 
 export async function getAggMatrixData(q: AggregateMatrixDataRequest, ds: any): Promise<ValidAggMatrixResponse> {
-	const queryGenes = new Set<string>()
-	const rowSections: AxisSection[] = []
-	let rowCount = 0
-	let rowLongest = ''
-
-	for (const section in q.rows) {
-		const terms = q.rows[section].map(tw => {
-			const gene = tw.term?.['gene']
-			if (gene) queryGenes.add(gene)
-			const rowId = gene || tw.term.id
-			const label = tw.term.name || rowId
-			if (label.length > rowLongest.length) rowLongest = label
-			rowCount++
-			return { id: rowId, label }
-		})
-		rowSections.push({ id: section, terms })
-	}
-	if (!queryGenes.size) throw new Error('No genes found in aggregate matrix rows')
-
-	const genes = Array.from(queryGenes)
+	const { rows, sections: rowSections, longestLabel: rowLongest } = makeRows(q)
 	const columns: ColData[] = []
 	const colSections: AxisSection[] = []
+	let colLongest = ''
 	let colorMin = Infinity
 	let colorMax = -Infinity
 	let sizeMin = Infinity
 	let sizeMax = -Infinity
-	let colCount = 0
-	let colLongest = ''
 
-	/* Each category has its own HDF5 files. Process them sequentially so each batched-gene
-	 * response can be collected before the next category is loaded. */
 	for (const section in q.columns) {
 		const sectionColumns = q.columns[section]
-		const terms = sectionColumns.map(tw => {
-			const label = tw.term.name || tw.term.id
-			if (label.length > colLongest.length) colLongest = label
-			colCount++
-			return { id: tw.term.id, label }
+		colSections.push({
+			id: section,
+			terms: sectionColumns.map(tw => {
+				const label = tw.term.name || tw.term.id
+				if (label.length > colLongest.length) colLongest = label
+				return { id: tw.term.id, label }
+			})
 		})
-		colSections.push({ id: section, terms })
 
-		for (const tw of sectionColumns) {
-			const colorData = await getColumnData(tw, genes, q.gradientMethod, q, ds)
-			const sizeData = await getColumnData(tw, genes, q.sizeMethod, q, ds)
+		/* Process columns sequentially to bound peak getData response memory. Each generic
+		 * column loads both methods from one response; pseudobulk retains one read per method. */
+		for (const columnTw of sectionColumns) {
+			let colorData: ProcessedData
+			let sizeData: ProcessedData
+			if (columnTw.term.type == PSEUDOBULK) {
+				const genes = rows.map(row => row.id)
+				colorData = await getPseudobulkData(columnTw, genes, q.gradientMethod, q, ds)
+				sizeData = await getPseudobulkData(columnTw, genes, q.sizeMethod, q, ds)
+			} else {
+				const byMethod = await getSampleBasedData(columnTw, rows, [q.gradientMethod, q.sizeMethod], q, ds)
+				colorData = summarizeValues(byMethod.get(q.gradientMethod)!, rows.map(row => row.id))
+				sizeData = summarizeValues(byMethod.get(q.sizeMethod)!, rows.map(row => row.id))
+			}
+
 			colorMin = Math.min(colorMin, colorData.min)
 			colorMax = Math.max(colorMax, colorData.max)
 			sizeMin = Math.min(sizeMin, sizeData.min)
 			sizeMax = Math.max(sizeMax, sizeData.max)
 			columns.push({
-				column: section,
-				termId: tw.term.id,
-				colorTmp: colorData.values,
-				sizeTmp: sizeData.values
+				section,
+				id: columnTw.term.id,
+				colorValues: colorData.values,
+				sizeValues: sizeData.values
 			})
 		}
 	}
 
-	const data: AggMatrixDot[][] = []
-	for (const { terms, id: rowSection } of rowSections) {
-		for (const { id: row } of terms) {
-			data.push(
-				columns.map(col => ({
-					rowSection,
-					row,
-					colSection: col.column,
-					column: col.termId,
-					colorValue: col.colorTmp[row] ?? null,
-					sizeValue: col.sizeTmp[row] ?? null
-				}))
-			)
-		}
-	}
+	if (!columns.length) throw new Error('No aggregate matrix columns found')
+	const data: AggMatrixDot[][] = rows.map(row =>
+		columns.map(column => ({
+			rowSection: row.section,
+			row: row.id,
+			colSection: column.section,
+			column: column.id,
+			colorValue: column.colorValues[row.id] ?? null,
+			sizeValue: column.sizeValues[row.id] ?? null
+		}))
+	)
 
 	return {
 		colorScale: { min: colorMin, max: colorMax },
 		sizeScale: { min: sizeMin, max: sizeMax },
 		data,
 		axesLayout: {
-			rows: { sections: rowSections, rowCount, longestLabel: rowLongest },
-			columns: { sections: colSections, colCount, longestLabel: colLongest }
+			rows: { sections: rowSections, rowCount: rows.length, longestLabel: rowLongest },
+			columns: {
+				sections: colSections,
+				colCount: columns.length,
+				longestLabel: colLongest
+			}
 		}
 	}
 }
 
-async function getColumnData(
+function makeRows(q: AggregateMatrixDataRequest) {
+	const rows: RowData[] = []
+	const sections: AxisSection[] = []
+	let longestLabel = ''
+	for (const section in q.rows) {
+		const terms = q.rows[section].map(tw => {
+			const id = tw.term?.['gene'] || tw.term.id
+			if (!id) throw new Error(`Row term has no identifier`)
+			const label = tw.term.name || id
+			if (label.length > longestLabel.length) longestLabel = label
+			const row = { id, label, section, tw, queryId: `agg_row_${rows.length}` }
+			rows.push(row)
+			return { id, label }
+		})
+		sections.push({ id: section, terms })
+	}
+	if (!rows.length) throw new Error('No aggregate matrix rows found')
+	return { rows, sections, longestLabel }
+}
+
+async function getPseudobulkData(
 	tw: any,
 	genes: string[],
-	method: AggregateMatrixDataRequest['gradientMethod'],
+	method: string,
 	q: AggregateMatrixDataRequest,
 	ds: any
 ): Promise<ProcessedData> {
-	const columnTerm = tw.term
-	if (columnTerm.type !== PSEUDOBULK) {
-		throw new Error(`Term type: ${columnTerm.type} not supported in aggregate matrix route.`)
-	}
 	const term = {
 		...tw,
 		term: {
-			...columnTerm,
-			category: columnTerm.category || columnTerm.id,
+			...tw.term,
+			category: tw.term.category || tw.term.id,
 			dataTypeDetails: { genes, method }
 		}
 	}
-
-	const response = await getData({ terms: [term], filter: q.filter, filter0: q.filter0 }, ds, false)
-	if ('error' in response) throw new Error(response.error)
-	return processGetDataResponse(response, genes)
+	const response = await queryData([term], q, ds)
+	return aggregateNumericValues(response, genes)
 }
 
-/** Aggregate every queried gene in one sparse pass over a validated getData response. */
-function processGetDataResponse(data: ValidGetDataResponse, genes: string[]): ProcessedData {
-	const geneSet = new Set(genes)
+async function getSampleBasedData(
+	columnTw: any,
+	rows: RowData[],
+	methods: string[],
+	q: AggregateMatrixDataRequest,
+	ds: any
+) {
+	const rowTerms = rows.map(row => ({ ...row.tw, $id: row.queryId, term: { ...row.tw.term } }))
+	const columnId = 'agg_column'
+	const columnTerm = { ...columnTw, $id: columnId, term: { ...columnTw.term } }
+	const response = await queryData([...rowTerms, columnTerm], q, ds)
+	const valuesByQueryId = calculateSampleBasedMethods(
+		methods,
+		response.samples,
+		rows.map(row => row.queryId),
+		columnId
+	)
+	const byMethod = new Map<string, ValueByRow>()
+	for (const [method, values] of valuesByQueryId) {
+		const valuesByRow: ValueByRow = {}
+		for (const row of rows) valuesByRow[row.id] = values[row.queryId]
+		byMethod.set(method, valuesByRow)
+	}
+	return byMethod
+}
+
+async function queryData(terms: any[], q: AggregateMatrixDataRequest, ds: any): Promise<ValidGetDataResponse> {
+	const response = await getData({ terms, filter: q.filter, filter0: q.filter0 }, ds, false)
+	if ('error' in response) throw new Error(response.error)
+	return response
+}
+
+function aggregateNumericValues(data: ValidGetDataResponse, ids: string[]): ProcessedData {
+	const idSet = new Set(ids)
 	const sums: Record<string, number> = {}
 	const counts: Record<string, number> = {}
-
 	for (const sample of Object.values(data.samples)) {
-		for (const [gene, entry] of Object.entries(sample)) {
-			if (!geneSet.has(gene) || !entry || typeof entry !== 'object') continue
+		for (const [id, entry] of Object.entries(sample)) {
+			if (!idSet.has(id) || !entry || typeof entry != 'object') continue
 			const value = (entry as { value?: unknown }).value
-			if (typeof value !== 'number' || !Number.isFinite(value)) continue
-			sums[gene] = (sums[gene] || 0) + value
-			counts[gene] = (counts[gene] || 0) + 1
+			if (typeof value != 'number' || !Number.isFinite(value)) continue
+			sums[id] = (sums[id] || 0) + value
+			counts[id] = (counts[id] || 0) + 1
 		}
 	}
+	const values: ValueByRow = {}
+	for (const id of ids) values[id] = counts[id] ? sums[id] / counts[id] : null
+	return summarizeValues(values, ids)
+}
 
-	const values: ValueByGene = {}
+function summarizeValues(values: ValueByRow, rowIds: string[]): ProcessedData {
 	let min = Infinity
 	let max = -Infinity
-	for (const gene of genes) {
-		const count = counts[gene] || 0
-		const aggregate = count ? sums[gene] / count : null
-		values[gene] = aggregate
-		if (aggregate !== null) {
-			min = Math.min(min, aggregate)
-			max = Math.max(max, aggregate)
-		}
+	for (const id of rowIds) {
+		const value = values[id]
+		if (value === null || !Number.isFinite(value)) continue
+		min = Math.min(min, value)
+		max = Math.max(max, value)
 	}
-
-	if (min === Infinity || max === -Infinity) throw new Error('No valid aggregate values found in getData response')
+	if (min === Infinity) throw new Error('No valid aggregate values found in getData response')
 	if (min === max) throw new Error(`All aggregate values are the same: ${min}. Cannot use identical data for scaling.`)
 	return { values, min, max }
 }
