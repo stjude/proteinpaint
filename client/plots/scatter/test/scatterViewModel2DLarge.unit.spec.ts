@@ -8,6 +8,8 @@ import { xAxisOffSet, yAxisOffSet } from '#shared'
  *  - getVertices does not mutate the shared chart axis scales
  *  - renderAxes maps the data range onto the plot-area pixels with a non-inverted y-axis
  *  - renderAxes scales the axes about the plot center by the zoom factor
+ *  - renderAxes keeps the axis range pinned to the plot edges at any zoom
+ *  - renderAxes drops ticks outside the data range when zoomed out
  */
 
 /**************
@@ -107,10 +109,14 @@ function getAxisMockViewModel(zoom = 1) {
 
 function getAxisMockChart() {
 	const capture: any = {}
-	// an axis generator stub: .scale(s) records the scale and returns itself for chaining
+	// an axis generator stub: .scale(s)/.tickValues(v) record their args and return itself for chaining
 	const makeAxis = () => ({
 		scale(s: any) {
 			;(this as any)._scale = s
+			return this
+		},
+		tickValues(v: any) {
+			;(this as any)._tickValues = v
 			return this
 		}
 	})
@@ -127,11 +133,13 @@ function getAxisMockChart() {
 		xAxis: {
 			call(gen: any) {
 				capture.x = gen._scale
+				capture.xTicks = gen._tickValues
 			}
 		},
 		yAxis: {
 			call(gen: any) {
 				capture.y = gen._scale
+				capture.yTicks = gen._tickValues
 			}
 		},
 		_capture: capture
@@ -177,5 +185,52 @@ tape('renderAxes scales the axes about the plot center by the zoom factor', func
 	// range half-width doubles at zoom 2: xScale(0) = cx - 2*(svgw/2) = cx - 600
 	test.equal(xScale(0), cx - 600, 'Should widen the x range about the center by the zoom factor.')
 	test.equal(vm.currentAxisZoom, 2, 'Should record the current zoom.')
+	test.end()
+})
+
+tape('renderAxes keeps the axis range pinned to the plot edges at any zoom', function (test) {
+	test.timeoutAfter(100)
+	// Rescaling adjusts the domain, not the range, so the axis spines stay at the plot edges and the
+	// two axes remain joined at the corner — never spilling past the canvas (zoom in) or pulling
+	// inward (zoom out).
+	for (const zoom of [0.5, 2]) {
+		const vm = getAxisMockViewModel(zoom)
+		const chart = getAxisMockChart()
+		vm.axisChart = chart
+		vm.renderAxes()
+		test.deepEqual(
+			chart._capture.x.range(),
+			[xAxisOffSet, 600 + xAxisOffSet],
+			`Should pin the x-axis range to the plot edges at zoom ${zoom}.`
+		)
+		test.deepEqual(
+			chart._capture.y.range(),
+			[yAxisOffSet, 600 + yAxisOffSet],
+			`Should pin the y-axis range to the plot edges at zoom ${zoom}.`
+		)
+	}
+	test.end()
+})
+
+tape('renderAxes drops ticks outside the data range when zoomed out', function (test) {
+	test.timeoutAfter(100)
+	// zoomed out, the visible window extends past the data domain ([0,10] x, [0,100] y); those
+	// out-of-range values should not be labeled with tick marks
+	const vm = getAxisMockViewModel(0.5)
+	const chart = getAxisMockChart()
+	vm.axisChart = chart
+	vm.renderAxes()
+
+	const xTicks = chart._capture.xTicks
+	const yTicks = chart._capture.yTicks
+	test.ok(Array.isArray(xTicks) && xTicks.length > 0, 'Should still render x ticks within the data range.')
+	test.ok(
+		xTicks.every((t: number) => t >= 0 && t <= 10),
+		'Should not render x ticks below the min or above the max.'
+	)
+	test.ok(
+		yTicks.every((t: number) => t >= 0 && t <= 100),
+		'Should not render y ticks below the min or above the max.'
+	)
 	test.end()
 })
