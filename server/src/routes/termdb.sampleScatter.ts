@@ -177,6 +177,9 @@ export function init({ genomes }) {
 				range = { xMin, xMax, yMin, yMax }
 			}
 			if (!result) result = await colorAndShapeSamples(refSamples, cohortSamples, data as ValidGetDataResponse, q)
+			// the real sampleId was needed above for the server-side annotation join; it must not leave the
+			// server for a request not authorized to display sample ids (see anonymizeSampleIds)
+			if (!authApi.canDisplaySampleIds(req, ds)) anonymizeSampleIds(result)
 			res.send({ result, range } satisfies TermdbSampleScatterResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
@@ -195,11 +198,34 @@ export async function getSamples(req: any, ds: any, plot: any) {
 		const result: number[] = []
 		// must make in-memory duplication of the objects as they will be modified by assigning .color/shape
 		for (const i of JSON.parse(JSON.stringify(samples))) {
-			// only expose the sample name/id when the request is authorized to display sample ids
+			// only expose the sample name when the request is authorized to display sample ids. The real
+			// .sampleId is still needed downstream for the server-side annotation join and is anonymized
+			// out of the response later by anonymizeSampleIds()
 			if (!canDisplay) delete i.sample
 			result.push(i)
 		}
 		return result
+	}
+}
+
+/** Replace every real sampleId in the scatter response with an anonymous surrogate.
+ *
+ * Called only when the request is NOT authorized to display sample ids. Both sample sources put a real,
+ * identifying value on .sampleId: getSampleCoordinatesByTerms() uses the db sample id, and loadFile()
+ * assigns the integer sample id (or, for colorColumn plots, the sample name) to prebuilt cohort/reference
+ * entries. That value was needed for the server-side annotation join (colorAndShapeSamples) but must not
+ * reach the client: without this, the client download fallback (scatter.ts toText: `s.sample || s.sampleId`)
+ * would still expose it even after the sample NAME was stripped.
+ *
+ * The client uses only the presence of the .sampleId key — not its value — to tell cohort dots from
+ * reference dots and to size them, so the key is preserved and given a non-numeric surrogate that cannot
+ * resolve back to a real (integer) sample id on any subsequent request. */
+export function anonymizeSampleIds(result: { [index: string]: { samples: any[] } }) {
+	let n = 0
+	for (const divideBy in result) {
+		for (const sample of result[divideBy].samples || []) {
+			if ('sampleId' in sample) sample.sampleId = `anonymous-${n++}`
+		}
 	}
 }
 
