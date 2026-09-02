@@ -2,7 +2,7 @@ import { Vocab } from './Vocab'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
-import { isDictionaryType, isSingleCellTerm, restoreGvQueryEntry } from '#shared/terms.js'
+import { isDictionaryType, isNumericTerm, isSingleCellTerm, restoreGvQueryEntry } from '#shared/terms.js'
 
 export class TermdbVocab extends Vocab {
 	// getAbortSignal() will be used to cancel async fetch requests or canvas rendering that may
@@ -1482,16 +1482,28 @@ export class TermdbVocab extends Vocab {
 			filter: opts.filter,
 			filter0: opts.filter0
 		}
-		const formatTw = term => {
+		const formatTw = async term => {
 			if (isSingleCellTerm(term)) return { term, q: {} }
-			else return this.getTwMinCopy({ term: term, q: {} })
+			if (isNumericTerm(term) && isDictionaryType(term.type)) {
+				const fullTerm = term.bins?.default ? term : await this.getterm(term.id)
+				if (!fullTerm.bins?.default) throw new Error(`No default bins configured for numeric term '${term.id}'`)
+				return this.getTwMinCopy({
+					term: fullTerm,
+					q: { ...fullTerm.bins.default, mode: 'discrete' }
+				})
+			}
+			return this.getTwMinCopy({ term, q: {} })
 		}
-		Object.keys(body.rows).forEach(section => {
-			body.rows[section] = body.rows[section].map(term => formatTw(term))
-		})
-		Object.keys(body.columns).forEach(member => {
-			body.columns[member] = body.columns[member].map(term => formatTw(term))
-		})
+		await Promise.all(
+			Object.keys(body.rows).map(async section => {
+				body.rows[section] = await Promise.all(body.rows[section].map(formatTw))
+			})
+		)
+		await Promise.all(
+			Object.keys(body.columns).map(async section => {
+				body.columns[section] = await Promise.all(body.columns[section].map(formatTw))
+			})
+		)
 
 		if (body.filter) body.filter = getNormalRoot(body.filter)
 		const signal = opts.signal || this.getAbortSignal()

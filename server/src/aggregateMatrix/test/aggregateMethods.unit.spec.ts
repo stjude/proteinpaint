@@ -48,8 +48,8 @@ tape('aggregate method availability follows dataset data and term kind', test =>
 	)
 	test.deepEqual(
 		ds.getAvailableAggregateMethods([{ type: 'categorical' }]).map(method => method.id),
-		['count'],
-		'exposes count for selected nonnumeric terms'
+		['percent', 'count'],
+		'exposes intersection methods for selected nonnumeric terms'
 	)
 
 	ds.cohort.termdb.termtypeByCohort.nested = { all: { categorical: 2 } }
