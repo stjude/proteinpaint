@@ -201,10 +201,22 @@ export class Scatter extends PlotBase implements RxComponent {
 	 * transparent and overlaid on chart.svg, which carries the axes, titles, legend and the white
 	 * plot-area background. A plain canvas.toDataURL() would therefore export only the points on a
 	 * transparent background, so composite the svg and the webgl canvas onto one export canvas.
-	 * When there is no co-located svg to composite (e.g. a server-rendered single-cell image), fall
-	 * back to serializing the canvas on its own. */
+	 * For a server-rendered single-cell plot there is no webgl canvas — renderLargeSingleCell() puts
+	 * the server image into an SVG <image> — so return that image source directly. When there is no
+	 * co-located svg to composite, fall back to serializing the canvas on its own. */
 	async getWebglImage(): Promise<string> {
-		const canvas = this.vm.canvas
+		// this.vm.canvas is an HTMLCanvasElement for the webgl point cloud, but renderLargeSingleCell()
+		// assigns a d3 selection wrapping an SVG <image>; normalize either to a DOM node
+		const rawCanvas: any = this.vm.canvas
+		const canvasNode = typeof rawCanvas?.node === 'function' ? rawCanvas.node() : rawCanvas
+
+		// server-rendered single-cell plot: no HTML canvas to composite, so return the server image's
+		// source (the <image> href) directly rather than calling toDataURL() on a non-canvas node
+		if (canvasNode instanceof SVGImageElement) {
+			return canvasNode.href?.baseVal || canvasNode.getAttribute('href') || canvasNode.getAttribute('xlink:href') || ''
+		}
+
+		const canvas = canvasNode as HTMLCanvasElement
 		const container = canvas?.parentNode as HTMLElement | null
 		const svgNode = container?.querySelector('svg') as SVGSVGElement | null
 		if (!svgNode) return canvas.toDataURL('image/png')
