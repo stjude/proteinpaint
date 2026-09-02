@@ -39,6 +39,9 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = AggMatrixInput.type
+
+		//opts.header is the sandbox header
+        if (opts.header) opts.header.text(`AGGREGATE MATRIX`).style('font-size', '0.9em')
 	}
 
 	getState(appState) {

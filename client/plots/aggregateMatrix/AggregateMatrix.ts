@@ -39,7 +39,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
         }
 
         //opts.header is the sandbox header
-        if (opts.header) opts.header.html(`AGGREGATE MATRIX`).style('font-size', '0.9em')
+        if (opts.header) opts.header.text(`AGGREGATE MATRIX`).style('font-size', '0.9em')
     }
 
     getState(appState: any) {
