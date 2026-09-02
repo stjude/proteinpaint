@@ -5,8 +5,8 @@ on:
     - cron: '0 6 * * *'
   workflow_dispatch:
   workflow_call: {} #Let other workflows in this repo invoke this one as a reusable job
-  merge_group: #run again when the PR enters the merge queue
-    types: [checks_requested]
+  pull_request:
+  merge_group:
 
 jobs:
   
