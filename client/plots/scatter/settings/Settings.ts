@@ -32,6 +32,10 @@ export type Settings = {
 	threeSize: number
 	/** Field of vision for 2D large plots */
 	threeFOV: number
+	/** Sample-count threshold: cohorts larger than this switch from SVG to WebGL/canvas rendering
+	 * (ScatterViewModel2DLarge). Kept in the recoverable defaults so it can be lowered — e.g. in a
+	 * unit/integration test — to exercise the large-plot path with a small dataset like TermdbTest. */
+	maxSvgSamplesCutoff: number
 	// Color scale configuration settings
 	// These settings control how numerical values are mapped to colors
 	/** Default to automatic scaling based on data range
@@ -48,6 +52,10 @@ export type Settings = {
 	/** User-defined maximum value for fixed mode
 	 * Null indicates this hasn't been set yet */
 	colorScaleMaxFixed: null | number
+	/** Color for dots with no gene expression value (gene-expression color term) */
+	noExpColor: string
+	/** Color for dots at/above the maximum gene expression value (gene-expression color term) */
+	expColor: string
 	//3D Plot settings
 	/** Shows the density of point clouds.
 	 * If 'Color' is used in continous mode,
