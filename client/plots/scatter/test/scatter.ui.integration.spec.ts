@@ -19,7 +19,7 @@ Tests:
     - Show tooltip for sample
     - Test scale dot
     - Test lasso menus options
-    - Lasso menu is suppressed for anonymized samples (hideSampleId)
+    - Lasso menu is suppressed for anonymized samples (no sampleId)
     - (commented out) Test continuous mode with age color
     - Test legend
     - Render color groups
@@ -84,7 +84,7 @@ tape('Show tooltip for sample', function (test) {
 		scatter.on('postRender.test', null)
 		const chart = scatter.Inner.model.charts[0]
 		const scatterTooltip = scatter.Inner.vm.scatterTooltip
-		const dot = chart.data.samples.find(s => 'sampleId' in s && scatterTooltip.isVisible(s))
+		const dot = chart.data.samples.find(s => !s.isRef && scatterTooltip.isVisible(s))
 
 		mousemoveOverDot(scatter, chart, dot)
 
@@ -224,7 +224,7 @@ tape('Test lasso menus options', function (test) {
 	}
 })
 
-tape('Lasso menu is suppressed for anonymized samples (hideSampleId)', function (test) {
+tape('Lasso menu is suppressed for anonymized samples (no sampleId)', function (test) {
 	test.timeoutAfter(8000)
 
 	runpp({
@@ -239,13 +239,14 @@ tape('Lasso menu is suppressed for anonymized samples (hideSampleId)', function 
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
 
-		// Simulate the response to a request that may not display sample ids: the server
-		// (anonymizeSampleIds) replaces each real sampleId with a non-numeric surrogate and flags
-		// hideSampleId. Because a surrogate id cannot resolve to a real sample, none of the
-		// sample-specific lasso actions (list, grouping, filtering, sample view) should be offered.
-		const anonymizedItems = mockGroups[0].items.map((it, i) => {
-			const clone: any = { ...it, sampleId: `anonymous-${i}`, hideSampleId: true }
+		// Simulate the response to a request that may not display sample ids: the server marks each dot's
+		// isRef, then anonymizeSampleIds deletes the sampleId and name from cohort dots (isRef stays false,
+		// so they still render as cohort dots). With no real sampleId, none of the sample-specific lasso
+		// actions (list, grouping, filtering, sample view) should be offered.
+		const anonymizedItems = mockGroups[0].items.map(it => {
+			const clone: any = { ...it, isRef: false }
 			delete clone.sample
+			delete clone.sampleId
 			return clone
 		})
 		scatter.Inner.vm.scatterLasso.showLassoMenu(new PointerEvent('click'), anonymizedItems)

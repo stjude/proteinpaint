@@ -304,9 +304,7 @@ export class ScatterViewModelBase {
 	mayRenderSampleLabels(chart) {
 		const g = chart.serie
 		const labelData =
-			this.scatter.config.bySample && chart.data?.samples
-				? chart.data.samples.filter(c => 'sampleId' in c && c.sample)
-				: []
+			this.scatter.config.bySample && chart.data?.samples ? chart.data.samples.filter(c => !c.isRef && c.sample) : []
 		const labels = g.selectAll('text[name="sampleLabel"]').data(labelData, (c: any) => c.sample)
 		labels.exit().remove()
 		labels

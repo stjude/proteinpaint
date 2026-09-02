@@ -10,7 +10,7 @@ import { xAxisOffSet, yAxisOffSet } from '#shared'
  * 	- Neighbours are the dots that overlap at 100% zoom, held constant in screen px
  * 	- scaleDotTW dots get a neighbourhood matching their larger radius
  * 	- isVisible() excludes hidden dots and the suppressed reference cloud
- * 	- getActions() gates sample-specific actions for reference dots and anonymized (hideSampleId) samples
+ * 	- getActions() gates sample-specific actions for reference dots and anonymized (sampleId-less) samples
  *
  * These cover what the deleted distance() got wrong. It clamped both points into
  * [xAxisScale.invert(0), xAxisScale.invert(svgw)] — but the axis range starts at
@@ -89,9 +89,9 @@ tape('dotRadius() tracks the rendered dot size', function (test) {
 
 	const ref = getScatterStub({ refSize: 3 })
 	test.equal(
-		new ScatterTooltip(ref).dotRadius(getChart(ref), { x: 0, y: 0, hidden: {} }),
+		new ScatterTooltip(ref).dotRadius(getChart(ref), { x: 0, y: 0, hidden: {}, isRef: true }),
 		(8 * 3) / 3,
-		'a reference dot (no sampleId) uses refSize'
+		'a reference dot (isRef true) uses refSize'
 	)
 	test.end()
 })
@@ -245,13 +245,19 @@ tape('isVisible() excludes hidden dots and the suppressed reference cloud', func
 		tooltip.isVisible(sample(1, 1, { hidden: { category: true } })),
 		'a dot hidden by a color legend click is excluded'
 	)
-	test.true(tooltip.isVisible({ x: 1, y: 1, hidden: {} }), 'a reference dot is visible by default')
+	test.true(tooltip.isVisible({ x: 1, y: 1, hidden: {}, isRef: true }), 'a reference dot is visible by default')
 
 	const noRef = new ScatterTooltip(getScatterStub({ showRef: false }))
-	test.false(noRef.isVisible({ x: 1, y: 1, hidden: {} }), 'reference dots are excluded when showRef is off')
+	test.false(
+		noRef.isVisible({ x: 1, y: 1, hidden: {}, isRef: true }),
+		'reference dots are excluded when showRef is off'
+	)
 
 	const zeroRef = new ScatterTooltip(getScatterStub({ refSize: 0 }))
-	test.false(zeroRef.isVisible({ x: 1, y: 1, hidden: {} }), 'reference dots are excluded when refSize is 0')
+	test.false(
+		zeroRef.isVisible({ x: 1, y: 1, hidden: {}, isRef: true }),
+		'reference dots are excluded when refSize is 0'
+	)
 	test.end()
 })
 
@@ -274,18 +280,18 @@ tape('getActions() gates sample-specific actions for reference and anonymized sa
 	test.timeoutAfter(100)
 	const tooltip = new ScatterTooltip(getActionsStub())
 
-	const cohortActions = tooltip.getActions({ sampleId: 1, sample: 'S1' })
+	const cohortActions = tooltip.getActions({ isRef: false, sampleId: 1, sample: 'S1' })
 	test.ok(
 		cohortActions.some((a: any) => a.label === 'Sample view'),
 		'a real cohort sample offers the Sample view action'
 	)
 
 	test.deepEqual(
-		tooltip.getActions({ sampleId: 'anonymous-0', hideSampleId: true }),
+		tooltip.getActions({ isRef: false }),
 		[],
-		'an anonymized sample (hideSampleId) offers no sample-specific actions even though the sampleId key is present'
+		'an anonymized cohort dot (isRef false, but no sampleId) offers no sample-specific actions'
 	)
 
-	test.deepEqual(tooltip.getActions({ x: 1, y: 2 }), [], 'a reference dot (no sampleId) offers no actions')
+	test.deepEqual(tooltip.getActions({ isRef: true }), [], 'a reference dot (isRef true) offers no actions')
 	test.end()
 })

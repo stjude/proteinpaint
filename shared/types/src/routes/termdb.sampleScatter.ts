@@ -22,12 +22,14 @@ export type TermdbSampleScatterRequest = {
 export type ScatterSample = {
 	category: string
 	sample?: string
-	/** real db sample id (or a non-numeric anonymous surrogate when the request may not display sample ids) */
+	/** real db sample id. Absent on reference-cloud dots, and also dropped from cohort dots when the request
+	 * is not authorized to display sample ids (see anonymizeSampleIds) — so its presence is NOT a reliable
+	 * cohort-vs-reference test; use isRef for that. */
 	sampleId?: number | string
-	/** set by the server (anonymizeSampleIds) when this cohort sample's id has been anonymized. The client
-	 * uses it to gate all sample-specific actions and grouping, since the surrogate sampleId cannot resolve
-	 * back to a real sample. */
-	hideSampleId?: boolean
+	/** set by the server (markRefDots) for every dot: true = reference-cloud dot (rendered small/unlabeled,
+	 * no sample actions), false = cohort dot. Derived from sampleId presence BEFORE any anonymization, so the
+	 * client can classify/size/label dots even when a denied request has dropped the sampleId. */
+	isRef?: boolean
 	info?: { [index: string]: any }
 	shape: string
 	x: number

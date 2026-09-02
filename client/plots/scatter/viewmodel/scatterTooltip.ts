@@ -63,7 +63,7 @@ export class ScatterTooltip {
 
 	isVisible(s) {
 		// getOpacity() honours showRef for reference dots but not refSize == 0
-		if (!('sampleId' in s) && (!this.scatter.settings.showRef || this.scatter.settings.refSize == 0)) return false
+		if (s.isRef && (!this.scatter.settings.showRef || this.scatter.settings.refSize == 0)) return false
 		return this.scatter.model.getOpacity(s) > 0
 	}
 
@@ -292,11 +292,11 @@ export class ScatterTooltip {
 		const interactivity = this.scatter.interactivity
 		const actions: ActionMenuItem[] = []
 
-		// reference-cloud dots carry no mutation data, so none of these apply to them; the plots
-		// below are also for cohort samples only, and not in the single cell plot. hideSampleId marks a
-		// sample whose id was anonymized because the request may not display sample ids — its surrogate id
-		// cannot resolve to a real sample, so gate every sample-specific action here.
-		if (!('sampleId' in sample) || sample.hideSampleId || config.singleCellPlot) return actions
+		// reference-cloud dots carry no mutation data, so none of these apply to them; the plots below are
+		// also for cohort samples only, and not in the single cell plot. A cohort dot from a request not
+		// authorized to display sample ids has no sampleId (the server dropped it), so gate every
+		// sample-specific action when the real id is absent — it would submit nothing / build an empty filter.
+		if (sample.isRef || sample.sampleId == null || config.singleCellPlot) return actions
 
 		// the gene may be carried by either term — the old tooltip offered Lollipop from
 		// whichever of the color/shape rows happened to be a geneVariant

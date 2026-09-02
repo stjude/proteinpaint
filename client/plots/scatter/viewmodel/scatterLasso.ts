@@ -65,7 +65,7 @@ export class ScatterLasso {
 			this.selectedItems = []
 			for (const item of chart.lasso.selectedItems()) {
 				const data = item.__data__
-				if ('sampleId' in data && !(data.hidden['category'] || data.hidden['shape'])) this.selectedItems.push(item)
+				if (!data.isRef && !(data.hidden['category'] || data.hidden['shape'])) this.selectedItems.push(item)
 			}
 			chart.lasso.notSelectedItems().attr('transform', c => this.model.transform(chart, c))
 			const samples = this.selectedItems.map(item => item.__data__)
@@ -76,10 +76,10 @@ export class ScatterLasso {
 	showLassoMenu(event, samples) {
 		this.view.dom.tip.clear().hide()
 		if (samples.length == 0) return
-		// hideSampleId marks cohort dots whose ids were anonymized because the request may not display
-		// sample ids. Their surrogate ids cannot resolve to real samples, so listing, grouping, filtering
-		// and sample view would all submit nonexistent ids or build empty filters — offer no menu.
-		if (samples.some(s => s.hideSampleId)) return
+		// A request not authorized to display sample ids yields cohort dots with no sampleId (the server
+		// dropped it). Listing, grouping, filtering and sample view would all submit nothing or build an
+		// empty filter, so offer no menu when any selected dot lacks a real sample id.
+		if (samples.some(s => s.sampleId == null)) return
 		this.view.dom.tip.show(event.clientX, event.clientY)
 
 		const labels = this.scatter.config.controlLabels

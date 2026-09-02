@@ -36,7 +36,9 @@ export abstract class ScatterModelBase {
 	abstract initData(): Promise<void>
 
 	createChart(id: string, data: ScatterDataResult | SingleCellPlotDataResult) {
-		const cohortSamples: any[] = data.samples ? data.samples.filter(sample => 'sampleId' in sample) : []
+		// isRef marks reference-cloud dots; the server sets it once (from sampleId presence, before any
+		// anonymization) so a denied request that drops sampleId still classifies cohort dots correctly.
+		const cohortSamples: any[] = data.samples ? data.samples.filter(sample => !sample.isRef) : []
 		if (cohortSamples.length > maxSvgSamplesCutoff) this.is2DLarge = true
 		const colorLegend: Map<string, ColorLegendItem> = new Map(data.colorLegend)
 		const shapeLegend: Map<string, ShapeLegendItem> = new Map(data.shapeLegend)
@@ -102,7 +104,7 @@ export abstract class ScatterModelBase {
 	}
 
 	getOpacity(c) {
-		if ('sampleId' in c) {
+		if (!c.isRef) {
 			const hidden = c.hidden?.['category'] || c.hidden?.['shape']
 			if (this.filterSampleStr) {
 				if (!c.sample?.toLowerCase().includes(this.filterSampleStr.toLowerCase())) {
@@ -137,10 +139,10 @@ export abstract class ScatterModelBase {
 	}
 
 	getScale(chart, c, factor = 1) {
-		const isRef = !('sampleId' in c)
+		const isRef = !!c.isRef
 		let scale
 		if (!this.scatter.config.scaleDotTW || isRef) {
-			scale = 'sampleId' in c ? this.scatter.settings.size : this.scatter.settings.refSize
+			scale = isRef ? this.scatter.settings.refSize : this.scatter.settings.size
 		} else {
 			const range = this.scatter.settings.maxShapeSize - this.scatter.settings.minShapeSize
 			if (this.scatter.settings.scaleDotOrder == 'Ascending')
@@ -179,7 +181,7 @@ export abstract class ScatterModelBase {
 			else color = chart.colorGenerator(c.geneExp)
 			return color
 		}
-		if (this.scatter.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) {
+		if (this.scatter.config.colorTW?.q.mode == 'continuous' && !c.isRef) {
 			const [min, max] = chart.colorGenerator.domain()
 			if (c.category < min) return chart.colorGenerator(min)
 			if (c.category > max) return chart.colorGenerator(max)
