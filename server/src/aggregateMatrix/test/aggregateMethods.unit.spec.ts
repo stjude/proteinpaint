@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { initAggregateMethods } from '../aggregateMethods.ts'
+import { calculateSampleBasedMethods, initAggregateMethods } from '../aggregateMethods.ts'
 
 function getDs() {
 	return {
@@ -57,5 +57,17 @@ tape('aggregate method availability follows dataset data and term kind', test =>
 		['count', 'total'],
 		'exposes count-based methods only for nonnumeric terms'
 	)
+	test.end()
+})
+
+tape('sample-based aggregate methods share one set of counts', test => {
+	const samples = {
+		one: { sample: 'one', rowA: { key: 'x', value: 'x' }, column: { key: 'x', value: 'x' } },
+		two: { sample: 'two', rowB: { key: 'y', value: 'y' }, column: { key: 'x', value: 'x' } },
+		three: { sample: 'three', rowA: { key: 'x', value: 'x' } }
+	}
+	const result = calculateSampleBasedMethods(['count', 'total'], samples, ['rowA', 'rowB'], 'column')
+	test.deepEqual(result.get('count'), { rowA: 1, rowB: 1 }, 'counts row and column intersections')
+	test.deepEqual(result.get('total'), { rowA: 2, rowB: 2 }, 'reuses the column population total for each row')
 	test.end()
 })

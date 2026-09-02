@@ -3,8 +3,8 @@ import { isNumericTerm } from '#shared/terms.js'
 
 type AggregateMethodDefinition = AggregateMethodOption & {
 	isAvailable: (ds: any) => boolean
-	/** Future calculation and cache hooks belong here and are never sent to the client. */
-	calculate?: (...args: any[]) => Promise<number | null> | number | null
+	/** Server-only calculation hook. Counts are computed once and shared by all requested methods. */
+	calculateFromCounts?: (counts: { matches: number; total: number }) => number
 }
 
 const definitions: AggregateMethodDefinition[] = [
@@ -26,13 +26,15 @@ const definitions: AggregateMethodDefinition[] = [
 		id: 'count',
 		label: 'Count',
 		appliesTo: 'nonNumeric',
-		isAvailable: hasNonNumericTerms
+		isAvailable: hasNonNumericTerms,
+		calculateFromCounts: counts => counts.matches
 	},
 	{
 		id: 'total',
 		label: 'Total',
 		appliesTo: 'nonNumeric',
-		isAvailable: hasNonNumericTerms
+		isAvailable: hasNonNumericTerms,
+		calculateFromCounts: counts => counts.total
 	}
 ]
 
@@ -43,6 +45,40 @@ export function initAggregateMethods(ds: any) {
 		available
 			.filter(method => appliesToTerms(method, terms))
 			.map(({ id, label, appliesTo, termTypes }) => ({ id, label, appliesTo, termTypes }))
+}
+
+/** Calculate all requested sample-based methods in one pass over a getData response. */
+export function calculateSampleBasedMethods(
+	methodIds: string[],
+	samples: Record<string, any>,
+	rowIds: string[],
+	columnId: string
+): Map<string, Record<string, number>> {
+	const requested = methodIds.map(id => definitions.find(method => method.id == id))
+	if (requested.some(method => !method?.calculateFromCounts)) {
+		throw new Error(`Unsupported sample-based aggregate method: ${methodIds.join(', ')}`)
+	}
+
+	const matches = new Uint32Array(rowIds.length)
+	let total = 0
+	for (const sample of Object.values(samples)) {
+		if (!Object.prototype.hasOwnProperty.call(sample, columnId)) continue
+		total++
+		for (let i = 0; i < rowIds.length; i++) {
+			if (Object.prototype.hasOwnProperty.call(sample, rowIds[i])) matches[i]++
+		}
+	}
+
+	const result = new Map<string, Record<string, number>>()
+	for (let methodIndex = 0; methodIndex < methodIds.length; methodIndex++) {
+		const values: Record<string, number> = {}
+		const calculate = requested[methodIndex]!.calculateFromCounts!
+		for (let rowIndex = 0; rowIndex < rowIds.length; rowIndex++) {
+			values[rowIds[rowIndex]] = calculate({ matches: matches[rowIndex], total })
+		}
+		result.set(methodIds[methodIndex], values)
+	}
+	return result
 }
 
 function appliesToTerms(method: AggregateMethodDefinition, terms: any[]) {
