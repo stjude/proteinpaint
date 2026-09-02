@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { scaleLinear as d3Linear } from 'd3-scale'
+import { scaleLinear as d3Linear, scaleTime as d3Time } from 'd3-scale'
 import { ScatterViewModel2DLarge } from '../viewmodel/scatterViewModel2DLarge.ts'
 import { xAxisOffSet, yAxisOffSet } from '#shared'
 
@@ -11,6 +11,7 @@ import { xAxisOffSet, yAxisOffSet } from '#shared'
  *  - renderAxes keeps the axis range pinned to the plot edges at any zoom
  *  - renderAxes drops ticks outside the data range when zoomed out
  *  - renderAxes tracks zoom per chart so multiple charts stay in sync (categorical term0)
+ *  - renderAxes rescales the time scale for date terms, keeping date ticks
  */
 
 /**************
@@ -145,6 +146,9 @@ function getAxisMockChart() {
 		},
 		// renderAxes() records the per-chart zoom here
 		currentAxisZoom: undefined as number | undefined,
+		// optional time scales set by tests to simulate a date term (as ScatterModelBase.initAxes does)
+		xAxisScaleTime: undefined as any,
+		yAxisScaleTime: undefined as any,
 		_capture: capture
 	}
 }
@@ -257,5 +261,29 @@ tape('renderAxes tracks zoom per chart so multiple charts stay in sync (categori
 	// chartB's own loop redraws chartB to the same shared zoom
 	vm.renderAxes(chartB)
 	test.equal(chartB.currentAxisZoom, 3, 'Should redraw chartB to the shared zoom independently.')
+	test.end()
+})
+
+tape('renderAxes rescales the time scale for date terms, keeping date ticks', function (test) {
+	test.timeoutAfter(100)
+	// initAxes() binds the axis generator to a time scale for a date term; renderAxes must rescale
+	// that time scale (so date ticks/formatting survive) rather than replacing it with the numeric
+	// coordinate scale used for the WebGL points.
+	const vm = getAxisMockViewModel(1)
+	const chart = getAxisMockChart()
+	// simulate a date x term: numeric xAxisScale (for WebGL coords) plus a time scale for the axis
+	chart.xAxisScaleTime = d3Time()
+		.domain([new Date(2000, 0, 1), new Date(2020, 0, 1)])
+		.range([xAxisOffSet, 600 + xAxisOffSet])
+
+	vm.renderAxes(chart)
+
+	const xScale = chart._capture.x
+	const yScale = chart._capture.y
+	test.ok(
+		xScale.invert(xAxisOffSet) instanceof Date,
+		'Should rescale the time scale (its invert returns a Date) for a date x term.'
+	)
+	test.equal(typeof yScale.invert(yAxisOffSet), 'number', 'Should keep the numeric scale for the non-date y axis.')
 	test.end()
 })
