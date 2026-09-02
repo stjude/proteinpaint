@@ -75,8 +75,14 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 	}
 
 	getVertices(chart) {
-		const xAxisScale = chart.xAxisScale.range([-1, 1])
-		const yAxisScale = chart.yAxisScale.range([-1, 1])
+		// Map data coordinates into WebGL clip space [-1, 1]. Copy the shared axis scales instead of
+		// mutating their range in place, since fillSvgSubElems (axis), scatterZoom and the hover
+		// quadtree all read chart.xAxisScale/yAxisScale expecting their SVG pixel ranges.
+		// WebGL's y points up while the SVG-oriented chart.yAxisScale uses a flipped domain
+		// ([yMax, yMin]) for SVG's downward y; map y to [1, -1] so larger values render at the top,
+		// matching the SVG y-axis. x needs no flip ([-1, 1]) since both spaces grow left-to-right.
+		const xAxisScale = chart.xAxisScale.copy().range([-1, 1])
+		const yAxisScale = chart.yAxisScale.copy().range([1, -1])
 		const vertices: any = []
 		const colors: any = []
 		for (const sample of chart.data.samples) {
