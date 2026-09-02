@@ -1,5 +1,6 @@
 import { rgb } from 'd3-color'
 import { select } from 'd3-selection'
+import { zoomIdentity } from 'd3-zoom'
 import * as THREE from 'three'
 import { ScatterViewModel } from './scatterViewModel'
 import type { Scatter } from '../scatter'
@@ -102,9 +103,12 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		this.animate(camera, scene, renderer)
 	}
 
-	/** Redraw the x/y axes to match the current WebGL zoom. The point cloud is scaled about the
-	 * canvas center by camera.zoom, so scale each axis range about the same center by the same
-	 * factor — mirroring how ScatterZoom.handleZoom() rescales the svg axes for the small plots. */
+	/** Redraw the x/y axes to match the current WebGL zoom. camera.zoom scales the point cloud by k
+	 * about the plot center, so express that as a d3 zoom transform and rescale the axes the way
+	 * ScatterZoom.handleZoom() does for the small plots. Rescaling keeps each axis RANGE pinned to the
+	 * plot edges (only the visible data window is relabeled), so the two axes stay joined at the corner
+	 * and neither the ticks nor the spine spill past the canvas when zoomed in. Ticks that fall outside
+	 * the data range (e.g. when zoomed out past the data) are dropped. */
 	renderAxes() {
 		const chart = this.axisChart
 		if (!chart?.axisBottom || !chart?.axisLeft || !chart.xAxis || !chart.yAxis) return
@@ -114,13 +118,22 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		const offsetY = this.model.axisOffset.y
 		const cx = offsetX + s.svgw / 2
 		const cy = offsetY + s.svgh / 2
-		const halfW = (s.svgw / 2) * k
-		const halfH = (s.svgh / 2) * k
-		const xScale = chart.xAxisScale.copy().range([cx - halfW, cx + halfW])
-		const yScale = chart.yAxisScale.copy().range([cy - halfH, cy + halfH])
-		chart.xAxis.call(chart.axisBottom.scale(xScale))
-		chart.yAxis.call(chart.axisLeft.scale(yScale))
+		// a scale by k about (cx, cy): applyX(p) = p*k + cx*(1-k), applyY(p) = p*k + cy*(1-k)
+		const transform = zoomIdentity.translate(cx * (1 - k), cy * (1 - k)).scale(k)
+		const xScale = transform.rescaleX(chart.xAxisScale)
+		const yScale = transform.rescaleY(chart.yAxisScale)
+		chart.xAxis.call(chart.axisBottom.scale(xScale).tickValues(this.ticksWithinData(xScale, chart.xAxisScale)))
+		chart.yAxis.call(chart.axisLeft.scale(yScale).tickValues(this.ticksWithinData(yScale, chart.yAxisScale)))
 		this.currentAxisZoom = k
+	}
+
+	/** Ticks of the zoomed scale that still fall within the base (data) domain, so zooming out past
+	 * the data does not render tick marks for values below the minimum or above the maximum. */
+	ticksWithinData(zoomedScale: any, baseScale: any) {
+		const [d0, d1] = baseScale.domain()
+		const lo = Math.min(d0, d1)
+		const hi = Math.max(d0, d1)
+		return zoomedScale.ticks().filter((t: number) => t >= lo && t <= hi)
 	}
 
 	animate(camera, scene, renderer) {
