@@ -40,6 +40,13 @@ export class SCViewModel {
 		}
 	}
 
+	/** Shape the selected sample's plot data for the plot buttons view:
+	 * the server's plots plus flags the view only reads (hasSpatial shows
+	 * the Spatial button). */
+	formatPlotsData(sampleData: any, hasSpatial: boolean) {
+		return { ...sampleData, hasSpatial }
+	}
+
 	getTabelData(
 		plotConfig: SCConfig,
 		items: SingleCellSample[],
