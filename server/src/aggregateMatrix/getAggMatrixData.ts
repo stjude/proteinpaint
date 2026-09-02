@@ -11,8 +11,10 @@ import { getData } from '../termdb.matrix.js'
 type ValueByGene = Record<string, number | null>
 type ColData = { column: string; termId: string; colorTmp: ValueByGene; sizeTmp: ValueByGene }
 type ProcessedData = { values: ValueByGene; min: number; max: number }
+export type AggregateMatrixDataRequest = TermdbAggregateMatrixRequest &
+	Required<Pick<TermdbAggregateMatrixRequest, 'rows' | 'gradientMethod' | 'sizeMethod'>>
 
-export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any): Promise<ValidAggMatrixResponse> {
+export async function getAggMatrixData(q: AggregateMatrixDataRequest, ds: any): Promise<ValidAggMatrixResponse> {
 	const queryGenes = new Set<string>()
 	const rowSections: AxisSection[] = []
 	let rowCount = 0
@@ -100,8 +102,8 @@ export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any)
 async function getColumnData(
 	tw: any,
 	genes: string[],
-	method: TermdbAggregateMatrixRequest['gradientMethod'],
-	q: TermdbAggregateMatrixRequest,
+	method: AggregateMatrixDataRequest['gradientMethod'],
+	q: AggregateMatrixDataRequest,
 	ds: any
 ): Promise<ProcessedData> {
 	const columnTerm = tw.term

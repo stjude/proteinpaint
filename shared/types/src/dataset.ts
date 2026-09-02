@@ -2,6 +2,7 @@ import type { Mclass } from './Mclass.ts'
 import type { BaseTerm } from './terms/term.ts'
 import type { CategoryKey } from './terms/termCollection.ts'
 import type { TermdbSingleCellSamplesRequest, CountsFilePreview } from './index.ts'
+import type { AggregateMethodOption } from './routes/termdb.aggregateMatrix.ts'
 /*** General usage types ***/
 type FileObj = {
 	file: string
@@ -2670,4 +2671,6 @@ export type Mds3 = BaseMds & {
 
 export type Mds3WithCohort = Mds3 & {
 	cohort: Cohort
+	/** Server-only aggregation capability resolver, installed during dataset initialization. */
+	getAvailableAggregateMethods?: (terms?: BaseTerm[]) => AggregateMethodOption[]
 }
