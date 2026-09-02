@@ -117,10 +117,17 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		const cy = offsetY + s.svgh / 2
 		// a scale by k about (cx, cy): applyX(p) = p*k + cx*(1-k), applyY(p) = p*k + cy*(1-k)
 		const transform = zoomIdentity.translate(cx * (1 - k), cy * (1 - k)).scale(k)
-		const xScale = transform.rescaleX(chart.xAxisScale)
-		const yScale = transform.rescaleY(chart.yAxisScale)
-		chart.xAxis.call(chart.axisBottom.scale(xScale).tickValues(this.ticksWithinData(xScale, chart.xAxisScale)))
-		chart.yAxis.call(chart.axisLeft.scale(yScale).tickValues(this.ticksWithinData(yScale, chart.yAxisScale)))
+		// initAxes() binds the axis generators to time scales for date terms (xAxisScaleTime/
+		// yAxisScaleTime); rescale those when present so date ticks and formatting survive the zoom,
+		// and fall back to the numeric coordinate scale otherwise. Both share the same pixel range, so
+		// the same transform applies. The WebGL points always use the numeric chart.xAxisScale/
+		// yAxisScale (see getVertices), which is left untouched.
+		const xBase = chart.xAxisScaleTime || chart.xAxisScale
+		const yBase = chart.yAxisScaleTime || chart.yAxisScale
+		const xScale = transform.rescaleX(xBase)
+		const yScale = transform.rescaleY(yBase)
+		chart.xAxis.call(chart.axisBottom.scale(xScale).tickValues(this.ticksWithinData(xScale, xBase)))
+		chart.yAxis.call(chart.axisLeft.scale(yScale).tickValues(this.ticksWithinData(yScale, yBase)))
 		chart.currentAxisZoom = k
 	}
 
