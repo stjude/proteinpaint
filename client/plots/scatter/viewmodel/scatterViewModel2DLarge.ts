@@ -7,10 +7,6 @@ import type { Scatter } from '../scatter'
 
 export class ScatterViewModel2DLarge extends ScatterViewModel {
 	isSingleCell: boolean = false
-	/** the chart whose x/y axes this view model keeps in sync with the WebGL zoom */
-	axisChart: any
-	/** the zoom level the axes were last drawn at, so animate() only redraws on change */
-	currentAxisZoom: number | null = null
 
 	constructor(scatter: Scatter) {
 		super(scatter)
@@ -97,20 +93,21 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 			zoomState.zoom = Math.max(0.1, Math.min(10, zoomState.zoom * factor))
 		})
 
-		this.axisChart = chart
-		this.currentAxisZoom = null
-		this.renderAxes()
-		this.animate(camera, scene, renderer)
+		this.renderAxes(chart)
+		this.animate(chart, camera, scene, renderer)
 	}
 
-	/** Redraw the x/y axes to match the current WebGL zoom. camera.zoom scales the point cloud by k
-	 * about the plot center, so express that as a d3 zoom transform and rescale the axes the way
-	 * ScatterZoom.handleZoom() does for the small plots. Rescaling keeps each axis RANGE pinned to the
-	 * plot edges (only the visible data window is relabeled), so the two axes stay joined at the corner
-	 * and neither the ticks nor the spine spill past the canvas when zoomed in. Ticks that fall outside
-	 * the data range (e.g. when zoomed out past the data) are dropped. */
-	renderAxes() {
-		const chart = this.axisChart
+	/** Redraw the given chart's x/y axes to match the current WebGL zoom. camera.zoom scales the point
+	 * cloud by k about the plot center, so express that as a d3 zoom transform and rescale the axes the
+	 * way ScatterZoom.handleZoom() does for the small plots. Rescaling keeps each axis RANGE pinned to
+	 * the plot edges (only the visible data window is relabeled), so the two axes stay joined at the
+	 * corner and neither the ticks nor the spine spill past the canvas when zoomed in. Ticks that fall
+	 * outside the data range (e.g. when zoomed out past the data) are dropped.
+	 *
+	 * The zoom is tracked per chart (chart.currentAxisZoom), not on the view model, because a
+	 * categorical term0 renders multiple charts — each with its own canvas and animation loop — that
+	 * all share one zoom level; per-chart tracking keeps every chart's axes in sync, not just the last. */
+	renderAxes(chart) {
 		if (!chart?.axisBottom || !chart?.axisLeft || !chart.xAxis || !chart.yAxis) return
 		const s = this.scatter.settings
 		const k = this.scatter.vm.scatterZoom.zoom || 1
@@ -124,7 +121,7 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		const yScale = transform.rescaleY(chart.yAxisScale)
 		chart.xAxis.call(chart.axisBottom.scale(xScale).tickValues(this.ticksWithinData(xScale, chart.xAxisScale)))
 		chart.yAxis.call(chart.axisLeft.scale(yScale).tickValues(this.ticksWithinData(yScale, chart.yAxisScale)))
-		this.currentAxisZoom = k
+		chart.currentAxisZoom = k
 	}
 
 	/** Ticks of the zoomed scale that still fall within the base (data) domain, so zooming out past
@@ -136,15 +133,15 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		return zoomedScale.ticks().filter((t: number) => t >= lo && t <= hi)
 	}
 
-	animate(camera, scene, renderer) {
+	animate(chart, camera, scene, renderer) {
 		// a re-render replaces scatter.vm with a fresh view model; stop this now-stale loop so old
 		// loops don't keep rendering to a detached canvas or fight over the shared axes
 		if (this.scatter.vm !== this) return
-		requestAnimationFrame(() => this.animate(camera, scene, renderer))
+		requestAnimationFrame(() => this.animate(chart, camera, scene, renderer))
 		const k = this.scatter.vm.scatterZoom.zoom
 		camera.zoom = k
 		camera.updateProjectionMatrix()
-		if (k !== this.currentAxisZoom) this.renderAxes()
+		if (k !== chart.currentAxisZoom) this.renderAxes(chart)
 		renderer.render(scene, camera)
 	}
 
