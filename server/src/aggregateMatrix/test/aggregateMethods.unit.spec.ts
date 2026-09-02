@@ -35,39 +35,42 @@ tape('aggregate method availability follows dataset data and term kind', test =>
 		'exposes only methods backed by this numeric dataset'
 	)
 	test.deepEqual(
-		ds.getAvailableAggregateMethods([{ type: 'pseudobulk' }]).map(method => method.id),
+		ds.getAvailableAggregateMethods([
+			{ type: 'pseudobulk', assay: 'geneExpression', memberId: 'cellType', id: 'B' }
+		]).map(method => method.id),
 		['mean', 'percent'],
 		'exposes file-backed methods for pseudobulk terms'
 	)
 	test.deepEqual(
-		ds.getAvailableAggregateMethods([{ type: 'geneExpression' }]),
-		[],
-		'does not assign pseudobulk aggregation methods to gene-expression terms'
+		ds.getAvailableAggregateMethods([{ type: 'geneExpression' }]).map(method => method.id),
+		['mean', 'percent', 'count'],
+		'exposes calculated descriptive methods for standard numeric terms'
 	)
 	test.deepEqual(
-		ds.getAvailableAggregateMethods([{ type: 'categorical' }]),
-		[],
-		'does not expose numeric methods for nonnumeric terms'
+		ds.getAvailableAggregateMethods([{ type: 'categorical' }]).map(method => method.id),
+		['count'],
+		'exposes count for selected nonnumeric terms'
 	)
 
 	ds.cohort.termdb.termtypeByCohort.nested = { all: { categorical: 2 } }
 	initAggregateMethods(ds)
 	test.deepEqual(
-		ds.getAvailableAggregateMethods([{ type: 'categorical' }]).map(method => method.id),
-		['count', 'total'],
-		'exposes count-based methods only for nonnumeric terms'
+		ds.getAvailableAggregateMethods().map(method => method.id),
+		['mean', 'percent', 'count'],
+		'exposes dataset-wide methods when no term context is supplied'
 	)
 	test.end()
 })
 
 tape('sample-based aggregate methods share one set of counts', test => {
 	const samples = {
-		one: { sample: 'one', rowA: { key: 'x', value: 'x' }, column: { key: 'x', value: 'x' } },
-		two: { sample: 'two', rowB: { key: 'y', value: 'y' }, column: { key: 'x', value: 'x' } },
+		one: { sample: 'one', rowA: { key: 'x', value: 'x' }, column: { key: 10, value: 10 } },
+		two: { sample: 'two', rowB: { key: 'y', value: 'y' }, column: { key: 20, value: 20 } },
 		three: { sample: 'three', rowA: { key: 'x', value: 'x' } }
 	}
-	const result = calculateSampleBasedMethods(['count', 'total'], samples, ['rowA', 'rowB'], 'column')
-	test.deepEqual(result.get('count'), { rowA: 1, rowB: 1 }, 'counts row and column intersections')
-	test.deepEqual(result.get('total'), { rowA: 2, rowB: 2 }, 'reuses the column population total for each row')
+	const result = calculateSampleBasedMethods(['count', 'mean', 'percent'], samples, ['rowA', 'rowB'], 'column')
+	test.deepEqual(result.get('count'), { rowA: 1, rowB: 1 }, 'returns the matching observation count for each row')
+	test.deepEqual(result.get('mean'), { rowA: 10, rowB: 20 }, 'uses exact numeric values for means')
+	test.deepEqual(result.get('percent'), { rowA: 50, rowB: 50 }, 'calculates percent of the column cohort')
 	test.end()
 })
