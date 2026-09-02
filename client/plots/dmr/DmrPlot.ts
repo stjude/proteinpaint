@@ -215,12 +215,14 @@ class DmrPlot extends PlotBase implements RxComponent {
 
 export const componentInit = getCompInit(DmrPlot)
 
-export function getPlotConfig(opts: Partial<DmrConfig>): DmrConfig {
+export function getPlotConfig(opts: Partial<DmrConfig>, app?: any): DmrConfig {
 	validateConfig(opts)
 
 	const config = {
 		settings: {
-			dmr: getDefaultDMRSettings(opts)
+			// app is passed through so the defaults can tell a CpG-level dataset from an
+			// element-level one; opts alone does not carry termdbConfig
+			dmr: getDefaultDMRSettings({ ...opts, app })
 		}
 	}
 	return copyMerge(config, opts)

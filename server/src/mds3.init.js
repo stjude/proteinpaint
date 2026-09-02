@@ -2066,6 +2066,44 @@ async function validate_query_dnaMethylation(ds, genome) {
 				q.samples.push(si)
 			}
 			console.log(`${ds.label}: dnaMethylation HDF5 file validated. Samples:`, samples.length)
+			q.regionSampleSet = new Set(samples)
+		}
+		/* Per-chromosome CpG matrices for the region (DMR) view, as a path template holding
+		{chr}. Sharded rather than one file because the region analysis fits its eBayes prior
+		over the WHOLE matrix before subsetting: one 28GB genome-wide file is ~27s per request
+		against ~2s for a chromosome. The trade is that the prior is pooled per chromosome,
+		which at ~700k CpGs a shard is plenty. Built by utils/dnaMeth/build_cpg_matrix.py.
+
+		Kept off .file deliberately: .file also backs the dnaMethylation TERM getter, which
+		reads one matrix and knows nothing about shards. */
+		if (q.cpgByChr) {
+			if (!q.cpgByChr.includes('{chr}')) throw 'dnaMethylation.cpgByChr must contain the {chr} placeholder'
+			q.cpgByChr = path.join(serverconfig.tpmasterdir, q.cpgByChr)
+			const [prefix, suffix] = path.basename(q.cpgByChr).split('{chr}')
+			const dir = path.dirname(q.cpgByChr)
+			const files = fs.readdirSync(dir)
+			q.cpgChroms = new Set(
+				files
+					.filter(f => f.startsWith(prefix) && f.endsWith(suffix) && f.length > prefix.length + suffix.length)
+					.map(f => f.slice(prefix.length, f.length - suffix.length))
+			)
+			if (!q.cpgChroms.size) throw `dnaMethylation.cpgByChr matched no file under ${dir}`
+			/* Sample gate on one shard, since all shards come out of the same build. A CpG matrix
+			written from the raw count files carries the sequencing sample names, which are not the
+			portal's until the build appends its suffix -- catching that here rather than at request
+			time, where it would surface as an unexplained empty region. */
+			const probe = q.cpgByChr.replace('{chr}', [...q.cpgChroms][0])
+			const cpgSamples = await getH5samples(probe, '/meta/samples/names')
+			for (const sn of cpgSamples) {
+				if (ds.cohort.termdb.q.sampleName2id(sn) == undefined) throw `unknown sample ${sn} from HDF5 ${probe}`
+			}
+			/* The region view is handed group membership as termdb sample ids and has to resolve
+			them to the names the matrix is keyed by, so it needs the name set. Only used when the
+			dataset has no element entry to take an eligible-sample set from. */
+			q.regionSampleSet = new Set(cpgSamples)
+			console.log(
+				`${ds.label}: dnaMethylation CpG matrices validated. Chromosomes: ${q.cpgChroms.size}, samples: ${cpgSamples.length}`
+			)
 		}
 		/* Validate every element matrix, not just the promoter one. The legacy .promoter
 		key and the .elements map go through the SAME loop so a non-promoter class cannot

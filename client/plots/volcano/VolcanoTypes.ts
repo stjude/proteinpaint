@@ -153,6 +153,14 @@ export type VolcanoViewData = {
 	pointData: DataPointEntry[]
 	pValueTableData: VolcanoPValueTableData
 	statsData: { label: string; value: number }[]
+	/** The significant count split by direction of effect, both counted server-side over every
+	 * significant row. Passed as numbers rather than looked up out of statsData by label, which
+	 * silently yields nothing when the label wording drifts. */
+	numSignificantUp: number
+	numSignificantDown: number
+	/** Median effect size subtracted from the plotted x, or 0 when centering was off. Shown
+	 * next to the counts so a centered figure states the size of the shift it removed. */
+	xOffset: number
 	/** One-line record of the groups, sample sizes and result-affecting settings behind this
 	 * run. Written into exported tables so a file can be traced back to how it was produced. */
 	provenance: string

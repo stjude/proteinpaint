@@ -1,1 +1,25 @@
+Features:
+- DMR region analysis now runs on datasets with no genome-wide CpG matrix: per-chromosome CpG
+  matrices via queries.dnaMethylation.cpgByChr (preferred, built by utils/dnaMeth/build_cpg_matrix.py),
+  falling back per chromosome to the element matrix behind the volcano's element type. MMRF can
+  now drill into a hit of any cCRE class.
+- MMRF differential methylation offers the two remaining cCRE classes, CTCF-only and DNase-H3K4me3.
+- DMR analysis can be launched directly from the group menu alongside the differential analyses,
+  naming a region instead of reaching it by clicking a volcano hit.
+- The volcano's significant-count line now splits by direction ("17,399 DM distal enhancers
+  (15,707 hyper / 1,692 hypo)"), counted server-side over every significant row so the ratio is
+  unaffected by the maxInteractiveDots cap. Gene expression reads "up / down".
+- Volcano control "Center Δβ on median" (differential methylation) moves the x origin to the
+  median effect size across all tested elements, so the direction counts answer "moved more than
+  the typical element" rather than "moved from zero". Off by default; the caption and axis name
+  the shift when on, and the p-value table is unaffected either way.
 
+Fixes:
+- DMR analysis no longer returns "Group 1 needs at least 3 samples" on datasets whose sample
+  groups carry sample ids without names (MMRF, GDC). The route resolved group membership by
+  reading an optional `sample` field; it now resolves ids through the same resolver differential
+  methylation uses, against the same eligible-sample set.
+
+General:
+- MMRF requires the new files/hg38/mmrf/methylation/cpg/{chr}.h5 shards on the target host (~28GB).
+  Without them the region view degrades to element resolution rather than failing.

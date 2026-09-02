@@ -33,7 +33,8 @@ export class DmrModel {
 				devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio : 1,
 				maxLoessRegion: settings.dmr.maxLoessRegion,
 				colors: settings.dmr.colors,
-				backend: settings.dmr.backend
+				backend: settings.dmr.backend,
+				element_type: this.config.elementType
 			}
 		}) as Promise<TermdbDmrResponse>
 	}

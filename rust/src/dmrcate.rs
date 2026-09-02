@@ -5,6 +5,10 @@
 // eBayes → regional kernel smoothing → DMR segmentation with proximity fallback.
 // Usage: echo '{"probe_h5_file":"beta.h5","chr":"chr14","start":100000,"stop":105000,
 //              "case":"s1,s2","control":"s3,s4"}' | target/release/dmrcate
+//
+// The matrix may also be an element matrix (promoters, cCREs) instead of a CpG one: one row is
+// then one regulatory element rather than one CpG, and "mvalues":true says the stored values are
+// already M-values. Everything downstream is unchanged -- an element is a probe with wider spacing.
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use hdf5::File;
@@ -99,45 +103,98 @@ struct ProbeStats {
     stdev_unscaled: f64,
 }
 
-fn read_h5_metadata(file: &File) -> Result<(Vec<String>, Vec<usize>, Vec<String>, Vec<i64>, Vec<String>), String> {
-    let samples: Vec<String> = file
-        .dataset("meta/samples/names")
+fn read_str_1d(file: &File, path: &str) -> Result<Vec<String>, String> {
+    Ok(file
+        .dataset(path)
         .map_err(|e| e.to_string())?
         .read_1d::<VarLenUnicode>()
         .map_err(|e| e.to_string())?
         .iter()
         .map(|s| s.to_string())
-        .collect();
+        .collect())
+}
+
+struct H5Meta {
+    /// chromosome names in row order, with the number of rows each one occupies
+    chr_names: Vec<String>,
+    chr_rows: Vec<usize>,
+    samples: Vec<String>,
+    starts: Vec<i64>,
+    /// probe id (CpG matrix) or element id (element matrix)
+    row_ids: Vec<String>,
+}
+
+/* Two matrix layouts, one reader.
+
+CpG/probe matrix:     rows are CpGs, chromosome row spans come from the `chrom_lengths`
+                      root attribute, ids from /meta/probe/probeID.
+Element matrix:       rows are regulatory elements (promoters, cCREs), carrying a per-row
+                      /meta/chr instead of the root attribute and ids under
+                      /meta/element/elementID (or /meta/promoter/promoterID on original
+                      promoter-only builds). See query_element_values.py for the layout.
+
+Both are sorted by chromosome then start, so a chromosome's rows are one contiguous slice
+either way -- which is all the chunked fit below needs. */
+fn read_h5_metadata(file: &File) -> Result<H5Meta, String> {
+    let samples = read_str_1d(file, "meta/samples/names")?;
     let starts: Vec<i64> = file
         .dataset("meta/start")
         .map_err(|e| e.to_string())?
         .read_1d::<i64>()
         .map_err(|e| e.to_string())?
         .to_vec();
-    let probes: Vec<String> = file
-        .dataset("meta/probe/probeID")
-        .map_err(|e| e.to_string())?
-        .read_1d::<VarLenUnicode>()
-        .map_err(|e| e.to_string())?
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
+    let row_ids = read_str_1d(file, "meta/probe/probeID")
+        .or_else(|_| read_str_1d(file, "meta/element/elementID"))
+        .or_else(|_| read_str_1d(file, "meta/promoter/promoterID"))
+        .map_err(|_| {
+            "no row id dataset: expected meta/probe/probeID, meta/element/elementID or meta/promoter/promoterID"
+                .to_string()
+        })?;
+
     let root = file.group("/").map_err(|e| e.to_string())?;
-    let cl_json: String = root
-        .attr("chrom_lengths")
-        .map_err(|e| e.to_string())?
-        .read_scalar::<VarLenUnicode>()
-        .map_err(|e| e.to_string())?
-        .to_string();
-    // json crate preserves key order; serde_json::Map sorts alphabetically (wrong for chromosomes)
-    let cl_parsed = json::parse(&cl_json).map_err(|e| format!("Failed to parse chrom_lengths: {}", e))?;
-    let mut names = Vec::new();
-    let mut lens = Vec::new();
-    for (k, v) in cl_parsed.entries() {
-        names.push(k.to_string());
-        lens.push(v.as_u64().unwrap_or(0) as usize);
-    }
-    Ok((names, lens, samples, starts, probes))
+    let (chr_names, chr_rows) = match root.attr("chrom_lengths") {
+        Ok(a) => {
+            let cl_json = a.read_scalar::<VarLenUnicode>().map_err(|e| e.to_string())?.to_string();
+            // json crate preserves key order; serde_json::Map sorts alphabetically (wrong for chromosomes)
+            let cl_parsed = json::parse(&cl_json).map_err(|e| format!("Failed to parse chrom_lengths: {}", e))?;
+            let mut names = Vec::new();
+            let mut lens = Vec::new();
+            for (k, v) in cl_parsed.entries() {
+                names.push(k.to_string());
+                lens.push(v.as_u64().unwrap_or(0) as usize);
+            }
+            (names, lens)
+        }
+        Err(_) => {
+            let chrs = read_str_1d(file, "meta/chr")
+                .map_err(|_| "matrix has neither a chrom_lengths attribute nor meta/chr".to_string())?;
+            let mut names: Vec<String> = Vec::new();
+            let mut lens: Vec<usize> = Vec::new();
+            for c in &chrs {
+                if names.last().map(|l| l == c).unwrap_or(false) {
+                    *lens.last_mut().unwrap() += 1;
+                } else {
+                    /* A chromosome coming back after another one means the rows are not sorted,
+                    so a contiguous slice would silently mix chromosomes and mislabel every
+                    probe's chromosome. Refuse rather than compute a wrong answer. */
+                    if names.iter().any(|n| n == c) {
+                        return Err(format!("meta/chr is not sorted: {} appears in more than one run", c));
+                    }
+                    names.push(c.clone());
+                    lens.push(1);
+                }
+            }
+            (names, lens)
+        }
+    };
+
+    Ok(H5Meta {
+        chr_names,
+        chr_rows,
+        samples,
+        starts,
+        row_ids,
+    })
 }
 
 fn process_chromosome(
@@ -150,6 +207,8 @@ fn process_chromosome(
     starts: &[i64],
     probe_ids: &[String],
     min_spg: usize,
+    // element matrices already store M-values, so the logit below must not run twice
+    mvalues: bool,
 ) -> Result<Vec<ProbeStats>, String> {
     let n_probes = row_end - row_start;
     if n_probes == 0 {
@@ -166,6 +225,7 @@ fn process_chromosome(
             .read_slice_2d::<f32, _>(sel)
             .map_err(|e| format!("HDF5 read: {}", e))?;
         for lp in 0..(ce - cs) {
+            let idx = row_start + cs + lp;
             let row = data.row(lp);
             let (mut cv, mut kv) = (Vec::with_capacity(case_idx.len()), Vec::with_capacity(ctrl_idx.len()));
             for &si in case_idx {
@@ -188,6 +248,9 @@ fn process_chromosome(
                 continue;
             }
             let to_m = |b: f64| {
+                if mvalues {
+                    return b;
+                }
                 let c = b.clamp(0.001, 0.999);
                 (c / (1.0 - c)).log2()
             };
@@ -209,7 +272,6 @@ fn process_chromosome(
                 continue;
             }
             let su = (1.0 / n1 + 1.0 / n2).sqrt();
-            let idx = row_start + cs + lp;
             results.push(ProbeStats {
                 chr: chr.to_string(),
                 start: starts[idx],
@@ -748,6 +810,9 @@ fn main() {
     let c_param = p["C"].as_f64().unwrap_or(2.0);
     let min_db = p["min_delta_beta"].as_f64().unwrap_or(0.05);
     let min_spg = p["min_samples_per_group"].as_u64().unwrap_or(3) as usize;
+    /* Set by the server from the ds config entry, never by the client: an element matrix stores
+    M-values where a CpG matrix stores betas. Same contract as diffMeth.R. */
+    let mvalues = p["mvalues"].as_bool().unwrap_or(false);
     let block_width = p["blockWidth"].as_u64().unwrap_or(800) as u32;
     let device_pixel_ratio = p["devicePixelRatio"].as_f64().unwrap_or(1.0) as f32;
     let max_loess_region = p["maxLoessRegion"].as_f64().unwrap_or(50000.0);
@@ -769,10 +834,17 @@ fn main() {
         Ok(f) => f,
         Err(e) => bail!("HDF5 open: {}", e),
     };
-    let (chr_names, chr_lens, sample_names, starts, probe_ids) = match read_h5_metadata(&file) {
+    let meta = match read_h5_metadata(&file) {
         Ok(m) => m,
         Err(e) => bail!("{}", e),
     };
+    let H5Meta {
+        chr_names,
+        chr_rows: chr_lens,
+        samples: sample_names,
+        starts,
+        row_ids: probe_ids,
+    } = meta;
     let smap: HashMap<&str, usize> = sample_names.iter().enumerate().map(|(i, s)| (s.as_str(), i)).collect();
     let ci: Vec<usize> = cases.iter().filter_map(|s| smap.get(s).copied()).collect();
     let ki: Vec<usize> = ctrls.iter().filter_map(|s| smap.get(s).copied()).collect();
@@ -796,6 +868,7 @@ fn main() {
             &starts,
             &probe_ids,
             min_spg,
+            mvalues,
         ) {
             Ok(s) => all.extend(s),
             Err(_e) => {}
@@ -841,6 +914,17 @@ fn main() {
     let rlfc: Vec<f64> = ri.iter().map(|&i| all[i].log_fc).collect();
 
     let (mut mg1, mut mg2) = (Vec::new(), Vec::new());
+    /* Group means are the DISPLAY scale: the track PNG, the LOESS curves and the DMR
+    maxdiff/meandiff are all beta-scale (0-1), and the client labels them as such. An element
+    matrix stores M-values, so undo the logit here -- per sample before averaging, matching how
+    diffMeth.R reports mean betas. The stats above stay on M-values either way. */
+    let to_beta = |v: f64| -> f64 {
+        if !mvalues {
+            return v;
+        }
+        let p = v.exp2();
+        p / (1.0 + p)
+    };
     let ds = file.dataset("beta/values").ok();
     for &idx in &ri {
         let pid = &all[idx].probe_id;
@@ -853,7 +937,7 @@ fn main() {
                     if si < row.len() {
                         let v = row[si] as f64;
                         if v.is_finite() {
-                            ks += v;
+                            ks += to_beta(v);
                             kc += 1;
                         }
                     }
@@ -862,7 +946,7 @@ fn main() {
                     if si < row.len() {
                         let v = row[si] as f64;
                         if v.is_finite() {
-                            cs += v;
+                            cs += to_beta(v);
                             cc += 1;
                         }
                     }

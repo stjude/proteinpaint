@@ -146,6 +146,30 @@ export async function renderVolcano<T extends DataEntry>(
 	}
 	if (!Number.isFinite(minNonZeroP)) minNonZeroP = 1e-300
 
+	/* Optionally recentre x on the median effect size across ALL tested rows, so the origin is
+	the typical row rather than zero.
+
+	Why it matters for the direction counts: a contrast can carry a baseline offset affecting
+	every row -- on MMRF NSD2-high the median delta-beta over 202,499 distal enhancers is +0.0125,
+	not 0. Counting "up vs down" at a symmetric +/-cutoff around ZERO then asks a row with no
+	locus-specific effect to travel 0.0875 to be called up but 0.1125 to be called down, and with
+	200k tests that alone skews the ratio (9.3:1 raw vs 3.5:1 centred, on that contrast).
+
+	This is a sensitivity check, NOT a correction to leave on: if the shift is real biology (a
+	genuine genome-wide gain), centring subtracts the effect being measured. Hence a toggle that
+	reports both, rather than a silent adjustment.
+
+	The MEDIAN, not the mean, so a heavy tail on one side does not drag the origin toward it.
+	Only the plotted/classified value moves -- p-values are untouched, and the returned rows keep
+	their raw effect sizes, so the p-value table and its download stay the raw source of truth. */
+	let xOffset = 0
+	if (req.centerX && points.length) {
+		const xs = points.map(pt => pt.fc).sort((a, b) => a - b)
+		const m = xs.length
+		xOffset = m % 2 ? xs[(m - 1) / 2] : (xs[m / 2 - 1] + xs[m / 2]) / 2
+		if (xOffset !== 0) for (const pt of points) pt.fc -= xOffset
+	}
+
 	// Classify + compute y; track axis extents in the same pass.
 	let xAbsMax = 0
 	let yMaxData = 0
@@ -264,6 +288,15 @@ export async function renderVolcano<T extends DataEntry>(
 	for (let i = 0; i < points.length; i++) if (points[i].significant) sigIdx.push(i)
 	sigIdx.sort((a, b) => points[a].p - points[b].p)
 	const totalSignificantRows = sigIdx.length
+	/* Split by direction, using the same sign rule that colours the PNG above (fc == 0 falls in
+	with 'down' there, so it does here too) — the two must agree or the caption contradicts the
+	picture. Counted over every significant row rather than over `dots`, because
+	maxInteractiveDots truncates that to the most significant rows, and the strongest hits skew
+	hard to one direction: on MMRF NSD2-high distal enhancers the full set runs 90% up while the
+	top of the ranking is near 100%, so counting the capped list would overstate the imbalance. */
+	let totalSignificantUp = 0
+	for (const i of sigIdx) if (points[i].fc > 0) totalSignificantUp++
+	const totalSignificantDown = totalSignificantRows - totalSignificantUp
 	const keep = maxInteractiveDots == null ? sigIdx : sigIdx.slice(0, maxInteractiveDots)
 	const dots = keep.map(i => {
 		const row = { ...(rows[i] as any) }
@@ -297,6 +330,9 @@ export async function renderVolcano<T extends DataEntry>(
 			minNonZeroPValue: minNonZeroP
 		},
 		totalRows: rows.length,
-		totalSignificantRows
+		totalSignificantRows,
+		totalSignificantUp,
+		totalSignificantDown,
+		xOffset
 	}
 }
