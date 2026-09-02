@@ -177,6 +177,10 @@ export function init({ genomes }) {
 				range = { xMin, xMax, yMin, yMax }
 			}
 			if (!result) result = await colorAndShapeSamples(refSamples, cohortSamples, data as ValidGetDataResponse, q)
+			// classify each dot as cohort vs reference cloud ONCE, from sampleId presence, before any
+			// anonymization. The client renders/sizes/labels by this flag instead of sampleId presence, so a
+			// denied request may drop sampleId (below) without a dot being misclassified as a reference dot.
+			markRefDots(result)
 			// the real sampleId was needed above for the server-side annotation join; it must not leave the
 			// server for a request not authorized to display sample ids (see anonymizeSampleIds)
 			if (!authApi.canDisplaySampleIds(req, ds)) anonymizeSampleIds(result)
@@ -208,30 +212,43 @@ export async function getSamples(req: any, ds: any, plot: any) {
 	}
 }
 
-/** Replace every real sampleId in the scatter response with an anonymous surrogate and mark the sample.
+/** Mark every dot as reference-cloud (isRef=true) or cohort (isRef=false), from sampleId presence.
+ *
+ * Must run BEFORE anonymizeSampleIds, while sampleId presence still reflects reality. The client uses this
+ * flag — not sampleId presence — to tell cohort dots from reference dots, to size them (cohort = size,
+ * reference = refSize), to decide labels, and to gate sample-specific actions. Deriving it here, once,
+ * lets a denied request drop sampleId entirely without a cohort dot being reclassified as a reference dot.
+ *
+ * Note this deliberately mirrors the old `!('sampleId' in dot)` test: colorColumn (non-bySample) plots set
+ * a sampleId on their reference dots so they render at the regular size, and those therefore stay
+ * isRef=false — exactly as before. */
+export function markRefDots(result: { [index: string]: { samples: any[] } }) {
+	for (const divideBy in result) {
+		for (const sample of result[divideBy].samples || []) {
+			sample.isRef = !('sampleId' in sample)
+		}
+	}
+}
+
+/** Remove every real sampleId and sample name from the scatter response.
  *
  * Called only when the request is NOT authorized to display sample ids. Both sample sources put a real,
- * identifying value on .sampleId: getSampleCoordinatesByTerms() uses the db sample id, and loadFile()
- * assigns the integer sample id (or, for colorColumn plots, the sample name) to prebuilt cohort/reference
- * entries. That value was needed for the server-side annotation join (colorAndShapeSamples) but must not
- * reach the client: without this, the client download fallback (scatter.ts toText: `s.sample || s.sampleId`)
- * would still expose it even after the sample NAME was stripped.
+ * identifying value on .sampleId (getSampleCoordinatesByTerms uses the db sample id; loadFile assigns the
+ * integer sample id, or the sample name for colorColumn plots) and, when authorized, a .sample name. Those
+ * were needed for the server-side annotation join and labeling, but must not reach the client: the client
+ * download fallback (scatter.ts toText: `s.sample || s.sampleId`) and its sample-specific actions would
+ * otherwise expose or submit a real id.
  *
- * The client uses the presence of the .sampleId key to tell cohort dots from reference dots and to size
- * them, so the key is preserved and given a non-numeric surrogate that cannot resolve back to a real
- * (integer) sample id. But the client also submits the sampleId VALUE for sample-specific actions (open
- * sample view, lasso grouping/filtering); a surrogate there would offer denied users actions that submit
- * a nonexistent id or build an empty filter. So each anonymized sample is also flagged with .hideSampleId,
- * which the client uses to gate all such sample-specific actions and grouping. */
+ * Classification/rendering no longer depends on sampleId (markRefDots set .isRef first), so the id can be
+ * deleted outright — no surrogate needed. Deleting .sample and .sampleId is also the fail-closed choice:
+ * authorization is evaluated once while building samples and again here; if it flips to "denied" between
+ * those points, this unconditionally strips whatever was already copied in. A cohort dot then has no
+ * sampleId, which is how the client gates its sample-specific actions. */
 export function anonymizeSampleIds(result: { [index: string]: { samples: any[] } }) {
-	let n = 0
 	for (const divideBy in result) {
 		for (const sample of result[divideBy].samples || []) {
 			delete sample.sample
-			if ('sampleId' in sample) {
-				sample.sampleId = `anonymous-${n++}`
-				sample.hideSampleId = true
-			}
+			delete sample.sampleId
 		}
 	}
 }

@@ -195,7 +195,11 @@ tape('getOpacity, getStrokeWidth, getShape and getCoordinates return expected va
 		0,
 		'Should return no stroke width for a hidden sample.'
 	)
-	test.equal(model.getOpacity({ x: 0, y: 0 }), 0.6, 'Should return reference opacity based on the showRef setting.')
+	test.equal(
+		model.getOpacity({ x: 0, y: 0, isRef: true }),
+		0.6,
+		'Should return reference opacity based on the showRef setting.'
+	)
 
 	const shape = model.getShape(chart, sample)
 	test.ok(!!shape, 'Should return a valid shape entry.')
@@ -217,7 +221,7 @@ tape('getScale and transform support fixed and data-driven sizing', function (te
 	})
 
 	const sample = { sampleId: 's1', sample: 'Alpha', x: 10, y: 10, scale: 15 }
-	const ref = { x: 10, y: 10, scale: 15 }
+	const ref = { x: 10, y: 10, scale: 15, isRef: true }
 
 	const s = scatter.settings
 
@@ -285,13 +289,15 @@ tape('getColor supports categorical and continuous clamping', function (test) {
 		'rgb(12,0,0)',
 		'Should pass through continuous values within the domain.'
 	)
+	// reference-cloud dots (isRef) skip the continuous branch even under a continuous colorTW, falling to
+	// the Default/categorical color path
 	test.equal(
-		model.getColor({ category: 'Default' }, chart),
+		model.getColor({ category: 'Default', isRef: true }, chart),
 		'#ce768e',
 		'Should use the scatter default color for the Default category.'
 	)
 	test.equal(
-		model.getColor({ category: 'A' }, chart),
+		model.getColor({ category: 'A', isRef: true }, chart),
 		'#f00',
 		'Should use the color legend mapping for categorical values.'
 	)

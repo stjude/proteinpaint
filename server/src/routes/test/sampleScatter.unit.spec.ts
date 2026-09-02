@@ -20,7 +20,7 @@ or run the whole unit suite (as CI does):
   cd proteinpaint/server && npm run test:unit
 *********************************************/
 import tape from 'tape'
-import { getSampleCoordinatesByTerms, getSamples, anonymizeSampleIds } from '../termdb.sampleScatter.ts'
+import { getSampleCoordinatesByTerms, getSamples, markRefDots, anonymizeSampleIds } from '../termdb.sampleScatter.ts'
 import { getAuthApi, authApi } from '../../auth.js'
 
 // assign the shared open-access authApi once (idempotent — the live-binding is process-global)
@@ -101,26 +101,28 @@ tape('getSampleCoordinatesByTerms: hides sample name when displaying sample ids 
 
 tape('coordinate branch response is anonymized end-to-end when access is denied', async t => {
 	// getSampleCoordinatesByTerms returns the raw sampleId (needed for annotation), so the route must
-	// anonymize it before responding — otherwise the client export `sample || sampleId` still leaks an
-	// identifier. This is the assertion the name-only checks above cannot make.
+	// classify (markRefDots) then anonymize (delete sampleId + name) before responding — otherwise the
+	// client export `sample || sampleId` still leaks an identifier. This is the assertion the name-only
+	// checks above cannot make.
 	await ensureOpenAuth()
 	const [samples] = await getSampleCoordinatesByTerms(req, coordQ, makeDs(false), makeCoordData())
-	// mirror the route: the coordinate-branch samples flow into the response result unchanged
+	// mirror the route: classify each dot, then anonymize, on the response result
 	const result: any = { Default: { samples } }
+	markRefDots(result)
 	anonymizeSampleIds(result)
 	const out = result.Default.samples
 
 	t.ok(
-		out.every((s: any) => 'sampleId' in s),
-		'the sampleId key should remain so the client can still tell cohort dots from reference dots'
+		out.every((s: any) => s.isRef === false),
+		'coordinate-branch dots are cohort dots (isRef false), so the client still distinguishes them from reference dots after the sampleId is gone'
 	)
 	t.notOk(
-		out.some((s: any) => s.sampleId === '1' || s.sampleId === '2'),
-		'no raw sampleId should remain in the anonymized response'
+		out.some((s: any) => 'sampleId' in s),
+		'no sampleId (real or surrogate) should remain in the anonymized response'
 	)
 	t.notOk(
 		out.some((s: any) => 'sample' in s),
-		'and no sample name should be present either (so `sample || sampleId` exposes only a surrogate)'
+		'and no sample name should be present either (so `sample || sampleId` exposes nothing)'
 	)
 	t.end()
 })
@@ -180,13 +182,34 @@ tape('getSamples: hides sample names when displaying sample ids is not allowed',
 	t.end()
 })
 
-/*** response anonymization: anonymizeSampleIds() ***/
+/*** dot classification and response anonymization ***/
 
-tape('anonymizeSampleIds: replaces real sampleId with an anonymous surrogate while keeping the key', t => {
+tape('markRefDots: classifies dots by sampleId presence, mirroring the old cohort-vs-reference test', t => {
+	// Cohort dots carry a real sampleId; reference-cloud dots carry none — EXCEPT colorColumn (non-bySample)
+	// reference dots, which carry a sampleId so they render at the regular size and must stay isRef=false.
+	const result: any = {
+		Default: {
+			samples: [
+				{ sampleId: 41, x: 3, y: 4 }, // cohort dot
+				{ x: 7, y: 8 }, // plain reference-cloud dot, no sampleId
+				{ sampleId: 'CC-1', x: 9, y: 10 } // colorColumn reference dot with a sampleId
+			]
+		}
+	}
+	markRefDots(result)
+	const samples = result.Default.samples
+	t.equal(samples[0].isRef, false, 'a dot with a sampleId is a cohort dot (isRef false)')
+	t.equal(samples[1].isRef, true, 'a dot without a sampleId is a reference-cloud dot (isRef true)')
+	t.equal(samples[2].isRef, false, 'a colorColumn reference dot keeps isRef false so it renders regular size')
+	t.end()
+})
+
+tape('anonymizeSampleIds: deletes sampleId and name so no identifier leaves the server', t => {
 	// a response shape as built after annotation: cohort entries carry a real sampleId, reference entries
 	// (e.g. the "Ref" cloud) carry none. Each entry here still carries a .sample name — this models the
 	// fail-closed case where the name was copied into result while the request was authorized, then the
-	// final auth decision at the response boundary is "denied" (see the fail-closed test below).
+	// final auth decision at the response boundary is "denied" (see the fail-closed test below). Classify
+	// first (as the route does) so we can assert the client can still tell cohort from reference dots.
 	const result: any = {
 		Default: {
 			samples: [
@@ -196,32 +219,23 @@ tape('anonymizeSampleIds: replaces real sampleId with an anonymous surrogate whi
 			]
 		}
 	}
+	markRefDots(result)
 	anonymizeSampleIds(result)
 	const samples = result.Default.samples
 
-	t.ok(
-		samples.slice(0, 2).every((s: any) => 'sampleId' in s),
-		'cohort dots should keep the sampleId key so the client can still tell them from reference dots'
-	)
 	t.notOk(
-		samples.some((s: any) => s.sampleId === 41 || s.sampleId === 52),
-		'no real sampleId value should remain in the response'
-	)
-	t.notOk(
-		samples.some((s: any) => typeof s.sampleId == 'number'),
-		'surrogates should be non-numeric so they cannot resolve back to a real (integer) sample id'
-	)
-	t.equal(new Set(samples.slice(0, 2).map((s: any) => s.sampleId)).size, 2, 'surrogates should be unique')
-	t.ok(
-		samples.slice(0, 2).every((s: any) => s.hideSampleId === true),
-		'each anonymized cohort dot should be flagged with hideSampleId so the client gates sample actions'
+		samples.some((s: any) => 'sampleId' in s),
+		'no sampleId (real or surrogate) should remain on any dot'
 	)
 	t.notOk(
 		samples.some((s: any) => 'sample' in s),
 		'no sample name should survive, on cohort or reference dots (fail-closed at the response boundary)'
 	)
-	t.notOk('sampleId' in samples[2], 'a reference dot without a sampleId should keep no sampleId key')
-	t.notOk('hideSampleId' in samples[2], 'a reference dot should not be flagged with hideSampleId')
+	t.deepEqual(
+		samples.map((s: any) => s.isRef),
+		[false, false, true],
+		'isRef still distinguishes cohort dots from the reference dot after the sampleId is gone'
+	)
 	t.deepEqual(
 		samples.map((s: any) => [s.x, s.y]),
 		[
@@ -234,19 +248,19 @@ tape('anonymizeSampleIds: replaces real sampleId with an anonymous surrogate whi
 	t.end()
 })
 
-tape('anonymizeSampleIds: is fail-closed — deletes sample names even when sampleId was already anonymized', t => {
+tape('anonymizeSampleIds: is fail-closed — deletes sampleId and name unconditionally', t => {
 	// Guards the response-boundary sanitizer. Authorization is evaluated twice: once while building samples
 	// and again here at the boundary. If a session expires (or a function policy flips) between those two
-	// points, names may already have been copied into result. anonymizeSampleIds must strip .sample
-	// unconditionally so the final denied decision wins — rewriting only sampleId is not enough.
+	// points, the id and name may already have been copied into result. anonymizeSampleIds must strip both
+	// unconditionally so the final denied decision wins.
 	const result: any = {
 		Group1: { samples: [{ sampleId: 7, sample: 'Alice', x: 1, y: 2 }] },
 		Group2: { samples: [{ sample: 'Bob', x: 3, y: 4 }] } // a name with no sampleId must also be removed
 	}
 	anonymizeSampleIds(result)
-	t.notOk('sample' in result.Group1.samples[0], 'a cohort name copied in before the auth flip should be removed')
+	t.notOk('sampleId' in result.Group1.samples[0], 'the real sampleId copied in before the auth flip should be removed')
+	t.notOk('sample' in result.Group1.samples[0], 'the cohort name copied in before the auth flip should be removed')
 	t.notOk('sample' in result.Group2.samples[0], 'a name without a sampleId should be removed too')
-	t.equal(result.Group1.samples[0].sampleId, 'anonymous-0', 'the sampleId should still be anonymized')
 	t.end()
 })
 
