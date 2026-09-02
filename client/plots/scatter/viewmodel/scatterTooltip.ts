@@ -218,7 +218,7 @@ export class ScatterTooltip {
 	renderSampleRows(sample, chart, container) {
 		const config = this.scatter.config
 		const table = table2col({ holder: container.append('div'), disableScroll: true, cellPadding: '5px' })
-
+		table.table.attr('name', 'sjpp-single-hit-table')
 		if (config.term) {
 			table.addRow(config.term.term.name, this.getCategoryValue('x', sample, config.term))
 			if (config.term2) table.addRow(config.term2.term.name, this.getCategoryValue('y', sample, config.term2))
@@ -284,6 +284,7 @@ export class ScatterTooltip {
 
 	/** Flat table for the multi-hit hover tooltip and click menu. */
 	buildTableData(dots) {
+		console.trace('multu')
 		return buildSampleTableData(this.scatter.config, this.scatter.settings.itemLabel, dots)
 	}
 
