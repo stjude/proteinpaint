@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getPlotConfig, mayAdjustConfig } from '../summary.ts'
+import { getPlotConfig, mayAdjustConfig, isScatterToggleVisible } from '../summary.ts'
 
 /*
 Tests:
@@ -10,6 +10,7 @@ Tests:
 	mayAdjustConfig() - two continuous terms should set childType to sampleScatter
 	mayAdjustConfig() - single continuous term should default to violin
 	mayAdjustConfig() - discrete terms should default to barchart
+	isScatterToggleVisible() - resolves the comma-joined cohort key, requires dynamicScatter and two numeric terms
 */
 
 /*************************
@@ -248,4 +249,81 @@ tape('getPlotConfig() applies opts.getPlotConfig_mutateSummary before validating
 	test.equal(callbackCalls, 1, 'calls the Mass summary-config mutator once')
 	test.equal(config.term.term.id, 'test-term', 'uses the primary term supplied asynchronously by the mutator')
 	test.equal(config.childType, 'barchart', 'returns a valid summary config after applying the mutation')
+})
+
+/*
+	isScatterToggleVisible() — regression coverage for the summary "Scatter" toggle visibility.
+	Two prior bugs are guarded here (see client/plots/summary.ts and client/mass/charts.ts getActiveCohortStr):
+	  1. supportedChartTypes is keyed by the sorted cohort KEYS joined with commas, not by the cohort's
+	     shortLabel — so combined cohorts (keys "ABC","XYZ" -> "ABC,XYZ", shortLabel "ABC+XYZ") were losing
+	     the toggle when it was looked up by shortLabel.
+	  2. The toggle builds a dynamic two-term scatter, so it must require `dynamicScatter`, not
+	     `sampleScatter` — the latter is also reported for a cohort that only has a premade plot, which
+	     would offer an unsupported toggle.
+*/
+
+const numericTw = { term: { type: 'float', id: 'x', name: 'X', values: {} } }
+const categoricalTw = { term: { type: 'categorical', id: 'c', name: 'C', values: {} } }
+
+// build an appState shaped as getActiveCohortStr()/getCurrentCohortChartTypes() read it. `cohortKeys` are
+// the raw (unsorted) keys of the active cohort; `shortLabel` is deliberately different from the comma key.
+function makeCohortAppState(cohortKeys: string[], supportedChartTypes: Record<string, string[]>, shortLabel: string) {
+	return {
+		activeCohort: 0,
+		termdbConfig: {
+			selectCohort: { values: [{ keys: cohortKeys, shortLabel }] },
+			supportedChartTypes
+		}
+	}
+}
+
+tape('isScatterToggleVisible: shows the toggle for a combined cohort keyed by its comma-joined keys', test => {
+	// keys given out of order to prove they are sorted before joining: "XYZ","ABC" -> "ABC,XYZ"
+	const appState = makeCohortAppState(
+		['XYZ', 'ABC'],
+		{ 'ABC,XYZ': ['summary', 'sampleScatter', 'dynamicScatter'] },
+		'ABC+XYZ' // the old (wrong) shortLabel key — absent from supportedChartTypes
+	)
+	test.equal(
+		isScatterToggleVisible(appState, numericTw, numericTw),
+		true,
+		'combined cohort should keep the toggle when dynamicScatter is supported under the comma key'
+	)
+	test.end()
+})
+
+tape(
+	'isScatterToggleVisible: hides the toggle for a prebuilt-only cohort (sampleScatter but not dynamicScatter)',
+	test => {
+		const appState = makeCohortAppState(
+			['ABC'],
+			{ ABC: ['summary', 'sampleScatter'] }, // premade plot enables sampleScatter, but no dynamic scatter
+			'ABC'
+		)
+		test.equal(
+			isScatterToggleVisible(appState, numericTw, numericTw),
+			false,
+			'a cohort with only a premade scatter must not offer the dynamic two-term toggle'
+		)
+		test.end()
+	}
+)
+
+tape('isScatterToggleVisible: requires both terms to be numeric even when dynamicScatter is supported', test => {
+	const appState = makeCohortAppState(['ABC'], { ABC: ['summary', 'dynamicScatter'] }, 'ABC')
+	test.equal(isScatterToggleVisible(appState, numericTw, numericTw), true, 'two numeric terms -> visible')
+	test.equal(isScatterToggleVisible(appState, numericTw, categoricalTw), false, 'a non-numeric term2 -> hidden')
+	test.equal(isScatterToggleVisible(appState, categoricalTw, numericTw), false, 'a non-numeric term -> hidden')
+	test.end()
+})
+
+tape('isScatterToggleVisible: datasets without cohort selection use the empty-string key', test => {
+	// getActiveCohortStr returns '' when there is no selectCohort, so supportedChartTypes is keyed by ''
+	const appState = { termdbConfig: { supportedChartTypes: { '': ['summary', 'dynamicScatter'] } } }
+	test.equal(
+		isScatterToggleVisible(appState, numericTw, numericTw),
+		true,
+		'a non-subcohort dataset should resolve the empty-string key'
+	)
+	test.end()
 })

@@ -11,6 +11,7 @@ import { isNumericTw } from '#shared/terms.js'
 import { getDefaultFractionBins, getT0T2defaultQ } from './summaryQ.ts'
 import { importPlot } from './importPlot.js'
 import { filterRxCompInit } from '#filter'
+import { getCurrentCohortChartTypes } from '#mass/charts'
 
 class SummaryPlot extends PlotBase implements RxComponent {
 	static type = 'summary'
@@ -213,13 +214,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 				childType: 'sampleScatter',
 				label: 'Scatter',
 				disabled: () => false,
-				isVisible: () => {
-					const cohortLabel =
-						this.app.vocabApi.termdbConfig.selectCohort?.values?.[this.app.getState().activeCohort]?.shortLabel
-					const isSupportedChart =
-						this.app.vocabApi.termdbConfig.supportedChartTypes?.[cohortLabel || '']?.includes('sampleScatter')
-					return isSupportedChart && isNumericTw(this.config?.term) && isNumericTw(this.config?.term2)
-				},
+				isVisible: () => isScatterToggleVisible(this.app.getState(), this.config?.term, this.config?.term2),
 				getConfig: async () => {
 					const _term = await this.getWrappedTermCopy(this.config?.term, 'continuous')
 					const _term2 = await this.getWrappedTermCopy(this.config?.term2, 'continuous')
@@ -521,6 +516,22 @@ export async function getPlotConfig(opts, app) {
 	// to override ui labels from recovered session state
 	Object.assign(config.controlLabels, app.vocabApi.termdbConfig.uiLabels || {})
 	return config
+}
+
+/**
+ * Whether the summary "Scatter" toggle should be shown for the current cohort and terms.
+ *
+ * The toggle builds a DYNAMIC two-term scatter (term + term2), so it must require the `dynamicScatter`
+ * capability — NOT `sampleScatter`, which the server also reports for a cohort that only has a premade
+ * plot (see server/src/termdb.server.init.ts). supportedChartTypes is keyed by the sorted cohort keys
+ * joined with commas (getActiveCohortStr), not by the cohort's shortLabel; getCurrentCohortChartTypes()
+ * resolves that key from the active cohort, so combined cohorts (e.g. keys "ABC,XYZ") are handled.
+ *
+ * Exported so it can be tested directly.
+ */
+export function isScatterToggleVisible(appState, term, term2): boolean {
+	const isSupportedChart = getCurrentCohortChartTypes(appState).includes('dynamicScatter')
+	return isSupportedChart && isNumericTw(term) && isNumericTw(term2)
 }
 
 const discreteByContinuousPlots = new Set(['violin', 'boxplot'])
