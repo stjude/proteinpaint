@@ -1,9 +1,6 @@
 import type { ErrorResponse } from './errorResponse.ts'
 import type { TermWrapper } from '../terms/tw.ts'
 
-/** Temporary client allowlist. The dataset capability metadata will replace this in the input UI. */
-export const availableAggregateMethods = ['mean', 'percent'] as const
-
 export type AggregateMethodApplicability = 'numeric' | 'nonNumeric' | 'any'
 
 /** Serializable aggregation capability exposed in termdbConfig. */

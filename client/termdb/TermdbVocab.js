@@ -1497,6 +1497,26 @@ export class TermdbVocab extends Vocab {
 		const signal = opts.signal || this.getAbortSignal()
 		return await this.dofetch3('termdb/aggregateMatrix', { body, signal })
 	}
+
+	async getAvailableAggregateMatrixMethods(columns, signal) {
+		const formatTw = term => {
+			if (isSingleCellTerm(term)) return { term, q: {} }
+			return this.getTwMinCopy({ term, q: {} })
+		}
+		const formattedColumns = {}
+		for (const [section, terms] of Object.entries(columns)) {
+			formattedColumns[section] = terms.map(formatTw)
+		}
+		return await this.dofetch3('termdb/aggregateMatrix', {
+			body: {
+				genome: this.vocab.genome,
+				dslabel: this.vocab.dslabel,
+				getAvailableMethods: true,
+				columns: formattedColumns
+			},
+			signal: signal || this.getAbortSignal()
+		})
+	}
 }
 
 /*
