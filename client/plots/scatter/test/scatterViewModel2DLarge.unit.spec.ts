@@ -12,6 +12,7 @@ import { xAxisOffSet, yAxisOffSet } from '#shared'
  *  - renderAxes drops ticks outside the data range when zoomed out
  *  - renderAxes tracks zoom per chart so multiple charts stay in sync (categorical term0)
  *  - renderAxes rescales the time scale for date terms, keeping date ticks
+ *  - animate releases the canvas and renderer when its loop becomes stale
  */
 
 /**************
@@ -285,5 +286,37 @@ tape('renderAxes rescales the time scale for date terms, keeping date ticks', fu
 		'Should rescale the time scale (its invert returns a Date) for a date x term.'
 	)
 	test.equal(typeof yScale.invert(yAxisOffSet), 'number', 'Should keep the numeric scale for the non-date y axis.')
+	test.end()
+})
+
+tape('animate releases the canvas and renderer when its loop becomes stale', function (test) {
+	test.timeoutAfter(100)
+	// a re-render swaps scatter.vm; the old loop must clean up rather than leave a stale overlay canvas
+	// (which would cover a plot that switched back to the SVG path) and a retained WebGL context
+	const vm: any = Object.create(ScatterViewModel2DLarge.prototype)
+	vm.scatter = { vm: {} } // scatter.vm !== vm, so this loop is stale
+	let removed = false
+	let disposed = false
+	let rendered = false
+	const renderer = {
+		domElement: {
+			remove() {
+				removed = true
+			}
+		},
+		dispose() {
+			disposed = true
+		},
+		render() {
+			rendered = true
+		}
+	}
+	const camera = { updateProjectionMatrix() {} }
+
+	vm.animate({}, camera, {}, renderer)
+
+	test.ok(removed, 'Should remove the overlay canvas.')
+	test.ok(disposed, 'Should dispose the WebGL renderer.')
+	test.notOk(rendered, 'Should not render again after the loop is stale.')
 	test.end()
 })
