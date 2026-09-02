@@ -18,7 +18,6 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 			this.renderLargeSingleCell(chart)
 			return
 		}
-		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
 		const s = this.scatter.settings
 		const offsetX = this.model.axisOffset.x
 		const offsetY = this.model.axisOffset.y
@@ -29,6 +28,11 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		const div = select(chart.svg.node().parentNode)
 		div.style('position', 'relative')
 		div.selectAll('canvas').remove()
+		// When a chart crosses from the SVG path to this WebGL path, chart.svg is reused. Clear its data
+		// layers — the dots/contour in chart.serie and the regression curve in chart.regressionG — so
+		// stale SVG points don't show through the transparent canvas. Axes, labels and legend are kept.
+		chart.serie?.selectAll('*').remove()
+		chart.regressionG?.selectAll('*').remove()
 		this.canvas = div
 			.append('canvas')
 			.style('position', 'absolute')
@@ -82,7 +86,9 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		renderer.setSize(this.scatter.settings.svgw, this.scatter.settings.svgh)
 		renderer.setPixelRatio(window.devicePixelRatio)
 
-		new DragControls.DragControls([particles], camera, renderer.domElement)
+		// Note: no DragControls here. Dragging the point cloud would translate the particles directly
+		// while the SVG axes stay fixed, so the points would no longer line up with their axis values.
+		// Zoom (below and via the zoom buttons) is the only navigation, and it keeps the axes in sync.
 
 		// drive zoom through the shared scatterZoom so the WebGL camera and the SVG axes stay in sync
 		this.canvas.addEventListener('wheel', (event: any) => {
@@ -141,9 +147,15 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 	}
 
 	animate(chart, camera, scene, renderer) {
-		// a re-render replaces scatter.vm with a fresh view model; stop this now-stale loop so old
-		// loops don't keep rendering to a detached canvas or fight over the shared axes
-		if (this.scatter.vm !== this) return
+		// a re-render replaces scatter.vm with a fresh view model; stop this now-stale loop and release
+		// its canvas + WebGL context. Otherwise, if the plot switched back to the SVG path (which does
+		// not remove this absolute canvas), the stale overlay would cover the new SVG plot, and the
+		// renderer's GPU resources would be retained until garbage collection.
+		if (this.scatter.vm !== this) {
+			renderer.domElement.remove()
+			renderer.dispose()
+			return
+		}
 		requestAnimationFrame(() => this.animate(chart, camera, scene, renderer))
 		const k = this.scatter.vm.scatterZoom.zoom
 		camera.zoom = k
