@@ -1,6 +1,5 @@
 import type { Div, Elem } from '../../../types/d3'
 import type { SCInteractions } from '../interactions/SCInteractions'
-import { dofetch3 } from '#common/dofetch'
 import { Menu } from '#dom'
 import { digestMessage } from '#termsetting'
 import { TermTypeGroups } from '#shared/terms.js'
@@ -35,9 +34,6 @@ export class PlotButtons {
 	settings!: Settings
 	scctTerms?: any[]
 	availablePlots!: Set<string>
-	/** whether the selected sample has a spatial image, keyed by sID; drives
-	 the Spatial plot button. Cached: one termdb/wsiBySample probe per sample */
-	sampleHasSpatial: { [sID: string]: boolean } = {}
 
 	/** scctTerms and the scTermdbConfig are created on server init and will not change. */
 	constructor(interactions: SCInteractions, holder: Div, termdbConfig) {
@@ -70,25 +66,6 @@ export class PlotButtons {
 		const name = item.sID
 		this.plotBtnsDom.selectPrompt.text(` ${name}:`)
 		this.renderChartBtns()
-		this.mayDetectSpatial(name) // async; re-renders the buttons when it answers
-	}
-
-	/** Probe once per sample whether it has a spatial image (with the
-	 consolidated h5ad the spatial subplot needs); a positive answer adds the
-	 Spatial button on the re-render. Failures = no button, app unaffected. */
-	async mayDetectSpatial(sID: string) {
-		if (sID in this.sampleHasSpatial) return // answered before
-		try {
-			const v = this.interactions.app.vocabApi.vocab // genome + dslabel
-			const r: any = await dofetch3('termdb/wsiBySample', {
-				body: { genome: v.genome, dslabel: v.dslabel, sample_id: sID }
-			})
-			this.sampleHasSpatial[sID] = !!(r?.images || []).some((i: any) => i.type == 'spatial' && i.spatialData)
-		} catch (_) {
-			this.sampleHasSpatial[sID] = false // dataset without w2 images
-		}
-		// only re-render if the user is still on this sample
-		if (this.item?.sID == sID && this.sampleHasSpatial[sID]) this.renderChartBtns()
 	}
 
 	renderChartBtns() {
@@ -142,10 +119,11 @@ export class PlotButtons {
 		}
 
 		btns.push({
-			// spatial tissue viewer for samples with a spatial image; cell types
-			// hidden in the map plots above are hidden in it too (see SCSpatial)
+			// spatial tissue viewer for samples with a spatial image (the model's
+			// wsiBySample probe sets data.hasSpatial); cell types hidden in the
+			// map plots above are hidden in it too (see SCSpatial)
 			label: 'Spatial',
-			isVisible: () => !!this.sampleHasSpatial[this.item?.sID || ''],
+			isVisible: () => !!this.data?.hasSpatial,
 			getPlotConfig: () => {
 				const sample = this.item!
 				return {

@@ -54,7 +54,7 @@ export class SCModel {
 	/********** Single Cell DATA for rendering plots ********
 	 * This is for the plot buttons. Returns an array plots with found files or
 	 * available data. */
-	async getSampleData() { 
+	async getSampleData() {
 		const body = this.getDataRequestOpts()
 		if (!body) return
 		return await dofetch3('termdb/singlecellData', { body, signal: this.sc.api?.getAbortSignal() })
@@ -84,6 +84,25 @@ export class SCModel {
 				sID: config.settings.sc.item.sID
 			}
 		}
+	}
+
+	/** whether a sample has a spatial image (with the consolidated h5ad the
+	 spatial subplot needs), keyed by sID; one termdb/wsiBySample probe per
+	 sample. Failures = false, app unaffected. Drives the Spatial plot button. */
+	sampleHasSpatial: { [sID: string]: boolean } = {}
+	async hasSpatialImage(sID: string): Promise<boolean> {
+		if (!(sID in this.sampleHasSpatial)) {
+			try {
+				const r: any = await dofetch3('termdb/wsiBySample', {
+					body: { genome: this.state.vocab.genome, dslabel: this.state.vocab.dslabel, sample_id: sID },
+					signal: this.sc.api?.getAbortSignal()
+				})
+				this.sampleHasSpatial[sID] = !!(r?.images || []).some((i: any) => i.type == 'spatial' && i.spatialData)
+			} catch (_) {
+				this.sampleHasSpatial[sID] = false // dataset without w2 images
+			}
+		}
+		return this.sampleHasSpatial[sID]
 	}
 
 	/** Essentially for the GDC. Maybe applied to other ds in the future. */
