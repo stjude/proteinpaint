@@ -11,6 +11,7 @@ import { getCoordinate } from '#shared'
  *  - getScale and transform support fixed and data-driven sizing
  *  - getColor supports categorical and continuous clamping
  *  - initAxes applies continuous colorScale modes: auto, fixed, percentile
+ *  - initAxes orients the date Y-axis to match the numeric dot scale
  *  - processData sorts charts and computes polynomial regression curve
  *  - getCoordinate returns value as coordinate when min and max are null
  *  - getCoordinate returns value when value is within min and max
@@ -336,6 +337,60 @@ tape('initAxes applies continuous colorScale modes: auto, fixed, percentile', fu
 
 	scatter.config.settings.sampleScatter.colorScalePercentile = 50
 	assertRange('percentile', 1, 5, 'the percentile mode percentile-range')
+	test.end()
+})
+
+tape('initAxes orients the date Y-axis to match the numeric dot scale', function (test) {
+	test.timeoutAfter(100)
+	// Regression test: term2 (Y / overlay) is a date term. Dots are always positioned with the
+	// numeric chart.yAxisScale, whose domain is flipped to [yMax, yMin] so that larger values (later
+	// dates, since dates are encoded as year + fraction) render at the top. The date axis scale must
+	// share that orientation; otherwise the axis labels run opposite to the plotted dots and the
+	// y-axis appears inverted. See ScatterModelBase.initAxes().
+	const scatter: any = getMockScatter({
+		config: {
+			term: { term: { id: 'agedx', type: 'integer' } },
+			term2: { term: { id: 'visitdate', type: 'date' } }
+		}
+	})
+	const model = new ScatterModel(scatter)
+	const chart: any = getMockChart({
+		id: 'date-chart',
+		data: { samples: [{ sampleId: 's1', x: 5, y: 2010 }] },
+		ranges: {
+			xMin: 0,
+			xMax: 20,
+			yMin: 2000,
+			yMax: 2020,
+			zMin: 0,
+			zMax: 10,
+			scaleMin: 10,
+			scaleMax: 20,
+			geMin: 1,
+			geMax: 5
+		}
+	})
+
+	model.initAxes(chart)
+
+	const [rangeTop, rangeBottom] = chart.yAxisScaleTime.range()
+	test.ok(rangeBottom > rangeTop, 'Sanity: the SVG y range grows downward (top pixel < bottom pixel).')
+
+	const lateDate = new Date(2019, 0, 1)
+	const earlyDate = new Date(2001, 0, 1)
+	test.ok(
+		chart.yAxisScaleTime(lateDate) < chart.yAxisScaleTime(earlyDate),
+		'Should render the later date higher on the axis (smaller y pixel), not inverted.'
+	)
+
+	// The date axis must agree with the numeric yAxisScale that positions the dots.
+	const laterIsHigherOnTime = chart.yAxisScaleTime(lateDate) < chart.yAxisScaleTime(earlyDate)
+	const laterIsHigherOnLinear = chart.yAxisScale(2019) < chart.yAxisScale(2001)
+	test.equal(
+		laterIsHigherOnTime,
+		laterIsHigherOnLinear,
+		'Should orient the date Y-axis the same way as the numeric yAxisScale used for the dots.'
+	)
 	test.end()
 })
 

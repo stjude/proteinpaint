@@ -245,8 +245,12 @@ export abstract class ScatterModelBase {
 			const yMinDate = getDateFromNumber(yMin - extraSpaceY)
 			const yMaxDate = getDateFromNumber(yMax + extraSpaceY)
 
+			// Flip the domain (max first) to mirror the numeric yAxisScale above. In SVG the y range
+			// grows downward, so the numeric scale uses [yMax, yMin] to render larger values at the top;
+			// the date axis must match, otherwise the axis labels run opposite to the plotted dots
+			// (which are always positioned with yAxisScale), making the y-axis appear inverted.
 			chart.yAxisScaleTime = scaleTime()
-				.domain([yMinDate, yMaxDate])
+				.domain([yMaxDate, yMinDate])
 				.range([offsetY, settings.svgh + offsetY])
 
 			chart.axisLeft = axisLeft(chart.yAxisScaleTime)
