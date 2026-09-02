@@ -18,8 +18,8 @@ const definitions: AggregateMethodDefinition[] = [
 	{
 		id: 'percent',
 		label: 'Percent',
-		appliesTo: 'numeric',
-		isAvailable: (ds, terms) => hasNumericMethod(ds, terms, 'percent'),
+		appliesTo: 'any',
+		isAvailable: (ds, terms) => hasPercentMethod(ds, terms),
 		calculateFromStats: stats => (stats.total ? (stats.matches / stats.total) * 100 : null)
 	},
 	{
@@ -30,6 +30,15 @@ const definitions: AggregateMethodDefinition[] = [
 		calculateFromStats: stats => stats.matches
 	}
 ]
+
+export function calculateAggregateMethod(
+	methodId: string,
+	stats: { matches: number; total: number; sum: number }
+) {
+	const calculate = definitions.find(method => method.id == methodId)?.calculateFromStats
+	if (!calculate) throw new Error(`Unsupported sample-based aggregate method: ${methodId}`)
+	return calculate(stats)
+}
 
 /** Attach the server-only aggregation capability resolver after dataset queries are validated. */
 export function initAggregateMethods(ds: any) {
@@ -78,13 +87,20 @@ export function calculateSampleBasedMethods(
 	return result
 }
 
-function hasNumericMethod(ds: any, terms: any[], method: 'mean' | 'percent') {
+function hasNumericMethod(ds: any, terms: any[], method: 'mean') {
 	if (terms.length) {
 		return terms.every(term =>
 			term.type == PSEUDOBULK ? hasPseudobulkMethod(ds, method, term) : isNumericTerm(term)
 		)
 	}
 	return hasStandardNumericTerms(ds) || hasPseudobulkMethod(ds, method)
+}
+
+function hasPercentMethod(ds: any, terms: any[]) {
+	if (terms.length) {
+		return terms.every(term => term.type == PSEUDOBULK ? hasPseudobulkMethod(ds, 'percent', term) : true)
+	}
+	return hasStandardNumericTerms(ds) || hasNonNumericTerms(ds) || hasPseudobulkMethod(ds, 'percent')
 }
 
 function hasCountMethod(ds: any, terms: any[]) {

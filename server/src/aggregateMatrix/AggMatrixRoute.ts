@@ -1,6 +1,7 @@
 import { type RoutePayload, type TermdbAggregateMatrixRequest, type TermdbAggregateMatrixResponse, type RouteApi, type Filter } from '#types'
 import { validGenomeDs } from '#routes/common.ts'
 import { getAggMatrixData, type AggregateMatrixDataRequest } from './getAggMatrixData.ts'
+import { isNonDictionaryType } from '#shared/terms.js'
 
 export const payload: RoutePayload = {
     init,
@@ -22,12 +23,15 @@ export const api: RouteApi = {
 
 function validTermdbAggregateMatrixRequest(input) {
 	if (input.getAvailableMethods === true) {
+		validateAxisSections(input.columns, 'columns')
 		return {
 			...validGenomeDs(input),
 			getAvailableMethods: true,
 			columns: input.columns || {}
 		}
 	}
+	validateAxisSections(input.rows, 'rows')
+	validateAxisSections(input.columns, 'columns')
     if (input.gradientMethod === input.sizeMethod) throw `.gradientMethod and .sizeMethod must be different`
     if (typeof input.gradientMethod != 'string' || !input.gradientMethod) throw `invalid .gradientMethod`
     if (typeof input.sizeMethod != 'string' || !input.sizeMethod) throw `invalid .sizeMethod`
@@ -41,6 +45,19 @@ function validTermdbAggregateMatrixRequest(input) {
         filter: input.filter ? (input.filter as Filter) : undefined, // TODO: use a filter validator
         filter0: input.filter0 as any,
     }
+}
+
+function validateAxisSections(axis: any, name: string) {
+	if (!axis || typeof axis != 'object') throw new Error(`invalid .${name}`)
+	for (const [section, terms] of Object.entries<any>(axis)) {
+		if (!Array.isArray(terms) || !terms.length) throw new Error(`invalid .${name}[${section}]`)
+		const types = new Set(terms.map(tw => tw?.term?.type))
+		if (types.size != 1 || types.has(undefined)) throw new Error(`${name} section '${section}' must contain one term type`)
+		const termType = terms[0].term.type
+		if (!isNonDictionaryType(termType) && terms.length != 1) {
+			throw new Error(`${name} dictionary section '${section}' must contain one term`)
+		}
+	}
 }
 
 

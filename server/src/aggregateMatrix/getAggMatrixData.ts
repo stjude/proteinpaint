@@ -6,9 +6,9 @@ import type {
 	ValidGetDataResponse
 } from '#types'
 import { PSEUDOBULK } from '#types'
-import { isNumericTerm } from '#shared/terms.js'
+import { isDictionaryType, isNumericTerm } from '#shared/terms.js'
 import { getData } from '../termdb.matrix.js'
-import { calculateSampleBasedMethods } from './aggregateMethods.ts'
+import { calculateAggregateMethod, calculateSampleBasedMethods } from './aggregateMethods.ts'
 
 type ValueByRow = Record<string, number | null>
 type RowData = { id: string; label: string; section: string; tw: any; queryId: string }
@@ -18,6 +18,14 @@ export type AggregateMatrixDataRequest = TermdbAggregateMatrixRequest &
 	Required<Pick<TermdbAggregateMatrixRequest, 'rows' | 'gradientMethod' | 'sizeMethod'>>
 
 export async function getAggMatrixData(q: AggregateMatrixDataRequest, ds: any): Promise<ValidAggMatrixResponse> {
+	const columnTerms = Object.values(q.columns).flat()
+	const pseudobulkColumns = columnTerms.filter(tw => tw.term.type == PSEUDOBULK).length
+	if (!pseudobulkColumns) {
+		return getIntersectionMatrixData(q, ds)
+	}
+	if (pseudobulkColumns != columnTerms.length) {
+		throw new Error('Pseudobulk and sample-based columns cannot currently be combined in one aggregate matrix')
+	}
 	const { rows, sections: rowSections, longestLabel: rowLongest } = makeRows(q)
 	const columns: ColData[] = []
 	const colSections: AxisSection[] = []
@@ -93,6 +101,167 @@ export async function getAggMatrixData(q: AggregateMatrixDataRequest, ds: any): 
 	}
 }
 
+type AxisSource = { section: string; tw: any; queryId: string; expand: boolean }
+type ResolvedAxisEntry = { id: string; label: string; section: string; source: AxisSource; key?: string }
+
+async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any): Promise<ValidAggMatrixResponse> {
+	const rowSources = makeAxisSources(q.rows, 'row')
+	const columnSources = makeAxisSources(q.columns, 'column')
+	const response = await queryData(
+		[...rowSources, ...columnSources].map(source => makeSampleTerm(source.tw, source.queryId)),
+		q,
+		ds
+	)
+	const rows = resolveAxisEntries(rowSources, response)
+	const columns = resolveAxisEntries(columnSources, response)
+	if (!rows.length || !columns.length) throw new Error('No aggregate matrix axis entries found')
+
+	const rowLookup = makeEntryLookup(rows)
+	const columnLookup = makeEntryLookup(columns)
+	const cellCount = rows.length * columns.length
+	const counts = new Uint32Array(cellCount)
+	const sums = new Float64Array(cellCount)
+	let total = 0
+	for (const sample of Object.values<any>(response.samples)) {
+		const rowIndexes = resolveSampleEntryIndexes(sample, rowSources, rowLookup)
+		const columnIndexes = resolveSampleEntryIndexes(sample, columnSources, columnLookup)
+		if (!rowIndexes.length || !columnIndexes.length) continue
+		total++
+		for (const rowIndex of rowIndexes) {
+			for (const columnIndex of columnIndexes) {
+				const index = rowIndex * columns.length + columnIndex
+				counts[index]++
+				const value = sample[columns[columnIndex].source.queryId]?.value
+				if (typeof value == 'number' && Number.isFinite(value)) sums[index] += value
+			}
+		}
+	}
+
+	let colorMin = Infinity
+	let colorMax = -Infinity
+	let sizeMin = Infinity
+	let sizeMax = -Infinity
+	const data = rows.map((row, rowIndex) =>
+		columns.map((column, columnIndex) => {
+			const index = rowIndex * columns.length + columnIndex
+			const stats = { matches: counts[index], total, sum: sums[index] }
+			const colorValue = calculateAggregateMethod(q.gradientMethod, stats)
+			const sizeValue = calculateAggregateMethod(q.sizeMethod, stats)
+			if (colorValue !== null) {
+				if (colorValue < colorMin) colorMin = colorValue
+				if (colorValue > colorMax) colorMax = colorValue
+			}
+			if (sizeValue !== null) {
+				if (sizeValue < sizeMin) sizeMin = sizeValue
+				if (sizeValue > sizeMax) sizeMax = sizeValue
+			}
+			return {
+				rowSection: row.section,
+				row: row.id,
+				colSection: column.section,
+				column: column.id,
+				colorValue,
+				sizeValue
+			}
+		})
+	)
+
+	return {
+		colorScale: getScale(colorMin, colorMax),
+		sizeScale: getScale(sizeMin, sizeMax),
+		data,
+		axesLayout: {
+			rows: makeAxisLayout(rows, 'row'),
+			columns: makeAxisLayout(columns, 'column')
+		}
+	}
+}
+
+function makeAxisSources(axis: Record<string, any[]>, prefix: string): AxisSource[] {
+	const sources: AxisSource[] = []
+	for (const [section, terms] of Object.entries(axis)) {
+		for (const tw of terms) {
+			sources.push({
+				section,
+				tw,
+				queryId: `agg_${prefix}_${sources.length}`,
+				expand: isDictionaryType(tw.term.type)
+			})
+		}
+	}
+	return sources
+}
+
+function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataResponse): ResolvedAxisEntry[] {
+	const entries: ResolvedAxisEntry[] = []
+	for (const source of sources) {
+		if (!source.expand) {
+			const id = source.tw.term.gene || source.tw.term.id || source.tw.term.name
+			entries.push({ id, label: source.tw.term.name || id, section: source.section, source })
+			continue
+		}
+		const observed = new Set<string>()
+		for (const sample of Object.values<any>(response.samples)) {
+			const entry = sample[source.queryId]
+			if (entry?.key !== undefined && entry?.key !== null) observed.add(String(entry.key))
+		}
+		const bins = response.refs?.byTermId?.[source.queryId]?.bins || []
+		const orderedKeys = bins.map(bin => String(bin.name || bin.label)).filter(key => observed.has(key))
+		for (const key of observed) if (!orderedKeys.includes(key)) orderedKeys.push(key)
+		for (const key of orderedKeys) {
+			entries.push({
+				id: key,
+				label: source.tw.term.values?.[key]?.label || key,
+				section: source.section,
+				source,
+				key
+			})
+		}
+	}
+	return entries
+}
+
+function makeEntryLookup(entries: ResolvedAxisEntry[]) {
+	const lookup = new Map<string, number>()
+	for (let i = 0; i < entries.length; i++) {
+		const entry = entries[i]
+		lookup.set(`${entry.source.queryId}\0${entry.key ?? ''}`, i)
+	}
+	return lookup
+}
+
+function resolveSampleEntryIndexes(sample: any, sources: AxisSource[], lookup: Map<string, number>) {
+	const indexes: number[] = []
+	for (const source of sources) {
+		const annotation = sample[source.queryId]
+		if (!annotation) continue
+		const index = lookup.get(`${source.queryId}\0${source.expand ? String(annotation.key) : ''}`)
+		if (index !== undefined) indexes.push(index)
+	}
+	return indexes
+}
+
+function makeAxisLayout(entries: ResolvedAxisEntry[], axis: 'row' | 'column') {
+	const bySection = new Map<string, { id: string; label: string }[]>()
+	let longestLabel = ''
+	for (const entry of entries) {
+		if (!bySection.has(entry.section)) bySection.set(entry.section, [])
+		bySection.get(entry.section)!.push({ id: entry.id, label: entry.label })
+		if (entry.label.length > longestLabel.length) longestLabel = entry.label
+	}
+	return {
+		sections: [...bySection].map(([id, terms]) => ({ id, terms })),
+		[axis == 'row' ? 'rowCount' : 'colCount']: entries.length,
+		longestLabel
+	} as any
+}
+
+function getScale(min: number, max: number) {
+	if (min === Infinity) throw new Error('No valid aggregate values found in getData response')
+	if (min === max) throw new Error(`All aggregate values are the same: ${min}. Cannot use identical data for scaling.`)
+	return { min, max }
+}
+
 function makeRows(q: AggregateMatrixDataRequest) {
 	const rows: RowData[] = []
 	const sections: AxisSection[] = []
@@ -158,13 +327,19 @@ async function getSampleBasedData(
 	return byMethod
 }
 
-/** Generic numeric terms are quantities for now; discrete/bin expansion is not yet part of this route's contract. */
+/** Dictionary numeric terms define binned cohorts; non-dictionary numeric terms remain unexpanded features. */
 function makeSampleTerm(tw: any, id: string) {
+	const isNumeric = isNumericTerm(tw.term)
+	const isDictionaryNumeric = isNumeric && isDictionaryType(tw.term.type)
 	return {
 		...tw,
 		$id: id,
 		term: { ...tw.term },
-		q: isNumericTerm(tw.term) ? { ...tw.q, mode: 'continuous' } : { ...tw.q }
+		q: isDictionaryNumeric
+			? { ...tw.term.bins?.default, ...tw.q, mode: 'discrete' }
+			: isNumeric
+				? { ...tw.q, mode: 'continuous' }
+				: { ...tw.q }
 	}
 }
 
