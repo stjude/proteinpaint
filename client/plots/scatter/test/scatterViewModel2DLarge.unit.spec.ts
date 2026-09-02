@@ -10,6 +10,7 @@ import { xAxisOffSet, yAxisOffSet } from '#shared'
  *  - renderAxes scales the axes about the plot center by the zoom factor
  *  - renderAxes keeps the axis range pinned to the plot edges at any zoom
  *  - renderAxes drops ticks outside the data range when zoomed out
+ *  - renderAxes tracks zoom per chart so multiple charts stay in sync (categorical term0)
  */
 
 /**************
@@ -94,9 +95,9 @@ tape('getVertices does not mutate the shared chart axis scales', function (test)
 	test.end()
 })
 
-/** renderAxes only reads this.axisChart, this.scatter.settings/vm.scatterZoom and this.model.axisOffset,
- * and calls chart.xAxis/yAxis.call(chart.axisBottom/Left.scale(newScale)). Capture the scale handed to
- * each axis so we can assert where data values land in plot-area pixels. */
+/** renderAxes(chart) reads the passed chart, this.scatter.settings/vm.scatterZoom and
+ * this.model.axisOffset, and calls chart.xAxis/yAxis.call(chart.axisBottom/Left.scale(newScale)).
+ * Capture the scale handed to each axis so we can assert where data values land in plot-area pixels. */
 function getAxisMockViewModel(zoom = 1) {
 	const vm: any = Object.create(ScatterViewModel2DLarge.prototype)
 	vm.model = { axisOffset: { x: xAxisOffSet, y: yAxisOffSet } }
@@ -142,6 +143,8 @@ function getAxisMockChart() {
 				capture.yTicks = gen._tickValues
 			}
 		},
+		// renderAxes() records the per-chart zoom here
+		currentAxisZoom: undefined as number | undefined,
 		_capture: capture
 	}
 }
@@ -150,9 +153,8 @@ tape('renderAxes maps the data range onto the plot-area pixels with a non-invert
 	test.timeoutAfter(100)
 	const vm = getAxisMockViewModel(1)
 	const chart = getAxisMockChart()
-	vm.axisChart = chart
 
-	vm.renderAxes()
+	vm.renderAxes(chart)
 
 	const xScale = chart._capture.x
 	const yScale = chart._capture.y
@@ -162,7 +164,7 @@ tape('renderAxes maps the data range onto the plot-area pixels with a non-invert
 	test.equal(yScale(100), yAxisOffSet, 'Should place the y maximum at the top plot edge (offsetY).')
 	test.equal(yScale(0), 600 + yAxisOffSet, 'Should place the y minimum at the bottom plot edge (svgh + offsetY).')
 	test.ok(yScale(100) < yScale(0), 'Should map the larger y value higher (smaller pixel), not inverted.')
-	test.equal(vm.currentAxisZoom, 1, 'Should record the zoom the axes were drawn at.')
+	test.equal(chart.currentAxisZoom, 1, 'Should record the zoom the axes were drawn at on the chart.')
 	test.end()
 })
 
@@ -170,9 +172,8 @@ tape('renderAxes scales the axes about the plot center by the zoom factor', func
 	test.timeoutAfter(100)
 	const vm = getAxisMockViewModel(2)
 	const chart = getAxisMockChart()
-	vm.axisChart = chart
 
-	vm.renderAxes()
+	vm.renderAxes(chart)
 
 	const xScale = chart._capture.x
 	const cx = xAxisOffSet + 600 / 2
@@ -184,7 +185,7 @@ tape('renderAxes scales the axes about the plot center by the zoom factor', func
 	test.equal(yScale(50), cy, 'Should keep the plot center fixed under zoom (y).')
 	// range half-width doubles at zoom 2: xScale(0) = cx - 2*(svgw/2) = cx - 600
 	test.equal(xScale(0), cx - 600, 'Should widen the x range about the center by the zoom factor.')
-	test.equal(vm.currentAxisZoom, 2, 'Should record the current zoom.')
+	test.equal(chart.currentAxisZoom, 2, 'Should record the current zoom on the chart.')
 	test.end()
 })
 
@@ -196,8 +197,7 @@ tape('renderAxes keeps the axis range pinned to the plot edges at any zoom', fun
 	for (const zoom of [0.5, 2]) {
 		const vm = getAxisMockViewModel(zoom)
 		const chart = getAxisMockChart()
-		vm.axisChart = chart
-		vm.renderAxes()
+		vm.renderAxes(chart)
 		test.deepEqual(
 			chart._capture.x.range(),
 			[xAxisOffSet, 600 + xAxisOffSet],
@@ -218,8 +218,7 @@ tape('renderAxes drops ticks outside the data range when zoomed out', function (
 	// out-of-range values should not be labeled with tick marks
 	const vm = getAxisMockViewModel(0.5)
 	const chart = getAxisMockChart()
-	vm.axisChart = chart
-	vm.renderAxes()
+	vm.renderAxes(chart)
 
 	const xTicks = chart._capture.xTicks
 	const yTicks = chart._capture.yTicks
@@ -232,5 +231,31 @@ tape('renderAxes drops ticks outside the data range when zoomed out', function (
 		yTicks.every((t: number) => t >= 0 && t <= 100),
 		'Should not render y ticks below the min or above the max.'
 	)
+	test.end()
+})
+
+tape('renderAxes tracks zoom per chart so multiple charts stay in sync (categorical term0)', function (test) {
+	test.timeoutAfter(100)
+	// A categorical term0 renders multiple charts, each with its own canvas and animation loop but a
+	// single shared zoom. The zoom must be tracked per chart, not on the view model, so that every
+	// chart's axes are redrawn — not just the last one rendered.
+	const vm = getAxisMockViewModel(1)
+	const chartA = getAxisMockChart()
+	const chartB = getAxisMockChart()
+
+	vm.renderAxes(chartA)
+	vm.renderAxes(chartB)
+	test.equal(chartA.currentAxisZoom, 1, 'Should record zoom 1 on chartA.')
+	test.equal(chartB.currentAxisZoom, 1, 'Should record zoom 1 on chartB.')
+
+	// the shared zoom changes; chartA's loop redraws chartA
+	vm.scatter.vm.scatterZoom.zoom = 3
+	vm.renderAxes(chartA)
+	test.equal(chartA.currentAxisZoom, 3, 'Should redraw chartA and record the new zoom.')
+	test.equal(chartB.currentAxisZoom, 1, 'Should leave chartB tracked independently until its own loop redraws it.')
+
+	// chartB's own loop redraws chartB to the same shared zoom
+	vm.renderAxes(chartB)
+	test.equal(chartB.currentAxisZoom, 3, 'Should redraw chartB to the shared zoom independently.')
 	test.end()
 })
