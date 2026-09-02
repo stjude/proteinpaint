@@ -76,6 +76,10 @@ export class ScatterLasso {
 	showLassoMenu(event, samples) {
 		this.view.dom.tip.clear().hide()
 		if (samples.length == 0) return
+		// hideSampleId marks cohort dots whose ids were anonymized because the request may not display
+		// sample ids. Their surrogate ids cannot resolve to real samples, so listing, grouping, filtering
+		// and sample view would all submit nonexistent ids or build empty filters — offer no menu.
+		if (samples.some(s => s.hideSampleId)) return
 		this.view.dom.tip.show(event.clientX, event.clientY)
 
 		const labels = this.scatter.config.controlLabels

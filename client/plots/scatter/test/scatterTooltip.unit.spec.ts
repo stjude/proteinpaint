@@ -10,6 +10,7 @@ import { xAxisOffSet, yAxisOffSet } from '#shared'
  * 	- Neighbours are the dots that overlap at 100% zoom, held constant in screen px
  * 	- scaleDotTW dots get a neighbourhood matching their larger radius
  * 	- isVisible() excludes hidden dots and the suppressed reference cloud
+ * 	- getActions() gates sample-specific actions for reference dots and anonymized (hideSampleId) samples
  *
  * These cover what the deleted distance() got wrong. It clamped both points into
  * [xAxisScale.invert(0), xAxisScale.invert(svgw)] — but the axis range starts at
@@ -251,5 +252,40 @@ tape('isVisible() excludes hidden dots and the suppressed reference cloud', func
 
 	const zeroRef = new ScatterTooltip(getScatterStub({ refSize: 0 }))
 	test.false(zeroRef.isVisible({ x: 1, y: 1, hidden: {} }), 'reference dots are excluded when refSize is 0')
+	test.end()
+})
+
+/** Stub carrying the fields getActions() reads: config, interactivity, and the state used to decide which
+ * sample-specific actions apply. currentCohortChartTypes includes 'sampleView' so a real cohort sample
+ * yields at least the "Sample view" action; the gated cases must still return none. */
+function getActionsStub(config: any = {}) {
+	const scatter: any = {
+		settings: getDefaultScatterSettings(),
+		config,
+		interactivity: { openSampleView() {}, openDiscoPlot() {}, openMetArray() {}, openLollipop() {} },
+		state: { termdbConfig: { queries: {} }, currentCohortChartTypes: ['sampleView'] },
+		view: {}
+	}
+	scatter.model = new ScatterModel(scatter)
+	return scatter
+}
+
+tape('getActions() gates sample-specific actions for reference and anonymized samples', function (test) {
+	test.timeoutAfter(100)
+	const tooltip = new ScatterTooltip(getActionsStub())
+
+	const cohortActions = tooltip.getActions({ sampleId: 1, sample: 'S1' })
+	test.ok(
+		cohortActions.some((a: any) => a.label === 'Sample view'),
+		'a real cohort sample offers the Sample view action'
+	)
+
+	test.deepEqual(
+		tooltip.getActions({ sampleId: 'anonymous-0', hideSampleId: true }),
+		[],
+		'an anonymized sample (hideSampleId) offers no sample-specific actions even though the sampleId key is present'
+	)
+
+	test.deepEqual(tooltip.getActions({ x: 1, y: 2 }), [], 'a reference dot (no sampleId) offers no actions')
 	test.end()
 })

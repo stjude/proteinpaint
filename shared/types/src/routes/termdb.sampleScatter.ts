@@ -22,6 +22,12 @@ export type TermdbSampleScatterRequest = {
 export type ScatterSample = {
 	category: string
 	sample: string
+	/** real db sample id (or a non-numeric anonymous surrogate when the request may not display sample ids) */
+	sampleId?: number | string
+	/** set by the server (anonymizeSampleIds) when this cohort sample's id has been anonymized. The client
+	 * uses it to gate all sample-specific actions and grouping, since the surrogate sampleId cannot resolve
+	 * back to a real sample. */
+	hideSampleId?: boolean
 	info?: { [index: string]: any }
 	shape: string
 	x: number

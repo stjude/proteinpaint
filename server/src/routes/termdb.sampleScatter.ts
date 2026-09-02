@@ -208,7 +208,7 @@ export async function getSamples(req: any, ds: any, plot: any) {
 	}
 }
 
-/** Replace every real sampleId in the scatter response with an anonymous surrogate.
+/** Replace every real sampleId in the scatter response with an anonymous surrogate and mark the sample.
  *
  * Called only when the request is NOT authorized to display sample ids. Both sample sources put a real,
  * identifying value on .sampleId: getSampleCoordinatesByTerms() uses the db sample id, and loadFile()
@@ -217,14 +217,20 @@ export async function getSamples(req: any, ds: any, plot: any) {
  * reach the client: without this, the client download fallback (scatter.ts toText: `s.sample || s.sampleId`)
  * would still expose it even after the sample NAME was stripped.
  *
- * The client uses only the presence of the .sampleId key — not its value — to tell cohort dots from
- * reference dots and to size them, so the key is preserved and given a non-numeric surrogate that cannot
- * resolve back to a real (integer) sample id on any subsequent request. */
+ * The client uses the presence of the .sampleId key to tell cohort dots from reference dots and to size
+ * them, so the key is preserved and given a non-numeric surrogate that cannot resolve back to a real
+ * (integer) sample id. But the client also submits the sampleId VALUE for sample-specific actions (open
+ * sample view, lasso grouping/filtering); a surrogate there would offer denied users actions that submit
+ * a nonexistent id or build an empty filter. So each anonymized sample is also flagged with .hideSampleId,
+ * which the client uses to gate all such sample-specific actions and grouping. */
 export function anonymizeSampleIds(result: { [index: string]: { samples: any[] } }) {
 	let n = 0
 	for (const divideBy in result) {
 		for (const sample of result[divideBy].samples || []) {
-			if ('sampleId' in sample) sample.sampleId = `anonymous-${n++}`
+			if ('sampleId' in sample) {
+				sample.sampleId = `anonymous-${n++}`
+				sample.hideSampleId = true
+			}
 		}
 	}
 }

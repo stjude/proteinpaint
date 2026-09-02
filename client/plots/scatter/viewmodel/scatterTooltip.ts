@@ -293,8 +293,10 @@ export class ScatterTooltip {
 		const actions: ActionMenuItem[] = []
 
 		// reference-cloud dots carry no mutation data, so none of these apply to them; the plots
-		// below are also for cohort samples only, and not in the single cell plot
-		if (!('sampleId' in sample) || config.singleCellPlot) return actions
+		// below are also for cohort samples only, and not in the single cell plot. hideSampleId marks a
+		// sample whose id was anonymized because the request may not display sample ids — its surrogate id
+		// cannot resolve to a real sample, so gate every sample-specific action here.
+		if (!('sampleId' in sample) || sample.hideSampleId || config.singleCellPlot) return actions
 
 		// the gene may be carried by either term — the old tooltip offered Lollipop from
 		// whichever of the color/shape rows happened to be a geneVariant
