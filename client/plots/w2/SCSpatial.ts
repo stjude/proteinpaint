@@ -46,15 +46,19 @@ class SCSpatial extends PlotBase implements RxComponent {
 		// expression term shows that gene's spatial expression fills, anything
 		// else (the cell-type term) shows the cell-type fills. The first map
 		// plot decides when several exist
-		const firstMap = appState.plots.find((p: any) => p.chartType == 'sampleScatter')
+		const sampleId = config.sample?.sID
+		const sampleMaps = appState.plots.filter(
+			(p: any) =>
+				p.chartType == 'sampleScatter' &&
+				p.parentId == config.parentId &&
+				(p.sample?.sID || p.singleCellPlot?.sample?.sID) == sampleId
+		)
+		const firstMap = sampleMaps[0]
 		const colorGene = firstMap?.colorTW?.term?.type == SINGLECELL_GENE_EXPRESSION ? firstMap.colorTW.term.gene : null
-		// in cell-type mode, the map's colorTW + plot name let this subplot
-		// fetch the exact category colors the map shows, for consistency
 		const mapColorTW = colorGene ? null : firstMap?.colorTW || null
 		const mapPlotName = firstMap?.singleCellPlot?.name || null
 		const hiddenTypes = new Set<string>()
-		for (const p of appState.plots) {
-			if (p.chartType != 'sampleScatter') continue // only the sc map plots
+		for (const p of sampleMaps) {
 			for (const k of Object.keys(p.colorTW?.q?.hiddenValues || {})) hiddenTypes.add(k)
 		}
 		return {
