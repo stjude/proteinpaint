@@ -1,6 +1,6 @@
 import { PlotBase } from './PlotBase.ts'
 import { getCompInit, copyMerge, type AppApi, type ComponentApi, type RxComponent } from '#rx'
-import { availableAggregateMethods } from '#types'
+import type { AggregateMethodOption } from '#types'
 import { capitalizeFirstLetter, icons } from '#dom'
 import { appInit } from '../termdb/app.js'
 import { validatePlotConfig } from './aggregateMatrix/AggregateMatrix.ts'
@@ -27,6 +27,11 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 	startOpt = '-- Select --'
 	sizeMethod = ''
 	gradientMethod = ''
+	availableMethods: AggregateMethodOption[] = []
+	methodsReady = false
+	methodsError = ''
+	methodTermsKey = ''
+	methodRequestId = 0
 	nextSectionViewId = 0
 	sectionViews = new Map<string, SectionView>()
 
@@ -46,35 +51,6 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			.append('div')
 			.style('padding', '10px')
 			.attr('data-testid', 'sjpp-agg-matrix-input-wrapper')
-
-		this.dom.methodSelects = {}
-		for (const method of ['size', 'gradient']) {
-			const methodKey = `${method}Method`
-			const methodWrapper = wrapper
-				.append('div')
-				.style('margin', '5px')
-				.style('display', 'inline-flex')
-				.style('align-items', 'center')
-			methodWrapper
-				.append('label')
-				.attr('for', `sjpp-agg-matrix-${method}-method-select`)
-				.style('margin-right', '5px')
-				.text(`${capitalizeFirstLetter(method)} method:`)
-			this.dom.methodSelects[methodKey] = methodWrapper
-				.append('select')
-				.attr('id', `sjpp-agg-matrix-${method}-method-select`)
-				.attr('name', `sjpp-agg-matrix-${method}-method-select`)
-				.on('change', async event => {
-					this[methodKey] = event.target.value === this.startOpt ? '' : event.target.value
-					await this.main()
-				})
-			this.dom.methodSelects[methodKey]
-				.selectAll('option')
-				.data([this.startOpt, ...availableAggregateMethods])
-				.join('option')
-				.attr('value', value => value)
-				.text(value => value)
-		}
 
 		const axisWrapper = wrapper
 			.append('div')
@@ -103,6 +79,30 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			this.dom.sectionHolders[type] = axis.append('div')
 		}
 
+		this.dom.methodsHolder = wrapper.append('div').style('display', 'none')
+		this.dom.methodSelects = {}
+		for (const method of ['size', 'gradient']) {
+			const methodKey = `${method}Method`
+			const methodWrapper = this.dom.methodsHolder
+				.append('div')
+				.style('margin', '5px')
+				.style('display', 'inline-flex')
+				.style('align-items', 'center')
+			methodWrapper
+				.append('label')
+				.attr('for', `sjpp-agg-matrix-${method}-method-select`)
+				.style('margin-right', '5px')
+				.text(`${capitalizeFirstLetter(method)} method:`)
+			this.dom.methodSelects[methodKey] = methodWrapper
+				.append('select')
+				.attr('id', `sjpp-agg-matrix-${method}-method-select`)
+				.attr('name', `sjpp-agg-matrix-${method}-method-select`)
+				.on('change', async event => {
+					this[methodKey] = event.target.value === this.startOpt ? '' : event.target.value
+					await this.main()
+				})
+		}
+
 		const submitWrapper = wrapper.append('div').style('margin-top', '12px')
 		this.dom.submit = submitWrapper
 			.append('button')
@@ -125,17 +125,74 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 
 	async main() {
 		this.config = this.state.config
-		for (const method of ['sizeMethod', 'gradientMethod']) {
-			this.dom.methodSelects[method].property('value', this[method] || this.startOpt)
-		}
 
 		await this.renderSections('row', this.config.rowSections || [])
 		await this.renderSections('column', this.config.colSections || [])
+		await this.updateAvailableMethods()
+		this.renderMethodSelects()
 
 		const error = this.getValidationError()
 		const enabled = !error
 		this.dom.submit.property('disabled', !enabled).style('cursor', enabled ? 'pointer' : 'default')
 		this.dom.validationMessage.text(error || '')
+	}
+
+	async updateAvailableMethods() {
+		const rows = this.getTerms('rowSections')
+		const columns = this.getTerms('colSections')
+		if (!rows.length || !columns.length) {
+			this.methodRequestId++
+			this.methodTermsKey = ''
+			this.availableMethods = []
+			this.methodsReady = false
+			this.methodsError = ''
+			this.dom.methodsHolder.style('display', 'none')
+			return
+		}
+
+		this.dom.methodsHolder.style('display', '')
+		const columnSections = this.toAxis(this.config.colSections || [], false)
+		const key = JSON.stringify(columnSections)
+		if (key == this.methodTermsKey && (this.methodsReady || this.methodsError)) return
+		this.methodTermsKey = key
+		this.methodsReady = false
+		this.methodsError = ''
+		const requestId = ++this.methodRequestId
+		try {
+			const response = await this.vocabApi!.getAvailableAggregateMatrixMethods(
+				columnSections,
+				this.api?.getAbortSignal()
+			)
+			if (requestId != this.methodRequestId) return
+			if (response?.error) throw new Error(response.error)
+			this.availableMethods = response?.availableMethods || []
+			this.methodsReady = true
+			const ids = new Set(this.availableMethods.map(method => method.id))
+			if (!ids.has(this.sizeMethod)) this.sizeMethod = ''
+			if (!ids.has(this.gradientMethod)) this.gradientMethod = ''
+		} catch (error: any) {
+			if (requestId != this.methodRequestId) return
+			this.availableMethods = []
+			this.methodsError = error.message || String(error)
+		}
+	}
+
+	renderMethodSelects() {
+		for (const methodKey of ['sizeMethod', 'gradientMethod']) {
+			const otherMethod = methodKey == 'sizeMethod' ? this.gradientMethod : this.sizeMethod
+			this.dom.methodSelects[methodKey]
+				.selectAll('option')
+				.data([{ id: this.startOpt, label: this.startOpt }, ...this.availableMethods], method => method.id)
+				.join('option')
+				.attr('value', method => method.id)
+				.property('disabled', method => method.id != this.startOpt && method.id == otherMethod)
+				.text(method => method.label)
+			this.dom.methodSelects[methodKey].property('value', this[methodKey] || this.startOpt)
+		}
+	}
+
+	getTerms(key: 'rowSections' | 'colSections') {
+		return (this.config[key] || []).flatMap(section => section.terms || [])
 	}
 
 	async renderSections(type: SectionType, sections: Section[]) {
@@ -304,17 +361,10 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 	}
 
 	getAggregateMatrixConfig() {
-		const toAxis = (sections: Section[]) =>
-			Object.fromEntries(
-				sections.map(section => [
-					section.name.trim(),
-					section.terms.map(term => (structuredClone(term)))
-				])
-			)
 		return {
 			chartType: 'aggregateMatrix',
-			rows: toAxis(this.config.rowSections || []),
-			columns: toAxis(this.config.colSections || []),
+			rows: this.toAxis(this.config.rowSections || []),
+			columns: this.toAxis(this.config.colSections || []),
 			settings: {
 				aggregateMatrix: {
 					sizeMethod: this.sizeMethod,
@@ -324,11 +374,28 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		}
 	}
 
+	toAxis(sections: Section[], cloneTerms = true) {
+		return Object.fromEntries(
+			sections.map(section => [
+				section.name.trim(),
+				cloneTerms ? section.terms.map(term => structuredClone(term)) : section.terms
+			])
+		)
+	}
+
 	getValidationError() {
 		for (const sections of [this.config.rowSections || [], this.config.colSections || []]) {
 			const names = sections.map(section => (section.name || '').trim())
 			if (names.some(name => !name)) return 'Every section requires a name.'
 			if (new Set(names).size !== names.length) return 'Section names must be unique within each axis.'
+		}
+		if (this.methodsError) return `Unable to load aggregate methods: ${this.methodsError}`
+		if (this.getTerms('rowSections').length && this.getTerms('colSections').length) {
+			if (!this.methodsReady) return 'Loading compatible aggregate methods.'
+			if (this.availableMethods.length < 2) return 'Selected column terms do not share at least two aggregate methods.'
+			const availableIds = new Set(this.availableMethods.map(method => method.id))
+			if (this.sizeMethod && !availableIds.has(this.sizeMethod)) return 'The selected size method is not compatible.'
+			if (this.gradientMethod && !availableIds.has(this.gradientMethod)) return 'The selected gradient method is not compatible.'
 		}
 		try {
 			validatePlotConfig(this.getAggregateMatrixConfig())

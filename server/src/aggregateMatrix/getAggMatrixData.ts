@@ -6,6 +6,7 @@ import type {
 	ValidGetDataResponse
 } from '#types'
 import { PSEUDOBULK } from '#types'
+import { isNumericTerm } from '#shared/terms.js'
 import { getData } from '../termdb.matrix.js'
 import { calculateSampleBasedMethods } from './aggregateMethods.ts'
 
@@ -138,9 +139,9 @@ async function getSampleBasedData(
 	q: AggregateMatrixDataRequest,
 	ds: any
 ) {
-	const rowTerms = rows.map(row => ({ ...row.tw, $id: row.queryId, term: { ...row.tw.term } }))
+	const rowTerms = rows.map(row => makeSampleTerm(row.tw, row.queryId))
 	const columnId = 'agg_column'
-	const columnTerm = { ...columnTw, $id: columnId, term: { ...columnTw.term } }
+	const columnTerm = makeSampleTerm(columnTw, columnId)
 	const response = await queryData([...rowTerms, columnTerm], q, ds)
 	const valuesByQueryId = calculateSampleBasedMethods(
 		methods,
@@ -155,6 +156,16 @@ async function getSampleBasedData(
 		byMethod.set(method, valuesByRow)
 	}
 	return byMethod
+}
+
+/** Generic numeric terms are quantities for now; discrete/bin expansion is not yet part of this route's contract. */
+function makeSampleTerm(tw: any, id: string) {
+	return {
+		...tw,
+		$id: id,
+		term: { ...tw.term },
+		q: isNumericTerm(tw.term) ? { ...tw.q, mode: 'continuous' } : { ...tw.q }
+	}
 }
 
 async function queryData(terms: any[], q: AggregateMatrixDataRequest, ds: any): Promise<ValidGetDataResponse> {
