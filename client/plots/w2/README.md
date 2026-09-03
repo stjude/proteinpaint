@@ -23,6 +23,32 @@ There is no tile server and no redis: every tile is produced by spawning
 `wsi_tile.py` once, and node caches the JPEG on disk so a tile is only ever
 computed once per (slide, plane, z, x, y).
 
+## Two ways in: the standalone plot vs the single-cell app
+
+`Wsi.ts` is one component with two modes, decided by whether the plot config
+carries a `sample`:
+
+- **Standalone — the "Whole Slide Images" mass chart** (no `config.sample`).
+  Lists every sample that has at least one *plain* slide on disk (the
+  no-`sample_id` form of `termdb/wsiBySample` — spatial-only samples are not
+  listed), renders the pick-a-sample table and one tab per image, and shows
+  the plain OpenLayers viewer. Spatial images are filtered out of a listed
+  sample's tabs, so this mode never shows the burger menu or any overlay
+  machinery; the sandbox header stays WHOLE SLIDE IMAGES.
+- **Inside the single-cell app — fixed-sample mode** (`config.sample.sID`
+  set). The sc app probes `termdb/wsiBySample?sample_id=…` for the selected
+  sample (`sc/model/SCModel.hasSpatialImage`) and, when a spatial image with
+  its consolidated h5ad exists, shows a **Spatial** plot button
+  (`sc/view/PlotButtons.ts`). Clicking it spawns this same `wsi` plot as an
+  sc subplot with the sample pinned: the sample table is hidden, images are
+  filtered to `type == 'spatial'`, the header becomes SPATIAL VIEWER, and the
+  burger menu drives the overlays (steps 4–6 below). The viewer is
+  self-contained — its settings live in its own burger menu and are not tied
+  to the sc app's map plots (umap/tsne) in any way.
+
+So: spatial viewing is reachable only through the single-cell app, and the
+standalone chart is images-only.
+
 ## Zoomify tile addressing (shared contract)
 
 The client uses OpenLayers' `Zoomify` source, which addresses tiles as
@@ -125,10 +151,12 @@ file, in file order.
 
 ### 4. Client rendering — `client/plots/w2/`
 
-- **`Wsi.ts`** — the mass "Whole Slide Images" plot (rx component). Fetches
-  the sample list, renders the burger-menu controls for spatial images (via
-  `controlsInit`), and swaps the sandbox header to SPATIAL VIEWER when the
-  shown image is spatial. Gene defaults are **discovered from the data**: it
+- **`Wsi.ts`** — the plot component for both modes above (rx component).
+  Standalone it fetches the sample list and shows plain slides; in
+  fixed-sample mode (spawned from the sc app) it shows the pinned sample's
+  spatial image, renders the burger-menu controls (via `controlsInit`), and
+  swaps the sandbox header to SPATIAL VIEWER. Gene defaults are
+  **discovered from the data**: it
   calls `/genenames` on the image's expression h5, filters the dataset's
   optional `geneExpression` override to genes actually in the file (falling
   back to the file's first gene), seeds the Genes field with that, and
