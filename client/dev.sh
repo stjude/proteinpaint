@@ -9,7 +9,7 @@ if [[ ! -d ../public/bin ]]; then
 fi
 
 OUTDIR=$(pwd)/dist
-if [[ "$BUNDLE_OUTDIR" != "" ]]; then
+if [[ "${BUNDLE_OUTDIR:-}" != "" ]]; then
 	echo "[BUNDLE_OUTDIR=$BUNDLE_OUTDIR]"
 	OUTDIR="$BUNDLE_OUTDIR"
 fi
