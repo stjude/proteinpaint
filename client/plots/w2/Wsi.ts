@@ -92,23 +92,41 @@ class Wsi extends PlotBase implements RxComponent {
 
 		this.dom.error.text('') // clear any previous error banner
 
-		// which samples have whole-slide images on disk?
+		// fixed sample: spawned from the sc app's Spatial button for one
+		// already-chosen sample — no sample picker, spatial images only
+		const fixedSample = config.sample?.sID
 		const model = new Model(this.state.vocab.genome, this.state.vocab.dslabel)
-		const data = await model.getData() // termdb/wsiBySample sample listing
-		if (!data || data.error || !data.samples?.length) {
-			this.dom.table.selectAll('*').remove() // nothing to show; clear the ui
-			this.dom.viewer.selectAll('*').remove() // and any stale viewer
-			this.dom.error.style('padding', '20px').text(data?.error || 'No samples with whole-slide images.') // say why
-			return
+		let samples
+		if (fixedSample) {
+			this.dom.table.style('display', 'none') // the sample is already chosen
+			samples = [{ sampleId: fixedSample, count: 1 }] // count unused (table hidden)
+		} else {
+			// which samples have whole-slide images on disk?
+			const data = await model.getData() // termdb/wsiBySample sample listing
+			if (!data || data.error || !data.samples?.length) {
+				this.dom.table.selectAll('*').remove() // nothing to show; clear the ui
+				this.dom.viewer.selectAll('*').remove() // and any stale viewer
+				this.dom.error.style('padding', '20px').text(data?.error || 'No samples with whole-slide images.') // say why
+				return
+			}
+			samples = data.samples
 		}
 
 		// shape for rendering
-		const viewModel = new ViewModel(data.samples, settings)
+		const viewModel = new ViewModel(samples, settings)
 
 		// the selected sample's images from termdb/wsiBySample; on launch the
 		// first sample is selected by default so its first image displays
 		const selectedSample = viewModel.viewData.selectedSample
-		const images = selectedSample ? (await model.getImages(selectedSample.sampleId)).images ?? [] : []
+		let images = selectedSample ? (await model.getImages(selectedSample.sampleId)).images ?? [] : []
+		if (fixedSample) {
+			images = images.filter((i: any) => i.type == 'spatial') // the sc button is spatial-only
+			if (!images.length) {
+				this.dom.viewer.selectAll('*').remove()
+				this.dom.error.style('padding', '20px').text(`No spatial image for sample ${fixedSample}.`)
+				return
+			}
+		}
 
 		// spatial image: rename the sandbox header and show the burger menu
 		const image = images[settings.selectedImageIndex] ?? images[0] // the image being viewed
@@ -273,11 +291,7 @@ class Wsi extends PlotBase implements RxComponent {
 				},
 				{
 					// checkbox: toggle the categorical cell-type fills (mutually
-					// exclusive with the gene expression fills, enforced in main()).
-					// This burger only exists in the mass Whole Slide Images plot —
-					// a sample may have spatial data but no umap/tsne, so the toggle
-					// is needed here; the single-cell app's spatial subplot instead
-					// follows its map-plot legends and never shows this burger.
+					// exclusive with the gene expression fills, enforced in main())
 					label: 'Cell types',
 					title: 'Fill cells by their cell_type from the annotations CSV (when present)',
 					type: 'checkbox',

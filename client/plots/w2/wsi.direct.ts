@@ -53,7 +53,6 @@ import VectorSource from 'ol/source/Vector.js' // holds the polygon features
 import Feature from 'ol/Feature.js' // one drawable geometry + style
 import MultiPolygon from 'ol/geom/MultiPolygon.js' // many cell rings in one feature
 import { Fill, Stroke, Style } from 'ol/style.js' // polygon styling primitives
-import { rgb as d3rgb } from 'd3-color' // parse CSS color overrides to r,g,b
 import RBush from 'ol/structs/RBush.js' // spatial index for the hover hit test
 import { dofetch3 } from '#common/dofetch' // fetch wrapper for meta/genecounts
 import { sayerror } from '#dom' // inline error banner
@@ -87,10 +86,6 @@ export async function init(
 		 ALL types by abundance, so a type keeps its color when the filter
 		 changes */
 		cellTypeFilter?: string[]
-		/** per-type fill color overrides (any CSS color), e.g. to match the
-		 colors another plot assigned to the same types; types absent here
-		 keep the built-in palette */
-		cellTypeColors?: { [type: string]: string }
 		/** = annotation_level: strokes only in the n most zoomed-in levels */
 		annotationLevel?: string | number
 		/** = gene_expression: comma-separated genes, one fill overlay per gene */
@@ -315,15 +310,7 @@ export async function init(
 			for (const id in cellTypes) counts[cellTypes[id]] = (counts[cellTypes[id]] || 0) + 1 // tally
 			const types = Object.keys(counts).sort((a, b) => counts[b] - counts[a]) // most abundant first
 			const typeColor: { [t: string]: string } = Object.create(null) // type -> its stable palette color
-			for (const [i, t] of types.entries()) {
-				// a caller-supplied color (e.g. matching another plot's legend)
-				// wins over the built-in palette; parsed from any CSS color to
-				// the "r, g, b" form the fills/legend compose into rgb()/rgba()
-				const override = opts.cellTypeColors?.[t] ? d3rgb(opts.cellTypeColors[t]) : null
-				typeColor[t] = override
-					? `${override.r}, ${override.g}, ${override.b}`
-					: CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
-			}
+			for (const [i, t] of types.entries()) typeColor[t] = CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
 			// optional filter: fill + legend only these types (colors unchanged)
 			const wanted = opts.cellTypeFilter || [] // the requested type list
 			const shown = wanted.length ? types.filter(t => wanted.includes(t)) : types // empty filter = all
