@@ -459,7 +459,12 @@ async function getSampleData(q, ds) {
 			names.push(config.name)
 			plural_names.push(config.plural_name)
 		}
-		sampleType = { name: names.join(' / '), plural_name: plural_names.join(' / ') }
+		sampleType = {
+			name: getSampleTypeLabelByTerms(q.sampleTypes, q.ds.cohort.termdb.sampleTypesByTerms, false) || names.join(' / '),
+			plural_name:
+				getSampleTypeLabelByTerms(q.sampleTypes, q.ds.cohort.termdb.sampleTypesByTerms, true) ||
+				plural_names.join(' / ')
+		}
 	} else if (processedSingleCellTerm === true) {
 		// work around for single cell cases
 		// TODO: may support single cell as another
@@ -1574,4 +1579,27 @@ function checkAccessToSampleData(data, ds, q) {
 			code: 'ERR_MIN_SIZE'
 		}
 	}
+}
+
+function getSampleTypeLabelByTerms(sampleTypes, sampleTypesByTerms, isPlural) {
+	if (!sampleTypesByTerms) return
+	const parts = []
+	for (const value2sampleTypes of Object.values(sampleTypesByTerms)) {
+		const sharedValues = Object.entries(value2sampleTypes)
+			.filter(([, types]) => sampleTypes.every(type => types.includes(type)))
+			.map(([value]) => value)
+		if (!sharedValues.length) {
+			// term does not share any values among query sample types
+		} else if (sharedValues.length == 1) {
+			// term shares a value among query sample types
+			// include the value in the label
+			parts.push(sharedValues[0])
+		} else {
+			// term shares multiple values among query sample types
+			// should not happen
+			throw 'term shares >1 value among query sample types'
+		}
+	}
+	if (!parts.length) return
+	return `${parts.join(' ')} ${isPlural ? 'samples' : 'sample'}`
 }
