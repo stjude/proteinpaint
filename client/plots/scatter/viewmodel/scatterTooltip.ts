@@ -221,7 +221,7 @@ export class ScatterTooltip {
 			holder: container.append('div'),
 			disableScroll: true,
 			cellPadding: '5px',
-			datatestid: 'sjpp-single-hit-table'
+			testid: 'sjpp-single-hit-table'
 		})
 		if (config.term) {
 			table.addRow(config.term.term.name, this.getCategoryValue('x', sample, config.term))
