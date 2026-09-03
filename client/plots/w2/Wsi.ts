@@ -10,9 +10,11 @@ import { ViewModel } from './viewModel/ViewModel' // shapes data for rendering
 import { View } from './view/View' // renders table + viewer
 import { WsiInteractions } from './interactions/WsiInteractions' // state-edit dispatchers
 
-/** Mass plot listing every sample in the dataset that has whole-slide images
- (the wsisamples route performs the per-sample check), with a pan/zoom viewer
- for the selected sample's slide. Architecture mirrors plots/corrVolcano:
+/** Mass plot listing every sample in the dataset that has plain whole-slide
+ images, with a pan/zoom viewer for the selected sample's slide. Spatial
+ images are excluded here — they are viewed through the single-cell app's
+ Spatial button, which spawns this same plot in fixed-sample mode
+ (config.sample.sID). Architecture mirrors plots/corrVolcano:
  Model (server data) -> ViewModel (view data) -> View (render), with
  interactions dispatching state edits. */
 type WsiDom = {
@@ -119,13 +121,13 @@ class Wsi extends PlotBase implements RxComponent {
 		// first sample is selected by default so its first image displays
 		const selectedSample = viewModel.viewData.selectedSample
 		let images = selectedSample ? (await model.getImages(selectedSample.sampleId)).images ?? [] : []
-		if (fixedSample) {
-			images = images.filter((i: any) => i.type == 'spatial') // the sc button is spatial-only
-			if (!images.length) {
-				this.dom.viewer.selectAll('*').remove()
-				this.dom.error.style('padding', '20px').text(`No spatial image for sample ${fixedSample}.`)
-				return
-			}
+		// spatial images are viewed only through the sc app's Spatial button
+		// (fixed-sample mode); the standalone plot shows plain slides only
+		images = images.filter((i: any) => (fixedSample ? i.type == 'spatial' : i.type != 'spatial'))
+		if (fixedSample && !images.length) {
+			this.dom.viewer.selectAll('*').remove()
+			this.dom.error.style('padding', '20px').text(`No spatial image for sample ${fixedSample}.`)
+			return
 		}
 
 		// spatial image: rename the sandbox header and show the burger menu

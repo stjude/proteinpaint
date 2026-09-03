@@ -47,8 +47,10 @@ roots, both laid out as `<root>/<sample_id>/<imageName>/<files>`:
 - `wsiFolder` — plain whole-slide images (`.svs` / `.ome.tif`), one slide per
   image folder.
 
-The route lists samples (subfolder names of the roots, unioned with the legacy
-`wsimages` sql table when present) and, per sample, its images. Each image is
+The route lists samples with plain slides (subfolder names of `wsiFolder` that
+hold at least one slide — spatial-only samples are excluded, since spatial
+images are viewed through the single-cell app's Spatial button instead) and,
+per `sample_id`, that sample's images of both kinds. Each image is
 returned as `WsiImage` (`type:'wsi'`) or `SpatialImage` (`type:'spatial'`,
 plus tpmasterdir-relative companion paths and the optional dataset-level
 viewer overrides `geneExpression`/`annotationLevel`/`cellTypes` — the actual
