@@ -363,6 +363,21 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 			sampleTypes.add(sampleType)
 		}
 		q.sampleTypes = [...sampleTypes]
+		if (ds.cohort.termdb.sampleTypesByTerms) {
+			// sampleTypesByTerms{} defined
+			// group available sample types by terms
+			const availableSampleTypes = new Set(q.sampleTypes)
+			const sampleTypesByTerms: any = {}
+			for (const [term, values] of Object.entries(ds.cohort.termdb.sampleTypesByTerms)) {
+				const availableValues: any = {}
+				for (const [value, sampleTypes] of Object.entries(values)) {
+					const filteredSampleTypes = sampleTypes.filter(sampleType => availableSampleTypes.has(sampleType))
+					if (filteredSampleTypes.length) availableValues[value] = filteredSampleTypes
+				}
+				if (Object.keys(availableValues).length) sampleTypesByTerms[term] = availableValues
+			}
+			q.sampleTypesByTerms = sampleTypesByTerms
+		}
 		console.log(`${ds.label}: geneExpression HDF5 file validated. Samples:`, q.samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate geneExpression HDF5 file: ${error}`

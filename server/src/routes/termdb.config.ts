@@ -148,6 +148,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.limitDictTermSamplesToMutated) c.limitDictTermSamplesToMutated = tdb.limitDictTermSamplesToMutated
 	if (tdb.hidePlotDocumentation) c.hidePlotDocumentation = tdb.hidePlotDocumentation
 	if (tdb.gbRecreateBlock) c.gbRecreateBlock = tdb.gbRecreateBlock
+	if (tdb.sampleTypesByTerms) c.sampleTypesByTerms = tdb.sampleTypesByTerms
 	addRestrictAncestries(c, tdb)
 	addMatrixplots(c, ds)
 	addNonDictionaryQueries(c, ds, genome)
@@ -295,6 +296,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	}
 	if (q.geneExpression) {
 		q2.geneExpression = { unit: q.geneExpression.unit, sampleTypes: q.geneExpression.sampleTypes }
+		if (q.geneExpression.sampleTypesByTerms) q2.geneExpression.sampleTypesByTerms = q.geneExpression.sampleTypesByTerms
 	}
 	if (q.isoformExpression) {
 		q2.isoformExpression = { unit: q.isoformExpression.unit }

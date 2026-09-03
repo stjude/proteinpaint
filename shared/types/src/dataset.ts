@@ -1875,6 +1875,8 @@ if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsi
 export type Termdb = {
 	/** Terms */
 	termIds?: TermIds
+	/** Maps each sample-type term and value to its available sample type IDs. */
+	sampleTypesByTerms?: Record<string, Record<string, any[]>>
 	/**
 	 * Check for the required minimum number of samples with data as queried with getData() or other code,
 	 * in order to minimize the ease of extracting identifiable information from aggregate data
