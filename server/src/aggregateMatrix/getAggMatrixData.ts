@@ -120,13 +120,14 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 	const columnLookup = makeEntryLookup(columns)
 	const cellCount = rows.length * columns.length
 	const counts = new Uint32Array(cellCount)
+	const columnCounts = new Uint32Array(columns.length)
 	const sums = new Float64Array(cellCount)
-	let total = 0
 	for (const sample of Object.values<any>(response.samples)) {
 		const rowIndexes = resolveSampleEntryIndexes(sample, rowSources, rowLookup)
 		const columnIndexes = resolveSampleEntryIndexes(sample, columnSources, columnLookup)
-		if (!rowIndexes.length || !columnIndexes.length) continue
-		total++
+		if (!columnIndexes.length) continue
+		for (const columnIndex of columnIndexes) columnCounts[columnIndex]++
+		if (!rowIndexes.length) continue
 		for (const rowIndex of rowIndexes) {
 			for (const columnIndex of columnIndexes) {
 				const index = rowIndex * columns.length + columnIndex
@@ -144,7 +145,7 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 	const data = rows.map((row, rowIndex) =>
 		columns.map((column, columnIndex) => {
 			const index = rowIndex * columns.length + columnIndex
-			const stats = { matches: counts[index], total, sum: sums[index] }
+			const stats = { matches: counts[index], columnCount: columnCounts[columnIndex], sum: sums[index] }
 			const colorValue = calculateAggregateMethod(q.gradientMethod, stats)
 			const sizeValue = calculateAggregateMethod(q.sizeMethod, stats)
 			if (colorValue !== null) {
