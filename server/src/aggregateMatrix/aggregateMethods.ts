@@ -124,7 +124,13 @@ function hasPseudobulkMethod(ds: any, method: string, term?: any): boolean {
 		if (term.type != PSEUDOBULK) return false
 		/* No need to check every file in the pseudobulk member; will fail on init if missing
 		in validatePseudobulk. just check if the specific method is enabled. */
-		return !!pseudobulk[term.assay]?.[term.memberId]?.enabledmethods.has(method)
+		return pseudobulk[term.assay]?.[term.memberId]?.enabledMethods?.has(method) || false
+	}
+	for (const assay of Object.values<any>(pseudobulk)) {
+		if (!assay || typeof assay != 'object') continue
+		for (const member of Object.values<any>(assay)) {
+			if (member?.enabledMethods?.has(method)) return true
+		}
 	}
 	return false
 }
