@@ -90,7 +90,7 @@ runs:
         sleep 10
         cd ..
         # Run integration tests using headless Chrome (no X server / xvfb required)
-        npm run test:integration
+        PUPPET_CONCURRENCY=2 npm run test:integration
       continue-on-error: true
 
     - name: Check if integration tests passed
@@ -116,7 +116,7 @@ runs:
       run: echo "SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
 
     - name: Post build results on Slack
-      if: always()
+      if: github.ref_name == 'master'
       uses: slackapi/slack-github-action@v3
       with:
         webhook: ${{ inputs.SLACK_WEBHOOK_URL }} #webhook URL is now an input (was the SLACK_WEBHOOK_URL env var) Composite actions can't access secrets — must receive it as an input
