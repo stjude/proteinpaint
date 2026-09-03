@@ -5,12 +5,12 @@ const termType = SINGLECELL_NUMERIC_VALUE
 
 export class SingleCellNumericValueBase {
     type = termType
-
+    sample: string
+    plot: string
 
     static fill(term: RawSingleCellNumValueTerm, /*opts: TwOpts*/) {
         if (term instanceof SingleCellNumericValueBase) return
         SingleCellNumericValueBase.validate(term)
-        
     }
 
     static validate(term: RawSingleCellNumValueTerm) {
@@ -20,5 +20,7 @@ export class SingleCellNumericValueBase {
 
     constructor(term: RawSingleCellNumValueTerm | SingleCellNumericValueTerm, /*opts: TwOpts*/) {
         SingleCellNumericValueBase.validate(term)
+        this.sample = term.sample
+		this.plot = term.plot || ''
     }
 }
