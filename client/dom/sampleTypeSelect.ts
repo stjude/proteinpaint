@@ -39,3 +39,48 @@ export function getSelectedSampleTypes(sampleTypeSelect?: any[]) {
 		.filter(checkbox => checkbox.property('checked'))
 		.map(checkbox => Number(checkbox.property('value')))
 }
+
+// renders a dropdown menu for each term in sampleTypesByTerms, with the term's
+// values as options
+export function renderSampleTypesByTermsSelect(holder: any, sampleTypesByTerms: any) {
+	holder.selectAll('*').remove()
+
+	const sampleTypesByTermsDiv = holder
+		.append('div')
+		.attr('class', 'sjpp-genesearch-sampletypesbyterms-selects')
+		.style('margin-right', '8px')
+
+	const termSelects = {}
+
+	for (const term in sampleTypesByTerms) {
+		const values = Object.keys(sampleTypesByTerms[term])
+		const label = sampleTypesByTermsDiv
+			.append('label')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('margin-bottom', '4px')
+		label.append('span').style('margin-right', '4px').text(term)
+		const select = label.append('select')
+		for (const value of values) {
+			select.append('option').attr('value', value).text(value)
+		}
+		termSelects[term] = select
+	}
+
+	return termSelects
+}
+
+// returns the intersection of sample types associated with the selected
+// term values from dropdowns created by renderSampleTypesByTermsSelect()
+export function getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms) {
+	const selected = {}
+	for (const term in termSelects) {
+		selected[term] = termSelects[term].property('value')
+	}
+	const selectedSampleTypesByTerms = Object.entries(selected).map(([term, value]) => sampleTypesByTerms[term][value])
+	if (!selectedSampleTypesByTerms.length) return []
+	const selectedSampleTypes = selectedSampleTypesByTerms.reduce((intersection, sampleTypes) =>
+		intersection.filter(sampleType => sampleTypes.includes(sampleType))
+	)
+	return selectedSampleTypes
+}
