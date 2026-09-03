@@ -9,6 +9,8 @@ Both run the mass wsi plot against the TermdbTest fixture:
     sample 2660         image1/CMU-1-Small-Region.svs (ds.queries.w2.wsiFolder)
     sample TCGA-22-1017 image1/image1_morphology.ome.tif + image1_spatial.h5ad
                         (ds.queries.w2.folder; 791 cells, 5 cell types)
+Spatial images are only reachable in fixed-sample mode (config.sample, the
+sc app's Spatial button path); the standalone plot lists plain slides only.
 The spatial settings below pin every value main() would otherwise seed or
 reconcile (genes, overlay toggles, annotation level), so each test renders
 exactly once and postRender fires with the finished viewer.
@@ -49,9 +51,9 @@ tape('spatial OME-TIFF image renders the map with overlays and the burger menu',
 			plots: [
 				{
 					chartType: 'wsi',
+					sample: { sID: 'TCGA-22-1017' }, // fixed-sample mode, the sc app's Spatial path
 					settings: {
 						wsi: {
-							selectedSampleIndex: 1, // samples sort as ['2660', 'TCGA-22-1017']
 							geneExpression: 'PTPRC', // preset: skips the one-time seeding dispatch
 							showCellTypes: true, // cell-type fills + legend on
 							showGeneExpression: false, // fills are mutually exclusive with cell types
@@ -73,9 +75,8 @@ tape('spatial OME-TIFF image renders the map with overlays and the burger menu',
 		try {
 			const dom = wsi.Inner.dom
 
-			// the sample table renders selectable samples (how many is server
-			// data, covered by unit tests — only the structure is asserted here)
-			test.ok(dom.table.selectAll('input[type=radio]').size() >= 1, 'sample table renders selectable samples')
+			// fixed-sample mode: the sample is already chosen, no picker table
+			test.equal(dom.table.style('display'), 'none', 'sample table is hidden in fixed-sample mode')
 
 			// the spatial burger menu is shown for a spatial image
 			test.notEqual(dom.controls.style('display'), 'none', 'burger menu is shown')

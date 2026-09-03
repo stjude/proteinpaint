@@ -21,11 +21,12 @@ import serverconfig from '#src/serverconfig.js' // tpmasterdir, the root of all 
    wsiFolder  plain slides: wsiFolder/<sample>/<imageName>/<slide file>
 
  Everything is listed straight from disk: samples are the subfolders of the
- configured roots. The legacy wsimages sql table (when present) is unioned in,
- so a stale db record without files shows 0 images.
+ configured roots.
 
- With sample_id: that sample's images. Without: every sample discovered on
- disk or named in the db, with its image count (drives the plot's sample table).
+ With sample_id: that sample's images, both kinds (the single-cell app's
+ spatial probe/viewer use this). Without: every sample with PLAIN slides on
+ disk, with its plain-image count — drives the standalone plot's sample
+ table, which excludes spatial-only samples.
 */
 
 export const payload: RoutePayload = {
@@ -127,26 +128,15 @@ function init({ genomes }) {
 			}
 
 			if (!q.sample_id) {
-				// no sample given: sample ids are the subfolders of the configured
-				// roots on disk, unioned with the legacy wsimages db table (if any)
-				// so a db-listed sample whose files are gone still shows with 0
-				const ids = new Set<string>() // sample names, deduped across both roots + db
-				for (const base of [spatialBase, wsiBase]) {
-					if (base) for (const name of await subdirs(base)) ids.add(name) // each subfolder = one sample
-				}
-				try {
-					// legacy db rows: samples that are supposed to have images
-					const sql = `SELECT DISTINCT sampleidmap.name AS name
-						 FROM wsimages INNER JOIN sampleidmap ON wsimages.sample = sampleidmap.id`
-					for (const r of ds.cohort.db.connection.prepare(sql).all()) ids.add(String((r as any).name))
-				} catch (_) {
-					// dataset without a wsimages table: disk-only listing
-				}
-
+				// no sample given: list samples for the standalone Whole Slide
+				// Images plot — PLAIN slides on disk only (spatial images are
+				// viewed through the single-cell app, which asks per sample_id)
+				const ids = wsiBase ? await subdirs(wsiBase) : [] // each subfolder = one sample
 				const samples: WsiSampleSummary[] = []
-				for (const name of [...ids].sort()) {
-					// count each sample's images by actually enumerating them on disk
-					samples.push({ sampleId: name, count: (await getImages(name)).length })
+				for (const name of ids.sort()) {
+					// count each sample's plain images by actually enumerating them on disk
+					const count = (await getImages(name)).filter(i => i.type == 'wsi').length
+					if (count) samples.push({ sampleId: name, count }) // a folder without slides isn't listed
 				}
 				res.status(200).json({ samples } satisfies WsiBySampleResponse)
 				return
