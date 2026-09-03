@@ -61,6 +61,7 @@ export function renderSampleTypesByTermsSelect(holder: any, sampleTypesByTerms: 
 			.style('margin-bottom', '4px')
 		label.append('span').style('margin-right', '4px').text(term)
 		const select = label.append('select')
+		select.append('option').attr('value', 'any').text('Any')
 		for (const value of values) {
 			select.append('option').attr('value', value).text(value)
 		}
@@ -77,7 +78,10 @@ export function getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms) {
 	for (const term in termSelects) {
 		selected[term] = termSelects[term].property('value')
 	}
-	const selectedSampleTypesByTerms = Object.entries(selected).map(([term, value]) => sampleTypesByTerms[term][value])
+	const selectedSampleTypesByTerms = Object.entries(selected).map(([term, value]) => {
+		if (value == 'any') return Object.values(sampleTypesByTerms[term]).flat()
+		return sampleTypesByTerms[term][value]
+	})
 	if (!selectedSampleTypesByTerms.length) return []
 	const selectedSampleTypes = selectedSampleTypesByTerms.reduce((intersection, sampleTypes) =>
 		intersection.filter(sampleType => sampleTypes.includes(sampleType))
