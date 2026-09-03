@@ -425,7 +425,10 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				// sample) instead of the genome gene db — panel/assay gene sets
 				// may not exist in the db at all
 				const vlc = v.toLowerCase()
-				const hits = arg.geneList.filter(g => g.toLowerCase().startsWith(vlc)).slice(0, 20)
+const hits = arg.geneList
+	.filter(g => g.toLowerCase().startsWith(vlc))
+	.sort((a, b) => Number(b.toLowerCase() === vlc) - Number(a.toLowerCase() === vlc))
+	.slice(0, 20)
 				if (!hits.length) {
 					tip.d.append('div').style('margin', '5px').text('No match among this sample’s genes')
 					return
