@@ -324,15 +324,23 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		const key = type === 'row' ? 'rowSections' : 'colSections'
 		const section: Section | undefined = this.config[key]?.[idx]
 		if (!section) return
-		const term = selected.term || selected
-		if (!term?.type) throw new Error('Selected term has no type')
+		const selectedTerms = (Array.isArray(selected) ? selected : [selected]).map(item => item.term || item)
+		if (!selectedTerms.length) return
+		if (selectedTerms.some(term => !term?.type)) throw new Error('Selected term has no type')
+
+		const selectedType = selectedTerms[0].type
+		if (selectedTerms.some(term => term.type != selectedType)) {
+			this.dom.validationMessage.text('A section can only contain one term type.')
+			return
+		}
 		const sectionTermType = this.getSectionTermType(section)
-		if (sectionTermType && sectionTermType != term.type) {
+		if (sectionTermType && sectionTermType != selectedType) {
 			this.dom.validationMessage.text(`A section can only contain ${sectionTermType} terms.`)
 			return
 		}
 
-		if (!isNonDictionaryType(term.type)) {
+		if (!isNonDictionaryType(selectedType)) {
+			const term = selectedTerms[0]
 			this.destroySectionView(type, idx)
 			this.updateSection(type, idx, { name: term.name || term.id, termType: term.type, terms: [term] })
 			return
@@ -343,16 +351,21 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			nameInput.node().reportValidity()
 			return
 		}
-		const terms = section.terms || []
-		const id = term.id || term.gene || term.name
-		if (
-			terms.some(item => {
-				const existing = item.term || item
-				return existing.type == term.type && (existing.id || existing.gene || existing.name) == id
+		const terms = [...(section.terms || [])]
+		const termKeys = new Set(
+			terms.map(item => {
+				const term = item.term || item
+				return `${term.type}\0${term.assay || ''}\0${term.memberId || ''}\0${term.id || term.gene || term.name}`
 			})
-		) return
+		)
+		for (const term of selectedTerms) {
+			const termKey = `${term.type}\0${term.assay || ''}\0${term.memberId || ''}\0${term.id || term.gene || term.name}`
+			if (termKeys.has(termKey)) continue
+			termKeys.add(termKey)
+			terms.push(term)
+		}
 		this.destroySectionView(type, idx)
-		this.updateSection(type, idx, { name, termType: term.type, terms: [...terms, term] })
+		this.updateSection(type, idx, { name, termType: selectedType, terms })
 	}
 
 	getSectionTermType(section: Section) {
