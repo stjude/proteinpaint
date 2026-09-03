@@ -15,7 +15,8 @@ import {
 	SSGSEA,
 	PSEUDOBULK,
 	JUNCTION,
-	TERM_COLLECTION
+	TERM_COLLECTION,
+	SINGLECELL_NUMERIC_VALUE
 } from '#types'
 import type { Mds3WithCohort } from '#types'
 
@@ -555,6 +556,7 @@ export function getDsAllowedTermTypes(ds) {
 	if (ds.queries?.junction) typeSet.add(JUNCTION)
 	if (ds.queries?.singleCell) {
 		typeSet.add(SINGLECELL_CELLTYPE)
+		typeSet.add(SINGLECELL_NUMERIC_VALUE)
 		if (ds.queries.singleCell?.geneExpression) typeSet.add(SINGLECELL_GENE_EXPRESSION)
 		if (ds.queries.singleCell?.pseudobulk) typeSet.add(PSEUDOBULK)
 	}
