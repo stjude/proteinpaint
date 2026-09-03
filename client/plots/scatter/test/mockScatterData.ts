@@ -1,5 +1,5 @@
 import { getScgeneexpTw } from '../../../test/testdata/data.ts'
-import { scTestSample } from '#shared'
+import { scTestSample } from '#shared/testData'
 
 export const state = {
 	plots: [

@@ -20,7 +20,7 @@ import {
 	state2dnameth,
 	state3DContour
 } from './mockScatterData.ts'
-import { scTestSample } from '#shared'
+import { scTestSample } from '#shared/testData'
 
 /* Include tests for different term types in this file. 
 Please add tests for UI interactions in scatter.ui.integration.spec.ts 

@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
-import { scTestSample } from '#shared'
+import { scTestSample } from '#shared/testData'
 
 /*
 Tests:

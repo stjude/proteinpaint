@@ -21,7 +21,8 @@
     "./*": {
       "sjpp/dev": "./src/*",
       "default": "./dist/src/*"
-    }
+    },
+  	"./testData": "./test/testData.ts"
   },
   "scripts": {
     "ts2js": "esbuild src/*.* src/**/*.* --platform=node --outdir=dist/src --format=esm --sourcemap",

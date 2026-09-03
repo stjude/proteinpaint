@@ -1,5 +1,5 @@
 import * as tt from '#types'
-import { scTestSample } from '#shared'
+import { scTestSample } from '#shared/testData'
 /* 
 exports a set of functions, each returns a TermdbTest-based term/tw/tvs that is complex and lengthy
 that are used in unit/integration tests so to simplify test and avoid code duplication
