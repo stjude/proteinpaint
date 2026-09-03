@@ -40,7 +40,8 @@ export function calculateAggregateMethod(
 	return calculate(stats)
 }
 
-/** Attach the server-only aggregation capability resolver after dataset queries are validated. */
+/** Attach the server-only aggregation capability resolver after dataset queries are validated. 
+ * This runs after sample validation in mds3.init. */
 export function initAggregateMethods(ds: any) {
 	ds.getAvailableAggregateMethods = (terms: any[] = []): AggregateMethodOption[] =>
 		definitions
