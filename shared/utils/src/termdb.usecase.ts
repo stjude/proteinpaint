@@ -26,6 +26,7 @@ export const graphableTypes = new Set([
 	TermTypes.JUNCTION,
 	SINGLECELL_GENE_EXPRESSION,
 	SINGLECELL_CELLTYPE,
+	TermTypes.SINGLECELL_NUMERIC_VALUE,
 	TermTypes.SNP,
 	TermTypes.TERM_COLLECTION,
 	TermTypes.COHORT,
@@ -70,7 +71,7 @@ Returns
 	- 'branch' if the term can be used only as an expandable tree branch, but not in a plot
 	- an empty Set means that the term has no valid uses, i.e, it cannot be used either for plotting or as a tree branch
 */
-export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
+export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: any) {
 	const usecase = _usecase || {}
 
 	// may apply dataset specific override filter for a use case
@@ -268,7 +269,7 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 			const exlst = termdbConfig?.excludedTermtypeByTarget?.filter
 			if (exlst) {
 				if (graphableTypes.has(term.type) && !exlst.includes(term.type)) uses.add('plot')
-				if (child_types.find(t => !exlst.includes(t))) uses.add('branch') // there's a non-excluded child type, allow branch to show
+				if (child_types.find((t: any) => !exlst.includes(t))) uses.add('branch') // there's a non-excluded child type, allow branch to show
 				return uses
 			}
 			// no specific rule for filter. use default rules
@@ -324,7 +325,7 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 
 // determine if the term has at least one child type that
 // is not excluded
-function hasAllowedChildTypes(child_types, excluded_types) {
+function hasAllowedChildTypes(child_types: string[], excluded_types: string[]) {
 	if (!child_types.length) {
 		// term does not have children
 		return false
@@ -339,11 +340,11 @@ function hasAllowedChildTypes(child_types, excluded_types) {
 	}
 }
 
-function hasNumericChild(child_types) {
+function hasNumericChild(child_types: string[]) {
 	return child_types.includes('float') || child_types.includes('integer')
 }
 
-function hasChildTypes(child_types, expected_types) {
+function hasChildTypes(child_types: string[], expected_types: string[]) {
 	for (const a of expected_types) {
 		if (child_types.includes(a)) return true
 	}
