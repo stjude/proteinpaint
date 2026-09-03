@@ -120,7 +120,9 @@ class Wsi extends PlotBase implements RxComponent {
 		// the selected sample's images from termdb/wsiBySample; on launch the
 		// first sample is selected by default so its first image displays
 		const selectedSample = viewModel.viewData.selectedSample
-		let images = selectedSample ? (await model.getImages(selectedSample.sampleId)).images ?? [] : []
+const imageData = selectedSample ? await model.getImages(selectedSample.sampleId) : undefined
+		if (imageData?.error) throw new Error(imageData.error)
+		let images = imageData?.images ?? []
 		// spatial images are viewed only through the sc app's Spatial button
 		// (fixed-sample mode); the standalone plot shows plain slides only
 		images = images.filter((i: any) => (fixedSample ? i.type == 'spatial' : i.type != 'spatial'))
