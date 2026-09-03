@@ -7,7 +7,14 @@ rm -rf ./dist
 if [[ ! -d ../public/bin ]]; then
 	mkdir ../public/bin
 fi
-ln -sf $(pwd)/dist ../public/bin/
+
+OUTDIR=$(pwd)/dist
+if [[ "$BUNDLE_OUTDIR" != "" ]]; then
+	echo "[BUNDLE_OUTDIR=$BUNDLE_OUTDIR]"
+	OUTDIR="$BUNDLE_OUTDIR"
+fi
+
+ln -sf $OUTDIR ../public/bin/
 ln -sf $(pwd)/../front/src/app.js ../public/bin/proteinpaint.js
 
 # needed to track messages for browser notification
