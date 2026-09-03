@@ -3,6 +3,8 @@ import type { PresetNumericBins, NumericBaseTerm, NumTW, RawNumTW } from '../ind
 export type SingleCellNumericValueTerm = NumericBaseTerm & {
     type: 'singleCellNumericValue'
     bins?: PresetNumericBins
+    sample: any
+    plot: string
 }
 
 export type SingleCellNumValueTermTW = NumTW & { term: SingleCellNumericValueTerm }
