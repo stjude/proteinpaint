@@ -29,6 +29,7 @@ import {
 	PSEUDOBULK,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
+	SINGLECELL_NUMERIC_VALUE,
 	MULTIVALUE,
 	DATE,
 	TERM_COLLECTION,
@@ -91,6 +92,7 @@ export const typeGroup = {
 	[TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION,
 	[SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE,
 	[SINGLECELL_GENE_EXPRESSION]: TermTypeGroups.SINGLECELL_GENE_EXPRESSION,
+	[SINGLECELL_NUMERIC_VALUE]: TermTypeGroups.SINGLECELL_NUMERIC_VALUE,
 	[COHORT]: TermTypeGroups.COHORT
 }
 
@@ -109,6 +111,7 @@ const nonDictTypes = new Set([
 	PSEUDOBULK,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
+	SINGLECELL_NUMERIC_VALUE,
 	COHORT
 ])
 
@@ -127,6 +130,7 @@ export const numericTypes = new Set([
 	METABOLITE_INTENSITY,
 	PROTEOME_ABUNDANCE,
 	SINGLECELL_GENE_EXPRESSION,
+	SINGLECELL_NUMERIC_VALUE,
 	DATE,
 	PSEUDOBULK
 ])
@@ -136,7 +140,11 @@ export const dictionaryNumericTypes = new Set([INTEGER, FLOAT, DATE])
 
 const categoricalTypes = new Set([CATEGORICAL, SNP])
 
-const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION /*PSEUDOBULK*/])
+/** Note: Do not add pseudobulk here. These capture cell level terms. 
+ * Pseudobulk terms are sample level terms. May in the future update
+ * to isSCCellLevelTerms() and isSingleCellTerm() if the need arises
+ */
+const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE /*PSEUDOBULK*/])
 
 export function isSingleCellTerm(term: any) {
 	if (!term) return false
