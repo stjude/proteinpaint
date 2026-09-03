@@ -12,7 +12,7 @@ type PseudobulkSelection = Omit<PseudobulkTerm, 'category' | 'gene'> & {
 }
 
 export class SearchHandler {
-	callback!: (term?: PseudobulkSelection | PseudobulkSelection[]) => void | Promise<void>
+	callback!: (term: PseudobulkSelection | PseudobulkSelection[]) => void | Promise<void>
 	app!: AppApi
 	genome!: ClientGenome
 	map?: Map<string, Map<string, any[]>>
@@ -176,22 +176,7 @@ export class SearchHandler {
 			holder,
 			labeltext: 'Select all',
 			divstyle: { opacity: '0.7' },
-			callback: async () => {
-				const selectedTerms = this.app.getState().selectedTerms
-				const selectedKeys = new Set(
-					selectedTerms.map(term => `${term.type}\0${term.assay}\0${term.memberId}\0${term.id}`)
-				)
-				const unselectedTerms = terms.filter(
-					term => !selectedKeys.has(`${term.type}\0${term.assay}\0${term.memberId}\0${term.id}`)
-				)
-				if (unselectedTerms.length) {
-					await this.app.dispatch({
-						type: 'app_refresh',
-						state: { selectedTerms: [...selectedTerms, ...unselectedTerms] }
-					})
-				}
-				await this.callback([...selectedTerms, ...unselectedTerms])
-			}
+			callback: () => this.callback(terms)
 		})
 
 		const wrapper = holder.append('div').style('display', 'block').style('padding', '10px 15px 0px')
