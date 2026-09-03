@@ -687,6 +687,7 @@ const typeMap: { [key: string]: string } = {
 	multivalue: 'Multi Value',
 	singleCellGeneExpression: 'Single Cell, Gene Expression',
 	singleCellCellType: 'Single Cell, Cell Type',
+	singleCellNumericValue: 'Single Cell, Numeric Value',
 	snplocus: 'SNP Locus',
 	snp: 'SNP',
 	snplst: 'SNP List',
