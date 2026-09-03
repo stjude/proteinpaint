@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { boxplot_getvalue } from '../boxplot.ts'
+import { boxplot_getvalue } from '../boxplot.js'
 
 tape('boxplot_getvalue() supports numeric values', test => {
 	const result = boxplot_getvalue([0, 1, 2, 3, 4, 5, 100])
