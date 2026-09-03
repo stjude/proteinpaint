@@ -425,10 +425,10 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				// sample) instead of the genome gene db — panel/assay gene sets
 				// may not exist in the db at all
 				const vlc = v.toLowerCase()
-const hits = arg.geneList
-	.filter(g => g.toLowerCase().startsWith(vlc))
-	.sort((a, b) => Number(b.toLowerCase() === vlc) - Number(a.toLowerCase() === vlc))
-	.slice(0, 20)
+				const hits = arg.geneList
+					.filter(g => g.toLowerCase().startsWith(vlc))
+					.sort((a, b) => Number(b.toLowerCase() === vlc) - Number(a.toLowerCase() === vlc))
+					.slice(0, 20)
 				if (!hits.length) {
 					tip.d.append('div').style('margin', '5px').text('No match among this sample’s genes')
 					return
@@ -546,6 +546,14 @@ const hits = arg.geneList
 		//let invalidCount = 0 // may report later
 
 		for (const s of lst) {
+			if (arg.geneList) {
+				// same contract as the autocomplete branch in checkInput(): match
+				// against the supplied list (e.g. one sample's assayed genes, which
+				// may not exist in the genome gene db), returning its own casing
+				const hit = arg.geneList.find(g => g.toLowerCase() == s.toLowerCase())
+				if (hit) validGenes.push({ geneSymbol: hit })
+				continue
+			}
 			const gene = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: s } })
 			if (!gene || gene.error || !gene.hits?.length) {
 				//invalidCount++
