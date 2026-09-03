@@ -19,12 +19,9 @@ import { validString } from '#src/routes/common.js'
  *
  */
 
-//This is a sanity check
-const enabledMethods = new Set(['mean', 'total', 'percent'])
-
 export async function validatePseudobulk(ds: any) {
 	const pseudobulk = ds.queries.singleCell.pseudobulk
-
+	//Ensure that the pseudobulk object exists and is properly structured.
 	if (typeof pseudobulk != 'object') throw new Error('singleCell.pseudobulk is not object')
 	for (const assayKey of Object.keys(pseudobulk)) {
 		try {
@@ -44,6 +41,8 @@ export async function validatePseudobulk(ds: any) {
 		for (const memberId of Object.keys(pseudobulk[assayKey])) {
 			// a member corresponds to a cell type (or lineage) with categories
 			const member = pseudobulk[assayKey][memberId]
+			/** The methods available for this member; used as quick check in getter */
+			member.enabledMethods = new Set()
 			validString(member.folder, 'member.folder must be a non-empty string')
 			validString(member.meanExt, 'member.meanExt must be a non-empty string')
 			if (member.totalExt !== undefined) validString(member.totalExt, 'member.totalExt must be a non-empty string')
@@ -95,6 +94,7 @@ export async function validatePseudobulk(ds: any) {
 					}
 					// sample names (not ids); used by the termdb/DE route as its allSampleSet
 					co[`${method}Sampleset`] = new Set(samples)
+					member.enabledMethods.add(method)
 					console.log(
 						`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} ${method.toUpperCase()} HDF5 samples:`,
 						co[`${method}Samples`].length
@@ -102,16 +102,16 @@ export async function validatePseudobulk(ds: any) {
 				}
 				/** Always validate "mean value" h5 file
 				 * If validated, category object will have .meanSamples[], .meanSampleset, and .meanFile:str properties populated */
-				validateMethodFile('mean')
+				await validateMethodFile('mean')
 				/** NOTE: Validing total and percent file as optional for now.
 				 * Will decided later if either is required. */
 				if (member.totalExt !== undefined) {
 					/** If validated, category object will have .totalSamples[], .totalSampleset, and totalFile:str properties populated */
-					validateMethodFile('total')
+					await validateMethodFile('total')
 				}
 				if (member.percentExt !== undefined) {
 					/** If validated, category object will have .percentSamples[], .percentSampleset, and percentFile:str properties populated */
-					validateMethodFile('percent')
+					await validateMethodFile('percent')
 				}
 			}
 		}
@@ -134,12 +134,15 @@ export async function validatePseudobulk(ds: any) {
 	pseudobulk.get = async (param: { terms: any[], dataTypeDetails?: { genes?: string[], method?: string }, filter?: any, filter0?: any, mapParent2Children?: boolean, sampleTypes?: any }) => {
 		//Set default to mean for most requests
 		const method = param?.dataTypeDetails?.method || 'mean'
-		if (!enabledMethods.has(method)) throw new Error(`Invalid method.`)
+		
 		if (!Array.isArray(param.terms)) throw new Error('.terms[] not array')
 		// all terms needs to be by the same HDF5 file! TODO validate and reject otherwise
 		const _t = param.terms[0]?.term
 		if (!_t) throw new Error('param.terms[0].term missing')
-		const thisCategory = pseudobulk[_t.assay]?.[_t.memberId]?.categories?.[_t.category]
+		const member = pseudobulk[_t.assay]?.[_t.memberId]
+		if (!member) throw new Error('Invalid member.')
+		if (!member.enabledMethods.has(method)) throw new Error(`Invalid method for ${_t.assay}.${_t.memberId}.`)
+		const thisCategory = member?.categories?.[_t.category]
 		if (!thisCategory) throw new Error(`pseudobulk[${_t.assay}]?.[${_t.memberId}]?.categories?.[${_t.category}] missing`)
 
 		const limitSamples = await mayLimitSamples(param, thisCategory[`${method}Samples`], ds)
