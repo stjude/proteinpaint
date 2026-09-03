@@ -142,9 +142,7 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 	}
 
 	async updateAvailableMethods() {
-		const rows = this.getTerms('rowSections')
-		const columns = this.getTerms('colSections')
-		if (!rows.length || !columns.length) {
+		if (!this.hasTerms(this.config.rowSections) || !this.hasTerms(this.config.colSections)) {
 			this.methodRequestId++
 			this.methodTermsKey = ''
 			this.availableMethods = []
@@ -156,7 +154,9 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 
 		this.dom.methodsHolder.style('display', '')
 		const columnSections = this.toAxis(this.config.colSections || [], false)
-		const key = JSON.stringify(columnSections)
+		const key = (this.config.colSections || [])
+			.flatMap(section => section.terms.map(term => getTermSelectionKey(term.term || term)))
+			.join('\n')
 		if (key == this.methodTermsKey && (this.methodsReady || this.methodsError)) return
 		this.methodTermsKey = key
 		this.methodsReady = false
@@ -195,8 +195,8 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		}
 	}
 
-	getTerms(key: 'rowSections' | 'colSections') {
-		return (this.config[key] || []).flatMap(section => section.terms || [])
+	hasTerms(sections: Section[] | undefined) {
+		return sections?.some(section => section.terms?.length) === true
 	}
 
 	async renderSections(type: SectionType, sections: Section[]) {
@@ -352,14 +352,9 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			return
 		}
 		const terms = [...(section.terms || [])]
-		const termKeys = new Set(
-			terms.map(item => {
-				const term = item.term || item
-				return `${term.type}\0${term.assay || ''}\0${term.memberId || ''}\0${term.id || term.gene || term.name}`
-			})
-		)
+		const termKeys = new Set(terms.map(item => getTermSelectionKey(item.term || item)))
 		for (const term of selectedTerms) {
-			const termKey = `${term.type}\0${term.assay || ''}\0${term.memberId || ''}\0${term.id || term.gene || term.name}`
+			const termKey = getTermSelectionKey(term)
 			if (termKeys.has(termKey)) continue
 			termKeys.add(termKey)
 			terms.push(term)
@@ -455,7 +450,7 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			}
 		}
 		if (this.methodsError) return `Unable to load aggregate methods: ${this.methodsError}`
-		if (this.getTerms('rowSections').length && this.getTerms('colSections').length) {
+		if (this.hasTerms(this.config.rowSections) && this.hasTerms(this.config.colSections)) {
 			if (!this.methodsReady) return 'Loading compatible aggregate methods.'
 			if (this.availableMethods.length < 2) return 'Selected column terms do not share at least two aggregate methods.'
 			const availableIds = new Set(this.availableMethods.map(method => method.id))
@@ -484,6 +479,10 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			]
 		})
 	}
+}
+
+function getTermSelectionKey(term: any) {
+	return `${term.type}\0${term.assay || ''}\0${term.memberId || ''}\0${term.id || term.gene || term.name}`
 }
 
 export const AggMatrixInputInit = getCompInit(AggMatrixInput)

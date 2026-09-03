@@ -208,7 +208,12 @@ function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataRespons
 		}
 		const bins = response.refs?.byTermId?.[source.queryId]?.bins || []
 		const orderedKeys = bins.map(bin => String(bin.name || bin.label)).filter(key => observed.has(key))
-		for (const key of observed) if (!orderedKeys.includes(key)) orderedKeys.push(key)
+		const orderedKeySet = new Set(orderedKeys)
+		for (const key of observed) {
+			if (orderedKeySet.has(key)) continue
+			orderedKeySet.add(key)
+			orderedKeys.push(key)
+		}
 		for (const key of orderedKeys) {
 			entries.push({
 				id: key,
