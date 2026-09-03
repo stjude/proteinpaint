@@ -26,7 +26,7 @@
   },
   "scripts": {
     "ts2js": "esbuild src/*.* src/**/*.* --platform=node --outdir=dist/src --format=esm --sourcemap",
-    "build": "rm -rf dist && npm run ts2js && rm -rf dist/**/*.spec.* && tsc --sourcemap --skipLibCheck",
+    "build": "rm -rf dist && npm run ts2js && rm -rf dist/**/*.spec.* dist/**/test && tsc --sourcemap --skipLibCheck",
     "prepack": "npm run build",
     "dev0": "rm -rf dist && 'npx tsc --watch --skipLibCheck --preserveWatchOutput'",
     "dev": "echo '--- now using raw shared/utils/src exports under conditions=sjpp/dev ---\n'",
