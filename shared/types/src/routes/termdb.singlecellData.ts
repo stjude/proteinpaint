@@ -46,7 +46,7 @@ export type TermdbSingleCellDataRequest = {
 	(e.g. to offer/validate exactly the sample's assayed genes in a search
 	box, which may differ from the genome gene db) instead of returning plot
 	data; false = return plot data as usual */
-	listGenes: boolean
+	listGenes?: boolean
 	/** in each plot, what Column name to color by 
 	key: plot.name, value: column name
 	if missing, use default setting of the plot
