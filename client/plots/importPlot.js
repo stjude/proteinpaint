@@ -168,9 +168,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'wsi':
 			return await import('./w2/Wsi.ts')
 
-		case 'scSpatial':
-			return await import('./w2/SCSpatial.ts')
-
 		default:
 			// temporary option to force an error, to bypass the default filename matching
 			if (notFoundMessage) throw notFoundMessage
