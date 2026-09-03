@@ -284,7 +284,6 @@ export class ScatterTooltip {
 
 	/** Flat table for the multi-hit hover tooltip and click menu. */
 	buildTableData(dots) {
-		console.trace('multu')
 		return buildSampleTableData(this.scatter.config, this.scatter.settings.itemLabel, dots)
 	}
 

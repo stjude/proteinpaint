@@ -4,7 +4,7 @@ import type { ColorLegendEntry, ShapeLegendEntry } from './termdb.sampleScatter.
 import type { TermWrapper } from '../terms/tw.ts'
 
 /** Test sample ID for single cell plots.
- * Recreated here from utils/test/testData.ts so
+ * Recreated here from utils/src/test/testData.ts so
  * es-lint doesn't complain. */
 const scTestSample = '2646'
 
