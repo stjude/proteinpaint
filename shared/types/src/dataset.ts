@@ -1083,6 +1083,8 @@ type ColorColumn = {
 	/** column values (categories) to color mapping */
 	colorMap?: { [index: string]: string }
 	aliases?: { [index: string]: string }
+	/** type of the column, e.g., 'numeric' */
+	type?: string
 }
 
 /** defines a tsne type of plot for cells from one sample */
