@@ -4,7 +4,7 @@ import { isNumericTerm } from '#shared/terms.js'
 type AggregateMethodDefinition = AggregateMethodOption & {
 	isAvailable: (ds: any, terms: any[]) => boolean
 	/** Server-only hook. Sufficient statistics are computed once for all requested methods. */
-	calculateFromStats?: (stats: { matches: number; total: number; sum: number }) => number | null
+	calculateFromStats?: (stats: { matches: number; columnCount: number; sum: number }) => number | null
 }
 
 const definitions: AggregateMethodDefinition[] = [
@@ -20,7 +20,7 @@ const definitions: AggregateMethodDefinition[] = [
 		label: 'Percent',
 		appliesTo: 'any',
 		isAvailable: (ds, terms) => hasPercentMethod(ds, terms),
-		calculateFromStats: stats => (stats.total ? (stats.matches / stats.total) * 100 : null)
+		calculateFromStats: stats => (stats.columnCount ? (stats.matches / stats.columnCount) * 100 : null)
 	},
 	{
 		id: 'count',
@@ -33,7 +33,7 @@ const definitions: AggregateMethodDefinition[] = [
 
 export function calculateAggregateMethod(
 	methodId: string,
-	stats: { matches: number; total: number; sum: number }
+	stats: { matches: number; columnCount: number; sum: number }
 ) {
 	const calculate = definitions.find(method => method.id == methodId)?.calculateFromStats
 	if (!calculate) throw new Error(`Unsupported sample-based aggregate method: ${methodId}`)
@@ -63,10 +63,10 @@ export function calculateSampleBasedMethods(
 
 	const matches = new Uint32Array(rowIds.length)
 	const sums = new Float64Array(rowIds.length)
-	let total = 0
+	let columnCount = 0
 	for (const sample of Object.values(samples)) {
 		if (!Object.prototype.hasOwnProperty.call(sample, columnId)) continue
-		total++
+		columnCount++
 		const columnValue = sample[columnId]?.value
 		for (let i = 0; i < rowIds.length; i++) {
 			if (!Object.prototype.hasOwnProperty.call(sample, rowIds[i])) continue
@@ -80,7 +80,7 @@ export function calculateSampleBasedMethods(
 		const values: Record<string, number | null> = {}
 		const calculate = requested[methodIndex]!.calculateFromStats!
 		for (let rowIndex = 0; rowIndex < rowIds.length; rowIndex++) {
-			values[rowIds[rowIndex]] = calculate({ matches: matches[rowIndex], total, sum: sums[rowIndex] })
+			values[rowIds[rowIndex]] = calculate({ matches: matches[rowIndex], columnCount, sum: sums[rowIndex] })
 		}
 		result.set(methodIds[methodIndex], values)
 	}
@@ -124,7 +124,7 @@ function hasPseudobulkMethod(ds: any, method: string, term?: any): boolean {
 		if (term.type != PSEUDOBULK) return false
 		/* No need to check every file in the pseudobulk member; will fail on init if missing
 		in validatePseudobulk. just check if the specific method is enabled. */
-		return !!pseudobulk[term.assay]?.[term.memberId].enabledmethods.has(method)
+		return !!pseudobulk[term.assay]?.[term.memberId]?.enabledmethods.has(method)
 	}
 	return false
 }
