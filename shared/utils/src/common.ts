@@ -32,6 +32,7 @@ export class TermTypeGroups {
 	static PSEUDOBULK = 'Pseudobulk'
 	static SINGLECELL_CELLTYPE = 'Single-cell Cell Type'
 	static SINGLECELL_GENE_EXPRESSION = 'Single-cell Gene Expression'
+	static SINGLECELL_NUMERIC_VALUE = 'Single-cell Numeric Value'
 	static SNP = 'SNP Genotype'
 	static SNP_LIST = 'SNP List'
 	static SNP_LOCUS = 'SNP Locus'
