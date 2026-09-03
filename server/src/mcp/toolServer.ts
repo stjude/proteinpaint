@@ -8,11 +8,8 @@ import { z } from 'zod' //runtime validator
 import { screenshotSummaryPlot } from './renderPlot.ts'
 
 const PP_SERVER = process.env.PP_MCP_SERVER_URL || 'http://localhost:3000'
-const GENOME = 'hg38-test'
-const DSLABEL = 'TermdbTest'
 // TermdbTest's dictionary search is scoped to a subcohort (see dataset/termdb.test.ts's
 // selectCohort.values); 'ABC' is the dataset's primary test subcohort.
-const COHORT_STR = 'ABC'
 
 export function createMcpServer(): McpServer {
 	const server = new McpServer({
@@ -29,19 +26,22 @@ export function createMcpServer(): McpServer {
 				`(e.g. "sex", "age", "diagnosis"). Returns a short list of matching terms with their id, name, ` +
 				`and type. Use the returned "id" values as the term/term2 arguments to create_summary_plot.`,
 			inputSchema: {
-				query: z.string().min(1).describe('Free-text search string, e.g. "sex" or "age at diagnosis"')
+				query: z.string().min(1).describe('Free-text search string, e.g. "sex" or "age at diagnosis"'),
+				genome: z.string().min(1).describe('Genome name, e.g. "hg38-test"'),
+				dslabel: z.string().min(1).describe('Dataset label, e.g. "TermdbTest"'),
+				cohort: z.string().optional().describe('Cohort string, e.g. "ABC" for TermdbTest')
 			}
 		},
-		async ({ query }) => {
+		async ({ query, genome, dslabel, cohort }) => {
 			// Reuses the real, already-established dictionary search endpoint (server/src/termdb.js's
 			// trigger_findterm, dispatched from the generic /termdb handler) — the same one the Mass UI's
 			// own tree/search box calls. Not part of chat/ or the omnisearch endpoint.
 			const url = new URL('/termdb', PP_SERVER)
-			url.searchParams.set('genome', GENOME)
-			url.searchParams.set('dslabel', DSLABEL)
+			url.searchParams.set('genome', genome)
+			url.searchParams.set('dslabel', dslabel)
 			url.searchParams.set('findterm', query)
 			url.searchParams.set('targetType', 'Dictionary Variables')
-			url.searchParams.set('cohortStr', COHORT_STR)
+			if (cohort) url.searchParams.set('cohortStr', cohort)
 
 			const res = await fetch(url)
 			if (!res.ok) throw new Error(`search_terms: PP server responded ${res.status} ${await res.text()}`)
@@ -66,13 +66,15 @@ export function createMcpServer(): McpServer {
 				`deterministic plot-state assembler, not invented — invalid term ids are rejected.`,
 			inputSchema: {
 				term: z.string().min(1).describe('Dictionary term id for the main variable (from search_terms)'),
-				term2: z.string().min(1).optional().describe('Optional dictionary term id to overlay (from search_terms)')
+				term2: z.string().min(1).optional().describe('Optional dictionary term id to overlay (from search_terms)'),
+				genome: z.string().min(1).describe('Genome name, e.g. "hg38-test"'),
+				dslabel: z.string().min(1).describe('Dataset label, e.g. "TermdbTest"')
 			}
 		},
-		async ({ term, term2 }) => {
+		async ({ term, term2, genome, dslabel }) => {
 			const url = new URL('/mcp/createSummaryPlot', PP_SERVER)
-			url.searchParams.set('genome', GENOME)
-			url.searchParams.set('dslabel', DSLABEL)
+			url.searchParams.set('genome', genome)
+			url.searchParams.set('dslabel', dslabel)
 			url.searchParams.set('term', term)
 			if (term2) url.searchParams.set('term2', term2)
 
@@ -83,13 +85,13 @@ export function createMcpServer(): McpServer {
 
 			// A real, working deep link: the same `?mass=<json>` URL param shape the Mass UI's own
 			// e2e tests use to open a specific chart directly (e2e-playwright/TermdbTest/massNav.e2e.spec.ts).
-			const deepLinkState = { genome: GENOME, dslabel: DSLABEL, nav: { activeTab: 1 }, plots: [plotState.plot] }
+			const deepLinkState = { genome: genome, dslabel: dslabel, nav: { activeTab: 1 }, plots: [plotState.plot] }
 			const deepLinkUrl = `${PP_SERVER}/?mass=${encodeURIComponent(JSON.stringify(deepLinkState))}`
 
 			const content: any[] = []
 			let renderError: string | undefined
 			try {
-				const png = await screenshotSummaryPlot(PP_SERVER, GENOME, DSLABEL, plotState.plot)
+				const png = await screenshotSummaryPlot(PP_SERVER, genome, dslabel, plotState.plot)
 				content.push({ type: 'image', data: png.toString('base64'), mimeType: 'image/png' })
 			} catch (e: any) {
 				// Rendering is a best-effort addition on top of the validated config below — a headless
