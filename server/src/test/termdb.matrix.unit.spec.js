@@ -658,7 +658,9 @@ function makeNoDbDs({
 	scope = new Set(['c1', 'c2', 'c3']),
 	expValues = { c1: 5, c2: 6, c3: 7 },
 	dictCalls,
-	scExpValues
+	scExpValues,
+	sampleTypes,
+	sampleTypesByTerms
 } = {}) {
 	const ds = {
 		label: 'MockNoDb',
@@ -672,7 +674,9 @@ function makeNoDbDs({
 					}
 				},
 				filterSamples: async () => scope,
-				q: { id2sampleName: id => 'submitter-' + id }
+				q: { id2sampleName: id => 'submitter-' + id },
+				sampleTypes,
+				sampleTypesByTerms
 			}
 		},
 		queries: {
@@ -749,6 +753,41 @@ tape('getData: a request of only a negated samplelst group is rejected', async t
 	// resolve to an empty result with no explanation
 	t.ok(data.error, 'an error is returned')
 	t.ok(/not in/.test(data.error), `the error names the unsupported shape: ${data.error}`)
+	t.end()
+})
+
+tape('getData: collapses redundant sample type labels', async t => {
+	await ensureOpenAuth()
+	const data = await getData(
+		{ terms: [geneTw()], filter: emptyFilter(), sampleTypes: [2, 3] },
+		makeNoDbDs({
+			sampleTypes: {
+				2: {
+					name: 'Baseline Bone Marrow CD138pos sample',
+					plural_name: 'Baseline Bone Marrow CD138pos samples'
+				},
+				3: {
+					name: 'Baseline Peripheral Blood CD138pos sample',
+					plural_name: 'Baseline Peripheral Blood CD138pos samples'
+				}
+			},
+			sampleTypesByTerms: {
+				'samples.collection_event': { Baseline: [2, 3] },
+				'samples.specimen_type': { 'Bone Marrow': [2], 'Peripheral Blood': [3] },
+				'samples.sample_type': { CD138pos: [2, 3] }
+			}
+		})
+	)
+
+	t.equal(data.error, undefined, 'no error')
+	t.deepEqual(
+		data.sampleType,
+		{
+			name: 'Baseline CD138pos sample',
+			plural_name: 'Baseline CD138pos samples'
+		},
+		'sample type labels are collapsed for every getData consumer'
+	)
 	t.end()
 })
 
