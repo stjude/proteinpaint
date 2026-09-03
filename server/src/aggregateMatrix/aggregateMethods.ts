@@ -117,19 +117,14 @@ function appliesToTerms(method: AggregateMethodDefinition, terms: any[]) {
 	return terms.every(term => isNumericTerm(term) == (method.appliesTo == 'numeric'))
 }
 
-function hasPseudobulkMethod(ds: any, method: string, term?: any) {
+function hasPseudobulkMethod(ds: any, method: string, term?: any): boolean {
 	const pseudobulk = ds.queries?.singleCell?.pseudobulk
 	if (!pseudobulk) return false
 	if (term) {
-		return !!pseudobulk[term.assay]?.[term.memberId]?.categories?.[term.category || term.id]?.[`${method}File`]
-	}
-	for (const assay of Object.values<any>(pseudobulk)) {
-		if (!assay || typeof assay != 'object') continue
-		for (const member of Object.values<any>(assay)) {
-			for (const category of Object.values<any>(member?.categories || {})) {
-				if (category?.[`${method}File`]) return true
-			}
-		}
+		if (term.type != PSEUDOBULK) return false
+		/* No need to check every file in the pseudobulk member; will fail on init if missing
+		in validatePseudobulk. just check if the specific method is enabled. */
+		return !!pseudobulk[term.assay]?.[term.memberId].enabledmethods.has(method)
 	}
 	return false
 }
