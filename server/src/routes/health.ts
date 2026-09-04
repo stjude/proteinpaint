@@ -15,6 +15,6 @@ export const api: RouteApi = {
 
 function init() {
 	return async (req, res): Promise<void> => {
-		res.send({ status: 'ok' } satisfies HealthResponse)
+		res.send({ status: 'ok', detailsAt: '/status' } satisfies HealthResponse)
 	}
 }

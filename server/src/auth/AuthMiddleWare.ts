@@ -1,7 +1,15 @@
 // these server routes should not be protected by default,
 // since a user that is not logged should be able to have a way to login,
 // also logout should be supported regardless
-const forcedOpenRoutes = new Set(['/dslogin', '/jwt-status', '/dslogout', '/healthcheck', '/health', '/demoToken'])
+const forcedOpenRoutes = new Set([
+	'/dslogin',
+	'/jwt-status',
+	'/dslogout',
+	'/healthcheck',
+	'/health',
+	'/status',
+	'/demoToken'
+])
 
 // Using a closure to make sure that the arguments are all related to each other.
 // An alternative of exporting/importing the auth instance unnecessarily exposes it
