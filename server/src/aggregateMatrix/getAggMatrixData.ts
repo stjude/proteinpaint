@@ -168,8 +168,8 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 	)
 
 	return {
-		colorScale: getScale(colorMin, colorMax),
-		sizeScale: getScale(sizeMin, sizeMax),
+		colorScale: validateScale(colorMin, colorMax),
+		sizeScale: validateScale(sizeMin, sizeMax),
 		data,
 		axesLayout: {
 			rows: makeAxisLayout(rows, 'row'),
@@ -262,9 +262,11 @@ function makeAxisLayout(entries: ResolvedAxisEntry[], axis: 'row' | 'column') {
 	} as any
 }
 
-function getScale(min: number, max: number) {
+function validateScale(min: number, max: number) {
 	if (min === Infinity) throw new Error('No valid aggregate values found in getData response')
-	if (min === max) throw new Error(`All aggregate values are the same: ${min}. Cannot use identical data for scaling.`)
+	/** This check is commented out because having identical min and max values is allowed in some cases (e.g. count). 
+	 * May be appropriate to revert later.  */
+	// if (min === max) throw new Error(`All aggregate values are the same: ${min}. Cannot use identical data for scaling.`)
 	return { min, max }
 }
 
@@ -387,6 +389,5 @@ function summarizeValues(values: ValueByRow, rowIds: string[]): ProcessedData {
 		max = Math.max(max, value)
 	}
 	if (min === Infinity) throw new Error('No valid aggregate values found in getData response')
-	if (min === max) throw new Error(`All aggregate values are the same: ${min}. Cannot use identical data for scaling.`)
 	return { values, min, max }
 }
