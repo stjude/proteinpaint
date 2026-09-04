@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-shared",
-  "version": "2.207.0",
+  "version": "2.207.1",
   "description": "ProteinPaint code that is shared between server and client-side workspaces",
   "type": "module",
   "main": "dist/src/index.js",
@@ -22,7 +22,7 @@
       "sjpp/dev": "./src/*",
       "default": "./dist/src/*"
     },
-  	"./testData": "./test/testData.ts"
+    "./testData": "./test/testData.ts"
   },
   "scripts": {
     "ts2js": "esbuild src/*.* src/**/*.* --platform=node --outdir=dist/src --format=esm --sourcemap",

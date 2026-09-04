@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.207.1
 
 Fixes:
 - do not show sample IDs in /termdb/sampleScatter route
