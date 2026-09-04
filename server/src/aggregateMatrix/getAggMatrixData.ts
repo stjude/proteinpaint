@@ -203,11 +203,26 @@ function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataRespons
 		}
 		const observed = new Set<string>()
 		for (const sample of Object.values<any>(response.samples)) {
+			/** Uncomputable values are ignored completely. */
 			const entry = sample[source.queryId]
-			if (entry?.key !== undefined && entry?.key !== null) observed.add(String(entry.key))
+			if (
+				entry?.key !== undefined &&
+				entry?.key !== null &&
+				!source.tw.term.values?.[entry.key]?.uncomputable
+			) {
+				observed.add(String(entry.key))
+			}
 		}
-		const bins = response.refs?.byTermId?.[source.queryId]?.bins || []
-		const orderedKeys = bins.map(bin => String(bin.name || bin.label)).filter(key => observed.has(key))
+		const ref = response.refs?.byTermId?.[source.queryId]
+ 		const bins = ref?.bins || []
+		/** If there are configured bins, use them to determine the order of keys. 
+		 * Otherwise, fall back to the key order from the reference. */
+ 		const configuredKeys = bins.length
+ 			? bins.map(bin => String(bin.name || bin.label))
+ 			: Array.isArray(ref?.keyOrder)
+ 				? ref.keyOrder.map(String)
+ 				: []
+ 		const orderedKeys = configuredKeys.filter(key => observed.has(key))
 		const orderedKeySet = new Set(orderedKeys)
 		for (const key of observed) {
 			if (orderedKeySet.has(key)) continue
