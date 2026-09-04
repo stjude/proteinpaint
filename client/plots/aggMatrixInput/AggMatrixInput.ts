@@ -1,16 +1,15 @@
-import { PlotBase } from './PlotBase.ts'
+import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, copyMerge, type AppApi, type ComponentApi, type RxComponent } from '#rx'
 import { capitalizeFirstLetter, icons } from '#dom'
-import { appInit } from '../termdb/app.js'
-import { validatePlotConfig } from './aggregateMatrix/AggregateMatrix.ts'
+import { appInit } from '../../termdb/app.js'
+import { validatePlotConfig } from '../aggregateMatrix/AggregateMatrix.ts'
 import { isNonDictionaryType } from '#shared/terms.js'
 import {
 	AggMatrixInputViewModel,
 	getTerm,
-	getTermSelectionKey, 
-	type Section,
-	type SectionType
-} from './aggMatrixInput/viewModel/AggMatrixInputViewModel.ts'
+	getTermSelectionKey
+} from './viewModel/AggMatrixInputViewModel.ts'
+import type { Section, SectionType } from './viewModel/AMIViewModelTypes.ts'
 
 const chartType = 'aggMatrixInput'
 
@@ -129,8 +128,12 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 
 		await this.renderSections('row', this.config.rowSections || [])
 		await this.renderSections('column', this.config.colSections || [])
+		this.dom.methodsHolder.style('display', 'none')
 		await this.viewModel.updateAvailableMethods(this.config, this.vocabApi, this.api?.getAbortSignal())
-		this.renderMethodSelects()
+		if (this.viewModel.state.methodsStatus == 'ready') {
+			this.renderMethodSelects()
+			this.dom.methodsHolder.style('display', '')
+		}
 
 		const error = this.viewModel.getValidationError(this.config)
 		const enabled = !error
@@ -169,7 +172,7 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 				this.sectionViews.set(key, view)
 			}
 			const hasName = !!(section.name || '').trim()
-			const termType = this.getSectionTermType(section)
+			const termType = this.viewModel.getSectionTermType(section)
 			const isDictionary = !!termType && !isNonDictionaryType(termType)
 			view.nameLabel.style('display', isDictionary ? 'none' : '')
 			view.nameInput
@@ -255,7 +258,9 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			state: {
 				activeCohort: this.state.activeCohort,
 				selectedTerms: [],
-				allowedTermTypes: this.getSectionTermType(section) ? [this.getSectionTermType(section)!] : undefined,
+				allowedTermTypes: this.viewModel.getSectionTermType(section)
+					? [this.viewModel.getSectionTermType(section)!]
+					: undefined,
 				nav: { header_mode: 'search_only' },
 				tree: { usecase: { target: 'aggregateMatrix' } }
 			},
@@ -275,8 +280,8 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		const key = type === 'row' ? 'rowSections' : 'colSections'
 		const section: Section | undefined = this.config[key]?.[idx]
 		if (!section) return
-		const selectedItems = Array.isArray(selected) ? selected : [selected]
-		const selectedTerms = selectedItems.map(getTerm)
+		const selectedItems: any[] = Array.isArray(selected) ? selected : [selected]
+		const selectedTerms: any[] = selectedItems.map(getTerm)
 		if (!selectedTerms.length) return
 		if (selectedTerms.some(term => !term?.type)) throw new Error('Selected term has no type')
 
@@ -285,7 +290,7 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			this.dom.validationMessage.text('A section can only contain one term type.')
 			return
 		}
-		const sectionTermType = this.getSectionTermType(section)
+		const sectionTermType = this.viewModel.getSectionTermType(section)
 		if (sectionTermType && sectionTermType != selectedType) {
 			this.dom.validationMessage.text(`A section can only contain ${sectionTermType} terms.`)
 			return
@@ -317,10 +322,6 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		}
 		this.destroySectionView(type, idx)
 		this.updateSection(type, idx, { name, termType: selectedType, terms })
-	}
-
-	getSectionTermType(section: Section) {
-		return this.viewModel.getSectionTermType(section)
 	}
 
 	updateSection(type: SectionType, idx: number, edits: Partial<Section>) {
@@ -367,20 +368,8 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
-	getAggregateMatrixConfig() {
-		return this.viewModel.getAggregateMatrixConfig(this.config)
-	}
-
-	toAxis(sections: Section[], cloneTerms = true) {
-		return this.viewModel.toAxis(sections, cloneTerms)
-	}
-
-	getValidationError() {
-		return this.viewModel.getValidationError(this.config)
-	}
-
 	submit() {
-		const config = this.getAggregateMatrixConfig()
+		const config = this.viewModel.getAggregateMatrixConfig(this.config)
 		validatePlotConfig(config)
 		this.app.dispatch({
 			type: 'app_refresh',
