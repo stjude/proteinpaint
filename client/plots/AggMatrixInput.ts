@@ -157,7 +157,7 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		const key = (this.config.colSections || [])
 			.flatMap(section => section.terms.map(term => getTermSelectionKey(term.term || term)))
 			.join('\n')
-		if (key == this.methodTermsKey && (this.methodsReady || this.methodsError)) return
+		if (key == this.methodTermsKey && this.methodsReady) return
 		this.methodTermsKey = key
 		this.methodsReady = false
 		this.methodsError = ''
