@@ -67,9 +67,11 @@ function init({ genomes }) {
 			const spatialBase = w2.folder ? path.resolve(serverconfig.tpmasterdir, w2.folder) : undefined
 			const wsiBase = w2.wsiFolder ? path.resolve(serverconfig.tpmasterdir, w2.wsiFolder) : undefined
 
-			/** the sample's images from both roots. fileName is relative to the
-			 sample's folder in its root, matching the wsitiles wsimage= param */
-			const getImages = async (sampleId: string): Promise<(WsiImage | SpatialImage)[]> => {
+			/** the sample's images, from both roots by default; kind restricts to
+			 one root so the other tree is never touched (the sample listing only
+			 needs plain slides). fileName is relative to the sample's folder in
+			 its root, matching the wsitiles wsimage= param */
+			const getImages = async (sampleId: string, kind?: 'spatial' | 'wsi'): Promise<(WsiImage | SpatialImage)[]> => {
 				const images: (WsiImage | SpatialImage)[] = []
 
 				// v=<slide mtime>: tiles are served immutable, so a regenerated slide
@@ -83,7 +85,7 @@ function init({ genomes }) {
 					}&sample_id=${encodeURIComponent(sampleId)}&imageType=${imageType}&v=${mtime}`
 
 				// spatial: one image per subfolder of the sample's directory
-				if (spatialBase) {
+				if (spatialBase && kind != 'wsi') {
 					const spSampleDir = path.resolve(spatialBase, sampleId) // folder/<sample>/
 					if (!spSampleDir.startsWith(spatialBase + path.sep)) throw new Error('invalid sample_id') // traversal guard
 					for (const img of await subdirs(spSampleDir)) {
@@ -112,7 +114,7 @@ function init({ genomes }) {
 				}
 
 				// plain wsi: one image per subfolder of the sample's directory
-				if (wsiBase) {
+				if (wsiBase && kind != 'spatial') {
 					const wsiSampleDir = path.resolve(wsiBase, sampleId) // wsiFolder/<sample>/
 					if (!wsiSampleDir.startsWith(wsiBase + path.sep)) throw new Error('invalid sample_id') // traversal guard
 					for (const img of await subdirs(wsiSampleDir)) {
@@ -134,16 +136,21 @@ function init({ genomes }) {
 				const ids = wsiBase ? await subdirs(wsiBase) : [] // each subfolder = one sample
 				const samples: WsiSampleSummary[] = []
 				for (const name of ids.sort()) {
-					// count each sample's plain images by actually enumerating them on disk
-					const count = (await getImages(name)).filter(i => i.type == 'wsi').length
+					// count each sample's plain slides by enumerating only the wsi
+					// root — the spatial tree is never touched here, so listing
+					// cost and failures can't depend on unrelated spatial data
+					const count = (await getImages(name, 'wsi')).length
 					if (count) samples.push({ sampleId: name, count }) // a folder without slides isn't listed
 				}
 				res.status(200).json({ samples } satisfies WsiBySampleResponse)
 				return
 			}
 
+			// optional root restriction (the standalone plot asks for 'wsi', the
+			// sc app for 'spatial'); absent = both kinds
+			if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw new Error('invalid imageType')
 			// String(): numeric-looking sample names arrive as numbers from query parsing
-			const images = await getImages(String(q.sample_id))
+			const images = await getImages(String(q.sample_id), q.imageType)
 			res.status(200).json({ images } satisfies WsiBySampleResponse)
 		} catch (e: any) {
 			console.warn(e)

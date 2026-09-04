@@ -16,11 +16,12 @@ export class Model {
 		})
 	}
 
-	/** One sample's images (WsiImage | SpatialImage), enumerated from the
-	 sample's subfolders in both w2 roots. */
-	async getImages(sample_id: string): Promise<WsiBySampleResponse> {
+	/** One sample's images (WsiImage | SpatialImage). imageType restricts the
+	 enumeration to that root ('wsi' = wsiFolder, 'spatial' = folder) so the
+	 other tree is never read; omitted = both kinds. */
+	async getImages(sample_id: string, imageType?: 'spatial' | 'wsi'): Promise<WsiBySampleResponse> {
 		return await dofetch3('termdb/wsiBySample', {
-			body: { genome: this.genome, dslabel: this.dslabel, sample_id } // sample_id = list its images
+			body: { genome: this.genome, dslabel: this.dslabel, sample_id, imageType } // sample_id = list its images
 		})
 	}
 }

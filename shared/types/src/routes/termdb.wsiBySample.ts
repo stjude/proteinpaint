@@ -6,6 +6,10 @@ export type WsiBySampleRequest = {
 	 have plain slides — spatial-only samples are not listed, their images are
 	 fetched per sample_id by the single-cell app */
 	sample_id?: string
+	/** only with sample_id: enumerate just this root ('wsi' = wsiFolder,
+	 'spatial' = folder), so the other tree is never read or stat'ed; omit
+	 for both kinds */
+	imageType?: 'spatial' | 'wsi'
 }
 
 /** one sample that has plain whole-slide images on disk (the standalone
