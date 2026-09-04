@@ -84,7 +84,7 @@ export function createMcpServer(): McpServer {
 			if (plotState.error) throw new Error(`create_summary_plot: ${plotState.error}`)
 
 			// A real, working deep link: the same `?mass=<json>` URL param shape the Mass UI's own
-			// e2e tests use to open a specific chart directly (e2e-playwright/TermdbTest/massNav.e2e.spec.ts).
+			// e2e tests use to open a specific chart directly (e2e-tests/TermdbTest/massNav.e2e.spec.ts).
 			const deepLinkState = { genome: genome, dslabel: dslabel, nav: { activeTab: 1 }, plots: [plotState.plot] }
 			const deepLinkUrl = `${PP_SERVER}/?mass=${encodeURIComponent(JSON.stringify(deepLinkState))}`
 

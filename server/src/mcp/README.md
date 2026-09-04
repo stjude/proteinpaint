@@ -71,7 +71,7 @@ explicit `server/package.json` dependency here) against the same running dev ser
 
 1. Build a full initial Mass state — `{genome, dslabel, nav:{activeTab:1}, plots:[plotConfig]}` —
    and open it via the `?mass=<json>` URL param (`client/src/app.parseurl.js`). This is the exact
-   pattern `e2e-playwright/TermdbTest/massNav.e2e.spec.ts` already uses to open a specific chart
+   pattern `e2e-tests/TermdbTest/massNav.e2e.spec.ts` already uses to open a specific chart
    directly, reused here rather than reverse-engineered from scratch.
 2. `nav.activeTab` must NOT be the default `0` (COHORT) tab — that's a cohort-selection landing
    screen that hides chart sandboxes entirely; `1` (CHARTS) is what the e2e test also uses.

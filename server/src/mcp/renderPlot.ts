@@ -3,8 +3,8 @@ import puppeteer from 'puppeteer'
 /** Screenshot a rendered ProteinPaint Mass 'summary' plot by driving a real (headless) browser
  * against the already-running dev server. Mass charts are only ever rendered client-side
  * (D3/SVG in a browser DOM) — there is no server-side path that turns a plot config into an
- * image — so this mirrors how the client's own e2e-playwright tests exercise the app
- * (e2e-playwright/TermdbTest/massNav.e2e.spec.ts): load the Mass UI with the plot pre-seeded via
+ * image — so this mirrors how the client's own e2e-tests exercise the app
+ * (e2e-tests/TermdbTest/massNav.e2e.spec.ts): load the Mass UI with the plot pre-seeded via
  * the `?mass=<json>` URL param (client/src/app.parseurl.js), on a non-COHORT nav tab (the default
  * COHORT tab, index 0, hides chart sandboxes), and wait for the actual bar elements
  * (`.bars-cell-grp`) to appear before capturing — `networkidle0` never resolves against a dev
