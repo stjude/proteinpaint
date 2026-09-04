@@ -286,6 +286,9 @@ export class VolcanoInteractions {
 			group2: config.samplelst.groups[1].values || [],
 			group1Name: config.samplelst.groups[0].name,
 			group2Name: config.samplelst.groups[1].name,
+			/* Which element matrix to drill into, for a dataset whose methylation is element-level
+			only. The server ignores it when the dataset has a CpG-level matrix, which is finer. */
+			elementType: config?.settings?.volcano?.elementType,
 			settings: {
 				colors: { group1: controlColor, group2: caseColor }
 			}
