@@ -101,6 +101,7 @@ class Wsi extends PlotBase implements RxComponent {
 		let samples
 		if (fixedSample) {
 			this.dom.table.style('display', 'none') // the sample is already chosen
+			settings.selectedSampleIndex = 0 // fixed mode always selects its sole pinned sample
 			samples = [{ sampleId: fixedSample, count: 1 }] // count unused (table hidden)
 		} else {
 			// which samples have whole-slide images on disk?
@@ -120,12 +121,15 @@ class Wsi extends PlotBase implements RxComponent {
 		// the selected sample's images from termdb/wsiBySample; on launch the
 		// first sample is selected by default so its first image displays
 		const selectedSample = viewModel.viewData.selectedSample
-const imageData = selectedSample ? await model.getImages(selectedSample.sampleId) : undefined
-		if (imageData?.error) throw new Error(imageData.error)
-		let images = imageData?.images ?? []
 		// spatial images are viewed only through the sc app's Spatial button
-		// (fixed-sample mode); the standalone plot shows plain slides only
-		images = images.filter((i: any) => (fixedSample ? i.type == 'spatial' : i.type != 'spatial'))
+		// (fixed-sample mode); the standalone plot shows plain slides only.
+		// The route enumerates just the requested root, so neither mode's
+		// cost or failures depend on the other tree
+		const imageData = selectedSample
+			? await model.getImages(selectedSample.sampleId, fixedSample ? 'spatial' : 'wsi')
+			: undefined
+		if (imageData?.error) throw new Error(imageData.error)
+		const images = imageData?.images ?? []
 		if (fixedSample && !images.length) {
 			this.dom.viewer.selectAll('*').remove()
 			this.dom.error.style('padding', '20px').text(`No spatial image for sample ${fixedSample}.`)

@@ -522,8 +522,9 @@ function validateGeneExpressionNative(G: SingleCellGeneExpression): void {
 		await file_is_readable(h5file)
 		const out = JSON.parse(await run_python('readHDF5.py', JSON.stringify({ hdf5_file: h5file, list_items: true })))
 		if (!Array.isArray(out.items)) throw new Error(out.message || 'failed to list the expression store genes')
-		if (out.assay != 'panel') return { assay: 'wholeTranscriptome' as const }
-		return { assay: 'panel' as const, genes: out.items }
+		if (out.assay == null || out.assay == 'wholeTranscriptome') return { assay: 'wholeTranscriptome' as const }
+		if (out.assay == 'panel') return { assay: 'panel' as const, genes: out.items }
+		throw new Error(`invalid expression store assay: ${String(out.assay)}`)
 	}
 }
 

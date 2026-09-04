@@ -92,15 +92,35 @@ export class SCModel {
 	sampleHasSpatial: { [sID: string]: boolean } = {}
 	async hasSpatialImage(sID: string): Promise<boolean> {
 		if (!(sID in this.sampleHasSpatial)) {
+			// only probe datasets that can have spatial images: supportedChartTypes
+			// advertises 'wsi' (per cohort) when ds.queries.w2 exists; without it
+			// the wsiBySample route can only 500, so skip the request entirely
+			const supported = this.state.termdbConfig?.supportedChartTypes || {}
+			if (!Object.values(supported).some((types: any) => types?.includes?.('wsi'))) return false
+			let r: any
 			try {
-				const r: any = await dofetch3('termdb/wsiBySample', {
-					body: { genome: this.state.vocab.genome, dslabel: this.state.vocab.dslabel, sample_id: sID },
+				r = await dofetch3('termdb/wsiBySample', {
+					// imageType: only the spatial root is enumerated for the probe
+					body: {
+						genome: this.state.vocab.genome,
+						dslabel: this.state.vocab.dslabel,
+						sample_id: sID,
+						imageType: 'spatial'
+					},
 					signal: this.sc.api?.getAbortSignal()
 				})
-				this.sampleHasSpatial[sID] = !!(r?.images || []).some((i: any) => i.type == 'spatial' && i.spatialData)
-			} catch (_) {
-				return false
+			} catch (e: any) {
+				// a superseding dispatch aborts in-flight requests: rethrow so
+				// rx's stale-render handling stops this render, instead of it
+				// continuing with a made-up false
+				if (this.app.vocabApi?.isAbortError?.(e)) throw e
+				return false // network failure: false for this render, retried next
 			}
+			// dofetch3 resolves server error payloads without rejecting: treat
+			// them like a thrown failure — false now, uncached so a later
+			// render can retry — never as proof the sample has no image
+			if (r?.error) return false
+			this.sampleHasSpatial[sID] = !!(r?.images || []).some((i: any) => i.type == 'spatial' && i.spatialData)
 		}
 		return this.sampleHasSpatial[sID]
 	}
