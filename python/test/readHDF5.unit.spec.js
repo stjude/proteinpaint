@@ -23,6 +23,12 @@ import { run_python, setPythonBinPath } from '@sjcrh/proteinpaint-python'
 if (process.env.PP_PYTHON) setPythonBinPath(process.env.PP_PYTHON)
 
 const HDF5_FILE = 'server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5'
+// panel-based sc expression store: 'assay' root attribute = 'panel', 3 genes
+const PANEL_H5 = 'server/test/tp/files/hg38/TermdbTest/scrna/geneExpHdf5/TCGA-22-1017.h5'
+// whole-transcriptome-style sc store: no 'assay' attribute
+const WHOLE_H5 = 'server/test/tp/files/hg38/TermdbTest/scrna/geneExpHdf5/2646.h5'
+// a valid HDF5 file with none of this script's expected datasets (h5ad layout)
+const WRONG_SCHEMA_H5 = 'server/test/tp/files/hg38/TermdbTest/spatial/TCGA-22-1017/image1/image1_spatial.h5ad'
 const python_script = 'readHDF5.py'
 
 /**************
@@ -184,6 +190,89 @@ tape('Invalid HDF5 File', async t => {
 		const errorText = String(e)
 		t.ok(errorText.includes('not be found'))
 	}
+
+	t.end()
+})
+
+/**
+ * Test: List Items — panel assay
+ *
+ * list_items mode on a store whose 'assay' root attribute is 'panel' must
+ * return the exact item names plus assay:'panel', the contract the server's
+ * listGenes getter relies on to serve a sample's assayed gene list.
+ */
+tape('List items: panel assay returns items plus assay', async t => {
+	try {
+		const input_data = {
+			hdf5_file: PANEL_H5,
+			list_items: true
+		}
+		const out = await run_python(python_script, JSON.stringify(input_data))
+		const data = typeof out === 'string' ? JSON.parse(out) : out
+
+		t.deepEqual(data.items, ['ACE2', 'ACTA2', 'PTPRC'], 'Should list exactly the assayed genes, in file order')
+		t.equal(data.assay, 'panel', "Should report assay 'panel' from the root attribute")
+	} catch (e) {
+		t.fail(`Test failed with error: ${e}`)
+	}
+
+	t.end()
+})
+
+/**
+ * Test: List Items — absent assay attribute
+ *
+ * A store without the 'assay' root attribute is whole-transcriptome by
+ * default: the script reports assay null and the server-side getter maps
+ * that to 'wholeTranscriptome' (gene search stays on the genome db).
+ */
+tape('List items: absent assay attribute yields null (whole-transcriptome default)', async t => {
+	try {
+		const input_data = {
+			hdf5_file: WHOLE_H5,
+			list_items: true
+		}
+		const out = await run_python(python_script, JSON.stringify(input_data))
+		const data = typeof out === 'string' ? JSON.parse(out) : out
+
+		t.equal(data.assay, null, 'Should report assay null when the attribute is absent')
+		t.ok(Array.isArray(data.items) && data.items.length > 0, 'Should still list the item names')
+		t.ok(data.items.includes('DDX11L1'), 'Should include a known gene from the store')
+	} catch (e) {
+		t.fail(`Test failed with error: ${e}`)
+	}
+
+	t.end()
+})
+
+/**
+ * Test: List Items — malformed inputs
+ *
+ * The listing mode must fail the same way the query mode does: a missing
+ * file, a non-HDF5 file, and a valid HDF5 file lacking the expected 'item'
+ * dataset each produce an error payload, never a partial listing.
+ */
+tape('List items: malformed files are reported as errors', async t => {
+	// helper: the script always prints JSON and exits 0, but run_python may
+	// reject on some environments — normalize both paths to text
+	const runForText = async input_data => {
+		try {
+			const out = await run_python(python_script, JSON.stringify(input_data))
+			return typeof out === 'string' ? out : JSON.stringify(out)
+		} catch (e) {
+			return String(e)
+		}
+	}
+
+	let text = await runForText({ hdf5_file: 'nonexistent_file.h5', list_items: true })
+	t.ok(text.includes('not be found'), 'Nonexistent file should report not found')
+
+	text = await runForText({ hdf5_file: 'python/test/readHDF5.unit.spec.js', list_items: true })
+	t.ok(text.includes('not a valid hdf5'), 'A non-HDF5 file should be rejected')
+
+	text = await runForText({ hdf5_file: WRONG_SCHEMA_H5, list_items: true })
+	t.ok(text.includes('error'), 'A valid HDF5 without the item dataset should report an error')
+	t.notOk(text.includes('"items"'), 'No partial item listing should be produced')
 
 	t.end()
 })
