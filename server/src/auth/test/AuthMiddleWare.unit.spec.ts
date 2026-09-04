@@ -120,7 +120,7 @@ tape('middleware: forced open routes bypass auth check and call next()', functio
 	test.timeoutAfter(500)
 
 	const auth = makeAuth()
-	const forcedOpenPaths = ['/dslogin', '/jwt-status', '/dslogout', '/healthcheck', '/demoToken']
+	const forcedOpenPaths = ['/dslogin', '/jwt-status', '/dslogout', '/healthcheck', '/health', '/status', '/demoToken']
 
 	// We need one test.plan because we check each route
 	test.plan(forcedOpenPaths.length)
