@@ -331,18 +331,19 @@ async function getSampleData(q, ds) {
 				sampleTypes: q.sampleTypes
 			}
 			const data = await queryHandler.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
-			const values = data.term2sample2value.get(tw.$id)
-			for (const sampleId in values) {
-				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
-				if (!Number.isFinite(values[sampleId])) continue // skip non-numeric values
-				const value = Number(values[sampleId])
-				let key = value
-				if (lstOfBins) {
-					// term is in binning mode. key should be changed into the label of the bin to which value belongs
-					const bin = getBin(lstOfBins, value)
-					key = get_bin_label(lstOfBins[bin], tw.q)
+			for (const [dataId, values] of data.term2sample2value) {
+				for (const sampleId in values) {
+					if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+					if (!Number.isFinite(values[sampleId])) continue // skip non-numeric values
+					const value = Number(values[sampleId])
+					let key = value
+					if (lstOfBins) {
+						// term is in binning mode. key should be changed into the label of the bin to which value belongs
+						const bin = getBin(lstOfBins, value)
+						key = get_bin_label(lstOfBins[bin], tw.q)
+					}
+					samples[sampleId][dataId] = { key, value }
 				}
-				samples[sampleId][tw.$id] = { key, value }
 			}
 		} else if (tw.term.type == SINGLECELL_GENE_EXPRESSION) {
 			if (!q.ds.queries?.singleCell?.geneExpression)

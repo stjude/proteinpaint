@@ -11,13 +11,8 @@ type PseudobulkSelection = Omit<PseudobulkTerm, 'category' | 'gene'> & {
 	category?: string
 }
 
-/** A category id is only unique within its assay and member grouping. */
-export function isSamePseudobulkSelection(a: PseudobulkSelection, b: PseudobulkSelection) {
-	return a.type === b.type && a.assay === b.assay && a.memberId === b.memberId && a.id === b.id
-}
-
 export class SearchHandler {
-	callback!: (f?: any) => void
+	callback!: (term: PseudobulkSelection | PseudobulkSelection[]) => void | Promise<void>
 	app!: AppApi
 	genome!: ClientGenome
 	map?: Map<string, Map<string, any[]>>
@@ -177,47 +172,20 @@ export class SearchHandler {
 	renderCategoriesAsTerms(holder: any, terms: PseudobulkTerm[]) {
 		holder.style('padding', '0px 10px')
 
-		const isSelected = term =>
-			this.app.getState().selectedTerms.some(selected => isSamePseudobulkSelection(selected, term))
-
-		const setSelected = async (term, selected) => {
-			const selectedTerms = this.app.getState().selectedTerms
-			if (selectedTerms.some(selectedTerm => isSamePseudobulkSelection(selectedTerm, term)) === selected) return
-			const nextSelectedTerms = selected
-				? [...selectedTerms, term]
-				: selectedTerms.filter(selectedTerm => !isSamePseudobulkSelection(selectedTerm, term))
-			await this.app.dispatch({ type: 'app_refresh', state: { selectedTerms: nextSelectedTerms } })
-		}
-
-		const selectAll = make_one_checkbox({
+		make_one_checkbox({
 			holder,
 			labeltext: 'Select all',
 			divstyle: { opacity: '0.7' },
-			callback: async () => {
-				const checked = selectAll.property('checked')
-				const selectedTerms = this.app.getState().selectedTerms
-				const nextSelectedTerms = checked
-					? [
-							...selectedTerms,
-							...terms.filter(
-								term => !selectedTerms.some(selected => isSamePseudobulkSelection(selected, term))
-							)
-						]
-					: selectedTerms.filter(
-							selected => !terms.some(term => isSamePseudobulkSelection(selected, term))
-						)
-				await this.app.dispatch({ type: 'app_refresh', state: { selectedTerms: nextSelectedTerms } })
-				update()
-			}
+			callback: () => this.callback(terms)
 		})
 
 		const wrapper = holder.append('div').style('display', 'block').style('padding', '10px 15px 0px')
 
-		const termRows = wrapper
+		wrapper
 			.selectAll('.pseudobulk-term')
 			.data(terms, term => term.id)
 			.join(enter => {
-				const row = enter .append('div').attr('class', 'pseudobulk-term')
+				const row = enter.append('div').attr('class', 'pseudobulk-term')
 
 				row
 					.append('div')
@@ -226,30 +194,13 @@ export class SearchHandler {
 					.style('margin', '1px 0px')
 					.style('border-radius', '6px')
 					.text(term => term.name)
-
-				row.append('div').attr('class', 'termcheck').style('color', '#008000').html('&check;')
+					.on('click', async (_, term) => {
+						await this.callback(term)
+						holder.selectAll('*').remove()
+					})
 
 				return row
 			})
-
-		termRows.select('.ts_pill').on('click', async (_, term) => {
-			await setSelected(term, !isSelected(term))
-			update()
-		})
-
-		const update = () => {
-			termRows
-				.select('.ts_pill')
-				.style('background-color', term => (isSelected(term) ? '#FFC20A80' : '#cfe2f3'))
-
-			termRows.select('.termcheck').style('display', term => (isSelected(term) ? 'inline-block' : 'none'))
-			const selectedCount = terms.filter(isSelected).length
-			selectAll
-				.property('checked', terms.length > 0 && selectedCount === terms.length)
-				.property('indeterminate', selectedCount > 0 && selectedCount < terms.length)
-		}
-
-		update()
 	}
 }
 

@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { createPseudobulkTerm, isSamePseudobulkSelection, SearchHandler } from '../pseudobulk.ts'
+import { createPseudobulkTerm, SearchHandler } from '../pseudobulk.ts'
 
 /**************
  test sections
@@ -42,27 +42,6 @@ tape('buildRenderingDataMap() returns an empty map for empty input', function (t
 	const map = handler.buildRenderingDataMap([])
 
 	test.equal(map.size, 0, 'empty input produces empty map')
-	test.end()
-})
-
-tape('pseudobulk selection identity includes assay and memberId', function (test) {
-	const term = {
-		id: 'blast',
-		name: 'Blast',
-		type: 'pseudobulk',
-		assay: 'geneExpression',
-		memberId: 'Cell Type'
-	}
-
-	test.ok(isSamePseudobulkSelection(term as any, { ...term } as any), 'matches the same pseudobulk category')
-	test.notOk(
-		isSamePseudobulkSelection(term as any, { ...term, memberId: 'Cell Subtype' } as any),
-		'does not match the same category id from another member group'
-	)
-	test.notOk(
-		isSamePseudobulkSelection(term as any, { ...term, assay: 'proteinExpression' } as any),
-		'does not match the same category id from another assay'
-	)
 	test.end()
 })
 

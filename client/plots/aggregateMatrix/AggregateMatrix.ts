@@ -7,7 +7,7 @@ import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
 import { setControls } from './view/setControls.ts'
 import { Menu } from '#dom'
-import { availableAggregateMethods } from '#types'
+import { isNonDictionaryType } from '#shared/terms.js'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
@@ -39,7 +39,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
         }
 
         //opts.header is the sandbox header
-        if (opts.header) opts.header.html(`AGGREGATE MATRIX`).style('font-size', '0.9em')
+        if (opts.header) opts.header.text(`AGGREGATE MATRIX`).style('font-size', '0.9em')
     }
 
     getState(appState: any) {
@@ -112,27 +112,33 @@ export function getPlotConfig(opts: any) {
 
 export function validatePlotConfig(config: any) {
     if (!config || typeof config !== 'object') throw new Error(`Invalid config provided for aggregate matrix plot`)
-    if (!config.rows || !Object.keys(config.rows).length) throw new Error(`No rows provided for aggregate matrix plot`)
-    let rowCount = 0
-    for (const section in config.rows) {
-        rowCount = rowCount + config.rows[section].length
-        if (rowCount > 2) break
-    }
-    if (rowCount < 2) throw new Error(`Aggregate matrix plot requires at least 2 rows`)
-    if (!config.columns || !Object.keys(config.columns).length) throw new Error(`No columns provided for aggregate matrix plot`)
-    let colCount = 0
-    for (const member in config.columns) {
-        colCount = colCount + config.columns[member].length
-        if (colCount > 2) break
-    }
-    if (colCount < 2) throw new Error(`Aggregate matrix plot requires at least 2 columns`)
+    validateAxis(config.rows, 'rows')
+    validateAxis(config.columns, 'columns')
 
     const settings = config.settings?.aggregateMatrix || {}
-    if (!availableAggregateMethods.includes(settings.sizeMethod)) {
+    if (typeof settings.sizeMethod != 'string' || !settings.sizeMethod) {
         throw new Error(`Invalid aggregate method for dot size`)
     }
-    if (!availableAggregateMethods.includes(settings.gradientMethod)) {
+    if (typeof settings.gradientMethod != 'string' || !settings.gradientMethod) {
         throw new Error(`Invalid aggregate method for color gradient`)
     }
     if (settings.gradientMethod == settings.sizeMethod) throw new Error('Aggregate method for the color gradient cannot be the same as the aggregate method for the dot size.')
+}
+
+function validateAxis(axis: any, name: 'rows' | 'columns') {
+    if (!axis || typeof axis != 'object' || Array.isArray(axis) || !Object.keys(axis).length) {
+        throw new Error(`No ${name} provided for aggregate matrix plot`)
+    }
+    for (const [section, terms] of Object.entries<any>(axis)) {
+        if (!section.trim()) throw new Error(`Every ${name} section requires a name`)
+        if (!Array.isArray(terms) || !terms.length) throw new Error(`${name} section '${section}' has no terms`)
+        const types = new Set(terms.map(item => (item.term || item)?.type))
+        if (types.size != 1 || types.has(undefined)) {
+            throw new Error(`${name} section '${section}' must contain exactly one term type`)
+        }
+        const termType = (terms[0].term || terms[0]).type
+        if (!isNonDictionaryType(termType) && terms.length != 1) {
+            throw new Error(`${name} dictionary section '${section}' can contain only one term`)
+        }
+    }
 }
