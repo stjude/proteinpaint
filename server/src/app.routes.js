@@ -38,6 +38,7 @@ export const routeFiles = [
 	import('./routes/profile.radar2.ts'),
 	import('./routes/profile.radarFacility2.ts'),
 	import('./routes/snp.ts'),
+	import('./routes/status.ts'),
 	import('./routes/termdb.animatedBubbleChart.ts'),
 	import('./routes/termdb.wsiBySample.ts'),
 	import('./routes/termdb.brainImaging.ts'),
