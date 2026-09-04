@@ -14,7 +14,67 @@ Features:
   the typical element" rather than "moved from zero". Off by default; the caption and axis name
   the shift when on, and the p-value table is unaffected either way.
 
+- New termdb/dmrBatch route: calls DMRs across a whole hit list in one request. dmrcate now takes
+  a regions[] list and amortises the genome-wide fit across them, so cost scales with chromosomes
+  rather than regions -- 421 windows over 23 chromosomes in ~20s against ~35min one-at-a-time,
+  with identical DMR calls. Overlapping windows are merged first so a shared DMR is not counted
+  twice.
+- termdb/dmrBatch gains a scan mode: pass scanChromosomes instead of regions to call DMRs across
+  whole chromosomes rather than a supplied hit list. Affordable because the model fit is already
+  chromosome-wide and the kernel smoothing is linear in CpGs -- MMRF chr20 (362k CpGs) scans in
+  ~3s, all 23 (16.4M CpGs) in ~131s for 149,341 DMRs. The per-region size cap does not apply to
+  scan regions, which are whole chromosomes by construction.
+- Volcano action "Drill hits to CpG resolution" (differential methylation): runs the batch over the
+  significant elements and reports the DMR width distribution plus a downloadable table. Says plainly when
+  it drilled only the top N of the significant set, since that subset is not direction-balanced.
+- A chromosome scan now draws a domain map: log2(hyper/hypo) DMRs per 5Mb bin across the
+  chromosome. A ratio rather than a count, because DMR density tracks CpG and gene density and a
+  count map would mostly redraw where the CpGs are; both directions are called from the same
+  probes in each bin, so dividing cancels that. Bins holding fewer than 20 DMRs are drawn faded
+  rather than dropped, so "no data" stays distinguishable from "balanced". On MMRF chr1 this shows
+  what no table of 10,824 rows could: hyper and hypo occupy near-exclusive megabase territories
+  (1q42-44 at +2.3, 85-90Mb at -3.3), which is a chromatin-compartment signature and is the reason
+  to scan a chromosome rather than drill a hit list.
+- DMR width is now shown as a formatted size ("1.1 Kb") with a log-scale width histogram split by
+  direction, replacing the linear barplot column. Widths span four orders of magnitude on a scan,
+  so a linear bar drew the median 1.1kb DMR as 1% of the axis and crushed its own tick labels. The
+  histogram shows width and direction are coupled: DMRs under 1kb run 58% hyper, those over 25kb
+  run 89% hyper -- hypomethylation stays local, hypermethylation forms wide blocks.
+- DMR calls are now screened against the genome's artifact-region blacklists (Genome.blacklists,
+  the same declaration GRIN2's gene mask uses): a DMR lying >=50% inside masked regions is dropped
+  before the response, and the count is reported so the denominator stays visible. Defaults to
+  ENCODE blacklist + segmental duplications, NOT all declared sources -- beta is a read ratio and
+  so copy-number invariant, which makes DGV common germline CNVs the wrong mask for methylation
+  (it was the largest contributor, 429 of 566 chr1 DMRs), and assembly gaps hold no CpGs. Caller
+  can override by name via excludeOptions, as GRIN2 does. On MMRF chr1 the default drops 371 of
+  10,824 DMRs (3.4%) including a 91kb/4,055-CpG block in pericentromeric 1q12 that is 100% inside
+  both sources; no enrichment conclusion moves by more than 0.03x.
+  resolveExcludeBeds moved from server/src/grin2/main.ts to server/src/utils/regionMask.ts so both
+  consumers share one definition; grin2/main.ts re-exports it.
+- The DMR results panel gains a "Minimum CpGs per DMR" control, defaulting to 5. Two-CpG calls
+  carry the largest effect sizes and no direction (MMRF chr1: median |db| 0.099 and 51.5% hyper,
+  against 0.073 and 58% hyper for 10+ CpG calls), so a db-sorted table leads with the rows that
+  mean least. Filtering is applied in the browser over the returned DMRs, so it redraws rather
+  than refits, and every figure shown -- counts, direction split, width quantiles, download and
+  table -- comes from the filtered set with the threshold stated alongside.
+- Region analysis now reports each group's genome-wide methylation level and the shift between
+  them, accumulated over every value the model fits already read (so it costs nothing and is
+  independent of the regions requested). Shown alongside the DMR counts, because part of every
+  region's difference is that shift rather than anything local.
+
 Fixes:
+- dmrcate no longer emits thousands of false DMRs on a chromosome where NO probe passes per-CpG
+  significance. DMRCate's adaptive rule selects the nsig smallest SMOOTHED FDRs, where nsig is the
+  per-CpG significant count; when nsig was 0 the code fell back to comparing the smoothed FDR
+  against the raw 0.05 cutoff. Kernel smoothing pools ~25 neighbouring probes, so a smoothed FDR
+  sits orders of magnitude below any per-probe FDR and stays under 0.05 across long stretches of a
+  null chromosome -- "nothing is significant" became "everything is a DMR". nsig == 0 now selects
+  nothing. Found by scanning all 23 chromosomes for a contrast with a known answer (MMRF
+  male-vs-female): 12 of 22 autosomes reported 0 significant probes and 963-4,570 DMRs each, while
+  every chromosome with even one significant probe reported 0 or 1. Fixing it takes the autosomal
+  total from 20,963 to 5 over 15.9M probes; chrX (104,218 significant probes) is unchanged at
+  6,472, and the NSD2 chr1 result is bit-identical at 10,453. The threshold rule is now
+  select_significant() with unit tests, since no single-chromosome run could expose this.
 - DMR analysis no longer returns "Group 1 needs at least 3 samples" on datasets whose sample
   groups carry sample ids without names (MMRF, GDC). The route resolved group membership by
   reading an optional `sample` field; it now resolves ids through the same resolver differential

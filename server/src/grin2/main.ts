@@ -12,6 +12,10 @@ import { getMaxLesions } from './memory.ts'
 import { processSampleMlst, buildLesionTypeMap } from './lesions.ts'
 import type { CnvType, Grin2CacheResult, Grin2Processing, Lesion } from './types.ts'
 import { maySetMapParent2Children } from '../termdb.matrix.js'
+/* Re-exported because the GRIN2 unit spec and callers import it from here. The definition moved to
+utils/regionMask.ts once DMR analysis needed the same selector -- one copy, two consumers. */
+export { resolveExcludeBeds } from '../utils/regionMask.ts'
+import { resolveExcludeBeds } from '../utils/regionMask.ts'
 
 /**
  * General GRIN2 analysis route
@@ -335,17 +339,6 @@ export function grin2KeyInputs(req: GRIN2Request) {
 		excludeOptions: normalizeExcludeOptions(req.excludeOptions),
 		maxGenesToShow: req.maxGenesToShow ?? null
 	}
-}
-
-/** Resolve genome-declared blacklist BED files for GRIN2's gene mask. Blacklist sources are declared
- * in the genome config (Genome.blacklists) and their file paths absolutized at genome init.
- * `selectedNames` chooses which sources to apply: undefined = all declared, [] = none, otherwise the
- * named subset. Unknown names are ignored. Returns absolute BED file paths. */
-export function resolveExcludeBeds(g: any, selectedNames?: string[]): string[] {
-	const all = g.blacklists as { name: string; file: string }[] | undefined
-	if (!all?.length) return []
-	const wanted = new Set(selectedNames ?? all.map(b => b.name))
-	return all.filter(b => wanted.has(b.name)).map(b => b.file)
 }
 
 /** Normalize excludeOptions so the cache key and the Python input always agree and never carry a

@@ -93,10 +93,26 @@ fn bh_adjust(pvalues: &[f64]) -> Vec<f64> {
     adj
 }
 
+/* Running per-group methylation level, on the beta scale, accumulated over every value the fit
+already reads. This is the cohort's GLOBAL level -- not a property of any region -- and it is what
+tells a reader how much of a region result is just the whole genome moving. Accumulated before the
+variance and coverage filters below, so it describes the matrix rather than the rows that survived
+modelling. Free to compute: these values are already in registers for the stats. */
+#[derive(Default, Clone, Copy)]
+struct GlobalBeta {
+    case_sum: f64,
+    case_n: u64,
+    ctrl_sum: f64,
+    ctrl_n: u64,
+}
+
 struct ProbeStats {
     chr: String,
     start: i64,
-    probe_id: String,
+    /* Absolute row of this probe in beta/values. Kept because the region pass needs to re-read the
+    matrix for group means, and looking the row up by probe_id was a linear scan over every id in
+    the file -- tolerable for one region, quadratic for a batch of thousands. */
+    row: usize,
     log_fc: f64,
     residual_var: f64,
     df_residual: f64,
@@ -205,17 +221,20 @@ fn process_chromosome(
     ctrl_idx: &[usize],
     chr: &str,
     starts: &[i64],
-    probe_ids: &[String],
     min_spg: usize,
     // element matrices already store M-values, so the logit below must not run twice
     mvalues: bool,
-) -> Result<Vec<ProbeStats>, String> {
+) -> Result<(Vec<ProbeStats>, GlobalBeta), String> {
     let n_probes = row_end - row_start;
+    let mut gb = GlobalBeta::default();
     if n_probes == 0 {
-        return Ok(vec![]);
+        return Ok((vec![], gb));
     }
     let ds = file.dataset("beta/values").map_err(|e| format!("beta/values: {}", e))?;
     let mut results = Vec::with_capacity(n_probes);
+    // scratch, reused for every probe; see the comment in the row loop
+    let mut cm: Vec<f64> = Vec::with_capacity(case_idx.len());
+    let mut km: Vec<f64> = Vec::with_capacity(ctrl_idx.len());
     const CHUNK: usize = 1000;
     for chunk_i in 0..((n_probes + CHUNK - 1) / CHUNK) {
         let cs = chunk_i * CHUNK;
@@ -227,12 +246,36 @@ fn process_chromosome(
         for lp in 0..(ce - cs) {
             let idx = row_start + cs + lp;
             let row = data.row(lp);
-            let (mut cv, mut kv) = (Vec::with_capacity(case_idx.len()), Vec::with_capacity(ctrl_idx.len()));
+            /* Filled in place into buffers reused across rows. The previous version allocated five
+            Vecs per probe (raw case, raw control, their M-transforms, and a concatenation of both):
+            6.5 million allocations per chromosome on the MMRF shards, and every value transformed
+            then copied a second time. Same arithmetic, same summation ORDER -- the sums below walk
+            case then control exactly as iterating the old concatenation did, so results stay
+            bit-identical rather than merely close. */
+            cm.clear();
+            km.clear();
+            let mut n_case_raw = 0usize;
+            let mut n_ctrl_raw = 0usize;
             for &si in case_idx {
                 if si < row.len() {
                     let v = row[si] as f64;
                     if v.is_finite() {
-                        cv.push(v);
+                        /* Beta scale for the global level: the stats run on M-values, but a cohort
+                        methylation level is only interpretable as a fraction methylated. */
+                        gb.case_sum += if mvalues {
+                            let e = v.exp2();
+                            e / (1.0 + e)
+                        } else {
+                            v
+                        };
+                        gb.case_n += 1;
+                        n_case_raw += 1;
+                        cm.push(if mvalues {
+                            v
+                        } else {
+                            let c = v.clamp(0.001, 0.999);
+                            (c / (1.0 - c)).log2()
+                        });
                     }
                 }
             }
@@ -240,32 +283,63 @@ fn process_chromosome(
                 if si < row.len() {
                     let v = row[si] as f64;
                     if v.is_finite() {
-                        kv.push(v);
+                        gb.ctrl_sum += if mvalues {
+                            let e = v.exp2();
+                            e / (1.0 + e)
+                        } else {
+                            v
+                        };
+                        gb.ctrl_n += 1;
+                        n_ctrl_raw += 1;
+                        km.push(if mvalues {
+                            v
+                        } else {
+                            let c = v.clamp(0.001, 0.999);
+                            (c / (1.0 - c)).log2()
+                        });
                     }
                 }
             }
-            if cv.len() < min_spg || kv.len() < min_spg {
+            if n_case_raw < min_spg || n_ctrl_raw < min_spg {
                 continue;
             }
-            let to_m = |b: f64| {
-                if mvalues {
-                    return b;
-                }
-                let c = b.clamp(0.001, 0.999);
-                (c / (1.0 - c)).log2()
-            };
-            let cm: Vec<f64> = cv.iter().map(|&b| to_m(b)).collect();
-            let km: Vec<f64> = kv.iter().map(|&b| to_m(b)).collect();
-            let all: Vec<f64> = cm.iter().chain(km.iter()).copied().collect();
-            let mean_all = all.iter().sum::<f64>() / all.len() as f64;
-            let var = all.iter().map(|&x| (x - mean_all).powi(2)).sum::<f64>() / (all.len() as f64 - 1.0);
+            /* Passes fused: the pooled sum is accumulated alongside the per-group sums, and the
+            pooled variance alongside the per-group sums of squares. Each accumulator still walks its
+            own values in its original order, so this is bit-identical to computing them separately
+            -- it just stops walking the same 365 values five times per probe. Profiling put 3933ms
+            of a 4955ms chromosome in this loop against 287ms of HDF5 read, so passes are the cost. */
+            let n_all = (cm.len() + km.len()) as f64;
+            let (mut sum_all, mut sc, mut sk) = (0.0, 0.0, 0.0);
+            for &x in cm.iter() {
+                sum_all += x;
+                sc += x;
+            }
+            for &x in km.iter() {
+                sum_all += x;
+                sk += x;
+            }
+            let mean_all = sum_all / n_all;
+            let (n1, n2) = (cm.len() as f64, km.len() as f64);
+            let (mc, mk) = (sc / n1, sk / n2);
+            let (mut var, mut ss_c0, mut ss_k0) = (0.0, 0.0, 0.0);
+            for &x in cm.iter() {
+                var += (x - mean_all).powi(2);
+                ss_c0 += (x - mc).powi(2);
+            }
+            for &x in km.iter() {
+                var += (x - mean_all).powi(2);
+                ss_k0 += (x - mk).powi(2);
+            }
+            var /= n_all - 1.0;
             if var <= 0.0 || !var.is_finite() {
                 continue;
             }
-            let (n1, n2) = (cm.len() as f64, km.len() as f64);
-            let (mc, mk) = (cm.iter().sum::<f64>() / n1, km.iter().sum::<f64>() / n2);
-            let ss: f64 =
-                cm.iter().map(|&x| (x - mc).powi(2)).sum::<f64>() + km.iter().map(|&x| (x - mk).powi(2)).sum::<f64>();
+            /* Two separate sums then added, NOT one running accumulator across both groups. The
+            original wrote `cm.sum() + km.sum()`, and in floating point that is a different value
+            from summing straight through -- enough to shift a residual variance, then a moderated
+            t, then an FDR, then which probes a DMR spans. Preserving the association is what makes
+            this rewrite verifiably identical rather than merely very close. */
+            let ss = ss_c0 + ss_k0;
             let df = n1 + n2 - 2.0;
             let rv = ss / df;
             if !rv.is_finite() || rv <= 0.0 {
@@ -275,7 +349,7 @@ fn process_chromosome(
             results.push(ProbeStats {
                 chr: chr.to_string(),
                 start: starts[idx],
-                probe_id: probe_ids[idx].clone(),
+                row: idx,
                 log_fc: mc - mk,
                 residual_var: rv,
                 df_residual: df,
@@ -283,7 +357,7 @@ fn process_chromosome(
             });
         }
     }
-    Ok(results)
+    Ok((results, gb))
 }
 
 fn fit_f_dist(vars: &[f64], dfs: &[f64]) -> (f64, f64) {
@@ -527,6 +601,202 @@ fn build_dmrs(
 }
 
 macro_rules! bail { ($($t:tt)*) => { { println!("{}", json!({"error": format!($($t)*)})); return; } } }
+
+/// The genome-wide fit, computed once per matrix and reused by every region drawn from it.
+struct Fit {
+    all: Vec<ProbeStats>,
+    mod_t: Vec<f64>,
+    adj_p: Vec<f64>,
+}
+
+/// Region-calling knobs, all from the request.
+struct RegionParams {
+    lambda: f64,
+    c_param: f64,
+    fdr_cut: f64,
+    min_db: f64,
+}
+
+/// Everything one region produces. The single-region path uses all of it (LOESS, PNG,
+/// diagnostics); a batch keeps only `dmrs` and the two counts.
+struct RegionResult {
+    rpos: Vec<i64>,
+    rfdr: Vec<f64>,
+    rlfc: Vec<f64>,
+    mg1: Vec<f64>,
+    mg2: Vec<f64>,
+    sfdr: Vec<f64>,
+    dmrs: Vec<Value>,
+    n_sig_probes: usize,
+}
+
+/* Call DMRs in one region against an already-fitted model.
+Split out of main() so a batch can amortise the fit: eBayes and the BH correction run over the
+whole matrix and are identical for every region drawn from it, so the expensive part is done
+once and this runs per region. Behaviour for a single region is unchanged. */
+fn call_region(
+    fit: &Fit,
+    file: &File,
+    ci: &[usize],
+    ki: &[usize],
+    mvalues: bool,
+    qchr: &str,
+    qstart: i64,
+    qstop: i64,
+    p: &RegionParams,
+) -> Option<RegionResult> {
+    let ri: Vec<usize> = (0..fit.all.len())
+        .filter(|&i| fit.all[i].chr == qchr && fit.all[i].start >= qstart && fit.all[i].start <= qstop)
+        .collect();
+    if ri.is_empty() {
+        return None;
+    }
+    let rpos: Vec<i64> = ri.iter().map(|&i| fit.all[i].start).collect();
+    let rt: Vec<f64> = ri.iter().map(|&i| fit.mod_t[i]).collect();
+    let rfdr: Vec<f64> = ri.iter().map(|&i| fit.adj_p[i]).collect();
+    let rlfc: Vec<f64> = ri.iter().map(|&i| fit.all[i].log_fc).collect();
+
+    /* Group means are the DISPLAY scale: the track PNG, the LOESS curves and the DMR
+    maxdiff/meandiff are all beta-scale (0-1), and the client labels them as such. An element
+    matrix stores M-values, so undo the logit here -- per sample before averaging, matching how
+    diffMeth.R reports mean betas. The stats above stay on M-values either way. */
+    let to_beta = |v: f64| -> f64 {
+        if !mvalues {
+            return v;
+        }
+        let e = v.exp2();
+        e / (1.0 + e)
+    };
+    let (mut mg1, mut mg2) = (Vec::with_capacity(ri.len()), Vec::with_capacity(ri.len()));
+    /* One slab read spanning the region's rows, rather than a single-row read per probe. The
+    region's probes are consecutive rows (both layouts are position-sorted); rows dropped by the
+    variance filter sit inside the span and are simply skipped over, so the slab is a handful of
+    rows wider than the probe count at most. */
+    let rows_abs: Vec<usize> = ri.iter().map(|&i| fit.all[i].row).collect();
+    let (lo, hi) = (rows_abs[0], *rows_abs.last().unwrap());
+    let slab = file
+        .dataset("beta/values")
+        .ok()
+        .and_then(|d| d.read_slice_2d::<f32, _>(hdf5::Selection::from((lo..hi + 1, ..))).ok());
+    for &r in &rows_abs {
+        match &slab {
+            Some(s) if r >= lo && r - lo < s.nrows() => {
+                let row = s.row(r - lo);
+                let (mut cs, mut cc, mut ks, mut kc) = (0.0, 0, 0.0, 0);
+                for &si in ki {
+                    if si < row.len() {
+                        let v = row[si] as f64;
+                        if v.is_finite() {
+                            ks += to_beta(v);
+                            kc += 1;
+                        }
+                    }
+                }
+                for &si in ci {
+                    if si < row.len() {
+                        let v = row[si] as f64;
+                        if v.is_finite() {
+                            cs += to_beta(v);
+                            cc += 1;
+                        }
+                    }
+                }
+                mg1.push(if kc > 0 { ks / kc as f64 } else { f64::NAN });
+                mg2.push(if cc > 0 { cs / cc as f64 } else { f64::NAN });
+            }
+            _ => {
+                mg1.push(f64::NAN);
+                mg2.push(f64::NAN);
+            }
+        }
+    }
+
+    // Kernel smoothing in log space to avoid underflow for extreme t-statistics
+    let log_smoothed = kernel_smooth_log(&rpos, &rt, p.lambda, p.c_param);
+    let log_sfdr = bh_adjust_log(&log_smoothed);
+    // Convert log FDR to linear for diagnostic output and Sig. CpGs track
+    let sfdr: Vec<f64> = log_sfdr.iter().map(|&v| v.exp()).collect();
+    // Adaptive threshold matching R's dmrcate(): select the same NUMBER of CpGs
+    // as are per-CpG significant, but ranked by smoothed FDR instead.
+    // Work in log space so extreme p-values maintain proper ordering.
+    let nsig = rfdr.iter().filter(|&&f| f < p.fdr_cut).count();
+    /* The adaptive rule takes the nsig SMALLEST smoothed FDRs. When nsig is zero that set is
+    empty, and there is nothing to call.
+
+    This branch used to fall back to comparing the SMOOTHED fdr against the raw per-probe cutoff,
+    and that is not a conservative default -- it is a catastrophic one. Kernel smoothing pools
+    roughly 25 neighbouring probes, so a smoothed FDR is orders of magnitude smaller than any
+    per-probe FDR; on a chromosome with no signal at all it still dips below 0.05 across long
+    stretches. "Nothing is significant" therefore produced thousands of DMRs.
+
+    Measured on MMRF male-vs-female, where the answer is known: every chromosome reporting
+    nsig == 0 emitted a large false set (chr3: 0 significant probes, 4,570 DMRs; chr11: 0 and
+    2,733), while every chromosome with even one significant probe emitted 0 or 1. chrX, the real
+    signal, has 104,218 significant probes. The bug was invisible on any single chromosome that
+    happened to carry signal, which is why the drill-down and the chrX/chr7 scans never showed it. */
+    let sig_fdr: Vec<f64> = select_significant(&log_sfdr, nsig);
+    let mut dmrs = build_dmrs(qchr, &rpos, &sig_fdr, &rlfc, &mg1, &mg2, 0.5, p.lambda, 2, None, false);
+    for dmr in &mut dmrs {
+        if let (Some(s), Some(e)) = (dmr["start"].as_i64(), dmr["stop"].as_i64()) {
+            let min_sfdr = rpos
+                .iter()
+                .zip(sfdr.iter())
+                .filter(|(&pp, _)| pp >= s && pp <= e)
+                .map(|(_, &f)| f)
+                .fold(f64::INFINITY, f64::min);
+            dmr["min_smoothed_fdr"] = json!(min_sfdr);
+        }
+    }
+    if dmrs.is_empty() {
+        dmrs = build_dmrs(
+            qchr,
+            &rpos,
+            &rfdr,
+            &rlfc,
+            &mg1,
+            &mg2,
+            p.fdr_cut,
+            p.lambda,
+            2,
+            Some(p.min_db),
+            true,
+        );
+    }
+    Some(RegionResult {
+        rpos,
+        rfdr,
+        rlfc,
+        mg1,
+        mg2,
+        sfdr,
+        dmrs,
+        n_sig_probes: nsig,
+    })
+}
+
+/// Mark the `nsig` probes with the smallest smoothed FDR as significant (0.0), the rest 1.0 --
+/// R's dmrcate rule, which selects the same NUMBER of CpGs as pass per-CpG significance but ranks
+/// them by the smoothed statistic. Operates on log FDR so extreme p-values keep their ordering.
+///
+/// nsig == 0 must select NOTHING. Comparing the smoothed FDR against the raw cutoff instead is not
+/// a conservative fallback but a catastrophic one: smoothing pools ~25 neighbouring probes, so a
+/// smoothed FDR is orders of magnitude below any per-probe FDR and stays under 0.05 across long
+/// stretches of a chromosome carrying no signal at all. That turned "nothing is significant" into
+/// thousands of DMRs -- on MMRF male-vs-female, chr3 reported 0 significant probes and 4,570 DMRs
+/// while chrX, the real signal, reported 104,218 and 6,472.
+fn select_significant(log_sfdr: &[f64], nsig: usize) -> Vec<f64> {
+    if nsig == 0 {
+        return vec![1.0; log_sfdr.len()];
+    }
+    let mut sorted_log: Vec<f64> = log_sfdr.to_vec();
+    sorted_log.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    // nsig-th smallest log FDR (most negative = most significant)
+    let adaptive_log_cut = sorted_log[nsig.min(sorted_log.len()) - 1];
+    log_sfdr
+        .iter()
+        .map(|&v| if v <= adaptive_log_cut { 0.0 } else { 1.0 })
+        .collect()
+}
 
 /// LOESS (locally weighted scatterplot smoothing) with tricube weights and local linear fit.
 /// Returns (fitted, ci_lower, ci_upper) evaluated at `eval_at` positions, clamped to [0,1].
@@ -813,6 +1083,26 @@ fn main() {
     /* Set by the server from the ds config entry, never by the client: an element matrix stores
     M-values where a CpG matrix stores betas. Same contract as diffMeth.R. */
     let mvalues = p["mvalues"].as_bool().unwrap_or(false);
+    /* Optional batch: call DMRs in many regions against one fit. Regions may name any chromosome
+    the matrix holds; with per-chromosome shards that is just the one, and the caller groups its
+    hit list by chromosome and invokes once per shard. Absent means the single-region path below,
+    which is unchanged. */
+    let batch_regions: Vec<(String, i64, i64)> = p["regions"]
+        .as_array()
+        .map(|a| {
+            a.iter()
+                .filter_map(|r| {
+                    let c = r["chr"].as_str().unwrap_or(qchr);
+                    let (s, e) = (r["start"].as_i64()?, r["stop"].as_i64()?);
+                    if c.is_empty() || e < s {
+                        None
+                    } else {
+                        Some((c.to_string(), s, e))
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
     let block_width = p["blockWidth"].as_u64().unwrap_or(800) as u32;
     let device_pixel_ratio = p["devicePixelRatio"].as_f64().unwrap_or(1.0) as f32;
     let max_loess_region = p["maxLoessRegion"].as_f64().unwrap_or(50000.0);
@@ -843,7 +1133,7 @@ fn main() {
         chr_rows: chr_lens,
         samples: sample_names,
         starts,
-        row_ids: probe_ids,
+        row_ids: _probe_ids,
     } = meta;
     let smap: HashMap<&str, usize> = sample_names.iter().enumerate().map(|(i, s)| (s.as_str(), i)).collect();
     let ci: Vec<usize> = cases.iter().filter_map(|s| smap.get(s).copied()).collect();
@@ -852,25 +1142,21 @@ fn main() {
         bail!("Not enough samples: case={}, control={}", ci.len(), ki.len());
     }
     let mut all: Vec<ProbeStats> = Vec::new();
+    let mut global = GlobalBeta::default();
     let mut pfx = 0usize;
     for (i, &cl) in chr_lens.iter().enumerate() {
         if cl == 0 {
             pfx += cl;
             continue;
         }
-        match process_chromosome(
-            &file,
-            pfx,
-            pfx + cl,
-            &ci,
-            &ki,
-            &chr_names[i],
-            &starts,
-            &probe_ids,
-            min_spg,
-            mvalues,
-        ) {
-            Ok(s) => all.extend(s),
+        match process_chromosome(&file, pfx, pfx + cl, &ci, &ki, &chr_names[i], &starts, min_spg, mvalues) {
+            Ok((s, g)) => {
+                all.extend(s);
+                global.case_sum += g.case_sum;
+                global.case_n += g.case_n;
+                global.ctrl_sum += g.ctrl_sum;
+                global.ctrl_n += g.ctrl_n;
+            }
             Err(_e) => {}
         }
         pfx += cl;
@@ -898,116 +1184,85 @@ fn main() {
     }
     let adj_p = bh_adjust(&raw_p);
 
-    let ri: Vec<usize> = (0..all.len())
-        .filter(|&i| all[i].chr == qchr && all[i].start >= qstart && all[i].start <= qstop)
-        .collect();
-    if ri.is_empty() {
+    let fit = Fit { all, mod_t, adj_p };
+    let rp = RegionParams {
+        lambda,
+        c_param,
+        fdr_cut,
+        min_db,
+    };
+
+    /* Group means on the beta scale plus their difference -- the global shift. A region result
+    should always be read against this: on a contrast where the whole genome moves, part of every
+    region's difference is this number rather than anything local. */
+    let gmean = |sum: f64, n: u64| if n > 0 { sum / n as f64 } else { f64::NAN };
+    let g_ctrl = gmean(global.ctrl_sum, global.ctrl_n);
+    let g_case = gmean(global.case_sum, global.case_n);
+    let global_json = json!({
+        "control_mean_beta": if g_ctrl.is_finite() { json!((g_ctrl * 100000.0).round() / 100000.0) } else { Value::Null },
+        "case_mean_beta": if g_case.is_finite() { json!((g_case * 100000.0).round() / 100000.0) } else { Value::Null },
+        "shift": if g_ctrl.is_finite() && g_case.is_finite() { json!(((g_case - g_ctrl) * 100000.0).round() / 100000.0) } else { Value::Null },
+        "values_counted": global.case_n + global.ctrl_n
+    });
+
+    /* Batch mode: many regions against the one fit above. The fit and the BH correction are what
+    cost seconds here -- they run over the whole matrix and are identical for every region drawn
+    from it -- so one call with N regions is dramatically cheaper than N single-region calls. The
+    per-region track PNG and LOESS are skipped: a caller asking for hundreds of regions wants the
+    DMR calls, and rendering hundreds of images would be most of the runtime. */
+    if !batch_regions.is_empty() {
+        let out: Vec<Value> = batch_regions
+            .iter()
+            .map(
+                |(c, s, e)| match call_region(&fit, &file, &ci, &ki, mvalues, c, *s, *e, &rp) {
+                    Some(r) => json!({
+                        "chr": c, "start": s, "stop": e,
+                        "n_probes": r.rpos.len(),
+                        "n_sig_probes": r.n_sig_probes,
+                        "dmrs": r.dmrs
+                    }),
+                    /* An empty region is a valid answer, not an error: the caller asked about a window
+                    this matrix has no probes in. Emitting the row keeps the response aligned with the
+                    request, so a caller can zip the two without tracking which ones dropped out. */
+                    None => json!({"chr": c, "start": s, "stop": e, "n_probes": 0, "n_sig_probes": 0, "dmrs": []}),
+                },
+            )
+            .collect();
         println!(
             "{}",
-            json!({"dmrs":[],"diagnostic":{"probes":{"positions":[],"mean_group1":[],"mean_group2":[],"fdr":[],"logFC":[]},"probe_spacings":[]}})
+            json!({
+                "regions": out,
+                "diagnostic": {
+                    "global_methylation": global_json,
+                    "total_probes_analyzed": fit.all.len(),
+                    "peak_memory_mb": (get_rss_mb() * 10.0).round() / 10.0,
+                    "elapsed_ms": t0.elapsed().as_millis()
+                }
+            })
         );
         return;
     }
-    let rpos: Vec<i64> = ri.iter().map(|&i| all[i].start).collect();
-    let rt: Vec<f64> = ri.iter().map(|&i| mod_t[i]).collect();
-    let rfdr: Vec<f64> = ri.iter().map(|&i| adj_p[i]).collect();
-    let rlfc: Vec<f64> = ri.iter().map(|&i| all[i].log_fc).collect();
 
-    let (mut mg1, mut mg2) = (Vec::new(), Vec::new());
-    /* Group means are the DISPLAY scale: the track PNG, the LOESS curves and the DMR
-    maxdiff/meandiff are all beta-scale (0-1), and the client labels them as such. An element
-    matrix stores M-values, so undo the logit here -- per sample before averaging, matching how
-    diffMeth.R reports mean betas. The stats above stay on M-values either way. */
-    let to_beta = |v: f64| -> f64 {
-        if !mvalues {
-            return v;
+    let region = match call_region(&fit, &file, &ci, &ki, mvalues, qchr, qstart, qstop, &rp) {
+        Some(r) => r,
+        None => {
+            println!(
+                "{}",
+                json!({"dmrs":[],"diagnostic":{"probes":{"positions":[],"mean_group1":[],"mean_group2":[],"fdr":[],"logFC":[]},"probe_spacings":[]}})
+            );
+            return;
         }
-        let p = v.exp2();
-        p / (1.0 + p)
     };
-    let ds = file.dataset("beta/values").ok();
-    for &idx in &ri {
-        let pid = &all[idx].probe_id;
-        if let (Some(abs), Some(ref d)) = (probe_ids.iter().position(|p| p == pid), &ds) {
-            let sel = hdf5::Selection::from((abs..abs + 1, ..));
-            if let Ok(r2d) = d.read_slice_2d::<f32, _>(sel) {
-                let row = r2d.into_raw_vec_and_offset().0;
-                let (mut cs, mut cc, mut ks, mut kc) = (0.0, 0, 0.0, 0);
-                for &si in &ki {
-                    if si < row.len() {
-                        let v = row[si] as f64;
-                        if v.is_finite() {
-                            ks += to_beta(v);
-                            kc += 1;
-                        }
-                    }
-                }
-                for &si in &ci {
-                    if si < row.len() {
-                        let v = row[si] as f64;
-                        if v.is_finite() {
-                            cs += to_beta(v);
-                            cc += 1;
-                        }
-                    }
-                }
-                mg1.push(if kc > 0 { ks / kc as f64 } else { f64::NAN });
-                mg2.push(if cc > 0 { cs / cc as f64 } else { f64::NAN });
-                continue;
-            }
-        }
-        mg1.push(f64::NAN);
-        mg2.push(f64::NAN);
-    }
-
-    // Kernel smoothing in log space to avoid underflow for extreme t-statistics
-    let log_smoothed = kernel_smooth_log(&rpos, &rt, lambda, c_param);
-    let log_sfdr = bh_adjust_log(&log_smoothed);
-    // Convert log FDR to linear for diagnostic output and Sig. CpGs track
-    let sfdr: Vec<f64> = log_sfdr.iter().map(|&v| v.exp()).collect();
-    // Adaptive threshold matching R's dmrcate(): select the same NUMBER of CpGs
-    // as are per-CpG significant, but ranked by smoothed FDR instead.
-    // Work in log space so extreme p-values maintain proper ordering.
-    let nsig = rfdr.iter().filter(|&&f| f < fdr_cut).count();
-    let adaptive_log_cut = if nsig > 0 && nsig <= log_sfdr.len() {
-        let mut sorted_log: Vec<f64> = log_sfdr.clone();
-        sorted_log.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        sorted_log[nsig - 1] // nsig-th smallest log FDR (most negative = most significant)
-    } else {
-        fdr_cut.ln()
-    };
-    // Build sig_fdr: probes with log_sfdr <= adaptive_log_cut get 0 (significant), others get 1
-    let sig_fdr: Vec<f64> = log_sfdr
-        .iter()
-        .map(|&v| if v <= adaptive_log_cut { 0.0 } else { 1.0 })
-        .collect();
-    let mut dmrs = build_dmrs(qchr, &rpos, &sig_fdr, &rlfc, &mg1, &mg2, 0.5, lambda, 2, None, false);
-    for dmr in &mut dmrs {
-        if let (Some(s), Some(e)) = (dmr["start"].as_i64(), dmr["stop"].as_i64()) {
-            let min_sfdr = rpos
-                .iter()
-                .zip(sfdr.iter())
-                .filter(|(&p, _)| p >= s && p <= e)
-                .map(|(_, &f)| f)
-                .fold(f64::INFINITY, f64::min);
-            dmr["min_smoothed_fdr"] = json!(min_sfdr);
-        }
-    }
-    if dmrs.is_empty() {
-        dmrs = build_dmrs(
-            qchr,
-            &rpos,
-            &rfdr,
-            &rlfc,
-            &mg1,
-            &mg2,
-            fdr_cut,
-            lambda,
-            2,
-            Some(min_db),
-            true,
-        );
-    }
+    let RegionResult {
+        rpos,
+        rfdr,
+        rlfc,
+        mg1,
+        mg2,
+        sfdr: _sfdr,
+        dmrs,
+        n_sig_probes: _n_sig,
+    } = region;
 
     // LOESS curves for both groups
     let n_eval = 200usize;
@@ -1070,11 +1325,60 @@ fn main() {
                 "fdr": rfdr, "logFC": rlfc.iter().map(|&v| r4(v)).collect::<Vec<_>>() },
                 "loess": loess_json,
                 "probe_spacings": spacings,
-                "total_probes_analyzed": all.len(),
+                "global_methylation": global_json,
+                "total_probes_analyzed": fit.all.len(),
                 "peak_memory_mb": (rss_peak * 10.0).round() / 10.0,
                 "start_memory_mb": (rss_start * 10.0).round() / 10.0,
                 "elapsed_ms": elapsed_ms,
                 "track_png": track_png }
         })
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::select_significant;
+
+    /// log FDRs standing in for a chromosome with no per-CpG significance: smoothing has pushed
+    /// them all far below ln(0.05) = -3.0, which is exactly the situation that produced thousands
+    /// of false DMRs when the cutoff was compared against the raw threshold.
+    const SMOOTHED_BUT_UNSIGNIFICANT: [f64; 6] = [-9.0, -8.0, -7.5, -7.0, -6.0, -5.0];
+
+    #[test]
+    fn no_significant_probes_selects_nothing() {
+        let out = select_significant(&SMOOTHED_BUT_UNSIGNIFICANT, 0);
+        assert_eq!(out, vec![1.0; 6], "nsig == 0 must select no probes");
+        assert!(
+            SMOOTHED_BUT_UNSIGNIFICANT.iter().all(|&v| v < (0.05f64).ln()),
+            "every value is under the raw cutoff -- the old code selected all six"
+        );
+    }
+
+    #[test]
+    fn selects_exactly_nsig_smallest() {
+        let lf = [-1.0, -9.0, -3.0, -7.0, -2.0];
+        let out = select_significant(&lf, 2);
+        // the two smallest are -9.0 (idx 1) and -7.0 (idx 3)
+        assert_eq!(out, vec![1.0, 0.0, 1.0, 0.0, 1.0]);
+        assert_eq!(out.iter().filter(|&&v| v == 0.0).count(), 2);
+    }
+
+    #[test]
+    fn ties_may_select_more_than_nsig() {
+        // a tie at the cutoff admits both -- the threshold is a value, not a rank
+        let out = select_significant(&[-5.0, -5.0, -1.0], 1);
+        assert_eq!(out, vec![0.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn nsig_at_or_beyond_length_selects_all() {
+        assert_eq!(select_significant(&[-4.0, -2.0], 2), vec![0.0, 0.0]);
+        // nsig can never exceed the probe count, but must not panic if it does
+        assert_eq!(select_significant(&[-4.0, -2.0], 9), vec![0.0, 0.0]);
+    }
+
+    #[test]
+    fn empty_input_is_empty_output() {
+        assert!(select_significant(&[], 0).is_empty());
+    }
 }

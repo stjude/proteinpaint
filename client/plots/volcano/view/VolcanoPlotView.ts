@@ -7,6 +7,7 @@ import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
 import { formatPromoterLabel, elementNoun } from '../promoterLabel'
+import { runDmrBatch } from '../interactions/dmrBatch'
 
 export class VolcanoPlotView {
 	dom: VolcanoDom
@@ -76,6 +77,10 @@ export class VolcanoPlotView {
 		// the old div in dom.holder (the table never closes), and toggling
 		// it on repeatedly appends additional divs.
 		this.dom.holder.select('#sjpp-volcano-pValueTable').remove()
+		/* Same lifecycle as the p-value table: results are data, not config, so a re-render (new
+		thresholds, new element class) must drop them rather than leave a stale table next to a plot
+		it no longer describes. */
+		this.dom.holder.select('#sjpp-volcano-dmrBatch').remove()
 
 		if (!this.settings.showPValueTable) return
 		this.volcanoDom.pValueTable = this.dom.holder
@@ -132,6 +137,99 @@ export class VolcanoPlotView {
 			const centered = off ? `, centered on median Δβ ${off > 0 ? '+' : ''}${off.toFixed(3)}` : ''
 			const sigText = (isDM ? `${n} DM ${dmNoun.many}` : `${n} DE genes`) + split + centered + ':'
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
+
+			/* Only offered where a region analysis can actually run. regionAnalysis is emitted by
+			termdb.config only when the dataset has a matrix to run one on, so this does not advertise
+			a drill-down that would error on click. */
+			if (isDM && this.interactions.app?.vocabApi?.termdbConfig?.queries?.dnaMethylation?.regionAnalysis) {
+				/* Deliberately not addActionButton: that always opens the actionsTip, and a results
+				table belongs in the sandbox under the plot (where the p-value table goes), not floating
+				on top of it. Progress goes in the button label so there is no second thing to look at. */
+				const dots = this.viewData.pointData.filter((d: any) => d.significant !== false)
+				const drillBtn = this.volcanoDom.actions
+					.append('button')
+					.attr('class', 'sja_menuoption')
+					.attr('data-testid', 'sjpp-volcano-drill-btn')
+					.style('margin', '3px')
+					.style('padding', '3px')
+					.text('Drill hits to CpG resolution')
+					.on('click', async () => {
+						if (drillBtn.property('disabled')) return
+						const label = drillBtn.text()
+						drillBtn.property('disabled', true).text(`Drilling ${dots.length.toLocaleString()} regions…`)
+						this.dom.holder.select('#sjpp-volcano-dmrBatch').remove()
+						const holder = this.dom.holder
+							.append('div')
+							.attr('id', 'sjpp-volcano-dmrBatch')
+							.attr('data-testid', 'sjpp-volcano-dmrBatch')
+							.style('display', 'block')
+							.style('margin', '10px 0 0 20px')
+						try {
+							await runDmrBatch({
+								config: this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id),
+								vocab: this.interactions.app.vocabApi.vocab,
+								dots,
+								totalSignificant: numSigGenes,
+								holder,
+								app: this.interactions.app
+							})
+						} finally {
+							drillBtn.property('disabled', false).text(label)
+						}
+					})
+
+				/* Scan mode needs no hit list at all -- the model fit is chromosome-wide either way, so
+				calling every DMR on a chromosome costs about what drilling a handful of its windows does.
+				A plain <select> rather than the region search box: string2pos() turns a bare "chr20" into
+				a 20kb window at the chromosome midpoint, which would silently scan 0.005% of the target. */
+				const chrs: string[] = this.interactions.app?.opts?.genome?.majorchrorder || []
+				if (chrs.length) {
+					const chrSelect = this.volcanoDom.actions
+						.append('select')
+						.attr('data-testid', 'sjpp-volcano-scan-chr')
+						.style('margin', '3px')
+					chrSelect
+						.selectAll('option')
+						.data(chrs)
+						.enter()
+						.append('option')
+						.attr('value', (d: string) => d)
+						.text((d: string) => d)
+					const scanBtn = this.volcanoDom.actions
+						.append('button')
+						.attr('class', 'sja_menuoption')
+						.attr('data-testid', 'sjpp-volcano-scan-btn')
+						.style('margin', '3px')
+						.style('padding', '3px')
+						.text('Scan chromosome')
+						.on('click', async () => {
+							if (scanBtn.property('disabled')) return
+							const chr = chrSelect.property('value')
+							const label = scanBtn.text()
+							scanBtn.property('disabled', true).text(`Scanning ${chr}…`)
+							this.dom.holder.select('#sjpp-volcano-dmrBatch').remove()
+							const holder = this.dom.holder
+								.append('div')
+								.attr('id', 'sjpp-volcano-dmrBatch')
+								.attr('data-testid', 'sjpp-volcano-dmrBatch')
+								.style('display', 'block')
+								.style('margin', '10px 0 0 20px')
+							try {
+								await runDmrBatch({
+									config: this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id),
+									vocab: this.interactions.app.vocabApi.vocab,
+									dots,
+									totalSignificant: numSigGenes,
+									holder,
+									app: this.interactions.app,
+									scanChromosome: chr
+								})
+							} finally {
+								scanBtn.property('disabled', false).text(label)
+							}
+						})
+				}
+			}
 
 			const pValueTableButtonText = this.settings.showPValueTable ? 'Hide p-value table' : 'Show p-value table'
 			this.addActionButton(
