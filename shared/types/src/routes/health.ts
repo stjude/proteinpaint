@@ -6,6 +6,8 @@ export type HealthRequest = Record<string, never>
  */
 export type HealthResponse = {
 	status: 'ok' | 'error'
+	/** path to the full /status (alias of /healthcheck) response, for callers that need build/dataset details */
+	detailsAt?: string
 }
 
 // TODO: write payload examples to help with automated testing and documentation, for non-prod use only
