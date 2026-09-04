@@ -14,6 +14,7 @@ import { getMockSCApp, getMockSCConfig } from './getMockSCApp.ts'
  *   - getTabelData() should link the experiment column when the ds declares a url template
  *   - getTabelData() should not add a URL when the ds declares no url template
  *   - getTabelData() should include sampleColumns with experiments
+ *   - formatPlotsData() should pass through sample data with the hasSpatial flag
  */
 
 /**************
@@ -211,5 +212,20 @@ tape('getTabelData() should include sampleColumns with experiments', test => {
 
 	const row0 = vm.tableData.rows[0] as any[]
 	test.equal(row0[3].value, 'Female', 'Row should include sample column value')
+	test.end()
+})
+
+tape('formatPlotsData() should pass through sample data with the hasSpatial flag', test => {
+	const app = getMockSCApp()
+	const vm = new SCViewModel(app.app)
+
+	// the flag the model's wsiBySample probe computed, shaped for the view
+	// (PlotButtons reads data.hasSpatial to show the Spatial button)
+	const sampleData = { plots: [{ name: 'umap' }] }
+	const formatted = vm.formatPlotsData(sampleData, true)
+
+	test.deepEqual(formatted.plots, sampleData.plots, 'Should keep the server plot data unchanged')
+	test.equal(formatted.hasSpatial, true, 'Should attach hasSpatial')
+	test.equal(vm.formatPlotsData(sampleData, false).hasSpatial, false, 'Should attach a false flag as-is')
 	test.end()
 })

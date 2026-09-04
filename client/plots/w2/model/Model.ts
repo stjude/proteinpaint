@@ -6,8 +6,10 @@ import type { WsiBySampleResponse } from '#types' // the route's response shape
 export class Model {
 	constructor(readonly genome: string, readonly dslabel: string) {} // both requests address the dataset
 
-	/** Every sample in the dataset that has at least one image on disk (one
-	 subfolder per sample under either w2 root), with image counts. */
+	/** Every sample in the dataset that has at least one PLAIN slide on disk
+	 (a wsiFolder subfolder with a slide), with plain-slide counts. Spatial-only
+	 samples are not listed — spatial images are viewed through the sc app,
+	 which fetches them per sample via getImages(). */
 	async getData(): Promise<WsiBySampleResponse> {
 		return await dofetch3('termdb/wsiBySample', {
 			body: { genome: this.genome, dslabel: this.dslabel } // no sample_id = list samples
