@@ -154,8 +154,8 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 
 		this.dom.methodsHolder.style('display', '')
 		const columnSections = this.toAxis(this.config.colSections || [], false)
-		const key = (this.config.colSections || [])
-			.flatMap(section => section.terms.map(term => getTermSelectionKey(term.term || term)))
+		const key = Object.values(columnSections)
+			.flatMap(terms => terms.map(wrapper => getTermSelectionKey(wrapper.term)))
 			.join('\n')
 		if (key == this.methodTermsKey && this.methodsReady) return
 		this.methodTermsKey = key
@@ -201,12 +201,10 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 
 	async renderSections(type: SectionType, sections: Section[]) {
 		const holder = this.dom.sectionHolders[type]
-		for (const [key, view] of this.sectionViews) {
+		for (const [key, _] of this.sectionViews) {
 			const idx = Number(key.slice(type.length + 1))
 			if (key.startsWith(`${type}:`) && idx >= sections.length) {
-				view.termdb?.destroy?.()
-				view.holder.remove()
-				this.sectionViews.delete(key)
+				this.destroySectionView(type, idx)
 			}
 		}
 
@@ -324,7 +322,8 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		const key = type === 'row' ? 'rowSections' : 'colSections'
 		const section: Section | undefined = this.config[key]?.[idx]
 		if (!section) return
-		const selectedTerms = (Array.isArray(selected) ? selected : [selected]).map(item => item.term || item)
+		const selectedItems = Array.isArray(selected) ? selected : [selected]
+		const selectedTerms = selectedItems.map(getTerm)
 		if (!selectedTerms.length) return
 		if (selectedTerms.some(term => !term?.type)) throw new Error('Selected term has no type')
 
@@ -342,7 +341,11 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		if (!isNonDictionaryType(selectedType)) {
 			const term = selectedTerms[0]
 			this.destroySectionView(type, idx)
-			this.updateSection(type, idx, { name: term.name || term.id, termType: term.type, terms: [term] })
+			this.updateSection(type, idx, {
+				name: term.name || term.id,
+				termType: term.type,
+				terms: [selectedItems[0]]
+			})
 			return
 		}
 
@@ -352,19 +355,19 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			return
 		}
 		const terms = [...(section.terms || [])]
-		const termKeys = new Set(terms.map(item => getTermSelectionKey(item.term || item)))
-		for (const term of selectedTerms) {
+		const termKeys = new Set(terms.map(item => getTermSelectionKey(getTerm(item))))
+		for (const [index, term] of selectedTerms.entries()) {
 			const termKey = getTermSelectionKey(term)
 			if (termKeys.has(termKey)) continue
 			termKeys.add(termKey)
-			terms.push(term)
+			terms.push(selectedItems[index])
 		}
 		this.destroySectionView(type, idx)
 		this.updateSection(type, idx, { name, termType: selectedType, terms })
 	}
 
 	getSectionTermType(section: Section) {
-		return section.termType || (section.terms[0]?.term || section.terms[0])?.type
+		return section.termType || getTerm(section.terms[0])?.type
 	}
 
 	updateSection(type: SectionType, idx: number, edits: Partial<Section>) {
@@ -429,7 +432,7 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		return Object.fromEntries(
 			sections.map(section => [
 				section.name.trim(),
-				cloneTerms ? section.terms.map(term => structuredClone(term)) : section.terms
+				section.terms.map(item => toTermWrapper(item, cloneTerms))
 			])
 		)
 	}
@@ -441,7 +444,7 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			if (new Set(names).size !== names.length) return 'Section names must be unique within each axis.'
 			for (const section of sections as Section[]) {
 				if (!section.terms.length) continue
-				const types = new Set(section.terms.map(item => (item.term || item).type))
+				const types = new Set(section.terms.map(item => getTerm(item).type))
 				const termType = this.getSectionTermType(section)
 				if (types.size != 1 || !termType || !types.has(termType)) return 'Every section must contain exactly one term type.'
 				if (!isNonDictionaryType(termType) && section.terms.length != 1) {
@@ -483,6 +486,15 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 
 function getTermSelectionKey(term: any) {
 	return `${term.type}\0${term.assay || ''}\0${term.memberId || ''}\0${term.id || term.gene || term.name}`
+}
+
+function getTerm(item: any) {
+	return item?.term || item
+}
+
+function toTermWrapper(item: any, clone: boolean) {
+	const wrapper = item?.term ? { term: item.term, q: item.q || {} } : { term: item, q: {} }
+	return clone ? structuredClone(wrapper) : wrapper
 }
 
 export const AggMatrixInputInit = getCompInit(AggMatrixInput)

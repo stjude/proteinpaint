@@ -1511,9 +1511,11 @@ export class TermdbVocab extends Vocab {
 	}
 
 	async getAvailableAggregateMatrixMethods(columns, signal) {
-		const formatTw = term => {
-			if (isSingleCellTerm(term)) return { term, q: {} }
-			return this.getTwMinCopy({ term, q: {} })
+		const formatTw = item => {
+			const term = item.term || item
+			const q = item.term ? item.q || {} : {}
+			if (isSingleCellTerm(term)) return { term, q }
+			return this.getTwMinCopy({ term, q })
 		}
 		const formattedColumns = {}
 		for (const [section, terms] of Object.entries(columns)) {
