@@ -24,6 +24,7 @@ export const routeFiles = [
 	import('./routes/genesetEnrichment.ts'),
 	import('./routes/genesetOverrepresentation.ts'),
 	import('./routes/genomes.ts'),
+	import('./routes/health.ts'),
 	import('./routes/healthcheck.ts'),
 	import('./routes/hicdata.ts'),
 	import('./routes/hicgenome.ts'),
