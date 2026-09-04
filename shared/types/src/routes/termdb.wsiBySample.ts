@@ -1,15 +1,19 @@
 export type WsiBySampleRequest = {
 	genome: string
 	dslabel: string
-	/** sample name = the sample's subfolder under ds.queries.w2.folder;
-	 omit to list all samples that have images */
+	/** sample name = the sample's subfolder under a ds.queries.w2 root
+	 (folder for spatial, wsiFolder for plain); omit to list the samples that
+	 have plain slides — spatial-only samples are not listed, their images are
+	 fetched per sample_id by the single-cell app */
 	sample_id?: string
 }
 
-/** one sample that has whole-slide images on disk */
+/** one sample that has plain whole-slide images on disk (the standalone
+ Whole Slide Images plot's sample table; spatial images are excluded) */
 export type WsiSampleSummary = {
 	sampleId: string
-	/** number of images (spatial + plain) in the sample's folders */
+	/** number of plain slides in the sample's wsiFolder subfolder — NOT the
+	 total image count; spatial images are not included */
 	count: number
 }
 
@@ -51,9 +55,11 @@ export type SpatialImage = {
 }
 
 export type WsiBySampleResponse = {
-	/** present when sample_id was given: that sample's images */
+	/** present when sample_id was given: that sample's images, BOTH kinds
+	 (the single-cell app's spatial probe/viewer rely on spatial entries here) */
 	images?: (WsiImage | SpatialImage)[]
-	/** present when sample_id was omitted: every sample with an image folder */
+	/** present when sample_id was omitted: every sample with at least one
+	 plain slide (spatial-only samples are not listed) */
 	samples?: WsiSampleSummary[]
 	status?: string
 	error?: string

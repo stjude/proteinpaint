@@ -8,6 +8,7 @@ import { SCModel } from '../model/SCModel.ts'
  *   - getDataRequestOpts() should return correct request body
  *   - getDataRequestOpts() should return undefined when item is not set
  *   - getDataRequestOpts() should throw when singleCell.data is not configured
+ *   - hasSpatialImage() should return cached probe results without refetching
  */
 
 /**************
@@ -82,5 +83,18 @@ tape('getDataRequestOpts() should throw when singleCell.data is not configured',
 		/No singleCell\.data defined in termdbConfig\.queries/,
 		'Should throw when singleCell.data is missing'
 	)
+	test.end()
+})
+
+tape('hasSpatialImage() should return cached probe results without refetching', async test => {
+	const app = getMockSCApp()
+	const model = new SCModel(app)
+
+	// the cache short-circuits the wsiBySample probe: seeded values come back
+	// as-is with no request (live probes are covered by the integration spec)
+	model.sampleHasSpatial['with-spatial'] = true
+	model.sampleHasSpatial['without-spatial'] = false
+	test.equal(await model.hasSpatialImage('with-spatial'), true, 'Should return a cached true without probing')
+	test.equal(await model.hasSpatialImage('without-spatial'), false, 'Should return a cached false without probing')
 	test.end()
 })
