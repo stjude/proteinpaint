@@ -120,20 +120,25 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 	const columnLookup = makeEntryLookup(columns)
 	const cellCount = rows.length * columns.length
 	const counts = new Uint32Array(cellCount)
-	const columnCounts = new Uint32Array(columns.length)
+	const numericMatches = new Uint32Array(cellCount)
 	const sums = new Float64Array(cellCount)
+	const cohortCount = Object.keys(response.samples).length
 	for (const sample of Object.values<any>(response.samples)) {
-		const rowIndexes = resolveSampleEntryIndexes(sample, rowSources, rowLookup)
-		const columnIndexes = resolveSampleEntryIndexes(sample, columnSources, columnLookup)
-		if (!columnIndexes.length) continue
-		for (const columnIndex of columnIndexes) columnCounts[columnIndex]++
-		if (!rowIndexes.length) continue
+		const rowIndexes = new Set(resolveSampleEntryIndexes(sample, rowSources, rowLookup))
+		const columnIndexes = new Set(resolveSampleEntryIndexes(sample, columnSources, columnLookup))
+		if (!columnIndexes.size) continue
+		if (!rowIndexes.size) continue
 		for (const rowIndex of rowIndexes) {
 			for (const columnIndex of columnIndexes) {
 				const index = rowIndex * columns.length + columnIndex
 				counts[index]++
-				const value = sample[columns[columnIndex].source.queryId]?.value
-				if (typeof value == 'number' && Number.isFinite(value)) sums[index] += value
+				const source = columns[columnIndex].source
+				const annotation = sample[source.queryId]
+				const value = annotation?.value
+				if (isComputableNumeric(annotation, source.tw.term, value)) {
+					numericMatches[index]++
+					sums[index] += value
+				}
 			}
 		}
 	}
@@ -145,9 +150,9 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 	const data = rows.map((row, rowIndex) =>
 		columns.map((column, columnIndex) => {
 			const index = rowIndex * columns.length + columnIndex
-			const stats = { matches: counts[index], columnCount: columnCounts[columnIndex], sum: sums[index] }
-			const colorValue = calculateAggregateMethod(q.gradientMethod, stats)
-			const sizeValue = calculateAggregateMethod(q.sizeMethod, stats)
+			const stats = { matches: counts[index], numericMatches: numericMatches[index], cohortCount, sum: sums[index] }
+			const colorValue = q.gradientMethod == 'count' ? stats.matches : calculateAggregateMethod(q.gradientMethod, stats)
+			const sizeValue = q.sizeMethod == 'count' ? stats.matches : calculateAggregateMethod(q.sizeMethod, stats)
 			if (colorValue !== null) {
 				if (colorValue < colorMin) colorMin = colorValue
 				if (colorValue > colorMax) colorMax = colorValue
@@ -178,6 +183,15 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 	}
 }
 
+function isComputableNumeric(annotation: any, term: any, value: unknown): value is number {
+	if (typeof value != 'number' || !Number.isFinite(value)) return false
+	const keys = Array.isArray(annotation?.values) ? annotation.values.map(item => item.key) : [annotation?.key]
+	return !keys.some(key =>
+		term?.values?.[key]?.uncomputable ||
+		Object.entries<any>(term?.values || {}).some(([_, item]) => item?.uncomputable && item.label === key)
+	)
+}
+
 function makeAxisSources(axis: Record<string, any[]>, prefix: string): AxisSource[] {
 	const sources: AxisSource[] = []
 	for (const [section, terms] of Object.entries(axis)) {
@@ -203,15 +217,8 @@ function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataRespons
 		}
 		const observed = new Set<string>()
 		for (const sample of Object.values<any>(response.samples)) {
-			/** Uncomputable values are ignored completely. */
 			const entry = sample[source.queryId]
-			if (
-				entry?.key !== undefined &&
-				entry?.key !== null &&
-				!source.tw.term.values?.[entry.key]?.uncomputable
-			) {
-				observed.add(String(entry.key))
-			}
+			for (const key of getAnnotationKeys(entry, source.tw.term)) observed.add(String(key))
 		}
 		const ref = response.refs?.byTermId?.[source.queryId]
  		const bins = ref?.bins || []
@@ -232,7 +239,7 @@ function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataRespons
 		for (const key of orderedKeys) {
 			entries.push({
 				id: key,
-				label: source.tw.term.values?.[key]?.label || key,
+				label: getValueLabel(source.tw.term, key),
 				section: source.section,
 				source,
 				key
@@ -256,10 +263,34 @@ function resolveSampleEntryIndexes(sample: any, sources: AxisSource[], lookup: M
 	for (const source of sources) {
 		const annotation = sample[source.queryId]
 		if (!annotation) continue
-		const index = lookup.get(`${source.queryId}\0${source.expand ? String(annotation.key) : ''}`)
-		if (index !== undefined) indexes.push(index)
+		for (const key of getAnnotationKeys(annotation, source.tw.term)) {
+			const index = lookup.get(`${source.queryId}\0${source.expand ? String(key) : ''}`)
+			if (index !== undefined) indexes.push(index)
+		}
 	}
 	return indexes
+}
+
+function getAnnotationKeys(annotation: any, term?: any): (string | number)[] {
+	const keys = Array.isArray(annotation?.values)
+		? annotation.values.map(value => value.key)
+		: annotation?.key !== undefined && annotation?.key !== null
+			? [annotation.key]
+			: []
+	return keys.map(key => getCanonicalValueKey(term, key))
+}
+
+function getCanonicalValueKey(term: any, key: string | number) {
+	const values = Object.entries<any>(term?.values || {})
+	const match = values.find(([valueKey, value]) => String(valueKey) === String(key) || (value?.uncomputable && value.label === key))
+	if (match?.[1]?.uncomputable) return match[0]
+	return key
+}
+
+function getValueLabel(term: any, key: string) {
+	const value = term.values?.[key]
+	if (value?.label) return value.label
+	return Object.entries<any>(term.values || {}).find(([, value]) => value.label === key)?.[1]?.label || key
 }
 
 function makeAxisLayout(entries: ResolvedAxisEntry[], axis: 'row' | 'column') {
@@ -339,7 +370,8 @@ async function getSampleBasedData(
 		methods,
 		response.samples,
 		rows.map(row => row.queryId),
-		columnId
+		columnId,
+		columnTw.term
 	)
 	const byMethod = new Map<string, ValueByRow>()
 	for (const [method, values] of valuesByQueryId) {

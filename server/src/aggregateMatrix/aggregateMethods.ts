@@ -4,7 +4,7 @@ import { isNumericTerm } from '#shared/terms.js'
 type AggregateMethodDefinition = AggregateMethodOption & {
 	isAvailable: (ds: any, terms: any[]) => boolean
 	/** Server-only hook. Sufficient statistics are computed once for all requested methods. */
-	calculateFromStats?: (stats: { matches: number; columnCount: number; sum: number }) => number | null
+	calculateFromStats?: (stats: { matches: number; numericMatches: number; cohortCount: number; sum: number }) => number | null
 }
 
 const definitions: AggregateMethodDefinition[] = [
@@ -13,27 +13,26 @@ const definitions: AggregateMethodDefinition[] = [
 		label: 'Mean',
 		appliesTo: 'numeric',
 		isAvailable: (ds, terms) => hasNumericMethod(ds, terms, 'mean'),
-		calculateFromStats: stats => (stats.matches ? stats.sum / stats.matches : null)
+		calculateFromStats: stats => (stats.numericMatches ? stats.sum / stats.numericMatches : null)
 	},
 	{
 		id: 'percent',
 		label: 'Percent',
 		appliesTo: 'any',
 		isAvailable: (ds, terms) => hasPercentMethod(ds, terms),
-		calculateFromStats: stats => (stats.columnCount ? (stats.matches / stats.columnCount) * 100 : null)
+		calculateFromStats: stats => (stats.cohortCount ? (stats.matches / stats.cohortCount) * 100 : null)
 	},
 	{
 		id: 'count',
 		label: 'Count',
 		appliesTo: 'any',
-		isAvailable: (ds, terms) => hasCountMethod(ds, terms),
-		calculateFromStats: stats => stats.matches
+		isAvailable: (ds, terms) => hasCountMethod(ds, terms)
 	}
 ]
 
 export function calculateAggregateMethod(
 	methodId: string,
-	stats: { matches: number; columnCount: number; sum: number }
+	stats: { matches: number; numericMatches: number; cohortCount: number; sum: number }
 ) {
 	const calculate = definitions.find(method => method.id == methodId)?.calculateFromStats
 	if (!calculate) throw new Error(`Unsupported sample-based aggregate method: ${methodId}`)
@@ -55,37 +54,55 @@ export function calculateSampleBasedMethods(
 	methodIds: string[],
 	samples: Record<string, any>,
 	rowIds: string[],
-	columnId: string
+	columnId: string,
+	columnTerm?: any,
+	cohortCount = Object.keys(samples).length
 ): Map<string, Record<string, number | null>> {
 	const requested = methodIds.map(id => definitions.find(method => method.id == id))
-	if (requested.some(method => !method?.calculateFromStats)) {
+	if (requested.some((method, index) => methodIds[index] != 'count' && !method?.calculateFromStats)) {
 		throw new Error(`Unsupported sample-based aggregate method: ${methodIds.join(', ')}`)
 	}
 
 	const matches = new Uint32Array(rowIds.length)
+	const numericMatches = new Uint32Array(rowIds.length)
 	const sums = new Float64Array(rowIds.length)
-	let columnCount = 0
 	for (const sample of Object.values(samples)) {
 		if (!Object.prototype.hasOwnProperty.call(sample, columnId)) continue
-		columnCount++
-		const columnValue = sample[columnId]?.value
+		const columnAnnotation = sample[columnId]
+		const columnValue = columnAnnotation?.value
 		for (let i = 0; i < rowIds.length; i++) {
 			if (!Object.prototype.hasOwnProperty.call(sample, rowIds[i])) continue
 			matches[i]++
-			if (typeof columnValue == 'number' && Number.isFinite(columnValue)) sums[i] += columnValue
+			if (isComputableNumeric(columnAnnotation, columnTerm, columnValue)) {
+				numericMatches[i]++
+				sums[i] += columnValue
+			}
 		}
 	}
 
 	const result = new Map<string, Record<string, number | null>>()
 	for (let methodIndex = 0; methodIndex < methodIds.length; methodIndex++) {
 		const values: Record<string, number | null> = {}
-		const calculate = requested[methodIndex]!.calculateFromStats!
 		for (let rowIndex = 0; rowIndex < rowIds.length; rowIndex++) {
-			values[rowIds[rowIndex]] = calculate({ matches: matches[rowIndex], columnCount, sum: sums[rowIndex] })
+			values[rowIds[rowIndex]] =
+				methodIds[methodIndex] == 'count'
+					? matches[rowIndex]
+					: requested[methodIndex]!.calculateFromStats!({
+							matches: matches[rowIndex],
+							numericMatches: numericMatches[rowIndex],
+							cohortCount,
+							sum: sums[rowIndex]
+						})
 		}
 		result.set(methodIds[methodIndex], values)
 	}
 	return result
+}
+
+function isComputableNumeric(annotation: any, term: any, value: unknown): value is number {
+	if (typeof value != 'number' || !Number.isFinite(value)) return false
+	const keys = annotation?.values?.length ? annotation.values.map(item => item.key) : [annotation?.key]
+	return !keys.some(key => term?.values?.[key]?.uncomputable || Object.entries<any>(term?.values || {}).some(([_, item]) => item?.uncomputable && item.label === key))
 }
 
 function hasNumericMethod(ds: any, terms: any[], method: 'mean') {
