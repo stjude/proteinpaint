@@ -93,6 +93,15 @@ tape('setColorScale and getDotPositions', function (test) {
     test.equal(typeof maxColor, 'string', 'Should produce a string color value at max scale')
     test.notEqual(minColor, maxColor, 'Should produce different colors at min and max values')
 
+    viewModel.setColorScale(mockAggregateMatrix.state.config.settings.aggregateMatrix, { min: 0, max: 0 })
+    test.equal(viewModel.viewData.colorScale.absMin, 0, 'Should preserve constant color value as absolute minimum')
+    test.equal(viewModel.viewData.colorScale.absMax, 0, 'Should preserve constant color value as absolute maximum')
+    test.equal(
+        viewModel.viewData.colorScale.scale(0),
+        'rgb(128, 128, 0)', //#808000
+        'Should map a constant color value to the midpoint of the color range'
+    )
+
     viewModel.maxRowLabelLgth = 30
     const cellSize = 10
     viewModel.getDotPositions(
