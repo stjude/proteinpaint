@@ -1,4 +1,4 @@
-import { type RoutePayload, type TermdbAggregateMatrixRequest, type TermdbAggregateMatrixResponse, type RouteApi, type Filter } from '#types'
+import { type RoutePayload, type TermdbAggregateMatrixRequest, type TermdbAggregateMatrixResponse, type RouteApi, type Filter, PSEUDOBULK, GENE_EXPRESSION } from '#types'
 import { validGenomeDs } from '#routes/common.ts'
 import { getAggMatrixData, type AggregateMatrixDataRequest } from './getAggMatrixData.ts'
 import { isNonDictionaryType } from '#shared/terms.js'
@@ -73,7 +73,11 @@ function init({ genomes }) {
             if (!ds) throw new Error('invalid dataset name')
 			// Methods are capabilities of the column terms that provide the aggregate values.
 			const terms = Object.values(q.columns).flat().map((tw: any) => tw.term)
-			const availableMethods = ds.getAvailableAggregateMethods?.(terms) || []
+            /** There's no term type for the genes themselves. Using geneExpression until non-terms are implemented. */
+            const pseudobulkCount = terms.filter((term: any) => (term.type == PSEUDOBULK || term.type == GENE_EXPRESSION)).length
+ 			const mixesPseudobulk = pseudobulkCount > 0 && pseudobulkCount < terms.length
+ 			// If there is a mix of pseudobulk and non-pseudobulk terms, no methods are available.
+            const availableMethods = mixesPseudobulk ? [] : ds.getAvailableAggregateMethods?.(terms) || []
 			if (q.getAvailableMethods) {
 				res.send({ availableMethods } satisfies TermdbAggregateMatrixResponse)
 				return
