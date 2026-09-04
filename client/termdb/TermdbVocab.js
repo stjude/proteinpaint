@@ -1482,17 +1482,19 @@ export class TermdbVocab extends Vocab {
 			filter: opts.filter,
 			filter0: opts.filter0
 		}
-		const formatTw = async term => {
-			if (isSingleCellTerm(term)) return { term, q: {} }
+		const formatTw = async item => {
+			const term = item.term || item
+			const q = item.term ? item.q || {} : {}
+			if (isSingleCellTerm(term)) return { term, q }
 			if (isNumericTerm(term) && isDictionaryType(term.type)) {
 				const fullTerm = term.bins?.default ? term : await this.getterm(term.id)
 				if (!fullTerm.bins?.default) throw new Error(`No default bins configured for numeric term '${term.id}'`)
 				return this.getTwMinCopy({
 					term: fullTerm,
-					q: { ...fullTerm.bins.default, mode: 'discrete' }
+					q: { ...fullTerm.bins.default, ...q, mode: 'discrete' }
 				})
 			}
-			return this.getTwMinCopy({ term, q: {} })
+			return this.getTwMinCopy({ term, q })
 		}
 		await Promise.all(
 			Object.keys(body.rows).map(async section => {

@@ -201,7 +201,7 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 
 	async renderSections(type: SectionType, sections: Section[]) {
 		const holder = this.dom.sectionHolders[type]
-		for (const [key, _] of this.sectionViews) {
+		for (const key of this.sectionViews.keys()) {
 			const idx = Number(key.slice(type.length + 1))
 			if (key.startsWith(`${type}:`) && idx >= sections.length) {
 				this.destroySectionView(type, idx)
