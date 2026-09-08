@@ -146,7 +146,7 @@ tape('validate: throws error for non-object term', function (test) {
 	)
 	test.throws(
 		() => SingleCellNumericValueBase.validate({} as any),
-		/missing term.sample/,
+		/incorrect term\.type='undefined'.*singleCellNumericValue/,
 		'throws error for object without sample'
 	)
 	test.end()

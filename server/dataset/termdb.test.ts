@@ -462,6 +462,11 @@ export default function (): Mds3 {
 								{
 									index: 3,
 									name: 'Cell Type'
+								},
+								{
+									index: 4,
+									name: 'Cell Cycle Score',
+									type: 'numeric'
 								}
 							],
 							coordsColumns: { x: 1, y: 2 },
