@@ -16,6 +16,9 @@ export class SingleCellNumericValueBase {
     static validate(term: RawSingleCellNumValueTerm) {
         if (!term || typeof term !== 'object') throw new Error('term is not an object')
         if (term.type != termType) throw new Error(`incorrect term.type='${term?.type}', expecting '${termType}'`)
+        if (!term?.sample) throw new Error('missing term.sample')
+        //It's entirely possible the plot is not known. 
+        // if (!term?.plot) throw new Error('missing term.plot')
     }
 
     constructor(term: RawSingleCellNumValueTerm | SingleCellNumericValueTerm, /*opts: TwOpts*/) {
