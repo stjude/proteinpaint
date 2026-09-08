@@ -1,6 +1,10 @@
 import tape from 'tape'
 import { getDsAllowedTermTypes, getLoneTermByType } from '../termdb.config.ts'
 import {
+	CATEGORICAL, 
+	FLOAT,
+	SURVIVAL,
+	TERM_COLLECTION,
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
 	METABOLITE_INTENSITY,
@@ -9,7 +13,8 @@ import {
 	DNA_METHYLATION,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
-	JUNCTION
+	JUNCTION,
+	SINGLECELL_NUMERIC_VALUE
 } from '#types'
 
 /**
@@ -285,17 +290,18 @@ tape('getDsAllowedTermTypes() - comprehensive dataset', function (test) {
 	}
 	const result = getDsAllowedTermTypes(ds)
 	const expectedTypes = [
-		'categorical',
-		'float',
-		'survival',
-		'termCollection',
+		CATEGORICAL,
+		FLOAT,
+		SURVIVAL,
+		TERM_COLLECTION,
 		GENE_EXPRESSION,
 		ISOFORM_EXPRESSION,
 		PROTEOME_ABUNDANCE,
 		DNA_METHYLATION,
 		SSGSEA,
 		SINGLECELL_CELLTYPE,
-		SINGLECELL_GENE_EXPRESSION
+		SINGLECELL_GENE_EXPRESSION,
+		SINGLECELL_NUMERIC_VALUE
 	]
 	test.equal(result.length, expectedTypes.length, 'Should have correct number of term types')
 	for (const type of expectedTypes) {
