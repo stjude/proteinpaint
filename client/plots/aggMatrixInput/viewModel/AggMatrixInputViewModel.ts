@@ -103,7 +103,7 @@ export class AggMatrixInputViewModel {
 		return Object.fromEntries(
 			sections.map(section => [
 				section.name.trim(),
-				section.terms.map(item => toTermWrapper(item, cloneTerms))
+				section.terms.map(item => cloneTerms ? structuredClone(item) : item)
 			])
 		)
 	}
@@ -115,9 +115,4 @@ export function getTerm(item: any) {
 
 export function getTermSelectionKey(term: any) {
 	return `${term.type}\0${term.assay || ''}\0${term.memberId || ''}\0${term.id || term.gene || term.name}`
-}
-
-function toTermWrapper(item: any, clone: boolean) {
-	const wrapper = item?.term ? { term: item.term, q: item.q || {} } : { term: item, q: {} }
-	return clone ? structuredClone(wrapper) : wrapper
 }

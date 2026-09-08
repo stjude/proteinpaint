@@ -186,7 +186,7 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			view.holder
 				.select('[data-testid="sjpp-agg-matrix-section-term-list"]')
 				.selectAll('div')
-				.data(section.terms || [], term => term.term?.id || term.id || term.term?.name || term.name)
+				.data(section.terms || [], item => getTermSelectionKey(getTerm(item)))
 				.join('div')
 				.attr('data-testid', 'sjpp-agg-matrix-section-term')
 				.style('margin', '5px')

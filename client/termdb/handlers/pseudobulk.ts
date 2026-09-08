@@ -194,10 +194,7 @@ export class SearchHandler {
 					.style('margin', '1px 0px')
 					.style('border-radius', '6px')
 					.text(term => term.name)
-					.on('click', async (_, term) => {
-						await this.callback(term)
-						holder.selectAll('*').remove()
-					})
+					.on('click', async (_, term) => { await this.callback(term) })
 
 				return row
 			})

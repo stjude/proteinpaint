@@ -7,6 +7,7 @@ import type {
 } from '#types'
 import { PSEUDOBULK } from '#types'
 import { isDictionaryType, isNumericTerm } from '#shared/terms.js'
+import { get_bin_label } from '#shared/termdb.bins.js'
 import { getData } from '../termdb.matrix.js'
 import { calculateAggregateMethod, calculateSampleBasedMethods } from './aggregateMethods.ts'
 
@@ -225,7 +226,7 @@ function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataRespons
 		/** If there are configured bins, use them to determine the order of keys. 
 		 * Otherwise, fall back to the key order from the reference. */
  		const configuredKeys = bins.length
- 			? bins.map(bin => String(bin.name || bin.label))
+			? bins.map(bin => String(get_bin_label(bin, source.tw.q)))
  			: Array.isArray(ref?.keyOrder)
  				? ref.keyOrder.map(String)
  				: []
