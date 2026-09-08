@@ -2,8 +2,6 @@ import type { AggMatrixInputViewState, Section } from './AMIViewModelTypes.ts'
 import { validatePlotConfig } from '#plots/aggregateMatrix/AggregateMatrix.ts'
 import { isNonDictionaryType } from '#shared/terms.js'
 
-export type { Section, SectionType } from './AMIViewModelTypes.ts'
-
 export class AggMatrixInputViewModel {
 	state: AggMatrixInputViewState = {
 		availableMethods: [],
