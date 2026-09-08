@@ -14,7 +14,6 @@ import { uiLabel } from '#shared'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import serverconfig from './serverconfig.js'
 import { filterTerms } from './termdb.server.init.ts'
-import { get_matrix } from './termdb.get_matrix.js'
 /*
 ********************** EXPORTED
 handle_request_closure
@@ -57,7 +56,6 @@ export function handle_request_closure(genomes) {
 			if (q.getLowessCurve) return await trigger_getLowessCurve(q, res)
 
 			if (q.for == 'termTypes') return res.send(await ds.getTermTypes(q))
-			if (q.for == 'matrix') return await get_matrix(q, req, res, ds, genome)
 			if (q.for == 'numericDictTermCluster') return await get_numericDictTermCluster(q, req, res, ds, genome)
 			if (q.for == 'mds3variantData') return await get_mds3variantData(q, res, ds, genome)
 			if (q.for == 'getMultivalueTWs') return res.send(tdb.q.get_multivalue_tws(q.parent_id))
