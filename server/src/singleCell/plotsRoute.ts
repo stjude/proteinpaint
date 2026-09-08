@@ -1,5 +1,4 @@
 import type {
-	Cell,
 	ColorLegendEntry,
 	Filter,
 	FormattedCell2Sample,
@@ -10,14 +9,15 @@ import type {
 	RoutePayload,
 	ValidSingleCellPlotsResponse,
 	ValidGetDataResponse,
-	ScatterSample
+	ScatterSample,
+	TermWrapper 
 } from '#types'
-import { TermdbSingleCellPlotsExample, type TermWrapper } from '#types'
+import { SINGLECELL_NUMERIC_VALUE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE, TermdbSingleCellPlotsExample } from '#types'
 import { validGenomeDs, validString, validNumber } from '#routes/common.ts'
 import { getColors, plotColor } from '#shared'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
 import { isSingleCellTerm } from '#shared/terms.js'
-import { SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#types'
+import { get_bin_label } from '#shared/termdb.bins.js'
 import { makeCanvas } from './canvasRendering.ts'
 import { getData } from '../termdb.matrix.js'
 import { getSampleCoordinatesByTerms } from '../routes/termdb.sampleScatter.js'
@@ -166,11 +166,21 @@ async function getSingleCellScatter(req, res, ds) {
 			filteredSamples,
 			tw,
 			sample,
-			ds
+			ds,
+			data
 		)
+		if (tw.term.type == SINGLECELL_NUMERIC_VALUE && !totalCellCount) {
+			throw new Error(`No numeric data for ${tw.term.name}`)
+		}
 		const colorMap = {}
 
-		if (tw.term.type == SINGLECELL_CELLTYPE) {
+		if (tw.term.type == SINGLECELL_NUMERIC_VALUE && tw.q?.mode != 'continuous') {
+			for (const bin of data.refs.byTermId[tw.$id]?.bins || []) {
+				const label = get_bin_label(bin, tw.q)
+				const count = categoryCounts.get(label)
+				if (count) colorMap[label] = { sampleCount: count, color: bin.color, key: label }
+			}
+		} else if (tw.term.type == SINGLECELL_CELLTYPE) {
 			const defaultK2c = getColors(categoryCounts.size)
 			const dsTerm = ds.queries.singleCell?.terms
 				? ds.queries.singleCell.terms.find(t => t.name == tw.term.name)
@@ -247,12 +257,12 @@ function getSingleCellDataArgs(q, name, sample) {
 	if (!arg.terms.length) throw new Error('At least one term must be provided for single cell scatter plot')
 
 	const tw: any = arg.terms[0]
-	if (tw.term.type == SINGLECELL_CELLTYPE) arg.colorBy = tw.term.name
+	if (tw.term.type == SINGLECELL_CELLTYPE || tw.term.type == SINGLECELL_NUMERIC_VALUE) arg.colorBy = tw.term.name
 
 	return { arg, tw, genes }
 }
 
-function processSamples(coords: any, colorData: { plots: Plot[] }, filteredSamples: Set<string>, tw, sample, ds) {
+export function processSamples(coords: any, colorData: { plots: Plot[] }, filteredSamples: Set<string>, tw, sample, ds, data: ValidGetDataResponse) {
 	const samples: FormattedCell2Sample[] = []
 	const categoryCounts = new Map<string, number>()
 	let xMin = Infinity,
@@ -296,7 +306,7 @@ function processSamples(coords: any, colorData: { plots: Plot[] }, filteredSampl
 		}
 	} else if (!coords?.length && colorData.plots?.length) {
 		const plot = colorData.plots[0]
-		const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]
+		const isNumericValue = tw.term.type == SINGLECELL_NUMERIC_VALUE
 
 		const groups = tw.q?.customset?.groups
 		const cat2GrpName = new Map<any, string>()
@@ -308,42 +318,59 @@ function processSamples(coords: any, colorData: { plots: Plot[] }, filteredSampl
 			}
 		}
 
-		for (const cell of cells) {
-			if (filteredSamples.size > 0) {
-				const metaIdMap = ds.queries?.singleCell?.data?.metaIdMap?.get?.(sample!.sID)
-				const sampleName = metaIdMap?.get?.(cell.cellId)
-				if (sampleName && !filteredSamples.has(sampleName)) continue
+		// Iterate the two arrays without copying every cell reference.
+		for (const cells of [plot.expCells, plot.noExpCells]) {
+			for (const cell of cells) {
+				if (filteredSamples.size > 0) {
+					const metaIdMap = ds.queries?.singleCell?.data?.metaIdMap?.get?.(sample!.sID)
+					const sampleName = metaIdMap?.get?.(cell.cellId)
+					if (sampleName && !filteredSamples.has(sampleName)) continue
+				}
+
+				/** Since getData() from termdb.matrix is not called again for single cell scatter,
+				 * the groups formatting logic for category (i.e. value) is recreated here. */
+				let category = cell.category
+				let numericValue: number | undefined
+				if (isNumericValue) {
+					// Reuse the matrix's validation, filtering and bins for the selected column.
+					const annotation = data.samples[cell.cellId]?.[tw.$id]
+					if (!annotation || !Number.isFinite(annotation.value)) continue
+					numericValue = annotation.value
+					category = String(annotation.key)
+				}
+				const groupName = cat2GrpName.get(category)
+				if (groupName !== undefined) category = groupName
+
+				const isHidden = tw?.q?.hiddenValues ? category in tw.q.hiddenValues : false
+				totalCellCount++
+				if (!isNumericValue || tw.q?.mode != 'continuous') {
+					categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1)
+				}
+				if (numericValue !== undefined) {
+					if (numericValue < geMin) geMin = numericValue
+					if (numericValue > geMax) geMax = numericValue
+				}
+
+				if (cell.x < xMin) xMin = cell.x
+				if (cell.x > xMax) xMax = cell.x
+				if (cell.y < yMin) yMin = cell.y
+				if (cell.y > yMax) yMax = cell.y
+				if (Number.isFinite(cell.geneExp!) && cell.geneExp! < geMin) geMin = cell.geneExp!
+				if (Number.isFinite(cell.geneExp!) && cell.geneExp! > geMax) geMax = cell.geneExp!
+
+				if (isHidden) continue
+
+				samples.push({
+					sampleId: cell.cellId,
+					x: cell.x,
+					y: cell.y,
+					z: 0,
+					category,
+					shape: 'Ref',
+					hidden: { category: false },
+					geneExp: cell.geneExp
+				})
 			}
-
-			/** Since getData() from termdb.matrix is not called again for single cell scatter,
-			 * the groups formatting logic for category (i.e. value) is recreated here. */
-			let category = cell.category
-			const groupName = cat2GrpName.get(category)
-			if (groupName !== undefined) category = groupName
-
-			const isHidden = tw?.q?.hiddenValues ? category in tw.q.hiddenValues : false
-			totalCellCount++
-			categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1)
-
-			if (cell.x < xMin) xMin = cell.x
-			if (cell.x > xMax) xMax = cell.x
-			if (cell.y < yMin) yMin = cell.y
-			if (cell.y > yMax) yMax = cell.y
-			if (Number.isFinite(cell.geneExp!) && cell.geneExp! < geMin) geMin = cell.geneExp!
-			if (Number.isFinite(cell.geneExp!) && cell.geneExp! > geMax) geMax = cell.geneExp!
-
-			if (isHidden) continue
-
-			samples.push({
-				sampleId: cell.cellId,
-				x: cell.x,
-				y: cell.y,
-				z: 0,
-				category,
-				shape: 'Ref',
-				hidden: { category: false },
-				geneExp: cell.geneExp
-			})
 		}
 	}
 

@@ -5,7 +5,7 @@ import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
 import { refColor } from '#routes/termdb.sampleScatter.js'
-import { SINGLECELL_GENE_EXPRESSION } from '#types'
+import { SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE } from '#types'
 
 export async function makeCanvas(
 	q /*:TermdbSingleCellPlotsRequest*/,
@@ -40,6 +40,9 @@ export async function makeCanvas(
 	const getCategoryColor = (sample: FormattedCell2Sample) => colorMap[sample.category]?.color || refColor
 	const color = (sample: FormattedCell2Sample) => {
 		if (q?.coordTWs?.length > 0) return getCategoryColor(sample)
+		if (termType == SINGLECELL_NUMERIC_VALUE && q.colorTW?.q.mode == 'continuous') {
+			return colorGenerator ? colorGenerator(Number(sample.category)) : settings.startColor
+		}
 		if (termType == SINGLECELL_GENE_EXPRESSION) {
 			if (!Number.isFinite(sample.geneExp)) return settings.startColor
 			if (sample.geneExp! > range.geMax!) return settings.stopColor

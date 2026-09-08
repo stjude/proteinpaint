@@ -58,9 +58,10 @@ export async function getSingleCellCellValues(q: any, tw: any, ds: any): Promise
 	const isNumeric = scNumericTypes.has(tw.term.type)
 	for (const cell of data.plots[0].noExpCells) {
 		// the getter returns every plot column as a string, under cell.category
+		if (isNumeric && (cell.category == null || String(cell.category).trim() === '')) continue
 		const value = isNumeric ? Number(cell.category) : cell.category
 		if (isNumeric && !Number.isFinite(value)) continue
-		cells.push({ ...cell, value })
+		cells.push({ cellId: cell.cellId, sampleId: cell.sampleId, value })
 	}
 	return cells
 }
