@@ -60,6 +60,7 @@ export const routeFiles = [
 	import('./routes/termdb.filterTermValues.ts'),
 	import('./routes/termdb.isoformAvailability.ts'),
 	import('./routes/termdb.geneRanking.ts'),
+	import('./routes/termdb.matrix.ts'),
 	import('./routes/termdb.numericcategories.ts'),
 	import('./routes/termdb.percentile.ts'),
 	import('./routes/termdb.profileFormScores.ts'),

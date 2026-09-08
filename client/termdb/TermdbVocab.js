@@ -823,7 +823,6 @@ export class TermdbVocab extends Vocab {
 				headers,
 				credentials: 'include',
 				body: {
-					for: 'matrix',
 					genome: this.vocab.genome,
 					dslabel: this.vocab.dslabel,
 					// one request per term
@@ -848,7 +847,7 @@ export class TermdbVocab extends Vocab {
 			}
 
 			promises.push(
-				this.dofetch3('termdb', init)
+				this.dofetch3('termdb/matrix', init)
 					.then(data => {
 						if (data.error) throw data.error
 						if (data.warning) warnings.push(data.warning.message)
@@ -1266,9 +1265,8 @@ export class TermdbVocab extends Vocab {
 
 	async getMatrixByName(name) {
 		// find a pre-built matrix by name from this dataset
-		return await this.dofetch3('termdb', {
+		return await this.dofetch3('termdb/matrix', {
 			body: {
-				for: 'matrix',
 				getPlotDataByName: name,
 				genome: this.state.vocab.genome,
 				dslabel: this.state.vocab.dslabel

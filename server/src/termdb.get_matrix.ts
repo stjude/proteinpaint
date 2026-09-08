@@ -5,9 +5,10 @@ import { Readable, pipeline } from 'stream'
 import zlib from 'zlib'
 import { mclass } from '#shared/common.js'
 import { getGvQueryKey, internGvQueryEntry } from '#shared/terms.js'
+import type { TermdbMatrixRequest, GetDataResponse } from '#types'
 
 // based on a 64-bit hard constraint in V8 for string processing
-const maxStrLength = 5.12e8 - 1e5 // subtract 100KB for error message, etc
+// const maxStrLength = 5.12e8 - 1e5 // subtract 100KB for error message, etc
 
 const { Blank, WT } = mclass
 
@@ -54,11 +55,11 @@ const $copyAs = Object.freeze(Object.entries($codes.copyAs).map(c => Object.free
 //   }
 // }
 // not hardcoding, but basing off refs.$codes.objAssign entry to guarantee correct mapping
-const $objAssign = {}
+const $objAssign: { [cls: string]: { [origin: string]: number } } = {}
 for (const [code, m] of Object.entries($codes.objAssign)) {
 	Object.freeze(m)
 	if (!$objAssign[m.class]) $objAssign[m.class] = {}
-	$objAssign[m.class][m.origin || ''] = parseInt(code)
+	$objAssign[m.class][(m as any).origin || ''] = parseInt(code)
 }
 Object.freeze($objAssign)
 
@@ -73,7 +74,7 @@ an entry, so a term whose values have none never grows an empty array.
 refs is pushed to the stream only after every sample has been walked, so filling queries[]
 as values are visited is safe.
 */
-function internQueryEntry(ref, queryIdxByTerm, termId, v) {
+function internQueryEntry(ref: any, queryIdxByTerm: Map<string, any>, termId: string, v: any) {
 	if (!getGvQueryKey(v)) return
 	let ctx = queryIdxByTerm.get(termId)
 	if (!ctx) {
@@ -84,11 +85,11 @@ function internQueryEntry(ref, queryIdxByTerm, termId, v) {
 	internGvQueryEntry(v, ctx.queries, ctx.idxByKey)
 }
 
-export async function get_matrix(q, req, res, ds, genome) {
+export async function get_matrix(q: TermdbMatrixRequest, req: any, res: any, ds: any, _genome: any) {
 	if (q.getPlotDataByName) {
 		// send back the config for premade matrix plot
 		if (!ds.cohort?.matrixplots?.plots) throw 'ds.cohort.matrixplots.plots missing for the dataset'
-		const plot = ds.cohort.matrixplots.plots.find(p => p.name === q.getPlotDataByName)
+		const plot = ds.cohort.matrixplots.plots.find((p: any) => p.name === q.getPlotDataByName)
 		if (!plot) throw 'invalid name of premade matrix plot' // invalid name could be attack string, avoid returning it so it won't be printed in html
 		res.send(plot.matrixConfig)
 		return
@@ -99,17 +100,21 @@ export async function get_matrix(q, req, res, ds, genome) {
 			? ds.cohort.termdb.disableAssayAvailability(req.path, q)
 			: false
 
-	const data = await getData(q, ds)
-	if (data.error) {
-		if (String(data.error).includes('operation was aborted')) console.log(`(!) abort error`)
-		else console.trace(data)
-		res.send({ error: data.error })
+	const rawData = (await getData(q, ds)) as GetDataResponse
+	if ('error' in rawData) {
+		if (String(rawData.error).includes('operation was aborted')) console.log(`(!) abort error`)
+		else console.trace(rawData)
+		res.send({ error: rawData.error })
 		return
 	}
+	// The response payload is dynamically shaped by term type (categorical/numeric/geneVariant),
+	// which ValidGetDataResponse only partially models -- see TermdbMatrixResponse in #types,
+	// whose samples/refs are declared as Record<string, any> for the same reason.
+	const data = rawData as any
 	data.refs.$codes = $codes
 	if (!data.refs.byTermId) data.refs.byTermId = {}
 
-	const payload = {
+	const payload: { samples: any; refs: any; error?: { code: string; message: string; jsonStrlen: number } } = {
 		samples: [],
 		refs: {
 			byTermId: [],
@@ -118,8 +123,8 @@ export async function get_matrix(q, req, res, ds, genome) {
 	}
 
 	const sampleEntries = Object.entries(data.samples || {})
-	const unsentSampleIds = new Set()
-	const lastSampleId = sampleEntries.slice(-1)?.[0]?.[0] || -1
+	const unsentSampleIds = new Set<string>()
+	const lastSampleId = (sampleEntries.slice(-1)?.[0]?.[0] as string) || -1
 	//debugLog('lastSampleId=', lastSampleId)
 
 	let hasStarted = false
@@ -134,7 +139,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 				this.push(JSON.stringify([['samples', id], data.samples[id]]) + '\n')
 				delete data.samples[id]
 			}
-			if (unsentSampleIds.has(lastSampleId) || sampleIndex >= sampleEntries.length) {
+			if (unsentSampleIds.has(lastSampleId as string) || sampleIndex >= sampleEntries.length) {
 				this.push(JSON.stringify([['refs'], data.refs]) + '\n')
 				// uncomment below to test warning message if rendered by client-side plot code
 				// this.push(JSON.stringify([['warning'], {message: '!!! TEST !!!'}]) + '\n')
@@ -149,16 +154,16 @@ export async function get_matrix(q, req, res, ds, genome) {
 	res.status(200)
 
 	// termId -> { queries[], idxByKey } shared with refs.byTermId[termId].queries
-	const queryIdxByTerm = new Map()
+	const queryIdxByTerm = new Map<string, any>()
 
-	let jsonStrlen = 0,
+	const jsonStrlen = 0,
 		currShortId = 1,
 		sampleIndex = 1
 
 	if (authApi.canDisplaySampleIds(req, ds) && sampleEntries.length) {
 		const { byTermId, bySampleId } = data.refs
 
-		for (const [sampleId, sample] of sampleEntries) {
+		for (const [sampleId, sample] of sampleEntries as [string, any][]) {
 			if (!bySampleId[sampleId]) bySampleId[sampleId] = {}
 			const s = bySampleId[sampleId]
 			if (!s.sample) s.sample = sample.sample
@@ -166,7 +171,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 			delete sample.sample
 			delete sample.sampleName
 
-			for (const [termId, d] of Object.entries(sample)) {
+			for (const [termId, d] of Object.entries(sample) as [string, any][]) {
 				if (!byTermId[termId]?.shortId) {
 					if (!byTermId[termId]) byTermId[termId] = {}
 					byTermId[termId].shortId = currShortId++
@@ -180,8 +185,8 @@ export async function get_matrix(q, req, res, ds, genome) {
 				delete d._SAMPLEID_ // not needed in client code
 				if (d.key) {
 					for (const c of $copyAs) {
-						if (d.key !== d[c[1]]) continue
-						delete d[c[1]] // can be copied as data[refs.$codes.copyAs[d.$]] = d.key
+						if (d.key !== d[c[1] as string]) continue
+						delete d[c[1] as string] // can be copied as data[refs.$codes.copyAs[d.$]] = d.key
 						d.$ = c[0]
 						break // can only encode one property at a time, for example:
 						// if d.key == d.value and d.key == d.label,
@@ -190,7 +195,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 					}
 				}
 
-				const { shortId, gene } = byTermId[termId]
+				const { shortId } = byTermId[termId]
 				// termId can be very long and repeated across all samples,
 				// use the shortId to lessen memory use
 				sample[shortId] = sample[termId]
@@ -221,7 +226,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 
 	try {
 		debugLog('get_matrix() jsonStrlen=', jsonStrlen)
-		pipeline(jsonStream, zlib.createGzip(), res, err => {
+		pipeline(jsonStream, zlib.createGzip(), res, (err: NodeJS.ErrnoException | null) => {
 			if (err) {
 				console.error('Pipeline failed.', err)
 				// If headers haven't been sent, we can send a 500 error
@@ -230,7 +235,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 				if (!res.headersSent) res.end()
 			}
 		})
-	} catch (e) {
+	} catch (e: any) {
 		console.log(e)
 		if (e instanceof RangeError && e.message.includes('Invalid string length')) {
 			// create a more informative error message for end user
@@ -247,12 +252,12 @@ export async function get_matrix(q, req, res, ds, genome) {
 	}
 }
 
-function getRangeErrorMessage(totalSamples, sampleIndex) {
+function getRangeErrorMessage(totalSamples: number, sampleIndex: number) {
 	let message = `Response data too large - please narrow the cohort or limit the number of variables and/or genes.`
 	message += `(Unable to encode data for ${totalSamples - sampleIndex} of ${totalSamples} cases/samples.)`
 	return message
 }
 
-function debugLog() {
-	if (serverconfig.debugmode) console.log(...arguments)
+function debugLog(...args: any[]) {
+	if (serverconfig.debugmode) console.log(...args)
 }
