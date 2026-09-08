@@ -376,7 +376,12 @@ async function getSampleData(q, ds) {
 
 	// determine the sample type
 	let sampleType
-	if (q.sampleTypes) {
+	const sampleTypeLabel = q.terms?.map(tw => tw.term?.sampleTypeLabel).find(label => label)
+	if (sampleTypeLabel) {
+		// term carries client-computed sampleTypeLabel (e.g. built from the
+		// 'Any' vs specific value selections in the sample type dropdowns)
+		sampleType = { name: sampleTypeLabel, plural_name: sampleTypeLabel }
+	} else if (q.sampleTypes) {
 		// query sample types defined
 		const names = []
 		const plural_names = []
@@ -386,10 +391,8 @@ async function getSampleData(q, ds) {
 			plural_names.push(config.plural_name)
 		}
 		sampleType = {
-			name: getSampleTypeLabelByTerms(q.sampleTypes, q.ds.cohort.termdb.sampleTypesByTerms, false) || names.join(' / '),
-			plural_name:
-				getSampleTypeLabelByTerms(q.sampleTypes, q.ds.cohort.termdb.sampleTypesByTerms, true) ||
-				plural_names.join(' / ')
+			name: names.join(' / '),
+			plural_name: plural_names.join(' / ')
 		}
 	} else if (processedSingleCellTerm === true) {
 		// work around for single cell cases
@@ -1433,27 +1436,4 @@ function checkAccessToSampleData(data, ds, q) {
 			code: 'ERR_MIN_SIZE'
 		}
 	}
-}
-
-function getSampleTypeLabelByTerms(sampleTypes, sampleTypesByTerms, isPlural) {
-	if (!sampleTypesByTerms) return
-	const parts = []
-	for (const value2sampleTypes of Object.values(sampleTypesByTerms)) {
-		const sharedValues = Object.entries(value2sampleTypes)
-			.filter(([, types]) => sampleTypes.every(type => types.includes(type)))
-			.map(([value]) => value)
-		if (!sharedValues.length) {
-			// term does not share any values among query sample types
-		} else if (sharedValues.length == 1) {
-			// term shares a value among query sample types
-			// include the value in the label
-			parts.push(sharedValues[0])
-		} else {
-			// term shares multiple values among query sample types
-			// should not happen
-			throw 'term shares >1 value among query sample types'
-		}
-	}
-	if (!parts.length) return
-	return `${parts.join(' ')} ${isPlural ? 'samples' : 'sample'}`
 }
