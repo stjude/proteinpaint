@@ -100,6 +100,7 @@ tape('spatial OME-TIFF image renders the map with overlays and the burger menu',
 			// the hover tooltip element is armed (hidden until a cell is hovered)
 			const tooltips = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-tooltip"]')
 			test.equal(tooltips.length, 1, 'hover tooltip is armed')
+			if (test['_ok']) wsi.Inner.app.destroy()
 		} catch (e) {
 			test.fail(`spatial viewer test error: ${e}`) // never leave tape hanging
 		}
@@ -123,7 +124,7 @@ tape('plain SVS image renders the map without the spatial machinery', test => {
 			callbacks: {
 				'postRender.test': runTests
 			}
-		}
+		} 
 	})
 
 	async function runTests(wsi) {
@@ -139,6 +140,7 @@ tape('plain SVS image renders the map without the spatial machinery', test => {
 			test.equal(dom.controls.style('display'), 'none', 'burger menu is hidden')
 			test.equal(dom.viewer.selectAll('div[data-testid="sjpp-wsi-typelegend"]').size(), 0, 'no cell-type legend')
 			test.equal(dom.viewer.selectAll('div[data-testid="sjpp-wsi-tooltip"]').size(), 0, 'no hover tooltip')
+			if (test['_ok']) wsi.Inner.app.destroy()
 		} catch (e) {
 			test.fail(`svs viewer test error: ${e}`) // never leave tape hanging
 		}
