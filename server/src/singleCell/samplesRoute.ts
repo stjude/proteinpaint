@@ -172,7 +172,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 			}
 			/** Meta analysis results may not be separated into folders like the sample files
 			 * for other plots. Check the file exists with the appropriate "sample name". This
-			 * method ensure the file can be queried as intended later.
+			 * method ensures the file can be queried later.
 			 *
 			 * Note: meta analysis results are treated as sample because the data structure and
 			 * getters are the same. The results or the sID used for querying will not appear
