@@ -59,6 +59,7 @@ export class SearchHandler {
 		const term = { gene, name, type: TermTypes.GENE_EXPRESSION, sampleTypes }
 		if (this.querySampleTypesByTerms) {
 			term.sampleTypeLabel = getSampleTypeLabelByTerms(this.sampleTypeSelect)
+			if (term.sampleTypeLabel) term.name += ` (${term.sampleTypeLabel})`
 		}
 		this.callback(term)
 	}
