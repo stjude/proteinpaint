@@ -158,13 +158,17 @@ export class SearchHandler {
 		this.querySampleTypesByTerms = this.getQuerySampleTypesByTerms()
 		if (this.querySampleTypesByTerms) {
 			// query sample types by terms defined
-			this.sampleTypeSelect = renderSampleTypesByTermsSelect(td2, this.querySampleTypesByTerms)
+			this.sampleTypeSelect = renderSampleTypesByTermsSelect(
+				td2,
+				this.querySampleTypesByTerms,
+				this.opts.app.vocabApi.termdbConfig
+			)
 		} else {
 			this.sampleTypeSelect = renderSampleTypeSelect(td2, this.querySampleTypes, this.opts.app.vocabApi.termdbConfig)
 		}
 		if (this.sampleTypeSelect) {
 			td1.style('display', null).text('Sample Type')
-			td2.style('display', null)
+			td2.style('display', null).style('padding-left', '10px')
 		} else {
 			td1.style('display', 'none')
 			td2.style('display', 'none')

@@ -42,8 +42,10 @@ export function getSelectedSampleTypes(sampleTypeSelect?: any[]) {
 
 // renders a dropdown menu for each term in sampleTypesByTerms, with the term's
 // values as options
-export function renderSampleTypesByTermsSelect(holder: any, sampleTypesByTerms: any) {
+export function renderSampleTypesByTermsSelect(holder: any, sampleTypesByTerms: any, termdbConfig: any) {
 	holder.selectAll('*').remove()
+
+	if (!sampleTypesByTerms || !Object.keys(sampleTypesByTerms).length) return
 
 	const sampleTypesByTermsDiv = holder
 		.append('div')
@@ -59,8 +61,8 @@ export function renderSampleTypesByTermsSelect(holder: any, sampleTypesByTerms: 
 			.style('display', 'flex')
 			.style('align-items', 'center')
 			.style('margin-bottom', '4px')
-		label.append('span').style('margin-right', '4px').text(term)
-		const select = label.append('select')
+		label.append('span').style('margin-right', '10px').text(termdbConfig.sampleTypeTerms[term].name)
+		const select = label.append('select').style('padding-right', '15px')
 		select.append('option').attr('value', 'any').text('Any')
 		for (const value of values) {
 			select.append('option').attr('value', value).text(value)
