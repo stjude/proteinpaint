@@ -7,7 +7,8 @@ import {
 	renderSampleTypeSelect,
 	renderSampleTypesByTermsSelect,
 	getSelectedSampleTypes,
-	getSelectedSampleTypesByTerms
+	getSelectedSampleTypesByTerms,
+	getSampleTypeLabelByTerms
 } from '#dom'
 import type { VocabApi, DtAssayAvailabilityTerm } from '#types'
 import { dtTerms, dtcnv, dtsnvindel } from '#shared/common.js'
@@ -413,6 +414,9 @@ export class SearchHandler {
 				geneSetEditUI.api.dom.submitBtn.property('disabled', false).text('Submit')
 			}
 			return false
+		}
+		if (this.querySampleTypesByTerms) {
+			this.term.sampleTypeLabel = getSampleTypeLabelByTerms(this.sampleTypeSelect)
 		}
 		return true
 	}

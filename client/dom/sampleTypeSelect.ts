@@ -71,13 +71,22 @@ export function renderSampleTypesByTermsSelect(holder: any, sampleTypesByTerms: 
 	return termSelects
 }
 
-// returns the intersection of sample types associated with the selected
-// term values from dropdowns created by renderSampleTypesByTermsSelect()
-export function getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms) {
+// builds the selected term-value map from dropdowns created by
+// renderSampleTypesByTermsSelect()
+function getSelectedTermValues(termSelects) {
+	if (!termSelects) return
 	const selected = {}
 	for (const term in termSelects) {
 		selected[term] = termSelects[term].property('value')
 	}
+	return selected
+}
+
+// returns the intersection of sample types associated with the selected
+// term values from dropdowns created by renderSampleTypesByTermsSelect()
+export function getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms) {
+	if (!termSelects) return
+	const selected = getSelectedTermValues(termSelects)
 	const selectedSampleTypesByTerms = Object.entries(selected).map(([term, value]) => {
 		if (value == 'any') return Object.values(sampleTypesByTerms[term]).flat()
 		return sampleTypesByTerms[term][value]
@@ -87,4 +96,18 @@ export function getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms) {
 		intersection.filter(sampleType => sampleTypes.includes(sampleType))
 	)
 	return selectedSampleTypes
+}
+
+// builds a sample type label based on the selected term values from dropdowns
+// created by renderSampleTypesByTermsSelect(). Terms for which the 'Any' option
+// was selected do not contribute to the label, since that selection is not
+// restrictive/informative. If every term used 'Any' (or there are no terms),
+// the generic 'samples' label is returned instead.
+export function getSampleTypeLabelByTerms(termSelects) {
+	if (!termSelects) return
+	const selected = getSelectedTermValues(termSelects)
+	const parts = Object.values(selected).filter(value => value != 'any')
+	const suffix = 'samples'
+	if (!parts.length) return suffix
+	return `${parts.join(' ')} ${suffix}`
 }

@@ -5,6 +5,7 @@ import {
 	renderSampleTypesByTermsSelect,
 	getSelectedSampleTypes,
 	getSelectedSampleTypesByTerms,
+	getSampleTypeLabelByTerms,
 	table2col
 } from '#dom'
 import { TermTypes } from '#types'
@@ -56,6 +57,9 @@ export class SearchHandler {
 		const unit = getGEunit(this.app.vocabApi)
 		const name = `${gene} ${unit}`
 		const term = { gene, name, type: TermTypes.GENE_EXPRESSION, sampleTypes }
+		if (this.querySampleTypesByTerms) {
+			term.sampleTypeLabel = getSampleTypeLabelByTerms(this.sampleTypeSelect)
+		}
 		this.callback(term)
 	}
 }
