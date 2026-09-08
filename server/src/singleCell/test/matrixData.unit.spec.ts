@@ -82,27 +82,29 @@ tape('single cell annotation preserves existing rows and continuous values', asy
 	test.end()
 })
 
-tape('single cell numeric custom bins include boundaries and leave request bins unchanged', async test => {
-	for (const type of [SINGLECELL_NUMERIC_VALUE, SINGLECELL_GENE_EXPRESSION]) {
-		const tw = wrapper(type)
-		tw.q = { mode: 'discrete', type: 'custom-bin', lst: [
-			{ startunbounded: true, stop: 0, stopinclusive: false, label: 'negative', color: '#123456' },
-			{ start: 0, startinclusive: true, stopunbounded: true, label: 'nonnegative' }
-		] }
-		const before = structuredClone(tw.q)
-		const ds = plotDataset([{ cellId: 'a', category: '-1' }, { cellId: 'b', category: '0' }, { cellId: 'c', category: '2' }])
-		ds.queries.singleCell.geneExpression = { get: async () => ({ a: -1, b: 0, c: 2 }) }
-		const samples: any = {}, refs: any = {}
-		await annotateSingleCellTerm({ ds }, tw, samples, refs)
-		test.deepEqual([samples.a.term, samples.b.term, samples.c.term], [
-			{ value: -1, key: 'negative' }, { value: 0, key: 'nonnegative' }, { value: 2, key: 'nonnegative' }
-		], `${type}: bins change keys but preserve measurements`)
-		test.ok(refs.term.bins[0].color, 'assigns a palette color to the first bin')
-		test.ok(refs.term.bins[1].color, 'assigns missing bin color')
-		test.deepEqual(tw.q, before, 'does not mutate custom bin configuration')
-	}
-	test.end()
-})
+for (const mode of ['discrete', 'binary']) {
+	tape(`single cell numeric ${mode} bins include boundaries and leave request bins unchanged`, async test => {
+		for (const type of [SINGLECELL_NUMERIC_VALUE, SINGLECELL_GENE_EXPRESSION]) {
+			const tw = wrapper(type)
+			tw.q = { mode, type: 'custom-bin', lst: [
+				{ startunbounded: true, stop: 0, stopinclusive: false, label: 'negative', color: '#123456' },
+				{ start: 0, startinclusive: true, stopunbounded: true, label: 'nonnegative' }
+			] }
+			const before = structuredClone(tw.q)
+			const ds = plotDataset([{ cellId: 'a', category: '-1' }, { cellId: 'b', category: '0' }, { cellId: 'c', category: '2' }])
+			ds.queries.singleCell.geneExpression = { get: async () => ({ a: -1, b: 0, c: 2 }) }
+			const samples: any = {}, refs: any = {}
+			await annotateSingleCellTerm({ ds }, tw, samples, refs)
+			test.deepEqual([samples.a.term, samples.b.term, samples.c.term], [
+				{ value: -1, key: 'negative' }, { value: 0, key: 'nonnegative' }, { value: 2, key: 'nonnegative' }
+			], `${type}: bins change keys but preserve measurements`)
+			test.ok(refs.term.bins[0].color, 'assigns a palette color to the first bin')
+			test.ok(refs.term.bins[1].color, 'assigns missing bin color')
+			test.deepEqual(tw.q, before, 'does not mutate custom bin configuration')
+		}
+		test.end()
+	})
+}
 
 tape('single cell regular bins use term bounds and reject missing custom bins', async test => {
 	const tw = wrapper()

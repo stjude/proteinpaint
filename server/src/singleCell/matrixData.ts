@@ -78,7 +78,10 @@ export async function annotateSingleCellTerm(q: any, tw: any, samples: any, byTe
 
 	// the two ways a cell value is converted into a key: bins for numeric terms, custom groups for
 	// cell type terms. neither applies when the term is continuous/ungrouped, and key is the value
-	const bins = scNumericTypes.has(tw.term.type) && tw.q?.mode == 'discrete' ? getListOfBins(tw) : undefined
+	const bins =
+		scNumericTypes.has(tw.term.type) && (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary')
+			? getListOfBins(tw)
+			: undefined
 	if (bins) byTermId[tw.$id] = { bins }
 	const groups = tw.term.type == SINGLECELL_CELLTYPE ? tw.q?.customset?.groups : undefined
 
@@ -107,7 +110,7 @@ export async function annotateSingleCellTerm(q: any, tw: any, samples: any, byTe
 	}
 }
 
-/** Bins of a numeric single cell term in discrete mode. Same two cases as findListOfBins() in
+/** Bins of a numeric single cell term in discrete or binary mode. Same two cases as findListOfBins() in
  * termdb.matrix.js, minus its on-the-fly bin computation: term.bins is always present here, seeded
  * by termdb.getDefaultBins.js. */
 function getListOfBins(tw: any): any[] {
