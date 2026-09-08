@@ -1,18 +1,28 @@
 import type { ErrorResponse } from './errorResponse.ts'
 import type { TermWrapper } from '../terms/tw.ts'
 
-/** This is a sanity check.  */
-export const availableAggregateMethods = [ 'mean', 'percent' ] as const
+export type AggregateMethodApplicability = 'numeric' | 'nonNumeric' | 'any'
+
+/** Serializable aggregation capability exposed in termdbConfig. */
+export type AggregateMethodOption = {
+    id: string
+    label: string
+    appliesTo: AggregateMethodApplicability
+	/** Term types whose quantities this method can aggregate. Omit when appliesTo is sufficient. */
+	termTypes?: string[]
+}
 
 export type TermdbAggregateMatrixRequest = {
     genome: string
     dslabel: string
-    rows: { [section: string]: TermWrapper[] }
+    /** Return available methods for the supplied column terms without loading matrix data. */
+    getAvailableMethods?: boolean
+    rows?: { [section: string]: TermWrapper[] }
     columns: { [member: string]: TermWrapper[] }
     /** Aggregation method to determine the color gradient. */
-    gradientMethod: (typeof availableAggregateMethods)[number]
+    gradientMethod?: string
     /** Aggregation method to determine the dot sizes. */
-    sizeMethod: (typeof availableAggregateMethods)[number]
+    sizeMethod?: string
     filter?: any
     filter0?: any
 }
@@ -75,4 +85,6 @@ export type ValidAggMatrixResponse = {
     axesLayout: AxesLayout
 }
 
-export type TermdbAggregateMatrixResponse = ValidAggMatrixResponse | ErrorResponse
+export type AggregateMatrixMethodsResponse = { availableMethods: AggregateMethodOption[] }
+
+export type TermdbAggregateMatrixResponse = ValidAggMatrixResponse | AggregateMatrixMethodsResponse | ErrorResponse
