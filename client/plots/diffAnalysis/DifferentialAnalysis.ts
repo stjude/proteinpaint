@@ -83,6 +83,16 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 		const config = structuredClone(state.config) as DiffAnalysisPlotConfig
 
 		this.plotTabs = new DiffAnalysisView(this.app, config, this.dom)
+
+		if (this.dom.header) {
+			const text = config?.headerText || (config.tw?.term?.name ?? '')
+			const typeStr = termType2label(config.termType).toUpperCase()
+			formatHeaderText({
+				header: this.dom.header,
+				chartType: `DIFFERENTIAL ${typeStr} ANALYSIS`,
+				text
+			})
+		}
 	}
 
 	async setComponent(config: DiffAnalysisPlotConfig) {
@@ -116,16 +126,6 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 		}
 		this.plotsDiv[config.childType].style('display', '')
 		this.plotsControlsDiv[config.childType].style('display', '')
-
-		if (this.dom.header) {
-			const text = config.headerText || (config.tw?.term?.name ?? '')
-			const typeStr = termType2label(config.termType).toUpperCase()
-			formatHeaderText({
-				header: this.dom.header,
-				chartType: `DIFFERENTIAL ${typeStr} ANALYSIS`,
-				text
-			})
-		}
 
 		if (this.plotTabs) this.plotTabs.update(config)
 	}
