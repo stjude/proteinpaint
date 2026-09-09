@@ -1,6 +1,6 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
 import { DownloadMenu, niceNumLabels, ListSamples, renderTable } from '#dom'
-import { SINGLECELL_GENE_EXPRESSION } from '#types'
+import { isSingleCellTerm } from '#shared'
 
 type MenuOption = {
 	label: string
@@ -30,7 +30,7 @@ export function setInteractivity(self: any) {
 
 	self.displayLabelClickMenu = function (t1: any, t2: any, plot: any, event: MouseEvent) {
 		if (!t2) return // when no term 2 do not show options on the sole violin label
-		if (self.config.term.term.type == SINGLECELL_GENE_EXPRESSION) return // is sc gene exp data, none of the options below work, thus disable
+		if (isSingleCellTerm(self.config.term.term.type)) return // is sc data, none of the options below work, thus disable
 
 		const label = t1.q.mode === 'continuous' ? 'term2' : 'term'
 		const options: MenuOption[] = []

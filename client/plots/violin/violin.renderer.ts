@@ -5,7 +5,7 @@ import { brushX, brushY } from 'd3-brush'
 import { renderTable, getMaxLabelWidth, table2col } from '#dom'
 import { rgb } from 'd3-color'
 import { format as d3format } from 'd3-format'
-import { SINGLECELL_GENE_EXPRESSION } from '#types'
+import { isSingleCellTerm } from '#shared'
 import type { TermWrapper } from '#types'
 import { getValueConversionFactor, toUserUnit } from '#shared/helpers.js'
 
@@ -149,7 +149,7 @@ export default function setViolinRenderer(self: any) {
 				y += height
 				if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings)
 
-				if (self.config.term.term.type == SINGLECELL_GENE_EXPRESSION) {
+				if (isSingleCellTerm(self.config.term.term.type)) {
 					// is sc data, disable brushing for now because 1) no use 2) avoid bug of listing cells
 				} else {
 					// enable brushing
