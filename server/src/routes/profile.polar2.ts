@@ -1,5 +1,5 @@
 import type { RouteApi, RoutePayload } from '#types'
-import { getData } from '#src/termdb.matrix.js'
+import { getData } from '#src/termdb.matrix.ts'
 
 /*
 Route for the profile polar chart. Returns the aggregated median percentage
@@ -8,7 +8,7 @@ per module across all eligible sites for the active cohort.
 - The facility term id is derived server-side by scanning term ID prefixes
   already in the request (scoreTerms or filter), so the client never needs
   cohort-specific logic and never sends facilityTW.
-- Site data is queried via getData() (server/src/termdb.matrix.js).
+- Site data is queried via getData() (server/src/termdb.matrix.ts).
 - Public role: `sites` is always [] in the response (no site IDs exposed).
 */
 

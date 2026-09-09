@@ -57,6 +57,8 @@ export class Matrix extends PlotBase {
 			settings: {
 				isExcludedAttr: 'isExcluded'
 			},
+			groupLabelAttrs: d => ({ 'data-testid': `sjpp-matrix-legend-group-${d.name}` }),
+			itemLabelAttrs: d => ({ 'data-testid': `sjpp-matrix-legend-item-${d.termid}-${d.key}` }),
 			note: 'CLICK A ROW LABEL OR ITEM TO APPLY FILTERING'
 		})
 
@@ -255,7 +257,7 @@ export class Matrix extends PlotBase {
 				yGrps: this[yGrps],
 				dimensions: d
 			})
-
+			console.log(this.legendData)
 			this.legendRenderer(this.legendData, {
 				settings: Object.assign({}, this.settings.legend, {
 					svgw: Math.max(400, d.mainw + d.xOffset - this.settings.matrix.margin.right),

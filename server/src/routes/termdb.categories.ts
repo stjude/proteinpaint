@@ -2,7 +2,7 @@ import type { RoutePayload, RouteApi } from '#types'
 import type { CategoriesRequest, CategoriesResponse } from '#types'
 import type { ReqQueryAddons } from '../../routes/types.ts'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
-import { getData } from '#src/termdb.matrix.js'
+import { getData } from '#src/termdb.matrix.ts'
 import { getSelfBreakpoint, getPartnerBreakpoints } from '#src/svfusion.breakpoint.ts'
 import { dtsv, dtfusionrna } from '#shared/common.js'
 import { getGvQueryKey } from '#shared/terms.js'
@@ -74,7 +74,7 @@ async function trigger_getcategories(
 /* opts.withMnames: tally the amino acid changes of each dt, in addition to the
 mutation classes. Off by default because getData() calls this for every
 geneVariant term of every matrix/barchart request (see mayGetCategories() in
-termdb.matrix.js), where the mname list is unused and can be large: it holds one
+termdb.matrix.ts), where the mname list is unused and can be large: it holds one
 entry per distinct dt/origin/class/gene/mname of the cohort */
 export function getCategories(data, q, ds, $id, opts: { withMnames?: boolean } = {}) {
 	const lst: any[] = []

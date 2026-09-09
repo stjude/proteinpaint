@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import type { BrainSample, BrainImagingSamplesRequest, BrainImagingSamplesResponse } from '#types'
-import { getData } from '#src/termdb.matrix.js'
+import { getData } from '#src/termdb.matrix.ts'
 import { filterSampleNamesByAccess } from '#src/termdb.sql.js'
 
 export function init({ genomes }) {

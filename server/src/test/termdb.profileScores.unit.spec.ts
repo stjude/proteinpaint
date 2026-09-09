@@ -41,7 +41,7 @@ const mockFacilityTW = {
 }
 
 // Keyed by the facility site value — matches the shape returned by
-// getData() (server/src/termdb.matrix.js), which the single-site branch
+// getData() (server/src/termdb.matrix.ts), which the single-site branch
 // of pickSampleAndSite() looks up via samplesByValue[sites[0].value].
 const mockSamplesByValue = {
 	site_a: { [mockFacilityTwId]: { value: 'site_a' } },

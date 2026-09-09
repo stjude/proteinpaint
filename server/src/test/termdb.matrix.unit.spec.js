@@ -6,7 +6,7 @@ import {
 	setSampleLstData,
 	isNegatedSampleLstOnlyRequest,
 	hasFilterTermsUnsupportedByFilterSamples
-} from '../termdb.matrix.js'
+} from '../termdb.matrix.ts'
 import { getAuthApi, authApi } from '../auth.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'

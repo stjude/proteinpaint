@@ -1,4 +1,4 @@
-import { getData } from '#src/termdb.matrix.js'
+import { getData } from '#src/termdb.matrix.ts'
 import { getTwByIndex, getTwBins } from '#src/termdb.twFromRequest.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { TermTypes } from '#types'

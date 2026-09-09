@@ -9,9 +9,9 @@ import { termCollectionCategorical, termCollectionNumeric } from './termdb.sql.t
 import { boxplot_getvalue } from '#shared/boxplot.js'
 import { DEFAULT_SAMPLE_TYPE, isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
 import { authApi } from '#src/auth.js'
-// circular import with termdb.matrix.js (it imports get_samples etc from this file); safe
+// circular import with termdb.matrix.ts (it imports get_samples etc from this file); safe
 // because the binding is only dereferenced at runtime, never during module evaluation
-import { maySetMapParent2Children } from './termdb.matrix.js'
+import { maySetMapParent2Children } from './termdb.matrix.ts'
 
 /* a ds with sample ancestry may annotate terms at different levels (e.g. patient vs sample).
 CTEs of parent-level filter terms must be mapped down to leaf-level samples, otherwise

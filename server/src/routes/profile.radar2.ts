@@ -1,5 +1,5 @@
 import type { RouteApi, RoutePayload } from '#types'
-import { getData } from '#src/termdb.matrix.js'
+import { getData } from '#src/termdb.matrix.ts'
 
 /*
 Route for the profile radar chart. Returns the aggregated median percentage

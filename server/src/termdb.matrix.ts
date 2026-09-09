@@ -82,7 +82,7 @@ Returns:
 TODO: pass mapParent2Children in q{}, instead of as a separate arg, when calling getData()
 */
 
-export async function getData(q, ds, mapParent2Children) {
+export async function getData(q, ds, mapParent2Children?: boolean): Promise<any> {
 	if (serverconfig.debugmode && !ds?.cohort?.db) trackXfetch(new Map())
 
 	try {
@@ -118,7 +118,7 @@ export async function getData(q, ds, mapParent2Children) {
 		}
 		trackXfetch(null)
 		return data
-	} catch (e) {
+	} catch (e: any) {
 		//console.log(72, 'termdb.matrix getData() catch')
 		trackXfetch(null)
 		if (e.stack) console.log(e.stack)
@@ -217,7 +217,7 @@ async function getSampleData(q, ds) {
 				// 1 query here means 1 gene query, but downstream code may trigger multiple requests per query;
 				// for example, 1 gene query will trigger 3 GDC API requests plus the shared `/cases` request
 				const maxConcurrentQueries = ds.cohort.termdb.maxConcurrentQueries || 10
-				const promises = []
+				const promises: Promise<any>[] = []
 				let numGenes = 0
 
 				for (const [i, tw] of geneVariantTws.entries()) {
@@ -416,7 +416,7 @@ async function getSampleData(q, ds) {
 				let value = cell.category
 				if (groups) {
 					//custom groups where created
-					const group = groups.find(g => Object.values(g.values).find(v => v.key == value))
+					const group = groups.find(g => (Object.values(g.values) as any[]).find(v => v.key == value))
 					if (group) value = group.name
 				}
 				samples[sampleId][tw.$id] = { value, key: value }
@@ -453,8 +453,8 @@ async function getSampleData(q, ds) {
 	let sampleType
 	if (q.sampleTypes) {
 		// query sample types defined
-		const names = []
-		const plural_names = []
+		const names: any[] = []
+		const plural_names: any[] = []
 		for (const st of q.sampleTypes) {
 			const config = q.ds.cohort.termdb.sampleTypes[st]
 			names.push(config.name)
@@ -569,7 +569,7 @@ async function setGeneVariantDataForTw(q, tw, samples) {
 // function to get sample genotype data for a single snp
 export async function getSnpData(tw, q) {
 	if (!q.ds.queries?.snvindel?.byrange) throw 'not supported by dataset: snvindel.byrange'
-	const arg = {
+	const arg: any = {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
@@ -587,11 +587,11 @@ export async function getSnpData(tw, q) {
 	// parse sample genotypes
 	// can use mlst[0].samples because .samples[] will
 	// be identical for each element of mlst[]
-	const sampleGTs = []
+	const sampleGTs: any[] = []
 	for (const s of mlst[0].samples) {
 		if (!('GT' in s.formatK2v)) throw 'sample must have GT format'
 		const gt = s.formatK2v.GT
-		const alleles = []
+		const alleles: any[] = []
 		for (const a of gt.split('/')) {
 			if (!a || a === '.') {
 				// gt is missing
@@ -712,7 +712,7 @@ export function setSampleLstData(termWrappers, samples, scopedSamples) {
 			id must still match the always-string keys that for..in yields below -- and drop the blanks,
 			including '', which no sampleidmap row can carry and which would otherwise become an
 			empty-named sample. */
-			const ids = new Set(
+			const ids = new Set<string>(
 				(group.values || [])
 					.map(v => v?.sampleId || v?.sample)
 					.filter(id => id !== undefined && id !== null && id !== '')
@@ -758,9 +758,9 @@ export function divideTerms(q, ds) {
 	(mds3.init builds it from termIds, and the client echoes it back in the payload); the legacy
 	termIds[] is not consulted.
 	*/
-	const dict = [],
-		geneVariantTws = [],
-		nonDict = []
+	const dict: any[] = [],
+		geneVariantTws: any[] = [],
+		nonDict: any[] = []
 	const isTermCollectionVisible = tw => {
 		/*
 		Members arrive in the request payload, so normalize each to a consistent term-object
@@ -821,7 +821,7 @@ export function divideTerms(q, ds) {
 - q.mapParent2Children: flag for whether to map term data onto child samples
 - q.sampleTypes: sample types to query for
 TODO: may rename to maySetSampleTypes() */
-export function maySetMapParent2Children(q, ds, mapParent2Children) {
+export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
 	if (!ds.cohort?.termdb?.hasSampleAncestry) {
 		// no sample ancestry, so should not map parent to children
 		q.mapParent2Children = false
@@ -886,10 +886,11 @@ output:
 async function getSampleData_dictionaryTerms(q, termWrappers) {
 	if (!termWrappers.length) return [{}, {}]
 	// distinguish between dictionary terms with cached or uncached data
-	const cachedTermWrappers = []
-	const uncachedTermWrappers = []
+	const cachedTermWrappers: any[] = []
+	const uncachedTermWrappers: any[] = []
 	for (const tw of termWrappers) {
-		q.ds?.termid2sample2value?.has(tw.term.id) ? cachedTermWrappers.push(tw) : uncachedTermWrappers.push(tw)
+		if (q.ds?.termid2sample2value?.has(tw.term.id)) cachedTermWrappers.push(tw)
+		else uncachedTermWrappers.push(tw)
 	}
 	// query uncached dictionary term data
 	const [samples, byTermId] = await getSampleData_dictionaryTerms_uncached(q, uncachedTermWrappers)
@@ -951,7 +952,6 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		termWrappers.map(async (tw, i) => {
 			if (!tw.$id) tw.$id = tw.term.id || tw.term.name
 			const CTE = await get_term_cte(q, values, i, filter, tw)
-			const $id = tw.$id || tw.term.id
 			if (CTE.bins) {
 				byTermId[tw.$id] = { bins: CTE.bins }
 			}
@@ -959,7 +959,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 				byTermId[tw.$id] = { events: CTE.events }
 			}
 			if (tw.term.values) {
-				const values = Object.values(tw.term.values)
+				const values: any[] = Object.values(tw.term.values)
 				if (values.find(v => 'order' in v)) {
 					byTermId[tw.$id] = {
 						keyOrder: values.sort((a, b) => a.order - b.order).map(v => v.key)
@@ -1223,7 +1223,7 @@ async function findListOfBins(q, tw, ds) {
 			should be true for both q.type=regular-bin or q.type=custom-bin
 			*/
 			// term lacks bins. compute it on the fly. expensive step and not supposed to happen?
-			await new Promise(async (resolve, reject) => {
+			await new Promise<void>((resolve, reject) => {
 				const _q = {
 					tw,
 					genome: ds.genomename,
@@ -1231,13 +1231,16 @@ async function findListOfBins(q, tw, ds) {
 					filter: q.filter,
 					filter0: q.filter0
 				}
-				await trigger_getDefaultBins(_q, ds, {
+				void trigger_getDefaultBins(_q, ds, {
 					send(bins) {
-						if (bins.error) throw reject(bins.error)
+						if (bins.error) {
+							reject(bins.error)
+							return
+						}
 						tw.term.bins = bins
 						resolve()
 					}
-				})
+				}).catch(reject)
 			})
 		}
 		const min = tw.term.bins.min
@@ -1306,7 +1309,7 @@ async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
 
 		const snpid = l[0] // snpid is used as "term id"
 
-		const snpObj = {
+		const snpObj: any = {
 			// get effect allele from q, but not from cache file
 			// column [5] is for user-assigned effect allele
 			refAle: l[3],
@@ -1346,7 +1349,7 @@ async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
 	// k: snpid, v:{gt:INT}
 	for (const [snpid, o] of snp2sample) {
 		const gt2count = new Map()
-		for (const [sampleid, gt] of o.samples) {
+		for (const [, gt] of o.samples) {
 			// count gt for this snp
 			gt2count.set(gt, 1 + (gt2count.get(gt) || 0))
 		}
@@ -1402,7 +1405,7 @@ function categorizeSnpsByAF(tw, snp2sample) {
 		const totalsamplecount = o.samples.size
 		// o.effAle is effect allele
 		let effAleCount = 0 // count number of effect alleles across samples
-		for (const [sampleid, gt] of o.samples) {
+		for (const [, gt] of o.samples) {
 			const [a1, a2] = gt.split('/') // assuming diploid
 			effAleCount += (a1 == o.effAle ? 1 : 0) + (a2 == o.effAle ? 1 : 0)
 		}
@@ -1496,7 +1499,7 @@ function applyGeneticModel(tw, effAle, a1, a2) {
 // for now only considering geneVariant terms and
 // categorical terms without .values{}
 function mayGetCategories(data, q, ds) {
-	const twLst = []
+	const twLst: any[] = []
 	for (const _tw of q.terms) {
 		const tw = structuredClone({ q: {}, term: _tw.term, $id: _tw.$id })
 		let term = tw.term
@@ -1538,13 +1541,13 @@ function checkAccessToSampleData(data, ds, q) {
 		rows = ds.cohort.db.connection
 			.prepare(
 				`SELECT distinct value as name FROM anno_categorical WHERE term_id in (${hiddenIds
-					.map(s => '?')
-					.join(',')}) and sample in (${sampleIds.map(s => '?').join(',')})`
+					.map(() => '?')
+					.join(',')}) and sample in (${sampleIds.map(() => '?').join(',')})`
 			)
 			.all([...hiddenIds, ...sampleIds])
 	} else {
 		rows = ds.cohort.db.connection
-			.prepare(`SELECT name FROM sampleidmap WHERE id in (${sampleIds.map(s => '?').join(',')})`)
+			.prepare(`SELECT name FROM sampleidmap WHERE id in (${sampleIds.map(() => '?').join(',')})`)
 			.all(sampleIds)
 	}
 	const names = rows.map(s => s.name)
@@ -1561,7 +1564,7 @@ function checkAccessToSampleData(data, ds, q) {
 	}
 	// more detailed check
 	const sampleSizeByTermId = new Map()
-	for (const [sid, dataByTermId] of Object.entries(data.samples)) {
+	for (const [sid, dataByTermId] of Object.entries(data.samples) as [string, any][]) {
 		for (const tid of Object.keys(dataByTermId)) {
 			if (!sampleSizeByTermId.has(tid)) sampleSizeByTermId.set(tid, new Set())
 			sampleSizeByTermId.get(tid).add(sid)

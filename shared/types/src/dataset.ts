@@ -158,7 +158,7 @@ type DictApi = {
 	// helpers at ds.cohort.termdb.q{}
 	build?: (ds: any) => void
 	/** gets dictionary term data; returns [samples{}, byTermId{}]
-	see getSampleData_dictionaryTerms() of server/src/termdb.matrix.js
+	see getSampleData_dictionaryTerms() of server/src/termdb.matrix.ts
 
 	sample hierarchy is signaled on q (q.mapParent2Children, with
 	ds.cohort.termdb.sampleTypes and .term2SampleType), not by an arg here.

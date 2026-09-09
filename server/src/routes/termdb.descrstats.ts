@@ -1,6 +1,6 @@
 import type { Filter, RoutePayload, RouteApi } from '#types'
 import type { ReqQueryAddons } from './types.js'
-import { getData } from '#src/termdb.matrix.js'
+import { getData } from '#src/termdb.matrix.ts'
 import computePercentile from '#shared/compute.percentile.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { DescrStatsRequest, DescrStatsResponse, DescrStats } from '#types'

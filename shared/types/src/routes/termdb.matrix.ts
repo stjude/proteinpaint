@@ -15,12 +15,19 @@ export type TermdbMatrixRequest = {
 	[k: string]: any
 }
 
+export type ObjectAssign = {
+	[key: string]: object
+}
+
 /** Matrix responses are sent as an NDJSON-nested-key stream by the server. */
 export type TermdbMatrixResponse = {
 	samples: Record<string, any>
 	refs: {
 		byTermId: Record<string, any>
 		bySampleId: Record<string, any>
-		$codes?: Record<string, any>
+		$codes?: {
+			objAssign?: ObjectAssign
+			copyAs?: Record<string, string>
+		}
 	}
 }

@@ -3,7 +3,7 @@ import { get_densityplot } from './mds3.densityPlot.js'
 import * as utils from './utils.js'
 import { dtsnvindel, dtcnv, dtitd, dtfusionrna, dtsv, mclassitd } from '#shared/common.js'
 import * as geneDbSearch from './gene.js'
-import { getSampleData_dictionaryTerms_termdb, getData } from './termdb.matrix.js'
+import { getSampleData_dictionaryTerms_termdb, getData } from './termdb.matrix.ts'
 import { authApi } from './auth.js'
 import { ssmIdFieldsSeparator, guessSsmid } from '#shared/mds3tk.js'
 

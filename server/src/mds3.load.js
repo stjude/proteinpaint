@@ -15,7 +15,7 @@ import {
 } from '#shared/common.js'
 import { summarize_mclass } from '#shared/mds3tk.js'
 import { plotWiggle } from './bw.js'
-import { maySetMapParent2Children } from './termdb.matrix.js'
+import { maySetMapParent2Children } from './termdb.matrix.ts'
 
 /*
 method good for somatic variants, in skewer and gp queries:

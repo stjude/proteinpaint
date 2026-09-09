@@ -1,5 +1,5 @@
 import type { RouteApi } from '#types'
-import { getData } from '../src/termdb.matrix.js'
+import { getData } from '../src/termdb.matrix.ts'
 
 /*
 Route for the per-module impression thermometer rendered inside profileForms

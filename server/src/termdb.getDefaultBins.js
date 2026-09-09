@@ -1,6 +1,6 @@
 import { SINGLECELL_GENE_EXPRESSION, PROTEOME_ABUNDANCE, PSEUDOBULK } from '#types'
 import initBinConfig from '#shared/termdb.initbinconfig.js'
-import { maySetMapParent2Children } from './termdb.matrix.js'
+import { maySetMapParent2Children } from './termdb.matrix.ts'
 import { mayLimitSamples } from './mds3.filter.js'
 
 // TODO convert to route

@@ -19,7 +19,7 @@ import { getColors, plotColor } from '#shared'
 import { isSingleCellTerm } from '#shared/terms.js'
 import { SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#types'
 import { makeCanvas } from './canvasRendering.ts'
-import { getData } from '../termdb.matrix.js'
+import { getData } from '../termdb.matrix.ts'
 import { getSampleCoordinatesByTerms } from '../routes/termdb.sampleScatter.js'
 
 const payload: RoutePayload = {

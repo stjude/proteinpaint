@@ -74,7 +74,7 @@ function mayAddGetCategoryArgs(arg, block) {
 		// GDC specific logic
 		// in gene mode, supply the current gene name as a new parameter
 		// for the vocabApi getCategories() query, so it can pull the number of mutated samples for a term
-		// this parameter is used by some sneaky gdc-specific logic in termdb.matrix.js getData()
+		// this parameter is used by some sneaky gdc-specific logic in termdb.matrix.ts getData()
 		// should not impact non-gdc datasets
 		//
 		/////////////////////////////////////

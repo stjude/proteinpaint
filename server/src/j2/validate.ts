@@ -5,7 +5,7 @@ import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
 import { setFile, validateSampleHeader } from '../mds3.init.js'
 import type { Junction, TermdbJunctionsRequest } from '#types'
-import { maySetMapParent2Children } from '../termdb.matrix.js'
+import { maySetMapParent2Children } from '../termdb.matrix.ts'
 
 export async function validate_query_junction(ds: any, genome: any) {
 	const tmp = ds.queries?.junction // fixme: tmp-to-q avoids tsc err
