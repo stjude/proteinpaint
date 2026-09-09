@@ -160,7 +160,7 @@ export function server_init_db_queries(ds) {
 			for (const ancestors of i2ancestors.values()) ancestors.sort(sortByAncestorDistance)
 		}
 
-		// centralized id->display resolution (see termdb.matrix.js id2sampleRef()), wrapping id2sampleName.
+		// centralized id->display resolution (see termdb.matrix.ts id2sampleRef()), wrapping id2sampleName.
 		// native sample ids are integer PKs (sampleidmap.id), so Number() only normalizes a stringified
 		// map key and never NaNs a real id; non-integer id spaces (e.g. gdc case uuids) never reach here —
 		// they use their own id2sampleRefs (gdc.buildDictionary.ts) with no coercion.
@@ -853,7 +853,8 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	correlationVolcano: ({ ds }) => ds.cohort.correlationVolcano,
 	chat: ({ ds }) => ds.queries?.chat,
 	geneExpression: ({ ds }) => ds.queries?.geneExpression,
-	GeneExpInput: ({ ds }) => ds.queries?.geneExpression || ds.queries?.singleCell?.geneExpression || ds.queries?.singleCell?.pseudobulk,
+	GeneExpInput: ({ ds }) =>
+		ds.queries?.geneExpression || ds.queries?.singleCell?.geneExpression || ds.queries?.singleCell?.pseudobulk,
 	metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
 	proteomeAbundance: ({ ds }) => ds.queries?.proteome,
 	ProteomeInput: ({ ds }) => ds.queries?.proteome,

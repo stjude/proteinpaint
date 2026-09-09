@@ -321,7 +321,7 @@ tape('resolveDaContext returns ds with empty term_results when neither tw nor tw
 //
 // We then deliberately pass an UNRECOGNIZED term id. getData() swallows the
 // internal error, returns { error: 'unknown term id' } (see
-// termdb.matrix.js — getData wraps everything in try/catch and converts
+// termdb.matrix.ts — getData wraps everything in try/catch and converts
 // throws to { error }). resolveDaContext's `if (term_results.error)` then
 // fires, covering both the call and the rethrow lines for tw and tw2.
 

@@ -15,7 +15,7 @@ import type {
 	ValidGetDataResponse
 } from '#types'
 import type { ReqQueryAddons } from './types.js'
-import { getData } from '#src/termdb.matrix.js'
+import { getData } from '#src/termdb.matrix.ts'
 import { get_active_groupset } from '#src/termdb.sql.js'
 import fs from 'fs'
 import path from 'path'

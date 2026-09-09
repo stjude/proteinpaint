@@ -20,7 +20,7 @@ import { isSingleCellTerm } from '#shared/terms.js'
 import { get_bin_label } from '#shared/termdb.bins.js'
 import { getNumericColorDomain } from './colorDomain.ts'
 import { makeCanvas } from './canvasRendering.ts'
-import { getData } from '../termdb.matrix.js'
+import { getData } from '../termdb.matrix.ts'
 import { getSampleCoordinatesByTerms } from '../routes/termdb.sampleScatter.js'
 
 const payload: RoutePayload = {

@@ -1,4 +1,4 @@
-import { getData } from './termdb.matrix.js'
+import { getData } from './termdb.matrix.ts'
 import serverconfig from './serverconfig.js'
 import { authApi } from './auth.js'
 import { Readable, pipeline } from 'stream'
@@ -156,9 +156,9 @@ export async function get_matrix(q: TermdbMatrixRequest, req: any, res: any, ds:
 	// termId -> { queries[], idxByKey } shared with refs.byTermId[termId].queries
 	const queryIdxByTerm = new Map<string, any>()
 
-	const jsonStrlen = 0,
-		currShortId = 1,
-		sampleIndex = 1
+	const jsonStrlen = 0
+	let currShortId = 1
+	let sampleIndex = 1
 
 	if (authApi.canDisplaySampleIds(req, ds) && sampleEntries.length) {
 		const { byTermId, bySampleId } = data.refs

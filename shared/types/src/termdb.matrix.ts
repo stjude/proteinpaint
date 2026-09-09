@@ -1,7 +1,8 @@
-/******* server/src/termdb.matrix.js is ~not~ a route *****
- * getData() is used frequently in other routes or typescript files.
- * Although the original file is 1) not ts and 2) not a route, a type
- * is still needed when func used in other ts files.
+/******* server/src/termdb.matrix.ts is ~not~ a route *****
+ * getData() is used frequently in other routes or typescript files. It has no useful native
+ * return type of its own -- its return shape is assembled dynamically across many branches
+ * (dictionary terms, geneVariant, snp, single-cell, ...) that this hand-written type does not
+ * attempt to fully capture -- so a type is still needed when the func is used in other ts files.
  *
  * Use this type for that purpose.
  */

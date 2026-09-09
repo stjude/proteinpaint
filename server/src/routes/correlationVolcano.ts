@@ -1,6 +1,6 @@
 import type { RoutePayload, RouteApi } from '#types'
 import type { CorrelationVolcanoRequest, CorrelationVolcanoResponse } from '#types'
-import { getData } from '#src/termdb.matrix.js'
+import { getData } from '#src/termdb.matrix.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { mayLog } from '#src/helpers.ts'
 import { getStdDev } from './termdb.descrstats.ts'
