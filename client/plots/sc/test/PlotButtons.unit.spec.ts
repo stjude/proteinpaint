@@ -285,7 +285,7 @@ tape('getSingleCellConfig() should return sampleScatter config', async test => {
 	const config = (await pb.getSingleCellConfig('umap')) as any
 
 	test.equal(config.chartType, 'sampleScatter', 'Should set chartType to sampleScatter')
-	test.equal(config.name, 'Sample: S1', 'Should set name with sample sID')
+	test.equal(config.name, 'Sample: S1 (umap)', 'Should set name with sample sID')
 	test.deepEqual(config.sample, { sID: 'S1', eID: 'EXP1' }, 'Should include sample')
 	test.equal(config.singleCellPlot.name, 'umap', 'Should set singleCellPlot.name')
 	test.deepEqual(config.singleCellPlot.sample, { sID: 'S1', eID: 'EXP1' }, 'Should set singleCellPlot.sample')
