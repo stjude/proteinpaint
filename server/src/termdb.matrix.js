@@ -18,13 +18,12 @@ import {
 	GENE_VARIANT,
 	ISOFORM_EXPRESSION,
 	METABOLITE_INTENSITY,
-	SINGLECELL_CELLTYPE,
-	SINGLECELL_GENE_EXPRESSION,
 	SSGSEA,
 	PROTEOME_ABUNDANCE,
 	PSEUDOBULK,
 	JUNCTION
 } from '#types'
+import { annotateSingleCellTerm, hydrateMetaResultCellRows } from './singleCell/matrixData.ts'
 import { get_bin_label, compute_bins, assignBinColors } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from './routes/termdb.categories.ts'
@@ -345,82 +344,8 @@ async function getSampleData(q, ds) {
 					samples[sampleId][dataId] = { key, value }
 				}
 			}
-		} else if (tw.term.type == SINGLECELL_GENE_EXPRESSION) {
-			if (!q.ds.queries?.singleCell?.geneExpression)
-				throw new Error('not supported by dataset: singleCell.geneExpression')
-			let lst // list of bins based on tw config
-			if (tw.q?.mode == 'discrete') {
-				const min = tw.term.bins.min
-				const max = tw.term.bins.max
-				if (tw.q.type == 'regular-bin') {
-					lst = compute_bins(tw.q, () => {
-						return { min, max }
-					})
-				} else {
-					if (!tw.q.lst) throw 'q.type is not discrete and q.lst[] is missing'
-					// custom bins are used as given and never go through compute_bins(), so they must be
-					// colored here, same as in findListOfBins() -- and on a copy, for the same reason
-					lst = assignBinColors(tw.q.lst.map(bin => ({ ...bin })))
-				}
-				byTermId[tw.$id] = { bins: lst }
-			}
-			const geneExpMap = await q.ds.queries.singleCell.geneExpression.get(q, tw.term.sample, tw.term.gene)
-			let filteredSamples = new Set()
-			if ((q.filter?.lst?.length || q.filter0) && tw.term.sample?.isMetaResult) {
-				filteredSamples = await q.ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
-			}
-			/** geneExpMap returns cells => (cellId: value), not samples.
-			 * The cellId is never in the samples object, as cells are not in
-			 * the termdb. Get the sampleId and add object to samples with the value.
-			 *
-			 * NOTE: ds.queries.singleCell.data.metaIdMap required for matching the
-			 * cohort level term to the cell is made on init from the single cell
-			 * plot files. The hdf5 does not contain the sampleId to map to the
-			 * cohort level term. This will need to addressed if plot files do not
-			 * exist but the hdf5 does. */
-			for (const sampleId in geneExpMap) {
-				if (!(sampleId in samples)) {
-					const cell = { cellId: sampleId }
-					const scEntry = getSingleCellSampleEntry(samples, q.ds, tw, cell, filteredSamples)
-					if (!scEntry) continue // cell is filtered out based on cohort level term filter
-					samples[sampleId] = scEntry
-				}
-				const value = geneExpMap[sampleId]
-				let key = value
-				if (tw.q?.mode == 'discrete') {
-					//check binary mode
-					const bin = getBin(lst, value)
-					key = get_bin_label(lst[bin], tw.q)
-				}
-				samples[sampleId][tw.$id] = { value, key }
-			}
-		} else if (tw.term.type == SINGLECELL_CELLTYPE) {
-			if (!q.ds.queries?.singleCell?.data) throw new Error('not supported by dataset: singleCell.data')
-			const data = await q.ds.queries.singleCell.data.get({
-				sample: tw.term.sample,
-				plots: [tw.term.plot],
-				colorBy: { [tw.term.plot]: tw.term.name }
-			})
-			let filteredSamples = new Set()
-			if ((q.filter?.lst?.length || q.filter0) && tw.term.sample?.isMetaResult) {
-				filteredSamples = await q.ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
-			}
-			const groups = tw.q?.customset?.groups
-			for (const cell of data.plots[0].noExpCells) {
-				const sampleId = cell.cellId
-				if (!(sampleId in samples)) {
-					const scEntry = getSingleCellSampleEntry(samples, q.ds, tw, cell, filteredSamples)
-					if (!scEntry) continue // cell is filtered out based on cohort level term filter
-					samples[sampleId] = scEntry
-				}
-				let value = cell.category
-				if (groups) {
-					//custom groups where created
-					const group = groups.find(g => Object.values(g.values).find(v => v.key == value))
-					if (group) value = group.name
-				}
-				samples[sampleId][tw.$id] = { value, key: value }
-			}
+		} else if (isSingleCellTerm(tw.term)) {
+			await annotateSingleCellTerm(q, tw, samples, byTermId)
 		} else {
 			throw 'unknown type of non-dictionary term'
 		}
@@ -481,78 +406,6 @@ async function getSampleData(q, ds) {
 
 	return { samples, refs: { byTermId, bySampleId }, sampleType }
 }
-/********** Start single cell helpers **********
- *
- * Single cell data is unique. Cells, not samples, are displayed. At times, those cells are
- * compared against cohort level terms in the termdb. The sampleId from the tsv file is mapped
- * to the primary key in the termdb to match the cohort level data to the cell data.
- *
- * The helpers below are used to:
- * 1. map the cell to the sampleId in the termdb, and then get the cohort level data for that
- * sampleId, and attach it to the cell data. This is done in getSingleCellSampleEntry() and
- * getSampleId4Cell()
- * 2. for single cell meta analysis results, the "cell" is actually a pseudo-sample that
- * represents a group of cells. The sampleId of this pseudo-sample is mapped to the sampleId
- * in the termdb, and then get the cohort level data for that sampleId, and attach it to
- * the pseudo-sample data. This is done in hydrateMetaResultCellRows()
- */
-
-function getSingleCellSampleEntry(samples, ds, tw, _cell, filteredSamples) {
-	const sampleId = getSampleId4Cell(ds, tw, _cell, filteredSamples)
-	if (!sampleId) {
-		if (!tw.term.sample?.isMetaResult) return { sample: _cell.cellId }
-		else return null
-	}
-	const sample = samples[sampleId]
-	const cell = sample ? structuredClone(sample) : {}
-	cell.sample = _cell.cellId
-	cell.sampleId = sampleId
-	return cell
-}
-
-//See documentation above
-function getSampleId4Cell(ds, tw, cell, filteredSamples) {
-	if (!tw.term.sample?.isMetaResult) return
-	/** Note: Do not use .eID. Only for GDC in separate pathway */
-	const metaResultId = tw.term.sample.sID
-	const metaIdMap = ds.queries?.singleCell?.data?.metaIdMap?.get?.(metaResultId)
-	const sampleMappingCache = ds.queries?.singleCell?.samples?.sampleMappingCache
-	let sampleName = metaIdMap?.get?.(cell.cellId)
-	if (!sampleName && cell.sampleId != undefined) {
-		sampleName = sampleMappingCache?.sampleIntId2Name?.get?.(cell.sampleId)
-		if (!sampleName) {
-			const numericSampleId = Number(cell.sampleId)
-			if (Number.isFinite(numericSampleId)) {
-				sampleName = sampleMappingCache?.sampleIntId2Name?.get?.(numericSampleId)
-			}
-		}
-		if (!sampleName && typeof cell.sampleId == 'string') sampleName = cell.sampleId
-	}
-	if (!sampleName) return
-	if (filteredSamples.size > 0 && !filteredSamples.has(sampleName)) return
-	const sampleId =
-		sampleMappingCache?.sampleName2IntId?.get?.(sampleName) ?? ds.cohort?.termdb?.q?.sampleName2id?.(sampleName)
-	if (sampleId == undefined) {
-		throw new Error(`single cell meta result cannot map sample name = ${sampleName} to sample id`)
-	}
-	return String(sampleId)
-}
-
-//See documentation above
-function hydrateMetaResultCellRows(samples) {
-	for (const _sampleId in samples) {
-		const row = samples[_sampleId]
-		const sampleId = row?.sampleId
-		if (!sampleId) continue
-		const parentRow = samples[sampleId]
-		if (!parentRow) continue
-		for (const [termId, value] of Object.entries(parentRow)) {
-			if (termId == 'sample' || termId == 'sampleId') continue
-			if (!(termId in row)) row[termId] = value
-		}
-	}
-}
-//********** End single cell helpers **********
 
 function twlstGeneCountReducer(sum, tw) {
 	return sum + (tw.term.genes?.length || 1)

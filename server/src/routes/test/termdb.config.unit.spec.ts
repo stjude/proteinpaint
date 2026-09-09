@@ -1,6 +1,10 @@
 import tape from 'tape'
 import { getDsAllowedTermTypes, getLoneTermByType } from '../termdb.config.ts'
 import {
+	CATEGORICAL, 
+	FLOAT,
+	SURVIVAL,
+	TERM_COLLECTION,
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
 	METABOLITE_INTENSITY,
@@ -9,7 +13,8 @@ import {
 	DNA_METHYLATION,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
-	JUNCTION
+	JUNCTION,
+	SINGLECELL_NUMERIC_VALUE
 } from '#types'
 
 /**
@@ -216,6 +221,54 @@ tape('getDsAllowedTermTypes() - with singleCell and geneExpression', function (t
 	test.end()
 })
 
+tape('getDsAllowedTermTypes() - singleCell without geneExpression', function (test) {
+	const ds: any = {
+		cohort: {
+			termdb: {
+				termtypeByCohort: []
+			}
+		},
+		queries: {
+			singleCell: {
+				samples: {},
+				data: {}
+			}
+		}
+	}
+	const result = getDsAllowedTermTypes(ds)
+	test.ok(result.includes(SINGLECELL_CELLTYPE), 'Should include SINGLECELL_CELLTYPE')
+	test.notOk(
+		result.includes(SINGLECELL_GENE_EXPRESSION),
+		'Should not include SINGLECELL_GENE_EXPRESSION without geneExpression'
+	)
+	test.end()
+})
+
+tape('getDsAllowedTermTypes() - singleCell with numeric but without geneExpression', function (test) {
+	const ds: any = {
+		cohort: {
+			termdb: {
+				termtypeByCohort: []
+			}
+		},
+		queries: {
+			singleCell: {
+				terms: [{ name: 'fake', type: SINGLECELL_NUMERIC_VALUE }],
+				samples: {},
+				data: {}
+			}
+		}
+	}
+	const result = getDsAllowedTermTypes(ds)
+	test.ok(result.includes(SINGLECELL_CELLTYPE), 'Should include SINGLECELL_CELLTYPE')
+	test.ok(result.includes(SINGLECELL_NUMERIC_VALUE), 'Should include SINGLECELL_NUMERIC_VALUE')
+	test.notOk(
+		result.includes(SINGLECELL_GENE_EXPRESSION),
+		'Should not include SINGLECELL_GENE_EXPRESSION without geneExpression'
+	)
+	test.end()
+})
+
 tape('getDsAllowedTermTypes() - with termCollections', function (test) {
 	const ds: any = {
 		cohort: {
@@ -277,6 +330,7 @@ tape('getDsAllowedTermTypes() - comprehensive dataset', function (test) {
 			dnaMethylation: { unit: 'beta', get: async () => ({}) },
 			ssGSEA: {},
 			singleCell: {
+				terms: [{ name: 'fake', type: SINGLECELL_NUMERIC_VALUE }],
 				samples: {},
 				data: {},
 				geneExpression: { unit: 'CPM' }
@@ -285,17 +339,18 @@ tape('getDsAllowedTermTypes() - comprehensive dataset', function (test) {
 	}
 	const result = getDsAllowedTermTypes(ds)
 	const expectedTypes = [
-		'categorical',
-		'float',
-		'survival',
-		'termCollection',
+		CATEGORICAL,
+		FLOAT,
+		SURVIVAL,
+		TERM_COLLECTION,
 		GENE_EXPRESSION,
 		ISOFORM_EXPRESSION,
 		PROTEOME_ABUNDANCE,
 		DNA_METHYLATION,
 		SSGSEA,
 		SINGLECELL_CELLTYPE,
-		SINGLECELL_GENE_EXPRESSION
+		SINGLECELL_GENE_EXPRESSION,
+		SINGLECELL_NUMERIC_VALUE
 	]
 	test.equal(result.length, expectedTypes.length, 'Should have correct number of term types')
 	for (const type of expectedTypes) {
@@ -314,29 +369,6 @@ tape('getDsAllowedTermTypes() - no queries object', function (test) {
 	}
 	const result = getDsAllowedTermTypes(ds)
 	test.deepEqual(result, ['categorical'], 'Should handle missing queries object')
-	test.end()
-})
-
-tape('getDsAllowedTermTypes() - singleCell without geneExpression', function (test) {
-	const ds: any = {
-		cohort: {
-			termdb: {
-				termtypeByCohort: []
-			}
-		},
-		queries: {
-			singleCell: {
-				samples: {},
-				data: {}
-			}
-		}
-	}
-	const result = getDsAllowedTermTypes(ds)
-	test.ok(result.includes(SINGLECELL_CELLTYPE), 'Should include SINGLECELL_CELLTYPE')
-	test.notOk(
-		result.includes(SINGLECELL_GENE_EXPRESSION),
-		'Should not include SINGLECELL_GENE_EXPRESSION without geneExpression'
-	)
 	test.end()
 })
 

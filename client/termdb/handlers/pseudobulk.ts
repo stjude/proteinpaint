@@ -39,7 +39,7 @@ export class SearchHandler {
 		if (opts.genomeObj == null || typeof opts.genomeObj !== 'object') throw new Error('genomeObj is required')
 		if (!opts.callback) throw new Error('opts.callback is required')
 		const pseudobulkTerms = opts.app.vocabApi.termdbConfig?.termType2terms?.[TermTypeGroups.PSEUDOBULK]
-		if (!pseudobulkTerms) {
+		if (!pseudobulkTerms?.length) {
 			throw new Error(
 				`termType2terms[${TermTypeGroups.PSEUDOBULK}]:[] is required in termdbConfig for pseudobulk handler`
 			)

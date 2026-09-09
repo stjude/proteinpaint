@@ -5,14 +5,15 @@ import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
 import { refColor } from '#routes/termdb.sampleScatter.js'
-import { SINGLECELL_GENE_EXPRESSION } from '#types'
+import { SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE } from '#types'
 
 export async function makeCanvas(
 	q /*:TermdbSingleCellPlotsRequest*/,
 	samples: FormattedCell2Sample[],
 	colorMap: ColorMap,
 	range: SingleCellRange,
-	termType: string
+	termType: string,
+	colorDomain?: [number, number]
 ) {
 	const settings = q.canvasSettings
 	const dpr = settings.devicePixelRatio || 1
@@ -34,12 +35,16 @@ export async function makeCanvas(
 		.range([yAxisOffSet, settings.height + yAxisOffSet])
 
 	let colorGenerator
-	if (Number.isFinite(range.geMin) && Number.isFinite(range.geMax)) {
-		colorGenerator = scaleLinear().domain([range.geMin, range.geMax]).range([settings.startColor, settings.stopColor])
+	const domain = colorDomain || [range.geMin, range.geMax]
+	if (Number.isFinite(domain[0]) && Number.isFinite(domain[1])) {
+		colorGenerator = scaleLinear().domain(domain).clamp(!!colorDomain).range([settings.startColor, settings.stopColor])
 	}
 	const getCategoryColor = (sample: FormattedCell2Sample) => colorMap[sample.category]?.color || refColor
 	const color = (sample: FormattedCell2Sample) => {
 		if (q?.coordTWs?.length > 0) return getCategoryColor(sample)
+		if (termType == SINGLECELL_NUMERIC_VALUE && q.colorTW?.q.mode == 'continuous') {
+			return colorGenerator ? colorGenerator(Number(sample.category)) : settings.startColor
+		}
 		if (termType == SINGLECELL_GENE_EXPRESSION) {
 			if (!Number.isFinite(sample.geneExp)) return settings.startColor
 			if (sample.geneExp! > range.geMax!) return settings.stopColor
