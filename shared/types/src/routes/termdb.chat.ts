@@ -70,6 +70,9 @@ export interface SampleMatch {
 	singleCell?: { sID: string; eID?: string }
 	/** Facet-table assays available for this sample, when track-list facet data exists. */
 	assays?: { facet: string; names: string[] }[]
+	/** true when the sample has plain whole-slide images on disk
+	 (ds.queries.w2.wsiFolder); shows the "Whole Slide Images" action */
+	wsimages?: boolean
 }
 
 /** Result of the mass omnisearch: matched dictionary terms and matched genes, each carrying its own
