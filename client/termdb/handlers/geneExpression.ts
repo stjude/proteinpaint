@@ -64,7 +64,6 @@ export class SearchHandler {
 			? getSelectedSampleTypesByTerms(this.sampleTypeSelect, this.querySampleTypesByTerms)
 			: getSelectedSampleTypes(this.sampleTypeSelect) || this.querySampleTypes
 		if (this.sampleTypeSelect && !sampleTypes?.length) {
-			window.alert('Must select at least one sample type')
 			return
 		}
 		const unit = getGEunit(this.app.vocabApi)

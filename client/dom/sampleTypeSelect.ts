@@ -35,9 +35,11 @@ export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, term
 // returns selected sample types from checkboxes created by renderSampleTypeSelect().
 export function getSelectedSampleTypes(sampleTypeSelect?: any[]) {
 	if (!sampleTypeSelect) return
-	return sampleTypeSelect
+	const selectedSampleTypes = sampleTypeSelect
 		.filter(checkbox => checkbox.property('checked'))
 		.map(checkbox => Number(checkbox.property('value')))
+	if (!selectedSampleTypes.length) window.alert('Please select at least one sample type.')
+	return selectedSampleTypes
 }
 
 // renders a dropdown menu for each term in sampleTypesByTerms, with the term's
@@ -97,6 +99,7 @@ export function getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms) {
 	const selectedSampleTypes = selectedSampleTypesByTerms.reduce((intersection, sampleTypes) =>
 		intersection.filter(sampleType => sampleTypes.includes(sampleType))
 	)
+	if (!selectedSampleTypes.length) window.alert('Sample type not found. Please select a different sample type.')
 	return selectedSampleTypes
 }
 

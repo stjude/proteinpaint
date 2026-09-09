@@ -409,7 +409,6 @@ export class SearchHandler {
 			? getSelectedSampleTypesByTerms(this.sampleTypeSelect, this.querySampleTypesByTerms)
 			: getSelectedSampleTypes(this.sampleTypeSelect) || this.querySampleTypes
 		if (this.sampleTypeSelect && !this.term.sampleTypes?.length) {
-			window.alert('Must select at least one sample type')
 			const geneSetEditUI = this.dom.geneSetEditUI
 			if (geneSetEditUI) {
 				// the gene set edit UI's submit button was disabled on
