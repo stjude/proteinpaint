@@ -130,14 +130,14 @@ export function init({ genomes }) {
 async function getSingleCellScatter(req, res, ds) {
 	const q = req.query as TermdbSingleCellPlotsRequest
 
-	if (q.coordTWs?.length && q.colorTW) {
-		throw new Error('Using coordTWs with colorTW is not implemented for single cell scatter plot')
-	}
-
-	const { name, sample } = q.singleCellPlot
-	const isMetaResult = sample?.['isMetaResult']
-
 	try {
+		if (q.coordTWs?.length && q.colorTW) {
+			throw new Error('Using coordTWs with colorTW is not implemented for single cell scatter plot')
+		}
+
+		const { name, sample } = q.singleCellPlot
+		const isMetaResult = sample?.['isMetaResult']
+
 		const { arg, tw, genes } = getSingleCellDataArgs(q, name, sample)
 
 		let coords: ScatterSample[] = [],

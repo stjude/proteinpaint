@@ -1,5 +1,6 @@
 import tape from 'tape'
 import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE } from '#types'
+import { getAuthApi, authApi } from '../../auth.js'
 import { init, processSamples } from '../plotsRoute.ts'
 
 /**
@@ -25,6 +26,12 @@ function makeRes(test) {
 	}
 }
 
+async function ensureOpenAuth() {
+	if (authApi) return
+	const app = { doNotFreezeAuthApi: true, get() {}, post() {}, all() {}, use() {} }
+	await getAuthApi(app, {}, {}, true)
+}
+
 /**************
  test sections
 ***************/
@@ -34,7 +41,9 @@ tape('\n', function (test) {
 })
 
 tape('singleCellPlots: categoryCounts from colorData generates color legend entries', async test => {
+	await ensureOpenAuth()
 	const ds = {
+		cohort: { termdb: {} },
 		queries: {
 			singleCell: {
 				data: {
@@ -106,6 +115,7 @@ tape('singleCellPlots: categoryCounts from colorData generates color legend entr
 
 tape('singleCellPlots: coordTWs + colorTW returns explicit not-implemented error', async test => {
 	const ds = {
+		cohort: { termdb: {} },
 		queries: {
 			singleCell: {
 				data: {
@@ -155,12 +165,17 @@ tape('singleCellPlots: coordTWs + colorTW returns explicit not-implemented error
 })
 
 tape('singleCellPlots: gene-expression colorTW populates gene range', async test => {
+	await ensureOpenAuth()
 	const ds = {
+		cohort: { termdb: {} },
 		queries: {
 			singleCell: {
+			geneExpression: {
+				get: async () => ({ cell1: 0.1, cell2: 0.9 })
+			},
 				data: {
 					get: async arg => {
-						test.deepEqual(arg.genes, ['TP53'], 'passes colorTW gene to singleCell data query')
+						test.equal(arg.terms[0].term.gene, 'TP53', 'passes colorTW gene to singleCell data query')
 						return {
 							plots: [
 								{
