@@ -3,7 +3,7 @@ import type { Div } from '../../types/d3'
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '../PlotBase'
 import { importPlot } from '../importPlot.js'
-import { Menu } from '#dom'
+import { Menu, formatHeaderText } from '#dom'
 import { termType2label } from '#shared/terms.js'
 import type { DiffAnalysisDom, /*DiffAnalysisOpts,*/ DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
@@ -50,17 +50,11 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 			plots: plots,
 			tip: new Menu({ padding: '' })
 		}
+		if (opts.header) this.dom.header = opts.header
 		this.plotsControlsDiv = {}
 		this.plotsDiv = {}
 
 		if (opts.parentId) this.parentId = opts.parentId
-
-		if (opts.header) {
-			this.dom.header = {
-				title: opts.header.append('span').style('margin-right', '5px').style('color', 'darkslategray'),
-				plot: opts.header.append('span').style('font-size', '0.7em').style('opacity', 0.6)
-			}
-		}
 	}
 
 	getState(appState: MassState) {
@@ -124,10 +118,13 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 		this.plotsControlsDiv[config.childType].style('display', '')
 
 		if (this.dom.header) {
-			if (config.tw) this.dom.header.title.text(config.tw.term.name)
-			if (config.headerText) this.dom.header.title.text(config.headerText)
+			const text = config.headerText || (config.tw?.term?.name ?? '')
 			const typeStr = termType2label(config.termType).toUpperCase()
-			this.dom.header.plot.text(` DIFFERENTIAL ${typeStr} ANALYSIS`)
+			formatHeaderText({
+				header: this.dom.header,
+				chartType: `DIFFERENTIAL ${typeStr} ANALYSIS`,
+				text
+			})
 		}
 
 		if (this.plotTabs) this.plotTabs.update(config)

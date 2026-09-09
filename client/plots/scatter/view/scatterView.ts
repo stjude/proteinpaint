@@ -1,9 +1,9 @@
 import { fillTermWrapper } from '#termsetting'
-import { Menu } from '#dom'
+import { Menu, formatHeaderText } from '#dom'
 import type { Scatter } from '../scatter.js'
 import { isNumericTerm, numericTypes, dictionaryNumericTypes } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.js'
+import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
 
 export const minShapeSize = 0.2
 export const maxShapeSize = 6
@@ -75,11 +75,11 @@ export class ScatterView {
 
 		if (this.dom.header) {
 			const chartName = splitCamelCase(this.scatter.type).toUpperCase()
-			this.dom.header.html(
-				`${
-					this.scatter.config.name || ''
-				} <span style="opacity:.6;font-size:.7em;margin-left:10px;">${chartName}</span>`
-			)
+			formatHeaderText({
+				header: this.dom.header,
+				chartType: chartName,
+				text: this.scatter.config.name || ''
+			})
 		}
 	}
 
