@@ -32,7 +32,10 @@ export class PlotButtons {
 	interactions: SCInteractions
 	scTermdbConfig: any
 	settings!: Settings
+	/** Single cell cell type terms defined in the ds file and saved in the termdbConfig */
 	scctTerms?: any[]
+	/** Single cell numeric value terms defined in the ds file and saved in the termdbConfig */
+	scnvTerms?: any[]
 	availablePlots!: Set<string>
 
 	/** scctTerms and the scTermdbConfig are created on server init and will not change. */
@@ -48,6 +51,7 @@ export class PlotButtons {
 		}
 		this.interactions = interactions
 		this.scctTerms = termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_CELLTYPE]
+		this.scnvTerms = termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_NUMERIC_VALUE]
 		this.scTermdbConfig = termdbConfig.queries.singleCell
 	}
 
@@ -282,19 +286,22 @@ export class PlotButtons {
 		}
 		if (plot.colorColumns?.[0]) {
 			// apply optional color term. hardcodes to 1st of the array
-			config.colorTW = await this.makeScctTW(sample, plot)
+			const key = plot.colorColumns[0]?.type == 'numeric' ? 'scnv' : 'scct'
+			config.colorTW = await this.makeScTW(key, sample, plot) 
 		}
 		return config
 	}
 
 	// Quick fix. Eventually use the handler to get the proper term from the termdbConfig
-	async makeScctTW(item: { sID: string; eID: string }, plot: any) {
+	async makeScTW(key, item: { sID: string; eID: string }, plot: any){
+		if (!key) throw new Error('Key is required for makeScTW')
 		const colorColName = plot.colorColumns[0].name
-		const savedTerm = this.scctTerms?.find(t => t.name == colorColName && t.plot == plot.name)
-		if (!savedTerm)
+		const savedTerm = this[`${key}Terms`]?.find(t => t.name == colorColName && t.plot == plot.name)
+		if (!savedTerm){
+			const ttg = key === 'scct' ? TermTypeGroups.SINGLECELL_CELLTYPE : TermTypeGroups.SINGLECELL_NUMERIC_VALUE
 			throw new Error(
-				`No term found for colorColumn=${colorColName} in .termType2terms.[TermTypeGroups.SINGLECELL_CELLTYPE] for plot ${plot.name}`
-			)
+				`No term found for colorColumn=${colorColName} in .termType2terms.${ttg} for plot ${plot.name}`
+			)}
 		const term = Object.assign(structuredClone(savedTerm), {
 			sample: item
 		})
