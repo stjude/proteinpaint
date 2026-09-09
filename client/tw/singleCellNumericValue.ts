@@ -11,6 +11,7 @@ export class SingleCellNumericValueBase {
     static fill(term: RawSingleCellNumValueTerm, /*opts: TwOpts*/) {
         if (term instanceof SingleCellNumericValueBase) return
         SingleCellNumericValueBase.validate(term)
+        if (typeof term.sample == 'string') term.sample = { sID: term.sample }
     }
 
     static validate(term: RawSingleCellNumValueTerm) {
