@@ -99,6 +99,7 @@ export default function svgLegend(opts) {
 			.attr('dominant-baseline', 'central')
 			.text(d.name)
 			.style('text-decoration', d.crossedOut ? 'line-through' : '')
+		if (opts.groupLabelAttrs) grplabel.attr(opts.groupLabelAttrs(d, i))
 
 		if (settings.linesep) {
 			currlinex = settings.padleft
@@ -153,6 +154,7 @@ export default function svgLegend(opts) {
 					: ''
 			)
 
+		if (opts.itemLabelAttrs) itemlabel.attr(opts.itemLabelAttrs(d, i))
 		itemlabel.each(function (d) {
 			const t = select(this)
 			if (settings.isExcludedAttr && d[settings.isExcludedAttr]) {
