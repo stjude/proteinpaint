@@ -12,7 +12,8 @@ export async function makeCanvas(
 	samples: FormattedCell2Sample[],
 	colorMap: ColorMap,
 	range: SingleCellRange,
-	termType: string
+	termType: string,
+	colorDomain?: [number, number]
 ) {
 	const settings = q.canvasSettings
 	const dpr = settings.devicePixelRatio || 1
@@ -34,8 +35,9 @@ export async function makeCanvas(
 		.range([yAxisOffSet, settings.height + yAxisOffSet])
 
 	let colorGenerator
-	if (Number.isFinite(range.geMin) && Number.isFinite(range.geMax)) {
-		colorGenerator = scaleLinear().domain([range.geMin, range.geMax]).range([settings.startColor, settings.stopColor])
+	const domain = colorDomain || [range.geMin, range.geMax]
+	if (Number.isFinite(domain[0]) && Number.isFinite(domain[1])) {
+		colorGenerator = scaleLinear().domain(domain).clamp(!!colorDomain).range([settings.startColor, settings.stopColor])
 	}
 	const getCategoryColor = (sample: FormattedCell2Sample) => colorMap[sample.category]?.color || refColor
 	const color = (sample: FormattedCell2Sample) => {

@@ -333,6 +333,11 @@ export abstract class ScatterModelBase {
 					// order just get the first and last values
 					break
 			}
+			// Canvas responses carry the domain computed from the full cell distribution.
+			// Do not estimate percentiles from the two raw extrema returned with the image.
+			if (chart.data.src && 'colorDomain' in chart.data && chart.data.colorDomain) {
+				[min, max] = chart.data.colorDomain
+			}
 			// Create the color generator using d3's linear scale
 			// This maps our numerical range to a color gradient
 

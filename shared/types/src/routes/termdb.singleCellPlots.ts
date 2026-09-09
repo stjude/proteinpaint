@@ -53,6 +53,10 @@ export type TermdbSingleCellPlotsRequest = {
 		stopColor: string
 		/** Device pixel ratio from the client for HiDPI rendering */
 		devicePixelRatio?: number
+		colorScaleMode?: 'auto' | 'fixed' | 'percentile'
+		colorScaleMinFixed?: number | null
+		colorScaleMaxFixed?: number | null
+		colorScalePercentile?: number
 	}
 	/** Term wrapper for coloring the single cell plot */
 	colorTW?: TermWrapper
@@ -103,6 +107,8 @@ export type FormattedCell2Sample = {
 }
 
 export type SingleCellPlotDataResult = {
+	/** Resolved numeric color domain shared by the canvas and its legend. */
+	colorDomain?: [number, number]
 	colorLegend: ColorLegendEntry[]
 	shapeLegend: ShapeLegendEntry[]
 	samples?: FormattedCell2Sample[]

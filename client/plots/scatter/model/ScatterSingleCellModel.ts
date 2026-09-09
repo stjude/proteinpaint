@@ -29,6 +29,10 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
 			canvasSettings: {
+				colorScaleMode: this.scatter.settings.colorScaleMode,
+				colorScaleMinFixed: this.scatter.settings.colorScaleMinFixed,
+				colorScaleMaxFixed: this.scatter.settings.colorScaleMaxFixed,
+				colorScalePercentile: this.scatter.settings.colorScalePercentile,
 				cutoff: this.scatter.settings.maxSvgSamplesCutoff,
 				width: this.scatter.settings.svgw,
 				height: this.scatter.settings.svgh,

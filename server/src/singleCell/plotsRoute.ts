@@ -18,6 +18,7 @@ import { getColors, plotColor } from '#shared'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
 import { isSingleCellTerm } from '#shared/terms.js'
 import { get_bin_label } from '#shared/termdb.bins.js'
+import { getNumericColorDomain } from './colorDomain.ts'
 import { makeCanvas } from './canvasRendering.ts'
 import { getData } from '../termdb.matrix.js'
 import { getSampleCoordinatesByTerms } from '../routes/termdb.sampleScatter.js'
@@ -53,6 +54,10 @@ function validTermdbSingleCellPlotsRequest(input): TermdbSingleCellPlotsRequest 
 		filter: input.filter ? (input.filter as Filter) : undefined, // TODO: use a filter validator
 		filter0: input.filter0 as any,
 		canvasSettings: {
+			colorScaleMode: input.canvasSettings?.colorScaleMode,
+			colorScaleMinFixed: input.canvasSettings?.colorScaleMinFixed,
+			colorScaleMaxFixed: input.canvasSettings?.colorScaleMaxFixed,
+			colorScalePercentile: input.canvasSettings?.colorScalePercentile,
 			cutoff: validNumber(input.canvasSettings?.cutoff, 'cutoff must be a number') || 1000,
 			width: validNumber(input.canvasSettings?.width, 'width must be a number') || 800,
 			height: validNumber(input.canvasSettings?.height, 'height must be a number') || 600,
@@ -203,12 +208,17 @@ async function getSingleCellScatter(req, res, ds) {
 		}
 
 		if (totalCellCount >= q.canvasSettings.cutoff) {
+			const colorDomain = q.colorTW?.term.type == SINGLECELL_NUMERIC_VALUE && q.colorTW.q?.['mode'] == 'continuous'
+				? getNumericColorDomain(samples, q.canvasSettings)
+				: undefined
+			if (colorDomain) output.result.Default.colorDomain = colorDomain
 			const { src, canvasWidth, canvasHeight } = await makeCanvas(
 				q,
 				samples,
 				colorMap,
 				{ xMin, xMax, yMin, yMax, geMin, geMax },
-				tw.term.type
+				tw.term.type,
+				colorDomain
 			)
 			output.result.Default.src = src
 			output.result.Default.canvasWidth = canvasWidth
