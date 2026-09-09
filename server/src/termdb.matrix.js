@@ -10,7 +10,7 @@ import {
 	isSingleCellTerm,
 	getBin,
 	getTwSampleTypes,
-	DEFAULT_SAMPLE_TYPE
+	getDefaultSampleTypes
 } from '#shared/terms.js'
 import {
 	DNA_METHYLATION,
@@ -698,7 +698,7 @@ export function maySetMapParent2Children(q, ds, mapParent2Children) {
 	if (typeof mapParent2Children === 'boolean') {
 		// flag supplied by caller
 		q.mapParent2Children = mapParent2Children
-		q.sampleTypes = [DEFAULT_SAMPLE_TYPE]
+		q.sampleTypes = getDefaultSampleTypes(ds)
 		return
 	}
 	// determine query sample types

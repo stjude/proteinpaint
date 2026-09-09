@@ -621,20 +621,29 @@ export function getTwSampleTypes(tw: any, ds: any) {
 	if (ds.cohort.termdb.term2SampleType.has(term.id)) {
 		return [ds.cohort.termdb.term2SampleType.get(term.id)]
 	}
+	const defaultSampleTypes = getDefaultSampleTypes(ds)
 	if (term.type == 'samplelst') {
 		const key = Object.keys(term.values)[0]
 		const sampleId = term.values[key].list[0]?.sampleId
 		if (sampleId) {
 			const sampleType = ds.sampleId2Type.get(Number(sampleId) || sampleId)
 			return sampleType != null ? [sampleType] : []
-		} else return [DEFAULT_SAMPLE_TYPE]
+		} else return defaultSampleTypes
 	}
 	if (dtTermTypes.has(term.type)) {
 		if (term.parentTerm.sampleTypes) {
 			return term.parentTerm.sampleTypes
 		}
 	}
-	return [DEFAULT_SAMPLE_TYPE] //later own term needs to know what type annotates based on the samples
+	return defaultSampleTypes
+}
+
+// default sample types will be all non-root sample types
+export function getDefaultSampleTypes(ds: any) {
+	const sampleTypes = Object.keys(ds.cohort.termdb.sampleTypes)
+		.filter(key => Number.isInteger(ds.cohort.termdb.sampleTypes[key].parent_id))
+		.map(Number)
+	return sampleTypes
 }
 
 export function getParentType(types: Set<string>, ds: any) {
