@@ -1,6 +1,7 @@
 import type { GeneMatch, GeneDataTypeAvailability, OmnisearchResult, SampleMatch } from '#types'
 import { filterTerms } from '#src/termdb.server.init.ts'
 import { copy_term, get_AllSamplesByName } from '#src/termdb.js'
+import { sampleHasPlainSlides } from '../routes/termdb.wsiBySample.ts'
 import { authApi } from '#src/auth.js'
 import { getDsAllowedTermTypes } from '../routes/termdb.config.ts'
 import { GENE_EXPRESSION, DNA_METHYLATION } from '#types'
@@ -261,24 +262,33 @@ async function searchSamples(req: any, ds: any, prompt: string): Promise<{ match
 	const sampleAssayIndex = getSampleAssayIndex(ds)
 
 	const str = prompt.toLowerCase()
-	const matches: SampleMatch[] = []
+	const collected: { name: string; v: any }[] = []
 	let total = 0
 	// ponytail: O(all samples) substring scan per keystroke; count every match for `total` (no early break)
 	// but only collect up to the cap. Index the names if counting all matches gets slow on a large ds.
 	for (const [name, v] of Object.entries(sampleName2Id as { [k: string]: any })) {
 		if (!name?.toLowerCase().includes(str)) continue
 		total++
-		if (matches.length < MAX_SAMPLE_MATCHES) {
-			const scSample = singleCellSamples.get(name.toLowerCase())
-			const assays = sampleAssayIndex.get(String(name)) || []
-			matches.push({
-				id: v.id,
-				name,
-				...(scSample ? { singleCell: scSample } : {}),
-				...(assays.length ? { assays } : {})
-			})
-		}
+		if (collected.length < MAX_SAMPLE_MATCHES) collected.push({ name, v })
 	}
+	// plain-slide probes for the capped matches only (never all samples), run
+	// concurrently so the response waits ~one readdir round-trip, not up to ten
+	// serial ones; a ds without queries.w2.wsiFolder answers false with no disk
+	// access. ponytail: still walks the disk per request; cache a per-ds
+	// slide-sample set (invalidated by wsiFolder mtime) if search-as-you-type
+	// latency shows up on network storage.
+	const slideFlags = await Promise.all(collected.map(m => sampleHasPlainSlides(ds, m.name)))
+	const matches: SampleMatch[] = collected.map((m, i) => {
+		const scSample = singleCellSamples.get(m.name.toLowerCase())
+		const assays = sampleAssayIndex.get(String(m.name)) || []
+		return {
+			id: m.v.id,
+			name: m.name,
+			...(scSample ? { singleCell: scSample } : {}),
+			...(assays.length ? { assays } : {}),
+			...(slideFlags[i] ? { wsimages: true } : {})
+		}
+	})
 	return { matches, total }
 }
 

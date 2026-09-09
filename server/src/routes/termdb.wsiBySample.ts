@@ -52,6 +52,24 @@ async function subdirs(dir: string): Promise<string[]> {
 	return entries.filter(e => e.isDirectory()).map(e => e.name) // directories only; loose files ignored
 }
 
+/** true when the sample has at least one plain slide on disk under
+ ds.queries.w2.wsiFolder — the capability check behind "Whole Slide Images"
+ actions outside this route (e.g. the omnisearch sample results). Matches the
+ standalone plot's listing: spatial-only samples are false, and a dataset
+ without a wsiFolder answers false with no disk access. Never throws. */
+export async function sampleHasPlainSlides(ds: any, sampleId: string): Promise<boolean> {
+	const wsiFolder = ds?.queries?.w2?.wsiFolder
+	if (!wsiFolder) return false
+	const wsiBase = path.resolve(serverconfig.tpmasterdir, wsiFolder)
+	const sampleDir = path.resolve(wsiBase, String(sampleId)) // wsiFolder/<sample>/
+	if (!sampleDir.startsWith(wsiBase + path.sep)) return false // traversal guard
+	for (const img of await subdirs(sampleDir)) {
+		const files = await readdir(path.join(sampleDir, img)).catch(() => [] as string[]) // image folder contents
+		if (files.some(f => SLIDE_EXT.test(f))) return true // one slide is enough
+	}
+	return false
+}
+
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
