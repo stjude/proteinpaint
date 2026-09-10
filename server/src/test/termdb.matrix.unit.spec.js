@@ -5,7 +5,8 @@ import {
 	id2sampleRef,
 	setSampleLstData,
 	isNegatedSampleLstOnlyRequest,
-	hasFilterTermsUnsupportedByFilterSamples
+	hasFilterTermsUnsupportedByFilterSamples,
+	maySetMapParent2Children
 } from '../termdb.matrix.js'
 import { getAuthApi, authApi } from '../auth.js'
 import { init } from './load.testds.js'
@@ -88,6 +89,32 @@ tape('divideTerms: sorts terms by type', t => {
 	t.deepEqual(dict, [dictTerm, dictTerm2, unknownTypeTerm], 'Dictionary terms and terms with only id go to dict')
 	t.deepEqual(geneVariant, [geneVariantTerm], 'Gene variant terms go to geneVariantTws')
 	t.deepEqual(nonDict, [nonDictTerm, noTerm], 'Non-dictionary and unknown terms go to nonDict')
+	t.end()
+})
+
+tape('maySetMapParent2Children: explicit map flag queries all non-root sample types', t => {
+	const ds = {
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: {
+					1: { name: 'Root', parent_id: null },
+					2: { name: 'Child A', parent_id: 1 },
+					3: { name: 'Child B', parent_id: 1 }
+				}
+			}
+		}
+	}
+
+	const mapParents = {}
+	maySetMapParent2Children(mapParents, ds, true)
+	t.equal(mapParents.mapParent2Children, true, 'an explicit true flag is preserved')
+	t.deepEqual(mapParents.sampleTypes, [2, 3], 'all non-root sample types are selected')
+
+	const doNotMapParents = {}
+	maySetMapParent2Children(doNotMapParents, ds, false)
+	t.equal(doNotMapParents.mapParent2Children, false, 'an explicit false flag is preserved')
+	t.deepEqual(doNotMapParents.sampleTypes, [2, 3], 'the same default sample types are selected')
 	t.end()
 })
 
@@ -756,7 +783,7 @@ tape('getData: a request of only a negated samplelst group is rejected', async t
 	t.end()
 })
 
-tape('getData: collapses redundant sample type labels', async t => {
+tape('getData: uses generic sample labels for non-root sample types', async t => {
 	await ensureOpenAuth()
 	const data = await getData(
 		{ terms: [geneTw()], filter: emptyFilter(), sampleTypes: [2, 3] },
@@ -764,11 +791,13 @@ tape('getData: collapses redundant sample type labels', async t => {
 			sampleTypes: {
 				2: {
 					name: 'Baseline Bone Marrow CD138pos sample',
-					plural_name: 'Baseline Bone Marrow CD138pos samples'
+					plural_name: 'Baseline Bone Marrow CD138pos samples',
+					parent_id: 1
 				},
 				3: {
 					name: 'Baseline Peripheral Blood CD138pos sample',
-					plural_name: 'Baseline Peripheral Blood CD138pos samples'
+					plural_name: 'Baseline Peripheral Blood CD138pos samples',
+					parent_id: 1
 				}
 			},
 			sampleTypesByTerms: {
@@ -782,11 +811,8 @@ tape('getData: collapses redundant sample type labels', async t => {
 	t.equal(data.error, undefined, 'no error')
 	t.deepEqual(
 		data.sampleType,
-		{
-			name: 'Baseline CD138pos sample',
-			plural_name: 'Baseline CD138pos samples'
-		},
-		'sample type labels are collapsed for every getData consumer'
+		{ name: 'sample', plural_name: 'samples' },
+		'non-root sample type labels are already displayed elsewhere'
 	)
 	t.end()
 })
