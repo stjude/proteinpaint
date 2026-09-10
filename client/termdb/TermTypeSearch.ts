@@ -186,6 +186,17 @@ export const useCasesExcluded = {
 		SINGLECELL_CELLTYPE,
 		SINGLECELL_GENE_EXPRESSION,
 		COHORT
+	],
+	aggregateMatrix: [
+		SNP_LOCUS,
+		SNP_LIST,
+		METABOLITE_INTENSITY,
+		PROTEOME_ABUNDANCE,
+		SSGSEA,
+		TERM_COLLECTION,
+		SINGLECELL_CELLTYPE,
+		SINGLECELL_GENE_EXPRESSION,
+		COHORT
 	]
 }
 
@@ -304,8 +315,7 @@ export class TermTypeSearch {
 		this.dom.holder.style('display', this.state.isVisible ? 'inline-block' : 'none')
 		this.dom.topbar.style('display', this.state.isVisible ? 'inline-block' : 'none')
 		if (this.submit_lst) {
-			this.renderTermsSelected()
-			this.dom.selectedTermsDiv.style('display', this.state.selectedTerms.length > 0 ? 'inline-block' : 'none')
+			this.dom.selectedTermsDiv.style('display', this.state.selectedTerms.length > 0 ? 'flex' : 'none')
 		} else this.dom.selectedTermsDiv.style('display', 'none')
 		this.renderTermsSelected()
 		if (this.dom.clearbt) this.dom.clearbt.property('disabled', this.state.selectedTerms.length == 0)

@@ -40,6 +40,13 @@ if (!serverconfig.genomes) {
 }
 
 serverconfig.backend_only = true
+// TODO: app-server.mjs (and app-full.mjs) should have NO side effects on mounted artifacts except
+// active/public. This writeback mutates the mounted serverconfig.json, which forces that bind mount to
+// be read-write — a :ro mount makes this fail with EROFS and crashes the container at startup (the
+// releaseRollout healthgate then times out and rolls back a good release; see its validate.js guard
+// against a :ro serverconfig mount). Prefer passing the derived values (backend_only, and the default
+// genomes above) to launch() directly, or via process.env, so the server picks them up without
+// rewriting serverconfig.json on disk.
 fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '), { charset: 'utf8' })
 
 if (serverconfig.releaseTag && serverconfig.releaseTag.server) {

@@ -89,7 +89,9 @@ function getRetry(url) {
 *********************/
 
 let xfetchTracker = null,
-	i = 0
+	i = 0,
+	// the pending timeout that clears an abandoned tracker, see trackXfetch()
+	trackerTimeout = null
 
 // trackXfetch()
 // - is expected to be called towards the beginning of a route handler or helper like getData(),
@@ -103,6 +105,13 @@ let xfetchTracker = null,
 export function trackXfetch(tracker) {
 	if (!serverconfig.debugmode) return
 	if (tracker !== null && !(tracker instanceof Map)) throw `xfetch tracker must be either null or a Map instance`
+
+	// the previous cleanup timeout must not outlive the tracker it was meant to clear,
+	// or it would null out a tracker started by a later call
+	if (trackerTimeout) {
+		clearTimeout(trackerTimeout)
+		trackerTimeout = null
+	}
 
 	if (!tracker) {
 		i = 0 // reset the request counter for simulating which browser request to abort/cancel with an error response
@@ -119,10 +128,14 @@ export function trackXfetch(tracker) {
 			xfetchTracker.clear()
 			uniqueReqTracker.clear()
 		}
-		// cleanup in case the caller does not do a follow-up `trackXfetch(null)`
-		setTimeout(() => {
+		// cleanup in case the caller does not do a follow-up `trackXfetch(null)`.
+		// unref'd: this diagnostic-only timer must not keep the process alive, which
+		// would otherwise stall the exit of a test run or script by up to a minute
+		trackerTimeout = setTimeout(() => {
 			xfetchTracker = null
+			trackerTimeout = null
 		}, 60000)
+		trackerTimeout.unref?.()
 
 		uniqueReqTracker.clear()
 	}

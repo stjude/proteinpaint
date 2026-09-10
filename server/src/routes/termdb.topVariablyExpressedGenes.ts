@@ -99,14 +99,14 @@ function topVeKeyInputs(q: TermdbTopVariablyExpressedGenesRequest) {
 		filter: (q as any).filter ?? null,
 		filter0: (q as any).filter0 ?? null,
 		mapParent2Children: q.mapParent2Children,
-		sampleType: q.sampleType
+		sampleTypes: q.sampleTypes
 	}
 }
 
 async function resolveNativeSamples(q: TermdbTopVariablyExpressedGenesRequest, gE: any, ds: any): Promise<string[]> {
 	const samples: string[] = []
 	const limitSamples = await mayLimitSamples(
-		{ filter: q.filter, filter0: q.filter0, mapParent2Children: q.mapParent2Children, sampleType: q.sampleType },
+		{ filter: q.filter, filter0: q.filter0, mapParent2Children: q.mapParent2Children, sampleTypes: q.sampleTypes },
 		gE.samples,
 		ds
 	)

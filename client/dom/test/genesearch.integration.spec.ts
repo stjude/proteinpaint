@@ -12,6 +12,7 @@ import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.
 	searchOnly=gene with "p53" returns {geneSymbol:"TP53"}
 	searchOnly=genes with "p53" returns {geneSymbol:"TP53"}
 	searchOnly=genes with "kras tp53" returns {genes:[...]} with both KRAS and TP53
+	searchOnly=genes with geneList validates against the list, not the genome db
 	searchOnly=null, "p53" returns {geneSymbol,chr,start,stop}
 	searchOnly=null, "chr:start-stop" returns coordinate object
 	allowVariant=true with "chr2.208248388.C.T" returns variant object
@@ -411,6 +412,46 @@ tape('searchOnly=genes with "kras tp53" returns {genes:[...]} with both KRAS and
 
 	const geneSymbols = result.genes?.map(g => g.geneSymbol).sort()
 	test.deepEqual(geneSymbols, ['KRAS', 'TP53'], 'result should contain both KRAS and TP53')
+
+	if (test['_ok']) {
+		if (tip.dnode) tip.dnode.remove()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('searchOnly=genes with geneList validates against the list, not the genome db', async test => {
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+	const tip = new Menu({ padding: '' })
+	// a panel of assayed genes (e.g. one sample's), which the genome gene db
+	// need not contain; multi-gene validation must use this list
+	const result = await getSearchBox(holder, { tip, searchOnly: 'genes', geneList: ['PTPRC', 'ACE2', 'ACTA2'] })
+	const searchInput = holder.select('input').node() as HTMLInputElement
+
+	// two panel genes (lowercase, to prove case-insensitive canonicalization)
+	// plus a real genome gene that is NOT in the panel and must be rejected
+	searchInput.value = 'ptprc ace2 tp53'
+	searchInput.dispatchEvent(new KeyboardEvent('keyup'))
+	await sleep(debounceDelay + 50)
+	searchInput.dispatchEvent(
+		new KeyboardEvent('keyup', {
+			code: 'Enter',
+			key: 'Enter',
+			charCode: 13,
+			keyCode: 13,
+			view: window,
+			bubbles: true
+		})
+	)
+	await sleep(100)
+
+	const geneSymbols = result.genes?.map(g => g.geneSymbol).sort()
+	test.deepEqual(
+		geneSymbols,
+		['ACE2', 'PTPRC'],
+		'panel genes are accepted with the list casing; the off-panel genome gene is rejected'
+	)
 
 	if (test['_ok']) {
 		if (tip.dnode) tip.dnode.remove()

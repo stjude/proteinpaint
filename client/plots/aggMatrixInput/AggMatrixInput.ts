@@ -1,14 +1,18 @@
-import { PlotBase } from './PlotBase.ts'
+import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, copyMerge, type AppApi, type ComponentApi, type RxComponent } from '#rx'
-import { availableAggregateMethods } from '#types'
 import { capitalizeFirstLetter, icons } from '#dom'
-import { appInit } from '../termdb/app.js'
-import { validatePlotConfig } from './aggregateMatrix/AggregateMatrix.ts'
+import { appInit } from '../../termdb/app.js'
+import { validatePlotConfig } from '../aggregateMatrix/AggregateMatrix.ts'
+import { isNonDictionaryType } from '#shared/terms.js'
+import {
+	AggMatrixInputViewModel,
+	getTerm,
+	getTermSelectionKey
+} from './viewModel/AggMatrixInputViewModel.ts'
+import type { Section, SectionType } from './viewModel/AMIViewModelTypes.ts'
 
 const chartType = 'aggMatrixInput'
 
-type SectionType = 'row' | 'column'
-type Section = { name: string; terms: any[] }
 type SectionView = {
 	holder: any
 	nameLabel: any
@@ -25,14 +29,16 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 	type: string
 	config: any
 	startOpt = '-- Select --'
-	sizeMethod = ''
-	gradientMethod = ''
 	nextSectionViewId = 0
 	sectionViews = new Map<string, SectionView>()
+	viewModel = new AggMatrixInputViewModel()
 
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = AggMatrixInput.type
+
+		//opts.header is the sandbox header
+        if (opts.header) opts.header.text(`AGGREGATE MATRIX`).style('font-size', '0.9em')
 	}
 
 	getState(appState) {
@@ -46,35 +52,6 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			.append('div')
 			.style('padding', '10px')
 			.attr('data-testid', 'sjpp-agg-matrix-input-wrapper')
-
-		this.dom.methodSelects = {}
-		for (const method of ['size', 'gradient']) {
-			const methodKey = `${method}Method`
-			const methodWrapper = wrapper
-				.append('div')
-				.style('margin', '5px')
-				.style('display', 'inline-flex')
-				.style('align-items', 'center')
-			methodWrapper
-				.append('label')
-				.attr('for', `sjpp-agg-matrix-${method}-method-select`)
-				.style('margin-right', '5px')
-				.text(`${capitalizeFirstLetter(method)} method:`)
-			this.dom.methodSelects[methodKey] = methodWrapper
-				.append('select')
-				.attr('id', `sjpp-agg-matrix-${method}-method-select`)
-				.attr('name', `sjpp-agg-matrix-${method}-method-select`)
-				.on('change', async event => {
-					this[methodKey] = event.target.value === this.startOpt ? '' : event.target.value
-					await this.main()
-				})
-			this.dom.methodSelects[methodKey]
-				.selectAll('option')
-				.data([this.startOpt, ...availableAggregateMethods])
-				.join('option')
-				.attr('value', value => value)
-				.text(value => value)
-		}
 
 		const axisWrapper = wrapper
 			.append('div')
@@ -103,6 +80,29 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			this.dom.sectionHolders[type] = axis.append('div')
 		}
 
+		this.dom.methodsHolder = wrapper.append('div').style('display', 'none')
+		this.dom.methodSelects = {}
+		for (const method of ['size', 'gradient']) {
+			const methodKey = `${method}Method`
+			const methodWrapper = this.dom.methodsHolder
+				.append('div')
+				.style('margin', '5px')
+				.style('display', 'inline-flex')
+				.style('align-items', 'center')
+			methodWrapper
+				.append('label')
+				.attr('for', `sjpp-agg-matrix-${method}-method-select`)
+				.style('margin-right', '5px')
+				.text(`${capitalizeFirstLetter(method)} method:`)
+			this.dom.methodSelects[methodKey] = methodWrapper
+				.append('select')
+				.attr('id', `sjpp-agg-matrix-${method}-method-select`)
+				.attr('name', `sjpp-agg-matrix-${method}-method-select`)
+				.on('change', event => {
+					this.editConfig({ [methodKey]: event.target.value === this.startOpt ? '' : event.target.value })
+				})
+		}
+
 		const submitWrapper = wrapper.append('div').style('margin-top', '12px')
 		this.dom.submit = submitWrapper
 			.append('button')
@@ -125,27 +125,42 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 
 	async main() {
 		this.config = this.state.config
-		for (const method of ['sizeMethod', 'gradientMethod']) {
-			this.dom.methodSelects[method].property('value', this[method] || this.startOpt)
-		}
 
 		await this.renderSections('row', this.config.rowSections || [])
 		await this.renderSections('column', this.config.colSections || [])
+		this.dom.methodsHolder.style('display', 'none')
+		await this.viewModel.updateAvailableMethods(this.config, this.vocabApi, this.api?.getAbortSignal())
+		if (this.viewModel.state.methodsStatus == 'ready') {
+			this.renderMethodSelects()
+			this.dom.methodsHolder.style('display', '')
+		}
 
-		const error = this.getValidationError()
+		const error = this.viewModel.getValidationError(this.config)
 		const enabled = !error
 		this.dom.submit.property('disabled', !enabled).style('cursor', enabled ? 'pointer' : 'default')
 		this.dom.validationMessage.text(error || '')
 	}
 
+	renderMethodSelects() {
+		for (const methodKey of ['sizeMethod', 'gradientMethod']) {
+			const otherMethod = methodKey == 'sizeMethod' ? this.config.gradientMethod : this.config.sizeMethod
+			this.dom.methodSelects[methodKey]
+				.selectAll('option')
+				.data([{ id: this.startOpt, label: this.startOpt }, ...this.viewModel.state.availableMethods], method => method.id)
+				.join('option')
+				.attr('value', method => method.id)
+				.property('disabled', method => method.id != this.startOpt && method.id == otherMethod)
+				.text(method => method.label)
+			this.dom.methodSelects[methodKey].property('value', this.config[methodKey] || this.startOpt)
+		}
+	}
+
 	async renderSections(type: SectionType, sections: Section[]) {
 		const holder = this.dom.sectionHolders[type]
-		for (const [key, view] of this.sectionViews) {
+		for (const key of this.sectionViews.keys()) {
 			const idx = Number(key.slice(type.length + 1))
 			if (key.startsWith(`${type}:`) && idx >= sections.length) {
-				view.termdb?.destroy?.()
-				view.holder.remove()
-				this.sectionViews.delete(key)
+				this.destroySectionView(type, idx)
 			}
 		}
 
@@ -157,25 +172,26 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 				this.sectionViews.set(key, view)
 			}
 			const hasName = !!(section.name || '').trim()
-			const isSubmitted = !!section.terms?.length
-			view.nameLabel.style('display', isSubmitted ? 'none' : '')
+			const termType = this.viewModel.getSectionTermType(section)
+			const isDictionary = !!termType && !isNonDictionaryType(termType)
+			view.nameLabel.style('display', isDictionary ? 'none' : '')
 			view.nameInput
 				.property('value', section.name)
 				.attr('aria-invalid', hasName ? null : 'true')
 				.attr('title', hasName ? null : 'A section name is required')
 				.style('border-color', hasName ? null : '#c33')
-				.style('display', isSubmitted ? 'none' : '')
-			view.displayName.style('display', isSubmitted ? '' : 'none').text(section.name)
-			view.editButton.style('display', isSubmitted ? '' : 'none')
+				.style('display', isDictionary ? 'none' : '')
+			view.displayName.style('display', isDictionary ? '' : 'none').text(section.name)
+			view.editButton.style('display', isDictionary ? '' : 'none')
 			view.holder
 				.select('[data-testid="sjpp-agg-matrix-section-term-list"]')
 				.selectAll('div')
-				.data(section.terms || [], term => term.id || term.name)
+				.data(section.terms || [], item => getTermSelectionKey(getTerm(item)))
 				.join('div')
 				.attr('data-testid', 'sjpp-agg-matrix-section-term')
 				.style('margin', '5px')
-				.text(term => term.name || term.id)
-			view.termsHolder.style('display', section.terms?.length ? 'none' : '')
+				.text(term => term.term?.name || term.name || term.term?.id || term.id)
+			view.termsHolder.style('display', isDictionary ? 'none' : '')
 			holder.node().appendChild(view.holder.node())
 		}
 	}
@@ -241,23 +257,14 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			vocabApi: this.app.vocabApi,
 			state: {
 				activeCohort: this.state.activeCohort,
-				selectedTerms: section.terms || [],
+				selectedTerms: [],
+				allowedTermTypes: this.viewModel.getSectionTermType(section)
+					? [this.viewModel.getSectionTermType(section)!]
+					: undefined,
 				nav: { header_mode: 'search_only' },
 				tree: { usecase: { target: 'aggregateMatrix' } }
 			},
-			tree: {
-				//TODO: Cannot disable terms previously used in current tree set up. 
-				//Need to investigate why or come up with work around. 
-				minTermsToSubmit: 1,
-				submit_lst: terms => {
-					const name = nameInput.property('value').trim()
-					if (!name) {
-						nameInput.node().reportValidity()
-						return
-					}
-					this.updateSection(type, idx, { name, terms })
-				}
-			}
+			tree: { click_term: term => this.selectSectionTerm(type, idx, term, nameInput) }
 		})
 		return view
 	}
@@ -265,8 +272,56 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 	addSection(type: SectionType) {
 		const key = type === 'row' ? 'rowSections' : 'colSections'
 		const sections = structuredClone(this.config[key] || [])
-		sections.push({ name: '', terms: [] })
+		sections.push({ name: '', termType: undefined, terms: [] })
 		this.editConfig({ [key]: sections })
+	}
+
+	selectSectionTerm(type: SectionType, idx: number, selected: any, nameInput: any) {
+		const key = type === 'row' ? 'rowSections' : 'colSections'
+		const section: Section | undefined = this.config[key]?.[idx]
+		if (!section) return
+		const selectedItems: any[] = Array.isArray(selected) ? selected : [selected]
+		const selectedTerms: any[] = selectedItems.map(getTerm)
+		if (!selectedTerms.length) return
+		if (selectedTerms.some(term => !term?.type)) throw new Error('Selected term has no type')
+
+		const selectedType = selectedTerms[0].type
+		if (selectedTerms.some(term => term.type != selectedType)) {
+			this.dom.validationMessage.text('A section can only contain one term type.')
+			return
+		}
+		const sectionTermType = this.viewModel.getSectionTermType(section)
+		if (sectionTermType && sectionTermType != selectedType) {
+			this.dom.validationMessage.text(`A section can only contain ${sectionTermType} terms.`)
+			return
+		}
+
+		if (!isNonDictionaryType(selectedType)) {
+			const term = selectedTerms[0]
+			this.destroySectionView(type, idx)
+			this.updateSection(type, idx, {
+				name: term.name || term.id,
+				termType: term.type,
+				terms: [selectedItems[0]]
+			})
+			return
+		}
+
+		const name = nameInput.property('value').trim()
+		if (!name) {
+			nameInput.node().reportValidity()
+			return
+		}
+		const terms = [...(section.terms || [])]
+		const termKeys = new Set(terms.map(item => getTermSelectionKey(getTerm(item))))
+		for (const [index, term] of selectedTerms.entries()) {
+			const termKey = getTermSelectionKey(term)
+			if (termKeys.has(termKey)) continue
+			termKeys.add(termKey)
+			terms.push(selectedItems[index])
+		}
+		this.destroySectionView(type, idx)
+		this.updateSection(type, idx, { name, termType: selectedType, terms })
 	}
 
 	updateSection(type: SectionType, idx: number, edits: Partial<Section>) {
@@ -279,7 +334,17 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 	}
 
 	editSection(type: SectionType, idx: number) {
-		this.updateSection(type, idx, { terms: [] })
+		this.destroySectionView(type, idx)
+		this.updateSection(type, idx, { name: '', termType: undefined, terms: [] })
+	}
+
+	destroySectionView(type: SectionType, idx: number) {
+		const key = `${type}:${idx}`
+		const view = this.sectionViews.get(key)
+		if (!view) return
+		view.termdb?.destroy?.()
+		view.holder.remove()
+		this.sectionViews.delete(key)
 	}
 
 	removeSection(type: SectionType, idx: number) {
@@ -303,43 +368,8 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config })
 	}
 
-	getAggregateMatrixConfig() {
-		const toAxis = (sections: Section[]) =>
-			Object.fromEntries(
-				sections.map(section => [
-					section.name.trim(),
-					section.terms.map(term => (structuredClone(term)))
-				])
-			)
-		return {
-			chartType: 'aggregateMatrix',
-			rows: toAxis(this.config.rowSections || []),
-			columns: toAxis(this.config.colSections || []),
-			settings: {
-				aggregateMatrix: {
-					sizeMethod: this.sizeMethod,
-					gradientMethod: this.gradientMethod
-				}
-			}
-		}
-	}
-
-	getValidationError() {
-		for (const sections of [this.config.rowSections || [], this.config.colSections || []]) {
-			const names = sections.map(section => (section.name || '').trim())
-			if (names.some(name => !name)) return 'Every section requires a name.'
-			if (new Set(names).size !== names.length) return 'Section names must be unique within each axis.'
-		}
-		try {
-			validatePlotConfig(this.getAggregateMatrixConfig())
-			return ''
-		} catch (error: any) {
-			return error.message || String(error)
-		}
-	}
-
 	submit() {
-		const config = this.getAggregateMatrixConfig()
+		const config = this.viewModel.getAggregateMatrixConfig(this.config)
 		validatePlotConfig(config)
 		this.app.dispatch({
 			type: 'app_refresh',

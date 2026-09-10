@@ -6,6 +6,8 @@ export type GeneRankingRequest =
 			dslabel: string
 			/** when omitted, server returns the list of available keys */
 			key?: string
+			/** single-gene lookup across every ranking (ignores key): returns geneRanks */
+			gene?: string
 	  }
 	| {
 			/** run hierarchical clustering on a client-built matrix */
@@ -32,6 +34,16 @@ export type GeneRankingResponse = {
 	columns?: string[]
 	/** rows of cell values; numeric where possible, string otherwise */
 	rows?: (string | number | null)[][]
+	/** single-gene lookup: per ranking key, the gene's row (null when not ranked), the
+	 *  columns, the number of ranked (non-null) genes per column, and the total rows */
+	geneRanks?: {
+		[key: string]: {
+			columns: string[]
+			row: (string | number | null)[] | null
+			counts: number[]
+			total: number
+		}
+	}
 
 	// 'cluster' mode
 	/** hclust output for rows */

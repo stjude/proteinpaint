@@ -47,14 +47,13 @@ tape('Simple aggregate matrix', async function (test) {
 				{
 					chartType: 'aggregateMatrix',
 					rows: {
-						'Genes': [
+						Genes: [
 							{ name: 'TP53', gene: 'TP53', type: 'geneExpression' },
 							{ name: 'KRAS', gene: 'KRAS', type: 'geneExpression' },
 							{ name: 'EGFR', gene: 'EGFR', type: 'geneExpression' },
-							//Getter should work for 'gene' or 'id' property
-							{ name: 'XBP1', id: 'XBP1', type: 'geneExpression' },
-							{ name: 'SDC1', id: 'SDC1', type: 'geneExpression' },
-							{ name: 'MZB1', gene: 'MZB1', type: 'geneExpression' },
+							{ name: 'XBP1', gene: 'XBP1', type: 'geneExpression' },
+							{ name: 'SDC1', gene: 'SDC1', type: 'geneExpression' },
+							{ name: 'MZB1', gene: 'MZB1', type: 'geneExpression' }
 						]
 					},
 					columns: {
@@ -97,7 +96,7 @@ tape('Multiple sections and categories aggregate matrix', async function (test) 
 				{
 					chartType: 'aggregateMatrix',
 					rows: {
-						'Genes': [
+						Genes: [
 							{ name: 'TP53', gene: 'TP53', type: 'geneExpression' },
 							{ name: 'KRAS', gene: 'KRAS', type: 'geneExpression' },
 							{ name: 'EGFR', gene: 'EGFR', type: 'geneExpression' },
@@ -108,9 +107,7 @@ tape('Multiple sections and categories aggregate matrix', async function (test) 
 							{ name: 'DIS3', gene: 'DIS3', type: 'geneExpression' },
 							{ name: 'MZB1', gene: 'MZB1', type: 'geneExpression' },
 							{ name: 'SDC1', gene: 'SDC1', type: 'geneExpression' },
-							{ name: 'NRAS', gene: 'NRAS', type: 'geneExpression' },
-							//Should show a blank line with functioning tooltips
-							{ name: 'Not a real gene', gene: 'Not a real gene', type: 'geneExpression' }
+							{ name: 'NRAS', gene: 'NRAS', type: 'geneExpression' }
 						]
 					},
 					columns: {

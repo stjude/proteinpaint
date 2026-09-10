@@ -27,6 +27,9 @@ class BrainImaging extends PlotBase implements RxComponent {
 	config!: any
 	settings!: any
 	dom!: any
+	sampleRequestNum?: number
+	// sample table mode: the template chosen by the toolbar radio; persists across re-renders
+	tableRefKey?: string
 
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
@@ -35,9 +38,26 @@ class BrainImaging extends PlotBase implements RxComponent {
 		setInteractivity(this)
 	}
 
+	/* the chart has two modes, decided by config.selectedSampleFileNames:
+	- absent: "sample table" mode, launched from the chart button. lists the imaging samples
+	  passing the sandbox's local filter (plus the global filter) for the user to pick from;
+	  "Generate image" launches a new sandbox in image mode
+	- present: "image" mode, renders the selected samples on a brain template. also launched
+	  directly by sample view, matrix and groups, which supply the samples themselves */
+	isSampleTableMode(config) {
+		return !config.selectedSampleFileNames
+	}
+
 	async init(appState) {
 		const state = this.getState(appState)
 		const holder = this.opts.holder
+		if (this.isSampleTableMode(state.config)) {
+			if (this.opts.header) {
+				this.opts.header.style('padding-left', '7px').style('color', 'rgb(85, 85, 85)').html('Brain Imaging')
+			}
+			this.dom = { tableHolder: holder.append('div').style('padding', '10px') }
+			return
+		}
 		if (this.opts.header) {
 			const fileNames = state.config.selectedSampleFileNames
 			// show individual sample names only for small selections; otherwise show the count
@@ -247,11 +267,16 @@ class BrainImaging extends PlotBase implements RxComponent {
 			termfilter,
 			dslabel: appState.vocab.dslabel,
 			genome: appState.vocab.genome,
-			RefNIdata: appState.termdbConfig.queries.NIdata[config.queryKey]
+			termdbConfig: appState.termdbConfig,
+			RefNIdata: appState.termdbConfig.queries.NIdata.references[config.queryKey]
 		}
 	}
 
 	async main() {
+		if (this.isSampleTableMode(this.state.config)) {
+			await this.renderSampleTable()
+			return
+		}
 		this.config = structuredClone(this.state.config) //to modify config on plot_edit
 		this.settings = this.state.config.settings.brainImaging
 
@@ -319,7 +344,7 @@ class BrainImaging extends PlotBase implements RxComponent {
 			legendFilter: this.state.config.legendFilter,
 			filter: this.state.termfilter?.filter
 		}
-		return await dofetch3('brainImaging', { body })
+		return await dofetch3('termdb/brainImaging', { body })
 	}
 
 	renderImages({ data, td, dataUrls }: ImgData) {
@@ -347,7 +372,177 @@ class BrainImaging extends PlotBase implements RxComponent {
 		}
 	}
 
+	/* sample table mode. re-runs on every state change, in particular when the local filter
+	is edited: the table is rebuilt from a fresh sample query and checked rows are reset */
+	async renderSampleTable() {
+		const NIdata = this.state.termdbConfig.queries.NIdata
+		const refKeys = Object.keys(NIdata.references)
+		/* the template to render the selected samples on; a radio in the toolbar switches it,
+		which refetches the samples and rebuilds the table with that template's sampleColumns
+		(templates may differ in samples dir and columns) */
+		const refKey = this.tableRefKey && refKeys.includes(this.tableRefKey) ? this.tableRefKey : refKeys[0]
+		// guards against an earlier, slower sample query landing after a later one
+		const requestNum = (this.sampleRequestNum = (this.sampleRequestNum || 0) + 1)
+
+		const holder = this.dom.tableHolder
+		holder.selectAll('*').remove()
+		const loadingDiv = holder.append('div').style('opacity', 0.6).text('Loading samples...')
+
+		const body = {
+			genome: this.state.genome,
+			dslabel: this.state.dslabel,
+			refKey,
+			// global mass filter combined with this sandbox's local filter
+			filter: this.state.termfilter?.filter
+		}
+		let samples: any[]
+		try {
+			const result = await fetchBrainImagingSamples(body)
+			samples = result.samples || []
+		} catch (e: any) {
+			if (requestNum != this.sampleRequestNum) return // superseded by a newer render
+			loadingDiv.remove()
+			sayerror(holder, e?.message || String(e))
+			return
+		}
+		if (requestNum != this.sampleRequestNum) return // superseded by a newer render
+		loadingDiv.remove()
+
+		if (!samples.length) {
+			holder.append('div').style('opacity', 0.6).text('No imaging samples match the current filter')
+			return
+		}
+
+		const columns = await getTableColumns(this, refKey)
+		if (requestNum != this.sampleRequestNum) return
+
+		// samples currently shown in the table (narrowed by the search box)
+		let shownSamples = samples
+		// sample names checked by the user; persists across search box re-renders
+		const selectedSamples = new Set<string>()
+
+		/* shrink-to-fit container: its width follows the table (also when the user drags
+		the table's resize handle), so the toolbar above spans exactly the table width */
+		const container = holder.append('div').style('display', 'inline-block')
+		/* toolbar above the table, always visible: Generate image + template radios on the
+		left, sample count + search on the right, flush with the table's right edge */
+		const toolbar = container
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '30px')
+			.style('padding', '5px 0px')
+		const generateBtn = toolbar
+			.append('button')
+			.attr('data-testid', 'sjpp-brainImaging-generate')
+			.property('disabled', true)
+			// same pill style as the chart menu buttons, e.g. sample scatter
+			.style('padding', '10px 15px')
+			.style('border-radius', '20px')
+			.style('border-color', '#ededed')
+			.text('Generate image')
+			.on('click', () => {
+				if (!selectedSamples.size) return
+				const selectedSampleFileNames = [...selectedSamples].map(s => s + '.nii')
+				// launch the images in a new sandbox; this table stays for further launches.
+				// default slice positions are resolved by getPlotConfig() from the template's parameters
+				this.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'brainImaging',
+						queryKey: refKey,
+						selectedSampleFileNames
+					}
+				})
+			})
+		if (refKeys.length > 1) {
+			const span = toolbar.append('span')
+			span.append('span').style('opacity', 0.6).text('Template: ')
+			const name = `sjpp-brainImaging-template-${this.id}`
+			for (const k of refKeys) {
+				const label = span.append('label').style('margin-right', '10px').style('cursor', 'pointer')
+				label
+					.append('input')
+					.attr('type', 'radio')
+					.attr('name', name)
+					.attr('value', k)
+					.property('checked', k == refKey)
+					.on('change', () => {
+						this.tableRefKey = k
+						this.renderSampleTable()
+					})
+				label.append('span').text(' ' + k)
+			}
+		}
+		const countLabel = toolbar.append('span').style('margin-left', 'auto').style('opacity', 0.6)
+		// debounce: re-rendering a large table on every keystroke is janky
+		const debouncedRenderRows = debounce(() => renderRows(), 200)
+		const searchInput = toolbar
+			.append('input')
+			.attr('type', 'search')
+			.attr('aria-label', 'Search samples')
+			.attr('placeholder', 'Search samples')
+			.style('width', '200px')
+			.on('input', debouncedRenderRows)
+		const tableDiv = container.append('div')
+
+		// line up the button's left edge with the table's checkbox column
+		const alignToolbar = () => {
+			const checkbox = tableDiv.select('input[type=checkbox]').node()
+			if (!checkbox) return
+			const offset = checkbox.getBoundingClientRect().left - container.node().getBoundingClientRect().left
+			toolbar.style('padding-left', `${Math.max(0, offset)}px`)
+		}
+
+		const updateToolbar = (str: string) => {
+			countLabel.text(
+				(str ? `${shownSamples.length} of ${samples.length} samples` : `${samples.length} samples`) +
+					(selectedSamples.size ? `; ${selectedSamples.size} selected` : '')
+			)
+			// considers all selections, also those hidden by the search
+			generateBtn.property('disabled', !selectedSamples.size)
+		}
+
+		const renderRows = () => {
+			const str = searchInput.property('value').trim().toLowerCase()
+			shownSamples = !str
+				? samples
+				: samples.filter(s => Object.values(s).some(v => v != undefined && String(v).toLowerCase().includes(str)))
+			updateToolbar(str)
+			const rows = getTableRows(shownSamples, this.state, refKey)
+			tableDiv.selectAll('*').remove()
+			renderTable({
+				rows,
+				columns,
+				resize: true,
+				singleMode: false,
+				div: tableDiv,
+				maxHeight: '60vh',
+				header: { allowSort: true },
+				selectedRows: shownSamples.map((s, i) => (selectedSamples.has(s.sample) ? i : -1)).filter(i => i >= 0),
+				/* fires per checkbox on any change, incl. check-all. the checkbox value is the
+				index into the rows array passed above, i.e. into shownSamples, also after
+				sorting. rows hidden by the search keep their recorded state, so selections
+				persist across searches */
+				noButtonCallback: (_i: number, node: any) => {
+					const sample = shownSamples[Number(node.value)]?.sample
+					if (!sample) return
+					if (node.checked) selectedSamples.add(sample)
+					else selectedSamples.delete(sample)
+					updateToolbar(str)
+				}
+			})
+			alignToolbar()
+		}
+		renderRows()
+	}
+
 	renderLegend() {
+		// with a single sample the intensity color scale carries no information; skip it
+		if (this.state.config.selectedSampleFileNames?.length == 1) {
+			this.dom.legendHolder.selectAll('*').remove()
+			return
+		}
 		const legendItems: any[] = []
 		for (const [label, v] of Object.entries(this.legendValues)) {
 			const scale = scaleLinear([0, v.maxLength], [rgb('white').formatHex(), v.color]).clamp(true)
@@ -381,142 +576,15 @@ class BrainImaging extends PlotBase implements RxComponent {
 	}
 }
 
-export function makeChartBtnMenu(holder, chartsInstance: any) {
-	chartsInstance.dom.tip.clear()
-	const menuDiv = holder.append('div')
-	if (chartsInstance.state.termdbConfig.queries.NIdata) {
-		// track each template's div so that once one is chosen, the others can be hidden
-		const refDivs: any[] = []
-		for (const refKey of Object.keys(chartsInstance.state.termdbConfig.queries.NIdata)) {
-			const refDiv = menuDiv.append('div')
-			refDivs.push(refDiv)
-
-			const refOption = refDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(refKey)
-				.on('click', async () => {
-					// a template is chosen: hide the other template options,
-					// and show the chosen one as a plain label
-					for (const d of refDivs) if (d !== refDiv) d.style('display', 'none')
-					refOption.attr('class', '').style('font-weight', 'bold').style('padding', '5px')
-					refOption.on('click', null)
-					const body = {
-						genome: chartsInstance.opts.vocab.genome,
-						dslabel: chartsInstance.opts.vocab.dslabel,
-						refKey,
-						// restrict the sample table by the current cohort filter, if one is set
-						filter: chartsInstance.state.filter
-					}
-					let samples: any[]
-					try {
-						const result = await fetchBrainImagingSamples(body)
-						samples = result.samples || []
-					} catch (e: any) {
-						sayerror(refDiv, e?.message || String(e))
-						return
-					}
-
-					const columns = await getTableColumns(chartsInstance, refKey)
-
-					// samples currently shown in the table (narrowed by the search box)
-					let shownSamples = samples
-					// sample names checked by the user; persists across search box re-renders
-					const selectedSamples = new Set<string>()
-
-					/* update selections from the checked row indexes renderTable reports;
-					indexes point into the rows array passed to renderTable, i.e. into
-					shownSamples, also after sorting. rows hidden by the search keep
-					their recorded state, so selections persist across searches */
-					const updateSelections = (idxlst: number[]) => {
-						const checked = new Set(idxlst.map(i => shownSamples[i]?.sample))
-						for (const s of shownSamples) {
-							if (!s.sample) continue
-							if (checked.has(s.sample)) selectedSamples.add(s.sample)
-							else selectedSamples.delete(s.sample)
-						}
-					}
-
-					// debounce: re-rendering a large table on every keystroke is janky
-					const debouncedRenderRows = debounce(() => renderRows(), 200)
-					const searchDiv = refDiv.append('div').style('padding', '5px 0px')
-					const searchInput = searchDiv
-						.append('input')
-						.attr('type', 'search')
-						.attr('placeholder', 'Search samples')
-						.style('width', '200px')
-						.on('input', debouncedRenderRows)
-					const countLabel = searchDiv.append('span').style('margin-left', '10px').style('opacity', 0.6)
-					const tableDiv = refDiv.append('div')
-
-					const applybt = {
-						text: 'Apply',
-						// unstyled button, found by testid since it carries no distinguishing class
-						dataTestId: 'sjpp-brainImaging-apply',
-						/* fires on every checkbox change: keeps selectedSamples current, and
-						overrides the table's own disabling (which only considers visible rows)
-						so Apply stays usable when checked samples are hidden by the search */
-						onChange: (idxlst: number[], button: any) => {
-							updateSelections(idxlst)
-							if (button) button.disabled = !selectedSamples.size
-						},
-						callback: (indexes: number[]) => {
-							updateSelections(indexes)
-							if (!selectedSamples.size) return
-							chartsInstance.dom.tip.hide()
-							const selectedSampleFileNames = [...selectedSamples].map(s => s + '.nii')
-							// default slice positions are resolved by getPlotConfig()
-							// from the template's dataset-configured parameters
-							chartsInstance.app.dispatch({
-								type: 'plot_create',
-								config: {
-									chartType: 'brainImaging',
-									queryKey: refKey,
-									selectedSampleFileNames
-								}
-							})
-						}
-					}
-
-					const renderRows = () => {
-						const str = searchInput.property('value').trim().toLowerCase()
-						shownSamples = !str
-							? samples
-							: samples.filter(s => Object.values(s).some(v => v != undefined && String(v).toLowerCase().includes(str)))
-						countLabel.text(
-							(str ? `${shownSamples.length} of ${samples.length} samples` : `${samples.length} samples`) +
-								(selectedSamples.size ? `; ${selectedSamples.size} selected` : '')
-						)
-						const rows = getTableRows(shownSamples, chartsInstance.state, refKey)
-						tableDiv.selectAll('*').remove()
-						renderTable({
-							rows,
-							columns,
-							resize: true,
-							singleMode: false,
-							div: tableDiv,
-							maxHeight: '40vh',
-							header: { allowSort: true },
-							selectedRows: shownSamples.map((s, i) => (selectedSamples.has(s.sample) ? i : -1)).filter(i => i >= 0),
-							buttons: [applybt],
-							buttonsToLeft: true
-						})
-					}
-					renderRows()
-				})
-		}
-	}
-}
-
 export const brainImaging = getCompInit(BrainImaging)
 export const componentInit = brainImaging
 
 export async function getPlotConfig(opts, app) {
 	/* default slice positions come from the template's dataset-configured
-	parameters (NIdata[queryKey].parameters in e.g. DISCOVER.hg38.ts); a ds
+	parameters (NIdata.references[queryKey].parameters in e.g. DISCOVER.hg38.ts); a ds
 	that omits parameters falls back to the volume midpoint (dimensions are
 	read from the NIfTI header at server launch), then to default numbers */
-	const ref = app.vocabApi?.termdbConfig?.queries?.NIdata?.[opts.queryKey]
+	const ref = app.vocabApi?.termdbConfig?.queries?.NIdata?.references?.[opts.queryKey]
 	const parameters = ref?.parameters
 	const dims = ref?.dimensions
 	const settings = {
@@ -543,7 +611,7 @@ function getTableRows(samples, state, refKey): TableRow[] {
 		const row = [{ value: sample.sample }]
 
 		// optional sample columns
-		for (const c of state.termdbConfig.queries.NIdata[refKey].sampleColumns || []) {
+		for (const c of state.termdbConfig.queries.NIdata.references[refKey].sampleColumns || []) {
 			row.push({ value: sample[c.termid] })
 		}
 		rows.push(row)
@@ -556,7 +624,7 @@ async function getTableColumns(self, refKey): Promise<TableColumn[]> {
 	const columns: TableColumn[] = [{ label: 'Sample', sortable: true }]
 
 	// add in optional sample columns
-	for (const c of self.state.termdbConfig.queries.NIdata[refKey].sampleColumns || []) {
+	for (const c of self.state.termdbConfig.queries.NIdata.references[refKey].sampleColumns || []) {
 		columns.push({
 			label: (await self.app.vocabApi.getterm(c.termid)).name,
 			sortable: true

@@ -111,8 +111,9 @@ export class VolcanoPlotView {
 			this.termType == tt.DNA_METHYLATION ? `Number of significant ${dmNoun.many}` : 'Number of significant genes'
 		const numSigGenes = this.viewData.statsData.find(d => d.label == sigLabel)?.value
 		if (numSigGenes) {
-			const sigText =
-				this.termType == tt.DNA_METHYLATION ? `${numSigGenes} DM ${dmNoun.many}:` : `${numSigGenes} DE genes:`
+			// grouped: these run to five and six figures, and "84302" vs "8430" is hard to tell apart at a glance
+			const n = numSigGenes.toLocaleString()
+			const sigText = this.termType == tt.DNA_METHYLATION ? `${n} DM ${dmNoun.many}:` : `${n} DE genes:`
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
 
 			const pValueTableButtonText = this.settings.showPValueTable ? 'Hide p-value table' : 'Show p-value table'
@@ -246,7 +247,10 @@ export class VolcanoPlotView {
 		written as plain text rather than forced through the log-subscript helper. */
 		if (this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta') {
 			this.volcanoDom.xAxisLabel.selectAll('*').remove()
-			this.volcanoDom.xAxisLabel.text('Δβ (case − control)')
+			/* Prefer the group-named form built by the view model ("Δβ (NSD2 Higher − NSD2 Lower)"):
+			case/control are slot names, so the role-based wording does not say which direction a
+			positive value points. Fall back to it only when the names are unavailable. */
+			this.volcanoDom.xAxisLabel.text(this.viewData.deltaBetaAxisLabel || 'Δβ (case − control)')
 		} else {
 			this.volcanoDom.xAxisLabel.text(null)
 			this.setSvgSubscriptLabel(this.volcanoDom.xAxisLabel, 'log', '2', '(fold-change)')
@@ -355,7 +359,11 @@ export class VolcanoPlotView {
 		for (const d of this.viewData.statsData) {
 			const [td1, td2] = table.addRow()
 			td1.text(d.label)
-			td2.style('text-align', 'end').text(d.value)
+			/* Group the counts, but only the counts: statsData also carries a percentage that the
+			view model already put through roundValueAuto(), and toLocaleString() would re-round it
+			to three decimals. Integer test rather than a per-label check so a row added later is
+			formatted correctly without touching this. */
+			td2.style('text-align', 'end').text(Number.isInteger(d.value) ? d.value.toLocaleString() : d.value)
 		}
 	}
 
@@ -502,9 +510,19 @@ export class VolcanoPlotView {
 		}).attach()
 	}
 
+	/** Whether the effect size on show is delta-beta rather than log2 fold-change. Methylation
+	 * fold-change is a difference of logits: it ranks elements correctly but says nothing about
+	 * how much methylation moved, so it must not be what a reader is handed next to a delta-beta
+	 * axis. Read by both hover paths -- the single-point tooltip and the multi-point table -- so
+	 * the two cannot disagree about which number they show. */
+	private get onDeltaBeta() {
+		return this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
+	}
+
 	private buildMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
 		const isDM = this.termType === tt.DNA_METHYLATION
 		const isDAP = this.termType === tt.PROTEOME_DAP
+		const effectLabel = this.onDeltaBeta ? 'Δβ' : 'log₂(FC)'
 		const pValueType = this.settings.pValueType
 		// DAP files carry a single FDR (stored in original_p_value); label it as such
 		// rather than "Original/Adjusted p-value".
@@ -514,19 +532,20 @@ export class VolcanoPlotView {
 			? [
 					{ label: elementNoun(this.settings?.elementType).one },
 					{ label: 'Gene(s)' },
-					{ label: 'log₂(FC)', sortable: true },
+					{ label: effectLabel, sortable: true },
 					{ label: pLabel, sortable: true }
 			  ]
 			: isDAP
 			? [
 					{ label: 'Identifier' },
 					{ label: 'Gene' },
-					{ label: 'log₂(FC)', sortable: true },
+					{ label: effectLabel, sortable: true },
 					{ label: pLabel, sortable: true }
 			  ]
-			: [{ label: 'Gene' }, { label: 'log₂(FC)', sortable: true }, { label: pLabel, sortable: true }]
+			: [{ label: 'Gene' }, { label: effectLabel, sortable: true }, { label: pLabel, sortable: true }]
 		const rows = dots.map(d => {
-			const fc = { value: roundValueAuto(d.fold_change) }
+			// must match effectLabel above, or the column header names one number and the cell holds another
+			const fc = { value: roundValueAuto(this.onDeltaBeta ? (d as any).delta_beta : d.fold_change) }
 			const pval = { value: roundValueAuto(d[pField]) }
 			if (isDM) {
 				return [{ value: formatPromoterLabel(d as any) }, { value: d.gene_name || '' }, fc, pval]
@@ -597,7 +616,12 @@ export class VolcanoPlotView {
 		} else {
 			addTooltipRow(table, 'Gene name', d.gene_name)
 		}
-		addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
+		// report the effect size the plot is actually drawing -- see the onDeltaBeta getter
+		if (this.onDeltaBeta) {
+			addTooltipRow(table, 'Δβ', roundValueAuto((d as any).delta_beta))
+		} else {
+			addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
+		}
 		if (this.termType === tt.PROTEOME_DAP) {
 			// DAP carries a single FDR (adjusted p-value), stored in original_p_value.
 			addTooltipRow(table, 'FDR', roundValueAuto(d.original_p_value))

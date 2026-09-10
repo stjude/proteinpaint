@@ -225,6 +225,69 @@ tape('pseudobulk numeric filter', async function (test) {
 	test.end()
 })
 
+/* tvs.isnot inverts the membership test in numericSampleData2tvs(), which every non-dictionary
+numeric term type shares (geneExpression, isoformExpression, metaboliteIntensity,
+proteomeAbundance, ssGSEA, dnaMethylation, junction, pseudobulk).
+
+Regression guard: isnot used to be ignored outright, so a negated filter matched the SAME samples
+as the un-negated one. The two-group analyses build a complement group by flipping that flag, so
+"Not in X" came back identical to X and every sample was reported as being in both groups. */
+tape('numeric filter honors tvs.isnot (junction)', async function (test) {
+	// 1 is below the range, 2 is inside it, 3 is above it. Sample 4 exists in the test db's
+	// sampleidmap but is deliberately absent here -- it has no value for this term.
+	tdb.ds.queries.junction = {
+		get: async () => ({ term2sample2value: new Map([['xx', { 1: 5, 2: 15, 3: 25 }]]) })
+	}
+	const term = { type: 'junction', chr: 'chr1', start: 100, stop: 200, strand: '+' }
+	const ranges = [{ start: 10, startinclusive: true, stop: 20, stopinclusive: false }]
+	const build = isnot =>
+		getFilterCTEs(
+			{ type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term, q: {}, ranges, isnot } }] },
+			tdb.ds
+		)
+
+	const group = await build(false)
+	const complement = await build(true)
+
+	test.deepEqual(group.values, ['2'], 'without isnot, selects the in-range sample')
+	test.deepEqual(complement.values.slice().sort(), ['1', '3'], 'with isnot, selects the out-of-range samples')
+	test.deepEqual(
+		group.values.filter(v => complement.values.includes(v)),
+		[],
+		'a group and its isnot complement share no sample'
+	)
+	/* Also pins the missing-data rule: sample 4 has no value for the term and must appear in
+	NEITHER side. Enumerating the cohort and subtracting the group -- a plausible way to "fix"
+	isnot -- would put 4 in the complement and fail this. */
+	test.deepEqual(
+		[...group.values, ...complement.values].sort(),
+		['1', '2', '3'],
+		'group plus complement covers the annotated samples only, never one without a value'
+	)
+	test.equal(
+		complement.filters.split('?').length - 1,
+		complement.values.length,
+		'CTE placeholders match values when negated'
+	)
+	test.end()
+})
+
+tape('numeric filter honors tvs.isnot (pseudobulk)', async function (test) {
+	// same inversion, reached through a different term type's getter
+	tdb.ds.queries.singleCell = {
+		pseudobulk: { get: async () => ({ term2sample2value: new Map([['xx', { 1: 0.5, 2: 1.5, 3: 2.5 }]]) }) }
+	}
+	const term = { type: 'pseudobulk', assay: 'geneExpression', memberId: 'immune', category: 'T cells', gene: 'TP53' }
+	const ranges = [{ start: 1, startinclusive: true, stop: 2, stopinclusive: false }]
+	const filter = await getFilterCTEs(
+		{ type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term, ranges, isnot: true } }] },
+		tdb.ds
+	)
+
+	test.deepEqual(filter.values.slice().sort(), ['1', '3'], 'isnot selects the out-of-range pseudobulk samples')
+	test.end()
+})
+
 tape('custom termCollection fraction filter', async function (test) {
 	const filter = await getFilterCTEs(
 		{

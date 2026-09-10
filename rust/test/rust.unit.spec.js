@@ -1,6 +1,35 @@
 // Import necessary modules
 import tape from 'tape'
+import fs from 'fs'
+import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
+
+const binDir = path.join(import.meta.dirname, '../target/release')
+
+/* A child that dies before reading its input used to take the whole node process down with it: the
+write landed on a closed pipe, and the resulting 'error' event on ps.stdin had no listener, so node
+threw it as an uncaught exception. In production one binary that would not start turned into a
+crashed server and a gateway 502 for every in-flight request -- and the child's stderr died with the
+process, hiding why it failed to start at all.
+
+This test reaching its assertion is itself the proof: an unhandled 'error' event would abort the
+tape run outright rather than fail a test. */
+tape('run_rust survives a child that dies before reading stdin', async test => {
+	const binfile = '__test-diesfast'
+	const stub = path.join(binDir, binfile)
+	// exit 127 is what a missing binary or a dynamic-loader failure reports
+	fs.writeFileSync(stub, '#!/bin/sh\nexit 127\n', { mode: 0o755 })
+	try {
+		// large enough that the write is still in flight once the child is already gone
+		await run_rust(binfile, 'x'.repeat(200000))
+		test.fail('should reject when the child exits with a non-zero status')
+	} catch (e) {
+		test.ok(String(e).includes('non-zero status'), 'rejects with the child exit status rather than crashing')
+	} finally {
+		fs.unlinkSync(stub)
+	}
+	test.end()
+})
 
 tape.skip('indel', async test => {
 	const message = 'should match the expected indel output'

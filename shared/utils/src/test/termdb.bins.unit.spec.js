@@ -970,6 +970,37 @@ tape('get_bin_range_equation(), valueConversion', function (test) {
 	test.end()
 })
 
+tape('assignBinColors()', function (test) {
+	const labeled = [{ label: 'a' }, { label: 'b' }, { label: 'c' }]
+	test.equal(new Set(b.assignBinColors(labeled).map(bin => bin.color)).size, 3, 'labeled bins get distinct colors')
+
+	/* label is optional on a bin and is often only derived later by get_bin_label(), so a
+	label-keyed ordinal scale would hand every unlabeled bin the same color */
+	const unlabeled = [{ start: 0, stop: 1 }, { start: 1, stop: 2 }, { start: 2 }]
+	test.equal(new Set(b.assignBinColors(unlabeled).map(bin => bin.color)).size, 3, 'unlabeled bins get distinct colors')
+
+	// indexing must not disturb the colors that labeled bins already had
+	test.deepEqual(
+		unlabeled.map(bin => bin.color),
+		labeled.map(bin => bin.color),
+		'the nth bin gets the same color whether or not it is labeled'
+	)
+
+	/* a pre-existing color is deliberately overwritten, not preserved: a client that echoes back a
+	bin list it was served would otherwise keep a color drawn from a scale of a different size.
+	user-chosen bin colors travel as q.binColored[], not on q.lst[] */
+	const stale = [{ label: 'a', color: '#123456' }, { label: 'b' }]
+	b.assignBinColors(stale)
+	test.notEqual(stale[0].color, '#123456', 'a stale bin color is replaced, not kept')
+	test.equal(new Set(stale.map(bin => bin.color)).size, 2, 'the recolored bins are still distinct')
+
+	// bins are colored in place, so callers that must not touch their input have to copy first
+	const input = [{ label: 'a' }, { label: 'b' }]
+	test.equal(b.assignBinColors(input), input, 'the same array is returned, colored in place')
+
+	test.end()
+})
+
 /*************************
  reusable helper functions
 **************************/

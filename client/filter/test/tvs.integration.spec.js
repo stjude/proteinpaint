@@ -18,6 +18,8 @@ Tests:
 	tvs: Gene Variant - CNV - cateogrical
 	tvs: Gene Variant - CNV - continuous
 	tvs: Gene Variant - Fusion
+	tvs: Gene Expression
+	tvs: termCollection
 
 
 the direct functional testing of the component, without the use of runpp()
@@ -1324,6 +1326,89 @@ tape('tvs: Gene Variant - Fusion', async test => {
 		tipd.remove()
 		controlTipd.remove()
 	}
+	test.end()
+})
+
+tape('tvs: Gene Expression', async test => {
+	test.timeoutAfter(4000)
+	test.plan(5)
+
+	const opts = getOpts({
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							gene: 'TP53',
+							name: 'TP53 expression',
+							type: 'geneExpression'
+						},
+						ranges: [{ stopinclusive: true, start: 1, stop: 10 }]
+					}
+				}
+			]
+		}
+	})
+
+	const filternode = opts.holder.node()
+	await opts.filter.main(opts.filterData)
+
+	try {
+		const pill = await detectOne({ target: filternode, selector: '.tvs_pill' })
+		const controlTipd = opts.filter.Inner.dom.controlsTip.d
+		const editOpt = controlTipd
+			.selectAll('tr')
+			.filter(d => d.action == 'edit')
+			.node()
+		const tipd = opts.filter.Inner.dom.termSrcDiv
+
+		test.equal(opts.filter.Inner.pills['1'].Inner.handler.type, 'numeric', 'should use the numeric handler')
+		test.equal(
+			pill.querySelector('.term_name_btn').textContent,
+			'TP53 expression',
+			'should label the pill with the gene'
+		)
+		test.true(pill.querySelector('.value_btn').textContent.includes('1'), 'should show the selected expression range')
+
+		pill.click()
+		const rangeInput = await detectOne({
+			target: tipd.node(),
+			selector: 'input[name="rangeInput"]',
+			trigger: () => editOpt.click()
+		})
+		test.equal(rangeInput.value, '1 < x <= 10', 'should show the selected expression range in the editor')
+
+		rangeInput.value = 'x > 5'
+		rangeInput.dispatchEvent(new KeyboardEvent('keyup', { code: 'Enter', key: 'Enter', keyCode: 13 }))
+		const applyBtn = await detectOne({ target: tipd.node(), selector: 'table button:not(.sjpp_delete_btn)' })
+		opts.test({
+			trigger: () => applyBtn.click(),
+			callback: filter => {
+				test.deepEqual(
+					filter.lst[0].tvs.ranges,
+					[
+						{
+							start: 5,
+							stop: undefined,
+							value: undefined,
+							startinclusive: false,
+							stopinclusive: undefined,
+							startunbounded: false,
+							stopunbounded: true
+						}
+					],
+					'should update the expression range in the filter payload'
+				)
+			}
+		})
+	} catch (e) {
+		test.fail('test error: ' + e)
+	}
+	if (test._ok) opts.holder.remove()
 	test.end()
 })
 

@@ -399,7 +399,7 @@ export function setInteractivity(self) {
 			offered when this sample has an imaging file */
 			const niOptionsDiv = self.dom.clickMenu.d.append('div')
 			Promise.all(
-				Object.keys(q.NIdata).map(async queryKey => {
+				Object.keys(q.NIdata.references).map(async queryKey => {
 					try {
 						const available = await getBrainImagingSampleSet(
 							self.state.vocab.genome,

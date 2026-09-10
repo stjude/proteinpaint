@@ -186,7 +186,7 @@ export class Scatter extends PlotBase implements RxComponent {
 
 	async download(event) {
 		if (this.model.is2DLarge || this.model.is3D) {
-			const url = this.vm.canvas.toDataURL('image/png')
+			const url = await this.getWebglImage()
 			downloadImage(url)
 		} else {
 			const name2svg = this.getChartImages()
@@ -195,6 +195,64 @@ export class Scatter extends PlotBase implements RxComponent {
 			})
 			menu.show(event.clientX, event.clientY, event.target)
 		}
+	}
+
+	/** Build the downloadable image for the webgl (2D large / 3D) plots. The webgl canvas is now
+	 * transparent and overlaid on chart.svg, which carries the axes, titles, legend and the white
+	 * plot-area background. A plain canvas.toDataURL() would therefore export only the points on a
+	 * transparent background, so composite the svg and the webgl canvas onto one export canvas.
+	 * For a server-rendered single-cell plot there is no webgl canvas — renderLargeSingleCell() puts
+	 * the server image into an SVG <image> — so return that image source directly. When there is no
+	 * co-located svg to composite, fall back to serializing the canvas on its own. */
+	async getWebglImage(): Promise<string> {
+		// this.vm.canvas is an HTMLCanvasElement for the webgl point cloud, but renderLargeSingleCell()
+		// assigns a d3 selection wrapping an SVG <image>; normalize either to a DOM node
+		const rawCanvas: any = this.vm.canvas
+		const canvasNode = typeof rawCanvas?.node === 'function' ? rawCanvas.node() : rawCanvas
+
+		// server-rendered single-cell plot: no HTML canvas to composite, so return the server image's
+		// source (the <image> href) directly rather than calling toDataURL() on a non-canvas node
+		if (canvasNode instanceof SVGImageElement) {
+			return canvasNode.href?.baseVal || canvasNode.getAttribute('href') || canvasNode.getAttribute('xlink:href') || ''
+		}
+
+		const canvas = canvasNode as HTMLCanvasElement
+		const container = canvas?.parentNode as HTMLElement | null
+		const svgNode = container?.querySelector('svg') as SVGSVGElement | null
+		if (!svgNode) return canvas.toDataURL('image/png')
+
+		const width = svgNode.width.baseVal.value || Number(svgNode.getAttribute('width'))
+		const height = svgNode.height.baseVal.value || Number(svgNode.getAttribute('height'))
+
+		// serialize the svg, copying font styles onto the clone so the axis/legend text renders
+		// correctly when the svg is drawn as a standalone image
+		const svgClone = svgNode.cloneNode(true) as SVGSVGElement
+		svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+		const computed = window.getComputedStyle(svgNode)
+		svgClone.style.setProperty('font-family', computed.getPropertyValue('font-family'))
+		svgClone.style.setProperty('font-size', computed.getPropertyValue('font-size'))
+		const svgStr = new XMLSerializer().serializeToString(svgClone)
+		const svgImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+			const img = new Image()
+			img.onload = () => resolve(img)
+			img.onerror = reject
+			img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr)
+		})
+
+		const out = document.createElement('canvas')
+		out.width = width
+		out.height = height
+		const ctx = out.getContext('2d')!
+		// restore the former opaque white background of the exported image
+		ctx.fillStyle = 'white'
+		ctx.fillRect(0, 0, width, height)
+		// axes, titles, legend and the plot-area background
+		ctx.drawImage(svgImg, 0, 0, width, height)
+		// the webgl points, overlaid on the plot area at the same axis-margin offset used on screen
+		const offsetX = parseFloat(canvas.style.left) || this.model.axisOffset.x
+		const offsetY = parseFloat(canvas.style.top) || this.model.axisOffset.y
+		ctx.drawImage(canvas, offsetX, offsetY, this.settings.svgw, this.settings.svgh)
+		return out.toDataURL('image/png')
 	}
 	toText() {
 		const lines: string[] = []

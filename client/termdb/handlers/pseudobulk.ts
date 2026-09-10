@@ -1,6 +1,14 @@
 import type { AppApi } from '#rx'
 import { TermTypeGroups, termType2label } from '#shared/terms.js'
-import { Tabs, type TabsInputEntry, make_radios, type OptionEntry, Menu, addGeneSearchbox } from '#dom'
+import {
+	Tabs,
+	type TabsInputEntry,
+	make_radios,
+	type OptionEntry,
+	Menu,
+	addGeneSearchbox,
+	make_one_checkbox
+} from '#dom'
 import type { ClientGenome } from 'types/clientGenome'
 import type { PseudobulkTerm } from '#types'
 
@@ -12,13 +20,12 @@ type PseudobulkSelection = Omit<PseudobulkTerm, 'category' | 'gene'> & {
 }
 
 export class SearchHandler {
-	callback!: (f?: any) => void
+	callback!: (term: PseudobulkSelection | PseudobulkSelection[]) => void | Promise<void>
 	app!: AppApi
 	genome!: ClientGenome
 	map?: Map<string, Map<string, any[]>>
 	selectedTerm?: PseudobulkSelection
-
-	constructor() {}
+	multiSelect!: boolean
 
 	async init(opts) {
 		const pseudobulkTerms = this.validateOpts(opts)
@@ -26,6 +33,8 @@ export class SearchHandler {
 		this.app = opts.app
 		this.genome = opts.genomeObj
 		const holder = opts.holder.append('div').style('padding', '10px 0px')
+		this.multiSelect = opts?.usecase?.target == 'aggregateMatrix'
+		this.selectedTerm = undefined
 
 		this.map = this.buildRenderingDataMap(pseudobulkTerms)
 		this.renderPseudobulkSearch(holder)
@@ -66,12 +75,15 @@ export class SearchHandler {
 		if (this.map.size === 1) {
 			// only one assay
 			const label = termType2label(this.map.keys().next().value!)
-			holder.append('div').text('Single-cell pseudobulk ' + label)
+			holder
+				.append('div')
+				.style('padding-bottom', '10px')
+				.text('Single-cell pseudobulk ' + label)
 			this.renderMemberIdsByAssay(holder.append('div'), this.map)
 			return
 		}
 		const tabs = this.buildTabsOpts(this.map)
-		new Tabs({ holder, tabs, linePosition: 'right', tabsPosition: 'vertical' }).main()
+		new Tabs({ holder, tabs, tabsPosition: 'vertical' }).main()
 	}
 
 	buildTabsOpts(map) {
@@ -105,7 +117,9 @@ export class SearchHandler {
 	renderPseudobulkTerms(holder, memberIdMap, geneSearchHolder) {
 		if (memberIdMap.size === 1) {
 			const [memberId, terms] = memberIdMap.entries().next().value
-			this.renderCategoryRadios(holder, memberId, terms, geneSearchHolder)
+			if (this.multiSelect) {
+				this.renderCategoriesAsTerms(holder, terms)
+			} else this.renderCategoryRadios(holder, memberId, terms, geneSearchHolder)
 			return
 		}
 
@@ -115,18 +129,17 @@ export class SearchHandler {
 			active: false,
 			testid: `sjpp-pseudobulk-member-${memberId}`,
 			callback: (_, tab) => {
-				this.selectedTerm = undefined
 				geneSearchHolder.selectAll('*').remove()
 				tab.contentHolder.selectAll('*').remove()
-				this.renderCategoryRadios(tab.contentHolder, memberId, terms, geneSearchHolder)
+				if (this.multiSelect) this.renderCategoriesAsTerms(tab.contentHolder, terms)
+				else this.renderCategoryRadios(tab.contentHolder, memberId, terms, geneSearchHolder)
 			}
 		}))
-		new Tabs({ holder, tabs }).main()
+		new Tabs({ holder, tabs, tabsPosition: 'vertical' }).main()
 	}
 
 	renderCategoryRadios(holder, memberId, terms, geneSearchHolder) {
 		if (!terms || terms.length < 1) throw new Error('No terms found for memberId')
-		holder.append('div').style('opacity', 0.7).text(`Select from ${memberId}:`)
 
 		const options: OptionEntry[] = terms.map(term => ({
 			label: term.name,
@@ -161,6 +174,42 @@ export class SearchHandler {
 				this.callback(createPseudobulkTerm(this.selectedTerm, geneSearch.geneSymbol))
 			}
 		})
+	}
+
+	/** Mimics the style and functionality of pills created in tree.js.
+	 * Returns the term object(s) from termdbConfig.termType2terms.[TermTypeGroups.PSEUDOBULK]
+	 * without the gene. */
+	renderCategoriesAsTerms(holder: any, terms: PseudobulkTerm[]) {
+		holder.style('padding', '0px 10px')
+
+		make_one_checkbox({
+			holder,
+			labeltext: 'Select all',
+			divstyle: { opacity: '0.7' },
+			callback: () => this.callback(terms)
+		})
+
+		const wrapper = holder.append('div').style('display', 'block').style('padding', '10px 15px 0px')
+
+		wrapper
+			.selectAll('.pseudobulk-term')
+			.data(terms, term => term.id)
+			.join(enter => {
+				const row = enter.append('div').attr('class', 'pseudobulk-term')
+
+				row
+					.append('div')
+					.attr('class', 'termlabel sja_filter_tag_btn sja_tree_click_term ts_pill')
+					.style('padding', '5px 8px')
+					.style('margin', '1px 0px')
+					.style('border-radius', '6px')
+					.text(term => term.name)
+					.on('click', async (_, term) => {
+						await this.callback(term)
+					})
+
+				return row
+			})
 	}
 }
 

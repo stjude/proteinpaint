@@ -351,6 +351,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		const samples = await getH5samples(q.file)
 		if (!Array.isArray(samples)) throw new Error('samples not array')
 		if (!samples.length) throw 'HDF5 file has no samples, please check file.'
+		const sampleTypes = new Set()
 		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
 			if (si === undefined) {
@@ -358,7 +359,10 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 				throw `unknown sample ${sn} from HDF5 ${q.file}`
 			}
 			q.samples.push(si)
+			const sampleType = ds.sampleId2Type.get(si)
+			sampleTypes.add(sampleType)
 		}
+		q.sampleTypes = [...sampleTypes]
 		console.log(`${ds.label}: geneExpression HDF5 file validated. Samples:`, q.samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate geneExpression HDF5 file: ${error}`

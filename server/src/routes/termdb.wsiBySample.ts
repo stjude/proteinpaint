@@ -21,11 +21,12 @@ import serverconfig from '#src/serverconfig.js' // tpmasterdir, the root of all 
    wsiFolder  plain slides: wsiFolder/<sample>/<imageName>/<slide file>
 
  Everything is listed straight from disk: samples are the subfolders of the
- configured roots. The legacy wsimages sql table (when present) is unioned in,
- so a stale db record without files shows 0 images.
+ configured roots.
 
- With sample_id: that sample's images. Without: every sample discovered on
- disk or named in the db, with its image count (drives the plot's sample table).
+ With sample_id: that sample's images, both kinds (the single-cell app's
+ spatial probe/viewer use this). Without: every sample with PLAIN slides on
+ disk, with its plain-image count — drives the standalone plot's sample
+ table, which excludes spatial-only samples.
 */
 
 export const payload: RoutePayload = {
@@ -66,9 +67,11 @@ function init({ genomes }) {
 			const spatialBase = w2.folder ? path.resolve(serverconfig.tpmasterdir, w2.folder) : undefined
 			const wsiBase = w2.wsiFolder ? path.resolve(serverconfig.tpmasterdir, w2.wsiFolder) : undefined
 
-			/** the sample's images from both roots. fileName is relative to the
-			 sample's folder in its root, matching the wsitiles wsimage= param */
-			const getImages = async (sampleId: string): Promise<(WsiImage | SpatialImage)[]> => {
+			/** the sample's images, from both roots by default; kind restricts to
+			 one root so the other tree is never touched (the sample listing only
+			 needs plain slides). fileName is relative to the sample's folder in
+			 its root, matching the wsitiles wsimage= param */
+			const getImages = async (sampleId: string, kind?: 'spatial' | 'wsi'): Promise<(WsiImage | SpatialImage)[]> => {
 				const images: (WsiImage | SpatialImage)[] = []
 
 				// v=<slide mtime>: tiles are served immutable, so a regenerated slide
@@ -82,7 +85,7 @@ function init({ genomes }) {
 					}&sample_id=${encodeURIComponent(sampleId)}&imageType=${imageType}&v=${mtime}`
 
 				// spatial: one image per subfolder of the sample's directory
-				if (spatialBase) {
+				if (spatialBase && kind != 'wsi') {
 					const spSampleDir = path.resolve(spatialBase, sampleId) // folder/<sample>/
 					if (!spSampleDir.startsWith(spatialBase + path.sep)) throw new Error('invalid sample_id') // traversal guard
 					for (const img of await subdirs(spSampleDir)) {
@@ -100,19 +103,18 @@ function init({ genomes }) {
 						images.push({
 							type: 'spatial' as const,
 							fileName,
-							cellBoundaries: rel(bySuffix(w2.cellBoundariesFileSuffix)),
-							nucleusBoundaries: rel(bySuffix(w2.nucleusBoundariesFileSuffix)),
-							geneExpressionFile: rel(bySuffix(w2.geneExpressionFileSuffix)),
+							spatialData: rel(bySuffix(w2.spatialDataFileSuffix)),
 							// dataset-level viewer defaults; the client's burger menu overrides them
 							geneExpression: w2.geneExpression,
 							annotationLevel: w2.annotationLevel,
+							cellTypes: w2.cellTypes,
 							thumbnail: thumbnail(fileName, v, 'spatial')
 						})
 					}
 				}
 
 				// plain wsi: one image per subfolder of the sample's directory
-				if (wsiBase) {
+				if (wsiBase && kind != 'spatial') {
 					const wsiSampleDir = path.resolve(wsiBase, sampleId) // wsiFolder/<sample>/
 					if (!wsiSampleDir.startsWith(wsiBase + path.sep)) throw new Error('invalid sample_id') // traversal guard
 					for (const img of await subdirs(wsiSampleDir)) {
@@ -128,33 +130,27 @@ function init({ genomes }) {
 			}
 
 			if (!q.sample_id) {
-				// no sample given: sample ids are the subfolders of the configured
-				// roots on disk, unioned with the legacy wsimages db table (if any)
-				// so a db-listed sample whose files are gone still shows with 0
-				const ids = new Set<string>() // sample names, deduped across both roots + db
-				for (const base of [spatialBase, wsiBase]) {
-					if (base) for (const name of await subdirs(base)) ids.add(name) // each subfolder = one sample
-				}
-				try {
-					// legacy db rows: samples that are supposed to have images
-					const sql = `SELECT DISTINCT sampleidmap.name AS name
-						 FROM wsimages INNER JOIN sampleidmap ON wsimages.sample = sampleidmap.id`
-					for (const r of ds.cohort.db.connection.prepare(sql).all()) ids.add(String((r as any).name))
-				} catch (_) {
-					// dataset without a wsimages table: disk-only listing
-				}
-
+				// no sample given: list samples for the standalone Whole Slide
+				// Images plot — PLAIN slides on disk only (spatial images are
+				// viewed through the single-cell app, which asks per sample_id)
+				const ids = wsiBase ? await subdirs(wsiBase) : [] // each subfolder = one sample
 				const samples: WsiSampleSummary[] = []
-				for (const name of [...ids].sort()) {
-					// count each sample's images by actually enumerating them on disk
-					samples.push({ sampleId: name, count: (await getImages(name)).length })
+				for (const name of ids.sort()) {
+					// count each sample's plain slides by enumerating only the wsi
+					// root — the spatial tree is never touched here, so listing
+					// cost and failures can't depend on unrelated spatial data
+					const count = (await getImages(name, 'wsi')).length
+					if (count) samples.push({ sampleId: name, count }) // a folder without slides isn't listed
 				}
 				res.status(200).json({ samples } satisfies WsiBySampleResponse)
 				return
 			}
 
+			// optional root restriction (the standalone plot asks for 'wsi', the
+			// sc app for 'spatial'); absent = both kinds
+			if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw new Error('invalid imageType')
 			// String(): numeric-looking sample names arrive as numbers from query parsing
-			const images = await getImages(String(q.sample_id))
+			const images = await getImages(String(q.sample_id), q.imageType)
 			res.status(200).json({ images } satisfies WsiBySampleResponse)
 		} catch (e: any) {
 			console.warn(e)

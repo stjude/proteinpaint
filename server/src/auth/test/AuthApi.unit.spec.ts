@@ -136,6 +136,163 @@ tape('AuthApi.canDisplaySampleIds: returns false when user is not logged in', fu
 	test.end()
 })
 
+// Regression guard for the /termdb/sampleScatter entry in Auth.protectedRoutes.samples — this list is the
+// privacy boundary for the route. If that entry were missing or misspelled, getRequiredCred() would find no
+// required cred for the exact path, isUserLoggedIn() would short-circuit to true, and a LOGGED-OUT request
+// would wrongly be allowed to display sample ids. The generic '/termdb' + typeof-boolean test above cannot
+// catch that, so assert the exact path with the session both absent and present.
+tape(
+	'AuthApi.canDisplaySampleIds: denies a logged-out request on the exact /termdb/sampleScatter path',
+	function (test) {
+		test.timeoutAfter(500)
+		test.plan(1)
+
+		const { authApi } = makeAuthApi()
+		const ds = { cohort: { termdb: { displaySampleIds: true } }, label: dslabel }
+		const req = { query: { embedder, dslabel }, headers: {}, path: '/termdb/sampleScatter', cookies: {} }
+		test.equal(
+			authApi.canDisplaySampleIds(req, ds as any),
+			false,
+			'a logged-out request on the protected scatter route must not display sample ids'
+		)
+		test.end()
+	}
+)
+
+tape(
+	'AuthApi.canDisplaySampleIds: allows a logged-in request on the exact /termdb/sampleScatter path',
+	async function (test) {
+		test.timeoutAfter(1000)
+		test.plan(1)
+
+		const genomes = { hg38: { datasets: { [dslabel]: {} } } }
+		// Token without a 'datasets' field so the dsnames check is skipped
+		const loginToken = jsonwebtoken.sign(
+			{ iat: time, exp: time + 300, ip: '127.0.0.1', email: 'user@test.com' },
+			secret
+		)
+		const { authApi, app } = await makeAuthApiWithRoutes({}, genomes)
+
+		// Establish a session via /jwt-status and capture the session cookie (same pattern as the getDsAuth test)
+		let capturedSessionCookieId = ''
+		let capturedSessionId = ''
+		await new Promise<void>(resolve => {
+			const req = {
+				query: { embedder, dslabel },
+				headers: { [headerKey]: loginToken },
+				path: '/jwt-status',
+				ip: '127.0.0.1',
+				cookies: {}
+			}
+			const res = {
+				send() {
+					resolve()
+				},
+				header(key: string, val: string) {
+					if (key === 'Set-Cookie') {
+						const parts = val.split(';')[0].split('=')
+						capturedSessionCookieId = parts[0]
+						capturedSessionId = parts[1]
+					}
+				},
+				status() {}
+			}
+			app.routes['/jwt-status'].post(req, res)
+		})
+		await sleep(50)
+
+		const ds = { cohort: { termdb: { displaySampleIds: true } }, label: dslabel }
+		const req = {
+			query: { embedder, dslabel },
+			headers: {},
+			path: '/termdb/sampleScatter',
+			cookies: { [capturedSessionCookieId]: capturedSessionId }
+		}
+		test.equal(
+			authApi.canDisplaySampleIds(req, ds as any),
+			true,
+			'a logged-in request on the protected scatter route should display sample ids'
+		)
+		test.end()
+	}
+)
+
+tape(
+	'AuthApi.canDisplaySampleIds: evaluates a function displaySampleIds policy against the request role',
+	function (test) {
+		test.timeoutAfter(500)
+		test.plan(3)
+
+		// no creds => the samples-route login gate (isUserLoggedIn) passes, isolating the policy evaluation.
+		// A truthy function object must NOT be treated as an unconditional allow: it is evaluated for the
+		// request's clientAuthResult and must fail closed when the role is denied.
+		const authApi = new AuthApi({}, makeMockApp(), {}, { port: 3000, cachedir: '/tmp' })
+		const policy = (clientAuthResult: any) => clientAuthResult?.role == 'admin'
+		const ds = { cohort: { termdb: { displaySampleIds: policy } }, label: dslabel }
+
+		const adminReq = {
+			query: { embedder, dslabel, __protected__: { clientAuthResult: { role: 'admin' } } },
+			headers: {},
+			path: '/termdb/sampleScatter',
+			cookies: {}
+		}
+		const nonAdminReq = {
+			query: { embedder, dslabel, __protected__: { clientAuthResult: { role: 'public' } } },
+			headers: {},
+			path: '/termdb/sampleScatter',
+			cookies: {}
+		}
+		const noRoleReq = {
+			query: { embedder, dslabel, __protected__: { clientAuthResult: {} } },
+			headers: {},
+			path: '/termdb/sampleScatter',
+			cookies: {}
+		}
+
+		test.equal(
+			authApi.canDisplaySampleIds(adminReq, ds as any),
+			true,
+			'should allow when the policy returns true for the role'
+		)
+		test.equal(
+			authApi.canDisplaySampleIds(nonAdminReq, ds as any),
+			false,
+			'should deny an authenticated non-admin whose policy returns false'
+		)
+		test.equal(
+			authApi.canDisplaySampleIds(noRoleReq, ds as any),
+			false,
+			'should deny when clientAuthResult carries no role'
+		)
+		test.end()
+	}
+)
+
+tape('AuthApi.canDisplaySampleIds: fails closed when the displaySampleIds policy throws', function (test) {
+	test.timeoutAfter(500)
+	test.plan(1)
+
+	const authApi = new AuthApi({}, makeMockApp(), {}, { port: 3000, cachedir: '/tmp' })
+	const ds = {
+		cohort: {
+			termdb: {
+				displaySampleIds: () => {
+					throw new Error('policy blew up')
+				}
+			}
+		},
+		label: dslabel
+	}
+	const req = {
+		query: { embedder, dslabel, __protected__: { clientAuthResult: {} } },
+		headers: {},
+		path: '/termdb/sampleScatter',
+		cookies: {}
+	}
+	test.equal(authApi.canDisplaySampleIds(req, ds as any), false, 'should return false when the policy throws')
+	test.end()
+})
+
 tape('AuthApi.getDsAuth: returns empty array when no active genomes', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)

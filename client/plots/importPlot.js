@@ -2,11 +2,11 @@ export async function importPlot(chartType, notFoundMessage = '') {
 	// TODO: move to dynamic import of exact plot names here, instead of string-pattern,
 	// so that the bundler does not have to guess code file extension, directory names and letter casing
 	switch (chartType) {
+		case 'aggMatrixInput':
+			return await import('./aggMatrixInput/AggMatrixInput.ts')
+
 		case 'aggregateMatrix':
 			return await import('./aggregateMatrix/AggregateMatrix.ts')
-
-		case 'aggMatrixInput':
-			return await import('./AggMatrixInput.ts')
 
 		case 'animatedBubbleChart':
 			return await import(`./animatedBubbleChart.ts`)

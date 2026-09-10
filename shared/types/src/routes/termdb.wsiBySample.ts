@@ -1,15 +1,23 @@
 export type WsiBySampleRequest = {
 	genome: string
 	dslabel: string
-	/** sample name = the sample's subfolder under ds.queries.w2.folder;
-	 omit to list all samples that have images */
+	/** sample name = the sample's subfolder under a ds.queries.w2 root
+	 (folder for spatial, wsiFolder for plain); omit to list the samples that
+	 have plain slides — spatial-only samples are not listed, their images are
+	 fetched per sample_id by the single-cell app */
 	sample_id?: string
+	/** only with sample_id: enumerate just this root ('wsi' = wsiFolder,
+	 'spatial' = folder), so the other tree is never read or stat'ed; omit
+	 for both kinds */
+	imageType?: 'spatial' | 'wsi'
 }
 
-/** one sample that has whole-slide images on disk */
+/** one sample that has plain whole-slide images on disk (the standalone
+ Whole Slide Images plot's sample table; spatial images are excluded) */
 export type WsiSampleSummary = {
 	sampleId: string
-	/** number of images (spatial + plain) in the sample's folders */
+	/** number of plain slides in the sample's wsiFolder subfolder — NOT the
+	 total image count; spatial images are not included */
 	count: number
 }
 
@@ -37,24 +45,25 @@ export type SpatialImage = {
 	/** = image_file: slide path relative to the sample's folder under
 	 ds.queries.w2.folder (<imageName>/<tif file>); used as the wsitiles wsimage= param */
 	fileName: string
-	/** = cell_boundaries: cell segmentation CSV */
-	cellBoundaries?: string
-	/** = nucleus_boundaries: nucleus segmentation CSV */
-	nucleusBoundaries?: string
-	/** = gene_expression_file: 10x cell_feature_matrix HDF5 */
-	geneExpressionFile?: string
+	/** = spatial_data: the consolidated .h5ad — the single source of the
+	 image's boundaries, cell-type annotations and gene expression */
+	spatialData?: string
 	/** = gene_expression: comma-separated genes to overlay */
 	geneExpression?: string
 	/** = annotation_level: show boundary strokes only in the n most zoomed-in levels */
 	annotationLevel?: number
+	/** = cell_types: fill cells by their annotated type by default */
+	cellTypes?: boolean
 	/** relative URL of a small preview (the slide's z=0 tile); client prepends host */
 	thumbnail?: string
 }
 
 export type WsiBySampleResponse = {
-	/** present when sample_id was given: that sample's images */
+	/** present when sample_id was given: that sample's images, BOTH kinds
+	 (the single-cell app's spatial probe/viewer rely on spatial entries here) */
 	images?: (WsiImage | SpatialImage)[]
-	/** present when sample_id was omitted: every sample with an image folder */
+	/** present when sample_id was omitted: every sample with at least one
+	 plain slide (spatial-only samples are not listed) */
 	samples?: WsiSampleSummary[]
 	status?: string
 	error?: string

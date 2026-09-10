@@ -266,6 +266,9 @@ export class Matrix extends PlotBase {
 			})
 			await this.adjustSvgDimensions(prevTranspose)
 			this.controlsRenderer.main()
+			// sayerror() appends, and main() reruns on every zoom/layout/control change, so clear
+			// first or the same skipped-terms messages stack up one copy per render
+			this.dom.errorDiv.selectAll('*').remove()
 			if (this.data.removedHierClusterTerms) {
 				for (const r of this.data.removedHierClusterTerms) {
 					sayerror(this.dom.errorDiv, r.text + ': ' + r.lst.join(', '))

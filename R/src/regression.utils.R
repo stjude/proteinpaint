@@ -424,7 +424,8 @@ coxRegression <- function(formula, dat) {
     formula_reduce <- update(formula$formula, paste0("~.-", v))
     res_reduce <- coxph(formula_reduce, data = dat, model = T)
     # reduced model first, full model second, so that the Df diff comes out positive
-    lt <- as.matrix(lrtest(res_reduce, res))
+    # suppress harmless warnings to prevent coxph.null warning when using one independent variable
+    lt <- as.matrix(suppressWarnings(lrtest(res_reduce, res)))
     type3_table[i,] <- lt[2,]
   }
   colnames(type3_table) <- colnames(lt)
@@ -462,7 +463,8 @@ coxRegression <- function(formula, dat) {
     formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snp_vars, collapse = "")))
     res_reduce <- coxph(formula_reduce, data = dat, model = T)
     # reduced model first, full model second
-    totalSnpEffect_table <- as.matrix(lrtest(res_reduce, res))[2, 3:5, drop = F]
+    # suppress harmless warnings to prevent coxph.null warning when using one independent variable
+    totalSnpEffect_table <- as.matrix(suppressWarnings(lrtest(res_reduce, res)))[2, 3:5, drop = F]
     row.names(totalSnpEffect_table) <- "Total"
     totalSnpEffect_table[,"Chisq"] <- round(totalSnpEffect_table[,"Chisq"], 3)
     totalSnpEffect_table[,"Pr(>Chisq)"] <- signif(totalSnpEffect_table[,"Pr(>Chisq)"], 4)

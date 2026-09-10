@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { SearchHandler } from '../geneVariant.ts'
-import { dtsnvindel } from '#shared/common.js'
+import { dtcnv, dtsnvindel } from '#shared/common.js'
 import { hg38 } from '../../../test/testdata/genomes'
 import { sleep } from '../../../test/test.helpers.js'
 import { vocabInit } from '../../vocabulary'
@@ -34,14 +34,13 @@ async function getVocabApi() {
 
 const vocabApi: any = await getVocabApi()
 
-const handler = new SearchHandler()
-
 function getHolder() {
 	const holder = d3s.select('body').append('div')
 	return holder
 }
 
 async function initializeSearchHandler(opts) {
+	const handler = new SearchHandler()
 	const callback = opts.callback || (() => {})
 	await handler.init({
 		holder: opts.holder,
@@ -51,6 +50,7 @@ async function initializeSearchHandler(opts) {
 		msg: opts.msg,
 		callback
 	})
+	return handler
 }
 
 /**************
@@ -210,6 +210,102 @@ function getVocabApiWithRememberedQ(lst) {
 	return Object.assign(Object.create(vocabApi), { getGvQLst: () => structuredClone(lst) })
 }
 
+function getVocabApiWithSampleTypes() {
+	const termdbConfig = structuredClone(vocabApi.termdbConfig)
+	termdbConfig.sampleTypes = {
+		1: { name: 'Primary' },
+		2: { name: 'Relapse' }
+	}
+	termdbConfig.assayAvailability ??= { byDt: {} }
+	termdbConfig.assayAvailability.byDt ??= {}
+	termdbConfig.assayAvailability.byDt[dtsnvindel] = {
+		...termdbConfig.assayAvailability.byDt[dtsnvindel],
+		bySampleType: { 1: { hasSamples: true }, 2: { hasSamples: true } }
+	}
+	termdbConfig.assayAvailability.byDt[dtcnv] = {
+		...termdbConfig.assayAvailability.byDt[dtcnv],
+		bySampleType: { 1: { hasSamples: true } }
+	}
+	return Object.assign(Object.create(vocabApi), { termdbConfig })
+}
+
+tape('Sample types are derived from current assay availability', async test => {
+	const holder = getHolder()
+	const handler = await initializeSearchHandler({ holder, vocabApi: getVocabApiWithSampleTypes() })
+	test.deepEqual(handler.getQuerySampleTypes(), [1, 2], 'should return available SNV/indel sample types')
+
+	delete handler.opts.app.vocabApi.termdbConfig.assayAvailability.byDt[dtsnvindel].bySampleType
+	test.equal(handler.getQuerySampleTypes(), undefined, 'should not retain sample types after availability is removed')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Sample type selection is cleared when changing to a mutation type without a selector', async test => {
+	let tw
+	const holder = getHolder()
+	await initializeSearchHandler({
+		holder,
+		callback: _tw => (tw = _tw),
+		vocabApi: getVocabApiWithSampleTypes()
+	})
+	const sampleTypeCheckboxes: any = holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input')
+	test.equal(sampleTypeCheckboxes.size(), 2, 'should render sample type choices for SNV/indel')
+	sampleTypeCheckboxes.nodes()[1].checked = true
+	await pickGene(holder)
+	test.deepEqual(tw.term.sampleTypes, [2], 'should submit the selected sample type')
+
+	const cnvRadio: any = holder
+		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
+		.selectAll('input[type="radio"]')
+		.nodes()[2]
+	cnvRadio.click()
+	test.equal(
+		holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').size(),
+		0,
+		'should remove stale sample type choices'
+	)
+	await pickGene(holder, 'KRAS')
+	test.deepEqual(tw.term.sampleTypes, [1], 'should carry the only available CNV sample type')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+/* The initial selection writes sampleTypes to the handler term. A remembered setting on the
+next selection exercises the "Continue with ..." path, which must replace those values. */
+tape('Continuing past remembered settings does not retain sample types from another mutation type', async test => {
+	let tw
+	const holder: any = getHolder()
+	const sampleTypeVocabApi = getVocabApiWithSampleTypes()
+	const vocabApiWithRememberedKrasQ = Object.assign(Object.create(sampleTypeVocabApi), {
+		getGvQLst: (term: any) => (term.name == 'KRAS' ? structuredClone(rememberedLst) : [])
+	})
+	await initializeSearchHandler({
+		holder,
+		callback: _tw => (tw = _tw),
+		vocabApi: vocabApiWithRememberedKrasQ,
+		keepsQ: true
+	})
+	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[1].checked = true
+	await pickGene(holder)
+	test.deepEqual(tw.term.sampleTypes, [2], 'should submit the selected SNV/indel sample type')
+
+	const cnvRadio: any = holder
+		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
+		.selectAll('input[type="radio"]')
+		.nodes()[2]
+	cnvRadio.click()
+	await pickGene(holder, 'KRAS')
+	const continueWithCnv: any = holder.selectAll('.sja_menuoption').nodes()[0]
+	continueWithCnv.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+	await sleep(100)
+	test.deepEqual(tw.term.sampleTypes, [1], 'should not retain the prior SNV/indel sample type')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
 /* a grouping of the first mutation type of this dataset, SNV/indel (somatic), as it is
 remembered: a customset whose group filter carries the dt term of each tvs */
 function getRememberedQ(name) {
@@ -324,6 +420,30 @@ tape('Remembered settings are applied on Enter', async test => {
 		true,
 		'should clear the offered settings once one is applied'
 	)
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Applying remembered settings applies the selected sample type', async test => {
+	let tw
+	const holder: any = getHolder()
+	const sampleTypeVocabApi = getVocabApiWithSampleTypes()
+	await initializeSearchHandler({
+		holder,
+		callback: _tw => (tw = _tw),
+		vocabApi: Object.assign(Object.create(sampleTypeVocabApi), {
+			getGvQLst: () => structuredClone(rememberedLst)
+		}),
+		keepsQ: true
+	})
+	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[1].checked = true
+	await pickGene(holder)
+
+	const first: any = holder.selectAll('[data-testid="sjpp-genevariant-rememberedQ"]').nodes()[0]
+	first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+	await sleep(100)
+	test.deepEqual(tw.term.sampleTypes, [2], 'should apply the selected sample type with the remembered q')
+
 	if (test['_ok']) holder.remove()
 	test.end()
 })

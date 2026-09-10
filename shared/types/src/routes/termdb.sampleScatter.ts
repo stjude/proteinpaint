@@ -21,7 +21,15 @@ export type TermdbSampleScatterRequest = {
 
 export type ScatterSample = {
 	category: string
-	sample: string
+	sample?: string
+	/** real db sample id. Absent on reference-cloud dots, and also dropped from cohort dots when the request
+	 * is not authorized to display sample ids (see anonymizeSampleIds) — so its presence is NOT a reliable
+	 * cohort-vs-reference test; use isRef for that. */
+	sampleId?: number | string
+	/** set by the server (markRefDots) for every dot: true = reference-cloud dot (rendered small/unlabeled,
+	 * no sample actions), false = cohort dot. Derived from sampleId presence BEFORE any anonymization, so the
+	 * client can classify/size/label dots even when a denied request has dropped the sampleId. */
+	isRef?: boolean
 	info?: { [index: string]: any }
 	shape: string
 	x: number
@@ -30,11 +38,11 @@ export type ScatterSample = {
 	geneExp?: number
 }
 
-type ColorObject = { color: string; sampleCount: number; key: string }
+export type ColorObject = { color: string; sampleCount: number; key: string }
 export type ColorLegendEntry = [string, ColorObject]
 export type ColorMap = { [index: string]: ColorObject }
 
-type ShapeObject = { shape: number; sampleCount: number; key: string }
+export type ShapeObject = { shape: number; sampleCount: number; key: string }
 export type ShapeLegendEntry = [string, ShapeObject]
 export type ShapeMap = { [index: string]: ShapeObject }
 

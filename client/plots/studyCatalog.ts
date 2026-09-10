@@ -3,10 +3,31 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { PlotBase } from './PlotBase'
 import { Menu, renderTable, addGeneSearchbox } from '#dom'
 import type { TableColumn, TableRow } from '#dom'
+import { orderBy } from './proteinView.tiles'
 
-/** PTM proteome layers — kept separate from protein-level (Whole/Insoluble) layers because
- *  PTM z is site-level collapsed to gene, so the two aren't directly comparable in a scatter/heatmap */
-const PTM_PROTEOMES = new Set(['Phospho', 'Ubiquitin'])
+/** The Proteome facet is nested under a derived single-select "Data type" facet
+ *  (Protein → protein-level assays; PTM → assays marked PTMType in the dataset config).
+ *  PTM layers are kept separate from protein-level layers because PTM z is site-level
+ *  collapsed to gene, so the two aren't directly comparable in a scatter/heatmap: the
+ *  radio keeps them apart structurally and the Proteome checkboxes only ever list the
+ *  active class — no rows need to be greyed out after the fact. Proteome values sort
+ *  in the order their assays appear in the dataset config. */
+const DATA_TYPE_FACET = 'dataType'
+const DATA_TYPE_CHILD = 'proteome'
+const DATA_TYPE_LABEL = 'Data type'
+const DATA_TYPE_ORDER = ['Protein', 'PTM']
+
+/** proteome labels in dataset order (first appearance across organisms/assays) */
+function proteomeOrder(organisms: any): string[] {
+	const out: string[] = []
+	for (const org of Object.values(organisms || {}) as any[]) {
+		for (const assay in org?.assays || {}) {
+			const label = org.assays[assay].proteomeLabel || assay
+			if (!out.includes(label)) out.push(label)
+		}
+	}
+	return out
+}
 
 /** facets that get a "launch chart" button. needsGene=false charts launch directly (no gene
  *  picker); gene-centric charts prompt for a gene first. `requires(queries)` gates the button on
@@ -175,7 +196,16 @@ class StudyCatalog extends PlotBase implements RxComponent {
 				const cohorts = assays[assay].cohorts || {}
 				for (const cohort in cohorts) {
 					// species/proteome first so catalog may override them; identity keys last so it can't
-					rows.push({ species, proteome, ...(cohorts[cohort].catalog || {}), organism, assay, cohort } as CatalogRow)
+					const dataType = assays[assay].PTMType ? 'PTM' : 'Protein'
+					rows.push({
+						species,
+						proteome,
+						dataType,
+						...(cohorts[cohort].catalog || {}),
+						organism,
+						assay,
+						cohort
+					} as CatalogRow)
 				}
 			}
 		}
@@ -183,10 +213,11 @@ class StudyCatalog extends PlotBase implements RxComponent {
 	}
 
 	/** rows passing every active filter, optionally excluding one facet (for that facet's own counts) */
-	filteredRows(excludeFacet?: string): CatalogRow[] {
+	filteredRows(excludeFacet?: string | string[]): CatalogRow[] {
+		const excluded = new Set(Array.isArray(excludeFacet) ? excludeFacet : excludeFacet ? [excludeFacet] : [])
 		return this.rows.filter(row => {
 			for (const [facet, values] of this.activeFilters) {
-				if (facet === excludeFacet) continue
+				if (excluded.has(facet)) continue
 				if (values.size === 0) continue
 				if (!values.has(row[facet] || '')) return false
 			}
@@ -195,7 +226,92 @@ class StudyCatalog extends PlotBase implements RxComponent {
 	}
 
 	facetLabel(ui: CatalogUiConfig, key: string): string {
+		if (key === DATA_TYPE_FACET) return DATA_TYPE_LABEL
 		return ui.columns.find(c => c.key === key)?.label || key
+	}
+
+	/** facet order to render: the proteome facet is replaced by its Data type parent,
+	 *  which renders the proteome values nested under the active radio option */
+	effectiveFacets(ui: CatalogUiConfig): string[] {
+		return ui.facets.map(f => (f === DATA_TYPE_CHILD ? DATA_TYPE_FACET : f))
+	}
+
+	sortValues(facet: string, values: string[]): string[] {
+		const fixed =
+			facet === DATA_TYPE_FACET
+				? DATA_TYPE_ORDER
+				: facet === DATA_TYPE_CHILD
+				? proteomeOrder(this.app.vocabApi.termdbConfig?.queries?.proteome?.organisms)
+				: null
+		if (fixed)
+			return orderBy(
+				[...values].sort((a, b) => a.localeCompare(b)),
+				fixed
+			)
+		return [...values].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+	}
+
+	/** filters to ignore when computing a facet's own value counts: itself, plus — for the
+	 *  Data type parent — its nested proteome filter, so that ticking e.g. "Insoluble" under
+	 *  Protein never makes the PTM option disappear (it must stay clickable to switch class) */
+	facetScopeExclusions(facet: string): string[] {
+		return facet === DATA_TYPE_FACET ? [DATA_TYPE_FACET, DATA_TYPE_CHILD] : [facet]
+	}
+
+	/** counts of one facet's values under all OTHER active filters (standard faceted behavior) */
+	facetCounts(facet: string): Map<string, number> {
+		const counts = new Map<string, number>()
+		for (const row of this.filteredRows(this.facetScopeExclusions(facet))) {
+			const v = row[facet] || ''
+			if (!v) continue
+			counts.set(v, (counts.get(v) || 0) + 1)
+		}
+		return counts
+	}
+
+	/** one radio/checkbox line of a facet */
+	appendFacetOption(
+		ui: CatalogUiConfig,
+		group: any,
+		facet: string,
+		value: string,
+		count: number,
+		single: boolean,
+		checked: boolean,
+		indentPx = 0
+	) {
+		const line = group
+			.append('label')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '6px')
+			.style('font-size', '0.85em')
+			.style('cursor', 'pointer')
+			.style('padding', '1px 0')
+			.style('margin-left', indentPx ? `${indentPx}px` : null)
+		line
+			.append('input')
+			.attr('type', single ? 'radio' : 'checkbox')
+			.attr('name', single ? `sjpp-studyCatalog-facet-${this.id}-${facet}` : null)
+			.property('checked', checked)
+			.on('change', (event: any) => {
+				if (single) {
+					// radio: picking a value replaces the facet's single active value
+					this.activeFilters.set(facet, new Set([value]))
+					// the nested proteome values belong to the previous class; drop them
+					if (facet === DATA_TYPE_FACET) this.activeFilters.delete(DATA_TYPE_CHILD)
+				} else {
+					const set = this.activeFilters.get(facet) || new Set<string>()
+					if (event.target.checked) set.add(value)
+					else set.delete(value)
+					if (set.size) this.activeFilters.set(facet, set)
+					else this.activeFilters.delete(facet)
+				}
+				this.renderFacets(ui)
+				this.renderTable(ui)
+			})
+		line.append('span').style('flex', '1 1 auto').text(value)
+		line.append('span').style('color', '#999').text(count)
 	}
 
 	renderFacets(ui: CatalogUiConfig) {
@@ -207,22 +323,26 @@ class StudyCatalog extends PlotBase implements RxComponent {
 
 		// single-select facets always have exactly one active value; default to the first available value
 		// under the other active filters (also reapplied after "clear all"), so the table never mixes e.g. species
+		const facets = this.effectiveFacets(ui)
 		const singleSelect = new Set(ui.singleSelectFacets || [])
+		if (facets.includes(DATA_TYPE_FACET)) singleSelect.add(DATA_TYPE_FACET)
 		for (const facet of singleSelect) {
-			if (!ui.facets.includes(facet)) continue
+			if (!facets.includes(facet)) continue
 			// available values given the other active filters (exclude this facet itself)
-			const scope = this.filteredRows(facet)
-			const values = [...new Set(scope.map(r => r[facet]).filter(Boolean))].sort((a, b) =>
-				a.localeCompare(b, undefined, { numeric: true })
-			)
+			const scope = this.filteredRows(this.facetScopeExclusions(facet))
+			const values = this.sortValues(facet, [...new Set(scope.map(r => r[facet]).filter(Boolean))])
 			if (!values.length) {
 				this.activeFilters.delete(facet)
+				if (facet === DATA_TYPE_FACET) this.activeFilters.delete(DATA_TYPE_CHILD)
 				continue
 			}
 			const active = this.activeFilters.get(facet)
 			const activeValue = active && active.size === 1 ? [...active][0] : null
 			if (activeValue && values.includes(activeValue)) continue
 			this.activeFilters.set(facet, new Set([values[0]]))
+			// the class changed under the user: its nested proteome values belong to the old
+			// class and would otherwise filter invisibly (nothing checked, empty table)
+			if (facet === DATA_TYPE_FACET) this.activeFilters.delete(DATA_TYPE_CHILD)
 		}
 
 		const header = div
@@ -247,15 +367,8 @@ class StudyCatalog extends PlotBase implements RxComponent {
 				this.renderTable(ui)
 			})
 
-		for (const facet of ui.facets) {
-			// counts reflect all OTHER active filters (standard faceted behavior)
-			const scope = this.filteredRows(facet)
-			const counts = new Map<string, number>()
-			for (const row of scope) {
-				const v = row[facet] || ''
-				if (!v) continue
-				counts.set(v, (counts.get(v) || 0) + 1)
-			}
+		for (const facet of facets) {
+			const counts = this.facetCounts(facet)
 			if (counts.size === 0) continue
 
 			const group = div.append('div').style('margin-bottom', '12px')
@@ -282,37 +395,16 @@ class StudyCatalog extends PlotBase implements RxComponent {
 
 			const single = singleSelect.has(facet)
 			const active = this.activeFilters.get(facet) || new Set<string>()
-			const values = [...counts.keys()].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-			for (const value of values) {
-				const line = group
-					.append('label')
-					.style('display', 'flex')
-					.style('align-items', 'center')
-					.style('gap', '6px')
-					.style('font-size', '0.85em')
-					.style('cursor', 'pointer')
-					.style('padding', '1px 0')
-				line
-					.append('input')
-					.attr('type', single ? 'radio' : 'checkbox')
-					.attr('name', single ? `sjpp-studyCatalog-facet-${this.id}-${facet}` : null)
-					.property('checked', active.has(value))
-					.on('change', (event: any) => {
-						if (single) {
-							// radio: picking a value replaces the facet's single active value
-							this.activeFilters.set(facet, new Set([value]))
-						} else {
-							const set = this.activeFilters.get(facet) || new Set<string>()
-							if (event.target.checked) set.add(value)
-							else set.delete(value)
-							if (set.size) this.activeFilters.set(facet, set)
-							else this.activeFilters.delete(facet)
-						}
-						this.renderFacets(ui)
-						this.renderTable(ui)
-					})
-				line.append('span').style('flex', '1 1 auto').text(value)
-				line.append('span').style('color', '#999').text(counts.get(value)!)
+			for (const value of this.sortValues(facet, [...counts.keys()])) {
+				this.appendFacetOption(ui, group, facet, value, counts.get(value)!, single, active.has(value))
+				// nested proteome checkboxes under the active Data type option
+				if (facet === DATA_TYPE_FACET && active.has(value)) {
+					const childCounts = this.facetCounts(DATA_TYPE_CHILD)
+					const childActive = this.activeFilters.get(DATA_TYPE_CHILD) || new Set<string>()
+					for (const cv of this.sortValues(DATA_TYPE_CHILD, [...childCounts.keys()])) {
+						this.appendFacetOption(ui, group, DATA_TYPE_CHILD, cv, childCounts.get(cv)!, false, childActive.has(cv), 22)
+					}
+				}
 			}
 		}
 	}
@@ -333,10 +425,21 @@ class StudyCatalog extends PlotBase implements RxComponent {
 		this.selectedKeys = new Set(this.selected.map(r => this.cohortKey(r)))
 		this.updateActionBtn()
 
-		const columns: TableColumn[] = ui.columns.map(c => ({ label: c.label, sortable: true }))
+		// Columns are data-driven: a column that is empty for every row under the
+		// current facet selection is dropped, so a single-species selection shows
+		// only that species' attributes (e.g. brain region for human; model, cell
+		// type and age group for mouse) instead of a fixed column set. With no rows
+		// at all, keep every column so the empty table still has a header.
+		// Single-select facets (e.g. Species) are dropped too: their radio always
+		// states the one active value, so the column would just repeat it.
+		const singleSelect = new Set(ui.singleSelectFacets || [])
+		const visibleColumns = rows.length
+			? ui.columns.filter(c => !singleSelect.has(c.key) && rows.some(row => row[c.key] != null && row[c.key] !== ''))
+			: ui.columns
+		const columns: TableColumn[] = visibleColumns.map(c => ({ label: c.label, sortable: true }))
 		const tableRows: TableRow[] = rows.map(
 			row =>
-				ui.columns.map(c => {
+				visibleColumns.map(c => {
 					const value = row[c.key] ?? ''
 					return c.urlBase && value ? { value, url: c.urlBase + value } : { value }
 				}) as TableRow
@@ -359,20 +462,11 @@ class StudyCatalog extends PlotBase implements RxComponent {
 					callback: () => {},
 					onChange: (idxs: number[], button: any) => {
 						button.style.display = 'none'
-						let sel = idxs.map(i => rows[i])
-						if (sel.length > 1) {
-							const cls = this.proteomeClass(sel[0])
-							const offIdx = new Set(idxs.filter(i => this.proteomeClass(rows[i]) !== cls))
-							if (offIdx.size) {
-								sel = idxs.filter(i => !offIdx.has(i)).map(i => rows[i])
-								const nodes = this.dom.tableDiv.selectAll('tbody input[type="checkbox"]').nodes() as HTMLInputElement[]
-								for (const node of nodes) if (offIdx.has(Number(node.getAttribute('value')))) node.checked = false
-							}
-						}
-						this.selected = sel
-						this.selectedKeys = new Set(sel.map(r => this.cohortKey(r)))
+						// the Data type radio already keeps PTM and protein-level cohorts apart,
+						// so any combination of visible rows is a valid selection
+						this.selected = idxs.map(i => rows[i])
+						this.selectedKeys = new Set(this.selected.map(r => this.cohortKey(r)))
 						this.updateActionBtn()
-						this.applyClassLock(rows)
 					}
 				}
 			]
@@ -382,28 +476,6 @@ class StudyCatalog extends PlotBase implements RxComponent {
 	/** stable identity of a cohort row, used to keep the selection across re-renders */
 	cohortKey(row: CatalogRow): string {
 		return `${row.organism}|${row.assay}|${row.cohort}`
-	}
-
-	/** PTM (site-level) vs non-PTM (protein-level) class of a cohort row */
-	proteomeClass(row: CatalogRow): 'ptm' | 'nonptm' {
-		return PTM_PROTEOMES.has(row.proteome) ? 'ptm' : 'nonptm'
-	}
-
-	/** PTM/non-PTM lock: once a cohort is selected, disable + dim checkboxes
-	 *  for cohorts of the OTHER class. */
-	applyClassLock(rows: CatalogRow[]) {
-		const locked = this.selected.length ? this.proteomeClass(this.selected[0]) : null
-		const nodes = this.dom.tableDiv.selectAll('tbody input[type="checkbox"]').nodes() as HTMLInputElement[]
-		for (const input of nodes) {
-			const vAttr = input.getAttribute('value')
-			if (vAttr === null) continue
-			const idx = Number(vAttr)
-			if (!Number.isInteger(idx) || idx < 0 || idx >= rows.length) continue
-			const disable = locked !== null && !input.checked && this.proteomeClass(rows[idx]) !== locked
-			input.disabled = disable
-			const tr = input.closest('tr') as HTMLElement | null
-			if (tr) tr.style.opacity = disable ? '0.4' : ''
-		}
 	}
 
 	/** update the action button + count text from the current selection.

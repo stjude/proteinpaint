@@ -78,8 +78,10 @@ export type VolcanoRenderRequest = {
 	dotRadius?: number
 	/** Maximum number of interactive rows to return in `data` (the overlay).
 	 * The server still renders every row into `volcanoPng`; this only caps the
-	 * interactive list. Capped to the most-significant rows (smallest p-value). */
-	maxInteractiveDots?: number
+	 * interactive list. Capped to the most-significant rows (smallest p-value).
+	 * `null` lifts the cap and returns every significant row -- what the table
+	 * download sends, so the file is complete while the overlay stays capped. */
+	maxInteractiveDots?: number | null
 	/** Hi-DPI scale factor from `window.devicePixelRatio` (e.g. 2.0 on retina).
 	 * The PNG is rasterized at `pixelWidth*dpr × pixelHeight*dpr` device pixels
 	 * but reported (and rendered in the SVG) at the CSS-space dimensions, so
@@ -185,11 +187,54 @@ export type ExpressionInput = {
 	cachedir?: string
 }
 
+/** What a build-on-demand dataset can say about the counts files behind a run, before
+ * running it: which files back the requested cases, how the one-file-per-case choice was
+ * made, and how much of the fetch is already on disk. Produced by
+ * RnaseqGeneCount.previewCountsFiles; gdc is the only implementer today. */
+export type CountsFilePreview = {
+	/** cases the run asked about */
+	casesRequested: number
+	/** cases that actually have a usable counts file; <= casesRequested */
+	cases: number
+	/** counts files found across those cases, before one-per-case selection */
+	candidateFiles: number
+	/** cases that had more than one candidate file. always the true count, even when
+	 * multiCases[] below is capped */
+	casesWithMultiple: number
+	/** the chosen files broken down by the tissue type of the aliquot each came from */
+	byTissueType: Record<string, number>
+	/** per-case detail for the multi-file cases, capped by the dataset */
+	multiCases: { case: string; chosen: string; candidates: { file_id: string; tissueType: string }[] }[]
+	/** true when multiCases[] was capped */
+	multiCasesTruncated: boolean
+	/** human-readable statement of how the one file per case was chosen */
+	selectionRule: string
+	/** false when the dataset could not tell what its cached files are keyed on, in which case
+	 * cached/toDownload are absent rather than guessed */
+	axisKnown: boolean
+	/** true when the whole matrix is already assembled, so the run fetches nothing */
+	matrixCached?: boolean
+	/** files already on disk */
+	cached?: number
+	/** files the run would download */
+	toDownload?: number
+	/** when the cache key this estimate rests on was last established */
+	axisSeenAt?: string
+}
+
 /** Response when DERequest.preAnalysis === true. Returns per-group sample
  * counts (keyed by group name) plus an optional validation alert. No volcano
  * is rendered; the client uses this to show counts before the user submits. */
 export type DEPreAnalysisResponse = {
-	data: Record<string, number | string>
+	/** number of samples with expression data, keyed by group name. a group name is
+	 * user-supplied, so it must not share this object with any other property */
+	data: Record<string, number>
+	/** validation message; the client hides the run button while it is present */
+	alert?: string
+	/** only for datasets that build their counts matrix on demand; absent otherwise, and
+	 * absent when the preview query itself failed -- it is descriptive, so a failure there
+	 * must not fail the pre-analysis */
+	countsFiles?: CountsFilePreview
 }
 
 /** Response for a full DE run (DERequest.preAnalysis absent/false). */

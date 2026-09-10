@@ -23,6 +23,40 @@ There is no tile server and no redis: every tile is produced by spawning
 `wsi_tile.py` once, and node caches the JPEG on disk so a tile is only ever
 computed once per (slide, plane, z, x, y).
 
+## Two ways in: the standalone plot vs the single-cell app
+
+`Wsi.ts` is one component with two modes, decided by whether the plot config
+carries a `sample`:
+
+- **Standalone — the "Whole Slide Images" mass chart** (no `config.sample`).
+  Lists every sample that has at least one *plain* slide on disk (the
+  no-`sample_id` form of `termdb/wsiBySample` — spatial-only samples are not
+  listed), renders the pick-a-sample table and one tab per image, and shows
+  the plain OpenLayers viewer. Spatial images are filtered out of a listed
+  sample's tabs, so this mode never shows the burger menu or any overlay
+  machinery; the sandbox header stays WHOLE SLIDE IMAGES.
+- **Inside the single-cell app — fixed-sample mode** (`config.sample.sID`
+  set). The sc app probes `termdb/wsiBySample?sample_id=…` for the selected
+  sample (`sc/model/SCModel.hasSpatialImage`) and, when a spatial image with
+  its consolidated h5ad exists, shows a **Spatial** plot button
+  (`sc/view/PlotButtons.ts`). Clicking it spawns this same `wsi` plot as an
+  sc subplot with the sample pinned: the sample table is hidden, images are
+  filtered to `type == 'spatial'`, the header becomes SPATIAL VIEWER, and the
+  burger menu drives the overlays (steps 4–6 below). The viewer is
+  self-contained — its settings live in its own burger menu and are not tied
+  to the sc app's map plots (umap/tsne) in any way.
+
+  Probe semantics: the probe only fires for datasets that can have spatial
+  images — `termdbConfig.supportedChartTypes` advertises `'wsi'` exactly when
+  `ds.queries.w2` exists, and without it `hasSpatialImage` returns false with
+  no request (a non-spatial sc dataset never generates wsiBySample traffic).
+  Successful probes are cached per sample; server error payloads and network
+  failures return false UNCACHED so a later render retries, and an aborted
+  request (a superseding state change) rethrows so the stale render stops.
+
+So: spatial viewing is reachable only through the single-cell app, and the
+standalone chart is images-only.
+
 ## Zoomify tile addressing (shared contract)
 
 The client uses OpenLayers' `Zoomify` source, which addresses tiles as
@@ -41,18 +75,21 @@ is the contract that makes the whole pipeline line up.
 roots, both laid out as `<root>/<sample_id>/<imageName>/<files>`:
 
 - `folder` — spatial (Xenium) images. Inside each image folder the slide and
-  its companion files are found by suffix match (`tiffFileSuffix`,
-  `cellBoundariesFileSuffix`, `nucleusBoundariesFileSuffix`,
-  `geneExpressionFileSuffix`).
+  its consolidated data store are found by suffix match (`tiffFileSuffix`,
+  `spatialDataFileSuffix` — the spatial.h5ad holding boundaries, annotations
+  and expression).
 - `wsiFolder` — plain whole-slide images (`.svs` / `.ome.tif`), one slide per
   image folder.
 
-The route lists samples (subfolder names of the roots, unioned with the legacy
-`wsimages` sql table when present) and, per sample, its images. Each image is
+The route lists samples with plain slides (subfolder names of `wsiFolder` that
+hold at least one slide — spatial-only samples are excluded, since spatial
+images are viewed through the single-cell app's Spatial button instead) and,
+per `sample_id`, that sample's images of both kinds. Each image is
 returned as `WsiImage` (`type:'wsi'`) or `SpatialImage` (`type:'spatial'`,
 plus tpmasterdir-relative companion paths and the optional dataset-level
-viewer overrides `geneExpression`/`annotationLevel` — the actual gene
-defaults are discovered from the expression file at runtime, see step 4).
+viewer overrides `geneExpression`/`annotationLevel`/`cellTypes` — the actual
+gene defaults are discovered from the expression file at runtime, see step 4;
+`cellTypes: true` opens the spatial viewer with the cell-type overlay on).
 
 ### 2. Slide resolution & tile serving — `server/src/routes/wsitiles.ts`
 
@@ -66,15 +103,23 @@ All viewer traffic hits `wsitiles/:action`:
   A separate gated mode (`?slide=`, dev-only) takes a tpmasterdir-relative path.
 - **`/meta`**: spawns `wsi_tile.py meta` → dimensions, mpp, level count,
   z-plane count, plus `version` (slide mtime) which the client bakes into tile
-  URLs so a regenerated slide busts the immutable browser cache.
+  URLs so a regenerated slide busts the immutable browser cache. With
+  `?cellAnnotations=<h5ad>` it also reads the distinct `cell_type` values out
+  of the consolidated store and adds `cellTypes: [...]` (sorted, cached by
+  file mtime) — how the client discovers the types for its filter dropdowns
+  up front.
 - **`/tile/z/x/y`**: checks the disk cache
   (`cachedir/wsitiles/<sha1(slide:mtime)>_<plane>_<z>_<x>_<y>.jpg`); on a miss
   spawns `wsi_tile.py tile`, copies the produced JPEG into the cache, and
   serves it with `Cache-Control: immutable`.
-- **`/boundaries`, `/genecounts`, `/genenames`** (spatial only): serve a
-  companion CSV / per-cell counts of one gene / the list of all genes present
-  in the companion HDF5. `?file=` is scoped to the selected slide's own image
-  folder, so a valid slide query cannot read other samples' or datasets' files.
+- **`/boundaries`, `/annotations`, `/genecounts`, `/genenames`** (spatial
+  only): all read the image's consolidated spatial.h5ad (`?file=`).
+  `/boundaries` regenerates a polygon CSV (`?kind=cell|nucleus` — safe as CSV:
+  ids and numbers only); `/annotations` answers `{cells:{cell_id:type}}` as
+  JSON, since cell types are free text that CSV comma-splitting would corrupt;
+  the gene actions answer per-cell counts of one gene / every gene name in the
+  file. `?file=` is scoped to the selected slide's own image folder, so a
+  valid slide query cannot read other samples' or datasets' files.
 
 ### 3. Decoding & tile production — `python/src/wsi_tile.py`
 
@@ -114,10 +159,12 @@ file, in file order.
 
 ### 4. Client rendering — `client/plots/w2/`
 
-- **`Wsi.ts`** — the mass "Whole Slide Images" plot (rx component). Fetches
-  the sample list, renders the burger-menu controls for spatial images (via
-  `controlsInit`), and swaps the sandbox header to SPATIAL VIEWER when the
-  shown image is spatial. Gene defaults are **discovered from the data**: it
+- **`Wsi.ts`** — the plot component for both modes above (rx component).
+  Standalone it fetches the sample list and shows plain slides; in
+  fixed-sample mode (spawned from the sc app) it shows the pinned sample's
+  spatial image, renders the burger-menu controls (via `controlsInit`), and
+  swaps the sandbox header to SPATIAL VIEWER. Gene defaults are
+  **discovered from the data**: it
   calls `/genenames` on the image's expression h5, filters the dataset's
   optional `geneExpression` override to genes actually in the file (falling
   back to the file's first gene), seeds the Genes field with that, and
@@ -133,16 +180,76 @@ file, in file order.
   and zooms — this is where tiles are **combined on screen**. For a
   **spatial** image it delegates to `wsi.direct.ts`, passing the burger-menu
   settings.
-- **`wsi.direct.ts`** — the spatial/direct viewer. Same Zoomify map, plus:
-  a z-plane slider (from `meta.planes`), boundary overlays (fetches the
-  cell/nucleus CSVs via `/boundaries`, converts µm→px with `meta.mpp`, draws
-  them as OpenLayers vector layers, hidden beyond `annotationLevel` zooms),
-  and gene-expression fills (per-gene `/genecounts` requests; each cell
-  polygon filled with a log-scaled opacity, one color per gene or one summed
-  `gene_groups` overlay, with a legend on the map).
+- **`wsi.direct.ts`** — the spatial/direct viewer. Same Zoomify map, plus a
+  z-plane slider (from `meta.planes`) and the overlay/hover system described
+  in the next section. Both entry points converge here: the direct URL
+  (`?image_file=…`) and the mass plot (via `View.ts`), so overlay behavior is
+  identical in both.
 - **`Settings.ts` / `interactions/WsiInteractions.ts`** — the plot settings
-  (selected sample/image, overlay toggles, genes, annotation level) and the
-  dispatchers that write them back into app state, triggering a re-render.
+  (selected sample/image, overlay toggles, genes, cell-type filter,
+  annotation level) and the dispatchers that write them back into app state,
+  triggering a re-render.
+
+### 5. Overlays — `client/plots/w2/wsi.direct.ts`
+
+All overlays are OpenLayers vector layers drawn over the tile layer, built
+from the h5ad's cell/nucleus polygons (`/boundaries`, µm→px via `meta.mpp`).
+
+- **Boundary strokes** — cell outlines green, nucleus outlines blue.
+  `annotation_level=n` (burger: "Annotation level") shows them only within
+  the n most zoomed-in levels; zoomed out beyond that they hide. Fills are
+  not affected by this gate.
+- **Gene expression fills** — one `/genecounts` request per gene
+  (`gene_expression=g1,g2`, or the burger's Genes field). Each expressing
+  cell is filled in the gene's color with opacity log-scaled to its
+  transcript count, bucketed into 8 shades. `gene_groups` ("Gene group"
+  mode) instead sums the listed genes per cell into ONE overlay. A gradient
+  legend sits at the map's top-right.
+- **Cell-type fills** — per-cell annotations come from the h5ad's
+  `obs.cell_type`, fetched as JSON via `/annotations` (one entry per
+  annotated cell). Each annotated cell is filled in its type's
+  categorical color, with a legend at the top-left (cell counts per type in
+  parentheses), placed clear of the zoom buttons. Toggled by the "Cell
+  types" checkbox or `&cell_types=1`; without the annotations file the
+  toggle is a no-op. A QC-filtered cell (empty `cell_type`) stays unfilled.
+- **Cell-type filter** — fill only some types: `&cell_types=Tumor,B cells`
+  on a URL, or the burger's "Types shown" chained dropdowns (one dropdown
+  per selected type plus an "Add type…" dropdown of the remaining ones;
+  no selection = all types). The available types are discovered up front by
+  the meta request — `wsitiles/meta?cellAnnotations=<h5ad>` scans the file
+  and returns `cellTypes:[…]`. Colors are assigned over ALL types by
+  abundance, so a type keeps its color when the filter changes.
+- **Mutual exclusion** — cell-type fills and expression fills never draw
+  together (unreadable on top of each other). While cell types are shown the
+  expression fills/legend are suppressed, and in the mass plot the two
+  checkboxes uncheck each other (last one toggled wins). The "Gene
+  expression" checkbox only controls the *fills*: genes stay loaded either
+  way so the hover tooltip always reports their counts.
+- **Legend pinning** — the legends are absolutely positioned at the map's
+  top corners; a scroll listener pushes them down by however much of the
+  map's top is scrolled out of view (clamped to the map's bottom), so they
+  stay visible as long as any of the image is.
+- **Dataset defaults** — `ds.queries.w2` can set `cellTypes: true` to open
+  the spatial viewer with the cell-type overlay on (seeded once into the
+  burger settings, expression fills off; the checkboxes override after).
+
+### 6. Cell hover — `client/plots/w2/wsi.direct.ts`
+
+Whenever cell boundaries are loaded, hovering over a cell shows a tooltip
+next to the cursor:
+
+```
+cell id: aaabkgcd-1
+cell type: Tumor          (when the h5ad carries annotations)
+PTPRC expression: 12.0    (one line per loaded gene / gene group)
+```
+
+The hit test is a per-cell bounding-box scan plus an even-odd ray cast
+(`pointInRing`, unit-tested). The tooltip obeys the same zoom gate as the
+boundary strokes: with `annotation_level` set it only appears within the n
+most zoomed-in levels. Expression lines come from the same `/genecounts`
+data as the fills, so they work even when the fills are hidden (cell types
+shown, or "Gene expression" unchecked).
 
 ## SVS vs OME-TIFF: what actually differs
 

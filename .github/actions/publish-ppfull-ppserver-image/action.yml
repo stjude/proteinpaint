@@ -10,6 +10,10 @@ inputs:
   GITHUB_ACTOR:
     description: 'github_actor'
     required: true
+  skip_sjpp_dispatch:
+    description: 'if "true", do NOT trigger the downstream deploy in sj-pp (the caller runs it manually, e.g. sjpp/build/deploy.sh)'
+    required: false
+    default: 'false'
 runs:
   using: 'composite'
   steps:
@@ -74,8 +78,9 @@ runs:
     # tags string bodies with duplex:"half", which Node 24's undici rejects as
     # "Request body length does not match content-length header".
     - name: Trigger deploy in sj-pp
-      # Only fire on non-release branches (release/prerelease deploys are handled elsewhere).
-      if: ${{ !startsWith(github.ref_name, 'release') && !startsWith(github.ref_name, 'prerelease') }}
+      # Only fire on non-release branches (release/prerelease deploys are handled elsewhere),
+      # and only when the caller did not opt to run the sj-pp deploy itself (skip_sjpp_dispatch).
+      if: ${{ inputs.skip_sjpp_dispatch != 'true' && !startsWith(github.ref_name, 'release') && !startsWith(github.ref_name, 'prerelease') }}
       uses: actions/github-script@v9
       with:
         # PAT (not the default GITHUB_TOKEN) — we dispatch to a DIFFERENT repo,

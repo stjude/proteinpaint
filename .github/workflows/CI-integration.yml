@@ -4,7 +4,8 @@ on:
   schedule:
     - cron: '0 6 * * *'
   workflow_dispatch:
-  workflow_call: {}
+  workflow_call: {} #Let other workflows in this repo invoke this one as a reusable job
+  merge_group:
 
 jobs:
   
@@ -61,7 +62,7 @@ jobs:
     uses: ./.github/workflows/CD-rust-build.yml
 
   docker-with-rust:
-    needs: [rust-build]
+    needs: [build, rust-build]
     if: needs.build.outputs.updated_rust == 'true'
     runs-on: ubuntu-22.04
     steps:
@@ -95,5 +96,17 @@ jobs:
         with:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  integration-tests-complete:
+    if: always()
+    needs: [build, rust-build, docker-with-rust, docker-without-rust]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Fail if any integration tests failed
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || (needs['docker-with-rust'].result != 'success' && needs['docker-without-rust'].result != 'success') }}" == "true" ]]; then
+            echo "Integration tests failed"
+            exit 1
+          fi
 
 

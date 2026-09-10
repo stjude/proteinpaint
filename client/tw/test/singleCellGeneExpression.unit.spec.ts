@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { SingleCellGeneExpressionBase, getSCGEunit } from '../singleCellGeneExpression.ts'
+import { SingleCellGeneExpressionBase, getSCGEunit, getSampleAssayInfo } from '../singleCellGeneExpression.ts'
 import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION } from '#types'
 
 /*************************
@@ -149,5 +149,65 @@ tape('constructor should preserve explicit term.unit', test => {
 	const x = new SingleCellGeneExpressionBase(term as any, { vocabApi: mockVocabApi as any } as any)
 
 	test.equal(x.unit, 'Custom Unit', 'Should preserve explicit term.unit')
+	test.end()
+})
+
+/* ---- getSampleAssayInfo() ---- */
+
+/** Run fn with window.fetch stubbed: a payload object is served as a JSON
+ Response (the shape dofetch3's processResponse expects); an Error rejects.
+ Counts the calls so the no-request branches can assert none happened. */
+async function withMockFetch(payload: any, fn: (calls: { n: number }) => Promise<void>) {
+	const realFetch = window.fetch
+	const calls = { n: 0 }
+	window.fetch = (async () => {
+		calls.n++
+		if (payload instanceof Error) throw payload
+		return new Response(JSON.stringify(payload), { headers: { 'content-type': 'application/json' } })
+	}) as any
+	try {
+		await fn(calls)
+	} finally {
+		window.fetch = realFetch
+	}
+}
+
+// getSampleAssayInfo only reads vocabApi.vocab for the request body
+const assayVocabApi = { vocab: { genome: 'hg38-test', dslabel: 'MockDs' } } as any
+
+tape('getSampleAssayInfo() should return the panel assay with its gene list', async test => {
+	await withMockFetch({ assay: 'panel', genes: ['ACE2', 'ACTA2', 'PTPRC'] }, async () => {
+		const info = await getSampleAssayInfo(assayVocabApi, { sID: 'assay-panel-sample' })
+		test.equal(info.assay, 'panel', 'Should report the panel assay')
+		test.deepEqual(info.genes, ['ACE2', 'ACTA2', 'PTPRC'], 'Should return the assayed gene list for the search boxes')
+	})
+	test.end()
+})
+
+tape('getSampleAssayInfo() should return whole-transcriptome without a gene list', async test => {
+	// the server sends genes only for panel samples; without them the search
+	// boxes stay on the genome gene db
+	await withMockFetch({ assay: 'wholeTranscriptome' }, async () => {
+		const info = await getSampleAssayInfo(assayVocabApi, { sID: 'assay-wt-sample' })
+		test.equal(info.assay, 'wholeTranscriptome', 'Should report the whole-transcriptome assay')
+		test.equal(info.genes, undefined, 'Should not return a gene list')
+	})
+	test.end()
+})
+
+tape('getSampleAssayInfo() should fall back to {} on a failed request', async test => {
+	await withMockFetch(new Error('mock network failure'), async () => {
+		const info = await getSampleAssayInfo(assayVocabApi, { sID: 'assay-error-sample' })
+		test.deepEqual(info, {}, 'Should return {} so gene search falls back to the genome gene db')
+	})
+	test.end()
+})
+
+tape('getSampleAssayInfo() should not request anything without a sample', async test => {
+	await withMockFetch({ assay: 'panel', genes: ['PTPRC'] }, async calls => {
+		test.deepEqual(await getSampleAssayInfo(assayVocabApi, undefined), {}, 'Should return {} for no sample')
+		test.deepEqual(await getSampleAssayInfo(assayVocabApi, { sID: '' }), {}, 'Should return {} for an empty sID')
+		test.equal(calls.n, 0, 'Should make no request at all')
+	})
 	test.end()
 })

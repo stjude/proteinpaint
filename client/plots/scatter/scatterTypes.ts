@@ -127,6 +127,9 @@ export type ScatterChart = {
 	colorValues?: number[]
 	/** Current min/max range used by the color generator */
 	currentColorRange?: { min: number; max: number }
+	/** 2D large (webgl) only: the zoom level this chart's axes were last drawn at, tracked per chart
+	 * so each chart's animation loop only redraws its own axes when the shared zoom changes */
+	currentAxisZoom?: number
 }
 
 export type ValidScatterDataResponse = { range: DataRange; result: { [index: string]: ScatterDataResult } }

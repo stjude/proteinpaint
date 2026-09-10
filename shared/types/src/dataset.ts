@@ -1,7 +1,8 @@
 import type { Mclass } from './Mclass.ts'
 import type { BaseTerm } from './terms/term.ts'
 import type { CategoryKey } from './terms/termCollection.ts'
-import type { TermdbSingleCellSamplesRequest } from './index.ts'
+import type { TermdbSingleCellSamplesRequest, CountsFilePreview } from './index.ts'
+import type { AggregateMethodOption } from './routes/termdb.aggregateMatrix.ts'
 /*** General usage types ***/
 type FileObj = {
 	file: string
@@ -452,9 +453,14 @@ type SingleSampleMutationQuery = {
 }
 
 type NIdataQuery = {
+	/** (server-side) optional dataset-level access rule for brain imaging. Receives the route
+	query (auth info at q.__protected__.clientAuthResult) and returns false to deny; the
+	brainImaging and brainImagingSamples routes call it before serving and reject with a
+	generic message. When undefined the feature is open to all callers. */
+	checkDataAccess?: (q: any) => boolean
 	/** Reference objs for NI data query, keyed by reference name.
 	Each key is shown to users as a template option in the brain imaging chart menu */
-	[refKey: string]: NIdataQueryRef
+	references: { [refKey: string]: NIdataQueryRef }
 }
 
 type NIdataQueryRef = {
@@ -753,7 +759,15 @@ type RnaseqGeneCount = {
 	 * from open-access STAR-Counts files). called by the DE route only after the sample groups are
 	 * resolved, since the matrix is built for exactly the samples in the two groups. returns the
 	 * h5 path plus the samples that actually landed in it, which may be fewer than requested. */
-	buildCountsFile?: (samples: string[], q: any) => Promise<{ file: string; samples: string[] }>
+	buildCountsFile?: (
+		samples: string[],
+		q: any
+	) => Promise<{ file: string; samples: string[]; countsFiles?: CountsFilePreview }>
+	/** describe the counts files behind a run without building it, so preAnalysis can tell the user
+	 * which files back the cohort and how much of the fetch is already cached. costs one metadata
+	 * query and no downloads. only for datasets with buildCountsFile; may throw, and the DE route
+	 * treats a throw as "no preview" rather than a failed pre-analysis. */
+	previewCountsFiles?: (samples: string[], q: any) => Promise<CountsFilePreview>
 	/** max samples one DE run may build a matrix for. reported during preAnalysis so the client can
 	 * warn before the user submits, and enforced by buildCountsFile itself */
 	maxSamples?: number
@@ -790,10 +804,13 @@ type ProteomeFilter = {
 }
 
 type ProteomeCohortConfig = {
-	prior?: { d0: number; s0sq: number }
+	/** case/control sample filters over the abundance db: used for sample lists, sample
+	 *  counts and per-sample values (violins, clustering) — never for statistics */
 	controlFilter: ProteomeFilter[]
 	caseFilter: ProteomeFilter[]
-	DAPfile?: string
+	/** precomputed differential-abundance file (acc, identifier, gene, log2FC, FDR[, pValue]),
+	 *  the single source of every fold change and significance */
+	DAPfile: string
 	catalog?: { [columnKey: string]: string }
 	/** age/progression trajectory membership. Cohorts sharing `series` form one ordered series;
 	 *  `value` is the numeric x-axis position (e.g. months) giving true spacing; `label` is the tick text. */
@@ -813,6 +830,57 @@ type ProteomeAssayConfig = {
 	mclassOverride?: Mclass
 }
 
+/** Selects proteome cohorts by organism/assay and their catalog metadata. Every given
+ *  condition must hold: `catalog` values equal, `with` keys present (non-empty), `without`
+ *  keys absent. */
+export type ProteomeCohortMatch = {
+	organism?: string
+	assay?: string
+	catalog?: { [catalogKey: string]: string }
+	with?: string[]
+	without?: string[]
+}
+
+export type ProteinViewTileConfig = {
+	/** renderer key: crossDisease | insoluble | brainRegions | mouseModels | cellTypes |
+	 *  plaque | multiomicRank | concordance | ptm */
+	key: string
+	title: string
+	subtitle: string
+	/** cohorts feeding this tile; a cohort goes to the first tile (in array order) it matches */
+	cohortMatch?: ProteomeCohortMatch
+	/** key of another tile whose entries are the reference side of a paired tile (e.g. the
+	 * whole-proteome tile for the insoluble dumbbell); paired by cohort name */
+	referenceTile?: string
+	/** axis titles for tiles with a categorical/age x axis (mouseModels, plaque) */
+	xLabel?: string
+	yLabel?: string
+	/** concordance tile: cohort pairs to scatter against each other. A side with ageVaries
+	 *  additionally matches catalog.ageGroup against the selected age (defaultAge first). */
+	pairs?: {
+		key: string
+		label: string
+		x: ProteomeCohortMatch & { label: string; ageVaries?: boolean }
+		y: ProteomeCohortMatch & { label: string; ageVaries?: boolean }
+	}[]
+	defaultAge?: string
+	/** footnote shown in the expanded pane */
+	note?: string
+}
+
+export type ProteinViewConfig = {
+	/** disease code → display; key order is the axis order. specificityControl entries
+	 *  (e.g. psychiatric controls) render muted after a separator */
+	diseases?: { [code: string]: { name: string; label?: string; specificityControl?: boolean } }
+	/** header over the specificityControl group in the cross-disease tile */
+	specificityControlLabel?: string
+	/** model → color; key order is the legend/column order */
+	models?: { [model: string]: { color?: string } }
+	/** cell type → optional footnote; key order is the row order */
+	cellTypes?: { [cellType: string]: { note?: string } }
+	tiles: ProteinViewTileConfig[]
+}
+
 export type ProteomeAbundanceQuery = {
 	/** database file path */
 	dbfile?: string
@@ -821,6 +889,10 @@ export type ProteomeAbundanceQuery = {
 	 *  assay). Used by both the bubble heatmap and the Protein View PTM lollipop. When
 	 *  omitted, no adjustment/normalization is offered. */
 	proteinReferenceAssay?: string
+	/** Protein View study-tile config: the dataset's vocabulary (diseases, models, cell
+	 *  types) and the ordered tiles with the cohort-routing rule feeding each. Without it
+	 *  the Protein View shows only the overview volcano and PTM track. */
+	proteinView?: ProteinViewConfig
 	/** Brain-region visualization config: powers the Brain Regional Proteome chart
 	 *  and the Protein View sample-distribution panel */
 	brainRegions?: {
@@ -921,6 +993,8 @@ export type GeneExpressionQuery = {
 	file?: string
 	/** dynamically added during server launch, list of sample integer IDs from file */
 	samples?: number[]
+	/** unique list of sample types present in samples[] */
+	sampleTypes?: any[]
 	/** dynamically added flag during launch */
 	nochr?: boolean
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
@@ -958,6 +1032,12 @@ export type SingleCellGeneExpression = {
 	unauthenticated headers. sample and gene are explicit since callers query by a term's sample/gene,
 	which is not the request's. */
 	get?: (q: any, sample: any, gene: string) => any
+	/** the sample's assay type and, when panel-based, its assayed gene list;
+	added on init() by validateGeneExpressionNative(). The store's own 'assay'
+	attribute declares the type per sample: panel samples get their gene list
+	served for search boxes, whole-transcriptome samples stay on the genome
+	gene db */
+	listGenes?: (sample: any) => Promise<{ assay: 'panel' | 'wholeTranscriptome'; genes?: string[] }>
 	/** cached gene exp bins, seeded on init() in validate_query_singleCell() */
 	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
 	/** gene expression unit (e.g. 'FPKM') */
@@ -1385,6 +1465,12 @@ type Mds3Queries = {
 		rankings: { [key: string]: string }
 		/** column names of modalities to include in the heatmap, in display order */
 		modalities: string[]
+		/** column holding the integrative (combined) rank, shown as "#n of N" in the Protein View */
+		integrativeColumn?: string
+		/** extra statistic columns to list per ranking in the expanded Protein View tile */
+		statColumns?: string[]
+		/** short display label per ranking key (e.g. "AD multiomics" → "AD"); defaults to the key */
+		labels?: { [key: string]: string }
 		/** intro text shown above the table */
 		description?: string
 		/** optional override for the chart-menu label; defaults to "Gene Ranking" */
@@ -1408,20 +1494,22 @@ type Mds3Queries = {
 		/** suffix of the spatial slide file (e.g. 'morphology.ome.tif'); an image
 		 * subfolder without it is skipped. Required with folder */
 		tiffFileSuffix?: string
-		/** suffix of the cell segmentation CSV */
-		cellBoundariesFileSuffix?: string
-		/** suffix of the nucleus segmentation CSV */
-		nucleusBoundariesFileSuffix?: string
-		/** suffix of the 10x cell feature matrix HDF5 */
-		geneExpressionFileSuffix?: string
+		/** suffix of the consolidated spatial .h5ad (expression X, obs cell_type,
+		 * uns cell/nucleus boundary polygons) — the single source of an image's
+		 * boundaries, annotations and expression. Required for the spatial
+		 * overlays; an image folder without one shows the bare slide */
+		spatialDataFileSuffix?: string
 		/** optional override for the spatial viewer's default gene overlay
-		 * (comma-separated). Gene names are discovered from the expression h5 at
+		 * (comma-separated). Gene names are discovered from the h5ad at
 		 * runtime; this value is filtered to genes actually present there, and
 		 * when absent (or naming only absent genes) the file's first gene is the
 		 * default. The burger menu can always override it. */
 		geneExpression?: string
 		/** default: show boundary strokes only in the n most zoomed-in levels */
 		annotationLevel?: number
+		/** default: fill cells by their annotated cell_type.
+		 * The burger menu can always override it. */
+		cellTypes?: boolean
 	}
 	images?: Images
 	chat?: any
@@ -1963,7 +2051,7 @@ keep this setting here for reason of:
 	 * Supports the About tab in mass UI
 	 */
 	hasSampleAncestry?: boolean
-	sampleTypes?: SampleType[]
+	sampleTypes?: SampleTypes
 	/** ui labels used for plot controls and tooltips */
 	uiLabels?: UiLabels
 
@@ -2097,10 +2185,12 @@ type CategoricalTermCollection = TermCollectionBase & {
 
 type TermCollection = NumericTermCollection | CategoricalTermCollection
 
-type SampleType = {
-	name: string
-	plural_name: string
-	parent_id: string
+export type SampleTypes = {
+	[sampleType: number]: {
+		name: string
+		plural_name: string
+		parent_id: number | null
+	}
 }
 
 /** predefined configuration objects per subcohort per plot type */
@@ -2172,7 +2262,7 @@ type MutationSet = {
 
 /** different methods to return samples with assay availability info */
 /** using dictionary term */
-type DtAssayAvailabilityTerm = {
+export type DtAssayAvailabilityTerm = {
 	/** id of this assay term for this dt */
 	term_id: string
 	/** optional label */
@@ -2186,6 +2276,8 @@ type DtAssayAvailabilityTerm = {
 	*/
 	yesSamples?: Set<string | number>
 	noSamples?: Set<string | number>
+	/** whether yesSamples is non-empty, consumed by client-side code */
+	hasSamples?: boolean
 }
 
 type DtAssayAvailabilityByOrigin = {
@@ -2585,4 +2677,6 @@ export type Mds3 = BaseMds & {
 
 export type Mds3WithCohort = Mds3 & {
 	cohort: Cohort
+	/** Server-only aggregation capability resolver, installed during dataset initialization. */
+	getAvailableAggregateMethods?: (terms?: BaseTerm[]) => AggregateMethodOption[]
 }

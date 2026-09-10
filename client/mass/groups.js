@@ -356,7 +356,7 @@ function mayAddBrainImagingOption(menuDiv, self, samplelstTW) {
 			// let user select a template; show imaging availability per template.
 			// per-template try/catch: one broken template must not hide the others
 			const entries = await Promise.all(
-				Object.keys(NIdata).map(async refKey => {
+				Object.keys(NIdata.references).map(async refKey => {
 					try {
 						const available = await getBrainImagingSampleSet(
 							self.app.vocabApi.vocab.genome,
@@ -591,78 +591,17 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					throw new Error('no data returned from pre-analysis request')
 				}
 
-				const numControl = preAnalysisData.data[samplelstTW.q.groups[0].name]
-				const numCase = preAnalysisData.data[samplelstTW.q.groups[1].name]
-
-				if (numControl + numCase > maxSampleCutoff) {
-					if (preAnalysisData.data.alert)
-						preAnalysisData.data.alert += ` | Sample size ${
-							numControl + numCase
-						} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
-					else
-						preAnalysisData.data.alert = `Sample size ${
-							numControl + numCase
-						} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
-				}
-
 				tip.clear().showunderoffset(itemDiv.node())
-				// gdc etc. call them cases, not samples
-				const sampleLabel = self.app.vocabApi.termdbConfig?.uiLabels?.samples || 'samples'
-				const menuDiv = tip.d.append('div')
-				const table = table2col({ holder: menuDiv })
-				table.table.style('margin-left', '5px').style('padding', '5px 10px')
-				{
-					const controlGColor = samplelstTW.term.values[samplelstTW.q.groups[0].name].color
-					const colorSquareCtrl = controlGColor
-						? `<span style="display:inline-block; width:12px; height:12px; background-color:${controlGColor}" ></span>`
-						: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
-					const [c1, c2] = table.addRow()
-					c1.html(
-						`<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${colorSquareCtrl} ${samplelstTW.q.groups[0].name}`
-					)
-					c2.html(`${numControl} ${sampleLabel}`)
-				}
-				{
-					const caseGColor = samplelstTW.term.values[samplelstTW.q.groups[1].name].color
-					const colorSquareCase = caseGColor
-						? `<span style="display:inline-block; width:12px; height:12px; background-color:${caseGColor}" ></span>`
-						: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
-					const [c1, c2] = table.addRow()
-					c1.html(
-						`<span style="font-size:.8em;font-weight:bold">CASE</span> ${colorSquareCase} ${samplelstTW.q.groups[1].name}`
-					)
-					c2.html(`${numCase} ${sampleLabel}`)
-				}
-
-				const alertDiv = menuDiv.append('div')
-				if (preAnalysisData.data.alert) {
-					sayerror(alertDiv, preAnalysisData.data.alert)
-				}
-
-				if (!preAnalysisData.data.alert) {
-					const launchDiv = menuDiv.append('div').style('margin', '8px 5px').style('padding', '5px 10px')
-					launchDiv
-						.append('button')
-						.style('border', 'none')
-						.style('border-radius', '20px')
-						.style('padding', '10px 15px')
-						.text(`Run Differential ${termType2label(TermTypes.DNA_METHYLATION)} Analysis`)
-						.on('click', async () => {
-							const config = {
-								chartType: 'differentialAnalysis',
-								state: self.state,
-								samplelst: { groups },
-								termType: TermTypes.DNA_METHYLATION,
-								tw: samplelstTW
-							}
-							tip.hide()
-							self.tip.hide()
-							self.app.dispatch({
-								type: 'plot_create',
-								config
-							})
-						})
-				}
+				// shared with differential expression; termType selects the label and drops the
+				// method radios, which do not apply to methylation
+				renderPreAnalysisData({
+					preAnalysisData,
+					samplelstTW,
+					groups,
+					tip,
+					termType: TermTypes.DNA_METHYLATION,
+					self
+				})
 			})
 	}
 
@@ -674,20 +613,121 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 		div.append('div').text('DA should support whole proteome abundance')
 	}
 	// small text to explain which is case/control. always show this for all DA
-	div
+	const noteDiv = div
 		.append('div')
-		.html(
-			`<span style="font-size:.8em;font-weight:bold">CASE</span> ${samplelstTW.q.groups[1].name}
-		&nbsp;
-		<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${samplelstTW.q.groups[0].name}`
-		)
 		.style('font-size', '0.8em')
 		.style('opacity', 0.8)
 		.style('padding', '3px 3px 3px 10px')
+	for (const [role, i] of [
+		['CASE', 1],
+		['CONTROL', 0]
+	]) {
+		noteDiv.append('span').style('font-size', '.8em').style('font-weight', 'bold').text(role)
+		// group name is set as text, see addGroupCountRow()
+		noteDiv.append('span').style('margin', '0 10px 0 4px').text(samplelstTW.q.groups[i].name)
+	}
 }
 
+/* one row of a case/control table, showing a group's color, name, and number of samples with data
+
+table: a table2col() instance
+role: 'CASE' or 'CONTROL'
+samplelstTW: the samplelst tw of the compared groups, .term.values[] is keyed by group name
+i: index of the group in samplelstTW.q.groups[]
+count: number of samples in this group that have data for the analysis
+sampleLabel: what the dataset calls a sample, e.g. 'cases' on gdc
+
+the group name and color are supplied by the user or an embedder -- a name is typed into the groups
+table, and plots/DEinput.ts accepts prebuilt groups from runpp -- so both are set as text and style
+properties, and must not be interpolated into markup
+*/
+function addGroupCountRow(table, role, samplelstTW, i, count, sampleLabel) {
+	const name = samplelstTW.q.groups[i].name
+	const color = samplelstTW.term.values[name].color
+	const [c1, c2] = table.addRow()
+	c1.append('span').style('font-size', '.8em').style('font-weight', 'bold').text(role)
+	const square = c1.append('span').style('display', 'inline-block').style('margin', '0 4px')
+	if (color) square.style('width', '12px').style('height', '12px').style('background-color', color)
+	else
+		square
+			.style('width', '11px')
+			.style('height', '11px')
+			.style('background-color', '#fff')
+			.style('border', '0.1px solid black')
+	c1.append('span').text(name)
+	c2.text(`${count} ${sampleLabel}`)
+}
+
+/* Provenance for datasets that assemble their counts matrix per run (gdc today): which files
+back the cohort, how the one-file-per-case choice was made, and how much of the fetch is
+already cached. Absent for datasets with a static counts file, so this renders nothing.
+
+The counts above say how many cases are comparable; this says what data those cases resolve
+to. Both are needed to read a result: a case with three rna-seq aliquots contributes exactly
+one column, and which one is not obvious from the case count alone.
+
+ponytail: summary only. countsFiles.multiCases[] carries the per-case candidate lists and is
+not shown -- render it in an expandable table if someone actually needs to audit a specific
+case, and drop it from the payload if nobody does. */
+function renderCountsFileInfo(holder, preview, sampleLabel) {
+	if (!preview) return
+
+	/* every line is stated even when it is unremarkable. "0 cases had more than one file" and
+	"all Tumor" are the answers a reader needs; suppressing them as boring leaves the reader unable
+	to tell a clean cohort from a report that skipped the check. */
+	const lines = []
+
+	const missing = preview.casesRequested - preview.cases
+	lines.push(
+		`${preview.cases} of ${preview.casesRequested} ${sampleLabel} resolve to a counts file` +
+			(missing > 0 ? ` — ${missing} have no open-access file` : '')
+	)
+	lines.push(
+		`${preview.candidateFiles} candidate ${preview.candidateFiles == 1 ? 'file' : 'files'}; ` +
+			`${preview.casesWithMultiple} ${sampleLabel} had more than one`
+	)
+	lines.push(
+		'Aliquots: ' +
+			Object.entries(preview.byTissueType)
+				.map(([t, n]) => `${n} ${t}`)
+				.join(', ')
+	)
+
+	/* only when the dataset knows what its cache is keyed on. matrixCached is the decisive case --
+	an assembled cohort fetches nothing regardless of the per-file counts -- so it is worded as a
+	fact, while the per-file numbers are a disk probe and are worded as what the run would do */
+	if (preview.axisKnown && preview.toDownload != null)
+		lines.push(
+			preview.matrixCached
+				? 'Fetch: none, this cohort is already assembled'
+				: preview.toDownload
+				? `Fetch: ${preview.cached} cached, ${preview.toDownload} to download`
+				: 'Fetch: none, every file is already cached'
+		)
+
+	lines.push(`Rule: ${preview.selectionRule}`)
+
+	const div = holder
+		.append('div')
+		.style('margin', '2px 0 0 5px')
+		.style('padding', '0 10px')
+		.style('font-size', '.85em')
+		.style('opacity', 0.65)
+	for (const l of lines) div.append('div').text(l)
+}
+
+/* Renders the group sample counts and the "Run Differential X Analysis" button, for both
+differential gene expression and differential DNA methylation.
+
+arg.termType selects the assay; it defaults to gene expression so existing callers are
+unchanged. Only two things actually differ between the two: the label on the counts header,
+and the analysis-method radios, which exist for expression alone (diffMeth.R is the only
+methylation engine, so there is nothing to choose). Everything else -- the counts table, the
+sample-size cap, the alert, and the plot_create dispatch -- is shared. */
 export function renderPreAnalysisData(arg) {
 	const { preAnalysisData, samplelstTW, groups, holder, tip, self } = arg
+	const termType = arg.termType || TermTypes.GENE_EXPRESSION
+	const isGE = termType == TermTypes.GENE_EXPRESSION
 
 	if (!preAnalysisData?.data) return
 
@@ -695,76 +735,60 @@ export function renderPreAnalysisData(arg) {
 	const numCase = preAnalysisData.data[samplelstTW.q.groups[1].name]
 
 	if (numControl + numCase > maxSampleCutoff) {
-		if (preAnalysisData.data.alert)
-			preAnalysisData.data.alert += ` | Sample size ${
+		if (preAnalysisData.alert)
+			preAnalysisData.alert += ` | Sample size ${
 				numControl + numCase
 			} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
 		else
-			preAnalysisData.data.alert = `Sample size ${
+			preAnalysisData.alert = `Sample size ${
 				numControl + numCase
 			} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
 	}
 
-	// display actual numbers of samples with rnaseq count
+	// display actual numbers of samples with assay data
 	// gdc etc. call them cases, not samples
 	const uiLabels = self?.app?.vocabApi?.termdbConfig?.uiLabels
 	const sampleLabel = uiLabels?.samples || 'samples'
 	const menuDiv = tip ? tip.d.append('div') : holder.append('div')
 	/* these counts are a subset of the group sizes shown in the groups table: only the samples that
-	actually have expression data can be compared. without this header the two numbers look like a
+	actually have data for this assay can be compared. without this header the two numbers look like a
 	bug (e.g. a GDC group of 1570 cases showing as 626 here). */
 	menuDiv
 		.append('div')
 		.style('font-weight', 'bold')
 		.style('margin', '5px 0 0 5px')
-		.text(`${uiLabels?.Samples || 'Samples'} with gene expression data:`)
+		// label kept in its natural case: lowercasing turns "DNA Methylation" into "dna methylation"
+		.text(`${uiLabels?.Samples || 'Samples'} with ${termType2label(termType)} data:`)
 	const table = table2col({ holder: menuDiv })
 	table.table.style('margin-left', '5px').style('padding', '5px 10px')
-	{
-		const controlGColor = samplelstTW.term.values[samplelstTW.q.groups[0].name].color
-		const colorSquareCtrl = controlGColor
-			? `<span style="display:inline-block; width:12px; height:12px; background-color:${controlGColor}" ></span>`
-			: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
-		const [c1, c2] = table.addRow()
-		c1.html(
-			`<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${colorSquareCtrl} ${samplelstTW.q.groups[0].name}`
-		)
-		c2.html(`${numControl} ${sampleLabel}`)
-	}
-	{
-		const caseGColor = samplelstTW.term.values[samplelstTW.q.groups[1].name].color
-		const colorSquareCase = caseGColor
-			? `<span style="display:inline-block; width:12px; height:12px; background-color:${caseGColor}" ></span>`
-			: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
-		const [c1, c2] = table.addRow()
-		c1.html(
-			`<span style="font-size:.8em;font-weight:bold">CASE</span> ${colorSquareCase} ${samplelstTW.q.groups[1].name}`
-		)
-		c2.html(`${numCase} ${sampleLabel}`)
-	}
+	addGroupCountRow(table, 'CONTROL', samplelstTW, 0, numControl, sampleLabel)
+	addGroupCountRow(table, 'CASE', samplelstTW, 1, numCase, sampleLabel)
+
+	renderCountsFileInfo(menuDiv, preAnalysisData.countsFiles, sampleLabel)
 
 	// display errors
 	const alertDiv = menuDiv.append('div')
-	if (preAnalysisData.data.alert) {
-		sayerror(alertDiv, preAnalysisData.data.alert)
+	if (preAnalysisData.alert) {
+		sayerror(alertDiv, preAnalysisData.alert)
 	}
 
-	// option to launch DE
+	// option to launch the analysis
 	const sample_size_limit = 8
-	if (!preAnalysisData.data.alert) {
-		const options =
-			numControl + numCase >= maxGESampleCutoff
-				? [{ label: 'Wilcoxon', value: 'wilcoxon' }]
-				: numControl <= sample_size_limit && numCase <= sample_size_limit
-				? [
-						{ label: 'edgeR', value: 'edgeR' },
-						{ label: 'Limma', value: 'limma' }
-				  ]
-				: [
-						{ label: 'edgeR', value: 'edgeR' },
-						{ label: 'Wilcoxon', value: 'wilcoxon' },
-						{ label: 'Limma', value: 'limma' }
-				  ]
+	if (!preAnalysisData.alert) {
+		const options = !isGE
+			? []
+			: numControl + numCase >= maxGESampleCutoff
+			? [{ label: 'Wilcoxon', value: 'wilcoxon' }]
+			: numControl <= sample_size_limit && numCase <= sample_size_limit
+			? [
+					{ label: 'edgeR', value: 'edgeR' },
+					{ label: 'Limma', value: 'limma' }
+			  ]
+			: [
+					{ label: 'edgeR', value: 'edgeR' },
+					{ label: 'Wilcoxon', value: 'wilcoxon' },
+					{ label: 'Limma', value: 'limma' }
+			  ]
 
 		/* a ds may prefer one method: gdc sets wilcoxon because its cohorts are large enough that
 		edgeR's estimateDisp dominates (measured ~25x slower on a 1370-case cohort). this only moves
@@ -778,48 +802,53 @@ export function renderPreAnalysisData(arg) {
 		}
 
 		const launchDEDiv = menuDiv.append('div').style('margin', '8px 5px').style('padding', '5px 10px')
-		const radioRow = launchDEDiv.append('tr')
-		let selectedMethod = options[0].value
+		let selectedMethod = options[0]?.value
 
-		radioRow
-			.append('td')
-			.html('Method')
-			.attr('aria-label', 'DE Method')
-			.attr('class', 'sja-termdb-config-row-label')
-			.style('padding', '5px')
+		// methylation has a single engine (diffMeth.R), so there is no method to choose
+		if (options.length) {
+			const radioRow = launchDEDiv.append('tr')
+			radioRow
+				.append('td')
+				.html('Method')
+				.attr('aria-label', 'DE Method')
+				.attr('class', 'sja-termdb-config-row-label')
+				.style('padding', '5px')
 
-		const cell = radioRow.append('td')
-		const radioBtnDiv = cell.append('div')
+			const cell = radioRow.append('td')
+			const radioBtnDiv = cell.append('div')
 
-		make_radios({
-			holder: radioBtnDiv,
-			inputName: `de-method-${Date.now()}`,
-			options: options.map((o, i) => ({
-				...o,
-				title: `${o.label} method`,
-				checked: i === 0 // preselect first option
-			})),
-			styles: {
-				display: 'inline-block',
-				padding: '0 12px 0 0'
-			},
-			callback: v => (selectedMethod = v)
-		})
+			make_radios({
+				holder: radioBtnDiv,
+				inputName: `de-method-${Date.now()}`,
+				options: options.map((o, i) => ({
+					...o,
+					title: `${o.label} method`,
+					checked: i === 0 // preselect first option
+				})),
+				styles: {
+					display: 'inline-block',
+					padding: '0 12px 0 0'
+				},
+				callback: v => (selectedMethod = v)
+			})
+		}
 
 		launchDEDiv
 			.append('button')
 			.style('border', 'none')
 			.style('border-radius', '20px')
 			.style('padding', '10px 15px')
-			.text(`Run Differential ${termType2label(TermTypes.GENE_EXPRESSION)} Analysis`)
+			.attr('data-testid', 'sjpp-da-run-btn')
+			.text(`Run Differential ${termType2label(termType)} Analysis`)
 			.on('click', async () => {
 				const config = {
 					chartType: 'differentialAnalysis',
 					state: self.state,
 					samplelst: { groups },
-					termType: TermTypes.GENE_EXPRESSION,
+					termType,
 					tw: samplelstTW,
-					settings: { volcano: { method: selectedMethod } }
+					// only expression carries a method; passing an undefined one would fail volcano settings validation
+					...(selectedMethod ? { settings: { volcano: { method: selectedMethod } } } : {})
 				}
 				if (tip) tip.hide()
 				if (self.tip) self.tip.hide()

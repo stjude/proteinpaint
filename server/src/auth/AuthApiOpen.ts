@@ -28,9 +28,18 @@ export const AuthApiOpen: AuthInterface = {
 		return
 	},
 
-	canDisplaySampleIds(_, ds) {
-		if (!ds.cohort.termdb.displaySampleIds) return false
-		return true //AuthApiOpen.isUserLoggedIn(req, ds, protectedRoutes.samples)
+	canDisplaySampleIds(req, ds) {
+		const displaySampleIds = ds?.cohort?.termdb?.displaySampleIds
+		if (!displaySampleIds) return false
+		// displaySampleIds may be a boolean or a per-request policy (a function of clientAuthResult);
+		// a truthy non-function value is an unconditional allow, a function must be evaluated for this
+		// request's role and fail closed. Open access carries no clientAuthResult (only sessionid).
+		if (typeof displaySampleIds != 'function') return true //AuthApiOpen.isUserLoggedIn(req, ds, protectedRoutes.samples)
+		try {
+			return !!displaySampleIds(req?.query?.__protected__?.clientAuthResult ?? {})
+		} catch {
+			return false
+		}
 	},
 
 	// these open-acces, default methods may be replaced by maySetAuthRoutes()

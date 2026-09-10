@@ -22,8 +22,8 @@ export const api: RouteApi = {
 // FDR threshold below which a site is significant.
 const SIGNIFICANCE_THRESHOLD = 0.05
 
-/** one parsed DAPfile row (the file is: acc \t identifier \t gene \t log2FC \t FDR) */
-type DapRow = {
+/** one parsed DAPfile row (the file is: acc \t identifier \t gene \t log2FC \t FDR [\t pValue]) */
+export type DapRow = {
 	acc: string
 	/** base UniProt accession (isoform suffix stripped), e.g. P10636 from sp|P10636-8|TAU_HUMAN */
 	baseAcc: string
@@ -33,14 +33,29 @@ type DapRow = {
 	fc: number
 	/** FDR (adjusted p-value) */
 	fdr: number
+	/** nominal p-value, only when the file carries a 6th column */
+	p?: number
 }
 
-/** sp|P10636-8|TAU_HUMAN → P10636 ; falls back to the raw acc when it doesn't parse */
-function baseUniProtAcc(acc: string): string {
-	const parts = acc.split('|')
-	const id = parts.length >= 2 ? parts[1] : acc
-	const dash = id.indexOf('-')
-	return dash > 0 ? id.slice(0, dash) : id
+/**
+ * sp|P10636-8|TAU_HUMAN → P10636 ; also handles the dotted DAP-file form
+ * sp.P10636.TAU_HUMAN / sp.P10636.3.TAU_HUMAN → P10636. Falls back to the raw
+ * acc when it doesn't parse. Shared by every DAP consumer (bubble heatmap,
+ * proteome/protein view, brain regions) so PTM sites and whole-proteome rows
+ * collapse to the same base UniProt accession.
+ */
+export function baseUniProtAcc(acc: string): string {
+	if (!acc) return ''
+	if (acc.includes('|')) {
+		const parts = acc.split('|')
+		const id = parts.length >= 2 ? parts[1] : acc
+		const dash = id.indexOf('-')
+		return dash > 0 ? id.slice(0, dash) : id
+	}
+	// dotted DAP form: sp.ACC.NAME or sp.ACC.isoformN.NAME
+	const parts = acc.split('.')
+	if (parts.length >= 3 && (parts[0] === 'sp' || parts[0] === 'tr')) return parts[1]
+	return acc
 }
 
 /**
@@ -50,7 +65,7 @@ function baseUniProtAcc(acc: string): string {
  * touches. Returns null when the file is missing/unreadable so the caller leaves
  * the cell empty.
  */
-async function readGeneRows(filePath: string, geneLower: string): Promise<DapRow[] | null> {
+export async function readGeneRows(filePath: string, geneLower: string): Promise<DapRow[] | null> {
 	let content: string
 	try {
 		content = await fs.readFile(filePath, 'utf8')
@@ -70,7 +85,13 @@ async function readGeneRows(filePath: string, geneLower: string): Promise<DapRow
 		if (!Number.isFinite(fc)) continue
 		const fdr = Number(parts[4])
 		if (!Number.isFinite(fdr)) continue
-		rows.push({ acc, baseAcc: baseUniProtAcc(acc), identifier: parts[1] || acc, gene, fc, fdr })
+		const row: DapRow = { acc, baseAcc: baseUniProtAcc(acc), identifier: parts[1] || acc, gene, fc, fdr }
+		const pText = parts[5]?.trim()
+		if (pText) {
+			const p = Number(pText)
+			if (Number.isFinite(p)) row.p = p
+		}
+		rows.push(row)
 	}
 	return rows
 }

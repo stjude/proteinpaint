@@ -142,13 +142,47 @@ read_counts_time <- system.time({
   if (length(missing_controls)) fail(paste0(length(missing_controls), " control sample(s) are absent from HDF5 'samples': ", format_examples(missing_controls)))
 
   samples_indices <- c(case_indices, control_indices)
-  raw_counts <- read_h5_dataset(input$input_file, "matrix", list(samples_indices, seq_along(geneNames)))
-  if (!is.numeric(raw_counts)) fail("HDF5 dataset 'matrix' must be numeric raw counts")
-  if (length(raw_counts) != length(samples_indices) * length(geneNames)) {
-    fail(sprintf("HDF5 matrix dimensions do not match %d selected samples and %d genes", length(samples_indices), length(geneNames)))
+  # Read one contiguous hyperslab spanning min..max of the selected (unsorted) sample indices,
+  # then pick out and reorder the needed rows in memory, rather than handing the scattered
+  # samples_indices straight to h5read/H5Sselect_hyperslab. A non-contiguous index selection makes
+  # the HDF5 library issue one access per discontiguous run in the selection; on local disk (page
+  # cache) that's negligible, but when input_file sits on S3-backed storage each such access can
+  # cost a separate network round trip, so a scattered per-sample selection turns into many slow
+  # S3 reads instead of one. This mirrors the fix already applied to the wilcoxon engine, see the
+  # comment above read_slice_2d in rust/src/DEanalysis.rs.
+  first_index <- min(samples_indices)
+  last_index <- max(samples_indices)
+  span_len <- last_index - first_index + 1
+  # local_indices maps each entry of samples_indices (case/control order) to its row within the
+  # span, so the resulting matrix is reordered exactly as case_indices/control_indices dictated
+  # before this optimization.
+  local_indices <- samples_indices - first_index + 1
+  n_genes <- length(geneNames)
+  # The span is read in blocks of genes rather than in one call. On disk the matrix is contiguous
+  # and C-ordered (genes x samples), which rhdf5 presents transposed as (samples x genes) -- so
+  # samples are the fast-varying dimension and every read costs one access per gene row whether it
+  # asks for the whole span or part of it. Blocking by gene therefore preserves the access pattern
+  # above exactly while bounding what is materialized: the span alone, read whole, is unbounded in
+  # memory (a 2-vs-2 comparison landing at opposite ends of a 3000-sample x 60660-gene file spans
+  # every sample, ~730MB on disk as f32 and ~1.45GB once rhdf5 widens it to R doubles, to use ~2MB
+  # of it). Selecting scattered samples instead is not the alternative: with samples fast-varying
+  # that is ~60660 x n separate 4-byte accesses, the case the rust comment measured at 28.8s.
+  # ponytail: fixed ~100MB block, tune if a profile ever shows the per-block overhead mattering.
+  gene_block <- max(1L, as.integer(1.25e7 %/% span_len))
+  read_counts <- matrix(0, nrow = n_genes, ncol = length(samples_indices))
+  for (block_start in seq(1L, n_genes, by = gene_block)) {
+    block_end <- min(block_start + gene_block - 1L, n_genes)
+    block_genes <- block_end - block_start + 1L
+    block <- read_h5_dataset(input$input_file, "matrix", list(first_index:last_index, block_start:block_end))
+    if (!is.numeric(block)) fail("HDF5 dataset 'matrix' must be numeric raw counts")
+    if (length(block) != span_len * block_genes) {
+      fail(sprintf("HDF5 matrix dimensions do not match the %d-sample span and %d genes", span_len, n_genes))
+    }
+    dim(block) <- c(span_len, block_genes)
+    # Transposed per block, so the full-size transpose the old code did after the read never exists.
+    read_counts[block_start:block_end, ] <- t(block[local_indices, , drop = FALSE])
   }
-  raw_counts <- matrix(raw_counts, nrow = length(samples_indices), ncol = length(geneNames))
-  read_counts <- as.data.frame(t(raw_counts))
+  read_counts <- as.data.frame(read_counts)
   colnames(read_counts) <- c(cases, controls)
 
   missing_count <- sum(is.na(read_counts))
@@ -450,6 +484,7 @@ memory_mb <- list(
 )
 if (exists("mds_plot_mem")) memory_mb$mds_plot <- mem(mds_plot_mem)
 if (exists("model_gen_mem")) memory_mb$model_gen <- mem(model_gen_mem)
+if (exists("estimate_disp_mem")) memory_mb$estimate_disp <- mem(estimate_disp_mem)
 if (exists("fit_mem")) memory_mb$fit <- mem(fit_mem)
 if (exists("test_mem")) memory_mb$test <- mem(test_mem)
 if (exists("ql_plot_mem")) memory_mb$ql_plot <- mem(ql_plot_mem)

@@ -59,6 +59,7 @@ export function showResultsTable(opts: ShowResultsTableOpts): void {
 		rows,
 		showLines: false,
 		showHeader: true,
+		dataTestId: 'sjpp-results-table',
 		striped: true,
 		resize: 'both',
 		header: { allowSort: true },

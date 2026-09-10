@@ -21,11 +21,15 @@ export function getDefaultScatterSettings(opts: any = {}): Settings {
 		fov: 50,
 		threeSize: 0.005,
 		threeFOV: 70,
+		maxSvgSamplesCutoff: 20000, // if a cohort is larger than this, switch from svg to webgl/canvas rendering
+
 		//ColorScale settings
 		colorScaleMode: 'auto',
 		colorScalePercentile: 95,
 		colorScaleMinFixed: null,
 		colorScaleMaxFixed: null,
+		noExpColor: '#F5F5F5', // light gray, for dots with no gene expression value
+		expColor: '#ff000d', // default color for the maximum gene expression value
 		//3D Plot settings
 		showContour: false,
 		colorContours: false,
@@ -45,7 +49,3 @@ export function getDefaultScatterSettings(opts: any = {}): Settings {
 
 	return Object.assign(defaults, overrides)
 }
-
-export const maxSvgSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
-export const noExpColor = '#F5F5F5' //light gray
-export const expColor = '#ff000d' //default color for gene expression

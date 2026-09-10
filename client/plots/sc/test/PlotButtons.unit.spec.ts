@@ -14,6 +14,8 @@ import { getMockSCState } from './getMockSCApp.ts'
  *   - getChartBtnOpts() Gene expression button should not be visible when geneExpression is not configured
  *   - getChartBtnOpts() Differential expression button should be visible when DEgenes is configured
  *   - getChartBtnOpts() should include only plots found in availablePlots
+ *   - getChartBtnOpts() Spatial button visibility should follow data.hasSpatial
+ *   - getChartBtnOpts() Spatial button should spawn the wsi plot in fixed-sample mode
  *   - getSingleCellConfig() should return sampleScatter config
  *   - getSingleCellConfig() should throw when no item is selected
  *   - getSingleCellConfig() should throw when plot name is not found
@@ -238,6 +240,38 @@ tape('getChartBtnOpts() should include only plots found in availablePlots', test
 
 	test.ok(umap, 'umap button should be present when in availablePlots')
 	test.notOk(tsne, 'tsne button should not be present when not in availablePlots')
+	test.end()
+})
+
+tape('getChartBtnOpts() Spatial button visibility should follow data.hasSpatial', test => {
+	const pb = getPlotButtons()
+	pb.item = { sID: 'S1', eID: 'EXP1' }
+	pb.availablePlots = new Set()
+
+	// the model's wsiBySample probe sets data.hasSpatial; absent/false = no button
+	pb.data = { plots: [] }
+	let spatial = pb.getChartBtnOpts().find(b => b.label === 'Spatial')
+	test.ok(spatial, 'Should have a Spatial button entry')
+	test.notOk(spatial!.isVisible(), 'Spatial should be hidden when data.hasSpatial is not set')
+
+	pb.data = { plots: [], hasSpatial: true }
+	spatial = pb.getChartBtnOpts().find(b => b.label === 'Spatial')
+	test.ok(spatial!.isVisible(), 'Spatial should be visible when data.hasSpatial is true')
+	test.end()
+})
+
+tape('getChartBtnOpts() Spatial button should spawn the wsi plot in fixed-sample mode', test => {
+	const pb = getPlotButtons()
+	pb.item = { sID: 'S1', eID: 'EXP1' }
+	pb.availablePlots = new Set()
+	pb.data = { plots: [], hasSpatial: true }
+
+	const spatial = pb.getChartBtnOpts().find(b => b.label === 'Spatial')
+	const config = spatial!.getPlotConfig!() as any
+
+	test.equal(config.chartType, 'wsi', 'Should set chartType to wsi')
+	test.deepEqual(config.sample, { sID: 'S1', eID: 'EXP1' }, 'Should pin the selected sample (fixed-sample mode)')
+	test.equal(config.name, 'Sample: S1 Spatial', 'Should name the subplot after the sample')
 	test.end()
 })
 

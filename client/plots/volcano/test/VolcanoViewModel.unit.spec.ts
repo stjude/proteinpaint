@@ -300,6 +300,45 @@ tape('setProvenance records groups, sizes and every result-affecting setting', f
 	test.end()
 })
 
+/* "case" and "control" are slot names, not group names, so the old axis label said how big an
+effect was but not which direction it pointed. Naming the groups is the only place on the plot
+that states the direction -- the provenance line does too, but only inside a downloaded file. */
+tape('deltaBetaAxisLabel names the groups in subtraction order', function (test) {
+	test.timeoutAfter(100)
+
+	const dmConfig = { ...mockConfig, termType: 'dnaMethylation' } as any
+	const vm = new VolcanoViewModel(dmConfig, mockResponse, mockSettings as any)
+	const label = vm.viewData.deltaBetaAxisLabel
+
+	// groups[0] is the control and groups[1] the case, and delta_beta is case - control,
+	// so the case name must come first for the label to describe the actual subtraction
+	test.equal(label, 'Δβ (Resistant − Sensitive)', 'reads case − control using the real group names')
+
+	{
+		// a long name must be shortened the same way the group labels above the plot are,
+		// or it overflows the centered axis label
+		const longName = 'Not in a group with a very long user supplied name'
+		const cfg = {
+			...dmConfig,
+			samplelst: { groups: [{ ...testData.groups[0], name: longName }, testData.groups[1]] }
+		}
+		const shortened = new VolcanoViewModel(cfg, mockResponse, mockSettings as any).viewData.deltaBetaAxisLabel!
+		test.ok(shortened.includes('...'), 'shortens an over-long group name')
+		test.ok(!shortened.includes(longName), 'does not emit the full over-long name')
+	}
+
+	{
+		/* Falls back rather than rendering "Δβ (undefined − undefined)". Called directly rather
+		than through the constructor: single-cell DE has no config.samplelst at all, but a
+		constructor call cannot reach that state here because setTermInfo() runs first and
+		hard-requires groups[0]/[1] for the term types that do use samplelst. */
+		const noGroups = (VolcanoViewModel.prototype as any).setDeltaBetaAxisLabel.call({ config: {} })
+		test.equal(noGroups, undefined, 'undefined when the config carries no sample groups')
+	}
+
+	test.end()
+})
+
 tape('setPointData: methylation cells line up with their column headers', function (test) {
 	test.timeoutAfter(100)
 

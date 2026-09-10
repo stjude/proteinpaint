@@ -1,3 +1,4 @@
+/** the w2 plot's settings slice (config.settings.wsi) */
 type Settings = {
 	/** index of the selected row in the sample table; -1 = no sample selected */
 	selectedSampleIndex: number
@@ -7,9 +8,15 @@ type Settings = {
 	viewerHeight: string
 	/** spatial images only — burger-menu overrides of the dataset's viewer settings */
 	showCellBoundaries: boolean
+	/** blue nucleus outlines */
 	showNucleusBoundaries: boolean
 	/** master switch for the gene expression overlay */
 	showGeneExpression: boolean
+	/** fill cells by the cell_type column of the boundaries CSV (when present) */
+	showCellTypes: boolean
+	/** cell types to fill, as a list — type names are free text and may
+	 contain commas, so never a comma-joined string; null/[] = all types */
+	cellTypeFilter: string[] | null
 	/** comma-separated gene names; null = dataset default (seeded on first spatial render), '' = no overlay */
 	geneExpression: string | null
 	/** show boundary strokes only in the n most zoomed-in levels; null = dataset default, 0 = always show */

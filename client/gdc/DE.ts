@@ -39,7 +39,8 @@ export async function init(
 			dslabel: useDslabel,
 			termfilter: { filter0: arg.filter0 },
 			nav: { activeTab: 1, header_mode: 'hidden' },
-			plots: [{ chartType: 'DEinput' }]
+			// an embedder may supply prebuilt groups, see config.groups[] in plots/DEinput.ts
+			plots: arg.state?.plots || [{ chartType: 'DEinput' }]
 		},
 		opts: Object.assign(
 			{

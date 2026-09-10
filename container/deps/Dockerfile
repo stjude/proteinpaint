@@ -26,6 +26,14 @@ RUN apt-get update && apt-get install --allow-downgrades -y \
 	libgsl0-dev \
 	libhdf5-dev \
 	hdf5-tools \
+	# Runtime HDF5 for the rust binaries, which are compiled elsewhere (container/rust/Dockerfile)
+	# and copied in by pack.sh. They link libhdf5_serial.so.310, but this image is based on r-base,
+	# which tracks Debian sid/testing -- so libhdf5-dev above now resolves to HDF5 2.x and provides
+	# only .320. Nothing then loads DEanalysis or dmrcate, and the failure surfaces as a dead child
+	# process on a live request. The package name IS the soname, so this pins what actually matters.
+	# The two versions co-install; -dev stays for anything needing headers. Must move in lockstep
+	# with the HDF5 the rust builder compiles against (hdf5-metno 0.9 accepts only 1.x).
+	libhdf5-310 \
 	liblzma-dev \
     libdatrie1=0.2.14-2 \
 	libncurses5-dev \
@@ -42,15 +50,19 @@ RUN apt-get update && apt-get install --allow-downgrades -y \
 	g++ \
     pkg-config \
     cmake \
-    # python3=3.13.9-1 \
-    # python3-venv=3.13.7-1 \
-    # python3-pip=25.2+dfsg-1 \
-    # In case the python3 pin breaks the build use:
-    python3 \
-    python3-dev \
-    python3-pip \
-    python3-venv \
-    # and read the versions and pin again.
+    # r-base tracks debian testing/sid, so an unpinned python3 floats. it floated from
+    # 3.13 to 3.14 and broke matplotlib's savefig at runtime (see python/requirements.txt),
+    # after floating once before and breaking the hdf5 soname the rust binaries link against.
+    # pinned so that drift fails the build here instead of surfacing in production.
+    # python3-dev must match python3 exactly or apt refuses to resolve the pair.
+    # these versions rotate out of the archive: when the build fails on a missing version,
+    # read the new ones and re-pin, do NOT drop the pins --
+    #   docker run --rm --platform linux/amd64 r-base:4.5.0 bash -c \
+    #     'apt-get update -qq >/dev/null 2>&1; apt-cache policy python3 python3-dev python3-venv python3-pip'
+    python3=3.14.6-1 \
+    python3-dev=3.14.6-1 \
+    python3-venv=3.14.6-1 \
+    python3-pip=26.1.2+dfsg-1 \
     x11-common \
     libx11-dev \
     libx11-data \
@@ -143,6 +155,36 @@ RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz 
       npm install /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz; \
     else \
       npm install @sjcrh/proteinpaint-server@${SERVERPKGVER}; \
+    fi
+
+# The rust binaries are compiled in a different image (container/rust/Dockerfile, Debian trixie) and
+# arrive here inside the npm package, so this is the first point where they meet the libraries they
+# will actually run against. This image is based on r-base, which tracks Debian sid, so an apt bump
+# can silently withdraw a soname they link -- exactly how a build once shipped binaries that could
+# not load and 502'd every wilcoxon DE request. An unloadable binary must not reach a published
+# image, so fail the build here rather than at request time.
+#
+# Note the equivalent check in rust/extract_binaries.sh only proves the BUILDER is self-consistent;
+# because the builder deliberately does NOT share this base (hdf5-metno 0.9 cannot compile against
+# the HDF5 2.x that r-base provides), this is the check that actually catches drift.
+RUN bindir=node_modules/@sjcrh/proteinpaint-rust/target/release; \
+    if [ ! -d "$bindir" ]; then \
+      echo "WARNING: $bindir not found, skipping shared library check" >&2; \
+    else \
+      unresolved=0; \
+      for bin in "$bindir"/*; do \
+        [ -f "$bin" ] && [ -x "$bin" ] || continue; \
+        if ldd "$bin" 2>/dev/null | grep -q "not found"; then \
+          echo "ERROR: $bin cannot resolve:" >&2; \
+          ldd "$bin" 2>/dev/null | grep "not found" >&2; \
+          unresolved=1; \
+        fi; \
+      done; \
+      if [ "$unresolved" -ne 0 ]; then \
+        echo "unloadable rust binaries: this image lacks a shared library they were linked against" >&2; \
+        exit 1; \
+      fi; \
+      echo "all rust binaries resolve their shared libraries"; \
     fi
 
 # enable ssh into this stage, for troubleshooting

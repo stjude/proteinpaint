@@ -9,7 +9,7 @@ import {
 	isNonDictionaryType,
 	isSingleCellTerm,
 	getBin,
-	getSampleType,
+	getTwSampleTypes,
 	DEFAULT_SAMPLE_TYPE
 } from '#shared/terms.js'
 import {
@@ -25,7 +25,7 @@ import {
 	PSEUDOBULK,
 	JUNCTION
 } from '#types'
-import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
+import { get_bin_label, compute_bins, assignBinColors } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from './routes/termdb.categories.ts'
 import { authApi } from '#src/auth.js'
@@ -47,6 +47,14 @@ export function id2sampleRef(id, ds) {
 	if (q?.id2sampleRefs) return q.id2sampleRefs(id)
 	if (q?.id2sampleName) return { label: q.id2sampleName(id) ?? q.id2sampleName(Number(id)) }
 	return undefined
+}
+
+export function shouldMapParent2Children(tw, ds, mapParent2Children, sampleTypes) {
+	if (!mapParent2Children || !sampleTypes?.length) return false
+	const twSampleTypes = getTwSampleTypes(tw, ds)
+	return sampleTypes.some(qSampleType =>
+		twSampleTypes.some(twSampleType => ds.cohort.termdb.sampleTypes[qSampleType].parent_id == twSampleType)
+	)
 }
 
 /*
@@ -155,6 +163,21 @@ let numActiveQueriesAcrossUsers = 0,
 async function getSampleData(q, ds) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, geneVariantTws, nonDictTerms] = divideTerms(q, ds)
+
+	/* a samplelst term carries its own annotation in tw.q.groups[] and has no data source to
+	query. a ds with a sqlite db turns those groups into a CTE (termdb.sql.samplelst.js), but a
+	ds without one (e.g. GDC) has no such path: its dictionary getter is handed a term it cannot
+	know, every sample comes back unannotated, and an overlay of custom groups then matches no
+	sample at all. Split them out of dictTerms and annotate them here from the group lists. */
+	const sampleLstTws = ds.cohort.db ? [] : dictTerms.filter(tw => tw.term.type == 'samplelst')
+	for (const tw of sampleLstTws) dictTerms.splice(dictTerms.indexOf(tw), 1)
+
+	/* a negated group ("everyone not in this list") needs a sample universe to subtract from. the
+	sqlite path takes it from sampleidmap; here the only universe is what the other terms of this
+	request return, so a request carrying nothing but negated groups would come back silently
+	empty. throw before any query work rather than return a wrong answer. */
+	if (isNegatedSampleLstOnlyRequest(q.terms, sampleLstTws))
+		throw 'a samplelst term with a "not in" group requires another term in the same request, which this dataset needs to define the sample universe'
 
 	// query dictionary term data
 	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms)
@@ -305,21 +328,22 @@ async function getSampleData(q, ds) {
 				filter0: q.filter0,
 				dataTypeDetails: tw.term.dataTypeDetails,
 				mapParent2Children: q.mapParent2Children,
-				sampleType: q.sampleType
+				sampleTypes: q.sampleTypes
 			}
 			const data = await queryHandler.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
-			const values = data.term2sample2value.get(tw.$id)
-			for (const sampleId in values) {
-				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
-				if (!Number.isFinite(values[sampleId])) continue // skip non-numeric values
-				const value = Number(values[sampleId])
-				let key = value
-				if (lstOfBins) {
-					// term is in binning mode. key should be changed into the label of the bin to which value belongs
-					const bin = getBin(lstOfBins, value)
-					key = get_bin_label(lstOfBins[bin], tw.q)
+			for (const [dataId, values] of data.term2sample2value) {
+				for (const sampleId in values) {
+					if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+					if (!Number.isFinite(values[sampleId])) continue // skip non-numeric values
+					const value = Number(values[sampleId])
+					let key = value
+					if (lstOfBins) {
+						// term is in binning mode. key should be changed into the label of the bin to which value belongs
+						const bin = getBin(lstOfBins, value)
+						key = get_bin_label(lstOfBins[bin], tw.q)
+					}
+					samples[sampleId][dataId] = { key, value }
 				}
-				samples[sampleId][tw.$id] = { key, value }
 			}
 		} else if (tw.term.type == SINGLECELL_GENE_EXPRESSION) {
 			if (!q.ds.queries?.singleCell?.geneExpression)
@@ -334,7 +358,9 @@ async function getSampleData(q, ds) {
 					})
 				} else {
 					if (!tw.q.lst) throw 'q.type is not discrete and q.lst[] is missing'
-					lst = tw.q.lst
+					// custom bins are used as given and never go through compute_bins(), so they must be
+					// colored here, same as in findListOfBins() -- and on a copy, for the same reason
+					lst = assignBinColors(tw.q.lst.map(bin => ({ ...bin })))
 				}
 				byTermId[tw.$id] = { bins: lst }
 			}
@@ -406,6 +432,16 @@ async function getSampleData(q, ds) {
 		}
 	}
 
+	/* annotate the groups of samplelst terms last, so that a negated group ("not in this list")
+	can be resolved against the samples the other terms of this request actually returned.
+
+	scopedSamples is the set of sample ids this request is allowed to see, and bounds which group
+	members may be *added* to samples{}: the group lists come straight from the client, and the
+	sqlite path intersects them with q.filter in getAnnotationRows(), so this path must not hand
+	back a sample that the filter, filter0 or authApi.mayAdjustFilter() excluded. */
+	const scopedSamples = sampleLstTws.length ? await getSampleLstScope(q, ds) : undefined
+	setSampleLstData(sampleLstTws, samples, scopedSamples)
+
 	// resolve each id -> display refs via the dataset's id2sampleRefs() (see id2sampleRef())
 	const bySampleId = {}
 	for (const sid in samples) {
@@ -415,9 +451,16 @@ async function getSampleData(q, ds) {
 
 	// determine the sample type
 	let sampleType
-	if (q.sampleType) {
-		// query sample type defined
-		sampleType = q.ds.cohort.termdb.sampleTypes[q.sampleType]
+	if (q.sampleTypes) {
+		// query sample types defined
+		const names = []
+		const plural_names = []
+		for (const st of q.sampleTypes) {
+			const config = q.ds.cohort.termdb.sampleTypes[st]
+			names.push(config.name)
+			plural_names.push(config.plural_name)
+		}
+		sampleType = { name: names.join(' / '), plural_name: plural_names.join(' / ') }
 	} else if (processedSingleCellTerm === true) {
 		// work around for single cell cases
 		// TODO: may support single cell as another
@@ -584,6 +627,121 @@ async function mayGetSampleFilterSet4snplst(q, nonDictTerms) {
 	return new Set((await get_samples(q, q.ds)).map(i => i.id))
 }
 
+/*
+True when the request has nothing but samplelst terms and at least one of their groups is
+negated. See the call site: such a request has no sample universe for the negation to subtract
+from, and would silently resolve to no samples at all.
+*/
+export function isNegatedSampleLstOnlyRequest(terms, sampleLstTws) {
+	if (!sampleLstTws.length || sampleLstTws.length != terms?.length) return false
+	return sampleLstTws.some(tw => tw.q?.groups?.some(g => g.in === false))
+}
+
+/*
+True when q.filter carries a term type that ds.cohort.termdb.filterSamples() does not resolve.
+gdc's filter2GDCfilter() silently skips geneVariant/geneExpression/survival tvs -- they are
+applied later, in post-processing that filterSamples() never runs -- so with one of them active
+its answer is broader than the request's real result set. get_samplecount() (termdb.sql.js)
+refuses to use filterSamples for exactly this reason.
+
+survival is a dictionary type, so it is named separately from the isNonDictionaryType() check.
+*/
+export function hasFilterTermsUnsupportedByFilterSamples(filter) {
+	if (!Array.isArray(filter?.lst)) return false
+	for (const item of filter.lst) {
+		if (item.type == 'tvslst') {
+			if (hasFilterTermsUnsupportedByFilterSamples(item)) return true
+			continue
+		}
+		const type = item.tvs?.term?.type
+		if (!type) continue // isNonDictionaryType() throws on a missing type
+		if (type == 'survival' || isNonDictionaryType(type)) return true
+	}
+	return false
+}
+
+/*
+The set of sample ids this request is authorized to see. It bounds which samplelst group members
+may be added to samples{} (see setSampleLstData): the group lists come straight from the client,
+and the sqlite path intersects them with q.filter in getAnnotationRows(), so this path must not
+hand back a sample that q.filter, q.filter0 or authApi.mayAdjustFilter() excluded.
+
+Returns an empty Set when no trustworthy bound can be established, which annotates only the
+samples the filtered queries already returned. Returns undefined only when the ds reports no
+bound at all, in which case every listed member is accepted.
+*/
+async function getSampleLstScope(q, ds) {
+	if (hasFilterTermsUnsupportedByFilterSamples(q.filter)) return new Set() // see above, fail closed
+	if (typeof ds.cohort.termdb.filterSamples != 'function') return new Set() // ds cannot report a scope
+	/* returnAllSamples: with no filter in play the authorized scope is the whole cohort, not
+	"whatever the client names", so an id that exists in no cohort is still rejected. a ds that
+	does not implement the flag returns undefined here and stays permissive. */
+	return await ds.cohort.termdb.filterSamples(q, ds, true)
+}
+
+/* Scope ids and samples{} keys are strings for every current no-db ds (gdc case uuid, mmrf
+submitter id). The Number() fallback mirrors id2sampleRef() above, so a ds that keys its scope
+by integer still matches the stringified id. */
+function isInSampleLstScope(scopedSamples, sampleId) {
+	if (!scopedSamples) return true // ds reported no bound
+	return scopedSamples.has(sampleId) || scopedSamples.has(Number(sampleId))
+}
+
+/*
+Annotate samples with the groups of samplelst terms, for datasets that cannot express those
+groups in SQL (see the sampleLstTws comment in getSampleData). Each group writes
+{key,value} = group.name onto its samples, and a group with in:false covers the samples that are
+*not* listed. A sample already annotated for this term is left alone, so an explicit membership
+is never overwritten by a later negated group.
+
+scopedSamples: see getSampleLstScope(). A listed group member that is absent from samples{} is
+added only when it is in scope; without that a client could name any sample id and have it
+echoed back, e.g. through refs.bySampleId. Samples already in samples{} were returned by the
+filtered queries, so they are annotated regardless.
+
+samples{} is modified in place.
+*/
+export function setSampleLstData(termWrappers, samples, scopedSamples) {
+	for (const tw of termWrappers) {
+		const groups = tw.q?.groups
+		if (!Array.isArray(groups)) throw 'samplelst tw.q.groups[] is not an array'
+		for (const group of groups) {
+			/* sampleId || sample, deliberately the same falsy-fallback rule as sampleLstSql.getCTE():
+			the two paths read the same client tw, so a divergence here would let one dataset annotate
+			a sample that another drops. ids are request data, so also normalize to string -- a numeric
+			id must still match the always-string keys that for..in yields below -- and drop the blanks,
+			including '', which no sampleidmap row can carry and which would otherwise become an
+			empty-named sample. */
+			const ids = new Set(
+				(group.values || [])
+					.map(v => v?.sampleId || v?.sample)
+					.filter(id => id !== undefined && id !== null && id !== '')
+					.map(String)
+			)
+			if (group.in === false) {
+				for (const sampleId in samples) {
+					if (ids.has(sampleId) || samples[sampleId][tw.$id]) continue
+					samples[sampleId][tw.$id] = { key: group.name, value: group.name }
+				}
+				continue
+			}
+			for (const sampleId of ids) {
+				// assigning to '__proto__' would run the prototype setter rather than create a row,
+				// and the write that follows would then land outside samples{}. no sample is named this
+				if (sampleId == '__proto__') continue
+				// Object.hasOwn(), not `in`: an id such as 'constructor' matches an inherited property,
+				// which would skip row creation and write the annotation onto Object itself
+				if (!Object.hasOwn(samples, sampleId)) {
+					if (!isInSampleLstScope(scopedSamples, sampleId)) continue // out of scope, see above
+					samples[sampleId] = { sample: sampleId }
+				}
+				if (samples[sampleId][tw.$id]) continue
+				samples[sampleId][tw.$id] = { key: group.name, value: group.name }
+			}
+		}
+	}
+}
+
 export function divideTerms(q, ds) {
 	/*
 	Divide q.terms into dict / gene-variant / non-dict lists by term type. This is the central
@@ -659,51 +817,50 @@ export function divideTerms(q, ds) {
 	return [dict, geneVariantTws, nonDict]
 }
 
-// function to set the mapParent2Children flag, which controls
-// whether to map parent-level data onto child samples
+/* function will set:
+- q.mapParent2Children: flag for whether to map term data onto child samples
+- q.sampleTypes: sample types to query for
+TODO: may rename to maySetSampleTypes() */
 export function maySetMapParent2Children(q, ds, mapParent2Children) {
 	if (!ds.cohort?.termdb?.hasSampleAncestry) {
 		// no sample ancestry, so should not map parent to children
 		q.mapParent2Children = false
 		return
 	}
+	// ds has sample ancestry
 	if (typeof mapParent2Children === 'boolean') {
 		// flag supplied by caller
 		q.mapParent2Children = mapParent2Children
-		// set query sample type to default
-		q.sampleType = DEFAULT_SAMPLE_TYPE
+		q.sampleTypes = [DEFAULT_SAMPLE_TYPE]
 		return
 	}
-	// ds has sample ancestry and mapParent2Children is undefined
-	// determine sample types that are being queried
+	// determine query sample types
 	const sampleTypes = getSampleTypes(q, ds)
 	const types = [...sampleTypes]
 	if (!types.length) {
 		throw 'no sample types found'
 	} else if (types.length == 1) {
 		// single sample type, no need to map parent to children
-		const type = types[0]
-		if (!ds.cohort.termdb.sampleTypes[type]) throw 'invalid sample type'
+		if (!ds.cohort.termdb.sampleTypes[types[0]]) throw 'invalid sample type'
 		q.mapParent2Children = false
-		q.sampleType = type
+		q.sampleTypes = types
 	} else {
 		// multiple sample types
-		const config = {}
-		for (const type of types) {
-			config[type] = ds.cohort.termdb.sampleTypes[type]
-		}
+		// determine parent sample types of query sample types
 		const parentTypes = new Set(
-			Object.values(config)
-				.map(d => d.parent_id)
-				.filter(Number.isInteger)
+			types.map(type => ds.cohort.termdb.sampleTypes[type]?.parent_id).filter(Number.isInteger)
 		)
 		if (!parentTypes.size) throw 'parent sample types missing'
 		if (types.some(type => parentTypes.has(type))) {
-			// some query sample types are parents of others, so map parent to children
-			q.mapParent2Children = true
+			// query sample types have parent-child relationship
+			// map parent to children
 			const childTypes = types.filter(type => !parentTypes.has(type))
-			if (childTypes.length != 1) throw 'should have a single child sample type'
-			q.sampleType = childTypes[0]
+			if (!childTypes.length) throw 'child sample types missing'
+			q.mapParent2Children = true
+			q.sampleTypes = childTypes
+		} else {
+			// query sample types do not have parent-child relationship
+			q.sampleTypes = types
 		}
 	}
 }
@@ -788,7 +945,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
-	const filter = await getFilterCTEs(q.filter, q.ds, q.mapParent2Children, q.sampleType)
+	const filter = await getFilterCTEs(q.filter, q.ds, q.mapParent2Children, q.sampleTypes)
 	const values = filter ? filter.values.slice() : []
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
@@ -828,18 +985,17 @@ function getSampleTypes(q, ds) {
 	const twLst = q.terms ? q.terms : q.tw ? [q.tw] : []
 	const filter = q.filter
 	const filter0 = q.filter0
-	const twTypes = getTwSampleTypes(twLst, ds)
+	const twTypes = getTwLstSampleTypes(twLst, ds)
 	const filterTypes = getFilterSampleTypes(filter, ds)
 	const filter0Types = ds.getFilter0SampleTypes ? ds.getFilter0SampleTypes(filter0, ds) : new Set()
 	const types = new Set([...twTypes, ...filterTypes, ...filter0Types])
 	return types
 }
 
-function getTwSampleTypes(twLst, ds) {
+function getTwLstSampleTypes(twLst, ds) {
 	const types = new Set()
 	for (const tw of twLst) {
-		const type = getSampleType(tw, ds)
-		types.add(type)
+		for (const type of getTwSampleTypes(tw, ds) || []) types.add(type)
 	}
 	return types
 }
@@ -852,8 +1008,9 @@ function getFilterSampleTypes(filter, ds) {
 			for (const type of getFilterSampleTypes(item, ds)) types.add(type)
 		} else {
 			if (item.tag == 'cohortFilter') continue
-			const type = getSampleType({ term: item.tvs.term }, ds)
-			if (Number.isInteger(type)) types.add(type)
+			for (const type of getTwSampleTypes({ term: item.tvs.term }, ds) || []) {
+				if (Number.isInteger(type)) types.add(type)
+			}
 		}
 	}
 	return types
@@ -873,15 +1030,14 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 		${CTEs.map((t, i) => {
 			const tw = termWrappers[i]
 			let query
-			const sampleType = getSampleType(tw, q.ds)
-			if (q.mapParent2Children && q.ds.cohort.termdb.sampleTypes[q.sampleType].parent_id == sampleType) {
+			if (shouldMapParent2Children(tw, q.ds, q.mapParent2Children, q.sampleTypes)) {
 				// need to map parent annotations onto child samples and
 				// term sample type is parent of query sample type
 				query = `SELECT sa.sample_id as sample, key, value, ? as term_id
 				FROM sample_ancestry sa
 				JOIN ${t.tablename} ON sa.ancestor_id = sample
 				JOIN sampleidmap sm ON sa.sample_id = sm.id
-				WHERE sm.sample_type = ${q.sampleType}
+				WHERE sm.sample_type IN (${q.sampleTypes.join(',')})
 				${filter ? `AND sa.sample_id IN ${filter.CTEname}` : ''}`
 			} else {
 				// query annotations directly
@@ -1044,8 +1200,18 @@ function normalizeLegacyHierClusterDataType(config) {
 async function findListOfBins(q, tw, ds) {
 	// for non-dict terms which may lack tw.term.bins
 	if (tw.q.type == 'custom-bin') {
-		if (Array.isArray(tw.q.lst)) return tw.q.lst
-		throw 'q.type is custom-bin but q.lst is missing' // when mode is custom bin, q.lst must always be present
+		if (!Array.isArray(tw.q.lst)) throw 'q.type is custom-bin but q.lst is missing' // when mode is custom bin, q.lst must always be present
+		// custom bins are used as given and never go through compute_bins(), which is where bins
+		// are colored. without this they reach the client colorless and consumers that color by bin
+		// (e.g. the scatter color legend) fall back to a scheme of their own that can yield nearly
+		// identical bin colors. dictionary numeric terms are already colored this way, as their bins
+		// are always computed via get_bins() in termdb.sql.js
+		//
+		// color a per-bin copy rather than q.lst[] itself: the returned list is handed straight to
+		// the response as refs.byTermId[$id].bins, and callers go on to mutate those bins (e.g.
+		// termdb.barchart.js overlays q.binColored on them), which would otherwise write back into
+		// the request. compute_bins() likewise returns a copy for a custom-bin config
+		return assignBinColors(tw.q.lst.map(bin => ({ ...bin })))
 	}
 	if (tw.q.type == 'regular-bin') {
 		// is regular bin. must compute the bins from tw.term.bins

@@ -295,6 +295,16 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 			if (child_types.includes(TermTypes.PROTEOME_ABUNDANCE)) uses.add('branch')
 			return uses
 
+		case 'brainImaging': {
+			/* multivalue is allowed as divide-by (term0): the image route renders a sample
+			belonging to several categories in each of their panels. it is excluded as
+			color-by (term2): one sample intensity cannot carry more than one color */
+			const allowMultivalue = usecase.detail == 'term0'
+			if (graphableTypes.has(term.type) && (allowMultivalue || term.type != 'multivalue')) uses.add('plot')
+			if (!term.isleaf) uses.add('branch')
+			return uses
+		}
+
 		case 'dictionary':
 			// dictionary browsing must show every graphable term, including multivalue
 			if (graphableTypes.has(term.type)) uses.add('plot')

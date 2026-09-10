@@ -131,7 +131,8 @@ export class SCViewer extends PlotBase implements RxComponent {
 					super.printError(sampleData?.error || 'No data found for this sample')
 					return
 				}
-				data = sampleData
+				const hasSpatial = await this.model.hasSpatialImage(config.settings.sc.item.sID)
+				data = this.viewModel.formatPlotsData(sampleData, hasSpatial)
 			}
 		} catch (e: any) {
 			if (e instanceof Error) console.error(`${e.message || e} [SC main()]`)

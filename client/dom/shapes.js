@@ -233,21 +233,23 @@ export function shapeSelector(div, callback, arr = shapesArray, opts = {}) {
 	let y = 0
 	for (const shape of arr) {
 		const index = count + y * cols
-		svg
-			.append('path')
-			.style('pointer-events', 'bounding-box')
-			.style('fill', 'gray')
-			.attr('d', shape)
-			.attr('transform', `translate(${size * count}, ${y * size})`)
-			.on('click', () => {
-				callback(index)
-			})
-			.on('mouseover', function () {
-				d3select(this).style('fill', 'black')
-			})
-			.on('mouseout', function () {
-				d3select(this).style('fill', 'gray')
-			})
+		const shapeG = svg.append('g').attr('transform', `translate(${size * count}, ${y * size})`)
+		shapeG
+			.append('rect')
+			.attr('width', size)
+			.attr('height', size)
+			.attr('fill', 'transparent')
+			.style('pointer-events', 'all')
+		shapeG.append('path').style('fill', 'gray').attr('d', shape)
+		shapeG.on('mouseover', function () {
+			d3select(this).select('path').style('fill', 'black')
+		})
+		shapeG.on('mouseout', function () {
+			d3select(this).select('path').style('fill', 'gray')
+		})
+		shapeG.on('click', () => {
+			callback(index)
+		})
 		count++
 		if (count % cols == 0) {
 			count = 0

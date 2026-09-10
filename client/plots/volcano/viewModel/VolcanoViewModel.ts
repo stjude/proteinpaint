@@ -14,6 +14,14 @@ import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { getGroupColors } from '../colors'
 import { DATermTypes as tt, enabledTermTypes } from '../../diffAnalysis/enabledTermTypes'
 
+/* Group names are user-supplied and can be arbitrarily long, so they are shortened before going
+into any label. Shared by the two group labels above the plot and by the delta-beta axis label,
+so the two shorten identically rather than drifting apart. */
+function shortenGroupName(name: string) {
+	if (name.length >= 25) return name.substring(0, 20) + '...'
+	return name
+}
+
 export class VolcanoViewModel {
 	config: any
 	dataType: string
@@ -101,9 +109,25 @@ export class VolcanoViewModel {
 			statsData: this.setStatsData(),
 			provenance: this.setProvenance(),
 			userActions: this.setUserActions(),
+			deltaBetaAxisLabel: this.setDeltaBetaAxisLabel(),
 			volcanoPng: response.data.volcanoPng,
 			plotExtent: response.data.plotExtent
 		}
+	}
+
+	/* The delta-beta axis used to read "Δβ (case − control)". Those are positional roles, not
+	names, so the plot showed the size of an effect but not its direction -- you had to already
+	know which group landed in which slot, or open a downloaded file and read the provenance line.
+	Name the groups instead, in subtraction order (case first), so the axis states what it plots.
+
+	Returns undefined when the group names are not available; the view falls back to the old
+	wording rather than rendering a broken label. */
+	setDeltaBetaAxisLabel(): string | undefined {
+		const groups = this.config?.samplelst?.groups
+		const control = groups?.[0]?.name
+		const cases = groups?.[1]?.name
+		if (!control || !cases) return undefined
+		return `Δβ (${shortenGroupName(cases)} − ${shortenGroupName(control)})`
 	}
 
 	setDataType() {
@@ -217,21 +241,17 @@ export class VolcanoViewModel {
 		// controlColor: string
 	) {
 		if (!enabledTermTypes.has(this.termType as any)) return
-		const getLabel = (name: string) => {
-			if (name.length >= 25) return name.substring(0, 20) + '...'
-			return name
-		}
 
 		if (this.termType == tt.PROTEOME_DAP) {
 			// FIXME this shouldn't be needed. there should be a way for caller to supply names for each group, and avoid this special logic and SINGLECELL_CELLTYPE
 			return {
 				y: plotDim.top.y + 10,
 				first: {
-					label: getLabel(`Control (${this.response.sample_size1})`),
+					label: shortenGroupName(`Control (${this.response.sample_size1})`),
 					x: 0
 				},
 				second: {
-					label: getLabel(`Case (${this.response.sample_size2})`),
+					label: shortenGroupName(`Case (${this.response.sample_size2})`),
 					x: this.settings.width
 				}
 			}
@@ -248,11 +268,11 @@ export class VolcanoViewModel {
 			return {
 				y: plotDim.top.y + 10,
 				first: {
-					label: getLabel(`Not in ${groupLabel}`),
+					label: shortenGroupName(`Not in ${groupLabel}`),
 					x: 0
 				},
 				second: {
-					label: getLabel(groupLabel),
+					label: shortenGroupName(groupLabel),
 					x: this.settings.width
 				}
 			}
@@ -263,13 +283,13 @@ export class VolcanoViewModel {
 			y: plotDim.top.y + 10,
 			first: {
 				// color: controlColor || this.settings.defaultSignColor,
-				label: getLabel(`${this.config.samplelst.groups[0].name} (${this.response.sample_size1})`),
+				label: shortenGroupName(`${this.config.samplelst.groups[0].name} (${this.response.sample_size1})`),
 				x: 0
 				// rectX: this.settings.width/2 - 10,
 			},
 			second: {
 				// color: caseColor || this.settings.defaultSignColor,
-				label: getLabel(`${this.config.samplelst.groups[1].name} (${this.response.sample_size2})`),
+				label: shortenGroupName(`${this.config.samplelst.groups[1].name} (${this.response.sample_size2})`),
 				x: this.settings.width
 				// rectX: this.settings.width/2 + 10,
 			}

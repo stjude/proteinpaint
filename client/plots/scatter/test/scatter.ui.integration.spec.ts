@@ -19,6 +19,7 @@ Tests:
     - Show tooltip for sample
     - Test scale dot
     - Test lasso menus options
+    - Lasso menu is suppressed for anonymized samples (no sampleId)
     - (commented out) Test continuous mode with age color
     - Test legend
     - Render color groups
@@ -83,7 +84,7 @@ tape('Show tooltip for sample', function (test) {
 		scatter.on('postRender.test', null)
 		const chart = scatter.Inner.model.charts[0]
 		const scatterTooltip = scatter.Inner.vm.scatterTooltip
-		const dot = chart.data.samples.find(s => 'sampleId' in s && scatterTooltip.isVisible(s))
+		const dot = chart.data.samples.find(s => !s.isRef && scatterTooltip.isVisible(s))
 
 		mousemoveOverDot(scatter, chart, dot)
 
@@ -220,6 +221,41 @@ tape('Test lasso menus options', function (test) {
 		test.equal(samples2Check.length, foundSamples, `Should render all samples for ${group.name}`)
 
 		scatter.Inner.view.dom.tip.hide()
+	}
+})
+
+tape('Lasso menu is suppressed for anonymized samples (no sampleId)', function (test) {
+	test.timeoutAfter(8000)
+
+	runpp({
+		state,
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+
+		// Simulate the response to a request that may not display sample ids: the server marks each dot's
+		// isRef, then anonymizeSampleIds deletes the sampleId and name from cohort dots (isRef stays false,
+		// so they still render as cohort dots). With no real sampleId, none of the sample-specific lasso
+		// actions (list, grouping, filtering, sample view) should be offered.
+		const anonymizedItems = mockGroups[0].items.map(it => {
+			const clone: any = { ...it, isRef: false }
+			delete clone.sample
+			delete clone.sampleId
+			return clone
+		})
+		scatter.Inner.vm.scatterLasso.showLassoMenu(new PointerEvent('click'), anonymizedItems)
+
+		const options = scatter.Inner.view.dom.tip.d.selectAll('div.sja_menuoption').nodes()
+		test.equal(options.length, 0, 'Should not render any lasso menu option for anonymized samples')
+
+		if (test['_ok']) scatter.Inner.app.destroy()
+		test.end()
 	}
 })
 
@@ -388,6 +424,8 @@ tape('Render color groups', function (test) {
 					colorTW: {
 						id: 'genetic_race',
 						q: {
+							mode: 'discrete',
+							type: 'custom-groupset',
 							customset: {
 								groups: [
 									{
@@ -432,7 +470,7 @@ tape('Render color groups', function (test) {
 	async function testColorLegend(scatter) {
 		const legendLabels = await detectGte({
 			elem: scatter.Inner.model.charts[0].chartDiv.node(),
-			selector: 'text[name="sjpp-scatter-legend-label"]'
+			selector: 'text[data-testid="sjpp-scatter-color-legend-label"]'
 		})
 
 		const groups: { label: string; samples: string[] }[] = []

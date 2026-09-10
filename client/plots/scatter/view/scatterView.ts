@@ -85,7 +85,7 @@ export class ScatterView {
 
 	getControlInputs() {
 		const labels = this.scatter.config.controlLabels
-		const hasRef = this.scatter.model.charts?.[0]?.data?.samples?.find(s => !('sampleId' in s)) || false
+		const hasRef = this.scatter.model.charts?.[0]?.data?.samples?.find(s => s.isRef) || false
 		const chartType = 'sampleScatter'
 		const itemLabel = this.scatter.settings.itemLabel
 		const scaleDotOption = {

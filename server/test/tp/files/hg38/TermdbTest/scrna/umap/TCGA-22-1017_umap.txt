@@ -1,0 +1,761 @@
+Sample	UMAP1	UMAP2	cell_type
+alcmbegi-1	6.3047	4.9600	Fibroblasts
+alcnpcoj-1	2.7505	2.1406	T cells
+aldigpim-1	-1.9510	-1.3022	B cells
+alecodpf-1	7.1278	-3.3162	Macrophages
+aleekjac-1	19.9832	14.1470	Tumor
+alegdhnl-1	6.8794	6.7778	Fibroblasts
+alegoclp-1	2.0660	2.3272	T cells
+alehfhgh-1	0.4675	-0.8593	B cells
+alehigan-1	7.3688	-3.9589	Macrophages
+aleiilak-1	20.8785	14.9501	Tumor
+aleijbdf-1	5.8151	5.3191	Fibroblasts
+aleimfpi-1	3.2225	1.0455	T cells
+alejaohi-1	-0.4283	-0.3521	B cells
+alelglde-1	7.5323	-2.6346	Macrophages
+alenjmgl-1	20.4127	15.4308	Tumor
+alenkpnp-1	8.1416	5.5936	Fibroblasts
+alfabkmn-1	1.4878	0.3862	T cells
+alfbkoen-1	0.6160	1.1290	B cells
+alfcdnaj-1	6.8861	-3.8402	Macrophages
+alfcipil-1	19.1755	15.6506	Tumor
+alfedddg-1	6.7433	6.5432	Fibroblasts
+alffcfne-1	1.3345	1.4322	T cells
+alfpgglp-1	0.1167	0.2187	B cells
+algbmekl-1	7.8714	-2.7764	Macrophages
+ambppmaj-1	6.6789	6.0676	Fibroblasts
+amcaaicg-1	2.2891	1.8313	T cells
+amcaakho-1	-1.4572	-0.3197	B cells
+amcaifim-1	6.5296	-3.6389	Macrophages
+amcaognd-1	19.7249	16.4949	Tumor
+amccpgnj-1	5.1342	6.9683	Fibroblasts
+amceokpp-1	0.3171	0.8651	T cells
+amcfpiie-1	0.1628	0.5862	B cells
+amcigfnj-1	7.7112	-2.2067	Macrophages
+amcimiab-1	19.6513	14.5376	Tumor
+amcjllic-1	6.8580	5.8087	Fibroblasts
+amckeaga-1	0.7243	0.0667	T cells
+amcngelj-1	-0.9195	0.4972	B cells
+amcnkiaf-1	7.1424	-2.3095	Macrophages
+amcpnpkc-1	19.5727	15.1585	Tumor
+amdbhmgj-1	6.6256	5.6907	Fibroblasts
+amdbmedi-1	2.4568	0.5381	T cells
+amdcccdn-1	-0.3631	-0.3817	B cells
+amddpkml-1	5.8042	-2.5130	Macrophages
+amdehjeo-1	19.5306	15.0125	Tumor
+amdiaknn-1	6.4807	6.4465	Fibroblasts
+amdklaoo-1	2.6654	1.1015	T cells
+amdlkopp-1	-0.4233	-0.0797	B cells
+amdnanen-1	5.3127	-4.4471	Macrophages
+amdnilkb-1	4.6773	5.0028	Fibroblasts
+amdnmiik-1	2.3998	0.2945	T cells
+amdoagnp-1	-0.3782	1.2992	B cells
+ameachic-1	6.6437	-2.2625	Macrophages
+ameclkng-1	19.0664	14.7946	Tumor
+ameclmfh-1	5.0500	5.6610	Fibroblasts
+ameddhjd-1	2.8403	-0.5273	T cells
+ameeefln-1	0.4344	0.2377	B cells
+ameegmjo-1	6.4059	-4.4461	Macrophages
+amefbecp-1	20.0721	14.4705	Tumor
+amefnckn-1	6.2327	6.0219	Fibroblasts
+amegompc-1	3.6018	0.9606	T cells
+ameiidcd-1	-1.0235	0.1793	B cells
+amelakjm-1	7.2200	-1.6408	Macrophages
+amemdoco-1	20.8351	15.3569	Tumor
+amfaedfm-1	7.4633	4.8112	Fibroblasts
+amfahpmc-1	1.3602	0.2734	T cells
+amfcifle-1	-0.3898	-1.3767	B cells
+amfdaopl-1	7.6352	-3.2222	Macrophages
+amfeahfg-1	18.5292	13.9844	Tumor
+amfeklhc-1	6.3135	6.8381	Fibroblasts
+amfenobo-1	3.9967	4.1139	T cells
+amfgbifk-1	0.4144	-0.9895	B cells
+amfgibme-1	4.8680	-2.7323	Macrophages
+amfiglcd-1	5.1871	5.5846	Fibroblasts
+amfimkpe-1	1.3879	1.0592	T cells
+amfkbpho-1	1.0660	0.1570	B cells
+amfkpfpa-1	6.8414	-4.0357	Macrophages
+amflogcb-1	18.3253	14.5137	Tumor
+amfngmok-1	5.9462	7.7679	Fibroblasts
+amfojllh-1	2.1303	2.1827	T cells
+amfokpig-1	-0.4993	-1.1849	B cells
+amfpjagp-1	6.0349	-3.7252	Macrophages
+amgbgija-1	22.1285	14.1786	Tumor
+amgbogmc-1	6.8385	5.0971	Fibroblasts
+amgcgchf-1	2.9316	1.5850	T cells
+amgcjlmm-1	-0.1566	-0.0408	B cells
+amgekjda-1	6.3452	-2.5539	Macrophages
+amgfjelk-1	19.5450	13.7744	Tumor
+amgflglp-1	4.7221	6.1726	Fibroblasts
+amggohdn-1	3.5791	1.3600	T cells
+amghijml-1	-0.1186	0.2858	B cells
+amgkbigk-1	8.3060	-2.7806	Macrophages
+amgmdfpa-1	19.5891	16.1063	Tumor
+amgmjkfa-1	6.4288	7.5358	Fibroblasts
+amgndgle-1	2.1832	-0.0245	T cells
+amgnfkid-1	-1.3682	1.6509	B cells
+amgogbpm-1	8.7237	-3.1795	Macrophages
+amgojble-1	5.6168	7.4614	Fibroblasts
+amhaekhj-1	0.8930	0.3053	T cells
+amhcjacl-1	0.6433	-0.3946	B cells
+amhdelmo-1	6.9949	-3.1634	Macrophages
+amhepbai-1	20.3376	16.4075	Tumor
+amhghicc-1	6.0906	6.6439	Fibroblasts
+amhgmefp-1	-0.0502	1.1513	T cells
+amhhfeof-1	-0.8432	-1.2188	B cells
+amhhpadn-1	6.1218	-3.3341	Macrophages
+amhidfko-1	20.9159	13.6736	Tumor
+amhjbdfd-1	6.0306	5.5158	Fibroblasts
+amhjiiah-1	1.6723	2.2028	T cells
+amhkbgdk-1	0.5381	1.3374	B cells
+amhkipgd-1	6.8455	-3.6959	Macrophages
+amhkogpm-1	19.7761	15.2425	Tumor
+amhlpjkm-1	6.1766	4.9156	Fibroblasts
+amhnfbbb-1	2.0905	1.4282	T cells
+amhnmobg-1	2.5175	1.8768	B cells
+amhoampo-1	6.1468	-3.2874	Macrophages
+amhpldjc-1	18.5366	14.4093	Tumor
+amhpmlbe-1	6.3156	7.2059	Fibroblasts
+amibipch-1	1.2709	0.5459	T cells
+amibkegi-1	-2.1473	-0.1627	B cells
+amibnmnc-1	5.9376	-3.5294	Macrophages
+amiccmgc-1	5.1231	5.9057	Fibroblasts
+amigbggh-1	0.2423	-0.2670	T cells
+amigdnfb-1	2.1292	-1.2874	B cells
+amihepjf-1	5.9032	-1.1631	Macrophages
+amihipoo-1	22.9051	13.8284	Tumor
+amiibfep-1	5.6318	6.3416	Fibroblasts
+amijdfki-1	3.7287	0.2131	T cells
+amilbgdl-1	-0.2453	0.7773	B cells
+amimhein-1	7.4348	-3.3762	Macrophages
+amimkhng-1	19.8662	13.6251	Tumor
+amiogaeb-1	5.7618	5.7336	Fibroblasts
+amipiefe-1	2.2322	0.6447	T cells
+amjdpjao-1	0.4715	1.0127	B cells
+amjffgag-1	7.1554	-2.6482	Macrophages
+amjgmplg-1	20.0532	15.0001	Tumor
+aoiolbfp-1	5.2784	6.3165	Fibroblasts
+aoipchji-1	1.9027	3.2932	T cells
+aoipdhpp-1	1.5734	0.3858	B cells
+aoiplnpn-1	6.2369	-4.1124	Macrophages
+aojbjbmj-1	21.1911	15.2627	Tumor
+hoocnnnc-1	6.4801	4.2554	Fibroblasts
+hooekcil-1	2.9274	1.6544	T cells
+hopajonk-1	-1.1104	-0.4715	B cells
+hopdmpjg-1	7.2637	-2.9475	Macrophages
+iblpmnbd-1	5.7078	5.8965	Fibroblasts
+iblpopbi-1	1.7480	1.3526	T cells
+ibmalcal-1	1.4715	-2.5667	B cells
+ibmbclja-1	6.7631	-2.8235	Macrophages
+ibmbjpmm-1	20.2960	14.6281	Tumor
+ibmboilk-1	4.2433	6.3280	Fibroblasts
+ibmcoeoj-1	3.7274	-0.3339	T cells
+ibmcpkbl-1	0.8638	-0.3285	B cells
+ibmfmphn-1	6.9387	-4.0529	Macrophages
+ibmgbpfe-1	19.6655	16.3000	Tumor
+ibmhcelm-1	6.5827	7.7323	Fibroblasts
+ibmheaao-1	3.1774	1.6391	T cells
+ibmhjldo-1	1.7439	0.4390	B cells
+ibmhojfe-1	7.8280	-3.2966	Macrophages
+ibmkaodo-1	20.0665	14.3026	Tumor
+ibmmahpo-1	6.9896	4.8217	Fibroblasts
+ibmncfgb-1	2.7824	1.0093	T cells
+ibmnhbmh-1	1.1712	0.7509	B cells
+ibmnnmec-1	8.8206	-2.2692	Macrophages
+ibmpkjki-1	18.4280	14.9330	Tumor
+ibnapacd-1	4.8280	5.4817	Fibroblasts
+ibnbcfim-1	3.5112	1.8375	T cells
+ibnbdnbk-1	-0.6989	-1.0137	B cells
+ibnbfjoe-1	7.0328	-4.2166	Macrophages
+ibndgdgn-1	5.3289	6.3120	Fibroblasts
+ibndmjcm-1	3.1553	1.8088	T cells
+ibnffbnh-1	-2.2913	0.3044	B cells
+ibnhfldh-1	7.0720	-2.5861	Macrophages
+ibnhkpaa-1	21.6162	12.9368	Tumor
+ibnilhjd-1	5.4089	6.5909	Fibroblasts
+ibnjfjdj-1	0.4184	2.6759	T cells
+ibnkgdib-1	0.3684	0.8466	B cells
+ibnklfai-1	6.4291	-2.1862	Macrophages
+ibnnaijl-1	21.0685	15.2329	Tumor
+ibnoaeia-1	6.2344	6.2703	Fibroblasts
+ibnpehpm-1	1.1367	1.0525	T cells
+iboalfnp-1	-0.1525	0.3834	B cells
+iboamhik-1	7.9998	-4.0585	Macrophages
+ibodfadl-1	19.8750	16.4815	Tumor
+ibogklcd-1	5.2564	5.1777	Fibroblasts
+ibohabko-1	2.2023	2.0444	T cells
+iboikmef-1	0.0114	1.3290	B cells
+ibojfiml-1	7.8568	-2.1582	Macrophages
+ibondnbj-1	20.5541	17.3277	Tumor
+ibopeplg-1	5.7948	3.9965	Fibroblasts
+ibpadnlb-1	3.6043	0.7423	T cells
+ibpdbinl-1	0.1079	1.3096	B cells
+ibpefohb-1	5.3977	-4.2516	Macrophages
+ibpfmkni-1	4.3987	5.2059	Fibroblasts
+ibpgaajh-1	2.4396	1.7242	T cells
+ibpgihjl-1	0.2763	-1.4128	B cells
+ibpgjndg-1	4.6899	-2.9456	Macrophages
+ibpgmogf-1	19.5282	15.4594	Tumor
+ibphaocl-1	6.7020	6.1382	Fibroblasts
+ibpidajp-1	2.7601	1.4292	T cells
+ibpijaml-1	0.5301	-0.7047	B cells
+ibpjpljk-1	6.8204	-2.8032	Macrophages
+ibpkmmlh-1	20.8205	14.6063	Tumor
+ibplpfbb-1	6.5212	5.7342	Fibroblasts
+ibpmhcne-1	1.8825	2.0295	T cells
+ibpniicn-1	-1.9931	-1.2965	B cells
+ibpnkefg-1	5.5178	-5.3336	Macrophages
+ibpnmkkl-1	19.3217	15.7494	Tumor
+ibpohdpp-1	5.7151	6.1978	Fibroblasts
+ibppihlh-1	3.0892	2.5277	T cells
+ibppmhdg-1	-0.0691	1.3536	B cells
+icabjpih-1	7.0921	-3.8374	Macrophages
+icadkpib-1	19.4056	13.5195	Tumor
+icadojce-1	5.1119	5.6420	Fibroblasts
+icaeeejc-1	2.8036	2.9208	T cells
+icafiill-1	-1.3822	0.3928	B cells
+icahhhlc-1	5.9595	-2.5253	Macrophages
+icalhaan-1	5.8689	4.1691	Fibroblasts
+icanfalo-1	2.9283	0.5950	T cells
+icaofgnm-1	-0.5339	-1.0698	B cells
+icapidkf-1	6.3457	-2.5721	Macrophages
+icbbboeo-1	19.8108	15.3287	Tumor
+icbbdnjd-1	6.3619	7.3207	Fibroblasts
+icbcdpdb-1	1.6572	-0.2769	T cells
+icbchicb-1	1.0672	-0.3315	B cells
+icbcoicg-1	8.1146	-2.6166	Macrophages
+icbeemkf-1	19.8689	15.3488	Tumor
+icbeikaf-1	7.9510	8.0770	Fibroblasts
+icbfjhgc-1	2.0694	1.3602	T cells
+icbgannl-1	1.0762	-0.8457	B cells
+icbghnbk-1	7.3331	-3.0259	Macrophages
+icbgkpai-1	20.3139	14.1666	Tumor
+icbhaage-1	4.4104	3.9270	Fibroblasts
+icbhkkbf-1	0.8826	0.7413	T cells
+icbhlojn-1	-0.2932	1.9372	B cells
+icbifgal-1	8.1060	-3.9621	Macrophages
+icbjdinh-1	20.3477	14.5929	Tumor
+icbkanpm-1	5.7156	6.1853	Fibroblasts
+icbkplcc-1	2.6192	0.8607	T cells
+icbmnnle-1	1.0639	-1.1419	B cells
+icbnggah-1	7.0063	-0.4023	Macrophages
+iccadnho-1	6.2231	7.4332	Fibroblasts
+iccamome-1	2.0915	1.7808	T cells
+iccefpkd-1	-0.0568	-0.1704	B cells
+iccgdpdm-1	6.2205	-2.5697	Macrophages
+icchefmf-1	19.1485	15.6656	Tumor
+icchkbki-1	7.0853	6.3665	Fibroblasts
+iccicige-1	1.7138	1.6540	T cells
+iccimgfd-1	-0.3087	0.9355	B cells
+iccipobb-1	5.1686	-3.3356	Macrophages
+iccjapoj-1	18.0092	13.5049	Tumor
+iccmnpep-1	7.3639	6.8952	Fibroblasts
+iccoiknp-1	1.2805	-0.3025	T cells
+icdainhn-1	-2.9645	-0.5435	B cells
+icddcmad-1	9.4204	-2.5651	Macrophages
+icdfdhpc-1	19.4404	15.4651	Tumor
+icjgblin-1	4.4390	5.7027	Fibroblasts
+icjhpjgk-1	2.0995	1.1139	T cells
+icjighci-1	0.7908	0.3446	B cells
+icjiogph-1	7.6683	-3.6884	Macrophages
+icjjllpc-1	20.8978	16.6289	Tumor
+icjjocpd-1	5.0299	5.1123	Fibroblasts
+icjlaaok-1	3.3358	1.0087	T cells
+icjlbifd-1	1.4038	-0.4425	B cells
+icjmmahi-1	8.4550	-2.8685	Macrophages
+icjpaoei-1	6.2582	7.5647	Fibroblasts
+icjpbepb-1	1.6382	0.2589	T cells
+icjpkgil-1	-0.4486	0.4523	B cells
+ickcimeb-1	5.4342	-2.3625	Macrophages
+ickenham-1	19.4612	16.1478	Tumor
+ickgmemj-1	3.6057	5.2134	Fibroblasts
+ickgpofb-1	0.3135	0.3738	T cells
+ickhpkbp-1	0.2477	-0.1792	B cells
+icklmdkf-1	6.7466	-3.1592	Macrophages
+ickmlcbf-1	20.2034	13.9915	Tumor
+icknkbde-1	6.7068	6.6627	Fibroblasts
+iclabpbo-1	2.3850	1.7565	T cells
+iclalemj-1	0.2964	2.0351	B cells
+iclcfakg-1	6.9129	-3.3071	Macrophages
+icldmbhh-1	19.2465	13.9677	Tumor
+iclfnmkn-1	4.7555	5.1112	Fibroblasts
+iclfoece-1	1.9293	1.5343	T cells
+iclgbele-1	0.0511	-0.7655	B cells
+iclggdck-1	7.9002	-2.2606	Macrophages
+iclkgnfc-1	19.8404	14.3471	Tumor
+iclnchko-1	6.5484	6.1880	Fibroblasts
+iclooeei-1	0.5519	1.1320	T cells
+iclpciai-1	0.2620	-0.8997	B cells
+iclpobfg-1	7.1898	-4.4548	Macrophages
+icmbfppg-1	7.3362	7.2479	Fibroblasts
+icmcgcak-1	1.7475	1.5635	T cells
+icmcnjnl-1	-2.4099	-1.1563	B cells
+icmgmdak-1	6.7062	-4.0721	Macrophages
+icmihinb-1	20.7144	16.9973	Tumor
+icmijeok-1	4.8234	5.1625	Fibroblasts
+icmjkkoo-1	2.2354	2.8111	T cells
+icmkllaf-1	-1.2224	0.2490	B cells
+icmlbgao-1	8.8213	-4.6518	Macrophages
+icmlclhi-1	18.7189	14.5764	Tumor
+icmloilc-1	5.4794	6.8126	Fibroblasts
+icmmblhm-1	2.2417	-0.5750	T cells
+icmmmfdl-1	0.5154	-0.5775	B cells
+icmneikk-1	8.2744	-3.6276	Macrophages
+icmniang-1	19.3634	15.5411	Tumor
+icmnplbi-1	6.7629	6.4481	Fibroblasts
+icmohnep-1	0.3144	1.7380	T cells
+icmpapgm-1	-1.0343	0.2353	B cells
+icnahmpd-1	5.5763	-2.5537	Macrophages
+icnamhpi-1	19.1934	13.7174	Tumor
+icnbgdgn-1	6.7138	6.2416	Fibroblasts
+icncmkcl-1	1.3860	2.6512	T cells
+icnencdi-1	-0.4407	0.0321	B cells
+icnhgijl-1	7.2689	-3.6197	Macrophages
+icnjjcca-1	6.4711	5.4665	Fibroblasts
+icnkcigc-1	1.5884	2.5626	T cells
+icnlngck-1	-1.0406	-2.4128	B cells
+ifcnpgog-1	8.6109	-0.4507	Macrophages
+ifdabigo-1	19.5947	13.0632	Tumor
+ifdaigem-1	5.6895	5.7138	Fibroblasts
+ifdbhkhg-1	1.8101	0.0866	T cells
+ifdcbdfg-1	0.5796	0.5245	B cells
+ifdccdhn-1	5.5056	-2.3008	Macrophages
+ifddeiec-1	22.0527	15.1720	Tumor
+ifdfhphm-1	5.6627	5.8580	Fibroblasts
+ifdhggji-1	2.6153	-0.5307	T cells
+ifdinlgk-1	0.1644	-0.3905	B cells
+ifdlainn-1	8.8478	-3.1742	Macrophages
+ifdlllkc-1	21.6679	13.8963	Tumor
+ifdlomkb-1	6.5873	6.3194	Fibroblasts
+ifdlpipl-1	1.1310	1.3774	T cells
+ifdnabjh-1	1.2125	-0.3238	B cells
+ifdoekdl-1	5.3080	-3.0176	Macrophages
+ifdohkjg-1	19.0976	14.6577	Tumor
+ifdojpjg-1	5.9184	4.2943	Fibroblasts
+ifdonghf-1	0.3843	1.6821	T cells
+ifdpikip-1	-0.5227	-2.5647	B cells
+ifeadldg-1	7.7848	-2.7276	Macrophages
+ifhjnblh-1	5.2861	4.6832	Fibroblasts
+ifhjncch-1	2.8358	1.5494	T cells
+ifhkcnla-1	2.3826	0.4202	B cells
+ifhlhomo-1	7.3877	-3.1669	Macrophages
+ifhljdlh-1	20.8168	15.6251	Tumor
+ifhmemch-1	7.2517	5.4787	Fibroblasts
+ifhmhbpb-1	1.5646	0.7209	T cells
+ifhmholh-1	0.7908	1.4984	B cells
+ifhnagfh-1	6.5412	-3.4248	Macrophages
+ifhnggch-1	20.3141	14.7542	Tumor
+ifhnlpgf-1	6.9521	3.7482	Fibroblasts
+ifhoejka-1	1.1733	0.4176	T cells
+ificklnb-1	-2.3204	-0.9636	B cells
+ifihanii-1	6.0848	-3.2011	Macrophages
+ifihbmfj-1	21.1130	14.7549	Tumor
+ifihljbh-1	4.9692	5.9430	Fibroblasts
+ifijkffd-1	3.0492	0.2240	T cells
+ifikcbbe-1	-0.9106	0.5585	B cells
+ifikeple-1	6.7785	-2.3525	Macrophages
+ifinecnk-1	19.9864	15.7017	Tumor
+ifingokg-1	4.9649	5.9879	Fibroblasts
+ifiogohd-1	1.7893	-0.0159	T cells
+ifjapgae-1	-1.5635	0.6857	B cells
+ifjcdkop-1	6.6490	-4.0223	Macrophages
+ifjcjhen-1	5.9038	7.1280	Fibroblasts
+ifjdkloe-1	-0.2807	-0.2966	T cells
+ifjdmdmc-1	-0.9229	1.4612	B cells
+ifjeffdb-1	7.2826	-2.2327	Macrophages
+ifjkkcjn-1	18.8598	13.8805	Tumor
+ifjlciao-1	6.4478	6.0583	Fibroblasts
+ifjmoepa-1	2.5487	1.0123	T cells
+ifjojajj-1	0.2781	0.1581	B cells
+ifjponbo-1	7.7778	-2.1930	Macrophages
+ifkaffld-1	18.3801	12.7527	Tumor
+ifkaiclo-1	7.0017	7.1877	Fibroblasts
+ifkajgkb-1	0.9794	-0.6598	T cells
+ifkcfbbn-1	0.0990	0.9308	B cells
+ifkcnmcm-1	8.7976	-2.4837	Macrophages
+ifkdogda-1	19.6283	14.1069	Tumor
+ifkecmco-1	6.0115	5.7007	Fibroblasts
+ifkfeioi-1	0.9849	3.2488	T cells
+ifkgkccl-1	1.7852	1.1360	B cells
+ifkgmngh-1	6.0791	-2.1450	Macrophages
+iflajbgd-1	20.6396	15.4425	Tumor
+iflbjgkg-1	7.2497	6.6354	Fibroblasts
+iflcfgoo-1	2.7400	1.8369	T cells
+ifleccib-1	0.3408	-1.7836	B cells
+iflekpgd-1	7.0836	-3.5562	Macrophages
+iflhield-1	4.7202	7.6818	Fibroblasts
+iflmkidp-1	3.7290	2.5592	T cells
+ifloeeni-1	0.2552	1.3506	B cells
+iflojkmi-1	7.0121	-2.7972	Macrophages
+iflpgfhm-1	18.9065	15.3970	Tumor
+ifmaggpc-1	6.0604	4.6973	Fibroblasts
+ifmdegdo-1	1.9488	1.1203	T cells
+ifmdhojb-1	1.7976	0.8942	B cells
+ifmdnapc-1	7.0114	-2.7512	Macrophages
+ifmdppgi-1	20.0442	14.7971	Tumor
+ifmgkjab-1	4.9176	5.8489	Fibroblasts
+ifmhkjjc-1	1.2539	-0.0503	T cells
+ifmidfch-1	0.5112	0.3913	B cells
+ifmkjeok-1	5.2133	-3.1227	Macrophages
+ifmmhnih-1	20.9957	16.0592	Tumor
+ifmpkdci-1	7.0258	6.0389	Fibroblasts
+ifmpmclj-1	1.1550	0.1163	T cells
+ifnaikja-1	0.3446	0.3793	B cells
+ifnddage-1	8.2873	-1.9000	Macrophages
+ifndmhhg-1	19.8678	13.7558	Tumor
+ifneafcp-1	5.6809	6.2172	Fibroblasts
+ifneeoec-1	1.7979	0.6221	T cells
+ifneoaei-1	0.2529	-0.5040	B cells
+ifngbapi-1	6.3719	-2.6885	Macrophages
+ifnnehko-1	5.5980	6.2441	Fibroblasts
+ifnpoljf-1	2.2732	0.0606	T cells
+ifobkbbb-1	-0.4812	1.4378	B cells
+ifobofhm-1	5.8379	-5.1167	Macrophages
+ifoccpfd-1	18.1382	15.0291	Tumor
+ifohpkji-1	6.0309	5.8824	Fibroblasts
+ifoiipfc-1	3.2142	-1.4728	T cells
+ifojlboj-1	0.3959	1.5614	B cells
+ifolebah-1	5.8722	-3.3798	Macrophages
+ifolibbk-1	19.2471	14.1057	Tumor
+ifolinjl-1	5.6737	7.4275	Fibroblasts
+ifoobphj-1	3.8374	0.8641	T cells
+ifpaahee-1	1.9051	0.0356	B cells
+ifpaohhk-1	8.7537	-3.0933	Macrophages
+ifpcngpl-1	20.1311	15.3655	Tumor
+ifpdfckp-1	9.1789	6.8513	Fibroblasts
+ifpkgddg-1	1.2927	2.1690	T cells
+ifpmfdba-1	-0.3618	-0.4898	B cells
+ifpnhopb-1	7.9086	-2.9689	Macrophages
+ifpomkig-1	20.2786	15.0140	Tumor
+ifppahne-1	6.3366	6.4250	Fibroblasts
+ifppbnpd-1	0.0630	1.8666	T cells
+ifppocnc-1	-0.9820	-1.4423	B cells
+igaaobhp-1	6.9416	-2.9160	Macrophages
+ighgfiih-1	5.3065	6.8310	Fibroblasts
+ighghibj-1	0.6578	0.7931	T cells
+ighhchjh-1	-0.5849	-0.0466	B cells
+ighkfifd-1	7.2789	-4.0079	Macrophages
+ighljbaa-1	20.7243	15.0630	Tumor
+ighmbcjb-1	4.1081	4.0414	Fibroblasts
+ighmfklb-1	1.9877	0.9790	T cells
+ighnjcbh-1	-0.1034	-0.0280	B cells
+ighofmho-1	7.2256	-2.0524	Macrophages
+ighohimj-1	18.8889	13.8280	Tumor
+ighpglko-1	4.9067	6.2889	Fibroblasts
+igicgoae-1	3.2449	0.7687	T cells
+igicpllf-1	-2.5017	-1.7040	B cells
+igiinokk-1	6.1670	-3.5577	Macrophages
+igijdmaf-1	19.5916	15.0386	Tumor
+igioaelb-1	5.6883	7.0493	Fibroblasts
+igipoafm-1	1.3240	0.3377	T cells
+ihgnpihh-1	0.4789	-1.5356	B cells
+ihgpifdb-1	7.3897	-2.8974	Macrophages
+ihgpmkko-1	19.8526	16.5883	Tumor
+ihhbpapa-1	5.3778	8.0603	Fibroblasts
+ihhehbic-1	1.7746	-0.0770	T cells
+ihhglemh-1	0.0699	-1.0762	B cells
+ihhhhnbl-1	6.2482	-2.6030	Macrophages
+ihhkmoep-1	6.5556	5.3778	Fibroblasts
+ihhmaimk-1	2.9874	2.3575	T cells
+ihhmjjed-1	1.4363	0.5294	B cells
+ihhmoaaa-1	8.3634	-4.8808	Macrophages
+ihhoaelf-1	19.6821	14.1330	Tumor
+ihhojgdj-1	6.1192	5.4286	Fibroblasts
+ihibdckn-1	1.8338	3.0822	T cells
+ihibnpgi-1	-0.1697	0.4138	B cells
+ihidfkin-1	6.7677	-2.9243	Macrophages
+ihidhchm-1	20.0060	15.4483	Tumor
+ihifblap-1	7.1653	7.6474	Fibroblasts
+ihihcnhl-1	2.3096	1.7895	T cells
+ihiildmc-1	-1.1509	-0.0879	B cells
+ihiklhfg-1	7.9403	-2.1340	Macrophages
+ihilfekl-1	20.2116	15.8864	Tumor
+ihipnehm-1	6.4908	7.2003	Fibroblasts
+ihipnemg-1	2.2894	0.8443	T cells
+ihjbekgd-1	0.3358	-2.9306	B cells
+ihjeifea-1	7.3829	-6.6484	Macrophages
+ihjfpjmo-1	18.2765	15.4518	Tumor
+ihjgclgh-1	6.4775	4.8376	Fibroblasts
+ihjgdfgd-1	1.2879	2.5705	T cells
+ihjglfeo-1	-0.4840	2.2429	B cells
+ihjjdfnc-1	6.9981	-2.5920	Macrophages
+ihjkddma-1	7.6169	6.1310	Fibroblasts
+ihjkfgfg-1	0.9977	1.0903	T cells
+ihjkjcbi-1	-0.0356	-1.3647	B cells
+ihjkllic-1	6.7442	-3.7422	Macrophages
+ihjlpbao-1	20.9244	15.0346	Tumor
+ihjmaljn-1	5.7172	5.8938	Fibroblasts
+ihjmdmpn-1	2.2231	1.8168	T cells
+ihjndgdd-1	-0.9997	-1.0416	B cells
+ihjogjie-1	8.1047	-3.4123	Macrophages
+ihjpkebi-1	18.5832	15.4438	Tumor
+ihkadlch-1	6.4634	4.4693	Fibroblasts
+ihkamfoe-1	2.2295	1.9356	T cells
+ihkamlhe-1	0.3744	0.6320	B cells
+ihkekhfn-1	5.5957	-2.6690	Macrophages
+ihkepbfl-1	19.6974	14.5172	Tumor
+ihkffogl-1	6.8706	7.4793	Fibroblasts
+ihkgjjdf-1	3.7944	2.5148	T cells
+ihkihajn-1	-0.1097	0.3527	B cells
+ihkincej-1	7.7668	-2.8788	Macrophages
+ihkjfike-1	20.1308	15.8238	Tumor
+ihkjhbik-1	5.9407	5.2707	Fibroblasts
+ihkkaaon-1	1.5855	1.8339	T cells
+iifhkadk-1	0.0030	0.3402	B cells
+iifkbmoc-1	7.6701	-3.3748	Macrophages
+iifnanmk-1	6.7562	6.3788	Fibroblasts
+iifnhffi-1	0.7652	2.6423	T cells
+iifplglm-1	-0.5007	-1.6551	B cells
+iigdamia-1	5.9550	-4.0210	Macrophages
+iigdjohf-1	20.0522	14.7261	Tumor
+iigekbop-1	5.6632	6.6197	Fibroblasts
+iiggmgci-1	2.3399	1.5160	T cells
+iiglmekj-1	0.4098	0.6161	B cells
+iigmejlg-1	4.8920	-3.3644	Macrophages
+iignjfkb-1	17.8198	15.0361	Tumor
+iignpdli-1	5.9954	7.0455	Fibroblasts
+iihcdjek-1	3.1876	1.4028	T cells
+iihegcdh-1	-0.5004	0.4852	B cells
+iihfgcjj-1	6.4721	-3.0014	Macrophages
+iihgpnli-1	20.9861	14.4422	Tumor
+iihhnicb-1	6.8057	6.6774	Fibroblasts
+ijbggjeo-1	1.0452	2.1739	T cells
+ijbhddfg-1	0.6986	0.1019	B cells
+ijbhnomo-1	6.2377	-3.8592	Macrophages
+jecfagkd-1	19.4623	15.5426	Tumor
+jecgekab-1	5.0444	6.4375	Fibroblasts
+jecgplml-1	0.7582	0.9959	T cells
+jecmmlca-1	0.1096	2.4451	B cells
+jecogkfe-1	5.6227	-1.5280	Macrophages
+jedckbdf-1	6.1498	6.4112	Fibroblasts
+jedemnee-1	2.1183	1.6447	T cells
+jedlkklm-1	-0.1537	1.4541	B cells
+jeebhngn-1	6.5435	-1.8678	Macrophages
+jeegiolp-1	19.3556	14.9397	Tumor
+jeeifapg-1	4.9280	6.4550	Fibroblasts
+jefefjkf-1	3.4451	1.1226	T cells
+jeijomgi-1	-0.1969	-1.1146	B cells
+jeikchfg-1	6.7707	-4.5928	Macrophages
+jeikeahd-1	19.0871	15.2268	Tumor
+jeipgmbf-1	7.3190	8.8092	Fibroblasts
+jejahncl-1	1.4134	2.6353	T cells
+jejallhg-1	0.2438	-0.1512	B cells
+jejbhian-1	7.4326	-2.9381	Macrophages
+jejcmajf-1	20.1104	14.5917	Tumor
+jejgbefa-1	4.6019	4.4564	Fibroblasts
+jejhpmlf-1	2.6532	0.9233	T cells
+jejifcgn-1	-0.5961	0.0085	B cells
+jejjnigg-1	7.7949	-2.8196	Macrophages
+jejkopok-1	19.3439	16.2263	Tumor
+jejpjfji-1	7.5792	6.4946	Fibroblasts
+jejpknkc-1	2.9737	2.4420	T cells
+jekahfgo-1	1.1301	0.6141	B cells
+jekanbic-1	7.5983	-2.4803	Macrophages
+jekclolp-1	4.9027	6.7007	Fibroblasts
+jekdadka-1	0.6442	0.4054	T cells
+jekeaokm-1	1.3036	0.8402	B cells
+jekfbifb-1	8.4874	-3.2717	Macrophages
+jekhbife-1	18.8478	14.7596	Tumor
+jekicijo-1	6.1020	6.0790	Fibroblasts
+jekjelnd-1	3.1337	0.8387	T cells
+jekjfmpg-1	0.3520	-0.9886	B cells
+jekjkbhc-1	7.4503	-2.9969	Macrophages
+jekkdfaa-1	19.2502	14.7642	Tumor
+jekonndb-1	5.8158	5.7298	Fibroblasts
+jekphodd-1	3.7713	1.1016	T cells
+jekpindb-1	-0.2439	-2.0975	B cells
+jelbngll-1	6.1058	-3.2631	Macrophages
+jelccida-1	19.3141	16.3817	Tumor
+jelhmnna-1	5.8351	7.2884	Fibroblasts
+jeljabae-1	2.0617	1.2372	T cells
+jelkkipg-1	-0.0888	0.0038	B cells
+jelmggfi-1	8.7188	-5.3196	Macrophages
+jelnhbnh-1	17.9985	14.4568	Tumor
+jelnjblp-1	6.0145	6.6901	Fibroblasts
+jelpfieo-1	2.4731	0.8158	T cells
+jelplanp-1	1.0190	1.0302	B cells
+jemafdho-1	7.1841	-2.0373	Macrophages
+jemcjfjj-1	6.2726	5.4385	Fibroblasts
+jemdbnbb-1	2.6978	1.3106	T cells
+jemdmamn-1	0.0013	1.4730	B cells
+jemednnp-1	4.5491	-4.4177	Macrophages
+jemekpbl-1	18.8129	14.6367	Tumor
+jemhjphh-1	5.7454	4.4927	Fibroblasts
+jemilknh-1	1.0148	0.3392	T cells
+jeminocl-1	2.4574	1.8017	B cells
+jemjeanf-1	6.5883	-3.3636	Macrophages
+jemjkkpe-1	18.8508	13.0919	Tumor
+jemnajjn-1	5.8831	5.0021	Fibroblasts
+jemohmci-1	1.9151	-0.4002	T cells
+jemojnbl-1	-0.7620	0.1486	B cells
+jenbmamn-1	7.3662	-2.5825	Macrophages
+jencdahm-1	18.6795	15.8547	Tumor
+jencfjog-1	5.1998	6.6329	Fibroblasts
+jencgbpj-1	1.9894	-0.1764	T cells
+jenckolk-1	-0.3162	0.3654	B cells
+jenfhbpo-1	7.6130	-3.1410	Macrophages
+jeokogah-1	21.5318	16.0075	Tumor
+jeolcjkf-1	5.7433	6.7501	Fibroblasts
+jeomjdkh-1	3.9338	3.1605	T cells
+jeonmdhp-1	-1.2280	-0.9265	B cells
+jeoohfbc-1	8.4849	-4.0583	Macrophages
+jeopflfo-1	4.6775	5.5138	Fibroblasts
+jepdfjin-1	2.4202	1.0976	T cells
+jepfgeem-1	-0.6506	-0.6742	B cells
+jepgdgej-1	6.2877	-3.8795	Macrophages
+jephecdh-1	22.2816	15.2975	Tumor
+jephnfbo-1	6.8868	5.5109	Fibroblasts
+jepkoanp-1	1.8140	0.4864	T cells
+jepnonmd-1	-2.6517	-1.3780	B cells
+jfabbhkd-1	5.1894	-5.2498	Macrophages
+jfabjnmc-1	18.8046	16.3250	Tumor
+jfacdfii-1	5.9556	7.2906	Fibroblasts
+jfadhbli-1	2.4110	1.9826	T cells
+jfaeimfm-1	-0.9009	0.5240	B cells
+jfafejdc-1	7.7287	-3.5766	Macrophages
+jfagnbda-1	20.5595	15.5662	Tumor
+jfahbhef-1	5.4504	4.8772	Fibroblasts
+jfahkgeb-1	0.8159	1.2865	T cells
+jfahkjpf-1	0.3270	-0.7925	B cells
+jfaiohln-1	7.0266	-2.4295	Macrophages
+jfajeeem-1	20.6182	16.5519	Tumor
+jfajikhd-1	7.2770	4.9987	Fibroblasts
+jfamccll-1	3.6836	0.6690	T cells
+jfamojpm-1	1.0449	0.0680	B cells
+jfanfhjo-1	6.5879	-4.8077	Macrophages
+jfaphacb-1	5.8284	4.4406	Fibroblasts
+jfapidee-1	2.9673	2.7168	T cells
+jfbammcc-1	-0.7969	0.3020	B cells
+jfbbndnb-1	6.2746	-3.6285	Macrophages
+jfbclaoj-1	20.7745	14.9615	Tumor
+jfbdpooj-1	7.7396	5.5178	Fibroblasts
+jfbgpake-1	2.9993	1.2974	T cells
+jfbgplfg-1	0.7958	-0.4472	B cells
+jfbhklbi-1	6.9504	-3.1155	Macrophages
+jfbhlppm-1	19.1639	15.6621	Tumor
+jfbjcgdl-1	6.6502	6.5936	Fibroblasts
+jfbjfpem-1	3.5370	2.6493	T cells
+jfblicjb-1	-0.3749	0.3731	B cells
+jfbmfobl-1	6.3764	-2.9766	Macrophages
+jfbompci-1	19.4003	16.6201	Tumor
+jfbonkcl-1	6.3637	5.7820	Fibroblasts
+jfboolnc-1	3.1936	-0.9706	T cells
+jfcbdmlj-1	-2.0141	0.7958	B cells
+jfcblhke-1	7.0605	-2.7496	Macrophages
+jfccdgfb-1	18.6736	14.9768	Tumor
+jfcdaeka-1	8.0035	6.8242	Fibroblasts
+jfcdckmo-1	2.1697	0.7609	T cells
+jfcecgfc-1	-0.3946	-2.1292	B cells
+jfcgdhib-1	7.2576	-2.1545	Macrophages
+jfchmkla-1	4.4244	5.3386	Fibroblasts
+jfcjbldj-1	0.8425	0.2346	T cells
+jfcjbpeh-1	0.0535	-2.0844	B cells
+jfcnmejl-1	7.6143	-2.2461	Macrophages
+jfcnmhfc-1	19.7489	12.5193	Tumor
+jfcpfibp-1	5.0036	7.2329	Fibroblasts
+jfcphmac-1	-0.7780	0.8525	T cells
+jfdapnhi-1	-1.1800	0.8046	B cells
+jfdbhkhc-1	6.3249	-2.5960	Macrophages
+jfdeofol-1	20.5655	16.8362	Tumor
+jfdfdcmp-1	5.7971	6.3760	Fibroblasts
+jfdgbdic-1	0.5149	2.3904	T cells
+jfdgdcdg-1	-0.7605	-0.5608	B cells
+jfdgheci-1	6.9778	-4.5629	Macrophages
+jfdhkbkf-1	20.2288	15.9675	Tumor
+jfdhkopi-1	6.2929	4.4111	Fibroblasts
+jfdiaibb-1	1.8762	1.9420	T cells
+jfdjgfje-1	-1.8780	-1.0748	B cells
+jfdjihgo-1	7.8765	-2.7299	Macrophages
+jfdjplpe-1	20.4120	16.8595	Tumor
+jfdmifdc-1	6.4686	6.6579	Fibroblasts
+jfdmmhlc-1	4.7107	0.9862	T cells
+jfdmnlmc-1	-0.7979	0.4278	B cells
+jfdpihgk-1	7.4390	-3.5267	Macrophages
+jfedabel-1	4.9676	8.3098	Fibroblasts
+jfedkjlk-1	2.3268	0.4677	T cells
+jfegbgcp-1	0.9159	-0.1091	B cells
+jfegfajl-1	6.7471	-2.4377	Macrophages
+jfehfmid-1	18.7081	15.3526	Tumor
+jfehmcci-1	7.9130	6.4662	Fibroblasts
+jfehmkgc-1	1.6238	0.6929	T cells
+jfeiggii-1	-0.4103	-0.2540	B cells
+jfeiibid-1	6.6222	-2.0837	Macrophages
+jfekjofg-1	18.2668	15.8620	Tumor
+jfekmpib-1	5.6203	6.3769	Fibroblasts
+jfeliaeb-1	0.8730	2.5286	T cells
+jfeljbfp-1	1.2456	0.9596	B cells
+jfemipfi-1	5.4852	-2.1709	Macrophages
+jfeoeojm-1	20.4049	13.3947	Tumor
+jfeolemb-1	5.9757	6.3645	Fibroblasts
+jffcfpmj-1	2.5561	1.3773	T cells
+jffdbhfh-1	0.2912	1.4736	B cells
+jfffehbm-1	8.2260	-5.8671	Macrophages
+jfffipdg-1	19.6826	14.8353	Tumor
+jffgfcnj-1	4.2479	6.0942	Fibroblasts
+jffhbaim-1	3.2488	0.1134	T cells
+jffhfghi-1	0.3364	-0.9158	B cells
+jffjcghc-1	6.3281	-1.5226	Macrophages
+jffjkbga-1	5.4574	6.4622	Fibroblasts
+jfollffm-1	0.1288	3.0623	T cells
+jfombaij-1	0.6027	-0.1825	B cells
+jfonepeo-1	7.5755	-4.4098	Macrophages
+jfooncim-1	21.1825	14.6760	Tumor
+jfophhcf-1	5.7959	5.5083	Fibroblasts
+jfopipaj-1	1.4193	1.8947	T cells
+jfpaipmm-1	0.2559	0.6517	B cells
+jfpanhil-1	6.9912	-2.4868	Macrophages
+jfpbhgoe-1	19.5812	17.2297	Tumor
+jfpbiili-1	4.4321	7.2609	Fibroblasts
+jfpbinaj-1	3.3679	0.3478	T cells
+jfpccdfp-1	2.2293	0.9955	B cells
+jfpciape-1	7.9711	-2.9720	Macrophages
+jfpcjccm-1	19.7828	14.7906	Tumor
+jfpedkgg-1	6.3905	7.4012	Fibroblasts
+jfpeinkb-1	2.1813	0.2886	T cells
+jfpejaim-1	0.8244	0.9212	B cells
+jfpepbhe-1	7.6547	-2.2545	Macrophages
+jfpfdlen-1	19.7291	14.0710	Tumor
+jfpfpafp-1	5.1318	4.3645	Fibroblasts
+jfpgfpjb-1	2.2369	1.1166	T cells
+jfpiiemc-1	-0.4400	-2.9556	B cells
+jfpikddo-1	5.7527	-1.8792	Macrophages
+jfpkmfkh-1	5.3354	6.3606	Fibroblasts
+jfpkngam-1	0.6093	2.6387	T cells
+jfpkpoek-1	-0.1440	0.2900	B cells
+jfplhdae-1	9.3258	-1.4836	Macrophages
+jfpnciap-1	19.6934	14.4068	Tumor
+jfppljii-1	5.6745	6.5099	Fibroblasts
+jgaapgha-1	1.8948	0.8048	T cells
+jgabejon-1	1.4672	-0.1142	B cells
+jgabkjlg-1	9.2996	-2.9093	Macrophages
+jgabnaaj-1	21.7853	15.3573	Tumor
+jgabpmbe-1	6.9630	5.2754	Fibroblasts
+jgaddjpl-1	1.1462	1.6597	T cells
+jgadoipc-1	0.9886	0.0403	B cells
+jgadoknb-1	5.7136	-4.3603	Macrophages
+jgafbkob-1	18.5729	13.2324	Tumor
+jgagampj-1	6.1095	7.1250	Fibroblasts
+jgagfnpd-1	1.9866	-1.0604	T cells
+jgakpjme-1	-0.1908	-0.1628	B cells
+jgakplof-1	9.0960	-4.4571	Macrophages
+jgalaghc-1	19.6093	16.7059	Tumor
+jgalijec-1	6.4500	6.5633	Fibroblasts
+jgamkcgd-1	2.1146	1.5299	T cells
+jgandjke-1	0.7776	-0.8095	B cells
+jgbinfkj-1	7.8781	-4.3730	Macrophages
+jhcfepdb-1	6.3284	6.1787	Fibroblasts
+jhcmogkn-1	1.3837	1.1773	T cells
+jhjnioih-1	-0.6225	-1.0717	B cells
+jhkgnjeh-1	6.6464	-4.1040	Macrophages
+jhkodjfj-1	20.3228	13.8499	Tumor
+jhlblkhc-1	6.7120	4.8185	Fibroblasts
+jhldgfnh-1	1.4337	0.5754	T cells
+jhlglfff-1	1.3251	0.3303	B cells
+jhlgpoki-1	6.7883	-2.5013	Macrophages
+jhlkioei-1	17.8928	14.9569	Tumor
+jhlknpog-1	7.9975	6.1323	Fibroblasts
+jhllhkia-1	2.0679	1.7481	T cells
+jhllnkjb-1	0.8956	-1.9975	B cells
+jhllockk-1	5.3177	-2.7897	Macrophages
+jhlmjjbh-1	19.2851	16.3120	Tumor
+jhlnofdn-1	5.6848	4.0655	Fibroblasts

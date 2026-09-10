@@ -118,6 +118,22 @@ export class PlotButtons {
 			})
 		}
 
+		btns.push({
+			// spatial tissue viewer for samples with a spatial image (the model's
+			// wsiBySample probe sets data.hasSpatial); spawns the w2 wsi plot in
+			// fixed-sample mode, which has its own burger menu for the overlays
+			label: 'Spatial',
+			isVisible: () => !!this.data?.hasSpatial,
+			getPlotConfig: () => {
+				const sample = this.item!
+				return {
+					chartType: 'wsi',
+					name: `Sample: ${sample.sID} Spatial`,
+					sample
+				}
+			}
+		})
+
 		btns.push(
 			{
 				label: 'Summary',

@@ -81,7 +81,7 @@ export class ScatterLegend {
 		const fontSize = this.getFontSize(chart, chart.colorLegend)
 		const scale = chart.colorLegend.size > 20 || chart.shapeLegend.size > 20 ? 0.6 : 0.7 //if many categories, reduce size
 
-		const colorG = legendG.append('g').style('font-size', `${fontSize}em`)
+		const colorG = legendG.append('g').style('font-size', `${fontSize}em`).attr('data-testid', 'sjpp-color-legend')
 		offsetY += step + 20
 		if (this.scatter.config.colorTW || this.scatter.config.colorColumn) {
 			title = `${getTitle(
@@ -115,7 +115,7 @@ export class ScatterLegend {
 					// We filter out any values that are explicitly defined in the term values
 					// This gives us the raw numerical data we need for scaling
 					const colorValues = chart.colorValues
-					const scaleG = colorG.append('g')
+					const scaleG = colorG.append('g').attr('data-testid', 'sjpp-scale-legend')
 					// Create a ColorScale component with enhanced mode functionality
 					const colorScale = new ColorScale({
 						// Basic visual configuration
@@ -228,6 +228,8 @@ export class ScatterLegend {
 				const refText = legendG
 					.append('g')
 					.append('text')
+					.attr('name', 'sjpp-scatter-legend-label')
+					.attr('data-testid', 'sjpp-scatter-ref-legend-label')
 					.attr('x', offsetX + 20)
 					.attr('y', offsetY + 4)
 					.text(`n=${colorRefCategory.sampleCount}`)
@@ -257,7 +259,10 @@ export class ScatterLegend {
 					scale
 				)
 			} else {
-				const shapeG = legendG.append('g').style('font-size', `${this.getFontSize(chart, chart.shapeLegend)}em`)
+				const shapeG = legendG
+					.append('g')
+					.style('font-size', `${this.getFontSize(chart, chart.shapeLegend)}em`)
+					.attr('data-testid', 'sjpp-shape-legend')
 
 				this.addLegendTitle(legendG, title, offsetX, offsetY, this.scatter.config.shapeTW, 'SHAPE')
 
@@ -276,6 +281,7 @@ export class ScatterLegend {
 
 					itemG
 						.append('path')
+						.attr('data-testid', 'sjpp-legend-shape')
 						.attr('transform', () => `translate(${offsetX}, ${offsetY - 4}) scale(${scale + 0.1})`) //shapes are a bit smaller than the circle shape
 						.style('pointer-events', 'bounding-box')
 						.style('fill', color)
@@ -284,6 +290,8 @@ export class ScatterLegend {
 
 					itemG
 						.append('text')
+						.attr('name', 'sjpp-scatter-legend-label')
+						.attr('data-testid', 'sjpp-scatter-shape-legend-label')
 						.attr('x', offsetX + 25)
 						.attr('y', offsetY + 4)
 						.text(`${name}, n=${count}`)
@@ -298,6 +306,7 @@ export class ScatterLegend {
 
 		if (this.scatter.config.scaleDotTW) {
 			chart.scaleG = legendG.append('g').attr('transform', `translate(${0},${legendHeight + 50})`)
+
 			this.drawScaleDotLegend(chart)
 		}
 	}
@@ -316,6 +325,7 @@ export class ScatterLegend {
 		itemG
 			.append('text')
 			.attr('name', 'sjpp-scatter-legend-label')
+			.attr('data-testid', 'sjpp-scatter-color-legend-label')
 			.attr('x', x + 20)
 			.attr('y', y + 4)
 			.text(`${name}, n=${category.sampleCount}`)
@@ -381,6 +391,7 @@ export class ScatterLegend {
 					const index = category.shape % shapes.length
 					itemG
 						.append('path')
+						.attr('data-testid', 'sjpp-legend-shape')
 						.attr('transform', () => `translate(${offsetX - step - 2}, ${offsetY - 8}) scale(${scale})`)
 						.style('fill', 'gray')
 						.style('pointer-events', 'bounding-box')
@@ -404,6 +415,7 @@ export class ScatterLegend {
 					.attr('x', offsetX - step + 24)
 					.attr('y', offsetY + 4)
 					.attr('name', 'sjpp-scatter-legend-label')
+					.attr('data-testid', cname == 'shape' ? 'sjpp-scatter-shape-legend-label' : 'sjpp-scatter-color-legend-label')
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.text(text)
 					.on('click', event =>
@@ -446,10 +458,14 @@ export class ScatterLegend {
 		const maxSize = defaultSize * maxScale
 		const minRadius = minSize / 2
 		const maxRadius = maxSize / 2
-		const minG = scaleG.append('g').attr('transform', `translate(${x},${y})`)
+		const minG = scaleG
+			.append('g')
+			.attr('transform', `translate(${x},${y})`)
+			.attr('data-testid', 'sjpp-legend-min-scale-g')
 		const shift = 30
 		minG
 			.append('path')
+			.attr('data-testid', 'sjpp-legend-min-scale-dot')
 			.attr('d', shapes[0])
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
@@ -464,6 +480,7 @@ export class ScatterLegend {
 
 		maxG
 			.append('path')
+			.attr('data-testid', 'sjpp-legend-max-scale-dot')
 			.attr('d', shapes[0])
 			.style('fill', '#aaa')
 			.style('stroke', '#aaa')
@@ -515,14 +532,22 @@ export class ScatterLegend {
 				div.append('label').text('Min:')
 				const minInput: any = div
 					.append('input')
+					.attr('data-testid', 'sjpp-legend-min-scale-input')
 					.attr('type', 'number')
 					.attr('min', minShapeSize)
 					.attr('step', '0.5')
 					.attr('max', maxShapeSize)
 					.style('width', '50px')
-					.attr('value', this.scatter.settings.minShapeSize)
+					.property('value', this.scatter.settings.minShapeSize)
 					.on('change', () => {
-						const value = parseFloat(minInput.node().value)
+						let value = parseFloat(minInput.node().value)
+						if (!Number.isFinite(value)) return
+						value = clampValue(value, minShapeSize, maxShapeSize)
+						value =
+							value > this.scatter.config.settings.sampleScatter.maxShapeSize
+								? this.scatter.config.settings.sampleScatter.maxShapeSize
+								: value
+						minInput.property('value', value)
 						this.scatter.config.settings.sampleScatter.minShapeSize = value
 						this.scatter.app.dispatch({
 							type: 'plot_edit',
@@ -533,14 +558,22 @@ export class ScatterLegend {
 				div.append('label').text('Max:')
 				const maxInput: any = div
 					.append('input')
+					.attr('data-testid', 'sjpp-legend-max-scale-input')
 					.attr('type', 'number')
 					.attr('step', '0.5')
 					.attr('min', minShapeSize)
 					.attr('max', maxShapeSize)
 					.style('width', '50px')
-					.attr('value', this.scatter.settings.maxShapeSize)
+					.property('value', this.scatter.settings.maxShapeSize)
 					.on('change', () => {
-						const value: any = parseFloat(maxInput.node().value)
+						let value = parseFloat(maxInput.node().value)
+						if (!Number.isFinite(value)) return
+						value = clampValue(value, minShapeSize, maxShapeSize)
+						value =
+							value < this.scatter.config.settings.sampleScatter.minShapeSize
+								? this.scatter.config.settings.sampleScatter.minShapeSize
+								: value
+						maxInput.property('value', value)
 						this.scatter.config.settings.sampleScatter.maxShapeSize = value
 						this.scatter.app.dispatch({
 							type: 'plot_edit',
@@ -585,7 +618,11 @@ export class ScatterLegend {
 		})
 	}
 }
-
+function clampValue(inputValue: number, minValue: number, maxValue: number): number {
+	if (maxValue < inputValue) inputValue = maxValue
+	if (minValue > inputValue) inputValue = minValue
+	return inputValue
+}
 export function getTitle(name, size = 30, complete = false) {
 	if (name.length > size && !complete) name = name.slice(0, size) + '...'
 	return name

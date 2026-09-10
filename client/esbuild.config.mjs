@@ -14,7 +14,7 @@ const ENV = process.env.ENV || 'prod'
 
 const entryPoints = ['./src/app.js']
 if (ENV != 'prod') entryPoints.push(`./test/internals-${ENV}.js`)
-const outdir = path.join(__dirname, ENV == 'test' ? '../public/bin/test' : './dist')
+const outdir = process.env.BUNDLE_OUTDIR || path.join(__dirname, ENV == 'test' ? '../public/bin/test' : './dist')
 
 const libReplacers =
 	ENV == 'dev'

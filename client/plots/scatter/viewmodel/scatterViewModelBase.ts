@@ -267,12 +267,13 @@ export class ScatterViewModelBase {
 
 		// remove all symbols as there is no data id for privacy
 		//g.selectAll('path').remove()
-
+		const labelPointTestId = c => 'sjpp-scatter-dot-' + (c.sample ?? c.sampleId ?? '')
 		const symbols = g.selectAll('path[name="serie"]').data(data.samples)
 		symbols
 			.transition()
 			.duration(duration)
 			.attr('name', 'serie')
+			.attr('data-testid', labelPointTestId)
 			.attr('transform', c => this.model.transform(chart, c))
 			.attr('d', c => this.model.getShape(chart, c))
 			.attr('fill', c => this.model.getColor(c, chart))
@@ -283,6 +284,7 @@ export class ScatterViewModelBase {
 			.enter()
 			.append('path')
 			.attr('name', 'serie')
+			.attr('data-testid', labelPointTestId)
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
 			.attr('transform', c => this.model.transform(chart, c))
 			.attr('d', c => this.model.getShape(chart, c))
@@ -302,9 +304,7 @@ export class ScatterViewModelBase {
 	mayRenderSampleLabels(chart) {
 		const g = chart.serie
 		const labelData =
-			this.scatter.config.bySample && chart.data?.samples
-				? chart.data.samples.filter(c => 'sampleId' in c && c.sample)
-				: []
+			this.scatter.config.bySample && chart.data?.samples ? chart.data.samples.filter(c => !c.isRef && c.sample) : []
 		const labels = g.selectAll('text[name="sampleLabel"]').data(labelData, (c: any) => c.sample)
 		labels.exit().remove()
 		labels

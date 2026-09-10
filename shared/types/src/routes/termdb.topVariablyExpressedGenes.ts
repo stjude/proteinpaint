@@ -35,7 +35,7 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	/** whether to map parent annotations onto child samples */
 	mapParent2Children?: boolean
 	/** query sample type */
-	sampleType?: number
+	sampleTypes?: number[]
 }
 
 type ValidResponse = {

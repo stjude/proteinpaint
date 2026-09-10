@@ -115,7 +115,7 @@ export function init({ genomes }) {
 				const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
 				if (!plot) throw new Error(`plot not found with plotName ${q.plotName}`)
 
-				const tmp = await getSamples(ds, plot)
+				const tmp = await getSamples(req, ds, plot)
 				refSamples = tmp[0]
 				cohortSamples = tmp[1]
 
@@ -177,6 +177,13 @@ export function init({ genomes }) {
 				range = { xMin, xMax, yMin, yMax }
 			}
 			if (!result) result = await colorAndShapeSamples(refSamples, cohortSamples, data as ValidGetDataResponse, q)
+			// classify each dot as cohort vs reference cloud ONCE, from sampleId presence, before any
+			// anonymization. The client renders/sizes/labels by this flag instead of sampleId presence, so a
+			// denied request may drop sampleId (below) without a dot being misclassified as a reference dot.
+			markRefDots(result)
+			// the real sampleId was needed above for the server-side annotation join; it must not leave the
+			// server for a request not authorized to display sample ids (see anonymizeSampleIds)
+			if (!authApi.canDisplaySampleIds(req, ds)) anonymizeSampleIds(result)
 			res.send({ result, range } satisfies TermdbSampleScatterResponse)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
@@ -185,20 +192,64 @@ export function init({ genomes }) {
 	}
 }
 
-async function getSamples(ds: any, plot: any) {
+export async function getSamples(req: any, ds: any, plot: any) {
 	if (!plot.filterableSamples) await loadFile(plot, ds) // this is the first time the plot is accessed. load the data in mem
 
+	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	return [readSamples(plot.referenceSamples), readSamples(plot.filterableSamples)]
 
 	function readSamples(samples) {
 		const result: number[] = []
 		// must make in-memory duplication of the objects as they will be modified by assigning .color/shape
 		for (const i of JSON.parse(JSON.stringify(samples))) {
-			//When reading from a file coordinates can be displayed
-			//if (!authApi.canDisplaySampleIds(req, ds)) delete i.sample
+			// only expose the sample name when the request is authorized to display sample ids. The real
+			// .sampleId is still needed downstream for the server-side annotation join and is anonymized
+			// out of the response later by anonymizeSampleIds()
+			if (!canDisplay) delete i.sample
 			result.push(i)
 		}
 		return result
+	}
+}
+
+/** Mark every dot as reference-cloud (isRef=true) or cohort (isRef=false), from sampleId presence.
+ *
+ * Must run BEFORE anonymizeSampleIds, while sampleId presence still reflects reality. The client uses this
+ * flag — not sampleId presence — to tell cohort dots from reference dots, to size them (cohort = size,
+ * reference = refSize), to decide labels, and to gate sample-specific actions. Deriving it here, once,
+ * lets a denied request drop sampleId entirely without a cohort dot being reclassified as a reference dot.
+ *
+ * Note this deliberately mirrors the old `!('sampleId' in dot)` test: colorColumn (non-bySample) plots set
+ * a sampleId on their reference dots so they render at the regular size, and those therefore stay
+ * isRef=false — exactly as before. */
+export function markRefDots(result: { [index: string]: { samples: any[] } }) {
+	for (const divideBy in result) {
+		for (const sample of result[divideBy].samples || []) {
+			sample.isRef = !('sampleId' in sample)
+		}
+	}
+}
+
+/** Remove every real sampleId and sample name from the scatter response.
+ *
+ * Called only when the request is NOT authorized to display sample ids. Both sample sources put a real,
+ * identifying value on .sampleId (getSampleCoordinatesByTerms uses the db sample id; loadFile assigns the
+ * integer sample id, or the sample name for colorColumn plots) and, when authorized, a .sample name. Those
+ * were needed for the server-side annotation join and labeling, but must not reach the client: the client
+ * download fallback (scatter.ts toText: `s.sample || s.sampleId`) and its sample-specific actions would
+ * otherwise expose or submit a real id.
+ *
+ * Classification/rendering no longer depends on sampleId (markRefDots set .isRef first), so the id can be
+ * deleted outright — no surrogate needed. Deleting .sample and .sampleId is also the fail-closed choice:
+ * authorization is evaluated once while building samples and again here; if it flips to "denied" between
+ * those points, this unconditionally strips whatever was already copied in. A cohort dot then has no
+ * sampleId, which is how the client gates its sample-specific actions. */
+export function anonymizeSampleIds(result: { [index: string]: { samples: any[] } }) {
+	for (const divideBy in result) {
+		for (const sample of result[divideBy].samples || []) {
+			delete sample.sample
+			delete sample.sampleId
+		}
 	}
 }
 

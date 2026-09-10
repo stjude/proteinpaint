@@ -6,7 +6,6 @@ import { regressionPoly } from 'd3-regression'
 import type { Scatter } from '../scatter'
 import { getDateFromNumber } from '#shared/terms.js'
 import type { ColorLegendItem, ScatterChart, ScatterDataResult, ScatterRanges, ShapeLegendItem } from '../scatterTypes'
-import { maxSvgSamplesCutoff, noExpColor, expColor } from '../settings/defaults'
 import { type SingleCellPlotDataResult, SINGLECELL_GENE_EXPRESSION } from '#types'
 import { xAxisOffSet, yAxisOffSet, getCoordinate, calculatePadding } from '#shared'
 
@@ -36,8 +35,10 @@ export abstract class ScatterModelBase {
 	abstract initData(): Promise<void>
 
 	createChart(id: string, data: ScatterDataResult | SingleCellPlotDataResult) {
-		const cohortSamples: any[] = data.samples ? data.samples.filter(sample => 'sampleId' in sample) : []
-		if (cohortSamples.length > maxSvgSamplesCutoff) this.is2DLarge = true
+		// isRef marks reference-cloud dots; the server sets it once (from sampleId presence, before any
+		// anonymization) so a denied request that drops sampleId still classifies cohort dots correctly.
+		const cohortSamples: any[] = data.samples ? data.samples.filter(sample => !sample.isRef) : []
+		if (cohortSamples.length > this.scatter.settings.maxSvgSamplesCutoff) this.is2DLarge = true
 		const colorLegend: Map<string, ColorLegendItem> = new Map(data.colorLegend)
 		const shapeLegend: Map<string, ShapeLegendItem> = new Map(data.shapeLegend)
 		const chart: ScatterChart = { id, data, cohortSamples, colorLegend, shapeLegend }
@@ -68,7 +69,7 @@ export abstract class ScatterModelBase {
 			}
 			return
 		}
-		if (samples.length > maxSvgSamplesCutoff) this.is2DLarge = true
+		if (samples.length > settings.maxSvgSamplesCutoff) this.is2DLarge = true
 		const s0 = samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax, geMin, geMax] = samples.reduce(
 			(s, d) => [
@@ -102,7 +103,7 @@ export abstract class ScatterModelBase {
 	}
 
 	getOpacity(c) {
-		if ('sampleId' in c) {
+		if (!c.isRef) {
 			const hidden = c.hidden?.['category'] || c.hidden?.['shape']
 			if (this.filterSampleStr) {
 				if (!c.sample?.toLowerCase().includes(this.filterSampleStr.toLowerCase())) {
@@ -137,10 +138,10 @@ export abstract class ScatterModelBase {
 	}
 
 	getScale(chart, c, factor = 1) {
-		const isRef = !('sampleId' in c)
+		const isRef = !!c.isRef
 		let scale
 		if (!this.scatter.config.scaleDotTW || isRef) {
-			scale = 'sampleId' in c ? this.scatter.settings.size : this.scatter.settings.refSize
+			scale = isRef ? this.scatter.settings.refSize : this.scatter.settings.size
 		} else {
 			const range = this.scatter.settings.maxShapeSize - this.scatter.settings.minShapeSize
 			if (this.scatter.settings.scaleDotOrder == 'Ascending')
@@ -174,12 +175,12 @@ export abstract class ScatterModelBase {
 	getColor(c, chart) {
 		if (this.scatter.config.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION) {
 			let color
-			if (!c.geneExp) color = noExpColor
-			else if (c.geneExp > chart.ranges.geMax) color = expColor
+			if (!c.geneExp) color = this.scatter.settings.noExpColor
+			else if (c.geneExp > chart.ranges.geMax) color = this.scatter.settings.expColor
 			else color = chart.colorGenerator(c.geneExp)
 			return color
 		}
-		if (this.scatter.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) {
+		if (this.scatter.config.colorTW?.q.mode == 'continuous' && !c.isRef) {
 			const [min, max] = chart.colorGenerator.domain()
 			if (c.category < min) return chart.colorGenerator(min)
 			if (c.category > max) return chart.colorGenerator(max)
@@ -243,8 +244,12 @@ export abstract class ScatterModelBase {
 			const yMinDate = getDateFromNumber(yMin - extraSpaceY)
 			const yMaxDate = getDateFromNumber(yMax + extraSpaceY)
 
+			// Flip the domain (max first) to mirror the numeric yAxisScale above. In SVG the y range
+			// grows downward, so the numeric scale uses [yMax, yMin] to render larger values at the top;
+			// the date axis must match, otherwise the axis labels run opposite to the plotted dots
+			// (which are always positioned with yAxisScale), making the y-axis appear inverted.
 			chart.yAxisScaleTime = scaleTime()
-				.domain([yMinDate, yMaxDate])
+				.domain([yMaxDate, yMinDate])
 				.range([offsetY, settings.svgh + offsetY])
 
 			chart.axisLeft = axisLeft(chart.yAxisScaleTime)
@@ -270,14 +275,14 @@ export abstract class ScatterModelBase {
 		if (!config.startColor[chart.id]) {
 			config.startColor[chart.id] =
 				config.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION
-					? noExpColor
+					? settings.noExpColor
 					: config.colorTW?.term.continuousColorScale?.minColor || gradientColor.brighter().brighter().toString()
 		}
 
 		if (!config.stopColor[chart.id]) {
 			config.stopColor[chart.id] =
 				config.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION
-					? expColor
+					? settings.expColor
 					: config.colorTW?.term.continuousColorScale?.maxColor || gradientColor.darker().toString()
 		}
 		// Handle continuous color scaling when color term wrapper is in continuous mode

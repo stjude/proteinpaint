@@ -108,7 +108,7 @@ export async function get_samples(q, ds, canDisplay = false) {
 	*/
 
 	mayDetectSampleLevels(q, ds)
-	const filter = await getFilterCTEs(q.filter, ds, q.mapParent2Children, q.sampleType) // if q.filter is blank, it returns null
+	const filter = await getFilterCTEs(q.filter, ds, q.mapParent2Children, q.sampleTypes) // if q.filter is blank, it returns null
 	const sql = filter
 		? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
 		: `SELECT id, name FROM sampleidmap`
@@ -179,7 +179,7 @@ export async function get_samplecount(q, ds) {
 
 	const fq = { filter: j }
 	mayDetectSampleLevels(fq, ds)
-	const filter = await getFilterCTEs(j, ds, fq.mapParent2Children, fq.sampleType)
+	const filter = await getFilterCTEs(j, ds, fq.mapParent2Children, fq.sampleTypes)
 	let statement, row
 	let sample_type
 	//the filters either return a sample type or none as the samples are converted to the common type.

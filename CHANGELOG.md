@@ -4,6 +4,76 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- The available aggregate methods for "size" and "gradient" are now dynamically fetched based on the selected column terms. Method selectors are only shown when valid terms are selected, and incompatible selections are disabled. User feedback is provided if methods cannot be loaded or are incompatible.
+- The aggregate matrix route is no longer pseudobulk dependent and processes dictionary terms as well.
+- The aggregate matrix plot renders dictionary terms as a section, displaying the bins or categories as the rows and the section name as the term name.
+
+
+## 2.207.1
+
+Fixes:
+- do not show sample IDs in /termdb/sampleScatter route
+
+
+## 2.207.0
+
+General:
+- Requires a rebuilt dependencies image. The matplotlib bump only reaches production once "Publish Dependencies Image" has run, and that workflow does not trigger on a merge to master: it fires on pushes to the deps-image branch, and requirements.txt matches its '**.txt' paths-ignore in any case. Start it manually with workflow_dispatch, then cut the release once it has committed the new deps tag into container/server/Dockerfile.
+
+Features:
+- Pseudobulk termdb handler allows selecting multiple terms at a time. Terms are displayed like pills and works with '.submit_lst()`
+- This new handler functionality allows the aggMatrixInput and GeneExpInput transient plots to work with pseudobulk data as intended.
+
+Fixes:
+- GDC gene set enrichment: clicking a pathway returned a long RecursionError instead of the running-sum image. matplotlib 3.10.3 recurses forever in Path.__deepcopy__ on python 3.14, which breaks every savefig, not just this one; pinned to 3.10.7, where the in-progress copy is registered in the memo dict before recursing (matplotlib #29157, fixed by #30198). 3.10.3 also ships no cp314 wheel and was being built from source, so the image build stayed green and it failed at runtime instead.
+- differential expression failed inside R with "'DE_method' must be 'edgeR' or 'limma'" when a wilcoxon run was forced onto the edgeR engine by having 8 or fewer samples in both groups, and with a missing-argument error when no method was supplied at all. The server now sends R the engine it actually selected.
+
+DevOps:
+- container/deps/Dockerfile now pins python3, python3-dev, python3-venv and python3-pip again, to the 3.14.6-1 / 26.1.2+dfsg-1 that r-base:4.5.0 currently resolves. r-base tracks debian testing/sid, so an unpinned python3 floats: it floated 3.13 -> 3.14 and broke matplotlib at runtime, after floating once before and breaking the hdf5 soname the rust binaries link against. Drift now fails the deps build instead of reaching production. These versions do rotate out of the archive; the comment above the pins carries the one-liner for reading the current ones, and the fix is to re-pin rather than to drop the pins.
+- Local python venvs should be rebuilt on 3.14 to match. The gsea bug reproduced in production only because local dev was still on 3.13, so a 3.14-only failure could not be hit while developing. All of python/requirements.txt installs and imports on 3.14.6 (blitzgsea, pandas, pyBigWig and statsmodels build from source, no wheels yet): rm -rf ~/pppython && python3.14 -m venv ~/pppython && ~/pppython/bin/pip install -r python/requirements.txt
+
+
+## 2.206.1
+
+Fixes:
+- in routes/termdb.config.ts, revert the change to sturcturedClone() from JSON.parse(JSON.stringify())
+
+
+## 2.206.0
+
+Features:
+- GDC: Added detailed reporting to DE pre-analysis panel
+
+Fixes:
+- GDC differential expression with the wilcoxon method failed with a 502. The server image now installs libhdf5-310, the HDF5 runtime the rust binaries are linked against; its base image (r-base) tracks Debian sid, where libhdf5-dev has moved on to HDF5 2.x and no longer provides that soname.
+
+DevOps:
+- The rust build now fails if any extracted binary has unresolved shared libraries, instead of shipping one that cannot load.
+
+
+## 2.205.1
+
+Fixes:
+- Improve run_rust so server error gets reported
+
+
+## 2.205.0
+
+General:
+- the mmrf dataset keeps its own copy of the numeric filter code because it has no sqlite termdb, and is fixed separately in the sjpp repo; both changes must ship together or mmrf and the db-backed datasets will disagree about whether a complement group works
+
+Features:
+- Differential methylation has a group-building submission UI. DEinput is parameterized by config.termType, defaulting to geneExpression so every existing caller is unchanged; only the ds query that proves the assay is configured, the route the pre-analysis posts to, and the bulk/pseudobulk tabs differ between the two assays. Previously DM could only be reached from the Groups menu, since differentialAnalysis is the results view and requires groups to already exist, leaving an embedder with nothing to launch.
+- Downloaded p-value tables contain every significant row rather than the most-significant maxInteractiveDots. The interactive table stays capped because the dot overlay does not scale past it, but a file has no such constraint, and a truncated export cannot answer "how many were significant". The download re-requests with the cap lifted; volcanoRender is not part of the differential-analysis cache key, so this reuses the cached analysis and only pays for a re-render.
+- The delta-beta axis names the two groups, e.g. "delta-beta (NSD2 Higher - NSD2 Lower)" rather than "delta-beta (case - control)". Case and control are positional slots, so the old label gave the size of an effect but not its direction unless the reader already knew which group landed in which slot -- and the direction flips every biological conclusion drawn from the plot.
+
+Fixes:
+- tvs.isnot is honored for non-dictionary numeric filters, which covers geneExpression, isoformExpression, metaboliteIntensity, proteomeAbundance, ssGSEA, dnaMethylation, junction and pseudobulk. A negated filter previously selected the same samples as the un-negated one, so the auto-generated complement group built by flipping that flag came back identical to the group it complements, and a two-group analysis reported every sample as belonging to both. A sample with no value for the term joins neither side, since missing data is unknown rather than out-of-range.
+- Prebuilt groups passed to the differential-analysis submission UI as config.groups[] are no longer silently dropped on any dataset offering both bulk and single-cell pseudobulk. The expression-source tabs render during init and fire their active tab's callback before the component's state is assigned, and the group-seeding step marked itself done before throwing on that missing state, so the seeded groups never appeared and no error surfaced.
+- Element and gene counts in the volcano action bar and statistics panel are thousands-separated, so five- and six-figure counts are legible at a glance. The percentage in that panel is left alone rather than re-rounded.
+- GDC: Enable hier clustering in volcano
+
 
 ## 2.204.0
 

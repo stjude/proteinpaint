@@ -639,7 +639,7 @@ class SampleView extends PlotBase implements RxComponent {
 		}
 		if (state.termdbConfig.queries?.NIdata) {
 			// show a single brain imaging plot per sample, using the first template as the default
-			const k = Object.keys(state.termdbConfig.queries.NIdata)[0]
+			const k = Object.keys(state.termdbConfig.queries.NIdata.references)[0]
 			// find which of the samples actually have imaging files, to skip the ones without
 			let available = new Set()
 			try {
