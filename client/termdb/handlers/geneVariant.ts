@@ -11,6 +11,7 @@ import {
 	getSampleTypeLabelByTerms
 } from '#dom'
 import type { VocabApi, DtAssayAvailabilityTerm } from '#types'
+import { getQuerySampleTypesByTerms } from '#shared/terms.js'
 import { dtTerms, dtcnv, dtsnvindel } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
 import { mayShowRememberedGvQ } from './rememberedGvQ.ts'
@@ -155,7 +156,10 @@ export class SearchHandler {
 	updateSampleTypeSelect() {
 		const [td1, td2] = this.dom.sampleTypeSelectRow
 		this.querySampleTypes = this.getQuerySampleTypes()
-		this.querySampleTypesByTerms = this.getQuerySampleTypesByTerms()
+		this.querySampleTypesByTerms = getQuerySampleTypesByTerms(
+			this.opts.app.vocabApi.termdbConfig?.sampleTypesByTerms,
+			this.querySampleTypes
+		)
 		if (this.querySampleTypesByTerms) {
 			// query sample types by terms defined
 			this.sampleTypeSelect = renderSampleTypesByTermsSelect(
@@ -173,24 +177,6 @@ export class SearchHandler {
 			td1.style('display', 'none')
 			td2.style('display', 'none')
 		}
-	}
-
-	// filter termdbConfig.sampleTypesByTerms for those term-values
-	// corresponding to query sample types
-	getQuerySampleTypesByTerms() {
-		if (!this.opts.app.vocabApi.termdbConfig?.sampleTypesByTerms) return
-		const availableSampleTypes = new Set(this.querySampleTypes)
-		const sampleTypesByTerms = {}
-		for (const [term, values] of Object.entries(this.opts.app.vocabApi.termdbConfig.sampleTypesByTerms)) {
-			const availableValues = {}
-			for (const [value, sampleTypes] of Object.entries(values)) {
-				const filteredSampleTypes = sampleTypes.filter(sampleType => availableSampleTypes.has(sampleType))
-				if (filteredSampleTypes.length) availableValues[value] = filteredSampleTypes
-			}
-			if (Object.keys(availableValues).length) sampleTypesByTerms[term] = availableValues
-		}
-		if (!Object.keys(sampleTypesByTerms).length) return
-		return sampleTypesByTerms
 	}
 
 	// get sample types that are present in the selected data type

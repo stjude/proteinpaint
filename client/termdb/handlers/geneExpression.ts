@@ -68,7 +68,7 @@ export class SearchHandler {
 		}
 		const unit = getGEunit(this.app.vocabApi)
 		const name = `${gene} ${unit}`
-		const term = { gene, name, type: TermTypes.GENE_EXPRESSION, sampleTypes }
+		const term: any = { gene, name, type: TermTypes.GENE_EXPRESSION, sampleTypes }
 		if (this.querySampleTypesByTerms) {
 			const sampleTypeLabel = getSampleTypeLabelByTerms(this.sampleTypeSelect)
 			if (sampleTypeLabel) {
