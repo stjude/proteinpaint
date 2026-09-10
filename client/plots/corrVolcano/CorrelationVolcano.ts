@@ -4,7 +4,7 @@ import { fillTermWrapper, fillTwLst } from '#termsetting'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import { controlsInit } from '../controls'
 import type { CorrVolcanoDom, CorrVolcanoOpts, CorrVolcanoSettings } from './CorrelationVolcanoTypes'
-import { Menu } from '#dom'
+import { Menu, formatHeaderText } from '#dom'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
 import { View } from './view/View'
@@ -51,8 +51,10 @@ class CorrelationVolcano extends PlotBase implements RxComponent {
 			legend: div.append('svg'),
 			tip: new Menu({ padding: '' })
 		}
-		if (opts.header)
-			this.dom.header = opts.header.text('CORRELATION VOLCANO').style('font-size', '0.7em').style('opacity', 0.6)
+		if (opts.header) formatHeaderText({
+			header: opts.header,
+			chartType: 'CORRELATION VOLCANO'
+		})
 		this.variableTwLst = []
 	}
 
