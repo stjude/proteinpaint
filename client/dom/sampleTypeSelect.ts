@@ -77,7 +77,7 @@ export function renderSampleTypesByTermsSelect(holder: any, sampleTypesByTerms: 
 
 // builds the selected term-value map from dropdowns created by
 // renderSampleTypesByTermsSelect()
-function getSelectedTermValues(termSelects) {
+function getSelectedTermValues(termSelects): { [term: string]: string } | undefined {
 	if (!termSelects) return
 	const selected = {}
 	for (const term in termSelects) {
@@ -91,6 +91,7 @@ function getSelectedTermValues(termSelects) {
 export function getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms) {
 	if (!termSelects) return
 	const selected = getSelectedTermValues(termSelects)
+	if (!selected) return
 	const selectedSampleTypesByTerms = Object.entries(selected).map(([term, value]) => {
 		if (value == 'any') return Object.values(sampleTypesByTerms[term]).flat()
 		return sampleTypesByTerms[term][value]
@@ -111,6 +112,7 @@ export function getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms) {
 export function getSampleTypeLabelByTerms(termSelects) {
 	if (!termSelects) return
 	const selected = getSelectedTermValues(termSelects)
+	if (!selected) return
 	const parts = Object.values(selected).filter(value => value != 'any')
 	if (!parts.length) return
 	return parts.join(' ')

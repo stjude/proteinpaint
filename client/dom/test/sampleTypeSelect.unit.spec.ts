@@ -4,7 +4,7 @@ import { renderSampleTypesByTermsSelect } from '../sampleTypeSelect'
 
 tape('renderSampleTypesByTermsSelect(): preserves supplied term-value order', test => {
 	const holder = d3s.select('body').append('div')
-	const termSelects = renderSampleTypesByTermsSelect(
+	const termSelects: any = renderSampleTypesByTermsSelect(
 		holder,
 		{
 			'samples.collection_event': {

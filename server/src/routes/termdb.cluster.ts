@@ -19,7 +19,7 @@ import serverconfig from '#src/serverconfig.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getData, id2sampleRef, maySetMapParent2Children } from '#src/termdb.matrix.js'
-import { termType2label, numericTypes, dictionaryNumericTypes } from '#shared/terms.js'
+import { termType2label, numericTypes, dictionaryNumericTypes, getQuerySampleTypesByTerms } from '#shared/terms.js'
 import { GENE_EXPRESSION, PROTEOME_ABUNDANCE } from '#types'
 import { formatElapsedTime } from '#shared/time.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
@@ -363,21 +363,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 			sampleTypes.add(sampleType)
 		}
 		q.sampleTypes = [...sampleTypes]
-		if (ds.cohort.termdb.sampleTypesByTerms) {
-			// sampleTypesByTerms{} defined
-			// group available sample types by terms
-			const availableSampleTypes = new Set(q.sampleTypes)
-			const sampleTypesByTerms: any = {}
-			for (const [term, values] of Object.entries(ds.cohort.termdb.sampleTypesByTerms)) {
-				const availableValues: any = {}
-				for (const [value, sampleTypes] of Object.entries(values)) {
-					const filteredSampleTypes = sampleTypes.filter(sampleType => availableSampleTypes.has(sampleType))
-					if (filteredSampleTypes.length) availableValues[value] = filteredSampleTypes
-				}
-				if (Object.keys(availableValues).length) sampleTypesByTerms[term] = availableValues
-			}
-			q.sampleTypesByTerms = sampleTypesByTerms
-		}
+		q.sampleTypesByTerms = getQuerySampleTypesByTerms(ds.cohort.termdb.sampleTypesByTerms, q.sampleTypes)
 		console.log(`${ds.label}: geneExpression HDF5 file validated. Samples:`, q.samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate geneExpression HDF5 file: ${error}`
