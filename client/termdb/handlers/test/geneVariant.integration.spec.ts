@@ -226,6 +226,8 @@ function getVocabApiWithSampleTypes() {
 		...termdbConfig.assayAvailability.byDt[dtcnv],
 		bySampleType: { 1: { hasSamples: true } }
 	}
+	termdbConfig.queries.snvindel = { ...termdbConfig.queries.snvindel, mafFilter: true }
+	termdbConfig.queries.cnv = { ...termdbConfig.queries.cnv, cnvGainCutoff: 1 }
 	return Object.assign(Object.create(vocabApi), { termdbConfig })
 }
 
@@ -236,6 +238,21 @@ tape('Sample types are derived from current assay availability', async test => {
 
 	delete handler.opts.app.vocabApi.termdbConfig.assayAvailability.byDt[dtsnvindel].bySampleType
 	test.equal(handler.getQuerySampleTypes(), undefined, 'should not retain sample types after availability is removed')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Sample types are intersected for a multi-DT mutation type', async test => {
+	const holder = getHolder()
+	const handler = await initializeSearchHandler({ holder, vocabApi: getVocabApiWithSampleTypes() })
+	const allelicRadio: any = holder
+		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
+		.selectAll('input[type="radio"]')
+		.nodes()
+		.at(-1)
+	allelicRadio.click()
+	test.deepEqual(handler.getQuerySampleTypes(), [1], 'should return only sample types available for SNV/indel and CNV')
 
 	if (test['_ok']) holder.remove()
 	test.end()

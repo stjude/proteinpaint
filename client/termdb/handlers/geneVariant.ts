@@ -185,13 +185,32 @@ export class SearchHandler {
 		if (!selectedMutationType) return
 		const mutationTypeIdx = Number(selectedMutationType.value)
 		if (!Number.isInteger(mutationTypeIdx)) return
-		const dt = this.mutationTypeTerms[mutationTypeIdx]?.dt
-		if (!Number.isInteger(dt)) return
-		const bySampleType: BySampleType = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.bySampleType
-		if (!bySampleType) return
+		const mutationType = this.mutationTypeTerms[mutationTypeIdx]
+		if (!mutationType) return
 		const querySampleTypes: number[] = []
-		for (const [k, v] of Object.entries(bySampleType)) {
-			if (v.hasSamples) querySampleTypes.push(Number(k))
+		if (mutationType.dt) {
+			// mutation type has single dt
+			// get available sample types for that dt
+			const bySampleType: BySampleType =
+				this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[mutationType.dt]?.bySampleType
+			if (!bySampleType) return
+			for (const [k, v] of Object.entries(bySampleType)) {
+				if (v.hasSamples) querySampleTypes.push(Number(k))
+			}
+		} else if (mutationType.dts) {
+			// mutation type has multiple dts
+			// get intersection of sample types available for those dts
+			const dts = mutationType.dts
+			const bySampleTypes: BySampleType[] = dts.map(
+				dt => this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.bySampleType
+			)
+			if (!bySampleTypes.length) throw new Error('no sample types available')
+			for (const [sampleType, availability] of Object.entries(bySampleTypes[0])) {
+				if (!availability.hasSamples) continue
+				if (bySampleTypes.slice(1).every(bySampleType => bySampleType?.[sampleType]?.hasSamples)) {
+					querySampleTypes.push(Number(sampleType))
+				}
+			}
 		}
 		// do not assign to this.querySampleTypes here because
 		// this.querySampleTypes must be assigned any return value
