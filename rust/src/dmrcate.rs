@@ -231,6 +231,57 @@ fn read_h5_metadata(file: &File) -> Result<H5Meta, String> {
     })
 }
 
+/// 1/ln(2)^2. The delta method gives the variance of a natural log ratio; the fit works in log2,
+/// and that squared factor is the conversion. It cancelled out while weights were pure inverse
+/// variance, and stopped cancelling once a variance on the M scale is added to them below.
+const LOG2_VAR: f64 = 2.0813689810056077;
+
+/* One cell of the matrix, as the value the fit sees and the precision it carries.
+
+Without depth -- an element matrix, or a CpG matrix built before depth was kept -- a beta is all
+there is. The logit is clamped, because 41.7% of WGBS betas are exactly 0 or 1 and log2(0/1) is
+not a number, and every observation then counts the same.
+
+With depth this is the WGBS model DMRcate publishes (Peters 2021, Nucleic Acids Research 49:e109):
+the value is a log ratio of the methylated and unmethylated read counts with half a read added to
+each side. The half read is what removes the clamp. A cell with 0 of 5 methylated reads and one
+with 0 of 200 are both "beta = 0" and collapsed to a single M-value before; they are now -3.46 and
+-8.65, which is the difference between weak and strong evidence that the site is unmethylated.
+
+The second return is that observation's TECHNICAL variance -- how much the read sampling alone
+could have moved it -- which is (d+1)/((m+1/2)(u+1/2)) by the delta method, converted to the log2
+scale. It is not the weight. See the variance-components step in the probe loop for why the
+difference matters: weighting by inverse technical variance alone asserts that read noise is the
+only reason two patients differ, and on a null contrast that assertion manufactures DMRs. Zero
+means "no depth recorded", and every such cell is given the same weight. */
+#[inline]
+fn cell(v: f64, depth: f64, m_lo: f64, m_hi: f64) -> (f64, f64) {
+    if depth > 0.0 {
+        let m = (v * depth).round();
+        let u = depth - m;
+        let tech = LOG2_VAR * (depth + 1.0) / ((m + 0.5) * (u + 0.5));
+        (((m + 0.5) / (u + 0.5)).log2(), tech)
+    } else if v <= 0.001 {
+        (m_lo, 0.0)
+    } else if v >= 0.999 {
+        (m_hi, 0.0)
+    } else {
+        ((v / (1.0 - v)).log2(), 0.0)
+    }
+}
+
+/** How a run weights its observations. `None` is the historical behaviour and is bit-identical to
+ * it; anything else requires the matrix to carry depth/values. */
+#[derive(Clone, Copy, PartialEq)]
+enum Weighting {
+    /// every finite cell counts the same
+    None,
+    /// inverse-variance by read depth, as the published WGBS mode does
+    Counts,
+    /// those, times a per-sample factor; see estimate_sample_weights
+    CountsAndSample,
+}
+
 fn process_chromosome(
     file: &File,
     row_start: usize,
@@ -242,6 +293,14 @@ fn process_chromosome(
     min_spg: usize,
     // element matrices already store M-values, so the logit below must not run twice
     mvalues: bool,
+    wt: Weighting,
+    // per-sample multipliers indexed by matrix column, when wt is CountsAndSample
+    sw: Option<&[f64]>,
+    // process every nth probe only, for the sample-weight estimation pass. 1 = every probe.
+    stride: usize,
+    // when set, accumulate (sum of w*e^2/residual_var, count) per matrix column rather than
+    // reporting probes -- the one pass estimate_sample_weights needs
+    mut acc: Option<&mut [(f64, f64)]>,
 ) -> Result<(Vec<ProbeStats>, GlobalBeta), String> {
     let n_probes = row_end - row_start;
     let mut gb = GlobalBeta::default();
@@ -257,10 +316,29 @@ fn process_chromosome(
     let m_lo = (0.001f64 / 0.999f64).log2();
     let m_hi = (0.999f64 / 0.001f64).log2();
     let ds = file.dataset("beta/values").map_err(|e| format!("beta/values: {}", e))?;
+    /* Depth is optional so that every matrix built before it was kept still loads, and so that
+    element matrices -- which have no per-cell read count to report -- are untouched. Absent depth
+    with a weighting mode that needs it is a caller error, not something to silently ignore. */
+    let dds = if wt == Weighting::None {
+        None
+    } else {
+        match file.dataset("depth/values") {
+            Ok(d) => Some(d),
+            Err(_) => {
+                return Err(
+                    "weights requested but this matrix carries no depth/values; rebuild it with build_cpg_matrix.py"
+                        .into(),
+                );
+            }
+        }
+    };
     let mut results = Vec::with_capacity(n_probes);
     // scratch, reused for every probe; see the comment in the row loop
     let mut cm: Vec<f64> = Vec::with_capacity(case_idx.len());
     let mut km: Vec<f64> = Vec::with_capacity(ctrl_idx.len());
+    // the weight beside each value, in the same order
+    let mut cw: Vec<f64> = Vec::with_capacity(case_idx.len());
+    let mut kw: Vec<f64> = Vec::with_capacity(ctrl_idx.len());
     const CHUNK: usize = 1000;
     for chunk_i in 0..((n_probes + CHUNK - 1) / CHUNK) {
         let cs = chunk_i * CHUNK;
@@ -269,7 +347,20 @@ fn process_chromosome(
         let data = ds
             .read_slice_2d::<f32, _>(sel)
             .map_err(|e| format!("HDF5 read: {}", e))?;
+        let depth = match &dds {
+            Some(d) => {
+                let sel = hdf5::Selection::from((row_start + cs..row_start + ce, ..));
+                Some(
+                    d.read_slice_2d::<u16, _>(sel)
+                        .map_err(|e| format!("HDF5 depth read: {}", e))?,
+                )
+            }
+            None => None,
+        };
         for lp in 0..(ce - cs) {
+            if stride > 1 && (cs + lp) % stride != 0 {
+                continue;
+            }
             let idx = row_start + cs + lp;
             let row = data.row(lp);
             /* Filled in place into buffers reused across rows. The previous version allocated five
@@ -280,6 +371,9 @@ fn process_chromosome(
             bit-identical rather than merely close. */
             cm.clear();
             km.clear();
+            cw.clear();
+            kw.clear();
+            let drow = depth.as_ref().map(|d| d.row(lp));
             let mut n_case_raw = 0usize;
             let mut n_ctrl_raw = 0usize;
             // per-probe display-scale sums, kept separate from the global accumulators above so
@@ -302,15 +396,17 @@ fn process_chromosome(
                         pb_case += b;
                         gb.case_n += 1;
                         n_case_raw += 1;
-                        cm.push(if mvalues {
-                            v
-                        } else if v <= 0.001 {
-                            m_lo
-                        } else if v >= 0.999 {
-                            m_hi
+                        if mvalues {
+                            cm.push(v);
+                            cw.push(1.0);
                         } else {
-                            (v / (1.0 - v)).log2()
-                        });
+                            let d = drow.map_or(0.0, |r| r[si] as f64);
+                            let (mv, tech) = cell(v, d, m_lo, m_hi);
+                            cm.push(mv);
+                            // technical variance for now; turned into a weight below, once this
+                            // probe's biological variance is known
+                            cw.push(tech);
+                        }
                     }
                 }
             }
@@ -328,15 +424,17 @@ fn process_chromosome(
                         pb_ctrl += b;
                         gb.ctrl_n += 1;
                         n_ctrl_raw += 1;
-                        km.push(if mvalues {
-                            v
-                        } else if v <= 0.001 {
-                            m_lo
-                        } else if v >= 0.999 {
-                            m_hi
+                        if mvalues {
+                            km.push(v);
+                            kw.push(1.0);
                         } else {
-                            (v / (1.0 - v)).log2()
-                        });
+                            let d = drow.map_or(0.0, |r| r[si] as f64);
+                            let (mv, tech) = cell(v, d, m_lo, m_hi);
+                            km.push(mv);
+                            // technical variance for now; turned into a weight below, once this
+                            // probe's biological variance is known
+                            kw.push(tech);
+                        }
                     }
                 }
             }
@@ -348,29 +446,114 @@ fn process_chromosome(
             own values in its original order, so this is bit-identical to computing them separately
             -- it just stops walking the same 365 values five times per probe. Profiling put 3933ms
             of a 4955ms chromosome in this loop against 287ms of HDF5 read, so passes are the cost. */
-            let n_all = (cm.len() + km.len()) as f64;
-            let (mut sum_all, mut sc, mut sk) = (0.0, 0.0, 0.0);
-            for &x in cm.iter() {
-                sum_all += x;
-                sc += x;
+            /* Turn this probe's technical variances into weights.
+
+            The first version of this weighted by inverse technical variance, which is what the
+            delta method hands you and what "precision weights" sounds like it should mean. It is
+            wrong, and measurably so: on the male-versus-female null contrast it took chr21 from 0
+            DMRs to 258, because weighting that way asserts that read sampling is the ONLY reason
+            two patients' methylation differs. It is not, and at this cohort's depth it is not even
+            the main reason -- patients differ biologically far more than 21 reads of sampling
+            noise, so the deeply sequenced samples get trusted far past what they deserve and the
+            residual variance comes out too small.
+
+            So an observation's variance is biological plus technical, and the weight is the
+            inverse of the SUM. The biological part is shared by the probe's samples and estimated
+            by subtracting the mean technical variance from the unweighted residual variance, which
+            is one iteration of a variance-components fit. That gives the behaviour both extremes
+            need: where biology dominates the weights flatten out and this reduces to the
+            unweighted fit, and where reads are scarce a 5-read cell is still discounted against a
+            200-read one.
+
+            voom (Law 2014) reaches the same place from the other side, replacing the theoretical
+            variance with an empirically fitted mean-variance trend; that is what Peters 2021
+            credits for its performance. ponytail: one variance-components iteration per probe,
+            not a genome-wide empirical trend. Revisit if a cohort's weights look unstable. */
+            if wt != Weighting::None {
+                let n_tot = (cm.len() + km.len()) as f64;
+                let (mut s_c, mut s_k, mut t_bar) = (0.0, 0.0, 0.0);
+                for &x in cm.iter() {
+                    s_c += x;
+                }
+                for &x in km.iter() {
+                    s_k += x;
+                }
+                for &t in cw.iter().chain(kw.iter()) {
+                    t_bar += t;
+                }
+                t_bar /= n_tot;
+                let (u_mc, u_mk) = (s_c / cm.len() as f64, s_k / km.len() as f64);
+                let mut ss0 = 0.0;
+                for &x in cm.iter() {
+                    ss0 += (x - u_mc).powi(2);
+                }
+                for &x in km.iter() {
+                    ss0 += (x - u_mk).powi(2);
+                }
+                let rv0 = ss0 / (n_tot - 2.0);
+                // a probe whose scatter is no more than its read noise has no biological variance
+                // to find; the floor keeps the weights finite when that happens
+                let bio = (rv0 - t_bar).max(0.0);
+                let floor = 1e-12;
+                for t in cw.iter_mut().chain(kw.iter_mut()) {
+                    *t = 1.0 / (bio + *t).max(floor);
+                }
+                if let Some(f) = sw {
+                    for (i, w) in cw.iter_mut().enumerate() {
+                        *w *= f[case_idx[i]];
+                    }
+                    for (i, w) in kw.iter_mut().enumerate() {
+                        *w *= f[ctrl_idx[i]];
+                    }
+                }
+            } else {
+                for w in cw.iter_mut().chain(kw.iter_mut()) {
+                    *w = 1.0;
+                }
             }
-            for &x in km.iter() {
-                sum_all += x;
-                sk += x;
+            /* Weighted least squares on the two-group design. Every sum below carries its
+            observation's weight, which for Weighting::None is exactly 1.0 -- and a weight of 1
+            makes each of these expressions the arithmetic that was here before, in the same order,
+            so an unweighted run stays bit-identical rather than merely close. That is what keeps
+            the element matrices and any depth-less CpG matrix reproducing their published numbers.
+
+            The residual degrees of freedom stay n - 2, the sample count, not a function of the
+            weights: limma does the same, because weights say how precise an observation is, not
+            how many observations there are. */
+            let (mut w_all, mut sum_all, mut sc, mut sk) = (0.0, 0.0, 0.0, 0.0);
+            let (mut w1, mut w2) = (0.0, 0.0);
+            for (i, &x) in cm.iter().enumerate() {
+                let w = cw[i];
+                w_all += w;
+                w1 += w;
+                sum_all += w * x;
+                sc += w * x;
             }
-            let mean_all = sum_all / n_all;
+            for (i, &x) in km.iter().enumerate() {
+                let w = kw[i];
+                w_all += w;
+                w2 += w;
+                sum_all += w * x;
+                sk += w * x;
+            }
+            if !(w1 > 0.0) || !(w2 > 0.0) {
+                continue;
+            }
+            let mean_all = sum_all / w_all;
             let (n1, n2) = (cm.len() as f64, km.len() as f64);
-            let (mc, mk) = (sc / n1, sk / n2);
+            let (mc, mk) = (sc / w1, sk / w2);
             let (mut var, mut ss_c0, mut ss_k0) = (0.0, 0.0, 0.0);
-            for &x in cm.iter() {
-                var += (x - mean_all).powi(2);
-                ss_c0 += (x - mc).powi(2);
+            for (i, &x) in cm.iter().enumerate() {
+                let w = cw[i];
+                var += w * (x - mean_all).powi(2);
+                ss_c0 += w * (x - mc).powi(2);
             }
-            for &x in km.iter() {
-                var += (x - mean_all).powi(2);
-                ss_k0 += (x - mk).powi(2);
+            for (i, &x) in km.iter().enumerate() {
+                let w = kw[i];
+                var += w * (x - mean_all).powi(2);
+                ss_k0 += w * (x - mk).powi(2);
             }
-            var /= n_all - 1.0;
+            var /= w_all - 1.0;
             if var <= 0.0 || !var.is_finite() {
                 continue;
             }
@@ -385,7 +568,23 @@ fn process_chromosome(
             if !rv.is_finite() || rv <= 0.0 {
                 continue;
             }
-            let su = (1.0 / n1 + 1.0 / n2).sqrt();
+            let su = (1.0 / w1 + 1.0 / w2).sqrt();
+            /* The sample-weight estimation pass wants each column's standardised squared
+            residual, not a probe list: E[w e^2 / s^2] is 1 under the null, so the mean of that
+            ratio over probes is how much a sample scatters against the cohort. */
+            if let Some(a) = acc.as_deref_mut() {
+                for (i, &x) in cm.iter().enumerate() {
+                    let e = x - mc;
+                    a[case_idx[i]].0 += cw[i] * e * e / rv;
+                    a[case_idx[i]].1 += 1.0;
+                }
+                for (i, &x) in km.iter().enumerate() {
+                    let e = x - mk;
+                    a[ctrl_idx[i]].0 += kw[i] * e * e / rv;
+                    a[ctrl_idx[i]].1 += 1.0;
+                }
+                continue;
+            }
             results.push(ProbeStats {
                 chr: chr.to_string(),
                 start: starts[idx],
@@ -407,6 +606,81 @@ fn process_chromosome(
         }
     }
     Ok((results, gb))
+}
+
+/** Cap on the probes the sample weights are estimated from. 415 numbers do not need 1.3 million
+ * rows, and walking them all is what turns this from seconds into minutes -- the same trap limma
+ * hits on WGBS, where a single NA drops it off its vectorised path. 50,000 probes leaves each
+ * sample's factor resting on tens of thousands of residuals, which is far past what it needs. */
+const MAX_SAMPLE_WEIGHT_PROBES: usize = 50_000;
+
+/* Per-sample weights: limma's array weights (Ritchie et al. 2006, BMC Bioinformatics 7:261), in
+one step.
+
+This is a different axis from the precision weights in `cell`. Those say how many reads a single
+measurement rests on; this says whether a whole sample scatters more than the cohort does. On this
+MMRF cohort that scatter varies 1.7-fold and tracks a sample's global methylation level rather
+than its read depth, so the two are not substitutes -- Liu et al. 2015 (Nucleic Acids Research
+43:e97) is the reference for using both together, and is what voomWithQualityWeights does.
+
+E[w e^2 / s^2] = 1 under the null, so a column's mean standardised squared residual is its
+variance inflation and the weight is the reciprocal, normalised to average 1 so the overall scale
+of the fit is unchanged.
+
+ponytail: one-step moment estimator, not Ritchie's iterated REML. It is the right shape and gets
+the ordering of samples right; iterate if a cohort ever shows weights that look unstable between
+chromosomes. */
+fn estimate_sample_weights(
+    file: &File,
+    row_start: usize,
+    row_end: usize,
+    case_idx: &[usize],
+    ctrl_idx: &[usize],
+    chr: &str,
+    starts: &[i64],
+    min_spg: usize,
+    n_samples: usize,
+) -> Result<Vec<f64>, String> {
+    let n = row_end - row_start;
+    let stride = std::cmp::max(1, n / MAX_SAMPLE_WEIGHT_PROBES);
+    let mut acc = vec![(0.0f64, 0.0f64); n_samples];
+    process_chromosome(
+        file,
+        row_start,
+        row_end,
+        case_idx,
+        ctrl_idx,
+        chr,
+        starts,
+        min_spg,
+        false,
+        Weighting::Counts,
+        None,
+        stride,
+        Some(&mut acc),
+    )?;
+    let mut w = vec![1.0f64; n_samples];
+    let mut used = 0usize;
+    let mut sum = 0.0;
+    for j in 0..n_samples {
+        let (s, c) = acc[j];
+        // a column with no residuals is not in the contrast; leave it at 1 and out of the mean
+        if c > 0.0 && s > 0.0 {
+            w[j] = c / s;
+            sum += w[j];
+            used += 1;
+        }
+    }
+    if used == 0 {
+        return Err("sample weights: no residuals collected".into());
+    }
+    let mean = sum / used as f64;
+    for j in 0..n_samples {
+        if w[j] != 1.0 || acc[j].1 > 0.0 {
+            w[j] /= mean;
+        }
+    }
+    Ok(w)
 }
 
 fn fit_f_dist(vars: &[f64], dfs: &[f64]) -> (f64, f64) {
@@ -1200,6 +1474,21 @@ fn main() {
     /* Set by the server from the ds config entry, never by the client: an element matrix stores
     M-values where a CpG matrix stores betas. Same contract as diffMeth.R. */
     let mvalues = p["mvalues"].as_bool().unwrap_or(false);
+    /* How to weight observations. Default "none" is the historical behaviour, bit-identical to it,
+    so nothing changes for a caller that does not ask. "counts" is the published WGBS model and
+    needs depth/values in the matrix; "counts+sample" adds the per-sample factor on top. */
+    let wt = match p["weights"].as_str().unwrap_or("none") {
+        "none" => Weighting::None,
+        "counts" => Weighting::Counts,
+        "counts+sample" => Weighting::CountsAndSample,
+        other => bail!(
+            "unknown weights mode '{}'; expected none, counts or counts+sample",
+            other
+        ),
+    };
+    if wt != Weighting::None && mvalues {
+        bail!("weights need per-cell read counts, which an M-value matrix does not carry");
+    }
     /* Optional batch: call DMRs in many regions against one fit. Regions may name any chromosome
     the matrix holds; with per-chromosome shards that is just the one, and the caller groups its
     hit list by chromosome and invokes once per shard. Absent means the single-region path below,
@@ -1283,7 +1572,42 @@ fn main() {
             pfx += cl;
             continue;
         }
-        match process_chromosome(&file, pfx, pfx + cl, &ci, &ki, &chr_names[i], &starts, min_spg, mvalues) {
+        /* Sample weights are a property of the cohort, not of a probe, so they are estimated
+        once per chromosome on a strided subset and then applied to every probe on it. One file
+        per chromosome in this deployment, so that is once per request. */
+        let sw: Option<Vec<f64>> = if wt == Weighting::CountsAndSample {
+            match estimate_sample_weights(
+                &file,
+                pfx,
+                pfx + cl,
+                &ci,
+                &ki,
+                &chr_names[i],
+                &starts,
+                min_spg,
+                sample_names.len(),
+            ) {
+                Ok(w) => Some(w),
+                Err(e) => bail!("sample weights: {}", e),
+            }
+        } else {
+            None
+        };
+        match process_chromosome(
+            &file,
+            pfx,
+            pfx + cl,
+            &ci,
+            &ki,
+            &chr_names[i],
+            &starts,
+            min_spg,
+            mvalues,
+            wt,
+            sw.as_deref(),
+            1,
+            None,
+        ) {
             Ok((s, g)) => {
                 all.extend(s);
                 global.case_sum += g.case_sum;
@@ -1507,7 +1831,85 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{ProbeStats, chrom_blocks, select_significant};
+    use super::{ProbeStats, cell, chrom_blocks, select_significant};
+
+    /* The WGBS cell transform. This is where "fully support WGBS" actually lives: a beta on its
+    own cannot say whether 0.0 came from 5 reads or 200, and the old clamp gave both the same
+    M-value and the same variance. `cell` returns (value, technical variance); a variance of 0
+    means the matrix carried no depth for that cell. */
+    #[test]
+    fn depthless_cell_is_the_clamped_logit_with_no_variance_of_its_own() {
+        let (m_lo, m_hi) = ((0.001f64 / 0.999).log2(), (0.999f64 / 0.001).log2());
+        for b in [0.0, 0.0005, 0.001] {
+            assert_eq!(cell(b, 0.0, m_lo, m_hi), (m_lo, 0.0), "beta {} clamps low", b);
+        }
+        for b in [0.999, 0.9999, 1.0] {
+            assert_eq!(cell(b, 0.0, m_lo, m_hi), (m_hi, 0.0), "beta {} clamps high", b);
+        }
+        let (mv, t) = cell(0.25, 0.0, m_lo, m_hi);
+        assert!(
+            (mv - (0.25f64 / 0.75).log2()).abs() < 1e-12,
+            "interior beta is the plain logit"
+        );
+        assert_eq!(t, 0.0, "and reports no read-level variance");
+    }
+
+    #[test]
+    fn depth_separates_a_weak_zero_from_a_strong_one() {
+        let (m_lo, m_hi) = ((0.001f64 / 0.999).log2(), (0.999f64 / 0.001).log2());
+        let (m5, t5) = cell(0.0, 5.0, m_lo, m_hi);
+        let (m200, t200) = cell(0.0, 200.0, m_lo, m_hi);
+        // log2(0.5/5.5) and log2(0.5/200.5): the same beta, two different strengths of evidence
+        assert!((m5 - (0.5f64 / 5.5).log2()).abs() < 1e-12, "got {}", m5);
+        assert!((m200 - (0.5f64 / 200.5).log2()).abs() < 1e-12, "got {}", m200);
+        assert!(m200 < m5, "more reads at beta 0 means a more extreme M-value");
+        assert!(t200 < t5, "and a smaller technical variance");
+        // neither is the clamp, which is the whole point
+        assert_ne!(m5, m_lo);
+        assert_ne!(m200, m_lo);
+    }
+
+    #[test]
+    fn technical_variance_falls_with_depth_and_is_least_at_half_methylated() {
+        let (m_lo, m_hi) = ((0.001f64 / 0.999).log2(), (0.999f64 / 0.001).log2());
+        let w = |b: f64, d: f64| cell(b, d, m_lo, m_hi).1;
+        // (d+1)/((m+.5)(u+.5)) is smallest when the reads split evenly
+        assert!(w(0.5, 40.0) < w(0.25, 40.0) && w(0.25, 40.0) < w(0.05, 40.0));
+        // and falls with coverage at a fixed beta
+        assert!(w(0.5, 40.0) < w(0.5, 20.0) && w(0.5, 20.0) < w(0.5, 5.0));
+        // symmetric: a site's precision does not depend on which way round it is
+        assert!((w(0.2, 30.0) - w(0.8, 30.0)).abs() < 1e-12);
+        let (a, _) = cell(0.2, 30.0, m_lo, m_hi);
+        let (b, _) = cell(0.8, 30.0, m_lo, m_hi);
+        assert!((a + b).abs() < 1e-12, "and the M-values mirror: {} vs {}", a, b);
+        /* Scale check against the delta method by hand: 20 of 40 reads methylated is
+        (40+1)/(20.5*20.5) on the natural-log scale, times 1/ln(2)^2 for log2. A missing factor
+        here would silently mis-scale every cell against the biological variance it is added to. */
+        let expect = 2.0813689810056077 * 41.0 / (20.5 * 20.5);
+        assert!(
+            (w(0.5, 40.0) - expect).abs() < 1e-12,
+            "got {} want {}",
+            w(0.5, 40.0),
+            expect
+        );
+    }
+
+    #[test]
+    fn a_single_read_is_still_a_usable_observation() {
+        let (m_lo, m_hi) = ((0.001f64 / 0.999).log2(), (0.999f64 / 0.001).log2());
+        // the half-read keeps every cell finite, which is what removes the need for a clamp
+        for (b, d) in [(0.0, 1.0), (1.0, 1.0), (0.0, 2.0), (1.0, 3.0)] {
+            let (mv, t) = cell(b, d, m_lo, m_hi);
+            assert!(
+                mv.is_finite() && t > 0.0,
+                "beta {} at depth {} gave ({}, {})",
+                b,
+                d,
+                mv,
+                t
+            );
+        }
+    }
 
     /// Probes as a matrix stores them: chromosome blocks contiguous, in the matrix's own
     /// karyotypic order, which is NOT lexicographic -- chr10 sorts before chr2 as a string.

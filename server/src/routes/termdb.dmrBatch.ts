@@ -241,6 +241,9 @@ export async function runDmrBatch(
 		element_type: q.element_type ?? null,
 		mask: { sources: [...appliedNames].sort(), overlapFrac },
 		background: !!q.backgroundCorrection,
+		/* In the key because it changes every p-value. Without it a weighted request would be
+		served whatever an unweighted one cached earlier, silently. */
+		weights: q.weights ?? null,
 		files: fingerprint([...[...resolved.values()].map(r => r.matrixFile), ...maskFiles, genome?.genedb?.dbfile])
 	}
 
@@ -354,7 +357,12 @@ export async function runDmrBatch(
 							fdr_cutoff: q.fdr_cutoff,
 							lambda,
 							C: q.C,
-							bin_bp: q.binMethylation ? METHYLATION_BIN_BP : 0
+							bin_bp: q.binMethylation ? METHYLATION_BIN_BP : 0,
+							/* Absent means the historical unweighted fit. 'counts' is the WGBS model,
+							which needs a matrix carrying depth/values -- the binary says so rather than
+							falling back, because a silent fallback would report weighted numbers that
+							are not. */
+							weights: q.weights
 						}
 						const jobResult = JSON.parse(await run_rust('dmrcate', JSON.stringify(input)))
 						if (jobResult.error) throw new Error(`${jobChrs.join(',')}: ${jobResult.error}`)

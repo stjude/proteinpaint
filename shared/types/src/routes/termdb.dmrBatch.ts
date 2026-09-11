@@ -56,6 +56,19 @@ export type TermdbDmrBatchRequest = {
 	 * cohort with a large global shift the second question is answered yes almost everywhere.
 	 * Costs a second rust invocation per chromosome. */
 	backgroundCorrection?: boolean
+	/** How the per-CpG fit weights its observations. Absent or 'none' is an unweighted fit on
+	 * clamped beta logits, which is what every result before this was computed with.
+	 *
+	 * 'counts' is the model DMRcate publishes for WGBS (Peters 2021, Nucleic Acids Research
+	 * 49:e109): the value is a log ratio of the methylated and unmethylated read counts, and an
+	 * observation is weighted by the inverse of its total variance, biological plus read-level.
+	 * It requires a matrix carrying depth/values -- build_cpg_matrix.py writes it -- and the
+	 * binary errors rather than falling back if it is missing.
+	 *
+	 * 'counts+sample' multiplies in a per-sample factor as well, limma's array weights
+	 * (Ritchie 2006), for a cohort whose samples differ in how much they scatter. Estimated from
+	 * a capped subset of probes, so it costs a few percent of runtime rather than minutes. */
+	weights?: 'none' | 'counts' | 'counts+sample'
 	filter?: Filter
 	__protected__?: any
 }
