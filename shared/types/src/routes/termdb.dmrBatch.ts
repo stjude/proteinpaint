@@ -75,6 +75,12 @@ export type TermdbDmrBatchSuccessResponse = {
 			maxdiff: number
 			meandiff: number
 			direction: 'hyper' | 'hypo'
+			/** Genes whose span overlaps the DMR, in genomic order. Absent when none overlap or the
+			 * genome has no gene2coord table. Capped -- see genesTruncated. */
+			genes?: string[]
+			/** Total overlapping genes when more than the cap were found, so a truncated list is
+			 * never mistaken for the whole set. */
+			genesTruncated?: number
 		}[]
 		/** true when this chromosome fell back to the element matrix, so one "probe" is a
 		 * regulatory element rather than a CpG and the widths are not base-resolution */

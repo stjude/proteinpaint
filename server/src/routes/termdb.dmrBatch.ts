@@ -12,6 +12,9 @@ import {
 	DM_DEFAULT_BLACKLISTS,
 	DEFAULT_OVERLAP_FRAC
 } from '#src/utils/regionMask.ts'
+import { buildGeneIndex, genesAt, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
+import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import fs from 'fs'
 
 /* Call DMRs across many regions at once — the whole hit list of a differential methylation run,
 rather than one clicked element at a time.
@@ -81,6 +84,31 @@ export function buildScanRegions(genome: any, chromosomes: string[]) {
 	})
 }
 
+/** Bump when a change to this route or to dmrcate alters results for an unchanged request.
+ * Without it, a cache written before the change keeps serving the old answer forever. */
+const CACHE_VERSION = 1
+
+/* Fingerprint the data files a result was computed from.
+ *
+ * A cache keyed only on the request silently serves stale answers the moment a matrix is rebuilt,
+ * which is exactly how the topve cache went wrong. Keying on size+mtime means rebuilding a CpG
+ * shard, swapping a blacklist BED or updating the gene database invalidates only what actually
+ * depended on it. A missing file contributes a null rather than throwing: the compute below will
+ * report the real error, and it must not be masked by one raised while building a cache key. */
+function fingerprint(files: string[]) {
+	return files
+		.filter(Boolean)
+		.sort()
+		.map(f => {
+			try {
+				const st = fs.statSync(f)
+				return { f, size: st.size, mtimeMs: st.mtimeMs }
+			} catch {
+				return { f, size: null, mtimeMs: null }
+			}
+		})
+}
+
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -134,18 +162,59 @@ function init({ genomes }) {
 			const overlapFrac = Number.isFinite(rawFrac) ? Math.min(Math.max(rawFrac, 0), 1) : DEFAULT_OVERLAP_FRAC
 			let dmrsDropped = 0
 
+			/* Built once for the request, not once per DMR: a genome scan calls >100,000 of them and
+			one sqlite round trip each would cost more than the model fits. Absent on a genome with no
+			gene2coord table, in which case the column is simply omitted. */
+			const geneIdx = buildGeneIndex(genome)
+
 			const merged = mergeWindows(regions)
+			const chrEntriesAll = [...merged.entries()]
+
+			/* Matrix resolution is hoisted out of the worker pool so the cache key can name the exact
+			files the answer depends on. It stays per chromosome because the backing can differ per
+			chromosome: a cohort part-way through building its CpG shards serves those where they
+			exist and falls back to the element matrix elsewhere. */
+			const resolved = new Map<string, ReturnType<typeof resolveMethylationMatrix>>()
+			for (const [chr] of chrEntriesAll) resolved.set(chr, resolveMethylationMatrix(ds, chr, q.element_type))
+
+			/* Everything whose identity changes the answer, and nothing that does not. Sample ids are
+			sorted so that two callers naming the same cohort in a different order share a cache entry;
+			the merged windows rather than the raw request, so two hit lists that collapse to the same
+			windows also share one. */
+			const cacheKey = {
+				v: CACHE_VERSION,
+				genome: q.genome,
+				dslabel: q.dslabel,
+				group1: q.group1.map(x => x.sampleId).sort(),
+				group2: q.group2.map(x => x.sampleId).sort(),
+				windows: [...merged.entries()].map(([chr, ws]) => [chr, ws.map(w => [w.start, w.stop])]).sort(),
+				lambda: q.lambda ?? null,
+				C: q.C ?? null,
+				fdr_cutoff: q.fdr_cutoff ?? null,
+				element_type: q.element_type ?? null,
+				mask: { sources: [...appliedNames].sort(), overlapFrac },
+				files: fingerprint([...[...resolved.values()].map(r => r.matrixFile), ...maskFiles, genome?.genedb?.dbfile])
+			}
+
 			const time1 = Date.now()
-			const out: TermdbDmrBatchSuccessResponse['regions'] = []
-			let totalProbes = 0
-			/* Global methylation is accumulated per chromosome and pooled here weighted by how many
+			/* Cached because a scan is ~40s of fresh compute with nothing reused: the same contrast
+			re-run, or a second person running it, would otherwise pay in full again. The identical
+			request arriving twice concurrently is deduplicated to one compute by cacheOrRecompute,
+			so a demo and a colleague clicking along cost one scan, not two. */
+			const { result: payload, cacheId } = await cacheOrRecompute<typeof cacheKey, TermdbDmrBatchSuccessResponse>({
+				computeArgument: cacheKey,
+				cacheSubdir: 'dmr',
+				computeFresh: async () => {
+					const out: TermdbDmrBatchSuccessResponse['regions'] = []
+					let totalProbes = 0
+					/* Global methylation is accumulated per chromosome and pooled here weighted by how many
 			values each contributed, so the result is a genuine cohort-wide mean rather than an
 			average of chromosome averages (which would over-weight the small chromosomes). */
-			let gCtrl = 0
-			let gCase = 0
-			let gN = 0
+					let gCtrl = 0
+					let gCase = 0
+					let gN = 0
 
-			/* One rust invocation per chromosome, a couple at a time. Each holds one chromosome's matrix
+					/* One rust invocation per chromosome, a couple at a time. Each holds one chromosome's matrix
 			(~400MB on the MMRF shards) and saturates a single core, so the work parallelises cleanly
 			across chromosomes; running them strictly sequentially left every other core idle and made
 			the request as slow as the sum of its parts.
@@ -156,119 +225,139 @@ function init({ genomes }) {
 			also leaves headroom on a 4-core deployment: this route must not starve every other request
 			on the server while it runs. Raise it per deployment via serverconfig where the cores and
 			the ~400MB-per-job memory are actually known. */
-			const CONCURRENCY = Math.max(1, Number(serverconfig.dmrBatchConcurrency) || 2)
-			const chrEntries = [...merged.entries()]
-			/* Biggest chromosomes first. With a fixed pool the tail is set by the slowest job still
+					const CONCURRENCY = Math.max(1, Number(serverconfig.dmrBatchConcurrency) || 2)
+					const chrEntries = [...chrEntriesAll]
+					/* Biggest chromosomes first. With a fixed pool the tail is set by the slowest job still
 			running, so starting chr1 last would leave it running alone after everything else finished. */
-			chrEntries.sort((a, b) => b[1].length - a[1].length)
-			const results: { chr: string; windows: (typeof chrEntries)[0][1]; result: any; useElement: boolean }[] = []
-			let next = 0
-			await Promise.all(
-				Array.from({ length: Math.min(CONCURRENCY, chrEntries.length) }, async () => {
-					while (true) {
-						const i = next++
-						if (i >= chrEntries.length) return
-						const [chr, windows] = chrEntries[i]
-						/* Resolved per chromosome, because the backing can differ per chromosome: a cohort
-						part-way through building its CpG shards serves those where they exist and falls
-						back to the element matrix elsewhere. */
-						const { matrixFile, mvalues, useElement, eligible } = resolveMethylationMatrix(ds, chr, q.element_type)
-						const { group1, group2 } = await resolveGroupNames(q.group1, q.group2, eligible, ds)
-						if (group1.length < 3 || group2.length < 3)
-							throw new Error(
-								`Each group needs at least 3 samples with methylation data (got ${group1.length} and ${group2.length}).`
-							)
-						const input = {
-							probe_h5_file: matrixFile,
-							mvalues,
-							cachedir: serverconfig.cachedir,
-							genome: q.genome,
-							chr,
-							start: 0,
-							stop: 0,
-							regions: windows.map(w => ({ chr, start: w.start, stop: w.stop })),
-							case: group2.join(','),
-							control: group1.join(','),
-							fdr_cutoff: q.fdr_cutoff,
-							lambda: q.lambda,
-							C: q.C
-						}
-						const result = JSON.parse(await run_rust('dmrcate', JSON.stringify(input)))
-						if (result.error) throw new Error(`${chr}: ${result.error}`)
-						/* Masked here rather than in the assembly loop below so each chromosome's BED
+					chrEntries.sort((a, b) => b[1].length - a[1].length)
+					const results: { chr: string; windows: (typeof chrEntries)[0][1]; result: any; useElement: boolean }[] = []
+					let next = 0
+					await Promise.all(
+						Array.from({ length: Math.min(CONCURRENCY, chrEntries.length) }, async () => {
+							while (true) {
+								const i = next++
+								if (i >= chrEntries.length) return
+								const [chr, windows] = chrEntries[i]
+								const { matrixFile, mvalues, useElement, eligible } = resolved.get(chr)!
+								const { group1, group2 } = await resolveGroupNames(q.group1, q.group2, eligible, ds)
+								if (group1.length < 3 || group2.length < 3)
+									throw new Error(
+										`Each group needs at least 3 samples with methylation data (got ${group1.length} and ${group2.length}).`
+									)
+								const input = {
+									probe_h5_file: matrixFile,
+									mvalues,
+									cachedir: serverconfig.cachedir,
+									genome: q.genome,
+									chr,
+									start: 0,
+									stop: 0,
+									regions: windows.map(w => ({ chr, start: w.start, stop: w.stop })),
+									case: group2.join(','),
+									control: group1.join(','),
+									fdr_cutoff: q.fdr_cutoff,
+									lambda: q.lambda,
+									C: q.C
+								}
+								const result = JSON.parse(await run_rust('dmrcate', JSON.stringify(input)))
+								if (result.error) throw new Error(`${chr}: ${result.error}`)
+								/* Masked here rather than in the assembly loop below so each chromosome's BED
 						query runs inside its own worker slot, alongside the fit it belongs to, instead
 						of serially after every fit has finished. */
-						if (maskFiles.length) {
-							const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
-							if (chrLen) {
-								const mask = await loadMaskIntervals(maskFiles, chr, chrLen)
-								if (mask.length) {
-									for (const r of result.regions || []) {
-										if (!r?.dmrs?.length) continue
-										const kept = r.dmrs.filter((d: any) => maskedFraction(mask, d.start, d.stop) < overlapFrac)
-										dmrsDropped += r.dmrs.length - kept.length
-										r.dmrs = kept
+								if (maskFiles.length) {
+									const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
+									if (chrLen) {
+										const mask = await loadMaskIntervals(maskFiles, chr, chrLen)
+										if (mask.length) {
+											for (const r of result.regions || []) {
+												if (!r?.dmrs?.length) continue
+												const kept = r.dmrs.filter((d: any) => maskedFraction(mask, d.start, d.stop) < overlapFrac)
+												dmrsDropped += r.dmrs.length - kept.length
+												r.dmrs = kept
+											}
+										}
 									}
 								}
+								/* Name the regions. A scan returns coordinates; the element volcano returns "XIST",
+						and that word is the difference between a row a reader can act on and one they
+						have to look up. Done here, inside the worker slot, so it is spread across the
+						pool rather than serialised after every fit. */
+								if (geneIdx) {
+									for (const r of result.regions || []) {
+										for (const d of r?.dmrs || []) {
+											const g = genesAt(geneIdx, chr, d.start, d.stop)
+											if (!g.length) continue
+											d.genes = g.slice(0, MAX_GENES_PER_DMR)
+											if (g.length > MAX_GENES_PER_DMR) d.genesTruncated = g.length
+										}
+									}
+								}
+								results.push({ chr, windows, result, useElement })
 							}
-						}
-						results.push({ chr, windows, result, useElement })
-					}
-				})
-			)
-			/* Restore the caller's region order. A worker pool finishes in whatever order jobs land, so
+						})
+					)
+					/* Restore the caller's region order. A worker pool finishes in whatever order jobs land, so
 			without this the response ordering varies run to run for byte-identical results -- which
 			makes two runs impossible to diff and quietly breaks any caller that assumes request order.
 			Sorting by smallest member index puts windows back in the order the regions arrived. */
-			results.sort((a, b) => Math.min(...a.windows[0].members) - Math.min(...b.windows[0].members))
-			for (const { chr, windows, result, useElement } of results) {
-				totalProbes += result.diagnostic?.total_probes_analyzed || 0
-				const gm = result.diagnostic?.global_methylation
-				if (gm && Number.isFinite(gm.control_mean_beta) && Number.isFinite(gm.case_mean_beta) && gm.values_counted) {
-					// halved because values_counted pools both arms; each mean covers its own half
-					const w = gm.values_counted / 2
-					gCtrl += gm.control_mean_beta * w
-					gCase += gm.case_mean_beta * w
-					gN += w
-				}
-				for (let i = 0; i < windows.length; i++) {
-					const r = result.regions?.[i]
-					if (!r) continue
-					out.push({
-						chr,
-						start: windows[i].start,
-						stop: windows[i].stop,
-						// which of the caller's regions merged into this window
-						members: windows[i].members,
-						n_probes: r.n_probes,
-						n_sig_probes: r.n_sig_probes,
-						dmrs: r.dmrs,
-						elementResolution: useElement
-					})
-				}
-			}
+					results.sort((a, b) => Math.min(...a.windows[0].members) - Math.min(...b.windows[0].members))
+					for (const { chr, windows, result, useElement } of results) {
+						totalProbes += result.diagnostic?.total_probes_analyzed || 0
+						const gm = result.diagnostic?.global_methylation
+						if (
+							gm &&
+							Number.isFinite(gm.control_mean_beta) &&
+							Number.isFinite(gm.case_mean_beta) &&
+							gm.values_counted
+						) {
+							// halved because values_counted pools both arms; each mean covers its own half
+							const w = gm.values_counted / 2
+							gCtrl += gm.control_mean_beta * w
+							gCase += gm.case_mean_beta * w
+							gN += w
+						}
+						for (let i = 0; i < windows.length; i++) {
+							const r = result.regions?.[i]
+							if (!r) continue
+							out.push({
+								chr,
+								start: windows[i].start,
+								stop: windows[i].stop,
+								// which of the caller's regions merged into this window
+								members: windows[i].members,
+								n_probes: r.n_probes,
+								n_sig_probes: r.n_sig_probes,
+								dmrs: r.dmrs,
+								elementResolution: useElement
+							})
+						}
+					}
 
-			mayLog(
-				`DMR ${scanning ? 'scan' : 'batch'}: ${regions.length} regions -> ${out.length} windows over ${
-					merged.size
-				} chromosomes,`,
-				formatElapsedTime(Date.now() - time1)
-			)
-			res.send({
-				status: 'ok',
-				regions: out,
-				chromosomes: merged.size,
-				totalProbesAnalyzed: totalProbes,
-				regionMask: maskFiles.length ? { sources: appliedNames, overlapFrac, dmrsDropped } : undefined,
-				globalMethylation: gN
-					? {
-							controlMeanBeta: gCtrl / gN,
-							caseMeanBeta: gCase / gN,
-							shift: (gCase - gCtrl) / gN,
-							valuesCounted: gN * 2
-					  }
-					: undefined
-			} as TermdbDmrBatchSuccessResponse)
+					mayLog(
+						`DMR ${scanning ? 'scan' : 'batch'} computed: ${regions.length} regions -> ${out.length} windows over ${
+							merged.size
+						} chromosomes,`,
+						formatElapsedTime(Date.now() - time1)
+					)
+					return {
+						status: 'ok',
+						regions: out,
+						chromosomes: merged.size,
+						totalProbesAnalyzed: totalProbes,
+						regionMask: maskFiles.length ? { sources: appliedNames, overlapFrac, dmrsDropped } : undefined,
+						globalMethylation: gN
+							? {
+									controlMeanBeta: gCtrl / gN,
+									caseMeanBeta: gCase / gN,
+									shift: (gCase - gCtrl) / gN,
+									valuesCounted: gN * 2
+							  }
+							: undefined
+					} as TermdbDmrBatchSuccessResponse
+				}
+			})
+			mayLog(`DMR ${scanning ? 'scan' : 'batch'} served ${cacheId} in`, formatElapsedTime(Date.now() - time1))
+			res.send(payload)
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : String(e)
 			res.send({ error: msg })

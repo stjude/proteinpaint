@@ -21,20 +21,84 @@ Features:
   twice.
 - termdb/dmrBatch gains a scan mode: pass scanChromosomes instead of regions to call DMRs across
   whole chromosomes rather than a supplied hit list. Affordable because the model fit is already
-  chromosome-wide and the kernel smoothing is linear in CpGs -- MMRF chr20 (362k CpGs) scans in
-  ~3s, all 23 (16.4M CpGs) in ~131s for 149,341 DMRs. The per-region size cap does not apply to
-  scan regions, which are whole chromosomes by construction.
+  chromosome-wide and the kernel smoothing is linear in CpGs. The per-region size cap does not
+  apply to scan regions, which are whole chromosomes by construction.
+- The volcano's scan control defaults to "Whole genome" and runs every chromosome in one request:
+  MMRF NSD2-low vs NSD2-high, 16.4M CpGs over 24 chromosomes, 41.7s for 123,647 DMRs. chrM is
+  excluded -- 16.5 kb of circular DNA that is not CpG-island methylated cannot carry a domain, and
+  on a map scaled to chr1 its track is 0.06 px wide. chrY is kept, because on a mixed-sex cohort
+  an empty chrY track is a result rather than an omission. The button reports elapsed seconds
+  while it runs, since the route returns one response and a static label cannot be told apart
+  from a hung request.
 - Volcano action "Drill hits to CpG resolution" (differential methylation): runs the batch over the
   significant elements and reports the DMR width distribution plus a downloadable table. Says plainly when
   it drilled only the top N of the significant set, since that subset is not direction-balanced.
-- A chromosome scan now draws a domain map: log2(hyper/hypo) DMRs per 5Mb bin across the
-  chromosome. A ratio rather than a count, because DMR density tracks CpG and gene density and a
+- A scan now draws a domain map: log2(hyper/hypo) DMRs per 5Mb bin, one track per chromosome
+  drawn to scale, so a genome scan renders as a 24-track genome figure and a single-chromosome
+  scan as one track with a coordinate axis. Bin width is chosen once from the longest chromosome
+  so a bar means the same number of megabases on every track -- binning each chromosome to a fixed
+  count would make chr21's bars six times finer than chr1's and the tracks incomparable. A ratio rather than a count, because DMR density tracks CpG and gene density and a
   count map would mostly redraw where the CpGs are; both directions are called from the same
   probes in each bin, so dividing cancels that. Bins holding fewer than 20 DMRs are drawn faded
   rather than dropped, so "no data" stays distinguishable from "balanced". On MMRF chr1 this shows
-  what no table of 10,824 rows could: hyper and hypo occupy near-exclusive megabase territories
-  (1q42-44 at +2.3, 85-90Mb at -3.3), which is a chromatin-compartment signature and is the reason
-  to scan a chromosome rather than drill a hit list.
+  what no table of 123,647 rows could: gains dominate nearly everywhere, yet hypomethylated
+  territories persist inside otherwise hypermethylated chromosomes. That compartmentalisation is
+  the reason to scan rather than drill a hit list.
+- The group colours chosen in the picker carry through to the DMR region view: the per-CpG dots,
+  the LOESS fits and their CI bands, and the legend all use them, rather than the plot's own blue
+  and orange. The reader has already learned which group is which from the picker swatches and the
+  volcano's axis labels; recolouring them downstream makes that re-learned at every hop. The lookup
+  is now one shared helper, so the volcano's hit drill-down and the batch table's row click cannot
+  drift apart -- and a group with no colour is omitted rather than replaced, where the drill-down
+  previously substituted a hardcoded red/blue that overrode the plot's tuned defaults.
+- Hyper/hypo are drawn in the same two colours everywhere -- orange and blue, exported from the DMR
+  plot's settings so the genome map, the width histogram and the region view's DMR bars share one
+  definition. The map previously used orange/green, which put green on "hypomethylated" in one
+  figure and on a sample GROUP in another once picker colours were carried into the region view.
+  Direction is now orange/blue; group colours come from the picker and are free to be anything.
+- The genome map gains a vertical scale: dashed guides at the clamp on every track, labelled once
+  on the first. "Clamped at 8x" in the footnote says what full height means but not where it is, so
+  a reader could not tell a 2x territory from a 6x one.
+- Scan results are navigable, not just descriptive. Clicking a bin in the genome map narrows the
+  table to that 5Mb span (the map and summary keep describing the whole scan, so the figure never
+  disagrees with the numbers printed over it); clicking a DMR's coordinate opens it in the genome
+  browser, padded by half its width so it is shown in context rather than edge to edge. The browser
+  opens the DMR region view -- per-CpG group means, LOESS fits, significant CpGs, the called DMR
+  spans and the gene models, all on one axis -- rather than a bare browser. A browser alone showed
+  cCREs and genes with the thing being explained absent from the screen, which is no context at all.
+  hg38 now declares an ENCODE cCRE track coloured in SCREEN's own colours, available from the Tracks
+  menu on any block and switched on by the region view, which is where element classes belong:
+  there are 1,063,878 cCREs genome-wide, 0.01 px each on the genome figure, so a locus is the only
+  scale at which they are drawable. Per-bin class composition was measured before adding it to the map and
+  carries no directional signal -- the most hyper and most hypo bins both run 33.0% dELS, r=-0.07 --
+  because class enrichment only exists relative to a CpG-matched null, which a raw track has none of.
+- termdb/dmrBatch results are cached. A genome scan was ~40s of fresh compute with nothing reused,
+  so the same contrast re-run, or a second person running it, paid in full again: MMRF NSD2
+  genome-wide is 41.5s cold and 0.6s warm, 67x. Concurrent identical requests are deduplicated to
+  one compute, so a demo and a colleague clicking along cost one scan.
+  The key covers everything whose identity changes the answer -- sample ids (sorted, so naming a
+  cohort in a different order still hits), the MERGED windows rather than the raw request, lambda,
+  C, fdr_cutoff, element type, mask sources and overlap fraction -- plus size+mtime of every file
+  the answer was computed from: the CpG or element matrices, the blacklist BEDs and the gene
+  database. That last part is not optional. A cache keyed only on the request serves stale answers
+  the moment a matrix is rebuilt, which is how the topve cache went wrong; rebuilding one CpG shard
+  now invalidates only the scans that read it. CACHE_VERSION in the route invalidates everything
+  when a change to the route or to dmrcate alters results for an unchanged request.
+  cacheJobPolicies gets a `dmr` subdir at maxPending 2, lower than the other analyses because each
+  pending job fans out to dmrBatchConcurrency rust processes -- total concurrent rust invocations is
+  maxPending x dmrBatchConcurrency, so a deployer raising either must consider the other.
+- Scan results name their DMRs. Each region is annotated with the genes its span overlaps, from
+  the genome's gene2coord table, indexed once per request rather than queried per DMR -- genome-wide
+  the annotation costs 0.1s on a 41.7s scan and names 51% of regions. This closes the one thing the
+  element-level volcano had over the scan: a coordinate a reader has to look up versus a gene name
+  they can act on. On MMRF male-vs-female the volcano reported one XIST hit, a 285bp cCRE promoter
+  at db -0.17; the scan reports five DMRs across the locus, including that event at its true 1,760bp
+  / 29-CpG extent with a -0.285 peak, plus four hypermethylated blocks over XIST/TSIX that no
+  promoter-class test could see.
+- The DMR table renders at most 1,000 rows. renderTable has no virtualisation, so a genome scan's
+  123,647 DMRs would build ~740,000 DOM nodes and freeze the tab. The widest are kept, the full
+  count is always stated, and a separate download button emits every row -- the cap costs
+  visibility of the tail, not access to it.
 - DMR width is now shown as a formatted size ("1.1 Kb") with a log-scale width histogram split by
   direction, replacing the linear barplot column. Widths span four orders of magnitude on a scan,
   so a linear bar drew the median 1.1kb DMR as 1% of the axis and crushed its own tick labels. The
@@ -81,5 +145,11 @@ Fixes:
   methylation uses, against the same eligible-sample set.
 
 General:
+- The cCRE track needs anno/encodeCCREtrack.hg38.gz (+ .tbi) on the target host, ~11MB, built by
+  utils/dnaMeth/build_ccre_track.py from anno/encodeCCRE.hg38.gz. It is a reformat, not new data:
+  the registry ships column 4 as an internal id with the class in column 6, where bedj cannot see
+  it, so column 4 is rewritten as the JSON bedj colours by. Any host serving methylation elements
+  already has the source registry, since the element matrices are built from it. Without the track
+  file the locus view still opens; only the cCRE row is missing.
 - MMRF requires the new files/hg38/mmrf/methylation/cpg/{chr}.h5 shards on the target host (~28GB).
   Without them the region view degrades to element resolution rather than failing.

@@ -1,5 +1,13 @@
 import type { DMRSettings } from './Settings.ts'
 
+/* The colours that mean DIRECTION, exported so every view encoding hyper/hypo uses the same two.
+The genome domain map and the scan's width histogram used a separate orange/green pair, which put
+green on "hypomethylated" in one figure and on a sample GROUP in another once group colours were
+carried into the region view. Direction is orange/blue everywhere; group colours come from the
+picker and are free to be anything. */
+export const HYPER_COLOR = '#e66101'
+export const HYPO_COLOR = '#5e81f4'
+
 export function getDefaultDMRSettings(opts: any): DMRSettings {
 	const overrides = opts.settings || {}
 	/* A dataset with no CpG-level matrix runs the region analysis on its element matrix, where one
@@ -17,8 +25,8 @@ export function getDefaultDMRSettings(opts: any): DMRSettings {
 		colors: {
 			group1: '#3b5ee6',
 			group2: '#c04e00',
-			hyper: '#e66101',
-			hypo: '#5e81f4'
+			hyper: HYPER_COLOR,
+			hypo: HYPO_COLOR
 		},
 		maxLoessRegion: 250_000,
 		minProbesForCi: 10,

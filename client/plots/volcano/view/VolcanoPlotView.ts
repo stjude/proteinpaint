@@ -184,29 +184,52 @@ export class VolcanoPlotView {
 				a 20kb window at the chromosome midpoint, which would silently scan 0.005% of the target. */
 				const chrs: string[] = this.interactions.app?.opts?.genome?.majorchrorder || []
 				if (chrs.length) {
+					/* "Whole genome" is the default selection, not an afterthought at the bottom of the
+					list. A scan of one chromosome answers "what happened here"; a scan of all of them
+					answers "where did anything happen", which is the question the mode exists for, and
+					it costs about as much as scanning three chromosomes separately because the per-
+					chromosome model fit is the price either way. */
+					const ALL = '__all__'
+					/* Everything except the mitochondrion. chrM is 16.5 kb of circular DNA that is not
+					CpG-island methylated the way the nuclear genome is and cannot carry a domain, so
+					scanning it answers nothing -- and on a map scaled to chr1 its track is 0.06 px wide
+					with a label floating beside it. chrY stays: it is a real chromosome, and on a
+					mixed-sex cohort an empty chrY track is a result rather than an omission. */
+					const genomeChrs = chrs.filter(c => c != 'chrM' && c != 'chrMT')
 					const chrSelect = this.volcanoDom.actions
 						.append('select')
 						.attr('data-testid', 'sjpp-volcano-scan-chr')
 						.style('margin', '3px')
 					chrSelect
 						.selectAll('option')
-						.data(chrs)
+						.data([ALL, ...chrs])
 						.enter()
 						.append('option')
 						.attr('value', (d: string) => d)
-						.text((d: string) => d)
+						.text((d: string) => (d == ALL ? `Whole genome (${genomeChrs.length} chromosomes)` : d))
 					const scanBtn = this.volcanoDom.actions
 						.append('button')
 						.attr('class', 'sja_menuoption')
 						.attr('data-testid', 'sjpp-volcano-scan-btn')
 						.style('margin', '3px')
 						.style('padding', '3px')
-						.text('Scan chromosome')
+						.text('Scan')
 						.on('click', async () => {
 							if (scanBtn.property('disabled')) return
-							const chr = chrSelect.property('value')
+							const sel = chrSelect.property('value')
+							const scanChromosomes = sel == ALL ? genomeChrs.slice() : [sel]
 							const label = scanBtn.text()
-							scanBtn.property('disabled', true).text(`Scanning ${chr}…`)
+							/* A genome scan is ~40s of server work with nothing on the wire until it
+							finishes, so a static label is indistinguishable from a hung request. Ticking
+							the elapsed seconds is the cheapest honest progress signal available here:
+							the route returns a single response and cannot report partial progress. */
+							const what = sel == ALL ? 'genome' : sel
+							const t0 = Date.now()
+							const tick = setInterval(
+								() => scanBtn.text(`Scanning ${what}… ${Math.round((Date.now() - t0) / 1000)}s`),
+								1000
+							)
+							scanBtn.property('disabled', true).text(`Scanning ${what}… 0s`)
 							this.dom.holder.select('#sjpp-volcano-dmrBatch').remove()
 							const holder = this.dom.holder
 								.append('div')
@@ -222,9 +245,10 @@ export class VolcanoPlotView {
 									totalSignificant: numSigGenes,
 									holder,
 									app: this.interactions.app,
-									scanChromosome: chr
+									scanChromosomes
 								})
 							} finally {
+								clearInterval(tick)
 								scanBtn.property('disabled', false).text(label)
 							}
 						})

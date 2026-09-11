@@ -1,7 +1,10 @@
 import { dofetch3 } from '#common/dofetch'
-import { renderTable, sayerror } from '#dom'
+import { HYPER_COLOR, HYPO_COLOR } from '../../dmr/settings/defaults'
+import { renderTable, downloadTable, sayerror } from '#dom'
 import { bplen } from '#shared/common.js'
 import type { TermdbDmrBatchResponse, TermdbDmrBatchSuccessResponse } from '#types'
+import { domainMap } from './domainMap'
+import { groupColors } from '../groupColors'
 
 /* Drill a whole differential-methylation hit list to CpG resolution in one request.
 
@@ -29,6 +32,13 @@ calls and all of the structure. Not zero by default, because "show everything" h
 "lead with the noise". */
 const DEFAULT_MIN_CPGS = 5
 
+/* Rows actually put in the DOM. renderTable builds a <tr> per row with no virtualisation, so a
+genome scan's 123,647 DMRs would be ~740,000 nodes and a frozen tab. The widest are kept because
+that is the order the table already sorts in, the count shown is always the full one, and the
+download button below emits every row -- so the cap costs visibility of the tail, not access to
+it. */
+const MAX_TABLE_ROWS = 1000
+
 export async function runDmrBatch(opts: {
 	config: any
 	vocab: { genome: string; dslabel: string }
@@ -36,11 +46,12 @@ export async function runDmrBatch(opts: {
 	totalSignificant: number
 	holder: any
 	app: any
-	/** Scan this chromosome end to end instead of drilling the hit list. The two modes share
-	 * everything downstream; only what is asked for differs. */
-	scanChromosome?: string
+	/** Scan these chromosomes end to end instead of drilling the hit list. The two modes share
+	 * everything downstream; only what is asked for differs. One chromosome answers "what happened
+	 * here"; the whole list answers "where did anything happen". */
+	scanChromosomes?: string[]
 }) {
-	const { config, vocab, dots, totalSignificant, holder, app, scanChromosome } = opts
+	const { config, vocab, dots, totalSignificant, holder, app, scanChromosomes } = opts
 	holder.selectAll('*').remove()
 	const groups = config?.samplelst?.groups
 	if (!groups || groups.length != 2) {
@@ -48,7 +59,8 @@ export async function runDmrBatch(opts: {
 		return
 	}
 	let regions: Region[] = []
-	if (!scanChromosome) {
+	const scanning = !!scanChromosomes?.length
+	if (!scanning) {
 		regions = dots
 			.filter(d => d.chr && Number.isFinite(d.start) && Number.isFinite(d.stop))
 			.map(d => ({ chr: d.chr, start: Math.max(0, d.start - WINDOW_PAD), stop: d.stop + WINDOW_PAD }))
@@ -66,7 +78,7 @@ export async function runDmrBatch(opts: {
 				dslabel: vocab.dslabel,
 				group1: groups[0].values,
 				group2: groups[1].values,
-				...(scanChromosome ? { scanChromosomes: [scanChromosome] } : { regions }),
+				...(scanning ? { scanChromosomes } : { regions }),
 				lambda: config.settings?.dmr?.lambda,
 				fdr_cutoff: config.settings?.volcano?.pValue ? Math.pow(10, -config.settings.volcano.pValue) : undefined,
 				element_type: config.settings?.volcano?.elementType
@@ -80,7 +92,7 @@ export async function runDmrBatch(opts: {
 		sayerror(holder.append('div'), res.error)
 		return
 	}
-	render(res, { regions, totalSignificant, holder, config, app, scanChromosome })
+	render(res, { regions, totalSignificant, holder, config, app, scanChromosomes })
 }
 
 function render(
@@ -91,7 +103,7 @@ function render(
 		holder: any
 		config: any
 		app: any
-		scanChromosome?: string
+		scanChromosomes?: string[]
 	}
 ) {
 	const { holder } = o
@@ -106,6 +118,10 @@ function render(
 	download and the table -- comes from the filtered set, and the summary states the threshold, so
 	no figure here is ever read without knowing what it excludes. */
 	let minCpgs = DEFAULT_MIN_CPGS
+	/** Set by clicking a bin in the genome map; narrows the table to that span. Kept beside
+	 * minCpgs because both are view state over an unchanged result set, and both redraw rather
+	 * than refetch. */
+	let binFilter: { chr: string; start: number; stop: number } | null = null
 	const controls = holder.append('div').style('padding', '5px').style('font-size', '.95em')
 	controls.append('span').text('Minimum CpGs per DMR: ')
 	controls
@@ -129,7 +145,10 @@ function render(
 
 	function draw() {
 		content.selectAll('*').remove()
-		drawResults(res, o, content, allRows, minCpgs)
+		drawResults(res, o, content, allRows, minCpgs, binFilter, f => {
+			binFilter = f
+			draw()
+		})
 	}
 }
 
@@ -141,14 +160,23 @@ function drawResults(
 		holder: any
 		config: any
 		app: any
-		scanChromosome?: string
+		scanChromosomes?: string[]
 	},
 	holder: any,
 	allRows: { r: any; d: any; width: number }[],
-	minCpgs: number
+	minCpgs: number,
+	binFilter: { chr: string; start: number; stop: number } | null,
+	setBinFilter: (f: { chr: string; start: number; stop: number } | null) => void
 ) {
-	const { totalSignificant, config, app, scanChromosome } = o
+	const { totalSignificant, config, app, scanChromosomes } = o
+	const scanning = !!scanChromosomes?.length
+	const oneChr = scanChromosomes?.length == 1 ? scanChromosomes[0] : undefined
 	const rows = allRows.filter(x => x.d.no_cpgs >= minCpgs)
+	/* The bin filter narrows the TABLE only. The map and the summary above keep describing the
+	whole scan, so clicking a bin never makes the figure disagree with the numbers printed over it. */
+	const tableRows = binFilter
+		? rows.filter(x => x.d.chr == binFilter.chr && x.d.start < binFilter.stop && x.d.stop > binFilter.start)
+		: rows
 	const widths = rows.map(x => x.width).sort((a, b) => a - b)
 	const q = (p: number) => (widths.length ? widths[Math.floor(p * (widths.length - 1))] : 0)
 	const hyper = rows.filter(x => x.d.direction == 'hyper').length
@@ -160,8 +188,8 @@ function drawResults(
 		.append('div')
 		.style('font-weight', 'bold')
 		.text(
-			scanChromosome
-				? `${rows.length.toLocaleString()} DMRs on ${scanChromosome} ` +
+			scanning
+				? `${rows.length.toLocaleString()} DMRs on ${oneChr || `${scanChromosomes!.length} chromosomes`} ` +
 						`(${hyper.toLocaleString()} hyper / ${(rows.length - hyper).toLocaleString()} hypo)`
 				: `${rows.length.toLocaleString()} DMRs from ${windowsWithDmr.toLocaleString()} of ` +
 						`${res.regions.length.toLocaleString()} windows ` +
@@ -224,7 +252,7 @@ function drawResults(
 	/* The count actually drilled versus the count that was significant. The dots list is capped by
 	maxInteractiveDots and the cap keeps the MOST significant rows, which are not direction-balanced
 	-- so a truncated drill is a biased sample and must not be read as the whole hit list. */
-	if (!scanChromosome && totalSignificant > o.regions.length) {
+	if (!scanning && totalSignificant > o.regions.length) {
 		summary
 			.append('div')
 			.style('color', '#a00')
@@ -250,158 +278,161 @@ function drawResults(
 	/* Only for a scan. A drill covers scattered windows chosen by a hit list, so a positional
 	profile of it would map where the volcano's elements happen to be, not where methylation
 	changes -- the same picture for any contrast run on the same element class. */
-	if (scanChromosome) {
-		const chrLen = app?.opts?.genome?.majorchr?.[scanChromosome]
-		if (chrLen) domainMap(holder.append('div').style('padding', '5px'), rows, scanChromosome, chrLen)
+	if (scanning) {
+		const lens = app?.opts?.genome?.majorchr || {}
+		const present = scanChromosomes!.filter(c => lens[c] > 0)
+		if (present.length)
+			domainMap(holder.append('div').style('padding', '5px'), rows, present, lens, (chr, start, stop) =>
+				setBinFilter({ chr, start, stop })
+			)
 	}
 	widthHistogram(holder.append('div').style('padding', '5px'), rows)
 
-	renderTable({
-		div: holder.append('div'),
-		columns: [
-			{ label: 'DMR' },
-			/* Formatted rather than a bar. Widths span four orders of magnitude on a scan (24 bp to
+	const tableCols = [
+		{ label: 'DMR' },
+		/* Formatted rather than a bar. Widths span four orders of magnitude on a scan (24 bp to
 			100 kb on MMRF chr1) and the barplot column is a LINEAR scale, so the median 1.1 kb DMR
 			drew as 1% of the axis -- every row below the top dozen was an identical sliver, and the
 			shared axis crushed its own tick labels into an unreadable run of digits. The shape of the
 			distribution is in the histogram above, where a log axis can carry it. */
-			{ label: 'Width', align: 'right', nowrap: true },
-			{ label: 'CpGs', align: 'right' },
-			{ label: 'Direction' },
-			{ label: 'Mean Δβ', align: 'right' }
-		],
-		rows: rows
-			.sort((a, b) => b.width - a.width)
-			.map(x => [
-				{ value: `${x.d.chr}:${x.d.start.toLocaleString()}-${x.d.stop.toLocaleString()}` },
-				{ value: bplen(x.width) },
-				{ value: x.d.no_cpgs.toLocaleString() },
-				{ value: x.d.direction },
-				{ value: Number(x.d.meandiff?.toFixed(3)) }
-			]),
+		{ label: 'Width', align: 'right', nowrap: true },
+		{ label: 'CpGs', align: 'right' },
+		{ label: 'Direction' },
+		{ label: 'Mean Δβ', align: 'right' },
+		/* The column that makes a coordinate actionable. The element volcano gets gene names for
+			free by testing pre-annotated elements, at the cost of coverage and of reporting every
+			event at whatever width the annotation drew. Naming the scan's regions closes that gap
+			without giving the extent back. */
+		{ label: 'Genes' }
+	]
+	const toRow = (x: { d: any; width: number }) => [
+		{ value: `${x.d.chr}:${x.d.start.toLocaleString()}-${x.d.stop.toLocaleString()}` },
+		{ value: bplen(x.width) },
+		{ value: x.d.no_cpgs.toLocaleString() },
+		{ value: x.d.direction },
+		{ value: Number(x.d.meandiff?.toFixed(3)) },
+		{
+			value: x.d.genes?.length
+				? x.d.genes.join(', ') + (x.d.genesTruncated ? ` +${x.d.genesTruncated - x.d.genes.length} more` : '')
+				: ''
+		}
+	]
+	const sorted = [...tableRows].sort((a, b) => b.width - a.width)
+	const shown = sorted.slice(0, MAX_TABLE_ROWS)
+	const tableDiv = holder.append('div')
+	if (binFilter) {
+		const bar = tableDiv.append('div').style('padding', '4px 5px').style('font-size', '.92em')
+		bar
+			.append('span')
+			.text(
+				`Showing ${sorted.length.toLocaleString()} DMRs in ${binFilter.chr}:` +
+					`${(binFilter.start / 1e6).toFixed(0)}–${(binFilter.stop / 1e6).toFixed(0)} Mb. `
+			)
+		bar
+			.append('button')
+			.attr('class', 'sja_menuoption')
+			.attr('data-testid', 'sjpp-dmrBatch-clearBin')
+			.style('padding', '1px 6px')
+			.text('Show all')
+			.on('click', () => setBinFilter(null))
+	}
+	if (sorted.length > shown.length) {
+		tableDiv
+			.append('div')
+			.style('padding', '4px 5px')
+			.style('font-size', '.9em')
+			.style('color', '#777')
+			.text(
+				`Showing the ${shown.length.toLocaleString()} widest of ${sorted.length.toLocaleString()} DMRs — ` +
+					`the table is not virtualised and the full set would not render. Download gets all of them.`
+			)
+	}
+	tableDiv
+		.append('button')
+		.attr('class', 'sja_menuoption')
+		.attr('data-testid', 'sjpp-dmrBatch-download')
+		.style('margin', '3px')
+		.style('padding', '3px')
+		.text(`Download all ${rows.length.toLocaleString()} DMRs`)
+		// the FULL set, deliberately not the rendered subset
+		.on('click', () => downloadTable(rows.map(toRow), tableCols, 'dmr-scan.tsv'))
+	tableDiv
+		.append('div')
+		.style('padding', '2px 5px 4px')
+		.style('font-size', '.9em')
+		.style('color', '#777')
+		.text(
+			"Click a DMR's coordinates to open the region view — per-CpG values, group fits, the called DMRs and the cCRE track."
+		)
+	const cells = shown.map(toRow)
+	renderTable({
+		div: tableDiv.append('div'),
+		columns: tableCols,
+		rows: cells,
 		showLines: true,
-		maxHeight: '30vh',
-		download: { fileName: 'dmr-batch.tsv' }
+		maxHeight: '30vh'
+	})
+	/* Make the coordinate a link into the locus browser. This is the end of the drill: the map says
+	WHERE, the table says WHAT GENE, and the browser says WHICH ELEMENTS -- at a scale where a cCRE
+	is actually drawable. A cCRE is ~300bp, so across the genome figure it is 0.01 px; the only
+	honest place to show element classes as a track is a locus. renderTable attaches each cell's
+	<td> as __td for exactly this. */
+	cells.forEach((row, i) => {
+		const td = (row[0] as any).__td
+		if (!td) return
+		/* No cursor change and no link colour: the coordinates read as the same black as every other
+		cell, and the note above the table says they can be clicked. An affordance that recolours one
+		column makes the table look like it holds two kinds of value when it holds one. */
+		td.attr('title', 'Click to open this region with its CpGs, fits and cCREs').on('click', () =>
+			openLocus(shown[i].d, config, app, holder)
+		)
 	})
 }
 
-/* Where on the chromosome the changes are, and which way they go.
- *
- * A scan returns ~10,000 DMRs; no table of them answers "where". Binning the chromosome and
- * plotting log2(hyper/hypo) per bin does, and on MMRF chr1 it shows the thing the table cannot:
- * hyper and hypo occupy near-EXCLUSIVE megabase territories (1q42-44 runs 5:1 hyper, 85-90 Mb runs
- * 0.11), rather than being interleaved. That is a chromatin-compartment signature, and it is the
- * reason to scan a chromosome rather than drill a hit list.
- *
- * A RATIO, not a count, because DMR density tracks CpG density and gene density -- a raw count map
- * would mostly redraw where the CpGs are. Dividing hyper by hypo cancels that: both directions are
- * called from the same probes in the same bin, so whatever makes a bin DMR-rich affects both.
- *
- * +1 on each side (a Laplace/Haldane correction) so a bin with 44 hyper and 0 hypo produces a
- * finite, comparable number instead of Infinity -- and so a 2:0 bin does not outrank a 400:80 one. */
-function domainMap(div: any, rows: { d: any; width: number }[], chr: string, chrLen: number) {
-	const TARGET_BINS = 50
-	// round the bin to a whole Mb so the axis reads in round numbers on every chromosome
-	const binBp = Math.max(1e6, Math.round(chrLen / TARGET_BINS / 1e6) * 1e6)
-	const nbins = Math.ceil(chrLen / binBp)
-	const hyper = new Array(nbins).fill(0)
-	const hypo = new Array(nbins).fill(0)
-	for (const r of rows) {
-		const i = Math.min(nbins - 1, Math.floor(r.d.start / binBp))
-		;(r.d.direction == 'hyper' ? hyper : hypo)[i]++
-	}
-	/* Below this a bin's ratio is noise: 3 hyper and 0 hypo is not a hypermethylated domain. Drawn
-	faded rather than dropped, so a gap in the map still reads as "no data here" rather than
-	"balanced here" -- those mean different things and a blank would conflate them. */
-	const MIN_DMRS = 20
+/** Pad the DMR before showing it. A DMR drawn edge to edge tells you nothing about whether it sits
+ * inside a larger domain or ends where it does; half its width either side puts it in context. */
+const LOCUS_PAD_FRACTION = 0.5
+const LOCUS_MIN_PAD = 2000
 
-	const barW = 12
-	const gap = 1
-	const half = 45
-	// wide enough for the right-anchored "8x hyper" scale labels; at 42 the leading digit clipped
-	const padL = 58
-	const padT = 14
-	const w = padL + nbins * (barW + gap) + 10
-	const svg = div
-		.append('svg')
-		.attr('data-testid', 'sjpp-dmrBatch-domainMap')
-		.attr('width', w)
-		.attr('height', padT + half * 2 + 34)
-	svg
-		.append('text')
-		.attr('x', padL)
-		.attr('y', 10)
-		.attr('font-size', 12)
-		.attr('font-weight', 'bold')
-		.attr('fill', '#333')
-		.text(`${chr} methylation domains — log₂(hyper / hypo) per ${(binBp / 1e6).toFixed(0)} Mb`)
-	const mid = padT + half
-	// clamped so one extreme bin cannot flatten every other bar into invisibility
-	const CLAMP = 3
-	const y = (v: number) => (Math.max(-CLAMP, Math.min(CLAMP, v)) / CLAMP) * half
-
-	for (let i = 0; i < nbins; i++) {
-		const n = hyper[i] + hypo[i]
-		if (!n) continue
-		const lr = Math.log2((hyper[i] + 1) / (hypo[i] + 1))
-		const bh = y(lr)
-		const x = padL + i * (barW + gap)
-		svg
-			.append('rect')
-			.attr('x', x)
-			.attr('y', bh >= 0 ? mid - bh : mid)
-			.attr('width', barW)
-			.attr('height', Math.max(1, Math.abs(bh)))
-			.attr('fill', lr >= 0 ? '#d95f02' : '#1b9e77')
-			.attr('opacity', n < MIN_DMRS ? 0.25 : 0.85)
-			.append('title')
-			.text(
-				`${chr}:${((i * binBp) / 1e6).toFixed(0)}-${(((i + 1) * binBp) / 1e6).toFixed(0)} Mb\n` +
-					`${hyper[i].toLocaleString()} hyper / ${hypo[i].toLocaleString()} hypo` +
-					(n < MIN_DMRS ? `\ntoo few DMRs (${n}) to read a ratio from` : ` — log₂ ratio ${lr.toFixed(2)}`)
-			)
+/* Open the clicked DMR in the region view.
+ *
+ * Deliberately the existing DMR plot rather than a bare genome browser. A browser showed the cCREs
+ * and the gene models, and a reader's first reaction was that the elements meant nothing without
+ * context -- correctly, because the thing being explained was not on the screen. The DMR plot puts
+ * the per-CpG group means, the LOESS fits, the significant CpGs and the called DMR spans on the
+ * same axis as the genes, and the genome now declares the cCRE track that view switches on. So one
+ * click gives the evidence, the call, and the annotation at one coordinate scale.
+ *
+ * structuredClone because rx freezes state: the group values come off the volcano's config, and
+ * fillTermWrapper adds fields to whatever it is handed. */
+function openLocus(d: any, config: any, app: any, holder: any) {
+	const groups = config?.samplelst?.groups
+	if (!groups || groups.length != 2) {
+		sayerror(holder.append('div'), 'Two sample groups are required to open the region view.')
+		return
 	}
-	// zero line last, so it sits over the bars and the crossing point stays readable
-	svg
-		.append('line')
-		.attr('x1', padL - 4)
-		.attr('x2', w - 6)
-		.attr('y1', mid)
-		.attr('y2', mid)
-		.attr('stroke', '#666')
-	for (const [v, lab] of [
-		[CLAMP, `${Math.pow(2, CLAMP)}× hyper`],
-		[-CLAMP, `${Math.pow(2, CLAMP)}× hypo`]
-	] as [number, string][]) {
-		svg
-			.append('text')
-			.attr('x', padL - 6)
-			.attr('y', mid - y(v) + (v > 0 ? 8 : -2))
-			.attr('text-anchor', 'end')
-			.attr('font-size', 10)
-			.attr('fill', '#777')
-			.text(lab)
-	}
-	// Mb ticks every ~10 bins, so the axis stays sparse whatever the chromosome length
-	const step = Math.max(1, Math.round(nbins / 5))
-	for (let i = 0; i < nbins; i += step) {
-		svg
-			.append('text')
-			.attr('x', padL + i * (barW + gap))
-			.attr('y', padT + half * 2 + 14)
-			.attr('font-size', 11)
-			.attr('fill', '#555')
-			.text(`${((i * binBp) / 1e6).toFixed(0)} Mb`)
-	}
-	svg
-		.append('text')
-		.attr('x', padL)
-		.attr('y', padT + half * 2 + 29)
-		.attr('font-size', 10)
-		.attr('fill', '#999')
-		.text(`bars faded where a bin holds fewer than ${MIN_DMRS} DMRs`)
+	const pad = Math.max(LOCUS_MIN_PAD, Math.round((d.stop - d.start) * LOCUS_PAD_FRACTION))
+	const chrLen = app?.opts?.genome?.majorchr?.[d.chr]
+	app.dispatch({
+		type: 'plot_create',
+		config: structuredClone({
+			chartType: 'dmr',
+			coordinateOverride: {
+				chr: d.chr,
+				start: Math.max(0, d.start - pad),
+				stop: chrLen ? Math.min(chrLen, d.stop + pad) : d.stop + pad
+			},
+			group1: groups[0].values,
+			group2: groups[1].values,
+			group1Name: groups[0].name,
+			group2Name: groups[1].name,
+			/* Carry the picker's colours through. The reader has already learned which group is which
+			from the swatches in the group menu and from the volcano's axis labels; recolouring them
+			here would make them re-learn it at every hop. */
+			settings: { colors: groupColors(config) }
+		})
+	})
 }
-
 /* Width distribution on a log axis, split by direction.
  *
  * The panel exists to answer "what is the SPATIAL SCALE of these events", and on a scan that is a
@@ -444,8 +475,8 @@ function widthHistogram(div: any, rows: { d: any; width: number }[]) {
 	for (let i = first; i <= last; i++) {
 		const x = padL + (i - first) * (barW * 2 + gap)
 		for (const [j, [count, color]] of [
-			[hyper[i], '#d95f02'],
-			[hypo[i], '#1b9e77']
+			[hyper[i], HYPER_COLOR],
+			[hypo[i], HYPO_COLOR]
 		].entries()) {
 			const bh = ((count as number) / max) * h
 			if (bh <= 0) continue
@@ -475,8 +506,8 @@ function widthHistogram(div: any, rows: { d: any; width: number }[]) {
 		}
 	}
 	const legend = svg.append('g').attr('transform', `translate(${padL},${h + padB - 2})`)
-	legend.append('rect').attr('width', 9).attr('height', 9).attr('y', -9).attr('fill', '#d95f02')
+	legend.append('rect').attr('width', 9).attr('height', 9).attr('y', -9).attr('fill', HYPER_COLOR)
 	legend.append('text').attr('x', 12).attr('font-size', 11).attr('fill', '#555').text('hyper')
-	legend.append('rect').attr('x', 52).attr('width', 9).attr('height', 9).attr('y', -9).attr('fill', '#1b9e77')
+	legend.append('rect').attr('x', 52).attr('width', 9).attr('height', 9).attr('y', -9).attr('fill', HYPO_COLOR)
 	legend.append('text').attr('x', 64).attr('font-size', 11).attr('fill', '#555').text('hypo')
 }

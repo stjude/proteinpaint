@@ -1,4 +1,5 @@
 import type { MassAppApi } from '#mass/types/mass'
+import { groupColors } from '../groupColors'
 import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
@@ -274,8 +275,10 @@ export class VolcanoInteractions {
 	async launchDmr(d: { chr: string; start: number; stop: number; promoterId?: string }) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 
-		const controlColor = config?.tw?.term?.values?.[config?.samplelst?.groups[0].name]?.color || '#ff0000'
-		const caseColor = config?.tw?.term?.values?.[config?.samplelst?.groups[1].name]?.color || '#0000ff'
+		/* Shared with the batch drill-down's launcher so the two cannot drift. Absent colours are
+		omitted rather than replaced: the DMR plot's own defaults are tuned, where the red/blue this
+		used to substitute was neither chosen nor legible next to the hyper/hypo bars. */
+		const colors = groupColors(config)
 
 		const label = d.promoterId || `${d.chr}:${d.start}-${d.stop}`
 		const dmrConfig: any = {
@@ -289,9 +292,7 @@ export class VolcanoInteractions {
 			/* Which element matrix to drill into, for a dataset whose methylation is element-level
 			only. The server ignores it when the dataset has a CpG-level matrix, which is finer. */
 			elementType: config?.settings?.volcano?.elementType,
-			settings: {
-				colors: { group1: controlColor, group2: caseColor }
-			}
+			settings: { colors }
 		}
 
 		this.app.dispatch({
