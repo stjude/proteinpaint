@@ -7,7 +7,8 @@ import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
 import { formatPromoterLabel, elementNoun } from '../promoterLabel'
-import { runDmrBatch } from '../interactions/dmrBatch'
+import { domainMap } from '../interactions/domainMap'
+import { geneBodyLossTest } from '../interactions/geneBodyLossDE'
 
 export class VolcanoPlotView {
 	dom: VolcanoDom
@@ -58,6 +59,7 @@ export class VolcanoPlotView {
 		this.renderFoldChangeLine(plotDim)
 		this.attachInteractions(plotDim)
 		if (this.settings.showPValueTable) this.renderPValueTable()
+		if (this.viewData.scan) this.renderDomainMap()
 	}
 
 	initDom() {
@@ -77,10 +79,8 @@ export class VolcanoPlotView {
 		// the old div in dom.holder (the table never closes), and toggling
 		// it on repeatedly appends additional divs.
 		this.dom.holder.select('#sjpp-volcano-pValueTable').remove()
-		/* Same lifecycle as the p-value table: results are data, not config, so a re-render (new
-		thresholds, new element class) must drop them rather than leave a stale table next to a plot
-		it no longer describes. */
-		this.dom.holder.select('#sjpp-volcano-dmrBatch').remove()
+		// same lifecycle as the p-value table: redrawn from each response, never left stale
+		this.dom.holder.select('#sjpp-volcano-domainMap').remove()
 
 		if (!this.settings.showPValueTable) return
 		this.volcanoDom.pValueTable = this.dom.holder
@@ -109,12 +109,31 @@ export class VolcanoPlotView {
 			},
 			{ whenOpen: 'Hide statistics' }
 		)
+		/* The expression test on the genes under gene-body loss regions that beat background. Only a
+		corrected scan offers it: on every called region the question would be whether the
+		proliferation odometer changes transcription. */
+		const gb = this.viewData.scan?.geneBodyLoss
+		if (gb?.genes.length) {
+			this.addActionButton(
+				`Expression of ${gb.genes.length.toLocaleString()} gene-body loss genes`,
+				[tt.DNA_METHYLATION],
+				() =>
+					geneBodyLossTest(
+						this.dom.actionsTip,
+						this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id),
+						this.interactions.app.vocabApi.vocab,
+						this.viewData.scan!,
+						this.interactions.app
+					)
+			)
+		}
 		/* Must match the label the view model built from the same helper, otherwise the
 		find() below silently misses and the count disappears from the action bar. */
 		const dmNoun = elementNoun(this.settings?.elementType)
 		const sigLabel =
 			this.termType == tt.DNA_METHYLATION ? `Number of significant ${dmNoun.many}` : 'Number of significant genes'
-		const numSigGenes = this.viewData.statsData.find(d => d.label == sigLabel)?.value
+		// stats values may be formatted strings now (scan rows); the count row is always a number
+		const numSigGenes = Number(this.viewData.statsData.find(d => d.label == sigLabel)?.value ?? 0)
 		if (numSigGenes) {
 			// grouped: these run to five and six figures, and "84302" vs "8430" is hard to tell apart at a glance
 			const n = numSigGenes.toLocaleString()
@@ -135,146 +154,13 @@ export class VolcanoPlotView {
 			numbers cannot be confused for each other. */
 			const off = this.viewData.xOffset
 			const centered = off ? `, centered on median Δβ ${off > 0 ? '+' : ''}${off.toFixed(3)}` : ''
-			const sigText = (isDM ? `${n} DM ${dmNoun.many}` : `${n} DE genes`) + split + centered + ':'
+			// a DMR is differentially methylated by definition, so "DM DMRs" would say it twice
+			const sigText =
+				(isDM ? (this.viewData.scan ? `${n} ${dmNoun.many}` : `${n} DM ${dmNoun.many}`) : `${n} DE genes`) +
+				split +
+				centered +
+				':'
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
-
-			/* Only offered where a region analysis can actually run. regionAnalysis is emitted by
-			termdb.config only when the dataset has a matrix to run one on, so this does not advertise
-			a drill-down that would error on click. */
-			if (isDM && this.interactions.app?.vocabApi?.termdbConfig?.queries?.dnaMethylation?.regionAnalysis) {
-				/* Deliberately not addActionButton: that always opens the actionsTip, and a results
-				table belongs in the sandbox under the plot (where the p-value table goes), not floating
-				on top of it. Progress goes in the button label so there is no second thing to look at. */
-				const dots = this.viewData.pointData.filter((d: any) => d.significant !== false)
-				const drillBtn = this.volcanoDom.actions
-					.append('button')
-					.attr('class', 'sja_menuoption')
-					.attr('data-testid', 'sjpp-volcano-drill-btn')
-					.style('margin', '3px')
-					.style('padding', '3px')
-					.text('Drill hits to CpG resolution')
-					.on('click', async () => {
-						if (drillBtn.property('disabled')) return
-						const label = drillBtn.text()
-						drillBtn.property('disabled', true).text(`Drilling ${dots.length.toLocaleString()} regions…`)
-						this.dom.holder.select('#sjpp-volcano-dmrBatch').remove()
-						const holder = this.dom.holder
-							.append('div')
-							.attr('id', 'sjpp-volcano-dmrBatch')
-							.attr('data-testid', 'sjpp-volcano-dmrBatch')
-							.style('display', 'block')
-							.style('margin', '10px 0 0 20px')
-						try {
-							await runDmrBatch({
-								config: this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id),
-								vocab: this.interactions.app.vocabApi.vocab,
-								dots,
-								totalSignificant: numSigGenes,
-								holder,
-								app: this.interactions.app
-							})
-						} finally {
-							drillBtn.property('disabled', false).text(label)
-						}
-					})
-
-				/* Scan mode needs no hit list at all -- the model fit is chromosome-wide either way, so
-				calling every DMR on a chromosome costs about what drilling a handful of its windows does.
-				A plain <select> rather than the region search box: string2pos() turns a bare "chr20" into
-				a 20kb window at the chromosome midpoint, which would silently scan 0.005% of the target. */
-				const chrs: string[] = this.interactions.app?.opts?.genome?.majorchrorder || []
-				if (chrs.length) {
-					/* "Whole genome" is the default selection, not an afterthought at the bottom of the
-					list. A scan of one chromosome answers "what happened here"; a scan of all of them
-					answers "where did anything happen", which is the question the mode exists for, and
-					it costs about as much as scanning three chromosomes separately because the per-
-					chromosome model fit is the price either way. */
-					const ALL = '__all__'
-					/* Everything except the mitochondrion. chrM is 16.5 kb of circular DNA that is not
-					CpG-island methylated the way the nuclear genome is and cannot carry a domain, so
-					scanning it answers nothing -- and on a map scaled to chr1 its track is 0.06 px wide
-					with a label floating beside it. chrY stays: it is a real chromosome, and on a
-					mixed-sex cohort an empty chrY track is a result rather than an omission. */
-					const genomeChrs = chrs.filter(c => c != 'chrM' && c != 'chrMT')
-					const chrSelect = this.volcanoDom.actions
-						.append('select')
-						.attr('data-testid', 'sjpp-volcano-scan-chr')
-						.style('margin', '3px')
-					chrSelect
-						.selectAll('option')
-						.data([ALL, ...chrs])
-						.enter()
-						.append('option')
-						.attr('value', (d: string) => d)
-						.text((d: string) => (d == ALL ? `Whole genome (${genomeChrs.length} chromosomes)` : d))
-					/* Opt-in, and off by default, because it changes what the numbers mean rather than how
-					they look: uncorrected, a DMR is a region that moved; corrected, it is a region that
-					moved MORE than a comparable region drifts. On a cohort with a global shift those are
-					different populations -- on MMRF NSD2-high the direction inverts. It costs a second
-					model fit per chromosome, so it roughly doubles a scan. */
-					const bgLabel = this.volcanoDom.actions
-						.append('label')
-						.style('margin', '3px 3px 3px 8px')
-						.style('font-size', '.95em')
-						.attr(
-							'title',
-							'Score each DMR against width-matched intergenic background instead of against zero. Roughly doubles the scan time.'
-						)
-					const bgBox = bgLabel
-						.append('input')
-						.attr('type', 'checkbox')
-						.attr('data-testid', 'sjpp-volcano-scan-bg')
-						.style('margin-right', '4px')
-					bgLabel.append('span').text('Correct for background drift')
-					const scanBtn = this.volcanoDom.actions
-						.append('button')
-						.attr('class', 'sja_menuoption')
-						.attr('data-testid', 'sjpp-volcano-scan-btn')
-						.style('margin', '3px')
-						.style('padding', '3px')
-						.text('Scan')
-						.on('click', async () => {
-							if (scanBtn.property('disabled')) return
-							const sel = chrSelect.property('value')
-							const scanChromosomes = sel == ALL ? genomeChrs.slice() : [sel]
-							const label = scanBtn.text()
-							/* A genome scan is ~40s of server work with nothing on the wire until it
-							finishes, so a static label is indistinguishable from a hung request. Ticking
-							the elapsed seconds is the cheapest honest progress signal available here:
-							the route returns a single response and cannot report partial progress. */
-							const backgroundCorrection = bgBox.property('checked')
-							const what = (sel == ALL ? 'genome' : sel) + (backgroundCorrection ? ' + background' : '')
-							const t0 = Date.now()
-							const tick = setInterval(
-								() => scanBtn.text(`Scanning ${what}… ${Math.round((Date.now() - t0) / 1000)}s`),
-								1000
-							)
-							scanBtn.property('disabled', true).text(`Scanning ${what}… 0s`)
-							this.dom.holder.select('#sjpp-volcano-dmrBatch').remove()
-							const holder = this.dom.holder
-								.append('div')
-								.attr('id', 'sjpp-volcano-dmrBatch')
-								.attr('data-testid', 'sjpp-volcano-dmrBatch')
-								.style('display', 'block')
-								.style('margin', '10px 0 0 20px')
-							try {
-								await runDmrBatch({
-									config: this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id),
-									vocab: this.interactions.app.vocabApi.vocab,
-									dots,
-									totalSignificant: numSigGenes,
-									holder,
-									app: this.interactions.app,
-									scanChromosomes,
-									backgroundCorrection
-								})
-							} finally {
-								clearInterval(tick)
-								scanBtn.property('disabled', false).text(label)
-							}
-						})
-				}
-			}
 
 			const pValueTableButtonText = this.settings.showPValueTable ? 'Hide p-value table' : 'Show p-value table'
 			this.addActionButton(
@@ -395,12 +281,7 @@ export class VolcanoPlotView {
 			'transform',
 			`translate(${plotDim.yAxisLabel.x}, ${plotDim.yAxisLabel.y}) rotate(-90)`
 		)
-		this.setSvgSubscriptLabel(
-			this.volcanoDom.yAxisLabel,
-			'-log',
-			'10',
-			this.termType === tt.PROTEOME_DAP ? '(FDR)' : `(${this.settings.pValueType} p-value)`
-		)
+		this.setSvgSubscriptLabel(this.volcanoDom.yAxisLabel, '-log', '10', `(${this.viewData.pValueLabel})`)
 
 		this.volcanoDom.xAxisLabel.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
 		/* The axis must name what it is actually plotting. Delta-beta has no subscript, so it is
@@ -525,6 +406,25 @@ export class VolcanoPlotView {
 			formatted correctly without touching this. */
 			td2.style('text-align', 'end').text(Number.isInteger(d.value) ? d.value.toLocaleString() : d.value)
 		}
+	}
+
+	/* The genome map: where the DMRs are and which way they go, one track per chromosome, drawn from
+	server-side bins over every kept DMR rather than from the capped interactive dots. Clicking a
+	bin opens that span in the region view -- per-CpG group means, the called DMRs and the genes on
+	one axis -- which is the scale at which a hyper or hypo territory can actually be looked at. */
+	renderDomainMap() {
+		const scan = this.viewData.scan!
+		const div = this.dom.holder
+			.append('div')
+			.attr('id', 'sjpp-volcano-domainMap')
+			.attr('data-testid', 'sjpp-volcano-domainMap')
+			.style('display', 'block')
+			.style('margin', '10px 0 0 20px')
+		/* No padding: a multi-megabase bin is its own context, and the region view's default 2 kb
+		pad would push a 5 Mb bin over its 5 Mb cap and fail before any request was made. */
+		domainMap(div, scan.domainMap, scan.chromosomes, (chr, start, stop) =>
+			this.interactions.launchDmr({ chr, start, stop }, { pad: 0 })
+		)
 	}
 
 	renderPValueTable() {
@@ -684,10 +584,12 @@ export class VolcanoPlotView {
 		const isDAP = this.termType === tt.PROTEOME_DAP
 		const effectLabel = this.onDeltaBeta ? 'Δβ' : 'log₂(FC)'
 		const pValueType = this.settings.pValueType
-		// DAP files carry a single FDR (stored in original_p_value); label it as such
-		// rather than "Original/Adjusted p-value".
-		const pLabel = isDAP ? 'FDR' : `${pValueType.charAt(0).toUpperCase()}${pValueType.slice(1)} p-value`
-		const pField = (isDAP ? 'original_p_value' : `${pValueType}_p_value`) as 'original_p_value' | 'adjusted_p_value'
+		// a single p (DAP's FDR, a scan's p) lives in original_p_value whatever the p-value type says
+		const { pValueLabel, singlePValue } = this.viewData
+		const pLabel = pValueLabel.charAt(0).toUpperCase() + pValueLabel.slice(1)
+		const pField = (singlePValue ? 'original_p_value' : `${pValueType}_p_value`) as
+			| 'original_p_value'
+			| 'adjusted_p_value'
 		const columns = isDM
 			? [
 					{ label: elementNoun(this.settings?.elementType).one },
@@ -782,9 +684,9 @@ export class VolcanoPlotView {
 		} else {
 			addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
 		}
-		if (this.termType === tt.PROTEOME_DAP) {
-			// DAP carries a single FDR (adjusted p-value), stored in original_p_value.
-			addTooltipRow(table, 'FDR', roundValueAuto(d.original_p_value))
+		if (this.viewData.singlePValue) {
+			// DAP carries a single FDR, a scan a single p; both are stored in original_p_value
+			addTooltipRow(table, this.viewData.pValueLabel, roundValueAuto(d.original_p_value))
 		} else {
 			addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
 			if (d.adjusted_p_value != undefined) addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))

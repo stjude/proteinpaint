@@ -23,7 +23,11 @@ export type DmrDom = {
 	header: Elem
 	holder: Elem
 	loadingOverlay: Elem
+	/** written only by the framework's printError; the rx update loop hides and empties it before
+	 * every main(), so nothing the plot wants to keep may go in here */
 	error: Elem
+	/** notes that should survive an update, e.g. the zoom-in hint */
+	note: Elem
 	loading: Elem
 	diagnosticPanel: Elem
 }

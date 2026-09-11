@@ -12,7 +12,7 @@ import { VolcanoInteractions } from './interactions/VolcanoInteractions'
 import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
-import { GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION } from '#types'
+import { GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { uiLabel } from '#shared'
 
 /* Below this many samples in the smaller group, the wilcoxon p-values are worth a caveat.
@@ -96,7 +96,8 @@ export class Volcano extends PlotBase implements RxComponent {
 		const controls = new VolcanoControlInputs(
 			plotConfig,
 			this.termType,
-			this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.elementTypes
+			this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.elementTypes,
+			this.app.opts.genome?.majorchrorder
 		)
 
 		this.components.controls = await controlsInit({
@@ -133,6 +134,13 @@ export class Volcano extends PlotBase implements RxComponent {
 
 		const settings = config.settings.volcano
 		try {
+			/* A genome scan is a minute or two of server work with nothing on the wire until it
+			finishes; a bare "Loading..." is indistinguishable from a hung request. */
+			this.dom.wait.text(
+				settings.elementType == DMR_SCAN_ELEMENT_TYPE
+					? 'Scanning for DMRs... a whole-genome scan takes a minute or two the first time, and is cached after that.'
+					: 'Loading...'
+			)
 			//Only show Loading for data requests that take longer than 500ms
 			const showWait = setTimeout(() => {
 				this.dom.wait.style('display', 'block')

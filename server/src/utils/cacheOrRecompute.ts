@@ -24,6 +24,8 @@ export const cacheJobPolicies = {
 	Identical requests still share one compute through the in-flight dedup below, so several users
 	running the SAME scan cost one. */
 	dmr: { maxPending: 2 },
+	// per-gene gene-body methylation deltas for a contrast; same fan-out as a scan, same ceiling
+	geneBodyMeth: { maxPending: 2 },
 	gsea: { maxPending: 5 },
 	grin2: { maxPending: 5 },
 	topve: { maxPending: 5 },

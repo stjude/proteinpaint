@@ -1,6 +1,5 @@
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
-import { sayerror } from '#dom'
 import type { DmrConfig, DmrDom } from './DmrTypes.ts'
 import { getDefaultDMRSettings } from './settings/defaults.ts'
 import { DmrModel } from './model/DmrModel.ts'
@@ -52,6 +51,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 			holder: wrapper.append('div'),
 			loadingOverlay,
 			error: opts.holder.append('div'),
+			note: opts.holder.append('div'),
 			loading: opts.holder.append('div').text('Running DMR analysis\u2026'),
 			diagnosticPanel: opts.holder.append('div').style('display', 'none')
 		}
@@ -71,49 +71,14 @@ class DmrPlot extends PlotBase implements RxComponent {
 		this.genomeObj = this.app.opts.genome
 		this.model = new DmrModel(config, this.app.vocabApi.vocab)
 
-		// First render: fetch data and build the block
-		this.dom.loading.style('display', 'block')
-		try {
-			const pad = config.settings.dmr.pad
-			const chr = config.coordinateOverride!.chr
-			const start = Math.max(0, Number(config.coordinateOverride!.start) - pad)
-			const stop = Number(config.coordinateOverride!.stop) + pad
-
-			checkRegionSize(stop - start, config.settings.dmr.maxRegionSize)
-			const dmrResult = await this.model.fetchDmr(chr, start, stop, this.api?.getAbortSignal())
-			if ('error' in dmrResult) {
-				sayerror(this.dom.error, dmrResult.error)
-				throw new Error(dmrResult.error)
-			}
-
-			this.analyzedRegion = { chr, start, stop }
-			const vm = new DmrViewModel(dmrResult, config, this.genomeObj, chr, start, stop)
-
-			this.blockInstance = await this.view.renderBlock(
-				vm.viewData,
-				this.genomeObj,
-				config.settings.dmr,
-				chr,
-				start,
-				stop,
-				rglst => this.onBlockCoordinateChange(rglst)
-			)
-			this.view.renderLegend(this.blockInstance, vm.viewData.legendRows)
-			this.view.showLoessNote(!vm.viewData.showDots)
-			if (vm.viewData.diagnostic)
-				this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
-		} catch (e: unknown) {
-			if (this.app.isAbortError(e)) return
-			const msg = e instanceof Error ? e.message : String(e)
-			sayerror(this.dom.error, msg)
-		}
-		this.dom.loading.style('display', 'none')
+		/* No fetch here. main() runs right after init and its full-rebuild branch does the first
+		render, so there is one code path for rendering and, more to the point, one for failing:
+		an error thrown from main() is shown by the framework (PlotBase.printError) and re-shown on
+		every update until it is resolved, where an error caught inside init and written into
+		dom.error was wiped by the very next update() before anyone saw it. */
 	}
 
 	async main() {
-		// Skip the first main() call — init() already rendered
-		if (!this.analyzedRegion) return
-
 		const config = this.state.config as DmrConfig
 		this.model = new DmrModel(config, this.app.vocabApi.vocab)
 
@@ -125,20 +90,16 @@ class DmrPlot extends PlotBase implements RxComponent {
 		const stop = Number(c.stop) + pad
 
 		const a = this.analyzedRegion
-		const coordsChanged = chr !== a.chr || start !== a.start || stop !== a.stop
+		const coordsChanged = a && (chr !== a.chr || start !== a.start || stop !== a.stop)
 
-		if (coordsChanged) {
+		if (a && coordsChanged) {
 			// New coordinates — re-fetch and update tracks in place
 			this.view.showOverlay()
-			this.view.clearErrors()
 
 			try {
 				checkRegionSize(stop - start, config.settings.dmr.maxRegionSize)
 				const dmrResult = await this.model.fetchDmr(chr, start, stop, this.api?.getAbortSignal())
-				if ('error' in dmrResult) {
-					sayerror(this.dom.error, dmrResult.error)
-					throw new Error(dmrResult.error)
-				}
+				if ('error' in dmrResult) throw new Error(dmrResult.error)
 
 				this.analyzedRegion = { chr, start, stop }
 				const blkRegion = this.blockInstance?.rglst?.[0]
@@ -154,24 +115,20 @@ class DmrPlot extends PlotBase implements RxComponent {
 					this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
 			} catch (e: unknown) {
 				if (this.app.isAbortError(e)) return
-				const msg = e instanceof Error ? e.message : String(e)
-				sayerror(this.dom.error, msg)
+				this.view.hideOverlay()
+				throw e
 			}
 			this.view.hideOverlay()
 		} else {
-			// Same coordinates but settings changed (e.g. backend toggle) — full rebuild
+			// First render, or same coordinates with changed settings (e.g. backend toggle) — full build
 			this.dom.holder.selectAll('*').remove()
-			this.view.clearErrors()
 			this.dom.loading.style('display', 'block')
 			this.blockInstance = null
 
 			try {
 				checkRegionSize(stop - start, config.settings.dmr.maxRegionSize)
 				const dmrResult = await this.model.fetchDmr(chr, start, stop, this.api?.getAbortSignal())
-				if ('error' in dmrResult) {
-					sayerror(this.dom.error, dmrResult.error)
-					throw new Error(dmrResult.error)
-				}
+				if ('error' in dmrResult) throw new Error(dmrResult.error)
 
 				this.analyzedRegion = { chr, start, stop }
 				const vm = new DmrViewModel(dmrResult, config, this.genomeObj, chr, start, stop)
@@ -191,8 +148,8 @@ class DmrPlot extends PlotBase implements RxComponent {
 					this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
 			} catch (e: unknown) {
 				if (this.app.isAbortError(e)) return
-				const msg = e instanceof Error ? e.message : String(e)
-				sayerror(this.dom.error, msg)
+				this.dom.loading.style('display', 'none')
+				throw e
 			}
 			this.dom.loading.style('display', 'none')
 		}
@@ -202,7 +159,6 @@ class DmrPlot extends PlotBase implements RxComponent {
 		if (!this.analyzedRegion || !rglst.length) return
 		const r = rglst[0]
 		if (r.start >= r.stop || r.start < 0) return
-		this.view.clearErrors()
 		const a = this.analyzedRegion
 		if (r.chr === a.chr && r.start === a.start && r.stop === a.stop) return
 		this.app.dispatch({

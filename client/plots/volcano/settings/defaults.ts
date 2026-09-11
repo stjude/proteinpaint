@@ -76,6 +76,15 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	not 0.3: that is the log2FC default and would be a 30-point shift here, which almost nothing
 	clears. */
 	defaults.deltaBetaCutoff = 0.1
+	/* DMR scan. Whole genome by default: a scan of one chromosome answers "what happened here", the
+	whole genome "where did anything happen", which is the question the mode exists for, and the
+	per-chromosome fit is the price either way. Correction off because it changes what the numbers
+	MEAN (a region that moved vs one that moved more than its matched background drifts) -- on MMRF
+	NSD2-high the direction inverts -- so it is a second reading to switch to. Five CpGs because
+	two-CpG calls carry the largest effects and no direction (51.5% hyper, a coin flip). */
+	defaults.scanChromosome = ''
+	defaults.backgroundCorrection = false
+	defaults.minCpgs = 5
 }
 
 /*********** Setting Validation Functions ***********

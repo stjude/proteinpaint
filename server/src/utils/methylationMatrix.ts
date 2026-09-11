@@ -87,6 +87,29 @@ export function resolveMethylationMatrix(ds: any, chr: string, elementType: stri
 -- while the matrices are keyed by sample NAME, so the ids are resolved through the same resolver
 differential methylation uses. Reading a `sample` field off the request instead silently produced
 empty groups for every caller whose group values carry ids alone, which is most of them. */
+/* The two groups cut down to the samples that have methylation data, as termdb sample ids.
+
+For any expression step that follows a methylation contrast -- the gene-body expression test, the
+DE volcano launched from it -- the comparison is only clean if it is made on the SAME patients.
+Otherwise the methylation side is the 365 with WGBS and the expression side the 918 with RNA, and a
+difference between the two readings could be the extra 553 patients rather than anything about
+methylation. Resolved through the same path the methylation analyses use, then mapped back to ids,
+so ancestry mapping and the dataset's specimen exclusions apply identically. */
+export async function matchedSamplelst(
+	samplelst: { groups: { name: string; values: any[]; [k: string]: any }[] },
+	eligible: Set<string>,
+	ds: any
+): Promise<{ groups: { name: string; values: { sampleId: number | string }[]; [k: string]: any }[] }> {
+	const groups: { name: string; values: { sampleId: number | string }[] }[] = []
+	for (const g of samplelst.groups) {
+		const { names } = await buildGroupValues(g.values, eligible, ds, undefined, undefined, undefined, undefined)
+		/* Everything but the values is kept as it came, `in: true` included: the volcano treats a
+		group without `in` as the "all other samples" group and rebuilds its membership. */
+		groups.push({ ...g, values: names.map(n => ({ sampleId: ds.cohort?.termdb?.q?.sampleName2id?.(n) ?? n })) })
+	}
+	return { groups }
+}
+
 export async function resolveGroupNames(
 	group1: any[],
 	group2: any[],

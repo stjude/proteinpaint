@@ -2,6 +2,7 @@ import type { RoutePayload, RouteApi } from '#types'
 import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { lengthStratifiedDE, type GeneFC } from '#src/utils/dmrGeneDE.ts'
 import { mayLog } from '#src/helpers.ts'
+import { resolveMethylationMatrix, matchedSamplelst } from '#src/utils/methylationMatrix.ts'
 import { formatElapsedTime } from '#shared'
 
 /* Do the genes losing gene-body methylation also lose expression?
@@ -39,16 +40,26 @@ function init({ genomes }) {
 			if (!q.samplelst?.groups?.length) throw new Error('Two sample groups are required.')
 			const t0 = Date.now()
 
-			/* Reuses the DE route's cache: the same contrast run for the volcano is not recomputed
-			here, and running this twice is free. */
+			/* Expression on the SAME patients the methylation was measured on. The groups arrive as the
+			full cohort (623 vs 295 with RNA on MMRF) while the scan ran on the 255 vs 110 with WGBS; a
+			test made across the two would compare cohorts, not readings. Cached like any DE run, so
+			the launched DE volcano on the same matched groups shares the result. */
+			const ds = genome.datasets?.[q.dslabel]
+			if (!ds) throw new Error('unknown dataset')
+			const { eligible } = resolveMethylationMatrix(ds, genome.majorchrorder?.[0] || 'chr1', undefined)
+			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds)
 			const { result } = await getDeCacheResult(
 				{
 					genome: q.genome,
 					dslabel: q.dslabel,
-					samplelst: q.samplelst,
+					samplelst,
 					min_count: q.min_count ?? 10,
 					min_total_count: q.min_total_count ?? 15,
-					method: q.method
+					cpm_cutoff: q.cpm_cutoff,
+					method: q.method,
+					// part of the DE cache key: sent so this run and the volcano's are one entry
+					filter: q.filter,
+					filter0: q.filter0
 				} as any,
 				genomes
 			)

@@ -2,6 +2,7 @@ import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { getGroupColors, toHex } from '../colors'
 // import type { Volcano } from '../Volcano'
 
@@ -104,6 +105,16 @@ export class VolcanoModel {
 			regardless of what the client sends. */
 			...(this.settings.elementType && this.settings.elementType != 'promoter'
 				? { element_type: this.settings.elementType }
+				: {}),
+			// the scan's own knobs; the server ignores them for any other element type
+			...(this.settings.elementType == DMR_SCAN_ELEMENT_TYPE
+				? {
+						scan: {
+							...(this.settings.scanChromosome ? { chromosome: this.settings.scanChromosome } : {}),
+							backgroundCorrection: !!this.settings.backgroundCorrection,
+							minCpgs: this.settings.minCpgs
+						}
+				  }
 				: {}),
 			volcanoRender: this.getVolcanoRender()
 		} as Partial<DiffMethRequest>

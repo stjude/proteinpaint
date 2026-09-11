@@ -23,16 +23,60 @@ Features:
   whole chromosomes rather than a supplied hit list. Affordable because the model fit is already
   chromosome-wide and the kernel smoothing is linear in CpGs. The per-region size cap does not
   apply to scan regions, which are whole chromosomes by construction.
-- The volcano's scan control defaults to "Whole genome" and runs every chromosome in one request:
-  MMRF NSD2-low vs NSD2-high, 16.4M CpGs over 24 chromosomes, 41.7s for 123,647 DMRs. chrM is
-  excluded -- 16.5 kb of circular DNA that is not CpG-island methylated cannot carry a domain, and
-  on a map scaled to chr1 its track is 0.06 px wide. chrY is kept, because on a mixed-sex cohort
-  an empty chrY track is a result rather than an omission. The button reports elapsed seconds
-  while it runs, since the route returns one response and a static label cannot be told apart
-  from a hung request.
-- Volcano action "Drill hits to CpG resolution" (differential methylation): runs the batch over the
-  significant elements and reports the DMR width distribution plus a downloadable table. Says plainly when
-  it drilled only the top N of the significant set, since that subset is not direction-balanced.
+- The genome-wide DMR scan is now an element class of the differential-methylation volcano rather
+  than a panel of its own. Pick "DMRs called de novo (genome scan)" in the volcano's Element class
+  control and every DMR becomes a dot -- delta-beta on x, DMRcate's smoothed FDR on y -- drawn by the
+  same server-side renderer, with the same p-value table, hover, highlight, download, and the same
+  dot menu that opens a region in the DMR view. The scan's own settings sit in the controls panel
+  and appear only while the scan is selected: "Scan" (whole genome, the default, or one chromosome;
+  chrM is left out because 16.5 kb of circular DNA cannot carry a domain, chrY stays because on a
+  mixed-sex cohort an empty chrY track is a result), "Correct for background drift", and "Min CpGs
+  per DMR" (default 5). The whole-scan facts the panel used to print as a wall of text -- DMRs
+  called and kept, hyper/hypo split, width median and IQR, artifact-mask drops, each group's
+  genome-wide mean beta and the shift, background windows sampled, scored, unscored and beating
+  background, the gene-body loss set -- are rows in the Statistics menu, every one over the same
+  set of DMRs so no two lines have different denominators. What was dropped with the panel: the
+  "Drill hits to CpG resolution" action (a scan of the same chromosomes costs about the same and is
+  unbiased), the log-scale width histogram (median and IQR remain in Statistics), and the
+  table-narrowing bin click (a bin now opens in the region view). MMRF NSD2-low vs NSD2-high,
+  16.4M CpGs over 24 chromosomes, is 41.7s for 144,529 DMRs the first time and served from cache
+  after; the loading message says so. The per-CpG FDR cutoff is DMRcate's 0.05: the old panel
+  handed the volcano's -log10 slider back as the cutoff, which at 1.3 is 0.0501 and called ~0.1%
+  more DMRs (144,529 against 144,398 on MMRF); the volcano's p slider now only classifies, so
+  moving it redraws rather than refits. Confounders are not offered for the scan, and the "Min
+  samples per group" and p-value-type controls hide while it is selected, since the scan resolves
+  its own groups and carries one p per DMR.
+  Server-side, termdb/diffMeth recognises element_type 'dmr_scan' and runs termdb/dmrBatch's cached
+  scan (exported as runDmrBatch) instead of an element matrix; termdb.config lists the pseudo-class
+  among elementTypes wherever the region analysis can run. The DMR-to-row mapping and the summary
+  are one pure function (server/src/utils/dmrScanRows.ts, unit tested), and the map's binning moved
+  to shared/utils so server and client bin identically.
+- MMRF differential methylation is the genome-wide DMR scan only. queries.dnaMethylation.scanOnly
+  keeps the element matrices configured (they serve terms and the region view's fallback) but offers
+  nothing else in the class picker, so the analysis opens on the scan with no class control at all;
+  defaultElementType may alternatively name 'dmr_scan' to open on the scan while keeping the classes.
+  While the scan is selected the "Exclude sex chromosomes" and "Center Δβ on median" controls are
+  hidden too: the scan has its own chromosome picker and chrX is a track of its own on the map, and
+  the background correction is the scan's version of the centring question.
+- GSEA on a DMR scan ranks genes by gene-body methylation. A scan's rows are DMRs, not genes -- many
+  per gene, none for half of them, and more for long genes simply because they are long -- so
+  ranking them could not mean anything gene-set-wise. For a scan the enrichment route instead ranks
+  every gene by the mean delta-beta over its body (termdb/geneBodyMeth's per-gene deltas, now
+  computed once per contrast and cached under geneBodyMeth/), one signed number per gene across the
+  genome and free of length. Negative is gene-body loss in the case group, which the length-matched
+  expression test says predicts lower expression. The GSEA header says "ranked by gene-body Δβ"
+  because the plot looks identical to one ranked by promoter delta-beta and means something
+  different; promoter-level GSEA remains what the promoter element class gives. With the scan's
+  background correction on, the ranking is the excess of each gene body over width- and
+  CpG-density-matched intergenic background rather than the raw delta -- the scan's own correction
+  pointed at fixed regions, sampled and seeded the same way. Raw, the gain side of the ranking is
+  led by silent late-replicating gene families (olfactory receptors, keratins), which is where
+  genome-wide drift lives; the excess asks whether a gene body moved more than a region like it
+  drifted. The note beside the collection picker says which ranking is shown.
+- GSEA's maximum gene set size now defaults to 500, the conventional ceiling, rather than 20,000.
+  Above it a set is a compartment rather than a pathway, and blitzgsea's null fit is unstable
+  there: on a 16,000-gene gene-body ranking it returned infinite scores for Reactome sets of 260 to
+  500 genes. The existing control raises the cap when a reader wants the large sets.
 - A scan now draws a domain map: log2(hyper/hypo) DMRs per 5Mb bin, one track per chromosome
   drawn to scale, so a genome scan renders as a 24-track genome figure and a single-chromosome
   scan as one track with a coordinate axis. Bin width is chosen once from the longest chromosome
@@ -59,19 +103,17 @@ Features:
 - The genome map gains a vertical scale: dashed guides at the clamp on every track, labelled once
   on the first. "Clamped at 8x" in the footnote says what full height means but not where it is, so
   a reader could not tell a 2x territory from a 6x one.
-- Scan results are navigable, not just descriptive. Clicking a bin in the genome map narrows the
-  table to that 5Mb span (the map and summary keep describing the whole scan, so the figure never
-  disagrees with the numbers printed over it); clicking a DMR's coordinate opens it in the genome
-  browser, padded by half its width so it is shown in context rather than edge to edge. The browser
-  opens the DMR region view -- per-CpG group means, LOESS fits, significant CpGs, the called DMR
-  spans and the gene models, all on one axis -- rather than a bare browser. A browser alone showed
-  cCREs and genes with the thing being explained absent from the screen, which is no context at all.
-  hg38 now declares an ENCODE cCRE track coloured in SCREEN's own colours, available from the Tracks
-  menu on any block and switched on by the region view, which is where element classes belong:
-  there are 1,063,878 cCREs genome-wide, 0.01 px each on the genome figure, so a locus is the only
-  scale at which they are drawable. Per-bin class composition was measured before adding it to the map and
-  carries no directional signal -- the most hyper and most hypo bins both run 33.0% dELS, r=-0.07 --
-  because class enrichment only exists relative to a CpG-matched null, which a raw track has none of.
+- Scan results are navigable, not just descriptive. Clicking a bin in the genome map opens that 5Mb
+  span in the DMR region view -- per-CpG group means, LOESS fits, significant CpGs, the called DMR
+  spans and the gene models, all on one axis -- and a DMR's dot menu opens the DMR itself there, as
+  it does for any element. A bare browser showed cCREs and genes with the thing being explained
+  absent from the screen, which is no context at all. hg38 now declares an ENCODE cCRE track
+  coloured in SCREEN's own colours, available from the Tracks menu on any block and switched on by
+  the region view, which is where element classes belong: there are 1,063,878 cCREs genome-wide,
+  0.01 px each on the genome figure, so a locus is the only scale at which they are drawable.
+  Per-bin class composition was measured before adding it to the map and carries no directional
+  signal -- the most hyper and most hypo bins both run 33.0% dELS, r=-0.07 -- because class
+  enrichment only exists relative to a CpG-matched null, which a raw track has none of.
 - New termdb/geneBodyMeth route answers whether gene-body methylation loss CAUSES reduced
   transcription or merely records it. Gene-body methylation is laid down by transcription -- Pol II
   carries SETD2, which deposits H3K36me3 across a gene as it is transcribed, and DNMT3B reads that
@@ -91,10 +133,20 @@ Features:
   difference says the SET moves; a reader then wants to know which members did, and DE's own p --
   not the permutation p, which is a property of the set and not of any gene in it. On MMRF, 3,709
   of 6,108 tested hit genes are significant, 2,368 of them down.
-- The DMR results panel offers the expression test directly: after a background-corrected scan a
-  button runs it on the genes under surviving gene-body loss regions, and reports the within-length
-  difference plus the per-stratum table. Offered only when the correction ran -- on every called
-  region the question would be whether the proliferation odometer changes transcription.
+- The volcano offers the expression test as an action after a background-corrected scan:
+  "Expression of N gene-body loss genes" runs it on the genes under surviving gene-body loss
+  regions -- on the samples the methylation was measured on, not on everyone with RNA (MMRF: 255 vs
+  110, not 623 vs 295), so the expression and methylation readings come from the same patients and a
+  difference between them cannot be the extra patients -- with the same method, count filters, CPM
+  cutoff and cohort filter the DE volcano uses, so the test and the volcano launched from it share
+  one cached DE run -- and reports the within-length difference,
+  the individual genes (gene length on a log
+  bar, fold change as a bar in the group colours), and the per-stratum table. A button opens the
+  same contrast as a differential-expression volcano on those same matched samples with the hit
+  genes highlighted, so the set is seen against every other gene in the plot that already draws
+  them. Offered only when the
+  correction ran -- on every called region the question would be whether the proliferation
+  odometer changes transcription.
   DMRs now carry inGeneBody, true when the region overlaps a gene's span with 2kb trimmed from both
   ends. gene2coord has no strand, so trimming both ends is the strand-agnostic reading and errs
   toward excluding promoter overlap. It is tracked separately from gene membership because promoter
@@ -116,10 +168,14 @@ Features:
   within-length difference -0.167 log2 fold change, p = 0.0005. The gap widens with gene length --
   under -0.05 below 10kb, past -0.35 above 150kb -- which is the direction gene-body methylation
   predicts.
-- The volcano's scan control gains a "Correct for background drift" checkbox, off by default. It
-  changes what the numbers mean rather than how they look -- uncorrected, a DMR is a region that
-  moved; corrected, it is a region that moved MORE than a comparable region drifts -- so it is opt-in
-  and the button reports "+ background" while it runs. Roughly doubles the scan.
+- The volcano's "Correct for background drift" control (DMR scan only), off by default. It changes
+  what the numbers mean rather than how they look -- uncorrected, a DMR is a region that moved;
+  corrected, it is a region that moved MORE than a comparable region drifts -- so it is opt-in. With
+  it on, the y axis is the empirical p against matched background, the table gains an "Excess Δβ"
+  column, DMRs whose stratum held too little background to score are counted in Statistics but
+  not plotted, and the genome map is redrawn over the DMRs that beat background rather than every
+  call -- the map's title says which. On MMRF NSD2-high the uncorrected map is orange nearly
+  everywhere and the corrected one turns over. Roughly doubles the scan.
 - termdb/dmrBatch gains an opt-in matched-background correction. A scan tests every region's
   delta-beta against ZERO, which asks "did this region change?" -- and on a cohort whose genome is
   drifting (MMRF NSD2-high runs a +0.058 global shift) the answer is yes almost everywhere. The
@@ -162,15 +218,9 @@ Features:
   at db -0.17; the scan reports five DMRs across the locus, including that event at its true 1,760bp
   / 29-CpG extent with a -0.285 peak, plus four hypermethylated blocks over XIST/TSIX that no
   promoter-class test could see.
-- The DMR table renders at most 1,000 rows. renderTable has no virtualisation, so a genome scan's
-  123,647 DMRs would build ~740,000 DOM nodes and freeze the tab. The widest are kept, the full
-  count is always stated, and a separate download button emits every row -- the cap costs
-  visibility of the tail, not access to it.
-- DMR width is now shown as a formatted size ("1.1 Kb") with a log-scale width histogram split by
-  direction, replacing the linear barplot column. Widths span four orders of magnitude on a scan,
-  so a linear bar drew the median 1.1kb DMR as 1% of the axis and crushed its own tick labels. The
-  histogram shows width and direction are coupled: DMRs under 1kb run 58% hyper, those over 25kb
-  run 89% hyper -- hypomethylation stays local, hypermethylation forms wide blocks.
+- A scan's p-value table shows each DMR's coordinate, genes, mean and peak Δβ, CpG count and width
+  in bp, with the mean Δβ drawn as the bar. Widths span four orders of magnitude on a scan, so the
+  distribution is summarised as median and IQR in Statistics rather than as a linear bar column.
 - DMR calls are now screened against the genome's artifact-region blacklists (Genome.blacklists,
   the same declaration GRIN2's gene mask uses): a DMR lying >=50% inside masked regions is dropped
   before the response, and the count is reported so the denominator stays visible. Defaults to
@@ -182,18 +232,26 @@ Features:
   both sources; no enrichment conclusion moves by more than 0.03x.
   resolveExcludeBeds moved from server/src/grin2/main.ts to server/src/utils/regionMask.ts so both
   consumers share one definition; grin2/main.ts re-exports it.
-- The DMR results panel gains a "Minimum CpGs per DMR" control, defaulting to 5. Two-CpG calls
-  carry the largest effect sizes and no direction (MMRF chr1: median |db| 0.099 and 51.5% hyper,
-  against 0.073 and 58% hyper for 10+ CpG calls), so a db-sorted table leads with the rows that
-  mean least. Filtering is applied in the browser over the returned DMRs, so it redraws rather
-  than refits, and every figure shown -- counts, direction split, width quantiles, download and
-  table -- comes from the filtered set with the threshold stated alongside.
+- The volcano's "Min CpGs per DMR" control (DMR scan only), defaulting to 5. Two-CpG calls carry the
+  largest effect sizes and no direction (MMRF chr1: median |db| 0.099 and 51.5% hyper, against 0.073
+  and 58% hyper for 10+ CpG calls), so a db-sorted table leads with the rows that mean least. Applied
+  server-side to the cached scan, so changing it redraws rather than refits, and every figure in
+  Statistics -- counts, direction split, width quantiles, background scoring -- is over the DMRs
+  that meet it, with the floor stated in the row label.
 - Region analysis now reports each group's genome-wide methylation level and the shift between
   them, accumulated over every value the model fits already read (so it costs nothing and is
-  independent of the regions requested). Shown alongside the DMR counts, because part of every
+  independent of the regions requested). Shown in the scan's Statistics rows, because part of every
   region's difference is that shift rather than anything local.
 
 Fixes:
+- Clicking a bin in the genome map now opens the region view. A 5Mb bin plus the region view's 2kb
+  padding on each side was 5.004Mb, just over the view's 5Mb cap, and the scan's pseudo element type
+  was being handed to the server as a matrix name; bins now open unpadded and name no matrix.
+- The DMR region view's errors are now visible. It caught its own errors and wrote them into
+  dom.error, which the rx update loop hides and empties before every main(), so a failed region
+  showed an empty sandbox with no message; the "Zoom in to see per-CpG dots" note lived in the same
+  div and was wiped the same way. The plot now renders and fails through main(), so the framework
+  displays the error and re-shows it until resolved, and the note has its own div.
 - dmrcate no longer emits thousands of false DMRs on a chromosome where NO probe passes per-CpG
   significance. DMRCate's adaptive rule selects the nsig smallest SMOOTHED FDRs, where nsig is the
   per-CpG significant count; when nsig was 0 the code fell back to comparing the smoothed FDR

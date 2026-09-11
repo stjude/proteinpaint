@@ -1,4 +1,8 @@
 import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest } from '#types'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
+import { runDmrBatch } from '#src/routes/termdb.dmrBatch.ts'
+import { dmrScanToRows } from '#src/utils/dmrScanRows.ts'
+import { resolveMethylationMatrix, resolveGroupNames, matchedSamplelst } from '#src/utils/methylationMatrix.ts'
 import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { formatElapsedTime } from '#shared'
@@ -51,13 +55,18 @@ export function init({ genomes }) {
 			// Empty dots is valid (strict thresholds) and the PNG should still
 			// return; only abort if no rows reached the renderer at all.
 			if (rendered.totalRows === 0)
-				throw new Error('No promoters passed filtering. Try relaxing group criteria or selecting more samples.')
+				throw new Error(
+					result.scan
+						? 'The scan called no DMRs that met the CpG floor.'
+						: 'No promoters passed filtering. Try relaxing group criteria or selecting more samples.'
+				)
 
 			const output: DiffMethFullResponse = {
 				data: rendered,
 				sample_size1: result.sample_size1,
 				sample_size2: result.sample_size2
 			}
+			if (result.scan) output.scan = result.scan
 			res.send(output)
 		} catch (e: any) {
 			res.status(e.status || 500).send({ status: 'error', error: e.message || e, code: e.code })
@@ -146,6 +155,8 @@ export async function getDmCacheResult(
 	req: DiffMethRequest,
 	genomes: any
 ): Promise<{ result: DmCacheResult; cacheId: string }> {
+	// a de novo scan is not a matrix of elements: it has its own cache (dmr/) and its own rows
+	if (req.element_type === DMR_SCAN_ELEMENT_TYPE) return getDmrScanAsDm(req, genomes)
 	/* Cheap map lookup so the platform can reach the cache key without paying for
 	resolveDaContext on a cache hit. Absent platform means 'array', keeping every existing
 	dataset on the imputing path it was validated under. */
@@ -161,6 +172,62 @@ export async function getDmCacheResult(
 		}
 	})
 	return { result, cacheId }
+}
+
+/* A genome-wide DMR scan presented as differential methylation.
+
+The scan (termdb/dmrBatch) already does the expensive part and caches it; this maps its DMRs onto
+the rows the volcano renders -- delta-beta on x, DMRcate's smoothed FDR (or, corrected, the
+empirical p against matched intergenic background) on y -- so the PNG, the p-value table, hover,
+highlight, download and the region drill-down are the ones every other element class uses, and the
+scan needs no UI of its own. Group sizes come from the same resolver the scan uses internally, so
+the volcano's caption and the scan agree on who was compared. */
+async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ result: DmCacheResult; cacheId: string }> {
+	if (req.tw || req.tw2) throw new Error('Confounding factors are not supported by the DMR scan.')
+	const genome = genomes[req.genome]
+	if (!genome) throw new Error('unknown genome')
+	const ds = genome.datasets?.[req.dslabel]
+	if (!ds) throw new Error('unknown dataset')
+	const groups = req.samplelst?.groups
+	if (groups?.length != 2)
+		throw new Error('Exactly 2 sample groups are required for differential methylation analysis.')
+
+	/* Every major chromosome except the mitochondrion: 16.5 kb of circular DNA that is not CpG-island
+	methylated cannot carry a domain, and on a map scaled to chr1 its track is 0.06 px wide. chrY
+	stays -- on a mixed-sex cohort an empty chrY track is a result rather than an omission -- unless
+	the sex chromosomes were excluded, which applies here as it does to an element class. */
+	let chromosomes: string[] = req.scan?.chromosome
+		? [req.scan.chromosome]
+		: (genome.majorchrorder as string[]).filter(c => c != 'chrM' && c != 'chrMT')
+	if (req.exclude_sex_chr) chromosomes = chromosomes.filter(c => !/^chr[XY]$/i.test(c))
+	if (!chromosomes.length) throw new Error('No chromosomes left to scan.')
+
+	const { payload, cacheId } = await runDmrBatch(
+		{
+			genome: req.genome,
+			dslabel: req.dslabel,
+			group1: groups[0].values,
+			group2: groups[1].values,
+			scanChromosomes: chromosomes,
+			backgroundCorrection: !!req.scan?.backgroundCorrection
+		},
+		genomes
+	)
+	const { eligible } = resolveMethylationMatrix(ds, chromosomes[0], undefined)
+	const { group1, group2 } = await resolveGroupNames(groups[0].values, groups[1].values, eligible, ds)
+	const lens: Record<string, number> = {}
+	for (const c of chromosomes) lens[c] = genome.majorchr[c]
+	const { rows, scan } = dmrScanToRows(payload, {
+		chromosomes,
+		lens,
+		minCpgs: req.scan?.minCpgs,
+		backgroundCorrection: !!req.scan?.backgroundCorrection
+	})
+	scan.matchedSamplelst = await matchedSamplelst(req.samplelst, eligible, ds)
+	return {
+		result: { promoterRows: rows, sample_size1: group1.length, sample_size2: group2.length, scan },
+		cacheId
+	}
 }
 
 type DiffMethInput = {

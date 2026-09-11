@@ -1,7 +1,7 @@
 // these are route type definitions that are only known on the server-side,
 // the client does not know about them, so do not put this in shared/types
 
-import type { DEImage, DiffMethEntry, GeneDEEntry, GenesetEnrichmentResponse } from '#types'
+import type { DEImage, DiffMethEntry, DmrScanSummary, GeneDEEntry, GenesetEnrichmentResponse } from '#types'
 
 // these req.query key-values are not submitted from the client
 export type ReqQueryAddons = {
@@ -40,6 +40,9 @@ export type DmCacheResult = {
 	promoterRows: DiffMethEntry[]
 	sample_size1: number
 	sample_size2: number
+	/** only when the "element type" was a de novo DMR scan, which is served from the dmr/ cache
+	 * rather than written here */
+	scan?: DmrScanSummary
 }
 
 /** gsea/{cacheid}.json. Self-contained: the blitzgsea result is pickled

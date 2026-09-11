@@ -3,9 +3,18 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { resolveMethylationMatrix, resolveGroupNames } from '#src/utils/methylationMatrix.ts'
+import { resolveMethylationMatrix, resolveGroupNames, matchedSamplelst } from '#src/utils/methylationMatrix.ts'
 import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { GENE_BODY_PAD } from '#src/utils/dmrGenes.ts'
+import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { fingerprint } from '#src/routes/termdb.dmrBatch.ts'
+import { buildGeneIndex } from '#src/utils/dmrGenes.ts'
+import {
+	buildExclusion,
+	sampleBackground,
+	scoreAgainstBackground,
+	BG_WINDOWS_PER_CHR
+} from '#src/utils/dmrBackground.ts'
 
 /* Is gene-body methylation loss a cause of reduced transcription, or a footprint of it?
 
@@ -58,69 +67,16 @@ function init({ genomes }) {
 			if (!Array.isArray(q.group1) || !Array.isArray(q.group2)) throw new Error('group1 and group2 are required.')
 			const t0 = Date.now()
 
-			/* Gene bodies, trimmed at both ends exactly as the scan's inGeneBody flag trims them, so
-			"gene body" means one thing across the two analyses. */
-			const rows: any[] = genome?.genedb?.db?.prepare('select name, chr, start, stop from gene2coord').all() || []
-			if (!rows.length) throw new Error('This genome has no gene2coord table.')
-			const byChr = new Map<string, { name: string; start: number; stop: number }[]>()
-			for (const r of rows) {
-				const s = r.start + GENE_BODY_PAD
-				const e = r.stop - GENE_BODY_PAD
-				if (!(e > s)) continue // shorter than twice the pad: no body left
-				const lst = byChr.get(r.chr) || []
-				lst.push({ name: r.name, start: s, stop: e })
-				byChr.set(r.chr, lst)
-			}
+			const deltaOf = new Map(Object.entries(await getGeneBodyDeltas(q, genomes)))
 
-			const chrs: string[] = (q.chromosomes?.length ? q.chromosomes : [...byChr.keys()]).filter((c: string) =>
-				byChr.has(c)
-			)
-			const deltaOf = new Map<string, number>()
-			const CONCURRENCY = Math.max(1, Number(serverconfig.dmrBatchConcurrency) || 2)
-			let next = 0
-			await Promise.all(
-				Array.from({ length: Math.min(CONCURRENCY, chrs.length) }, async () => {
-					while (true) {
-						const i = next++
-						if (i >= chrs.length) return
-						const chr = chrs[i]
-						const bodies = byChr.get(chr)!
-						const { matrixFile, mvalues, eligible } = resolveMethylationMatrix(ds, chr, q.element_type)
-						const { group1, group2 } = await resolveGroupNames(q.group1, q.group2, eligible, ds)
-						if (group1.length < 3 || group2.length < 3) throw new Error('Each group needs at least 3 samples.')
-						const out = JSON.parse(
-							await run_rust(
-								'dmrcate',
-								JSON.stringify({
-									probe_h5_file: matrixFile,
-									mvalues,
-									cachedir: serverconfig.cachedir,
-									genome: q.genome,
-									chr,
-									start: 0,
-									stop: 0,
-									regions: [],
-									background_regions: bodies.map(b => ({ chr, start: b.start, stop: b.stop })),
-									case: group2.join(','),
-									control: group1.join(',')
-								})
-							)
-						)
-						if (out.error) throw new Error(`${chr}: ${out.error}`)
-						;(out.background || []).forEach((b: any, j: number) => {
-							/* A gene body with too few probes has an unstable mean; 5 matches the scan's own
-							minimum CpG count so the two analyses agree on what is measurable. */
-							if (b.delta != null && b.n_probes >= 5) deltaOf.set(bodies[j].name, b.delta)
-						})
-					}
-				})
-			)
-
+			// expression on the same patients the methylation was measured on; see matchedSamplelst
+			const { eligible } = resolveMethylationMatrix(ds, genome.majorchrorder?.[0] || 'chr1', q.element_type)
+			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds)
 			const { result } = await getDeCacheResult(
 				{
 					genome: q.genome,
 					dslabel: q.dslabel,
-					samplelst: q.samplelst,
+					samplelst,
 					min_count: q.min_count ?? 10,
 					min_total_count: q.min_total_count ?? 15,
 					method: q.method
@@ -167,4 +123,155 @@ function init({ genomes }) {
 			if (e instanceof Error && e.stack) console.log(e)
 		}
 	}
+}
+
+/** Bump when a change here alters the deltas for an unchanged request. */
+const CACHE_VERSION = 2 // 2: corrected mode added; raw entries carry corrected:false in the key
+
+/* Mean delta-beta over every gene body, keyed by gene symbol -- one signed number per gene across
+the whole genome. This is the gene-level reading of a methylation scan: a DMR list has many regions
+per gene, none for half of them, and more for long genes, so it cannot rank genes; the body mean
+can, and it is what the GSEA tab ranks on for a scan (see genesetEnrichment.ts).
+
+`corrected` scores each gene body against width- and CpG-density-matched intergenic background --
+the scan's own correction, pointed at fixed regions -- and returns the excess over that background
+instead of the raw delta. Raw, the gain side of the ranking is led by silent, late-replicating gene
+families (olfactory receptors, keratins), which is where genome-wide drift lives; the excess asks
+whether a gene body moved more than a region like it drifted. Genes whose stratum holds too little
+background are left out rather than scored badly.
+
+Cached because it is ~33s of rust across 24 chromosomes and the same contrast asks for it from the
+causality test and from GSEA. Keyed on the samples, the chromosomes and the files read, the same
+way the scan cache is. */
+export async function getGeneBodyDeltas(
+	q: {
+		genome: string
+		dslabel: string
+		group1: any[]
+		group2: any[]
+		chromosomes?: string[]
+		element_type?: string
+		corrected?: boolean
+	},
+	genomes: any
+): Promise<Record<string, number>> {
+	const genome = genomes[q.genome]
+	if (!genome) throw new Error('unknown genome')
+	const ds = genome.datasets?.[q.dslabel]
+	if (!ds) throw new Error('unknown ds')
+	if (!Array.isArray(q.group1) || !Array.isArray(q.group2)) throw new Error('group1 and group2 are required.')
+	const chromosomes = q.chromosomes?.length ? [...q.chromosomes].sort() : null
+	const matrixFiles = (chromosomes || Object.keys(genome.majorchr || {})).map(
+		c => resolveMethylationMatrix(ds, c, q.element_type).matrixFile
+	)
+	const { result } = await cacheOrRecompute({
+		computeArgument: {
+			v: CACHE_VERSION,
+			genome: q.genome,
+			dslabel: q.dslabel,
+			group1: q.group1.map(x => x.sampleId).sort(),
+			group2: q.group2.map(x => x.sampleId).sort(),
+			chromosomes,
+			element_type: q.element_type ?? null,
+			corrected: !!q.corrected,
+			files: fingerprint([...new Set(matrixFiles)].concat(genome?.genedb?.dbfile))
+		},
+		cacheSubdir: 'geneBodyMeth',
+		computeFresh: async () => computeGeneBodyDeltas(q, genome, ds)
+	})
+	return result as Record<string, number>
+}
+
+async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Record<string, number>> {
+	/* Gene bodies, trimmed at both ends exactly as the scan's inGeneBody flag trims them, so
+	"gene body" means one thing across the two analyses. */
+	const rows: any[] = genome?.genedb?.db?.prepare('select name, chr, start, stop from gene2coord').all() || []
+	if (!rows.length) throw new Error('This genome has no gene2coord table.')
+	const byChr = new Map<string, { name: string; start: number; stop: number }[]>()
+	for (const r of rows) {
+		const s = r.start + GENE_BODY_PAD
+		const e = r.stop - GENE_BODY_PAD
+		if (!(e > s)) continue // shorter than twice the pad: no body left
+		const lst = byChr.get(r.chr) || []
+		lst.push({ name: r.name, start: s, stop: e })
+		byChr.set(r.chr, lst)
+	}
+
+	const chrs: string[] = (q.chromosomes?.length ? q.chromosomes : [...byChr.keys()]).filter((c: string) => byChr.has(c))
+	const deltaOf: Record<string, number> = {}
+	// the exclusion needs the gene index; built once, not per chromosome
+	const geneIdx = q.corrected ? buildGeneIndex(genome) : null
+	const CONCURRENCY = Math.max(1, Number(serverconfig.dmrBatchConcurrency) || 2)
+	let next = 0
+	await Promise.all(
+		Array.from({ length: Math.min(CONCURRENCY, chrs.length) }, async () => {
+			while (true) {
+				const i = next++
+				if (i >= chrs.length) return
+				const chr = chrs[i]
+				const bodies = byChr.get(chr)!
+				const { matrixFile, mvalues, eligible } = resolveMethylationMatrix(ds, chr, q.element_type)
+				const { group1, group2 } = await resolveGroupNames(q.group1, q.group2, eligible, ds)
+				if (group1.length < 3 || group2.length < 3) throw new Error('Each group needs at least 3 samples.')
+				/* Corrected: intergenic windows width-matched to the gene bodies ride along in the same
+				rust call, after the bodies, so one fit serves both. Same sampler and seed rule as the
+				scan, so the two corrections are the same correction. */
+				let windows: { chr: string; start: number; stop: number }[] = []
+				if (q.corrected) {
+					const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
+					const excl = chrLen ? await buildExclusion(genome, chr, chrLen, geneIdx as any) : null
+					if (!excl) throw new Error('This genome cannot supply an intergenic background (no cCRE track).')
+					windows = sampleBackground(
+						chr,
+						chrLen,
+						excl,
+						bodies.map(b => b.stop - b.start),
+						BG_WINDOWS_PER_CHR,
+						[...chr].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0
+					)
+				}
+				const out = JSON.parse(
+					await run_rust(
+						'dmrcate',
+						JSON.stringify({
+							probe_h5_file: matrixFile,
+							mvalues,
+							cachedir: serverconfig.cachedir,
+							genome: q.genome,
+							chr,
+							start: 0,
+							stop: 0,
+							regions: [],
+							background_regions: [...bodies.map(b => ({ chr, start: b.start, stop: b.stop })), ...windows],
+							case: group2.join(','),
+							control: group1.join(',')
+						})
+					)
+				)
+				if (out.error) throw new Error(`${chr}: ${out.error}`)
+				const bg: any[] = out.background || []
+				const bodyRes = bg.slice(0, bodies.length)
+				if (!q.corrected) {
+					bodyRes.forEach((b: any, j: number) => {
+						/* A gene body with too few probes has an unstable mean; 5 matches the scan's own
+						minimum CpG count so the two analyses agree on what is measurable. */
+						if (b.delta != null && b.n_probes >= 5) deltaOf[bodies[j].name] = b.delta
+					})
+				} else {
+					const measured = bodyRes
+						.map((b: any, j: number) => ({ j, b }))
+						.filter(({ b }) => b?.delta != null && b.n_probes >= 5)
+					const { scored } = scoreAgainstBackground(
+						measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, meandiff: b.delta })),
+						bg.slice(bodies.length)
+					)
+					measured.forEach(({ j }, k) => {
+						const sc = scored[k]
+						if (sc) deltaOf[bodies[j].name] = Math.round(sc.excess * 100000) / 100000
+					})
+				}
+			}
+		})
+	)
+	return deltaOf
 }

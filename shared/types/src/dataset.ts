@@ -1465,8 +1465,15 @@ type Mds3Queries = {
 		 * Set it when the dataset's best default is not the legacy promoter matrix — e.g. a cohort
 		 * offering both TSS-window promoters and the stricter ENCODE cCRE promoter-like elements,
 		 * where the cCRE definition is the one to lead with. The client uses this as the initial
-		 * element_type; the user can still switch classes in the picker. */
+		 * element_type; the user can still switch classes in the picker. May also be 'dmr_scan'
+		 * (DMR_SCAN_ELEMENT_TYPE) to open on the genome-wide DMR scan, where the region analysis
+		 * can run. */
 		defaultElementType?: string
+		/** Offer only the genome-wide DMR scan in the differential-methylation class picker: the
+		 * element matrices stay configured (they serve terms and the region view's fallback) but
+		 * are not offered as classes to test, and the analysis opens on the scan. Requires a matrix
+		 * the region analysis can run on. */
+		scanOnly?: boolean
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene
