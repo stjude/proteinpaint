@@ -89,6 +89,10 @@ export type TermdbDmrBatchSuccessResponse = {
 			/** Fraction of that background drifting at least this far in the same direction, with a
 			 * +1 pseudocount -- so the resolution floor is 1/(n+1) and never zero. */
 			bgP?: number
+			/** The region overlaps the body of at least one gene -- its span with 2kb trimmed from both
+			 * ends. Separate from `genes` because promoter and gene-body methylation relate to
+			 * transcription in opposite directions. */
+			inGeneBody?: boolean
 			genes?: string[]
 			/** Total overlapping genes when more than the cap were found, so a truncated list is
 			 * never mistaken for the whole set. */

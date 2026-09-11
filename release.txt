@@ -72,6 +72,50 @@ Features:
   scale at which they are drawable. Per-bin class composition was measured before adding it to the map and
   carries no directional signal -- the most hyper and most hypo bins both run 33.0% dELS, r=-0.07 --
   because class enrichment only exists relative to a CpG-matched null, which a raw track has none of.
+- New termdb/geneBodyMeth route answers whether gene-body methylation loss CAUSES reduced
+  transcription or merely records it. Gene-body methylation is laid down by transcription -- Pol II
+  carries SETD2, which deposits H3K36me3 across a gene as it is transcribed, and DNMT3B reads that
+  mark -- so a gene transcribed less loses gene-body methylation for that reason alone, and the
+  correlation is expected even if methylation does nothing.
+  The discriminating question is what happens to genes whose expression did NOT change. So the
+  route measures delta-beta over EVERY gene body, not only the ones a scan called, bins genes by
+  expression fold change, and reports methylation change per bin. Gene bodies go in as
+  background_regions, so this reuses the correction's machinery and skips smoothing entirely:
+  20,723 gene bodies measured in 33s.
+  On MMRF the footprint model fails its own test. Genes with unchanged expression (|log2FC| < 0.1,
+  n=3,163) show median gene-body delta-beta of -0.0435 -- indistinguishable from the -0.0333 across
+  all genes. Transcription-coupled deposition is separately visible in the up tail (genes up more
+  than 1 log2FC gain +0.13), but the loss in the middle is not explained by transcription.
+- The expression test also reports the individual genes: those reaching DE significance on their
+  own, with fold change and adjusted p, capped at 500 with the true count stated. The stratified
+  difference says the SET moves; a reader then wants to know which members did, and DE's own p --
+  not the permutation p, which is a property of the set and not of any gene in it. On MMRF, 3,709
+  of 6,108 tested hit genes are significant, 2,368 of them down.
+- The DMR results panel offers the expression test directly: after a background-corrected scan a
+  button runs it on the genes under surviving gene-body loss regions, and reports the within-length
+  difference plus the per-stratum table. Offered only when the correction ran -- on every called
+  region the question would be whether the proliferation odometer changes transcription.
+  DMRs now carry inGeneBody, true when the region overlaps a gene's span with 2kb trimmed from both
+  ends. gene2coord has no strand, so trimming both ends is the strand-agnostic reading and errs
+  toward excluding promoter overlap. It is tracked separately from gene membership because promoter
+  and gene-body methylation relate to transcription in opposite directions: selecting on gene
+  overlap alone enlarged the MMRF set from 6,317 to 7,364 genes with the wrong mechanism.
+- New termdb/dmrGeneDE route: do the genes losing gene-body methylation also lose expression?
+  Gene-body methylation tracks transcription, so a scan finding loss concentrated in gene bodies
+  predicts those genes are expressed lower in the same patients -- the first step in this analysis
+  that reaches function rather than another methylation-adjacent annotation. Takes the gene set
+  from a corrected scan, runs DE on the SAME groups through the existing cached machinery, and
+  compares hits to non-hits WITHIN log2 length strata.
+  Length control is not optional: the most frequently hit genes are VPS13B, LRBA, ZBTB20 and
+  CNTNAP2, all 1-2Mb, because a long gene collects more DMRs by being long, and length also
+  predicts expression level and variance -- so an unmatched comparison recovers gene length. The
+  null permutes hit labels INSIDE each length bin, which preserves the length distribution exactly;
+  a bin thin on either side is dropped with its hits reported as unmatched rather than pooled into
+  a neighbouring length.
+  On MMRF NSD2-low vs NSD2-high: 5,663 hit genes against 8,967 non-hits over 35 strata, weighted
+  within-length difference -0.167 log2 fold change, p = 0.0005. The gap widens with gene length --
+  under -0.05 below 10kb, past -0.35 above 150kb -- which is the direction gene-body methylation
+  predicts.
 - The volcano's scan control gains a "Correct for background drift" checkbox, off by default. It
   changes what the numbers mean rather than how they look -- uncorrected, a DMR is a region that
   moved; corrected, it is a region that moved MORE than a comparable region drifts -- so it is opt-in

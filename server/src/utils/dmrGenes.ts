@@ -68,3 +68,34 @@ export function genesAt(idx: GeneIndex, chr: string, start: number, stop: number
 	}
 	return out.reverse()
 }
+
+/** Padding trimmed from BOTH ends of a gene before asking whether a region is in its body.
+ * gene2coord carries no strand, so which end is the TSS is unknown -- trimming both is the
+ * strand-agnostic reading, and it errs toward excluding rather than admitting promoter overlap. */
+export const GENE_BODY_PAD = 2000
+
+/** Does the region overlap the BODY of any gene -- its span with both ends trimmed?
+ *
+ * Distinguished from genesAt() because the two answer different questions. Promoter methylation
+ * and gene-body methylation relate to transcription in opposite directions, so a test about gene
+ * bodies must not quietly include regions that only clip a promoter: on MMRF that would enlarge
+ * the set by 17% with the wrong mechanism. */
+export function inGeneBody(idx: GeneIndex, chr: string, start: number, stop: number): boolean {
+	const c = idx.get(chr)
+	if (!c) return false
+	let lo = 0
+	let hi = c.start.length
+	while (lo < hi) {
+		const mid = (lo + hi) >> 1
+		if (c.start[mid] < stop) lo = mid + 1
+		else hi = mid
+	}
+	const floor = start - c.maxSpan
+	for (let i = lo - 1; i >= 0 && c.start[i] >= floor; i--) {
+		const bs = c.start[i] + GENE_BODY_PAD
+		const be = c.stop[i] - GENE_BODY_PAD
+		// a gene shorter than twice the pad has no body left to speak of
+		if (be > bs && be > start && bs < stop) return true
+	}
+	return false
+}

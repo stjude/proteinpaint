@@ -95,7 +95,7 @@ export async function runDmrBatch(opts: {
 		sayerror(holder.append('div'), res.error)
 		return
 	}
-	render(res, { regions, totalSignificant, holder, config, app, scanChromosomes })
+	render(res, { regions, totalSignificant, holder, config, app, vocab, scanChromosomes })
 }
 
 function render(
@@ -106,6 +106,7 @@ function render(
 		holder: any
 		config: any
 		app: any
+		vocab: { genome: string; dslabel: string }
 		scanChromosomes?: string[]
 	}
 ) {
@@ -163,6 +164,7 @@ function drawResults(
 		holder: any
 		config: any
 		app: any
+		vocab: { genome: string; dslabel: string }
 		scanChromosomes?: string[]
 	},
 	holder: any,
@@ -171,7 +173,7 @@ function drawResults(
 	binFilter: { chr: string; start: number; stop: number } | null,
 	setBinFilter: (f: { chr: string; start: number; stop: number } | null) => void
 ) {
-	const { totalSignificant, config, app, scanChromosomes } = o
+	const { totalSignificant, config, app, vocab, scanChromosomes } = o
 	const scanning = !!scanChromosomes?.length
 	const oneChr = scanChromosomes?.length == 1 ? scanChromosomes[0] : undefined
 	const rows = allRows.filter(x => x.d.no_cpgs >= minCpgs)
@@ -327,6 +329,11 @@ function drawResults(
 				setBinFilter({ chr, start, stop })
 			)
 	}
+	/* The expression test, offered only when there is something to test it on. It needs the
+	background correction, because the question is about regions that beat drift -- run on every
+	called region it would be asking whether the odometer changes transcription. */
+	if (res.backgroundCorrection) geneExpressionTest(holder.append('div').style('padding', '5px'), rows, config, vocab)
+
 	widthHistogram(holder.append('div').style('padding', '5px'), rows)
 
 	const tableCols = [
@@ -564,4 +571,147 @@ function widthHistogram(div: any, rows: { d: any; width: number }[]) {
 	legend.append('text').attr('x', 12).attr('font-size', 11).attr('fill', '#555').text('hyper')
 	legend.append('rect').attr('x', 52).attr('width', 9).attr('height', 9).attr('y', -9).attr('fill', HYPO_COLOR)
 	legend.append('text').attr('x', 64).attr('font-size', 11).attr('fill', '#555').text('hypo')
+}
+
+/* Do the genes losing gene-body methylation also lose expression?
+ *
+ * Gene-body methylation tracks transcription, so loss concentrated in gene bodies predicts those
+ * genes are expressed lower in the same patients. That is the first question in this panel that
+ * reaches function rather than another methylation-adjacent annotation, and it is answerable here
+ * because the two groups that defined the scan also define the expression contrast.
+ *
+ * Restricted to regions flagged inGeneBody -- a region clipping only a promoter relates to
+ * transcription the other way round, and including those would mix two mechanisms. */
+function geneExpressionTest(div: any, rows: { d: any }[], config: any, vocab: { genome: string; dslabel: string }) {
+	const hits = new Set<string>()
+	let nRegions = 0
+	for (const { d } of rows) {
+		if (d.direction != 'hypo' || !d.inGeneBody) continue
+		if (d.bgP == null || d.bgP >= 0.05) continue
+		nRegions++
+		for (const g of d.genes || []) hits.add(g)
+	}
+	if (!hits.size) return
+	const groups = config?.samplelst?.groups
+	if (!groups || groups.length != 2) return
+	const btn = div
+		.append('button')
+		.attr('class', 'sja_menuoption')
+		.attr('data-testid', 'sjpp-dmrBatch-geneDE')
+		.style('margin', '3px')
+		.style('padding', '3px')
+		.text(`Test expression of ${hits.size.toLocaleString()} gene-body loss genes`)
+	const out = div.append('div')
+	btn.on('click', async () => {
+		if (btn.property('disabled')) return
+		const label = btn.text()
+		btn.property('disabled', true).text('Running differential expression…')
+		out.selectAll('*').remove()
+		try {
+			const res: any = await dofetch3('termdb/dmrGeneDE', {
+				body: {
+					genome: vocab.genome,
+					dslabel: vocab.dslabel,
+					samplelst: { groups: groups.map((g: any) => ({ name: g.name, values: g.values })) },
+					genes: [...hits]
+				}
+			})
+			if (res?.error) {
+				sayerror(out.append('div'), res.error)
+				return
+			}
+			renderGeneDE(out, res, nRegions)
+		} catch (e: any) {
+			sayerror(out.append('div'), e?.message || String(e))
+		} finally {
+			btn.property('disabled', false).text(label)
+		}
+	})
+}
+
+function renderGeneDE(div: any, res: any, nRegions: number) {
+	const dir = res.weightedDiff < 0 ? 'lower' : 'higher'
+	div
+		.append('div')
+		.style('font-weight', 'bold')
+		.style('padding', '4px 0')
+		.text(
+			`Genes under a surviving gene-body loss region are expressed ${dir} in the case group: ` +
+				`${res.weightedDiff >= 0 ? '+' : ''}${res.weightedDiff.toFixed(3)} log₂ fold change ` +
+				`within matched gene length (p = ${res.p < 0.001 ? res.p.toExponential(1) : res.p.toFixed(4)}).`
+		)
+	/* Length matching is the test, not a caveat: the most frequently hit genes are the longest, and
+	long genes move differently for reasons unrelated to methylation. So the comparison is made
+	inside length strata and the null permutes labels within them. */
+	div
+		.append('div')
+		.style('color', '#777')
+		.style('font-size', '.92em')
+		.text(
+			`${nRegions.toLocaleString()} regions → ${res.genesRequested.toLocaleString()} genes; ` +
+				`${res.nHit.toLocaleString()} compared against ${res.nOther.toLocaleString()} genes of matched length ` +
+				`across ${res.strata.length} strata. ${res.genesNotInDE.toLocaleString()} were not tested by DE ` +
+				`(low count or absent from the expression matrix) and ${res.unmatchedHits.toLocaleString()} fell in ` +
+				`strata too thin to match. Comparing hits to all other genes instead would recover gene length.`
+		)
+	/* The individual genes. The stratified difference above says the SET moves; this says which
+	members did, using DE's own p rather than the permutation p, which is a property of the set and
+	not of any gene in it. */
+	if (res.sigCount) {
+		div
+			.append('div')
+			.style('padding', '8px 0 2px')
+			.style('font-weight', 'bold')
+			.text(
+				`${res.sigCount.toLocaleString()} of these genes are differentially expressed on their own ` +
+					`(p < 0.05), ${res.sigDown.toLocaleString()} of them down.`
+			)
+		renderTable({
+			div: div.append('div'),
+			columns: [
+				{ label: 'Gene' },
+				{ label: 'Length', align: 'right', nowrap: true },
+				{ label: 'log₂FC', align: 'right' },
+				{ label: res.topGenes[0]?.adjusted ? 'Adjusted p' : 'p', align: 'right' }
+			],
+			rows: res.topGenes.map((g: any) => [
+				{ value: g.gene },
+				{ value: g.len ? bplen(g.len) : '' },
+				{ value: Number(g.fc.toFixed(3)) },
+				{ value: Number(g.p.toPrecision(2)) }
+			]),
+			showLines: true,
+			maxHeight: '26vh',
+			download: { fileName: 'gene-body-loss-genes.tsv' }
+		})
+		if (res.sigCount > res.topGenes.length)
+			div
+				.append('div')
+				.style('color', '#777')
+				.style('font-size', '.9em')
+				.text(`Showing the ${res.topGenes.length} most significant of ${res.sigCount.toLocaleString()}.`)
+	}
+	div.append('div').style('padding', '10px 0 2px').style('font-weight', 'bold').text('By gene length')
+	renderTable({
+		div: div.append('div'),
+		columns: [
+			{ label: 'Gene length' },
+			{ label: 'Genes hit', align: 'right' },
+			{ label: 'Matched', align: 'right' },
+			{ label: 'Median log₂FC, hit', align: 'right' },
+			{ label: 'Median log₂FC, matched', align: 'right' },
+			{ label: 'Difference', align: 'right' }
+		],
+		rows: res.strata.map((s: any) => [
+			{ value: `${bplen(s.lenFrom)} – ${bplen(s.lenTo)}` },
+			{ value: s.nHit.toLocaleString() },
+			{ value: s.nOther.toLocaleString() },
+			{ value: Number(s.medianHit.toFixed(3)) },
+			{ value: Number(s.medianOther.toFixed(3)) },
+			{ value: Number(s.diff.toFixed(3)) }
+		]),
+		showLines: true,
+		maxHeight: '26vh',
+		download: { fileName: 'gene-body-loss-expression.tsv' }
+	})
 }

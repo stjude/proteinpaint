@@ -12,7 +12,7 @@ import {
 	DM_DEFAULT_BLACKLISTS,
 	DEFAULT_OVERLAP_FRAC
 } from '#src/utils/regionMask.ts'
-import { buildGeneIndex, genesAt, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
+import { buildGeneIndex, genesAt, inGeneBody, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
 import {
 	buildExclusion,
 	sampleBackground,
@@ -94,7 +94,8 @@ export function buildScanRegions(genome: any, chromosomes: string[]) {
  * Without it, a cache written before the change keeps serving the old answer forever. */
 // 2: background correction added; v1 entries were written before dmrcate emitted background
 // windows for a regions-less call, so they hold an empty correction
-const CACHE_VERSION = 2
+// 3: DMRs now carry inGeneBody
+const CACHE_VERSION = 3
 
 /* Fingerprint the data files a result was computed from.
  *
@@ -296,6 +297,11 @@ function init({ genomes }) {
 									for (const r of result.regions || []) {
 										for (const d of r?.dmrs || []) {
 											const g = genesAt(geneIdx, chr, d.start, d.stop)
+											/* Body overlap is tracked separately from gene membership: promoter and
+											gene-body methylation relate to transcription in opposite directions, so a
+											downstream test about gene bodies must be able to exclude a region that only
+											clips a promoter -- on MMRF that would enlarge the set by 17%. */
+											if (inGeneBody(geneIdx, chr, d.start, d.stop)) d.inGeneBody = true
 											if (!g.length) continue
 											d.genes = g.slice(0, MAX_GENES_PER_DMR)
 											if (g.length > MAX_GENES_PER_DMR) d.genesTruncated = g.length
