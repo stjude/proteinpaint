@@ -482,6 +482,15 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		for the boolean form. */
 		q2.rnaseqGeneCount = q.rnaseqGeneCount.defaultMethod ? { defaultMethod: q.rnaseqGeneCount.defaultMethod } : true
 	}
+	if (q.w2) {
+		/* presence-only capability marker: the ds has whole-slide/spatial images.
+		The sc app gates its per-sample spatial probe (SCModel.hasSpatialImage)
+		on this, so a ds without w2 never sends wsiBySample requests. Deliberately
+		NOT the supportedChartTypes 'wsi' flag: an allowlist ds (e.g. mmrf's
+		commonCharts) hides the standalone chart from the menu while still
+		serving spatial images per sample. No config details are exposed. */
+		q2.w2 = {}
+	}
 	if (q.singleCell) {
 		// samples and data are required properties
 		q2.singleCell = {
@@ -556,7 +565,8 @@ export function getDsAllowedTermTypes(ds) {
 	if (ds.queries?.junction) typeSet.add(JUNCTION)
 	if (ds.queries?.singleCell) {
 		typeSet.add(SINGLECELL_CELLTYPE)
-		if (ds.queries.singleCell.terms?.some(term => term.type == SINGLECELL_NUMERIC_VALUE)) typeSet.add(SINGLECELL_NUMERIC_VALUE)
+		if (ds.queries.singleCell.terms?.some(term => term.type == SINGLECELL_NUMERIC_VALUE))
+			typeSet.add(SINGLECELL_NUMERIC_VALUE)
 		if (ds.queries.singleCell?.geneExpression) typeSet.add(SINGLECELL_GENE_EXPRESSION)
 		if (ds.queries.singleCell?.pseudobulk) typeSet.add(PSEUDOBULK)
 	}

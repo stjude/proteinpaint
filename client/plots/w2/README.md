@@ -47,9 +47,12 @@ carries a `sample`:
   to the sc app's map plots (umap/tsne) in any way.
 
   Probe semantics: the probe only fires for datasets that can have spatial
-  images — `termdbConfig.supportedChartTypes` advertises `'wsi'` exactly when
-  `ds.queries.w2` exists, and without it `hasSpatialImage` returns false with
-  no request (a non-spatial sc dataset never generates wsiBySample traffic).
+  images — `termdbConfig.queries.w2` is a presence-only marker exposed by
+  termdb.config.ts exactly when `ds.queries.w2` exists, and without it
+  `hasSpatialImage` returns false with no request (a non-spatial sc dataset
+  never generates wsiBySample traffic). Deliberately not gated on
+  supportedChartTypes: an allowlist ds (e.g. mmrf) hides the standalone
+  chart from the menu while still serving spatial images per sample.
   Successful probes are cached per sample; server error payloads and network
   failures return false UNCACHED so a later render retries, and an aborted
   request (a superseding state change) rethrows so the stale render stops.

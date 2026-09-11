@@ -19,8 +19,8 @@ tape('\n', function (test) {
 })
 
 // the probe is gated on the ds advertising wsi support (ds.queries.w2 →
-// supportedChartTypes), so the mock config must declare it to reach the fetch
-const wsiSupport = { termdbConfig: { supportedChartTypes: { ABC: ['wsi'] } } }
+// the queries.w2 marker), so the mock config must declare it to reach the fetch
+const wsiSupport = { termdbConfig: { queries: { w2: {} } } }
 
 tape('hasSpatialImage() should probe wsiBySample and cache per sample', async test => {
 	test.timeoutAfter(10000) // live termdb/wsiBySample probes against the TermdbTest fixture
