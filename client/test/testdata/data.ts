@@ -645,23 +645,6 @@ export function getCnv_categorical() {
 	}
 }
 
-export function getScnvTw() {
-	return {
-		term: {
-			type: tt.SINGLECELL_NUMERIC_VALUE,
-			id: 'Cell Cycle Score',
-			name: 'Cell Cycle Score',
-			plot: 'UMAP',
-			sample: {
-				sID: scTestSample
-			}
-		},
-		q: {
-			mode: 'continuous'
-		}
-	}
-}
-
 export function getScgeneexpTw(gene = 'KRAS') {
 	return {
 		term: {
@@ -723,7 +706,27 @@ export function getPseudobulkTW(nameId = 'Blast') {
 		}
 	}
 }
+export function getPseudobulkTermCollection(termIds = ['Blast', 'Monocyte', 'T_NK']) {
+	const termlst = termIds.map(id => getPseudobulkTW(id).term)
 
+	return {
+		type: 'TermCollectionTWCont',
+		term: {
+			type: tt.TERM_COLLECTION,
+			memberType: 'numeric',
+			id: 'test',
+			name: 'Test pseudobulk term collection',
+			termIds,
+			termlst,
+			isCustom: true
+		},
+		q: {
+			mode: 'continuous',
+			type: 'values',
+			lst: []
+		}
+	}
+}
 
 ////////////// following are gdc-specific! may move to separate file
 

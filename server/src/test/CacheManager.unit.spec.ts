@@ -56,6 +56,25 @@ tape('defaults', function (test) {
 							absPath: `${m.cachedir}/dm`,
 							skipUntil: 0
 						},
+						dmr: {
+							maxAge: 5184000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							// lower than the other analyses: each pending DMR job fans out to
+							// dmrBatchConcurrency rust processes, so the real ceiling is the product
+							maxPending: 2,
+							absPath: `${m.cachedir}/dmr`,
+							skipUntil: 0
+						},
+						geneBodyMeth: {
+							maxAge: 5184000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							// same fan-out as a scan, same ceiling
+							maxPending: 2,
+							absPath: `${m.cachedir}/geneBodyMeth`,
+							skipUntil: 0
+						},
 						gsea: {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
@@ -134,6 +153,8 @@ tape('defaults', function (test) {
 							grin2: { deletedCount: 0, totalCount: 0 },
 							de: { deletedCount: 0, totalCount: 0 },
 							dm: { deletedCount: 0, totalCount: 0 },
+							dmr: { deletedCount: 0, totalCount: 0 },
+							geneBodyMeth: { deletedCount: 0, totalCount: 0 },
 							topve: { deletedCount: 0, totalCount: 0 },
 							gdcCounts: { deletedCount: 0, totalCount: 0 },
 							daAnalysis: { deletedCount: 0, totalCount: 0 },

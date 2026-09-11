@@ -1,7 +1,6 @@
-import { SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE, PROTEOME_ABUNDANCE, PSEUDOBULK } from '#types'
+import { SINGLECELL_GENE_EXPRESSION, PROTEOME_ABUNDANCE, PSEUDOBULK } from '#types'
 import initBinConfig from '#shared/termdb.initbinconfig.js'
 import { maySetMapParent2Children } from './termdb.matrix.js'
-import { getSingleCellCellValues } from './singleCell/matrixData.ts'
 import { mayLimitSamples } from './mds3.filter.js'
 
 // TODO convert to route
@@ -43,13 +42,6 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			const data = await ds.queries.singleCell.geneExpression.get(q, tw.term.sample, tw.term.gene)
 			for (const cell in data) {
 				const value = data[cell]
-				if (value < min) min = value
-				if (value > max) max = value
-				lst.push(value)
-			}
-		} else if (tw.term.type == SINGLECELL_NUMERIC_VALUE) {
-			// values come from a plot column, so they are not cached: a plot file may be reloaded
-			for (const { value } of await getSingleCellCellValues(q, tw, ds)) {
 				if (value < min) min = value
 				if (value > max) max = value
 				lst.push(value)

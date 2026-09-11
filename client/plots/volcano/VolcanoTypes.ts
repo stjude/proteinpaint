@@ -1,7 +1,16 @@
 import type { Elem } from '../../types/d3'
 import type { PlotConfig } from '#mass/types/mass'
 import type { TableCell, TableColumn, Menu } from '#dom'
-import type { GeneDEEntry, DiffMethEntry, SingleCellDEEntry, DapEntry, DEImage, PlotExtent, TermWrapper } from '#types'
+import type {
+	GeneDEEntry,
+	DiffMethEntry,
+	SingleCellDEEntry,
+	DapEntry,
+	DEImage,
+	DmrScanSummary,
+	PlotExtent,
+	TermWrapper
+} from '#types'
 import type { ValidatedVolcanoSettings } from './settings/Settings'
 
 /** Attributes are added in the view model
@@ -152,7 +161,24 @@ export type VolcanoViewData = {
 	plotDim: VolcanoPlotDimensions
 	pointData: DataPointEntry[]
 	pValueTableData: VolcanoPValueTableData
-	statsData: { label: string; value: number }[]
+	statsData: { label: string; value: number | string }[]
+	/** DMR scan only: what the scan did and found, for the Statistics panel, the genome map and the
+	 * gene-body expression test. Absent for every annotated element class. */
+	scan?: DmrScanSummary
+	/** What the y axis and the p column are called. When `singlePValue` there is one p per row
+	 * and one column for it: DAP carries a single FDR, a DMR scan a single smoothed FDR or
+	 * background p. Otherwise original and adjusted are both shown and the label names the one
+	 * the thresholds use. */
+	pValueLabel: string
+	singlePValue: boolean
+	/** The significant count split by direction of effect, both counted server-side over every
+	 * significant row. Passed as numbers rather than looked up out of statsData by label, which
+	 * silently yields nothing when the label wording drifts. */
+	numSignificantUp: number
+	numSignificantDown: number
+	/** Median effect size subtracted from the plotted x, or 0 when centering was off. Shown
+	 * next to the counts so a centered figure states the size of the shift it removed. */
+	xOffset: number
 	/** One-line record of the groups, sample sizes and result-affecting settings behind this
 	 * run. Written into exported tables so a file can be traced back to how it was produced. */
 	provenance: string

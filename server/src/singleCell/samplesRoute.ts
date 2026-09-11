@@ -21,7 +21,7 @@ import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
 import { validGenomeDs } from '#routes/common.ts'
 import { validate_query_singleCell_DEgenes } from './DEgenesRoute.ts'
-import { SINGLECELL_CELLTYPE, SINGLECELL_NUMERIC_VALUE } from '#types'
+import { SINGLECELL_CELLTYPE } from '#types'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { SingleCellMetaCache } from './SingleCellMetaCache.ts'
@@ -172,7 +172,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 			}
 			/** Meta analysis results may not be separated into folders like the sample files
 			 * for other plots. Check the file exists with the appropriate "sample name". This
-			 * method ensures the file can be queried later.
+			 * method ensure the file can be queried as intended later.
 			 *
 			 * Note: meta analysis results are treated as sample because the data structure and
 			 * getters are the same. The results or the sID used for querying will not appear
@@ -534,51 +534,31 @@ function colorColumn2terms(plots: SingleCellPlot[], ds: any): void {
 	const termSet = new Set()
 	for (const plot of plots) {
 		/** Creates the tw obj from the existing color map and alias defined
-		 * in the ds file. These will be available to the SC app on init().*/
+		 * in the ds file. These will be available to the SC app on init().
+		 *
+		 * TODO: Consider creating these objs in the ds file.*/
 		const tmpTerms = plot.colorColumns.map(c => {
 			const baseValues = c.colorMap ? Object.keys(c.colorMap) : []
-			const base = {
+			return {
 				name: c.name,
 				isleaf: true,
 				/** Note, term may apply to multiple plots.
 				 * The plot denotes the data file defined in the ds file,
 				 * which may be the same or different file paths for
 				 * all the plots. */
-				plot: plot.name
-			}
-			let termObj = {}
-			if (c?.type == 'numeric') {
-				termObj = {
-					type: SINGLECELL_NUMERIC_VALUE,
-					bins: {
-						default: {
-							type: 'custom-bin',
-							lst: [],
-							isDummyPreset: true
-						},
-						less: {
-							type: 'custom-bin',
-							lst: [],
-							isDummyPreset: true
-						}
+				plot: plot.name,
+				type: SINGLECELL_CELLTYPE,
+				groupsetting: {},
+				values: baseValues.reduce((acc, v) => {
+					const alias = c?.aliases?.[v]
+					acc[v] = {
+						key: v,
+						label: alias || v,
+						color: c.colorMap?.[v] || '#000000'
 					}
-				}
-			} else {
-				termObj = {
-					type: SINGLECELL_CELLTYPE,
-					groupsetting: {},
-					values: baseValues.reduce((acc, v) => {
-						const alias = c?.aliases?.[v]
-						acc[v] = {
-							key: v,
-							label: alias || v,
-							color: c.colorMap?.[v] || '#000000'
-						}
-						return acc
-					}, {})
-				}
+					return acc
+				}, {})
 			}
-			return Object.assign({}, base, termObj)
 		})
 		tmpTerms.forEach(term => termSet.add(term))
 	}

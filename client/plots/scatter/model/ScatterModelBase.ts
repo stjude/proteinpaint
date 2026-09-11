@@ -6,7 +6,7 @@ import { regressionPoly } from 'd3-regression'
 import type { Scatter } from '../scatter'
 import { getDateFromNumber } from '#shared/terms.js'
 import type { ColorLegendItem, ScatterChart, ScatterDataResult, ScatterRanges, ShapeLegendItem } from '../scatterTypes'
-import { type SingleCellPlotDataResult, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE } from '#types'
+import { type SingleCellPlotDataResult, SINGLECELL_GENE_EXPRESSION } from '#types'
 import { xAxisOffSet, yAxisOffSet, getCoordinate, calculatePadding } from '#shared'
 
 //icons have size 16x16
@@ -260,46 +260,43 @@ export abstract class ScatterModelBase {
 		this.initColorGenerator(chart)
 	}
 
-	initColorDefaults(chartId: string) {
+	initColorGenerator(chart) {
 		const config = this.scatter.config
 		const settings = this.scatter.settings
+		if (!chart.ranges) return
 
 		const gradientColor = rgb(settings.defaultColor)
-		config.startColor ||= {}
-		config.stopColor ||= {}
+		if (!config.startColor) {
+			// FIXME should move these to getPlotConfig
+			config.startColor = {}
+			config.stopColor = {}
+		}
 		// supply start and stop color, if term has hardcoded colors, use; otherwise use default
-		if (!config.startColor[chartId]) {
-			config.startColor[chartId] =
+		if (!config.startColor[chart.id]) {
+			config.startColor[chart.id] =
 				config.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION
 					? settings.noExpColor
 					: config.colorTW?.term.continuousColorScale?.minColor || gradientColor.brighter().brighter().toString()
 		}
 
-		if (!config.stopColor[chartId]) {
-			config.stopColor[chartId] =
+		if (!config.stopColor[chart.id]) {
+			config.stopColor[chart.id] =
 				config.colorTW?.term.type == SINGLECELL_GENE_EXPRESSION
 					? settings.expColor
 					: config.colorTW?.term.continuousColorScale?.maxColor || gradientColor.darker().toString()
 		}
-	}
-
-	initColorGenerator(chart) {
-		const config = this.scatter.config
-		if (!chart.ranges) return
-		this.initColorDefaults(chart.id)
 		// Handle continuous color scaling when color term wrapper is in continuous mode
 		if (config.colorTW?.q.mode === 'continuous') {
 			// Extract and sort all sample values for our calculations
 			// We filter out any values that are explicitly defined in the term values
 			// This gives us the raw numerical data we need for scaling
 			let colorValues
-			if (config.colorTW.term.type == SINGLECELL_GENE_EXPRESSION ||
-				(config.colorTW.term.type == SINGLECELL_NUMERIC_VALUE && chart.data.src)) {
+			if (config.colorTW.term.type == SINGLECELL_GENE_EXPRESSION) {
 				colorValues = [chart.ranges.geMin, chart.ranges.geMax]
 			} else {
 				colorValues = chart.cohortSamples
 					.filter(s => !config.colorTW.term.values || !(s.category in config.colorTW.term.values))
-					.map(s => Number(s.category))
+					.map(s => s.category)
 					.sort((a, b) => a - b)
 			}
 			chart.colorValues = colorValues // to use it in renderLegend
@@ -332,11 +329,6 @@ export abstract class ScatterModelBase {
 					max = colorValues[colorValues.length - 1] // Since the values are already sorted in ascending
 					// order just get the first and last values
 					break
-			}
-			// Canvas responses carry the domain computed from the full cell distribution.
-			// Do not estimate percentiles from the two raw extrema returned with the image.
-			if (chart.data.src && 'colorDomain' in chart.data && chart.data.colorDomain) {
-				[min, max] = chart.data.colorDomain
 			}
 			// Create the color generator using d3's linear scale
 			// This maps our numerical range to a color gradient

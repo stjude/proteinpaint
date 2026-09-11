@@ -10,7 +10,6 @@ import { SCViewRenderer } from './view/SCViewRenderer'
 import { getDefaultSCAppSettings } from './settings/defaults.ts'
 import { getCombinedTermFilter } from '#filter'
 import { SubplotManager } from './subplots/SubplotManager.ts'
-import { formatHeaderText } from '#dom'
 
 /** Viewer for single cell data. Renders a sample table and associated subplots for each sample.*/
 export class SCViewer extends PlotBase implements RxComponent {
@@ -60,10 +59,7 @@ export class SCViewer extends PlotBase implements RxComponent {
 		}
 
 		//opts.header is the sandbox header
-		if (opts.header) formatHeaderText({
-			header: opts.header,
-			chartType: 'SINGLE CELL'
-		})
+		if (opts.header) opts.header.html(`SINGLE CELL`).style('font-size', '0.9em')
 	}
 
 	getState(appState: any): SCFormattedState {

@@ -1,4 +1,7 @@
 import { first_genetrack_tolist } from '#common/1stGenetk'
+
+/** Name of the regulatory-element track in the genome config, if it declares one. */
+export const CCRE_TRACK_NAME = 'ENCODE cCREs'
 import type { TermdbDmrSuccessResponse, DmrDiagnostic } from '#types'
 import type { DmrConfig, BedItem, LegendRow, DmrViewData } from '../DmrTypes.ts'
 
@@ -60,6 +63,12 @@ export class DmrViewModel {
 	): any[] {
 		const tklst: any[] = []
 		first_genetrack_tolist(genomeObj, tklst)
+		/* Regulatory context, switched on here rather than left in the Tracks menu. A DMR next to a
+		gene model says where it is; a DMR next to the cCREs says what it is sitting on, which is the
+		question the element-level view was answering. Taken from the genome's own declaration by
+		name, so a genome that does not declare it simply renders without the row. */
+		const ccre = (genomeObj?.tracks || []).find((t: any) => t.name == CCRE_TRACK_NAME)
+		if (ccre) tklst.push(structuredClone(ccre))
 		tklst.push({ type: 'bedj', name: 'DMRs', bedItems: dmrBedItems })
 		tklst.push({ type: 'bedj', name: 'Sig. CpGs', bedItems: sigCpgBedItems })
 		if (betaTrackImg) {

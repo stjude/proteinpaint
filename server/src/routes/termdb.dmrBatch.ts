@@ -1,0 +1,539 @@
+import type { RoutePayload, RouteApi, TermdbDmrBatchRequest, TermdbDmrBatchSuccessResponse } from '#types'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { invalidcoord } from '#shared/common.js'
+import { mayLog } from '#src/helpers.ts'
+import serverconfig from '#src/serverconfig.js'
+import { formatElapsedTime } from '#shared'
+import { chrSeed } from '#src/utils/dmrStats.ts'
+import {
+	resolveMethylationMatrix,
+	resolveGroupNames,
+	eligibleMethylationSamples,
+	validateChromosomes
+} from '#src/utils/methylationMatrix.ts'
+import {
+	resolveExcludeBeds,
+	loadMaskIntervals,
+	maskedFraction,
+	DM_DEFAULT_BLACKLISTS,
+	DEFAULT_OVERLAP_FRAC
+} from '#src/utils/regionMask.ts'
+import { buildGeneIndex, genesAt, inGeneBody, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
+import {
+	buildExclusion,
+	sampleBackground,
+	scoreAgainstBackground,
+	BG_WINDOWS_PER_CHR
+} from '#src/utils/dmrBackground.ts'
+import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import fs from 'fs'
+
+/* Call DMRs across many regions at once — the whole hit list of a differential methylation run,
+rather than one clicked element at a time.
+
+Why this is a route and not a client loop: dmrcate fits eBayes and applies the BH correction over
+the WHOLE matrix before subsetting to a region, so that cost is identical for every region drawn
+from the same matrix. Grouping regions by chromosome and invoking once per shard pays it once per
+chromosome instead of once per region. Measured on 55 windows from one MMRF shard: 285.7s
+one-at-a-time against 5.3s batched, with identical DMR calls for all 55.
+
+The consequence is that cost scales with CHROMOSOMES, not regions, so drilling an entire 17,000-row
+hit list costs barely more than drilling the top 400. */
+
+export const payload: RoutePayload = {
+	init,
+	request: { typeId: 'TermdbDmrBatchRequest' },
+	response: { typeId: 'TermdbDmrBatchResponse' }
+}
+
+export const api: RouteApi = {
+	endpoint: 'termdb/dmrBatch',
+	methods: {
+		get: payload,
+		post: payload
+	}
+}
+
+/** Guards a request that would pin a core for an unbounded time. Regions are cheap individually;
+ * it is the count that has to be bounded, and 25k is well past any real hit list. */
+const MAX_REGIONS = 25_000
+/** Per region, the same hard cap the single-region route applies. */
+const SERVER_MAX_REGION_BP = 10_000_000
+/* Bin width for the genome-wide methylation profile. 100 kb because that is the width the field
+plots this metric at: Zhou 2018 (Nat Genet 50:591) bins the genome at 100 kb, "so that the segments
+would contain a sufficient number of solo-WCGWs to give reliable methylation averages, without
+losing resolution to detect the majority of PMD positions, which fall within PMDs of 500 kb or
+greater". Fixed rather than derived from the genome, so a profile means the same thing on every
+cohort and can be read against a published one. */
+export const METHYLATION_BIN_BP = 100_000
+
+/** Smoothing bandwidth for an element matrix, whose rows sit ~10 kb apart: the client's element-scale
+ * default (client/plots/dmr/settings/defaults.ts). The rust default of 1 kb is the CpG scale. */
+const ELEMENT_SCALE_LAMBDA = 50_000
+
+/* Overlapping windows are the norm, not the exception: neighbouring elements from one hit list
+routinely sit a few hundred bp apart and belong to the SAME underlying DMR. Drilling both calls
+that DMR twice, and any width distribution built from the output then counts it twice. Merging
+first also cuts the work. Each merged window records which inputs it came from, so a caller can
+still map a DMR back to the elements that asked for it. */
+export function mergeWindows(regions: { chr: string; start: number; stop: number }[]) {
+	const byChr = new Map<string, { start: number; stop: number; members: number[] }[]>()
+	const order = regions.map((r, i) => ({ ...r, i })).sort((a, b) => a.chr.localeCompare(b.chr) || a.start - b.start)
+	for (const r of order) {
+		const lst = byChr.get(r.chr) || []
+		const last = lst[lst.length - 1]
+		if (last && r.start <= last.stop) {
+			last.stop = Math.max(last.stop, r.stop)
+			last.members.push(r.i)
+		} else {
+			lst.push({ start: r.start, stop: r.stop, members: [r.i] })
+		}
+		byChr.set(r.chr, lst)
+	}
+	return byChr
+}
+
+/* Turn a list of chromosome names into whole-chromosome regions.
+ *
+ * Names are resolved through the genome's own lookup rather than trusted, so casing and aliases
+ * behave the same as everywhere else in the app and an unknown name fails with a message naming
+ * the chromosome instead of silently scanning nothing. The stop is the chromosome's full length:
+ * a scan deliberately has no window, which is the whole point of the mode. */
+export function buildScanRegions(genome: any, chromosomes: string[]) {
+	/* Bounded and deduplicated before anything is built from the list: a scan request skips the
+	per-region cap, so this is the only thing standing between an arbitrarily long list of repeated
+	names and one rust fit per entry. Shared with every other route taking a chromosome list. */
+	return validateChromosomes(genome, chromosomes).map(c => ({
+		chr: c,
+		start: 0,
+		stop: genome.chrlookup[c.toUpperCase()].len
+	}))
+}
+
+/** Bump when a change to this route or to dmrcate alters results for an unchanged request.
+ * Without it, a cache written before the change keeps serving the old answer forever. */
+// 2: background correction added; v1 entries were written before dmrcate emitted background
+// windows for a regions-less call, so they hold an empty correction
+// 3: DMRs now carry inGeneBody
+const CACHE_VERSION = 4
+
+/* Fingerprint the data files a result was computed from.
+ *
+ * A cache keyed only on the request silently serves stale answers the moment a matrix is rebuilt,
+ * which is exactly how the topve cache went wrong. Keying on size+mtime means rebuilding a CpG
+ * shard, swapping a blacklist BED or updating the gene database invalidates only what actually
+ * depended on it. A missing file contributes a null rather than throwing: the compute below will
+ * report the real error, and it must not be masked by one raised while building a cache key. */
+export function fingerprint(files: string[]) {
+	return files
+		.filter(Boolean)
+		.sort()
+		.map(f => {
+			try {
+				const st = fs.statSync(f)
+				return { f, size: st.size, mtimeMs: st.mtimeMs }
+			} catch {
+				return { f, size: null, mtimeMs: null }
+			}
+		})
+}
+
+function init({ genomes }) {
+	return async (req, res): Promise<void> => {
+		try {
+			const { payload } = await runDmrBatch(req.query, genomes)
+			res.send(payload)
+		} catch (e: unknown) {
+			const msg = e instanceof Error ? e.message : String(e)
+			res.send({ error: msg })
+			if (e instanceof Error && e.stack) console.log(e)
+		}
+	}
+}
+
+/** Run (or serve from cache) one batch or scan request. Exported so the differential-methylation
+ * volcano can present a scan as an element class: it calls this, maps the DMRs to rows and hands
+ * them to the same renderer every other class goes through. */
+export async function runDmrBatch(
+	q: TermdbDmrBatchRequest,
+	genomes: any
+): Promise<{ payload: TermdbDmrBatchSuccessResponse; cacheId: string }> {
+	const genome = genomes[q.genome]
+	if (!genome) throw 'unknown genome'
+	const ds = genome.datasets?.[q.dslabel]
+	if (!ds) throw 'unknown ds'
+
+	/* Two ways to ask: a list of windows (drill a hit list), or a list of chromosomes to scan
+	end to end (find DMRs without deciding in advance where to look). The scan is affordable
+	because the fit is already chromosome-wide and the smoothing is linear in CpGs, so the
+	extra cost over drilling a few windows on that chromosome is small. */
+	const scanning = Array.isArray(q.scanChromosomes) && q.scanChromosomes.length > 0
+	let regions: { chr: string; start: number; stop: number }[]
+	if (scanning) {
+		regions = buildScanRegions(genome, q.scanChromosomes!)
+	} else {
+		if (!Array.isArray(q.regions) || !q.regions.length) throw new Error('No regions requested.')
+		if (q.regions.length > MAX_REGIONS)
+			throw new Error(`Too many regions (${q.regions.length}). Maximum is ${MAX_REGIONS}.`)
+		regions = q.regions
+	}
+	if (!Array.isArray(q.group1) || q.group1.length == 0)
+		throw new Error('Group 1 has no samples. Please select at least one sample.')
+	if (!Array.isArray(q.group2) || q.group2.length == 0)
+		throw new Error('Group 2 has no samples. Please select at least one sample.')
+	for (const r of regions) {
+		if (invalidcoord(genome, r.chr, r.start, r.stop))
+			throw new Error(`Invalid genomic coordinates: ${r.chr}:${r.start}-${r.stop}`)
+		/* The size cap guards against an unbounded drill-down request. A scan region is a whole
+		chromosome by construction, so the cap would reject every one of them -- and the cost it
+		exists to bound is paid per chromosome either way, since the model fit is chromosome-wide
+		regardless of how much of it is asked about. */
+		if (!scanning && r.stop - r.start > SERVER_MAX_REGION_BP)
+			throw new Error(`Region too large: ${r.chr}:${r.start}-${r.stop}`)
+	}
+
+	/* Artifact-region mask. Applied AFTER the fit, to the called DMRs, rather than by dropping
+	probes first: the fit is chromosome-wide and its variance and FDR estimates are better for
+	having seen every probe, and a DMR is the thing a reader acts on. Names default to the
+	methylation subset, not to every declared source -- see DM_DEFAULT_BLACKLISTS. */
+	const maskNames = q.excludeOptions?.blacklists ?? DM_DEFAULT_BLACKLISTS
+	const maskFiles = resolveExcludeBeds(genome, maskNames)
+	/* Report what was applied, not what was asked for. A source is dropped at genome init when
+	its BED is unreadable, and a deployment missing one must not be told it was masked. */
+	const appliedNames = maskNames.filter(n =>
+		(genome.blacklists as { name: string }[] | undefined)?.some(b => b.name == n)
+	)
+	const rawFrac = Number(q.excludeOptions?.overlapFrac)
+	const overlapFrac = Number.isFinite(rawFrac) ? Math.min(Math.max(rawFrac, 0), 1) : DEFAULT_OVERLAP_FRAC
+	let dmrsDropped = 0
+	const bgTotals = { windows: 0, scored: 0, unscored: 0, significant: 0 }
+
+	/* Built once for the request, not once per DMR: a genome scan calls >100,000 of them and
+	one sqlite round trip each would cost more than the model fits. Absent on a genome with no
+	gene2coord table, in which case the column is simply omitted. */
+	const geneIdx = buildGeneIndex(genome)
+
+	const merged = mergeWindows(regions)
+	const chrEntriesAll = [...merged.entries()]
+
+	/* Matrix resolution is hoisted out of the worker pool so the cache key can name the exact
+	files the answer depends on. It stays per chromosome because the backing can differ per
+	chromosome: a cohort part-way through building its CpG shards serves those where they
+	exist and falls back to the element matrix elsewhere. */
+	const resolved = new Map<string, ReturnType<typeof resolveMethylationMatrix>>()
+	for (const [chr] of chrEntriesAll) resolved.set(chr, resolveMethylationMatrix(ds, chr, q.element_type))
+
+	/* Everything whose identity changes the answer, and nothing that does not. Sample ids are
+	sorted so that two callers naming the same cohort in a different order share a cache entry;
+	the merged windows rather than the raw request, so two hit lists that collapse to the same
+	windows also share one. */
+	const cacheKey = {
+		v: CACHE_VERSION,
+		genome: q.genome,
+		dslabel: q.dslabel,
+		group1: q.group1.map(x => x.sampleId).sort(),
+		group2: q.group2.map(x => x.sampleId).sort(),
+		windows: [...merged.entries()].map(([chr, ws]) => [chr, ws.map(w => [w.start, w.stop])]).sort(),
+		binBp: q.binMethylation ? METHYLATION_BIN_BP : 0,
+		lambda: q.lambda ?? null,
+		C: q.C ?? null,
+		fdr_cutoff: q.fdr_cutoff ?? null,
+		element_type: q.element_type ?? null,
+		mask: { sources: [...appliedNames].sort(), overlapFrac },
+		background: !!q.backgroundCorrection,
+		files: fingerprint([...[...resolved.values()].map(r => r.matrixFile), ...maskFiles, genome?.genedb?.dbfile])
+	}
+
+	const time1 = Date.now()
+	/* Cached because a scan is ~40s of fresh compute with nothing reused: the same contrast
+	re-run, or a second person running it, would otherwise pay in full again. The identical
+	request arriving twice concurrently is deduplicated to one compute by cacheOrRecompute,
+	so a demo and a colleague clicking along cost one scan, not two. */
+	const { result: payload, cacheId } = await cacheOrRecompute<typeof cacheKey, TermdbDmrBatchSuccessResponse>({
+		computeArgument: cacheKey,
+		cacheSubdir: 'dmr',
+		computeFresh: async () => {
+			const out: TermdbDmrBatchSuccessResponse['regions'] = []
+			let totalProbes = 0
+			/* Global methylation is accumulated per chromosome and pooled here weighted by how many
+	values each contributed, so the result is a genuine cohort-wide mean rather than an
+	average of chromosome averages (which would over-weight the small chromosomes). */
+			let gCtrl = 0
+			let gCtrlN = 0
+			let gCase = 0
+			let gCaseN = 0
+
+			/* One rust invocation per chromosome, a couple at a time. Each holds one chromosome's matrix
+	(~400MB on the MMRF shards) and saturates a single core, so the work parallelises cleanly
+	across chromosomes; running them strictly sequentially left every other core idle and made
+	the request as slow as the sum of its parts.
+
+	Default 2, NOT derived from the machine's core count. os.availableParallelism() and
+	os.cpus() report the HOST's cores, not a container's CPU quota, so on a 4-core-limited
+	container sitting on a large host they would happily return 32 and oversubscribe it. Two
+	also leaves headroom on a 4-core deployment: this route must not starve every other request
+	on the server while it runs. Raise it per deployment via serverconfig where the cores and
+	the ~400MB-per-job memory are actually known. */
+			const CONCURRENCY = Math.max(1, Number(serverconfig.dmrBatchConcurrency) || 2)
+			/* Cost accounting. Each worker reports its own peak memory and CPU from getrusage; Node's
+			share (mask reads, background sampling, JSON assembly) is the delta in this process over
+			the run. Kept with the result so the cache carries the cost of computing it. */
+			/* One cohort for the whole run, resolved once. It was resolved per job against that job's
+			matrix, so a dataset serving some chromosomes from CpG shards and others from the element
+			matrix compared a different sample set per chromosome while the volcano reported a single
+			n per group -- and the matched cohort handed to the expression follow-ups was whichever
+			one the first chromosome produced. */
+			const { group1, group2 } = await resolveGroupNames(
+				q.group1,
+				q.group2,
+				eligibleMethylationSamples(ds, q.element_type),
+				ds
+			)
+			if (group1.length < 3 || group2.length < 3)
+				throw new Error(
+					`Each group needs at least 3 samples with methylation data (got ${group1.length} and ${group2.length}).`
+				)
+			const nodeRss0 = process.memoryUsage().rss
+			const nodeCpu0 = process.cpuUsage()
+			const perChromosome: NonNullable<TermdbDmrBatchSuccessResponse['resources']>['perChromosome'] = []
+			/* Genome-wide profile rows, accumulated across jobs. One job covers one matrix file, so
+			its rows are already distinct from every other job's. */
+			const binRows: NonNullable<TermdbDmrBatchSuccessResponse['binMethylation']>['bins'] = []
+			const account = (chr: string, d: any) => {
+				if (!d) return
+				perChromosome.push({
+					chr,
+					probes: d.total_probes_analyzed || 0,
+					peakMemoryMb: Number(d.peak_memory_mb) || 0,
+					cpuSeconds: Number(d.cpu_seconds) || 0,
+					elapsedMs: Number(d.elapsed_ms) || 0
+				})
+			}
+			/* One rust invocation per MATRIX FILE, not per chromosome. Every invocation opens and fits
+			its whole file: with per-chromosome shards that is one chromosome and the grouping is a
+			no-op, but a dataset backed by one genome-wide file would otherwise refit the same matrix
+			once per chromosome asked about. Rust accepts regions on any chromosome the file holds and
+			returns them in input order, so a job's result is sliced back per chromosome below and
+			everything per chromosome -- mask, gene names, background -- runs unchanged on its slice. */
+			type ChrEntry = (typeof chrEntriesAll)[0]
+			const jobs = new Map<string, ChrEntry[]>()
+			for (const e of chrEntriesAll) {
+				const file = resolved.get(e[0])!.matrixFile
+				jobs.set(file, [...(jobs.get(file) || []), e])
+			}
+			/* Biggest jobs first. With a fixed pool the tail is set by the slowest job still running,
+			so starting chr1 last would leave it running alone after everything else finished. */
+			const jobList = [...jobs.values()].sort(
+				(a, b) => b.reduce((n, e) => n + e[1].length, 0) - a.reduce((n, e) => n + e[1].length, 0)
+			)
+			const results: { chr: string; windows: ChrEntry[1]; result: any; useElement: boolean }[] = []
+			let next = 0
+			await Promise.all(
+				Array.from({ length: Math.min(CONCURRENCY, jobList.length) }, async () => {
+					while (true) {
+						const i = next++
+						if (i >= jobList.length) return
+						const job = jobList[i]
+						const jobChrs = job.map(e => e[0])
+						const { matrixFile, mvalues, useElement } = resolved.get(jobChrs[0])!
+						/* An element matrix's rows sit ~10 kb apart against a CpG's ~100 bp, so the CpG-scale
+						kernel would smooth nothing there: the element-scale default is the client's 50 kb
+						(client/plots/dmr/settings/defaults.ts), applied when the caller set none. */
+						const lambda = q.lambda ?? (useElement ? ELEMENT_SCALE_LAMBDA : undefined)
+						const input = {
+							probe_h5_file: matrixFile,
+							mvalues,
+							cachedir: serverconfig.cachedir,
+							genome: q.genome,
+							chr: jobChrs[0],
+							start: 0,
+							stop: 0,
+							regions: job.flatMap(([chr, windows]) => windows.map(w => ({ chr, start: w.start, stop: w.stop }))),
+							case: group2.join(','),
+							control: group1.join(','),
+							fdr_cutoff: q.fdr_cutoff,
+							lambda,
+							C: q.C,
+							bin_bp: q.binMethylation ? METHYLATION_BIN_BP : 0
+						}
+						const jobResult = JSON.parse(await run_rust('dmrcate', JSON.stringify(input)))
+						if (jobResult.error) throw new Error(`${jobChrs.join(',')}: ${jobResult.error}`)
+						account(jobChrs.join(','), jobResult.diagnostic)
+						/* Per chromosome from here: the job's regions come back in input order, so each
+						chromosome's slice is the result it would have had from its own invocation. */
+						const perChr: { chr: string; windows: ChrEntry[1]; result: any; called: any[] }[] = []
+						let offset = 0
+						for (const [chr, windows] of job) {
+							const result = { ...jobResult, regions: (jobResult.regions || []).slice(offset, offset + windows.length) }
+							offset += windows.length
+							/* Masked here rather than in the assembly loop below so each chromosome's BED
+							query runs inside its own worker slot, alongside the fit it belongs to, instead
+							of serially after every fit has finished. */
+							if (maskFiles.length) {
+								const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
+								if (chrLen) {
+									const mask = await loadMaskIntervals(maskFiles, chr, chrLen)
+									if (mask.length) {
+										for (const r of result.regions || []) {
+											if (!r?.dmrs?.length) continue
+											const kept = r.dmrs.filter((d: any) => maskedFraction(mask, d.start, d.stop) < overlapFrac)
+											dmrsDropped += r.dmrs.length - kept.length
+											r.dmrs = kept
+										}
+									}
+								}
+							}
+							/* Name the regions. A scan returns coordinates; the element volcano returns "XIST",
+							and that word is the difference between a row a reader can act on and one they
+							have to look up. Done here, inside the worker slot, so it is spread across the
+							pool rather than serialised after every fit. */
+							if (geneIdx) {
+								for (const r of result.regions || []) {
+									for (const d of r?.dmrs || []) {
+										const g = genesAt(geneIdx, chr, d.start, d.stop)
+										/* Body overlap is tracked separately from gene membership: promoter and
+										gene-body methylation relate to transcription in opposite directions, so a
+										downstream test about gene bodies must be able to exclude a region that only
+										clips a promoter -- on MMRF that would enlarge the set by 17%. */
+										if (inGeneBody(geneIdx, chr, d.start, d.stop)) d.inGeneBody = true
+										if (!g.length) continue
+										d.genes = g.slice(0, MAX_GENES_PER_DMR)
+										if (g.length > MAX_GENES_PER_DMR) d.genesTruncated = g.length
+									}
+								}
+							}
+							perChr.push({ chr, windows, result, called: (result.regions || []).flatMap((r: any) => r?.dmrs || []) })
+						}
+						/* Matched intergenic background, sampled per chromosome and scored per chromosome,
+						but fitted ONCE per job for the same reason as above. Requires a second rust
+						invocation because the window list has to be built from the DMRs the first one
+						called -- the widths are matched to them. Each chromosome's windows are scored
+						against its own draw, so pooling the invocation changes no number. */
+						if (q.backgroundCorrection) {
+							const draws: { chr: string; called: any[]; windows: any[] }[] = []
+							for (const { chr, called } of perChr) {
+								const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
+								const excl = chrLen ? await buildExclusion(genome, chr, chrLen, geneIdx as any) : null
+								if (!excl || !chrLen || !called.length) continue
+								const windows = sampleBackground(
+									chr,
+									chrLen,
+									excl,
+									called.map((d: any) => d.stop - d.start),
+									BG_WINDOWS_PER_CHR,
+									// seeded from the chromosome name so the draw is reproducible and cacheable
+									chrSeed(chr)
+								)
+								if (windows.length) draws.push({ chr, called, windows })
+							}
+							if (draws.length) {
+								const bgRes = JSON.parse(
+									await run_rust(
+										'dmrcate',
+										JSON.stringify({ ...input, regions: [], background_regions: draws.flatMap(d => d.windows) })
+									)
+								)
+								account(`${draws.map(d => d.chr).join(',')} background`, bgRes.diagnostic)
+								let bgOffset = 0
+								for (const { called, windows } of draws) {
+									const background = (bgRes.background || []).slice(bgOffset, bgOffset + windows.length)
+									bgOffset += windows.length
+									const { scored, unscored } = scoreAgainstBackground(called, background)
+									called.forEach((d: any, i: number) => {
+										const sc = scored[i]
+										if (!sc) return
+										d.excess = Math.round(sc.excess * 100000) / 100000
+										d.bgP = sc.p
+									})
+									bgTotals.windows += background.length
+									bgTotals.scored += scored.filter(Boolean).length
+									bgTotals.unscored += unscored
+									bgTotals.significant += scored.filter(s2 => s2 && s2.p < 0.05).length
+								}
+							}
+						}
+						if (jobResult.bin_methylation?.length) binRows.push(...jobResult.bin_methylation)
+						for (const { chr, windows, result } of perChr) results.push({ chr, windows, result, useElement })
+					}
+				})
+			)
+			const seenDiag = new Set<any>()
+			for (const { chr, windows, result, useElement } of results) {
+				// a job's diagnostic is shared by every chromosome it fitted; count it once
+				const gm = seenDiag.has(result.diagnostic) ? undefined : result.diagnostic?.global_methylation
+				if (!seenDiag.has(result.diagnostic)) totalProbes += result.diagnostic?.total_probes_analyzed || 0
+				seenDiag.add(result.diagnostic)
+				if (gm && Number.isFinite(gm.control_mean_beta) && Number.isFinite(gm.case_mean_beta) && gm.values_counted) {
+					// each arm weighted by its own count: group sizes and missingness differ per chromosome
+					const wc = gm.control_n ?? gm.values_counted / 2
+					const wk = gm.case_n ?? gm.values_counted / 2
+					gCtrl += gm.control_mean_beta * wc
+					gCtrlN += wc
+					gCase += gm.case_mean_beta * wk
+					gCaseN += wk
+				}
+				for (let i = 0; i < windows.length; i++) {
+					const r = result.regions?.[i]
+					if (!r) continue
+					out.push({
+						chr,
+						start: windows[i].start,
+						stop: windows[i].stop,
+						// which of the caller's regions merged into this window
+						members: windows[i].members,
+						n_probes: r.n_probes,
+						n_sig_probes: r.n_sig_probes,
+						dmrs: r.dmrs,
+						elementResolution: useElement
+					})
+				}
+			}
+
+			/* Restore the caller's region order. A worker pool finishes in whatever order jobs land, and
+			a caller's list may interleave chromosomes, so the assembled windows are sorted by the
+			smallest member index each carries: byte-identical output for identical requests, and
+			request order for any caller that assumes it. */
+			out.sort((a, b) => Math.min(...a.members) - Math.min(...b.members))
+			mayLog(
+				`DMR ${scanning ? 'scan' : 'batch'} computed: ${regions.length} regions -> ${out.length} windows over ${
+					merged.size
+				} chromosomes,`,
+				formatElapsedTime(Date.now() - time1)
+			)
+			perChromosome.sort((a, b) => b.peakMemoryMb - a.peakMemoryMb)
+			const nodeCpu = process.cpuUsage(nodeCpu0)
+			const resources: TermdbDmrBatchSuccessResponse['resources'] = {
+				workers: CONCURRENCY,
+				threadsPerWorker: 1,
+				wallMs: Date.now() - time1,
+				peakWorkerMemoryMb: perChromosome[0]?.peakMemoryMb || 0,
+				peakPoolMemoryMb: perChromosome.slice(0, CONCURRENCY).reduce((a, r) => a + r.peakMemoryMb, 0),
+				workerCpuSeconds: perChromosome.reduce((a, r) => a + r.cpuSeconds, 0),
+				nodeRssDeltaMb: Math.max(0, process.memoryUsage().rss - nodeRss0) / 1048576,
+				nodeCpuSeconds: (nodeCpu.user + nodeCpu.system) / 1e6,
+				perChromosome
+			}
+			return {
+				status: 'ok',
+				regions: out,
+				chromosomes: merged.size,
+				totalProbesAnalyzed: totalProbes,
+				resources,
+				binMethylation: q.binMethylation ? { binBp: METHYLATION_BIN_BP, bins: binRows } : undefined,
+				regionMask: maskFiles.length ? { sources: appliedNames, overlapFrac, dmrsDropped } : undefined,
+				backgroundCorrection: q.backgroundCorrection ? { ...bgTotals, matchedOn: ['CpG density', 'width'] } : undefined,
+				globalMethylation:
+					gCtrlN && gCaseN
+						? {
+								controlMeanBeta: gCtrl / gCtrlN,
+								caseMeanBeta: gCase / gCaseN,
+								shift: gCase / gCaseN - gCtrl / gCtrlN,
+								valuesCounted: gCtrlN + gCaseN
+						  }
+						: undefined
+			} as TermdbDmrBatchSuccessResponse
+		}
+	})
+	mayLog(`DMR ${scanning ? 'scan' : 'batch'} served ${cacheId} in`, formatElapsedTime(Date.now() - time1))
+	return { payload, cacheId }
+}

@@ -1,6 +1,6 @@
 import type { SCSample } from '../SCTypes'
 
-export const GroupByOptions = ['sample', 'plot', 'none'] as const
+export const GroupByOptions = ['none', 'sample', 'plot'] as const
 
 export type Settings = {
 	sc: SCSettings

@@ -10,6 +10,7 @@ import { VolcanoViewModel } from '../viewModel/VolcanoViewModel'
     - setPointData
     - setStatsData
 	- setUserActions
+	- pValueLabel per term type (scan, corrected scan, proteome DAP)
 */
 
 const mockSettings = {
@@ -97,7 +98,11 @@ const mockResponse = {
 			minNonZeroPValue: 1e-9
 		},
 		totalRows: testData.responseData.length,
-		totalSignificantRows: significantRow ? 1 : 0
+		totalSignificantRows: significantRow ? 1 : 0,
+		// C1orf159, the one significant row here, has fold_change -0.0021 — so it counts down
+		totalSignificantUp: 0,
+		totalSignificantDown: significantRow ? 1 : 0,
+		xOffset: 0 // uncentered, so the axis label carries no "− median"
 	},
 	images: [],
 	method: 'edgeR',
@@ -166,7 +171,7 @@ tape('setPlotDimensions', function (test) {
 	test.deepEqual(plotDim.xAxisLabel, { x: 282, y: 514 }, 'Should properly set xAxisLabel')
 	test.deepEqual(
 		plotDim.yAxisLabel,
-		{ text: '-log10(adjusted P value)', x: 23.333333333333332, y: 242 },
+		{ text: '-log10(adjusted p-value)', x: 23.333333333333332, y: 242 },
 		'Should properly set yAxisLabel'
 	)
 	test.deepEqual(plotDim.plot, { height: 404, width: 404, x: 90, y: 40 }, 'Should properly set plot')
@@ -420,5 +425,142 @@ tape('setUserActions', function (test) {
 	expected = { noShow: new Set(['Confounding factors']) }
 	test.deepEqual(result, expected, `Should properly set user actions when method is ${viewModel.settings.method}`)
 
+	test.end()
+})
+
+/* A DMR scan reaches the volcano as one more element class, with its own column set. The columns
+are built in setPTableColumns and the cells in setPointData, in separate splices, so the pairing
+is asserted through the column labels rather than by index -- a swap would render CpG counts under
+"Width" and look entirely plausible. The single-p contract (one column, one label everywhere) is
+what lets the DAP special case and the scan share one code path. */
+tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and provenance', function (test) {
+	test.timeoutAfter(100)
+
+	const scanDot = {
+		promoter_id: 'chr1:1000-2000',
+		element_id: 'chr1:1000-2000',
+		element_class: 'dmr',
+		gene_name: 'GENEA, GENEB',
+		chr: 'chr1',
+		start: 1000,
+		stop: 2000,
+		delta_beta: -0.21,
+		fold_change: -0.35,
+		original_p_value: 0.012,
+		adjusted_p_value: 0.012,
+		no_cpgs: 14,
+		excess: -0.17,
+		pixel_x: 10,
+		pixel_y: 10
+	}
+	const scan = {
+		chromosomes: ['chr1'],
+		totalProbesAnalyzed: 1000,
+		called: 3,
+		minCpgs: 5,
+		kept: 2,
+		hyper: 1,
+		hypo: 1,
+		width: { median: 1000, q1: 800, q3: 1500 },
+		backgroundCorrection: {
+			windows: 2000,
+			scored: 2,
+			unscored: 0,
+			significant: 1,
+			matchedOn: ['CpG density', 'width']
+		},
+		geneBodyLoss: { regions: 1, genes: ['GENEA'] }
+	}
+	const settings = {
+		...mockSettings,
+		elementType: 'dmr_scan',
+		xAxis: 'delta_beta',
+		deltaBetaCutoff: 0.1,
+		minSamplesPerGroup: 3,
+		excludeSexChr: false,
+		scanChromosome: '',
+		backgroundCorrection: true,
+		minCpgs: 5
+	}
+	const vm = new VolcanoViewModel(
+		{ ...mockConfig, termType: 'dnaMethylation' } as any,
+		{ ...mockResponse, scan, data: { ...mockResponse.data, dots: [scanDot] as any } } as any,
+		settings as any
+	)
+	const cols = vm.pValueTable.columns.map(c => c.label)
+	const row = vm.pValueTable.rows[0]
+	test.equal(row.length, cols.length, 'every column has a cell')
+	const cell = (label: string) => row[cols.indexOf(label)]?.value
+	test.deepEqual(
+		cols,
+		['DMR', 'Gene(s)', 'Δβ', 'Peak Δβ', 'CpGs', 'Width (bp)', 'Excess Δβ', 'p vs matched background'],
+		'scan columns, in order, with a single p column named for the correction'
+	)
+	test.equal(cell('DMR'), 'chr1:1000-2000', 'the row is labelled by its coordinate')
+	test.equal(cell('Δβ'), -0.21, 'Δβ is the mean delta-beta')
+	test.equal(cell('Peak Δβ'), -0.35, 'the peak rides in fold_change')
+	test.equal(cell('CpGs'), 14, 'CpG count under CpGs')
+	test.equal(cell('Width (bp)'), 1000, 'width under Width')
+	test.equal(cell('Excess Δβ'), -0.17, 'excess under Excess')
+	test.equal(cell('p vs matched background'), 0.012, 'the one p under the one p column')
+	test.ok(vm.viewData.singlePValue, 'a scan has one p per row')
+	test.equal(vm.viewData.pValueLabel, 'p vs matched background', 'and names it after the correction')
+	test.equal(vm.viewData.scan, scan, 'the scan summary is passed through for the view')
+	test.ok(vm.viewData.userActions.noShow.has('Confounding factors'), 'the scan offers no confounders')
+
+	const labels = vm.viewData.statsData.map(d => d.label)
+	test.ok(labels.includes('DMRs with 5+ CpGs'), 'stats state the CpG floor and the count meeting it')
+	test.ok(
+		vm.viewData.statsData.find(d => d.label.startsWith('DMRs moving more than matched background'))?.value ==
+			'1 of 2 (50.0%)',
+		'the correction is reported with its denominator'
+	)
+	test.ok(labels.includes('Gene-body loss regions beating background → genes'), 'the gene-body set is reported')
+
+	const p = vm.viewData.provenance
+	test.ok(p.includes('scan: whole genome'), 'provenance names what was scanned')
+	test.ok(p.includes('background correction: yes'), 'and whether it was corrected')
+	test.ok(p.includes('min CpGs per DMR: 5'), 'and the CpG floor')
+
+	// without the correction the p is the smoothed FDR and there is no excess column
+	const plain = new VolcanoViewModel(
+		{ ...mockConfig, termType: 'dnaMethylation' } as any,
+		{
+			...mockResponse,
+			// the gene set stays: it no longer depends on the correction, only its label does
+			scan: { ...scan, backgroundCorrection: undefined },
+			data: { ...mockResponse.data, dots: [scanDot] as any }
+		} as any,
+		{ ...settings, backgroundCorrection: false } as any
+	)
+	test.equal(plain.viewData.pValueLabel, 'smoothed FDR', 'uncorrected, the p is DMRcate’s smoothed FDR')
+	test.notOk(
+		plain.pValueTable.columns.some(c => c.label == 'Excess Δβ'),
+		'and there is no excess column'
+	)
+	test.equal(plain.pValueTable.rows[0].length, plain.pValueTable.columns.length, 'cells still match columns')
+	/* The expression follow-up runs on an uncorrected scan too, so the row must not claim a
+	background gate that was never applied. */
+	test.ok(
+		plain.viewData.statsData.some(d => d.label == 'Gene-body loss regions → genes'),
+		'the gene-body set is reported without the background wording'
+	)
+
+	test.end()
+})
+
+tape('a proteome DAP volcano calls its single p an FDR', function (test) {
+	test.timeoutAfter(1000)
+	/* DAP files carry one FDR, and the label is chosen off the term type. It was read before the
+	term type had been assigned, so every DAP label read 'adjusted p-value' for data that is an
+	FDR -- the numbers were right and every word for them was wrong. */
+	const vm = new VolcanoViewModel({ ...mockConfig, termType: 'proteomeDAP' } as any, mockResponse, mockSettings as any)
+	test.equal(vm.viewData.pValueLabel, 'FDR', 'the y axis and hover rows say FDR')
+	test.ok(vm.singlePValue, 'and DAP reports a single p')
+	test.deepEqual(
+		vm.pValueTable.columns.map(c => c.label),
+		['Identifier', 'Gene', 'log₂(fold-change)', 'FDR'],
+		'so the p column is titled FDR, not Adjusted p-value'
+	)
 	test.end()
 })

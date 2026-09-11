@@ -4,7 +4,6 @@ import * as helpers from '../../../test/front.helpers.js'
 /* Tests
     spatial OME-TIFF image renders the map with overlays and the burger menu
     plain SVS image renders the map without the spatial machinery
-    fixed-sample plain-WSI mode renders the pinned sample without the spatial machinery
 
 Both run the mass wsi plot against the TermdbTest fixture:
     sample 2660         image1/CMU-1-Small-Region.svs (ds.queries.w2.wsiFolder)
@@ -125,7 +124,7 @@ tape('plain SVS image renders the map without the spatial machinery', test => {
 			callbacks: {
 				'postRender.test': runTests
 			}
-		}
+		} 
 	})
 
 	async function runTests(wsi) {
@@ -144,54 +143,6 @@ tape('plain SVS image renders the map without the spatial machinery', test => {
 			if (test['_ok']) wsi.Inner.app.destroy()
 		} catch (e) {
 			test.fail(`svs viewer test error: ${e}`) // never leave tape hanging
-		}
-		test.end()
-	}
-})
-
-tape('fixed-sample plain-WSI mode renders the pinned sample without the spatial machinery', test => {
-	test.timeoutAfter(30000) // first tiles may spawn python server-side
-
-	// the omnisearch "Whole Slide Images" action's config: sample pinned,
-	// imageType 'wsi'. Would regress to spatial if imageType were dropped —
-	// 2660 has NO spatial image, so this render only succeeds on the plain path
-	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'wsi',
-					sample: { sID: '2660' },
-					imageType: 'wsi'
-				}
-			]
-		},
-		wsi: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	async function runTests(wsi) {
-		wsi.on('postRender.test', null) // run once
-		try {
-			const dom = wsi.Inner.dom
-
-			// fixed-sample mode: the sample is already chosen, no picker table
-			test.equal(dom.table.style('display'), 'none', 'sample table is hidden in fixed-sample mode')
-
-			// the OL map rendered the pinned sample's plain slide; an imageType
-			// regression would instead show the "No spatial image" error, no canvas
-			const canvases = await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
-			test.ok(canvases.length >= 1, 'OpenLayers canvas rendered for the pinned plain slide')
-			test.equal(dom.error.text(), '', 'no error banner')
-
-			// plain mode: none of the spatial machinery
-			test.equal(dom.controls.style('display'), 'none', 'burger menu is hidden')
-			test.equal(dom.viewer.selectAll('div[data-testid="sjpp-wsi-typelegend"]').size(), 0, 'no cell-type legend')
-			if (test['_ok']) wsi.Inner.app.destroy()
-		} catch (e) {
-			test.fail(`fixed-sample plain viewer test error: ${e}`) // never leave tape hanging
 		}
 		test.end()
 	}

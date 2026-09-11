@@ -180,8 +180,7 @@ export class SectionRenderer {
 		const caseText = item?.sample && item.sample !== key ? `Case: ${item.sample}` : ''
 		const isMeta = item?.isMetaResult || false
 		const itemText = `${isMeta ? '' : 'Sample: '}${key}`
-		const projectProp = item?.case?.project?.project_id || item?.['project id']
-		const projectText = projectProp ? `Project: ${projectProp}` : ''
+		const projectText = item?.['project id'] ? `Project: ${item['project id']}` : ''
 		return [itemText, caseText, projectText].filter(Boolean).join(' ')
 	}
 

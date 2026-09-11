@@ -13,7 +13,7 @@ export class SearchHandler {
 
 		const holder = opts.holder.append('div').style('padding', '10px 0px')
 		const scctTerms = opts.app.vocabApi.termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_CELLTYPE]
-		if (!scctTerms?.length) {
+		if (!scctTerms) {
 			sayerror(
 				holder,
 				`termType2terms[${TermTypeGroups.SINGLECELL_CELLTYPE}]:[] is required in termdbConfig for singleCellCellType handler`

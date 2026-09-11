@@ -55,6 +55,10 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	// Off by default so existing analyses are unchanged and chrX remains usable as a
 	// positive control. Recommended on for mixed-sex cohorts -- see the checkbox title.
 	defaults.excludeSexChr = false
+	/* Off by default: the raw count is the one that answers "how many elements gained
+	methylation", and centring silently would subtract a global shift that may well BE the
+	biology. It is a second reading to switch to, not a better default. */
+	defaults.centerDeltaBeta = false
 	/* Starting element class comes from the dataset when it names one, otherwise 'promoter'.
 	The server resolves an absent or 'promoter' element_type to the legacy single-matrix config,
 	so the fallback reproduces existing behaviour exactly for datasets declaring no elements map.
@@ -72,6 +76,18 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	not 0.3: that is the log2FC default and would be a 30-point shift here, which almost nothing
 	clears. */
 	defaults.deltaBetaCutoff = 0.1
+	/* DMR scan. Whole genome by default: a scan of one chromosome answers "what happened here", the
+	whole genome "where did anything happen", which is the question the mode exists for, and the
+	per-chromosome fit is the price either way. Correction off because it changes what the numbers
+	MEAN (a region that moved vs one that moved more than its matched background drifts) -- on MMRF
+	NSD2-high the direction inverts -- so it is a second reading to switch to. Five CpGs because
+	two-CpG calls carry the largest effects and no direction (51.5% hyper, a coin flip). */
+	defaults.scanChromosome = ''
+	defaults.backgroundCorrection = false
+	defaults.minCpgs = 5
+	/* The native width, so the figure opens as the metric is defined (Zhou 2018, 100 kb bins) and a
+	coarser view is something the reader asks for. */
+	defaults.profileBinBp = 100_000
 }
 
 /*********** Setting Validation Functions ***********

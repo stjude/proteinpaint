@@ -47,6 +47,10 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	minSamplesPerGroup: number
 	/** Drop chrX/chrY promoters before testing */
 	excludeSexChr: boolean
+	/** Recentre the Δβ axis on the median across all tested elements, so the origin is the
+	 * typical element rather than zero. See the checkbox title for when it is the right question
+	 * to ask, and the server's centerX for what it does. */
+	centerDeltaBeta: boolean
 	/** Which regulatory-element matrix to test, keying into
 	 * ds.queries.dnaMethylation.elements server-side. 'promoter' is the default and is
 	 * what the legacy single-matrix config resolves to. Changing this changes the rows
@@ -62,6 +66,18 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	 * foldChangeCutoff because the two are not interchangeable: 0.3 is a modest logit shift but
 	 * a 30-percentage-point methylation change, which almost nothing clears. */
 	deltaBetaCutoff: number
+	/** DMR scan only (elementType == DMR_SCAN_ELEMENT_TYPE): one chromosome to scan, or '' for the
+	 * whole genome. */
+	scanChromosome: string
+	/** DMR scan only: score each DMR against matched intergenic background, so the y axis asks
+	 * "moved more than a region like it drifts" rather than "moved at all". */
+	backgroundCorrection: boolean
+	/** DMR scan only: drop DMRs called from fewer CpGs than this. */
+	minCpgs: number
+	/** DMR scan only: the width, in bp, the methylome-wide profile's bins are DRAWN at. The metric
+	 * is computed at 100 kb and the statistics stay there; several bins are averaged into one dot
+	 * for display, because at 100 kb the dots overlap. A dropdown holds this as a string. */
+	profileBinBp: number
 }
 
 export type SCCTVolcanoSettings = DefaultVolcanoSettings & {}

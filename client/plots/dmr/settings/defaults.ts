@@ -1,18 +1,28 @@
 import type { DMRSettings } from './Settings.ts'
 
+// direction colours are shared with the server-rendered scan Manhattan
+export { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
+import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
+
 export function getDefaultDMRSettings(opts: any): DMRSettings {
 	const overrides = opts.settings || {}
+	/* A dataset with no CpG-level matrix runs the region analysis on its element matrix, where one
+	row is a cCRE, not a CpG. Those sit ~10kb apart against a CpG's ~100bp, so the CpG-scale window
+	and kernel below would frame one element and smooth nothing. Scaled to element spacing instead.
+	ponytail: fixed values, not derived from the matrix's actual spacing — worth deriving only if a
+	dataset shows up whose element density is far off this one's. The user can pan/zoom either way. */
+	const elementScale = opts?.app?.vocabApi?.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'element'
 	const defaults = {
 		blockWidth: 800,
-		pad: 2000,
-		lambda: 1000,
+		pad: elementScale ? 100_000 : 2000,
+		lambda: elementScale ? 50_000 : 1000,
 		C: 2,
 		fdr_cutoff: 0.05,
 		colors: {
 			group1: '#3b5ee6',
 			group2: '#c04e00',
-			hyper: '#e66101',
-			hypo: '#5e81f4'
+			hyper: HYPER_COLOR,
+			hypo: HYPO_COLOR
 		},
 		maxLoessRegion: 250_000,
 		minProbesForCi: 10,

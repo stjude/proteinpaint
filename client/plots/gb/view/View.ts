@@ -156,6 +156,9 @@ export class View {
 				if (t.shown) tklst.push(t)
 			}
 		}
+		/* Tracks the launcher brought with it, e.g. a scan's DMRs as in-memory bedj items or a genome
+		track switched on by name. Cloned so the block's per-track state never lands in app state. */
+		for (const t of this.state.config.tracks || []) tklst.push(structuredClone(t))
 		return tklst
 	}
 

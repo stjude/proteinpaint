@@ -23,7 +23,6 @@ export const PSEUDOBULK = 'pseudobulk'
 export const SAMPLELST = 'samplelst'
 export const SINGLECELL_CELLTYPE = 'singleCellCellType'
 export const SINGLECELL_GENE_EXPRESSION = 'singleCellGeneExpression'
-export const SINGLECELL_NUMERIC_VALUE = 'singleCellNumericValue'
 export const SNP = 'snp'
 export const SNP_LIST = 'snplst'
 export const SNP_LOCUS = 'snplocus'
@@ -57,7 +56,6 @@ export const TermTypes = {
 	PSEUDOBULK,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
-	SINGLECELL_NUMERIC_VALUE,
 	MULTIVALUE,
 	DATE,
 	TERM_COLLECTION,

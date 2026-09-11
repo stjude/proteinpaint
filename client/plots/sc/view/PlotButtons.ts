@@ -32,10 +32,7 @@ export class PlotButtons {
 	interactions: SCInteractions
 	scTermdbConfig: any
 	settings!: Settings
-	/** Single cell cell type terms defined in the ds file and saved in the termdbConfig */
 	scctTerms?: any[]
-	/** Single cell numeric value terms defined in the ds file and saved in the termdbConfig */
-	scnvTerms?: any[]
 	availablePlots!: Set<string>
 
 	/** scctTerms and the scTermdbConfig are created on server init and will not change. */
@@ -51,7 +48,6 @@ export class PlotButtons {
 		}
 		this.interactions = interactions
 		this.scctTerms = termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_CELLTYPE]
-		this.scnvTerms = termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_NUMERIC_VALUE]
 		this.scTermdbConfig = termdbConfig.queries.singleCell
 	}
 
@@ -121,6 +117,23 @@ export class PlotButtons {
 				}
 			})
 		}
+
+		btns.push({
+			// spatial tissue viewer for samples with a spatial image (the model's
+			// wsiBySample probe sets data.hasSpatial); spawns the w2 wsi plot in
+			// fixed-sample mode, which has its own burger menu for the overlays
+			label: 'Spatial',
+			isVisible: () => !!this.data?.hasSpatial,
+			getPlotConfig: () => {
+				const sample = this.item!
+				return {
+					chartType: 'wsi',
+					name: `Sample: ${sample.sID} Spatial`,
+					sample
+				}
+			}
+		})
+
 		btns.push(
 			{
 				label: 'Summary',
@@ -133,7 +146,7 @@ export class PlotButtons {
 						sample,
 						spawnConfig: {
 							parentId: this.interactions.id,
-							headerText: this.makeHeaderText(sample, isMeta),
+							headerText: `${isMeta ? '' : 'Sample: '}${this.item!.sID}`,
 							hidePlotFilter: !isMeta,
 							sample
 						},
@@ -155,7 +168,7 @@ export class PlotButtons {
 				getPlotConfig: () => {
 					const sample = this.item!
 					const isMeta = sample?.isMetaResult || false
-					const headerText = this.makeHeaderText(sample, isMeta)
+					const headerText = `${isMeta ? '' : 'Sample: '}${this.item!.sID}`
 
 					return {
 						chartType: 'GeneExpInput',
@@ -206,35 +219,13 @@ export class PlotButtons {
 						chartType: 'imagePlot',
 						sample: this.item!,
 						imgDir: this.scTermdbConfig?.images,
-						headerText: this.makeHeaderText(this.item!, isMeta),
+						headerText: `${isMeta ? '' : 'Sample: '}${this.item!.sID}`,
 						settings: { imagePlot: { width: '', height: 400 } }
-					}
-				}
-			},
-			{
-				// spatial tissue viewer for samples with a spatial image (the model's
-				// wsiBySample probe sets data.hasSpatial); spawns the w2 wsi plot in
-				// fixed-sample mode, which has its own burger menu for the overlays
-				label: 'Spatial',
-				isVisible: () => !!this.data?.hasSpatial,
-				getPlotConfig: () => {
-					const sample = this.item!
-					return {
-						chartType: 'wsi',
-						name: `Sample: ${sample.sID} Spatial`,
-						sample
 					}
 				}
 			}
 		)
 		return btns
-	}
-
-	makeHeaderText(sample: any, isMeta: boolean, plot?: string) {
-		/** Case and project are GDC specific */
-		const caseText = sample.case ? ` Case: ${sample.case}` : ''
-		const projectText = sample?.['project id'] ? ` Project: ${sample['project id']}` : ''
-		return`${isMeta ? '' : 'Sample: '}${sample.sID}${caseText}${projectText}${plot ? ` (${plot})`: ''}`
 	}
 
 	//********** Btn Menus **********/
@@ -282,7 +273,7 @@ export class PlotButtons {
 		const isMeta = sample?.isMetaResult || false
 		const config: any = {
 			chartType: 'sampleScatter',
-			name: this.makeHeaderText(sample, isMeta, plotName),
+			name: `${isMeta ? '' : 'Sample: '}${this.item.sID}`,
 			sample,
 			singleCellPlot: {
 				name: plotName,
@@ -291,23 +282,19 @@ export class PlotButtons {
 		}
 		if (plot.colorColumns?.[0]) {
 			// apply optional color term. hardcodes to 1st of the array
-			const key = plot.colorColumns[0]?.type == 'numeric' ? 'scnv' : 'scct'
-			config.colorTW = await this.makeScTW(key, sample, plot)
+			config.colorTW = await this.makeScctTW(sample, plot)
 		}
 		return config
 	}
 
 	// Quick fix. Eventually use the handler to get the proper term from the termdbConfig
-	async makeScTW(key, item: { sID: string; eID: string }, plot: any) {
-		if (!key) throw new Error('Key is required for makeScTW')
+	async makeScctTW(item: { sID: string; eID: string }, plot: any) {
 		const colorColName = plot.colorColumns[0].name
-		const savedTerm = this[`${key}Terms`]?.find(t => t.name == colorColName && t.plot == plot.name)
-		if (!savedTerm) {
-			const ttg = key === 'scct' ? TermTypeGroups.SINGLECELL_CELLTYPE : TermTypeGroups.SINGLECELL_NUMERIC_VALUE
+		const savedTerm = this.scctTerms?.find(t => t.name == colorColName && t.plot == plot.name)
+		if (!savedTerm)
 			throw new Error(
-				`No term found for colorColumn=${colorColName} in .termType2terms.${ttg} for plot ${plot.name}`
+				`No term found for colorColumn=${colorColName} in .termType2terms.[TermTypeGroups.SINGLECELL_CELLTYPE] for plot ${plot.name}`
 			)
-		}
 		const term = Object.assign(structuredClone(savedTerm), {
 			sample: item
 		})

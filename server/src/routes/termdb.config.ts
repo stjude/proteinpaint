@@ -1,4 +1,5 @@
 import type { RouteApi, RoutePayload } from '#types'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
@@ -15,8 +16,7 @@ import {
 	SSGSEA,
 	PSEUDOBULK,
 	JUNCTION,
-	TERM_COLLECTION,
-	SINGLECELL_NUMERIC_VALUE
+	TERM_COLLECTION
 } from '#types'
 import type { Mds3WithCohort } from '#types'
 
@@ -396,6 +396,12 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		element matrix that serves terms when there is no CpG file, and the client needs it to
 		label a region term with the unit it will actually receive. */
 		if (q.dnaMethylation.unit) q2.dnaMethylation.unit = q.dnaMethylation.unit
+		/* Which matrix the region (DMR) view will run on, absent when the dataset has neither
+		backing. The client sizes its default window from this: element rows sit ~10kb apart where
+		CpGs sit ~100bp apart, so the ±2kb window that frames a CpG region holds one element. */
+		if (q.dnaMethylation.cpgByChr || q.dnaMethylation.file) q2.dnaMethylation.regionAnalysis = 'cpg'
+		else if (q.dnaMethylation.promoter || Object.keys(q.dnaMethylation.elements ?? {}).length)
+			q2.dnaMethylation.regionAnalysis = 'element'
 		if (q.dnaMethylation.promoter) {
 			q2.dnaMethylation.promoter = { unit: q.dnaMethylation.promoter.unit }
 		}
@@ -419,7 +425,13 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		so a stale or mistyped key cannot leave the plot defaulting to a class the dataset does not
 		serve -- it silently falls back to 'promoter' instead. */
 		const dEl = q.dnaMethylation.defaultElementType
-		if (dEl && (q.dnaMethylation.elements?.[dEl]?.file || (dEl == 'promoter' && q.dnaMethylation.promoter?.file))) {
+		if (
+			dEl &&
+			(q.dnaMethylation.elements?.[dEl]?.file ||
+				(dEl == 'promoter' && q.dnaMethylation.promoter?.file) ||
+				// the scan is a valid start wherever the region analysis can run
+				(dEl == DMR_SCAN_ELEMENT_TYPE && q2.dnaMethylation.regionAnalysis))
+		) {
 			q2.dnaMethylation.defaultElementType = dEl
 		}
 		const elements = q.dnaMethylation.elements
@@ -439,6 +451,22 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			if (!q2.dnaMethylation.elementTypes) q2.dnaMethylation.elementTypes = [promoterEntry]
 			else if (!q2.dnaMethylation.elementTypes.some(e => e.key === 'promoter'))
 				q2.dnaMethylation.elementTypes.unshift(promoterEntry)
+		}
+		/* The de novo scan is offered as one more entry in the class picker, last, wherever the
+		region analysis can run. It is not a matrix: the server recognises the key and runs
+		termdb/dmrBatch across the genome instead of testing pre-annotated elements. */
+		if (q2.dnaMethylation.regionAnalysis) {
+			const scanEntry = { key: DMR_SCAN_ELEMENT_TYPE, label: 'DMRs called de novo (genome scan)' }
+			/* scanOnly: the matrices stay configured for terms and the region view, but the picker
+			offers nothing else, so the client shows no class control at all and opens on the scan. */
+			if (q.dnaMethylation.scanOnly) {
+				q2.dnaMethylation.elementTypes = [scanEntry]
+				q2.dnaMethylation.defaultElementType = DMR_SCAN_ELEMENT_TYPE
+			} else if (!q2.dnaMethylation.elementTypes) {
+				// a CpG-only dataset has nothing but the scan to start on
+				q2.dnaMethylation.elementTypes = [scanEntry]
+				q2.dnaMethylation.defaultElementType = DMR_SCAN_ELEMENT_TYPE
+			} else q2.dnaMethylation.elementTypes.push(scanEntry)
 		}
 	}
 	if (q.ld) {
@@ -556,7 +584,6 @@ export function getDsAllowedTermTypes(ds) {
 	if (ds.queries?.junction) typeSet.add(JUNCTION)
 	if (ds.queries?.singleCell) {
 		typeSet.add(SINGLECELL_CELLTYPE)
-		if (ds.queries.singleCell.terms?.some(term => term.type == SINGLECELL_NUMERIC_VALUE)) typeSet.add(SINGLECELL_NUMERIC_VALUE)
 		if (ds.queries.singleCell?.geneExpression) typeSet.add(SINGLECELL_GENE_EXPRESSION)
 		if (ds.queries.singleCell?.pseudobulk) typeSet.add(PSEUDOBULK)
 	}

@@ -6,7 +6,8 @@ import type {
 	DataPointEntry
 } from '../VolcanoTypes'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
-import type { DEFullResponse } from '#types'
+import type { DEFullResponse, DmrScanSummary } from '#types'
+import { bplen } from '#shared/common.js'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSampleNum } from '../settings/defaults'
@@ -32,6 +33,16 @@ export class VolcanoViewModel {
 	viewData: VolcanoViewData
 	numSignificant = 0
 	numNonSignificant = 0
+	/** The significant count split by direction, from the server so it reflects every
+	 * significant row rather than the maxInteractiveDots-capped `dots`. */
+	numSignificantUp = 0
+	numSignificantDown = 0
+	/** Present only when the "element class" was the de novo DMR scan. */
+	scan?: DmrScanSummary
+	/** One p per row (DAP's FDR, a scan's smoothed FDR or background p) rather than original +
+	 * adjusted. Decides the column set, the tooltip rows and the axis name. */
+	singlePValue: boolean
+	pValueLabel: string
 	minLogFoldChange = 0
 	maxLogFoldChange = 0
 	//Used for the y axis domain
@@ -68,13 +79,22 @@ export class VolcanoViewModel {
 		const { caseColor, controlColor } = getGroupColors(this.config)
 		const barplot = { colorNegative: controlColor, colorPositive: caseColor }
 
+		/* Assigned before setPValueLabel(), which reads it: DAP is labelled off the term type, and
+		with the assignment further down every DAP label read "adjusted p-value" for data that is an
+		FDR. */
+		this.termType = config.termType
+		this.scan = (response as any).scan
+		this.singlePValue = config.termType == tt.PROTEOME_DAP || !!this.scan
+		this.pValueLabel = this.setPValueLabel(settings)
+
 		this.pValueTable = {
 			columns: [
-				{ label: 'log₂(fold-change)', barplot, sortable: true },
-				// DAP files carry a single FDR (adjusted p-value); other term types report
-				// both a raw and an adjusted p-value.
-				...(config.termType == tt.PROTEOME_DAP
-					? [{ label: 'FDR', sortable: true }]
+				// a scan's effect size is delta-beta; the fold change is a difference of logits
+				{ label: this.scan ? 'Δβ' : 'log₂(fold-change)', barplot, sortable: true },
+				// DAP files carry a single FDR (adjusted p-value) and a scan a single p; other term
+				// types report both a raw and an adjusted p-value.
+				...(this.singlePValue
+					? [{ label: this.pValueLabel, sortable: true }]
 					: [
 							{ label: 'Original p-value', sortable: true },
 							{ label: 'Adjusted p-value', sortable: true }
@@ -87,7 +107,6 @@ export class VolcanoViewModel {
 			height: settings.height + this.topPad
 		}
 		this.settings = settings
-		this.termType = config.termType
 		this.dataType = this.setDataType()
 
 		this.setMinMaxValues()
@@ -96,8 +115,9 @@ export class VolcanoViewModel {
 		this.setPTableColumns()
 		const pointData = this.setPointData(plotDim, controlColor, caseColor)
 
-		// sort by fold change, for the rendered table and the downloaded one alike
-		const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('log₂(fold-change)'))
+		// sort by effect size, for the rendered table and the downloaded one alike; it is the one
+		// column drawn as a bar
+		const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.barplot)
 		this.pValueTable.rows.sort((a: any, b: any) => b[foldChangeIdx].value - a[foldChangeIdx].value)
 
 		this.viewData = {
@@ -107,6 +127,12 @@ export class VolcanoViewModel {
 			pointData,
 			pValueTableData: this.pValueTable,
 			statsData: this.setStatsData(),
+			scan: this.scan,
+			pValueLabel: this.pValueLabel,
+			singlePValue: this.singlePValue,
+			numSignificantUp: this.numSignificantUp,
+			numSignificantDown: this.numSignificantDown,
+			xOffset: this.response.data.xOffset ?? 0,
 			provenance: this.setProvenance(),
 			userActions: this.setUserActions(),
 			deltaBetaAxisLabel: this.setDeltaBetaAxisLabel(),
@@ -127,7 +153,19 @@ export class VolcanoViewModel {
 		const control = groups?.[0]?.name
 		const cases = groups?.[1]?.name
 		if (!control || !cases) return undefined
-		return `Δβ (${shortenGroupName(cases)} − ${shortenGroupName(control)})`
+		/* A centred axis must say so on the axis itself. The plot looks identical to an
+		uncentred one apart from a small shift, so a reader who does not know the origin moved
+		would take a dot at 0 to mean "no change" when it means "typical". */
+		const centered = this.response.data.xOffset ? ' − median' : ''
+		return `Δβ${centered} (${shortenGroupName(cases)} − ${shortenGroupName(control)})`
+	}
+
+	/** What the y axis and the p column are called. Named here once so the axis, the table header,
+	 * the hover rows and the multi-hit table cannot disagree. */
+	setPValueLabel(settings: ValidatedVolcanoSettings): string {
+		if (this.termType == tt.PROTEOME_DAP) return 'FDR'
+		if (this.scan) return this.scan.backgroundCorrection ? 'p vs matched background' : 'smoothed FDR'
+		return `${settings.pValueType} p-value`
 	}
 
 	setDataType() {
@@ -210,7 +248,7 @@ export class VolcanoViewModel {
 				y: plotH + this.topPad + this.offset * 2
 			},
 			yAxisLabel: {
-				text: this.termType == tt.PROTEOME_DAP ? '-log10(FDR)' : `-log10(${this.settings.pValueType} P value)`,
+				text: `-log10(${this.pValueLabel})`,
 				x: this.horizPad / 3,
 				y: this.topPad + plotH / 2
 			},
@@ -314,28 +352,42 @@ export class VolcanoViewModel {
 			this.getGenesColor(d, d.significant, controlColor, caseColor)
 			if (d.significant) {
 				this.numSignificant++
-				// DAP carries a single FDR (in original_p_value); keep the row cells in
+				// DAP and the scan carry a single p (in original_p_value); keep the row cells in
 				// lock-step with the column set built in the constructor.
-				const row =
-					this.termType == tt.PROTEOME_DAP
-						? [{ value: roundValueAuto(d.fold_change) }, { value: roundValueAuto(d.original_p_value) }]
-						: [
-								{ value: roundValueAuto(d.fold_change) },
-								{ value: roundValueAuto(d.original_p_value) },
-								{ value: d.adjusted_p_value != undefined ? roundValueAuto(d.adjusted_p_value) : '' }
-						  ]
+				const row = this.singlePValue
+					? [
+							{ value: roundValueAuto(this.scan ? d.delta_beta : d.fold_change) },
+							{ value: roundValueAuto(d.original_p_value) }
+					  ]
+					: [
+							{ value: roundValueAuto(d.fold_change) },
+							{ value: roundValueAuto(d.original_p_value) },
+							{ value: d.adjusted_p_value != undefined ? roundValueAuto(d.adjusted_p_value) : '' }
+					  ]
 				if (this.termType == tt.DNA_METHYLATION) {
 					/* Two splices, in this order, mirroring setPTableColumns exactly: the beta cells
 					go in after fold-change (index 1) while it is still at index 0, then the
 					Promoter/Gene prefix shifts everything right. Swapping the order puts Δβ under the
 					wrong header. */
-					row.splice(
-						1,
-						0,
-						{ value: roundValueAuto((d as any).delta_beta) },
-						{ value: roundValueAuto((d as any).mean_beta_control) },
-						{ value: roundValueAuto((d as any).mean_beta_case) }
-					)
+					if (this.scan) {
+						row.splice(
+							1,
+							0,
+							// fold_change carries the peak per-CpG delta-beta on a scan row
+							{ value: roundValueAuto(d.fold_change) },
+							{ value: d.no_cpgs },
+							{ value: d.stop - d.start },
+							...(this.scan.backgroundCorrection ? [{ value: d.excess == null ? '' : roundValueAuto(d.excess) }] : [])
+						)
+					} else {
+						row.splice(
+							1,
+							0,
+							{ value: roundValueAuto((d as any).delta_beta) },
+							{ value: roundValueAuto((d as any).mean_beta_control) },
+							{ value: roundValueAuto((d as any).mean_beta_case) }
+						)
+					}
 					row.splice(0, 0, { value: formatPromoterLabel(d as any) }, { value: d.gene_name || '' })
 				} else if (this.termType == tt.PROTEOME_DAP) {
 					row.splice(0, 0, { value: d.gene_name || '' }, { value: d.gene || '' })
@@ -368,6 +420,8 @@ export class VolcanoViewModel {
 		// dots was capped by maxInteractiveDots.
 		this.numSignificant = this.response.data.totalSignificantRows
 		this.numNonSignificant = Math.max(0, this.response.data.totalRows - this.numSignificant)
+		this.numSignificantUp = this.response.data.totalSignificantUp ?? 0
+		this.numSignificantDown = this.response.data.totalSignificantDown ?? 0
 		//Sort so the highlighted points appear on top
 		dataCopy.sort((a: any, b: any) => a.highlighted - b.highlighted)
 		return dataCopy
@@ -417,7 +471,17 @@ export class VolcanoViewModel {
 			// Which effect size the run was thresholded on. Two exports with the same p cutoff but
 			// different axes are not comparable, and nothing else in the line would reveal it.
 			parts.push(`x axis: ${s.xAxis === 'delta_beta' ? 'delta-beta' : 'log2(fold-change)'}`)
-			parts.push(`min samples per group: ${s.minSamplesPerGroup}`)
+			/* Which reading the counts came from. Two runs of the same contrast give different
+			hyper:hypo ratios depending on this one flag, so a file without it cannot be told
+			apart from the other run. Records the offset too, since it is a result in itself. */
+			const off = this.response.data.xOffset
+			if (off) parts.push(`centered on median delta-beta ${off > 0 ? '+' : ''}${roundValueAuto(off)}`)
+			if (this.scan) {
+				// what was scanned and how the DMRs were selected, since the scan has no element matrix to name
+				parts.push(`scan: ${s.scanChromosome || 'whole genome'}`)
+				parts.push(`background correction: ${s.backgroundCorrection ? 'yes' : 'no'}`)
+				parts.push(`min CpGs per DMR: ${s.minCpgs}`)
+			} else parts.push(`min samples per group: ${s.minSamplesPerGroup}`)
 			parts.push(`exclude sex chromosomes: ${s.excludeSexChr ? 'yes' : 'no'}`)
 		} else if (this.termType == tt.GENE_EXPRESSION) {
 			parts.push(`method: ${s.method}`)
@@ -433,7 +497,7 @@ export class VolcanoViewModel {
 	}
 
 	setStatsData() {
-		const tableRows = [
+		const tableRows: { label: string; value: number | string }[] = [
 			{
 				label: `Percentage of significant ${this.dataType}`,
 				value: roundValueAuto((this.numSignificant * 100) / (this.numSignificant + this.numNonSignificant))
@@ -477,7 +541,124 @@ export class VolcanoViewModel {
 				value: roundValueAuto(this.response.bcv)
 			})
 		}
+		if (this.scan) tableRows.push(...this.setScanStats(this.scan))
 		return tableRows
+	}
+
+	/* The whole-scan facts, every one of them over the scan as returned -- before the volcano's
+	thresholds -- and over the same set of DMRs (those meeting the CpG floor), so no two lines here
+	have different denominators. The counts the thresholds select are the three rows above. */
+	setScanStats(s: DmrScanSummary) {
+		const rows: { label: string; value: number | string }[] = [
+			{ label: 'Chromosomes scanned', value: s.chromosomes.length },
+			{ label: 'CpGs analyzed', value: s.totalProbesAnalyzed },
+			{ label: 'DMRs called', value: s.called },
+			{ label: `DMRs with ${s.minCpgs}+ CpGs`, value: s.kept },
+			{ label: 'Hypermethylated', value: s.hyper },
+			{ label: 'Hypomethylated', value: s.hypo }
+		]
+		if (s.width)
+			rows.push({
+				label: 'DMR width, median (IQR)',
+				value: `${bplen(s.width.median)} (${bplen(s.width.q1)} – ${bplen(s.width.q3)})`
+			})
+		/* Stated even when it dropped nothing, so "no artifact regions here" reads differently from
+		"no mask was applied". These DMRs never reached the browser. */
+		if (s.regionMask)
+			rows.push({
+				label: `DMRs removed by artifact mask (${s.regionMask.sources.join(', ')}; ≥${Math.round(
+					s.regionMask.overlapFrac * 100
+				)}% masked)`,
+				value: s.regionMask.dmrsDropped
+			})
+		/* The backdrop every DMR is read against. Measured over every value the fits read, not over
+		the DMRs, so it is independent of the result it qualifies: where the whole genome shifts,
+		part of every region's difference is this number rather than anything local. */
+		const gm = s.globalMethylation
+		if (gm) {
+			const [g1, g2] = this.config.samplelst?.groups?.map((g: any) => g.name) || ['group 1', 'group 2']
+			rows.push(
+				{ label: `${g1} genome-wide mean β`, value: gm.controlMeanBeta.toFixed(4) },
+				{ label: `${g2} genome-wide mean β`, value: gm.caseMeanBeta.toFixed(4) },
+				{ label: 'Genome-wide β shift (case − control)', value: `${gm.shift >= 0 ? '+' : ''}${gm.shift.toFixed(4)}` }
+			)
+		}
+		/* A survival rate is only readable against its denominator, and the unscored are not a
+		random sample -- they are the widest and most CpG-dense regions, which intergenic space
+		cannot match -- so the unscored count is a row of its own rather than folded away. */
+		const bc = s.backgroundCorrection
+		if (bc) {
+			rows.push(
+				{ label: 'Intergenic background windows sampled', value: bc.windows },
+				{ label: `DMRs scored against background (matched on ${bc.matchedOn.join(' and ')})`, value: bc.scored },
+				{ label: 'DMRs unscored: stratum too thin (not plotted)', value: bc.unscored },
+				{
+					label: 'DMRs moving more than matched background (p < 0.05)',
+					value: `${bc.significant.toLocaleString()} of ${bc.scored.toLocaleString()} (${(
+						(100 * bc.significant) /
+						Math.max(1, bc.scored)
+					).toFixed(1)}%)`
+				}
+			)
+		}
+		if (s.geneBodyLoss)
+			rows.push({
+				// the correction adds the background gate, so the label must say which set this is
+				label: s.backgroundCorrection
+					? 'Gene-body loss regions beating background → genes'
+					: 'Gene-body loss regions → genes',
+				value: `${s.geneBodyLoss.regions.toLocaleString()} → ${s.geneBodyLoss.genes.length.toLocaleString()}`
+			})
+		/* How much of the measured methylome moved. Sits beside the DMR counts because the two say
+		different things: a DMR count is a count of regions that passed a threshold, and on a cohort
+		that drifted genome-wide that count is large whether or not much changed anywhere. The binned
+		profile is the metric the methylome literature compares cohorts with, so these rows are the
+		numbers a reader would quote from that figure. */
+		const pf = s.profileSummary
+		if (pf) {
+			const pct = (v: number) => `${(100 * v).toFixed(1)}%`
+			rows.push(
+				{
+					label: `Methylome profile: ${pf.bins.toLocaleString()} bins measured`,
+					value: `${pct(pf.fractionHyper)} hyper`
+				},
+				{
+					label: 'Methylome profile: per-bin Δβ, median (IQR)',
+					value: `${pf.median >= 0 ? '+' : ''}${pf.median.toFixed(4)} (${pf.q1.toFixed(4)} – ${pf.q3.toFixed(4)})`
+				},
+				{ label: 'Methylome profile: bins moving |Δβ| > 0.05', value: pct(pf.fractionBeyond05) },
+				{ label: 'Methylome profile: bins moving |Δβ| > 0.10', value: pct(pf.fractionBeyond10) }
+			)
+		}
+		/* What the scan cost, measured on the run that produced this result (a cached answer keeps
+		the original run's figures). One row each for the numbers a deployment is sized by: memory
+		per worker, memory for the pool, cores, and how the time split between the workers and Node. */
+		const r = s.resources
+		if (r) {
+			const top = r.perChromosome[0]
+			rows.push(
+				{
+					label: 'Compute: workers × threads',
+					value: `${r.workers} × ${r.threadsPerWorker} (${r.workers * r.threadsPerWorker} core${
+						r.workers * r.threadsPerWorker == 1 ? '' : 's'
+					})`
+				},
+				{ label: 'Compute: wall time', value: `${(r.wallMs / 1000).toFixed(1)} s` },
+				{
+					label: 'Compute: peak memory per worker',
+					value: `${Math.round(r.peakWorkerMemoryMb).toLocaleString()} MB${
+						top ? ` (${top.chr}, ${top.probes.toLocaleString()} CpGs)` : ''
+					}`
+				},
+				{ label: 'Compute: peak memory, worker pool', value: `${Math.round(r.peakPoolMemoryMb).toLocaleString()} MB` },
+				{ label: 'Compute: worker CPU time', value: `${r.workerCpuSeconds.toFixed(1)} s` },
+				{
+					label: 'Compute: server process',
+					value: `+${Math.round(r.nodeRssDeltaMb).toLocaleString()} MB, ${r.nodeCpuSeconds.toFixed(1)} s CPU`
+				}
+			)
+		}
+		return rows
 	}
 
 	setPTableColumns() {
@@ -487,13 +668,27 @@ export class VolcanoViewModel {
 			The group means follow because a Δβ of 0.2 means something different at 0.1→0.3 than at
 			0.7→0.9. Insert at 1 (after fold-change) BEFORE the Promoter/Gene prefix shifts indices —
 			setPointData splices its cells in the same order for the same reason. */
-			this.pValueTable.columns.splice(
-				1,
-				0,
-				{ label: 'Δβ', sortable: true },
-				{ label: 'Mean β (group 1)', sortable: true },
-				{ label: 'Mean β (group 2)', sortable: true }
-			)
+			if (this.scan) {
+				/* A DMR is a called region, so what a row needs is its extent and its evidence -- the
+				peak CpG's delta-beta, how many CpGs, how wide -- plus, corrected, how far it moved
+				beyond its matched background. There are no two group means to show. */
+				this.pValueTable.columns.splice(
+					1,
+					0,
+					{ label: 'Peak Δβ', sortable: true },
+					{ label: 'CpGs', sortable: true },
+					{ label: 'Width (bp)', sortable: true },
+					...(this.scan.backgroundCorrection ? [{ label: 'Excess Δβ', sortable: true }] : [])
+				)
+			} else {
+				this.pValueTable.columns.splice(
+					1,
+					0,
+					{ label: 'Δβ', sortable: true },
+					{ label: 'Mean β (group 1)', sortable: true },
+					{ label: 'Mean β (group 2)', sortable: true }
+				)
+			}
 			/* This column header is what lands in the downloaded p-value table, so a block
 			run exported a column titled "Promoter" holding block coordinates. */
 			this.pValueTable.columns.splice(
@@ -513,6 +708,8 @@ export class VolcanoViewModel {
 		const userActions = {
 			noShow: new Set<string>()
 		}
+		// the scan resolves its own two groups and fits no covariates
+		if (this.scan) userActions.noShow.add('Confounding factors')
 		if (this.termType == tt.GENE_EXPRESSION) {
 			if (this.settings.method == 'edgeR' && getSampleNum(this.config) > 100) {
 				userActions.noShow.add('Confounding factors')

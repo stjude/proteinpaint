@@ -1090,8 +1090,6 @@ type ColorColumn = {
 	/** column values (categories) to color mapping */
 	colorMap?: { [index: string]: string }
 	aliases?: { [index: string]: string }
-	/** type of the column, e.g., 'numeric' */
-	type?: string
 }
 
 /** defines a tsne type of plot for cells from one sample */
@@ -1362,6 +1360,23 @@ type Mds3Queries = {
 		 * it and supply only .promoter, since a CpG-level matrix at whole-genome
 		 * scale is very large. At least one of .file / .promoter / .elements must be set. */
 		file?: string
+		/** Path template for per-chromosome CpG matrices, holding a literal `{chr}`, e.g.
+		 * `files/hg38/mmrf/methylation/cpg/{chr}.h5`. Read by the region (DMR) view only, in
+		 * preference to .file and to the element matrices, since per-CpG is the resolution
+		 * region calling wants: cCREs are median 316bp/4 CpGs against DMRs of median
+		 * 737bp/12 CpGs, so element averaging cannot resolve sub-element structure.
+		 *
+		 * Sharded rather than one genome-wide file because the analysis fits its eBayes prior
+		 * over the whole matrix before subsetting the region — one 28GB file costs ~27s a
+		 * request against ~2s for a chromosome. The prior is then pooled per chromosome,
+		 * which at ~700k CpGs a shard is ample.
+		 *
+		 * Deliberately separate from .file, which also backs the dnaMethylation term getter:
+		 * that getter reads one matrix and knows nothing about shards. Built by
+		 * utils/dnaMeth/build_cpg_matrix.py; startup fills in .cpgChroms from what is on disk. */
+		cpgByChr?: string
+		/** Chromosomes with a built shard, filled at startup from the files matching .cpgByChr. */
+		cpgChroms?: Set<string>
 		/** dna methylation unit (e.g. 'Average Beta Value'); required with .file.
 		 * Also set at init from the element matrix that serves terms when there is no .file,
 		 * so the client can label a region term with the unit it will actually receive. */
@@ -1450,8 +1465,15 @@ type Mds3Queries = {
 		 * Set it when the dataset's best default is not the legacy promoter matrix — e.g. a cohort
 		 * offering both TSS-window promoters and the stricter ENCODE cCRE promoter-like elements,
 		 * where the cCRE definition is the one to lead with. The client uses this as the initial
-		 * element_type; the user can still switch classes in the picker. */
+		 * element_type; the user can still switch classes in the picker. May also be 'dmr_scan'
+		 * (DMR_SCAN_ELEMENT_TYPE) to open on the genome-wide DMR scan, where the region analysis
+		 * can run. */
 		defaultElementType?: string
+		/** Offer only the genome-wide DMR scan in the differential-methylation class picker: the
+		 * element matrices stay configured (they serve terms and the region view's fallback) but
+		 * are not offered as classes to test, and the analysis opens on the scan. Requires a matrix
+		 * the region analysis can run on. */
+		scanOnly?: boolean
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene

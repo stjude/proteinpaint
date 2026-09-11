@@ -1,4 +1,11 @@
 import type { DataEntry, VolcanoData, VolcanoRenderRequest } from './termdb.DE.js'
+import type { DmrRunResources, TermdbDmrBatchSuccessResponse } from './termdb.dmrBatch.js'
+
+/** The element_type that asks the differential-methylation volcano to call DMRs de novo across
+ * the genome (termdb/dmrBatch scan mode) instead of testing a pre-annotated element class. Not a
+ * key into ds.queries.dnaMethylation.elements; termdb.config.ts lists it among elementTypes when
+ * the dataset has a matrix the region analysis can run on. */
+export const DMR_SCAN_ELEMENT_TYPE = 'dmr_scan'
 
 export type DiffMethRequest = {
 	/** Discriminator tag. Matches the `kind` field on `DmCacheResult` and
@@ -23,6 +30,22 @@ export type DiffMethRequest = {
 	 * display labels come from the dataset config, so the picker is data-driven rather
 	 * than a hardcoded list. */
 	element_type?: string
+	/** Only read when element_type is DMR_SCAN_ELEMENT_TYPE. Every field has a default, so a bare
+	 * scan request scans the whole genome uncorrected and keeps DMRs of 5+ CpGs. */
+	scan?: {
+		/** one chromosome to scan; absent = every major chromosome except the mitochondrion */
+		chromosome?: string
+		/** score each DMR against matched intergenic background (termdb/dmrBatch
+		 * backgroundCorrection); the volcano's p then becomes that empirical p and DMRs whose
+		 * stratum held too little background are left out of the rows */
+		backgroundCorrection?: boolean
+		/** drop DMRs called from fewer CpGs than this before rendering */
+		minCpgs?: number
+		/** display width of the methylome-wide profile's bins, in bp. Several native bins are
+		 * averaged into one at render time; absent or at/below the native width draws them as
+		 * computed. Not part of any cache key -- changing it redraws a cached scan. */
+		profileBinBp?: number
+	}
 	/** Term for confounding variable 1 (if present) */
 	tw?: any
 	/** Term for confounding variable 2 (if present) */
@@ -53,6 +76,83 @@ export type DiffMethFullResponse = {
 	sample_size1: number
 	/** Effective sample size for group 2 */
 	sample_size2: number
+	/** Present only for a DMR scan: what the scan did and found, beyond the rows themselves. */
+	scan?: DmrScanSummary
+}
+
+/** Whole-scan facts the volcano's Statistics panel and genome map are drawn from. Every count here
+ * is over the scan as returned by termdb/dmrBatch, before the volcano's own thresholds, so the
+ * panel can state what the rows were selected from. */
+export type DmrScanSummary = {
+	/** chromosomes scanned, in genome order */
+	chromosomes: string[]
+	totalProbesAnalyzed: number
+	/** DMRs the scan called, before any filtering here */
+	called: number
+	/** the minCpgs that was applied, and how many DMRs met it */
+	minCpgs: number
+	kept: number
+	/** direction split of the kept DMRs */
+	hyper: number
+	hypo: number
+	/** width quantiles (bp) of the kept DMRs; absent when none were kept */
+	width?: { median: number; q1: number; q3: number }
+	globalMethylation?: { controlMeanBeta: number; caseMeanBeta: number; shift: number; valuesCounted: number }
+	regionMask?: { sources: string[]; overlapFrac: number; dmrsDropped: number }
+	/** present when the correction ran. `scored` and `significant` count the kept DMRs; `unscored`
+	 * kept DMRs had no background in their stratum and are not among the rows */
+	backgroundCorrection?: { windows: number; scored: number; unscored: number; significant: number; matchedOn: string[] }
+	/** genes under kept hypomethylated gene-body DMRs -- the set the expression test
+	 * (termdb/dmrGeneDE) runs on. With the background correction on, a region must also beat its
+	 * matched background (p<0.05), which makes this the stricter of two readings rather than the
+	 * only one. Absent when no DMR qualifies. */
+	geneBodyLoss?: { regions: number; genes: string[] }
+	/** The two groups cut to the samples with methylation data, as sample ids: the cohort any
+	 * expression step after a scan should run on, so both readings come from the same patients. */
+	matchedSamplelst?: { groups: { name: string; values: { sampleId: number | string }[]; [k: string]: any }[] }
+	/** what the scan cost when it was computed; see DmrRunResources */
+	resources?: DmrRunResources
+	/** Mean methylation per group in fixed-width bins along the genome: the profile methylome
+	 * papers plot for a genome-wide comparison, covering every bin with probes rather than only
+	 * the called DMRs. See TermdbDmrBatchSuccessResponse.binMethylation. */
+	binMethylation?: NonNullable<TermdbDmrBatchSuccessResponse['binMethylation']>
+	/** The rendered genome-wide methylation profile: the per-bin group difference along the genome.
+	 * Rendered per request, after the cache, like the DMR Manhattan. `interactive` is how many bins
+	 * per direction carry pixel coordinates; `dotRadius` is the radius the PNG was drawn at, which
+	 * the client's hover layer must match to land on the dots. */
+	profile?: {
+		png: string
+		plotData: any
+		/** the width actually drawn, which is the requested display width when one was asked for */
+		binBp: number
+		plotWidth: number
+		plotHeight: number
+		dotRadius: number
+		/** bins drawn at that width */
+		bins: number
+		/** how many of them are hoverable: the top N per direction by |delta beta|, so at a coarse
+		 * width where the rule reaches every bin this equals `bins` */
+		interactive: number
+	}
+	/** Quantiles of the per-bin difference and the fraction of bins that moved beyond a threshold:
+	 * how much of the measured methylome changed, which the DMR counts alone do not say. */
+	profileSummary?: {
+		bins: number
+		median: number
+		q1: number
+		q3: number
+		fractionBeyond05: number
+		fractionBeyond10: number
+		fractionHyper: number
+	}
+	/** the cached scan the rows came from, so its DMRs can be fetched back for a browser track
+	 * (termdb/dmrScanTrack) without recomputing anything */
+	cacheId?: string
+	/** Every kept DMR drawn along the genome, hyper above the line and hypo below, y = signed
+	 * -log10 of the q the volcano plots; the N most significant per direction carry pixel
+	 * coordinates and are interactive. Rendered per request, after the cache, because it depends
+	 * on the client's pixel ratio. */
+	manhattan?: { png: string; plotData: any; interactive: number; plotWidth: number; plotHeight: number }
 }
 
 export type DiffMethResponse = DiffMethPreAnalysisResponse | DiffMethFullResponse
@@ -88,16 +188,21 @@ export type DiffMethEntry = DataEntry & {
 	start: number
 	/** Element end coordinate (exclusive) */
 	stop: number
-	/** Group 1 (control) mean beta, over observed cells only */
-	mean_beta_control: number
+	/** Group 1 (control) mean beta, over observed cells only. Absent on a DMR-scan row, which
+	 * carries the difference but not the two means. */
+	mean_beta_control?: number
 	/** Group 2 (case) mean beta, over observed cells only */
-	mean_beta_case: number
+	mean_beta_case?: number
 	/** mean_beta_case - mean_beta_control. The interpretable effect size: fold_change is a
 	 * difference of M-values (a logit), so it does not say how much methylation changed.
 	 * Same sign as fold_change, since both are case - control. Derived by back-transforming
 	 * the stored M-values, which yields the alpha-smoothed beta and so shrinks the difference
 	 * toward zero by 2/(depth+2) — under 1% at this cohort's typical promoter depth. */
 	delta_beta: number
+	/** DMR-scan rows only (element_class 'dmr'): CpGs the region was called from, and when the
+	 * background correction ran, the observed delta-beta minus the matched drift. */
+	no_cpgs?: number
+	excess?: number
 }
 
 /** What diffMeth.R actually tested, as opposed to what was asked for. Emitted by the R script

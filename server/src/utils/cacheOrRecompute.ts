@@ -16,6 +16,16 @@ import type { CacheOrRecomputeOpts, CacheOrRecomputeResult } from '#src/utils/ty
 export const cacheJobPolicies = {
 	de: { maxPending: 5 },
 	dm: { maxPending: 5 },
+	/* DMR scans. Lower than the analyses above because each pending job is not one process: it
+	fans out to `serverconfig.dmrBatchConcurrency` rust invocations (default 2), each holding one
+	chromosome's matrix at ~0.5GB and saturating a core. Total concurrent rust processes is
+	maxPending x dmrBatchConcurrency, so a deployer raising either must consider the other -- at 2
+	and 2 that is 4 processes and ~2GB, which is the ceiling a 4-core deployment can absorb.
+	Identical requests still share one compute through the in-flight dedup below, so several users
+	running the SAME scan cost one. */
+	dmr: { maxPending: 2 },
+	// per-gene gene-body methylation deltas for a contrast; same fan-out as a scan, same ceiling
+	geneBodyMeth: { maxPending: 2 },
 	gsea: { maxPending: 5 },
 	grin2: { maxPending: 5 },
 	topve: { maxPending: 5 },

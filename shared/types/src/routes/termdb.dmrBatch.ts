@@ -1,0 +1,184 @@
+import type { Filter } from '../filter.ts'
+
+/** Call DMRs across many regions in one request — a whole differential-methylation hit list
+ * rather than one clicked element. See server/src/routes/termdb.dmrBatch.ts for why this is a
+ * route and not a client loop. */
+export type TermdbDmrBatchRequest = {
+	genome: string
+	dslabel: string
+	/** list of samples from each group; sample ids are resolved server-side to matrix names */
+	group1: { sampleId: number | string }[]
+	group2: { sampleId: number | string }[]
+	/** Windows to call DMRs in. Overlapping windows are merged before analysis.
+	 * Ignored when scanChromosomes is given. */
+	regions?: { chr: string; start: number; stop: number }[]
+	/** Scan these chromosomes end to end instead of supplying windows — an unbiased DMR scan
+	 * rather than a drill-down of a hit list.
+	 *
+	 * Affordable because the model fit is already chromosome-wide and the kernel smoothing is a
+	 * sliding window (linear in CpGs, not quadratic), so scanning a whole chromosome costs barely
+	 * more than drilling a few windows on it. Measured on MMRF: chr20 (362k CpGs) in ~3s, all 23
+	 * chromosomes (16.4M CpGs) in ~131s, yielding 149,341 DMRs.
+	 *
+	 * One chromosome is comfortably interactive; a whole genome is a background job. The
+	 * per-region size cap does not apply to these, by construction. */
+	scanChromosomes?: string[]
+	/** Ask for the genome-wide binned methylation profile alongside the DMRs. Only a scan wants it:
+	 * a drill-down of a few windows would be describing regions the caller did not ask about. */
+	binMethylation?: boolean
+	/** DMRCate lambda: Gaussian kernel bandwidth in nucleotides (default 1000). Also the distance
+	 * within which significant probes are chained into one DMR, so it partly determines the widths
+	 * reported — record it alongside any width distribution. */
+	lambda?: number
+	/** DMRCate C: scaling factor for kernel width (default 2) */
+	C?: number
+	/** FDR cutoff for per-probe significance (default 0.05) */
+	fdr_cutoff?: number
+	/** Which element matrix to use on a dataset with no CpG matrix. Ignored where a CpG matrix
+	 * exists, which is always finer. */
+	element_type?: string
+	/** Artifact-region exclude mask applied to the called DMRs: a DMR whose span lies >= overlapFrac
+	 * inside the selected blacklist regions is dropped. Sources are declared per genome
+	 * (Genome.blacklists) and selected here by name, the same way GRIN2 selects them.
+	 *
+	 * Omitted = the methylation default (ENCODE blacklist + segmental duplications), which is NOT
+	 * all declared sources: see DM_DEFAULT_BLACKLISTS in server/src/utils/regionMask.ts for why DGV
+	 * common germline CNVs and assembly gaps are excluded from a methylation mask. An empty
+	 * blacklists array disables masking. */
+	excludeOptions?: {
+		/** names matching Genome.blacklists[].name; omitted = methylation default, [] = no masking */
+		blacklists?: string[]
+		/** drop a DMR when >= this fraction of its span is masked (default 0.5) */
+		overlapFrac?: number
+	}
+	/** Score each called DMR against matched intergenic background, answering "did this region move
+	 * more than a region like it would have drifted anyway?" rather than "did it move at all". On a
+	 * cohort with a large global shift the second question is answered yes almost everywhere.
+	 * Costs a second rust invocation per chromosome. */
+	backgroundCorrection?: boolean
+	filter?: Filter
+	__protected__?: any
+}
+
+export type TermdbDmrBatchSuccessResponse = {
+	status: 'ok'
+	regions: {
+		chr: string
+		/** the merged window actually analysed, which may be wider than any single input region */
+		start: number
+		stop: number
+		/** indices into the request's `regions` that merged into this window */
+		members: number[]
+		/** probes with usable data in the window */
+		n_probes: number
+		/** of those, how many passed the per-probe FDR cutoff */
+		n_sig_probes: number
+		dmrs: {
+			chr: string
+			start: number
+			stop: number
+			no_cpgs: number
+			min_smoothed_fdr: number
+			HMFDR: number
+			maxdiff: number
+			meandiff: number
+			direction: 'hyper' | 'hypo'
+			/** Genes whose span overlaps the DMR, in genomic order. Absent when none overlap or the
+			 * genome has no gene2coord table. Capped -- see genesTruncated. */
+			/** Observed delta-beta minus the mean drift of matched background in the same stratum.
+			 * Present only when backgroundCorrection was requested and the DMR's stratum had enough
+			 * background to estimate from. */
+			excess?: number
+			/** Fraction of that background drifting at least this far in the same direction, with a
+			 * +1 pseudocount -- so the resolution floor is 1/(n+1) and never zero. */
+			bgP?: number
+			/** The region overlaps the body of at least one gene -- its span with 2kb trimmed from both
+			 * ends. Separate from `genes` because promoter and gene-body methylation relate to
+			 * transcription in opposite directions. */
+			inGeneBody?: boolean
+			genes?: string[]
+			/** Total overlapping genes when more than the cap were found, so a truncated list is
+			 * never mistaken for the whole set. */
+			genesTruncated?: number
+		}[]
+		/** true when this chromosome fell back to the element matrix, so one "probe" is a
+		 * regulatory element rather than a CpG and the widths are not base-resolution */
+		elementResolution: boolean
+	}[]
+	/** Cohort-wide methylation level of each group and the difference between them, measured over
+	 * every value the model fits read — NOT over the requested regions, so it is an unbiased
+	 * backdrop rather than a restatement of the result.
+	 *
+	 * Read every region result against this: where the whole genome shifts, part of each region's
+	 * difference is this number rather than anything local to the region. Absent when no
+	 * chromosome reported one. */
+	globalMethylation?: {
+		controlMeanBeta: number
+		caseMeanBeta: number
+		/** case - control, on the beta scale */
+		shift: number
+		valuesCounted: number
+	}
+	/** chromosomes touched — the number of model fits performed, which is what the cost scales with */
+	chromosomes: number
+	totalProbesAnalyzed: number
+	/** Matched-background outcome. Present whenever the correction ran. `unscored` is the count
+	 * whose stratum held too little background to estimate from -- reported so a survival rate is
+	 * never read against the wrong denominator. */
+	backgroundCorrection?: {
+		windows: number
+		scored: number
+		unscored: number
+		significant: number
+		/** The covariates actually matched on. The full method also matches solo-WCGW, replication
+		 * timing and lamina association, which need normal-B-cell reference tracks; where those are
+		 * absent the correction is weaker and must be described by what it did match. */
+		matchedOn: string[]
+	}
+	/** Artifact-region mask outcome. Present whenever the mask ran, including when it dropped
+	 * nothing, so a reader can tell "no artifacts here" from "the mask never ran". The dropped DMRs
+	 * are gone from `regions[].dmrs` — this is the count needed to report the denominator. */
+	regionMask?: {
+		/** blacklist source names actually applied */
+		sources: string[]
+		overlapFrac: number
+		/** DMRs removed because >= overlapFrac of their span was masked */
+		dmrsDropped: number
+	}
+	resources?: DmrRunResources
+	/** Mean methylation per group in fixed-width bins along the genome, present when the request
+	 * asked for it. This is the metric methylome papers plot for a genome-wide comparison; unlike
+	 * the DMR list it covers every bin with probes, so an unchanged stretch is visible as measured
+	 * and unchanged rather than as absence. Computed from the group means the fit already holds. */
+	binMethylation?: {
+		binBp: number
+		bins: { chr: string; start: number; n_probes: number; control: number; case: number }[]
+	}
+}
+
+/** What one run of the route cost, measured while it ran. Stored with the cached result, so a
+ * cached answer reports the cost of the run that produced it, not of serving it. Read this to size
+ * a deployment: memory is per worker and scales with the chromosome, CPU is one core per worker. */
+export type DmrRunResources = {
+	/** worker processes run at once (serverconfig.dmrBatchConcurrency) */
+	workers: number
+	/** threads one worker uses; the dmrcate binary is single-threaded */
+	threadsPerWorker: number
+	wallMs: number
+	/** largest resident set any one worker reached, MB */
+	peakWorkerMemoryMb: number
+	/** sum of the `workers` largest worker peaks: the most the pool can have held at once, MB */
+	peakPoolMemoryMb: number
+	/** user + system CPU seconds over every worker */
+	workerCpuSeconds: number
+	/** the Node process: resident growth over the run and CPU it spent itself, mask reads and
+	 * background sampling included */
+	nodeRssDeltaMb: number
+	nodeCpuSeconds: number
+	/** one row per worker invocation, largest first */
+	perChromosome: { chr: string; probes: number; peakMemoryMb: number; cpuSeconds: number; elapsedMs: number }[]
+}
+
+export type TermdbDmrBatchErrorResponse = { error: string }
+
+export type TermdbDmrBatchResponse = TermdbDmrBatchSuccessResponse | TermdbDmrBatchErrorResponse

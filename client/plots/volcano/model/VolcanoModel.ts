@@ -2,6 +2,7 @@ import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { getGroupColors, toHex } from '../colors'
 // import type { Volcano } from '../Volcano'
 
@@ -105,6 +106,17 @@ export class VolcanoModel {
 			...(this.settings.elementType && this.settings.elementType != 'promoter'
 				? { element_type: this.settings.elementType }
 				: {}),
+			// the scan's own knobs; the server ignores them for any other element type
+			...(this.settings.elementType == DMR_SCAN_ELEMENT_TYPE
+				? {
+						scan: {
+							...(this.settings.scanChromosome ? { chromosome: this.settings.scanChromosome } : {}),
+							backgroundCorrection: !!this.settings.backgroundCorrection,
+							minCpgs: this.settings.minCpgs,
+							profileBinBp: this.settings.profileBinBp
+						}
+				  }
+				: {}),
 			volcanoRender: this.getVolcanoRender()
 		} as Partial<DiffMethRequest>
 
@@ -136,6 +148,9 @@ export class VolcanoModel {
 				foldChangeCutoff: useDeltaBeta ? this.settings.deltaBetaCutoff : this.settings.foldChangeCutoff
 			},
 			...(useDeltaBeta ? { xField: 'delta_beta' as const } : {}),
+			// Tied to the delta-beta axis: the control that sets it is only offered for
+			// methylation, and centering a log2 fold-change axis is a different conversation.
+			...(useDeltaBeta && this.settings.centerDeltaBeta ? { centerX: true } : {}),
 			pixelWidth: this.settings.width,
 			pixelHeight: this.settings.height,
 			colorSignificant: toHex(this.settings.defaultSignColor, 'red'),

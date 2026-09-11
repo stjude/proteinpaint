@@ -6,7 +6,7 @@ import { getAggregateMatrixSettings } from './settings/defaults.ts'
 import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
 import { setControls } from './view/setControls.ts'
-import { Menu, formatHeaderText } from '#dom'
+import { Menu } from '#dom'
 import { isNonDictionaryType } from '#shared/terms.js'
 
 /**** Plot in development ***
@@ -38,10 +38,8 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
             tip: new Menu({ padding: '3px' })
         }
 
-        if (opts.header) formatHeaderText({
-            header: opts.header,
-            chartType: 'AGGREGATE MATRIX'
-        })
+        //opts.header is the sandbox header
+        if (opts.header) opts.header.text(`AGGREGATE MATRIX`).style('font-size', '0.9em')
     }
 
     getState(appState: any) {

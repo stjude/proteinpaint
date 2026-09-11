@@ -236,8 +236,7 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 			name: s.name,
 			sampleId: s.id,
 			singleCell: s.singleCell,
-			facetTracks: s.assays,
-			wsimages: s.wsimages
+			facetTracks: s.assays
 		}))
 	// The genomic coordinate is its own result entry (like a gene entry), rendered by showTerm
 	const coordItems = coord
@@ -609,34 +608,6 @@ export function setSearchRenderers(self: any) {
 								.launchPlot({
 									chartType: 'sc',
 									settings: { sc: { item: item.singleCell } }
-								})
-								.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
-					)
-			}
-			if (item.wsimages) {
-				// shown only when the server confirmed this sample has plain
-				// whole-slide images on disk; opens the wsi plot in fixed-sample
-				// mode restricted to plain slides (imageType 'wsi')
-				tr.select('td:nth-child(2)')
-					.append('button')
-					.attr('type', 'button')
-					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-mass-chat-wsimages-${item.sampleId}`)
-					.style('display', 'inline-block')
-					.style('margin', '0px 3px')
-					.style('padding', '5px 10px')
-					.style('border-radius', '5px')
-					.style('border', '0')
-					.style('cursor', 'pointer')
-					.text('Whole Slide Images')
-					.on(
-						'click',
-						() =>
-							void self
-								.launchPlot({
-									chartType: 'wsi',
-									sample: { sID: item.name },
-									imageType: 'wsi'
 								})
 								.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
 					)
