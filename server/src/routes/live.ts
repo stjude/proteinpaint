@@ -1,9 +1,9 @@
-import type { HealthResponse, RouteApi } from '#types'
+import type { LiveResponse, RouteApi } from '#types'
 
 // Lightweight liveness check for frequent polling, as an alternative to the
 // full /healthcheck route which computes and returns genome/dataset build info.
 export const api: RouteApi = {
-	endpoint: 'health',
+	endpoint: 'live',
 	methods: {
 		get: {
 			init,
@@ -15,6 +15,6 @@ export const api: RouteApi = {
 
 function init() {
 	return async (req, res): Promise<void> => {
-		res.send({ status: 'ok', detailsAt: '/status' } satisfies HealthResponse)
+		res.send({ status: 'ok', detailsAt: '/status' } satisfies LiveResponse)
 	}
 }

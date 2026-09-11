@@ -2,7 +2,7 @@ import { getStat } from '#src/health.ts'
 import type { HealthCheckRequest, HealthCheckResponse, RouteApi } from '#types'
 
 export const api: RouteApi = {
-	endpoint: 'healthcheck',
+	endpoint: 'healthcheck', // responds with more details than /live, to help with troubleshooting
 	methods: {
 		// Support GET method only, since the URL is expected to be short.
 		// There is no need for a fallback to use POST method + body for large payloads that,
