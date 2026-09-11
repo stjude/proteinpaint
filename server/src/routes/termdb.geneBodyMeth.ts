@@ -3,8 +3,15 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { resolveMethylationMatrix, resolveGroupNames, matchedSamplelst } from '#src/utils/methylationMatrix.ts'
+import {
+	resolveMethylationMatrix,
+	resolveGroupNames,
+	matchedSamplelst,
+	eligibleMethylationSamples,
+	validateChromosomes
+} from '#src/utils/methylationMatrix.ts'
 import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
+import { median, chrSeed } from '#src/utils/dmrStats.ts'
 import { GENE_BODY_PAD } from '#src/utils/dmrGenes.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import { fingerprint } from '#src/routes/termdb.dmrBatch.ts'
@@ -48,13 +55,6 @@ const FC_EDGES = [-Infinity, -1, -0.5, -0.25, -0.1, 0.1, 0.25, 0.5, 1, Infinity]
 /** A bin holding fewer genes than this is reported but not read: its median is noise. */
 const MIN_PER_BIN = 30
 
-function median(v: number[]): number {
-	if (!v.length) return NaN
-	const s = [...v].sort((a, b) => a - b)
-	const m = s.length >> 1
-	return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
-}
-
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -70,7 +70,8 @@ function init({ genomes }) {
 			const deltaOf = new Map(Object.entries(await getGeneBodyDeltas(q, genomes)))
 
 			// expression on the same patients the methylation was measured on; see matchedSamplelst
-			const { eligible } = resolveMethylationMatrix(ds, genome.majorchrorder?.[0] || 'chr1', q.element_type)
+			// analysis-wide, so this cohort is the one the scan ran on whatever chr1 resolves to
+			const eligible = eligibleMethylationSamples(ds, q.element_type)
 			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds)
 			const { result } = await getDeCacheResult(
 				{
@@ -160,8 +161,13 @@ export async function getGeneBodyDeltas(
 	const ds = genome.datasets?.[q.dslabel]
 	if (!ds) throw new Error('unknown ds')
 	if (!Array.isArray(q.group1) || !Array.isArray(q.group2)) throw new Error('group1 and group2 are required.')
-	const chromosomes = q.chromosomes?.length ? [...q.chromosomes].sort() : null
-	const matrixFiles = (chromosomes || Object.keys(genome.majorchr || {})).map(
+	/* Validated and deduplicated HERE, before the cache key is built and before anything fans out:
+	the raw list was filtered only by a membership test, which keeps duplicates, so one chromosome
+	named five thousand times became five thousand full-matrix fits -- and since the key was built
+	from the raw list, a unique multiset never hit the cache and paid in full every time. */
+	// sorted, so two requests naming the same chromosomes in a different order share a cache entry
+	const chromosomes = q.chromosomes?.length ? validateChromosomes(genome, q.chromosomes).sort() : null
+	const matrixFiles = (chromosomes || validateChromosomes(genome, undefined, true)).map(
 		c => resolveMethylationMatrix(ds, c, q.element_type).matrixFile
 	)
 	const { result } = await cacheOrRecompute({
@@ -174,10 +180,11 @@ export async function getGeneBodyDeltas(
 			chromosomes,
 			element_type: q.element_type ?? null,
 			corrected: !!q.corrected,
-			files: fingerprint([...new Set(matrixFiles)].concat(genome?.genedb?.dbfile))
+			files: fingerprint([...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile))
 		},
 		cacheSubdir: 'geneBodyMeth',
-		computeFresh: async () => computeGeneBodyDeltas(q, genome, ds)
+		// the validated list, so the compute cannot see the raw one
+		computeFresh: async () => computeGeneBodyDeltas({ ...q, chromosomes }, genome, ds)
 	})
 	return result as Record<string, number>
 }
@@ -227,7 +234,7 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 						excl,
 						bodies.map(b => b.stop - b.start),
 						BG_WINDOWS_PER_CHR,
-						[...chr].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0
+						chrSeed(chr)
 					)
 				}
 				const out = JSON.parse(

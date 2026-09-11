@@ -4,7 +4,13 @@ import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
 import { formatElapsedTime } from '#shared'
-import { resolveMethylationMatrix, resolveGroupNames } from '#src/utils/methylationMatrix.ts'
+import { chrSeed } from '#src/utils/dmrStats.ts'
+import {
+	resolveMethylationMatrix,
+	resolveGroupNames,
+	eligibleMethylationSamples,
+	validateChromosomes
+} from '#src/utils/methylationMatrix.ts'
 import {
 	resolveExcludeBeds,
 	loadMaskIntervals,
@@ -94,22 +100,14 @@ export function mergeWindows(regions: { chr: string; start: number; stop: number
  * the chromosome instead of silently scanning nothing. The stop is the chromosome's full length:
  * a scan deliberately has no window, which is the whole point of the mode. */
 export function buildScanRegions(genome: any, chromosomes: string[]) {
-	/* Bounded by the genome's own chromosome set, and deduplicated, before anything is built from
-	the list: a scan request skips the per-region cap, so this is the only thing standing between
-	an arbitrarily long list of repeated names and the work of validating and sorting every entry. */
-	const known = Object.keys(genome.chrlookup || {}).length || 1
-	if (chromosomes.length > known)
-		throw new Error(`Too many chromosomes (${chromosomes.length}); the genome has ${known}.`)
-	const seen = new Set<string>()
-	const out: { chr: string; start: number; stop: number }[] = []
-	for (const c of chromosomes) {
-		const info = genome.chrlookup?.[String(c).toUpperCase()]
-		if (!info) throw new Error(`Unknown chromosome '${c}' for genome ${genome.name || ''}.`.replace(' .', '.'))
-		if (seen.has(info.name)) continue
-		seen.add(info.name)
-		out.push({ chr: info.name, start: 0, stop: info.len })
-	}
-	return out
+	/* Bounded and deduplicated before anything is built from the list: a scan request skips the
+	per-region cap, so this is the only thing standing between an arbitrarily long list of repeated
+	names and one rust fit per entry. Shared with every other route taking a chromosome list. */
+	return validateChromosomes(genome, chromosomes).map(c => ({
+		chr: c,
+		start: 0,
+		stop: genome.chrlookup[c.toUpperCase()].len
+	}))
 }
 
 /** Bump when a change to this route or to dmrcate alters results for an unchanged request.
@@ -280,6 +278,21 @@ export async function runDmrBatch(
 			/* Cost accounting. Each worker reports its own peak memory and CPU from getrusage; Node's
 			share (mask reads, background sampling, JSON assembly) is the delta in this process over
 			the run. Kept with the result so the cache carries the cost of computing it. */
+			/* One cohort for the whole run, resolved once. It was resolved per job against that job's
+			matrix, so a dataset serving some chromosomes from CpG shards and others from the element
+			matrix compared a different sample set per chromosome while the volcano reported a single
+			n per group -- and the matched cohort handed to the expression follow-ups was whichever
+			one the first chromosome produced. */
+			const { group1, group2 } = await resolveGroupNames(
+				q.group1,
+				q.group2,
+				eligibleMethylationSamples(ds, q.element_type),
+				ds
+			)
+			if (group1.length < 3 || group2.length < 3)
+				throw new Error(
+					`Each group needs at least 3 samples with methylation data (got ${group1.length} and ${group2.length}).`
+				)
 			const nodeRss0 = process.memoryUsage().rss
 			const nodeCpu0 = process.cpuUsage()
 			const perChromosome: NonNullable<TermdbDmrBatchSuccessResponse['resources']>['perChromosome'] = []
@@ -322,12 +335,7 @@ export async function runDmrBatch(
 						if (i >= jobList.length) return
 						const job = jobList[i]
 						const jobChrs = job.map(e => e[0])
-						const { matrixFile, mvalues, useElement, eligible } = resolved.get(jobChrs[0])!
-						const { group1, group2 } = await resolveGroupNames(q.group1, q.group2, eligible, ds)
-						if (group1.length < 3 || group2.length < 3)
-							throw new Error(
-								`Each group needs at least 3 samples with methylation data (got ${group1.length} and ${group2.length}).`
-							)
+						const { matrixFile, mvalues, useElement } = resolved.get(jobChrs[0])!
 						/* An element matrix's rows sit ~10 kb apart against a CpG's ~100 bp, so the CpG-scale
 						kernel would smooth nothing there: the element-scale default is the client's 50 kb
 						(client/plots/dmr/settings/defaults.ts), applied when the caller set none. */
@@ -414,7 +422,7 @@ export async function runDmrBatch(
 									called.map((d: any) => d.stop - d.start),
 									BG_WINDOWS_PER_CHR,
 									// seeded from the chromosome name so the draw is reproducible and cacheable
-									[...chr].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0
+									chrSeed(chr)
 								)
 								if (windows.length) draws.push({ chr, called, windows })
 							}

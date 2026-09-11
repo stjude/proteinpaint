@@ -2379,7 +2379,9 @@ function makeElementMethylationGetter(q, entry, ds) {
 					}
 					if (!n) continue
 					const avg = sum / n
-					// betas from the shard; the entry's unit decides whether the term reports M-values
+					/* A CpG shard always stores betas, so here the source scale is known and the
+					conversion is TO the advertised unit -- the same invariant as the element branch
+					above, where source and target are already the same. */
 					if (storesBeta) s2v[sid] = avg
 					else {
 						const clamped = Math.min(Math.max(avg, 1e-6), 1 - 1e-6)
@@ -2413,13 +2415,13 @@ function makeElementMethylationGetter(q, entry, ds) {
 					n++
 				}
 				if (!n) continue
-				const avg = sum / n
-				if (storesBeta) {
-					const clamped = Math.min(Math.max(avg, 1e-6), 1 - 1e-6)
-					s2v[sid] = Math.log2(clamped / (1 - clamped))
-				} else {
-					s2v[sid] = avg
-				}
+				/* No conversion: an element matrix stores what its entry's unit says, and that unit
+				is what q.unit advertises, so the stored scale IS the returned scale. Converting a
+				beta entry to an M-value here returned M under a label saying beta -- unreachable
+				today (every configured element entry declares M-values) but the CpG-shard branch
+				below converts TO the advertised unit, and two branches of one getter must not
+				disagree about what the number they return is. */
+				s2v[sid] = sum / n
 			}
 			if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v)
 		}

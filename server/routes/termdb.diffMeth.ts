@@ -2,7 +2,7 @@ import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, DmrScanSumma
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { runDmrBatch } from '#src/routes/termdb.dmrBatch.ts'
 import { dmrScanToRows, summarizeProfile } from '#src/utils/dmrScanRows.ts'
-import { resolveMethylationMatrix, resolveGroupNames, matchedSamplelst } from '#src/utils/methylationMatrix.ts'
+import { resolveGroupNames, matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
 import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { formatElapsedTime } from '#shared'
@@ -194,6 +194,22 @@ export async function getDmCacheResult(
 	return { result, cacheId }
 }
 
+/* Which chromosomes a scan covers, from the request. Exported because anything ranking genes off
+the same scan has to agree with it: GSEA ranked every gene in the genome while the volcano showed
+one chromosome, and said the two matched.
+
+chrM is left out -- 16.5 kb of circular DNA that is not CpG-island methylated cannot carry a domain
+-- and chrY stays, because on a mixed-sex cohort an empty chrY is a result rather than an omission,
+unless the sex chromosomes were excluded. */
+export function scanChromosomes(req: DiffMethRequest, genome: any): string[] {
+	let chromosomes: string[] = req.scan?.chromosome
+		? [req.scan.chromosome]
+		: (genome.majorchrorder as string[]).filter(c => c != 'chrM' && c != 'chrMT')
+	if (req.exclude_sex_chr) chromosomes = chromosomes.filter(c => !/^chr[XY]$/i.test(c))
+	if (!chromosomes.length) throw new Error('No chromosomes left to scan.')
+	return chromosomes
+}
+
 /* A genome-wide DMR scan presented as differential methylation.
 
 The scan (termdb/dmrBatch) already does the expensive part and caches it; this maps its DMRs onto
@@ -216,11 +232,7 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	methylated cannot carry a domain, and on a map scaled to chr1 its track is 0.06 px wide. chrY
 	stays -- on a mixed-sex cohort an empty chrY track is a result rather than an omission -- unless
 	the sex chromosomes were excluded, which applies here as it does to an element class. */
-	let chromosomes: string[] = req.scan?.chromosome
-		? [req.scan.chromosome]
-		: (genome.majorchrorder as string[]).filter(c => c != 'chrM' && c != 'chrMT')
-	if (req.exclude_sex_chr) chromosomes = chromosomes.filter(c => !/^chr[XY]$/i.test(c))
-	if (!chromosomes.length) throw new Error('No chromosomes left to scan.')
+	const chromosomes = scanChromosomes(req, genome)
 
 	const { payload, cacheId } = await runDmrBatch(
 		{
@@ -235,7 +247,8 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 		},
 		genomes
 	)
-	const { eligible } = resolveMethylationMatrix(ds, chromosomes[0], undefined)
+	// the analysis-wide eligible set, not whichever one chromosomes[0] happened to resolve
+	const eligible = eligibleMethylationSamples(ds, undefined)
 	const { group1, group2 } = await resolveGroupNames(groups[0].values, groups[1].values, eligible, ds)
 	const { rows, scan } = dmrScanToRows(payload, {
 		chromosomes,
@@ -454,11 +467,14 @@ export async function resolveDmSampleGroups(
 	built against always comes from the matrix that will actually be tested. Each element
 	entry carries its own allSampleSet (built at startup in mds3.init.js), because the
 	matrices need not hold identical sample sets. */
-	const { q } = resolveElementQuery(ds, param.element_type)
+	/* Not resolveElementQuery: the pre-analysis call carries no element_type, and on a CpG-only
+	dataset that resolved 'promoter' and threw -- so a dataset whose only offer IS the scan could
+	never get past the sample counts the group picker shows. */
+	const allSampleSet = eligibleMethylationSamples(ds, param.element_type)
 
 	const g1 = await buildGroupValues(
 		param.samplelst.groups[0].values,
-		q.allSampleSet,
+		allSampleSet,
 		ds,
 		param.tw,
 		param.tw2,
@@ -467,7 +483,7 @@ export async function resolveDmSampleGroups(
 	)
 	const g2 = await buildGroupValues(
 		param.samplelst.groups[1].values,
-		q.allSampleSet,
+		allSampleSet,
 		ds,
 		param.tw,
 		param.tw2,

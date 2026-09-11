@@ -2,7 +2,7 @@ import type { RoutePayload, RouteApi } from '#types'
 import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { lengthStratifiedDE, type GeneFC } from '#src/utils/dmrGeneDE.ts'
 import { mayLog } from '#src/helpers.ts'
-import { resolveMethylationMatrix, matchedSamplelst } from '#src/utils/methylationMatrix.ts'
+import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
 import { formatElapsedTime } from '#shared'
 
 /* Do the genes losing gene-body methylation also lose expression?
@@ -29,6 +29,9 @@ export const api: RouteApi = {
 /** Individual genes returned. Enough to scan and export, far short of a table nobody reads --
  * the aggregate is the result, these are for following it up. */
 const MAX_TOP_GENES = 500
+/** Ceiling on the requested gene set. Above any real genome's gene count, so it bounds the work
+ * without ever rejecting a scan's own output: MMRF's largest gene-body loss set is ~6,000. */
+const MAX_GENES = 100_000
 
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
@@ -37,6 +40,11 @@ function init({ genomes }) {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'unknown genome'
 			if (!Array.isArray(q.genes) || !q.genes.length) throw new Error('No genes supplied.')
+			/* Bounded, and deduplicated into the hit set below. The permutation null and the
+			not-in-DE count both walk this list against the DE result, so an uncapped list is
+			seconds of synchronous work on the shared event loop -- and a gene set is a gene set:
+			past every gene a genome has, the request is not a question about a scan's output. */
+			if (q.genes.length > MAX_GENES) throw new Error(`Too many genes (${q.genes.length}). Maximum is ${MAX_GENES}.`)
 			if (!q.samplelst?.groups?.length) throw new Error('Two sample groups are required.')
 			const t0 = Date.now()
 
@@ -46,7 +54,8 @@ function init({ genomes }) {
 			the launched DE volcano on the same matched groups shares the result. */
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw new Error('unknown dataset')
-			const { eligible } = resolveMethylationMatrix(ds, genome.majorchrorder?.[0] || 'chr1', undefined)
+			// analysis-wide, so this cohort is the one the scan ran on whatever chr1 resolves to
+			const eligible = eligibleMethylationSamples(ds, undefined)
 			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds)
 			const { result } = await getDeCacheResult(
 				{
@@ -83,6 +92,10 @@ function init({ genomes }) {
 				genes.push({ gene: r.gene_name, fc: r.fold_change, len })
 			}
 			const hitSet = new Set<string>(q.genes)
+			/* The genes DE actually tested, as a set. The not-in-DE count below asked this with a
+			linear scan of the DE rows per requested gene, which on a real genome's worth of symbols
+			is ~1e8 string comparisons run synchronously on the shared event loop. */
+			const testedGenes = new Set<string>(genes.map(g => g.gene))
 			const out = lengthStratifiedDE(genes, hitSet, 1)
 
 			/* The individual genes, not just the aggregate. The stratified difference says the SET
@@ -120,7 +133,7 @@ function init({ genomes }) {
 				/* Genes named by a DMR that DE never reported -- filtered out for low count, or absent
 				from the expression matrix. Reported so a null result cannot be read as "no effect"
 				when it was really "most of the set was never tested". */
-				genesNotInDE: [...hitSet].filter(g => !lenOf.has(g) || !genes.some(x => x.gene == g)).length,
+				genesNotInDE: [...hitSet].filter(g => !lenOf.has(g) || !testedGenes.has(g)).length,
 				/** hit genes reaching DE significance on their own, and how many of those went down */
 				sigCount: sigHits.length,
 				sigDown: downSig,

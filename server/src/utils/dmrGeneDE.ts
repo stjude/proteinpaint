@@ -25,6 +25,8 @@ const LEN_BIN = 0.25
 const MIN_PER_SIDE = 5
 
 /** Permutations for the label-shuffle null. 2000 gives a resolution floor of 1/2001. */
+import { median, makeRng } from './dmrStats.ts'
+
 const N_PERM = 2000
 
 export type GeneFC = { gene: string; fc: number; len: number }
@@ -38,26 +40,6 @@ export type StratumRow = {
 	medianHit: number
 	medianOther: number
 	diff: number
-}
-
-function median(v: number[]): number {
-	if (!v.length) return NaN
-	const s = [...v].sort((a, b) => a - b)
-	const m = s.length >> 1
-	return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
-}
-
-/** Deterministic PRNG, so an identical request permutes identically and the result is cacheable. */
-function makeRng(seed: number) {
-	let s = seed >>> 0 || 1
-	return () => {
-		s ^= s << 13
-		s >>>= 0
-		s ^= s >> 17
-		s ^= s << 5
-		s >>>= 0
-		return s / 4294967296
-	}
 }
 
 /** Weighted mean of per-bin differences, weighting each bin by its hit count -- so the summary

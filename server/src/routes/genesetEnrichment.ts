@@ -8,7 +8,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { getDeCacheResult } from './termdb.DE.ts'
-import { getDmCacheResult } from '../../routes/termdb.diffMeth.ts'
+import { getDmCacheResult, scanChromosomes } from '../../routes/termdb.diffMeth.ts'
 import { getGeneBodyDeltas } from './termdb.geneBodyMeth.ts'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
@@ -359,7 +359,13 @@ async function resolveGseaGenesAndFoldChange({
 					dslabel: dm.dslabel,
 					group1: groups[0].values,
 					group2: groups[1].values,
-					corrected: !!dm.scan?.backgroundCorrection
+					corrected: !!dm.scan?.backgroundCorrection,
+					/* The chromosomes the scan itself ran on. Without this the ranking covered the
+					whole genome while the volcano showed one chromosome, and on a sex-imbalanced
+					cohort chrX dominated a ranking the header called the scan's own. It also keeps
+					chrM out, which has no CpG shard and would fall back to a whole element-matrix
+					fit to describe 13 mitochondrial genes. */
+					chromosomes: scanChromosomes(dm, genomes[dm.genome])
 				},
 				genomes
 			)

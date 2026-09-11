@@ -38,30 +38,57 @@ volcano's class-restricted DM and will not match it.
 The choice is per CHROMOSOME, not per dataset: a cohort part-way through building its shards
 serves CpG resolution where a shard exists and elements everywhere else, rather than failing on the
 chromosomes it has not built yet. */
+/* The element matrix entry a request implies, or undefined when the dataset has none.
+
+An explicit element_type that names nothing is a caller bug and resolveElementQuery says so
+precisely. Its ABSENCE is not: the DMR chart can be launched straight from the group menu with only
+a region, and the scan pseudo-class names no matrix at all. So fall back to the dataset's own
+default class when one resolves -- not to 'promoter', which a dataset may not declare or may not
+mean -- and to nothing when none does. The entry is wanted for its eligible-sample set, and is only
+load-bearing when the element matrix is also the analysis matrix. */
+function resolveElementEntry(ds: any, elementType: string | undefined): any {
+	const dm = ds.queries?.dnaMethylation
+	const et = elementType == DMR_SCAN_ELEMENT_TYPE ? undefined : elementType
+	if (et) return resolveElementQuery(ds, et).q
+	const hasElements = !!(dm.promoter || Object.keys(dm.elements ?? {}).length)
+	if (!hasElements) return undefined
+	const dEl = dm.defaultElementType
+	try {
+		return resolveElementQuery(ds, dEl && dEl != DMR_SCAN_ELEMENT_TYPE ? dEl : undefined).q
+	} catch {
+		return undefined // dataset declares classes but no default one
+	}
+}
+
+/* Which samples can take part in a methylation contrast, for the whole analysis rather than for one
+chromosome.
+
+Every caller that only needs the sample set used to resolve a MATRIX for an arbitrary chromosome
+(majorchrorder[0], or 'chr1') to get at this, which made the answer depend on whether that one
+chromosome happened to have a shard -- so the expression follow-ups could be handed a different
+cohort than the scan they claim to match. It also made a CpG-only dataset throw: the pre-analysis
+sample count resolved 'promoter' on a dataset that declares no element matrix at all.
+
+The element entry's set is preferred where there is one, because it already has the dataset's
+excludeSampleNamesMatching applied -- a specimen type the volcano withheld must not reappear here.
+It is then cut to the samples a CpG matrix actually holds when the dataset has one, since that is
+what a region analysis on this dataset reads. */
+export function eligibleMethylationSamples(ds: any, elementType: string | undefined): Set<string> {
+	const dm = ds.queries?.dnaMethylation
+	if (!dm) throw new Error('This dataset does not support DNA methylation region analysis.')
+	const elementEntry = resolveElementEntry(ds, elementType)
+	const eligible: Set<string> | undefined = elementEntry?.allSampleSet || dm.regionSampleSet
+	if (!eligible) throw new Error('This dataset does not support DNA methylation region analysis.')
+	const cpgBacked = !!(dm.cpgChroms?.size || dm.file)
+	if (cpgBacked && elementEntry?.allSampleSet && dm.regionSampleSet)
+		return new Set([...eligible].filter(n => dm.regionSampleSet.has(n)))
+	return eligible
+}
+
 export function resolveMethylationMatrix(ds: any, chr: string, elementType: string | undefined): ResolvedMatrix {
 	const dm = ds.queries?.dnaMethylation
 	if (!dm) throw new Error('This dataset does not support DNA methylation region analysis.')
-
-	/* An explicit element_type that names nothing is a caller bug and resolveElementQuery says so
-	precisely. Its ABSENCE is not: the DMR chart can be launched straight from the group menu with
-	only a region, never having been through the volcano. So fall back to the dataset's default
-	class when one resolves, and to no entry at all when none does -- the entry is wanted for its
-	eligible-sample set, and is only load-bearing when the element matrix is also the analysis
-	matrix, which the branch below requires. */
-	const hasElements = !!(dm.promoter || Object.keys(dm.elements ?? {}).length)
-	let elementEntry: any
-	if (elementType) {
-		elementEntry = resolveElementQuery(ds, elementType).q
-	} else if (hasElements) {
-		/* The dataset's own default class, as the volcano opens on it -- not 'promoter', which a
-		dataset may not declare or may not mean. The scan pseudo-class is not a matrix. */
-		const dEl = dm.defaultElementType
-		try {
-			elementEntry = resolveElementQuery(ds, dEl && dEl != DMR_SCAN_ELEMENT_TYPE ? dEl : undefined).q
-		} catch {
-			elementEntry = undefined // dataset declares classes but no default one
-		}
-	}
+	const elementEntry = resolveElementEntry(ds, elementType)
 
 	let matrixFile: string
 	let mvalues = false
@@ -79,17 +106,48 @@ export function resolveMethylationMatrix(ds: any, chr: string, elementType: stri
 		throw new Error('This dataset does not support DNA methylation region analysis.')
 	}
 
-	/* The eligible set is the element entry's when the dataset has one, because that set already
-	has the dataset's excludeSampleNamesMatching applied: a specimen type the volcano withheld must
-	not reappear here, or the region view would contrast a different set of samples than the hit
-	being drilled into. */
-	let eligible: Set<string> = elementEntry?.allSampleSet || dm.regionSampleSet
-	/* ...and cut to the samples the CpG matrix actually holds when that is the matrix being read:
-	the two are validated as separate sample sets, so the element filter alone could name a sample
-	the CpG file lacks, or withhold one it has. */
-	if (!useElement && elementEntry?.allSampleSet && dm.regionSampleSet)
-		eligible = new Set([...eligible].filter(n => dm.regionSampleSet.has(n)))
+	/* One definition of who is eligible, shared with every caller that needs it without a
+	chromosome in hand. An element-matrix fit reads that matrix's own samples; anything CpG-backed
+	is intersected, which is what eligibleMethylationSamples does. */
+	const eligible = useElement ? elementEntry.allSampleSet : eligibleMethylationSamples(ds, elementType)
 	return { matrixFile, mvalues, useElement, eligible }
+}
+
+/* A caller-supplied chromosome list, bounded by the genome's own chromosome set and deduplicated,
+returned in the genome's order.
+
+Every route taking one of these fans out to one rust invocation per entry, each holding a
+chromosome's matrix and saturating a core, and none of them caps the list: a request naming one
+chromosome five thousand times was five thousand full fits, and because a cache key built from the
+raw list is unique per multiset it was five thousand fits every time it was sent. Deduplicating
+before anything is built from the list is what makes the cost proportional to the genome rather
+than to the request.
+
+Names are canonicalised through chrlookup and returned in the caller's order, first occurrence
+winning; a caller wanting a stable cache key sorts the result. */
+export function validateChromosomes(genome: any, chromosomes: string[] | undefined, allOnAbsent = false): string[] {
+	/* The genome's chromosomes, most authoritative first. majorchrorder carries them in order;
+	majorchr is the same set unordered; chrlookup is a last resort that also holds aliases, so it
+	bounds the length without being a list to return. */
+	const all: string[] = (genome.majorchrorder as string[]) || Object.keys(genome.majorchr || {})
+	const known: string[] = all.length ? all : Object.keys(genome.chrlookup || {})
+	if (!chromosomes?.length) {
+		if (!allOnAbsent) return []
+		if (!all.length) throw new Error('This genome declares no chromosomes.')
+		return [...all]
+	}
+	if (chromosomes.length > known.length)
+		throw new Error(`Too many chromosomes (${chromosomes.length}); the genome has ${known.length}.`)
+	const seen = new Set<string>()
+	const out: string[] = []
+	for (const c of chromosomes) {
+		const info = genome.chrlookup?.[String(c).toUpperCase()]
+		if (!info) throw new Error(`Unknown chromosome '${c}' for genome ${genome.name || ''}.`.replace(' .', '.'))
+		if (seen.has(info.name)) continue
+		seen.add(info.name)
+		out.push(info.name)
+	}
+	return out
 }
 
 /* The client sends group membership the way every two-group analysis does -- as termdb sample ids

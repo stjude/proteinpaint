@@ -26,25 +26,12 @@ Constraints carried over from that spec, because they are easy to get wrong:
 
 /** Background windows sampled per chromosome. Enough to populate the strata below without making
  * the rust call meaningfully slower -- a window's delta is a binary search, not an analysis. */
+import { makeRng } from './dmrStats.ts'
+
 export const BG_WINDOWS_PER_CHR = 2000
 
 /** Padding either side of a transcript, so a window abutting a promoter is not called intergenic. */
 const TSS_PAD = 2000
-
-/** Deterministic PRNG. Math.random would make an identical request return different numbers and,
- * worse, make the route's cache serve one arbitrary draw forever. Seeded from the chromosome so
- * each one samples independently but reproducibly. */
-function makeRng(seed: number) {
-	let s = seed >>> 0 || 1
-	return () => {
-		s ^= s << 13
-		s >>>= 0
-		s ^= s >> 17
-		s ^= s << 5
-		s >>>= 0
-		return s / 4294967296
-	}
-}
 
 function merge(ivs: MaskInterval[]): MaskInterval[] {
 	ivs.sort((a, b) => a[0] - b[0])

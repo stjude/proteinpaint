@@ -749,7 +749,15 @@ fn call_region(
             dmr["min_smoothed_fdr"] = json!(min_sfdr);
         }
     }
-    if dmrs.is_empty() {
+    /* Proximity fallback: when the smoothed rule segments nothing, fall back to plain runs of
+    per-CpG significant probes. Gated on nsig > 0, because that is what the fallback exists for --
+    "there is per-CpG signal here and the smoothed rule found no region in it". Without the gate
+    nsig == 0 does not guarantee an empty result: nsig counts probes STRICTLY below the cutoff
+    while build_dmrs keeps probes at or below it, so a run sitting exactly on the cutoff is
+    invisible to one and visible to the other, and the fallback would build a DMR on a region the
+    adaptive rule had just correctly found nothing in. See the unit test on that boundary; it is
+    reachable through fdr_cutoff = 1, where BH caps a great many adjusted p-values at exactly 1. */
+    if dmrs.is_empty() && nsig > 0 {
         dmrs = build_dmrs(
             qchr,
             &rpos,
@@ -787,7 +795,9 @@ fn call_region(
 /// thousands of DMRs -- on MMRF male-vs-female, chr3 reported 0 significant probes and 4,570 DMRs
 /// while chrX, the real signal, reported 104,218 and 6,472.
 fn select_significant(log_sfdr: &[f64], nsig: usize) -> Vec<f64> {
-    if nsig == 0 {
+    // nothing to select, and nothing to index: the caller's nsig is a count over these same
+    // probes, so an empty input means nsig is 0 too -- but a helper must not panic on the pairing
+    if nsig == 0 || log_sfdr.is_empty() {
         return vec![1.0; log_sfdr.len()];
     }
     let mut sorted_log: Vec<f64> = log_sfdr.to_vec();
@@ -1634,8 +1644,37 @@ mod tests {
         assert_eq!(select_significant(&[-4.0, -2.0], 9), vec![0.0, 0.0]);
     }
 
+    /* The boundary that makes the nsig > 0 gate on the raw-FDR fallback necessary: nsig counts
+    probes STRICTLY below the cutoff, while build_dmrs keeps probes at or below it. So a run of
+    probes sitting exactly on the cutoff is invisible to nsig and visible to the segmenter, and
+    without the gate the fallback could build a DMR on a region the adaptive rule had just
+    correctly found nothing in. Reachable in practice through fdr_cutoff = 1, where BH caps a great
+    many adjusted p-values at exactly 1. */
+    #[test]
+    fn build_dmrs_keeps_probes_exactly_at_the_cutoff_that_nsig_excludes() {
+        let cut = 0.05;
+        let fdr = [cut, cut, cut];
+        let pos = [1000i64, 1100, 1200];
+        let lfc = [1.0, 1.0, 1.0];
+        let mg1 = [0.2, 0.2, 0.2];
+        let mg2 = [0.8, 0.8, 0.8];
+        let nsig = fdr.iter().filter(|&&f| f < cut).count();
+        assert_eq!(
+            nsig, 0,
+            "nsig is a strict comparison, so probes on the cutoff do not count"
+        );
+        let dmrs = super::build_dmrs("chr1", &pos, &fdr, &lfc, &mg1, &mg2, cut, 1000.0, 2, Some(0.05), true);
+        assert!(
+            !dmrs.is_empty(),
+            "but the segmenter's comparison is inclusive, so it would build a DMR from them -- \
+             which is why the fallback is gated on nsig > 0 rather than on dmrs.is_empty() alone"
+        );
+    }
+
     #[test]
     fn empty_input_is_empty_output() {
         assert!(select_significant(&[], 0).is_empty());
+        // nsig cannot exceed the probe count in practice; the helper still must not index past 0
+        assert!(select_significant(&[], 3).is_empty());
     }
 }

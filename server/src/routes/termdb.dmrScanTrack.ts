@@ -20,10 +20,19 @@ export const api: RouteApi = {
 	}
 }
 
-function init() {
+function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const q = req.query
+			/* genome and dslabel are read, and required, so that the request is gated the way every
+			other termdb route is: the auth middleware resolves a dataset's credentials from
+			q.dslabel and returns without checking a session when it is absent, so a route that
+			ignored them sat outside the gatekeeper entirely. The client has always sent both. */
+			const genome = genomes[q.genome]
+			if (!genome) throw new Error('unknown genome')
+			const ds = genome.datasets?.[q.dslabel]
+			if (!ds) throw new Error('unknown dataset')
+			if (!ds.queries?.dnaMethylation) throw new Error('This dataset has no DNA methylation data.')
 			if (typeof q.cacheId != 'string') throw new Error('cacheId missing')
 			if (typeof q.chr != 'string' || !q.chr) throw new Error('chr missing')
 			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
