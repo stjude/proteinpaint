@@ -34,6 +34,7 @@ export function zoom(opts) {
 	const number = label
 		.append('input')
 		.attr('title', 'Enter a desired zoom level')
+		.attr('data-testid', 'sjpp-zoom-number-input')
 		.attr('type', 'number')
 		.attr('min', settings.min)
 		.attr('max', settings.max)
@@ -79,6 +80,7 @@ export function zoom(opts) {
 	const slider = sliderDiv
 		.append('input')
 		.attr('title', 'Slide to desired zoom level')
+		.attr('data-testid', 'sjpp-zoom-slide-input')
 		.attr('type', 'range')
 		.attr('min', settings.min)
 		.attr('max', settings.max)

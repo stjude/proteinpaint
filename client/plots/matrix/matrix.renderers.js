@@ -48,7 +48,12 @@ export function setRenderers(self) {
 			const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, series => series.tw.$id)
 			sg.exit().remove()
 			sg.each(self.renderSeries)
-			sg.enter().append('g').attr('class', 'sjpp-mass-series-g').style('opacity', 0.001).each(self.renderSeries)
+			sg.enter()
+				.append('g')
+				.attr('class', 'sjpp-mass-series-g')
+				.attr('data-testid', d => `sjpp-mass-series-g-${d.tw.term.name}`)
+				.style('opacity', 0.001)
+				.each(self.renderSeries)
 			// need to reset imgBox and beam highlighters after rendering to avoid misaligned beam highlighters
 			self.mouseout()
 		}
@@ -197,7 +202,13 @@ export function setRenderers(self) {
 			const labels = side.box.selectAll('.sjpp-matrix-label').data(side.data, side.key)
 			labels.exit().remove()
 			labels.each(renderLabel)
-			labels.enter().append('g').attr('class', 'sjpp-matrix-label').each(renderLabel)
+			console.log(l, direction)
+			labels
+				.enter()
+				.append('g')
+				.attr('class', 'sjpp-matrix-label')
+				.each(renderLabel)
+				.attr('data-testid', `sjpp-matrix-label-${direction}`)
 
 			// unconditionally clear any previously rendered ancestor spans from this side box;
 			// renderLabelSpans() below re-adds them only when applicable, so stale spans are
