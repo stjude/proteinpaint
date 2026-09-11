@@ -7,8 +7,8 @@ export const api: RouteApi = {
 	methods: {
 		get: {
 			init,
-			request: { typeId: 'HealthRequest' },
-			response: { typeId: 'HealthResponse' }
+			request: { typeId: 'LiveRequest' },
+			response: { typeId: 'LiveResponse' }
 		}
 	}
 }
