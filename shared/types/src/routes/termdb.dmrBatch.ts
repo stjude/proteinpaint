@@ -23,6 +23,9 @@ export type TermdbDmrBatchRequest = {
 	 * One chromosome is comfortably interactive; a whole genome is a background job. The
 	 * per-region size cap does not apply to these, by construction. */
 	scanChromosomes?: string[]
+	/** Ask for the genome-wide binned methylation profile alongside the DMRs. Only a scan wants it:
+	 * a drill-down of a few windows would be describing regions the caller did not ask about. */
+	binMethylation?: boolean
 	/** DMRCate lambda: Gaussian kernel bandwidth in nucleotides (default 1000). Also the distance
 	 * within which significant probes are chained into one DMR, so it partly determines the widths
 	 * reported — record it alongside any width distribution. */
@@ -143,6 +146,14 @@ export type TermdbDmrBatchSuccessResponse = {
 		dmrsDropped: number
 	}
 	resources?: DmrRunResources
+	/** Mean methylation per group in fixed-width bins along the genome, present when the request
+	 * asked for it. This is the metric methylome papers plot for a genome-wide comparison; unlike
+	 * the DMR list it covers every bin with probes, so an unchanged stretch is visible as measured
+	 * and unchanged rather than as absence. Computed from the group means the fit already holds. */
+	binMethylation?: {
+		binBp: number
+		bins: { chr: string; start: number; n_probes: number; control: number; case: number }[]
+	}
 }
 
 /** What one run of the route cost, measured while it ran. Stored with the cached result, so a

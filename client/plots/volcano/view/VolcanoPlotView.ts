@@ -472,6 +472,43 @@ export class VolcanoPlotView {
 				getRowKey: d => `${d.chrom}:${d.start}-${d.stop}`
 			}
 		)
+		this.renderMethylationProfile(g2)
+	}
+
+	/* The genome-wide methylation profile, under the DMR plot: mean beta per group in 100 kb bins,
+	drawn as the per-bin difference. The DMR plot above shows the regions that passed a threshold;
+	this shows every bin that was measured, which is what says whether the methylome shifted a
+	little everywhere or a lot in a few places. Same component, no interactive dots -- a bin is
+	context, and the DMR above it is the thing to click. */
+	private renderMethylationProfile(caseName: string) {
+		const profile = this.viewData.scan?.profile
+		if (!profile) return
+		const div = this.dom.holder
+			.select('#sjpp-volcano-scanManhattan')
+			.append('div')
+			.attr('data-testid', 'sjpp-volcano-methylationProfile')
+			.style('display', 'block')
+			/* Pulled up into the trailing space the component reserves below every plot for a
+			legend this one does not have. The two figures share one x axis and are read together,
+			so a gap the height of the profile itself reads as two unrelated pictures. */
+			.style('margin-top', '-70px')
+		plotManhattan(
+			div,
+			{ png: profile.png, plotData: profile.plotData },
+			{
+				...manhattanLayoutDefaults,
+				plotWidth: profile.plotWidth,
+				plotHeight: profile.plotHeight,
+				showInteractiveDots: false,
+				showLegend: false,
+				showDownload: false
+			},
+			undefined,
+			{
+				title: `Methylome-wide profile: mean Δβ per ${(profile.binBp / 1000).toFixed(0)} kb bin in ${caseName}`,
+				yAxisLabel: 'Δβ per bin'
+			}
+		)
 	}
 
 	renderPValueTable() {

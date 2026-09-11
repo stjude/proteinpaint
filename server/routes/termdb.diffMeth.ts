@@ -1,7 +1,7 @@
 import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, DmrScanSummary } from '#types'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { runDmrBatch } from '#src/routes/termdb.dmrBatch.ts'
-import { dmrScanToRows } from '#src/utils/dmrScanRows.ts'
+import { dmrScanToRows, summarizeProfile } from '#src/utils/dmrScanRows.ts'
 import { resolveMethylationMatrix, resolveGroupNames, matchedSamplelst } from '#src/utils/methylationMatrix.ts'
 import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
@@ -70,6 +70,17 @@ export function init({ genomes }) {
 			}
 			if (result.scan) {
 				output.scan = result.scan
+				if (result.scan.binMethylation) {
+					output.scan.profileSummary = summarizeProfile(result.scan.binMethylation)
+					output.scan.profile = await renderMethylationProfile(
+						result.scan,
+						genomes[q.genome],
+						q.volcanoRender?.devicePixelRatio
+					)
+					/* The bins themselves are not sent: ~30,000 rows the client would only re-derive
+					the picture and the summary from, both of which are already in the response. */
+					delete output.scan.binMethylation
+				}
 				output.scan.manhattan = await renderScanManhattan(
 					result.promoterRows,
 					genomes[q.genome],
@@ -218,7 +229,9 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 			group1: groups[0].values,
 			group2: groups[1].values,
 			scanChromosomes: chromosomes,
-			backgroundCorrection: !!req.scan?.backgroundCorrection
+			backgroundCorrection: !!req.scan?.backgroundCorrection,
+			// the genome-wide profile: the metric the methylome literature compares cohorts with
+			binMethylation: true
 		},
 		genomes
 	)
@@ -293,6 +306,59 @@ async function renderScanManhattan(
 		hollow: true
 	})
 	return { png, plotData: plot_data, interactive: SCAN_MANHATTAN_INTERACTIVE, plotWidth, plotHeight }
+}
+
+/* The genome-wide methylation profile: mean beta per group in 100 kb bins, drawn as the per-bin
+difference along the genome. This is the metric the methylome literature uses for a genome-wide
+comparison of two groups, and it answers the question a DMR list cannot: how much of the methylome
+moved, and where, INCLUDING the parts where nothing was called. A DMR plot shows only the regions
+that passed a threshold, so a genome that shifted everywhere by a little and a genome that shifted
+nowhere both look like sparse dots; this shows the difference between them.
+
+Every bin with a probe is a dot, none are interactive (a bin is not a result to act on, and the
+DMRs above it are), and the axis is uncapped because a beta difference is bounded. */
+function renderMethylationProfile(
+	scan: DmrScanSummary,
+	genome: any,
+	devicePixelRatio?: number
+): Promise<NonNullable<DmrScanSummary['profile']>> | undefined {
+	const bm = scan.binMethylation
+	if (!bm?.bins.length) return undefined
+	const chrSizes: Record<string, number> = {}
+	for (const c of genome.majorchrorder as string[]) if (c != 'chrM' && c != 'chrMT') chrSizes[c] = genome.majorchr[c]
+	const points = bm.bins.map(b => {
+		const d = b.case - b.control
+		return {
+			chrom: b.chr,
+			pos: b.start,
+			y: d,
+			color: d < 0 ? HYPO_COLOR : HYPER_COLOR,
+			start: b.start,
+			stop: b.start + bm.binBp,
+			delta: d,
+			control: b.control,
+			case: b.case,
+			n_probes: b.n_probes
+		}
+	})
+	const plotWidth = 1000
+	const plotHeight = 160
+	return renderManhattanPoints({
+		points,
+		chrSizes,
+		plotWidth,
+		plotHeight,
+		devicePixelRatio: devicePixelRatio || 1,
+		// 1 px: at 100 kb there are ~30,000 bins, and a 2 px dot makes the genome one solid band
+		pngDotRadius: 1,
+		maxCappedPoints: 5,
+		hardCap: 200,
+		binSize: 10,
+		// a bin is context, not a result: nothing here is hoverable
+		interactive: 0,
+		signed: true,
+		capping: false
+	}).then(({ png, plot_data }) => ({ png, plotData: plot_data, binBp: bm.binBp, plotWidth, plotHeight }))
 }
 
 type DiffMethInput = {

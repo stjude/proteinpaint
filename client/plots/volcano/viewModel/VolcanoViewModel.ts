@@ -79,6 +79,10 @@ export class VolcanoViewModel {
 		const { caseColor, controlColor } = getGroupColors(this.config)
 		const barplot = { colorNegative: controlColor, colorPositive: caseColor }
 
+		/* Assigned before setPValueLabel(), which reads it: DAP is labelled off the term type, and
+		with the assignment further down every DAP label read "adjusted p-value" for data that is an
+		FDR. */
+		this.termType = config.termType
 		this.scan = (response as any).scan
 		this.singlePValue = config.termType == tt.PROTEOME_DAP || !!this.scan
 		this.pValueLabel = this.setPValueLabel(settings)
@@ -103,7 +107,6 @@ export class VolcanoViewModel {
 			height: settings.height + this.topPad
 		}
 		this.settings = settings
-		this.termType = config.termType
 		this.dataType = this.setDataType()
 
 		this.setMinMaxValues()
@@ -603,6 +606,27 @@ export class VolcanoViewModel {
 				label: 'Gene-body loss regions beating background → genes',
 				value: `${s.geneBodyLoss.regions.toLocaleString()} → ${s.geneBodyLoss.genes.length.toLocaleString()}`
 			})
+		/* How much of the measured methylome moved. Sits beside the DMR counts because the two say
+		different things: a DMR count is a count of regions that passed a threshold, and on a cohort
+		that drifted genome-wide that count is large whether or not much changed anywhere. The binned
+		profile is the metric the methylome literature compares cohorts with, so these rows are the
+		numbers a reader would quote from that figure. */
+		const pf = s.profileSummary
+		if (pf) {
+			const pct = (v: number) => `${(100 * v).toFixed(1)}%`
+			rows.push(
+				{
+					label: `Methylome profile: ${pf.bins.toLocaleString()} bins measured`,
+					value: `${pct(pf.fractionHyper)} hyper`
+				},
+				{
+					label: 'Methylome profile: per-bin Δβ, median (IQR)',
+					value: `${pf.median >= 0 ? '+' : ''}${pf.median.toFixed(4)} (${pf.q1.toFixed(4)} – ${pf.q3.toFixed(4)})`
+				},
+				{ label: 'Methylome profile: bins moving |Δβ| > 0.05', value: pct(pf.fractionBeyond05) },
+				{ label: 'Methylome profile: bins moving |Δβ| > 0.10', value: pct(pf.fractionBeyond10) }
+			)
+		}
 		/* What the scan cost, measured on the run that produced this result (a cached answer keeps
 		the original run's figures). One row each for the numbers a deployment is sized by: memory
 		per worker, memory for the pool, cores, and how the time split between the workers and Node. */

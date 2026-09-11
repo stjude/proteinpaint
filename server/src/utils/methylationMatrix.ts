@@ -1,4 +1,5 @@
 import { resolveElementQuery } from '../../routes/termdb.diffMeth.ts'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { buildGroupValues } from '#src/utils/sampleGroups.ts'
 
 /* Which methylation matrix a region (DMR) request runs on, and which samples are eligible for it.
@@ -52,10 +53,13 @@ export function resolveMethylationMatrix(ds: any, chr: string, elementType: stri
 	if (elementType) {
 		elementEntry = resolveElementQuery(ds, elementType).q
 	} else if (hasElements) {
+		/* The dataset's own default class, as the volcano opens on it -- not 'promoter', which a
+		dataset may not declare or may not mean. The scan pseudo-class is not a matrix. */
+		const dEl = dm.defaultElementType
 		try {
-			elementEntry = resolveElementQuery(ds, undefined).q
+			elementEntry = resolveElementQuery(ds, dEl && dEl != DMR_SCAN_ELEMENT_TYPE ? dEl : undefined).q
 		} catch {
-			elementEntry = undefined // dataset declares classes but no default 'promoter' one
+			elementEntry = undefined // dataset declares classes but no default one
 		}
 	}
 
@@ -79,7 +83,12 @@ export function resolveMethylationMatrix(ds: any, chr: string, elementType: stri
 	has the dataset's excludeSampleNamesMatching applied: a specimen type the volcano withheld must
 	not reappear here, or the region view would contrast a different set of samples than the hit
 	being drilled into. */
-	const eligible: Set<string> = elementEntry?.allSampleSet || dm.regionSampleSet
+	let eligible: Set<string> = elementEntry?.allSampleSet || dm.regionSampleSet
+	/* ...and cut to the samples the CpG matrix actually holds when that is the matrix being read:
+	the two are validated as separate sample sets, so the element filter alone could name a sample
+	the CpG file lacks, or withhold one it has. */
+	if (!useElement && elementEntry?.allSampleSet && dm.regionSampleSet)
+		eligible = new Set([...eligible].filter(n => dm.regionSampleSet.has(n)))
 	return { matrixFile, mvalues, useElement, eligible }
 }
 

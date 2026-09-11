@@ -10,6 +10,7 @@ import { VolcanoViewModel } from '../viewModel/VolcanoViewModel'
     - setPointData
     - setStatsData
 	- setUserActions
+	- pValueLabel per term type (scan, corrected scan, proteome DAP)
 */
 
 const mockSettings = {
@@ -538,5 +539,21 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 	)
 	test.equal(plain.pValueTable.rows[0].length, plain.pValueTable.columns.length, 'cells still match columns')
 
+	test.end()
+})
+
+tape('a proteome DAP volcano calls its single p an FDR', function (test) {
+	test.timeoutAfter(1000)
+	/* DAP files carry one FDR, and the label is chosen off the term type. It was read before the
+	term type had been assigned, so every DAP label read 'adjusted p-value' for data that is an
+	FDR -- the numbers were right and every word for them was wrong. */
+	const vm = new VolcanoViewModel({ ...mockConfig, termType: 'proteomeDAP' } as any, mockResponse, mockSettings as any)
+	test.equal(vm.viewData.pValueLabel, 'FDR', 'the y axis and hover rows say FDR')
+	test.ok(vm.singlePValue, 'and DAP reports a single p')
+	test.deepEqual(
+		vm.pValueTable.columns.map(c => c.label),
+		['Identifier', 'Gene', 'log₂(fold-change)', 'FDR'],
+		'so the p column is titled FDR, not Adjusted p-value'
+	)
 	test.end()
 })

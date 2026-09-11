@@ -800,6 +800,64 @@ fn select_significant(log_sfdr: &[f64], nsig: usize) -> Vec<f64> {
         .collect()
 }
 
+/// Mean beta per group in fixed-width bins along each chromosome, the profile methylome papers
+/// plot for a genome-wide comparison (Zhou 2018, Nat Genet, bins the genome at 100 kb and plots
+/// mean solo-WCGW methylation per bin to show PMD/HMD structure; Berman 2011 does the same at
+/// megabase scale). It is NOT a DMR summary: every bin is reported whether or not anything was
+/// called in it, so a flat stretch reads as "measured and unchanged" rather than as absence.
+///
+/// Free to compute here: the fit already carries each probe's two group means, so this is one pass
+/// with no matrix read. Returns (chr, bin start, n probes, ctrl mean, case mean) per non-empty bin.
+fn bin_methylation(all: &[ProbeStats], bin_bp: i64) -> Vec<(String, i64, u64, f64, f64)> {
+    let mut out: Vec<(String, i64, u64, f64, f64)> = Vec::new();
+    // one accumulator, flushed when the chromosome or the bin changes: probes are grouped by
+    // chromosome and ascending within it, so a bin is a contiguous run
+    let mut cur: Option<(&str, i64)> = None;
+    let (mut n, mut cs, mut ks) = (0u64, 0.0f64, 0.0f64);
+    let flush = |cur: Option<(&str, i64)>, n: u64, cs: f64, ks: f64, out: &mut Vec<_>| {
+        if let Some((chr, b)) = cur {
+            if n > 0 {
+                out.push((chr.to_string(), b * bin_bp, n, cs / n as f64, ks / n as f64));
+            }
+        }
+    };
+    for p in all {
+        // a probe with no finite mean in either arm contributes to no bin
+        if !p.beta_ctrl_mean.is_finite() || !p.beta_case_mean.is_finite() {
+            continue;
+        }
+        let key = (p.chr.as_str(), p.start / bin_bp);
+        if cur != Some(key) {
+            flush(cur, n, cs, ks, &mut out);
+            cur = Some(key);
+            n = 0;
+            cs = 0.0;
+            ks = 0.0;
+        }
+        n += 1;
+        cs += p.beta_ctrl_mean;
+        ks += p.beta_case_mean;
+    }
+    flush(cur, n, cs, ks, &mut out);
+    out
+}
+
+/// Row span of each chromosome's contiguous block in `fit.all`, keyed by name.
+///
+/// The reader refuses a matrix whose chromosome rows are not in contiguous runs, so one pass over
+/// the probes gives each chromosome's half-open row range. Built once per request so a window
+/// lookup is a hash hit plus two binary searches inside its own block, with no assumption about
+/// the ORDER the chromosomes appear in.
+fn chrom_blocks(all: &[ProbeStats]) -> HashMap<&str, (usize, usize)> {
+    let mut m: HashMap<&str, (usize, usize)> = HashMap::new();
+    for (i, p) in all.iter().enumerate() {
+        m.entry(p.chr.as_str())
+            .and_modify(|e| e.1 = i + 1)
+            .or_insert((i, i + 1));
+    }
+    m
+}
+
 /* Mean beta-scale difference over the probes inside a window, and how many there were.
  *
  * The matched-background correction asks "did this region move more than a region like it would
@@ -808,17 +866,26 @@ fn select_significant(log_sfdr: &[f64], nsig: usize) -> Vec<f64> {
  * fit already holds -- ProbeStats carries both group means on the beta scale. So this is a binary
  * search and an average.
  *
- * fit.all is position-sorted within a chromosome, and dmrBatch invokes once per chromosome, so the
- * probes inside a window are a contiguous slice. A linear filter would be O(windows x probes):
- * 2,000 windows against 1.3M probes is 2.6 billion iterations for one chromosome. */
-fn window_delta(fit: &Fit, qchr: &str, qstart: i64, qstop: i64) -> (usize, f64) {
+ * fit.all is position-sorted within a chromosome, so the probes inside a window are a contiguous
+ * slice once the chromosome's block is known. A linear filter would be O(windows x probes):
+ * 2,000 windows against 1.3M probes is 2.6 billion iterations for one chromosome.
+ *
+ * The block bounds come from `blocks` rather than from a binary search on the chromosome string:
+ * the matrix stores chromosomes in its own karyotypic order (chr1, chr2, ..., chr10), which is not
+ * lexicographic, so `partition_point` on the name is not a valid search. That was harmless while
+ * the caller invoked once per chromosome and every probe in `fit.all` belonged to `qchr`; it is not
+ * harmless now that one invocation may cover every chromosome of a genome-wide matrix. */
+fn window_delta(
+    fit: &Fit,
+    blocks: &HashMap<&str, (usize, usize)>,
+    qchr: &str,
+    qstart: i64,
+    qstop: i64,
+) -> (usize, f64) {
     let all = &fit.all;
-    // probes for a single chromosome are contiguous; find that block first
-    let lo_chr = all.partition_point(|p| p.chr.as_str() < qchr);
-    let hi_chr = all.partition_point(|p| p.chr.as_str() <= qchr);
-    if lo_chr >= hi_chr {
+    let Some(&(lo_chr, hi_chr)) = blocks.get(qchr) else {
         return (0, f64::NAN);
-    }
+    };
     let blk = &all[lo_chr..hi_chr];
     let lo = blk.partition_point(|p| p.start < qstart);
     let hi = blk.partition_point(|p| p.start <= qstop);
@@ -1116,6 +1183,10 @@ fn main() {
     let c_param = p["C"].as_f64().unwrap_or(2.0);
     let min_db = p["min_delta_beta"].as_f64().unwrap_or(0.05);
     let min_spg = p["min_samples_per_group"].as_u64().unwrap_or(3) as usize;
+    /* Bin width for the genome-wide methylation profile, 0 or absent meaning "do not compute it".
+    Opt-in because only a scan wants it: a drill-down of a few windows would be binning a whole
+    chromosome's probes to describe regions the caller did not ask about. */
+    let bin_bp = p["bin_bp"].as_i64().unwrap_or(0);
     /* Set by the server from the ds config entry, never by the client: an element matrix stores
     M-values where a CpG matrix stores betas. Same contract as diffMeth.R. */
     let mvalues = p["mvalues"].as_bool().unwrap_or(false);
@@ -1255,7 +1326,10 @@ fn main() {
         "control_mean_beta": if g_ctrl.is_finite() { json!((g_ctrl * 100000.0).round() / 100000.0) } else { Value::Null },
         "case_mean_beta": if g_case.is_finite() { json!((g_case * 100000.0).round() / 100000.0) } else { Value::Null },
         "shift": if g_ctrl.is_finite() && g_case.is_finite() { json!(((g_case - g_ctrl) * 100000.0).round() / 100000.0) } else { Value::Null },
-        "values_counted": global.case_n + global.ctrl_n
+        "values_counted": global.case_n + global.ctrl_n,
+        // each arm's own count, so a caller pooling chromosomes can weight each mean by its own n
+        "control_n": global.ctrl_n,
+        "case_n": global.case_n
     });
 
     /* Batch mode: many regions against the one fit above. The fit and the BH correction are what
@@ -1284,21 +1358,36 @@ fn main() {
             .collect();
         /* Plain delta-beta per background window, no DMR calling. Rounded to five places, as the
         group means above are: the caller compares distributions, not last bits. */
+        // one pass over the probes, then every window is a lookup; see chrom_blocks
+        let blocks = chrom_blocks(&fit.all);
         let bg: Vec<Value> = background_regions
             .iter()
             .map(|(c, s, e)| {
-                let (n, d) = window_delta(&fit, c, *s, *e);
+                let (n, d) = window_delta(&fit, &blocks, c, *s, *e);
                 json!({
                     "chr": c, "start": s, "stop": e, "n_probes": n,
                     "delta": if d.is_finite() { json!((d * 100000.0).round() / 100000.0) } else { Value::Null }
                 })
             })
             .collect();
+        let bins: Vec<Value> = if bin_bp > 0 {
+            bin_methylation(&fit.all, bin_bp)
+                .into_iter()
+                .map(|(c, start, n, ctrl, case)| {
+                    let r5 = |v: f64| json!((v * 100000.0).round() / 100000.0);
+                    json!({"chr": c, "start": start, "n_probes": n, "control": r5(ctrl), "case": r5(case)})
+                })
+                .collect()
+        } else {
+            vec![]
+        };
         println!(
             "{}",
             json!({
                 "regions": out,
                 "background": bg,
+                "bin_methylation": bins,
+                "bin_bp": bin_bp,
                 "diagnostic": {
                     "global_methylation": global_json,
                     "total_probes_analyzed": fit.all.len(),
@@ -1408,7 +1497,104 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::select_significant;
+    use super::{ProbeStats, chrom_blocks, select_significant};
+
+    /// Probes as a matrix stores them: chromosome blocks contiguous, in the matrix's own
+    /// karyotypic order, which is NOT lexicographic -- chr10 sorts before chr2 as a string.
+    fn karyotypic_probes() -> Vec<ProbeStats> {
+        let mut v = Vec::new();
+        for chr in ["chr1", "chr2", "chr10", "chr20", "chrX"] {
+            for i in 0..3i64 {
+                v.push(ProbeStats {
+                    chr: chr.to_string(),
+                    start: 1000 + i * 100,
+                    log_fc: 0.0,
+                    residual_var: 1.0,
+                    df_residual: 1.0,
+                    stdev_unscaled: 1.0,
+                    beta_ctrl_mean: 0.4,
+                    beta_case_mean: 0.5,
+                });
+            }
+        }
+        v
+    }
+
+    /* A window on chr10 or chr20 must find its probes even though those names sort before chr2.
+    Looking the block up by a binary search on the chromosome STRING returned an empty range for
+    exactly those chromosomes, so background correction reported every DMR on them as unscored --
+    silently, and only on a dataset whose chromosomes share one matrix file. */
+    #[test]
+    fn chrom_blocks_finds_every_chromosome_in_karyotypic_order() {
+        let probes = karyotypic_probes();
+        let blocks = chrom_blocks(&probes);
+        assert_eq!(blocks.len(), 5, "every chromosome has a block");
+        for (chr, expect) in [
+            ("chr1", (0, 3)),
+            ("chr2", (3, 6)),
+            ("chr10", (6, 9)),
+            ("chr20", (9, 12)),
+            ("chrX", (12, 15)),
+        ] {
+            assert_eq!(blocks.get(chr), Some(&expect), "{} block bounds", chr);
+            let (lo, hi) = expect;
+            assert!(
+                probes[lo..hi].iter().all(|p| p.chr == chr),
+                "{} block holds only its own probes",
+                chr
+            );
+        }
+    }
+
+    /* The genome-wide profile is a claim about every bin, including the ones nothing was called in,
+    so a binning bug misplaces the whole figure. Bins are keyed on the probe's own chromosome, so a
+    bin index repeating on the next chromosome must not merge with the previous one. */
+    #[test]
+    fn bin_methylation_bins_per_chromosome_and_averages_each_group() {
+        let probes = karyotypic_probes(); // 3 probes per chr at 1000/1100/1200, ctrl 0.4 case 0.5
+        let bins = super::bin_methylation(&probes, 100_000);
+        assert_eq!(bins.len(), 5, "one bin per chromosome, not one bin for all of them");
+        for (chr, start, n, ctrl, case) in &bins {
+            assert_eq!(*start, 0, "{} probes at 1 kb land in the first 100 kb bin", chr);
+            assert_eq!(*n, 3, "{} counts all three probes", chr);
+            assert!(
+                (*ctrl - 0.4).abs() < 1e-9 && (*case - 0.5).abs() < 1e-9,
+                "{} group means",
+                chr
+            );
+        }
+        let narrow = super::bin_methylation(&probes, 100);
+        assert_eq!(narrow.len(), 15, "at 100 bp each probe is its own bin");
+        assert_eq!(
+            narrow[0].1, 1000,
+            "and a bin's start is its own coordinate, not the probe's"
+        );
+    }
+
+    #[test]
+    fn bin_methylation_skips_probes_with_no_finite_mean() {
+        let mut probes = karyotypic_probes();
+        probes[0].beta_case_mean = f64::NAN;
+        let bins = super::bin_methylation(&probes, 100_000);
+        let chr1 = bins.iter().find(|b| b.0 == "chr1").unwrap();
+        assert_eq!(
+            chr1.2, 2,
+            "the NaN probe is not counted, so it cannot drag the bin's mean"
+        );
+    }
+
+    #[test]
+    fn chrom_blocks_ranges_are_start_sorted_within_a_block() {
+        let probes = karyotypic_probes();
+        let blocks = chrom_blocks(&probes);
+        let &(lo, hi) = blocks.get("chr10").unwrap();
+        let starts: Vec<i64> = probes[lo..hi].iter().map(|p| p.start).collect();
+        assert_eq!(
+            starts,
+            vec![1000, 1100, 1200],
+            "positions ascend, so partition_point inside a block is valid"
+        );
+    }
 
     /// log FDRs standing in for a chromosome with no per-CpG significance: smoothing has pushed
     /// them all far below ln(0.05) = -3.0, which is exactly the situation that produced thousands

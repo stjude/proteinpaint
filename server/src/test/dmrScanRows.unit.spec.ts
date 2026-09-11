@@ -1,11 +1,12 @@
 import tape from 'tape'
-import { dmrScanToRows } from '#src/utils/dmrScanRows.ts'
+import { dmrScanToRows, summarizeProfile } from '#src/utils/dmrScanRows.ts'
 
 /*
 test sections:
 
 uncorrected: CpG floor, one p per row, direction split, widths
 corrected: unscored DMRs leave the rows but stay counted; gene-body loss set gates on body+direction+p
+summarizeProfile: quantiles and moved-fraction of the genome-wide binned profile
 */
 
 /** The scan reaches the volcano only through this mapping, so a mistake here is a wrong figure
@@ -132,5 +133,24 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 		{ regions: 1, genes: ['LOSS'] },
 		'only the hypo, in-body, significant region contributes genes'
 	)
+	t.end()
+})
+
+tape('summarizeProfile reports how much of the measured methylome moved', t => {
+	/* The number a reader quotes from the profile figure. It exists because a DMR count does not
+	answer it: a cohort that drifted a little everywhere produces a huge DMR count, and the
+	fraction of bins that actually moved is what separates that from real, concentrated change. */
+	const bin = (control: number, caseV: number) => ({ chr: 'chr1', start: 0, n_probes: 10, control, case: caseV })
+	// nine bins: deltas -0.2 -0.1 -0.04 -0.01 0 +0.01 +0.04 +0.1 +0.2
+	const deltas = [-0.2, -0.1, -0.04, -0.01, 0, 0.01, 0.04, 0.1, 0.2]
+	const pf = summarizeProfile({ binBp: 100000, bins: deltas.map(d => bin(0.5, 0.5 + d)) })!
+	t.equal(pf.bins, 9, 'every bin is counted, including the ones that did not move')
+	t.ok(Math.abs(pf.median) < 1e-9, 'the median is the middle bin, not the mean of the extremes')
+	t.ok(Math.abs(pf.q1 + 0.04) < 1e-9 && Math.abs(pf.q3 - 0.04) < 1e-9, 'quartiles bracket the bulk')
+	// strictly beyond: the two at exactly 0.1 do not count, the two at 0.2 do
+	t.ok(Math.abs(pf.fractionBeyond10 - 2 / 9) < 1e-9, '|delta| > 0.10 is a strict threshold')
+	t.ok(Math.abs(pf.fractionBeyond05 - 4 / 9) < 1e-9, 'and so is |delta| > 0.05')
+	t.ok(Math.abs(pf.fractionHyper - 4 / 9) < 1e-9, 'a bin at exactly zero is not counted as hyper')
+	t.equal(summarizeProfile({ binBp: 100000, bins: [] }), undefined, 'no bins is no summary, not a zero')
 	t.end()
 })

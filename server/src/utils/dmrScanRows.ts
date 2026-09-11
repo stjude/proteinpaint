@@ -71,7 +71,8 @@ export function dmrScanToRows(
 		...(widths.length ? { width: { median: q(0.5), q1: q(0.25), q3: q(0.75) } } : {}),
 		...(payload.globalMethylation ? { globalMethylation: payload.globalMethylation } : {}),
 		...(payload.regionMask ? { regionMask: payload.regionMask } : {}),
-		...(payload.resources ? { resources: payload.resources } : {})
+		...(payload.resources ? { resources: payload.resources } : {}),
+		...(payload.binMethylation ? { binMethylation: payload.binMethylation } : {})
 	}
 	if (payload.backgroundCorrection) {
 		const scored = kept.filter(d => d.bgP != null)
@@ -95,4 +96,26 @@ export function dmrScanToRows(
 		scan.geneBodyLoss = { regions, genes: [...genes] }
 	}
 	return { rows, scan }
+}
+
+/* How much of the measured methylome moved, and by how much. Reported beside the DMR counts
+because the two answer different questions: 123,000 DMRs sounds like a transformed genome, and the
+fraction of 100 kb bins that actually shifted says whether it is. Quantiles rather than a mean, so
+one extreme territory cannot carry the summary. */
+export function summarizeProfile(bm: NonNullable<DmrScanSummary['binMethylation']>): DmrScanSummary['profileSummary'] {
+	const d = bm.bins.map(b => b.case - b.control).sort((a, b) => a - b)
+	if (!d.length) return undefined
+	const q = (p: number) => d[Math.min(d.length - 1, Math.floor(p * d.length))]
+	const beyond = (t: number) => d.filter(v => Math.abs(v) > t).length / d.length
+	return {
+		bins: d.length,
+		median: q(0.5),
+		q1: q(0.25),
+		q3: q(0.75),
+		/* 0.05 and 0.1 in beta: the smaller is about the size of the global drift on a cohort like
+		this one, the larger is the difference a reader would call a real change in a region. */
+		fractionBeyond05: beyond(0.05),
+		fractionBeyond10: beyond(0.1),
+		fractionHyper: d.filter(v => v > 0).length / d.length
+	}
 }

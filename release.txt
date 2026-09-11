@@ -260,7 +260,35 @@ Features:
   than the mean of overlapping cCREs, so the violin a scan's DMR opens is the DMR's methylation per
   sample -- a DMR overlapping no cCRE previously had no violin at all.
 
+- A scan also draws the methylome-wide profile: mean beta per group in 100 kb bins, plotted as the
+  per-bin difference along the genome, under the -log10(q) DMR plot and on the same x axis. This is
+  the metric the methylome literature uses for a genome-wide comparison -- Zhou 2018 (Nat Genet
+  50:591) bins at 100 kb for exactly this figure, and the width is fixed rather than derived so a
+  profile can be read against a published one. It answers what a DMR list cannot: a DMR plot shows
+  only what passed a threshold, so a genome that shifted a little everywhere and one that shifted
+  nowhere both look like sparse dots. Free to compute -- the fit already carries each probe's two
+  group means, so the bins are one pass with no matrix read (dmrcate gains an opt-in bin_bp input).
+  Statistics gains the numbers a reader would quote from it: bins measured, the per-bin median and
+  IQR, and the fraction moving beyond 0.05 and 0.10. On MMRF NSD2 that is 28,994 bins, median
+  +0.0088, and 22.2% of bins beyond 0.05 but only 0.9% beyond 0.10 -- so the 123,520 DMRs are a
+  pervasive small shift plus real change in under 1% of the genome, which the DMR count alone reads
+  as a transformed methylome.
+
 Fixes:
+- dmrcate no longer loses a chromosome's background windows when one invocation covers several
+  chromosomes. window_delta found a chromosome's probe block with a binary search on the chromosome
+  NAME, but a matrix stores chromosomes in karyotypic order (chr1, chr2, ..., chr10), which is not
+  lexicographic, so the search was invalid. Harmless while the caller invoked once per chromosome
+  and every probe belonged to the queried one; not harmless once jobs are grouped by matrix file,
+  where a genome-wide matrix sends every chromosome to one invocation. Measured on the MMRF element
+  matrix: chr10 and chr20 returned 0 background probes and a null delta, which would have reported
+  every DMR on them as unscored. The block bounds now come from a one-pass index that assumes
+  nothing about the order the chromosomes appear in. Only affects datasets backed by one
+  genome-wide matrix; per-chromosome shards were always one chromosome per invocation.
+- A proteome DAP volcano calls its single p-value an FDR again. The label is chosen off the term
+  type, and the term type was assigned after the label was computed, so every DAP axis, p-column
+  header and hover row read "adjusted p-value" for data that is an FDR -- right numbers, wrong word
+  for them everywhere.
 - The DMR region view's errors are now visible. It caught its own errors and wrote them into
   dom.error, which the rx update loop hides and empties before every main(), so a failed region
   showed an empty sandbox with no message; the "Zoom in to see per-CpG dots" note lived in the same

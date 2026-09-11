@@ -1,5 +1,5 @@
 import type { DataEntry, VolcanoData, VolcanoRenderRequest } from './termdb.DE.js'
-import type { DmrRunResources } from './termdb.dmrBatch.js'
+import type { DmrRunResources, TermdbDmrBatchSuccessResponse } from './termdb.dmrBatch.js'
 
 /** The element_type that asks the differential-methylation volcano to call DMRs de novo across
  * the genome (termdb/dmrBatch scan mode) instead of testing a pre-annotated element class. Not a
@@ -106,6 +106,24 @@ export type DmrScanSummary = {
 	matchedSamplelst?: { groups: { name: string; values: { sampleId: number | string }[]; [k: string]: any }[] }
 	/** what the scan cost when it was computed; see DmrRunResources */
 	resources?: DmrRunResources
+	/** Mean methylation per group in fixed-width bins along the genome: the profile methylome
+	 * papers plot for a genome-wide comparison, covering every bin with probes rather than only
+	 * the called DMRs. See TermdbDmrBatchSuccessResponse.binMethylation. */
+	binMethylation?: NonNullable<TermdbDmrBatchSuccessResponse['binMethylation']>
+	/** The rendered genome-wide methylation profile: the per-bin group difference along the genome.
+	 * Rendered per request, after the cache, like the DMR Manhattan. */
+	profile?: { png: string; plotData: any; binBp: number; plotWidth: number; plotHeight: number }
+	/** Quantiles of the per-bin difference and the fraction of bins that moved beyond a threshold:
+	 * how much of the measured methylome changed, which the DMR counts alone do not say. */
+	profileSummary?: {
+		bins: number
+		median: number
+		q1: number
+		q3: number
+		fractionBeyond05: number
+		fractionBeyond10: number
+		fractionHyper: number
+	}
 	/** the cached scan the rows came from, so its DMRs can be fetched back for a browser track
 	 * (termdb/dmrScanTrack) without recomputing anything */
 	cacheId?: string

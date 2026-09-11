@@ -52,6 +52,13 @@ function init({ genomes }) {
 				)
 
 			const { group1, group2 } = await resolveGroupNames(q.group1, q.group2, eligible, ds)
+			/* Checked after id-to-name resolution, which is where a group actually shrinks: the R
+			backend does not check and, handed fewer than three, filters every probe and reports "too
+			few probes genome-wide", which misdiagnoses a sample problem as a data problem. */
+			if (group1.length < 3 || group2.length < 3)
+				throw new Error(
+					`Each group needs at least 3 samples with methylation data (got ${group1.length} and ${group2.length}).`
+				)
 
 			const useR = q.backend === 'r'
 			// dmrcate_full.R reads the CpG layout only (chrom_lengths attribute, meta/probe/probeID)
