@@ -4,7 +4,7 @@ import { dmrScanToRows } from '#src/utils/dmrScanRows.ts'
 /*
 test sections:
 
-uncorrected: CpG floor, one p per row, direction split, widths, bins
+uncorrected: CpG floor, one p per row, direction split, widths
 corrected: unscored DMRs leave the rows but stay counted; gene-body loss set gates on body+direction+p
 */
 
@@ -36,7 +36,7 @@ const payload = (dmrs: any[], extra: any = {}) =>
 		...extra
 	} as any)
 
-const opts = { chromosomes: ['chr1'], lens: { chr1: 20e6 } }
+const opts = { chromosomes: ['chr1'] }
 
 tape('\n', t => {
 	t.comment('-***- dmrScanRows specs -***-')
@@ -62,11 +62,23 @@ tape('uncorrected scan: CpG floor, one p per row, summary counts', t => {
 	t.equal(rows[0].original_p_value, 1e-10, 'p is the smoothed FDR')
 	t.equal(rows[0].adjusted_p_value, 1e-10, 'and is the same under either p-value type')
 	t.deepEqual(scan.width, { median: 3000, q1: 1000, q3: 3000 }, 'width quantiles over kept DMRs')
-	t.equal(scan.domainMap.binBp, 1e6, 'a 20 Mb genome bins at the 1 Mb floor')
-	t.deepEqual(scan.domainMap.bins.chr1[0], [1, 0], 'the 1 kb DMR lands in the first bin')
-	t.deepEqual(scan.domainMap.bins.chr1[10], [1, 0], 'the 10 Mb one in bin 10')
-	t.equal(scan.domainMap.subject, 'all DMRs', 'uncorrected, the map bins every kept DMR')
-	t.deepEqual(scan.domainMap.bins.chr1[15], [0, 1], 'the hypo DMR in bin 15')
+	t.equal(scan.resources, undefined, 'a result computed before cost accounting carries no resources')
+	const res = {
+		workers: 2,
+		threadsPerWorker: 1,
+		wallMs: 1,
+		peakWorkerMemoryMb: 1,
+		peakPoolMemoryMb: 2,
+		workerCpuSeconds: 1,
+		nodeRssDeltaMb: 0,
+		nodeCpuSeconds: 0,
+		perChromosome: []
+	}
+	t.equal(
+		dmrScanToRows(payload([], { resources: res }), opts).scan.resources,
+		res,
+		'and one with them passes them through to the panel'
+	)
 	t.equal(scan.backgroundCorrection, undefined, 'no correction block without the correction')
 	t.equal(scan.geneBodyLoss, undefined, 'and no gene set')
 	t.end()
@@ -115,15 +127,6 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 	)
 	t.equal(rows[0].original_p_value, 0.01, 'p is now the background p')
 	t.equal(rows[0].excess, -0.15, 'and the excess rides along for the table')
-	/* The corrected map bins only the survivors: the two non-significant / unscored DMRs (bins 7
-	and 9) must be absent, or the map would be the drift map with a different title. */
-	t.equal(scan.domainMap.subject, 'DMRs beating matched background (p < 0.05)', 'corrected map names its subject')
-	t.deepEqual(scan.domainMap.bins.chr1[0], [1, 2], 'bin 0 holds the three DMRs beating background')
-	t.equal(
-		scan.domainMap.bins.chr1.reduce((n, b) => n + b[0] + b[1], 0),
-		3,
-		'and nothing else: the non-significant and unscored DMRs are not on the corrected map'
-	)
 	t.deepEqual(
 		scan.geneBodyLoss,
 		{ regions: 1, genes: ['LOSS'] },

@@ -603,6 +603,34 @@ export class VolcanoViewModel {
 				label: 'Gene-body loss regions beating background → genes',
 				value: `${s.geneBodyLoss.regions.toLocaleString()} → ${s.geneBodyLoss.genes.length.toLocaleString()}`
 			})
+		/* What the scan cost, measured on the run that produced this result (a cached answer keeps
+		the original run's figures). One row each for the numbers a deployment is sized by: memory
+		per worker, memory for the pool, cores, and how the time split between the workers and Node. */
+		const r = s.resources
+		if (r) {
+			const top = r.perChromosome[0]
+			rows.push(
+				{
+					label: 'Compute: workers × threads',
+					value: `${r.workers} × ${r.threadsPerWorker} (${r.workers * r.threadsPerWorker} core${
+						r.workers * r.threadsPerWorker == 1 ? '' : 's'
+					})`
+				},
+				{ label: 'Compute: wall time', value: `${(r.wallMs / 1000).toFixed(1)} s` },
+				{
+					label: 'Compute: peak memory per worker',
+					value: `${Math.round(r.peakWorkerMemoryMb).toLocaleString()} MB${
+						top ? ` (${top.chr}, ${top.probes.toLocaleString()} CpGs)` : ''
+					}`
+				},
+				{ label: 'Compute: peak memory, worker pool', value: `${Math.round(r.peakPoolMemoryMb).toLocaleString()} MB` },
+				{ label: 'Compute: worker CPU time', value: `${r.workerCpuSeconds.toFixed(1)} s` },
+				{
+					label: 'Compute: server process',
+					value: `+${Math.round(r.nodeRssDeltaMb).toLocaleString()} MB, ${r.nodeCpuSeconds.toFixed(1)} s CPU`
+				}
+			)
+		}
 		return rows
 	}
 

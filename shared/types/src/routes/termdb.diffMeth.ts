@@ -1,4 +1,5 @@
 import type { DataEntry, VolcanoData, VolcanoRenderRequest } from './termdb.DE.js'
+import type { DmrRunResources } from './termdb.dmrBatch.js'
 
 /** The element_type that asks the differential-methylation volcano to call DMRs de novo across
  * the genome (termdb/dmrBatch scan mode) instead of testing a pre-annotated element class. Not a
@@ -103,14 +104,16 @@ export type DmrScanSummary = {
 	/** The two groups cut to the samples with methylation data, as sample ids: the cohort any
 	 * expression step after a scan should run on, so both readings come from the same patients. */
 	matchedSamplelst?: { groups: { name: string; values: { sampleId: number | string }[]; [k: string]: any }[] }
-	/** hyper/hypo counts per fixed-width bin, per chromosome, for the genome map. `subject` names
-	 * which DMRs were binned: every kept DMR, or with the correction only those beating background */
-	domainMap: {
-		binBp: number
-		lens: Record<string, number>
-		subject: string
-		bins: Record<string, [number, number][]>
-	}
+	/** what the scan cost when it was computed; see DmrRunResources */
+	resources?: DmrRunResources
+	/** the cached scan the rows came from, so its DMRs can be fetched back for a browser track
+	 * (termdb/dmrScanTrack) without recomputing anything */
+	cacheId?: string
+	/** Every kept DMR drawn along the genome, hyper above the line and hypo below, y = signed
+	 * -log10 of the q the volcano plots; the N most significant per direction carry pixel
+	 * coordinates and are interactive. Rendered per request, after the cache, because it depends
+	 * on the client's pixel ratio. */
+	manhattan?: { png: string; plotData: any; interactive: number; plotWidth: number; plotHeight: number }
 }
 
 export type DiffMethResponse = DiffMethPreAnalysisResponse | DiffMethFullResponse

@@ -7,7 +7,8 @@ import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
 import { formatPromoterLabel, elementNoun } from '../promoterLabel'
-import { domainMap } from '../interactions/domainMap'
+import { plotManhattan, manhattanLayoutDefaults } from '#plots/manhattan/manhattan.ts'
+import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { geneBodyLossTest } from '../interactions/geneBodyLossDE'
 
 export class VolcanoPlotView {
@@ -59,7 +60,7 @@ export class VolcanoPlotView {
 		this.renderFoldChangeLine(plotDim)
 		this.attachInteractions(plotDim)
 		if (this.settings.showPValueTable) this.renderPValueTable()
-		if (this.viewData.scan) this.renderDomainMap()
+		if (this.viewData.scan?.manhattan) this.renderScanManhattan()
 	}
 
 	initDom() {
@@ -80,7 +81,7 @@ export class VolcanoPlotView {
 		// it on repeatedly appends additional divs.
 		this.dom.holder.select('#sjpp-volcano-pValueTable').remove()
 		// same lifecycle as the p-value table: redrawn from each response, never left stale
-		this.dom.holder.select('#sjpp-volcano-domainMap').remove()
+		this.dom.holder.select('#sjpp-volcano-scanManhattan').remove()
 
 		if (!this.settings.showPValueTable) return
 		this.volcanoDom.pValueTable = this.dom.holder
@@ -408,22 +409,68 @@ export class VolcanoPlotView {
 		}
 	}
 
-	/* The genome map: where the DMRs are and which way they go, one track per chromosome, drawn from
-	server-side bins over every kept DMR rather than from the capped interactive dots. Clicking a
-	bin opens that span in the region view -- per-CpG group means, the called DMRs and the genes on
-	one axis -- which is the scale at which a hyper or hypo territory can actually be looked at. */
-	renderDomainMap() {
-		const scan = this.viewData.scan!
+	/* Where the DMRs are, along the whole genome: every kept DMR in the server's PNG, hyper above
+	the line and hypo below, height = evidence; the most significant thousand are live. A dot is
+	the same DMR the volcano shows, so hover and click give the volcano's own rows and actions --
+	the violin of that region and the region view, a genome browser with the called DMRs, the
+	per-CpG group means and the genes. Same lifecycle as the p-value table: redrawn from each
+	response, never left stale. */
+	renderScanManhattan() {
+		const { manhattan } = this.viewData.scan!
 		const div = this.dom.holder
 			.append('div')
-			.attr('id', 'sjpp-volcano-domainMap')
-			.attr('data-testid', 'sjpp-volcano-domainMap')
+			.attr('id', 'sjpp-volcano-scanManhattan')
+			.attr('data-testid', 'sjpp-volcano-scanManhattan')
 			.style('display', 'block')
 			.style('margin', '10px 0 0 20px')
-		/* No padding: a multi-megabase bin is its own context, and the region view's default 2 kb
-		pad would push a 5 Mb bin over its 5 Mb cap and fail before any request was made. */
-		domainMap(div, scan.domainMap, scan.chromosomes, (chr, start, stop) =>
-			this.interactions.launchDmr({ chr, start, stop }, { pad: 0 })
+		// a Manhattan point carries the row's fields; the volcano's tooltip and actions read a row
+		const asRow = (d: any): DataPointEntry =>
+			({
+				promoter_id: `${d.chrom}:${d.start}-${d.stop}`,
+				gene_name: d.gene_name,
+				chr: d.chrom,
+				start: d.start,
+				stop: d.stop,
+				delta_beta: d.delta_beta,
+				fold_change: d.fold_change,
+				original_p_value: d.p,
+				adjusted_p_value: d.p,
+				no_cpgs: d.no_cpgs,
+				excess: d.excess
+			} as any)
+		// the case group, whose direction the colours name; the scan carries the groups it ran on
+		const g2 = this.viewData.scan!.matchedSamplelst?.groups?.[1]?.name || 'case group'
+		plotManhattan(
+			div,
+			{ png: manhattan!.png, plotData: manhattan!.plotData },
+			{
+				...manhattanLayoutDefaults,
+				plotWidth: manhattan!.plotWidth,
+				plotHeight: manhattan!.plotHeight,
+				// the server already picked N per direction; the client must not re-cap by |y|
+				interactiveDotsCap: manhattan!.plotData.points.length,
+				maxTooltipGenes: this.settings.maxTooltipGenes,
+				legendItemWidth: 130
+			},
+			undefined,
+			{
+				title: `DMRs along the genome, direction in ${g2} (top ${manhattan!.interactive.toLocaleString()} per direction interactive)`,
+				// short, because it runs down a 300 px axis: the legend and title say what the sign means
+				yAxisLabel: `±log₁₀(${this.viewData.pValueLabel.replace('smoothed ', '')})`,
+				legend: [
+					{ label: 'Hypermethylated', color: HYPER_COLOR, hollow: true },
+					{ label: 'Hypomethylated', color: HYPO_COLOR, hollow: true }
+				],
+				itemNoun: 'DMR',
+				renderSingleHoverTooltip: (d, container) => {
+					const table = table2col({ holder: container.append('table') })
+					this.addTooltipRows(asRow(d), table)
+					if (d.no_cpgs != null) addTooltipRow(table, 'CpGs', d.no_cpgs)
+				},
+				buildMultiHitTableData: dots => this.buildMultiHitTable(dots.map(asRow)),
+				getActions: d => this.getActionMenuOpts(asRow(d)),
+				getRowKey: d => `${d.chrom}:${d.start}-${d.stop}`
+			}
 		)
 	}
 
@@ -636,8 +683,19 @@ export class VolcanoPlotView {
 				}
 			},
 			{
+				/* A scan has already called every DMR: the browser shows them from the cache, beside
+				the genes and cCREs, where the region view would re-fit the chromosome to draw the same
+				track. The region view stays for the element classes, whose hits are not yet DMRs. */
+				label: 'Genome browser',
+				isVisible: () => termType === tt.DNA_METHYLATION && !!this.viewData.scan,
+				onClick: async () => {
+					const dm = d as DataPointEntry & { chr: string; start: number; stop: number }
+					await interactions.launchScanGenomeBrowser(dm, this.viewData.scan!)
+				}
+			},
+			{
 				label: 'DMR analysis',
-				isVisible: () => termType === tt.DNA_METHYLATION,
+				isVisible: () => termType === tt.DNA_METHYLATION && !this.viewData.scan,
 				onClick: async () => {
 					const dm = d as DataPointEntry & {
 						chr: string

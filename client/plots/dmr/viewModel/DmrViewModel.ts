@@ -1,7 +1,7 @@
 import { first_genetrack_tolist } from '#common/1stGenetk'
 
 /** Name of the regulatory-element track in the genome config, if it declares one. */
-const CCRE_TRACK_NAME = 'ENCODE cCREs'
+export const CCRE_TRACK_NAME = 'ENCODE cCREs'
 import type { TermdbDmrSuccessResponse, DmrDiagnostic } from '#types'
 import type { DmrConfig, BedItem, LegendRow, DmrViewData } from '../DmrTypes.ts'
 

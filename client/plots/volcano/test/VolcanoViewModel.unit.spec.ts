@@ -468,17 +468,7 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 			significant: 1,
 			matchedOn: ['CpG density', 'width']
 		},
-		geneBodyLoss: { regions: 1, genes: ['GENEA'] },
-		domainMap: {
-			binBp: 1e6,
-			lens: { chr1: 2e6 },
-			bins: {
-				chr1: [
-					[1, 1],
-					[0, 0]
-				]
-			}
-		}
+		geneBodyLoss: { regions: 1, genes: ['GENEA'] }
 	}
 	const settings = {
 		...mockSettings,

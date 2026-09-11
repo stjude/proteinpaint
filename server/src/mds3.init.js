@@ -2343,6 +2343,52 @@ function makeElementMethylationGetter(q, entry, ds) {
 		if (!tws.length || !queryNames.length) return { term2sample2value, byTermId, bySampleId }
 
 		for (const tw of tws) {
+			/* A region on a chromosome that has a CpG shard is read from the CpGs themselves. The
+			element average is what a promoter or cCRE term wants, but a region a scan called is not
+			an element: a DMR overlapping no cCRE would have no value at all, and one overlapping half
+			of a cCRE would get that element's whole-span average. The shard gives the region's own
+			CpGs, averaged per sample, on the unit the entry advertises. */
+			if (q.cpgByChr && q.cpgChroms?.has(tw.term.chr)) {
+				const shardNames = queryNames.filter(n => !q.regionSampleSet || q.regionSampleSet.has(n))
+				if (!shardNames.length) continue
+				const input = {
+					h: q.cpgByChr.replace('{chr}', tw.term.chr),
+					s: shardNames.join(','),
+					q: `${tw.term.chr}:${tw.term.start}-${tw.term.stop}`
+				}
+				let sites
+				try {
+					sites = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input)))
+				} catch (e) {
+					// the script throws for a span holding no CpG; that is "no data", not a failure
+					if (/No DNA methylation data|not within the genomic bounds/.test(String(e))) continue
+					throw e
+				}
+				if (!Array.isArray(sites)) throw new Error('CpG methylation query returned unexpected format')
+				const s2v = {}
+				for (const [i, sname] of shardNames.entries()) {
+					const sid = ds.cohort.termdb.q.sampleName2id(sname)
+					if (sid === undefined || sid === null) continue
+					let sum = 0,
+						n = 0
+					for (const site of sites) {
+						const v = site[i]
+						if (!Number.isFinite(v)) continue
+						sum += v
+						n++
+					}
+					if (!n) continue
+					const avg = sum / n
+					// betas from the shard; the entry's unit decides whether the term reports M-values
+					if (storesBeta) s2v[sid] = avg
+					else {
+						const clamped = Math.min(Math.max(avg, 1e-6), 1 - 1e-6)
+						s2v[sid] = Math.log2(clamped / (1 - clamped))
+					}
+				}
+				if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v)
+				continue
+			}
 			/* Located by coordinates, which every dnaMethylation term carries. The query script
 			also accepts element IDs, but no term type holds one today, so there is nothing to
 			pass -- wire that up if a term ever gains an element identifier. */

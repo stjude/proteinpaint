@@ -36,6 +36,20 @@ fn get_rss_mb() -> f64 {
     }
 }
 
+/// User + system CPU seconds consumed so far, from getrusage. Compared with wall time this says
+/// how much of the run was compute versus waiting on the HDF5 read.
+fn get_cpu_seconds() -> f64 {
+    unsafe {
+        let mut usage: libc::rusage = std::mem::zeroed();
+        libc::getrusage(libc::RUSAGE_SELF, &mut usage);
+        let tv = |t: libc::timeval| t.tv_sec as f64 + t.tv_usec as f64 / 1e6;
+        tv(usage.ru_utime) + tv(usage.ru_stime)
+    }
+}
+/// This binary runs one chromosome on one thread: rayon is a workspace dependency but nothing
+/// here uses it, and the parallelism is the server's worker pool, one process per chromosome.
+/// Reported so a deployment reading the diagnostic knows a worker costs one core, not several.
+const THREADS: u32 = 1;
 fn trigamma(mut x: f64) -> f64 {
     if x <= 0.0 {
         return f64::NAN;
@@ -1289,6 +1303,8 @@ fn main() {
                     "global_methylation": global_json,
                     "total_probes_analyzed": fit.all.len(),
                     "peak_memory_mb": (get_rss_mb() * 10.0).round() / 10.0,
+                    "cpu_seconds": (get_cpu_seconds() * 100.0).round() / 100.0,
+                    "threads": THREADS,
                     "elapsed_ms": t0.elapsed().as_millis()
                 }
             })
@@ -1382,6 +1398,8 @@ fn main() {
                 "total_probes_analyzed": fit.all.len(),
                 "peak_memory_mb": (rss_peak * 10.0).round() / 10.0,
                 "start_memory_mb": (rss_start * 10.0).round() / 10.0,
+                "cpu_seconds": (get_cpu_seconds() * 100.0).round() / 100.0,
+                "threads": THREADS,
                 "elapsed_ms": elapsed_ms,
                 "track_png": track_png }
         })

@@ -142,6 +142,30 @@ export type TermdbDmrBatchSuccessResponse = {
 		/** DMRs removed because >= overlapFrac of their span was masked */
 		dmrsDropped: number
 	}
+	resources?: DmrRunResources
+}
+
+/** What one run of the route cost, measured while it ran. Stored with the cached result, so a
+ * cached answer reports the cost of the run that produced it, not of serving it. Read this to size
+ * a deployment: memory is per worker and scales with the chromosome, CPU is one core per worker. */
+export type DmrRunResources = {
+	/** worker processes run at once (serverconfig.dmrBatchConcurrency) */
+	workers: number
+	/** threads one worker uses; the dmrcate binary is single-threaded */
+	threadsPerWorker: number
+	wallMs: number
+	/** largest resident set any one worker reached, MB */
+	peakWorkerMemoryMb: number
+	/** sum of the `workers` largest worker peaks: the most the pool can have held at once, MB */
+	peakPoolMemoryMb: number
+	/** user + system CPU seconds over every worker */
+	workerCpuSeconds: number
+	/** the Node process: resident growth over the run and CPU it spent itself, mask reads and
+	 * background sampling included */
+	nodeRssDeltaMb: number
+	nodeCpuSeconds: number
+	/** one row per worker invocation, largest first */
+	perChromosome: { chr: string; probes: number; peakMemoryMb: number; cpuSeconds: number; elapsedMs: number }[]
 }
 
 export type TermdbDmrBatchErrorResponse = { error: string }

@@ -253,6 +253,22 @@ export async function runDmrBatch(
 	on the server while it runs. Raise it per deployment via serverconfig where the cores and
 	the ~400MB-per-job memory are actually known. */
 			const CONCURRENCY = Math.max(1, Number(serverconfig.dmrBatchConcurrency) || 2)
+			/* Cost accounting. Each worker reports its own peak memory and CPU from getrusage; Node's
+			share (mask reads, background sampling, JSON assembly) is the delta in this process over
+			the run. Kept with the result so the cache carries the cost of computing it. */
+			const nodeRss0 = process.memoryUsage().rss
+			const nodeCpu0 = process.cpuUsage()
+			const perChromosome: NonNullable<TermdbDmrBatchSuccessResponse['resources']>['perChromosome'] = []
+			const account = (chr: string, d: any) => {
+				if (!d) return
+				perChromosome.push({
+					chr,
+					probes: d.total_probes_analyzed || 0,
+					peakMemoryMb: Number(d.peak_memory_mb) || 0,
+					cpuSeconds: Number(d.cpu_seconds) || 0,
+					elapsedMs: Number(d.elapsed_ms) || 0
+				})
+			}
 			const chrEntries = [...chrEntriesAll]
 			/* Biggest chromosomes first. With a fixed pool the tail is set by the slowest job still
 	running, so starting chr1 last would leave it running alone after everything else finished. */
@@ -288,6 +304,7 @@ export async function runDmrBatch(
 						}
 						const result = JSON.parse(await run_rust('dmrcate', JSON.stringify(input)))
 						if (result.error) throw new Error(`${chr}: ${result.error}`)
+						account(chr, result.diagnostic)
 						/* Masked here rather than in the assembly loop below so each chromosome's BED
 				query runs inside its own worker slot, alongside the fit it belongs to, instead
 				of serially after every fit has finished. */
@@ -346,6 +363,7 @@ export async function runDmrBatch(
 									const bgRes = JSON.parse(
 										await run_rust('dmrcate', JSON.stringify({ ...input, regions: [], background_regions: windows }))
 									)
+									account(`${chr} background`, bgRes.diagnostic)
 									const { scored, unscored } = scoreAgainstBackground(called, bgRes.background || [])
 									called.forEach((d: any, i: number) => {
 										const sc = scored[i]
@@ -402,11 +420,25 @@ export async function runDmrBatch(
 				} chromosomes,`,
 				formatElapsedTime(Date.now() - time1)
 			)
+			perChromosome.sort((a, b) => b.peakMemoryMb - a.peakMemoryMb)
+			const nodeCpu = process.cpuUsage(nodeCpu0)
+			const resources: TermdbDmrBatchSuccessResponse['resources'] = {
+				workers: CONCURRENCY,
+				threadsPerWorker: 1,
+				wallMs: Date.now() - time1,
+				peakWorkerMemoryMb: perChromosome[0]?.peakMemoryMb || 0,
+				peakPoolMemoryMb: perChromosome.slice(0, CONCURRENCY).reduce((a, r) => a + r.peakMemoryMb, 0),
+				workerCpuSeconds: perChromosome.reduce((a, r) => a + r.cpuSeconds, 0),
+				nodeRssDeltaMb: Math.max(0, process.memoryUsage().rss - nodeRss0) / 1048576,
+				nodeCpuSeconds: (nodeCpu.user + nodeCpu.system) / 1e6,
+				perChromosome
+			}
 			return {
 				status: 'ok',
 				regions: out,
 				chromosomes: merged.size,
 				totalProbesAnalyzed: totalProbes,
+				resources,
 				regionMask: maskFiles.length ? { sources: appliedNames, overlapFrac, dmrsDropped } : undefined,
 				backgroundCorrection: q.backgroundCorrection ? { ...bgTotals, matchedOn: ['CpG density', 'width'] } : undefined,
 				globalMethylation: gN

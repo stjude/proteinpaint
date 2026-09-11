@@ -1,5 +1,4 @@
 import type { DiffMethEntry, DmrScanSummary, TermdbDmrBatchSuccessResponse } from '#types'
-import { domainBinBp, domainBins } from '#shared/dmrDomainBins.js'
 
 /* Turn a DMR scan (termdb/dmrBatch) into rows the differential-methylation volcano can render,
 plus the whole-scan summary its Statistics panel shows.
@@ -19,7 +18,7 @@ type Dmr = TermdbDmrBatchSuccessResponse['regions'][number]['dmrs'][number]
 
 export function dmrScanToRows(
 	payload: TermdbDmrBatchSuccessResponse,
-	opts: { chromosomes: string[]; lens: Record<string, number>; minCpgs?: number; backgroundCorrection?: boolean }
+	opts: { chromosomes: string[]; minCpgs?: number; backgroundCorrection?: boolean }
 ): { rows: DiffMethEntry[]; scan: DmrScanSummary } {
 	const minCpgs = Math.max(1, Math.floor(opts.minCpgs ?? DEFAULT_MIN_CPGS))
 	const called: Dmr[] = payload.regions.flatMap(r => r.dmrs || [])
@@ -61,12 +60,6 @@ export function dmrScanToRows(
 	const q = (p: number) => widths[Math.floor(p * (widths.length - 1))]
 	const hyper = kept.filter(d => d.direction == 'hyper').length
 
-	/* Corrected, the map shows the DMRs that beat matched background rather than every call: on a
-	cohort with a global shift the uncorrected map is mostly the drift, and the question the
-	correction asks -- where did methylation move MORE than a region like it drifts -- is answered by
-	the survivors. Same bins either way, so the two maps can be read against each other. */
-	const mapped = opts.backgroundCorrection ? kept.filter(d => d.bgP != null && d.bgP < 0.05) : kept
-	const binBp = domainBinBp(Math.max(...opts.chromosomes.map(c => opts.lens[c] || 0)))
 	const scan: DmrScanSummary = {
 		chromosomes: opts.chromosomes,
 		totalProbesAnalyzed: payload.totalProbesAnalyzed,
@@ -78,12 +71,7 @@ export function dmrScanToRows(
 		...(widths.length ? { width: { median: q(0.5), q1: q(0.25), q3: q(0.75) } } : {}),
 		...(payload.globalMethylation ? { globalMethylation: payload.globalMethylation } : {}),
 		...(payload.regionMask ? { regionMask: payload.regionMask } : {}),
-		domainMap: {
-			binBp,
-			lens: opts.lens,
-			subject: opts.backgroundCorrection ? 'DMRs beating matched background (p < 0.05)' : 'all DMRs',
-			bins: domainBins(mapped, opts.chromosomes, opts.lens, binBp)
-		}
+		...(payload.resources ? { resources: payload.resources } : {})
 	}
 	if (payload.backgroundCorrection) {
 		const scored = kept.filter(d => d.bgP != null)

@@ -56,7 +56,7 @@ Features:
   nothing else in the class picker, so the analysis opens on the scan with no class control at all;
   defaultElementType may alternatively name 'dmr_scan' to open on the scan while keeping the classes.
   While the scan is selected the "Exclude sex chromosomes" and "Center Δβ on median" controls are
-  hidden too: the scan has its own chromosome picker and chrX is a track of its own on the map, and
+  hidden too: the scan has its own chromosome picker and chrX is its own stretch of the Manhattan plot, and
   the background correction is the scan's version of the centring question.
 - GSEA on a DMR scan ranks genes by gene-body methylation. A scan's rows are DMRs, not genes -- many
   per gene, none for half of them, and more for long genes simply because they are long -- so
@@ -77,17 +77,26 @@ Features:
   Above it a set is a compartment rather than a pathway, and blitzgsea's null fit is unstable
   there: on a 16,000-gene gene-body ranking it returned infinite scores for Reactome sets of 260 to
   500 genes. The existing control raises the cap when a reader wants the large sets.
-- A scan now draws a domain map: log2(hyper/hypo) DMRs per 5Mb bin, one track per chromosome
-  drawn to scale, so a genome scan renders as a 24-track genome figure and a single-chromosome
-  scan as one track with a coordinate axis. Bin width is chosen once from the longest chromosome
-  so a bar means the same number of megabases on every track -- binning each chromosome to a fixed
-  count would make chr21's bars six times finer than chr1's and the tracks incomparable. A ratio rather than a count, because DMR density tracks CpG and gene density and a
-  count map would mostly redraw where the CpGs are; both directions are called from the same
-  probes in each bin, so dividing cancels that. Bins holding fewer than 20 DMRs are drawn faded
-  rather than dropped, so "no data" stays distinguishable from "balanced". On MMRF chr1 this shows
-  what no table of 123,647 rows could: gains dominate nearly everywhere, yet hypomethylated
-  territories persist inside otherwise hypermethylated chromosomes. That compartmentalisation is
-  the reason to scan rather than drill a hit list.
+- A scan draws a Manhattan plot under the volcano: every kept DMR along the genome, chromosomes left
+  to right, hypermethylated DMRs above a zero line and hypomethylated below, height = -log10 of
+  the q the volcano plots (DMRcate's smoothed FDR; corrected, the p against matched background),
+  capped as GRIN2 caps it. It is the GRIN2 Manhattan component, whose PNG renderer now has a generic core
+  (renderManhattanPoints: any genome-positioned points with a signed y, capped on |y|, a predicate or
+  top-N rule for which dots are interactive) with GRIN2's renderManhattan a wrapper over it, and
+  whose client component takes a `custom` argument for the caller's tooltip, table, actions, labels
+  and legend. Every DMR is in the image; the 1,000 most significant in EACH direction are live --
+  ranked overall, hyper's stronger evidence on MMRF took every slot and hypo had none: hover
+  gives the volcano's rows for that DMR, click gives the volcano's dot menu -- the violin of that
+  region, and a genome browser opened on the DMR with the scan's own DMRs as a track (new
+  termdb/dmrScanTrack reads them back from the scan's cache one chromosome at a time, as in-memory
+  bedj items, so nothing is recomputed and the whole chromosome pans) beside the genes, the ENCODE
+  cCREs and the dataset's mutation track. For a scan this replaces the "DMR analysis" region view,
+  which re-fitted the chromosome to draw the same DMRs; the region view remains for element
+  classes, whose hits are not yet DMRs. The mass genome browser plot accepts launcher-supplied
+  tracks (config.tracks[]) for this. On MMRF NSD2 this shows what no table of 123,647 rows could: gains
+  dominate nearly everywhere, yet hypomethylated territories persist inside otherwise
+  hypermethylated chromosomes. Replaces the per-5Mb log2(hyper/hypo) domain map, which showed
+  direction but not evidence and could not be clicked through to one region.
 - The group colours chosen in the picker carry through to the DMR region view: the per-CpG dots,
   the LOESS fits and their CI bands, and the legend all use them, rather than the plot's own blue
   and orange. The reader has already learned which group is which from the picker swatches and the
@@ -95,18 +104,14 @@ Features:
   is now one shared helper, so the volcano's hit drill-down and the batch table's row click cannot
   drift apart -- and a group with no colour is omitted rather than replaced, where the drill-down
   previously substituted a hardcoded red/blue that overrode the plot's tuned defaults.
-- Hyper/hypo are drawn in the same two colours everywhere -- orange and blue, exported from the DMR
-  plot's settings so the genome map, the width histogram and the region view's DMR bars share one
+- Hyper/hypo are drawn in the same two colours everywhere -- orange and blue, defined once in
+  shared/utils so the server-rendered Manhattan and the region view's DMR bars share one
   definition. The map previously used orange/green, which put green on "hypomethylated" in one
   figure and on a sample GROUP in another once picker colours were carried into the region view.
   Direction is now orange/blue; group colours come from the picker and are free to be anything.
-- The genome map gains a vertical scale: dashed guides at the clamp on every track, labelled once
-  on the first. "Clamped at 8x" in the footnote says what full height means but not where it is, so
-  a reader could not tell a 2x territory from a 6x one.
-- Scan results are navigable, not just descriptive. Clicking a bin in the genome map opens that 5Mb
-  span in the DMR region view -- per-CpG group means, LOESS fits, significant CpGs, the called DMR
-  spans and the gene models, all on one axis -- and a DMR's dot menu opens the DMR itself there, as
-  it does for any element. A bare browser showed cCREs and genes with the thing being explained
+- Scan results are navigable, not just descriptive. A DMR's dot menu, on the volcano or on the
+  Manhattan plot, opens the DMR in the region view -- per-CpG group means, LOESS fits, significant
+  CpGs, the called DMR spans and the gene models, all on one axis -- as it does for any element. A bare browser showed cCREs and genes with the thing being explained
   absent from the screen, which is no context at all. hg38 now declares an ENCODE cCRE track
   coloured in SCREEN's own colours, available from the Tracks menu on any block and switched on by
   the region view, which is where element classes belong: there are 1,063,878 cCREs genome-wide,
@@ -173,8 +178,8 @@ Features:
   corrected, it is a region that moved MORE than a comparable region drifts -- so it is opt-in. With
   it on, the y axis is the empirical p against matched background, the table gains an "Excess Δβ"
   column, DMRs whose stratum held too little background to score are counted in Statistics but
-  not plotted, and the genome map is redrawn over the DMRs that beat background rather than every
-  call -- the map's title says which. On MMRF NSD2-high the uncorrected map is orange nearly
+  not plotted, and the Manhattan plot's heights become the background p, so what stands out is
+  what moved more than drift. On MMRF NSD2-high the uncorrected picture is orange nearly
   everywhere and the corrected one turns over. Roughly doubles the scan.
 - termdb/dmrBatch gains an opt-in matched-background correction. A scan tests every region's
   delta-beta against ZERO, which asks "did this region change?" -- and on a cohort whose genome is
@@ -243,10 +248,19 @@ Features:
   independent of the regions requested). Shown in the scan's Statistics rows, because part of every
   region's difference is that shift rather than anything local.
 
+- Every scan reports what it cost. The dmrcate binary reports CPU seconds and its thread count
+  (one: it is single-threaded, the parallelism is the server's worker pool) beside the peak memory
+  it already measured; termdb/dmrBatch keeps one row per worker invocation and aggregates peak
+  memory per worker, the most the pool held at once, worker CPU time, wall time, and the Node
+  process's own resident growth and CPU. Stored with the cached result, so a cached answer reports
+  the run that produced it; shown as "Compute" rows in the scan's Statistics and as `resources`
+  in the response. Measured on MMRF NSD2 (255 vs 110): 42s and under 500MB per worker uncorrected,
+  77s corrected, about 1.8GB for the whole server at peak with the default two workers.
+- A dnaMethylation term on a chromosome with a CpG shard reads the region's own CpGs from it rather
+  than the mean of overlapping cCREs, so the violin a scan's DMR opens is the DMR's methylation per
+  sample -- a DMR overlapping no cCRE previously had no violin at all.
+
 Fixes:
-- Clicking a bin in the genome map now opens the region view. A 5Mb bin plus the region view's 2kb
-  padding on each side was 5.004Mb, just over the view's 5Mb cap, and the scan's pseudo element type
-  was being handed to the server as a matrix name; bins now open unpadded and name no matrix.
 - The DMR region view's errors are now visible. It caught its own errors and wrote them into
   dom.error, which the rx update loop hides and empties before every main(), so a failed region
   showed an empty sandbox with no message; the "Zoom in to see per-CpG dots" note lived in the same

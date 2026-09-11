@@ -1,12 +1,8 @@
 import type { DMRSettings } from './Settings.ts'
 
-/* The colours that mean DIRECTION, exported so every view encoding hyper/hypo uses the same two.
-The genome domain map and the scan's width histogram used a separate orange/green pair, which put
-green on "hypomethylated" in one figure and on a sample GROUP in another once group colours were
-carried into the region view. Direction is orange/blue everywhere; group colours come from the
-picker and are free to be anything. */
-export const HYPER_COLOR = '#e66101'
-export const HYPO_COLOR = '#5e81f4'
+// direction colours are shared with the server-rendered scan Manhattan
+export { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
+import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 
 export function getDefaultDMRSettings(opts: any): DMRSettings {
 	const overrides = opts.settings || {}

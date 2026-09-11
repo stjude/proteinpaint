@@ -1,4 +1,4 @@
-import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest } from '#types'
+import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, DmrScanSummary } from '#types'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { runDmrBatch } from '#src/routes/termdb.dmrBatch.ts'
 import { dmrScanToRows } from '#src/utils/dmrScanRows.ts'
@@ -7,6 +7,8 @@ import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { formatElapsedTime } from '#shared'
 import { renderVolcano } from '../src/renderVolcano.ts'
+import { renderManhattanPoints } from '../src/renderManhattan.ts'
+import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import {
 	buildGroupValues,
@@ -66,7 +68,14 @@ export function init({ genomes }) {
 				sample_size1: result.sample_size1,
 				sample_size2: result.sample_size2
 			}
-			if (result.scan) output.scan = result.scan
+			if (result.scan) {
+				output.scan = result.scan
+				output.scan.manhattan = await renderScanManhattan(
+					result.promoterRows,
+					genomes[q.genome],
+					q.volcanoRender?.devicePixelRatio
+				)
+			}
 			res.send(output)
 		} catch (e: any) {
 			res.status(e.status || 500).send({ status: 'error', error: e.message || e, code: e.code })
@@ -215,19 +224,75 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	)
 	const { eligible } = resolveMethylationMatrix(ds, chromosomes[0], undefined)
 	const { group1, group2 } = await resolveGroupNames(groups[0].values, groups[1].values, eligible, ds)
-	const lens: Record<string, number> = {}
-	for (const c of chromosomes) lens[c] = genome.majorchr[c]
 	const { rows, scan } = dmrScanToRows(payload, {
 		chromosomes,
-		lens,
 		minCpgs: req.scan?.minCpgs,
 		backgroundCorrection: !!req.scan?.backgroundCorrection
 	})
 	scan.matchedSamplelst = await matchedSamplelst(req.samplelst, eligible, ds)
+	scan.cacheId = cacheId
 	return {
 		result: { promoterRows: rows, sample_size1: group1.length, sample_size2: group2.length, scan },
 		cacheId
 	}
+}
+
+/** How many of the scan's DMRs the client can hover and click, most significant first, in EACH
+ * direction: hyper carries the larger evidence on MMRF and would otherwise take every slot. Every
+ * DMR is in the PNG; only these carry pixel coordinates. */
+const SCAN_MANHATTAN_INTERACTIVE = 1000
+
+/* Where the DMRs are, along the whole genome: hyper above the line, hypo below, height = evidence,
+-log10 of the q the volcano plots (DMRcate's smoothed FDR, or corrected the empirical p against
+matched background), capped as GRIN2 caps it so a few extreme regions do not flatten the rest.
+Drawn from EVERY kept row rather than the volcano's capped dots, which would draw the wrong picture
+of 120,000 regions. Fixed size rather than the volcano's, because this figure is read as a strip
+under the volcano at whatever width the volcano has. */
+async function renderScanManhattan(
+	rows: DiffMethEntry[],
+	genome: any,
+	devicePixelRatio?: number
+): Promise<NonNullable<DmrScanSummary['manhattan']>> {
+	const chrSizes: Record<string, number> = {}
+	for (const c of genome.majorchrorder as string[]) if (c != 'chrM' && c != 'chrMT') chrSizes[c] = genome.majorchr[c]
+	const points = rows.map(r => {
+		const p = r.original_p_value
+		// a q of 0 is the most significant thing there is and is parked at the cap
+		const mag = p > 0 ? -Math.log10(p) : Infinity
+		return {
+			chrom: r.chr,
+			pos: r.start,
+			y: r.delta_beta < 0 ? -mag : mag,
+			color: r.delta_beta < 0 ? HYPO_COLOR : HYPER_COLOR,
+			start: r.start,
+			stop: r.stop,
+			delta_beta: r.delta_beta,
+			fold_change: r.fold_change,
+			p,
+			no_cpgs: r.no_cpgs,
+			gene_name: r.gene_name,
+			...(r.excess != null ? { excess: r.excess } : {})
+		}
+	})
+	const plotWidth = 1000
+	const plotHeight = 300
+	const { png, plot_data } = await renderManhattanPoints({
+		points,
+		chrSizes,
+		plotWidth,
+		plotHeight,
+		devicePixelRatio: devicePixelRatio || 1,
+		pngDotRadius: 2,
+		// the GRIN2 defaults: raise the cap only when more than 5 dots would sit on it
+		maxCappedPoints: 5,
+		hardCap: 200,
+		binSize: 10,
+		interactive: SCAN_MANHATTAN_INTERACTIVE,
+		signed: true,
+		// open circles, as the volcano above draws the same DMRs
+		hollow: true
+	})
+	return { png, plotData: plot_data, interactive: SCAN_MANHATTAN_INTERACTIVE, plotWidth, plotHeight }
 }
 
 type DiffMethInput = {
