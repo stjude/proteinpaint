@@ -307,6 +307,7 @@ export function setSamplesBtn(self: MatrixControls, s: any) {
 
 	self.opts.holder
 		.append('button')
+		.attr('data-testid', 'sjpp-matrix-samples-button')
 		//.property('disabled', d => d.disabled)
 		.datum({
 			label: l.Samples || `Samples`,
