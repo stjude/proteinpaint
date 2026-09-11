@@ -1,12 +1,13 @@
 import tape from 'tape'
-import { dmrScanToRows, summarizeProfile } from '#src/utils/dmrScanRows.ts'
+import { dmrScanToRows, summarizeProfile, coarsenProfile } from '#src/utils/dmrScanRows.ts'
 
 /*
 test sections:
 
-uncorrected: CpG floor, one p per row, direction split, widths
-corrected: unscored DMRs leave the rows but stay counted; gene-body loss set gates on body+direction+p
+uncorrected: CpG floor, one p per row, direction split, widths, gene-body loss set
+corrected: unscored DMRs leave the rows but stay counted; the correction adds a p gate to the set
 summarizeProfile: quantiles and moved-fraction of the genome-wide binned profile
+coarsenProfile: probe-weighted re-binning for display
 */
 
 /** The scan reaches the volcano only through this mapping, so a mistake here is a wrong figure
@@ -49,7 +50,15 @@ tape('uncorrected scan: CpG floor, one p per row, summary counts', t => {
 		dmr({ start: 0, stop: 500, no_cpgs: 2 }), // below the floor
 		dmr({ start: 1000, stop: 2000, genes: ['A', 'B'] }),
 		dmr({ start: 10_000_000, stop: 10_005_000 }),
-		dmr({ start: 15_000_000, stop: 15_003_000, meandiff: -0.1, maxdiff: -0.2, direction: 'hypo' })
+		dmr({
+			start: 15_000_000,
+			stop: 15_003_000,
+			meandiff: -0.1,
+			maxdiff: -0.2,
+			direction: 'hypo',
+			inGeneBody: true,
+			genes: ['LOSS']
+		})
 	])
 	const { rows, scan } = dmrScanToRows(p, opts)
 	t.equal(scan.called, 4, 'every called DMR is counted')
@@ -81,7 +90,20 @@ tape('uncorrected scan: CpG floor, one p per row, summary counts', t => {
 		'and one with them passes them through to the panel'
 	)
 	t.equal(scan.backgroundCorrection, undefined, 'no correction block without the correction')
-	t.equal(scan.geneBodyLoss, undefined, 'and no gene set')
+	/* The gene-body loss set does not depend on the correction: without one, a DMR's own smoothed
+	FDR is the evidence, and the expression test is offered on that. Gating it on the correction
+	made the uncorrected scan the only reading you could not follow up. */
+	t.deepEqual(
+		scan.geneBodyLoss,
+		{ regions: 1, genes: ['LOSS'] },
+		'the gene set comes from the hypo, in-body DMR with no background p'
+	)
+	t.equal(
+		dmrScanToRows(payload([dmr({ direction: 'hypo', inGeneBody: false, genes: ['PROMOTER_ONLY'] })]), opts).scan
+			.geneBodyLoss,
+		undefined,
+		'and is omitted rather than reported as empty when nothing qualifies'
+	)
 	t.end()
 })
 
@@ -152,5 +174,45 @@ tape('summarizeProfile reports how much of the measured methylome moved', t => {
 	t.ok(Math.abs(pf.fractionBeyond05 - 4 / 9) < 1e-9, 'and so is |delta| > 0.05')
 	t.ok(Math.abs(pf.fractionHyper - 4 / 9) < 1e-9, 'a bin at exactly zero is not counted as hyper')
 	t.equal(summarizeProfile({ binBp: 100000, bins: [] }), undefined, 'no bins is no summary, not a zero')
+	t.end()
+})
+
+tape('coarsenProfile averages bins for display, weighted by the probes under them', t => {
+	/* The figure is unreadable at the native width (29,000 dots over 1,000 px), so a reader can
+	draw it coarser. The averaging has to be probe-weighted: a bin resting on 3 CpGs and one resting
+	on 3,000 are not two equal measurements, and a plain mean of bin means would let a sparse bin at
+	a centromere edge pull a megabase's value around. */
+	const bm = {
+		binBp: 100_000,
+		// two bins in the same 1 Mb, wildly different probe counts
+		bins: [
+			{ chr: 'chr1', start: 0, n_probes: 100, control: 0.8, case: 0.9 },
+			{ chr: 'chr1', start: 100_000, n_probes: 900, control: 0.4, case: 0.4 },
+			// a third in the NEXT megabase, and one on another chromosome at the same offset
+			{ chr: 'chr1', start: 1_000_000, n_probes: 10, control: 0.5, case: 0.7 },
+			{ chr: 'chr2', start: 0, n_probes: 50, control: 0.2, case: 0.3 }
+		]
+	}
+	const wide = coarsenProfile(bm, 1_000_000)
+	t.equal(wide.binBp, 1_000_000, 'the reported width is the one drawn')
+	t.equal(wide.bins.length, 3, 'bins merge within a chromosome and a window, never across either')
+	const first = wide.bins[0]
+	t.equal(first.n_probes, 1000, 'probe counts add')
+	t.equal(first.control, (0.8 * 100 + 0.4 * 900) / 1000, 'control is the probe-weighted mean, not the bin mean')
+	t.equal(first.case, (0.9 * 100 + 0.4 * 900) / 1000, 'and so is case')
+	t.notEqual(first.control, 0.6, 'a plain mean of the two bin means would have said 0.6')
+	t.deepEqual(
+		wide.bins.map(b => `${b.chr}:${b.start}`),
+		['chr1:0', 'chr1:1000000', 'chr2:0'],
+		'each wide bin is keyed by chromosome and window start'
+	)
+	/* The native width and anything at or below it must pass through untouched -- the default asks
+	for exactly the width the bins are already at, and that must not re-bin or re-average. */
+	t.equal(coarsenProfile(bm, 100_000), bm, 'the native width returns the same object')
+	t.equal(coarsenProfile(bm, 50_000), bm, 'so does a narrower request: there is nothing to split')
+	t.equal(coarsenProfile(bm, undefined), bm, 'and an absent width')
+	t.equal(coarsenProfile(bm, NaN), bm, 'and a nonsense one')
+	// bounded, so a hostile width cannot ask for one dot per genome
+	t.equal(coarsenProfile(bm, 1e12).binBp, 100_000 * 100, 'the factor is capped at 100x the native width')
 	t.end()
 })

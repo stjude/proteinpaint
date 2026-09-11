@@ -9,9 +9,11 @@ import { formatElapsedTime } from '#shared'
 
 Gene-body methylation tracks transcription, so a scan finding methylation loss concentrated in
 gene bodies predicts those genes are expressed lower in the same patients. This route runs that
-test: it takes the gene set from a background-corrected scan, runs differential expression on the
-SAME two groups through the existing DE machinery (cached, so a repeat is free), and compares hit
-genes to non-hit genes within length strata.
+test: it takes the gene set the scan reports, runs differential expression on the SAME two groups
+through the existing DE machinery (cached, so a repeat is free), and compares hit genes to non-hit
+genes within length strata. The set is the scan's hypomethylated gene-body DMRs, narrowed to those
+beating matched background when the correction ran; this route does not care which, it tests the
+set it is given.
 
 Length control is not optional. The most frequently hit genes on this cohort -- VPS13B, LRBA,
 ZBTB20, CNTNAP2 -- are all 1-2Mb, because a long gene collects more DMRs simply by being long, and

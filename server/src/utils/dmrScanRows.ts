@@ -83,19 +83,72 @@ export function dmrScanToRows(
 			unscored: kept.length - scored.length,
 			significant: scored.filter(d => d.bgP! < 0.05).length
 		}
-		/* Gene-body loss set: hypomethylated, in a gene body (span with 2kb trimmed off both ends),
-		beating background. A region clipping only a promoter relates to transcription the other
-		way round, so inGeneBody rather than gene overlap is the gate. */
-		const genes = new Set<string>()
-		let regions = 0
-		for (const d of scored) {
-			if (d.direction != 'hypo' || !d.inGeneBody || d.bgP! >= 0.05) continue
-			regions++
-			for (const g of d.genes || []) genes.add(g)
-		}
-		scan.geneBodyLoss = { regions, genes: [...genes] }
 	}
+	/* Gene-body loss set: hypomethylated, in a gene body (span with 2kb trimmed off both ends). A
+	region clipping only a promoter relates to transcription the other way round, so inGeneBody
+	rather than gene overlap is the gate.
+
+	The background p is one more filter when there is one, not a precondition for asking the
+	question: a DMR's own smoothed FDR is evidence that the region moved, and whether the genes it
+	sits in are expressed lower is answerable either way. The corrected set is the stricter reading
+	-- it drops regions that moved no more than their stratum drifts -- and on a cohort with a
+	genome-wide shift the two sets differ a lot, which is a result to compare rather than a reason
+	to offer only one. */
+	const genes = new Set<string>()
+	let regions = 0
+	for (const d of kept) {
+		if (d.direction != 'hypo' || !d.inGeneBody) continue
+		if (payload.backgroundCorrection && !(d.bgP != null && d.bgP < 0.05)) continue
+		regions++
+		for (const g of d.genes || []) genes.add(g)
+	}
+	// omitted rather than reported as "0 -> 0": nothing to run the expression test on
+	if (regions) scan.geneBodyLoss = { regions, genes: [...genes] }
 	return { rows, scan }
+}
+
+/** Ceiling on the coarsening factor, so a hostile or mistyped bin width cannot ask for one dot
+ * per genome. 100 is 10 Mb at the native 100 kb, already coarser than anything readable. */
+const MAX_PROFILE_COARSEN = 100
+
+/* Coarsen the profile for display: several base bins averaged into one, weighted by the probes
+each rests on, so a bin resting on 3 CpGs does not count as much as one resting on 3,000.
+
+Display only. The metric the literature compares methylomes with is the 100 kb bin (Zhou 2018) and
+the summary rows stay on it; this exists because 29,000 dots over 1,000 px of plot overlap however
+small the dot is, so the shape of the shift is hidden inside a band. Applied at render time, after
+the cache, so switching widths redraws a scan rather than refitting one. */
+export function coarsenProfile(
+	bm: NonNullable<DmrScanSummary['binMethylation']>,
+	binBp: number | undefined
+): NonNullable<DmrScanSummary['binMethylation']> {
+	const factor = Math.round((Number(binBp) || 0) / bm.binBp)
+	// the native width, anything narrower, or nonsense: leave the bins as they are
+	if (!Number.isFinite(factor) || factor < 2) return bm
+	const wide = bm.binBp * Math.min(factor, MAX_PROFILE_COARSEN)
+	const acc = new Map<string, { chr: string; start: number; probes: number; control: number; case: number }>()
+	for (const b of bm.bins) {
+		const start = Math.floor(b.start / wide) * wide
+		const id = `${b.chr}:${start}`
+		let a = acc.get(id)
+		if (!a) acc.set(id, (a = { chr: b.chr, start, probes: 0, control: 0, case: 0 }))
+		a.probes += b.n_probes
+		a.control += b.control * b.n_probes
+		a.case += b.case * b.n_probes
+	}
+	return {
+		binBp: wide,
+		bins: [...acc.values()]
+			// a wide bin with no probes under it is not a measurement; the base bins never are
+			.filter(a => a.probes > 0)
+			.map(a => ({
+				chr: a.chr,
+				start: a.start,
+				n_probes: a.probes,
+				control: a.control / a.probes,
+				case: a.case / a.probes
+			}))
+	}
 }
 
 /* How much of the measured methylome moved, and by how much. Reported beside the DMR counts

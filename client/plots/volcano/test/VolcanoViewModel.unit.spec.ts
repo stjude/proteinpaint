@@ -527,7 +527,8 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 		{ ...mockConfig, termType: 'dnaMethylation' } as any,
 		{
 			...mockResponse,
-			scan: { ...scan, backgroundCorrection: undefined, geneBodyLoss: undefined },
+			// the gene set stays: it no longer depends on the correction, only its label does
+			scan: { ...scan, backgroundCorrection: undefined },
 			data: { ...mockResponse.data, dots: [scanDot] as any }
 		} as any,
 		{ ...settings, backgroundCorrection: false } as any
@@ -538,6 +539,12 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 		'and there is no excess column'
 	)
 	test.equal(plain.pValueTable.rows[0].length, plain.pValueTable.columns.length, 'cells still match columns')
+	/* The expression follow-up runs on an uncorrected scan too, so the row must not claim a
+	background gate that was never applied. */
+	test.ok(
+		plain.viewData.statsData.some(d => d.label == 'Gene-body loss regions → genes'),
+		'the gene-body set is reported without the background wording'
+	)
 
 	test.end()
 })

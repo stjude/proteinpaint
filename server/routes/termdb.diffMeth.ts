@@ -1,7 +1,7 @@
 import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, DmrScanSummary } from '#types'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { runDmrBatch } from '#src/routes/termdb.dmrBatch.ts'
-import { dmrScanToRows, summarizeProfile } from '#src/utils/dmrScanRows.ts'
+import { dmrScanToRows, summarizeProfile, coarsenProfile } from '#src/utils/dmrScanRows.ts'
 import { resolveGroupNames, matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
 import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
@@ -75,7 +75,9 @@ export function init({ genomes }) {
 					output.scan.profile = await renderMethylationProfile(
 						result.scan,
 						genomes[q.genome],
-						q.volcanoRender?.devicePixelRatio
+						q.volcanoRender?.devicePixelRatio,
+						// display width only; the summary rows above stay on the native 100 kb bin
+						q.scan?.profileBinBp
 					)
 					/* The bins themselves are not sent: ~30,000 rows the client would only re-derive
 					the picture and the summary from, both of which are already in the response. */
@@ -263,10 +265,11 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	}
 }
 
-/** How many of the scan's DMRs the client can hover and click, most significant first, in EACH
- * direction: hyper carries the larger evidence on MMRF and would otherwise take every slot. Every
- * DMR is in the PNG; only these carry pixel coordinates. */
-const SCAN_MANHATTAN_INTERACTIVE = 1000
+/** How many dots the client can hover and click in EACH direction, on both genome-wide figures:
+ * DMRs ranked by evidence, profile bins by |Δβ|. Per direction rather than overall because hyper
+ * carries the larger evidence on MMRF and would otherwise take every slot. Everything is in the
+ * PNG; only these carry pixel coordinates. */
+const SCAN_INTERACTIVE_PER_SIDE = 1000
 
 /* Where the DMRs are, along the whole genome: hyper above the line, hypo below, height = evidence,
 -log10 of the q the volcano plots (DMRcate's smoothed FDR, or corrected the empirical p against
@@ -313,12 +316,12 @@ async function renderScanManhattan(
 		maxCappedPoints: 5,
 		hardCap: 200,
 		binSize: 10,
-		interactive: SCAN_MANHATTAN_INTERACTIVE,
+		interactive: SCAN_INTERACTIVE_PER_SIDE,
 		signed: true,
 		// open circles, as the volcano above draws the same DMRs
 		hollow: true
 	})
-	return { png, plotData: plot_data, interactive: SCAN_MANHATTAN_INTERACTIVE, plotWidth, plotHeight }
+	return { png, plotData: plot_data, interactive: SCAN_INTERACTIVE_PER_SIDE, plotWidth, plotHeight }
 }
 
 /* The genome-wide methylation profile: mean beta per group in 100 kb bins, drawn as the per-bin
@@ -328,17 +331,23 @@ moved, and where, INCLUDING the parts where nothing was called. A DMR plot shows
 that passed a threshold, so a genome that shifted everywhere by a little and a genome that shifted
 nowhere both look like sparse dots; this shows the difference between them.
 
-Every bin with a probe is a dot, none are interactive (a bin is not a result to act on, and the
-DMRs above it are), and the axis is uncapped because a beta difference is bounded. */
+Every bin with a probe is a dot and the axis is uncapped, because a beta difference is bounded.
+The largest per direction are interactive: a band of 29,000 dots says nothing on its own, and a
+reader points at what stands out to ask what it is. */
 function renderMethylationProfile(
 	scan: DmrScanSummary,
 	genome: any,
-	devicePixelRatio?: number
+	devicePixelRatio?: number,
+	profileBinBp?: number
 ): Promise<NonNullable<DmrScanSummary['profile']>> | undefined {
-	const bm = scan.binMethylation
-	if (!bm?.bins.length) return undefined
+	if (!scan.binMethylation?.bins.length) return undefined
+	// the reader's chosen display width, or the native one; see coarsenProfile
+	const bm = coarsenProfile(scan.binMethylation, profileBinBp)
 	const chrSizes: Record<string, number> = {}
 	for (const c of genome.majorchrorder as string[]) if (c != 'chrM' && c != 'chrMT') chrSizes[c] = genome.majorchr[c]
+	/* Only what the tooltip cannot derive: the bin's span is binBp from its pos, and with capping
+	off the plotted y IS the difference. 2,000 interactive bins carry these, so a field that can be
+	recomputed on the client is payload for nothing. */
 	const points = bm.bins.map(b => {
 		const d = b.case - b.control
 		return {
@@ -346,9 +355,6 @@ function renderMethylationProfile(
 			pos: b.start,
 			y: d,
 			color: d < 0 ? HYPO_COLOR : HYPER_COLOR,
-			start: b.start,
-			stop: b.start + bm.binBp,
-			delta: d,
 			control: b.control,
 			case: b.case,
 			n_probes: b.n_probes
@@ -356,22 +362,35 @@ function renderMethylationProfile(
 	})
 	const plotWidth = 1000
 	const plotHeight = 160
+	// 1 px: at 100 kb there are ~30,000 bins, and a 2 px dot makes the genome one solid band
+	const dotRadius = 1
 	return renderManhattanPoints({
 		points,
 		chrSizes,
 		plotWidth,
 		plotHeight,
 		devicePixelRatio: devicePixelRatio || 1,
-		// 1 px: at 100 kb there are ~30,000 bins, and a 2 px dot makes the genome one solid band
-		pngDotRadius: 1,
+		pngDotRadius: dotRadius,
 		maxCappedPoints: 5,
 		hardCap: 200,
 		binSize: 10,
-		// a bin is context, not a result: nothing here is hoverable
-		interactive: 0,
+		/* The bins that moved most, each way. Ranking is |y| = |Δβ| here rather than evidence: on
+		this figure the effect size IS the result, and the bins a reader wants to identify are the
+		excursions away from the zero line. */
+		interactive: SCAN_INTERACTIVE_PER_SIDE,
 		signed: true,
 		capping: false
-	}).then(({ png, plot_data }) => ({ png, plotData: plot_data, binBp: bm.binBp, plotWidth, plotHeight }))
+	}).then(({ png, plot_data }) => ({
+		png,
+		plotData: plot_data,
+		binBp: bm.binBp,
+		plotWidth,
+		plotHeight,
+		dotRadius,
+		bins: bm.bins.length,
+		// what the top-N-per-side rule actually left live, which at a coarse width is every bin
+		interactive: plot_data.points.length
+	}))
 }
 
 type DiffMethInput = {

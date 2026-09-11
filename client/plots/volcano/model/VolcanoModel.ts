@@ -112,7 +112,8 @@ export class VolcanoModel {
 						scan: {
 							...(this.settings.scanChromosome ? { chromosome: this.settings.scanChromosome } : {}),
 							backgroundCorrection: !!this.settings.backgroundCorrection,
-							minCpgs: this.settings.minCpgs
+							minCpgs: this.settings.minCpgs,
+							profileBinBp: this.settings.profileBinBp
 						}
 				  }
 				: {}),

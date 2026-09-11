@@ -74,6 +74,10 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	backgroundCorrection: boolean
 	/** DMR scan only: drop DMRs called from fewer CpGs than this. */
 	minCpgs: number
+	/** DMR scan only: the width, in bp, the methylome-wide profile's bins are DRAWN at. The metric
+	 * is computed at 100 kb and the statistics stay there; several bins are averaged into one dot
+	 * for display, because at 100 kb the dots overlap. A dropdown holds this as a string. */
+	profileBinBp: number
 }
 
 export type SCCTVolcanoSettings = DefaultVolcanoSettings & {}

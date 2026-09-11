@@ -603,7 +603,10 @@ export class VolcanoViewModel {
 		}
 		if (s.geneBodyLoss)
 			rows.push({
-				label: 'Gene-body loss regions beating background → genes',
+				// the correction adds the background gate, so the label must say which set this is
+				label: s.backgroundCorrection
+					? 'Gene-body loss regions beating background → genes'
+					: 'Gene-body loss regions → genes',
 				value: `${s.geneBodyLoss.regions.toLocaleString()} → ${s.geneBodyLoss.genes.length.toLocaleString()}`
 			})
 		/* How much of the measured methylome moved. Sits beside the DMR counts because the two say

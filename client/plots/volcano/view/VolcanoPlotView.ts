@@ -10,6 +10,7 @@ import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { plotManhattan, manhattanLayoutDefaults } from '#plots/manhattan/manhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { geneBodyLossTest } from '../interactions/geneBodyLossDE'
+import { bplen } from '#shared/common.js'
 
 export class VolcanoPlotView {
 	dom: VolcanoDom
@@ -110,9 +111,10 @@ export class VolcanoPlotView {
 			},
 			{ whenOpen: 'Hide statistics' }
 		)
-		/* The expression test on the genes under gene-body loss regions that beat background. Only a
-		corrected scan offers it: on every called region the question would be whether the
-		proliferation odometer changes transcription. */
+		/* The expression test on the genes under gene-body loss regions. Offered on either reading:
+		the correction narrows the set to regions that moved more than their stratum drifts, and
+		without it the DMR's own smoothed FDR is the evidence -- both are answerable questions, and
+		gating the button on the correction made the uncorrected scan a dead end. */
 		const gb = this.viewData.scan?.geneBodyLoss
 		if (gb?.genes.length) {
 			this.addActionButton(
@@ -472,15 +474,20 @@ export class VolcanoPlotView {
 				getRowKey: d => `${d.chrom}:${d.start}-${d.stop}`
 			}
 		)
-		this.renderMethylationProfile(g2)
+		this.renderMethylationProfile(this.viewData.scan!.matchedSamplelst?.groups?.[0]?.name || 'control group', g2)
 	}
 
 	/* The genome-wide methylation profile, under the DMR plot: mean beta per group in 100 kb bins,
 	drawn as the per-bin difference. The DMR plot above shows the regions that passed a threshold;
 	this shows every bin that was measured, which is what says whether the methylome shifted a
-	little everywhere or a lot in a few places. Same component, no interactive dots -- a bin is
-	context, and the DMR above it is the thing to click. */
-	private renderMethylationProfile(caseName: string) {
+	little everywhere or a lot in a few places.
+
+	Same component and the same hover/click layer as the DMR plot, on the bins that moved most in
+	each direction: 29,000 dots in a band cannot be read by eye, so a dot has to be able to say
+	which 100 kb it is, what each group's mean beta there was, and how many CpGs that rests on.
+	Clicking opens the browser on the bin -- the question a standout bin raises is which of the
+	scan's DMRs are inside it, and that is the view that answers it. */
+	private renderMethylationProfile(controlName: string, caseName: string) {
 		const profile = this.viewData.scan?.profile
 		if (!profile) return
 		const div = this.dom.holder
@@ -492,6 +499,9 @@ export class VolcanoPlotView {
 			legend this one does not have. The two figures share one x axis and are read together,
 			so a gap the height of the profile itself reads as two unrelated pictures. */
 			.style('margin-top', '-70px')
+		// the bin's own span, from the start the point carries and the fixed bin width
+		const region = (d: any) => ({ chr: d.chrom, start: d.pos, stop: d.pos + profile.binBp })
+		const label = (d: any) => `${d.chrom}:${(d.pos + 1).toLocaleString()}-${(d.pos + profile.binBp).toLocaleString()}`
 		plotManhattan(
 			div,
 			{ png: profile.png, plotData: profile.plotData },
@@ -499,14 +509,51 @@ export class VolcanoPlotView {
 				...manhattanLayoutDefaults,
 				plotWidth: profile.plotWidth,
 				plotHeight: profile.plotHeight,
-				showInteractiveDots: false,
+				/* The radius the PNG was drawn at, not the shared default of 2: the hover layer is
+				placed in the PNG's own pixel space, and a 1 px mismatch in the padding stretches
+				the image against the dot coordinates the server computed. */
+				pngDotRadius: profile.dotRadius,
+				// the server already picked N per direction; the client must not re-cap by |y|
+				interactiveDotsCap: profile.plotData.points.length,
+				/* More rows than the volcano's 5. At 100 kb there are ~29,000 bins over 1,000 px, so
+				a cursor covers a median of 7 live bins on MMRF however tight the hit radius -- the
+				dots genuinely overlap at this scale. 8 shows the whole neighbourhood on a typical
+				hover instead of 5 of it. */
+				maxTooltipGenes: 8,
 				showLegend: false,
 				showDownload: false
 			},
 			undefined,
 			{
-				title: `Methylome-wide profile: mean Δβ per ${(profile.binBp / 1000).toFixed(0)} kb bin in ${caseName}`,
-				yAxisLabel: 'Δβ per bin'
+				/* The width drawn, not the width requested: the server reports back what it binned at,
+				and a reader quoting the figure needs the two to agree. The interactive count is the
+				live dot count rather than the per-direction rule, because at a coarse width the rule
+				reaches every bin and "top 1,000 per direction" would read as a restriction. */
+				title:
+					`Methylome-wide profile: mean Δβ per ${bplen(profile.binBp)} bin in ${caseName} ` +
+					`(${profile.interactive.toLocaleString()} of ${profile.bins.toLocaleString()} bins interactive)`,
+				yAxisLabel: 'Δβ per bin',
+				itemNoun: 'bin',
+				renderSingleHoverTooltip: (d, container) => {
+					const table = table2col({ holder: container.append('table') })
+					addTooltipRow(table, 'Region', label(d))
+					// with capping off, the plotted y is the difference itself
+					addTooltipRow(table, 'Δβ', roundValueAuto(d.y))
+					addTooltipRow(table, `Mean β, ${controlName}`, roundValueAuto(d.control))
+					addTooltipRow(table, `Mean β, ${caseName}`, roundValueAuto(d.case))
+					addTooltipRow(table, 'CpGs measured', d.n_probes.toLocaleString())
+				},
+				buildMultiHitTableData: dots => ({
+					columns: [{ label: 'Region' }, { label: 'Δβ', sortable: true }, { label: 'CpGs', sortable: true }],
+					rows: dots.map(d => [{ value: label(d) }, { value: roundValueAuto(d.y) }, { value: d.n_probes }])
+				}),
+				getActions: d => [
+					{
+						label: 'Genome browser',
+						onClick: async () => await this.interactions.launchScanGenomeBrowser(region(d), this.viewData.scan!)
+					}
+				],
+				getRowKey: d => label(d)
 			}
 		)
 	}

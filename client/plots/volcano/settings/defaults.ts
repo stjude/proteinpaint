@@ -85,6 +85,9 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	defaults.scanChromosome = ''
 	defaults.backgroundCorrection = false
 	defaults.minCpgs = 5
+	/* The native width, so the figure opens as the metric is defined (Zhou 2018, 100 kb bins) and a
+	coarser view is something the reader asks for. */
+	defaults.profileBinBp = 100_000
 }
 
 /*********** Setting Validation Functions ***********

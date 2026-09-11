@@ -187,5 +187,14 @@ tape('renderManhattanPoints: capping off draws a bounded y in full, and rank pic
 		['small-strong', 'hypo-strong'],
 		'the live dot per side is the best supported, not the largest'
 	)
+	/* Uncapped, an interactive point's y is the datum, not a clamped drawing coordinate. The
+	methylome profile's tooltip reads delta-beta straight off it and the route sends no separate
+	copy of the value; under capping that shortcut would report the cap. */
+	const byId = Object.fromEntries(points.map(p => [p.id, p.y]))
+	test.deepEqual(
+		r.plot_data.points.map(p => p.y),
+		r.plot_data.points.map(p => byId[p.id as string]),
+		'the returned y is the input y, so a tooltip can read the effect size off it'
+	)
 	test.end()
 })

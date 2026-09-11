@@ -289,6 +289,26 @@ export class VolcanoControlInputs {
 					'Drop DMRs called from fewer CpGs. Two-CpG calls carry the largest effect sizes and no direction (51.5% hyper on MMRF chr1, a coin flip, against 58% for 10+ CpG calls), so a Δβ-sorted table would lead with the rows that mean least. Applied to the cached scan, so changing it redraws rather than refits.'
 			},
 			{
+				/* Display width for the methylome-wide profile only. The metric is the 100 kb bin and
+				the Statistics rows stay on it whatever this says -- this is here because 29,000 dots
+				over 1,000 px overlap however small the dot, so the native figure reads as a band. */
+				label: 'Profile bin width',
+				type: 'dropdown',
+				chartType: 'volcano',
+				settingsKey: 'profileBinBp',
+				getDisplayStyle: scanOnly,
+				options: [
+					{ value: 100_000, label: '100 Kb (native)' },
+					{ value: 500_000, label: '500 Kb' },
+					{ value: 1_000_000, label: '1 Mb' },
+					{ value: 5_000_000, label: '5 Mb' }
+				],
+				// a <select> hands back its value as a string; the setting is a width in bp
+				processInput: (v: string) => Number(v),
+				title:
+					'How wide a bin the methylome-wide profile draws. 100 kb is the width the metric is computed and reported at (Zhou 2018); the coarser widths average neighbouring bins into one dot, weighted by the CpGs each rests on, so a genome-wide shift is legible instead of hidden in a band of overlapping dots. Display only: the Statistics rows and the fraction-of-bins-moved figures stay on the 100 kb bins, and changing this redraws the cached scan rather than refitting it. The most extreme 1,000 bins per direction stay hoverable at any width.'
+			},
+			{
 				label: 'Min samples per group',
 				type: 'number',
 				chartType: 'volcano',

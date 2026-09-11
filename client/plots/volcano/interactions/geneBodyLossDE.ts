@@ -14,8 +14,9 @@ volcano that reaches function rather than another methylation-adjacent annotatio
 answerable here because the two groups that defined the scan also define the expression contrast.
 
 The gene set comes from the server with the scan (DmrScanSummary.geneBodyLoss): hypomethylated
-DMRs beating matched background and overlapping a gene BODY -- a region clipping only a promoter
-relates to transcription the other way round. The test itself is termdb/dmrGeneDE, which compares
+DMRs overlapping a gene BODY -- a region clipping only a promoter relates to transcription the
+other way round -- and, when the background correction is on, also beating matched background.
+The test itself is termdb/dmrGeneDE, which compares
 hit genes to non-hits within gene-length strata; see that route for why length matching is the
 test and not a caveat. */
 export async function geneBodyLossTest(
@@ -115,7 +116,7 @@ function renderGeneDE(div: any, res: any, nRegions: number, config: any, scan: D
 		.style('font-weight', 'bold')
 		.style('padding', '4px 0')
 		.text(
-			`Genes under a surviving gene-body loss region are expressed ${dir} in the case group: ` +
+			`Genes under a gene-body loss region are expressed ${dir} in the case group: ` +
 				`${res.weightedDiff >= 0 ? '+' : ''}${res.weightedDiff.toFixed(3)} log₂ fold change ` +
 				`within matched gene length (p = ${res.p < 0.001 ? res.p.toExponential(1) : res.p.toFixed(4)}).`
 		)
