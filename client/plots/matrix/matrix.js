@@ -58,10 +58,9 @@ export class Matrix extends PlotBase {
 				isExcludedAttr: 'isExcluded'
 			},
 			groupLabelAttrs: d => ({ 'data-testid': `sjpp-matrix-legend-group-${d.name}` }),
-			itemLabelAttrs: d => ({ 'data-testid': `sjpp-matrix-legend-item-${d.termid}-${d.key}` }),
+			itemLabelAttrs: d => ({ 'data-testid': `sjpp-matrix-legend-item` }),
 			note: 'CLICK A ROW LABEL OR ITEM TO APPLY FILTERING'
 		})
-
 		// enable embedding of termsetting and tree menu inside self.dom.menu
 		this.customTipApi = this.dom.tip.getCustomApi({
 			d: this.dom.menubody,
