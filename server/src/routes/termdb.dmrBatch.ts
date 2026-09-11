@@ -227,6 +227,19 @@ export async function runDmrBatch(
 	sorted so that two callers naming the same cohort in a different order share a cache entry;
 	the merged windows rather than the raw request, so two hit lists that collapse to the same
 	windows also share one. */
+	/* WGBS is fitted on its read counts unless the caller says otherwise.
+
+	A CpG matrix built by build_cpg_matrix.py carries the per-cell depth, so the fit can weight an
+	observation by the reads behind it instead of treating a beta from 6 reads and one from 200 as
+	equally precise -- the model DMRcate publishes for sequencing data. An element matrix stores
+	M-values and has no per-cell count to weight by, so it stays unweighted whatever this says;
+	the binary refuses the combination rather than guessing.
+
+	Datasets whose methylation came off an array are untouched: their platform is not wgbs, they
+	get 'none', and their results are bit-identical to before. */
+	const weights: TermdbDmrBatchRequest['weights'] =
+		q.weights ?? (ds.queries?.dnaMethylation?.platform == 'wgbs' ? 'counts' : 'none')
+
 	const cacheKey = {
 		v: CACHE_VERSION,
 		genome: q.genome,
@@ -242,8 +255,10 @@ export async function runDmrBatch(
 		mask: { sources: [...appliedNames].sort(), overlapFrac },
 		background: !!q.backgroundCorrection,
 		/* In the key because it changes every p-value. Without it a weighted request would be
-		served whatever an unweighted one cached earlier, silently. */
-		weights: q.weights ?? null,
+		served whatever an unweighted one cached earlier, silently. The effective value, not the
+		requested one, so turning the default on orphans the entries computed before it rather
+		than serving them. */
+		weights,
 		files: fingerprint([...[...resolved.values()].map(r => r.matrixFile), ...maskFiles, genome?.genedb?.dbfile])
 	}
 
@@ -358,11 +373,10 @@ export async function runDmrBatch(
 							lambda,
 							C: q.C,
 							bin_bp: q.binMethylation ? METHYLATION_BIN_BP : 0,
-							/* Absent means the historical unweighted fit. 'counts' is the WGBS model,
-							which needs a matrix carrying depth/values -- the binary says so rather than
-							falling back, because a silent fallback would report weighted numbers that
-							are not. */
-							weights: q.weights
+							/* An element matrix holds M-values, not counts, so it cannot be weighted and
+							the binary refuses the pair; a mixed run weights the CpG chromosomes and
+							leaves the fallback ones alone. */
+							weights: mvalues || useElement ? undefined : weights == 'none' ? undefined : weights
 						}
 						const jobResult = JSON.parse(await run_rust('dmrcate', JSON.stringify(input)))
 						if (jobResult.error) throw new Error(`${jobChrs.join(',')}: ${jobResult.error}`)

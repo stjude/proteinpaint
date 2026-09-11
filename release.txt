@@ -48,16 +48,23 @@ Features:
 - DMR analysis can be launched from the group menu, not only by clicking a volcano hit. The picker's
   group colours carry into the region view, and hyper/hypo are one orange/blue pair everywhere.
 - dmrcate is 40% faster and uses 5x less memory on a genome-wide scan, with byte-identical output.
-- dmrcate supports the WGBS model DMRcate publishes (Peters 2021, Nucleic Acids Research 49:e109)
-  via termdb/dmrBatch `weights`. "counts" fits log2((m+0.5)/(u+0.5)) on the read counts and weights
-  each observation by the inverse of its total variance, biological plus read-level; "counts+sample"
-  adds limma array weights (Ritchie 2006) estimated from a capped probe subset, for ~5% of runtime
-  rather than minutes. Needs a CpG matrix carrying depth/values, and refuses rather than falling
-  back without one. Absent by default, so existing results are unchanged and the unweighted path is
-  bit-identical. Removes the clamp that collapsed the 41.7% of betas sitting at exactly 0 or 1 onto
-  two M-values regardless of the reads behind them. Validated: the NSD2 cis effect and XIST's
-  opposed promoter/body signal return at identical coordinates and effect sizes, 85% of unweighted
-  DMRs are recovered with 99.6% direction concordance, and ~40% more are found.
+- WGBS is fitted on its read counts, the model DMRcate publishes for sequencing data (Peters 2021,
+  Nucleic Acids Research 49:e109), and this is now the DEFAULT for a dataset declaring
+  platform:'wgbs'. The value becomes log2((m+0.5)/(u+0.5)) and each observation is weighted by the
+  inverse of its total variance, biological plus read-level, which removes the clamp that collapsed
+  the 41.7% of betas sitting at exactly 0 or 1 onto two M-values regardless of the reads behind
+  them. termdb/dmrBatch `weights` overrides it; 'counts+sample' adds limma array weights (Ritchie
+  2006) from a capped probe subset for ~5% of runtime rather than minutes. Needs a CpG matrix
+  carrying depth/values and refuses rather than falling back. Array-derived datasets get 'none' and
+  are bit-identical to before, as are element matrices on a WGBS dataset (M-values carry no counts).
+- Turning that default on changes what a WGBS scan reports and orphans every cached scan, since the
+  effective mode is in the cache key. On MMRF NSD2: 178,586 DMRs kept against 123,520, hyper:hypo
+  1.86:1 against 2.21:1, median width 1,535 bp against 1,324 -- wider because more neighbouring
+  CpGs now clear per-CpG significance and chain into one region. Unchanged by construction: the
+  genome-wide shift (+0.0100) and the 100 kb profile, both of which are built from unweighted
+  per-sample beta means. Controls hold: the NSD2 cis effect and XIST's opposed promoter/body signal
+  return at identical coordinates and effect sizes, 85% of unweighted DMRs are recovered with 99.6%
+  direction concordance.
 
 Fixes:
 - dmrcate no longer emits thousands of false DMRs on a chromosome where NO probe passes per-CpG
