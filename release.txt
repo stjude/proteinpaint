@@ -16,9 +16,11 @@ Features:
   matched drift and the direction inverts, 3.15:1 hyper before and 4.22:1 hypo after.
 - A scan draws two figures under the volcano, on one x axis: a Manhattan plot of every kept DMR,
   hyper above a zero line and hypo below, height -log10(q); and the methylome-wide profile, mean
-  beta per group in 100 kb bins drawn as the per-bin difference, which is the metric the literature
-  compares methylomes with (Zhou 2018, Nat Genet 50:591). The profile answers what a DMR list
-  cannot -- on MMRF NSD2 only 0.9% of 28,994 bins moved beyond 0.10 beta, median +0.0088.
+  beta per group in 100 kb bins drawn as the per-bin difference. The bin width follows Zhou 2018
+  (Nat Genet 50:591), which bins genome-wide methylation at 100 kb; unlike that paper the profile
+  plots a two-group difference rather than each group's level, and averages every CpG in a bin
+  rather than only solo-WCGWs. It answers what a DMR list cannot -- on MMRF NSD2 only 0.9% of
+  28,994 bins moved beyond 0.10 beta, median +0.0088.
 - Both figures put the top 1,000 per direction on a hover-and-click layer. A profile bin reports its
   coordinates, its Δβ, each group's mean beta and the CpGs those rest on, and opens a genome browser
   on the bin. "Profile bin width" redraws the bins at 100 kb, 500 kb, 1 Mb or 5 Mb, averaging

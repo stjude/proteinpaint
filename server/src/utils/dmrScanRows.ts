@@ -114,8 +114,8 @@ const MAX_PROFILE_COARSEN = 100
 /* Coarsen the profile for display: several base bins averaged into one, weighted by the probes
 each rests on, so a bin resting on 3 CpGs does not count as much as one resting on 3,000.
 
-Display only. The metric the literature compares methylomes with is the 100 kb bin (Zhou 2018) and
-the summary rows stay on it; this exists because 29,000 dots over 1,000 px of plot overlap however
+Display only. 100 kb is the width the field plots this metric at (Zhou 2018; see
+METHYLATION_BIN_BP) and the summary rows stay on it; this exists because 29,000 dots over 1,000 px of plot overlap however
 small the dot is, so the shape of the shift is hidden inside a band. Applied at render time, after
 the cache, so switching widths redraws a scan rather than refitting one. */
 export function coarsenProfile(
