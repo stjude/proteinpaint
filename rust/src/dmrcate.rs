@@ -881,22 +881,8 @@ fn main() {
     let log_sfdr = bh_adjust_log(&log_smoothed);
     // Convert log FDR to linear for diagnostic output and Sig. CpGs track
     let sfdr: Vec<f64> = log_sfdr.iter().map(|&v| v.exp()).collect();
-    // Adaptive threshold matching R's dmrcate(): select the same NUMBER of CpGs
-    // as are per-CpG significant, but ranked by smoothed FDR instead.
-    // Work in log space so extreme p-values maintain proper ordering.
     let nsig = rfdr.iter().filter(|&&f| f < fdr_cut).count();
-    let adaptive_log_cut = if nsig > 0 && nsig <= log_sfdr.len() {
-        let mut sorted_log: Vec<f64> = log_sfdr.clone();
-        sorted_log.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        sorted_log[nsig - 1] // nsig-th smallest log FDR (most negative = most significant)
-    } else {
-        fdr_cut.ln()
-    };
-    // Build sig_fdr: probes with log_sfdr <= adaptive_log_cut get 0 (significant), others get 1
-    let sig_fdr: Vec<f64> = log_sfdr
-        .iter()
-        .map(|&v| if v <= adaptive_log_cut { 0.0 } else { 1.0 })
-        .collect();
+    let sig_fdr: Vec<f64> = select_significant(&log_sfdr, nsig);
     let mut dmrs = build_dmrs(qchr, &rpos, &sig_fdr, &rlfc, &mg1, &mg2, 0.5, lambda, 2, None, false);
     for dmr in &mut dmrs {
         if let (Some(s), Some(e)) = (dmr["start"].as_i64(), dmr["stop"].as_i64()) {
@@ -909,7 +895,15 @@ fn main() {
             dmr["min_smoothed_fdr"] = json!(min_sfdr);
         }
     }
-    if dmrs.is_empty() {
+    /* Proximity fallback: when the smoothed rule segments nothing, fall back to plain runs of
+    per-CpG significant probes. Gated on nsig > 0, because that is what the fallback exists for --
+    "there is per-CpG signal here and the smoothed rule found no region in it". Without the gate
+    nsig == 0 does not guarantee an empty result: nsig counts probes STRICTLY below the cutoff
+    while build_dmrs keeps probes at or below it, so a run sitting exactly on the cutoff is
+    invisible to one and visible to the other, and the fallback would build a DMR on a region the
+    adaptive rule had just correctly found nothing in. See the unit test on that boundary; it is
+    reachable through fdr_cutoff = 1, where BH caps a great many adjusted p-values at exactly 1. */
+    if dmrs.is_empty() && nsig > 0 {
         dmrs = build_dmrs(
             qchr,
             &rpos,
@@ -993,4 +987,112 @@ fn main() {
                 "track_png": track_png }
         })
     );
+}
+
+/// Mark the `nsig` probes with the smallest smoothed FDR as significant (0.0), the rest 1.0 --
+/// R's dmrcate rule, which selects the same NUMBER of CpGs as pass per-CpG significance but ranks
+/// them by the smoothed statistic. Operates on log FDR so extreme p-values keep their ordering.
+///
+/// nsig == 0 must select NOTHING. Comparing the smoothed FDR against the raw cutoff instead is not
+/// a conservative fallback but a catastrophic one: smoothing pools ~25 neighbouring probes, so a
+/// smoothed FDR is orders of magnitude below any per-probe FDR and stays under 0.05 across long
+/// stretches of a chromosome carrying no signal at all. That turned "nothing is significant" into
+/// thousands of DMRs -- on MMRF male-vs-female, chr3 reported 0 significant probes and 4,570 DMRs
+/// while chrX, the real signal, reported 104,218 and 6,472.
+fn select_significant(log_sfdr: &[f64], nsig: usize) -> Vec<f64> {
+    // nothing to select, and nothing to index: the caller's nsig is a count over these same
+    // probes, so an empty input means nsig is 0 too -- but a helper must not panic on the pairing
+    if nsig == 0 || log_sfdr.is_empty() {
+        return vec![1.0; log_sfdr.len()];
+    }
+    let mut sorted_log: Vec<f64> = log_sfdr.to_vec();
+    sorted_log.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    // nsig-th smallest log FDR (most negative = most significant)
+    let adaptive_log_cut = sorted_log[nsig.min(sorted_log.len()) - 1];
+    log_sfdr
+        .iter()
+        .map(|&v| if v <= adaptive_log_cut { 0.0 } else { 1.0 })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::select_significant;
+
+    /// log FDRs standing in for a chromosome with no per-CpG significance: smoothing has pushed
+    /// them all far below ln(0.05) = -3.0, which is exactly the situation that produced thousands
+    /// of false DMRs when the cutoff was compared against the raw threshold.
+    const SMOOTHED_BUT_UNSIGNIFICANT: [f64; 6] = [-9.0, -8.0, -7.5, -7.0, -6.0, -5.0];
+
+    #[test]
+    fn no_significant_probes_selects_nothing() {
+        let out = select_significant(&SMOOTHED_BUT_UNSIGNIFICANT, 0);
+        assert_eq!(out, vec![1.0; 6], "nsig == 0 must select no probes");
+        assert!(
+            SMOOTHED_BUT_UNSIGNIFICANT.iter().all(|&v| v < 0.05f64.ln()),
+            "every one of them would have passed a raw-cutoff comparison"
+        );
+    }
+
+    #[test]
+    fn selects_exactly_nsig_smallest() {
+        let lf = [-9.0, -1.0, -8.0, -2.0];
+        let out = select_significant(&lf, 2);
+        assert_eq!(
+            out,
+            vec![0.0, 1.0, 0.0, 1.0],
+            "the two most significant, by smoothed rank"
+        );
+    }
+
+    #[test]
+    fn ties_may_select_more_than_nsig() {
+        let out = select_significant(&[-5.0, -5.0, -1.0], 1);
+        assert_eq!(
+            out,
+            vec![0.0, 0.0, 1.0],
+            "a tie at the cut is kept, as a threshold rule must"
+        );
+    }
+
+    #[test]
+    fn nsig_at_or_beyond_length_selects_all() {
+        assert_eq!(select_significant(&[-4.0, -2.0], 2), vec![0.0, 0.0]);
+        // more significant probes than smoothed values cannot index past the end
+        assert_eq!(select_significant(&[-4.0, -2.0], 9), vec![0.0, 0.0]);
+    }
+
+    /* The boundary that makes the nsig > 0 gate on the raw-FDR fallback necessary: nsig counts
+    probes STRICTLY below the cutoff, while build_dmrs keeps probes at or below it. So a run of
+    probes sitting exactly on the cutoff is invisible to nsig and visible to the segmenter, and
+    without the gate the fallback could build a DMR on a region the adaptive rule had just
+    correctly found nothing in. Reachable in practice through fdr_cutoff = 1, where BH caps a great
+    many adjusted p-values at exactly 1. */
+    #[test]
+    fn build_dmrs_keeps_probes_exactly_at_the_cutoff_that_nsig_excludes() {
+        let cut = 0.05;
+        let fdr = [cut, cut, cut];
+        let pos = [1000i64, 1100, 1200];
+        let lfc = [1.0, 1.0, 1.0];
+        let mg1 = [0.2, 0.2, 0.2];
+        let mg2 = [0.8, 0.8, 0.8];
+        let nsig = fdr.iter().filter(|&&f| f < cut).count();
+        assert_eq!(
+            nsig, 0,
+            "nsig is a strict comparison, so probes on the cutoff do not count"
+        );
+        let dmrs = super::build_dmrs("chr1", &pos, &fdr, &lfc, &mg1, &mg2, cut, 1000.0, 2, Some(0.05), true);
+        assert!(
+            !dmrs.is_empty(),
+            "but the segmenter's comparison is inclusive, so it would build a DMR from them -- \
+             which is why the fallback is gated on nsig > 0 rather than on dmrs.is_empty() alone"
+        );
+    }
+
+    #[test]
+    fn empty_input_is_empty_output() {
+        assert!(select_significant(&[], 0).is_empty());
+        // nsig cannot exceed the probe count in practice; the helper still must not index past 0
+        assert!(select_significant(&[], 3).is_empty());
+    }
 }
