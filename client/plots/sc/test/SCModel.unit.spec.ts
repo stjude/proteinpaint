@@ -101,7 +101,7 @@ tape('hasSpatialImage() should return cached probe results without refetching', 
 })
 
 tape('hasSpatialImage() should skip the probe when the ds does not support wsi', async test => {
-	// no supportedChartTypes advertising 'wsi' (ds without queries.w2): the
+	// no termdbConfig.queries.w2 marker (ds without spatial images): the
 	// wsiBySample route could only 500, so no request is made at all
 	const app = getMockSCApp()
 	const model = new SCModel(app)
