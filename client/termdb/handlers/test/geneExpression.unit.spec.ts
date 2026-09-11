@@ -106,6 +106,6 @@ tape('selectGene() should require at least one sample type when selector is rend
 	window.alert = oldAlert
 
 	test.equal(called, false, 'Should not call callback when no sample type is selected')
-	test.equal(alertMsg, 'Must select at least one sample type', 'Should notify user to select sample type')
+	test.equal(alertMsg, 'Please select at least one sample type.', 'Should notify user to select sample type')
 	test.end()
 })
