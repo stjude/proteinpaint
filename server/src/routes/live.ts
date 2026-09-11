@@ -13,8 +13,8 @@ export const api: RouteApi = {
 	}
 }
 
-function init() {
+function init(opts: any = {}) {
 	return async (req, res): Promise<void> => {
-		res.send({ status: 'ok', detailsAt: '/status' } satisfies LiveResponse)
+		res.send({ status: 'ok', detailsAt: `${opts.basepath || ''}/status` } satisfies LiveResponse)
 	}
 }
