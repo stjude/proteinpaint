@@ -13,6 +13,12 @@ import {
 	DEFAULT_OVERLAP_FRAC
 } from '#src/utils/regionMask.ts'
 import { buildGeneIndex, genesAt, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
+import {
+	buildExclusion,
+	sampleBackground,
+	scoreAgainstBackground,
+	BG_WINDOWS_PER_CHR
+} from '#src/utils/dmrBackground.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import fs from 'fs'
 
@@ -86,7 +92,9 @@ export function buildScanRegions(genome: any, chromosomes: string[]) {
 
 /** Bump when a change to this route or to dmrcate alters results for an unchanged request.
  * Without it, a cache written before the change keeps serving the old answer forever. */
-const CACHE_VERSION = 1
+// 2: background correction added; v1 entries were written before dmrcate emitted background
+// windows for a regions-less call, so they hold an empty correction
+const CACHE_VERSION = 2
 
 /* Fingerprint the data files a result was computed from.
  *
@@ -161,6 +169,7 @@ function init({ genomes }) {
 			const rawFrac = Number(q.excludeOptions?.overlapFrac)
 			const overlapFrac = Number.isFinite(rawFrac) ? Math.min(Math.max(rawFrac, 0), 1) : DEFAULT_OVERLAP_FRAC
 			let dmrsDropped = 0
+			const bgTotals = { windows: 0, scored: 0, unscored: 0, significant: 0 }
 
 			/* Built once for the request, not once per DMR: a genome scan calls >100,000 of them and
 			one sqlite round trip each would cost more than the model fits. Absent on a genome with no
@@ -193,6 +202,7 @@ function init({ genomes }) {
 				fdr_cutoff: q.fdr_cutoff ?? null,
 				element_type: q.element_type ?? null,
 				mask: { sources: [...appliedNames].sort(), overlapFrac },
+				background: !!q.backgroundCorrection,
 				files: fingerprint([...[...resolved.values()].map(r => r.matrixFile), ...maskFiles, genome?.genedb?.dbfile])
 			}
 
@@ -292,6 +302,45 @@ function init({ genomes }) {
 										}
 									}
 								}
+								/* Matched intergenic background, sampled and scored inside the worker slot so each
+						chromosome's tabix reads and its rust call happen together rather than serially
+						after every fit. Requires a second rust invocation because the window list has to
+						be built from the DMRs the first one called -- the widths are matched to them. */
+								if (q.backgroundCorrection) {
+									const called = (result.regions || []).flatMap((r: any) => r?.dmrs || [])
+									const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
+									const excl = chrLen ? await buildExclusion(genome, chr, chrLen, geneIdx as any) : null
+									if (excl && chrLen && called.length) {
+										const windows = sampleBackground(
+											chr,
+											chrLen,
+											excl,
+											called.map((d: any) => d.stop - d.start),
+											BG_WINDOWS_PER_CHR,
+											// seeded from the chromosome name so the draw is reproducible and cacheable
+											[...chr].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0
+										)
+										if (windows.length) {
+											const bgRes = JSON.parse(
+												await run_rust(
+													'dmrcate',
+													JSON.stringify({ ...input, regions: [], background_regions: windows })
+												)
+											)
+											const { scored, unscored } = scoreAgainstBackground(called, bgRes.background || [])
+											called.forEach((d: any, i: number) => {
+												const sc = scored[i]
+												if (!sc) return
+												d.excess = Math.round(sc.excess * 100000) / 100000
+												d.bgP = sc.p
+											})
+											bgTotals.windows += (bgRes.background || []).length
+											bgTotals.scored += scored.filter(Boolean).length
+											bgTotals.unscored += unscored
+											bgTotals.significant += scored.filter(s2 => s2 && s2.p < 0.05).length
+										}
+									}
+								}
 								results.push({ chr, windows, result, useElement })
 							}
 						})
@@ -345,6 +394,9 @@ function init({ genomes }) {
 						chromosomes: merged.size,
 						totalProbesAnalyzed: totalProbes,
 						regionMask: maskFiles.length ? { sources: appliedNames, overlapFrac, dmrsDropped } : undefined,
+						backgroundCorrection: q.backgroundCorrection
+							? { ...bgTotals, matchedOn: ['CpG density', 'width'] }
+							: undefined,
 						globalMethylation: gN
 							? {
 									controlMeanBeta: gCtrl / gN,

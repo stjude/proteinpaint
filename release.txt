@@ -72,6 +72,29 @@ Features:
   scale at which they are drawable. Per-bin class composition was measured before adding it to the map and
   carries no directional signal -- the most hyper and most hypo bins both run 33.0% dELS, r=-0.07 --
   because class enrichment only exists relative to a CpG-matched null, which a raw track has none of.
+- The volcano's scan control gains a "Correct for background drift" checkbox, off by default. It
+  changes what the numbers mean rather than how they look -- uncorrected, a DMR is a region that
+  moved; corrected, it is a region that moved MORE than a comparable region drifts -- so it is opt-in
+  and the button reports "+ background" while it runs. Roughly doubles the scan.
+- termdb/dmrBatch gains an opt-in matched-background correction. A scan tests every region's
+  delta-beta against ZERO, which asks "did this region change?" -- and on a cohort whose genome is
+  drifting (MMRF NSD2-high runs a +0.058 global shift) the answer is yes almost everywhere. The
+  correction instead asks "did this region change more than a region like it would have drifted
+  anyway?": intergenic windows width-matched to the called DMRs are sampled from outside every cCRE
+  class, gene body with TSS padding, and the ENCODE blacklist, scored through the same fit, and each
+  DMR is compared to background in its own CpG-density-and-width stratum. Reported per DMR as an
+  excess delta-beta and an empirical p with a 1/(n+1) floor, plus a summary line.
+  Cheap because the fit already carries both group means for every probe, so a background window's
+  delta is a binary search rather than a second analysis: dmrcate gains a background_regions input
+  that returns those deltas and nothing else. Genome-wide on MMRF the correction adds ~30s to a 41s
+  scan and samples 48,000 windows.
+  What it shows on that cohort: 71% of the median DMR's movement is matched intergenic drift, and
+  the direction inverts -- 3.15:1 hyper before, 4.22:1 HYPO after. Only 5.0% of hypermethylated
+  regions beat their matched background against 66.9% of hypomethylated ones.
+  Matching is on CpG density and width only. The full method also matches solo-WCGW, replication
+  timing and lamina association, which need normal-B-cell reference tracks; tumour-derived ones
+  would regress out the signal being looked for. The response states what it matched on, and a DMR
+  whose stratum holds too little background is returned unscored rather than scored badly.
 - termdb/dmrBatch results are cached. A genome scan was ~40s of fresh compute with nothing reused,
   so the same contrast re-run, or a second person running it, paid in full again: MMRF NSD2
   genome-wide is 41.5s cold and 0.6s warm, 67x. Concurrent identical requests are deduplicated to

@@ -48,6 +48,11 @@ export type TermdbDmrBatchRequest = {
 		/** drop a DMR when >= this fraction of its span is masked (default 0.5) */
 		overlapFrac?: number
 	}
+	/** Score each called DMR against matched intergenic background, answering "did this region move
+	 * more than a region like it would have drifted anyway?" rather than "did it move at all". On a
+	 * cohort with a large global shift the second question is answered yes almost everywhere.
+	 * Costs a second rust invocation per chromosome. */
+	backgroundCorrection?: boolean
 	filter?: Filter
 	__protected__?: any
 }
@@ -77,6 +82,13 @@ export type TermdbDmrBatchSuccessResponse = {
 			direction: 'hyper' | 'hypo'
 			/** Genes whose span overlaps the DMR, in genomic order. Absent when none overlap or the
 			 * genome has no gene2coord table. Capped -- see genesTruncated. */
+			/** Observed delta-beta minus the mean drift of matched background in the same stratum.
+			 * Present only when backgroundCorrection was requested and the DMR's stratum had enough
+			 * background to estimate from. */
+			excess?: number
+			/** Fraction of that background drifting at least this far in the same direction, with a
+			 * +1 pseudocount -- so the resolution floor is 1/(n+1) and never zero. */
+			bgP?: number
 			genes?: string[]
 			/** Total overlapping genes when more than the cap were found, so a truncated list is
 			 * never mistaken for the whole set. */
@@ -103,6 +115,19 @@ export type TermdbDmrBatchSuccessResponse = {
 	/** chromosomes touched — the number of model fits performed, which is what the cost scales with */
 	chromosomes: number
 	totalProbesAnalyzed: number
+	/** Matched-background outcome. Present whenever the correction ran. `unscored` is the count
+	 * whose stratum held too little background to estimate from -- reported so a survival rate is
+	 * never read against the wrong denominator. */
+	backgroundCorrection?: {
+		windows: number
+		scored: number
+		unscored: number
+		significant: number
+		/** The covariates actually matched on. The full method also matches solo-WCGW, replication
+		 * timing and lamina association, which need normal-B-cell reference tracks; where those are
+		 * absent the correction is weaker and must be described by what it did match. */
+		matchedOn: string[]
+	}
 	/** Artifact-region mask outcome. Present whenever the mask ran, including when it dropped
 	 * nothing, so a reader can tell "no artifacts here" from "the mask never ran". The dropped DMRs
 	 * are gone from `regions[].dmrs` — this is the count needed to report the denominator. */

@@ -786,6 +786,40 @@ fn select_significant(log_sfdr: &[f64], nsig: usize) -> Vec<f64> {
         .collect()
 }
 
+/* Mean beta-scale difference over the probes inside a window, and how many there were.
+ *
+ * The matched-background correction asks "did this region move more than a region like it would
+ * have drifted anyway?", which needs delta-beta for thousands of intergenic windows that are NOT
+ * DMRs. Calling call_region on each would redo smoothing and segmentation to obtain a number the
+ * fit already holds -- ProbeStats carries both group means on the beta scale. So this is a binary
+ * search and an average.
+ *
+ * fit.all is position-sorted within a chromosome, and dmrBatch invokes once per chromosome, so the
+ * probes inside a window are a contiguous slice. A linear filter would be O(windows x probes):
+ * 2,000 windows against 1.3M probes is 2.6 billion iterations for one chromosome. */
+fn window_delta(fit: &Fit, qchr: &str, qstart: i64, qstop: i64) -> (usize, f64) {
+    let all = &fit.all;
+    // probes for a single chromosome are contiguous; find that block first
+    let lo_chr = all.partition_point(|p| p.chr.as_str() < qchr);
+    let hi_chr = all.partition_point(|p| p.chr.as_str() <= qchr);
+    if lo_chr >= hi_chr {
+        return (0, f64::NAN);
+    }
+    let blk = &all[lo_chr..hi_chr];
+    let lo = blk.partition_point(|p| p.start < qstart);
+    let hi = blk.partition_point(|p| p.start <= qstop);
+    let mut n = 0usize;
+    let mut sum = 0.0f64;
+    for p in &blk[lo..hi] {
+        let d = p.beta_case_mean - p.beta_ctrl_mean;
+        if d.is_finite() {
+            sum += d;
+            n += 1;
+        }
+    }
+    (n, if n > 0 { sum / n as f64 } else { f64::NAN })
+}
+
 /// LOESS (locally weighted scatterplot smoothing) with tricube weights and local linear fit.
 /// Returns (fitted, ci_lower, ci_upper) evaluated at `eval_at` positions, clamped to [0,1].
 fn loess_fit(pos: &[i64], vals: &[f64], eval_at: &[f64], span: f64) -> Option<(Vec<f64>, Vec<f64>, Vec<f64>)> {
@@ -1075,6 +1109,23 @@ fn main() {
     the matrix holds; with per-chromosome shards that is just the one, and the caller groups its
     hit list by chromosome and invokes once per shard. Absent means the single-region path below,
     which is unchanged. */
+    /* Windows to report a plain delta-beta for, with no DMR calling. Used by the matched-background
+    correction, which needs the drift of regions structurally like the called ones. */
+    let background_regions: Vec<(String, i64, i64)> = p["background_regions"]
+        .as_array()
+        .map(|a| {
+            a.iter()
+                .filter_map(|r| {
+                    Some((
+                        r["chr"].as_str()?.to_string(),
+                        r["start"].as_i64()?,
+                        r["stop"].as_i64()?,
+                    ))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
     let batch_regions: Vec<(String, i64, i64)> = p["regions"]
         .as_array()
         .map(|a| {
@@ -1198,7 +1249,10 @@ fn main() {
     from it -- so one call with N regions is dramatically cheaper than N single-region calls. The
     per-region track PNG and LOESS are skipped: a caller asking for hundreds of regions wants the
     DMR calls, and rendering hundreds of images would be most of the runtime. */
-    if !batch_regions.is_empty() {
+    /* Also taken when only background windows are asked for: the correction's second call supplies
+    background_regions with an empty regions list, and falling through to single-region mode below
+    would return no background at all -- silently, as an empty correction rather than an error. */
+    if !batch_regions.is_empty() || !background_regions.is_empty() {
         let out: Vec<Value> = batch_regions
             .iter()
             .map(|(c, s, e)| match call_region(&fit, c, *s, *e, &rp) {
@@ -1214,10 +1268,23 @@ fn main() {
                 None => json!({"chr": c, "start": s, "stop": e, "n_probes": 0, "n_sig_probes": 0, "dmrs": []}),
             })
             .collect();
+        /* Plain delta-beta per background window, no DMR calling. Rounded to five places, as the
+        group means above are: the caller compares distributions, not last bits. */
+        let bg: Vec<Value> = background_regions
+            .iter()
+            .map(|(c, s, e)| {
+                let (n, d) = window_delta(&fit, c, *s, *e);
+                json!({
+                    "chr": c, "start": s, "stop": e, "n_probes": n,
+                    "delta": if d.is_finite() { json!((d * 100000.0).round() / 100000.0) } else { Value::Null }
+                })
+            })
+            .collect();
         println!(
             "{}",
             json!({
                 "regions": out,
+                "background": bg,
                 "diagnostic": {
                     "global_methylation": global_json,
                     "total_probes_analyzed": fit.all.len(),

@@ -207,6 +207,25 @@ export class VolcanoPlotView {
 						.append('option')
 						.attr('value', (d: string) => d)
 						.text((d: string) => (d == ALL ? `Whole genome (${genomeChrs.length} chromosomes)` : d))
+					/* Opt-in, and off by default, because it changes what the numbers mean rather than how
+					they look: uncorrected, a DMR is a region that moved; corrected, it is a region that
+					moved MORE than a comparable region drifts. On a cohort with a global shift those are
+					different populations -- on MMRF NSD2-high the direction inverts. It costs a second
+					model fit per chromosome, so it roughly doubles a scan. */
+					const bgLabel = this.volcanoDom.actions
+						.append('label')
+						.style('margin', '3px 3px 3px 8px')
+						.style('font-size', '.95em')
+						.attr(
+							'title',
+							'Score each DMR against width-matched intergenic background instead of against zero. Roughly doubles the scan time.'
+						)
+					const bgBox = bgLabel
+						.append('input')
+						.attr('type', 'checkbox')
+						.attr('data-testid', 'sjpp-volcano-scan-bg')
+						.style('margin-right', '4px')
+					bgLabel.append('span').text('Correct for background drift')
 					const scanBtn = this.volcanoDom.actions
 						.append('button')
 						.attr('class', 'sja_menuoption')
@@ -223,7 +242,8 @@ export class VolcanoPlotView {
 							finishes, so a static label is indistinguishable from a hung request. Ticking
 							the elapsed seconds is the cheapest honest progress signal available here:
 							the route returns a single response and cannot report partial progress. */
-							const what = sel == ALL ? 'genome' : sel
+							const backgroundCorrection = bgBox.property('checked')
+							const what = (sel == ALL ? 'genome' : sel) + (backgroundCorrection ? ' + background' : '')
 							const t0 = Date.now()
 							const tick = setInterval(
 								() => scanBtn.text(`Scanning ${what}… ${Math.round((Date.now() - t0) / 1000)}s`),
@@ -245,7 +265,8 @@ export class VolcanoPlotView {
 									totalSignificant: numSigGenes,
 									holder,
 									app: this.interactions.app,
-									scanChromosomes
+									scanChromosomes,
+									backgroundCorrection
 								})
 							} finally {
 								clearInterval(tick)

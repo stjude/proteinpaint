@@ -50,8 +50,10 @@ export async function runDmrBatch(opts: {
 	 * everything downstream; only what is asked for differs. One chromosome answers "what happened
 	 * here"; the whole list answers "where did anything happen". */
 	scanChromosomes?: string[]
+	/** Score every DMR against matched intergenic background rather than against zero. */
+	backgroundCorrection?: boolean
 }) {
-	const { config, vocab, dots, totalSignificant, holder, app, scanChromosomes } = opts
+	const { config, vocab, dots, totalSignificant, holder, app, scanChromosomes, backgroundCorrection } = opts
 	holder.selectAll('*').remove()
 	const groups = config?.samplelst?.groups
 	if (!groups || groups.length != 2) {
@@ -79,6 +81,7 @@ export async function runDmrBatch(opts: {
 				group1: groups[0].values,
 				group2: groups[1].values,
 				...(scanning ? { scanChromosomes } : { regions }),
+				backgroundCorrection,
 				lambda: config.settings?.dmr?.lambda,
 				fdr_cutoff: config.settings?.volcano?.pValue ? Math.pow(10, -config.settings.volcano.pValue) : undefined,
 				element_type: config.settings?.volcano?.elementType
@@ -222,6 +225,44 @@ function drawResults(
 	/* Stated even when it dropped nothing, so "no artifact regions here" reads differently from
 	"no mask was applied". These DMRs never reached the browser, so this is the only place their
 	count can come from. */
+	/* The correction's own line, stated whether or not much survived. A survival rate is only
+	readable against its denominator, so the unscored count is shown rather than folded away. */
+	const bc = res.backgroundCorrection
+	if (bc) {
+		const denom = bc.scored
+		summary
+			.append('div')
+			.style('font-weight', 'bold')
+			.text(
+				denom
+					? `Matched background: ${bc.significant.toLocaleString()} of ${denom.toLocaleString()} scored DMRs ` +
+							`(${((100 * bc.significant) / denom).toFixed(1)}%) move more than matched intergenic drift at p<0.05.`
+					: 'Matched background: no DMR had enough background in its stratum to score.'
+			)
+		summary
+			.append('div')
+			.style('color', '#777')
+			.text(
+				`${bc.windows.toLocaleString()} intergenic windows sampled, matched on ${bc.matchedOn.join(' and ')}. ` +
+					`Excess Δβ and its p are per-DMR columns below.`
+			)
+		/* An unscored DMR is not a failed one, and the distinction matters because the unscored are
+		not a random sample. They are the widest and the most CpG-dense -- intergenic space holds few
+		gaps wide enough for a 25kb window, and by construction holds NO CpG-dense regions at all,
+		since islands and promoters are exactly what the exclusion removes. So the correction is
+		structurally blind to two classes of region, and saying only "N unscored" would let a reader
+		treat blank cells as non-significant ones. */
+		if (bc.unscored)
+			summary
+				.append('div')
+				.style('color', '#777')
+				.text(
+					`${bc.unscored.toLocaleString()} DMRs have no excess or p: their stratum held too little ` +
+						`background. These are the widest and most CpG-dense regions — intergenic space has few ` +
+						`gaps that wide and, by construction, no CpG islands — so a blank cell means "not testable ` +
+						`this way", not "not significant".`
+				)
+	}
 	const rm = res.regionMask
 	if (rm) {
 		summary
@@ -303,7 +344,14 @@ function drawResults(
 			free by testing pre-annotated elements, at the cost of coverage and of reporting every
 			event at whatever width the annotation drew. Naming the scan's regions closes that gap
 			without giving the extent back. */
-		{ label: 'Genes' }
+		{ label: 'Genes' },
+		// only meaningful when the correction ran; otherwise every cell would be blank
+		...(res.backgroundCorrection
+			? [
+					{ label: 'Excess Δβ', align: 'right' },
+					{ label: 'vs bg p', align: 'right' }
+			  ]
+			: [])
 	]
 	const toRow = (x: { d: any; width: number }) => [
 		{ value: `${x.d.chr}:${x.d.start.toLocaleString()}-${x.d.stop.toLocaleString()}` },
@@ -315,7 +363,13 @@ function drawResults(
 			value: x.d.genes?.length
 				? x.d.genes.join(', ') + (x.d.genesTruncated ? ` +${x.d.genesTruncated - x.d.genes.length} more` : '')
 				: ''
-		}
+		},
+		...(res.backgroundCorrection
+			? [
+					{ value: x.d.excess == null ? '' : Number(x.d.excess.toFixed(3)) },
+					{ value: x.d.bgP == null ? '' : Number(x.d.bgP.toPrecision(2)) }
+			  ]
+			: [])
 	]
 	const sorted = [...tableRows].sort((a, b) => b.width - a.width)
 	const shown = sorted.slice(0, MAX_TABLE_ROWS)
