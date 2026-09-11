@@ -30,7 +30,6 @@ export function setInteractivity(self: any) {
 
 	self.displayLabelClickMenu = function (t1: any, t2: any, plot: any, event: MouseEvent) {
 		if (!t2) return // when no term 2 do not show options on the sole violin label
-		console.log(self.config.term.term.type, t2)
 		if (isSingleCellTerm(self.config.term.term)) return // is sc data, none of the options below work, thus disable
 
 		const label = t1.q.mode === 'continuous' ? 'term2' : 'term'
