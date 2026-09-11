@@ -93,8 +93,10 @@ Fixes:
   requires a dslabel so the auth gatekeeper runs.
 
 General:
-- MMRF requires files/hg38/mmrf/methylation/cpg/{chr}.h5 on the target host (~28GB), built by
+- MMRF requires files/hg38/mmrf/methylation/cpg/{chr}.h5 on the target host (~40GB), built by
   utils/dnaMeth/build_cpg_matrix.py. Without them the region view degrades to element resolution.
+  ~13GB of that is the per-cell read depth the builder now keeps beside each beta; a matrix without
+  it still serves every existing path unchanged, and only termdb/dmrBatch `weights` needs it.
 - The cCRE track needs anno/encodeCCREtrack.hg38.gz (+ .tbi), ~11MB, built by
   utils/dnaMeth/build_ccre_track.py from anno/encodeCCRE.hg38.gz. It is a reformat of a registry any
   host serving methylation elements already has; without it the locus view loses only that row.
