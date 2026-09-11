@@ -16,8 +16,8 @@ export async function getStat(genomes) {
 		// make an otherwise working server look down, since the k8s liveness and readiness probes
 		// both request this route. Dataset failures are reported in dsSummary and dsInitStatus.
 		status: auth?.errors?.length ? 'error' : 'ok',
-		genomes: {},
 		versionInfo,
+		genomes: {},
 		auth,
 		...getDsInitStatus()
 	} satisfies HealthCheckResponse
