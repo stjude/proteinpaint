@@ -15,8 +15,7 @@ import {
 	SSGSEA,
 	PSEUDOBULK,
 	JUNCTION,
-	TERM_COLLECTION,
-	SINGLECELL_NUMERIC_VALUE
+	TERM_COLLECTION
 } from '#types'
 import type { Mds3WithCohort } from '#types'
 
@@ -396,6 +395,12 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		element matrix that serves terms when there is no CpG file, and the client needs it to
 		label a region term with the unit it will actually receive. */
 		if (q.dnaMethylation.unit) q2.dnaMethylation.unit = q.dnaMethylation.unit
+		/* Which matrix the region (DMR) view will run on, absent when the dataset has neither
+		backing. The client sizes its default window from this: element rows sit ~10kb apart where
+		CpGs sit ~100bp apart, so the ±2kb window that frames a CpG region holds one element. */
+		if (q.dnaMethylation.cpgByChr || q.dnaMethylation.file) q2.dnaMethylation.regionAnalysis = 'cpg'
+		else if (q.dnaMethylation.promoter || Object.keys(q.dnaMethylation.elements ?? {}).length)
+			q2.dnaMethylation.regionAnalysis = 'element'
 		if (q.dnaMethylation.promoter) {
 			q2.dnaMethylation.promoter = { unit: q.dnaMethylation.promoter.unit }
 		}
@@ -556,7 +561,6 @@ export function getDsAllowedTermTypes(ds) {
 	if (ds.queries?.junction) typeSet.add(JUNCTION)
 	if (ds.queries?.singleCell) {
 		typeSet.add(SINGLECELL_CELLTYPE)
-		if (ds.queries.singleCell.terms?.some(term => term.type == SINGLECELL_NUMERIC_VALUE)) typeSet.add(SINGLECELL_NUMERIC_VALUE)
 		if (ds.queries.singleCell?.geneExpression) typeSet.add(SINGLECELL_GENE_EXPRESSION)
 		if (ds.queries.singleCell?.pseudobulk) typeSet.add(PSEUDOBULK)
 	}

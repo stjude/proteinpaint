@@ -32,6 +32,10 @@ export class VolcanoViewModel {
 	viewData: VolcanoViewData
 	numSignificant = 0
 	numNonSignificant = 0
+	/** The significant count split by direction, from the server so it reflects every
+	 * significant row rather than the maxInteractiveDots-capped `dots`. */
+	numSignificantUp = 0
+	numSignificantDown = 0
 	minLogFoldChange = 0
 	maxLogFoldChange = 0
 	//Used for the y axis domain
@@ -107,6 +111,9 @@ export class VolcanoViewModel {
 			pointData,
 			pValueTableData: this.pValueTable,
 			statsData: this.setStatsData(),
+			numSignificantUp: this.numSignificantUp,
+			numSignificantDown: this.numSignificantDown,
+			xOffset: this.response.data.xOffset ?? 0,
 			provenance: this.setProvenance(),
 			userActions: this.setUserActions(),
 			deltaBetaAxisLabel: this.setDeltaBetaAxisLabel(),
@@ -127,7 +134,11 @@ export class VolcanoViewModel {
 		const control = groups?.[0]?.name
 		const cases = groups?.[1]?.name
 		if (!control || !cases) return undefined
-		return `Δβ (${shortenGroupName(cases)} − ${shortenGroupName(control)})`
+		/* A centred axis must say so on the axis itself. The plot looks identical to an
+		uncentred one apart from a small shift, so a reader who does not know the origin moved
+		would take a dot at 0 to mean "no change" when it means "typical". */
+		const centered = this.response.data.xOffset ? ' − median' : ''
+		return `Δβ${centered} (${shortenGroupName(cases)} − ${shortenGroupName(control)})`
 	}
 
 	setDataType() {
@@ -368,6 +379,8 @@ export class VolcanoViewModel {
 		// dots was capped by maxInteractiveDots.
 		this.numSignificant = this.response.data.totalSignificantRows
 		this.numNonSignificant = Math.max(0, this.response.data.totalRows - this.numSignificant)
+		this.numSignificantUp = this.response.data.totalSignificantUp ?? 0
+		this.numSignificantDown = this.response.data.totalSignificantDown ?? 0
 		//Sort so the highlighted points appear on top
 		dataCopy.sort((a: any, b: any) => a.highlighted - b.highlighted)
 		return dataCopy
@@ -417,6 +430,11 @@ export class VolcanoViewModel {
 			// Which effect size the run was thresholded on. Two exports with the same p cutoff but
 			// different axes are not comparable, and nothing else in the line would reveal it.
 			parts.push(`x axis: ${s.xAxis === 'delta_beta' ? 'delta-beta' : 'log2(fold-change)'}`)
+			/* Which reading the counts came from. Two runs of the same contrast give different
+			hyper:hypo ratios depending on this one flag, so a file without it cannot be told
+			apart from the other run. Records the offset too, since it is a result in itself. */
+			const off = this.response.data.xOffset
+			if (off) parts.push(`centered on median delta-beta ${off > 0 ? '+' : ''}${roundValueAuto(off)}`)
 			parts.push(`min samples per group: ${s.minSamplesPerGroup}`)
 			parts.push(`exclude sex chromosomes: ${s.excludeSexChr ? 'yes' : 'no'}`)
 		} else if (this.termType == tt.GENE_EXPRESSION) {

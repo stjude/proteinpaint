@@ -136,6 +136,9 @@ export class VolcanoModel {
 				foldChangeCutoff: useDeltaBeta ? this.settings.deltaBetaCutoff : this.settings.foldChangeCutoff
 			},
 			...(useDeltaBeta ? { xField: 'delta_beta' as const } : {}),
+			// Tied to the delta-beta axis: the control that sets it is only offered for
+			// methylation, and centering a log2 fold-change axis is a different conversation.
+			...(useDeltaBeta && this.settings.centerDeltaBeta ? { centerX: true } : {}),
 			pixelWidth: this.settings.width,
 			pixelHeight: this.settings.height,
 			colorSignificant: toHex(this.settings.defaultSignColor, 'red'),

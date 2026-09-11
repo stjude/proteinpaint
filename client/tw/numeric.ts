@@ -32,24 +32,22 @@ import { DnaMethylationBase } from './dnaMethylation.ts'
 import { SingleCellGeneExpressionBase } from './singleCellGeneExpression.ts'
 import { PseudobulkBase } from './pseudobulk.ts'
 import * as tt from '#types'
-import { SingleCellNumericValueBase } from './singleCellNumericValue.ts'
 
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor
 	term: NumericTerm
 	type: 'NumTWRegularBin' | 'NumTWCustomBin' | 'NumTWCont' | 'NumTWBinary' | 'NumTWSpline'
 	static termTypes = new Set([
-		tt.INTEGER,
-		tt.FLOAT,
-		tt.DATE,
-		tt.GENE_EXPRESSION,
-		tt.ISOFORM_EXPRESSION,
+		'integer',
+		'float',
+		'date',
+		'geneExpression',
+		'isoformExpression',
 		tt.JUNCTION,
-		tt.METABOLITE_INTENSITY,
-		tt.PROTEOME_ABUNDANCE,
-		tt.SSGSEA,
-		tt.DNA_METHYLATION,
-		tt.SINGLECELL_NUMERIC_VALUE,
+		'metaboliteIntensity',
+		'proteomeAbundance',
+		'ssGSEA',
+		'dnaMethylation',
 		tt.SINGLECELL_GENE_EXPRESSION,
 		tt.PSEUDOBULK
 	])
@@ -113,14 +111,8 @@ export class NumericBase extends TwBase {
 				SingleCellGeneExpressionBase.fill(tw.term, opts)
 				if (!tw.q.mode) tw.q.mode = 'continuous'
 				break
-
 			case tt.PSEUDOBULK:
 				PseudobulkBase.fill(tw.term)
-				if (!tw.q.mode) tw.q.mode = 'continuous'
-				break
-			
-			case tt.SINGLECELL_NUMERIC_VALUE:
-				SingleCellNumericValueBase.fill(tw.term)
 				if (!tw.q.mode) tw.q.mode = 'continuous'
 				break
 

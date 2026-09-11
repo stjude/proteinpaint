@@ -60,141 +60,129 @@ How validation creates its getter:
 
 Important route behavior:
 
-# Single-cell server support
+- If dataset already provides `samples.get`, validator does not overwrite it.
+- Meta-analysis result files are handled as special pseudo-samples and can carry cell->sample mapping (`metaIdMap`) for downstream usage.
 
-This directory contains the single-cell HTTP routes and the server-side adapters used by the
-termdb matrix and plotting code. Dataset configuration lives under
-`ds.queries.singleCell`.
+### 2) `termdb/singlecellData`
 
-## Architecture
+- File: `dataRoute.ts`
+- Request checker: `validTermdbSingleCellDataRequest()`
+- Route init: `init({ genomes })`
+- Runtime getter called: `ds.queries.singleCell.data.get(q)`
 
-Single-cell datasets are initialized in two stages:
+Purpose:
 
-1. `validate_query_singleCell(ds, genome)` runs during `mds3.init`.
-2. The routes call getters on `ds.queries.singleCell` at request time.
+- Return per-sample plot cells and optional gene expression overlays.
+- Optionally return only plot availability (`checkPlotAvailability`).
 
-For native file-backed datasets, validation installs the built-in getters. A source adapter may
-provide its own getters instead; GDC is the current example. A supplied getter is not replaced.
+How validation creates its getter:
 
-`data.plots[]` is required for every dataset, including datasets that supply all of their own
-getters, because plot color columns are converted into `ds.queries.singleCell.terms`. A plot
-`folder` is required only when the native `samples` or `data` getter will be used. This lets API
-backends declare plot metadata without local data folders.
+- Datasets without their own getter: `validateDataNative(D, ds)` injects `D.get = async (q) => {...}`.
+- GDC: `gdc_validate_query_singleCell_data()` in ppgdc's `singleCell.ts` supplies `data.get`.
 
-## Dataset initialization
+Native `data.get` flow:
 
-`validate_query_singleCell()` validates and prepares these optional capabilities:
+- Resolves selected sample id (`eID` fallback to `sID`).
+- If `checkPlotAvailability=true`, calls `getAvailablePlots(...)` and returns available plot names only.
+- Otherwise loads requested plot TSV files, parses cells, applies selected color column, and returns:
+	- `expCells` (if gene expression exists for cell),
+	- `noExpCells`.
+- If `q.gene` is provided and `geneExpression` is configured, calls `ds.queries.singleCell.geneExpression.get(...)`.
 
-- `samples`: requires an object. Without `samples.get`, `validateSamples()` scans native plot
-  folders, builds the sample inventory, reads `sampleColumns`, and installs `samples.get` plus
-  `getFilteredSingleCellSamples()`.
-- `data`: requires an object and `plots[]`. Without `data.get`, native plot files are validated and
-  `validateDataNative()` installs the file-backed getter.
-- `geneExpression`: when present, initializes `sample2gene2expressionBins` for termdb binning.
-  Without `geneExpression.get`, `validateGeneExpressionNative()` installs a getter and requires
-  `geneExpression.folder`. Native stores can also provide `listGenes()`.
-- `DEgenes`: when present, `DEgenes.get` must already be supplied. There is no built-in
-  differential-expression getter yet.
-- `pseudobulk`: `validatePseudobulk()` validates native HDF5 files, converts categories into
-  `PSEUDOBULK` terms, records the samples available for each method, and installs `pseudobulk.get()`.
-  The current implementation is not supported for GDC.
-- `images`: validates `folder` and `fileName`, and defaults `label` to `Images`. Image metadata is
-  forwarded through termdb configuration; this directory does not define a separate image route.
+Related getter dependency:
 
-`colorColumn2terms()` adds terms for plot color columns. Numeric columns become
-`SINGLECELL_NUMERIC_VALUE` terms, and categorical columns become `SINGLECELL_CELLTYPE` terms.
-Gene expression terms are available only when `geneExpression` is configured. These terms are
-also exposed by `server/src/routes/termdb.config.ts` and used by matrix, filtering, and plotting
-workflows.
+- `data.get` optionally depends on `geneExpression.get` (also injected during validation) when gene overlay is requested.
 
-## Routes
+### 3) `termdb/singleCellPlots`
 
-### `termdb/singlecellSamples`
+- File: `plotsRoute.ts`
+- Request checker: `validTermdbSingleCellPlotsRequest()`
+- Route init: `init({ genomes })`
+- Runtime getter called indirectly: `ds.queries.singleCell.data.get(arg)`
 
-Implemented in `samplesRoute.ts`. Calls `singleCell.samples.get(q)` and returns samples with
-single-cell data, optional metadata, and optional cohort-level filtering. Native validation derives
-the inventory from plot files. Meta-analysis plots are represented as pseudo-samples; their cell
-to cohort-sample mappings are cached for filtering and matrix annotation.
+Purpose:
 
-### `termdb/singlecellData`
+- Build scatter-ready payload for a single-cell plot.
+- Return either:
+	- raw sample points (small datasets), or
+	- server-rendered canvas image (large datasets).
 
-Implemented in `dataRoute.ts`. Calls `singleCell.data.get(q)` for plot data, or
-`geneExpression.listGenes(sample)` when `listGenes` is requested. A native data getter:
+How it uses getters from sample-route validation:
 
-- resolves `eID` with `sID` as fallback;
-- can return plot availability with `checkPlotAvailability`;
-- reads plot TSV files and returns `expCells` and `noExpCells`;
-- applies `colorBy` and optional `colorMap`; and
-- uses `geneExpression.get()` when a gene overlay is requested.
+- This route does not define its own dataset getter.
+- It depends on `data.get` that was validated/injected by `validate_query_singleCell` in `samplesRoute.ts`.
+- For gene-expression coloring, it sets `arg.gene` and relies on `data.get` -> `geneExpression.get` chain.
+- For categorical cell-type coloring, it sets `arg.colorBy` and reads categories from returned cells.
 
-The route accepts `sample`, `plots`, `gene`, `listGenes`, `colorBy`, and color-map options. API
-backends may supply a different `data.get()` implementation.
+Notes:
 
-### `termdb/singleCellPlots`
+- Requires `colorTW.term` to be a recognized single-cell term (`SINGLECELL_GENE_EXPRESSION` or `SINGLECELL_CELLTYPE`).
+- Recreates group/category formatting logic for legend generation because termdb matrix formatting is not reused in this path.
 
-Implemented in `plotsRoute.ts`. This route builds a scatter response from `data.get()` and returns
-either raw cell points or a server-rendered canvas image, selected by `canvasSettings.cutoff`.
-It supports:
+### 4) `termdb/singlecellDEgenes`
 
-- categorical cell-type coloring;
-- numeric plot-column coloring, including discrete bins and continuous color domains;
-- gene-expression coloring and coordinate terms; and
-- meta-result filtering through the sample mapping cache.
+- File: `DEgenesRoute.ts`
+- Request checker: `validTermdbSingleCellDEgenesRequest()`
+- Route init: `init({ genomes })`
+- Runtime getter called: `ds.queries.singleCell.DEgenes.get(q)`
 
-The request must provide a single-cell `colorTW` or `coordTWs`. Combining `coordTWs` with
-`colorTW` is currently not implemented. Numeric color domains support `auto`, `fixed`, and
-`percentile` modes. Legend/category formatting is performed in this route because it does not
-reuse the full termdb matrix formatting path.
+Purpose:
 
-### `termdb/singlecellDEgenes`
+- Return DE genes for selected cluster/category vs rest of cells.
+- Supports plain gene lists or volcano-plot-oriented response shape.
 
-Implemented in `DEgenesRoute.ts`. Calls the dataset-supplied `DEgenes.get(q)` for a selected
-sample and cluster/category. The result may be a plain gene list or volcano-plot data. Empty
-results are returned as a 404-shaped response. Datasets without `DEgenes.get()` fail validation
-and do not support this route.
+How validation creates its getter:
 
-## Matrix integration
+- `validate_query_singleCell(ds, genome)` calls `validate_query_singleCell_DEgenes(ds)`.
+- In `DEgenesRoute.ts`, that validator requires the ds to have already supplied `DEgenes.get` (GDC supplies it from ppgdc's `initQueries()`) and throws otherwise.
+- There is no built-in DE-genes getter yet, so a ds that does not supply one throws.
 
-`matrixData.ts` adapts cell-level values to the termdb matrix representation. Each cell becomes a
-matrix row:
+## End-to-end request lifecycle
 
-- `SINGLECELL_GENE_EXPRESSION` reads from `geneExpression.get()`;
-- `SINGLECELL_NUMERIC_VALUE` reads a numeric plot column; and
-- `SINGLECELL_CELLTYPE` reads a categorical plot column.
+1. Dataset config is loaded.
+2. `validate_query_singleCell()` runs during `mds3.init`.
+3. Missing getters are injected onto `ds.queries.singleCell`.
+4. Route request arrives.
+5. Route-level checker normalizes request shape.
+6. Route `init()` performs genome/dataset guards.
+7. Route delegates to injected getter.
+8. Getter performs source-specific IO/processing and returns payload.
 
-Numeric values can be binned in discrete or binary mode. For meta-analysis results, cell IDs are
-mapped back to cohort samples so cohort-level filters and annotations can be applied. The helper
-`hydrateMetaResultCellRows()` copies mapped cohort values onto pseudo-sample rows.
+## Validation functions and what they add
 
-Pseudobulk terms use the general termdb data and DE paths rather than a route in this directory.
-The getter reads mean HDF5 data by default and can also expose configured `total` and `percent`
-methods. Terms are generated per assay, member, and category.
+- `validateSamples()`
+	- Adds: `samples.get`
+	- Also populates sample inventory and optional metadata columns.
 
-## Request flow
+- `validateDataNative()`
+	- Adds: `data.get` for native files.
+	- Includes plot availability logic and TSV parsing.
 
-```text
-dataset config
-  -> mds3.init
-  -> validate_query_singleCell()
-  -> native getters installed when needed
-  -> termdb route request validation
-  -> route delegates to ds.queries.singleCell getter
-  -> source-specific files/API data formatted for the response
-```
+- `validateGeneExpressionNative()`
+	- Adds: `geneExpression.get` for a ds that does not supply one. Requires `geneExpression.folder`.
+	- Used by `data.get` when `q.gene` is provided.
 
-Common failures are an absent `queries.singleCell` block, missing `data.plots[]`, a missing
-`plot.folder` or `geneExpression.folder` for a native getter, an unavailable supplied getter, an
-invalid genome/dataset/sample, or missing per-sample files. Native getters also reject sample IDs
-that would escape the configured data directory.
+- `validate_query_singleCell_DEgenes()`
+	- Ensures `DEgenes.get` is available for supported sources (currently GDC).
 
-## Tests
+- `colorColumn2terms()`
+	- Adds: `ds.queries.singleCell.terms` synthesized from plot color columns.
+	- Used by downstream term/vocab workflows and by plotting/color logic.
 
-Focused tests for this directory are under `test/`:
+## Common error conditions seen by routes
 
-- `samplesRoute.unit.spec.ts` covers initialization, native/API getter combinations, required
-  folders, term generation, and sample-path validation.
-- `plotsRoute.spec.ts` covers legends, gene-expression ranges, numeric values, and unsupported
-  request combinations.
-- `matrixData.unit.spec.ts` covers cell annotation, numeric/categorical values, gene expression,
-  and meta-result mappings.
-- `colorDomain.unit.spec.ts` covers automatic, fixed, and percentile numeric domains.
+- Invalid genome or dataset label.
+- Dataset has no `queries.singleCell` block.
+- Expected getter missing (usually means validation did not run or the ds config is invalid).
+- Missing `singleCell.data.plots[]`, `plot.folder`, or `geneExpression.folder` on a ds that supplies
+  no getter of its own.
+- Per-sample data files missing for requested plot/sample combination.
+
+## Practical dependency map
+
+- `singlecellSamples` -> `samples.get` (injected by `validateSamples` unless dataset-supplied)
+- `singlecellData` -> `data.get` (ds-supplied, else injected by `validateDataNative`)
+- `singleCellPlots` -> `data.get` -> optional `geneExpression.get`
+- `singlecellDEgenes` -> `DEgenes.get` (injected by DE validator)
+
+This is the main pattern to keep in mind: route files define HTTP behavior, while validation functions define data access behavior.

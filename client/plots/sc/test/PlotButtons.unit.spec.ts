@@ -20,8 +20,7 @@ import { getMockSCState } from './getMockSCApp.ts'
  *   - getSingleCellConfig() should throw when no item is selected
  *   - getSingleCellConfig() should throw when plot name is not found
  *   - getSingleCellConfig() should include colorTW when colorColumns are configured
- *   - makeScTW() should return term wrapper with sample and $id
- *   - makeScTW() should throw when no matching term is found
+ *   - makeScctTW() should return term wrapper with sample and $id
  */
 
 /**************
@@ -285,7 +284,7 @@ tape('getSingleCellConfig() should return sampleScatter config', async test => {
 	const config = (await pb.getSingleCellConfig('umap')) as any
 
 	test.equal(config.chartType, 'sampleScatter', 'Should set chartType to sampleScatter')
-	test.equal(config.name, 'Sample: S1 (umap)', 'Should set name with sample sID')
+	test.equal(config.name, 'Sample: S1', 'Should set name with sample sID')
 	test.deepEqual(config.sample, { sID: 'S1', eID: 'EXP1' }, 'Should include sample')
 	test.equal(config.singleCellPlot.name, 'umap', 'Should set singleCellPlot.name')
 	test.deepEqual(config.singleCellPlot.sample, { sID: 'S1', eID: 'EXP1' }, 'Should set singleCellPlot.sample')
@@ -343,9 +342,9 @@ tape('getSingleCellConfig() should include colorTW when colorColumns are configu
 	test.end()
 })
 
-/* ---- makeScTW() ---- */
+/* ---- makeScctTW() ---- */
 
-tape('makeScTW() should return term wrapper with sample and $id', async test => {
+tape('makeScctTW() should return term wrapper with sample and $id', async test => {
 	const pb = getPlotButtons({
 		termdbConfig: {
 			queries: {
@@ -363,7 +362,7 @@ tape('makeScTW() should return term wrapper with sample and $id', async test => 
 	const item = { sID: 'S1', eID: 'EXP1' }
 	const plot = { name: 'umap', colorColumns: [{ name: 'cellType' }] }
 
-	const tw = await pb.makeScTW('scct',item, plot)
+	const tw = await pb.makeScctTW(item, plot)
 
 	test.ok(tw.$id, 'Should have $id')
 	test.equal(typeof tw.$id, 'string', '$id should be a string')
@@ -373,13 +372,13 @@ tape('makeScTW() should return term wrapper with sample and $id', async test => 
 	test.end()
 })
 
-tape('makeScTW() should throw when no matching term is found', async test => {
+tape('makeScctTW() should throw when no matching term is found', async test => {
 	const pb = getPlotButtons()
 	const item = { sID: 'S1', eID: 'EXP1' }
 	const plot = { name: 'umap', colorColumns: [{ name: 'nonexistent' }] }
 
 	try {
-		await pb.makeScTW('scct', item, plot)
+		await pb.makeScctTW(item, plot)
 		test.fail('Should have thrown')
 	} catch (e: any) {
 		test.ok(e.message.includes('No term found for colorColumn=nonexistent'), 'Should throw when term not found')

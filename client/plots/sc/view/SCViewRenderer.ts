@@ -22,13 +22,11 @@ export class SCViewRenderer {
 	plotBtns!: PlotButtons
 	sectionRenderer!: SectionRenderer
 	sampleTableRenderer!: SampleTableRenderer
-	groupsWrapper!: any
 
 	constructor(sc: SCViewer) {
 		this.sc = sc
 		this.dom = sc.dom
 		this.interactions = sc.interactions
-		this.dom.controlsDiv.style('padding', '10px')
 	}
 
 	render(settings: SCSettings, state: SCFormattedState) {
@@ -42,6 +40,8 @@ export class SCViewRenderer {
 	/** Renders the select btn at the top of the page that
 	 * show/hides the item table and plot buttons */
 	renderSelectBtn() {
+		this.dom.controlsDiv.style('padding', '10px')
+
 		const btn = this.dom.controlsDiv
 			.append('button')
 			.attr('data-testid', 'sjpp-sc-item-table-select-btn')
@@ -63,13 +63,12 @@ export class SCViewRenderer {
 	}
 
 	renderGroupByOptions(settings: SCSettings) {
-		this.groupsWrapper = this.dom.controlsDiv.append('div').style('display', 'none')
-		this.groupsWrapper
+		this.dom.controlsDiv
 			.append('span')
 			.style('padding', '3px 0px 3px 20px')
 			.style('opacity', 0.7)
-			.text('Group by:')
-		const optionsDiv = this.groupsWrapper.append('span').style('display', 'inline-block')
+			.text('Group plots by:')
+		const optionsDiv = this.dom.controlsDiv.append('span').style('display', 'inline-block')
 		const options = GroupByOptions.map(option => {
 			return {
 				label: `${option.charAt(0).toUpperCase() + option.slice(1)}`,
@@ -107,8 +106,6 @@ export class SCViewRenderer {
 			settings.sc.groupBy
 		)
 		const activeSandboxes = subplotManager.getSampleSandboxes()
-		//Hide grouping option until more than one sample with potentially more than one plot is available
-		this.groupsWrapper.style('display', activeSandboxes.size > 1 ? 'inline-block' : 'none')
 		this.sampleTableRenderer.updatePlotBtns(activeSandboxes)
 	}
 }

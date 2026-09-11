@@ -3,6 +3,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
+import { resolveMethylationMatrix, resolveGroupNames } from '#src/utils/methylationMatrix.ts'
 import serverconfig from '#src/serverconfig.js'
 import { formatElapsedTime } from '#shared'
 
@@ -28,10 +29,10 @@ function init({ genomes }) {
 			if (!genome) throw 'unknown genome'
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'unknown ds'
-			// DMR calling reads the CpG/probe-level HDF5; a promoter-only dataset
-			// supports the volcano but cannot drill into a region
-			if (!ds.queries?.dnaMethylation?.file)
-				throw new Error('This dataset does not support DNA methylation region analysis.')
+			const dm = ds.queries?.dnaMethylation
+			if (!dm) throw new Error('This dataset does not support DNA methylation region analysis.')
+
+			const { matrixFile, mvalues, useElement, eligible } = resolveMethylationMatrix(ds, q.chr, q.element_type)
 
 			if (!Array.isArray(q.group1) || q.group1.length == 0)
 				throw new Error('Group 1 has no samples. Please select at least one sample.')
@@ -50,16 +51,15 @@ function init({ genomes }) {
 					`Region too large (${(span / 1e6).toFixed(1)} Mb). Server maximum is ${SERVER_MAX_REGION_BP / 1e6} Mb.`
 				)
 
-			const group1 = q.group1.map(s => s.sample).filter(Boolean)
-			const group2 = q.group2.map(s => s.sample).filter(Boolean)
-			if (group1.length < 3)
-				throw new Error(`Group 1 needs at least 3 samples with methylation data, got ${group1.length}.`)
-			if (group2.length < 3)
-				throw new Error(`Group 2 needs at least 3 samples with methylation data, got ${group2.length}.`)
+			const { group1, group2 } = await resolveGroupNames(q.group1, q.group2, eligible, ds)
 
 			const useR = q.backend === 'r'
+			// dmrcate_full.R reads the CpG layout only (chrom_lengths attribute, meta/probe/probeID)
+			if (useR && useElement)
+				throw new Error('The R backend does not read element-level methylation matrices. Use the Rust backend.')
 			const dmrInput = {
-				probe_h5_file: ds.queries.dnaMethylation.file,
+				probe_h5_file: matrixFile,
+				mvalues,
 				cachedir: serverconfig.cachedir,
 				genome: q.genome,
 				chr: q.chr,

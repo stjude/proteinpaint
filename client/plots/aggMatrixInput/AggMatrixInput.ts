@@ -1,6 +1,6 @@
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, copyMerge, type AppApi, type ComponentApi, type RxComponent } from '#rx'
-import { capitalizeFirstLetter, icons, formatHeaderText } from '#dom'
+import { capitalizeFirstLetter, icons } from '#dom'
 import { appInit } from '../../termdb/app.js'
 import { validatePlotConfig } from '../aggregateMatrix/AggregateMatrix.ts'
 import { isNonDictionaryType } from '#shared/terms.js'
@@ -37,10 +37,8 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		super(opts, api)
 		this.type = AggMatrixInput.type
 
-        if (opts.header) formatHeaderText({
-            header: opts.header,
-            chartType: 'aggregate matrix'
-        })
+		//opts.header is the sandbox header
+        if (opts.header) opts.header.text(`AGGREGATE MATRIX`).style('font-size', '0.9em')
 	}
 
 	getState(appState) {

@@ -3,6 +3,20 @@
 Differential Methylation Region (DMR) analysis for probe-level methylation array data.
 Two backends are available: **Rust** (default, ~3s) and **R/DMRCate** (validation, ~30-60s).
 
+## Which matrix a request runs on
+
+The server picks the finest backing the dataset has, per chromosome (`server/src/routes/termdb.dmr.ts`):
+
+| config key | rows | notes |
+| --- | --- | --- |
+| `dnaMethylation.cpgByChr` | CpGs, one h5 per chromosome | preferred; built by `utils/dnaMeth/build_cpg_matrix.py`. MMRF chr1: 1.3M CpGs x 415 samples, ~2s a request |
+| `dnaMethylation.file` | CpGs, one genome-wide h5 | the array case this pipeline was written for |
+| `dnaMethylation.elements` | regulatory elements | fallback for a WGBS cohort with no CpG matrix. One row is a cCRE, so spacing is ~10kb and the client widens its default window and kernel to match (`settings/defaults.ts`). Values are M-values, so the server sends `mvalues:true` and the beta->M transform below is skipped |
+
+Element rows cannot resolve sub-element structure — cCREs are median 316bp/4 CpGs against DMRs
+of median 737bp/12 CpGs — so the element path is a fallback, not a substitute. The R backend
+reads the CpG layout only.
+
 ## Pipeline Overview
 
 ```

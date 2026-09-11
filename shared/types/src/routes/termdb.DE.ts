@@ -61,6 +61,17 @@ export type VolcanoRenderRequest = {
 	 * field's units -- the caller sends the cutoff matching the axis it asked for. Otherwise the
 	 * threshold lines would sit at coordinates unrelated to what is classified significant. */
 	xField?: 'fold_change' | 'delta_beta'
+	/** Recentre the x axis on the median effect size across all tested rows, so the origin is the
+	 * typical row rather than zero. Off by default.
+	 *
+	 * For direction counts on a contrast carrying a baseline offset: at a symmetric cutoff around
+	 * zero, an offset distribution clears the up threshold more easily than the down one, which
+	 * skews the up:down ratio independently of any per-row biology. Turning this on answers
+	 * "which rows moved more than the typical row" instead of "which rows moved from zero".
+	 *
+	 * Moves only the plotted and classified value. P-values are untouched and the returned rows
+	 * keep their raw effect sizes, so a downloaded table reads the same either way. */
+	centerX?: boolean
 	/** Target PNG width in pixels. */
 	pixelWidth: number
 	/** Target PNG height in pixels. */
@@ -112,6 +123,19 @@ export type VolcanoData<T extends DataEntry> = {
 	/** Rows that passed significance thresholds, before any maxInteractiveDots
 	 * truncation. Use this (not dots.length) for "% significant" stats. */
 	totalSignificantRows: number
+	/** The same significant rows split by direction of effect: `up` is positive on whichever
+	 * field xField selected, matching how the PNG colours them. Summed over ALL significant
+	 * rows, so unlike counting `dots` these stay correct under maxInteractiveDots — which
+	 * matters because the most-significant rows are not direction-balanced.
+	 *
+	 * What "up" MEANS is the caller's to name: higher in group 2 (the case group) for
+	 * expression, hypermethylated for methylation. */
+	totalSignificantUp: number
+	totalSignificantDown: number
+	/** The value subtracted from every plotted x when centerX was requested — the median effect
+	 * size across all tested rows, and 0 when centring was off. Report it alongside a centred
+	 * count: it is the size of the baseline offset that was removed. */
+	xOffset: number
 	/** Server-side cache ID for the full DE result (all rows, not just dots).
 	 * Downstream tools (e.g. GSEA) pass this back to the server instead of
 	 * re-transmitting the gene + fold_change arrays. */

@@ -97,7 +97,11 @@ const mockResponse = {
 			minNonZeroPValue: 1e-9
 		},
 		totalRows: testData.responseData.length,
-		totalSignificantRows: significantRow ? 1 : 0
+		totalSignificantRows: significantRow ? 1 : 0,
+		// C1orf159, the one significant row here, has fold_change -0.0021 — so it counts down
+		totalSignificantUp: 0,
+		totalSignificantDown: significantRow ? 1 : 0,
+		xOffset: 0 // uncentered, so the axis label carries no "− median"
 	},
 	images: [],
 	method: 'edgeR',

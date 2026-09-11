@@ -8,7 +8,6 @@ Features:
 - The available aggregate methods for "size" and "gradient" are now dynamically fetched based on the selected column terms. Method selectors are only shown when valid terms are selected, and incompatible selections are disabled. User feedback is provided if methods cannot be loaded or are incompatible.
 - The aggregate matrix route is no longer pseudobulk dependent and processes dictionary terms as well.
 - The aggregate matrix plot renders dictionary terms as a section, displaying the bins or categories as the rows and the section name as the term name.
-- Enabled new single cell numeric value termType for numeric color column terms. This new termType appears similarly to the scct termTypeGroup: within the SC app or when usecase.specialCase.type == 'singleCell'.
 
 
 ## 2.207.1

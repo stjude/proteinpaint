@@ -12,6 +12,9 @@ export type DmrConfig = {
 	group1Name?: string
 	group2Name?: string
 	settings: { dmr: DMRSettings }
+	/** Element class the volcano was showing, which picks the matrix to analyze on a dataset
+	 * with no CpG-level one. Ignored server-side when a CpG matrix exists. */
+	elementType?: string
 	/** Set by onBlockCoordinateChange when user pans/zooms the genome browser */
 	coordinateOverride?: { chr: string; start: number; stop: number }
 }

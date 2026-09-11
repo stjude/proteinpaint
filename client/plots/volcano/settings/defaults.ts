@@ -55,6 +55,10 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	// Off by default so existing analyses are unchanged and chrX remains usable as a
 	// positive control. Recommended on for mixed-sex cohorts -- see the checkbox title.
 	defaults.excludeSexChr = false
+	/* Off by default: the raw count is the one that answers "how many elements gained
+	methylation", and centring silently would subtract a global shift that may well BE the
+	biology. It is a second reading to switch to, not a better default. */
+	defaults.centerDeltaBeta = false
 	/* Starting element class comes from the dataset when it names one, otherwise 'promoter'.
 	The server resolves an absent or 'promoter' element_type to the legacy single-matrix config,
 	so the fallback reproduces existing behaviour exactly for datasets declaring no elements map.

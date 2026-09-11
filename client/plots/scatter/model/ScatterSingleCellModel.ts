@@ -1,5 +1,6 @@
 import { ScatterModelBase } from './ScatterModelBase'
 import type { Scatter } from '../scatter'
+import { rgb } from 'd3-color'
 import type { TermdbSingleCellPlotsResponse } from '#types'
 
 /** Some large scale single cell plots are server side rendered and
@@ -13,8 +14,6 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 	getDataRequestOpts() {
 		const c: any = this.scatter.config
 		const state = this.scatter.state
-		// The canvas is rendered before the legend initializes its color generator.
-		this.initColorDefaults('Default')
 
 		/** SCGE terms may be applied as term/term2 from the summary plot.
 		 * Capture as coordTWs[] to pass to the server for the single cell plot data request. */
@@ -29,10 +28,6 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
 			canvasSettings: {
-				colorScaleMode: this.scatter.settings.colorScaleMode,
-				colorScaleMinFixed: this.scatter.settings.colorScaleMinFixed,
-				colorScaleMaxFixed: this.scatter.settings.colorScaleMaxFixed,
-				colorScalePercentile: this.scatter.settings.colorScalePercentile,
 				cutoff: this.scatter.settings.maxSvgSamplesCutoff,
 				width: this.scatter.settings.svgw,
 				height: this.scatter.settings.svgh,
@@ -41,8 +36,8 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 				maxXScale: this.scatter.settings.maxXScale,
 				minYScale: this.scatter.settings.minYScale,
 				maxYScale: this.scatter.settings.maxYScale,
-				startColor: c.startColor.Default,
-				stopColor: c.stopColor.Default,
+				startColor: c.startColor?.['Default'] || rgb(this.scatter.settings.noExpColor).toString(),
+				stopColor: c.stopColor?.['Default'] || rgb(this.scatter.settings.expColor).toString(),
 				opacity: this.scatter.settings.opacity,
 				devicePixelRatio: window.devicePixelRatio || 1
 			}

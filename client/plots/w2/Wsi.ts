@@ -94,12 +94,9 @@ class Wsi extends PlotBase implements RxComponent {
 
 		this.dom.error.text('') // clear any previous error banner
 
-		// fixed sample: one already-chosen sample, no sample picker. Which image
-		// kind it shows is the spawner's choice: the sc app's Spatial button
-		// spawns the default 'spatial'; the omnisearch "Whole Slide Images"
-		// action passes config.imageType 'wsi' for the sample's plain slides
+		// fixed sample: spawned from the sc app's Spatial button for one
+		// already-chosen sample — no sample picker, spatial images only
 		const fixedSample = config.sample?.sID
-		const fixedKind: 'spatial' | 'wsi' = config.imageType == 'wsi' ? 'wsi' : 'spatial'
 		const model = new Model(this.state.vocab.genome, this.state.vocab.dslabel)
 		let samples
 		if (fixedSample) {
@@ -129,15 +126,13 @@ class Wsi extends PlotBase implements RxComponent {
 		// The route enumerates just the requested root, so neither mode's
 		// cost or failures depend on the other tree
 		const imageData = selectedSample
-			? await model.getImages(selectedSample.sampleId, fixedSample ? fixedKind : 'wsi')
+			? await model.getImages(selectedSample.sampleId, fixedSample ? 'spatial' : 'wsi')
 			: undefined
 		if (imageData?.error) throw new Error(imageData.error)
 		const images = imageData?.images ?? []
 		if (fixedSample && !images.length) {
 			this.dom.viewer.selectAll('*').remove()
-			this.dom.error
-				.style('padding', '20px')
-				.text(`No ${fixedKind == 'spatial' ? 'spatial image' : 'whole-slide image'} for sample ${fixedSample}.`)
+			this.dom.error.style('padding', '20px').text(`No spatial image for sample ${fixedSample}.`)
 			return
 		}
 
