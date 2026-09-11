@@ -1,4 +1,4 @@
-import type { Term } from '#types'
+import type { Term, SampleTypesByTerms } from '#types'
 import {
 	dtgeneexpression,
 	dtssgsea,
@@ -140,11 +140,15 @@ export const dictionaryNumericTypes = new Set([INTEGER, FLOAT, DATE])
 
 const categoricalTypes = new Set([CATEGORICAL, SNP])
 
-/** Note: Do not add pseudobulk here. These capture cell level terms. 
+/** Note: Do not add pseudobulk here. These capture cell level terms.
  * Pseudobulk terms are sample level terms. May in the future update
  * to isSCCellLevelTerms() and isSingleCellTerm() if the need arises
  */
-const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE /*PSEUDOBULK*/])
+const singleCellTerms = new Set([
+	SINGLECELL_CELLTYPE,
+	SINGLECELL_GENE_EXPRESSION,
+	SINGLECELL_NUMERIC_VALUE /*PSEUDOBULK*/
+])
 
 export function isSingleCellTerm(term: any) {
 	if (!term) return false
@@ -621,20 +625,45 @@ export function getTwSampleTypes(tw: any, ds: any) {
 	if (ds.cohort.termdb.term2SampleType.has(term.id)) {
 		return [ds.cohort.termdb.term2SampleType.get(term.id)]
 	}
+	const defaultSampleTypes = getDefaultSampleTypes(ds)
 	if (term.type == 'samplelst') {
 		const key = Object.keys(term.values)[0]
 		const sampleId = term.values[key].list[0]?.sampleId
 		if (sampleId) {
 			const sampleType = ds.sampleId2Type.get(Number(sampleId) || sampleId)
 			return sampleType != null ? [sampleType] : []
-		} else return [DEFAULT_SAMPLE_TYPE]
+		} else return defaultSampleTypes
 	}
 	if (dtTermTypes.has(term.type)) {
 		if (term.parentTerm.sampleTypes) {
 			return term.parentTerm.sampleTypes
 		}
 	}
-	return [DEFAULT_SAMPLE_TYPE] //later own term needs to know what type annotates based on the samples
+	return defaultSampleTypes
+}
+
+// default sample types will be all non-root sample types
+export function getDefaultSampleTypes(ds: any) {
+	const sampleTypes = Object.keys(ds.cohort.termdb.sampleTypes)
+		.filter(key => Number.isInteger(ds.cohort.termdb.sampleTypes[key].parent_id))
+		.map(Number)
+	return sampleTypes
+}
+
+// filter sampleTypesByTerms for those entries with query sample types
+export function getQuerySampleTypesByTerms(sampleTypesByTerms: SampleTypesByTerms, querySampleTypes: number[]) {
+	if (!sampleTypesByTerms) return
+	const querySampleTypesByTerms: any = {}
+	for (const [term, values] of Object.entries(sampleTypesByTerms)) {
+		const queryValues: any = {}
+		for (const [value, sampleTypes] of Object.entries(values)) {
+			const filteredSampleTypes = sampleTypes.filter(sampleType => querySampleTypes.includes(sampleType))
+			if (filteredSampleTypes.length) queryValues[value] = filteredSampleTypes
+		}
+		if (Object.keys(queryValues).length) querySampleTypesByTerms[term] = queryValues
+	}
+	if (!Object.keys(querySampleTypesByTerms).length) return
+	return querySampleTypesByTerms
 }
 
 export function getParentType(types: Set<string>, ds: any) {

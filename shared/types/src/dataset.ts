@@ -993,8 +993,10 @@ export type GeneExpressionQuery = {
 	file?: string
 	/** dynamically added during server launch, list of sample integer IDs from file */
 	samples?: number[]
-	/** unique list of sample types present in samples[] */
+	/** unique list of sample types present in .samples[] */
 	sampleTypes?: any[]
+	/** termdb sampleTypesByTerms{} filtered for those entries with sample types present in .sampleTypes[] */
+	sampleTypesByTerms?: SampleTypesByTerms
 	/** dynamically added flag during launch */
 	nochr?: boolean
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
@@ -2054,6 +2056,10 @@ keep this setting here for reason of:
 	 */
 	hasSampleAncestry?: boolean
 	sampleTypes?: SampleTypes
+	/** Terms used to define sample types */
+	sampleTypeTerms?: SampleTypeTerms
+	/** Maps each term and value to its available sample types. */
+	sampleTypesByTerms?: SampleTypesByTerms
 	/** ui labels used for plot controls and tooltips */
 	uiLabels?: UiLabels
 
@@ -2192,6 +2198,19 @@ export type SampleTypes = {
 		name: string
 		plural_name: string
 		parent_id: number | null
+	}
+}
+
+type SampleTypeTerms = {
+	[term: string]: {
+		id: string
+		name: string
+	}
+}
+
+export type SampleTypesByTerms = {
+	[term: string]: {
+		[value: string]: number[]
 	}
 }
 

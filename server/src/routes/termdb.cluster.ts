@@ -19,7 +19,7 @@ import serverconfig from '#src/serverconfig.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getData, id2sampleRef, maySetMapParent2Children } from '#src/termdb.matrix.js'
-import { termType2label, numericTypes, dictionaryNumericTypes } from '#shared/terms.js'
+import { termType2label, numericTypes, dictionaryNumericTypes, getQuerySampleTypesByTerms } from '#shared/terms.js'
 import { GENE_EXPRESSION, PROTEOME_ABUNDANCE } from '#types'
 import { formatElapsedTime } from '#shared/time.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
@@ -363,6 +363,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 			sampleTypes.add(sampleType)
 		}
 		q.sampleTypes = [...sampleTypes]
+		q.sampleTypesByTerms = getQuerySampleTypesByTerms(ds.cohort.termdb.sampleTypesByTerms, q.sampleTypes)
 		console.log(`${ds.label}: geneExpression HDF5 file validated. Samples:`, q.samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate geneExpression HDF5 file: ${error}`
