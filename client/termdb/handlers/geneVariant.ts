@@ -191,24 +191,17 @@ export class SearchHandler {
 		if (mutationType.dt) {
 			// mutation type has single dt
 			// get available sample types for that dt
-			const bySampleType: BySampleType =
-				this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[mutationType.dt]?.bySampleType
-			if (!bySampleType) return
-			for (const [k, v] of Object.entries(bySampleType)) {
-				if (v.hasSamples) querySampleTypes.push(Number(k))
-			}
+			const sampleTypes = this.getDtSampleTypes(mutationType.dt)
+			if (!sampleTypes) return
+			querySampleTypes.push(...sampleTypes)
 		} else if (mutationType.dts) {
 			// mutation type has multiple dts
 			// get intersection of sample types available for those dts
-			const dts = mutationType.dts
-			const bySampleTypes: BySampleType[] = dts.map(
-				dt => this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.bySampleType
-			)
-			if (!bySampleTypes.length) throw new Error('no sample types available')
-			for (const [sampleType, availability] of Object.entries(bySampleTypes[0])) {
-				if (!availability.hasSamples) continue
-				if (bySampleTypes.slice(1).every(bySampleType => bySampleType?.[sampleType]?.hasSamples)) {
-					querySampleTypes.push(Number(sampleType))
+			const sampleTypeSets = mutationType.dts.map(dt => this.getDtSampleTypes(dt))
+			if (!sampleTypeSets.length) throw new Error('no sample types available')
+			for (const sampleType of sampleTypeSets[0] || []) {
+				if (sampleTypeSets.slice(1).every(sampleTypes => sampleTypes?.has(sampleType))) {
+					querySampleTypes.push(sampleType)
 				}
 			}
 		}
@@ -217,6 +210,30 @@ export class SearchHandler {
 		// of this function, which may be undefined (see earlier
 		// returns above)
 		return querySampleTypes
+	}
+
+	/* sample types that have samples for one dt. they may be declared directly on the dt,
+	or nested under one or more origins (e.g. somatic split into primary/PDX while germline
+	is a single patient-level term). a sample type is included when any declaring entry has
+	samples. returns undefined when the dt declares no sample types */
+	getDtSampleTypes(dt: number): Set<number> | undefined {
+		const dtConfig = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]
+		if (!dtConfig) return
+		const bySampleTypeLst: BySampleType[] = []
+		if (dtConfig.bySampleType) bySampleTypeLst.push(dtConfig.bySampleType)
+		else if (dtConfig.byOrigin) {
+			for (const o of Object.values(dtConfig.byOrigin) as { bySampleType?: BySampleType }[]) {
+				if (o?.bySampleType) bySampleTypeLst.push(o.bySampleType)
+			}
+		}
+		if (!bySampleTypeLst.length) return
+		const sampleTypes = new Set<number>()
+		for (const bySampleType of bySampleTypeLst) {
+			for (const [k, v] of Object.entries(bySampleType)) {
+				if (v.hasSamples) sampleTypes.add(Number(k))
+			}
+		}
+		return sampleTypes
 	}
 
 	// hide gene set radio when mutation type is cnv
