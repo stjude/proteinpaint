@@ -38,7 +38,8 @@ shared/**/test/internals*.*
 **/.coverage*/*
 **/shared/types/**/*d.ts
 
-
+# ignore public bin symlinks and dirs
+**/public/bin 
 **/public/bin/*
 public/tmp/*
 /container/deps/public/cards/
