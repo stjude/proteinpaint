@@ -5,13 +5,15 @@
     "skipLibCheck": true,
     "strictNullChecks": true,
     "baseUrl": "./",
-    //"rootDir": "./",
     //"allowJs": true, // TODO: enable later so that consumer code of shared helpers will be type checked
-    //"noEmit": true,
+    // Type-check only. We do NOT emit .d.ts here: under customConditions ["sjpp/dev"] the #types import
+    // resolves to the sibling package's RAW ../types/src/*.ts, which tsc would pull into the program and
+    // then either reject (TS6059, files outside rootDir) or emit declarations for — spilling *.d.ts into
+    // ../types/src. Runtime JS is produced by esbuild (npm run ts2js); this config only type-checks. See
+    // the sibling shared/types package (build.sh), which likewise ships JS-only and relies on the
+    // sjpp/dev condition for full types inside the monorepo.
+    "noEmit": true,
     "allowImportingTsExtensions": true,
-    "emitDeclarationOnly": true,
-    "declaration": true,
-    "outDir": "dist",
     "target": "es2019",
     "esModuleInterop": true,
     "module": "esnext",
