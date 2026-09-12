@@ -69,7 +69,8 @@ const result = spawnSync(
 	'npx',
 	['proteinpaint-front', serverconfig.URL, publicBinOnly ? '--publicBinOnly' : 'allPublic'],
 	{
-		encoding: 'utf-8'
+		encoding: 'utf-8',
+		stdio: 'inherit'
 	}
 )
 if (result.stderr) {
