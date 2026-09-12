@@ -168,13 +168,26 @@ export class SearchHandler {
 		if (!Number.isInteger(mutationTypeIdx)) return
 		const dt = this.mutationTypeTerms[mutationTypeIdx]?.dt
 		if (!Number.isInteger(dt)) return
-		const bySampleType: BySampleType = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.bySampleType
-		if (!bySampleType) return
-		const querySampleTypes: number[] = []
-		for (const [k, v] of Object.entries(bySampleType)) {
-			if (v.hasSamples) querySampleTypes.push(Number(k))
+		const dtConfig = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]
+		if (!dtConfig) return
+		/* sample types may be declared directly on the dt, or nested under one or more origins
+		(e.g. somatic split into primary/PDX while germline is a single patient-level term).
+		a sample type is offered when any declaring entry has samples */
+		const bySampleTypeLst: BySampleType[] = []
+		if (dtConfig.bySampleType) bySampleTypeLst.push(dtConfig.bySampleType)
+		else if (dtConfig.byOrigin) {
+			for (const o of Object.values(dtConfig.byOrigin) as { bySampleType?: BySampleType }[]) {
+				if (o?.bySampleType) bySampleTypeLst.push(o.bySampleType)
+			}
 		}
-		return querySampleTypes
+		if (!bySampleTypeLst.length) return
+		const querySampleTypes = new Set<number>()
+		for (const bySampleType of bySampleTypeLst) {
+			for (const [k, v] of Object.entries(bySampleType)) {
+				if (v.hasSamples) querySampleTypes.add(Number(k))
+			}
+		}
+		return [...querySampleTypes]
 	}
 
 	// hide gene set radio when mutation type is cnv

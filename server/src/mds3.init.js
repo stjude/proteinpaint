@@ -412,6 +412,15 @@ export async function validate_termdb(ds) {
 			ds.sampleName2Id.set(r.name, r.id)
 			ds.sampleId2Type.set(r.id, r.sample_type)
 		}
+		if (ds.cohort.termdb?.hasSampleAncestry && ds.cohort.db.tableColumns?.sample_ancestry) {
+			// k: ancestor sample id, v: descendant sample ids. lets an annotation on a parent sample
+			// (e.g. a patient-level assay availability term) apply to its child samples, see mayAddDataAvailability()
+			ds.sampleId2Descendants = new Map()
+			for (const r of ds.cohort.db.connection.prepare('SELECT sample_id, ancestor_id FROM sample_ancestry').all()) {
+				if (!ds.sampleId2Descendants.has(r.ancestor_id)) ds.sampleId2Descendants.set(r.ancestor_id, [])
+				ds.sampleId2Descendants.get(r.ancestor_id).push(r.sample_id)
+			}
+		}
 		// XXX delete, not a good idea to dump all samples to client
 		ds.getSampleIdMap = samples => {
 			const d = {}
@@ -3390,7 +3399,12 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 	if (_dt.byOrigin) {
 		for (const o in _dt.byOrigin) {
 			const dt = _dt.byOrigin[o]
-			dts.push({ ...dt, origin: o })
+			if (dt.bySampleType) {
+				// this origin is further split by sample type; each leaf carries its own yes/no sample sets
+				for (const st in dt.bySampleType) dts.push({ ...dt.bySampleType[st], origin: o, sampleType: st })
+			} else {
+				dts.push({ ...dt, origin: o })
+			}
 		}
 	} else if (_dt.bySampleType) {
 		for (const st in _dt.bySampleType) {
@@ -3406,14 +3420,29 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 			// sample has been assayed
 			// if sample does not have annotated mutation for dt
 			// then it will be annotated as wildtype
-			addDataAvailability(sid, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter, gene)
+			for (const id of getQueriedSamples(sid, ds, sampleFilter))
+				addDataAvailability(id, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter, gene)
 		}
 		for (const sid of dt.noSamples) {
 			// sample has not been assayed
 			// annotate the sample as not tested
-			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter, gene)
+			for (const id of getQueriedSamples(sid, ds, sampleFilter))
+				addDataAvailability(id, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter, gene)
 		}
 	}
+}
+
+/* an availability term may annotate parent samples (e.g. a patient-level germline term) while the
+query is at the child level, with sampleFilter holding child sample ids (mayLimitSamples() on
+q.sampleTypes). such a parent id would be dropped by the filter, losing the availability of every
+sample under it; map it instead onto its descendants that pass the filter, as a patient's assay
+status applies to each of their samples. an id that passes the filter itself, or a query without
+a filter, is used as is */
+function getQueriedSamples(sid, ds, sampleFilter) {
+	if (!sampleFilter || sampleFilter.has(sid)) return [sid]
+	const descendants = ds.sampleId2Descendants?.get(sid)
+	if (!descendants) return [sid] // not a parent; addDataAvailability() drops it via the filter as before
+	return descendants.filter(id => sampleFilter.has(id))
 }
 
 function addDataAvailability(sid, sample2mlst, dtKey, c, origin, sampleFilter, gene) {
@@ -3916,18 +3945,31 @@ async function mayValidateAssayAvailability(ds) {
 				const byWhat = dt.byOrigin ? 'byOrigin' : 'bySampleType'
 				for (const name in by) {
 					const sub_dt = by[name]
-					if (!sub_dt.yes || !sub_dt.no || !sub_dt.term_id)
-						throw `ds.assayAvailability.byDt.*.${byWhat} requires {term_id, yes{}, no{}}`
-					await getAssayAvailablility(ds, sub_dt)
-					console.log(
-						ds.label + ': assayAvailability',
-						dt2label[key],
-						dt.byOrigin ? name : ds.cohort.termdb.sampleTypes[name].plural_name,
-						'yes',
-						sub_dt.yesSamples.size,
-						'no',
-						sub_dt.noSamples.size
-					)
+					/* an origin may itself be split by sample type, e.g. somatic calls assayed on
+					primary samples and on PDX samples via different availability terms, while
+					germline stays a single patient-level term. only one nesting level is supported */
+					const leaves = dt.byOrigin && sub_dt.bySampleType ? sub_dt.bySampleType : { [name]: sub_dt }
+					for (const leafName in leaves) {
+						const leaf = leaves[leafName]
+						if (!leaf.yes || !leaf.no || !leaf.term_id)
+							throw `ds.assayAvailability.byDt.*.${byWhat} requires {term_id, yes{}, no{}}`
+						await getAssayAvailablility(ds, leaf)
+						const label =
+							dt.byOrigin && sub_dt.bySampleType
+								? `${name} ${ds.cohort.termdb.sampleTypes[leafName].plural_name}`
+								: dt.byOrigin
+								? name
+								: ds.cohort.termdb.sampleTypes[name].plural_name
+						console.log(
+							ds.label + ': assayAvailability',
+							dt2label[key],
+							label,
+							'yes',
+							leaf.yesSamples.size,
+							'no',
+							leaf.noSamples.size
+						)
+					}
 				}
 			} else {
 				// not by origin or by sample type
