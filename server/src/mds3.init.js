@@ -3390,7 +3390,12 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 	if (_dt.byOrigin) {
 		for (const o in _dt.byOrigin) {
 			const dt = _dt.byOrigin[o]
-			dts.push({ ...dt, origin: o })
+			if (dt.bySampleType) {
+				// this origin is further split by sample type; each leaf carries its own yes/no sample sets
+				for (const st in dt.bySampleType) dts.push({ ...dt.bySampleType[st], origin: o, sampleType: st })
+			} else {
+				dts.push({ ...dt, origin: o })
+			}
 		}
 	} else if (_dt.bySampleType) {
 		for (const st in _dt.bySampleType) {
@@ -3916,18 +3921,31 @@ async function mayValidateAssayAvailability(ds) {
 				const byWhat = dt.byOrigin ? 'byOrigin' : 'bySampleType'
 				for (const name in by) {
 					const sub_dt = by[name]
-					if (!sub_dt.yes || !sub_dt.no || !sub_dt.term_id)
-						throw `ds.assayAvailability.byDt.*.${byWhat} requires {term_id, yes{}, no{}}`
-					await getAssayAvailablility(ds, sub_dt)
-					console.log(
-						ds.label + ': assayAvailability',
-						dt2label[key],
-						dt.byOrigin ? name : ds.cohort.termdb.sampleTypes[name].plural_name,
-						'yes',
-						sub_dt.yesSamples.size,
-						'no',
-						sub_dt.noSamples.size
-					)
+					/* an origin may itself be split by sample type, e.g. somatic calls assayed on
+					primary samples and on PDX samples via different availability terms, while
+					germline stays a single patient-level term. only one nesting level is supported */
+					const leaves = dt.byOrigin && sub_dt.bySampleType ? sub_dt.bySampleType : { [name]: sub_dt }
+					for (const leafName in leaves) {
+						const leaf = leaves[leafName]
+						if (!leaf.yes || !leaf.no || !leaf.term_id)
+							throw `ds.assayAvailability.byDt.*.${byWhat} requires {term_id, yes{}, no{}}`
+						await getAssayAvailablility(ds, leaf)
+						const label =
+							dt.byOrigin && sub_dt.bySampleType
+								? `${name} ${ds.cohort.termdb.sampleTypes[leafName].plural_name}`
+								: dt.byOrigin
+								? name
+								: ds.cohort.termdb.sampleTypes[name].plural_name
+						console.log(
+							ds.label + ': assayAvailability',
+							dt2label[key],
+							label,
+							'yes',
+							leaf.yesSamples.size,
+							'no',
+							leaf.noSamples.size
+						)
+					}
 				}
 			} else {
 				// not by origin or by sample type

@@ -205,6 +205,39 @@ export async function get_samplecount(q, ds) {
 	return { count: `${row.count} ${sample_type}` }
 }
 
+/* for a ds with a patient-sample hierarchy (ds.cohort.termdb.hasSampleAncestry), describe a set of
+filtered ids at every level of the hierarchy, e.g. "874 patients and 874 primary samples and 8 PDX samples",
+joined like the unfiltered count of getCohortSampleCount() in termdb.server.init.ts.
+filtered ids sit at one level (see maySetMapParent2Children()); counted with them are their
+ancestors (the patients of matched samples) and their descendants (the samples of matched
+patients), each per sample type, in sample type id order. siblings of a matched sample are not
+counted: a PDX-only filter reports its patients and PDX samples, not the primary samples that did
+not pass it. returns undefined when the ds has no hierarchy, so that a caller falls back to a flat
+count. used by the termdb/cohort/summary route, which feeds the mass nav ABOUT tab. */
+export function getSampleCountByType(ds, ids) {
+	if (!ds.cohort?.termdb?.hasSampleAncestry || !ids?.length) return
+	const rows = ds.cohort.db.connection
+		.prepare(
+			`WITH m AS (SELECT value AS id FROM json_each(?)),
+			fam AS (
+				SELECT id FROM m
+				UNION SELECT ancestor_id FROM sample_ancestry WHERE sample_id IN (SELECT id FROM m)
+				UNION SELECT sample_id FROM sample_ancestry WHERE ancestor_id IN (SELECT id FROM m)
+			)
+			SELECT sm.sample_type, count(*) AS n
+			FROM fam JOIN sampleidmap sm ON sm.id = fam.id
+			GROUP BY sm.sample_type ORDER BY sm.sample_type`
+		)
+		.all(JSON.stringify(ids))
+	return rows
+		.map(r => {
+			const st = ds.cohort.termdb.sampleTypes[r.sample_type]
+			if (!st) throw `unknown sample_type ${r.sample_type}`
+			return `${r.n} ${r.n > 1 ? st.plural_name : st.name}`
+		})
+		.join(' and ')
+}
+
 export async function get_summary_numericcategories(q) {
 	/*
 	q{}
