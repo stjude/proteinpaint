@@ -941,6 +941,22 @@ export type ProteomeAbundanceQuery = {
 		/** timepoints, in row order, e.g. ['4m','8m','16m'] */
 		timepoints: string[]
 	}
+	/** Zoomable cohort sunburst (client cohortSunburst plot); self-contained ring/stat config
+	 *  passed through termdb.config as-is */
+	cohortSunburst?: { [key: string]: any }
+	/** Disease × sample-type matrix (client diseaseSampleMatrix plot); self-contained layout
+	 *  config passed through termdb.config as-is */
+	sampleTypeMatrix?: { [key: string]: any }
+	/** Global sample-set filter (mass Filter tab). When present, the Filter tab filters
+	 *  sample sets (cohorts) by their catalog attributes instead of samples by dictionary
+	 *  terms, and every cohort-enumerating plot and route honours state.termfilter.
+	 *  sampleSetFilter. Facet keys are catalog keys or the derived species/proteome/dataType. */
+	sampleSetFilter?: {
+		/** facets offered by the filter's term picker, in order */
+		facets: string[]
+		/** display label per facet key; falls back to studyCatalog.columns labels, then the key */
+		labels?: { [facetKey: string]: string }
+	}
 	studyCatalog?: {
 		/** table columns, in display order; `key` is the derived/override field name.
 		 *  urlBase renders the cell as a link to urlBase+value (e.g. a PubMed ID column) */
@@ -2101,6 +2117,10 @@ keep this setting here for reason of:
 	limitDictTermSamplesToMutated?: boolean
 	/** (client-side) if true, plots omit the Documentation button. for a ds with no applicable user guide */
 	hidePlotDocumentation?: boolean
+	/** (client-side) per-plot local sample filter in the plot header. `hide` omits it entirely,
+	for a ds whose plots are not sample-driven (e.g. sample-set–centred proteomics); `disabledMessage`
+	renders it greyed with that tooltip (may also be set per request via pruneTermdbConfig) */
+	plotFilter?: { hide?: boolean; disabledMessage?: string }
 	/** (client-side) if true, the genome browser recreates its block on track change rather than
 	updating tracks in the existing block instance */
 	gbRecreateBlock?: boolean
@@ -2284,8 +2304,10 @@ export type DtAssayAvailabilityTerm = {
 
 type DtAssayAvailabilityByOrigin = {
 	byOrigin: {
-		/** each key is an origin value or category */
-		[index: string]: DtAssayAvailabilityTerm
+		/** each key is an origin value or category. an origin may be a single availability term,
+		or be further split by sample type (e.g. somatic calls on primary vs PDX samples) while
+		another origin stays a single term (e.g. patient-level germline) */
+		[index: string]: DtAssayAvailabilityTerm | (DtAssayAvailabilityBySampleType & { label?: string })
 	}
 }
 
