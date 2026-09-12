@@ -13,12 +13,25 @@ const publicBinOnly = process.argv.includes('--publicBinOnly')
 const CWD = process.cwd()
 const PUBLIC_DIR = `${CWD}/public`
 const BIN_DIR = `${PUBLIC_DIR}/bin`
-// The DEPLOYED revision is read from publicOrig/rev.txt — the copy BAKED INTO THIS IMAGE (build.sh
-// moves the packed public/ to publicOrig/ so a host bind mount over active/public can't shadow it). It
-// reflects the running image's code the instant this container starts, identically for every instance.
-// The mounted public/rev.txt is NOT usable here: on a rollout the tool updates it (from publicOrig, via
-// copyPublicOrigToActivePublic in rollout.js) only AFTER the restart's health gate, so at startup it
-// still shows the PREVIOUS revision — reading it would skip regenerating a genuinely new bundle.
+// The DEPLOYED revision is read from publicOrig/rev.txt. This file is OPTIONAL and this package does
+// NOT create it: a plain ppfull image (container/full/Dockerfile, container/deps/Dockerfile) copies
+// assets to public/ only and has no publicOrig/, so deployedRev is null and the guard below simply
+// regenerates public/bin on every start — which is fine for a single container.
+//
+// publicOrig/rev.txt is a contract for an OUTER image or deployment built on top of ppfull. If that
+// layer bakes in (or mounts) a publicOrig/ holding a stable, per-build rev.txt — kept separate from the
+// served public/ so a bind mount over public/ can't shadow it — this guard uses that revision to build
+// public/bin once per release and reuse it afterward. That matters when SEVERAL instances share one
+// public/ dir: without the guard, instances starting at the same time clobber each other's public/bin
+// regeneration in the shared dir (see the race note in the guard below). A deployment that runs
+// multiple instances against a shared public/ should provide an immutable publicOrig/rev.txt to enable
+// this; a single-container image can leave it absent.
+//
+// When present it is the right oracle: baked into THIS image, it reflects the running image's code the
+// instant the container starts, identically for every instance. A mounted public/rev.txt is
+// deliberately NOT used here — an external deploy step may refresh it at an unpredictable time relative
+// to container startup (e.g. only after a post-start health check), so at startup it can still show the
+// PREVIOUS revision, and reading it would skip regenerating a genuinely new bundle.
 const DEPLOYED_REV_FILE = `${CWD}/publicOrig/rev.txt`
 // public/bin/.build-key records the full set of inputs the current public/bin was built for (see
 // buildKey below), so a reuse skip only happens when ALL of them still match.
@@ -74,8 +87,8 @@ try {
 	// tar extract -> "ENOTEMPTY, Directory not empty: .../public/bin"). So skip regeneration when the
 	// bundle is already built for the same inputs AND is actually present. Then only the first instance
 	// after a deployment rebuilds; every other instance, and every later restart/boot, reuses it. (This
-	// makes restarts/boots race-free; the first post-deploy build is serialized by activateHost.sh
-	// starting the instances one at a time.)
+	// makes restarts/boots race-free; a deployment that starts its instances one at a time also
+	// serializes that first post-deploy build.)
 	//
 	// The reuse key is EVERY input that determines public/bin's content: the image revision, the
 	// installed front package version (a runtime releaseTag.front install changes the bundle without

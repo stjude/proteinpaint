@@ -5,7 +5,7 @@
     "skipLibCheck": true,
     "strictNullChecks": true,
     "baseUrl": "./",
-    "rootDir": "./",
+    //"rootDir": "./",
     //"allowJs": true, // TODO: enable later so that consumer code of shared helpers will be type checked
     //"noEmit": true,
     "allowImportingTsExtensions": true,
