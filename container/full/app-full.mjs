@@ -55,10 +55,25 @@ if (serverconfig.releaseTag) {
 	}
 
 	console.log('Updating proteinpaint server package ...')
-	spawnSync('npm', ['install', `"@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}"`], { encoding: 'utf-8' })
+	const serverInstall = spawnSync(
+		'npm',
+		['install', `"@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}"`],
+		{ encoding: 'utf-8', stdio: 'inherit' }
+	)
+	if (serverInstall.error) throw serverInstall.error
+	if (serverInstall.status !== 0) {
+		throw new Error(`Server package installation failed with status ${serverInstall.status}`)
+	}
 
 	console.log('Updating proteinpaint front package ...')
-	spawnSync('npm', ['install', `"@sjcrh/proteinpaint-front@${serverconfig.releaseTag.front}"`], { encoding: 'utf-8' })
+	const frontInstall = spawnSync('npm', ['install', `"@sjcrh/proteinpaint-front@${serverconfig.releaseTag.front}"`], {
+		encoding: 'utf-8',
+		stdio: 'inherit'
+	})
+	if (frontInstall.error) throw frontInstall.error
+	if (frontInstall.status !== 0) {
+		throw new Error(`Front package installation failed with status ${frontInstall.status}`)
+	}
 }
 
 if (!serverconfig.URL) serverconfig.URL = process.env.URL || serverconfig.url || '.'
@@ -69,7 +84,8 @@ const result = spawnSync(
 	'npx',
 	['proteinpaint-front', serverconfig.URL, publicBinOnly ? '--publicBinOnly' : 'allPublic'],
 	{
-		encoding: 'utf-8'
+		encoding: 'utf-8',
+		stdio: 'inherit'
 	}
 )
 if (result.stderr) {

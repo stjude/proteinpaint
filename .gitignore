@@ -36,6 +36,8 @@ shared/types/terms/*.js
 shared/types/routes/checkers/*
 shared/**/test/internals*.*
 **/.coverage*/*
+**/shared/types/**/*d.ts
+
 
 **/public/bin/*
 public/tmp/*

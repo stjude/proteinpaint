@@ -51,7 +51,15 @@ fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '
 
 if (serverconfig.releaseTag && serverconfig.releaseTag.server) {
 	console.log('Updating proteinpaint server package ...')
-	spawnSync('npm', ['install', `"@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}"`], { encoding: 'utf-8' })
+	const serverInstall = spawnSync(
+		'npm',
+		['install', `"@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}"`],
+		{ encoding: 'utf-8', stdio: 'inherit' }
+	)
+	if (serverInstall.error) throw serverInstall.error
+	if (serverInstall.status !== 0) {
+		throw new Error(`Server package installation failed with status ${serverInstall.status}`)
+	}
 }
 
 console.log('starting the server ...')
