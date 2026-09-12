@@ -412,6 +412,15 @@ export async function validate_termdb(ds) {
 			ds.sampleName2Id.set(r.name, r.id)
 			ds.sampleId2Type.set(r.id, r.sample_type)
 		}
+		if (ds.cohort.termdb?.hasSampleAncestry && ds.cohort.db.tableColumns?.sample_ancestry) {
+			// k: ancestor sample id, v: descendant sample ids. lets an annotation on a parent sample
+			// (e.g. a patient-level assay availability term) apply to its child samples, see mayAddDataAvailability()
+			ds.sampleId2Descendants = new Map()
+			for (const r of ds.cohort.db.connection.prepare('SELECT sample_id, ancestor_id FROM sample_ancestry').all()) {
+				if (!ds.sampleId2Descendants.has(r.ancestor_id)) ds.sampleId2Descendants.set(r.ancestor_id, [])
+				ds.sampleId2Descendants.get(r.ancestor_id).push(r.sample_id)
+			}
+		}
 		// XXX delete, not a good idea to dump all samples to client
 		ds.getSampleIdMap = samples => {
 			const d = {}
@@ -3411,14 +3420,29 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 			// sample has been assayed
 			// if sample does not have annotated mutation for dt
 			// then it will be annotated as wildtype
-			addDataAvailability(sid, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter, gene)
+			for (const id of getQueriedSamples(sid, ds, sampleFilter))
+				addDataAvailability(id, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter, gene)
 		}
 		for (const sid of dt.noSamples) {
 			// sample has not been assayed
 			// annotate the sample as not tested
-			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter, gene)
+			for (const id of getQueriedSamples(sid, ds, sampleFilter))
+				addDataAvailability(id, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter, gene)
 		}
 	}
+}
+
+/* an availability term may annotate parent samples (e.g. a patient-level germline term) while the
+query is at the child level, with sampleFilter holding child sample ids (mayLimitSamples() on
+q.sampleTypes). such a parent id would be dropped by the filter, losing the availability of every
+sample under it; map it instead onto its descendants that pass the filter, as a patient's assay
+status applies to each of their samples. an id that passes the filter itself, or a query without
+a filter, is used as is */
+function getQueriedSamples(sid, ds, sampleFilter) {
+	if (!sampleFilter || sampleFilter.has(sid)) return [sid]
+	const descendants = ds.sampleId2Descendants?.get(sid)
+	if (!descendants) return [sid] // not a parent; addDataAvailability() drops it via the filter as before
+	return descendants.filter(id => sampleFilter.has(id))
 }
 
 function addDataAvailability(sid, sample2mlst, dtKey, c, origin, sampleFilter, gene) {
