@@ -84,7 +84,9 @@ export async function mayGetGeneVariantData(tw, q) {
 				if (dt.byOrigin) {
 					for (const origin in dt.byOrigin) {
 						const sub_dt = dt.byOrigin[origin]
-						addDataAvailability(dtKey, sub_dt, bySampleId, tname, origin, filterSamples)
+						// an origin may be split by sample type; each leaf carries its own yes/no sample sets
+						const leaves = sub_dt.bySampleType ? Object.values(sub_dt.bySampleType) : [sub_dt]
+						for (const leaf of leaves) addDataAvailability(dtKey, leaf, bySampleId, tname, origin, filterSamples)
 					}
 				} else addDataAvailability(dtKey, dt, bySampleId, tname, false, filterSamples)
 			}
