@@ -12,50 +12,42 @@ const publicBinOnly = process.argv.includes('--publicBinOnly')
 
 const CWD = process.cwd()
 const PUBLIC_DIR = `${CWD}/public`
-const BIN_DIR = `${PUBLIC_DIR}/bin`
-// The DEPLOYED revision is read from publicOrig/rev.txt. This file is OPTIONAL and this package does
-// NOT create it: a plain ppfull image (container/full/Dockerfile, container/deps/Dockerfile) copies
-// assets to public/ only and has no publicOrig/, so deployedRev is null and the guard below simply
-// regenerates public/bin on every start — which is fine for a single container.
+// The client bundle is served at public/bin, but it must NOT be generated inside public/ when public/ is
+// a SHARED mount: if several container instances bind-mount the same public/ and each regenerates
+// public/bin at startup, they clobber one another — one instance's recursive rmdir races another's tar
+// extract, throwing "ENOTEMPTY, Directory not empty: .../public/bin" and crashing a startup.
 //
-// publicOrig/rev.txt is a contract for an OUTER image or deployment built on top of ppfull. If that
-// layer bakes in (or mounts) a publicOrig/ holding a stable, per-build rev.txt — kept separate from the
-// served public/ so a bind mount over public/ can't shadow it — this guard uses that revision to build
-// public/bin once per release and reuse it afterward. That matters when SEVERAL instances share one
-// public/ dir: without the guard, instances starting at the same time clobber each other's public/bin
-// regeneration in the shared dir (see the race note in the guard below). A deployment that runs
-// multiple instances against a shared public/ should provide an immutable publicOrig/rev.txt to enable
-// this; a single-container image can leave it absent.
-//
-// When present it is the right oracle: baked into THIS image, it reflects the running image's code the
-// instant the container starts, identically for every instance. A mounted public/rev.txt is
-// deliberately NOT used here — an external deploy step may refresh it at an unpredictable time relative
-// to container startup (e.g. only after a post-start health check), so at startup it can still show the
-// PREVIOUS revision, and reading it would skip regenerating a genuinely new bundle.
-const DEPLOYED_REV_FILE = `${CWD}/publicOrig/rev.txt`
-// public/bin/.build-key records the full set of inputs the current public/bin was built for (see
-// buildKey below), so a reuse skip only happens when ALL of them still match.
-const BIN_KEY_FILE = `${BIN_DIR}/.build-key`
+// So each container generates its bundle in its OWN bin at CWD/bin — a sibling of public/ that lives in
+// the container's writable layer, NOT under any mount — and public/bin is a symlink to it. The symlink
+// uses a RELATIVE target ("../bin"), so the single (possibly shared) public/bin entry resolves, inside
+// every container, to that container's own CWD/bin. No shared directory is ever regenerated, so
+// concurrent starts cannot conflict — no lock or cross-instance revision key is needed. (This symlink is
+// created and followed inside the Linux container; a host that also sees the shared mount never needs to
+// resolve it, since only the container serves these files.)
+const BIN_DIR = `${CWD}/bin`
+const PUBLIC_BIN = `${PUBLIC_DIR}/bin`
+const PUBLIC_BIN_TARGET = '../bin' // relative to public/, i.e. CWD/bin, resolved per-container
 
-// Read a file as text, or null if it does not exist (any other error is real and rethrown).
-function readTextOrNull(file) {
+// Point public/bin at this container's own CWD/bin. Idempotent and safe under concurrent starts: every
+// instance writes the identical relative symlink, so a lost race just yields EEXIST (ignored). A
+// public/bin that is NOT already this symlink (e.g. a real directory left by an older build) is removed
+// and replaced — intended as a one-time migration to the symlink. A brief startup blip during that
+// migration is acceptable; afterward the symlink persists on the host and this becomes a no-op.
+function ensurePublicBinSymlink() {
 	try {
-		return fs.readFileSync(file, { encoding: 'utf8' })
+		if (fs.readlinkSync(PUBLIC_BIN) === PUBLIC_BIN_TARGET) return // already the symlink we want
 	} catch (e) {
-		if (e.code === 'ENOENT') return null
-		throw e
+		// EINVAL: public/bin exists but is not a symlink (e.g. a real dir); ENOENT: it is missing.
+		// Anything else is a real error.
+		if (e.code !== 'EINVAL' && e.code !== 'ENOENT') throw e
 	}
-}
-
-// The installed proteinpaint-front package version (this script IS that package's bin, so __dirname is
-// its root). app-full.mjs can `npm install @sjcrh/proteinpaint-front@<releaseTag.front>` at runtime,
-// which swaps bundles.tgz for a different version WITHOUT changing the image's publicOrig/rev.txt — so
-// the bundle's identity must be keyed on this too, not the image rev alone. '' if it can't be read.
-function frontPackageVersion() {
 	try {
-		return JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), { encoding: 'utf8' })).version || ''
+		fs.rmSync(PUBLIC_BIN, { recursive: true, force: true }) // clear a wrong/real entry (no-op if missing)
+	} catch (e) {}
+	try {
+		fs.symlinkSync(PUBLIC_BIN_TARGET, PUBLIC_BIN)
 	} catch (e) {
-		return ''
+		if (e.code !== 'EEXIST') throw e // another instance created it first; its symlink is identical
 	}
 }
 
@@ -65,8 +57,8 @@ try {
 		console.log(`making a public directory at ${CWD}`)
 		fs.mkdirSync(PUBLIC_DIR)
 	}
-	// index.html / cards are ensured independently of the public/bin guard below (idempotent, and needed
-	// even when the bundle is reused), so a skipped regeneration still leaves the public scaffolding in place.
+	// index.html / cards are ensured independently of the bundle below (idempotent, and needed even when
+	// the bundle is reused), so a skipped regeneration still leaves the public scaffolding in place.
 	if (!publicBinOnly) {
 		if (!fs.existsSync(`${PUBLIC_DIR}/index.html`)) {
 			console.log(`creating a public/index.html file`)
@@ -80,35 +72,28 @@ try {
 		}
 	}
 
-	// public/bin is a SHARED, server-generated bundle: in a multi-instance deployment every container
-	// bind-mounts the SAME active/public, and public/bin (unlike the rest of public) is NOT baked into
-	// the image — it is generated here at startup. Regenerating it on every start is wasteful and, when
-	// two instances do it at once on the shared dir, destructive (one's recursive rmdir races the other's
-	// tar extract -> "ENOTEMPTY, Directory not empty: .../public/bin"). So skip regeneration when the
-	// bundle is already built for the same inputs AND is actually present. Then only the first instance
-	// after a deployment rebuilds; every other instance, and every later restart/boot, reuses it. (This
-	// makes restarts/boots race-free; a deployment that starts its instances one at a time also
-	// serializes that first post-deploy build.)
+	// Generate the bundle into CWD/bin only if it isn't already there. CWD/bin is in the container's
+	// writable layer, so it persists across restarts of THIS container (reuse) and is empty in any freshly
+	// created container (regenerate) — including after an image update, which always yields a new
+	// container. Because CWD/bin is per-container, there is no shared directory to race on.
 	//
-	// The reuse key is EVERY input that determines public/bin's content: the image revision, the
-	// installed front package version (a runtime releaseTag.front install changes the bundle without
-	// touching the image rev), and the normalized URLPATH (embedded into proteinpaint.js as
-	// __PP_URL__ -> <URLPATH>/bin/, so it can invalidate the bundle independently of the code). Keyed
-	// only when there is an image revision to anchor on; without one (dev / a plain ppfull image) we
-	// always regenerate, since the front version alone may not bump between local rebuilds.
-	const deployedRev = readTextOrNull(DEPLOYED_REV_FILE)
-	const buildKey =
-		deployedRev === null ? null : `rev=${deployedRev.trim()}\nfront=${frontPackageVersion()}\nurl=${URLPATH}\n`
-	const binKey = readTextOrNull(BIN_KEY_FILE)
-	const bundleReady = fs.existsSync(`${BIN_DIR}/proteinpaint.js`)
-	if (buildKey !== null && binKey === buildKey && bundleReady) {
-		console.log(`public/bin already built for this revision/front/URL; reusing it`)
+	// NOTE: reuse is keyed only on the bundle being present, not on its version or URL. That is correct
+	// for the normal container lifecycle (a new image, or a changed URL, arrives with a new container and
+	// hence an empty CWD/bin). It would be stale only if the SAME container were reused across a bundle or
+	// URL change — e.g. CWD/bin persisted via a mounted volume, or serverconfig.json remounted with a
+	// different URL and merely restarted — which is uncommon and outside this simple scheme.
+	if (fs.existsSync(`${BIN_DIR}/proteinpaint.js`)) {
+		console.log(`bundle already present at ${BIN_DIR}; reusing it`)
 	} else {
 		if (fs.existsSync(BIN_DIR)) {
-			console.log(`removing the old public/bin at ${CWD}`)
+			console.log(`removing an incomplete ${BIN_DIR}`)
 			fs.rmSync(BIN_DIR, { recursive: true, force: true })
 		}
-		const tar = ps.spawnSync('tar', [`-xzf`, `${__dirname}/bundles.tgz`, `-C`, `${CWD}`], { encoding: 'utf8' })
+		// bundles.tgz contains public/bin/*; --strip-components=1 drops the leading public/ so the files
+		// land in CWD/bin/* (this container's private bin), not in the shared public/.
+		const tar = ps.spawnSync('tar', [`-xzf`, `${__dirname}/bundles.tgz`, `-C`, `${CWD}`, `--strip-components=1`], {
+			encoding: 'utf8'
+		})
 		if (tar.status !== 0) {
 			throw new Error(`Tar command failed with exit code ${tar.status}: ${tar.stderr}`)
 		}
@@ -123,21 +108,16 @@ try {
 		const newcode = code.replace(`__PP_URL__`, `${URLPATH}/bin/`)
 		fs.writeFileSync(codeFile, newcode, { encoding: 'utf8' })
 		try {
-			// reset the atime and mtime to the original mtime before setting the bundle publit path
+			// reset the atime and mtime to the original mtime before setting the bundle public path
 			fs.utimesSync(codeFile, mtime, mtime)
 		} catch (e) {
 			console.log('--- !!! unable to reset the mtime for the extracted proteinpaint bundle: ', e)
 		}
-		// Stamp the build key LAST — only after the bundle is fully built. A skip above then happens only
-		// over a complete public/bin; a crash mid-build leaves no/old key, so the next start rebuilds
-		// instead of serving a partial bundle forever. Only when there is an image rev to anchor on.
-		if (buildKey !== null) {
-			fs.writeFileSync(BIN_KEY_FILE, buildKey)
-			console.log(`stamped public/bin build key (${buildKey.replace(/\n/g, ' ').trim()})`)
-		} else {
-			console.log(`no publicOrig/rev.txt to track; public/bin will be regenerated on every start`)
-		}
 	}
+
+	// Finally, point the served public/bin at the now-populated CWD/bin (after generation, so it never
+	// briefly dangles).
+	ensurePublicBinSymlink()
 } catch (e) {
 	console.error(e)
 	throw e
