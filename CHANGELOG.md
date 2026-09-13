@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.208.0
 
 Features:
 - The available aggregate methods for "size" and "gradient" are now dynamically fetched based on the selected column terms. Method selectors are only shown when valid terms are selected, and incompatible selections are disabled. User feedback is provided if methods cannot be loaded or are incompatible.
