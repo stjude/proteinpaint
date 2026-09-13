@@ -16,8 +16,8 @@ module.exports = function getPortalConfig(env = {}) {
 		target: 'web',
 		entry: './src/index.js',
 		output: {
-			path: path.join(__dirname, 'public/bin/front'),
-			publicPath: mode === 'production' ? '__PP_URL__' : '/bin/front/',
+			path: path.join(__dirname, 'public/bin/'),
+			publicPath: mode === 'production' ? '__PP_URL__' : '/bin/',
 			filename: 'proteinpaint.js',
 			chunkLoadingGlobal: 'ppJsonp',
 			// the library name exposed by this bundle

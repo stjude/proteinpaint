@@ -2,28 +2,23 @@ import serverconfig from './serverconfig.js'
 import fs from 'fs'
 import path from 'path'
 //import pkg from '../package.json' with {type: "json"}
-import type { VersionInfo, GenomeBuildInfo, HealthCheckResponse, DsInitStatus, DsSummary } from '#types'
-import { authApi } from './auth.js'
+import type { VersionInfo, DsInitStatus, DsSummary } from '#types'
 import { trackedDatasets } from './initGenomesDs.js'
 
+const SERVER_PKG = '@sjcrh/proteinpaint-server'
+const FRONT_PKG = '@sjcrh/proteinpaint-front'
 const pkg = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../package.json'), { encoding: 'utf8' }))
+const deps = getDeps()
+const codedate = computeCodeDate(deps)
 
-export async function getStat(genomes) {
-	if (!versionInfo.deps) setVersionInfoDeps() // set only once
-	const auth = (await authApi.getHealth()) as undefined | { errors?: string[] }
-	const health = {
-		// NOTE: status describes the server process, not its datasets: a failed dataset must not
-		// make an otherwise working server look down, since the k8s liveness and readiness probes
-		// both request this route. Dataset failures are reported in dsSummary and dsInitStatus.
-		status: auth?.errors?.length ? 'error' : 'ok',
-		versionInfo,
-		genomes: {},
-		auth,
-		...getDsInitStatus()
-	} satisfies HealthCheckResponse
-
-	setGenomeDbInfo(genomes, health)
-	return health
+// versionInfo is created once at module load
+export const versionInfo: VersionInfo = {
+	pkgver: getPkgVer(codedate),
+	codedate,
+	hostImage: getHostImage(),
+	deps,
+	// launchdate captured at module load so it is the actual process start, outside of any function call
+	launchdate: new Date().toString().split(' ').slice(0, 5).join(' ')
 }
 
 /*
@@ -64,107 +59,54 @@ function copyInit(ds) {
 	}
 }
 
-function setGenomeDbInfo(genomes, health) {
-	// report status of every genome
-	for (const [gn, genome] of Object.entries(genomes as { [name: string]: any })) {
-		if (!('dbInfo' in genome)) {
-			// set only once and track using the genome object
-			const dbInfo = {} as GenomeBuildInfo // object to store status of this genome
-			if (genome.genedb) {
-				// genedb status
-				dbInfo.genedb = {
-					buildDate: genome.genedb.get_buildDate?.get().date || 'unknown',
-					tables: genome.genedb.tableSize
-				}
-			}
-			if (genome.termdbs) {
-				// genome-level termdb status e.g. msigdb
-				dbInfo.termdbs = {}
-				for (const key in genome.termdbs) {
-					const db = genome.termdbs[key]
-					dbInfo.termdbs[key] = {
-						buildDate: db.cohort.termdb.q.get_buildDate?.get().date || 'unknown'
-					}
-				}
-			}
-			genome.dbInfo = Object.keys(dbInfo).length ? dbInfo : undefined
+function getPkgVer(codedate) {
+	const revFile = path.join(process.cwd(), 'public/rev.txt')
+	const hash = fs.existsSync(revFile) && fs.readFileSync(revFile, { encoding: 'utf8' }).split(' ')[1]
+	return pkg.version + '-' + (hash || codedate)
+}
+
+function getHostImage() {
+	// host-specific image name, e.g. "pp-irt:v2.204.0-92b3ab96", from public/host-image.txt (written as
+	// "<host>:<version> <date>" when a host image is built with a version); only such images carry it.
+	const hostImageFile = path.join(process.cwd(), 'public/host-image.txt')
+	const hostImage =
+		(fs.existsSync(hostImageFile) && fs.readFileSync(hostImageFile, { encoding: 'utf8' }).trim().split(/\s+/)[0]) ||
+		undefined
+	return hostImage
+}
+
+// deps: the installed @sjcrh/* versions (from their package.json under binpath) plus the version
+// ranges the embedding project declares for them (entry, from the cwd package.json dependencies).
+function getDeps() {
+	const deps: any = {}
+	const serverPkgFile = path.join(serverconfig.binpath, 'package.json')
+	if (fs.existsSync(serverPkgFile)) {
+		deps[SERVER_PKG] = {
+			installed: JSON.parse(fs.readFileSync(serverPkgFile, 'utf8')).version,
+			mtime: fs.statSync(serverPkgFile).mtime
 		}
-		// NOTE: dataset init status is reported from the tracked datasets, see getDsInitStatus()
-		health.genomes[gn] = genome.dbInfo
 	}
-}
-
-const codedate = get_codedate()
-const revFile = path.join(process.cwd(), 'public/rev.txt')
-const hash = fs.existsSync(revFile) && fs.readFileSync(revFile, { encoding: 'utf8' }).split(' ')[1]
-
-// host-specific image name, e.g. "pp-irt:v2.204.0-92b3ab96", stamped into public/host-image.txt
-// (as "<host>:<version> <date>") at build time (sjpp/build/build.sh). Only host images built with a
-// version carry this file, so it is reported optionally.
-const hostImageFile = path.join(process.cwd(), 'public/host-image.txt')
-const hostImage =
-	fs.existsSync(hostImageFile) && fs.readFileSync(hostImageFile, { encoding: 'utf8' }).trim().split(/\s+/)[0]
-
-export const versionInfo: VersionInfo = {
-	pkgver: pkg.version + '-' + (hash || codedate),
-	codedate, // still useful to know the package build/publish date in the response payload, even if it's not displayed
-	launchdate: new Date(Date.now()).toString().split(' ').slice(0, 5).join(' '),
-	...(hostImage ? { hostImage } : {}),
-	deps: {}
-}
-
-// not  `${process.cwd()}/node_modules/@sjcrh/proteinpaint`
-const sjcrhServer = serverconfig.binpath
-const serverPkg = `${sjcrhServer}/package.json`
-if (fs.existsSync(serverPkg)) {
-	const pkg = JSON.parse(fs.readFileSync(serverPkg, { encoding: 'utf8' }))
-	versionInfo.deps['@sjcrh/proteinpaint-server'] = {
-		installed: pkg.version
-	}
-}
-
-const clientPkg = serverPkg.replace('server', 'client')
-if (fs.existsSync(clientPkg)) {
-	const pkg = JSON.parse(fs.readFileSync(clientPkg, { encoding: 'utf8' }))
-	versionInfo.deps['@sjcrh/proteinpaint-client'] = {
-		installed: pkg.version
-	}
-}
-
-async function setVersionInfoDeps() {
-	// this assumes that the package.json in the process.cwd() is the embedder package
-	// that may have >=1 @sjcrh packages as dependencies
-	const targetPkgJson = `${process.cwd()}/package.json`
-	try {
-		if (!fs.existsSync(targetPkgJson)) return
-		else {
-			const targetPkgContent = fs.readFileSync(targetPkgJson, { encoding: 'utf8' })
-			const targetPkg = JSON.parse(targetPkgContent)
-			const serverEntry = targetPkg?.dependencies['@sjcrh/proteinpaint-server']
-			if (serverEntry) versionInfo.deps['@sjcrh/proteinpaint-server'].entry = serverEntry
-			const clientEntry = targetPkg?.dependencies['@sjcrh/proteinpaint-client']
-			if (clientEntry) {
-				if (!versionInfo.deps.entry['@sjcrh/proteinpaint-client']) {
-					versionInfo.deps['@sjcrh/proteinpaint-client'] = {}
-				}
-				versionInfo.deps['@sjcrh/proteinpaint-client'] = clientEntry
-			}
+	const frontPkgFile = serverPkgFile.replace('server', 'front')
+	if (fs.existsSync(frontPkgFile)) {
+		deps[FRONT_PKG] = {
+			installed: JSON.parse(fs.readFileSync(frontPkgFile, 'utf8')).version,
+			mtime: fs.statSync(frontPkgFile).mtime
 		}
-	} catch (e) {
-		console.log(e)
-		// avoid repeated errors related to reading the target package.json
-		// versionInfo.deps = {}
 	}
+
+	const targetPkgFile = path.join(process.cwd(), 'package.json')
+	if (fs.existsSync(targetPkgFile)) {
+		const projectDeps = JSON.parse(fs.readFileSync(targetPkgFile, { encoding: 'utf8' })).dependencies || {}
+		for (const name of [SERVER_PKG, FRONT_PKG] as const) {
+			if (projectDeps[name]) deps[name].entry = projectDeps[name]
+		}
+	}
+	return deps
 }
 
-function get_codedate() {
-	const date1 =
-		(fs.existsSync(serverconfig.binpath + '/server.js') && fs.statSync(serverconfig.binpath + '/server.js').mtime) ||
-		new Date(0)
-	// the actually-served client bundle: bin/proteinpaint.js (this container's own bin, served at /bin;
-	// see app.middlewares.js), falling back to public/bin for older images that serve it from there.
-	const binFile = fs.existsSync('bin/proteinpaint.js') ? 'bin/proteinpaint.js' : 'public/bin/proteinpaint.js'
-	const date2 = (fs.existsSync(binFile) && fs.statSync(binFile).mtime) || new Date(0)
+function computeCodeDate(deps) {
+	const date1 = deps[SERVER_PKG]?.mtime || new Date(0)
+	const date2 = deps[FRONT_PKG]?.mtime || new Date(0)
 	const date = date1 > date2 ? date1 : date2
 	const year = date.getUTCFullYear()
 	const month = (date.getUTCMonth() + 1).toString().padStart(2, '0') // months from 1-12
