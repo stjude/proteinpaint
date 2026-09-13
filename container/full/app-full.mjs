@@ -49,31 +49,32 @@ serverconfig.backend_only = false
 // rewriting serverconfig.json on disk.
 fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '), { charset: 'utf8' })
 
-if (serverconfig.releaseTag) {
-	if (!serverconfig.releaseTag.server || !serverconfig.releaseTag.front) {
-		throw 'Error: If the serverconfig.releaseTag option is used, then both {server, front} must be specified when running the full app.'
-	}
+// TODO: may re-enable support for serverconfig.releaseTag, will require replacing launch from update @sjcrh/proteinpaint-server,
+//       but it may be better to do npm re-installss with a docker build on top of ppfull instead of this hack
+// if (serverconfig.releaseTag) {
+// 	if (!serverconfig.releaseTag.server || !serverconfig.releaseTag.front) {
+// 		throw 'Error: If the serverconfig.releaseTag option is used, then both {server, front} must be specified when running the full app.'
+// 	}
+// 	console.log('Updating proteinpaint server package ...')
+// 	const serverInstall = spawnSync('npm', ['install', `@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}`], {
+// 		encoding: 'utf-8',
+// 		stdio: 'inherit'
+// 	})
+// 	if (serverInstall.error) throw serverInstall.error
+// 	if (serverInstall.status !== 0) {
+// 		throw new Error(`Server package installation failed with status ${serverInstall.status}`)
+// 	}
 
-	console.log('Updating proteinpaint server package ...')
-	const serverInstall = spawnSync('npm', ['install', `@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}`], {
-		encoding: 'utf-8',
-		stdio: 'inherit'
-	})
-	if (serverInstall.error) throw serverInstall.error
-	if (serverInstall.status !== 0) {
-		throw new Error(`Server package installation failed with status ${serverInstall.status}`)
-	}
-
-	console.log('Updating proteinpaint front package ...')
-	const frontInstall = spawnSync('npm', ['install', `@sjcrh/proteinpaint-front@${serverconfig.releaseTag.front}`], {
-		encoding: 'utf-8',
-		stdio: 'inherit'
-	})
-	if (frontInstall.error) throw frontInstall.error
-	if (frontInstall.status !== 0) {
-		throw new Error(`Front package installation failed with status ${frontInstall.status}`)
-	}
-}
+// 	console.log('Updating proteinpaint front package ...')
+// 	const frontInstall = spawnSync('npm', ['install', `@sjcrh/proteinpaint-front@${serverconfig.releaseTag.front}`], {
+// 		encoding: 'utf-8',
+// 		stdio: 'inherit'
+// 	})
+// 	if (frontInstall.error) throw frontInstall.error
+// 	if (frontInstall.status !== 0) {
+// 		throw new Error(`Front package installation failed with status ${frontInstall.status}`)
+// 	}
+// }
 
 if (!serverconfig.URL) serverconfig.URL = process.env.URL || serverconfig.url || '.'
 
