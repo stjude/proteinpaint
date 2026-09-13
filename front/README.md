@@ -11,33 +11,30 @@ an embedder.
 
 ## Usage
 
-The recommended usage is to include a postinstall script in your project as follows.
-```json
-	"scripts": {
-		"postinstall": "proteinpaint-front https://my.host.tld"
-	}
-```
+This package is used inside a ppfull container (https://github.com/stjude/proteinpaint/pkgs/container/ppfull).
+The container image ensures that a matching proteinpaint-server is used to serve the data as expected by 
+proteinpaint-client code. Standalone usage outside of a ppfull container is not recommended. From within
+the container, the command below is used:
 
-You can manually test your project's postinstall lifecyle script by running the following
-to extract the Proteinpaint bundles, with the correct public path for the dynamically 
-loaded Proteinpaint bundles.
 ```bash
 npx proteinpaint-front [URL_PUBLIC_PATH]
 ```
 
-If you omit the URL_PUBLIC_PATH argument above, then it will default to `'.'`, which assumes that the bundle is served by 
-the same PP server. But note that in this case, the web bundle or server host may NOT be embedded or used as host from 
-other domains, even if CORS is allowed, since script bundles will not be sourced properly and loaded dynamically.
+See `init.js` for details. If the URL_PUBLIC_PATH argument is omitted above, then it will default to `'.'`, 
+which assumes that the bundle is served by the same PP server. But note that in this case, the web bundle or 
+server host may NOT be embedded or used as host from other domains, even if CORS is allowed, since script 
+bundles will not be sourced properly and loaded dynamically.
 
-Note that you can serve the web bundle using the Proteinpaint server or any web server,
-see the example in the Develop section.
 
 ## Develop
 
+The usual dev workflow typically focuses on the client workspace development. For troubleshooting builds
+for production, the following may be performed:
+
 ```bash
-# must run the module bundling of proteinpaint-client
-cd ../client
-npm run rollw
+# must run the module bundling of proteinpaint-client, either from sjpp dev process or below
+cd ../client 
+npm run dev
 
 # in another terminal
 cd ../front
