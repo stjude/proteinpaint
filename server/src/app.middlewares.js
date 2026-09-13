@@ -28,6 +28,13 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 		app.use(basicAuth({ users: serverconfig.users, challenge: true }))
 	}
 
+	// Serve the client bundle from this container's own CWD/bin when present (proteinpaint-front's init
+	// generates it there). Mounted BEFORE the public static so /bin takes priority over any public/bin.
+	// Existence is checked here rather than at config load because init creates CWD/bin after
+	// serverconfig.js is first loaded; an older image with no CWD/bin falls through to public/bin below.
+	if (serverconfig.binDir && fs.existsSync(serverconfig.binDir)) {
+		app.use('/bin', express.static(serverconfig.binDir))
+	}
 	if (serverconfig.publicDir) {
 		// NOTE: options = {setHeaders} is not needed here
 		// because it's already set at the beginning of this function

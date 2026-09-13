@@ -308,6 +308,15 @@ if (process.argv.find(a => a == 'validate')) {
 const publicDir = path.join(process.cwd(), './public')
 if (!serverconfig.backend_only && fs.existsSync(publicDir)) serverconfig.publicDir = publicDir
 
+// The client bundle (/bin) is served from this container's own CWD/bin when present, taking priority
+// over public/bin (see app.middlewares.js), so instances that share a public/ mount each serve their own
+// bundle without writing to the shared public/bin. Auto-computed from cwd like publicDir, never
+// operator-set. Unlike publicDir, existence is NOT checked here but when the route is mounted: the
+// proteinpaint-front init generates CWD/bin AFTER this config module is first loaded, so the dir may not
+// exist yet at this point.
+const binDir = path.join(process.cwd(), './bin')
+if (!serverconfig.backend_only) serverconfig.binDir = binDir
+
 if (serverconfig.publicDir) {
 	const defaultTarget = path.join(serverconfig.binpath, 'cards')
 	if (!serverconfig.cards) {
