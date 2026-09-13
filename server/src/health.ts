@@ -161,8 +161,10 @@ function get_codedate() {
 	const date1 =
 		(fs.existsSync(serverconfig.binpath + '/server.js') && fs.statSync(serverconfig.binpath + '/server.js').mtime) ||
 		new Date(0)
-	const date2 =
-		(fs.existsSync('public/bin/proteinpaint.js') && fs.statSync('public/bin/proteinpaint.js').mtime) || new Date(0)
+	// the actually-served client bundle: bin/proteinpaint.js (this container's own bin, served at /bin;
+	// see app.middlewares.js), falling back to public/bin for older images that serve it from there.
+	const binFile = fs.existsSync('bin/proteinpaint.js') ? 'bin/proteinpaint.js' : 'public/bin/proteinpaint.js'
+	const date2 = (fs.existsSync(binFile) && fs.statSync(binFile).mtime) || new Date(0)
 	const date = date1 > date2 ? date1 : date2
 	const year = date.getUTCFullYear()
 	const month = (date.getUTCMonth() + 1).toString().padStart(2, '0') // months from 1-12

@@ -78,7 +78,7 @@ fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '
 
 if (!serverconfig.URL) serverconfig.URL = process.env.URL || serverconfig.url || '.'
 
-console.log(`generating public/bin for ${serverconfig.URL}`)
+console.log(`generating the client bundle (bin/) for ${serverconfig.URL}`)
 const publicBinOnly = process.argv.includes('--publicBinOnly')
 const result = spawnSync(
 	'npx',
@@ -95,8 +95,10 @@ if (result.status !== 0) {
 	console.error(`Process exited with non-zero status code: ${result.status}`)
 	process.exit(1)
 }
-// since the npx command generated non-root owned js files inside the public/bin folder , we need to change the owner of the folder and files to root
-spawnSync('chown', ['-R', 'root:root', './public/bin'], { encoding: 'utf8' })
+// the npx command above (proteinpaint-front) generates the client bundle into ./bin (this container's
+// own bin, served at /bin; see front/init.js), owned by the npx user — chown it to root so the server
+// can read it.
+spawnSync('chown', ['-R', 'root:root', './bin'], { encoding: 'utf8' })
 
 console.log('starting the server ...')
 launch()
