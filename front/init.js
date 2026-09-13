@@ -25,6 +25,17 @@ const PUBLIC_DIR = `${CWD}/public`
 // instances serve their CWD/bin. An older image that has no CWD/bin also still works — the server falls
 // back to serving /bin from public/bin.
 const BIN_DIR = `${CWD}/bin`
+// A distinctively named marker written LAST, only after the bundle is fully extracted AND its __PP_URL__
+// placeholder is replaced. It serves two purposes:
+//   - completion: reuse requires it, so a container that stops mid-generation (after tar creates
+//     proteinpaint.js but before the URL rewrite, or on a partial extraction) regenerates on its next
+//     start instead of reusing a partial/unpatched bundle forever — which the health gate can't catch,
+//     since an unpatched or incomplete proteinpaint.js still returns 200.
+//   - ownership: the server publishes CWD/bin at /bin ONLY when this marker is present (see the server's
+//     app.middlewares.js), so launching the server package from a consumer project never exposes an
+//     unrelated CWD/bin (e.g. that project's own bin/ scripts) over HTTP. The name is distinctive so it
+//     won't collide with a consumer's files.
+const BIN_READY = `${BIN_DIR}/.pp-bundle-ready`
 
 console.log('CWD', CWD)
 try {
@@ -52,13 +63,14 @@ try {
 	// created container (regenerate) — including after an image update, which always yields a new
 	// container. Because CWD/bin is per-container, there is no shared directory to race on.
 	//
-	// NOTE: reuse is keyed only on the bundle being present, not on its version or URL. That is correct
-	// for the normal container lifecycle (a new image, or a changed URL, arrives with a new container and
-	// hence an empty CWD/bin). It would be stale only if the SAME container were reused across a bundle or
-	// URL change — e.g. CWD/bin persisted via a mounted volume, or serverconfig.json remounted with a
-	// different URL and merely restarted — which is uncommon and outside this simple scheme.
-	if (fs.existsSync(`${BIN_DIR}/proteinpaint.js`)) {
-		console.log(`bundle already present at ${BIN_DIR}; reusing it`)
+	// NOTE: reuse is keyed on the completion marker (a fully extracted, URL-patched bundle), not on its
+	// version or URL. That is correct for the normal container lifecycle (a new image, or a changed URL,
+	// arrives with a new container and hence an empty CWD/bin). It would be stale only if the SAME
+	// container were reused across a bundle or URL change — e.g. CWD/bin persisted via a mounted volume,
+	// or serverconfig.json remounted with a different URL and merely restarted — uncommon, and outside
+	// this simple scheme.
+	if (fs.existsSync(BIN_READY)) {
+		console.log(`bundle already present and complete at ${BIN_DIR}; reusing it`)
 	} else {
 		if (fs.existsSync(BIN_DIR)) {
 			console.log(`removing an incomplete ${BIN_DIR}`)
@@ -88,6 +100,9 @@ try {
 		} catch (e) {
 			console.log('--- !!! unable to reset the mtime for the extracted proteinpaint bundle: ', e)
 		}
+		// mark generation complete LAST (see BIN_READY above): a crash before this leaves no marker, so
+		// the next start regenerates rather than reusing a partial or unpatched bundle.
+		fs.writeFileSync(BIN_READY, '')
 	}
 } catch (e) {
 	console.error(e)

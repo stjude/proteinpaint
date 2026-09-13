@@ -28,11 +28,14 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 		app.use(basicAuth({ users: serverconfig.users, challenge: true }))
 	}
 
-	// Serve the client bundle from this container's own CWD/bin when present (proteinpaint-front's init
-	// generates it there). Mounted BEFORE the public static so /bin takes priority over any public/bin.
-	// Existence is checked here rather than at config load because init creates CWD/bin after
-	// serverconfig.js is first loaded; an older image with no CWD/bin falls through to public/bin below.
-	if (serverconfig.binDir && fs.existsSync(serverconfig.binDir)) {
+	// Serve the client bundle from this container's own CWD/bin, but ONLY when it carries the marker that
+	// proteinpaint-front's init writes after generating the bundle (see front/init.js). Gating on the
+	// marker — not merely the dir existing — means launching this server package from a consumer project
+	// never publishes an unrelated CWD/bin (e.g. that project's own bin/ scripts) over HTTP, and ensures
+	// the bundle is fully generated. Checked here rather than at config load because init creates CWD/bin
+	// after serverconfig.js is first loaded. Mounted BEFORE the public static so /bin takes priority;
+	// an older image with no such CWD/bin falls through to public/bin below.
+	if (serverconfig.binDir && fs.existsSync(path.join(serverconfig.binDir, '.pp-bundle-ready'))) {
 		app.use('/bin', express.static(serverconfig.binDir))
 	}
 	if (serverconfig.publicDir) {
