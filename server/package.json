@@ -28,8 +28,8 @@
     "mjs": "esbuild \"$DIR/*.ts\" --platform=node --outdir=\"$DIR\" --format=esm",
     "cjs": "esbuild \"$DIR/*.ts\" --platform=node --outdir=\"$DIR\" --format=cjs",
     "build": "./build.sh",
-    "prepack": "npm run build",
-    "postpack": "./dedupjs.sh",
+    "prepack": "npm run build && npm pkg set _buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "postpack": "npm pkg delete _buildTime && ./dedupjs.sh",
     "dedup": "./dedupjs.sh"
   },
   "author": "",

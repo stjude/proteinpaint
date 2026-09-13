@@ -19,6 +19,7 @@ export type VersionInfo = {
 			installed?: string
 			/** the version as entered in the project's package.dependencies */
 			entry?: string
+			buildTime?: string
 		}
 	}
 }
