@@ -12,44 +12,19 @@ const publicBinOnly = process.argv.includes('--publicBinOnly')
 
 const CWD = process.cwd()
 const PUBLIC_DIR = `${CWD}/public`
-// The client bundle is served at public/bin, but it must NOT be generated inside public/ when public/ is
-// a SHARED mount: if several container instances bind-mount the same public/ and each regenerates
-// public/bin at startup, they clobber one another — one instance's recursive rmdir races another's tar
-// extract, throwing "ENOTEMPTY, Directory not empty: .../public/bin" and crashing a startup.
+// The client bundle is generated into a PER-CONTAINER dir at CWD/bin — a sibling of public/, in the
+// container's own writable layer, NOT under any mount — and is served at /bin by the server, which
+// routes /bin to CWD/bin when it exists (see the server's serverconfig binDir + app.middlewares.js).
 //
-// So each container generates its bundle in its OWN bin at CWD/bin — a sibling of public/ that lives in
-// the container's writable layer, NOT under any mount — and public/bin is a symlink to it. The symlink
-// uses a RELATIVE target ("../bin"), so the single (possibly shared) public/bin entry resolves, inside
-// every container, to that container's own CWD/bin. No shared directory is ever regenerated, so
-// concurrent starts cannot conflict — no lock or cross-instance revision key is needed. (This symlink is
-// created and followed inside the Linux container; a host that also sees the shared mount never needs to
-// resolve it, since only the container serves these files.)
+// It is deliberately NOT written into public/: when several instances bind-mount the SAME public/,
+// regenerating a shared public/bin at startup makes them clobber one another (one instance's recursive
+// rmdir races another's tar extract -> "ENOTEMPTY, Directory not empty: .../public/bin", crashing a
+// startup). Generating per-container removes the shared write entirely, so concurrent starts can't race
+// — no lock or cross-instance key needed. It also makes a rolling deploy safe: init never mutates the
+// shared public/bin, so instances still on an older release keep serving their own public/bin while new
+// instances serve their CWD/bin. An older image that has no CWD/bin also still works — the server falls
+// back to serving /bin from public/bin.
 const BIN_DIR = `${CWD}/bin`
-const PUBLIC_BIN = `${PUBLIC_DIR}/bin`
-const PUBLIC_BIN_TARGET = '../bin' // relative to public/, i.e. CWD/bin, resolved per-container
-
-// Point public/bin at this container's own CWD/bin. Idempotent and safe under concurrent starts: every
-// instance writes the identical relative symlink, so a lost race just yields EEXIST (ignored). A
-// public/bin that is NOT already this symlink (e.g. a real directory left by an older build) is removed
-// and replaced — intended as a one-time migration to the symlink. A brief startup blip during that
-// migration is acceptable; afterward the symlink persists on the host and this becomes a no-op.
-function ensurePublicBinSymlink() {
-	try {
-		if (fs.readlinkSync(PUBLIC_BIN) === PUBLIC_BIN_TARGET) return // already the symlink we want
-	} catch (e) {
-		// EINVAL: public/bin exists but is not a symlink (e.g. a real dir); ENOENT: it is missing.
-		// Anything else is a real error.
-		if (e.code !== 'EINVAL' && e.code !== 'ENOENT') throw e
-	}
-	try {
-		fs.rmSync(PUBLIC_BIN, { recursive: true, force: true }) // clear a wrong/real entry (no-op if missing)
-	} catch (e) {}
-	try {
-		fs.symlinkSync(PUBLIC_BIN_TARGET, PUBLIC_BIN)
-	} catch (e) {
-		if (e.code !== 'EEXIST') throw e // another instance created it first; its symlink is identical
-	}
-}
 
 console.log('CWD', CWD)
 try {
@@ -114,10 +89,6 @@ try {
 			console.log('--- !!! unable to reset the mtime for the extracted proteinpaint bundle: ', e)
 		}
 	}
-
-	// Finally, point the served public/bin at the now-populated CWD/bin (after generation, so it never
-	// briefly dangles).
-	ensurePublicBinSymlink()
 } catch (e) {
 	console.error(e)
 	throw e
