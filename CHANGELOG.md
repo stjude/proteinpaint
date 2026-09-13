@@ -10,6 +10,9 @@ Features:
 - The aggregate matrix plot renders dictionary terms as a section, displaying the bins or categories as the rows and the section name as the term name.
 - Enabled new single cell numeric value termType for numeric color column terms. This new termType appears similarly to the scct termTypeGroup: within the SC app or when usecase.specialCase.type == 'singleCell'.
 
+Fixes:
+- reliably compute the codedate in healthcheck response
+- avoid clobbered shared public/bin in a multi-instance setup, by making each instance generate and serve its own active/bin bundles
 
 ## 2.207.1
 
