@@ -75,23 +75,22 @@ function getHostImage() {
 	return hostImage
 }
 
-// deps: the installed @sjcrh/* versions (from their package.json under binpath) plus the version
-// ranges the embedding project declares for them (entry, from the cwd package.json dependencies).
+// deps: the installed @sjcrh/* versions and build times (from their package.json under binpath) plus the
+// version ranges the embedding project declares for them (entry, from the cwd package.json dependencies).
+// _buildTime is set by each package's prepack via `npm pkg set` — package CONTENT, so (unlike a file
+// mtime, which npm normalizes in the published tarball) it is a valid build date, and it ships in the
+// installed package.json read here.
 function getDeps() {
 	const deps: any = {}
 	const serverPkgFile = path.join(serverconfig.binpath, 'package.json')
 	if (fs.existsSync(serverPkgFile)) {
-		deps[SERVER_PKG] = {
-			installed: JSON.parse(fs.readFileSync(serverPkgFile, 'utf8')).version,
-			mtime: fs.statSync(serverPkgFile).mtime
-		}
+		const p = JSON.parse(fs.readFileSync(serverPkgFile, 'utf8'))
+		deps[SERVER_PKG] = { installed: p.version, buildTime: p._buildTime }
 	}
-	const frontPkgFile = serverPkgFile.replace('server', 'front')
+	const frontPkgFile = serverPkgFile.replace('server/package.json', 'front/package.json')
 	if (fs.existsSync(frontPkgFile)) {
-		deps[FRONT_PKG] = {
-			installed: JSON.parse(fs.readFileSync(frontPkgFile, 'utf8')).version,
-			mtime: fs.statSync(frontPkgFile).mtime
-		}
+		const p = JSON.parse(fs.readFileSync(frontPkgFile, 'utf8'))
+		deps[FRONT_PKG] = { installed: p.version, buildTime: p._buildTime }
 	}
 
 	const targetPkgFile = path.join(process.cwd(), 'package.json')
@@ -104,10 +103,14 @@ function getDeps() {
 	return deps
 }
 
+// Reports the later of the server and front _buildTime values; a data-only server (no front installed)
+// reports the server's build time. Falls back to the epoch when no _buildTime is present (e.g. running
+// from unbuilt source in dev).
 function computeCodeDate(deps) {
-	const date1 = deps[SERVER_PKG]?.mtime || new Date(0)
-	const date2 = deps[FRONT_PKG]?.mtime || new Date(0)
-	const date = date1 > date2 ? date1 : date2
+	const times = [deps[SERVER_PKG]?.buildTime, deps[FRONT_PKG]?.buildTime]
+		.map(t => (t ? new Date(t) : undefined))
+		.filter((d): d is Date => !!d && !isNaN(d.getTime()))
+	const date = times.length ? new Date(Math.max(...times.map(d => d.getTime()))) : new Date(0)
 	const year = date.getUTCFullYear()
 	const month = (date.getUTCMonth() + 1).toString().padStart(2, '0') // months from 1-12
 	const day = date.getUTCDate().toString().padStart(2, '0')

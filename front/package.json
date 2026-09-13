@@ -5,10 +5,11 @@
 	"main": "src/index.js",
 	"bin": "init.js",
 	"scripts": {
-		"dev": "./dev.sh &",
+		"dev": "./dev.sh",
 		"//TODO": "# delete webpack use, once esbuild migration is fully tested and unlikely to be reverted",
 		"client-dist": "if ! -d ../client/dist; then cd ../client; npm pack; fi",
-		"prepack": "npm run client-dist && rm -rf public/bin && rm -rf *.tgz && webpack && tar -czf bundles.tgz public/bin",
+		"prepack": "npm run client-dist && rm -rf public/bin && rm -rf *.tgz && webpack && tar -czf bundles.tgz public/bin && npm pkg set _buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+		"postpack": "npm pkg delete _buildTime",
 		"test:unit": "echo 'TODO: front unit tests'",
 		"test:integration": "echo 'TODO: front integration tests'"
 	},
