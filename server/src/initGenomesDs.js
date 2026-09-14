@@ -608,8 +608,13 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 	if (e) console.trace(e)
 
 	if (!ds.init.recoverableError && !utils.nonFatalStatus.has(ds.init.status) && !utils.nonFatalStatus.has(e?.status)) {
-		// forget datasets that did not load or cannot be loaded with retries
-		delete g.datasets[ds.label]
+		// forget datasets that did not load or cannot be loaded with retries — but only remove the
+		// genome's entry when it is THIS dataset, or when the existing entry is an untracked, partially-
+		// constructed object. A duplicate d.name can leave g.datasets[ds.label] pointing at a different,
+		// already-loaded dataset while this failure is a stub created for the duplicate (see the try/catch
+		// above); deleting it would drop a routable, done dataset while the server still reports success.
+		const existing = g.datasets[ds.label]
+		if (existing === ds || !trackedDatasets.includes(existing)) delete g.datasets[ds.label]
 	}
 
 	if (ds.init.fatalError) {
