@@ -13,7 +13,10 @@ import crypto from 'crypto'
 export async function sendMessageToSlack(
 	webhookUrl: string,
 	message: string,
-	lastMessageHashFile: string
+	lastMessageHashFile: string,
+	// bound every request so an unreachable or unresponsive webhook can never leave this promise
+	// pending — e.g. the `validate` startup awaits this notification and must not hang on Slack
+	timeoutMs = 10_000
 ): Promise<void> {
 	return new Promise((resolve, reject) => {
 		// Validate inputs
@@ -60,8 +63,27 @@ export async function sendMessageToSlack(
 			}
 		}
 
+		// Settle the promise exactly once and always clear the timer. Every terminal event routes here so
+		// none can leave the promise pending (which would hang an awaiting caller) or settle it twice.
+		let settled = false
+
+		const settle = (err?: Error) => {
+			if (settled) return
+			settled = true
+			clearTimeout(timer)
+			if (err) {
+				console.error(`Error posting message to Slack: ${err.message}`)
+				reject(err)
+			} else {
+				resolve()
+			}
+		}
+
 		// Send message to Slack
 		const req = https.request(new URL(webhookUrl), options, res => {
+			// drain the response so 'end' fires and the socket is freed even though the body is ignored;
+			// without this the stream stays paused and the promise could never settle, even on success
+			res.resume()
 			if (res.statusCode === 200) {
 				console.log(`Message posted successfully on Slack`)
 				// Save the new hash to the file
@@ -70,15 +92,27 @@ export async function sendMessageToSlack(
 				console.log(`Error posting message on Slack: ${res.statusCode} ${res.statusMessage}`)
 			}
 
-			res.on('end', () => {
-				resolve()
-			})
+			// Settle on every terminal response event: 'end' on a clean finish, but also 'error'/'aborted'
+			// when the connection is cut mid-response. Without the latter two, only 'end' resolves — so an
+			// aborted response would hang the promise, and its unhandled 'error' would crash the process.
+			res.on('end', () => settle())
+			res.on('error', settle)
+			res.on('aborted', () => settle(new Error('Slack webhook response aborted before completion')))
 		})
 
-		req.on('error', e => {
-			console.error(`Error posting message to Slack: ${e.message}`)
-			reject(e)
-		})
+		req.on('error', settle)
+
+		// Fail fast on a hung or unreachable webhook so an awaiting caller (e.g. the validate startup
+		// notification) can never block indefinitely. An explicit timer fires at timeoutMs regardless of
+		// connection state — request.setTimeout only arms the socket timeout AFTER the socket connects,
+		// which a blackholed host never does. Settle the promise directly here rather than relying on
+		// req.destroy(err) to emit 'error': if the request was already destroyed/closed without an error,
+		// a later destroy(error) is a no-op and no handler would fire, leaving the promise pending past the
+		// timeout. Then destroy the request (no-op if already closed) to release its socket.
+		const timer: ReturnType<typeof setTimeout> = setTimeout(() => {
+			settle(new Error(`Slack webhook request timed out after ${timeoutMs}ms`))
+			req.destroy()
+		}, timeoutMs)
 
 		req.write(data)
 		req.end()
