@@ -16,11 +16,12 @@ export function getDefaultGseaSettings(overrides = {}, opts: any = {}): GseaSett
 		pathway: opts?.gsea_params?.pathway ?? undefined,
 		geneset_name: null,
 		min_gene_set_size_cutoff: 0,
-		/* 500 only for a DMR scan's gene-body ranking, where blitzgsea's null fit is unstable above
-		it: on that 16,000-gene ranking it returned infinite scores for Reactome sets of 260-500
-		genes. Every other caller keeps 20,000, because lowering it for them would silently drop
-		large GO and Reactome sets from analyses that have always shown them. The control panel
-		moves it either way. */
+		/* 500 only for a DMR scan's gene-body ranking, where blitzgsea's null fit is unstable above it.
+		The server enforces that ceiling on the library before the fit (genesetEnrichment.ts); this
+		default only keeps the table's own size filter consistent with it, and daRequest may not be
+		known yet when defaults are first built. Every other caller keeps 20,000, because lowering it
+		for them would silently drop large GO and Reactome sets from analyses that have always shown
+		them. */
 		max_gene_set_size_cutoff: isDmrScanRanking(opts) ? 500 : 20000,
 		filter_non_coding_genes: true,
 		fdr_or_top: 'top',

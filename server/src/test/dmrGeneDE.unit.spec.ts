@@ -80,6 +80,26 @@ tape('a stratum thin on either side is dropped rather than pooled', t => {
 	t.end()
 })
 
+tape('the test is lower-tailed: a higher-expressed set is not significant', t => {
+	const genes: GeneFC[] = []
+	const hits = new Set<string>()
+	const h = mk(30, 50_000, () => 5, 'H')
+	const o = mk(30, 50_000, () => -5, 'O')
+	h.forEach(g => hits.add(g.gene))
+	genes.push(...h, ...o)
+	const r = lengthStratifiedDE(genes, hits, 7)
+	t.ok(r.weightedDiff > 0, 'the hits are expressed higher')
+	t.ok(r.p > 0.5, `so the pre-specified lower tail does not reject (p=${r.p})`)
+	t.end()
+})
+
+tape('no usable stratum is an error, not a floor p', t => {
+	const genes = [...mk(2, 50_000, () => -1, 'H'), ...mk(30, 50_000, () => 0, 'O')]
+	const hits = new Set(genes.filter(g => g.gene.startsWith('H')).map(g => g.gene))
+	t.throws(() => lengthStratifiedDE(genes, hits, 1), /No gene-length stratum/, 'too few hits anywhere to compare')
+	t.end()
+})
+
 tape('p is bounded below and the run is deterministic', t => {
 	const genes: GeneFC[] = []
 	const hits = new Set<string>()

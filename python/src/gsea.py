@@ -181,6 +181,13 @@ try:
               execution_time = stop_loop_time - start_loop_time  # Calculate the execution time
               print(f"Execution time: {execution_time} seconds")  # Print the execution time
 
+            # Drop gene sets above a size ceiling before fitting, when the caller sets one (a DMR scan's
+            # gene-body ranking): blitzgsea's null is fitted on the library it is given, so filtering the
+            # finished table afterwards would leave the unstable fit in place
+            max_geneset_size = json_object.get('max_geneset_size')
+            if max_geneset_size:
+                msigdb_library = {k: v for k, v in msigdb_library.items() if len(v) <= max_geneset_size}
+
             # Filter out non-coding genes if specified
             if filter_non_coding_genes:
                 coding_genes_query = "SELECT * FROM codingGenes"  # SQL query to get coding genes

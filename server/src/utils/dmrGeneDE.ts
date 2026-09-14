@@ -99,6 +99,13 @@ export function lengthStratifiedDE(
 			diff: mh - mo
 		}
 	})
+	/* With no usable stratum there is no comparison to make. Carrying on gave a NaN difference that no
+	permutation could reach, so p came out at its 1/(perms+1) floor -- the strongest possible result
+	for a test that never ran. */
+	if (!strata.length)
+		throw new Error(
+			`No gene-length stratum holds at least ${MIN_PER_SIDE} hit and ${MIN_PER_SIDE} other genes, so the set cannot be compared at matched length.`
+		)
 	const observed = weightedDiff(strata)
 
 	/* Permute the hit label WITHIN each bin. Shuffling globally would break the length matching --
@@ -117,8 +124,10 @@ export function lengthStratifiedDE(
 			return { nHit: h.length, diff: median(h) - median(o) }
 		})
 		const d = weightedDiff(perm)
-		// one-sided in the observed direction; the prediction names a direction
-		if (Number.isFinite(d) && (observed <= 0 ? d <= observed : d >= observed)) atLeast++
+		/* One-sided in the direction fixed BEFORE looking at the data: the hypothesis is that these
+		genes are expressed lower. Choosing the tail from the observed sign handed a positive effect a
+		small upper-tail p it never predicted, and doubles the false-positive rate of a one-sided test. */
+		if (Number.isFinite(d) && d <= observed) atLeast++
 	}
 	return {
 		strata,

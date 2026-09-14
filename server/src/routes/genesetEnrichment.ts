@@ -137,9 +137,19 @@ function gseaKeyInputs(q: GenesetEnrichmentRequest, genes: string[], fold_change
 		fold_change,
 		geneSetGroup: q.geneSetGroup,
 		num_permutations: q.num_permutations,
-		filter_non_coding_genes: q.filter_non_coding_genes
+		filter_non_coding_genes: q.filter_non_coding_genes,
+		/* A scan's gene-body ranking drops sets above this size from the library BEFORE blitzgsea
+		fits its null, which is unstable above it on that ranking. Filtering the finished table
+		afterwards, as the client default did, left the fit itself unchanged. Only present for a scan,
+		so every other caller's cache key is unchanged. */
+		...((q.daRequest as Partial<DiffMethRequest> | undefined)?.element_type === DMR_SCAN_ELEMENT_TYPE
+			? { max_geneset_size: SCAN_MAX_GENESET_SIZE }
+			: {})
 	}
 }
+
+/** Largest gene set a DMR scan's gene-body ranking is fitted against. */
+const SCAN_MAX_GENESET_SIZE = 500
 
 /** Single read-or-recompute entry point for the GSEA cache. Both the
  * initial-table path and the detail-image path go through here so they
@@ -303,6 +313,7 @@ function buildPyInput(
 		cachedir: path.join(serverconfig.cachedir, 'gsea'),
 		geneset_name: q.geneset_name,
 		num_permutations: cacheArg.num_permutations,
+		...(cacheArg.max_geneset_size ? { max_geneset_size: cacheArg.max_geneset_size } : {}),
 		...(pickleB64 ? { pickle_b64: pickleB64 } : {})
 	}
 }
