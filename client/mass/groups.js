@@ -617,13 +617,31 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.attr('data-testid', 'sjpp-dmr-option')
 			.text(`${termType2label(TermTypes.DNA_METHYLATION)} Region (DMR) Analysis`)
-			.on('click', () => {
+			.on('click', async () => {
 				const groups = []
 				for (const group of samplelstTW.q.groups) {
-					if (group.values && group.values.length > 0) groups.push(group)
+					if (group.values && group.values.length > 0) groups.push({ ...group })
 					else throw 'group does not contain samples for differential analysis'
 				}
 				if (groups.length != 2) throw 'exactly 2 groups are required for region analysis'
+				/* "One group vs everyone else" arrives as a second group with in:false whose values repeat
+				the first group's -- a placeholder the volcano expands in VolcanoModel.getOtherSamples.
+				The region route takes the values literally, so expand it the same way here or the
+				group is compared with itself. */
+				const others = groups.find(g => g.in === false)
+				if (others) {
+					const inIds = new Set(groups.find(g => g !== others).values.map(v => v.sampleId))
+					others.values = (await self.app.vocabApi.getFilteredSampleList(self.state.termfilter.filter))
+						.filter(s => !inIds.has(s.id))
+						.map(s => ({ sampleId: s.id, sample: s.name }))
+					others.in = true
+				}
+				// the picker's colours, as the volcano's launcher carries them (groupColors)
+				const colors = {}
+				const c1 = samplelstTW.term.values?.[groups[0].name]?.color
+				const c2 = samplelstTW.term.values?.[groups[1].name]?.color
+				if (c1) colors.group1 = c1
+				if (c2) colors.group2 = c2
 
 				const tip = self.tip2
 				tip.clear().showunderoffset(itemDiv.node())
@@ -648,7 +666,8 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 								group1: groups[0].values,
 								group2: groups[1].values,
 								group1Name: groups[0].name,
-								group2Name: groups[1].name
+								group2Name: groups[1].name,
+								...(Object.keys(colors).length ? { settings: { dmr: { colors } } } : {})
 							}
 						})
 					}

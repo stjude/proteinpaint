@@ -11,7 +11,14 @@ export function getDefaultDMRSettings(opts: any): DMRSettings {
 	and kernel below would frame one element and smooth nothing. Scaled to element spacing instead.
 	ponytail: fixed values, not derived from the matrix's actual spacing — worth deriving only if a
 	dataset shows up whose element density is far off this one's. The user can pan/zoom either way. */
-	const elementScale = opts?.app?.vocabApi?.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'element'
+	const dm = opts?.app?.vocabApi?.termdbConfig?.queries?.dnaMethylation
+	/* Per chromosome, not per dataset: a cohort with some shards built runs CpG resolution where one
+	exists and elements everywhere else (server resolveMethylationMatrix), so a dataset-wide flag gave
+	the fallback chromosomes a CpG-scale window over rows ~10 kb apart. cpgChroms is sent only for a
+	shard-backed dataset without a genome-wide file. */
+	const chr = opts?.coordinateOverride?.chr
+	const elementScale =
+		dm?.regionAnalysis == 'element' || (Array.isArray(dm?.cpgChroms) && !!chr && !dm.cpgChroms.includes(chr))
 	const defaults = {
 		blockWidth: 800,
 		pad: elementScale ? 100_000 : 2000,

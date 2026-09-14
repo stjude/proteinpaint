@@ -405,6 +405,11 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		if (q.dnaMethylation.cpgByChr || q.dnaMethylation.file) q2.dnaMethylation.regionAnalysis = 'cpg'
 		else if (q.dnaMethylation.promoter || Object.keys(q.dnaMethylation.elements ?? {}).length)
 			q2.dnaMethylation.regionAnalysis = 'element'
+		/* Shard-backed with no genome-wide file: the region view falls back to elements on every
+		chromosome without a shard, so the client needs the list to size its window per chromosome
+		rather than per dataset. */
+		if (q.dnaMethylation.cpgByChr && !q.dnaMethylation.file && q.dnaMethylation.cpgChroms)
+			q2.dnaMethylation.cpgChroms = [...q.dnaMethylation.cpgChroms]
 		if (q.dnaMethylation.promoter) {
 			q2.dnaMethylation.promoter = { unit: q.dnaMethylation.promoter.unit }
 		}

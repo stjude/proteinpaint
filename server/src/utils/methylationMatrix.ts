@@ -53,11 +53,20 @@ function resolveElementEntry(ds: any, elementType: string | undefined): any {
 	const hasElements = !!(dm.promoter || Object.keys(dm.elements ?? {}).length)
 	if (!hasElements) return undefined
 	const dEl = dm.defaultElementType
-	try {
-		return resolveElementQuery(ds, dEl && dEl != DMR_SCAN_ELEMENT_TYPE ? dEl : undefined).q
-	} catch {
-		return undefined // dataset declares classes but no default one
+	if (dEl && dEl != DMR_SCAN_ELEMENT_TYPE) {
+		try {
+			return resolveElementQuery(ds, dEl).q
+		} catch {
+			// a stale default is no worse than none: fall through to the configured order
+		}
 	}
+	/* No usable default: the order mds3.init.js resolveElementEntryForTerms uses, so a region request
+	and a term query nominate the same matrix -- first configured non-promoter entry, then promoter.
+	Resolving 'promoter' alone rejected every dataset that declares only other classes, while
+	termdb.config advertised element-level region analysis for it. */
+	const nonPromoter = Object.entries<any>(dm.elements ?? {}).find(([k, e]) => k != 'promoter' && e?.file)
+	if (nonPromoter) return nonPromoter[1]
+	return dm.elements?.promoter?.file ? dm.elements.promoter : dm.promoter?.file ? dm.promoter : undefined
 }
 
 /* Which samples can take part in a methylation contrast, for the whole analysis rather than for one
@@ -99,8 +108,10 @@ export function resolveMethylationMatrix(ds: any, chr: string, elementType: stri
 		matrixFile = dm.file
 	} else if (elementEntry) {
 		matrixFile = elementEntry.file
-		// element matrices may hold either scale; the ds config entry declares which
-		mvalues = /m-?value/i.test(elementEntry.unit || '')
+		/* M-values unless the entry says beta: the term getter's contract (mds3.init.js storesBeta).
+		Testing for "m-value" instead read a missing or differently worded unit as beta, and the
+		binary would logit-transform an M-value matrix a second time. */
+		mvalues = !/beta/i.test(elementEntry.unit || '')
 		useElement = true
 	} else {
 		throw new Error('This dataset does not support DNA methylation region analysis.')

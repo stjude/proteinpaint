@@ -339,6 +339,9 @@ fn process_chromosome(
     // the weight beside each value, in the same order
     let mut cw: Vec<f64> = Vec::with_capacity(case_idx.len());
     let mut kw: Vec<f64> = Vec::with_capacity(ctrl_idx.len());
+    // the matrix column each kept value came from; see apply_sample_factors
+    let mut ck: Vec<usize> = Vec::with_capacity(case_idx.len());
+    let mut kk: Vec<usize> = Vec::with_capacity(ctrl_idx.len());
     const CHUNK: usize = 1000;
     for chunk_i in 0..((n_probes + CHUNK - 1) / CHUNK) {
         let cs = chunk_i * CHUNK;
@@ -373,6 +376,8 @@ fn process_chromosome(
             km.clear();
             cw.clear();
             kw.clear();
+            ck.clear();
+            kk.clear();
             let drow = depth.as_ref().map(|d| d.row(lp));
             let mut n_case_raw = 0usize;
             let mut n_ctrl_raw = 0usize;
@@ -396,6 +401,7 @@ fn process_chromosome(
                         pb_case += b;
                         gb.case_n += 1;
                         n_case_raw += 1;
+                        ck.push(si);
                         if mvalues {
                             cm.push(v);
                             cw.push(1.0);
@@ -424,6 +430,7 @@ fn process_chromosome(
                         pb_ctrl += b;
                         gb.ctrl_n += 1;
                         n_ctrl_raw += 1;
+                        kk.push(si);
                         if mvalues {
                             km.push(v);
                             kw.push(1.0);
@@ -499,12 +506,8 @@ fn process_chromosome(
                     *t = 1.0 / (bio + *t).max(floor);
                 }
                 if let Some(f) = sw {
-                    for (i, w) in cw.iter_mut().enumerate() {
-                        *w *= f[case_idx[i]];
-                    }
-                    for (i, w) in kw.iter_mut().enumerate() {
-                        *w *= f[ctrl_idx[i]];
-                    }
+                    apply_sample_factors(&mut cw, &ck, f);
+                    apply_sample_factors(&mut kw, &kk, f);
                 }
             } else {
                 for w in cw.iter_mut().chain(kw.iter_mut()) {
@@ -965,10 +968,16 @@ fn call_region(
     qstart: i64,
     qstop: i64,
     p: &RegionParams,
+    blocks: &HashMap<&str, (usize, usize)>,
 ) -> Option<RegionResult> {
-    let ri: Vec<usize> = (0..fit.all.len())
-        .filter(|&i| fit.all[i].chr == qchr && fit.all[i].start >= qstart && fit.all[i].start <= qstop)
-        .collect();
+    /* The chromosome's block, then two binary searches: probes are start-sorted within a block.
+    A filter over every probe per region was O(regions x probes), which a 25,000-region batch on a
+    million-probe chromosome turns into tens of billions of comparisons before any smoothing. */
+    let &(lo, hi) = blocks.get(qchr)?;
+    let block = &fit.all[lo..hi];
+    let a = lo + block.partition_point(|s| s.start < qstart);
+    let b = lo + block.partition_point(|s| s.start <= qstop);
+    let ri: Vec<usize> = (a..b).collect();
     if ri.is_empty() {
         return None;
     }
@@ -1124,6 +1133,17 @@ fn bin_methylation(all: &[ProbeStats], bin_bp: i64) -> Vec<(String, i64, u64, f6
     }
     flush(cur, n, cs, ks, &mut out);
     out
+}
+
+/// Scale each observation's weight by its own sample's factor.
+///
+/// `cols[i]` is the matrix column observation `i` was read from. Observations are kept only where
+/// the cell is finite, so position `i` is NOT an index into the requested sample list: indexing the
+/// requested list instead gave every sample after the first missing one its neighbour's factor.
+fn apply_sample_factors(w: &mut [f64], cols: &[usize], f: &[f64]) {
+    for (wi, &c) in w.iter_mut().zip(cols) {
+        *wi *= f[c];
+    }
 }
 
 /// Row span of each chromosome's contiguous block in `fit.all`, keyed by name.
@@ -1615,7 +1635,10 @@ fn main() {
                 global.ctrl_sum += g.ctrl_sum;
                 global.ctrl_n += g.ctrl_n;
             }
-            Err(_e) => {}
+            /* An empty chromosome comes back Ok with no probes, so an Err here is a real failure: an
+            unreadable matrix, or weights asked of one with no depth/values. Swallowing it turned every
+            such cause into "Too few probes after filtering" once all chromosomes were skipped. */
+            Err(e) => bail!("{}: {}", chr_names[i], e),
         }
         pfx += cl;
     }
@@ -1675,9 +1698,11 @@ fn main() {
     background_regions with an empty regions list, and falling through to single-region mode below
     would return no background at all -- silently, as an empty correction rather than an error. */
     if !batch_regions.is_empty() || !background_regions.is_empty() {
+        // one pass over the probes, then every region and window is a lookup; see chrom_blocks
+        let blocks = chrom_blocks(&fit.all);
         let out: Vec<Value> = batch_regions
             .iter()
-            .map(|(c, s, e)| match call_region(&fit, c, *s, *e, &rp) {
+            .map(|(c, s, e)| match call_region(&fit, c, *s, *e, &rp, &blocks) {
                 Some(r) => json!({
                     "chr": c, "start": s, "stop": e,
                     "n_probes": r.rpos.len(),
@@ -1692,8 +1717,6 @@ fn main() {
             .collect();
         /* Plain delta-beta per background window, no DMR calling. Rounded to five places, as the
         group means above are: the caller compares distributions, not last bits. */
-        // one pass over the probes, then every window is a lookup; see chrom_blocks
-        let blocks = chrom_blocks(&fit.all);
         let bg: Vec<Value> = background_regions
             .iter()
             .map(|(c, s, e)| {
@@ -1735,7 +1758,7 @@ fn main() {
         return;
     }
 
-    let region = match call_region(&fit, qchr, qstart, qstop, &rp) {
+    let region = match call_region(&fit, qchr, qstart, qstop, &rp, &chrom_blocks(&fit.all)) {
         Some(r) => r,
         None => {
             println!(
@@ -1831,7 +1854,17 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{ProbeStats, cell, chrom_blocks, select_significant};
+    use super::{ProbeStats, apply_sample_factors, cell, chrom_blocks, select_significant};
+
+    /* Sample factors follow the column a value was read from. Three samples were requested and the
+    middle one was missing at this probe, so the two kept values came from columns 0 and 2; indexing
+    the requested list by position gave the second value column 1's factor. */
+    #[test]
+    fn sample_factors_follow_the_column_not_the_position() {
+        let mut w = vec![1.0, 1.0];
+        apply_sample_factors(&mut w, &[0, 2], &[2.0, 3.0, 5.0]);
+        assert_eq!(w, vec![2.0, 5.0]);
+    }
 
     /* The WGBS cell transform. This is where "fully support WGBS" actually lives: a beta on its
     own cannot say whether 0.0 came from 5 reads or 200, and the old clamp gave both the same
