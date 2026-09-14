@@ -61,17 +61,17 @@ tape('ReqResCache instance', test => {
 		)
 	}
 	{
-		const cache = new ReqResCache({ path: '/termdb', query: { for: 'matrix', y: 1 } })
+		const cache = new ReqResCache({ path: '/termdb/matrix', query: { y: 1 } })
 		const loc = cache.getLoc(cachedir, 'test')
 		test.deepEqual(
 			loc,
 			{
-				route: '/termdb',
-				dirId: `termdb~for/95e3ccd4281cd5939d89`,
-				id: '95e3ccd4281cd5939d896452b0230baa1e1fec75', // pragma: allowlist secret
-				file: `${cachedir}/termdb~for/95e3ccd4281cd5939d89.json`
+				route: '/termdb/matrix',
+				dirId: `termdb.matrix/6d5c2c5e64a67bb6d662`,
+				id: '6d5c2c5e64a67bb6d66218b50cbf7affb978555f', // pragma: allowlist secret
+				file: `${cachedir}/termdb.matrix/6d5c2c5e64a67bb6d662.json`
 			},
-			'should set the correct loc for /termdb?for=matrix'
+			'should set the correct loc for /termdb/matrix'
 		)
 		test.true(!fs.existsSync(loc.sudbir), 'should not mkdir in test mode')
 	}

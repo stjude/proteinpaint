@@ -26,7 +26,7 @@ export class Auth {
 	// TODO: should create a checker function for each route group that may be protected
 	protectedRoutes = {
 		// below is used in getRequiredCred as the default protected routes
-		termdb: ['matrix'],
+		termdb: ['/termdb/matrix'],
 		// below is used in AuthApi.canDisplaySampleIds()
 		samples: [
 			'singleSampleData',
@@ -34,9 +34,18 @@ export class Auth {
 			'convertSampleId',
 			'getSamplesByName',
 			'scatter',
-			'/termdb/sampleScatter'
+			'/termdb/sampleScatter',
+			'/termdb/matrix'
 		],
-		minSampleSize: ['/termdb/barsql', 'matrix', 'cuminc', 'survival', 'regression', 'scatter', '/termdb/sampleScatter']
+		minSampleSize: [
+			'/termdb/barsql',
+			'/termdb/cuminc',
+			'/termdb/survival',
+			'/termdb/regression',
+			'scatter',
+			'/termdb/sampleScatter',
+			'/termdb/matrix'
+		]
 	}
 
 	constructor(creds, app, genomes, serverconfig) {

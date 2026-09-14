@@ -654,13 +654,13 @@ tape('AuthApi.isUserLoggedIn: returns false when session is expired (no active s
 
 	const { authApi } = makeAuthApi()
 	const req = {
-		query: { embedder, dslabel, for: 'matrix' },
+		query: { embedder, dslabel },
 		headers: {},
-		path: '/termdb',
+		path: '/termdb/matrix',
 		cookies: {}
 	}
 	// The ds label must match what's in creds
-	const result = authApi.isUserLoggedIn(req as any, { label: dslabel } as any, ['matrix'])
+	const result = authApi.isUserLoggedIn(req as any, { label: dslabel } as any, ['/termdb/matrix'])
 	test.equal(result, false, 'should return false when there is no active session')
 	test.end()
 })
@@ -721,10 +721,10 @@ tape('AuthApi.getPayloadFromHeaderAuth: returns jwt payload for valid bearer tok
 	const email = 'test@example.com'
 	const validToken = jsonwebtoken.sign({ iat: time, exp: time + 300, email, datasets: [dslabel] }, secret)
 	const req = {
-		query: { embedder, dslabel, for: 'matrix' },
+		query: { embedder, dslabel },
 		headers: { authorization: `Bearer ${Buffer.from(validToken).toString('base64')}` }
 	}
-	const result = authApi.getPayloadFromHeaderAuth(req as any, '/termdb')
+	const result = authApi.getPayloadFromHeaderAuth(req as any, '/termdb/matrix')
 	test.ok(result, 'should return a payload object')
 	test.equal((result as any).email, email, 'should include the email from the payload')
 	test.end()
