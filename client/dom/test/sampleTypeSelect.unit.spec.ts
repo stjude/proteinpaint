@@ -4,18 +4,21 @@ import { getSelectedSampleTypesByTerms, renderSampleTypesByTermsSelect } from '.
 
 const sampleTypesByTerms = {
 	'samples.collection_event': {
-		Baseline: ['WBC', 'CD3pos'],
-		'Month 3': ['CD138pos'],
-		Unknown: ['CD3pos']
+		Baseline: [2, 3, 4, 5],
+		'Month 3': [29, 30, 77],
+		'Month 6': [26, 27, 47]
 	},
 	'samples.specimen_type': {
-		'Peripheral Blood': ['WBC', 'CD3pos'],
-		'Bone Marrow': ['CD138pos', 'CD3pos']
+		'Bone Marrow': [2, 4, 26, 29, 77],
+		'Peripheral Blood': [3, 5, 27, 30, 47]
 	},
 	'samples.sample_type': {
-		WBC: ['WBC'],
-		CD138pos: ['CD138pos'],
-		CD3pos: ['CD3pos']
+		CD138neg: [4, 77],
+		CD138pos: [2, 26, 29],
+		CD3pos: [18, 81, 89],
+		Plasma: [12, 20, 39, 40, 41],
+		WBC: [5, 27],
+		'Whole Blood': [3, 30, 47]
 	}
 }
 
@@ -43,17 +46,17 @@ tape('renderSampleTypesByTermsSelect(): preserves supplied term-value order', te
 
 	test.deepEqual(
 		optionLabels('samples.collection_event'),
-		['Any', 'Baseline', 'Month 3', 'Unknown'],
+		['Any', 'Baseline', 'Month 3', 'Month 6'],
 		'preserves dataset-provided collection event order'
 	)
 	test.deepEqual(
 		optionLabels('samples.specimen_type'),
-		['Any', 'Peripheral Blood', 'Bone Marrow'],
+		['Any', 'Bone Marrow', 'Peripheral Blood'],
 		'preserves dataset-provided specimen type order'
 	)
 	test.deepEqual(
 		optionLabels('samples.sample_type'),
-		['Any', 'WBC', 'CD138pos', 'CD3pos'],
+		['Any', 'CD138neg', 'CD138pos', 'CD3pos', 'Plasma', 'WBC', 'Whole Blood'],
 		'preserves dataset-provided sample type order'
 	)
 
@@ -61,13 +64,13 @@ tape('renderSampleTypesByTermsSelect(): preserves supplied term-value order', te
 	test.end()
 })
 
-tape('getSelectedSampleTypesByTerms(): returns all sample types for Any', test => {
+tape('getSelectedSampleTypesByTerms(): returns all samples for Any', test => {
 	const { holder, termSelects } = getTermSelects()
 
 	test.deepEqual(
 		getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms),
-		['WBC', 'CD3pos', 'CD138pos'],
-		'returns all sample types when every term is set to Any'
+		[2, 3, 4, 5, 29, 30, 77, 26, 27, 47],
+		'returns all samples when every term is set to Any'
 	)
 
 	holder.remove()
@@ -80,7 +83,7 @@ tape('getSelectedSampleTypesByTerms(): intersects specific and Any selections', 
 
 	test.deepEqual(
 		getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms),
-		['WBC', 'CD3pos'],
+		[2, 3, 4, 5],
 		'intersects a specific term value with Any selections from other terms'
 	)
 
