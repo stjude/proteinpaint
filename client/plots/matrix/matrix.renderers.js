@@ -202,13 +202,7 @@ export function setRenderers(self) {
 			const labels = side.box.selectAll('.sjpp-matrix-label').data(side.data, side.key)
 			labels.exit().remove()
 			labels.each(renderLabel)
-			console.log(l, direction)
-			labels
-				.enter()
-				.append('g')
-				.attr('class', 'sjpp-matrix-label')
-				.each(renderLabel)
-				.attr('data-testid', `sjpp-matrix-label-${direction}`)
+			labels.enter().append('g').attr('class', 'sjpp-matrix-label').each(renderLabel)
 
 			// unconditionally clear any previously rendered ancestor spans from this side box;
 			// renderLabelSpans() below re-adds them only when applicable, so stale spans are
@@ -228,7 +222,7 @@ export function setRenderers(self) {
 					//.duration(textduration)
 					.attr('transform', side.attr.labelGTransform)
 
-				if (!g.select(':scope>text').size()) g.append('text')
+				if (!g.select(':scope>text').size()) g.append('text').attr('data-testid', `sjpp-matrix-label-${direction}`)
 				const showContAxis = !side.isGroup && lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous'
 				const labelText = side.label(lab)
 				const text = g.select(':scope>text').attr('fill', '#000')
