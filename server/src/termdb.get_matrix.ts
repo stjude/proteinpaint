@@ -108,7 +108,7 @@ export async function get_matrix(q: TermdbMatrixRequest, req: any, res: any, ds:
 		return
 	}
 	// The response payload is dynamically shaped by term type (categorical/numeric/geneVariant),
-	// which ValidGetDataResponse only partially models -- see TermdbMatrixResponse in #types,
+	// which ValidGetDataResponse only partially models -- see TermdbMatrixDataResponse in #types,
 	// whose samples/refs are declared as Record<string, any> for the same reason.
 	const data = rawData as any
 	data.refs.$codes = $codes
