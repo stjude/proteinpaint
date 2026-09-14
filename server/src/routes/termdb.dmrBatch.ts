@@ -547,6 +547,9 @@ export async function runDmrBatch(
 			}
 			return {
 				status: 'ok',
+				// which dataset this result belongs to, so a consumer holding only a cacheId can check it
+				genome: q.genome,
+				dslabel: q.dslabel,
 				regions: out,
 				chromosomes: merged.size,
 				totalProbesAnalyzed: totalProbes,

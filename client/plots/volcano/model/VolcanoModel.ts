@@ -120,7 +120,10 @@ export class VolcanoModel {
 			volcanoRender: this.getVolcanoRender()
 		} as Partial<DiffMethRequest>
 
-		this.addConfounderTw(body)
+		/* The scan fits no covariates and the server rejects a scan request carrying them. Confounders
+		chosen under an element class stay in the config when the class switches to the scan, so they
+		are left off here rather than failing every scan until the user finds and clears them. */
+		if (this.settings.elementType != DMR_SCAN_ELEMENT_TYPE) this.addConfounderTw(body)
 
 		return body
 	}
