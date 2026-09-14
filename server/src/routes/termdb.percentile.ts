@@ -1,7 +1,7 @@
 import type { RoutePayload } from '#types'
 import type { PercentileRequest, PercentileResponse, RouteApi } from '#types'
 import { isNumericTerm } from '#shared/terms.js'
-import { getData } from '#src/termdb.matrix.js'
+import { getData } from '#src/termdb.matrix.ts'
 import computePercentile from '#shared/compute.percentile.js'
 
 export const payload: RoutePayload = {

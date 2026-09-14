@@ -8,7 +8,7 @@ import type {
 import { PSEUDOBULK } from '#types'
 import { isDictionaryType, isNumericTerm } from '#shared/terms.js'
 import { get_bin_label } from '#shared/termdb.bins.js'
-import { getData } from '../termdb.matrix.js'
+import { getData } from '../termdb.matrix.ts'
 import { calculateAggregateMethod, calculateSampleBasedMethods } from './aggregateMethods.ts'
 
 type ValueByRow = Record<string, number | null>
@@ -58,8 +58,14 @@ export async function getAggMatrixData(q: AggregateMatrixDataRequest, ds: any): 
 				sizeData = await getPseudobulkData(columnTw, genes, q.sizeMethod, q, ds)
 			} else {
 				const byMethod = await getSampleBasedData(columnTw, rows, [q.gradientMethod, q.sizeMethod], q, ds)
-				colorData = summarizeValues(byMethod.get(q.gradientMethod)!, rows.map(row => row.id))
-				sizeData = summarizeValues(byMethod.get(q.sizeMethod)!, rows.map(row => row.id))
+				colorData = summarizeValues(
+					byMethod.get(q.gradientMethod)!,
+					rows.map(row => row.id)
+				)
+				sizeData = summarizeValues(
+					byMethod.get(q.sizeMethod)!,
+					rows.map(row => row.id)
+				)
 			}
 
 			colorMin = Math.min(colorMin, colorData.min)
@@ -187,9 +193,10 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 function isComputableNumeric(annotation: any, term: any, value: unknown): value is number {
 	if (typeof value != 'number' || !Number.isFinite(value)) return false
 	const keys = Array.isArray(annotation?.values) ? annotation.values.map(item => item.key) : [annotation?.key]
-	return !keys.some(key =>
-		term?.values?.[key]?.uncomputable ||
-		Object.entries<any>(term?.values || {}).some(([_, item]) => item?.uncomputable && item.label === key)
+	return !keys.some(
+		key =>
+			term?.values?.[key]?.uncomputable ||
+			Object.entries<any>(term?.values || {}).some(([_, item]) => item?.uncomputable && item.label === key)
 	)
 }
 
@@ -222,15 +229,15 @@ function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataRespons
 			for (const key of getAnnotationKeys(entry, source.tw.term)) observed.add(String(key))
 		}
 		const ref = response.refs?.byTermId?.[source.queryId]
- 		const bins = ref?.bins || []
-		/** If there are configured bins, use them to determine the order of keys. 
+		const bins = ref?.bins || []
+		/** If there are configured bins, use them to determine the order of keys.
 		 * Otherwise, fall back to the key order from the reference. */
- 		const configuredKeys = bins.length
+		const configuredKeys = bins.length
 			? bins.map(bin => String(get_bin_label(bin, source.tw.q)))
- 			: Array.isArray(ref?.keyOrder)
- 				? ref.keyOrder.map(String)
- 				: []
- 		const orderedKeys = configuredKeys.filter(key => observed.has(key))
+			: Array.isArray(ref?.keyOrder)
+			? ref.keyOrder.map(String)
+			: []
+		const orderedKeys = configuredKeys.filter(key => observed.has(key))
 		const orderedKeySet = new Set(orderedKeys)
 		for (const key of observed) {
 			if (orderedKeySet.has(key)) continue
@@ -276,14 +283,16 @@ function getAnnotationKeys(annotation: any, term?: any): (string | number)[] {
 	const keys = Array.isArray(annotation?.values)
 		? annotation.values.map(value => value.key)
 		: annotation?.key !== undefined && annotation?.key !== null
-			? [annotation.key]
-			: []
+		? [annotation.key]
+		: []
 	return keys.map(key => getCanonicalValueKey(term, key))
 }
 
 function getCanonicalValueKey(term: any, key: string | number) {
 	const values = Object.entries<any>(term?.values || {})
-	const match = values.find(([valueKey, value]) => String(valueKey) === String(key) || (value?.uncomputable && value.label === key))
+	const match = values.find(
+		([valueKey, value]) => String(valueKey) === String(key) || (value?.uncomputable && value.label === key)
+	)
 	if (match?.[1]?.uncomputable) return match[0]
 	return key
 }
@@ -311,7 +320,7 @@ function makeAxisLayout(entries: ResolvedAxisEntry[], axis: 'row' | 'column') {
 
 function validateScale(min: number, max: number) {
 	if (min === Infinity) throw new Error('No valid aggregate values found in getData response')
-	/** This check is commented out because having identical min and max values is allowed in some cases (e.g. count). 
+	/** This check is commented out because having identical min and max values is allowed in some cases (e.g. count).
 	 * May be appropriate to revert later.  */
 	// if (min === max) throw new Error(`All aggregate values are the same: ${min}. Cannot use identical data for scaling.`)
 	return { min, max }
@@ -394,17 +403,17 @@ function makeSampleTerm(tw: any, id: string) {
 		q: isDictionaryNumeric
 			? { ...tw.term.bins?.default, ...tw.q, mode: 'discrete' }
 			: isNumeric
-				? { ...tw.q, mode: 'continuous' }
-				: { ...tw.q }
+			? { ...tw.q, mode: 'continuous' }
+			: { ...tw.q }
 	}
 }
 
 async function queryData(terms: any[], q: AggregateMatrixDataRequest, ds: any): Promise<ValidGetDataResponse> {
 	const response = await getData(
- 		{ terms, filter: q.filter, filter0: q.filter0, __protected__: (q as any).__protected__ },
- 		ds,
- 		false
- 	)
+		{ terms, filter: q.filter, filter0: q.filter0, __protected__: (q as any).__protected__ },
+		ds,
+		false
+	)
 	if ('error' in response) throw new Error(response.error)
 	return response
 }

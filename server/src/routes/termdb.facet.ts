@@ -1,6 +1,6 @@
 import type { RouteApi, RoutePayload, TermdbFacetRequest, TermdbFacetResponse } from '#types'
 import { get_samples } from '#src/termdb.sql.js'
-import { getData } from '#src/termdb.matrix.js'
+import { getData } from '#src/termdb.matrix.ts'
 import type { ReqQueryAddons } from './types.js'
 
 export const payload: RoutePayload = {

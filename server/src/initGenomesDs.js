@@ -19,7 +19,7 @@ import { renderVolcano } from './renderVolcano.ts'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { cacheOrRecompute, cacheFilePath, generateHash } from './utils/cacheOrRecompute.ts'
-import { shouldMapParent2Children } from './termdb.matrix.js'
+import { shouldMapParent2Children } from './termdb.matrix.ts'
 
 const dsHelpers = {
 	isUsableTerm,

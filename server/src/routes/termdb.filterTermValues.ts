@@ -1,6 +1,6 @@
 import type { RoutePayload } from '#types'
 import type { RouteApi } from '#types'
-import { getData } from '#src/termdb.matrix.js'
+import { getData } from '#src/termdb.matrix.ts'
 import { authApi } from '#src/auth.js'
 import { filterJoin } from '#shared/filter.js'
 import { get_samples } from '#src/termdb.sql.js'

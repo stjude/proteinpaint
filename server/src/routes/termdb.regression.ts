@@ -11,7 +11,7 @@ import { getValueConversionFactor } from '#shared/helpers.js'
 import { runCumincR } from './termdb.cuminc.ts'
 import { isDictionaryType } from '#shared/terms.js'
 import { FRACTION_TW_TYPE, validateTermCollectionFraction } from '#shared/termCollection.js'
-import { getData } from '../termdb.matrix.js'
+import { getData } from '../termdb.matrix.ts'
 
 type TermWrapperLike = {
 	$id?: string

@@ -48,7 +48,12 @@ export function setRenderers(self) {
 			const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, series => series.tw.$id)
 			sg.exit().remove()
 			sg.each(self.renderSeries)
-			sg.enter().append('g').attr('class', 'sjpp-mass-series-g').style('opacity', 0.001).each(self.renderSeries)
+			sg.enter()
+				.append('g')
+				.attr('class', 'sjpp-mass-series-g')
+				.attr('data-testid', d => `sjpp-mass-series-g-${d.tw.term.name}`)
+				.style('opacity', 0.001)
+				.each(self.renderSeries)
 			// need to reset imgBox and beam highlighters after rendering to avoid misaligned beam highlighters
 			self.mouseout()
 		}
@@ -220,7 +225,13 @@ export function setRenderers(self) {
 				if (!g.select(':scope>text').size()) g.append('text')
 				const showContAxis = !side.isGroup && lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous'
 				const labelText = side.label(lab)
-				const text = g.select(':scope>text').attr('fill', '#000')
+				// added display style here because visibilility of these text elements were not being
+				// properly received in webkit playwright
+				const text = g
+					.select(':scope>text')
+					.attr('fill', '#000')
+					.attr('data-testid', `sjpp-matrix-label-${direction}`)
+					.style('display', side.display || '')
 
 				let continuousBarHAdjust
 				const twSpecificSettings = self.config.settings.matrix.twSpecificSettings

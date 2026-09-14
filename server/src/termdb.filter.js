@@ -1,7 +1,7 @@
 import { getBin, dictionaryNumericTypes, dtTermTypes, isNonDictionaryType } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { validateTermCollectionTvs, getTvsDenominators } from '#shared/filter.js'
-import { getSnpData, getData, shouldMapParent2Children } from './termdb.matrix.js'
+import { getSnpData, getData, shouldMapParent2Children } from './termdb.matrix.ts'
 import { filterByItem } from './mds3.init.js'
 
 /*

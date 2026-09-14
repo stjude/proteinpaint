@@ -11,7 +11,7 @@ import { mapConcurrent } from '../utils/concurrencyLimiter.ts'
 import { getMaxLesions } from './memory.ts'
 import { processSampleMlst, buildLesionTypeMap } from './lesions.ts'
 import type { CnvType, Grin2CacheResult, Grin2Processing, Lesion } from './types.ts'
-import { maySetMapParent2Children } from '../termdb.matrix.js'
+import { maySetMapParent2Children } from '../termdb.matrix.ts'
 
 /**
  * General GRIN2 analysis route

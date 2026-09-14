@@ -205,8 +205,8 @@ tape('middleware: returns 401 error for missing session on protected route', fun
 	const middleware = registerMiddleware(auth, mockAuthApi)
 
 	const req: any = {
-		query: { dslabel, embedder, for: 'matrix' },
-		path: '/termdb',
+		query: { dslabel, embedder },
+		path: '/termdb/matrix',
 		cookies: {},
 		headers: {}
 	}
@@ -268,8 +268,8 @@ tape('middleware: clears sessions when sessionTracking is jwt-only', function (t
 	const middleware = registerMiddleware(auth, mockAuthApi)
 
 	const req: any = {
-		query: { dslabel, embedder, for: 'matrix' },
-		path: '/termdb',
+		query: { dslabel, embedder },
+		path: '/termdb/matrix',
 		cookies: {},
 		headers: {}
 	}
@@ -301,8 +301,8 @@ tape('middleware: valid session - calls next() and updates session time', async 
 	const middleware = registerMiddleware(auth, mockAuthApi)
 
 	const req: any = {
-		query: { dslabel, embedder, for: 'matrix' },
-		path: '/termdb',
+		query: { dslabel, embedder },
+		path: '/termdb/matrix',
 		// The session cookie key is 'x-ds-access-token' (cred.cookieId)
 		cookies: { [headerKey]: sessionId },
 		headers: {},

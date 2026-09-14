@@ -10,7 +10,7 @@ import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import type { TopVeCacheResult } from '../../routes/types.ts'
-import { maySetMapParent2Children } from '#src/termdb.matrix.js'
+import { maySetMapParent2Children } from '#src/termdb.matrix.ts'
 
 export const payload: RoutePayload = {
 	init,

@@ -64,7 +64,7 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 	}
 
 	const terms: any = isFrequency ? [q.xtw] : [q.xtw, q.ytw]
-	const { getData } = await import('../src/termdb.matrix.js')
+	const { getData } = await import('../src/termdb.matrix.ts')
 
 	const data = await getData(
 		{

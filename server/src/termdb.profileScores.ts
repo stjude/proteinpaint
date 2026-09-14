@@ -1,4 +1,4 @@
-import { getData } from './termdb.matrix.js'
+import { getData } from './termdb.matrix.ts'
 
 /*
 Fetches site/sample data for facility-aware profile scoring.

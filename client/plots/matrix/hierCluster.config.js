@@ -16,7 +16,7 @@ export async function getPlotConfig(opts = {}, app) {
 	// legacy: recovered saved sessions may still carry the removed synthetic dataType 'numericDictTerm'.
 	// rewrite it to the real term type of the clustered terms, falling back to 'float', so
 	// the numericTypes/dictionaryNumericTypes checks below accept it. (Pre-built plot configs are
-	// normalized server-side in termdb.matrix.js:normalizeLegacyHierClusterDataType.)
+	// normalized server-side in termdb.matrix.ts:normalizeLegacyHierClusterDataType.)
 	if (config.dataType == 'numericDictTerm') {
 		const lst = config.termgroups?.find(g => g.type == 'hierCluster')?.lst
 		config.dataType = lst?.[0]?.term?.type || 'float'

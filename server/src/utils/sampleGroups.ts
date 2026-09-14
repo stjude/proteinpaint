@@ -1,5 +1,5 @@
 import type { DERequest, DiffMethRequest } from '#types'
-import { getData, maySetMapParent2Children } from '#src/termdb.matrix.js'
+import { getData, maySetMapParent2Children } from '#src/termdb.matrix.ts'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 
 /** Two-group sample resolution result. The conf{1,2}_group{1,2} arrays

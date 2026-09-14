@@ -1,6 +1,6 @@
 import { SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE, PROTEOME_ABUNDANCE, PSEUDOBULK } from '#types'
 import initBinConfig from '#shared/termdb.initbinconfig.js'
-import { maySetMapParent2Children } from './termdb.matrix.js'
+import { maySetMapParent2Children } from './termdb.matrix.ts'
 import { getSingleCellCellValues } from './singleCell/matrixData.ts'
 import { mayLimitSamples } from './mds3.filter.js'
 

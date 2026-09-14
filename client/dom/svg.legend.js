@@ -1,6 +1,12 @@
 import { select } from 'd3-selection'
 import { ColorScale, computeTicks, getMaxLabelWidth } from '#dom'
 
+function applyAttrs(selection, attrs) {
+	for (const key in attrs) {
+		selection.attr(key, attrs[key])
+	}
+}
+
 export default function svgLegend(opts) {
 	let currlinex = 0
 	let currliney = 0
@@ -99,6 +105,7 @@ export default function svgLegend(opts) {
 			.attr('dominant-baseline', 'central')
 			.text(d.name)
 			.style('text-decoration', d.crossedOut ? 'line-through' : '')
+		if (opts.groupLabelAttrs) applyAttrs(grplabel, opts.groupLabelAttrs(d))
 
 		if (settings.linesep) {
 			currlinex = settings.padleft
@@ -153,6 +160,7 @@ export default function svgLegend(opts) {
 					: ''
 			)
 
+		if (opts.itemLabelAttrs) applyAttrs(itemlabel, opts.itemLabelAttrs(d, i))
 		itemlabel.each(function (d) {
 			const t = select(this)
 			if (settings.isExcludedAttr && d[settings.isExcludedAttr]) {

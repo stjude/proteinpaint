@@ -824,11 +824,11 @@ tape(`session handling by the middleware`, async test => {
 
 		/*** valid session ***/
 		const req1 = {
-			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+			query: { embedder: 'localhost', dslabel: 'ds0' },
 			headers: {
 				[headerKey]: validToken
 			},
-			path: '/termdb',
+			path: '/termdb/matrix',
 			cookies: {
 				[headerKey]: sessionId
 			},
@@ -850,11 +850,11 @@ tape(`session handling by the middleware`, async test => {
 
 		// **** invalid session id ***/
 		const req2 = {
-			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+			query: { embedder: 'localhost', dslabel: 'ds0' },
 			headers: {
 				[headerKey]: validToken
 			},
-			path: '/termdb',
+			path: '/termdb/matrix',
 			cookies: {
 				[headerKey]: 'Invalid-Session-Id'
 			}
@@ -879,11 +879,11 @@ tape(`session handling by the middleware`, async test => {
 
 		/*** invalid ip address ****/
 		const req3 = {
-			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+			query: { embedder: 'localhost', dslabel: 'ds0' },
 			headers: {
 				[headerKey]: validToken
 			},
-			path: '/termdb',
+			path: '/termdb/matrix',
 			cookies: {
 				[headerKey]: sessionId
 			},
@@ -985,7 +985,7 @@ tape(`/dslogin`, async test => {
 			// middleware test when there is a valid logged-in user via /dslogin
 			const [cookieId, cookieVal] = cookie.split('=').map(str => str.trim())
 			const req = {
-				query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+				query: { embedder: 'localhost', dslabel: 'ds0' },
 				cookies: {
 					[cookieId]: cookieVal
 				},
@@ -993,7 +993,7 @@ tape(`/dslogin`, async test => {
 					cookie,
 					authorization: 'Bearer ' + Buffer.from(jwt).toString('base64')
 				},
-				path: '/termdb',
+				path: '/termdb/matrix',
 				ip: '127.0.0.1'
 			}
 
@@ -1046,7 +1046,7 @@ tape(`/dslogin`, async test => {
 			// middleware test when there is an invalid logged-in user via /dslogin
 			const [cookieId, cookieVal] = cookie.split('=').map(str => str.trim())
 			const req = {
-				query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+				query: { embedder: 'localhost', dslabel: 'ds0' },
 				cookies: {
 					[cookieId]: 'invalid-cookie-value'
 				},
@@ -1054,7 +1054,7 @@ tape(`/dslogin`, async test => {
 					cookie,
 					authorization: 'Bearer ' + Buffer.from('invalid-jwt').toString('base64')
 				},
-				path: '/termdb',
+				path: '/termdb/matrix',
 				ip: '127.0.0.1'
 			}
 

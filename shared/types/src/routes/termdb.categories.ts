@@ -66,7 +66,7 @@ export type GvCategoryEntry = {
 	/** amino acid changes present for this dt, sorted by descending sample count.
 	 * only served by the termdb/categories route, and only when the mutation data
 	 * carries mname; the same entries returned within a data request (see
-	 * mayGetCategories() in termdb.matrix.js) omit this field */
+	 * mayGetCategories() in termdb.matrix.ts) omit this field */
 	mnames?: MnameEntry[] | { byOrigin: { [origin: string]: MnameEntry[] } }
 }
 
