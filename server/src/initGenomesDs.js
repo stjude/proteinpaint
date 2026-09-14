@@ -585,9 +585,17 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 		}
 		/* end special handling */
 
-		const msg = ds.init?.fatalError || e?.error || e
-		// optional slack notification will be handled in app.ts
-		throw msg
+		// A dataset-specific fatal error must NOT throw/abort validation or server startup — it applies
+		// to this one dataset only. Record it like the normal fatalError path below (drop from genomes,
+		// status=fatalError, reported by app.ts processTrackedDs() in the startup log, optional slack
+		// notification, and /healthcheck) and return early WITHOUT entering the retry loop: during
+		// validation we exit as soon as possible, and retries are pointless since `validate` exits
+		// immediately after. processTrackedDs() still exits the process when NO dataset loaded
+		// successfully, which is the real server-wide failure that should fail validation/rollout.
+		delete g.datasets[ds.label]
+		ds.init.status = 'fatalError'
+		if (!ds.init.error) ds.init.error = stringifyInitError(e)
+		return
 	}
 
 	if (e) console.trace(e)
