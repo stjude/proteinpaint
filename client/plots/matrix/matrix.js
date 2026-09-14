@@ -256,7 +256,6 @@ export class Matrix extends PlotBase {
 				yGrps: this[yGrps],
 				dimensions: d
 			})
-			console.log(this.legendData)
 			this.legendRenderer(this.legendData, {
 				settings: Object.assign({}, this.settings.legend, {
 					svgw: Math.max(400, d.mainw + d.xOffset - this.settings.matrix.margin.right),

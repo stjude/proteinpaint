@@ -5,7 +5,6 @@ import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
 
 export function getLegendData(legendGroups, refs, self) {
-	console
 	const s = this.settings.matrix
 	const legendData = []
 	const dvt = this.config.divideBy || {}
