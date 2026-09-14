@@ -4,7 +4,7 @@ import type { TermWrapper } from '../terms/tw.ts'
 export type TermdbMatrixRequest = {
 	genome: string
 	dslabel: string
-	terms: TermWrapper[]
+	terms?: TermWrapper[]
 	filter?: Filter
 	filter0?: any
 	embedder?: string

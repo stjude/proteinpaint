@@ -89,13 +89,13 @@ tape('getRequiredCred: returns undefined for unprotected path/dslabel combinatio
 	test.end()
 })
 
-tape('getRequiredCred: returns cred for matching termdb route and for=matrix', function (test) {
+tape('getRequiredCred: returns cred for matching termdb/matrix route', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
 
 	const auth = makeAuth()
-	const result = auth.getRequiredCred({ dslabel, embedder, for: 'matrix' }, '/termdb')
-	test.ok(result, 'should return a cred for a matching termdb route with a protected for=matrix query')
+	const result = auth.getRequiredCred({ dslabel, embedder }, '/termdb/matrix')
+	test.ok(result, 'should return a cred for a matching termdb/matrix route')
 	test.end()
 })
 
@@ -138,7 +138,7 @@ tape('getRequiredCred: uses wildcard dslabel when specific dslabel not found', f
 		}
 	}
 	const auth = new Auth(creds, {}, {}, { port: 3000 })
-	const result = auth.getRequiredCred({ dslabel: 'anyDs', embedder, for: 'matrix' }, '/termdb')
+	const result = auth.getRequiredCred({ dslabel: 'anyDs', embedder }, '/termdb/matrix')
 	test.ok(result, 'should match wildcard dslabel (*) when exact dslabel not found')
 	test.end()
 })
