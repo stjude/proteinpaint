@@ -592,7 +592,14 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 		// validation we exit as soon as possible, and retries are pointless since `validate` exits
 		// immediately after. processTrackedDs() still exits the process when NO dataset loaded
 		// successfully, which is the real server-wide failure that should fail validation/rollout.
-		delete g.datasets[ds.label]
+		// Only remove the genome's entry when it is THIS dataset, or when the existing entry is an
+		// untracked, partially-constructed object. A duplicate d.name can leave g.datasets[ds.label]
+		// pointing at a DIFFERENT, already-loaded dataset while this failure is a stub created for the
+		// duplicate (see the try/catch above); deleting it would drop a routable, done dataset from the
+		// genome even though it stays tracked as done, so the server would report success for a dataset
+		// it can no longer serve.
+		const existing = g.datasets[ds.label]
+		if (existing === ds || !trackedDatasets.includes(existing)) delete g.datasets[ds.label]
 		ds.init.status = 'fatalError'
 		if (!ds.init.error) ds.init.error = stringifyInitError(e)
 		return
