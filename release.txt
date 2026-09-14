@@ -3,6 +3,14 @@ Features:
   matrices (queries.dnaMethylation.cpgByChr), falling back per chromosome to the element matrix so a
   partial build degrades in resolution rather than erroring. MMRF also offers the CTCF-only and
   DNase-H3K4me3 cCRE classes.
+- New termdb/dmrBatch calls DMRs across a hit list, or across whole chromosomes with
+  scanChromosomes. dmrcate fits once per matrix file and amortises it across regions, so cost scales
+  with chromosomes rather than regions: 421 windows over 23 chromosomes in ~20s against ~35min
+  one-at-a-time. Results are cached on the samples, settings and the size+mtime of every file read.
+- Opt-in matched-background correction for a scan. Instead of testing each region against zero, it
+  scores each DMR against width- and CpG-density-matched intergenic windows in its own stratum, and
+  reports an excess Δβ and empirical p. On MMRF NSD2-high, 71% of the median DMR's movement is
+  matched drift and the direction inverts, 3.15:1 hyper before and 4.22:1 hypo after.
 - Volcano: "Center Δβ on median" (methylation, on the Δβ axis) moves the x origin to the median
   effect size. The significant-count line splits by direction ("15,707 hyper / 1,692 hypo"), counted
   server-side so the ratio is unaffected by the interactive-dot cap; the split also applies to gene
@@ -11,6 +19,23 @@ Features:
   group colours carry into the region view, and hyper/hypo are one orange/blue pair everywhere. The
   region view shows a new ENCODE cCRE track beside the genes.
 - dmrcate is 40% faster and uses 5x less memory on a genome-wide scan, with byte-identical output.
+- WGBS is fitted on its read counts, the model DMRcate publishes for sequencing data (Peters 2021,
+  Nucleic Acids Research 49:e109), and this is now the DEFAULT for a dataset declaring
+  platform:'wgbs'. The value becomes log2((m+0.5)/(u+0.5)) and each observation is weighted by the
+  inverse of its total variance, biological plus read-level, which removes the clamp that collapsed
+  the 41.7% of betas sitting at exactly 0 or 1 onto two M-values regardless of the reads behind
+  them. termdb/dmrBatch `weights` overrides it; 'counts+sample' adds limma array weights (Ritchie
+  2006) from a capped probe subset for ~5% of runtime rather than minutes. Needs a CpG matrix
+  carrying depth/values and refuses rather than falling back. Array-derived datasets get 'none' and
+  are bit-identical to before, as are element matrices on a WGBS dataset (M-values carry no counts).
+- Turning that default on changes what a WGBS scan reports and orphans every cached scan, since the
+  effective mode is in the cache key. On MMRF NSD2: 178,586 DMRs kept against 123,520, hyper:hypo
+  1.86:1 against 2.21:1, median width 1,535 bp against 1,324 -- wider because more neighbouring
+  CpGs now clear per-CpG significance and chain into one region. Unchanged by construction: the
+  genome-wide shift (+0.0100) and the 100 kb profile, both of which are built from unweighted
+  per-sample beta means. Controls hold: the NSD2 cis effect and XIST's opposed promoter/body signal
+  return at identical coordinates and effect sizes, 85% of unweighted DMRs are recovered with 99.6%
+  direction concordance.
 
 Fixes:
 - dmrcate no longer emits thousands of false DMRs on a chromosome where NO probe passes per-CpG
@@ -18,6 +43,12 @@ Fixes:
   FDR against the raw cutoff; smoothing pools ~25 probes, so that stays under 0.05 across a null
   chromosome. On MMRF male-vs-female, 12 of 22 autosomes reported 0 significant probes and
   963-4,570 DMRs each; the autosomal total goes from 20,963 to 5 over 15.9M probes, chrX unchanged.
+- dmrcate no longer loses a chromosome's background windows when one invocation covers several
+  chromosomes: the probe block was found by a binary search on the chromosome name, but matrices
+  store chromosomes karyotypically, where chr10 sorts before chr2. Affected datasets backed by one
+  genome-wide matrix; per-chromosome shards were always one chromosome per invocation.
+- A scan compares one cohort. Membership was resolved per rust job against that job's matrix, so a
+  dataset mixing CpG shards and element fallback contrasted a different sample set per chromosome.
 - The element methylation getter returns values on the unit it advertises; a beta-unit entry was
   converted to an M-value and still labelled beta.
 - The DMR region view's errors are visible. It wrote them into a div the rx update loop empties
@@ -25,10 +56,17 @@ Fixes:
 - DMR analysis no longer reports "Group 1 needs at least 3 samples" on datasets whose sample groups
   carry ids without names (MMRF, GDC), and checks the sizes after id-to-name resolution, where a
   group actually shrinks.
+- Hardening on termdb/dmrBatch: a caller-supplied chromosome list is bounded and deduplicated before
+  anything fans out from it (one chromosome named 5,000 times was 5,000 full-matrix fits that never
+  hit the cache).
 
 General:
 - MMRF requires files/hg38/mmrf/methylation/cpg/{chr}.h5 on the target host (~40GB), built by
   utils/dnaMeth/build_cpg_matrix.py. Without them the region view degrades to element resolution.
+  ~13GB of that is the per-cell read depth the builder now keeps beside each beta; a matrix without
+  it still serves every existing path unchanged, and only termdb/dmrBatch `weights` needs it.
 - The cCRE track needs anno/encodeCCREtrack.hg38.gz (+ .tbi), ~11MB, built by
   utils/dnaMeth/build_ccre_track.py from anno/encodeCCRE.hg38.gz. It is a reformat of a registry any
   host serving methylation elements already has; without it the locus view loses only that row.
+- serverconfig.dmrBatchConcurrency sets the scan's worker pool (default 2). Budget ~500MB per
+  worker; total concurrent rust processes is cacheJobPolicies.dmr.maxPending x this.
