@@ -127,7 +127,9 @@ function init({ genomes }) {
 }
 
 /** Bump when a change here alters the deltas for an unchanged request. */
-const CACHE_VERSION = 2 // 2: corrected mode added; raw entries carry corrected:false in the key
+// 2: corrected mode added; raw entries carry corrected:false in the key
+// 3: one cohort for all chromosomes; major chromosomes only; one locus per gene symbol
+const CACHE_VERSION = 3
 
 /* Mean delta-beta over every gene body, keyed by gene symbol -- one signed number per gene across
 the whole genome. This is the gene-level reading of a methylation scan: a DMR list has many regions
@@ -194,17 +196,40 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 	"gene body" means one thing across the two analyses. */
 	const rows: any[] = genome?.genedb?.db?.prepare('select name, chr, start, stop from gene2coord').all() || []
 	if (!rows.length) throw new Error('This genome has no gene2coord table.')
-	const byChr = new Map<string, { name: string; start: number; stop: number }[]>()
+	/* One locus per symbol, the longest body, chosen before fan-out. gene2coord can hold a symbol on
+	several contigs; the chromosome workers write into one object, so whichever finished last set
+	that gene's value and the ranking changed between recomputations. */
+	const locusOf = new Map<string, { chr: string; start: number; stop: number }>()
 	for (const r of rows) {
 		const s = r.start + GENE_BODY_PAD
 		const e = r.stop - GENE_BODY_PAD
 		if (!(e > s)) continue // shorter than twice the pad: no body left
-		const lst = byChr.get(r.chr) || []
-		lst.push({ name: r.name, start: s, stop: e })
-		byChr.set(r.chr, lst)
+		const prev = locusOf.get(r.name)
+		if (!prev || e - s > prev.stop - prev.start) locusOf.set(r.name, { chr: r.chr, start: s, stop: e })
+	}
+	const byChr = new Map<string, { name: string; start: number; stop: number }[]>()
+	for (const [name, l] of locusOf) {
+		const lst = byChr.get(l.chr) || []
+		lst.push({ name, start: l.start, stop: l.stop })
+		byChr.set(l.chr, lst)
 	}
 
-	const chrs: string[] = (q.chromosomes?.length ? q.chromosomes : [...byChr.keys()]).filter((c: string) => byChr.has(c))
+	/* The validated list the cache key was built from, and with none requested the genome's major
+	chromosomes -- not every contig gene2coord names, which fanned out unkeyed fits over alternate and
+	unplaced contigs that may have no matrix at all. */
+	const chrs: string[] = (q.chromosomes?.length ? q.chromosomes : validateChromosomes(genome, undefined, true)).filter(
+		(c: string) => byChr.has(c)
+	)
+	/* One cohort for every chromosome, as dmrBatch resolves it. Per chromosome it followed that
+	chromosome's matrix, so a dataset mixing CpG shards and element fallback ranked genes from
+	different patients on different chromosomes under one contrast. */
+	const { group1, group2 } = await resolveGroupNames(
+		q.group1,
+		q.group2,
+		eligibleMethylationSamples(ds, q.element_type),
+		ds
+	)
+	if (group1.length < 3 || group2.length < 3) throw new Error('Each group needs at least 3 samples.')
 	const deltaOf: Record<string, number> = {}
 	// the exclusion needs the gene index; built once, not per chromosome
 	const geneIdx = q.corrected ? buildGeneIndex(genome) : null
@@ -217,9 +242,7 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 				if (i >= chrs.length) return
 				const chr = chrs[i]
 				const bodies = byChr.get(chr)!
-				const { matrixFile, mvalues, eligible } = resolveMethylationMatrix(ds, chr, q.element_type)
-				const { group1, group2 } = await resolveGroupNames(q.group1, q.group2, eligible, ds)
-				if (group1.length < 3 || group2.length < 3) throw new Error('Each group needs at least 3 samples.')
+				const { matrixFile, mvalues } = resolveMethylationMatrix(ds, chr, q.element_type)
 				/* Corrected: intergenic windows width-matched to the gene bodies ride along in the same
 				rust call, after the bodies, so one fit serves both. Same sampler and seed rule as the
 				scan, so the two corrections are the same correction. */

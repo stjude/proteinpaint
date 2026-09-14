@@ -30,10 +30,9 @@ Features:
   a new ENCODE cCRE track and the dataset's mutations.
 - Three expression follow-ups, on the samples the methylation was measured on rather than everyone
   with RNA. New termdb/dmrGeneDE asks whether genes losing gene-body methylation are expressed
-  lower, within log2 gene-length strata with a permutation null (MMRF: -0.167 log2FC, p=0.0005).
-  It runs on either reading of a scan: the correction adds the background gate rather than being a
-  precondition for the gene set (MMRF: 23,274 regions / 5,891 genes uncorrected, 13,137 / 4,120
-  corrected).
+  lower, within log2 gene-length strata with a lower-tailed permutation null, on the genes whose body
+  each hypomethylated DMR overlaps. It runs on either reading of a scan: the correction adds the
+  background gate rather than being a precondition for the gene set.
   New termdb/geneBodyMeth measures Δβ over every gene body binned by expression change, the
   discriminating test for transcription-coupled deposition. GSEA ranks genes by mean gene-body Δβ,
   since a scan's rows are DMRs and not genes.
