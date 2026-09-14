@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- dmrcate no longer emits thousands of false DMRs on a chromosome where NO probe passes per-CpG
+
+
 ## 2.208.0
 
 Features:
