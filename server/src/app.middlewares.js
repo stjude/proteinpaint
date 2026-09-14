@@ -49,7 +49,7 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 		compression({
 			filter: (req, res) => {
 				// some routes use stream.pipeline(..., gzip), so need to avoid recompressing here
-				if (req.path === '/termdb' && req.query.for === 'matrix') return false
+				if (req.path === '/termdb/matrix') return false
 				// Fallback to standard filter function
 				return compression.filter(req, res)
 			}
