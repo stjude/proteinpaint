@@ -8,7 +8,8 @@ import {
 	table2col,
 	showResultsTable,
 	createLollipopFromGene,
-	DataPointInteractions
+	DataPointInteractions,
+	type ActionMenuItem
 } from '#dom'
 import { to_svg } from '#src/client'
 import type { ManhattanPoint } from './manhattanTypes'
@@ -52,18 +53,70 @@ import type { ManhattanPoint } from './manhattanTypes'
  * including axes, labels, legend, and top genes (represented as interactive dots) for detailed information on hover.
  */
 
-export function plotManhattan(div: any, data: any, settings: any, app?: any) {
+/** What a caller other than GRIN2 supplies: the plot is drawn the same way, but what a dot IS --
+ * what its tooltip says, what clicking it offers, what the axis is called -- belongs to the caller.
+ * Every field is optional and defaults to the GRIN2 behaviour, so GRIN2 passes nothing. */
+export type ManhattanCustom<T = any> = {
+	title?: string
+	yAxisLabel?: string
+	/** legend entries; default derives one per point `type` from the data. `hollow` draws the
+	 * swatch as an open circle, for a plot whose dots are drawn that way */
+	legend?: { label: string; color: string; hollow?: boolean }[]
+	itemNoun?: string
+	renderSingleHoverTooltip?: (d: T, container: any) => void
+	buildMultiHitTableData?: (dots: T[]) => { columns: any[]; rows: any[] }
+	/** Given, clicking a dot opens the standard action menu (buttons over the info table) rather
+	 * than GRIN2's lollipop launch; multi-hit clicks open the standard pick-a-row menu. */
+	getActions?: (d: T) => ActionMenuItem[]
+	renderSingleHitInfo?: (d: T, container: any) => void
+	getRowKey?: (d: T) => string
+}
+
+/** Layout settings shared by every caller. GRIN2 keeps its own copy in its settings (they are
+ * part of its persisted state); a caller without such state spreads these. */
+export const manhattanLayoutDefaults = {
+	plotWidth: 1000,
+	plotHeight: 400,
+	pngDotRadius: 2,
+	yAxisX: 70,
+	yAxisY: 40,
+	yAxisSpace: 20,
+	xAxisLabelPad: 30,
+	yAxisPad: 5,
+	axisColor: '#545454',
+	showYAxisLine: true,
+	fontSize: 12,
+	showLegend: true,
+	legendItemWidth: 80,
+	legendDotRadius: 3,
+	legendRightOffset: 15,
+	legendTextOffset: 12,
+	legendVerticalOffset: 4,
+	legendFontSize: 12,
+	showInteractiveDots: true,
+	interactiveDotRadius: 2,
+	interactiveDotStrokeWidth: 1,
+	showDownload: true,
+	interactiveDotsCap: 5000,
+	maxTooltipGenes: 5
+}
+
+export function plotManhattan(div: any, data: any, settings: any, app?: any, custom: ManhattanCustom = {}) {
 	// Get our settings
 	settings = {
 		...settings
 	}
 
-	// Check size of interactive data
+	// Check size of interactive data. Ranked by |y| so a signed plot (hypomethylation below the
+	// line) keeps its strongest dots on both sides rather than only the positive ones.
 	let interactivePoints = data.plotData.points
 	if (data.plotData.points.length > settings.interactiveDotsCap) {
-		// Sort points by y value (-log10(q-value)) descending and take top N up to interactiveDotsCap
-		interactivePoints = data.plotData.points.sort((a: any, b: any) => b.y - a.y).slice(0, settings.interactiveDotsCap)
+		interactivePoints = data.plotData.points
+			.sort((a: any, b: any) => Math.abs(b.y) - Math.abs(a.y))
+			.slice(0, settings.interactiveDotsCap)
 	}
+	// A signed plot has y_min below zero; its axis is symmetric and its zero line sits mid-plot.
+	const signed = data.plotData.y_min < 0
 
 	// Set the  positioning up for download button to work properly
 	div.style('position', 'relative')
@@ -102,9 +155,13 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	//    - Domain = true data values (no padding)
 	//    - Range  = subset of pixel space between yPlot(0) and yPlot(realMax [data.plotData.y_max - data.plotData.png_dot_radius])
 	//               so the axis sits entirely within the real data area
+	// the PNG pads its y range by the dot radius; older renders had that padding equal the radius
+	// in y units, newer ones state it
+	const yPad = data.plotData.y_pad ?? settings.pngDotRadius
+	const yAxisLow = signed ? data.plotData.y_min + yPad : 0
 	const yAxisScale = scaleLinear()
-		.domain([0, data.plotData.y_max - settings.pngDotRadius])
-		.range([yPlot(0), yPlot(data.plotData.y_max - settings.pngDotRadius)])
+		.domain([yAxisLow, data.plotData.y_max - yPad])
+		.range([yPlot(yAxisLow), yPlot(data.plotData.y_max - yPad)])
 
 	// Axis group
 	const axisG = svg
@@ -131,7 +188,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${settings.fontSize + 4}px`)
 		.attr('fill', 'black')
-		.text(data.plotData.has_capped_points ? '-log₁₀(q-value) [capped]' : '-log₁₀(q-value)')
+		.text((custom.yAxisLabel ?? '-log₁₀(q-value)') + (data.plotData.has_capped_points ? ' [capped]' : ''))
 
 	// Add png image
 	svg
@@ -168,6 +225,35 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		// Circle as an SVG path so it flows through the generic `drawHoverShapes`.
 		const circlePath = (r: number) => `M${r},0 A${r},${r} 0 1,1 ${-r},0 A${r},${r} 0 1,1 ${r},0 Z`
 
+		const grin2Hover = (d: ManhattanPoint, container: any) => {
+			const table = table2col({ holder: container.append('div'), margin: '10px' })
+			table.addRow('Gene', d.gene)
+			table.addRow('Position', `${d.chrom}:${d.start}-${d.end}`)
+			const [t1, t2] = table.addRow()
+			t1.text('Type')
+			t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
+			table.addRow('Q-value', d.q_value.toPrecision(3))
+			table.addRow('Subject count', d.nsubj)
+		}
+		const grin2Table = (dots: ManhattanPoint[]) => ({
+			columns: [
+				{ label: 'Gene' },
+				{ label: 'Position' },
+				{ label: 'Type' },
+				{ label: 'Q-value', sortable: true },
+				{ label: 'Subject count', sortable: true }
+			],
+			rows: dots.map(d => [
+				{ value: d.gene },
+				{ value: `${d.chrom}:${d.start}-${d.end}` },
+				{
+					html: `<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`
+				},
+				{ value: d.q_value.toPrecision(3) },
+				{ value: d.nsubj }
+			])
+		})
+
 		const interactions = new DataPointInteractions<ManhattanPoint>({
 			cover,
 			hoverLayer,
@@ -184,57 +270,41 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				strokeWidth: settings.interactiveDotStrokeWidth
 			}),
 			maxTooltipRows: settings.maxTooltipGenes,
-			itemNoun: 'gene',
-			renderSingleHoverTooltip: (d, container) => {
-				const table = table2col({ holder: container.append('div'), margin: '10px' })
-				table.addRow('Gene', d.gene)
-				table.addRow('Position', `${d.chrom}:${d.start}-${d.end}`)
-				const [t1, t2] = table.addRow()
-				t1.text('Type')
-				t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
-				table.addRow('Q-value', d.q_value.toPrecision(3))
-				table.addRow('Subject count', d.nsubj)
-			},
-			buildMultiHitTableData: dots => ({
-				columns: [
-					{ label: 'Gene' },
-					{ label: 'Position' },
-					{ label: 'Type' },
-					{ label: 'Q-value', sortable: true },
-					{ label: 'Subject count', sortable: true }
-				],
-				rows: dots.map(d => [
-					{ value: d.gene },
-					{ value: `${d.chrom}:${d.start}-${d.end}` },
-					{
-						html: `<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`
-					},
-					{ value: d.q_value.toPrecision(3) },
-					{ value: d.nsubj }
-				])
-			}),
-			// Manhattan single-click goes straight to a lollipop launch — no menu.
-			// Release hover-suppression immediately so the cursor's next move re-engages.
-			onSingleClick: (d, _event, ctx) => {
-				ctx.dismiss()
-				if (app) createLollipopFromGene(d.gene, app)
-			},
-			// Manhattan multi-click shows showResultsTable directly with `app + clickMenu`
-			// so the table renders inline Matrix/Lollipop buttons. Reuses the module's
-			// clickMenu so its onHide cleanup (clear flag, clear hover) fires on dismiss.
-			// Content is built BEFORE show2 so Menu can measure the populated rect for
-			// its right-edge clamp — otherwise the wide table is placed at cursor+offsetX
-			// and extends off the right edge of the viewport.
-			onMultiClick: (dots, event, ctx) => {
-				if (!app) {
-					ctx.dismiss()
-					return
-				}
-				ctx.clickMenu.clear()
-				const holder = ctx.clickMenu.d.append('div').style('margin', '10px')
-				showResultsTable({ tableDiv: holder, hits: dots, app, clickMenu: ctx.clickMenu })
-				ctx.clickMenu.show2(event.clientX, event.clientY)
-			}
+			itemNoun: custom.itemNoun ?? 'gene',
+			renderSingleHoverTooltip: custom.renderSingleHoverTooltip ?? grin2Hover,
+			buildMultiHitTableData: custom.buildMultiHitTableData ?? grin2Table,
+			// A caller with actions gets the module's standard click flow: an action menu for one
+			// dot, a pick-a-row menu for several. Without one, GRIN2's behaviour below.
+			...(custom.getActions
+				? {
+						getActions: custom.getActions,
+						renderSingleHitInfo: custom.renderSingleHitInfo ?? custom.renderSingleHoverTooltip,
+						getRowKey: custom.getRowKey
+				  }
+				: {
+						// Manhattan single-click goes straight to a lollipop launch — no menu.
+						// Release hover-suppression immediately so the cursor's next move re-engages.
+						onSingleClick: (d, _event, ctx) => {
+							ctx.dismiss()
+							if (app && d.gene) createLollipopFromGene(d.gene, app)
+						},
+						// Manhattan multi-click shows showResultsTable directly with `app + clickMenu`
+						// so the table renders inline Matrix/Lollipop buttons. Reuses the module's
+						// clickMenu so its onHide cleanup (clear flag, clear hover) fires on dismiss.
+						// Content is built BEFORE show2 so Menu can measure the populated rect for
+						// its right-edge clamp — otherwise the wide table is placed at cursor+offsetX
+						// and extends off the right edge of the viewport.
+						onMultiClick: (dots, event, ctx) => {
+							if (!app) {
+								ctx.dismiss()
+								return
+							}
+							ctx.clickMenu.clear()
+							const holder = ctx.clickMenu.d.append('div').style('margin', '10px')
+							showResultsTable({ tableDiv: holder, hits: dots, app, clickMenu: ctx.clickMenu })
+							ctx.clickMenu.show2(event.clientX, event.clientY)
+						}
+				  })
 		})
 
 		interactions.attach()
@@ -275,20 +345,22 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		.text('Chromosomes')
 
 	// Add title
-	svg
+	const title = svg
 		.append('text')
 		.attr('x', settings.yAxisX + settings.yAxisSpace)
 		.attr('y', settings.yAxisY / 2)
 		.attr('font-weight', 'bold')
 		.attr('font-size', `${settings.fontSize + 2}px`)
-		.text('Manhattan Plot')
+		.text(custom.title ?? 'Manhattan Plot')
+	// the download icon follows the title, whatever its length; 108 was the width of the default
+	const titleWidth = (title.node() as SVGTextElement).getBBox?.().width || 100
 
 	if (settings.showDownload) {
 		const downloadDiv = div
 			.append('div')
 			.style('position', 'absolute')
 			.style('top', '5px')
-			.style('left', `${settings.yAxisX + settings.yAxisSpace + 108}px`)
+			.style('left', `${settings.yAxisX + settings.yAxisSpace + titleWidth + 8}px`)
 
 		icons['download'](downloadDiv, {
 			width: 16,
@@ -314,15 +386,17 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 		})
 	}
 
-	// Generate legend data
-	const mutationTypes = [...new Set(data.plotData.points.map((p: any) => p.type))]
-	const legendData = mutationTypes.map(type => {
-		const point = data.plotData.points.find((p: any) => p.type === type)
-		return {
-			type: String(type).charAt(0).toUpperCase() + String(type).slice(1),
-			color: point?.color
-		}
-	})
+	// Generate legend data: the caller's, or one entry per point type
+	const mutationTypes = [...new Set(data.plotData.points.map((p: any) => p.type).filter(Boolean))]
+	const legendData: { type: string; color: string; hollow?: boolean }[] =
+		custom.legend?.map(l => ({ type: l.label, color: l.color, hollow: l.hollow })) ??
+		mutationTypes.map(type => {
+			const point = data.plotData.points.find((p: any) => p.type === type)
+			return {
+				type: String(type).charAt(0).toUpperCase() + String(type).slice(1),
+				color: point?.color
+			}
+		})
 
 	// Add legend
 	if (settings.showLegend && legendData.length > 0) {
@@ -344,7 +418,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.attr('cx', x + 8)
 				.attr('cy', legendY)
 				.attr('r', settings.legendDotRadius)
-				.attr('fill', item.color)
+				.attr('fill', item.hollow ? 'none' : item.color)
+				.attr('stroke', item.hollow ? item.color : 'none')
 
 			// Legend text
 			svg

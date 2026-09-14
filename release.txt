@@ -1,4 +1,7 @@
 Features:
+- The genome-wide DMR scan is an element class of the differential-methylation volcano: pick "DMRs
+  called de novo (genome scan)" and every called DMR is a dot, with the same p-value table, hover,
+  download and dot menu as any other class. MMRF offers only the scan (queries.dnaMethylation.scanOnly).
 - DMR region analysis runs on datasets with no genome-wide CpG matrix, via per-chromosome CpG
   matrices (queries.dnaMethylation.cpgByChr), falling back per chromosome to the element matrix so a
   partial build degrades in resolution rather than erroring. MMRF also offers the CTCF-only and
@@ -10,13 +13,31 @@ Features:
 - Opt-in matched-background correction for a scan. Instead of testing each region against zero, it
   scores each DMR against width- and CpG-density-matched intergenic windows in its own stratum, and
   reports an excess Δβ and an empirical p, one-sided in the direction of the excess.
+- A scan draws two figures under the volcano, on one x axis: a Manhattan plot of every kept DMR,
+  hyper above a zero line and hypo below, height -log10(q); and the methylome-wide profile, mean
+  beta per group in 100 kb bins drawn as the per-bin difference. The bin width follows Zhou 2018
+  (Nat Genet 50:591), which bins genome-wide methylation at 100 kb; unlike that paper the profile
+  plots a two-group difference rather than each group's level, and averages every CpG in a bin
+  rather than only solo-WCGWs. It answers what a DMR list cannot -- on MMRF NSD2 only 0.9% of
+  28,994 bins moved beyond 0.10 beta, median +0.0088.
+- Both figures put the top 1,000 per direction on a hover-and-click layer. A profile bin reports its
+  coordinates, its Δβ, each group's mean beta and the CpGs those rest on, and opens a genome browser
+  on the bin. "Profile bin width" redraws the bins at 100 kb, 500 kb, 1 Mb or 5 Mb, averaging
+  neighbours weighted by CpG count (28,994 dots to 609): display only, applied after the cache, with
+  the statistics staying on the 100 kb bins the metric is defined at.
+- Clicking a DMR opens a violin of that region per sample, or a genome browser on the DMR with the
+  scan's own DMRs as a track (new termdb/dmrScanTrack, read from the scan's cache), beside the genes,
+  a new ENCODE cCRE track and the dataset's mutations.
+- Scan controls: chromosome, background correction, and "Min CpGs per DMR" (default 5; 2-CpG calls
+  carry the largest effect sizes and split hyper/hypo like a coin flip). Statistics carries the
+  whole-scan facts, including each group's genome-wide mean beta and the shift, and what the run
+  cost in memory, CPU and wall time.
 - Volcano: "Center Δβ on median" (methylation, on the Δβ axis) moves the x origin to the median
   effect size. The significant-count line splits by direction ("15,707 hyper / 1,692 hypo"), counted
   server-side so the ratio is unaffected by the interactive-dot cap; the split also applies to gene
   expression and proteomics.
 - DMR analysis can be launched from the group menu, not only by clicking a volcano hit. The picker's
-  group colours carry into the region view, and hyper/hypo are one orange/blue pair everywhere. The
-  region view shows a new ENCODE cCRE track beside the genes.
+  group colours carry into the region view, and hyper/hypo are one orange/blue pair everywhere.
 - dmrcate is 40% faster and uses 5x less memory on a genome-wide scan, with byte-identical output.
 - WGBS is fitted on its read counts, the model DMRcate publishes for sequencing data (Peters 2021,
   Nucleic Acids Research 49:e109), and this is now the DEFAULT for a dataset declaring
@@ -46,18 +67,24 @@ Fixes:
   chromosomes: the probe block was found by a binary search on the chromosome name, but matrices
   store chromosomes karyotypically, where chr10 sorts before chr2. Affected datasets backed by one
   genome-wide matrix; per-chromosome shards were always one chromosome per invocation.
+- Differential methylation works on a dataset whose only methylation backing is a CpG matrix; the
+  config advertised the scan for one, but the group picker's sample counts resolved 'promoter'.
 - A scan compares one cohort. Membership was resolved per rust job against that job's matrix, so a
   dataset mixing CpG shards and element fallback contrasted a different sample set per chromosome.
 - The element methylation getter returns values on the unit it advertises; a beta-unit entry was
   converted to an M-value and still labelled beta.
+- A proteome DAP volcano calls its single p-value an FDR again. The label is read off the term type,
+  which was assigned after the label was computed, so every DAP axis and column said "adjusted
+  p-value" for data that is an FDR.
 - The DMR region view's errors are visible. It wrote them into a div the rx update loop empties
   before every main(), so a failed region showed an empty sandbox.
 - DMR analysis no longer reports "Group 1 needs at least 3 samples" on datasets whose sample groups
   carry ids without names (MMRF, GDC), and checks the sizes after id-to-name resolution, where a
   group actually shrinks.
-- Hardening on termdb/dmrBatch: a caller-supplied chromosome list is bounded and deduplicated before
+- Hardening on the new routes: a caller-supplied chromosome list is bounded and deduplicated before
   anything fans out from it (one chromosome named 5,000 times was 5,000 full-matrix fits that never
-  hit the cache).
+  hit the cache), and termdb/dmrScanTrack
+  requires a dslabel so the auth gatekeeper runs.
 
 General:
 - MMRF requires files/hg38/mmrf/methylation/cpg/{chr}.h5 on the target host (~40GB), built by

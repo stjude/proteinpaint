@@ -74,16 +74,18 @@ export type ManhattanPoint = {
 	x: number
 	y: number
 	color: string
-	type: string
-	gene: string
 	chrom: string
-	start: number
-	end: number
-	pos: number
-	q_value: number
-	nsubj: number | null
 	pixel_x: number
 	pixel_y: number
+	/** GRIN2 fields; a generic caller's own fields ride along the same way */
+	type?: string
+	gene?: string
+	start?: number
+	end?: number
+	pos?: number
+	q_value?: number
+	nsubj?: number | null
+	[k: string]: any
 }
 
 export type ManhattanChromInfo = {
@@ -99,6 +101,9 @@ export type ManhattanPlotData = {
 	x_buffer: number
 	y_min: number
 	y_max: number
+	/** padding inside y_min/y_max, in y units, that the dot radius occupies: the client's visible
+	 * axis stops this far short of the PNG's edges */
+	y_pad: number
 	device_pixel_ratio: number
 	default_log_cutoff: number
 	has_capped_points: boolean
@@ -107,6 +112,50 @@ export type ManhattanPlotData = {
 export type ManhattanRenderResult = {
 	png: string
 	plot_data: ManhattanPlotData
+}
+
+/** One dot for the generic renderer. `y` is the plotted value, normally -log10 of a p or q. It may be
+ * signed (a negative y draws below the zero line, which is how the DMR scan puts hypomethylation
+ * under the axis) and may be Infinity, which places the dot at the cap (a q of exactly 0). Whatever
+ * else the caller puts on the point comes back unchanged on the interactive points, so the client
+ * tooltip can read its own fields. */
+export type ManhattanInputPoint = {
+	chrom: string
+	/** position within the chromosome that sets the dot's x */
+	pos: number
+	y: number
+	color: string
+	[k: string]: any
+}
+
+export type ManhattanPointsRequest = {
+	points: ManhattanInputPoint[]
+	/** chrom -> length in bases (e.g. genome.majorchr). */
+	chrSizes: Record<string, number>
+	plotWidth: number
+	plotHeight: number
+	devicePixelRatio: number
+	pngDotRadius: number
+	maxCappedPoints: number
+	hardCap: number
+	binSize: number
+	/** Which points come back with pixel coordinates for the client's hover/click layer. A
+	 * predicate keeps the caller's rule (GRIN2: q under a threshold); a number keeps the top N by
+	 * |y|, which is what a scan with 120,000 dots wants -- and on a signed plot the top N on EACH
+	 * side, so the direction with the weaker evidence is not crowded out of interactivity by the
+	 * other. Default: every point. */
+	interactive?: number | ((p: ManhattanInputPoint) => boolean)
+	/** Draw the y axis symmetric about zero and a zero line, for signed y. Default: y >= 0 only. */
+	signed?: boolean
+	/** Draw dots as open circles, stroke only, as the volcano draws its dots. Default filled. */
+	hollow?: boolean
+	/** Ranks points for the top-N rule. Default |y|. A plot whose y is an effect size passes the
+	 * evidence here, so the live dots are the best-supported rather than the largest. */
+	rank?: (p: ManhattanInputPoint) => number
+	/** The dynamic y-cap and its headroom are for a -log10 axis, where a few extreme values would
+	 * flatten the rest. A bounded axis such as delta-beta wants none of it: false draws the full
+	 * range, padded by the dot radius so edge dots stay whole. Default true. */
+	capping?: boolean
 }
 
 export type ManhattanRenderRequest = {
@@ -249,16 +298,72 @@ export async function renderManhattan(req: ManhattanRenderRequest): Promise<Manh
 }
 
 async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<ManhattanRenderResult> {
+	const qValueThreshold = finiteAtLeast(req.qValueThreshold, 0, 'qValueThreshold')
+	if (!Array.isArray(req.geneHits)) throw new Error('geneHits must be an array')
+
+	// Walk geneHits; for each gene emit one point per mutation type with a finite, non-negative
+	// q-value. A zero q becomes y = Infinity, which the core places at the cap.
+	const colors = { ...DEFAULT_COLORS, ...(req.lesionTypeColors ?? {}) }
+	const lesionTypes = collectLesionTypes(req.geneHits)
+	const points: ManhattanInputPoint[] = []
+	for (const row of req.geneHits) {
+		const chrom = row.chrom
+		if (typeof chrom !== 'string' || !chrom) continue
+		const geneStart = row['loc.start']
+		const geneEnd = row['loc.end']
+		if (typeof geneStart !== 'number' || !Number.isFinite(geneStart)) continue
+		if (typeof geneEnd !== 'number' || !Number.isFinite(geneEnd)) continue
+		const gene = typeof row.gene === 'string' ? row.gene : ''
+		for (const mtype of lesionTypes) {
+			const qRaw = row[`q.nsubj.${mtype}`]
+			if (typeof qRaw !== 'number' || !Number.isFinite(qRaw) || qRaw < 0) continue
+			const nsubjRaw = row[`nsubj.${mtype}`]
+			points.push({
+				chrom,
+				pos: geneStart,
+				y: qRaw === 0 ? Infinity : -Math.log10(qRaw),
+				color: colors[mtype] ?? DEFAULT_FALLBACK_COLOR,
+				type: mtype,
+				gene,
+				start: geneStart,
+				end: geneEnd,
+				q_value: qRaw,
+				nsubj: typeof nsubjRaw === 'number' && Number.isFinite(nsubjRaw) ? Math.trunc(nsubjRaw) : null
+			})
+		}
+	}
+	return await renderManhattanPoints_actual({
+		points,
+		chrSizes: req.chrSizes,
+		plotWidth: req.plotWidth,
+		plotHeight: req.plotHeight,
+		devicePixelRatio: req.devicePixelRatio,
+		pngDotRadius: req.pngDotRadius,
+		maxCappedPoints: req.maxCappedPoints,
+		hardCap: req.hardCap,
+		binSize: req.binSize,
+		interactive: p => p.q_value <= qValueThreshold
+	})
+}
+
+/** Rasterize any set of genome-positioned points into a Manhattan PNG plus the interactive subset
+ * with pixel coordinates. The GRIN2 entry point above is one caller; the DMR scan is another. */
+export async function renderManhattanPoints(req: ManhattanPointsRequest): Promise<ManhattanRenderResult> {
+	return await renderLimiter.run(async () => {
+		return await renderManhattanPoints_actual(req)
+	})
+}
+
+async function renderManhattanPoints_actual(req: ManhattanPointsRequest): Promise<ManhattanRenderResult> {
 	const pixelWidth = clampedInt(req.plotWidth, 1, MAX_PIXEL_DIM, 'plotWidth')
 	const pixelHeight = clampedInt(req.plotHeight, 1, MAX_PIXEL_DIM, 'plotHeight')
 	const dotRadius = clampedInt(req.pngDotRadius ?? 2, 1, MAX_DOT_RADIUS, 'pngDotRadius')
 	const devicePixelRatio = clampedFloat(req.devicePixelRatio ?? 1.0, 1.0, 6.0, 'devicePixelRatio')
-	const qValueThreshold = finiteAtLeast(req.qValueThreshold, 0, 'qValueThreshold')
 	const hardCap = finiteAtLeast(req.hardCap, 0, 'hardCap')
 	const binSize = finiteAtLeast(req.binSize, Number.EPSILON, 'binSize')
 	const maxCappedPoints = clampedInt(req.maxCappedPoints, 0, 1_000_000, 'maxCappedPoints')
 
-	if (!Array.isArray(req.geneHits)) throw new Error('geneHits must be an array')
+	if (!Array.isArray(req.points)) throw new Error('points must be an array')
 	if (!req.chrSizes || typeof req.chrSizes !== 'object') throw new Error('chrSizes is required')
 
 	const t0 = Date.now()
@@ -268,112 +373,68 @@ async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<Manh
 	// 0.5% buffer on each side of the x-domain (matches Rust's `x_buffer`).
 	const xBuffer = Math.floor(totalGenomeLength * 0.005)
 
-	// 2. Walk geneHits; for each gene emit one point per mutation type with a
-	// finite, non-negative q-value. Track zero-q rows so we can place them at
-	// the y-cap after step 4 (same trick as Rust's placeholder).
-	const colors = { ...DEFAULT_COLORS, ...(req.lesionTypeColors ?? {}) }
-
-	type Pt = {
-		x: number
-		y: number
-		color: string
-		type: string
-		gene: string
-		chrom: string
-		start: number
-		end: number
-		q: number
-		nsubj: number | null
-	}
-	const pts: Pt[] = []
+	// 2. Keep the points on a known chromosome. The cap arithmetic runs on |y| so a signed plot
+	// caps both directions alike; `sign` restores the side afterwards. Infinite y (a q of 0) is
+	// tracked so it can be excluded from the cutoff mean and parked at the cap.
+	const pts: ManhattanInputPoint[] = []
 	const ys: number[] = []
-	const zeroQIndices: number[] = []
-	const sigIndices: number[] = []
-
-	const lesionTypes = collectLesionTypes(req.geneHits)
-
-	for (const row of req.geneHits) {
-		const chrom = row.chrom
-		if (typeof chrom !== 'string' || !chrom) continue
-		const ci = chromData[chrom]
-		if (!ci) continue
-		const geneStart = row['loc.start']
-		const geneEnd = row['loc.end']
-		if (typeof geneStart !== 'number' || !Number.isFinite(geneStart)) continue
-		if (typeof geneEnd !== 'number' || !Number.isFinite(geneEnd)) continue
-		const gene = typeof row.gene === 'string' ? row.gene : ''
-		const xPos = ci.start + geneStart
-
-		for (const mtype of lesionTypes) {
-			const qRaw = row[`q.nsubj.${mtype}`]
-			if (typeof qRaw !== 'number' || !Number.isFinite(qRaw) || qRaw < 0) continue
-			const idx = pts.length
-			let y: number
-			if (qRaw === 0) {
-				zeroQIndices.push(idx)
-				y = 0 // placeholder; replaced with y_cap after step 4
-			} else {
-				y = -Math.log10(qRaw)
-			}
-			const nsubjRaw = row[`nsubj.${mtype}`]
-			const nsubj = typeof nsubjRaw === 'number' && Number.isFinite(nsubjRaw) ? Math.trunc(nsubjRaw) : null
-			const color = colors[mtype] ?? DEFAULT_FALLBACK_COLOR
-
-			pts.push({
-				x: xPos,
-				y,
-				color,
-				type: mtype,
-				gene,
-				chrom,
-				start: geneStart,
-				end: geneEnd,
-				q: qRaw,
-				nsubj
-			})
-			ys.push(y)
-			if (qRaw <= qValueThreshold) sigIndices.push(idx)
-		}
+	const signs: number[] = []
+	const infIndices: number[] = []
+	for (const p of req.points) {
+		if (typeof p.chrom !== 'string' || !chromData[p.chrom]) continue
+		if (typeof p.pos !== 'number' || !Number.isFinite(p.pos)) continue
+		if (typeof p.y !== 'number' || Number.isNaN(p.y)) continue
+		if (!req.signed && p.y < 0) continue
+		const idx = pts.length
+		pts.push(p)
+		signs.push(p.y < 0 ? -1 : 1)
+		if (!Number.isFinite(p.y)) {
+			infIndices.push(idx)
+			ys.push(0) // placeholder; replaced with the cap after step 4
+		} else ys.push(Math.abs(p.y))
 	}
 
 	// 3. Default log cutoff (mean of below-hard-cap values, floor 40), with
-	// zero-q placeholders excluded so they don't drag the mean down.
-	const zeroQSet = new Set<number>(zeroQIndices)
-	const logCutoff = getLogCutoff(ys, hardCap, zeroQSet)
+	// infinite placeholders excluded so they don't drag the mean down.
+	const infSet = new Set<number>(infIndices)
+	const logCutoff = getLogCutoff(ys, hardCap, infSet)
 
-	// 4. Dynamic y-cap and final y_max with radius-of-padding (in -log10 units;
-	// see Rust manhattan_plot.rs `y_padding = png_dot_radius`).
-	const yPadding = dotRadius
-	const yMin = 0 - yPadding
+	// 4. Dynamic y-cap and the y extent. The data span is padded by the dot radius CONVERTED to y
+	// units at this plot height, so a dot on the cap is drawn whole whatever the scale. The Rust
+	// port padded by the radius in -log10 units, which is about the right number of pixels on a
+	// 0..200 axis and half that on a signed one, where the top row of dots was cut in half.
 	const yCap = calculateDynamicYCap(ys, maxCappedPoints, logCutoff, hardCap, binSize)
-
-	let yMax: number
+	// the stroke of an open circle reaches half a pixel past the radius
+	const edgePx = dotRadius + (req.hollow ? 1 : 0)
+	let top: number // the largest plotted |y|, plus headroom
 	let hasCappedPoints = false
-	if (ys.length > 0) {
+	if (req.capping === false) {
+		// the full range
+		const maxY = ys.reduce((a, b) => (Number.isFinite(b) && b > a ? b : a), 0) || 1
+		for (const idx of infIndices) ys[idx] = maxY
+		top = maxY
+	} else if (ys.length > 0) {
 		const maxY = ys.reduce((a, b) => (b > a ? b : a), -Infinity)
 		hasCappedPoints = maxY > logCutoff
-		// Place zero-q rows at the cap so they appear at the top.
-		for (const idx of zeroQIndices) {
-			ys[idx] = yCap
-			pts[idx].y = yCap
-		}
+		for (const idx of infIndices) ys[idx] = yCap
 		if (maxY > yCap) {
-			for (let i = 0; i < pts.length; i++) {
-				if (ys[i] > yCap) {
-					ys[i] = yCap
-					pts[i].y = yCap
-				}
-			}
+			for (let i = 0; i < ys.length; i++) if (ys[i] > yCap) ys[i] = yCap
 		}
-		// yMax must clear the highest plotted value. That is yCap whenever anything reached it —
-		// a clamped point (maxY > yCap) OR a zero-q row parked there — otherwise the natural max.
-		// Without the zero-q branch, a run whose only top signal is q=0 (e.g. FLT3 in an ITD run)
-		// places those dots at yCap but sizes yMax from the lower non-zero max, clipping them off the top.
-		const effectiveMax = maxY > yCap || zeroQIndices.length > 0 ? yCap : maxY
-		yMax = effectiveMax + 0.35 + yPadding
+		// The top must clear the highest plotted value. That is yCap whenever anything reached it —
+		// a clamped point (maxY > yCap) OR an infinite row parked there — otherwise the natural max.
+		// Without the infinite branch, a run whose only top signal is q=0 (e.g. FLT3 in an ITD run)
+		// places those dots at yCap but sizes the top from the lower non-zero max, clipping them off.
+		const effectiveMax = maxY > yCap || infIndices.length > 0 ? yCap : maxY
+		top = effectiveMax + 0.35
 	} else {
-		yMax = 1.0 + yPadding
+		top = 1.0
 	}
+	// Signed: the same reach below zero as above, so the axis reads symmetrically and a hyper and
+	// a hypo dot of equal evidence sit equally far from the line.
+	const yPadding = (edgePx * (req.signed ? 2 * top : top)) / pixelHeight
+	const yMax = top + yPadding
+	const yMin = req.signed ? -yMax : 0 - yPadding
+	const plottedY = ys.map((y, i) => y * signs[i])
 
 	// 5. Canvas dims. PNG includes 2*radius of padding on each axis so dots at
 	// the data edges stay fully visible (matches Rust + renderVolcano).
@@ -393,7 +454,8 @@ async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<Manh
 	// Precompute pixel coords once — used for both the PNG draw loop and the
 	// returned interactive `points` overlay positions.
 	const pxCss: Array<[number, number]> = new Array(pts.length)
-	for (let i = 0; i < pts.length; i++) pxCss[i] = [xScale(pts[i].x), yScale(pts[i].y)]
+	for (let i = 0; i < pts.length; i++)
+		pxCss[i] = [xScale(chromData[pts[i].chrom].start + pts[i].pos), yScale(plottedY[i])]
 
 	// Clamp DPR downward when device-pixel canvas would exceed
 	// MAX_DEVICE_PIXELS_PER_SIDE; CSS-space outputs unaffected (see renderVolcano).
@@ -423,6 +485,17 @@ async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<Manh
 		ctx.fillRect(x0, bandTop, x1 - x0, bandBottom - bandTop)
 	}
 	ctx.restore()
+	if (req.signed) {
+		// the line the two directions hang off; drawn under the dots so it never hides one
+		ctx.save()
+		ctx.strokeStyle = '#999'
+		ctx.lineWidth = 1
+		ctx.beginPath()
+		ctx.moveTo(0, yScale(0))
+		ctx.lineTo(w, yScale(0))
+		ctx.stroke()
+		ctx.restore()
+	}
 
 	// 8. Filled, anti-aliased dots. skia-canvas anti-aliases fills by
 	// default, replacing the tiny-skia step in the Rust port. Group by
@@ -439,6 +512,8 @@ async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<Manh
 	}
 	for (const [color, idxs] of byColor) {
 		ctx.fillStyle = color
+		ctx.strokeStyle = color
+		ctx.lineWidth = 1
 		ctx.beginPath()
 		for (const i of idxs) {
 			const [px, py] = pxCss[i]
@@ -447,32 +522,30 @@ async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<Manh
 			ctx.moveTo(px + radiusPx, py)
 			ctx.arc(px, py, radiusPx, 0, Math.PI * 2)
 		}
-		ctx.fill()
+		if (req.hollow) ctx.stroke()
+		else ctx.fill()
 	}
 
 	// Async rasterize+encode on skia's thread pool.
 	const png = (await canvas.toBuffer('png')).toString('base64')
 
-	// 9. Build interactive points: only those with q <= threshold. Pixel
-	// coords in CSS space so the SVG overlay aligns with the PNG.
+	// 9. Interactive points, in CSS pixel space so the SVG overlay aligns with the PNG. Either the
+	// caller's predicate, or the top N by |y| -- ties broken by input order.
+	let sigIndices: number[]
+	if (typeof req.interactive === 'function') {
+		const keep = req.interactive
+		sigIndices = pts.map((p, i) => i).filter(i => keep(pts[i]))
+	} else if (typeof req.interactive === 'number') {
+		const n = Math.max(0, Math.floor(req.interactive))
+		const score = req.rank ? pts.map(p => req.rank!(p)) : ys
+		const top = (idx: number[]) => idx.sort((a, b) => score[b] - score[a]).slice(0, n)
+		const all = pts.map((_, i) => i)
+		sigIndices = req.signed ? [...top(all.filter(i => signs[i] > 0)), ...top(all.filter(i => signs[i] < 0))] : top(all)
+	} else sigIndices = pts.map((_, i) => i)
 	const interactivePoints: ManhattanPoint[] = sigIndices.map(i => {
 		const p = pts[i]
 		const [px, py] = pxCss[i]
-		return {
-			x: p.x,
-			y: p.y,
-			color: p.color,
-			type: p.type,
-			gene: p.gene,
-			chrom: p.chrom,
-			start: p.start,
-			end: p.end,
-			pos: p.start,
-			q_value: p.q,
-			nsubj: p.nsubj,
-			pixel_x: px,
-			pixel_y: py
-		}
+		return { ...p, x: chromData[p.chrom].start + p.pos, y: plottedY[i], pixel_x: px, pixel_y: py } as ManhattanPoint
 	})
 
 	mayLog(
@@ -489,6 +562,7 @@ async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<Manh
 			x_buffer: xBuffer,
 			y_min: yMin,
 			y_max: yMax,
+			y_pad: yPadding,
 			device_pixel_ratio: effectiveDpr,
 			default_log_cutoff: logCutoff,
 			has_capped_points: hasCappedPoints
