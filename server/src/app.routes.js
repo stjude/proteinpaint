@@ -59,6 +59,7 @@ export const routeFiles = [
 	import('./routes/termdb.diffMeth.ts'),
 	import('./routes/termdb.dmr.ts'),
 	import('./routes/termdb.dmrBatch.ts'),
+	import('./routes/termdb.dmrScanTrack.ts'),
 	import('./routes/termdb.facet.ts'),
 	import('./routes/termdb.filterTermValues.ts'),
 	import('./routes/termdb.isoformAvailability.ts'),

@@ -1,4 +1,5 @@
 import { dt2lesion } from '#shared/common.js'
+import { manhattanLayoutDefaults } from '#plots/manhattan/manhattan.ts'
 
 /** CNV form fallbacks used when the dataset config does not supply ds-specific cutoffs. */
 export const CNV_LOSS_THRESHOLD_FALLBACK = -0.4
@@ -91,44 +92,13 @@ export const EXCLUDE_OVERLAP_FRAC_FALLBACK = 0.5
 export function getDefaultGRIN2Settings(opts: any) {
 	const defaults = {
 		manhattan: {
-			// Core plot dimensions
-			plotWidth: 1000,
-			plotHeight: 400,
-			pngDotRadius: 2,
+			/* The layout the Manhattan component draws by, from its own module rather than restated
+			here: these 22 keys were a second copy, so a spacing tweak for one plot silently left
+			the other rendering differently. GRIN2's own knobs follow. */
+			...manhattanLayoutDefaults,
 
-			// Layout spacing
-			yAxisX: 70,
-			yAxisY: 40,
-			yAxisSpace: 20,
-			xAxisLabelPad: 30,
-			yAxisPad: 5,
-			axisColor: '#545454',
-			showYAxisLine: true,
-
-			// Typography
-			fontSize: 12,
-
-			// Legend settings
-			showLegend: true,
-			legendItemWidth: 80,
-			legendDotRadius: 3,
-			legendRightOffset: 15,
-			legendTextOffset: 12,
-			legendVerticalOffset: 4,
-			legendFontSize: 12,
-
-			// Interactive dots
-			showInteractiveDots: true,
-			interactiveDotRadius: 2,
-			interactiveDotStrokeWidth: 1,
-
-			// Download options
-			showDownload: true,
-
-			// Max genes to show in table, interactive dots cap, and tooltip genes
+			// Max genes to show in table
 			maxGenesToShow: 500,
-			interactiveDotsCap: 5000,
-			maxTooltipGenes: 5,
 
 			// Q-value threshold for significance indicators in the table, tooltips, and for determining which dots become interactive
 			qValueThreshold: 0.05,

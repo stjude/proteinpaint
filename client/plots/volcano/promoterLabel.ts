@@ -1,4 +1,5 @@
 import type { DiffMethEntry } from '#types'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 
 /** Display label for a differential methylation promoter.
  *
@@ -61,6 +62,9 @@ export function elementNoun(elementType?: string): { one: string; many: string }
 			return { one: 'Distal enhancer', many: 'distal enhancers' }
 		case 'enhancer_proximal':
 			return { one: 'Proximal enhancer', many: 'proximal enhancers' }
+		// de novo regions called by the genome scan, not an annotated class at all
+		case DMR_SCAN_ELEMENT_TYPE:
+			return { one: 'DMR', many: 'DMRs' }
 		default:
 			return { one: 'Element', many: 'elements' }
 	}
