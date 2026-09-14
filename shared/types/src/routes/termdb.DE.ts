@@ -136,6 +136,9 @@ export type VolcanoData<T extends DataEntry> = {
 	 * size across all tested rows, and 0 when centring was off. Report it alongside a centred
 	 * count: it is the size of the baseline offset that was removed. */
 	xOffset: number
+	/** Whether centerX was applied. Read this, not xOffset, to decide whether a figure is centred:
+	 * a centred run whose median effect is exactly 0 also reports xOffset 0. */
+	centered: boolean
 	/** Server-side cache ID for the full DE result (all rows, not just dots).
 	 * Downstream tools (e.g. GSEA) pass this back to the server instead of
 	 * re-transmitting the gene + fold_change arrays. */

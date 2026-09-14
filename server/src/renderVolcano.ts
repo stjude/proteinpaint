@@ -333,6 +333,8 @@ export async function renderVolcano<T extends DataEntry>(
 		totalSignificantRows,
 		totalSignificantUp,
 		totalSignificantDown,
-		xOffset
+		xOffset,
+		// explicit, because a centred run whose median is exactly 0 has xOffset 0 too
+		centered: !!req.centerX
 	}
 }
