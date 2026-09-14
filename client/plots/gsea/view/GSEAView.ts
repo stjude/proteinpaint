@@ -1,3 +1,4 @@
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import type { GSEA } from '../GSEA'
 import * as d3axis from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
@@ -66,6 +67,25 @@ export class GSEAView {
 
 		if (!viewData.tableData) return
 
+		/* A DMR scan has no gene-level rows, so the server ranks every gene by the mean delta-beta
+		over its body instead (genesetEnrichment.ts). Said here because the plot looks identical to
+		one ranked by promoter delta-beta and means something different. */
+		this.dom.actionsDiv.selectAll('.sjpp-gsea-ranking-note').remove()
+		const da = this.gsea.gsea_params?.daRequest
+		if (da?.element_type === DMR_SCAN_ELEMENT_TYPE) {
+			this.dom.actionsDiv
+				.append('span')
+				.attr('class', 'sjpp-gsea-ranking-note')
+				.style('margin-left', '14px')
+				.style('font-size', '.9em')
+				.style('color', '#555')
+				.text(
+					da.scan?.backgroundCorrection
+						? 'Genes ranked by gene-body Δβ in excess of matched intergenic background (case − control); negative is gene-body methylation loss'
+						: 'Genes ranked by gene-body Δβ (case − control); negative is gene-body methylation loss'
+				)
+		}
+
 		this.renderStats(viewData.statsData)
 		if (viewData.detailImage) this.renderImage(viewData.detailImage)
 		if (viewData.cernoPlotData) this.renderCernoPlot(viewData.cernoPlotData)
@@ -99,7 +119,11 @@ export class GSEAView {
 	}
 
 	renderImage(detailImage) {
-		this.dom.holder.append('img').attr('width', detailImage.width).attr('height', detailImage.height).attr('src', detailImage.src)
+		this.dom.holder
+			.append('img')
+			.attr('width', detailImage.width)
+			.attr('height', detailImage.height)
+			.attr('src', detailImage.src)
 	}
 
 	renderHighlightButton() {
@@ -167,8 +191,12 @@ export class GSEAView {
 		const yAxis = svg.append('g')
 		const xAxis = svg.append('g')
 
-		const xScale = scaleLinear().domain([0, cernoPlotData.rankedGenes.length]).range([xPad, svgWidth - rightPad])
-		const yScale = scaleLinear().domain([100, 0]).range([topPad, svgHeight - yPad])
+		const xScale = scaleLinear()
+			.domain([0, cernoPlotData.rankedGenes.length])
+			.range([xPad, svgWidth - rightPad])
+		const yScale = scaleLinear()
+			.domain([100, 0])
+			.range([topPad, svgHeight - yPad])
 
 		yAxis.attr('transform', `translate(${xPad},0)`)
 		xAxis.attr('transform', `translate(0,${svgHeight - yPad})`)
