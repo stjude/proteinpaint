@@ -17,14 +17,8 @@ proteinpaint-client code. Standalone usage outside of a ppfull container is not 
 the container, the command below is used:
 
 ```bash
-npx proteinpaint-front [URL_PUBLIC_PATH]
+npx proteinpaint-front
 ```
-
-See `init.js` for details. If the URL_PUBLIC_PATH argument is omitted above, then it will default to `'.'`, 
-which assumes that the bundle is served by the same PP server. But note that in this case, the web bundle or 
-server host may NOT be embedded or used as host from other domains, even if CORS is allowed, since script 
-bundles will not be sourced properly and loaded dynamically.
-
 
 ## Develop
 
