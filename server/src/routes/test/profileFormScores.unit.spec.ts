@@ -1,13 +1,50 @@
 import tape from 'tape'
-import { getSCPercentsDict } from '../termdb.profileFormScores.ts'
+import { getPercentsDict, getSCPercentsDict } from '../termdb.profileFormScores.ts'
 
 /**
  * Tests for termdb.profileFormScores helpers
+ *  - getPercentsDict()
  *  - getSCPercentsDict()
  */
 
 tape('\n', function (test) {
 	test.comment('-***- #routes/termdb.profileFormScores -***-')
+	test.end()
+})
+
+const LIKERT_VALUES = {
+	'1': { key: '1', label: 'Almost never' },
+	'4': { key: '4', label: 'Frequently' },
+	'5': { key: '5', label: 'Almost always' }
+}
+const byItself = (sample: any) => sample
+
+tape('getPercentsDict() folds differently capitalized answers onto the term value label', function (test) {
+	const samples = [
+		{ 'Almost Always': 6, Frequently: 4 },
+		{ 'Almost always': 2, 'Almost Never': 1 },
+		{ 'Almost never': 3 }
+	]
+	test.deepEqual(
+		getPercentsDict(byItself, samples, LIKERT_VALUES),
+		{ 'Almost always': 8, Frequently: 4, 'Almost never': 4 },
+		'one category per answer, counts summed across spellings'
+	)
+	test.end()
+})
+
+tape('getPercentsDict() keeps answers with no matching label, and all keys when values are absent', function (test) {
+	const samples = [{ "I don't know": 2, 'Almost Always': 1 }, null]
+	test.deepEqual(
+		getPercentsDict(byItself, samples, LIKERT_VALUES),
+		{ "I don't know": 2, 'Almost always': 1 },
+		'an unlabelled answer is kept verbatim and a sample without data is skipped'
+	)
+	test.deepEqual(
+		getPercentsDict(byItself, [{ 'Almost Always': 1 }, { 'Almost always': 1 }]),
+		{ 'Almost Always': 1, 'Almost always': 1 },
+		'without term values the keys are left untouched'
+	)
 	test.end()
 })
 
