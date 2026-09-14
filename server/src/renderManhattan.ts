@@ -378,6 +378,8 @@ async function renderManhattanPoints_actual(req: ManhattanPointsRequest): Promis
 	// tracked so it can be excluded from the cutoff mean and parked at the cap.
 	const pts: ManhattanInputPoint[] = []
 	const ys: number[] = []
+	// |y| before any clamping, for the top-N rule: after the cap every point above it ties
+	const rankYs: number[] = []
 	const signs: number[] = []
 	const infIndices: number[] = []
 	for (const p of req.points) {
@@ -387,6 +389,7 @@ async function renderManhattanPoints_actual(req: ManhattanPointsRequest): Promis
 		if (!req.signed && p.y < 0) continue
 		const idx = pts.length
 		pts.push(p)
+		rankYs.push(Math.abs(p.y))
 		signs.push(p.y < 0 ? -1 : 1)
 		if (!Number.isFinite(p.y)) {
 			infIndices.push(idx)
@@ -537,7 +540,7 @@ async function renderManhattanPoints_actual(req: ManhattanPointsRequest): Promis
 		sigIndices = pts.map((p, i) => i).filter(i => keep(pts[i]))
 	} else if (typeof req.interactive === 'number') {
 		const n = Math.max(0, Math.floor(req.interactive))
-		const score = req.rank ? pts.map(p => req.rank!(p)) : ys
+		const score = req.rank ? pts.map(p => req.rank!(p)) : rankYs
 		const top = (idx: number[]) => idx.sort((a, b) => score[b] - score[a]).slice(0, n)
 		const all = pts.map((_, i) => i)
 		sigIndices = req.signed ? [...top(all.filter(i => signs[i] > 0)), ...top(all.filter(i => signs[i] < 0))] : top(all)

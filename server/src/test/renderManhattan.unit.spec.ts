@@ -148,6 +148,37 @@ tape('renderManhattanPoints: signed y is symmetric about zero and the top N by |
 	test.end()
 })
 
+tape('renderManhattanPoints: the top N ranks by |y| before capping, so points above the cap do not tie', async test => {
+	test.timeoutAfter(5000)
+	/* Every point here is above the hard cap of 200, so all are drawn at the cap. Ranked on the
+	clamped values they would all tie and input order would pick the live dots; the two most
+	significant must win whatever order they arrive in. */
+	const points = [
+		{ chrom: 'chr1', pos: 1e6, y: 300, color: '#e66101', id: 'y300' },
+		{ chrom: 'chr1', pos: 2e6, y: 250, color: '#e66101', id: 'y250' },
+		{ chrom: 'chr13', pos: 3e6, y: 500, color: '#e66101', id: 'y500' },
+		{ chrom: 'chr17', pos: 4e6, y: 400, color: '#e66101', id: 'y400' }
+	]
+	const r = await renderManhattanPoints({
+		chrSizes,
+		plotWidth: 1004,
+		plotHeight: 404,
+		devicePixelRatio: 1,
+		pngDotRadius: 2,
+		maxCappedPoints: 5,
+		hardCap: 200,
+		binSize: 10,
+		points,
+		interactive: 2
+	})
+	test.deepEqual(
+		r.plot_data.points.map(p => p.id),
+		['y500', 'y400'],
+		'the two largest -log10 values are live, not the first two in input order'
+	)
+	test.end()
+})
+
 tape('renderManhattanPoints: capping off draws a bounded y in full, and rank picks the live dots', async test => {
 	test.timeoutAfter(5000)
 	/* The DMR scan puts delta-beta on y: a range of a few tenths that the -log10 cap logic would

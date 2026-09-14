@@ -39,6 +39,12 @@ function init({ genomes }) {
 			const file = cacheFilePath('dmr', q.cacheId)
 			if (!fs.existsSync(file)) throw new Error('This scan is no longer cached; rerun it to open the browser.')
 			const scan = JSON.parse(await fs.promises.readFile(file, 'utf8'))
+			/* The auth gate ran for q.dslabel, but the cacheId names a result computed for some dataset,
+			so a valid id from a protected dataset could otherwise be replayed under any accessible one.
+			Serve only a result recorded as belonging to the dataset asked for; one cached before the
+			result recorded its dataset cannot be verified and is refused. */
+			if (scan.genome !== q.genome || scan.dslabel !== q.dslabel)
+				throw new Error('This scan does not belong to the requested dataset; rerun it to open the browser.')
 			const items: { chr: string; start: number; stop: number; name: string; color: string }[] = []
 			for (const r of scan.regions || []) {
 				if (r.chr != q.chr) continue

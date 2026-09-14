@@ -57,7 +57,9 @@ tape('uncorrected scan: CpG floor, one p per row, summary counts', t => {
 			maxdiff: -0.2,
 			direction: 'hypo',
 			inGeneBody: true,
-			genes: ['LOSS']
+			bodyGenes: ['LOSS'],
+			// NEIGHBOUR only clips the region with its promoter, so it is not a body gene
+			genes: ['LOSS', 'NEIGHBOUR']
 		})
 	])
 	const { rows, scan } = dmrScanToRows(p, opts)
@@ -96,7 +98,7 @@ tape('uncorrected scan: CpG floor, one p per row, summary counts', t => {
 	t.deepEqual(
 		scan.geneBodyLoss,
 		{ regions: 1, genes: ['LOSS'] },
-		'the gene set comes from the hypo, in-body DMR with no background p'
+		'the gene set comes from the hypo, in-body DMR with no background p, and only its body genes'
 	)
 	t.equal(
 		dmrScanToRows(payload([dmr({ direction: 'hypo', inGeneBody: false, genes: ['PROMOTER_ONLY'] })]), opts).scan
@@ -119,6 +121,7 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 				bgP: 0.01,
 				excess: -0.15,
 				inGeneBody: true,
+				bodyGenes: ['LOSS'],
 				genes: ['LOSS']
 			}),
 			// hypo, beats background, but only clips a promoter -> not in the set

@@ -58,9 +58,13 @@ export function init({ genomes }) {
 			// return; only abort if no rows reached the renderer at all.
 			if (rendered.totalRows === 0)
 				throw new Error(
-					result.scan
-						? 'The scan called no DMRs that met the CpG floor.'
-						: 'No promoters passed filtering. Try relaxing group criteria or selecting more samples.'
+					!result.scan
+						? 'No promoters passed filtering. Try relaxing group criteria or selecting more samples.'
+						: result.scan.kept && result.scan.backgroundCorrection
+						? /* rows omit unscored DMRs under the correction, so none plotted does not mean
+						none met the floor */
+						  `None of the ${result.scan.kept.toLocaleString()} DMRs meeting the CpG floor could be scored against matched background. Turn off the background correction to see them.`
+						: 'The scan called no DMRs that met the CpG floor.'
 				)
 
 			const output: DiffMethFullResponse = {

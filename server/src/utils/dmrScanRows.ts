@@ -100,7 +100,9 @@ export function dmrScanToRows(
 		if (d.direction != 'hypo' || !d.inGeneBody) continue
 		if (payload.backgroundCorrection && !(d.bgP != null && d.bgP < 0.05)) continue
 		regions++
-		for (const g of d.genes || []) genes.add(g)
+		/* bodyGenes, not genes: genes also lists promoter-only neighbours of an in-body region and is
+		capped for display, so it admitted the wrong mechanism and dropped body genes past the cap. */
+		for (const g of d.bodyGenes || []) genes.add(g)
 	}
 	// omitted rather than reported as "0 -> 0": nothing to run the expression test on
 	if (regions) scan.geneBodyLoss = { regions, genes: [...genes] }
