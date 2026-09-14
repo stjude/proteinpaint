@@ -53,6 +53,8 @@ export async function buildExclusion(
 	chrLen: number,
 	geneIdx: Map<string, { start: number[]; stop: number[] }> | null
 ): Promise<MaskInterval[] | null> {
+	// without gene spans a window can land in a gene body, which is not intergenic
+	if (!geneIdx) return null
 	const ccreTk = (genome?.tracks || []).find((t: any) => t.name == 'ENCODE cCREs')
 	if (!ccreTk?.file) return null // without the registry we cannot say what is intergenic
 	/* Genome TRACK paths stay relative to tpmasterdir -- they are sent to the client, which asks the
@@ -163,8 +165,11 @@ export function scoreAgainstBackground(
 		}
 		const mean = bg.reduce((a, b) => a + b, 0) / bg.length
 		const obs = d.meandiff
-		// two-sided: how often does background drift at least this far in the same direction?
-		const atLeast = bg.filter(v => (obs >= 0 ? v >= obs : v <= obs)).length
+		/* One-sided in the direction of the EXCESS, relative to the stratum mean rather than to zero:
+		how often does background drift at least this far past its own mean on that side? Taking the
+		tail from the raw sign meant a +0.01 DMR over a +0.05 background -- excess -0.04 -- was tested
+		in the upper tail, where it can never register as the hypo effect it is. */
+		const atLeast = bg.filter(v => (obs >= mean ? v >= obs : v <= obs)).length
 		return { excess: obs - mean, p: (atLeast + 1) / (bg.length + 1), stratum: k }
 	})
 	return { scored, strataUsed: [...byStratum.values()].filter(v => v.length >= MIN_BG).length, unscored }

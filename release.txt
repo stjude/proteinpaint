@@ -9,8 +9,7 @@ Features:
   one-at-a-time. Results are cached on the samples, settings and the size+mtime of every file read.
 - Opt-in matched-background correction for a scan. Instead of testing each region against zero, it
   scores each DMR against width- and CpG-density-matched intergenic windows in its own stratum, and
-  reports an excess Δβ and empirical p. On MMRF NSD2-high, 71% of the median DMR's movement is
-  matched drift and the direction inverts, 3.15:1 hyper before and 4.22:1 hypo after.
+  reports an excess Δβ and an empirical p, one-sided in the direction of the excess.
 - Volcano: "Center Δβ on median" (methylation, on the Δβ axis) moves the x origin to the median
   effect size. The significant-count line splits by direction ("15,707 hyper / 1,692 hypo"), counted
   server-side so the ratio is unaffected by the interactive-dot cap; the split also applies to gene

@@ -81,8 +81,17 @@ export const GENE_BODY_PAD = 2000
  * bodies must not quietly include regions that only clip a promoter: on MMRF that would enlarge
  * the set by 17% with the wrong mechanism. */
 export function inGeneBody(idx: GeneIndex, chr: string, start: number, stop: number): boolean {
+	return genesInBody(idx, chr, start, stop).length > 0
+}
+
+/** Names of the genes whose BODY the region overlaps, uncapped, in genomic order.
+ *
+ * Not genesAt() filtered by inGeneBody(): a region in one gene's body can also clip a neighbour's
+ * promoter, and a per-region flag cannot say which gene is which -- so a gene-body gene set built
+ * that way admits promoter-only genes. */
+export function genesInBody(idx: GeneIndex, chr: string, start: number, stop: number): string[] {
 	const c = idx.get(chr)
-	if (!c) return false
+	if (!c) return []
 	let lo = 0
 	let hi = c.start.length
 	while (lo < hi) {
@@ -90,12 +99,13 @@ export function inGeneBody(idx: GeneIndex, chr: string, start: number, stop: num
 		if (c.start[mid] < stop) lo = mid + 1
 		else hi = mid
 	}
+	const out: string[] = []
 	const floor = start - c.maxSpan
 	for (let i = lo - 1; i >= 0 && c.start[i] >= floor; i--) {
 		const bs = c.start[i] + GENE_BODY_PAD
 		const be = c.stop[i] - GENE_BODY_PAD
 		// a gene shorter than twice the pad has no body left to speak of
-		if (be > bs && be > start && bs < stop) return true
+		if (be > bs && be > start && bs < stop) out.push(c.name[i])
 	}
-	return false
+	return out.reverse()
 }
