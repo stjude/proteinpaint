@@ -1,1 +1,9 @@
-
+Fixes:
+- dmrcate no longer emits thousands of false DMRs on a chromosome where NO probe passes per-CpG
+  significance. When that count was 0, the adaptive rule compared the smoothed FDR against the raw
+  0.05 cutoff; kernel smoothing pools ~25 neighbouring probes, so a smoothed FDR sits well under
+  0.05 across long stretches of a null chromosome. On MMRF male-vs-female, 12 of 22 autosomes
+  reported 0 significant probes and 963-4,570 DMRs each; the autosomal total goes from 20,963 to 5
+  over 15.9M probes, chrX is unchanged at 6,472 and the NSD2 chr1 result is bit-identical. The
+  proximity fallback is gated on the same count, since it keeps probes at or below the cutoff while
+  the count is strictly below it.
