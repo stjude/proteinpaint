@@ -237,6 +237,18 @@ tape('maxInteractiveDots caps dots to most-significant N; null returns all', asy
 
 	const all = await renderVolcano(rows, makeReq({ maxInteractiveDots: null }))
 	t.equal(all.dots.length, 4, 'null maxInteractiveDots returns every significant row')
+
+	/* The direction split must count every significant row, not the capped dots. Here the one
+	down row has the SMALLEST p-value, so a split computed off a cap of 2 would report 1 up /
+	1 down instead of 3 up / 1 down. That is the real-data failure mode in miniature: the most
+	significant hits are not direction-balanced. */
+	t.equal(capped.totalSignificantUp, 3, 'up count is over all significant rows, not the cap')
+	t.equal(capped.totalSignificantDown, 1, 'down count is over all significant rows, not the cap')
+	t.equal(
+		capped.totalSignificantUp + capped.totalSignificantDown,
+		capped.totalSignificantRows,
+		'the split partitions the significant rows exactly'
+	)
 	t.end()
 })
 
@@ -321,5 +333,42 @@ tape('DPR: exact device dimensions, and clamp to MAX_DEVICE_PIXELS_PER_SIDE', as
 	const sz = pngSize(clamped.volcanoPng)
 	t.equal(sz.width, 8192, 'wide axis is clamped to MAX_DEVICE_PIXELS_PER_SIDE (not 24000)')
 	t.equal(sz.height, 256, 'short axis scales by the same clamped effectiveDpr')
+	t.end()
+})
+
+tape('centerX shifts the origin to the median, changing the direction split but not the p-values', async t => {
+	/* Five p-significant rows whose effect sizes sit around a +0.2 baseline, none of them ON the
+	0.15 cutoff (a value exactly at the cutoff fails the strict > and makes the arithmetic here
+	hard to follow). Median is 0.2, so:
+	    raw       -0.05  0.00  0.20  0.40  0.60   -> |x|>0.15 gives 3 up, 0 down
+	    centered  -0.25 -0.20  0.00  0.20  0.40   -> |x|>0.15 gives 2 up, 2 down
+	Same rows, same p-values, opposite impression of the direction balance. */
+	const rows = [row(-0.05, 0.001), row(0, 0.002), row(0.2, 0.003), row(0.4, 0.004), row(0.6, 0.005)]
+	const req = () => makeReq({ significanceThresholds: { foldChangeCutoff: 0.15 }, maxInteractiveDots: null })
+
+	const raw = await renderVolcano(rows, req())
+	t.equal(raw.xOffset, 0, 'xOffset is 0 when centering is off')
+	t.equal(raw.totalSignificantUp, 3, 'uncentered: the three rows above +0.15 count up')
+	t.equal(raw.totalSignificantDown, 0, 'uncentered: the baseline offset leaves nothing counting down')
+
+	const centered = await renderVolcano(rows, { ...req(), centerX: true })
+	t.equal(centered.xOffset, 0.2, 'xOffset is the median effect size across all rows')
+	t.equal(centered.totalSignificantUp, 2, 'centered: rows above the median count up')
+	t.equal(centered.totalSignificantDown, 2, 'centered: rows below the median now count down')
+
+	/* Centering is an x-axis operation only. The p-values must survive it, and so must the
+	effect sizes in the returned rows — a downloaded table has to read the same whichever way
+	the plot was drawn. */
+	const pByFc = new Map(centered.dots.map((d: any) => [d.fold_change, d.adjusted_p_value]))
+	t.deepEqual(
+		[...pByFc.entries()].sort((a, b) => a[0] - b[0]),
+		[
+			[-0.05, 0.001],
+			[0, 0.002],
+			[0.4, 0.004],
+			[0.6, 0.005]
+		],
+		'returned rows keep their RAW fold_change and their own p-value'
+	)
 	t.end()
 })
