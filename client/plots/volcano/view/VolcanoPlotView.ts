@@ -107,9 +107,12 @@ export class VolcanoPlotView {
 		/* Must match the label the view model built from the same helper, otherwise the
 		find() below silently misses and the count disappears from the action bar. */
 		const dmNoun = elementNoun(this.settings?.elementType)
-		const sigLabel =
-			this.termType == tt.DNA_METHYLATION ? `Number of significant ${dmNoun.many}` : 'Number of significant genes'
-		const numSigGenes = this.viewData.statsData.find(d => d.label == sigLabel)?.value
+		/* The view model builds exactly one "Number of significant <noun>" row, the noun following the
+		term type. Matching a hardcoded "genes" missed proteomics ("proteins") entirely, so its caption
+		and direction split never rendered. */
+		const SIG_PREFIX = 'Number of significant '
+		const sigRow = this.viewData.statsData.find(d => d.label.startsWith(SIG_PREFIX))
+		const numSigGenes = sigRow?.value
 		if (numSigGenes) {
 			// grouped: these run to five and six figures, and "84302" vs "8430" is hard to tell apart at a glance
 			const n = numSigGenes.toLocaleString()
@@ -129,8 +132,14 @@ export class VolcanoPlotView {
 			self-describing wherever the line is read or screenshotted, and the raw and centred
 			numbers cannot be confused for each other. */
 			const off = this.viewData.xOffset
-			const centered = off ? `, centered on median Δβ ${off > 0 ? '+' : ''}${off.toFixed(3)}` : ''
-			const sigText = (isDM ? `${n} DM ${dmNoun.many}` : `${n} DE genes`) + split + centered + ':'
+			const centered = this.viewData.centered ? `, centered on median Δβ ${off > 0 ? '+' : ''}${off.toFixed(3)}` : ''
+			// expression keeps "DE genes"; any other term type names what the stats row counted
+			const noun = isDM
+				? `DM ${dmNoun.many}`
+				: this.termType == tt.GENE_EXPRESSION
+				? 'DE genes'
+				: `significant ${sigRow!.label.slice(SIG_PREFIX.length)}`
+			const sigText = `${n} ${noun}` + split + centered + ':'
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
 
 			const pValueTableButtonText = this.settings.showPValueTable ? 'Hide p-value table' : 'Show p-value table'

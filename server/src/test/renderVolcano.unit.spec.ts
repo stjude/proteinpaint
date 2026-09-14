@@ -348,11 +348,13 @@ tape('centerX shifts the origin to the median, changing the direction split but 
 
 	const raw = await renderVolcano(rows, req())
 	t.equal(raw.xOffset, 0, 'xOffset is 0 when centering is off')
+	t.equal(raw.centered, false, 'and the result says it was not centred')
 	t.equal(raw.totalSignificantUp, 3, 'uncentered: the three rows above +0.15 count up')
 	t.equal(raw.totalSignificantDown, 0, 'uncentered: the baseline offset leaves nothing counting down')
 
 	const centered = await renderVolcano(rows, { ...req(), centerX: true })
 	t.equal(centered.xOffset, 0.2, 'xOffset is the median effect size across all rows')
+	t.equal(centered.centered, true, 'centred is flagged explicitly, not inferred from a non-zero offset')
 	t.equal(centered.totalSignificantUp, 2, 'centered: rows above the median count up')
 	t.equal(centered.totalSignificantDown, 2, 'centered: rows below the median now count down')
 

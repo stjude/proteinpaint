@@ -114,6 +114,7 @@ export class VolcanoViewModel {
 			numSignificantUp: this.numSignificantUp,
 			numSignificantDown: this.numSignificantDown,
 			xOffset: this.response.data.xOffset ?? 0,
+			centered: !!this.response.data.centered,
 			provenance: this.setProvenance(),
 			userActions: this.setUserActions(),
 			deltaBetaAxisLabel: this.setDeltaBetaAxisLabel(),
@@ -137,7 +138,7 @@ export class VolcanoViewModel {
 		/* A centred axis must say so on the axis itself. The plot looks identical to an
 		uncentred one apart from a small shift, so a reader who does not know the origin moved
 		would take a dot at 0 to mean "no change" when it means "typical". */
-		const centered = this.response.data.xOffset ? ' − median' : ''
+		const centered = this.response.data.centered ? ' − median' : ''
 		return `Δβ${centered} (${shortenGroupName(cases)} − ${shortenGroupName(control)})`
 	}
 
@@ -390,7 +391,14 @@ export class VolcanoViewModel {
 		if (!d.gene_name && this.termType != tt.DNA_METHYLATION)
 			throw new Error(`Missing gene_name in data: ${JSON.stringify(d)}`)
 		if (significant) {
-			if (controlColor && caseColor) d.color = d.fold_change > 0 ? caseColor : controlColor
+			/* The value the server classified and drew: delta-beta on the Δβ axis, less the median when
+			centred. Colouring from raw fold_change painted a point between 0 and a positive median as
+			"up" over a PNG dot the server had drawn as "down". */
+			const x =
+				this.termType == tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
+					? (d as any).delta_beta - (this.response.data.xOffset ?? 0)
+					: d.fold_change
+			if (controlColor && caseColor) d.color = x > 0 ? caseColor : controlColor
 			else d.color = this.settings.defaultSignColor
 		} else d.color = this.settings.defaultNonSignColor
 	}
@@ -433,8 +441,9 @@ export class VolcanoViewModel {
 			/* Which reading the counts came from. Two runs of the same contrast give different
 			hyper:hypo ratios depending on this one flag, so a file without it cannot be told
 			apart from the other run. Records the offset too, since it is a result in itself. */
-			const off = this.response.data.xOffset
-			if (off) parts.push(`centered on median delta-beta ${off > 0 ? '+' : ''}${roundValueAuto(off)}`)
+			const off = this.response.data.xOffset ?? 0
+			if (this.response.data.centered)
+				parts.push(`centered on median delta-beta ${off > 0 ? '+' : ''}${roundValueAuto(off)}`)
 			parts.push(`min samples per group: ${s.minSamplesPerGroup}`)
 			parts.push(`exclude sex chromosomes: ${s.excludeSexChr ? 'yes' : 'no'}`)
 		} else if (this.termType == tt.GENE_EXPRESSION) {
