@@ -76,18 +76,23 @@ fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '
 // 	}
 // }
 
+// NOTES: Restored support for
+// - The environment variable that's supported in server/src/serverconfig.js is process.env.PP_URL,
+//   so process.env.URL is likely a legacy requirement when running very old ppfull containers, but now
+//   should always be done directly through serverconfig.URL or via override with process.env.PP_URL.
+// - serverconfig.url is similar, it is not handled in serverconfig.js or documented, it's potentially
+//   a legacy environment-specific fix.
 if (!serverconfig.URL) serverconfig.URL = process.env.URL || serverconfig.url || '.'
 
-console.log(`generating the client bundle (bin/) for ${serverconfig.URL}`)
+// No URL is passed to bundle generation: webpack's output.publicPath is 'auto', so the client derives
+// its /bin/ base path at runtime from the <script> tag it was loaded from (see front/webpack.config.js
+// and front/init.js). This container therefore serves the same bundle regardless of the mount URL.
+console.log(`generating the client bundle (bin/)`)
 const publicBinOnly = process.argv.includes('--publicBinOnly')
-const result = spawnSync(
-	'npx',
-	['proteinpaint-front', serverconfig.URL, publicBinOnly ? '--publicBinOnly' : 'allPublic'],
-	{
-		encoding: 'utf-8',
-		stdio: 'inherit'
-	}
-)
+const result = spawnSync('npx', ['proteinpaint-front', ...(publicBinOnly ? ['--publicBinOnly'] : [])], {
+	encoding: 'utf-8',
+	stdio: 'inherit'
+})
 if (result.stderr) {
 	console.warn(result.stderr)
 }

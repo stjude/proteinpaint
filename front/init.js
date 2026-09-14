@@ -6,8 +6,6 @@ const ps = require('child_process')
 const fs = require('fs')
 const { execSync } = require('child_process')
 
-let URLPATH = process.argv[2] || '.'
-if (URLPATH.endsWith('/')) URLPATH = URLPATH.slice(0, -1)
 const publicBinOnly = process.argv.includes('--publicBinOnly')
 
 const CWD = process.cwd()
@@ -25,12 +23,11 @@ const PUBLIC_DIR = `${CWD}/public`
 // instances serve their CWD/bin. An older image that has no CWD/bin also still works — the server falls
 // back to serving /bin from public/bin.
 const BIN_DIR = `${CWD}/bin`
-// A distinctively named marker written LAST, only after the bundle is fully extracted AND its __PP_URL__
-// placeholder is replaced. It serves two purposes:
-//   - completion: reuse requires it, so a container that stops mid-generation (after tar creates
-//     proteinpaint.js but before the URL rewrite, or on a partial extraction) regenerates on its next
-//     start instead of reusing a partial/unpatched bundle forever — which the health gate can't catch,
-//     since an unpatched or incomplete proteinpaint.js still returns 200.
+// A distinctively named marker written LAST, only after the bundle is fully extracted. It serves two
+// purposes:
+//   - completion: reuse requires it, so a container that stops mid-generation (on a partial extraction)
+//     regenerates on its next start instead of reusing an incomplete bundle forever — which the health
+//     gate can't catch, since an incomplete proteinpaint.js still returns 200.
 //   - ownership: the server publishes CWD/bin at /bin ONLY when this marker is present (see the server's
 //     app.middlewares.js), so launching the server package from a consumer project never exposes an
 //     unrelated CWD/bin (e.g. that project's own bin/ scripts) over HTTP. The name is distinctive so it
@@ -63,12 +60,10 @@ try {
 	// created container (regenerate) — including after an image update, which always yields a new
 	// container. Because CWD/bin is per-container, there is no shared directory to race on.
 	//
-	// NOTE: reuse is keyed on the completion marker (a fully extracted, URL-patched bundle), not on its
-	// version or URL. That is correct for the normal container lifecycle (a new image, or a changed URL,
-	// arrives with a new container and hence an empty CWD/bin). It would be stale only if the SAME
-	// container were reused across a bundle or URL change — e.g. CWD/bin persisted via a mounted volume,
-	// or serverconfig.json remounted with a different URL and merely restarted — uncommon, and outside
-	// this simple scheme.
+	// NOTE: reuse is keyed on the completion marker (a fully extracted bundle), not on its version. That
+	// is correct for the normal container lifecycle (a new image arrives with a new container and hence an
+	// empty CWD/bin). It would be stale only if the SAME container were reused across a bundle change —
+	// e.g. CWD/bin persisted via a mounted volume — uncommon, and outside this simple scheme.
 	if (fs.existsSync(BIN_READY)) {
 		console.log(`bundle already present and complete at ${BIN_DIR}; reusing it`)
 	} else {
@@ -87,21 +82,10 @@ try {
 		if (tar.stderr) {
 			console.warn('Tar command warnings:', tar.stderr)
 		}
-		console.log(`Setting the dynamic bundle path to ${URLPATH}`)
-		const codeFile = `${BIN_DIR}/proteinpaint.js`
-		// remember the modified time before setting the bundle public path
-		const mtime = fs.statSync(codeFile).mtime
-		const code = fs.readFileSync(codeFile, { encoding: 'utf8' })
-		const newcode = code.replace(`__PP_URL__`, `${URLPATH}/bin/`)
-		fs.writeFileSync(codeFile, newcode, { encoding: 'utf8' })
-		try {
-			// reset the atime and mtime to the original mtime before setting the bundle public path
-			fs.utimesSync(codeFile, mtime, mtime)
-		} catch (e) {
-			console.log('--- !!! unable to reset the mtime for the extracted proteinpaint bundle: ', e)
-		}
+		// The bundle needs no URL patching: webpack's output.publicPath is 'auto', so the client derives
+		// the /bin/ base path at runtime from the <script> tag it was loaded from (see front/webpack.config.js).
 		// mark generation complete LAST (see BIN_READY above): a crash before this leaves no marker, so
-		// the next start regenerates rather than reusing a partial or unpatched bundle.
+		// the next start regenerates rather than reusing a partial bundle.
 		fs.writeFileSync(BIN_READY, '')
 	}
 } catch (e) {
