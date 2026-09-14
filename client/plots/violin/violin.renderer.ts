@@ -149,7 +149,7 @@ export default function setViolinRenderer(self: any) {
 				y += height
 				if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings)
 
-				if (isSingleCellTerm(self.config.term.term.type)) {
+				if (isSingleCellTerm(self.config.term.term)) {
 					// is sc data, disable brushing for now because 1) no use 2) avoid bug of listing cells
 				} else {
 					// enable brushing
