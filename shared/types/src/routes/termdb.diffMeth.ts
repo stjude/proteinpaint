@@ -1,5 +1,11 @@
 import type { DataEntry, VolcanoData, VolcanoRenderRequest } from './termdb.DE.js'
 
+/** The element_type that asks the differential-methylation volcano to call DMRs de novo across
+ * the genome (termdb/dmrBatch scan mode) instead of testing a pre-annotated element class. Not a
+ * key into ds.queries.dnaMethylation.elements; termdb.config.ts lists it among elementTypes when
+ * the dataset has a matrix the region analysis can run on. */
+export const DMR_SCAN_ELEMENT_TYPE = 'dmr_scan'
+
 export type DiffMethRequest = {
 	/** Discriminator tag. Matches the `kind` field on `DmCacheResult` and
 	 * lets the GSEA route tell a snapshot DM request apart from a snapshot

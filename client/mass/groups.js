@@ -1,5 +1,5 @@
 import { getCompInit } from '#rx'
-import { Menu, GeneSetEditUI, renderTable, table2col, sayerror, make_radios } from '#dom'
+import { Menu, GeneSetEditUI, renderTable, table2col, sayerror, make_radios, addGeneSearchbox } from '#dom'
 import {
 	filterInit,
 	getNormalRoot,
@@ -601,6 +601,57 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					tip,
 					termType: TermTypes.DNA_METHYLATION,
 					self
+				})
+			})
+	}
+
+	/* Region (DMR) analysis off the same two groups. The volcano reaches this by clicking a hit,
+	which supplies the region; here the user names one instead, for the case where the region of
+	interest is already known and the genome-wide scan is not the point.
+
+	Gated on regionAnalysis, which termdb.config.ts emits only when the dataset has a matrix the
+	region view can run on -- otherwise this offers an analysis that errors on submit. */
+	if (dmQuery?.regionAnalysis) {
+		const itemDiv = div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', 'sjpp-dmr-option')
+			.text(`${termType2label(TermTypes.DNA_METHYLATION)} Region (DMR) Analysis`)
+			.on('click', () => {
+				const groups = []
+				for (const group of samplelstTW.q.groups) {
+					if (group.values && group.values.length > 0) groups.push(group)
+					else throw 'group does not contain samples for differential analysis'
+				}
+				if (groups.length != 2) throw 'exactly 2 groups are required for region analysis'
+
+				const tip = self.tip2
+				tip.clear().showunderoffset(itemDiv.node())
+				const row = tip.d.append('div').style('padding', '5px')
+				row.append('div').style('margin-bottom', '5px').text('Region to analyze:')
+				const geneSearch = addGeneSearchbox({
+					row,
+					genome: self.app.opts.genome,
+					tip: new Menu({ padding: '0px' }),
+					callback: () => {
+						if (!geneSearch.chr) throw new Error('A valid gene or position is required')
+						tip.hide()
+						self.app.dispatch({
+							type: 'plot_create',
+							config: {
+								chartType: 'dmr',
+								headerText: `DMR: ${
+									geneSearch.geneSymbol || `${geneSearch.chr}:${geneSearch.start}-${geneSearch.stop}`
+								}`,
+								coordinateOverride: { chr: geneSearch.chr, start: geneSearch.start, stop: geneSearch.stop },
+								// same shape the volcano hands over; the server resolves ids to sample names
+								group1: groups[0].values,
+								group2: groups[1].values,
+								group1Name: groups[0].name,
+								group2Name: groups[1].name
+							}
+						})
+					}
 				})
 			})
 	}

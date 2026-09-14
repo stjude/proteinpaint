@@ -1,8 +1,9 @@
 import type { MassAppApi } from '#mass/types/mass'
+import { groupColors } from '../groupColors'
 import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
-import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION } from '#types'
+import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { getGEunit } from '#tw/geneExpression'
 import { getDNAMethUnit, getDNAMethTermName } from '#tw/dnaMethylation'
 import { elementNoun } from '../promoterLabel'
@@ -271,11 +272,17 @@ export class VolcanoInteractions {
 	/** When clicking on a DM data point, dispatches a DMR plot that runs DMRCate
 	 * analysis and renders a genome browser Block with DMR regions on their own
 	 * track. */
-	async launchDmr(d: { chr: string; start: number; stop: number; promoterId?: string }) {
+	async launchDmr(
+		d: { chr: string; start: number; stop: number; promoterId?: string },
+		/** DMR-plot settings to override, e.g. pad: 0 for a region that is already its own context */
+		dmrSettings: Record<string, any> = {}
+	) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 
-		const controlColor = config?.tw?.term?.values?.[config?.samplelst?.groups[0].name]?.color || '#ff0000'
-		const caseColor = config?.tw?.term?.values?.[config?.samplelst?.groups[1].name]?.color || '#0000ff'
+		/* Shared with the batch drill-down's launcher so the two cannot drift. Absent colours are
+		omitted rather than replaced: the DMR plot's own defaults are tuned, where the red/blue this
+		used to substitute was neither chosen nor legible next to the hyper/hypo bars. */
+		const colors = groupColors(config)
 
 		const label = d.promoterId || `${d.chr}:${d.start}-${d.stop}`
 		const dmrConfig: any = {
@@ -286,9 +293,14 @@ export class VolcanoInteractions {
 			group2: config.samplelst.groups[1].values || [],
 			group1Name: config.samplelst.groups[0].name,
 			group2Name: config.samplelst.groups[1].name,
-			settings: {
-				colors: { group1: controlColor, group2: caseColor }
-			}
+			/* Which element matrix to drill into, for a dataset whose methylation is element-level
+			only. The server ignores it when the dataset has a CpG-level matrix, which is finer. The
+			scan is not a matrix, so a region opened from a scan names none and the server picks. */
+			elementType:
+				config?.settings?.volcano?.elementType == DMR_SCAN_ELEMENT_TYPE
+					? undefined
+					: config?.settings?.volcano?.elementType,
+			settings: { colors, ...dmrSettings }
 		}
 
 		this.app.dispatch({
