@@ -222,10 +222,16 @@ export function setRenderers(self) {
 					//.duration(textduration)
 					.attr('transform', side.attr.labelGTransform)
 
-				if (!g.select(':scope>text').size()) g.append('text').attr('data-testid', `sjpp-matrix-label-${direction}`)
+				if (!g.select(':scope>text').size()) g.append('text')
 				const showContAxis = !side.isGroup && lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous'
 				const labelText = side.label(lab)
-				const text = g.select(':scope>text').attr('fill', '#000')
+				// added display style here because visibilility of these text elements were not being
+				// properly received in webkit playwright
+				const text = g
+					.select(':scope>text')
+					.attr('fill', '#000')
+					.attr('data-testid', `sjpp-matrix-label-${direction}`)
+					.style('display', side.display || '')
 
 				let continuousBarHAdjust
 				const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
