@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { genesAt, buildGeneIndex, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
+import { genesAt, genesInBody, buildGeneIndex, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
 
 /*
 test sections:
@@ -44,6 +44,20 @@ tape('genesAt boundaries and unknown chromosomes', t => {
 	t.deepEqual(genesAt(i, 'chr1', 2000, 2500), [], 'nor one starting exactly at the gene stop')
 	t.deepEqual(genesAt(i, 'chr1', 999, 1001), ['G'], 'one base of overlap counts')
 	t.deepEqual(genesAt(i, 'chr2', 1000, 2000), [], 'a chromosome with no genes returns nothing')
+	t.end()
+})
+
+tape('genesInBody names only the genes whose body the region is in', t => {
+	/* BODY spans 10,000-60,000 (body 12,000-58,000). NEIGHBOUR starts at 30,500, so a region at
+	30,000-31,000 sits in BODY's body and within 2 kb of NEIGHBOUR's start: genesAt returns both, and
+	a region-level "in some body" flag would put NEIGHBOUR in a gene-body set by association. */
+	const i = idx([
+		['BODY', 'chr1', 10_000, 60_000],
+		['NEIGHBOUR', 'chr1', 30_500, 80_000]
+	])
+	t.deepEqual(genesAt(i, 'chr1', 30_000, 31_000), ['BODY', 'NEIGHBOUR'], 'both genes overlap the region')
+	t.deepEqual(genesInBody(i, 'chr1', 30_000, 31_000), ['BODY'], 'only BODY has its body there')
+	t.deepEqual(genesInBody(i, 'chr1', 10_500, 11_000), [], 'the trimmed end of a gene is not its body')
 	t.end()
 })
 

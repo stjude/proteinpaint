@@ -1,5 +1,10 @@
 import tape from 'tape'
-import { sampleBackground, scoreAgainstBackground, BG_WINDOWS_PER_CHR } from '#src/utils/dmrBackground.ts'
+import {
+	buildExclusion,
+	sampleBackground,
+	scoreAgainstBackground,
+	BG_WINDOWS_PER_CHR
+} from '#src/utils/dmrBackground.ts'
 
 /*
 test sections:
@@ -70,6 +75,30 @@ tape('scoreAgainstBackground reports excess over the stratum mean', t => {
 	t.ok(Math.abs(scored[1]!.excess) < 1e-9, 'a DMR that only matched the drift has zero excess')
 	t.equal(scored[0]!.p, 1 / 41, 'nothing in the background reached +0.20; p is the 1/(n+1) floor')
 	t.equal(scored[1]!.p, 41 / 41, 'all of it reached +0.05')
+	t.end()
+})
+
+tape('scoreAgainstBackground tests the tail the excess points to, not the raw sign', t => {
+	// background spread 0.04-0.06 around +0.05; a +0.01 DMR moved LESS than its stratum drifted
+	const background = Array.from({ length: 40 }, (_, i) => ({
+		n_probes: 10,
+		start: 0,
+		stop: 1000,
+		delta: 0.04 + (i % 3) * 0.01
+	}))
+	const { scored } = scoreAgainstBackground([{ no_cpgs: 10, start: 0, stop: 1000, meandiff: 0.01 }], background)
+	t.ok(scored[0]!.excess < 0, 'the excess is negative')
+	t.equal(scored[0]!.p, 1 / 41, 'and no background fell as low, so the lower tail gives the floor, not p = 1')
+	t.end()
+})
+
+tape('buildExclusion cannot build an intergenic background without gene spans', async t => {
+	const genome = { tracks: [{ name: 'ENCODE cCREs', file: 'anno/x.gz' }] }
+	t.equal(
+		await buildExclusion(genome, 'chr1', 1000, null),
+		null,
+		'no gene index => no correction, not a gene-blind one'
+	)
 	t.end()
 })
 

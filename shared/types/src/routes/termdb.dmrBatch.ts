@@ -56,8 +56,10 @@ export type TermdbDmrBatchRequest = {
 	 * cohort with a large global shift the second question is answered yes almost everywhere.
 	 * Costs a second rust invocation per chromosome. */
 	backgroundCorrection?: boolean
-	/** How the per-CpG fit weights its observations. Absent or 'none' is an unweighted fit on
-	 * clamped beta logits, which is what every result before this was computed with.
+	/** How the per-CpG fit weights its observations. 'none' is an unweighted fit on clamped beta
+	 * logits. When absent the default depends on the dataset: 'counts' for one declaring
+	 * dnaMethylation.platform 'wgbs', 'none' otherwise -- and the choice changes every fitted value
+	 * and p-value.
 	 *
 	 * 'counts' is the model DMRcate publishes for WGBS (Peters 2021, Nucleic Acids Research
 	 * 49:e109): the value is a log ratio of the methylated and unmethylated read counts, and an
@@ -109,6 +111,9 @@ export type TermdbDmrBatchSuccessResponse = {
 			 * ends. Separate from `genes` because promoter and gene-body methylation relate to
 			 * transcription in opposite directions. */
 			inGeneBody?: boolean
+			/** Every gene whose body (span less 2kb at each end) the DMR overlaps, uncapped. The set a
+			 * gene-body analysis should use: `genes` also holds promoter-only neighbours and is capped. */
+			bodyGenes?: string[]
 			genes?: string[]
 			/** Total overlapping genes when more than the cap were found, so a truncated list is
 			 * never mistaken for the whole set. */

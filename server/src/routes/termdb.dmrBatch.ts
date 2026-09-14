@@ -18,7 +18,7 @@ import {
 	DM_DEFAULT_BLACKLISTS,
 	DEFAULT_OVERLAP_FRAC
 } from '#src/utils/regionMask.ts'
-import { buildGeneIndex, genesAt, inGeneBody, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
+import { buildGeneIndex, genesAt, genesInBody, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
 import {
 	buildExclusion,
 	sampleBackground,
@@ -115,7 +115,8 @@ export function buildScanRegions(genome: any, chromosomes: string[]) {
 // 2: background correction added; v1 entries were written before dmrcate emitted background
 // windows for a regions-less call, so they hold an empty correction
 // 3: DMRs now carry inGeneBody
-const CACHE_VERSION = 4
+// 5: members in the key; DMRs carry bodyGenes; background p tail follows the excess direction
+const CACHE_VERSION = 5
 
 /* Fingerprint the data files a result was computed from.
  *
@@ -246,7 +247,10 @@ export async function runDmrBatch(
 		dslabel: q.dslabel,
 		group1: q.group1.map(x => x.sampleId).sort(),
 		group2: q.group2.map(x => x.sampleId).sort(),
-		windows: [...merged.entries()].map(([chr, ws]) => [chr, ws.map(w => [w.start, w.stop])]).sort(),
+		/* members included: the cached payload returns them, and two requests that merge to the same
+		windows from different region lists ([100,200]+[150,300] against [100,300]) need different
+		mappings back to their own inputs. */
+		windows: [...merged.entries()].map(([chr, ws]) => [chr, ws.map(w => [w.start, w.stop, w.members])]).sort(),
 		binBp: q.binMethylation ? METHYLATION_BIN_BP : 0,
 		lambda: q.lambda ?? null,
 		C: q.C ?? null,
@@ -417,7 +421,13 @@ export async function runDmrBatch(
 										gene-body methylation relate to transcription in opposite directions, so a
 										downstream test about gene bodies must be able to exclude a region that only
 										clips a promoter -- on MMRF that would enlarge the set by 17%. */
-										if (inGeneBody(geneIdx, chr, d.start, d.stop)) d.inGeneBody = true
+										const body = genesInBody(geneIdx, chr, d.start, d.stop)
+										if (body.length) {
+											d.inGeneBody = true
+											/* Uncapped and body-specific: the gene-body loss set is built from this, not
+											from `genes`, which also holds promoter-only neighbours and is capped. */
+											d.bodyGenes = body
+										}
 										if (!g.length) continue
 										d.genes = g.slice(0, MAX_GENES_PER_DMR)
 										if (g.length > MAX_GENES_PER_DMR) d.genesTruncated = g.length
