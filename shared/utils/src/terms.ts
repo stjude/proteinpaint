@@ -142,12 +142,12 @@ const categoricalTypes = new Set([CATEGORICAL, SNP])
 
 /** Note: Do not add pseudobulk here. These capture cell level terms. 
  * Pseudobulk terms are sample level terms. May in the future update
- * to isSCCellLevelTerms() and isSingleCellTerm() if the need arises
- */
+ * to isSCCellLevelTerms() and isSingleCellTerm() if the need arises */
 const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE /*PSEUDOBULK*/])
 
 export function isSingleCellTerm(term: any) {
 	if (!term) return false
+	if (typeof term !== 'object') throw new Error('Term is not an object. Did you provide the type instead?')
 	return singleCellTerms.has(term.type)
 }
 export function isNumericTerm(term: Term) {
