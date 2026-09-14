@@ -45,6 +45,11 @@ export type DiffMethRequest = {
 		 * averaged into one at render time; absent or at/below the native width draws them as
 		 * computed. Not part of any cache key -- changing it redraws a cached scan. */
 		profileBinBp?: number
+		/** DMRcate lambda, C and per-CpG FDR cutoff, passed to termdb/dmrBatch; absent = its defaults.
+		 * Part of the scan's cache key, so changing one refits. */
+		lambda?: number
+		C?: number
+		fdrCutoff?: number
 	}
 	/** Term for confounding variable 1 (if present) */
 	tw?: any

@@ -74,6 +74,12 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	backgroundCorrection: boolean
 	/** DMR scan only: drop DMRs called from fewer CpGs than this. */
 	minCpgs: number
+	/** DMR scan only: DMRcate lambda, the kernel bandwidth and max gap between chained CpGs, bp. */
+	lambda: number
+	/** DMR scan only: DMRcate C, the kernel's scaling factor (sigma = lambda / C). */
+	C: number
+	/** DMR scan only: per-CpG FDR a CpG must pass to seed or extend a DMR. */
+	fdrCutoff: number
 	/** DMR scan only: the width, in bp, the methylome-wide profile's bins are DRAWN at. The metric
 	 * is computed at 100 kb and the statistics stay there; several bins are averaged into one dot
 	 * for display, because at 100 kb the dots overlap. A dropdown holds this as a string. */

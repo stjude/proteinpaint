@@ -288,6 +288,44 @@ export class VolcanoControlInputs {
 				title:
 					'Drop DMRs called from fewer CpGs. Two-CpG calls carry the largest effect sizes and no direction (51.5% hyper on MMRF chr1, a coin flip, against 58% for 10+ CpG calls), so a Δβ-sorted table would lead with the rows that mean least. Applied to the cached scan, so changing it redraws rather than refits.'
 			},
+			/* DMRcate's region-shape knobs. Unlike the CpG floor these change the fit's output, so each
+			one refits the scan (and gets its own cache entry). */
+			{
+				label: 'DMR bandwidth λ (bp)',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'lambda',
+				getDisplayStyle: scanOnly,
+				min: 50,
+				max: 100_000,
+				step: 50,
+				title:
+					'DMRcate lambda. Two things at once: the width of the Gaussian kernel that smooths per-CpG statistics along the genome, and the largest gap allowed between significant CpGs chained into one DMR. Larger values merge nearby signal into fewer, wider DMRs and recover broad domains; smaller values split them into narrow, focal regions. DMRcate recommends 1000 bp for CpG-resolution data. Changing it refits the scan (a minute or two genome-wide).'
+			},
+			{
+				label: 'DMR kernel scaling C',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'C',
+				getDisplayStyle: scanOnly,
+				min: 0.5,
+				max: 50,
+				step: 0.5,
+				title:
+					'DMRcate C: the kernel standard deviation is lambda / C. A larger C gives a narrower kernel, so each CpG borrows evidence from fewer neighbours: sharper boundaries and more, smaller DMRs, at the cost of power in sparse regions. A smaller C smooths further. DMRcate recommends 2. Changing it refits the scan.'
+			},
+			{
+				label: 'Per-CpG FDR cutoff',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'fdrCutoff',
+				getDisplayStyle: scanOnly,
+				min: 0.0001,
+				max: 0.5,
+				step: 0.01,
+				title:
+					"The FDR a CpG's smoothed statistic must pass to take part in a DMR. Raising it lets weaker CpGs join, which extends DMRs and bridges gaps between them; lowering it keeps only the strongest CpGs, giving shorter, fewer DMRs. DMRcate's default is 0.05. This is not the volcano's significance threshold, which is applied afterwards to each DMR. Changing it refits the scan."
+			},
 			{
 				/* Display width for the methylome-wide profile only. The metric is the 100 kb bin and
 				the Statistics rows stay on it whatever this says -- this is here because 29,000 dots
@@ -325,10 +363,9 @@ export class VolcanoControlInputs {
 				chartType: 'volcano',
 				settingsKey: 'excludeSexChr',
 				boxLabel: '',
-				// the scan has its own chromosome picker, and chrX is a track of its own on the map
-				getDisplayStyle: notScan,
+				// the scan honours it too: scanChromosomes() drops chrX/chrY from a whole-genome scan
 				title:
-					'Drop chrX/chrY promoters. Recommended for mixed-sex cohorts — X-inactivation makes chrX methylation strongly sex-dependent, so a sex-imbalanced comparison reports sex rather than the grouping variable.'
+					'Drop chrX and chrY (promoters, elements, or whole chromosomes from a DMR scan). Recommended for mixed-sex cohorts — X-inactivation makes chrX methylation strongly sex-dependent, so a sex-imbalanced comparison reports sex rather than the grouping variable. On a scan, autosomal DMRs are unchanged (each chromosome is fitted on its own); gene links and gene set enrichment lose the X-linked genes.'
 			},
 			{
 				label: 'Center Δβ on median',

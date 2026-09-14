@@ -45,7 +45,8 @@ function init({ genomes }) {
 			result recorded its dataset cannot be verified and is refused. */
 			if (scan.genome !== q.genome || scan.dslabel !== q.dslabel)
 				throw new Error('This scan does not belong to the requested dataset; rerun it to open the browser.')
-			const items: { chr: string; start: number; stop: number; name: string; color: string }[] = []
+			// category drives the bedj legend (hyper/hypo with counts in view); color stays for older callers
+			const items: { chr: string; start: number; stop: number; name: string; color: string; category: string }[] = []
 			for (const r of scan.regions || []) {
 				if (r.chr != q.chr) continue
 				for (const d of r.dmrs || []) {
@@ -57,7 +58,8 @@ function init({ genomes }) {
 						name: `Δβ ${d.meandiff >= 0 ? '+' : ''}${d.meandiff.toFixed(3)}, ${d.no_cpgs} CpGs${
 							d.genes?.length ? ', ' + d.genes.join(' ') : ''
 						}`,
-						color: d.direction == 'hypo' ? HYPO_COLOR : HYPER_COLOR
+						color: d.direction == 'hypo' ? HYPO_COLOR : HYPER_COLOR,
+						category: d.direction
 					})
 				}
 			}

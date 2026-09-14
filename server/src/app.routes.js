@@ -60,6 +60,8 @@ export const routeFiles = [
 	import('./routes/termdb.dmr.ts'),
 	import('./routes/termdb.dmrBatch.ts'),
 	import('./routes/termdb.dmrGeneDE.ts'),
+	import('./routes/termdb.dmrGeneLink.ts'),
+	import('./routes/termdb.dmrLiterature.ts'),
 	import('./routes/termdb.dmrScanTrack.ts'),
 	import('./routes/termdb.geneBodyMeth.ts'),
 	import('./routes/termdb.facet.ts'),

@@ -1,4 +1,4 @@
-import { axisstyle, table2col, renderTable, DataPointInteractions, type ActionMenuItem } from '#dom'
+import { axisstyle, table2col, renderTable, DataPointInteractions, drawHoverShapes, type ActionMenuItem } from '#dom'
 import { axisBottom, axisLeft, rgb, select, selectAll } from 'd3'
 import type { DataPointEntry, VolcanoDom, VolcanoPlotDimensions, VolcanoViewData } from '../VolcanoTypes'
 import type { VolcanoPlotDom } from './VolcanoPlotDom'
@@ -10,7 +10,17 @@ import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { plotManhattan, manhattanLayoutDefaults } from '#plots/manhattan/manhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { geneBodyLossTest } from '../interactions/geneBodyLossDE'
+import { dmrGeneLinkPanel } from '../interactions/dmrGeneLink'
 import { bplen } from '#shared/common.js'
+
+/** One of the scan's three figures, for mirroring a hover across them. Items are matched by genomic
+ * overlap, not by id: a DMR is the same DMR on the volcano and the Manhattan, and on the profile the
+ * bin containing it. */
+type LinkedPlot = {
+	points: any[]
+	highlight: (dots: any[]) => void
+	region: (d: any) => { chr: string; start: number; stop: number }
+}
 
 export class VolcanoPlotView {
 	dom: VolcanoDom
@@ -19,6 +29,9 @@ export class VolcanoPlotView {
 	termType: string
 	volcanoDom: VolcanoPlotDom
 	viewData!: VolcanoViewData
+	/** volcano, scan Manhattan and profile side by side; the p-value table follows them */
+	row: any
+	linked: LinkedPlot[] = []
 
 	constructor(dom: VolcanoDom, interactions: VolcanoInteractions, termType: string) {
 		this.dom = dom
@@ -30,7 +43,12 @@ export class VolcanoPlotView {
 			.style('display', 'block')
 			.style('z-index', 1)
 			.style('position', 'relative')
-		const svg = this.dom.holder
+		this.row = this.dom.holder
+			.append('div')
+			.attr('id', 'sjpp-volcano-row')
+			.style('display', 'flex')
+			.style('align-items', 'flex-start')
+		const svg = this.row
 			.append('svg')
 			.style('display', 'inline-block')
 			.attr('id', 'sjpp-volcano-svg')
@@ -51,6 +69,7 @@ export class VolcanoPlotView {
 	render(settings: ValidatedVolcanoSettings, viewData: VolcanoViewData) {
 		this.settings = settings
 		this.viewData = viewData
+		this.linked = []
 		const plotDim = this.viewData.plotDim
 
 		this.initDom()
@@ -85,7 +104,7 @@ export class VolcanoPlotView {
 		this.dom.holder.select('#sjpp-volcano-scanManhattan').remove()
 
 		if (!this.settings.showPValueTable) return
-		this.volcanoDom.pValueTable = this.dom.holder
+		this.volcanoDom.pValueTable = this.row
 			.append('div')
 			.attr('id', 'sjpp-volcano-pValueTable')
 			.attr('data-testid', 'sjpp-volcano-pValueTable')
@@ -128,6 +147,17 @@ export class VolcanoPlotView {
 						this.viewData.scan!,
 						this.interactions.app
 					)
+			)
+		}
+		if (this.viewData.scan?.cacheId) {
+			this.addActionButton('Genes, expression and literature', [tt.DNA_METHYLATION], () =>
+				dmrGeneLinkPanel(
+					this.dom.actionsTip,
+					this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id),
+					this.interactions.app.vocabApi.vocab,
+					this.viewData.scan!,
+					this.interactions.app
+				)
 			)
 		}
 		/* Must match the label the view model built from the same helper, otherwise the
@@ -426,12 +456,13 @@ export class VolcanoPlotView {
 	response, never left stale. */
 	renderScanManhattan() {
 		const { manhattan } = this.viewData.scan!
-		const div = this.dom.holder
-			.append('div')
+		// beside the volcano, ahead of the p-value table (insert before a missing node appends)
+		const div = this.row
+			.insert('div', '#sjpp-volcano-pValueTable')
 			.attr('id', 'sjpp-volcano-scanManhattan')
 			.attr('data-testid', 'sjpp-volcano-scanManhattan')
 			.style('display', 'block')
-			.style('margin', '10px 0 0 20px')
+			.style('margin', '0 0 0 20px')
 		// a Manhattan point carries the row's fields; the volcano's tooltip and actions read a row
 		const asRow = (d: any): DataPointEntry =>
 			({
@@ -449,7 +480,12 @@ export class VolcanoPlotView {
 			} as any)
 		// the case group, whose direction the colours name; the scan carries the groups it ran on
 		const g2 = this.viewData.scan!.matchedSamplelst?.groups?.[1]?.name || 'case group'
-		plotManhattan(
+		const link: LinkedPlot = {
+			points: [],
+			highlight: () => {},
+			region: d => ({ chr: d.chrom, start: d.start, stop: d.stop })
+		}
+		const handle = plotManhattan(
 			div,
 			{ png: manhattan!.png, plotData: manhattan!.plotData },
 			{
@@ -478,9 +514,11 @@ export class VolcanoPlotView {
 				},
 				buildMultiHitTableData: dots => this.buildMultiHitTable(dots.map(asRow)),
 				getActions: d => this.getActionMenuOpts(asRow(d)),
-				getRowKey: d => `${d.chrom}:${d.start}-${d.stop}`
+				getRowKey: d => `${d.chrom}:${d.start}-${d.stop}`,
+				onHover: dots => this.mirrorHover(link, dots)
 			}
 		)
+		this.linked.push(Object.assign(link, handle))
 		this.renderMethylationProfile(this.viewData.scan!.matchedSamplelst?.groups?.[0]?.name || 'control group', g2)
 	}
 
@@ -509,7 +547,8 @@ export class VolcanoPlotView {
 		// the bin's own span, from the start the point carries and the fixed bin width
 		const region = (d: any) => ({ chr: d.chrom, start: d.pos, stop: d.pos + profile.binBp })
 		const label = (d: any) => `${d.chrom}:${(d.pos + 1).toLocaleString()}-${(d.pos + profile.binBp).toLocaleString()}`
-		plotManhattan(
+		const link: LinkedPlot = { points: [], highlight: () => {}, region }
+		const handle = plotManhattan(
 			div,
 			{ png: profile.png, plotData: profile.plotData },
 			{
@@ -560,9 +599,29 @@ export class VolcanoPlotView {
 						onClick: async () => await this.interactions.launchScanGenomeBrowser(region(d), this.viewData.scan!)
 					}
 				],
-				getRowKey: d => label(d)
+				getRowKey: d => label(d),
+				onHover: dots => this.mirrorHover(link, dots)
 			}
 		)
+		this.linked.push(Object.assign(link, handle))
+	}
+
+	/* Ring, on every other figure, the live dots overlapping what the cursor is on. Only live dots can
+	be ringed -- the rest are pixels in a PNG -- so a hovered DMR outside another figure's interactive
+	top N has nothing to light up there. */
+	private mirrorHover(src: LinkedPlot, dots: any[]) {
+		const hovered = dots.map(src.region)
+		for (const p of this.linked) {
+			if (p === src) continue
+			p.highlight(
+				hovered.length
+					? p.points.filter(d => {
+							const r = p.region(d)
+							return hovered.some(h => h.chr == r.chr && h.start < r.stop && r.start < h.stop)
+					  })
+					: []
+			)
+		}
 	}
 
 	renderPValueTable() {
@@ -673,6 +732,27 @@ export class VolcanoPlotView {
 		// `drawHoverShapes` helper (which renders `<path>` elements).
 		const circlePath = (r: number) => `M${r},0 A${r},${r} 0 1,1 ${-r},0 A${r},${r} 0 1,1 ${r},0 Z`
 
+		// a scan's DMRs are also on the two genome-wide figures; a hover on any one rings them in all
+		const link: LinkedPlot | undefined = this.viewData.scan
+			? {
+					points,
+					region: d => ({ chr: d.chr, start: d.start, stop: d.stop }),
+					highlight: dots => {
+						drawHoverShapes(
+							linkedLayer,
+							dots.map(d => ({
+								path: circlePath(dotRadiusPx + 2),
+								transform: `translate(${d.x},${d.y})`,
+								stroke: 'black',
+								strokeWidth: 2
+							}))
+						)
+					}
+			  }
+			: undefined
+		const linkedLayer = this.volcanoDom.plot.append('g').style('pointer-events', 'none')
+		if (link) this.linked.push(link)
+
 		new DataPointInteractions<DataPointEntry>({
 			cover,
 			hoverLayer,
@@ -693,6 +773,7 @@ export class VolcanoPlotView {
 				stroke: 'none'
 			}),
 			maxTooltipRows: this.settings.maxTooltipGenes,
+			...(link ? { onHover: dots => this.mirrorHover(link, dots) } : {}),
 			itemNoun: 'gene',
 			renderSingleHoverTooltip: (d, container) => {
 				const table = table2col({ holder: container.append('table') })

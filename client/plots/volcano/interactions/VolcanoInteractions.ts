@@ -5,7 +5,6 @@ import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import type { DmrScanSummary } from '#types'
-import { dofetch3 } from '#common/dofetch'
 import { CCRE_TRACK_NAME } from '#plots/dmr/viewModel/DmrViewModel.ts'
 import { getGEunit } from '#tw/geneExpression'
 import { getDNAMethUnit, getDNAMethTermName } from '#tw/dnaMethylation'
@@ -314,22 +313,11 @@ export class VolcanoInteractions {
 
 	/* Open a genome browser on a scan's DMR, with the scan's own DMRs as a track. The region view
 	re-fits the chromosome to draw its DMR track; a scan has already called every DMR and cached
-	them, so the browser fetches the chromosome's DMRs back from that cache (termdb/dmrScanTrack)
-	and shows them beside the gene models and the cCREs, at whatever pan the reader takes. Opened
-	on the DMR with room either side, so what is next to it is in the frame from the start. */
+	them, so the browser names the cached scan (scanDmrTrack) and fetches the DMRs of whatever
+	chromosome is on screen from it -- including after the reader types another position into the
+	search box. Opened on the DMR with room either side. */
 	async launchScanGenomeBrowser(d: { chr: string; start: number; stop: number }, scan: DmrScanSummary) {
-		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		const res = await dofetch3('termdb/dmrScanTrack', {
-			body: {
-				genome: this.app.vocabApi.vocab.genome,
-				dslabel: this.app.vocabApi.vocab.dslabel,
-				cacheId: scan.cacheId,
-				chr: d.chr,
-				minCpgs: config?.settings?.volcano?.scan?.minCpgs ?? scan.minCpgs
-			}
-		})
-		if (res.error) throw res.error
-		const tracks: any[] = [{ type: 'bedj', name: 'Scan DMRs', bedItems: res.items, stackheight: 14 }]
+		const tracks: any[] = []
 		// the regulatory context the region view also switches on, by the genome's own declaration
 		const ccre = (this.app.opts.genome?.tracks || []).find((t: any) => t.name == CCRE_TRACK_NAME)
 		if (ccre) tracks.push(structuredClone(ccre))
@@ -339,6 +327,8 @@ export class VolcanoInteractions {
 			config: {
 				chartType: 'genomeBrowser',
 				geneSearchResult: { chr: d.chr, start: Math.max(0, d.start - pad), stop: d.stop + pad },
+				// the CpG floor the scan was rendered with, so the track shows the DMRs the volcano counts
+				scanDmrTrack: { cacheId: scan.cacheId, minCpgs: scan.minCpgs },
 				tracks
 			}
 		})

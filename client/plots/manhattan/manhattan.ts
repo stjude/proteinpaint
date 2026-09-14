@@ -9,6 +9,7 @@ import {
 	showResultsTable,
 	createLollipopFromGene,
 	DataPointInteractions,
+	drawHoverShapes,
 	type ActionMenuItem
 } from '#dom'
 import { to_svg } from '#src/client'
@@ -70,7 +71,14 @@ export type ManhattanCustom<T = any> = {
 	getActions?: (d: T) => ActionMenuItem[]
 	renderSingleHitInfo?: (d: T, container: any) => void
 	getRowKey?: (d: T) => string
+	/** see DataPointInteractionsOpts.onHover */
+	onHover?: (dots: T[]) => void
 }
+
+/** Returned by plotManhattan: the live points, and a way to ring some of them from outside -- for a
+ * hover on another plot showing the same items. Separate from the plot's own hover layer, so the two
+ * never erase each other. */
+export type ManhattanHandle = { points: any[]; highlight: (dots: any[]) => void }
 
 /** Layout settings shared by every caller. GRIN2 keeps its own copy in its settings (they are
  * part of its persisted state); a caller without such state spreads these. */
@@ -101,7 +109,14 @@ export const manhattanLayoutDefaults = {
 	maxTooltipGenes: 5
 }
 
-export function plotManhattan(div: any, data: any, settings: any, app?: any, custom: ManhattanCustom = {}) {
+export function plotManhattan(
+	div: any,
+	data: any,
+	settings: any,
+	app?: any,
+	custom: ManhattanCustom = {}
+): ManhattanHandle {
+	const handle: ManhattanHandle = { points: [], highlight: () => {} }
 	// Get our settings
 	settings = {
 		...settings
@@ -225,6 +240,22 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any, cus
 		// Circle as an SVG path so it flows through the generic `drawHoverShapes`.
 		const circlePath = (r: number) => `M${r},0 A${r},${r} 0 1,1 ${-r},0 A${r},${r} 0 1,1 ${r},0 Z`
 
+		const linkedLayer = svg
+			.append('g')
+			.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
+			.style('pointer-events', 'none')
+		handle.points = interactivePoints
+		handle.highlight = dots =>
+			drawHoverShapes(
+				linkedLayer,
+				dots.map(d => ({
+					path: circlePath(settings.pngDotRadius + 2),
+					transform: `translate(${d.pixel_x},${d.pixel_y})`,
+					stroke: 'black',
+					strokeWidth: 2
+				}))
+			)
+
 		const grin2Hover = (d: ManhattanPoint, container: any) => {
 			const table = table2col({ holder: container.append('div'), margin: '10px' })
 			table.addRow('Gene', d.gene)
@@ -270,6 +301,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any, cus
 				strokeWidth: settings.interactiveDotStrokeWidth
 			}),
 			maxTooltipRows: settings.maxTooltipGenes,
+			onHover: custom.onHover,
 			itemNoun: custom.itemNoun ?? 'gene',
 			renderSingleHoverTooltip: custom.renderSingleHoverTooltip ?? grin2Hover,
 			buildMultiHitTableData: custom.buildMultiHitTableData ?? grin2Table,
@@ -430,4 +462,5 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any, cus
 				.text(item.type)
 		})
 	}
+	return handle
 }

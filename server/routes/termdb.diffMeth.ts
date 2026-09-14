@@ -249,7 +249,10 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 			scanChromosomes: chromosomes,
 			backgroundCorrection: !!req.scan?.backgroundCorrection,
 			// the genome-wide profile: the metric the methylome literature compares cohorts with
-			binMethylation: true
+			binMethylation: true,
+			lambda: positiveOrUndefined(req.scan?.lambda),
+			C: positiveOrUndefined(req.scan?.C),
+			fdr_cutoff: positiveOrUndefined(req.scan?.fdrCutoff)
 		},
 		genomes
 	)
@@ -267,6 +270,13 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 		result: { promoterRows: rows, sample_size1: group1.length, sample_size2: group2.length, scan },
 		cacheId
 	}
+}
+
+/** A tuning knob from the client: a positive finite number, or absent so the binary's default
+ * applies. Anything else is dropped rather than handed to rust or into the cache key. */
+function positiveOrUndefined(v: unknown): number | undefined {
+	const n = Number(v)
+	return v != null && Number.isFinite(n) && n > 0 ? n : undefined
 }
 
 /** How many dots the client can hover and click in EACH direction, on both genome-wide figures:

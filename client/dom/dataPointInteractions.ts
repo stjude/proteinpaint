@@ -113,6 +113,10 @@ export interface DataPointInteractionsOpts<T> {
 
 	/** Forwarded to `new Menu({...})` for the click menu. Default `padding: ''`. */
 	clickMenuPadding?: string
+
+	/** Called with the dots under the cursor on every hover, and with [] when the cursor leaves
+	 * them, so a caller can mirror the hover onto other plots showing the same items. */
+	onHover?: (dots: T[]) => void
 }
 
 /** Passed to override callbacks. Before the override fires the module has
@@ -223,12 +227,14 @@ export class DataPointInteractions<T> {
 		if (dots.length === 0) {
 			drawHoverShapes(this.opts.hoverLayer, [])
 			this.opts.hoverTip.hide()
+			this.opts.onHover?.([])
 			return
 		}
 
 		const max = this.opts.maxTooltipRows ?? 5
 		const shown = dots.slice(0, max)
 		const additional = dots.length - shown.length
+		this.opts.onHover?.(shown)
 
 		drawHoverShapes(
 			this.opts.hoverLayer,
@@ -276,6 +282,7 @@ export class DataPointInteractions<T> {
 		if (this.clickMenuIsShown) return
 		drawHoverShapes(this.opts.hoverLayer, [])
 		this.opts.hoverTip.hide()
+		this.opts.onHover?.([])
 	}
 
 	private onClick(event: MouseEvent): void {

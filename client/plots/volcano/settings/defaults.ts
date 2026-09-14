@@ -7,6 +7,10 @@ import type {
 	DefaultVolcanoSettings
 } from '../settings/Settings'
 
+/** DMRcate's own defaults (Peters 2015/2021), which the dmrcate binary also falls back to. The model
+ * sends a knob only when it differs from these, so an untouched scan keeps its cache entry. */
+export const DMRCATE_DEFAULTS = { lambda: 1000, C: 2, fdrCutoff: 0.05 }
+
 // The max sample cutoff for volcano rendering
 export const maxSampleCutoff = 4000
 // The max sample cutoff for gene expression term type
@@ -85,6 +89,9 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	defaults.scanChromosome = ''
 	defaults.backgroundCorrection = false
 	defaults.minCpgs = 5
+	defaults.lambda = DMRCATE_DEFAULTS.lambda
+	defaults.C = DMRCATE_DEFAULTS.C
+	defaults.fdrCutoff = DMRCATE_DEFAULTS.fdrCutoff
 	/* The native width, so the figure opens as the metric is defined (Zhou 2018, 100 kb bins) and a
 	coarser view is something the reader asks for. */
 	defaults.profileBinBp = 100_000

@@ -4,6 +4,7 @@ import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, Volcan
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { getGroupColors, toHex } from '../colors'
+import { DMRCATE_DEFAULTS } from '../settings/defaults'
 // import type { Volcano } from '../Volcano'
 
 export class VolcanoModel {
@@ -113,7 +114,11 @@ export class VolcanoModel {
 							...(this.settings.scanChromosome ? { chromosome: this.settings.scanChromosome } : {}),
 							backgroundCorrection: !!this.settings.backgroundCorrection,
 							minCpgs: this.settings.minCpgs,
-							profileBinBp: this.settings.profileBinBp
+							profileBinBp: this.settings.profileBinBp,
+							// only when changed: an explicit default would orphan every cached scan
+							...(this.settings.lambda != DMRCATE_DEFAULTS.lambda ? { lambda: this.settings.lambda } : {}),
+							...(this.settings.C != DMRCATE_DEFAULTS.C ? { C: this.settings.C } : {}),
+							...(this.settings.fdrCutoff != DMRCATE_DEFAULTS.fdrCutoff ? { fdrCutoff: this.settings.fdrCutoff } : {})
 						}
 				  }
 				: {}),
