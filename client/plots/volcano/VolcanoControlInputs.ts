@@ -253,6 +253,15 @@ export class VolcanoControlInputs {
 					'Drop chrX/chrY promoters. Recommended for mixed-sex cohorts — X-inactivation makes chrX methylation strongly sex-dependent, so a sex-imbalanced comparison reports sex rather than the grouping variable.'
 			},
 			{
+				label: 'Center Δβ on median',
+				type: 'checkbox',
+				chartType: 'volcano',
+				settingsKey: 'centerDeltaBeta',
+				boxLabel: '',
+				title:
+					'Move the Δβ origin to the median across all tested elements, so 0 is the typical element rather than no change. Use it to ask "which elements moved MORE than the typical one" — at a symmetric cutoff, a contrast whose whole distribution sits off zero clears the hyper threshold more easily than the hypo one, which skews the hyper:hypo ratio on its own. Leave it off to ask "which elements gained or lost methylation", since a genuine genome-wide shift is itself a result and centering would subtract it. The Δβ values in the table and its download are unaffected either way.'
+			},
+			{
 				label: 'Min Δβ',
 				type: 'number',
 				chartType: 'volcano',

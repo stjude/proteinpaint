@@ -3,6 +3,9 @@ Features:
   matrices (queries.dnaMethylation.cpgByChr), falling back per chromosome to the element matrix so a
   partial build degrades in resolution rather than erroring. MMRF also offers the CTCF-only and
   DNase-H3K4me3 cCRE classes.
+- Volcano: "Center Δβ on median" moves the x origin to the median effect size, and the
+  significant-count line splits by direction ("15,707 hyper / 1,692 hypo"), counted server-side so
+  the ratio is unaffected by the interactive-dot cap. Both apply to gene expression and proteomics.
 - DMR analysis can be launched from the group menu, not only by clicking a volcano hit. The picker's
   group colours carry into the region view, and hyper/hypo are one orange/blue pair everywhere. The
   region view shows a new ENCODE cCRE track beside the genes.

@@ -113,7 +113,24 @@ export class VolcanoPlotView {
 		if (numSigGenes) {
 			// grouped: these run to five and six figures, and "84302" vs "8430" is hard to tell apart at a glance
 			const n = numSigGenes.toLocaleString()
-			const sigText = this.termType == tt.DNA_METHYLATION ? `${n} DM ${dmNoun.many}:` : `${n} DE genes:`
+			/* Direction split next to the total. Both counts are the server's, taken over every
+			significant row rather than the maxInteractiveDots-capped dots list -- the strongest
+			hits are not direction-balanced, so counting what reached the browser would misreport
+			the ratio. Named for the CASE group, matching the x-axis subtraction order, so the
+			label reads the same way round as the plot. */
+			const isDM = this.termType == tt.DNA_METHYLATION
+			const up = this.viewData.numSignificantUp
+			const down = this.viewData.numSignificantDown
+			const split =
+				up + down > 0
+					? ` (${up.toLocaleString()} ${isDM ? 'hyper' : 'up'} / ${down.toLocaleString()} ${isDM ? 'hypo' : 'down'})`
+					: ''
+			/* Name the centring in the caption, with the offset it removed. Both counts are then
+			self-describing wherever the line is read or screenshotted, and the raw and centred
+			numbers cannot be confused for each other. */
+			const off = this.viewData.xOffset
+			const centered = off ? `, centered on median Δβ ${off > 0 ? '+' : ''}${off.toFixed(3)}` : ''
+			const sigText = (isDM ? `${n} DM ${dmNoun.many}` : `${n} DE genes`) + split + centered + ':'
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
 
 			const pValueTableButtonText = this.settings.showPValueTable ? 'Hide p-value table' : 'Show p-value table'

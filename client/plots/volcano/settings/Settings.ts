@@ -47,6 +47,10 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	minSamplesPerGroup: number
 	/** Drop chrX/chrY promoters before testing */
 	excludeSexChr: boolean
+	/** Recentre the Δβ axis on the median across all tested elements, so the origin is the
+	 * typical element rather than zero. See the checkbox title for when it is the right question
+	 * to ask, and the server's centerX for what it does. */
+	centerDeltaBeta: boolean
 	/** Which regulatory-element matrix to test, keying into
 	 * ds.queries.dnaMethylation.elements server-side. 'promoter' is the default and is
 	 * what the legacy single-matrix config resolves to. Changing this changes the rows
