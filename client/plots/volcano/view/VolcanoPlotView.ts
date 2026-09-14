@@ -9,6 +9,7 @@ import type { ValidatedVolcanoSettings } from '../settings/Settings'
 import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { plotManhattan, manhattanLayoutDefaults } from '#plots/manhattan/manhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
+import { geneBodyLossTest } from '../interactions/geneBodyLossDE'
 import { bplen } from '#shared/common.js'
 
 export class VolcanoPlotView {
@@ -110,6 +111,25 @@ export class VolcanoPlotView {
 			},
 			{ whenOpen: 'Hide statistics' }
 		)
+		/* The expression test on the genes under gene-body loss regions. Offered on either reading:
+		the correction narrows the set to regions that moved more than their stratum drifts, and
+		without it the DMR's own smoothed FDR is the evidence -- both are answerable questions, and
+		gating the button on the correction made the uncorrected scan a dead end. */
+		const gb = this.viewData.scan?.geneBodyLoss
+		if (gb?.genes.length) {
+			this.addActionButton(
+				`Expression of ${gb.genes.length.toLocaleString()} gene-body loss genes`,
+				[tt.DNA_METHYLATION],
+				() =>
+					geneBodyLossTest(
+						this.dom.actionsTip,
+						this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id),
+						this.interactions.app.vocabApi.vocab,
+						this.viewData.scan!,
+						this.interactions.app
+					)
+			)
+		}
 		/* Must match the label the view model built from the same helper, otherwise the
 		find() below silently misses and the count disappears from the action bar. */
 		const dmNoun = elementNoun(this.settings?.elementType)

@@ -28,6 +28,15 @@ Features:
 - Clicking a DMR opens a violin of that region per sample, or a genome browser on the DMR with the
   scan's own DMRs as a track (new termdb/dmrScanTrack, read from the scan's cache), beside the genes,
   a new ENCODE cCRE track and the dataset's mutations.
+- Three expression follow-ups, on the samples the methylation was measured on rather than everyone
+  with RNA. New termdb/dmrGeneDE asks whether genes losing gene-body methylation are expressed
+  lower, within log2 gene-length strata with a permutation null (MMRF: -0.167 log2FC, p=0.0005).
+  It runs on either reading of a scan: the correction adds the background gate rather than being a
+  precondition for the gene set (MMRF: 23,274 regions / 5,891 genes uncorrected, 13,137 / 4,120
+  corrected).
+  New termdb/geneBodyMeth measures Δβ over every gene body binned by expression change, the
+  discriminating test for transcription-coupled deposition. GSEA ranks genes by mean gene-body Δβ,
+  since a scan's rows are DMRs and not genes.
 - Scan controls: chromosome, background correction, and "Min CpGs per DMR" (default 5; 2-CpG calls
   carry the largest effect sizes and split hyper/hypo like a coin flip). Statistics carries the
   whole-scan facts, including each group's genome-wide mean beta and the shift, and what the run
@@ -67,10 +76,14 @@ Fixes:
   chromosomes: the probe block was found by a binary search on the chromosome name, but matrices
   store chromosomes karyotypically, where chr10 sorts before chr2. Affected datasets backed by one
   genome-wide matrix; per-chromosome shards were always one chromosome per invocation.
+- GSEA on a scan ranks the chromosomes the scan ran on. It ranked the whole genome regardless, so a
+  single-chromosome scan got an enrichment for a different contrast under a header saying otherwise.
 - Differential methylation works on a dataset whose only methylation backing is a CpG matrix; the
   config advertised the scan for one, but the group picker's sample counts resolved 'promoter'.
 - A scan compares one cohort. Membership was resolved per rust job against that job's matrix, so a
   dataset mixing CpG shards and element fallback contrasted a different sample set per chromosome.
+- GSEA's 500-gene ceiling applies only to a scan's gene-body ranking. It had been lowered from
+  20,000 for every caller, dropping large GO and Reactome sets from unrelated analyses.
 - The element methylation getter returns values on the unit it advertises; a beta-unit entry was
   converted to an M-value and still labelled beta.
 - A proteome DAP volcano calls its single p-value an FDR again. The label is read off the term type,
@@ -83,7 +96,7 @@ Fixes:
   group actually shrinks.
 - Hardening on the new routes: a caller-supplied chromosome list is bounded and deduplicated before
   anything fans out from it (one chromosome named 5,000 times was 5,000 full-matrix fits that never
-  hit the cache), and termdb/dmrScanTrack
+  hit the cache), the requested gene set of termdb/dmrGeneDE is capped, and termdb/dmrScanTrack
   requires a dslabel so the auth gatekeeper runs.
 
 General:
