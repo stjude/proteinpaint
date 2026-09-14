@@ -576,15 +576,19 @@ fn process_chromosome(
             residual, not a probe list: E[w e^2 / s^2] is 1 under the null, so the mean of that
             ratio over probes is how much a sample scatters against the cohort. */
             if let Some(a) = acc.as_deref_mut() {
+                /* By the matrix column each kept value came from (ck/kk), as apply_sample_factors
+                does: values are kept only where finite, so position i is not an index into the
+                requested samples, and every sample after a missing cell was credited with its
+                neighbour's residual. */
                 for (i, &x) in cm.iter().enumerate() {
                     let e = x - mc;
-                    a[case_idx[i]].0 += cw[i] * e * e / rv;
-                    a[case_idx[i]].1 += 1.0;
+                    a[ck[i]].0 += cw[i] * e * e / rv;
+                    a[ck[i]].1 += 1.0;
                 }
                 for (i, &x) in km.iter().enumerate() {
                     let e = x - mk;
-                    a[ctrl_idx[i]].0 += kw[i] * e * e / rv;
-                    a[ctrl_idx[i]].1 += 1.0;
+                    a[kk[i]].0 += kw[i] * e * e / rv;
+                    a[kk[i]].1 += 1.0;
                 }
                 continue;
             }
