@@ -1,9 +1,8 @@
-import type { Filter, RoutePayload, RouteApi } from '#types'
+import type { Filter, RoutePayload, RouteApi, DescrStatsRequest, DescrStatsResponse, DescrStats } from '#types'
 import type { ReqQueryAddons } from './types.js'
 import { getData } from '#src/termdb.matrix.js'
 import computePercentile from '#shared/compute.percentile.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import type { DescrStatsRequest, DescrStatsResponse, DescrStats } from '#types'
 import { validGenomeDs, validBoolean } from './common.ts'
 
 export const payload: RoutePayload = {

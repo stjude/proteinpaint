@@ -6,7 +6,7 @@ import { renderTable, getMaxLabelWidth, table2col } from '#dom'
 import { rgb } from 'd3-color'
 import { format as d3format } from 'd3-format'
 import { isSingleCellTerm } from '#shared'
-import type { TermWrapper } from '#types'
+import type { TermWrapper, ViolinResponse, ViolinResponseChart } from '#types'
 import { getValueConversionFactor, toUserUnit } from '#shared/helpers.js'
 
 // const minSampleSize = 5 // a group below cutoff will not render a violin plot
@@ -61,7 +61,7 @@ export default function setViolinRenderer(self: any) {
 				const v = val as { label: string; uncomputable?: boolean }
 				if (v.uncomputable) {
 					if ((termNum as any).q.hiddenValues[k]) {
-						(termNum as any).q.hiddenValues[v.label] = 1
+						;(termNum as any).q.hiddenValues[v.label] = 1
 						delete (termNum as any).q.hiddenValues[k]
 					}
 				}
@@ -70,20 +70,18 @@ export default function setViolinRenderer(self: any) {
 
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
 		self.dom.violinDiv.selectAll('*').remove()
-		const chartKeys = Object.keys(self.data.charts)
+		const data: ViolinResponse = self.data
+		const chartKeys = Object.keys(data.charts)
 		if (!chartKeys?.length) {
 			self.dom.banner.html(`<span>No visible violin plot data to render</span>`).style('display', 'block')
 			self.dom.legendDiv.selectAll('*').remove()
 			return
 		}
 		for (const chartKey of chartKeys) {
-			const chart = self.data.charts[chartKey]
+			const chart: ViolinResponseChart & { chartDiv?: any } = data.charts[chartKey]
 			const plots = chart.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
 			if (settings.orderByMedian == true) {
-				plots.sort(
-					(a, b) =>
-						a.summaryStats.find(x => x.id === 'median').value - b.summaryStats.find(x => x.id === 'median').value
-				)
+				plots.sort((a, b) => a.summaryStats.median.value - b.summaryStats.median.value)
 			}
 			if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
 
@@ -314,14 +312,7 @@ export default function setViolinRenderer(self: any) {
 		return { margin: margin, svgG: svgG, axisScale: createNumericScale(self, settings, isH), violinSvg: violinSvg }
 	}
 
-	function renderScale(
-		t1: TermWrapper,
-		t2: TermWrapper | undefined,
-		settings: any,
-		isH: boolean,
-		svg: any,
-		self: any
-	) {
+	function renderScale(t1: TermWrapper, t2: TermWrapper | undefined, settings: any, isH: boolean, svg: any, self: any) {
 		// <g>: holder of numeric axis
 		const g = svg.svgG
 			.append('g')
@@ -365,7 +356,7 @@ export default function setViolinRenderer(self: any) {
 			const numTerm = getNumericTerm(t1, t2)
 			// name the unit the ticks are in, when it is not the one the values are stored in
 			const n = numTerm.valueConversion ? `${numTerm.name} (${numTerm.valueConversion.toUnit}s)` : numTerm.name
-			/*const lab = */svg.svgG
+			/*const lab = */ svg.svgG
 				.append('text')
 				.text(n)
 				.classed('sjpp-numeric-term-label', true)
@@ -387,9 +378,9 @@ export default function setViolinRenderer(self: any) {
 		const label = plot.label?.split(',')[0]
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
 		const category = catTerm?.term.values
-			? ((Object.values(catTerm.term.values as Record<string, { label: string; color?: string }>).find(
+			? (Object.values(catTerm.term.values as Record<string, { label: string; color?: string }>).find(
 					o => o.label == label
-			  ) as { label: string; color?: string } | undefined) ?? null)
+			  ) as { label: string; color?: string } | undefined) ?? null
 			: null
 		let color
 		if (catTerm) {
@@ -581,13 +572,13 @@ export function createNumericScale(self, settings, isH) {
 	let axisScale
 	if (settings.isLogScale) {
 		axisScale = scaleLog()
-				.base(self.app.vocabApi.termdbConfig.logscaleBase2 ? 2 : 10)
-				.domain([self.data.min, self.data.max])
-				.range(isH ? [0, settings.svgw] : [settings.svgw, 0])
+			.base(self.app.vocabApi.termdbConfig.logscaleBase2 ? 2 : 10)
+			.domain([self.data.min, self.data.max])
+			.range(isH ? [0, settings.svgw] : [settings.svgw, 0])
 	} else {
 		axisScale = scaleLinear()
-				.domain([self.data.min, self.data.max])
-				.range(isH ? [0, settings.svgw] : [settings.svgw, 0])
+			.domain([self.data.min, self.data.max])
+			.range(isH ? [0, settings.svgw] : [settings.svgw, 0])
 	}
 	return axisScale
 }
@@ -622,7 +613,9 @@ function getLegendGrps(termNum: TermWrapper, self: any) {
 }
 
 function addDescriptiveStats(term: TermWrapper, legendGrps: LegendGroup[], headingStyle: string, self: any) {
-	const descrStats = (term as any)?.q?.descrStats as Record<string, { label: string; value: number | string }> | undefined
+	const descrStats = (term as any)?.q?.descrStats as
+		| Record<string, { label: string; value: number | string }>
+		| undefined
 	if (descrStats) {
 		const items: LegendItem[] = Object.values(descrStats).map(stat => {
 			return {
@@ -640,12 +633,7 @@ function addDescriptiveStats(term: TermWrapper, legendGrps: LegendGroup[], headi
 	}
 }
 
-function addUncomputableValues(
-	term: TermWrapper | null,
-	legendGrps: LegendGroup[],
-	headingStyle: string,
-	self: any
-) {
+function addUncomputableValues(term: TermWrapper | null, legendGrps: LegendGroup[], headingStyle: string, self: any) {
 	if (term?.term.values) {
 		const items: LegendItem[] = []
 		const values = term.term.values as Record<string, { label?: string }>
