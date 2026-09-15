@@ -43,7 +43,7 @@ async function getScoresDict(query, ds) {
 	const term2Score: any = {}
 	for (const d of query.scoreTerms) {
 		const getDictFunc = (sample: any) => getDict(d.$id, sample)
-		const percents: { [key: string]: number } = getPercentsDict(getDictFunc, data.samples)
+		const percents: { [key: string]: number } = getPercentsDict(getDictFunc, data.samples, getScoreTermValues(d, ds))
 		term2Score[d.term.id] = percents
 	}
 	if (query.scScoreTerms)
@@ -71,19 +71,41 @@ async function getScoresDict(query, ds) {
 	}
 }
 
+/*
+Score term wrappers come from get_multivalue_tws(), which carries only id/name/type/subtype/details,
+and getData() does not rehydrate a wrapper that already has a name. Read the value labels from the
+termdb so getPercentsDict() can fold answer capitalization.
+*/
+export function getScoreTermValues(tw, ds) {
+	return ds.cohort.termdb.q.termjsonByOneid(tw.term.id)?.values
+}
+
 function getDict(key, sample) {
 	if (!sample[key]) return null
 	const termData = sample[key].value
 	return JSON.parse(termData)
 }
 
-function getPercentsDict(getDictFunc, samples): { [key: string]: number } {
+/*
+POC answers are stored per site as {answerText: count}, with the answer text taken verbatim from
+each site's export. Sites capitalize the same answer differently ("Almost Always" vs "Almost always"),
+which would otherwise split one answer into two categories and push the Likert bar past 100%.
+Each key is folded onto the term's own value label when they match ignoring case; a key with no
+matching label is kept as-is.
+*/
+export function getPercentsDict(getDictFunc, samples, values?): { [key: string]: number } {
+	const upper2label = {}
+	for (const v of Object.values(values || {}) as any[]) {
+		// TermValues allows numeric labels; stringify since the answer keys are always strings
+		if (v?.label != null) upper2label[String(v.label).toUpperCase()] = String(v.label)
+	}
 	const percentageDict = {}
 	for (const sample of samples) {
 		const percents: { [key: string]: number } = getDictFunc(sample)
 		if (!percents) continue
-		for (const key in percents) {
-			const value = percents[key]
+		for (const rawKey in percents) {
+			const value = percents[rawKey]
+			const key = upper2label[rawKey.toUpperCase()] || rawKey
 			if (!percentageDict[key]) percentageDict[key] = 0
 			percentageDict[key] += value
 		}
