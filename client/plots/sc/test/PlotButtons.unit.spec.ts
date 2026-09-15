@@ -274,6 +274,11 @@ tape('getChartBtnOpts() Spatial button should spawn the wsi plot in fixed-sample
 	test.equal(config.chartType, 'wsi', 'Should set chartType to wsi')
 	test.deepEqual(config.sample, { sID: 'S1', eID: 'EXP1' }, 'Should pin the selected sample (fixed-sample mode)')
 	test.equal(config.name, 'Sample: S1 Spatial', 'Should name the subplot after the sample')
+	test.equal(
+		config.plotName,
+		'Spatial',
+		'Should label the plot Spatial (section title / table button), not the raw chartType'
+	)
 	test.end()
 })
 
