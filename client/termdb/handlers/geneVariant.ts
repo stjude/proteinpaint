@@ -189,9 +189,9 @@ export class SearchHandler {
 		if (!mutationType) return
 		const querySampleTypes: number[] = []
 		if (mutationType.dt) {
-			// mutation type has single dt
-			// get available sample types for that dt
-			const sampleTypes = this.getDtSampleTypes(mutationType.dt)
+			// mutation type has single dt, and an origin when the dt is split by origin
+			// get available sample types for that dt (and origin)
+			const sampleTypes = this.getDtSampleTypes(mutationType.dt, mutationType.origin)
 			if (!sampleTypes) return
 			querySampleTypes.push(...sampleTypes)
 		} else if (mutationType.dts) {
@@ -214,17 +214,24 @@ export class SearchHandler {
 
 	/* sample types that have samples for one dt. they may be declared directly on the dt,
 	or nested under one or more origins (e.g. somatic split into primary/PDX while germline
-	is a single patient-level term). a sample type is included when any declaring entry has
-	samples. a type that is the parent of another type (e.g. patient above primary and PDX
-	samples) annotates availability at that level but holds no genomic data itself, so it is
-	never offered for querying. returns undefined when the dt declares no sample types */
-	getDtSampleTypes(dt: number): Set<number> | undefined {
+	is a single patient-level term). when the dt is split by origin, a mutation type names its
+	origin and only that origin's sample types are read, as origins may be assayed on different
+	sample types; without an origin every origin is read. a sample type is included when any
+	declaring entry has samples. a type that is the parent of another type (e.g. patient above
+	primary and PDX samples) annotates availability at that level but holds no genomic data
+	itself: the data sits on its child samples, so the parent is replaced by its children (a
+	patient-level germline term offers the patient's primary and PDX samples). returns
+	undefined when the dt declares no sample types */
+	getDtSampleTypes(dt: number, origin?: string): Set<number> | undefined {
 		const dtConfig = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]
 		if (!dtConfig) return
 		const bySampleTypeLst: BySampleType[] = []
 		if (dtConfig.bySampleType) bySampleTypeLst.push(dtConfig.bySampleType)
 		else if (dtConfig.byOrigin) {
-			for (const o of Object.values(dtConfig.byOrigin) as { bySampleType?: BySampleType }[]) {
+			const origins: { bySampleType?: BySampleType }[] = origin
+				? [dtConfig.byOrigin[origin]]
+				: Object.values(dtConfig.byOrigin)
+			for (const o of origins) {
 				if (o?.bySampleType) bySampleTypeLst.push(o.bySampleType)
 			}
 		}
@@ -235,11 +242,20 @@ export class SearchHandler {
 				if (v.hasSamples) sampleTypes.add(Number(k))
 			}
 		}
-		const allTypes: { parent_id?: number | null }[] = Object.values(
+		const allTypes: [string, { parent_id?: number | null }][] = Object.entries(
 			this.opts.app.vocabApi.termdbConfig?.sampleTypes || {}
 		)
-		for (const t of allTypes) {
-			if (Number.isInteger(t?.parent_id)) sampleTypes.delete(t.parent_id as number)
+		const parent2children = new Map<number, number[]>()
+		for (const [id, t] of allTypes) {
+			if (!Number.isInteger(t?.parent_id)) continue
+			const parent = t.parent_id as number
+			if (!parent2children.has(parent)) parent2children.set(parent, [])
+			parent2children.get(parent)!.push(Number(id))
+		}
+		for (const [parent, children] of parent2children) {
+			if (!sampleTypes.has(parent)) continue
+			sampleTypes.delete(parent)
+			for (const c of children) sampleTypes.add(c)
 		}
 		return sampleTypes
 	}
