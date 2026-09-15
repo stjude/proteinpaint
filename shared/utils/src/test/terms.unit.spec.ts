@@ -7,6 +7,7 @@ import {
 	getGvQueryKey,
 	matchesGvQueryEntry,
 	internGvQueryEntry,
+	isSingleCellTerm,
 	restoreGvQueryEntry,
 	setGroupsetParentTerms,
 	trimGvQForCache,
@@ -485,5 +486,31 @@ tape('matchesGvQueryEntry()', t => {
 		true,
 		'a region entry is compared by value, not by identity'
 	)
+	t.end()
+})
+
+tape('isSingleCellTerm() should throw for an invalid term object', t => {
+	t.throws(() => isSingleCellTerm(TermTypes.SINGLECELL_CELLTYPE), /Term is not an object/, 'Should throw when term is not an object')
+	t.end()
+})
+
+tape('isSingleCellTerm() should return false if no term provided', t => {
+	t.equal(isSingleCellTerm(null), false, 'Should return false when term is null')
+	t.equal(isSingleCellTerm(undefined), false, 'Should return false when term is undefined')
+	t.end()
+})
+
+tape('isSingleCellTerm() should return correct boolean based on term.type', t => {
+	/** False for non-single cell terms */
+	t.equal(isSingleCellTerm({ type: TermTypes.CATEGORICAL }), false, 'Should return false for a categorical term')
+	t.equal(isSingleCellTerm({ type: TermTypes.SNP }), false, 'Should return false for a SNP term')
+	/** Pseudobulk is specifically excluded from singleCellTerm list
+	 * despite arising from single cell data. See note in the terms.ts file */
+	t.equal(isSingleCellTerm({ type: TermTypes.PSEUDOBULK }), false, 'Should return false for a PSEUDOBULK term')
+
+	/** True for single cell terms */
+	t.equal(isSingleCellTerm({ type: TermTypes.SINGLECELL_CELLTYPE }), true, 'Should return true for a SINGLECELL_CELLTYPE term')
+	t.equal(isSingleCellTerm({ type: TermTypes.SINGLECELL_GENE_EXPRESSION }), true, 'Should return true for a SINGLECELL_GENE_EXPRESSION term')
+	t.equal(isSingleCellTerm({ type: TermTypes.SINGLECELL_NUMERIC_VALUE }), true, 'Should return true for a SINGLECELL_NUMERIC_VALUE term')
 	t.end()
 })
