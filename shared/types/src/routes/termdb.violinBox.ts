@@ -90,12 +90,6 @@ interface BinsEntries {
 	density: number
 }
 
-interface ValuesEntries {
-	id: string
-	label: string
-	value: number
-}
-
 interface PValueEntries {
 	value?: string
 	html?: string
@@ -115,17 +109,19 @@ export type ViolinPlotEntry = {
 	plotValueCount: number
 	seriesId: string
 	src: string
-	summaryStats: ValuesEntries[]
+	summaryStats: DescrStats
+}
+
+export type ViolinResponseChart = {
+	chartId: string
+	plots: ViolinPlotEntry[]
+	pvalues?: PValueEntries[][]
 }
 
 export type ViolinResponse = {
 	bins: { [index: string]: any }
 	charts: {
-		[index: string]: {
-			chartId: string
-			plots: ViolinPlotEntry[]
-			pvalues?: PValueEntries[][]
-		}
+		[index: string]: ViolinResponseChart
 	}
 	min: number
 	max: number
