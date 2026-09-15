@@ -1170,6 +1170,14 @@ export type SingleCellData = {
 }
 
 export type SingleCellQuery = {
+	/** UI related settings */
+	scApp?: {
+		/** disable specific plots in the UI.
+		 * This is specifically for the GDC. In the future
+		 * maybe able to use defined/derived enabled chart types
+		 * to turn on/off plot buttons. */
+		disabledPlots: string[]
+	}
 	/** methods to identify samples with singlecell data,
 	this data allows client-side to display a table with these samples for user to choose from
 	also, sampleView uses this to determine if to invoke the sc plot for a sample
