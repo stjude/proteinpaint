@@ -412,15 +412,6 @@ export async function validate_termdb(ds) {
 			ds.sampleName2Id.set(r.name, r.id)
 			ds.sampleId2Type.set(r.id, r.sample_type)
 		}
-		if (ds.cohort.termdb?.hasSampleAncestry && ds.cohort.db.tableColumns?.sample_ancestry) {
-			// k: ancestor sample id, v: descendant sample ids. lets an annotation on a parent sample
-			// (e.g. a patient-level assay availability term) apply to its child samples, see mayAddDataAvailability()
-			ds.sampleId2Descendants = new Map()
-			for (const r of ds.cohort.db.connection.prepare('SELECT sample_id, ancestor_id FROM sample_ancestry').all()) {
-				if (!ds.sampleId2Descendants.has(r.ancestor_id)) ds.sampleId2Descendants.set(r.ancestor_id, [])
-				ds.sampleId2Descendants.get(r.ancestor_id).push(r.sample_id)
-			}
-		}
 		// XXX delete, not a good idea to dump all samples to client
 		ds.getSampleIdMap = samples => {
 			const d = {}
@@ -3526,7 +3517,7 @@ status applies to each of their samples. an id that passes the filter itself, or
 a filter, is used as is */
 function getQueriedSamples(sid, ds, sampleFilter) {
 	if (!sampleFilter || sampleFilter.has(sid)) return [sid]
-	const descendants = ds.sampleId2Descendants?.get(sid)
+	const descendants = ds.cohort.termdb.q.id2descendants?.(sid)
 	if (!descendants) return [sid] // not a parent; addDataAvailability() drops it via the filter as before
 	return descendants.filter(id => sampleFilter.has(id))
 }
