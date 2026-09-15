@@ -55,6 +55,10 @@ function init({ genomes }) {
 			const file = cacheFilePath('dmr', q.cacheId)
 			if (!fs.existsSync(file)) throw new Error('This scan is no longer cached; rerun it first.')
 			const scan = JSON.parse(await fs.promises.readFile(file, 'utf8'))
+			/* The auth gate ran for q.dslabel, but the cacheId names a result computed for some dataset:
+			refuse one computed for another, as termdb/dmrScanTrack does. */
+			if (scan.genome !== q.genome || scan.dslabel !== q.dslabel)
+				throw new Error('This scan does not belong to the requested dataset; rerun it first.')
 			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
 			const links = linkDmrsToGenes(
 				(scan.regions || []).flatMap((r: any) => r.dmrs || []),

@@ -116,7 +116,8 @@ export function buildScanRegions(genome: any, chromosomes: string[]) {
 // windows for a regions-less call, so they hold an empty correction
 // 3: DMRs now carry inGeneBody
 // 5: members in the key; DMRs carry bodyGenes; background p tail follows the excess direction
-const CACHE_VERSION = 5
+// 6: results record the genome and dslabel they belong to, which dmrScanTrack and dmrGeneLink require
+const CACHE_VERSION = 6
 
 /* Fingerprint the data files a result was computed from.
  *

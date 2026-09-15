@@ -19,10 +19,19 @@ export const api: RouteApi = {
 
 const EUTILS = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils'
 const MAX_ARTICLES = 5
-/** ponytail: unbounded memo keyed by query; a session asks about tens of genes. LRU if it grows. */
-const memo = new Map<string, any>()
+/** Lookups by query, in flight or done, shared by every user of this process: concurrent clicks on one
+ * gene share one pair of NCBI calls. Past MAX_MEMO the oldest query is evicted (Map keeps insertion order). */
+const MAX_MEMO = 500
+const memo = new Map<string, Promise<any>>()
+/** E-utilities allows 3 requests a second without an API key; calls from every request are spaced by this */
+const EUTILS_SPACING_MS = 350
+let nextSlot = 0
 /** xfetch parses JSON only on an exact 'application/json'; NCBI appends '; charset=UTF-8' */
 const eutils = async (url: string) => {
+	const now = Date.now()
+	const wait = Math.max(0, nextSlot - now)
+	nextSlot = Math.max(now, nextSlot) + EUTILS_SPACING_MS
+	if (wait) await new Promise(resolve => setTimeout(resolve, wait))
 	const r = await xfetch(url)
 	return typeof r == 'string' ? JSON.parse(r) : r
 }
@@ -34,6 +43,31 @@ export function literatureQuery(gene: string, context: string, disease?: string)
 		// without it, a well-studied gene's hits are whichever cancer studied it most
 		(disease ? ` AND "${disease}"[tiab]` : '')
 	)
+}
+
+async function lookup(term: string) {
+	const search: any = await eutils(
+		`${EUTILS}/esearch.fcgi?db=pubmed&retmode=json&sort=relevance&retmax=${MAX_ARTICLES}&term=${encodeURIComponent(
+			term
+		)}`
+	)
+	const ids: string[] = search?.esearchresult?.idlist || []
+	const count = Number(search?.esearchresult?.count) || 0
+	let articles: any[] = []
+	if (ids.length) {
+		const sum: any = await eutils(`${EUTILS}/esummary.fcgi?db=pubmed&retmode=json&id=${ids.join(',')}`)
+		articles = ids.map(id => {
+			const a = sum?.result?.[id] || {}
+			return {
+				pmid: id,
+				title: a.title,
+				journal: a.source,
+				year: String(a.pubdate || '').slice(0, 4),
+				doi: (a.articleids || []).find((x: any) => x.idtype == 'doi')?.value || null
+			}
+		})
+	}
+	return { count, articles, query: term }
 }
 
 function init({ genomes }) {
@@ -51,31 +85,17 @@ function init({ genomes }) {
 			)
 				throw new Error('invalid disease term')
 			const term = literatureQuery(q.gene, q.context, q.disease?.trim() || undefined)
-			if (!memo.has(term)) {
-				const search: any = await eutils(
-					`${EUTILS}/esearch.fcgi?db=pubmed&retmode=json&sort=relevance&retmax=${MAX_ARTICLES}&term=${encodeURIComponent(
-						term
-					)}`
-				)
-				const ids: string[] = search?.esearchresult?.idlist || []
-				const count = Number(search?.esearchresult?.count) || 0
-				let articles: any[] = []
-				if (ids.length) {
-					const sum: any = await eutils(`${EUTILS}/esummary.fcgi?db=pubmed&retmode=json&id=${ids.join(',')}`)
-					articles = ids.map(id => {
-						const a = sum?.result?.[id] || {}
-						return {
-							pmid: id,
-							title: a.title,
-							journal: a.source,
-							year: String(a.pubdate || '').slice(0, 4),
-							doi: (a.articleids || []).find((x: any) => x.idtype == 'doi')?.value || null
-						}
-					})
-				}
-				memo.set(term, { count, articles, query: term })
+			let found = memo.get(term)
+			if (!found) {
+				found = lookup(term)
+				memo.set(term, found)
+				if (memo.size > MAX_MEMO) memo.delete(memo.keys().next().value!)
+				// a failed lookup (NCBI down, rate-limited) is retried on the next click rather than remembered
+				found.catch(() => {
+					if (memo.get(term) === found) memo.delete(term)
+				})
 			}
-			res.send({ status: 'ok', ...memo.get(term) })
+			res.send({ status: 'ok', ...(await found) })
 		} catch (e: any) {
 			// E-utilities down or unreachable from this host is a missing column, not a broken panel
 			res.send({ error: `PubMed lookup failed: ${e?.message || e}` })

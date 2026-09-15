@@ -234,31 +234,50 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 	// the exclusion needs the gene index; built once, not per chromosome
 	const geneIdx = q.corrected ? buildGeneIndex(genome) : null
 	const CONCURRENCY = Math.max(1, Number(serverconfig.dmrBatchConcurrency) || 2)
+	/* One rust invocation per MATRIX FILE, as dmrBatch groups its jobs. Every invocation opens and fits
+	its whole file: with per-chromosome shards a job is one chromosome, but a dataset backed by one
+	genome-wide matrix would otherwise reload and refit that file once per chromosome. Rust returns
+	background regions in input order, so each chromosome's results are sliced back by offset, and
+	the fit is the same either way, so no value changes. */
+	const jobs = new Map<string, string[]>()
+	for (const chr of chrs) {
+		const file = resolveMethylationMatrix(ds, chr, q.element_type).matrixFile
+		jobs.set(file, [...(jobs.get(file) || []), chr])
+	}
+	const jobList = [...jobs.values()]
 	let next = 0
 	await Promise.all(
-		Array.from({ length: Math.min(CONCURRENCY, chrs.length) }, async () => {
+		Array.from({ length: Math.min(CONCURRENCY, jobList.length) }, async () => {
 			while (true) {
 				const i = next++
-				if (i >= chrs.length) return
-				const chr = chrs[i]
-				const bodies = byChr.get(chr)!
-				const { matrixFile, mvalues } = resolveMethylationMatrix(ds, chr, q.element_type)
+				if (i >= jobList.length) return
+				const jobChrs = jobList[i]
+				const { matrixFile, mvalues } = resolveMethylationMatrix(ds, jobChrs[0], q.element_type)
 				/* Corrected: intergenic windows width-matched to the gene bodies ride along in the same
-				rust call, after the bodies, so one fit serves both. Same sampler and seed rule as the
-				scan, so the two corrections are the same correction. */
-				let windows: { chr: string; start: number; stop: number }[] = []
-				if (q.corrected) {
-					const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
-					const excl = chrLen ? await buildExclusion(genome, chr, chrLen, geneIdx as any) : null
-					if (!excl) throw new Error('This genome cannot supply an intergenic background (no cCRE track).')
-					windows = sampleBackground(
-						chr,
-						chrLen,
-						excl,
-						bodies.map(b => b.stop - b.start),
-						BG_WINDOWS_PER_CHR,
-						chrSeed(chr)
-					)
+				rust call, after each chromosome's bodies, so one fit serves both. Same sampler and seed rule
+				as the scan, so the two corrections are the same correction. */
+				const parts: {
+					chr: string
+					bodies: { name: string; start: number; stop: number }[]
+					windows: { chr: string; start: number; stop: number }[]
+				}[] = []
+				for (const chr of jobChrs) {
+					const bodies = byChr.get(chr)!
+					let windows: { chr: string; start: number; stop: number }[] = []
+					if (q.corrected) {
+						const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
+						const excl = chrLen ? await buildExclusion(genome, chr, chrLen, geneIdx as any) : null
+						if (!excl) throw new Error('This genome cannot supply an intergenic background (no cCRE track).')
+						windows = sampleBackground(
+							chr,
+							chrLen,
+							excl,
+							bodies.map(b => b.stop - b.start),
+							BG_WINDOWS_PER_CHR,
+							chrSeed(chr)
+						)
+					}
+					parts.push({ chr, bodies, windows })
 				}
 				const out = JSON.parse(
 					await run_rust(
@@ -268,37 +287,45 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 							mvalues,
 							cachedir: serverconfig.cachedir,
 							genome: q.genome,
-							chr,
+							chr: jobChrs[0],
 							start: 0,
 							stop: 0,
 							regions: [],
-							background_regions: [...bodies.map(b => ({ chr, start: b.start, stop: b.stop })), ...windows],
+							background_regions: parts.flatMap(p => [
+								...p.bodies.map(b => ({ chr: p.chr, start: b.start, stop: b.stop })),
+								...p.windows
+							]),
 							case: group2.join(','),
 							control: group1.join(',')
 						})
 					)
 				)
-				if (out.error) throw new Error(`${chr}: ${out.error}`)
+				if (out.error) throw new Error(`${jobChrs.join(',')}: ${out.error}`)
 				const bg: any[] = out.background || []
-				const bodyRes = bg.slice(0, bodies.length)
-				if (!q.corrected) {
-					bodyRes.forEach((b: any, j: number) => {
-						/* A gene body with too few probes has an unstable mean; 5 matches the scan's own
-						minimum CpG count so the two analyses agree on what is measurable. */
-						if (b.delta != null && b.n_probes >= 5) deltaOf[bodies[j].name] = b.delta
-					})
-				} else {
-					const measured = bodyRes
-						.map((b: any, j: number) => ({ j, b }))
-						.filter(({ b }) => b?.delta != null && b.n_probes >= 5)
-					const { scored } = scoreAgainstBackground(
-						measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, meandiff: b.delta })),
-						bg.slice(bodies.length)
-					)
-					measured.forEach(({ j }, k) => {
-						const sc = scored[k]
-						if (sc) deltaOf[bodies[j].name] = Math.round(sc.excess * 100000) / 100000
-					})
+				let offset = 0
+				for (const { bodies, windows } of parts) {
+					const bodyRes = bg.slice(offset, offset + bodies.length)
+					const chrWindows = bg.slice(offset + bodies.length, offset + bodies.length + windows.length)
+					offset += bodies.length + windows.length
+					if (!q.corrected) {
+						bodyRes.forEach((b: any, j: number) => {
+							/* A gene body with too few probes has an unstable mean; 5 matches the scan's own
+							minimum CpG count so the two analyses agree on what is measurable. */
+							if (b.delta != null && b.n_probes >= 5) deltaOf[bodies[j].name] = b.delta
+						})
+					} else {
+						const measured = bodyRes
+							.map((b: any, j: number) => ({ j, b }))
+							.filter(({ b }) => b?.delta != null && b.n_probes >= 5)
+						const { scored } = scoreAgainstBackground(
+							measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, meandiff: b.delta })),
+							chrWindows
+						)
+						measured.forEach(({ j }, k) => {
+							const sc = scored[k]
+							if (sc) deltaOf[bodies[j].name] = Math.round(sc.excess * 100000) / 100000
+						})
+					}
 				}
 			}
 		})

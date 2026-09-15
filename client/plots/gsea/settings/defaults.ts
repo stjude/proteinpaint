@@ -5,7 +5,11 @@ import { DMR_SCAN_ELEMENT_TYPE } from '#types'
  * gene-level fold change. The scan has no gene rows, so the server substitutes that ranking
  * (genesetEnrichment.ts) and it needs a tighter gene-set ceiling than the rest. */
 function isDmrScanRanking(opts: any): boolean {
-	return opts?.gsea_params?.daRequest?.element_type === DMR_SCAN_ELEMENT_TYPE
+	/* daRequest arrives only once GSEA has fetched from the volcano's cache, after these defaults are
+	built, so a differential analysis also passes the volcano's element class directly. */
+	return (
+		opts?.elementType === DMR_SCAN_ELEMENT_TYPE || opts?.gsea_params?.daRequest?.element_type === DMR_SCAN_ELEMENT_TYPE
+	)
 }
 
 export function getDefaultGseaSettings(overrides = {}, opts: any = {}): GseaSettings {

@@ -34,7 +34,16 @@ export async function dmrGeneLinkPanel(
 				dslabel: vocab.dslabel,
 				cacheId: scan.cacheId,
 				minCpgs: scan.minCpgs,
-				samplelst: { groups: config.samplelst.groups.map((g: any) => ({ name: g.name, in: g.in, values: g.values })) },
+				/* The cohort the scan compared, expanded and matched server-side. The plot state's list can still
+				hold a "Not in" group as {in:false} carrying the included group's values, which DE reads as two
+				overlapping groups. */
+				samplelst: {
+					groups: (scan.matchedSamplelst || config.samplelst).groups.map((g: any) => ({
+						name: g.name,
+						in: g.in,
+						values: g.values
+					}))
+				},
 				method: de.method,
 				min_count: de.minCount,
 				min_total_count: de.minTotalCount,
@@ -120,7 +129,7 @@ export async function dmrGeneLinkPanel(
 		noRadioBtn: true,
 		download: { fileName: 'dmr-gene-links.tsv' },
 		// a click asks PubMed about that row's gene in that row's context
-		noButtonCallback: (i: number) => showLiterature(litDiv, vocab, recordOf.get(tableRows[i]))
+		noButtonCallback: (i: number) => showLiterature(litDiv, vocab, recordOf.get(tableRows[i]), disease)
 	})
 	if (rows.length < res.links)
 		div
@@ -130,13 +139,16 @@ export async function dmrGeneLinkPanel(
 			.text(`Showing the first ${rows.length.toLocaleString()} of ${res.links.toLocaleString()} links.`)
 	const hint = litDiv.append('div').style('color', '#777').style('padding', '6px 0')
 	hint.append('span').text('Click a row for PubMed articles on that gene and mechanism, optionally within a disease: ')
-	disease = hint.append('input').attr('type', 'text').attr('placeholder', 'e.g. myeloma').style('width', '120px')
+	const disease = hint.append('input').attr('type', 'text').attr('placeholder', 'e.g. myeloma').style('width', '120px')
 }
 
-/** the disease-context box, read at each lookup; one panel is open at a time */
-let disease: any
-
-async function showLiterature(holder: any, vocab: { genome: string; dslabel: string }, r: any) {
+async function showLiterature(
+	holder: any,
+	vocab: { genome: string; dslabel: string },
+	r: any,
+	/** this panel's disease-context box, read at each lookup */
+	disease: any
+) {
 	// keep the hint row (and its typed disease) at the top; replace only the previous results
 	holder.selectAll('.sjpp-dmr-lit').remove()
 	const out = holder.append('div').attr('class', 'sjpp-dmr-lit')

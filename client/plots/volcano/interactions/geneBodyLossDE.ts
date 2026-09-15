@@ -29,7 +29,10 @@ export async function geneBodyLossTest(
 ) {
 	const gb = scan.geneBodyLoss!
 	const holder = tip.d
-	const groups = config?.samplelst?.groups
+	/* The cohort the scan compared, expanded and matched server-side. The plot state's list can still
+	hold a "Not in" group as {in:false} carrying the included group's values, which DE reads as two
+	overlapping groups ("Common elements found"). */
+	const groups = (scan.matchedSamplelst || config?.samplelst)?.groups
 	if (!groups || groups.length != 2) {
 		sayerror(holder.append('div'), 'Two sample groups are required.')
 		return
