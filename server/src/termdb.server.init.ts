@@ -140,10 +140,16 @@ export function server_init_db_queries(ds) {
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
 		q.id2sampleType = id => i2type.get(id)
+		// descendant sample ids of an ancestor id at any distance; undefined when the id is not an ancestor
+		q.id2descendants = id => i2descendants.get(id)
 
 		// when the dataset has sample ancestry, store each sample's ancestors in its ref,
 		// so downstream (e.g. matrix) can group/label samples by ancestry. Built once here.
-		const i2ancestors = new Map()
+		// the inverse map, ancestor -> descendant ids, lets an annotation on a parent sample
+		// (e.g. a patient-level assay availability term) apply to its child samples, see
+		// getQueriedSamples() in mds3.init.js
+		const i2ancestors = new Map(),
+			i2descendants = new Map()
 		if (ds.cohort.termdb.hasSampleAncestry && tables.has('sample_ancestry')) {
 			const rows = cn.prepare('SELECT sample_id, ancestor_id, distance FROM sample_ancestry').all()
 			for (const { sample_id, ancestor_id, distance } of rows) {
@@ -154,6 +160,8 @@ export function server_init_db_queries(ds) {
 					sample_type: i2type.get(ancestor_id),
 					distance
 				})
+				if (!i2descendants.has(ancestor_id)) i2descendants.set(ancestor_id, [])
+				i2descendants.get(ancestor_id).push(sample_id)
 			}
 			// sort each sample's ancestors by lowest distance first, so samples can be
 			// grouped/sorted by ancestry "tree" from the nearest ancestor outward
@@ -853,7 +861,8 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	correlationVolcano: ({ ds }) => ds.cohort.correlationVolcano,
 	chat: ({ ds }) => ds.queries?.chat,
 	geneExpression: ({ ds }) => ds.queries?.geneExpression,
-	GeneExpInput: ({ ds }) => ds.queries?.geneExpression || ds.queries?.singleCell?.geneExpression || ds.queries?.singleCell?.pseudobulk,
+	GeneExpInput: ({ ds }) =>
+		ds.queries?.geneExpression || ds.queries?.singleCell?.geneExpression || ds.queries?.singleCell?.pseudobulk,
 	metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
 	proteomeAbundance: ({ ds }) => ds.queries?.proteome,
 	ProteomeInput: ({ ds }) => ds.queries?.proteome,
