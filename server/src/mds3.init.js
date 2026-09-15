@@ -3297,7 +3297,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			if (!q.disableAssayAvailability) {
 				// add data availability for each dt
 				for (const dt of dts) {
-					mayAddDataAvailability(sample2mlst, dt, ds, gene, sampleFilter)
+					mayAddDataAvailability(sample2mlst, dt, ds, gene, sampleFilter, tw)
 				}
 			}
 		}
@@ -3381,7 +3381,7 @@ function getDtsToQuery(tw, ds) {
 	return [...dts]
 }
 
-function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
+function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) {
 	if (!ds.assayAvailability?.byDt) return // this ds is not equipped with assay availability by dt
 	const _dt = ds.assayAvailability.byDt[dtKey]
 	if (!_dt) return // this ds has assay availability but lacks setting for this dt. this is allowed e.g. we only specify availability for cnv but not snvindel.
@@ -3389,16 +3389,21 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 	const dts = []
 	if (_dt.byOrigin) {
 		for (const o in _dt.byOrigin) {
+			if (tw.term.origin && tw.term.origin != o) continue
 			const dt = _dt.byOrigin[o]
 			if (dt.bySampleType) {
 				// this origin is further split by sample type; each leaf carries its own yes/no sample sets
-				for (const st in dt.bySampleType) dts.push({ ...dt.bySampleType[st], origin: o, sampleType: st })
+				for (const st in dt.bySampleType) {
+					if (tw.term.sampleTypes && !tw.term.sampleTypes.includes(Number(st))) continue
+					dts.push({ ...dt.bySampleType[st], origin: o, sampleType: st })
+				}
 			} else {
 				dts.push({ ...dt, origin: o })
 			}
 		}
 	} else if (_dt.bySampleType) {
 		for (const st in _dt.bySampleType) {
+			if (tw.term.sampleTypes && !tw.term.sampleTypes.includes(Number(st))) continue
 			const dt = _dt.bySampleType[st]
 			dts.push({ ...dt, sampleType: st })
 		}
@@ -3411,14 +3416,14 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 			// sample has been assayed
 			// if sample does not have annotated mutation for dt
 			// then it will be annotated as wildtype
-			for (const id of getQueriedSamples(sid, ds, sampleFilter))
-				addDataAvailability(id, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter, gene)
+			//for (const id of getQueriedSamples(sid, ds, sampleFilter))
+			addDataAvailability(sid, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter, gene)
 		}
 		for (const sid of dt.noSamples) {
 			// sample has not been assayed
 			// annotate the sample as not tested
-			for (const id of getQueriedSamples(sid, ds, sampleFilter))
-				addDataAvailability(id, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter, gene)
+			//for (const id of getQueriedSamples(sid, ds, sampleFilter))
+			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter, gene)
 		}
 	}
 }
@@ -3429,12 +3434,12 @@ q.sampleTypes). such a parent id would be dropped by the filter, losing the avai
 sample under it; map it instead onto its descendants that pass the filter, as a patient's assay
 status applies to each of their samples. an id that passes the filter itself, or a query without
 a filter, is used as is */
-function getQueriedSamples(sid, ds, sampleFilter) {
+/*function getQueriedSamples(sid, ds, sampleFilter) {
 	if (!sampleFilter || sampleFilter.has(sid)) return [sid]
 	const descendants = ds.cohort.termdb.q.id2descendants?.(sid)
 	if (!descendants) return [sid] // not a parent; addDataAvailability() drops it via the filter as before
 	return descendants.filter(id => sampleFilter.has(id))
-}
+}*/
 
 function addDataAvailability(sid, sample2mlst, dtKey, c, origin, sampleFilter, gene) {
 	if (sampleFilter && !sampleFilter.has(sid)) return
