@@ -300,7 +300,7 @@ tape('renderChartBtns() should omit disabled plot types', test => {
 			return selection
 		}
 	}
-	for (const method of ['enter', 'append', 'attr', 'style', 'text', 'on']) selection[method] = () => selection
+	for (const method of ['enter', 'append', 'attr', 'style', 'text', 'on', 'remove']) selection[method] = () => selection
 	;(pb.plotBtnsDom.btnsDiv as any).selectAll = () => selection
 
 	pb.renderChartBtns()
@@ -399,7 +399,7 @@ tape('makeScTW() should return term wrapper with sample and $id', async test => 
 	const item = { sID: 'S1', eID: 'EXP1' }
 	const plot = { name: 'umap', colorColumns: [{ name: 'cellType' }] }
 
-	const tw = await pb.makeScTW('scct',item, plot)
+	const tw = await pb.makeScTW('scct', item, plot)
 
 	test.ok(tw.$id, 'Should have $id')
 	test.equal(typeof tw.$id, 'string', '$id should be a string')
