@@ -114,7 +114,7 @@ class Regression extends PlotBase implements RxComponent {
 		const o = this.config.outcome
 		this.dom.header.html(
 			(o ? o.term.name : '') +
-				'<span style="opacity:.6;font-size:.7em;margin-left:10px;">' +
+				'<span style="font-size:.7em;margin-left:10px;">' +
 				this.config.regressionType.toUpperCase() +
 				' REGRESSION</span>'
 		)
