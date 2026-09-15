@@ -30,13 +30,18 @@ export type TermdbDmrRequest = {
 	colors?: { group1: string; group2: string; hyper: string; hypo: string }
 	/** Backend engine: 'rust' (genome-wide eBayes, default) or 'r' (DMRCate via cached limma) */
 	backend?: 'rust' | 'r'
+	/** Which element matrix to analyze on a dataset with no CpG-level matrix, e.g. the class the
+	 * volcano was showing. Ignored when the dataset has a CpG matrix, which is always finer. */
+	element_type?: string
 	filter?: Filter
 	__protected__?: any
 }
 
 type Sample = {
 	sampleId: number | string
-	sample: string
+	/** Ignored by the server, which resolves sampleId against the termdb: a caller cannot be
+	 * relied on to carry names, and the name must be the one the methylation matrix is keyed by. */
+	sample?: string
 }
 
 export type DmrLoessCurves = {

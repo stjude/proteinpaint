@@ -237,7 +237,8 @@ class Query:
 
         with h5:
             names = h5["meta/samples/names"].asstr()[:] #so that correctly decodes as string
-            cols  = h5["meta/samples/col_idx"][:]
+            # a per-chromosome shard (build_cpg_matrix.py) stores samples in column order and has no col_idx
+            cols  = h5["meta/samples/col_idx"][:] if "meta/samples/col_idx" in h5 else np.arange(len(names))
             start_pos = h5["meta/start"][:]
 
             num_sites_per_chrom = json.loads(h5.attrs['chrom_lengths'])
