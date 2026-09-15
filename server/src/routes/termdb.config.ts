@@ -15,7 +15,8 @@ import {
 	SSGSEA,
 	PSEUDOBULK,
 	JUNCTION,
-	TERM_COLLECTION
+	TERM_COLLECTION,
+	SINGLECELL_NUMERIC_VALUE
 } from '#types'
 import type { Mds3WithCohort } from '#types'
 
@@ -148,6 +149,8 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.limitDictTermSamplesToMutated) c.limitDictTermSamplesToMutated = tdb.limitDictTermSamplesToMutated
 	if (tdb.hidePlotDocumentation) c.hidePlotDocumentation = tdb.hidePlotDocumentation
 	if (tdb.gbRecreateBlock) c.gbRecreateBlock = tdb.gbRecreateBlock
+	if (tdb.sampleTypeTerms) c.sampleTypeTerms = tdb.sampleTypeTerms
+	if (tdb.sampleTypesByTerms) c.sampleTypesByTerms = tdb.sampleTypesByTerms
 	addRestrictAncestries(c, tdb)
 	addMatrixplots(c, ds)
 	addNonDictionaryQueries(c, ds, genome)
@@ -295,6 +298,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	}
 	if (q.geneExpression) {
 		q2.geneExpression = { unit: q.geneExpression.unit, sampleTypes: q.geneExpression.sampleTypes }
+		if (q.geneExpression.sampleTypesByTerms) q2.geneExpression.sampleTypesByTerms = q.geneExpression.sampleTypesByTerms
 	}
 	if (q.isoformExpression) {
 		q2.isoformExpression = { unit: q.isoformExpression.unit }
@@ -395,6 +399,17 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		element matrix that serves terms when there is no CpG file, and the client needs it to
 		label a region term with the unit it will actually receive. */
 		if (q.dnaMethylation.unit) q2.dnaMethylation.unit = q.dnaMethylation.unit
+		/* Which matrix the region (DMR) view will run on, absent when the dataset has neither
+		backing. The client sizes its default window from this: element rows sit ~10kb apart where
+		CpGs sit ~100bp apart, so the ±2kb window that frames a CpG region holds one element. */
+		if (q.dnaMethylation.cpgByChr || q.dnaMethylation.file) q2.dnaMethylation.regionAnalysis = 'cpg'
+		else if (q.dnaMethylation.promoter || Object.keys(q.dnaMethylation.elements ?? {}).length)
+			q2.dnaMethylation.regionAnalysis = 'element'
+		/* Shard-backed with no genome-wide file: the region view falls back to elements on every
+		chromosome without a shard, so the client needs the list to size its window per chromosome
+		rather than per dataset. */
+		if (q.dnaMethylation.cpgByChr && !q.dnaMethylation.file && q.dnaMethylation.cpgChroms)
+			q2.dnaMethylation.cpgChroms = [...q.dnaMethylation.cpgChroms]
 		if (q.dnaMethylation.promoter) {
 			q2.dnaMethylation.promoter = { unit: q.dnaMethylation.promoter.unit }
 		}
@@ -555,6 +570,8 @@ export function getDsAllowedTermTypes(ds) {
 	if (ds.queries?.junction) typeSet.add(JUNCTION)
 	if (ds.queries?.singleCell) {
 		typeSet.add(SINGLECELL_CELLTYPE)
+		if (ds.queries.singleCell.terms?.some(term => term.type == SINGLECELL_NUMERIC_VALUE))
+			typeSet.add(SINGLECELL_NUMERIC_VALUE)
 		if (ds.queries.singleCell?.geneExpression) typeSet.add(SINGLECELL_GENE_EXPRESSION)
 		if (ds.queries.singleCell?.pseudobulk) typeSet.add(PSEUDOBULK)
 	}

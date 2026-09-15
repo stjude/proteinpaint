@@ -9,12 +9,7 @@ export type DiffAnalysisDom = {
 	/** Holder */
 	div: Elem
 	/** Sandbox header, if provided */
-	header?: {
-		/** If tw.term.name || headerText is present, show in header */
-		title: Elem
-		/** Updates plot title per provided opts.termType */
-		plot: Elem
-	}
+	header?: Elem
 	/** Toggle between plots */
 	tabsDiv: Elem
 	/** Container for the plots */
@@ -55,4 +50,6 @@ export type DiffAnalysisPlotConfig = PlotConfig & {
 	tw: TermWrapper
 	/** Determines the kind of diff analysis */
 	termType: string
+	/** Special text for the sandbox header */
+	headerText?: string
 }

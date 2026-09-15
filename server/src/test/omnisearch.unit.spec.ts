@@ -201,6 +201,30 @@ tape('sample search: omits single-cell action for samples without single-cell da
 	t.end()
 })
 
+tape('sample search: flags samples with plain whole-slide images on disk', async t => {
+	await ensureOpenAuth()
+	// the TermdbTest fixture: wsimages/2660 holds a plain .svs; 2646 has no
+	// folder there. The flag drives the "Whole Slide Images" omnisearch action.
+	const ds = makeSampleDs(true)
+	ds.queries.w2 = { wsiFolder: 'files/hg38/TermdbTest/wsimages' }
+	ds.sampleName2Id = new Map([
+		['2660', 42],
+		['2646', 41]
+	])
+	const data = await runOmnisearch({ prompt: '26' }, req, ds, genome)
+	const byName = Object.fromEntries(data.samples.map((s: any) => [s.name, s]))
+	t.equal(byName['2660']?.wsimages, true, '2660 (has a plain slide on disk) should be flagged')
+	t.equal('wsimages' in byName['2646'], false, '2646 (no plain slides) should not carry the flag')
+	t.end()
+})
+
+tape('sample search: no wsimages flag when the dataset has no wsiFolder', async t => {
+	await ensureOpenAuth()
+	const data = await runOmnisearch({ prompt: '2646' }, req, makeSampleDs(true), genome)
+	t.equal('wsimages' in (data.samples[0] || {}), false, 'should not flag samples without ds.queries.w2.wsiFolder')
+	t.end()
+})
+
 tape('sample search: returns assays from track-list facets for the matched sample', async t => {
 	await ensureOpenAuth()
 	const ds = addTrackFacets(makeSampleDs(true), [

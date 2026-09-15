@@ -479,7 +479,7 @@ tape('geneVariant terms with divide by dictionary term', function (test) {
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			722,
+			752,
 			`should render the expected number of cell rects`
 		)
 		test.equal(
@@ -543,7 +543,7 @@ tape('geneVariant terms and dictionary terms divide by dictionary term', functio
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			902,
+			962,
 			`should render the expected number of cell rects`
 		)
 		test.equal(

@@ -1,14 +1,10 @@
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, copyMerge, type AppApi, type ComponentApi, type RxComponent } from '#rx'
-import { capitalizeFirstLetter, icons } from '#dom'
+import { capitalizeFirstLetter, icons, formatHeaderText } from '#dom'
 import { appInit } from '../../termdb/app.js'
 import { validatePlotConfig } from '../aggregateMatrix/AggregateMatrix.ts'
 import { isNonDictionaryType } from '#shared/terms.js'
-import {
-	AggMatrixInputViewModel,
-	getTerm,
-	getTermSelectionKey
-} from './viewModel/AggMatrixInputViewModel.ts'
+import { AggMatrixInputViewModel, getTerm, getTermSelectionKey } from './viewModel/AggMatrixInputViewModel.ts'
 import type { Section, SectionType } from './viewModel/AMIViewModelTypes.ts'
 
 const chartType = 'aggMatrixInput'
@@ -37,8 +33,11 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 		super(opts, api)
 		this.type = AggMatrixInput.type
 
-		//opts.header is the sandbox header
-        if (opts.header) opts.header.text(`AGGREGATE MATRIX`).style('font-size', '0.9em')
+		if (opts.header)
+			formatHeaderText({
+				header: opts.header,
+				chartType: 'aggregate matrix'
+			})
 	}
 
 	getState(appState) {
@@ -146,7 +145,10 @@ class AggMatrixInput extends PlotBase implements RxComponent {
 			const otherMethod = methodKey == 'sizeMethod' ? this.config.gradientMethod : this.config.sizeMethod
 			this.dom.methodSelects[methodKey]
 				.selectAll('option')
-				.data([{ id: this.startOpt, label: this.startOpt }, ...this.viewModel.state.availableMethods], method => method.id)
+				.data(
+					[{ id: this.startOpt, label: this.startOpt }, ...this.viewModel.state.availableMethods],
+					method => method.id
+				)
 				.join('option')
 				.attr('value', method => method.id)
 				.property('disabled', method => method.id != this.startOpt && method.id == otherMethod)

@@ -49,10 +49,19 @@ serverconfig.backend_only = true
 // rewriting serverconfig.json on disk.
 fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '), { charset: 'utf8' })
 
-if (serverconfig.releaseTag && serverconfig.releaseTag.server) {
-	console.log('Updating proteinpaint server package ...')
-	spawnSync('npm', ['install', `"@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}"`], { encoding: 'utf-8' })
-}
+// TODO: may re-enable support for serverconfig.releaseTag, will require replacing launch from update @sjcrh/proteinpaint-server,
+//       but it may be better to do npm re-installss with a docker build on top of ppserver instead of this hack
+// if (serverconfig.releaseTag && serverconfig.releaseTag.server) {
+// 	console.log('Updating proteinpaint server package ...')
+// 	const serverInstall = spawnSync('npm', ['install', `@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}`], {
+// 		encoding: 'utf-8',
+// 		stdio: 'inherit'
+// 	})
+// 	if (serverInstall.error) throw serverInstall.error
+// 	if (serverInstall.status !== 0) {
+// 		throw new Error(`Server package installation failed with status ${serverInstall.status}`)
+// 	}
+// }
 
 console.log('starting the server ...')
 launch()

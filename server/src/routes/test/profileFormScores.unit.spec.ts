@@ -1,13 +1,81 @@
 import tape from 'tape'
-import { getSCPercentsDict } from '../termdb.profileFormScores.ts'
+import { getPercentsDict, getSCPercentsDict, getScoreTermValues } from '../termdb.profileFormScores.ts'
 
 /**
  * Tests for termdb.profileFormScores helpers
+ *  - getPercentsDict()
  *  - getSCPercentsDict()
  */
 
 tape('\n', function (test) {
 	test.comment('-***- #routes/termdb.profileFormScores -***-')
+	test.end()
+})
+
+const LIKERT_VALUES = {
+	'1': { key: '1', label: 'Almost never' },
+	'4': { key: '4', label: 'Frequently' },
+	'5': { key: '5', label: 'Almost always' }
+}
+const byItself = (sample: any) => sample
+
+tape('getPercentsDict() folds differently capitalized answers onto the term value label', function (test) {
+	const samples = [
+		{ 'Almost Always': 6, Frequently: 4 },
+		{ 'Almost always': 2, 'Almost Never': 1 },
+		{ 'Almost never': 3 }
+	]
+	test.deepEqual(
+		getPercentsDict(byItself, samples, LIKERT_VALUES),
+		{ 'Almost always': 8, Frequently: 4, 'Almost never': 4 },
+		'one category per answer, counts summed across spellings'
+	)
+	test.end()
+})
+
+tape('getPercentsDict() keeps answers with no matching label, and all keys when values are absent', function (test) {
+	const samples = [{ "I don't know": 2, 'Almost Always': 1 }, null]
+	test.deepEqual(
+		getPercentsDict(byItself, samples, LIKERT_VALUES),
+		{ "I don't know": 2, 'Almost always': 1 },
+		'an unlabelled answer is kept verbatim and a sample without data is skipped'
+	)
+	test.deepEqual(
+		getPercentsDict(byItself, [{ 'Almost Always': 1 }, { 'Almost always': 1 }]),
+		{ 'Almost Always': 1, 'Almost always': 1 },
+		'without term values the keys are left untouched'
+	)
+	test.end()
+})
+
+tape('getPercentsDict() accepts numeric value labels', function (test) {
+	const values = { '1': { key: '1', label: 1 }, '0': { key: '0', label: 0 } }
+	test.deepEqual(
+		getPercentsDict(byItself, [{ '1': 2, '0': 1 }, { '1': 3 }], values),
+		{ '1': 5, '0': 1 },
+		'numeric labels are stringified instead of throwing on toUpperCase()'
+	)
+	test.end()
+})
+
+tape('getScoreTermValues() reads labels from the termdb for a get_multivalue_tws() wrapper', function (test) {
+	// same shape as get_multivalue_tws(): no term.values
+	const tw = { $id: 'Q1', term: { id: 'Q1', name: 'Q1', type: 'multivalue', subtype: 'Likert', details: '' } }
+	const ds = {
+		cohort: { termdb: { q: { termjsonByOneid: id => (id == 'Q1' ? { values: LIKERT_VALUES } : undefined) } } }
+	}
+	const values = getScoreTermValues(tw, ds)
+	test.deepEqual(values, LIKERT_VALUES, 'values come from the termdb, not the wrapper')
+	test.deepEqual(
+		getPercentsDict(byItself, [{ 'Almost Always': 1 }, { 'Almost always': 2 }], values),
+		{ 'Almost always': 3 },
+		'answers are folded for the real request shape'
+	)
+	test.equal(
+		getScoreTermValues({ term: { id: 'missing' } }, ds),
+		undefined,
+		'an unknown term yields no values, leaving keys untouched'
+	)
 	test.end()
 })
 

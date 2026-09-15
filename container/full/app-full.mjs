@@ -49,29 +49,50 @@ serverconfig.backend_only = false
 // rewriting serverconfig.json on disk.
 fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '), { charset: 'utf8' })
 
-if (serverconfig.releaseTag) {
-	if (!serverconfig.releaseTag.server || !serverconfig.releaseTag.front) {
-		throw 'Error: If the serverconfig.releaseTag option is used, then both {server, front} must be specified when running the full app.'
-	}
+// TODO: may re-enable support for serverconfig.releaseTag, will require replacing launch from update @sjcrh/proteinpaint-server,
+//       but it may be better to do npm re-installss with a docker build on top of ppfull instead of this hack
+// if (serverconfig.releaseTag) {
+// 	if (!serverconfig.releaseTag.server || !serverconfig.releaseTag.front) {
+// 		throw 'Error: If the serverconfig.releaseTag option is used, then both {server, front} must be specified when running the full app.'
+// 	}
+// 	console.log('Updating proteinpaint server package ...')
+// 	const serverInstall = spawnSync('npm', ['install', `@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}`], {
+// 		encoding: 'utf-8',
+// 		stdio: 'inherit'
+// 	})
+// 	if (serverInstall.error) throw serverInstall.error
+// 	if (serverInstall.status !== 0) {
+// 		throw new Error(`Server package installation failed with status ${serverInstall.status}`)
+// 	}
 
-	console.log('Updating proteinpaint server package ...')
-	spawnSync('npm', ['install', `"@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}"`], { encoding: 'utf-8' })
+// 	console.log('Updating proteinpaint front package ...')
+// 	const frontInstall = spawnSync('npm', ['install', `@sjcrh/proteinpaint-front@${serverconfig.releaseTag.front}`], {
+// 		encoding: 'utf-8',
+// 		stdio: 'inherit'
+// 	})
+// 	if (frontInstall.error) throw frontInstall.error
+// 	if (frontInstall.status !== 0) {
+// 		throw new Error(`Front package installation failed with status ${frontInstall.status}`)
+// 	}
+// }
 
-	console.log('Updating proteinpaint front package ...')
-	spawnSync('npm', ['install', `"@sjcrh/proteinpaint-front@${serverconfig.releaseTag.front}"`], { encoding: 'utf-8' })
-}
-
+// NOTES: Restored support for
+// - The environment variable that's supported in server/src/serverconfig.js is process.env.PP_URL,
+//   so process.env.URL is likely a legacy requirement when running very old ppfull containers, but now
+//   should always be done directly through serverconfig.URL or via override with process.env.PP_URL.
+// - serverconfig.url is similar, it is not handled in serverconfig.js or documented, it's potentially
+//   a legacy environment-specific fix.
 if (!serverconfig.URL) serverconfig.URL = process.env.URL || serverconfig.url || '.'
 
-console.log(`generating public/bin for ${serverconfig.URL}`)
+// No URL is passed to bundle generation: webpack's output.publicPath is 'auto', so the client derives
+// its /bin/ base path at runtime from the <script> tag it was loaded from (see front/webpack.config.js
+// and front/init.js). This container therefore serves the same bundle regardless of the mount URL.
+console.log(`generating the client bundle (bin/)`)
 const publicBinOnly = process.argv.includes('--publicBinOnly')
-const result = spawnSync(
-	'npx',
-	['proteinpaint-front', serverconfig.URL, publicBinOnly ? '--publicBinOnly' : 'allPublic'],
-	{
-		encoding: 'utf-8'
-	}
-)
+const result = spawnSync('npx', ['proteinpaint-front', ...(publicBinOnly ? ['--publicBinOnly'] : [])], {
+	encoding: 'utf-8',
+	stdio: 'inherit'
+})
 if (result.stderr) {
 	console.warn(result.stderr)
 }
@@ -79,8 +100,10 @@ if (result.status !== 0) {
 	console.error(`Process exited with non-zero status code: ${result.status}`)
 	process.exit(1)
 }
-// since the npx command generated non-root owned js files inside the public/bin folder , we need to change the owner of the folder and files to root
-spawnSync('chown', ['-R', 'root:root', './public/bin'], { encoding: 'utf8' })
+// the npx command above (proteinpaint-front) generates the client bundle into ./bin (this container's
+// own bin, served at /bin; see front/init.js), owned by the npx user — chown it to root so the server
+// can read it.
+spawnSync('chown', ['-R', 'root:root', './bin'], { encoding: 'utf8' })
 
 console.log('starting the server ...')
 launch()

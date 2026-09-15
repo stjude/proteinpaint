@@ -12,7 +12,8 @@ import type {
 	DnaMethylationTerm,
 	SingleCellGeneExpressionTerm,
 	PseudobulkTerm,
-	JunctionTerm
+	JunctionTerm,
+	SingleCellNumericValueTerm
 } from '../index.ts'
 
 export type RawRegularBin = Partial<RegularNumericBinConfig> & { preferredBins?: string }
@@ -72,6 +73,7 @@ export type NumericTerm =
 	| SsGSEATerm
 	| DnaMethylationTerm
 	| SingleCellGeneExpressionTerm
+	| SingleCellNumericValueTerm
 	| PseudobulkTerm
 	| JunctionTerm
 

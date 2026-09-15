@@ -4,11 +4,33 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- MMRF requires files/hg38/mmrf/methylation/cpg/{chr}.h5 on the target host (~40GB), built by
+- The cCRE track needs anno/encodeCCREtrack.hg38.gz (+ .tbi), ~11MB, built by
+
+Features:
+- DMR region analysis runs on datasets with no genome-wide CpG matrix, via per-chromosome CpG
+- DMR analysis can be launched from the group menu, not only by clicking a volcano hit. The picker's
+- dmrcate is 40% faster and uses 5x less memory on a genome-wide scan, with byte-identical output.
+
+Fixes:
+- dmrcate no longer emits thousands of false DMRs on a chromosome where NO probe passes per-CpG
+- The element methylation getter returns values on the unit it advertises; a beta-unit entry was
+- The DMR region view's errors are visible. It wrote them into a div the rx update loop empties
+- DMR analysis no longer reports "Group 1 needs at least 3 samples" on datasets whose sample groups
+
+
+## 2.208.0
+
 Features:
 - The available aggregate methods for "size" and "gradient" are now dynamically fetched based on the selected column terms. Method selectors are only shown when valid terms are selected, and incompatible selections are disabled. User feedback is provided if methods cannot be loaded or are incompatible.
 - The aggregate matrix route is no longer pseudobulk dependent and processes dictionary terms as well.
 - The aggregate matrix plot renders dictionary terms as a section, displaying the bins or categories as the rows and the section name as the term name.
+- Enabled new single cell numeric value termType for numeric color column terms. This new termType appears similarly to the scct termTypeGroup: within the SC app or when usecase.specialCase.type == 'singleCell'.
 
+Fixes:
+- reliably compute the codedate in healthcheck response
+- avoid clobbered shared public/bin in a multi-instance setup, by making each instance generate and serve its own active/bin bundles
 
 ## 2.207.1
 

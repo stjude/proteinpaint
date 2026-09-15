@@ -1,7 +1,19 @@
+import serverconfig from '../serverconfig.js'
+
+const basepath = serverconfig.basepath || ''
+
 // these server routes should not be protected by default,
 // since a user that is not logged should be able to have a way to login,
 // also logout should be supported regardless
-const forcedOpenRoutes = new Set(['/dslogin', '/jwt-status', '/dslogout', '/healthcheck', '/demoToken'])
+const forcedOpenRoutes = new Set([
+	`${basepath}/dslogin`,
+	`${basepath}/jwt-status`,
+	`${basepath}/dslogout`,
+	`${basepath}/healthcheck`,
+	`${basepath}/live`,
+	`${basepath}/status`,
+	`${basepath}/demoToken`
+])
 
 // Using a closure to make sure that the arguments are all related to each other.
 // An alternative of exporting/importing the auth instance unnecessarily exposes it

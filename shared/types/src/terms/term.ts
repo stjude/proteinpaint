@@ -49,6 +49,8 @@ export type BaseTerm = {
 	}
 	/** query sample types */
 	sampleTypes?: number[]
+	/** sample type label */
+	sampleTypeLabel?: string
 }
 
 // NumericTerm includes integer, float, date, geneExpression, metaboliteIntensity, proteomeAbundance, and other non-dict terms

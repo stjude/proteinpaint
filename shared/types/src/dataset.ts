@@ -993,8 +993,10 @@ export type GeneExpressionQuery = {
 	file?: string
 	/** dynamically added during server launch, list of sample integer IDs from file */
 	samples?: number[]
-	/** unique list of sample types present in samples[] */
+	/** unique list of sample types present in .samples[] */
 	sampleTypes?: any[]
+	/** termdb sampleTypesByTerms{} filtered for those entries with sample types present in .sampleTypes[] */
+	sampleTypesByTerms?: SampleTypesByTerms
 	/** dynamically added flag during launch */
 	nochr?: boolean
 	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
@@ -1090,6 +1092,8 @@ type ColorColumn = {
 	/** column values (categories) to color mapping */
 	colorMap?: { [index: string]: string }
 	aliases?: { [index: string]: string }
+	/** type of the column, e.g., 'numeric' */
+	type?: string
 }
 
 /** defines a tsne type of plot for cells from one sample */
@@ -1360,6 +1364,23 @@ type Mds3Queries = {
 		 * it and supply only .promoter, since a CpG-level matrix at whole-genome
 		 * scale is very large. At least one of .file / .promoter / .elements must be set. */
 		file?: string
+		/** Path template for per-chromosome CpG matrices, holding a literal `{chr}`, e.g.
+		 * `files/hg38/mmrf/methylation/cpg/{chr}.h5`. Read by the region (DMR) view only, in
+		 * preference to .file and to the element matrices, since per-CpG is the resolution
+		 * region calling wants: cCREs are median 316bp/4 CpGs against DMRs of median
+		 * 737bp/12 CpGs, so element averaging cannot resolve sub-element structure.
+		 *
+		 * Sharded rather than one genome-wide file because the analysis fits its eBayes prior
+		 * over the whole matrix before subsetting the region — one 28GB file costs ~27s a
+		 * request against ~2s for a chromosome. The prior is then pooled per chromosome,
+		 * which at ~700k CpGs a shard is ample.
+		 *
+		 * Deliberately separate from .file, which also backs the dnaMethylation term getter:
+		 * that getter reads one matrix and knows nothing about shards. Built by
+		 * utils/dnaMeth/build_cpg_matrix.py; startup fills in .cpgChroms from what is on disk. */
+		cpgByChr?: string
+		/** Chromosomes with a built shard, filled at startup from the files matching .cpgByChr. */
+		cpgChroms?: Set<string>
 		/** dna methylation unit (e.g. 'Average Beta Value'); required with .file.
 		 * Also set at init from the element matrix that serves terms when there is no .file,
 		 * so the client can label a region term with the unit it will actually receive. */
@@ -2052,6 +2073,10 @@ keep this setting here for reason of:
 	 */
 	hasSampleAncestry?: boolean
 	sampleTypes?: SampleTypes
+	/** Terms used to define sample types */
+	sampleTypeTerms?: SampleTypeTerms
+	/** Maps each term and value to its available sample types. */
+	sampleTypesByTerms?: SampleTypesByTerms
 	/** ui labels used for plot controls and tooltips */
 	uiLabels?: UiLabels
 
@@ -2190,6 +2215,19 @@ export type SampleTypes = {
 		name: string
 		plural_name: string
 		parent_id: number | null
+	}
+}
+
+type SampleTypeTerms = {
+	[term: string]: {
+		id: string
+		name: string
+	}
+}
+
+export type SampleTypesByTerms = {
+	[term: string]: {
+		[value: string]: number[]
 	}
 }
 

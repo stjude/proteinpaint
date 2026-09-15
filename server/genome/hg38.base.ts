@@ -83,6 +83,28 @@ export function getHg38(): Genome {
 				vpad: 4
 			},
 			{
+				/* ENCODE cCRE registry, coloured by class in SCREEN's own colours. Declared here rather
+				than in a dataset so any hg38 block can turn it on from the Tracks menu; like
+				RepeatMasker it is available, not default-on, because __isgene is what
+				first_genetrack_tolist adds automatically. The differential-methylation region view
+				switches it on explicitly, where a cCRE is at a scale it can actually be drawn at.
+				Built by utils/dnaMeth/build_ccre_track.py -- the shipped registry carries the class in
+				column 6, where bedj cannot see it. */
+				type: 'bedj',
+				name: 'ENCODE cCREs',
+				file: 'anno/encodeCCREtrack.hg38.gz',
+				stackheight: 12,
+				stackspace: 1,
+				vpad: 3,
+				categories: {
+					PLS: { color: '#FF0000', label: 'Promoter-like' },
+					pELS: { color: '#FFA700', label: 'Proximal enhancer-like' },
+					dELS: { color: '#FFCD00', label: 'Distal enhancer-like' },
+					'CTCF-only': { color: '#00B0F0', label: 'CTCF-only' },
+					'DNase-H3K4me3': { color: '#FFAAAA', label: 'DNase-H3K4me3' }
+				}
+			},
+			{
 				type: 'bedj',
 				name: 'RepeatMasker',
 				stackheight: 14,

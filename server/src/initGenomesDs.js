@@ -585,16 +585,36 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 		}
 		/* end special handling */
 
-		const msg = ds.init?.fatalError || e?.error || e
-		// optional slack notification will be handled in app.ts
-		throw msg
+		// A dataset-specific fatal error must NOT throw/abort validation or server startup — it applies
+		// to this one dataset only. Record it like the normal fatalError path below (drop from genomes,
+		// status=fatalError, reported by app.ts processTrackedDs() in the startup log, optional slack
+		// notification, and /healthcheck) and return early WITHOUT entering the retry loop: during
+		// validation we exit as soon as possible, and retries are pointless since `validate` exits
+		// immediately after. processTrackedDs() still exits the process when NO dataset loaded
+		// successfully, which is the real server-wide failure that should fail validation/rollout.
+		// Only remove the genome's entry when it is THIS dataset, or when the existing entry is an
+		// untracked, partially-constructed object. A duplicate d.name can leave g.datasets[ds.label]
+		// pointing at a DIFFERENT, already-loaded dataset while this failure is a stub created for the
+		// duplicate (see the try/catch above); deleting it would drop a routable, done dataset from the
+		// genome even though it stays tracked as done, so the server would report success for a dataset
+		// it can no longer serve.
+		const existing = g.datasets[ds.label]
+		if (existing === ds || !trackedDatasets.includes(existing)) delete g.datasets[ds.label]
+		ds.init.status = 'fatalError'
+		if (!ds.init.error) ds.init.error = stringifyInitError(e)
+		return
 	}
 
 	if (e) console.trace(e)
 
 	if (!ds.init.recoverableError && !utils.nonFatalStatus.has(ds.init.status) && !utils.nonFatalStatus.has(e?.status)) {
-		// forget datasets that did not load or cannot be loaded with retries
-		delete g.datasets[ds.label]
+		// forget datasets that did not load or cannot be loaded with retries — but only remove the
+		// genome's entry when it is THIS dataset, or when the existing entry is an untracked, partially-
+		// constructed object. A duplicate d.name can leave g.datasets[ds.label] pointing at a different,
+		// already-loaded dataset while this failure is a stub created for the duplicate (see the try/catch
+		// above); deleting it would drop a routable, done dataset while the server still reports success.
+		const existing = g.datasets[ds.label]
+		if (existing === ds || !trackedDatasets.includes(existing)) delete g.datasets[ds.label]
 	}
 
 	if (ds.init.fatalError) {

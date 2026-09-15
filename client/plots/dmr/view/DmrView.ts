@@ -175,14 +175,10 @@ export class DmrView {
 		this.dom.diagnosticPanel.style('display', 'none')
 	}
 
-	clearErrors() {
-		this.dom.error.selectAll('*').remove()
-	}
-
 	showLoessNote(show: boolean) {
-		this.dom.error.selectAll('.sjpp-loess-note').remove()
+		this.dom.note.selectAll('*').remove()
 		if (show) {
-			this.dom.error
+			this.dom.note
 				.append('div')
 				.attr('class', 'sjpp-loess-note')
 				.style('color', '#888')

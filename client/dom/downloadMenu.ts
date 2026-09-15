@@ -74,7 +74,8 @@ export class DownloadMenu {
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.attr('data-testid', 'sjpp-download-text')
-				.text('Text')
+				//Request from GDC to change the text label from 'Text' to 'TXT'
+				.text('TXT')
 				.on('click', () => {
 					to_textfile(this.filename + '.txt', this.textCallback())
 					this.menu.hide()

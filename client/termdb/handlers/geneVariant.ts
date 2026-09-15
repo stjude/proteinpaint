@@ -5,9 +5,13 @@ import {
 	GeneSetEditUI,
 	table2col,
 	renderSampleTypeSelect,
-	getSelectedSampleTypes
+	renderSampleTypesByTermsSelect,
+	getSelectedSampleTypes,
+	getSelectedSampleTypesByTerms,
+	getSampleTypeLabelByTerms
 } from '#dom'
 import type { VocabApi, DtAssayAvailabilityTerm } from '#types'
+import { getQuerySampleTypesByTerms } from '#shared/terms.js'
 import { dtTerms, dtcnv, dtsnvindel } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
 import { mayShowRememberedGvQ } from './rememberedGvQ.ts'
@@ -34,7 +38,9 @@ export class SearchHandler {
 	mutationTypeRadio: any
 	mutationTypeTerms!: any[]
 	inputTypeRadio: any
-	sampleTypeSelect?: any[]
+	sampleTypeSelect?: any
+	querySampleTypes?: any
+	querySampleTypesByTerms?: any
 	term: any // tw.term
 	q: any // tw.q
 	callback: any
@@ -149,11 +155,24 @@ export class SearchHandler {
 
 	updateSampleTypeSelect() {
 		const [td1, td2] = this.dom.sampleTypeSelectRow
-		const querySampleTypes = this.getQuerySampleTypes()
-		this.sampleTypeSelect = renderSampleTypeSelect(td2, querySampleTypes, this.opts.app.vocabApi.termdbConfig)
+		this.querySampleTypes = this.getQuerySampleTypes()
+		this.querySampleTypesByTerms = getQuerySampleTypesByTerms(
+			this.opts.app.vocabApi.termdbConfig?.sampleTypesByTerms,
+			this.querySampleTypes
+		)
+		if (this.querySampleTypesByTerms) {
+			// query sample types by terms defined
+			this.sampleTypeSelect = renderSampleTypesByTermsSelect(
+				td2,
+				this.querySampleTypesByTerms,
+				this.opts.app.vocabApi.termdbConfig
+			)
+		} else {
+			this.sampleTypeSelect = renderSampleTypeSelect(td2, this.querySampleTypes, this.opts.app.vocabApi.termdbConfig)
+		}
 		if (this.sampleTypeSelect) {
 			td1.style('display', null).text('Sample Type')
-			td2.style('display', null)
+			td2.style('display', null).style('padding-left', '10px')
 		} else {
 			td1.style('display', 'none')
 			td2.style('display', 'none')
@@ -166,14 +185,37 @@ export class SearchHandler {
 		if (!selectedMutationType) return
 		const mutationTypeIdx = Number(selectedMutationType.value)
 		if (!Number.isInteger(mutationTypeIdx)) return
-		const dt = this.mutationTypeTerms[mutationTypeIdx]?.dt
-		if (!Number.isInteger(dt)) return
-		const bySampleType: BySampleType = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.bySampleType
-		if (!bySampleType) return
+		const mutationType = this.mutationTypeTerms[mutationTypeIdx]
+		if (!mutationType) return
 		const querySampleTypes: number[] = []
-		for (const [k, v] of Object.entries(bySampleType)) {
-			if (v.hasSamples) querySampleTypes.push(Number(k))
+		if (mutationType.dt) {
+			// mutation type has single dt
+			// get available sample types for that dt
+			const bySampleType: BySampleType =
+				this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[mutationType.dt]?.bySampleType
+			if (!bySampleType) return
+			for (const [k, v] of Object.entries(bySampleType)) {
+				if (v.hasSamples) querySampleTypes.push(Number(k))
+			}
+		} else if (mutationType.dts) {
+			// mutation type has multiple dts
+			// get intersection of sample types available for those dts
+			const dts = mutationType.dts
+			const bySampleTypes: BySampleType[] = dts.map(
+				dt => this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.bySampleType
+			)
+			if (!bySampleTypes.length) throw new Error('no sample types available')
+			for (const [sampleType, availability] of Object.entries(bySampleTypes[0])) {
+				if (!availability.hasSamples) continue
+				if (bySampleTypes.slice(1).every(bySampleType => bySampleType?.[sampleType]?.hasSamples)) {
+					querySampleTypes.push(Number(sampleType))
+				}
+			}
 		}
+		// do not assign to this.querySampleTypes here because
+		// this.querySampleTypes must be assigned any return value
+		// of this function, which may be undefined (see earlier
+		// returns above)
 		return querySampleTypes
 	}
 
@@ -368,9 +410,10 @@ export class SearchHandler {
 	}
 
 	mayApplySampleType() {
-		this.term.sampleTypes = getSelectedSampleTypes(this.sampleTypeSelect) || this.getQuerySampleTypes()
+		this.term.sampleTypes = this.querySampleTypesByTerms
+			? getSelectedSampleTypesByTerms(this.sampleTypeSelect, this.querySampleTypesByTerms)
+			: getSelectedSampleTypes(this.sampleTypeSelect) || this.querySampleTypes
 		if (this.sampleTypeSelect && !this.term.sampleTypes?.length) {
-			window.alert('Must select at least one sample type')
 			const geneSetEditUI = this.dom.geneSetEditUI
 			if (geneSetEditUI) {
 				// the gene set edit UI's submit button was disabled on
@@ -379,6 +422,9 @@ export class SearchHandler {
 				geneSetEditUI.api.dom.submitBtn.property('disabled', false).text('Submit')
 			}
 			return false
+		}
+		if (this.querySampleTypesByTerms) {
+			this.term.sampleTypeLabel = getSampleTypeLabelByTerms(this.sampleTypeSelect)
 		}
 		return true
 	}

@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-shared",
-  "version": "2.207.1",
+  "version": "2.208.0",
   "description": "ProteinPaint code that is shared between server and client-side workspaces",
   "type": "module",
   "main": "dist/src/index.js",
@@ -26,7 +26,7 @@
   },
   "scripts": {
     "ts2js": "esbuild src/*.* src/**/*.* --platform=node --outdir=dist/src --format=esm --sourcemap",
-    "build": "rm -rf dist && npm run ts2js && rm -rf dist/**/*.spec.* dist/**/test && tsc --sourcemap --skipLibCheck",
+    "build": "rm -rf dist && npm run ts2js && rm -rf dist/**/*.spec.* dist/**/test && tsc",
     "prepack": "npm run build",
     "dev0": "rm -rf dist && 'npx tsc --watch --skipLibCheck --preserveWatchOutput'",
     "dev": "echo '--- now using raw shared/utils/src exports under conditions=sjpp/dev ---\n'",

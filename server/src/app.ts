@@ -37,7 +37,7 @@ export async function launch() {
 		// setting up auth routes before any other routes are set up
 		const validatedCreds = await extractValidatedCreds(serverconfig)
 		const trackedDatasets = await initGenomesDs(serverconfig, { credDslabels: Object.keys(validatedCreds) })
-		const doneLoading = processTrackedDs(trackedDatasets)
+		const { doneLoading, pendingNotification } = processTrackedDs(trackedDatasets)
 
 		// no error from server initiation
 		console.log(`\n${new Date()} ${serverconfig.commitHash || ''}`)
@@ -90,6 +90,11 @@ shared/types/src/routes and not when modified.
 		if (exit) {
 			if (exit.error) console.error(exit.error)
 			else if (exit.message) console.log(exit.message)
+
+			// Flush any startup notification posted by processTrackedDs() (e.g. a failed-dataset summary)
+			// before exiting: the process.exit() below would otherwise abort the in-flight Slack HTTPS
+			// request and drop the notification. Undefined when nothing was posted, so this is a no-op then.
+			await pendingNotification
 
 			// May terminate background setInterval, timeout, listen steps to allow immediate exit here.
 			// Notes:
@@ -244,6 +249,10 @@ async function setOptionalRoutes(app, genomes) {
 
 function processTrackedDs(trackedDatasets) {
 	const getLabel = ds => `${ds.genomename}/${ds.label}`
+	// the optional failed-dataset Slack post below is async; expose its promise so launch() can await it
+	// before any process.exit() (notably the `validate` early exit), otherwise the in-flight HTTPS
+	// request is aborted and the notification is lost. Stays undefined when nothing is posted.
+	let pendingNotification: Promise<unknown> | undefined
 	// console.log(trackedDatasets.map(ds => [ds.label, ds.init.status]))
 	const done = trackedDatasets.filter(ds => ds.init.status === 'done')
 	const nonblocking = trackedDatasets.filter(
@@ -325,7 +334,7 @@ function processTrackedDs(trackedDatasets) {
 			// so must trigger a notification here
 			const hostname =
 				serverconfig.hostname || spawnSync('hostname', ['-s'], { encoding: 'utf-8' })?.stdout?.trim() || ''
-			sendMessageToSlack(
+			pendingNotification = sendMessageToSlack(
 				serverconfig.slackWebhookUrl,
 				`\n${serverconfig.URL} ${hostname}: ${msg}`,
 				path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
@@ -333,5 +342,5 @@ function processTrackedDs(trackedDatasets) {
 		}
 	}
 
-	return done.map(getLabel)
+	return { doneLoading: done.map(getLabel), pendingNotification }
 }
