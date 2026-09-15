@@ -215,7 +215,9 @@ export class SearchHandler {
 	/* sample types that have samples for one dt. they may be declared directly on the dt,
 	or nested under one or more origins (e.g. somatic split into primary/PDX while germline
 	is a single patient-level term). a sample type is included when any declaring entry has
-	samples. returns undefined when the dt declares no sample types */
+	samples. a type that is the parent of another type (e.g. patient above primary and PDX
+	samples) annotates availability at that level but holds no genomic data itself, so it is
+	never offered for querying. returns undefined when the dt declares no sample types */
 	getDtSampleTypes(dt: number): Set<number> | undefined {
 		const dtConfig = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]
 		if (!dtConfig) return
@@ -232,6 +234,12 @@ export class SearchHandler {
 			for (const [k, v] of Object.entries(bySampleType)) {
 				if (v.hasSamples) sampleTypes.add(Number(k))
 			}
+		}
+		const allTypes: { parent_id?: number | null }[] = Object.values(
+			this.opts.app.vocabApi.termdbConfig?.sampleTypes || {}
+		)
+		for (const t of allTypes) {
+			if (Number.isInteger(t?.parent_id)) sampleTypes.delete(t.parent_id as number)
 		}
 		return sampleTypes
 	}
