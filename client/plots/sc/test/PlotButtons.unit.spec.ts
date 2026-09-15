@@ -16,6 +16,7 @@ import { getMockSCState } from './getMockSCApp.ts'
  *   - getChartBtnOpts() should include only plots found in availablePlots
  *   - getChartBtnOpts() Spatial button visibility should follow data.hasSpatial
  *   - getChartBtnOpts() Spatial button should spawn the wsi plot in fixed-sample mode
+ *   - renderChartBtns() should omit disabled plot types
  *   - getSingleCellConfig() should return sampleScatter config
  *   - getSingleCellConfig() should throw when no item is selected
  *   - getSingleCellConfig() should throw when plot name is not found
@@ -273,6 +274,41 @@ tape('getChartBtnOpts() Spatial button should spawn the wsi plot in fixed-sample
 	test.equal(config.chartType, 'wsi', 'Should set chartType to wsi')
 	test.deepEqual(config.sample, { sID: 'S1', eID: 'EXP1' }, 'Should pin the selected sample (fixed-sample mode)')
 	test.equal(config.name, 'Sample: S1 Spatial', 'Should name the subplot after the sample')
+	test.end()
+})
+
+tape('renderChartBtns() should omit disabled plot types', test => {
+	const pb = getPlotButtons({
+		termdbConfig: {
+			queries: {
+				singleCell: {
+					data: {
+						plots: [{ name: 'umap' }, { name: 'tsne' }]
+					},
+					scApp: { disabledPlots: ['sampleScatter'] }
+				}
+			}
+		}
+	})
+	pb.item = { sID: 'S1', eID: 'EXP1' }
+	pb.availablePlots = new Set(['umap', 'tsne'])
+
+	let renderedBtns: any[] = []
+	const selection: any = {
+		data(btns: any[]) {
+			renderedBtns = btns
+			return selection
+		}
+	}
+	for (const method of ['enter', 'append', 'attr', 'style', 'text', 'on']) selection[method] = () => selection
+	;(pb.plotBtnsDom.btnsDiv as any).selectAll = () => selection
+
+	pb.renderChartBtns()
+	const labels = renderedBtns.map(b => b.label)
+
+	test.notOk(labels.includes('umap'), 'Should omit disabled sampleScatter plots')
+	test.notOk(labels.includes('tsne'), 'Should omit disabled sampleScatter plots')
+	test.ok(labels.includes('Summary'), 'Should retain enabled Summary plot')
 	test.end()
 })
 
