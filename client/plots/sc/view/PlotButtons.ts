@@ -234,7 +234,8 @@ export class PlotButtons {
 					return {
 						chartType: 'wsi',
 						name: `Sample: ${sample.sID} Spatial`,
-						sample
+						sample,
+						plotName: 'Spatial'
 					}
 				}
 			}

@@ -1171,7 +1171,7 @@ export type SingleCellData = {
 
 export type SingleCellQuery = {
 	/** UI related settings */
-	scApp: {
+	scApp?: {
 		/** disable specific plots in the UI.
 		 * This is specifically for the GDC. In the future
 		 * maybe able to use defined/derived enabled chart types
