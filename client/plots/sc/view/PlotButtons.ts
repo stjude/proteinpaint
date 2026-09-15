@@ -74,11 +74,16 @@ export class PlotButtons {
 
 	renderChartBtns() {
 		this.plotBtnsDom.btnsDiv.selectAll('*').remove()
-		const btns = this.getChartBtnOpts()
+		/** TODO: May eventually get rid of this an used support chart types already 
+		 * defined in the termdbConfig when more data available. In the interim, 
+		 * the summary plot in particular maybe hidden if no cell type 
+		 * annotations are available. */
+		const disabledPlots = this.scTermdbConfig?.scApp?.disabledPlots || []
+		const btns = this.getChartBtnOpts().filter(b => !disabledPlots.includes(b.chartType)).filter(b => b.isVisible())
 
 		this.plotBtnsDom.btnsDiv
 			.selectAll('button')
-			.data(btns.filter(b => (b.isVisible ? b.isVisible() : true)))
+			.data(btns)
 			.enter()
 			.append('button')
 			.attr('type', 'button')
@@ -106,6 +111,7 @@ export class PlotButtons {
 	getChartBtnOpts() {
 		const btns: {
 			label: string
+			chartType: string
 			isVisible: () => boolean
 			open?: (plot: any, self: PlotButtons) => void
 			getPlotConfig?: (f?: any) => any
@@ -115,6 +121,7 @@ export class PlotButtons {
 			if (!this.availablePlots.has(plot.name)) continue
 			btns.push({
 				label: plot.name,
+				chartType: 'sampleScatter',
 				isVisible: () => true,
 				getPlotConfig: async () => {
 					return await this.getSingleCellConfig(plot.name)
@@ -124,6 +131,7 @@ export class PlotButtons {
 		btns.push(
 			{
 				label: 'Summary',
+				chartType: 'dictionary',
 				isVisible: () => true,
 				getPlotConfig: () => {
 					const sample = { ...this.item!, plots: Array.from(this.availablePlots) }
@@ -151,6 +159,7 @@ export class PlotButtons {
 			},
 			{
 				label: 'Gene expression',
+				chartType: 'GeneExpInput',
 				isVisible: () => this.scTermdbConfig?.geneExpression,
 				getPlotConfig: () => {
 					const sample = this.item!
@@ -181,6 +190,7 @@ export class PlotButtons {
 			},
 			{
 				label: 'Differential expression',
+				chartType: 'DA',
 				isVisible: () => this.scTermdbConfig?.DEgenes,
 				open: this.termDropdownMenu,
 				getPlotConfig: value => {
@@ -198,6 +208,7 @@ export class PlotButtons {
 			},
 			{
 				label: this.scTermdbConfig?.images?.label || 'Image',
+				chartType: 'imagePlot',
 				isVisible: () =>
 					this.scTermdbConfig?.images && this.availablePlots.has(this.scTermdbConfig.images.label || 'Image'),
 				getPlotConfig: () => {
@@ -216,6 +227,7 @@ export class PlotButtons {
 				// wsiBySample probe sets data.hasSpatial); spawns the w2 wsi plot in
 				// fixed-sample mode, which has its own burger menu for the overlays
 				label: 'Spatial',
+				chartType: 'wsi',
 				isVisible: () => !!this.data?.hasSpatial,
 				getPlotConfig: () => {
 					const sample = this.item!
