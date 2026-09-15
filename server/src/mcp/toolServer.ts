@@ -107,5 +107,25 @@ export function createMcpServer(): McpServer {
 		}
 	)
 
+	server.registerTool(
+		'list_datasets',
+		{
+			title: 'List ProteinPaint datasets',
+			description:
+				`Return a list of all datasets available on the running ProteinPaint dev server, ` +
+				`as genome/dslabel pairs. Call this first if you don't already know which genome/dslabel ` +
+				`to use with search_terms or create_summary_plot.`,
+			inputSchema: {}
+		},
+		async () => {
+			const url = new URL('/mcp/listDatasets', PP_SERVER)
+			const res = await fetch(url)
+			if (!res.ok) throw new Error(`list_datasets: PP server responded ${res.status} ${await res.text()}`)
+			const datasets: any = await res.json()
+
+			return { content: [{ type: 'text', text: JSON.stringify(datasets, null, 2) }] }
+		}
+	)
+
 	return server
 }
