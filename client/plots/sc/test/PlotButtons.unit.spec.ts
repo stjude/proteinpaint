@@ -274,6 +274,11 @@ tape('getChartBtnOpts() Spatial button should spawn the wsi plot in fixed-sample
 	test.equal(config.chartType, 'wsi', 'Should set chartType to wsi')
 	test.deepEqual(config.sample, { sID: 'S1', eID: 'EXP1' }, 'Should pin the selected sample (fixed-sample mode)')
 	test.equal(config.name, 'Sample: S1 Spatial', 'Should name the subplot after the sample')
+	test.equal(
+		config.plotName,
+		'Spatial',
+		'Should label the plot Spatial (section title / table button), not the raw chartType'
+	)
 	test.end()
 })
 
@@ -399,7 +404,7 @@ tape('makeScTW() should return term wrapper with sample and $id', async test => 
 	const item = { sID: 'S1', eID: 'EXP1' }
 	const plot = { name: 'umap', colorColumns: [{ name: 'cellType' }] }
 
-	const tw = await pb.makeScTW('scct',item, plot)
+	const tw = await pb.makeScTW('scct', item, plot)
 
 	test.ok(tw.$id, 'Should have $id')
 	test.equal(typeof tw.$id, 'string', '$id should be a string')

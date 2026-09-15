@@ -67,7 +67,7 @@ tape('\n', function (test) {
 
 tape('getTermdbConfig()', async test => {
 	test.timeoutAfter(100)
-	test.plan(3)
+	test.plan(4)
 
 	/* Example of using TestApp for testing */
 	const termdbVocabApi = await getTermdbVocabApi()
@@ -97,6 +97,16 @@ tape('getTermdbConfig()', async test => {
 			? true
 			: false
 	test.ok(validateSelectCohort, 'Should include all required keys for .selectCohort')
+
+	//.queries.w2 — the presence-only capability marker the sc app's spatial
+	//probe gates on (SCModel.hasSpatialImage). TermdbTest configures
+	//ds.queries.w2, so the real config response must carry the marker: if
+	//addNonDictionaryQueries() stopped emitting it, the Spatial button would
+	//silently disappear for every sample while the mocked SC tests still pass.
+	test.ok(
+		termdbConfig.queries?.w2 && typeof termdbConfig.queries.w2 == 'object',
+		'Should include the queries.w2 spatial-capability marker for TermdbTest'
+	)
 })
 
 tape('getTermChildren()', async test => {
