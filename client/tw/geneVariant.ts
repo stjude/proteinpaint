@@ -292,8 +292,12 @@ export class GvPredefinedGS extends GvBase {
 	}
 
 	getTitleText() {
-		const gsname = this.term?.groupsetting?.lst?.[this.q.predefined_groupset_idx].name || ''
-		return `${this.term.name} ${gsname}`
+		let text = this.term.name
+		const gsname = this.term?.groupsetting?.lst?.[this.q.predefined_groupset_idx].name
+		if (gsname) text += ` ${gsname}`
+		const sampleTypeLabel = this.term.sampleTypeLabel
+		if (sampleTypeLabel) text += ` (${sampleTypeLabel})`
+		return text
 	}
 }
 

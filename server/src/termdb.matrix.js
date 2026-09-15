@@ -10,7 +10,7 @@ import {
 	isSingleCellTerm,
 	getBin,
 	getTwSampleTypes,
-	DEFAULT_SAMPLE_TYPE
+	getDefaultSampleTypes
 } from '#shared/terms.js'
 import {
 	DNA_METHYLATION,
@@ -376,7 +376,18 @@ async function getSampleData(q, ds) {
 
 	// determine the sample type
 	let sampleType
-	if (q.sampleTypes) {
+	if (ds.cohort.termdb.sampleTypesByTerms) {
+		// sample type based on terms
+		if (q.sampleTypes.length == 1 && !Number.isInteger(ds.cohort.termdb.sampleTypes[q.sampleTypes[0]].parent_id)) {
+			// query sample type is root, so use its config
+			sampleType = ds.cohort.termdb.sampleTypes[q.sampleTypes[0]]
+		} else {
+			// query sample type(s) are non-root
+			// sample type label already displayed in term pill and sandbox header
+			// so only need to render minimal samples label in plot
+			sampleType = { name: 'sample', plural_name: 'samples' }
+		}
+	} else if (q.sampleTypes) {
 		// query sample types defined
 		const names = []
 		const plural_names = []
@@ -385,7 +396,10 @@ async function getSampleData(q, ds) {
 			names.push(config.name)
 			plural_names.push(config.plural_name)
 		}
-		sampleType = { name: names.join(' / '), plural_name: plural_names.join(' / ') }
+		sampleType = {
+			name: names.join(' / '),
+			plural_name: plural_names.join(' / ')
+		}
 	} else if (processedSingleCellTerm === true) {
 		// work around for single cell cases
 		// TODO: may support single cell as another
@@ -684,7 +698,7 @@ export function maySetMapParent2Children(q, ds, mapParent2Children) {
 	if (typeof mapParent2Children === 'boolean') {
 		// flag supplied by caller
 		q.mapParent2Children = mapParent2Children
-		q.sampleTypes = [DEFAULT_SAMPLE_TYPE]
+		q.sampleTypes = getDefaultSampleTypes(ds)
 		return
 	}
 	// determine query sample types

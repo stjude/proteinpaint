@@ -222,10 +222,13 @@ function getVocabApiWithSampleTypes() {
 		...termdbConfig.assayAvailability.byDt[dtsnvindel],
 		bySampleType: { 1: { hasSamples: true }, 2: { hasSamples: true } }
 	}
+	delete termdbConfig.assayAvailability.byDt[dtsnvindel].byOrigin
 	termdbConfig.assayAvailability.byDt[dtcnv] = {
 		...termdbConfig.assayAvailability.byDt[dtcnv],
 		bySampleType: { 1: { hasSamples: true } }
 	}
+	termdbConfig.queries.snvindel = { ...termdbConfig.queries.snvindel, mafFilter: true }
+	termdbConfig.queries.cnv = { ...termdbConfig.queries.cnv, cnvGainCutoff: 1 }
 	return Object.assign(Object.create(vocabApi), { termdbConfig })
 }
 
@@ -241,10 +244,25 @@ tape('Sample types are derived from current assay availability', async test => {
 	test.end()
 })
 
+tape('Sample types are intersected for a multi-DT mutation type', async test => {
+	const holder = getHolder()
+	const handler = await initializeSearchHandler({ holder, vocabApi: getVocabApiWithSampleTypes() })
+	const allelicRadio: any = holder
+		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
+		.selectAll('input[type="radio"]')
+		.nodes()
+		.slice(-1)[0]
+	allelicRadio.click()
+	test.deepEqual(handler.getQuerySampleTypes(), [1], 'should return only sample types available for SNV/indel and CNV')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
 tape('Sample type selection is cleared when changing to a mutation type without a selector', async test => {
 	let tw
 	const holder = getHolder()
-	await initializeSearchHandler({
+	const handler = await initializeSearchHandler({
 		holder,
 		callback: _tw => (tw = _tw),
 		vocabApi: getVocabApiWithSampleTypes()
@@ -255,10 +273,11 @@ tape('Sample type selection is cleared when changing to a mutation type without 
 	await pickGene(holder)
 	test.deepEqual(tw.term.sampleTypes, [2], 'should submit the selected sample type')
 
+	const cnvMutationTypeIdx = handler.mutationTypeTerms.findIndex((term: any) => term.dt == dtcnv)
 	const cnvRadio: any = holder
 		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
 		.selectAll('input[type="radio"]')
-		.nodes()[2]
+		.nodes()[cnvMutationTypeIdx]
 	cnvRadio.click()
 	test.equal(
 		holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').size(),
@@ -281,7 +300,7 @@ tape('Continuing past remembered settings does not retain sample types from anot
 	const vocabApiWithRememberedKrasQ = Object.assign(Object.create(sampleTypeVocabApi), {
 		getGvQLst: (term: any) => (term.name == 'KRAS' ? structuredClone(rememberedLst) : [])
 	})
-	await initializeSearchHandler({
+	const handler = await initializeSearchHandler({
 		holder,
 		callback: _tw => (tw = _tw),
 		vocabApi: vocabApiWithRememberedKrasQ,
@@ -291,13 +310,17 @@ tape('Continuing past remembered settings does not retain sample types from anot
 	await pickGene(holder)
 	test.deepEqual(tw.term.sampleTypes, [2], 'should submit the selected SNV/indel sample type')
 
+	const cnvMutationTypeIdx = handler.mutationTypeTerms.findIndex((term: any) => term.dt == dtcnv)
 	const cnvRadio: any = holder
 		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
 		.selectAll('input[type="radio"]')
-		.nodes()[2]
+		.nodes()[cnvMutationTypeIdx]
 	cnvRadio.click()
 	await pickGene(holder, 'KRAS')
-	const continueWithCnv: any = holder.selectAll('.sja_menuoption').nodes()[0]
+	const continueWithCnv: any = holder
+		.selectAll('.sja_menuoption')
+		.nodes()
+		.find((option: any) => option.textContent == `Continue with ${handler.mutationTypeTerms[cnvMutationTypeIdx].name}`)
 	continueWithCnv.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
 	await sleep(100)
 	test.deepEqual(tw.term.sampleTypes, [1], 'should not retain the prior SNV/indel sample type')
