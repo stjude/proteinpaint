@@ -344,7 +344,13 @@ function compileFilter0Tri(node): (d: any, caseObj: any) => number {
 	// GDC fields carry a "cases." or "case." prefix, e.g. "cases.diagnoses.age_at_diagnosis"
 	const dm = field.match(/(?:^|\.)diagnoses\.(.+)$/)
 	if (dm) {
-		const leaf = { op, key: dm[1], value: node.content.value }
+		const key = dm[1]
+		// only a direct diagnosis sub-field (e.g. age_at_diagnosis, primary_diagnosis) is supported.
+		// a dotted descendant (e.g. treatments.treatment_type) sits under a nested array; a literal
+		// lookup cannot read it and GDC's nested matching is not replicated here, so treat it as UNKNOWN
+		// (undecidable) rather than a false match that would wrongly force the SV-2770 fallback.
+		if (key.includes('.')) return () => TRI_UNKNOWN
+		const leaf = { op, key, value: node.content.value }
 		return (d: any) => (evalDiagnosisLeaf(leaf, d) ? TRI_TRUE : TRI_FALSE)
 	}
 	// case-level leaf: strip the leading "cases."/"case." segment and resolve against caseObj
@@ -387,7 +393,10 @@ function collectFilter0Fields(node, out) {
 	out.push(m ? m[1] : field)
 }
 
-// used only by getDiagnosisEvaluator's gate: does filter0 reference any diagnoses.<key> leaf?
+// used only by getDiagnosisEvaluator's gate: does filter0 reference a SUPPORTED (direct) diagnoses
+// sub-field leaf? A dotted descendant (e.g. diagnoses.treatments.treatment_type) is not evaluable here
+// (see compileFilter0Tri) so it must not, on its own, gate an evaluator into existence -- otherwise a
+// treatments-only filter0 would build an all-UNKNOWN evaluator instead of using the default selection.
 function collectDiagnosisLeaves(node, out) {
 	if (!node || typeof node != 'object') return
 	if (Array.isArray(node.content) && (node.op == 'and' || node.op == 'or')) {
@@ -395,7 +404,6 @@ function collectDiagnosisLeaves(node, out) {
 		return
 	}
 	if (node.op == 'not') {
-		// descend so a diagnoses field referenced only inside a negation is still fetched
 		if (Array.isArray(node.content)) for (const c of node.content) collectDiagnosisLeaves(c, out)
 		else collectDiagnosisLeaves(node.content, out)
 		return
@@ -404,7 +412,7 @@ function collectDiagnosisLeaves(node, out) {
 	if (typeof field != 'string') return
 	// GDC fields carry a "cases." or "case." prefix, e.g. "cases.diagnoses.age_at_diagnosis"
 	const m = field.match(/(?:^|\.)diagnoses\.(.+)$/)
-	if (!m) return
+	if (!m || m[1].includes('.')) return // skip non-diagnoses and unsupported dotted descendants
 	out.push({ op: node.op, key: m[1], value: node.content.value })
 }
 

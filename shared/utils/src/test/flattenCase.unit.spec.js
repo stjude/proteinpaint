@@ -415,6 +415,42 @@ tape('flattenCaseByFields(): case-level string leaves match case-insensitively',
 	test.end()
 })
 
+// a dotted diagnosis descendant (e.g. diagnoses.treatments.treatment_type) is array-backed and not
+// evaluable by a literal lookup; it must compile to UNKNOWN, not a false match. Combined with a
+// supported age leaf, the in-range diagnosis stays selectable (UNKNOWN) rather than being rejected
+// (false) and falling back to the out-of-range primary.
+tape('flattenCaseByFields(): unsupported dotted diagnosis descendant does not force a false fallback', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: 19175,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'and',
+		content: [
+			{ op: '>=', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 18263 } },
+			{ op: '<', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 21915 } },
+			// dotted descendant under the diagnosis' treatments[] array -- unsupported, compiles to UNKNOWN
+			{ op: 'in', content: { field: 'cases.diagnoses.treatments.treatment_type', value: ['Chemotherapy'] } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19175 },
+		'the in-range diagnosis is still chosen; the unevaluable treatments leaf is UNKNOWN, not false'
+	)
+	test.end()
+})
+
 // a diagnosis satisfying a non-age constraint (primary_diagnosis) must be selectable even when its
 // age_at_diagnosis is null -- the evaluator, not a blanket null-age drop, decides selection (SV-2821)
 tape('flattenCaseByFields(): non-age constraint selects a diagnosis with null age', test => {
