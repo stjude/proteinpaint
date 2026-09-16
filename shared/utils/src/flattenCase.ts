@@ -248,11 +248,16 @@ function chooseDiagnosis(allDiagnoses, matcher) {
 	return diagnoses[0]
 }
 
-/* SV-2821: read the diagnoses-scoped value constraints out of a GDC cohort filter (filter0) and
-return a predicate testing whether a single diagnosis entry satisfies all of them; null when filter0
-constrains no diagnoses field, so chooseDiagnosis uses the default SV-2770 selection. Handles the
-age_at_diagnosis range and a primary_diagnosis set -- any leaf whose field is "*.diagnoses.<key>".
-Parsing is memoized per filter0 object, since flattenCaseByFields runs once per case per term. */
+/* SV-2821: compile a GDC cohort filter (filter0) into a predicate testing whether a single diagnosis
+entry satisfies the filter's diagnoses-scoped conditions; null when filter0 constrains no diagnoses
+field, so chooseDiagnosis uses the default SV-2770 selection. Handles the age_at_diagnosis range and a
+primary_diagnosis set -- any leaf whose field is "*.diagnoses.<key>".
+
+The nested and/or operators are preserved (see compileDiagnosisNode): flattening the tree into a
+single AND was wrong -- "primary_diagnosis in [A] OR primary_diagnosis in [B]" would then require a
+diagnosis to be both A and B, match nothing, and fall back to the primary diagnosis (re-binning the
+case outside the cohort). Parsing is memoized per filter0 object, since flattenCaseByFields runs once
+per case per term. */
 const filter0MatcherCache = new WeakMap<object, ((d: any) => boolean) | null>()
 function getDiagnosisMatcher(filter0) {
 	// cache hit first: the hot path is repeat calls with the same filter0 over re.data.hits[].
@@ -260,11 +265,41 @@ function getDiagnosisMatcher(filter0) {
 	// so the object guard below is only needed to protect the .set() further down
 	if (filter0MatcherCache.has(filter0)) return filter0MatcherCache.get(filter0)!
 	if (!filter0 || typeof filter0 != 'object') return null
-	const leaves: Array<{ op: string; key: string; value: any }> = []
-	collectDiagnosisLeaves(filter0, leaves)
-	const matcher = leaves.length ? (d: any) => leaves.every(l => evalDiagnosisLeaf(l, d)) : null
+	const matcher = compileDiagnosisNode(filter0)
 	filter0MatcherCache.set(filter0, matcher)
 	return matcher
+}
+
+/* compile one filter0 node into a per-diagnosis predicate, or null when the node constrains no
+diagnoses field. and/or groups keep their boolean meaning; a non-diagnoses leaf (e.g. primary_site)
+compiles to null and is dropped -- it is a case-level condition already satisfied by every returned
+case, so it must neither tighten an AND nor, on its own, satisfy an OR. A group with no diagnoses
+leaf anywhere therefore compiles to null (no diagnosis-level constraint). */
+function compileDiagnosisNode(node): ((d: any) => boolean) | null {
+	if (!node || typeof node != 'object') return null
+	if (Array.isArray(node.content) && (node.op == 'and' || node.op == 'or')) {
+		const children = node.content.map(compileDiagnosisNode).filter(Boolean) as Array<(d: any) => boolean>
+		if (!children.length) return null
+		return node.op == 'or' ? (d: any) => children.some(fn => fn(d)) : (d: any) => children.every(fn => fn(d))
+	}
+	if (node.op == 'not') {
+		// boolean negation of the wrapped sub-filter. content may be a single node or an array of
+		// nodes (implicitly AND-ed before negating). Only meaningful when it wraps a diagnoses
+		// constraint; if the wrapped expression has none (compiles to null -- e.g. GDC's field-presence
+		// `not` leaf, or a non-diagnoses condition), the negation constrains no diagnosis, so return null.
+		const inner = Array.isArray(node.content)
+			? compileDiagnosisNode({ op: 'and', content: node.content })
+			: compileDiagnosisNode(node.content)
+		return inner ? (d: any) => !inner(d) : null
+	}
+	// leaf
+	const field = node.content?.field
+	if (typeof field != 'string') return null
+	// GDC fields carry a "cases." or "case." prefix, e.g. "cases.diagnoses.age_at_diagnosis"
+	const m = field.match(/(?:^|\.)diagnoses\.(.+)$/)
+	if (!m) return null
+	const leaf = { op: node.op, key: m[1], value: node.content.value }
+	return (d: any) => evalDiagnosisLeaf(leaf, d)
 }
 
 /* the diagnoses sub-field names a filter0 references (e.g. 'age_at_diagnosis'), so a caller building
@@ -282,6 +317,12 @@ function collectDiagnosisLeaves(node, out) {
 		for (const c of node.content) collectDiagnosisLeaves(c, out)
 		return
 	}
+	if (node.op == 'not') {
+		// descend so a diagnoses field referenced only inside a negation is still fetched
+		if (Array.isArray(node.content)) for (const c of node.content) collectDiagnosisLeaves(c, out)
+		else collectDiagnosisLeaves(node.content, out)
+		return
+	}
 	const field = node.content?.field
 	if (typeof field != 'string') return
 	// GDC fields carry a "cases." or "case." prefix, e.g. "cases.diagnoses.age_at_diagnosis"
@@ -297,6 +338,11 @@ function evalDiagnosisLeaf(l, d) {
 	// filter0's value[] set (Array) -- or a scalar value via loose equality
 	if (l.op == 'in') return Array.isArray(l.value) ? l.value.includes(v) : v == l.value
 	if (l.op == '=' || l.op == '==') return v == l.value
+	// GDC leaf-level negation: 'exclude' is NOT IN, '!='/'<>' is not-equal. filter2GDCfilter() emits
+	// these for an isnot tvs, and a portal filter0 can carry them directly. A missing value already
+	// returned false above (conservative: a diagnosis we cannot verify is not selected).
+	if (l.op == 'exclude') return Array.isArray(l.value) ? !l.value.includes(v) : v != l.value
+	if (l.op == '!=' || l.op == '<>') return v != l.value
 	// remaining ops are numeric range bounds (e.g. age_at_diagnosis in days). filter0 is not
 	// type-checked, so a non-numeric bound or value would silently fall into JS string comparison;
 	// require both to be numbers, else treat as non-matching (safe fallback to default selection)
