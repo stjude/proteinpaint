@@ -622,6 +622,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 			.attr('text-anchor', 'end')
 			.attr('font-size', computed.rowfontsize + 'px')
 			.html(hm.handlers.barLabel.text)
+			.attr('data-testid', 'sjpp-row-label-' + d.seriesId)
 
 		g.transition().delay(hm.delay).duration(hm.duration).style('opacity', 1)
 	}
