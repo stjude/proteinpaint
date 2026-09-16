@@ -167,6 +167,103 @@ tape('flattenCaseByFields(): filter0 primary_diagnosis set selects the matching 
 	test.end()
 })
 
+// the nested and/or operators must be preserved when compiling the predicate. flattening the tree
+// into one AND would require a diagnosis to satisfy BOTH branches of an OR at once -> match nothing
+// -> wrongly fall back to the primary diagnosis and re-bin the case outside the cohort condition.
+tape('flattenCaseByFields(): filter0 OR of diagnoses leaves matches either branch', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: 19175,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	// primary_diagnosis in [Squamous...] OR primary_diagnosis in [Small cell...]:
+	// the non-primary Squamous diagnosis (19175) satisfies the first branch and must be chosen
+	const filter0 = {
+		op: 'or',
+		content: [
+			{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Squamous cell carcinoma, NOS'] } },
+			{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Small cell carcinoma'] } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19175 },
+		'a diagnosis matching either OR branch is chosen (tree structure preserved, not AND-flattened)'
+	)
+	test.end()
+})
+
+// a `not` group negates its wrapped sub-filter; the diagnosis NOT excluded by it must be chosen.
+// without not-group handling the node compiles to null -> default selection -> the primary diagnosis
+tape('flattenCaseByFields(): filter0 not-group negation selects the non-excluded diagnosis', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: 19175,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	// NOT(primary_diagnosis in [Adenocarcinoma]) -> the Squamous (non-primary, 19175) diagnosis qualifies
+	const filter0 = {
+		op: 'not',
+		content: { op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Adenocarcinoma, NOS'] } }
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19175 },
+		'the diagnosis not excluded by the negation is chosen'
+	)
+	test.end()
+})
+
+// GDC expresses an isnot categorical constraint as a leaf-level `exclude` (NOT IN); the diagnosis
+// that is not excluded must be chosen. Before exclude/!= were handled, the leaf matched nothing and
+// the case fell back to the primary diagnosis.
+tape('flattenCaseByFields(): filter0 leaf-level exclude selects the non-excluded diagnosis', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: 19175,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'and',
+		content: [
+			{ op: 'exclude', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Adenocarcinoma, NOS'] } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19175 },
+		'exclude (NOT IN) selects the diagnosis whose value is not in the excluded set'
+	)
+	test.end()
+})
+
 // when no diagnosis satisfies filter0, fall back to the deterministic SV-2770 selection so behavior
 // is unchanged for cases the cohort filter matched for a non-diagnoses reason (e.g. primary_site)
 tape('flattenCaseByFields(): filter0 falls back to the primary diagnosis when none matches', test => {
