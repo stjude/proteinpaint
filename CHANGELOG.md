@@ -12,12 +12,28 @@ Features:
 - DMR region analysis runs on datasets with no genome-wide CpG matrix, via per-chromosome CpG
 - DMR analysis can be launched from the group menu, not only by clicking a volcano hit. The picker's
 - dmrcate is 40% faster and uses 5x less memory on a genome-wide scan, with byte-identical output.
+- The genome-wide DMR scan is an element class of the differential-methylation volcano: pick "DMRs
+- A scan draws two figures beside the volcano, on one x axis: a Manhattan plot of every kept DMR,
+- Both figures put the top 1,000 per direction on a hover-and-click layer. A profile bin reports its
+- Hovering a DMR or bin on any of the scan's three figures rings what overlaps it on the other two:
+- The genome browser opened from a scan keeps the scan's DMRs as a track wherever the reader goes,
+- DMRcate's lambda, C and per-CpG FDR cutoff are exposed in the volcano controls for a scan, with
+- "Genes, expression and literature" on a scan links every DMR to the genes it touches by
+- Clicking a DMR opens a violin of that region per sample, or a genome browser on the DMR with the
+- Three expression follow-ups, on the samples the methylation was measured on rather than everyone
+- Scan controls: chromosome, background correction, and "Min CpGs per DMR" (default 5; 2-CpG calls
 
 Fixes:
 - dmrcate no longer emits thousands of false DMRs on a chromosome where NO probe passes per-CpG
 - The element methylation getter returns values on the unit it advertises; a beta-unit entry was
 - The DMR region view's errors are visible. It wrote them into a div the rx update loop empties
 - DMR analysis no longer reports "Group 1 needs at least 3 samples" on datasets whose sample groups
+- GSEA on a scan ranks the chromosomes the scan ran on. It ranked the whole genome regardless, so a
+- Differential methylation works on a dataset whose only methylation backing is a CpG matrix; the
+- GSEA's 500-gene ceiling applies only to a scan's gene-body ranking. It had been lowered from
+- A proteome DAP volcano calls its single p-value an FDR again. The label is read off the term type,
+- A genome-wide analysis refuses a chromosome whose CpG matrix shard is missing, naming it, rather
+- Hardening on the new routes: a caller-supplied chromosome list is bounded and deduplicated before
 
 
 ## 2.208.0
