@@ -118,6 +118,14 @@ const defaultOpts = {
 			maxAge: day * 30,
 			skipMs: halfDay,
 			fileExtensions: new Set(['.jpg'])
+		},
+		// Cached bedj track files served by tkbedj when req.query.isCache=true (see bedj.js).
+		// Flat tabix/bigbed files plus index, evicted by mtime like any other subdir.
+		bedj: {
+			...subdirOptsDefaults,
+			maxAge: day * 30,
+			skipMs: halfDay,
+			fileExtensions: new Set(['.gz', '.tbi', '.csi', '.bb'])
 		}
 		// bam: {
 		//  ...subdirOptsDefaults,

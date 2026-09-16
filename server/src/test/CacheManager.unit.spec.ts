@@ -136,6 +136,14 @@ tape('defaults', function (test) {
 							fileExtensions: new Set(['.jpg']),
 							absPath: `${m.cachedir}/wsitiles`,
 							skipUntil: 0
+						},
+						bedj: {
+							maxAge: 2592000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							fileExtensions: new Set(['.gz', '.tbi', '.csi', '.bb']),
+							absPath: `${m.cachedir}/bedj`,
+							skipUntil: 0
 						}
 					},
 					`should set default subdir properties`
@@ -158,7 +166,8 @@ tape('defaults', function (test) {
 							topve: { deletedCount: 0, totalCount: 0 },
 							gdcCounts: { deletedCount: 0, totalCount: 0 },
 							daAnalysis: { deletedCount: 0, totalCount: 0 },
-							wsitiles: { deletedCount: 0, totalCount: 0 }
+							wsitiles: { deletedCount: 0, totalCount: 0 },
+							bedj: { deletedCount: 0, totalCount: 0 }
 						},
 						`should detect no cache files to delete`
 					)
