@@ -704,11 +704,10 @@ export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
 	// determine query sample types
 	const sampleTypes = getSampleTypes(q, ds)
 	const types = [...sampleTypes]
-	if (!types.length) {
-		throw 'no sample types found'
-	} else if (types.length == 1) {
+	if (!types.length) throw 'no query sample types'
+	for (const t of types) if (!ds.cohort.termdb.sampleTypes[t]) throw 'invalid query sample types'
+	if (types.length == 1) {
 		// single sample type, no need to map parent to children
-		if (!ds.cohort.termdb.sampleTypes[types[0]]) throw 'invalid sample type'
 		q.mapParent2Children = false
 		q.sampleTypes = types
 	} else {

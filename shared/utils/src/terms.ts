@@ -143,7 +143,11 @@ const categoricalTypes = new Set([CATEGORICAL, SNP])
 /** Note: Do not add pseudobulk here. These capture cell level terms.
  * Pseudobulk terms are sample level terms. May in the future update
  * to isSCCellLevelTerms() and isSingleCellTerm() if the need arises */
-const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE /*PSEUDOBULK*/])
+const singleCellTerms = new Set([
+	SINGLECELL_CELLTYPE,
+	SINGLECELL_GENE_EXPRESSION,
+	SINGLECELL_NUMERIC_VALUE /*PSEUDOBULK*/
+])
 
 export function isSingleCellTerm(term: any) {
 	if (!term) return false
@@ -619,7 +623,8 @@ export function getTwSampleTypes(tw: any, ds: any) {
 		return term.sampleTypes
 	}
 	if (ds.cohort.termdb.term2SampleType.has(term.id)) {
-		return [ds.cohort.termdb.term2SampleType.get(term.id)]
+		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
+		return Array.isArray(sampleType) ? sampleType : [sampleType]
 	}
 	const defaultSampleTypes = getDefaultSampleTypes(ds)
 	if (term.type == 'samplelst') {
