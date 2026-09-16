@@ -336,6 +336,85 @@ tape('flattenCaseByFields(): definite (TRUE) match is preferred over an UNKNOWN 
 	test.end()
 })
 
+// mixed cross-field OR-of-AND branches must be disambiguated by evaluating case-level leaves against
+// the case. "(diagnosis=A AND primary_site=lung) OR (diagnosis=B AND primary_site=brain)" on a brain
+// case whose primary diagnosis is A: only the diagnosis-B branch's site condition holds, so the case
+// must be summarized by B. Without case-level evaluation both A and B are UNKNOWN and diagnosisSort
+// would pick the primary (A) -- a diagnosis that did not admit the case.
+tape('flattenCaseByFields(): case-level leaves disambiguate mixed OR-of-AND branches', test => {
+	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
+	const hit = {
+		primary_site: 'brain',
+		diagnoses: [
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'A', diagnosis_is_primary_disease: true },
+			{ age_at_diagnosis: 19175, primary_diagnosis: 'B', diagnosis_is_primary_disease: false }
+		]
+	}
+	const filter0 = {
+		op: 'or',
+		content: [
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['A'] } },
+					{ op: 'in', content: { field: 'cases.primary_site', value: ['lung'] } }
+				]
+			},
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['B'] } },
+					{ op: 'in', content: { field: 'cases.primary_site', value: ['brain'] } }
+				]
+			}
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.primary_diagnosis': 'B' },
+		'the diagnosis whose branch site condition (brain) holds is chosen, not the primary A'
+	)
+	test.end()
+})
+
+// GDC keyword fields match case-insensitively: the portal lowercases filter values but the API returns
+// original casing (filter "bronchus and lung" vs returned "Bronchus and lung"). A case-level leaf must
+// match regardless of case, else its AND collapses to FALSE and selection wrongly falls back.
+tape('flattenCaseByFields(): case-level string leaves match case-insensitively', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		primary_site: 'Bronchus and lung', // API casing differs from the lowercased filter value
+		diagnoses: [
+			{
+				age_at_diagnosis: 19175,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'and',
+		content: [
+			{ op: 'in', content: { field: 'cases.primary_site', value: ['bronchus and lung'] } },
+			{ op: '>=', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 18263 } },
+			{ op: '<', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 21915 } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19175 },
+		'the primary_site leaf matches despite casing, so the in-range diagnosis is chosen'
+	)
+	test.end()
+})
+
 // a diagnosis satisfying a non-age constraint (primary_diagnosis) must be selectable even when its
 // age_at_diagnosis is null -- the evaluator, not a blanket null-age drop, decides selection (SV-2821)
 tape('flattenCaseByFields(): non-age constraint selects a diagnosis with null age', test => {

@@ -102,7 +102,7 @@ export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1, opts: { f
 	Primary site cells and -- via the missing case.project.project_id -- a bogus "Controlled" access label */
 	if (fields.includes('diagnoses') && Array.isArray(caseObj.diagnoses)) {
 		// There may be multiple diagnosis entries, choose only one for summary plot.
-		const chosen = chooseDiagnosis(caseObj.diagnoses, getDiagnosisEvaluator(opts.filter0))
+		const chosen = chooseDiagnosis(caseObj.diagnoses, getDiagnosisEvaluator(opts.filter0), caseObj)
 		if (!chosen) return
 		caseObj.diagnoses = chosen
 	}
@@ -218,22 +218,20 @@ its diagnoses matches, but the default SV-2770 rule bins by the primary diagnosi
 outside the cohort's constraint.
 
 The tri-state is preserved through selection: a diagnosis the filter definitely admits (TRI_TRUE) is
-preferred over one that is only possibly-admitted (TRI_UNKNOWN, i.e. its acceptance hinges on a
-case-level leaf such as primary_site that we do not evaluate here). Collapsing both to "matched" and
-letting diagnosisSort decide would let an UNKNOWN primary diagnosis win over the TRUE diagnosis that
-actually admitted the case -- e.g. for "diagnosis=A OR primary_site=lung", a non-lung case with a
-non-primary diagnosis A (TRUE) and a primary diagnosis B (UNKNOWN) must be summarized by A, not B.
-UNKNOWN candidates are used only when no definite match exists; when neither exists (or no evaluator
-is given), fall back to the deterministic SV-2770 selection.
+preferred over one that is only possibly-admitted (TRI_UNKNOWN, i.e. a case-level leaf it depends on was
+not fetched). Collapsing both to "matched" and letting diagnosisSort decide would let an UNKNOWN primary
+diagnosis win over the TRUE diagnosis that actually admitted the case. UNKNOWN candidates are used only
+when no definite match exists; when neither exists (or no evaluator is given), fall back to the
+deterministic SV-2770 selection. caseObj is passed so the evaluator can resolve case-level leaves.
 
 returns the chosen diagnosis entry, or undefined when the selection is undecidable (caller then
 leaves the term unset rather than blanking unrelated terms of the case). */
-function chooseDiagnosis(allDiagnoses, evalDiagnosis) {
+function chooseDiagnosis(allDiagnoses, evalDiagnosis, caseObj) {
 	if (evalDiagnosis) {
 		const trueMatches: any[] = [],
 			unknownMatches: any[] = []
 		for (const d of allDiagnoses) {
-			const t = evalDiagnosis(d)
+			const t = evalDiagnosis(d, caseObj)
 			if (t === TRI_TRUE) trueMatches.push(d)
 			else if (t === TRI_UNKNOWN) unknownMatches.push(d)
 		}
@@ -262,28 +260,25 @@ function chooseDiagnosis(allDiagnoses, evalDiagnosis) {
 	return diagnoses[0]
 }
 
-/* SV-2821: compile a GDC cohort filter (filter0) into a tri-state evaluator of its diagnoses
-conditions for a single diagnosis entry; null when filter0 constrains no diagnoses field, so
+/* SV-2821: compile a GDC cohort filter (filter0) into a tri-state evaluator (d, caseObj) => tri of its
+conditions for one diagnosis entry of a case; null when filter0 constrains no diagnoses field, so
 chooseDiagnosis uses the default SV-2770 selection. Handles the age_at_diagnosis range and a
 primary_diagnosis set -- any leaf whose field is "*.diagnoses.<key>".
 
-The whole boolean structure is preserved via Kleene 3-valued logic (see compileDiagnosisTri), not
-flattened: a diagnosis leaf evaluates TRUE/FALSE against the diagnosis, a case-level leaf (e.g.
-primary_site) is UNKNOWN because its truth depends on case fields not evaluated here, and the case is
-known to have passed filter0. The evaluator returns TRI_TRUE (filter definitely admits this diagnosis),
-TRI_UNKNOWN (admitted only if a case-level leaf holds) or TRI_FALSE (not admitted). chooseDiagnosis
-prefers TRI_TRUE over TRI_UNKNOWN, which keeps a non-diagnosis branch inside an OR from either turning a
-sibling diagnosis branch into a spurious mandatory constraint OR letting an UNKNOWN primary diagnosis
-outrank the diagnosis that actually admitted the case. Memoized per filter0 object, since
-flattenCaseByFields runs once per case per term.
+The whole boolean structure is preserved via Kleene 3-valued logic (see compileFilter0Tri), not
+flattened: a diagnosis leaf evaluates against the diagnosis, a case-level leaf (e.g. primary_site)
+evaluates against caseObj, and only an absent (unfetched) case-level field stays UNKNOWN. The evaluator
+returns TRI_TRUE (filter admits this diagnosis), TRI_UNKNOWN (undecidable -- a case-level field was not
+available) or TRI_FALSE (not admitted). chooseDiagnosis prefers TRI_TRUE over TRI_UNKNOWN so a diagnosis
+the filter definitely admits is never outranked by a merely-possible one. Memoized per filter0 object,
+since flattenCaseByFields runs once per case per term.
 
-Boundary: case-level leaves are UNKNOWN rather than evaluated against the case, so an UNKNOWN result is
-"possibly admitted," not proven. This is only consulted when no TRI_TRUE diagnosis exists; evaluating
-case-level leaves against caseObj would make it exact but needs those fields fetched and threaded here. */
+For the case-level evaluation to be exact rather than UNKNOWN, the GDC getters project the fields
+filter0 references (filter0Fields) so caseObj carries them. */
 const TRI_TRUE = 1,
 	TRI_FALSE = 0,
 	TRI_UNKNOWN = -1
-const filter0EvalCache = new WeakMap<object, ((d: any) => number) | null>()
+const filter0EvalCache = new WeakMap<object, ((d: any, caseObj: any) => number) | null>()
 function getDiagnosisEvaluator(filter0) {
 	// cache hit first: the hot path is repeat calls with the same filter0 over re.data.hits[].
 	// WeakMap.has/get tolerate a null/undefined/primitive key (return false/undefined, no throw),
@@ -294,36 +289,39 @@ function getDiagnosisEvaluator(filter0) {
 	// uses the default SV-2770 selection (which includes its undecidable-diagnoses bail)
 	const leaves: Array<{ op: string; key: string; value: any }> = []
 	collectDiagnosisLeaves(filter0, leaves)
-	const evalTree = leaves.length ? compileDiagnosisTri(filter0) : null
+	const evalTree = leaves.length ? compileFilter0Tri(filter0) : null
 	filter0EvalCache.set(filter0, evalTree)
 	return evalTree
 }
 
-/* compile one filter0 node into (d) => tri-state (TRI_TRUE|TRI_FALSE|TRI_UNKNOWN), evaluated with
-Kleene 3-valued logic. A diagnoses-scoped leaf resolves TRUE/FALSE against the diagnosis; a case-level
-leaf (e.g. primary_site) and any node whose truth cannot be decided from the diagnosis are UNKNOWN.
-Preserving UNKNOWN through and/or/not is what makes a mixed group behave correctly: an OR with an
-UNKNOWN (case-level) branch stays UNKNOWN rather than reducing to its diagnosis branch alone. */
-function compileDiagnosisTri(node): (d: any) => number {
+/* compile one filter0 node into (d, caseObj) => tri-state (TRI_TRUE|TRI_FALSE|TRI_UNKNOWN), evaluated
+with Kleene 3-valued logic. A diagnoses-scoped leaf resolves against the diagnosis d; a case-level leaf
+(e.g. primary_site) resolves against caseObj -- TRUE/FALSE when that field is present, UNKNOWN only when
+it is absent (not fetched or genuinely missing). Evaluating case-level leaves is what disambiguates
+mixed OR branches: for "(diagnosis=A AND primary_site=lung) OR (diagnosis=B AND primary_site=brain)" on
+a brain case, branch 1 resolves FALSE (site!=lung) and only the diagnosis-B branch admits the case, so
+B is chosen rather than an arbitrary UNKNOWN. Preserving UNKNOWN through and/or/not still handles a
+case-level field that was not fetched. */
+function compileFilter0Tri(node): (d: any, caseObj: any) => number {
 	if (!node || typeof node != 'object') return () => TRI_UNKNOWN
 	const op = node.op
 	if ((op == 'and' || op == 'or') && Array.isArray(node.content)) {
-		const kids = node.content.map(compileDiagnosisTri)
+		const kids = node.content.map(compileFilter0Tri)
 		if (op == 'and') {
-			return (d: any) => {
+			return (d: any, caseObj: any) => {
 				let res = TRI_TRUE
 				for (const k of kids) {
-					const v = k(d)
+					const v = k(d, caseObj)
 					if (v == TRI_FALSE) return TRI_FALSE // AND with a false child is false
 					if (v == TRI_UNKNOWN) res = TRI_UNKNOWN
 				}
 				return res
 			}
 		}
-		return (d: any) => {
+		return (d: any, caseObj: any) => {
 			let res = TRI_FALSE
 			for (const k of kids) {
-				const v = k(d)
+				const v = k(d, caseObj)
 				if (v == TRI_TRUE) return TRI_TRUE // OR with a true child is true
 				if (v == TRI_UNKNOWN) res = TRI_UNKNOWN
 			}
@@ -333,10 +331,10 @@ function compileDiagnosisTri(node): (d: any) => number {
 	if (op == 'not') {
 		// content may be a single node or an array of nodes (implicitly AND-ed) before negating
 		const inner = Array.isArray(node.content)
-			? compileDiagnosisTri({ op: 'and', content: node.content })
-			: compileDiagnosisTri(node.content)
-		return (d: any) => {
-			const v = inner(d)
+			? compileFilter0Tri({ op: 'and', content: node.content })
+			: compileFilter0Tri(node.content)
+		return (d: any, caseObj: any) => {
+			const v = inner(d, caseObj)
 			return v == TRI_UNKNOWN ? TRI_UNKNOWN : v == TRI_TRUE ? TRI_FALSE : TRI_TRUE
 		}
 	}
@@ -344,21 +342,52 @@ function compileDiagnosisTri(node): (d: any) => number {
 	const field = node.content?.field
 	if (typeof field != 'string') return () => TRI_UNKNOWN
 	// GDC fields carry a "cases." or "case." prefix, e.g. "cases.diagnoses.age_at_diagnosis"
-	const m = field.match(/(?:^|\.)diagnoses\.(.+)$/)
-	if (!m) return () => TRI_UNKNOWN // case-level leaf: truth depends on case fields not evaluated here
-	const leaf = { op, key: m[1], value: node.content.value }
-	return (d: any) => (evalDiagnosisLeaf(leaf, d) ? TRI_TRUE : TRI_FALSE)
+	const dm = field.match(/(?:^|\.)diagnoses\.(.+)$/)
+	if (dm) {
+		const leaf = { op, key: dm[1], value: node.content.value }
+		return (d: any) => (evalDiagnosisLeaf(leaf, d) ? TRI_TRUE : TRI_FALSE)
+	}
+	// case-level leaf: strip the leading "cases."/"case." segment and resolve against caseObj
+	const cm = field.match(/^cases?\.(.+)$/)
+	const path = cm ? cm[1] : field
+	const leafOp = op,
+		leafValue = node.content.value
+	return (d: any, caseObj: any) => {
+		const v = resolveCaseValue(caseObj, path)
+		if (v === undefined || v === null) return TRI_UNKNOWN // field not fetched / absent -> undecidable
+		return evalLeafOp(leafOp, leafValue, v) ? TRI_TRUE : TRI_FALSE
+	}
 }
 
-/* the diagnoses sub-field names a filter0 references (e.g. 'age_at_diagnosis'), so a caller building
-a GDC /cases or /ssm_occurrences fields[] can ensure they are fetched even when they are not a
-requested term -- otherwise the matcher sees undefined and the case falls back to default selection. */
-export function diagnosisFilter0Fields(filter0): string[] {
-	const leaves: Array<{ op: string; key: string; value: any }> = []
-	collectDiagnosisLeaves(filter0, leaves)
-	return [...new Set(leaves.map(l => l.key))]
+/* every field a filter0 references, trimmed of the leading "cases."/"case." segment (relative to the
+case object), e.g. 'diagnoses.age_at_diagnosis' or 'primary_site'. A GDC getter adds these to its
+fields[] (with its endpoint's prefix) so caseObj carries both the diagnoses fields the diagnosis
+selection tests AND the case-level fields getDiagnosisEvaluator resolves -- otherwise those read as
+undefined and selection loses precision (or falls back). */
+export function filter0Fields(filter0): string[] {
+	const out: string[] = []
+	collectFilter0Fields(filter0, out)
+	return [...new Set(out)]
 }
 
+function collectFilter0Fields(node, out) {
+	if (!node || typeof node != 'object') return
+	if (Array.isArray(node.content) && (node.op == 'and' || node.op == 'or')) {
+		for (const c of node.content) collectFilter0Fields(c, out)
+		return
+	}
+	if (node.op == 'not') {
+		if (Array.isArray(node.content)) for (const c of node.content) collectFilter0Fields(c, out)
+		else collectFilter0Fields(node.content, out)
+		return
+	}
+	const field = node.content?.field
+	if (typeof field != 'string') return
+	const m = field.match(/^cases?\.(.+)$/)
+	out.push(m ? m[1] : field)
+}
+
+// used only by getDiagnosisEvaluator's gate: does filter0 reference any diagnoses.<key> leaf?
 function collectDiagnosisLeaves(node, out) {
 	if (!node || typeof node != 'object') return
 	if (Array.isArray(node.content) && (node.op == 'and' || node.op == 'or')) {
@@ -380,26 +409,54 @@ function collectDiagnosisLeaves(node, out) {
 }
 
 function evalDiagnosisLeaf(l, d) {
-	const v = d?.[l.key]
+	return evalLeafOp(l.op, l.value, d?.[l.key])
+}
+
+/* GDC keyword (string) fields match case-insensitively -- the portal lowercases filter values but the
+API returns the original casing, e.g. filter "bronchus and lung" vs returned "Bronchus and lung". So an
+exact compare here would wrongly reject a value the GDC server accepted; match strings case-insensitively
+(numbers compare exactly). */
+function looseEq(a, b) {
+	if (typeof a == 'string' && typeof b == 'string') return a.toLowerCase() === b.toLowerCase()
+	return a == b
+}
+
+/* evaluate one filter0 leaf operator: does actual value `v` satisfy `op` against filter value?
+Shared by diagnoses leaves (v read off the diagnosis) and case-level leaves (v resolved off caseObj). */
+function evalLeafOp(op, filterValue, v) {
 	if (v === undefined || v === null) return false
 	// membership / equality: works for a string field such as primary_diagnosis tested against
-	// filter0's value[] set (Array) -- or a scalar value via loose equality
-	if (l.op == 'in') return Array.isArray(l.value) ? l.value.includes(v) : v == l.value
-	if (l.op == '=' || l.op == '==') return v == l.value
+	// filter0's value[] set (Array) -- or a scalar value; string compares are case-insensitive (GDC)
+	if (op == 'in') return Array.isArray(filterValue) ? filterValue.some(x => looseEq(x, v)) : looseEq(filterValue, v)
+	if (op == '=' || op == '==') return looseEq(filterValue, v)
 	// GDC leaf-level negation: 'exclude' is NOT IN, '!='/'<>' is not-equal. filter2GDCfilter() emits
 	// these for an isnot tvs, and a portal filter0 can carry them directly. A missing value already
-	// returned false above (conservative: a diagnosis we cannot verify is not selected).
-	if (l.op == 'exclude') return Array.isArray(l.value) ? !l.value.includes(v) : v != l.value
-	if (l.op == '!=' || l.op == '<>') return v != l.value
+	// returned false above (conservative: a value we cannot verify is not treated as a match).
+	if (op == 'exclude')
+		return Array.isArray(filterValue) ? !filterValue.some(x => looseEq(x, v)) : !looseEq(filterValue, v)
+	if (op == '!=' || op == '<>') return !looseEq(filterValue, v)
 	// remaining ops are numeric range bounds (e.g. age_at_diagnosis in days). filter0 is not
 	// type-checked, so a non-numeric bound or value would silently fall into JS string comparison;
 	// require both to be numbers, else treat as non-matching (safe fallback to default selection)
-	if (typeof v != 'number' || typeof l.value != 'number') return false
-	if (l.op == '>=') return v >= l.value
-	if (l.op == '>') return v > l.value
-	if (l.op == '<=') return v <= l.value
-	if (l.op == '<') return v < l.value
+	if (typeof v != 'number' || typeof filterValue != 'number') return false
+	if (op == '>=') return v >= filterValue
+	if (op == '>') return v > filterValue
+	if (op == '<=') return v <= filterValue
+	if (op == '<') return v < filterValue
 	return false // unknown op: cannot confirm a match -> treat as non-matching (safe fallback)
+}
+
+/* resolve a dotted case-level field path (leading "cases."/"case." already stripped) against the case
+object, e.g. "primary_site" or "project.project_id". Returns undefined if any segment is missing or the
+path runs into an array (case-level cohort fields are scalars/objects; a diagnoses[] array is handled
+separately), so an unfetched or absent field reads as undefined -> UNKNOWN rather than a false match. */
+function resolveCaseValue(caseObj, path) {
+	let cur = caseObj
+	for (const seg of path.split('.')) {
+		if (cur == null || typeof cur != 'object' || Array.isArray(cur)) return undefined
+		cur = cur[seg]
+	}
+	return cur
 }
 
 // see the decision tree in https://gdc-ctds.atlassian.net/browse/SV-2770
