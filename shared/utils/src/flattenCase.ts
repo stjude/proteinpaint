@@ -321,10 +321,15 @@ function compileFilter0Tri(node): (d: any, caseObj: any) => number {
 		// case-level leaf children are evaluated together against the case so that constraints sharing a
 		// nested array (e.g. samples.sample_type and samples.portions.x) are correlated to the SAME element
 		// at every level (GDC same-nested-object semantics), not satisfied independently across elements.
-		// Other children -- sub-groups, not-nodes, diagnoses leaves -- compile independently.
+		// Other children -- OR/NOT sub-groups, diagnoses leaves -- compile independently.
+		//
+		// First flatten nested AND groups (AND is associative): "a AND (b AND c)" -> "a AND b AND c", so
+		// case leaves buried in a sub-AND still join the same correlated scope as their AND-siblings.
+		const flat: any[] = []
+		flattenAndContent(node.content, flat)
 		const caseLeaves: any[] = []
 		const kids: Array<(d: any, caseObj: any) => number> = []
-		for (const c of node.content) {
+		for (const c of flat) {
 			const info = caseLevelLeafInfo(c)
 			if (info) caseLeaves.push(info)
 			else kids.push(compileFilter0Tri(c))
@@ -498,6 +503,16 @@ function caseLeafMatch(values, op, filterValue) {
 	}
 	if (op == '!=' || op == '<>') return !values.some(v => looseEq(filterValue, v))
 	return values.some(v => evalLeafOp(op, filterValue, v))
+}
+
+/* Flatten nested AND nodes into a single content list (AND is associative), so leaves connected only by
+AND -- even through sub-AND groups -- become direct siblings and share one correlated case-level scope.
+Does NOT descend into OR or NOT, whose grouping is not associative with the enclosing AND. */
+function flattenAndContent(content, out) {
+	for (const c of content) {
+		if (c && typeof c == 'object' && c.op == 'and' && Array.isArray(c.content)) flattenAndContent(c.content, out)
+		else out.push(c)
+	}
 }
 
 /* describe a filter0 node if it is a case-level leaf (a leaf whose field is not a diagnoses.* path),

@@ -523,6 +523,64 @@ tape('flattenCaseByFields(): correlation is preserved recursively below the firs
 	test.end()
 })
 
+// correlation must survive a nested AND group (AND is associative): "sample_type=Blood AND
+// (tissue_type=Normal AND diagnosis=A)" must still require ONE sample that is Blood+Normal. With samples
+// [{Blood,Tumor},{Solid,Normal}] there is none, so branch A is FALSE; only branch B (needs a Solid+Normal
+// sample, which exists) is admitted, so B is chosen -- not the primary A.
+tape('flattenCaseByFields(): correlation survives a nested AND subgroup', test => {
+	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
+	const hit = {
+		samples: [
+			{ sample_type: 'Blood', tissue_type: 'Tumor' },
+			{ sample_type: 'Solid', tissue_type: 'Normal' }
+		],
+		diagnoses: [
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'A', diagnosis_is_primary_disease: true },
+			{ age_at_diagnosis: 19175, primary_diagnosis: 'B', diagnosis_is_primary_disease: false }
+		]
+	}
+	const filter0 = {
+		op: 'or',
+		content: [
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.samples.sample_type', value: ['Blood'] } },
+					{
+						op: 'and',
+						content: [
+							{ op: 'in', content: { field: 'cases.samples.tissue_type', value: ['Normal'] } },
+							{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['A'] } }
+						]
+					}
+				]
+			},
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.samples.sample_type', value: ['Solid'] } },
+					{
+						op: 'and',
+						content: [
+							{ op: 'in', content: { field: 'cases.samples.tissue_type', value: ['Normal'] } },
+							{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['B'] } }
+						]
+					}
+				]
+			}
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.primary_diagnosis': 'B' },
+		'the two sample leaves correlate across the nested AND, so branch A is FALSE and B is chosen'
+	)
+	test.end()
+})
+
 // GDC keyword fields match case-insensitively: the portal lowercases filter values but the API returns
 // original casing (filter "bronchus and lung" vs returned "Bronchus and lung"). A case-level leaf must
 // match regardless of case, else its AND collapses to FALSE and selection wrongly falls back.
