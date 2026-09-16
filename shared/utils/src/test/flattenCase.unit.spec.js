@@ -305,8 +305,39 @@ tape('flattenCaseByFields(): case-level OR branch does not force a sibling diagn
 	test.end()
 })
 
+// a diagnosis the filter DEFINITELY admits (TRI_TRUE) must be preferred over one only possibly
+// admitted via an unevaluated case-level leaf (TRI_UNKNOWN). "diagnosis=A OR primary_site=lung" on a
+// non-lung case: the non-primary diagnosis A is a definite match, the primary diagnosis B is only
+// UNKNOWN -- the case must be summarized by A, not by B. Collapsing the tri-state to a boolean would
+// let diagnosisSort pick the UNKNOWN primary B.
+tape('flattenCaseByFields(): definite (TRUE) match is preferred over an UNKNOWN primary diagnosis', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{ age_at_diagnosis: 19000, primary_diagnosis: 'A', diagnosis_is_primary_disease: false },
+			{ age_at_diagnosis: 22000, primary_diagnosis: 'B', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'or',
+		content: [
+			{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['A'] } },
+			{ op: 'in', content: { field: 'cases.primary_site', value: ['bronchus and lung'] } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19000 },
+		'the definite match A is chosen over the possibly-admitted primary diagnosis B'
+	)
+	test.end()
+})
+
 // a diagnosis satisfying a non-age constraint (primary_diagnosis) must be selectable even when its
-// age_at_diagnosis is null -- the matcher, not a blanket null-age drop, decides selection (SV-2821)
+// age_at_diagnosis is null -- the evaluator, not a blanket null-age drop, decides selection (SV-2821)
 tape('flattenCaseByFields(): non-age constraint selects a diagnosis with null age', test => {
 	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
 	const hit = {
