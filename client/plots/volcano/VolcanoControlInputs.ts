@@ -265,7 +265,7 @@ export class VolcanoControlInputs {
 					...this.chromosomes.filter(c => c != 'chrM' && c != 'chrMT').map(c => ({ value: c, label: c }))
 				],
 				title:
-					'Call DMRs de novo across the whole genome, or across one chromosome. A whole-genome scan takes a minute or two the first time and is cached after that.'
+					'Call DMRs de novo across the whole genome, or across one chromosome. A whole-genome scan takes about 45 seconds the first time and is cached after that.'
 			},
 			{
 				label: 'Correct for background drift',
@@ -300,7 +300,7 @@ export class VolcanoControlInputs {
 				max: 100_000,
 				step: 50,
 				title:
-					'DMRcate lambda. Two things at once: the width of the Gaussian kernel that smooths per-CpG statistics along the genome, and the largest gap allowed between significant CpGs chained into one DMR. Larger values merge nearby signal into fewer, wider DMRs and recover broad domains; smaller values split them into narrow, focal regions. DMRcate recommends 1000 bp for CpG-resolution data. Changing it refits the scan (a minute or two genome-wide).'
+					'DMRcate lambda. Two things at once: the width of the Gaussian kernel that smooths per-CpG statistics along the genome, and the largest gap allowed between significant CpGs chained into one DMR. Larger values merge nearby signal into fewer, wider DMRs and recover broad domains; smaller values split them into narrow, focal regions. DMRcate recommends 1000 bp for CpG-resolution data. Changing it refits the scan (about 45 seconds genome-wide).'
 			},
 			{
 				label: 'DMR kernel scaling C',

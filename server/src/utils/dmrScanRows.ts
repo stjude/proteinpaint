@@ -56,12 +56,20 @@ export function dmrScanToRows(
 		}
 	})
 
+	/* What the scan actually covers, read off the result rather than the request: under
+	serverconfig.debugmode a chromosome with no CpG shard is skipped (requireCpgShards), and a panel
+	saying "24" while one ran would misdescribe every number under it. */
+	const scanned = [...new Set(payload.regions.map(r => r.chr))]
+
 	const widths = kept.map(d => d.stop - d.start).sort((a, b) => a - b)
 	const q = (p: number) => widths[Math.floor(p * (widths.length - 1))]
 	const hyper = kept.filter(d => d.direction == 'hyper').length
 
 	const scan: DmrScanSummary = {
-		chromosomes: opts.chromosomes,
+		/* What the scan actually covers, read off the result rather than the request: under
+		serverconfig.debugmode a chromosome with no CpG shard is skipped (requireCpgShards), and the
+		panel saying "24" while one ran would misdescribe every number under it. */
+		chromosomes: scanned.length ? scanned : opts.chromosomes,
 		totalProbesAnalyzed: payload.totalProbesAnalyzed,
 		called: called.length,
 		minCpgs,

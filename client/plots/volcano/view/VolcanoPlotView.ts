@@ -454,6 +454,14 @@ export class VolcanoPlotView {
 	the violin of that region and the region view, a genome browser with the called DMRs, the
 	per-CpG group means and the genes. Same lifecycle as the p-value table: redrawn from each
 	response, never left stale. */
+	/** What the scan covered, for the figure titles: the chromosome when that is all of it, and "the
+	 * genome" otherwise. A one-chromosome scan describing itself as genome-wide overstates every
+	 * number under it, which is what a dev host holding a subset of CpG shards produces. */
+	private scanSpan(): string {
+		const chrs = this.viewData.scan?.chromosomes || []
+		return chrs.length == 1 ? chrs[0] : 'the genome'
+	}
+
 	renderScanManhattan() {
 		const { manhattan } = this.viewData.scan!
 		// beside the volcano, ahead of the p-value table (insert before a missing node appends)
@@ -499,7 +507,8 @@ export class VolcanoPlotView {
 			},
 			undefined,
 			{
-				title: `DMRs along the genome, direction in ${g2} (top ${manhattan!.interactive.toLocaleString()} per direction interactive)`,
+				// names the chromosome when that is all the scan covered, rather than "the genome"
+				title: `DMRs along ${this.scanSpan()}, direction in ${g2} (top ${manhattan!.interactive.toLocaleString()} per direction interactive)`,
 				// short, because it runs down a 300 px axis: the legend and title say what the sign means
 				yAxisLabel: `±log₁₀(${this.viewData.pValueLabel.replace('smoothed ', '')})`,
 				legend: [
@@ -576,7 +585,8 @@ export class VolcanoPlotView {
 				live dot count rather than the per-direction rule, because at a coarse width the rule
 				reaches every bin and "top 1,000 per direction" would read as a restriction. */
 				title:
-					`Methylome-wide profile: mean Δβ per ${bplen(profile.binBp)} bin in ${caseName} ` +
+					`${this.scanSpan() == 'the genome' ? 'Methylome-wide' : `${this.scanSpan()}-wide`} profile: ` +
+					`mean Δβ per ${bplen(profile.binBp)} bin in ${caseName} ` +
 					`(${profile.interactive.toLocaleString()} of ${profile.bins.toLocaleString()} bins interactive)`,
 				yAxisLabel: 'Δβ per bin',
 				itemNoun: 'bin',

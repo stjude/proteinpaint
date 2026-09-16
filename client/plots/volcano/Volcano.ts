@@ -134,11 +134,11 @@ export class Volcano extends PlotBase implements RxComponent {
 
 		const settings = config.settings.volcano
 		try {
-			/* A genome scan is a minute or two of server work with nothing on the wire until it
-			finishes; a bare "Loading..." is indistinguishable from a hung request. */
+			/* A genome scan is ~45 seconds of server work with nothing on the wire until it finishes;
+			a bare "Loading..." is indistinguishable from a hung request. */
 			this.dom.wait.text(
 				settings.elementType == DMR_SCAN_ELEMENT_TYPE
-					? 'Scanning for DMRs... a whole-genome scan takes a minute or two the first time, and is cached after that.'
+					? 'Scanning for DMRs... a whole-genome scan takes about 45 seconds the first time, and is cached after that.'
 					: 'Loading...'
 			)
 			//Only show Loading for data requests that take longer than 500ms

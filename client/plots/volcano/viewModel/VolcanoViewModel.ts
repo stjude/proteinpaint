@@ -586,10 +586,17 @@ export class VolcanoViewModel {
 		const gm = s.globalMethylation
 		if (gm) {
 			const [g1, g2] = this.config.samplelst?.groups?.map((g: any) => g.name) || ['group 1', 'group 2']
+			/* Named for what was scanned. One chromosome makes these chromosome-wide numbers, and
+			"genome-wide" would overstate every one of them. */
+			const one = s.chromosomes.length == 1 ? s.chromosomes[0] : null
+			const meanLabel = (g: string) => (one ? `${g} mean β on ${one}` : `${g} genome-wide mean β`)
 			rows.push(
-				{ label: `${g1} genome-wide mean β`, value: gm.controlMeanBeta.toFixed(4) },
-				{ label: `${g2} genome-wide mean β`, value: gm.caseMeanBeta.toFixed(4) },
-				{ label: 'Genome-wide β shift (case − control)', value: `${gm.shift >= 0 ? '+' : ''}${gm.shift.toFixed(4)}` }
+				{ label: meanLabel(g1), value: gm.controlMeanBeta.toFixed(4) },
+				{ label: meanLabel(g2), value: gm.caseMeanBeta.toFixed(4) },
+				{
+					label: one ? `β shift on ${one} (case − control)` : 'Genome-wide β shift (case − control)',
+					value: `${gm.shift >= 0 ? '+' : ''}${gm.shift.toFixed(4)}`
+				}
 			)
 		}
 		/* A survival rate is only readable against its denominator, and the unscored are not a
