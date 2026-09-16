@@ -436,6 +436,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 		if (!series || !series.data.length) return
 		select(this)
 			.attr('class', 'bars-cell-grp')
+			.attr('data-testid', 'sjpp-bar-cell-grp-' + series.seriesId)
 			.selectAll('g')
 			.data(series.data.filter(filterData), cellKey)
 			.enter()
@@ -448,7 +449,10 @@ export default function barsRenderer(barsapp: any, holder: any) {
 	}
 
 	function addCell(this: any, d: any) {
-		const g = select(this).attr('class', 'bars-cell').datum(d)
+		const g = select(this)
+			.attr('class', 'bars-cell')
+			.attr('data-testid', 'sjpp-bars-cell-' + d.dataId)
+			.datum(d)
 
 		g.style('display', d => {
 			return hm.cols.includes(d.colId) ? 'block' : 'none'
