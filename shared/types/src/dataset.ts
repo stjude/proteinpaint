@@ -1479,6 +1479,11 @@ type Mds3Queries = {
 		 * where the cCRE definition is the one to lead with. The client uses this as the initial
 		 * element_type; the user can still switch classes in the picker. */
 		defaultElementType?: string
+		/** Offer only the genome-wide DMR scan in the differential-methylation class picker: the
+		 * element matrices stay configured (they serve terms and the region view's fallback) but
+		 * are not offered as classes to test, and the analysis opens on the scan. Requires a matrix
+		 * the region analysis can run on. */
+		scanOnly?: boolean
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene
