@@ -103,6 +103,621 @@ tape('flattenCaseByFields(): undecidable diagnoses does not blank non-diagnoses 
 	test.end()
 })
 
+// see https://gdc-ctds.atlassian.net/browse/SV-2821
+// filter0 admits a case when ANY diagnosis is in range, so the case must be binned by a diagnosis
+// that satisfies the filter -- even a non-primary one -- and not by the primary diagnosis, which may
+// fall in a different bin. this is the TCGA-MN-A4N1 case from the report: a 52.5y non-primary
+// diagnosis matched a 50-60y cohort filter, but the 60.06y primary diagnosis wrongly binned it as >60y.
+// filter0 shape carrying an age_at_diagnosis range [18263, 21915): only the 19175 (non-primary)
+// diagnosis of TCGA-MN-A4N1 qualifies, not the 21939 (primary) one
+const ageRangeFilter0 = {
+	op: 'and',
+	content: [
+		{ op: '>=', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 18263 } },
+		{ op: '<', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 21915 } }
+	]
+}
+
+tape('flattenCaseByFields(): filter0 age range selects the in-range diagnosis over the primary', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{ age_at_diagnosis: 19175, submitter_id: 'TCGA-MN-A4N1_diagnosis2', diagnosis_is_primary_disease: false },
+			{ age_at_diagnosis: 21939, submitter_id: 'TCGA-MN-A4N1_diagnosis', diagnosis_is_primary_disease: true }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0: ageRangeFilter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19175 },
+		'the in-range non-primary diagnosis is chosen, aligning the summary with filter0'
+	)
+	test.end()
+})
+
+// filter0 can constrain primary_diagnosis instead of / as well as age; the matching diagnosis wins
+tape('flattenCaseByFields(): filter0 primary_diagnosis set selects the matching diagnosis', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: 19175,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'and',
+		content: [
+			{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Squamous cell carcinoma, NOS'] } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19175 },
+		'the diagnosis whose primary_diagnosis matches filter0 is chosen'
+	)
+	test.end()
+})
+
+// the nested and/or operators must be preserved when compiling the predicate. flattening the tree
+// into one AND would require a diagnosis to satisfy BOTH branches of an OR at once -> match nothing
+// -> wrongly fall back to the primary diagnosis and re-bin the case outside the cohort condition.
+tape('flattenCaseByFields(): filter0 OR of diagnoses leaves matches either branch', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: 19175,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	// primary_diagnosis in [Squamous...] OR primary_diagnosis in [Small cell...]:
+	// the non-primary Squamous diagnosis (19175) satisfies the first branch and must be chosen
+	const filter0 = {
+		op: 'or',
+		content: [
+			{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Squamous cell carcinoma, NOS'] } },
+			{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Small cell carcinoma'] } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19175 },
+		'a diagnosis matching either OR branch is chosen (tree structure preserved, not AND-flattened)'
+	)
+	test.end()
+})
+
+// a `not` group negates its wrapped sub-filter; the diagnosis NOT excluded by it must be chosen.
+// without not-group handling the node compiles to null -> default selection -> the primary diagnosis
+tape('flattenCaseByFields(): filter0 not-group negation selects the non-excluded diagnosis', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: 19175,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	// NOT(primary_diagnosis in [Adenocarcinoma]) -> the Squamous (non-primary, 19175) diagnosis qualifies
+	const filter0 = {
+		op: 'not',
+		content: { op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Adenocarcinoma, NOS'] } }
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19175 },
+		'the diagnosis not excluded by the negation is chosen'
+	)
+	test.end()
+})
+
+// GDC expresses an isnot categorical constraint as a leaf-level `exclude` (NOT IN); the diagnosis
+// that is not excluded must be chosen. Before exclude/!= were handled, the leaf matched nothing and
+// the case fell back to the primary diagnosis.
+tape('flattenCaseByFields(): filter0 leaf-level exclude selects the non-excluded diagnosis', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: 19175,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'and',
+		content: [
+			{ op: 'exclude', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Adenocarcinoma, NOS'] } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19175 },
+		'exclude (NOT IN) selects the diagnosis whose value is not in the excluded set'
+	)
+	test.end()
+})
+
+// a non-diagnosis branch inside an OR must not turn a sibling diagnosis branch into a mandatory
+// constraint. "(diagnosis=A OR primary_site=lung) AND age<60": a returned lung case whose only
+// under-60 diagnosis is not A must still be binned by that under-60 diagnosis, not fall back to an
+// over-60 primary. (Flattening/dropping the case-level branch would compile this to diagnosis=A AND
+// age<60, match nothing, and re-bin the case outside the cohort.)
+tape('flattenCaseByFields(): case-level OR branch does not force a sibling diagnosis constraint', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: 19000,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 22000, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'and',
+		content: [
+			{
+				op: 'or',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Adenocarcinoma, NOS'] } },
+					{ op: 'in', content: { field: 'cases.primary_site', value: ['bronchus and lung'] } }
+				]
+			},
+			{ op: '<', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 21915 } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19000 },
+		'the under-60 diagnosis is chosen even though it is not the primary_diagnosis named in the OR'
+	)
+	test.end()
+})
+
+// a diagnosis the filter DEFINITELY admits (TRI_TRUE) must be preferred over one only possibly
+// admitted via an unevaluated case-level leaf (TRI_UNKNOWN). "diagnosis=A OR primary_site=lung" on a
+// non-lung case: the non-primary diagnosis A is a definite match, the primary diagnosis B is only
+// UNKNOWN -- the case must be summarized by A, not by B. Collapsing the tri-state to a boolean would
+// let diagnosisSort pick the UNKNOWN primary B.
+tape('flattenCaseByFields(): definite (TRUE) match is preferred over an UNKNOWN primary diagnosis', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{ age_at_diagnosis: 19000, primary_diagnosis: 'A', diagnosis_is_primary_disease: false },
+			{ age_at_diagnosis: 22000, primary_diagnosis: 'B', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'or',
+		content: [
+			{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['A'] } },
+			{ op: 'in', content: { field: 'cases.primary_site', value: ['bronchus and lung'] } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19000 },
+		'the definite match A is chosen over the possibly-admitted primary diagnosis B'
+	)
+	test.end()
+})
+
+// mixed cross-field OR-of-AND branches must be disambiguated by evaluating case-level leaves against
+// the case. "(diagnosis=A AND primary_site=lung) OR (diagnosis=B AND primary_site=brain)" on a brain
+// case whose primary diagnosis is A: only the diagnosis-B branch's site condition holds, so the case
+// must be summarized by B. Without case-level evaluation both A and B are UNKNOWN and diagnosisSort
+// would pick the primary (A) -- a diagnosis that did not admit the case.
+tape('flattenCaseByFields(): case-level leaves disambiguate mixed OR-of-AND branches', test => {
+	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
+	const hit = {
+		primary_site: 'brain',
+		diagnoses: [
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'A', diagnosis_is_primary_disease: true },
+			{ age_at_diagnosis: 19175, primary_diagnosis: 'B', diagnosis_is_primary_disease: false }
+		]
+	}
+	const filter0 = {
+		op: 'or',
+		content: [
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['A'] } },
+					{ op: 'in', content: { field: 'cases.primary_site', value: ['lung'] } }
+				]
+			},
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['B'] } },
+					{ op: 'in', content: { field: 'cases.primary_site', value: ['brain'] } }
+				]
+			}
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.primary_diagnosis': 'B' },
+		'the diagnosis whose branch site condition (brain) holds is chosen, not the primary A'
+	)
+	test.end()
+})
+
+// case-level leaves are often array-backed (e.g. cases.samples.sample_type). Such a leaf must be tested
+// as membership over the array's values, not read as a scalar (which would be UNKNOWN). For
+// "(diagnosis=A AND sample_type=Blood) OR (diagnosis=B AND sample_type=Tumor)" on a Tumor-sample case,
+// only the diagnosis-B branch holds, so B must be chosen rather than an arbitrary UNKNOWN primary A.
+tape('flattenCaseByFields(): array-backed case leaves disambiguate mixed OR-of-AND branches', test => {
+	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
+	const hit = {
+		samples: [{ sample_type: 'Tumor' }], // array-backed case field; no Blood sample
+		diagnoses: [
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'A', diagnosis_is_primary_disease: true },
+			{ age_at_diagnosis: 19175, primary_diagnosis: 'B', diagnosis_is_primary_disease: false }
+		]
+	}
+	const filter0 = {
+		op: 'or',
+		content: [
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['A'] } },
+					{ op: 'in', content: { field: 'cases.samples.sample_type', value: ['Blood'] } }
+				]
+			},
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['B'] } },
+					{ op: 'in', content: { field: 'cases.samples.sample_type', value: ['Tumor'] } }
+				]
+			}
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.primary_diagnosis': 'B' },
+		'the diagnosis whose branch sample_type (Tumor) is in the samples[] array is chosen'
+	)
+	test.end()
+})
+
+// two leaves on the SAME nested array must be correlated to one element (GDC same-nested-object). With
+// samples [{Blood,Tumor},{Solid,Normal}], "sample_type=Blood AND tissue_type=Normal" is FALSE (no single
+// sample is both) -- independent some() would wrongly make it TRUE. In this OR tree only branch B (needs
+// a Solid+Normal sample, which exists) is admitted, so B must be chosen, not the primary A.
+tape('flattenCaseByFields(): grouped leaves on the same nested array are correlated per element', test => {
+	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
+	const hit = {
+		samples: [
+			{ sample_type: 'Blood', tissue_type: 'Tumor' },
+			{ sample_type: 'Solid', tissue_type: 'Normal' }
+		],
+		diagnoses: [
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'A', diagnosis_is_primary_disease: true },
+			{ age_at_diagnosis: 19175, primary_diagnosis: 'B', diagnosis_is_primary_disease: false }
+		]
+	}
+	const filter0 = {
+		op: 'or',
+		content: [
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['A'] } },
+					{ op: 'in', content: { field: 'cases.samples.sample_type', value: ['Blood'] } },
+					{ op: 'in', content: { field: 'cases.samples.tissue_type', value: ['Normal'] } }
+				]
+			},
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['B'] } },
+					{ op: 'in', content: { field: 'cases.samples.sample_type', value: ['Solid'] } },
+					{ op: 'in', content: { field: 'cases.samples.tissue_type', value: ['Normal'] } }
+				]
+			}
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.primary_diagnosis': 'B' },
+		'branch A is FALSE (no single Blood+Normal sample); only branch B is admitted, so B is chosen'
+	)
+	test.end()
+})
+
+// correlation must hold recursively at EVERY nested array level, not just the first. One sample with two
+// portions [{x:PA,y:PC},{x:PD,y:PB}]: "portions.x=PA AND portions.y=PB" is FALSE (no single portion has
+// both) -- flattening portions[] would satisfy it from different portions. Only branch B (needs a
+// PD+PB portion, which exists) is admitted, so B must be chosen, not the primary A.
+tape('flattenCaseByFields(): correlation is preserved recursively below the first nested array', test => {
+	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
+	const hit = {
+		samples: [
+			{
+				portions: [
+					{ x: 'PA', y: 'PC' },
+					{ x: 'PD', y: 'PB' }
+				]
+			}
+		],
+		diagnoses: [
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'A', diagnosis_is_primary_disease: true },
+			{ age_at_diagnosis: 19175, primary_diagnosis: 'B', diagnosis_is_primary_disease: false }
+		]
+	}
+	const filter0 = {
+		op: 'or',
+		content: [
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['A'] } },
+					{ op: 'in', content: { field: 'cases.samples.portions.x', value: ['PA'] } },
+					{ op: 'in', content: { field: 'cases.samples.portions.y', value: ['PB'] } }
+				]
+			},
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['B'] } },
+					{ op: 'in', content: { field: 'cases.samples.portions.x', value: ['PD'] } },
+					{ op: 'in', content: { field: 'cases.samples.portions.y', value: ['PB'] } }
+				]
+			}
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.primary_diagnosis': 'B' },
+		'branch A is FALSE (no single portion is PA+PB); only branch B (a PD+PB portion exists) is admitted'
+	)
+	test.end()
+})
+
+// correlation must survive a nested AND group (AND is associative): "sample_type=Blood AND
+// (tissue_type=Normal AND diagnosis=A)" must still require ONE sample that is Blood+Normal. With samples
+// [{Blood,Tumor},{Solid,Normal}] there is none, so branch A is FALSE; only branch B (needs a Solid+Normal
+// sample, which exists) is admitted, so B is chosen -- not the primary A.
+tape('flattenCaseByFields(): correlation survives a nested AND subgroup', test => {
+	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
+	const hit = {
+		samples: [
+			{ sample_type: 'Blood', tissue_type: 'Tumor' },
+			{ sample_type: 'Solid', tissue_type: 'Normal' }
+		],
+		diagnoses: [
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'A', diagnosis_is_primary_disease: true },
+			{ age_at_diagnosis: 19175, primary_diagnosis: 'B', diagnosis_is_primary_disease: false }
+		]
+	}
+	const filter0 = {
+		op: 'or',
+		content: [
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.samples.sample_type', value: ['Blood'] } },
+					{
+						op: 'and',
+						content: [
+							{ op: 'in', content: { field: 'cases.samples.tissue_type', value: ['Normal'] } },
+							{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['A'] } }
+						]
+					}
+				]
+			},
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.samples.sample_type', value: ['Solid'] } },
+					{
+						op: 'and',
+						content: [
+							{ op: 'in', content: { field: 'cases.samples.tissue_type', value: ['Normal'] } },
+							{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['B'] } }
+						]
+					}
+				]
+			}
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.primary_diagnosis': 'B' },
+		'the two sample leaves correlate across the nested AND, so branch A is FALSE and B is chosen'
+	)
+	test.end()
+})
+
+// GDC keyword fields match case-insensitively: the portal lowercases filter values but the API returns
+// original casing (filter "bronchus and lung" vs returned "Bronchus and lung"). A case-level leaf must
+// match regardless of case, else its AND collapses to FALSE and selection wrongly falls back.
+tape('flattenCaseByFields(): case-level string leaves match case-insensitively', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		primary_site: 'Bronchus and lung', // API casing differs from the lowercased filter value
+		diagnoses: [
+			{
+				age_at_diagnosis: 19175,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'and',
+		content: [
+			{ op: 'in', content: { field: 'cases.primary_site', value: ['bronchus and lung'] } },
+			{ op: '>=', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 18263 } },
+			{ op: '<', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 21915 } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19175 },
+		'the primary_site leaf matches despite casing, so the in-range diagnosis is chosen'
+	)
+	test.end()
+})
+
+// a dotted diagnosis descendant (e.g. diagnoses.treatments.treatment_type) is array-backed and not
+// evaluable by a literal lookup; it must compile to UNKNOWN, not a false match. Combined with a
+// supported age leaf, the in-range diagnosis stays selectable (UNKNOWN) rather than being rejected
+// (false) and falling back to the out-of-range primary.
+tape('flattenCaseByFields(): unsupported dotted diagnosis descendant does not force a false fallback', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: 19175,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'and',
+		content: [
+			{ op: '>=', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 18263 } },
+			{ op: '<', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 21915 } },
+			// dotted descendant under the diagnosis' treatments[] array -- unsupported, compiles to UNKNOWN
+			{ op: 'in', content: { field: 'cases.diagnoses.treatments.treatment_type', value: ['Chemotherapy'] } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19175 },
+		'the in-range diagnosis is still chosen; the unevaluable treatments leaf is UNKNOWN, not false'
+	)
+	test.end()
+})
+
+// a diagnosis satisfying a non-age constraint (primary_diagnosis) must be selectable even when its
+// age_at_diagnosis is null -- the evaluator, not a blanket null-age drop, decides selection (SV-2821)
+tape('flattenCaseByFields(): non-age constraint selects a diagnosis with null age', test => {
+	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: null,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 20000, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'and',
+		content: [
+			{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Squamous cell carcinoma, NOS'] } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.primary_diagnosis': 'Squamous cell carcinoma, NOS' },
+		'the null-age diagnosis matching the cohort primary_diagnosis is chosen, not dropped'
+	)
+	test.end()
+})
+
+// when no diagnosis satisfies filter0, fall back to the deterministic SV-2770 selection so behavior
+// is unchanged for cases the cohort filter matched for a non-diagnoses reason (e.g. primary_site)
+tape('flattenCaseByFields(): filter0 falls back to the primary diagnosis when none matches', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{ age_at_diagnosis: 10, submitter_id: 'abc-123-DIAG2', diagnosis_is_primary_disease: false },
+			{ age_at_diagnosis: 20, submitter_id: 'abc-123-DIAG', diagnosis_is_primary_disease: true }
+		]
+	}
+
+	const sample = {}
+	// no diagnosis falls in [18263, 21915) -> default selection (the primary, 20) is used
+	flattenCaseByFields(sample, hit, tw, 1, { filter0: ageRangeFilter0 })
+	test.deepEqual(sample, { 'case.diagnoses.age_at_diagnosis': 20 }, 'falls back to the primary diagnosis')
+	test.end()
+})
+
+// a filter0 with no diagnoses-scoped constraint must not change the default SV-2770 selection
+tape('flattenCaseByFields(): filter0 without a diagnoses constraint leaves default selection intact', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{ age_at_diagnosis: 10, submitter_id: 'abc-123-DIAG2', diagnosis_is_primary_disease: false },
+			{ age_at_diagnosis: 20, submitter_id: 'abc-123-DIAG', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = { op: 'and', content: [{ op: 'in', content: { field: 'cases.primary_site', value: ['lung'] } }] }
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(sample, { 'case.diagnoses.age_at_diagnosis': 20 }, 'primary diagnosis is chosen as usual')
+	test.end()
+})
+
 // a non-diagnoses array-valued path (e.g. treatments) is collected into a Set by query(); it must be
 // reduced to a single scalar before returning, else a raw Set leaks to callers and serializes to {}.
 // this conversion was dropped by the SV-2770 diagnoses rework; guards against dropping it again.
