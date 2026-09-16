@@ -353,15 +353,17 @@ function compileFilter0Tri(node): (d: any, caseObj: any) => number {
 		const leaf = { op, key, value: node.content.value }
 		return (d: any) => (evalDiagnosisLeaf(leaf, d) ? TRI_TRUE : TRI_FALSE)
 	}
-	// case-level leaf: strip the leading "cases."/"case." segment and resolve against caseObj
+	// case-level leaf: strip the leading "cases."/"case." segment and resolve against caseObj, descending
+	// into any array along the path and testing membership over its values (see collectPathValues)
 	const cm = field.match(/^cases?\.(.+)$/)
-	const path = cm ? cm[1] : field
+	const segs = (cm ? cm[1] : field).split('.')
 	const leafOp = op,
 		leafValue = node.content.value
 	return (d: any, caseObj: any) => {
-		const v = resolveCaseValue(caseObj, path)
-		if (v === undefined || v === null) return TRI_UNKNOWN // field not fetched / absent -> undecidable
-		return evalLeafOp(leafOp, leafValue, v) ? TRI_TRUE : TRI_FALSE
+		const values: any[] = []
+		collectPathValues(caseObj, segs, 0, values)
+		if (!values.length) return TRI_UNKNOWN // field not fetched / absent -> undecidable
+		return caseLeafMatch(values, leafOp, leafValue) ? TRI_TRUE : TRI_FALSE
 	}
 }
 
@@ -454,17 +456,37 @@ function evalLeafOp(op, filterValue, v) {
 	return false // unknown op: cannot confirm a match -> treat as non-matching (safe fallback)
 }
 
-/* resolve a dotted case-level field path (leading "cases."/"case." already stripped) against the case
-object, e.g. "primary_site" or "project.project_id". Returns undefined if any segment is missing or the
-path runs into an array (case-level cohort fields are scalars/objects; a diagnoses[] array is handled
-separately), so an unfetched or absent field reads as undefined -> UNKNOWN rather than a false match. */
-function resolveCaseValue(caseObj, path) {
-	let cur = caseObj
-	for (const seg of path.split('.')) {
-		if (cur == null || typeof cur != 'object' || Array.isArray(cur)) return undefined
-		cur = cur[seg]
+/* collect the terminal scalar values of a dotted case-level path (leading "cases."/"case." already
+stripped), descending into arrays along the way. e.g. "primary_site" -> ["Bronchus and lung"];
+"samples.sample_type" over caseObj.samples[] -> ["Blood","Tumor"]. GDC cohort filters commonly point at
+array-backed nested fields (samples, exposures, ...), so a leaf on such a path must be tested as
+membership over ALL of the array's values, not read as a single scalar. Absent/empty -> [] (UNKNOWN). */
+function collectPathValues(node, segs, i, out) {
+	if (node == null) return
+	if (Array.isArray(node)) {
+		for (const el of node) collectPathValues(el, segs, i, out)
+		return
 	}
-	return cur
+	if (i == segs.length) {
+		if (typeof node != 'object') out.push(node) // terminal scalar
+		return
+	}
+	if (typeof node != 'object') return
+	collectPathValues(node[segs[i]], segs, i + 1, out)
+}
+
+/* does a case-level leaf match, given all values collected along its (possibly array-backed) path?
+Positive ops (in/=/range): satisfied if ANY value matches. Negation (exclude/!=): GDC nested NOT-IN
+means NO value is in the set, so it is satisfied only when none of the values matches. Note: each leaf
+is evaluated independently, so two leaves on the SAME nested array are not constrained to the same
+sub-object (GDC's same-nested-object semantics); that cross-leaf case is rare and left unhandled. */
+function caseLeafMatch(values, op, filterValue) {
+	if (op == 'exclude') {
+		const inSet = v => (Array.isArray(filterValue) ? filterValue.some(x => looseEq(x, v)) : looseEq(filterValue, v))
+		return !values.some(inSet)
+	}
+	if (op == '!=' || op == '<>') return !values.some(v => looseEq(filterValue, v))
+	return values.some(v => evalLeafOp(op, filterValue, v))
 }
 
 // see the decision tree in https://gdc-ctds.atlassian.net/browse/SV-2770

@@ -380,6 +380,49 @@ tape('flattenCaseByFields(): case-level leaves disambiguate mixed OR-of-AND bran
 	test.end()
 })
 
+// case-level leaves are often array-backed (e.g. cases.samples.sample_type). Such a leaf must be tested
+// as membership over the array's values, not read as a scalar (which would be UNKNOWN). For
+// "(diagnosis=A AND sample_type=Blood) OR (diagnosis=B AND sample_type=Tumor)" on a Tumor-sample case,
+// only the diagnosis-B branch holds, so B must be chosen rather than an arbitrary UNKNOWN primary A.
+tape('flattenCaseByFields(): array-backed case leaves disambiguate mixed OR-of-AND branches', test => {
+	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
+	const hit = {
+		samples: [{ sample_type: 'Tumor' }], // array-backed case field; no Blood sample
+		diagnoses: [
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'A', diagnosis_is_primary_disease: true },
+			{ age_at_diagnosis: 19175, primary_diagnosis: 'B', diagnosis_is_primary_disease: false }
+		]
+	}
+	const filter0 = {
+		op: 'or',
+		content: [
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['A'] } },
+					{ op: 'in', content: { field: 'cases.samples.sample_type', value: ['Blood'] } }
+				]
+			},
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['B'] } },
+					{ op: 'in', content: { field: 'cases.samples.sample_type', value: ['Tumor'] } }
+				]
+			}
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.primary_diagnosis': 'B' },
+		'the diagnosis whose branch sample_type (Tumor) is in the samples[] array is chosen'
+	)
+	test.end()
+})
+
 // GDC keyword fields match case-insensitively: the portal lowercases filter values but the API returns
 // original casing (filter "bronchus and lung" vs returned "Bronchus and lung"). A case-level leaf must
 // match regardless of case, else its AND collapses to FALSE and selection wrongly falls back.
