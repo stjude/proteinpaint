@@ -34,6 +34,7 @@ Fixes:
 - A proteome DAP volcano calls its single p-value an FDR again. The label is read off the term type,
 - A genome-wide analysis refuses a chromosome whose CpG matrix shard is missing, naming it, rather
 - Hardening on the new routes: a caller-supplied chromosome list is bounded and deduplicated before
+- consider filter0 when flattening GDC case-level data with multiple values such as age_at_diagnosis and primary_diagnosis
 
 
 ## 2.208.0
