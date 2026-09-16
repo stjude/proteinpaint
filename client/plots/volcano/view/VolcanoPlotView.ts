@@ -1,4 +1,4 @@
-import { axisstyle, table2col, renderTable, DataPointInteractions, type ActionMenuItem } from '#dom'
+import { axisstyle, table2col, renderTable, DataPointInteractions, drawHoverShapes, type ActionMenuItem } from '#dom'
 import { axisBottom, axisLeft, rgb, select, selectAll } from 'd3'
 import type { DataPointEntry, VolcanoDom, VolcanoPlotDimensions, VolcanoViewData } from '../VolcanoTypes'
 import type { VolcanoPlotDom } from './VolcanoPlotDom'
@@ -7,6 +7,20 @@ import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
 import { formatPromoterLabel, elementNoun } from '../promoterLabel'
+import { plotManhattan, manhattanLayoutDefaults } from '#plots/manhattan/manhattan.ts'
+import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
+import { geneBodyLossTest } from '../interactions/geneBodyLossDE'
+import { dmrGeneLinkPanel } from '../interactions/dmrGeneLink'
+import { bplen } from '#shared/common.js'
+
+/** One of the scan's three figures, for mirroring a hover across them. Items are matched by genomic
+ * overlap, not by id: a DMR is the same DMR on the volcano and the Manhattan, and on the profile the
+ * bin containing it. */
+type LinkedPlot = {
+	points: any[]
+	highlight: (dots: any[]) => void
+	region: (d: any) => { chr: string; start: number; stop: number }
+}
 
 export class VolcanoPlotView {
 	dom: VolcanoDom
@@ -15,6 +29,9 @@ export class VolcanoPlotView {
 	termType: string
 	volcanoDom: VolcanoPlotDom
 	viewData!: VolcanoViewData
+	/** volcano, scan Manhattan and profile side by side; the p-value table follows them */
+	row: any
+	linked: LinkedPlot[] = []
 
 	constructor(dom: VolcanoDom, interactions: VolcanoInteractions, termType: string) {
 		this.dom = dom
@@ -26,7 +43,12 @@ export class VolcanoPlotView {
 			.style('display', 'block')
 			.style('z-index', 1)
 			.style('position', 'relative')
-		const svg = this.dom.holder
+		this.row = this.dom.holder
+			.append('div')
+			.attr('id', 'sjpp-volcano-row')
+			.style('display', 'flex')
+			.style('align-items', 'flex-start')
+		const svg = this.row
 			.append('svg')
 			.style('display', 'inline-block')
 			.attr('id', 'sjpp-volcano-svg')
@@ -47,6 +69,7 @@ export class VolcanoPlotView {
 	render(settings: ValidatedVolcanoSettings, viewData: VolcanoViewData) {
 		this.settings = settings
 		this.viewData = viewData
+		this.linked = []
 		const plotDim = this.viewData.plotDim
 
 		this.initDom()
@@ -57,6 +80,7 @@ export class VolcanoPlotView {
 		this.renderFoldChangeLine(plotDim)
 		this.attachInteractions(plotDim)
 		if (this.settings.showPValueTable) this.renderPValueTable()
+		if (this.viewData.scan?.manhattan) this.renderScanManhattan()
 	}
 
 	initDom() {
@@ -76,9 +100,11 @@ export class VolcanoPlotView {
 		// the old div in dom.holder (the table never closes), and toggling
 		// it on repeatedly appends additional divs.
 		this.dom.holder.select('#sjpp-volcano-pValueTable').remove()
+		// same lifecycle as the p-value table: redrawn from each response, never left stale
+		this.dom.holder.select('#sjpp-volcano-scanManhattan').remove()
 
 		if (!this.settings.showPValueTable) return
-		this.volcanoDom.pValueTable = this.dom.holder
+		this.volcanoDom.pValueTable = this.row
 			.append('div')
 			.attr('id', 'sjpp-volcano-pValueTable')
 			.attr('data-testid', 'sjpp-volcano-pValueTable')
@@ -104,6 +130,36 @@ export class VolcanoPlotView {
 			},
 			{ whenOpen: 'Hide statistics' }
 		)
+		/* The expression test on the genes under gene-body loss regions. Offered on either reading:
+		the correction narrows the set to regions that moved more than their stratum drifts, and
+		without it the DMR's own smoothed FDR is the evidence -- both are answerable questions, and
+		gating the button on the correction made the uncorrected scan a dead end. */
+		const gb = this.viewData.scan?.geneBodyLoss
+		if (gb?.genes.length) {
+			this.addActionButton(
+				`Expression of ${gb.genes.length.toLocaleString()} gene-body loss genes`,
+				[tt.DNA_METHYLATION],
+				() =>
+					geneBodyLossTest(
+						this.dom.actionsTip,
+						this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id),
+						this.interactions.app.vocabApi.vocab,
+						this.viewData.scan!,
+						this.interactions.app
+					)
+			)
+		}
+		if (this.viewData.scan?.cacheId) {
+			this.addActionButton('Genes, expression and literature', [tt.DNA_METHYLATION], () =>
+				dmrGeneLinkPanel(
+					this.dom.actionsTip,
+					this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id),
+					this.interactions.app.vocabApi.vocab,
+					this.viewData.scan!,
+					this.interactions.app
+				)
+			)
+		}
 		/* Must match the label the view model built from the same helper, otherwise the
 		find() below silently misses and the count disappears from the action bar. */
 		const dmNoun = elementNoun(this.settings?.elementType)
@@ -112,7 +168,8 @@ export class VolcanoPlotView {
 		and direction split never rendered. */
 		const SIG_PREFIX = 'Number of significant '
 		const sigRow = this.viewData.statsData.find(d => d.label.startsWith(SIG_PREFIX))
-		const numSigGenes = sigRow?.value
+		// stats values may be formatted strings now (scan rows); the count row is always a number
+		const numSigGenes = Number(sigRow?.value ?? 0)
 		if (numSigGenes) {
 			// grouped: these run to five and six figures, and "84302" vs "8430" is hard to tell apart at a glance
 			const n = numSigGenes.toLocaleString()
@@ -133,9 +190,12 @@ export class VolcanoPlotView {
 			numbers cannot be confused for each other. */
 			const off = this.viewData.xOffset
 			const centered = this.viewData.centered ? `, centered on median Δβ ${off > 0 ? '+' : ''}${off.toFixed(3)}` : ''
-			// expression keeps "DE genes"; any other term type names what the stats row counted
+			/* A DMR is differentially methylated by definition, so "DM DMRs" would say it twice. Expression
+			keeps "DE genes"; any other term type names what the stats row counted. */
 			const noun = isDM
-				? `DM ${dmNoun.many}`
+				? this.viewData.scan
+					? dmNoun.many
+					: `DM ${dmNoun.many}`
 				: this.termType == tt.GENE_EXPRESSION
 				? 'DE genes'
 				: `significant ${sigRow!.label.slice(SIG_PREFIX.length)}`
@@ -261,12 +321,7 @@ export class VolcanoPlotView {
 			'transform',
 			`translate(${plotDim.yAxisLabel.x}, ${plotDim.yAxisLabel.y}) rotate(-90)`
 		)
-		this.setSvgSubscriptLabel(
-			this.volcanoDom.yAxisLabel,
-			'-log',
-			'10',
-			this.termType === tt.PROTEOME_DAP ? '(FDR)' : `(${this.settings.pValueType} p-value)`
-		)
+		this.setSvgSubscriptLabel(this.volcanoDom.yAxisLabel, '-log', '10', `(${this.viewData.pValueLabel})`)
 
 		this.volcanoDom.xAxisLabel.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
 		/* The axis must name what it is actually plotting. Delta-beta has no subscript, so it is
@@ -393,6 +448,192 @@ export class VolcanoPlotView {
 		}
 	}
 
+	/* Where the DMRs are, along the whole genome: every kept DMR in the server's PNG, hyper above
+	the line and hypo below, height = evidence; the most significant thousand are live. A dot is
+	the same DMR the volcano shows, so hover and click give the volcano's own rows and actions --
+	the violin of that region and the region view, a genome browser with the called DMRs, the
+	per-CpG group means and the genes. Same lifecycle as the p-value table: redrawn from each
+	response, never left stale. */
+	/** What the scan covered, for the figure titles: the chromosome when that is all of it, and "the
+	 * genome" otherwise. A one-chromosome scan describing itself as genome-wide overstates every
+	 * number under it, which is what a dev host holding a subset of CpG shards produces. */
+	private scanSpan(): string {
+		const chrs = this.viewData.scan?.chromosomes || []
+		return chrs.length == 1 ? chrs[0] : 'the genome'
+	}
+
+	renderScanManhattan() {
+		const { manhattan } = this.viewData.scan!
+		// beside the volcano, ahead of the p-value table (insert before a missing node appends)
+		const div = this.row
+			.insert('div', '#sjpp-volcano-pValueTable')
+			.attr('id', 'sjpp-volcano-scanManhattan')
+			.attr('data-testid', 'sjpp-volcano-scanManhattan')
+			.style('display', 'block')
+			.style('margin', '0 0 0 20px')
+		// a Manhattan point carries the row's fields; the volcano's tooltip and actions read a row
+		const asRow = (d: any): DataPointEntry =>
+			({
+				promoter_id: `${d.chrom}:${d.start}-${d.stop}`,
+				gene_name: d.gene_name,
+				chr: d.chrom,
+				start: d.start,
+				stop: d.stop,
+				delta_beta: d.delta_beta,
+				fold_change: d.fold_change,
+				original_p_value: d.p,
+				adjusted_p_value: d.p,
+				no_cpgs: d.no_cpgs,
+				excess: d.excess
+			} as any)
+		// the case group, whose direction the colours name; the scan carries the groups it ran on
+		const g2 = this.viewData.scan!.matchedSamplelst?.groups?.[1]?.name || 'case group'
+		const link: LinkedPlot = {
+			points: [],
+			highlight: () => {},
+			region: d => ({ chr: d.chrom, start: d.start, stop: d.stop })
+		}
+		const handle = plotManhattan(
+			div,
+			{ png: manhattan!.png, plotData: manhattan!.plotData },
+			{
+				...manhattanLayoutDefaults,
+				plotWidth: manhattan!.plotWidth,
+				plotHeight: manhattan!.plotHeight,
+				// the server already picked N per direction; the client must not re-cap by |y|
+				interactiveDotsCap: manhattan!.plotData.points.length,
+				maxTooltipGenes: this.settings.maxTooltipGenes,
+				legendItemWidth: 130
+			},
+			undefined,
+			{
+				// names the chromosome when that is all the scan covered, rather than "the genome"
+				title: `DMRs along ${this.scanSpan()}, direction in ${g2} (top ${manhattan!.interactive.toLocaleString()} per direction interactive)`,
+				// short, because it runs down a 300 px axis: the legend and title say what the sign means
+				yAxisLabel: `±log₁₀(${this.viewData.pValueLabel.replace('smoothed ', '')})`,
+				legend: [
+					{ label: 'Hypermethylated', color: HYPER_COLOR, hollow: true },
+					{ label: 'Hypomethylated', color: HYPO_COLOR, hollow: true }
+				],
+				itemNoun: 'DMR',
+				renderSingleHoverTooltip: (d, container) => {
+					const table = table2col({ holder: container.append('table') })
+					this.addTooltipRows(asRow(d), table)
+					if (d.no_cpgs != null) addTooltipRow(table, 'CpGs', d.no_cpgs)
+				},
+				buildMultiHitTableData: dots => this.buildMultiHitTable(dots.map(asRow)),
+				getActions: d => this.getActionMenuOpts(asRow(d)),
+				getRowKey: d => `${d.chrom}:${d.start}-${d.stop}`,
+				onHover: dots => this.mirrorHover(link, dots)
+			}
+		)
+		this.linked.push(Object.assign(link, handle))
+		this.renderMethylationProfile(this.viewData.scan!.matchedSamplelst?.groups?.[0]?.name || 'control group', g2)
+	}
+
+	/* The genome-wide methylation profile, under the DMR plot: mean beta per group in 100 kb bins,
+	drawn as the per-bin difference. The DMR plot above shows the regions that passed a threshold;
+	this shows every bin that was measured, which is what says whether the methylome shifted a
+	little everywhere or a lot in a few places.
+
+	Same component and the same hover/click layer as the DMR plot, on the bins that moved most in
+	each direction: 29,000 dots in a band cannot be read by eye, so a dot has to be able to say
+	which 100 kb it is, what each group's mean beta there was, and how many CpGs that rests on.
+	Clicking opens the browser on the bin -- the question a standout bin raises is which of the
+	scan's DMRs are inside it, and that is the view that answers it. */
+	private renderMethylationProfile(controlName: string, caseName: string) {
+		const profile = this.viewData.scan?.profile
+		if (!profile) return
+		const div = this.dom.holder
+			.select('#sjpp-volcano-scanManhattan')
+			.append('div')
+			.attr('data-testid', 'sjpp-volcano-methylationProfile')
+			.style('display', 'block')
+			/* Pulled up into the trailing space the component reserves below every plot for a
+			legend this one does not have. The two figures share one x axis and are read together,
+			so a gap the height of the profile itself reads as two unrelated pictures. */
+			.style('margin-top', '-70px')
+		// the bin's own span, from the start the point carries and the fixed bin width
+		const region = (d: any) => ({ chr: d.chrom, start: d.pos, stop: d.pos + profile.binBp })
+		const label = (d: any) => `${d.chrom}:${(d.pos + 1).toLocaleString()}-${(d.pos + profile.binBp).toLocaleString()}`
+		const link: LinkedPlot = { points: [], highlight: () => {}, region }
+		const handle = plotManhattan(
+			div,
+			{ png: profile.png, plotData: profile.plotData },
+			{
+				...manhattanLayoutDefaults,
+				plotWidth: profile.plotWidth,
+				plotHeight: profile.plotHeight,
+				/* The radius the PNG was drawn at, not the shared default of 2: the hover layer is
+				placed in the PNG's own pixel space, and a 1 px mismatch in the padding stretches
+				the image against the dot coordinates the server computed. */
+				pngDotRadius: profile.dotRadius,
+				// the server already picked N per direction; the client must not re-cap by |y|
+				interactiveDotsCap: profile.plotData.points.length,
+				/* More rows than the volcano's 5. At 100 kb there are ~29,000 bins over 1,000 px, so
+				a cursor covers a median of 7 live bins on MMRF however tight the hit radius -- the
+				dots genuinely overlap at this scale. 8 shows the whole neighbourhood on a typical
+				hover instead of 5 of it. */
+				maxTooltipGenes: 8,
+				showLegend: false,
+				showDownload: false
+			},
+			undefined,
+			{
+				/* The width drawn, not the width requested: the server reports back what it binned at,
+				and a reader quoting the figure needs the two to agree. The interactive count is the
+				live dot count rather than the per-direction rule, because at a coarse width the rule
+				reaches every bin and "top 1,000 per direction" would read as a restriction. */
+				title:
+					`${this.scanSpan() == 'the genome' ? 'Methylome-wide' : `${this.scanSpan()}-wide`} profile: ` +
+					`mean Δβ per ${bplen(profile.binBp)} bin in ${caseName} ` +
+					`(${profile.interactive.toLocaleString()} of ${profile.bins.toLocaleString()} bins interactive)`,
+				yAxisLabel: 'Δβ per bin',
+				itemNoun: 'bin',
+				renderSingleHoverTooltip: (d, container) => {
+					const table = table2col({ holder: container.append('table') })
+					addTooltipRow(table, 'Region', label(d))
+					// with capping off, the plotted y is the difference itself
+					addTooltipRow(table, 'Δβ', roundValueAuto(d.y))
+					addTooltipRow(table, `Mean β, ${controlName}`, roundValueAuto(d.control))
+					addTooltipRow(table, `Mean β, ${caseName}`, roundValueAuto(d.case))
+					addTooltipRow(table, 'CpGs measured', d.n_probes.toLocaleString())
+				},
+				buildMultiHitTableData: dots => ({
+					columns: [{ label: 'Region' }, { label: 'Δβ', sortable: true }, { label: 'CpGs', sortable: true }],
+					rows: dots.map(d => [{ value: label(d) }, { value: roundValueAuto(d.y) }, { value: d.n_probes }])
+				}),
+				getActions: d => [
+					{
+						label: 'Genome browser',
+						onClick: async () => await this.interactions.launchScanGenomeBrowser(region(d), this.viewData.scan!)
+					}
+				],
+				getRowKey: d => label(d),
+				onHover: dots => this.mirrorHover(link, dots)
+			}
+		)
+		this.linked.push(Object.assign(link, handle))
+	}
+
+	/* Ring, on every other figure, the live dots overlapping what the cursor is on. Only live dots can
+	be ringed -- the rest are pixels in a PNG -- so a hovered DMR outside another figure's interactive
+	top N has nothing to light up there. */
+	private mirrorHover(src: LinkedPlot, dots: any[]) {
+		const hovered = dots.map(src.region)
+		for (const p of this.linked) {
+			if (p === src) continue
+			p.highlight(
+				hovered.length
+					? p.points.filter(d => {
+							const r = p.region(d)
+							return hovered.some(h => h.chr == r.chr && h.start < r.stop && r.start < h.stop)
+					  })
+					: []
+			)
+		}
+	}
+
 	renderPValueTable() {
 		if (!this.settings.showPValueTable) return
 		// Cap rendered rows to prevent browser OOM with large datasets (e.g. 30k+ significant promoters).
@@ -501,6 +742,27 @@ export class VolcanoPlotView {
 		// `drawHoverShapes` helper (which renders `<path>` elements).
 		const circlePath = (r: number) => `M${r},0 A${r},${r} 0 1,1 ${-r},0 A${r},${r} 0 1,1 ${r},0 Z`
 
+		// a scan's DMRs are also on the two genome-wide figures; a hover on any one rings them in all
+		const link: LinkedPlot | undefined = this.viewData.scan
+			? {
+					points,
+					region: d => ({ chr: d.chr, start: d.start, stop: d.stop }),
+					highlight: dots => {
+						drawHoverShapes(
+							linkedLayer,
+							dots.map(d => ({
+								path: circlePath(dotRadiusPx + 2),
+								transform: `translate(${d.x},${d.y})`,
+								stroke: 'black',
+								strokeWidth: 2
+							}))
+						)
+					}
+			  }
+			: undefined
+		const linkedLayer = this.volcanoDom.plot.append('g').style('pointer-events', 'none')
+		if (link) this.linked.push(link)
+
 		new DataPointInteractions<DataPointEntry>({
 			cover,
 			hoverLayer,
@@ -521,6 +783,7 @@ export class VolcanoPlotView {
 				stroke: 'none'
 			}),
 			maxTooltipRows: this.settings.maxTooltipGenes,
+			...(link ? { onHover: dots => this.mirrorHover(link, dots) } : {}),
 			itemNoun: 'gene',
 			renderSingleHoverTooltip: (d, container) => {
 				const table = table2col({ holder: container.append('table') })
@@ -550,10 +813,12 @@ export class VolcanoPlotView {
 		const isDAP = this.termType === tt.PROTEOME_DAP
 		const effectLabel = this.onDeltaBeta ? 'Δβ' : 'log₂(FC)'
 		const pValueType = this.settings.pValueType
-		// DAP files carry a single FDR (stored in original_p_value); label it as such
-		// rather than "Original/Adjusted p-value".
-		const pLabel = isDAP ? 'FDR' : `${pValueType.charAt(0).toUpperCase()}${pValueType.slice(1)} p-value`
-		const pField = (isDAP ? 'original_p_value' : `${pValueType}_p_value`) as 'original_p_value' | 'adjusted_p_value'
+		// a single p (DAP's FDR, a scan's p) lives in original_p_value whatever the p-value type says
+		const { pValueLabel, singlePValue } = this.viewData
+		const pLabel = pValueLabel.charAt(0).toUpperCase() + pValueLabel.slice(1)
+		const pField = (singlePValue ? 'original_p_value' : `${pValueType}_p_value`) as
+			| 'original_p_value'
+			| 'adjusted_p_value'
 		const columns = isDM
 			? [
 					{ label: elementNoun(this.settings?.elementType).one },
@@ -600,8 +865,19 @@ export class VolcanoPlotView {
 				}
 			},
 			{
+				/* A scan has already called every DMR: the browser shows them from the cache, beside
+				the genes and cCREs, where the region view would re-fit the chromosome to draw the same
+				track. The region view stays for the element classes, whose hits are not yet DMRs. */
+				label: 'Genome browser',
+				isVisible: () => termType === tt.DNA_METHYLATION && !!this.viewData.scan,
+				onClick: async () => {
+					const dm = d as DataPointEntry & { chr: string; start: number; stop: number }
+					await interactions.launchScanGenomeBrowser(dm, this.viewData.scan!)
+				}
+			},
+			{
 				label: 'DMR analysis',
-				isVisible: () => termType === tt.DNA_METHYLATION,
+				isVisible: () => termType === tt.DNA_METHYLATION && !this.viewData.scan,
 				onClick: async () => {
 					const dm = d as DataPointEntry & {
 						chr: string
@@ -648,9 +924,9 @@ export class VolcanoPlotView {
 		} else {
 			addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
 		}
-		if (this.termType === tt.PROTEOME_DAP) {
-			// DAP carries a single FDR (adjusted p-value), stored in original_p_value.
-			addTooltipRow(table, 'FDR', roundValueAuto(d.original_p_value))
+		if (this.viewData.singlePValue) {
+			// DAP carries a single FDR, a scan a single p; both are stored in original_p_value
+			addTooltipRow(table, this.viewData.pValueLabel, roundValueAuto(d.original_p_value))
 		} else {
 			addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
 			if (d.adjusted_p_value != undefined) addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))

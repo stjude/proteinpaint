@@ -7,6 +7,7 @@ import { formatElapsedTime } from '#shared'
 import { chrSeed } from '#src/utils/dmrStats.ts'
 import {
 	resolveMethylationMatrix,
+	requireCpgShards,
 	resolveGroupNames,
 	eligibleMethylationSamples,
 	validateChromosomes
@@ -116,7 +117,8 @@ export function buildScanRegions(genome: any, chromosomes: string[]) {
 // windows for a regions-less call, so they hold an empty correction
 // 3: DMRs now carry inGeneBody
 // 5: members in the key; DMRs carry bodyGenes; background p tail follows the excess direction
-const CACHE_VERSION = 5
+// 6: results record the genome and dslabel they belong to, which dmrScanTrack and dmrGeneLink require
+const CACHE_VERSION = 6
 
 /* Fingerprint the data files a result was computed from.
  *
@@ -215,6 +217,10 @@ export async function runDmrBatch(
 	const geneIdx = buildGeneIndex(genome)
 
 	const merged = mergeWindows(regions)
+	/* Refuses a chromosome with no CpG shard rather than fitting it on the element matrix; in debugmode
+	it is skipped instead. Before the cache key and the fan-out, so neither can be built from it. */
+	const kept = new Set(requireCpgShards(ds, [...merged.keys()], 'dmrBatch'))
+	for (const chr of [...merged.keys()]) if (!kept.has(chr)) merged.delete(chr)
 	const chrEntriesAll = [...merged.entries()]
 
 	/* Matrix resolution is hoisted out of the worker pool so the cache key can name the exact
@@ -547,6 +553,9 @@ export async function runDmrBatch(
 			}
 			return {
 				status: 'ok',
+				// which dataset this result belongs to, so a consumer holding only a cacheId can check it
+				genome: q.genome,
+				dslabel: q.dslabel,
 				regions: out,
 				chromosomes: merged.size,
 				totalProbesAnalyzed: totalProbes,

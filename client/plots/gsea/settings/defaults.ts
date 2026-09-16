@@ -1,6 +1,18 @@
 import type { GseaSettings } from './Settings'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 
-export function getDefaultGseaSettings(overrides = {}, opts: any= {}): GseaSettings {
+/** Whether this GSEA ranks genes by gene-body delta-beta from a DMR scan rather than by a
+ * gene-level fold change. The scan has no gene rows, so the server substitutes that ranking
+ * (genesetEnrichment.ts) and it needs a tighter gene-set ceiling than the rest. */
+function isDmrScanRanking(opts: any): boolean {
+	/* daRequest arrives only once GSEA has fetched from the volcano's cache, after these defaults are
+	built, so a differential analysis also passes the volcano's element class directly. */
+	return (
+		opts?.elementType === DMR_SCAN_ELEMENT_TYPE || opts?.gsea_params?.daRequest?.element_type === DMR_SCAN_ELEMENT_TYPE
+	)
+}
+
+export function getDefaultGseaSettings(overrides = {}, opts: any = {}): GseaSettings {
 	const defaults: GseaSettings = {
 		fdr_cutoff: 0.05,
 		num_permutations: 1000,
@@ -8,7 +20,13 @@ export function getDefaultGseaSettings(overrides = {}, opts: any= {}): GseaSetti
 		pathway: opts?.gsea_params?.pathway ?? undefined,
 		geneset_name: null,
 		min_gene_set_size_cutoff: 0,
-		max_gene_set_size_cutoff: 20000,
+		/* 500 only for a DMR scan's gene-body ranking, where blitzgsea's null fit is unstable above it.
+		The server enforces that ceiling on the library before the fit (genesetEnrichment.ts); this
+		default only keeps the table's own size filter consistent with it, and daRequest may not be
+		known yet when defaults are first built. Every other caller keeps 20,000, because lowering it
+		for them would silently drop large GO and Reactome sets from analyses that have always shown
+		them. */
+		max_gene_set_size_cutoff: isDmrScanRanking(opts) ? 500 : 20000,
 		filter_non_coding_genes: true,
 		fdr_or_top: 'top',
 		gsea_method: 'blitzgsea'

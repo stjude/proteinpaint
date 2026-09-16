@@ -1,7 +1,7 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
 import { getSampleNum } from './settings/defaults'
-import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#types'
+import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, DMR_SCAN_ELEMENT_TYPE } from '#types'
 
 /** Handles settings the controls in the menu based on the app
  * termType.
@@ -18,6 +18,11 @@ import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } f
  * at the bottom of the list or at least together
  */
 
+/** Whether the plot's current element class is the de novo DMR scan. Read from the live plot
+ * config the controls are re-rendered with, not the config captured at construction, so the scan
+ * knobs appear and disappear as the class picker changes. */
+const isScan = (plot: any) => plot?.settings?.volcano?.elementType == DMR_SCAN_ELEMENT_TYPE
+
 export class VolcanoControlInputs {
 	config: any
 	sampleNum?: number
@@ -29,11 +34,19 @@ export class VolcanoControlInputs {
 	 * termdbConfig.queries.dnaMethylation.elementTypes. Empty or single-entry means
 	 * there is nothing to choose between, and the element picker stays hidden. */
 	elementTypes: { key: string; label: string }[]
-	constructor(config: VolcanoPlotConfig, termType: string, elementTypes?: { key: string; label: string }[]) {
+	/** Major chromosomes of the genome, for the DMR scan's region picker. */
+	chromosomes: string[]
+	constructor(
+		config: VolcanoPlotConfig,
+		termType: string,
+		elementTypes?: { key: string; label: string }[],
+		chromosomes?: string[]
+	) {
 		this.config = config
 		if (this.config.termType == GENE_EXPRESSION) this.sampleNum = getSampleNum(config)
 		this.termType = termType
 		this.elementTypes = elementTypes || []
+		this.chromosomes = chromosomes || []
 		//Populated with the default controls for the volcano plot
 		this.inputs = [
 			{
@@ -60,8 +73,9 @@ export class VolcanoControlInputs {
 				chartType: 'volcano',
 				settingsKey: 'pValueType',
 				title: 'Toggle between original and adjusted pvalues for volcano plot',
-				// DAP files carry only a single FDR, so there is nothing to toggle between.
-				getDisplayStyle: () => (this.config.termType == PROTEOME_DAP ? 'none' : ''),
+				// DAP files carry only a single FDR, and a DMR scan a single p, so there is nothing to
+				// toggle between
+				getDisplayStyle: (plot: any) => (this.config.termType == PROTEOME_DAP || isScan(plot) ? 'none' : ''),
 				options: [
 					{ label: 'Adjusted', value: 'adjusted' },
 					{ label: 'Original', value: 'original' }
@@ -211,6 +225,8 @@ export class VolcanoControlInputs {
 
 	addDNAMethControlInputs() {
 		if (this.termType !== DNA_METHYLATION) return
+		const scanOnly = (plot: any) => (isScan(plot) ? '' : 'none')
+		const notScan = (plot: any) => (isScan(plot) ? 'none' : '')
 		const dmInputs: any[] = [
 			/* Element class comes FIRST because it is categorically different from the
 			controls below it: those tune how the test is run, this one changes what is
@@ -234,12 +250,110 @@ export class VolcanoControlInputs {
 						}
 				  ]
 				: []),
+			/* The scan's own knobs, shown only while the scan is the selected class. The chromosome
+			picker is a plain dropdown rather than the region search box: string2pos() turns a bare
+			"chr20" into a 20kb window at the chromosome midpoint, which would silently scan 0.005% of
+			the target. chrM is left out -- 16.5 kb of circular DNA that cannot carry a domain. */
+			{
+				label: 'Scan',
+				type: 'dropdown',
+				chartType: 'volcano',
+				settingsKey: 'scanChromosome',
+				getDisplayStyle: scanOnly,
+				options: [
+					{ value: '', label: 'Whole genome' },
+					...this.chromosomes.filter(c => c != 'chrM' && c != 'chrMT').map(c => ({ value: c, label: c }))
+				],
+				title:
+					'Call DMRs de novo across the whole genome, or across one chromosome. A whole-genome scan takes about 45 seconds the first time and is cached after that.'
+			},
+			{
+				label: 'Correct for background drift',
+				type: 'checkbox',
+				chartType: 'volcano',
+				settingsKey: 'backgroundCorrection',
+				boxLabel: '',
+				getDisplayStyle: scanOnly,
+				title:
+					'Score each DMR against width- and CpG-density-matched intergenic background instead of against zero, so the y axis asks "did this region move MORE than a region like it drifts" rather than "did it move". On a cohort whose whole genome shifts, the two questions have different answers -- on MMRF NSD2-high the hyper:hypo direction inverts. DMRs whose stratum holds too little background to score are counted in Statistics but not plotted. Roughly doubles the scan time.'
+			},
+			{
+				label: 'Min CpGs per DMR',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'minCpgs',
+				getDisplayStyle: scanOnly,
+				min: 1,
+				max: 1000,
+				title:
+					'Drop DMRs called from fewer CpGs. Two-CpG calls carry the largest effect sizes and no direction (51.5% hyper on MMRF chr1, a coin flip, against 58% for 10+ CpG calls), so a Δβ-sorted table would lead with the rows that mean least. Applied to the cached scan, so changing it redraws rather than refits.'
+			},
+			/* DMRcate's region-shape knobs. Unlike the CpG floor these change the fit's output, so each
+			one refits the scan (and gets its own cache entry). */
+			{
+				label: 'DMR bandwidth λ (bp)',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'lambda',
+				getDisplayStyle: scanOnly,
+				min: 50,
+				max: 100_000,
+				step: 50,
+				title:
+					'DMRcate lambda. Two things at once: the width of the Gaussian kernel that smooths per-CpG statistics along the genome, and the largest gap allowed between significant CpGs chained into one DMR. Larger values merge nearby signal into fewer, wider DMRs and recover broad domains; smaller values split them into narrow, focal regions. DMRcate recommends 1000 bp for CpG-resolution data. Changing it refits the scan (about 45 seconds genome-wide).'
+			},
+			{
+				label: 'DMR kernel scaling C',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'C',
+				getDisplayStyle: scanOnly,
+				min: 0.5,
+				max: 50,
+				step: 0.5,
+				title:
+					'DMRcate C: the kernel standard deviation is lambda / C. A larger C gives a narrower kernel, so each CpG borrows evidence from fewer neighbours: sharper boundaries and more, smaller DMRs, at the cost of power in sparse regions. A smaller C smooths further. DMRcate recommends 2. Changing it refits the scan.'
+			},
+			{
+				label: 'Per-CpG FDR cutoff',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'fdrCutoff',
+				getDisplayStyle: scanOnly,
+				min: 0.0001,
+				max: 0.5,
+				step: 0.01,
+				title:
+					"The FDR a CpG's smoothed statistic must pass to take part in a DMR. Raising it lets weaker CpGs join, which extends DMRs and bridges gaps between them; lowering it keeps only the strongest CpGs, giving shorter, fewer DMRs. DMRcate's default is 0.05. This is not the volcano's significance threshold, which is applied afterwards to each DMR. Changing it refits the scan."
+			},
+			{
+				/* Display width for the methylome-wide profile only. The metric is the 100 kb bin and
+				the Statistics rows stay on it whatever this says -- this is here because 29,000 dots
+				over 1,000 px overlap however small the dot, so the native figure reads as a band. */
+				label: 'Profile bin width',
+				type: 'dropdown',
+				chartType: 'volcano',
+				settingsKey: 'profileBinBp',
+				getDisplayStyle: scanOnly,
+				options: [
+					{ value: 100_000, label: '100 Kb (native)' },
+					{ value: 500_000, label: '500 Kb' },
+					{ value: 1_000_000, label: '1 Mb' },
+					{ value: 5_000_000, label: '5 Mb' }
+				],
+				// a <select> hands back its value as a string; the setting is a width in bp
+				processInput: (v: string) => Number(v),
+				title:
+					'How wide a bin the methylome-wide profile draws. 100 kb is the width the metric is computed and reported at (Zhou 2018); the coarser widths average neighbouring bins into one dot, weighted by the CpGs each rests on, so a genome-wide shift is legible instead of hidden in a band of overlapping dots. Display only: the Statistics rows and the fraction-of-bins-moved figures stay on the 100 kb bins, and changing this redraws the cached scan rather than refitting it. The most extreme 1,000 bins per direction stay hoverable at any width.'
+			},
 			{
 				label: 'Min samples per group',
 				type: 'number',
 				chartType: 'volcano',
 				settingsKey: 'minSamplesPerGroup',
 				title: 'Minimum non-NA samples required per group for a promoter to be tested',
+				// the scan resolves its own groups (3+ per group, fixed) and has no per-element NA filter
+				getDisplayStyle: notScan,
 				min: 1,
 				max: 100
 			},
@@ -249,8 +363,9 @@ export class VolcanoControlInputs {
 				chartType: 'volcano',
 				settingsKey: 'excludeSexChr',
 				boxLabel: '',
+				// the scan honours it too: scanChromosomes() drops chrX/chrY from a whole-genome scan
 				title:
-					'Drop chrX/chrY promoters. Recommended for mixed-sex cohorts — X-inactivation makes chrX methylation strongly sex-dependent, so a sex-imbalanced comparison reports sex rather than the grouping variable.'
+					'Drop chrX and chrY (promoters, elements, or whole chromosomes from a DMR scan). Recommended for mixed-sex cohorts — X-inactivation makes chrX methylation strongly sex-dependent, so a sex-imbalanced comparison reports sex rather than the grouping variable. On a scan, autosomal DMRs are unchanged (each chromosome is fitted on its own); gene links and gene set enrichment lose the X-linked genes.'
 			},
 			{
 				label: 'Center Δβ on median',
@@ -258,6 +373,8 @@ export class VolcanoControlInputs {
 				chartType: 'volcano',
 				settingsKey: 'centerDeltaBeta',
 				boxLabel: '',
+				// the background correction is the scan's version of this question
+				getDisplayStyle: notScan,
 				title:
 					'Move the Δβ origin to the median across all tested elements, so 0 is the typical element rather than no change. Use it to ask "which elements moved MORE than the typical one" — at a symmetric cutoff, a contrast whose whole distribution sits off zero clears the hyper threshold more easily than the hypo one, which skews the hyper:hypo ratio on its own. Leave it off to ask "which elements gained or lost methylation", since a genuine genome-wide shift is itself a result and centering would subtract it. The Δβ values in the table and its download are unaffected either way.'
 			},

@@ -2,7 +2,9 @@ import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { getGroupColors, toHex } from '../colors'
+import { DMRCATE_DEFAULTS } from '../settings/defaults'
 // import type { Volcano } from '../Volcano'
 
 export class VolcanoModel {
@@ -105,10 +107,28 @@ export class VolcanoModel {
 			...(this.settings.elementType && this.settings.elementType != 'promoter'
 				? { element_type: this.settings.elementType }
 				: {}),
+			// the scan's own knobs; the server ignores them for any other element type
+			...(this.settings.elementType == DMR_SCAN_ELEMENT_TYPE
+				? {
+						scan: {
+							...(this.settings.scanChromosome ? { chromosome: this.settings.scanChromosome } : {}),
+							backgroundCorrection: !!this.settings.backgroundCorrection,
+							minCpgs: this.settings.minCpgs,
+							profileBinBp: this.settings.profileBinBp,
+							// only when changed: an explicit default would orphan every cached scan
+							...(this.settings.lambda != DMRCATE_DEFAULTS.lambda ? { lambda: this.settings.lambda } : {}),
+							...(this.settings.C != DMRCATE_DEFAULTS.C ? { C: this.settings.C } : {}),
+							...(this.settings.fdrCutoff != DMRCATE_DEFAULTS.fdrCutoff ? { fdrCutoff: this.settings.fdrCutoff } : {})
+						}
+				  }
+				: {}),
 			volcanoRender: this.getVolcanoRender()
 		} as Partial<DiffMethRequest>
 
-		this.addConfounderTw(body)
+		/* The scan fits no covariates and the server rejects a scan request carrying them. Confounders
+		chosen under an element class stay in the config when the class switches to the scan, so they
+		are left off here rather than failing every scan until the user finds and clears them. */
+		if (this.settings.elementType != DMR_SCAN_ELEMENT_TYPE) this.addConfounderTw(body)
 
 		return body
 	}

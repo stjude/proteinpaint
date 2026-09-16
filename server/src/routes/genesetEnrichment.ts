@@ -8,7 +8,9 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { getDeCacheResult } from './termdb.DE.ts'
-import { getDmCacheResult } from '../../routes/termdb.diffMeth.ts'
+import { getDmCacheResult, scanChromosomes } from '../../routes/termdb.diffMeth.ts'
+import { getGeneBodyDeltas } from './termdb.geneBodyMeth.ts'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import { get_ds_tdb } from '#src/termdb.js'
 import type { GseaCacheResult } from '../../routes/types.ts'
@@ -135,9 +137,19 @@ function gseaKeyInputs(q: GenesetEnrichmentRequest, genes: string[], fold_change
 		fold_change,
 		geneSetGroup: q.geneSetGroup,
 		num_permutations: q.num_permutations,
-		filter_non_coding_genes: q.filter_non_coding_genes
+		filter_non_coding_genes: q.filter_non_coding_genes,
+		/* A scan's gene-body ranking drops sets above this size from the library BEFORE blitzgsea
+		fits its null, which is unstable above it on that ranking. Filtering the finished table
+		afterwards, as the client default did, left the fit itself unchanged. Only present for a scan,
+		so every other caller's cache key is unchanged. */
+		...((q.daRequest as Partial<DiffMethRequest> | undefined)?.element_type === DMR_SCAN_ELEMENT_TYPE
+			? { max_geneset_size: SCAN_MAX_GENESET_SIZE }
+			: {})
 	}
 }
+
+/** Largest gene set a DMR scan's gene-body ranking is fitted against. */
+const SCAN_MAX_GENESET_SIZE = 500
 
 /** Single read-or-recompute entry point for the GSEA cache. Both the
  * initial-table path and the detail-image path go through here so they
@@ -301,6 +313,7 @@ function buildPyInput(
 		cachedir: path.join(serverconfig.cachedir, 'gsea'),
 		geneset_name: q.geneset_name,
 		num_permutations: cacheArg.num_permutations,
+		...(cacheArg.max_geneset_size ? { max_geneset_size: cacheArg.max_geneset_size } : {}),
 		...(pickleB64 ? { pickle_b64: pickleB64 } : {})
 	}
 }
@@ -341,8 +354,35 @@ async function resolveGseaGenesAndFoldChange({
 				fold_change: result.geneRows.map(g => g.fold_change)
 			}
 		}
-		const { result, cacheId } = await getDmCacheResult(q.daRequest as DiffMethRequest, genomes)
+		const dm = q.daRequest as DiffMethRequest
+		const { result, cacheId } = await getDmCacheResult(dm, genomes)
 		if (cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
+		/* A scan's rows are DMRs, not genes: many per gene, none for half of them, and more for long
+		genes, so ranking them cannot mean anything gene-set-wise. Rank every gene by the mean
+		delta-beta over its body instead -- one signed number per gene, genome-wide, length-free.
+		Negative means the body lost methylation in the case group. Same groups as the scan. */
+		if (dm.element_type === DMR_SCAN_ELEMENT_TYPE) {
+			const groups = dm.samplelst.groups
+			// with the scan's correction on, rank by the excess over matched background, as the scan does
+			const deltas = await getGeneBodyDeltas(
+				{
+					genome: dm.genome,
+					dslabel: dm.dslabel,
+					group1: groups[0].values,
+					group2: groups[1].values,
+					corrected: !!dm.scan?.backgroundCorrection,
+					/* The chromosomes the scan itself ran on. Without this the ranking covered the
+					whole genome while the volcano showed one chromosome, and on a sex-imbalanced
+					cohort chrX dominated a ranking the header called the scan's own. It also keeps
+					chrM out, which has no CpG shard and would fall back to a whole element-matrix
+					fit to describe 13 mitochondrial genes. */
+					chromosomes: scanChromosomes(dm, genomes[dm.genome])
+				},
+				genomes
+			)
+			const genes = Object.keys(deltas)
+			return { genes, fold_change: genes.map(g => deltas[g]) }
+		}
 		return {
 			genes: result.promoterRows.map(p => p.gene_name),
 			fold_change: result.promoterRows.map(p => p.fold_change)

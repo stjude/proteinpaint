@@ -1,6 +1,6 @@
 import type { GSEA } from '../GSEA'
 import { type GseaParams, isProteomeDAPGseaParams, isScctGseaParams, isOtherTermTypesGseaParams } from './GseaParams'
-import { PROTEOME_DAP, SINGLECELL_CELLTYPE } from '#types'
+import { PROTEOME_DAP, SINGLECELL_CELLTYPE, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import type { AppApi } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { VolcanoModel } from '#plots/volcano/model/VolcanoModel.ts'
@@ -96,6 +96,25 @@ export class GSEAModel {
 		params.cacheId = response.data.cacheId
 		params.daRequest = response.daRequest
 		params.genes_length = response.data.totalRows
+		/* A scan's rows are DMRs, and GSEA ranks genes by gene-body delta-beta instead, so totalRows
+		would put the DMR count in a header that says "genes". The ranked list comes back from the
+		route's fetchDE mode, off the same cached gene-body deltas the enrichment runs on. */
+		if (response.daRequest?.element_type === DMR_SCAN_ELEMENT_TYPE) {
+			const ranked = await dofetch3('genesetEnrichment', {
+				body: {
+					genome: params.genome,
+					dslabel: params.dslabel,
+					cacheId: params.cacheId,
+					daRequest: params.daRequest,
+					fetchDE: true,
+					method: 'blitzgsea',
+					geneSetGroup: '',
+					filter_non_coding_genes: false
+				}
+			})
+			if (ranked?.error) throw new Error(ranked.error)
+			params.genes_length = ranked?.data?.genes?.length ?? 0
+		}
 	}
 
 	async getCachedResponse(config): Promise<any> {

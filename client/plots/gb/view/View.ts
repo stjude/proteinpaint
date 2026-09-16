@@ -2,6 +2,13 @@ import { first_genetrack_tolist } from '#common/1stGenetk'
 import { filterJoin } from '#filter'
 import { TabsRenderer } from './TabsRenderer.ts'
 import { GeneSearchRenderer } from './GeneSearchRenderer.ts'
+import { dofetch3 } from '#common/dofetch'
+import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
+
+const SCAN_DMR_TRACK = 'Scan DMRs'
+/** bedj items per `${cacheId}:${minCpgs}:${chr}`. ponytail: never evicted; a session opens a
+ * handful of chromosomes (~1 MB each at most), add an LRU if that stops being true. */
+const scanDmrItems = new Map<string, any[]>()
 
 export class View {
 	state: any
@@ -156,7 +163,40 @@ export class View {
 				if (t.shown) tklst.push(t)
 			}
 		}
+		/* Tracks the launcher brought with it, e.g. a scan's DMRs as in-memory bedj items or a genome
+		track switched on by name. Cloned so the block's per-track state never lands in app state. */
+		for (const t of this.state.config.tracks || []) tklst.push(structuredClone(t))
+		const scanTk = await this.getScanDmrTrack()
+		if (scanTk) tklst.push(scanTk)
 		return tklst
+	}
+
+	/* A DMR scan's calls, for the chromosome on screen. The launcher names the cached scan rather than
+	passing items, so a position typed into the search box on any chromosome shows that chromosome's
+	DMRs. Items are memoised per chromosome: a pan re-runs main() and must not re-read the scan. */
+	async getScanDmrTrack() {
+		const s = this.state.config.scanDmrTrack
+		const chr = this.state.config.geneSearchResult?.chr
+		if (!s || !chr || this.state.config.blockIsProteinMode) return
+		const key = `${s.cacheId}:${s.minCpgs}:${chr}`
+		if (!scanDmrItems.has(key)) {
+			const res = await dofetch3('termdb/dmrScanTrack', {
+				body: { genome: this.state.vocab.genome, dslabel: this.state.vocab.dslabel, ...s, chr }
+			})
+			if (res.error) throw res.error
+			scanDmrItems.set(key, res.items)
+		}
+		return {
+			type: 'bedj',
+			name: SCAN_DMR_TRACK,
+			bedItems: scanDmrItems.get(key),
+			stackheight: 14,
+			// drives both the fill and the block legend, which counts each class in view
+			categories: {
+				hyper: { label: 'Hypermethylated DMR', color: HYPER_COLOR },
+				hypo: { label: 'Hypomethylated DMR', color: HYPO_COLOR }
+			}
+		}
 	}
 
 	async launchCustomMds3tk() {
@@ -253,6 +293,10 @@ export class View {
 					// this tk is not in block, add to block
 					const t = this.blockInstance.block_addtk_template(tk)
 					this.blockInstance.tk_load(t)
+				} else if (tk.name == SCAN_DMR_TRACK && this.blockInstance.tklst[tki].bedItems !== tk.bedItems) {
+					// the search moved to another chromosome: same track, that chromosome's DMRs
+					this.blockInstance.tklst[tki].bedItems = tk.bedItems
+					this.blockInstance.tk_load(this.blockInstance.tklst[tki])
 				}
 			}
 			if (this.state.config.trackLst?.removeTracks) {
