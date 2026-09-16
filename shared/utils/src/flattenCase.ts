@@ -305,24 +305,40 @@ case-level field that was not fetched. */
 function compileFilter0Tri(node): (d: any, caseObj: any) => number {
 	if (!node || typeof node != 'object') return () => TRI_UNKNOWN
 	const op = node.op
-	if ((op == 'and' || op == 'or') && Array.isArray(node.content)) {
+	if (op == 'or' && Array.isArray(node.content)) {
 		const kids = node.content.map(compileFilter0Tri)
-		if (op == 'and') {
-			return (d: any, caseObj: any) => {
-				let res = TRI_TRUE
-				for (const k of kids) {
-					const v = k(d, caseObj)
-					if (v == TRI_FALSE) return TRI_FALSE // AND with a false child is false
-					if (v == TRI_UNKNOWN) res = TRI_UNKNOWN
-				}
-				return res
-			}
-		}
 		return (d: any, caseObj: any) => {
 			let res = TRI_FALSE
 			for (const k of kids) {
 				const v = k(d, caseObj)
 				if (v == TRI_TRUE) return TRI_TRUE // OR with a true child is true
+				if (v == TRI_UNKNOWN) res = TRI_UNKNOWN
+			}
+			return res
+		}
+	}
+	if (op == 'and' && Array.isArray(node.content)) {
+		// case-level leaf children sharing a nested-array root (e.g. samples.sample_type and
+		// samples.tissue_type) must be correlated to the SAME array element (GDC same-nested-object
+		// semantics), so group them by first path segment and evaluate each group per element. Other
+		// children -- sub-groups, not-nodes, diagnoses leaves -- compile independently.
+		const groups = new Map<string, Array<{ restSegs: string[]; op: string; value: any }>>()
+		const kids: Array<(d: any, caseObj: any) => number> = []
+		for (const c of node.content) {
+			const info = caseLevelLeafInfo(c)
+			if (info) {
+				if (!groups.has(info.firstSeg)) groups.set(info.firstSeg, [])
+				groups.get(info.firstSeg)!.push({ restSegs: info.restSegs, op: info.op, value: info.value })
+			} else {
+				kids.push(compileFilter0Tri(c))
+			}
+		}
+		for (const [firstSeg, leaves] of groups) kids.push(compileCorrelatedGroup(firstSeg, leaves))
+		return (d: any, caseObj: any) => {
+			let res = TRI_TRUE
+			for (const k of kids) {
+				const v = k(d, caseObj)
+				if (v == TRI_FALSE) return TRI_FALSE // AND with a false child is false
 				if (v == TRI_UNKNOWN) res = TRI_UNKNOWN
 			}
 			return res
@@ -475,11 +491,10 @@ function collectPathValues(node, segs, i, out) {
 	collectPathValues(node[segs[i]], segs, i + 1, out)
 }
 
-/* does a case-level leaf match, given all values collected along its (possibly array-backed) path?
-Positive ops (in/=/range): satisfied if ANY value matches. Negation (exclude/!=): GDC nested NOT-IN
-means NO value is in the set, so it is satisfied only when none of the values matches. Note: each leaf
-is evaluated independently, so two leaves on the SAME nested array are not constrained to the same
-sub-object (GDC's same-nested-object semantics); that cross-leaf case is rare and left unhandled. */
+/* does a case-level leaf match, given the values collected along its path within ONE scope (a single
+array element when correlated, or the whole case otherwise)? Positive ops (in/=/range): satisfied if ANY
+value matches. Negation (exclude/!=): GDC nested NOT-IN means NO value is in the set, so it is satisfied
+only when none of the values matches. */
 function caseLeafMatch(values, op, filterValue) {
 	if (op == 'exclude') {
 		const inSet = v => (Array.isArray(filterValue) ? filterValue.some(x => looseEq(x, v)) : looseEq(filterValue, v))
@@ -487,6 +502,53 @@ function caseLeafMatch(values, op, filterValue) {
 	}
 	if (op == '!=' || op == '<>') return !values.some(v => looseEq(filterValue, v))
 	return values.some(v => evalLeafOp(op, filterValue, v))
+}
+
+/* describe a filter0 node if it is a case-level leaf (a leaf whose field is not a diagnoses.* path),
+splitting the case-relative path into its first segment (the potential nested-array root) and the rest.
+Returns null for groups, not-nodes, diagnoses leaves and malformed nodes. */
+function caseLevelLeafInfo(node) {
+	if (!node || typeof node != 'object') return null
+	if (node.op == 'and' || node.op == 'or' || node.op == 'not') return null
+	const field = node.content?.field
+	if (typeof field != 'string') return null
+	if (/(?:^|\.)diagnoses\./.test(field)) return null // diagnoses leaf: evaluated against the diagnosis
+	const cm = field.match(/^cases?\.(.+)$/)
+	const segs = (cm ? cm[1] : field).split('.')
+	return { firstSeg: segs[0], restSegs: segs.slice(1), op: node.op, value: node.content.value }
+}
+
+/* compile a group of case-level leaves that share a first path segment into a tri-state evaluator that
+correlates them to the SAME nested array element: the group is TRUE if SOME element of caseObj[firstSeg]
+satisfies EVERY leaf (each leaf's remaining path resolved within that element), FALSE if some element is
+present but none satisfies all, and UNKNOWN when the field is absent (unfetched) or every element is
+undecidable. A non-array root is treated as a single element, so a single leaf or object path behaves
+exactly like an independent leaf. Deeper arrays inside an element are still flattened per leaf, so only
+the first shared array level is correlated -- enough for the common samples.<field> cohort filters. */
+function compileCorrelatedGroup(firstSeg, leaves) {
+	return (d: any, caseObj: any) => {
+		const root = caseObj?.[firstSeg]
+		if (root == null) return TRI_UNKNOWN
+		const elements = Array.isArray(root) ? root : [root]
+		if (!elements.length) return TRI_UNKNOWN
+		let anyUnknown = false
+		for (const el of elements) {
+			let elemRes = TRI_TRUE
+			for (const leaf of leaves) {
+				const values: any[] = []
+				collectPathValues(el, leaf.restSegs, 0, values)
+				const t = !values.length ? TRI_UNKNOWN : caseLeafMatch(values, leaf.op, leaf.value) ? TRI_TRUE : TRI_FALSE
+				if (t == TRI_FALSE) {
+					elemRes = TRI_FALSE
+					break
+				}
+				if (t == TRI_UNKNOWN) elemRes = TRI_UNKNOWN
+			}
+			if (elemRes == TRI_TRUE) return TRI_TRUE
+			if (elemRes == TRI_UNKNOWN) anyUnknown = true
+		}
+		return anyUnknown ? TRI_UNKNOWN : TRI_FALSE
+	}
 }
 
 // see the decision tree in https://gdc-ctds.atlassian.net/browse/SV-2770

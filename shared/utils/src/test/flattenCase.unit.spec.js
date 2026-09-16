@@ -423,6 +423,54 @@ tape('flattenCaseByFields(): array-backed case leaves disambiguate mixed OR-of-A
 	test.end()
 })
 
+// two leaves on the SAME nested array must be correlated to one element (GDC same-nested-object). With
+// samples [{Blood,Tumor},{Solid,Normal}], "sample_type=Blood AND tissue_type=Normal" is FALSE (no single
+// sample is both) -- independent some() would wrongly make it TRUE. In this OR tree only branch B (needs
+// a Solid+Normal sample, which exists) is admitted, so B must be chosen, not the primary A.
+tape('flattenCaseByFields(): grouped leaves on the same nested array are correlated per element', test => {
+	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
+	const hit = {
+		samples: [
+			{ sample_type: 'Blood', tissue_type: 'Tumor' },
+			{ sample_type: 'Solid', tissue_type: 'Normal' }
+		],
+		diagnoses: [
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'A', diagnosis_is_primary_disease: true },
+			{ age_at_diagnosis: 19175, primary_diagnosis: 'B', diagnosis_is_primary_disease: false }
+		]
+	}
+	const filter0 = {
+		op: 'or',
+		content: [
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['A'] } },
+					{ op: 'in', content: { field: 'cases.samples.sample_type', value: ['Blood'] } },
+					{ op: 'in', content: { field: 'cases.samples.tissue_type', value: ['Normal'] } }
+				]
+			},
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['B'] } },
+					{ op: 'in', content: { field: 'cases.samples.sample_type', value: ['Solid'] } },
+					{ op: 'in', content: { field: 'cases.samples.tissue_type', value: ['Normal'] } }
+				]
+			}
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.primary_diagnosis': 'B' },
+		'branch A is FALSE (no single Blood+Normal sample); only branch B is admitted, so B is chosen'
+	)
+	test.end()
+})
+
 // GDC keyword fields match case-insensitively: the portal lowercases filter values but the API returns
 // original casing (filter "bronchus and lung" vs returned "Bronchus and lung"). A case-level leaf must
 // match regardless of case, else its AND collapses to FALSE and selection wrongly falls back.

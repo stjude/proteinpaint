@@ -1,1 +1,2 @@
-
+Fixes:
+- in flatten.ts, preserve the originating array element while evaluating grouped leaves so constraints on the same nested path are correlated.
