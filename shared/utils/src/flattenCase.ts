@@ -102,7 +102,7 @@ export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1, opts: { f
 	Primary site cells and -- via the missing case.project.project_id -- a bogus "Controlled" access label */
 	if (fields.includes('diagnoses') && Array.isArray(caseObj.diagnoses)) {
 		// There may be multiple diagnosis entries, choose only one for summary plot.
-		const chosen = chooseDiagnosis(caseObj.diagnoses, getDiagnosisMatcher(opts.filter0))
+		const chosen = chooseDiagnosis(caseObj.diagnoses, getDiagnosisEvaluator(opts.filter0))
 		if (!chosen) return
 		caseObj.diagnoses = chosen
 	}
@@ -211,25 +211,39 @@ function isNotPrimaryDisease(d) {
 
 /* pick the single diagnosis entry to represent the case.
 
-matcher (optional): a predicate identifying diagnoses that satisfy the cohort filter's diagnoses
-constraints (see getDiagnosisMatcher). When present, the case is represented by a matching diagnosis
--- even a non-primary one -- so the summary aligns with the filter (SV-2821): filter0 admits a case
-if ANY of its diagnoses matches, but the default SV-2770 rule bins by the primary diagnosis, which
-may fall outside the cohort's constraint. When no diagnosis matches (or no matcher is given), fall
-back to the deterministic SV-2770 selection, so behavior is unchanged for the non-cohort-filtered case.
+evalDiagnosis (optional): the tri-state evaluator of the cohort filter's diagnoses conditions (see
+getDiagnosisEvaluator). When present, the case is represented by a diagnosis the filter admits -- even
+a non-primary one -- so the summary aligns with the filter (SV-2821): filter0 admits a case if ANY of
+its diagnoses matches, but the default SV-2770 rule bins by the primary diagnosis, which may fall
+outside the cohort's constraint.
+
+The tri-state is preserved through selection: a diagnosis the filter definitely admits (TRI_TRUE) is
+preferred over one that is only possibly-admitted (TRI_UNKNOWN, i.e. its acceptance hinges on a
+case-level leaf such as primary_site that we do not evaluate here). Collapsing both to "matched" and
+letting diagnosisSort decide would let an UNKNOWN primary diagnosis win over the TRUE diagnosis that
+actually admitted the case -- e.g. for "diagnosis=A OR primary_site=lung", a non-lung case with a
+non-primary diagnosis A (TRUE) and a primary diagnosis B (UNKNOWN) must be summarized by A, not B.
+UNKNOWN candidates are used only when no definite match exists; when neither exists (or no evaluator
+is given), fall back to the deterministic SV-2770 selection.
 
 returns the chosen diagnosis entry, or undefined when the selection is undecidable (caller then
 leaves the term unset rather than blanking unrelated terms of the case). */
-function chooseDiagnosis(allDiagnoses, matcher) {
-	if (matcher) {
-		// diagnosisFilter(d, matcher) keeps a diagnosis satisfying the cohort constraint regardless
-		// of primary-disease status; among those the SV-2770 sort still gives a deterministic pick
-		const matched = allDiagnoses.filter(d => diagnosisFilter(d, matcher))
-		if (matched.length) {
-			matched.sort(diagnosisSort)
-			return matched[0]
+function chooseDiagnosis(allDiagnoses, evalDiagnosis) {
+	if (evalDiagnosis) {
+		const trueMatches: any[] = [],
+			unknownMatches: any[] = []
+		for (const d of allDiagnoses) {
+			const t = evalDiagnosis(d)
+			if (t === TRI_TRUE) trueMatches.push(d)
+			else if (t === TRI_UNKNOWN) unknownMatches.push(d)
 		}
-		// no diagnosis satisfies the cohort constraint -> fall through to the default selection
+		// prefer definite matches; only consider possibly-admitted (UNKNOWN) diagnoses when there are none
+		const pool = trueMatches.length ? trueMatches : unknownMatches
+		if (pool.length) {
+			pool.sort(diagnosisSort)
+			return pool[0]
+		}
+		// no diagnosis is consistent with the cohort filter -> fall through to the default selection
 	}
 
 	// deterministic default: same plot for a given diagnoses[] regardless of entry order.
@@ -248,41 +262,41 @@ function chooseDiagnosis(allDiagnoses, matcher) {
 	return diagnoses[0]
 }
 
-/* SV-2821: compile a GDC cohort filter (filter0) into a predicate testing whether a single diagnosis
-entry is consistent with the case's cohort membership; null when filter0 constrains no diagnoses field,
-so chooseDiagnosis uses the default SV-2770 selection. Handles the age_at_diagnosis range and a
+/* SV-2821: compile a GDC cohort filter (filter0) into a tri-state evaluator of its diagnoses
+conditions for a single diagnosis entry; null when filter0 constrains no diagnoses field, so
+chooseDiagnosis uses the default SV-2770 selection. Handles the age_at_diagnosis range and a
 primary_diagnosis set -- any leaf whose field is "*.diagnoses.<key>".
 
 The whole boolean structure is preserved via Kleene 3-valued logic (see compileDiagnosisTri), not
-flattened: a diagnosis leaf evaluates against the diagnosis, a case-level leaf (e.g. primary_site) is
-UNKNOWN because its truth depends on case fields not evaluated here, and the case is known to have
-passed filter0. A diagnosis is selectable when the tree is NOT definitely FALSE for it (TRUE or
-UNKNOWN). This is what keeps a non-diagnosis branch inside an OR from collapsing and turning a sibling
-diagnosis branch into a spurious mandatory constraint, e.g. "(diagnosis=A OR primary_site=lung) AND
-age<60" must still admit an under-60 diagnosis that is not A. Memoized per filter0 object, since
-flattenCaseByFields runs once per case per term. */
+flattened: a diagnosis leaf evaluates TRUE/FALSE against the diagnosis, a case-level leaf (e.g.
+primary_site) is UNKNOWN because its truth depends on case fields not evaluated here, and the case is
+known to have passed filter0. The evaluator returns TRI_TRUE (filter definitely admits this diagnosis),
+TRI_UNKNOWN (admitted only if a case-level leaf holds) or TRI_FALSE (not admitted). chooseDiagnosis
+prefers TRI_TRUE over TRI_UNKNOWN, which keeps a non-diagnosis branch inside an OR from either turning a
+sibling diagnosis branch into a spurious mandatory constraint OR letting an UNKNOWN primary diagnosis
+outrank the diagnosis that actually admitted the case. Memoized per filter0 object, since
+flattenCaseByFields runs once per case per term.
+
+Boundary: case-level leaves are UNKNOWN rather than evaluated against the case, so an UNKNOWN result is
+"possibly admitted," not proven. This is only consulted when no TRI_TRUE diagnosis exists; evaluating
+case-level leaves against caseObj would make it exact but needs those fields fetched and threaded here. */
 const TRI_TRUE = 1,
 	TRI_FALSE = 0,
 	TRI_UNKNOWN = -1
-const filter0MatcherCache = new WeakMap<object, ((d: any) => boolean) | null>()
-function getDiagnosisMatcher(filter0) {
+const filter0EvalCache = new WeakMap<object, ((d: any) => number) | null>()
+function getDiagnosisEvaluator(filter0) {
 	// cache hit first: the hot path is repeat calls with the same filter0 over re.data.hits[].
 	// WeakMap.has/get tolerate a null/undefined/primitive key (return false/undefined, no throw),
 	// so the object guard below is only needed to protect the .set() further down
-	if (filter0MatcherCache.has(filter0)) return filter0MatcherCache.get(filter0)!
+	if (filter0EvalCache.has(filter0)) return filter0EvalCache.get(filter0)!
 	if (!filter0 || typeof filter0 != 'object') return null
 	// no diagnoses-scoped leaf anywhere -> no diagnosis-level constraint; return null so chooseDiagnosis
 	// uses the default SV-2770 selection (which includes its undecidable-diagnoses bail)
 	const leaves: Array<{ op: string; key: string; value: any }> = []
 	collectDiagnosisLeaves(filter0, leaves)
-	if (!leaves.length) {
-		filter0MatcherCache.set(filter0, null)
-		return null
-	}
-	const evalTree = compileDiagnosisTri(filter0)
-	const matcher = (d: any) => evalTree(d) !== TRI_FALSE
-	filter0MatcherCache.set(filter0, matcher)
-	return matcher
+	const evalTree = leaves.length ? compileDiagnosisTri(filter0) : null
+	filter0EvalCache.set(filter0, evalTree)
+	return evalTree
 }
 
 /* compile one filter0 node into (d) => tri-state (TRI_TRUE|TRI_FALSE|TRI_UNKNOWN), evaluated with
@@ -389,15 +403,9 @@ function evalDiagnosisLeaf(l, d) {
 }
 
 // see the decision tree in https://gdc-ctds.atlassian.net/browse/SV-2770
-// matcher (optional, SV-2821): when the cohort filter constrains diagnoses, it replaces the
-// primary-disease requirement below -- keep a diagnosis iff it satisfies the cohort constraint, so a
-// non-primary diagnosis that put the case in the cohort is not discarded (see getDiagnosisMatcher)
-function diagnosisFilter(d, matcher?) {
-	// the cohort matcher decides selection on whichever fields filter0 constrains -- do not drop a
-	// diagnosis on a null age_at_diagnosis before consulting it, or a diagnosis that satisfies a
-	// non-age constraint (e.g. primary_diagnosis) but has no age would be lost (SV-2821)
-	if (matcher) return matcher(d)
-	// default SV-2770 path (no cohort constraint on diagnoses):
+// default SV-2770 selection filter, used only when filter0 has no diagnoses constraint; the cohort
+// evaluator handles the filtered case in chooseDiagnosis, so a matcher never routes through here
+function diagnosisFilter(d) {
 	// strict equality, undefined and other non-null empty values are not matched,
 	// so this condition will not be applied if age_at_diagnosis or primary_diagnosis
 	// was not added to the requested fieldset
