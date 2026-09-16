@@ -83,8 +83,16 @@ args:
 	start with caseObj as "current" root
 	default is 1 as fields[0]='case', and caseObj is already the "case", so start from i=1
 	if caseObj data is returned by /cases/, use 0
+- opts.filter0:
+	the GDC cohort filter. When it constrains diagnoses -- e.g. an age_at_diagnosis range and/or a
+	primary_diagnosis set -- the case is binned by a diagnosis that satisfies those constraints, so
+	the summary aligns with the cohort filter. filter0 admits a case when ANY of its diagnoses is in
+	range, but the GDC API does not prune the returned diagnoses[] (nested sub-docs always come back
+	in full), so the matching diagnosis is picked here. See https://gdc-ctds.atlassian.net/browse/SV-2821.
+	When filter0 has no diagnoses constraint, or no diagnosis satisfies it, the deterministic SV-2770
+	selection is used.
 */
-export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
+export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1, opts: { filter0?: any } = {}) {
 	const fields = tw.term.id.split('.')
 
 	/* the diagnoses decision tree below only governs terms whose value is read out of diagnoses[];
@@ -93,22 +101,10 @@ export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 	bailout blanked every term of a case, which in the mds3 sample table surfaced as empty Disease type/
 	Primary site cells and -- via the missing case.project.project_id -- a bogus "Controlled" access label */
 	if (fields.includes('diagnoses') && Array.isArray(caseObj.diagnoses)) {
-		// There may be multiple diagnosis entries, choose only one for summary plot,
-		// but the selected entry must be deterministic and always render the same plot
-		// for a given diagnoses array with entries in assumed arbitrary, random order.
-		// See https://gdc-ctds.atlassian.net/browse/SV-2770
-		const diagnoses = caseObj.diagnoses.filter(diagnosisFilter)
-		if (!diagnoses.length) return
-		if (diagnoses.length > 1) {
-			// there should be either exactly 1 diagnoses entry that is primary disease,
-			// or all of the diagnoses entries have undefined primary disease since
-			// it was not in the requested fieldset (as required if diagnoses.age_at_diagnosis
-			// or primary_disease are also requested)
-			if (diagnoses.filter(diagnosisIsPrimaryDisease).length !== 1 && diagnoses.filter(primaryDiseasesIsDefined).length)
-				return
-		}
-		diagnoses.sort(diagnosisSort)
-		caseObj.diagnoses = diagnoses[0]
+		// There may be multiple diagnosis entries, choose only one for summary plot.
+		const chosen = chooseDiagnosis(caseObj.diagnoses, getDiagnosisMatcher(opts.filter0))
+		if (!chosen) return
+		caseObj.diagnoses = chosen
 	}
 
 	query(fields, sample, tw, caseObj, startIdx)
@@ -213,12 +209,115 @@ function isNotPrimaryDisease(d) {
 	return v === false || v === 'false'
 }
 
+/* pick the single diagnosis entry to represent the case.
+
+matcher (optional): a predicate identifying diagnoses that satisfy the cohort filter's diagnoses
+constraints (see getDiagnosisMatcher). When present, the case is represented by a matching diagnosis
+-- even a non-primary one -- so the summary aligns with the filter (SV-2821): filter0 admits a case
+if ANY of its diagnoses matches, but the default SV-2770 rule bins by the primary diagnosis, which
+may fall outside the cohort's constraint. When no diagnosis matches (or no matcher is given), fall
+back to the deterministic SV-2770 selection, so behavior is unchanged for the non-cohort-filtered case.
+
+returns the chosen diagnosis entry, or undefined when the selection is undecidable (caller then
+leaves the term unset rather than blanking unrelated terms of the case). */
+function chooseDiagnosis(allDiagnoses, matcher) {
+	if (matcher) {
+		// diagnosisFilter(d, matcher) keeps a diagnosis satisfying the cohort constraint regardless
+		// of primary-disease status; among those the SV-2770 sort still gives a deterministic pick
+		const matched = allDiagnoses.filter(d => diagnosisFilter(d, matcher))
+		if (matched.length) {
+			matched.sort(diagnosisSort)
+			return matched[0]
+		}
+		// no diagnosis satisfies the cohort constraint -> fall through to the default selection
+	}
+
+	// deterministic default: same plot for a given diagnoses[] regardless of entry order.
+	// See https://gdc-ctds.atlassian.net/browse/SV-2770
+	const diagnoses = allDiagnoses.filter(d => diagnosisFilter(d))
+	if (!diagnoses.length) return undefined
+	if (diagnoses.length > 1) {
+		// there should be either exactly 1 diagnoses entry that is primary disease,
+		// or all of the diagnoses entries have undefined primary disease since
+		// it was not in the requested fieldset (as required if diagnoses.age_at_diagnosis
+		// or primary_disease are also requested)
+		if (diagnoses.filter(diagnosisIsPrimaryDisease).length !== 1 && diagnoses.filter(primaryDiseasesIsDefined).length)
+			return undefined
+	}
+	diagnoses.sort(diagnosisSort)
+	return diagnoses[0]
+}
+
+/* SV-2821: read the diagnoses-scoped value constraints out of a GDC cohort filter (filter0) and
+return a predicate testing whether a single diagnosis entry satisfies all of them; null when filter0
+constrains no diagnoses field, so chooseDiagnosis uses the default SV-2770 selection. Handles the
+age_at_diagnosis range and a primary_diagnosis set -- any leaf whose field is "*.diagnoses.<key>".
+Parsing is memoized per filter0 object, since flattenCaseByFields runs once per case per term. */
+const filter0MatcherCache = new WeakMap<object, ((d: any) => boolean) | null>()
+function getDiagnosisMatcher(filter0) {
+	// cache hit first: the hot path is repeat calls with the same filter0 over re.data.hits[].
+	// WeakMap.has/get tolerate a null/undefined/primitive key (return false/undefined, no throw),
+	// so the object guard below is only needed to protect the .set() further down
+	if (filter0MatcherCache.has(filter0)) return filter0MatcherCache.get(filter0)!
+	if (!filter0 || typeof filter0 != 'object') return null
+	const leaves: Array<{ op: string; key: string; value: any }> = []
+	collectDiagnosisLeaves(filter0, leaves)
+	const matcher = leaves.length ? (d: any) => leaves.every(l => evalDiagnosisLeaf(l, d)) : null
+	filter0MatcherCache.set(filter0, matcher)
+	return matcher
+}
+
+/* the diagnoses sub-field names a filter0 references (e.g. 'age_at_diagnosis'), so a caller building
+a GDC /cases or /ssm_occurrences fields[] can ensure they are fetched even when they are not a
+requested term -- otherwise the matcher sees undefined and the case falls back to default selection. */
+export function diagnosisFilter0Fields(filter0): string[] {
+	const leaves: Array<{ op: string; key: string; value: any }> = []
+	collectDiagnosisLeaves(filter0, leaves)
+	return [...new Set(leaves.map(l => l.key))]
+}
+
+function collectDiagnosisLeaves(node, out) {
+	if (!node || typeof node != 'object') return
+	if (Array.isArray(node.content) && (node.op == 'and' || node.op == 'or')) {
+		for (const c of node.content) collectDiagnosisLeaves(c, out)
+		return
+	}
+	const field = node.content?.field
+	if (typeof field != 'string') return
+	// GDC fields carry a "cases." or "case." prefix, e.g. "cases.diagnoses.age_at_diagnosis"
+	const m = field.match(/(?:^|\.)diagnoses\.(.+)$/)
+	if (!m) return
+	out.push({ op: node.op, key: m[1], value: node.content.value })
+}
+
+function evalDiagnosisLeaf(l, d) {
+	const v = d?.[l.key]
+	if (v === undefined || v === null) return false
+	// membership / equality: works for a string field such as primary_diagnosis tested against
+	// filter0's value[] set (Array) -- or a scalar value via loose equality
+	if (l.op == 'in') return Array.isArray(l.value) ? l.value.includes(v) : v == l.value
+	if (l.op == '=' || l.op == '==') return v == l.value
+	// remaining ops are numeric range bounds (e.g. age_at_diagnosis in days). filter0 is not
+	// type-checked, so a non-numeric bound or value would silently fall into JS string comparison;
+	// require both to be numbers, else treat as non-matching (safe fallback to default selection)
+	if (typeof v != 'number' || typeof l.value != 'number') return false
+	if (l.op == '>=') return v >= l.value
+	if (l.op == '>') return v > l.value
+	if (l.op == '<=') return v <= l.value
+	if (l.op == '<') return v < l.value
+	return false // unknown op: cannot confirm a match -> treat as non-matching (safe fallback)
+}
+
 // see the decision tree in https://gdc-ctds.atlassian.net/browse/SV-2770
-function diagnosisFilter(d) {
+// matcher (optional, SV-2821): when the cohort filter constrains diagnoses, it replaces the
+// primary-disease requirement below -- keep a diagnosis iff it satisfies the cohort constraint, so a
+// non-primary diagnosis that put the case in the cohort is not discarded (see getDiagnosisMatcher)
+function diagnosisFilter(d, matcher?) {
 	// strict equality, undefined and other non-null empty values are not matched,
 	// so this condition will not be applied if age_at_diagnosis or primary_diagnosis
 	// was not added to the requested fieldset
 	if (d.age_at_diagnosis === null) return false
+	if (matcher) return matcher(d)
 	// as of 4/1/2026, 14 CPTAC cases have diagnoses entries that all match the condition below;
 	// it looks like the GDC API does not return these samples when the fieldset is diagnoses.*,
 	// but will still filter here nonetheless
