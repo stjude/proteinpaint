@@ -264,6 +264,78 @@ tape('flattenCaseByFields(): filter0 leaf-level exclude selects the non-excluded
 	test.end()
 })
 
+// a non-diagnosis branch inside an OR must not turn a sibling diagnosis branch into a mandatory
+// constraint. "(diagnosis=A OR primary_site=lung) AND age<60": a returned lung case whose only
+// under-60 diagnosis is not A must still be binned by that under-60 diagnosis, not fall back to an
+// over-60 primary. (Flattening/dropping the case-level branch would compile this to diagnosis=A AND
+// age<60, match nothing, and re-bin the case outside the cohort.)
+tape('flattenCaseByFields(): case-level OR branch does not force a sibling diagnosis constraint', test => {
+	const tw = { term: { id: 'case.diagnoses.age_at_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: 19000,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 22000, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'and',
+		content: [
+			{
+				op: 'or',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Adenocarcinoma, NOS'] } },
+					{ op: 'in', content: { field: 'cases.primary_site', value: ['bronchus and lung'] } }
+				]
+			},
+			{ op: '<', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 21915 } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.age_at_diagnosis': 19000 },
+		'the under-60 diagnosis is chosen even though it is not the primary_diagnosis named in the OR'
+	)
+	test.end()
+})
+
+// a diagnosis satisfying a non-age constraint (primary_diagnosis) must be selectable even when its
+// age_at_diagnosis is null -- the matcher, not a blanket null-age drop, decides selection (SV-2821)
+tape('flattenCaseByFields(): non-age constraint selects a diagnosis with null age', test => {
+	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
+	const hit = {
+		diagnoses: [
+			{
+				age_at_diagnosis: null,
+				primary_diagnosis: 'Squamous cell carcinoma, NOS',
+				diagnosis_is_primary_disease: false
+			},
+			{ age_at_diagnosis: 20000, primary_diagnosis: 'Adenocarcinoma, NOS', diagnosis_is_primary_disease: true }
+		]
+	}
+	const filter0 = {
+		op: 'and',
+		content: [
+			{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['Squamous cell carcinoma, NOS'] } }
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.primary_diagnosis': 'Squamous cell carcinoma, NOS' },
+		'the null-age diagnosis matching the cohort primary_diagnosis is chosen, not dropped'
+	)
+	test.end()
+})
+
 // when no diagnosis satisfies filter0, fall back to the deterministic SV-2770 selection so behavior
 // is unchanged for cases the cohort filter matched for a non-diagnoses reason (e.g. primary_site)
 tape('flattenCaseByFields(): filter0 falls back to the primary diagnosis when none matches', test => {

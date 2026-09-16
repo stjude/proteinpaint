@@ -249,15 +249,21 @@ function chooseDiagnosis(allDiagnoses, matcher) {
 }
 
 /* SV-2821: compile a GDC cohort filter (filter0) into a predicate testing whether a single diagnosis
-entry satisfies the filter's diagnoses-scoped conditions; null when filter0 constrains no diagnoses
-field, so chooseDiagnosis uses the default SV-2770 selection. Handles the age_at_diagnosis range and a
+entry is consistent with the case's cohort membership; null when filter0 constrains no diagnoses field,
+so chooseDiagnosis uses the default SV-2770 selection. Handles the age_at_diagnosis range and a
 primary_diagnosis set -- any leaf whose field is "*.diagnoses.<key>".
 
-The nested and/or operators are preserved (see compileDiagnosisNode): flattening the tree into a
-single AND was wrong -- "primary_diagnosis in [A] OR primary_diagnosis in [B]" would then require a
-diagnosis to be both A and B, match nothing, and fall back to the primary diagnosis (re-binning the
-case outside the cohort). Parsing is memoized per filter0 object, since flattenCaseByFields runs once
-per case per term. */
+The whole boolean structure is preserved via Kleene 3-valued logic (see compileDiagnosisTri), not
+flattened: a diagnosis leaf evaluates against the diagnosis, a case-level leaf (e.g. primary_site) is
+UNKNOWN because its truth depends on case fields not evaluated here, and the case is known to have
+passed filter0. A diagnosis is selectable when the tree is NOT definitely FALSE for it (TRUE or
+UNKNOWN). This is what keeps a non-diagnosis branch inside an OR from collapsing and turning a sibling
+diagnosis branch into a spurious mandatory constraint, e.g. "(diagnosis=A OR primary_site=lung) AND
+age<60" must still admit an under-60 diagnosis that is not A. Memoized per filter0 object, since
+flattenCaseByFields runs once per case per term. */
+const TRI_TRUE = 1,
+	TRI_FALSE = 0,
+	TRI_UNKNOWN = -1
 const filter0MatcherCache = new WeakMap<object, ((d: any) => boolean) | null>()
 function getDiagnosisMatcher(filter0) {
 	// cache hit first: the hot path is repeat calls with the same filter0 over re.data.hits[].
@@ -265,41 +271,69 @@ function getDiagnosisMatcher(filter0) {
 	// so the object guard below is only needed to protect the .set() further down
 	if (filter0MatcherCache.has(filter0)) return filter0MatcherCache.get(filter0)!
 	if (!filter0 || typeof filter0 != 'object') return null
-	const matcher = compileDiagnosisNode(filter0)
+	// no diagnoses-scoped leaf anywhere -> no diagnosis-level constraint; return null so chooseDiagnosis
+	// uses the default SV-2770 selection (which includes its undecidable-diagnoses bail)
+	const leaves: Array<{ op: string; key: string; value: any }> = []
+	collectDiagnosisLeaves(filter0, leaves)
+	if (!leaves.length) {
+		filter0MatcherCache.set(filter0, null)
+		return null
+	}
+	const evalTree = compileDiagnosisTri(filter0)
+	const matcher = (d: any) => evalTree(d) !== TRI_FALSE
 	filter0MatcherCache.set(filter0, matcher)
 	return matcher
 }
 
-/* compile one filter0 node into a per-diagnosis predicate, or null when the node constrains no
-diagnoses field. and/or groups keep their boolean meaning; a non-diagnoses leaf (e.g. primary_site)
-compiles to null and is dropped -- it is a case-level condition already satisfied by every returned
-case, so it must neither tighten an AND nor, on its own, satisfy an OR. A group with no diagnoses
-leaf anywhere therefore compiles to null (no diagnosis-level constraint). */
-function compileDiagnosisNode(node): ((d: any) => boolean) | null {
-	if (!node || typeof node != 'object') return null
-	if (Array.isArray(node.content) && (node.op == 'and' || node.op == 'or')) {
-		const children = node.content.map(compileDiagnosisNode).filter(Boolean) as Array<(d: any) => boolean>
-		if (!children.length) return null
-		return node.op == 'or' ? (d: any) => children.some(fn => fn(d)) : (d: any) => children.every(fn => fn(d))
+/* compile one filter0 node into (d) => tri-state (TRI_TRUE|TRI_FALSE|TRI_UNKNOWN), evaluated with
+Kleene 3-valued logic. A diagnoses-scoped leaf resolves TRUE/FALSE against the diagnosis; a case-level
+leaf (e.g. primary_site) and any node whose truth cannot be decided from the diagnosis are UNKNOWN.
+Preserving UNKNOWN through and/or/not is what makes a mixed group behave correctly: an OR with an
+UNKNOWN (case-level) branch stays UNKNOWN rather than reducing to its diagnosis branch alone. */
+function compileDiagnosisTri(node): (d: any) => number {
+	if (!node || typeof node != 'object') return () => TRI_UNKNOWN
+	const op = node.op
+	if ((op == 'and' || op == 'or') && Array.isArray(node.content)) {
+		const kids = node.content.map(compileDiagnosisTri)
+		if (op == 'and') {
+			return (d: any) => {
+				let res = TRI_TRUE
+				for (const k of kids) {
+					const v = k(d)
+					if (v == TRI_FALSE) return TRI_FALSE // AND with a false child is false
+					if (v == TRI_UNKNOWN) res = TRI_UNKNOWN
+				}
+				return res
+			}
+		}
+		return (d: any) => {
+			let res = TRI_FALSE
+			for (const k of kids) {
+				const v = k(d)
+				if (v == TRI_TRUE) return TRI_TRUE // OR with a true child is true
+				if (v == TRI_UNKNOWN) res = TRI_UNKNOWN
+			}
+			return res
+		}
 	}
-	if (node.op == 'not') {
-		// boolean negation of the wrapped sub-filter. content may be a single node or an array of
-		// nodes (implicitly AND-ed before negating). Only meaningful when it wraps a diagnoses
-		// constraint; if the wrapped expression has none (compiles to null -- e.g. GDC's field-presence
-		// `not` leaf, or a non-diagnoses condition), the negation constrains no diagnosis, so return null.
+	if (op == 'not') {
+		// content may be a single node or an array of nodes (implicitly AND-ed) before negating
 		const inner = Array.isArray(node.content)
-			? compileDiagnosisNode({ op: 'and', content: node.content })
-			: compileDiagnosisNode(node.content)
-		return inner ? (d: any) => !inner(d) : null
+			? compileDiagnosisTri({ op: 'and', content: node.content })
+			: compileDiagnosisTri(node.content)
+		return (d: any) => {
+			const v = inner(d)
+			return v == TRI_UNKNOWN ? TRI_UNKNOWN : v == TRI_TRUE ? TRI_FALSE : TRI_TRUE
+		}
 	}
 	// leaf
 	const field = node.content?.field
-	if (typeof field != 'string') return null
+	if (typeof field != 'string') return () => TRI_UNKNOWN
 	// GDC fields carry a "cases." or "case." prefix, e.g. "cases.diagnoses.age_at_diagnosis"
 	const m = field.match(/(?:^|\.)diagnoses\.(.+)$/)
-	if (!m) return null
-	const leaf = { op: node.op, key: m[1], value: node.content.value }
-	return (d: any) => evalDiagnosisLeaf(leaf, d)
+	if (!m) return () => TRI_UNKNOWN // case-level leaf: truth depends on case fields not evaluated here
+	const leaf = { op, key: m[1], value: node.content.value }
+	return (d: any) => (evalDiagnosisLeaf(leaf, d) ? TRI_TRUE : TRI_FALSE)
 }
 
 /* the diagnoses sub-field names a filter0 references (e.g. 'age_at_diagnosis'), so a caller building
@@ -359,11 +393,15 @@ function evalDiagnosisLeaf(l, d) {
 // primary-disease requirement below -- keep a diagnosis iff it satisfies the cohort constraint, so a
 // non-primary diagnosis that put the case in the cohort is not discarded (see getDiagnosisMatcher)
 function diagnosisFilter(d, matcher?) {
+	// the cohort matcher decides selection on whichever fields filter0 constrains -- do not drop a
+	// diagnosis on a null age_at_diagnosis before consulting it, or a diagnosis that satisfies a
+	// non-age constraint (e.g. primary_diagnosis) but has no age would be lost (SV-2821)
+	if (matcher) return matcher(d)
+	// default SV-2770 path (no cohort constraint on diagnoses):
 	// strict equality, undefined and other non-null empty values are not matched,
 	// so this condition will not be applied if age_at_diagnosis or primary_diagnosis
 	// was not added to the requested fieldset
 	if (d.age_at_diagnosis === null) return false
-	if (matcher) return matcher(d)
 	// as of 4/1/2026, 14 CPTAC cases have diagnoses entries that all match the condition below;
 	// it looks like the GDC API does not return these samples when the fieldset is diagnoses.*,
 	// but will still filter here nonetheless
