@@ -318,22 +318,18 @@ function compileFilter0Tri(node): (d: any, caseObj: any) => number {
 		}
 	}
 	if (op == 'and' && Array.isArray(node.content)) {
-		// case-level leaf children sharing a nested-array root (e.g. samples.sample_type and
-		// samples.tissue_type) must be correlated to the SAME array element (GDC same-nested-object
-		// semantics), so group them by first path segment and evaluate each group per element. Other
-		// children -- sub-groups, not-nodes, diagnoses leaves -- compile independently.
-		const groups = new Map<string, Array<{ restSegs: string[]; op: string; value: any }>>()
+		// case-level leaf children are evaluated together against the case so that constraints sharing a
+		// nested array (e.g. samples.sample_type and samples.portions.x) are correlated to the SAME element
+		// at every level (GDC same-nested-object semantics), not satisfied independently across elements.
+		// Other children -- sub-groups, not-nodes, diagnoses leaves -- compile independently.
+		const caseLeaves: any[] = []
 		const kids: Array<(d: any, caseObj: any) => number> = []
 		for (const c of node.content) {
 			const info = caseLevelLeafInfo(c)
-			if (info) {
-				if (!groups.has(info.firstSeg)) groups.set(info.firstSeg, [])
-				groups.get(info.firstSeg)!.push({ restSegs: info.restSegs, op: info.op, value: info.value })
-			} else {
-				kids.push(compileFilter0Tri(c))
-			}
+			if (info) caseLeaves.push(info)
+			else kids.push(compileFilter0Tri(c))
 		}
-		for (const [firstSeg, leaves] of groups) kids.push(compileCorrelatedGroup(firstSeg, leaves))
+		if (caseLeaves.length) kids.push((_d: any, caseObj: any) => evalLeavesInScope(caseObj, caseLeaves))
 		return (d: any, caseObj: any) => {
 			let res = TRI_TRUE
 			for (const k of kids) {
@@ -505,8 +501,8 @@ function caseLeafMatch(values, op, filterValue) {
 }
 
 /* describe a filter0 node if it is a case-level leaf (a leaf whose field is not a diagnoses.* path),
-splitting the case-relative path into its first segment (the potential nested-array root) and the rest.
-Returns null for groups, not-nodes, diagnoses leaves and malformed nodes. */
+returning the case-relative path segments (leading "cases."/"case." stripped). Returns null for groups,
+not-nodes, diagnoses leaves and malformed nodes. */
 function caseLevelLeafInfo(node) {
 	if (!node || typeof node != 'object') return null
 	if (node.op == 'and' || node.op == 'or' || node.op == 'not') return null
@@ -514,41 +510,71 @@ function caseLevelLeafInfo(node) {
 	if (typeof field != 'string') return null
 	if (/(?:^|\.)diagnoses\./.test(field)) return null // diagnoses leaf: evaluated against the diagnosis
 	const cm = field.match(/^cases?\.(.+)$/)
-	const segs = (cm ? cm[1] : field).split('.')
-	return { firstSeg: segs[0], restSegs: segs.slice(1), op: node.op, value: node.content.value }
+	return { segs: (cm ? cm[1] : field).split('.'), op: node.op, value: node.content.value }
 }
 
-/* compile a group of case-level leaves that share a first path segment into a tri-state evaluator that
-correlates them to the SAME nested array element: the group is TRUE if SOME element of caseObj[firstSeg]
-satisfies EVERY leaf (each leaf's remaining path resolved within that element), FALSE if some element is
-present but none satisfies all, and UNKNOWN when the field is absent (unfetched) or every element is
-undecidable. A non-array root is treated as a single element, so a single leaf or object path behaves
-exactly like an independent leaf. Deeper arrays inside an element are still flattened per leaf, so only
-the first shared array level is correlated -- enough for the common samples.<field> cohort filters. */
-function compileCorrelatedGroup(firstSeg, leaves) {
-	return (d: any, caseObj: any) => {
-		const root = caseObj?.[firstSeg]
-		if (root == null) return TRI_UNKNOWN
-		const elements = Array.isArray(root) ? root : [root]
-		if (!elements.length) return TRI_UNKNOWN
-		let anyUnknown = false
-		for (const el of elements) {
-			let elemRes = TRI_TRUE
-			for (const leaf of leaves) {
-				const values: any[] = []
-				collectPathValues(el, leaf.restSegs, 0, values)
-				const t = !values.length ? TRI_UNKNOWN : caseLeafMatch(values, leaf.op, leaf.value) ? TRI_TRUE : TRI_FALSE
-				if (t == TRI_FALSE) {
-					elemRes = TRI_FALSE
-					break
-				}
-				if (t == TRI_UNKNOWN) elemRes = TRI_UNKNOWN
-			}
-			if (elemRes == TRI_TRUE) return TRI_TRUE
-			if (elemRes == TRI_UNKNOWN) anyUnknown = true
-		}
-		return anyUnknown ? TRI_UNKNOWN : TRI_FALSE
+/* Evaluate an AND of case-level leaves against `scope`, correlating shared nested arrays at EVERY level
+so constraints on the same nested object are satisfied by the same element -- e.g.
+samples.portions.x=A AND samples.portions.y=B requires one sample with one portion that has both, not A
+and B from different portions/samples. leaves[].segs are relative to `scope`. Tri-state: FALSE if any
+segment group is FALSE, else UNKNOWN if any is undecidable (field absent / not fetched), else TRUE. */
+function evalLeavesInScope(scope, leaves): number {
+	if (scope == null || typeof scope != 'object' || Array.isArray(scope)) return TRI_UNKNOWN
+	const byNext = new Map<string, any[]>()
+	for (const leaf of leaves) {
+		const seg = leaf.segs[0]
+		if (!byNext.has(seg)) byNext.set(seg, [])
+		byNext.get(seg)!.push(leaf)
 	}
+	let overall = TRI_TRUE
+	for (const [seg, grp] of byNext) {
+		const t = evalChildGroup(scope[seg], grp)
+		if (t == TRI_FALSE) return TRI_FALSE
+		if (t == TRI_UNKNOWN) overall = TRI_UNKNOWN
+	}
+	return overall
+}
+
+/* Evaluate the leaves under one segment (all grp[].segs[0] == that segment) against `child` = scope[seg].
+When `child` is an array, correlate: SOME element satisfies ALL of them (terminal leaves as membership on
+the element, deeper leaves recursed into it). A scalar/object child is a single element. */
+function evalChildGroup(child, grp): number {
+	if (child === undefined || child === null) return TRI_UNKNOWN
+	const terminal: any[] = [],
+		deeper: any[] = []
+	for (const leaf of grp) {
+		if (leaf.segs.length == 1) terminal.push(leaf)
+		else deeper.push({ segs: leaf.segs.slice(1), op: leaf.op, value: leaf.value })
+	}
+	const elements = Array.isArray(child) ? child : [child]
+	if (!elements.length) return TRI_UNKNOWN
+	let anyUnknown = false
+	for (const el of elements) {
+		const t = evalElementAll(el, terminal, deeper)
+		if (t == TRI_TRUE) return TRI_TRUE
+		if (t == TRI_UNKNOWN) anyUnknown = true
+	}
+	return anyUnknown ? TRI_UNKNOWN : TRI_FALSE
+}
+
+// AND of terminal leaves (tested against `el`'s scalar values) and deeper leaves (recursed into `el`)
+function evalElementAll(el, terminal, deeper): number {
+	let overall = TRI_TRUE
+	if (terminal.length) {
+		const values: any[] = []
+		collectPathValues(el, [], 0, values) // flatten el to its scalar value(s)
+		for (const leaf of terminal) {
+			const t = !values.length ? TRI_UNKNOWN : caseLeafMatch(values, leaf.op, leaf.value) ? TRI_TRUE : TRI_FALSE
+			if (t == TRI_FALSE) return TRI_FALSE
+			if (t == TRI_UNKNOWN) overall = TRI_UNKNOWN
+		}
+	}
+	if (deeper.length) {
+		const t = evalLeavesInScope(el, deeper)
+		if (t == TRI_FALSE) return TRI_FALSE
+		if (t == TRI_UNKNOWN) overall = TRI_UNKNOWN
+	}
+	return overall
 }
 
 // see the decision tree in https://gdc-ctds.atlassian.net/browse/SV-2770

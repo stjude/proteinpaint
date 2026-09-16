@@ -1,2 +1,2 @@
 Fixes:
-- in flatten.ts, preserve the originating array element while evaluating grouped leaves so constraints on the same nested path are correlated.
+- consider filter0 when flattening GDC case-level data with multiple values such as age_at_diagnosis and primary_diagnosis

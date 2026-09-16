@@ -471,6 +471,58 @@ tape('flattenCaseByFields(): grouped leaves on the same nested array are correla
 	test.end()
 })
 
+// correlation must hold recursively at EVERY nested array level, not just the first. One sample with two
+// portions [{x:PA,y:PC},{x:PD,y:PB}]: "portions.x=PA AND portions.y=PB" is FALSE (no single portion has
+// both) -- flattening portions[] would satisfy it from different portions. Only branch B (needs a
+// PD+PB portion, which exists) is admitted, so B must be chosen, not the primary A.
+tape('flattenCaseByFields(): correlation is preserved recursively below the first nested array', test => {
+	const tw = { term: { id: 'case.diagnoses.primary_diagnosis' } }
+	const hit = {
+		samples: [
+			{
+				portions: [
+					{ x: 'PA', y: 'PC' },
+					{ x: 'PD', y: 'PB' }
+				]
+			}
+		],
+		diagnoses: [
+			{ age_at_diagnosis: 21939, primary_diagnosis: 'A', diagnosis_is_primary_disease: true },
+			{ age_at_diagnosis: 19175, primary_diagnosis: 'B', diagnosis_is_primary_disease: false }
+		]
+	}
+	const filter0 = {
+		op: 'or',
+		content: [
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['A'] } },
+					{ op: 'in', content: { field: 'cases.samples.portions.x', value: ['PA'] } },
+					{ op: 'in', content: { field: 'cases.samples.portions.y', value: ['PB'] } }
+				]
+			},
+			{
+				op: 'and',
+				content: [
+					{ op: 'in', content: { field: 'cases.diagnoses.primary_diagnosis', value: ['B'] } },
+					{ op: 'in', content: { field: 'cases.samples.portions.x', value: ['PD'] } },
+					{ op: 'in', content: { field: 'cases.samples.portions.y', value: ['PB'] } }
+				]
+			}
+		]
+	}
+
+	const sample = {}
+	flattenCaseByFields(sample, hit, tw, 1, { filter0 })
+	test.deepEqual(
+		sample,
+		{ 'case.diagnoses.primary_diagnosis': 'B' },
+		'branch A is FALSE (no single portion is PA+PB); only branch B (a PD+PB portion exists) is admitted'
+	)
+	test.end()
+})
+
 // GDC keyword fields match case-insensitively: the portal lowercases filter values but the API returns
 // original casing (filter "bronchus and lung" vs returned "Bronchus and lung"). A case-level leaf must
 // match regardless of case, else its AND collapses to FALSE and selection wrongly falls back.
