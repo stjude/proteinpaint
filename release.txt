@@ -54,6 +54,13 @@ Fixes:
 - A proteome DAP volcano calls its single p-value an FDR again. The label is read off the term type,
   which was assigned after the label was computed, so every DAP axis and column said "adjusted
   p-value" for data that is an FDR.
+- A genome-wide analysis refuses a chromosome whose CpG matrix shard is missing, naming it, rather
+  than fitting that chromosome on the element matrix: silently, one result mixed CpG and element
+  resolution across chromosomes, and where the fit cannot read that matrix it failed deep in rust
+  with an h5 error naming no cause. The single-region view keeps the documented fallback, where
+  dropping to element resolution on one chromosome is a local and visible trade. Under
+  serverconfig.debugmode the missing chromosomes are skipped instead, so a dev host holding a few
+  shards runs on those.
 - Hardening on the new routes: a caller-supplied chromosome list is bounded and deduplicated before
   anything fans out from it (one chromosome named 5,000 times was 5,000 full-matrix fits that never
   hit the cache), the requested gene set of termdb/dmrGeneDE is capped, and termdb/dmrScanTrack

@@ -7,6 +7,7 @@ import { formatElapsedTime } from '#shared'
 import { chrSeed } from '#src/utils/dmrStats.ts'
 import {
 	resolveMethylationMatrix,
+	requireCpgShards,
 	resolveGroupNames,
 	eligibleMethylationSamples,
 	validateChromosomes
@@ -216,6 +217,10 @@ export async function runDmrBatch(
 	const geneIdx = buildGeneIndex(genome)
 
 	const merged = mergeWindows(regions)
+	/* Refuses a chromosome with no CpG shard rather than fitting it on the element matrix; in debugmode
+	it is skipped instead. Before the cache key and the fan-out, so neither can be built from it. */
+	const kept = new Set(requireCpgShards(ds, [...merged.keys()], 'dmrBatch'))
+	for (const chr of [...merged.keys()]) if (!kept.has(chr)) merged.delete(chr)
 	const chrEntriesAll = [...merged.entries()]
 
 	/* Matrix resolution is hoisted out of the worker pool so the cache key can name the exact

@@ -5,6 +5,7 @@ import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import {
 	resolveMethylationMatrix,
+	requireCpgShards,
 	resolveGroupNames,
 	matchedSamplelst,
 	eligibleMethylationSamples,
@@ -168,7 +169,13 @@ export async function getGeneBodyDeltas(
 	named five thousand times became five thousand full-matrix fits -- and since the key was built
 	from the raw list, a unique multiset never hit the cache and paid in full every time. */
 	// sorted, so two requests naming the same chromosomes in a different order share a cache entry
-	const chromosomes = q.chromosomes?.length ? validateChromosomes(genome, q.chromosomes).sort() : null
+	let chromosomes = q.chromosomes?.length ? validateChromosomes(genome, q.chromosomes).sort() : null
+	/* Same rule as the scan: a chromosome with no CpG shard is refused rather than fitted on the element
+	matrix, and skipped in debugmode. The debug list is made explicit so the cache key and the compute
+	both see it; a deployment either passes or throws, so its key is unchanged. */
+	const requested = chromosomes || validateChromosomes(genome, undefined, true)
+	const usable = requireCpgShards(ds, requested, 'geneBodyMeth')
+	if (usable.length < requested.length) chromosomes = usable
 	const matrixFiles = (chromosomes || validateChromosomes(genome, undefined, true)).map(
 		c => resolveMethylationMatrix(ds, c, q.element_type).matrixFile
 	)

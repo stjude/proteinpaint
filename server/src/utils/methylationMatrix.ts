@@ -1,6 +1,7 @@
 import { resolveElementQuery } from '../../routes/termdb.diffMeth.ts'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { buildGroupValues } from '#src/utils/sampleGroups.ts'
+import serverconfig from '#src/serverconfig.js'
 
 /* Which methylation matrix a region (DMR) request runs on, and which samples are eligible for it.
 Shared by the single-region and batch routes so the two cannot drift: if they disagreed about the
@@ -122,6 +123,35 @@ export function resolveMethylationMatrix(ds: any, chr: string, elementType: stri
 	is intersected, which is what eligibleMethylationSamples does. */
 	const eligible = useElement ? elementEntry.allSampleSet : eligibleMethylationSamples(ds, elementType)
 	return { matrixFile, mvalues, useElement, eligible }
+}
+
+/* Which of these chromosomes a genome-wide analysis may fan out over, on a dataset whose CpG matrix
+is sharded per chromosome.
+
+The per-chromosome fallback to the element matrix exists for the single-region view, where dropping
+to element resolution on one chromosome is a visible, local trade. A genome-wide run is different:
+falling back silently mixes CpG and element resolution across chromosomes of ONE result, and where
+the fit cannot read the element matrix it fails deep in rust with an h5 error naming no cause. So a
+missing shard is refused up front here, naming the chromosomes.
+
+In debugmode the missing ones are skipped instead, so local dev holding one shard (say chr4) runs on
+what it has. A dataset with a genome-wide CpG matrix, or none at all, is not shard-backed and is
+returned unchanged. */
+export function requireCpgShards(ds: any, chromosomes: string[], route: string): string[] {
+	const dm = ds.queries?.dnaMethylation
+	// .file is a genome-wide CpG matrix: every chromosome is in it, so nothing can be missing
+	if (!dm?.cpgByChr || dm.file) return chromosomes
+	const missing = chromosomes.filter(c => !dm.cpgChroms?.has(c))
+	if (!missing.length) return chromosomes
+	if (!serverconfig.debugmode)
+		throw new Error(
+			`No CpG matrix for ${missing.join(',')}. A genome-wide analysis needs one shard per chromosome ` +
+				`(queries.dnaMethylation.cpgByChr); build the missing ones, or analyse a chromosome that has one.`
+		)
+	const kept = chromosomes.filter(c => dm.cpgChroms?.has(c))
+	console.log(`${route} (debugmode): skipped chromosomes with no CpG h5 file: ${missing.join(',')}`)
+	if (!kept.length) throw new Error(`No CpG h5 file for the requested chromosome(s): ${chromosomes.join(',')}`)
+	return kept
 }
 
 /* A caller-supplied chromosome list, bounded by the genome's own chromosome set and deduplicated,
