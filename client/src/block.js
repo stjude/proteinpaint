@@ -3311,6 +3311,7 @@ seekrange(chr,start,stop) {
 			par.bedItems = tk.bedItems
 		} else if (tk.file) {
 			par.file = tk.file
+			par.isCache = tk.isCache
 		} else {
 			par.url = tk.url
 			if (tk.indexURL) par.indexURL = tk.indexURL
