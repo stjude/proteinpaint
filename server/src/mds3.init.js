@@ -3475,6 +3475,7 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) 
 	const dts = []
 	if (_dt.byOrigin) {
 		for (const o in _dt.byOrigin) {
+			if (tw.term.origin && tw.term.origin != o) continue
 			const dt = _dt.byOrigin[o]
 			if (dt.bySampleType) {
 				// this origin is further split by sample type; each leaf carries its own yes/no sample sets
