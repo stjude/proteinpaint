@@ -4,14 +4,7 @@ import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
 import { read_file, trackXfetch } from './utils.js'
-import {
-	isDictionaryType,
-	isNonDictionaryType,
-	isSingleCellTerm,
-	getBin,
-	getTwSampleTypes,
-	getDefaultSampleTypes
-} from '#shared/terms.js'
+import { isDictionaryType, isNonDictionaryType, isSingleCellTerm, getBin, getTwSampleTypes } from '#shared/terms.js'
 import {
 	DNA_METHYLATION,
 	GENE_EXPRESSION,
