@@ -2335,8 +2335,10 @@ export type DtAssayAvailabilityTerm = {
 
 type DtAssayAvailabilityByOrigin = {
 	byOrigin: {
-		/** each key is an origin value or category */
-		[index: string]: DtAssayAvailabilityTerm
+		/** each key is an origin value or category. an origin may be a single availability term,
+		or be further split by sample type (e.g. calls on primary vs PDX samples) while
+		another origin stays a single term */
+		[index: string]: DtAssayAvailabilityTerm | (DtAssayAvailabilityBySampleType & { label?: string })
 	}
 }
 

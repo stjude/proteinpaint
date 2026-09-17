@@ -3383,7 +3383,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			if (!q.disableAssayAvailability) {
 				// add data availability for each dt
 				for (const dt of dts) {
-					mayAddDataAvailability(sample2mlst, dt, ds, gene, sampleFilter)
+					mayAddDataAvailability(sample2mlst, dt, ds, gene, sampleFilter, tw)
 				}
 			}
 		}
@@ -3467,7 +3467,7 @@ function getDtsToQuery(tw, ds) {
 	return [...dts]
 }
 
-function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
+function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) {
 	if (!ds.assayAvailability?.byDt) return // this ds is not equipped with assay availability by dt
 	const _dt = ds.assayAvailability.byDt[dtKey]
 	if (!_dt) return // this ds has assay availability but lacks setting for this dt. this is allowed e.g. we only specify availability for cnv but not snvindel.
@@ -3475,13 +3475,22 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 	const dts = []
 	if (_dt.byOrigin) {
 		for (const o in _dt.byOrigin) {
+			if (tw.term.origin && tw.term.origin != o) continue
 			const dt = _dt.byOrigin[o]
-			dts.push({ ...dt, origin: o })
+			if (dt.bySampleType) {
+				// this origin is further split by sample type; each leaf carries its own yes/no sample sets
+				for (const st in dt.bySampleType) {
+					if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(Number(st))) continue
+					dts.push({ ...dt.bySampleType[st], origin: o })
+				}
+			} else {
+				dts.push({ ...dt, origin: o })
+			}
 		}
 	} else if (_dt.bySampleType) {
 		for (const st in _dt.bySampleType) {
-			const dt = _dt.bySampleType[st]
-			dts.push({ ...dt, sampleType: st })
+			if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(Number(st))) continue
+			dts.push({ ..._dt.bySampleType[st] })
 		}
 	} else {
 		dts.push({ ..._dt })
@@ -4002,18 +4011,31 @@ async function mayValidateAssayAvailability(ds) {
 				const byWhat = dt.byOrigin ? 'byOrigin' : 'bySampleType'
 				for (const name in by) {
 					const sub_dt = by[name]
-					if (!sub_dt.yes || !sub_dt.no || !sub_dt.term_id)
-						throw `ds.assayAvailability.byDt.*.${byWhat} requires {term_id, yes{}, no{}}`
-					await getAssayAvailablility(ds, sub_dt)
-					console.log(
-						ds.label + ': assayAvailability',
-						dt2label[key],
-						dt.byOrigin ? name : ds.cohort.termdb.sampleTypes[name].plural_name,
-						'yes',
-						sub_dt.yesSamples.size,
-						'no',
-						sub_dt.noSamples.size
-					)
+					/* an origin may itself be split by sample type, e.g. calls assayed on primary
+					samples and on PDX samples via different availability terms, while another
+					origin stays a single term. only one nesting level is supported */
+					const isOriginBySampleType = Boolean(dt.byOrigin && sub_dt.bySampleType)
+					const leaves = isOriginBySampleType ? sub_dt.bySampleType : { [name]: sub_dt }
+					for (const leafName in leaves) {
+						const leaf = leaves[leafName]
+						if (!leaf.yes || !leaf.no || !leaf.term_id)
+							throw `ds.assayAvailability.byDt.*.${byWhat} requires {term_id, yes{}, no{}}`
+						await getAssayAvailablility(ds, leaf)
+						const label = isOriginBySampleType
+							? `${name} ${ds.cohort.termdb.sampleTypes[leafName].plural_name}`
+							: dt.byOrigin
+							? name
+							: ds.cohort.termdb.sampleTypes[name].plural_name
+						console.log(
+							ds.label + ': assayAvailability',
+							dt2label[key],
+							label,
+							'yes',
+							leaf.yesSamples.size,
+							'no',
+							leaf.noSamples.size
+						)
+					}
 				}
 			} else {
 				// not by origin or by sample type

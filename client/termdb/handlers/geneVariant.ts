@@ -189,26 +189,24 @@ export class SearchHandler {
 		if (!mutationType) return
 		const querySampleTypes: number[] = []
 		if (mutationType.dt) {
-			// mutation type has single dt
-			// get available sample types for that dt
-			const bySampleType: BySampleType =
-				this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[mutationType.dt]?.bySampleType
-			if (!bySampleType) return
-			for (const [k, v] of Object.entries(bySampleType)) {
-				if (v.hasSamples) querySampleTypes.push(Number(k))
-			}
+			// mutation type has single dt, and an origin when the dt is split by origin
+			// get available sample types for that dt (and origin)
+			const sampleTypes = this.getDtSampleTypes(mutationType.dt, mutationType.origin)
+			if (!sampleTypes) return
+			querySampleTypes.push(...sampleTypes)
 		} else if (mutationType.dts) {
 			// mutation type has multiple dts
 			// get intersection of sample types available for those dts
-			const dts = mutationType.dts
-			const bySampleTypes: BySampleType[] = dts.map(
-				dt => this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.bySampleType
-			)
-			if (!bySampleTypes.length) throw new Error('no sample types available')
-			for (const [sampleType, availability] of Object.entries(bySampleTypes[0])) {
-				if (!availability.hasSamples) continue
-				if (bySampleTypes.slice(1).every(bySampleType => bySampleType?.[sampleType]?.hasSamples)) {
-					querySampleTypes.push(Number(sampleType))
+			const sampleTypeSets = mutationType.dts.map(dt => this.getDtSampleTypes(dt, mutationType.origin))
+			if (!sampleTypeSets.length) throw new Error('no sample types available')
+			// a dt that declares no sample types leaves nothing to intersect, so return
+			// undefined for the mutation type, as the single-dt branch above does. an
+			// empty array must not be returned: it reads as "no sample type is queryable"
+			// to mayApplySampleType() and to the server's assay availability filter
+			if (sampleTypeSets.some(sampleTypes => !sampleTypes)) return
+			for (const sampleType of sampleTypeSets[0] || []) {
+				if (sampleTypeSets.slice(1).every(sampleTypes => sampleTypes?.has(sampleType))) {
+					querySampleTypes.push(sampleType)
 				}
 			}
 		}
@@ -217,6 +215,33 @@ export class SearchHandler {
 		// of this function, which may be undefined (see earlier
 		// returns above)
 		return querySampleTypes
+	}
+
+	/* sample types that have samples for one dt. they may be declared directly on the dt,
+	or nested under one or more origins (e.g. somatic and germline each assayed on primary
+	and PDX samples). when the dt is split by origin, only the given origin's sample types
+	are read, as origins may be assayed on different sample types. a sample type is included
+	when its entry has samples. returns undefined when the dt declares no sample types */
+	getDtSampleTypes(dt: number, origin?: string): Set<number> | undefined {
+		const dtConfig = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]
+		if (!dtConfig) return
+		let bySampleType: BySampleType | undefined
+		if (dtConfig.bySampleType) bySampleType = dtConfig.bySampleType
+		else if (dtConfig.byOrigin) {
+			/* an origin-split dt is only reached with an origin: a single-dt mutation type carries
+			one (see getChildTerms()), and the multi-dt allelic type is not offered when its dts are
+			split by origin (see isEligibleForAllelicGroupset() in client/tw/geneVariant.ts) */
+			if (!origin) throw new Error(`origin is required for dt ${dt} split by origin`)
+			const o: { bySampleType?: BySampleType } | undefined = dtConfig.byOrigin[origin]
+			if (!o) throw new Error(`unknown origin '${origin}' for dt ${dt}`)
+			bySampleType = o.bySampleType
+		}
+		if (!bySampleType) return
+		const sampleTypes = new Set<number>()
+		for (const [k, v] of Object.entries(bySampleType)) {
+			if (v.hasSamples) sampleTypes.add(Number(k))
+		}
+		return sampleTypes
 	}
 
 	// hide gene set radio when mutation type is cnv
@@ -451,7 +476,9 @@ export function getChildTerms(term, vocabApi: VocabApi) {
 	term.childTerms = []
 	for (const _t of dtTerms) {
 		const t = structuredClone(_t)
-		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
+		const query = vocabApi.termdbConfig.queries[t.query]
+		if (!query) continue // dt is not in dataset
+		if (query.dtLst?.length && !query.dtLst.includes(t.dt)) continue
 		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
 		if (byOrigin) {
 			// dt has origins in dataset
