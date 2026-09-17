@@ -199,6 +199,11 @@ export class SearchHandler {
 			// get intersection of sample types available for those dts
 			const sampleTypeSets = mutationType.dts.map(dt => this.getDtSampleTypes(dt, mutationType.origin))
 			if (!sampleTypeSets.length) throw new Error('no sample types available')
+			// a dt that declares no sample types leaves nothing to intersect, so return
+			// undefined for the mutation type, as the single-dt branch above does. an
+			// empty array must not be returned: it reads as "no sample type is queryable"
+			// to mayApplySampleType() and to the server's assay availability filter
+			if (sampleTypeSets.some(sampleTypes => !sampleTypes)) return
 			for (const sampleType of sampleTypeSets[0] || []) {
 				if (sampleTypeSets.slice(1).every(sampleTypes => sampleTypes?.has(sampleType))) {
 					querySampleTypes.push(sampleType)
@@ -216,9 +221,7 @@ export class SearchHandler {
 	or nested under one or more origins (e.g. somatic and germline each assayed on primary
 	and PDX samples). when the dt is split by origin, only the given origin's sample types
 	are read, as origins may be assayed on different sample types. a sample type is included
-	when its entry has samples. an availability term always annotates the sample type that
-	holds the genomic data, so a type is offered for querying exactly as declared. returns
-	undefined when the dt declares no sample types */
+	when its entry has samples. returns undefined when the dt declares no sample types */
 	getDtSampleTypes(dt: number, origin?: string): Set<number> | undefined {
 		const dtConfig = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]
 		if (!dtConfig) return

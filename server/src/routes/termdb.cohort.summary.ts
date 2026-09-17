@@ -40,10 +40,12 @@ function init({ genomes }) {
 					/* the ds has typed samples (a patient-sample hierarchy): report the filtered
 					ids at every level, in the same format as getCohortSampleCount() */
 					try {
-						count = getSampleCountByType(
-							ds,
-							samples.map(s => s.id)
-						)
+						// keep the flat count when the getter cannot describe the ids by type
+						count =
+							getSampleCountByType(
+								ds,
+								samples.map(s => s.id)
+							) || count
 					} catch (e) {
 						// fall back to the flat sample count rather than failing the About display
 						console.log('cohort summary by-type count failed:', e)

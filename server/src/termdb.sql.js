@@ -212,10 +212,13 @@ filtered ids sit at one level (see maySetMapParent2Children()); counted with the
 ancestors (the patients of matched samples) and their descendants (the samples of matched
 patients), each per sample type, in sample type id order. siblings of a matched sample are not
 counted: a PDX-only filter reports its patients and PDX samples, not the primary samples that did
-not pass it. returns undefined when the ds has no hierarchy, so that a caller falls back to a flat
-count. used by the termdb/cohort/summary route, which feeds the mass nav ABOUT tab. */
+not pass it. returns undefined when the ds cannot be described this way, so that a caller falls back
+to a flat count: hasSampleAncestry only means the ds declares >1 sample type and does not guarantee a
+sample_ancestry table, and the ids may match no row of sampleidmap.
+used by the termdb/cohort/summary route, which feeds the mass nav ABOUT tab. */
 export function getSampleCountByType(ds, ids) {
 	if (!ds.cohort?.termdb?.hasSampleAncestry || !ids?.length) return
+	if (!ds.cohort.db.tables?.has('sample_ancestry')) return
 	const rows = ds.cohort.db.connection
 		.prepare(
 			`WITH m AS (SELECT value AS id FROM json_each(?)),
@@ -229,6 +232,7 @@ export function getSampleCountByType(ds, ids) {
 			GROUP BY sm.sample_type ORDER BY sm.sample_type`
 		)
 		.all(JSON.stringify(ids))
+	if (!rows.length) return
 	return rows
 		.map(r => {
 			const st = ds.cohort.termdb.sampleTypes[r.sample_type]

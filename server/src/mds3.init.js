@@ -3479,8 +3479,8 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) 
 			if (dt.bySampleType) {
 				// this origin is further split by sample type; each leaf carries its own yes/no sample sets
 				for (const st in dt.bySampleType) {
-					if (tw.term.sampleTypes && !tw.term.sampleTypes.includes(Number(st))) continue
-					dts.push({ ...dt.bySampleType[st], origin: o, sampleType: st })
+					if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(Number(st))) continue
+					dts.push({ ...dt.bySampleType[st], origin: o })
 				}
 			} else {
 				dts.push({ ...dt, origin: o })
@@ -3488,9 +3488,8 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) 
 		}
 	} else if (_dt.bySampleType) {
 		for (const st in _dt.bySampleType) {
-			if (tw.term.sampleTypes && !tw.term.sampleTypes.includes(Number(st))) continue
-			const dt = _dt.bySampleType[st]
-			dts.push({ ...dt, sampleType: st })
+			if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(Number(st))) continue
+			dts.push({ ..._dt.bySampleType[st] })
 		}
 	} else {
 		dts.push({ ..._dt })
@@ -4014,18 +4013,18 @@ async function mayValidateAssayAvailability(ds) {
 					/* an origin may itself be split by sample type, e.g. calls assayed on primary
 					samples and on PDX samples via different availability terms, while another
 					origin stays a single term. only one nesting level is supported */
-					const leaves = dt.byOrigin && sub_dt.bySampleType ? sub_dt.bySampleType : { [name]: sub_dt }
+					const isOriginBySampleType = Boolean(dt.byOrigin && sub_dt.bySampleType)
+					const leaves = isOriginBySampleType ? sub_dt.bySampleType : { [name]: sub_dt }
 					for (const leafName in leaves) {
 						const leaf = leaves[leafName]
 						if (!leaf.yes || !leaf.no || !leaf.term_id)
 							throw `ds.assayAvailability.byDt.*.${byWhat} requires {term_id, yes{}, no{}}`
 						await getAssayAvailablility(ds, leaf)
-						const label =
-							dt.byOrigin && sub_dt.bySampleType
-								? `${name} ${ds.cohort.termdb.sampleTypes[leafName].plural_name}`
-								: dt.byOrigin
-								? name
-								: ds.cohort.termdb.sampleTypes[name].plural_name
+						const label = isOriginBySampleType
+							? `${name} ${ds.cohort.termdb.sampleTypes[leafName].plural_name}`
+							: dt.byOrigin
+							? name
+							: ds.cohort.termdb.sampleTypes[name].plural_name
 						console.log(
 							ds.label + ': assayAvailability',
 							dt2label[key],
