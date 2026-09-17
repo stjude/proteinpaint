@@ -476,7 +476,9 @@ export function getChildTerms(term, vocabApi: VocabApi) {
 	term.childTerms = []
 	for (const _t of dtTerms) {
 		const t = structuredClone(_t)
-		if (!Object.keys(vocabApi.termdbConfig.queries).includes(t.query)) continue // dt is not in dataset
+		const query = vocabApi.termdbConfig.queries[t.query]
+		if (!query) continue // dt is not in dataset
+		if (query.dtLst?.length && !query.dtLst.includes(t.dt)) continue
 		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
 		if (byOrigin) {
 			// dt has origins in dataset
