@@ -369,10 +369,13 @@ async function getSampleData(q, ds) {
 
 	// determine the sample type
 	let sampleType
-	if (ds.cohort.termdb.sampleTypesByTerms && q.terms.some(tw => tw.term.sampleTypeLabel)) {
-		// sample type based on terms and sample type label defined
-		// label already displayed in term pill and sandbox header
-		// so only need to render minimal samples label in plot
+	if (
+		ds.cohort.termdb.sampleTypesByTerms &&
+		q.sampleTypes?.every(st => Number.isInteger(ds.cohort.termdb.sampleTypes[st].parent_id))
+	) {
+		// sample types in ds are based on terms and all query
+		// sample types are non-root, so only need minimal samples
+		// label in plot
 		sampleType = { name: 'sample', plural_name: 'samples' }
 	} else if (q.sampleTypes) {
 		// query sample types defined

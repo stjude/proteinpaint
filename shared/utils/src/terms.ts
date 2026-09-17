@@ -619,13 +619,20 @@ export function getBin(lst: any[], value: number) {
 export function getTwSampleTypes(tw: any, ds: any, mapParent2Children?: boolean) {
 	const term = tw?.term
 	if (!term) return []
-	const defaultSampleTypes = getDefaultSampleTypes(ds)
-	if (mapParent2Children) {
-		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
-		return Array.isArray(sampleType?.childSampleTypes) ? sampleType.childSampleTypes : defaultSampleTypes
-	}
+	// prioritize user-defined sample types
 	if (term.sampleTypes) {
 		return term.sampleTypes
+	}
+	if (dtTermTypes.has(term.type)) {
+		if (term.parentTerm.sampleTypes) {
+			return term.parentTerm.sampleTypes
+		}
+	}
+	const defaultSampleTypes = getDefaultSampleTypes(ds)
+	if (mapParent2Children) {
+		// must map to child sample types
+		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
+		return Array.isArray(sampleType?.childSampleTypes) ? sampleType.childSampleTypes : defaultSampleTypes
 	}
 	if (ds.cohort.termdb.term2SampleType.has(term.id)) {
 		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
@@ -646,11 +653,6 @@ export function getTwSampleTypes(tw: any, ds: any, mapParent2Children?: boolean)
 			if (Number.isInteger(sampleType)) return [sampleType]
 			return []
 		} else return defaultSampleTypes
-	}
-	if (dtTermTypes.has(term.type)) {
-		if (term.parentTerm.sampleTypes) {
-			return term.parentTerm.sampleTypes
-		}
 	}
 	return defaultSampleTypes
 }
