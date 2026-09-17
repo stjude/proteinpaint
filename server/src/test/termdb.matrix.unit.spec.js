@@ -92,7 +92,37 @@ tape('divideTerms: sorts terms by type', t => {
 	t.end()
 })
 
-tape('maySetMapParent2Children: explicit map flag queries all non-root sample types', t => {
+tape('maySetMapParent2Children: explicit map flag preserves query-derived sample types', t => {
+	const ds = {
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: {
+					1: { name: 'Root', parent_id: null },
+					2: { name: 'Child A', parent_id: 1 },
+					3: { name: 'Child B', parent_id: 1 }
+				}
+			}
+		}
+	}
+
+	const query = {
+		terms: [{ term: { id: 'gene', sampleTypes: [2, 3] } }]
+	}
+	maySetMapParent2Children(query, ds, true)
+	t.equal(query.mapParent2Children, true, 'an explicit true flag is preserved')
+	t.deepEqual(query.sampleTypes, [2, 3], 'sample types are derived from the query')
+
+	const doNotMapParents = {
+		terms: [{ term: { id: 'gene', sampleTypes: [2, 3] } }]
+	}
+	maySetMapParent2Children(doNotMapParents, ds, false)
+	t.equal(doNotMapParents.mapParent2Children, false, 'an explicit false flag is preserved')
+	t.deepEqual(doNotMapParents.sampleTypes, [2, 3], 'the same query-derived sample types are preserved')
+	t.end()
+})
+
+tape('maySetMapParent2Children: does not invent sample types without a query scope', t => {
 	const ds = {
 		cohort: {
 			termdb: {
@@ -109,12 +139,7 @@ tape('maySetMapParent2Children: explicit map flag queries all non-root sample ty
 	const mapParents = {}
 	maySetMapParent2Children(mapParents, ds, true)
 	t.equal(mapParents.mapParent2Children, true, 'an explicit true flag is preserved')
-	t.deepEqual(mapParents.sampleTypes, [2, 3], 'all non-root sample types are selected')
-
-	const doNotMapParents = {}
-	maySetMapParent2Children(doNotMapParents, ds, false)
-	t.equal(doNotMapParents.mapParent2Children, false, 'an explicit false flag is preserved')
-	t.deepEqual(doNotMapParents.sampleTypes, [2, 3], 'the same default sample types are selected')
+	t.equal(mapParents.sampleTypes, undefined, 'no sample types are synthesized without a query scope')
 	t.end()
 })
 
