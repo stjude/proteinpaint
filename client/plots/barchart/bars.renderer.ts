@@ -616,13 +616,12 @@ export default function barsRenderer(barsapp: any, holder: any) {
 	function addRowLabel(this: any, d) {
 		if (!this || d === undefined) return
 		const g = select(this).attr('transform', rowLabelTransform).style('opacity', 0)
-
 		g.append('text')
 			.attr('x', 2) //hm.colw / 3)
 			.attr('text-anchor', 'end')
 			.attr('font-size', computed.rowfontsize + 'px')
 			.html(hm.handlers.barLabel.text)
-			.attr('data-testid', 'sjpp-row-label-' + d.seriesId)
+			.attr('data-testid', 'sjpp-row-label-' + d.id)
 
 		g.transition().delay(hm.delay).duration(hm.duration).style('opacity', 1)
 	}

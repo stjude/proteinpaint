@@ -19,33 +19,6 @@ export type TermdbSurvivalRequest = {
 	term1?: TermWrapper | Term
 	term2?: TermWrapper | Term
 
-	/** @deprecated post the term wrapper in term0 */
-	term0_q?: any
-	/** @deprecated post the term wrapper in term0 */
-	term0_id?: string
-	/** @deprecated post the term wrapper in term0 */
-	term0_$id?: string
-	/** @deprecated post the term wrapper in term0 */
-	term0_type?: string
-
-	/** @deprecated post the term wrapper in term1 */
-	term1_q?: any
-	/** @deprecated post the term wrapper in term1 */
-	term1_id?: string
-	/** @deprecated post the term wrapper in term1 */
-	term1_$id?: string
-	/** @deprecated post the term wrapper in term1 */
-	term1_type?: string
-
-	/** @deprecated post the term wrapper in term2 */
-	term2_q?: any
-	/** @deprecated post the term wrapper in term2 */
-	term2_id?: string
-	/** @deprecated post the term wrapper in term2 */
-	term2_$id?: string
-	/** @deprecated post the term wrapper in term2 */
-	term2_type?: string
-
 	filter?: Filter
 	filter0?: any
 	hiddenValues?: {
