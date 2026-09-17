@@ -213,19 +213,17 @@ export class SearchHandler {
 	}
 
 	/* sample types that have samples for one dt. they may be declared directly on the dt,
-	or nested under one or more origins (e.g. somatic split into primary/PDX while germline
-	is a single patient-level term). when the dt is split by origin, only the given origin's
-	sample types are read, as origins may be assayed on different sample types. a sample type
-	is included when any declaring entry has samples. a type that is the parent of another
-	type (e.g. patient above primary and PDX samples) annotates availability at that level
-	but holds no genomic data itself: the data sits on its child samples, so the parent is
-	replaced by its children (a patient-level germline term offers the patient's primary and
-	PDX samples). returns undefined when the dt declares no sample types */
+	or nested under one or more origins (e.g. somatic and germline each assayed on primary
+	and PDX samples). when the dt is split by origin, only the given origin's sample types
+	are read, as origins may be assayed on different sample types. a sample type is included
+	when its entry has samples. an availability term always annotates the sample type that
+	holds the genomic data, so a type is offered for querying exactly as declared. returns
+	undefined when the dt declares no sample types */
 	getDtSampleTypes(dt: number, origin?: string): Set<number> | undefined {
 		const dtConfig = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]
 		if (!dtConfig) return
-		const bySampleTypeLst: BySampleType[] = []
-		if (dtConfig.bySampleType) bySampleTypeLst.push(dtConfig.bySampleType)
+		let bySampleType: BySampleType | undefined
+		if (dtConfig.bySampleType) bySampleType = dtConfig.bySampleType
 		else if (dtConfig.byOrigin) {
 			/* an origin-split dt is only reached with an origin: a single-dt mutation type carries
 			one (see getChildTerms()), and the multi-dt allelic type is not offered when its dts are
@@ -233,29 +231,12 @@ export class SearchHandler {
 			if (!origin) throw new Error(`origin is required for dt ${dt} split by origin`)
 			const o: { bySampleType?: BySampleType } | undefined = dtConfig.byOrigin[origin]
 			if (!o) throw new Error(`unknown origin '${origin}' for dt ${dt}`)
-			if (o.bySampleType) bySampleTypeLst.push(o.bySampleType)
+			bySampleType = o.bySampleType
 		}
-		if (!bySampleTypeLst.length) return
+		if (!bySampleType) return
 		const sampleTypes = new Set<number>()
-		for (const bySampleType of bySampleTypeLst) {
-			for (const [k, v] of Object.entries(bySampleType)) {
-				if (v.hasSamples) sampleTypes.add(Number(k))
-			}
-		}
-		const allTypes: [string, { parent_id?: number | null }][] = Object.entries(
-			this.opts.app.vocabApi.termdbConfig?.sampleTypes || {}
-		)
-		const parent2children = new Map<number, number[]>()
-		for (const [id, t] of allTypes) {
-			if (!Number.isInteger(t?.parent_id)) continue
-			const parent = t.parent_id as number
-			if (!parent2children.has(parent)) parent2children.set(parent, [])
-			parent2children.get(parent)!.push(Number(id))
-		}
-		for (const [parent, children] of parent2children) {
-			if (!sampleTypes.has(parent)) continue
-			sampleTypes.delete(parent)
-			for (const c of children) sampleTypes.add(c)
+		for (const [k, v] of Object.entries(bySampleType)) {
+			if (v.hasSamples) sampleTypes.add(Number(k))
 		}
 		return sampleTypes
 	}

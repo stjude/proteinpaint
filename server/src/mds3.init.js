@@ -3475,7 +3475,6 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) 
 	const dts = []
 	if (_dt.byOrigin) {
 		for (const o in _dt.byOrigin) {
-			if (tw.term.origin && tw.term.origin != o) continue
 			const dt = _dt.byOrigin[o]
 			if (dt.bySampleType) {
 				// this origin is further split by sample type; each leaf carries its own yes/no sample sets
@@ -3502,30 +3501,15 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) 
 			// sample has been assayed
 			// if sample does not have annotated mutation for dt
 			// then it will be annotated as wildtype
-			//for (const id of getQueriedSamples(sid, ds, sampleFilter))
 			addDataAvailability(sid, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter, gene)
 		}
 		for (const sid of dt.noSamples) {
 			// sample has not been assayed
 			// annotate the sample as not tested
-			//for (const id of getQueriedSamples(sid, ds, sampleFilter))
 			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter, gene)
 		}
 	}
 }
-
-/* an availability term may annotate parent samples (e.g. a patient-level germline term) while the
-query is at the child level, with sampleFilter holding child sample ids (mayLimitSamples() on
-q.sampleTypes). such a parent id would be dropped by the filter, losing the availability of every
-sample under it; map it instead onto its descendants that pass the filter, as a patient's assay
-status applies to each of their samples. an id that passes the filter itself, or a query without
-a filter, is used as is */
-/*function getQueriedSamples(sid, ds, sampleFilter) {
-	if (!sampleFilter || sampleFilter.has(sid)) return [sid]
-	const descendants = ds.cohort.termdb.q.id2descendants?.(sid)
-	if (!descendants) return [sid] // not a parent; addDataAvailability() drops it via the filter as before
-	return descendants.filter(id => sampleFilter.has(id))
-}*/
 
 function addDataAvailability(sid, sample2mlst, dtKey, c, origin, sampleFilter, gene) {
 	if (sampleFilter && !sampleFilter.has(sid)) return
@@ -4027,9 +4011,9 @@ async function mayValidateAssayAvailability(ds) {
 				const byWhat = dt.byOrigin ? 'byOrigin' : 'bySampleType'
 				for (const name in by) {
 					const sub_dt = by[name]
-					/* an origin may itself be split by sample type, e.g. somatic calls assayed on
-					primary samples and on PDX samples via different availability terms, while
-					germline stays a single patient-level term. only one nesting level is supported */
+					/* an origin may itself be split by sample type, e.g. calls assayed on primary
+					samples and on PDX samples via different availability terms, while another
+					origin stays a single term. only one nesting level is supported */
 					const leaves = dt.byOrigin && sub_dt.bySampleType ? sub_dt.bySampleType : { [name]: sub_dt }
 					for (const leafName in leaves) {
 						const leaf = leaves[leafName]
