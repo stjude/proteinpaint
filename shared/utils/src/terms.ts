@@ -616,23 +616,35 @@ export function getBin(lst: any[], value: number) {
 }
 
 // get sample types of termwrapper
-export function getTwSampleTypes(tw: any, ds: any) {
+export function getTwSampleTypes(tw: any, ds: any, mapParent2Children?: boolean) {
 	const term = tw?.term
 	if (!term) return []
+	const defaultSampleTypes = getDefaultSampleTypes(ds)
+	if (mapParent2Children) {
+		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
+		return Array.isArray(sampleType?.childSampleTypes) ? sampleType.childSampleTypes : defaultSampleTypes
+	}
 	if (term.sampleTypes) {
 		return term.sampleTypes
 	}
 	if (ds.cohort.termdb.term2SampleType.has(term.id)) {
 		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
-		return Array.isArray(sampleType) ? sampleType : [sampleType]
+		if (Number.isInteger(sampleType)) {
+			return [sampleType]
+		} else if (sampleType && typeof sampleType == 'object') {
+			if (!Number.isInteger(sampleType.sampleType)) throw new Error('sampleType.sampleType is non-numeric')
+			return [sampleType.sampleType]
+		} else {
+			return []
+		}
 	}
-	const defaultSampleTypes = getDefaultSampleTypes(ds)
 	if (term.type == 'samplelst') {
 		const key = Object.keys(term.values)[0]
 		const sampleId = term.values[key].list[0]?.sampleId
 		if (sampleId) {
 			const sampleType = ds.sampleId2Type.get(Number(sampleId) || sampleId)
-			return sampleType != null ? [sampleType] : []
+			if (Number.isInteger(sampleType)) return [sampleType]
+			return []
 		} else return defaultSampleTypes
 	}
 	if (dtTermTypes.has(term.type)) {

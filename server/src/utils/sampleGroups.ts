@@ -1,6 +1,5 @@
 import type { DERequest, DiffMethRequest } from '#types'
-import { getData, maySetMapParent2Children } from '#src/termdb.matrix.js'
-import { mayLimitSamples } from '#src/mds3.filter.js'
+import { getData } from '#src/termdb.matrix.js'
 
 /** Two-group sample resolution result. The conf{1,2}_group{1,2} arrays
  * carry the confounder values for samples that survived the per-confounder
@@ -101,34 +100,7 @@ export async function buildGroupValues(
 	const names: string[] = []
 	const conf1: (string | number)[] = []
 	const conf2: (string | number)[] = []
-	let sampleLst = values
-	if (ds.cohort.termdb.hasSampleAncestry) {
-		// ds has sample ancestry
-		// data for DE/DM (i.e. genomic data) are assumed to be
-		// at sample-level, so map sample ids to sample-level
-		const term = {
-			type: 'samplelst',
-			values: {
-				'': { key: '', list: values }
-			}
-		}
-		const filter = {
-			type: 'tvslst',
-			in: true,
-			join: '',
-			lst: [{ type: 'tvs', tvs: { term } }]
-		}
-		const arg = { filter }
-		maySetMapParent2Children(arg, ds, true)
-		const allSamples = [...allSampleSet].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
-		// filtering samples by samplelst term
-		// if samples are at parent-level, then will get mapped to sample-level
-		// otherwise, samples will be used as is
-		const samples = (await mayLimitSamples(arg, allSamples, ds)) || new Set()
-		sampleLst = [...samples].map(s => {
-			return { sampleId: s }
-		})
-	}
+	const sampleLst = values
 	for (const s of sampleLst) {
 		// a string sampleId IS the sample name: api-backed datasets without a sqlite termdb (gdc) key
 		// samples by case uuid, which is what getSampleList() hands back for them. an integer id is a

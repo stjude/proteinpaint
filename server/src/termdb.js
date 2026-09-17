@@ -14,6 +14,8 @@ import { uiLabel } from '#shared'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import serverconfig from './serverconfig.js'
 import { filterTerms } from './termdb.server.init.ts'
+import { get_matrix } from './termdb.get_matrix.js'
+import { maySetMapParent2Children } from './termdb.matrix.js'
 /*
 ********************** EXPORTED
 handle_request_closure
@@ -153,6 +155,8 @@ async function getSampleCount(q, ds) {
 
 async function getSampleList(req, q, ds) {
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
+	// calling maySetMapParent2Children() to get query sample types
+	maySetMapParent2Children(q, ds, q.mapParent2Children)
 	let samples
 	if (ds.cohort?.db) {
 		// dataset is sqlite-based

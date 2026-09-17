@@ -688,21 +688,14 @@ export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
 		q.mapParent2Children = false
 		return
 	}
-	// ds has sample ancestry
-	if (typeof mapParent2Children === 'boolean') {
-		// flag supplied by caller
-		q.mapParent2Children = mapParent2Children
-		q.sampleTypes = getDefaultSampleTypes(ds)
-		return
-	}
+	q.mapParent2Children = mapParent2Children
 	// determine query sample types
 	const sampleTypes = getSampleTypes(q, ds)
 	const types = [...sampleTypes]
-	if (!types.length) throw 'no query sample types'
+	if (!types.length) return
 	for (const t of types) if (!ds.cohort.termdb.sampleTypes[t]) throw 'invalid query sample types'
 	if (types.length == 1) {
-		// single sample type, no need to map parent to children
-		q.mapParent2Children = false
+		// single sample type
 		q.sampleTypes = types
 	} else {
 		// multiple sample types
@@ -845,30 +838,30 @@ function getSampleTypes(q, ds) {
 	const twLst = q.terms ? q.terms : q.tw ? [q.tw] : []
 	const filter = q.filter
 	const filter0 = q.filter0
-	const twTypes = getTwLstSampleTypes(twLst, ds)
-	const filterTypes = getFilterSampleTypes(filter, ds)
+	const twTypes = getTwLstSampleTypes(twLst, ds, q.mapParent2Children)
+	const filterTypes = getFilterSampleTypes(filter, ds, q.mapParent2Children)
 	const filter0Types = ds.getFilter0SampleTypes ? ds.getFilter0SampleTypes(filter0, ds) : new Set()
 	const types = new Set([...twTypes, ...filterTypes, ...filter0Types])
 	return types
 }
 
-function getTwLstSampleTypes(twLst, ds) {
+function getTwLstSampleTypes(twLst, ds, mapParent2Children) {
 	const types = new Set()
 	for (const tw of twLst) {
-		for (const type of getTwSampleTypes(tw, ds) || []) types.add(type)
+		for (const type of getTwSampleTypes(tw, ds, mapParent2Children) || []) types.add(type)
 	}
 	return types
 }
 
-function getFilterSampleTypes(filter, ds) {
+function getFilterSampleTypes(filter, ds, mapParent2Children) {
 	const types = new Set()
 	if (!filter) return types
 	for (const item of filter.lst) {
 		if (item.type == 'tvslst') {
-			for (const type of getFilterSampleTypes(item, ds)) types.add(type)
+			for (const type of getFilterSampleTypes(item, ds, mapParent2Children)) types.add(type)
 		} else {
 			if (item.tag == 'cohortFilter') continue
-			for (const type of getTwSampleTypes({ term: item.tvs.term }, ds) || []) {
+			for (const type of getTwSampleTypes({ term: item.tvs.term }, ds, mapParent2Children) || []) {
 				if (Number.isInteger(type)) types.add(type)
 			}
 		}
