@@ -5,6 +5,7 @@ import path from 'path'
 import {
 	filterByItem,
 	filterByTvsLst,
+	groupsetUsesMafFilter,
 	mayFilterByMaf,
 	mayValidateBcfMafFilter,
 	setFile,
@@ -53,6 +54,8 @@ Tests:
 	mayFilterByMaf: mafFilter with child ids
 	mayFilterByMaf: basic mafFilter, min allelic depth
 	mayFilterByMaf: mafFilter with child ids, min allelic depth
+	mayFilterByMaf: a term with child ids never reads its own id as data
+	groupsetUsesMafFilter: detects a maf filter in the active groupset
 	setFile: validates and resolves files
 	toBreakpointPos: parses breakpoint positions
 	svfusionByNameGetter_file: breakpoint positions of the file
@@ -2375,21 +2378,106 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 })
 
 test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t => {
-	t.plan(2)
+	t.plan(6)
 	// GDC has a byrange with no _tk.format; its FORMAT is on q.format. The `|| q.format` fallback in
 	// mayValidateBcfMafFilter is the whole reason GDC MAF works — guard it so a cleanup can't silently
 	// break GDC (validation would then throw /no FORMAT/ and take down the GDC snvindel query).
-	const q = {
+	// Description mirrors the gdc ds: display-only, the sample table draws a Number:'R' field as a MAF bar
+	const format = { TumorAC: { ID: 'TumorAC', Number: 'R', Type: 'Integer', Description: 'Tumor MAF' } }
+	const getQ = term => ({
 		byrange: {},
-		format: { TumorAC: { ID: 'TumorAC', Number: 'R', Type: 'Integer', Description: 'tumor allele counts' } },
+		format,
 		mafFilter: {
 			opts: { joinWith: ['and', 'or'] },
 			filter: { type: 'tvslst', join: '', in: true, lst: [] },
-			terms: [{ id: 'TumorAC', name: 'Tumor MAF', parent_id: null, isleaf: true, type: 'float' }]
+			terms: [term]
 		}
-	}
+	})
+
+	// the shape the gdc ds uses: a derived maf term with its own id, reading the FORMAT key via child_ids
+	// (see dataset/gdc/index.ts and the tumor_DNA term of dataset/ash.hg38.ts)
+	const q = getQ({
+		id: 'TumorMAF',
+		name: 'Tumor MAF',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		child_ids: ['TumorAC']
+	})
 	t.doesNotThrow(() => mayValidateBcfMafFilter(q), 'GDC-shaped q (format on q.format) passes validation')
 	t.equal(q.mafFilter.terms.length, 3, 'auto-populated totalDepth + altDepth terms from q.format')
+	t.deepEqual(
+		q.mafFilter.terms.slice(1).map(t => [t.id, t.name, t.mafFormatKey]),
+		[
+			['TumorAC__totalDepth', 'Tumor MAF total depth', 'TumorAC'],
+			['TumorAC__altDepth', 'Tumor MAF alt depth', 'TumorAC']
+		],
+		'depth terms are named from the FORMAT Description and read the FORMAT key'
+	)
+
+	// legacy shape: a maf term whose id is itself the FORMAT key (no child_ids) must keep validating, as
+	// saved sessions and older ds configs carry it
+	t.doesNotThrow(
+		() =>
+			mayValidateBcfMafFilter(getQ({ id: 'TumorAC', name: 'Tumor MAF', parent_id: null, isleaf: true, type: 'float' })),
+		'maf term with id == FORMAT key still validates'
+	)
+
+	// a child_ids typo must fail at init, not silently drop every sample as "not annotated"
+	t.throws(
+		() =>
+			mayValidateBcfMafFilter(
+				getQ({
+					id: 'TumorMAF',
+					name: 'Tumor MAF',
+					parent_id: null,
+					isleaf: true,
+					type: 'float',
+					child_ids: ['TumorAc']
+				})
+			),
+		/unknown FORMAT key "TumorAc"/,
+		'child_ids naming an unknown FORMAT key throws'
+	)
+	t.throws(
+		() =>
+			mayValidateBcfMafFilter(
+				getQ({ id: 'TumorMaf', name: 'Tumor MAF', parent_id: null, isleaf: true, type: 'float' })
+			),
+		/unknown FORMAT key "TumorMaf"/,
+		'a term without child_ids whose id is not a FORMAT key throws'
+	)
+})
+
+test('mayFilterByMaf: a term with child ids never reads its own id as data', t => {
+	t.plan(4)
+	// the gdc maf term is id 'TumorMAF' with child_ids ['TumorAC']; the counts live on m.TumorAC. m must not be
+	// expected to carry anything under the term id, and a stray value under the term id must not be read
+	const getFilter = term => ({
+		type: 'tvslst',
+		join: '',
+		in: true,
+		lst: [{ type: 'tvs', tvs: { term, ranges: [{ start: 0.1, startinclusive: false, stopunbounded: true }] } }]
+	})
+	const term = { id: 'TumorMAF', name: 'Tumor MAF', type: 'float', child_ids: ['TumorAC'] }
+	t.equal(
+		mayFilterByMaf(getFilter(term), { dt: 1, class: 'M', TumorAC: '42,39' }),
+		true,
+		'reads counts from the child id'
+	)
+	t.equal(mayFilterByMaf(getFilter(term), { dt: 1, class: 'M', TumorAC: '95,5' }), false, 'maf below cutoff fails')
+	t.equal(
+		mayFilterByMaf(getFilter(term), { dt: 1, class: 'M', TumorMAF: '42,39' }),
+		false,
+		'a value under the term id is not read; sample is not annotated for the child id and fails'
+	)
+	// legacy tvs saved before the derived term existed: id is the FORMAT key, no child_ids
+	const legacy = { id: 'TumorAC', name: 'Tumor MAF', type: 'float' }
+	t.equal(
+		mayFilterByMaf(getFilter(legacy), { dt: 1, class: 'M', TumorAC: '42,39' }),
+		true,
+		'legacy id-as-key term falls back to m[term.id]'
+	)
 })
 
 test('toBreakpointPos: parses breakpoint positions', t => {
@@ -2631,4 +2719,50 @@ test('filterByItem: an mname entry is scoped to its queried region', t => {
 	}
 	t.equal(filterByItem(unscoped, [inTal1])[0], true, 'an unscoped entry matches either region')
 	t.equal(filterByItem(unscoped, [inLmo2])[0], true, 'an unscoped entry matches either region')
+})
+
+/* mayGetGeneVariantData() passes this to the snvindel getter as addReadDepth, so that a getter which must
+fetch allele counts separately (gdc) does so only when a maf filter will read them. the gdc summary chart
+showed no case for "KRAS missense with MAF>0.1" because the counts were never fetched */
+test('groupsetUsesMafFilter: detects a maf filter in the active groupset', t => {
+	t.plan(6)
+	const term = { type: 'geneVariant', name: 'KRAS', groupsetting: { disabled: false } }
+	const snvTvs = (extra = {}) => ({
+		type: 'tvs',
+		tvs: { term: { type: 'dtsnvindel', dt: 1 }, values: [{ key: 'M' }], genotype: 'variant', mcount: 'any', ...extra }
+	})
+	const mafTvs = () => snvTvs({ mafFilter })
+	const groupset = (...items) => ({
+		type: 'custom-groupset',
+		customset: { groups: [{ name: 'a', type: 'filter', filter: { type: 'tvslst', in: true, join: '', lst: items } }] }
+	})
+
+	t.equal(
+		groupsetUsesMafFilter({ term, q: { type: 'values' } }),
+		false,
+		'values mode has no groupset, so no maf filter'
+	)
+	t.equal(groupsetUsesMafFilter({ term, q: groupset(snvTvs()) }), false, 'groupset without maf filter')
+	t.equal(groupsetUsesMafFilter({ term, q: groupset(mafTvs()) }), true, 'tvs with maf filter')
+	t.equal(
+		groupsetUsesMafFilter({ term, q: groupset(snvTvs(), { type: 'tvslst', in: true, join: 'and', lst: [mafTvs()] }) }),
+		true,
+		'maf filter inside a nested tvslst'
+	)
+	t.equal(
+		groupsetUsesMafFilter({
+			term,
+			q: groupset(snvTvs({ mafFilter: { type: 'tvslst', in: true, join: '', lst: [] } }))
+		}),
+		false,
+		'an empty maf filter (the ds default before the user sets a cutoff) does not count'
+	)
+	// second group carries the filter; every group is checked, not just the first
+	const q = groupset(snvTvs())
+	q.customset.groups.push({
+		name: 'b',
+		type: 'filter',
+		filter: { type: 'tvslst', in: true, join: '', lst: [mafTvs()] }
+	})
+	t.equal(groupsetUsesMafFilter({ term, q }), true, 'maf filter in a later group')
 })
