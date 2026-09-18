@@ -1,8 +1,8 @@
 import type { SampleTypes } from '#types'
 
-// renders sample type checkboxes, all checked by default. The optional
-// onChange is called whenever a checkbox is toggled
-export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, termdbConfig?: any, onChange?: () => void) {
+// renders sample type checkboxes, all checked by default. At least one sample
+// type always stays checked: a click that would uncheck the last checked box is cancelled
+export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, termdbConfig?: any) {
 	holder.selectAll('*').remove()
 
 	if (!Array.isArray(querySampleTypes) || querySampleTypes.length < 2) return
@@ -30,7 +30,11 @@ export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, term
 			.attr('type', 'checkbox')
 			.attr('value', k)
 			.property('checked', true)
-			.on('change', () => onChange?.())
+			.on('click', event => {
+				// the click has already toggled the box, and cancelling it restores the box
+				if (!sampleTypeCheckboxes.some(checkbox => checkbox.property('checked'))) event.preventDefault()
+			})
+			.on('change', () => markLastChecked(sampleTypeCheckboxes))
 		label.append('span').style('margin-left', '4px').text(v.name)
 		sampleTypeCheckboxes.push(input)
 	}
@@ -38,10 +42,17 @@ export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, term
 	return sampleTypeCheckboxes
 }
 
-// whether any checkbox created by renderSampleTypeSelect() is checked
-export function hasSelectedSampleType(sampleTypeSelect?: any[]) {
-	if (!Array.isArray(sampleTypeSelect)) return true
-	return sampleTypeSelect.some(checkbox => checkbox.property('checked'))
+// marks the only checked box as not uncheckable with a hint and cursor on its
+// label, which covers both the box and its text. The box stays enabled so that
+// it still looks checked
+function markLastChecked(sampleTypeCheckboxes: any[]) {
+	const checked = sampleTypeCheckboxes.filter(checkbox => checkbox.property('checked'))
+	for (const checkbox of sampleTypeCheckboxes) {
+		const isLast = checked.length == 1 && checked[0] === checkbox
+		const label = checkbox.node().parentNode
+		label.title = isLast ? 'At least one sample type must be selected' : ''
+		label.style.cursor = isLast ? 'not-allowed' : ''
+	}
 }
 
 // returns selected sample types from checkboxes created by renderSampleTypeSelect().

@@ -5,7 +5,6 @@ import {
 	GeneSetEditUI,
 	table2col,
 	renderSampleTypeSelect,
-	hasSelectedSampleType,
 	renderSampleTypesByTermsSelect,
 	getSelectedSampleTypes,
 	getSelectedSampleTypesByTerms,
@@ -169,14 +168,8 @@ export class SearchHandler {
 				this.opts.app.vocabApi.termdbConfig
 			)
 		} else {
-			this.sampleTypeSelect = renderSampleTypeSelect(
-				td2,
-				this.querySampleTypes,
-				this.opts.app.vocabApi.termdbConfig,
-				() => this.toggleGeneSearch()
-			)
+			this.sampleTypeSelect = renderSampleTypeSelect(td2, this.querySampleTypes, this.opts.app.vocabApi.termdbConfig)
 		}
-		this.toggleGeneSearch()
 		if (this.sampleTypeSelect) {
 			td1.style('display', null).text('Sample Type')
 			td2.style('display', null).style('padding-left', '10px')
@@ -297,12 +290,6 @@ export class SearchHandler {
 		})
 		this.dom.searchbox = geneSearch.searchbox
 		searchDiv.select('.sja_genesearchinput').style('margin', '0px')
-		this.toggleGeneSearch()
-	}
-
-	// disable gene search when no sample type is checked
-	toggleGeneSearch() {
-		this.dom.searchbox?.property('disabled', !hasSelectedSampleType(this.sampleTypeSelect))
 	}
 
 	/** focus on the search box of the current gene input (single gene or gene set) */
@@ -366,7 +353,6 @@ export class SearchHandler {
 		})
 		this.dom.searchbox = this.dom.geneSetEditUI.geneSearch?.searchbox
 		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px').style('margin-top', '-10px')
-		this.toggleGeneSearch()
 	}
 
 	async selectGeneSet(result) {
