@@ -6,6 +6,7 @@ import {
 	getSelectedSampleTypes,
 	getSelectedSampleTypesByTerms,
 	getSampleTypeLabelByTerms,
+	hasSelectedSampleType,
 	table2col
 } from '#dom'
 import { TermTypes } from '#types'
@@ -32,7 +33,14 @@ export class SearchHandler {
 			searchOnly: 'gene',
 			callback: () => this.selectGene(geneSearch)
 		})
+		this.dom.searchbox = geneSearch.searchbox
 		holder.select('.sja_genesearchinput').style('margin', '0px')
+		this.toggleGeneSearch()
+	}
+
+	// disable gene search when no sample type is checked
+	toggleGeneSearch() {
+		this.dom.searchbox?.property('disabled', !hasSelectedSampleType(this.sampleTypeSelect))
 	}
 
 	mayRenderSampleTypeSelect() {
@@ -52,7 +60,9 @@ export class SearchHandler {
 					this.app.vocabApi.termdbConfig
 				)
 			} else {
-				this.sampleTypeSelect = renderSampleTypeSelect(td2, this.querySampleTypes, this.app.vocabApi.termdbConfig)
+				this.sampleTypeSelect = renderSampleTypeSelect(td2, this.querySampleTypes, this.app.vocabApi.termdbConfig, () =>
+					this.toggleGeneSearch()
+				)
 			}
 		}
 	}

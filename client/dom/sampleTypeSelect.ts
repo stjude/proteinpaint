@@ -1,7 +1,8 @@
 import type { SampleTypes } from '#types'
 
-// renders sample type checkboxes
-export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, termdbConfig?: any) {
+// renders sample type checkboxes, all checked by default. The optional
+// onChange is called whenever a checkbox is toggled
+export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, termdbConfig?: any, onChange?: () => void) {
 	holder.selectAll('*').remove()
 
 	if (!Array.isArray(querySampleTypes) || querySampleTypes.length < 2) return
@@ -24,12 +25,23 @@ export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, term
 			.style('display', 'inline-flex')
 			.style('align-items', 'center')
 			.style('margin-right', '10px')
-		const input = label.append('input').attr('type', 'checkbox').attr('value', k)
+		const input = label
+			.append('input')
+			.attr('type', 'checkbox')
+			.attr('value', k)
+			.property('checked', true)
+			.on('change', () => onChange?.())
 		label.append('span').style('margin-left', '4px').text(v.name)
 		sampleTypeCheckboxes.push(input)
 	}
 
 	return sampleTypeCheckboxes
+}
+
+// whether any checkbox created by renderSampleTypeSelect() is checked
+export function hasSelectedSampleType(sampleTypeSelect?: any[]) {
+	if (!Array.isArray(sampleTypeSelect)) return true
+	return sampleTypeSelect.some(checkbox => checkbox.property('checked'))
 }
 
 // returns selected sample types from checkboxes created by renderSampleTypeSelect().
