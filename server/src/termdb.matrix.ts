@@ -836,7 +836,9 @@ function getSampleTypes(q, ds) {
 	const filter0 = q.filter0
 	const twTypes = getTwLstSampleTypes(twLst, ds, q.mapParent2Children)
 	const filterTypes = getFilterSampleTypes(filter, ds, q.mapParent2Children)
-	const filter0Types = ds.getFilter0SampleTypes ? ds.getFilter0SampleTypes(filter0, ds) : new Set()
+	const filter0Types = ds.getFilter0SampleTypes
+		? ds.getFilter0SampleTypes(filter0, ds, q.mapParent2Children)
+		: new Set()
 	const types = new Set([...twTypes, ...filterTypes, ...filter0Types])
 	return types
 }
