@@ -3,6 +3,7 @@ test sections:
 
 simple filter
 nested filter
+dt term filter requests read depth only when its tvs carries a maf filter
 invalid filter term
 */
 import tape from 'tape'
@@ -548,6 +549,64 @@ tape('custom termCollection filter validates numerators', async function (test) 
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
+	}
+	test.end()
+})
+
+/* a dt-term item of the cohort filter is applied by get_dtTerm() itself, via filterByItem() on the values
+mayGetGeneVariantData() returns, so a maf filter on that tvs is not in any tw groupset and the getter cannot
+see it. get_dtTerm() must therefore ask for the allele counts (q.addReadDepth); a ds whose getter fetches
+them only on request (gdc) would otherwise see every mutation as unannotated and drop every mutant sample */
+tape('dt term filter requests read depth only when its tvs carries a maf filter', async function (test) {
+	const original = tdb.ds.mayGetGeneVariantData
+	const requests = [] // q.addReadDepth of each mayGetGeneVariantData() call
+	// one sample with one missense mutation at maf 0.3 (30 alt of 100 reads)
+	tdb.ds.mayGetGeneVariantData = async (tw, q) => {
+		requests.push(q.addReadDepth)
+		return new Map([
+			[1, { sample: 1, [tw.$id]: { key: 'TP53', values: [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }] } }]
+		])
+	}
+	try {
+		const dtTerm = {
+			id: 'snvindel',
+			name: 'SNV/indel',
+			type: 'dtsnvindel',
+			dt: 1,
+			parentTerm: { name: 'TP53', type: 'geneVariant', genes: [{ kind: 'gene', gene: 'TP53', name: 'TP53' }] }
+		}
+		const mafTerm = { id: 'tumor_DNA', name: 'Tumor DNA', type: 'float', child_ids: ['tumor_DNA_WGS'] }
+		const getFilter = tvsExtra => ({
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{ type: 'tvs', tvs: { term: dtTerm, values: [{ key: 'M' }], genotype: 'variant', mcount: 'any', ...tvsExtra } }
+			]
+		})
+		const mafAtLeast = start => ({
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [{ type: 'tvs', tvs: { term: mafTerm, ranges: [{ start, startinclusive: true, stopunbounded: true }] } }]
+		})
+
+		let result = await getFilterCTEs(getFilter({}), tdb.ds)
+		test.deepEqual(result.values, [1], 'mutant sample passes a plain dt-term filter')
+
+		result = await getFilterCTEs(getFilter({ mafFilter: mafAtLeast(0.1) }), tdb.ds)
+		test.deepEqual(result.values, [1], 'mutant sample at maf 0.3 passes a maf >= 0.1 filter')
+
+		result = await getFilterCTEs(getFilter({ mafFilter: mafAtLeast(0.5) }), tdb.ds)
+		test.deepEqual(result.values, [], 'mutant sample at maf 0.3 fails a maf >= 0.5 filter')
+
+		test.deepEqual(
+			requests,
+			[false, true, true],
+			'read depth is requested from the getter exactly when the tvs carries a maf filter'
+		)
+	} finally {
+		tdb.ds.mayGetGeneVariantData = original
 	}
 	test.end()
 })

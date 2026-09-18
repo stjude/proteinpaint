@@ -2,7 +2,7 @@ import { getBin, dictionaryNumericTypes, dtTermTypes, isNonDictionaryType } from
 import { TermTypes } from '#types'
 import { validateTermCollectionTvs, getTvsDenominators } from '#shared/filter.js'
 import { getSnpData, getData, shouldMapParent2Children } from './termdb.matrix.js'
-import { filterByItem } from './mds3.init.js'
+import { filterByItem, tvsUsesMafFilter } from './mds3.init.js'
 
 /*
 ds: required by get_numerical()
@@ -611,7 +611,16 @@ function numericSampleData2tvs(tvs, CTEname, termData) {
 
 async function get_dtTerm(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	const tw = { $id, term: tvs.term.parentTerm, q: { dtLst: [tvs.term.dt] } }
-	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename, mapParent2Children, sampleTypes })
+	// the tvs is applied below by filterByItem(), outside of tw, so its maf filter is invisible to
+	// mayGetGeneVariantData(); ask for the allele counts it will read (a getter that must fetch them
+	// separately, like gdc's, only does so on request)
+	const addReadDepth = tvsUsesMafFilter(tvs)
+	const data = await ds.mayGetGeneVariantData(tw, {
+		genome: ds.genomename,
+		mapParent2Children,
+		sampleTypes,
+		addReadDepth
+	})
 
 	const samples = []
 	for (const [sample, value] of data) {
