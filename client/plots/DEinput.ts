@@ -472,10 +472,12 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		if (this.expressionSource === 'pseudobulk') samplelstTW.pseudobulk = this.pseudobulk
 		// ignore filter0 when cohort0 is used
 		const filter0 = this.hasCohort0 ? null : this.state.termfilter.filter0
+		const mapParent2Children = true // DE/DM data assumed to be at sample-level so map parent samples to child samples
 		for (const g of groups) {
 			const samples = await this.vocabApi!.getFilteredSampleList(
 				filterJoin([g.filter, this.state.termfilter.filter]),
-				filter0
+				filter0,
+				mapParent2Children
 			)
 			const sampleIds = samples.map(s => {
 				return { sampleId: s.id }

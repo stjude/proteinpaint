@@ -2653,7 +2653,7 @@ export type Mds3 = BaseMds & {
 	output: validated filter0 obj, or undefined
 	*/
 	validate_filter0?: (f: any) => void
-	getFilter0SampleTypes?: (filter: any, ds: any) => void
+	getFilter0SampleTypes?: (filter: any, ds: any, mapParent2Children?: boolean) => void
 	/** ds-supplied getter, maps a ssm id to a canonical ENST name */
 	ssm2canonicalisoform?: { get?: (q: any) => any }
 	/** mds3 tk displays presence and occurrence of genomic alterations, but not including samples harboring each alteration

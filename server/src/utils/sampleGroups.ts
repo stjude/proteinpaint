@@ -102,6 +102,7 @@ export async function buildGroupValues(
 	const conf1: (string | number)[] = []
 	const conf2: (string | number)[] = []
 	let sampleLst = values
+
 	if (ds.cohort.termdb.hasSampleAncestry) {
 		// ds has sample ancestry
 		// data for DE/DM (i.e. genomic data) are assumed to be
@@ -122,13 +123,14 @@ export async function buildGroupValues(
 		maySetMapParent2Children(arg, ds, true)
 		const allSamples = [...allSampleSet].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
 		// filtering samples by samplelst term
-		// if samples are at parent-level, then will get mapped to sample-level
-		// otherwise, samples will be used as is
+		// if samples are at parent-level then will get
+		// mapped to sample-level, otherwise will be used as is
 		const samples = (await mayLimitSamples(arg, allSamples, ds)) || new Set()
 		sampleLst = [...samples].map(s => {
 			return { sampleId: s }
 		})
 	}
+
 	for (const s of sampleLst) {
 		// a string sampleId IS the sample name: api-backed datasets without a sqlite termdb (gdc) key
 		// samples by case uuid, which is what getSampleList() hands back for them. an integer id is a

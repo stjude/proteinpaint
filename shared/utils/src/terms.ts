@@ -143,7 +143,11 @@ const categoricalTypes = new Set([CATEGORICAL, SNP])
 /** Note: Do not add pseudobulk here. These capture cell level terms.
  * Pseudobulk terms are sample level terms. May in the future update
  * to isSCCellLevelTerms() and isSingleCellTerm() if the need arises */
-const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE /*PSEUDOBULK*/])
+const singleCellTerms = new Set([
+	SINGLECELL_CELLTYPE,
+	SINGLECELL_GENE_EXPRESSION,
+	SINGLECELL_NUMERIC_VALUE /*PSEUDOBULK*/
+])
 
 export function isSingleCellTerm(term: any) {
 	if (!term) return false
@@ -612,28 +616,43 @@ export function getBin(lst: any[], value: number) {
 }
 
 // get sample types of termwrapper
-export function getTwSampleTypes(tw: any, ds: any) {
+export function getTwSampleTypes(tw: any, ds: any, mapParent2Children?: boolean) {
 	const term = tw?.term
 	if (!term) return []
+	// prioritize user-defined sample types
 	if (term.sampleTypes) {
 		return term.sampleTypes
-	}
-	if (ds.cohort.termdb.term2SampleType.has(term.id)) {
-		return [ds.cohort.termdb.term2SampleType.get(term.id)]
-	}
-	const defaultSampleTypes = getDefaultSampleTypes(ds)
-	if (term.type == 'samplelst') {
-		const key = Object.keys(term.values)[0]
-		const sampleId = term.values[key].list[0]?.sampleId
-		if (sampleId) {
-			const sampleType = ds.sampleId2Type.get(Number(sampleId) || sampleId)
-			return sampleType != null ? [sampleType] : []
-		} else return defaultSampleTypes
 	}
 	if (dtTermTypes.has(term.type)) {
 		if (term.parentTerm.sampleTypes) {
 			return term.parentTerm.sampleTypes
 		}
+	}
+	const defaultSampleTypes = getDefaultSampleTypes(ds)
+	if (mapParent2Children) {
+		// must map to child sample types
+		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
+		return Array.isArray(sampleType?.childSampleTypes) ? sampleType.childSampleTypes : defaultSampleTypes
+	}
+	if (ds.cohort.termdb.term2SampleType.has(term.id)) {
+		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
+		if (Number.isInteger(sampleType)) {
+			return [sampleType]
+		} else if (sampleType && typeof sampleType == 'object') {
+			if (!Number.isInteger(sampleType.sampleType)) throw new Error('sampleType.sampleType is non-numeric')
+			return [sampleType.sampleType]
+		} else {
+			return []
+		}
+	}
+	if (term.type == 'samplelst') {
+		const key = Object.keys(term.values)[0]
+		const sampleId = term.values[key].list[0]?.sampleId
+		if (sampleId) {
+			const sampleType = ds.sampleId2Type.get(Number(sampleId) || sampleId)
+			if (Number.isInteger(sampleType)) return [sampleType]
+			return []
+		} else return defaultSampleTypes
 	}
 	return defaultSampleTypes
 }
