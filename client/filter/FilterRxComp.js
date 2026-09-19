@@ -72,6 +72,8 @@ class FilterRxComp extends Filter {
 			.style('width', 'fit-content')
 			.style('display', 'table')
 			.style('border', this.opts.hideLabel ? 'none' : 'solid 1px #ddd')
+			.on('mouseover', () => div.selectAll('button').style('border', '1px solid #555').style('border-radius', '5px')) //.style('background-color', 'rgba(200,50,50,0.5)'))
+			.on('mouseout', () => div.selectAll('button').style('border', null).style('border-radius', null)) //.style('background-color', null)
 
 		if (this.opts.hideLabel) {
 			this.dom.filterDiv = div.style('display', 'inline-block').style('padding', '5px 10px')
