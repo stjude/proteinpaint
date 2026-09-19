@@ -260,6 +260,17 @@ by normalize.css are covered here
     cursor: default;
 }
 
+.sjpp_filter_div button {
+	border: 1px solid transparent;
+	background-color: transparent;
+}
+
+/*.sjpp_filter_div button:hover {
+	color: #00f;
+	font-weight: 800;
+	background-color: #ff0;
+}*/
+
 /* .sja_filter_tag_btn:hover { opacity: 0.8; cursor:default} */
 
 .sja_filter_tag_btn:active {
