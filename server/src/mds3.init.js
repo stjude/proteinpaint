@@ -3173,7 +3173,8 @@ export async function svfusionByNameGetter_file(ds, genome) {
 	}
 }
 
-function mayAdd_mayGetGeneVariantData(ds, genome) {
+// exported for the unit test that drives ds.mayGetGeneVariantData() against a stub getter
+export function mayAdd_mayGetGeneVariantData(ds, genome) {
 	if (!ds.queries.snvindel && !ds.queries.svfusion && !ds.queries.geneCnv && !ds.queries.cnv && !ds.queries.itd) {
 		// no eligible data types
 		return
@@ -3191,6 +3192,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			pp filter obj
 		.filter0
 			json obj, the read-only gdc cohort filter supplied to gdc api
+		.addReadDepth
+			optional. set by a caller that will apply its own dt-term filter carrying a maf filter to the
+			returned values (get_dtTerm() in termdb.filter.js), so that the allele counts mayFilterByMaf()
+			reads are fetched. a maf filter inside tw's own groupset is detected here and needs no flag
 
 	output a map:
 		k: sample id
@@ -3246,6 +3251,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		const maxNumGenes = ds.cohort.termdb.maxGeneVariantGeneSetSize || 200
 		if (tw.term.genes.length > maxNumGenes) throw `gene set size exceeds ${maxNumGenes} genes`
 		const termdbmclass = q.ds?.cohort?.termdb?.mclass // custom mclass labels from dataset
+		// a maf filter reads per-sample allele counts off each mutation (mayFilterByMaf). a getter that
+		// must fetch them separately (gdc) only does so on this flag, as they inflate its payload. the
+		// filter is either in tw's groupset, or applied afterwards by a caller that says so via q
+		const addReadDepth = !!q.addReadDepth || groupsetUsesMafFilter(tw)
 		const chunkSize = 50
 		for (let i = 0; i < tw.term.genes.length; i += chunkSize) {
 			const genes = tw.term.genes.slice(i, i + chunkSize)
@@ -3256,7 +3265,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				throw 'no gene or position specified'
 			const mlst = []
 			if (ds.queries.snvindel && dts.includes(dtsnvindel)) {
-				const snvIndelMlst = await getSnvindelByTerm(ds, gene, genome, q)
+				const snvIndelMlst = await getSnvindelByTerm(ds, gene, genome, q, { addReadDepth })
 				mlst.push(...snvIndelMlst)
 			}
 			if (ds.queries.svfusion && (dts.includes(dtfusionrna) || dts.includes(dtsv))) {
@@ -3775,6 +3784,30 @@ export function mayFilterByMaf(mafFilter, m) {
 	return passFilter
 }
 
+/* whether any tvs of the active groupset of a geneVariant tw carries a maf filter, so that the snvindel
+getter knows to supply the allele counts mayFilterByMaf() reads. tvs.mafFilter is a filter of its own
+nested in a tvs (see walkTvs() in shared/utils/src/terms.ts), so a tvs is a leaf here and only a sibling
+tvslst in filter.lst[] is descended into. a q without an active groupset (values mode) never filters
+by maf */
+export function groupsetUsesMafFilter(tw) {
+	const groupset = get_active_groupset(tw.term, tw.q)
+	if (!groupset?.groups) return false
+	const hasMaf = filter => {
+		if (!filter?.lst) return false
+		return filter.lst.some(item => {
+			if (item.type == 'tvslst') return hasMaf(item)
+			return tvsUsesMafFilter(item.tvs)
+		})
+	}
+	return groupset.groups.some(group => hasMaf(group.filter))
+}
+
+/* whether a dt-term tvs carries a maf filter with at least one cutoff. the ds default attached by the
+client is an empty tvslst and filters nothing (mayFilterByMaf() passes on an empty lst) */
+export function tvsUsesMafFilter(tvs) {
+	return tvs?.mafFilter?.lst?.length > 0
+}
+
 // add allele counts of maf field to total allele counts
 // returns true if the sample was annotated for this field, false otherwise
 function addAlleleCnts(m, mafFieldId, alleleCnts) {
@@ -3845,10 +3878,14 @@ async function mayMapGeneName2isoform(term, genome) {
 	term.isoform = gm.isoform
 }
 
-async function getSnvindelByTerm(ds, term, genome, q) {
+/* opts.addReadDepth: the caller will apply a maf filter and needs allelic depth format values on
+every sample. bcf getters ignore it (addFormatValues already returns every FORMAT value); the gdc
+getter fetches read depth only when it is set, see validate_query_snvindel_byisoform() in ppgdc */
+async function getSnvindelByTerm(ds, term, genome, q, opts = {}) {
 	const arg = Object.assign(
 		{
 			addFormatValues: true,
+			addReadDepth: opts.addReadDepth || false,
 			filter0: q.filter0, // hidden filter
 			filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 			sessionid: q.sessionid,
