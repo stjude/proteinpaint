@@ -269,7 +269,7 @@ tape('Sample type selection is cleared when changing to a mutation type without 
 	})
 	const sampleTypeCheckboxes: any = holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input')
 	test.equal(sampleTypeCheckboxes.size(), 2, 'should render sample type choices for SNV/indel')
-	sampleTypeCheckboxes.nodes()[1].checked = true
+	sampleTypeCheckboxes.nodes()[0].checked = false
 	await pickGene(holder)
 	test.deepEqual(tw.term.sampleTypes, [2], 'should submit the selected sample type')
 
@@ -306,7 +306,7 @@ tape('Continuing past remembered settings does not retain sample types from anot
 		vocabApi: vocabApiWithRememberedKrasQ,
 		keepsQ: true
 	})
-	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[1].checked = true
+	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].checked = false
 	await pickGene(holder)
 	test.deepEqual(tw.term.sampleTypes, [2], 'should submit the selected SNV/indel sample type')
 
@@ -459,7 +459,7 @@ tape('Applying remembered settings applies the selected sample type', async test
 		}),
 		keepsQ: true
 	})
-	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[1].checked = true
+	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].checked = false
 	await pickGene(holder)
 
 	const first: any = holder.selectAll('[data-testid="sjpp-genevariant-rememberedQ"]').nodes()[0]

@@ -296,7 +296,7 @@ tape('GENE_EXPRESSION should open TVS when no selection callback is defined', as
 	await geneExpressionTab?.callback()
 
 	const geneExpressionHandler = termTypeSearch.handlerByType[TermTypes.GENE_EXPRESSION]
-	geneExpressionHandler.sampleTypeSelect[0].property('checked', true)
+	geneExpressionHandler.sampleTypeSelect[1].property('checked', false)
 	await geneExpressionHandler.selectGene({ geneSymbol: 'EGFR' })
 	await sleep(1)
 
