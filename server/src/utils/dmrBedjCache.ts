@@ -26,9 +26,11 @@ function dsToken(genome: string, dslabel: string): string {
 /* Refuse a DMR cache file requested under a dataset it was not computed for. Called by the bedj
 tk reader for any isCache file; a file without the DMR prefix is not ours and is left alone.
 
-NOTE this restores the ownership half of what the deleted route enforced, not the authentication
-half: /tkbedj carries no dslabel in the auth middleware's sense, so it is not itself gated. See
-the PR discussion -- gating cached track reads belongs with the isCache path, not here. */
+Requiring the dataset also brings authentication along, for the datasets that declare it: a
+'*' credential is rewritten to '/**' (auth.dsCredentials.ts), which matches /tkbedj, so the
+global auth middleware demands a session before this is ever reached. A dataset declaring
+'termdb' credentials is public-view by design and gates neither this nor the analysis routes
+that produce the file -- Auth.protectedRoutes.termdb lists only /termdb/matrix. */
 export function assertDmrBedjAccess(file: string, q: { genome?: string; dslabel?: string }) {
 	if (!file.startsWith(DMR_PREFIX)) return
 	if (!q.genome || !q.dslabel) throw 'genome and dslabel are required for this cached track'
