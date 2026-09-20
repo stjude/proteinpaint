@@ -6,7 +6,7 @@ import { buildTssIndex, linkDmrsToGenes, classifyLink, type GeneModel, type TssI
 import fs from 'fs'
 
 /* Every gene a scan's DMRs touch, where they touch it, and whether its expression moved the way
-that position predicts. The scan comes from its cache (as termdb/dmrScanTrack reads it), expression
+that position predicts. The scan comes from its cache, expression
 from the same DE run the volcano and termdb/dmrGeneDE use, on the patients with methylation. See
 utils/dmrGeneLink.ts for the promoter/body rules. */
 
@@ -56,7 +56,7 @@ function init({ genomes }) {
 			if (!fs.existsSync(file)) throw new Error('This scan is no longer cached; rerun it first.')
 			const scan = JSON.parse(await fs.promises.readFile(file, 'utf8'))
 			/* The auth gate ran for q.dslabel, but the cacheId names a result computed for some dataset:
-			refuse one computed for another, as termdb/dmrScanTrack does. */
+			refuse one computed for another. */
 			if (scan.genome !== q.genome || scan.dslabel !== q.dslabel)
 				throw new Error('This scan does not belong to the requested dataset; rerun it first.')
 			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))

@@ -9,6 +9,7 @@ import { CCRE_TRACK_NAME } from '#plots/dmr/viewModel/DmrViewModel.ts'
 import { getGEunit } from '#tw/geneExpression'
 import { getDNAMethUnit, getDNAMethTermName } from '#tw/dnaMethylation'
 import { elementNoun } from '../promoterLabel'
+import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -311,24 +312,39 @@ export class VolcanoInteractions {
 		})
 	}
 
-	/* Open a genome browser on a scan's DMR, with the scan's own DMRs as a track. The region view
-	re-fits the chromosome to draw its DMR track; a scan has already called every DMR and cached
-	them, so the browser names the cached scan (scanDmrTrack) and fetches the DMRs of whatever
-	chromosome is on screen from it -- including after the reader types another position into the
-	search box. Opened on the DMR with room either side. */
+	/* Open a genome browser on a scan's DMR, with the scan's own DMRs as a track. The scan wrote
+	every DMR it called to a bedj file in the server's cache (at the CpG floor the volcano counts
+	at), so the track is an ordinary file tk: the browser reads whatever region is in view from it,
+	including after the reader types another position into the search box. Opened on the DMR with
+	room either side. */
 	async launchScanGenomeBrowser(d: { chr: string; start: number; stop: number }, scan: DmrScanSummary) {
 		const tracks: any[] = []
 		// the regulatory context the region view also switches on, by the genome's own declaration
 		const ccre = (this.app.opts.genome?.tracks || []).find((t: any) => t.name == CCRE_TRACK_NAME)
 		if (ccre) tracks.push(structuredClone(ccre))
+		if (scan.bedjFile) {
+			tracks.push({
+				type: 'bedj',
+				name: 'Scan DMRs',
+				// the file is under the server's bedj cache dir, not the tp dir, and is bound to
+				// the dataset it was computed from, which the server checks on read
+				isCache: true,
+				file: scan.bedjFile,
+				dslabel: this.app.vocabApi.vocab.dslabel,
+				stackheight: 14,
+				// drives both the fill and the block legend, which counts each class in view
+				categories: {
+					hyper: { label: 'Hypermethylated DMR', color: HYPER_COLOR },
+					hypo: { label: 'Hypomethylated DMR', color: HYPO_COLOR }
+				}
+			})
+		}
 		const pad = Math.max(5000, d.stop - d.start)
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
 				chartType: 'genomeBrowser',
 				geneSearchResult: { chr: d.chr, start: Math.max(0, d.start - pad), stop: d.stop + pad },
-				// the CpG floor the scan was rendered with, so the track shows the DMRs the volcano counts
-				scanDmrTrack: { cacheId: scan.cacheId, minCpgs: scan.minCpgs },
 				tracks
 			}
 		})

@@ -78,7 +78,7 @@ export type TermdbDmrBatchRequest = {
 export type TermdbDmrBatchSuccessResponse = {
 	status: 'ok'
 	/** The genome and dataset the result was computed for. A cached scan is later read back by
-	 * cacheId alone (termdb/dmrScanTrack), which must check these against the dataset the caller is
+	 * cacheId alone (termdb/dmrGeneLink), which must check these against the dataset the caller is
 	 * authorized for. Absent on results cached before they were recorded. */
 	genome?: string
 	dslabel?: string

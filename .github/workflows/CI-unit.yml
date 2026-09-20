@@ -121,6 +121,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y hdf5-tools libhdf5-dev
 
+      # bgzip + tabix, for specs that write or read a cached track file
+      - name: Install htslib
+        if: contains(env.WS_TO_TEST, 'server')
+        run: sudo apt-get install -y tabix
+
       - name: 🔎 Server unit tests
         if: contains(env.WS_TO_TEST, 'server')
         run: npm run test:unit --workspace="server"

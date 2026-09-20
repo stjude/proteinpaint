@@ -5,6 +5,7 @@ import * as utils from './utils.js'
 import serverconfig from './serverconfig.js'
 import { nt2aa } from '#shared/common.js'
 import { parseBedLine } from './bedj.parseBed.js'
+import { assertDmrBedjAccess } from './utils/dmrBedjCache.ts'
 
 /*
 should guard against file content error e.g. two tabs separating columns
@@ -893,6 +894,8 @@ async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 		// file is under the "bedj" cache subdir (created and swept by CacheManager.ts) rather than tpmasterdir.
 		// checkBlackList must be false: the default blacklist rejects .gz/.bb etc, which are the expected track file types
 		if (utils.illegalpath(req.query.file, false, false)) throw 'illegal file path'
+		// a cached file carries the dataset it was computed for; refuse it under any other
+		assertDmrBedjAccess(req.query.file, req.query)
 		// the cache folder is flat: the CacheManager sweep is non-recursive, so a file in a subfolder would be readable but never evicted
 		if (req.query.file.includes('/')) throw 'cache file name must not contain "/"'
 		tkfile = path.join(serverconfig.cachedir, 'bedj', req.query.file)

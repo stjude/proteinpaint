@@ -150,9 +150,13 @@ export type DmrScanSummary = {
 		fractionBeyond10: number
 		fractionHyper: number
 	}
-	/** the cached scan the rows came from, so its DMRs can be fetched back for a browser track
-	 * (termdb/dmrScanTrack) without recomputing anything */
+	/** the cached scan the rows came from, so anything ranked off the same scan (e.g.
+	 * termdb/dmrGeneLink) can reach it without recomputing anything */
 	cacheId?: string
+	/** The kept DMRs written as a bedj track file under the "bedj" cache subdir, as its file name.
+	 * A genome browser opened on the scan loads it with isCache:true, so the track is an ordinary
+	 * bedj file tk rather than items the browser has to fetch and swap per chromosome. */
+	bedjFile?: string
 	/** Every kept DMR drawn along the genome, hyper above the line and hypo below, y = signed
 	 * -log10 of the q the volcano plots; the N most significant per direction carry pixel
 	 * coordinates and are interactive. Rendered per request, after the cache, because it depends
