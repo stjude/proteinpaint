@@ -181,8 +181,9 @@ export function filterAndConvertSnvIndel(
 		if (Array.isArray(entry.vafs)) {
 			for (const v of entry.vafs) {
 				// per-sample json (disco shape) carries totalCount where the gdc getter carries refCount
-				const ref = Number.isInteger(v.refCount) ? v.refCount : v.totalCount - v.altCount
-				copy[v.id] = ref + ',' + v.altCount
+const alt = Number(v.altCount)
+				const ref = v.refCount != null ? Number(v.refCount) : Number(v.totalCount) - alt
+				copy[v.id] = ref + ',' + alt
 			}
 		}
 		try {
