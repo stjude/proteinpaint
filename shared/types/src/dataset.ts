@@ -217,8 +217,13 @@ export type FilterTermEntry = BaseTvsFilter & {
 	child_ids?: string[]
 	/** marks the default maf filter term */
 	default?: boolean
-	/** metric computed for a maf filter term; defaults to 'maf' when absent */
-	mafFilterMode?: 'maf' | 'totalDepth' | 'altDepth'
+	/** metric computed for a maf filter term; defaults to 'maf' when absent
+	- 'maf': alt/(ref+alt) from the "<ref>,<alt>" allele counts of term.id, or summed across child_ids[]
+	- 'totalDepth' / 'altDepth': ref+alt or alt of the single count field named by mafFormatKey
+	- 'value': any numerical FORMAT field read as-is, one number per sample under the FORMAT key term.id:
+	  a precomputed allele fraction, the read depth of a matched normal, etc. No range is assumed; the term's
+	  own min/max bound the UI. child_ids[] is not allowed and tvs.minAllelicDepth has no effect */
+	mafFilterMode?: 'maf' | 'totalDepth' | 'altDepth' | 'value'
 	/** underlying bcf FORMAT key read by an auto-generated allelic-depth term */
 	mafFormatKey?: string
 }
