@@ -892,8 +892,10 @@ export function mayValidateBcfMafFilter(q) {
 				throw `snvindel.mafFilter term "${term.id}" (value) cannot use child_ids[]: values are not summed`
 			const f = format[term.id]
 			if (!f) throw `snvindel.mafFilter term "${term.id}" references unknown FORMAT key "${term.id}"`
-			if (f.Number == 'R')
+if (f.Number == 'R')
 				throw `snvindel.mafFilter term "${term.id}" (value) reads FORMAT key "${term.id}" with Number=R, which holds allele counts; use mafFilterMode "maf", "totalDepth" or "altDepth"`
+			if (f.Number && f.Number != '1' && f.Number != 'A')
+				throw `snvindel.mafFilter term "${term.id}" (value) reads FORMAT key "${term.id}" with Number=${f.Number}, expected one numeric value`
 			// Integer or Float; an untyped header is let through
 			if (f.Type && f.Type != 'Integer' && f.Type != 'Float')
 				throw `snvindel.mafFilter term "${term.id}" (value) reads FORMAT key "${term.id}" with Type=${f.Type}, expected Integer or Float`
