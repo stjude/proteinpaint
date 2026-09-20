@@ -56,15 +56,17 @@ export async function writeDmrBedjFile(
 	const name = `${DMR_PREFIX}${dsToken(genome, dslabel)}-${cacheId}-${minCpgs}.gz`
 	const dir = path.join(serverconfig.cachedir, 'bedj')
 	const gz = path.join(dir, name)
-	// both must be there: the index is renamed into place after the file, so a lone .gz is a partial write
+	// both must be there: the .gz is the commit point, so a lone .tbi is an unfinished publish
 	if (fs.existsSync(gz) && fs.existsSync(gz + '.tbi')) {
 		/* The subdir is swept by mtime, so touch on reuse: the TTL should mean last-used, not
 		first-written, or a scan someone still has open can be swept out from under the track.
-		BOTH files, index last: tabix refuses an index older than the data file, so touching only
-		the .gz makes every subsequent query fail with "index file is older than the data file". */
+		BOTH files, and the INDEX FIRST: tabix rejects an index older than its data file, and a
+		concurrent read landing between the two touches must not see that state. Touching the
+		index first makes the in-between state "index newer than data", which is fine; the other
+		order fails every read in the window with "index file is older than the data file". */
 		const now = new Date()
-		await fs.promises.utimes(gz, now, now).catch(() => {})
 		await fs.promises.utimes(gz + '.tbi', now, now).catch(() => {})
+		await fs.promises.utimes(gz, now, now).catch(() => {})
 		return name
 	}
 	await fs.promises.mkdir(dir, { recursive: true })
@@ -87,8 +89,13 @@ export async function writeDmrBedjFile(
 		await fs.promises.writeFile(tmpBed, lines.length ? lines.join('\n') + '\n' : '')
 		await run(serverconfig.bgzip, ['-f', tmpBed]) // writes tmpBed + '.gz'
 		await run(serverconfig.tabix, ['-f', '-p', 'bed', tmpBed + '.gz'])
-		await fs.promises.rename(tmpBed + '.gz', gz)
+		/* Publish the index first and let the .gz rename be the commit point, since that is what
+		the reuse check and any reader key off. Publishing the data first leaves a window where a
+		concurrent read finds a .gz whose index is absent, or worse pairs a fresh index with a
+		stale .gz left by an aborted publish -- so a lone leftover is cleared before either move. */
+		await fs.promises.rm(gz, { force: true })
 		await fs.promises.rename(tmpBed + '.gz.tbi', gz + '.tbi')
+		await fs.promises.rename(tmpBed + '.gz', gz)
 	} finally {
 		for (const f of [tmpBed, tmpBed + '.gz', tmpBed + '.gz.tbi']) await fs.promises.rm(f, { force: true })
 	}
