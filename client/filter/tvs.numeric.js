@@ -269,6 +269,10 @@ function addRangeTableNoDensity(self, tvs) {
 			.style('width', '125px')
 			.property('value', tvs.minAllelicDepth)
 		brush.apply_btn = addApplyButton(holder.append('div').style('margin-top', '10px'))
+	} else if (mafFilterMode == 'value') {
+		// any numerical FORMAT field read as-is; bounds come from the term's min/max, and no depth input
+		rangeLabel.text('Range')
+		brush.apply_btn = addApplyButton(rangeRow)
 	} else if (mafFilterMode == 'totalDepth' || mafFilterMode == 'altDepth') {
 		// allelic depth filter tvs; render an integer range input
 		rangeLabel.text(mafFilterMode == 'totalDepth' ? 'Total Depth' : 'Alt Allele Depth')

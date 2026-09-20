@@ -171,12 +171,19 @@ export function filterAndConvertSnvIndel(
 	}
 
 	if (options.mafFilter?.lst?.length) {
-		// has non-empty maf filter. apply maf filtering
-		if (!Array.isArray(entry.vafs)) return null // lacks vaf and skip entry
-		// TEMP fix! delete this and use !mayFilterByMaf(options.mafFilter, entry) when helper accepts .vafs[]
-		const copy = { dt: dtsnvindel }
-		for (const v of entry.vafs) {
-			copy[v.id] = v.refCount + ',' + v.altCount
+		/* has non-empty maf filter. apply maf filtering.
+		mayFilterByMaf() reads each term's FORMAT value off the record: "<ref>,<alt>" allele counts for
+		maf/depth terms, one number for a 'value' term. A count-based getter (gdc) carries the counts
+		in vafs[] rather than on the record, so flatten them onto a copy; a value-mode field already rides
+		on the record under its FORMAT key. A record lacking a term's value is "not annotated" and fails.
+		TEMP fix! drop the flattening and pass entry when the helper accepts .vafs[] */
+		const copy: Record<string, any> = { ...entry, dt: dtsnvindel }
+		if (Array.isArray(entry.vafs)) {
+			for (const v of entry.vafs) {
+				// per-sample json (disco shape) carries totalCount where the gdc getter carries refCount
+				const ref = Number.isInteger(v.refCount) ? v.refCount : v.totalCount - v.altCount
+				copy[v.id] = ref + ',' + v.altCount
+			}
 		}
 		try {
 			if (!mayFilterByMaf(options.mafFilter, copy)) return null

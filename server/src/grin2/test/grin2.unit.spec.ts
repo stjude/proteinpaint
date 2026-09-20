@@ -85,6 +85,82 @@ tape('filterAndConvertSnvIndel', test => {
 	test.end()
 })
 
+tape('filterAndConvertSnvIndel: maf filter', test => {
+	const m = { chr: 'chr17', pos: 7675088, class: 'M' }
+	const lesion = [sample, 'chr17', m.pos, m.pos, 'mutation']
+	const atLeast = (start: number) => [{ start, startinclusive: true, stopunbounded: true }]
+
+	// count-based term: allele counts come from vafs[], in either the gdc getter's refCount shape or the
+	// per-sample json's totalCount shape (see client/plots/disco/snv/vafTooltip.ts)
+	const countOpts = {
+		consequences: ['M'],
+		mafFilter: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { id: 'TumorAC', name: 'Tumor MAF', parent_id: null, isleaf: true, type: 'float' },
+						ranges: atLeast(0.2)
+					}
+				}
+			]
+		} as any
+	}
+	test.deepEqual(
+		filterAndConvertSnvIndel(sample, { ...m, vafs: [{ id: 'TumorAC', refCount: 60, altCount: 40 }] }, countOpts),
+		lesion,
+		'refCount/altCount vaf at 0.4 passes'
+	)
+	test.deepEqual(
+		filterAndConvertSnvIndel(sample, { ...m, vafs: [{ id: 'TumorAC', totalCount: 100, altCount: 40 }] }, countOpts),
+		lesion,
+		'totalCount/altCount vaf at 0.4 passes'
+	)
+	test.equal(
+		filterAndConvertSnvIndel(sample, { ...m, vafs: [{ id: 'TumorAC', refCount: 95, altCount: 5 }] }, countOpts),
+		null,
+		'vaf at 0.05 fails'
+	)
+	test.equal(filterAndConvertSnvIndel(sample, m, countOpts), null, 'record without vafs[] fails as not annotated')
+
+	// value term: the number rides on the record under its FORMAT key, no vafs[] involved
+	const valueOpts = {
+		consequences: ['M'],
+		mafFilter: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							id: 'tumor_AF',
+							name: 'Tumor allele fraction',
+							parent_id: null,
+							isleaf: true,
+							type: 'float',
+							mafFilterMode: 'value'
+						},
+						ranges: atLeast(0.2)
+					}
+				}
+			]
+		} as any
+	}
+	test.deepEqual(
+		filterAndConvertSnvIndel(sample, { ...m, tumor_AF: '0.35' }, valueOpts),
+		lesion,
+		'value 0.35 on the record passes'
+	)
+	test.equal(filterAndConvertSnvIndel(sample, { ...m, tumor_AF: 0.1 }, valueOpts), null, 'value 0.1 fails')
+	test.equal(filterAndConvertSnvIndel(sample, m, valueOpts), null, 'record without the value fails as not annotated')
+	test.end()
+})
+
 tape('filterAndConvertCnv: log2ratio / segmean (baseline 0)', test => {
 	for (const type of ['log2ratio', 'segmean'] as const) {
 		test.deepEqual(

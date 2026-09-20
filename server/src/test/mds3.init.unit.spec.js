@@ -57,6 +57,8 @@ Tests:
 	mayFilterByMaf: basic mafFilter, min allelic depth
 	mayFilterByMaf: mafFilter with child ids, min allelic depth
 	mayFilterByMaf: a term with child ids never reads its own id as data
+	mayFilterByMaf: value filter
+	mayValidateBcfMafFilter: value term and single-value fields
 	groupsetUsesMafFilter: detects a maf filter in the active groupset
 	tvsUsesMafFilter: a tvs carries a maf filter only when its lst[] has a cutoff
 	mayGetGeneVariantData: requests read depth from the snvindel getter only when a maf filter applies
@@ -2267,6 +2269,56 @@ test('mayFilterByMaf: alt allele depth filter', t => {
 	t.equal(mayFilterByMaf(mafFilter_altDepth, { dt: 1, class: 'M' }), false, 'unannotated does not pass')
 })
 
+test('mayFilterByMaf: value filter', t => {
+	t.plan(13)
+	const m = v => ({ dt: 1, class: 'M', tumor_AF: v })
+	// a bcf sample column reaches the filter as the raw FORMAT string; a getter may stamp a number
+	t.equal(mayFilterByMaf(mafFilter_value, m('0.35')), true, 'string value 0.35 passes')
+	t.equal(mayFilterByMaf(mafFilter_value, m(0.35)), true, 'numeric value 0.35 passes')
+	t.equal(mayFilterByMaf(mafFilter_value, m('0.1')), true, 'inclusive start 0.1 passes')
+	t.equal(mayFilterByMaf(mafFilter_value, m('0.05')), false, '0.05 does not pass')
+	t.equal(mayFilterByMaf(mafFilter_value, m('0.3,0.2')), false, 'multi-allelic list does not pass')
+	t.equal(mayFilterByMaf(mafFilter_value, m('abc')), false, 'non-numeric value does not pass')
+	t.equal(mayFilterByMaf(mafFilter_value, m('.')), false, 'missing-value marker does not pass')
+	t.equal(mayFilterByMaf(mafFilter_value, { dt: 1, class: 'M' }), false, 'unannotated does not pass')
+
+	// no 0-1 assumption: an integer field such as normal read depth filters on the same path
+	const depth = structuredClone(mafFilter_value)
+	depth.lst[0].tvs.term = {
+		id: 'NormalDepth',
+		name: 'Normal depth',
+		isleaf: true,
+		type: 'integer',
+		mafFilterMode: 'value',
+		min: 0
+	}
+	depth.lst[0].tvs.ranges = [{ start: 20, startinclusive: true, startunbounded: false, stopunbounded: true }]
+	t.equal(mayFilterByMaf(depth, { dt: 1, class: 'M', NormalDepth: '42' }), true, 'integer value 42 passes depth >= 20')
+	t.equal(mayFilterByMaf(depth, { dt: 1, class: 'M', NormalDepth: 7 }), false, 'integer value 7 does not pass')
+
+	// minAllelicDepth has nothing to gate on for a value term and is ignored
+	const gated = structuredClone(mafFilter_value)
+	gated.lst[0].tvs.minAllelicDepth = 100
+	t.equal(mayFilterByMaf(gated, m('0.35')), true, 'minAllelicDepth does not apply to a value term')
+
+	// a negated tvs flips the range test but an unannotated sample still does not pass
+	const negated = structuredClone(mafFilter_value)
+	negated.lst[0].tvs.isnot = true
+	t.equal(mayFilterByMaf(negated, m('0.05')), true, 'negated: 0.05 passes')
+	t.equal(mayFilterByMaf(negated, { dt: 1, class: 'M' }), false, 'negated: unannotated does not pass')
+})
+
+test('mayFilterByMaf: unknown mafFilterMode throws', t => {
+	t.plan(1)
+	const bogus = structuredClone(mafFilter_value)
+	bogus.lst[0].tvs.term.mafFilterMode = 'bogus'
+	t.throws(
+		() => mayFilterByMaf(bogus, { dt: 1, class: 'M', tumor_AF: '0.35' }),
+		/unexpected mafFilterMode/,
+		'throws before reading any data'
+	)
+})
+
 test('mayFilterByMaf: AND combination of maf and alt depth', t => {
 	t.plan(4)
 	// maf > 0.1 AND alt depth >= 20
@@ -2450,6 +2502,71 @@ test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t =>
 			),
 		/unknown FORMAT key "TumorMaf"/,
 		'a term without child_ids whose id is not a FORMAT key throws'
+	)
+})
+
+test('mayValidateBcfMafFilter: value term and single-value fields', t => {
+	t.plan(9)
+	const format = {
+		tumor_AF: { ID: 'tumor_AF', Number: 'A', Type: 'Float', Description: 'Tumor allele fraction' },
+		DP: { ID: 'DP', Number: '1', Type: 'Integer', Description: 'Read depth' },
+		assay: { ID: 'assay', Number: '1', Type: 'String', Description: 'DNA assay' },
+		tumor_DNA_WGS: { ID: 'tumor_DNA_WGS', Number: 'R', Type: 'Integer', Description: 'Tumor DNA WGS' },
+		GT: { ID: 'GT', Number: '1', Type: 'String', isGT: true }
+	}
+	const getQ = term => ({
+		byrange: { _tk: { format } },
+		mafFilter: {
+			opts: { joinWith: ['and', 'or'] },
+			filter: { type: 'tvslst', join: '', in: true, lst: [] },
+			terms: [term]
+		}
+	})
+	const base = { name: 'Tumor allele fraction', parent_id: null, isleaf: true, type: 'float' }
+
+	const q = getQ({ ...base, id: 'tumor_AF', mafFilterMode: 'value' })
+	t.doesNotThrow(() => mayValidateBcfMafFilter(q), 'value term on a Float field validates')
+	t.deepEqual(
+		q.mafFilter.terms.map(t => t.id),
+		['tumor_AF', 'tumor_DNA_WGS__totalDepth', 'tumor_DNA_WGS__altDepth'],
+		'depth terms are still generated from the Number=R field only'
+	)
+
+	// a fraction field declared as a count-based maf term must fail at init, not silently drop every
+	// variant as "not annotated" once the filter runs
+	t.throws(
+		() => mayValidateBcfMafFilter(getQ({ ...base, id: 'tumor_AF' })),
+		/single numeric value/,
+		'maf term on a single-value Float field throws'
+	)
+	t.throws(
+		() => mayValidateBcfMafFilter(getQ({ ...base, id: 'tumor_DNA', child_ids: ['tumor_DNA_WGS', 'DP'] })),
+		/"DP" which holds a single numeric value/,
+		'maf term summing a Number=1 Integer field throws'
+	)
+	t.doesNotThrow(
+		() => mayValidateBcfMafFilter(getQ({ ...base, id: 'GT' })),
+		'a Number=1 String field is not rejected, as it may carry the pair verbatim'
+	)
+
+	t.throws(
+		() => mayValidateBcfMafFilter(getQ({ ...base, id: 'tumor_AF', mafFilterMode: 'value', child_ids: ['tumor_AF'] })),
+		/cannot use child_ids/,
+		'value term with child_ids throws'
+	)
+	t.throws(
+		() => mayValidateBcfMafFilter(getQ({ ...base, id: 'tumor_DNA_WGS', mafFilterMode: 'value' })),
+		/Number=R/,
+		'value term on an allele count field throws'
+	)
+	t.doesNotThrow(
+		() => mayValidateBcfMafFilter(getQ({ ...base, id: 'DP', type: 'integer', mafFilterMode: 'value' })),
+		'value term on an Integer field validates (e.g. normal depth)'
+	)
+	t.throws(
+		() => mayValidateBcfMafFilter(getQ({ ...base, id: 'assay', mafFilterMode: 'value' })),
+		/Type=String/,
+		'value term on a String field throws'
 	)
 })
 
@@ -2645,6 +2762,31 @@ const mafFilter_altDepth = {
 					min: 0
 				},
 				ranges: [{ start: 20, startinclusive: true, startunbounded: false, stopunbounded: true }]
+			}
+		}
+	]
+}
+
+// a precomputed allele fraction >= 0.1 read as-is (value mode), for a data source without allelic depth
+const mafFilter_value = {
+	type: 'tvslst',
+	join: '',
+	in: true,
+	lst: [
+		{
+			type: 'tvs',
+			tvs: {
+				term: {
+					id: 'tumor_AF',
+					name: 'Tumor allele fraction',
+					parent_id: null,
+					isleaf: true,
+					type: 'float',
+					mafFilterMode: 'value',
+					min: 0,
+					max: 1
+				},
+				ranges: [{ start: 0.1, startinclusive: true, startunbounded: false, stopunbounded: true }]
 			}
 		}
 	]

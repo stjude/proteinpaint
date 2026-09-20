@@ -855,8 +855,9 @@ allelic-depth filter terms.
 
 q = ds.queries.snvindel
 
-- verifies every FORMAT key referenced by mafFilter.terms[] (via term.id or term.child_ids[])
-  exists in q.byrange._tk.format{}
+- verifies every FORMAT key referenced by mafFilter.terms[] (via term.id, term.child_ids[] or
+  term.mafFormatKey) exists in the FORMAT{} and holds a value shape its mafFilterMode can read:
+  "<ref>,<alt>" allele counts for maf/depth terms, one number for a 'value' term
 - for every FORMAT key with Number=="R" (one value per allele incl. reference, i.e. AD-style
   "<ref>,<alt>"), appends two depth terms to mafFilter.terms[]: one for total depth (ref+alt)
   and one for alternate-allele depth (alt). these surface as additional terms in the maf filter UI.
@@ -877,8 +878,25 @@ export function mayValidateBcfMafFilter(q) {
 			// maf-mode term reads term.id, or sums across term.child_ids[]
 			const keys = term.child_ids?.length ? term.child_ids : [term.id]
 			for (const key of keys) {
-				if (!format[key]) throw `snvindel.mafFilter term "${term.id}" references unknown FORMAT key "${key}"`
+				const f = format[key]
+				if (!f) throw `snvindel.mafFilter term "${term.id}" references unknown FORMAT key "${key}"`
+				/* a numeric field with one value per sample (e.g. a precomputed AF, or DP) cannot hold a
+				"<ref>,<alt>" pair; mayFilterByMaf() would then drop every variant as "not annotated". a
+				Number=1 String field is let through as it may carry the pair verbatim */
+				if (isSingleNumericFormatField(f))
+					throw `snvindel.mafFilter term "${term.id}" reads FORMAT key "${key}" which holds a single numeric value, not "<ref>,<alt>" allele counts; to filter on the value itself set mafFilterMode "value"`
 			}
+		} else if (mode == 'value') {
+			// value-mode term reads one number per sample from the single FORMAT key term.id
+			if (term.child_ids?.length)
+				throw `snvindel.mafFilter term "${term.id}" (value) cannot use child_ids[]: values are not summed`
+			const f = format[term.id]
+			if (!f) throw `snvindel.mafFilter term "${term.id}" references unknown FORMAT key "${term.id}"`
+			if (f.Number == 'R')
+				throw `snvindel.mafFilter term "${term.id}" (value) reads FORMAT key "${term.id}" with Number=R, which holds allele counts; use mafFilterMode "maf", "totalDepth" or "altDepth"`
+			// Integer or Float; an untyped header is let through
+			if (f.Type && f.Type != 'Integer' && f.Type != 'Float')
+				throw `snvindel.mafFilter term "${term.id}" (value) reads FORMAT key "${term.id}" with Type=${f.Type}, expected Integer or Float`
 		} else if (mode == 'totalDepth' || mode == 'altDepth') {
 			// depth-mode term reads a single raw FORMAT key from term.mafFormatKey
 			if (!term.mafFormatKey) throw `snvindel.mafFilter term "${term.id}" (${mode}) is missing mafFormatKey`
@@ -919,6 +937,13 @@ export function mayValidateBcfMafFilter(q) {
 		})
 	}
 	q.mafFilter._depthTermsAdded = true
+}
+
+/* whether a FORMAT field holds one numeric value per sample, per its header: Number=1, or Number=A
+(one per alt allele, so one at the biallelic sites the maf filter handles). Such a field cannot be
+"<ref>,<alt>" allele counts. A Number=R field, or an untyped/unnumbered one, may be */
+function isSingleNumericFormatField(f) {
+	return (f.Number == '1' || f.Number == 'A') && (f.Type == 'Integer' || f.Type == 'Float')
 }
 
 // for data files using string sample name in header line, call this function to map each sample name to integer id and return the id array
@@ -3714,6 +3739,8 @@ export function filterByItem(filter, mlst, values) {
 	return [pass, tested]
 }
 
+const mafFilterModes = new Set(['maf', 'totalDepth', 'altDepth', 'value'])
+
 // filter mutation by maf
 export function mayFilterByMaf(mafFilter, m) {
 	if (!mafFilter?.lst.length || m.dt != dtsnvindel) return true
@@ -3729,41 +3756,15 @@ export function mayFilterByMaf(mafFilter, m) {
 		// - 'maf': minor allele frequency, alt/(ref+alt), gated by minimum total depth (default)
 		// - 'totalDepth': total read depth, ref+alt
 		// - 'altDepth': alternate-allele read depth, alt
+		// - 'value': any numerical FORMAT field read as-is, e.g. a precomputed allele fraction or normal depth
 		const mode = tvs.term.mafFilterMode || 'maf'
-		const alleleCnts = { ref: 0, alt: 0 } // allele counts for maf filter term
-		let annotated = false
-		if (mode == 'maf' && tvs.term.child_ids?.length) {
-			// maf filter term has child terms; sum allele counts across child terms
-			for (const id of tvs.term.child_ids) {
-				if (addAlleleCnts(m, id, alleleCnts)) annotated = true
-			}
-		} else {
-			// single field: term.id for maf terms, mafFormatKey for depth terms
-			const fieldId = mode == 'maf' ? tvs.term.id : tvs.term.mafFormatKey
-			if (addAlleleCnts(m, fieldId, alleleCnts)) annotated = true
-		}
-		if (!annotated) {
-			// sample is not annotated for this field; does not pass
+		if (!mafFilterModes.has(mode)) throw 'unexpected mafFilterMode'
+		// the value tested against tvs.ranges. undefined when the sample is not annotated for the
+		// term's field, or (maf mode) its depth is below the cutoff; either way it does not pass
+		const metric = mode == 'value' ? getFormatValue(m, tvs.term.id) : getMetricFromAlleleCnts(mode, tvs, m)
+		if (metric === undefined) {
 			passLst.push(pass)
 			continue
-		}
-		const { ref, alt } = alleleCnts
-		const total = ref + alt
-		let metric
-		if (mode == 'maf') {
-			const minAllelicDepth = Number.isFinite(tvs.minAllelicDepth) && tvs.minAllelicDepth != 0 ? tvs.minAllelicDepth : 1
-			if (total < minAllelicDepth) {
-				// allelic depth does not meet cutoff; sample does not pass
-				passLst.push(pass)
-				continue
-			}
-			metric = alt / total
-		} else if (mode == 'totalDepth') {
-			metric = total
-		} else if (mode == 'altDepth') {
-			metric = alt
-		} else {
-			throw 'unexpected mafFilterMode'
 		}
 		// test if metric is in range of tvs
 		const intvs = tvs.ranges.every(r => {
@@ -3782,6 +3783,43 @@ export function mayFilterByMaf(mafFilter, m) {
 	}
 	const passFilter = filter.join == 'or' ? passLst.some(pass => pass) : passLst.every(pass => pass)
 	return passFilter
+}
+
+/* metric of a count-based maf filter mode for mutation m: alt/(ref+alt) for 'maf', ref+alt for
+'totalDepth', alt for 'altDepth'. undefined when m is not annotated for the term's FORMAT field(s),
+or when a maf-mode total depth is below tvs.minAllelicDepth */
+function getMetricFromAlleleCnts(mode, tvs, m) {
+	const alleleCnts = { ref: 0, alt: 0 } // allele counts for maf filter term
+	let annotated = false
+	if (mode == 'maf' && tvs.term.child_ids?.length) {
+		// maf filter term has child terms; sum allele counts across child terms
+		for (const id of tvs.term.child_ids) {
+			if (addAlleleCnts(m, id, alleleCnts)) annotated = true
+		}
+	} else {
+		// single field: term.id for maf terms, mafFormatKey for depth terms
+		const fieldId = mode == 'maf' ? tvs.term.id : tvs.term.mafFormatKey
+		if (addAlleleCnts(m, fieldId, alleleCnts)) annotated = true
+	}
+	if (!annotated) return undefined // sample is not annotated for this field
+	const { ref, alt } = alleleCnts
+	const total = ref + alt
+	if (mode == 'totalDepth') return total
+	if (mode == 'altDepth') return alt
+	const minAllelicDepth = Number.isFinite(tvs.minAllelicDepth) && tvs.minAllelicDepth != 0 ? tvs.minAllelicDepth : 1
+	if (total < minAllelicDepth) return undefined // allelic depth does not meet cutoff
+	return alt / total
+}
+
+/* the number a 'value' mode term reads from m[fieldId]: the raw FORMAT string of a bcf sample column
+("0.35", "42"), or a number when a getter stamps it directly. undefined when missing, non-numeric, or a
+multi-allelic list (mirroring the multi-allelic skip of addAlleleCnts) */
+function getFormatValue(m, fieldId) {
+	const v = m[fieldId]
+	if (v === undefined || v === null || v === '') return undefined
+	if (typeof v == 'string' && v.includes(',')) return undefined
+	const f = Number(v)
+	return Number.isFinite(f) ? f : undefined
 }
 
 /* whether any tvs of the active groupset of a geneVariant tw carries a maf filter, so that the snvindel
