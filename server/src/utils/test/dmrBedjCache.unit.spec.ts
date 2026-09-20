@@ -63,6 +63,16 @@ tape('writeDmrBedjFile', async test => {
 	// the touch must include the index: tabix refuses one older than the data file
 	test.equal(q('chr1:1-10000').length, 2, 'and the file is still queryable after the touch')
 
+	/* The publish does not clear the destination first, so a competing writer for the same scan
+	replaces a file the other may already have handed to a client. That is safe only because the
+	content is a pure function of what names the file, so the replacement is byte-identical. */
+	const bytes = fs.readFileSync(gz)
+	const idxBytes = fs.readFileSync(gz + '.tbi')
+	for (const f of [gz, gz + '.tbi']) fs.rmSync(f, { force: true })
+	await writeDmrBedjFile(payload, 'hg38', 'MMRF', cacheId, 5)
+	test.equal(Buffer.compare(fs.readFileSync(gz), bytes), 0, 'an independent rewrite is byte-identical')
+	test.equal(Buffer.compare(fs.readFileSync(gz + '.tbi'), idxBytes), 0, 'and so is its index')
+
 	for (const f of [gz, gz + '.tbi']) fs.rmSync(f, { force: true })
 	test.end()
 })

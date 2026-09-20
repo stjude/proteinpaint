@@ -91,9 +91,14 @@ export async function writeDmrBedjFile(
 		await run(serverconfig.tabix, ['-f', '-p', 'bed', tmpBed + '.gz'])
 		/* Publish the index first and let the .gz rename be the commit point, since that is what
 		the reuse check and any reader key off. Publishing the data first leaves a window where a
-		concurrent read finds a .gz whose index is absent, or worse pairs a fresh index with a
-		stale .gz left by an aborted publish -- so a lone leftover is cleared before either move. */
-		await fs.promises.rm(gz, { force: true })
+		concurrent read finds a .gz whose index is absent.
+
+		Nothing is unlinked first, deliberately: rename replaces the destination atomically, so a
+		leftover from an aborted publish is overwritten by these two moves anyway, and a writer
+		that clears the destination first would delete a file a competing writer had already
+		committed -- and whose name that writer may have returned to a client. The competing
+		writer replacing ours is harmless because the content is a pure function of the cache id
+		and the CpG floor, which name the file: both write the same bytes (asserted in the spec). */
 		await fs.promises.rename(tmpBed + '.gz.tbi', gz + '.tbi')
 		await fs.promises.rename(tmpBed + '.gz', gz)
 	} finally {
