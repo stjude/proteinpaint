@@ -3,13 +3,13 @@ import fs from 'fs'
 import path from 'path'
 import { execFileSync } from 'child_process'
 import serverconfig from '#src/serverconfig.js'
-import { writeDmrBedjFile, assertDmrBedjAccess } from '#src/utils/dmrBedjCache.ts'
+import { writeDmrBedjFile, assertBedjCacheAccess } from '#src/utils/dmrBedjCache.ts'
 
 /*
 test sections:
 
 writes a tabix-queryable file; the CpG floor drops calls; a reuse touches both files and stays readable
-a cached file is refused under a dataset it was not computed for
+a cached file is refused under another dataset, and an untokenized name is refused outright
 */
 
 const payload: any = {
@@ -77,29 +77,30 @@ tape('writeDmrBedjFile', async test => {
 	test.end()
 })
 
-tape('assertDmrBedjAccess', async test => {
+tape('assertBedjCacheAccess', async test => {
 	const name = `dmr-${'a'.repeat(8)}-${cacheId}-5.gz`
 	const owner = await writeDmrBedjFile(payload, 'hg38', 'MMRF', cacheId, 5)
 	fs.rmSync(path.join(serverconfig.cachedir, 'bedj', owner), { force: true })
 	fs.rmSync(path.join(serverconfig.cachedir, 'bedj', owner + '.tbi'), { force: true })
 
 	test.doesNotThrow(
-		() => assertDmrBedjAccess(owner, { genome: 'hg38', dslabel: 'MMRF' }),
+		() => assertBedjCacheAccess(owner, { genome: 'hg38', dslabel: 'MMRF' }),
 		'the dataset it was computed for is served'
 	)
 	test.throws(
-		() => assertDmrBedjAccess(owner, { genome: 'hg38', dslabel: 'SomeOtherDs' }),
+		() => assertBedjCacheAccess(owner, { genome: 'hg38', dslabel: 'SomeOtherDs' }),
 		/does not belong/,
 		'the same name replayed under another dataset is refused'
 	)
 	test.throws(
-		() => assertDmrBedjAccess(owner, { genome: 'hg38' }),
+		() => assertBedjCacheAccess(owner, { genome: 'hg38' }),
 		/required/,
 		'a request naming no dataset is refused'
 	)
-	test.doesNotThrow(
-		() => assertDmrBedjAccess('someothertrack.gz', {}),
-		'a cached file that is not a DMR scan is left alone'
+	test.throws(
+		() => assertBedjCacheAccess('someothertrack.gz', { genome: 'hg38', dslabel: 'MMRF' }),
+		/does not belong/,
+		'a cached file carrying no dataset token is refused, not waved through'
 	)
 	test.notEqual(name, owner, 'the dataset token is part of the name')
 	test.end()

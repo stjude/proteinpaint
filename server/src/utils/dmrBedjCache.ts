@@ -23,17 +23,23 @@ function dsToken(genome: string, dslabel: string): string {
 	return createHash('sha256').update(`${genome}\0${dslabel}`).digest('hex').slice(0, 8)
 }
 
-/* Refuse a DMR cache file requested under a dataset it was not computed for. Called by the bedj
-tk reader for any isCache file; a file without the DMR prefix is not ours and is left alone.
+/* The gate for EVERY read out of the bedj cache subdir, called by the bedj tk reader before it
+opens an isCache file.
+
+Fail closed: a name that does not carry a dataset token is refused, rather than waved through.
+Checking only names with the DMR prefix would mean the next thing to write into this subdir gets
+no ownership check at all -- and, since genome/dslabel would then not be required, no session
+check either, because the auth middleware returns early without a dslabel to resolve creds from.
+So anything written here must carry dsToken() in the second '-' separated field of its name.
 
 Requiring the dataset also brings authentication along, for the datasets that declare it: a
 '*' credential is rewritten to '/**' (auth.dsCredentials.ts), which matches /tkbedj, so the
 global auth middleware demands a session before this is ever reached. A dataset declaring
 'termdb' credentials is public-view by design and gates neither this nor the analysis routes
 that produce the file -- Auth.protectedRoutes.termdb lists only /termdb/matrix. */
-export function assertDmrBedjAccess(file: string, q: { genome?: string; dslabel?: string }) {
-	if (!file.startsWith(DMR_PREFIX)) return
-	if (!q.genome || !q.dslabel) throw 'genome and dslabel are required for this cached track'
+export function assertBedjCacheAccess(file: string, q: { genome?: string; dslabel?: string }) {
+	if (!q.genome || !q.dslabel) throw 'genome and dslabel are required for a cached track'
+	// an unrecognized name has no token in that field, so this refuses it too
 	if (file.split('-')[1] !== dsToken(q.genome, q.dslabel))
 		throw 'this cached track does not belong to the requested dataset'
 }
