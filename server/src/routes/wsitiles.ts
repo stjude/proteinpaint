@@ -39,7 +39,7 @@ export const payload: RoutePayload = {
 }
 
 // one endpoint, `action` selects meta/tile/boundaries/annotations/genecounts/
-// genenames; z/x/y only for tile
+// genenames/nhood; z/x/y only for tile
 export const api: RouteApi = {
 	endpoint: `wsitiles/:action/:z?/:x?/:y?`,
 	methods: { get: payload, post: payload }
@@ -250,6 +250,44 @@ function init({ genomes }) {
 					req.params.action == 'genecounts'
 						? { action: 'genecounts', h5: full, gene: String(q.gene || '') }
 						: { action: 'genenames', h5: full }
+				const out = await run_python('wsi_tile.py', JSON.stringify(job))
+				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim
+				return
+			}
+
+			if (req.params.action == 'nhood') {
+				// neighborhood enrichment of a cell selection (the viewer's lasso):
+				// POST {file, ids[], k?, perms?, seed?} — file is the consolidated
+				// .h5ad (tpmasterdir-relative, slide-folder scoped like the other
+				// companion reads), ids the selected cell ids (body-merged into q by
+				// the json middleware; the list can run to ~1MB, hence POST). Answers
+				// python's {types, count, zscore, cells, skipped, k, perms} or {error}
+				const file = String(q.file || '')
+				if (!file.toLowerCase().endsWith('.h5ad')) {
+					res.status(400).send({ status: 'error', error: 'nhood file must be a .h5ad' })
+					return
+				}
+				const full = path.resolve(serverconfig.tpmasterdir, file)
+				if (!full.startsWith(companionBase + path.sep)) {
+					res.status(400).send({ status: 'error', error: 'nhood path escapes the slide folder' })
+					return
+				}
+				const ids = Array.isArray(q.ids) ? q.ids.map(String) : [] // the selection
+				if (!ids.length) {
+					res.status(400).send({ status: 'error', error: 'nhood needs a non-empty ids list' })
+					return
+				}
+				// bounded so a request cannot pin python indefinitely
+				const int = (v: any, d: number, lo: number, hi: number) =>
+					Math.min(hi, Math.max(lo, Number.isInteger(Number(v)) ? Number(v) : d))
+				const job = {
+					action: 'nhood',
+					h5ad: full,
+					ids,
+					k: int(q.k, 6, 1, 30),
+					perms: int(q.perms, 1000, 10, 5000),
+					seed: int(q.seed, 0, 0, 2 ** 31)
+				}
 				const out = await run_python('wsi_tile.py', JSON.stringify(job))
 				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim
 				return

@@ -1,11 +1,13 @@
 import tape from 'tape'
-import { parseBoundaries, pointInRing, tooltipRows, cellsInLasso } from '../wsi.direct'
+import { select } from 'd3-selection'
+import { parseBoundaries, pointInRing, tooltipRows, cellsInLasso, renderNhoodHeatmap } from '../wsi.direct'
 
 /* Tests
     parseBoundaries: boundary csv -> one ring per cell
     pointInRing: hover hit test
     tooltipRows: hover tooltip content
     cellsInLasso: lasso selection by cell centroid
+    renderNhoodHeatmap: enrichment z-score matrix rendering
 */
 
 // two cells, µm coords; mpp 0.5 doubles px values, y negated for OL
@@ -138,5 +140,36 @@ tape('cellsInLasso selects by cell centroid', test => {
 		[],
 		'tiny lasso misses the cell'
 	)
+	test.end()
+})
+
+tape('renderNhoodHeatmap draws one cell per type pair', test => {
+	const holder = select(document.body).append('div')
+	renderNhoodHeatmap(holder, {
+		types: ['B cells', 'Tumor'],
+		count: [
+			[30, 6],
+			[6, 18]
+		],
+		zscore: [
+			[4.2, -4.2],
+			[null, 1.5]
+		],
+		cells: 10,
+		skipped: 3,
+		k: 6,
+		perms: 50
+	})
+	const panel = holder.node() as HTMLElement
+	test.equal(panel.querySelectorAll('.sjpp-wsi-nhood-cell').length, 4, '2x2 types -> 4 cells')
+	test.ok(panel.textContent?.includes('10 cells, 6 nearest neighbours, 50 permutations'), 'title reports the run')
+	test.ok(panel.textContent?.includes('3 unannotated cells skipped'), 'title reports skipped cells')
+	const texts = [...panel.querySelectorAll('.sjpp-wsi-nhood-cell text')].map(t => t.textContent)
+	test.deepEqual(texts, ['4.2', '-4.2', '–', '1.5'], 'z-scores printed to 1 decimal, null as a dash')
+	const fills = [...panel.querySelectorAll('.sjpp-wsi-nhood-cell rect')].map(r => r.getAttribute('fill'))
+	test.notEqual(fills[0], fills[1], 'enriched and depleted cells get different colors')
+	test.equal(fills[2], '#f0efec', 'null z-score gets the neutral fill')
+	test.equal(panel.querySelectorAll('.sjpp-wsi-nhood-cell title').length, 4, 'every cell has a hover tooltip')
+	holder.remove()
 	test.end()
 })
