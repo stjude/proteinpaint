@@ -229,7 +229,6 @@ export function setInteractivity(self) {
 			vocabApi: self.vocabApi,
 			holder: self.dom.termSrcDiv,
 			getCategoriesArguments: self.opts.getCategoriesArguments,
-			isMafFilter: self.opts.isMafFilter,
 			state: {
 				activeCohort: self.activeCohort,
 				termfilter: { filter: treeFilter },
@@ -347,7 +346,6 @@ export function setInteractivity(self) {
 			vocabApi: self.vocabApi,
 			holder: self.dom.termSrcDiv,
 			getCategoriesArguments: self.opts.getCategoriesArguments,
-			isMafFilter: self.opts.isMafFilter,
 			state: {
 				activeCohort: self.activeCohort,
 				nav: { header_mode: self.opts.header_mode || 'search_only' },

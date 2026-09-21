@@ -575,7 +575,13 @@ tape('dt term filter requests read depth only when its tvs carries a maf filter'
 			dt: 1,
 			parentTerm: { name: 'TP53', type: 'geneVariant', genes: [{ kind: 'gene', gene: 'TP53', name: 'TP53' }] }
 		}
-		const mafTerm = { id: 'tumor_DNA', name: 'Tumor DNA', type: 'float', child_ids: ['tumor_DNA_WGS'] }
+		const mafTerm = {
+			id: 'tumor_DNA',
+			name: 'Tumor DNA',
+			type: 'float',
+			mafFilterMode: 'maf',
+			mafFormatKey: 'tumor_DNA_WGS'
+		}
 		const getFilter = tvsExtra => ({
 			type: 'tvslst',
 			in: true,

@@ -236,6 +236,23 @@ function addRangeTableNoDensity(self, tvs) {
 
 	const brush = {}
 	const holder = num_div.append('div').style('padding-left', '5px')
+
+	// a maf filter term carries its mode, which determines the metric filtered and the inputs shown.
+	// undefined for any other numeric term
+	const mafFilterMode = tvs.term.mafFilterMode
+	if (mafFilterMode == 'maf' && tvs.term.child_ids?.length > 1) {
+		// the fraction sums allele counts across several FORMAT fields (e.g. WGS and WES assays); the
+		// term name alone does not say so
+		const ids = tvs.term.child_ids
+		const list = ids.slice(0, -1).join(', ') + ' and ' + ids[ids.length - 1]
+		holder
+			.append('div')
+			.style('margin-bottom', '8px')
+			.style('font-size', '.9em')
+			.style('opacity', 0.7)
+			.text(`MAF is computed by summing allelic depths from ${list}`)
+	}
+
 	const rangeRow = holder
 		.append('div')
 		.style('display', 'flex')
@@ -248,8 +265,6 @@ function addRangeTableNoDensity(self, tvs) {
 		scaleFactor: getValueConversionFactor(tvs.term)
 	})
 
-	// for maf filter tvs, the term's mode determines which metric is filtered
-	const mafFilterMode = self.opts.isMafFilter ? tvs.term.mafFilterMode || 'maf' : null
 	if (mafFilterMode == 'maf') {
 		// maf filter tvs
 		// render maf range input and min allelic depth input
@@ -283,6 +298,9 @@ function addRangeTableNoDensity(self, tvs) {
 		rangeLabel.text('Range')
 		brush.apply_btn = addApplyButton(rangeRow)
 	}
+
+	// a maf filter term opens with the range input focused, so a cutoff can be typed right away
+	if (mafFilterMode) brush.rangeInput.getInput().node().focus()
 
 	function addApplyButton(holder) {
 		return holder.append('button').text('Apply').on('click', clickApply)

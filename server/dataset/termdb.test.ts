@@ -28,9 +28,10 @@ const mafFields = [
 		id: 'tumor_DNA',
 		name: 'Tumor DNA',
 		parent_id: null,
-		child_ids: ['tumor_DNA_WGS'],
+		mafFormatKey: 'tumor_DNA_WGS',
 		isleaf: true,
 		type: 'float',
+		mafFilterMode: 'maf' as const,
 		default: true, // indicates default maf term (e.g. will be used by default for making maf filters in predefined groupset)
 		min: 0,
 		max: 1,

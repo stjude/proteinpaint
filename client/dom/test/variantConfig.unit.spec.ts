@@ -1194,6 +1194,7 @@ const activeMafFilter = {
 					parent_id: null,
 					isleaf: true,
 					type: 'float',
+					mafFilterMode: 'maf',
 					min: 0,
 					max: 1
 				}
@@ -1209,6 +1210,7 @@ const activeMafFilter = {
 					parent_id: null,
 					isleaf: true,
 					type: 'float',
+					mafFilterMode: 'maf',
 					min: 0,
 					max: 1
 				}
@@ -1226,6 +1228,7 @@ const mafFilter = {
 			parent_id: null,
 			isleaf: true,
 			type: 'float',
+			mafFilterMode: 'maf',
 			min: 0,
 			max: 1,
 			tvs: {
@@ -1238,6 +1241,7 @@ const mafFilter = {
 			parent_id: null,
 			isleaf: true,
 			type: 'float',
+			mafFilterMode: 'maf',
 			min: 0,
 			max: 1,
 			tvs: {
