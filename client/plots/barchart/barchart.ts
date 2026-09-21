@@ -954,6 +954,7 @@ export class Barchart extends PlotBase implements RxComponent {
 					const ntotal = total ? ', n=' + total : ''
 					return [
 						{
+							testID: collabel,
 							id: collabel,
 							text: label + ntotal,
 							color: '#fff',
@@ -1017,6 +1018,7 @@ export class Barchart extends PlotBase implements RxComponent {
 								text: label + ntotal,
 								color: this.term2toColor[d],
 								type: 'row',
+								testID: d,
 								isHidden: s.exclude.rows.includes(d)
 							}
 						]
