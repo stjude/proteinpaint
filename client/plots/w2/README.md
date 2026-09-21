@@ -272,6 +272,28 @@ of cell id + type (`sjpp-wsi-lasso-table`). One lasso at a time: a new
 drawing replaces the old, and toggling the button off clears the ring and
 menu.
 
+### 8. Neighborhood enrichment — `wsitiles/nhood`, `python/src/wsi_tile.py`
+
+The lasso menu's **Neighborhood enrichment** button (`sjpp-wsi-nhood-btn`,
+shown only when the h5ad carries cell types) POSTs `{file, ids}` to
+`wsitiles/nhood` — ids only, since the server reads the selected cells'
+`obsm/spatial` centroids and `obs/cell_type` from the h5ad itself. The
+route bounds `k` (default 6), `perms` (default 1000) and `seed`, then runs
+`nhood_enrichment()` in `wsi_tile.py`, a scipy/numpy port of the squidpy
+pipeline the MMRF notebook uses (`sq.gr.spatial_neighbors(coord_type=
+'generic', n_neighs=6)` + `sq.gr.nhood_enrichment`): a **directed** kNN
+graph over the centroids (each cell → its k nearest others; squidpy's
+KNNBuilder does not symmetrise), `count[a][b]` = edges from a type-a cell
+to a type-b neighbour, and a z-score of each count against `perms` random
+relabellings of the same cells (population std, as squidpy). Unannotated
+cells are dropped first (reported as `skipped`); unknown ids are ignored.
+Fewer than two types is an `{error}`.
+
+The client draws the answer with `renderNhoodHeatmap()` into a panel under
+the map (`sjpp-wsi-nhood`, one at a time): a diverging blue–gray–red
+matrix symmetric around 0, the z-score printed in every cell, a hover
+tooltip with the edge count, a legend bar, and a close button.
+
 ## SVS vs OME-TIFF: what actually differs
 
 | step | .svs | .ome.tif |

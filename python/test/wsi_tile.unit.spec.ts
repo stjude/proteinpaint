@@ -95,3 +95,33 @@ tape('h5ad_csv rejects an unknown polygon kind without leaking a temp file', asy
 	}
 	t.end()
 })
+
+tape('nhood computes squidpy-style neighborhood enrichment over a selection', async t => {
+	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
+	const ids = Object.keys(ann.cells) // the 760 annotated fixture cells
+	const job = { action: 'nhood', h5ad, ids: [...ids, 'not-a-cell'], k: 6, perms: 50, seed: 1 }
+	const out = JSON.parse(await run_python('wsi_tile.py', JSON.stringify(job)))
+	t.deepEqual(out.types, ['B cells', 'Fibroblasts', 'Macrophages', 'T cells', 'Tumor'], 'types sorted, matrix order')
+	t.equal(out.cells, 760, 'unknown ids are ignored')
+	t.equal(out.skipped, 0, 'no unannotated cells among the selected')
+	t.equal(out.k, 6, 'k nearest neighbours')
+	t.equal(out.perms, 50, 'permutation count echoed')
+	const total = out.count.flat().reduce((a: number, b: number) => a + b, 0)
+	t.equal(total, 760 * 6, 'directed kNN graph: one edge per cell per neighbour')
+	t.ok(out.zscore.length == 5 && out.zscore.every((r: any[]) => r.length == 5), '5x5 z-score matrix')
+	t.ok(
+		out.zscore.flat().every((z: any) => z === null || Number.isFinite(z)),
+		'z-scores finite or null'
+	)
+	const again = JSON.parse(await run_python('wsi_tile.py', JSON.stringify(job)))
+	t.deepEqual(again.zscore, out.zscore, 'same seed reproduces the z-scores')
+	t.end()
+})
+
+tape('nhood rejects a selection with fewer than two cell types', async t => {
+	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
+	const ids = Object.keys(ann.cells).filter(id => ann.cells[id] == 'Tumor')
+	const out = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'nhood', h5ad, ids, perms: 10 })))
+	t.ok(String(out.error).includes('at least 2 cell types'), 'error names the requirement')
+	t.end()
+})
