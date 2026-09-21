@@ -122,7 +122,7 @@ jobs:
           FLAGS=()
           if [ "$IS_DRAFT" = "true" ]; then FLAGS+=(--draft); fi
           if [ "$IS_PRERELEASE" = "true" ]; then FLAGS+=(--prerelease); fi
-          gh release create "$TAG_NAME" \
+          gh release view "$TAG_NAME" >/dev/null 2>&1 || gh release create "$TAG_NAME" \
             --title "$TAG_NAME" \
             --notes "$RELEASE_BODY" \
             "${FLAGS[@]}"
