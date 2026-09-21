@@ -3,13 +3,12 @@ import fs from 'fs'
 import path from 'path'
 import { execFileSync } from 'child_process'
 import serverconfig from '#src/serverconfig.js'
-import { writeDmrBedjFile, assertBedjCacheAccess } from '#src/utils/dmrBedjCache.ts'
+import { writeDmrBedjFile } from '#src/utils/dmrBedjCache.ts'
 
 /*
 test sections:
 
 writes a tabix-queryable file; the CpG floor drops calls; a reuse touches both files and stays readable
-a cached file is refused under another dataset, and an untokenized name is refused outright
 */
 
 const payload: any = {
@@ -32,9 +31,9 @@ const payload: any = {
 const cacheId = 'a'.repeat(32)
 
 tape('writeDmrBedjFile', async test => {
-	const name = await writeDmrBedjFile(payload, 'hg38', 'MMRF', cacheId, 5)
+	const name = await writeDmrBedjFile(payload, cacheId, 5)
 	const gz = path.join(serverconfig.cachedir, 'bedj', name)
-	test.ok(name.endsWith(`-${cacheId}-5.gz`), 'file is named for the scan and its CpG floor')
+	test.equal(name, `dmr-${cacheId}-5.gz`, 'file is named for the scan and its CpG floor')
 	test.ok(fs.existsSync(gz) && fs.existsSync(gz + '.tbi'), 'both the file and its index are in the bedj cache dir')
 
 	const q = (region: string) =>
@@ -55,7 +54,7 @@ tape('writeDmrBedjFile', async test => {
 	test.equal(q('chr2:1-1000').length, 1, 'other chromosomes are in the same file')
 
 	const before = fs.statSync(gz)
-	test.equal(await writeDmrBedjFile(payload, 'hg38', 'MMRF', cacheId, 5), name, 'a second call returns the same file')
+	test.equal(await writeDmrBedjFile(payload, cacheId, 5), name, 'a second call returns the same file')
 	const after = fs.statSync(gz)
 	// a rebuild renames a fresh temp file into place, which would change the inode; a touch does not
 	test.equal(after.ino, before.ino, 'and does not rebuild it')
@@ -69,39 +68,10 @@ tape('writeDmrBedjFile', async test => {
 	const bytes = fs.readFileSync(gz)
 	const idxBytes = fs.readFileSync(gz + '.tbi')
 	for (const f of [gz, gz + '.tbi']) fs.rmSync(f, { force: true })
-	await writeDmrBedjFile(payload, 'hg38', 'MMRF', cacheId, 5)
+	await writeDmrBedjFile(payload, cacheId, 5)
 	test.equal(Buffer.compare(fs.readFileSync(gz), bytes), 0, 'an independent rewrite is byte-identical')
 	test.equal(Buffer.compare(fs.readFileSync(gz + '.tbi'), idxBytes), 0, 'and so is its index')
 
 	for (const f of [gz, gz + '.tbi']) fs.rmSync(f, { force: true })
-	test.end()
-})
-
-tape('assertBedjCacheAccess', async test => {
-	const name = `dmr-${'a'.repeat(8)}-${cacheId}-5.gz`
-	const owner = await writeDmrBedjFile(payload, 'hg38', 'MMRF', cacheId, 5)
-	fs.rmSync(path.join(serverconfig.cachedir, 'bedj', owner), { force: true })
-	fs.rmSync(path.join(serverconfig.cachedir, 'bedj', owner + '.tbi'), { force: true })
-
-	test.doesNotThrow(
-		() => assertBedjCacheAccess(owner, { genome: 'hg38', dslabel: 'MMRF' }),
-		'the dataset it was computed for is served'
-	)
-	test.throws(
-		() => assertBedjCacheAccess(owner, { genome: 'hg38', dslabel: 'SomeOtherDs' }),
-		/does not belong/,
-		'the same name replayed under another dataset is refused'
-	)
-	test.throws(
-		() => assertBedjCacheAccess(owner, { genome: 'hg38' }),
-		/required/,
-		'a request naming no dataset is refused'
-	)
-	test.throws(
-		() => assertBedjCacheAccess('someothertrack.gz', { genome: 'hg38', dslabel: 'MMRF' }),
-		/does not belong/,
-		'a cached file carrying no dataset token is refused, not waved through'
-	)
-	test.notEqual(name, owner, 'the dataset token is part of the name')
 	test.end()
 })

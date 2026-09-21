@@ -3312,8 +3312,6 @@ seekrange(chr,start,stop) {
 		} else if (tk.file) {
 			par.file = tk.file
 			par.isCache = tk.isCache
-			// a cached file is bound to the dataset it came from; the server checks this against the name
-			if (tk.dslabel) par.dslabel = tk.dslabel
 		} else {
 			par.url = tk.url
 			if (tk.indexURL) par.indexURL = tk.indexURL

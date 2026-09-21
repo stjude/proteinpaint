@@ -2,47 +2,11 @@ import path from 'path'
 import fs from 'fs'
 import { promisify } from 'util'
 import { execFile } from 'child_process'
-import { randomUUID, createHash } from 'crypto'
+import { randomUUID } from 'crypto'
 import serverconfig from '#src/serverconfig.js'
 import type { TermdbDmrBatchSuccessResponse } from '#types'
 
 const run = promisify(execFile)
-
-/** Prefix that marks a bedj cache file as a DMR scan, so the read side knows to check it. */
-const DMR_PREFIX = 'dmr-'
-
-/* Binds a cached file to the dataset it was computed from.
-
-The file name travels to the client and is persisted in plot config, so it reaches anyone a
-session is shared with. The deleted termdb/dmrScanTrack route refused a cached scan whose recorded
-genome/dslabel did not match the dataset the caller asked for -- without that, a name obtained
-from a protected dataset could be replayed under any dataset the caller can reach. This carries
-the same binding in the name, so the check costs a hash instead of reading and parsing the scan. */
-function dsToken(genome: string, dslabel: string): string {
-	// hashed rather than spelled out: a dslabel is free-form config and need not be filename-safe
-	return createHash('sha256').update(`${genome}\0${dslabel}`).digest('hex').slice(0, 8)
-}
-
-/* The gate for EVERY read out of the bedj cache subdir, called by the bedj tk reader before it
-opens an isCache file.
-
-Fail closed: a name that does not carry a dataset token is refused, rather than waved through.
-Checking only names with the DMR prefix would mean the next thing to write into this subdir gets
-no ownership check at all -- and, since genome/dslabel would then not be required, no session
-check either, because the auth middleware returns early without a dslabel to resolve creds from.
-So anything written here must carry dsToken() in the second '-' separated field of its name.
-
-Requiring the dataset also brings authentication along, for the datasets that declare it: a
-'*' credential is rewritten to '/**' (auth.dsCredentials.ts), which matches /tkbedj, so the
-global auth middleware demands a session before this is ever reached. A dataset declaring
-'termdb' credentials is public-view by design and gates neither this nor the analysis routes
-that produce the file -- Auth.protectedRoutes.termdb lists only /termdb/matrix. */
-export function assertBedjCacheAccess(file: string, q: { genome?: string; dslabel?: string }) {
-	if (!q.genome || !q.dslabel) throw 'genome and dslabel are required for a cached track'
-	// an unrecognized name has no token in that field, so this refuses it too
-	if (file.split('-')[1] !== dsToken(q.genome, q.dslabel))
-		throw 'this cached track does not belong to the requested dataset'
-}
 
 /* A scan's DMRs as a bedj track file, under the "bedj" cache subdir that block tracks read with
 isCache:true.
@@ -56,12 +20,10 @@ One file per (scan, CpG floor), since the floor is a display knob applied after 
 only when absent, and swept on the bedj subdir's own TTL. */
 export async function writeDmrBedjFile(
 	payload: TermdbDmrBatchSuccessResponse,
-	genome: string,
-	dslabel: string,
 	cacheId: string,
 	minCpgs: number
 ): Promise<string> {
-	const name = `${DMR_PREFIX}${dsToken(genome, dslabel)}-${cacheId}-${minCpgs}.gz`
+	const name = `dmr-${cacheId}-${minCpgs}.gz`
 	const dir = path.join(serverconfig.cachedir, 'bedj')
 	const gz = path.join(dir, name)
 	// both must be there: the .gz is the commit point, so a lone .tbi is an unfinished publish

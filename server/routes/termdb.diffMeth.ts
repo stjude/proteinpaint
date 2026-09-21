@@ -271,7 +271,7 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	track is optional -- the browser opens without it -- so a failed write (no bgzip, unwritable
 	cachedir, full disk) is logged and dropped rather than failing the whole analysis. */
 	try {
-		scan.bedjFile = await writeDmrBedjFile(payload, req.genome, req.dslabel, cacheId, scan.minCpgs)
+		scan.bedjFile = await writeDmrBedjFile(payload, cacheId, scan.minCpgs)
 	} catch (e: any) {
 		console.error('DMR scan: bedj cache write failed, browser track unavailable:', e?.message || e)
 	}

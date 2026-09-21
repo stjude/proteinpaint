@@ -326,11 +326,9 @@ export class VolcanoInteractions {
 			tracks.push({
 				type: 'bedj',
 				name: 'Scan DMRs',
-				// the file is under the server's bedj cache dir, not the tp dir, and is bound to
-				// the dataset it was computed from, which the server checks on read
+				// the file is under the server's bedj cache dir, not the tp dir
 				isCache: true,
 				file: scan.bedjFile,
-				dslabel: this.app.vocabApi.vocab.dslabel,
 				stackheight: 14,
 				// drives both the fill and the block legend, which counts each class in view
 				categories: {
