@@ -74,7 +74,7 @@ export * from './routes/termdb.violinBox.ts'
 export * from './routes/termdb.wsiBySample.ts'
 export * from './terms/categorical.ts'
 export * from './terms/condition.ts'
-export * from './terms/constants.ts'
+export * from './terms/constants.ts' // this may need to be changed to .js, or have a separate prod package export of only constant
 export * from './terms/date.ts'
 export * from './terms/numeric.ts'
 export * from './terms/geneVariant.ts'

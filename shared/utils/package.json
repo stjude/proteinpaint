@@ -8,7 +8,7 @@
     "#types": "@sjcrh/proteinpaint-types",
     "#types/*": "@sjcrh/proteinpaint-types/*"
   },
-  "//": "all export aliases below are meant for runtime code, except for the devTs-aliased subpath",
+  "//": "all export aliases below are meant for runtime code; supply --conditions=sjpp/dev as an option to node when running in dev",
   "exports": {
     ".": {
       "sjpp/dev": "./src/index.ts",
