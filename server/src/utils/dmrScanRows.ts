@@ -1,4 +1,5 @@
 import type { DiffMethEntry, DmrScanSummary, TermdbDmrBatchSuccessResponse } from '#types'
+import { DEFAULT_MIN_CPGS } from '#types'
 
 /* Turn a DMR scan (termdb/dmrBatch) into rows the differential-methylation volcano can render,
 plus the whole-scan summary its Statistics panel shows.
@@ -9,10 +10,8 @@ table, hover, highlight, download and region drill-down all apply unchanged. Wha
 is the mapping and the numbers the panel prints, kept pure so both can be checked against a saved
 scan without a genome or a dataset. */
 
-/** Default CpG floor. Two-CpG calls carry the LARGEST effect sizes and split 51.5% / 48.5% hyper /
- * hypo on MMRF chr1 -- a coin flip -- where 10+ CpG calls run 58% hyper. Five keeps 86% of calls
- * and all of the structure. */
-export const DEFAULT_MIN_CPGS = 5
+// re-exported so callers of this module get the floor and its resolution from one import
+export { DEFAULT_MIN_CPGS }
 
 type Dmr = TermdbDmrBatchSuccessResponse['regions'][number]['dmrs'][number]
 
@@ -181,4 +180,20 @@ export function summarizeProfile(bm: NonNullable<DmrScanSummary['binMethylation'
 		fractionBeyond10: beyond(0.1),
 		fractionHyper: d.filter(v => v > 0).length / d.length
 	}
+}
+
+/** The kept DMRs as the body of a bedj track file, for writeBedjFile(). One file per (scan, CpG
+ * floor), since the floor is a display knob applied after the scan. */
+export function dmrBedjLines(payload: TermdbDmrBatchSuccessResponse, minCpgs: number): string {
+	// tabix needs each chromosome's lines contiguous and ascending by start; any chr order will do
+	const dmrs = (payload.regions || []).flatMap(r => r.dmrs || []).filter(d => d.no_cpgs >= minCpgs)
+	dmrs.sort((a, b) => (a.chr == b.chr ? a.start - b.start : a.chr < b.chr ? -1 : 1))
+	// 4th column is the bedj item as JSON; category drives both the fill and the block legend
+	const lines = dmrs.map(d => {
+		const label = `Δβ ${d.meandiff >= 0 ? '+' : ''}${d.meandiff.toFixed(3)}, ${d.no_cpgs} CpGs${
+			d.genes?.length ? ', ' + d.genes.join(' ') : ''
+		}`
+		return `${d.chr}\t${d.start}\t${d.stop}\t${JSON.stringify({ name: label, category: d.direction })}`
+	})
+	return lines.length ? lines.join('\n') + '\n' : ''
 }

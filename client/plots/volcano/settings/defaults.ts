@@ -1,5 +1,6 @@
 import { roundValue } from '#shared/roundValue.js'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
+import { DEFAULT_MIN_CPGS } from '#types'
 import type {
 	ValidatedVolcanoSettings,
 	GEVolcanoSettings,
@@ -84,11 +85,11 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	whole genome "where did anything happen", which is the question the mode exists for, and the
 	per-chromosome fit is the price either way. Correction off because it changes what the numbers
 	MEAN (a region that moved vs one that moved more than its matched background drifts) -- on MMRF
-	NSD2-high the direction inverts -- so it is a second reading to switch to. Five CpGs because
-	two-CpG calls carry the largest effects and no direction (51.5% hyper, a coin flip). */
+	NSD2-high the direction inverts -- so it is a second reading to switch to. The CpG floor is
+	DEFAULT_MIN_CPGS, shared with the server fallback so both mean the same untouched scan. */
 	defaults.scanChromosome = ''
 	defaults.backgroundCorrection = false
-	defaults.minCpgs = 5
+	defaults.minCpgs = DEFAULT_MIN_CPGS
 	defaults.lambda = DMRCATE_DEFAULTS.lambda
 	defaults.C = DMRCATE_DEFAULTS.C
 	defaults.fdrCutoff = DMRCATE_DEFAULTS.fdrCutoff
