@@ -213,22 +213,32 @@ export type FilterTermEntry = BaseTvsFilter & {
 	tvs?: TvsFilter
 	min?: number
 	max?: number
-	/** child term ids whose allele counts are summed for a maf filter term */
+}
+
+/** a term of queries.snvindel.mafFilter: a FilterTermEntry over per-sample FORMAT values, plus the
+properties that say which FORMAT key(s) it reads and which metric it computes from them */
+export type MafFilterTermEntry = FilterTermEntry & {
+	/** FORMAT keys whose allele counts are summed for a count-based term (maf/totalDepth/altDepth), e.g.
+	WGS and WES assays. For one key use mafFormatKey; see getMafFilterTermKeys() in server/src/mds3.init.js */
 	child_ids?: string[]
 	/** marks the default maf filter term */
 	default?: boolean
-	/** metric computed for a maf filter term; defaults to 'maf' when absent
+	/** metric computed for a maf filter term. Required on every declared term (ds init throws without it);
+	only a tvs saved before it was required may omit it, and mayFilterByMaf() then reads it as 'maf'
 	- 'maf': alt/(ref+alt) from the "<ref>,<alt>" allele counts of term.id, or summed across child_ids[]
 	- 'totalDepth' / 'altDepth': ref+alt or alt of the single count field named by mafFormatKey
 	- 'value': any numerical FORMAT field read as-is, one number per sample under the FORMAT key term.id:
 	  a precomputed allele fraction, the read depth of a matched normal, etc. No range is assumed; the term's
 	  own min/max bound the UI. child_ids[] is not allowed and tvs.minAllelicDepth has no effect */
-	mafFilterMode?: 'maf' | 'totalDepth' | 'altDepth' | 'value'
-	/** underlying bcf FORMAT key read by an auto-generated allelic-depth term */
+	mafFilterMode: 'maf' | 'totalDepth' | 'altDepth' | 'value'
+	/** the single FORMAT key a term reads when its id is not the key itself: set on the auto-generated
+	allelic-depth terms, and on a declared term whose id is shared across datasets (MMRF) or kept apart from
+	the raw count field (GDC). Absent, and without child_ids[], the term id is the key */
 	mafFormatKey?: string
 }
 
 type FilterLstTvs = BaseTvsFilter & {
+	/** a MafFilterTermEntry in a maf filter */
 	term: FilterTermEntry
 	values: (string | number | FilterValues)[]
 	/** minimum total read depth gate for a maf-mode filter term */
@@ -247,10 +257,19 @@ type Filter = {
 	lst?: FilterLstEntry[]
 }
 
+/** variant-level filter over INFO fields (queries.snvindel.variant_filter) */
 type VariantFilter = {
 	opts: { joinWith: string[] }
 	filter?: Filter
 	terms: FilterTermEntry[]
+}
+
+/** sample-level filter over FORMAT values (queries.snvindel.mafFilter), see mayValidateBcfMafFilter()
+and mayFilterByMaf() in server/src/mds3.init.js */
+type MafFilter = {
+	opts: { joinWith: string[] }
+	filter?: Filter
+	terms: MafFilterTermEntry[]
 	/** set once allelic-depth terms have been auto-populated, to keep init idempotent */
 	_depthTermsAdded?: boolean
 }
@@ -369,7 +388,7 @@ type SnvIndelQuery = {
 	format4filters?: string[]
 	format?: SnvIndelFormat
 	variant_filter?: VariantFilter
-	mafFilter?: VariantFilter
+	mafFilter?: MafFilter
 	populations?: Population[]
 	/** NOTE **
 this definition can appear either in queries.snvindel{} or termdb{}

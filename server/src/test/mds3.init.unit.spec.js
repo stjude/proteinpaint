@@ -2308,6 +2308,58 @@ test('mayFilterByMaf: value filter', t => {
 	t.equal(mayFilterByMaf(negated, { dt: 1, class: 'M' }), false, 'negated: unannotated does not pass')
 })
 
+test('mayFilterByMaf: FORMAT key resolution', t => {
+	t.plan(5)
+	const getFilter = (term, ranges) => ({
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [{ type: 'tvs', tvs: { term, ranges } }]
+	})
+	const atLeast = start => [{ start, startinclusive: true, stopunbounded: true }]
+	// mafFormatKey names one key for a maf term whose id is not the key (mmrf, gdc)
+	const byKey = getFilter(
+		{ id: 'TumorMAF', type: 'float', mafFilterMode: 'maf', mafFormatKey: 'TumorAC' },
+		atLeast(0.3)
+	)
+	t.equal(mayFilterByMaf(byKey, { dt: 1, class: 'M', TumorAC: '60,40' }), true, 'maf term reads m[mafFormatKey]')
+	t.equal(
+		mayFilterByMaf(byKey, { dt: 1, class: 'M', TumorMAF: '60,40' }),
+		false,
+		'maf term does not read m[term.id] when mafFormatKey is set'
+	)
+	// child_ids applies to depth terms too: the total is summed across the fields
+	const summedDepth = getFilter(
+		{
+			id: 'tumor_DNA__totalDepth',
+			type: 'integer',
+			mafFilterMode: 'totalDepth',
+			child_ids: ['tumor_DNA_WGS', 'tumor_DNA_WES']
+		},
+		atLeast(100)
+	)
+	t.equal(
+		mayFilterByMaf(summedDepth, { dt: 1, class: 'M', tumor_DNA_WGS: '40,20', tumor_DNA_WES: '30,15' }),
+		true,
+		'total depth sums across child_ids (105 >= 100)'
+	)
+	t.equal(
+		mayFilterByMaf(summedDepth, { dt: 1, class: 'M', tumor_DNA_WGS: '40,20' }),
+		false,
+		'one field alone falls short (60 < 100)'
+	)
+	// a value term reads mafFormatKey as well
+	const valueByKey = getFilter(
+		{ id: 'normal_depth', type: 'integer', mafFilterMode: 'value', mafFormatKey: 'NormalDepth' },
+		atLeast(20)
+	)
+	t.equal(
+		mayFilterByMaf(valueByKey, { dt: 1, class: 'M', NormalDepth: '42' }),
+		true,
+		'value term reads m[mafFormatKey]'
+	)
+})
+
 test('mayFilterByMaf: unknown mafFilterMode throws', t => {
 	t.plan(1)
 	const bogus = structuredClone(mafFilter_value)
@@ -2349,14 +2401,23 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 		mafFilter: {
 			opts: { joinWith: ['and', 'or'] },
 			filter: { type: 'tvslst', join: '', in: true, lst: [] },
-			terms: [{ id: 'tumor_DNA_WGS', name: 'Tumor DNA WGS', parent_id: null, isleaf: true, type: 'float' }]
+			terms: [
+				{
+					id: 'tumor_DNA_WGS',
+					name: 'Tumor DNA WGS',
+					parent_id: null,
+					isleaf: true,
+					type: 'float',
+					mafFilterMode: 'maf'
+				}
+			]
 		}
 	})
 
 	const q = makeQ()
 	t.doesNotThrow(() => mayValidateBcfMafFilter(q), 'does not throw on valid filter')
 	t.equal(q.mafFilter.terms.length, 3, 'appended exactly 2 depth terms (1 user term + 2 generated)')
-	const generated = q.mafFilter.terms.filter(tm => tm.mafFilterMode)
+	const generated = q.mafFilter.terms.filter(tm => tm.mafFormatKey) // only auto-generated depth terms carry it
 	t.deepEqual(
 		generated.map(tm => tm.mafFilterMode).sort(),
 		['altDepth', 'totalDepth'],
@@ -2394,7 +2455,7 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 	})
 	t.doesNotThrow(() => mayValidateBcfMafFilter(qDepth), 'configured depth term with valid mafFormatKey passes')
 
-	// a configured depth term missing mafFormatKey throws
+	// a configured depth term without mafFormatKey reads its own id, which must then be a FORMAT key
 	const qNoKey = makeQ()
 	qNoKey.mafFilter.terms.push({
 		id: 'bad_depth',
@@ -2406,8 +2467,8 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 	})
 	t.throws(
 		() => mayValidateBcfMafFilter(qNoKey),
-		/missing mafFormatKey/,
-		'configured depth term without mafFormatKey throws'
+		/unknown FORMAT key "bad_depth"/,
+		'configured depth term without mafFormatKey and a non-key id throws'
 	)
 
 	// a configured depth term with an unknown mafFormatKey throws
@@ -2434,7 +2495,7 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 })
 
 test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t => {
-	t.plan(6)
+	t.plan(7)
 	// GDC has a byrange with no _tk.format; its FORMAT is on q.format. The `|| q.format` fallback in
 	// mayValidateBcfMafFilter is the whole reason GDC MAF works — guard it so a cleanup can't silently
 	// break GDC (validation would then throw /no FORMAT/ and take down the GDC snvindel query).
@@ -2450,17 +2511,34 @@ test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t =>
 		}
 	})
 
-	// the shape the gdc ds uses: a derived maf term with its own id, reading the FORMAT key via child_ids
-	// (see dataset/gdc/index.ts and the tumor_DNA term of dataset/ash.hg38.ts)
+	// the shape the gdc ds uses: a derived maf term with its own id, reading the FORMAT key via mafFormatKey
+	// (see dataset/gdc/index.ts; the tumor_DNA term of dataset/ash.hg38.ts sums two keys via child_ids instead)
 	const q = getQ({
 		id: 'TumorMAF',
 		name: 'Tumor MAF',
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
-		child_ids: ['TumorAC']
+		mafFilterMode: 'maf',
+		mafFormatKey: 'TumorAC'
 	})
 	t.doesNotThrow(() => mayValidateBcfMafFilter(q), 'GDC-shaped q (format on q.format) passes validation')
+	// the same term as saved before mafFormatKey applied to maf terms
+	t.doesNotThrow(
+		() =>
+			mayValidateBcfMafFilter(
+				getQ({
+					id: 'TumorMAF',
+					name: 'Tumor MAF',
+					parent_id: null,
+					isleaf: true,
+					type: 'float',
+					mafFilterMode: 'maf',
+					child_ids: ['TumorAC']
+				})
+			),
+		'a maf term reading one key via child_ids still validates'
+	)
 	t.equal(q.mafFilter.terms.length, 3, 'auto-populated totalDepth + altDepth terms from q.format')
 	t.deepEqual(
 		q.mafFilter.terms.slice(1).map(t => [t.id, t.name, t.mafFormatKey]),
@@ -2475,7 +2553,9 @@ test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t =>
 	// saved sessions and older ds configs carry it
 	t.doesNotThrow(
 		() =>
-			mayValidateBcfMafFilter(getQ({ id: 'TumorAC', name: 'Tumor MAF', parent_id: null, isleaf: true, type: 'float' })),
+			mayValidateBcfMafFilter(
+				getQ({ id: 'TumorAC', name: 'Tumor MAF', parent_id: null, isleaf: true, type: 'float', mafFilterMode: 'maf' })
+			),
 		'maf term with id == FORMAT key still validates'
 	)
 
@@ -2489,6 +2569,7 @@ test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t =>
 					parent_id: null,
 					isleaf: true,
 					type: 'float',
+					mafFilterMode: 'maf',
 					child_ids: ['TumorAc']
 				})
 			),
@@ -2498,7 +2579,7 @@ test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t =>
 	t.throws(
 		() =>
 			mayValidateBcfMafFilter(
-				getQ({ id: 'TumorMaf', name: 'Tumor MAF', parent_id: null, isleaf: true, type: 'float' })
+				getQ({ id: 'TumorMaf', name: 'Tumor MAF', parent_id: null, isleaf: true, type: 'float', mafFilterMode: 'maf' })
 			),
 		/unknown FORMAT key "TumorMaf"/,
 		'a term without child_ids whose id is not a FORMAT key throws'
@@ -2506,7 +2587,7 @@ test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t =>
 })
 
 test('mayValidateBcfMafFilter: value term and single-value fields', t => {
-	t.plan(9)
+	t.plan(10)
 	const format = {
 		tumor_AF: { ID: 'tumor_AF', Number: 'A', Type: 'Float', Description: 'Tumor allele fraction' },
 		DP: { ID: 'DP', Number: '1', Type: 'Integer', Description: 'Read depth' },
@@ -2522,10 +2603,17 @@ test('mayValidateBcfMafFilter: value term and single-value fields', t => {
 			terms: [term]
 		}
 	})
-	const base = { name: 'Tumor allele fraction', parent_id: null, isleaf: true, type: 'float' }
+	const base = { name: 'Tumor allele fraction', parent_id: null, isleaf: true, type: 'float', mafFilterMode: 'maf' }
 
 	const q = getQ({ ...base, id: 'tumor_AF', mafFilterMode: 'value' })
 	t.doesNotThrow(() => mayValidateBcfMafFilter(q), 'value term on a Float field validates')
+
+	// a declared term must state its mode; only a tvs saved before the mode was required may omit it
+	t.throws(
+		() => mayValidateBcfMafFilter(getQ({ ...base, id: 'tumor_AF', mafFilterMode: undefined })),
+		/missing mafFilterMode/,
+		'declared term without mafFilterMode throws'
+	)
 	t.deepEqual(
 		q.mafFilter.terms.map(t => t.id),
 		['tumor_AF', 'tumor_DNA_WGS__totalDepth', 'tumor_DNA_WGS__altDepth'],
@@ -2580,7 +2668,7 @@ test('mayFilterByMaf: a term with child ids never reads its own id as data', t =
 		in: true,
 		lst: [{ type: 'tvs', tvs: { term, ranges: [{ start: 0.1, startinclusive: false, stopunbounded: true }] } }]
 	})
-	const term = { id: 'TumorMAF', name: 'Tumor MAF', type: 'float', child_ids: ['TumorAC'] }
+	const term = { id: 'TumorMAF', name: 'Tumor MAF', type: 'float', mafFilterMode: 'maf', child_ids: ['TumorAC'] }
 	t.equal(
 		mayFilterByMaf(getFilter(term), { dt: 1, class: 'M', TumorAC: '42,39' }),
 		true,
@@ -2592,12 +2680,13 @@ test('mayFilterByMaf: a term with child ids never reads its own id as data', t =
 		false,
 		'a value under the term id is not read; sample is not annotated for the child id and fails'
 	)
-	// legacy tvs saved before the derived term existed: id is the FORMAT key, no child_ids
+	// legacy tvs saved before the derived term existed and before mafFilterMode was required: id is
+	// the FORMAT key, no child_ids, no mode. the runtime keeps tolerating it and reads it as maf mode
 	const legacy = { id: 'TumorAC', name: 'Tumor MAF', type: 'float' }
 	t.equal(
 		mayFilterByMaf(getFilter(legacy), { dt: 1, class: 'M', TumorAC: '42,39' }),
 		true,
-		'legacy id-as-key term falls back to m[term.id]'
+		'legacy id-as-key term without a mode falls back to maf mode and m[term.id]'
 	)
 })
 
@@ -2701,6 +2790,7 @@ const mafFilter = {
 					parent_id: null,
 					isleaf: true,
 					type: 'float',
+					mafFilterMode: 'maf',
 					default: true,
 					min: 0,
 					max: 1
@@ -2812,6 +2902,7 @@ const mafFilter_childIds = {
 					child_ids: ['tumor_DNA_WGS', 'tumor_DNA_WES'],
 					isleaf: true,
 					type: 'float',
+					mafFilterMode: 'maf',
 					default: true,
 					min: 0,
 					max: 1
@@ -2973,8 +3064,8 @@ test('mayGetGeneVariantData: requests read depth from the snvindel getter only w
 			]
 		}
 	})
-	// the gdc maf term: derived id, counts read from the FORMAT key via child_ids
-	const mafTerm = { id: 'TumorMAF', name: 'Tumor MAF', type: 'float', child_ids: ['TumorAC'] }
+	// the gdc maf term: derived id, counts read from the FORMAT key via mafFormatKey
+	const mafTerm = { id: 'TumorMAF', name: 'Tumor MAF', type: 'float', mafFilterMode: 'maf', mafFormatKey: 'TumorAC' }
 	const mafFilter = {
 		type: 'tvslst',
 		in: true,

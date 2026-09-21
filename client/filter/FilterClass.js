@@ -27,10 +27,6 @@ const defaults = deepFreeze({
 		optional setting for header of tree menu
 		will be supplied to termdb app state in filter.interactivity.js
 
-	.isMafFilter (boolean)
-		whether the filter is a MAF filter, in which case the tvs UI will
-		include an additional input for allelic depth (see "tvs.numeric.js")
-
 	Coding convenience:
 	- use $id for data binding to match  
 	  existing DOM elements with the corresponding
