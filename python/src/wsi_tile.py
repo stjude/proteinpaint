@@ -400,6 +400,64 @@ def h5ad_celltypes(h5ad):
         return {"cellTypes": sorted(set(t for t in _h5ad_cell_types(f) if t))}
 
 
+def nhood_enrichment(h5ad, ids, k=6, perms=1000, seed=0):
+    """Neighborhood enrichment of the given cells, as squidpy computes it
+    (sq.gr.spatial_neighbors coord_type='generic', n_neighs=k, followed by
+    sq.gr.nhood_enrichment): a directed kNN graph over the cells' obsm/spatial
+    centroids (each cell -> its k nearest others, no symmetrisation, as in
+    squidpy's KNNBuilder), count[a][b] = number of edges from a type-a cell to
+    a type-b cell, and a z-score of that count against `perms` random
+    relabellings of the same cells (population std, as squidpy). Cells with
+    no annotation are dropped first (the reference script's dropna); unknown
+    ids are ignored. Errors (fewer than 2 types, or fewer than 2 cells) come
+    back as {"error"} so the UI gets a message, not a traceback."""
+    import h5py
+    from scipy.spatial import cKDTree
+    with h5py.File(h5ad, "r") as f:
+        all_ids = _h5ad_index(f, "obs")                   # cell ids, obs order
+        types = _h5ad_cell_types(f)                       # one string per cell, '' = untyped
+        xy = f["obsm/spatial"][:]                         # centroids, obs order (µm)
+    pos = {i: n for n, i in enumerate(all_ids.tolist())}  # id -> obs row
+    sel = np.array([pos[i] for i in ids if i in pos], dtype=int)
+    lab = types[sel]
+    keep = lab != ""                                      # annotated cells only
+    skipped = int((~keep).sum())
+    sel, lab = sel[keep], lab[keep]
+    cats = sorted(set(lab.tolist()))                      # type order of the matrices
+    C, n = len(cats), int(sel.size)
+    if C < 2:
+        return {"error": f"neighborhood enrichment needs at least 2 cell types, found {C}"}
+    kk = min(int(k), n - 1)                               # a tiny selection gets what neighbours it has
+    if kk < 1:
+        return {"error": "neighborhood enrichment needs at least 2 annotated cells"}
+    coords = xy[sel].astype(np.float64)
+    nbr = cKDTree(coords).query(coords, k=kk + 1)[1][:, 1:]  # k nearest, self (column 0) dropped
+    code = np.searchsorted(cats, lab).astype(np.int64)    # type index per cell
+    rows = np.repeat(np.arange(n), kk)                    # edge sources, aligned with nbr.ravel()
+    cols = nbr.ravel()                                    # edge targets
+
+    def count(c):
+        # C x C edge tally for one labelling c
+        return np.bincount(c[rows] * C + c[cols], minlength=C * C).reshape(C, C)
+
+    observed = count(code)
+    rng = np.random.default_rng(int(seed))
+    P = np.empty((int(perms), C, C))
+    for i in range(int(perms)):
+        P[i] = count(code[rng.permutation(n)])            # same cells, shuffled types
+    z = (observed - P.mean(axis=0)) / P.std(axis=0)       # squidpy: population std
+    zl = [[float(v) if np.isfinite(v) else None for v in row] for row in z]  # JSON has no NaN
+    return {
+        "types": cats,
+        "count": observed.tolist(),
+        "zscore": zl,
+        "cells": n,
+        "skipped": skipped,
+        "k": kk,
+        "perms": int(perms),
+    }
+
+
 def _test():
     # offline self-check of the Zoomify tier math against known geometry
     W, H = 124712, 78731
@@ -436,6 +494,10 @@ def main():
         print(json.dumps(h5ad_annotations(job["h5ad"]), separators=(",", ":")))
     elif job["action"] == "h5ad_celltypes":
         print(json.dumps(h5ad_celltypes(job["h5ad"]), separators=(",", ":")))
+    elif job["action"] == "nhood":
+        print(json.dumps(
+            nhood_enrichment(job["h5ad"], job["ids"], job.get("k", 6), job.get("perms", 1000), job.get("seed", 0)),
+            separators=(",", ":")))
     elif job["action"] == "selftest":
         _test()  # tier-math self-check as a job, for the node unit spec
     else:

@@ -43,8 +43,11 @@
  OpenLayers Draw interaction). Releasing the pointer selects every cell whose
  centroid lies inside the drawn ring and opens a menu listing the selection:
  per-type counts, then a table of cell ids and their annotated types. Only
- one lasso is kept; drawing again replaces it, toggling off clears it. This
- selection is the input for the neighborhood enrichment step that follows.
+ one lasso is kept; drawing again replaces it, toggling off clears it.
+ The menu's 'Neighborhood enrichment' button (annotated h5ad only) POSTs the
+ selected ids to wsitiles/nhood, which runs the squidpy-style analysis (kNN
+ graph over centroids, type-to-neighbour edge counts, permutation z-scores)
+ and draws the z-score matrix as a heatmap in a panel under the map.
 
  Bypasses datasets/samples: hits the wsitiles route with a direct slide path
  (resolved relative to serverconfig.tpmasterdir; gated by features.wsi.allowDirectSlidePath). Minimal
@@ -64,8 +67,9 @@ import RBush from 'ol/structs/RBush.js' // spatial index for the hover hit test
 import Draw from 'ol/interaction/Draw.js' // freehand polygon drawing = the lasso
 import Control from 'ol/control/Control.js' // hosts the lasso toggle inside the map's viewport
 import { select } from 'd3-selection' // wraps the control element for the icon helper
+import { scaleLinear } from 'd3-scale' // diverging z-score color scale of the enrichment heatmap
 import { dofetch3 } from '#common/dofetch' // fetch wrapper for meta/genecounts
-import { sayerror, Menu, renderTable, icons } from '#dom' // error banner, lasso menu + table, lasso icon
+import { sayerror, Menu, renderTable, icons, ColorScale } from '#dom' // error banner, lasso menu + table, lasso icon, heatmap legend
 
 /** Build the viewer in `holder`; opts mirror the URL params documented above */
 export async function init(
@@ -200,6 +204,7 @@ export async function init(
 						: ''
 				}, ${meta.levels} levels`
 			)
+		const resultsDiv = holder.append('div') // analysis panels under the map (lasso enrichment)
 
 		// Legends are position:fixed and placed from the map's live viewport
 		// rectangle, so they are confined to the map's on-screen area no matter
@@ -572,8 +577,39 @@ export async function init(
 				const hits = cellsInLasso(ring, index.getInExtent(geom.getExtent())) // bbox prefilter, then ray cast
 				const px = map.getPixelFromCoordinate(ring[ring.length - 1]) // where the pointer was released
 				const mr = mapDiv.node().getBoundingClientRect() // map rect: OL pixel -> viewport coords
-				showLassoMenu(lassoMenu, hits, cellTypes, mr.left + px[0], mr.top + px[1])
+				showLassoMenu(lassoMenu, hits, cellTypes, mr.left + px[0], mr.top + px[1], runNhood)
 			})
+
+			// neighborhood enrichment of the lasso selection: the server reads the
+			// selected cells' centroids and types from the h5ad, so only ids travel.
+			// Rendered into a panel under the map (replacing the previous run) so
+			// the result outlives the menu. Absent without annotations: the
+			// analysis is over cell types.
+			const runNhood =
+				opts.spatialData && cellTypes
+					? async (ids: string[]) => {
+							lassoMenu.hide()
+							resultsDiv.selectAll('*').remove() // one panel at a time
+							const panel = resultsDiv
+								.append('div')
+								.attr('data-testid', 'sjpp-wsi-nhood')
+								.style('margin', '8px')
+								.style('font', '12px system-ui')
+							panel.append('div').text(`Neighborhood enrichment: running on ${ids.length} cells …`) // 1000 permutations take a moment
+							try {
+								const r = await dofetch3(`wsitiles/nhood?${sq}`, {
+									method: 'POST', // explicit: dofetch3's GET path would URL-encode the id list (and re-encode it as strings past the URL length limit)
+									body: { file: opts.spatialData, ids }
+								})
+								if (!r || r.error) throw new Error(r?.error || 'failed to compute neighborhood enrichment')
+								panel.selectAll('*').remove()
+								renderNhoodHeatmap(panel, r)
+							} catch (e: any) {
+								panel.selectAll('*').remove()
+								sayerror(panel, `Neighborhood enrichment error: ${e.message || e}`) // the lasso and viewer live on
+							}
+					  }
+					: undefined
 		}
 	} catch (e: any) {
 		loading.remove() // drop the placeholder before showing the error
@@ -645,7 +681,9 @@ function showLassoMenu(
 	hits: CellPoly[],
 	cellTypes: { [id: string]: string } | undefined,
 	x: number,
-	y: number
+	y: number,
+	/** runs the neighborhood enrichment on the selected ids; absent = no button */
+	runNhood?: (ids: string[]) => Promise<void>
 ) {
 	menu.clear().show(x, y)
 	const d = menu.d.append('div').style('font', '12px system-ui')
@@ -654,6 +692,13 @@ function showLassoMenu(
 		return
 	}
 	d.append('div').style('font-weight', 'bold').text(`${hits.length} cells selected`) // headline count
+	if (runNhood)
+		d.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', 'sjpp-wsi-nhood-btn')
+			.style('margin', '4px 0')
+			.text('Neighborhood enrichment')
+			.on('click', () => runNhood(hits.map(c => c.id)))
 	if (cellTypes) {
 		// per-type tally of the selection, the input the enrichment step will consume
 		const counts: { [t: string]: number } = Object.create(null)
@@ -825,4 +870,115 @@ function expressionLayer(cells: CellPoly[], counts: { [id: string]: number }, ma
 		features.push(f)
 	}
 	return new VectorLayer({ source: new VectorSource({ features }) }) // fills only, no strokes
+}
+
+/** The wsitiles/nhood answer: one row/column per cell type, in `types` order */
+export type NhoodResult = {
+	types: string[]
+	/** count[a][b]: edges from a type-a cell to a type-b neighbour */
+	count: number[][]
+	/** z-score of count vs. permuted labels; null where the permutations had no variance */
+	zscore: (number | null)[][]
+	cells: number
+	skipped: number
+	k: number
+	perms: number
+}
+
+/** Draw the enrichment z-score matrix as a heatmap into `holder`: diverging
+ blue (depleted) – gray (neutral) – red (enriched) around 0, symmetric domain
+ ±max|z|, the value printed in each cell, a native tooltip with the edge
+ count, a legend bar, and a close button. Types are rows (the cell) and
+ columns (its neighbour). (exported for tests) */
+export function renderNhoodHeatmap(holder: any, r: NhoodResult) {
+	const C = r.types.length // matrix size
+	let m = 1 // color domain half-width: the largest finite |z|, at least 1
+	for (const row of r.zscore) for (const z of row) if (z != null && Math.abs(z) > m) m = Math.abs(z)
+	const color = scaleLinear<string>().domain([-m, 0, m]).range(['#2a78d6', '#f0efec', '#d0342c']) // blue–gray–red
+	const cs = 34, // cell size, px
+		gap = 2, // surface gap between fills
+		labelW = Math.min(180, 14 + 6.5 * Math.max(...r.types.map(t => t.length))), // row label column
+		topH = Math.min(140, 14 + 5 * Math.max(...r.types.map(t => t.length))) // rotated column labels
+
+	const head = holder.append('div').style('display', 'flex').style('align-items', 'baseline').style('gap', '10px')
+	head
+		.append('div')
+		.style('font-weight', 'bold')
+		.text(
+			`Neighborhood enrichment — ${r.cells} cells, ${r.k} nearest neighbours, ${r.perms} permutations` +
+				(r.skipped ? `, ${r.skipped} unannotated cells skipped` : '')
+		)
+	head
+		.append('span')
+		.attr('role', 'button')
+		.attr('tabindex', 0)
+		.style('cursor', 'pointer')
+		.style('opacity', 0.6)
+		.attr('title', 'Close')
+		.text('✕')
+		.on('click', () => holder.remove())
+	holder
+		.append('div')
+		.style('opacity', 0.7)
+		.style('margin', '2px 0 6px 0')
+		.text(
+			'z-score of edge counts from each cell type (row) to its neighbours (column) vs. shuffled labels: red = enriched, blue = depleted'
+		)
+
+	const svg = holder
+		.append('svg')
+		.attr('width', labelW + C * (cs + gap) + 10)
+		.attr('height', topH + C * (cs + gap) + 10)
+		.style('font', '11px system-ui')
+	const g = svg.append('g').attr('transform', `translate(${labelW},${topH})`)
+	for (const [i, t] of r.types.entries()) {
+		// row label (right-aligned at the matrix's left edge) and rotated column label
+		g.append('text')
+			.attr('x', -6)
+			.attr('y', i * (cs + gap) + cs / 2)
+			.attr('dy', '0.35em')
+			.attr('text-anchor', 'end')
+			.attr('fill', '#0b0b0b')
+			.text(t)
+		g.append('text')
+			.attr('transform', `translate(${i * (cs + gap) + cs / 2},-6) rotate(-45)`)
+			.attr('text-anchor', 'start')
+			.attr('fill', '#0b0b0b')
+			.text(t)
+	}
+	for (const [i, a] of r.types.entries()) {
+		for (const [j, b] of r.types.entries()) {
+			const z = r.zscore[i][j] // this pair's z-score (null = undefined)
+			const cell = g
+				.append('g')
+				.attr('class', 'sjpp-wsi-nhood-cell')
+				.attr('transform', `translate(${j * (cs + gap)},${i * (cs + gap)})`)
+			cell
+				.append('rect')
+				.attr('width', cs)
+				.attr('height', cs)
+				.attr('rx', 3)
+				.attr('fill', z == null ? '#f0efec' : color(z))
+			cell
+				.append('text')
+				.attr('x', cs / 2)
+				.attr('y', cs / 2)
+				.attr('dy', '0.35em')
+				.attr('text-anchor', 'middle')
+				.attr('fill', z != null && Math.abs(z) / m > 0.6 ? '#fff' : '#0b0b0b') // readable on the saturated ends
+				.text(z == null ? '–' : z.toFixed(1))
+			cell.append('title').text(`${a} → ${b}\nz-score: ${z == null ? 'n/a' : z.toFixed(2)}\nedges: ${r.count[i][j]}`) // hover detail
+		}
+	}
+	// legend: the same diverging scale, ticks at nice values of ±m
+	const legendSvg = holder.append('svg').attr('width', 220).attr('height', 45).style('font', '11px system-ui')
+	new ColorScale({
+		holder: legendSvg,
+		domain: [-m, 0, m],
+		colors: ['#2a78d6', '#f0efec', '#d0342c'],
+		width: 180,
+		height: 40,
+		position: '15,5',
+		ticks: 5
+	})
 }
