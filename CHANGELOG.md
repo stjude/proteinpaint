@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.210.1
 
 Fixes:
 - The DMR scan track is served from the bedj cache like any other block track, instead of via DMR-specific server logic. The scan writes DMRs to a bgzipped, tabix-indexed BED and the volcano passes it as a plain `{type:'bedj', isCache:true, file}` track, removing `getScanDmrTrack()`, the module-level item cache, the per-chromosome reload, and the `termdb/dmrScanTrack` route.
