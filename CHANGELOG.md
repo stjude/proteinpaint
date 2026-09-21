@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.210.0
 
 Features:
 - MAF filter: `value` mafFilterMode to filter on any numerical FORMAT field read as-is (e.g. a precomputed allele fraction, or matched-normal read depth); ds init now rejects a count-based MAF term pointed at a single-value numeric field
