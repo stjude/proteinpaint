@@ -118,6 +118,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 		setDimensions()
 		_chart.name = hm.handlers.chart.title(chart)
 		chartTitle
+			.attr('data-testid', 'sjpp-chart-title-' + _chart.chartId)
 			.style('width', hm.svgw + 100 + 'px')
 			//.style('font-weight', 600)
 			.style('font-size', '1.1em')
