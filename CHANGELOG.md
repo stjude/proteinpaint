@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - MAF filter: `value` mafFilterMode to filter on any numerical FORMAT field read as-is (e.g. a precomputed allele fraction, or matched-normal read depth); ds init now rejects a count-based MAF term pointed at a single-value numeric field
+- MAF filter: mafFilterMode is now required on every dataset-declared maf filter term (ds init throws without it); a tvs saved before the requirement is still read as maf mode. The tvs UI keys on the term's mode, so the filterInit isMafFilter option is removed and GRIN2 and geneVariant render maf terms identically
 
 
 ## 2.209.0
