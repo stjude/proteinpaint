@@ -7,6 +7,13 @@ import type { DmrRunResources, TermdbDmrBatchSuccessResponse } from './termdb.dm
  * the dataset has a matrix the region analysis can run on. */
 export const DMR_SCAN_ELEMENT_TYPE = 'dmr_scan'
 
+/** Default CpG floor, shared because the client seeds its control with it and the server falls
+ * back to it for a request that omits one -- two readings of "an untouched scan" that must agree.
+ * Two-CpG calls carry the LARGEST effect sizes and split 51.5% / 48.5% hyper / hypo on MMRF chr1
+ * -- a coin flip -- where 10+ CpG calls run 58% hyper. Five keeps 86% of calls and all of the
+ * structure. Not part of any cache key: the floor is applied to a cached scan's DMRs. */
+export const DEFAULT_MIN_CPGS = 5
+
 export type DiffMethRequest = {
 	/** Discriminator tag. Matches the `kind` field on `DmCacheResult` and
 	 * lets the GSEA route tell a snapshot DM request apart from a snapshot
@@ -39,7 +46,7 @@ export type DiffMethRequest = {
 		 * backgroundCorrection); the volcano's p then becomes that empirical p and DMRs whose
 		 * stratum held too little background are left out of the rows */
 		backgroundCorrection?: boolean
-		/** drop DMRs called from fewer CpGs than this before rendering */
+		/** drop DMRs called from fewer CpGs than this before rendering; absent = DEFAULT_MIN_CPGS */
 		minCpgs?: number
 		/** display width of the methylome-wide profile's bins, in bp. Several native bins are
 		 * averaged into one at render time; absent or at/below the native width draws them as
@@ -150,9 +157,13 @@ export type DmrScanSummary = {
 		fractionBeyond10: number
 		fractionHyper: number
 	}
-	/** the cached scan the rows came from, so its DMRs can be fetched back for a browser track
-	 * (termdb/dmrScanTrack) without recomputing anything */
+	/** the cached scan the rows came from, so anything ranked off the same scan (e.g.
+	 * termdb/dmrGeneLink) can reach it without recomputing anything */
 	cacheId?: string
+	/** The kept DMRs written as a bedj track file under the "bedj" cache subdir, as its file name.
+	 * A genome browser opened on the scan loads it with isCache:true, so the track is an ordinary
+	 * bedj file tk rather than items the browser has to fetch and swap per chromosome. */
+	bedjFile?: string
 	/** Every kept DMR drawn along the genome, hyper above the line and hypo below, y = signed
 	 * -log10 of the q the volcano plots; the N most significant per direction carry pixel
 	 * coordinates and are interactive. Rendered per request, after the cache, because it depends

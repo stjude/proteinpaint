@@ -50,6 +50,13 @@ if (!serverconfigfile) {
 if (!serverconfig.port) serverconfig.port = process.env.PP_PORT || 3000
 // default binary cmd paths
 if (!serverconfig.tabix) serverconfig.tabix = 'tabix'
+/* ships with tabix as part of htslib; used to write cached track files. Derived from an explicit
+tabix path so a deployment with htslib off PATH does not have to set both, since forgetting the
+second one only shows up the first time something writes a cached track. */
+if (!serverconfig.bgzip)
+	serverconfig.bgzip = serverconfig.tabix.includes(path.sep)
+		? path.join(path.dirname(serverconfig.tabix), 'bgzip')
+		: 'bgzip'
 if (!serverconfig.samtools) serverconfig.samtools = 'samtools'
 if (!serverconfig.bcftools) serverconfig.bcftools = 'bcftools'
 if (!serverconfig.hicstraw) serverconfig.hicstraw = 'straw'

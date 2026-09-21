@@ -1,7 +1,8 @@
 import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, DmrScanSummary } from '#types'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { runDmrBatch } from '#src/routes/termdb.dmrBatch.ts'
-import { dmrScanToRows, summarizeProfile, coarsenProfile } from '#src/utils/dmrScanRows.ts'
+import { dmrScanToRows, summarizeProfile, coarsenProfile, dmrBedjLines } from '#src/utils/dmrScanRows.ts'
+import { writeBedjFile } from '#src/utils/bedjCache.ts'
 import { resolveGroupNames, matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
 import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
@@ -266,6 +267,16 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	})
 	scan.matchedSamplelst = await matchedSamplelst(req.samplelst, eligible, ds)
 	scan.cacheId = cacheId
+	/* The DMRs as a track file, so a genome browser opened on the scan is a plain bedj tk. The
+	track is optional -- the browser opens without it -- so a failed write (no bgzip, unwritable
+	cachedir, full disk) is logged and dropped rather than failing the whole analysis. */
+	try {
+		scan.bedjFile = await writeBedjFile(`dmr-${cacheId}-${scan.minCpgs}.gz`, {
+			text: dmrBedjLines(payload, scan.minCpgs)
+		})
+	} catch (e: any) {
+		console.error('DMR scan: bedj cache write failed, browser track unavailable:', e?.message || e)
+	}
 	return {
 		result: { promoterRows: rows, sample_size1: group1.length, sample_size2: group2.length, scan },
 		cacheId
