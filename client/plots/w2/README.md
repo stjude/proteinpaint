@@ -254,6 +254,24 @@ most zoomed-in levels. Expression lines come from the same `/genecounts`
 data as the fills, so they work even when the fills are hidden (cell types
 shown, or "Gene expression" unchecked).
 
+### 7. Lasso selection — `client/plots/w2/wsi.direct.ts`
+
+A control button under the map's zoom buttons (`sjpp-wsi-lasso-btn`) toggles
+an OpenLayers `Draw` interaction in freehand polygon mode; while it is on,
+dragging draws instead of panning. The drawn ring lives on its own vector
+layer (orange). On release, `cellsInLasso()` keeps every cell whose centroid
+(vertex mean) falls inside the ring — candidates come from the same RBush
+bbox index the hover uses, queried with the ring's extent, so a lasso costs
+one ray cast per candidate, not per cell. Selection is not gated by
+`annotationLevel`.
+
+The result opens a `Menu` (`sjpp-wsi-lasso-menu`): a headline count, a
+per-type tally (`sjpp-wsi-lasso-summary`, descending, unannotated last —
+the input the neighborhood enrichment step will take), and a `renderTable`
+of cell id + type (`sjpp-wsi-lasso-table`). One lasso at a time: a new
+drawing replaces the old, and toggling the button off clears the ring and
+menu.
+
 ## SVS vs OME-TIFF: what actually differs
 
 | step | .svs | .ome.tif |

@@ -1,10 +1,11 @@
 import tape from 'tape'
-import { parseBoundaries, pointInRing, tooltipRows } from '../wsi.direct'
+import { parseBoundaries, pointInRing, tooltipRows, cellsInLasso } from '../wsi.direct'
 
 /* Tests
     parseBoundaries: boundary csv -> one ring per cell
     pointInRing: hover hit test
     tooltipRows: hover tooltip content
+    cellsInLasso: lasso selection by cell centroid
 */
 
 // two cells, µm coords; mpp 0.5 doubles px values, y negated for OL
@@ -86,5 +87,56 @@ tape('tooltipRows hover tooltip content', test => {
 		'unannotated cell: no type line'
 	)
 	test.deepEqual(tooltipRows('cell-1', undefined, []), ['cell id: cell-1'], 'no annotations, no genes: id only')
+	test.end()
+})
+
+tape('cellsInLasso selects by cell centroid', test => {
+	// lasso: the 0..10 square. Cells are small triangles named by where their centroid lands
+	const lasso = [
+		[0, 0],
+		[10, 0],
+		[10, 10],
+		[0, 10],
+		[0, 0]
+	]
+	const cell = (id: string, cx: number, cy: number) => ({
+		id,
+		ring: [
+			[cx - 1, cy - 1],
+			[cx + 1, cy - 1],
+			[cx, cy + 2]
+		] // centroid = (cx, cy)
+	})
+	const inside = cell('in', 5, 5)
+	const outside = cell('out', 20, 20)
+	// centroid outside though one vertex pokes in: vertices (11,9),(13,9),(12,12) -> centroid (12,10)
+	const straddle = {
+		id: 'straddle',
+		ring: [
+			[9, 9],
+			[13, 9],
+			[14, 12]
+		]
+	} // centroid (12, 10): outside
+	const hits = cellsInLasso(lasso, [outside, inside, straddle])
+	test.deepEqual(
+		hits.map(c => c.id),
+		['in'],
+		'only the cell whose centroid is inside the ring, in input order'
+	)
+	test.deepEqual(cellsInLasso(lasso, []), [], 'no candidates: empty selection')
+	test.deepEqual(
+		cellsInLasso(
+			[
+				[0, 0],
+				[1, 0],
+				[1, 1],
+				[0, 1]
+			],
+			[inside]
+		),
+		[],
+		'tiny lasso misses the cell'
+	)
 	test.end()
 })
