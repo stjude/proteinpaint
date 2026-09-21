@@ -66,7 +66,7 @@ tape('ReqResCache instance', test => {
 		test.deepEqual(
 			loc,
 			{
-				route: '/termdb/matrix',
+				route: '/termdb/matrix', // previously /termb?for=matrix
 				dirId: `termdb.matrix/6d5c2c5e64a67bb6d662`,
 				id: '6d5c2c5e64a67bb6d66218b50cbf7affb978555f', // pragma: allowlist secret
 				file: `${cachedir}/termdb.matrix/6d5c2c5e64a67bb6d662.json`
