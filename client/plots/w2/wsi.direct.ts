@@ -39,6 +39,13 @@
  and draws ONE overlay of the totals in a single color. Can be combined with
  gene_expression (the group takes the next unused palette color).
 
+ Lasso: the button under the zoom controls toggles a freehand lasso (an
+ OpenLayers Draw interaction). Releasing the pointer selects every cell whose
+ centroid lies inside the drawn ring and opens a menu listing the selection:
+ per-type counts, then a table of cell ids and their annotated types. Only
+ one lasso is kept; drawing again replaces it, toggling off clears it. This
+ selection is the input for the neighborhood enrichment step that follows.
+
  Bypasses datasets/samples: hits the wsitiles route with a direct slide path
  (resolved relative to serverconfig.tpmasterdir; gated by features.wsi.allowDirectSlidePath). Minimal
  pan/zoom viewer — the same OpenLayers Zoomify setup the full viewer uses.
@@ -54,8 +61,11 @@ import Feature from 'ol/Feature.js' // one drawable geometry + style
 import MultiPolygon from 'ol/geom/MultiPolygon.js' // many cell rings in one feature
 import { Fill, Stroke, Style } from 'ol/style.js' // polygon styling primitives
 import RBush from 'ol/structs/RBush.js' // spatial index for the hover hit test
+import Draw from 'ol/interaction/Draw.js' // freehand polygon drawing = the lasso
+import Control from 'ol/control/Control.js' // hosts the lasso toggle inside the map's viewport
+import { select } from 'd3-selection' // wraps the control element for the icon helper
 import { dofetch3 } from '#common/dofetch' // fetch wrapper for meta/genecounts
-import { sayerror } from '#dom' // inline error banner
+import { sayerror, Menu, renderTable, icons } from '#dom' // error banner, lasso menu + table, lasso icon
 
 /** Build the viewer in `holder`; opts mirror the URL params documented above */
 export async function init(
@@ -508,6 +518,62 @@ export async function init(
 					.style('top', `${mr.top + evt.pixel[1] + 12}px`)
 					.text(rows.join('\n'))
 			})
+
+			// lasso: freehand polygon drawn on its own vector layer; on release,
+			// the cells whose centroid falls inside it are listed in a menu.
+			// Reuses the hover index: only cells whose bbox meets the lasso's
+			// extent are ray-cast. Not gated by annotation_level — a region can
+			// be selected at any zoom.
+			const lassoSource = new VectorSource() // holds the one drawn ring
+			map.addLayer(
+				new VectorLayer({
+					source: lassoSource,
+					style: new Style({
+						stroke: new Stroke({ color: 'rgba(255, 140, 0, 0.9)', width: 2 }), // orange outline
+						fill: new Fill({ color: 'rgba(255, 140, 0, 0.1)' }) // faint tint of the region
+					})
+				})
+			)
+			const draw = new Draw({ source: lassoSource, type: 'Polygon', freehand: true }) // the lasso itself
+			const lassoMenu = new Menu({ padding: '8px', testid: 'sjpp-wsi-lasso-menu' }) // the selection popup
+			let lassoOn = false // whether the Draw interaction is on the map
+			// the toggle lives in an OL control so it sits inside the map's
+			// viewport with the zoom buttons (just below them)
+			const ctl = document.createElement('div') // the control's element
+			ctl.className = 'ol-unselectable ol-control' // OL styles it as a control
+			// inline, not left to .ol-control: a global rule wins on this element and
+			// makes it position:relative, i.e. a full-width block whose grey control
+			// background paints a band across the map
+			ctl.style.position = 'absolute'
+			ctl.style.top = '65px' // right under the +/- zoom buttons
+			ctl.style.left = '.5em' // aligned with them
+			map.addControl(new Control({ element: ctl }))
+			const btn = icons.lasso(select(ctl).attr('data-testid', 'sjpp-wsi-lasso-btn'), {
+				title: 'Lasso: drag to select cells',
+				enabled: false, // starts off; the handler repaints the button
+				handler: () => {
+					lassoOn = !lassoOn
+					btn.select('button').style('background-color', lassoOn ? 'rgb(207, 226, 243)' : 'transparent') // on = tinted
+					if (lassoOn) map.addInteraction(draw) // drags now draw instead of panning
+					else {
+						map.removeInteraction(draw) // back to pan/zoom
+						lassoSource.clear() // drop the drawn region
+						lassoMenu.hide()
+					}
+				}
+			})
+			draw.on('drawstart', () => {
+				lassoSource.clear() // one lasso at a time
+				lassoMenu.hide()
+			})
+			draw.on('drawend', (evt: any) => {
+				const geom = evt.feature.getGeometry() // the finished polygon
+				const ring: number[][] = geom.getCoordinates()[0] // its outer ring, map coords
+				const hits = cellsInLasso(ring, index.getInExtent(geom.getExtent())) // bbox prefilter, then ray cast
+				const px = map.getPixelFromCoordinate(ring[ring.length - 1]) // where the pointer was released
+				const mr = mapDiv.node().getBoundingClientRect() // map rect: OL pixel -> viewport coords
+				showLassoMenu(lassoMenu, hits, cellTypes, mr.left + px[0], mr.top + px[1])
+			})
 		}
 	} catch (e: any) {
 		loading.remove() // drop the placeholder before showing the error
@@ -546,6 +612,70 @@ export function pointInRing(x: number, y: number, ring: number[][]): boolean {
 		if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside
 	}
 	return inside // odd crossings = inside
+}
+
+/** The cells whose centroid (vertex mean) lies inside the lasso ring; order
+ preserved from `cells` (exported for tests). Centroid-in-ring, not polygon
+ overlap: a cell counts when most of it is inside, which is what a hand-drawn
+ region means, and it keeps the test to one ray cast per candidate. */
+export function cellsInLasso(
+	/** the lasso's outer ring, map coords */
+	ring: number[][],
+	/** candidate cells (typically the bbox-index hits for the ring's extent) */
+	cells: Iterable<CellPoly>
+): CellPoly[] {
+	const hits: CellPoly[] = [] // selected cells
+	for (const c of cells) {
+		let sx = 0, // running vertex sums
+			sy = 0
+		for (const [x, y] of c.ring) {
+			sx += x
+			sy += y
+		}
+		if (pointInRing(sx / c.ring.length, sy / c.ring.length, ring)) hits.push(c) // centroid inside = selected
+	}
+	return hits
+}
+
+/** Fill and show the lasso menu at viewport (x, y): a per-type count summary
+ (types by descending count, unannotated cells last), then a table of every
+ selected cell's id and type. An empty selection shows a one-line notice. */
+function showLassoMenu(
+	menu: Menu,
+	hits: CellPoly[],
+	cellTypes: { [id: string]: string } | undefined,
+	x: number,
+	y: number
+) {
+	menu.clear().show(x, y)
+	const d = menu.d.append('div').style('font', '12px system-ui')
+	if (!hits.length) {
+		d.text('No cells in the lasso') // nothing to list
+		return
+	}
+	d.append('div').style('font-weight', 'bold').text(`${hits.length} cells selected`) // headline count
+	if (cellTypes) {
+		// per-type tally of the selection, the input the enrichment step will consume
+		const counts: { [t: string]: number } = Object.create(null)
+		for (const c of hits) {
+			const t = cellTypes[c.id] || 'unannotated' // cells the h5ad left unannotated get their own bucket
+			counts[t] = (counts[t] || 0) + 1
+		}
+		const types = Object.keys(counts).sort((a, b) =>
+			a == 'unannotated' ? 1 : b == 'unannotated' ? -1 : counts[b] - counts[a]
+		)
+		const sum = d.append('div').attr('data-testid', 'sjpp-wsi-lasso-summary').style('margin', '4px 0 6px 0') // the tally
+		for (const t of types) sum.append('div').text(`${t}: ${counts[t]}`) // one line per type
+	}
+	const columns = [{ label: 'Cell ID' }] as { label: string }[] // id always; type only when annotated
+	if (cellTypes) columns.push({ label: 'Cell type' })
+	renderTable({
+		columns,
+		rows: hits.map(c => (cellTypes ? [{ value: c.id }, { value: cellTypes[c.id] || '' }] : [{ value: c.id }])), // one row per cell
+		div: d.append('div').attr('data-testid', 'sjpp-wsi-lasso-table'),
+		showLines: true,
+		maxHeight: '40vh'
+	})
 }
 
 /** Fetch one polygon set of the h5ad (via wsitiles/boundaries) and parse it
