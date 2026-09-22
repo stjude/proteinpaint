@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Gene/isoform names carried by a request are validated against the genome gene db in an app middleware, before any route handler can query data with them, locally or against a remote api (gdc). Covers geneVariant (term wrapper, filter tvs, and a dt term tvs via its parentTerm), geneExpression, isoformExpression, pseudobulk and singleCellGeneExpression; the error names the term type and never the rejected name. A dataset whose data declares names outside the gene db opts out with `cohort.termdb.skipGeneNameValidation` (TermdbTest does so for geneExpression, since the hg38-test gene db is a stub)
+- Gene db name/alias/isoform lookups are loaded into maps at server init and served from memory: `getnamebynameorisoform`, `getnamebyisoform`, `getNameByAlias`, `getAliasByName` and `get_gene2canonicalisoform` keep their statement shape but no longer query sqlite, so the per-request gene name check never blocks the event loop and needs no cache of client-supplied strings. The genemodel json, the name prefix search and the coord/ideogram tables stay in sqlite. Costs ~1.1s and ~78MB per genome with a full gene db (hg38: 81.5k genes, 506k isoforms, 145k aliases)
+
 
 ## 2.210.1
 
