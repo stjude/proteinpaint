@@ -10,7 +10,7 @@ import { getMockSCState } from './getMockSCApp.ts'
  *   - update() should retain previous data when new data is null
  *   - getChartBtnOpts() should return configured plot buttons
  *   - getChartBtnOpts() Summary button should always be visible
- *   - getChartBtnOpts() Gene expression button should be visible when geneExpression is configured
+ *   - getChartBtnOpts() Gene expression button should be visible when geneExpression is configured and an available plot
  *   - getChartBtnOpts() Gene expression button should not be visible when geneExpression is not configured
  *   - getChartBtnOpts() Differential expression button should be visible when DEgenes is configured
  *   - getChartBtnOpts() should include only plots found in availablePlots
@@ -191,7 +191,7 @@ tape('getChartBtnOpts() Summary button should always be visible', test => {
 	test.end()
 })
 
-tape('getChartBtnOpts() Gene expression button should be visible when geneExpression is configured and an avaialble plot', test => {
+tape('getChartBtnOpts() Gene expression button should be visible when geneExpression is configured and an available plot', test => {
 	const pb = getPlotButtons({ geneExpression: true })
 	pb.data = { plots: [] }
 	pb.item = { sID: 'S1', eID: 'EXP1' }
@@ -200,7 +200,9 @@ tape('getChartBtnOpts() Gene expression button should be visible when geneExpres
 	const btns = pb.getChartBtnOpts()
 	const geneExp = btns.find(b => b.label === 'Gene expression')
 
-	test.ok(geneExp!.isVisible(), 'Gene expression should be visible when geneExpression is configured and ge file is available. ')
+	test.ok(geneExp!.isVisible(), 'Gene expression should be visible when geneExpression is configured and its file is available')
+ 	pb.availablePlots = new Set()
+ 	test.notOk(geneExp!.isVisible(), 'Gene expression should be hidden when its file is unavailable.')
 	test.end()
 })
 
