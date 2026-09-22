@@ -9,7 +9,7 @@ import { getMockSCState } from './getMockSCApp.ts'
  *   - update() should set data, settings, and item when item is selected
  *   - update() should retain previous data when new data is null
  *   - getChartBtnOpts() should return configured plot buttons
- *   - getChartBtnOpts() Summary button should always be visible
+ *   - getChartBtnOpts() Summary button should be visible if dictionary is an available plot.
  *   - getChartBtnOpts() Gene expression button should be visible when geneExpression is configured and an available plot
  *   - getChartBtnOpts() Gene expression button should not be visible when geneExpression is not configured
  *   - getChartBtnOpts() Differential expression button should be visible when DEgenes is configured
@@ -177,17 +177,17 @@ tape('getChartBtnOpts() should return configured plot buttons', test => {
 	test.end()
 })
 
-tape('getChartBtnOpts() Summary button should always be visible', test => {
+tape('getChartBtnOpts() Summary button should be visible if dictionary is an available plot.', test => {
 	const pb = getPlotButtons()
 	pb.data = { plots: [] }
 	pb.item = { sID: 'S1', eID: 'EXP1' }
-	pb.availablePlots = new Set()
+	pb.availablePlots = new Set(['dictionary'])
 
 	const btns = pb.getChartBtnOpts()
 	const summary = btns.find(b => b.label === 'Summary')
 
 	test.ok(summary, 'Should have Summary button')
-	test.ok(summary!.isVisible(), 'Summary should always be visible')
+	test.ok(summary!.isVisible(), 'Summary should be visible if dictionary is an available plot.')
 	test.end()
 })
 
@@ -310,7 +310,6 @@ tape('renderChartBtns() should omit disabled plot types', test => {
 
 	test.notOk(labels.includes('umap'), 'Should omit disabled sampleScatter plots')
 	test.notOk(labels.includes('tsne'), 'Should omit disabled sampleScatter plots')
-	test.ok(labels.includes('Summary'), 'Should retain enabled Summary plot')
 	test.end()
 })
 

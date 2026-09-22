@@ -482,7 +482,7 @@ async function getAvailablePlots(
 			 * the sample only has spatial images and no other data. */
 			if (dictAdded == false) {
 				dictAdded = true
-				plots.push({ name: 'dictionary '})
+				plots.push({ name: 'dictionary'})
 			}
 		} catch (_) {
 			// file doesn't exist for this sample. this is allowed
