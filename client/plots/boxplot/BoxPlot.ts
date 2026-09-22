@@ -3,13 +3,12 @@ import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getCombinedTermFilter } from '#filter'
 import { controlsInit } from '#plots/controls.js'
-import { Menu, getMaxLabelWidth, DownloadMenu } from '#dom'
+import { Menu, getMaxLabelWidth, DownloadMenu, getChartTitle } from '#dom'
 import type { Elem } from '../../types/d3'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { TdbBoxPlotOpts, BoxPlotDom, BoxPlotConfigOpts } from './BoxPlotTypes'
 import { Model } from './model/Model'
 import { ViewModel } from './viewModel/ViewModel'
-import { getChartSubtitle } from './viewModel/ChartsDataMapper'
 import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
 import { View } from './view/View'
 import { getDefaultBoxplotSettings } from './defaults'
@@ -211,7 +210,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		const charts: any[] = this.data.charts
 		for (const [key, chart] of Object.entries(charts)) {
 			const svg: any = chart.svg
-			const title = getChartSubtitle(this.state.config, key)
+			const title = getChartTitle(this.state.config, key)
 			const name = `${this.state.config.term.term.name}  ${title}`
 			chartImages.push({ name, svg })
 		}

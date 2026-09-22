@@ -39,7 +39,7 @@ class ViolinPlot extends PlotBase implements RxComponent{
 	legendRenderer!: any
 	render!: () => void
 	renderPvalueTable!: (chartDiv: any, chart: any) => void
-	getChartTitle!: (chartId: any) => string
+	getChartTitle!: (chartId: string, totalNum: number) => string
 	data!: any
 	config!: any
 	displayLabelClickMenu!: (...args: any[]) => void

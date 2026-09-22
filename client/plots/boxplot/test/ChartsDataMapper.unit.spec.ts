@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { getBoxPlotMockData } from './mockBoxPlotData'
-import { ChartsDataMapper, getChartSubtitle } from '../viewModel/ChartsDataMapper'
+import { ChartsDataMapper } from '../viewModel/ChartsDataMapper'
 import { termjson } from '../../../test/testdata/termjson'
 
 /*
@@ -17,8 +17,6 @@ Tests:
 	- ChartsDataMapper.setTitleDimensions() sets the correct title dimensions when term0 present
 	- ChartsDataMapper.filterTickValues() should throw if no ticks array
 	- ChartsDataMapper.setPlotData() sets the correct plot data for rendering
-	- getChartSubtitle() returns the correct subtitle with no divide by term (i.e. term0)
-	- getChartSubtitle() returns the correct subtitle with divide by term
 */
 
 tape('\n', function (test) {
@@ -294,28 +292,5 @@ tape('ChartsDataMapper.setPlotData() sets the correct plot data for rendering', 
 		`Should set x the same for all plots and increment y`
 	)
 
-	test.end()
-})
-
-tape('getChartSubtitle() returns the correct subtitle with no divide by term (i.e. term0)', function (test) {
-	test.timeoutAfter(100)
-	const { mockConfig1 } = getBoxPlotMockData()
-	const expectedSubtitle = 'Age at Cancer Diagnosis'
-	const result = getChartSubtitle(mockConfig1, expectedSubtitle)
-	test.equal(
-		result,
-		expectedSubtitle,
-		`Should return subtitle = ${expectedSubtitle} when no divide by term is present.`
-	)
-	test.end()
-})
-
-tape('getChartSubtitle() returns the correct subtitle with divide by term', function (test) {
-	test.timeoutAfter(100)
-	const { mockConfig1 } = getBoxPlotMockData()
-	mockConfig1['term0'] = { term: termjson['diaggrp'] }
-	const expectedSubtitle = 'Acute lymphoblastic leukemia'
-	const result = getChartSubtitle(mockConfig1, expectedSubtitle)
-	test.equal(result, expectedSubtitle, `Should return subtitle = ${expectedSubtitle} when divide by term is present.`)
 	test.end()
 })
