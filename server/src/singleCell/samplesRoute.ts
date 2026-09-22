@@ -468,9 +468,9 @@ async function getAvailablePlots(
 			// file doesn't exist for this sample. this is allowed
 		}
 	}
-	const ge = ds.queries.singleCell?.geneExpression
-	if (ge) {
-		const geFile = path.join(serverconfig.tpmasterdir, ge.folder!, sampleId + '.h5')
+	const ge = ds.queries.singleCell?.geneExpression as SingleCellGeneExpression
+	if (ge && ge.folder) {
+		const geFile = path.join(serverconfig.tpmasterdir, ge.folder, sampleId + '.h5')
 		try {
 			await file_is_readable(geFile)
 			plots.push({ name: ge?.label || 'Gene expression' })
@@ -478,7 +478,7 @@ async function getAvailablePlots(
 			// gene expression file doesn't exist for this sample.
 		}
 	}
-	const imgs = ds.queries.singleCell?.images
+	const imgs = ds.queries.singleCell?.images as SCImages
 	if (imgs) {
 		const imgFile = path.join(serverconfig.tpmasterdir, imgs.folder, sampleId, imgs.fileName)
 		try {
