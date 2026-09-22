@@ -13,6 +13,7 @@ import { clinsig } from '../dataset/clinvar.ts'
 import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
 import { mayLog } from './helpers.ts'
 import { mapConcurrent } from './utils/concurrencyLimiter.ts'
+import { initGeneDbLookups } from './genedbLookups.ts'
 // server-internal utilities that GDC query code depends on; injected so that code can move to
 // the ppgdc dataset repo, which cannot import from the server package
 import { renderVolcano } from './renderVolcano.ts'
@@ -274,8 +275,8 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 			} catch (e) {
 				throw `Cannot connect genedb: ${g.genedb.dbfile}: ${e}`
 			}
-			g.genedb.getnamebynameorisoform = g.genedb.db.prepare('select name from genes where name=? or isoform=?')
-			g.genedb.getnamebyisoform = g.genedb.db.prepare('select distinct name from genes where isoform=?')
+			/* genemodel json is the bulk of this db and is only ever read by accession, so it stays
+			in sqlite. Same for the prefix search, which no per-request check runs */
 			g.genedb.getjsonbyname = g.genedb.db.prepare('select isdefault,genemodel from genes where name=?')
 			g.genedb.getjsonbyisoform = g.genedb.db.prepare('select isdefault,genemodel from genes where isoform=?')
 			g.genedb.getnameslike = g.genedb.db.prepare('select distinct name from genes where name like ? limit 20')
@@ -293,11 +294,15 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 			if present, create getter to this table and attach to g.genedb{}
 			*/
 			const tables = listDbTables(g.genedb.db)
-			if (tables.has('genealias')) {
-				g.genedb.getNameByAlias = g.genedb.db.prepare('select name from genealias where alias=?')
-				// quick fix -- convert symbol to ENSG, to be used for gdc api query
-				g.genedb.getAliasByName = g.genedb.db.prepare('select alias from genealias where name=?')
-			}
+
+			/* reads the name/alias/isoform tables into maps and attaches the getters over them:
+			getnamebynameorisoform, getnamebyisoform, and (when the tables exist) getNameByAlias,
+			getAliasByName and get_gene2canonicalisoform. Same getter shape as the statements they
+			replace, so call sites are unchanged, but a lookup no longer blocks the event loop --
+			which is what lets every request be checked for unknown gene names, see
+			geneRefValidation.ts */
+			initGeneDbLookups(g.genedb, tables)
+
 			if (tables.has('gene2coord')) {
 				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
 			}
@@ -306,11 +311,6 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 				g.genedb.getIdeogramByChr = g.genedb.db.prepare('select * from ideogram where chromosome=?')
 			} else {
 				g.genedb.hasIdeogram = false
-			}
-			if (tables.has('gene2canonicalisoform')) {
-				g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
-					'select isoform from gene2canonicalisoform where gene=?'
-				)
 			}
 			if (tables.has('buildDate')) {
 				g.genedb.get_buildDate = g.genedb.db.prepare('select date from buildDate')

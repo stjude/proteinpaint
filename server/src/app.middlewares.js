@@ -15,6 +15,7 @@ import crypto from 'crypto'
 import { ReqResCache } from '@sjcrh/augen'
 import { abortCtrlBy } from './xfetch.js'
 import { mayLog } from './helpers.ts'
+import { mayValidateRequestGeneRefs } from './geneRefValidation.ts'
 import { formatElapsedTime } from '#shared'
 
 const basepath = serverconfig.basepath || ''
@@ -166,6 +167,14 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 			const notReady = ds?.init?.notReadyMessage?.()
 			if (notReady) {
 				res.send({ error: notReady })
+				return
+			}
+
+			/* reject a gene/isoform name the genome does not know, before any route handler
+			can query data with it, locally or against a remote api */
+			const geneRefError = mayValidateRequestGeneRefs(req, g, ds)
+			if (geneRefError) {
+				res.send({ error: geneRefError })
 				return
 			}
 		}

@@ -294,15 +294,18 @@ tape('numeric dictionary terms (float)', async function (test) {
 
 tape('isoform expression cluster', async function (test) {
 	test.timeoutAfter(4000)
+	/* accessions of the isoform tpm matrix that the hg38-test gene db also knows: a request
+	naming an isoform the genome has no record of is rejected before it reaches the data
+	(see geneRefValidation.ts), so a fixture must be in both */
 	const terms = [
 		{
-			term: { isoform: 'ENST00000370314', name: 'ENST00000370314', type: 'isoformExpression' }
+			term: { isoform: 'ENST00000269305', name: 'ENST00000269305', type: 'isoformExpression' }
 		},
 		{
-			term: { isoform: 'ENST00000361510', name: 'ENST00000361510', type: 'isoformExpression' }
+			term: { isoform: 'ENST00000256078', name: 'ENST00000256078', type: 'isoformExpression' }
 		},
 		{
-			term: { isoform: 'ENST00000229281', name: 'ENST00000229281', type: 'isoformExpression' }
+			term: { isoform: 'ENST00000311936', name: 'ENST00000311936', type: 'isoformExpression' }
 		}
 	]
 	const { app, hc } = await getHierClusterApp({
