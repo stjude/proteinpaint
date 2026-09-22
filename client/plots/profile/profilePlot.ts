@@ -466,22 +466,18 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 				let link
 				if (activeCohort == ABBREV_COHORT) {
 					if (chartType == 'profileBarchart2')
-						link =
-							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-abbr-profiledash.pdf'
+						link = 'https://global.stjude.org/content/dam/global/en-us/documents/bargraphabbr-profiledash.pdf'
 					else if (chartType == 'profilePolar2')
-						link =
-							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-abbr-profiledash.pdf'
+						link = 'https://global.stjude.org/content/dam/global/en-us/documents/polargraphabbr-profiledash.pdf'
 					else if (chartType.startsWith('profileRadar'))
-						link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/radar-abbr-profiledash.pdf'
+						link = 'https://global.stjude.org/content/dam/global/en-us/documents/radarabbr-Profiledash-rev9.14.2026.pdf'
 				} else if (activeCohort == FULL_COHORT) {
 					if (chartType == 'profileBarchart2')
-						link =
-							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-full-profiledash.pdf'
+						link = 'https://global.stjude.org/content/dam/global/en-us/documents/bargraphfull-profiledash.pdf'
 					else if (chartType == 'profilePolar2')
-						link =
-							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-full-profiledash.pdf'
+						link = 'https://global.stjude.org/content/dam/global/en-us/documents/polargraphfull-profiledash.pdf'
 					else if (chartType.startsWith('profileRadar'))
-						link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/radar-full-profiledash.pdf'
+						link = 'https://global.stjude.org/content/dam/global/en-us/documents/radarfull-profiledash-rev9.14.2026.pdf'
 				}
 				if (link) window.open(link)
 			})
