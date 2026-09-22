@@ -533,13 +533,13 @@ export type GeneArgumentEntry = {
 	 * required if type is string. Otherwise, optional
 	 */
 	value?:
-		| string
-		| boolean
-		| number
-		| {
-				type: string
-				value: string[] | null
-		  }
+	| string
+	| boolean
+	| number
+	| {
+		type: string
+		value: string[] | null
+	}
 	options?: {
 		/** Type of dom element to render underneath the radio
 		 * 'text': creates a text area input
@@ -1345,6 +1345,35 @@ type SingleSampleGbtk = {
 	}
 }
 
+export type SpatialQuery = {
+	/** spatial (Xenium) images root: folder/<sample_id>/<imageName>/ holds one
+	 * image per subfolder, containing the slide and its annotation files,
+	 * located by the *FileSuffix fields (matched with endsWith) */
+	folder?: string
+	/** plain whole-slide images root: wsiFolder/<sample_id>/<imageName>/
+	 * holds one image per subfolder, containing that image's slide file */
+	wsiFolder?: string
+	/** suffix of the spatial slide file (e.g. 'morphology.ome.tif'); an image
+	 * subfolder without it is skipped. Required with folder */
+	tiffFileSuffix?: string
+	/** suffix of the consolidated spatial .h5ad (expression X, obs cell_type,
+	 * uns cell/nucleus boundary polygons) — the single source of an image's
+	 * boundaries, annotations and expression. Required for the spatial
+	 * overlays; an image folder without one shows the bare slide */
+	spatialDataFileSuffix?: string
+	/** optional override for the spatial viewer's default gene overlay
+	 * (comma-separated). Gene names are discovered from the h5ad at
+	 * runtime; this value is filtered to genes actually present there, and
+	 * when absent (or naming only absent genes) the file's first gene is the
+	 * default. The burger menu can always override it. */
+	geneExpression?: string
+	/** default: show boundary strokes only in the n most zoomed-in levels */
+	annotationLevel?: number
+	/** default: fill cells by their annotated cell_type.
+	 * The burger menu can always override it. */
+	cellTypes?: boolean
+}
+
 type Mds3Queries = {
 	/** (gb=genomebrowser) controls gb chart button menu genesearchbox behavior, 
 	add some additional options after a gene is found, and mode of gb launched from the menu
@@ -1545,34 +1574,7 @@ type Mds3Queries = {
 	 * images are discovered from disk, never listed in the dataset. At least one
 	 * of folder (spatial) / wsiFolder (plain) is required — a dataset may have
 	 * either kind of image, or both. */
-	w2?: {
-		/** spatial (Xenium) images root: folder/<sample_id>/<imageName>/ holds one
-		 * image per subfolder, containing the slide and its annotation files,
-		 * located by the *FileSuffix fields (matched with endsWith) */
-		folder?: string
-		/** plain whole-slide images root: wsiFolder/<sample_id>/<imageName>/
-		 * holds one image per subfolder, containing that image's slide file */
-		wsiFolder?: string
-		/** suffix of the spatial slide file (e.g. 'morphology.ome.tif'); an image
-		 * subfolder without it is skipped. Required with folder */
-		tiffFileSuffix?: string
-		/** suffix of the consolidated spatial .h5ad (expression X, obs cell_type,
-		 * uns cell/nucleus boundary polygons) — the single source of an image's
-		 * boundaries, annotations and expression. Required for the spatial
-		 * overlays; an image folder without one shows the bare slide */
-		spatialDataFileSuffix?: string
-		/** optional override for the spatial viewer's default gene overlay
-		 * (comma-separated). Gene names are discovered from the h5ad at
-		 * runtime; this value is filtered to genes actually present there, and
-		 * when absent (or naming only absent genes) the file's first gene is the
-		 * default. The burger menu can always override it. */
-		geneExpression?: string
-		/** default: show boundary strokes only in the n most zoomed-in levels */
-		annotationLevel?: number
-		/** default: fill cells by their annotated cell_type.
-		 * The burger menu can always override it. */
-		cellTypes?: boolean
-	}
+	w2?: SpatialQuery
 	images?: Images
 	chat?: any
 }
@@ -1725,7 +1727,7 @@ type BoxPlots = {
 }
 
 type UiLabels = {
-	[propName: string]: string | { label: string; [otherAttr: string]: string }
+	[propName: string]: string | { label: string;[otherAttr: string]: string }
 }
 
 type TieBreakerFilterValuesEntry = {
@@ -2175,7 +2177,7 @@ keep this setting here for reason of:
 	implementations destructure clientAuthResult (and e.g. activeCohort) from it. Accepts the
 	term object (not just an id) so the hook can generalize to non-dictionary terms in the
 	future, which may key visibility off properties other than id. */
-	isTermVisible?: (__protected__: any, term: { id?: string; [key: string]: any }) => boolean
+	isTermVisible?: (__protected__: any, term: { id?: string;[key: string]: any }) => boolean
 	/** Optional dataset hook to prune the per-request /termdb/config response.
 	 * Typical use is hiding plots/sections/etc. based on the requester's role.
 	 *

@@ -1,5 +1,9 @@
 import tape from 'tape'
+import fs from 'fs/promises'
+import os from 'os'
+import path from 'path'
 import { validate_query_singleCell } from '../samplesRoute.ts'
+import serverconfig from '#src/serverconfig.js'
 
 /**
  * Tests
@@ -130,6 +134,73 @@ tape('built-in getters screen the sample id for path traversal', async test => {
 	// its missing data file is reported as an unavailable plot, not as an invalid id
 	const re = await data.get({ sample: { sID: 'SJALL040053_D1' }, plots: ['UMAP'], checkPlotAvailability: true })
 	test.deepEqual(re, { plots: [] }, 'should accept a legitimate sample name')
+
+	test.end()
+})
+
+tape('validate_query_singleCell: native sample list includes plot and spatial-only samples once', async test => {
+	const oldTpMasterDir = serverconfig.tpmasterdir
+	const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'pp-sc-samples-'))
+	serverconfig.tpmasterdir = tmpdir
+
+	try {
+		await fs.mkdir(path.join(tmpdir, 'sc'))
+		await fs.mkdir(path.join(tmpdir, 'spatial'))
+		await fs.writeFile(path.join(tmpdir, 'sc', 'plot-only.tsv'), 'cell\tx\ty\n')
+		await fs.writeFile(path.join(tmpdir, 'sc', 'plot-and-spatial.tsv'), 'cell\tx\ty\n')
+		await fs.mkdir(path.join(tmpdir, 'spatial', 'plot-and-spatial'))
+		await fs.mkdir(path.join(tmpdir, 'spatial', 'spatial-only'))
+
+		const sample2id = new Map([
+			['plot-only', 1],
+			['plot-and-spatial', 2],
+			['spatial-only', 3]
+		])
+		const ds = {
+			queries: {
+				w2: {
+					folder: 'spatial'
+				},
+				singleCell: {
+					samples: {},
+					data: {
+						get: async () => ({}),
+						plots: [{ ...apiPlots[0], folder: 'sc', fileSuffix: '.tsv' }]
+					}
+				}
+			},
+			cohort: {
+				termdb: {
+					q: {
+						sampleName2id: name => sample2id.get(name)
+					}
+				}
+			}
+		} as any
+
+		await validate_query_singleCell(ds, {})
+		const re = await ds.queries.singleCell.samples.get({})
+		const sampleNames = re.samples.map(s => s.sample).sort()
+
+		test.deepEqual(
+			sampleNames,
+			['plot-and-spatial', 'plot-only', 'spatial-only'],
+			'should include plot-only, plot+spatial, and spatial-only samples'
+		)
+		test.equal(
+			re.samples.filter(s => s.sample == 'plot-and-spatial').length,
+			1,
+			'should not duplicate a sample that has both plot data and spatial data'
+		)
+		test.deepEqual(
+			[...ds.queries.singleCell.samples.sampleMappingCache.sampleIntIds].sort(),
+			[1, 2, 3],
+			'should register plot and spatial samples in the sample mapping cache'
+		)
+	} finally {
+		serverconfig.tpmasterdir = oldTpMasterDir
+		await fs.rm(tmpdir, { recursive: true, force: true })
+	}
 
 	test.end()
 })
