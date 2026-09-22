@@ -8,7 +8,7 @@ import { findItem } from './filter.utils'
 // elements within instance.dom.holder, so no need for this index
 let filterIndex = 0
 
-const TITLE_REMOVE_NEGATE_GRP = 'Click to see a menu to undo the negation of this filter group or to remove it.'
+const TITLE_REMOVE_NEGATE_GRP = 'Click to see a menu to change the negation of this filter group or to remove it.'
 const TITLE_EDIT_GRP = 'Click to see a menu to edit this filter group.'
 
 export function setRenderers(self) {
@@ -442,9 +442,4 @@ function getDefaultValueForHtmlSelect(self, item) {
 	const defaultKey = JSON.stringify(item.tvs.values.map(o => o.key).sort())
 	const i = values.findIndex(d => (d.keys ? defaultKey === JSON.stringify(d.keys.sort()) : d.key === defaultKey))
 	return i
-}
-
-function showNegateOptionTitle(elem, activeData) {
-	console.log('420 -----', elem, activeData)
-	return 'test'
 }

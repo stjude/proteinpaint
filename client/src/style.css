@@ -260,7 +260,13 @@ by normalize.css are covered here
     cursor: default;
 }
 
-.sjpp_filter_div button {
+.sjpp_filter_div button,
+.sja_filter_add_transformer,
+.sja_filter_clause_negate,
+.sja_filter_paren_open,
+.sja_filter_last_join_label,
+.sja_filter_paren_close,
+.sja_filter_join_label {
 	border: 1px solid transparent;
 	background-color: transparent;
 }
