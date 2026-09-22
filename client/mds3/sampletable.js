@@ -57,8 +57,13 @@ export async function init_sampletable(arg) {
 
 	try {
 		arg.querytype = arg.tk.mds.variant2samples.type_samples
-		const out = await arg.tk.mds.variant2samples.get(arg) // returns list of samples
-		await displaySampleTable(out.samples, arg)
+		/* samples may already be retrieved by the caller, e.g. the svfusion breakpoint chooser that
+		must group samples by breakpoint before anything is rendered; do not query for them twice */
+		const samples = arg.preloadedSamples || (await arg.tk.mds.variant2samples.get(arg)).samples // list of samples
+		/* the cache is only good for the render it was made for; drop it so that calling this
+		again on the same arg[], e.g. after a filter change, queries the server again */
+		delete arg.preloadedSamples
+		await displaySampleTable(samples, arg)
 		wait.remove()
 	} catch (e) {
 		wait.text('Error: ' + (e.message || e))
@@ -493,9 +498,10 @@ export async function samples2columnsRows(samples, tk) {
 							pairArrayIdx++
 							if (p) {
 								oneHtml.push(
-									`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${
+									// print 1-based position, as printSvPair() does for the same breakpoints
+									`${p.a.name || ''} ${p.a.chr}:${p.a.pos + 1} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${
 										p.b.name || ''
-									} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
+									} ${p.b.chr}:${p.b.pos + 1} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
 								)
 								showClass = true
 							} else {
