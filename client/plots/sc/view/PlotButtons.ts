@@ -132,7 +132,8 @@ export class PlotButtons {
 			{
 				label: 'Summary',
 				chartType: 'dictionary',
-				isVisible: () => true,
+				/** Note: if only spatial image available, this plot should not show. */
+				isVisible: () => this.availablePlots.has('dictionary'),
 				getPlotConfig: () => {
 					const sample = { ...this.item!, plots: Array.from(this.availablePlots) }
 					const isMeta = sample?.isMetaResult || false
