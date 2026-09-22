@@ -998,6 +998,7 @@ export class Barchart extends PlotBase implements RxComponent {
 				: t2.term.name
 			legendGrps.push({
 				name: `<span style="${headingStyle}">` + legendName + (value_by_label ? ', ' + value_by_label : '') + '</span>',
+				testID: 'Overlay',
 				items: s.rows
 					.flatMap(d => {
 						// for the synthetic membership overlay, a shared sample sits in several
