@@ -68,6 +68,8 @@ function term_name_gen(d) {
 
 function get_pill_label(tvs) {
 	let txt
+	// the pill's tag slot, rendered small and uppercase by updatePill() in tvs.js
+	let grade_type = ''
 	if (tvs.genotype == 'variant') {
 		if (tvs.values.length == 1) {
 			// single mutation class
@@ -85,6 +87,12 @@ function get_pill_label(tvs) {
 			if (v.partnerBreakpointRange) ranges.push(breakpointRangeLabel(v.partnerBreakpointRange))
 		}
 		if (ranges.length) txt += ` @ ${ranges.join(', ')}`
+		/* a maf filter changes which mutations count as a match, so a filtered tvs must not read the
+		same as an unfiltered one. the ds default attached by fillMenu() is an empty tvslst and filters
+		nothing, so only a lst[] with a cutoff is tagged (same test as tvsUsesMafFilter() in
+		server/src/mds3.init.js). tagged only for the variant genotype: mayFilterByMaf() is applied
+		nowhere else, and a tvs switched from variant to wt may keep a stale mafFilter */
+		if (tvs.mafFilter?.lst?.length) grade_type = 'MAF'
 	} else if (tvs.genotype == 'wt') {
 		// wildtype genotype
 		txt = 'Wildtype'
@@ -94,7 +102,7 @@ function get_pill_label(tvs) {
 	} else {
 		throw 'tvs.genotype not recognized'
 	}
-	return { txt }
+	return { txt, grade_type }
 }
 
 /*

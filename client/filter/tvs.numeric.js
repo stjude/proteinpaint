@@ -13,6 +13,7 @@ handler:
 	term_name_gen()
 	get_pill_label()
 		format_val_text()
+		mafDepthText()
 	getSelectRemovePos()
 	fillMenu()
 	setTvsDefaults()
@@ -54,10 +55,19 @@ function get_pill_label(tvs) {
 			return { txt: v.value }
 		}
 		// numeric range
-		return { txt: format_val_text(v, tvs.term) }
+		return { txt: format_val_text(v, tvs.term) + mafDepthText(tvs) }
 	}
 	// multiple
-	return { txt: tvs.ranges.length + ' intervals' }
+	return { txt: tvs.ranges.length + ' intervals' + mafDepthText(tvs) }
+}
+
+/* a maf-mode tvs may also gate samples on total read depth; the range text alone does not show it.
+returns '' when no cutoff is set, and for any other tvs: 'totalDepth'/'altDepth' filter on depth with
+their own range, and minAllelicDepth has no effect on a 'value' term */
+function mafDepthText(tvs) {
+	if (tvs.term.mafFilterMode != 'maf') return ''
+	if (!Number.isFinite(tvs.minAllelicDepth) || tvs.minAllelicDepth < 1) return ''
+	return `, Total depth &ge; ${tvs.minAllelicDepth}`
 }
 
 export function format_val_text(range, term) {
@@ -282,7 +292,8 @@ function addRangeTableNoDensity(self, tvs) {
 			.attr('min', 1)
 			.attr('step', 1)
 			.style('width', '125px')
-			.property('value', tvs.minAllelicDepth)
+			// blank when no cutoff is set, so that it is not applied back as one, see clickApply()
+			.property('value', Number.isFinite(tvs.minAllelicDepth) ? tvs.minAllelicDepth : '')
 		brush.apply_btn = addApplyButton(holder.append('div').style('margin-top', '10px'))
 	} else if (mafFilterMode == 'value') {
 		// any numerical FORMAT field read as-is; bounds come from the term's min/max, and no depth input
@@ -314,12 +325,18 @@ function addRangeTableNoDensity(self, tvs) {
 		}
 		const new_tvs = { term: tvs.term, ranges: [r] }
 		if (brush.depthInput) {
-			const minAllelicDepth = Number(brush.depthInput.property('value'))
-			if (!Number.isFinite(minAllelicDepth)) {
-				window.alert('Minimum allelic depth must be a numeric value.')
-				return
+			/* the depth input is optional: a blank input leaves minAllelicDepth out, rather than storing
+			the depth of 1 that getMetricFromAlleleCnts() defaults to, which would then fill the input
+			back in as a cutoff on the next edit of this tvs */
+			const str = brush.depthInput.property('value').trim()
+			if (str) {
+				const minAllelicDepth = Number(str)
+				if (!Number.isFinite(minAllelicDepth)) {
+					window.alert('Minimum allelic depth must be a numeric value.')
+					return
+				}
+				new_tvs.minAllelicDepth = Math.max(minAllelicDepth, 1)
 			}
-			new_tvs.minAllelicDepth = Math.max(minAllelicDepth, 1)
 		}
 		self.dom.tip.hide()
 		self.opts.callback(new_tvs)
