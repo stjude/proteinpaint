@@ -254,7 +254,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 
 		if (!plot.colorColumns || plot.colorColumns.length == 0) continue
 	}
-	if (W2) {
+	if (W2?.folder) {
 		for (const dir of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, W2.folder!))){
 			//dir: string directory name, should match a sample name.
 			const sampleName = dir
@@ -462,6 +462,7 @@ async function getAvailablePlots(
 	sampleId: string
 ): Promise<{ plots: { name: string }[] }> {
 	const plots: { name: string }[] = []
+	let dictAdded = false
 	for (const plot of DsPlots) {
 		if (!Qplots.includes(plot.name)) continue
 		if (plot.isMetaResult) {
@@ -476,6 +477,13 @@ async function getAvailablePlots(
 			await file_is_readable(tsvfile)
 			// file exists for this sample
 			plots.push({ name: plot.name })
+			/** Do not show the summary button in the UI unless there 
+			 * are terms from the plot file to use. Entirely possible
+			 * the sample only has spatial images and no other data. */
+			if (dictAdded == false) {
+				dictAdded = true
+				plots.push({ name: 'dictionary '})
+			}
 		} catch (_) {
 			// file doesn't exist for this sample. this is allowed
 		}
