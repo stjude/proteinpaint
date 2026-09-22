@@ -330,7 +330,7 @@ export class Menu {
 			// state during a shift-tab blur, before focus moves back to the launcher element
 			if (
 				tip.dnode.contains(document.activeElement) ||
-				event.target?.closest('.sja_menu_div')?.ancestor_menus?.includes(tip.dnode)
+				document.activeElement?.closest('.sja_menu_div')?.ancestor_menus?.includes(tip.dnode)
 			)
 				return
 			tip.hide()

@@ -163,6 +163,7 @@ export function setRenderers(self) {
 		select(this)
 			.append('button')
 			.attr('class', 'sja_filter_paren_open')
+			.attr('title', TITLE_REMOVE_NEGATE_GRP)
 			.html('(')
 			.style('display', 'none')
 			.style('padding', '0 5px')
@@ -206,7 +207,6 @@ export function setRenderers(self) {
 			.style('font-weight', 500)
 			.style('font-size', '24px')
 			.style('cursor', 'pointer')
-			.style('border', 'none')
 			.style('background-color', 'transparent')
 			.on('click', self.displayControlsMenu)
 
