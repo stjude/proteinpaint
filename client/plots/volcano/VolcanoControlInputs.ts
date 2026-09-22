@@ -384,7 +384,7 @@ export class VolcanoControlInputs {
 				chartType: 'volcano',
 				settingsKey: 'deltaBetaCutoff',
 				title:
-					'Effect-size cutoff for differential methylation, applied to Δβ. 0.1 is a 10-percentage-point change in methylation, the conventional floor for calling a region differentially methylated. Kept separate from the log₂ cutoff because the two are not interchangeable.',
+					'Effect-size cutoff for differential methylation, applied to Δβ. 0.1 is a 10-percentage-point change in methylation, the conventional floor for calling a region differentially methylated. Kept separate from the log₂ cutoff because the two are not interchangeable. On a background-corrected scan it is applied to the EXCESS Δβ instead — the axis, the threshold and the hyper:hypo counts are all in excess units there, so a cutoff on raw Δβ would gate the two directions unequally on a cohort whose methylome has shifted.',
 				min: 0,
 				max: 1,
 				step: 0.01

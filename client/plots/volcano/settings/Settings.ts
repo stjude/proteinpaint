@@ -1,3 +1,5 @@
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
+
 export type DefaultVolcanoSettings = {
 	/** Default color for significant data points. */
 	defaultSignColor: string
@@ -91,3 +93,15 @@ export type SCCTVolcanoSettings = DefaultVolcanoSettings & {}
 export type SCGEVolcanoSettings = DefaultVolcanoSettings & {}
 
 export type ValidatedVolcanoSettings = GEVolcanoSettings | DMVolcanoSettings | SCCTVolcanoSettings | SCGEVolcanoSettings
+
+/* Whether the x axis, and everything read off it, is the excess over matched background rather
+than the raw delta-beta. True exactly when a DMR scan ran with the background correction on.
+
+Asked at request time, off the settings, to decide which column the renderer is pointed at. Once
+a response is in hand the view model answers the same question from the returned scan summary
+instead (VolcanoViewModel.xIsExcess) and hands that down to the view, because a setting says what
+was asked for while the figure has to be named after what actually came back. The two are the same
+fact from the only two sources available at their respective moments -- not a second opinion. */
+export function isExcessAxis(settings: { elementType?: string; backgroundCorrection?: boolean }): boolean {
+	return settings.elementType == DMR_SCAN_ELEMENT_TYPE && !!settings.backgroundCorrection
+}

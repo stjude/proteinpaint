@@ -39,6 +39,11 @@ export class VolcanoViewModel {
 	numSignificantDown = 0
 	/** Present only when the "element class" was the de novo DMR scan. */
 	scan?: DmrScanSummary
+	/** Whether the effect size on show is the excess over matched background rather than the raw
+	 * delta-beta: true exactly when the scan ran corrected. Set from the returned summary, so it
+	 * describes the figure in hand. Handed to the view through viewData so the axis, the colours
+	 * and both hover paths read one decision instead of three. */
+	xIsExcess = false
 	/** One p per row (DAP's FDR, a scan's smoothed FDR or background p) rather than original +
 	 * adjusted. Decides the column set, the tooltip rows and the axis name. */
 	singlePValue: boolean
@@ -84,6 +89,10 @@ export class VolcanoViewModel {
 		FDR. */
 		this.termType = config.termType
 		this.scan = (response as any).scan
+		/* From the returned summary rather than from settings: a setting says what was asked for,
+		and the axis has to be named after what came back. Assigned here because the axis label,
+		the provenance line and the dot colours all read it below. */
+		this.xIsExcess = !!this.scan?.backgroundCorrection
 		this.singlePValue = config.termType == tt.PROTEOME_DAP || !!this.scan
 		this.pValueLabel = this.setPValueLabel(settings)
 
@@ -137,6 +146,7 @@ export class VolcanoViewModel {
 			provenance: this.setProvenance(),
 			userActions: this.setUserActions(),
 			deltaBetaAxisLabel: this.setDeltaBetaAxisLabel(),
+			xIsExcess: this.xIsExcess,
 			volcanoPng: response.data.volcanoPng,
 			plotExtent: response.data.plotExtent
 		}
@@ -158,6 +168,10 @@ export class VolcanoViewModel {
 		uncentred one apart from a small shift, so a reader who does not know the origin moved
 		would take a dot at 0 to mean "no change" when it means "typical". */
 		const centered = this.response.data.centered ? ' − median' : ''
+		/* Corrected, the axis is not delta-beta at all but delta-beta less the drift of matched
+		background in the region's own stratum. Labelling it "Δβ" would put the uncorrected name on
+		the corrected number, which is the confusion this whole path exists to remove. */
+		if (this.xIsExcess) return `Excess Δβ (${shortenGroupName(cases)} − ${shortenGroupName(control)})`
 		return `Δβ${centered} (${shortenGroupName(cases)} − ${shortenGroupName(control)})`
 	}
 
@@ -165,7 +179,19 @@ export class VolcanoViewModel {
 	 * the hover rows and the multi-hit table cannot disagree. */
 	setPValueLabel(settings: ValidatedVolcanoSettings): string {
 		if (this.termType == tt.PROTEOME_DAP) return 'FDR'
-		if (this.scan) return this.scan.backgroundCorrection ? 'p vs matched background' : 'smoothed FDR'
+		/* "unadjusted" in the name, not in a footnote. The background p is a one-sided empirical
+		tail probability, (windows at least as extreme + 1) / (windows + 1), carrying no
+		multiple-testing adjustment of any kind -- and the row hands the same number to both
+		original_p_value and adjusted_p_value, so anything reading the "adjusted" slot gets the
+		raw one. Left unsaid, a column headed "p" next to tens of thousands of rows reads as
+		a q-value to every reader who did not write the pipeline.
+
+		Not adjustable after the fact, either: the empirical p cannot go below 1/(windows + 1),
+		about 1.2e-3 here, so a Benjamini-Hochberg pass over a scan's tests is decided by how many
+		regions DMRcate emitted rather than by the evidence -- it rejects all of them or none of
+		them as that count crosses a threshold. The calibrated number for a scan is a permutation
+		FDR over the whole calling pipeline, which is a separate run, not a column. */
+		if (this.scan) return this.scan.backgroundCorrection ? 'unadjusted p vs matched background' : 'smoothed FDR'
 		return `${settings.pValueType} p-value`
 	}
 
@@ -435,10 +461,11 @@ export class VolcanoViewModel {
 			/* The value the server classified and drew: delta-beta on the Δβ axis, less the median when
 			centred. Colouring from raw fold_change painted a point between 0 and a positive median as
 			"up" over a PNG dot the server had drawn as "down". */
-			const x =
-				this.termType == tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
-					? (d as any).delta_beta - (this.response.data.xOffset ?? 0)
-					: d.fold_change
+			const x = this.xIsExcess
+				? (d as any).excess ?? 0
+				: this.termType == tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
+				? (d as any).delta_beta - (this.response.data.xOffset ?? 0)
+				: d.fold_change
 			if (controlColor && caseColor) d.color = x > 0 ? caseColor : controlColor
 			else d.color = this.settings.defaultSignColor
 		} else d.color = this.settings.defaultNonSignColor
@@ -478,7 +505,15 @@ export class VolcanoViewModel {
 			parts.push(`element class: ${s.elementType || 'promoter'}`)
 			// Which effect size the run was thresholded on. Two exports with the same p cutoff but
 			// different axes are not comparable, and nothing else in the line would reveal it.
-			parts.push(`x axis: ${s.xAxis === 'delta_beta' ? 'delta-beta' : 'log2(fold-change)'}`)
+			parts.push(
+				`x axis: ${
+					this.xIsExcess
+						? 'excess delta-beta vs matched background'
+						: s.xAxis === 'delta_beta'
+						? 'delta-beta'
+						: 'log2(fold-change)'
+				}`
+			)
 			/* Which reading the counts came from. Two runs of the same contrast give different
 			hyper:hypo ratios depending on this one flag, so a file without it cannot be told
 			apart from the other run. Records the offset too, since it is a result in itself. */
@@ -499,8 +534,24 @@ export class VolcanoViewModel {
 		// Name the effect-size measure the cutoff was applied to, not just its number — the
 		// threshold moves to deltaBetaCutoff when the axis does, and "0.1" alone is ambiguous.
 		const onDeltaBeta = this.termType == tt.DNA_METHYLATION && s.xAxis === 'delta_beta'
-		const effect = onDeltaBeta ? `|delta-beta| > ${s.deltaBetaCutoff}` : `|log2(fold-change)| > ${s.foldChangeCutoff}`
-		parts.push(`significance: ${s.pValueType} p < ${roundValueAuto(Math.pow(10, -s.pValue))}, ${effect}`)
+		/* Corrected, the cutoff is applied to the excess, not to the raw delta-beta. A file saying
+		"|delta-beta| > 0.1" for a set actually gated on excess misstates the one number a reader
+		would use to reproduce it. */
+		const effect = this.xIsExcess
+			? `|excess delta-beta| > ${s.deltaBetaCutoff}`
+			: onDeltaBeta
+			? `|delta-beta| > ${s.deltaBetaCutoff}`
+			: `|log2(fold-change)| > ${s.foldChangeCutoff}`
+		/* Name the p the run actually thresholded, not the UI's pValueType. On a scan that setting
+		is inert -- its control is hidden and both p fields carry the one number the scan computed --
+		so it left every exported scan claiming an "adjusted p" it never had. */
+		const pCutoff = roundValueAuto(Math.pow(10, -s.pValue))
+		const pDesc = this.scan
+			? this.scan.backgroundCorrection
+				? `unadjusted p < ${pCutoff} (empirical, vs matched background; no multiple-testing adjustment)`
+				: `smoothed FDR < ${pCutoff}`
+			: `${s.pValueType} p < ${pCutoff}`
+		parts.push(`significance: ${pDesc}, ${effect}`)
 
 		return parts.join('; ')
 	}

@@ -9,6 +9,8 @@ import { run_R } from '@sjcrh/proteinpaint-r'
 import { formatElapsedTime } from '#shared'
 import { renderVolcano } from '../src/renderVolcano.ts'
 import { renderManhattanPoints } from '../src/renderManhattan.ts'
+import { permuteGroups } from '../src/utils/dmrPermute.ts'
+import serverconfig from '../src/serverconfig.js'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import {
@@ -241,12 +243,28 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	the sex chromosomes were excluded, which applies here as it does to an element class. */
 	const chromosomes = scanChromosomes(req, genome)
 
+	/* An empirical-null draw: same samples, same thresholds, group labels shuffled. Gated on
+	debugmode because a permuted scan is indistinguishable from a real one once it reaches the
+	volcano, and nothing downstream marks it. The shuffle is on the request's own value objects, so
+	whatever id shape the dataset uses passes through untouched and resolves exactly as it would
+	have. Group sizes are preserved, or the null would describe a different contrast. */
+	let g1values = groups[0].values
+	let g2values = groups[1].values
+	if (req.scan?.permutation) {
+		if (!serverconfig.debugmode) throw new Error('scan.permutation requires debugmode')
+		const seed = req.scan.permutation.seed
+		if (!Number.isFinite(seed)) throw new Error('scan.permutation.seed must be a finite number')
+		const p = permuteGroups(g1values, g2values, seed)
+		g1values = p.group1
+		g2values = p.group2
+	}
+
 	const { payload, cacheId } = await runDmrBatch(
 		{
 			genome: req.genome,
 			dslabel: req.dslabel,
-			group1: groups[0].values,
-			group2: groups[1].values,
+			group1: g1values,
+			group2: g2values,
 			scanChromosomes: chromosomes,
 			backgroundCorrection: !!req.scan?.backgroundCorrection,
 			// the genome-wide profile: the metric the methylome literature compares cohorts with
@@ -313,11 +331,17 @@ async function renderScanManhattan(
 		const p = r.original_p_value
 		// a q of 0 is the most significant thing there is and is parked at the cap
 		const mag = p > 0 ? -Math.log10(p) : Infinity
+		/* Which side of the line a DMR hangs off. Corrected, that is the sign of the excess over
+		matched background, the same quantity the volcano above puts on x and thresholds on -- with
+		the raw sign a region that gained less than its stratum drifted was drawn above the line as
+		a gain while the volcano beside it classified the same region as a loss. Falls back to the
+		raw delta-beta when the scan ran uncorrected, where excess is absent. */
+		const dir = r.excess ?? r.delta_beta
 		return {
 			chrom: r.chr,
 			pos: r.start,
-			y: r.delta_beta < 0 ? -mag : mag,
-			color: r.delta_beta < 0 ? HYPO_COLOR : HYPER_COLOR,
+			y: dir < 0 ? -mag : mag,
+			color: dir < 0 ? HYPO_COLOR : HYPER_COLOR,
 			start: r.start,
 			stop: r.stop,
 			delta_beta: r.delta_beta,

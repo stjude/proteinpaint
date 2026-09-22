@@ -467,9 +467,18 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		if (q2.dnaMethylation.regionAnalysis) {
 			const scanEntry = { key: DMR_SCAN_ELEMENT_TYPE, label: 'DMRs called de novo (genome scan)' }
 			/* scanOnly: the matrices stay configured for terms and the region view, but the picker
-			offers nothing else, so the client shows no class control at all and opens on the scan. */
+			offers nothing else, so the client opens on the scan.
+
+			offerWithScanOnly is the one way back in, per entry. It exists because the scan's fit
+			has no design matrix and rejects confounders, so the ONLY way to ask "does this survive
+			adjusting for sex / proliferation / purity" is to test a matrix through diffMeth.R.
+			A dataset that is scan-first still needs somewhere to send that question. Opting in one
+			derived class does not re-offer the cCRE classes that scanOnly was set to hide. */
 			if (q.dnaMethylation.scanOnly) {
-				q2.dnaMethylation.elementTypes = [scanEntry]
+				q2.dnaMethylation.elementTypes = [
+					...scanOnlyElementTypes(q2.dnaMethylation.elementTypes, q.dnaMethylation.elements),
+					scanEntry
+				]
 				q2.dnaMethylation.defaultElementType = DMR_SCAN_ELEMENT_TYPE
 			} else if (!q2.dnaMethylation.elementTypes) {
 				// a CpG-only dataset has nothing but the scan to start on
@@ -579,6 +588,17 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 }
 
 // allowedTermTypes[] is an unique list of term types from this dataset. allows plot to determine if term type specific feature is applicable for a ds
+/** Which element classes a scanOnly dataset still offers in the DM class picker: only those
+ * marked offerWithScanOnly. Exported for its spec, because the branch it guards decides whether a
+ * scan-first dataset has any way at all to ask a covariate-adjusted question -- the scan's own fit
+ * has no design matrix and rejects confounders, so the answer has to come from a matrix. */
+export function scanOnlyElementTypes(
+	elementTypes: { key: string; label?: string }[] | undefined,
+	declared: Record<string, { offerWithScanOnly?: boolean }> | undefined
+) {
+	return (elementTypes || []).filter(e => declared?.[e.key]?.offerWithScanOnly)
+}
+
 export function getDsAllowedTermTypes(ds) {
 	const typeSet = new Set()
 	for (const r of ds.cohort.termdb.termtypeByCohort) {

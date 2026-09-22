@@ -57,10 +57,17 @@ export type VolcanoRenderRequest = {
 	 * of M-values, a logit, so it orders elements correctly but its magnitude does not say how
 	 * much methylation changed. Delta-beta does, on the 0-1 scale the biology is discussed in.
 	 *
+	 * A background-corrected DMR scan plots 'excess' instead: the DMR's delta-beta less the mean
+	 * drift of matched background in its own stratum. On a cohort with a genome-wide shift that is
+	 * the only effect size the corrected p refers to, so plotting raw delta-beta against it put two
+	 * coordinate systems on one figure and made the cutoff gate the directions unequally -- at a
+	 * +0.09 drift a hyper row cleared |delta_beta| > 0.1 on an excess of +0.01 while a hypo row
+	 * needed an excess of -0.19 to clear the same bar.
+	 *
 	 * Whichever field is chosen, significanceThresholds.foldChangeCutoff is interpreted in THAT
 	 * field's units -- the caller sends the cutoff matching the axis it asked for. Otherwise the
 	 * threshold lines would sit at coordinates unrelated to what is classified significant. */
-	xField?: 'fold_change' | 'delta_beta'
+	xField?: 'fold_change' | 'delta_beta' | 'excess'
 	/** Recentre the x axis on the median effect size across all tested rows, so the origin is the
 	 * typical row rather than zero. Off by default.
 	 *

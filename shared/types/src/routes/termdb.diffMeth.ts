@@ -57,6 +57,16 @@ export type DiffMethRequest = {
 		lambda?: number
 		C?: number
 		fdrCutoff?: number
+		/** Re-run this scan with the group labels permuted, for an empirical null. Sample values are
+		 * reassigned between the two groups at random, group SIZES are preserved, and everything
+		 * else -- thresholds, correction, masks -- is identical, so the significant-row count that
+		 * comes back is a draw from the null of "this grouping means nothing". An FDR is
+		 * mean(null counts) / observed, over many seeds; see utils/dnaMeth/permutationFdr.mjs.
+		 *
+		 * Deterministic in the seed, so a draw can be re-run and compared. Requires
+		 * serverconfig.debugmode: it is an offline analysis facility, and a permuted scan returned
+		 * to an ordinary reader would look exactly like a real one. */
+		permutation?: { seed: number }
 	}
 	/** Term for confounding variable 1 (if present) */
 	tw?: any

@@ -5,6 +5,7 @@ import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { getGroupColors, toHex } from '../colors'
 import { DMRCATE_DEFAULTS } from '../settings/defaults'
+import { isExcessAxis } from '../settings/Settings'
 // import type { Volcano } from '../Volcano'
 
 export class VolcanoModel {
@@ -149,16 +150,26 @@ export class VolcanoModel {
 		of the field sent -- otherwise the server draws threshold lines that do not correspond to
 		what it classified. */
 		const useDeltaBeta = this.termType === tt.DNA_METHYLATION && this.settings.xAxis == 'delta_beta'
+		/* A background-corrected scan is plotted on the excess over matched background, not on raw
+		delta-beta. The corrected p answers "did this region move more than its stratum drifts", so
+		the effect size beside it has to be the same quantity: on a cohort drifting +0.09 the raw
+		cutoff let a hyper region in on an excess of +0.01 while demanding -0.19 of a hypo one, and
+		the up:down ratio then measured the gate rather than the biology. Sending the field here
+		moves the axis, the threshold lines, the direction counts and the significant-row selection
+		together, because the server reads all four off this one column. */
+		const xIsExcess = useDeltaBeta && isExcessAxis(this.settings)
 		return {
 			significanceThresholds: {
 				pValueCutoff: this.settings.pValue,
 				pValueType: this.settings.pValueType,
 				foldChangeCutoff: useDeltaBeta ? this.settings.deltaBetaCutoff : this.settings.foldChangeCutoff
 			},
-			...(useDeltaBeta ? { xField: 'delta_beta' as const } : {}),
-			// Tied to the delta-beta axis: the control that sets it is only offered for
-			// methylation, and centering a log2 fold-change axis is a different conversation.
-			...(useDeltaBeta && this.settings.centerDeltaBeta ? { centerX: true } : {}),
+			...(useDeltaBeta ? { xField: xIsExcess ? ('excess' as const) : ('delta_beta' as const) } : {}),
+			/* Tied to the delta-beta axis: the control that sets it is only offered for
+			methylation, and centering a log2 fold-change axis is a different conversation.
+			Never on top of the correction -- excess is already the drift subtracted per stratum,
+			and recentring it on its own median would subtract a shift that is no longer there. */
+			...(useDeltaBeta && this.settings.centerDeltaBeta && !xIsExcess ? { centerX: true } : {}),
 			pixelWidth: this.settings.width,
 			pixelHeight: this.settings.height,
 			colorSignificant: toHex(this.settings.defaultSignColor, 'red'),

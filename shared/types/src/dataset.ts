@@ -1510,6 +1510,13 @@ type Mds3Queries = {
 				label?: string
 				/** see promoter.excludeSampleNamesMatching */
 				excludeSampleNamesMatching?: string
+				/** Offer this entry in the class picker even when scanOnly is set. The escape hatch
+				 * exists because the scan's fit has no design matrix and rejects confounders, so a
+				 * covariate-adjusted question can only be asked of a matrix through diffMeth.R --
+				 * a scan-first dataset still needs somewhere to send it. Opting one derived class
+				 * back in does not re-offer the classes scanOnly was set to hide. Ignored when
+				 * scanOnly is absent, where every entry is offered anyway. */
+				offerWithScanOnly?: boolean
 				/** Restrict a mixed-class matrix to one element class, so several entries can be
 				 * served from ONE h5 rather than one file each. That is what makes cCRE
 				 * promoter-like (PLS) and the enhancer classes free to offer: their rows already
@@ -1545,7 +1552,8 @@ type Mds3Queries = {
 		/** Offer only the genome-wide DMR scan in the differential-methylation class picker: the
 		 * element matrices stay configured (they serve terms and the region view's fallback) but
 		 * are not offered as classes to test, and the analysis opens on the scan. Requires a matrix
-		 * the region analysis can run on. */
+		 * the region analysis can run on. An individual entry can opt back in with
+		 * elements[].offerWithScanOnly. */
 		scanOnly?: boolean
 	}
 	rnaseqGeneCount?: RnaseqGeneCount

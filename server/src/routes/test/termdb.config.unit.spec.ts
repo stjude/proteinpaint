@@ -1,7 +1,7 @@
 import tape from 'tape'
-import { getDsAllowedTermTypes, getLoneTermByType } from '../termdb.config.ts'
+import { getDsAllowedTermTypes, getLoneTermByType, scanOnlyElementTypes } from '../termdb.config.ts'
 import {
-	CATEGORICAL, 
+	CATEGORICAL,
 	FLOAT,
 	SURVIVAL,
 	TERM_COLLECTION,
@@ -408,5 +408,50 @@ tape('getLoneTermByType() - drops a lone term hidden from the requesting user', 
 tape('getLoneTermByType() - returns undefined when every lone term is hidden', function (test) {
 	const ds: any = { cohort: { termdb: { isTermVisible: () => false } } }
 	test.equal(getLoneTermByType({ query: {} }, ds, loneTermByType), undefined, 'Should not send an empty loneTermByType')
+	test.end()
+})
+
+/* A scanOnly dataset shows nothing but the genome scan, which is the right default -- the cCRE
+classes were hidden deliberately. But the scan's Rust fit has no design matrix and rejects
+confounders, so without an escape hatch such a dataset can never be asked "does this survive
+adjusting for sex / proliferation / purity". offerWithScanOnly is that hatch, and it has to let
+exactly the opted-in entries through and nothing else. */
+tape('scanOnlyElementTypes() - offers only the opted-in classes', function (test) {
+	const types = [
+		{ key: 'promoter', label: 'TSS windows' },
+		{ key: 'promoter_pls', label: 'PLS' },
+		{ key: 'enhancer_distal', label: 'dELS' },
+		{ key: 'eqtm_block', label: 'eQTM' },
+		{ key: 'dmr_block', label: 'DMR blocks, full span' },
+		{ key: 'dmr_block_called', label: 'DMR blocks, called only' }
+	]
+	const declared = {
+		promoter_pls: {},
+		enhancer_distal: {},
+		eqtm_block: {},
+		dmr_block: { offerWithScanOnly: true },
+		dmr_block_called: { offerWithScanOnly: true }
+	}
+	test.deepEqual(
+		scanOnlyElementTypes(types, declared).map(e => e.key),
+		['dmr_block', 'dmr_block_called'],
+		'the two covariate-testable block classes get through'
+	)
+	/* The point of scanOnly is that these stay hidden; opting one derived class back in must not
+	re-offer the ones the flag was set to suppress. */
+	test.equal(
+		scanOnlyElementTypes(types, declared).some(e => e.key == 'enhancer_distal' || e.key == 'eqtm_block'),
+		false,
+		'the cCRE and eQTM classes stay hidden'
+	)
+	// 'promoter' is synthesised into the picker and has no elements[] entry at all
+	test.equal(
+		scanOnlyElementTypes(types, declared).some(e => e.key == 'promoter'),
+		false,
+		'an entry with no elements[] config is not offered'
+	)
+	test.deepEqual(scanOnlyElementTypes(types, {}), [], 'nothing opted in means nothing but the scan')
+	test.deepEqual(scanOnlyElementTypes(undefined, declared), [], 'tolerates a dataset with no element types')
+	test.deepEqual(scanOnlyElementTypes(types, undefined), [], 'tolerates a dataset with no elements config')
 	test.end()
 })

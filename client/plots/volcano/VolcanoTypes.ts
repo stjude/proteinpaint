@@ -194,6 +194,10 @@ export type VolcanoViewData = {
 	 * plot. undefined when group names are unavailable; the view then falls back to the
 	 * role-based "Δβ (case − control)". */
 	deltaBetaAxisLabel?: string
+	/** Whether the x axis, the effect-size cutoff and the direction counts are the excess over
+	 * matched background rather than the raw delta-beta. True exactly when the scan ran corrected.
+	 * Read by the view so its hover rows name the same quantity the axis does. */
+	xIsExcess: boolean
 	/** Base64-encoded PNG of the full scatter, rendered by the `da` Rust binary. */
 	volcanoPng: string
 	/** Coordinate extents used by the server-drawn PNG. The view's scales and

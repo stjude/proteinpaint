@@ -494,7 +494,7 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 	const cell = (label: string) => row[cols.indexOf(label)]?.value
 	test.deepEqual(
 		cols,
-		['DMR', 'Gene(s)', 'Δβ', 'Peak Δβ', 'CpGs', 'Width (bp)', 'Excess Δβ', 'p vs matched background'],
+		['DMR', 'Gene(s)', 'Δβ', 'Peak Δβ', 'CpGs', 'Width (bp)', 'Excess Δβ', 'unadjusted p vs matched background'],
 		'scan columns, in order, with a single p column named for the correction'
 	)
 	test.equal(cell('DMR'), 'chr1:1000-2000', 'the row is labelled by its coordinate')
@@ -503,9 +503,9 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 	test.equal(cell('CpGs'), 14, 'CpG count under CpGs')
 	test.equal(cell('Width (bp)'), 1000, 'width under Width')
 	test.equal(cell('Excess Δβ'), -0.17, 'excess under Excess')
-	test.equal(cell('p vs matched background'), 0.012, 'the one p under the one p column')
+	test.equal(cell('unadjusted p vs matched background'), 0.012, 'the one p under the one p column')
 	test.ok(vm.viewData.singlePValue, 'a scan has one p per row')
-	test.equal(vm.viewData.pValueLabel, 'p vs matched background', 'and names it after the correction')
+	test.equal(vm.viewData.pValueLabel, 'unadjusted p vs matched background', 'and names it after the correction')
 	test.equal(vm.viewData.scan, scan, 'the scan summary is passed through for the view')
 	test.ok(vm.viewData.userActions.noShow.has('Confounding factors'), 'the scan offers no confounders')
 
@@ -522,6 +522,51 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 	test.ok(p.includes('scan: whole genome'), 'provenance names what was scanned')
 	test.ok(p.includes('background correction: yes'), 'and whether it was corrected')
 	test.ok(p.includes('min CpGs per DMR: 5'), 'and the CpG floor')
+	/* The p a scan reports is an empirical tail probability with no multiplicity adjustment, and
+	the row hands it to adjusted_p_value as well, so anything reading that slot gets the raw
+	number. The label and the provenance line both have to say so -- the pValueType setting is
+	inert on a scan (its control is hidden), and echoing it left every export claiming an
+	"adjusted p" the scan never computed. */
+	test.ok(p.includes('significance: unadjusted p < 0.05'), 'provenance calls the scan p unadjusted')
+	test.ok(p.includes('no multiple-testing adjustment'), 'and says so in as many words')
+	test.notOk(p.includes('significance: adjusted p'), 'never echoes the inert pValueType as the scan\u2019s p')
+
+	/* Corrected, the figure is drawn on the excess over matched background, so everything naming
+	or valuing the x axis has to say excess: the label, the provenance line and the cutoff's units.
+	A file that reports "|delta-beta| > 0.1" for a set gated on excess misstates the one number a
+	reader needs to reproduce it. */
+	test.ok(vm.viewData.xIsExcess, 'a corrected scan is plotted on the excess')
+	test.ok(
+		vm.viewData.deltaBetaAxisLabel?.startsWith('Excess Δβ ('),
+		'the axis names the excess, not the raw delta-beta'
+	)
+	test.ok(p.includes('x axis: excess delta-beta vs matched background'), 'provenance names the corrected axis')
+	test.ok(p.includes('|excess delta-beta| > 0.1'), 'and puts the cutoff in excess units')
+
+	/* The case the whole path exists for: on a cohort drifting upward a region can gain in raw
+	terms while having gained LESS than its stratum drifted. The server classifies it down off the
+	excess, so the overlay must colour it down too -- colouring from the raw sign painted a "down"
+	PNG dot with the "up" colour. */
+	const drifted = { ...scanDot, delta_beta: 0.04, excess: -0.17 }
+	const vmDrift = new VolcanoViewModel(
+		{ ...mockConfig, termType: 'dnaMethylation' } as any,
+		{ ...mockResponse, scan, data: { ...mockResponse.data, dots: [drifted] as any } } as any,
+		settings as any
+	)
+	const vmPlain = new VolcanoViewModel(
+		{ ...mockConfig, termType: 'dnaMethylation' } as any,
+		{
+			...mockResponse,
+			scan: { ...scan, backgroundCorrection: undefined },
+			data: { ...mockResponse.data, dots: [drifted] as any }
+		} as any,
+		{ ...settings, backgroundCorrection: false } as any
+	)
+	test.notEqual(
+		vmDrift.viewData.pointData[0].color,
+		vmPlain.viewData.pointData[0].color,
+		'a raw gain that is a loss against background is coloured down, not up'
+	)
 
 	// without the correction the p is the smoothed FDR and there is no excess column
 	const plain = new VolcanoViewModel(
@@ -535,6 +580,13 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 		{ ...settings, backgroundCorrection: false } as any
 	)
 	test.equal(plain.viewData.pValueLabel, 'smoothed FDR', 'uncorrected, the p is DMRcate’s smoothed FDR')
+	test.notOk(plain.viewData.xIsExcess, 'uncorrected, the axis stays on the raw delta-beta')
+	test.ok(
+		plain.viewData.provenance.includes('significance: smoothed FDR < 0.05'),
+		'uncorrected, provenance names DMRcate\u2019s smoothed FDR rather than a p-value type'
+	)
+	test.ok(plain.viewData.deltaBetaAxisLabel?.startsWith('Δβ ('), 'and the axis label says so')
+	test.ok(plain.viewData.provenance.includes('|delta-beta| > 0.1'), 'and the cutoff is in raw units')
 	test.notOk(
 		plain.pValueTable.columns.some(c => c.label == 'Excess Δβ'),
 		'and there is no excess column'

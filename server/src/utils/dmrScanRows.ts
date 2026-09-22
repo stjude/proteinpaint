@@ -47,7 +47,11 @@ export function dmrScanToRows(
 			/* The peak per-CpG delta-beta. Same sign as the mean by construction (a DMR is one
 			direction), so colouring and ranking by it agree with the axis. */
 			fold_change: d.maxdiff,
-			// one p per DMR: DMRcate's smoothed FDR, or the empirical p against matched background
+			/* One p per DMR: DMRcate's smoothed FDR, or the empirical p against matched background.
+			Neither is multiplicity-adjusted, and the same number goes into both fields because the
+			renderer picks one by the caller's pValueType and a scan has only the one to give. The
+			duplicate is a wiring shim, NOT a claim that the second is adjusted -- the volcano names
+			it "unadjusted p vs matched background" for exactly that reason (setPValueLabel). */
 			original_p_value: p,
 			adjusted_p_value: p,
 			no_cpgs: d.no_cpgs,
@@ -104,7 +108,12 @@ export function dmrScanToRows(
 	const genes = new Set<string>()
 	let regions = 0
 	for (const d of kept) {
-		if (d.direction != 'hypo' || !d.inGeneBody) continue
+		/* Corrected, "lost methylation" means lost it relative to what a region like this drifts,
+		not relative to zero: on a cohort gaining +0.09 genome-wide, d.direction calls a region that
+		gained +0.02 a gain while its excess of -0.07 is the loss the expression follow-up is asking
+		about. Uncorrected there is no excess and the raw direction is the only reading. */
+		const isHypo = payload.backgroundCorrection ? (d.excess ?? 0) < 0 : d.direction == 'hypo'
+		if (!isHypo || !d.inGeneBody) continue
 		if (payload.backgroundCorrection && !(d.bgP != null && d.bgP < 0.05)) continue
 		regions++
 		/* bodyGenes, not genes: genes also lists promoter-only neighbours of an in-body region and is

@@ -331,7 +331,10 @@ export class VolcanoPlotView {
 			/* Prefer the group-named form built by the view model ("Δβ (NSD2 Higher − NSD2 Lower)"):
 			case/control are slot names, so the role-based wording does not say which direction a
 			positive value points. Fall back to it only when the names are unavailable. */
-			this.volcanoDom.xAxisLabel.text(this.viewData.deltaBetaAxisLabel || 'Δβ (case − control)')
+			this.volcanoDom.xAxisLabel.text(
+				this.viewData.deltaBetaAxisLabel ||
+					(this.viewData.xIsExcess ? 'Excess Δβ (case − control)' : 'Δβ (case − control)')
+			)
 		} else {
 			this.volcanoDom.xAxisLabel.text(null)
 			this.setSvgSubscriptLabel(this.volcanoDom.xAxisLabel, 'log', '2', '(fold-change)')
@@ -808,10 +811,24 @@ export class VolcanoPlotView {
 		return this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
 	}
 
+	/** The effect size the figure is drawn on, named and valued together so a header can never
+	 * sit over a different number than the cell under it. Corrected, that is the excess over
+	 * matched background -- the raw delta-beta is still in the p-value table, but it is not what
+	 * the axis, the threshold or the direction counts used. */
+	private get effectLabel() {
+		if (this.viewData.xIsExcess) return 'Excess Δβ'
+		return this.onDeltaBeta ? 'Δβ' : 'log₂(FC)'
+	}
+
+	private effectValue(d: DataPointEntry) {
+		if (this.viewData.xIsExcess) return (d as any).excess
+		return this.onDeltaBeta ? (d as any).delta_beta : d.fold_change
+	}
+
 	private buildMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
 		const isDM = this.termType === tt.DNA_METHYLATION
 		const isDAP = this.termType === tt.PROTEOME_DAP
-		const effectLabel = this.onDeltaBeta ? 'Δβ' : 'log₂(FC)'
+		const effectLabel = this.effectLabel
 		const pValueType = this.settings.pValueType
 		// a single p (DAP's FDR, a scan's p) lives in original_p_value whatever the p-value type says
 		const { pValueLabel, singlePValue } = this.viewData
@@ -836,7 +853,7 @@ export class VolcanoPlotView {
 			: [{ label: 'Gene' }, { label: effectLabel, sortable: true }, { label: pLabel, sortable: true }]
 		const rows = dots.map(d => {
 			// must match effectLabel above, or the column header names one number and the cell holds another
-			const fc = { value: roundValueAuto(this.onDeltaBeta ? (d as any).delta_beta : d.fold_change) }
+			const fc = { value: roundValueAuto(this.effectValue(d)) }
 			const pval = { value: roundValueAuto(d[pField]) }
 			if (isDM) {
 				return [{ value: formatPromoterLabel(d as any) }, { value: d.gene_name || '' }, fc, pval]
@@ -918,8 +935,13 @@ export class VolcanoPlotView {
 		} else {
 			addTooltipRow(table, 'Gene name', d.gene_name)
 		}
-		// report the effect size the plot is actually drawing -- see the onDeltaBeta getter
-		if (this.onDeltaBeta) {
+		/* Report the effect size the plot is actually drawing -- see the effectLabel getter. On a
+		corrected scan the raw Δβ is shown underneath it, because the excess alone does not say how
+		much methylation moved, only how much more than background it moved. */
+		if (this.viewData.xIsExcess) {
+			addTooltipRow(table, 'Excess Δβ', roundValueAuto((d as any).excess))
+			addTooltipRow(table, 'Δβ', roundValueAuto((d as any).delta_beta))
+		} else if (this.onDeltaBeta) {
 			addTooltipRow(table, 'Δβ', roundValueAuto((d as any).delta_beta))
 		} else {
 			addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))

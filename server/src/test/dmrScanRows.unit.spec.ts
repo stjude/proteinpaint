@@ -161,6 +161,77 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 	t.end()
 })
 
+tape('corrected, gene-body loss is loss against background, not against zero', t => {
+	/* The reason this is not just d.direction: on a cohort gaining methylation genome-wide, a gene
+	body that gained LESS than its stratum drifted has lost methylation relative to everything
+	around it, and that is the region the expression follow-up is asking about. Reading the raw
+	sign put it in the gain pile and dropped it from the set. The converse is equally wrong -- a
+	raw loss smaller than a drifting stratum's own loss is not a loss beyond background. */
+	const drifted = payload(
+		[
+			// raw hyper (+0.02) but the stratum drifted +0.09, so it LOST 0.07 against background
+			dmr({
+				start: 1000,
+				stop: 2000,
+				direction: 'hyper',
+				meandiff: 0.02,
+				bgP: 0.01,
+				excess: -0.07,
+				inGeneBody: true,
+				bodyGenes: ['LOST_VS_BACKGROUND'],
+				genes: ['LOST_VS_BACKGROUND']
+			}),
+			// raw hypo (-0.2) but it gained against a stratum that drifted further down
+			dmr({
+				start: 3000,
+				stop: 4000,
+				direction: 'hypo',
+				meandiff: -0.2,
+				bgP: 0.01,
+				excess: 0.05,
+				inGeneBody: true,
+				bodyGenes: ['GAINED_VS_BACKGROUND'],
+				genes: ['GAINED_VS_BACKGROUND']
+			})
+		],
+		{ backgroundCorrection: { windows: 2000, scored: 2, unscored: 0, significant: 2, matchedOn: ['width'] } }
+	)
+	t.deepEqual(
+		dmrScanToRows(drifted, { ...opts, backgroundCorrection: true }).scan.geneBodyLoss,
+		{ regions: 1, genes: ['LOST_VS_BACKGROUND'] },
+		'the excess sign decides, so the raw gain is the loss and the raw loss is not'
+	)
+	/* Uncorrected there is no background to be beyond, so the raw direction is the only reading
+	and the set is exactly the other one. An uncorrected run carries no excess and no bgP at all,
+	so the fixture drops both rather than leaving them for the gate to ignore. */
+	const raw = payload([
+		dmr({
+			start: 1000,
+			stop: 2000,
+			direction: 'hyper',
+			meandiff: 0.02,
+			inGeneBody: true,
+			bodyGenes: ['LOST_VS_BACKGROUND'],
+			genes: ['LOST_VS_BACKGROUND']
+		}),
+		dmr({
+			start: 3000,
+			stop: 4000,
+			direction: 'hypo',
+			meandiff: -0.2,
+			inGeneBody: true,
+			bodyGenes: ['GAINED_VS_BACKGROUND'],
+			genes: ['GAINED_VS_BACKGROUND']
+		})
+	])
+	t.deepEqual(
+		dmrScanToRows(raw, opts).scan.geneBodyLoss,
+		{ regions: 1, genes: ['GAINED_VS_BACKGROUND'] },
+		'uncorrected, the raw direction still decides'
+	)
+	t.end()
+})
+
 tape('summarizeProfile reports how much of the measured methylome moved', t => {
 	/* The number a reader quotes from the profile figure. It exists because a DMR count does not
 	answer it: a cohort that drifted a little everywhere produces a huge DMR count, and the
