@@ -445,7 +445,12 @@ def nhood_enrichment(h5ad, ids, k=6, perms=1000, seed=0):
     P = np.empty((int(perms), C, C))
     for i in range(int(perms)):
         P[i] = count(code[rng.permutation(n)])            # same cells, shuffled types
-    z = (observed - P.mean(axis=0)) / P.std(axis=0)       # squidpy: population std
+    # a pair whose count never varies across permutations has std 0 (tiny or
+    # lopsided selections); that yields nan/inf which becomes null below, so
+    # numpy's divide warning is silenced — run_python treats ANY stderr text as
+    # a failure, and this is not one
+    with np.errstate(divide="ignore", invalid="ignore"):
+        z = (observed - P.mean(axis=0)) / P.std(axis=0)   # squidpy: population std
     zl = [[float(v) if np.isfinite(v) else None for v in row] for row in z]  # JSON has no NaN
     return {
         "types": cats,

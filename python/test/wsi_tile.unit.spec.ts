@@ -125,3 +125,20 @@ tape('nhood rejects a selection with fewer than two cell types', async t => {
 	t.ok(String(out.error).includes('at least 2 cell types'), 'error names the requirement')
 	t.end()
 })
+
+tape('nhood reports a zero-variance pair as null without failing', async t => {
+	// two cells of different types: k drops to 1, every permutation swaps the
+	// two labels and the edge counts never change, so std is 0 for every pair
+	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
+	const byType: { [t: string]: string } = {}
+	for (const [id, type] of Object.entries(ann.cells) as [string, string][]) if (!byType[type]) byType[type] = id
+	const ids = [byType['Tumor'], byType['B cells']]
+	const out = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'nhood', h5ad, ids, perms: 10 })))
+	t.notOk(out.error, 'no error (a numpy divide warning must not leak to stderr)')
+	t.equal(out.k, 1, 'k capped at cells - 1')
+	t.ok(
+		out.zscore.flat().every((z: any) => z === null),
+		'every z-score is null'
+	)
+	t.end()
+})
