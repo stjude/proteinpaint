@@ -170,6 +170,46 @@ tape('renderNhoodHeatmap draws one cell per type pair', test => {
 	test.notEqual(fills[0], fills[1], 'enriched and depleted cells get different colors')
 	test.equal(fills[2], '#f0efec', 'null z-score gets the neutral fill')
 	test.equal(panel.querySelectorAll('.sjpp-wsi-nhood-cell title').length, 4, 'every cell has a hover tooltip')
+	test.equal(
+		panel.querySelectorAll('[data-testid="sjpp-wsi-nhood-controls"]').length,
+		0,
+		'no controls without a rerun callback'
+	)
+	holder.remove()
+	test.end()
+})
+
+tape('renderNhoodHeatmap k/permutation controls rerun with clamped values', test => {
+	const holder = select(document.body).append('div')
+	const calls: [number, number][] = []
+	const result = {
+		types: ['A', 'B'],
+		count: [
+			[1, 2],
+			[2, 1]
+		],
+		zscore: [
+			[0.5, -0.5],
+			[-0.5, 0.5]
+		],
+		cells: 4,
+		skipped: 0,
+		k: 6,
+		perms: 50
+	}
+	renderNhoodHeatmap(holder, result, (k, perms) => calls.push([k, perms]))
+	const panel = holder.node() as HTMLElement
+	const inputs = [...panel.querySelectorAll('[data-testid="sjpp-wsi-nhood-controls"] input')] as HTMLInputElement[]
+	test.equal(inputs.length, 2, 'k and permutations inputs')
+	test.deepEqual([inputs[0].value, inputs[1].value], ['6', '50'], 'prefilled with the values that ran')
+	inputs[0].value = '10'
+	inputs[1].value = '200'
+	;(panel.querySelector('[data-testid="sjpp-wsi-nhood-rerun"]') as HTMLButtonElement).click()
+	test.deepEqual(calls, [[10, 200]], 'Rerun passes the entered k and permutations')
+	inputs[0].value = '99'
+	inputs[1].value = '3'
+	;(panel.querySelector('[data-testid="sjpp-wsi-nhood-rerun"]') as HTMLButtonElement).click()
+	test.deepEqual(calls[1], [30, 10], 'out-of-range entries are clamped to the route bounds')
 	holder.remove()
 	test.end()
 })

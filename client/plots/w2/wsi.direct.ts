@@ -587,7 +587,7 @@ export async function init(
 			// analysis is over cell types.
 			const runNhood =
 				opts.spatialData && cellTypes
-					? async (ids: string[]) => {
+					? async (ids: string[], k = 6, perms = 1000) => {
 							lassoMenu.hide()
 							resultsDiv.selectAll('*').remove() // one panel at a time
 							const panel = resultsDiv
@@ -595,15 +595,18 @@ export async function init(
 								.attr('data-testid', 'sjpp-wsi-nhood')
 								.style('margin', '8px')
 								.style('font', '12px system-ui')
-							panel.append('div').text(`Neighborhood enrichment: running on ${ids.length} cells …`) // 1000 permutations take a moment
+							panel
+								.append('div')
+								.text(`Neighborhood enrichment: running on ${ids.length} cells, k=${k}, ${perms} permutations …`) // permutations take a moment
 							try {
 								const r = await dofetch3(`wsitiles/nhood?${sq}`, {
 									method: 'POST', // explicit: dofetch3's GET path would URL-encode the id list (and re-encode it as strings past the URL length limit)
-									body: { file: opts.spatialData, ids }
+									body: { file: opts.spatialData, ids, k, perms }
 								})
 								if (!r || r.error) throw new Error(r?.error || 'failed to compute neighborhood enrichment')
 								panel.selectAll('*').remove()
-								renderNhoodHeatmap(panel, r)
+								// the panel's k/permutation controls rerun on the SAME selection
+								renderNhoodHeatmap(panel, r, (k2, p2) => runNhood!(ids, k2, p2))
 							} catch (e: any) {
 								panel.selectAll('*').remove()
 								sayerror(panel, `Neighborhood enrichment error: ${e.message || e}`) // the lasso and viewer live on
@@ -890,7 +893,12 @@ export type NhoodResult = {
  ±max|z|, the value printed in each cell, a native tooltip with the edge
  count, a legend bar, and a close button. Types are rows (the cell) and
  columns (its neighbour). (exported for tests) */
-export function renderNhoodHeatmap(holder: any, r: NhoodResult) {
+export function renderNhoodHeatmap(
+	holder: any,
+	r: NhoodResult,
+	/** rerun the analysis with new k / permutations; absent = no controls */
+	rerun?: (k: number, perms: number) => void
+) {
 	const C = r.types.length // matrix size
 	let m = 1 // color domain half-width: the largest finite |z|, at least 1
 	for (const row of r.zscore) for (const z of row) if (z != null && Math.abs(z) > m) m = Math.abs(z)
@@ -908,6 +916,32 @@ export function renderNhoodHeatmap(holder: any, r: NhoodResult) {
 			`Neighborhood enrichment — ${r.cells} cells, ${r.k} nearest neighbours, ${r.perms} permutations` +
 				(r.skipped ? `, ${r.skipped} unannotated cells skipped` : '')
 		)
+	if (rerun) {
+		// k and permutation controls, prefilled with the values that ran; bounds
+		// mirror the route's clamps. Native number inputs, no widget library.
+		const ctl = head.append('span').attr('data-testid', 'sjpp-wsi-nhood-controls').style('opacity', 0.85)
+		const numInput = (label: string, value: number, min: number, max: number, title: string) => {
+			ctl.append('label').attr('title', title).style('margin-left', '6px').text(`${label} `)
+			return ctl
+				.append('input')
+				.attr('type', 'number')
+				.attr('min', min)
+				.attr('max', max)
+				.attr('step', 1)
+				.style('width', '5em')
+				.property('value', value)
+		}
+		const kIn = numInput('k', r.k, 1, 30, 'nearest neighbours per cell')
+		const pIn = numInput('permutations', r.perms, 10, 5000, 'random relabellings for the null distribution')
+		const clamp = (el: any, lo: number, hi: number) =>
+			Math.min(hi, Math.max(lo, Math.round(Number(el.property('value')) || lo)))
+		ctl
+			.append('button')
+			.attr('data-testid', 'sjpp-wsi-nhood-rerun')
+			.style('margin-left', '6px')
+			.text('Rerun')
+			.on('click', () => rerun(clamp(kIn, 1, 30), clamp(pIn, 10, 5000)))
+	}
 	head
 		.append('span')
 		.attr('role', 'button')
