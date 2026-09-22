@@ -103,6 +103,14 @@ export default function (): Mds3 {
 				allowedTermTypes: ['geneVariant'],
 				displaySampleIds: () => true, // allow to display sample-level data
 
+				/* the hg38-test gene db is a stub of ~11 genes, while the expression matrix of this
+				ds carries the real gene universe (topVariablyExpressedGenes answers ISG15, MXRA8, ...).
+				Without this, every one of those genes would be rejected as unknown to the genome before
+				its data is read -- see geneRefValidation.ts, which validates against the gene db.
+				geneVariant and isoformExpression stay validated: their fixtures are genes/isoforms that
+				the stub gene db does have */
+				skipGeneNameValidation: ['geneExpression'],
+
 				timeUnit: 'years',
 
 				ageEndOffset: 0.00274, // number of years to offset ending age of patients

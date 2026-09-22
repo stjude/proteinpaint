@@ -1973,6 +1973,12 @@ export type Termdb = {
 	}
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
+	/** Exempts this dataset from the request-level gene/isoform name check that rejects a name
+	 * the genome gene db does not know (see server/src/geneRefValidation.ts). true exempts every
+	 * checked term type; an array exempts the named ones. For a dataset whose data declares names
+	 * of its own, e.g. a single cell store built from a gene panel, or a matrix whose rows are not
+	 * confined to the gene db */
+	skipGeneNameValidation?: boolean | string[]
 	/** filter samples by supplied filter(s). When no filter is supplied, returns undefined
 	 * unless returnAllSamples is true, in which case it returns the full set
 	 * of cohort sample ids (for callers like grin2 that must enumerate the cohort explicitly). */
