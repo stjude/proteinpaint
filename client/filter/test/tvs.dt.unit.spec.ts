@@ -17,6 +17,7 @@ test sections:
 	- getDtTermValues: frontend vocab keeps an unqueryable stale tally
 	- getDtTermValues: frontend vocab without a matching term
 	- get_pill_label: mname values
+	- get_pill_label: maf filter tag
 */
 
 tape('\n', test => {
@@ -270,7 +271,11 @@ tape('get_pill_label: mname values', test => {
 			genotype: 'variant',
 			values: [{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }]
 		}
-		test.deepEqual(handler.get_pill_label(tvs), { txt: 'G12D' }, 'single mname value should show its label')
+		test.deepEqual(
+			handler.get_pill_label(tvs),
+			{ txt: 'G12D', grade_type: '' },
+			'single mname value should show its label'
+		)
 	}
 	{
 		const tvs = {
@@ -281,7 +286,11 @@ tape('get_pill_label: mname values', test => {
 				{ key: 'M', label: 'G12V', value: 'G12V', mname: 'G12V' }
 			]
 		}
-		test.deepEqual(handler.get_pill_label(tvs), { txt: 'Mutated' }, 'multiple values should show Mutated for snvindel')
+		test.deepEqual(
+			handler.get_pill_label(tvs),
+			{ txt: 'Mutated', grade_type: '' },
+			'multiple values should show Mutated for snvindel'
+		)
 	}
 	{
 		const tvs = {
@@ -289,7 +298,60 @@ tape('get_pill_label: mname values', test => {
 			genotype: 'wt',
 			values: []
 		}
-		test.deepEqual(handler.get_pill_label(tvs), { txt: 'Wildtype' }, 'wildtype genotype should show Wildtype')
+		test.deepEqual(
+			handler.get_pill_label(tvs),
+			{ txt: 'Wildtype', grade_type: '' },
+			'wildtype genotype should show Wildtype'
+		)
+	}
+	test.end()
+})
+
+tape('get_pill_label: maf filter tag', test => {
+	// the ranges of a maf filter tvs are not shown, only that one is in use
+	const mafFilter = (lst: any[]) => ({ type: 'tvslst', in: true, join: '', lst })
+	const mafTvs = {
+		type: 'tvs',
+		tvs: {
+			term: { id: 'tumor_DNA', type: 'float', mafFilterMode: 'maf' },
+			ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }]
+		}
+	}
+	const getTvs = (genotype: string) => {
+		return {
+			term: { dt: 1, type: 'dtsnvindel' },
+			genotype,
+			values: genotype == 'variant' ? [{ key: 'M', label: 'MISSENSE' }] : []
+		}
+	}
+	{
+		const tvs: any = getTvs('variant')
+		tvs.mafFilter = mafFilter([mafTvs])
+		const label = handler.get_pill_label(tvs)
+		test.equal(label.grade_type, 'MAF', 'should tag a variant tvs that carries a maf filter')
+		test.equal(label.txt, 'MISSENSE', 'should leave the label text unchanged by the tag')
+	}
+	{
+		// fillMenu() seeds the menu with the ds default, an empty tvslst that filters nothing
+		const tvs: any = getTvs('variant')
+		tvs.mafFilter = mafFilter([])
+		test.equal(handler.get_pill_label(tvs).grade_type, '', 'should not tag an empty maf filter')
+	}
+	{
+		const tvs: any = getTvs('variant')
+		test.equal(handler.get_pill_label(tvs).grade_type, '', 'should not tag a tvs without a maf filter')
+	}
+	{
+		// the variant config only offers the maf filter for the variant genotype, and
+		// mayFilterByMaf() is only applied there, so a stale filter must not be tagged
+		const tvs: any = getTvs('wt')
+		tvs.mafFilter = mafFilter([mafTvs])
+		test.equal(handler.get_pill_label(tvs).grade_type, '', 'should not tag a wildtype tvs')
+	}
+	{
+		const tvs: any = getTvs('nt')
+		tvs.mafFilter = mafFilter([mafTvs])
+		test.equal(handler.get_pill_label(tvs).grade_type, '', 'should not tag a not-tested tvs')
 	}
 	test.end()
 })
