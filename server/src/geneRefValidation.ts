@@ -108,7 +108,9 @@ undefined otherwise. Never throws: a bug in the walk must not break a request th
 of the server would have served, so an internal error fails open and is logged. */
 export function mayValidateRequestGeneRefs(req: any, genome: any, ds: any): string | undefined {
 	try {
-		if (!genome?.genedb) return // nothing to validate against
+		/* the in-memory name maps are what makes this check free of sqlite; a genome with no
+		gene db, or one whose lookups were not built, has nothing to validate against */
+		if (!genome?.genedb?.mapByName) return
 		const endpoint = req.path?.split('/').filter(Boolean).pop()
 		if (endpoint && skippedEndpoints.has(endpoint)) return
 		const refs = collectGeneRefs(req.query, getSkippedTermTypes(ds))
@@ -216,58 +218,48 @@ function collectGeneVariant(term: any, add: (kind: RefKind, value: any) => void)
 	gene db lookups
 ******************************************/
 
-/* k: `${kind}|${name}`, v: whether the genome knows it. Both outcomes are cached: a client
-that repeats a bad name must not repeat the db lookups either. Per genome, since the gene db
-is per genome, and dropped with the genome object. */
-const cacheByGenome = new WeakMap<object, Map<string, boolean>>()
-/** caps the cache of a long-running server against junk names; the real gene space of a
- * genome is well under this */
-const maxCacheEntries = 200000
+/* Every lookup below is a Map hit on the tables that initGeneDbLookups() loaded at server
+init (see genedbLookups.ts). Deliberately no sqlite and no memoizing:
 
-function cached(genome: any, kind: RefKind, value: string, compute: () => boolean): boolean {
-	let cache = cacheByGenome.get(genome)
-	if (!cache) {
-		cache = new Map()
-		cacheByGenome.set(genome, cache)
-	}
-	const key = `${kind}|${value}`
-	const hit = cache.get(key)
-	if (hit !== undefined) return hit
-	const result = compute()
-	if (cache.size >= maxCacheEntries) cache.clear()
-	cache.set(key, result)
-	return result
+- better-sqlite3 is synchronous, so a query per name on a request naming hundreds of genes
+  would block the event loop for the whole process, on every request
+- a cache keyed on what a client sent is unbounded by construction -- an endless stream of
+  made-up names would grow it forever -- and buys nothing over a Map hit
+
+The maps are the reason mayValidateRequestGeneRefs() is cheap enough to run on every request.
+*/
+
+const hasLowerCase = /[a-z]/
+/** matches the `collate nocase` of the columns these maps were built from; keys are stored
+ * uppercased, and a value with no lowercase letter is used as-is (see genedbLookups.ts) */
+function upper(value: string): string {
+	return hasLowerCase.test(value) ? value.toUpperCase() : value
 }
 
-/* Does the genome's gene db know this gene? Matches what the gene queries downstream accept:
+/* Does the genome's gene db know this gene? Accepts what the gene queries downstream accept:
 symbol, isoform accession, alias (which is also how an ENSG accession resolves on hg38, and
 how gdc's getter maps a symbol to ENSG), and an ENSG that only the gene2canonicalisoform
 table knows. See getResult() in gene.js, which resolves the same set. */
 export function isKnownGeneName(genome: any, name: string): boolean {
-	return cached(genome, 'gene', name, () => {
-		if (genome.genomicNameRegexp.test(name)) return false // not a name this server ever queries with
-		const db = genome.genedb
-		if (db.getnamebynameorisoform?.get(name, name)) return true
-		if (db.getNameByAlias?.get(name)) return true
-		const upper = name.toUpperCase()
-		if (upper != name && db.getNameByAlias?.get(upper)) return true
-		if (db.get_gene2canonicalisoform?.get(name)?.isoform) return true
-		const unversioned = stripAccessionVersion(name)
-		if (unversioned != name) return isKnownGeneName(genome, unversioned)
-		return false
-	})
+	if (genome.genomicNameRegexp.test(name)) return false // not a name this server ever queries with
+	const db = genome.genedb
+	const key = upper(name)
+	if (db.mapByName.has(key)) return true
+	if (db.mapByIsoform.has(key)) return true
+	if (db.mapByAlias?.has(key)) return true
+	if (db.mapCanonicalIsoformByEnsg?.has(key)) return true
+	const unversioned = stripAccessionVersion(name)
+	if (unversioned != name) return isKnownGeneName(genome, unversioned)
+	return false
 }
 
 /** Does the genome's gene db know this isoform accession? */
 export function isKnownIsoform(genome: any, accession: string): boolean {
-	return cached(genome, 'isoform', accession, () => {
-		if (genome.genomicNameRegexp.test(accession)) return false
-		const db = genome.genedb
-		if (db.getnamebyisoform?.get(accession)) return true
-		const unversioned = stripAccessionVersion(accession)
-		if (unversioned != accession) return isKnownIsoform(genome, unversioned)
-		return false
-	})
+	if (genome.genomicNameRegexp.test(accession)) return false
+	if (genome.genedb.mapByIsoform.has(upper(accession))) return true
+	const unversioned = stripAccessionVersion(accession)
+	if (unversioned != accession) return isKnownIsoform(genome, unversioned)
+	return false
 }
 
 /* ENSG00000141510.16 -> ENSG00000141510, NM_000546.6 -> NM_000546. Gene db rows carry no

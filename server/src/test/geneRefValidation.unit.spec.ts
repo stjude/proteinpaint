@@ -1,13 +1,15 @@
 /********************************************
 Unit tests for the gene/isoform validation middleware (server/src/geneRefValidation.ts)
 
-Hardcodes the minimal gene db the lookups read, as a stub with the same prepared-statement
-shape initGenomesDs.js builds. Values follow the real hg38-test genedb: TP53 with an NM_
-and an ENST isoform, 'p53' as an alias, and an ENSG accession.
+Hardcodes the minimal gene db the lookups read, as the name maps initGeneDbLookups()
+builds (see genedbLookups.ts). Values follow the real hg38-test genedb: TP53 with an NM_
+and an ENST isoform, 'p53' as an alias, and an ENSG accession. The stub also carries a
+sqlite connection that throws, so that a lookup reaching for sql fails the test rather
+than silently blocking the event loop in production.
 
 Covered: the term types and contexts the middleware reports, the gene db lookups
-(symbol/isoform/alias/ENSG/version suffix), the per-genome cache, and the middleware's
-skips (no gene db, skipped route, dataset opt-out).
+(symbol/isoform/alias/ENSG/version suffix, case insensitivity), and the middleware's
+skips (no name maps, skipped route, dataset opt-out).
 
 Run with:
   cd proteinpaint/server && npx tsx --conditions=sjpp/dev src/test/geneRefValidation.unit.spec.ts
@@ -17,51 +19,37 @@ or run the whole unit suite (as CI does):
 import tape from 'tape'
 import { mayValidateRequestGeneRefs, collectGeneRefs, isKnownGeneName, isKnownIsoform } from '../geneRefValidation.ts'
 
-const genes = new Set(['TP53', 'AKT1', 'ENSG00000258430'])
-const isoforms = new Set(['NM_000546', 'ENST00000269305'])
-const aliases = new Map([
-	['p53', 'TP53'],
-	['ENSG00000141510', 'TP53']
-])
-const canonicalIsoformByEnsg = new Map([['ENSG00000012048', 'ENST00000357654']])
-
-/** a genome stub of the shape initGenomesDs.js builds, counting the lookups so the cache
- * can be tested. Each test gets its own, since the cache is keyed on the genome object */
+/** the maps initGeneDbLookups() builds, keyed uppercase, for: TP53 (NM_000546, ENST00000269305),
+ * AKT1, the gene-named accession ENSG00000258430, the aliases p53 and ENSG00000141510, and an ENSG
+ * known only to gene2canonicalisoform */
 function makeGenome() {
-	const calls = { count: 0 }
-	const bump = () => calls.count++
 	const genome: any = {
 		genomicNameRegexp: /[^a-zA-Z0-9.:_-]/, // default from initGenomesDs.js
 		genedb: {
-			getnamebynameorisoform: {
-				get: (name: string, isoform: string) => {
-					bump()
-					return genes.has(name) || isoforms.has(isoform) ? { name } : undefined
+			// any lookup that reaches for sqlite blocks the event loop, and must not happen here
+			db: {
+				prepare: () => {
+					throw new Error('the name lookups must not query sqlite')
 				}
 			},
-			getnamebyisoform: {
-				get: (isoform: string) => {
-					bump()
-					return isoforms.has(isoform) ? { name: 'TP53' } : undefined
-				}
-			},
-			getNameByAlias: {
-				get: (alias: string) => {
-					bump()
-					const name = aliases.get(alias)
-					return name ? { name } : undefined
-				}
-			},
-			get_gene2canonicalisoform: {
-				get: (ensg: string) => {
-					bump()
-					const isoform = canonicalIsoformByEnsg.get(ensg)
-					return isoform ? { isoform } : undefined
-				}
-			}
+			mapByName: new Map([
+				['TP53', 'TP53'],
+				['AKT1', 'AKT1'],
+				['ENSG00000258430', 'ENSG00000258430']
+			]),
+			mapByIsoform: new Map([
+				['NM_000546', 'TP53'],
+				['ENST00000269305', 'TP53']
+			]),
+			mapByAlias: new Map([
+				['P53', ['TP53']],
+				['ENSG00000141510', ['TP53']]
+			]),
+			mapAliasesByName: new Map([['TP53', ['p53', 'ENSG00000141510']]]),
+			mapCanonicalIsoformByEnsg: new Map([['ENSG00000012048', 'ENST00000357654']])
 		}
 	}
-	return { genome, calls }
+	return genome
 }
 
 const req = (query: any, path = '/termdb/matrix') => ({ path, query })
@@ -84,11 +72,12 @@ tape('\n', test => {
 })
 
 tape('gene db lookups', test => {
-	const { genome } = makeGenome()
+	const genome = makeGenome()
 	test.equal(isKnownGeneName(genome, 'TP53'), true, 'symbol')
+	test.equal(isKnownGeneName(genome, 'tp53'), true, 'symbol in another case, as collate nocase matched')
 	test.equal(isKnownGeneName(genome, 'NM_000546'), true, 'isoform accession as a gene name')
 	test.equal(isKnownGeneName(genome, 'p53'), true, 'alias')
-	test.equal(isKnownGeneName(genome, 'ensg00000141510'), true, 'alias matched after uppercasing')
+	test.equal(isKnownGeneName(genome, 'ensg00000141510'), true, 'alias in another case')
 	test.equal(isKnownGeneName(genome, 'ENSG00000258430'), true, 'ENSG that is a gene name')
 	test.equal(isKnownGeneName(genome, 'ENSG00000012048'), true, 'ENSG known only to gene2canonicalisoform')
 	test.equal(isKnownGeneName(genome, 'ENSG00000141510.16'), true, 'ENSG with a version suffix')
@@ -103,21 +92,14 @@ tape('gene db lookups', test => {
 	test.end()
 })
 
-tape('lookups are cached per genome, for hits and misses', test => {
-	const { genome, calls } = makeGenome()
-	isKnownGeneName(genome, 'TP53')
-	const afterHit = calls.count
-	isKnownGeneName(genome, 'TP53')
-	test.equal(calls.count, afterHit, 'a known name is looked up once')
-
-	isKnownGeneName(genome, 'xxx')
-	const afterMiss = calls.count
-	isKnownGeneName(genome, 'xxx')
-	test.equal(calls.count, afterMiss, 'an unknown name is looked up once')
-
-	const other = makeGenome()
-	isKnownGeneName(other.genome, 'TP53')
-	test.ok(other.calls.count > 0, 'another genome does not read the first genome cache')
+tape('a genome without name maps is not validated', test => {
+	const genome = makeGenome()
+	delete genome.genedb.mapByName
+	test.equal(
+		mayValidateRequestGeneRefs(req({ terms: [{ term: gvTerm('xxx') }] }), genome, { cohort: { termdb: {} } }),
+		undefined,
+		'nothing to validate against, so the request is left alone'
+	)
 	test.end()
 })
 
@@ -259,7 +241,7 @@ tape('collectGeneRefs() reads a geneVariant term of any shape', test => {
 })
 
 tape('mayValidateRequestGeneRefs()', test => {
-	const { genome } = makeGenome()
+	const genome = makeGenome()
 	const ds: any = { cohort: { termdb: {} } }
 
 	test.equal(
@@ -299,11 +281,6 @@ tape('mayValidateRequestGeneRefs()', test => {
 		mayValidateRequestGeneRefs(req({ terms: [{ term: gvTerm('xxx') }] }, '/pp/massSession'), genome, ds),
 		undefined,
 		'a skipped endpoint is recognized under a serverconfig.basepath'
-	)
-	test.equal(
-		mayValidateRequestGeneRefs(req({ terms: [{ term: gvTerm('xxx') }] }), { genomicNameRegexp: /x/ }, ds),
-		undefined,
-		'a genome without a gene db has nothing to validate against'
 	)
 	test.equal(
 		mayValidateRequestGeneRefs(
