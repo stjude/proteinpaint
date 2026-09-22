@@ -44,6 +44,7 @@ import { validate_query_proteome } from '../routes/termdb.proteome.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
 import { validate_query_geneExpression, validateQueryIsoformExpression } from './routes/termdb.cluster.ts'
+import { validateSkipGeneNameValidation } from './geneRefValidation.ts'
 import { mayLimitSamples, combinePPfilterAndTid2value } from './mds3.filter.js'
 import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
@@ -280,6 +281,10 @@ export async function validate_termdb(ds) {
 
 	const tdb = ds.cohort.termdb
 	if (!tdb) throw 'ds.cohort is set but cohort.termdb{} missing'
+
+	// a gene name opt-out that the request validation cannot read must fail at launch, not
+	// silently leave that dataset unchecked, see geneRefValidation.ts
+	validateSkipGeneNameValidation(ds)
 
 	/***********************************************************
 	 ** new properties created on tdb{} must be duplicated at  **

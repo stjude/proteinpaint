@@ -142,17 +142,37 @@ export function mayValidateRequestGeneRefs(req: any, genome: any, ds: any): stri
 	}
 }
 
+/* Rejects a malformed cohort.termdb.skipGeneNameValidation at dataset init, called from
+validate_termdb() in mds3.init.js. An opt-out that this module cannot read must stop the
+server at launch: read at request time instead, the only two outcomes would be silently
+exempting a dataset that meant to name one term type, or silently ignoring an opt-out the
+dataset needs -- neither visible to whoever wrote the config. */
+export function validateSkipGeneNameValidation(ds: any): void {
+	const skip = ds?.cohort?.termdb?.skipGeneNameValidation
+	if (skip === undefined || typeof skip == 'boolean') return
+	if (!Array.isArray(skip)) throw 'cohort.termdb.skipGeneNameValidation must be true/false or an array of term types'
+	for (const termType of skip) {
+		if (!refsByTermType[termType])
+			throw `cohort.termdb.skipGeneNameValidation names a term type that is not gene name checked: '${termType}'. Valid: ${Object.keys(
+				refsByTermType
+			).join(', ')}`
+	}
+}
+
 /** term types a dataset exempts from validation, via
  * ds.cohort.termdb.skipGeneNameValidation = true | ['<term type>', ...].
  * A single-cell store built from a gene panel is the case this exists for: its genes are
  * declared per sample by the store itself (see listGenes() in singleCell/samplesRoute.ts)
- * and are not required to be in the genome gene db. */
+ * and are not required to be in the genome gene db.
+ *
+ * Anything else exempts nothing, so that a value this module cannot read leaves the check
+ * on rather than turning it off. validateSkipGeneNameValidation() has already rejected such
+ * a value at init, so this is only the fail-closed backstop */
 function getSkippedTermTypes(ds: any): Set<string> {
 	const skip = ds?.cohort?.termdb?.skipGeneNameValidation
-	if (!skip) return new Set()
 	if (skip === true) return new Set(Object.keys(refsByTermType))
 	if (Array.isArray(skip)) return new Set(skip)
-	throw 'ds.cohort.termdb.skipGeneNameValidation must be true or an array of term types'
+	return new Set()
 }
 
 /*****************************************

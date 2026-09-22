@@ -17,7 +17,13 @@ or run the whole unit suite (as CI does):
   cd proteinpaint/server && npm run test:unit
 *********************************************/
 import tape from 'tape'
-import { mayValidateRequestGeneRefs, collectGeneRefs, isKnownGeneName, isKnownIsoform } from '../geneRefValidation.ts'
+import {
+	mayValidateRequestGeneRefs,
+	collectGeneRefs,
+	isKnownGeneName,
+	isKnownIsoform,
+	validateSkipGeneNameValidation
+} from '../geneRefValidation.ts'
 
 /** the maps initGeneDbLookups() builds, keyed uppercase, for: TP53 (NM_000546, ENST00000269305),
  * AKT1, the gene-named accession ENSG00000258430, the aliases p53 and ENSG00000141510, and an ENSG
@@ -302,8 +308,37 @@ tape('mayValidateRequestGeneRefs()', test => {
 		mayValidateRequestGeneRefs(req({ terms: [{ term: gvTerm('xxx') }] }), genome, {
 			cohort: { termdb: { skipGeneNameValidation: 'yes' } }
 		}),
-		undefined,
-		'a malformed opt-out fails open rather than breaking the request'
+		'invalid gene/isoform for [geneVariant TW]',
+		'an opt-out this module cannot read exempts nothing, rather than exempting everything'
+	)
+	test.end()
+})
+
+tape('validateSkipGeneNameValidation()', test => {
+	const withSkip = (skip: any) => ({ cohort: { termdb: skip === undefined ? {} : { skipGeneNameValidation: skip } } })
+	for (const valid of [undefined, true, false, [], ['geneExpression'], ['geneVariant', 'singleCellGeneExpression']]) {
+		test.doesNotThrow(
+			() => validateSkipGeneNameValidation(withSkip(valid)),
+			`accepts ${JSON.stringify(valid) || 'no value'}`
+		)
+	}
+	test.doesNotThrow(() => validateSkipGeneNameValidation({}), 'accepts a dataset with no cohort')
+	for (const invalid of ['yes', 'geneExpression', 1, {}]) {
+		test.throws(
+			() => validateSkipGeneNameValidation(withSkip(invalid)),
+			/must be true\/false or an array of term types/,
+			`rejects ${JSON.stringify(invalid)} at init, so it cannot silently disable the check`
+		)
+	}
+	test.throws(
+		() => validateSkipGeneNameValidation(withSkip(['geneExpresion'])),
+		/not gene name checked/,
+		'rejects a misspelled term type, which would otherwise be an opt-out that does nothing'
+	)
+	test.throws(
+		() => validateSkipGeneNameValidation(withSkip(['proteomeAbundance'])),
+		/not gene name checked/,
+		'rejects a term type this module does not check'
 	)
 	test.end()
 })
