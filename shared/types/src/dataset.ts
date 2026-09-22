@@ -1067,7 +1067,9 @@ export type SingleCellGeneExpression = {
 	/** cached gene exp bins, seeded on init() in validate_query_singleCell() */
 	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
 	/** gene expression unit (e.g. 'FPKM') */
-	unit?: string
+	unit?: string,
+	/** Label for plot buttons, title, etc. */
+	label?: string
 }
 
 export type SingleCellSamples = {
