@@ -616,7 +616,7 @@ export function getBin(lst: any[], value: number) {
 }
 
 // get sample types of termwrapper
-export function getTwSampleTypes(tw: any, ds: any, mapParent2Children?: boolean) {
+export function getTwSampleTypes(tw: any, ds: any) {
 	const term = tw?.term
 	if (!term) return []
 	// prioritize user-defined sample types
@@ -629,18 +629,14 @@ export function getTwSampleTypes(tw: any, ds: any, mapParent2Children?: boolean)
 		}
 	}
 	const defaultSampleTypes = getDefaultSampleTypes(ds)
-	if (mapParent2Children) {
-		// must map to child sample types
-		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
-		return Array.isArray(sampleType?.childSampleTypes) ? sampleType.childSampleTypes : defaultSampleTypes
-	}
 	if (ds.cohort.termdb.term2SampleType.has(term.id)) {
 		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
 		if (Number.isInteger(sampleType)) {
 			return [sampleType]
 		} else if (sampleType && typeof sampleType == 'object') {
 			if (!Number.isInteger(sampleType.sampleType)) throw new Error('sampleType.sampleType is non-numeric')
-			return [sampleType.sampleType]
+			if (!Array.isArray(sampleType.childSampleTypes)) throw new Error('sampleType.childSampleTypes is not array')
+			return [sampleType]
 		} else {
 			return []
 		}
