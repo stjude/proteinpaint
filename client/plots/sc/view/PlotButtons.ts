@@ -160,7 +160,7 @@ export class PlotButtons {
 			{
 				label: 'Gene expression',
 				chartType: 'GeneExpInput',
-				isVisible: () => this.scTermdbConfig?.geneExpression,
+				isVisible: () => this.scTermdbConfig?.geneExpression && this.availablePlots.has(this.scTermdbConfig.geneExpression?.label || 'Gene expression'),
 				getPlotConfig: () => {
 					const sample = this.item!
 					const isMeta = sample?.isMetaResult || false

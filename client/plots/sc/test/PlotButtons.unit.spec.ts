@@ -191,16 +191,16 @@ tape('getChartBtnOpts() Summary button should always be visible', test => {
 	test.end()
 })
 
-tape('getChartBtnOpts() Gene expression button should be visible when geneExpression is configured', test => {
+tape('getChartBtnOpts() Gene expression button should be visible when geneExpression is configured and an avaialble plot', test => {
 	const pb = getPlotButtons({ geneExpression: true })
 	pb.data = { plots: [] }
 	pb.item = { sID: 'S1', eID: 'EXP1' }
-	pb.availablePlots = new Set()
+	pb.availablePlots = new Set(['Gene expression'])
 
 	const btns = pb.getChartBtnOpts()
 	const geneExp = btns.find(b => b.label === 'Gene expression')
 
-	test.ok(geneExp!.isVisible(), 'Gene expression should be visible when geneExpression is configured')
+	test.ok(geneExp!.isVisible(), 'Gene expression should be visible when geneExpression is configured and ge file is available. ')
 	test.end()
 })
 
