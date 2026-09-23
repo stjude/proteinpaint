@@ -19,7 +19,7 @@ facet table is always shown for secured or unsecured ds, as it does not reveal s
 click on table cells allow to select corresponding samples, this is only allowed when hasVerifiedToken() is true
 */
 
-class Facet extends PlotBase implements RxComponent{
+class Facet extends PlotBase implements RxComponent {
 	static type = 'facet'
 
 	type: string
@@ -44,7 +44,7 @@ class Facet extends PlotBase implements RxComponent{
 	}
 
 	async init() {
-		//Leaving a comment here so the linter does not complain about an empty function. 
+		//Leaving a comment here so the linter does not complain about an empty function.
 		// This is a required method for RxComponent interface.
 	}
 
@@ -83,7 +83,7 @@ class Facet extends PlotBase implements RxComponent{
 		//blank space left for row labels
 		headerRow.append('th')
 
-		const samplesAuth = this.app.vocabApi.hasVerifiedToken()
+		const samplesAuth = this.app.vocabApi.termdbConfig?.displaySampleIds && this.app.vocabApi.hasVerifiedToken()
 		if (samplesAuth) {
 			//overrides the default sja_root table style
 			table.style('border-spacing', '0px')
@@ -401,7 +401,7 @@ class Facet extends PlotBase implements RxComponent{
 
 	orderColNames(cols) {
 		//Show ranges first, then strings
-		const tmpNums: {key: number, label: string}[] = []
+		const tmpNums: { key: number; label: string }[] = []
 		const tmpStrings: string[] = []
 		for (const col of cols) {
 			const c = col.split(' to ')

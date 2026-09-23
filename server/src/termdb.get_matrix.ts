@@ -126,6 +126,7 @@ export async function get_matrix(q: TermdbMatrixRequest, req: any, res: any, ds:
 	const unsentSampleIds = new Set<string>()
 	const lastSampleId = (sampleEntries.slice(-1)?.[0]?.[0] as string) || -1
 	//debugLog('lastSampleId=', lastSampleId)
+	const canSendSampleIds = authApi.canDisplaySampleIds(req, ds)
 
 	let hasStarted = false
 	const jsonStream = new Readable({
@@ -139,7 +140,7 @@ export async function get_matrix(q: TermdbMatrixRequest, req: any, res: any, ds:
 				this.push(JSON.stringify([['samples', id], data.samples[id]]) + '\n')
 				delete data.samples[id]
 			}
-			if (unsentSampleIds.has(lastSampleId as string) || sampleIndex >= sampleEntries.length) {
+			if (!canSendSampleIds || unsentSampleIds.has(lastSampleId as string) || sampleIndex >= sampleEntries.length) {
 				this.push(JSON.stringify([['refs'], data.refs]) + '\n')
 				// uncomment below to test warning message if rendered by client-side plot code
 				// this.push(JSON.stringify([['warning'], {message: '!!! TEST !!!'}]) + '\n')
@@ -160,7 +161,7 @@ export async function get_matrix(q: TermdbMatrixRequest, req: any, res: any, ds:
 	let currShortId = 1
 	let sampleIndex = 1
 
-	if (authApi.canDisplaySampleIds(req, ds) && sampleEntries.length) {
+	if (canSendSampleIds && sampleEntries.length) {
 		const { byTermId, bySampleId } = data.refs
 
 		for (const [sampleId, sample] of sampleEntries as [string, any][]) {
