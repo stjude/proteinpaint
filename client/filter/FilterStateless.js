@@ -26,10 +26,20 @@ class FilterStateless extends Filter {
 			destroy: () => this.destroy()
 		}
 
+		this.initHolder()
+
 		if (opts.callbacks) {
 			this.events = ['postInit', 'postRender', 'firstRender']
 			this.bus = new Bus(this.api, this.events, opts.callbacks)
 		}
+	}
+
+	initHolder() {
+		const div = this.dom.holder
+			.on('mouseover.FilterStateless', () =>
+				div.selectAll('button').style('border', '1px dashed #555').style('border-radius', '5px')
+			)
+			.on('mouseout.FilterStateless', () => div.selectAll('button').style('border', null).style('border-radius', null))
 	}
 
 	async main(rawFilter, opts = {}) {
