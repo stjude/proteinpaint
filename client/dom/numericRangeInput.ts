@@ -8,6 +8,10 @@ type Opts = {
 	 * term.valueConversion (see getValueConversionFactor()). the range handed in and given back is
 	 * always in the stored unit; only the text in the <input> is in the user-facing one */
 	scaleFactor?: number
+	/** the allowed bounds of a typed range, in the stored unit, e.g. 0 and 1 for a fraction. kept apart
+	 * from the range, which is replaced by every parsed entry */
+	min?: number | null
+	max?: number | null
 }
 
 export class NumericRangeInput {
@@ -15,9 +19,13 @@ export class NumericRangeInput {
 	input: Input
 	range: any
 	scaleFactor: number
+	min?: number | null
+	max?: number | null
 
 	constructor(holder: Elem, range: any, callback: () => void, opts?: Opts) {
 		this.scaleFactor = opts?.scaleFactor && opts.scaleFactor > 0 ? opts.scaleFactor : 1
+		this.min = opts?.min
+		this.max = opts?.max
 		this.input = holder
 			.append('input')
 			.attr('name', 'rangeInput')
@@ -44,20 +52,34 @@ export class NumericRangeInput {
 	parseRange() {
 		const str = this.input.node()!.value
 		const new_range = toStoredUnits(parseRange(str), this.scaleFactor)
-		if (this.range?.min != undefined) {
-			if (!new_range.startunbounded && this.range?.min > new_range.start) throw 'Invalid start value < minimum allowed'
-			if (!new_range.stopunbounded && this.range?.min >= new_range.stop) throw 'Invalid stop value >= minimum allowed'
-		}
-		if (this.range?.max != undefined) {
-			if (!new_range.stopunbounded && this.range?.max < new_range.stop) throw 'Invalid stop value > maximum allowed'
-
-			if (!new_range.startunbounded && new_range.start >= this.range?.max)
-				throw 'Invalid start value >= maximum allowed'
-		}
-
+		this.validateBounds(new_range)
 		this.range = new_range
 		this.callback(new_range)
 		return new_range
+	}
+
+	/** throws on a range that selects nothing within the allowed bounds. a bound at the min or max is
+	 * allowed when inclusive, e.g. x>=1 for a fraction */
+	validateBounds(r: any) {
+		const min = this.min,
+			max = this.max
+		const minLabel = toDisplayValue(min, this.scaleFactor),
+			maxLabel = toDisplayValue(max, this.scaleFactor)
+		if (r.value != undefined) {
+			if (min != undefined && r.value < min) throw `Invalid value < minimum allowed (${minLabel})`
+			if (max != undefined && r.value > max) throw `Invalid value > maximum allowed (${maxLabel})`
+			return
+		}
+		if (min != undefined) {
+			if (!r.startunbounded && r.start < min) throw `Invalid start value < minimum allowed (${minLabel})`
+			if (!r.stopunbounded && (r.stop < min || (r.stop == min && !r.stopinclusive)))
+				throw `Invalid stop value ${r.stopinclusive ? '<' : '<='} minimum allowed (${minLabel})`
+		}
+		if (max != undefined) {
+			if (!r.stopunbounded && r.stop > max) throw `Invalid stop value > maximum allowed (${maxLabel})`
+			if (!r.startunbounded && (r.start > max || (r.start == max && !r.startinclusive)))
+				throw `Invalid start value ${r.startinclusive ? '>' : '>='} maximum allowed (${maxLabel})`
+		}
 	}
 
 	getRange() {

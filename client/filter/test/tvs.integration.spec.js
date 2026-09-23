@@ -19,6 +19,7 @@ Tests:
 	tvs: Gene Variant - CNV - continuous
 	tvs: Gene Variant - Fusion
 	tvs: Gene Expression
+	tvs: Gene Expression - range outside of data
 	tvs: termCollection
 
 
@@ -1408,6 +1409,77 @@ tape('tvs: Gene Expression', async test => {
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}
+	if (test._ok) opts.holder.remove()
+	test.end()
+})
+
+tape('tvs: Gene Expression - range outside of data', async test => {
+	test.timeoutAfter(4000)
+	test.plan(3)
+
+	const opts = getOpts({
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { gene: 'TP53', name: 'TP53 expression', type: 'geneExpression' },
+						ranges: [{ stopinclusive: true, start: 1, stop: 10 }]
+					}
+				}
+			]
+		}
+	})
+
+	const filternode = opts.holder.node()
+	await opts.filter.main(opts.filterData)
+
+	const alerts = []
+	const origAlert = window.alert
+	window.alert = msg => alerts.push(msg)
+	let called = false
+	opts.testCallback = () => {
+		called = true
+		return true
+	}
+
+	try {
+		const pill = await detectOne({ target: filternode, selector: '.tvs_pill' })
+		const editOpt = opts.filter.Inner.dom.controlsTip.d
+			.selectAll('tr')
+			.filter(d => d.action == 'edit')
+			.node()
+		const tipd = opts.filter.Inner.dom.termSrcDiv
+		pill.click()
+		const rangeInput = await detectOne({
+			target: tipd.node(),
+			selector: 'input[name="rangeInput"]',
+			trigger: () => editOpt.click()
+		})
+
+		// the max of TP53 expression in the test data is far below 1000
+		rangeInput.value = 'x > 1000'
+		rangeInput.dispatchEvent(new Event('change'))
+		test.true(
+			alerts[0]?.startsWith('The range is outside of the data'),
+			'should alert on entering a range above the data max'
+		)
+		const brushSelection = tipd.node().querySelector('.range_brush .selection')
+		test.false(
+			Number(brushSelection.getAttribute('width')) < 0,
+			'should not invert the brush selection for a range above the data max'
+		)
+
+		tipd.node().querySelector(rangeApplySelector).click()
+		test.true(!called && alerts.length == 2, 'should not apply a range above the data max')
+	} catch (e) {
+		test.fail('test error: ' + e)
+	}
+	window.alert = origAlert
+	delete opts.testCallback
 	if (test._ok) opts.holder.remove()
 	test.end()
 })

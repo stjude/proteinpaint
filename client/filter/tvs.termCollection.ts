@@ -55,12 +55,10 @@ function renderRangeInput(div, tvs, applyRange) {
 	// the fraction is on a 0 to 1 scale, same as the value of a fraction termCollection tw
 	num_div.append('span').text('Fraction 0 to 1')
 
-	range.min = 0
-	range.max = 1
 	// the input fires 'change' when it loses focus with an edited value, e.g. on clicking a
 	// checkbox in the member table below. So it may only parse the entry: applying the filter
 	// closes the menu, and must be left to the Apply button.
-	const rangeInput = new NumericRangeInput(num_div, range, () => {})
+	const rangeInput = new NumericRangeInput(num_div, range, () => {}, { min: 0, max: 1 })
 
 	num_div
 		.append('button')
