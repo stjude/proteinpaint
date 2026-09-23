@@ -127,6 +127,11 @@ export async function get_matrix(q: TermdbMatrixRequest, req: any, res: any, ds:
 	const lastSampleId = (sampleEntries.slice(-1)?.[0]?.[0] as string) || -1
 	//debugLog('lastSampleId=', lastSampleId)
 	const canSendSampleIds = authApi.canDisplaySampleIds(req, ds)
+	/* getSampleData() fills refs.bySampleId with every sample's display ref (id2sampleRef() in
+	termdb.matrix.ts), independent of this policy. The refs line is streamed even when no sample rows
+	are, so the map must be dropped here -- otherwise a request that is denied sample ids still
+	receives every sample's label. */
+	if (!canSendSampleIds) data.refs.bySampleId = {}
 
 	let hasStarted = false
 	const jsonStream = new Readable({
