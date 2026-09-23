@@ -27,6 +27,7 @@ when launching:
 */
 
 import serverconfig from './serverconfig.js'
+import { sql } from './sql.ts'
 import util from 'util'
 import fs from 'fs'
 import path from 'path'
@@ -365,17 +366,20 @@ async function handle_mdsgenecount(req, res) {
 		const n_gene = req.query.nGenes ? Number(req.query.nGenes) : 15
 		if (!Number.isInteger(n_gene) || n_gene < 1) throw 'invalid nGenes'
 		const samples = Array.isArray(req.query.samples) ? req.query.samples : String(req.query.samples).split(',')
-		const query = `WITH
+		const query = sql`WITH
 	filtered AS (
-		SELECT gene, ${mutTypes.map(t => `"${t}"`).join('+')} AS total FROM genecount
-		WHERE sample IN (${samples.map(() => '?').join(',')})
+		SELECT gene, ${sql.join(
+			mutTypes.map(t => sql.id(t)),
+			'+'
+		)} AS total FROM genecount
+		WHERE sample IN (${sql.list(samples.map(String))})
 	)
 	SELECT gene, SUM(total) AS count
 	FROM filtered
 	GROUP BY gene
 	ORDER BY count DESC
-	LIMIT ?`
-		const genes = ds.gene2mutcount.db.prepare(query).all(...samples.map(String), n_gene)
+	LIMIT ${n_gene}`
+		const genes = ds.gene2mutcount.db.prepare(query).all()
 		const validgenes = []
 		for (const gene of genes) {
 			const re = genome.genedb.getCoordByGene.get(gene.gene)

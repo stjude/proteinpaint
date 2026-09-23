@@ -9,6 +9,7 @@ Tests:
 	guardDb() in 'throw' mode
 	guardDb() in 'warn' mode logs once per call site
 	guardDb() passes through other connection methods and properties
+	guardDb() in 'off' mode
 */
 
 function getDb(mode) {
@@ -116,7 +117,28 @@ tape('guardDb() passes through other connection methods and properties', t => {
 		[5, 'f']
 	])
 	t.equal(db.prepare('SELECT count(*) AS n FROM t').get().n, 5, 'should run a transaction')
-	const raw = new Database(':memory:')
-	t.equal(guardDb(raw, 'off'), raw, "should return the connection as-is in 'off' mode")
+	t.end()
+})
+
+tape("guardDb() in 'off' mode", t => {
+	const db = getDb('off')
+	const warn = console.warn
+	const messages: string[] = []
+	console.warn = (m: string) => messages.push(m)
+	try {
+		t.deepEqual(
+			db.prepare("SELECT id FROM t WHERE name = 'a'").all(),
+			[{ id: 1 }],
+			'should allow a plain sql string with quoted values'
+		)
+	} finally {
+		console.warn = warn
+	}
+	t.equal(messages.length, 0, 'should not warn')
+	t.deepEqual(
+		db.prepare(sql`SELECT id FROM t WHERE name = ${'d'}`).all(),
+		[{ id: 3 }],
+		'should still support sql fragments'
+	)
 	t.end()
 })

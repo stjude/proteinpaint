@@ -105,8 +105,8 @@ export function connect_db(file: string, override: bettersqlite.Options & { sqlC
 	return guardDb(db, sqlCheck || serverconfig.sqlCheck || 'warn')
 }
 
+/* mode='off' only skips the check of plain sql strings, the proxy is still needed to support sql fragments */
 export function guardDb(db: any, mode: SqlCheckMode = 'warn') {
-	if (mode == 'off') return db
 	return new Proxy(db, {
 		get(target, prop) {
 			if (prop == 'prepare') {
@@ -140,6 +140,7 @@ export function guardDb(db: any, mode: SqlCheckMode = 'warn') {
 }
 
 function checkSqlString(source: string, opts: PrepareOpts | undefined, mode: SqlCheckMode, method: string) {
+	if (mode == 'off') return
 	if (typeof source != 'string') return // let better-sqlite3 report invalid arguments
 	if (opts?.allowQuotedValues || !quotedValue.test(source)) return
 	const site = getCallSite()
