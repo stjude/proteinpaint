@@ -44,7 +44,7 @@ export function setRenderers(self) {
 			.attr('class', 'sja_filter_add_transformer')
 			.style('display', d => (self.filter && self.filter.join != d ? 'inline-block' : 'none'))
 			.style('margin-left', '10px')
-			.style('padding', '5px')
+			.style('padding', '0 5px')
 			.style('border-radius', '5px')
 			//.style('background-color', '#ececec')
 			.style('cursor', 'pointer')
@@ -396,7 +396,7 @@ export function setRenderers(self) {
 					: 'none'
 			)
 			.style('width', '50px')
-			.style('padding', '5px')
+			.style('padding', '0 5px')
 			.style('background-color', 'transparent')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
