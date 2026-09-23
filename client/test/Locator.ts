@@ -166,8 +166,8 @@ export class Locator {
 		return new Promise((resolve, reject) => {
 			let elapsed = 0
 			const i = setInterval(() => {
-				const elem = rootElem.querySelector(selector)
-				if (elem && elem.innerText === text) {
+				const elem = [...rootElem.querySelectorAll(selector)].find(e => e.innerText === text)
+				if (elem) {
 					clearInterval(i)
 					resolve(elem)
 					return
