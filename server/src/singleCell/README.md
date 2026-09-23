@@ -141,10 +141,12 @@ It supports:
 - gene-expression coloring and coordinate terms; and
 - meta-result filtering through the sample mapping cache.
 
-The request must provide a single-cell `colorTW` or `coordTWs`. Combining `coordTWs` with
-`colorTW` is currently not implemented. Numeric color domains support `auto`, `fixed`, and
-`percentile` modes. Legend/category formatting is performed in this route because it does not
-reuse the full termdb matrix formatting path.
+`colorTW` and `coordTWs` are both optional. When neither is given, every cell is still returned,
+rendered as a single reference-colored ("Ref") group, matching the bulk scatter's reference-dot
+behavior. Combining `coordTWs` with `colorTW` is currently not implemented. Numeric color domains
+support `auto`, `fixed`, and `percentile` modes. Legend/category formatting is performed in this
+route because it does not reuse the full termdb matrix formatting path.
+
 
 ### `termdb/singlecellDEgenes`
 
