@@ -168,9 +168,8 @@ async function getViolin(
 	ds: { cohort: { termdb: { logscaleBase2?: boolean } } }
 ) {
 	const samples = Object.values(data.samples)
-	const values = extractNumericValues(samples, q.tw, q.isLogScale)
 	//calculate stats here and pass them to client to avoid second request on client for getting stats
-	const descrStats = getDescrStats(values)
+	const descrStats = getDescrStatsByTerm(samples, q.tw, q.overlayTw, q.isLogScale)
 	const sampleType = computeSampleType(data)
 	//get ordered labels to sort keys in plot2values
 	if (q.overlayTw && data.refs.byTermId[q.overlayTw.$id!]) {
@@ -451,8 +450,9 @@ export async function getDensities(
  **********************************************************/
 
 async function getBoxPlot(q: BoxRequest & ReqQueryAddons, data: ValidGetDataResponse) {
-	const { absMin, absMax, bins, charts, uncomputableValues, descrStats, outlierMin, outlierMax } =
-		await processBoxPlotData(data, q)
+	const descrStats = getDescrStatsByTerm(Object.values(data.samples), q.tw, q.overlayTw, q.isLogScale, q.removeOutliers)
+	const { absMin, absMax, bins, charts, uncomputableValues, outlierMin, outlierMax } =
+		await processBoxPlotData(data, q, descrStats[q.tw.$id!])
 
 	const returnData = {
 		absMin: q.removeOutliers ? outlierMin : absMin,
@@ -467,12 +467,7 @@ async function getBoxPlot(q: BoxRequest & ReqQueryAddons, data: ValidGetDataResp
 }
 
 /** Process the returned data from getData() for entire box plot chart.*/
-async function processBoxPlotData(data: ValidGetDataResponse, q: BoxRequest) {
-	const samples = Object.values(data.samples)
-	const values = extractNumericValues(samples, q.tw)
-	//calculate stats here and pass them to client to avoid second request on client for getting stats
-	const descrStats = getDescrStats(values, q.removeOutliers)
-
+async function processBoxPlotData(data: ValidGetDataResponse, q: BoxRequest, descrStats: DescrStats) {
 	const sampleType = computeSampleType(data)
 	const overlayTw = q.overlayTw
 	const divideTw = q.divideTw
@@ -704,6 +699,21 @@ export function extractNumericValues(samples: any[], tw: TermWrapper, isLogScale
 		.filter(v => typeof v === 'number' && !tw.term.values?.[v]?.uncomputable)
 	if (isLogScale) values = values.filter(v => v > 0)
 	return values
+}
+
+/** Calculate term-level stats for every requested wrapper. Non-numeric terms
+ * produce an empty stats object, matching the existing descriptive-stats route. */
+export function getDescrStatsByTerm(
+	samples: any[],
+	tw: TermWrapper,
+	overlayTw?: TermWrapper,
+	isLogScale?: boolean,
+	showOutlierRange?: boolean
+): Record<string, DescrStats> {
+	const terms = [tw, overlayTw].filter((term): term is TermWrapper => !!term?.$id)
+	return Object.fromEntries(
+		terms.map(term => [term.$id!, getDescrStats(extractNumericValues(samples, term, isLogScale), showOutlierRange)])
+	)
 }
 
 type ParseValuesTw = { $id?: string; term: { values?: Record<string, any>; [key: string]: any } }
