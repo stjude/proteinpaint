@@ -750,6 +750,10 @@ async function getFilefullpathOrUrl(req) {
 }
 
 async function get_q(genome, req) {
+	// validate region chr before any samtools process is launched (quickcheck below)
+	if (!Array.isArray(req.query.regions) || req.query.regions.length == 0) throw 'q.regions[] not non-empty array'
+	for (const r of req.query.regions) utils.checkChr(genome, r.chr)
+
 	const [filefullpath, dir] = await getFilefullpathOrUrl(req)
 	const q = {
 		genome,
@@ -841,11 +845,9 @@ async function get_q(genome, req) {
 		q.nochr = await utils.bam_ifnochr(q.file, genome, q.dir, q.fileIsTruncated)
 	}
 	q.regions = req.query.regions
-	if (!Array.isArray(q.regions) || q.regions.length == 0) throw 'q.regions[] not non-empty array'
 
 	let maxntwidth = 0
 	for (const r of q.regions) {
-		utils.checkChr(genome, r.chr)
 		if (!Number.isInteger(r.start)) throw '.start not integer of a region'
 		if (!Number.isInteger(r.stop)) throw '.stop not integer of a region'
 		r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))

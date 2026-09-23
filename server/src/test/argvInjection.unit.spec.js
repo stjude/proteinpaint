@@ -92,11 +92,9 @@ tape('get_fasta() defense in depth with "--"', async test => {
 	// even if a genome declared a chr that looks like an option, '--' keeps samtools from parsing it as one
 	const evil = `-cr${leakFile}`
 	g.chrlookup[evil.toUpperCase()] = { name: evil, len: 10 }
-	try {
-		await utils.get_fasta(g, `${evil}:1-2`)
-	} catch (e) {
-		test.notOk(String(e).includes(leakMarker), 'should not read the file named in an option-like region')
-	}
+	// check the outcome whether get_fasta() resolves or rejects, so a leak on stdout cannot pass silently
+	const out = await utils.get_fasta(g, `${evil}:1-2`).catch(e => e)
+	test.notOk(String(out).includes(leakMarker), 'should not read the file named in an option-like region')
 	test.end()
 })
 
@@ -148,20 +146,17 @@ tape('/tkbam', async test => {
 	})
 	test.equal(urlAttack?.error, 'url must not start with "-"', 'should reject a url starting with "-"')
 
-	if (hasSamtools) {
-		for (const chr of chrAttacks) {
-			const r = await send(handler, {
-				genome: 'hg38',
-				file: 'files/hg38/TermdbTest/trackLst/bam.bam',
-				nochr: false,
-				regions: [{ chr, start: 1, stop: 100, width: 100 }]
-			})
-			test.equal(r?.error, 'invalid chr', `regions[] should reject chr=${chr}`)
-		}
-		test.notOk(fs.existsSync(outFile), 'samtools view should not write to a requested path')
-	} else {
-		test.comment('samtools not found, skipped the regions[] assertions')
+	// regions[] are validated before any samtools process starts, so these run without samtools too
+	for (const chr of chrAttacks) {
+		const r = await send(handler, {
+			genome: 'hg38',
+			file: 'files/hg38/TermdbTest/trackLst/bam.bam',
+			nochr: false,
+			regions: [{ chr, start: 1, stop: 100, width: 100 }]
+		})
+		test.equal(r?.error, 'invalid chr', `regions[] should reject chr=${chr}`)
 	}
+	if (hasSamtools) test.notOk(fs.existsSync(outFile), 'samtools view should not write to a requested path')
 	test.end()
 })
 
@@ -261,12 +256,17 @@ tape('/singlecell', async test => {
 		const pcd = await send(handler, getpcd(chr))
 		test.equal(pcd?.error, 'invalid chr', `getpcd.gene_expression should reject chr=${chr}`)
 	}
-	// a valid chr must get past the check, not fail with a ReferenceError from an out-of-scope genome
-	const validPcd = await send(handler, getpcd('chr17'))
-	test.notOk(
-		/invalid chr|is not defined/.test(String(validPcd?.error)),
-		'getpcd.gene_expression should accept a valid chr'
-	)
+	// a valid chr must get past the check, not fail with a ReferenceError from an out-of-scope genome;
+	// a valid request runs tabix, so this needs the binary
+	if (hasTabix) {
+		const validPcd = await send(handler, getpcd('chr17'))
+		test.notOk(
+			/invalid chr|is not defined/.test(String(validPcd?.error)),
+			'getpcd.gene_expression should accept a valid chr'
+		)
+	} else {
+		test.comment('tabix not found, skipped the valid getpcd request')
+	}
 	test.end()
 })
 
