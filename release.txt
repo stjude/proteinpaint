@@ -1,5 +1,1 @@
-Fixes:
-- Restored violin label menu option to hide individual plots.
-Features:
-- Descriptive stats for the overlay term appear in the violin and box plot legends. 
-- New README for the violin plot
+
