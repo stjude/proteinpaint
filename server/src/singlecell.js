@@ -81,7 +81,7 @@ async function get_pcd(q, gn, res) {
 
 	const result = {}
 
-	const lines = await slice_file_add_color(q, result)
+	const lines = await slice_file_add_color(q, gn, result)
 
 	const header = `# .PCD v.7 - Point Cloud Data file format
 VERSION .7
@@ -100,7 +100,7 @@ DATA ascii
 	res.send(result)
 }
 
-async function slice_file_add_color(q, result) {
+async function slice_file_add_color(q, gn, result) {
 	/*
 to slice the csv/tab file of all cells
 for each cell, assign color based on desired method

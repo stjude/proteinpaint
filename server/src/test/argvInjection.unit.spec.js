@@ -235,6 +235,35 @@ tape('/singlecell', async test => {
 		})
 		test.equal(heat?.error, 'invalid chr', `getheatmap should reject chr=${chr}`)
 	}
+
+	const getpcd = chr => ({
+		genome: 'hg38',
+		textfile: 'files/hg38/TermdbTest/tsne.txt',
+		getpcd: {
+			coord: [],
+			gene_expression: {
+				file: expfile,
+				barcodecolumnidx: 4,
+				chr,
+				start: 1,
+				stop: 2,
+				genename: 'TP53',
+				autoscale: true,
+				color_min: '#000',
+				color_max: '#fff'
+			}
+		}
+	})
+	for (const chr of chrAttacks) {
+		const pcd = await send(handler, getpcd(chr))
+		test.equal(pcd?.error, 'invalid chr', `getpcd.gene_expression should reject chr=${chr}`)
+	}
+	// a valid chr must get past the check, not fail with a ReferenceError from an out-of-scope genome
+	const validPcd = await send(handler, getpcd('chr17'))
+	test.notOk(
+		/invalid chr|is not defined/.test(String(validPcd?.error)),
+		'getpcd.gene_expression should accept a valid chr'
+	)
 	test.end()
 })
 
