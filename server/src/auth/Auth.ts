@@ -1,6 +1,7 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import mm from 'micromatch'
+import serverconfig from '../serverconfig.js'
 
 const { isMatch: mmIsMatch } = mm
 
@@ -11,6 +12,19 @@ export function normalizeReqPath(path: string) {
 	if (typeof path != 'string') return ''
 	const p = path.toLowerCase().replace(/\/+$/, '')
 	return p || (path.startsWith('/') ? '/' : '')
+}
+
+// The auth middleware is not mounted under serverconfig.basepath, so req.path includes the basepath,
+// but the protected route checks in getRequiredCred() and dsCredentials route patterns do not.
+// Returns the normalized request path with a matching basepath prefix removed.
+export function stripBasepath(path: string, basepath = '') {
+	const p = normalizeReqPath(path)
+	const prefix = normalizeReqPath(basepath)
+	if (!prefix || prefix == '/') return p
+	if (p == prefix) return '/'
+	// collapse any extra leading slashes, e.g. from a basepath with a trailing slash
+	if (p.startsWith(prefix + '/')) return p.slice(prefix.length).replace(/^\/+/, '/')
+	return p
 }
 
 function isMatch(path: string, pattern: string) {
@@ -35,6 +49,8 @@ export class Auth {
 		}
 	} = {}
 	sessionTracking: '' | 'jwt-only' = ''
+	// the basepath that data routes are registered under, see stripBasepath()
+	basepath: string = serverconfig.basepath || ''
 
 	// TODO: should create a checker function for each route group that may be protected
 	protectedRoutes = {
@@ -66,6 +82,9 @@ export class Auth {
 		this.creds = creds
 		this.genomes = genomes
 		if (serverconfig.port) this.port = serverconfig.port
+		// the serverconfig argument may be only { validatedCreds } during server launch,
+		// in which case the basepath defaults to the loaded serverconfig.basepath
+		if (typeof serverconfig.basepath == 'string') this.basepath = serverconfig.basepath
 		const { sessionTracking, maxSessionAge } = serverconfig.features || {}
 		if (sessionTracking) this.sessionTracking = sessionTracking
 		if (maxSessionAge) this.maxSessionAge = maxSessionAge
@@ -79,7 +98,7 @@ export class Auth {
 	//
 	getRequiredCred(q, path, _protectedRoutes?: string[]) {
 		if (!q.dslabel) return
-		path = normalizeReqPath(path)
+		path = stripBasepath(path, this.basepath)
 		const creds = this.creds
 		// faster exact matching, based on known protected routes
 		// if no creds[dslabel], match to wildcard dslabel if specified
@@ -316,7 +335,7 @@ export class Auth {
 			}
 			// do not overwrite existing tracking object for dslabel
 			if (!sessions[dslabel]) sessions[dslabel] = {}
-			const reqPath = normalizeReqPath(req.path)
+			const reqPath = stripBasepath(req.path, this.basepath)
 			const path = reqPath[0] == '/' && !cred.route.startsWith('/') ? reqPath.slice(1) : reqPath
 			// signed payload route must match the requested data route
 			if (
