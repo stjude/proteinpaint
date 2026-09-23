@@ -155,6 +155,32 @@ export class Locator {
 		return await this.get('.innerText')
 	}
 
+	// resolve once an element matched by selector under the root has innerText === text.
+	// like shows(), it polls at intervalWait until maxWait, so the triggering action
+	// should be performed before awaiting; polling catches the update whenever it lands.
+	// rejects if the text does not appear within maxWait.
+	async hasText(selector, text, opts: { intervalWait?: number; maxWait?: number } = {}) {
+		const intervalWait = opts.intervalWait || this.opts.intervalWait
+		const maxWait = opts.maxWait || this.opts.maxWait
+		const rootElem = this.rootElem
+		return new Promise((resolve, reject) => {
+			let elapsed = 0
+			const i = setInterval(() => {
+				const elem = rootElem.querySelector(selector)
+				if (elem && elem.innerText === text) {
+					clearInterval(i)
+					resolve(elem)
+					return
+				}
+				elapsed += intervalWait
+				if (elapsed > maxWait) {
+					clearInterval(i)
+					reject(`text '${text}' did not appear for selector '${selector}' within ${maxWait}ms`)
+				}
+			}, intervalWait)
+		})
+	}
+
 	hides(selector) {
 		return this.shows(selector, { visibility: false })
 	}

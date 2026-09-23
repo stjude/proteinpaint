@@ -104,35 +104,9 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
 
 	opts.tip = opts.pill.Inner.dom.tip
 	opts.tipLoc = await Locator.init(opts.tip.d.node())
+	opts.holderLoc = await Locator.init(opts.holder.node())
 
 	return opts
-}
-
-// wait until an element under `holder` matched by `selector` has innerText === text.
-// the optional trigger() is fired after the observer is set up, so a synchronous
-// re-render is not missed. rejects if the text does not appear within maxWait.
-function whenText(holder, selector, text, { trigger, maxWait = 3000 } = {}) {
-	return new Promise((resolve, reject) => {
-		let observer, timer
-		const check = () => {
-			const el = holder.querySelector(selector)
-			if (el && el.innerText === text) {
-				observer.disconnect()
-				clearTimeout(timer)
-				resolve(el)
-				return true
-			}
-			return false
-		}
-		observer = new MutationObserver(check)
-		observer.observe(holder, { childList: true, subtree: true, attributes: true, characterData: true })
-		timer = setTimeout(() => {
-			observer.disconnect()
-			reject(`'${text}' did not appear for selector '${selector}' within ${maxWait}ms`)
-		}, maxWait)
-		if (trigger) trigger()
-		check()
-	})
 }
 
 /**************
@@ -953,9 +927,8 @@ tape('Conditional term', async test => {
 	// select 'Most recent grade'
 	const gradeSelect1 = tip.d.select('select')._groups[0][0]
 	gradeSelect1.selectedIndex = 1
-	await whenText(opts.holder.node(), '.ts_summary_btn', 'Most Recent Grade', {
-		trigger: () => gradeSelect1.dispatchEvent(new Event('change'))
-	})
+	gradeSelect1.dispatchEvent(new Event('change'))
+	await opts.holderLoc.hasText('.ts_summary_btn', 'Most Recent Grade')
 	test.equal(
 		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
 		'Most Recent Grade',
@@ -966,9 +939,8 @@ tape('Conditional term', async test => {
 	await opts.pillMenuClick('Edit')
 	const gradeSelect2 = tip.d.select('select')._groups[0][0]
 	gradeSelect2.selectedIndex = 2
-	await whenText(opts.holder.node(), '.ts_summary_btn', 'Any Grade', {
-		trigger: () => gradeSelect2.dispatchEvent(new Event('change'))
-	})
+	gradeSelect2.dispatchEvent(new Event('change'))
+	await opts.holderLoc.hasText('.ts_summary_btn', 'Any Grade')
 	// check tvspill and group menu
 	// **** q.groupsetting does not contain predefined_groupset_idx
 	// const groupset_idx = opts.pill.Inner.q.groupsetting.predefined_groupset_idx
@@ -983,9 +955,8 @@ tape('Conditional term', async test => {
 	// change to subcondition
 	const gradeSelect3 = tip.d.selectAll('select')._groups[0][0]
 	gradeSelect3.selectedIndex = 3
-	await whenText(opts.holder.node(), '.ts_summary_btn', 'Sub-condition', {
-		trigger: () => gradeSelect3.dispatchEvent(new Event('change'))
-	})
+	gradeSelect3.dispatchEvent(new Event('change'))
+	await opts.holderLoc.hasText('.ts_summary_btn', 'Sub-condition')
 	test.equal(
 		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
 		'Sub-condition',
@@ -1119,7 +1090,7 @@ tape('Custom vocabulary', async test => {
 		selector: '.sja_menu_div'
 	})
 
-	await whenText(opts.holder.node(), '.term_name_btn', 'DDD')
+	await opts.holderLoc.hasText('.term_name_btn', 'DDD')
 	const pilldiv1 = opts.holder.node().querySelector('.term_name_btn ')
 	test.equal(
 		pilldiv1.innerText,
@@ -1385,9 +1356,8 @@ tape('geneVariant term', async test => {
 	menuOptions = tip.d.selectAll('.sja_menuoption.sja_sharp_border')
 	// select cnv groupset
 	const cnvOptionElem = menuOptions._groups[0][3]
-	await whenText(opts.holder.node(), '.ts_summary_btn', 'CNV', {
-		trigger: () => cnvOptionElem.click()
-	})
+	cnvOptionElem.click()
+	await opts.holderLoc.hasText('.ts_summary_btn', 'CNV')
 	pillSummary = pill.select('.ts_summary_btn')
 	test.equal(pillSummary.text(), 'CNV', 'Pill should display CNV predefined groupset')
 	if (test._ok) opts.pill.destroy()
@@ -1428,9 +1398,8 @@ tape('geneVariant term: turning off grouping clears q.dtLst', async test => {
 		.nodes()
 		.find(b => b.textContent == 'Apply')
 	test.ok(applyBtn, 'Should have an "Apply" button')
-	await whenText(opts.holder.node(), '.ts_summary_btn', 'any variant class', {
-		trigger: () => applyBtn.click()
-	})
+	applyBtn.click()
+	await opts.holderLoc.hasText('.ts_summary_btn', 'any variant class')
 
 	test.equal(opts.tsData.q.type, 'values', 'q.type should be values')
 	test.equal('dtLst' in opts.tsData.q, false, 'q.dtLst should be deleted')
@@ -1480,9 +1449,8 @@ tape('geneVariant term: reuse a remembered setting from the pill menu', async te
 	const reuseOption = menuOptions.nodes().find(o => o.textContent == 'Reuse: TP53 missense')
 	test.ok(reuseOption, 'Should label the option by the remembered setting')
 
-	await whenText(opts.holder.node(), '.ts_summary_btn', 'Divided into 1 groups', {
-		trigger: () => reuseOption.click()
-	})
+	reuseOption.click()
+	await opts.holderLoc.hasText('.ts_summary_btn', 'Divided into 1 groups')
 	test.equal(opts.tsData.q.type, 'custom-groupset', 'Should apply the remembered q')
 	test.deepEqual(
 		opts.tsData.q.customset.groups.map(g => g.name),
