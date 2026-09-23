@@ -93,7 +93,7 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
 	opts.pillMenuClick = async optionLabel => {
 		const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 		pilldiv.click()
-		await sleep(300)
+		await opts.tipLoc.shows('.sja_menuoption').get()
 		const tip = opts.pill.Inner.dom.tip.d.node()
 		{
 			const editOption = [...tip.querySelectorAll('.sja_menuoption')].filter(o => o.__data__.label === optionLabel)[0]
@@ -106,6 +106,33 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
 	opts.tipLoc = await Locator.init(opts.tip.d.node())
 
 	return opts
+}
+
+// wait until an element under `holder` matched by `selector` has innerText === text.
+// the optional trigger() is fired after the observer is set up, so a synchronous
+// re-render is not missed. rejects if the text does not appear within maxWait.
+function whenText(holder, selector, text, { trigger, maxWait = 3000 } = {}) {
+	return new Promise((resolve, reject) => {
+		let observer, timer
+		const check = () => {
+			const el = holder.querySelector(selector)
+			if (el && el.innerText === text) {
+				observer.disconnect()
+				clearTimeout(timer)
+				resolve(el)
+				return true
+			}
+			return false
+		}
+		observer = new MutationObserver(check)
+		observer.observe(holder, { childList: true, subtree: true, attributes: true, characterData: true })
+		timer = setTimeout(() => {
+			observer.disconnect()
+			reject(`'${text}' did not appear for selector '${selector}' within ${maxWait}ms`)
+		}, maxWait)
+		if (trigger) trigger()
+		check()
+	})
 }
 
 /**************
@@ -329,7 +356,7 @@ tape('fraction termCollection edit menu selects denominators and numerators', as
 
 	await opts.pill.main(opts.tsData)
 	opts.holder.node().querySelector('.ts_pill').click()
-	await sleep(100)
+	await opts.tipLoc.shows('.sja_menuoption').get()
 	const menuLabels = [...opts.pill.Inner.dom.tip.d.node().querySelectorAll('.sja_menuoption')].map(
 		option => option.textContent
 	)
@@ -341,7 +368,7 @@ tape('fraction termCollection edit menu selects denominators and numerators', as
 	;[...opts.pill.Inner.dom.tip.d.node().querySelectorAll('.sja_menuoption')]
 		.find(option => option.textContent === 'Edit numerator/denominator')
 		.click()
-	await sleep(100)
+	await opts.tipLoc.shows('[data-testid="sjpp-term-collection-denominator"]').get()
 	const tip = opts.pill.Inner.dom.tip.d
 	test.ok(tip.text().includes('Denominator'), 'labels the member-selection column as Denominator')
 	test.ok(tip.text().includes('Numerator'), 'labels the numerator column')
@@ -355,15 +382,15 @@ tape('fraction termCollection edit menu selects denominators and numerators', as
 	test.equal(numerators[0].checked, false, 'clears numerator when its denominator is unchecked')
 	numerators[1].click()
 	tip.select('[data-testid="sjpp-term-collection-members-apply"]').node().click()
-	await sleep(100)
+	await opts.tipLoc.hides('[data-testid="sjpp-term-collection-members-apply"]').get()
 	test.deepEqual(opts.tsData.q.denominators, ['member-2', 'member-3'], 'commits selected denominators')
 	test.deepEqual(opts.tsData.q.numerators, ['member-2'], 'commits selected numerators')
 	opts.holder.node().querySelector('.ts_pill').click()
-	await sleep(100)
+	await opts.tipLoc.shows('.sja_menuoption').get()
 	;[...opts.pill.Inner.dom.tip.d.node().querySelectorAll('.sja_menuoption')]
 		.find(option => option.textContent === 'Edit bins')
 		.click()
-	await sleep(500)
+	await opts.tipLoc.shows('.sj-toggle-button', { count: 2 }).get()
 	test.ok(
 		opts.pill.Inner.dom.tip.d.text().includes('Same bin size') &&
 			opts.pill.Inner.dom.tip.d.text().includes('Varying bin sizes'),
@@ -471,7 +498,7 @@ tape('Numerical term: range boundaries', async test => {
 	await opts.pill.main(opts.tsData)
 	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 	await opts.pillMenuClick('Edit')
-	await sleep(1000)
+	await opts.tipLoc.shows('select').get()
 	const tip = opts.pill.Inner.dom.tip.d.node()
 	test.equal(tip.querySelectorAll('select').length, 1, 'Should have a select dropdown')
 	test.equal(
@@ -481,12 +508,10 @@ tape('Numerical term: range boundaries', async test => {
 	)
 	test.equal(tip.querySelector('select').querySelectorAll('option').length, 2, 'Should have 2 select options')
 
-	await sleep(50)
 	const select1 = tip.querySelector('select')
 	const option1 = select1.querySelectorAll('option')[1]
 	select1.value = option1.value
 	select1.dispatchEvent(new Event('change'))
-	await sleep(50)
 	const q1 = opts.pill.Inner.handler.editHandler.editorsByType['regular-bin'].q
 	test.equal(!q1.stopinclusive && q1.startinclusive, true, 'should set the range boundary to start inclusive')
 
@@ -494,7 +519,6 @@ tape('Numerical term: range boundaries', async test => {
 	const option0 = select0.querySelectorAll('option')[0]
 	select0.value = option0.value
 	select0.dispatchEvent(new Event('change'))
-	await sleep(50)
 	const q0 = opts.pill.Inner.handler.editHandler.editorsByType['regular-bin'].q
 	test.equal(q0.stopinclusive && !q0.startinclusive, true, 'should set the range boundary to stop inclusive')
 	if (test._ok) opts.pill.destroy()
@@ -579,7 +603,7 @@ tape('Numerical term: fixed bins', async test => {
 
 	const apply_btn = await tipLoc.shows('[data-testid="sjpp_numeric_edit_apply"]').get(0)
 	apply_btn.click()
-	await sleep(50)
+	await tipLoc.hides('[data-testid="sjpp_numeric_edit_apply"]').get()
 	await opts.pillMenuClick('Edit')
 	test.deepEqual(
 		await tipLoc.shows('[data-testid="sjpp-num-reg-bin-editor-size"]').value(),
@@ -744,7 +768,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 		'Should show the expected number of knots when switching back to Discrete tab'
 	)
 
-	if (test._ok) opts.pill.destroy()
+	//if (test._ok) opts.pill.destroy()
 	test.end()
 })
 
@@ -758,12 +782,12 @@ tape('Numerical term: toggle menu - 2 options', async test => {
 			term: getTermCopy('agedx')
 		}
 	})
+	const tipLoc = opts.tipLoc
 
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
-	await sleep(100)
 	test.equal(
-		opts.pill.Inner.handler.dom.topBar.node().querySelectorAll('.sj-toggle-button').length,
+		await tipLoc.shows(`[data-testid='sja-ts-numeric-edit-top-bar'] .sj-toggle-button`, { count: 2 }).length(),
 		2,
 		'Should have 2 toggle buttons for numeric edit menu'
 	)
@@ -927,9 +951,11 @@ tape('Conditional term', async test => {
 	test.equal(tip.d.selectAll('select').size(), 1, 'Should have 1 dropdown to change grade setting')
 
 	// select 'Most recent grade'
-	tip.d.select('select')._groups[0][0].selectedIndex = 1
-	tip.d.select('select')._groups[0][0].dispatchEvent(new Event('change'))
-	await sleep(50)
+	const gradeSelect1 = tip.d.select('select')._groups[0][0]
+	gradeSelect1.selectedIndex = 1
+	await whenText(opts.holder.node(), '.ts_summary_btn', 'Most Recent Grade', {
+		trigger: () => gradeSelect1.dispatchEvent(new Event('change'))
+	})
 	test.equal(
 		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
 		'Most Recent Grade',
@@ -938,9 +964,11 @@ tape('Conditional term', async test => {
 
 	// select 'Any condition vs normal'
 	await opts.pillMenuClick('Edit')
-	tip.d.select('select')._groups[0][0].selectedIndex = 2
-	tip.d.select('select')._groups[0][0].dispatchEvent(new Event('change'))
-	await sleep(50)
+	const gradeSelect2 = tip.d.select('select')._groups[0][0]
+	gradeSelect2.selectedIndex = 2
+	await whenText(opts.holder.node(), '.ts_summary_btn', 'Any Grade', {
+		trigger: () => gradeSelect2.dispatchEvent(new Event('change'))
+	})
 	// check tvspill and group menu
 	// **** q.groupsetting does not contain predefined_groupset_idx
 	// const groupset_idx = opts.pill.Inner.q.groupsetting.predefined_groupset_idx
@@ -953,9 +981,11 @@ tape('Conditional term', async test => {
 	)
 
 	// change to subcondition
-	tip.d.selectAll('select')._groups[0][0].selectedIndex = 3
-	tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
-	await sleep(50)
+	const gradeSelect3 = tip.d.selectAll('select')._groups[0][0]
+	gradeSelect3.selectedIndex = 3
+	await whenText(opts.holder.node(), '.ts_summary_btn', 'Sub-condition', {
+		trigger: () => gradeSelect3.dispatchEvent(new Event('change'))
+	})
 	test.equal(
 		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
 		'Sub-condition',
@@ -1089,7 +1119,7 @@ tape('Custom vocabulary', async test => {
 		selector: '.sja_menu_div'
 	})
 
-	await sleep(1000)
+	await whenText(opts.holder.node(), '.term_name_btn', 'DDD')
 	const pilldiv1 = opts.holder.node().querySelector('.term_name_btn ')
 	test.equal(
 		pilldiv1.innerText,
@@ -1355,8 +1385,9 @@ tape('geneVariant term', async test => {
 	menuOptions = tip.d.selectAll('.sja_menuoption.sja_sharp_border')
 	// select cnv groupset
 	const cnvOptionElem = menuOptions._groups[0][3]
-	cnvOptionElem.click()
-	await sleep(300)
+	await whenText(opts.holder.node(), '.ts_summary_btn', 'CNV', {
+		trigger: () => cnvOptionElem.click()
+	})
 	pillSummary = pill.select('.ts_summary_btn')
 	test.equal(pillSummary.text(), 'CNV', 'Pill should display CNV predefined groupset')
 	if (test._ok) opts.pill.destroy()
@@ -1397,8 +1428,9 @@ tape('geneVariant term: turning off grouping clears q.dtLst', async test => {
 		.nodes()
 		.find(b => b.textContent == 'Apply')
 	test.ok(applyBtn, 'Should have an "Apply" button')
-	applyBtn.click()
-	await sleep(300)
+	await whenText(opts.holder.node(), '.ts_summary_btn', 'any variant class', {
+		trigger: () => applyBtn.click()
+	})
 
 	test.equal(opts.tsData.q.type, 'values', 'q.type should be values')
 	test.equal('dtLst' in opts.tsData.q, false, 'q.dtLst should be deleted')
@@ -1448,8 +1480,9 @@ tape('geneVariant term: reuse a remembered setting from the pill menu', async te
 	const reuseOption = menuOptions.nodes().find(o => o.textContent == 'Reuse: TP53 missense')
 	test.ok(reuseOption, 'Should label the option by the remembered setting')
 
-	reuseOption.click()
-	await sleep(300)
+	await whenText(opts.holder.node(), '.ts_summary_btn', 'Divided into 1 groups', {
+		trigger: () => reuseOption.click()
+	})
 	test.equal(opts.tsData.q.type, 'custom-groupset', 'Should apply the remembered q')
 	test.deepEqual(
 		opts.tsData.q.customset.groups.map(g => g.name),
