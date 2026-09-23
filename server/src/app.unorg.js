@@ -3003,6 +3003,7 @@ async function handle_bamnochr(req, res) {
 		const genome = genomes[q.genome]
 		if (!genome) throw 'invalid genome'
 		if (q.file) {
+			if (utils.illegalpath(q.file, false, false)) throw 'illegal file path'
 			q.file = path.join(serverconfig.tpmasterdir, q.file)
 		} else {
 			if (!q.url) throw 'no bam file or url'
