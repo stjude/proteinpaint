@@ -1,1 +1,2 @@
-
+Fixes:
+- Restored violin label menu option to hide individual plots.

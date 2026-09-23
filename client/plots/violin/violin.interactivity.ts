@@ -45,20 +45,15 @@ export function setInteractivity(self: any) {
 			label: `Hide: ${plot.label}`,
 			testid: 'sjpp-violinLabOpt-hide',
 			callback: () => {
-				const term = self.config[label]
-
-				const isHidden = true
+				const config = structuredClone(self.config)
+				const term = config[label]
+				if (!term.q.hiddenValues) term.q.hiddenValues = {}
+				term.q.hiddenValues[plot.label || plot.seriesId] = 1
 
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.id,
-					config: {
-						[label]: {
-							isAtomic: true,
-							term: term.term,
-							q: getUpdatedQfromClick(plot, term, isHidden)
-						}
-					}
+					config
 				})
 			}
 		})
@@ -223,7 +218,7 @@ export function setInteractivity(self: any) {
 		})
 	}
 
-	self.labelHideLegendClicking = function (t2: any, plot: any) {
+	self.labelHideLegendClicking = function (t2: any) {
 		// whoever wrote this tangled mess needs to be fired
 		self.dom.legendDiv
 			.selectAll('.sjpp-htmlLegend')
@@ -237,24 +232,18 @@ export function setInteractivity(self: any) {
 					((t2?.term.type === 'float' || t2?.term.type === 'integer') && self.config.term?.q.mode === 'continuous')
 						? 'term2'
 						: 'term'
-				const term = self.config[termNum]
+				const config = structuredClone(self.config)
+				const term = config[termNum]
 				if (t2) {
-					for (const key of Object.keys(term?.q?.hiddenValues)) {
+					for (const key of Object.keys(term.q.hiddenValues || {})) {
 						if (d.text === key) {
 							delete term.q.hiddenValues[key]
 						}
 					}
-					const isHidden = false
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.id,
-						config: {
-							[termNum]: {
-								isAtomic: true,
-								term: term.term,
-								q: getUpdatedQfromClick(plot, term, isHidden)
-							}
-						}
+						config
 					})
 				}
 			})
@@ -285,13 +274,3 @@ function getAddFilterCallback(self: any, plot: any, rangeStart?: number, rangeSt
 	}
 }
 
-function getUpdatedQfromClick(plot: any, term: any, isHidden = false) {
-	const label = plot.label
-	const valueId = term?.term?.values ? term?.term?.values?.[label]?.label : label
-	const id = !valueId ? label : valueId
-	const q = term.q
-	if (!q.hiddenValues) q.hiddenValues = {}
-	if (isHidden) q.hiddenValues[id] = 1
-	else delete q.hiddenValues[id]
-	return q
-}
