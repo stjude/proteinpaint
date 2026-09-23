@@ -10,6 +10,9 @@ cachedFetch
 validateRglst
 illegalpath()
 doUpdateAttr
+get_fasta
+checkChr
+fileurl() argv safety
 */
 
 tape('\n', function (test) {
@@ -283,5 +286,56 @@ tape('doUpdateAttr', test => {
 		test.equal(obj.key1.key2, 'xxx', 'key1.key2 updated to "xxx" replacing {key3:value}')
 	}
 
+	test.end()
+})
+
+tape('get_fasta', async test => {
+	const g = { genomefile: 'NA', chrlookup: { CHR1: { name: 'chr1', len: 1000 } } }
+	test.equal(await utils.get_fasta(g, 'chr1:2-4'), '>chr1:2-4\nNNN', 'should return sequence for a valid coord')
+	test.equal(await utils.get_fasta(g, 'CHR1:2-4'), '>chr1:2-4\nNNN', 'should use the canonical chr name')
+	for (const coord of [
+		'-cr/etc/passwd',
+		'--fai-idx=/tmp/x',
+		'chrX:1-2',
+		'chr1:-5-10',
+		'chr1:1-2 -o/tmp/x',
+		undefined
+	]) {
+		try {
+			await utils.get_fasta(g, coord)
+			test.fail(`should reject coord=${coord}`)
+		} catch (e) {
+			test.equal(e, 'invalid coordinate', `should reject coord=${coord}`)
+		}
+	}
+	test.end()
+})
+
+tape('checkChr', test => {
+	const g = { chrlookup: { CHR1: { name: 'chr1', len: 1000 } } }
+	test.doesNotThrow(() => utils.checkChr(g, 'chr1'), 'should accept a known chr')
+	test.doesNotThrow(() => utils.checkChr(g, 'Chr1'), 'should accept a known chr case-insensitively')
+	for (const chr of ['-o/tmp/x', '-fc', 'chrX', '', undefined, { a: 1 }]) {
+		test.throws(() => utils.checkChr(g, chr), /invalid chr/, `should reject chr=${JSON.stringify(chr)}`)
+	}
+	test.end()
+})
+
+tape('fileurl() argv safety', test => {
+	test.deepEqual(
+		utils.fileurl({ query: { url: '-o/tmp/x://abcde' } }),
+		['url must not start with "-"'],
+		'should reject url starting with "-"'
+	)
+	test.deepEqual(
+		utils.fileurl({ query: { url: ['-o/tmp/x', 'https://a.org/b.bam'] } }),
+		['url must be a string'],
+		'should reject url from a repeated query parameter'
+	)
+	test.equal(
+		utils.fileurl({ query: { url: 'https://a.org/b.bam' } })[1],
+		'https://a.org/b.bam',
+		'should accept a normal url'
+	)
 	test.end()
 })

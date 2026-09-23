@@ -2,6 +2,7 @@ import type { RoutePayload, RouteApi } from '#types'
 import path from 'path'
 import { spawn } from 'child_process'
 import serverconfig from '#src/serverconfig.js'
+import { checkChr } from '#src/utils.js'
 import * as common from '#shared/common.js'
 import type { DsDataRequest, DsDataResponse } from '#types'
 
@@ -60,6 +61,7 @@ export function init({ genomes }) {
 				}
 
 				if (query.vcffile) {
+					checkChr(genomes[q.genome], req.query.range?.chr)
 					const d = await handle_dsdata_vcf(query, req)
 					data.push(d)
 					continue

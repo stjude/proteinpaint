@@ -845,7 +845,7 @@ async function get_q(genome, req) {
 
 	let maxntwidth = 0
 	for (const r of q.regions) {
-		if (!r.chr) throw '.chr missing from a region'
+		utils.checkChr(genome, r.chr)
 		if (!Number.isInteger(r.start)) throw '.start not integer of a region'
 		if (!Number.isInteger(r.stop)) throw '.stop not integer of a region'
 		r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
@@ -3086,7 +3086,7 @@ Insertion  BBBBBBBBBBBBBBBBB
 
 async function route_getread(genome, req) {
 	// cannot use the point position under cursor to query, as if clicking on softclip
-	if (!req.query.chr) throw '.chr missing'
+	utils.checkChr(genome, req.query.chr)
 	if (!req.query.qname) throw '.qname missing'
 	req.query.qname = decodeURIComponent(req.query.qname) // convert %2B to +
 	if (!Number.isInteger(req.query.start)) throw '.start is not integer'

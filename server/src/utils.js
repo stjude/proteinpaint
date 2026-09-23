@@ -41,6 +41,7 @@ connect_db
 loadfile_ssid
 bam_ifnochr
 testIfFileIsBigbed
+checkChr
 validateRglst
 ********************** INTERNAL
 */
@@ -129,6 +130,8 @@ export function fileurl(req, checkWhiteList = true) {
 		if (file.includes('"') || file.includes("'")) return ['url must not contain single or double quotes']
 		// the url is turned into a cache dir path by cache_index()
 		if (file.split('/').includes('..')) return ['url must not contain ".." path segment']
+		// url goes into samtools/tabix argv, where a leading '-' would be parsed as an option
+		if (file[0] == '-') return ['url must not start with "-"']
 		isurl = true
 	}
 	if (!file) return ['file unspecified']
@@ -199,6 +202,7 @@ const cacheUrlProtocols = new Set(['http', 'https', 'ftp'])
 function test_url(u) {
 	const tmp = u.split('://')
 	if (tmp.length != 2) return ['improper url']
+	if (u[0] == '-') return ['url must not start with "-"'] // would be parsed as a samtools/tabix option
 	const protocol = tmp[0].toLowerCase()
 	if (!cacheUrlProtocols.has(protocol)) return ['protocol must be http, https or ftp']
 	if (tmp[1].split(/[/\\]/).includes('..')) return ['must not contain ".." path segment']
@@ -559,7 +563,13 @@ export function read_file(file) {
 	})
 }
 
-export async function get_fasta(gn, pos) {
+export async function get_fasta(gn, coord) {
+	// coord may come from a request; rebuild it from validated parts so it can never be read as a samtools option
+	const m = typeof coord == 'string' && coord.match(/^(.+):(\d+)-(\d+)$/)
+	const c = m && gn.chrlookup?.[m[1].toUpperCase()]
+	if (!c) throw 'invalid coordinate'
+	const pos = `${c.name}:${m[2]}-${m[3]}`
+
 	if (gn.genomefile == 'NA') {
 		// not using a real fasta file, return Ns by the length of region
 		const tmp = pos.split(/[:-]/)
@@ -572,7 +582,7 @@ export async function get_fasta(gn, pos) {
 	const lines = []
 	await get_lines_bigfile({
 		isbam: true, // so that samtools will be used for querying
-		args: ['faidx', gn.genomefile, pos],
+		args: ['faidx', gn.genomefile, '--', pos], // '--' so a region is never parsed as an option
 		callback: line => lines.push(line)
 	})
 	return lines.join('\n')
@@ -799,6 +809,12 @@ genome is used for validating chr names. when routes are fixed, genome should be
 
 throws on any err. makes no return. may update q
 */
+// a request-supplied chr must be a known chromosome before it goes into a samtools/tabix/bcftools argv,
+// otherwise a value like "-o/path" is parsed as an option
+export function checkChr(genome, chr) {
+	if (typeof chr != 'string' || !genome?.chrlookup?.[chr.toUpperCase()]) throw 'invalid chr'
+}
+
 export function validateRglst(q, genome) {
 	if (typeof q.rglst == 'string') {
 		try {

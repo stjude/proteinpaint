@@ -1,1 +1,2 @@
-
+Fixes:
+- validate request chr, coord and url before they reach samtools/tabix arguments
