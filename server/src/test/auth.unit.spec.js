@@ -507,6 +507,61 @@ tape(`sample-level access without a session`, async test => {
 	test.end()
 })
 
+tape(`sample-level access without a session, glob credential keys`, async test => {
+	test.timeoutAfter(500)
+
+	const serverconfig = {
+		debugmode,
+		dsCredentials: {
+			'realD*': {
+				termdb: {
+					'*.example.org': {
+						type: 'jwt',
+						secret
+					}
+				}
+			}
+		},
+		cachedir
+	}
+	const genomes = { hg38: { datasets: { realDs1: {}, openDs: {} } } }
+	const { authApi } = await appInit(serverconfig, genomes)
+	const displaySampleIds = true
+	const getReq = query => ({
+		query: { getsamplelist: 1, ...query },
+		path: '/termdb',
+		headers: {},
+		cookies: {},
+		get: () => 'localhost'
+	})
+
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ dslabel: 'realDs1', embedder: 'portal.example.org' }), {
+			label: 'realDs1',
+			cohort: { termdb: { displaySampleIds } }
+		}),
+		false,
+		`should require a session when both the dslabel and embedder match glob credential keys`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ dslabel: 'realDs1', embedder: 'other.org' }), {
+			label: 'realDs1',
+			cohort: { termdb: { displaySampleIds } }
+		}),
+		true,
+		`should not require a session when the embedder does not match the glob credential key`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ dslabel: 'openDs', embedder: 'portal.example.org' }), {
+			label: 'openDs',
+			cohort: { termdb: { displaySampleIds } }
+		}),
+		true,
+		`should not require a session when the dslabel does not match the glob credential key`
+	)
+	test.end()
+})
+
 tape(`a valid request`, async test => {
 	test.timeoutAfter(500)
 	test.plan(2)

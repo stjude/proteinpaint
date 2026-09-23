@@ -30,6 +30,27 @@ function isMatch(path: string, pattern: string) {
 	return mmIsMatch(path, pattern, { nocase: true })
 }
 
+// match a client-supplied value against a dsCredentials key: an exact key match or the '*' wildcard
+// always apply, otherwise try a glob. Note that a glob '*' alone does not match values with a '/',
+// such as embedder='a/b', so the wildcard must be checked explicitly to avoid treating a protected
+// dataset as open access.
+export function patternMatches(value, pattern) {
+	if (pattern === '*' || value === pattern) return true
+	if (typeof value != 'string' || !value || !pattern) return false
+	return isMatch(value, pattern)
+}
+
+// return the value for the key in obj that best matches a client-supplied value:
+// an exact key first, then a glob pattern key, then the '*' wildcard
+function getMatchedEntry(obj, value) {
+	if (!obj) return
+	if (typeof value == 'string' && Object.hasOwn(obj, value)) return obj[value]
+	for (const pattern in obj) {
+		if (pattern != '*' && patternMatches(value, pattern)) return obj[pattern]
+	}
+	return obj['*']
+}
+
 // This is the "inner" private auth that's wrapped by AuthApi.
 // It hides and protect implementation details from being accidentally
 // viewed or mutated by consumer code.
@@ -143,10 +164,25 @@ export class Auth {
 
 	// returns the termdb credential that applies to the requested dslabel and embedder,
 	// regardless of the request path or q.for, or falsy if the dataset's termdb data is open access
+	//
+	// dslabel and embedder keys are resolved with the same exact/glob/'*' semantics as
+	// AuthApi.getRequiredCredForDsEmbedder(), so that a glob-configured key like 'realD*'
+	// or '*.example.org' is not mistaken for open access
 	getTermdbCred(q) {
 		if (!q.dslabel) return
-		const route = (this.creds[q.dslabel] || this.creds['*'])?.termdb
-		return route && (route[q.embedder] || route['*'])
+		// a dslabel may match more than one pattern, and only some of those entries may have
+		// a termdb route; fail closed by checking every matched entry
+		const dsEntries = [
+			...(typeof q.dslabel == 'string' && Object.hasOwn(this.creds, q.dslabel) ? [this.creds[q.dslabel]] : []),
+			...Object.keys(this.creds)
+				.filter(pattern => pattern != q.dslabel && pattern != '*' && patternMatches(q.dslabel, pattern))
+				.map(pattern => this.creds[pattern]),
+			...(this.creds['*'] ? [this.creds['*']] : [])
+		]
+		for (const ds of dsEntries) {
+			const cred = getMatchedEntry(ds?.termdb, q.embedder)
+			if (cred) return cred
+		}
 	}
 
 	/**

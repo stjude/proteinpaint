@@ -1,23 +1,13 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import { type AuthInterface } from '../auth.ts'
-import { Auth } from './Auth.ts'
+import { Auth, patternMatches } from './Auth.ts'
 import { setAuthMiddleware } from './AuthMiddleWare.ts'
 import { setAuthRoutes } from './AuthRoutes.ts'
 import { sleep } from '../utils.js'
 import mm from 'micromatch'
 
 const { isMatch } = mm
-
-// match a client-supplied value against a dsCredentials key, using the same key semantics as
-// Auth.getRequiredCred(): an exact key match or the '*' wildcard always apply, otherwise try a glob.
-// Note that a glob '*' alone does not match values with a '/', such as embedder='a/b', so the
-// wildcard must be checked explicitly to avoid treating a protected dataset as open access.
-function patternMatches(value, pattern) {
-	if (pattern === '*' || value === pattern) return true
-	if (typeof value != 'string' || !value || !pattern) return false
-	return isMatch(value, pattern)
-}
 
 // const authRouteByCredType = {
 // 	basic: '/dslogin',
