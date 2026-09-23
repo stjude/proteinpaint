@@ -16,8 +16,8 @@ export type TermdbBarSqlRequest = {
 	filter?: Filter
 	filter0?: JsonObject
 
-	/** by term1 category key, used to exclude hidden categories from the term1-term2 pvalue calculation */
-	hiddenValues?: Record<string, number>
+	/** hidden term1 and term2 labels excluded from association-test calculations */
+	hiddenValues?: { term1: string[]; term2: string[] }
 
 	/** identifies a genotype-by-sample file previously loaded via loadfile_ssid(), for VCF-genotype overlay bars */
 	ssid?: string
@@ -79,7 +79,7 @@ export type BarRefs = {
 	useColOrder?: boolean
 	useRowOrder?: boolean
 	bins?: unknown[]
-	q?: JsonObject
+	q?: JsonObject[]
 	[key: string]: unknown
 }
 
@@ -87,6 +87,7 @@ export type BarData = {
 	charts: BarChart[]
 	refs?: BarRefs
 	maxAcrossCharts?: number
+	tests?: Record<string, unknown[]>
 	min?: number
 	max?: number
 	boxplot?: BarBoxplotStat
