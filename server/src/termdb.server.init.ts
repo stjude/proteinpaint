@@ -905,8 +905,13 @@ export function listDbTables(cn) {
 }
 
 export function listTableColumns(cn, table) {
-	const rows = cn.prepare(`SELECT name FROM PRAGMA_TABLE_INFO('${table}')`).all()
+	const rows = cn.prepare('SELECT name FROM PRAGMA_TABLE_INFO(?)').all(table)
 	return rows.map(i => i.name)
+}
+
+/* identifiers such as table names cannot be bound as sql parameters, so quote them for interpolation instead */
+export function quoteSqlIdentifier(name: string) {
+	return `"${String(name).replaceAll('"', '""')}"`
 }
 
 function mayComputeTermtypeByCohort(ds) {

@@ -744,30 +744,6 @@ export function get_active_groupset(term, q) {
 }
 
 /*
-	Arguments
-	- term{}
-	- q{}: must have a groupset
-	
-	Return
-	- a series of "SELECT name, value" statements that are joined by UNION ALL
-	- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
-*/
-function makesql_values_groupset(term, q) {
-	const s = get_active_groupset(term, q)
-	if (!s.groups) throw '.groups[] missing from a group-set'
-	const categories = []
-	let filter
-	for (const [i, g] of s.groups.entries()) {
-		const groupname = g.name || 'Group ' + (i + 1)
-		if (!Array.isArray(g.values)) throw 'groupset.groups[' + i + '].values[] is not array'
-		for (const v of g.values) {
-			categories.push(`SELECT '${groupname}' AS name, '${v.key}' AS value`)
-		}
-	}
-	return categories.join('\nUNION ALL\n')
-}
-
-/*
 q{}
 	termsetting
 index
