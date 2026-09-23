@@ -1,7 +1,7 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import { type AuthInterface } from '../auth.ts'
-import { Auth, patternMatches } from './Auth.ts'
+import { Auth, patternMatches, getMatchedEntry } from './Auth.ts'
 import { setAuthMiddleware } from './AuthMiddleWare.ts'
 import { setAuthRoutes } from './AuthRoutes.ts'
 import { sleep } from '../utils.js'
@@ -144,7 +144,8 @@ export class AuthApi implements AuthInterface {
 		}
 
 		const forbiddenRoutes: string[] = []
-		const ds = this.#auth.creds[req.query.dslabel] || this.#auth.creds['*']
+		// use the best matched dslabel entry (exact, then glob, then '*'), same as Auth.getRequiredCred()
+		const ds = this.#auth.getMatchedDsEntries(req.query.dslabel)[0]
 		let cred
 		if (!ds) {
 			// no checks for this ds, is open access
@@ -152,7 +153,7 @@ export class AuthApi implements AuthInterface {
 		} else {
 			// has checks
 			for (const k in ds) {
-				cred = ds[k][req.query.embedder] || ds[k]['*']
+				cred = getMatchedEntry(ds[k], req.query.embedder)
 				if (cred?.type == 'forbidden') {
 					forbiddenRoutes.push(k)
 				}

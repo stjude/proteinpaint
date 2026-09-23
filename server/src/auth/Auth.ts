@@ -42,7 +42,7 @@ export function patternMatches(value, pattern) {
 
 // return the value for the key in obj that best matches a client-supplied value:
 // an exact key first, then a glob pattern key, then the '*' wildcard
-function getMatchedEntry(obj, value) {
+export function getMatchedEntry(obj, value) {
 	if (!obj) return
 	if (typeof value == 'string' && Object.hasOwn(obj, value)) return obj[value]
 	for (const pattern in obj) {
@@ -118,21 +118,21 @@ export class Auth {
 	getRequiredCred(q, path, _protectedRoutes?: string[]) {
 		if (!q.dslabel) return
 		path = stripBasepath(path, this.basepath)
-		const creds = this.creds
-		// faster exact matching, based on known protected routes
-		// if no creds[dslabel], match to wildcard dslabel if specified
-		const ds0 = creds[q.dslabel] || creds['*']
+		// dslabel and embedder keys may be exact, glob patterns, or the '*' wildcard, in that order of precedence
+		const dsEntries = this.getMatchedDsEntries(q.dslabel)
+		// faster matching, based on known protected routes, using the best matched dslabel entry
+		const ds0 = dsEntries[0]
 		if (ds0) {
 			if (path == '/jwt-status' || path == '/demotoken') {
 				const route = ds0[q.route] || ds0['termdb'] || ds0['/**']
-				return route && (route[q.embedder] || route['*'])
+				return getMatchedEntry(route, q.embedder)
 			} else if (path == '/dslogin') {
 				const route = ds0[q.route] || ds0['/**']
-				return route && (route[q.embedder] || route['*'])
+				return getMatchedEntry(route, q.embedder)
 			} else if (path.startsWith('/termdb') && ds0.termdb) {
 				const route = ds0.termdb
 				// okay to return an undefined embedder[route]
-				const cred = route[q.embedder] || route['*']
+				const cred = getMatchedEntry(route, q.embedder)
 				if (!cred) return
 				if (cred.protectedRoutes?.find(pattern => isMatch(path, pattern))) return cred
 				const protRoutes = _protectedRoutes || this.protectedRoutes.termdb
@@ -143,23 +143,31 @@ export class Auth {
 				if (protRoutes.find(pattern => isMatch(path, pattern))) return cred
 			} else if (path.startsWith('/burden') && ds0.burden) {
 				// okay to return an undefined embedder[route]
-				return ds0.burden[q.embedder] || ds0.burden['*']
+				return getMatchedEntry(ds0.burden, q.embedder)
 			}
 		}
 
-		for (const dslabel in creds) {
-			if (dslabel != q.dslabel && dslabel != '*') continue
-			const ds = creds[dslabel]
+		for (const ds of dsEntries) {
 			for (const routeName in ds) {
 				const routePattern = ds[routeName].routePattern || routeName
 				if (!isMatch(path, routePattern)) continue
-				const route = ds[routeName]
-				for (const embedderHost in route) {
-					if (embedderHost != q.embedder && embedderHost != '*') continue
-					return route[embedderHost]
-				}
+				const cred = getMatchedEntry(ds[routeName], q.embedder)
+				if (cred) return cred
 			}
 		}
+	}
+
+	// returns the dsCredentials entries that apply to a client-supplied dslabel, ordered by precedence:
+	// an exact key, then glob pattern keys (e.g. 'realD*'), then the '*' wildcard
+	getMatchedDsEntries(dslabel) {
+		const creds = this.creds
+		const entries: any[] = []
+		if (typeof dslabel == 'string' && Object.hasOwn(creds, dslabel)) entries.push(creds[dslabel])
+		for (const pattern in creds) {
+			if (pattern != dslabel && pattern != '*' && patternMatches(dslabel, pattern)) entries.push(creds[pattern])
+		}
+		if (creds['*']) entries.push(creds['*'])
+		return entries
 	}
 
 	// returns the termdb or all-routes credential that applies to the requested dslabel and embedder,
@@ -172,14 +180,7 @@ export class Auth {
 		if (!q.dslabel) return
 		// a dslabel may match more than one pattern, and only some of those entries may have
 		// a termdb route; fail closed by checking every matched entry
-		const dsEntries = [
-			...(typeof q.dslabel == 'string' && Object.hasOwn(this.creds, q.dslabel) ? [this.creds[q.dslabel]] : []),
-			...Object.keys(this.creds)
-				.filter(pattern => pattern != q.dslabel && pattern != '*' && patternMatches(q.dslabel, pattern))
-				.map(pattern => this.creds[pattern]),
-			...(this.creds['*'] ? [this.creds['*']] : [])
-		]
-		for (const ds of dsEntries) {
+		for (const ds of this.getMatchedDsEntries(q.dslabel)) {
 			// also check the all-routes entry: validateDsCredentials() rewrites a '*' route key
 			// to '/**', and the raw '*' key may still be present in unvalidated credentials
 			for (const routeKey of ['termdb', '/**', '*']) {
