@@ -117,23 +117,20 @@ export class Auth {
 	//
 	getRequiredCred(q, path, _protectedRoutes?: string[]) {
 		if (!q.dslabel) return
-		path = stripBasepath(path, this.basepath)
-		// dslabel and embedder keys may be exact, glob patterns, or the '*' wildcard, in that order of precedence
+		// dslabel keys may be exact, glob patterns, or the '*' wildcard, in that order of precedence
 		const dsEntries = this.getMatchedDsEntries(q.dslabel)
-		// faster matching, based on known protected routes, using the best matched dslabel entry
-		const ds0 = dsEntries[0]
-		if (ds0) {
-			if (path == '/jwt-status' || path == '/demotoken') {
-				const route = ds0[q.route] || ds0['termdb'] || ds0['/**']
-				return getMatchedEntry(route, q.embedder)
-			} else if (path == '/dslogin') {
-				const route = ds0[q.route] || ds0['/**']
-				return getMatchedEntry(route, q.embedder)
-			} else if (path.startsWith('/termdb') && ds0.termdb) {
-				const route = ds0.termdb
-				// okay to return an undefined embedder[route]
-				const cred = getMatchedEntry(route, q.embedder)
-				if (!cred) return
+		// no credentials for this dslabel, is open access
+		if (!dsEntries.length) return
+		// also normalizes a non-string path to ''
+		path = stripBasepath(path, this.basepath)
+		// faster matching, based on known protected routes
+		if (path == '/jwt-status' || path == '/demotoken') {
+			return this.getRouteCred(q.dslabel, [q.route, 'termdb', '/**'], q.embedder)
+		} else if (path == '/dslogin') {
+			return this.getRouteCred(q.dslabel, [q.route, '/**'], q.embedder)
+		} else if (path.startsWith('/termdb')) {
+			const cred = this.getRouteCred(q.dslabel, ['termdb'], q.embedder)
+			if (cred) {
 				if (cred.protectedRoutes?.find(pattern => isMatch(path, pattern))) return cred
 				const protRoutes = _protectedRoutes || this.protectedRoutes.termdb
 				// q.for is client-supplied and may be a non-string, e.g. an array from `for[]=...`
@@ -141,10 +138,10 @@ export class Auth {
 				const forValues = q.for === undefined ? [] : Array.isArray(q.for) ? q.for : [q.for]
 				if (forValues.some(f => protRoutes.includes(String(f)))) return cred
 				if (protRoutes.find(pattern => isMatch(path, pattern))) return cred
-			} else if (path.startsWith('/burden') && ds0.burden) {
-				// okay to return an undefined embedder[route]
-				return getMatchedEntry(ds0.burden, q.embedder)
 			}
+		} else if (path.startsWith('/burden')) {
+			const cred = this.getRouteCred(q.dslabel, ['burden'], q.embedder)
+			if (cred) return cred
 		}
 
 		for (const ds of dsEntries) {
@@ -158,36 +155,59 @@ export class Auth {
 	}
 
 	// returns the dsCredentials entries that apply to a client-supplied dslabel, ordered by precedence:
-	// an exact key, then glob pattern keys (e.g. 'realD*'), then the '*' wildcard
+	// an exact key, then glob pattern keys (e.g. 'realD*'), then the '*' wildcard;
+	// keys that start with '#' (comment) or '__' (not a dslabel) are not used as glob patterns
 	getMatchedDsEntries(dslabel) {
 		const creds = this.creds
 		const entries: any[] = []
 		if (typeof dslabel == 'string' && Object.hasOwn(creds, dslabel)) entries.push(creds[dslabel])
 		for (const pattern in creds) {
-			if (pattern != dslabel && pattern != '*' && patternMatches(dslabel, pattern)) entries.push(creds[pattern])
+			if (pattern == dslabel || pattern == '*' || pattern.startsWith('#') || pattern.startsWith('__')) continue
+			if (patternMatches(dslabel, pattern)) entries.push(creds[pattern])
 		}
 		if (creds['*']) entries.push(creds['*'])
 		return entries
 	}
 
-	// returns the termdb or all-routes credential that applies to the requested dslabel and embedder,
-	// regardless of the request path or q.for, or falsy if the dataset's termdb data is open access
+	// returns the route keys, such as 'termdb', 'burden', or '/**', that are configured for a dslabel
+	// across all of its matched dsCredentials entries, in order of precedence
+	getMatchedRouteKeys(dslabel) {
+		const routeKeys = new Set<string>()
+		for (const ds of this.getMatchedDsEntries(dslabel)) {
+			for (const routeKey in ds) routeKeys.add(routeKey)
+		}
+		return [...routeKeys]
+	}
+
+	// This is the shared resolver for a credential that applies to a concrete dslabel and embedder,
+	// to be used for credential discovery, login, middleware, and session checks.
 	//
-	// dslabel and embedder keys are resolved with the same exact/glob/'*' semantics as
-	// AuthApi.getRequiredCredForDsEmbedder(), so that a glob-configured key like 'realD*'
-	// or '*.example.org' is not mistaken for open access
-	getTermdbCred(q) {
-		if (!q.dslabel) return
-		// a dslabel may match more than one pattern, and only some of those entries may have
-		// a termdb route; fail closed by checking every matched entry
-		for (const ds of this.getMatchedDsEntries(q.dslabel)) {
-			// also check the all-routes entry: validateDsCredentials() rewrites a '*' route key
-			// to '/**', and the raw '*' key may still be present in unvalidated credentials
-			for (const routeKey of ['termdb', '/**', '*']) {
-				const cred = getMatchedEntry(ds?.[routeKey], q.embedder)
+	// routeKeys[]: the route keys to try in order, e.g. ['termdb'] or [q.route, 'termdb', '/**']
+	//
+	// For each route key, the matched dslabel entries are checked in order of precedence
+	// (exact, glob, '*'), and the first entry with a matching embedder key (exact, glob, '*') wins.
+	// A lower-precedence entry is still checked when a higher-precedence entry does not have
+	// that route or embedder, so that a configured credential is not mistaken for open access.
+	getRouteCred(dslabel, routeKeys: any[], embedder) {
+		const dsEntries = this.getMatchedDsEntries(dslabel)
+		for (const routeKey of routeKeys) {
+			// a client-supplied route key, such as q.route, must be a string
+			if (typeof routeKey != 'string' || !routeKey) continue
+			for (const ds of dsEntries) {
+				if (!Object.hasOwn(ds, routeKey)) continue
+				const cred = getMatchedEntry(ds[routeKey], embedder)
 				if (cred) return cred
 			}
 		}
+	}
+
+	// returns the termdb or all-routes credential that applies to the requested dslabel and embedder,
+	// regardless of the request path or q.for, or falsy if the dataset's termdb data is open access
+	getTermdbCred(q) {
+		if (!q.dslabel) return
+		// also check the all-routes entry: validateDsCredentials() rewrites a '*' route key
+		// to '/**', and the raw '*' key may still be present in unvalidated credentials
+		return this.getRouteCred(q.dslabel, ['termdb', '/**', '*'], q.embedder)
 	}
 
 	/**
@@ -233,7 +253,12 @@ export class Auth {
 
 		// if there is a session, handle the expiration outside of this function
 		if (session)
-			return { iat: payload.iat, email: payload.email, ip: payload.ip, clientAuthResult: payload.clientAuthResult }
+			return {
+				iat: payload.iat,
+				email: payload.email,
+				ip: payload.ip,
+				clientAuthResult: payload.clientAuthResult
+			}
 
 		// the embedder may use a post-processor function to
 		// optionally transform, translate, reformat the payload,
@@ -395,7 +420,13 @@ export class Auth {
 				path == 'authorizedactions' ||
 				path.startsWith(cred.route.toLowerCase() + '/')
 			) {
-				if (!sessions[dslabel][id]) sessions[dslabel][id] = { ...payload, dslabel, embedder, route: cred.route }
+				if (!sessions[dslabel][id])
+					sessions[dslabel][id] = {
+						...payload,
+						dslabel,
+						embedder,
+						route: cred.route
+					}
 				return id
 			}
 		} catch (e) {

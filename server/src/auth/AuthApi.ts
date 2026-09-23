@@ -1,13 +1,10 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import { type AuthInterface } from '../auth.ts'
-import { Auth, patternMatches, getMatchedEntry } from './Auth.ts'
+import { Auth, patternMatches } from './Auth.ts'
 import { setAuthMiddleware } from './AuthMiddleWare.ts'
 import { setAuthRoutes } from './AuthRoutes.ts'
 import { sleep } from '../utils.js'
-import mm from 'micromatch'
-
-const { isMatch } = mm
 
 // const authRouteByCredType = {
 // 	basic: '/dslogin',
@@ -73,55 +70,47 @@ export class AuthApi implements AuthInterface {
 		}
 		const dsAuth: any[] = []
 		const embedder = req.query.embedder || req.get('host')?.split(':')[0] // do not include port number
-		for (const [dslabelPattern, ds] of Object.entries(this.#auth.creds)) {
-			if (
-				dslabelPattern.startsWith('__') ||
-				dslabelPattern.startsWith('#') ||
-				!activeDslabels.find(dslabel => dslabel === dslabelPattern || isMatch(dslabel, dslabelPattern))
-			)
-				continue
-			for (const [routePattern, route] of Object.entries(ds as any)) {
-				for (const [embedderHostPattern, _cred] of Object.entries(route as any)) {
-					if (embedderHostPattern != '*' && !isMatch(embedder, embedderHostPattern)) continue
-					const cred: any = _cred
-					const query = Object.assign({}, req.query, { dslabel: dslabelPattern })
-					// path must be included: getSessionId -> mayAddSessionFromJwt matches
-					// req.path against cred.route, and without it the bearer-jwt branch
-					// throws and is discarded, leaving only the session cookie to prove
-					// insession — a cookie some browsers (webkit) won't send over plain
-					// http since it is flagged Secure
-					const id = this.#auth.getSessionId(
-						{ query, headers: req.headers, cookies: req.cookies, path: req.path },
-						cred
-					)
-					const activeSession = this.#auth.sessions[dslabelPattern]?.[id]
-					const sessionStart = activeSession?.time || 0
-					// support a dataset-specific override to maxSessionAge
-					const maxAge = cred.maxSessionAge || this.#auth.maxSessionAge
-					const currTime = Date.now()
-					const insession =
-						// Previously, all requests to `/genomes` is assumed to originate from a "landing page"
-						// that should trigger a sign-in. This assumption causes unnecessary duplicate logins
-						// when the landing page opens links to protected pages that also request `/genomes` data.
-						/* cred.type == 'basic' && req.path.startsWith('/genomes')
-						? false
-						: */ (cred.type != 'jwt' || id) && currTime - sessionStart < maxAge
+		// report the credentials for each concrete loaded dslabel, instead of the dsCredentials key pattern
+		// that matched it, since clients look up dsAuth entries by the exact dslabel, and the login routes
+		// and sessions are also tracked by the exact dslabel
+		for (const dslabel of new Set(activeDslabels)) {
+			for (const routeKey of this.#auth.getMatchedRouteKeys(dslabel)) {
+				const cred = this.#auth.getRouteCred(dslabel, [routeKey], embedder)
+				if (!cred) continue
+				const query = Object.assign({}, req.query, { dslabel })
+				// path must be included: getSessionId -> mayAddSessionFromJwt matches
+				// req.path against cred.route, and without it the bearer-jwt branch
+				// throws and is discarded, leaving only the session cookie to prove
+				// insession — a cookie some browsers (webkit) won't send over plain
+				// http since it is flagged Secure
+				const id = this.#auth.getSessionId({ query, headers: req.headers, cookies: req.cookies, path: req.path }, cred)
+				const activeSession = this.#auth.sessions[dslabel]?.[id]
+				const sessionStart = activeSession?.time || 0
+				// support a dataset-specific override to maxSessionAge
+				const maxAge = cred.maxSessionAge || this.#auth.maxSessionAge
+				const currTime = Date.now()
+				const insession =
+					// Previously, all requests to `/genomes` is assumed to originate from a "landing page"
+					// that should trigger a sign-in. This assumption causes unnecessary duplicate logins
+					// when the landing page opens links to protected pages that also request `/genomes` data.
+					/* cred.type == 'basic' && req.path.startsWith('/genomes')
+					? false
+					: */ (cred.type != 'jwt' || id) && currTime - sessionStart < maxAge
 
-					// if session is valid, extend the session expiration by resetting the start time
-					if (insession) activeSession.time = currTime
-					const referer = req.headers.referer || ''
-					const demoTokenRoles = cred.demoToken?.referers.find(r => referer.includes(r))
-						? cred.demoToken?.roles
-						: undefined
-					dsAuth.push({
-						dslabel: dslabelPattern,
-						route: routePattern,
-						type: cred.type || 'basic',
-						headerKey: cred.headerKey,
-						insession,
-						demoTokenRoles
-					})
-				}
+				// if session is valid, extend the session expiration by resetting the start time
+				if (insession) activeSession.time = currTime
+				const referer = req.headers.referer || ''
+				const demoTokenRoles = cred.demoToken?.referers.find(r => referer.includes(r))
+					? cred.demoToken?.roles
+					: undefined
+				dsAuth.push({
+					dslabel,
+					route: routeKey,
+					type: cred.type || 'basic',
+					headerKey: cred.headerKey,
+					insession,
+					demoTokenRoles
+				})
 			}
 		}
 
@@ -144,24 +133,23 @@ export class AuthApi implements AuthInterface {
 		}
 
 		const forbiddenRoutes: string[] = []
-		// use the best matched dslabel entry (exact, then glob, then '*'), same as Auth.getRequiredCred()
-		const ds = this.#auth.getMatchedDsEntries(req.query.dslabel)[0]
+		// use the same exact/glob/'*' resolver as Auth.getRequiredCred()
+		const routeKeys = this.#auth.getMatchedRouteKeys(req.query.dslabel)
+		// no checks for this ds, is open access
+		if (!routeKeys.length) return { forbiddenRoutes, clientAuthResult: {} }
 		let cred
-		if (!ds) {
-			// no checks for this ds, is open access
-			return { forbiddenRoutes, clientAuthResult: {} }
-		} else {
-			// has checks
-			for (const k in ds) {
-				cred = getMatchedEntry(ds[k], req.query.embedder)
-				if (cred?.type == 'forbidden') {
-					forbiddenRoutes.push(k)
-				}
+		for (const k of routeKeys) {
+			cred = this.#auth.getRouteCred(req.query.dslabel, [k], req.query.embedder)
+			if (cred?.type == 'forbidden') {
+				forbiddenRoutes.push(k)
 			}
 		}
 		const id = this.#auth.getSessionId(req, cred)
 		const activeSession = id && this.#auth.sessions[req.query.dslabel]?.[id]
-		return { forbiddenRoutes, clientAuthResult: activeSession?.clientAuthResult || {} }
+		return {
+			forbiddenRoutes,
+			clientAuthResult: activeSession?.clientAuthResult || {}
+		}
 	}
 
 	getRequiredCredForDsEmbedder(dslabel, embedder) {
@@ -317,8 +305,8 @@ export class AuthApi implements AuthInterface {
 				if (q.filter.join != 'and') throw `unexpected filter.join != 'and' for a previously added auth filter entry `
 				q.filter.lst[i] = authFilter // replace the previously added auth filter entry
 			} else if (!q.filter.lst.length) q.filter = authFilter // replace an empty root filter
-			else if (q.filter.tag === FILTER_TAG)
-				q.filter = authFilter // replace a previous authFilter that was set as root q.filter
+			else if (q.filter.tag === FILTER_TAG) q.filter = authFilter
+			// replace a previous authFilter that was set as root q.filter
 			else if (q.filter.join != 'or') {
 				// prevent unnecessary filter nesting,  root filter.lst[] with only one entry that is also a tvslst
 				q.filter.lst.push(authFilter) // add to the existing root filter.lst[] array

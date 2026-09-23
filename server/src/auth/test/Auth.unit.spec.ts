@@ -62,7 +62,13 @@ tape('Auth constructor: applies serverconfig features', function (test) {
 	test.timeoutAfter(500)
 	test.plan(3)
 
-	const auth = makeAuth({}, { port: 4000, features: { sessionTracking: 'jwt-only', maxSessionAge: 60000 } })
+	const auth = makeAuth(
+		{},
+		{
+			port: 4000,
+			features: { sessionTracking: 'jwt-only', maxSessionAge: 60000 }
+		}
+	)
 	test.equal(auth.port, 4000, 'should set port from serverconfig.port')
 	test.equal(auth.sessionTracking, 'jwt-only', 'should set sessionTracking from serverconfig.features')
 	test.equal(auth.maxSessionAge, 60000, 'should set maxSessionAge from serverconfig.features')
@@ -186,7 +192,9 @@ tape('getRequiredCred: exact keys take precedence over glob and wildcard keys', 
 	const creds = {
 		'*': { termdb: { '*': wildcardCred } },
 		'realD*': { termdb: { '*': globCred } },
-		realDs1: { termdb: { 'portal.example.org': exactCred, '*.example.org': globCred } }
+		realDs1: {
+			termdb: { 'portal.example.org': exactCred, '*.example.org': globCred }
+		}
 	}
 	const auth = new Auth(creds, {}, {}, { port: 3000 })
 	test.equal(
@@ -204,6 +212,32 @@ tape('getRequiredCred: exact keys take precedence over glob and wildcard keys', 
 		wildcardCred,
 		'should fall back to the wildcard dslabel and embedder keys'
 	)
+	test.end()
+})
+
+tape('getRequiredCred: checks lower-precedence dslabel entries for a route', function (test) {
+	test.timeoutAfter(500)
+
+	const burdenCred = makeCred({ dslabel: 'realDs1', route: 'burden' })
+	const termdbCred = makeCred({ dslabel: 'realD*' })
+	const creds = {
+		// the exact entry has no termdb route
+		realDs1: { burden: { '*': burdenCred } },
+		'realD*': { termdb: { '*.example.org': termdbCred } }
+	}
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	const q = { dslabel: 'realDs1', embedder: 'portal.example.org' }
+	test.equal(
+		auth.getRequiredCred(q, '/termdb/matrix'),
+		termdbCred,
+		'should return the termdb cred from a glob entry when the exact entry has no termdb route'
+	)
+	test.equal(
+		auth.getRequiredCred({ ...q, route: 'termdb' }, '/jwt-status'),
+		termdbCred,
+		'should return the same termdb cred for /jwt-status'
+	)
+	test.equal(auth.getRequiredCred(q, '/burden'), burdenCred, 'should return the burden cred from the exact entry')
 	test.end()
 })
 
@@ -420,7 +454,13 @@ tape('getJwtPayload: returns payload for valid token with datasets', function (t
 	const auth = makeAuth({ dsnames: [{ id: dslabel, label: 'Test Dataset' }] })
 	const cred = auth.creds[dslabel].termdb[embedder]
 	const token = jsonwebtoken.sign(
-		{ iat: time, exp: time + 300, datasets: [dslabel], email: 'user@test.com', ip: '127.0.0.1' },
+		{
+			iat: time,
+			exp: time + 300,
+			datasets: [dslabel],
+			email: 'user@test.com',
+			ip: '127.0.0.1'
+		},
 		secret
 	)
 	const headers = { [cred.headerKey]: token }
@@ -478,7 +518,12 @@ tape('getJwtPayload: throws for missing dataset access', function (test) {
 	const auth = makeAuth({ dsnames: [{ id: dslabel, label: 'Test Dataset' }] })
 	const cred = auth.creds[dslabel].termdb[embedder]
 	const token = jsonwebtoken.sign(
-		{ iat: time, exp: time + 300, datasets: ['OTHER-DS'], email: 'user@test.com' },
+		{
+			iat: time,
+			exp: time + 300,
+			datasets: ['OTHER-DS'],
+			email: 'user@test.com'
+		},
 		secret
 	)
 	const headers = { [cred.headerKey]: token }
