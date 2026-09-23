@@ -162,7 +162,7 @@ export class Auth {
 		}
 	}
 
-	// returns the termdb credential that applies to the requested dslabel and embedder,
+	// returns the termdb or all-routes credential that applies to the requested dslabel and embedder,
 	// regardless of the request path or q.for, or falsy if the dataset's termdb data is open access
 	//
 	// dslabel and embedder keys are resolved with the same exact/glob/'*' semantics as
@@ -180,8 +180,12 @@ export class Auth {
 			...(this.creds['*'] ? [this.creds['*']] : [])
 		]
 		for (const ds of dsEntries) {
-			const cred = getMatchedEntry(ds?.termdb, q.embedder)
-			if (cred) return cred
+			// also check the all-routes entry: validateDsCredentials() rewrites a '*' route key
+			// to '/**', and the raw '*' key may still be present in unvalidated credentials
+			for (const routeKey of ['termdb', '/**', '*']) {
+				const cred = getMatchedEntry(ds?.[routeKey], q.embedder)
+				if (cred) return cred
+			}
 		}
 	}
 

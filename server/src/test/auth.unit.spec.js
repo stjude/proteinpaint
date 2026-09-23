@@ -562,6 +562,41 @@ tape(`sample-level access without a session, glob credential keys`, async test =
 	test.end()
 })
 
+tape(`sample-level access without a session, all-routes credential with a glob embedder`, async test => {
+	test.timeoutAfter(500)
+
+	const serverconfig = {
+		debugmode,
+		dsCredentials: {
+			// validateDsCredentials() rewrites the '*' route key to '/**'
+			'*': { '*': { '*.example.org': { type: 'jwt', secret } } }
+		},
+		cachedir
+	}
+	const genomes = { hg38: { datasets: { ds300: {} } } }
+	const { authApi } = await appInit(serverconfig, genomes)
+	const ds = { label: 'ds300', cohort: { termdb: { displaySampleIds: true } } }
+	const getReq = embedder => ({
+		query: { dslabel: 'ds300', embedder, getsamplelist: 1 },
+		path: '/termdb',
+		headers: {},
+		cookies: {},
+		get: () => 'localhost'
+	})
+
+	test.equal(
+		authApi.canDisplaySampleIds(getReq('portal.example.org'), ds),
+		false,
+		`should require a session for an all-routes credential with a matching glob embedder key`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq('other.org'), ds),
+		true,
+		`should not require a session when the embedder does not match the all-routes glob embedder key`
+	)
+	test.end()
+})
+
 tape(`a valid request`, async test => {
 	test.timeoutAfter(500)
 	test.plan(2)
