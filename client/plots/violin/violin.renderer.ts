@@ -257,7 +257,7 @@ export default function setViolinRenderer(self: any) {
 		})
 	}
 
-	self.getChartTitle = function (chartId: string, totalCount:number) {
+	self.getChartTitle = function (chartId: string, totalCount?:number) {
 		return getChartTitle(self.config, chartId, totalCount)
 	}
 
