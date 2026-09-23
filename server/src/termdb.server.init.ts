@@ -53,7 +53,6 @@ export function server_init_db_queries(ds) {
 		'ancestry',
 		'alltermsbyorder',
 		'termhtmldef',
-		'category2vcfsample',
 		'chronicevents',
 		'precomputed_chc_grade',
 		'precomputed_chc_child',
@@ -226,20 +225,6 @@ export function server_init_db_queries(ds) {
 		}
 	}
 
-	if (tables.has('category2vcfsample')) {
-		const s = cn.prepare('SELECT * FROM category2vcfsample')
-		// must be cached as there are lots of json parsing
-		let cache
-		q.getcategory2vcfsample = () => {
-			if (cache) return cache
-			cache = s.all()
-			for (const i of cache) {
-				i.q = JSON.parse(i.q)
-				i.categories = JSON.parse(i.categories)
-			}
-			return cache
-		}
-	}
 	if (tables.has('alltermsbyorder')) {
 		const s = cn.prepare('SELECT * FROM alltermsbyorder')
 		let cache
