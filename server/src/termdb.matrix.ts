@@ -49,25 +49,22 @@ export function id2sampleRef(id, ds) {
 	return undefined
 }
 
-export function shouldMapParent2Children(tw, ds, mapParent2Children, sampleTypes) {
-	if (!mapParent2Children || !sampleTypes?.length) return false
-	// check every entry, not only up to the first match in .some() below,
-	// since all entries are later used in a sql IN clause
-	for (const st of sampleTypes) {
-		if (!ds.cohort.termdb.sampleTypes?.[st]) throw `invalid sample type='${st}'`
-	}
-	const twSampleTypes = getTwSampleTypes(tw, ds)
-	return sampleTypes.some(qSampleType =>
+export function shouldMapParent2Children(tw, ds, mapParent2Children, qSampleTypes) {
+	if (!mapParent2Children || !qSampleTypes?.length) return false
+	const st = getTwSampleTypes(tw, ds)
+	const twSampleTypes = st.sampleTypes || []
+	return qSampleTypes.some(qSampleType =>
 		twSampleTypes.some(twSampleType => ds.cohort.termdb.sampleTypes[qSampleType].parent_id == twSampleType)
 	)
 }
 
 /* sample type ids are integers; returns a comma-separated list that is safe to interpolate into a sql IN clause */
-export function getSampleTypesSqlList(sampleTypes) {
+export function getSampleTypesSqlList(sampleTypes, ds) {
 	return sampleTypes
 		.map(st => {
 			const n = Number(st)
-			if (!Number.isInteger(n)) throw `invalid sample type='${st}'`
+			if (!Number.isInteger(n)) throw `sample type='${st}' is not an integer`
+			if (!ds.cohort.termdb.sampleTypes[n]) throw `invalid sample type='${st}'`
 			return n
 		})
 		.join(',')
@@ -923,7 +920,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 				FROM sample_ancestry sa
 				JOIN ${t.tablename} ON sa.ancestor_id = sample
 				JOIN sampleidmap sm ON sa.sample_id = sm.id
-				WHERE sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes)})
+				WHERE sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes, q.ds)})
 				${filter ? `AND sa.sample_id IN ${filter.CTEname}` : ''}`
 			} else {
 				// query annotations directly
