@@ -187,15 +187,15 @@ export function setInteractivity(self) {
 			)
 			.remove()
 
-		// in case of potentially root filter subnesting, may have to
-		// revert the visibility of root filter group parentheses
-		// that subnest existing pill + blank pill
-		if (self.filter.in && self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
+		// in case of potentially root filter subnesting, revert the visibility
+		// of the root filter group parentheses that subnest existing pills + blank pill,
+		// regardless of whether the root filter has subnested tvslst items
+		if (self.filter?.lst) {
 			self.dom.filterContainer
 				?.selectAll(
 					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
 				)
-				.style('display', 'none')
+				.style('display', self.getGrpParenDisplay(self.filter, self.filter.lst))
 		}
 	}
 

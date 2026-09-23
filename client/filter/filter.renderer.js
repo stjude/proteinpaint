@@ -144,6 +144,16 @@ export function setRenderers(self) {
 		self.updatePromise(0)
 	}
 
+	// filter: the parent filter of the group
+	// data: the group's items
+	self.getGrpParenDisplay = function (filter, data) {
+		return self.opts.joinWith.length < 2 || data.length < 2
+			? 'none'
+			: !filter.in || (data.length > 1 && filter.tag != 'filterUiRoot')
+			? 'inline-block'
+			: 'none'
+	}
+
 	self.addGrp = function (item, i) {
 		const filter = this.parentNode.__data__
 
@@ -212,14 +222,7 @@ export function setRenderers(self) {
 
 		select(this)
 			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
-			.style(
-				'display',
-				self.opts.joinWith.length < 2 || data.length < 2
-					? 'none'
-					: !filter.in || (data.length > 1 && filter.tag != 'filterUiRoot')
-					? 'inline-block'
-					: 'none'
-			)
+			.style('display', self.getGrpParenDisplay(filter, data))
 	}
 
 	self.updateGrp = function (item, i) {
@@ -233,14 +236,7 @@ export function setRenderers(self) {
 
 		select(this)
 			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
-			.style(
-				'display',
-				self.opts.joinWith.length < 2 || data.length < 2
-					? 'none'
-					: !filter.in || (data.length > 1 && filter.tag != 'filterUiRoot')
-					? 'inline-block'
-					: 'none'
-			)
+			.style('display', self.getGrpParenDisplay(filter, data))
 
 		const pills = select(this).selectAll(':scope > .sja_filter_item').data(data, self.getId)
 
