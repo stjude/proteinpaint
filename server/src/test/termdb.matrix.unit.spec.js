@@ -119,7 +119,9 @@ tape('maySetMapParent2Children: explicit map flag preserves query-derived sample
 		terms: [{ term: { id: 'gene', sampleTypes: [2, 3] } }]
 	}
 	maySetMapParent2Children(doNotMapParents, ds, false)
-	t.equal(doNotMapParents.mapParent2Children, false, 'an explicit false flag is preserved')
+	// an explicit false is never written back: the flag is only ever set to true,
+	// so a falsy caller input leaves q.mapParent2Children untouched
+	t.equal(doNotMapParents.mapParent2Children, undefined, 'an explicit false flag is not written back')
 	t.deepEqual(doNotMapParents.sampleTypes, [2, 3], 'the same query-derived sample types are preserved')
 	t.end()
 })
@@ -140,7 +142,9 @@ tape('maySetMapParent2Children: does not invent sample types without a query sco
 
 	const mapParents = {}
 	maySetMapParent2Children(mapParents, ds, true)
-	t.equal(mapParents.mapParent2Children, true, 'an explicit true flag is preserved')
+	// no sample types are found for an empty query, so the function returns early
+	// without setting q.mapParent2Children, even though the caller requested true
+	t.equal(mapParents.mapParent2Children, undefined, 'the flag is not set when no sample types are found')
 	t.equal(mapParents.sampleTypes, undefined, 'no sample types are synthesized without a query scope')
 	t.end()
 })
