@@ -3,7 +3,8 @@ import jsonwebtoken from 'jsonwebtoken'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { setAuthRoutes } from '#src/auth/AuthRoutes.ts'
-import { Auth } from '#src/auth/Auth.ts'
+import { Auth, normalizeReqPath } from '#src/auth/Auth.ts'
+import { setAuthMiddleware } from '#src/auth/AuthMiddleWare.ts'
 
 /*************************
  reusable constants and helper functions
@@ -202,10 +203,7 @@ tape('/dslogin: returns 400 when cred uses a different authRoute', async functio
 
 	await app.routes['/dslogin'].post(req, res)
 	test.equal(res.statusCode, 400, 'should set 400 status when wrong authRoute')
-	test.ok(
-		String(res.sentData?.error).includes('/jwt-status'),
-		'should mention the correct auth route in error'
-	)
+	test.ok(String(res.sentData?.error).includes('/jwt-status'), 'should mention the correct auth route in error')
 	test.end()
 })
 
@@ -431,10 +429,7 @@ tape('/jwt-status: returns ok with new session jwt on valid login token', async 
 	const auth = makeAuthWithJwt()
 	const app = makeApp(auth)
 	// Login token: no dslabel in payload (triggers getSignedJwt), include ip for IP check
-	const loginToken = jsonwebtoken.sign(
-		{ iat: time, exp: time + 300, email: 'user@test.com', ip: '127.0.0.1' },
-		secret
-	)
+	const loginToken = jsonwebtoken.sign({ iat: time, exp: time + 300, email: 'user@test.com', ip: '127.0.0.1' }, secret)
 	const req = {
 		query: { dslabel, embedder, route: 'termdb' },
 		path: '/jwt-status',
@@ -452,34 +447,37 @@ tape('/jwt-status: returns ok with new session jwt on valid login token', async 
 	test.end()
 })
 
-tape('/jwt-status: returns ok and generates new session jwt even when session token is provided', async function (test) {
-	test.timeoutAfter(500)
-	test.plan(3)
+tape(
+	'/jwt-status: returns ok and generates new session jwt even when session token is provided',
+	async function (test) {
+		test.timeoutAfter(500)
+		test.plan(3)
 
-	const auth = makeAuthWithJwt()
-	const app = makeApp(auth)
-	// A "session" jwt may include dslabel, but getJwtPayload never returns dslabel,
-	// so getSignedJwt is always called and a new session jwt is generated
-	const sessionToken = jsonwebtoken.sign(
-		{ iat: time, exp: time + 300, dslabel, email: 'user@test.com', ip: '127.0.0.1' },
-		secret
-	)
-	const req = {
-		query: { dslabel, embedder, route: 'termdb' },
-		path: '/jwt-status',
-		headers: { [headerKey]: sessionToken },
-		ip: '127.0.0.1',
-		cookies: {}
+		const auth = makeAuthWithJwt()
+		const app = makeApp(auth)
+		// A "session" jwt may include dslabel, but getJwtPayload never returns dslabel,
+		// so getSignedJwt is always called and a new session jwt is generated
+		const sessionToken = jsonwebtoken.sign(
+			{ iat: time, exp: time + 300, dslabel, email: 'user@test.com', ip: '127.0.0.1' },
+			secret
+		)
+		const req = {
+			query: { dslabel, embedder, route: 'termdb' },
+			path: '/jwt-status',
+			headers: { [headerKey]: sessionToken },
+			ip: '127.0.0.1',
+			cookies: {}
+		}
+		const res = makeMockRes()
+
+		await app.routes['/jwt-status'].post(req, res)
+		test.equal(res.sentData?.status, 'ok', 'should return ok when a session token is provided')
+		test.equal(res.statusCode, 200, 'should return 200')
+		// A new session jwt is generated (not the same as the input token)
+		test.ok(res.sentData?.jwt, 'should return a new session jwt')
+		test.end()
 	}
-	const res = makeMockRes()
-
-	await app.routes['/jwt-status'].post(req, res)
-	test.equal(res.sentData?.status, 'ok', 'should return ok when a session token is provided')
-	test.equal(res.statusCode, 200, 'should return 200')
-	// A new session jwt is generated (not the same as the input token)
-	test.ok(res.sentData?.jwt, 'should return a new session jwt')
-	test.end()
-})
+)
 
 tape('/jwt-status: clears cookie and returns error when jwt is expired', async function (test) {
 	test.timeoutAfter(500)
@@ -783,10 +781,7 @@ tape('/demoToken: returns 401 when referer does not match', async function (test
 
 	await app.routes['/demoToken'].post(req, res)
 	test.equal(res.statusCode, 401, 'should set 401 when referer does not match')
-	test.ok(
-		String(res.sentData?.error).includes('not accepted from referer'),
-		'should mention referer is not accepted'
-	)
+	test.ok(String(res.sentData?.error).includes('not accepted from referer'), 'should mention referer is not accepted')
 	test.end()
 })
 
@@ -897,3 +892,109 @@ tape('/demoToken: generates new jwt when cached token is close to expiring', asy
 	test.end()
 })
 
+// ─────────────────────────────────────────
+// auth middleware + route handler flow under a configured basepath
+// ─────────────────────────────────────────
+
+const flowBasepath = '/api'
+const flowAuthApi = {
+	getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+	mayAdjustFilter: () => {},
+	isUserLoggedIn: () => true
+}
+
+// Registers the auth middleware and auth routes on the same mock app, and returns a function that
+// sends a request through the middleware, then to the registered handler the way Express would route it:
+// case-insensitive and ignoring a trailing slash, without stripping the basepath from req.path
+function makeFlow(auth: Auth) {
+	const app = makeApp(auth, flowBasepath)
+	const middlewares: any[] = []
+	app.use = (handler: any) => middlewares.push(handler)
+	setAuthMiddleware(app, {}, flowAuthApi, auth)
+
+	return async function send(req: any) {
+		req.cookies = req.cookies || {}
+		req.headers = req.headers || {}
+		req.ip = req.ip || '127.0.0.1'
+		const res = makeMockRes()
+		let nextCalled = false
+		middlewares[0](req, res, () => (nextCalled = true))
+		if (!nextCalled) return { res, nextCalled }
+		const route = Object.keys(app.routes).find(r => r.toLowerCase() == normalizeReqPath(req.path))
+		if (route && app.routes[route].post) await app.routes[route].post(req, res)
+		return { res, nextCalled, route }
+	}
+}
+
+tape(
+	'auth flow: /jwt-status variants under a basepath establish a session for protected routes',
+	async function (test) {
+		test.timeoutAfter(1000)
+
+		for (const path of ['/API/JWT-STATUS', '/api/jwt-status/', '/Api/Jwt-Status']) {
+			const auth = makeAuthWithJwt({}, {}, { basepath: flowBasepath })
+			const send = makeFlow(auth)
+			const loginToken = jsonwebtoken.sign(
+				{ iat: time, exp: time + 300, email: 'user@test.com', ip: '127.0.0.1' },
+				secret
+			)
+
+			const login = await send({
+				query: { dslabel, embedder, route: 'termdb' },
+				path,
+				headers: { [headerKey]: loginToken }
+			})
+			test.ok(login.nextCalled, `should let '${path}' through the middleware`)
+			test.equal(login.route, '/api/jwt-status', `should route '${path}' to the /api/jwt-status handler`)
+			test.equal(login.res.sentData?.status, 'ok', `should return ok for '${path}'`)
+			test.ok(login.res.sentData?.jwt, `should return a session jwt for '${path}'`)
+			test.equal(login.res.sentData?.route, 'termdb', `should return the cred route for '${path}'`)
+			test.equal(Object.keys(auth.sessions[dslabel] || {}).length, 1, `should establish a session for '${path}'`)
+
+			const protectedPath = '/API/TERMDB/MATRIX/'
+			const anon = await send({ query: { dslabel, embedder }, path: protectedPath })
+			test.notOk(anon.nextCalled, `should reject '${protectedPath}' without a session`)
+			test.equal(anon.res.statusCode, 401, `should set 401 for '${protectedPath}' without a session`)
+
+			const b64token = Buffer.from(login.res.sentData?.jwt || '').toString('base64')
+			const authed = await send({
+				query: { dslabel, embedder },
+				path: protectedPath,
+				headers: { authorization: `Bearer ${b64token}` }
+			})
+			test.ok(authed.nextCalled, `should allow '${protectedPath}' with the session from '${path}'`)
+		}
+		test.end()
+	}
+)
+
+tape('auth flow: /dslogin and /dslogout variants under a basepath', async function (test) {
+	test.timeoutAfter(1000)
+
+	const creds: any = { [dslabel]: { '/**': { [embedder]: makeBasicCred() } } }
+	const auth = new Auth(creds, {}, {}, { port: 3000, basepath: flowBasepath })
+	const send = makeFlow(auth)
+	const encodedPwd = Buffer.from(password).toString('base64')
+
+	const login = await send({
+		query: { dslabel, embedder },
+		path: '/API/DSLOGIN/',
+		headers: { authorization: `Basic ${encodedPwd}` }
+	})
+	test.ok(login.nextCalled, 'should let /API/DSLOGIN/ through the middleware')
+	test.equal(login.route, '/api/dslogin', 'should route /API/DSLOGIN/ to the /api/dslogin handler')
+	test.equal(login.res.sentData?.status, 'ok', 'should return ok for /API/DSLOGIN/')
+	test.ok(login.res.sentData?.jwt, 'should return a session jwt for /API/DSLOGIN/')
+	const sessionId = login.res.sentData?.jwt?.slice(-20)
+	test.ok(sessionId && auth.sessions[dslabel]?.[sessionId], 'should establish a session for /API/DSLOGIN/')
+
+	const logout = await send({
+		query: { dslabel, embedder },
+		path: '/Api/DsLogout/',
+		cookies: { [headerKey]: sessionId }
+	})
+	test.ok(logout.nextCalled, 'should let /Api/DsLogout/ through the middleware')
+	test.equal(logout.res.sentData?.status, 'ok', 'should return ok for /Api/DsLogout/')
+	test.equal(auth.sessions[dslabel]?.[sessionId], undefined, 'should remove the session for /Api/DsLogout/')
+	test.end()
+})

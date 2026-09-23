@@ -1,25 +1,19 @@
-import serverconfig from '../serverconfig.js'
 import { normalizeReqPath } from './Auth.ts'
-
-const basepath = serverconfig.basepath || ''
 
 // these server routes should not be protected by default,
 // since a user that is not logged should be able to have a way to login,
 // also logout should be supported regardless
 const openRoutes = ['/dslogin', '/jwt-status', '/dslogout', '/healthcheck', '/live', '/status', '/demoToken']
 
-function getForcedOpenRoutes(_basepath: string) {
-	return new Set(openRoutes.map(route => normalizeReqPath(_basepath + route)))
+function getForcedOpenRoutes(basepath: string) {
+	return new Set(openRoutes.map(route => normalizeReqPath(basepath + route)))
 }
-
-const forcedOpenRoutes = getForcedOpenRoutes(basepath)
 
 // Express routes requests case-insensitively and ignores a trailing slash, so the forced-open check
 // must match the same path variants that Auth.getRequiredCred() normalizes, otherwise a request
 // such as `/DSLOGIN` or `/jwt-status/` would be treated as protected and rejected for lacking
 // the session that it is meant to establish
-export function isForcedOpenRoute(path: string, _basepath?: string) {
-	const routes = _basepath === undefined ? forcedOpenRoutes : getForcedOpenRoutes(_basepath)
+export function isForcedOpenRoute(path: string, basepath = '', routes = getForcedOpenRoutes(basepath)) {
 	return routes.has(normalizeReqPath(path))
 }
 
@@ -29,6 +23,10 @@ export function isForcedOpenRoute(path: string, _basepath?: string) {
 export function setAuthMiddleware(app, genomes, authApi, auth) {
 	// TODO: should check if the app already has an auth middleware,
 	// to avoid mutating what's already been set at server launch
+
+	// use the same basepath as auth.getRequiredCred(), so that both agree on which request paths
+	// are the auth routes that the forced-open check lets through
+	const forcedOpenRoutes = getForcedOpenRoutes(auth.basepath)
 
 	/* !!! app.use() must be called before route setters and await !!! */
 
@@ -43,7 +41,7 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 			sessionid: req.cookies.sessionid // may be undefined
 		}
 
-		if (isForcedOpenRoute(req.path)) {
+		if (isForcedOpenRoute(req.path, auth.basepath, forcedOpenRoutes)) {
 			Object.freeze(req.query.__protected__)
 			next()
 			return
