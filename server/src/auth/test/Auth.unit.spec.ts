@@ -1,6 +1,6 @@
 import tape from 'tape'
 import jsonwebtoken from 'jsonwebtoken'
-import { Auth, normalizeReqPath } from '#src/auth/Auth.ts'
+import { Auth, normalizeReqPath, stripBasepath } from '#src/auth/Auth.ts'
 
 /*************************
  reusable constants and helper functions
@@ -207,6 +207,69 @@ tape('getRequiredCred: matches configured route patterns regardless of case or t
 	const auth = new Auth(creds, {}, {}, { port: 3000 })
 	for (const path of ['/CUSTOMROUTE', '/customroute/', '/customRoute']) {
 		test.ok(auth.getRequiredCred({ dslabel, embedder }, path), `should return a cred for path='${path}'`)
+	}
+	test.end()
+})
+
+tape('stripBasepath: removes a matching basepath prefix from the normalized path', function (test) {
+	test.timeoutAfter(500)
+	const cases = [
+		['/api/termdb/matrix', '/api', '/termdb/matrix'],
+		['/API/TERMDB/MATRIX/', '/api', '/termdb/matrix'],
+		['/api/termdb', '/Api/', '/termdb'],
+		['/api//termdb', '/api/', '/termdb'],
+		['/api', '/api', '/'],
+		['/api/', '/api', '/'],
+		['/apix/termdb', '/api', '/apix/termdb'],
+		['/termdb/matrix', '/api', '/termdb/matrix'],
+		['/termdb/matrix', '', '/termdb/matrix'],
+		['/termdb/matrix', '/', '/termdb/matrix'],
+		['termdb', '/api', 'termdb']
+	]
+	for (const [path, basepath, expected] of cases) {
+		test.equal(
+			stripBasepath(path, basepath),
+			expected,
+			`should return '${expected}' for path='${path}', basepath='${basepath}'`
+		)
+	}
+	test.end()
+})
+
+// the auth middleware is not mounted under the basepath, so req.path includes it
+tape('getRequiredCred: matches protected routes under a configured basepath', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth({}, { basepath: '/api' })
+	test.equal(auth.basepath, '/api', 'should use the basepath from the serverconfig argument')
+	for (const path of ['/api/termdb/matrix', '/API/TERMDB/MATRIX/', '/api/termdb/matrix/']) {
+		test.ok(auth.getRequiredCred({ dslabel, embedder }, path), `should return a cred for path='${path}'`)
+	}
+	for (const path of ['/api/termdb', '/Api/Termdb/']) {
+		test.ok(
+			auth.getRequiredCred({ dslabel, embedder, for: 'getAllSamples' }, path, auth.protectedRoutes.samples),
+			`should return a cred for path='${path}' with for=getAllSamples`
+		)
+	}
+	test.ok(
+		auth.getRequiredCred({ dslabel, embedder }, '/api/termdb/sampleScatter', auth.protectedRoutes.samples),
+		'should return a cred for /api/termdb/sampleScatter'
+	)
+	test.ok(
+		auth.getRequiredCred({ dslabel, embedder, route: 'termdb' }, '/api/jwt-status'),
+		'should return a cred for /api/jwt-status'
+	)
+	test.notOk(auth.getRequiredCred({ dslabel, embedder }, '/api/genomes'), 'should not protect an unrelated route')
+
+	const creds = {
+		[dslabel]: {
+			burden: { [embedder]: makeCred({ route: 'burden' }) },
+			'/customRoute': { [embedder]: makeCred({ route: '/customRoute' }) }
+		}
+	}
+	const auth2 = new Auth(creds, {}, {}, { port: 3000, basepath: '/api' })
+	for (const path of ['/api/burden', '/API/BURDEN/', '/api/customRoute', '/api/CUSTOMROUTE/']) {
+		test.ok(auth2.getRequiredCred({ dslabel, embedder }, path), `should return a cred for path='${path}'`)
 	}
 	test.end()
 })
@@ -580,6 +643,22 @@ tape('mayAddSessionFromJwt: adds session from valid bearer jwt', function (test)
 	const id = auth.mayAddSessionFromJwt(sessions, req, cred)
 	test.ok(id, 'should return a session id from a valid bearer jwt')
 	test.ok(sessions[dslabel]?.[id], 'should add the session to the sessions object')
+	test.end()
+})
+
+tape('mayAddSessionFromJwt: matches the signed route under a configured basepath', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth({}, { basepath: '/api' })
+	const cred = auth.creds[dslabel].termdb[embedder]
+	const payload = { dslabel, embedder, route: 'termdb', iat: time, exp: time + 300, email: 'user@test.com' }
+	const b64token = Buffer.from(jsonwebtoken.sign(payload, secret)).toString('base64')
+	for (const path of ['/api/termdb', '/API/TERMDB/MATRIX/', '/api/authorizedActions']) {
+		const req = { headers: { authorization: `Bearer ${b64token}` }, query: { dslabel, embedder }, path }
+		test.ok(auth.mayAddSessionFromJwt({}, req, cred), `should return a session id for path='${path}'`)
+	}
+	const req = { headers: { authorization: `Bearer ${b64token}` }, query: { dslabel, embedder }, path: '/api/burden' }
+	test.notOk(auth.mayAddSessionFromJwt({}, req, cred), 'should not return a session id for a different route')
 	test.end()
 })
 

@@ -259,6 +259,27 @@ tape('middleware: returns 401 error for missing session on protected route', fun
 	test.end()
 })
 
+tape('middleware: returns 401 for a protected route under a configured basepath', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth({}, { basepath: '/api' })
+	const mockAuthApi = {
+		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+		mayAdjustFilter: () => {},
+		isUserLoggedIn: () => true
+	}
+	for (const path of ['/api/termdb/matrix', '/API/TERMDB/MATRIX/']) {
+		const middleware = registerMiddleware(auth, mockAuthApi)
+		const req: any = { query: { dslabel, embedder }, path, cookies: {}, headers: {} }
+		const res = makeMockRes()
+		let nextCalled = false
+		middleware(req, res, () => (nextCalled = true))
+		test.notOk(nextCalled, `should NOT call next() for '${path}' with no session`)
+		test.equal(res.statusCode, 401, `should set 401 status for '${path}'`)
+	}
+	test.end()
+})
+
 tape('middleware: sends error response with code from thrown error object', function (test) {
 	test.timeoutAfter(500)
 	test.plan(2)
