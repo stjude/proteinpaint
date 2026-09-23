@@ -8,6 +8,9 @@ import { findItem } from './filter.utils'
 // elements within instance.dom.holder, so no need for this index
 let filterIndex = 0
 
+const TITLE_REMOVE_NEGATE_GRP = 'Click to see a menu to change the negation of this filter group or to remove it.'
+const TITLE_EDIT_GRP = 'Click to see a menu to edit this filter group.'
+
 export function setRenderers(self) {
 	self.initUI = async function () {
 		if (self.opts.newBtn) {
@@ -15,6 +18,10 @@ export function setRenderers(self) {
 		} else {
 			self.dom.newBtn = self.dom.holder
 				.append('div')
+				.attr(
+					'title',
+					'Create a new filter with a range of selected values for one variable, with the option to jpin other variable conditions.'
+				)
 				.attr('class', 'sja_new_filter_btn sja_menuoption')
 				.attr('data-testid', 'sjpp-new-filter-btn')
 				.html(self.opts.emptyLabel)
@@ -28,7 +35,12 @@ export function setRenderers(self) {
 			.selectAll('.sja_filter_add_transformer')
 			.data(self.opts.joinWith)
 			.enter()
-			.append('div')
+			.append('button')
+			.attr(
+				'title',
+				d =>
+					`Use the '${d.toUpperCase()}' operator to join a new variable with the group of filter variable(s) to the left.`
+			)
 			.attr('class', 'sja_filter_add_transformer')
 			.style('display', d => (self.filter && self.filter.join != d ? 'inline-block' : 'none'))
 			.style('margin-left', '10px')
@@ -42,11 +54,31 @@ export function setRenderers(self) {
 		self.dom.table = self.dom.controlsTip.clear().d.append('table').style('border-collapse', 'collapse')
 
 		const menuOptions = [
-			{ action: 'edit', html: ['', 'Edit', '&rsaquo;'], handler: self.editTerm },
-			{ action: 'join', html: ['&#10010;', '', '&rsaquo;'], handler: self.displayTreeMenu },
-			{ action: 'switch', html: ['', 'Switch to', ''], handler: self.switchJoin },
-			{ action: 'negate', html: ['', 'Negate', ''], handler: self.negateClause },
-			{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform }
+			{ action: 'edit', html: ['', 'Edit', '&rsaquo;'], handler: self.editTerm, title: 'Edit the filter variable' },
+			{
+				action: 'join',
+				html: ['&#10010;', '', '&rsaquo;'],
+				handler: self.displayTreeMenu,
+				title: 'Add a variable to the current filter group using the same join operator'
+			},
+			{
+				action: 'switch',
+				html: ['', 'Switch to', ''],
+				handler: self.switchJoin,
+				title: 'Switch the join operator between AND/OR'
+			},
+			{
+				action: 'negate',
+				html: ['', 'Negate', ''],
+				handler: self.negateClause,
+				title: 'Negate the filter criteria under the cursor'
+			},
+			{
+				action: 'remove',
+				html: ['&#10006;', 'Remove', ''],
+				handler: self.removeTransform,
+				title: 'Remove filter criteria under the cursor'
+			}
 		]
 
 		// option to add a Replace option in the second row
@@ -63,6 +95,7 @@ export function setRenderers(self) {
 			.data(menuOptions)
 			.enter()
 			.append('tr')
+			.attr('title', d => d.title)
 			.attr('class', 'sja_menuoption')
 			.attr('data-testid', d => `sjpp-menu-option-${d.action}`)
 			.on('click', self.handleMenuOptionClick)
@@ -117,7 +150,8 @@ export function setRenderers(self) {
 		select(this).style('display', 'inline-block')
 
 		select(this)
-			.append('div')
+			.append('button')
+			.attr('title', TITLE_REMOVE_NEGATE_GRP)
 			.attr('class', 'sja_filter_clause_negate')
 			.style('display', filter.in ? 'none' : 'inline-block')
 			.style('color', 'rgb(102,0,0)')
@@ -127,8 +161,9 @@ export function setRenderers(self) {
 			.on('click', self.displayControlsMenu)
 
 		select(this)
-			.append('div')
+			.append('button')
 			.attr('class', 'sja_filter_paren_open')
+			.attr('title', TITLE_REMOVE_NEGATE_GRP)
 			.html('(')
 			.style('display', 'none')
 			.style('padding', '0 5px')
@@ -147,9 +182,10 @@ export function setRenderers(self) {
 				.attr('class', 'sja_filter_last_join')
 				.style('display', 'inline')
 			self.dom.last_join_label = self.dom.last_join_div
-				.append('div')
+				.append('button')
 				.datum({ action: 'join', html: ['&#10010;', '', '&rsaquo;'], handler: self.displayTreeMenu })
 				.attr('class', 'sja_filter_last_join_label')
+				.attr('title', 'Click to see a menu of options to adjust this filter.')
 				.style('padding', '0 5px')
 				.style('display', filter.lst.length ? 'inline' : 'none')
 				.style('font-weight', 500)
@@ -162,14 +198,16 @@ export function setRenderers(self) {
 			})
 		}
 		select(this)
-			.append('div')
+			.append('button')
 			.attr('class', 'sja_filter_paren_close')
+			.attr('title', TITLE_REMOVE_NEGATE_GRP)
 			.style('padding', '0 5px')
 			.html(')')
 			.style('display', 'none')
 			.style('font-weight', 500)
 			.style('font-size', '24px')
 			.style('cursor', 'pointer')
+			.style('background-color', 'transparent')
 			.on('click', self.displayControlsMenu)
 
 		select(this)
@@ -257,6 +295,7 @@ export function setRenderers(self) {
 			.style('position', 'relative')
 			.style('white-space', 'nowrap')
 			.append('div')
+			.attr('title', TITLE_EDIT_GRP)
 			.attr('class', 'sja_pill_wrapper')
 			.style('display', 'inline-block')
 			.style('margin', self.opts.joinWith.length > 1 ? '' : '2px')
@@ -347,7 +386,8 @@ export function setRenderers(self) {
 	self.addJoinLabel = function (elem, filter, item) {
 		const i = filter.lst.findIndex(d => d.$id === item.$id)
 		select(elem)
-			.append('div')
+			.append('button')
+			.attr('title', TITLE_EDIT_GRP)
 			.attr('class', 'sja_filter_join_label')
 			.style(
 				'display',
@@ -357,8 +397,7 @@ export function setRenderers(self) {
 			)
 			.style('width', '50px')
 			.style('padding', '5px')
-			.style('border', 'none')
-			.style('border-radius', '5px')
+			.style('background-color', 'transparent')
 			.style('text-align', 'center')
 			.style('cursor', 'pointer')
 			.html(filter.lst.length < 2 ? '' : filter.join == 'and' ? 'AND' : 'OR')

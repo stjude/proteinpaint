@@ -44,9 +44,11 @@ export class TermSettingView {
 			.append('div')
 			.style('cursor', 'pointer')
 			.on('click', event => self.actions.clickNoPillDiv(event))
-			.on(`keyup.sjpp-termdb`, event => {
-				if (event.key == 'Enter') self.api.showTree(self.dom.nopilldiv.node(), event)
-			})
+		// disabled .on(`keyup...`) below since pressing the Enter or Space key on a focused button or interactive element
+		// triggers both a native click event (and thus onclick) and keyboard events (onkeyup) by browser design
+		// .on(`keyup.sjpp-termdb`, event => {
+		// 	if (event.key == 'Enter') self.api.showTree(self.dom.nopilldiv.node(), event)
+		// })
 
 		self.dom.pilldiv = self.dom.holder.append('div')
 

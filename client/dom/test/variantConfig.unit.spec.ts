@@ -487,12 +487,11 @@ tape('maf filter', async test => {
 	const tvsPills = await detectGt({ target: mafFilterDiv.node(), selector: '.tvs_pill' })
 	test.equal(tvsPills.length, 2, 'should render 2 maf tvs pills')
 
-	const applyBtn: any = holder.select('button').node()
-	applyBtn.click()
+	getApplyBtn(holder).click()
 
-	test.deepEqual(newConfig.mafFilter, activeMafFilter, 'should set .mafFilter in config')
+	test.deepEqual(newConfig?.mafFilter, activeMafFilter, 'should set .mafFilter in config')
 
-	holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 

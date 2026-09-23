@@ -302,7 +302,6 @@ export class Menu {
 			if (numTries < 30) setTimeout(() => this.setTabNavigation(elem, numTries++), 100)
 			return
 		}
-
 		const firstFocusableChildElem = d3select(clickableElems[0])
 
 		for (const elem of clickableElems) {
@@ -326,11 +325,12 @@ export class Menu {
 			// detect if the blur is caused by something other than a tabbed navigation away from the first element
 			if (Date.now() - lastTabbedTime > tabWait) return
 			// do not trigger focusing back to firstFocusableChildElem or closing the tooltip
-			// if there is no activeElement or if it's inside the tooltip
+			// if focus actually landed back inside the tooltip. Note: do NOT bail when
+			// document.activeElement === document.body, since that is the expected transient
+			// state during a shift-tab blur, before focus moves back to the launcher element
 			if (
-				document.activeElement === document.body ||
 				tip.dnode.contains(document.activeElement) ||
-				event.target?.closest('.sja_menu_div')?.ancestor_menus?.includes(this.dnode)
+				document.activeElement?.closest('.sja_menu_div')?.ancestor_menus?.includes(tip.dnode)
 			)
 				return
 			tip.hide()
