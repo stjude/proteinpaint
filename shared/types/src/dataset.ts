@@ -533,13 +533,13 @@ export type GeneArgumentEntry = {
 	 * required if type is string. Otherwise, optional
 	 */
 	value?:
-	| string
-	| boolean
-	| number
-	| {
-		type: string
-		value: string[] | null
-	}
+		| string
+		| boolean
+		| number
+		| {
+				type: string
+				value: string[] | null
+		  }
 	options?: {
 		/** Type of dom element to render underneath the radio
 		 * 'text': creates a text area input
@@ -1067,7 +1067,7 @@ export type SingleCellGeneExpression = {
 	/** cached gene exp bins, seeded on init() in validate_query_singleCell() */
 	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
 	/** gene expression unit (e.g. 'FPKM') */
-	unit?: string,
+	unit?: string
 	/** Label for plot buttons, title, etc. */
 	label?: string
 }
@@ -1727,7 +1727,7 @@ type BoxPlots = {
 }
 
 type UiLabels = {
-	[propName: string]: string | { label: string;[otherAttr: string]: string }
+	[propName: string]: string | { label: string; [otherAttr: string]: string }
 }
 
 type TieBreakerFilterValuesEntry = {
@@ -2183,7 +2183,7 @@ keep this setting here for reason of:
 	implementations destructure clientAuthResult (and e.g. activeCohort) from it. Accepts the
 	term object (not just an id) so the hook can generalize to non-dictionary terms in the
 	future, which may key visibility off properties other than id. */
-	isTermVisible?: (__protected__: any, term: { id?: string;[key: string]: any }) => boolean
+	isTermVisible?: (__protected__: any, term: { id?: string; [key: string]: any }) => boolean
 	/** Optional dataset hook to prune the per-request /termdb/config response.
 	 * Typical use is hiding plots/sections/etc. based on the requester's role.
 	 *
@@ -2687,7 +2687,7 @@ export type Mds3 = BaseMds & {
 	output: validated filter0 obj, or undefined
 	*/
 	validate_filter0?: (f: any) => void
-	getFilter0SampleTypes?: (filter: any, ds: any, mapParent2Children?: boolean) => void
+	getFilter0SampleTypes?: (filter: any, ds: any) => void
 	/** ds-supplied getter, maps a ssm id to a canonical ENST name */
 	ssm2canonicalisoform?: { get?: (q: any) => any }
 	/** mds3 tk displays presence and occurrence of genomic alterations, but not including samples harboring each alteration

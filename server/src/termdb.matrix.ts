@@ -695,8 +695,8 @@ export function divideTerms(q, ds) {
 	return [dict, geneVariantTws, nonDict]
 }
 
-/* function will set:
-- q.mapParent2Children: flag for whether to map term data onto child samples
+/* function may set:
+- q.mapParent2Children: flag for whether to map data of parent samples onto child samples
 - q.sampleTypes: sample types to query for
 TODO: may rename to maySetSampleTypes() */
 export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {

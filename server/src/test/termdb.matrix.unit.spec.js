@@ -6,7 +6,8 @@ import {
 	setSampleLstData,
 	isNegatedSampleLstOnlyRequest,
 	hasFilterTermsUnsupportedByFilterSamples,
-	maySetMapParent2Children
+	maySetMapParent2Children,
+	shouldMapParent2Children
 } from '../termdb.matrix.js'
 import { getAuthApi, authApi } from '../auth.js'
 import { init } from './load.testds.js'
@@ -36,6 +37,7 @@ hasFilterTermsUnsupportedByFilterSamples: detects filter terms filterSamples() c
 getData: samplelst overlay resolves on a dataset without a sqlite db
 getData: an untrustworthy scope adds no absent group member
 getData: a request of only a negated samplelst group is rejected
+shouldMapParent2Children: handles object sample type metadata with child sample types
 getData: custom bins of a non-dict numeric term come back colored and distinct
 getData: custom bins of a single-cell gene expression term come back colored and distinct
 */
@@ -140,6 +142,51 @@ tape('maySetMapParent2Children: does not invent sample types without a query sco
 	maySetMapParent2Children(mapParents, ds, true)
 	t.equal(mapParents.mapParent2Children, true, 'an explicit true flag is preserved')
 	t.equal(mapParents.sampleTypes, undefined, 'no sample types are synthesized without a query scope')
+	t.end()
+})
+
+tape('shouldMapParent2Children: handles object sample type metadata with child sample types', t => {
+	const ds = {
+		cohort: {
+			termdb: {
+				sampleTypes: {
+					1: { name: 'Parent', parent_id: null },
+					2: { name: 'Child', parent_id: 1 },
+					4: { name: 'Unrelated', parent_id: null }
+				},
+				term2SampleType: new Map([
+					['expression', { sampleType: 1, childSampleTypes: [2] }],
+					['legacy', 1]
+				])
+			}
+		}
+	}
+
+	t.equal(
+		shouldMapParent2Children({ term: { id: 'expression' } }, ds, true, [2]),
+		true,
+		'parent sample type from object metadata maps to a requested child type'
+	)
+	t.equal(
+		shouldMapParent2Children({ term: { id: 'expression' } }, ds, true, [4]),
+		false,
+		'unrelated requested sample types do not map'
+	)
+	t.equal(
+		shouldMapParent2Children({ term: { id: 'expression' } }, ds, false, [2]),
+		false,
+		'disabled mapping never maps'
+	)
+	t.equal(
+		shouldMapParent2Children({ term: { id: 'expression' } }, ds, true, []),
+		false,
+		'without requested sample types there is nothing to map'
+	)
+	t.equal(
+		shouldMapParent2Children({ term: { id: 'legacy' } }, ds, true, [2]),
+		true,
+		'legacy numeric sample type metadata remains supported'
+	)
 	t.end()
 })
 
