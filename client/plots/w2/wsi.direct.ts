@@ -695,13 +695,24 @@ function showLassoMenu(
 		return
 	}
 	d.append('div').style('font-weight', 'bold').text(`${hits.length} cells selected`) // headline count
-	if (runNhood)
-		d.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.attr('data-testid', 'sjpp-wsi-nhood-btn')
-			.style('margin', '4px 0')
-			.text('Neighborhood enrichment')
-			.on('click', () => runNhood(hits.map(c => c.id)))
+	if (runNhood) {
+		// mirrors the route's ids*k*perms cap (server/src/routes/wsitiles.ts) at the
+		// default k=6/perms=1000 the button runs with, so an oversized lasso gets an
+		// instant explanation instead of a POST the server would reject anyway
+		const maxCells = Math.floor(50_000_000 / (6 * 1000))
+		if (hits.length > maxCells)
+			d.append('div')
+				.style('margin', '4px 0')
+				.style('color', '#a00')
+				.text(`Selection too large for neighborhood enrichment (max ${maxCells} cells) — draw a smaller lasso`)
+		else
+			d.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('data-testid', 'sjpp-wsi-nhood-btn')
+				.style('margin', '4px 0')
+				.text('Neighborhood enrichment')
+				.on('click', () => runNhood(hits.map(c => c.id)))
+	}
 	if (cellTypes) {
 		// per-type tally of the selection, the input the enrichment step will consume
 		const counts: { [t: string]: number } = Object.create(null)

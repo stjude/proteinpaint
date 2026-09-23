@@ -280,12 +280,28 @@ function init({ genomes }) {
 				// bounded so a request cannot pin python indefinitely
 				const int = (v: any, d: number, lo: number, hi: number) =>
 					Math.min(hi, Math.max(lo, Number.isInteger(Number(v)) ? Number(v) : d))
+				const k = int(q.k, 6, 1, 30)
+				const perms = int(q.perms, 1000, 10, 5000)
+				// wsi_tile.py's nhood_enrichment does ids.length * k * perms edge tallies
+				// per run (kNN graph x permutations); k and perms alone don't bound that
+				// when ids is huge (the request body allows up to ~5MB of ids), so bound
+				// the product directly instead of guessing a flat ids cap
+				const MAX_NHOOD_WORK = 50_000_000
+				if (ids.length * k * perms > MAX_NHOOD_WORK) {
+					res.status(400).send({
+						status: 'error',
+						error: `selection too large for k=${k}, perms=${perms}: at most ${Math.floor(
+							MAX_NHOOD_WORK / (k * perms)
+						)} cells (draw a smaller lasso, or lower k/permutations)`
+					})
+					return
+				}
 				const job = {
 					action: 'nhood',
 					h5ad: full,
 					ids,
-					k: int(q.k, 6, 1, 30),
-					perms: int(q.perms, 1000, 10, 5000),
+					k,
+					perms,
 					seed: int(q.seed, 0, 0, 2 ** 31)
 				}
 				const out = await run_python('wsi_tile.py', JSON.stringify(job))
