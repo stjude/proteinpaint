@@ -98,8 +98,11 @@ function applyBrush(self, elem, brush) {
 			brush.elem.selectAll('.overlay').style('pointer-events', 'none')
 		})
 
-	const brush_start = range.startunbounded ? minvalue : range.start
-	const brush_stop = range.stopunbounded ? maxvalue : range.stop
+	// a saved bound may lie outside of the data, e.g. a typed bound kept by updateTempRanges(), or a range
+	// saved under a filter that has since changed; clamp it so the brush stays on the plot
+	const clamp = v => Math.min(Math.max(v, minvalue), maxvalue)
+	const brush_start = range.startunbounded ? minvalue : clamp(range.start)
+	const brush_stop = range.stopunbounded ? maxvalue : clamp(range.stop)
 	brush.init = () => {
 		if (range.value == undefined)
 			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
@@ -128,6 +131,11 @@ function applyBrush(self, elem, brush) {
  * minValue: min value of the density plot
  * maxValue: max value of the density plot
  * termType: term type
+ *
+ * A typed bound at or beyond the data, e.g. x>-1 for data starting at 0, is kept as typed while the
+ * brush sits at that edge. Replacing it by the data min or max would change the selected samples:
+ * the typed exclusivity would drop the samples at the min, e.g. 0<x, and the rounded min may lie
+ * inside the data, e.g. 0.93 for a min of 0.925.
  */
 export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalue, type) {
 	range.start = convertRangeValue(xscale, s[0])
@@ -141,11 +149,16 @@ export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalu
 	//Limit by the brush, not by the user
 	range.startunbounded = min == range.start && inputRange.startunbounded
 	range.stopunbounded = max == range.stop && inputRange.stopunbounded
+	const startAtEdge = !range.startunbounded && range.start == min,
+		stopAtEdge = !range.stopunbounded && range.stop == max
 	//Do not show decimals for integer types
 	if (type == 'integer') {
 		range.start = range.startunbounded ? '' : Math.round(range.start)
 		range.stop = range.stopunbounded ? '' : Math.round(range.stop)
 	}
+	// not rounded for an integer term either, as rounding x>-0.5 to x>0 would also drop the samples at 0
+	if (startAtEdge && Number.isFinite(inputRange.start) && inputRange.start <= minvalue) range.start = inputRange.start
+	if (stopAtEdge && Number.isFinite(inputRange.stop) && inputRange.stop >= maxvalue) range.stop = inputRange.stop
 }
 
 /** Set the start and stop displayed to the user

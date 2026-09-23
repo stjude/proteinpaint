@@ -433,8 +433,8 @@ function enterRange(self, tr, brush, i) {
 			new_range.value != undefined ? new_range.value : new_range.start != undefined ? new_range.start : minvalue
 		const stop =
 			new_range.value != undefined ? new_range.value : new_range.stop != undefined ? new_range.stop : maxvalue
-		// a typed bound beyond the data would place the brush outside of the plot; clamp to the plot,
-		// and the brush handler then limits the input text to the data range, see updateTempRanges()
+		// a typed bound beyond the data would place the brush outside of the plot; clamp to the plot.
+		// the brush handler keeps such a bound as typed in the input text, see updateTempRanges()
 		const clamp = v => Math.min(Math.max(v, minvalue), maxvalue)
 		brush.elem.call(brush.d3brush).call(brush.d3brush.move, [clamp(start), clamp(stop)].map(xscale))
 	}
@@ -599,7 +599,7 @@ async function showCheckList_numeric(self, tvs, div) {
 
 /* a range typed outside of the density plot would select no sample, e.g. x>100 when the data max is 50,
 and would invert the brush selection. only reject a range that has no overlap with the data, as a
-partial overlap is limited to the data range by the brush */
+partial overlap still selects samples, and its brush is clamped to the plot */
 function validateRangeInData(self, range) {
 	if (range.value != undefined) return // a single value or special category
 	const { min, max } = self.num_obj.density_data

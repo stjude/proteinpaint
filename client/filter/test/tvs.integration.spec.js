@@ -1415,7 +1415,7 @@ tape('tvs: Gene Expression', async test => {
 
 tape('tvs: Gene Expression - range outside of data', async test => {
 	test.timeoutAfter(4000)
-	test.plan(3)
+	test.plan(5)
 
 	const opts = getOpts({
 		filterData: {
@@ -1475,6 +1475,20 @@ tape('tvs: Gene Expression - range outside of data', async test => {
 
 		tipd.node().querySelector(rangeApplySelector).click()
 		test.true(!called && alerts.length == 2, 'should not apply a range above the data max')
+
+		// a range covering the data keeps its typed bounds, as the data min or max in their place
+		// would drop the samples at the min or max from an exclusive bound
+		rangeInput.value = '0.5 < x < 1000'
+		rangeInput.dispatchEvent(new Event('change'))
+		test.equal(rangeInput.value, '0.5 < x < 1000', 'should keep typed bounds beyond the data in the input')
+		opts.test({
+			trigger: () => tipd.node().querySelector(rangeApplySelector).click(),
+			callback: filter => {
+				const r = filter.lst[0].tvs.ranges[0]
+				test.deepEqual([r.start, r.stop], [0.5, 1000], 'should apply the typed bounds beyond the data')
+				return true
+			}
+		})
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}
