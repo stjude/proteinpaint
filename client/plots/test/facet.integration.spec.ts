@@ -9,6 +9,7 @@ Tests:
 	- geneExpression facet table
 	- termCollection (row), categorical (col)
 	- categorical (row), termCollection (col)
+	- static count table when displaySampleIds is disabled
 */
 
 /*************************
@@ -268,6 +269,74 @@ tape('categorical (row), termCollection (col)', test => {
 			selector: 'td.sja_menuoption'
 		})
 		test.equal(cells.length, 6, 'Should render 6 cells.')
+
+		if (test['_ok']) facet.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('static count table when displaySampleIds is disabled', test => {
+	test.timeoutAfter(3000)
+
+	/*
+	TermdbTest sets displaySampleIds: () => true, so every case above takes the interactive
+	sample-level branch. Turn that policy off while the token stays verified -- the shape of a
+	logged-in role the dataset still denies sample ids, e.g. careReg 'user' -- and the static count
+	table must be what renders. renderTable() pairs both checks, and server/src/termdb.get_matrix.ts
+	enforces the same boundary by withholding sample rows and refs.bySampleId, so a regression here
+	would ask for sample-level data the server never serves.
+	*/
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'facet',
+					columnTw: {
+						id: 'agedx'
+					},
+					rowTw: {
+						id: 'diaggrp'
+					}
+				}
+			]
+		},
+		facet: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	// the first render uses the dataset default; the re-render below is the one under test
+	let policyDisabled = false
+
+	async function runTests(facet) {
+		if (policyDisabled) return
+		policyDisabled = true
+
+		facet.Inner.app.vocabApi.termdbConfig.displaySampleIds = false
+		await facet.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: facet.Inner.id,
+			config: { settings: { facet: { showPercents: true } } }
+		})
+
+		const table = facet.Inner.dom.mainDiv
+
+		test.true(facet.Inner.app.vocabApi.hasVerifiedToken(), 'Should still hold a verified token')
+
+		const headerNum = table.selectAll('th[data-testid="sjpp-facet-col-header"]').size()
+		test.equal(headerNum, 5, 'Should render 5 headers')
+		const rowNum = table.selectAll('td[data-testid="sjpp-facet-row-label"]').size()
+		test.equal(rowNum, 7, 'Should render 7 rows')
+
+		const prompt = table.selectAll('div[data-testid="sjpp-facet-start-prompt"]').size()
+		test.equal(prompt, 0, 'Should not render the prompt to select cells.')
+
+		/* the only cell class renderStaticTable() sets is sja_menuoption, on cells that carry a count,
+		so highlightable-cell is what separates a selectable grid from a static one */
+		const selectableCells = table.selectAll('td.highlightable-cell').size()
+		test.equal(selectableCells, 0, 'Should not render selectable cells.')
 
 		if (test['_ok']) facet.Inner.app.destroy()
 		test.end()
