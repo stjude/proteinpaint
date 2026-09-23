@@ -32,7 +32,7 @@ The box plot follows a Model-View-ViewModel pattern:
 - **model/Model.ts**: Handles data requests to the server
   - Sends the continuous wrapper as `tw` and the other wrapper as `overlayTw`
   - The server expands numeric termCollections into member-term plots
-  - Copies the `$id`-keyed descriptive statistics response into each wrapper's `q.descrStats` for rendering and saved plot state
+  - Copies the `$id`-keyed descriptive statistics response into each wrapper's `q.descrStats` for rendering.
 - **viewModel/**: Transforms server data into view-ready format
   - ChartsDataMapper: Calculates dimensions and formats plot data
   - LegendDataMapper: Prepares legend items including member terms
