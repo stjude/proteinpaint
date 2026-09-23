@@ -1,8 +1,7 @@
 import type { RoutePayload, RouteApi } from '#types'
 import path from 'path'
-import { spawn } from 'child_process'
 import serverconfig from '#src/serverconfig.js'
-import { checkChr } from '#src/utils.js'
+import { checkChr, spawnTool } from '#src/utils.js'
 import * as common from '#shared/common.js'
 import type { DsDataRequest, DsDataResponse } from '#types'
 
@@ -143,7 +142,7 @@ function handle_dsdata_vcf(query, req) {
 			req.query.range.stop
 	]
 	return new Promise((resolve, reject) => {
-		const ps = spawn(serverconfig.tabix, par)
+		const ps = spawnTool(serverconfig.tabix, par)
 		const out: any[] = [],
 			out2: any[] = []
 		ps.stdout.on('data', i => out.push(i))

@@ -42,6 +42,7 @@ loadfile_ssid
 bam_ifnochr
 testIfFileIsBigbed
 checkChr
+spawnTool
 validateRglst
 ********************** INTERNAL
 */
@@ -458,7 +459,7 @@ export async function get_header_txt(file, dir) {
 export function get_header_bcf(file, dir) {
 	// file is full path or url
 	return new Promise((resolve, reject) => {
-		const ps = spawn(bcftools, ['view', '-h', file], { cwd: dir })
+		const ps = spawnTool(bcftools, ['view', '-h', file], { cwd: dir })
 		const out = []
 		ps.stdout.on('data', i => out.push(i))
 		ps.on('close', () => {
@@ -501,7 +502,7 @@ export function get_lines_bigfile({ args, callback, dir = null, isbcf = false, i
 	if (!callback) throw 'callback is missing'
 	if (typeof callback != 'function') throw 'callback() not a function'
 	return new Promise((resolve, reject) => {
-		const ps = spawn(isbcf ? bcftools : isbam ? samtools : tabix, args, { cwd: dir })
+		const ps = spawnTool(isbcf ? bcftools : isbam ? samtools : tabix, args, { cwd: dir })
 		const rl = readline.createInterface({ input: ps.stdout })
 		const em = []
 		rl.on('line', line => callback(line, ps))
@@ -813,6 +814,16 @@ throws on any err. makes no return. may update q
 // otherwise a value like "-o/path" is parsed as an option
 export function checkChr(genome, chr) {
 	if (typeof chr != 'string' || !genome?.chrlookup?.[chr.toUpperCase()]) throw 'invalid chr'
+}
+
+// every samtools/tabix/bcftools spawn goes through here: an argument that starts with "-" and contains ":" is a
+// region built from a request chr (e.g. "-o/path:1-2"), which the tool would parse as an option
+// ponytail: catches region-shaped injection only; request values used as a whole argument must still be validated at the route
+export function spawnTool(bin, args, opts) {
+	for (const a of args) {
+		if (typeof a == 'string' && a[0] == '-' && a.includes(':')) throw 'invalid region argument'
+	}
+	return spawn(bin, args, opts)
 }
 
 export function validateRglst(q, genome) {

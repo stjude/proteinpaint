@@ -13,6 +13,7 @@ import { mdsjunction_request_closure } from '../mds.junction.js'
 import { handle_singlecell_closure } from '../singlecell.js'
 import { handle_mdssurvivalplot } from '../km.js'
 import { handle_request_closure as termdbClosure } from '../termdb.js'
+import { setRoutes } from '../app.unorg.js'
 
 /*
 Regression specs for argument injection (CWE-88) into samtools/tabix argv.
@@ -33,6 +34,8 @@ test sections:
 - /singlecell
 - /mdssurvivalplot
 - /termdb?getLDdata
+- spawnTool() central guard
+- /mdsgeneboxplot and /isoformbycoord, via the real route table
 */
 
 const hasSamtools = spawnSync(serverconfig.samtools, ['--version']).status === 0
@@ -306,6 +309,62 @@ tape('/termdb?getLDdata', async test => {
 			m: { chr, pos: 1, ref: 'A', alt: 'T' }
 		})
 		test.equal(r?.error, 'invalid chr', `m.chr should reject chr=${chr}`)
+	}
+	test.end()
+})
+
+tape('spawnTool() central guard', async test => {
+	// region-shaped arguments that start with "-" are what a request chr turns into
+	for (const args of [
+		['f.gz', `-o${outFile}:1-2`],
+		['f.gz', '-fc:1-2'],
+		['view', 'f.bam', '--help:x-y']
+	]) {
+		test.throws(() => utils.spawnTool('true', args), /invalid region argument/, `should reject ${JSON.stringify(args)}`)
+	}
+	// real flags have no ":", and a region after a flag value is fine
+	for (const args of [
+		['-H', 'f.gz'],
+		['view', '-c', 'f.bam', 'chr1:1-2'],
+		['query', 'f.bcf', '-r', 'chr1:1-2']
+	]) {
+		test.doesNotThrow(() => utils.spawnTool('true', args).kill(), `should allow ${JSON.stringify(args)}`)
+	}
+
+	// get_lines_bigfile() goes through the guard, so a route that forgot checkChr is still covered
+	const file = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest/TermdbTest_ITD.gz')
+	const tbiHash = sha(file + '.tbi')
+	try {
+		await utils.get_lines_bigfile({ args: [file, '-fc:1-2'], callback: () => {} })
+		test.fail('get_lines_bigfile should reject a region-shaped option')
+	} catch (e) {
+		test.equal(e, 'invalid region argument', 'get_lines_bigfile should reject a region-shaped option')
+	}
+	test.equal(sha(file + '.tbi'), tbiHash, 'should not rebuild the track .tbi')
+	test.end()
+})
+
+tape('/mdsgeneboxplot and /isoformbycoord, via the real route table', async test => {
+	const routes = {}
+	const record = (p, h) => (routes[p] = h)
+	setRoutes(
+		{ get: record, post: record, all: record, put: record, delete: record, use: () => {} },
+		{ hg38: getGenome() },
+		{}
+	)
+	for (const chr of chrAttacks) {
+		const box = await send(routes['/mdsgeneboxplot'], {
+			genome: 'hg38',
+			iscustom: 1,
+			file: 'files/hg38/TermdbTest/TermdbTest_ITD.gz',
+			gene: 'TP53',
+			chr,
+			start: 1,
+			stop: 2
+		})
+		test.equal(box?.error, 'invalid chr', `/mdsgeneboxplot should reject chr=${chr}`)
+		const iso = await send(routes['/isoformbycoord'], { genome: 'hg38', chr, pos: 1 })
+		test.equal(iso?.error, 'invalid chr', `/isoformbycoord should reject chr=${chr}`)
 	}
 	test.end()
 })

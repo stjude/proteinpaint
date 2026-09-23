@@ -481,12 +481,12 @@ async function may_get_sample2event(req, svcnv) {
 
 function get_param(genomes, req) {
 	if (!req.query.gene) throw 'gene name missing'
-	if (!req.query.chr) throw 'chr missing'
 	if (!Number.isInteger(req.query.start)) throw 'start missing'
 	if (!Number.isInteger(req.query.stop)) throw 'stop missing'
 
 	const gn = genomes[req.query.genome]
 	if (!gn) throw 'invalid genome'
+	utils.checkChr(gn, req.query.chr)
 
 	let ds, dsquery
 	if (req.query.iscustom) {
