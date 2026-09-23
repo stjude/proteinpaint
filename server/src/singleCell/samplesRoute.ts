@@ -454,7 +454,9 @@ function validateDataNative(D: SingleCellData, ds: any): void {
 	}
 }
 
-/** When q.checkPlotAvailability is true, returns only plots with available data files. */
+/** When q.checkPlotAvailability is true, returns only plots with available data files. 
+ * *** Note: When updating this function, ensure `ppgdc/active/dataset/gdc/singleCell.ts`,
+ * gdc_validate_query_singleCell_data() is also updated. */
 async function getAvailablePlots(
 	Qplots: string[],
 	DsPlots: SingleCellPlot[],
