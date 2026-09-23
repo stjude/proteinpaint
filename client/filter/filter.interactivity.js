@@ -116,8 +116,9 @@ export function setInteractivity(self) {
 			//&& self.activeData.filter != self.filter
 			!self.activeData.elem.className.includes('join_label')
 		) {
+			// use a button like the rendered parentheses, so that the same css rules apply
 			select(elem)
-				.insert('div', 'div')
+				.insert('button', 'div')
 				.attr('class', 'sja_filter_paren_open')
 				.style('display', self.opts.joinWith.length > 1 ? 'inline-block' : 'none')
 				.style('padding', '0 5px')
@@ -131,28 +132,28 @@ export function setInteractivity(self) {
 			.insert('div', ':scope > .sja_filter_paren_close')
 			.attr('class', 'sja_filter_blank_pill')
 			.style('display', 'inline-block')
-			//.style('width', '120px')
-			.style('height', '20px')
-			//.style('margin-right', '20px')
-			.style('overflow', 'visible')
+			// same height and vertical alignment as the filter buttons in style.css,
+			// so that the blank pill does not shift or resize its neighbors
+			.style('height', '26px')
+			.style('vertical-align', 'middle')
 
 		blank
 			.append('div')
 			.style('display', 'inline-block')
 			.style('width', '50px')
 			.style('text-align', 'center')
+			.style('vertical-align', 'middle')
 			.html(joiner)
 
 		blank
 			.append('div')
-			.style('position', 'relative')
-			.style('top', '-7px')
 			.style('display', 'inline-block')
+			.style('box-sizing', 'border-box')
 			.style('width', '80px')
-			.style('height', '22px')
+			.style('height', '26px')
 			.style('margin-right', '5px')
 			.style('border', '3px dashed #b8d3ea')
-			.style('vertical-align', 'top')
+			.style('vertical-align', 'middle')
 			.style('background-color', '#ee5')
 
 		if (
@@ -161,7 +162,7 @@ export function setInteractivity(self) {
 			!self.activeData.elem.className.includes('join_label')
 		) {
 			select(elem)
-				.append('div')
+				.append('button')
 				.attr('class', 'sja_filter_paren_close')
 				.style('display', self.opts.joinWith.length > 1 ? 'inline-block' : 'none')
 				.style('padding', '0 5px')

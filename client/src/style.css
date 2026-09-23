@@ -298,7 +298,8 @@ button.sja_filter_join_label {
 	border-radius: 5px;
 }
 
-.sja_filter_item > .sja_pill_wrapper {
+.sja_filter_item > .sja_pill_wrapper,
+.sja_pill_wrapper > .tvs_pill {
 	vertical-align: middle;
 }
 
