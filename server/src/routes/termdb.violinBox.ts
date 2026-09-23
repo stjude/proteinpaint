@@ -712,10 +712,19 @@ export function getDescrStatsByTerm(
 ): Record<string, DescrStats> {
 	const terms = [tw, overlayTw].filter((term): term is TermWrapper => !!term?.$id)
 	return Object.fromEntries(
-		terms.map(term => [
-			term.$id!,
-			getDescrStats(extractNumericValues(samples, term, term === tw && isLogScale), showOutlierRange)
-		])
+		terms.map(term => {
+			// gate on wrapper type, not runtime value type, since categorical terms may use numeric-looking values/keys
+			const hasNumericValues =
+				isNumericTw(term) ||
+				term.term.type === 'survival' ||
+				(term.term.type === 'termCollection' && (term.term as any).memberType === 'numeric')
+			return [
+				term.$id!,
+				hasNumericValues
+					? getDescrStats(extractNumericValues(samples, term, term === tw && isLogScale), showOutlierRange)
+					: {}
+			]
+		})
 	)
 }
 
