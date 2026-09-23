@@ -1,4 +1,3 @@
-/* eslint-env node, es2021 */
 import tape from 'tape'
 import { gunzipSync } from 'zlib'
 import serverconfig from '../serverconfig.js'

@@ -18,12 +18,19 @@ const currentDir = path.dirname(fileURLToPath(import.meta.url))
 const sjppDir = path.join(currentDir, '../../sjpp')
 const errOrWarn = fs.existsSync(sjppDir) ? 'error' : 'warn'
 
+// esquery regex for template text that looks like a sql statement, used by the server sql lint rule
+// uppercase keywords, or a lowercase 'select <columns> from'
+const sqlKeywords = String.raw`/\b(SELECT|FROM|WHERE|JOIN|UNION|INSERT INTO|DELETE FROM|GROUP BY|ORDER BY)\b|\bselect\s+[\w*.,()\s]+\s+from\b/`
+
 export default tseslint.config(
 	{
 		// lint TypeScript only (matches the old `--ext .ts`); ported .eslintignore patterns + deps
 		// Skip all JavaScript files
 		ignores: [
 			'**/*.js',
+			// except server source js, which is only linted by the sql rule block below
+			'!server/src/**/*.js',
+			'server/src/app.js', // bundled build output
 			'**/*.cjs',
 			'**/*.mjs',
 			'**/tmp*/*',
@@ -67,6 +74,28 @@ export default tseslint.config(
 		// NodeJS namespace + webpack's __non_webpack_require__ aren't in globals.node; whitelist for no-undef
 		languageOptions: { globals: { ...globals.node, NodeJS: 'readonly', __non_webpack_require__: 'readonly' } },
 		rules: { 'no-undef': 'error' }
+	},
+	{
+		// sql statements should bind values as parameters instead of interpolating them into the sql text,
+		// use the sql`` tag from server/src/sql.ts, see also guardDb() there for the runtime check
+		files: ['server/**/*.ts', 'server/src/**/*.js'],
+		rules: {
+			'no-restricted-syntax': [
+				'warn',
+				{
+					selector: `CallExpression[callee.property.name=/^(prepare|exec)$/] > TemplateLiteral.arguments[expressions.length>0]`,
+					message: 'Do not interpolate into sql passed to prepare()/exec(), use the sql`` tag from server/src/sql.ts'
+				},
+				{
+					selector: `CallExpression[callee.property.name=/^(prepare|exec)$/] > BinaryExpression.arguments[operator='+']`,
+					message: 'Do not concatenate sql passed to prepare()/exec(), use the sql`` tag from server/src/sql.ts'
+				},
+				{
+					selector: `TemplateLiteral[expressions.length>0]:not(TaggedTemplateExpression > .quasi):has(> TemplateElement[value.raw=${sqlKeywords}])`,
+					message: 'Sql-like template with ${} interpolation, use the sql`` tag from server/src/sql.ts to bind values'
+				}
+			]
+		}
 	},
 	{
 		files: ['shared/**/*.ts'],

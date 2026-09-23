@@ -1,5 +1,6 @@
 import { connect_db } from '../utils'
-import { server_init_db_queries, listDbTables, quoteSqlIdentifier } from '../termdb.server.init.ts'
+import { server_init_db_queries, listDbTables } from '../termdb.server.init.ts'
+import { sql } from '../sql.ts'
 import { initGeneDbLookups } from '../genedbLookups.ts'
 
 /**
@@ -61,9 +62,7 @@ export function initdb(g, features = {}) {
 		g.genedb.tableSize = {}
 		for (const table of tables) {
 			if (table == 'buildDate') continue
-			g.genedb.tableSize[table] = g.genedb.db
-				.prepare(`select count(*) as size from ${quoteSqlIdentifier(table)}`)
-				.get().size
+			g.genedb.tableSize[table] = g.genedb.db.prepare(sql`select count(*) as size from ${sql.id(table)}`).get().size
 		}
 	}
 

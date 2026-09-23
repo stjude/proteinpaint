@@ -5,12 +5,12 @@ import readline from 'readline'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import ky from 'ky'
-import bettersqlite from 'better-sqlite3'
 import serverconfig from './serverconfig.js'
 import { Readable } from 'stream'
 import { minimatch } from 'minimatch'
 export * from './cachedFetch.js'
 export * from './xfetch.js'
+export { connect_db } from './sql.ts'
 
 const { tabix, samtools, bcftools, bigBedToBed, bigBedNamedItems, bigBedInfo } = serverconfig
 
@@ -538,26 +538,6 @@ export async function get_fasta(gn, pos) {
 		callback: line => lines.push(line)
 	})
 	return lines.join('\n')
-}
-
-/*
-inputs:
-file=str
-	half or full path; if not starting with '/', join with tp dir
-override={}
-	supplies overrides to default setting
-returns:
-	db connector
-*/
-const tpdir = serverconfig.features?.tp_native_dir || serverconfig.tpmasterdir
-
-export function connect_db(file, override = {}) {
-	const dbfile = file[0] == '/' ? file : path.join(tpdir, file)
-	try {
-		return new bettersqlite(dbfile, Object.assign({ readonly: true, fileMustExist: true }, override))
-	} catch (e) {
-		throw `error connecting to ${dbfile}: ${e}`
-	}
 }
 
 export const genotype_type_set = new Set(['Homozygous reference', 'Homozygous alternative', 'Heterozygous'])
