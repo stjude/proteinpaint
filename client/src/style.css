@@ -287,6 +287,17 @@ button.sja_filter_join_label {
 	vertical-align: middle;
 }
 
+/* sja_filter_btns_highlighted is toggled on the filter holder on mouseenter/mouseleave */
+.sja_filter_btns_highlighted button.sja_filter_add_transformer,
+.sja_filter_btns_highlighted button.sja_filter_clause_negate,
+.sja_filter_btns_highlighted button.sja_filter_paren_open,
+.sja_filter_btns_highlighted button.sja_filter_last_join_label,
+.sja_filter_btns_highlighted button.sja_filter_paren_close,
+.sja_filter_btns_highlighted button.sja_filter_join_label {
+	border: 1px dashed #555;
+	border-radius: 5px;
+}
+
 .sja_filter_item > .sja_pill_wrapper {
 	vertical-align: middle;
 }

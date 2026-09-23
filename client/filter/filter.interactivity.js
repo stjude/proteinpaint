@@ -6,7 +6,7 @@ const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
 export function setInteractivity(self) {
 	self.displayControlsMenu = function (event) {
 		event.stopPropagation() // in mass/group ui, to prevent pill-clicking to check/uncheck table rows
-		self.dom.holder.selectAll('button').style('border', null).style('border-radius', null)
+		self.dom.holder.classed('sja_filter_btns_highlighted', false)
 		if (!self.activeData) return
 		const item = this.parentNode.__data__
 		const filter = findParent(self.filter, item.$id)
