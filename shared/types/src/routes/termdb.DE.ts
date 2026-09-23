@@ -79,6 +79,11 @@ export type VolcanoRenderRequest = {
 	 * Moves only the plotted and classified value. P-values are untouched and the returned rows
 	 * keep their raw effect sizes, so a downloaded table reads the same either way. */
 	centerX?: boolean
+	/** Differential methylation only: keep the significance colours on rows whose gene is
+	 * 'expressed' (cohort mean log2 TPM+1 >= 1) or 'silent' (< 0.5) and grey every other row,
+	 * from the dataset's dnaMethylation.geneExpressionLevel file. Gene-body methylation follows
+	 * transcription and promoter methylation silences it, so a hit reads differently on the two. */
+	expressionHighlight?: 'expressed' | 'silent'
 	/** Target PNG width in pixels. */
 	pixelWidth: number
 	/** Target PNG height in pixels. */
@@ -139,6 +144,10 @@ export type VolcanoData<T extends DataEntry> = {
 	 * expression, hypermethylated for methylation. */
 	totalSignificantUp: number
 	totalSignificantDown: number
+	/** With a highlight (e.g. expressionHighlight): the up/down split over the highlighted
+	 * significant rows only. Absent without one. */
+	highlightedUp?: number
+	highlightedDown?: number
 	/** The value subtracted from every plotted x when centerX was requested — the median effect
 	 * size across all tested rows, and 0 when centring was off. Report it alongside a centred
 	 * count: it is the size of the baseline offset that was removed. */

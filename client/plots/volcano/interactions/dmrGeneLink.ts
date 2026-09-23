@@ -3,6 +3,7 @@ import { renderTable, sayerror, table2col } from '#dom'
 import { bplen } from '#shared/common.js'
 import type { DmrScanSummary } from '#types'
 import { getDefaultVolcanoSettings } from '../settings/defaults'
+import { runSurvivalScreen } from './dmrSurvivalScreen'
 
 /* The genes a scan's DMRs touch, whether their expression moved the way the DMR's position predicts,
 and what PubMed has on that gene's methylation-expression relationship.
@@ -16,7 +17,8 @@ export async function dmrGeneLinkPanel(
 	config: any,
 	vocab: { genome: string; dslabel: string },
 	scan: DmrScanSummary,
-	app: any
+	app: any,
+	interactions: any
 ) {
 	const div = tip.d.append('div').style('padding', '10px').style('max-width', '1000px')
 	const wait = div
@@ -89,6 +91,8 @@ export async function dmrGeneLinkPanel(
 				.join(' · ')
 		)
 	}
+
+	concordantSurvival(div.append('div'), res.rows, config, scan, vocab, interactions, tip)
 
 	const rows = res.rows
 	const litDiv = div.append('div')
@@ -185,4 +189,75 @@ async function showLiterature(
 			.attr('target', '_blank')
 			.text(a.doi ? `doi:${a.doi}` : `PMID ${a.pmid}`)
 	}
+}
+
+/** Concordant genes asked of PubMed, and so of the rate limit, at most this many per run */
+const MAX_CONCORDANT_GENES = 150
+
+/* Do the genes with the strongest case for a methylation-driven expression change predict survival?
+
+The genes are the concordant links -- promoter and expression moving opposite ways, or gene body and
+expression the same way -- ranked by expression evidence as the server returns them, one row per gene
+(its strongest DMR). Literature support is the same PubMed query a row click runs: the gene, its
+methylation in that context, and expression. The survival screen then fits methylation and expression
+for each supported gene, grouping as strata. Genes without literature can be screened too, since
+"not yet published" is not "not real". */
+function concordantSurvival(
+	holder: any,
+	rows: any[],
+	config: any,
+	scan: DmrScanSummary,
+	vocab: { genome: string; dslabel: string },
+	interactions: any,
+	tip: any
+) {
+	if (!interactions.app.vocabApi.termdbConfig?.defaultTw4correlationPlot?.survival) return
+	const seen = new Set<string>()
+	const genes = rows.filter(r => r.relationship == 'concordant' && !seen.has(r.gene) && seen.add(r.gene))
+	if (!genes.length) return
+	const top = genes.slice(0, MAX_CONCORDANT_GENES)
+	const bar = holder.append('div').style('padding', '8px 0 4px')
+	const out = holder.append('div')
+	const regionOf = (r: any) => ({
+		promoter_id: `${r.gene} ${r.context}`,
+		chr: r.dmr.chr,
+		start: r.dmr.start,
+		stop: r.dmr.stop,
+		gene_name: r.gene
+	})
+	const cfg = { ...config, samplelst: scan.matchedSamplelst || config.samplelst }
+	bar
+		.append('button')
+		.attr('data-testid', 'sjpp-dmrGeneLink-survival')
+		.text(`Survival of the top ${top.length} concordant genes with PubMed support`)
+		.on('click', async () => {
+			out.selectAll('*').remove()
+			const progress = out.append('div').style('color', '#777')
+			const count = new Map<string, number>()
+			for (const [i, r] of top.entries()) {
+				progress.text(`Asking PubMed about ${r.gene} (${i + 1} of ${top.length})…`)
+				const lit: any = await dofetch3('termdb/dmrLiterature', {
+					body: { genome: vocab.genome, dslabel: vocab.dslabel, gene: r.gene, context: r.context }
+				}).catch(() => null)
+				if (lit?.count) count.set(r.gene, lit.count)
+			}
+			progress.remove()
+			const supported = top.filter(r => count.has(r.gene))
+			if (!supported.length) return out.append('div').text(`None of the ${top.length} genes has PubMed support.`)
+			out
+				.append('div')
+				.style('padding', '2px 0 6px')
+				.text(
+					`${supported.length} of the top ${top.length} concordant genes have PubMed articles on their ` +
+						`methylation and expression in that context.`
+				)
+			runSurvivalScreen(out.append('div'), cfg, supported.map(regionOf), interactions, tip, {
+				extraColumn: { label: 'PubMed articles', value: d => count.get(d.gene_name!) || 0 }
+			})
+		})
+	bar
+		.append('button')
+		.style('margin-left', '6px')
+		.text(`All ${top.length}, without the literature filter`)
+		.on('click', () => runSurvivalScreen(out, cfg, top.map(regionOf), interactions, tip))
 }

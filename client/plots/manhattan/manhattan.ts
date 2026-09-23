@@ -59,6 +59,8 @@ import type { ManhattanPoint } from './manhattanTypes'
  * Every field is optional and defaults to the GRIN2 behaviour, so GRIN2 passes nothing. */
 export type ManhattanCustom<T = any> = {
 	title?: string
+	/** base name of the downloaded SVG (a timestamp is appended); defaults to manhattan_plot */
+	downloadName?: string
 	yAxisLabel?: string
 	/** legend entries; default derives one per point `type` from the data. `hollow` draws the
 	 * swatch as an open circle, for a plot whose dots are drawn that way */
@@ -397,7 +399,7 @@ export function plotManhattan(
 		icons['download'](downloadDiv, {
 			width: 16,
 			height: 16,
-			title: 'Download Manhattan plot',
+			title: custom.downloadName ? `Download ${custom.downloadName}` : 'Download Manhattan plot',
 			handler: () => {
 				// Clone the SVG to avoid modifying the displayed version
 				const svgNode = svg.node() as SVGSVGElement
@@ -411,9 +413,13 @@ export function plotManhattan(
 				clone.setAttribute('height', bbox.height.toString())
 				clone.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`)
 
-				to_svg(clone, `manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`, {
-					apply_dom_styles: true
-				})
+				to_svg(
+					clone,
+					`${custom.downloadName ?? 'manhattan_plot'}_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`,
+					{
+						apply_dom_styles: true
+					}
+				)
 			}
 		})
 	}

@@ -1555,6 +1555,21 @@ type Mds3Queries = {
 		 * the region analysis can run on. An individual entry can opt back in with
 		 * elements[].offerWithScanOnly. */
 		scanOnly?: boolean
+		/** Per-patient promoter silencing screen, precomputed offline (e.g. ppmmrf
+		 * utils/scripts/find_promoter_silencing.py): one row per gene whose normally unmethylated
+		 * promoter is methylated in a few patients, with the expression test and the outlier sample
+		 * names. Served by termdb/dmrSilencing and offered as a panel on the DM volcano. */
+		/** Per-gene expression level across the cohort (TSV: gene, mean_log2_tpm), e.g. built by
+		 * ppmmrf utils/scripts/build_gene_expression_level.py. Lets the DM volcano grey every dot but
+		 * those on expressed or on silent genes (VolcanoRenderRequest.expressionHighlight). */
+		geneExpressionLevel?: {
+			/** TSV path relative to tp */
+			file: string
+		}
+		silencingScreen?: {
+			/** TSV path relative to tp: gene, promoter, chr, start, n_outliers, ..., p, q, outlier_patients */
+			file: string
+		}
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene
@@ -1879,6 +1894,11 @@ type NumericDictTermClusterPlotsEntry = {
 type Survival = {
 	/** default settings for survival plot */
 	settings?: SurvivalSettings
+	/** Filter given to every new survival plot as its own (local) filter, shown in the plot's Filter
+	 * control where the user can edit or remove it. For a dataset whose patients have several samples:
+	 * survival is the patient's, so a curve split by a sample-level term counts a patient once per
+	 * sample unless the samples are restricted to one kind (e.g. diagnostic tumour samples). */
+	sampleFilter?: object
 }
 
 type Regression = {

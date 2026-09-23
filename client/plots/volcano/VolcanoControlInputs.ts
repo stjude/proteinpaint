@@ -36,17 +36,21 @@ export class VolcanoControlInputs {
 	elementTypes: { key: string; label: string }[]
 	/** Major chromosomes of the genome, for the DMR scan's region picker. */
 	chromosomes: string[]
+	/** the dataset has per-gene expression levels, so hits can be coloured by expression state */
+	hasExpressionLevels: boolean
 	constructor(
 		config: VolcanoPlotConfig,
 		termType: string,
 		elementTypes?: { key: string; label: string }[],
-		chromosomes?: string[]
+		chromosomes?: string[],
+		hasExpressionLevels = false
 	) {
 		this.config = config
 		if (this.config.termType == GENE_EXPRESSION) this.sampleNum = getSampleNum(config)
 		this.termType = termType
 		this.elementTypes = elementTypes || []
 		this.chromosomes = chromosomes || []
+		this.hasExpressionLevels = hasExpressionLevels
 		//Populated with the default controls for the volcano plot
 		this.inputs = [
 			{
@@ -247,6 +251,26 @@ export class VolcanoControlInputs {
 							options: this.elementTypes.map(e => ({ value: e.key, label: e.label })),
 							title:
 								'Which regulatory elements to test. This changes the features being analysed, not just the thresholds: promoters are TSS windows (-1500/+500 bp, the 450K array definition), cCRE promoters are the ~349 bp ENCODE promoter-like elements (the CpG-island core, no shores), eQTM blocks are runs of CpGs whose methylation correlates with a gene, and the other cCRE classes are ENCODE enhancer and CTCF annotations. Hit counts are not comparable across classes because the number of tests and the genes covered both differ. Narrow elements recover focal signal that a wide window averages away; wide windows do better on broad marks.'
+						}
+				  ]
+				: []),
+			/* Colour only the hits at expressed, or at silent, genes and grey the rest. Methylation reads
+			oppositely by context -- gene-body methylation follows transcription, promoter methylation
+			silences it -- so where a hit falls relative to expression is half of what it means. */
+			...(this.hasExpressionLevels
+				? [
+						{
+							label: 'Colour hits at',
+							type: 'dropdown',
+							chartType: 'volcano',
+							settingsKey: 'expressionHighlight',
+							options: [
+								{ value: '', label: 'All genes' },
+								{ value: 'expressed', label: 'Expressed genes' },
+								{ value: 'silent', label: 'Silent genes' }
+							],
+							title:
+								'Keep colour only on hits whose gene is expressed (cohort mean log2 TPM+1 at least 1) or silent (below 0.5), and grey every other dot. Hits naming no gene, or a gene without expression data, are greyed either way.'
 						}
 				  ]
 				: []),

@@ -10,8 +10,11 @@ import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { plotManhattan, manhattanLayoutDefaults } from '#plots/manhattan/manhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { geneBodyLossTest } from '../interactions/geneBodyLossDE'
+import { dmrSurvivalScreen } from '../interactions/dmrSurvivalScreen'
+import { silencingPanel } from '../interactions/silencingPanel'
 import { dmrGeneLinkPanel } from '../interactions/dmrGeneLink'
 import { bplen } from '#shared/common.js'
+import { getCurrentCohortChartTypes } from '#mass/charts'
 
 /** One of the scan's three figures, for mirroring a hover across them. Items are matched by genomic
  * overlap, not by id: a DMR is the same DMR on the volcano and the Manhattan, and on the profile the
@@ -156,9 +159,35 @@ export class VolcanoPlotView {
 					this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id),
 					this.interactions.app.vocabApi.vocab,
 					this.viewData.scan!,
-					this.interactions.app
+					this.interactions.app,
+					this.interactions
 				)
 			)
+		}
+		/* Per-patient promoter silencing: a cohort-wide screen, shown from the DM volcano because that is
+		where methylation analyses start; the volcano's groups add a count column each. */
+		if (this.interactions.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.silencingScreen) {
+			this.addActionButton('Promoter silencing', [tt.DNA_METHYLATION], () => {
+				const config = this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id)
+				silencingPanel(
+					this.dom.actionsTip,
+					{ ...config, samplelst: this.viewData.scan?.matchedSamplelst || config.samplelst },
+					this.interactions
+				)
+			})
+		}
+		/* The survival screen over the top regions. Offered where the dataset names a default
+		survival term, the same condition as the per-point Survival action it opens from each row. */
+		if (this.interactions.app.vocabApi.termdbConfig?.defaultTw4correlationPlot?.survival) {
+			this.addActionButton('Survival screen', [tt.DNA_METHYLATION], () => {
+				const config = this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id)
+				dmrSurvivalScreen(
+					this.dom.actionsTip,
+					{ ...config, samplelst: this.viewData.scan?.matchedSamplelst || config.samplelst },
+					this.viewData.pointData,
+					this.interactions
+				)
+			})
 		}
 		/* Must match the label the view model built from the same helper, otherwise the
 		find() below silently misses and the count disappears from the action bar. */
@@ -518,6 +547,7 @@ export class VolcanoPlotView {
 					{ label: 'Hypermethylated', color: HYPER_COLOR, hollow: true },
 					{ label: 'Hypomethylated', color: HYPO_COLOR, hollow: true }
 				],
+				downloadName: 'DMR Manhattan',
 				itemNoun: 'DMR',
 				renderSingleHoverTooltip: (d, container) => {
 					const table = table2col({ holder: container.append('table') })
@@ -578,8 +608,7 @@ export class VolcanoPlotView {
 				dots genuinely overlap at this scale. 8 shows the whole neighbourhood on a typical
 				hover instead of 5 of it. */
 				maxTooltipGenes: 8,
-				showLegend: false,
-				showDownload: false
+				showLegend: false
 			},
 			undefined,
 			{
@@ -592,6 +621,7 @@ export class VolcanoPlotView {
 					`mean Δβ per ${bplen(profile.binBp)} bin in ${caseName} ` +
 					`(${profile.interactive.toLocaleString()} of ${profile.bins.toLocaleString()} bins interactive)`,
 				yAxisLabel: 'Δβ per bin',
+				downloadName: 'methylation profile',
 				itemNoun: 'bin',
 				renderSingleHoverTooltip: (d, container) => {
 					const table = table2col({ holder: container.append('table') })
@@ -880,6 +910,31 @@ export class VolcanoPlotView {
 					if (termType === tt.DNA_METHYLATION) interactions.launchDNAMethViolin(d as any)
 					if (termType === tt.GENE_EXPRESSION) interactions.launchViolinGeneExp(d.gene_name)
 				}
+			},
+			{
+				/* Offered only where the dataset names a default survival term, which is what the
+				launcher needs to open on; a dataset without one would throw on click instead. */
+				label: 'Survival',
+				isVisible: () =>
+					termType === tt.DNA_METHYLATION &&
+					!!interactions.app.vocabApi.termdbConfig?.defaultTw4correlationPlot?.survival,
+				onClick: async () => {
+					await interactions.launchDNAMethSurvival(d as any)
+				}
+			},
+			{
+				/* Offered where the dataset has expression and the summary can draw a scatter, and only
+				for a region naming one gene: with several there is no single expression axis. */
+				label: 'Methylation vs expression',
+				isVisible: () =>
+					termType === tt.DNA_METHYLATION &&
+					String(d.gene_name || '')
+						.split(',')
+						.filter(s => s.trim()).length == 1 &&
+					!!interactions.app.vocabApi.termdbConfig?.queries?.geneExpression &&
+					// the summary draws two continuous terms as a scatter only where dynamicScatter is enabled
+					getCurrentCohortChartTypes(interactions.app.getState()).includes('dynamicScatter'),
+				onClick: async () => interactions.launchDNAMethExpressionScatter(d as any)
 			},
 			{
 				/* A scan has already called every DMR: the browser shows them from the cache, beside

@@ -97,7 +97,8 @@ export class Volcano extends PlotBase implements RxComponent {
 			plotConfig,
 			this.termType,
 			this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.elementTypes,
-			this.app.opts.genome?.majorchrorder
+			this.app.opts.genome?.majorchrorder,
+			!!this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.geneExpressionLevel
 		)
 
 		this.components.controls = await controlsInit({

@@ -9,6 +9,9 @@ import { CCRE_TRACK_NAME } from '#plots/dmr/viewModel/DmrViewModel.ts'
 import { getGEunit } from '#tw/geneExpression'
 import { getDNAMethUnit, getDNAMethTermName } from '#tw/dnaMethylation'
 import { elementNoun } from '../promoterLabel'
+import { fillTermWrapper } from '#termsetting'
+import { getCombinedTermFilter } from '#filter'
+import { roundValueAuto } from '#shared/roundValue.js'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 
 export class VolcanoInteractions {
@@ -351,7 +354,10 @@ export class VolcanoInteractions {
 	/** Launch a violin/box plot for a DNA methylation promoter.
 	 * Creates a methylation term using the promoter's chr/start/stop coordinates.
 	 * The tw handler fills in id and unit from termdbConfig. */
-	launchDNAMethViolin(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
+	/** The methylation term a volcano point stands for: its coordinates, named after the element
+	 * class actually tested. Shared by every action that turns a point into a term -- the violin and
+	 * the survival split -- so the two plots always label and value the same region the same way. */
+	dnaMethTermFor(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const genomicFeatureType = d.promoter_id ? 'promoter' : 'gene'
 		const featureName = genomicFeatureType === 'gene' ? d.gene_name?.split(',')[0]?.trim() || '' : ''
@@ -374,6 +380,11 @@ export class VolcanoInteractions {
 			term.unit = unit
 			term.name = getDNAMethTermName(term, unit, noun)
 		}
+		return { term, config }
+	}
+
+	launchDNAMethViolin(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
+		const { term, config } = this.dnaMethTermFor(d)
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
@@ -389,6 +400,134 @@ export class VolcanoInteractions {
 				}
 			}
 		})
+	}
+
+	/** Survival split by whether this promoter is methylated -- the silencing call of the promoter
+	silencing screen (beta >= 0.5, i.e. M-value >= 0) -- over the whole cohort. Not divided by the
+	volcano's groups: silencing is an event in a few patients, and splitting them further leaves arms of
+	one or two. */
+	async launchSilencingSurvival(d: {
+		chr: string
+		start: number
+		stop: number
+		gene_name?: string
+		promoter_id?: string
+	}) {
+		const survDefault = this.app.vocabApi.termdbConfig?.defaultTw4correlationPlot?.survival
+		if (!survDefault)
+			throw new Error('This dataset names no default survival term (defaultTw4correlationPlot.survival).')
+		const { term } = this.dnaMethTermFor(d)
+		const survTw: any = structuredClone(survDefault)
+		await fillTermWrapper(survTw, this.app.vocabApi)
+		const methTw: any = {
+			term,
+			q: {
+				mode: 'discrete',
+				type: 'custom-bin',
+				lst: [
+					{ startunbounded: true, stop: 0, stopinclusive: false, label: 'Unmethylated (beta < 0.5)' },
+					{ start: 0, startinclusive: true, stopunbounded: true, label: 'Methylated (beta >= 0.5)' }
+				]
+			}
+		}
+		await fillTermWrapper(methTw, this.app.vocabApi)
+		this.app.dispatch({ type: 'plot_create', config: { chartType: 'survival', term: survTw, term2: methTw } })
+	}
+
+	/** This region's methylation against its gene's expression, one dot per sample, one panel per
+	volcano group, with a lowess line. The simplest question methylation answers: is the gene silenced
+	in the patients where its promoter is methylated? Per group because the grouping moves both axes
+	(t(4;14) shifts methylation genome-wide), so a pooled scatter would show the grouping as a
+	correlation. Offered only for a region naming exactly one gene. */
+	launchDNAMethExpressionScatter(d: {
+		chr: string
+		start: number
+		stop: number
+		gene_name?: string
+		promoter_id?: string
+	}) {
+		const genes = (d.gene_name || '')
+			.split(',')
+			.map(s => s.trim())
+			.filter(Boolean)
+		if (genes.length != 1) throw new Error('Methylation vs expression needs a region naming exactly one gene.')
+		const { term, config } = this.dnaMethTermFor(d)
+		this.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'summary',
+				childType: 'sampleScatter',
+				term: { term, q: { mode: 'continuous' } },
+				term2: { term: { type: GENE_EXPRESSION, gene: genes[0], name: genes[0] }, q: { mode: 'continuous' } },
+				term0: { q: { groups: config.tw.q.groups, type: 'custom-samplelst' }, term: config.tw.term },
+				settings: { sampleScatter: { regression: 'Lowess' } }
+			}
+		})
+	}
+
+	/** Survival split by this region's methylation, divided by the volcano's own two groups.
+
+	Divided rather than pooled because the grouping is usually itself prognostic -- t(4;14) is a
+	high-risk marker -- so a region correlated with the grouping would "predict" survival across the
+	whole cohort by proxy, a guaranteed positive that says nothing about methylation. One panel per
+	group asks the question that can come out either way: within patients who share the grouping,
+	does the region's methylation still separate outcome?
+
+	Each group gets its own plot, split at the median WITHIN that group. A single cohort-wide median
+	cannot work here: the region was picked because the grouping shifts it, so the cohort median
+	lands near one group's tail and re-encodes the grouping (on MMRF t(4;14) chr5 block BLK_3038 it
+	left 42 vs 3 in the YES panel). The bins stay editable from each plot's term2 control. */
+	async launchDNAMethSurvival(d: {
+		chr: string
+		start: number
+		stop: number
+		gene_name?: string
+		promoter_id?: string
+	}) {
+		const survDefault = this.app.vocabApi.termdbConfig?.defaultTw4correlationPlot?.survival
+		if (!survDefault)
+			throw new Error('This dataset names no default survival term (defaultTw4correlationPlot.survival).')
+		const { term, config } = this.dnaMethTermFor(d)
+		const survTw: any = structuredClone(survDefault)
+		await fillTermWrapper(survTw, this.app.vocabApi)
+		for (const group of config.tw.q.groups) {
+			const values = { [group.name]: { key: group.name, label: group.name, list: group.values } }
+			const groupFilter = {
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [{ type: 'tvs', tvs: { term: { name: group.name, type: 'samplelst', values } } }]
+			}
+			const termfilter = getCombinedTermFilter(this.app.getState(), groupFilter)
+			const median = (await this.app.vocabApi.getPercentile(term, [50], termfilter)).values?.[0]
+			if (!Number.isFinite(median)) throw new Error(`No methylation values for this region in ${group.name}.`)
+			const m = roundValueAuto(median)
+			const methTw: any = {
+				term,
+				q: {
+					mode: 'discrete',
+					type: 'custom-bin',
+					lst: [
+						{ startunbounded: true, stop: m, stopinclusive: false, label: `<${m}` },
+						{ start: m, startinclusive: true, stopunbounded: true, label: `≥${m}` }
+					]
+				}
+			}
+			await fillTermWrapper(methTw, this.app.vocabApi)
+			this.app.dispatch({
+				type: 'plot_create',
+				config: {
+					chartType: 'survival',
+					term: survTw,
+					term2: methTw,
+					// one-group term0: restricts the plot to the group and titles its panel
+					term0: {
+						q: { groups: [group], type: 'custom-samplelst' },
+						term: { name: config.tw.term.name, type: 'samplelst', values }
+					}
+				}
+			})
+		}
 	}
 
 	async launchDEGClustering() {

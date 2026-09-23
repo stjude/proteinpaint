@@ -15,6 +15,9 @@ import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { getGroupColors } from '../colors'
 import { DATermTypes as tt, enabledTermTypes } from '../../diffAnalysis/enabledTermTypes'
 
+/** colour of hits outside an expression highlight; matches the server's PNG (renderVolcano colorDimmed) */
+const DIMMED_COLOR = '#d3d3d3'
+
 /* Group names are user-supplied and can be arbitrarily long, so they are shortened before going
 into any label. Shared by the two group labels above the plot and by the delta-beta axis label,
 so the two shorten identically rather than drifting apart. */
@@ -457,7 +460,10 @@ export class VolcanoViewModel {
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {
 		if (!d.gene_name && this.termType != tt.DNA_METHYLATION)
 			throw new Error(`Missing gene_name in data: ${JSON.stringify(d)}`)
-		if (significant) {
+		if (significant && (d as any).dimmed) {
+			// outside the expression highlight: grey, the same as the server drew it in the PNG
+			d.color = DIMMED_COLOR
+		} else if (significant) {
 			/* The value the server classified and drew: delta-beta on the Δβ axis, less the median when
 			centred. Colouring from raw fold_change painted a point between 0 and a positive median as
 			"up" over a PNG dot the server had drawn as "down". */
@@ -494,6 +500,8 @@ export class VolcanoViewModel {
 
 		const conf = this.config.confounderTws?.map((t: any) => t?.term?.name || t?.term?.id).filter(Boolean)
 		parts.push(`confounders: ${conf?.length ? conf.join(' + ') : 'none'}`)
+		if (this.termType == tt.DNA_METHYLATION && this.settings.expressionHighlight)
+			parts.push(`coloured: hits at ${this.settings.expressionHighlight} genes only (others grey)`)
 
 		if (this.termType == tt.DNA_METHYLATION) {
 			/* Recorded FIRST because it is the only setting that changes what was tested rather
@@ -582,6 +590,18 @@ export class VolcanoViewModel {
 					value: this.response.sample_size2
 				}
 			)
+			/* The split over the highlighted hits only, counted server-side over every significant row
+			(the dots are capped). This is the number a context panel reports. */
+			const { highlightedUp, highlightedDown } = this.response.data
+			if (highlightedUp != null && highlightedDown != null) {
+				const n = highlightedUp + highlightedDown
+				tableRows.push({
+					label: `Significant hits at ${this.settings.expressionHighlight} genes`,
+					value: `${n.toLocaleString()}: ${highlightedUp.toLocaleString()} up, ${highlightedDown.toLocaleString()} down${
+						n ? ` (${Math.round((100 * highlightedUp) / n)}% up)` : ''
+					}`
+				})
+			}
 		} else if (this.termType == tt.PROTEOME_DAP) {
 			tableRows.push(
 				{

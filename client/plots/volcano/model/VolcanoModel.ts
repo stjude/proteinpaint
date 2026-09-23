@@ -170,6 +170,9 @@ export class VolcanoModel {
 			Never on top of the correction -- excess is already the drift subtracted per stratum,
 			and recentring it on its own median would subtract a shift that is no longer there. */
 			...(useDeltaBeta && this.settings.centerDeltaBeta && !xIsExcess ? { centerX: true } : {}),
+			...(this.termType === tt.DNA_METHYLATION && this.settings.expressionHighlight
+				? { expressionHighlight: this.settings.expressionHighlight }
+				: {}),
 			pixelWidth: this.settings.width,
 			pixelHeight: this.settings.height,
 			colorSignificant: toHex(this.settings.defaultSignColor, 'red'),

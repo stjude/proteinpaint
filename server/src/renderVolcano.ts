@@ -83,9 +83,20 @@ function finiteAtLeast(value: number, min: number, name: string): number {
 	return value
 }
 
+/** Server-side render options a route adds on top of the client's request. */
+export type VolcanoRenderOpts<T> = {
+	/** Draw only the rows this returns true for in the significance colours; every other row,
+	 * significant or not, is drawn dimmed. The returned counts and the `dimmed` flag on each dot
+	 * follow the same rule, so the caption and the hover layer agree with the picture. */
+	highlight?: (row: T) => boolean
+	/** colour of the dimmed rows; light grey by default */
+	colorDimmed?: string
+}
+
 export async function renderVolcano<T extends DataEntry>(
 	rows: T[],
-	req: VolcanoRenderRequest = DEFAULT_REQ
+	req: VolcanoRenderRequest = DEFAULT_REQ,
+	opts: VolcanoRenderOpts<T> = {}
 ): Promise<VolcanoData<T>> {
 	const pixelWidth = clampedInt(req.pixelWidth, 1, MAX_PIXEL_DIM, 'pixelWidth')
 	const pixelHeight = clampedInt(req.pixelHeight, 1, MAX_PIXEL_DIM, 'pixelHeight')
@@ -122,6 +133,10 @@ export async function renderVolcano<T extends DataEntry>(
 	const colorSignificantUp = req.colorSignificantUp ?? colorSignificant
 	const colorSignificantDown = req.colorSignificantDown ?? colorSignificant
 	const colorNonsignificant = req.colorNonsignificant ?? '#000000'
+	const colorDimmed = opts.colorDimmed ?? '#d3d3d3'
+	// per row: kept in colour (true) or dimmed (false); all true when no highlight is asked for
+	const lit: boolean[] = opts.highlight ? rows.map(r => !!opts.highlight!(r)) : []
+	const isLit = (i: number) => !opts.highlight || lit[i]
 
 	const t0 = Date.now()
 
@@ -256,19 +271,31 @@ export async function renderVolcano<T extends DataEntry>(
 		ctx.strokeStyle = colorNonsignificant
 		ctx.beginPath()
 		for (let i = 0; i < points.length; i++) {
-			if (points[i].significant) continue
+			if (points[i].significant || !isLit(i)) continue
 			const [px, py] = pxCss[i]
 			ctx.moveTo(px + radiusPx, py)
 			ctx.arc(px, py, radiusPx, 0, Math.PI * 2)
 		}
 		ctx.stroke()
+		// dimmed rows under every coloured ring, significant or not
+		if (opts.highlight) {
+			ctx.strokeStyle = colorDimmed
+			ctx.beginPath()
+			for (let i = 0; i < points.length; i++) {
+				if (isLit(i)) continue
+				const [px, py] = pxCss[i]
+				ctx.moveTo(px + radiusPx, py)
+				ctx.arc(px, py, radiusPx, 0, Math.PI * 2)
+			}
+			ctx.stroke()
+		}
 		// Significant on top, batched by down/up so we only set strokeStyle twice.
 		for (const dir of ['down', 'up'] as const) {
 			ctx.strokeStyle = dir === 'up' ? colorSignificantUp : colorSignificantDown
 			ctx.beginPath()
 			for (let i = 0; i < points.length; i++) {
 				const p = points[i]
-				if (!p.significant) continue
+				if (!p.significant || !isLit(i)) continue
 				if (p.fc > 0 !== (dir === 'up')) continue
 				const [px, py] = pxCss[i]
 				ctx.moveTo(px + radiusPx, py)
@@ -297,12 +324,22 @@ export async function renderVolcano<T extends DataEntry>(
 	let totalSignificantUp = 0
 	for (const i of sigIdx) if (points[i].fc > 0) totalSignificantUp++
 	const totalSignificantDown = totalSignificantRows - totalSignificantUp
+	// the same split over the highlighted rows only
+	let highlightedUp = 0,
+		highlightedDown = 0
+	if (opts.highlight)
+		for (const i of sigIdx) {
+			if (!lit[i]) continue
+			if (points[i].fc > 0) highlightedUp++
+			else highlightedDown++
+		}
 	const keep = maxInteractiveDots == null ? sigIdx : sigIdx.slice(0, maxInteractiveDots)
 	const dots = keep.map(i => {
 		const row = { ...(rows[i] as any) }
 		const [px, py] = pxCss[i]
 		row.pixel_x = px
 		row.pixel_y = py
+		if (opts.highlight && !lit[i]) row.dimmed = true
 		return row as T
 	})
 
@@ -333,6 +370,7 @@ export async function renderVolcano<T extends DataEntry>(
 		totalSignificantRows,
 		totalSignificantUp,
 		totalSignificantDown,
+		...(opts.highlight ? { highlightedUp, highlightedDown } : {}),
 		xOffset,
 		// explicit, because a centred run whose median is exactly 0 has xOffset 0 too
 		centered: !!req.centerX

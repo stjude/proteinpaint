@@ -89,6 +89,7 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	DEFAULT_MIN_CPGS, shared with the server fallback so both mean the same untouched scan. */
 	defaults.scanChromosome = ''
 	defaults.backgroundCorrection = false
+	defaults.expressionHighlight = ''
 	defaults.minCpgs = DEFAULT_MIN_CPGS
 	defaults.lambda = DMRCATE_DEFAULTS.lambda
 	defaults.C = DMRCATE_DEFAULTS.C

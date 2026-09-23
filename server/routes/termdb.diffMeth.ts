@@ -11,6 +11,8 @@ import { renderVolcano } from '../src/renderVolcano.ts'
 import { renderManhattanPoints } from '../src/renderManhattan.ts'
 import { permuteGroups } from '../src/utils/dmrPermute.ts'
 import serverconfig from '../src/serverconfig.js'
+import fs from 'fs'
+import path from 'path'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import {
@@ -54,7 +56,9 @@ export function init({ genomes }) {
 
 			const { result, cacheId } = await getDmCacheResult(q, genomes)
 
-			const rendered = await renderVolcano<DiffMethEntry>(result.promoterRows, q.volcanoRender)
+			const rendered = await renderVolcano<DiffMethEntry>(result.promoterRows, q.volcanoRender, {
+				highlight: expressionHighlight(q, genomes)
+			})
 			rendered.cacheId = cacheId
 
 			// Empty dots is valid (strict thresholds) and the PNG should still
@@ -576,5 +580,46 @@ export async function resolveDmSampleGroups(
 		conf2_group1: g1.conf2,
 		conf2_group2: g2.conf2,
 		alerts
+	}
+}
+
+/* Cohort mean log2(TPM+1) per gene, from the dataset's dnaMethylation.geneExpressionLevel file:
+read once per file, it is a build artifact. */
+const expressionLevels = new Map<string, Map<string, number>>()
+function readExpressionLevels(file: string) {
+	let m = expressionLevels.get(file)
+	if (m) return m
+	m = new Map()
+	for (const line of fs.readFileSync(file, 'utf8').trim().split('\n').slice(1)) {
+		const [gene, v] = line.split('\t')
+		const n = Number(v)
+		if (gene && Number.isFinite(n)) m.set(gene, n)
+	}
+	expressionLevels.set(file, m)
+	return m
+}
+
+/** Expressed: cohort mean log2(TPM+1) >= 1. Silent: < 0.5. The band between is neither, so a gene
+ * sitting at the edge is not forced into one reading. */
+export const EXPRESSED_MIN = 1
+export const SILENT_MAX = 0.5
+
+/** The highlight rule for q.volcanoRender.expressionHighlight: rows whose (first) gene is expressed,
+ * or silent. Rows naming no gene, or a gene the expression file does not have, are never highlighted:
+ * whether they are transcribed is unknown. Undefined when no highlight was asked for. */
+function expressionHighlight(q: any, genomes: any): ((row: DiffMethEntry) => boolean) | undefined {
+	const want = q.volcanoRender?.expressionHighlight
+	if (!want) return
+	if (want != 'expressed' && want != 'silent') throw new Error(`invalid expressionHighlight: ${want}`)
+	const cfg = genomes[q.genome]?.datasets?.[q.dslabel]?.queries?.dnaMethylation?.geneExpressionLevel
+	if (!cfg?.file) throw new Error('This dataset has no gene expression levels to highlight by.')
+	const levels = readExpressionLevels(path.join(serverconfig.tpmasterdir, cfg.file))
+	return row => {
+		const gene = String(row.gene_name || '')
+			.split(',')[0]
+			.trim()
+		const v = levels.get(gene)
+		if (v === undefined) return false
+		return want == 'expressed' ? v >= EXPRESSED_MIN : v < SILENT_MAX
 	}
 }

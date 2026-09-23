@@ -16,6 +16,7 @@ plotExtent axis math: symmetric x, yMin 0, padding extends the domain
 minNonZeroPValue: smallest positive p, and all-zero-p fallback to 1e-300
 pValueType 'original' classifies/sorts on original_p_value
 both significant up (fc>0) and down (fc<0) render and appear in dots
+highlight: counts and dims by the caller's rule, totals unchanged; absent without one
 empty rows: blank PNG, no dots, zero-spread axis fallbacks
 default req: renderVolcano(rows) with no second arg
 DPR device dimensions: exact w*dpr, and clamp to MAX_DEVICE_PIXELS_PER_SIDE
@@ -371,6 +372,32 @@ tape('centerX shifts the origin to the median, changing the direction split but 
 			[0.6, 0.005]
 		],
 		'returned rows keep their RAW fold_change and their own p-value'
+	)
+	t.end()
+})
+
+tape('highlight: splits the highlighted significant rows and flags the rest as dimmed', async t => {
+	const rows = [
+		row(2, 0.0001, { gene_name: 'A' }),
+		row(2, 0.0001, { gene_name: 'B' }),
+		row(-2, 0.0001, { gene_name: 'C' }),
+		row(0.01, 0.5, { gene_name: 'A' }) // not significant
+	]
+	const lit = new Set(['A', 'C'])
+	const out: any = await renderVolcano(rows, makeReq(), { highlight: (r: any) => lit.has(r.gene_name) })
+	t.equal(out.totalSignificantRows, 3, 'the highlight does not change what is significant')
+	t.equal(out.highlightedUp, 1, 'one highlighted significant row up (A)')
+	t.equal(out.highlightedDown, 1, 'one highlighted significant row down (C)')
+	t.deepEqual(
+		out.dots.filter((d: any) => d.dimmed).map((d: any) => d.gene_name),
+		['B'],
+		'only the significant row outside the rule is flagged dimmed'
+	)
+	const plain: any = await renderVolcano(rows, makeReq())
+	t.equal(plain.highlightedUp, undefined, 'no highlighted counts without a highlight')
+	t.notOk(
+		plain.dots.some((d: any) => d.dimmed),
+		'no dot is dimmed without a highlight'
 	)
 	t.end()
 })

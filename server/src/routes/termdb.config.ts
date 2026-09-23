@@ -400,6 +400,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		element matrix that serves terms when there is no CpG file, and the client needs it to
 		label a region term with the unit it will actually receive. */
 		if (q.dnaMethylation.unit) q2.dnaMethylation.unit = q.dnaMethylation.unit
+		// only the fact that it exists; the rows come from termdb/dmrSilencing
+		if (q.dnaMethylation.silencingScreen) q2.dnaMethylation.silencingScreen = true
+		if (q.dnaMethylation.geneExpressionLevel) q2.dnaMethylation.geneExpressionLevel = true
 		/* Which matrix the region (DMR) view will run on, absent when the dataset has neither
 		backing. The client sizes its default window from this: element rows sit ~10kb apart where
 		CpGs sit ~100bp apart, so the ±2kb window that frames a CpG region holds one element. */

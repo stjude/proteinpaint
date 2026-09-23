@@ -13,7 +13,7 @@ import Partjson from 'partjson'
 import { fillTermWrapper } from '#termsetting'
 import { DownloadMenu, getSeriesTip, htmlLegend, Menu, renderAtRiskG, renderPvalues } from '#dom'
 import { downloadChart } from '#common/svg.download'
-import { getCombinedTermFilter } from '#filter'
+import { getCombinedTermFilter, filterInit, getNormalRoot } from '#filter'
 import { isNumericTerm } from '#shared/terms.js'
 
 const chartSizeMin = 200
@@ -151,6 +151,33 @@ class TdbSurvival extends PlotBase implements RxComponent {
 					id: this.id,
 					holder: this.dom.controls.style('display', 'inline-block'),
 					inputs: [
+						{
+							/* A filter for this plot only, applied on top of the global one (getState()
+							combines them). Samples can be filtered, not just patients: on a dataset whose
+							patients have several samples (diagnosis, relapse, blood), a sample-level term
+							such as a sample collection term keeps one sample per patient, which a
+							survival curve over sample-level strata needs. */
+							type: 'custom',
+							label: 'Filter',
+							title: 'Filter the samples in this plot only',
+							init: self => {
+								const ui = filterInit({
+									holder: self.dom.inputTd,
+									vocabApi: this.app.vocabApi,
+									emptyLabel: '+Add filter',
+									header_mode: 'hide_search',
+									callback: f =>
+										this.app.dispatch({
+											type: 'plot_edit',
+											id: this.id,
+											config: { filter: f?.lst?.length ? getNormalRoot(f) : null }
+										})
+								})
+								return {
+									main: plot => ui.main(plot.filter || { type: 'tvslst', in: true, join: '', lst: [] })
+								}
+							}
+						},
 						{
 							type: 'term',
 							configKey: 'term2',
@@ -1448,6 +1475,11 @@ export async function getPlotConfig(opts, app) {
 	// default survival settings will be overwritten by the survival settings defined in dataset
 	const overrides = app.vocabApi.termdbConfig.survival || {}
 	copyMerge(config.settings.survival, overrides.settings)
+
+	/* The dataset's default sample filter, as this plot's local filter, unless the caller set one or
+	explicitly passed filter: null. Applied once, at creation: the Filter control can edit or remove it. */
+	const sampleFilter = overrides.sampleFilter
+	if (sampleFilter && !('filter' in opts)) (config as any).filter = structuredClone(sampleFilter)
 
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
