@@ -65,8 +65,6 @@ import { draw_partition } from './partitionmatrix.js'
 import mdsgeneboxplot_closure from './mds.geneboxplot.js'
 import { handle_mdssurvivalplot } from './km.js'
 
-export * as phewas from './termdb.phewas.js'
-
 export const tabixnoterror = s => {
 	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
 }

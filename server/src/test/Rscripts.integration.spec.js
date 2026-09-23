@@ -113,7 +113,7 @@ tape.skip('fisher.R integration', test => {
 // Test the integration of fisher.2x3.R
 tape.skip('fisher.2x3.R integration', test => {
 	fetch(
-		`http://localhost:${serverconfig.port}/termdb?genome=hg38&dslabel=SJLife&ssid=${ssid}&phewas=1&intendwidth=800&axisheight=300&groupnamefontsize=16&dotradius=2&groupxspace=3&leftpad=2&rightpad=2&toppad=20&bottompad=10&devicePixelRatio=2&filter=` +
+		`http://localhost:${serverconfig.port}/termdb?genome=hg38&dslabel=SJLife&ssid=${ssid}&intendwidth=800&axisheight=300&groupnamefontsize=16&dotradius=2&groupxspace=3&leftpad=2&rightpad=2&toppad=20&bottompad=10&devicePixelRatio=2&filter=` +
 			encodeURIComponent(
 				JSON.stringify({
 					type: 'tvslst',
