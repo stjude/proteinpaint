@@ -6,6 +6,7 @@ import { checkDependenciesAndVersions } from './checkDependenciesAndVersions.js'
 import { initLegacyDataset } from './initLegacyDataset.js'
 import serverconfig from './serverconfig.js'
 import { server_init_db_queries, setSupportedChartTypes, listDbTables } from './termdb.server.init.ts'
+import { sql } from './sql.ts'
 import { mds_init } from './mds.init.js'
 import * as mds3_init from './mds3.init.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
@@ -323,7 +324,7 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 			g.genedb.tableSize = {}
 			for (const table of tables) {
 				if (table == 'buildDate') continue
-				g.genedb.tableSize[table] = g.genedb.db.prepare(`select count(*) as size from ${table}`).get().size
+				g.genedb.tableSize[table] = g.genedb.db.prepare(sql`select count(*) as size from ${sql.id(table)}`).get().size
 			}
 		}
 

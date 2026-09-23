@@ -533,12 +533,12 @@ export function server_init_db_queries(ds) {
 		const s = cn.prepare(
 			`select id, name, 
 			jsondata
-			from terms where type='multivalue' and parent_id=?`
+			from terms where type=? and parent_id=?`
 		)
 		const cache = new Map()
 		q.get_multivalue_tws = parent_id => {
 			if (cache.has(parent_id)) return cache.get(parent_id)
-			const items = s.all(parent_id)
+			const items = s.all('multivalue', parent_id)
 			const terms = items.map(item => {
 				const t = JSON.parse(item.jsondata)
 				t.id = item.id
@@ -900,12 +900,12 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 }
 
 export function listDbTables(cn) {
-	const rows = cn.prepare("SELECT name FROM sqlite_master WHERE type='table'").all()
+	const rows = cn.prepare("SELECT name FROM sqlite_master WHERE type='table'", { allowQuotedValues: true }).all()
 	return new Set(rows.map(i => i.name))
 }
 
 export function listTableColumns(cn, table) {
-	const rows = cn.prepare(`SELECT name FROM PRAGMA_TABLE_INFO('${table}')`).all()
+	const rows = cn.prepare('SELECT name FROM PRAGMA_TABLE_INFO(?)').all(table)
 	return rows.map(i => i.name)
 }
 

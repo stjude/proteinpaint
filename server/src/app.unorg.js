@@ -27,6 +27,7 @@ when launching:
 */
 
 import serverconfig from './serverconfig.js'
+import { sql } from './sql.ts'
 import util from 'util'
 import fs from 'fs'
 import path from 'path'
@@ -350,19 +351,28 @@ async function handle_mdsgenecount(req, res) {
 		if (!ds) throw 'invalid dataset'
 		if (!ds.gene2mutcount) throw 'not supported on this dataset'
 		if (!req.query.samples) throw '.samples missing'
-		let mutation_count_str, n_gene
-		if (req.query.selectedMutTypes) mutation_count_str = req.query.selectedMutTypes.join('+')
-		else mutation_count_str = 'total'
-		if (req.query.nGenes) n_gene = req.query.nGenes
-		else n_gene = 15
-		const query = `WITH
+		// column names cannot be bound as sql parameters, so only allow actual genecount columns
+		const columns = new Set(
+			ds.gene2mutcount.db
+				.prepare('SELECT name FROM pragma_table_info(?)')
+				.all('genecount')
+				.map(r => r.name)
+		)
+		const mutTypes = req.query.selectedMutTypes || ['total']
+		if (!Array.isArray(mutTypes) || !mutTypes.length) throw 'invalid selectedMutTypes'
+		for (const t of mutTypes) {
+			if (t == 'gene' || t == 'sample' || !columns.has(t)) throw `invalid mutation type='${t}'`
+		}
+		const n_gene = req.query.nGenes ? Number(req.query.nGenes) : 15
+		if (!Number.isInteger(n_gene) || n_gene < 1) throw 'invalid nGenes'
+		const samples = Array.isArray(req.query.samples) ? req.query.samples : String(req.query.samples).split(',')
+		const query = sql`WITH
 	filtered AS (
-		SELECT gene, ${mutation_count_str} AS total FROM genecount
-		WHERE sample IN (${JSON.stringify(req.query.samples)
-			.replace(/[[\]\"]/g, '')
-			.split(',')
-			.map(i => "'" + i + "'")
-			.join(',')})
+		SELECT gene, ${sql.join(
+			mutTypes.map(t => sql.id(t)),
+			'+'
+		)} AS total FROM genecount
+		WHERE sample IN (${sql.list(samples.map(String))})
 	)
 	SELECT gene, SUM(total) AS count
 	FROM filtered
