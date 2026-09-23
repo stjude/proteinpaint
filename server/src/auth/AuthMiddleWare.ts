@@ -1,19 +1,27 @@
 import serverconfig from '../serverconfig.js'
+import { normalizeReqPath } from './Auth.ts'
 
 const basepath = serverconfig.basepath || ''
 
 // these server routes should not be protected by default,
 // since a user that is not logged should be able to have a way to login,
 // also logout should be supported regardless
-const forcedOpenRoutes = new Set([
-	`${basepath}/dslogin`,
-	`${basepath}/jwt-status`,
-	`${basepath}/dslogout`,
-	`${basepath}/healthcheck`,
-	`${basepath}/live`,
-	`${basepath}/status`,
-	`${basepath}/demoToken`
-])
+const openRoutes = ['/dslogin', '/jwt-status', '/dslogout', '/healthcheck', '/live', '/status', '/demoToken']
+
+function getForcedOpenRoutes(_basepath: string) {
+	return new Set(openRoutes.map(route => normalizeReqPath(_basepath + route)))
+}
+
+const forcedOpenRoutes = getForcedOpenRoutes(basepath)
+
+// Express routes requests case-insensitively and ignores a trailing slash, so the forced-open check
+// must match the same path variants that Auth.getRequiredCred() normalizes, otherwise a request
+// such as `/DSLOGIN` or `/jwt-status/` would be treated as protected and rejected for lacking
+// the session that it is meant to establish
+export function isForcedOpenRoute(path: string, _basepath?: string) {
+	const routes = _basepath === undefined ? forcedOpenRoutes : getForcedOpenRoutes(_basepath)
+	return routes.has(normalizeReqPath(path))
+}
 
 // Using a closure to make sure that the arguments are all related to each other.
 // An alternative of exporting/importing the auth instance unnecessarily exposes it
@@ -35,7 +43,7 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 			sessionid: req.cookies.sessionid // may be undefined
 		}
 
-		if (forcedOpenRoutes.has(req.path)) {
+		if (isForcedOpenRoute(req.path)) {
 			Object.freeze(req.query.__protected__)
 			next()
 			return
