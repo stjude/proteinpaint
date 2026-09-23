@@ -6,7 +6,7 @@ const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
 export function setInteractivity(self) {
 	self.displayControlsMenu = function (event) {
 		event.stopPropagation() // in mass/group ui, to prevent pill-clicking to check/uncheck table rows
-		self.dom.holder.selectAll('button').style('border', null).style('border-radius', null)
+		self.dom.holder.classed('sja_filter_btns_highlighted', false)
 		if (!self.activeData) return
 		const item = this.parentNode.__data__
 		const filter = findParent(self.filter, item.$id)
@@ -116,8 +116,9 @@ export function setInteractivity(self) {
 			//&& self.activeData.filter != self.filter
 			!self.activeData.elem.className.includes('join_label')
 		) {
+			// use a button like the rendered parentheses, so that the same css rules apply
 			select(elem)
-				.insert('div', 'div')
+				.insert('button', 'div')
 				.attr('class', 'sja_filter_paren_open')
 				.style('display', self.opts.joinWith.length > 1 ? 'inline-block' : 'none')
 				.style('padding', '0 5px')
@@ -131,28 +132,28 @@ export function setInteractivity(self) {
 			.insert('div', ':scope > .sja_filter_paren_close')
 			.attr('class', 'sja_filter_blank_pill')
 			.style('display', 'inline-block')
-			//.style('width', '120px')
-			.style('height', '20px')
-			//.style('margin-right', '20px')
-			.style('overflow', 'visible')
+			// same height and vertical alignment as the filter buttons in style.css,
+			// so that the blank pill does not shift or resize its neighbors
+			.style('height', '26px')
+			.style('vertical-align', 'middle')
 
 		blank
 			.append('div')
 			.style('display', 'inline-block')
 			.style('width', '50px')
 			.style('text-align', 'center')
+			.style('vertical-align', 'middle')
 			.html(joiner)
 
 		blank
 			.append('div')
-			.style('position', 'relative')
-			.style('top', '-7px')
 			.style('display', 'inline-block')
+			.style('box-sizing', 'border-box')
 			.style('width', '80px')
-			.style('height', '22px')
+			.style('height', '26px')
 			.style('margin-right', '5px')
 			.style('border', '3px dashed #b8d3ea')
-			.style('vertical-align', 'top')
+			.style('vertical-align', 'middle')
 			.style('background-color', '#ee5')
 
 		if (
@@ -161,7 +162,7 @@ export function setInteractivity(self) {
 			!self.activeData.elem.className.includes('join_label')
 		) {
 			select(elem)
-				.append('div')
+				.append('button')
 				.attr('class', 'sja_filter_paren_close')
 				.style('display', self.opts.joinWith.length > 1 ? 'inline-block' : 'none')
 				.style('padding', '0 5px')
@@ -187,15 +188,15 @@ export function setInteractivity(self) {
 			)
 			.remove()
 
-		// in case of potentially root filter subnesting, may have to
-		// revert the visibility of root filter group parentheses
-		// that subnest existing pill + blank pill
-		if (self.filter.in && self.filter.lst.filter(f => f.type === 'tvslst').length < 1) {
+		// in case of potentially root filter subnesting, revert the visibility
+		// of the root filter group parentheses that subnest existing pills + blank pill,
+		// regardless of whether the root filter has subnested tvslst items
+		if (self.filter?.lst) {
 			self.dom.filterContainer
 				?.selectAll(
 					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
 				)
-				.style('display', 'none')
+				.style('display', self.getGrpParenDisplay(self.filter, self.filter.lst))
 		}
 	}
 

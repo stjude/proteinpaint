@@ -261,14 +261,46 @@ by normalize.css are covered here
 }
 
 .sjpp_filter_div button,
-.sja_filter_add_transformer,
-.sja_filter_clause_negate,
-.sja_filter_paren_open,
-.sja_filter_last_join_label,
-.sja_filter_paren_close,
-.sja_filter_join_label {
+button.sja_filter_add_transformer,
+button.sja_filter_clause_negate,
+button.sja_filter_paren_open,
+button.sja_filter_last_join_label,
+button.sja_filter_paren_close,
+button.sja_filter_join_label {
 	border: 1px solid transparent;
 	background-color: transparent;
+}
+
+/* same fixed height and vertical centering, so that the edges of these
+   buttons line up with each other and with the filter pills */
+button.sja_filter_add_transformer,
+button.sja_filter_clause_negate,
+button.sja_filter_paren_open,
+button.sja_filter_last_join_label,
+button.sja_filter_paren_close,
+button.sja_filter_join_label {
+	box-sizing: border-box;
+	height: 26px;
+	line-height: 1;
+	padding-top: 0;
+	padding-bottom: 0;
+	vertical-align: middle;
+}
+
+/* sja_filter_btns_highlighted is toggled on the filter holder on mouseenter/mouseleave */
+.sja_filter_btns_highlighted button.sja_filter_add_transformer,
+.sja_filter_btns_highlighted button.sja_filter_clause_negate,
+.sja_filter_btns_highlighted button.sja_filter_paren_open,
+.sja_filter_btns_highlighted button.sja_filter_last_join_label,
+.sja_filter_btns_highlighted button.sja_filter_paren_close,
+.sja_filter_btns_highlighted button.sja_filter_join_label {
+	border: 1px dashed #555;
+	border-radius: 5px;
+}
+
+.sja_filter_item > .sja_pill_wrapper,
+.sja_pill_wrapper > .tvs_pill {
+	vertical-align: middle;
 }
 
 /*.sjpp_filter_div button:hover {
