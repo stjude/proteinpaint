@@ -407,6 +407,10 @@ class ViolinPlot extends PlotBase implements RxComponent{
 	validateArgs(): ViolinRequest {
 		const { term, term2, term0, /*settings*/ } = this.config
 		const s = this.settings
+		const isNumericTermCollection =
+			term.term?.type === 'termCollection' &&
+			term.term?.memberType === 'numeric' &&
+			term.type !== 'TermCollectionTWFraction'
 		// dslabel and genome are injected by vocabApi.getViolinBox
 		const arg: any = {
 			plotType: 'violin',
@@ -442,11 +446,7 @@ class ViolinPlot extends PlotBase implements RxComponent{
 				// scale the data on the server-side
 				arg.scale = term.q.scale
 			}
-		} else if (
-			term.term?.type === 'termCollection' &&
-			term.term?.memberType === 'numeric' &&
-			term.type !== 'TermCollectionTWFraction'
-		) {
+		} else if (isNumericTermCollection) {
 			// numeric termCollection: server-side expandNumericTermCollection creates a
 			// synthetic overlay from member terms, so don't send term2/term0
 			arg.tw = term
@@ -460,7 +460,7 @@ class ViolinPlot extends PlotBase implements RxComponent{
 			throw 'both term1 and term2 are not numeric/continuous'
 		}
 
-		if (term0) arg.divideTw = term0
+		if (term0 && !isNumericTermCollection) arg.divideTw = term0
 		return arg satisfies ViolinRequest ? arg : (arg as any)
 	}
 }
