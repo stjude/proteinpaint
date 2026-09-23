@@ -164,8 +164,11 @@ function get_survival(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	let query = `SELECT sample
 	FROM survival
 	WHERE term_id = ?
-	${tvs.q?.cutoff ? 'AND tte >= ' + tvs.q?.cutoff : ''}
+	${tvs.q?.cutoff ? 'AND tte >= ?' : ''}
 	AND exit_code ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
+	const values = [tvs.term.id]
+	if (tvs.q?.cutoff) values.push(tvs.q.cutoff)
+	values.push(...tvs.values.map(i => i.key))
 
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
 		query = getChildren(query, sampleTypes)
@@ -177,7 +180,7 @@ function get_survival(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 			${query}
 			)`
 		],
-		values: [tvs.term.id, ...tvs.values.map(i => i.key)],
+		values,
 		CTEname
 	}
 }
