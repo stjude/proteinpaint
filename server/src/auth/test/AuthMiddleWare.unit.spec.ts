@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { setAuthMiddleware } from '#src/auth/AuthMiddleWare.ts'
+import { setAuthMiddleware, isForcedOpenRoute } from '#src/auth/AuthMiddleWare.ts'
 import { Auth } from '#src/auth/Auth.ts'
 import { AuthApiOpen } from '#src/auth/AuthApiOpen.ts'
 
@@ -141,6 +141,45 @@ tape('middleware: forced open routes bypass auth check and call next()', functio
 		middleware(req, res, next)
 		test.ok(nextCalled, `should call next() for forced open route '${path}'`)
 	}
+	test.end()
+})
+
+// Express routes case-insensitively and ignores a trailing slash, so these variants reach the auth
+// route handlers and must not be rejected for lacking the session that they are meant to establish
+tape('middleware: forced open route variants with different case or a trailing slash call next()', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth()
+	const mockAuthApi = {
+		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+		mayAdjustFilter: () => {},
+		isUserLoggedIn: () => true
+	}
+	const paths = ['/DSLOGIN', '/dslogin/', '/jwt-status/', '/JWT-STATUS', '/demoToken/', '/DEMOTOKEN', '/DsLogout/']
+	for (const path of paths) {
+		const middleware = registerMiddleware(auth, mockAuthApi)
+		const req: any = { query: { embedder, dslabel, route: 'termdb' }, path, cookies: {}, headers: {} }
+		const res = makeMockRes()
+		let nextCalled = false
+		middleware(req, res, () => (nextCalled = true))
+		test.ok(nextCalled, `should call next() for forced open route variant '${path}'`)
+		test.equal(res.statusCode, null, `should not set an error status for '${path}'`)
+		test.ok(Object.isFrozen(req.query.__protected__), `should freeze __protected__ for '${path}'`)
+	}
+	test.end()
+})
+
+tape('isForcedOpenRoute: matches case and trailing-slash variants with a configured basepath', function (test) {
+	test.timeoutAfter(500)
+
+	for (const path of ['/api/dslogin', '/API/DSLOGIN', '/api/jwt-status/', '/Api/demoToken/', '/api/demotoken']) {
+		test.ok(isForcedOpenRoute(path, '/api'), `should match '${path}' with basepath='/api'`)
+	}
+	test.ok(isForcedOpenRoute('/api/dslogin/', '/API'), 'should match regardless of the configured basepath case')
+	for (const path of ['/dslogin', '/api/termdb', '/api/dslogin/extra', '/other/dslogin']) {
+		test.notOk(isForcedOpenRoute(path, '/api'), `should not match '${path}' with basepath='/api'`)
+	}
+	test.notOk(isForcedOpenRoute('/TERMDB/MATRIX'), 'should not treat a protected route variant as open')
 	test.end()
 })
 
