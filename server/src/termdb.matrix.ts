@@ -10,6 +10,7 @@ import {
 	isSingleCellTerm,
 	getBin,
 	getTwSampleTypes,
+	type TwSampleTypes,
 	getDefaultSampleTypes
 } from '#shared/terms.js'
 import {
@@ -709,23 +710,13 @@ export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
 	}
 	// determine query sample types
 	const sampleTypes = getSampleTypes(q, ds)
-	const _types: any = new Set()
-	const _childTypes: any = new Set()
-	for (const type of sampleTypes) {
-		if (Number.isInteger(type)) {
-			_types.add(type)
-		} else if (type && typeof type == 'object') {
-			_types.add(type.sampleType)
-			for (const ct of type.childSampleTypes) _childTypes.add(ct)
-		}
-	}
-	const types = [..._types]
-	const childTypes = [..._childTypes]
+	const types = [...sampleTypes.sampleTypes]
+	const childTypes = [...sampleTypes.childSampleTypes]
 	if (!types.length) return
 	for (const t of [...types, ...childTypes]) if (!ds.cohort.termdb.sampleTypes[t]) throw 'invalid sample types'
 	if (mapParent2Children) {
-		// caller supplied mapParent2Children=true
-		// get children sample types
+		// mapParent2Children=true supplied by caller
+		// get child sample types
 		q.mapParent2Children = mapParent2Children
 		q.sampleTypes = childTypes.length ? childTypes : getDefaultSampleTypes(ds)
 	} else if (types.length == 1) {
@@ -733,7 +724,7 @@ export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
 		q.sampleTypes = types
 	} else {
 		// multiple sample types
-		// determine parent sample types of query sample types
+		// determine whether they have parent-child relationship
 		const parentTypes = new Set(
 			types.map(type => ds.cohort.termdb.sampleTypes[type]?.parent_id).filter(Number.isInteger)
 		)
@@ -871,41 +862,44 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	return [samples, byTermId]
 }
 
-function getSampleTypes(q, ds) {
+function getSampleTypes(q, ds): { sampleTypes: Set<any>; childSampleTypes: Set<any> } {
 	const twLst = q.terms ? q.terms : q.tw ? [q.tw] : []
 	const filter = q.filter
 	const filter0 = q.filter0
 	const twTypes = getTwLstSampleTypes(twLst, ds)
 	const filterTypes = getFilterSampleTypes(filter, ds)
-	const filter0Types = ds.getFilter0SampleTypes
-		? ds.getFilter0SampleTypes(filter0, ds, q.mapParent2Children)
-		: new Set()
-	const types = new Set([...twTypes, ...filterTypes, ...filter0Types])
-	return types
-}
-
-function getTwLstSampleTypes(twLst, ds) {
-	const types = new Set()
-	for (const tw of twLst) {
-		for (const type of getTwSampleTypes(tw, ds) || []) types.add(type)
+	const filter0Types = ds.getFilter0SampleTypes ? ds.getFilter0SampleTypes(filter0, ds) : []
+	const sampleTypes = new Set()
+	const childSampleTypes = new Set()
+	for (const type of [...twTypes, ...filterTypes, ...filter0Types]) {
+		if (type.sampleTypes) type.sampleTypes.forEach(st => sampleTypes.add(st))
+		if (type.childSampleTypes) type.childSampleTypes.forEach(st => childSampleTypes.add(st))
 	}
-	return types
+	return { sampleTypes, childSampleTypes }
 }
 
-function getFilterSampleTypes(filter, ds) {
-	const types = new Set()
-	if (!filter) return types
+function getTwLstSampleTypes(twLst, ds): TwSampleTypes[] {
+	const sampleTypesLst: TwSampleTypes[] = []
+	for (const tw of twLst) {
+		const sampleTypes = getTwSampleTypes(tw, ds)
+		sampleTypesLst.push(sampleTypes)
+	}
+	return sampleTypesLst
+}
+
+function getFilterSampleTypes(filter, ds): TwSampleTypes[] {
+	const sampleTypesLst: TwSampleTypes[] = []
+	if (!filter) return sampleTypesLst
 	for (const item of filter.lst) {
 		if (item.type == 'tvslst') {
-			for (const type of getFilterSampleTypes(item, ds)) types.add(type)
+			for (const type of getFilterSampleTypes(item, ds)) sampleTypesLst.push(type)
 		} else {
 			if (item.tag == 'cohortFilter') continue
-			for (const type of getTwSampleTypes({ term: item.tvs.term }, ds) || []) {
-				if (Number.isInteger(type)) types.add(type)
-			}
+			const sampleTypes = getTwSampleTypes({ term: item.tvs.term }, ds)
+			sampleTypesLst.push(sampleTypes)
 		}
 	}
-	return types
+	return sampleTypesLst
 }
 
 /*
