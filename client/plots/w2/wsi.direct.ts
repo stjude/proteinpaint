@@ -274,11 +274,10 @@ export async function init(
 		const groupGenes = geneList(opts.geneGroups) // summed into a single overlay
 
 		// which overlays need the h5ad: cell polygons serve the strokes, the
-		// type/expression fills and the hover tooltip; nucleus polygons only
-		// their own strokes
-		const needCellPolys =
-			!!opts.spatialData &&
-			(!opts.hideCellStrokes || opts.showCellTypes || exprGenes.length > 0 || groupGenes.length > 0)
+		// type/expression fills, the hover tooltip and the lasso (hit-testing
+		// needs the rings even with every fill/stroke option off); nucleus
+		// polygons only their own strokes
+		const needCellPolys = !!opts.spatialData
 		const overlays: Array<['cell' | 'nucleus', boolean, string]> = [
 			['cell', needCellPolys, 'rgba(0, 200, 80, 0.9)'],
 			['nucleus', !!opts.spatialData && !opts.hideNucleusStrokes, 'rgba(0, 150, 255, 0.9)']
