@@ -43,10 +43,26 @@ export function id2sampleRef(id, ds) {
 
 export function shouldMapParent2Children(tw, ds, mapParent2Children, sampleTypes) {
 	if (!mapParent2Children || !sampleTypes?.length) return false
+	// check every entry, not only up to the first match in .some() below,
+	// since all entries are later used in a sql IN clause
+	for (const st of sampleTypes) {
+		if (!ds.cohort.termdb.sampleTypes?.[st]) throw `invalid sample type='${st}'`
+	}
 	const twSampleTypes = getTwSampleTypes(tw, ds)
 	return sampleTypes.some(qSampleType =>
 		twSampleTypes.some(twSampleType => ds.cohort.termdb.sampleTypes[qSampleType].parent_id == twSampleType)
 	)
+}
+
+/* sample type ids are integers; returns a comma-separated list that is safe to interpolate into a sql IN clause */
+export function getSampleTypesSqlList(sampleTypes) {
+	return sampleTypes
+		.map(st => {
+			const n = Number(st)
+			if (!Number.isInteger(n)) throw `invalid sample type='${st}'`
+			return n
+		})
+		.join(',')
 }
 
 /*
@@ -888,7 +904,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 				FROM sample_ancestry sa
 				JOIN ${t.tablename} ON sa.ancestor_id = sample
 				JOIN sampleidmap sm ON sa.sample_id = sm.id
-				WHERE sm.sample_type IN (${q.sampleTypes.join(',')})
+				WHERE sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes)})
 				${filter ? `AND sa.sample_id IN ${filter.CTEname}` : ''}`
 			} else {
 				// query annotations directly

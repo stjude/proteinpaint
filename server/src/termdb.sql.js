@@ -817,8 +817,8 @@ at a numeric barchart
 		WHERE
 		${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
 		term_id=?
-		${excludevalues.length ? 'AND value NOT IN (' + excludevalues.join(',') + ')' : ''}`
-	values.push(term.id)
+		${excludevalues.length ? 'AND value NOT IN (' + excludevalues.map(() => '?').join(',') + ')' : ''}`
+	values.push(term.id, ...excludevalues.map(Number))
 
 	const s = ds.cohort.db.connection.prepare(string)
 	const result = s.all(values)
@@ -864,12 +864,15 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 	}
 	values.push(term.id)
 	const excludevalues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
+	values.push(...excludevalues.map(Number))
 
 	const ctes = []
 	const ptablenames = []
 	const cols = []
 	let tablename
 	for (const n of percentiles) {
+		// n is used in sql table and column names, which cannot be bound as parameters
+		if (!Number.isInteger(n)) throw `invalid percentile='${n}'`
 		tablename = 'pct_' + n
 		ctes.push(`
 		${tablename} AS (
@@ -897,7 +900,7 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 			WHERE
 			${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
 			term_id=?
-			${excludevalues.length ? 'AND value NOT IN (' + excludevalues.join(',') + ')' : ''}
+			${excludevalues.length ? 'AND value NOT IN (' + excludevalues.map(() => '?').join(',') + ')' : ''}
 			ORDER BY value ASC
 		),
 		p AS (

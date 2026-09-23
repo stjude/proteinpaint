@@ -1,7 +1,7 @@
 import { getBin, dictionaryNumericTypes, dtTermTypes, isNonDictionaryType } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { validateTermCollectionTvs, getTvsDenominators } from '#shared/filter.js'
-import { getSnpData, getData, shouldMapParent2Children } from './termdb.matrix.js'
+import { getSnpData, getData, shouldMapParent2Children, getSampleTypesSqlList } from './termdb.matrix.js'
 import { filterByItem, tvsUsesMafFilter } from './mds3.init.js'
 
 /*
@@ -847,7 +847,7 @@ function get_multivalue(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 }
 
 function getChildren(query, sampleTypes) {
-	const sampleTypeFilter = sampleTypes?.length ? `AND sm.sample_type IN (${sampleTypes.join(',')})` : ''
+	const sampleTypeFilter = sampleTypes?.length ? `AND sm.sample_type IN (${getSampleTypesSqlList(sampleTypes)})` : ''
 	return `SELECT sa.sample_id as sample
 	FROM sample_ancestry sa
 	JOIN sampleidmap sm ON sa.sample_id = sm.id
