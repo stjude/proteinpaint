@@ -7,6 +7,7 @@ import * as vcf from '#shared/vcf.js'
 import ky from 'ky'
 import serverconfig from './serverconfig.js'
 import { Readable } from 'stream'
+import { pipeline } from 'stream/promises'
 import { minimatch } from 'minimatch'
 export * from './cachedFetch.js'
 export * from './xfetch.js'
@@ -65,6 +66,7 @@ export async function cache_index(gzurl, indexurl) {
 	// build cache directory using gz file url and do not include index portion
 	// e.g. cache/https/domain/path/to/file.gz/
 	const dir = path.join(serverconfig.cachedir, protocol, body)
+	if (!isUnderDir(dir, path.join(serverconfig.cachedir, protocol))) throw '.gz file URL escapes cache dir'
 	try {
 		await fs.promises.stat(dir)
 	} catch (e) {
@@ -86,6 +88,7 @@ export async function cache_index(gzurl, indexurl) {
 		if (e) throw 'indexl url error: ' + e
 		// first, detect if the index file already exists in the dir+indexfile
 		const path2file = path.join(dir, path.basename(body2))
+		if (!isUnderDir(path2file, dir)) throw 'index URL file name escapes cache dir'
 		try {
 			await fs.promises.stat(path2file)
 			// index file exists
@@ -116,12 +119,16 @@ export function fileurl(req, checkWhiteList = true) {
 		if (illegalpath(file, checkWhiteList, false)) return ['illegal file path']
 		file = path.join(serverconfig.tpmasterdir, file)
 	} else if (req.query.url) {
+		// a non-string, such as an array from a repeated query parameter, would bypass the checks below
+		if (typeof req.query.url != 'string') return ['url must be a string']
 		file = req.query.url
 		// avoid whitespace in case the url is supplied as an argument
 		// to an exec script and thus execute arbitrary space-separated
 		// commands within the url
 		if (file.includes(' ')) return ['url must not contain whitespace']
 		if (file.includes('"') || file.includes("'")) return ['url must not contain single or double quotes']
+		// the url is turned into a cache dir path by cache_index()
+		if (file.split('/').includes('..')) return ['url must not contain ".." path segment']
 		isurl = true
 	}
 	if (!file) return ['file unspecified']
@@ -184,12 +191,24 @@ export function illegalPathSegment(s) {
 	return false
 }
 
+// protocol and body of a url become path segments of a cache dir (see cache_index), so only
+// allow protocols that are real remote track sources: any other name could be a feature dir under
+// cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
+const cacheUrlProtocols = new Set(['http', 'https', 'ftp'])
+
 function test_url(u) {
 	const tmp = u.split('://')
 	if (tmp.length != 2) return ['improper url']
-	if (tmp[0].length < 3) return ['protocol string length too short'] // ftp??
+	const protocol = tmp[0].toLowerCase()
+	if (!cacheUrlProtocols.has(protocol)) return ['protocol must be http, https or ftp']
+	if (tmp[1].split(/[/\\]/).includes('..')) return ['must not contain ".." path segment']
 	if (tmp[1].length < 5) return ['body string length too short'] // a/b.gz at minimum
-	return [null, tmp[0], tmp[1]]
+	return [null, protocol, tmp[1]]
+}
+
+// true if file resolves strictly inside dir
+function isUnderDir(file, dir) {
+	return path.resolve(file).startsWith(path.resolve(dir) + path.sep)
 }
 async function download_index(url, tofile) {
 	/* try to download the index file
@@ -212,12 +231,8 @@ async function download_index(url, tofile) {
 	}
 }
 function stream2file(from, file) {
-	// TODO any error to catch here
-	return new Promise((resolve, reject) => {
-		const f = fs.createWriteStream(file)
-		from.pipe(f)
-		from.on('end', () => resolve())
-	})
+	// resolves once the file is fully written (not when the download ends), so tabix never reads a partial index
+	return pipeline(from, fs.createWriteStream(file))
 }
 
 export async function file_is_readable(file) {

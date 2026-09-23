@@ -1,1 +1,2 @@
-
+Fixes:
+- keep cache_index() url and index paths inside the cache dir
