@@ -15,5 +15,6 @@ export function setDescrStatsByTerm(
 		if (!term?.$id) continue
 		const descrStats = descrStatsByTerm[term.$id]
 		if (descrStats && Object.keys(descrStats).length) (term.q as any).descrStats = descrStats
+		else delete (term.q as any).descrStats
 	}
 }
