@@ -124,6 +124,18 @@ tape('getDescrStatsByTerm: returns empty stats for categorical overlays', functi
 	test.end()
 })
 
+tape('getDescrStatsByTerm: retains zero-valued numeric overlay data on a log-scaled primary term', function (test) {
+	const numericOverlay = { term: termjson.agedx, $id: mockTerm2$id } as any
+	const samples = [
+		{ [mockTerm1$id]: { value: 1 }, [mockTerm2$id]: { value: 0 } },
+		{ [mockTerm1$id]: { value: 10 }, [mockTerm2$id]: { value: 2 } }
+	]
+	const stats = getDescrStatsByTerm(samples, mockTw as any, numericOverlay, true)
+	test.equal(stats[mockTerm1$id].total.value, 2, 'Should use log-scale filtering for the primary term')
+	test.equal(stats[mockTerm2$id].total.value, 2, 'Should retain zero-valued overlay data')
+	test.end()
+})
+
 /**************
  computeSampleType
 ***************/

@@ -13,7 +13,6 @@ export class LegendDataMapper {
 		this.config = config
 
 		const isTerm2 = config?.term2
-		const isTerm0 = config?.term0
 
 		if (config.term.term.type != 'termCollection' && config.term.q?.descrStats) {
 			this.legendData.push({

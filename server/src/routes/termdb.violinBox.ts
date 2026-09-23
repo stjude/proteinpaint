@@ -712,7 +712,10 @@ export function getDescrStatsByTerm(
 ): Record<string, DescrStats> {
 	const terms = [tw, overlayTw].filter((term): term is TermWrapper => !!term?.$id)
 	return Object.fromEntries(
-		terms.map(term => [term.$id!, getDescrStats(extractNumericValues(samples, term, isLogScale), showOutlierRange)])
+		terms.map(term => [
+			term.$id!,
+			getDescrStats(extractNumericValues(samples, term, term === tw && isLogScale), showOutlierRange)
+		])
 	)
 }
 
