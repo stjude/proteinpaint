@@ -674,3 +674,41 @@ tape('NumericRangeInput', function (test) {
 	if (test['_ok']) holder.remove()
 	test.end()
 })
+
+tape('NumericRangeInput: min and max bounds', function (test) {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const range = { start: 0.1, startinclusive: false, startunbounded: false, stopunbounded: true }
+	const input = new NumericRangeInput(holder.append('div') as any, range, () => {}, { min: 0, max: 1 })
+	const parse = (str: string) => {
+		input.getInput().node()!.value = str
+		return input.parseRange()
+	}
+
+	test.throws(() => parse('x > 5'), /maximum allowed/, 'Should reject a start above the max')
+	parse('0.2 < x < 0.5')
+	// a parsed entry replaces the range the input was given, which must not drop the bounds
+	test.throws(() => parse('x > 5'), /maximum allowed/, 'Should still reject a start above the max after a valid entry')
+	test.throws(() => parse('x < -1'), /minimum allowed/, 'Should reject a stop below the min')
+	test.throws(() => parse('0.5 < x < 2'), /maximum allowed/, 'Should reject a stop above the max')
+	test.throws(() => parse('-1 < x < 0.5'), /minimum allowed/, 'Should reject a start below the min')
+	test.throws(() => parse('x > 1'), /maximum allowed/, 'Should reject an exclusive start at the max')
+	test.throws(() => parse('x < 0'), /minimum allowed/, 'Should reject an exclusive stop at the min')
+	test.throws(() => parse('x = 2'), /maximum allowed/, 'Should reject a value above the max')
+	test.equal(parse('x >= 1').start, 1, 'Should allow an inclusive start at the max')
+	test.equal(parse('x <= 0').stop, 0, 'Should allow an inclusive stop at the min')
+	test.equal(parse('x = 1').value, 1, 'Should allow a value at the max')
+	test.deepEqual(
+		range,
+		{ start: 0.1, startinclusive: false, startunbounded: false, stopunbounded: true },
+		'Should not write the bounds into the given range'
+	)
+
+	// without opts.min/max, any parsable range is accepted
+	const unbounded = new NumericRangeInput(holder.append('div') as any, { ...range }, () => {})
+	unbounded.getInput().node()!.value = 'x > 5'
+	test.equal(unbounded.parseRange().start, 5, 'Should accept any range without bounds')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})

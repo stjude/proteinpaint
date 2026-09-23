@@ -10,6 +10,7 @@ import { detectChildText, sleep } from '../../test/test.helpers'
 	get_pill_label: maf filter total depth
 	maf filter menu: total depth input
 	maf filter pill: total depth after edit
+	no-density menu: range outside of term bounds
 */
 
 /**************
@@ -164,6 +165,53 @@ tape('maf filter pill: total depth after edit', async test => {
 	await sleep(100)
 	test.equal(holder.selectAll('.value_btn').size(), 1, 'should leave a single value button in the edited pill')
 
+	menuDiv.remove()
+	holder.remove()
+	test.end()
+})
+
+tape('no-density menu: range outside of term bounds', async test => {
+	const holder = d3s.select('body').append('div')
+	// FrontendVocab has no getViolinBox(), so the menu has no density plot to limit a range by,
+	// and relies on the term's min and max
+	const term = { id: 'tumor_DNA', name: 'Tumor DNA', type: 'float', min: 0, max: 1 }
+	const savedRange = { start: 0.1, startinclusive: false, stopunbounded: true }
+	let appliedTvs: any
+	const pill = await TVSInit({
+		vocabApi: new FrontendVocab({ state: { vocab: { terms: [term] } } }),
+		holder,
+		debug: true,
+		callback: (tvs: any) => (appliedTvs = tvs)
+	})
+	const menuDiv = d3s.select('body').append('div')
+	await pill.main({ tvs: { term, ranges: [savedRange] } })
+	await pill.Inner.showMenu(menuDiv)
+
+	const alerts: any[] = []
+	const origAlert = window.alert
+	window.alert = (msg: any) => alerts.push(msg)
+	const input = menuDiv.select('input[name="rangeInput"]').node() as HTMLInputElement
+	const type = (str: string) => {
+		input.value = str
+		input.dispatchEvent(new Event('change'))
+	}
+
+	try {
+		type('0.2 < x < 0.5')
+		type('x > 5')
+		test.equal(alerts.length, 1, 'should reject a range above the max after a valid entry')
+		test.equal(input.value, '0.2 < x < 0.5', 'should restore the last valid range in the input')
+		;(menuDiv.select('button').node() as HTMLButtonElement).click()
+		test.deepEqual(
+			[appliedTvs.ranges[0].start, appliedTvs.ranges[0].stop],
+			[0.2, 0.5],
+			'should apply the last valid range'
+		)
+		test.false('min' in savedRange || 'max' in savedRange, 'should not write the term bounds into the tvs range')
+	} catch (e) {
+		test.fail('test error: ' + e)
+	}
+	window.alert = origAlert
 	menuDiv.remove()
 	holder.remove()
 	test.end()
