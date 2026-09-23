@@ -1,4 +1,4 @@
-import { Menu, renderTable, type TableRow } from '#dom'
+import { Menu, renderTable, type TableRow, getChartTitle } from '#dom'
 // import { dofetch3 } from '#common/dofetch'
 import { mclass, dt2label } from '#shared/common.js'
 // import { /*newpane,*/ export_data } from '#src/client'
@@ -19,10 +19,7 @@ export default function getHandlers(self) {
 	return {
 		chart: {
 			title(chart) {
-				if (!self.config.term0) return chart.chartId
-				return self.config.term0.term.values && chart.chartId in self.config.term0.term.values
-					? self.config.term0.term.values[chart.chartId].label
-					: chart.chartId
+				return getChartTitle(self.config, chart.chartId)
 			}
 		},
 		svg: {

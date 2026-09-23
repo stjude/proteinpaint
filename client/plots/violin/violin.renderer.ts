@@ -2,7 +2,7 @@ import { axisLeft, axisTop } from 'd3-axis'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { curveBasis, line } from 'd3-shape'
 import { brushX, brushY } from 'd3-brush'
-import { renderTable, getMaxLabelWidth, table2col } from '#dom'
+import { renderTable, getMaxLabelWidth, table2col, getChartTitle } from '#dom'
 import { rgb } from 'd3-color'
 import { format as d3format } from 'd3-format'
 import { isSingleCellTerm } from '#shared'
@@ -113,7 +113,7 @@ export default function setViolinRenderer(self: any) {
 					.style('text-align', 'center')
 					.style('font-size', '1.1em')
 					.style('margin-bottom', '5px')
-					.html(`${self.getChartTitle(chart.chartId)} (n=${totalCount})`)
+					.text(self.getChartTitle(chart.chartId, totalCount))
 			}
 
 			// render chart data
@@ -257,11 +257,8 @@ export default function setViolinRenderer(self: any) {
 		})
 	}
 
-	self.getChartTitle = function (chartId: string) {
-		if (!self.config.term0) return chartId
-		return self.config.term0.term.values && chartId in self.config.term0.term.values
-			? self.config.term0.term.values[chartId].label
-			: chartId
+	self.getChartTitle = function (chartId: string, totalCount?:number) {
+		return getChartTitle(self.config, chartId, totalCount)
 	}
 
 	function createMargins(labelsize: number, settings: any, isH: boolean, isMinimal: boolean) {

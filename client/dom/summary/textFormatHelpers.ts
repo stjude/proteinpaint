@@ -15,7 +15,7 @@ type FormatHeaderTextArg = {
     suffix?: string
 }
 
-export default function formatHeaderText(arg: FormatHeaderTextArg): void {
+export function formatHeaderText(arg: FormatHeaderTextArg): void {
     if (!arg.header) throw new Error('Header element is required')
     if (!arg.chartType) throw new Error('Chart type is required')
 
@@ -24,7 +24,7 @@ export default function formatHeaderText(arg: FormatHeaderTextArg): void {
     if (arg.text) {
         if (!arg.prefix) arg.prefix = ''
         if (!arg.suffix) arg.suffix = ''
-        const joinedText = [arg.prefix, arg.text, arg.suffix].join(' ') 
+        const joinedText = [arg.prefix, arg.text, arg.suffix].join(' ')
         arg.header.append('span')
             .attr('data-testid', `sjpp-header-text-${arg.chartType}`)
             .style('margin-right', '5px')
@@ -35,4 +35,14 @@ export default function formatHeaderText(arg: FormatHeaderTextArg): void {
         .style('font-size', '0.8em')
         .style('opacity', '0.8')
         .text(arg.chartType.toUpperCase())
+}
+
+/** Consistently return the chart title (the text appearing above the plot title) 
+ * for the summary plots */
+export function getChartTitle(config: any, chartId: string, sampleCount?: number): string {
+    if (!config.term0) return chartId
+    const configName = `${config.term0.term.name}: `
+    const chartName = config.term0.term.values && chartId in config.term0.term.values ? config.term0.term.values[chartId].label : chartId
+    const sampleNum = sampleCount ? ` (n=${sampleCount})` : ''
+    return `${configName}${chartName}${sampleNum}`
 }

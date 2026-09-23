@@ -4,6 +4,7 @@ import { rgb } from 'd3-color'
 import type { BoxPlotChartEntry } from '#types'
 import type { BoxPlotSettings } from '../Settings'
 import type { BoxPlotConfig } from '../BoxPlotTypes'
+import { getChartTitle } from '#dom'
 
 /** Formats the .charts{} response data for rendering
  * in the View -> ChartRender. */
@@ -185,7 +186,7 @@ export class ChartsDataMapper {
 		if (config.term0) {
 			dim.x = settings.isVertical ? this.#horizPad / 2 : plotCenter
 			dim.y = settings.isVertical ? height - plotCenter - this.#horizPad / 2 : this.#topPad + incrPad / 2
-			dim.text = `${getChartSubtitle(config, chartId)} (n=${sampleCount})`
+			dim.text = getChartTitle(config, chartId, sampleCount)
 		}
 		return dim
 	}
@@ -265,11 +266,4 @@ export class ChartsDataMapper {
 		}
 		return plots
 	}
-}
-
-export function getChartSubtitle(config: any, chartId: string): string {
-	if (!config.term0) return chartId
-	return config.term0.term.values && chartId in config.term0.term.values
-		? config.term0.term.values[chartId].label
-		: chartId
 }
