@@ -34,7 +34,7 @@ export async function save(req, res) {
 		if (!dirExists) {
 			fs.mkdirSync(dir, { recursive: true })
 		}
-		await utils.write_file(path.join(dir, sessionID), content)
+		await utils.write_file(getSessionFile(dir, sessionID), content)
 		res.send({
 			id: sessionID
 		})
@@ -52,7 +52,7 @@ export async function get(req, res) {
 		const { route, dslabel, embedder } = req.query
 		const payload = req.query.route ? authApi.getPayloadFromHeaderAuth(req, req.query.route) : null //; console.log(14, payload)
 		const dir = req.query.route ? getSessionPath(req.query, payload) : cachedir_massSession
-		const file = path.join(dir, id)
+		const file = getSessionFile(dir, id)
 		let sessionCreationDate
 		try {
 			const s = await fs.promises.stat(file)
@@ -93,9 +93,11 @@ export async function _delete(req, res) {
 		const payload = req.query.route ? authApi.getPayloadFromHeaderAuth(req, req.query.route) : null
 		if (!payload) throw 'missing credentials'
 		const dir = req.query.route ? getSessionPath(req.query, payload) : cachedir_massSession
+		if (!Array.isArray(ids)) throw 'session ids[] must be an array'
+		// validate all ids before deleting any file
+		const files = ids.map(id => getSessionFile(dir, id))
 		const errors = []
-		for (const id of ids) {
-			const file = path.join(dir, id)
+		for (const file of files) {
 			fs.unlink(file, err => {
 				if (err) {
 					errors.push(err)
@@ -154,8 +156,27 @@ function makeID() {
 	return lst.join('')
 }
 
+const sessionsByCredDir = path.resolve(serverconfig.cachedir, 'sessionsByCred')
+
+// each request-derived value will be used as one dir level under sessionsByCred/,
+// and must not be able to traverse to other dirs
 function getSessionPath(query, payload) {
-	const { filename, route, dslabel, embedder } = query
+	const { route, dslabel, embedder } = query
+	if (!payload?.email) throw `invalid credentials: no jwt.email`
+	if (payload.dslabel != dslabel || payload.route != route || payload.embedder != embedder)
+		throw `invalid credentials: mismatched payload`
 	const email = payload.email.replace('@', '_at_')
-	return `${serverconfig.cachedir}/sessionsByCred/${embedder}/${email}/${route}/${dslabel}`
+	for (const segment of [embedder, email, route, dslabel]) {
+		if (utils.illegalPathSegment(segment)) throw 'invalid session path'
+	}
+	const dir = path.resolve(sessionsByCredDir, embedder, email, route, dslabel)
+	if (!dir.startsWith(sessionsByCredDir + path.sep)) throw 'invalid session path'
+	return dir
+}
+
+function getSessionFile(dir, id) {
+	if (utils.illegalPathSegment(id)) throw 'invalid session id'
+	const file = path.resolve(dir, id)
+	if (path.dirname(file) != path.resolve(dir)) throw 'invalid session id'
+	return file
 }

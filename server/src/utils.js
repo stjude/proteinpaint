@@ -131,10 +131,13 @@ export function fileurl(req, checkWhiteList = true) {
 const fileExtensionBlackList = Object.freeze(['.bam', '.bai', '.gz', '.tbi', '.csi', '.bw', '.bb'])
 
 export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
-	if (s[0] == '/') return true // must not be relative to mount root
+	// a non-string, such as an array from a repeated query parameter, could bypass the substring checks below
+	if (typeof s != 'string' || !s) return true
+	if (s[0] == '/' || path.isAbsolute(s)) return true // must not be relative to mount root
 	if (s.includes('"') || s.includes("'")) return true // must not include quotes, apostrophe
 	if (s.includes('|') || s.includes('&')) return true // must not include operator characters
-	if (s.includes(' ')) return true // must not include whitespace
+	if (/\s/.test(s)) return true // must not include whitespace, including tab and newline
+	if (/[\x00-\x1f\x7f]/.test(s)) return true // must not include null byte or other control characters
 	if (s.indexOf('..') != -1) return true
 	if (s.match(/(\<script|script\>)/i)) return true // avoid the potential for parsing injected code in client side error message
 	if (checkWhiteList && serverconfig.whiteListPaths) {
@@ -165,6 +168,19 @@ export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
 			if (ext === path.extname(s).toLowerCase()) return true
 		}
 	}
+	return false
+}
+
+/*
+	s: a single file or directory name, such as a session id or one dir level in a path
+
+	returns true if s is not usable as a single path segment,
+	such as when it may traverse to a parent dir or has path separators
+*/
+export function illegalPathSegment(s) {
+	if (illegalpath(s, false, false)) return true
+	if (s.includes('/') || s.includes('\\')) return true // must not add a dir level
+	if (s == '.') return true
 	return false
 }
 
