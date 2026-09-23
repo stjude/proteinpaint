@@ -96,16 +96,17 @@ export async function _delete(req, res) {
 		if (!Array.isArray(ids)) throw 'session ids[] must be an array'
 		// validate all ids before deleting any file
 		const files = ids.map(id => getSessionFile(dir, id))
-		const errors = []
-		for (const file of files) {
-			fs.unlink(file, err => {
-				if (err) {
-					errors.push(err)
-					throw err
-				}
-			})
+		const results = await Promise.allSettled(files.map(file => fs.promises.unlink(file)))
+		// report only the failed ids, not the error messages that include server file paths
+		const failedIds = ids.filter((id, i) => results[i].status == 'rejected')
+		if (failedIds.length) {
+			for (const [i, r] of results.entries()) {
+				if (r.status == 'rejected') console.log(`massSession _delete(): ${files[i]}`, r.reason)
+			}
+			res.send({ error: `unable to delete session(s): ${failedIds.join(', ')}`, failedIds })
+			return
 		}
-		if (!errors.length) res.send({ status: 'ok' })
+		res.send({ status: 'ok' })
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}

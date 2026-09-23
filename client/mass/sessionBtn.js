@@ -1,5 +1,6 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
+import { sayerror } from '#dom/sayerror'
 import { to_textfile } from '#dom/downloadTextfile'
 import { dofetch3 } from '#common/dofetch'
 import { parentCorsMessage } from '#common/embedder-helpers'
@@ -492,23 +493,40 @@ class MassSessionBtn {
 						if (d.loc == 'browser') {
 							delete this.savedSessions[input.value] //checkedIds.push(input.value)
 						} else if (d.loc == 'server') {
-							delete this.serverCachedSessions[input.value]
 							sessionIdsDeletedFromServer.push(input.value)
 						} else throw `unknown cache location=${d.loc}`
 					}
 				}
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
-				try {
-					const headers = await this.app.vocabApi.mayGetAuthHeaders('termdb')
-					const body = {
-						ids: sessionIdsDeletedFromServer,
-						route: this.route,
-						dslabel: this.dslabel,
-						embedder: window.location.hostname
+				if (sessionIdsDeletedFromServer.length) {
+					submitBtn.property('disabled', true)
+					let error, failedIds
+					try {
+						const headers = await this.app.vocabApi.mayGetAuthHeaders('termdb')
+						const body = {
+							ids: sessionIdsDeletedFromServer,
+							route: this.route,
+							dslabel: this.dslabel,
+							embedder: window.location.hostname
+						}
+						const res = await dofetch3(`/massSession?`, { method: 'DELETE', headers, body })
+						if (res.error) {
+							error = res.error
+							// without a list of failed ids, assume that none of the server sessions were deleted
+							failedIds = res.failedIds || sessionIdsDeletedFromServer
+						}
+					} catch (e) {
+						error = e.message || e
+						failedIds = sessionIdsDeletedFromServer
 					}
-					const res = dofetch3(`/massSession?`, { method: 'DELETE', headers, body })
-				} catch (e) {
-					throw e
+					const deletedIds = sessionIdsDeletedFromServer.filter(id => !failedIds?.includes(id))
+					this.serverCachedSessions = this.serverCachedSessions.filter(id => !deletedIds.includes(id))
+					if (error) {
+						// keep the menu open so that the error is visible, and allow a retry
+						submitBtn.property('disabled', false)
+						sayerror(this.dom.tip.d, `Error deleting server session(s): ${error}`)
+						return
+					}
 				}
 				this.dom.tip.hide()
 			})
