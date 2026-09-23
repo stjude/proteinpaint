@@ -71,6 +71,21 @@ tape('dofetch3() init.signal behavior', async test => {
 	test.end()
 })
 
+tape('dofetch3() oversized non-GET request', async test => {
+	const body = { ids: Array.from({ length: 300 }, (_, i) => `session${i}`) }
+	for (const method of ['DELETE', 'PUT']) {
+		const init = { method, body: structuredClone(body) }
+		try {
+			await df.dofetch3('/massSession', init, {})
+			test.fail(`should throw for an oversized ${method} request`)
+		} catch (e) {
+			test.true(String(e).includes('URL is too long'), `should throw for an oversized ${method} request`)
+		}
+		test.equal(init.method, method, `should not convert an oversized ${method} request to POST`)
+	}
+	test.end()
+})
+
 tape('setAuth()', async test => {
 	const opts = {
 		dsAuth: [

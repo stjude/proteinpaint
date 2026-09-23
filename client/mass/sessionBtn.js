@@ -503,18 +503,23 @@ class MassSessionBtn {
 					let error, failedIds
 					try {
 						const headers = await this.app.vocabApi.mayGetAuthHeaders('termdb')
-						const body = {
-							ids: sessionIdsDeletedFromServer,
-							route: this.route,
-							dslabel: this.dslabel,
-							embedder: window.location.hostname
+						const errors = []
+						failedIds = []
+						for (const ids of getDeletionBatches(sessionIdsDeletedFromServer)) {
+							const body = { ids, route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
+							try {
+								const res = await dofetch3(`/massSession?`, { method: 'DELETE', headers, body })
+								if (res.error) {
+									errors.push(res.error)
+									// without a list of failed ids, assume that none of the batch was deleted
+									failedIds.push(...(res.failedIds || ids))
+								}
+							} catch (e) {
+								errors.push(e.message || e)
+								failedIds.push(...ids)
+							}
 						}
-						const res = await dofetch3(`/massSession?`, { method: 'DELETE', headers, body })
-						if (res.error) {
-							error = res.error
-							// without a list of failed ids, assume that none of the server sessions were deleted
-							failedIds = res.failedIds || sessionIdsDeletedFromServer
-						}
+						if (errors.length) error = errors.join('; ')
 					} catch (e) {
 						error = e.message || e
 						failedIds = sessionIdsDeletedFromServer
@@ -549,6 +554,30 @@ class MassSessionBtn {
 			this.dom.tip.hide()
 		}, 3500)
 	}
+}
+
+/*
+	ids: session ids to delete from the server
+
+	returns ids[] split into batches, so that each DELETE request URL
+	stays below the length limit that dofetch3() allows for a non-GET request,
+	since the ids[] are URL-encoded as a request parameter
+*/
+function getDeletionBatches(ids) {
+	// leave room in the URL for the host, path, and the other request parameters
+	const maxEncodedIdsLength = 1000
+	const batches = []
+	let batch = []
+	for (const id of ids) {
+		if (batch.length && encodeURIComponent(JSON.stringify([...batch, id])).length > maxEncodedIdsLength) {
+			batches.push(batch)
+			batch = []
+		}
+		// a single id that is too long will be sent alone, and dofetch3() will throw instead of converting to POST
+		batch.push(id)
+	}
+	if (batch.length) batches.push(batch)
+	return batches
 }
 
 // may need to edit state based on updated expectations,

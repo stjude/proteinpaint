@@ -301,6 +301,12 @@ function mayAdjustRequest(url, init) {
 		return url
 	}
 
+	if (method != 'GET') {
+		// a server route typically has a different handler for POST than for DELETE or PUT,
+		// so converting to POST may trigger an unintended action, such as saving instead of deleting
+		throw `the ${method} request URL is too long (${url.length} characters, max=${urlMaxLength})`
+	}
+
 	// convert to a POST request because the URL is too long
 	// !!! NOTE: the requested server route must support both GET and POST, for example, app.all('/route', handler)
 	init.method = 'POST'
