@@ -61,7 +61,6 @@ function mds_clientcopy(ds) {
 		alleleAttribute: ds.alleleAttribute,
 		// these are quick fixes and should be deleted later
 		hide_genotypedownload: ds.hide_genotypedownload,
-		hide_phewas: ds.hide_phewas,
 		sample2bam: ds.sample2bam
 	}
 

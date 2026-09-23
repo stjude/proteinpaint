@@ -1,6 +1,5 @@
 import path from 'path'
 import * as termdbsql from './termdb.sql.js'
-import * as phewas from './termdb.phewas.js'
 import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { trigger_getLowessCurve } from '#routes/termdb.sampleScatter.ts'
@@ -39,11 +38,6 @@ export function handle_request_closure(genomes) {
 			// process triggers
 			if (q.findterm) return await trigger_findterm(q, req, res, tdb, ds, genome)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
-			if (q.phewas) {
-				if (q.update) return await phewas.update_image(q, res)
-				if (q.getgroup) return await phewas.getgroup(q, res)
-				return await phewas.trigger(q, res, ds)
-			}
 			//if (q.gettermdbconfig) return termdbConfig.make(q, res, ds, genome)
 			//if (q.getcohortsamplecount) return res.send({ count: ds.cohort.termdb.q.getcohortsamplecount(q.cohort) })
 			if (q.getsamplecount) return res.send(await getSampleCount(q, ds))

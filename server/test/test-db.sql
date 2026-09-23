@@ -192,7 +192,6 @@ AND term_id NOT IN (select id from treeterms)
 AND term_id != '$ROOT$';
 
 # from the proteinpaint/server dir, run 
-# $ node server.js phewas-precompute hg38 TermdbTest
 # then from your/tp/files/hg38/sjlife/clinical dir, 
 # $ sqlite3 db2 
 .mode tab
