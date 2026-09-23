@@ -235,7 +235,8 @@ export class ScatterTooltip {
 		}
 
 		if ('info' in sample) for (const [k, v] of Object.entries(sample.info)) table.addRow(k, v)
-		const name = sample.sample || sample.cellId
+		// single-cell samples only carry .sampleId (the cell id), not .sample/.cellId
+		const name = sample.sample || sample.cellId || sample.sampleId
 		if (name) table.addRow(this.scatter.settings.itemLabel, name)
 	}
 

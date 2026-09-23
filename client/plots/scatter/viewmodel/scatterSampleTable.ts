@@ -41,7 +41,8 @@ export function getCategoryValue(category, d, tw, includeMutation = false) {
  * Columns are included only when the plot actually has that term, and the sample-name and
  * Info columns only when at least one row can fill them. */
 export function buildSampleTableData(config, itemLabel: string, samples: any[]) {
-	const hasName = samples.some(d => d.sample || d.cellId)
+	// single-cell samples only carry .sampleId (the cell id), not .sample/.cellId
+	const hasName = samples.some(d => d.sample || d.cellId || d.sampleId)
 	const hasInfo = samples.some(d => 'info' in d)
 
 	const dims: { tw: any; key: string; sortable?: boolean }[] = [
@@ -59,7 +60,7 @@ export function buildSampleTableData(config, itemLabel: string, samples: any[]) 
 
 	const rows = samples.map(s => {
 		const row: any[] = []
-		if (hasName) row.push({ value: s.sample || s.cellId || '' })
+		if (hasName) row.push({ value: s.sample || s.cellId || s.sampleId || '' })
 		for (const d of dims) row.push({ value: getCategoryValue(d.key, s, d.tw) })
 		if (hasInfo)
 			row.push({
