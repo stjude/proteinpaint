@@ -580,7 +580,11 @@ tape('Numerical term: fixed bins', async test => {
 
 	const apply_btn = await tipLoc.shows('[data-testid="sjpp_numeric_edit_apply"]').get(0)
 	apply_btn.click()
-	await tipLoc.hides('[data-testid="sjpp_numeric_edit_apply"]').get()
+	// NumericHandler hides the tip synchronously but reruns the callback asynchronously
+	// (see NumericHandler.ts renderButtons Apply handler), so waiting for the tip to hide
+	// does not guarantee the apply has finished. Wait for the pill status, which only
+	// rerenders after the callback completes, otherwise reopening the edit menu can race it.
+	await opts.holderLoc.hasText('.ts_summary_btn', 'bin size=5')
 	await opts.pillMenuClick('Edit')
 	test.deepEqual(
 		await tipLoc.shows('[data-testid="sjpp-num-reg-bin-editor-size"]').value(),
