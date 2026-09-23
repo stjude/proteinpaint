@@ -90,16 +90,19 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
 		}
 	})
 
-	opts.pillMenuClick = async optionLabel => {
+	// optionLabel: the menu option to click, e.g. 'Edit'
+	// ready: optional selector that signals the chosen editor has rendered. Each option
+	//        opens a different editor, so the readiness condition is editor-specific and
+	//        supplied by the caller. Callers that immediately await their own
+	//        tipLoc.shows()/hasText() after this can omit it, since that await is the wait.
+	opts.pillMenuClick = async (optionLabel, ready) => {
 		const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 		pilldiv.click()
 		await opts.tipLoc.shows('.sja_menuoption').get()
 		const tip = opts.pill.Inner.dom.tip.d.node()
-		{
-			const editOption = [...tip.querySelectorAll('.sja_menuoption')].filter(o => o.__data__.label === optionLabel)[0]
-			editOption.click()
-			await sleep(300)
-		}
+		const editOption = [...tip.querySelectorAll('.sja_menuoption')].filter(o => o.__data__.label === optionLabel)[0]
+		editOption.click()
+		if (ready) await opts.tipLoc.shows(ready).get()
 	}
 
 	opts.tip = opts.pill.Inner.dom.tip
@@ -218,7 +221,7 @@ tape('termCollection edit menu shows available member colors', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-	await opts.pillMenuClick('Edit')
+	await opts.pillMenuClick('Edit', '[data-testid="sjpp-term-collection-member-color"]')
 	const swatches = opts.pill.Inner.dom.tip.d.selectAll('[data-testid="sjpp-term-collection-member-color"]').nodes()
 	test.equal(swatches.length, 1, 'shows a square only for the member with a color')
 	test.ok(swatches[0].style.backgroundColor, 'applies the member color to the square')
@@ -258,7 +261,7 @@ tape('termCollection edit menu retains unchecked members', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-	await opts.pillMenuClick('Edit')
+	await opts.pillMenuClick('Edit', 'tbody tr')
 	const tip = opts.pill.Inner.dom.tip.d
 	const memberCheckboxes = [...tip.node().querySelectorAll('tbody tr')].map(row => row.querySelector('td input'))
 	memberCheckboxes[1].click()
@@ -267,7 +270,7 @@ tape('termCollection edit menu retains unchecked members', async test => {
 	test.equal(excludedSortingCheckbox.checked, false, 'clears sorting when a member is excluded')
 	tip.select('[data-testid="sjpp-term-collection-members-apply"]').node().click()
 
-	await opts.pillMenuClick('Edit')
+	await opts.pillMenuClick('Edit', 'tbody tr')
 	test.deepEqual(opts.pill.Inner.tw.q.lst, ['member-1'], 'removes the unchecked member only from q.lst')
 	test.deepEqual(opts.pill.Inner.tw.q.numerators, ['member-1'], 'removes the excluded member from sorting')
 	test.equal(opts.pill.Inner.tw.term.termlst.length, 2, 'keeps every available member in term.termlst')
@@ -918,7 +921,7 @@ tape('Conditional term', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-	await opts.pillMenuClick('Edit')
+	await opts.pillMenuClick('Edit', 'select')
 	const tip = opts.pill.Inner.dom.tip
 
 	//check menu buttons on first menu
@@ -936,7 +939,7 @@ tape('Conditional term', async test => {
 	)
 
 	// select 'Any condition vs normal'
-	await opts.pillMenuClick('Edit')
+	await opts.pillMenuClick('Edit', 'select')
 	const gradeSelect2 = tip.d.select('select')._groups[0][0]
 	gradeSelect2.selectedIndex = 2
 	gradeSelect2.dispatchEvent(new Event('change'))
@@ -1265,7 +1268,7 @@ tape.skip('samplelst term', async test => {
 	const pillDiv = pill.dom.pilldiv.node().querySelector('.ts_pill')
 	test.equal(pillDiv.innerText, opts.tsData.term.name, `Should display custom name for button label`)
 	pillDiv.click()
-	await opts.pillMenuClick('Edit')
+	await opts.pillMenuClick('Edit', '.sjpp_table_item')
 
 	//Test if dom elements display properly
 	const tip = pill.dom.tip.dnode
