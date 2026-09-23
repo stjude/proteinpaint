@@ -115,7 +115,11 @@ export class Auth {
 				if (!cred) return
 				if (cred.protectedRoutes?.find(pattern => isMatch(path, pattern))) return cred
 				const protRoutes = _protectedRoutes || this.protectedRoutes.termdb
-				if (protRoutes.includes(q.for) || protRoutes.find(pattern => isMatch(path, pattern))) return cred
+				// q.for is client-supplied and may be a non-string, e.g. an array from `for[]=...`
+				// query params, so check every value instead of an exact includes() match on q.for
+				const forValues = q.for === undefined ? [] : Array.isArray(q.for) ? q.for : [q.for]
+				if (forValues.some(f => protRoutes.includes(String(f)))) return cred
+				if (protRoutes.find(pattern => isMatch(path, pattern))) return cred
 			} else if (path.startsWith('/burden') && ds0.burden) {
 				// okay to return an undefined embedder[route]
 				return ds0.burden[q.embedder] || ds0.burden['*']
@@ -135,6 +139,14 @@ export class Auth {
 				}
 			}
 		}
+	}
+
+	// returns the termdb credential that applies to the requested dslabel and embedder,
+	// regardless of the request path or q.for, or falsy if the dataset's termdb data is open access
+	getTermdbCred(q) {
+		if (!q.dslabel) return
+		const route = (this.creds[q.dslabel] || this.creds['*'])?.termdb
+		return route && (route[q.embedder] || route['*'])
 	}
 
 	/**

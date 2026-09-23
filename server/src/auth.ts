@@ -11,7 +11,7 @@ export interface AuthInterface {
 	// these open-acces, default methods may be replaced by maySetAuthRoutes()
 	getDsAuth: (req) => any[]
 	getNonsensitiveInfo: (_) => { forbiddenRoutes: string[] }
-	isUserLoggedIn: (req, ds, protectedRoutes) => boolean
+	isUserLoggedIn: (req, ds, protectedRoutes, requireTermdbCred?: boolean) => boolean
 	getRequiredCredForDsEmbedder: (dslabel: string, embedder: string) => any
 	getPayloadFromHeaderAuth: (req, res) => any
 	getHealth: () => any | Promise<any>

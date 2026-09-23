@@ -416,6 +416,97 @@ tape(`auth methods`, async test => {
 	)
 })
 
+tape(`sample-level access without a session`, async test => {
+	test.timeoutAfter(500)
+
+	const serverconfig = {
+		debugmode,
+		dsCredentials: {
+			ds200: {
+				termdb: {
+					'*': {
+						type: 'jwt',
+						secret
+					}
+				}
+			}
+		},
+		cachedir
+	}
+	const genomes = { hg38: { datasets: { ds200: {}, openDs: {} } } }
+	const { authApi } = await appInit(serverconfig, genomes)
+	const ds = { label: 'ds200', cohort: { termdb: { displaySampleIds: true } } }
+	const getReq = (query, path = '/termdb') => ({
+		query: { dslabel: 'ds200', embedder: 'localhost', ...query },
+		path,
+		headers: {},
+		cookies: {},
+		get: () => 'localhost'
+	})
+
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ for: 'getAllSamples' }), ds),
+		false,
+		`should not display sample ids for a string q.for that is listed as protected`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ for: ['getAllSamples'] }), ds),
+		false,
+		`should not display sample ids when q.for is an array`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ for: ['getAllSamples', 'singleSampleData'] }), ds),
+		false,
+		`should not display sample ids when q.for is a multi-value array`
+	)
+	test.equal(
+		authApi.isUserLoggedIn(getReq({ for: ['singleSampleData'] }), ds, ['singleSampleData']),
+		false,
+		`should match an array q.for against the protected routes in isUserLoggedIn()`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ getsamplelist: 1 }), ds),
+		false,
+		`should not display sample ids for a sample-bearing handler that is not selected by q.for`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ embedder: 'a/b' }, '/termdb/chat'), ds),
+		false,
+		`should not display sample ids on /termdb/chat for an embedder with a slash`
+	)
+	test.equal(
+		authApi.isUserLoggedIn(getReq({ for: 'convertSampleId' }), ds, [], true),
+		false,
+		`should require a session for convertSampleId when the dataset has a termdb credential`
+	)
+	test.equal(
+		authApi.isUserLoggedIn(getReq({ dslabel: 'openDs', for: 'convertSampleId' }), { label: 'openDs' }, [], true),
+		true,
+		`should not require a session for convertSampleId on an open-access dataset`
+	)
+	for (const embedder of ['localhost', 'a/b', 'a.b/c/d']) {
+		test.equal(
+			authApi.getRequiredCredForDsEmbedder('ds200', embedder)?.length,
+			1,
+			`should find the wildcard termdb credential for embedder='${embedder}'`
+		)
+	}
+	test.equal(
+		authApi.getRequiredCredForDsEmbedder('openDs', 'a/b'),
+		undefined,
+		`should not find a credential for an open-access dataset`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(
+			{ ...getReq({ dslabel: 'openDs', getsamplelist: 1 }), path: '/termdb' },
+			{ label: 'openDs', cohort: { termdb: { displaySampleIds: true } } }
+		),
+		true,
+		`should still display sample ids for an open-access dataset`
+	)
+	test.end()
+})
+
 tape(`a valid request`, async test => {
 	test.timeoutAfter(500)
 	test.plan(2)

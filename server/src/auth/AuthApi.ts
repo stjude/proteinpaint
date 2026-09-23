@@ -9,6 +9,16 @@ import mm from 'micromatch'
 
 const { isMatch } = mm
 
+// match a client-supplied value against a dsCredentials key, using the same key semantics as
+// Auth.getRequiredCred(): an exact key match or the '*' wildcard always apply, otherwise try a glob.
+// Note that a glob '*' alone does not match values with a '/', such as embedder='a/b', so the
+// wildcard must be checked explicitly to avoid treating a protected dataset as open access.
+function patternMatches(value, pattern) {
+	if (pattern === '*' || value === pattern) return true
+	if (typeof value != 'string' || !value || !pattern) return false
+	return isMatch(value, pattern)
+}
+
 // const authRouteByCredType = {
 // 	basic: '/dslogin',
 // 	jwt: '/jwt-status'
@@ -42,8 +52,11 @@ export class AuthApi implements AuthInterface {
 	canDisplaySampleIds(req, ds) {
 		const displaySampleIds = ds?.cohort?.termdb?.displaySampleIds
 		if (!displaySampleIds) return false
-		// the sample-id-bearing routes require the request to be logged in
-		if (!this.isUserLoggedIn(req, ds, this.#auth.protectedRoutes.samples)) return false
+		// the sample-id-bearing routes require the request to be logged in. This method is only called
+		// by code that returns sample-level data, so fail closed: require a session whenever the dataset has
+		// a termdb credential for this embedder, instead of relying only on a list of known route/q.for names
+		// that a client can avoid (e.g. getsamplelist=1, for[]=getAllSamples)
+		if (!this.isUserLoggedIn(req, ds, this.#auth.protectedRoutes.samples, true)) return false
 		// displaySampleIds may be a boolean or a per-request policy (a function of the request's
 		// clientAuthResult). A truthy non-function value is an unconditional allow; a function must be
 		// evaluated for THIS request's role and fail closed, so a role the dataset denies never leaks
@@ -163,10 +176,10 @@ export class AuthApi implements AuthInterface {
 	getRequiredCredForDsEmbedder(dslabel, embedder) {
 		const requiredCred: any[] = []
 		for (const dslabelPattern in this.#auth.creds) {
-			if (!isMatch(dslabel, dslabelPattern)) continue
+			if (!patternMatches(dslabel, dslabelPattern)) continue
 			for (const routePattern in this.#auth.creds[dslabelPattern]) {
 				for (const embedderHostPattern in this.#auth.creds[dslabelPattern][routePattern]) {
-					if (!isMatch(embedder, embedderHostPattern)) continue
+					if (!patternMatches(embedder, embedderHostPattern)) continue
 					const cred = this.#auth.creds[dslabelPattern][routePattern][embedderHostPattern]
 					requiredCred.push({
 						route: routePattern,
@@ -179,8 +192,12 @@ export class AuthApi implements AuthInterface {
 		return requiredCred.length ? requiredCred : undefined
 	}
 
-	isUserLoggedIn(req, ds, protectedRoutes) {
-		const cred = this.#auth.getRequiredCred(req.query, req.path, protectedRoutes)
+	// requireTermdbCred: if true, also require a session when the dataset has any termdb credential
+	// for the request's embedder, even when the request path/q.for is not in protectedRoutes
+	isUserLoggedIn(req, ds, protectedRoutes, requireTermdbCred = false) {
+		const cred =
+			this.#auth.getRequiredCred(req.query, req.path, protectedRoutes) ||
+			(requireTermdbCred ? this.#auth.getTermdbCred(req.query) : undefined)
 		if (!cred) return true
 		// NOTE: Basic (password) credentials are converted to session token upon log-in,
 		// so that a user does not have to login again for each runproteinpaint() call.
