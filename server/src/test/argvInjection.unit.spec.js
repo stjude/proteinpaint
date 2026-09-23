@@ -39,13 +39,13 @@ const hasSamtools = spawnSync(serverconfig.samtools, ['--version']).status === 0
 const hasTabix = spawnSync(serverconfig.tabix, ['--version']).status === 0
 
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-argv-'))
-const secretText = 'SECRET_' + crypto.randomUUID()
-const secretFile = path.join(tmpdir, 'secret.txt')
-fs.writeFileSync(secretFile, secretText + '\n')
+const leakMarker = 'LEAK_MARKER_' + crypto.randomUUID()
+const leakFile = path.join(tmpdir, 'private.txt')
+fs.writeFileSync(leakFile, leakMarker + '\n')
 
 // payloads from the disclosure, plus variants for other options
 const outFile = path.join(tmpdir, 'written-by-samtools.sam')
-const chrAttacks = [`-o${outFile}`, '-fc', `-cr${secretFile}`, '--help', 'chrNotInGenome']
+const chrAttacks = [`-o${outFile}`, '-fc', `-cr${leakFile}`, '--help', 'chrNotInGenome']
 
 function getGenome(genomefile = 'NA') {
 	return {
@@ -87,12 +87,12 @@ tape('get_fasta() defense in depth with "--"', async test => {
 	test.equal(await utils.get_fasta(g, 'chr1:2-5'), '>chr1:2-5\nCGTA', 'should return sequence from a real fasta')
 
 	// even if a genome declared a chr that looks like an option, '--' keeps samtools from parsing it as one
-	const evil = `-cr${secretFile}`
+	const evil = `-cr${leakFile}`
 	g.chrlookup[evil.toUpperCase()] = { name: evil, len: 10 }
 	try {
 		await utils.get_fasta(g, `${evil}:1-2`)
 	} catch (e) {
-		test.notOk(String(e).includes(secretText), 'should not read the file named in an option-like region')
+		test.notOk(String(e).includes(leakMarker), 'should not read the file named in an option-like region')
 	}
 	test.end()
 })
@@ -103,7 +103,7 @@ tape('/ntseq', async test => {
 	const ok = await send(handler, { genome: 'hg38', coord: 'chr17:10-12' })
 	test.deepEqual(ok, { seq: 'NNN' }, 'should return sequence for a valid coord')
 
-	for (const coord of [`-cr${secretFile}`, `--fai-idx=${tmpdir}/pwn.fai`, 'chr1:1-2 -o/x', 'chrX:1-2', ['chr1:1-2']]) {
+	for (const coord of [`-cr${leakFile}`, `--fai-idx=${tmpdir}/pwn.fai`, 'chr1:1-2 -o/x', 'chrX:1-2', ['chr1:1-2']]) {
 		const r = await send(handler, { genome: 'hg38', coord })
 		test.deepEqual(r, { error: 'cannot get sequence' }, `should reject coord=${JSON.stringify(coord)}`)
 	}
@@ -112,8 +112,8 @@ tape('/ntseq', async test => {
 		const fa = path.join(tmpdir, 'ntseq.fa')
 		fs.writeFileSync(fa, '>chr1\nACGTACGTAC\n')
 		const realHandler = ntseqApi.methods.get.init({ genomes: { hg38: getGenome(fa) } })
-		const leak = await send(realHandler, { genome: 'hg38', coord: `-cr${secretFile}` })
-		test.notOk(JSON.stringify(leak).includes(secretText), 'should not leak file contents through the error message')
+		const leak = await send(realHandler, { genome: 'hg38', coord: `-cr${leakFile}` })
+		test.notOk(JSON.stringify(leak).includes(leakMarker), 'should not leak file contents through the error message')
 		await send(realHandler, { genome: 'hg38', coord: `--fai-idx=${tmpdir}/pwn.fai` })
 		test.notOk(fs.existsSync(`${tmpdir}/pwn.fai`), 'should not write an index to a requested path')
 	} else {
