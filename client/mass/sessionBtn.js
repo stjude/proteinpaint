@@ -485,6 +485,7 @@ class MassSessionBtn {
 			.html('Delete selected sessions')
 			.property('disabled', true)
 			.on('click', async () => {
+				errorDiv.selectAll('*').remove()
 				const inputs = t.table.node().querySelectorAll('input')
 				const sessionIdsDeletedFromServer = []
 				for (const input of inputs) {
@@ -527,14 +528,19 @@ class MassSessionBtn {
 					const deletedIds = sessionIdsDeletedFromServer.filter(id => !failedIds?.includes(id))
 					this.serverCachedSessions = this.serverCachedSessions.filter(id => !deletedIds.includes(id))
 					if (error) {
-						// keep the menu open so that the error is visible, and allow a retry
-						submitBtn.property('disabled', false)
-						sayerror(this.dom.tip.d, `Error deleting server session(s): ${error}`)
+						// keep the menu open so that the error is visible, and allow a retry of only the failed ids,
+						// by removing the rows of deleted sessions while the failed rows remain checked
+						t.trs.filter(d => (d.loc == 'browser' ? !this.savedSessions[d.id] : deletedIds.includes(d.id))).remove()
+						const checkedRows = t.table.node().querySelectorAll('input:checked')
+						submitBtn.property('disabled', !checkedRows.length)
+						sayerror(errorDiv, `Error deleting server session(s): ${error}`)
 						return
 					}
 				}
 				this.dom.tip.hide()
 			})
+
+		const errorDiv = this.dom.tip.d.append('div')
 	}
 
 	showBackBtn() {

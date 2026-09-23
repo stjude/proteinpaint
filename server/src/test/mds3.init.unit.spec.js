@@ -75,6 +75,7 @@ test('\n', t => {
 test('setFile: validates and resolves files', async t => {
 	const originalTpMasterDir = serverconfig.tpmasterdir
 	const tmpdir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pp-setfile-'))
+	const siblingDir = tmpdir + '2'
 	serverconfig.tpmasterdir = tmpdir
 
 	try {
@@ -118,9 +119,44 @@ test('setFile: validates and resolves files', async t => {
 		} catch (e) {
 			t.ok(String(e).includes('No such file or directory'), 'throws for unreadable file')
 		}
+
+		// readable files outside of tpmasterdir, so that a rejection can only come from the path containment check;
+		// the sibling dir name starts with the tpmasterdir name, to detect a string prefix match being used as a containment check
+		await fs.promises.mkdir(siblingDir)
+		const outsideFile = path.join(siblingDir, 'outside.txt')
+		await fs.promises.writeFile(outsideFile, '')
+		const siblingName = path.basename(siblingDir)
+		for (const [file, label] of [
+			[outsideFile, 'absolute sibling-prefix path'],
+			[`${tmpdir}/../${siblingName}/outside.txt`, 'absolute path under tpmasterdir with ../ traversal'],
+			[`../${siblingName}/outside.txt`, 'relative ../ traversal'],
+			[`nested/../../${siblingName}/outside.txt`, 'relative ../ traversal from a subdir']
+		]) {
+			const q = { file }
+			try {
+				await setFile(q, 'testType')
+				t.fail(`setFile should reject ${label}: ${file}`)
+			} catch (e) {
+				t.equal(e, 'testType.file illegal file path', `rejects ${label}`)
+			}
+			t.equal(q.file, file, `does not modify q.file for ${label}`)
+		}
+
+		{
+			serverconfig.tpmasterdir = tmpdir + '/'
+			const q = { file: path.join(tmpdir, 'absolute.txt') }
+			await setFile(q, 'testType')
+			t.equal(
+				q.file,
+				path.join(tmpdir, 'absolute.txt'),
+				'keeps absolute file path when tpmasterdir has a trailing slash'
+			)
+			serverconfig.tpmasterdir = tmpdir
+		}
 	} finally {
 		serverconfig.tpmasterdir = originalTpMasterDir
 		await fs.promises.rm(tmpdir, { recursive: true, force: true })
+		await fs.promises.rm(siblingDir, { recursive: true, force: true })
 		t.end()
 	}
 })
