@@ -504,6 +504,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 					legendItems.push({
 						key: series.seriesId,
 						seriesId: series.seriesId,
+						testID: series.seriesId,
 						text: series.seriesLabel,
 						color: this.term2toColor[series.seriesId].adjusted,
 						isHidden: this.settings.hidden.includes(series.seriesId)
