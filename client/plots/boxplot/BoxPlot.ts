@@ -3,7 +3,7 @@ import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getCombinedTermFilter } from '#filter'
 import { controlsInit } from '#plots/controls.js'
-import { Menu, getMaxLabelWidth, DownloadMenu, getChartTitle } from '#dom'
+import { Menu, getMaxLabelWidth, DownloadMenu, getChartTitle, setDescrStatsByTerm } from '#dom'
 import type { Elem } from '../../types/d3'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { TdbBoxPlotOpts, BoxPlotDom, BoxPlotConfigOpts } from './BoxPlotTypes'
@@ -139,7 +139,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			this.toggleLoadingDiv('block', 'block')
 			const data = await model.getData()
 			if (isErrorResponse(data)) throw new Error(data.error)
-			config.term.q.descrStats = data.descrStats
+			setDescrStatsByTerm([config.term, config.term2], data.descrStats)
 			config.bins = data.bins
 
 			if (!data.charts || !Object.keys(data.charts).length) {

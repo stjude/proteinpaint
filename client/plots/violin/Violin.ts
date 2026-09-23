@@ -2,7 +2,7 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { controlsInit, renderTerm1Label } from '../controls'
 import { getT0T2defaultQ } from '../summaryQ.ts'
 import setViolinRenderer from './violin.renderer'
-import { htmlLegend, Menu } from '#dom'
+import { htmlLegend, Menu, setDescrStatsByTerm } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
 import { isNumericTw } from '#shared/terms.js'
@@ -393,7 +393,7 @@ class ViolinPlot extends PlotBase implements RxComponent{
 			this.toggleLoadingDiv('none', 'none')
 			throw this.data.error
 		}
-		args.tw.q.descrStats = this.data.descrStats
+		setDescrStatsByTerm([this.config.term, this.config.term2], this.data.descrStats)
 		//this.toggleLoadingDiv(this.opts.mode == 'minimal' ? 'none' : '')
 		setTimeout(
 			() => {
