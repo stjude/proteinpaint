@@ -2,7 +2,20 @@ import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import mm from 'micromatch'
 
-const { isMatch } = mm
+const { isMatch: mmIsMatch } = mm
+
+// Express routes requests case-insensitively and ignores a trailing slash (non-strict routing),
+// so auth path checks must do the same, otherwise a request to `/TERMDB/MATRIX` or `/termdb/matrix/`
+// would not match a protected route pattern but would still be handled by the protected route
+export function normalizeReqPath(path: string) {
+	if (typeof path != 'string') return ''
+	const p = path.toLowerCase().replace(/\/+$/, '')
+	return p || (path.startsWith('/') ? '/' : '')
+}
+
+function isMatch(path: string, pattern: string) {
+	return mmIsMatch(path, pattern, { nocase: true })
+}
 
 // This is the "inner" private auth that's wrapped by AuthApi.
 // It hides and protect implementation details from being accidentally
@@ -66,12 +79,13 @@ export class Auth {
 	//
 	getRequiredCred(q, path, _protectedRoutes?: string[]) {
 		if (!q.dslabel) return
+		path = normalizeReqPath(path)
 		const creds = this.creds
 		// faster exact matching, based on known protected routes
 		// if no creds[dslabel], match to wildcard dslabel if specified
 		const ds0 = creds[q.dslabel] || creds['*']
 		if (ds0) {
-			if (path == '/jwt-status' || path == '/demoToken') {
+			if (path == '/jwt-status' || path == '/demotoken') {
 				const route = ds0[q.route] || ds0['termdb'] || ds0['/**']
 				return route && (route[q.embedder] || route['*'])
 			} else if (path == '/dslogin') {
@@ -302,13 +316,14 @@ export class Auth {
 			}
 			// do not overwrite existing tracking object for dslabel
 			if (!sessions[dslabel]) sessions[dslabel] = {}
-			const path = req.path[0] == '/' && !cred.route.startsWith('/') ? req.path.slice(1) : req.path
+			const reqPath = normalizeReqPath(req.path)
+			const path = reqPath[0] == '/' && !cred.route.startsWith('/') ? reqPath.slice(1) : reqPath
 			// signed payload route must match the requested data route
 			if (
 				cred.route === '*' ||
 				isMatch(path, cred.route) ||
-				path == 'authorizedActions' ||
-				path.startsWith(cred.route + '/')
+				path == 'authorizedactions' ||
+				path.startsWith(cred.route.toLowerCase() + '/')
 			) {
 				if (!sessions[dslabel][id]) sessions[dslabel][id] = { ...payload, dslabel, embedder, route: cred.route }
 				return id

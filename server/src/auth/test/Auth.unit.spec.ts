@@ -1,6 +1,6 @@
 import tape from 'tape'
 import jsonwebtoken from 'jsonwebtoken'
-import { Auth } from '#src/auth/Auth.ts'
+import { Auth, normalizeReqPath } from '#src/auth/Auth.ts'
 
 /*************************
  reusable constants and helper functions
@@ -140,6 +140,74 @@ tape('getRequiredCred: uses wildcard dslabel when specific dslabel not found', f
 	const auth = new Auth(creds, {}, {}, { port: 3000 })
 	const result = auth.getRequiredCred({ dslabel: 'anyDs', embedder }, '/termdb/matrix')
 	test.ok(result, 'should match wildcard dslabel (*) when exact dslabel not found')
+	test.end()
+})
+
+tape('normalizeReqPath: lowercases and strips trailing slashes', function (test) {
+	test.timeoutAfter(500)
+	test.deepEqual(
+		['/TERMDB', '/termdb/matrix/', '/Termdb/SampleScatter//', '/', 'termdb/', '', undefined].map(p =>
+			normalizeReqPath(p as any)
+		),
+		['/termdb', '/termdb/matrix', '/termdb/samplescatter', '/', 'termdb', '', ''],
+		'should normalize request paths the way Express non-strict, case-insensitive routing does'
+	)
+	test.end()
+})
+
+// Express routes case-insensitively and ignores a trailing slash, so these paths reach the
+// protected handlers and must not bypass the auth check
+tape('getRequiredCred: matches protected termdb routes regardless of case or trailing slash', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth()
+	for (const path of ['/TERMDB/MATRIX', '/termdb/matrix/', '/Termdb/Matrix//', '/termdb/MATRIX']) {
+		test.ok(auth.getRequiredCred({ dslabel, embedder }, path), `should return a cred for path='${path}'`)
+	}
+	for (const path of ['/TERMDB', '/termdb/']) {
+		test.ok(
+			auth.getRequiredCred({ dslabel, embedder, for: 'getAllSamples' }, path, auth.protectedRoutes.samples),
+			`should return a cred for path='${path}' with for=getAllSamples`
+		)
+	}
+	for (const path of ['/termdb/SampleScatter', '/TERMDB/samplescatter/', '/termdb/sampleScatter']) {
+		test.ok(
+			auth.getRequiredCred({ dslabel, embedder }, path, auth.protectedRoutes.samples),
+			`should return a cred for path='${path}'`
+		)
+	}
+	test.end()
+})
+
+tape('getRequiredCred: matches cred.protectedRoutes regardless of case or trailing slash', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth({ protectedRoutes: ['/termdb/sampleScatter'] })
+	for (const path of ['/termdb/SAMPLESCATTER', '/termdb/samplescatter/']) {
+		test.ok(auth.getRequiredCred({ dslabel, embedder }, path), `should return a cred for path='${path}'`)
+	}
+	test.end()
+})
+
+tape('getRequiredCred: matches burden route regardless of case or trailing slash', function (test) {
+	test.timeoutAfter(500)
+
+	const creds = { [dslabel]: { burden: { [embedder]: makeCred({ route: 'burden' }) } } }
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	for (const path of ['/BURDEN', '/burden/', '/Burden']) {
+		test.ok(auth.getRequiredCred({ dslabel, embedder }, path), `should return a cred for path='${path}'`)
+	}
+	test.end()
+})
+
+tape('getRequiredCred: matches configured route patterns regardless of case or trailing slash', function (test) {
+	test.timeoutAfter(500)
+
+	const creds = { [dslabel]: { '/customRoute': { [embedder]: makeCred({ route: '/customRoute' }) } } }
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	for (const path of ['/CUSTOMROUTE', '/customroute/', '/customRoute']) {
+		test.ok(auth.getRequiredCred({ dslabel, embedder }, path), `should return a cred for path='${path}'`)
+	}
 	test.end()
 })
 
@@ -514,3 +582,20 @@ tape('mayAddSessionFromJwt: adds session from valid bearer jwt', function (test)
 	test.ok(sessions[dslabel]?.[id], 'should add the session to the sessions object')
 	test.end()
 })
+
+tape(
+	'mayAddSessionFromJwt: matches the signed route regardless of request path case or trailing slash',
+	function (test) {
+		test.timeoutAfter(500)
+
+		const auth = makeAuth()
+		const cred = auth.creds[dslabel].termdb[embedder]
+		const payload = { dslabel, embedder, route: 'termdb', iat: time, exp: time + 300, email: 'user@test.com' }
+		const b64token = Buffer.from(jsonwebtoken.sign(payload, secret)).toString('base64')
+		for (const path of ['/TERMDB', '/termdb/MATRIX/', '/authorizedActions']) {
+			const req = { headers: { authorization: `Bearer ${b64token}` }, query: { dslabel, embedder }, path }
+			test.ok(auth.mayAddSessionFromJwt({}, req, cred), `should return a session id for path='${path}'`)
+		}
+		test.end()
+	}
+)
