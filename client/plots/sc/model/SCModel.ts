@@ -92,11 +92,14 @@ export class SCModel {
 	sampleHasSpatial: { [sID: string]: boolean } = {}
 	async hasSpatialImage(sID: string): Promise<boolean> {
 		if (!(sID in this.sampleHasSpatial)) {
-			// only probe datasets that can have spatial images: supportedChartTypes
-			// advertises 'wsi' (per cohort) when ds.queries.w2 exists; without it
-			// the wsiBySample route can only 500, so skip the request entirely
-			const supported = this.state.termdbConfig?.supportedChartTypes || {}
-			if (!Object.values(supported).some((types: any) => types?.includes?.('wsi'))) return false
+			// only probe datasets that can have spatial images: termdbConfig
+			// carries a presence-only queries.w2 marker when ds.queries.w2
+			// exists (termdb.config.ts). Without it the wsiBySample route can
+			// only 500, so skip the request entirely. (Deliberately not the
+			// supportedChartTypes 'wsi' flag — that reflects the chart MENU,
+			// which allowlist datasets like mmrf hide while still serving
+			// spatial images per sample.)
+			if (!this.state.termdbConfig?.queries?.w2) return false
 			let r: any
 			try {
 				r = await dofetch3('termdb/wsiBySample', {
