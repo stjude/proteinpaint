@@ -187,6 +187,16 @@ tape('illegalpath()', test => {
 	test.ok(utils.illegalpath('ab&/cd'), 'ab&/cd bad')
 	test.ok(utils.illegalpath(' ab/cd'), ' ab/cd bad')
 
+	test.ok(utils.illegalpath('ab\tcd'), 'tab bad')
+	test.ok(utils.illegalpath('ab\ncd'), 'newline bad')
+	test.ok(utils.illegalpath('ab\0cd'), 'null byte bad')
+
+	// non-string or empty
+	test.ok(utils.illegalpath(''), 'empty string bad')
+	test.ok(utils.illegalpath(undefined), 'undefined bad')
+	test.ok(utils.illegalpath(['ab/../../cd']), 'array bad')
+	test.ok(utils.illegalpath({ ab: 1 }), 'object bad')
+
 	// <script>
 	test.ok(utils.illegalpath('<script>/cd'), '<script>/cd bad')
 	test.ok(utils.illegalpath('ab/<sCripT>/cd'), 'ab/<sCripT>/cd bad')
@@ -225,6 +235,23 @@ tape('illegalpath()', test => {
 	// must clear whitelistPaths that could affect other unit or integration specs
 	delete serverconfig.whiteListPaths
 
+	test.end()
+})
+
+tape('illegalPathSegment()', test => {
+	test.notOk(utils.illegalPathSegment('abc'), 'abc good')
+	test.notOk(utils.illegalPathSegment('a.b_at_c.org'), 'a.b_at_c.org good')
+	test.notOk(utils.illegalPathSegment('localhost:3000'), 'localhost:3000 good')
+	test.notOk(utils.illegalPathSegment('FI.bam'), 'FI.bam good, file extension is not checked')
+
+	test.ok(utils.illegalPathSegment('.'), '. bad')
+	test.ok(utils.illegalPathSegment('..'), '.. bad')
+	test.ok(utils.illegalPathSegment('ab/cd'), 'ab/cd bad')
+	test.ok(utils.illegalPathSegment('ab\\cd'), 'ab\\cd bad')
+	test.ok(utils.illegalPathSegment('/ab'), '/ab bad')
+	test.ok(utils.illegalPathSegment(''), 'empty string bad')
+	test.ok(utils.illegalPathSegment(undefined), 'undefined bad')
+	test.ok(utils.illegalPathSegment(['ab']), 'array bad')
 	test.end()
 })
 

@@ -1901,11 +1901,13 @@ export async function setFile(q, dtn, fk = 'file') {
 	if (!f) throw `${dtn}.${fk} empty string`
 	if (f.startsWith(serverconfig.tpmasterdir)) {
 		// when the same ds js file is included twice on this pp, the file will already become absolute path
-		if ((utils.illegalpath(f.replace(serverconfig.tpmasterdir + '/', '')), false, false))
+		// path.relative() is robust to a trailing slash in tpmasterdir, and will begin with '..' to be rejected
+		// when f is not actually under tpmasterdir, such as '/tp2/file' with tpmasterdir='/tp'
+		if (utils.illegalpath(path.relative(serverconfig.tpmasterdir, f), false, false))
 			throw `${dtn}.${fk} illegal file path`
 		q[fk] = f
 	} else {
-		if ((utils.illegalpath(f), false, false)) throw `${dtn}.${fk} illegal file path`
+		if (utils.illegalpath(f, false, false)) throw `${dtn}.${fk} illegal file path`
 		q[fk] = path.join(serverconfig.tpmasterdir, f)
 	}
 	await utils.file_is_readable(q[fk])
