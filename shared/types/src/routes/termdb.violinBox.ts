@@ -126,7 +126,7 @@ export type ViolinResponse = {
 	min: number
 	max: number
 	uncomputableValues: { [index: string]: number }[] | null
-	descrStats?: DescrStats
+	descrStats: Record<string, DescrStats>
 }
 
 /** Boxplot response types */
@@ -167,7 +167,7 @@ export type BoxPlotResponse = {
 	charts: {
 		[chartId: string]: BoxPlotChartEntry
 	}
-	descrStats: DescrStats
+	descrStats: Record<string, DescrStats>
 	uncomputableValues: { label: string; value: number }[] | null
 }
 

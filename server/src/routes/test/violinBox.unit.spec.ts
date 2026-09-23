@@ -15,7 +15,8 @@ import {
 	setHiddenPlots,
 	setUncomputableValues,
 	divideValues,
-	expandNumericTermCollection
+	expandNumericTermCollection,
+	getDescrStatsByTerm
 } from '../termdb.violinBox.ts'
 import {
 	mockTerm1$id,
@@ -102,6 +103,36 @@ tape('extractNumericValues: filters non-numeric values', function (test) {
 	]
 	const result = extractNumericValues(samples, mockTw as any)
 	test.deepEqual(result, [5, 3], 'Should only include numeric values')
+	test.end()
+})
+
+tape('getDescrStatsByTerm: calculates stats for both requested terms', function (test) {
+	const numericOverlay = { term: termjson.agedx, $id: mockTerm2$id } as any
+	const samples = Object.values({
+		...mockSamples,
+		5: { [mockTerm1$id]: { value: 20 }, [mockTerm2$id]: { value: 2 } }
+	})
+	const stats = getDescrStatsByTerm(samples, mockTw as any, numericOverlay)
+	test.equal(stats[mockTerm1$id].total.value, 5, 'Should include primary-term statistics')
+	test.equal(stats[mockTerm2$id].total.value, 1, 'Should include numeric-overlay statistics')
+	test.end()
+})
+
+tape('getDescrStatsByTerm: returns empty stats for categorical overlays', function (test) {
+	const stats = getDescrStatsByTerm(Object.values(mockSamples), mockTw as any, mockOverlayTw as any)
+	test.deepEqual(stats[mockTerm2$id], {}, 'Should not calculate statistics from categorical values')
+	test.end()
+})
+
+tape('getDescrStatsByTerm: retains zero-valued numeric overlay data on a log-scaled primary term', function (test) {
+	const numericOverlay = { term: termjson.agedx, $id: mockTerm2$id } as any
+	const samples = [
+		{ [mockTerm1$id]: { value: 1 }, [mockTerm2$id]: { value: 0 } },
+		{ [mockTerm1$id]: { value: 10 }, [mockTerm2$id]: { value: 2 } }
+	]
+	const stats = getDescrStatsByTerm(samples, mockTw as any, numericOverlay, true)
+	test.equal(stats[mockTerm1$id].total.value, 2, 'Should use log-scale filtering for the primary term')
+	test.equal(stats[mockTerm2$id].total.value, 2, 'Should retain zero-valued overlay data')
 	test.end()
 })
 

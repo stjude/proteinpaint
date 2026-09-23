@@ -13,7 +13,6 @@ export class LegendDataMapper {
 		this.config = config
 
 		const isTerm2 = config?.term2
-		const isTerm0 = config?.term0
 
 		if (config.term.term.type != 'termCollection' && config.term.q?.descrStats) {
 			this.legendData.push({
@@ -21,7 +20,7 @@ export class LegendDataMapper {
 				items: this.setDescrStatItems(config.term.q.descrStats)
 			})
 		}
-		if (isTerm2 && isTerm2.q?.descrStats && !isTerm0) {
+		if (isTerm2 && isTerm2.q?.descrStats) {
 			this.legendData.push({
 				label: `Descriptive Statistics: ${config.term2.term.name}`,
 				items: this.setDescrStatItems(isTerm2.q.descrStats)

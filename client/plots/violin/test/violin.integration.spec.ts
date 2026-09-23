@@ -495,32 +495,33 @@ tape('test hide option on label clicking', function (test) {
 		const legendDiv = violin.Inner.dom.legendDiv
 		const violinDiv = violin.Inner.dom.violinDiv
 
-		testHideOption(violin) //test filter on label clicking
+		await testHideOption(violin, violinDiv)
 		await testHiddenValues(violin, legendDiv, violinDiv)
 
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 
-	function testHideOption(violin) {
-		const q = {
-			hiddenValues: { [violin.Inner.data.charts[''].plots[0].label]: 1 },
-			isAtomic: true,
-			type: 'values'
-		}
-		violin.Inner.app.dispatch({
-			type: 'plot_edit',
-			id: violin.Inner.id,
-			config: {
-				term2: {
-					isAtomic: true,
-					id: violin.Inner.config.term2.id,
-					term: violin.Inner.config.term2.term,
-					q: q
-				}
-			}
+	async function testHideOption(violin, violinDiv) {
+		const hiddenPlot = violin.Inner.data.charts[''].plots[0]
+		const labels = await detectLst({
+			elem: violinDiv.node(),
+			selector: '[data-testid="sjpp-violin-label"]',
+			count: 2
 		})
-		test.ok(true, 'label Clicking and Hide option ok!')
+		labels[0].dispatchEvent(new Event('click', { bubbles: true }))
+		const hideOption = await detectOne({
+			elem: violin.Inner.dom.clicktip.dnode,
+			selector: '[data-testid="sjpp-violinLabOpt-hide"]'
+		})
+		hideOption.dispatchEvent(new Event('click', { bubbles: true }))
+
+		await detectLst({ elem: violinDiv.node(), selector: '[data-testid="sjpp-violin-label"]', count: 1 })
+		test.equal(
+			violin.Inner.config.term2.q.hiddenValues[hiddenPlot.label],
+			1,
+			'Hide menu stores the selected plot label in term2.q.hiddenValues'
+		)
 	}
 
 	async function testHiddenValues(violin, legendDiv, violinDiv) {

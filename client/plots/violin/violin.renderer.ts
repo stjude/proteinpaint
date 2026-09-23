@@ -586,9 +586,10 @@ function getLegendGrps(termNum: TermWrapper, self: any) {
 		t2 = self.config.term2,
 		// changed color from #aaa to address Section 508 contrast issue
 		headingStyle = 'color: #555; font-weight: 400'
-	if (self.settings.showStats) addDescriptiveStats(t1, legendGrps, headingStyle, self)
-	if (t2?.term.type === 'float' || t2?.q.mode === 'continuous' || t2?.term.type === 'integer')
-		addDescriptiveStats(t2, legendGrps, headingStyle, self)
+	if (self.settings.showStats) {
+		addDescriptiveStats(t1, legendGrps, headingStyle, self)
+		if (t2?.q.descrStats) addDescriptiveStats(t2, legendGrps, headingStyle, self)
+	}
 
 	addUncomputableValues(
 		t1?.q.mode === 'continuous' && t1?.q.hiddenValues && Object.keys(t1?.q.hiddenValues).length > 0
@@ -621,8 +622,7 @@ function addDescriptiveStats(term: TermWrapper, legendGrps: LegendGroup[], headi
 			}
 		})
 
-		const title =
-			self.config.term2?.term.type === 'float' || self.config.term2?.term.type === 'integer'
+			const title = self.config.term2?.q.descrStats
 				? `Descriptive statistics: ${term.term.name}`
 				: `Descriptive statistics`
 		const name = `<span style="${headingStyle}">${title}</span>`
