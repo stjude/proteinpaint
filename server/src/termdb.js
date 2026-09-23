@@ -154,8 +154,9 @@ async function getSampleCount(q, ds) {
 	throw new Error('no method available to get sample count')
 }
 
-async function getSampleList(req, q, ds) {
-	const canDisplay = authApi.canDisplaySampleIds(req, ds)
+// auth: defaults to the shared authApi, and is injectable so that unit tests can use a protected auth api
+export async function getSampleList(req, q, ds, auth = authApi) {
+	const canDisplay = auth.canDisplaySampleIds(req, ds)
 	// calling maySetMapParent2Children() to get query sample types
 	maySetMapParent2Children(q, ds, q.mapParent2Children)
 	let samples
@@ -163,8 +164,12 @@ async function getSampleList(req, q, ds) {
 		// dataset is sqlite-based
 		samples = await termdbsql.get_samples(q, ds, canDisplay)
 	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
+		// the returned sample ids are the ds sample identifiers, so require a session when the dataset has a
+		// termdb credential; unlike canDisplay, do not require ds.cohort.termdb.displaySampleIds, since an
+		// open-access api-backed ds (e.g. gdc) may not set it
+		if (!auth.isUserLoggedIn(req, ds, [], true)) return []
 		// dataset supplied method. mayAdjustFilter for the same reason as getSampleCount() above
-		authApi.mayAdjustFilter(q, ds, [])
+		auth.mayAdjustFilter(q, ds, [])
 		const temp = await ds.cohort.termdb.filterSamples(q, ds)
 		if (temp) {
 			samples = [...temp].map(sid => {
