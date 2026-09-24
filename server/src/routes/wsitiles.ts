@@ -370,6 +370,24 @@ function init({ genomes }) {
 				// than trivially "matching" itself. Meaningless (and never sent by
 				// the client) across samples, since ids are only unique per h5ad
 				const excludeIds = Array.isArray(q.excludeIds) ? q.excludeIds.map(String) : []
+				// per-type emphasis in the cheap-score comparison (soft: a high weight
+				// counts for more when the type IS present, unlike requiredTypes it
+				// never guarantees presence). One entry per type, default all 1 (no
+				// effect); negative or mismatched-length is rejected rather than
+				// silently ignored, since a caller bug here would silently skew every
+				// score without any error signal otherwise
+				let typeWeights: number[] | undefined
+				if (q.typeWeights !== undefined) {
+					const w = Array.isArray(q.typeWeights) ? q.typeWeights.map(Number) : null
+					if (!w || w.length != C || w.some((v: number) => !Number.isFinite(v) || v < 0)) {
+						res.status(400).send({
+							status: 'error',
+							error: `similar typeWeights must have ${C} non-negative numbers, one per type`
+						})
+						return
+					}
+					typeWeights = w
+				}
 				const int = (v: any, d: number, lo: number, hi: number) =>
 					Math.min(hi, Math.max(lo, Number.isInteger(Number(v)) ? Number(v) : d))
 				const num = (v: any, d: number, lo: number, hi: number) =>
@@ -395,7 +413,8 @@ function init({ genomes }) {
 					// types a candidate must contain at least one cell of, not merely be
 					// weighted toward in the composition score; default none required
 					requiredTypes,
-					excludeIds
+					excludeIds,
+					typeWeights
 				}
 				const out = await run_python('wsi_tile.py', JSON.stringify(job))
 				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim (windows[], or {error})
