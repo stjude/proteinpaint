@@ -372,7 +372,12 @@ function init({ genomes }) {
 					seed: int(q.seed, 0, 0, 2 ** 31),
 					window: num(q.window, 200, 10, 2000),
 					stride: num(q.stride, 100, 5, 2000),
-					topK: int(q.topK, 10, 1, 50)
+					topK: int(q.topK, 10, 1, 50),
+					// how far a candidate's cell count may differ from the query's own
+					// (fraction, default 0.1 = +-10%) before it's dropped, regardless of
+					// how well its composition matches — a bound of 5 (+-500%) still
+					// keeps a caller from disabling the check with an absurd value
+					sizeTolerance: num(q.sizeTolerance, 0.1, 0, 5)
 				}
 				const out = await run_python('wsi_tile.py', JSON.stringify(job))
 				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim (windows[], or {error})
