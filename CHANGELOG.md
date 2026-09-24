@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.211.0
 
 Features:
 - Gene/isoform names carried by a request are validated against the genome gene db in an app middleware, before any route handler can query data with them, locally or against a remote api (gdc). Covers geneVariant (term wrapper, filter tvs, and a dt term tvs via its parentTerm), geneExpression, isoformExpression, pseudobulk and singleCellGeneExpression; the error names the term type and never the rejected name. A dataset whose data declares names outside the gene db opts out with `cohort.termdb.skipGeneNameValidation` (TermdbTest does so for geneExpression, since the hg38-test gene db is a stub)
