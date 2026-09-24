@@ -240,8 +240,10 @@ tape('stripBasepath: removes a matching basepath prefix from the normalized path
 tape('getRequiredCred: matches protected routes under a configured basepath', function (test) {
 	test.timeoutAfter(500)
 
-	const auth = makeAuth({}, { basepath: '/api' })
-	test.equal(auth.basepath, '/api', 'should use the basepath from the serverconfig argument')
+	const auth = makeAuth()
+	test.equal(auth.basepath, '', 'should default to an empty basepath')
+	// set by AuthApi.maySetAuthRoutes() in the server
+	auth.basepath = '/api'
 	for (const path of ['/api/termdb/matrix', '/API/TERMDB/MATRIX/', '/api/termdb/matrix/']) {
 		test.ok(auth.getRequiredCred({ dslabel, embedder }, path), `should return a cred for path='${path}'`)
 	}
@@ -267,7 +269,8 @@ tape('getRequiredCred: matches protected routes under a configured basepath', fu
 			'/customRoute': { [embedder]: makeCred({ route: '/customRoute' }) }
 		}
 	}
-	const auth2 = new Auth(creds, {}, {}, { port: 3000, basepath: '/api' })
+	const auth2 = new Auth(creds, {}, {}, { port: 3000 })
+	auth2.basepath = '/api'
 	for (const path of ['/api/burden', '/API/BURDEN/', '/api/customRoute', '/api/CUSTOMROUTE/']) {
 		test.ok(auth2.getRequiredCred({ dslabel, embedder }, path), `should return a cred for path='${path}'`)
 	}
@@ -649,7 +652,8 @@ tape('mayAddSessionFromJwt: adds session from valid bearer jwt', function (test)
 tape('mayAddSessionFromJwt: matches the signed route under a configured basepath', function (test) {
 	test.timeoutAfter(500)
 
-	const auth = makeAuth({}, { basepath: '/api' })
+	const auth = makeAuth()
+	auth.basepath = '/api'
 	const cred = auth.creds[dslabel].termdb[embedder]
 	const payload = { dslabel, embedder, route: 'termdb', iat: time, exp: time + 300, email: 'user@test.com' }
 	const b64token = Buffer.from(jsonwebtoken.sign(payload, secret)).toString('base64')

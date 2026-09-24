@@ -262,7 +262,8 @@ tape('middleware: returns 401 error for missing session on protected route', fun
 tape('middleware: returns 401 for a protected route under a configured basepath', function (test) {
 	test.timeoutAfter(500)
 
-	const auth = makeAuth({}, { basepath: '/api' })
+	const auth = makeAuth()
+	auth.basepath = '/api'
 	const mockAuthApi = {
 		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
 		mayAdjustFilter: () => {},

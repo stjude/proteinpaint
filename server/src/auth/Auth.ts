@@ -1,7 +1,6 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import mm from 'micromatch'
-import serverconfig from '../serverconfig.js'
 
 const { isMatch: mmIsMatch } = mm
 
@@ -49,8 +48,10 @@ export class Auth {
 		}
 	} = {}
 	sessionTracking: '' | 'jwt-only' = ''
-	// the basepath that data routes are registered under, see stripBasepath()
-	basepath: string = serverconfig.basepath || ''
+	// the basepath that auth and data routes are registered under, see stripBasepath(),
+	// set by AuthApi.maySetAuthRoutes() so that route registration, the middleware forced-open check,
+	// and credential matching all use the same basepath value
+	basepath: string = ''
 
 	// TODO: should create a checker function for each route group that may be protected
 	protectedRoutes = {
@@ -82,9 +83,6 @@ export class Auth {
 		this.creds = creds
 		this.genomes = genomes
 		if (serverconfig.port) this.port = serverconfig.port
-		// the serverconfig argument may be only { validatedCreds } during server launch,
-		// in which case the basepath defaults to the loaded serverconfig.basepath
-		if (typeof serverconfig.basepath == 'string') this.basepath = serverconfig.basepath
 		const { sessionTracking, maxSessionAge } = serverconfig.features || {}
 		if (sessionTracking) this.sessionTracking = sessionTracking
 		if (maxSessionAge) this.maxSessionAge = maxSessionAge
