@@ -200,7 +200,7 @@ async function getSampleData(q, ds) {
 
 	if (dictTerms.length && !Object.keys(samples).length) {
 		// return early if all samples are filtered out by not having matching dictionary term values
-		return { samples, refs: { byTermId, bySampleId: {} } }
+		return { samples, refs: { byTermId, bySampleId: Object.create(null) } }
 	}
 
 	if (geneVariantTws.length) {
@@ -379,7 +379,10 @@ async function getSampleData(q, ds) {
 	setSampleLstData(sampleLstTws, samples, scopedSamples)
 
 	// resolve each id -> display refs via the dataset's id2sampleRefs() (see id2sampleRef())
-	const bySampleId = {}
+	// null-prototype: sid can legitimately be '__proto__' now that samples{} preserves it, and a
+	// plain bySampleId[sid] = ref assignment with an object ref would reassign bySampleId's own
+	// prototype instead of creating a real entry
+	const bySampleId = Object.create(null)
 	for (const sid in samples) {
 		const ref = id2sampleRef(samples[sid]?.sampleId ?? sid, q.ds)
 		if (ref) bySampleId[sid] = ref

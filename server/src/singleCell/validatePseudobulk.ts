@@ -76,7 +76,7 @@ export async function validatePseudobulk(ds: any) {
 					}
 				})
 
-				const validateMethodFile = async (method) => {
+				const validateMethodFile = async method => {
 					co[`${method}Samples`] = [] as any[]
 					const methodFile = path.join(serverconfig.tpmasterdir, member.folder, category + member[`${method}Ext`])
 					co[`${method}File`] = methodFile
@@ -118,23 +118,30 @@ export async function validatePseudobulk(ds: any) {
 	}
 
 	/** Get pseudobulk data for the specified terms and genes, using the specified aggregation method.
-	 * @param param 
-	 *  - terms: Pseudobulk terms. May or maynot include the gene names. 
+	 * @param param
+	 *  - terms: Pseudobulk terms. May or maynot include the gene names.
 	 * 	- dataTypeDetails: {
 	 * 		- genes Optional. An array of gene names to include in the pseudobulk aggregation.
-	 * 		- method: Optional. The aggregation method to use (e.g., 'mean', 'total', 'percent'). 
+	 * 		- method: Optional. The aggregation method to use (e.g., 'mean', 'total', 'percent').
 	 * }
-	 *  - filter: Optional. 
+	 *  - filter: Optional.
 	 * 	- filter0: Optional. An additional filter parameter.
-	 *  - mapParent2Children: Optional. See mayLimitSamples 
-	 *  - sampleTypes: Optional. See mayLimitSamples 
+	 *  - mapParent2Children: Optional. See mayLimitSamples
+	 *  - sampleTypes: Optional. See mayLimitSamples
 	 * @returns An object containing term-to-sample values, and mappings by term ID and by sample ID.
 	 * When dataTypeDetails.genes is supplied, each gene is used as the term ID in term2sample2value.
 	 */
-	pseudobulk.get = async (param: { terms: any[], dataTypeDetails?: { genes?: string[], method?: string }, filter?: any, filter0?: any, mapParent2Children?: boolean, sampleTypes?: any }) => {
+	pseudobulk.get = async (param: {
+		terms: any[]
+		dataTypeDetails?: { genes?: string[]; method?: string }
+		filter?: any
+		filter0?: any
+		mapParent2Children?: boolean
+		sampleTypes?: any
+	}) => {
 		//Set default to mean for most requests
 		const method = param?.dataTypeDetails?.method || 'mean'
-		
+
 		if (!Array.isArray(param.terms)) throw new Error('.terms[] not array')
 		// all terms needs to be by the same HDF5 file! TODO validate and reject otherwise
 		const _t = param.terms[0]?.term
@@ -143,16 +150,20 @@ export async function validatePseudobulk(ds: any) {
 		if (!member) throw new Error('Invalid member.')
 		if (!member.enabledMethods.has(method)) throw new Error(`Invalid method for ${_t.assay}.${_t.memberId}.`)
 		const thisCategory = member?.categories?.[_t.category]
-		if (!thisCategory) throw new Error(`pseudobulk[${_t.assay}]?.[${_t.memberId}]?.categories?.[${_t.category}] missing`)
+		if (!thisCategory)
+			throw new Error(`pseudobulk[${_t.assay}]?.[${_t.memberId}]?.categories?.[${_t.category}] missing`)
 
 		const limitSamples = await mayLimitSamples(param, thisCategory[`${method}Samples`], ds)
 		if (limitSamples?.size == 0) {
 			// Got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
+			return { term2sample2value: new Map(), byTermId: {}, bySampleId: Object.create(null) }
 		}
 
 		// Set up sample IDs and labels
-		const bySampleId = {}
+		// null-prototype: sid is dataset content, not validated against reserved names, and the
+		// values assigned are objects -- bySampleId[sid] = ... would otherwise reassign
+		// bySampleId's own prototype instead of creating a real entry when sid is '__proto__'
+		const bySampleId = Object.create(null)
 		const samples = thisCategory[`${method}Samples`] || []
 		const formatSamples = (samples: string[]) => {
 			for (const sid of samples) {
@@ -182,7 +193,6 @@ export async function validatePseudobulk(ds: any) {
 				}
 			}
 		}
-
 
 		if (geneNames.length === 0) {
 			console.log('No genes to query')

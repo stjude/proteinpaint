@@ -236,6 +236,23 @@ tape(
 	}
 )
 
+tape('getData: refs.bySampleId does not pollute Object.prototype for a sample id of __proto__', async t => {
+	await ensureOpenAuth()
+	const tw = { $id: 'agedx', term: { id: 'agedx', name: 'Age', type: 'float' }, q: { mode: 'continuous' } }
+	const ds = {
+		cohort: { db: null, termdb: { q: { id2sampleName: id => 'Case-' + id } } },
+		// the cached path Copilot's finding traces through: a sample id of '__proto__' now survives
+		// into refs.bySampleId, which must not resolve it through Object.prototype either
+		termid2sample2value: new Map([['agedx', new Map([['__proto__', 42]])]])
+	}
+	const data = await getData({ terms: [tw] }, ds)
+	t.notOk(data.error, 'no error')
+	t.ok(Object.hasOwn(data.refs.bySampleId, '__proto__'), 'stores the sample ref under a real own __proto__ key')
+	t.equal(data.refs.bySampleId['__proto__'].label, 'Case-__proto__', 'the ref is retrievable rather than lost')
+	t.notOk({}.label, 'does not pollute Object.prototype')
+	t.end()
+})
+
 tape('divideTerms: drops role-restricted dict terms via isTermVisible', t => {
 	const visible = { term: { type: 'categorical', id: 'ok' } }
 	const hidden = { term: { type: 'categorical', id: 'blocked' } }

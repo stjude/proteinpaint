@@ -374,11 +374,14 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// Got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
+			return { term2sample2value: new Map(), byTermId: {}, bySampleId: Object.create(null) }
 		}
 
 		// Set up sample IDs and labels
-		const bySampleId = {}
+		// null-prototype: sid is dataset content (q.samples/limitSamples), not validated against
+		// reserved names, and ref is an object -- bySampleId[sid] = ref would otherwise reassign
+		// bySampleId's own prototype instead of creating a real entry when sid is '__proto__'
+		const bySampleId = Object.create(null)
 		const samples = q.samples || []
 		if (limitSamples) {
 			for (const sid of limitSamples) {
@@ -506,10 +509,13 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 	q.get = async (param: TermdbClusterRequestIsoformExpression) => {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
-			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
+			return { term2sample2value: new Map(), byTermId: {}, bySampleId: Object.create(null) }
 		}
 
-		const bySampleId = {}
+		// null-prototype: sid is dataset content (q.samples/limitSamples), not validated against
+		// reserved names, and ref is an object -- bySampleId[sid] = ref would otherwise reassign
+		// bySampleId's own prototype instead of creating a real entry when sid is '__proto__'
+		const bySampleId = Object.create(null)
 		const samples = q.samples || []
 		if (limitSamples) {
 			for (const sid of limitSamples) {
