@@ -12,6 +12,7 @@ Features:
 
 Fixes:
 - Restored violin label menu option to hide individual plots.
+- keep cache_index() url and index paths inside the cache dir
 
 
 ## 2.210.1
