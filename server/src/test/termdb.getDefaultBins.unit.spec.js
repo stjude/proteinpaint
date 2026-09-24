@@ -73,7 +73,7 @@ tape('getDefaultBins rejects a reserved tw.$id before touching the single-cell b
 })
 
 tape(
-	'getDefaultBins rejects a reserved tw.term.sample instead of resolving the outer cache key through Object.prototype',
+	'getDefaultBins safely stores a reserved tw.term.sample without resolving the outer cache key through Object.prototype',
 	async test => {
 		const sample2gene2expressionBins = {}
 		const ds = {
