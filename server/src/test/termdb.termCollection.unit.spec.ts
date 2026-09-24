@@ -53,6 +53,26 @@ tape('resolveTermCollectionFractions() computes one scalar per sample', test => 
 	test.end()
 })
 
+tape('resolveTermCollectionFractions() rejects an empty custom-bin q.lst', test => {
+	const data: any = {
+		samples: { s1: { collection: { value: { a: 2, b: 1, c: 3 } } } },
+		refs: { byTermId: {} }
+	}
+	const tw = fractionTw('discrete')
+	tw.q.lst = []
+	test.throws(
+		() => resolveTermCollectionFractions(data, [tw]),
+		/non-empty q\.lst/,
+		'throws instead of silently treating an empty bins list as "no bins configured"'
+	)
+	test.deepEqual(
+		data.samples.s1.collection,
+		{ value: { a: 2, b: 1, c: 3 } },
+		'the sample is untouched since validation runs before any sample is processed'
+	)
+	test.end()
+})
+
 tape('resolveTermCollectionFractions() bins a discrete fraction', test => {
 	const data: any = {
 		samples: { s1: { collection: { value: { a: 2, b: 1, c: 3 } } } },

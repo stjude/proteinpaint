@@ -141,12 +141,16 @@ export function resolveTermCollectionFractions(
 				if (Number.isFinite(value)) valuesBySample.set(sampleData, value)
 			}
 		}
-		const bins =
+		// an empty array is truthy, but getBin() always returns -1 against it, so treating an
+		// empty bins list as "bins configured" would delete every sample's fraction result below
+		// instead of falling back to unbinned values; require at least one bin to opt into binning
+		const rawBins =
 			tw.q.mode !== 'discrete'
 				? undefined
 				: tw.q.type === 'custom-bin'
 				? tw.q.lst
 				: computeFractionBins(tw.q, [...valuesBySample.values()])
+		const bins = rawBins?.length ? rawBins : undefined
 		if (bins) {
 			data.refs ||= {}
 			data.refs.byTermId ||= {}
@@ -176,8 +180,8 @@ export function resolveTermCollectionFractions(
 function validateFractionTw(tw: any) {
 	assertSafeTermId(tw.$id, 'fraction termCollection')
 	validateTermCollectionFraction(tw.q, tw.term)
-	if (tw.q.mode === 'discrete' && tw.q.type === 'custom-bin' && !Array.isArray(tw.q.lst))
-		throw new Error('custom-bin fraction termCollection requires q.lst[]')
+	if (tw.q.mode === 'discrete' && tw.q.type === 'custom-bin' && !(Array.isArray(tw.q.lst) && tw.q.lst.length))
+		throw new Error('custom-bin fraction termCollection requires a non-empty q.lst[]')
 }
 
 function computeFractionBins(q: any, values: number[]) {
