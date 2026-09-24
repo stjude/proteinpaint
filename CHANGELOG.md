@@ -19,6 +19,7 @@ Fixes:
 - Mass session: harden session file path validation and fix deleting server-saved sessions
 - dofetch3: a request with a too-long URL is converted to POST only if it is a GET; a DELETE or PUT throws instead
 - SQL: parameterize or validate values and table names in constructed sql statements
+- validate request chr, coord and url before they reach samtools/tabix arguments
 
 
 ## 2.210.1
