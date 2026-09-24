@@ -113,6 +113,12 @@ tape('nhood computes squidpy-style neighborhood enrichment over a selection', as
 		out.zscore.flat().every((z: any) => z === null || Number.isFinite(z)),
 		'z-scores finite or null'
 	)
+	t.deepEqual(out.typeCounts.length, 5, 'one composition count per type')
+	t.equal(
+		out.typeCounts.reduce((a: number, b: number) => a + b, 0),
+		760,
+		'typeCounts sums to the selection size'
+	)
 	const again = JSON.parse(await run_python('wsi_tile.py', JSON.stringify(job)))
 	t.deepEqual(again.zscore, out.zscore, 'same seed reproduces the z-scores')
 	t.end()
@@ -140,5 +146,96 @@ tape('nhood reports a zero-variance pair as null without failing', async t => {
 		out.zscore.flat().every((z: any) => z === null),
 		'every z-score is null'
 	)
+	t.end()
+})
+
+tape('similar finds a window as its own best match when searched against itself', async t => {
+	// coarse-to-fine self-check: tile the fixture, take one window's own cells
+	// as the query, then search the same image for it -- the true answer is
+	// exactly that window, so it must come back distance ~0, cheapScore ~1
+	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
+	const allIds = Object.keys(ann.cells)
+	const wide = JSON.parse(
+		await run_python('wsi_tile.py', JSON.stringify({ action: 'nhood', h5ad, ids: allIds, k: 6, perms: 20, seed: 1 }))
+	)
+	const scan = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'similar',
+				h5ad,
+				types: wide.types,
+				typeCounts: wide.typeCounts,
+				count: wide.count,
+				window: 100,
+				stride: 50,
+				topK: 6
+			})
+		)
+	)
+	t.ok(scan.windows.length > 1, 'more than one window scanned the fixture')
+	const chosen = scan.windows[0] // any one real window's own cells become the new query
+	const query = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({ action: 'nhood', h5ad, ids: chosen.ids, k: 6, perms: 200, seed: 1 })
+		)
+	)
+	const selfSearch = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'similar',
+				h5ad,
+				types: query.types,
+				typeCounts: query.typeCounts,
+				count: query.count,
+				zscore: query.zscore,
+				k: 6,
+				perms: 200,
+				seed: 1,
+				window: 100,
+				stride: 50,
+				topK: 6
+			})
+		)
+	)
+	t.deepEqual(selfSearch.types, query.types, 'window result aligned to the query type vocabulary')
+	const best = selfSearch.windows[0]
+	t.ok(best.cheapScore > 0.999, `top match is (near) cosine-identical to the query (got ${best.cheapScore})`)
+	t.ok(best.distance !== null && best.distance < 0.5, `top match has a small rigorous distance (got ${best.distance})`)
+	const overlap = best.ids.filter((id: string) => chosen.ids.includes(id)).length
+	t.equal(overlap, chosen.ids.length, "the winning window is exactly the query's own window")
+	t.end()
+})
+
+tape('similar rejects a query with fewer than two cell types', async t => {
+	const out = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({ action: 'similar', h5ad, types: ['Tumor'], typeCounts: [5], count: [[0]] })
+		)
+	)
+	t.ok(String(out.error).includes('at least 2 query cell types'), 'error names the requirement')
+	t.end()
+})
+
+tape('similar rejects a query vocabulary absent from the target image', async t => {
+	const out = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'similar',
+				h5ad,
+				types: ['Not-A-Type-1', 'Not-A-Type-2'],
+				typeCounts: [3, 3],
+				count: [
+					[0, 3],
+					[3, 0]
+				]
+			})
+		)
+	)
+	t.ok(String(out.error).includes('fewer than 2 cells'), 'error names the requirement')
 	t.end()
 })

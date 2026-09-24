@@ -39,7 +39,7 @@ export const payload: RoutePayload = {
 }
 
 // one endpoint, `action` selects meta/tile/boundaries/annotations/genecounts/
-// genenames/nhood; z/x/y only for tile
+// genenames/nhood/similar; z/x/y only for tile
 export const api: RouteApi = {
 	endpoint: `wsitiles/:action/:z?/:x?/:y?`,
 	methods: { get: payload, post: payload }
@@ -306,6 +306,76 @@ function init({ genomes }) {
 				}
 				const out = await run_python('wsi_tile.py', JSON.stringify(job))
 				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim
+				return
+			}
+
+			if (req.params.action == 'similar') {
+				// find windows of THIS slide's h5ad that resemble a region of ANOTHER
+				// slide: the request addresses the TARGET slide/sample the normal way
+				// (genome/dslabel/sample_id/wsimage or ?slide=) and ?file= is the
+				// target's own consolidated .h5ad, scoped exactly like nhood/annotations —
+				// only the query's SIGNATURE travels in the body (types/typeCounts/count
+				// from an earlier /nhood run on the source slide, +optional zscore), never
+				// a path to the source's own h5ad, so this route only ever reads one file
+				const file = String(q.file || '')
+				if (!file.toLowerCase().endsWith('.h5ad')) {
+					res.status(400).send({ status: 'error', error: 'similar file must be a .h5ad' })
+					return
+				}
+				const full = path.resolve(serverconfig.tpmasterdir, file)
+				if (!full.startsWith(companionBase + path.sep)) {
+					res.status(400).send({ status: 'error', error: 'similar path escapes the slide folder' })
+					return
+				}
+				const types = Array.isArray(q.types) ? q.types.map(String) : []
+				const typeCounts = Array.isArray(q.typeCounts) ? q.typeCounts.map(Number) : []
+				const count = Array.isArray(q.count) ? q.count : []
+				const C = types.length
+				const shapeOk =
+					C >= 2 &&
+					typeCounts.length == C &&
+					typeCounts.every((v: number) => Number.isFinite(v)) &&
+					count.length == C &&
+					count.every((row: any) => Array.isArray(row) && row.length == C && row.every(Number.isFinite))
+				if (!shapeOk) {
+					res.status(400).send({
+						status: 'error',
+						error: 'similar needs types/typeCounts/count from a prior nhood result (>=2 types, matching shapes)'
+					})
+					return
+				}
+				let zscore: any = undefined
+				if (q.zscore !== undefined) {
+					const zOk =
+						Array.isArray(q.zscore) &&
+						q.zscore.length == C &&
+						q.zscore.every((row: any) => Array.isArray(row) && row.length == C)
+					if (!zOk) {
+						res.status(400).send({ status: 'error', error: 'similar zscore must be a C x C matrix matching types' })
+						return
+					}
+					zscore = q.zscore
+				}
+				const int = (v: any, d: number, lo: number, hi: number) =>
+					Math.min(hi, Math.max(lo, Number.isInteger(Number(v)) ? Number(v) : d))
+				const num = (v: any, d: number, lo: number, hi: number) =>
+					Math.min(hi, Math.max(lo, Number.isFinite(Number(v)) ? Number(v) : d))
+				const job = {
+					action: 'similar',
+					h5ad: full,
+					types,
+					typeCounts,
+					count,
+					zscore,
+					k: int(q.k, 6, 1, 30),
+					perms: int(q.perms, 1000, 10, 5000),
+					seed: int(q.seed, 0, 0, 2 ** 31),
+					window: num(q.window, 200, 10, 2000),
+					stride: num(q.stride, 100, 5, 2000),
+					topK: int(q.topK, 10, 1, 50)
+				}
+				const out = await run_python('wsi_tile.py', JSON.stringify(job))
+				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim (windows[], or {error})
 				return
 			}
 
