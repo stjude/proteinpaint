@@ -12,6 +12,9 @@ init_sampletable()
 	always return list of samples, does not return summaries
 	mlst can be mixture of data types, doesn't matter
 
+getSamples()
+	query the samples of mlst[] without rendering; init_sampletable() = getSamples() + displaySampleTable()
+
 displaySampleTable()
 	call this function to render one or multiple samples
 	calls make_singleSampleTable() or renderTable()
@@ -48,6 +51,22 @@ export async function init_sampletable(arg) {
 		.style('font-size', '1.25em')
 		.style('font-weight', 'bold')
 
+	try {
+		const samples = await getSamples(arg)
+		await displaySampleTable(samples, arg)
+		wait.remove()
+	} catch (e) {
+		wait.text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+/*
+query the list of samples carrying the variants of arg.mlst[] via variant2samples.get()
+also used by the svfusion breakpoint chart of itemtable.js, which limits the samples to the selected
+breakpoint before rendering them with displaySampleTable()
+*/
+export async function getSamples(arg) {
 	// may not be used!
 	//terms from sunburst ring
 	// Note: in ordered to keep term-values related to sunburst immuatable, these term names are
@@ -55,20 +74,9 @@ export async function init_sampletable(arg) {
 	arg.tid2value_orig = new Set()
 	if (arg.tid2value) Object.keys(arg.tid2value).forEach(arg.tid2value_orig.add, arg.tid2value_orig)
 
-	try {
-		arg.querytype = arg.tk.mds.variant2samples.type_samples
-		/* samples may already be retrieved by the caller, e.g. the svfusion breakpoint chooser that
-		must group samples by breakpoint before anything is rendered; do not query for them twice */
-		const samples = arg.preloadedSamples || (await arg.tk.mds.variant2samples.get(arg)).samples // list of samples
-		/* the cache is only good for the render it was made for; drop it so that calling this
-		again on the same arg[], e.g. after a filter change, queries the server again */
-		delete arg.preloadedSamples
-		await displaySampleTable(samples, arg)
-		wait.remove()
-	} catch (e) {
-		wait.text('Error: ' + (e.message || e))
-		if (e.stack) console.log(e.stack)
-	}
+	arg.querytype = arg.tk.mds.variant2samples.type_samples
+	const out = await arg.tk.mds.variant2samples.get(arg)
+	return out.samples // list of samples
 }
 
 export async function displaySampleTable(samples, args) {

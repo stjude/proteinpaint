@@ -1,6 +1,6 @@
 import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv, dtitd, bplen, dt2label } from '#shared/common.js'
-import { init_sampletable, displaySampleTable } from './sampletable'
-import { appear, renderTable, table2col, makeSsmLink } from '#dom'
+import { init_sampletable, getSamples, displaySampleTable } from './sampletable'
+import { appear, renderTable, table2col, makeSsmLink, isoformPairRangeSelect } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 
 /*
@@ -34,6 +34,8 @@ itemtable
 			table_snvindel_mayInsertHtmlSections
 			table_snvindel_mayInsertLD
 		table_svfusion
+			makeBreakpointChart
+				getGeneModels
 	itemtable_multiItems
 mayMoveTipDiv2left
 add_csqButton
@@ -108,9 +110,9 @@ export async function itemtable_oneItem(arg) {
 		if (m.occurrence) {
 			// has valid occurrence; display samples carrying this variant
 			if (arg.svfusionSampleTable) {
-				/* this fusion event has multiple breakpoints on the partner gene, and table_svfusion()
-				has taken over rendering of the sample table, as it must be re-rendered on selecting a
-				breakpoint */
+				/* this sv/fusion event breaks at multiple positions of the partner gene, and the breakpoint
+				chart of table_svfusion() has taken over rendering of the sample table, as the table is
+				limited to the selected breakpoint and re-rendered on selecting another */
 				await arg.svfusionSampleTable()
 			} else {
 				await init_sampletable(arg)
@@ -499,11 +501,7 @@ function add_csqButton(m, tk, td, table) {
 async function table_svfusion(arg, table) {
 	// display one svfusion event
 	const m = arg.mlst[0]
-
-	/* m.pairlst pins down the breakend on the gene in view, but events are aggregated by the NAME of
-	the partner gene, thus samples of one m can break at different positions of the partner gene.
-	retrieve sample-level breakpoints so that they can be shown separately */
-	const groupsPromise = getBreakpointGroups(arg, m)
+	if (!m.pairlst?.[0]) throw '.pairlst[] missing'
 
 	// svgraph in 1st row
 	const graphDiv = table.scrollDiv.insert('div', ':first-child') // insert to top
@@ -514,172 +512,163 @@ async function table_svfusion(arg, table) {
 		c1.text('Data type')
 		c2.text(mclass[m.class].label)
 	}
-	const [breakpointLabel, breakpointCell] = table.addRow()
-	breakpointLabel.text('Break points')
+	// todo: support chimeric read fraction on each break end
+	const [c1, c2] = table.addRow()
+	c1.text('Break points')
 
-	/* do not hold the fusion structure back for groupsPromise, which queries the server:
-	m.pairlst already describes a breakpoint of this event, so render it right away.
-	only the minority of events that break at multiple positions of the partner gene need more,
-	and those are re-rendered by the chooser below */
-	const graphPromise = makeSvgraph(m, graphDiv.append('div'), arg.block)
-	for (const pair of m.pairlst) {
-		printSvPair(pair, breakpointCell.append('div'))
-	}
-
-	const groups = await groupsPromise
-
-	if (groups.length > 1) {
-		/* events break at multiple positions of the partner gene; let user choose which one to show.
-		the chooser refills graphDiv and breakpointCell for the selected breakpoint.
-		do not wait for graphPromise here, or the chooser would be held back by a graph that is
-		thrown away on the next line; that render simply lands in a detached <div> */
-		graphDiv.selectAll('*').remove()
-		breakpointCell.selectAll('*').remove()
-		makeBreakpointChooser(arg, m, groups, graphDiv, breakpointCell)
+	// m.pairlstIdx is the side of the pair on the gene in view, thus the partner is the other side
+	const partnerSide = m.pairlstIdx == 0 ? 'b' : 'a'
+	if (m.pairlst[0][partnerSide]?.breakpoints) {
+		/* the samples of this event break at multiple positions of the partner gene (see
+		mayUpdatePairlst() in mds3.load.js); chart them and let user pick which to show */
+		await makeBreakpointChart(arg, m, partnerSide, graphDiv, c2)
 	} else {
-		// single breakpoint or no sample-level breakpoints; m.pairlst is shown as-is.
-		// callers such as mayMoveTipDiv2left() measure the rendered table, so wait for it
-		await graphPromise
-	}
-}
-
-/*
-an aggregated sv/fusion event is keyed by the breakend on the gene in view plus the NAME of the
-partner gene, thus its samples can break at different positions of the partner gene, while
-m.pairlst only describes whichever sample the server read first
-
-query the samples of this event, each carrying both breakends of its own event(s) in _pairArray[],
-and group the events by the breakend on the partner gene
-
-returns []
-	when the events cannot be grouped by breakpoint, and m.pairlst is to be used as before
-returns [ {key, partner, pairlst, count, samples[]}, ... ], in descending count
-	.partner is the breakend on the partner gene, by which the group is defined
-	.pairlst describes this breakpoint, in the same shape as m.pairlst
-	.count is the number of events breaking here, and all counts add up to m.occurrence
-	.samples[] are the samples supporting it, with _pairArray[] limited to this breakpoint.
-	as a sample can have events at multiple breakpoints, it can be in multiple groups, and a group
-	can have fewer samples than events
-*/
-async function getBreakpointGroups(arg, m) {
-	if (arg.mlst.length != 1) return [] // guard. only one event is displayed here
-	if (!arg.tk.mds.variant2samples || !m.occurrence) return [] // no sample-level data
-	if (!Number.isInteger(m.pairlstIdx)) return [] // do not know which breakend is on the gene in view
-
-	try {
-		arg.querytype = arg.tk.mds.variant2samples.type_samples
-		const out = await arg.tk.mds.variant2samples.get(arg)
-		// cache for init_sampletable() so that the same samples are not queried twice,
-		// no matter if the events can be grouped by breakpoint
-		arg.preloadedSamples = out.samples
-	} catch (e) {
-		console.log('cannot retrieve sample-level fusion breakpoints: ' + (e.message || e))
-		return []
-	}
-
-	const key2group = new Map()
-	for (const s of arg.preloadedSamples) {
-		if (!Array.isArray(s._pairArray)) return [] // dataset does not supply sample-level breakpoints
-		for (const pairlst of s._pairArray) {
-			if (pairlst?.length != 1) return [] // todo support events joining more than 2 genes
-			// the breakend that is not on the gene in view
-			const partner = m.pairlstIdx == 0 ? pairlst[0].b : pairlst[0].a
-			if (!Number.isInteger(partner?.pos)) return [] // no coordinate to group by
-			const key = partner.chr + '.' + partner.pos
-			if (!key2group.has(key)) key2group.set(key, { key, partner, pairlst, count: 0, samples: [] })
-			const g = key2group.get(key)
-			g.count++
-			/* a sample with multiple events can be in multiple groups; keep only the events of this
-			group on it, so that the sample table prints the matching breakpoints for it.
-			as all events here are of the same m, ssm_id_lst is trimmed to the same length */
-			const last = g.samples[g.samples.length - 1]
-			if (last && last.sample_id === s.sample_id) {
-				last._pairArray.push(pairlst)
-				last.ssm_id_lst = s.ssm_id_lst?.slice(0, last._pairArray.length)
-			} else {
-				g.samples.push(Object.assign({}, s, { _pairArray: [pairlst], ssm_id_lst: s.ssm_id_lst?.slice(0, 1) }))
-			}
+		await makeSvgraph(m, graphDiv, arg.block)
+		for (const pair of m.pairlst) {
+			printSvPair(pair, c2.append('div'))
 		}
 	}
-	if (key2group.size < 2) return [] // all events break at the same position of the partner gene
-	return [...key2group.values()].sort((i, j) => j.count - i.count)
 }
 
 /*
-show a button per breakpoint of the partner gene, plus one for all events of this m
-clicking a button shows the fusion structure and break points of that breakpoint, and limits the
-sample table to the samples supporting it
-the biggest breakpoint is selected by default
+chart the breakpoints of the partner gene, linked to the breakpoint of the gene in view, over the isoform
+structures of both genes, via isoformPairRangeSelect(). the user selects a range on the partner gene there
+(by dragging, typing coordinates, or clicking a link) and applies it; then:
+- the fusion structure of the selected breakpoint is drawn (of the most frequent one, when several are selected)
+- the break points in range are listed in breakpointCell
+- the sample table is limited to the samples breaking within the range
+clearing the range shows all breakpoints and samples. the most frequent breakpoint is selected to begin with
+
+m.pairlst[0][partnerSide].breakpoints[] is required; see mayUpdatePairlst() in mds3.load.js
 */
-function makeBreakpointChooser(arg, m, groups, div, breakpointCell) {
-	const btnRow = div.append('div').style('margin', '10px')
-	const graphDiv = div.append('div')
+async function makeBreakpointChart(arg, m, partnerSide, div, breakpointCell) {
+	const selfSide = partnerSide == 'a' ? 'b' : 'a'
+	const self = m.pairlst[0][selfSide] // point on the gene in view
+	const partner = m.pairlst[0][partnerSide]
+	const breakpoints = partner.breakpoints
 
-	/* take the samples cached by getBreakpointGroups() off arg[] and hold them here, for the
-	"all events" button. leaving them on arg[] would let a later init_sampletable(arg) reuse a
-	stale list, e.g. after the user changes a filter */
-	const allSamples = arg.preloadedSamples
-	delete arg.preloadedSamples
+	const chartDiv = div.append('div').attr('data-testid', 'sjpp-mds3tk-svfusionBreakpointChart').style('margin', '10px')
+	const svgraphDiv = div.append('div')
 
-	let sampleTableDiv // holder of the sample table; created by arg.svfusionSampleTable() below
-	let selected // the group in display; undefined to show all events of this m
+	// the breakpoint of the gene in view can be intergenic and carry no name; the gene in view is then used
+	const selfGene = self.name || arg.block.usegm?.name
+	/* one isoform per gene, over which the breakpoints are charted: the isoform in view for the gene in
+	view, and the default isoform of the partner. If using all isoforms of a gene the tooltip would be too 
+	tall to be usable, e.g. 50 rows for TP53 */
+	const [selfGm, partnerGm] = await Promise.all([
+		getGeneModels(arg.block.genome, selfGene, arg.block.usegm?.isoform),
+		getGeneModels(arg.block.genome, partner.name)
+	])
+
+	const api = isoformPairRangeSelect({
+		holder: chartDiv,
+		self: { gene: selfGene || self.chr, chr: self.chr, allgm: selfGm },
+		partner: { gene: partner.name || partner.chr, chr: partner.chr, allgm: partnerGm },
+		links: breakpoints.map(b => ({ selfPos: self.pos, partnerPos: b.pos, samplecount: b.samplecount })),
+		// a fusion transcript is read on the exons; an sv on the genome. same as the breakpoint filter ui
+		mode: m.dt == dtfusionrna ? 'rna' : 'genomic',
+		// room for an ensembl isoform name and the locus of a zoomed track, which the default width clips
+		labelWidth: 140,
+		// a sample with events at two partner breakpoints is counted at both
+		samplesAreUpperBound: true,
+		callback: range => select(range)
+	})
+
+	let selected // {chr,start,stop} range on the partner gene in display; null for all breakpoints
 	let latest = 0 // increments on each selection, so that a slow render does not overwrite a newer one
-	let renderedToken = -1 // the selection already painted into sampleTableDiv
-	const buttons = [] // {btn, group}, where group is undefined for the "all events" button
+	// samples of this event, and the holder of their table; both are set by arg.svfusionSampleTable() below
+	let allSamples, sampleTableDiv
 
-	async function select(group) {
+	// pair of breakpoints for one partner breakpoint, in the same shape as m.pairlst[0]
+	function makePair(b) {
+		const pair = {}
+		pair[selfSide] = self
+		pair[partnerSide] = { chr: b.chr, pos: b.pos, strand: b.strand, name: partner.name }
+		return pair
+	}
+
+	async function select(range) {
 		const token = ++latest
-		selected = group
+		selected = range
 		try {
-			for (const b of buttons) {
-				const inuse = b.group == group
-				b.btn.style('background-color', inuse ? '#ededed' : 'white').style('font-weight', inuse ? 'bold' : 'normal')
-			}
+			// breakpoints[] are all on the partner chr, the chr of the range
+			const inRange = range ? breakpoints.filter(b => b.pos >= range.start && b.pos <= range.stop) : breakpoints
 
-			// break points of the selected breakpoint, or of all of them
 			breakpointCell.selectAll('*').remove()
-			for (const g of group ? [group] : groups) {
-				const div = breakpointCell.append('div')
-				printSvPair(g.pairlst[0], div)
-				if (!group) {
-					// tell the breakpoints apart when all are listed
-					div
-						.append('span')
-						.style('margin-left', '5px')
+			if (!inRange.length)
+				breakpointCell.append('div').style('opacity', 0.6).text('No breakpoint in the selected range')
+			for (const b of inRange) {
+				const d = breakpointCell.append('div')
+				printSvPair(makePair(b), d)
+				d.append('span')
+					.style('margin-left', '5px')
+					.style('opacity', 0.6)
+					.text('n=' + b.samplecount)
+			}
+
+			svgraphDiv.selectAll('*').remove()
+			if (inRange.length) {
+				if (inRange.length > 1) {
+					// the fusion structure is of one pair of breakpoints; breakpoints[] is sorted by count
+					svgraphDiv
+						.append('div')
+						.style('margin', '0px 10px')
 						.style('opacity', 0.6)
-						.text('n=' + g.count)
+						.text(
+							`Fusion structure of the most frequent of ${
+								range ? 'the ' + inRange.length + ' selected' : 'all'
+							} breakpoints`
+						)
 				}
-			}
-
-			graphDiv.selectAll('*').remove()
-			if (group) {
-				// makeSvgraph() uses m.pairlst; supply the pairlst of this breakpoint instead.
 				// render into a new <div> so that the graph is wiped out on selecting another breakpoint
-				await makeSvgraph(Object.assign({}, m, { pairlst: group.pairlst }), graphDiv.append('div'), arg.block)
+				await makeSvgraph(
+					Object.assign({}, m, { pairlst: [makePair(inRange[0])] }),
+					svgraphDiv.append('div'),
+					arg.block
+				)
 			}
 
-			await renderSampleTable(group, token)
+			await renderSampleTable(token)
 		} catch (e) {
-			/* nothing awaits a button click; report in place as init_sampletable() does, rather
-			than leaving a half-drawn tip and an unhandled rejection.
-			renderSampleTable() reports its own errors and does not throw here */
+			// nothing awaits a selection made in the chart; report in place rather than leaving an unhandled rejection
 			if (token == latest) breakpointCell.text('Error: ' + (e.message || e))
 			if (e.stack) console.log(e.stack)
 		}
 	}
 
-	async function renderSampleTable(group, token) {
-		if (!sampleTableDiv) return // sample table is not yet created
+	async function renderSampleTable(token) {
+		if (!sampleTableDiv || !allSamples) return // samples are not yet loaded; rendered when they are
 		if (token != latest) return // another breakpoint is selected in the meantime; its render wins
-		/* select() also calls this, and gets through once svfusionSampleTable() has made
-		sampleTableDiv; without this the first selection would be painted twice */
-		if (token == renderedToken) return
-		renderedToken = token
 		sampleTableDiv.selectAll('*').remove()
+		/* limit to samples with an event breaking in the selected range, and each such sample to its events in
+		range, so its row prints only the matching breakpoints. a sample carries its events in _pairArray[],
+		aligned with ssm_id_lst[] (see combineSamplesById() in mds3.variant2samples.js) */
+		let samples = allSamples
+		if (selected) {
+			samples = []
+			for (const s of allSamples) {
+				const keep = [] // indices of the events in range
+				s._pairArray?.forEach((pairlst, i) => {
+					const p = pairlst?.[0]?.[partnerSide]
+					if (p?.chr == selected.chr && p.pos >= selected.start && p.pos <= selected.stop) keep.push(i)
+				})
+				if (keep.length)
+					samples.push(
+						Object.assign({}, s, {
+							_pairArray: keep.map(i => s._pairArray[i]),
+							ssm_id_lst: s.ssm_id_lst?.filter((_, i) => keep.includes(i))
+						})
+					)
+			}
+		}
+		if (!samples.length) {
+			sampleTableDiv.append('div').style('margin', '10px').style('opacity', 0.6).text('No sample')
+			return
+		}
 		try {
 			await displaySampleTable(
-				group ? group.samples : allSamples,
-				// singleSampleDiv is dropped so that a one-sample group is printed in sampleTableDiv
+				samples,
+				// singleSampleDiv is dropped so that a single sample of the selection is printed in sampleTableDiv
 				Object.assign({}, arg, { div: sampleTableDiv, singleSampleDiv: null })
 			)
 		} catch (e) {
@@ -689,37 +678,46 @@ function makeBreakpointChooser(arg, m, groups, div, breakpointCell) {
 		}
 	}
 
-	{
-		// m.occurrence counts events, as does the count of each group
-		const btn = addBreakpointBtn(btnRow, `All events (n=${m.occurrence})`)
-		buttons.push({ btn, group: undefined })
-		btn.on('click', () => select(undefined))
-	}
-	for (const g of groups) {
-		const btn = addBreakpointBtn(
-			btnRow,
-			`${g.partner.name ? g.partner.name + ' ' : ''}${g.partner.chr}:${g.partner.pos + 1} (n=${g.count})`
-		)
-		buttons.push({ btn, group: g })
-		btn.on('click', () => select(g))
-	}
-	// groups are sorted, show the biggest breakpoint by default
-	const firstSelect = select(groups[0])
-
-	/* called by itemtable_oneItem() in place of init_sampletable(), as the sample table is
-	re-rendered on selecting a breakpoint.
-	only the table is rendered here, as the graph of the default selection is already on its way */
+	/* called by itemtable_oneItem() in place of init_sampletable(), as the sample table is limited to the
+	selected breakpoint and re-rendered on selecting another */
 	arg.svfusionSampleTable = async () => {
 		sampleTableDiv = arg.div.append('div')
 		const wait = sampleTableDiv.append('div').text('Loading...').style('padding', '10px').style('color', '#8AB1D4')
-		await firstSelect
-		wait.remove()
-		await renderSampleTable(selected, latest)
+		try {
+			allSamples = await getSamples(arg)
+			wait.remove()
+			await renderSampleTable(latest)
+		} catch (e) {
+			wait.text('Error: ' + (e.message || e))
+			if (e.stack) console.log(e.stack)
+		}
 	}
+
+	// begin with the most frequent breakpoint; breakpoints[] is sorted by count
+	const mostFreqBP = { chr: partner.chr, start: breakpoints[0].pos, stop: breakpoints[0].pos }
+	api?.setRange(mostFreqBP)
+	await select(mostFreqBP)
 }
 
-function addBreakpointBtn(div, text) {
-	return div.append('button').style('margin-right', '5px').style('padding', '3px 8px').text(text)
+/*
+gene models of a gene by name, for charting breakpoints over its isoform. returns the preferred isoform when
+given and found, else the default isoform(s), else all models of the gene. none when the name is missing or
+unknown, so that the chart still draws the breakpoints on their own
+*/
+async function getGeneModels(genome, gene, preferredIsoform) {
+	if (!gene) return []
+	try {
+		const data = await dofetch3('genelookup', { body: { genome: genome.name, input: gene, deep: 1 } })
+		if (data.error) throw data.error
+		const gmlst = data.gmlst || []
+		const preferred = gmlst.filter(gm => gm.isoform == preferredIsoform)
+		if (preferred.length) return preferred
+		const defaults = gmlst.filter(gm => gm.isdefault)
+		return defaults.length ? defaults : gmlst
+	} catch (e) {
+		console.warn(`no gene model for ${gene}: ${e.message || e}`)
+		return []
+	}
 }
 
 export function table_cnv(arg, table) {
@@ -758,14 +756,15 @@ export function cnv2str(m, tk) {
 
 export function printSvPair(pair, div) {
 	if (pair.a.name) div.append('span').text(pair.a.name).style('font-weight', 'bold').style('margin-right', '5px')
-	div
-		.append('span')
-		.text(
-			`${pair.a.chr}:${pair.a.pos + 1} ${pair.a.strand == '+' ? 'forward' : 'reverse'} > ${pair.b.chr}:${
-				pair.b.pos + 1
-			} ${pair.b.strand == '+' ? 'forward' : 'reverse'}`
-		)
+	div.append('span').text(`${svPoint2str(pair.a)} > ${svPoint2str(pair.b)}`)
 	if (pair.b.name) div.append('span').text(pair.b.name).style('font-weight', 'bold').style('margin-left', '5px')
+}
+
+/* a point of a sv/fusion pair, at 1-based position. the partner point of an aggregated event may hold multiple
+breakpoints (see mayUpdatePairlst() in mds3.load.js), which are charted by table_svfusion() instead */
+function svPoint2str(p) {
+	if (p.breakpoints) return `${p.chr} ${p.breakpoints.length} breakpoints`
+	return `${p.chr}:${p.pos + 1} ${p.strand == '+' ? 'forward' : 'reverse'}`
 }
 
 async function makeSvgraph(m, div, block) {
