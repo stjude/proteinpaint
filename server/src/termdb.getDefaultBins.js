@@ -3,6 +3,7 @@ import initBinConfig from '#shared/termdb.initbinconfig.js'
 import { maySetMapParent2Children } from './termdb.matrix.js'
 import { getSingleCellCellValues } from './singleCell/matrixData.ts'
 import { mayLimitSamples } from './mds3.filter.js'
+import { resolveTermId } from './termdb.termCollection.ts'
 
 // TODO convert to route
 
@@ -24,6 +25,8 @@ export async function trigger_getDefaultBins(q, ds, res) {
 	let max = -Infinity
 	let binsCache // fine to cache bins for scrna genes, but not for cohort level data that's subject to filtering
 	try {
+		// resolve + freeze, not just validate: see the comment on resolveTermId() in termdb.termCollection.ts
+		tw.$id = resolveTermId(tw.$id)
 		if (ds.termid2sample2value?.has(tw.term.id)) {
 			// term data is cached
 			// use the cached data to compute bins
@@ -37,9 +40,23 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			}
 		} else if (tw.term.type == SINGLECELL_GENE_EXPRESSION) {
 			if (!ds.queries?.singleCell?.geneExpression) throw 'term type not supported by this dataset'
-			binsCache = ds.queries.singleCell.geneExpression.sample2gene2expressionBins[tw.term.sample]
-			if (!binsCache) binsCache = ds.queries.singleCell.geneExpression.sample2gene2expressionBins[tw.term.sample] = {}
-			else if (binsCache[tw.$id]) return res.send(binsCache[tw.$id])
+			// Object.hasOwn (not a truthy read) on the outer sample2gene2expressionBins map:
+			// a sample name of '__proto__' would otherwise make the read resolve to the real,
+			// shared Object.prototype instead of undefined, and every write below -- even one
+			// keyed by an innocuous tw.$id -- would then land on that same global object.
+			const sample2bins = ds.queries.singleCell.geneExpression.sample2gene2expressionBins
+			if (!Object.hasOwn(sample2bins, tw.term.sample)) {
+				binsCache = {}
+				Object.defineProperty(sample2bins, tw.term.sample, {
+					value: binsCache,
+					enumerable: true,
+					configurable: true,
+					writable: true
+				})
+			} else {
+				binsCache = sample2bins[tw.term.sample]
+				if (Object.hasOwn(binsCache, tw.$id)) return res.send(binsCache[tw.$id])
+			}
 			const data = await ds.queries.singleCell.geneExpression.get(q, tw.term.sample, tw.term.gene)
 			for (const cell in data) {
 				const value = data[cell]
@@ -88,7 +105,16 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			}
 		}
 		const binconfig = initBinConfig(lst)
-		if (binsCache) binsCache[tw.$id] = { default: binconfig, min, max }
+		// defineProperty (not binsCache[tw.$id] = value): binsCache is a persistent,
+		// dataset-scoped cache shared across requests, so a $id of '__proto__' must not
+		// be able to reassign its prototype for every future caller
+		if (binsCache)
+			Object.defineProperty(binsCache, tw.$id, {
+				value: { default: binconfig, min, max },
+				enumerable: true,
+				configurable: true,
+				writable: true
+			})
 		res.send({ default: binconfig, min, max })
 	} catch (e) {
 		console.log(e)

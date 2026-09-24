@@ -4,6 +4,26 @@ import mm from 'micromatch'
 
 const { isMatch: mmIsMatch } = mm
 
+// Returns sessions[dslabel], creating it as a null-prototype own property first if needed.
+// A plain read/assign pattern (if (!sessions[dslabel]) sessions[dslabel] = ...) is not safe here:
+// this.sessions is null-prototype, but this method also accepts a caller-supplied sessions map
+// (e.g. in unit tests) that may be an ordinary {}. On an ordinary object, dslabel === '__proto__'
+// makes the read resolve to the real Object.prototype instead of undefined, so the assignment is
+// skipped and the next line writes the session payload directly onto Object.prototype. Checking
+// Object.hasOwn first, and creating the entry via defineProperty (not sessions[dslabel] = ...),
+// keeps this safe regardless of the caller's map prototype.
+function getOrCreateDslabelSessions(sessions: Record<string, any>, dslabel: string) {
+	if (!Object.hasOwn(sessions, dslabel) || !sessions[dslabel]) {
+		Object.defineProperty(sessions, dslabel, {
+			value: Object.create(null),
+			enumerable: true,
+			configurable: true,
+			writable: true
+		})
+	}
+	return sessions[dslabel]
+}
+
 // Express routes requests case-insensitively and ignores a trailing slash (non-strict routing),
 // so auth path checks must do the same, otherwise a request to `/TERMDB/MATRIX` or `/termdb/matrix/`
 // would not match a protected route pattern but would still be handled by the protected route
@@ -90,7 +110,7 @@ export class Auth {
 		[dslabel: string]: {
 			[sessionId: string]: any
 		}
-	} = {}
+	} = Object.create(null)
 	sessionTracking: '' | 'jwt-only' = ''
 	// the basepath that auth and data routes are registered under, see stripBasepath(),
 	// set by AuthApi.maySetAuthRoutes() so that route registration, the middleware forced-open check,
@@ -381,8 +401,7 @@ export class Auth {
 			const jwt = jsonwebtoken.sign(payload, secret)
 			const id = this.getSessionIdFromJwt(jwt)
 			//const ip = req.ip // may use req.ips?
-			if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
-			sessions[q.dslabel][id] = payload
+			getOrCreateDslabelSessions(sessions, q.dslabel)[id] = payload
 			if (!cred.cookieMode || cred.cookieMode == 'set-cookie') {
 				// For basic/password login that protects all routes (including /genomes),
 				// must use session cookie, since it's not practical for the client dofetch code
@@ -424,7 +443,14 @@ export class Auth {
 		const id = this.getSessionIdFromJwt(token)
 		try {
 			const { secret } = getApplicableSecret(req.headers, cred, token)
-			const payload = sessions[dslabel]?.[id] || jsonwebtoken.verify(token, secret)
+			// id is attacker-controlled (the last 20 chars of the raw, unverified token -- or the
+			// whole token if shorter), so an own-property check is required on both levels: a
+			// naive sessions[dslabel]?.[id] read-through would let dslabel/id of '__proto__' (or
+			// any other name colliding with something already on Object.prototype) resolve to an
+			// inherited value and skip jsonwebtoken.verify() entirely, bypassing signature checking
+			const cachedPayload =
+				Object.hasOwn(sessions, dslabel) && Object.hasOwn(sessions[dslabel], id) ? sessions[dslabel][id] : undefined
+			const payload = cachedPayload || jsonwebtoken.verify(token, secret)
 			// signed payload dataset must match the requested dataset
 			if (payload.dslabel) {
 				if (payload.dslabel != dslabel) return
@@ -434,7 +460,7 @@ export class Auth {
 				throw `jwt payload missing datasets[] and dslabel, must have one`
 			}
 			// do not overwrite existing tracking object for dslabel
-			if (!sessions[dslabel]) sessions[dslabel] = {}
+			const dslabelSessions = getOrCreateDslabelSessions(sessions, dslabel)
 			const reqPath = stripBasepath(req.path, this.basepath)
 			const path = reqPath[0] == '/' && !cred.route.startsWith('/') ? reqPath.slice(1) : reqPath
 			// signed payload route must match the requested data route
@@ -444,8 +470,8 @@ export class Auth {
 				path == 'authorizedactions' ||
 				path.startsWith(cred.route.toLowerCase() + '/')
 			) {
-				if (!sessions[dslabel][id])
-					sessions[dslabel][id] = {
+				if (!dslabelSessions[id])
+					dslabelSessions[id] = {
 						...payload,
 						dslabel,
 						embedder,

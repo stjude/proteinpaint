@@ -48,13 +48,14 @@ tape('\n', function (test) {
 
 tape('Auth constructor: sets default properties', function (test) {
 	test.timeoutAfter(500)
-	test.plan(4)
+	test.plan(5)
 
 	const auth = makeAuth()
 	test.equal(auth.port, 3000, 'should set port from serverconfig')
 	test.equal(auth.maxSessionAge, 1000 * 3600 * 16, 'should set default maxSessionAge')
 	test.equal(auth.sessionTracking, '', 'should set empty sessionTracking by default')
-	test.deepEqual(auth.sessions, {}, 'should initialize empty sessions')
+	test.deepEqual(Object.keys(auth.sessions), [], 'should initialize empty sessions')
+	test.equal(Object.getPrototypeOf(auth.sessions), null, 'should initialize sessions without a prototype')
 	test.end()
 })
 
@@ -758,6 +759,27 @@ tape('getSignedJwt: creates a valid jwt and stores session', function (test) {
 	test.end()
 })
 
+tape('getSignedJwt: a dslabel of __proto__ does not pollute Object.prototype', function (test) {
+	test.timeoutAfter(500)
+	test.plan(3)
+
+	const auth = makeAuth()
+	const cred = auth.creds[dslabel].termdb[embedder]
+	const req = { ip: '127.0.0.1', headers: {} }
+	const res = { header() {} }
+	const q = { dslabel: '__proto__', embedder }
+	// a plain {} sessions map, same as this file's other getSignedJwt tests use, rather than
+	// the null-prototype auth.sessions -- this method must be safe independently of that
+	const sessions: any = {}
+	auth.getSignedJwt(req, res, q, cred, { role: 'user' }, 60000, 'user@test.com', sessions)
+
+	test.ok(Object.hasOwn(sessions, '__proto__'), 'stores the dslabel entry as a real own __proto__ key')
+	const sessionIds = Object.keys(sessions['__proto__'])
+	test.equal(sessionIds.length, 1, 'stores exactly one session under that dslabel')
+	test.notOk(({} as any)[sessionIds[0]], 'does not pollute Object.prototype with the session id')
+	test.end()
+})
+
 tape('mayAddSessionFromJwt: returns undefined when no authorization header', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
@@ -822,6 +844,80 @@ tape('mayAddSessionFromJwt: adds session from valid bearer jwt', function (test)
 	test.ok(sessions[dslabel]?.[id], 'should add the session to the sessions object')
 	test.end()
 })
+
+tape('mayAddSessionFromJwt: a dslabel of __proto__ does not pollute Object.prototype', function (test) {
+	test.timeoutAfter(500)
+	test.plan(3)
+
+	const auth = makeAuth()
+	const cred = auth.creds[dslabel].termdb[embedder]
+	const payload = {
+		dslabel: '__proto__',
+		embedder,
+		route: 'termdb',
+		iat: time,
+		exp: time + 300,
+		email: 'user@test.com',
+		ip: '127.0.0.1',
+		time: Date.now()
+	}
+	const sessionJwt = jsonwebtoken.sign(payload, secret)
+	const b64token = Buffer.from(sessionJwt).toString('base64')
+	const req = {
+		headers: { authorization: `Bearer ${b64token}` },
+		query: { dslabel: '__proto__', embedder },
+		path: '/termdb'
+	}
+	// a plain {} sessions map, same as this file's other mayAddSessionFromJwt tests use, rather
+	// than the null-prototype auth.sessions -- this method must be safe independently of that
+	const sessions: any = {}
+	const id = auth.mayAddSessionFromJwt(sessions, req, cred)
+	test.ok(id, 'should return a session id')
+	test.ok(Object.hasOwn(sessions, '__proto__'), 'stores the dslabel entry as a real own __proto__ key')
+	test.notOk(({} as any)[id as any], 'does not pollute Object.prototype with the session id')
+	test.end()
+})
+
+tape(
+	'mayAddSessionFromJwt: a cache hit resolved through Object.prototype is not trusted without real JWT verification',
+	function (test) {
+		test.timeoutAfter(500)
+		test.plan(1)
+
+		// getSessionIdFromJwt() returns the last 20 chars of the raw, unverified token (or the whole
+		// token if shorter), so a short token lets an id be chosen directly -- simulating an unrelated
+		// earlier bug having already polluted Object.prototype with a fake, "verified"-looking payload
+		// under that same id
+		const forgedId = 'forged-session-id-12' // exactly 20 chars
+		const auth = makeAuth()
+		const cred = auth.creds[dslabel].termdb[embedder]
+		;(Object.prototype as any)[forgedId] = {
+			dslabel: '__proto__',
+			embedder,
+			route: 'termdb',
+			ip: '127.0.0.1',
+			time: Date.now()
+		}
+		try {
+			// a plain {} sessions map, and dslabel = '__proto__', so sessions[dslabel] would resolve
+			// to Object.prototype on a naive read -- the fix must check ownership before trusting it
+			const sessions: any = {}
+			const req = {
+				headers: { authorization: `Bearer ${Buffer.from(forgedId).toString('base64')}` },
+				query: { dslabel: '__proto__', embedder },
+				path: '/termdb'
+			}
+			const id = auth.mayAddSessionFromJwt(sessions, req, cred)
+			// the forged payload was never actually signed, so forcing real jsonwebtoken.verify()
+			// must fail and mayAddSessionFromJwt's own catch block returns undefined -- it must not
+			// grant a session straight from the polluted cache entry
+			test.equal(id, undefined, 'does not grant a session from the polluted cache entry without real JWT verification')
+		} finally {
+			delete (Object.prototype as any)[forgedId]
+		}
+		test.end()
+	}
+)
 
 tape('mayAddSessionFromJwt: matches the signed route under a configured basepath', function (test) {
 	test.timeoutAfter(500)

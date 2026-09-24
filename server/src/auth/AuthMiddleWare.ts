@@ -78,7 +78,7 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 		// may configure to avoid in-memory session tracking, to simulate a multi-server process setup
 		if (auth.sessionTracking == 'jwt-only') {
 			console.log('!!! --- CLEARING ALL SESSION DATA TO simulate stateless service --- !!!')
-			auth.sessions = {}
+			auth.sessions = Object.create(null)
 		}
 
 		try {

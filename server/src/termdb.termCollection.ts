@@ -16,6 +16,60 @@ import { validateTermCollectionFraction } from '#shared/termCollection.js'
 type MemberMapping = { expandedId: string; memberId: string }
 type TcMapping = { originalTcId: string; originalTw: any; memberMap: MemberMapping[] }
 
+// 'prototype' plus every own property name inherited from Object.prototype (toString,
+// hasOwnProperty, __proto__, constructor, etc.) -- any of these read back as truthy/callable
+// on a plain object that never had them explicitly set, so they must all be excluded from use
+// as a $id, not just the classic __proto__/constructor/prototype trio.
+const RESERVED_TERM_IDS = new Set(['prototype', ...Object.getOwnPropertyNames(Object.prototype)])
+
+/** True if this $id could reach the Object.prototype chain when later used as a
+ *  plain-object property key (e.g. sampleData[$id] = ... or byTermId[$id] = ...).
+ *  Bracket notation coerces any non-symbol key via ToPropertyKey (equivalent to
+ *  String(id)), so a non-string $id -- e.g. ['__proto__'], or an object with a
+ *  custom toString() -- can reach the same dangerous keys while evading a strict
+ *  string-equality check; checking String(id) against the reserved set catches
+ *  those without rejecting harmless non-string ids such as a plain number, which
+ *  can never coerce to a reserved name. Symbols never collide with a string key,
+ *  and nullish is allowed through so callers can still fall back to
+ *  tw.term.id/tw.term.name. */
+export function isReservedTermId(id: any): boolean {
+	if (id == null || typeof id === 'symbol') return false
+	return RESERVED_TERM_IDS.has(String(id))
+}
+
+/** Validates $id and returns the value callers should use from then on, resolving it to a string
+ *  exactly once if (and only if) it's an object. Callers MUST overwrite their own $id with the
+ *  return value (e.g. tw.$id = resolveTermId(tw.$id)) rather than keep the original.
+ *
+ *  A primitive (string/number/boolean/bigint) always coerces to the same string every time --
+ *  there's no re-coercion risk, so it's returned unchanged (e.g. a numeric $id stays a number).
+ *  An object is different: its string coercion is not guaranteed to be pure, since a custom
+ *  toString()/valueOf()/Symbol.toPrimitive can return a different value on every call (e.g. based
+ *  on a counter). isReservedTermId() alone only protects a caller that both validates and later
+ *  re-keys with the SAME unresolved object -- if it's checked once (coercion call #1, returns
+ *  something safe) and then re-coerced later as an actual property key (coercion call #2, on a
+ *  plain, non-null-prototype object such as byTermId{}), those two calls can disagree, and the
+ *  second one can resolve to '__proto__' even though the first one didn't. Coercing an object
+ *  exactly once here and freezing the result into a plain string closes that gap: every later use
+ *  of the resolved value is a no-op re-coercion of an already-a-string, which cannot invoke user
+ *  code again. */
+export function resolveTermId(id: any): any {
+	if (id == null || typeof id !== 'object') {
+		if (isReservedTermId(id)) throw new Error('term wrapper has invalid $id')
+		return id
+	}
+	const resolved = String(id)
+	if (RESERVED_TERM_IDS.has(resolved)) throw new Error('term wrapper has invalid $id')
+	return resolved
+}
+
+/** Reject $id values that could be used to reach the Object.prototype chain
+ *  when later used as a plain-object property key (e.g. sampleData[$id] = ...). */
+function assertSafeTermId(id: any, context: string) {
+	if (!id || typeof id !== 'string') throw new Error(`${context} is missing $id`)
+	if (isReservedTermId(id)) throw new Error(`${context} has invalid $id`)
+}
+
 /** Expand custom termCollection tws into individual member tws.
  *  Non-custom terms pass through unchanged.
  *  Returns the expanded terms array and mappings needed for reconstitution. */
@@ -24,6 +78,7 @@ export function expandCustomTermCollection(terms: any[]): { expandedTerms: any[]
 	const tcMappings: TcMapping[] = []
 	for (const tw of terms) {
 		if (tw.term?.type === 'termCollection' && tw.term.isCustom) {
+			assertSafeTermId(tw.$id, 'custom termCollection')
 			if (!tw.term.termlst?.length) throw new Error('custom termCollection has empty termlst')
 			const mapping: TcMapping = { originalTcId: tw.$id, originalTw: tw, memberMap: [] }
 			for (const mt of tw.term.termlst) {
@@ -49,7 +104,10 @@ export function reconstituteCustomTermCollection(
 	if (!tcMappings.length || !data?.samples) return
 	for (const [sampleId, sampleData] of Object.entries(data.samples)) {
 		for (const mapping of tcMappings) {
-			const memberValues: Record<string, number> = {}
+			// null-prototype: memberId comes from the client-supplied termlst (mt.id || mt.name),
+			// so a member named '__proto__' must not be able to reassign this map's prototype
+			// instead of setting an own value
+			const memberValues: Record<string, number> = Object.create(null)
 			for (const { expandedId, memberId } of mapping.memberMap) {
 				const entry = sampleData[expandedId]
 				if (entry != null) {
@@ -58,7 +116,14 @@ export function reconstituteCustomTermCollection(
 				}
 			}
 			if (Object.keys(memberValues).length > 0) {
-				sampleData[mapping.originalTcId] = { key: sampleId, value: memberValues }
+				// defineProperty (not sampleData[key] = value) so a $id of '__proto__' cannot
+				// reassign sampleData's prototype instead of setting a data property
+				Object.defineProperty(sampleData, mapping.originalTcId, {
+					value: { key: sampleId, value: memberValues },
+					enumerable: true,
+					configurable: true,
+					writable: true
+				})
 			}
 		}
 	}
@@ -102,16 +167,20 @@ export function resolveTermCollectionFractions(
 				if (Number.isFinite(value)) valuesBySample.set(sampleData, value)
 			}
 		}
-		const bins =
+		// an empty array is truthy, but getBin() always returns -1 against it, so treating an
+		// empty bins list as "bins configured" would delete every sample's fraction result below
+		// instead of falling back to unbinned values; require at least one bin to opt into binning
+		const rawBins =
 			tw.q.mode !== 'discrete'
 				? undefined
 				: tw.q.type === 'custom-bin'
 				? tw.q.lst
 				: computeFractionBins(tw.q, [...valuesBySample.values()])
+		const bins = rawBins?.length ? rawBins : undefined
 		if (bins) {
 			data.refs ||= {}
 			data.refs.byTermId ||= {}
-			data.refs.byTermId[tw.$id] ||= {}
+			if (!Object.hasOwn(data.refs.byTermId, tw.$id)) data.refs.byTermId[tw.$id] = {}
 			data.refs.byTermId[tw.$id].bins = bins
 		}
 		for (const sampleData of Object.values(data.samples)) {
@@ -135,8 +204,10 @@ export function resolveTermCollectionFractions(
 }
 
 function validateFractionTw(tw: any) {
-	if (!tw.$id) throw new Error('fraction termCollection is missing $id')
+	assertSafeTermId(tw.$id, 'fraction termCollection')
 	validateTermCollectionFraction(tw.q, tw.term)
+	if (tw.q.mode === 'discrete' && tw.q.type === 'custom-bin' && !(Array.isArray(tw.q.lst) && tw.q.lst.length))
+		throw new Error('custom-bin fraction termCollection requires a non-empty q.lst[]')
 }
 
 function computeFractionBins(q: any, values: number[]) {

@@ -2,6 +2,9 @@ import tape from 'tape'
 import {
 	divideTerms,
 	getData,
+	getSamples,
+	getSampleData_dictionaryTerms_cached,
+	getSampleData_dictionaryTerms_termdb,
 	id2sampleRef,
 	setSampleLstData,
 	isNegatedSampleLstOnlyRequest,
@@ -205,6 +208,135 @@ tape('divideTerms: assigns $id from term.name if id missing', t => {
 	const term = { term: { type: 'dict', name: 'foo' } }
 	const [dict] = divideTerms({ terms: [term] }, emptyDs)
 	t.equal(dict[0].$id, 'foo', 'Should assign $id from term.name if id missing')
+	t.end()
+})
+
+tape('divideTerms: rejects a reserved $id', t => {
+	const term = { $id: '__proto__', term: { type: 'dict', id: 'd2' } }
+	t.throws(() => divideTerms({ terms: [term] }, emptyDs), /invalid \$id/, 'throws instead of assigning a reserved $id')
+	t.end()
+})
+
+tape('getData: rejects a term wrapper whose $id is a non-string that coerces to a reserved key', async t => {
+	const tw = { $id: ['__proto__'], term: { id: 'agedx', name: 'Age', type: 'float' }, q: { mode: 'continuous' } }
+	const result = await getData({ terms: [tw] }, { cohort: { db: null, termdb: {} } })
+	t.ok(result.error, 'returns an error instead of writing through the coerced key')
+	t.end()
+})
+
+// String coercion of an object $id is not guaranteed pure (a custom toString() can return a
+// different value on every call), so validating it once and later re-keying byTermId{} (a plain,
+// non-null-prototype object) with a SEPARATE coercion of the same object could validate one string
+// while actually writing under another. validateArg() must resolve $id to a string exactly once
+// and freeze that value onto tw.$id, so every later use is a no-op re-coercion of an already-string.
+tape('getData: an object $id with a stateful toString() is resolved exactly once and frozen', async t => {
+	await ensureOpenAuth()
+	let calls = 0
+	const statefulId = {
+		toString() {
+			calls++
+			return calls === 1 ? 'safeName' : '__proto__'
+		}
+	}
+	const tw = {
+		$id: statefulId,
+		term: { gene: 'CLN8', name: 'CLN8', type: 'geneExpression' },
+		q: {
+			mode: 'discrete',
+			type: 'custom-bin',
+			lst: [
+				{ startunbounded: true, stopinclusive: false, stop: 6, label: '<6' },
+				{ start: 6, startinclusive: true, stopunbounded: true, label: '≥6' }
+			]
+		}
+	}
+	const data = await getData({ terms: [tw], filter: emptyFilter() }, makeNoDbDs())
+	t.notOk(data.error, 'no error')
+	t.ok(
+		Object.hasOwn(data.refs.byTermId, 'safeName'),
+		'byTermId is keyed by the single resolved value validateArg() checked, not a later re-coercion'
+	)
+	t.notOk({}.bins, 'does not pollute Object.prototype even though a later coercion would have been dangerous')
+	t.end()
+})
+
+// mds3.variant2samples.js calls this function directly, bypassing getData()/validateArg() entirely,
+// so it must reject a dangerous $id on its own rather than relying on an upstream caller to have checked
+tape(
+	'getSampleData_dictionaryTerms_termdb: rejects a reserved or coercible $id independently of getData()',
+	async t => {
+		const q = { ds: emptyDs, filter: null }
+		try {
+			await getSampleData_dictionaryTerms_termdb(q, [{ $id: '__proto__', term: { id: 'x' } }])
+			t.fail('should have thrown for a reserved $id')
+		} catch (e) {
+			t.ok(String(e).includes('invalid $id'), 'rejects a reserved $id called the way mds3.variant2samples.js calls it')
+		}
+		try {
+			await getSampleData_dictionaryTerms_termdb(q, [{ $id: ['__proto__'], term: { id: 'x' } }])
+			t.fail('should have thrown for a coercible $id')
+		} catch (e) {
+			t.ok(String(e).includes('invalid $id'), 'rejects a non-string $id that would coerce to a reserved key')
+		}
+		t.end()
+	}
+)
+
+// The sample id here comes from a SQL row's `sample` column (dataset content, not the client
+// request), but nothing guarantees it can never be '__proto__'. Both getSamples() and
+// getSampleData_dictionaryTerms_cached() index a plain samples{} map by this value, which is
+// the exact read-through-then-write shape that caused the original prototype pollution bug --
+// just keyed by sample id instead of term $id.
+tape('getSamples: a sample id of __proto__ does not pollute Object.prototype', async t => {
+	const rows = [{ sample: '__proto__', key: 'k1', term_id: 'agedx', value: 42 }]
+	const samples = await getSamples({}, rows, [])
+	t.ok(Object.hasOwn(samples, '__proto__'), 'stores the sample as a real own __proto__ key')
+	t.equal(samples['__proto__'].agedx.value, 42, 'the term value is stored under the correct sample entry')
+	t.notOk({}.agedx, 'does not pollute Object.prototype')
+	t.end()
+})
+
+tape('getSamples: a term id of __proto__ is stored as real per-sample data, not a prototype reassignment', async t => {
+	const rows = [{ sample: 's1', key: 'k1', term_id: '__proto__', value: 99 }]
+	const samples = await getSamples({}, rows, [])
+	t.ok(Object.hasOwn(samples.s1, '__proto__'), 'stores the term value as a real own __proto__ key on the sample')
+	t.equal(samples.s1['__proto__'].value, 99, 'the value is retrievable rather than lost to a prototype swap')
+	t.notOk({}.key, 'does not pollute Object.prototype')
+	t.end()
+})
+
+tape(
+	'getSampleData_dictionaryTerms_cached: a sample id of __proto__ does not pollute Object.prototype, even given a plain samples map',
+	async t => {
+		const tw = { $id: 'agedx', term: { id: 'agedx' } }
+		const ds = { termid2sample2value: new Map([['agedx', new Map([['__proto__', 42]])]]) }
+		const q = { ds }
+		// a plain {} (not the null-prototype map our own code creates) simulates what a
+		// dataset-supplied dictionary.get()/getAdHocTermValues() getter could hand this function
+		const samples = {}
+		const byTermId = {}
+		await getSampleData_dictionaryTerms_cached(q, [tw], samples, byTermId)
+		t.ok(Object.hasOwn(samples, '__proto__'), 'stores the sample as a real own __proto__ key')
+		t.equal(samples['__proto__'].agedx.value, 42, 'the term value is stored under the correct sample entry')
+		t.notOk({}.agedx, 'does not pollute Object.prototype')
+		t.end()
+	}
+)
+
+tape('getData: refs.bySampleId does not pollute Object.prototype for a sample id of __proto__', async t => {
+	await ensureOpenAuth()
+	const tw = { $id: 'agedx', term: { id: 'agedx', name: 'Age', type: 'float' }, q: { mode: 'continuous' } }
+	const ds = {
+		cohort: { db: null, termdb: { q: { id2sampleName: id => 'Case-' + id } } },
+		// the cached path Copilot's finding traces through: a sample id of '__proto__' now survives
+		// into refs.bySampleId, which must not resolve it through Object.prototype either
+		termid2sample2value: new Map([['agedx', new Map([['__proto__', 42]])]])
+	}
+	const data = await getData({ terms: [tw] }, ds)
+	t.notOk(data.error, 'no error')
+	t.ok(Object.hasOwn(data.refs.bySampleId, '__proto__'), 'stores the sample ref under a real own __proto__ key')
+	t.equal(data.refs.bySampleId['__proto__'].label, 'Case-__proto__', 'the ref is retrievable rather than lost')
+	t.notOk({}.label, 'does not pollute Object.prototype')
 	t.end()
 })
 
@@ -458,8 +590,10 @@ tape('setSampleLstData: annotates group members, adds missing samples when unfil
 
 	t.deepEqual(samples.c1.grp, { key: 'Male', value: 'Male' }, 'listed sample is annotated with its group name')
 	t.deepEqual(samples.c3.grp, { key: 'Female', value: 'Female' }, 'second group is annotated too')
+	// spread first: a newly-created row is intentionally null-prototype (see getOrCreateSampleEntry),
+	// which deepEqual treats as unequal to a {} literal even with identical own properties
 	t.deepEqual(
-		samples.c2,
+		{ ...samples.c2 },
 		{ sample: 'c2', grp: { key: 'Male', value: 'Male' } },
 		'with no filter applied, a group member absent from samples{} is added'
 	)
@@ -605,8 +739,10 @@ tape('setSampleLstData: normalizes ids and ignores values without one', t => {
 	t.end()
 })
 
-tape('setSampleLstData: a prototype-named sample id cannot write outside samples{}', t => {
-	// sampleId and $id are unvalidated request data on this route
+tape('setSampleLstData: a prototype-named sample id becomes a safe, real row', t => {
+	// sampleId and $id are unvalidated request data on this route. A sample named '__proto__' is a
+	// legitimate, real sample now that samples{} preserves it elsewhere (see getOrCreateSampleEntry()),
+	// so it must be annotated like any other id instead of being silently skipped.
 	const tw = name => ({
 		$id: 'polluted',
 		term: { type: 'samplelst', name: 'P' },
@@ -615,15 +751,22 @@ tape('setSampleLstData: a prototype-named sample id cannot write outside samples
 
 	const samples = {}
 	setSampleLstData([tw('__proto__')], samples)
-	t.equal({}.polluted, undefined, '__proto__ as a sample id does not reach Object.prototype')
-	t.equal(Object.getPrototypeOf(samples), Object.prototype, 'and does not re-point the prototype of samples{}')
-	t.deepEqual(samples, {}, 'no row is created for it')
+	t.equal({}.polluted, undefined, '__proto__ as a sample id does not pollute Object.prototype')
+	t.equal(Object.getPrototypeOf(samples), Object.prototype, "does not re-point samples{}'s own prototype")
+	t.ok(Object.hasOwn(samples, '__proto__'), 'creates a real own __proto__ row instead of skipping it')
+	// spread first: a newly-created row is intentionally null-prototype, which deepEqual treats as
+	// unequal to a {} literal even with identical own properties
+	t.deepEqual(
+		{ ...samples['__proto__'] },
+		{ sample: '__proto__', polluted: { key: 'G', value: 'G' } },
+		'the row is a normal, annotated entry'
+	)
 
 	const samples2 = {}
 	setSampleLstData([tw('constructor')], samples2)
 	t.equal(Object.polluted, undefined, 'constructor as a sample id does not write onto the Object constructor')
 	t.deepEqual(
-		samples2.constructor,
+		{ ...samples2.constructor },
 		{ sample: 'constructor', polluted: { key: 'G', value: 'G' } },
 		'it becomes an ordinary own row instead'
 	)
@@ -805,8 +948,11 @@ tape('getData: samplelst overlay resolves on a dataset without a sqlite db', asy
 	// the original bug: samplelst reached the ds dictionary getter, which cannot know the term,
 	// so every sample came back without a group and the overlay matched nothing
 	t.deepEqual(dictCalls, [], 'the samplelst term is never handed to the dictionary getter')
+	// spread to a plain object first: data.samples.c1 is intentionally null-prototype
+	// (see getOrCreateSampleEntry()), which deepEqual treats as unequal to a {} literal
+	// even with identical own properties
 	t.deepEqual(
-		data.samples.c1,
+		{ ...data.samples.c1 },
 		{ sample: 'c1', exp: { key: 5, value: 5 }, grp: { key: 'Male', value: 'Male' } },
 		'a sample carries both its expression value and its group'
 	)
@@ -889,6 +1035,33 @@ tape('getData: uses generic sample labels for non-root sample types', async t =>
 		data.sampleType,
 		{ name: 'sample', plural_name: 'samples' },
 		'non-root sample type labels are already displayed elsewhere'
+	)
+	t.end()
+})
+
+tape('getData: a non-dict term data id of __proto__ does not corrupt an existing sample row', async t => {
+	await ensureOpenAuth()
+	const dictTw = { $id: 'grp2', term: { type: 'categorical', id: 'grp2', name: 'Group' }, q: {} }
+	const expTw = geneTw() // $id: 'exp', term.type: geneExpression (non-dict)
+	const ds = makeNoDbDs()
+	// an uncached ds-supplied dictionary getter can hand back an existing, ordinary (non-null-
+	// prototype) row -- getOrCreateSampleEntry() must return it unchanged since it already exists
+	ds.cohort.termdb.dictionary.get = async () => [{ c1: { sample: 'c1', grp2: { key: 'A', value: 'A' } } }, {}]
+	// the query handler's term2sample2value key is not necessarily tw.$id (e.g. pseudobulk with
+	// dataTypeDetails.genes uses a raw, unvalidated client-supplied gene name as the key)
+	ds.queries.geneExpression.get = async () => ({ term2sample2value: new Map([['__proto__', { c1: 5 }]]) })
+
+	const data = await getData({ terms: [dictTw, expTw], filter: emptyFilter() }, ds)
+	t.notOk(data.error, 'no error')
+	t.ok(
+		Object.hasOwn(data.samples.c1, '__proto__'),
+		'stores the value under a real own __proto__ key on the existing row'
+	)
+	t.equal(data.samples.c1['__proto__'].value, 5, 'the value is retrievable rather than corrupting the row prototype')
+	t.equal(
+		data.samples.c1.grp2.key,
+		'A',
+		'the row created by the ds-supplied dictionary getter is preserved, not replaced'
 	)
 	t.end()
 })

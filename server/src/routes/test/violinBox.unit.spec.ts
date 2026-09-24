@@ -900,6 +900,50 @@ tape('expandNumericTermCollection: creates synthetic overlay keyed by member ter
 	test.end()
 })
 
+tape(
+	'expandNumericTermCollection: a member named __proto__ is stored as real overlay data, not a prototype reassignment',
+	function (test) {
+		const q = getMockTermCollectionQ()
+		q.tw.term.termlst = [{ id: '__proto__', name: '__proto__' }, ...q.tw.term.termlst]
+		const data = getMockTermCollectionData()
+		for (const sampleData of Object.values(data.samples) as any[]) {
+			// plain assignment of a primitive to a '__proto__' key is a silent no-op (it never
+			// creates an own property), so defineProperty is required to actually exercise the
+			// per-sample expansion path for a __proto__-named member
+			Object.defineProperty(sampleData[mockTermCollectionId].value, '__proto__', {
+				value: 9.9,
+				enumerable: true,
+				configurable: true,
+				writable: true
+			})
+		}
+
+		expandNumericTermCollection(q, data)
+
+		test.ok(
+			Object.hasOwn(q.overlayTw.term.values, '__proto__'),
+			'the __proto__-named member is a real own property of the overlay values map'
+		)
+		test.equal(
+			q.overlayTw.term.values['__proto__'].label,
+			'__proto__',
+			'the __proto__-named member keeps its own label'
+		)
+		test.equal(
+			Object.getPrototypeOf(q.overlayTw.term.values),
+			null,
+			"the overlay values map's own prototype is untouched"
+		)
+		test.equal(
+			data.samples['s1____proto__']?.[mockTermCollectionId]?.value,
+			9.9,
+			'the per-sample expansion path also creates a virtual sample for the __proto__ member'
+		)
+		test.notOk(({} as any).label, 'does not pollute Object.prototype')
+		test.end()
+	}
+)
+
 tape('expandNumericTermCollection: sets overlay key on each virtual sample', function (test) {
 	const q = getMockTermCollectionQ()
 	const data = getMockTermCollectionData()

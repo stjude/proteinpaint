@@ -315,7 +315,7 @@ tape('middleware: sends error response with code from thrown error object', func
 
 tape('middleware: clears sessions when sessionTracking is jwt-only', function (test) {
 	test.timeoutAfter(500)
-	test.plan(1)
+	test.plan(2)
 
 	const auth = makeAuth({}, { features: { sessionTracking: 'jwt-only' } })
 	// Pre-populate sessions
@@ -338,7 +338,12 @@ tape('middleware: clears sessions when sessionTracking is jwt-only', function (t
 	middleware(req, res, () => {})
 
 	// After the middleware runs, sessions should be cleared (jwt-only mode)
-	test.deepEqual((auth as any).sessions, {}, 'should clear all sessions when sessionTracking is jwt-only')
+	test.deepEqual(Object.keys((auth as any).sessions), [], 'should clear all sessions when sessionTracking is jwt-only')
+	test.equal(
+		Object.getPrototypeOf((auth as any).sessions),
+		null,
+		'should clear sessions into a null-prototype map when sessionTracking is jwt-only'
+	)
 	test.end()
 })
 
