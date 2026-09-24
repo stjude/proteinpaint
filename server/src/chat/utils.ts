@@ -6,7 +6,7 @@ import type { MsgToUser, Entity, FilterTreeNode, FilterLeafNode, FilterTreeResul
 import { filterTreeJsonSchema, isMsgToUser } from './scaffoldTypes.ts'
 import fs from 'fs'
 import { getDsAllowedTermTypes } from '../routes/termdb.config.ts'
-import Database from 'better-sqlite3'
+import type Database from 'better-sqlite3'
 import { GENE_FEATURE_KEYWORDS, determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
 import { GENE_SET_KEYWORDS } from './genesetdatatype.ts'
 import { classifyGeneDataTypePhrase } from './genedatatypenew.ts'
@@ -460,9 +460,8 @@ export function validate_term(response_term: string, ds: any, geneFeatures: Gene
 	return { term_type, text, category }
 }
 
-export async function parse_geneset_db(genedb: string) {
+export async function parse_geneset_db(db: Database.Database) {
 	let genes_list: string[] = []
-	const db = new Database(genedb)
 	try {
 		// Query the database
 		const desc_rows = db.prepare('SELECT name from codingGenes').all()
@@ -472,16 +471,13 @@ export async function parse_geneset_db(genedb: string) {
 		genes_list = genes_list.map(str => str.toLowerCase()) // Converting to lowercase
 	} catch (error) {
 		throw 'Could not parse geneDB' + error
-	} finally {
-		db.close()
 	}
 	return genes_list
 }
 
 export async function parse_dataset_db(
-	dataset_db: string
+	db: Database.Database
 ): Promise<{ db_rows: DbRows[]; rag_docs: string[] } | MsgToUser> {
-	const db = new Database(dataset_db)
 	const rag_docs: string[] = []
 	const db_rows: DbRows[] = []
 	try {
@@ -532,18 +528,15 @@ export async function parse_dataset_db(
 		}
 	} catch (error) {
 		throw 'Error in parsing dataset DB:' + error
-	} finally {
-		db.close()
 	}
 	return { db_rows: db_rows, rag_docs: rag_docs }
 }
 
-export async function parse_survival_terms_from_db(dataset_db: string) {
-	const db = new Database(dataset_db)
+export async function parse_survival_terms_from_db(db: Database.Database) {
 	const rag_docs: string[] = []
 	const db_rows: DbRows[] = []
 	try {
-		const rows = db.prepare("SELECT * FROM terms WHERE type = 'survival'").all()
+		const rows = db.prepare('SELECT * FROM terms WHERE type = ?').all(TermTypes.SURVIVAL)
 
 		rows.forEach((row: any) => {
 			const jsondata = row.jsondata ? JSON.parse(row.jsondata) : {}
@@ -568,8 +561,6 @@ export async function parse_survival_terms_from_db(dataset_db: string) {
 		})
 	} catch (error) {
 		throw new Error('Error in parsing survival terms from dataset DB:' + error)
-	} finally {
-		db.close()
 	}
 	return { db_rows: db_rows, rag_docs: rag_docs }
 }

@@ -1,4 +1,5 @@
 import type { LlmConfig, DbRows } from '#types'
+import type Database from 'better-sqlite3'
 import {
 	extractGenesFromPrompt,
 	phrase2entitytw,
@@ -66,7 +67,7 @@ export async function phrase2entity(
 	dataset_json: any,
 	ds: any,
 	genome: any,
-	dbPath: string
+	db: Database.Database
 ): Promise<MsgToUser | Phrase2EntityResult | { type: 'plot'; plot: any }> {
 	if (plotType === 'summary') {
 		const scaffoldResult = scaffold as SummaryScaffold
@@ -178,7 +179,7 @@ export async function phrase2entity(
 
 		// Resolve term (OPTIONAL survival type)
 		if (scaffoldResult.term) {
-			const resolved = await find_survival_terms(scaffoldResult.term, llm, dbPath)
+			const resolved = await find_survival_terms(scaffoldResult.term, llm, db)
 			if (resolved === null) {
 				return { type: 'text', text: 'No survival terms available in this dataset.' }
 			} else if (typeof resolved === 'object' && 'type' in resolved) {
@@ -188,7 +189,7 @@ export async function phrase2entity(
 			survival_term.term = resolved
 		} else {
 			// term not named in prompt; send full list to client so user can pick
-			const { db_rows } = await parse_survival_terms_from_db(dbPath)
+			const { db_rows } = await parse_survival_terms_from_db(db)
 			if (db_rows.length === 0) {
 				return { type: 'text', text: 'No survival terms available in this dataset.' }
 			}
@@ -210,7 +211,7 @@ export async function phrase2entity(
 		return survival_term
 	} else if (plotType === 'cox') {
 		const scaffoldResult = scaffold as CoxScaffold
-		const resolvedOutcome = await find_survival_terms(scaffoldResult.outcome, llm, dbPath)
+		const resolvedOutcome = await find_survival_terms(scaffoldResult.outcome, llm, db)
 		if (resolvedOutcome === null) {
 			return { type: 'text', text: 'No survival terms available in this dataset.' }
 		}
@@ -468,10 +469,10 @@ export async function phrase2entity(
 		}
 		let filterTvs: any
 		if (scaffoldResult.filter) {
-			if (!genes_list || !dataset_json || !ds || !dbPath) {
-				throw 'generateFilterTerm requires genes_list, dataset_json, ds, and dbPath to be provided'
+			if (!genes_list || !dataset_json || !ds || !db) {
+				throw 'generateFilterTerm requires genes_list, dataset_json, ds, and db to be provided'
 			}
-			filterTvs = await generateFilterTerm(scaffoldResult.filter, llm, genes_list, dataset_json, ds, dbPath, genome)
+			filterTvs = await generateFilterTerm(scaffoldResult.filter, llm, genes_list, dataset_json, ds, db, genome)
 			if (filterTvs && 'type' in filterTvs && filterTvs.type === 'text') {
 				return filterTvs as { type: 'text'; text: string }
 			}
@@ -652,9 +653,9 @@ Phrase: "${phrase}"
 async function find_survival_terms(
 	user_prompt: string,
 	llm: LlmConfig,
-	dbPath: string
+	db: Database.Database
 ): Promise<string | DbRows[] | null | MsgToUser> {
-	const { db_rows } = await parse_survival_terms_from_db(dbPath)
+	const { db_rows } = await parse_survival_terms_from_db(db)
 	if (db_rows.length === 0) return null
 
 	const survivalTermList = db_rows.map(r => `  - "${r.name}": ${r.description}`).join('\n')
