@@ -27,6 +27,7 @@ npm run build
 cd ../..
 
 PPDIR=$PWD
+PUBLISHED=""
 for WS in ${WORKSPACES}; do
   PRIVATE=$(node -p "require('./$WS/package.json').private")
   if [ "$PRIVATE" = true ]; then
@@ -49,6 +50,33 @@ for WS in ${WORKSPACES}; do
     echo "publishing $WS-$CURRENTVER"
     # npm 11 requires a tag for pre-release version, default to latest regardless of type of release
     npm publish --provenance --access public --tag latest
+    PUBLISHED="$PUBLISHED $PKGNAME@$CURRENTVER"
     cd $PPDIR
   fi
 done
+
+# The npm registry may take a while before a newly published version is visible
+# to installers. Wait until every published package version can be resolved, so that
+# downstream jobs (such as the docker image build's `npm install`) do not fail.
+MAX_ATTEMPTS=30
+WAIT_SECONDS=10
+for PKGVER in ${PUBLISHED}; do
+  ATTEMPT=1
+  # --prefer-online bypasses the local npm cache to query the registry directly
+  until [[ "$(npm view "$PKGVER" version --prefer-online 2>/dev/null | tail -n1)" == "${PKGVER##*@}" ]]; do
+    if (( ATTEMPT >= MAX_ATTEMPTS )); then
+      echo "timed out waiting for $PKGVER to be visible in the npm registry"
+      exit 1
+    fi
+    echo "waiting for $PKGVER to be visible in the npm registry (attempt $ATTEMPT/$MAX_ATTEMPTS)"
+    ATTEMPT=$((ATTEMPT + 1))
+    sleep $WAIT_SECONDS
+  done
+  echo "verified $PKGVER is visible in the npm registry"
+done
+
+if [[ "$PUBLISHED" != "" ]]; then
+  # extra buffer for registry CDN edges that may lag behind the one queried above
+  echo "waiting 60s for the npm registry CDN to propagate the published packages"
+  sleep 60
+fi
