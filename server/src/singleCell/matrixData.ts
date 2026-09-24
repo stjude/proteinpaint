@@ -197,9 +197,17 @@ export function hydrateMetaResultCellRows(samples: any): void {
 		if (!parentRow) continue
 		for (const [termId, value] of Object.entries(parentRow)) {
 			if (termId == 'sample' || termId == 'sampleId') continue
-			// Object.hasOwn (not `in`): row is expected to be null-prototype by construction, but
-			// this stays correct even if that ever changes
-			if (!Object.hasOwn(row, termId)) row[termId] = value
+			// Object.hasOwn (not `in`) plus defineProperty (not row[termId] = value): this exported
+			// helper accepts any caller's row, which may not be null-prototype, so a termId of
+			// '__proto__' with an object value must not be able to reassign row's own prototype
+			if (!Object.hasOwn(row, termId)) {
+				Object.defineProperty(row, termId, {
+					value,
+					enumerable: true,
+					configurable: true,
+					writable: true
+				})
+			}
 		}
 	}
 }

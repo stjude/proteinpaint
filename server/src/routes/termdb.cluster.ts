@@ -173,7 +173,7 @@ this has two practical applications with gdc:
 // numeric dictionary terms (float/integer/date) have no dedicated ds.queries getter; fetch their
 // per-sample values via the matrix getData() and reshape into the {term2sample2value, byTermId,
 // bySampleId} shape the clustering code expects.
-async function getNumericDictTermAnnotation(q, ds) {
+export async function getNumericDictTermAnnotation(q, ds) {
 	const getDataArgs = {
 		// TODO: figure out when term is not a termwrapper
 		terms: q.terms.map(tw => (tw.term ? tw : { term: tw, q: { mode: 'continuous' } })),
@@ -191,7 +191,10 @@ async function getNumericDictTermAnnotation(q, ds) {
 			if (term !== 'sample') {
 				// Skip the sample number
 				if (!term2sample2value.has(term)) {
-					term2sample2value.set(term, {})
+					// null-prototype: key (a sample id) is dataset content and may legitimately be
+					// '__proto__' now that getData()'s samples{} preserves it; a plain object would
+					// silently drop that sample's value instead of storing it
+					term2sample2value.set(term, Object.create(null))
 				}
 				term2sample2value.get(term)[key] = (value as { value: any }).value
 			}
@@ -434,7 +437,10 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 			// Extract just the samples data
 			const samplesData = geneResult.samples || {}
 			// Convert the gene data to the expected format
-			const s2v = {}
+			// null-prototype: sampleId is dataset content and the values are numbers, so a
+			// sampleId of '__proto__' would otherwise be a silent no-op (assigning a primitive to
+			// '__proto__' via bracket notation creates no own property), dropping that sample's data
+			const s2v = Object.create(null)
 
 			for (const sampleName in samplesData) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
@@ -562,7 +568,8 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 			}
 
 			const samplesData = isoformResult.samples || {}
-			const s2v = {}
+			// null-prototype: same reasoning as the gene-expression getter above
+			const s2v = Object.create(null)
 
 			for (const sampleName in samplesData) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
