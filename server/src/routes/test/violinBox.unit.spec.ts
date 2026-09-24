@@ -900,6 +900,37 @@ tape('expandNumericTermCollection: creates synthetic overlay keyed by member ter
 	test.end()
 })
 
+tape(
+	'expandNumericTermCollection: a member named __proto__ is stored as real overlay data, not a prototype reassignment',
+	function (test) {
+		const q = getMockTermCollectionQ()
+		q.tw.term.termlst = [{ id: '__proto__', name: '__proto__' }, ...q.tw.term.termlst]
+		const data = getMockTermCollectionData()
+		for (const sampleData of Object.values(data.samples) as any[]) {
+			sampleData[mockTermCollectionId].value['__proto__'] = 9.9
+		}
+
+		expandNumericTermCollection(q, data)
+
+		test.ok(
+			Object.hasOwn(q.overlayTw.term.values, '__proto__'),
+			'the __proto__-named member is a real own property of the overlay values map'
+		)
+		test.equal(
+			q.overlayTw.term.values['__proto__'].label,
+			'__proto__',
+			'the __proto__-named member keeps its own label'
+		)
+		test.equal(
+			Object.getPrototypeOf(q.overlayTw.term.values),
+			null,
+			"the overlay values map's own prototype is untouched"
+		)
+		test.notOk(({} as any).label, 'does not pollute Object.prototype')
+		test.end()
+	}
+)
+
 tape('expandNumericTermCollection: sets overlay key on each virtual sample', function (test) {
 	const q = getMockTermCollectionQ()
 	const data = getMockTermCollectionData()

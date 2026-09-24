@@ -117,9 +117,11 @@ export function expandNumericTermCollection(q: ViolinBoxRequest & ReqQueryAddons
 	const propsByTermId: Record<string, any> = term.propsByTermId || {}
 	const tcId = q.tw.$id!
 
-	// Precompute memberId → name lookup to avoid O(n) find per (sample × member)
-	const memberNameById: Record<string, string> = {}
-	const overlayValues: Record<string, { label: string; color?: string }> = {}
+	// Precompute memberId → name lookup to avoid O(n) find per (sample × member).
+	// Null-prototype: mt.id/mt.name come from the client-supplied termlst, so a member
+	// named '__proto__' must not be able to reassign either map's prototype.
+	const memberNameById: Record<string, string> = Object.create(null)
+	const overlayValues: Record<string, { label: string; color?: string }> = Object.create(null)
 	for (const mt of termlst) {
 		const name = mt.name || mt.id
 		memberNameById[mt.id] = name
