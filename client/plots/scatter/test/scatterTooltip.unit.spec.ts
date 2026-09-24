@@ -1,5 +1,6 @@
 import tape from 'tape'
 import { scaleLinear as d3Linear } from 'd3-scale'
+import { select } from 'd3-selection'
 import { ScatterTooltip, HIT_BUFFER_PX, HOVER_RING_MARGIN_PX } from '../viewmodel/scatterTooltip.ts'
 import { ScatterModel } from '../model/scatterModel.ts'
 import { getDefaultScatterSettings } from '../settings/defaults.ts'
@@ -10,6 +11,7 @@ import { xAxisOffSet, yAxisOffSet } from '#shared'
  * 	- Neighbours are the dots that overlap at 100% zoom, held constant in screen px
  * 	- scaleDotTW dots get a neighbourhood matching their larger radius
  * 	- isVisible() excludes hidden dots and the suppressed reference cloud
+ * 	- renderSampleRows() labels single-cell samples that only carry sampleId
  * 	- getActions() gates sample-specific actions for reference dots and anonymized (sampleId-less) samples
  *
  * These cover what the deleted distance() got wrong. It clamped both points into
@@ -258,6 +260,24 @@ tape('isVisible() excludes hidden dots and the suppressed reference cloud', func
 		zeroRef.isVisible({ x: 1, y: 1, hidden: {}, isRef: true }),
 		'reference dots are excluded when refSize is 0'
 	)
+	test.end()
+})
+
+tape('renderSampleRows() labels single-cell samples that only carry sampleId', function (test) {
+	test.timeoutAfter(100)
+
+	const scatter = getScatterStub({}, { singleCellPlot: { name: 'umap' } })
+	const tooltip = new ScatterTooltip(scatter)
+	const holder = select(document.body).append('div')
+
+	tooltip.renderSampleRows({ sampleId: 'cell-1', x: 1, y: 2, hidden: {}, category: 'Ref' }, getChart(scatter), holder)
+
+	const rows = holder.selectAll('tr').nodes() as HTMLTableRowElement[]
+	test.equal(rows.length, 1, 'renders one identifier row')
+	test.equal(rows[0].children[0].textContent, scatter.settings.itemLabel, 'uses the configured item label')
+	test.equal(rows[0].children[1].textContent, 'cell-1', 'uses sampleId when sample and cellId are absent')
+
+	holder.remove()
 	test.end()
 })
 
