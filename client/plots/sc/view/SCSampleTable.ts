@@ -12,9 +12,13 @@ import { icons, sortTableCallBack } from '#dom'
  * actually change:
  * - whether the "Shown plots" column is visible
  * - the buttons inside each sample's "Shown plots" cell
+ * - the checked radio input, when the selected sample changes
  *
- * This is meant to be used as the long-term replacement for the ad hoc logic in
- * SampleTableRenderer when we want to avoid full table teardown during SC updates.
+ * setTableData() is called on every SC update() (e.g. on every subplot state
+ * change), so it only tears down and rebuilds the table shell when the sample
+ * list or columns actually changed (see isSameShape()). Otherwise it leaves
+ * existing row/cell DOM nodes in place so scroll position and row identity
+ * survive updates that only affect plot buttons.
  */
 export class SCSampleTable {
 	dom: SCDom | any
@@ -146,12 +150,49 @@ export class SCSampleTable {
 		}
 	}
 
+	/** Patches the table in place when the incoming data describes the same
+	 * set of samples/columns (e.g. a subplot state change re-triggers SC's
+	 * main()/update() without the sample list itself changing). Only falls
+	 * back to a full teardown+rebuild when the sample list or columns
+	 * actually changed, so row identity (and scroll position) survives
+	 * updates that only affect the "Shown plots" column. */
 	setTableData(tableData: SCTableData) {
+		const needsRebuild = !this.isSameShape(tableData)
 		this.tableData = tableData
 		this.rows = tableData.rows
 		this.columns = tableData.columns
 		this.sampleColIdx = tableData.sampleColIdx ?? 0
-		this.renderStaticTable()
+		if (needsRebuild) {
+			this.renderStaticTable()
+		} else {
+			this.syncSelectedRows(tableData)
+		}
+	}
+
+	/** Compares by the set of sample IDs rather than row order, since sortRows()
+	 * reorders this.rows/DOM in place on user interaction. Comparing positionally
+	 * would treat that as a "shape change" on the next incoming tableData and
+	 * force an unnecessary rebuild that undoes the sort and resets scroll. */
+	private isSameShape(tableData: SCTableData): boolean {
+		if (tableData.columns.length !== this.columns.length) return false
+		for (const [i, column] of this.columns.entries()) {
+			if (tableData.columns[i]?.label !== column.label) return false
+		}
+		if (tableData.rows.length !== this.rows.length) return false
+		const currentIds = new Set(this.rows.map(row => String(row[this.sampleColIdx]?.value ?? '')))
+		const incomingSampleColIdx = tableData.sampleColIdx ?? this.sampleColIdx
+		return tableData.rows.every(row => currentIds.has(String(row[incomingSampleColIdx]?.value ?? '')))
+	}
+
+	private syncSelectedRows(tableData: SCTableData) {
+		const sampleColIdx = tableData.sampleColIdx ?? this.sampleColIdx
+		const selectedIds = new Set(
+			tableData.selectedRows.map(rowIndex => String(tableData.rows[rowIndex]?.[sampleColIdx]?.value ?? ''))
+		)
+		for (const [sampleId, entry] of this.rowMap) {
+			const input = entry.row.select('input[type="radio"]').node()
+			if (input) input.checked = selectedIds.has(sampleId)
+		}
 	}
 
 	updatePlotBtns(activeSandboxes: Map<string, SCSampleSandbox[]>) {

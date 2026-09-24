@@ -56,7 +56,12 @@ export class SampleTableRenderer {
 
 	updateTable(tableData: SCTableData) {
 		this.tableData = tableData
-		this.renderSamplesTable(tableData)
+		if (!this.table) {
+			this.renderSamplesTable(tableData)
+			return
+		}
+		this.table.setTableData(tableData)
+		this.reapplyAllPlotButtons()
 	}
 
 	updatePlotBtns(activeSandboxes: Map<string, SCSampleSandbox[]>) {

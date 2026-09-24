@@ -21,6 +21,9 @@ import { SampleTableRenderer } from '../view/SampleTableRenderer.ts'
  *   - applyButtonsForSample() should find row by sample ID after sort mutation
  *   - updateTable() should skip rerendering btn when cell and plotIds are unchanged
  *   - updateTable() should re-render when plotIds change
+ *   - updateTable() should preserve row DOM identity when sample list is unchanged
+ *   - updateTable() should rebuild when the sample list changes
+ *   - updateTable() should sync radio selection without rebuilding
  *   - deleteBtns() should remove buttons and clear rendered entry
  *   - appendPlotBtn() should truncate long plot names
  *   - appendPlotBtn() should not truncate short plot names
@@ -48,7 +51,7 @@ function getTestTableData() {
 			[{ value: 'S2' }, { value: '' }, { value: 'EXP2' }],
 			[{ value: 'S3' }, { value: '' }, { value: 'EXP3' }]
 		],
-		selectedRows: [],
+		selectedRows: [] as number[],
 		sampleColIdx: 0
 	}
 }
@@ -459,6 +462,57 @@ tape('updateTable() should re-render when plotIds change', test => {
 	renderer.updatePlotBtns(sandboxes2)
 
 	test.equal(cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 2, 'Should re-render with 2 buttons')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('updateTable() should preserve row DOM identity when sample list is unchanged', test => {
+	const { renderer, holder } = getRenderer()
+
+	const firstRowNode = renderer.table!.rowMap.get('S1').row.node()
+	const parentDivNode = renderer.table!.parentDiv.node()
+
+	// Simulate SC's main()/update() re-running with a freshly built (but equivalent)
+	// tableData object, as happens on every subplot state change.
+	const nextTableData = getTestTableData()
+	renderer.updateTable(nextTableData)
+
+	test.equal(renderer.table!.rowMap.get('S1').row.node(), firstRowNode, 'Should keep the same row DOM node')
+	test.equal(renderer.table!.parentDiv.node(), parentDivNode, 'Should not tear down and rebuild the table shell')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('updateTable() should rebuild when the sample list changes', test => {
+	const { renderer, holder } = getRenderer()
+
+	const parentDivNode = renderer.table!.parentDiv.node()
+
+	const nextTableData = getTestTableData()
+	nextTableData.rows.push([{ value: 'S4' }, { value: '' }, { value: 'EXP4' }] as any)
+	renderer.updateTable(nextTableData)
+
+	test.notEqual(renderer.table!.parentDiv.node(), parentDivNode, 'Should rebuild the table shell when rows change')
+	test.equal(renderer.table!.rowMap.size, 4, 'Should render all rows including the new one')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('updateTable() should sync radio selection without rebuilding', test => {
+	const { renderer, holder } = getRenderer()
+
+	const parentDivNode = renderer.table!.parentDiv.node()
+	const nextTableData = getTestTableData()
+	nextTableData.selectedRows = [1] // select S2
+
+	renderer.updateTable(nextTableData)
+
+	test.equal(renderer.table!.parentDiv.node(), parentDivNode, 'Should not rebuild for a selection change')
+	const s2Input = renderer.table!.rowMap.get('S2').row.select('input[type="radio"]').node() as HTMLInputElement
+	test.ok(s2Input.checked, 'Should check the newly selected row')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
