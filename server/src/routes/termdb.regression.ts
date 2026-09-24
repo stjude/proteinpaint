@@ -12,6 +12,7 @@ import { runCumincR } from './termdb.cuminc.ts'
 import { isDictionaryType } from '#shared/terms.js'
 import { FRACTION_TW_TYPE, validateTermCollectionFraction } from '#shared/termCollection.js'
 import { getData } from '../termdb.matrix.js'
+import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 
 type TermWrapperLike = {
 	$id?: string
@@ -130,6 +131,7 @@ const payload: RoutePayload = {
 
 export const api: RouteApi = {
 	endpoint: 'termdb/regression',
+	middlewares: [protectedRoutes.minSampleSize],
 	methods: {
 		get: payload,
 		post: payload
