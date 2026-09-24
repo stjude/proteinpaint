@@ -23,9 +23,13 @@ type TcMapping = { originalTcId: string; originalTw: any; memberMap: MemberMappi
 const RESERVED_TERM_IDS = new Set(['prototype', ...Object.getOwnPropertyNames(Object.prototype)])
 
 /** True if this $id could reach the Object.prototype chain when later used as a
- *  plain-object property key (e.g. sampleData[$id] = ... or byTermId[$id] = ...). */
+ *  plain-object property key (e.g. sampleData[$id] = ... or byTermId[$id] = ...).
+ *  A non-string, non-nullish $id (e.g. ['__proto__']) is rejected outright: bracket
+ *  notation coerces any key to a string, so a non-string id can reach the same
+ *  dangerous keys while evading a strict string-equality check. Nullish is allowed
+ *  through so callers can still fall back to tw.term.id/tw.term.name. */
 export function isReservedTermId(id: any): boolean {
-	return typeof id === 'string' && RESERVED_TERM_IDS.has(id)
+	return id != null && (typeof id !== 'string' || RESERVED_TERM_IDS.has(id))
 }
 
 /** Reject $id values that could be used to reach the Object.prototype chain

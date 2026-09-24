@@ -39,9 +39,23 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			}
 		} else if (tw.term.type == SINGLECELL_GENE_EXPRESSION) {
 			if (!ds.queries?.singleCell?.geneExpression) throw 'term type not supported by this dataset'
-			binsCache = ds.queries.singleCell.geneExpression.sample2gene2expressionBins[tw.term.sample]
-			if (!binsCache) binsCache = ds.queries.singleCell.geneExpression.sample2gene2expressionBins[tw.term.sample] = {}
-			else if (Object.hasOwn(binsCache, tw.$id)) return res.send(binsCache[tw.$id])
+			// Object.hasOwn (not a truthy read) on the outer sample2gene2expressionBins map:
+			// a sample name of '__proto__' would otherwise make the read resolve to the real,
+			// shared Object.prototype instead of undefined, and every write below -- even one
+			// keyed by an innocuous tw.$id -- would then land on that same global object.
+			const sample2bins = ds.queries.singleCell.geneExpression.sample2gene2expressionBins
+			if (!Object.hasOwn(sample2bins, tw.term.sample)) {
+				binsCache = {}
+				Object.defineProperty(sample2bins, tw.term.sample, {
+					value: binsCache,
+					enumerable: true,
+					configurable: true,
+					writable: true
+				})
+			} else {
+				binsCache = sample2bins[tw.term.sample]
+				if (Object.hasOwn(binsCache, tw.$id)) return res.send(binsCache[tw.$id])
+			}
 			const data = await ds.queries.singleCell.geneExpression.get(q, tw.term.sample, tw.term.gene)
 			for (const cell in data) {
 				const value = data[cell]
