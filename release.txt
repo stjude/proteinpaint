@@ -1,1 +1,2 @@
-
+Fixes:
+- The SC app no longer scrolls to the top of the page when there is a state change within one of the subplots.
