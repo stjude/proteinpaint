@@ -1,4 +1,4 @@
-import { normalizeReqPath } from './Auth.ts'
+import { normalizeReqPath, getNonStringAuthParam } from './Auth.ts'
 
 // these server routes should not be protected by default,
 // since a user that is not logged should be able to have a way to login,
@@ -39,6 +39,16 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 			// NOTE: sessionid is from a domain-based cookie for GDC,
 			//       for SJ sites, the cookie key is determined by dsCredentials entry
 			sessionid: req.cookies.sessionid // may be undefined
+		}
+
+		// reject malformed auth query parameters before any credential lookup, since a non-string value
+		// (e.g. an array from `dslabel[]=...`) may still be coerced to a matching genome/dataset object key
+		// elsewhere, while not matching the exact dsCredentials key
+		const invalidParam = getNonStringAuthParam(req.query)
+		if (invalidParam) {
+			res.status(400)
+			res.send({ error: `invalid ${invalidParam}: must be a string` })
+			return
 		}
 
 		if (isForcedOpenRoute(req.path, auth.basepath, forcedOpenRoutes)) {

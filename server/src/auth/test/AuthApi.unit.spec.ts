@@ -1235,3 +1235,28 @@ tape('AuthApi.mayAdjustFilter: throws when filter.type is not tvslst', function 
 	}
 	test.end()
 })
+
+tape('AuthApi.getRequiredCredForDsEmbedder: fails closed for a non-string dslabel or embedder', function (test) {
+	test.timeoutAfter(500)
+
+	const { authApi } = makeAuthApi()
+	test.ok(
+		authApi.getRequiredCredForDsEmbedder(dslabel, embedder)?.length,
+		'should return the required cred for string values'
+	)
+	test.doesNotThrow(
+		() => authApi.getRequiredCredForDsEmbedder(dslabel, undefined),
+		'should not throw for an undefined embedder'
+	)
+	test.throws(
+		() => authApi.getRequiredCredForDsEmbedder([dslabel], embedder),
+		/must be a string/,
+		'should throw for dslabel[]'
+	)
+	test.throws(
+		() => authApi.getRequiredCredForDsEmbedder(dslabel, [embedder]),
+		/must be a string/,
+		'should throw for embedder[]'
+	)
+	test.end()
+})

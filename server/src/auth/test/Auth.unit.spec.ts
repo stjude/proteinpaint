@@ -1,6 +1,6 @@
 import tape from 'tape'
 import jsonwebtoken from 'jsonwebtoken'
-import { Auth, normalizeReqPath, stripBasepath } from '#src/auth/Auth.ts'
+import { Auth, getMatchedEntry, getNonStringAuthParam, normalizeReqPath, stripBasepath } from '#src/auth/Auth.ts'
 
 /*************************
  reusable constants and helper functions
@@ -808,3 +808,49 @@ tape(
 		test.end()
 	}
 )
+
+// a non-string client-supplied value, e.g. an array from `embedder[]=...`, must not resolve to no credential
+tape('getNonStringAuthParam: returns the first auth query param that is present but not a string', function (test) {
+	test.timeoutAfter(500)
+	test.equal(getNonStringAuthParam({ dslabel, embedder }), undefined, 'should accept string values')
+	test.equal(getNonStringAuthParam({ dslabel }), undefined, 'should accept a missing embedder')
+	test.equal(getNonStringAuthParam({ dslabel: [dslabel] }), 'dslabel', 'should reject an array dslabel')
+	test.equal(getNonStringAuthParam({ dslabel, embedder: [embedder] }), 'embedder', 'should reject an array embedder')
+	test.equal(getNonStringAuthParam({ dslabel, genome: { a: 1 } }), 'genome', 'should reject an object genome')
+	test.equal(getNonStringAuthParam({ dslabel, route: ['termdb'] }), 'route', 'should reject an array route')
+	test.end()
+})
+
+tape('getRequiredCred: fails closed for a non-string embedder or dslabel', function (test) {
+	test.timeoutAfter(500)
+
+	const exactEmbedder = 'portal.example.org'
+	const auth = makeAuth()
+	auth.creds[dslabel].termdb = { [exactEmbedder]: makeCred() }
+	test.ok(
+		auth.getRequiredCred({ dslabel, embedder: exactEmbedder }, '/termdb/matrix'),
+		'should return the cred for the exact embedder'
+	)
+	for (const [q, label] of [
+		[{ dslabel, embedder: [exactEmbedder] }, 'embedder[]'],
+		[{ dslabel, embedder: { 0: exactEmbedder } }, 'an object embedder'],
+		[{ dslabel: [dslabel], embedder: exactEmbedder }, 'dslabel[]']
+	] as any) {
+		test.throws(() => auth.getRequiredCred(q, '/termdb/matrix'), /must be a string/, `should throw for ${label}`)
+		test.throws(
+			() => auth.getRequiredCred({ ...q, for: 'getAllSamples' }, '/termdb', auth.protectedRoutes.samples),
+			/must be a string/,
+			`should throw for ${label} with for=getAllSamples`
+		)
+	}
+	test.throws(
+		() => getMatchedEntry({ '*': makeCred() }, [embedder]),
+		/must be a string/,
+		'getMatchedEntry should throw for an array'
+	)
+	test.ok(
+		getMatchedEntry({ '*': makeCred() }, undefined),
+		"getMatchedEntry should still use '*' for an undefined value"
+	)
+	test.end()
+})

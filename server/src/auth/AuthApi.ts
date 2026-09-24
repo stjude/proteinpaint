@@ -1,7 +1,7 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import { type AuthInterface } from '../auth.ts'
-import { Auth, patternMatches } from './Auth.ts'
+import { Auth, patternMatches, assertStringOrUndefined } from './Auth.ts'
 import { setAuthMiddleware } from './AuthMiddleWare.ts'
 import { setAuthRoutes } from './AuthRoutes.ts'
 import { sleep } from '../utils.js'
@@ -153,6 +153,11 @@ export class AuthApi implements AuthInterface {
 	}
 
 	getRequiredCredForDsEmbedder(dslabel, embedder) {
+		// fail closed: a non-string value, e.g. an array from `dslabel[]=...`, would not match an exact
+		// dslabel/embedder key, and must not be interpreted as a dataset that requires no credential
+		assertStringOrUndefined(dslabel, 'dslabel')
+		assertStringOrUndefined(embedder, 'embedder')
+
 		const requiredCred: any[] = []
 		for (const dslabelPattern in this.#auth.creds) {
 			if (!patternMatches(dslabel, dslabelPattern)) continue

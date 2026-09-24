@@ -40,9 +40,26 @@ export function patternMatches(value, pattern) {
 	return isMatch(value, pattern)
 }
 
+// client-supplied query parameters that are used to resolve dsCredentials entries. A non-string value,
+// e.g. an array from `embedder[]=...`, would not match an exact key and could fall through to no
+// credential, treating a protected dataset as open access, so these must be strings when present
+export const authQueryParams = ['dslabel', 'embedder', 'genome', 'route']
+
+// returns the name of the first auth query parameter that is present but is not a string
+export function getNonStringAuthParam(q) {
+	return authQueryParams.find(key => q?.[key] !== undefined && typeof q[key] != 'string')
+}
+
+// fail closed: throw instead of resolving a non-string value as matching no credential
+export function assertStringOrUndefined(value, name) {
+	if (value !== undefined && typeof value != 'string')
+		throw Object.assign(new Error(`invalid ${name}: must be a string`), { status: 400 })
+}
+
 // return the value for the key in obj that best matches a client-supplied value:
 // an exact key first, then a glob pattern key, then the '*' wildcard
 export function getMatchedEntry(obj, value) {
+	assertStringOrUndefined(value, 'embedder')
 	if (!obj) return
 	if (typeof value == 'string' && Object.hasOwn(obj, value)) return obj[value]
 	for (const pattern in obj) {
@@ -158,6 +175,7 @@ export class Auth {
 	// an exact key, then glob pattern keys (e.g. 'realD*'), then the '*' wildcard;
 	// keys that start with '#' (comment) or '__' (not a dslabel) are not used as glob patterns
 	getMatchedDsEntries(dslabel) {
+		assertStringOrUndefined(dslabel, 'dslabel')
 		const creds = this.creds
 		const entries: any[] = []
 		if (typeof dslabel == 'string' && Object.hasOwn(creds, dslabel)) entries.push(creds[dslabel])
