@@ -400,66 +400,234 @@ def h5ad_celltypes(h5ad):
         return {"cellTypes": sorted(set(t for t in _h5ad_cell_types(f) if t))}
 
 
-def nhood_enrichment(h5ad, ids, k=6, perms=1000, seed=0):
-    """Neighborhood enrichment of the given cells, as squidpy computes it
-    (sq.gr.spatial_neighbors coord_type='generic', n_neighs=k, followed by
-    sq.gr.nhood_enrichment): a directed kNN graph over the cells' obsm/spatial
-    centroids (each cell -> its k nearest others, no symmetrisation, as in
-    squidpy's KNNBuilder), count[a][b] = number of edges from a type-a cell to
-    a type-b cell, and a z-score of that count against `perms` random
-    relabellings of the same cells (population std, as squidpy). Cells with
-    no annotation are dropped first (the reference script's dropna); unknown
-    ids are ignored. Errors (fewer than 2 types, or fewer than 2 cells) come
-    back as {"error"} so the UI gets a message, not a traceback."""
-    import h5py
+def _knn_edges(coords, k):
+    """Directed kNN edge index arrays (rows -> cols, self dropped) over
+    `coords`, as squidpy's KNNBuilder builds them: each cell -> its k nearest
+    others, no symmetrisation. k is capped at n-1. Returns (rows, cols, kk);
+    kk is 0 (rows/cols empty) when fewer than 2 cells are given."""
     from scipy.spatial import cKDTree
-    with h5py.File(h5ad, "r") as f:
-        all_ids = _h5ad_index(f, "obs")                   # cell ids, obs order
-        types = _h5ad_cell_types(f)                       # one string per cell, '' = untyped
-        xy = f["obsm/spatial"][:]                         # centroids, obs order (µm)
-    pos = {i: n for n, i in enumerate(all_ids.tolist())}  # id -> obs row
-    sel = np.array([pos[i] for i in ids if i in pos], dtype=int)
+    n = coords.shape[0]
+    kk = min(int(k), n - 1)
+    if kk < 1:
+        return np.empty(0, dtype=np.int64), np.empty(0, dtype=np.int64), 0
+    nbr = cKDTree(coords).query(coords, k=kk + 1)[1][:, 1:]  # k nearest, self (column 0) dropped
+    rows = np.repeat(np.arange(n), kk)                    # edge sources, aligned with nbr.ravel()
+    cols = nbr.ravel()                                    # edge targets
+    return rows, cols, kk
+
+
+def _knn_count(code, rows, cols, C):
+    """C x C directed edge tally: count[a][b] = number of kNN edges from a
+    type-a cell to a type-b cell, for the type-index array `code` (one entry
+    per cell, aligned with `rows`/`cols` from _knn_edges)."""
+    return np.bincount(code[rows] * C + code[cols], minlength=C * C).reshape(C, C)
+
+
+def _permute_zscore(code, rows, cols, C, perms, seed):
+    """squidpy's neighbourhood-enrichment z-score: the observed _knn_count
+    against `perms` random relabellings of the same cells (population std).
+    Returns the C x C z-score matrix with None for zero-variance pairs (a
+    tiny or lopsided selection can make a pair's count never vary across
+    permutations -> nan/inf, not a real score)."""
+    n = code.size
+    observed = _knn_count(code, rows, cols, C)
+    rng = np.random.default_rng(int(seed))
+    P = np.empty((int(perms), C, C))
+    for i in range(int(perms)):
+        P[i] = _knn_count(code[rng.permutation(n)], rows, cols, C)  # same cells, shuffled types
+    # numpy's divide warning is silenced -- run_python treats ANY stderr output
+    # as a failure, and a zero-variance pair (-> nan/inf, becomes null below)
+    # is not one
+    with np.errstate(divide="ignore", invalid="ignore"):
+        z = (observed - P.mean(axis=0)) / P.std(axis=0)   # squidpy: population std
+    return observed, [[float(v) if np.isfinite(v) else None for v in row] for row in z]
+
+
+def _typed_selection(all_ids, types, xy, ids, pos=None):
+    """Resolve `ids` (or, if None, every annotated cell) against an open
+    h5ad's obs arrays: obs-row indices, their type labels, and their (x,y)
+    centroids, unannotated cells dropped. `pos` (id -> obs row) is built once
+    by the caller when resolving several selections against the same file."""
+    if ids is None:
+        sel = np.arange(all_ids.size)
+    else:
+        if pos is None:
+            pos = {i: n for n, i in enumerate(all_ids.tolist())}  # id -> obs row
+        sel = np.array([pos[i] for i in ids if i in pos], dtype=int)
     lab = types[sel]
     keep = lab != ""                                      # annotated cells only
     skipped = int((~keep).sum())
     sel, lab = sel[keep], lab[keep]
+    return sel, lab, xy[sel].astype(np.float64), skipped
+
+
+def nhood_enrichment(h5ad, ids, k=6, perms=1000, seed=0):
+    """Neighborhood enrichment of the given cells, as squidpy computes it
+    (sq.gr.spatial_neighbors coord_type='generic', n_neighs=k, followed by
+    sq.gr.nhood_enrichment): a directed kNN graph over the cells' obsm/spatial
+    centroids, count[a][b] = number of edges from a type-a cell to a type-b
+    cell, and a z-score of that count against `perms` random relabellings of
+    the same cells (population std, as squidpy). Cells with no annotation are
+    dropped first (the reference script's dropna); unknown ids are ignored.
+    Errors (fewer than 2 types, or fewer than 2 cells) come back as {"error"}
+    so the UI gets a message, not a traceback."""
+    import h5py
+    with h5py.File(h5ad, "r") as f:
+        all_ids = _h5ad_index(f, "obs")                   # cell ids, obs order
+        types = _h5ad_cell_types(f)                       # one string per cell, '' = untyped
+        xy = f["obsm/spatial"][:]                         # centroids, obs order (µm)
+    sel, lab, coords, skipped = _typed_selection(all_ids, types, xy, ids)
     cats = sorted(set(lab.tolist()))                      # type order of the matrices
     C, n = len(cats), int(sel.size)
     if C < 2:
         return {"error": f"neighborhood enrichment needs at least 2 cell types, found {C}"}
-    kk = min(int(k), n - 1)                               # a tiny selection gets what neighbours it has
+    rows, cols, kk = _knn_edges(coords, k)
     if kk < 1:
         return {"error": "neighborhood enrichment needs at least 2 annotated cells"}
-    coords = xy[sel].astype(np.float64)
-    nbr = cKDTree(coords).query(coords, k=kk + 1)[1][:, 1:]  # k nearest, self (column 0) dropped
     code = np.searchsorted(cats, lab).astype(np.int64)    # type index per cell
-    rows = np.repeat(np.arange(n), kk)                    # edge sources, aligned with nbr.ravel()
-    cols = nbr.ravel()                                    # edge targets
-
-    def count(c):
-        # C x C edge tally for one labelling c
-        return np.bincount(c[rows] * C + c[cols], minlength=C * C).reshape(C, C)
-
-    observed = count(code)
-    rng = np.random.default_rng(int(seed))
-    P = np.empty((int(perms), C, C))
-    for i in range(int(perms)):
-        P[i] = count(code[rng.permutation(n)])            # same cells, shuffled types
-    # a pair whose count never varies across permutations has std 0 (tiny or
-    # lopsided selections); that yields nan/inf which becomes null below, so
-    # numpy's divide warning is silenced — run_python treats ANY stderr text as
-    # a failure, and this is not one
-    with np.errstate(divide="ignore", invalid="ignore"):
-        z = (observed - P.mean(axis=0)) / P.std(axis=0)   # squidpy: population std
-    zl = [[float(v) if np.isfinite(v) else None for v in row] for row in z]  # JSON has no NaN
+    observed, zl = _permute_zscore(code, rows, cols, C, perms, seed)
     return {
         "types": cats,
+        "typeCounts": np.bincount(code, minlength=C).tolist(),  # per-type composition, aligned to `types`
         "count": observed.tolist(),
         "zscore": zl,
         "cells": n,
         "skipped": skipped,
         "k": kk,
         "perms": int(perms),
+    }
+
+
+def _row_normalize(mat):
+    """Each row of a non-negative matrix divided by its own sum (0-rows stay
+    0) — turns a raw kNN edge-count matrix into a per-source-type neighbour
+    profile, the cheap-stage signature that doesn't need a permutation test."""
+    mat = np.asarray(mat, dtype=np.float64)
+    sums = mat.sum(axis=1, keepdims=True)
+    return np.divide(mat, sums, out=np.zeros_like(mat), where=sums > 0)
+
+
+def _cosine(a, b):
+    na, nb = np.linalg.norm(a), np.linalg.norm(b)
+    return float(a @ b / (na * nb)) if na > 0 and nb > 0 else 0.0
+
+
+def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=1000,
+                     seed=0, window=200.0, stride=100.0, top_k=10):
+    """Windows of `h5ad` whose cell-type makeup and local neighbourhood
+    resemble a query region (typically another image's lasso selection,
+    summarised by an earlier nhood_enrichment() call and handed in here as
+    plain data -- `types`/`type_counts`/`count`/`zscore` -- so this never
+    needs to read the query's own h5ad).
+
+    Two-stage, coarse-to-fine: `h5ad`'s cells are tiled into `window`-sized,
+    `stride`-spaced (i.e. overlapping when stride < window) square windows;
+    each gets a cheap signature (its per-type composition + row-normalized
+    kNN neighbour-count matrix, both aligned to the query's `types` -- cells
+    of any other type are ignored, same as an unannotated cell) compared to
+    the query's own signature by cosine similarity, no permutation test. The
+    `top_k` cheap-stage windows are then confirmed with the SAME permutation
+    z-score test nhood_enrichment runs, and ranked by distance to the query's
+    z-score matrix (mean absolute difference over cells finite in both) when
+    the caller supplied one, else left in cheap-score order."""
+    import h5py
+    C = len(types)
+    if C < 2:
+        return {"error": f"similarity search needs at least 2 query cell types, found {C}"}
+    type_counts = np.asarray(type_counts, dtype=np.float64)
+    comp_q = type_counts / type_counts.sum() if type_counts.sum() > 0 else type_counts
+    adj_q = _row_normalize(count)
+    cheap_q = np.concatenate([comp_q, adj_q.ravel()])
+    zscore_q = np.array(zscore, dtype=np.float64) if zscore is not None else None
+
+    with h5py.File(h5ad, "r") as f:
+        all_ids = _h5ad_index(f, "obs")
+        all_types = _h5ad_cell_types(f)
+        xy = f["obsm/spatial"][:]
+    sel, lab, coords, _ = _typed_selection(all_ids, all_types, xy, None)
+    keep = np.isin(lab, types)                            # only the query's own vocabulary counts here
+    sel, lab, coords = sel[keep], lab[keep], coords[keep]
+    if coords.shape[0] < 2:
+        return {"error": "target image has fewer than 2 cells of the query's cell types"}
+    code = np.searchsorted(types, lab).astype(np.int64)
+    ids = all_ids[sel]
+
+    lo = coords.min(axis=0)
+    hi = coords.max(axis=0)
+    window, stride = float(window), float(stride)
+    xs = np.arange(lo[0], max(hi[0] - window, lo[0]) + stride, stride)
+    ys = np.arange(lo[1], max(hi[1] - window, lo[1]) + stride, stride)
+    n = coords.shape[0]
+    # the cheap stage masks all n cells per window (see the ponytail note
+    # below); window/stride are caller-controlled, so a tiny stride over a
+    # big image could otherwise drive an unbounded number of scans -- unlike
+    # the route's ids*k*perms cap (server/src/routes/wsitiles.ts), the window
+    # count here depends on the target's own extent, which the server can't
+    # know before spawning python, so it's bounded here instead
+    MAX_SCAN_WORK = 200_000_000
+    if xs.size * ys.size * n > MAX_SCAN_WORK:
+        return {"error": f"scan too large ({xs.size * ys.size} windows x {n} cells): use a larger window/stride"}
+
+    min_cells = max(4, k + 1)                              # too few cells for a meaningful kNN graph
+    candidates = []                                        # (cheap_score, cx, cy, member index array)
+    # ponytail: O(windows * cells) full-array scan per window, cells ~10-100k
+    # and windows ~hundreds is fine; a whole-slide-scale search would want a
+    # spatial grid/bucket index instead of re-masking every cell per window
+    for x0 in xs:
+        for y0 in ys:
+            m = (coords[:, 0] >= x0) & (coords[:, 0] < x0 + window) & \
+                (coords[:, 1] >= y0) & (coords[:, 1] < y0 + window)
+            idx = np.nonzero(m)[0]
+            if idx.size < min_cells:
+                continue
+            w_code = code[idx]
+            rows, cols, kk = _knn_edges(coords[idx], k)
+            if kk < 1:
+                continue
+            count_w = _knn_count(w_code, rows, cols, C)
+            comp_w = np.bincount(w_code, minlength=C).astype(np.float64)
+            comp_w = comp_w / comp_w.sum() if comp_w.sum() > 0 else comp_w
+            cheap_w = np.concatenate([comp_w, _row_normalize(count_w).ravel()])
+            candidates.append((_cosine(cheap_q, cheap_w), float(x0 + window / 2), float(y0 + window / 2), idx))
+    candidates.sort(key=lambda c: c[0], reverse=True)
+    top = candidates[: int(top_k)]
+
+    # same per-run budget the /nhood route enforces (ids*k*perms edge tallies);
+    # a window's cell count is only known after the cheap stage, so a window
+    # too dense to confirm within budget just skips confirmation rather than
+    # failing the whole scan -- its cheap score still stands
+    MAX_NHOOD_WORK = 50_000_000
+    windows = []
+    for cheap_score, cx, cy, idx in top:
+        w_code = code[idx]
+        rows, cols, kk = _knn_edges(coords[idx], k)
+        observed = _knn_count(w_code, rows, cols, C)
+        zl, distance = None, None
+        if idx.size * kk * perms <= MAX_NHOOD_WORK:
+            observed, zl = _permute_zscore(w_code, rows, cols, C, perms, seed)
+            if zscore_q is not None:
+                z = np.array([[v if v is not None else np.nan for v in row] for row in zl])
+                both_finite = np.isfinite(z) & np.isfinite(zscore_q)
+                if both_finite.sum() >= 2:
+                    distance = float(np.abs(z[both_finite] - zscore_q[both_finite]).mean())
+        windows.append({
+            "cx": cx, "cy": cy,
+            "cells": int(idx.size),
+            "ids": ids[idx].tolist(),
+            "cheapScore": cheap_score,
+            "count": observed.tolist(),
+            "zscore": zl,
+            "distance": distance,
+        })
+    windows.sort(key=lambda w: w["distance"] if w["distance"] is not None else float("inf"))
+    return {
+        "types": types,
+        "scanned": len(candidates),
+        "windows": windows,
+        "k": k,
+        "perms": int(perms),
+        "window": window,
+        "stride": stride,
     }
 
 
@@ -502,6 +670,13 @@ def main():
     elif job["action"] == "nhood":
         print(json.dumps(
             nhood_enrichment(job["h5ad"], job["ids"], job.get("k", 6), job.get("perms", 1000), job.get("seed", 0)),
+            separators=(",", ":")))
+    elif job["action"] == "similar":
+        print(json.dumps(
+            similar_regions(
+                job["h5ad"], job["types"], job["typeCounts"], job["count"], job.get("zscore"),
+                job.get("k", 6), job.get("perms", 1000), job.get("seed", 0),
+                job.get("window", 200.0), job.get("stride", 100.0), job.get("topK", 10)),
             separators=(",", ":")))
     elif job["action"] == "selftest":
         _test()  # tier-math self-check as a job, for the node unit spec
