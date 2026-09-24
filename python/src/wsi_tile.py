@@ -513,7 +513,8 @@ def _cosine(a, b):
 
 
 def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=1000,
-                     seed=0, window=200.0, stride=100.0, top_k=10, size_tolerance=0.1):
+                     seed=0, window=200.0, stride=100.0, top_k=10, size_tolerance=0.1,
+                     required_types=None):
     """Windows of `h5ad` whose cell-type makeup and local neighbourhood
     resemble a query region (typically another image's lasso selection,
     summarised by an earlier nhood_enrichment() call and handed in here as
@@ -522,23 +523,30 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
 
     Two-stage, coarse-to-fine: `h5ad`'s cells are tiled into `window`-sized,
     `stride`-spaced (i.e. overlapping when stride < window) square windows.
-    A window outside +-`size_tolerance` (default 0.1 = +-10%) of the query's
-    own cell count (sum(type_counts)) is dropped before anything else -- a
-    "similar" niche must be a similar SIZE, not just a similar mix, so a tiny
-    or huge window never wins on composition alone. Each survivor gets a cheap
-    signature (its per-type
-    composition + row-normalized kNN neighbour-count matrix, both aligned to
-    the query's `types` -- cells of any other type are ignored, same as an
-    unannotated cell) compared to the query's own signature by cosine
-    similarity, no permutation test. The `top_k` cheap-stage windows are then
-    confirmed with the SAME permutation z-score test nhood_enrichment runs,
-    and ranked by distance to the query's z-score matrix (mean absolute
-    difference over cells finite in both) when the caller supplied one, else
-    left in cheap-score order."""
+    A window is dropped before anything else if it's outside +-`size_tolerance`
+    (default 0.1 = +-10%) of the query's own cell count (sum(type_counts)) --
+    a "similar" niche must be a similar SIZE, not just a similar mix, so a
+    tiny or huge window never wins on composition alone -- or if it's missing
+    ANY of `required_types` (default none required): types whose presence is
+    mandatory, not just weighted into the composition score, for a window to
+    count as a candidate at all. Each survivor gets a cheap signature (its
+    per-type composition + row-normalized kNN neighbour-count matrix, both
+    aligned to the query's `types` -- cells of any other type are ignored,
+    same as an unannotated cell) compared to the query's own signature by
+    cosine similarity, no permutation test. The `top_k` cheap-stage windows
+    are then confirmed with the SAME permutation z-score test
+    nhood_enrichment runs, and ranked by distance to the query's z-score
+    matrix (mean absolute difference over cells finite in both) when the
+    caller supplied one, else left in cheap-score order."""
     import h5py
     C = len(types)
     if C < 2:
         return {"error": f"similarity search needs at least 2 query cell types, found {C}"}
+    required_types = required_types or []
+    missing = [t for t in required_types if t not in types]
+    if missing:
+        return {"error": f"requiredTypes not in the query's own vocabulary: {', '.join(missing)}"}
+    required_idx = np.searchsorted(types, required_types)  # types is sorted (nhood_enrichment's cats)
     type_counts = np.asarray(type_counts, dtype=np.float64)
     ref_n = type_counts.sum()                              # the query region's own cell count
     comp_q = type_counts / ref_n if ref_n > 0 else type_counts
@@ -591,6 +599,8 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
             if idx.size < min_cells or not (size_lo <= idx.size <= size_hi):
                 continue
             w_code = code[idx]
+            if required_idx.size and not np.isin(required_idx, w_code).all():
+                continue                                    # missing a mandatory type -- not a candidate at all
             rows, cols, kk = _knn_edges(coords[idx], k)
             if kk < 1:
                 continue
@@ -640,6 +650,7 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
         "stride": stride,
         "refCells": int(ref_n),           # the query region's own cell count, for the UI to show %-diff per candidate
         "sizeTolerance": size_tolerance,
+        "requiredTypes": required_types,
     }
 
 
@@ -689,7 +700,7 @@ def main():
                 job["h5ad"], job["types"], job["typeCounts"], job["count"], job.get("zscore"),
                 job.get("k", 6), job.get("perms", 1000), job.get("seed", 0),
                 job.get("window", 200.0), job.get("stride", 100.0), job.get("topK", 10),
-                job.get("sizeTolerance", 0.1)),
+                job.get("sizeTolerance", 0.1), job.get("requiredTypes")),
             separators=(",", ":")))
     elif job["action"] == "selftest":
         _test()  # tier-math self-check as a job, for the node unit spec

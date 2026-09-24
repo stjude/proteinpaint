@@ -1140,6 +1140,21 @@ export async function renderSimilarSearch(
 		.style('margin', '0 2px')
 		.property('value', 10)
 	row.append('span').text('%')
+	// which of the query's own types a candidate MUST contain at least one
+	// cell of, on top of (not instead of) the composition/size matching;
+	// none checked by default = no such requirement
+	const typesRow = section.append('div').style('margin', '2px 0 4px 0').style('opacity', 0.85)
+	typesRow.append('span').style('margin-right', '6px').text('require cell type(s) present:')
+	const requiredChecks: { type: string; input: any }[] = query.types.map(t => {
+		const label = typesRow.append('label').style('margin-right', '10px').style('cursor', 'pointer')
+		const input = label
+			.append('input')
+			.attr('type', 'checkbox')
+			.attr('data-testid', `sjpp-wsi-similar-required-${t}`)
+			.property('checked', false)
+		label.append('span').style('margin-left', '2px').text(t)
+		return { type: t, input }
+	})
 	const resultsDiv = section.append('div')
 	row
 		.append('button')
@@ -1150,6 +1165,7 @@ export async function renderSimilarSearch(
 			const sampleId = sampleSelect.property('value')
 			// percent in the UI, fraction over the wire (route clamps to 0-5, i.e. 0-500%)
 			const sizeTolerance = Math.max(0, Number(toleranceInput.property('value')) || 0) / 100
+			const requiredTypes = requiredChecks.filter(c => c.input.property('checked')).map(c => c.type)
 			resultsDiv.selectAll('*').remove()
 			resultsDiv.append('div').text(`Searching ${sampleId} …`)
 			try {
@@ -1173,17 +1189,19 @@ export async function renderSimilarSearch(
 						typeCounts: query.typeCounts,
 						count: query.count,
 						zscore: query.zscore,
-						sizeTolerance
+						sizeTolerance,
+						requiredTypes
 					}
 				})
 				if (!r || r.error) throw new Error(r?.error || 'similarity search failed')
 				resultsDiv.selectAll('*').remove()
 				const pct = (r.sizeTolerance * 100).toFixed(0)
+				const reqSuffix = r.requiredTypes?.length ? `, must contain: ${r.requiredTypes.join(', ')}` : ''
 				if (!r.windows?.length) {
 					resultsDiv
 						.append('div')
 						.text(
-							`No matching regions found in ${sampleId} (${r.scanned} windows scanned, none within ±${pct}% of the reference's ${r.refCells} cells).`
+							`No matching regions found in ${sampleId} (${r.scanned} windows scanned, none within ±${pct}% of the reference's ${r.refCells} cells${reqSuffix}).`
 						)
 					return
 				}
@@ -1192,7 +1210,7 @@ export async function renderSimilarSearch(
 					.style('opacity', 0.7)
 					.style('margin-bottom', '4px')
 					.text(
-						`${sampleId}: top ${r.windows.length} of ${r.scanned} windows scanned (reference: ${r.refCells} cells, ±${pct}% tolerance) — click a row to view it`
+						`${sampleId}: top ${r.windows.length} of ${r.scanned} windows scanned (reference: ${r.refCells} cells, ±${pct}% tolerance${reqSuffix}) — click a row to view it`
 					)
 				const tableDiv = resultsDiv.append('div')
 				const nicheDiv = resultsDiv
