@@ -168,6 +168,9 @@ export async function getSampleList(req, q, ds, auth = authApi) {
 		// termdb credential; unlike canDisplay, do not require ds.cohort.termdb.displaySampleIds, since an
 		// open-access api-backed ds (e.g. gdc) may not set it
 		if (!auth.isUserLoggedIn(req, ds, [], true)) return []
+		// when the dataset does define displaySampleIds, respect it like the sqlite and other sample handlers,
+		// e.g. displaySampleIds: false or a role policy that returns false for this request
+		if (ds.cohort.termdb.displaySampleIds !== undefined && !canDisplay) return []
 		// dataset supplied method. mayAdjustFilter for the same reason as getSampleCount() above
 		auth.mayAdjustFilter(q, ds, [])
 		const temp = await ds.cohort.termdb.filterSamples(q, ds)

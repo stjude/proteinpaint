@@ -11,12 +11,13 @@ const embedder = 'localhost'
 const sampleIds = ['case1', 'case2']
 
 // an api-backed dataset, with a ds-supplied filterSamples() method instead of a sqlite db
-function makeApiDs(label: string) {
+function makeApiDs(label: string, termdbOpts: any = {}) {
 	return {
 		label,
 		cohort: {
 			termdb: {
-				filterSamples: async () => new Set(sampleIds)
+				filterSamples: async () => new Set(sampleIds),
+				...termdbOpts
 			}
 		}
 	}
@@ -94,6 +95,59 @@ tape('getSampleList(): api-backed dataset', async function (test) {
 			sampleIds.map(id => ({ id })),
 			'should return the sample ids for a logged-in request to a protected dataset'
 		)
+	}
+	test.end()
+})
+
+tape('getSampleList(): api-backed dataset with a displaySampleIds option', async function (test) {
+	test.timeoutAfter(500)
+
+	const allSamples = sampleIds.map(id => ({ id }))
+	// mock a logged-in request, with canDisplaySampleIds() returning the given value
+	const makeLoggedInAuth = (canDisplay: boolean) => ({
+		canDisplaySampleIds: () => canDisplay,
+		isUserLoggedIn: () => true,
+		mayAdjustFilter: () => {}
+	})
+	const req = makeReq('protectedDs')
+	{
+		const ds = makeApiDs('protectedDs', { displaySampleIds: false })
+		const samples = await getSampleList(req, req.query, ds, makeLoggedInAuth(false))
+		test.deepEqual(samples, [], 'should return no sample ids for a logged-in request when displaySampleIds is false')
+	}
+	{
+		// a role policy that denies this request
+		const ds = makeApiDs('protectedDs', { displaySampleIds: () => false })
+		const samples = await getSampleList(req, req.query, ds, makeLoggedInAuth(false))
+		test.deepEqual(
+			samples,
+			[],
+			'should return no sample ids for a logged-in request when the role policy returns false'
+		)
+	}
+	{
+		const ds = makeApiDs('protectedDs', { displaySampleIds: () => true })
+		const samples = await getSampleList(req, req.query, ds, makeLoggedInAuth(true))
+		test.deepEqual(samples, allSamples, 'should return the sample ids when the role policy allows this request')
+	}
+	{
+		const ds = makeApiDs('protectedDs', { displaySampleIds: true })
+		const samples = await getSampleList(req, req.query, ds, makeLoggedInAuth(true))
+		test.deepEqual(samples, allSamples, 'should return the sample ids when displaySampleIds is true')
+	}
+	{
+		// the real AuthApi.canDisplaySampleIds() returns false for displaySampleIds: false
+		const auth = makeProtectedAuthApi('protectedDs')
+		const openReq = makeReq('openDs')
+		const ds = makeApiDs('openDs', { displaySampleIds: false })
+		const samples = await getSampleList(openReq, openReq.query, ds, auth)
+		test.deepEqual(samples, [], 'should return no sample ids for an open-access dataset with displaySampleIds: false')
+	}
+	{
+		const logoutAuth = { ...makeLoggedInAuth(true), isUserLoggedIn: () => false }
+		const ds = makeApiDs('protectedDs', { displaySampleIds: true })
+		const samples = await getSampleList(req, req.query, ds, logoutAuth)
+		test.deepEqual(samples, [], 'should still require a session when displaySampleIds is true')
 	}
 	test.end()
 })
