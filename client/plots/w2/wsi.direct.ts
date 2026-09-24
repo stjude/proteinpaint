@@ -70,6 +70,7 @@ import { select } from 'd3-selection' // wraps the control element for the icon 
 import { scaleLinear } from 'd3-scale' // diverging z-score color scale of the enrichment heatmap
 import { dofetch3 } from '#common/dofetch' // fetch wrapper for meta/genecounts
 import { sayerror, Menu, renderTable, icons, ColorScale } from '#dom' // error banner, lasso menu + table, lasso icon, heatmap legend
+import { addScaleBar } from './scaleBar' // bottom-right µm scale bar, every image (spatial or plain)
 
 /** Build the viewer in `holder`; opts mirror the URL params documented above */
 export async function init(
@@ -191,6 +192,9 @@ export async function init(
 			view: new View({ resolutions: grid.getResolutions(), extent }) // camera locked to the pyramid
 		})
 		map.getView().fit(extent) // start fully zoomed out, whole slide visible
+		// real, known mpp only — never the µm-math fallback below, which would
+		// draw a scale bar for pixels that aren't actually micrometers
+		addScaleBar(map, Array.isArray(meta.mpp) && meta.mpp.length === 2 ? meta.mpp[0] : undefined)
 
 		// info line under the map: name, pixel size, µm/px, level count
 		holder
