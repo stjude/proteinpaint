@@ -356,6 +356,14 @@ function init({ genomes }) {
 					}
 					zscore = q.zscore
 				}
+				let requiredTypes: string[] = []
+				if (q.requiredTypes !== undefined) {
+					requiredTypes = Array.isArray(q.requiredTypes) ? q.requiredTypes.map(String) : []
+					if (requiredTypes.some((t: string) => !types.includes(t))) {
+						res.status(400).send({ status: 'error', error: 'similar requiredTypes must be a subset of types' })
+						return
+					}
+				}
 				const int = (v: any, d: number, lo: number, hi: number) =>
 					Math.min(hi, Math.max(lo, Number.isInteger(Number(v)) ? Number(v) : d))
 				const num = (v: any, d: number, lo: number, hi: number) =>
@@ -377,7 +385,10 @@ function init({ genomes }) {
 					// (fraction, default 0.1 = +-10%) before it's dropped, regardless of
 					// how well its composition matches — a bound of 5 (+-500%) still
 					// keeps a caller from disabling the check with an absurd value
-					sizeTolerance: num(q.sizeTolerance, 0.1, 0, 5)
+					sizeTolerance: num(q.sizeTolerance, 0.1, 0, 5),
+					// types a candidate must contain at least one cell of, not merely be
+					// weighted toward in the composition score; default none required
+					requiredTypes
 				}
 				const out = await run_python('wsi_tile.py', JSON.stringify(job))
 				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim (windows[], or {error})
