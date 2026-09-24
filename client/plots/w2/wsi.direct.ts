@@ -1125,13 +1125,31 @@ export async function renderSimilarSearch(
 	const row = section.append('div').style('margin', '4px 0')
 	const sampleSelect = row.append('select').attr('data-testid', 'sjpp-wsi-similar-sample').style('margin-right', '6px')
 	for (const s of siblings) sampleSelect.append('option').attr('value', s.sampleId).text(s.sampleId)
+	row
+		.append('label')
+		.attr('title', 'A candidate must be within this % of the reference niche’s own cell count')
+		.text(' size tolerance ±')
+	const toleranceInput = row
+		.append('input')
+		.attr('data-testid', 'sjpp-wsi-similar-tolerance')
+		.attr('type', 'number')
+		.attr('min', 0)
+		.attr('max', 500)
+		.attr('step', 1)
+		.style('width', '4em')
+		.style('margin', '0 2px')
+		.property('value', 10)
+	row.append('span').text('%')
 	const resultsDiv = section.append('div')
 	row
 		.append('button')
 		.attr('data-testid', 'sjpp-wsi-similar-search')
+		.style('margin-left', '6px')
 		.text('Search')
 		.on('click', async () => {
 			const sampleId = sampleSelect.property('value')
+			// percent in the UI, fraction over the wire (route clamps to 0-5, i.e. 0-500%)
+			const sizeTolerance = Math.max(0, Number(toleranceInput.property('value')) || 0) / 100
 			resultsDiv.selectAll('*').remove()
 			resultsDiv.append('div').text(`Searching ${sampleId} …`)
 			try {
@@ -1154,13 +1172,19 @@ export async function renderSimilarSearch(
 						types: query.types,
 						typeCounts: query.typeCounts,
 						count: query.count,
-						zscore: query.zscore
+						zscore: query.zscore,
+						sizeTolerance
 					}
 				})
 				if (!r || r.error) throw new Error(r?.error || 'similarity search failed')
 				resultsDiv.selectAll('*').remove()
+				const pct = (r.sizeTolerance * 100).toFixed(0)
 				if (!r.windows?.length) {
-					resultsDiv.append('div').text(`No matching regions found in ${sampleId} (${r.scanned} windows scanned).`)
+					resultsDiv
+						.append('div')
+						.text(
+							`No matching regions found in ${sampleId} (${r.scanned} windows scanned, none within ±${pct}% of the reference's ${r.refCells} cells).`
+						)
 					return
 				}
 				resultsDiv
@@ -1168,7 +1192,7 @@ export async function renderSimilarSearch(
 					.style('opacity', 0.7)
 					.style('margin-bottom', '4px')
 					.text(
-						`${sampleId}: top ${r.windows.length} of ${r.scanned} windows scanned, ranked by similarity — click a row to view it`
+						`${sampleId}: top ${r.windows.length} of ${r.scanned} windows scanned (reference: ${r.refCells} cells, ±${pct}% tolerance) — click a row to view it`
 					)
 				const tableDiv = resultsDiv.append('div')
 				const nicheDiv = resultsDiv
@@ -1180,6 +1204,7 @@ export async function renderSimilarSearch(
 					columns: [
 						{ label: '#' },
 						{ label: 'Cells' },
+						{ label: 'Δ vs. reference' },
 						{ label: 'Cheap score' },
 						{ label: 'Distance' },
 						{ label: 'Center (x, y)' }
@@ -1187,6 +1212,9 @@ export async function renderSimilarSearch(
 					rows: r.windows.map((w: any, i: number) => [
 						{ value: String(i + 1) },
 						{ value: String(w.cells) },
+						{
+							value: `${w.cells >= r.refCells ? '+' : ''}${(((w.cells - r.refCells) / r.refCells) * 100).toFixed(1)}%`
+						},
 						{ value: w.cheapScore.toFixed(3) },
 						{ value: w.distance == null ? 'n/a' : w.distance.toFixed(3) },
 						{ value: `${w.cx.toFixed(0)}, ${w.cy.toFixed(0)}` }
