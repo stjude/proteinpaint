@@ -1,6 +1,7 @@
 import tape from 'tape'
 import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE } from '#types'
 import { getAuthApi, authApi } from '../../auth.js'
+import { refColor } from '../../routes/termdb.sampleScatter.js'
 import { init, processSamples } from '../plotsRoute.ts'
 
 /**
@@ -110,6 +111,122 @@ tape('singleCellPlots: categoryCounts from colorData generates color legend entr
 	test.equal(legendByCategory.get('B')?.sampleCount, 1, 'category B count is 1')
 	test.equal(legendByCategory.get('A')?.color, '#111111', 'category A color is mapped')
 	test.equal(legendByCategory.get('B')?.color, '#222222', 'category B color is mapped')
+	test.end()
+})
+
+tape('singleCellPlots: no colorTW or coordTWs emits Ref samples and legend', async test => {
+	await ensureOpenAuth()
+	let receivedArg: any
+	const ds = {
+		cohort: { termdb: {} },
+		queries: {
+			singleCell: {
+				data: {
+					get: async arg => {
+						receivedArg = arg
+						return {
+							plots: [
+								{
+									expCells: [
+										{ cellId: 'cell1', category: 'A', x: 1, y: 2, geneExp: 0.2 },
+										{ cellId: 'cell2', category: 'B', x: 2, y: 3, geneExp: 0.6 }
+									],
+									noExpCells: [{ cellId: 'cell3', category: 'C', x: 3, y: 4 }]
+								}
+							]
+						}
+					}
+				},
+				samples: {
+					getFilteredSingleCellSamples: async () => new Set<string>()
+				}
+			}
+		}
+	}
+
+	const genomes = { hg38: { datasets: { testds: ds } } }
+	const handler = init({ genomes })
+	const { response, res } = makeRes(test)
+
+	const req = {
+		query: {
+			genome: 'hg38',
+			dslabel: 'testds',
+			singleCellPlot: { name: 'plotA', sample: { sID: 'S1' } },
+			canvasSettings: { cutoff: 1000 }
+		}
+	}
+
+	await handler(req as any, res as any)
+
+	test.notOk(response.payload?.error, 'does not return error')
+	test.deepEqual(receivedArg?.terms, [], 'requests plot data without terms')
+	const result = response.payload?.result?.Default || {}
+	const colorLegend = result.colorLegend || []
+	test.equal(colorLegend.length, 1, 'returns one reference color legend entry')
+	const legendByCategory = new Map<string, any>(colorLegend as [string, any][])
+	test.equal(legendByCategory.get('Ref')?.sampleCount, 3, 'Ref legend counts all cells')
+	test.equal(legendByCategory.get('Ref')?.color, refColor, 'Ref legend uses reference color')
+	test.deepEqual(result.samples?.map(sample => sample.sampleId), ['cell1', 'cell2', 'cell3'], 'returns all cells')
+	test.deepEqual(result.samples?.map(sample => sample.category), ['Ref', 'Ref', 'Ref'], 'emits all cells as Ref')
+	test.ok(result.samples?.every(sample => sample.shape == 'Ref'), 'emits all cells with Ref shape')
+	test.end()
+})
+
+tape('singleCellPlots: no-term reference rendering uses canvas cutoff path', async test => {
+	await ensureOpenAuth()
+	const ds = {
+		cohort: { termdb: {} },
+		queries: {
+			singleCell: {
+				data: {
+					get: async () => ({
+						plots: [
+							{
+								expCells: [{ cellId: 'cell1', category: 'A', x: 1, y: 2 }],
+								noExpCells: [{ cellId: 'cell2', category: 'B', x: 2, y: 3 }]
+							}
+						]
+					})
+				},
+				samples: {
+					getFilteredSingleCellSamples: async () => new Set<string>()
+				}
+			}
+		}
+	}
+
+	const genomes = { hg38: { datasets: { testds: ds } } }
+	const handler = init({ genomes })
+	const { response, res } = makeRes(test)
+
+	const req = {
+		query: {
+			genome: 'hg38',
+			dslabel: 'testds',
+			singleCellPlot: { name: 'plotA', sample: { sID: 'S1' } },
+			canvasSettings: {
+				cutoff: 2,
+				width: 20,
+				height: 20,
+				radius: 1,
+				opacity: 1,
+				startColor: '#d3d3d3',
+				stopColor: '#ff0000'
+			}
+		}
+	}
+
+	await handler(req as any, res as any)
+
+	test.notOk(response.payload?.error, 'does not return error')
+	const result = response.payload?.result?.Default || {}
+	const legendByCategory = new Map<string, any>((result.colorLegend || []) as [string, any][])
+	test.equal(legendByCategory.get('Ref')?.sampleCount, 2, 'Ref legend counts canvas-rendered cells')
+	test.equal(legendByCategory.get('Ref')?.color, refColor, 'Ref legend uses reference color')
+	test.equal(result.totalSampleCount, 2, 'reports total sample count for canvas path')
+	test.match(result.src, /^data:image\/png;base64,/, 'returns a rendered canvas image')
+	test.notOk(result.samples, 'does not return samples in canvas path')
 	test.end()
 })
 
