@@ -277,7 +277,7 @@ tape('middleware: clears sessions when sessionTracking is jwt-only', function (t
 	middleware(req, res, () => {})
 
 	// After the middleware runs, sessions should be cleared (jwt-only mode)
-	test.deepEqual((auth as any).sessions, {}, 'should clear all sessions when sessionTracking is jwt-only')
+	test.deepEqual(Object.keys((auth as any).sessions), [], 'should clear all sessions when sessionTracking is jwt-only')
 	test.end()
 })
 

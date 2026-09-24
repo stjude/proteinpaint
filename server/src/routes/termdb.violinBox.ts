@@ -172,7 +172,7 @@ async function getViolin(
 	const descrStats = getDescrStatsByTerm(samples, q.tw, q.overlayTw, q.isLogScale)
 	const sampleType = computeSampleType(data)
 	//get ordered labels to sort keys in plot2values
-	if (q.overlayTw && data.refs.byTermId[q.overlayTw.$id!]) {
+	if (q.overlayTw && Object.hasOwn(data.refs.byTermId, q.overlayTw.$id!)) {
 		;(data.refs.byTermId[q.overlayTw.$id!] as any).orderedLabels = getOrderedLabels(
 			q.overlayTw.term,
 			data.refs.byTermId[q.overlayTw.$id!]?.bins || [],
@@ -451,8 +451,11 @@ export async function getDensities(
 
 async function getBoxPlot(q: BoxRequest & ReqQueryAddons, data: ValidGetDataResponse) {
 	const descrStats = getDescrStatsByTerm(Object.values(data.samples), q.tw, q.overlayTw, q.isLogScale, q.removeOutliers)
-	const { absMin, absMax, bins, charts, uncomputableValues, outlierMin, outlierMax } =
-		await processBoxPlotData(data, q, descrStats[q.tw.$id!])
+	const { absMin, absMax, bins, charts, uncomputableValues, outlierMin, outlierMax } = await processBoxPlotData(
+		data,
+		q,
+		descrStats[q.tw.$id!]
+	)
 
 	const returnData = {
 		absMin: q.removeOutliers ? outlierMin : absMin,

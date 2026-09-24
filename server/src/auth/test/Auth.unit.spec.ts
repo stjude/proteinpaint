@@ -54,7 +54,7 @@ tape('Auth constructor: sets default properties', function (test) {
 	test.equal(auth.port, 3000, 'should set port from serverconfig')
 	test.equal(auth.maxSessionAge, 1000 * 3600 * 16, 'should set default maxSessionAge')
 	test.equal(auth.sessionTracking, '', 'should set empty sessionTracking by default')
-	test.deepEqual(auth.sessions, {}, 'should initialize empty sessions')
+	test.deepEqual(Object.keys(auth.sessions), [], 'should initialize empty sessions')
 	test.end()
 })
 

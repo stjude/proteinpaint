@@ -111,7 +111,7 @@ export function resolveTermCollectionFractions(
 		if (bins) {
 			data.refs ||= {}
 			data.refs.byTermId ||= {}
-			data.refs.byTermId[tw.$id] ||= {}
+			if (!Object.hasOwn(data.refs.byTermId, tw.$id)) data.refs.byTermId[tw.$id] = {}
 			data.refs.byTermId[tw.$id].bins = bins
 		}
 		for (const sampleData of Object.values(data.samples)) {
@@ -135,8 +135,12 @@ export function resolveTermCollectionFractions(
 }
 
 function validateFractionTw(tw: any) {
-	if (!tw.$id) throw new Error('fraction termCollection is missing $id')
+	if (!tw.$id || typeof tw.$id !== 'string') throw new Error('fraction termCollection is missing $id')
+	if (tw.$id === '__proto__' || tw.$id === 'constructor' || tw.$id === 'prototype')
+		throw new Error('fraction termCollection has invalid $id')
 	validateTermCollectionFraction(tw.q, tw.term)
+	if (tw.q.mode === 'discrete' && tw.q.type === 'custom-bin' && !Array.isArray(tw.q.lst))
+		throw new Error('custom-bin fraction termCollection requires q.lst[]')
 }
 
 function computeFractionBins(q: any, values: number[]) {

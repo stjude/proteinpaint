@@ -20,7 +20,7 @@ export class Auth {
 		[dslabel: string]: {
 			[sessionId: string]: any
 		}
-	} = {}
+	} = Object.create(null)
 	sessionTracking: '' | 'jwt-only' = ''
 
 	// TODO: should create a checker function for each route group that may be protected
@@ -248,7 +248,7 @@ export class Auth {
 			const jwt = jsonwebtoken.sign(payload, secret)
 			const id = this.getSessionIdFromJwt(jwt)
 			//const ip = req.ip // may use req.ips?
-			if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
+			if (!sessions[q.dslabel]) sessions[q.dslabel] = Object.create(null)
 			sessions[q.dslabel][id] = payload
 			if (!cred.cookieMode || cred.cookieMode == 'set-cookie') {
 				// For basic/password login that protects all routes (including /genomes),
@@ -301,7 +301,7 @@ export class Auth {
 				throw `jwt payload missing datasets[] and dslabel, must have one`
 			}
 			// do not overwrite existing tracking object for dslabel
-			if (!sessions[dslabel]) sessions[dslabel] = {}
+			if (!sessions[dslabel]) sessions[dslabel] = Object.create(null)
 			const path = req.path[0] == '/' && !cred.route.startsWith('/') ? req.path.slice(1) : req.path
 			// signed payload route must match the requested data route
 			if (
