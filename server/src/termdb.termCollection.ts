@@ -16,7 +16,11 @@ import { validateTermCollectionFraction } from '#shared/termCollection.js'
 type MemberMapping = { expandedId: string; memberId: string }
 type TcMapping = { originalTcId: string; originalTw: any; memberMap: MemberMapping[] }
 
-const RESERVED_TERM_IDS = new Set(['__proto__', 'constructor', 'prototype'])
+// 'prototype' plus every own property name inherited from Object.prototype (toString,
+// hasOwnProperty, __proto__, constructor, etc.) -- any of these read back as truthy/callable
+// on a plain object that never had them explicitly set, so they must all be excluded from use
+// as a $id, not just the classic __proto__/constructor/prototype trio.
+const RESERVED_TERM_IDS = new Set(['prototype', ...Object.getOwnPropertyNames(Object.prototype)])
 
 /** True if this $id could reach the Object.prototype chain when later used as a
  *  plain-object property key (e.g. sampleData[$id] = ... or byTermId[$id] = ...). */
