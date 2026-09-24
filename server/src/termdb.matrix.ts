@@ -24,7 +24,8 @@ import { authApi } from '#src/auth.js'
 import {
 	expandCustomTermCollection,
 	reconstituteCustomTermCollection,
-	resolveTermCollectionFractions
+	resolveTermCollectionFractions,
+	isReservedTermId
 } from './termdb.termCollection.ts'
 import { mayLimitSamples } from './mds3.filter.js'
 
@@ -142,6 +143,7 @@ function validateArg(q, ds) {
 	q.ds = ds
 
 	for (const tw of q.terms) {
+		if (isReservedTermId(tw.$id)) throw new Error('term wrapper has invalid $id')
 		// TODO clean up
 		if ((tw?.term?.type && isDictionaryType(tw.term.type)) || (!tw.term?.type && tw.term.id)) {
 			if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
@@ -655,6 +657,7 @@ export function divideTerms(q, ds) {
 		// TODO FIXME should require valid term type, reject if not and remove assumptions and guesses
 		if (type) {
 			if (!tw.$id || tw.$id == 'undefined') tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
+			if (isReservedTermId(tw.$id)) throw new Error('term wrapper has invalid $id')
 			if (type == GENE_VARIANT) {
 				geneVariantTws.push(tw) // collect into own list to process separately later
 			} else if (isNonDictionaryType(type)) {
@@ -816,6 +819,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
 			if (!tw.$id) tw.$id = tw.term.id || tw.term.name
+			if (isReservedTermId(tw.$id)) throw new Error('term wrapper has invalid $id')
 			const CTE = await get_term_cte(q, values, i, filter, tw)
 			if (CTE.bins) {
 				byTermId[tw.$id] = { bins: CTE.bins }

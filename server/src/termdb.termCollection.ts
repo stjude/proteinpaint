@@ -16,11 +16,19 @@ import { validateTermCollectionFraction } from '#shared/termCollection.js'
 type MemberMapping = { expandedId: string; memberId: string }
 type TcMapping = { originalTcId: string; originalTw: any; memberMap: MemberMapping[] }
 
+const RESERVED_TERM_IDS = new Set(['__proto__', 'constructor', 'prototype'])
+
+/** True if this $id could reach the Object.prototype chain when later used as a
+ *  plain-object property key (e.g. sampleData[$id] = ... or byTermId[$id] = ...). */
+export function isReservedTermId(id: any): boolean {
+	return typeof id === 'string' && RESERVED_TERM_IDS.has(id)
+}
+
 /** Reject $id values that could be used to reach the Object.prototype chain
  *  when later used as a plain-object property key (e.g. sampleData[$id] = ...). */
 function assertSafeTermId(id: any, context: string) {
 	if (!id || typeof id !== 'string') throw new Error(`${context} is missing $id`)
-	if (id === '__proto__' || id === 'constructor' || id === 'prototype') throw new Error(`${context} has invalid $id`)
+	if (isReservedTermId(id)) throw new Error(`${context} has invalid $id`)
 }
 
 /** Expand custom termCollection tws into individual member tws.
