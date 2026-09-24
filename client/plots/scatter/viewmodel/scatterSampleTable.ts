@@ -42,7 +42,7 @@ export function getCategoryValue(category, d, tw, includeMutation = false) {
  * Info columns only when at least one row can fill them. */
 export function buildSampleTableData(config, itemLabel: string, samples: any[]) {
 	// single-cell samples only carry .sampleId (the cell id), not .sample/.cellId
-	const hasName = samples.some(d => d.sample || d.cellId || d.sampleId)
+	const hasName = samples.some(d => !!(d.sample || d.cellId || d.sampleId) || d.sampleId === 0)
 	const hasInfo = samples.some(d => 'info' in d)
 
 	const dims: { tw: any; key: string; sortable?: boolean }[] = [
