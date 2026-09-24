@@ -173,6 +173,42 @@ tape('getData: rejects a term wrapper whose $id is a non-string that coerces to 
 	t.end()
 })
 
+// String coercion of an object $id is not guaranteed pure (a custom toString() can return a
+// different value on every call), so validating it once and later re-keying byTermId{} (a plain,
+// non-null-prototype object) with a SEPARATE coercion of the same object could validate one string
+// while actually writing under another. validateArg() must resolve $id to a string exactly once
+// and freeze that value onto tw.$id, so every later use is a no-op re-coercion of an already-string.
+tape('getData: an object $id with a stateful toString() is resolved exactly once and frozen', async t => {
+	await ensureOpenAuth()
+	let calls = 0
+	const statefulId = {
+		toString() {
+			calls++
+			return calls === 1 ? 'safeName' : '__proto__'
+		}
+	}
+	const tw = {
+		$id: statefulId,
+		term: { gene: 'CLN8', name: 'CLN8', type: 'geneExpression' },
+		q: {
+			mode: 'discrete',
+			type: 'custom-bin',
+			lst: [
+				{ startunbounded: true, stopinclusive: false, stop: 6, label: '<6' },
+				{ start: 6, startinclusive: true, stopunbounded: true, label: '≥6' }
+			]
+		}
+	}
+	const data = await getData({ terms: [tw], filter: emptyFilter() }, makeNoDbDs())
+	t.notOk(data.error, 'no error')
+	t.ok(
+		Object.hasOwn(data.refs.byTermId, 'safeName'),
+		'byTermId is keyed by the single resolved value validateArg() checked, not a later re-coercion'
+	)
+	t.notOk({}.bins, 'does not pollute Object.prototype even though a later coercion would have been dangerous')
+	t.end()
+})
+
 // mds3.variant2samples.js calls this function directly, bypassing getData()/validateArg() entirely,
 // so it must reject a dangerous $id on its own rather than relying on an upstream caller to have checked
 tape(

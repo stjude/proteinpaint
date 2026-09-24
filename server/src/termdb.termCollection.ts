@@ -37,6 +37,32 @@ export function isReservedTermId(id: any): boolean {
 	return RESERVED_TERM_IDS.has(String(id))
 }
 
+/** Validates $id and returns the value callers should use from then on, resolving it to a string
+ *  exactly once if (and only if) it's an object. Callers MUST overwrite their own $id with the
+ *  return value (e.g. tw.$id = resolveTermId(tw.$id)) rather than keep the original.
+ *
+ *  A primitive (string/number/boolean/bigint) always coerces to the same string every time --
+ *  there's no re-coercion risk, so it's returned unchanged (e.g. a numeric $id stays a number).
+ *  An object is different: its string coercion is not guaranteed to be pure, since a custom
+ *  toString()/valueOf()/Symbol.toPrimitive can return a different value on every call (e.g. based
+ *  on a counter). isReservedTermId() alone only protects a caller that both validates and later
+ *  re-keys with the SAME unresolved object -- if it's checked once (coercion call #1, returns
+ *  something safe) and then re-coerced later as an actual property key (coercion call #2, on a
+ *  plain, non-null-prototype object such as byTermId{}), those two calls can disagree, and the
+ *  second one can resolve to '__proto__' even though the first one didn't. Coercing an object
+ *  exactly once here and freezing the result into a plain string closes that gap: every later use
+ *  of the resolved value is a no-op re-coercion of an already-a-string, which cannot invoke user
+ *  code again. */
+export function resolveTermId(id: any): any {
+	if (id == null || typeof id !== 'object') {
+		if (isReservedTermId(id)) throw new Error('term wrapper has invalid $id')
+		return id
+	}
+	const resolved = String(id)
+	if (RESERVED_TERM_IDS.has(resolved)) throw new Error('term wrapper has invalid $id')
+	return resolved
+}
+
 /** Reject $id values that could be used to reach the Object.prototype chain
  *  when later used as a plain-object property key (e.g. sampleData[$id] = ...). */
 function assertSafeTermId(id: any, context: string) {

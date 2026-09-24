@@ -3,7 +3,7 @@ import initBinConfig from '#shared/termdb.initbinconfig.js'
 import { maySetMapParent2Children } from './termdb.matrix.js'
 import { getSingleCellCellValues } from './singleCell/matrixData.ts'
 import { mayLimitSamples } from './mds3.filter.js'
-import { isReservedTermId } from './termdb.termCollection.ts'
+import { resolveTermId } from './termdb.termCollection.ts'
 
 // TODO convert to route
 
@@ -25,7 +25,8 @@ export async function trigger_getDefaultBins(q, ds, res) {
 	let max = -Infinity
 	let binsCache // fine to cache bins for scrna genes, but not for cohort level data that's subject to filtering
 	try {
-		if (isReservedTermId(tw.$id)) throw 'term wrapper has invalid $id'
+		// resolve + freeze, not just validate: see the comment on resolveTermId() in termdb.termCollection.ts
+		tw.$id = resolveTermId(tw.$id)
 		if (ds.termid2sample2value?.has(tw.term.id)) {
 			// term data is cached
 			// use the cached data to compute bins

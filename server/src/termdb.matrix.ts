@@ -25,7 +25,7 @@ import {
 	expandCustomTermCollection,
 	reconstituteCustomTermCollection,
 	resolveTermCollectionFractions,
-	isReservedTermId
+	resolveTermId
 } from './termdb.termCollection.ts'
 import { mayLimitSamples } from './mds3.filter.js'
 
@@ -143,7 +143,11 @@ function validateArg(q, ds) {
 	q.ds = ds
 
 	for (const tw of q.terms) {
-		if (isReservedTermId(tw.$id)) throw new Error('term wrapper has invalid $id')
+		// resolveTermId() coerces tw.$id to a string exactly once and freezes that value back onto
+		// tw.$id; a later re-coercion of the original value (e.g. an object with a stateful
+		// toString()) could otherwise disagree with this check when byTermId[tw.$id] = {...} runs
+		// on a plain, non-null-prototype object further down this file
+		tw.$id = resolveTermId(tw.$id)
 		// TODO clean up
 		if ((tw?.term?.type && isDictionaryType(tw.term.type)) || (!tw.term?.type && tw.term.id)) {
 			if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
@@ -667,7 +671,8 @@ export function divideTerms(q, ds) {
 		// TODO FIXME should require valid term type, reject if not and remove assumptions and guesses
 		if (type) {
 			if (!tw.$id || tw.$id == 'undefined') tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
-			if (isReservedTermId(tw.$id)) throw new Error('term wrapper has invalid $id')
+			// resolve + freeze, not just validate: see the comment at the top-level validateArg() check
+			tw.$id = resolveTermId(tw.$id)
 			if (type == GENE_VARIANT) {
 				geneVariantTws.push(tw) // collect into own list to process separately later
 			} else if (isNonDictionaryType(type)) {
@@ -851,7 +856,8 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
 			if (!tw.$id) tw.$id = tw.term.id || tw.term.name
-			if (isReservedTermId(tw.$id)) throw new Error('term wrapper has invalid $id')
+			// resolve + freeze, not just validate: see the comment at the top-level validateArg() check
+			tw.$id = resolveTermId(tw.$id)
 			const CTE = await get_term_cte(q, values, i, filter, tw)
 			if (CTE.bins) {
 				byTermId[tw.$id] = { bins: CTE.bins }

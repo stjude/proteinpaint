@@ -3,7 +3,8 @@ import {
 	resolveTermCollectionFractions,
 	expandCustomTermCollection,
 	reconstituteCustomTermCollection,
-	isReservedTermId
+	isReservedTermId,
+	resolveTermId
 } from '../termdb.termCollection.ts'
 import { getTwByIndex } from '../termdb.twFromRequest.ts'
 
@@ -122,6 +123,57 @@ tape('isReservedTermId() rejects reserved and coercible $id values, but allows h
 	test.notOk(isReservedTermId('agedx'), 'allows an ordinary $id')
 	test.notOk(isReservedTermId(undefined), 'allows a missing $id so callers can fall back to term.id/term.name')
 	test.notOk(isReservedTermId(42), 'allows a numeric $id since it cannot coerce to a reserved key')
+	test.end()
+})
+
+// Object string-coercion is not guaranteed pure: a custom toString()/valueOf()/Symbol.toPrimitive
+// can return a different value on every call. isReservedTermId() alone protects a caller that both
+// validates and later re-keys with the SAME unresolved object -- if $id is checked once (coercion
+// call #1) and later re-coerced as an actual property key (coercion call #2), those two calls can
+// disagree. resolveTermId() must coerce an object exactly once and freeze that single result.
+function makeStatefulId(firstResult: string, laterResults: string) {
+	let calls = 0
+	return {
+		toString() {
+			calls++
+			return calls === 1 ? firstResult : laterResults
+		}
+	}
+}
+
+tape('resolveTermId() coerces an object exactly once and freezes the result', test => {
+	const id = makeStatefulId('safe123', '__proto__')
+	const resolved = resolveTermId(id)
+	test.equal(resolved, 'safe123', "returns the FIRST call's result, matching what was validated")
+	test.equal(typeof resolved, 'string', 'resolves an object $id to a string')
+	// simulate later re-use as a property key on a plain, non-null-prototype object (e.g. byTermId{})
+	const byTermId: any = {}
+	byTermId[resolved] = { bins: [1, 2, 3] }
+	test.ok(Object.hasOwn(byTermId, 'safe123'), 'the frozen string is used consistently as the actual key')
+	test.notOk(
+		({} as any).bins,
+		'a later re-coercion of the original object never happens, so it cannot pollute Object.prototype'
+	)
+	test.end()
+})
+
+tape('resolveTermId() throws when an object resolves to a reserved name on its one authoritative call', test => {
+	const id = { toString: () => '__proto__' }
+	test.throws(() => resolveTermId(id), /invalid \$id/, 'rejects immediately, matching isReservedTermId')
+	test.end()
+})
+
+tape('resolveTermId() leaves primitives unchanged, since their coercion is always pure', test => {
+	test.equal(resolveTermId(42), 42, 'a numeric $id stays a number, not a stringified copy')
+	test.equal(typeof resolveTermId(42), 'number')
+	test.equal(resolveTermId('agedx'), 'agedx', 'an ordinary string $id is returned as-is')
+	test.equal(resolveTermId(undefined), undefined, 'a missing $id is returned as-is so callers can fall back')
+	test.throws(() => resolveTermId('__proto__'), /invalid \$id/, 'still rejects a reserved string $id')
+	test.end()
+})
+
+tape('resolveTermId() rejects an array $id (coerces via the default, stateless Array.prototype.toString)', test => {
+	test.throws(() => resolveTermId(['__proto__']), /invalid \$id/)
 	test.end()
 })
 
