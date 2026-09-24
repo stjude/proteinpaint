@@ -73,6 +73,7 @@ export class SCSampleTable {
 		this.tableHeaderRow.append('th').style('width', '1.5vw').style('padding', '0')
 		for (const [columnIndex, column] of this.columns.entries()) {
 			const th = this.tableHeaderRow.append('th').attr('class', 'sjpp_table_item sjpp_table_header')
+			if (column.label === 'Shown plots' && !this.showPlotsColumn) th.style('display', 'none')
 			if (column.width) th.style('width', column.width)
 			if (column.tooltip) th.attr('title', column.tooltip)
 			const labelWrap = th.append('span').style('display', 'inline-flex').style('align-items', 'center')
@@ -119,6 +120,7 @@ export class SCSampleTable {
 
 			for (const [colIdx, cell] of row.entries()) {
 				const td = tr.append('td').attr('class', 'sjpp_table_item').attr('data-testid', 'sjpp-table-cell-item')
+				if (this.columns[colIdx]?.label === 'Shown plots' && !this.showPlotsColumn) td.style('display', 'none')
 				cell.__td = td
 				if (colIdx === this.sampleColIdx) {
 					entry.cells.sample = td
@@ -154,29 +156,34 @@ export class SCSampleTable {
 
 	updatePlotBtns(activeSandboxes: Map<string, SCSampleSandbox[]>) {
 		this.activeSandboxes = activeSandboxes
-		const shouldShow = [...activeSandboxes.values()].some(items => items.length > 1)
-		if (shouldShow !== this.showPlotsColumn) this.toggleShownPlotsColumn(shouldShow)
+		const shouldShow = [...activeSandboxes.values()].reduce((total, items) => total + items.length, 0) >= 2
+		this.setShownPlotsColumnVisibility(shouldShow)
 
 		for (const [sampleId, sandboxes] of activeSandboxes) {
 			this.updateSamplePlotButtons(sampleId, sandboxes)
 		}
 	}
 
+	setShownPlotsColumnVisibility(visible: boolean) {
+		if (visible !== this.showPlotsColumn) this.toggleShownPlotsColumn(visible)
+	}
+
 	private toggleShownPlotsColumn(visible: boolean) {
 		this.showPlotsColumn = visible
 		const shownPlotsHeaderIndex = this.columns.findIndex(c => c.label === 'Shown plots')
 		if (shownPlotsHeaderIndex === -1) return
+		const domColumnIndex = shownPlotsHeaderIndex + 1
 
 		const headerCells = this.tableHeaderRow.selectAll('th').nodes()
 		const visibleState = visible ? 'table-cell' : 'none'
-		if (headerCells[shownPlotsHeaderIndex]) headerCells[shownPlotsHeaderIndex].style.display = visibleState
+		if (headerCells[domColumnIndex]) headerCells[domColumnIndex].style.display = visibleState
 
 		for (const row of this.rows) {
 			const sampleId = String(row[this.sampleColIdx]?.value ?? '')
 			const entry = this.rowMap.get(sampleId)
 			if (!entry) continue
 			const rowCells = entry.row.selectAll('td').nodes()
-			if (rowCells[shownPlotsHeaderIndex]) rowCells[shownPlotsHeaderIndex].style.display = visibleState
+			if (rowCells[domColumnIndex]) rowCells[domColumnIndex].style.display = visibleState
 		}
 	}
 

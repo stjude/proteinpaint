@@ -61,6 +61,9 @@ export class SampleTableRenderer {
 
 	updatePlotBtns(activeSandboxes: Map<string, SCSampleSandbox[]>) {
 		this.activeSandboxes = activeSandboxes
+		this.table?.setShownPlotsColumnVisibility(
+			[...activeSandboxes.values()].reduce((total, items) => total + items.length, 0) >= 2
+		)
 		this.reapplyAllPlotButtons()
 	}
 

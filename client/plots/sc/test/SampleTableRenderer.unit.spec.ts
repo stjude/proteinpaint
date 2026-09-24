@@ -136,6 +136,7 @@ tape('renderSamplesTable() should render correct number of rows', test => {
 
 	const rows = holder.selectAll('tr.sjpp_row_wrapper').nodes()
 	test.equal(rows.length, 3, 'Should render 3 rows')
+	test.equal(holder.selectAll('input[type="radio"]').nodes().length, 3, 'Should render one radio button per row')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -341,6 +342,36 @@ tape('updateTable() should append plot buttons for each sandbox', test => {
 	const cell = row[1].__td
 	const btns = cell.selectAll('.sjpp-sc-table-plot-btn').nodes()
 	test.equal(btns.length, 2, 'Should append 2 plot buttons')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('updateTable() should show the Shown plots column when there are multiple plots total', test => {
+	const { renderer, holder } = getRenderer()
+
+	const shownPlotsHeader = holder
+		.selectAll('th')
+		.filter(function () {
+			return (this as HTMLElement).textContent?.includes('Shown plots')
+		})
+	const shownPlotsCells = renderer.tableData.rows.map(row => (row[1] as any).__td)
+
+	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const onePlot = new Map<string, { plotId: string; div: any; plotName: string }[]>()
+	onePlot.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
+	renderer.updatePlotBtns(onePlot)
+
+	test.equal(shownPlotsHeader.style('display'), 'none', 'Should hide the Shown plots header for one plot')
+
+	const multiplePlots = new Map<string, { plotId: string; div: any; plotName: string }[]>()
+	multiplePlots.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
+	multiplePlots.set('S2', [{ plotId: 'p2', div: mockDiv, plotName: 'tSNE' }])
+	renderer.updatePlotBtns(multiplePlots)
+
+	test.equal(shownPlotsHeader.style('display'), 'table-cell', 'Should show the Shown plots header for multiple plots')
+	test.equal(shownPlotsCells.length, 3, 'Should keep one Shown plots cell per data row')
+	test.equal(shownPlotsCells[0].style('display'), 'table-cell', 'Should show Shown plots cells for multiple plots')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
