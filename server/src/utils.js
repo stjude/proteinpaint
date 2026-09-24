@@ -41,6 +41,8 @@ connect_db
 loadfile_ssid
 bam_ifnochr
 testIfFileIsBigbed
+checkChr
+spawnTool
 validateRglst
 ********************** INTERNAL
 */
@@ -129,6 +131,8 @@ export function fileurl(req, checkWhiteList = true) {
 		if (file.includes('"') || file.includes("'")) return ['url must not contain single or double quotes']
 		// the url is turned into a cache dir path by cache_index()
 		if (file.split('/').includes('..')) return ['url must not contain ".." path segment']
+		// url goes into samtools/tabix argv, where a leading '-' would be parsed as an option
+		if (file[0] == '-') return ['url must not start with "-"']
 		isurl = true
 	}
 	if (!file) return ['file unspecified']
@@ -199,6 +203,7 @@ const cacheUrlProtocols = new Set(['http', 'https', 'ftp'])
 function test_url(u) {
 	const tmp = u.split('://')
 	if (tmp.length != 2) return ['improper url']
+	if (u[0] == '-') return ['url must not start with "-"'] // would be parsed as a samtools/tabix option
 	const protocol = tmp[0].toLowerCase()
 	if (!cacheUrlProtocols.has(protocol)) return ['protocol must be http, https or ftp']
 	if (tmp[1].split(/[/\\]/).includes('..')) return ['must not contain ".." path segment']
@@ -454,7 +459,7 @@ export async function get_header_txt(file, dir) {
 export function get_header_bcf(file, dir) {
 	// file is full path or url
 	return new Promise((resolve, reject) => {
-		const ps = spawn(bcftools, ['view', '-h', file], { cwd: dir })
+		const ps = spawnTool(bcftools, ['view', '-h', file], { cwd: dir })
 		const out = []
 		ps.stdout.on('data', i => out.push(i))
 		ps.on('close', () => {
@@ -497,7 +502,7 @@ export function get_lines_bigfile({ args, callback, dir = null, isbcf = false, i
 	if (!callback) throw 'callback is missing'
 	if (typeof callback != 'function') throw 'callback() not a function'
 	return new Promise((resolve, reject) => {
-		const ps = spawn(isbcf ? bcftools : isbam ? samtools : tabix, args, { cwd: dir })
+		const ps = spawnTool(isbcf ? bcftools : isbam ? samtools : tabix, args, { cwd: dir })
 		const rl = readline.createInterface({ input: ps.stdout })
 		const em = []
 		rl.on('line', line => callback(line, ps))
@@ -559,7 +564,13 @@ export function read_file(file) {
 	})
 }
 
-export async function get_fasta(gn, pos) {
+export async function get_fasta(gn, coord) {
+	// coord may come from a request; rebuild it from validated parts so it can never be read as a samtools option
+	const m = typeof coord == 'string' && coord.match(/^(.+):(\d+)-(\d+)$/)
+	const c = m && gn.chrlookup?.[m[1].toUpperCase()]
+	if (!c) throw 'invalid coordinate'
+	const pos = `${c.name}:${m[2]}-${m[3]}`
+
 	if (gn.genomefile == 'NA') {
 		// not using a real fasta file, return Ns by the length of region
 		const tmp = pos.split(/[:-]/)
@@ -572,7 +583,7 @@ export async function get_fasta(gn, pos) {
 	const lines = []
 	await get_lines_bigfile({
 		isbam: true, // so that samtools will be used for querying
-		args: ['faidx', gn.genomefile, pos],
+		args: ['faidx', gn.genomefile, '--', pos], // '--' so a region is never parsed as an option
 		callback: line => lines.push(line)
 	})
 	return lines.join('\n')
@@ -799,6 +810,22 @@ genome is used for validating chr names. when routes are fixed, genome should be
 
 throws on any err. makes no return. may update q
 */
+// a request-supplied chr must be a known chromosome before it goes into a samtools/tabix/bcftools argv,
+// otherwise a value like "-o/path" is parsed as an option
+export function checkChr(genome, chr) {
+	if (typeof chr != 'string' || !genome?.chrlookup?.[chr.toUpperCase()]) throw 'invalid chr'
+}
+
+// every samtools/tabix/bcftools spawn goes through here: an argument that starts with "-" and contains ":" is a
+// region built from a request chr (e.g. "-o/path:1-2"), which the tool would parse as an option
+// ponytail: catches region-shaped injection only; request values used as a whole argument must still be validated at the route
+export function spawnTool(bin, args, opts) {
+	for (const a of args) {
+		if (typeof a == 'string' && a[0] == '-' && a.includes(':')) throw 'invalid region argument'
+	}
+	return spawn(bin, args, opts)
+}
+
 export function validateRglst(q, genome) {
 	if (typeof q.rglst == 'string') {
 		try {

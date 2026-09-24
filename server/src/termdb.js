@@ -4,7 +4,7 @@ import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { trigger_getLowessCurve } from '#routes/termdb.sampleScatter.ts'
 import { get_mds3variantData } from './mds3.variant.js'
-import { get_lines_bigfile } from './utils.js'
+import { get_lines_bigfile, checkChr } from './utils.js'
 import { authApi } from './auth.js'
 import { searchSNP } from '#routes/snp.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
@@ -50,7 +50,7 @@ export function handle_request_closure(genomes) {
 			if (q.getsamples) return await trigger_getsamples(q, req, res, ds)
 			if (q.validateSnps) return res.send(await snpValidate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return res.send(ds?.queries?.snvindel?.variant_filter || {})
-			if (q.getLDdata) return await LDoverlay(q, ds, res)
+			if (q.getLDdata) return await LDoverlay(q, ds, res, genome)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 			if (q.getSampleScatter) q.for = 'scatter'
 			if (q.getLowessCurve) return await trigger_getLowessCurve(q, res)
@@ -366,13 +366,13 @@ export async function get_AllSamplesByName(q, req, res, ds) {
 	}
 }
 
-async function LDoverlay(q, ds, res) {
+async function LDoverlay(q, ds, res, genome) {
 	if (!q.ldtkname) throw '.ldtkname missing'
 	if (!ds.queries?.ld?.tracks) throw 'no ld tk'
 	const tk = ds.queries.ld.tracks.find(i => i.name == q.ldtkname)
 	if (!tk) throw 'unknown ld tk'
 	if (typeof q.m != 'object') throw 'q.m{} not object'
-	if (!q.m.chr) throw 'q.m.chr missing'
+	checkChr(genome, q.m.chr)
 	if (!Number.isInteger(q.m.pos)) throw 'q.m.pos not integer'
 	if (!q.m.ref || !q.m.alt) throw 'q.m{} invalid alleles'
 	const thisalleles = q.m.ref + '.' + q.m.alt

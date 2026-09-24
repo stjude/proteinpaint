@@ -922,7 +922,7 @@ function handle_mdssvcnv_rnabam_genefragcount(bam, chr, gene) {
 			args.push((bam.nochr ? chr.replace('chr', '') : chr) + ':' + (e[0] + 1) + '-' + (e[1] + 1))
 		}
 
-		const p1 = spawn(samtools, args, { cwd: bam.dir })
+		const p1 = utils.spawnTool(samtools, args, { cwd: bam.dir })
 		const p2 = spawn('cut', ['-f1'], { cwd: bam.dir })
 		const p3 = spawn('sort', ['-u'], { cwd: bam.dir })
 		const p4 = spawn('wc', ['-l'], { cwd: bam.dir })
@@ -994,7 +994,7 @@ function handle_mdssvcnv_rnabam_pileup(bam, snps, chr, arg) {
 	}
 
 	return new Promise((resolve, reject) => {
-		const sp = spawn(
+		const sp = utils.spawnTool(
 			bcftools,
 			[
 				'mpileup',
@@ -1484,7 +1484,7 @@ async function handle_mdssvcnv_vcf(
 				// utils.validateRglst() was aleady called in the route handler that calls this function
 				for (const r of req.query.rglst) {
 					const task = new Promise((resolve, reject) => {
-						const ps = spawn(
+						const ps = utils.spawnTool(
 							tabix,
 							[
 								vcftk.file ? path.join(serverconfig.tpmasterdir, vcftk.file) : vcftk.url,
@@ -1817,7 +1817,7 @@ bad repetition
 	// utils.validateRglst() was aleady called in the route handler that calls this function
 	for (const r of req.query.rglst) {
 		const task = new Promise((resolve, reject) => {
-			const ps = spawn(tabix, [
+			const ps = utils.spawnTool(tabix, [
 				thisvcf.file,
 				(thisvcf.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
 			])
@@ -1998,7 +1998,7 @@ function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hidde
 	for (const r of req.query.rglst) {
 		const task = new Promise((resolve, reject) => {
 			const data = []
-			const ps = spawn(
+			const ps = utils.spawnTool(
 				tabix,
 				[
 					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
@@ -2838,7 +2838,7 @@ q {}
 	}
 
 	return new Promise((resolve, reject) => {
-		const sp = spawn(
+		const sp = utils.spawnTool(
 			bcftools,
 			[
 				'mpileup',
@@ -3190,7 +3190,7 @@ async function handle_ase_getgenes(genome, genetk, chr, start, stop) {
 
 async function tabix_getlines(file, coord, dir) {
 	return new Promise((resolve, reject) => {
-		const sp = spawn(tabix, [file, coord], { cwd: dir })
+		const sp = utils.spawnTool(tabix, [file, coord], { cwd: dir })
 		const out = [],
 			out2 = []
 		sp.stdout.on('data', i => out.push(i))
@@ -3207,7 +3207,7 @@ async function tabix_getlines(file, coord, dir) {
 
 function tabix_getvcfmeta(file, dir) {
 	return new Promise((resolve, reject) => {
-		const sp = spawn(tabix, ['-H', file], { cwd: dir })
+		const sp = utils.spawnTool(tabix, ['-H', file], { cwd: dir })
 		const out = [],
 			out2 = []
 		sp.stdout.on('data', i => out.push(i))
@@ -3304,7 +3304,7 @@ function handle_mdsexpressionrank(req, res) {
 			for (const r of req.query.rglst) {
 				tasks.push(
 					new Promise((resolve, reject) => {
-						const ps = spawn(
+						const ps = utils.spawnTool(
 							tabix,
 							[
 								dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
@@ -4116,7 +4116,7 @@ async function handle_mdssurvivalplot_dividesamples_genevalue_get(samples, q, ds
 
 async function mds_genenumeric_querygene(query, dir, chr, start, stop, gene) {
 	return new Promise((resolve, reject) => {
-		const ps = spawn(
+		const ps = utils.spawnTool(
 			tabix,
 			[query.file ? path.join(serverconfig.tpmasterdir, query.file) : query.url, chr + ':' + start + '-' + stop],
 			{ cwd: dir }
@@ -4139,7 +4139,7 @@ async function handle_isoformbycoord(req, res) {
 	try {
 		const genome = genomes[req.query.genome]
 		if (!genome) throw 'invalid genome'
-		if (!req.query.chr) throw 'chr missing'
+		utils.checkChr(genome, req.query.chr)
 		const pos = Number(req.query.pos)
 		if (!Number.isInteger(pos)) throw 'pos must be positive integer'
 
@@ -4171,7 +4171,7 @@ async function handle_isoformbycoord(req, res) {
 
 function isoformbycoord_tabix(genome, chr, pos) {
 	return new Promise((resolve, reject) => {
-		const ps = spawn('tabix', [path.join(serverconfig.tpmasterdir, genetk.file), chr + ':' + pos + '-' + pos])
+		const ps = utils.spawnTool('tabix', [path.join(serverconfig.tpmasterdir, genetk.file), chr + ':' + pos + '-' + pos])
 		const out = [],
 			out2 = []
 		ps.stdout.on('data', d => out.push(d))
@@ -4396,7 +4396,7 @@ function samplematrix_task_isgenevalue(feature, ds, dsquery, usesampleset) {
 		.then(dir => {
 			return new Promise((resolve, reject) => {
 				const data = []
-				const ps = spawn(
+				const ps = utils.spawnTool(
 					tabix,
 					[
 						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
@@ -4459,7 +4459,7 @@ function samplematrix_task_iscnv(feature, ds, dsquery, usesampleset) {
 		.then(dir => {
 			return new Promise((resolve, reject) => {
 				const data = []
-				const ps = spawn(
+				const ps = utils.spawnTool(
 					tabix,
 					[
 						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
@@ -4529,7 +4529,7 @@ function samplematrix_task_isloh(feature, ds, dsquery, usesampleset) {
 		.then(dir => {
 			return new Promise((resolve, reject) => {
 				const data = []
-				const ps = spawn(
+				const ps = utils.spawnTool(
 					tabix,
 					[
 						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
@@ -4592,7 +4592,7 @@ function samplematrix_task_isitd(feature, ds, dsquery, usesampleset) {
 		.then(dir => {
 			return new Promise((resolve, reject) => {
 				const data = []
-				const ps = spawn(
+				const ps = utils.spawnTool(
 					tabix,
 					[
 						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
@@ -4651,7 +4651,7 @@ function samplematrix_task_issvfusion(feature, ds, dsquery, usesampleset) {
 		.then(dir => {
 			return new Promise((resolve, reject) => {
 				const data = []
-				const ps = spawn(
+				const ps = utils.spawnTool(
 					tabix,
 					[
 						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
@@ -4716,7 +4716,7 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, usesampleset) {
 		.then(dir => {
 			return new Promise((resolve, reject) => {
 				const data = []
-				const ps = spawn(
+				const ps = utils.spawnTool(
 					tabix,
 					[
 						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
@@ -4883,7 +4883,7 @@ function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 			.then(dir => {
 				return new Promise((resolve, reject) => {
 					const data = []
-					const ps = spawn(
+					const ps = utils.spawnTool(
 						tabix,
 						[
 							tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
