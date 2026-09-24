@@ -293,3 +293,71 @@ tape('similar rejects a query vocabulary absent from the target image', async t 
 	t.ok(String(out.error).includes('fewer than 2 cells'), 'error names the requirement')
 	t.end()
 })
+
+tape('similar requires a candidate to actually contain every requiredType, not just weight it in', async t => {
+	// window=20/stride=10 tiles the fixture small enough that some real
+	// windows naturally lack a type the wide selection has (rare types don't
+	// reach every corner) -- requiring that type must drop exactly those
+	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
+	const wide = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({ action: 'nhood', h5ad, ids: Object.keys(ann.cells), k: 6, perms: 5, seed: 1 })
+		)
+	)
+	const scanArgs = {
+		action: 'similar',
+		h5ad,
+		types: wide.types,
+		typeCounts: wide.typeCounts,
+		count: wide.count,
+		k: 1,
+		perms: 5,
+		window: 20,
+		stride: 10,
+		topK: 20,
+		sizeTolerance: 1 // isolate the requiredTypes effect from the size filter
+	}
+	const unfiltered = JSON.parse(await run_python('wsi_tile.py', JSON.stringify(scanArgs)))
+	const required = 'Macrophages' // present overall, but not in every small window (verified below)
+	t.ok(wide.types.includes(required), 'sanity: the fixture actually has this type')
+	const missingSomewhere = unfiltered.windows.some((w: any) => !w.ids.some((id: string) => ann.cells[id] == required))
+	t.ok(missingSomewhere, 'sanity: at least one unfiltered window lacks it (else this test proves nothing)')
+
+	const filtered = JSON.parse(
+		await run_python('wsi_tile.py', JSON.stringify({ ...scanArgs, requiredTypes: [required] }))
+	)
+	t.deepEqual(filtered.requiredTypes, [required], 'requiredTypes echoed back')
+	t.ok(filtered.scanned < unfiltered.scanned, 'requiring the type shrinks the candidate pool, not just the ranking')
+	t.ok(filtered.windows.length > 0, 'at least one real window does contain it')
+	t.ok(
+		filtered.windows.every((w: any) => w.ids.some((id: string) => ann.cells[id] == required)),
+		'every returned window genuinely contains at least one cell of the required type'
+	)
+	t.end()
+})
+
+tape('similar rejects a requiredTypes entry outside the query’s own vocabulary', async t => {
+	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
+	const wide = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({ action: 'nhood', h5ad, ids: Object.keys(ann.cells), k: 6, perms: 5, seed: 1 })
+		)
+	)
+	const out = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'similar',
+				h5ad,
+				types: wide.types,
+				typeCounts: wide.typeCounts,
+				count: wide.count,
+				requiredTypes: ['Not-A-Real-Type']
+			})
+		)
+	)
+	t.ok(String(out.error).includes('requiredTypes'), 'error names the requirement')
+	t.end()
+})
