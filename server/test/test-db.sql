@@ -143,10 +143,6 @@ set age_graded = age_graded + abs(random() % 3) - abs(random() % 3),
 	years_to_event = years_to_event + abs(random() % 3) - abs(random() % 3);
 
 delete
-from category2vcfsample
-where term_id NOT IN (select id from annoterms);
-
-delete
 from sampleidmap
 where id not in (select sample from samples);
 
@@ -190,22 +186,6 @@ from subcohort_terms
 where term_id NOT IN (select id from annoterms) 
 AND term_id NOT IN (select id from treeterms)
 AND term_id != '$ROOT$';
-
-# from the proteinpaint/server dir, run 
-# $ node server.js phewas-precompute hg38 TermdbTest
-# then from your/tp/files/hg38/sjlife/clinical dir, 
-# $ sqlite3 db2 
-.mode tab
-drop table if exists category2vcfsample;
-create table category2vcfsample (
-subcohort character not null,
-group_name character not null,
-term_id character varying(100) not null,
-parent_name character varying(200) null,
-q text not null,
-categories text not null
-);
-.import 'category2vcfsample-test' category2vcfsample
 
 # CEU annotations are required for viewing the TermdbTest dataset
 # as http://localhost:3000/example.mds2.html#TermdbTest

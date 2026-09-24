@@ -47,13 +47,11 @@ export default function setRoutes(app, basepath, genomes) {
 					const supportedPlotTypes = (ds as any).cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
 					const chatSupportedPlotTypes = getChatRelatedPlotTypes(supportedPlotTypes)
 					console.log('\x1b[32m%s\x1b[0m', 'Testing chatbot for dataset: ' + label)
-					const genedb = path.join(serverconfig.tpmasterdir, (genome as any).genedb.dbfile)
-					console.log('genedb path for dataset ' + label + ': ' + genedb)
 					const overrideDir = path.join(process.cwd(), 'dataset', 'ai', label)
 					const aiFilesDir = fs.existsSync(overrideDir)
 						? overrideDir
 						: path.join(serverconfig.binpath, 'dataset', 'ai', label) // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
-					const results = await test_chatbot_by_dataset(ds, genome, genedb, aiFilesDir, chatSupportedPlotTypes)
+					const results = await test_chatbot_by_dataset(ds, genome, aiFilesDir, chatSupportedPlotTypes)
 					if (results.num_errors == 0) {
 						console.log(
 							'\x1b[32m%s\x1b[0m',
@@ -95,7 +93,6 @@ export default function setRoutes(app, basepath, genomes) {
 export async function test_chatbot_by_dataset(
 	ds: any,
 	genome: any,
-	genedb: string,
 	aiFilesDir: string,
 	chatSupportedPlotTypes: string[]
 ): Promise<TestResult> {
@@ -136,7 +133,6 @@ export async function test_chatbot_by_dataset(
 			test_data.question,
 			llm,
 			ds,
-			genedb,
 			agentFiles,
 			aiFilesDir,
 			chatSupportedPlotTypes,

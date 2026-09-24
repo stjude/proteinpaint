@@ -28,8 +28,9 @@ function init({ genomes }) {
 				seq: seq.split('\n').slice(1).join('')
 			} satisfies NtseqResponse)
 		} catch (e: any) {
-			res.send({ error: e.message || e })
-			if (e.stack) console.log(e.stack)
+			// do not reflect samtools stderr, which can echo file contents
+			console.log(e.stack || e)
+			res.send({ error: 'cannot get sequence' })
 		}
 	}
 }

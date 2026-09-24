@@ -744,30 +744,6 @@ export function get_active_groupset(term, q) {
 }
 
 /*
-	Arguments
-	- term{}
-	- q{}: must have a groupset
-	
-	Return
-	- a series of "SELECT name, value" statements that are joined by UNION ALL
-	- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
-*/
-function makesql_values_groupset(term, q) {
-	const s = get_active_groupset(term, q)
-	if (!s.groups) throw '.groups[] missing from a group-set'
-	const categories = []
-	let filter
-	for (const [i, g] of s.groups.entries()) {
-		const groupname = g.name || 'Group ' + (i + 1)
-		if (!Array.isArray(g.values)) throw 'groupset.groups[' + i + '].values[] is not array'
-		for (const v of g.values) {
-			categories.push(`SELECT '${groupname}' AS name, '${v.key}' AS value`)
-		}
-	}
-	return categories.join('\nUNION ALL\n')
-}
-
-/*
 q{}
 	termsetting
 index
@@ -817,8 +793,8 @@ at a numeric barchart
 		WHERE
 		${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
 		term_id=?
-		${excludevalues.length ? 'AND value NOT IN (' + excludevalues.join(',') + ')' : ''}`
-	values.push(term.id)
+		${excludevalues.length ? 'AND value NOT IN (' + excludevalues.map(() => '?').join(',') + ')' : ''}`
+	values.push(term.id, ...excludevalues.map(Number))
 
 	const s = ds.cohort.db.connection.prepare(string)
 	const result = s.all(values)
@@ -864,12 +840,15 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 	}
 	values.push(term.id)
 	const excludevalues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
+	values.push(...excludevalues.map(Number))
 
 	const ctes = []
 	const ptablenames = []
 	const cols = []
 	let tablename
 	for (const n of percentiles) {
+		// n is used in sql table and column names, which cannot be bound as parameters
+		if (!Number.isInteger(n)) throw `invalid percentile='${n}'`
 		tablename = 'pct_' + n
 		ctes.push(`
 		${tablename} AS (
@@ -897,7 +876,7 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 			WHERE
 			${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
 			term_id=?
-			${excludevalues.length ? 'AND value NOT IN (' + excludevalues.join(',') + ')' : ''}
+			${excludevalues.length ? 'AND value NOT IN (' + excludevalues.map(() => '?').join(',') + ')' : ''}
 			ORDER BY value ASC
 		),
 		p AS (

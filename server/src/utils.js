@@ -5,12 +5,13 @@ import readline from 'readline'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import ky from 'ky'
-import bettersqlite from 'better-sqlite3'
 import serverconfig from './serverconfig.js'
 import { Readable } from 'stream'
+import { pipeline } from 'stream/promises'
 import { minimatch } from 'minimatch'
 export * from './cachedFetch.js'
 export * from './xfetch.js'
+export { connect_db } from './sql.ts'
 
 const { tabix, samtools, bcftools, bigBedToBed, bigBedNamedItems, bigBedInfo } = serverconfig
 
@@ -40,6 +41,8 @@ connect_db
 loadfile_ssid
 bam_ifnochr
 testIfFileIsBigbed
+checkChr
+spawnTool
 validateRglst
 ********************** INTERNAL
 */
@@ -65,6 +68,7 @@ export async function cache_index(gzurl, indexurl) {
 	// build cache directory using gz file url and do not include index portion
 	// e.g. cache/https/domain/path/to/file.gz/
 	const dir = path.join(serverconfig.cachedir, protocol, body)
+	if (!isUnderDir(dir, path.join(serverconfig.cachedir, protocol))) throw '.gz file URL escapes cache dir'
 	try {
 		await fs.promises.stat(dir)
 	} catch (e) {
@@ -86,6 +90,7 @@ export async function cache_index(gzurl, indexurl) {
 		if (e) throw 'indexl url error: ' + e
 		// first, detect if the index file already exists in the dir+indexfile
 		const path2file = path.join(dir, path.basename(body2))
+		if (!isUnderDir(path2file, dir)) throw 'index URL file name escapes cache dir'
 		try {
 			await fs.promises.stat(path2file)
 			// index file exists
@@ -116,12 +121,18 @@ export function fileurl(req, checkWhiteList = true) {
 		if (illegalpath(file, checkWhiteList, false)) return ['illegal file path']
 		file = path.join(serverconfig.tpmasterdir, file)
 	} else if (req.query.url) {
+		// a non-string, such as an array from a repeated query parameter, would bypass the checks below
+		if (typeof req.query.url != 'string') return ['url must be a string']
 		file = req.query.url
 		// avoid whitespace in case the url is supplied as an argument
 		// to an exec script and thus execute arbitrary space-separated
 		// commands within the url
 		if (file.includes(' ')) return ['url must not contain whitespace']
 		if (file.includes('"') || file.includes("'")) return ['url must not contain single or double quotes']
+		// the url is turned into a cache dir path by cache_index()
+		if (file.split('/').includes('..')) return ['url must not contain ".." path segment']
+		// url goes into samtools/tabix argv, where a leading '-' would be parsed as an option
+		if (file[0] == '-') return ['url must not start with "-"']
 		isurl = true
 	}
 	if (!file) return ['file unspecified']
@@ -131,10 +142,13 @@ export function fileurl(req, checkWhiteList = true) {
 const fileExtensionBlackList = Object.freeze(['.bam', '.bai', '.gz', '.tbi', '.csi', '.bw', '.bb'])
 
 export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
-	if (s[0] == '/') return true // must not be relative to mount root
+	// a non-string, such as an array from a repeated query parameter, could bypass the substring checks below
+	if (typeof s != 'string' || !s) return true
+	if (s[0] == '/' || path.isAbsolute(s)) return true // must not be relative to mount root
 	if (s.includes('"') || s.includes("'")) return true // must not include quotes, apostrophe
 	if (s.includes('|') || s.includes('&')) return true // must not include operator characters
-	if (s.includes(' ')) return true // must not include whitespace
+	if (/\s/.test(s)) return true // must not include whitespace, including tab and newline
+	if (/[\x00-\x1f\x7f]/.test(s)) return true // must not include null byte or other control characters
 	if (s.indexOf('..') != -1) return true
 	if (s.match(/(\<script|script\>)/i)) return true // avoid the potential for parsing injected code in client side error message
 	if (checkWhiteList && serverconfig.whiteListPaths) {
@@ -168,12 +182,38 @@ export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
 	return false
 }
 
+/*
+	s: a single file or directory name, such as a session id or one dir level in a path
+
+	returns true if s is not usable as a single path segment,
+	such as when it may traverse to a parent dir or has path separators
+*/
+export function illegalPathSegment(s) {
+	if (illegalpath(s, false, false)) return true
+	if (s.includes('/') || s.includes('\\')) return true // must not add a dir level
+	if (s == '.') return true
+	return false
+}
+
+// protocol and body of a url become path segments of a cache dir (see cache_index), so only
+// allow protocols that are real remote track sources: any other name could be a feature dir under
+// cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
+const cacheUrlProtocols = new Set(['http', 'https', 'ftp'])
+
 function test_url(u) {
 	const tmp = u.split('://')
 	if (tmp.length != 2) return ['improper url']
-	if (tmp[0].length < 3) return ['protocol string length too short'] // ftp??
+	if (u[0] == '-') return ['url must not start with "-"'] // would be parsed as a samtools/tabix option
+	const protocol = tmp[0].toLowerCase()
+	if (!cacheUrlProtocols.has(protocol)) return ['protocol must be http, https or ftp']
+	if (tmp[1].split(/[/\\]/).includes('..')) return ['must not contain ".." path segment']
 	if (tmp[1].length < 5) return ['body string length too short'] // a/b.gz at minimum
-	return [null, tmp[0], tmp[1]]
+	return [null, protocol, tmp[1]]
+}
+
+// true if file resolves strictly inside dir
+function isUnderDir(file, dir) {
+	return path.resolve(file).startsWith(path.resolve(dir) + path.sep)
 }
 async function download_index(url, tofile) {
 	/* try to download the index file
@@ -195,13 +235,16 @@ async function download_index(url, tofile) {
 		throw 'cannot download from url'
 	}
 }
-function stream2file(from, file) {
-	// TODO any error to catch here
-	return new Promise((resolve, reject) => {
-		const f = fs.createWriteStream(file)
-		from.pipe(f)
-		from.on('end', () => resolve())
-	})
+async function stream2file(from, file) {
+	// write to a unique temp sibling and rename only after the download succeeds: rename is atomic, so a concurrent
+	// cache_index() or tabix never sees a partial index, and a failed download leaves nothing behind
+	const tmp = `${file}.${process.pid}.${Math.random().toString().slice(2)}.tmp`
+	try {
+		await pipeline(from, fs.createWriteStream(tmp))
+		await fs.promises.rename(tmp, file)
+	} finally {
+		await fs.promises.rm(tmp, { force: true }) // no-op after a successful rename
+	}
 }
 
 export async function file_is_readable(file) {
@@ -416,7 +459,7 @@ export async function get_header_txt(file, dir) {
 export function get_header_bcf(file, dir) {
 	// file is full path or url
 	return new Promise((resolve, reject) => {
-		const ps = spawn(bcftools, ['view', '-h', file], { cwd: dir })
+		const ps = spawnTool(bcftools, ['view', '-h', file], { cwd: dir })
 		const out = []
 		ps.stdout.on('data', i => out.push(i))
 		ps.on('close', () => {
@@ -459,7 +502,7 @@ export function get_lines_bigfile({ args, callback, dir = null, isbcf = false, i
 	if (!callback) throw 'callback is missing'
 	if (typeof callback != 'function') throw 'callback() not a function'
 	return new Promise((resolve, reject) => {
-		const ps = spawn(isbcf ? bcftools : isbam ? samtools : tabix, args, { cwd: dir })
+		const ps = spawnTool(isbcf ? bcftools : isbam ? samtools : tabix, args, { cwd: dir })
 		const rl = readline.createInterface({ input: ps.stdout })
 		const em = []
 		rl.on('line', line => callback(line, ps))
@@ -521,7 +564,13 @@ export function read_file(file) {
 	})
 }
 
-export async function get_fasta(gn, pos) {
+export async function get_fasta(gn, coord) {
+	// coord may come from a request; rebuild it from validated parts so it can never be read as a samtools option
+	const m = typeof coord == 'string' && coord.match(/^(.+):(\d+)-(\d+)$/)
+	const c = m && gn.chrlookup?.[m[1].toUpperCase()]
+	if (!c) throw 'invalid coordinate'
+	const pos = `${c.name}:${m[2]}-${m[3]}`
+
 	if (gn.genomefile == 'NA') {
 		// not using a real fasta file, return Ns by the length of region
 		const tmp = pos.split(/[:-]/)
@@ -534,30 +583,10 @@ export async function get_fasta(gn, pos) {
 	const lines = []
 	await get_lines_bigfile({
 		isbam: true, // so that samtools will be used for querying
-		args: ['faidx', gn.genomefile, pos],
+		args: ['faidx', gn.genomefile, '--', pos], // '--' so a region is never parsed as an option
 		callback: line => lines.push(line)
 	})
 	return lines.join('\n')
-}
-
-/*
-inputs:
-file=str
-	half or full path; if not starting with '/', join with tp dir
-override={}
-	supplies overrides to default setting
-returns:
-	db connector
-*/
-const tpdir = serverconfig.features?.tp_native_dir || serverconfig.tpmasterdir
-
-export function connect_db(file, override = {}) {
-	const dbfile = file[0] == '/' ? file : path.join(tpdir, file)
-	try {
-		return new bettersqlite(dbfile, Object.assign({ readonly: true, fileMustExist: true }, override))
-	} catch (e) {
-		throw `error connecting to ${dbfile}: ${e}`
-	}
 }
 
 export const genotype_type_set = new Set(['Homozygous reference', 'Homozygous alternative', 'Heterozygous'])
@@ -781,6 +810,22 @@ genome is used for validating chr names. when routes are fixed, genome should be
 
 throws on any err. makes no return. may update q
 */
+// a request-supplied chr must be a known chromosome before it goes into a samtools/tabix/bcftools argv,
+// otherwise a value like "-o/path" is parsed as an option
+export function checkChr(genome, chr) {
+	if (typeof chr != 'string' || !genome?.chrlookup?.[chr.toUpperCase()]) throw 'invalid chr'
+}
+
+// every samtools/tabix/bcftools spawn goes through here: an argument that starts with "-" and contains ":" is a
+// region built from a request chr (e.g. "-o/path:1-2"), which the tool would parse as an option
+// ponytail: catches region-shaped injection only; request values used as a whole argument must still be validated at the route
+export function spawnTool(bin, args, opts) {
+	for (const a of args) {
+		if (typeof a == 'string' && a[0] == '-' && a.includes(':')) throw 'invalid region argument'
+	}
+	return spawn(bin, args, opts)
+}
+
 export function validateRglst(q, genome) {
 	if (typeof q.rglst == 'string') {
 		try {

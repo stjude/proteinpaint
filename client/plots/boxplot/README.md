@@ -9,6 +9,7 @@ Box plot component for visualizing the distribution of numeric data in the Prote
 - Support for overlay (term2) to show distributions grouped by a categorical term
 - Support for divide-by (term0) to create separate charts for each category
 - Association tests (Wilcoxon) when overlay term is present
+- Descriptive-statistics legend sections for each numeric term
 - Customizable settings (orientation, scale, colors, display mode)
 
 ### Numeric Term Collection Support
@@ -29,8 +30,9 @@ The box plot follows a Model-View-ViewModel pattern:
 
 - **BoxPlot.ts**: Main component class, manages lifecycle and state
 - **model/Model.ts**: Handles data requests to the server
-  - For numeric termCollections, makes parallel requests for each member term
-  - Combines results into a single response structure
+  - Sends the continuous wrapper as `tw` and the other wrapper as `overlayTw`
+  - The server expands numeric termCollections into member-term plots
+  - Copies the `$id`-keyed descriptive statistics response into each wrapper's `q.descrStats` for rendering.
 - **viewModel/**: Transforms server data into view-ready format
   - ChartsDataMapper: Calculates dimensions and formats plot data
   - LegendDataMapper: Prepares legend items including member terms
@@ -49,6 +51,10 @@ Box plot settings are controlled via the settings object:
 - `color`: Default box plot color
 - `rowHeight`, `rowSpace`: Box dimensions and spacing
 - `plotLength`: Length of the plot axis
+
+## Data Contract
+
+Box plots and violin plots use the `termdb/violinBox` route. Its `descrStats` response is keyed by term-wrapper `$id`, allowing the client to assign the correct statistics when either `term` or `term2` is the continuous term. The plot configuration continues to store the statistics as a flat `q.descrStats` object on each wrapper.
 
 ## Development
 

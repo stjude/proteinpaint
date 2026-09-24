@@ -50,8 +50,7 @@ function nativeValidateQuery(ds: any) {
 }
 
 async function getSampleImages(ds: any, folder: string, sampleId: number) {
-	const sql = `SELECT * FROM images WHERE sample = ${sampleId}`
-	const rows = ds.cohort.db.connection.prepare(sql).all()
+	const rows = ds.cohort.db.connection.prepare('SELECT * FROM images WHERE sample = ?').all(sampleId)
 	const images: Image[] = []
 	for (const row of rows) {
 		const file = path.join(serverconfig.tpmasterdir, folder, row.fileName) //the file extension is assumed to be .jpg

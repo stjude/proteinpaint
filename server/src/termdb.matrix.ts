@@ -4,7 +4,15 @@ import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
 import { read_file, trackXfetch } from './utils.js'
-import { isDictionaryType, isNonDictionaryType, isSingleCellTerm, getBin, getTwSampleTypes } from '#shared/terms.js'
+import {
+	isDictionaryType,
+	isNonDictionaryType,
+	isSingleCellTerm,
+	getBin,
+	getTwSampleTypes,
+	type TwSampleTypes,
+	getDefaultSampleTypes
+} from '#shared/terms.js'
 import {
 	DNA_METHYLATION,
 	GENE_EXPRESSION,
@@ -24,7 +32,8 @@ import { authApi } from '#src/auth.js'
 import {
 	expandCustomTermCollection,
 	reconstituteCustomTermCollection,
-	resolveTermCollectionFractions
+	resolveTermCollectionFractions,
+	resolveTermId
 } from './termdb.termCollection.ts'
 import { mayLimitSamples } from './mds3.filter.js'
 
@@ -41,12 +50,25 @@ export function id2sampleRef(id, ds) {
 	return undefined
 }
 
-export function shouldMapParent2Children(tw, ds, mapParent2Children, sampleTypes) {
-	if (!mapParent2Children || !sampleTypes?.length) return false
-	const twSampleTypes = getTwSampleTypes(tw, ds)
-	return sampleTypes.some(qSampleType =>
+export function shouldMapParent2Children(tw, ds, mapParent2Children, qSampleTypes) {
+	if (!mapParent2Children || !qSampleTypes?.length) return false
+	const st = getTwSampleTypes(tw, ds)
+	const twSampleTypes = st.sampleTypes || []
+	return qSampleTypes.some(qSampleType =>
 		twSampleTypes.some(twSampleType => ds.cohort.termdb.sampleTypes[qSampleType].parent_id == twSampleType)
 	)
+}
+
+/* sample type ids are integers; returns a comma-separated list that is safe to interpolate into a sql IN clause */
+export function getSampleTypesSqlList(sampleTypes, ds) {
+	return sampleTypes
+		.map(st => {
+			const n = Number(st)
+			if (!Number.isInteger(n)) throw `sample type='${st}' is not an integer`
+			if (!ds.cohort.termdb.sampleTypes[n]) throw `invalid sample type='${st}'`
+			return n
+		})
+		.join(',')
 }
 
 /*
@@ -126,6 +148,11 @@ function validateArg(q, ds) {
 	q.ds = ds
 
 	for (const tw of q.terms) {
+		// resolveTermId() coerces tw.$id to a string exactly once and freezes that value back onto
+		// tw.$id; a later re-coercion of the original value (e.g. an object with a stateful
+		// toString()) could otherwise disagree with this check when byTermId[tw.$id] = {...} runs
+		// on a plain, non-null-prototype object further down this file
+		tw.$id = resolveTermId(tw.$id)
 		// TODO clean up
 		if ((tw?.term?.type && isDictionaryType(tw.term.type)) || (!tw.term?.type && tw.term.id)) {
 			if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
@@ -182,7 +209,7 @@ async function getSampleData(q, ds) {
 
 	if (dictTerms.length && !Object.keys(samples).length) {
 		// return early if all samples are filtered out by not having matching dictionary term values
-		return { samples, refs: { byTermId, bySampleId: {} } }
+		return { samples, refs: { byTermId, bySampleId: Object.create(null) } }
 	}
 
 	if (geneVariantTws.length) {
@@ -256,17 +283,17 @@ async function getSampleData(q, ds) {
 			const sampleGTs = await getSnpData(tw, q)
 			const groupset = get_active_groupset(tw.term, tw.q)
 			for (const s of sampleGTs) {
-				if (!(s.sample_id in samples)) samples[s.sample_id] = { sample: s.sample_id }
+				const sampleEntry = getOrCreateSampleEntry(samples, s.sample_id, { sample: s.sample_id })
 				if (groupset) {
 					// groupsetting is active
 					const group = groupset.groups.find(group => {
 						return group.values.map(v => v.key).includes(s.gt)
 					})
 					if (!group) throw 'unable to assign sample to group'
-					samples[s.sample_id][tw.$id] = { key: group.name, value: group.name }
+					sampleEntry[tw.$id] = { key: group.name, value: group.name }
 				} else {
 					// groupsetting is not active
-					samples[s.sample_id][tw.$id] = { key: s.gt, value: s.gt }
+					sampleEntry[tw.$id] = { key: s.gt, value: s.gt }
 				}
 			}
 		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
@@ -278,13 +305,13 @@ async function getSampleData(q, ds) {
 			for (const [sampleId, value] of _samples) {
 				if (sampleFilterSet && !sampleFilterSet.has(sampleId)) continue // filter in use and this sample not in filter
 
-				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				const sampleEntry = getOrCreateSampleEntry(samples, sampleId, { sample: sampleId })
 
-				// convert value.id2value Map to an object
-				const snp2value = {}
+				// convert value.id2value Map to an object; snp ids are dataset content too, so null-prototype here as well
+				const snp2value = Object.create(null)
 				for (const [snp, o] of value.id2value) snp2value[snp] = o.value
 
-				samples[sampleId][tw.$id] = snp2value
+				sampleEntry[tw.$id] = snp2value
 			}
 		} else if (
 			tw.term.type == GENE_EXPRESSION ||
@@ -325,7 +352,7 @@ async function getSampleData(q, ds) {
 			const data = await queryHandler.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
 			for (const [dataId, values] of data.term2sample2value) {
 				for (const sampleId in values) {
-					if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+					const sampleEntry = getOrCreateSampleEntry(samples, sampleId, { sample: sampleId })
 					if (!Number.isFinite(values[sampleId])) continue // skip non-numeric values
 					const value = Number(values[sampleId])
 					let key = value
@@ -334,7 +361,17 @@ async function getSampleData(q, ds) {
 						const bin = getBin(lstOfBins, value)
 						key = get_bin_label(lstOfBins[bin], tw.q)
 					}
-					samples[sampleId][dataId] = { key, value }
+					// defineProperty (not sampleEntry[dataId] = ...): sampleEntry may be an existing,
+					// non-null-prototype row returned unchanged by getOrCreateSampleEntry() (e.g. from
+					// an uncached ds-supplied dictionary getter), and dataId comes from the query
+					// handler's term2sample2value keys, not tw.$id -- for pseudobulk with
+					// dataTypeDetails.genes, it's a raw client-supplied gene name with no reserved-name check
+					Object.defineProperty(sampleEntry, dataId, {
+						value: { key, value },
+						enumerable: true,
+						configurable: true,
+						writable: true
+					})
 				}
 			}
 		} else if (isSingleCellTerm(tw.term)) {
@@ -361,7 +398,10 @@ async function getSampleData(q, ds) {
 	setSampleLstData(sampleLstTws, samples, scopedSamples)
 
 	// resolve each id -> display refs via the dataset's id2sampleRefs() (see id2sampleRef())
-	const bySampleId = {}
+	// null-prototype: sid can legitimately be '__proto__' now that samples{} preserves it, and a
+	// plain bySampleId[sid] = ref assignment with an object ref would reassign bySampleId's own
+	// prototype instead of creating a real entry
+	const bySampleId = Object.create(null)
 	for (const sid in samples) {
 		const ref = id2sampleRef(samples[sid]?.sampleId ?? sid, q.ds)
 		if (ref) bySampleId[sid] = ref
@@ -418,8 +458,8 @@ function twlstGeneCountReducer(sum, tw) {
 async function setGeneVariantDataForTw(q, tw, samples) {
 	const data = await q.ds.mayGetGeneVariantData(tw, q)
 	for (const [sampleId, value] of data.entries()) {
-		if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
-		samples[sampleId][tw.$id] = value[tw.$id]
+		const sampleEntry = getOrCreateSampleEntry(samples, sampleId, { sample: sampleId })
+		sampleEntry[tw.$id] = value[tw.$id]
 	}
 }
 
@@ -583,17 +623,14 @@ export function setSampleLstData(termWrappers, samples, scopedSamples) {
 				continue
 			}
 			for (const sampleId of ids) {
-				// assigning to '__proto__' would run the prototype setter rather than create a row,
-				// and the write that follows would then land outside samples{}. no sample is named this
-				if (sampleId == '__proto__') continue
 				// Object.hasOwn(), not `in`: an id such as 'constructor' matches an inherited property,
-				// which would skip row creation and write the annotation onto Object itself
-				if (!Object.hasOwn(samples, sampleId)) {
-					if (!isInSampleLstScope(scopedSamples, sampleId)) continue // out of scope, see above
-					samples[sampleId] = { sample: sampleId }
-				}
-				if (samples[sampleId][tw.$id]) continue
-				samples[sampleId][tw.$id] = { key: group.name, value: group.name }
+				// which would skip row creation and write the annotation onto Object itself. A sampleId
+				// of '__proto__' is a legitimate, real sample now that samples{} preserves it elsewhere
+				// (see getOrCreateSampleEntry()), so it must be annotated like any other id, not skipped
+				if (!Object.hasOwn(samples, sampleId) && !isInSampleLstScope(scopedSamples, sampleId)) continue // out of scope, see above
+				const sampleEntry = getOrCreateSampleEntry(samples, sampleId, { sample: sampleId })
+				if (sampleEntry[tw.$id]) continue
+				sampleEntry[tw.$id] = { key: group.name, value: group.name }
 			}
 		}
 	}
@@ -639,6 +676,8 @@ export function divideTerms(q, ds) {
 		// TODO FIXME should require valid term type, reject if not and remove assumptions and guesses
 		if (type) {
 			if (!tw.$id || tw.$id == 'undefined') tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
+			// resolve + freeze, not just validate: see the comment at the top-level validateArg() check
+			tw.$id = resolveTermId(tw.$id)
 			if (type == GENE_VARIANT) {
 				geneVariantTws.push(tw) // collect into own list to process separately later
 			} else if (isNonDictionaryType(type)) {
@@ -674,8 +713,8 @@ export function divideTerms(q, ds) {
 	return [dict, geneVariantTws, nonDict]
 }
 
-/* function will set:
-- q.mapParent2Children: flag for whether to map term data onto child samples
+/* function may set:
+- q.mapParent2Children: flag for whether to map data of parent samples onto child samples
 - q.sampleTypes: sample types to query for
 TODO: may rename to maySetSampleTypes() */
 export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
@@ -684,18 +723,23 @@ export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
 		q.mapParent2Children = false
 		return
 	}
-	q.mapParent2Children = mapParent2Children
 	// determine query sample types
 	const sampleTypes = getSampleTypes(q, ds)
-	const types = [...sampleTypes]
+	const types = [...sampleTypes.sampleTypes]
+	const childTypes = [...sampleTypes.childSampleTypes]
 	if (!types.length) return
-	for (const t of types) if (!ds.cohort.termdb.sampleTypes[t]) throw 'invalid query sample types'
-	if (types.length == 1) {
+	for (const t of [...types, ...childTypes]) if (!ds.cohort.termdb.sampleTypes[t]) throw 'invalid sample types'
+	if (mapParent2Children) {
+		// mapParent2Children=true supplied by caller
+		// get child sample types
+		q.mapParent2Children = mapParent2Children
+		q.sampleTypes = childTypes.length ? childTypes : getDefaultSampleTypes(ds)
+	} else if (types.length == 1) {
 		// single sample type
 		q.sampleTypes = types
 	} else {
 		// multiple sample types
-		// determine parent sample types of query sample types
+		// determine whether they have parent-child relationship
 		const parentTypes = new Set(
 			types.map(type => ds.cohort.termdb.sampleTypes[type]?.parent_id).filter(Number.isInteger)
 		)
@@ -703,15 +747,40 @@ export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
 		if (types.some(type => parentTypes.has(type))) {
 			// query sample types have parent-child relationship
 			// map parent to children
-			const childTypes = types.filter(type => !parentTypes.has(type))
-			if (!childTypes.length) throw 'child sample types missing'
 			q.mapParent2Children = true
-			q.sampleTypes = childTypes
+			q.sampleTypes = childTypes.length ? childTypes : types.filter(type => !parentTypes.has(type))
 		} else {
 			// query sample types do not have parent-child relationship
 			q.sampleTypes = types
 		}
 	}
+	if (!Array.isArray(q.sampleTypes)) throw 'q.sampleTypes is not array'
+	for (const st of q.sampleTypes) {
+		if (!Number.isInteger(st)) throw `sample type '${st}' is not integer`
+		if (!ds.cohort.termdb.sampleTypes[st]) throw `invalid sample type '${st}' found`
+	}
+}
+
+// Returns samples[sampleId], creating it as a null-prototype own property first if needed.
+// sample id and term id here come from database/dataset content (a SQL row's sample column,
+// a dataset-supplied dictionary.get()/getAdHocTermValues() getter, ds.termid2sample2value), not
+// directly from the client request, but nothing validates that content against reserved names.
+// A sample id of '__proto__' would otherwise make the read resolve to the real Object.prototype
+// instead of undefined, and the term data written under it -- even a perfectly ordinary tw.$id --
+// would land on that same global object. Using Object.hasOwn (not a truthy read) and
+// Object.defineProperty (not samples[id] = ...) keeps this safe regardless of whether the
+// samples map itself happens to be null-prototype, and the per-sample entry it creates is also
+// null-prototype so a term id of '__proto__' can't do the same thing one level down.
+function getOrCreateSampleEntry(samples: Record<string, any>, sampleId: string, initProps: Record<string, any> = {}) {
+	if (!Object.hasOwn(samples, sampleId)) {
+		Object.defineProperty(samples, sampleId, {
+			value: Object.assign(Object.create(null), initProps),
+			enumerable: true,
+			configurable: true,
+			writable: true
+		})
+	}
+	return samples[sampleId]
 }
 
 /*
@@ -733,7 +802,7 @@ output:
 ]
 */
 async function getSampleData_dictionaryTerms(q, termWrappers) {
-	if (!termWrappers.length) return [{}, {}]
+	if (!termWrappers.length) return [Object.create(null), {}]
 	// distinguish between dictionary terms with cached or uncached data
 	const cachedTermWrappers: any[] = []
 	const uncachedTermWrappers: any[] = []
@@ -750,7 +819,7 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 }
 
 async function getSampleData_dictionaryTerms_uncached(q, termWrappers) {
-	if (!termWrappers.length) return [{}, {}]
+	if (!termWrappers.length) return [Object.create(null), {}]
 	if (q.ds?.cohort?.db) {
 		// dataset uses server-side sqlite db, must use this method for dictionary terms
 		return await getSampleData_dictionaryTerms_termdb(q, termWrappers)
@@ -766,7 +835,7 @@ async function getSampleData_dictionaryTerms_uncached(q, termWrappers) {
 	throw 'unknown method for dictionary terms'
 }
 
-async function getSampleData_dictionaryTerms_cached(q, termWrappers, samples, byTermId) {
+export async function getSampleData_dictionaryTerms_cached(q, termWrappers, samples, byTermId) {
 	for (const tw of termWrappers) {
 		const sample2value = q.ds.termid2sample2value.get(tw.term.id)
 		const limitSamples = await mayLimitSamples(q, [...sample2value.keys()], q.ds)
@@ -777,15 +846,15 @@ async function getSampleData_dictionaryTerms_cached(q, termWrappers, samples, by
 		}
 		for (const [sample, value] of sample2value) {
 			if (limitSamples && !limitSamples.has(sample)) continue
-			if (!samples[sample]) samples[sample] = { sample }
-			if (samples[sample][tw.$id]) throw 'should not have multiple values for sample'
+			const sampleEntry = getOrCreateSampleEntry(samples, sample, { sample })
+			if (sampleEntry[tw.$id]) throw 'should not have multiple values for sample'
 			let key = value
 			if (lstOfBins) {
 				// term is in binning mode, key should be bin label
 				const bin = getBin(lstOfBins, value)
 				key = get_bin_label(lstOfBins[bin], tw.q)
 			}
-			samples[sample][tw.$id] = { key, value }
+			sampleEntry[tw.$id] = { key, value }
 		}
 	}
 }
@@ -800,6 +869,8 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
 			if (!tw.$id) tw.$id = tw.term.id || tw.term.name
+			// resolve + freeze, not just validate: see the comment at the top-level validateArg() check
+			tw.$id = resolveTermId(tw.$id)
 			const CTE = await get_term_cte(q, values, i, filter, tw)
 			if (CTE.bins) {
 				byTermId[tw.$id] = { bins: CTE.bins }
@@ -830,41 +901,44 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	return [samples, byTermId]
 }
 
-function getSampleTypes(q, ds) {
+function getSampleTypes(q, ds): { sampleTypes: Set<any>; childSampleTypes: Set<any> } {
 	const twLst = q.terms ? q.terms : q.tw ? [q.tw] : []
 	const filter = q.filter
 	const filter0 = q.filter0
-	const twTypes = getTwLstSampleTypes(twLst, ds, q.mapParent2Children)
-	const filterTypes = getFilterSampleTypes(filter, ds, q.mapParent2Children)
-	const filter0Types = ds.getFilter0SampleTypes
-		? ds.getFilter0SampleTypes(filter0, ds, q.mapParent2Children)
-		: new Set()
-	const types = new Set([...twTypes, ...filterTypes, ...filter0Types])
-	return types
-}
-
-function getTwLstSampleTypes(twLst, ds, mapParent2Children) {
-	const types = new Set()
-	for (const tw of twLst) {
-		for (const type of getTwSampleTypes(tw, ds, mapParent2Children) || []) types.add(type)
+	const twTypes = getTwLstSampleTypes(twLst, ds)
+	const filterTypes = getFilterSampleTypes(filter, ds)
+	const filter0Types = ds.getFilter0SampleTypes ? ds.getFilter0SampleTypes(filter0, ds) : []
+	const sampleTypes = new Set()
+	const childSampleTypes = new Set()
+	for (const type of [...twTypes, ...filterTypes, ...filter0Types]) {
+		if (type.sampleTypes) type.sampleTypes.forEach(st => sampleTypes.add(st))
+		if (type.childSampleTypes) type.childSampleTypes.forEach(st => childSampleTypes.add(st))
 	}
-	return types
+	return { sampleTypes, childSampleTypes }
 }
 
-function getFilterSampleTypes(filter, ds, mapParent2Children) {
-	const types = new Set()
-	if (!filter) return types
+function getTwLstSampleTypes(twLst, ds): TwSampleTypes[] {
+	const sampleTypesLst: TwSampleTypes[] = []
+	for (const tw of twLst) {
+		const sampleTypes = getTwSampleTypes(tw, ds)
+		sampleTypesLst.push(sampleTypes)
+	}
+	return sampleTypesLst
+}
+
+function getFilterSampleTypes(filter, ds): TwSampleTypes[] {
+	const sampleTypesLst: TwSampleTypes[] = []
+	if (!filter) return sampleTypesLst
 	for (const item of filter.lst) {
 		if (item.type == 'tvslst') {
-			for (const type of getFilterSampleTypes(item, ds, mapParent2Children)) types.add(type)
+			for (const type of getFilterSampleTypes(item, ds)) sampleTypesLst.push(type)
 		} else {
 			if (item.tag == 'cohortFilter') continue
-			for (const type of getTwSampleTypes({ term: item.tvs.term }, ds, mapParent2Children) || []) {
-				if (Number.isInteger(type)) types.add(type)
-			}
+			const sampleTypes = getTwSampleTypes({ term: item.tvs.term }, ds)
+			sampleTypesLst.push(sampleTypes)
 		}
 	}
-	return types
+	return sampleTypesLst
 }
 
 /*
@@ -888,7 +962,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 				FROM sample_ancestry sa
 				JOIN ${t.tablename} ON sa.ancestor_id = sample
 				JOIN sampleidmap sm ON sa.sample_id = sm.id
-				WHERE sm.sample_type IN (${q.sampleTypes.join(',')})
+				WHERE sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes, q.ds)})
 				${filter ? `AND sa.sample_id IN ${filter.CTEname}` : ''}`
 			} else {
 				// query annotations directly
@@ -920,7 +994,7 @@ export async function getSamples(q, rows, termWrappers) {
 			.map(tw => tw.$id)
 	)
 
-	const samples = {} // to return
+	const samples = Object.create(null) // to return
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
 	for (const { sample, key, term_id, value } of rows) {
@@ -928,23 +1002,23 @@ export async function getSamples(q, rows, termWrappers) {
 			// this sample is not mutated for given genes
 			continue
 		}
-		if (!samples[sample]) samples[sample] = { sample }
+		const sampleEntry = getOrCreateSampleEntry(samples, sample, { sample })
 		const v = tw$idsWithJson.has(term_id) && typeof value == 'string' ? JSON.parse(value) : value
 		// this assumes unique term key/value for a given sample
-		// samples[sample][term_id] = { key, value }
-		if (!samples[sample][term_id]) {
+		// sampleEntry[term_id] = { key, value }
+		if (!sampleEntry[term_id]) {
 			// first value of term for a sample
-			samples[sample][term_id] = { key, value: v }
+			sampleEntry[term_id] = { key, value: v }
 		} else {
 			// samples has multiple values for a term
 			// convert to .values[]
-			if (!samples[sample][term_id].values) {
-				const firstvalue = samples[sample][term_id] // first term value of the sample
+			if (!sampleEntry[term_id].values) {
+				const firstvalue = sampleEntry[term_id] // first term value of the sample
 				if (firstvalue.key === key && firstvalue.value === v) continue // duplicate
-				samples[sample][term_id] = { values: [firstvalue] } // convert to object with .values[]
+				sampleEntry[term_id] = { values: [firstvalue] } // convert to object with .values[]
 			}
 			// add next term value to .values[]
-			samples[sample][term_id].values.push({ key, value: v })
+			sampleEntry[term_id].values.push({ key, value: v })
 		}
 	}
 	return samples

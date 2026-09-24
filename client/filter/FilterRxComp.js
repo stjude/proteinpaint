@@ -73,6 +73,8 @@ class FilterRxComp extends Filter {
 			.style('display', 'table')
 			.style('border', this.opts.hideLabel ? 'none' : 'solid 1px #ddd')
 
+		this.setButtonHighlights()
+
 		if (this.opts.hideLabel) {
 			this.dom.filterDiv = div.style('display', 'inline-block').style('padding', '5px 10px')
 		} else {

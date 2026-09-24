@@ -1,5 +1,7 @@
 import { connect_db } from '../utils'
 import { server_init_db_queries, listDbTables } from '../termdb.server.init.ts'
+import { sql } from '../sql.ts'
+import { initGeneDbLookups } from '../genedbLookups.ts'
 
 /**
  * Initialize the connections and prepared statements for a genome's db files
@@ -18,8 +20,6 @@ export function initdb(g, features = {}) {
 		} catch (e) {
 			throw `Cannot connect genedb: ${g.genedb.dbfile}: ${e}`
 		}
-		g.genedb.getnamebynameorisoform = g.genedb.db.prepare('select name from genes where name=? or isoform=?')
-		g.genedb.getnamebyisoform = g.genedb.db.prepare('select distinct name from genes where isoform=?')
 		g.genedb.getjsonbyname = g.genedb.db.prepare('select isdefault,genemodel from genes where name=?')
 		g.genedb.getjsonbyisoform = g.genedb.db.prepare('select isdefault,genemodel from genes where isoform=?')
 		g.genedb.getnameslike = g.genedb.db.prepare('select distinct name from genes where name like ? limit 20')
@@ -37,8 +37,9 @@ export function initdb(g, features = {}) {
 		if present, create getter to this table and attach to g.genedb{}
 		*/
 		const tables = listDbTables(g.genedb.db)
+		// name/alias/isoform getters, over in-memory maps; same as initGenomesDs.js does
+		initGeneDbLookups(g.genedb, tables)
 		if (tables.has('genealias')) {
-			g.genedb.getNameByAlias = g.genedb.db.prepare('select name from genealias where alias=?')
 			g.genedb.tableSize = g.genedb.db.prepare('select count(*) from genealias where alias=?')
 		}
 		if (tables.has('gene2coord')) {
@@ -49,9 +50,6 @@ export function initdb(g, features = {}) {
 			g.genedb.getIdeogramByChr = g.genedb.db.prepare('select * from ideogram where chromosome=?')
 		} else {
 			g.genedb.hasIdeogram = false
-		}
-		if (tables.has('gene2canonicalisoform')) {
-			g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare('select isoform from gene2canonicalisoform where gene=?')
 		}
 		if (tables.has('buildDate')) {
 			g.genedb.get_buildDate = g.genedb.db.prepare('select date from buildDate')
@@ -64,7 +62,7 @@ export function initdb(g, features = {}) {
 		g.genedb.tableSize = {}
 		for (const table of tables) {
 			if (table == 'buildDate') continue
-			g.genedb.tableSize[table] = g.genedb.db.prepare(`select count(*) as size from ${table}`).get().size
+			g.genedb.tableSize[table] = g.genedb.db.prepare(sql`select count(*) as size from ${sql.id(table)}`).get().size
 		}
 	}
 

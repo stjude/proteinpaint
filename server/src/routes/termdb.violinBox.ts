@@ -117,9 +117,11 @@ export function expandNumericTermCollection(q: ViolinBoxRequest & ReqQueryAddons
 	const propsByTermId: Record<string, any> = term.propsByTermId || {}
 	const tcId = q.tw.$id!
 
-	// Precompute memberId → name lookup to avoid O(n) find per (sample × member)
-	const memberNameById: Record<string, string> = {}
-	const overlayValues: Record<string, { label: string; color?: string }> = {}
+	// Precompute memberId → name lookup to avoid O(n) find per (sample × member).
+	// Null-prototype: mt.id/mt.name come from the client-supplied termlst, so a member
+	// named '__proto__' must not be able to reassign either map's prototype.
+	const memberNameById: Record<string, string> = Object.create(null)
+	const overlayValues: Record<string, { label: string; color?: string }> = Object.create(null)
 	for (const mt of termlst) {
 		const name = mt.name || mt.id
 		memberNameById[mt.id] = name
@@ -127,7 +129,9 @@ export function expandNumericTermCollection(q: ViolinBoxRequest & ReqQueryAddons
 	}
 
 	// Expand: one virtual sample per (sample × member term) with a plain numeric value
-	const newSamples: Record<string, any> = {}
+	// null-prototype: keyed by `${sampleId}__${memberId}`, and memberId comes from the
+	// client-supplied termlst with no reserved-name check of its own, unlike the collection's tw.$id
+	const newSamples: Record<string, any> = Object.create(null)
 	for (const [sampleId, sampleData] of Object.entries(data.samples)) {
 		const tcEntry = (sampleData as any)[tcId]
 		const memberValues = tcEntry?.value
@@ -168,12 +172,11 @@ async function getViolin(
 	ds: { cohort: { termdb: { logscaleBase2?: boolean } } }
 ) {
 	const samples = Object.values(data.samples)
-	const values = extractNumericValues(samples, q.tw, q.isLogScale)
 	//calculate stats here and pass them to client to avoid second request on client for getting stats
-	const descrStats = getDescrStats(values)
+	const descrStats = getDescrStatsByTerm(samples, q.tw, q.overlayTw, q.isLogScale)
 	const sampleType = computeSampleType(data)
 	//get ordered labels to sort keys in plot2values
-	if (q.overlayTw && data.refs.byTermId[q.overlayTw.$id!]) {
+	if (q.overlayTw && Object.hasOwn(data.refs.byTermId, q.overlayTw.$id!)) {
 		;(data.refs.byTermId[q.overlayTw.$id!] as any).orderedLabels = getOrderedLabels(
 			q.overlayTw.term,
 			data.refs.byTermId[q.overlayTw.$id!]?.bins || [],
@@ -451,8 +454,12 @@ export async function getDensities(
  **********************************************************/
 
 async function getBoxPlot(q: BoxRequest & ReqQueryAddons, data: ValidGetDataResponse) {
-	const { absMin, absMax, bins, charts, uncomputableValues, descrStats, outlierMin, outlierMax } =
-		await processBoxPlotData(data, q)
+	const descrStats = getDescrStatsByTerm(Object.values(data.samples), q.tw, q.overlayTw, q.isLogScale, q.removeOutliers)
+	const { absMin, absMax, bins, charts, uncomputableValues, outlierMin, outlierMax } = await processBoxPlotData(
+		data,
+		q,
+		descrStats[q.tw.$id!]
+	)
 
 	const returnData = {
 		absMin: q.removeOutliers ? outlierMin : absMin,
@@ -467,12 +474,7 @@ async function getBoxPlot(q: BoxRequest & ReqQueryAddons, data: ValidGetDataResp
 }
 
 /** Process the returned data from getData() for entire box plot chart.*/
-async function processBoxPlotData(data: ValidGetDataResponse, q: BoxRequest) {
-	const samples = Object.values(data.samples)
-	const values = extractNumericValues(samples, q.tw)
-	//calculate stats here and pass them to client to avoid second request on client for getting stats
-	const descrStats = getDescrStats(values, q.removeOutliers)
-
+async function processBoxPlotData(data: ValidGetDataResponse, q: BoxRequest, descrStats: DescrStats) {
 	const sampleType = computeSampleType(data)
 	const overlayTw = q.overlayTw
 	const divideTw = q.divideTw
@@ -704,6 +706,33 @@ export function extractNumericValues(samples: any[], tw: TermWrapper, isLogScale
 		.filter(v => typeof v === 'number' && !tw.term.values?.[v]?.uncomputable)
 	if (isLogScale) values = values.filter(v => v > 0)
 	return values
+}
+
+/** Calculate term-level stats for every requested wrapper. Non-numeric terms
+ * produce an empty stats object, matching the existing descriptive-stats route. */
+export function getDescrStatsByTerm(
+	samples: any[],
+	tw: TermWrapper,
+	overlayTw?: TermWrapper,
+	isLogScale?: boolean,
+	showOutlierRange?: boolean
+): Record<string, DescrStats> {
+	const terms = [tw, overlayTw].filter((term): term is TermWrapper => !!term?.$id)
+	return Object.fromEntries(
+		terms.map(term => {
+			// gate on wrapper type, not runtime value type, since categorical terms may use numeric-looking values/keys
+			const hasNumericValues =
+				isNumericTw(term) ||
+				term.term.type === 'survival' ||
+				(term.term.type === 'termCollection' && (term.term as any).memberType === 'numeric')
+			return [
+				term.$id!,
+				hasNumericValues
+					? getDescrStats(extractNumericValues(samples, term, term === tw && isLogScale), showOutlierRange)
+					: {}
+			]
+		})
+	)
 }
 
 type ParseValuesTw = { $id?: string; term: { values?: Record<string, any>; [key: string]: any } }

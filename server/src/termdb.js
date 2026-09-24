@@ -1,11 +1,10 @@
 import path from 'path'
 import * as termdbsql from './termdb.sql.js'
-import * as phewas from './termdb.phewas.js'
 import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { trigger_getLowessCurve } from '#routes/termdb.sampleScatter.ts'
 import { get_mds3variantData } from './mds3.variant.js'
-import { get_lines_bigfile } from './utils.js'
+import { get_lines_bigfile, checkChr } from './utils.js'
 import { authApi } from './auth.js'
 import { searchSNP } from '#routes/snp.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
@@ -36,23 +35,22 @@ export function handle_request_closure(genomes) {
 			if (!genome) throw 'invalid genome'
 
 			const [ds, tdb] = get_ds_tdb(genome, q)
+			// q.for selects the handler below using loose equality, so a non-string value such as
+			// an array from `for[]=...` query params could reach a handler without matching
+			// the exact string checks elsewhere, e.g. in Auth.getRequiredCred()
+			if (q.for !== undefined && typeof q.for != 'string') throw 'invalid q.for'
 			// process triggers
 			if (q.findterm) return await trigger_findterm(q, req, res, tdb, ds, genome)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
-			if (q.phewas) {
-				if (q.update) return await phewas.update_image(q, res)
-				if (q.getgroup) return await phewas.getgroup(q, res)
-				return await phewas.trigger(q, res, ds)
-			}
 			//if (q.gettermdbconfig) return termdbConfig.make(q, res, ds, genome)
 			//if (q.getcohortsamplecount) return res.send({ count: ds.cohort.termdb.q.getcohortsamplecount(q.cohort) })
 			if (q.getsamplecount) return res.send(await getSampleCount(q, ds))
 			if (q.getsamplelist) return res.send(await getSampleList(req, q, ds))
 
-			if (q.getsamples) return await trigger_getsamples(q, res, ds)
+			if (q.getsamples) return await trigger_getsamples(q, req, res, ds)
 			if (q.validateSnps) return res.send(await snpValidate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return res.send(ds?.queries?.snvindel?.variant_filter || {})
-			if (q.getLDdata) return await LDoverlay(q, ds, res)
+			if (q.getLDdata) return await LDoverlay(q, ds, res, genome)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 			if (q.getSampleScatter) q.for = 'scatter'
 			if (q.getLowessCurve) return await trigger_getLowessCurve(q, res)
@@ -63,7 +61,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'getMultivalueTWs') return res.send(tdb.q.get_multivalue_tws(q.parent_id))
 			if (q.for == 'validateToken') {
 			}
-			if (q.for == 'convertSampleId') return get_convertSampleId(q, res, tdb)
+			if (q.for == 'convertSampleId') return get_convertSampleId(q, req, res, ds, tdb)
 			if (q.for == 'singleSampleData') return get_singleSampleData(q, req, res, ds, tdb)
 			if (q.for == 'getProfileFacilities') return get_ProfileFacilities(q, req, res, ds, tdb)
 			if (q.for == 'getAllSamples') return get_AllSamples(q, req, res, ds)
@@ -111,16 +109,19 @@ export function get_ds_tdb(genome, q) {
 	return [ds, ds.cohort.termdb]
 }
 
-function get_convertSampleId(q, res, tdb) {
+function get_convertSampleId(q, req, res, ds, tdb) {
+	// the response maps sample names to ids, so require a session when the dataset has a termdb credential;
+	// unlike canDisplaySampleIds(), do not require ds.cohort.termdb.displaySampleIds, since datasets that use
+	// this for sample selection (e.g. allow2selectSamples) may not set it
+	if (!authApi.isUserLoggedIn(req, ds, [], true)) throw 'Requires sign in to access the sample data'
 	if (!tdb.convertSampleId) throw 'not supported on this ds'
 	if (!Array.isArray(q.inputs)) throw 'q.inputs[] not array'
 	res.send({ mapping: tdb.convertSampleId.get(q.inputs) })
 }
 
-async function trigger_getsamples(q, res, ds) {
-	// this may be potentially limited?
-	// ds may allow it as a whole
-	// individual term may allow getting from it
+async function trigger_getsamples(q, req, res, ds) {
+	// the response is a list of sample names
+	if (!authApi.canDisplaySampleIds(req, ds)) return res.send({ error: 'Requires sign in to access the sample data' })
 	const lst = await termdbsql.get_samples(q.filter, ds)
 	const samples = lst.map(i => ds.cohort.termdb.q.id2sampleName(i))
 	res.send({ samples })
@@ -153,8 +154,9 @@ async function getSampleCount(q, ds) {
 	throw new Error('no method available to get sample count')
 }
 
-async function getSampleList(req, q, ds) {
-	const canDisplay = authApi.canDisplaySampleIds(req, ds)
+// auth: defaults to the shared authApi, and is injectable so that unit tests can use a protected auth api
+export async function getSampleList(req, q, ds, auth = authApi) {
+	const canDisplay = auth.canDisplaySampleIds(req, ds)
 	// calling maySetMapParent2Children() to get query sample types
 	maySetMapParent2Children(q, ds, q.mapParent2Children)
 	let samples
@@ -162,8 +164,15 @@ async function getSampleList(req, q, ds) {
 		// dataset is sqlite-based
 		samples = await termdbsql.get_samples(q, ds, canDisplay)
 	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
+		// the returned sample ids are the ds sample identifiers, so require a session when the dataset has a
+		// termdb credential; unlike canDisplay, do not require ds.cohort.termdb.displaySampleIds, since an
+		// open-access api-backed ds (e.g. gdc) may not set it
+		if (!auth.isUserLoggedIn(req, ds, [], true)) return []
+		// when the dataset does define displaySampleIds, respect it like the sqlite and other sample handlers,
+		// e.g. displaySampleIds: false or a role policy that returns false for this request
+		if (ds.cohort.termdb.displaySampleIds !== undefined && !canDisplay) return []
 		// dataset supplied method. mayAdjustFilter for the same reason as getSampleCount() above
-		authApi.mayAdjustFilter(q, ds, [])
+		auth.mayAdjustFilter(q, ds, [])
 		const temp = await ds.cohort.termdb.filterSamples(q, ds)
 		if (temp) {
 			samples = [...temp].map(sid => {
@@ -357,13 +366,13 @@ export async function get_AllSamplesByName(q, req, res, ds) {
 	}
 }
 
-async function LDoverlay(q, ds, res) {
+async function LDoverlay(q, ds, res, genome) {
 	if (!q.ldtkname) throw '.ldtkname missing'
 	if (!ds.queries?.ld?.tracks) throw 'no ld tk'
 	const tk = ds.queries.ld.tracks.find(i => i.name == q.ldtkname)
 	if (!tk) throw 'unknown ld tk'
 	if (typeof q.m != 'object') throw 'q.m{} not object'
-	if (!q.m.chr) throw 'q.m.chr missing'
+	checkChr(genome, q.m.chr)
 	if (!Number.isInteger(q.m.pos)) throw 'q.m.pos not integer'
 	if (!q.m.ref || !q.m.alt) throw 'q.m{} invalid alleles'
 	const thisalleles = q.m.ref + '.' + q.m.alt

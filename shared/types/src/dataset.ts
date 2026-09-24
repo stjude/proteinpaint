@@ -1068,6 +1068,8 @@ export type SingleCellGeneExpression = {
 	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
 	/** gene expression unit (e.g. 'FPKM') */
 	unit?: string
+	/** Label for plot buttons, title, etc. */
+	label?: string
 }
 
 export type SingleCellSamples = {
@@ -1343,6 +1345,35 @@ type SingleSampleGbtk = {
 	}
 }
 
+export type SpatialQuery = {
+	/** spatial (Xenium) images root: folder/<sample_id>/<imageName>/ holds one
+	 * image per subfolder, containing the slide and its annotation files,
+	 * located by the *FileSuffix fields (matched with endsWith) */
+	folder?: string
+	/** plain whole-slide images root: wsiFolder/<sample_id>/<imageName>/
+	 * holds one image per subfolder, containing that image's slide file */
+	wsiFolder?: string
+	/** suffix of the spatial slide file (e.g. 'morphology.ome.tif'); an image
+	 * subfolder without it is skipped. Required with folder */
+	tiffFileSuffix?: string
+	/** suffix of the consolidated spatial .h5ad (expression X, obs cell_type,
+	 * uns cell/nucleus boundary polygons) — the single source of an image's
+	 * boundaries, annotations and expression. Required for the spatial
+	 * overlays; an image folder without one shows the bare slide */
+	spatialDataFileSuffix?: string
+	/** optional override for the spatial viewer's default gene overlay
+	 * (comma-separated). Gene names are discovered from the h5ad at
+	 * runtime; this value is filtered to genes actually present there, and
+	 * when absent (or naming only absent genes) the file's first gene is the
+	 * default. The burger menu can always override it. */
+	geneExpression?: string
+	/** default: show boundary strokes only in the n most zoomed-in levels */
+	annotationLevel?: number
+	/** default: fill cells by their annotated cell_type.
+	 * The burger menu can always override it. */
+	cellTypes?: boolean
+}
+
 type Mds3Queries = {
 	/** (gb=genomebrowser) controls gb chart button menu genesearchbox behavior, 
 	add some additional options after a gene is found, and mode of gb launched from the menu
@@ -1543,34 +1574,7 @@ type Mds3Queries = {
 	 * images are discovered from disk, never listed in the dataset. At least one
 	 * of folder (spatial) / wsiFolder (plain) is required — a dataset may have
 	 * either kind of image, or both. */
-	w2?: {
-		/** spatial (Xenium) images root: folder/<sample_id>/<imageName>/ holds one
-		 * image per subfolder, containing the slide and its annotation files,
-		 * located by the *FileSuffix fields (matched with endsWith) */
-		folder?: string
-		/** plain whole-slide images root: wsiFolder/<sample_id>/<imageName>/
-		 * holds one image per subfolder, containing that image's slide file */
-		wsiFolder?: string
-		/** suffix of the spatial slide file (e.g. 'morphology.ome.tif'); an image
-		 * subfolder without it is skipped. Required with folder */
-		tiffFileSuffix?: string
-		/** suffix of the consolidated spatial .h5ad (expression X, obs cell_type,
-		 * uns cell/nucleus boundary polygons) — the single source of an image's
-		 * boundaries, annotations and expression. Required for the spatial
-		 * overlays; an image folder without one shows the bare slide */
-		spatialDataFileSuffix?: string
-		/** optional override for the spatial viewer's default gene overlay
-		 * (comma-separated). Gene names are discovered from the h5ad at
-		 * runtime; this value is filtered to genes actually present there, and
-		 * when absent (or naming only absent genes) the file's first gene is the
-		 * default. The burger menu can always override it. */
-		geneExpression?: string
-		/** default: show boundary strokes only in the n most zoomed-in levels */
-		annotationLevel?: number
-		/** default: fill cells by their annotated cell_type.
-		 * The burger menu can always override it. */
-		cellTypes?: boolean
-	}
+	w2?: SpatialQuery
 	images?: Images
 	chat?: any
 }
@@ -1969,6 +1973,12 @@ export type Termdb = {
 	}
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
+	/** Exempts this dataset from the request-level gene/isoform name check that rejects a name
+	 * the genome gene db does not know (see server/src/geneRefValidation.ts). true exempts every
+	 * checked term type; an array exempts the named ones. For a dataset whose data declares names
+	 * of its own, e.g. a single cell store built from a gene panel, or a matrix whose rows are not
+	 * confined to the gene db */
+	skipGeneNameValidation?: boolean | string[]
 	/** filter samples by supplied filter(s). When no filter is supplied, returns undefined
 	 * unless returnAllSamples is true, in which case it returns the full set
 	 * of cohort sample ids (for callers like grin2 that must enumerate the cohort explicitly). */
@@ -2677,7 +2687,7 @@ export type Mds3 = BaseMds & {
 	output: validated filter0 obj, or undefined
 	*/
 	validate_filter0?: (f: any) => void
-	getFilter0SampleTypes?: (filter: any, ds: any, mapParent2Children?: boolean) => void
+	getFilter0SampleTypes?: (filter: any, ds: any) => void
 	/** ds-supplied getter, maps a ssm id to a canonical ENST name */
 	ssm2canonicalisoform?: { get?: (q: any) => any }
 	/** mds3 tk displays presence and occurrence of genomic alterations, but not including samples harboring each alteration

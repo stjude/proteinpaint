@@ -2,7 +2,7 @@ import { axisLeft, axisTop } from 'd3-axis'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { curveBasis, line } from 'd3-shape'
 import { brushX, brushY } from 'd3-brush'
-import { renderTable, getMaxLabelWidth, table2col } from '#dom'
+import { renderTable, getMaxLabelWidth, table2col, getChartTitle } from '#dom'
 import { rgb } from 'd3-color'
 import { format as d3format } from 'd3-format'
 import { isSingleCellTerm } from '#shared'
@@ -113,7 +113,7 @@ export default function setViolinRenderer(self: any) {
 					.style('text-align', 'center')
 					.style('font-size', '1.1em')
 					.style('margin-bottom', '5px')
-					.html(`${self.getChartTitle(chart.chartId)} (n=${totalCount})`)
+					.text(self.getChartTitle(chart.chartId, totalCount))
 			}
 
 			// render chart data
@@ -257,11 +257,8 @@ export default function setViolinRenderer(self: any) {
 		})
 	}
 
-	self.getChartTitle = function (chartId: string) {
-		if (!self.config.term0) return chartId
-		return self.config.term0.term.values && chartId in self.config.term0.term.values
-			? self.config.term0.term.values[chartId].label
-			: chartId
+	self.getChartTitle = function (chartId: string, totalCount?:number) {
+		return getChartTitle(self.config, chartId, totalCount)
 	}
 
 	function createMargins(labelsize: number, settings: any, isH: boolean, isMinimal: boolean) {
@@ -589,9 +586,10 @@ function getLegendGrps(termNum: TermWrapper, self: any) {
 		t2 = self.config.term2,
 		// changed color from #aaa to address Section 508 contrast issue
 		headingStyle = 'color: #555; font-weight: 400'
-	if (self.settings.showStats) addDescriptiveStats(t1, legendGrps, headingStyle, self)
-	if (t2?.term.type === 'float' || t2?.q.mode === 'continuous' || t2?.term.type === 'integer')
-		addDescriptiveStats(t2, legendGrps, headingStyle, self)
+	if (self.settings.showStats) {
+		addDescriptiveStats(t1, legendGrps, headingStyle, self)
+		if (t2?.q.descrStats) addDescriptiveStats(t2, legendGrps, headingStyle, self)
+	}
 
 	addUncomputableValues(
 		t1?.q.mode === 'continuous' && t1?.q.hiddenValues && Object.keys(t1?.q.hiddenValues).length > 0
@@ -624,8 +622,7 @@ function addDescriptiveStats(term: TermWrapper, legendGrps: LegendGroup[], headi
 			}
 		})
 
-		const title =
-			self.config.term2?.term.type === 'float' || self.config.term2?.term.type === 'integer'
+			const title = self.config.term2?.q.descrStats
 				? `Descriptive statistics: ${term.term.name}`
 				: `Descriptive statistics`
 		const name = `<span style="${headingStyle}">${title}</span>`

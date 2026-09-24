@@ -83,6 +83,14 @@ export class Filter {
 		this.promises = {}
 	}
 
+	// toggle a css class on the holder, so that style.css can highlight only
+	// the clickable filter buttons, and not any other buttons in a caller-supplied holder
+	setButtonHighlights() {
+		this.dom.holder
+			.on('mouseenter.sjppFilterBtns', () => this.dom.holder.classed('sja_filter_btns_highlighted', true))
+			.on('mouseleave.sjppFilterBtns', () => this.dom.holder.classed('sja_filter_btns_highlighted', false))
+	}
+
 	validateOpts(opts) {
 		const o = Object.assign({}, defaults, opts)
 		if (!o.holder) throw '.holder missing'

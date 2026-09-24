@@ -44,6 +44,7 @@ import { validate_query_proteome } from '../routes/termdb.proteome.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
 import { validate_query_geneExpression, validateQueryIsoformExpression } from './routes/termdb.cluster.ts'
+import { validateSkipGeneNameValidation } from './geneRefValidation.ts'
 import { mayLimitSamples, combinePPfilterAndTid2value } from './mds3.filter.js'
 import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
@@ -280,6 +281,10 @@ export async function validate_termdb(ds) {
 
 	const tdb = ds.cohort.termdb
 	if (!tdb) throw 'ds.cohort is set but cohort.termdb{} missing'
+
+	// a gene name opt-out that the request validation cannot read must fail at launch, not
+	// silently leave that dataset unchecked, see geneRefValidation.ts
+	validateSkipGeneNameValidation(ds)
 
 	/***********************************************************
 	 ** new properties created on tdb{} must be duplicated at  **
@@ -1896,11 +1901,13 @@ export async function setFile(q, dtn, fk = 'file') {
 	if (!f) throw `${dtn}.${fk} empty string`
 	if (f.startsWith(serverconfig.tpmasterdir)) {
 		// when the same ds js file is included twice on this pp, the file will already become absolute path
-		if ((utils.illegalpath(f.replace(serverconfig.tpmasterdir + '/', '')), false, false))
+		// path.relative() is robust to a trailing slash in tpmasterdir, and will begin with '..' to be rejected
+		// when f is not actually under tpmasterdir, such as '/tp2/file' with tpmasterdir='/tp'
+		if (utils.illegalpath(path.relative(serverconfig.tpmasterdir, f), false, false))
 			throw `${dtn}.${fk} illegal file path`
 		q[fk] = f
 	} else {
-		if ((utils.illegalpath(f), false, false)) throw `${dtn}.${fk} illegal file path`
+		if (utils.illegalpath(f, false, false)) throw `${dtn}.${fk} illegal file path`
 		q[fk] = path.join(serverconfig.tpmasterdir, f)
 	}
 	await utils.file_is_readable(q[fk])

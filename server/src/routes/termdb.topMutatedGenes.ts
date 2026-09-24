@@ -93,12 +93,24 @@ export function validate_query_getTopMutatedGenes(ds: any) {
 			})
 		}
 	}
+	// cnv column names are composed from request values and cannot be bound as sql parameters,
+	// so only allow the combinations that are offered as arguments
+	const cnvColumns = new Set<string>()
+	const cnvArg = q.arguments.find(a => a.id == 'cnv')
+	const msOpts = cnvArg?.options?.find(o => o.id == 'cnv_ms')?.options || []
+	const lrOpts = cnvArg?.options?.find(o => o.id == 'cnv_logratio')?.options || []
+	for (const ms of msOpts) {
+		for (const lr of lrOpts) cnvColumns.add(ms.value + lr.value)
+	}
+
 	q.get = async (param: topMutatedGeneRequest) => {
+		const values: (string | number)[] = []
 		let sampleStatement = ''
 		if (param.filter) {
 			const lst = await get_samples(param, ds)
 			if (lst.length == 0) throw 'empty sample filter'
-			sampleStatement = `WHERE sample IN (${lst.map(i => i.id).join(',')})`
+			sampleStatement = `WHERE sample IN (${lst.map(() => '?').join(',')})`
+			values.push(...lst.map(i => i.id))
 		}
 
 		const fields: string[] = []
@@ -111,9 +123,14 @@ export function validate_query_getTopMutatedGenes(ds: any) {
 		if (param.cnv == 1 && param.cnv_ms?.type && param.cnv_logratio?.type) {
 			//"cnv_ms":{"type":"cnv_1mb","geneList":null}
 			// "cnv_logratio":{"type":"_01","geneList":null}
-			fields.push(param.cnv_ms.type + param.cnv_logratio.type)
+			const cnvColumn = param.cnv_ms.type + param.cnv_logratio.type
+			if (!cnvColumns.has(cnvColumn)) throw 'invalid cnv_ms.type or cnv_logratio.type'
+			fields.push(cnvColumn)
 		}
 		if (!fields.length) throw 'no fields'
+		const maxGenes = param.maxGenes ? Number(param.maxGenes) : 20
+		if (!Number.isInteger(maxGenes) || maxGenes < 1) throw 'invalid maxGenes'
+		values.push(maxGenes)
 
 		// TODO preserve count per data type to return as mutation stat
 		const query = `WITH
@@ -125,9 +142,9 @@ export function validate_query_getTopMutatedGenes(ds: any) {
 		FROM filtered
 		GROUP BY genesymbol
 		ORDER BY count DESC
-		LIMIT ${param.maxGenes || 20}`
+		LIMIT ?`
 		const t = Date.now()
-		const genes = ds.cohort.db.connection.prepare(query).all()
+		const genes = ds.cohort.db.connection.prepare(query).all(values)
 		mayLog('Top mutated gene sql', Date.now() - t, 'ms')
 		const results: MutatedGene[] = []
 		for (const g of genes) {

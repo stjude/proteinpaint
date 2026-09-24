@@ -13,7 +13,6 @@ import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares } from './app.middlewares.js'
 import * as oldApp from './app.unorg.js'
 import { getAuthApi, extractValidatedCreds } from './auth.ts'
-import * as phewas from './termdb.phewas.js'
 import { sendMessageToSlack } from './postOnSlack.ts'
 import { routeFiles } from './app.routes.js'
 import { setPythonBinPath } from '@sjcrh/proteinpaint-python'
@@ -157,24 +156,13 @@ init with bad config, data, and/or code
 	}
 }
 
-async function handle_argv(argv) {
+async function handle_argv(
+	argv: string[]
+): Promise<{ message?: string; error?: string; code?: number } | undefined> {
 	if (!argv?.length) return
 	if (argv.includes('validate'))
 		// exit early if only doing a validation of configuration + data + startup code
 		return { message: `You may now run the server.`, code: 0 }
-
-	if (argv.includes('phewas-precompute')) {
-		// argv[3] is genome, argv[4] is dslabel
-		const gn = argv[3],
-			dslabel = argv[4]
-		const genome = genomes[gn]
-		if (!genome) return { error: 'invalid genome name: ' + gn, code: 1 }
-		const ds = genome.datasets[dslabel]
-		if (!ds) return { error: 'invalid dataset: ' + dslabel, code: 1 }
-		await phewas.do_precompute(ds)
-		// do not return exit code, in case any precomputation step does not await
-		return { message: `computed phewas` }
-	}
 }
 
 async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {

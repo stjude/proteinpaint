@@ -113,7 +113,7 @@ export function init({ genomes }) {
 								// the other DAP-driven tools; a nominal p is only present when the
 								// DAP file carries one (6th column)
 								fdr: row.fdr,
-pValue: row.fdr,
+								pValue: row.fdr,
 								testedN: caseSamples.length,
 								controlN: controlSamples.length
 							}
@@ -222,8 +222,8 @@ export async function validate_query_proteome(ds) {
 	}
 
 	const geneIndexHint = q.db
-		.prepare(`SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'proteome_abundance_gene'`)
-		.get()
+		.prepare('SELECT 1 FROM sqlite_master WHERE type = ? AND name = ?')
+		.get('index', 'proteome_abundance_gene')
 		? ' INDEXED BY proteome_abundance_gene'
 		: ''
 

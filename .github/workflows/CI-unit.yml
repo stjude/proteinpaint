@@ -130,6 +130,13 @@ jobs:
         if: contains(env.WS_TO_TEST, 'server')
         run: npm run test:unit --workspace="server"
 
+      # launches a full server; the TermdbTest dataset also requires bcftools, tabix, and h5dump to load
+      - name: 🔐 Server auth request tests
+        if: contains(env.WS_TO_TEST, 'server')
+        run: |
+          sudo apt-get install -y bcftools
+          npm run test:request --workspace="server"
+
       - name: ⚡ Cache
         if: contains(env.WS_TO_TEST, 'rust')
         uses: actions/cache@v6

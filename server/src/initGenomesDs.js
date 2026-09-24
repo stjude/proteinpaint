@@ -6,6 +6,7 @@ import { checkDependenciesAndVersions } from './checkDependenciesAndVersions.js'
 import { initLegacyDataset } from './initLegacyDataset.js'
 import serverconfig from './serverconfig.js'
 import { server_init_db_queries, setSupportedChartTypes, listDbTables } from './termdb.server.init.ts'
+import { sql } from './sql.ts'
 import { mds_init } from './mds.init.js'
 import * as mds3_init from './mds3.init.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
@@ -13,6 +14,7 @@ import { clinsig } from '../dataset/clinvar.ts'
 import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
 import { mayLog } from './helpers.ts'
 import { mapConcurrent } from './utils/concurrencyLimiter.ts'
+import { initGeneDbLookups } from './genedbLookups.ts'
 // server-internal utilities that GDC query code depends on; injected so that code can move to
 // the ppgdc dataset repo, which cannot import from the server package
 import { renderVolcano } from './renderVolcano.ts'
@@ -218,14 +220,6 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 		if (!g.majorchr) throw genomename + ': majorchr missing'
 		if (!g.defaultcoord) throw genomename + ': defaultcoord missing'
 
-		try {
-			// test samtools and genomefile
-			await utils.get_fasta(g, g.defaultcoord.chr + ':' + g.defaultcoord.start + '-' + (g.defaultcoord.start + 1))
-		} catch (e) {
-			// either samtools or fasta file failed
-			throw `${genomename}: cannot get genome sequence: ${e.message || e}`
-		}
-
 		if (!g.tracks) {
 			g.tracks = []
 		}
@@ -264,6 +258,14 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 			}
 		}
 
+		try {
+			// test samtools and genomefile; runs after chrlookup is built since get_fasta() validates against it
+			await utils.get_fasta(g, g.defaultcoord.chr + ':' + g.defaultcoord.start + '-' + (g.defaultcoord.start + 1))
+		} catch (e) {
+			// either samtools or fasta file failed
+			throw `${genomename}: cannot get genome sequence: ${e.message || e}`
+		}
+
 		// genedb is optional
 		if (g.genedb) {
 			if (!g.genedb.dbfile) throw genomename + ': .genedb.dbfile missing'
@@ -274,8 +276,8 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 			} catch (e) {
 				throw `Cannot connect genedb: ${g.genedb.dbfile}: ${e}`
 			}
-			g.genedb.getnamebynameorisoform = g.genedb.db.prepare('select name from genes where name=? or isoform=?')
-			g.genedb.getnamebyisoform = g.genedb.db.prepare('select distinct name from genes where isoform=?')
+			/* genemodel json is the bulk of this db and is only ever read by accession, so it stays
+			in sqlite. Same for the prefix search, which no per-request check runs */
 			g.genedb.getjsonbyname = g.genedb.db.prepare('select isdefault,genemodel from genes where name=?')
 			g.genedb.getjsonbyisoform = g.genedb.db.prepare('select isdefault,genemodel from genes where isoform=?')
 			g.genedb.getnameslike = g.genedb.db.prepare('select distinct name from genes where name like ? limit 20')
@@ -293,11 +295,15 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 			if present, create getter to this table and attach to g.genedb{}
 			*/
 			const tables = listDbTables(g.genedb.db)
-			if (tables.has('genealias')) {
-				g.genedb.getNameByAlias = g.genedb.db.prepare('select name from genealias where alias=?')
-				// quick fix -- convert symbol to ENSG, to be used for gdc api query
-				g.genedb.getAliasByName = g.genedb.db.prepare('select alias from genealias where name=?')
-			}
+
+			/* reads the name/alias/isoform tables into maps and attaches the getters over them:
+			getnamebynameorisoform, getnamebyisoform, and (when the tables exist) getNameByAlias,
+			getAliasByName and get_gene2canonicalisoform. Same getter shape as the statements they
+			replace, so call sites are unchanged, but a lookup no longer blocks the event loop --
+			which is what lets every request be checked for unknown gene names, see
+			geneRefValidation.ts */
+			initGeneDbLookups(g.genedb, tables)
+
 			if (tables.has('gene2coord')) {
 				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
 			}
@@ -306,11 +312,6 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 				g.genedb.getIdeogramByChr = g.genedb.db.prepare('select * from ideogram where chromosome=?')
 			} else {
 				g.genedb.hasIdeogram = false
-			}
-			if (tables.has('gene2canonicalisoform')) {
-				g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
-					'select isoform from gene2canonicalisoform where gene=?'
-				)
 			}
 			if (tables.has('buildDate')) {
 				g.genedb.get_buildDate = g.genedb.db.prepare('select date from buildDate')
@@ -323,7 +324,7 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 			g.genedb.tableSize = {}
 			for (const table of tables) {
 				if (table == 'buildDate') continue
-				g.genedb.tableSize[table] = g.genedb.db.prepare(`select count(*) as size from ${table}`).get().size
+				g.genedb.tableSize[table] = g.genedb.db.prepare(sql`select count(*) as size from ${sql.id(table)}`).get().size
 			}
 		}
 

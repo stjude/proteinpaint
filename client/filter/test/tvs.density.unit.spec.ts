@@ -6,6 +6,7 @@ import { scaleLinear } from 'd3-scale'
 
 /* Tests
 	updateTempRanges
+	updateTempRanges: typed bound outside of the data
 	setStartStop
 */
 
@@ -136,6 +137,71 @@ tape('updateTempRanges', test => {
 	test.deepEqual(range, expected, 'Should update start and stop values in the range object')
 
 	holder.remove()
+	test.end()
+})
+
+tape('updateTempRanges: typed bound outside of the data', test => {
+	test.timeoutAfter(100)
+
+	/* a typed bound at or beyond the data places the brush at the edge of the plot. replacing that
+	bound by the data min or max would change the selected samples, so it is kept as typed */
+	const brushTo = (min: number, max: number, typed: any, type = 'float', s?: number[]) => {
+		const xscale = scaleLinear().domain([min, max]).range([0, 500])
+		const clamp = (v: number) => Math.min(Math.max(v, min), max)
+		// as tvs.numeric.js apply() moves the brush for a typed range
+		if (!s) s = [clamp(typed.start ?? min), clamp(typed.stop ?? max)].map(xscale)
+		const range: any = {}
+		const inputRange = { startunbounded: typed.start == undefined, stopunbounded: typed.stop == undefined, ...typed }
+		updateTempRanges(xscale, s, range, inputRange, min, max, type)
+		return setStartStopDisplays(range, inputRange)
+	}
+
+	test.deepEqual(
+		brushTo(0, 10, { start: -1, startinclusive: false }),
+		['-1 <', ''],
+		'Should keep a typed start below the min, rather than drop the samples at the min with 0 < x'
+	)
+	test.deepEqual(
+		brushTo(0, 10, { stop: 11, stopinclusive: false }),
+		['', '< 11'],
+		'Should keep a typed stop above the max, rather than drop the samples at the max with x < 10'
+	)
+	test.deepEqual(
+		brushTo(0, 10, { start: -1, stop: 11 }),
+		['-1 <', '< 11'],
+		'Should keep both typed bounds of a range covering the data'
+	)
+	test.deepEqual(
+		brushTo(0.925, 10, { start: 0 }),
+		['0 <', ''],
+		'Should keep a typed start below the min, rather than a min rounded up into the data'
+	)
+	test.deepEqual(
+		brushTo(0, 9.995, { stop: 20 }),
+		['', '< 20'],
+		'Should keep a typed stop above the max, rather than a max rounded down into the data'
+	)
+	test.deepEqual(
+		brushTo(0, 10, { start: 0, startinclusive: false }),
+		['0 <', ''],
+		'Should keep a typed exclusive start at the min'
+	)
+	test.deepEqual(
+		brushTo(0, 10, { start: -0.5 }, 'integer'),
+		['-0.5 <', ''],
+		'Should not round a kept bound of an integer term, as x > 0 would drop the samples at 0'
+	)
+	test.deepEqual(
+		brushTo(0, 10, { start: 2, stop: 11 }),
+		['2 <', '< 11'],
+		'Should limit only the bound beyond the data, and keep a bound inside the data from the brush'
+	)
+	// the input keeps the last typed range during a drag, which must not override a dragged handle
+	test.deepEqual(
+		brushTo(0, 10, { start: -1 }, 'float', [100, 500]),
+		['2 <', ''],
+		'Should take a start dragged away from the edge from the brush'
+	)
 	test.end()
 })
 

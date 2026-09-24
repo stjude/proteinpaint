@@ -43,7 +43,6 @@ export const discrete = {
 		const annoTable = `anno_${term.type}`
 		if (!dictionaryNumericTypes.has(term.type)) throw `unknown '${annoTable}' table (discrete.getCTE)`
 
-		values.push(term.id)
 		const bins = get_bins(q, term, ds, index, filter)
 		//console.log('last2', bins[bins.length - 2], 'last1', bins[bins.length - 1])
 		const bin_def_lst = []
@@ -55,15 +54,17 @@ export const discrete = {
 			if (!('name' in b) && b.label) b.name = b.label
 			name2bin.set(b.name, b)
 			bin_def_lst.push(
-				`SELECT '${b.name}' AS name,
-				${b.start == undefined ? 0 : b.start} AS start,
-				${b.stop == undefined ? 0 : b.stop} AS stop,
+				`SELECT ? AS name,
+				? AS start,
+				? AS stop,
 				0 AS unannotated,
 				${b.startunbounded ? 1 : 0} AS startunbounded,
 				${b.stopunbounded ? 1 : 0} AS stopunbounded,
 				${b.startinclusive ? 1 : 0} AS startinclusive,
 				${b.stopinclusive ? 1 : 0} AS stopinclusive`
 			)
+			// names are bound as strings, same as the previously quoted sql literals
+			values.push(String(b.name), getBinBoundary(b.start, b.startunbounded), getBinBoundary(b.stop, b.stopunbounded))
 		}
 		const excludevalues = []
 		if (term.values) {
@@ -71,11 +72,13 @@ export const discrete = {
 				const isUncomputable = term.values[key].uncomputable
 				if (q.computableValuesOnly && isUncomputable) continue
 				if (!q.computableValuesOnly && !isUncomputable) continue
-				excludevalues.push(key)
+				const numKey = Number(key)
+				if (!Number.isFinite(numKey)) throw `non-numeric uncomputable value key='${key}' (discrete.getCTE)`
+				excludevalues.push(numKey)
 				const v = term.values[key]
 				bin_def_lst.push(
-					`SELECT '${v.label}' AS name,
-	        ${key} AS start,
+					`SELECT ? AS name,
+	        ? AS start,
 	        0 AS stop,
 	        1 AS unannotated,
 	        0 AS startunbounded,
@@ -83,6 +86,7 @@ export const discrete = {
 	        0 AS startinclusive,
 	        0 AS stopinclusive`
 				)
+				values.push(String(v.label), numKey)
 				name2bin.set(v.label, {
 					is_unannotated: true,
 					value: key,
@@ -91,6 +95,8 @@ export const discrete = {
 			}
 		}
 
+		// values must be pushed in the order that their placeholders appear in the sql below
+		values.push(...excludevalues, term.id)
 		const bin_def_table = 'bin_defs_' + index
 		const uncomputable = getUncomputableClause(term, q, 'a')
 		values.push(...uncomputable.values)
@@ -110,7 +116,7 @@ export const discrete = {
 					OR
 					(
 						b.unannotated=0 AND
-						${excludevalues.length ? 'value NOT IN (' + excludevalues.join(',') + ') AND' : ''}
+						${excludevalues.length ? 'value NOT IN (' + excludevalues.map(() => '?').join(',') + ') AND' : ''}
 						(
 							b.startunbounded = 1
 							OR value > b.start
@@ -137,3 +143,11 @@ export const discrete = {
 }
 
 export const binary = discrete
+
+/* an undefined or unbounded bin boundary is stored as 0, it is ignored by the sql when the bin is unbounded on that side */
+function getBinBoundary(v, unbounded) {
+	if (v === undefined || v === null || unbounded) return 0
+	const n = Number(v)
+	if (!Number.isFinite(n)) throw `invalid bin boundary='${v}'`
+	return n
+}

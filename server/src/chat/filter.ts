@@ -5,6 +5,7 @@ import { resolveToTvs } from './entity2twTvs.ts'
 import type { FilterTreeResult, MsgToUser, Entity } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
 import type { LlmConfig } from '#types'
+import type Database from 'better-sqlite3'
 
 /**
  * Convert a natural-language filter phrase into a tvslst object that can be sent to the UI.
@@ -22,7 +23,7 @@ export async function generateFilterTerm(
 	genes_list: string[],
 	dataset_json: any,
 	ds: any,
-	dbPath: string,
+	db: Database.Database,
 	genome: any
 ): Promise<any | MsgToUser> {
 	const filterTree: FilterTreeResult | MsgToUser = await evaluateFilterTerm(phrase, llm)
@@ -46,12 +47,12 @@ export async function generateFilterTerm(
 	const filterValues: Value[] = []
 	for (const filterTerm of filterEntities) {
 		mayLog('generateFilterTerm evaluating filter term:', filterTerm)
-		const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
+		const termObj = await getTermObj('filter', filterTerm, llm, db, genes_list, genome)
 		if (isMsgToUser(termObj)) return termObj
 		if (!termObj) continue
 		if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
 		filterValues.push(termObj)
 	}
 
-	return await resolveToTvs(filterValues, dbPath, llm)
+	return await resolveToTvs(filterValues, db, llm)
 }

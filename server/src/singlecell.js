@@ -55,7 +55,7 @@ export function handle_singlecell_closure(genomes) {
 			if (!gn) throw 'invalid genome'
 
 			if (q.getpcd) {
-				await get_pcd(q, res)
+				await get_pcd(q, gn, res)
 				return
 			}
 			if (q.getgeneboxplot) {
@@ -73,7 +73,7 @@ export function handle_singlecell_closure(genomes) {
 	}
 }
 
-async function get_pcd(q, res) {
+async function get_pcd(q, gn, res) {
 	/* hardcoded to 3d
 		TODO 2d, svg
 		PCD file format guide: https://pcl.readthedocs.io/projects/tutorials/en/latest/pcd_file_format.html
@@ -81,7 +81,7 @@ async function get_pcd(q, res) {
 
 	const result = {}
 
-	const lines = await slice_file_add_color(q, result)
+	const lines = await slice_file_add_color(q, gn, result)
 
 	const header = `# .PCD v.7 - Point Cloud Data file format
 VERSION .7
@@ -100,7 +100,7 @@ DATA ascii
 	res.send(result)
 }
 
-async function slice_file_add_color(q, result) {
+async function slice_file_add_color(q, gn, result) {
 	/*
 to slice the csv/tab file of all cells
 for each cell, assign color based on desired method
@@ -151,7 +151,7 @@ may attach coloring scheme to result{} for returning to client
 			ge.file = file
 		}
 		if (!Number.isInteger(ge.barcodecolumnidx)) throw 'gene_expression.barcodecolumnidx missing'
-		if (!ge.chr) throw 'gene_expression.chr missing'
+		utils.checkChr(gn, ge.chr)
 		if (!ge.start) throw 'gene_expression.start missing'
 		if (!ge.stop) throw 'gene_expression.stop missing'
 		if (!ge.genename) throw 'gene_expression.genename missing'
@@ -359,7 +359,7 @@ async function get_geneboxplot(q, gn, res) {
 		if (e) throw 'getgeneboxplot.expfile error: ' + e
 		ge.expfile = file
 	}
-	if (!ge.chr) throw 'getgeneboxplot.chr missing'
+	utils.checkChr(gn, ge.chr)
 	if (!ge.start) throw 'getgeneboxplot.start missing'
 	if (!ge.stop) throw 'getgeneboxplot.stop missing'
 	if (!ge.genename) throw 'getgeneboxplot.genename missing'
@@ -491,7 +491,7 @@ async function get_heatmap(q, gn, res) {
 		ge.expfile = file
 	}
 	ge.gene_list.forEach(gene => {
-		if (!gene.chr) throw 'getgeneboxplot.chr missing'
+		utils.checkChr(gn, gene.chr)
 		if (!gene.start) throw 'getgeneboxplot.start missing'
 		if (!gene.stop) throw 'getgeneboxplot.stop missing'
 		if (!gene.gene) throw 'getgeneboxplot.genename missing'

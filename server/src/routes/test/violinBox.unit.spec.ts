@@ -15,7 +15,8 @@ import {
 	setHiddenPlots,
 	setUncomputableValues,
 	divideValues,
-	expandNumericTermCollection
+	expandNumericTermCollection,
+	getDescrStatsByTerm
 } from '../termdb.violinBox.ts'
 import {
 	mockTerm1$id,
@@ -102,6 +103,36 @@ tape('extractNumericValues: filters non-numeric values', function (test) {
 	]
 	const result = extractNumericValues(samples, mockTw as any)
 	test.deepEqual(result, [5, 3], 'Should only include numeric values')
+	test.end()
+})
+
+tape('getDescrStatsByTerm: calculates stats for both requested terms', function (test) {
+	const numericOverlay = { term: termjson.agedx, $id: mockTerm2$id } as any
+	const samples = Object.values({
+		...mockSamples,
+		5: { [mockTerm1$id]: { value: 20 }, [mockTerm2$id]: { value: 2 } }
+	})
+	const stats = getDescrStatsByTerm(samples, mockTw as any, numericOverlay)
+	test.equal(stats[mockTerm1$id].total.value, 5, 'Should include primary-term statistics')
+	test.equal(stats[mockTerm2$id].total.value, 1, 'Should include numeric-overlay statistics')
+	test.end()
+})
+
+tape('getDescrStatsByTerm: returns empty stats for categorical overlays', function (test) {
+	const stats = getDescrStatsByTerm(Object.values(mockSamples), mockTw as any, mockOverlayTw as any)
+	test.deepEqual(stats[mockTerm2$id], {}, 'Should not calculate statistics from categorical values')
+	test.end()
+})
+
+tape('getDescrStatsByTerm: retains zero-valued numeric overlay data on a log-scaled primary term', function (test) {
+	const numericOverlay = { term: termjson.agedx, $id: mockTerm2$id } as any
+	const samples = [
+		{ [mockTerm1$id]: { value: 1 }, [mockTerm2$id]: { value: 0 } },
+		{ [mockTerm1$id]: { value: 10 }, [mockTerm2$id]: { value: 2 } }
+	]
+	const stats = getDescrStatsByTerm(samples, mockTw as any, numericOverlay, true)
+	test.equal(stats[mockTerm1$id].total.value, 2, 'Should use log-scale filtering for the primary term')
+	test.equal(stats[mockTerm2$id].total.value, 2, 'Should retain zero-valued overlay data')
 	test.end()
 })
 
@@ -868,6 +899,50 @@ tape('expandNumericTermCollection: creates synthetic overlay keyed by member ter
 	test.equal(q.overlayTw.term.values['Drug B'].color, '#00ff00', 'Should use color from propsByTermId')
 	test.end()
 })
+
+tape(
+	'expandNumericTermCollection: a member named __proto__ is stored as real overlay data, not a prototype reassignment',
+	function (test) {
+		const q = getMockTermCollectionQ()
+		q.tw.term.termlst = [{ id: '__proto__', name: '__proto__' }, ...q.tw.term.termlst]
+		const data = getMockTermCollectionData()
+		for (const sampleData of Object.values(data.samples) as any[]) {
+			// plain assignment of a primitive to a '__proto__' key is a silent no-op (it never
+			// creates an own property), so defineProperty is required to actually exercise the
+			// per-sample expansion path for a __proto__-named member
+			Object.defineProperty(sampleData[mockTermCollectionId].value, '__proto__', {
+				value: 9.9,
+				enumerable: true,
+				configurable: true,
+				writable: true
+			})
+		}
+
+		expandNumericTermCollection(q, data)
+
+		test.ok(
+			Object.hasOwn(q.overlayTw.term.values, '__proto__'),
+			'the __proto__-named member is a real own property of the overlay values map'
+		)
+		test.equal(
+			q.overlayTw.term.values['__proto__'].label,
+			'__proto__',
+			'the __proto__-named member keeps its own label'
+		)
+		test.equal(
+			Object.getPrototypeOf(q.overlayTw.term.values),
+			null,
+			"the overlay values map's own prototype is untouched"
+		)
+		test.equal(
+			data.samples['s1____proto__']?.[mockTermCollectionId]?.value,
+			9.9,
+			'the per-sample expansion path also creates a virtual sample for the __proto__ member'
+		)
+		test.notOk(({} as any).label, 'does not pollute Object.prototype')
+		test.end()
+	}
+)
 
 tape('expandNumericTermCollection: sets overlay key on each virtual sample', function (test) {
 	const q = getMockTermCollectionQ()

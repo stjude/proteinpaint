@@ -1,5 +1,4 @@
-import { tabixnoterror, cache_index } from './utils.js'
-import { spawn } from 'child_process'
+import { tabixnoterror, cache_index, spawnTool } from './utils.js'
 import serverconfig from './serverconfig.js'
 import path from 'path'
 import readline from 'readline'
@@ -59,7 +58,7 @@ export function handle_mdssvcnv_expression(ds, dsquery, req, data_cnv) {
 			for (const r of req.query.rglst) {
 				const task = new Promise((resolve, reject) => {
 					const data = []
-					const ps = spawn(
+					const ps = spawnTool(
 						serverconfig.tabix,
 						[
 							expressionquery.file ? path.join(serverconfig.tpmasterdir, expressionquery.file) : expressionquery.url,

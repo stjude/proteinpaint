@@ -26,6 +26,8 @@ class FilterStateless extends Filter {
 			destroy: () => this.destroy()
 		}
 
+		this.setButtonHighlights()
+
 		if (opts.callbacks) {
 			this.events = ['postInit', 'postRender', 'firstRender']
 			this.bus = new Bus(this.api, this.events, opts.callbacks)

@@ -1,4 +1,5 @@
 import type { LlmConfig, DbRows } from '#types'
+import type Database from 'better-sqlite3'
 import type { Value, DictTerm, GeneSetTerm } from './entity2termObj.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
 import { isMsgToUser } from './scaffoldTypes.ts'
@@ -172,7 +173,11 @@ function generateFlatTvslst(items: Array<ResolvedFilter | any>): any {
 	return localfilter
 }
 
-export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmConfig): Promise<any | MsgToUser> {
+export async function resolveToTvs(
+	tvsValues: Value[],
+	db: Database.Database,
+	llm: LlmConfig
+): Promise<any | MsgToUser> {
 	// Resolve each filter phrase via the LLM helpers into an intermediate ResolvedFilter, then
 	// assemble a tvslst matching filter.ts's validate_filter() + generate_filter_term() output:
 	//   { type: 'tvslst', in: true, join?: 'and'|'or',
@@ -182,7 +187,7 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 	const resolved: ResolvedFilter[] = []
 	for (const termObj of tvsValues) {
 		if (termObj.term.type === 'categorical') {
-			const categoricalFilterTerm = await getCategoricalFilterTermValues(termObj, dbPath, llm)
+			const categoricalFilterTerm = await getCategoricalFilterTermValues(termObj, db, llm)
 			if (isMsgToUser(categoricalFilterTerm)) return categoricalFilterTerm
 			if (!categoricalFilterTerm) {
 				mayLog(`resolveToTvs: skipping categorical filter term (no result): "${termObj.phrase}"`)
@@ -192,7 +197,7 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 			// (similar logic to generate_filter_term() in filter.ts)
 			let cat: string | undefined
 			if ('id' in termObj.term) {
-				const dataset_db_output = await parse_dataset_db(dbPath)
+				const dataset_db_output = await parse_dataset_db(db)
 				if (isMsgToUser(dataset_db_output)) return dataset_db_output
 				const { db_rows } = dataset_db_output
 				const dbRow = db_rows.find(r => r.name === (termObj.term as DictTerm).id)
@@ -223,7 +228,7 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 			termObj.term.type === TermTypes.GENE_EXPRESSION ||
 			termObj.term.type === TermTypes.SSGSEA // Will need to add more nonDict term types here as needed, e.g. methylation, CNV, etc.
 		) {
-			const numericFilterTerm = await getNumericFilterTermValues(termObj, dbPath, llm)
+			const numericFilterTerm = await getNumericFilterTermValues(termObj, db, llm)
 			if (isMsgToUser(numericFilterTerm)) return numericFilterTerm
 			if (!numericFilterTerm) {
 				mayLog(`resolveToTvs: skipping numeric filter term (no result): "${termObj.phrase}"`)
@@ -496,7 +501,7 @@ export async function resolveToTwTvs(
 	entity: Record<string, Value | Value[] | string | DbRows[] | undefined>,
 	plotType: string,
 	llm: LlmConfig,
-	dbPath: string,
+	db: Database.Database,
 	genome: any
 ) {
 	if (!entity) throw new Error('Undefined entity provided')
@@ -509,7 +514,7 @@ export async function resolveToTwTvs(
 			if (key === 'filter') {
 				const filterValues = value as Value[] | undefined
 				if (!filterValues) throw new Error(`Invalid term entity for key ${key}`)
-				const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+				const termWrapper = await resolveToTvs(filterValues, db, llm)
 				if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 				twTvsObjects[key] = termWrapper
 				continue
@@ -530,7 +535,7 @@ export async function resolveToTwTvs(
 			}
 			const filterValues = value as Value[] | undefined
 			if (!filterValues) throw new Error(`Invalid term entity for key ${key}`)
-			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+			const termWrapper = await resolveToTvs(filterValues, db, llm)
 			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 			twTvsObjects[key] = termWrapper
 		}
@@ -555,7 +560,7 @@ export async function resolveToTwTvs(
 
 		if (entity['filter']) {
 			const filterValues = entity['filter'] as Value[]
-			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+			const termWrapper = await resolveToTvs(filterValues, db, llm)
 			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 			twTvsObjects['filter'] = termWrapper
 		}
@@ -578,7 +583,7 @@ export async function resolveToTwTvs(
 		// optional cohort filter
 		if (entity['filter']) {
 			const filterValues = entity['filter'] as Value[]
-			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+			const termWrapper = await resolveToTvs(filterValues, db, llm)
 			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 			twTvsObjects['filter'] = termWrapper
 		}
@@ -601,7 +606,7 @@ export async function resolveToTwTvs(
 			twTvsObjects.independent.push(wrapper)
 		}
 		if (entity.filter) {
-			const termWrapper = await resolveToTvs(entity.filter as Value[], dbPath, llm)
+			const termWrapper = await resolveToTvs(entity.filter as Value[], db, llm)
 			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 			twTvsObjects.filter = termWrapper
 		}
@@ -611,7 +616,7 @@ export async function resolveToTwTvs(
 			if (key === 'filter') {
 				const filterValues = value as Value[] | undefined
 				if (!filterValues) throw new Error(`Invalid term entity for key ${key}`)
-				const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+				const termWrapper = await resolveToTvs(filterValues, db, llm)
 				if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 				twTvsObjects[key] = termWrapper
 				continue
@@ -684,7 +689,7 @@ export async function resolveToTwTvs(
 		if (entity['filter']) {
 			const filterValues = entity['filter'] as Value[] | undefined
 			if (!filterValues) throw new Error(`Invalid term entity for key filter`)
-			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+			const termWrapper = await resolveToTvs(filterValues, db, llm)
 			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 			twTvsObjects['filter'] = termWrapper
 		}
@@ -696,7 +701,7 @@ export async function resolveToTwTvs(
 
 async function getCategoricalFilterTermValues(
 	termObj: Value,
-	dbPath: string,
+	db: Database.Database,
 	llm: LlmConfig
 ): Promise<{ term: string; value: string } | MsgToUser | undefined> {
 	// For categorical filters, we need to determine both the term and the specific value being filtered on
@@ -704,7 +709,7 @@ async function getCategoricalFilterTermValues(
 	// term + one of its enumerated values best matches termObj.phrase.
 	if ('id' in termObj.term) {
 		// Assuming categorical terms from the dictionary will have an 'id' field, while non-dictionary terms won't.
-		const dataset_db_output = await parse_dataset_db(dbPath)
+		const dataset_db_output = await parse_dataset_db(db)
 		if (isMsgToUser(dataset_db_output)) return dataset_db_output
 		const { db_rows, rag_docs } = dataset_db_output
 
@@ -766,7 +771,7 @@ JSON response:`
 
 async function getNumericFilterTermValues(
 	termObj: Value,
-	dbPath: string,
+	db: Database.Database,
 	llm: LlmConfig
 ): Promise<{ term: string; start?: string; stop?: string } | MsgToUser | undefined> {
 	// For numeric filters, we need to determine the term being filtered on and any specified cutoffs
@@ -777,7 +782,7 @@ async function getNumericFilterTermValues(
 	let termName: string
 
 	if ('id' in termObj.term) {
-		const dataset_db_output = await parse_dataset_db(dbPath)
+		const dataset_db_output = await parse_dataset_db(db)
 		if (isMsgToUser(dataset_db_output)) return dataset_db_output
 		const { db_rows, rag_docs } = dataset_db_output
 

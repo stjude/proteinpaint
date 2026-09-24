@@ -1,5 +1,6 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
+import { sayerror } from '#dom/sayerror'
 import { to_textfile } from '#dom/downloadTextfile'
 import { dofetch3 } from '#common/dofetch'
 import { parentCorsMessage } from '#common/embedder-helpers'
@@ -484,6 +485,7 @@ class MassSessionBtn {
 			.html('Delete selected sessions')
 			.property('disabled', true)
 			.on('click', async () => {
+				errorDiv.selectAll('*').remove()
 				const inputs = t.table.node().querySelectorAll('input')
 				const sessionIdsDeletedFromServer = []
 				for (const input of inputs) {
@@ -492,26 +494,53 @@ class MassSessionBtn {
 						if (d.loc == 'browser') {
 							delete this.savedSessions[input.value] //checkedIds.push(input.value)
 						} else if (d.loc == 'server') {
-							delete this.serverCachedSessions[input.value]
 							sessionIdsDeletedFromServer.push(input.value)
 						} else throw `unknown cache location=${d.loc}`
 					}
 				}
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
-				try {
-					const headers = await this.app.vocabApi.mayGetAuthHeaders('termdb')
-					const body = {
-						ids: sessionIdsDeletedFromServer,
-						route: this.route,
-						dslabel: this.dslabel,
-						embedder: window.location.hostname
+				if (sessionIdsDeletedFromServer.length) {
+					submitBtn.property('disabled', true)
+					let error, failedIds
+					try {
+						const headers = await this.app.vocabApi.mayGetAuthHeaders('termdb')
+						const errors = []
+						failedIds = []
+						for (const ids of getDeletionBatches(sessionIdsDeletedFromServer)) {
+							const body = { ids, route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
+							try {
+								const res = await dofetch3(`/massSession?`, { method: 'DELETE', headers, body })
+								if (res.error) {
+									errors.push(res.error)
+									// without a list of failed ids, assume that none of the batch was deleted
+									failedIds.push(...(res.failedIds || ids))
+								}
+							} catch (e) {
+								errors.push(e.message || e)
+								failedIds.push(...ids)
+							}
+						}
+						if (errors.length) error = errors.join('; ')
+					} catch (e) {
+						error = e.message || e
+						failedIds = sessionIdsDeletedFromServer
 					}
-					const res = dofetch3(`/massSession?`, { method: 'DELETE', headers, body })
-				} catch (e) {
-					throw e
+					const deletedIds = sessionIdsDeletedFromServer.filter(id => !failedIds?.includes(id))
+					this.serverCachedSessions = this.serverCachedSessions.filter(id => !deletedIds.includes(id))
+					if (error) {
+						// keep the menu open so that the error is visible, and allow a retry of only the failed ids,
+						// by removing the rows of deleted sessions while the failed rows remain checked
+						t.trs.filter(d => (d.loc == 'browser' ? !this.savedSessions[d.id] : deletedIds.includes(d.id))).remove()
+						const checkedRows = t.table.node().querySelectorAll('input:checked')
+						submitBtn.property('disabled', !checkedRows.length)
+						sayerror(errorDiv, `Error deleting server session(s): ${error}`)
+						return
+					}
 				}
 				this.dom.tip.hide()
 			})
+
+		const errorDiv = this.dom.tip.d.append('div')
 	}
 
 	showBackBtn() {
@@ -531,6 +560,30 @@ class MassSessionBtn {
 			this.dom.tip.hide()
 		}, 3500)
 	}
+}
+
+/*
+	ids: session ids to delete from the server
+
+	returns ids[] split into batches, so that each DELETE request URL
+	stays below the length limit that dofetch3() allows for a non-GET request,
+	since the ids[] are URL-encoded as a request parameter
+*/
+function getDeletionBatches(ids) {
+	// leave room in the URL for the host, path, and the other request parameters
+	const maxEncodedIdsLength = 1000
+	const batches = []
+	let batch = []
+	for (const id of ids) {
+		if (batch.length && encodeURIComponent(JSON.stringify([...batch, id])).length > maxEncodedIdsLength) {
+			batches.push(batch)
+			batch = []
+		}
+		// a single id that is too long will be sent alone, and dofetch3() will throw instead of converting to POST
+		batch.push(id)
+	}
+	if (batch.length) batches.push(batch)
+	return batches
 }
 
 // may need to edit state based on updated expectations,

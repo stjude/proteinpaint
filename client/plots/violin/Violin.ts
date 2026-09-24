@@ -2,7 +2,7 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { controlsInit, renderTerm1Label } from '../controls'
 import { getT0T2defaultQ } from '../summaryQ.ts'
 import setViolinRenderer from './violin.renderer'
-import { htmlLegend, Menu } from '#dom'
+import { htmlLegend, Menu, setDescrStatsByTerm } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
 import { isNumericTw } from '#shared/terms.js'
@@ -39,7 +39,7 @@ class ViolinPlot extends PlotBase implements RxComponent{
 	legendRenderer!: any
 	render!: () => void
 	renderPvalueTable!: (chartDiv: any, chart: any) => void
-	getChartTitle!: (chartId: any) => string
+	getChartTitle!: (chartId: string, totalNum?: number) => string
 	data!: any
 	config!: any
 	displayLabelClickMenu!: (...args: any[]) => void
@@ -393,7 +393,7 @@ class ViolinPlot extends PlotBase implements RxComponent{
 			this.toggleLoadingDiv('none', 'none')
 			throw this.data.error
 		}
-		args.tw.q.descrStats = this.data.descrStats
+		setDescrStatsByTerm([this.config.term, this.config.term2], this.data.descrStats)
 		//this.toggleLoadingDiv(this.opts.mode == 'minimal' ? 'none' : '')
 		setTimeout(
 			() => {
@@ -407,6 +407,10 @@ class ViolinPlot extends PlotBase implements RxComponent{
 	validateArgs(): ViolinRequest {
 		const { term, term2, term0, /*settings*/ } = this.config
 		const s = this.settings
+		const isNumericTermCollection =
+			term.term?.type === 'termCollection' &&
+			term.term?.memberType === 'numeric' &&
+			term.type !== 'TermCollectionTWFraction'
 		// dslabel and genome are injected by vocabApi.getViolinBox
 		const arg: any = {
 			plotType: 'violin',
@@ -442,11 +446,7 @@ class ViolinPlot extends PlotBase implements RxComponent{
 				// scale the data on the server-side
 				arg.scale = term.q.scale
 			}
-		} else if (
-			term.term?.type === 'termCollection' &&
-			term.term?.memberType === 'numeric' &&
-			term.type !== 'TermCollectionTWFraction'
-		) {
+		} else if (isNumericTermCollection) {
 			// numeric termCollection: server-side expandNumericTermCollection creates a
 			// synthetic overlay from member terms, so don't send term2/term0
 			arg.tw = term
@@ -460,7 +460,7 @@ class ViolinPlot extends PlotBase implements RxComponent{
 			throw 'both term1 and term2 are not numeric/continuous'
 		}
 
-		if (term0) arg.divideTw = term0
+		if (term0 && !isNumericTermCollection) arg.divideTw = term0
 		return arg satisfies ViolinRequest ? arg : (arg as any)
 	}
 }

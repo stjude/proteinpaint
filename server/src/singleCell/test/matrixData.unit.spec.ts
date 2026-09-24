@@ -5,22 +5,46 @@ import { SINGLECELL_NUMERIC_VALUE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTY
 tape('single cell numeric values omit missing/nonfinite fields and preserve zero', async test => {
 	const categories = ['', ' \t', undefined, null, 'NA', 'NaN', 'Infinity', '0', '-2', ' 2.5 ']
 	const ds = {
-		queries: { singleCell: { data: { get: async () => ({
-			plots: [{ noExpCells: categories.map((category, i) => ({ cellId: String(i), category })) }]
-		}) } } }
+		queries: {
+			singleCell: {
+				data: {
+					get: async () => ({
+						plots: [{ noExpCells: categories.map((category, i) => ({ cellId: String(i), category })) }]
+					})
+				}
+			}
+		}
 	}
-	const values = await getSingleCellCellValues({}, {
-		term: { type: SINGLECELL_NUMERIC_VALUE, name: 'score', plot: 'UMAP', sample: { sID: 's1' } }
-	}, ds)
-	test.deepEqual(values.map(cell => cell.value), [0, -2, 2.5], 'only finite, nonblank values are returned')
-	test.deepEqual(values.map(cell => cell.cellId), ['7', '8', '9'], 'values retain their cell IDs')
+	const values = await getSingleCellCellValues(
+		{},
+		{
+			term: { type: SINGLECELL_NUMERIC_VALUE, name: 'score', plot: 'UMAP', sample: { sID: 's1' } }
+		},
+		ds
+	)
+	test.deepEqual(
+		values.map(cell => cell.value),
+		[0, -2, 2.5],
+		'only finite, nonblank values are returned'
+	)
+	test.deepEqual(
+		values.map(cell => cell.cellId),
+		['7', '8', '9'],
+		'values retain their cell IDs'
+	)
 	test.end()
 })
 
 function plotDataset(cells: any[]) {
-	return { queries: { singleCell: { data: {
-		get: async (_q?: any) => ({ plots: [{ noExpCells: cells }] })
-	} } } } as any
+	return {
+		queries: {
+			singleCell: {
+				data: {
+					get: async (_q?: any) => ({ plots: [{ noExpCells: cells }] })
+				}
+			}
+		}
+	} as any
 }
 
 function wrapper(type = SINGLECELL_NUMERIC_VALUE): any {
@@ -38,47 +62,89 @@ async function rejects(test, run, expected: RegExp) {
 
 tape('single cell getters forward column and expression query context', async test => {
 	const tw = wrapper(SINGLECELL_CELLTYPE)
-	const ds = plotDataset([{ cellId: 'c1', sampleId: 12, category: '0' }, { cellId: 'c2', category: '' }])
+	const ds = plotDataset([
+		{ cellId: 'c1', sampleId: 12, category: '0' },
+		{ cellId: 'c2', category: '' }
+	])
 	const get = ds.queries.singleCell.data.get
 	ds.queries.singleCell.data.get = async q => {
-		test.deepEqual(q, { sample: tw.term.sample, plots: ['UMAP'], colorBy: { UMAP: 'score' } }, 'selects requested plot and column')
+		test.deepEqual(
+			q,
+			{ sample: tw.term.sample, plots: ['UMAP'], colorBy: { UMAP: 'score' } },
+			'selects requested plot and column'
+		)
 		return get()
 	}
 	const cells = await getSingleCellCellValues({}, tw, ds)
-	test.deepEqual(cells.map(c => c.value), ['0', ''], 'categorical values are not coerced or dropped')
+	test.deepEqual(
+		cells.map(c => c.value),
+		['0', ''],
+		'categorical values are not coerced or dropped'
+	)
 	test.equal(cells[0].sampleId, 12, 'preserves sample mapping')
 
 	const exp = wrapper(SINGLECELL_GENE_EXPRESSION)
 	exp.term.gene = 'TP53'
 	const q = { filter0: 'filter', __abortSignal: {} }
-	const expressionDs = { queries: { singleCell: { geneExpression: { get: async (query, sample, gene) => {
-		test.equal(query, q, 'forwards original expression query')
-		test.equal(sample, exp.term.sample, 'forwards sample')
-		test.equal(gene, 'TP53', 'forwards gene')
-		return { c1: 0, c2: 1.5 }
-	} } } } }
-	test.deepEqual(await getSingleCellCellValues(q, exp, expressionDs), [
-		{ cellId: 'c1', value: 0 }, { cellId: 'c2', value: 1.5 }
-	], 'expression values include zero without requiring plot data')
+	const expressionDs = {
+		queries: {
+			singleCell: {
+				geneExpression: {
+					get: async (query, sample, gene) => {
+						test.equal(query, q, 'forwards original expression query')
+						test.equal(sample, exp.term.sample, 'forwards sample')
+						test.equal(gene, 'TP53', 'forwards gene')
+						return { c1: 0, c2: 1.5 }
+					}
+				}
+			}
+		}
+	}
+	test.deepEqual(
+		await getSingleCellCellValues(q, exp, expressionDs),
+		[
+			{ cellId: 'c1', value: 0 },
+			{ cellId: 'c2', value: 1.5 }
+		],
+		'expression values include zero without requiring plot data'
+	)
 	await rejects(test, () => getSingleCellCellValues({}, exp, {}), /singleCell.geneExpression/)
 	await rejects(test, () => getSingleCellCellValues({}, tw, {}), /singleCell.data/)
-	ds.queries.singleCell.data.get = async () => { throw new Error('plot read failed') }
+	ds.queries.singleCell.data.get = async () => {
+		throw new Error('plot read failed')
+	}
 	await rejects(test, () => getSingleCellCellValues({}, tw, ds), /plot read failed/)
 	test.end()
 })
 
 tape('single cell annotation preserves existing rows and continuous values', async test => {
-	const ds = plotDataset([{ cellId: 'c1', category: '0' }, { cellId: 'c2', category: '-2' }, { cellId: 'missing', category: '' }])
+	const ds = plotDataset([
+		{ cellId: 'c1', category: '0' },
+		{ cellId: 'c2', category: '-2' },
+		{ cellId: 'missing', category: '' }
+	])
 	const samples: any = { c1: { sample: 'c1', other: { value: 'existing' } } }
 	const existing = samples.c1
 	const refs = { other: { bins: [] } }
 	await annotateSingleCellTerm({ ds, filter: { lst: [{}] } }, wrapper(), samples, refs)
 	test.equal(samples.c1, existing, 'annotates existing row in place')
 	test.deepEqual(samples.c1.term, { value: 0, key: 0 }, 'zero is a continuous value and key')
-	test.deepEqual(samples.c2, { sample: 'c2', term: { value: -2, key: -2 } }, 'creates a cell row')
+	// spread first: a newly-created row is intentionally null-prototype (see getOrCreateSampleEntry
+	// in matrixData.ts), which deepEqual treats as unequal to a {} literal even with identical own properties
+	test.deepEqual({ ...samples.c2 }, { sample: 'c2', term: { value: -2, key: -2 } }, 'creates a cell row')
 	test.equal(samples.c1.other.value, 'existing', 'retains previous term')
 	test.notOk(samples.missing, 'does not create rows for missing numeric values')
 	test.deepEqual(refs, { other: { bins: [] } }, 'continuous terms do not add bins')
+	test.end()
+})
+
+tape('single cell annotation: a cell id of __proto__ does not pollute Object.prototype', async test => {
+	const ds = plotDataset([{ cellId: '__proto__', category: '5' }])
+	const samples: any = {}
+	await annotateSingleCellTerm({ ds, filter: { lst: [{}] } }, wrapper(), samples, {})
+	test.ok(Object.hasOwn(samples, '__proto__'), 'stores the cell as a real own __proto__ key')
+	test.equal(samples['__proto__'].term.value, 5, 'the term value is stored under the correct cell entry')
+	test.notOk(({} as any).term, 'does not pollute Object.prototype')
 	test.end()
 })
 
@@ -86,18 +152,33 @@ for (const mode of ['discrete', 'binary']) {
 	tape(`single cell numeric ${mode} bins include boundaries and leave request bins unchanged`, async test => {
 		for (const type of [SINGLECELL_NUMERIC_VALUE, SINGLECELL_GENE_EXPRESSION]) {
 			const tw = wrapper(type)
-			tw.q = { mode, type: 'custom-bin', lst: [
-				{ startunbounded: true, stop: 0, stopinclusive: false, label: 'negative', color: '#123456' },
-				{ start: 0, startinclusive: true, stopunbounded: true, label: 'nonnegative' }
-			] }
+			tw.q = {
+				mode,
+				type: 'custom-bin',
+				lst: [
+					{ startunbounded: true, stop: 0, stopinclusive: false, label: 'negative', color: '#123456' },
+					{ start: 0, startinclusive: true, stopunbounded: true, label: 'nonnegative' }
+				]
+			}
 			const before = structuredClone(tw.q)
-			const ds = plotDataset([{ cellId: 'a', category: '-1' }, { cellId: 'b', category: '0' }, { cellId: 'c', category: '2' }])
+			const ds = plotDataset([
+				{ cellId: 'a', category: '-1' },
+				{ cellId: 'b', category: '0' },
+				{ cellId: 'c', category: '2' }
+			])
 			ds.queries.singleCell.geneExpression = { get: async () => ({ a: -1, b: 0, c: 2 }) }
-			const samples: any = {}, refs: any = {}
+			const samples: any = {},
+				refs: any = {}
 			await annotateSingleCellTerm({ ds }, tw, samples, refs)
-			test.deepEqual([samples.a.term, samples.b.term, samples.c.term], [
-				{ value: -1, key: 'negative' }, { value: 0, key: 'nonnegative' }, { value: 2, key: 'nonnegative' }
-			], `${type}: bins change keys but preserve measurements`)
+			test.deepEqual(
+				[samples.a.term, samples.b.term, samples.c.term],
+				[
+					{ value: -1, key: 'negative' },
+					{ value: 0, key: 'nonnegative' },
+					{ value: 2, key: 'nonnegative' }
+				],
+				`${type}: bins change keys but preserve measurements`
+			)
 			test.ok(refs.term.bins[0].color, 'assigns a palette color to the first bin')
 			test.ok(refs.term.bins[1].color, 'assigns missing bin color')
 			test.deepEqual(tw.q, before, 'does not mutate custom bin configuration')
@@ -109,11 +190,18 @@ for (const mode of ['discrete', 'binary']) {
 tape('single cell regular bins use term bounds and reject missing custom bins', async test => {
 	const tw = wrapper()
 	tw.term.bins = { min: -1, max: 3 }
-	tw.q = { mode: 'discrete', type: 'regular-bin', bin_size: 2,
-		startinclusive: true, stopinclusive: false, first_bin: { startunbounded: true, stop: 0 },
-		last_bin: { start: 2, stopunbounded: true } }
+	tw.q = {
+		mode: 'discrete',
+		type: 'regular-bin',
+		bin_size: 2,
+		startinclusive: true,
+		stopinclusive: false,
+		first_bin: { startunbounded: true, stop: 0 },
+		last_bin: { start: 2, stopunbounded: true }
+	}
 	const ds = plotDataset([-1, 0, 1, 2, 3].map((v, i) => ({ cellId: String(i), category: String(v) })))
-	const samples: any = {}, refs: any = {}
+	const samples: any = {},
+		refs: any = {}
 	await annotateSingleCellTerm({ ds }, tw, samples, refs)
 	test.equal(refs.term.bins.length, 3, 'computes first, middle and last bins')
 	test.equal(samples['0'].term.key, refs.term.bins[0].label, 'negative value in first bin')
@@ -121,7 +209,10 @@ tape('single cell regular bins use term bounds and reject missing custom bins', 
 	test.equal(samples['2'].term.key, refs.term.bins[1].label, 'one remains in middle bin')
 	test.equal(samples['3'].term.key, refs.term.bins[2].label, 'two starts last bin')
 	test.equal(samples['4'].term.value, 3, 'maximum retains measurement')
-	test.ok(refs.term.bins.every(b => b.color), 'computed bins have colors')
+	test.ok(
+		refs.term.bins.every(b => b.color),
+		'computed bins have colors'
+	)
 	tw.q = { mode: 'discrete', type: 'custom-bin' }
 	await rejects(test, () => annotateSingleCellTerm({ ds }, tw, {}, {}), /q.lst\[\] is missing/)
 	test.end()
@@ -131,7 +222,8 @@ tape('single cell categorical groups combine selected values and preserve ungrou
 	const tw = wrapper(SINGLECELL_CELLTYPE)
 	tw.q = { customset: { groups: [{ name: 'immune', values: [{ key: 'T' }, { key: 'B' }] }] } }
 	const ds = plotDataset(['T', 'B', 'other'].map(category => ({ cellId: category, category })))
-	const samples: any = {}, refs = {}
+	const samples: any = {},
+		refs = {}
 	await annotateSingleCellTerm({ ds }, tw, samples, refs)
 	test.deepEqual(samples.T.term, { value: 'immune', key: 'immune' }, 'groups T cells')
 	test.deepEqual(samples.B.term, samples.T.term, 'groups B cells into same category')
@@ -142,11 +234,27 @@ tape('single cell categorical groups combine selected values and preserve ungrou
 
 function metaDataset(cells: any[]) {
 	const ds = plotDataset(cells)
-	ds.queries.singleCell.data.metaIdMap = new Map([['s1', new Map([['mapped', 'A'], ['excluded', 'B']])]])
-	ds.queries.singleCell.samples = { sampleMappingCache: {
-		sampleIntId2Name: new Map([[1, 'A'], [2, 'B']]),
-		sampleName2IntId: new Map([['A', 1], ['B', 2]])
-	} }
+	ds.queries.singleCell.data.metaIdMap = new Map([
+		[
+			's1',
+			new Map([
+				['mapped', 'A'],
+				['excluded', 'B']
+			])
+		]
+	])
+	ds.queries.singleCell.samples = {
+		sampleMappingCache: {
+			sampleIntId2Name: new Map([
+				[1, 'A'],
+				[2, 'B']
+			]),
+			sampleName2IntId: new Map([
+				['A', 1],
+				['B', 2]
+			])
+		}
+	}
 	return ds
 }
 
@@ -158,7 +266,8 @@ tape('single cell meta mapping resolves names and numeric IDs and clones cohort 
 		{ cellId: 'name', sampleId: 'A', category: '4' },
 		{ cellId: 'unmapped', category: '5' }
 	])
-	const tw = wrapper(); tw.term.sample.isMetaResult = true
+	const tw = wrapper()
+	tw.term.sample.isMetaResult = true
 	const samples: any = { '1': { sample: '1', cohort: { value: ['original'] } } }
 	await annotateSingleCellTerm({ ds }, tw, samples, {})
 	for (const id of ['mapped', 'integer', 'string', 'name']) {
@@ -175,8 +284,12 @@ tape('single cell meta mapping resolves names and numeric IDs and clones cohort 
 
 tape('single cell meta filtering and database mapping fallback', async test => {
 	for (const filter of [{ filter: { lst: [{}] } }, { filter0: 'cohort filter' }]) {
-		const ds = metaDataset([{ cellId: 'mapped', category: '0' }, { cellId: 'excluded', category: '1' }])
-		const tw = wrapper(); tw.term.sample.isMetaResult = true
+		const ds = metaDataset([
+			{ cellId: 'mapped', category: '0' },
+			{ cellId: 'excluded', category: '1' }
+		])
+		const tw = wrapper()
+		tw.term.sample.isMetaResult = true
 		const q = { ds, ...filter }
 		ds.queries.singleCell.samples.getFilteredSingleCellSamples = async query => {
 			test.equal(query, q, 'forwards filter query')
@@ -188,8 +301,9 @@ tape('single cell meta filtering and database mapping fallback', async test => {
 	}
 	const ds = metaDataset([{ cellId: 'mapped', category: '0' }])
 	delete ds.queries.singleCell.samples.sampleMappingCache
-	ds.cohort = { termdb: { q: { sampleName2id: name => name == 'A' ? 7 : undefined } } }
-	const tw = wrapper(); tw.term.sample.isMetaResult = true
+	ds.cohort = { termdb: { q: { sampleName2id: name => (name == 'A' ? 7 : undefined) } } }
+	const tw = wrapper()
+	tw.term.sample.isMetaResult = true
 	const samples: any = {}
 	await annotateSingleCellTerm({ ds }, tw, samples, {})
 	test.equal(samples.mapped.sampleId, '7', 'uses database when cache is absent')
@@ -206,7 +320,11 @@ tape('hydrate meta rows fills late cohort annotations without overwriting cell d
 		ordinary: { sample: 'ordinary' }
 	}
 	hydrateMetaResultCellRows(samples)
-	test.deepEqual(samples.cell, { sample: 'cell', sampleId: '1', cohort: { value: 'late' }, shared: { value: 'cell' } }, 'adds missing annotations and keeps cell identity and values')
+	test.deepEqual(
+		samples.cell,
+		{ sample: 'cell', sampleId: '1', cohort: { value: 'late' }, shared: { value: 'cell' } },
+		'adds missing annotations and keeps cell identity and values'
+	)
 	test.deepEqual(samples.orphan, { sample: 'orphan', sampleId: 'missing' }, 'ignores absent parent rows')
 	test.deepEqual(samples.ordinary, { sample: 'ordinary' }, 'ignores non-meta rows')
 	const before = structuredClone(samples)
@@ -222,9 +340,15 @@ tape('single cell gene expression meta rows resolve through plot metadata', asyn
 	tw.term.sample.isMetaResult = true
 	const samples: any = {}
 	await annotateSingleCellTerm({ ds }, tw, samples, {})
-	test.deepEqual(samples, {
-		mapped: { sample: 'mapped', sampleId: '1', term: { value: 0, key: 0 } }
-	}, 'expression cells without sample IDs use metaIdMap and omit unmapped cells')
+	// spread the per-cell entry first: it's intentionally null-prototype (see getOrCreateSampleEntry
+	// in matrixData.ts), which deepEqual treats as unequal to a {} literal even with identical own properties
+	test.deepEqual(
+		{ mapped: { ...samples.mapped } },
+		{
+			mapped: { sample: 'mapped', sampleId: '1', term: { value: 0, key: 0 } }
+		},
+		'expression cells without sample IDs use metaIdMap and omit unmapped cells'
+	)
 	test.end()
 })
 

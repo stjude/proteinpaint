@@ -2,7 +2,97 @@ import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import mm from 'micromatch'
 
-const { isMatch } = mm
+const { isMatch: mmIsMatch } = mm
+
+// Returns sessions[dslabel], creating it as a null-prototype own property first if needed.
+// A plain read/assign pattern (if (!sessions[dslabel]) sessions[dslabel] = ...) is not safe here:
+// this.sessions is null-prototype, but this method also accepts a caller-supplied sessions map
+// (e.g. in unit tests) that may be an ordinary {}. On an ordinary object, dslabel === '__proto__'
+// makes the read resolve to the real Object.prototype instead of undefined, so the assignment is
+// skipped and the next line writes the session payload directly onto Object.prototype. Checking
+// Object.hasOwn first, and creating the entry via defineProperty (not sessions[dslabel] = ...),
+// keeps this safe regardless of the caller's map prototype.
+function getOrCreateDslabelSessions(sessions: Record<string, any>, dslabel: string) {
+	if (!Object.hasOwn(sessions, dslabel) || !sessions[dslabel]) {
+		Object.defineProperty(sessions, dslabel, {
+			value: Object.create(null),
+			enumerable: true,
+			configurable: true,
+			writable: true
+		})
+	}
+	return sessions[dslabel]
+}
+
+// Express routes requests case-insensitively and ignores a trailing slash (non-strict routing),
+// so auth path checks must do the same, otherwise a request to `/TERMDB/MATRIX` or `/termdb/matrix/`
+// would not match a protected route pattern but would still be handled by the protected route
+export function normalizeReqPath(path: string) {
+	if (typeof path != 'string') return ''
+	const p = path.toLowerCase().replace(/\/+$/, '')
+	return p || (path.startsWith('/') ? '/' : '')
+}
+
+// The auth middleware is not mounted under serverconfig.basepath, so req.path includes the basepath,
+// but the protected route checks in getRequiredCred() and dsCredentials route patterns do not.
+// Returns the normalized request path with a matching basepath prefix removed.
+export function stripBasepath(path: string, basepath = '') {
+	const p = normalizeReqPath(path)
+	const prefix = normalizeReqPath(basepath)
+	if (!prefix || prefix == '/') return p
+	if (p == prefix) return '/'
+	// collapse any extra leading slashes, e.g. from a basepath with a trailing slash
+	if (p.startsWith(prefix + '/')) return p.slice(prefix.length).replace(/^\/+/, '/')
+	return p
+}
+
+function isMatch(path: string, pattern: string) {
+	return mmIsMatch(path, pattern, { nocase: true })
+}
+
+// returns true if a client-supplied value matches a single dsCredentials key: the '*' wildcard
+// or an identical key always matches, any other key is tried as a glob pattern. Note that a glob '*'
+// alone does not match values with a '/', such as embedder='a/b', so the wildcard must be checked
+// explicitly to avoid treating a protected dataset as open access.
+//
+// This only decides whether one key matches. When more than one key matches, see getMatchedEntry()
+// and Auth.getMatchedDsEntries() for which key takes precedence.
+export function patternMatches(value, pattern) {
+	if (pattern === '*' || value === pattern) return true
+	if (typeof value != 'string' || !value || !pattern) return false
+	return isMatch(value, pattern)
+}
+
+// client-supplied query parameters that are used to resolve dsCredentials entries. A non-string value,
+// e.g. an array from `embedder[]=...`, would not match an exact key and could fall through to no
+// credential, treating a protected dataset as open access, so these must be strings when present
+export const authQueryParams = ['dslabel', 'embedder', 'genome', 'route']
+
+// returns the name of the first auth query parameter that is present but is not a string
+export function getNonStringAuthParam(q) {
+	return authQueryParams.find(key => q?.[key] !== undefined && typeof q[key] != 'string')
+}
+
+// fail closed: throw instead of resolving a non-string value as matching no credential
+export function assertStringOrUndefined(value, name) {
+	if (value !== undefined && typeof value != 'string')
+		throw Object.assign(new Error(`invalid ${name}: must be a string`), { status: 400 })
+}
+
+// return the value for the key in obj that best matches a client-supplied value, from the most to the
+// least specific key: an exact key first, then a glob pattern key, then the '*' wildcard. A glob key
+// takes precedence over '*', so that a config like { '*': forbidden, '*.example.org': jwt } requires
+// a login for the matching embedders and forbids all others. The same order is used for dslabel keys
+// in Auth.getMatchedDsEntries().
+export function getMatchedEntry(obj, value) {
+	assertStringOrUndefined(value, 'embedder')
+	if (!obj) return
+	if (typeof value == 'string' && Object.hasOwn(obj, value)) return obj[value]
+	for (const pattern in obj) {
+		if (pattern != '*' && patternMatches(value, pattern)) return obj[pattern]
+	}
+	return obj['*']
+}
 
 // This is the "inner" private auth that's wrapped by AuthApi.
 // It hides and protect implementation details from being accidentally
@@ -20,8 +110,12 @@ export class Auth {
 		[dslabel: string]: {
 			[sessionId: string]: any
 		}
-	} = {}
+	} = Object.create(null)
 	sessionTracking: '' | 'jwt-only' = ''
+	// the basepath that auth and data routes are registered under, see stripBasepath(),
+	// set by AuthApi.maySetAuthRoutes() so that route registration, the middleware forced-open check,
+	// and credential matching all use the same basepath value
+	basepath: string = ''
 
 	// TODO: should create a checker function for each route group that may be protected
 	protectedRoutes = {
@@ -66,44 +160,98 @@ export class Auth {
 	//
 	getRequiredCred(q, path, _protectedRoutes?: string[]) {
 		if (!q.dslabel) return
-		const creds = this.creds
-		// faster exact matching, based on known protected routes
-		// if no creds[dslabel], match to wildcard dslabel if specified
-		const ds0 = creds[q.dslabel] || creds['*']
-		if (ds0) {
-			if (path == '/jwt-status' || path == '/demoToken') {
-				const route = ds0[q.route] || ds0['termdb'] || ds0['/**']
-				return route && (route[q.embedder] || route['*'])
-			} else if (path == '/dslogin') {
-				const route = ds0[q.route] || ds0['/**']
-				return route && (route[q.embedder] || route['*'])
-			} else if (path.startsWith('/termdb') && ds0.termdb) {
-				const route = ds0.termdb
-				// okay to return an undefined embedder[route]
-				const cred = route[q.embedder] || route['*']
-				if (!cred) return
+		// dslabel keys may be exact, glob patterns, or the '*' wildcard, in that order of precedence
+		const dsEntries = this.getMatchedDsEntries(q.dslabel)
+		// no credentials for this dslabel, is open access
+		if (!dsEntries.length) return
+		// also normalizes a non-string path to ''
+		path = stripBasepath(path, this.basepath)
+		// faster matching, based on known protected routes
+		if (path == '/jwt-status' || path == '/demotoken') {
+			return this.getRouteCred(q.dslabel, [q.route, 'termdb', '/**'], q.embedder)
+		} else if (path == '/dslogin') {
+			return this.getRouteCred(q.dslabel, [q.route, '/**'], q.embedder)
+		} else if (path.startsWith('/termdb')) {
+			const cred = this.getRouteCred(q.dslabel, ['termdb'], q.embedder)
+			if (cred) {
 				if (cred.protectedRoutes?.find(pattern => isMatch(path, pattern))) return cred
 				const protRoutes = _protectedRoutes || this.protectedRoutes.termdb
-				if (protRoutes.includes(q.for) || protRoutes.find(pattern => isMatch(path, pattern))) return cred
-			} else if (path.startsWith('/burden') && ds0.burden) {
-				// okay to return an undefined embedder[route]
-				return ds0.burden[q.embedder] || ds0.burden['*']
+				// q.for is client-supplied and may be a non-string, e.g. an array from `for[]=...`
+				// query params, so check every value instead of an exact includes() match on q.for
+				const forValues = q.for === undefined ? [] : Array.isArray(q.for) ? q.for : [q.for]
+				if (forValues.some(f => protRoutes.includes(String(f)))) return cred
+				if (protRoutes.find(pattern => isMatch(path, pattern))) return cred
 			}
+		} else if (path.startsWith('/burden')) {
+			const cred = this.getRouteCred(q.dslabel, ['burden'], q.embedder)
+			if (cred) return cred
 		}
 
-		for (const dslabel in creds) {
-			if (dslabel != q.dslabel && dslabel != '*') continue
-			const ds = creds[dslabel]
+		for (const ds of dsEntries) {
 			for (const routeName in ds) {
 				const routePattern = ds[routeName].routePattern || routeName
 				if (!isMatch(path, routePattern)) continue
-				const route = ds[routeName]
-				for (const embedderHost in route) {
-					if (embedderHost != q.embedder && embedderHost != '*') continue
-					return route[embedderHost]
-				}
+				const cred = getMatchedEntry(ds[routeName], q.embedder)
+				if (cred) return cred
 			}
 		}
+	}
+
+	// returns the dsCredentials entries that apply to a client-supplied dslabel, ordered by precedence:
+	// an exact key, then glob pattern keys (e.g. 'realD*'), then the '*' wildcard;
+	// keys that start with '#' (comment) or '__' (not a dslabel) are not used as glob patterns
+	getMatchedDsEntries(dslabel) {
+		assertStringOrUndefined(dslabel, 'dslabel')
+		const creds = this.creds
+		const entries: any[] = []
+		if (typeof dslabel == 'string' && Object.hasOwn(creds, dslabel)) entries.push(creds[dslabel])
+		for (const pattern in creds) {
+			if (pattern == dslabel || pattern == '*' || pattern.startsWith('#') || pattern.startsWith('__')) continue
+			if (patternMatches(dslabel, pattern)) entries.push(creds[pattern])
+		}
+		if (creds['*']) entries.push(creds['*'])
+		return entries
+	}
+
+	// returns the route keys, such as 'termdb', 'burden', or '/**', that are configured for a dslabel
+	// across all of its matched dsCredentials entries, in order of precedence
+	getMatchedRouteKeys(dslabel) {
+		const routeKeys = new Set<string>()
+		for (const ds of this.getMatchedDsEntries(dslabel)) {
+			for (const routeKey in ds) routeKeys.add(routeKey)
+		}
+		return [...routeKeys]
+	}
+
+	// This is the shared resolver for a credential that applies to a concrete dslabel and embedder,
+	// to be used for credential discovery, login, middleware, and session checks.
+	//
+	// routeKeys[]: the route keys to try in order, e.g. ['termdb'] or [q.route, 'termdb', '/**']
+	//
+	// For each route key, the matched dslabel entries are checked in order of precedence
+	// (exact, glob, '*'), and the first entry with a matching embedder key (exact, glob, '*') wins.
+	// A lower-precedence entry is still checked when a higher-precedence entry does not have
+	// that route or embedder, so that a configured credential is not mistaken for open access.
+	getRouteCred(dslabel, routeKeys: any[], embedder) {
+		const dsEntries = this.getMatchedDsEntries(dslabel)
+		for (const routeKey of routeKeys) {
+			// a client-supplied route key, such as q.route, must be a string
+			if (typeof routeKey != 'string' || !routeKey) continue
+			for (const ds of dsEntries) {
+				if (!Object.hasOwn(ds, routeKey)) continue
+				const cred = getMatchedEntry(ds[routeKey], embedder)
+				if (cred) return cred
+			}
+		}
+	}
+
+	// returns the termdb or all-routes credential that applies to the requested dslabel and embedder,
+	// regardless of the request path or q.for, or falsy if the dataset's termdb data is open access
+	getTermdbCred(q) {
+		if (!q.dslabel) return
+		// also check the all-routes entry: validateDsCredentials() rewrites a '*' route key
+		// to '/**', and the raw '*' key may still be present in unvalidated credentials
+		return this.getRouteCred(q.dslabel, ['termdb', '/**', '*'], q.embedder)
 	}
 
 	/**
@@ -149,7 +297,12 @@ export class Auth {
 
 		// if there is a session, handle the expiration outside of this function
 		if (session)
-			return { iat: payload.iat, email: payload.email, ip: payload.ip, clientAuthResult: payload.clientAuthResult }
+			return {
+				iat: payload.iat,
+				email: payload.email,
+				ip: payload.ip,
+				clientAuthResult: payload.clientAuthResult
+			}
 
 		// the embedder may use a post-processor function to
 		// optionally transform, translate, reformat the payload,
@@ -248,8 +401,7 @@ export class Auth {
 			const jwt = jsonwebtoken.sign(payload, secret)
 			const id = this.getSessionIdFromJwt(jwt)
 			//const ip = req.ip // may use req.ips?
-			if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
-			sessions[q.dslabel][id] = payload
+			getOrCreateDslabelSessions(sessions, q.dslabel)[id] = payload
 			if (!cred.cookieMode || cred.cookieMode == 'set-cookie') {
 				// For basic/password login that protects all routes (including /genomes),
 				// must use session cookie, since it's not practical for the client dofetch code
@@ -291,7 +443,14 @@ export class Auth {
 		const id = this.getSessionIdFromJwt(token)
 		try {
 			const { secret } = getApplicableSecret(req.headers, cred, token)
-			const payload = sessions[dslabel]?.[id] || jsonwebtoken.verify(token, secret)
+			// id is attacker-controlled (the last 20 chars of the raw, unverified token -- or the
+			// whole token if shorter), so an own-property check is required on both levels: a
+			// naive sessions[dslabel]?.[id] read-through would let dslabel/id of '__proto__' (or
+			// any other name colliding with something already on Object.prototype) resolve to an
+			// inherited value and skip jsonwebtoken.verify() entirely, bypassing signature checking
+			const cachedPayload =
+				Object.hasOwn(sessions, dslabel) && Object.hasOwn(sessions[dslabel], id) ? sessions[dslabel][id] : undefined
+			const payload = cachedPayload || jsonwebtoken.verify(token, secret)
 			// signed payload dataset must match the requested dataset
 			if (payload.dslabel) {
 				if (payload.dslabel != dslabel) return
@@ -301,16 +460,23 @@ export class Auth {
 				throw `jwt payload missing datasets[] and dslabel, must have one`
 			}
 			// do not overwrite existing tracking object for dslabel
-			if (!sessions[dslabel]) sessions[dslabel] = {}
-			const path = req.path[0] == '/' && !cred.route.startsWith('/') ? req.path.slice(1) : req.path
+			const dslabelSessions = getOrCreateDslabelSessions(sessions, dslabel)
+			const reqPath = stripBasepath(req.path, this.basepath)
+			const path = reqPath[0] == '/' && !cred.route.startsWith('/') ? reqPath.slice(1) : reqPath
 			// signed payload route must match the requested data route
 			if (
 				cred.route === '*' ||
 				isMatch(path, cred.route) ||
-				path == 'authorizedActions' ||
-				path.startsWith(cred.route + '/')
+				path == 'authorizedactions' ||
+				path.startsWith(cred.route.toLowerCase() + '/')
 			) {
-				if (!sessions[dslabel][id]) sessions[dslabel][id] = { ...payload, dslabel, embedder, route: cred.route }
+				if (!dslabelSessions[id])
+					dslabelSessions[id] = {
+						...payload,
+						dslabel,
+						embedder,
+						route: cred.route
+					}
 				return id
 			}
 		} catch (e) {

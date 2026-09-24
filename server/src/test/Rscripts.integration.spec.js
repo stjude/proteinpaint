@@ -1,18 +1,7 @@
 import tape from 'tape'
-import path from 'path'
-import fs from 'fs'
 import serverconfig from '../serverconfig.js'
 
 // Note: these integration tests are dependant on clinical datasets that are subject to change.
-
-const ssid = 'fisher2x3-test.txt'
-const src = path.join(import.meta.dirname, '/testdata/R', ssid)
-const dest = path.join(serverconfig.cachedir, 'ssid', ssid)
-try {
-	fs.copyFileSync(src, dest)
-} catch (e) {
-	throw e
-}
 
 tape('\n', test => {
 	test.comment('-***- R scripts integration specs -***-')
@@ -103,56 +92,6 @@ tape.skip('fisher.R integration', test => {
 					3.8358862800882, 4.367259550183515, 4.733933800258545, 4.8892715539503255, 4.735469454648908,
 					35.42399158266384, 37.1150359439827, 4.047139919299597, 43.11900330805673, 4.601249811463866,
 					4.677021741496268, 41.43412233963457
-				],
-				'should match expected output'
-			)
-			test.end()
-		})
-})
-
-// Test the integration of fisher.2x3.R
-tape.skip('fisher.2x3.R integration', test => {
-	fetch(
-		`http://localhost:${serverconfig.port}/termdb?genome=hg38&dslabel=SJLife&ssid=${ssid}&phewas=1&intendwidth=800&axisheight=300&groupnamefontsize=16&dotradius=2&groupxspace=3&leftpad=2&rightpad=2&toppad=20&bottompad=10&devicePixelRatio=2&filter=` +
-			encodeURIComponent(
-				JSON.stringify({
-					type: 'tvslst',
-					join: 'and',
-					in: true,
-					lst: [
-						{
-							type: 'tvs',
-							tag: 'cohortFilter',
-							renderAs: 'htmlSelect',
-							selectOptionsFrom: 'selectCohort',
-							tvs: { term: { id: 'subcohort', type: 'multivalue' }, values: [{ key: 'XYZ', label: 'XYZ' }] }
-						},
-						{
-							type: 'tvs',
-							tvs: {
-								term: { id: 'genetic_race', name: 'Genetically defined race', type: 'categorical' },
-								values: [{ key: 'European Ancestry', label: 'European Ancestry' }]
-							}
-						},
-						{
-							type: 'tvs',
-							tvs: {
-								term: { name: 'wgs', id: 'wgs_curated', type: 'categorical' },
-								values: [{ key: '1', label: 'Yes' }]
-							}
-						}
-					]
-				})
-			),
-		{ method: 'GET' }
-	)
-		.then(res => res.json())
-		.then(obj => {
-			test.deepEqual(
-				obj.hoverdots.map(dot => dot.pvalue),
-				[
-					0.0389446388067233, 0.0417744929533588, 0.0447707467100442, 0.0299697075533679, 0.0290961584979116,
-					0.0247112465873679, 0.028812533964953
 				],
 				'should match expected output'
 			)

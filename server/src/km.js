@@ -51,6 +51,10 @@ export function handle_mdssurvivalplot(genomes) {
 
 			const samples = get_samples(q, ds, plottype)
 
+			// samplerule.set.chr goes into tabix argv
+			const st = q.samplerule?.set
+			if (st?.geneexpression || st?.mutation) utils.checkChr(gn, st.chr)
+
 			const samplesets = await divide_samples(samples, q, ds, samples)
 
 			let pvalue

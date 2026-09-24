@@ -9,8 +9,8 @@ import { getMockSCState } from './getMockSCApp.ts'
  *   - update() should set data, settings, and item when item is selected
  *   - update() should retain previous data when new data is null
  *   - getChartBtnOpts() should return configured plot buttons
- *   - getChartBtnOpts() Summary button should always be visible
- *   - getChartBtnOpts() Gene expression button should be visible when geneExpression is configured
+ *   - getChartBtnOpts() Summary button should be visible if dictionary is an available plot.
+ *   - getChartBtnOpts() Gene expression button should be visible when geneExpression is configured and an available plot
  *   - getChartBtnOpts() Gene expression button should not be visible when geneExpression is not configured
  *   - getChartBtnOpts() Differential expression button should be visible when DEgenes is configured
  *   - getChartBtnOpts() should include only plots found in availablePlots
@@ -177,30 +177,32 @@ tape('getChartBtnOpts() should return configured plot buttons', test => {
 	test.end()
 })
 
-tape('getChartBtnOpts() Summary button should always be visible', test => {
+tape('getChartBtnOpts() Summary button should be visible if dictionary is an available plot.', test => {
 	const pb = getPlotButtons()
 	pb.data = { plots: [] }
 	pb.item = { sID: 'S1', eID: 'EXP1' }
-	pb.availablePlots = new Set()
+	pb.availablePlots = new Set(['dictionary'])
 
 	const btns = pb.getChartBtnOpts()
 	const summary = btns.find(b => b.label === 'Summary')
 
 	test.ok(summary, 'Should have Summary button')
-	test.ok(summary!.isVisible(), 'Summary should always be visible')
+	test.ok(summary!.isVisible(), 'Summary should be visible if dictionary is an available plot.')
 	test.end()
 })
 
-tape('getChartBtnOpts() Gene expression button should be visible when geneExpression is configured', test => {
+tape('getChartBtnOpts() Gene expression button should be visible when geneExpression is configured and an available plot', test => {
 	const pb = getPlotButtons({ geneExpression: true })
 	pb.data = { plots: [] }
 	pb.item = { sID: 'S1', eID: 'EXP1' }
-	pb.availablePlots = new Set()
+	pb.availablePlots = new Set(['Gene expression'])
 
 	const btns = pb.getChartBtnOpts()
 	const geneExp = btns.find(b => b.label === 'Gene expression')
 
-	test.ok(geneExp!.isVisible(), 'Gene expression should be visible when geneExpression is configured')
+	test.ok(geneExp!.isVisible(), 'Gene expression should be visible when geneExpression is configured and its file is available')
+ 	pb.availablePlots = new Set()
+ 	test.notOk(geneExp!.isVisible(), 'Gene expression should be hidden when its file is unavailable.')
 	test.end()
 })
 
@@ -274,6 +276,11 @@ tape('getChartBtnOpts() Spatial button should spawn the wsi plot in fixed-sample
 	test.equal(config.chartType, 'wsi', 'Should set chartType to wsi')
 	test.deepEqual(config.sample, { sID: 'S1', eID: 'EXP1' }, 'Should pin the selected sample (fixed-sample mode)')
 	test.equal(config.name, 'Sample: S1 Spatial', 'Should name the subplot after the sample')
+	test.equal(
+		config.plotName,
+		'Spatial',
+		'Should label the plot Spatial (section title / table button), not the raw chartType'
+	)
 	test.end()
 })
 
@@ -308,7 +315,6 @@ tape('renderChartBtns() should omit disabled plot types', test => {
 
 	test.notOk(labels.includes('umap'), 'Should omit disabled sampleScatter plots')
 	test.notOk(labels.includes('tsne'), 'Should omit disabled sampleScatter plots')
-	test.ok(labels.includes('Summary'), 'Should retain enabled Summary plot')
 	test.end()
 })
 

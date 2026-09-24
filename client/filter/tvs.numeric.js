@@ -5,6 +5,7 @@ import { NumericRangeInput } from '#dom/numericRangeInput'
 import { convertUnits, getValueConversionFactor } from '#shared/helpers.js'
 import { violinRenderer } from '../dom/violinRenderer'
 import { niceNumLabels } from '../dom/niceNumLabels.ts'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 /*
 ********************** EXPORTED
@@ -13,6 +14,7 @@ handler:
 	term_name_gen()
 	get_pill_label()
 		format_val_text()
+		mafDepthText()
 	getSelectRemovePos()
 	fillMenu()
 	setTvsDefaults()
@@ -24,6 +26,7 @@ enterRange() // add row for each range, for existing readonly and for new or edi
 makeRangeButtons() // add buttons for  Apply / DELETE 
 mergeOverlapRanges() // when Apply is pressed, check if ranges are overlapping, if so, merge them
 showCheckList_numeric() // so checklist of uncomputable values
+validateRangeInData() // reject a typed range that does not overlap the data range of the density plot
 validateNumericTvs() // validate tvs before sending it to callback
 
 */
@@ -54,10 +57,19 @@ function get_pill_label(tvs) {
 			return { txt: v.value }
 		}
 		// numeric range
-		return { txt: format_val_text(v, tvs.term) }
+		return { txt: format_val_text(v, tvs.term) + mafDepthText(tvs) }
 	}
 	// multiple
-	return { txt: tvs.ranges.length + ' intervals' }
+	return { txt: tvs.ranges.length + ' intervals' + mafDepthText(tvs) }
+}
+
+/* a maf-mode tvs may also gate samples on total read depth; the range text alone does not show it.
+returns '' when no cutoff is set, and for any other tvs: 'totalDepth'/'altDepth' filter on depth with
+their own range, and minAllelicDepth has no effect on a 'value' term */
+function mafDepthText(tvs) {
+	if (tvs.term.mafFilterMode != 'maf') return ''
+	if (!Number.isFinite(tvs.minAllelicDepth) || tvs.minAllelicDepth < 1) return ''
+	return `, Total depth &ge; ${tvs.minAllelicDepth}`
 }
 
 export function format_val_text(range, term) {
@@ -229,8 +241,6 @@ function setTvsDefaults(tvs) {
 function addRangeTableNoDensity(self, tvs) {
 	const termrange = tvs.term.range || {}
 	const range = tvs.ranges && tvs.ranges[0] ? tvs.ranges[0] : termrange
-	range.min = 'min' in tvs.term ? tvs.term.min : null
-	range.max = 'max' in tvs.term ? tvs.term.max : null
 	const num_div = self.num_obj.num_div
 	num_div.selectAll('*').remove()
 
@@ -262,7 +272,10 @@ function addRangeTableNoDensity(self, tvs) {
 	brush.equation_div = rangeRow.append('div')
 	brush.rangeInput = new NumericRangeInput(brush.equation_div, range, () => {}, {
 		width: '125px',
-		scaleFactor: getValueConversionFactor(tvs.term)
+		scaleFactor: getValueConversionFactor(tvs.term),
+		// without a density plot, the term's declared bounds are the only check of a typed range
+		min: tvs.term.min,
+		max: tvs.term.max
 	})
 
 	if (mafFilterMode == 'maf') {
@@ -282,7 +295,8 @@ function addRangeTableNoDensity(self, tvs) {
 			.attr('min', 1)
 			.attr('step', 1)
 			.style('width', '125px')
-			.property('value', tvs.minAllelicDepth)
+			// blank when no cutoff is set, so that it is not applied back as one, see clickApply()
+			.property('value', Number.isFinite(tvs.minAllelicDepth) ? tvs.minAllelicDepth : '')
 		brush.apply_btn = addApplyButton(holder.append('div').style('margin-top', '10px'))
 	} else if (mafFilterMode == 'value') {
 		// any numerical FORMAT field read as-is; bounds come from the term's min/max, and no depth input
@@ -314,12 +328,18 @@ function addRangeTableNoDensity(self, tvs) {
 		}
 		const new_tvs = { term: tvs.term, ranges: [r] }
 		if (brush.depthInput) {
-			const minAllelicDepth = Number(brush.depthInput.property('value'))
-			if (!Number.isFinite(minAllelicDepth)) {
-				window.alert('Minimum allelic depth must be a numeric value.')
-				return
+			/* the depth input is optional: a blank input leaves minAllelicDepth out, rather than storing
+			the depth of 1 that getMetricFromAlleleCnts() defaults to, which would then fill the input
+			back in as a cutoff on the next edit of this tvs */
+			const str = brush.depthInput.property('value').trim()
+			if (str) {
+				const minAllelicDepth = Number(str)
+				if (!Number.isFinite(minAllelicDepth)) {
+					window.alert('Minimum allelic depth must be a numeric value.')
+					return
+				}
+				new_tvs.minAllelicDepth = Math.max(minAllelicDepth, 1)
 			}
-			new_tvs.minAllelicDepth = Math.max(minAllelicDepth, 1)
 		}
 		self.dom.tip.hide()
 		self.opts.callback(new_tvs)
@@ -401,20 +421,22 @@ function enterRange(self, tr, brush, i) {
 			)
 	}
 
-	async function apply(new_range) {
-		try {
-			brush.range = new_range
-			const minvalue = self.num_obj.density_data.min
-			const maxvalue = self.num_obj.density_data.max
+	/* called by brush.rangeInput.parseRange() on an input change or on clicking Apply, and a thrown
+	error is alerted by the caller */
+	function apply(new_range) {
+		const minvalue = self.num_obj.density_data.min
+		const maxvalue = self.num_obj.density_data.max
+		validateRangeInData(self, new_range)
+		brush.range = new_range
 
-			const start =
-				new_range.value != undefined ? new_range.value : new_range.start != undefined ? new_range.start : minvalue
-			const stop =
-				new_range.value != undefined ? new_range.value : new_range.stop != undefined ? new_range.stop : maxvalue
-			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [start, stop].map(xscale))
-		} catch (e) {
-			window.alert(e)
-		}
+		const start =
+			new_range.value != undefined ? new_range.value : new_range.start != undefined ? new_range.start : minvalue
+		const stop =
+			new_range.value != undefined ? new_range.value : new_range.stop != undefined ? new_range.stop : maxvalue
+		// a typed bound beyond the data would place the brush outside of the plot; clamp to the plot.
+		// the brush handler keeps such a bound as typed in the input text, see updateTempRanges()
+		const clamp = v => Math.min(Math.max(v, minvalue), maxvalue)
+		brush.elem.call(brush.d3brush).call(brush.d3brush.move, [clamp(start), clamp(stop)].map(xscale))
 	}
 
 	function makeRangeButtons(self, brush) {
@@ -427,15 +449,17 @@ function enterRange(self, tr, brush, i) {
 			.style('margin-left', '10px')
 			.text('Apply')
 			.on('click', async () => {
-				self.dom.tip.hide()
-				const new_range = brush.rangeInput.parseRange()
-				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
-				delete new_tvs.groupset_label
-				// merge overlapping ranges
-				if (self.num_obj.ranges.length > 1) new_tvs.ranges = mergeOverlapRanges(self, new_range)
-				else new_tvs.ranges[range.index] = new_range
 				try {
+					// throws on unparsable text, or on a range that apply() rejects, since the input
+					// keeps a rejected range as typed
+					const new_range = brush.rangeInput.parseRange()
+					const new_tvs = JSON.parse(JSON.stringify(self.tvs))
+					delete new_tvs.groupset_label
+					// merge overlapping ranges
+					if (self.num_obj.ranges.length > 1) new_tvs.ranges = mergeOverlapRanges(self, new_range)
+					else new_tvs.ranges[range.index] = new_range
 					validateNumericTvs(new_tvs)
+					self.dom.tip.hide()
 					self.opts.callback(new_tvs)
 				} catch (ex) {
 					alert(ex)
@@ -571,6 +595,22 @@ async function showCheckList_numeric(self, tvs, div) {
 	}
 
 	const values_table = self.makeValueTable(unanno_div, tvs, sortedVals, callback).node()
+}
+
+/* a range typed outside of the density plot would select no sample, e.g. x>100 when the data max is 50,
+and would invert the brush selection. only reject a range that has no overlap with the data, as a
+partial overlap still selects samples, and its brush is clamped to the plot */
+function validateRangeInData(self, range) {
+	if (range.value != undefined) return // a single value or special category
+	const { min, max } = self.num_obj.density_data
+	if (!Number.isFinite(min) || !Number.isFinite(max)) return
+	const aboveMax = !range.startunbounded && (range.start > max || (range.start == max && !range.startinclusive))
+	const belowMin = !range.stopunbounded && (range.stop < min || (range.stop == min && !range.stopinclusive))
+	if (!aboveMax && !belowMin) return
+	// the message is in the unit shown to users, same as the input text
+	const sf = getValueConversionFactor(self.tvs.term)
+	const [minLabel, maxLabel] = [min, max].map(v => roundValueAuto(v * sf))
+	throw `The range is outside of the data, which ranges from ${minLabel} to ${maxLabel}`
 }
 
 function validateNumericTvs(tvs) {

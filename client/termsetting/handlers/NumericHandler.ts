@@ -162,7 +162,10 @@ export class NumericHandler extends HandlerBase implements Handler {
 			this.renderButtons(this.dom.btnDiv)
 
 			if (this.tabs.length > 1) {
-				this.dom.topBar = this.dom.editDiv.append('div').style('padding', '10px')
+				this.dom.topBar = this.dom.editDiv
+					.append('div')
+					.attr('data-testid', 'sja-ts-numeric-edit-top-bar')
+					.style('padding', '10px')
 				this.dom.topBar.append('span').html('Use as&nbsp;')
 				new Tabs({
 					holder: this.dom.topBar.append('div').style('display', 'inline-block'),

@@ -132,7 +132,8 @@ export class PlotButtons {
 			{
 				label: 'Summary',
 				chartType: 'dictionary',
-				isVisible: () => true,
+				/** Note: if only spatial image available, this plot should not show. */
+				isVisible: () => this.availablePlots.has('dictionary'),
 				getPlotConfig: () => {
 					const sample = { ...this.item!, plots: Array.from(this.availablePlots) }
 					const isMeta = sample?.isMetaResult || false
@@ -160,7 +161,7 @@ export class PlotButtons {
 			{
 				label: 'Gene expression',
 				chartType: 'GeneExpInput',
-				isVisible: () => this.scTermdbConfig?.geneExpression,
+				isVisible: () => this.scTermdbConfig?.geneExpression && this.availablePlots.has(this.scTermdbConfig.geneExpression?.label || 'Gene expression'),
 				getPlotConfig: () => {
 					const sample = this.item!
 					const isMeta = sample?.isMetaResult || false
@@ -247,7 +248,7 @@ export class PlotButtons {
 		/** Case and project are GDC specific */
 		const caseText = sample.case ? ` Case: ${sample.case}` : ''
 		const projectText = sample?.['project id'] ? ` Project: ${sample['project id']}` : ''
-		return`${isMeta ? '' : 'Sample: '}${sample.sID}${caseText}${projectText}${plot ? ` (${plot})`: ''}`
+		return `${isMeta ? '' : 'Sample: '}${sample.sID}${caseText}${projectText}${plot ? ` (${plot})` : ''}`
 	}
 
 	//********** Btn Menus **********/
@@ -317,9 +318,7 @@ export class PlotButtons {
 		const savedTerm = this[`${key}Terms`]?.find(t => t.name == colorColName && t.plot == plot.name)
 		if (!savedTerm) {
 			const ttg = key === 'scct' ? TermTypeGroups.SINGLECELL_CELLTYPE : TermTypeGroups.SINGLECELL_NUMERIC_VALUE
-			throw new Error(
-				`No term found for colorColumn=${colorColName} in .termType2terms.${ttg} for plot ${plot.name}`
-			)
+			throw new Error(`No term found for colorColumn=${colorColName} in .termType2terms.${ttg} for plot ${plot.name}`)
 		}
 		const term = Object.assign(structuredClone(savedTerm), {
 			sample: item
