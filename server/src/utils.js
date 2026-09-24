@@ -230,9 +230,16 @@ async function download_index(url, tofile) {
 		throw 'cannot download from url'
 	}
 }
-function stream2file(from, file) {
-	// resolves once the file is fully written (not when the download ends), so tabix never reads a partial index
-	return pipeline(from, fs.createWriteStream(file))
+async function stream2file(from, file) {
+	// write to a unique temp sibling and rename only after the download succeeds: rename is atomic, so a concurrent
+	// cache_index() or tabix never sees a partial index, and a failed download leaves nothing behind
+	const tmp = `${file}.${process.pid}.${Math.random().toString().slice(2)}.tmp`
+	try {
+		await pipeline(from, fs.createWriteStream(tmp))
+		await fs.promises.rename(tmp, file)
+	} finally {
+		await fs.promises.rm(tmp, { force: true }) // no-op after a successful rename
+	}
 }
 
 export async function file_is_readable(file) {
