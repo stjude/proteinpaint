@@ -73,52 +73,7 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 			return
 		}
 
-		let code
-
-		// may configure to avoid in-memory session tracking, to simulate a multi-server process setup
-		if (auth.sessionTracking == 'jwt-only') {
-			console.log('!!! --- CLEARING ALL SESSION DATA TO simulate stateless service --- !!!')
-			auth.sessions = Object.create(null)
-		}
-
-		try {
-			const id = auth.getSessionId(req, cred, auth.sessions)
-			const session = id && auth.sessions[q.dslabel]?.[id]
-			if (!session) {
-				code = 401
-				throw `unestablished or expired browser session`
-			}
-			//if (!session.email) throw `missing session details: please login again through a supported portal`
-			auth.checkIPaddress(req, session.ip, cred)
-			const time = Date.now()
-			/* !!! TODO: may rethink the following assumption !!!
-				assumes that the payload.datasets list will not change within the maxSessionAge duration
-				including between subsequent checks of jwts, in order to avoid potentially expensive decryption 
-			*/
-			if (time - session.time > auth.maxSessionAge) {
-				const { iat } = auth.getJwtPayload(q, req.headers, cred, session)
-				const elapsedSinceIssue = time - iat
-				if (elapsedSinceIssue > auth.maxSessionAge) {
-					delete auth.sessions[q.dslabel][id]
-					throw 'Please login again to access this feature. (expired session)'
-				}
-				if (elapsedSinceIssue < 300000) {
-					// this request is accompanied by a new jwt
-					session.time = time
-					return
-				}
-			}
-			// TODO: may need to adjust session expiration based on the last active period
-			// If any activity happens within the hardcoded number of milliseconds below,
-			// then update the start time of the active session (account for prolonged user inactivity)
-			if (time - session.time < 900) session.time = time
-			next()
-		} catch (e: any) {
-			console.log(e)
-			const _code = e.code || code
-			if (_code) res.status(_code)
-			res.send(typeof e == 'object' ? e : { error: e })
-		}
+		checkSession(auth, req, res, next, cred)
 	})
 
 	/*
@@ -177,9 +132,152 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 				}
 
 				// this flag may be used by downstream code that does not have access to req argument or ds object
-				__protected__.isUserLoggedIn = authApi.isUserLoggedIn(req, ds, auth.protectedRoutes.minSampleSize)
+				// only considers the serverconfig.dsCredentials route patterns here, a data route that requires
+				// a stricter check will have a protectedRoutes.minSampleSize middleware to override this flag
+				__protected__.isUserLoggedIn = authApi.isUserLoggedIn(req, ds)
 			}
 		}
 		Object.freeze(__protected__)
 	}
+}
+
+// requests with a session that has already been validated by checkSession(), to avoid
+// repeating the same check when both the app-level and a route-level middleware apply
+const validatedCredByReq = new WeakMap()
+
+// the login status for sample-level data, as determined by the route-level samples middleware;
+// only the middleware can set it, so that other code cannot mark a request as logged in
+const sampleLoginByReq = new WeakMap()
+
+// returns the login status for sample-level data as determined by the samples middleware,
+// or undefined if the middleware did not run for the request and dataset
+export function getSampleLogin(req, ds): boolean | undefined {
+	const d = sampleLoginByReq.get(req)
+	if (d?.ds === ds) return d.isUserLoggedIn
+}
+
+// will call next() if the request has a valid session for the required cred,
+// otherwise will respond with an error
+function checkSession(auth, req, res, next, cred) {
+	const q = req.query
+	let code
+
+	// may configure to avoid in-memory session tracking, to simulate a multi-server process setup
+	if (auth.sessionTracking == 'jwt-only') {
+		console.log('!!! --- CLEARING ALL SESSION DATA TO simulate stateless service --- !!!')
+		auth.sessions = {}
+	}
+
+	try {
+		const id = auth.getSessionId(req, cred, auth.sessions)
+		const session = id && auth.sessions[q.dslabel]?.[id]
+		if (!session) {
+			code = 401
+			throw `unestablished or expired browser session`
+		}
+		//if (!session.email) throw `missing session details: please login again through a supported portal`
+		auth.checkIPaddress(req, session.ip, cred)
+		const time = Date.now()
+		/* !!! TODO: may rethink the following assumption !!!
+			assumes that the payload.datasets list will not change within the maxSessionAge duration
+			including between subsequent checks of jwts, in order to avoid potentially expensive decryption 
+		*/
+		if (time - session.time > auth.maxSessionAge) {
+			const { iat } = auth.getJwtPayload(q, req.headers, cred, session)
+			const elapsedSinceIssue = time - iat
+			if (elapsedSinceIssue > auth.maxSessionAge) {
+				delete auth.sessions[q.dslabel][id]
+				throw 'Please login again to access this feature. (expired session)'
+			}
+			if (elapsedSinceIssue < 300000) {
+				// this request is accompanied by a new jwt
+				session.time = time
+				return
+			}
+		}
+		// TODO: may need to adjust session expiration based on the last active period
+		// If any activity happens within the hardcoded number of milliseconds below,
+		// then update the start time of the active session (account for prolonged user inactivity)
+		if (time - session.time < 900) session.time = time
+		validatedCredByReq.set(req, cred)
+		next()
+	} catch (e: any) {
+		console.log(e)
+		const _code = e.code || code
+		if (_code) res.status(_code)
+		res.send(typeof e == 'object' ? e : { error: e })
+	}
+}
+
+// returns the dataset for a request, or undefined if it cannot be determined; the app-level middleware
+// has already rejected a request with an invalid genome or dslabel, so the route-level middlewares
+// below only need to handle the case where a genome or dslabel is not applicable to the request
+function getReqDs(req, genomes) {
+	const q = req.query
+	if (!q.genome || !q.dslabel || q.dslabel === 'msigdb') return
+	return genomes[q.genome]?.datasets?.[q.dslabel]
+}
+
+/*
+	The route-level auth middlewares, one for each group of data routes that are protected
+	by code instead of by serverconfig.dsCredentials route patterns. These are applied to a route by
+	listing the matching ./protectedRoutes.ts middleware in the route's RouteApi.middlewares[],
+	and must run after the app-level middleware from setAuthMiddleware().
+
+	termdb: before the route handler, requires a valid session when the dataset has a termdb credential
+	  for the request's embedder, otherwise responds with an error and the route handler is not called
+
+	samples: before the route handler, determines if the request is logged in for sample-level data,
+	  so that authApi.canDisplaySampleIds() in the route handler will deny sample IDs to a logged-out
+	  request. Note that canDisplaySampleIds() also fails closed without this middleware.
+
+	minSampleSize: before the route handler, sets q.__protected__.isUserLoggedIn based on the
+	  termdb credential, so that downstream dataset code may require a minimum sample size for
+	  aggregated results that are requested by a logged-out user
+*/
+export function getProtectedRouteMiddlewares(authApi, auth) {
+	return Object.freeze({
+		termdb(req, res, next) {
+			const q = req.query
+			let cred
+			try {
+				cred = q.dslabel && auth.getRouteCred(q.dslabel, ['termdb'], q.embedder)
+			} catch (e: any) {
+				res.status(e.status || 401)
+				res.send({ error: e.message || e.error || e })
+				return
+			}
+			if (!cred || validatedCredByReq.get(req) === cred) next()
+			else checkSession(auth, req, res, next, cred)
+		},
+
+		samples(req, res, next) {
+			const ds = getReqDs(req, auth.genomes)
+			try {
+				if (ds) sampleLoginByReq.set(req, { ds, isUserLoggedIn: authApi.isUserLoggedIn(req, ds, true) })
+			} catch (e: any) {
+				res.status(e.status || 401)
+				res.send({ error: e.message || e.error || e })
+				return
+			}
+			next()
+		},
+
+		minSampleSize(req, res, next) {
+			const q = req.query
+			const ds = getReqDs(req, auth.genomes)
+			if (ds) {
+				try {
+					const isUserLoggedIn = authApi.isUserLoggedIn(req, ds, true)
+					// the app-level middleware has frozen q.__protected__, replace it with a frozen copy
+					q.__protected__ = Object.freeze({ ...q.__protected__, isUserLoggedIn })
+				} catch (e: any) {
+					res.status(e.status || 401)
+					res.send({ error: e.message || e.error || e })
+					return
+				}
+			}
+			next()
+		}
+	})
 }

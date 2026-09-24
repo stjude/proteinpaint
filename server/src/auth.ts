@@ -5,17 +5,27 @@ import { AuthApi } from './auth/AuthApi.ts'
 export interface AuthInterface {
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: string[]
+	// the route-level auth middlewares, see ./auth/protectedRoutes.ts
+	routeMiddlewares: ProtectedRouteMiddlewares
 	maySetAuthRoutes: (app, genomes, basepath: string, serverconfig: any) => void | Promise<void>
 	//getJwtPayload, // declared below
 	canDisplaySampleIds: (req, ds) => boolean
 	// these open-acces, default methods may be replaced by maySetAuthRoutes()
 	getDsAuth: (req) => any[]
 	getNonsensitiveInfo: (_) => { forbiddenRoutes: string[] }
-	isUserLoggedIn: (req, ds, protectedRoutes, requireTermdbCred?: boolean) => boolean
+	isUserLoggedIn: (req, ds, requireTermdbCred?: boolean) => boolean
 	getRequiredCredForDsEmbedder: (dslabel: string, embedder: string) => any
 	getPayloadFromHeaderAuth: (req, res) => any
 	getHealth: () => any | Promise<any>
 	mayAdjustFilter: (q, ds, routeTwLst) => void
+}
+
+type RouteMiddleware = (req, res, next) => void
+
+export type ProtectedRouteMiddlewares = {
+	termdb: RouteMiddleware
+	samples: RouteMiddleware
+	minSampleSize: RouteMiddleware
 }
 
 // app should call this as early as possible to avoid unnecessarily exposing to other code
@@ -34,6 +44,11 @@ export let authApi
 // key: express app, value: authApi instance
 // will ensure that an app will be set up only once with auth middleware
 const authApiByApp = new WeakMap()
+
+// returns the authApi that was set up for an express app, such as req.app in a route-level middleware
+export function getAuthApiByApp(app) {
+	return app && authApiByApp.get(app)
+}
 
 // these may be overriden within maySetAuthRoutes()
 // config: one of the following

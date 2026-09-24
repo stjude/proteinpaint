@@ -25,6 +25,7 @@ import { authApi } from '#src/auth.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from '#src/utils.js'
 import { getDescrStats } from './termdb.descrstats.ts'
+import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 
 // color of reference samples, they should be shown as a "cloud" of dots at backdrop
 export const refColor = '#F5F5DC'
@@ -42,6 +43,7 @@ const payload: RoutePayload = {
 
 export const api: RouteApi = {
 	endpoint: 'termdb/sampleScatter',
+	middlewares: [protectedRoutes.samples, protectedRoutes.minSampleSize],
 	methods: {
 		// This endpoint does not support write operation, the same readonly request/response
 		// payload init/typeId/checker is expected for both GET and POST methods, where POST

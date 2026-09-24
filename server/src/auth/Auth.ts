@@ -117,31 +117,6 @@ export class Auth {
 	// and credential matching all use the same basepath value
 	basepath: string = ''
 
-	// TODO: should create a checker function for each route group that may be protected
-	protectedRoutes = {
-		// below is used in getRequiredCred as the default protected routes
-		termdb: ['/termdb/matrix'],
-		// below is used in AuthApi.canDisplaySampleIds()
-		samples: [
-			'singleSampleData',
-			'getAllSamples',
-			'convertSampleId',
-			'getSamplesByName',
-			'scatter',
-			'/termdb/sampleScatter',
-			'/termdb/matrix'
-		],
-		minSampleSize: [
-			'/termdb/barsql',
-			'/termdb/cuminc',
-			'/termdb/survival',
-			'/termdb/regression',
-			'scatter',
-			'/termdb/sampleScatter',
-			'/termdb/matrix'
-		]
-	}
-
 	constructor(creds, app, genomes, serverconfig) {
 		this.app = app
 		this.creds = creds
@@ -152,13 +127,16 @@ export class Auth {
 		if (maxSessionAge) this.maxSessionAge = maxSessionAge
 	}
 
-	// runs on every request as part of middleware to inspect request
+	// runs on every request as part of the app-level middleware to inspect request,
+	// only for the protection that is configured in serverconfig.dsCredentials;
+	// the code-defined protection of specific data routes is applied by the
+	// route-level middlewares in ./protectedRoutes.ts, see the RouteApi.middlewares of each route
 	//
 	// returns
 	// - a cred object containing details
 	// - falsy if a data route is not protected
 	//
-	getRequiredCred(q, path, _protectedRoutes?: string[]) {
+	getRequiredCred(q, path) {
 		if (!q.dslabel) return
 		// dslabel keys may be exact, glob patterns, or the '*' wildcard, in that order of precedence
 		const dsEntries = this.getMatchedDsEntries(q.dslabel)
@@ -173,15 +151,8 @@ export class Auth {
 			return this.getRouteCred(q.dslabel, [q.route, '/**'], q.embedder)
 		} else if (path.startsWith('/termdb')) {
 			const cred = this.getRouteCred(q.dslabel, ['termdb'], q.embedder)
-			if (cred) {
-				if (cred.protectedRoutes?.find(pattern => isMatch(path, pattern))) return cred
-				const protRoutes = _protectedRoutes || this.protectedRoutes.termdb
-				// q.for is client-supplied and may be a non-string, e.g. an array from `for[]=...`
-				// query params, so check every value instead of an exact includes() match on q.for
-				const forValues = q.for === undefined ? [] : Array.isArray(q.for) ? q.for : [q.for]
-				if (forValues.some(f => protRoutes.includes(String(f)))) return cred
-				if (protRoutes.find(pattern => isMatch(path, pattern))) return cred
-			}
+			// a dsCredentials entry may list additional termdb route patterns to protect
+			if (cred?.protectedRoutes?.find(pattern => isMatch(path, pattern))) return cred
 		} else if (path.startsWith('/burden')) {
 			const cred = this.getRouteCred(q.dslabel, ['burden'], q.embedder)
 			if (cred) return cred

@@ -64,6 +64,7 @@ import * as fimo from './fimo.js'
 import { draw_partition } from './partitionmatrix.js'
 import mdsgeneboxplot_closure from './mds.geneboxplot.js'
 import { handle_mdssurvivalplot } from './km.js'
+import { protectedRoutes } from './auth/protectedRoutes.ts'
 
 export const tabixnoterror = s => {
 	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
@@ -131,8 +132,9 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.post(basepath + '/mdssamplesignature', handle_mdssamplesignature)
 	app.post(basepath + '/mdssurvivalplot', handle_mdssurvivalplot(genomes))
 	app.post(basepath + '/fimo', fimo.handle_closure(genomes))
-	app.all(basepath + '/termdb', termdb.handle_request_closure(genomes))
-	app.all(basepath + '/termdb/barsql', termdbbarsql.handle_request_closure(genomes))
+	// the legacy /termdb route handler calls authApi.canDisplaySampleIds() for the q.for sample data requests
+	app.all(basepath + '/termdb', protectedRoutes.samples, termdb.handle_request_closure(genomes))
+	app.all(basepath + '/termdb/barsql', protectedRoutes.minSampleSize, termdbbarsql.handle_request_closure(genomes))
 	app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
 	app.post(basepath + '/massSession', massSession.save)
 	app.get(basepath + '/massSession', massSession.get)

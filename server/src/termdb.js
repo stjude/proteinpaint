@@ -113,7 +113,7 @@ function get_convertSampleId(q, req, res, ds, tdb) {
 	// the response maps sample names to ids, so require a session when the dataset has a termdb credential;
 	// unlike canDisplaySampleIds(), do not require ds.cohort.termdb.displaySampleIds, since datasets that use
 	// this for sample selection (e.g. allow2selectSamples) may not set it
-	if (!authApi.isUserLoggedIn(req, ds, [], true)) throw 'Requires sign in to access the sample data'
+	if (!authApi.isUserLoggedIn(req, ds, true)) throw 'Requires sign in to access the sample data'
 	if (!tdb.convertSampleId) throw 'not supported on this ds'
 	if (!Array.isArray(q.inputs)) throw 'q.inputs[] not array'
 	res.send({ mapping: tdb.convertSampleId.get(q.inputs) })
@@ -167,7 +167,7 @@ export async function getSampleList(req, q, ds, auth = authApi) {
 		// the returned sample ids are the ds sample identifiers, so require a session when the dataset has a
 		// termdb credential; unlike canDisplay, do not require ds.cohort.termdb.displaySampleIds, since an
 		// open-access api-backed ds (e.g. gdc) may not set it
-		if (!auth.isUserLoggedIn(req, ds, [], true)) return []
+		if (!auth.isUserLoggedIn(req, ds, true)) return []
 		// when the dataset does define displaySampleIds, respect it like the sqlite and other sample handlers,
 		// e.g. displaySampleIds: false or a role policy that returns false for this request
 		if (ds.cohort.termdb.displaySampleIds !== undefined && !canDisplay) return []
