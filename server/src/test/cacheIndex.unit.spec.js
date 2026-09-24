@@ -24,6 +24,7 @@ test sections:
 - cache_index() still caches valid urls
 - fileurl() url branch
 - /tkbedj, /tabixheader, /bamnochr via the real route table
+- cache_index() index download is atomic
 */
 
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-cacheidx-'))
@@ -33,7 +34,16 @@ let server, H
 function startServer() {
 	return new Promise(resolve => {
 		server = http
-			.createServer((req, res) => res.end('ATTACKER_BYTES ' + req.url))
+			.createServer((req, res) => {
+				// /slow/ pauses mid-body; /broken/ drops the connection mid-body
+				if (req.url.startsWith('/slow/')) {
+					res.write('PART1-')
+					setTimeout(() => res.end('PART2'), 400)
+				} else if (req.url.startsWith('/broken/')) {
+					res.write('PART1-')
+					setTimeout(() => res.socket.destroy(), 100)
+				} else res.end('ATTACKER_BYTES ' + req.url)
+			})
 			.listen(0, '127.0.0.1', () => {
 				H = '127.0.0.1:' + server.address().port
 				resolve()
@@ -175,6 +185,35 @@ tape('/tkbedj, /tabixheader, /bamnochr via the real route table', async test => 
 
 	const r = await send(routes['/bamnochr'], { genome: 'hg38', file: '../../../etc/x.bam' })
 	test.equal(r?.error, 'illegal file path', '/bamnochr should reject ".." in file')
+	test.end()
+})
+
+tape('cache_index() index download is atomic', async test => {
+	const tmpFiles = dir => fs.readdirSync(dir).filter(f => f.endsWith('.tmp'))
+
+	// while the download is in progress, the final index path must not exist yet
+	const url = `http://${H}/atomic/t.gz`
+	const dir = path.join(serverconfig.cachedir, 'http', H, 'atomic/t.gz')
+	const pending = utils.cache_index(url, `http://${H}/slow/t.gz.tbi`)
+	await new Promise(r => setTimeout(r, 200))
+	test.notOk(fs.existsSync(path.join(dir, 't.gz.tbi')), 'should not expose a partial index during the download')
+	await pending
+	test.equal(fs.readFileSync(path.join(dir, 't.gz.tbi'), 'utf8'), 'PART1-PART2', 'should hold the complete index after')
+	test.deepEqual(tmpFiles(dir), [], 'should leave no temp file after success')
+
+	// a failed download leaves neither the index nor a temp file, so a later call retries it
+	const url2 = `http://${H}/atomic2/t.gz`
+	const dir2 = path.join(serverconfig.cachedir, 'http', H, 'atomic2/t.gz')
+	await rejects(
+		test,
+		() => utils.cache_index(url2, `http://${H}/broken/t.gz.tbi`),
+		/cannot download from url/,
+		'should reject a dropped download'
+	)
+	test.notOk(fs.existsSync(path.join(dir2, 't.gz.tbi')), 'should not leave a partial index after a failure')
+	test.deepEqual(tmpFiles(dir2), [], 'should leave no temp file after a failure')
+
+	fs.rmSync(path.join(serverconfig.cachedir, 'http', H), { recursive: true, force: true })
 	test.end()
 })
 
