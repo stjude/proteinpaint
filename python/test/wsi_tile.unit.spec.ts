@@ -213,6 +213,77 @@ tape('similar finds a window as its own best match when searched against itself'
 	t.ok(best.distance !== null && best.distance < 0.5, `top match has a small rigorous distance (got ${best.distance})`)
 	const overlap = best.ids.filter((id: string) => chosen.ids.includes(id)).length
 	t.equal(overlap, chosen.ids.length, "the winning window is exactly the query's own window")
+
+	// same-sample search: without excludeIds the trivial self-match (the
+	// exact reference window, 100% overlap) wins, as just shown above.
+	// Passing the reference's own ids as excludeIds must drop that window
+	// (and any other candidate more than half made of reference cells) so a
+	// same-sample search returns a DIFFERENT niche instead of finding itself
+	const excluded = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'similar',
+				h5ad,
+				types: query.types,
+				typeCounts: query.typeCounts,
+				count: query.count,
+				zscore: query.zscore,
+				k: 6,
+				perms: 200,
+				seed: 1,
+				window: 100,
+				stride: 50,
+				topK: 6,
+				excludeIds: chosen.ids
+			})
+		)
+	)
+	t.equal(excluded.excluded, true, 'excluded flag reports the overlap check was active')
+	t.ok(
+		excluded.windows.every((w: any) => {
+			const frac = w.ids.filter((id: string) => chosen.ids.includes(id)).length / w.ids.length
+			return frac <= 0.5
+		}),
+		'no returned window is more than half made of the excluded reference cells'
+	)
+	t.notDeepEqual(
+		excluded.windows[0]?.ids,
+		best.ids,
+		'the trivial self-match is gone -- the top result is a genuinely different window'
+	)
+	t.end()
+})
+
+tape('similar excludeIds is a no-op across samples (empty/absent)', async t => {
+	// sanity: omitting excludeIds (the normal cross-sample case) must behave
+	// exactly as before -- excluded stays false, nothing is dropped by it
+	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
+	const wide = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({ action: 'nhood', h5ad, ids: Object.keys(ann.cells), k: 6, perms: 5, seed: 1 })
+		)
+	)
+	const out = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'similar',
+				h5ad,
+				types: wide.types,
+				typeCounts: wide.typeCounts,
+				count: wide.count,
+				k: 6,
+				perms: 5,
+				window: 100,
+				stride: 50,
+				topK: 5,
+				sizeTolerance: 1
+			})
+		)
+	)
+	t.equal(out.excluded, false, 'excluded is false when excludeIds is omitted')
 	t.end()
 })
 

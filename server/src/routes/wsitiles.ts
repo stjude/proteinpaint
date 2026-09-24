@@ -364,6 +364,12 @@ function init({ genomes }) {
 						return
 					}
 				}
+				// the reference selection's own cell ids, when searching the SAME
+				// sample the selection came from — lets a same-sample search skip
+				// windows that are mostly just the reference region again, rather
+				// than trivially "matching" itself. Meaningless (and never sent by
+				// the client) across samples, since ids are only unique per h5ad
+				const excludeIds = Array.isArray(q.excludeIds) ? q.excludeIds.map(String) : []
 				const int = (v: any, d: number, lo: number, hi: number) =>
 					Math.min(hi, Math.max(lo, Number.isInteger(Number(v)) ? Number(v) : d))
 				const num = (v: any, d: number, lo: number, hi: number) =>
@@ -388,7 +394,8 @@ function init({ genomes }) {
 					sizeTolerance: num(q.sizeTolerance, 0.1, 0, 5),
 					// types a candidate must contain at least one cell of, not merely be
 					// weighted toward in the composition score; default none required
-					requiredTypes
+					requiredTypes,
+					excludeIds
 				}
 				const out = await run_python('wsi_tile.py', JSON.stringify(job))
 				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim (windows[], or {error})
