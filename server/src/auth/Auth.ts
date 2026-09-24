@@ -434,7 +434,7 @@ export class Auth {
 				throw `jwt payload missing datasets[] and dslabel, must have one`
 			}
 			// do not overwrite existing tracking object for dslabel
-			if (!sessions[dslabel]) sessions[dslabel] = {}
+			if (!sessions[dslabel]) sessions[dslabel] = Object.create(null)
 			const reqPath = stripBasepath(req.path, this.basepath)
 			const path = reqPath[0] == '/' && !cred.route.startsWith('/') ? reqPath.slice(1) : reqPath
 			// signed payload route must match the requested data route
