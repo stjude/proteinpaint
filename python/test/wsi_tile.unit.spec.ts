@@ -432,3 +432,83 @@ tape('similar rejects a requiredTypes entry outside the query’s own vocabulary
 	t.ok(String(out.error).includes('requiredTypes'), 'error names the requirement')
 	t.end()
 })
+
+tape('similar typeWeights reweights the cheap score, defaults to 1 (no effect)', async t => {
+	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
+	const wide = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({ action: 'nhood', h5ad, ids: Object.keys(ann.cells), k: 6, perms: 5, seed: 1 })
+		)
+	)
+	const scanArgs = {
+		action: 'similar',
+		h5ad,
+		types: wide.types,
+		typeCounts: wide.typeCounts,
+		count: wide.count,
+		k: 1,
+		perms: 5,
+		window: 20,
+		stride: 10,
+		topK: 20,
+		sizeTolerance: 1 // isolate the weighting effect from the size filter
+	}
+	const macroCountOf = (w: any) => w.ids.filter((id: string) => ann.cells[id] == 'Macrophages').length
+
+	const baseline = JSON.parse(await run_python('wsi_tile.py', JSON.stringify(scanArgs)))
+	t.deepEqual(
+		baseline.typeWeights,
+		wide.types.map(() => 1),
+		'default weights are all 1 (no requested effect)'
+	)
+
+	const zeroed = wide.types.map((t: string) => (t == 'Macrophages' ? 0 : 1))
+	const zeroedScan = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ ...scanArgs, typeWeights: zeroed })))
+	t.deepEqual(zeroedScan.typeWeights, zeroed, 'typeWeights echoed back as given')
+	t.equal(macroCountOf(zeroedScan.windows[0]), 0, 'weight 0 on Macrophages: top match ignores Macrophages entirely')
+
+	const boosted = wide.types.map((t: string) => (t == 'Macrophages' ? 5 : 1))
+	const boostedScan = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ ...scanArgs, typeWeights: boosted })))
+	const boostedMacroCounts = boostedScan.windows.map(macroCountOf)
+	t.equal(
+		boostedMacroCounts[0],
+		Math.max(...boostedMacroCounts),
+		'weight 5 on Macrophages: top match has the highest Macrophage count among ALL returned candidates, not just a local one'
+	)
+	t.notEqual(
+		boostedScan.windows[0].cheapScore,
+		baseline.windows[0].cheapScore,
+		'weighting actually changed the top score relative to the unweighted baseline'
+	)
+	t.end()
+})
+
+tape('similar rejects typeWeights of the wrong length or a negative weight', async t => {
+	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
+	const wide = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({ action: 'nhood', h5ad, ids: Object.keys(ann.cells), k: 6, perms: 5, seed: 1 })
+		)
+	)
+	const run = (typeWeights: number[]) =>
+		run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'similar',
+				h5ad,
+				types: wide.types,
+				typeCounts: wide.typeCounts,
+				count: wide.count,
+				typeWeights
+			})
+		).then(JSON.parse)
+
+	const wrongLength = await run([1, 1])
+	t.ok(String(wrongLength.error).includes('typeWeights'), 'wrong-length error names the parameter')
+
+	const negative = await run(wide.types.map((_: string, i: number) => (i == 0 ? -1 : 1)))
+	t.ok(String(negative.error).includes('non-negative'), 'negative-weight error is explicit')
+	t.end()
+})
