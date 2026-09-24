@@ -4,7 +4,15 @@ import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
 import { read_file, trackXfetch } from './utils.js'
-import { isDictionaryType, isNonDictionaryType, isSingleCellTerm, getBin, getTwSampleTypes } from '#shared/terms.js'
+import {
+	isDictionaryType,
+	isNonDictionaryType,
+	isSingleCellTerm,
+	getBin,
+	getTwSampleTypes,
+	type TwSampleTypes,
+	getDefaultSampleTypes
+} from '#shared/terms.js'
 import {
 	DNA_METHYLATION,
 	GENE_EXPRESSION,
@@ -41,25 +49,22 @@ export function id2sampleRef(id, ds) {
 	return undefined
 }
 
-export function shouldMapParent2Children(tw, ds, mapParent2Children, sampleTypes) {
-	if (!mapParent2Children || !sampleTypes?.length) return false
-	// check every entry, not only up to the first match in .some() below,
-	// since all entries are later used in a sql IN clause
-	for (const st of sampleTypes) {
-		if (!ds.cohort.termdb.sampleTypes?.[st]) throw `invalid sample type='${st}'`
-	}
-	const twSampleTypes = getTwSampleTypes(tw, ds)
-	return sampleTypes.some(qSampleType =>
+export function shouldMapParent2Children(tw, ds, mapParent2Children, qSampleTypes) {
+	if (!mapParent2Children || !qSampleTypes?.length) return false
+	const st = getTwSampleTypes(tw, ds)
+	const twSampleTypes = st.sampleTypes || []
+	return qSampleTypes.some(qSampleType =>
 		twSampleTypes.some(twSampleType => ds.cohort.termdb.sampleTypes[qSampleType].parent_id == twSampleType)
 	)
 }
 
 /* sample type ids are integers; returns a comma-separated list that is safe to interpolate into a sql IN clause */
-export function getSampleTypesSqlList(sampleTypes) {
+export function getSampleTypesSqlList(sampleTypes, ds) {
 	return sampleTypes
 		.map(st => {
 			const n = Number(st)
-			if (!Number.isInteger(n)) throw `invalid sample type='${st}'`
+			if (!Number.isInteger(n)) throw `sample type='${st}' is not an integer`
+			if (!ds.cohort.termdb.sampleTypes[n]) throw `invalid sample type='${st}'`
 			return n
 		})
 		.join(',')
@@ -690,8 +695,8 @@ export function divideTerms(q, ds) {
 	return [dict, geneVariantTws, nonDict]
 }
 
-/* function will set:
-- q.mapParent2Children: flag for whether to map term data onto child samples
+/* function may set:
+- q.mapParent2Children: flag for whether to map data of parent samples onto child samples
 - q.sampleTypes: sample types to query for
 TODO: may rename to maySetSampleTypes() */
 export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
@@ -700,18 +705,23 @@ export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
 		q.mapParent2Children = false
 		return
 	}
-	q.mapParent2Children = mapParent2Children
 	// determine query sample types
 	const sampleTypes = getSampleTypes(q, ds)
-	const types = [...sampleTypes]
+	const types = [...sampleTypes.sampleTypes]
+	const childTypes = [...sampleTypes.childSampleTypes]
 	if (!types.length) return
-	for (const t of types) if (!ds.cohort.termdb.sampleTypes[t]) throw 'invalid query sample types'
-	if (types.length == 1) {
+	for (const t of [...types, ...childTypes]) if (!ds.cohort.termdb.sampleTypes[t]) throw 'invalid sample types'
+	if (mapParent2Children) {
+		// mapParent2Children=true supplied by caller
+		// get child sample types
+		q.mapParent2Children = mapParent2Children
+		q.sampleTypes = childTypes.length ? childTypes : getDefaultSampleTypes(ds)
+	} else if (types.length == 1) {
 		// single sample type
 		q.sampleTypes = types
 	} else {
 		// multiple sample types
-		// determine parent sample types of query sample types
+		// determine whether they have parent-child relationship
 		const parentTypes = new Set(
 			types.map(type => ds.cohort.termdb.sampleTypes[type]?.parent_id).filter(Number.isInteger)
 		)
@@ -719,14 +729,17 @@ export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
 		if (types.some(type => parentTypes.has(type))) {
 			// query sample types have parent-child relationship
 			// map parent to children
-			const childTypes = types.filter(type => !parentTypes.has(type))
-			if (!childTypes.length) throw 'child sample types missing'
 			q.mapParent2Children = true
-			q.sampleTypes = childTypes
+			q.sampleTypes = childTypes.length ? childTypes : types.filter(type => !parentTypes.has(type))
 		} else {
 			// query sample types do not have parent-child relationship
 			q.sampleTypes = types
 		}
+	}
+	if (!Array.isArray(q.sampleTypes)) throw 'q.sampleTypes is not array'
+	for (const st of q.sampleTypes) {
+		if (!Number.isInteger(st)) throw `sample type '${st}' is not integer`
+		if (!ds.cohort.termdb.sampleTypes[st]) throw `invalid sample type '${st}' found`
 	}
 }
 
@@ -846,41 +859,44 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	return [samples, byTermId]
 }
 
-function getSampleTypes(q, ds) {
+function getSampleTypes(q, ds): { sampleTypes: Set<any>; childSampleTypes: Set<any> } {
 	const twLst = q.terms ? q.terms : q.tw ? [q.tw] : []
 	const filter = q.filter
 	const filter0 = q.filter0
-	const twTypes = getTwLstSampleTypes(twLst, ds, q.mapParent2Children)
-	const filterTypes = getFilterSampleTypes(filter, ds, q.mapParent2Children)
-	const filter0Types = ds.getFilter0SampleTypes
-		? ds.getFilter0SampleTypes(filter0, ds, q.mapParent2Children)
-		: new Set()
-	const types = new Set([...twTypes, ...filterTypes, ...filter0Types])
-	return types
-}
-
-function getTwLstSampleTypes(twLst, ds, mapParent2Children) {
-	const types = new Set()
-	for (const tw of twLst) {
-		for (const type of getTwSampleTypes(tw, ds, mapParent2Children) || []) types.add(type)
+	const twTypes = getTwLstSampleTypes(twLst, ds)
+	const filterTypes = getFilterSampleTypes(filter, ds)
+	const filter0Types = ds.getFilter0SampleTypes ? ds.getFilter0SampleTypes(filter0, ds) : []
+	const sampleTypes = new Set()
+	const childSampleTypes = new Set()
+	for (const type of [...twTypes, ...filterTypes, ...filter0Types]) {
+		if (type.sampleTypes) type.sampleTypes.forEach(st => sampleTypes.add(st))
+		if (type.childSampleTypes) type.childSampleTypes.forEach(st => childSampleTypes.add(st))
 	}
-	return types
+	return { sampleTypes, childSampleTypes }
 }
 
-function getFilterSampleTypes(filter, ds, mapParent2Children) {
-	const types = new Set()
-	if (!filter) return types
+function getTwLstSampleTypes(twLst, ds): TwSampleTypes[] {
+	const sampleTypesLst: TwSampleTypes[] = []
+	for (const tw of twLst) {
+		const sampleTypes = getTwSampleTypes(tw, ds)
+		sampleTypesLst.push(sampleTypes)
+	}
+	return sampleTypesLst
+}
+
+function getFilterSampleTypes(filter, ds): TwSampleTypes[] {
+	const sampleTypesLst: TwSampleTypes[] = []
+	if (!filter) return sampleTypesLst
 	for (const item of filter.lst) {
 		if (item.type == 'tvslst') {
-			for (const type of getFilterSampleTypes(item, ds, mapParent2Children)) types.add(type)
+			for (const type of getFilterSampleTypes(item, ds)) sampleTypesLst.push(type)
 		} else {
 			if (item.tag == 'cohortFilter') continue
-			for (const type of getTwSampleTypes({ term: item.tvs.term }, ds, mapParent2Children) || []) {
-				if (Number.isInteger(type)) types.add(type)
-			}
+			const sampleTypes = getTwSampleTypes({ term: item.tvs.term }, ds)
+			sampleTypesLst.push(sampleTypes)
 		}
 	}
-	return types
+	return sampleTypesLst
 }
 
 /*
@@ -904,7 +920,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 				FROM sample_ancestry sa
 				JOIN ${t.tablename} ON sa.ancestor_id = sample
 				JOIN sampleidmap sm ON sa.sample_id = sm.id
-				WHERE sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes)})
+				WHERE sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes, q.ds)})
 				${filter ? `AND sa.sample_id IN ${filter.CTEname}` : ''}`
 			} else {
 				// query annotations directly

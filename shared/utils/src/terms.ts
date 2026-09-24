@@ -149,6 +149,11 @@ const singleCellTerms = new Set([
 	SINGLECELL_NUMERIC_VALUE /*PSEUDOBULK*/
 ])
 
+export type TwSampleTypes = {
+	sampleTypes?: number[] // sample types of termwrapper
+	childSampleTypes?: number[] // child sample types to map to
+}
+
 export function isSingleCellTerm(term: any) {
 	if (!term) return false
 	if (typeof term !== 'object') throw new Error('Term is not an object. Did you provide the type instead?')
@@ -616,33 +621,29 @@ export function getBin(lst: any[], value: number) {
 }
 
 // get sample types of termwrapper
-export function getTwSampleTypes(tw: any, ds: any, mapParent2Children?: boolean) {
+export function getTwSampleTypes(tw: any, ds: any): TwSampleTypes {
 	const term = tw?.term
-	if (!term) return []
+	if (!term) return {}
 	// prioritize user-defined sample types
 	if (term.sampleTypes) {
-		return term.sampleTypes
+		return { sampleTypes: term.sampleTypes }
 	}
 	if (dtTermTypes.has(term.type)) {
 		if (term.parentTerm.sampleTypes) {
-			return term.parentTerm.sampleTypes
+			return { sampleTypes: term.parentTerm.sampleTypes }
 		}
 	}
 	const defaultSampleTypes = getDefaultSampleTypes(ds)
-	if (mapParent2Children) {
-		// must map to child sample types
-		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
-		return Array.isArray(sampleType?.childSampleTypes) ? sampleType.childSampleTypes : defaultSampleTypes
-	}
 	if (ds.cohort.termdb.term2SampleType.has(term.id)) {
 		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
 		if (Number.isInteger(sampleType)) {
-			return [sampleType]
+			return { sampleTypes: [sampleType] }
 		} else if (sampleType && typeof sampleType == 'object') {
 			if (!Number.isInteger(sampleType.sampleType)) throw new Error('sampleType.sampleType is non-numeric')
-			return [sampleType.sampleType]
+			if (!Array.isArray(sampleType.childSampleTypes)) throw new Error('sampleType.childSampleTypes is not array')
+			return { sampleTypes: [sampleType.sampleType], childSampleTypes: sampleType.childSampleTypes }
 		} else {
-			return []
+			return {}
 		}
 	}
 	if (term.type == 'samplelst') {
@@ -650,11 +651,10 @@ export function getTwSampleTypes(tw: any, ds: any, mapParent2Children?: boolean)
 		const sampleId = term.values[key].list[0]?.sampleId
 		if (sampleId) {
 			const sampleType = ds.sampleId2Type.get(Number(sampleId) || sampleId)
-			if (Number.isInteger(sampleType)) return [sampleType]
-			return []
-		} else return defaultSampleTypes
+			return Number.isInteger(sampleType) ? { sampleTypes: [sampleType] } : {}
+		}
 	}
-	return defaultSampleTypes
+	return { sampleTypes: defaultSampleTypes }
 }
 
 // default sample types will be all non-root sample types
@@ -679,37 +679,6 @@ export function getQuerySampleTypesByTerms(sampleTypesByTerms: SampleTypesByTerm
 	}
 	if (!Object.keys(querySampleTypesByTerms).length) return
 	return querySampleTypesByTerms
-}
-
-export function getParentType(types: Set<string>, ds: any) {
-	if (Object.keys(ds.cohort.termdb.sampleTypes).length == 0) return null //dataset only has one type of sample
-	const ids = Array.from(types)
-	if (!ids || ids.length == 0) return null
-	for (const id of ids) {
-		const typeObj = ds.cohort.termdb.sampleTypes[id]
-		if (!typeObj) continue
-		if (typeObj.parent_id == null) return id //this is the root type
-		//if my parent is in the list, then I am not the parent
-		if (ids.includes(typeObj.parent_id)) continue
-		else return typeObj.parent_id //my parent is not in the list, so I am the parent
-	}
-	return null //no parent found
-}
-
-// whether the term annotates parent samples
-export function isParentType(term: any, ds: any) {
-	if (!ds.cohort.termdb.hasSampleAncestry) return false
-	const sampleType = getTwSampleTypes({ term }, ds)?.[0]
-	if (!sampleType) throw 'sample type is not defined'
-	const sampleTypeObj = ds.cohort.termdb.sampleTypes[sampleType]
-	if (!sampleTypeObj) throw 'invalid sample type'
-	if (Number.isInteger(sampleTypeObj.parent_id)) {
-		// sample type has parent, so it is child sample type
-		return false
-	} else {
-		// sample type does not have parent, so it is parent sample type
-		return true
-	}
 }
 
 //Returns human readable label for each term type; label is just for printing and not computing

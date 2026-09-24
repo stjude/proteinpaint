@@ -151,7 +151,7 @@ function get_categorical(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	WHERE term_id = ?
 	AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
-		query = getChildren(query, sampleTypes)
+		query = getChildren(query, sampleTypes, ds)
 	}
 	return {
 		CTEs: [` ${CTEname} AS (${query})`],
@@ -171,7 +171,7 @@ function get_survival(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	values.push(...tvs.values.map(i => i.key))
 
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
-		query = getChildren(query, sampleTypes)
+		query = getChildren(query, sampleTypes, ds)
 	}
 	return {
 		CTEs: [
@@ -199,7 +199,7 @@ function get_samplelst(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 
 	values.push(...samples.map(i => i.sampleId || i.sample))
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
-		query = getChildren(query, sampleTypes)
+		query = getChildren(query, sampleTypes, ds)
 	}
 	return {
 		CTEs: [
@@ -262,7 +262,7 @@ async function get_geneVariant(tvs, CTEname, ds, mapParent2Children, sampleTypes
 				FROM sampleidmap
 				WHERE id IN (${samplenames.map(i => '?').join(', ')})`
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
-		query = getChildren(query, sampleTypes)
+		query = getChildren(query, sampleTypes, ds)
 	}
 
 	return {
@@ -289,7 +289,7 @@ function isInRange(val, range, isnot) {
 function emptyFilterResult(CTEname, mapParent2Children, ds, sampleTypes) {
 	let query = `SELECT id as sample FROM sampleidmap WHERE 0`
 	if (shouldMapParent2Children({}, ds, mapParent2Children, sampleTypes)) {
-		query = getChildren(query, sampleTypes)
+		query = getChildren(query, sampleTypes, ds)
 	}
 	return { CTEs: [`${CTEname} AS (${query})`], values: [], CTEname }
 }
@@ -411,7 +411,7 @@ async function get_termCollection_nonDict_fraction(tvs, CTEname, ds, mapParent2C
 				FROM sampleidmap
 				WHERE id IN (${samplenames.map(() => '?').join(', ')})`
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
-		query = getChildren(query, sampleTypes)
+		query = getChildren(query, sampleTypes, ds)
 	}
 
 	return {
@@ -482,7 +482,7 @@ async function get_termCollection(tvs, CTEname, ds, mapParent2Children, sampleTy
 				FROM sampleidmap
 				WHERE id IN (${samplenames.map(i => '?').join(', ')})`
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
-		query = getChildren(query, sampleTypes)
+		query = getChildren(query, sampleTypes, ds)
 	}
 
 	return {
@@ -717,7 +717,7 @@ so here need to allow both string and number as range.value
 					${excludevalues && excludevalues.length ? `AND value NOT IN (${excludevalues.map(d => '?').join(',')}) ` : ''}`
 
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
-		query = getChildren(query, sampleTypes)
+		query = getChildren(query, sampleTypes, ds)
 	}
 
 	return {
@@ -809,7 +809,7 @@ function get_multivalue(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 				WHERE j.value > 0 AND j.key NOT IN (${tvs.values.map(() => '?').join(',')})
 			)`
 		const mappedQuery = shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)
-			? getChildren(query, sampleTypes)
+			? getChildren(query, sampleTypes, ds)
 			: query
 		return {
 			CTEs: [` ${CTEname} AS (${mappedQuery})`],
@@ -837,7 +837,7 @@ function get_multivalue(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	FROM anno_multivalue
 	WHERE term_id = ? AND ${tvs.isnot ? `NOT (${membershipTest})` : `(${membershipTest})`}`
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
-		query = getChildren(query, sampleTypes)
+		query = getChildren(query, sampleTypes, ds)
 	}
 	return {
 		CTEs: [` ${CTEname} AS (${query})`],
@@ -846,8 +846,10 @@ function get_multivalue(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	}
 }
 
-function getChildren(query, sampleTypes) {
-	const sampleTypeFilter = sampleTypes?.length ? `AND sm.sample_type IN (${getSampleTypesSqlList(sampleTypes)})` : ''
+function getChildren(query, sampleTypes, ds) {
+	const sampleTypeFilter = sampleTypes?.length
+		? `AND sm.sample_type IN (${getSampleTypesSqlList(sampleTypes, ds)})`
+		: ''
 	return `SELECT sa.sample_id as sample
 	FROM sample_ancestry sa
 	JOIN sampleidmap sm ON sa.sample_id = sm.id
