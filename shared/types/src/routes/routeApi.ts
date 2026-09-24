@@ -1,5 +1,11 @@
 export type RouteApi = {
 	endpoint: string
+	/**
+	 * optional route-level middlewares that apply to all methods of this endpoint,
+	 * called before the method-specific RoutePayload.middleware and route handler,
+	 * such as the protectedRoutes middlewares from server/src/auth/protectedRoutes.ts
+	 */
+	middlewares?: RouteMiddleware[]
 	methods: {
 		get?: RoutePayload
 		post?: RoutePayload
@@ -12,10 +18,12 @@ export type RoutePayload = {
 	init: RouteInit
 	request: RouteMethod
 	response: RouteMethod
-	middleware?: (req, res, next) => void
+	middleware?: RouteMiddleware
 	/** if examples are not provided, will not test */
 	examples?: PayloadExample[]
 }
+export type RouteMiddleware = (req, res, next) => void
+
 export type RouteMethod = {
 	typeId: string
 	checker?: any
