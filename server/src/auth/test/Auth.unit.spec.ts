@@ -48,13 +48,14 @@ tape('\n', function (test) {
 
 tape('Auth constructor: sets default properties', function (test) {
 	test.timeoutAfter(500)
-	test.plan(4)
+	test.plan(5)
 
 	const auth = makeAuth()
 	test.equal(auth.port, 3000, 'should set port from serverconfig')
 	test.equal(auth.maxSessionAge, 1000 * 3600 * 16, 'should set default maxSessionAge')
 	test.equal(auth.sessionTracking, '', 'should set empty sessionTracking by default')
 	test.deepEqual(Object.keys(auth.sessions), [], 'should initialize empty sessions')
+	test.equal(Object.getPrototypeOf(auth.sessions), null, 'should initialize sessions without a prototype')
 	test.end()
 })
 

@@ -16,6 +16,13 @@ import { validateTermCollectionFraction } from '#shared/termCollection.js'
 type MemberMapping = { expandedId: string; memberId: string }
 type TcMapping = { originalTcId: string; originalTw: any; memberMap: MemberMapping[] }
 
+/** Reject $id values that could be used to reach the Object.prototype chain
+ *  when later used as a plain-object property key (e.g. sampleData[$id] = ...). */
+function assertSafeTermId(id: any, context: string) {
+	if (!id || typeof id !== 'string') throw new Error(`${context} is missing $id`)
+	if (id === '__proto__' || id === 'constructor' || id === 'prototype') throw new Error(`${context} has invalid $id`)
+}
+
 /** Expand custom termCollection tws into individual member tws.
  *  Non-custom terms pass through unchanged.
  *  Returns the expanded terms array and mappings needed for reconstitution. */
@@ -24,6 +31,7 @@ export function expandCustomTermCollection(terms: any[]): { expandedTerms: any[]
 	const tcMappings: TcMapping[] = []
 	for (const tw of terms) {
 		if (tw.term?.type === 'termCollection' && tw.term.isCustom) {
+			assertSafeTermId(tw.$id, 'custom termCollection')
 			if (!tw.term.termlst?.length) throw new Error('custom termCollection has empty termlst')
 			const mapping: TcMapping = { originalTcId: tw.$id, originalTw: tw, memberMap: [] }
 			for (const mt of tw.term.termlst) {
@@ -58,7 +66,14 @@ export function reconstituteCustomTermCollection(
 				}
 			}
 			if (Object.keys(memberValues).length > 0) {
-				sampleData[mapping.originalTcId] = { key: sampleId, value: memberValues }
+				// defineProperty (not sampleData[key] = value) so a $id of '__proto__' cannot
+				// reassign sampleData's prototype instead of setting a data property
+				Object.defineProperty(sampleData, mapping.originalTcId, {
+					value: { key: sampleId, value: memberValues },
+					enumerable: true,
+					configurable: true,
+					writable: true
+				})
 			}
 		}
 	}
@@ -135,9 +150,7 @@ export function resolveTermCollectionFractions(
 }
 
 function validateFractionTw(tw: any) {
-	if (!tw.$id || typeof tw.$id !== 'string') throw new Error('fraction termCollection is missing $id')
-	if (tw.$id === '__proto__' || tw.$id === 'constructor' || tw.$id === 'prototype')
-		throw new Error('fraction termCollection has invalid $id')
+	assertSafeTermId(tw.$id, 'fraction termCollection')
 	validateTermCollectionFraction(tw.q, tw.term)
 	if (tw.q.mode === 'discrete' && tw.q.type === 'custom-bin' && !Array.isArray(tw.q.lst))
 		throw new Error('custom-bin fraction termCollection requires q.lst[]')
