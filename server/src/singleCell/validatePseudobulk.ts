@@ -220,7 +220,10 @@ export async function validatePseudobulk(ds: any) {
 			// Extract just the samples data
 			const samplesData = geneResult.samples || {}
 			// Convert the gene data to the expected format
-			const s2v = {}
+			// null-prototype: sampleId is dataset content and the values are numbers, so a
+			// sampleId of '__proto__' would otherwise be a silent no-op (assigning a primitive to
+			// '__proto__' via bracket notation creates no own property), dropping that sample's data
+			const s2v = Object.create(null)
 
 			for (const sampleName in samplesData) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)

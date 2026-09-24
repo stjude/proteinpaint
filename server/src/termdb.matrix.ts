@@ -352,7 +352,17 @@ async function getSampleData(q, ds) {
 						const bin = getBin(lstOfBins, value)
 						key = get_bin_label(lstOfBins[bin], tw.q)
 					}
-					sampleEntry[dataId] = { key, value }
+					// defineProperty (not sampleEntry[dataId] = ...): sampleEntry may be an existing,
+					// non-null-prototype row returned unchanged by getOrCreateSampleEntry() (e.g. from
+					// an uncached ds-supplied dictionary getter), and dataId comes from the query
+					// handler's term2sample2value keys, not tw.$id -- for pseudobulk with
+					// dataTypeDetails.genes, it's a raw client-supplied gene name with no reserved-name check
+					Object.defineProperty(sampleEntry, dataId, {
+						value: { key, value },
+						enumerable: true,
+						configurable: true,
+						writable: true
+					})
 				}
 			}
 		} else if (isSingleCellTerm(tw.term)) {

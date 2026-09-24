@@ -941,6 +941,33 @@ tape('getData: uses generic sample labels for non-root sample types', async t =>
 	t.end()
 })
 
+tape('getData: a non-dict term data id of __proto__ does not corrupt an existing sample row', async t => {
+	await ensureOpenAuth()
+	const dictTw = { $id: 'grp2', term: { type: 'categorical', id: 'grp2', name: 'Group' }, q: {} }
+	const expTw = geneTw() // $id: 'exp', term.type: geneExpression (non-dict)
+	const ds = makeNoDbDs()
+	// an uncached ds-supplied dictionary getter can hand back an existing, ordinary (non-null-
+	// prototype) row -- getOrCreateSampleEntry() must return it unchanged since it already exists
+	ds.cohort.termdb.dictionary.get = async () => [{ c1: { sample: 'c1', grp2: { key: 'A', value: 'A' } } }, {}]
+	// the query handler's term2sample2value key is not necessarily tw.$id (e.g. pseudobulk with
+	// dataTypeDetails.genes uses a raw, unvalidated client-supplied gene name as the key)
+	ds.queries.geneExpression.get = async () => ({ term2sample2value: new Map([['__proto__', { c1: 5 }]]) })
+
+	const data = await getData({ terms: [dictTw, expTw], filter: emptyFilter() }, ds)
+	t.notOk(data.error, 'no error')
+	t.ok(
+		Object.hasOwn(data.samples.c1, '__proto__'),
+		'stores the value under a real own __proto__ key on the existing row'
+	)
+	t.equal(data.samples.c1['__proto__'].value, 5, 'the value is retrievable rather than corrupting the row prototype')
+	t.equal(
+		data.samples.c1.grp2.key,
+		'A',
+		'the row created by the ds-supplied dictionary getter is preserved, not replaced'
+	)
+	t.end()
+})
+
 tape('getData: custom bins of a non-dict numeric term come back colored and distinct', async t => {
 	await ensureOpenAuth()
 	const tw = geneTw()
