@@ -82,6 +82,13 @@ export async function init(
 		 lets the w2 plot reuse this viewer for spatial images without the
 		 allowDirectSlidePath gate */
 		slideQuery?: string
+		/** dataset addressing (only set alongside slideQuery): lets the
+		 neighborhood-enrichment panel offer "find similar regions" against the
+		 dataset's OTHER spatial samples (termdb/wsiBySample + wsitiles/similar).
+		 Absent in direct-file mode, which has no dataset to search */
+		genome?: string
+		dslabel?: string
+		sampleId?: string
 		/** display name when slide is not given (e.g. the spatial image fileName) */
 		label?: string
 		/** = spatial_data: the consolidated spatial .h5ad, tpmasterdir-relative —
@@ -113,6 +120,11 @@ export async function init(
 		/** map div size; defaults fit the full-window direct viewer */
 		width?: string
 		height?: string
+		/** open already panned/zoomed to this niche (a wsitiles/similar result,
+		 e.g. from another sample's similar-region search) instead of the
+		 whole-slide overview, with a dashed box drawn around it. cx/cy/window
+		 are µm, the same obsm/spatial space the server computed them in */
+		focus?: { cx: number; cy: number; window: number }
 	},
 	/** d3 selection the viewer renders into */
 	holder: any
@@ -253,6 +265,27 @@ export async function init(
 		// segmentation overlays: boundary CSVs are in µm, converted to level-0
 		// pixels via the slide's mpp (defaulting to 1 = coords already in px)
 		const [mppX, mppY] = Array.isArray(meta.mpp) && meta.mpp.length === 2 ? meta.mpp : [1, 1]
+
+		// open straight to a specific niche instead of the whole-slide overview:
+		// fit its extent with margin and outline it
+		if (opts.focus) {
+			const { cx, cy, window: winSize } = opts.focus
+			const box = focusExtent(cx, cy, winSize, mppX, mppY)
+			map.getView().fit(box, { padding: [40, 40, 40, 40] })
+			const ring = [
+				[box[0], box[1]],
+				[box[2], box[1]],
+				[box[2], box[3]],
+				[box[0], box[3]],
+				[box[0], box[1]]
+			]
+			map.addLayer(
+				new VectorLayer({
+					source: new VectorSource({ features: [new Feature(new MultiPolygon([[ring]]))] }),
+					style: new Style({ stroke: new Stroke({ color: '#e08a00', width: 3, lineDash: [8, 6] }) })
+				})
+			)
+		}
 
 		// annotation_level=n: show the overlays only within the n most zoomed-in
 		// levels. OL picks the tile level with resolution <= the view resolution,
@@ -610,6 +643,10 @@ export async function init(
 								panel.selectAll('*').remove()
 								// the panel's k/permutation controls rerun on the SAME selection
 								renderNhoodHeatmap(panel, r, (k2, p2) => runNhood!(ids, k2, p2))
+								// offer to search the dataset's other spatial samples for a
+								// similarly-composed, similarly-organized region (no-op in
+								// direct-file mode, which has no dataset to search)
+								await renderSimilarSearch(panel, opts, r)
 							} catch (e: any) {
 								panel.selectAll('*').remove()
 								sayerror(panel, `Neighborhood enrichment error: ${e.message || e}`) // the lasso and viewer live on
@@ -793,6 +830,22 @@ export function parseBoundaries(
 	return cells
 }
 
+/** A `window`-µm-wide/tall box centered on (cx, cy) (µm, obsm/spatial space —
+ e.g. a wsitiles/similar result), as an OL extent [minX, minY, maxX, maxY] in
+ level-0 px: the SAME µm -> px transform parseBoundaries uses (y negated for
+ OL), so a niche's box lines up with the cell polygons drawn in the same
+ coordinate space. (exported for tests) */
+export function focusExtent(
+	cx: number,
+	cy: number,
+	window: number,
+	mppX: number,
+	mppY: number
+): [number, number, number, number] {
+	const half = window / 2
+	return [(cx - half) / mppX, -(cy + half) / mppY, (cx + half) / mppX, -(cy - half) / mppY]
+}
+
 /** One stroke-only vector layer holding every polygon; maxResolution (when
  set) hides the layer once the user zooms out beyond it.
  ponytail: all ~100k polygons in one MultiPolygon feature — switch to vector
@@ -892,6 +945,10 @@ function expressionLayer(cells: CellPoly[], counts: { [id: string]: number }, ma
 /** The wsitiles/nhood answer: one row/column per cell type, in `types` order */
 export type NhoodResult = {
 	types: string[]
+	/** typeCounts[i]: how many selected cells are of types[i] (the wsitiles/similar
+	 query's composition vector); optional here only because older test fixtures
+	 predate it — the live route always includes it */
+	typeCounts?: number[]
 	/** count[a][b]: edges from a type-a cell to a type-b neighbour */
 	count: number[][]
 	/** z-score of count vs. permuted labels; null where the permutations had no variance */
@@ -1029,4 +1086,166 @@ export function renderNhoodHeatmap(
 		position: '15,5',
 		ticks: 5
 	})
+}
+
+/** After a neighborhood-enrichment run, offer to search the DATASET's other
+ spatial samples for a region with a similar cell-type composition and
+ neighbourhood structure: wsitiles/similar coarse-scans each candidate sample
+ by cosine similarity, then confirms only the top candidates with the same
+ permutation z-score test nhood_enrichment ran on this selection. No-op in
+ direct-file mode (opts.genome/dslabel/sampleId absent — there is no dataset
+ to search). (exported for tests) */
+export async function renderSimilarSearch(
+	holder: any,
+	opts: { genome?: string; dslabel?: string; sampleId?: string },
+	/** the just-completed nhood_enrichment result: its composition/adjacency
+	 become the search query */
+	query: NhoodResult
+) {
+	if (!opts.genome || !opts.dslabel || !opts.sampleId || !query.typeCounts) return // no dataset, or nothing to search with
+	const data = await dofetch3(
+		`termdb/wsiBySample?genome=${encodeURIComponent(opts.genome)}&dslabel=${encodeURIComponent(
+			opts.dslabel
+		)}&imageType=spatial`
+	).catch(() => null)
+	const siblings = ((data?.samples || []) as { sampleId: string }[]).filter(s => s.sampleId != opts.sampleId)
+
+	const section = holder
+		.append('div')
+		.attr('data-testid', 'sjpp-wsi-similar')
+		.style('margin-top', '10px')
+		.style('padding-top', '8px')
+		.style('border-top', '1px solid #ddd')
+		.style('font', '12px system-ui')
+	if (!siblings.length) {
+		section.append('div').style('opacity', 0.7).text('No other spatial samples in this dataset to search.')
+		return
+	}
+	section.append('div').style('font-weight', 'bold').text('Find similar regions in another sample')
+	const row = section.append('div').style('margin', '4px 0')
+	const sampleSelect = row.append('select').attr('data-testid', 'sjpp-wsi-similar-sample').style('margin-right', '6px')
+	for (const s of siblings) sampleSelect.append('option').attr('value', s.sampleId).text(s.sampleId)
+	const resultsDiv = section.append('div')
+	row
+		.append('button')
+		.attr('data-testid', 'sjpp-wsi-similar-search')
+		.text('Search')
+		.on('click', async () => {
+			const sampleId = sampleSelect.property('value')
+			resultsDiv.selectAll('*').remove()
+			resultsDiv.append('div').text(`Searching ${sampleId} …`)
+			try {
+				// the target's own spatial image + consolidated h5ad (wsitiles/similar
+				// reads only this file — the query travels as data, not a path)
+				const imgData = await dofetch3(
+					`termdb/wsiBySample?genome=${encodeURIComponent(opts.genome!)}&dslabel=${encodeURIComponent(
+						opts.dslabel!
+					)}&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial`
+				)
+				const image = (imgData?.images || []).find((im: any) => im.type == 'spatial' && im.spatialData)
+				if (!image) throw new Error(`${sampleId} has no spatial image with cell data`)
+				const targetParams =
+					`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${encodeURIComponent(opts.dslabel!)}` +
+					`&genome=${encodeURIComponent(opts.genome!)}&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial`
+				const r = await dofetch3(`wsitiles/similar?${targetParams}`, {
+					method: 'POST', // the query signature (typeCounts/count/zscore matrices) travels in the body
+					body: {
+						file: image.spatialData,
+						types: query.types,
+						typeCounts: query.typeCounts,
+						count: query.count,
+						zscore: query.zscore
+					}
+				})
+				if (!r || r.error) throw new Error(r?.error || 'similarity search failed')
+				resultsDiv.selectAll('*').remove()
+				if (!r.windows?.length) {
+					resultsDiv.append('div').text(`No matching regions found in ${sampleId} (${r.scanned} windows scanned).`)
+					return
+				}
+				resultsDiv
+					.append('div')
+					.style('opacity', 0.7)
+					.style('margin-bottom', '4px')
+					.text(
+						`${sampleId}: top ${r.windows.length} of ${r.scanned} windows scanned, ranked by similarity — click a row to view it`
+					)
+				const tableDiv = resultsDiv.append('div')
+				const nicheDiv = resultsDiv
+					.append('div')
+					.attr('data-testid', 'sjpp-wsi-similar-niche')
+					.style('margin-top', '10px')
+				renderTable({
+					div: tableDiv,
+					columns: [
+						{ label: '#' },
+						{ label: 'Cells' },
+						{ label: 'Cheap score' },
+						{ label: 'Distance' },
+						{ label: 'Center (x, y)' }
+					],
+					rows: r.windows.map((w: any, i: number) => [
+						{ value: String(i + 1) },
+						{ value: String(w.cells) },
+						{ value: w.cheapScore.toFixed(3) },
+						{ value: w.distance == null ? 'n/a' : w.distance.toFixed(3) },
+						{ value: `${w.cx.toFixed(0)}, ${w.cy.toFixed(0)}` }
+					]),
+					singleMode: true,
+					noRadioBtn: true, // whole row is the click target, no visible selector column
+					noButtonCallback: async (rowIdx: number) => {
+						const w = r.windows[rowIdx]
+						nicheDiv.selectAll('*').remove()
+						nicheDiv
+							.append('div')
+							.style('font-weight', 'bold')
+							.text(`${sampleId} — niche #${rowIdx + 1}`)
+						const mapDiv = nicheDiv.append('div')
+						// re-enter this same module's viewer, addressed at the target
+						// image, panned/zoomed to this window (opts.focus) with its
+						// outline drawn — a small self-contained map, not tied into the
+						// mass app's sample table/state
+						await init(
+							{
+								slideQuery: targetParams,
+								spatialData: image.spatialData,
+								label: `${sampleId} — niche #${rowIdx + 1}`,
+								hideNucleusStrokes: true, // keep the preview lightweight
+								showCellTypes: true, // the point of the preview is comparing cell-type composition by eye
+								focus: { cx: w.cx, cy: w.cy, window: r.window },
+								width: '100%',
+								height: '45vh'
+							},
+							mapDiv
+						)
+						// the window's own enrichment matrix travels with the similar
+						// search response already (the rigorous-confirmation stage) — no
+						// extra request needed; side by side with the ORIGINAL heatmap
+						// (still shown above, in `panel`) this is the actual point of the
+						// search: comparing the two niches' neighbourhood structure
+						const heatmapDiv = nicheDiv.append('div').style('margin-top', '8px') // own container: its ✕ shouldn't remove the map above it
+						if (w.zscore) {
+							renderNhoodHeatmap(heatmapDiv, {
+								types: r.types,
+								count: w.count,
+								zscore: w.zscore,
+								cells: w.cells,
+								skipped: 0,
+								k: r.k,
+								perms: r.perms
+							})
+						} else {
+							// the per-window budget guard (server/src/routes/wsitiles.ts
+							// mirrors this in wsi_tile.py) skipped confirming this window
+							heatmapDiv
+								.style('opacity', 0.7)
+								.text('This window was too large to confirm within the permutation-test budget.')
+						}
+					}
+				})
+			} catch (e: any) {
+				resultsDiv.selectAll('*').remove()
+				sayerror(resultsDiv, `Similar-region search error: ${e.message || e}`)
+			}
+		})
 }
