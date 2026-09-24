@@ -733,6 +733,28 @@ export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
 	}
 }
 
+// Returns samples[sampleId], creating it as a null-prototype own property first if needed.
+// sample id and term id here come from database/dataset content (a SQL row's sample column,
+// a dataset-supplied dictionary.get()/getAdHocTermValues() getter, ds.termid2sample2value), not
+// directly from the client request, but nothing validates that content against reserved names.
+// A sample id of '__proto__' would otherwise make the read resolve to the real Object.prototype
+// instead of undefined, and the term data written under it -- even a perfectly ordinary tw.$id --
+// would land on that same global object. Using Object.hasOwn (not a truthy read) and
+// Object.defineProperty (not samples[id] = ...) keeps this safe regardless of whether the
+// samples map itself happens to be null-prototype, and the per-sample entry it creates is also
+// null-prototype so a term id of '__proto__' can't do the same thing one level down.
+function getOrCreateSampleEntry(samples: Record<string, any>, sampleId: string, initProps: Record<string, any> = {}) {
+	if (!Object.hasOwn(samples, sampleId)) {
+		Object.defineProperty(samples, sampleId, {
+			value: Object.assign(Object.create(null), initProps),
+			enumerable: true,
+			configurable: true,
+			writable: true
+		})
+	}
+	return samples[sampleId]
+}
+
 /*
 input:
 
@@ -752,7 +774,7 @@ output:
 ]
 */
 async function getSampleData_dictionaryTerms(q, termWrappers) {
-	if (!termWrappers.length) return [{}, {}]
+	if (!termWrappers.length) return [Object.create(null), {}]
 	// distinguish between dictionary terms with cached or uncached data
 	const cachedTermWrappers: any[] = []
 	const uncachedTermWrappers: any[] = []
@@ -769,7 +791,7 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 }
 
 async function getSampleData_dictionaryTerms_uncached(q, termWrappers) {
-	if (!termWrappers.length) return [{}, {}]
+	if (!termWrappers.length) return [Object.create(null), {}]
 	if (q.ds?.cohort?.db) {
 		// dataset uses server-side sqlite db, must use this method for dictionary terms
 		return await getSampleData_dictionaryTerms_termdb(q, termWrappers)
@@ -785,7 +807,7 @@ async function getSampleData_dictionaryTerms_uncached(q, termWrappers) {
 	throw 'unknown method for dictionary terms'
 }
 
-async function getSampleData_dictionaryTerms_cached(q, termWrappers, samples, byTermId) {
+export async function getSampleData_dictionaryTerms_cached(q, termWrappers, samples, byTermId) {
 	for (const tw of termWrappers) {
 		const sample2value = q.ds.termid2sample2value.get(tw.term.id)
 		const limitSamples = await mayLimitSamples(q, [...sample2value.keys()], q.ds)
@@ -796,15 +818,15 @@ async function getSampleData_dictionaryTerms_cached(q, termWrappers, samples, by
 		}
 		for (const [sample, value] of sample2value) {
 			if (limitSamples && !limitSamples.has(sample)) continue
-			if (!samples[sample]) samples[sample] = { sample }
-			if (samples[sample][tw.$id]) throw 'should not have multiple values for sample'
+			const sampleEntry = getOrCreateSampleEntry(samples, sample, { sample })
+			if (sampleEntry[tw.$id]) throw 'should not have multiple values for sample'
 			let key = value
 			if (lstOfBins) {
 				// term is in binning mode, key should be bin label
 				const bin = getBin(lstOfBins, value)
 				key = get_bin_label(lstOfBins[bin], tw.q)
 			}
-			samples[sample][tw.$id] = { key, value }
+			sampleEntry[tw.$id] = { key, value }
 		}
 	}
 }
@@ -940,7 +962,7 @@ export async function getSamples(q, rows, termWrappers) {
 			.map(tw => tw.$id)
 	)
 
-	const samples = {} // to return
+	const samples = Object.create(null) // to return
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
 	for (const { sample, key, term_id, value } of rows) {
@@ -948,23 +970,23 @@ export async function getSamples(q, rows, termWrappers) {
 			// this sample is not mutated for given genes
 			continue
 		}
-		if (!samples[sample]) samples[sample] = { sample }
+		const sampleEntry = getOrCreateSampleEntry(samples, sample, { sample })
 		const v = tw$idsWithJson.has(term_id) && typeof value == 'string' ? JSON.parse(value) : value
 		// this assumes unique term key/value for a given sample
-		// samples[sample][term_id] = { key, value }
-		if (!samples[sample][term_id]) {
+		// sampleEntry[term_id] = { key, value }
+		if (!sampleEntry[term_id]) {
 			// first value of term for a sample
-			samples[sample][term_id] = { key, value: v }
+			sampleEntry[term_id] = { key, value: v }
 		} else {
 			// samples has multiple values for a term
 			// convert to .values[]
-			if (!samples[sample][term_id].values) {
-				const firstvalue = samples[sample][term_id] // first term value of the sample
+			if (!sampleEntry[term_id].values) {
+				const firstvalue = sampleEntry[term_id] // first term value of the sample
 				if (firstvalue.key === key && firstvalue.value === v) continue // duplicate
-				samples[sample][term_id] = { values: [firstvalue] } // convert to object with .values[]
+				sampleEntry[term_id] = { values: [firstvalue] } // convert to object with .values[]
 			}
 			// add next term value to .values[]
-			samples[sample][term_id].values.push({ key, value: v })
+			sampleEntry[term_id].values.push({ key, value: v })
 		}
 	}
 	return samples

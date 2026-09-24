@@ -2,6 +2,8 @@ import tape from 'tape'
 import {
 	divideTerms,
 	getData,
+	getSamples,
+	getSampleData_dictionaryTerms_cached,
 	getSampleData_dictionaryTerms_termdb,
 	id2sampleRef,
 	setSampleLstData,
@@ -189,6 +191,47 @@ tape(
 		} catch (e) {
 			t.ok(String(e).includes('invalid $id'), 'rejects a non-string $id that would coerce to a reserved key')
 		}
+		t.end()
+	}
+)
+
+// The sample id here comes from a SQL row's `sample` column (dataset content, not the client
+// request), but nothing guarantees it can never be '__proto__'. Both getSamples() and
+// getSampleData_dictionaryTerms_cached() index a plain samples{} map by this value, which is
+// the exact read-through-then-write shape that caused the original prototype pollution bug --
+// just keyed by sample id instead of term $id.
+tape('getSamples: a sample id of __proto__ does not pollute Object.prototype', async t => {
+	const rows = [{ sample: '__proto__', key: 'k1', term_id: 'agedx', value: 42 }]
+	const samples = await getSamples({}, rows, [])
+	t.ok(Object.hasOwn(samples, '__proto__'), 'stores the sample as a real own __proto__ key')
+	t.equal(samples['__proto__'].agedx.value, 42, 'the term value is stored under the correct sample entry')
+	t.notOk({}.agedx, 'does not pollute Object.prototype')
+	t.end()
+})
+
+tape('getSamples: a term id of __proto__ is stored as real per-sample data, not a prototype reassignment', async t => {
+	const rows = [{ sample: 's1', key: 'k1', term_id: '__proto__', value: 99 }]
+	const samples = await getSamples({}, rows, [])
+	t.ok(Object.hasOwn(samples.s1, '__proto__'), 'stores the term value as a real own __proto__ key on the sample')
+	t.equal(samples.s1['__proto__'].value, 99, 'the value is retrievable rather than lost to a prototype swap')
+	t.notOk({}.key, 'does not pollute Object.prototype')
+	t.end()
+})
+
+tape(
+	'getSampleData_dictionaryTerms_cached: a sample id of __proto__ does not pollute Object.prototype, even given a plain samples map',
+	async t => {
+		const tw = { $id: 'agedx', term: { id: 'agedx' } }
+		const ds = { termid2sample2value: new Map([['agedx', new Map([['__proto__', 42]])]]) }
+		const q = { ds }
+		// a plain {} (not the null-prototype map our own code creates) simulates what a
+		// dataset-supplied dictionary.get()/getAdHocTermValues() getter could hand this function
+		const samples = {}
+		const byTermId = {}
+		await getSampleData_dictionaryTerms_cached(q, [tw], samples, byTermId)
+		t.ok(Object.hasOwn(samples, '__proto__'), 'stores the sample as a real own __proto__ key')
+		t.equal(samples['__proto__'].agedx.value, 42, 'the term value is stored under the correct sample entry')
+		t.notOk({}.agedx, 'does not pollute Object.prototype')
 		t.end()
 	}
 )
