@@ -1,5 +1,10 @@
 import tape from 'tape'
-import { resolveTermCollectionFractions } from '../termdb.termCollection.ts'
+import {
+	resolveTermCollectionFractions,
+	expandCustomTermCollection,
+	reconstituteCustomTermCollection,
+	isReservedTermId
+} from '../termdb.termCollection.ts'
 import { getTwByIndex } from '../termdb.twFromRequest.ts'
 
 function fractionTw(mode: 'continuous' | 'discrete' = 'continuous') {
@@ -83,6 +88,69 @@ tape('resolveTermCollectionFractions() computes regular bins from fraction value
 	test.ok(data.refs.byTermId.collection.bins.length >= 2, 'publishes computed regular bins')
 	test.end()
 })
+
+tape('isReservedTermId() rejects reserved, inherited, and non-string $id values', test => {
+	test.ok(isReservedTermId('__proto__'), 'rejects __proto__')
+	test.ok(isReservedTermId('constructor'), 'rejects constructor')
+	test.ok(isReservedTermId('prototype'), 'rejects prototype')
+	test.ok(isReservedTermId('toString'), 'rejects an inherited Object.prototype member name')
+	test.ok(isReservedTermId(['__proto__']), 'rejects a non-string id that would coerce to a dangerous key')
+	test.notOk(isReservedTermId('agedx'), 'allows an ordinary $id')
+	test.notOk(isReservedTermId(undefined), 'allows a missing $id so callers can fall back to term.id/term.name')
+	test.end()
+})
+
+tape('resolveTermCollectionFractions() rejects a fraction tw with a reserved $id', test => {
+	const data: any = { samples: { s1: { collection: { value: { a: 1, b: 1 } } } }, refs: { byTermId: {} } }
+	const tw = fractionTw()
+	tw.$id = '__proto__'
+	test.throws(() => resolveTermCollectionFractions(data, [tw]), /invalid \$id/, 'throws instead of writing through $id')
+	test.notOk((data.refs.byTermId as any).bins, 'does not pollute Object.prototype')
+	test.end()
+})
+
+tape('expandCustomTermCollection() rejects a custom termCollection with a reserved $id', test => {
+	const tw = {
+		$id: '__proto__',
+		term: { type: 'termCollection', isCustom: true, termlst: [{ id: 'a' }, { id: 'b' }] },
+		q: {}
+	}
+	test.throws(() => expandCustomTermCollection([tw]), /invalid \$id/, 'throws before any member expansion happens')
+	test.end()
+})
+
+tape(
+	'reconstituteCustomTermCollection() stores a member named __proto__ as real data, not a prototype reassignment',
+	test => {
+		const tw = {
+			$id: 'collection',
+			term: { type: 'termCollection', isCustom: true, termlst: [{ id: '__proto__' }, { id: 'b' }] },
+			q: {}
+		}
+		const { tcMappings } = expandCustomTermCollection([tw])
+		const data: any = {
+			samples: {
+				s1: {
+					__collection____proto__: { key: 5, value: 5 },
+					__collection__b: { key: 7, value: 7 }
+				}
+			}
+		}
+		reconstituteCustomTermCollection(data, tcMappings)
+		test.deepEqual(
+			Object.keys(data.samples.s1.collection.value).sort(),
+			['__proto__', 'b'],
+			'both members are stored as real own properties'
+		)
+		test.equal(data.samples.s1.collection.value['__proto__'], 5, 'the __proto__-named member keeps its own value')
+		test.equal(
+			Object.getPrototypeOf(data.samples.s1),
+			Object.prototype,
+			"the sample object's own prototype is untouched"
+		)
+		test.end()
+	}
+)
 
 tape('a request reconstructs a fraction collection wrapper with its wrapper type', test => {
 	const q: any = {

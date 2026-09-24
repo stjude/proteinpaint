@@ -157,6 +157,19 @@ tape('divideTerms: assigns $id from term.name if id missing', t => {
 	t.end()
 })
 
+tape('divideTerms: rejects a reserved $id', t => {
+	const term = { $id: '__proto__', term: { type: 'dict', id: 'd2' } }
+	t.throws(() => divideTerms({ terms: [term] }, emptyDs), /invalid \$id/, 'throws instead of assigning a reserved $id')
+	t.end()
+})
+
+tape('getData: rejects a term wrapper whose $id is a non-string that coerces to a reserved key', async t => {
+	const tw = { $id: ['__proto__'], term: { id: 'agedx', name: 'Age', type: 'float' }, q: { mode: 'continuous' } }
+	const result = await getData({ terms: [tw] }, { cohort: { db: null, termdb: {} } })
+	t.ok(result.error, 'returns an error instead of writing through the coerced key')
+	t.end()
+})
+
 tape('divideTerms: drops role-restricted dict terms via isTermVisible', t => {
 	const visible = { term: { type: 'categorical', id: 'ok' } }
 	const hidden = { term: { type: 'categorical', id: 'blocked' } }

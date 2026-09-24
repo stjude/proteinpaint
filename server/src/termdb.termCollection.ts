@@ -73,7 +73,10 @@ export function reconstituteCustomTermCollection(
 	if (!tcMappings.length || !data?.samples) return
 	for (const [sampleId, sampleData] of Object.entries(data.samples)) {
 		for (const mapping of tcMappings) {
-			const memberValues: Record<string, number> = {}
+			// null-prototype: memberId comes from the client-supplied termlst (mt.id || mt.name),
+			// so a member named '__proto__' must not be able to reassign this map's prototype
+			// instead of setting an own value
+			const memberValues: Record<string, number> = Object.create(null)
 			for (const { expandedId, memberId } of mapping.memberMap) {
 				const entry = sampleData[expandedId]
 				if (entry != null) {
