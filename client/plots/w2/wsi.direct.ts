@@ -1147,20 +1147,33 @@ export async function renderSimilarSearch(
 		.style('margin', '0 2px')
 		.property('value', 10)
 	row.append('span').text('%')
-	// which of the query's own types a candidate MUST contain at least one
-	// cell of, on top of (not instead of) the composition/size matching;
-	// none checked by default = no such requirement
+	// per-type controls: which types a candidate MUST contain at least one
+	// cell of (hard gate, unchecked by default = no requirement), and how
+	// much each type counts toward the cheap-score comparison (soft emphasis,
+	// weight 1 = default/no effect; a required type can still carry any
+	// weight — the two are independent knobs, not a spectrum of one setting)
 	const typesRow = section.append('div').style('margin', '2px 0 4px 0').style('opacity', 0.85)
-	typesRow.append('span').style('margin-right', '6px').text('require cell type(s) present:')
-	const requiredChecks: { type: string; input: any }[] = query.types.map(t => {
-		const label = typesRow.append('label').style('margin-right', '10px').style('cursor', 'pointer')
-		const input = label
+	typesRow.append('div').text('per cell type: require present, and/or weight its importance in the match score')
+	const typeControls: { type: string; required: any; weight: any }[] = query.types.map(t => {
+		const line = typesRow.append('div').style('margin', '2px 0').style('display', 'flex').style('align-items', 'center')
+		const label = line.append('label').style('cursor', 'pointer').style('margin-right', '10px')
+		const required = label
 			.append('input')
 			.attr('type', 'checkbox')
 			.attr('data-testid', `sjpp-wsi-similar-required-${t}`)
 			.property('checked', false)
-		label.append('span').style('margin-left', '2px').text(t)
-		return { type: t, input }
+		label.append('span').style('margin-left', '2px').text(`require ${t}`)
+		line.append('span').style('margin', '0 4px 0 12px').text('weight')
+		const weight = line
+			.append('input')
+			.attr('data-testid', `sjpp-wsi-similar-weight-${t}`)
+			.attr('type', 'number')
+			.attr('min', 0)
+			.attr('max', 10)
+			.attr('step', 0.5)
+			.style('width', '4em')
+			.property('value', 1)
+		return { type: t, required, weight }
 	})
 	const resultsDiv = section.append('div')
 	row
@@ -1173,7 +1186,8 @@ export async function renderSimilarSearch(
 			const searchingSameSample = sampleId == opts.sampleId
 			// percent in the UI, fraction over the wire (route clamps to 0-5, i.e. 0-500%)
 			const sizeTolerance = Math.max(0, Number(toleranceInput.property('value')) || 0) / 100
-			const requiredTypes = requiredChecks.filter(c => c.input.property('checked')).map(c => c.type)
+			const requiredTypes = typeControls.filter(c => c.required.property('checked')).map(c => c.type)
+			const typeWeights = typeControls.map(c => Math.max(0, Number(c.weight.property('value')) || 0))
 			resultsDiv.selectAll('*').remove()
 			resultsDiv.append('div').text(`Searching ${sampleId} …`)
 			try {
@@ -1199,6 +1213,7 @@ export async function renderSimilarSearch(
 						zscore: query.zscore,
 						sizeTolerance,
 						requiredTypes,
+						typeWeights,
 						// only meaningful (and only sent) when searching the SAME sample:
 						// cell ids are per-sample, so applying them cross-sample risks
 						// coincidentally excluding unrelated cells that happen to share an id
@@ -1208,7 +1223,16 @@ export async function renderSimilarSearch(
 				if (!r || r.error) throw new Error(r?.error || 'similarity search failed')
 				resultsDiv.selectAll('*').remove()
 				const pct = (r.sizeTolerance * 100).toFixed(0)
-				const reqSuffix = r.requiredTypes?.length ? `, must contain: ${r.requiredTypes.join(', ')}` : ''
+				const weighted = (r.typeWeights || []).some((w: number, i: number) => w != 1 && r.types[i])
+				const weightSuffix = weighted
+					? `, weighted: ${r.types
+							.map((t: string, i: number) => [t, r.typeWeights[i]])
+							.filter(([, w]: [string, number]) => w != 1)
+							.map(([t, w]: [string, number]) => `${t}×${w}`)
+							.join(', ')}`
+					: ''
+				const reqSuffix =
+					(r.requiredTypes?.length ? `, must contain: ${r.requiredTypes.join(', ')}` : '') + weightSuffix
 				if (!r.windows?.length) {
 					resultsDiv
 						.append('div')
