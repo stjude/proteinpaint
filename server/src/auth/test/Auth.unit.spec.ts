@@ -878,6 +878,47 @@ tape('mayAddSessionFromJwt: a dslabel of __proto__ does not pollute Object.proto
 	test.end()
 })
 
+tape(
+	'mayAddSessionFromJwt: a cache hit resolved through Object.prototype is not trusted without real JWT verification',
+	function (test) {
+		test.timeoutAfter(500)
+		test.plan(1)
+
+		// getSessionIdFromJwt() returns the last 20 chars of the raw, unverified token (or the whole
+		// token if shorter), so a short token lets an id be chosen directly -- simulating an unrelated
+		// earlier bug having already polluted Object.prototype with a fake, "verified"-looking payload
+		// under that same id
+		const forgedId = 'forged-session-id-12' // exactly 20 chars
+		const auth = makeAuth()
+		const cred = auth.creds[dslabel].termdb[embedder]
+		;(Object.prototype as any)[forgedId] = {
+			dslabel: '__proto__',
+			embedder,
+			route: 'termdb',
+			ip: '127.0.0.1',
+			time: Date.now()
+		}
+		try {
+			// a plain {} sessions map, and dslabel = '__proto__', so sessions[dslabel] would resolve
+			// to Object.prototype on a naive read -- the fix must check ownership before trusting it
+			const sessions: any = {}
+			const req = {
+				headers: { authorization: `Bearer ${Buffer.from(forgedId).toString('base64')}` },
+				query: { dslabel: '__proto__', embedder },
+				path: '/termdb'
+			}
+			const id = auth.mayAddSessionFromJwt(sessions, req, cred)
+			// the forged payload was never actually signed, so forcing real jsonwebtoken.verify()
+			// must fail and mayAddSessionFromJwt's own catch block returns undefined -- it must not
+			// grant a session straight from the polluted cache entry
+			test.equal(id, undefined, 'does not grant a session from the polluted cache entry without real JWT verification')
+		} finally {
+			delete (Object.prototype as any)[forgedId]
+		}
+		test.end()
+	}
+)
+
 tape('mayAddSessionFromJwt: matches the signed route under a configured basepath', function (test) {
 	test.timeoutAfter(500)
 

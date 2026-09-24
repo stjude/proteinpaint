@@ -2,6 +2,23 @@ import { getBin } from '#shared/terms.js'
 import { get_bin_label, compute_bins, assignBinColors } from '#shared/termdb.bins.js'
 import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE } from '#types'
 
+// Mirrors getOrCreateSampleEntry() in termdb.matrix.ts (duplicated here rather than imported,
+// since termdb.matrix.ts already imports from this file and importing back would be circular).
+// cellId/sampleId here come from single-cell dataset content, not validated against reserved
+// names, so a truthy read/direct assignment on the shared samples{} map could otherwise resolve
+// or write through Object.prototype.
+function getOrCreateSampleEntry(samples: any, sampleId: string, initProps: Record<string, any> = {}) {
+	if (!Object.hasOwn(samples, sampleId)) {
+		Object.defineProperty(samples, sampleId, {
+			value: Object.assign(Object.create(null), initProps),
+			enumerable: true,
+			configurable: true,
+			writable: true
+		})
+	}
+	return samples[sampleId]
+}
+
 /* Annotates termdb.matrix.js samples{} with single cell term data.
 
 Single cell data is unique. Cells, not samples, are displayed, so every single cell term resolves to
@@ -93,11 +110,12 @@ export async function annotateSingleCellTerm(q: any, tw: any, samples: any, byTe
 
 	for (const cell of cells) {
 		const cellId = cell.cellId
-		if (!(cellId in samples)) {
+		if (!Object.hasOwn(samples, cellId)) {
 			const entry = getSingleCellSampleEntry(samples, ds, tw, cell, filteredSamples)
 			if (!entry) continue // cell is filtered out based on cohort level term filter
-			samples[cellId] = entry
+			getOrCreateSampleEntry(samples, cellId, entry)
 		}
+		const sampleEntry = samples[cellId]
 		let value = cell.value
 		let key = value
 		if (bins) {
@@ -106,7 +124,7 @@ export async function annotateSingleCellTerm(q: any, tw: any, samples: any, byTe
 			const group = groups.find(g => Object.values(g.values).find((v: any) => v.key == value))
 			if (group) value = key = group.name
 		}
-		samples[cellId][tw.$id] = { value, key }
+		sampleEntry[tw.$id] = { value, key }
 	}
 }
 
@@ -124,9 +142,9 @@ function getListOfBins(tw: any): any[] {
 	return assignBinColors(tw.q.lst.map((bin: any) => ({ ...bin })))
 }
 
-/****** The next three functions are helpers for getData(). Together, they format the results from 
- * the getters into the ValidGetDataResponse obj created by getData().  
- * 
+/****** The next three functions are helpers for getData(). Together, they format the results from
+ * the getters into the ValidGetDataResponse obj created by getData().
+ *
  * The samples{} row for a cell: the cohort sample's data, when the cell maps to one. */
 function getSingleCellSampleEntry(samples: any, ds: any, tw: any, _cell: CellValue, filteredSamples: Set<any>) {
 	const sampleId = getSampleId4Cell(ds, tw, _cell, filteredSamples)
@@ -179,7 +197,9 @@ export function hydrateMetaResultCellRows(samples: any): void {
 		if (!parentRow) continue
 		for (const [termId, value] of Object.entries(parentRow)) {
 			if (termId == 'sample' || termId == 'sampleId') continue
-			if (!(termId in row)) row[termId] = value
+			// Object.hasOwn (not `in`): row is expected to be null-prototype by construction, but
+			// this stays correct even if that ever changes
+			if (!Object.hasOwn(row, termId)) row[termId] = value
 		}
 	}
 }

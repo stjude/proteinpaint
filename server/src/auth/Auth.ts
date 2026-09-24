@@ -443,7 +443,14 @@ export class Auth {
 		const id = this.getSessionIdFromJwt(token)
 		try {
 			const { secret } = getApplicableSecret(req.headers, cred, token)
-			const payload = sessions[dslabel]?.[id] || jsonwebtoken.verify(token, secret)
+			// id is attacker-controlled (the last 20 chars of the raw, unverified token -- or the
+			// whole token if shorter), so an own-property check is required on both levels: a
+			// naive sessions[dslabel]?.[id] read-through would let dslabel/id of '__proto__' (or
+			// any other name colliding with something already on Object.prototype) resolve to an
+			// inherited value and skip jsonwebtoken.verify() entirely, bypassing signature checking
+			const cachedPayload =
+				Object.hasOwn(sessions, dslabel) && Object.hasOwn(sessions[dslabel], id) ? sessions[dslabel][id] : undefined
+			const payload = cachedPayload || jsonwebtoken.verify(token, secret)
 			// signed payload dataset must match the requested dataset
 			if (payload.dslabel) {
 				if (payload.dslabel != dslabel) return

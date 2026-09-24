@@ -833,8 +833,11 @@ tape('getData: samplelst overlay resolves on a dataset without a sqlite db', asy
 	// the original bug: samplelst reached the ds dictionary getter, which cannot know the term,
 	// so every sample came back without a group and the overlay matched nothing
 	t.deepEqual(dictCalls, [], 'the samplelst term is never handed to the dictionary getter')
+	// spread to a plain object first: data.samples.c1 is intentionally null-prototype
+	// (see getOrCreateSampleEntry()), which deepEqual treats as unequal to a {} literal
+	// even with identical own properties
 	t.deepEqual(
-		data.samples.c1,
+		{ ...data.samples.c1 },
 		{ sample: 'c1', exp: { key: 5, value: 5 }, grp: { key: 'Male', value: 'Male' } },
 		'a sample carries both its expression value and its group'
 	)

@@ -129,7 +129,9 @@ export function expandNumericTermCollection(q: ViolinBoxRequest & ReqQueryAddons
 	}
 
 	// Expand: one virtual sample per (sample × member term) with a plain numeric value
-	const newSamples: Record<string, any> = {}
+	// null-prototype: keyed by `${sampleId}__${memberId}`, and memberId comes from the
+	// client-supplied termlst with no reserved-name check of its own, unlike the collection's tw.$id
+	const newSamples: Record<string, any> = Object.create(null)
 	for (const [sampleId, sampleData] of Object.entries(data.samples)) {
 		const tcEntry = (sampleData as any)[tcId]
 		const memberValues = tcEntry?.value

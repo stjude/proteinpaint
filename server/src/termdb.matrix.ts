@@ -274,17 +274,17 @@ async function getSampleData(q, ds) {
 			const sampleGTs = await getSnpData(tw, q)
 			const groupset = get_active_groupset(tw.term, tw.q)
 			for (const s of sampleGTs) {
-				if (!(s.sample_id in samples)) samples[s.sample_id] = { sample: s.sample_id }
+				const sampleEntry = getOrCreateSampleEntry(samples, s.sample_id, { sample: s.sample_id })
 				if (groupset) {
 					// groupsetting is active
 					const group = groupset.groups.find(group => {
 						return group.values.map(v => v.key).includes(s.gt)
 					})
 					if (!group) throw 'unable to assign sample to group'
-					samples[s.sample_id][tw.$id] = { key: group.name, value: group.name }
+					sampleEntry[tw.$id] = { key: group.name, value: group.name }
 				} else {
 					// groupsetting is not active
-					samples[s.sample_id][tw.$id] = { key: s.gt, value: s.gt }
+					sampleEntry[tw.$id] = { key: s.gt, value: s.gt }
 				}
 			}
 		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
@@ -296,13 +296,13 @@ async function getSampleData(q, ds) {
 			for (const [sampleId, value] of _samples) {
 				if (sampleFilterSet && !sampleFilterSet.has(sampleId)) continue // filter in use and this sample not in filter
 
-				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				const sampleEntry = getOrCreateSampleEntry(samples, sampleId, { sample: sampleId })
 
-				// convert value.id2value Map to an object
-				const snp2value = {}
+				// convert value.id2value Map to an object; snp ids are dataset content too, so null-prototype here as well
+				const snp2value = Object.create(null)
 				for (const [snp, o] of value.id2value) snp2value[snp] = o.value
 
-				samples[sampleId][tw.$id] = snp2value
+				sampleEntry[tw.$id] = snp2value
 			}
 		} else if (
 			tw.term.type == GENE_EXPRESSION ||
@@ -343,7 +343,7 @@ async function getSampleData(q, ds) {
 			const data = await queryHandler.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
 			for (const [dataId, values] of data.term2sample2value) {
 				for (const sampleId in values) {
-					if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+					const sampleEntry = getOrCreateSampleEntry(samples, sampleId, { sample: sampleId })
 					if (!Number.isFinite(values[sampleId])) continue // skip non-numeric values
 					const value = Number(values[sampleId])
 					let key = value
@@ -352,7 +352,7 @@ async function getSampleData(q, ds) {
 						const bin = getBin(lstOfBins, value)
 						key = get_bin_label(lstOfBins[bin], tw.q)
 					}
-					samples[sampleId][dataId] = { key, value }
+					sampleEntry[dataId] = { key, value }
 				}
 			}
 		} else if (isSingleCellTerm(tw.term)) {
@@ -436,8 +436,8 @@ function twlstGeneCountReducer(sum, tw) {
 async function setGeneVariantDataForTw(q, tw, samples) {
 	const data = await q.ds.mayGetGeneVariantData(tw, q)
 	for (const [sampleId, value] of data.entries()) {
-		if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
-		samples[sampleId][tw.$id] = value[tw.$id]
+		const sampleEntry = getOrCreateSampleEntry(samples, sampleId, { sample: sampleId })
+		sampleEntry[tw.$id] = value[tw.$id]
 	}
 }
 
