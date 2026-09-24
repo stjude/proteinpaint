@@ -721,6 +721,89 @@ tape('AuthApi.getNonsensitiveInfo: returns clientAuthResult from active session'
 	test.end()
 })
 
+tape('AuthApi.getNonsensitiveInfo: returns forbidden routes for glob dslabel and embedder keys', function (test) {
+	test.timeoutAfter(500)
+
+	const creds: any = {
+		'realD*': {
+			termdb: {
+				'*.example.org': makeShapedCred({ dslabel: 'realD*' })
+			},
+			burden: {
+				'*.example.org': makeShapedCred({ dslabel: 'realD*', route: 'burden', type: 'forbidden' })
+			}
+		}
+	}
+	const authApi = new AuthApi(creds, makeMockApp(), {}, { port: 3000, cachedir: '/tmp' })
+	const getReq = (dslabel, embedder) => ({ query: { dslabel, embedder }, headers: {}, cookies: {} })
+
+	test.deepEqual(
+		authApi.getNonsensitiveInfo(getReq('realDs1', 'portal.example.org') as any),
+		{ forbiddenRoutes: ['burden'], clientAuthResult: {} },
+		'should include a forbidden route for glob-matched dslabel and embedder keys'
+	)
+	test.deepEqual(
+		authApi.getNonsensitiveInfo(getReq('realDs1', 'other.org') as any).forbiddenRoutes,
+		[],
+		'should not include a forbidden route when the embedder does not match the glob key'
+	)
+	test.deepEqual(
+		authApi.getNonsensitiveInfo(getReq('otherDs', 'portal.example.org') as any),
+		{ forbiddenRoutes: [], clientAuthResult: {} },
+		'should return open access when the dslabel does not match the glob key'
+	)
+	test.end()
+})
+
+tape('AuthApi.getNonsensitiveInfo: returns clientAuthResult for glob dslabel and embedder keys', async function (test) {
+	test.timeoutAfter(1000)
+
+	const clientAuthResult = { role: 'user', access: 'full' }
+	const loginToken = jsonwebtoken.sign(
+		{ iat: time, exp: time + 300, ip: '127.0.0.1', email: 'user@test.com', clientAuthResult },
+		secret
+	)
+	const creds: any = {
+		'realD*': {
+			termdb: {
+				'*.example.org': makeShapedCred({ dslabel: 'realD*' })
+			}
+		}
+	}
+	const app = makeMockApp()
+	const serverconfig = { port: 3000, cachedir: '/tmp' }
+	const authApi = new AuthApi(creds, app, {}, serverconfig)
+	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
+	const query = { dslabel: 'realDs1', embedder: 'portal.example.org' }
+
+	// establish a session
+	let sessionCookieId = ''
+	let sessionId = ''
+	await new Promise<void>(resolve => {
+		const req = { query, headers: { [headerKey]: loginToken }, path: '/jwt-status', ip: '127.0.0.1', cookies: {} }
+		const res = {
+			send() {
+				resolve()
+			},
+			header(_key: string, val: string) {
+				if (_key === 'Set-Cookie') [sessionCookieId, sessionId] = val.split(';')[0].split('=')
+			},
+			status() {}
+		}
+		app.routes['/jwt-status'].post(req, res)
+	})
+	await sleep(50)
+
+	test.ok(sessionId, 'should establish a session for glob-matched dslabel and embedder keys')
+	const req = { query, headers: {}, cookies: { [sessionCookieId]: sessionId } }
+	test.deepEqual(
+		authApi.getNonsensitiveInfo(req as any).clientAuthResult,
+		clientAuthResult,
+		'should return clientAuthResult from an active session for glob-matched dslabel and embedder keys'
+	)
+	test.end()
+})
+
 tape('AuthApi.getRequiredCredForDsEmbedder: returns undefined for non-matching dslabel', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
@@ -1150,5 +1233,30 @@ tape('AuthApi.mayAdjustFilter: throws when filter.type is not tvslst', function 
 	} catch (e) {
 		test.ok(String(e).includes("invalid q.filter.type != 'tvslst'"), 'should throw mentioning invalid filter type')
 	}
+	test.end()
+})
+
+tape('AuthApi.getRequiredCredForDsEmbedder: fails closed for a non-string dslabel or embedder', function (test) {
+	test.timeoutAfter(500)
+
+	const { authApi } = makeAuthApi()
+	test.ok(
+		authApi.getRequiredCredForDsEmbedder(dslabel, embedder)?.length,
+		'should return the required cred for string values'
+	)
+	test.doesNotThrow(
+		() => authApi.getRequiredCredForDsEmbedder(dslabel, undefined),
+		'should not throw for an undefined embedder'
+	)
+	test.throws(
+		() => authApi.getRequiredCredForDsEmbedder([dslabel], embedder),
+		/must be a string/,
+		'should throw for dslabel[]'
+	)
+	test.throws(
+		() => authApi.getRequiredCredForDsEmbedder(dslabel, [embedder]),
+		/must be a string/,
+		'should throw for embedder[]'
+	)
 	test.end()
 })

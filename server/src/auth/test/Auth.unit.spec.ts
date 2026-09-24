@@ -1,6 +1,6 @@
 import tape from 'tape'
 import jsonwebtoken from 'jsonwebtoken'
-import { Auth, normalizeReqPath, stripBasepath } from '#src/auth/Auth.ts'
+import { Auth, getMatchedEntry, getNonStringAuthParam, normalizeReqPath, stripBasepath } from '#src/auth/Auth.ts'
 
 /*************************
  reusable constants and helper functions
@@ -62,7 +62,13 @@ tape('Auth constructor: applies serverconfig features', function (test) {
 	test.timeoutAfter(500)
 	test.plan(3)
 
-	const auth = makeAuth({}, { port: 4000, features: { sessionTracking: 'jwt-only', maxSessionAge: 60000 } })
+	const auth = makeAuth(
+		{},
+		{
+			port: 4000,
+			features: { sessionTracking: 'jwt-only', maxSessionAge: 60000 }
+		}
+	)
 	test.equal(auth.port, 4000, 'should set port from serverconfig.port')
 	test.equal(auth.sessionTracking, 'jwt-only', 'should set sessionTracking from serverconfig.features')
 	test.equal(auth.maxSessionAge, 60000, 'should set maxSessionAge from serverconfig.features')
@@ -123,6 +129,163 @@ tape('getRequiredCred: burden route returns cred', function (test) {
 	const auth = new Auth(creds, {}, {}, { port: 3000 })
 	const result = auth.getRequiredCred({ dslabel, embedder }, '/burden')
 	test.ok(result, 'should return cred for burden route')
+	test.end()
+})
+
+tape('getRequiredCred: glob dslabel and embedder keys', function (test) {
+	test.timeoutAfter(500)
+
+	const termdbCred = makeCred({ dslabel: 'realD*' })
+	const burdenCred = makeCred({ dslabel: 'realD*', route: 'burden' })
+	const allRoutesCred = makeCred({ dslabel: 'glob*', route: '/**' })
+	const creds = {
+		'realD*': {
+			termdb: { '*.example.org': termdbCred },
+			burden: { '*.example.org': burdenCred }
+		},
+		'glob*': {
+			'/**': { '*.example.org': allRoutesCred }
+		}
+	}
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	const embedder = 'portal.example.org'
+
+	test.equal(
+		auth.getRequiredCred({ dslabel: 'realDs1', embedder }, '/termdb/matrix'),
+		termdbCred,
+		'should return the termdb cred for glob-matched dslabel and embedder keys'
+	)
+	test.equal(
+		auth.getRequiredCred({ dslabel: 'realDs1', embedder }, '/burden'),
+		burdenCred,
+		'should return the burden cred for glob-matched dslabel and embedder keys'
+	)
+	test.equal(
+		auth.getRequiredCred({ dslabel: 'realDs1', embedder, route: 'termdb' }, '/jwt-status'),
+		termdbCred,
+		'should return the cred for /jwt-status with glob-matched dslabel and embedder keys'
+	)
+	test.equal(
+		auth.getRequiredCred({ dslabel: 'globDs', embedder }, '/termdb/matrix'),
+		allRoutesCred,
+		'should return the all-routes cred for glob-matched dslabel and embedder keys'
+	)
+	test.equal(
+		auth.getRequiredCred({ dslabel: 'realDs1', embedder: 'other.org' }, '/termdb/matrix'),
+		undefined,
+		'should return undefined when the embedder does not match the glob key'
+	)
+	test.equal(
+		auth.getRequiredCred({ dslabel: 'otherDs', embedder }, '/termdb/matrix'),
+		undefined,
+		'should return undefined when the dslabel does not match any glob key'
+	)
+	test.end()
+})
+
+tape('getRequiredCred: exact keys take precedence over glob and wildcard keys', function (test) {
+	test.timeoutAfter(500)
+
+	const exactCred = makeCred({ dslabel: 'realDs1' })
+	const globCred = makeCred({ dslabel: 'realD*' })
+	const wildcardCred = makeCred({ dslabel: '*' })
+	const creds = {
+		'*': { termdb: { '*': wildcardCred } },
+		'realD*': { termdb: { '*': globCred } },
+		realDs1: {
+			termdb: { 'portal.example.org': exactCred, '*.example.org': globCred }
+		}
+	}
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	test.equal(
+		auth.getRequiredCred({ dslabel: 'realDs1', embedder: 'portal.example.org' }, '/termdb/matrix'),
+		exactCred,
+		'should prefer the exact dslabel and embedder keys'
+	)
+	test.equal(
+		auth.getRequiredCred({ dslabel: 'realDs2', embedder: 'portal.example.org' }, '/termdb/matrix'),
+		globCred,
+		'should prefer a glob dslabel key over the wildcard dslabel key'
+	)
+	test.equal(
+		auth.getRequiredCred({ dslabel: 'otherDs', embedder: 'a/b' }, '/termdb/matrix'),
+		wildcardCred,
+		'should fall back to the wildcard dslabel and embedder keys'
+	)
+	test.end()
+})
+
+tape('getRequiredCred: checks lower-precedence dslabel entries for a route', function (test) {
+	test.timeoutAfter(500)
+
+	const burdenCred = makeCred({ dslabel: 'realDs1', route: 'burden' })
+	const termdbCred = makeCred({ dslabel: 'realD*' })
+	const creds = {
+		// the exact entry has no termdb route
+		realDs1: { burden: { '*': burdenCred } },
+		'realD*': { termdb: { '*.example.org': termdbCred } }
+	}
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	const q = { dslabel: 'realDs1', embedder: 'portal.example.org' }
+	test.equal(
+		auth.getRequiredCred(q, '/termdb/matrix'),
+		termdbCred,
+		'should return the termdb cred from a glob entry when the exact entry has no termdb route'
+	)
+	test.equal(
+		auth.getRequiredCred({ ...q, route: 'termdb' }, '/jwt-status'),
+		termdbCred,
+		'should return the same termdb cred for /jwt-status'
+	)
+	test.equal(auth.getRequiredCred(q, '/burden'), burdenCred, 'should return the burden cred from the exact entry')
+	test.end()
+})
+
+tape('getMatchedEntry: exact, then glob, then wildcard key precedence', function (test) {
+	test.timeoutAfter(500)
+
+	const obj = {
+		// declared first, to confirm that key order in the object does not affect precedence
+		'*': 'wildcard',
+		'*.example.org': 'glob',
+		'portal.example.org': 'exact'
+	}
+	test.equal(getMatchedEntry(obj, 'portal.example.org'), 'exact', 'should prefer an exact key')
+	test.equal(getMatchedEntry(obj, 'other.example.org'), 'glob', 'should prefer a glob key over the wildcard key')
+	test.equal(getMatchedEntry(obj, 'other.org'), 'wildcard', 'should fall back to the wildcard key')
+	test.equal(getMatchedEntry(obj, 'a/b'), 'wildcard', 'should fall back to the wildcard key for a value with a slash')
+	test.equal(
+		getMatchedEntry({ '*.example.org': 'glob' }, 'other.org'),
+		undefined,
+		'should return undefined with no match'
+	)
+	test.end()
+})
+
+tape('getRequiredCred: a glob embedder key takes precedence over the wildcard embedder key', function (test) {
+	test.timeoutAfter(500)
+
+	const forbiddenCred = makeCred({ type: 'forbidden' })
+	const loginCred = makeCred()
+	const creds = {
+		[dslabel]: {
+			termdb: {
+				'*': forbiddenCred,
+				'*.example.org': loginCred
+			}
+		}
+	}
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	test.equal(
+		auth.getRequiredCred({ dslabel, embedder: 'portal.example.org' }, '/termdb/matrix'),
+		loginCred,
+		'should return the login cred for an embedder that matches the glob key'
+	)
+	test.equal(
+		auth.getRequiredCred({ dslabel, embedder: 'other.org' }, '/termdb/matrix'),
+		forbiddenCred,
+		'should return the forbidden cred for an embedder that only matches the wildcard key'
+	)
 	test.end()
 })
 
@@ -339,7 +502,13 @@ tape('getJwtPayload: returns payload for valid token with datasets', function (t
 	const auth = makeAuth({ dsnames: [{ id: dslabel, label: 'Test Dataset' }] })
 	const cred = auth.creds[dslabel].termdb[embedder]
 	const token = jsonwebtoken.sign(
-		{ iat: time, exp: time + 300, datasets: [dslabel], email: 'user@test.com', ip: '127.0.0.1' },
+		{
+			iat: time,
+			exp: time + 300,
+			datasets: [dslabel],
+			email: 'user@test.com',
+			ip: '127.0.0.1'
+		},
 		secret
 	)
 	const headers = { [cred.headerKey]: token }
@@ -397,7 +566,12 @@ tape('getJwtPayload: throws for missing dataset access', function (test) {
 	const auth = makeAuth({ dsnames: [{ id: dslabel, label: 'Test Dataset' }] })
 	const cred = auth.creds[dslabel].termdb[embedder]
 	const token = jsonwebtoken.sign(
-		{ iat: time, exp: time + 300, datasets: ['OTHER-DS'], email: 'user@test.com' },
+		{
+			iat: time,
+			exp: time + 300,
+			datasets: ['OTHER-DS'],
+			email: 'user@test.com'
+		},
 		secret
 	)
 	const headers = { [cred.headerKey]: token }
@@ -682,3 +856,49 @@ tape(
 		test.end()
 	}
 )
+
+// a non-string client-supplied value, e.g. an array from `embedder[]=...`, must not resolve to no credential
+tape('getNonStringAuthParam: returns the first auth query param that is present but not a string', function (test) {
+	test.timeoutAfter(500)
+	test.equal(getNonStringAuthParam({ dslabel, embedder }), undefined, 'should accept string values')
+	test.equal(getNonStringAuthParam({ dslabel }), undefined, 'should accept a missing embedder')
+	test.equal(getNonStringAuthParam({ dslabel: [dslabel] }), 'dslabel', 'should reject an array dslabel')
+	test.equal(getNonStringAuthParam({ dslabel, embedder: [embedder] }), 'embedder', 'should reject an array embedder')
+	test.equal(getNonStringAuthParam({ dslabel, genome: { a: 1 } }), 'genome', 'should reject an object genome')
+	test.equal(getNonStringAuthParam({ dslabel, route: ['termdb'] }), 'route', 'should reject an array route')
+	test.end()
+})
+
+tape('getRequiredCred: fails closed for a non-string embedder or dslabel', function (test) {
+	test.timeoutAfter(500)
+
+	const exactEmbedder = 'portal.example.org'
+	const auth = makeAuth()
+	auth.creds[dslabel].termdb = { [exactEmbedder]: makeCred() }
+	test.ok(
+		auth.getRequiredCred({ dslabel, embedder: exactEmbedder }, '/termdb/matrix'),
+		'should return the cred for the exact embedder'
+	)
+	for (const [q, label] of [
+		[{ dslabel, embedder: [exactEmbedder] }, 'embedder[]'],
+		[{ dslabel, embedder: { 0: exactEmbedder } }, 'an object embedder'],
+		[{ dslabel: [dslabel], embedder: exactEmbedder }, 'dslabel[]']
+	] as any) {
+		test.throws(() => auth.getRequiredCred(q, '/termdb/matrix'), /must be a string/, `should throw for ${label}`)
+		test.throws(
+			() => auth.getRequiredCred({ ...q, for: 'getAllSamples' }, '/termdb', auth.protectedRoutes.samples),
+			/must be a string/,
+			`should throw for ${label} with for=getAllSamples`
+		)
+	}
+	test.throws(
+		() => getMatchedEntry({ '*': makeCred() }, [embedder]),
+		/must be a string/,
+		'getMatchedEntry should throw for an array'
+	)
+	test.ok(
+		getMatchedEntry({ '*': makeCred() }, undefined),
+		"getMatchedEntry should still use '*' for an undefined value"
+	)
+	test.end()
+})

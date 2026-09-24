@@ -13,7 +13,13 @@ const headerKey = 'x-ds-token'
 const secret = 'abc123' // pragma: allowlist secret
 const time = Math.floor(Date.now() / 1000)
 const validToken = jsonwebtoken.sign(
-	{ iat: time, exp: time + 300, datasets: ['ds0'], ip: '127.0.0.1', email: 'user@test.abc' },
+	{
+		iat: time,
+		exp: time + 300,
+		datasets: ['ds0'],
+		ip: '127.0.0.1',
+		email: 'user@test.abc'
+	},
 	secret
 )
 const secrets = {
@@ -155,7 +161,9 @@ tape(`initialization, non-empty credentials`, async test => {
 			}
 		}
 		const serverconfig = { debugmode, cachedir, dsCredentials, secrets }
-		const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { testDs: {} } } })
+		const { app, authApi } = await appInit(serverconfig, {
+			hg38: { datasets: { testDs: {} } }
+		})
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(middlewares, ['*'], 'should set a global middleware when dsCredentials is not empty')
 		const routes = Object.keys(app.routes)
@@ -179,7 +187,9 @@ tape(`initialization, non-empty credentials`, async test => {
 			}
 		}
 		const serverconfig = { debugmode, cachedir, dsCredentials, secrets }
-		const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { testDs: {} } } })
+		const { app, authApi } = await appInit(serverconfig, {
+			hg38: { datasets: { testDs: {} } }
+		})
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(
 			middlewares,
@@ -244,7 +254,10 @@ tape(`initialization, non-empty credentials`, async test => {
 			'should return all dslabels that require authorization for a given embedder'
 		)
 
-		const req = { query: { dslabel: 'no-cred-entry', embedder: 'localhost' }, headers: {} }
+		const req = {
+			query: { dslabel: 'no-cred-entry', embedder: 'localhost' },
+			headers: {}
+		}
 		test.deepEqual(
 			authApi.getNonsensitiveInfo(req),
 			{ forbiddenRoutes: [], clientAuthResult: {} },
@@ -290,7 +303,9 @@ tape('legacy reshape', async test => {
 		dsCredentials,
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {}, ds1: {} } } })
+	const { app, authApi } = await appInit(serverconfig, {
+		hg38: { datasets: { ds0: {}, ds1: {} } }
+	})
 
 	test.deepEqual(
 		JSON.parse(JSON.stringify(dsCredentials)),
@@ -358,7 +373,11 @@ tape(`auth methods`, async test => {
 	const genomes = { hg38: { datasets: { ds100: {} } } }
 	const { app, authApi } = await appInit(serverconfig, genomes)
 
-	const req0 = { query: { embedder: 'localhost', dslabel: 'ds100' }, headers: {}, get: () => 'localhost' }
+	const req0 = {
+		query: { embedder: 'localhost', dslabel: 'ds100' },
+		headers: {},
+		get: () => 'localhost'
+	}
 	test.deepEqual(
 		authApi.getDsAuth(req0),
 		[
@@ -382,7 +401,11 @@ tape(`auth methods`, async test => {
 		`should return the expected dsAuth array for a termdb-specified embedder`
 	)
 
-	const req1 = { query: { embedder: 'some.domain', dslabel: 'ds100' }, headers: {}, get: () => 'localhost' }
+	const req1 = {
+		query: { embedder: 'some.domain', dslabel: 'ds100' },
+		headers: {},
+		get: () => 'localhost'
+	}
 	test.deepEqual(
 		authApi.getDsAuth(req1),
 		[
@@ -403,7 +426,11 @@ tape(`auth methods`, async test => {
 		`should return the expected forbidden routes for a wildcard embedder with cred.type='forbidden'`
 	)
 
-	const req2 = { query: { embedder: 'notlocalhost', dslabel: 'ds100' }, headers: {}, get: () => 'localhost' }
+	const req2 = {
+		query: { embedder: 'notlocalhost', dslabel: 'ds100' },
+		headers: {},
+		get: () => 'localhost'
+	}
 	test.deepEqual(
 		authApi.getNonsensitiveInfo(req2),
 		{ forbiddenRoutes: [], clientAuthResult: {} },
@@ -414,6 +441,335 @@ tape(`auth methods`, async test => {
 		true,
 		`should return false for isUserLoggedIn() for a non-logged in user`
 	)
+})
+
+tape(`sample-level access without a session`, async test => {
+	test.timeoutAfter(500)
+
+	const serverconfig = {
+		debugmode,
+		dsCredentials: {
+			ds200: {
+				termdb: {
+					'*': {
+						type: 'jwt',
+						secret
+					}
+				}
+			}
+		},
+		cachedir
+	}
+	const genomes = { hg38: { datasets: { ds200: {}, openDs: {} } } }
+	const { authApi } = await appInit(serverconfig, genomes)
+	const ds = { label: 'ds200', cohort: { termdb: { displaySampleIds: true } } }
+	const getReq = (query, path = '/termdb') => ({
+		query: { dslabel: 'ds200', embedder: 'localhost', ...query },
+		path,
+		headers: {},
+		cookies: {},
+		get: () => 'localhost'
+	})
+
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ for: 'getAllSamples' }), ds),
+		false,
+		`should not display sample ids for a string q.for that is listed as protected`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ for: ['getAllSamples'] }), ds),
+		false,
+		`should not display sample ids when q.for is an array`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ for: ['getAllSamples', 'singleSampleData'] }), ds),
+		false,
+		`should not display sample ids when q.for is a multi-value array`
+	)
+	test.equal(
+		authApi.isUserLoggedIn(getReq({ for: ['singleSampleData'] }), ds, ['singleSampleData']),
+		false,
+		`should match an array q.for against the protected routes in isUserLoggedIn()`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ getsamplelist: 1 }), ds),
+		false,
+		`should not display sample ids for a sample-bearing handler that is not selected by q.for`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ embedder: 'a/b' }, '/termdb/chat'), ds),
+		false,
+		`should not display sample ids on /termdb/chat for an embedder with a slash`
+	)
+	test.equal(
+		authApi.isUserLoggedIn(getReq({ for: 'convertSampleId' }), ds, [], true),
+		false,
+		`should require a session for convertSampleId when the dataset has a termdb credential`
+	)
+	test.equal(
+		authApi.isUserLoggedIn(getReq({ dslabel: 'openDs', for: 'convertSampleId' }), { label: 'openDs' }, [], true),
+		true,
+		`should not require a session for convertSampleId on an open-access dataset`
+	)
+	for (const embedder of ['localhost', 'a/b', 'a.b/c/d']) {
+		test.equal(
+			authApi.getRequiredCredForDsEmbedder('ds200', embedder)?.length,
+			1,
+			`should find the wildcard termdb credential for embedder='${embedder}'`
+		)
+	}
+	test.equal(
+		authApi.getRequiredCredForDsEmbedder('openDs', 'a/b'),
+		undefined,
+		`should not find a credential for an open-access dataset`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(
+			{ ...getReq({ dslabel: 'openDs', getsamplelist: 1 }), path: '/termdb' },
+			{ label: 'openDs', cohort: { termdb: { displaySampleIds: true } } }
+		),
+		true,
+		`should still display sample ids for an open-access dataset`
+	)
+	test.end()
+})
+
+tape(`sample-level access without a session, glob credential keys`, async test => {
+	test.timeoutAfter(500)
+
+	const serverconfig = {
+		debugmode,
+		dsCredentials: {
+			'realD*': {
+				termdb: {
+					'*.example.org': {
+						type: 'jwt',
+						secret
+					}
+				}
+			}
+		},
+		cachedir
+	}
+	const genomes = { hg38: { datasets: { realDs1: {}, openDs: {} } } }
+	const { authApi } = await appInit(serverconfig, genomes)
+	const displaySampleIds = true
+	const getReq = query => ({
+		query: { getsamplelist: 1, ...query },
+		path: '/termdb',
+		headers: {},
+		cookies: {},
+		get: () => 'localhost'
+	})
+
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ dslabel: 'realDs1', embedder: 'portal.example.org' }), {
+			label: 'realDs1',
+			cohort: { termdb: { displaySampleIds } }
+		}),
+		false,
+		`should require a session when both the dslabel and embedder match glob credential keys`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ dslabel: 'realDs1', embedder: 'other.org' }), {
+			label: 'realDs1',
+			cohort: { termdb: { displaySampleIds } }
+		}),
+		true,
+		`should not require a session when the embedder does not match the glob credential key`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ dslabel: 'openDs', embedder: 'portal.example.org' }), {
+			label: 'openDs',
+			cohort: { termdb: { displaySampleIds } }
+		}),
+		true,
+		`should not require a session when the dslabel does not match the glob credential key`
+	)
+	test.end()
+})
+
+tape(`sample-level access without a session, all-routes credential with a glob embedder`, async test => {
+	test.timeoutAfter(500)
+
+	const serverconfig = {
+		debugmode,
+		dsCredentials: {
+			// validateDsCredentials() rewrites the '*' route key to '/**'
+			'*': { '*': { '*.example.org': { type: 'jwt', secret } } }
+		},
+		cachedir
+	}
+	const genomes = { hg38: { datasets: { ds300: {} } } }
+	const { authApi } = await appInit(serverconfig, genomes)
+	const ds = {
+		label: 'ds300',
+		cohort: { termdb: { displaySampleIds: true } }
+	}
+	const getReq = embedder => ({
+		query: { dslabel: 'ds300', embedder, getsamplelist: 1 },
+		path: '/termdb',
+		headers: {},
+		cookies: {},
+		get: () => 'localhost'
+	})
+
+	test.equal(
+		authApi.canDisplaySampleIds(getReq('portal.example.org'), ds),
+		false,
+		`should require a session for an all-routes credential with a matching glob embedder key`
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq('other.org'), ds),
+		true,
+		`should not require a session when the embedder does not match the all-routes glob embedder key`
+	)
+	test.end()
+})
+
+tape(`session flow for glob dslabel and embedder credential keys`, async test => {
+	test.timeoutAfter(1000)
+
+	const serverconfig = {
+		debugmode,
+		dsCredentials: {
+			'realD*': {
+				termdb: {
+					'*.example.org': { type: 'jwt', secret }
+				}
+			}
+		},
+		cachedir
+	}
+	const genomes = { hg38: { datasets: { realDs1: {}, openDs: {} } } }
+	const { app, authApi } = await appInit(serverconfig, genomes)
+	const embedder = 'portal.example.org'
+	const ds = {
+		label: 'realDs1',
+		cohort: { termdb: { displaySampleIds: true } }
+	}
+	// a login token without a datasets[] restriction
+	const loginToken = jsonwebtoken.sign(
+		{
+			iat: time,
+			exp: time + 300,
+			ip: '127.0.0.1',
+			email: 'user@test.abc',
+			clientAuthResult: { role: 'user' }
+		},
+		secret
+	)
+
+	test.deepEqual(
+		authApi.getDsAuth({
+			query: { embedder },
+			headers: {},
+			cookies: {},
+			get: () => embedder
+		}),
+		[
+			{
+				dslabel: 'realDs1',
+				route: 'termdb',
+				type: 'jwt',
+				headerKey: 'x-ds-access-token',
+				insession: undefined,
+				demoTokenRoles: undefined
+			}
+		],
+		'should report the concrete dslabel, not the glob pattern, in dsAuth'
+	)
+
+	// login
+	const cookies = {}
+	{
+		let status
+		const req = {
+			query: { embedder, dslabel: 'realDs1', route: 'termdb' },
+			headers: { 'x-ds-access-token': loginToken },
+			ip: '127.0.0.1',
+			path: '/jwt-status'
+		}
+		const res = {
+			send(data) {
+				status = data.status
+			},
+			header(key, val) {
+				if (key === 'Set-Cookie') {
+					const [k, v] = val.split(';')[0].split('=')
+					cookies[k] = v
+				}
+			},
+			status() {},
+			headers: {}
+		}
+		await app.routes['/jwt-status'].post(req, res)
+		test.equal(status, 'ok', 'should log in through /jwt-status with glob-matched credential keys')
+		test.ok(Object.keys(cookies).length, 'should set a session cookie')
+	}
+
+	test.equal(
+		authApi.getDsAuth({
+			query: { embedder },
+			headers: {},
+			cookies,
+			get: () => embedder
+		})[0]?.insession,
+		true,
+		'should report the logged-in session as insession in dsAuth'
+	)
+
+	const getReq = (query, path = '/termdb') => ({
+		query: { dslabel: 'realDs1', embedder, ...query },
+		path,
+		headers: {},
+		cookies,
+		ip: '127.0.0.1',
+		get: () => embedder
+	})
+	test.equal(
+		authApi.isUserLoggedIn(getReq({ getsamplelist: 1 }), ds, [], true),
+		true,
+		'should find the session in isUserLoggedIn()'
+	)
+	test.equal(
+		authApi.canDisplaySampleIds(getReq({ getsamplelist: 1 }), ds),
+		true,
+		'should display sample ids to the logged-in user'
+	)
+	test.deepEqual(
+		authApi.getNonsensitiveInfo(getReq({})).clientAuthResult,
+		{ role: 'user' },
+		'should return the clientAuthResult for the logged-in user'
+	)
+
+	// middleware on a protected route
+	const runMiddleware = req =>
+		new Promise(resolve => {
+			const res = {
+				statusCode: 200,
+				status(code) {
+					this.statusCode = code
+				},
+				send(data) {
+					resolve({ passed: false, statusCode: this.statusCode, data })
+				},
+				header() {}
+			}
+			app.middlewares['*'](req, res, () => resolve({ passed: true }))
+		})
+	test.deepEqual(
+		await runMiddleware(getReq({}, '/termdb/matrix')),
+		{ passed: true },
+		'should allow a logged-in request to a protected route through the middleware'
+	)
+	const loggedOut = await runMiddleware({
+		...getReq({}, '/termdb/matrix'),
+		cookies: {}
+	})
+	test.equal(loggedOut.passed, false, 'should not allow a logged-out request to a protected route')
+	test.equal(loggedOut.statusCode, 401, 'should respond with a 401 status to a logged-out request')
+	test.end()
 })
 
 tape(`a valid request`, async test => {
@@ -435,7 +791,9 @@ tape(`a valid request`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
+	const { app, authApi } = await appInit(serverconfig, {
+		hg38: { datasets: { ds0: {} } }
+	})
 
 	{
 		const req = {
@@ -482,7 +840,9 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
+	const { app, authApi } = await appInit(serverconfig, {
+		hg38: { datasets: { ds0: {} } }
+	})
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -496,7 +856,9 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 			send(data) {
 				test.deepEqual(
 					data,
-					{ error: 'Your connection has changed, please refresh your page or sign in again.' },
+					{
+						error: 'Your connection has changed, please refresh your page or sign in again.'
+					},
 					'should detect mismatched IP address on jwt-status check'
 				)
 			},
@@ -538,7 +900,9 @@ tape(`invalid embedder`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
+	const { app, authApi } = await appInit(serverconfig, {
+		hg38: { datasets: { ds0: {} } }
+	})
 
 	{
 		const req = {
@@ -552,7 +916,11 @@ tape(`invalid embedder`, async test => {
 			send(data) {
 				test.deepEqual(
 					data,
-					{ status: 'error', error: 'no credentials set up for this embedder', code: 403 },
+					{
+						status: 'error',
+						error: 'no credentials set up for this embedder',
+						code: 403
+					},
 					'should send an unknown embedder error'
 				)
 			},
@@ -592,7 +960,9 @@ tape(`invalid dataset access`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
+	const { app, authApi } = await appInit(serverconfig, {
+		hg38: { datasets: { ds0: {} } }
+	})
 
 	{
 		const req = {
@@ -646,7 +1016,9 @@ tape(`invalid jwt`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
+	const { app, authApi } = await appInit(serverconfig, {
+		hg38: { datasets: { ds0: {} } }
+	})
 
 	{
 		const req = {
@@ -758,7 +1130,9 @@ tape(`session handling by the middleware`, async test => {
 		cachedir
 	}
 
-	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
+	const { app, authApi } = await appInit(serverconfig, {
+		hg38: { datasets: { ds0: {} } }
+	})
 
 	{
 		const message = 'should call the next function on a non-protected route'
@@ -894,7 +1268,9 @@ tape(`session handling by the middleware`, async test => {
 				if (data.error) delete data.error.expiredAt
 				test.deepEqual(
 					data,
-					{ error: `Your connection has changed, please refresh your page or sign in again.` },
+					{
+						error: `Your connection has changed, please refresh your page or sign in again.`
+					},
 					'should send a changed connection message'
 				)
 			},
@@ -931,7 +1307,9 @@ tape(`/dslogin`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
+	const { app, authApi } = await appInit(serverconfig, {
+		hg38: { datasets: { ds0: {} } }
+	})
 
 	let cookie
 	/*** valid /dslogin request ***/
@@ -1101,9 +1479,14 @@ tape(`req.query.filter, __protected__`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
+	const { app, authApi } = await appInit(serverconfig, {
+		hg38: { datasets: { ds0: {} } }
+	})
 
-	const tvslst = { type: 'tvslst', lst: [{ type: 'tvs', tvs: { term: {}, values: {} } }] }
+	const tvslst = {
+		type: 'tvslst',
+		lst: [{ type: 'tvs', tvs: { term: {}, values: {} } }]
+	}
 
 	const genomes = {
 		test: {

@@ -655,3 +655,33 @@ tape('mayUpdate__protected__: skips msigdb dslabel when getting isUserLoggedIn',
 	test.equal(isUserLoggedInCalled, false, 'should skip isUserLoggedIn check for msigdb dslabel')
 	test.end()
 })
+
+tape('middleware: rejects non-string auth query params with 400 before any credential lookup', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth()
+	const mockAuthApi = {
+		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+		mayAdjustFilter: () => {},
+		isUserLoggedIn: () => true
+	}
+	const cases: [any, string][] = [
+		[{ dslabel, embedder: [embedder] }, '/termdb/matrix'],
+		[{ dslabel, embedder: [embedder], for: 'getAllSamples' }, '/termdb'],
+		[{ dslabel: [dslabel], embedder }, '/termdb/matrix'],
+		[{ dslabel, embedder, genome: ['hg38'] }, '/termdb'],
+		[{ dslabel, embedder, route: ['termdb'] }, '/jwt-status']
+	]
+	for (const [query, path] of cases) {
+		const middleware = registerMiddleware(auth, mockAuthApi)
+		const label = `${path}?${JSON.stringify(query)}`
+		const req: any = { query, path, cookies: {}, headers: {} }
+		const res = makeMockRes()
+		let nextCalled = false
+		middleware(req, res, () => (nextCalled = true))
+		test.notOk(nextCalled, `should NOT call next() for ${label}`)
+		test.equal(res.statusCode, 400, `should set 400 status for ${label}`)
+		test.ok(String(res.sentData?.error).includes('must be a string'), `should explain the error for ${label}`)
+	}
+	test.end()
+})
