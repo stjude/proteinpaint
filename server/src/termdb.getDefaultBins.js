@@ -49,9 +49,13 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			// request, so it's a new object identity each time even for the same logical sample. A
 			// Map compares object keys by identity, not value, so using the raw object directly would
 			// never hit this cache across requests and would grow it unboundedly. Normalize to the
-			// stable sID (or the string itself, for callers that already pass a plain string) for the
-			// cache key only; the data getter below still receives the original tw.term.sample.
-			const sampleKey = typeof tw.term.sample === 'string' ? tw.term.sample : tw.term.sample?.sID
+			// same effective identifier the native getter resolves the sample to (eID || sID, see
+			// validSampleId() in samplesRoute.ts -- when eID is present, expression data is read from
+			// a file named by eID, not sID, so two samples sharing an sID but differing in eID are
+			// different underlying data and must not share a cache entry), or the string itself for
+			// callers that already pass a plain string; the data getter below still receives the
+			// original tw.term.sample.
+			const sampleKey = typeof tw.term.sample === 'string' ? tw.term.sample : tw.term.sample?.eID || tw.term.sample?.sID
 			const sample2bins = ds.queries.singleCell.geneExpression.sample2gene2expressionBins
 			if (!sample2bins.has(sampleKey)) {
 				binsCache = new Map()

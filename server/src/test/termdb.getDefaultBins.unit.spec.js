@@ -153,3 +153,39 @@ tape(
 		test.end()
 	}
 )
+
+// When eID is present, the native getter reads expression data from a file named by eID, not sID
+// (see validSampleId() in samplesRoute.ts: sample?.eID || sample?.sID). Two samples that share an
+// sID but differ in eID are therefore different underlying data and must not collide in the cache.
+tape('getDefaultBins does not conflate two experiments that share an sID but differ in eID', async test => {
+	const requestedSamples = []
+	const sample2gene2expressionBins = new Map()
+	const ds = {
+		queries: {
+			singleCell: {
+				geneExpression: {
+					sample2gene2expressionBins,
+					async get(q, sample) {
+						requestedSamples.push(sample)
+						// simulate two genuinely different data files for the two experiments
+						return sample.eID === 'exp1' ? { c1: 1, c2: 2 } : { c1: 10, c2: 20 }
+					}
+				}
+			}
+		}
+	}
+	const makeReq = eID => ({
+		tw: {
+			$id: 'geneA',
+			term: { type: 'singleCellGeneExpression', sample: { sID: 'sampleX', eID }, gene: 'TP53' }
+		}
+	})
+	let response1, response2
+	await trigger_getDefaultBins(makeReq('exp1'), ds, { send: v => (response1 = v) })
+	await trigger_getDefaultBins(makeReq('exp2'), ds, { send: v => (response2 = v) })
+
+	test.equal(requestedSamples.length, 2, 'both experiments are queried, not served from a shared cache entry')
+	test.equal(sample2gene2expressionBins.size, 2, 'each experiment gets its own cache bucket, keyed by eID')
+	test.notDeepEqual(response1, response2, 'the two experiments get their own, distinct bins')
+	test.end()
+})
