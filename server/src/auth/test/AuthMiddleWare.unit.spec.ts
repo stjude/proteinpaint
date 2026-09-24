@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { setAuthMiddleware } from '#src/auth/AuthMiddleWare.ts'
+import { setAuthMiddleware, isForcedOpenRoute } from '#src/auth/AuthMiddleWare.ts'
 import { Auth } from '#src/auth/Auth.ts'
 import { AuthApiOpen } from '#src/auth/AuthApiOpen.ts'
 
@@ -144,6 +144,45 @@ tape('middleware: forced open routes bypass auth check and call next()', functio
 	test.end()
 })
 
+// Express routes case-insensitively and ignores a trailing slash, so these variants reach the auth
+// route handlers and must not be rejected for lacking the session that they are meant to establish
+tape('middleware: forced open route variants with different case or a trailing slash call next()', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth()
+	const mockAuthApi = {
+		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+		mayAdjustFilter: () => {},
+		isUserLoggedIn: () => true
+	}
+	const paths = ['/DSLOGIN', '/dslogin/', '/jwt-status/', '/JWT-STATUS', '/demoToken/', '/DEMOTOKEN', '/DsLogout/']
+	for (const path of paths) {
+		const middleware = registerMiddleware(auth, mockAuthApi)
+		const req: any = { query: { embedder, dslabel, route: 'termdb' }, path, cookies: {}, headers: {} }
+		const res = makeMockRes()
+		let nextCalled = false
+		middleware(req, res, () => (nextCalled = true))
+		test.ok(nextCalled, `should call next() for forced open route variant '${path}'`)
+		test.equal(res.statusCode, null, `should not set an error status for '${path}'`)
+		test.ok(Object.isFrozen(req.query.__protected__), `should freeze __protected__ for '${path}'`)
+	}
+	test.end()
+})
+
+tape('isForcedOpenRoute: matches case and trailing-slash variants with a configured basepath', function (test) {
+	test.timeoutAfter(500)
+
+	for (const path of ['/api/dslogin', '/API/DSLOGIN', '/api/jwt-status/', '/Api/demoToken/', '/api/demotoken']) {
+		test.ok(isForcedOpenRoute(path, '/api'), `should match '${path}' with basepath='/api'`)
+	}
+	test.ok(isForcedOpenRoute('/api/dslogin/', '/API'), 'should match regardless of the configured basepath case')
+	for (const path of ['/dslogin', '/api/termdb', '/api/dslogin/extra', '/other/dslogin']) {
+		test.notOk(isForcedOpenRoute(path, '/api'), `should not match '${path}' with basepath='/api'`)
+	}
+	test.notOk(isForcedOpenRoute('/TERMDB/MATRIX'), 'should not treat a protected route variant as open')
+	test.end()
+})
+
 tape('middleware: __protected__ is frozen for forced open routes', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
@@ -217,6 +256,28 @@ tape('middleware: returns 401 error for missing session on protected route', fun
 
 	test.equal(res.statusCode, 401, 'should set 401 status for missing session')
 	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('middleware: returns 401 for a protected route under a configured basepath', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth()
+	auth.basepath = '/api'
+	const mockAuthApi = {
+		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+		mayAdjustFilter: () => {},
+		isUserLoggedIn: () => true
+	}
+	for (const path of ['/api/termdb/matrix', '/API/TERMDB/MATRIX/']) {
+		const middleware = registerMiddleware(auth, mockAuthApi)
+		const req: any = { query: { dslabel, embedder }, path, cookies: {}, headers: {} }
+		const res = makeMockRes()
+		let nextCalled = false
+		middleware(req, res, () => (nextCalled = true))
+		test.notOk(nextCalled, `should NOT call next() for '${path}' with no session`)
+		test.equal(res.statusCode, 401, `should set 401 status for '${path}'`)
+	}
 	test.end()
 })
 
@@ -597,5 +658,35 @@ tape('mayUpdate__protected__: skips msigdb dslabel when getting isUserLoggedIn',
 	middleware(req, res, () => {})
 
 	test.equal(isUserLoggedInCalled, false, 'should skip isUserLoggedIn check for msigdb dslabel')
+	test.end()
+})
+
+tape('middleware: rejects non-string auth query params with 400 before any credential lookup', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth()
+	const mockAuthApi = {
+		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+		mayAdjustFilter: () => {},
+		isUserLoggedIn: () => true
+	}
+	const cases: [any, string][] = [
+		[{ dslabel, embedder: [embedder] }, '/termdb/matrix'],
+		[{ dslabel, embedder: [embedder], for: 'getAllSamples' }, '/termdb'],
+		[{ dslabel: [dslabel], embedder }, '/termdb/matrix'],
+		[{ dslabel, embedder, genome: ['hg38'] }, '/termdb'],
+		[{ dslabel, embedder, route: ['termdb'] }, '/jwt-status']
+	]
+	for (const [query, path] of cases) {
+		const middleware = registerMiddleware(auth, mockAuthApi)
+		const label = `${path}?${JSON.stringify(query)}`
+		const req: any = { query, path, cookies: {}, headers: {} }
+		const res = makeMockRes()
+		let nextCalled = false
+		middleware(req, res, () => (nextCalled = true))
+		test.notOk(nextCalled, `should NOT call next() for ${label}`)
+		test.equal(res.statusCode, 400, `should set 400 status for ${label}`)
+		test.ok(String(res.sentData?.error).includes('must be a string'), `should explain the error for ${label}`)
+	}
 	test.end()
 })
