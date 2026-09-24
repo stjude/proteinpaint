@@ -322,10 +322,11 @@ function bearer(jwt: string) {
 	return { authorization: `Bearer ${Buffer.from(jwt || '').toString('base64')}` }
 }
 
-// returns the sample names or ids in a response body, which may be an array or an object keyed by sample name
+// returns the sample names or ids in a response body, which may be an array or an object keyed by sample name;
+// only the error key is ignored, so that a response with both an error and sample-name keys is still detected
 function sampleKeys(body: any) {
-	if (!body || body.error) return []
-	return Array.isArray(body) ? body : Object.keys(body)
+	if (!body) return []
+	return Array.isArray(body) ? body : Object.keys(body).filter(k => k != 'error')
 }
 
 async function get(server: TestServer, path: string, query: string, headers = {}, prefix = server.url) {
