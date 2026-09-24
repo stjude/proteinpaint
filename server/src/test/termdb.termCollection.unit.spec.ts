@@ -89,14 +89,19 @@ tape('resolveTermCollectionFractions() computes regular bins from fraction value
 	test.end()
 })
 
-tape('isReservedTermId() rejects reserved, inherited, and non-string $id values', test => {
+tape('isReservedTermId() rejects reserved and coercible $id values, but allows harmless non-strings', test => {
 	test.ok(isReservedTermId('__proto__'), 'rejects __proto__')
 	test.ok(isReservedTermId('constructor'), 'rejects constructor')
 	test.ok(isReservedTermId('prototype'), 'rejects prototype')
 	test.ok(isReservedTermId('toString'), 'rejects an inherited Object.prototype member name')
 	test.ok(isReservedTermId(['__proto__']), 'rejects a non-string id that would coerce to a dangerous key')
+	test.ok(
+		isReservedTermId({ toString: () => '__proto__' }),
+		'rejects an object whose string coercion is a dangerous key'
+	)
 	test.notOk(isReservedTermId('agedx'), 'allows an ordinary $id')
 	test.notOk(isReservedTermId(undefined), 'allows a missing $id so callers can fall back to term.id/term.name')
+	test.notOk(isReservedTermId(42), 'allows a numeric $id since it cannot coerce to a reserved key')
 	test.end()
 })
 

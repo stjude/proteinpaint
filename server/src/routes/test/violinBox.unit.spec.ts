@@ -907,7 +907,15 @@ tape(
 		q.tw.term.termlst = [{ id: '__proto__', name: '__proto__' }, ...q.tw.term.termlst]
 		const data = getMockTermCollectionData()
 		for (const sampleData of Object.values(data.samples) as any[]) {
-			sampleData[mockTermCollectionId].value['__proto__'] = 9.9
+			// plain assignment of a primitive to a '__proto__' key is a silent no-op (it never
+			// creates an own property), so defineProperty is required to actually exercise the
+			// per-sample expansion path for a __proto__-named member
+			Object.defineProperty(sampleData[mockTermCollectionId].value, '__proto__', {
+				value: 9.9,
+				enumerable: true,
+				configurable: true,
+				writable: true
+			})
 		}
 
 		expandNumericTermCollection(q, data)
@@ -925,6 +933,11 @@ tape(
 			Object.getPrototypeOf(q.overlayTw.term.values),
 			null,
 			"the overlay values map's own prototype is untouched"
+		)
+		test.equal(
+			data.samples['s1____proto__']?.[mockTermCollectionId]?.value,
+			9.9,
+			'the per-sample expansion path also creates a virtual sample for the __proto__ member'
 		)
 		test.notOk(({} as any).label, 'does not pollute Object.prototype')
 		test.end()

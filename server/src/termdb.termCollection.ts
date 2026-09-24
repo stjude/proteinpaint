@@ -24,12 +24,17 @@ const RESERVED_TERM_IDS = new Set(['prototype', ...Object.getOwnPropertyNames(Ob
 
 /** True if this $id could reach the Object.prototype chain when later used as a
  *  plain-object property key (e.g. sampleData[$id] = ... or byTermId[$id] = ...).
- *  A non-string, non-nullish $id (e.g. ['__proto__']) is rejected outright: bracket
- *  notation coerces any key to a string, so a non-string id can reach the same
- *  dangerous keys while evading a strict string-equality check. Nullish is allowed
- *  through so callers can still fall back to tw.term.id/tw.term.name. */
+ *  Bracket notation coerces any non-symbol key via ToPropertyKey (equivalent to
+ *  String(id)), so a non-string $id -- e.g. ['__proto__'], or an object with a
+ *  custom toString() -- can reach the same dangerous keys while evading a strict
+ *  string-equality check; checking String(id) against the reserved set catches
+ *  those without rejecting harmless non-string ids such as a plain number, which
+ *  can never coerce to a reserved name. Symbols never collide with a string key,
+ *  and nullish is allowed through so callers can still fall back to
+ *  tw.term.id/tw.term.name. */
 export function isReservedTermId(id: any): boolean {
-	return id != null && (typeof id !== 'string' || RESERVED_TERM_IDS.has(id))
+	if (id == null || typeof id === 'symbol') return false
+	return RESERVED_TERM_IDS.has(String(id))
 }
 
 /** Reject $id values that could be used to reach the Object.prototype chain
