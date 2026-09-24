@@ -27,6 +27,9 @@ export class AuthApi implements AuthInterface {
 	}
 
 	async maySetAuthRoutes(app, genomes, basepath = '', serverconfig) {
+		// the same basepath must govern auth route registration, the middleware forced-open check,
+		// and credential matching, since req.path includes the basepath that routes are registered under
+		this.#auth.basepath = basepath
 		setAuthMiddleware(app, genomes, this, this.#auth)
 		/*** call app.use() before any await lines ***/
 

@@ -907,6 +907,8 @@ const flowAuthApi = {
 // sends a request through the middleware, then to the registered handler the way Express would route it:
 // case-insensitive and ignoring a trailing slash, without stripping the basepath from req.path
 function makeFlow(auth: Auth) {
+	// same as AuthApi.maySetAuthRoutes(), which sets auth.basepath from the route registration basepath
+	auth.basepath = flowBasepath
 	const app = makeApp(auth, flowBasepath)
 	const middlewares: any[] = []
 	app.use = (handler: any) => middlewares.push(handler)
@@ -932,7 +934,7 @@ tape(
 		test.timeoutAfter(1000)
 
 		for (const path of ['/API/JWT-STATUS', '/api/jwt-status/', '/Api/Jwt-Status']) {
-			const auth = makeAuthWithJwt({}, {}, { basepath: flowBasepath })
+			const auth = makeAuthWithJwt()
 			const send = makeFlow(auth)
 			const loginToken = jsonwebtoken.sign(
 				{ iat: time, exp: time + 300, email: 'user@test.com', ip: '127.0.0.1' },
@@ -972,7 +974,7 @@ tape('auth flow: /dslogin and /dslogout variants under a basepath', async functi
 	test.timeoutAfter(1000)
 
 	const creds: any = { [dslabel]: { '/**': { [embedder]: makeBasicCred() } } }
-	const auth = new Auth(creds, {}, {}, { port: 3000, basepath: flowBasepath })
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
 	const send = makeFlow(auth)
 	const encodedPwd = Buffer.from(password).toString('base64')
 
