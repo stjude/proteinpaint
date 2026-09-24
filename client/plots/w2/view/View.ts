@@ -9,6 +9,7 @@ import type { SpatialImage, WsiImage } from '#types' // the two image kinds wsiB
 import type Settings from '../Settings.ts' // burger-menu + selection settings
 import type { ViewData } from '../viewModel/ViewModel.ts' // shaped sample table data
 import type { WsiInteractions } from '../interactions/WsiInteractions.ts' // state-edit dispatchers
+import { addScaleBar } from '../scaleBar' // bottom-right µm scale bar, every image (spatial or plain)
 
 /** Renders the sample table and, when a sample is selected, tabs for its
  images (one per image folder on disk, shown when there are several) and an
@@ -145,5 +146,6 @@ export class View {
 			view: new OlView({ resolutions: grid.getResolutions(), extent }) // camera locked to the pyramid
 		})
 		map.getView().fit(extent) // start fully zoomed out, whole slide visible
+		addScaleBar(map, Array.isArray(meta.mpp) && meta.mpp.length === 2 ? meta.mpp[0] : undefined)
 	}
 }
