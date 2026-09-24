@@ -514,7 +514,8 @@ def _cosine(a, b):
 
 def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=1000,
                      seed=0, window=200.0, stride=100.0, top_k=10, size_tolerance=0.1,
-                     required_types=None, exclude_ids=None, max_overlap=0.5):
+                     required_types=None, exclude_ids=None, max_overlap=0.5,
+                     type_weights=None):
     """Windows of `h5ad` whose cell-type makeup and local neighbourhood
     resemble a query region (typically another image's lasso selection,
     summarised by an earlier nhood_enrichment() call and handed in here as
@@ -535,12 +536,20 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
     region itself would trivially "win" its own search (distance ~0). Each
     survivor gets a cheap signature (its per-type composition + row-normalized
     kNN neighbour-count matrix, both aligned to the query's `types` -- cells
-    of any other type are ignored, same as an unannotated cell) compared to
-    the query's own signature by cosine similarity, no permutation test. The
-    `top_k` cheap-stage windows are then confirmed with the SAME permutation
-    z-score test nhood_enrichment runs, and ranked by distance to the query's
-    z-score matrix (mean absolute difference over cells finite in both) when
-    the caller supplied one, else left in cheap-score order."""
+    of any other type are ignored, same as an unannotated cell), scaled by
+    `type_weights` (default 1 for every type: no effect) before being compared
+    to the query's own (identically scaled) signature by cosine similarity, no
+    permutation test. A composition entry for type i is scaled by weight[i];
+    an adjacency entry (i,j) -- "fraction of type i's neighbours that are type
+    j" -- by weight[i]*weight[j], so a type weighted to 0 drops out of the
+    score entirely (a SOFT version of required_types' hard exclusion: a
+    heavily-weighted type still isn't guaranteed to be present, it just counts
+    for more when it is). The `top_k` cheap-stage windows are then confirmed
+    with the SAME permutation z-score test nhood_enrichment runs (weights play
+    no part here -- the rigorous stage is the real statistical test, not a
+    tunable score), and ranked by distance to the query's z-score matrix (mean
+    absolute difference over cells finite in both) when the caller supplied
+    one, else left in cheap-score order."""
     import h5py
     C = len(types)
     if C < 2:
@@ -551,11 +560,17 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
         return {"error": f"requiredTypes not in the query's own vocabulary: {', '.join(missing)}"}
     required_idx = np.searchsorted(types, required_types)  # types is sorted (nhood_enrichment's cats)
     exclude_ids = frozenset(exclude_ids or ())
+    weights = np.ones(C) if type_weights is None else np.asarray(type_weights, dtype=np.float64)
+    if weights.shape[0] != C:
+        return {"error": f"typeWeights must have one entry per type ({C}), got {weights.shape[0]}"}
+    if (weights < 0).any():
+        return {"error": "typeWeights must be non-negative"}
+    w_full = np.concatenate([weights, np.outer(weights, weights).ravel()])  # aligned to cheap_q/cheap_w below
     type_counts = np.asarray(type_counts, dtype=np.float64)
     ref_n = type_counts.sum()                              # the query region's own cell count
     comp_q = type_counts / ref_n if ref_n > 0 else type_counts
     adj_q = _row_normalize(count)
-    cheap_q = np.concatenate([comp_q, adj_q.ravel()])
+    cheap_q = np.concatenate([comp_q, adj_q.ravel()]) * w_full
     zscore_q = np.array(zscore, dtype=np.float64) if zscore is not None else None
 
     with h5py.File(h5ad, "r") as f:
@@ -616,7 +631,7 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
             count_w = _knn_count(w_code, rows, cols, C)
             comp_w = np.bincount(w_code, minlength=C).astype(np.float64)
             comp_w = comp_w / comp_w.sum() if comp_w.sum() > 0 else comp_w
-            cheap_w = np.concatenate([comp_w, _row_normalize(count_w).ravel()])
+            cheap_w = np.concatenate([comp_w, _row_normalize(count_w).ravel()]) * w_full
             candidates.append((_cosine(cheap_q, cheap_w), float(x0 + window / 2), float(y0 + window / 2), idx))
     candidates.sort(key=lambda c: c[0], reverse=True)
     top = candidates[: int(top_k)]
@@ -661,6 +676,7 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
         "sizeTolerance": size_tolerance,
         "requiredTypes": required_types,
         "excluded": bool(exclude_ids),    # whether the same-sample overlap check was active
+        "typeWeights": weights.tolist(),
     }
 
 
@@ -710,7 +726,8 @@ def main():
                 job["h5ad"], job["types"], job["typeCounts"], job["count"], job.get("zscore"),
                 job.get("k", 6), job.get("perms", 1000), job.get("seed", 0),
                 job.get("window", 200.0), job.get("stride", 100.0), job.get("topK", 10),
-                job.get("sizeTolerance", 0.1), job.get("requiredTypes"), job.get("excludeIds")),
+                job.get("sizeTolerance", 0.1), job.get("requiredTypes"), job.get("excludeIds"),
+                type_weights=job.get("typeWeights")),
             separators=(",", ":")))
     elif job["action"] == "selftest":
         _test()  # tier-math self-check as a job, for the node unit spec
