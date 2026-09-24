@@ -643,10 +643,10 @@ export async function init(
 								panel.selectAll('*').remove()
 								// the panel's k/permutation controls rerun on the SAME selection
 								renderNhoodHeatmap(panel, r, (k2, p2) => runNhood!(ids, k2, p2))
-								// offer to search the dataset's other spatial samples for a
-								// similarly-composed, similarly-organized region (no-op in
-								// direct-file mode, which has no dataset to search)
-								await renderSimilarSearch(panel, opts, r)
+								// offer to search this sample or the dataset's other spatial
+								// samples for a similarly-composed, similarly-organized region
+								// (no-op in direct-file mode, which has no dataset to search)
+								await renderSimilarSearch(panel, opts, r, ids)
 							} catch (e: any) {
 								panel.selectAll('*').remove()
 								sayerror(panel, `Neighborhood enrichment error: ${e.message || e}`) // the lasso and viewer live on
@@ -1100,7 +1100,11 @@ export async function renderSimilarSearch(
 	opts: { genome?: string; dslabel?: string; sampleId?: string },
 	/** the just-completed nhood_enrichment result: its composition/adjacency
 	 become the search query */
-	query: NhoodResult
+	query: NhoodResult,
+	/** the lasso's own selected cell ids — passed to the server as excludeIds
+	 when searching THIS sample, so the reference region itself (an otherwise
+	 trivial cheapScore~1/distance~0 "match") doesn't dominate the results */
+	queryIds?: string[]
 ) {
 	if (!opts.genome || !opts.dslabel || !opts.sampleId || !query.typeCounts) return // no dataset, or nothing to search with
 	const data = await dofetch3(
@@ -1108,7 +1112,14 @@ export async function renderSimilarSearch(
 			opts.dslabel
 		)}&imageType=spatial`
 	).catch(() => null)
+	// this sample first (search elsewhere in the SAME image), then every other
+	// spatial sample in the dataset; wsiBySample's own listing may also include
+	// this sample, so it's filtered out of the "other samples" half to avoid a
+	// duplicate entry
 	const siblings = ((data?.samples || []) as { sampleId: string }[]).filter(s => s.sampleId != opts.sampleId)
+	const sampleOptions = [{ sampleId: opts.sampleId, label: `${opts.sampleId} (this sample)` }].concat(
+		siblings.map(s => ({ sampleId: s.sampleId, label: s.sampleId }))
+	)
 
 	const section = holder
 		.append('div')
@@ -1117,14 +1128,10 @@ export async function renderSimilarSearch(
 		.style('padding-top', '8px')
 		.style('border-top', '1px solid #ddd')
 		.style('font', '12px system-ui')
-	if (!siblings.length) {
-		section.append('div').style('opacity', 0.7).text('No other spatial samples in this dataset to search.')
-		return
-	}
-	section.append('div').style('font-weight', 'bold').text('Find similar regions in another sample')
+	section.append('div').style('font-weight', 'bold').text('Find similar regions')
 	const row = section.append('div').style('margin', '4px 0')
 	const sampleSelect = row.append('select').attr('data-testid', 'sjpp-wsi-similar-sample').style('margin-right', '6px')
-	for (const s of siblings) sampleSelect.append('option').attr('value', s.sampleId).text(s.sampleId)
+	for (const s of sampleOptions) sampleSelect.append('option').attr('value', s.sampleId).text(s.label)
 	row
 		.append('label')
 		.attr('title', 'A candidate must be within this % of the reference niche’s own cell count')
@@ -1163,6 +1170,7 @@ export async function renderSimilarSearch(
 		.text('Search')
 		.on('click', async () => {
 			const sampleId = sampleSelect.property('value')
+			const searchingSameSample = sampleId == opts.sampleId
 			// percent in the UI, fraction over the wire (route clamps to 0-5, i.e. 0-500%)
 			const sizeTolerance = Math.max(0, Number(toleranceInput.property('value')) || 0) / 100
 			const requiredTypes = requiredChecks.filter(c => c.input.property('checked')).map(c => c.type)
@@ -1190,7 +1198,11 @@ export async function renderSimilarSearch(
 						count: query.count,
 						zscore: query.zscore,
 						sizeTolerance,
-						requiredTypes
+						requiredTypes,
+						// only meaningful (and only sent) when searching the SAME sample:
+						// cell ids are per-sample, so applying them cross-sample risks
+						// coincidentally excluding unrelated cells that happen to share an id
+						excludeIds: searchingSameSample ? queryIds : undefined
 					}
 				})
 				if (!r || r.error) throw new Error(r?.error || 'similarity search failed')
