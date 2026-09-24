@@ -103,13 +103,21 @@ tape('filter sample types do not widen the sample list', async test => {
 
 	for (const sampleTypes of [['2', '2) OR (1=1'], ['2) OR (1=1']]) {
 		const res = await post('/termdb', { getsamplelist: 1, filter, mapParent2Children: true, sampleTypes })
-		const n = Array.isArray(res.body) ? res.body.length : 0
-		test.ok(
-			n <= legit.body.length,
-			`should not return more samples for sampleTypes=${JSON.stringify(sampleTypes)} (legit=${
-				legit.body.length
-			}, n=${n})`
-		)
+		const label = `sampleTypes=${JSON.stringify(sampleTypes)}`
+		if (Array.isArray(res.body)) {
+			test.ok(
+				res.body.length <= legit.body.length,
+				`should not return more samples for ${label} (legit=${legit.body.length}, n=${res.body.length})`
+			)
+		} else {
+			// only an intentional sample type validation error is acceptable, not an unrelated error
+			// such as a TypeError from dereferencing an unknown sample type, or an sql error
+			test.match(
+				String(res.body.error),
+				/invalid sample type|sample type='.*' is not an integer/,
+				`should reject ${label} with a sample type validation error`
+			)
+		}
 	}
 	test.end()
 })

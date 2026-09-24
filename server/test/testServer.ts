@@ -53,6 +53,8 @@ function getBaseConfig() {
 			// request tests; the TermdbTest dataset still requires tabix and h5dump to load
 			skip_checkDependenciesAndVersions: true
 		},
+		// debugmode would otherwise allow PP_URL, PP_BASEPATH, and other env values to override this config
+		allow_env_overrides: false,
 		binpath: serverDir,
 		tpmasterdir: path.join(serverDir, 'test/tp'),
 		backend_only: true
@@ -70,7 +72,7 @@ export async function startTestServer(overrides: any = {}, opts: { timeout?: num
 	// reuse the tsx loader flags of the current process, if any, so that the child can import .ts files
 	const child = spawn(process.execPath, [...process.execArgv, path.join(serverDir, 'test/testServer.launch.ts')], {
 		cwd: workdir,
-		env: process.env,
+		env: getChildEnv(),
 		stdio: ['ignore', 'pipe', 'pipe']
 	})
 
@@ -114,6 +116,17 @@ export async function startTestServer(overrides: any = {}, opts: { timeout?: num
 		throw e
 	}
 	return server
+}
+
+// the caller's PP_* env values must not reach the child: for example, PP_MODE=container* always
+// replaces the port and data paths in serverconfig.js, and PP_PORT may replace a missing port,
+// so that the child would not listen on the generated port that this helper waits for
+function getChildEnv() {
+	const env = { ...process.env }
+	for (const key of Object.keys(env)) {
+		if (key.startsWith('PP_')) delete env[key]
+	}
+	return env
 }
 
 function getFreePort(): Promise<number> {
