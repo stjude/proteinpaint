@@ -614,17 +614,14 @@ export function setSampleLstData(termWrappers, samples, scopedSamples) {
 				continue
 			}
 			for (const sampleId of ids) {
-				// assigning to '__proto__' would run the prototype setter rather than create a row,
-				// and the write that follows would then land outside samples{}. no sample is named this
-				if (sampleId == '__proto__') continue
 				// Object.hasOwn(), not `in`: an id such as 'constructor' matches an inherited property,
-				// which would skip row creation and write the annotation onto Object itself
-				if (!Object.hasOwn(samples, sampleId)) {
-					if (!isInSampleLstScope(scopedSamples, sampleId)) continue // out of scope, see above
-					samples[sampleId] = { sample: sampleId }
-				}
-				if (samples[sampleId][tw.$id]) continue
-				samples[sampleId][tw.$id] = { key: group.name, value: group.name }
+				// which would skip row creation and write the annotation onto Object itself. A sampleId
+				// of '__proto__' is a legitimate, real sample now that samples{} preserves it elsewhere
+				// (see getOrCreateSampleEntry()), so it must be annotated like any other id, not skipped
+				if (!Object.hasOwn(samples, sampleId) && !isInSampleLstScope(scopedSamples, sampleId)) continue // out of scope, see above
+				const sampleEntry = getOrCreateSampleEntry(samples, sampleId, { sample: sampleId })
+				if (sampleEntry[tw.$id]) continue
+				sampleEntry[tw.$id] = { key: group.name, value: group.name }
 			}
 		}
 	}

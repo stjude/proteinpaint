@@ -503,8 +503,10 @@ tape('setSampleLstData: annotates group members, adds missing samples when unfil
 
 	t.deepEqual(samples.c1.grp, { key: 'Male', value: 'Male' }, 'listed sample is annotated with its group name')
 	t.deepEqual(samples.c3.grp, { key: 'Female', value: 'Female' }, 'second group is annotated too')
+	// spread first: a newly-created row is intentionally null-prototype (see getOrCreateSampleEntry),
+	// which deepEqual treats as unequal to a {} literal even with identical own properties
 	t.deepEqual(
-		samples.c2,
+		{ ...samples.c2 },
 		{ sample: 'c2', grp: { key: 'Male', value: 'Male' } },
 		'with no filter applied, a group member absent from samples{} is added'
 	)
@@ -650,8 +652,10 @@ tape('setSampleLstData: normalizes ids and ignores values without one', t => {
 	t.end()
 })
 
-tape('setSampleLstData: a prototype-named sample id cannot write outside samples{}', t => {
-	// sampleId and $id are unvalidated request data on this route
+tape('setSampleLstData: a prototype-named sample id becomes a safe, real row', t => {
+	// sampleId and $id are unvalidated request data on this route. A sample named '__proto__' is a
+	// legitimate, real sample now that samples{} preserves it elsewhere (see getOrCreateSampleEntry()),
+	// so it must be annotated like any other id instead of being silently skipped.
 	const tw = name => ({
 		$id: 'polluted',
 		term: { type: 'samplelst', name: 'P' },
@@ -660,15 +664,22 @@ tape('setSampleLstData: a prototype-named sample id cannot write outside samples
 
 	const samples = {}
 	setSampleLstData([tw('__proto__')], samples)
-	t.equal({}.polluted, undefined, '__proto__ as a sample id does not reach Object.prototype')
-	t.equal(Object.getPrototypeOf(samples), Object.prototype, 'and does not re-point the prototype of samples{}')
-	t.deepEqual(samples, {}, 'no row is created for it')
+	t.equal({}.polluted, undefined, '__proto__ as a sample id does not pollute Object.prototype')
+	t.equal(Object.getPrototypeOf(samples), Object.prototype, "does not re-point samples{}'s own prototype")
+	t.ok(Object.hasOwn(samples, '__proto__'), 'creates a real own __proto__ row instead of skipping it')
+	// spread first: a newly-created row is intentionally null-prototype, which deepEqual treats as
+	// unequal to a {} literal even with identical own properties
+	t.deepEqual(
+		{ ...samples['__proto__'] },
+		{ sample: '__proto__', polluted: { key: 'G', value: 'G' } },
+		'the row is a normal, annotated entry'
+	)
 
 	const samples2 = {}
 	setSampleLstData([tw('constructor')], samples2)
 	t.equal(Object.polluted, undefined, 'constructor as a sample id does not write onto the Object constructor')
 	t.deepEqual(
-		samples2.constructor,
+		{ ...samples2.constructor },
 		{ sample: 'constructor', polluted: { key: 'G', value: 'G' } },
 		'it becomes an ordinary own row instead'
 	)
