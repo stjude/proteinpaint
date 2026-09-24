@@ -52,8 +52,8 @@ tape('validate_query_singleCell: ds-supplied getters need no folders', async tes
 	test.pass('validated a ds whose plots have no folder')
 	test.deepEqual(
 		ds.queries.singleCell.geneExpression.sample2gene2expressionBins,
-		{},
-		'should seed sample2gene2expressionBins for a ds-supplied getter, since getDefaultBins reads it'
+		new Map(),
+		'should seed sample2gene2expressionBins as an empty Map for a ds-supplied getter, since getDefaultBins reads it'
 	)
 	test.ok(Array.isArray(ds.queries.singleCell.terms), 'should build colorColumn terms')
 	test.end()

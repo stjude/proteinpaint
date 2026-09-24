@@ -52,7 +52,7 @@ tape('getDefaultBins rejects a reserved tw.$id before touching the single-cell b
 		queries: {
 			singleCell: {
 				geneExpression: {
-					sample2gene2expressionBins: {},
+					sample2gene2expressionBins: new Map(),
 					async get() {
 						test.fail('should not query gene expression data for a rejected $id')
 						return {}
@@ -73,9 +73,9 @@ tape('getDefaultBins rejects a reserved tw.$id before touching the single-cell b
 })
 
 tape(
-	'getDefaultBins safely stores a reserved tw.term.sample without resolving the outer cache key through Object.prototype',
+	'getDefaultBins stores a __proto__-named tw.term.sample as an ordinary Map key, not a prototype reassignment',
 	async test => {
-		const sample2gene2expressionBins = {}
+		const sample2gene2expressionBins = new Map()
 		const ds = {
 			queries: {
 				singleCell: {
@@ -94,11 +94,16 @@ tape(
 		let response
 		await trigger_getDefaultBins(q, ds, { send: value => (response = value) })
 
-		test.equal(response.error, undefined, 'processes normally instead of resolving binsCache to Object.prototype')
+		test.equal(response.error, undefined, 'processes normally, no special-casing needed for a Map key')
 		test.notOk({}.someGeneId, 'does not pollute Object.prototype')
 		test.ok(
-			Object.hasOwn(sample2gene2expressionBins, '__proto__'),
-			'stores the cache entry as a real own property of the outer map'
+			sample2gene2expressionBins.has('__proto__'),
+			'stores the cache entry under an ordinary Map key, same as any other sample name'
+		)
+		test.equal(
+			sample2gene2expressionBins.get('__proto__').get('someGeneId').min,
+			1,
+			'the cached bin config is retrievable from the nested Map'
 		)
 		test.end()
 	}

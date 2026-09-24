@@ -1064,8 +1064,10 @@ export type SingleCellGeneExpression = {
 	served for search boxes, whole-transcriptome samples stay on the genome
 	gene db */
 	listGenes?: (sample: any) => Promise<{ assay: 'panel' | 'wholeTranscriptome'; genes?: string[] }>
-	/** cached gene exp bins, seeded on init() in validate_query_singleCell() */
-	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
+	/** cached gene exp bins, seeded on init() in validate_query_singleCell(). A Map (not a plain
+	 * object): both levels are keyed by dataset-derived values with no reserved-name concerns,
+	 * since a Map key is never coerced through the object property system. */
+	sample2gene2expressionBins?: Map<string, Map<string, any>>
 	/** gene expression unit (e.g. 'FPKM') */
 	unit?: string
 	/** Label for plot buttons, title, etc. */

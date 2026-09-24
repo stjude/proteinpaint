@@ -40,22 +40,17 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			}
 		} else if (tw.term.type == SINGLECELL_GENE_EXPRESSION) {
 			if (!ds.queries?.singleCell?.geneExpression) throw 'term type not supported by this dataset'
-			// Object.hasOwn (not a truthy read) on the outer sample2gene2expressionBins map:
-			// a sample name of '__proto__' would otherwise make the read resolve to the real,
-			// shared Object.prototype instead of undefined, and every write below -- even one
-			// keyed by an innocuous tw.$id -- would then land on that same global object.
+			// Map, not a plain object: both levels of this cache are keyed by dataset-derived
+			// values (tw.term.sample, tw.$id) with no reserved-name concerns -- a Map key is never
+			// coerced through the object property system, so a value of '__proto__' is just an
+			// ordinary key, unlike a plain object where it can resolve to Object.prototype.
 			const sample2bins = ds.queries.singleCell.geneExpression.sample2gene2expressionBins
-			if (!Object.hasOwn(sample2bins, tw.term.sample)) {
-				binsCache = {}
-				Object.defineProperty(sample2bins, tw.term.sample, {
-					value: binsCache,
-					enumerable: true,
-					configurable: true,
-					writable: true
-				})
+			if (!sample2bins.has(tw.term.sample)) {
+				binsCache = new Map()
+				sample2bins.set(tw.term.sample, binsCache)
 			} else {
-				binsCache = sample2bins[tw.term.sample]
-				if (Object.hasOwn(binsCache, tw.$id)) return res.send(binsCache[tw.$id])
+				binsCache = sample2bins.get(tw.term.sample)
+				if (binsCache.has(tw.$id)) return res.send(binsCache.get(tw.$id))
 			}
 			const data = await ds.queries.singleCell.geneExpression.get(q, tw.term.sample, tw.term.gene)
 			for (const cell in data) {
@@ -105,16 +100,7 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			}
 		}
 		const binconfig = initBinConfig(lst)
-		// defineProperty (not binsCache[tw.$id] = value): binsCache is a persistent,
-		// dataset-scoped cache shared across requests, so a $id of '__proto__' must not
-		// be able to reassign its prototype for every future caller
-		if (binsCache)
-			Object.defineProperty(binsCache, tw.$id, {
-				value: { default: binconfig, min, max },
-				enumerable: true,
-				configurable: true,
-				writable: true
-			})
+		if (binsCache) binsCache.set(tw.$id, { default: binconfig, min, max })
 		res.send({ default: binconfig, min, max })
 	} catch (e) {
 		console.log(e)
