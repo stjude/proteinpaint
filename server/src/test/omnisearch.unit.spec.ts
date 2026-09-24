@@ -19,6 +19,7 @@ or run the whole unit suite (as CI does):
 import tape from 'tape'
 import { runOmnisearch, userCanAccessDsData, computeUnionAuthFilter } from '../chat/search.ts'
 import { getAuthApi, authApi } from '../auth.js'
+import { AuthApi } from '#src/auth/AuthApi.ts'
 
 // minimal request; filterTerms() only reads req.query.__protected__, and our hardcoded ds has no isTermVisible()
 const req: any = { query: {} }
@@ -408,5 +409,28 @@ tape('coordinate search for genome browser: a typed coordinate resolves only whe
 	// without coordCandidates the server does not resolve a coordinate (gated on the client regex)
 	const noCandidates = await runOmnisearch({ prompt: coordPrompt }, req, ds, genome)
 	t.notOk(noCandidates.coord, 'coord should NOT be resolved when no coordCandidates are sent')
+	t.end()
+})
+
+tape('sign-in gate: a non-string dslabel or embedder does not bypass a required credential', t => {
+	// real AuthApi, with a credential configured only for an exact dslabel and embedder key
+	const creds = { ProtDs: { termdb: { 'portal.example.org': { type: 'jwt', secret: 'x', route: 'termdb' } } } }
+	const auth = new AuthApi(creds, {}, {}, { port: 3000, cachedir: '/tmp' })
+	const req = (query: any): any => ({ query, headers: {}, cookies: {} })
+	t.equal(
+		userCanAccessDsData(req({ dslabel: 'ProtDs', embedder: 'portal.example.org' }), auth),
+		false,
+		'no session -> denied'
+	)
+	t.throws(
+		() => userCanAccessDsData(req({ dslabel: 'ProtDs', embedder: ['portal.example.org'] }), auth),
+		/must be a string/,
+		'embedder[] -> rejected, not treated as open'
+	)
+	t.throws(
+		() => userCanAccessDsData(req({ dslabel: ['ProtDs'], embedder: 'portal.example.org' }), auth),
+		/must be a string/,
+		'dslabel[] -> rejected, not treated as open'
+	)
 	t.end()
 })

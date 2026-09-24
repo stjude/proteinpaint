@@ -110,6 +110,73 @@ tape('AuthApi.maySetAuthRoutes: registers middleware and auth routes', async fun
 	test.end()
 })
 
+// The server constructs AuthApi via getAuthApi(app, genomes, { validatedCreds }), with no basepath in that
+// config argument, and later passes the route registration basepath to maySetAuthRoutes(). The same basepath
+// must govern the registered auth routes, the middleware forced-open check, and credential matching.
+tape(
+	'AuthApi.maySetAuthRoutes: uses the route registration basepath for the middleware and credential checks',
+	async function (test) {
+		test.timeoutAfter(1000)
+
+		const creds = { [dslabel]: { termdb: { [embedder]: makeShapedCred() } } }
+		const app = makeMockApp()
+		const authApi = new AuthApi(creds, app, {}, { validatedCreds: creds })
+		await authApi.maySetAuthRoutes(app, {}, '/api', { port: 3000, cachedir: '/tmp' })
+
+		test.deepEqual(
+			Object.keys(app.routes).sort(),
+			['/api/authorizedActions', '/api/demoToken', '/api/dslogin', '/api/dslogout', '/api/jwt-status'],
+			'should register the auth routes under the basepath'
+		)
+
+		const middleware = app.middlewares['*']
+		async function send(path: string, headers: any = {}, query: any = {}) {
+			const req: any = { query: { dslabel, embedder, ...query }, path, headers, cookies: {}, ip: '127.0.0.1' }
+			const res: any = {
+				statusCode: 200,
+				sentData: null,
+				status(code: number) {
+					res.statusCode = code
+					return res
+				},
+				send(data: any) {
+					res.sentData = data
+					return res
+				},
+				header() {
+					return res
+				}
+			}
+			let nextCalled = false
+			middleware(req, res, () => (nextCalled = true))
+			// route the way Express would: case-insensitive, ignoring a trailing slash
+			const route = Object.keys(app.routes).find(r => r.toLowerCase() == path.toLowerCase().replace(/\/+$/, ''))
+			if (nextCalled && route) await app.routes[route].post(req, res)
+			return { res, nextCalled }
+		}
+
+		for (const path of ['/api/termdb/matrix', '/API/TERMDB/MATRIX/']) {
+			const { res, nextCalled } = await send(path)
+			test.notOk(nextCalled, `should NOT call next() for '${path}' without a session`)
+			test.equal(res.statusCode, 401, `should set 401 for '${path}' without a session`)
+		}
+
+		const loginToken = jsonwebtoken.sign(
+			{ iat: time, exp: time + 300, email: 'user@test.com', ip: '127.0.0.1' },
+			secret
+		)
+		const login = await send('/api/jwt-status', { [headerKey]: loginToken }, { route: 'termdb' })
+		test.ok(login.nextCalled, 'should let /api/jwt-status through the middleware')
+		test.equal(login.res.sentData?.status, 'ok', 'should return ok from /api/jwt-status')
+		test.ok(login.res.sentData?.jwt, 'should return a session jwt from /api/jwt-status')
+
+		const b64token = Buffer.from(login.res.sentData?.jwt || '').toString('base64')
+		const authed = await send('/api/termdb/matrix', { authorization: `Bearer ${b64token}` })
+		test.ok(authed.nextCalled, 'should allow /api/termdb/matrix with the established session')
+		test.end()
+	}
+)
+
 tape('AuthApi.canDisplaySampleIds: returns false when displaySampleIds is not set on ds', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
@@ -654,6 +721,89 @@ tape('AuthApi.getNonsensitiveInfo: returns clientAuthResult from active session'
 	test.end()
 })
 
+tape('AuthApi.getNonsensitiveInfo: returns forbidden routes for glob dslabel and embedder keys', function (test) {
+	test.timeoutAfter(500)
+
+	const creds: any = {
+		'realD*': {
+			termdb: {
+				'*.example.org': makeShapedCred({ dslabel: 'realD*' })
+			},
+			burden: {
+				'*.example.org': makeShapedCred({ dslabel: 'realD*', route: 'burden', type: 'forbidden' })
+			}
+		}
+	}
+	const authApi = new AuthApi(creds, makeMockApp(), {}, { port: 3000, cachedir: '/tmp' })
+	const getReq = (dslabel, embedder) => ({ query: { dslabel, embedder }, headers: {}, cookies: {} })
+
+	test.deepEqual(
+		authApi.getNonsensitiveInfo(getReq('realDs1', 'portal.example.org') as any),
+		{ forbiddenRoutes: ['burden'], clientAuthResult: {} },
+		'should include a forbidden route for glob-matched dslabel and embedder keys'
+	)
+	test.deepEqual(
+		authApi.getNonsensitiveInfo(getReq('realDs1', 'other.org') as any).forbiddenRoutes,
+		[],
+		'should not include a forbidden route when the embedder does not match the glob key'
+	)
+	test.deepEqual(
+		authApi.getNonsensitiveInfo(getReq('otherDs', 'portal.example.org') as any),
+		{ forbiddenRoutes: [], clientAuthResult: {} },
+		'should return open access when the dslabel does not match the glob key'
+	)
+	test.end()
+})
+
+tape('AuthApi.getNonsensitiveInfo: returns clientAuthResult for glob dslabel and embedder keys', async function (test) {
+	test.timeoutAfter(1000)
+
+	const clientAuthResult = { role: 'user', access: 'full' }
+	const loginToken = jsonwebtoken.sign(
+		{ iat: time, exp: time + 300, ip: '127.0.0.1', email: 'user@test.com', clientAuthResult },
+		secret
+	)
+	const creds: any = {
+		'realD*': {
+			termdb: {
+				'*.example.org': makeShapedCred({ dslabel: 'realD*' })
+			}
+		}
+	}
+	const app = makeMockApp()
+	const serverconfig = { port: 3000, cachedir: '/tmp' }
+	const authApi = new AuthApi(creds, app, {}, serverconfig)
+	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
+	const query = { dslabel: 'realDs1', embedder: 'portal.example.org' }
+
+	// establish a session
+	let sessionCookieId = ''
+	let sessionId = ''
+	await new Promise<void>(resolve => {
+		const req = { query, headers: { [headerKey]: loginToken }, path: '/jwt-status', ip: '127.0.0.1', cookies: {} }
+		const res = {
+			send() {
+				resolve()
+			},
+			header(_key: string, val: string) {
+				if (_key === 'Set-Cookie') [sessionCookieId, sessionId] = val.split(';')[0].split('=')
+			},
+			status() {}
+		}
+		app.routes['/jwt-status'].post(req, res)
+	})
+	await sleep(50)
+
+	test.ok(sessionId, 'should establish a session for glob-matched dslabel and embedder keys')
+	const req = { query, headers: {}, cookies: { [sessionCookieId]: sessionId } }
+	test.deepEqual(
+		authApi.getNonsensitiveInfo(req as any).clientAuthResult,
+		clientAuthResult,
+		'should return clientAuthResult from an active session for glob-matched dslabel and embedder keys'
+	)
+	test.end()
+})
+
 tape('AuthApi.getRequiredCredForDsEmbedder: returns undefined for non-matching dslabel', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
@@ -1083,5 +1233,30 @@ tape('AuthApi.mayAdjustFilter: throws when filter.type is not tvslst', function 
 	} catch (e) {
 		test.ok(String(e).includes("invalid q.filter.type != 'tvslst'"), 'should throw mentioning invalid filter type')
 	}
+	test.end()
+})
+
+tape('AuthApi.getRequiredCredForDsEmbedder: fails closed for a non-string dslabel or embedder', function (test) {
+	test.timeoutAfter(500)
+
+	const { authApi } = makeAuthApi()
+	test.ok(
+		authApi.getRequiredCredForDsEmbedder(dslabel, embedder)?.length,
+		'should return the required cred for string values'
+	)
+	test.doesNotThrow(
+		() => authApi.getRequiredCredForDsEmbedder(dslabel, undefined),
+		'should not throw for an undefined embedder'
+	)
+	test.throws(
+		() => authApi.getRequiredCredForDsEmbedder([dslabel], embedder),
+		/must be a string/,
+		'should throw for dslabel[]'
+	)
+	test.throws(
+		() => authApi.getRequiredCredForDsEmbedder(dslabel, [embedder]),
+		/must be a string/,
+		'should throw for embedder[]'
+	)
 	test.end()
 })

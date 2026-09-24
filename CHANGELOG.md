@@ -12,6 +12,13 @@ Features:
 
 Fixes:
 - Restored violin label menu option to hide individual plots.
+- keep cache_index() url and index paths inside the cache dir
+- Auth: a `termdb` credential now requires sign-in for any sample-level response, including array `for[]` values, `getsamplelist`, `getsamples`, `convertSampleId`, and glob-matched dslabel/embedder keys
+- Auth: `/termdb/chat` sample search no longer treats a protected dataset as open for an embedder with a `/`
+- Auth: protected routes are matched case-insensitively and ignore a trailing slash
+- Mass session: harden session file path validation and fix deleting server-saved sessions
+- dofetch3: a request with a too-long URL is converted to POST only if it is a GET; a DELETE or PUT throws instead
+- SQL: parameterize or validate values and table names in constructed sql statements
 
 
 ## 2.210.1
