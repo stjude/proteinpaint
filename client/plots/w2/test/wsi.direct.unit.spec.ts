@@ -1,6 +1,14 @@
 import tape from 'tape'
 import { select } from 'd3-selection'
-import { parseBoundaries, pointInRing, tooltipRows, cellsInLasso, renderNhoodHeatmap } from '../wsi.direct'
+import {
+	parseBoundaries,
+	pointInRing,
+	tooltipRows,
+	cellsInLasso,
+	renderNhoodHeatmap,
+	renderSimilarSearch,
+	focusExtent
+} from '../wsi.direct'
 
 /* Tests
     parseBoundaries: boundary csv -> one ring per cell
@@ -8,6 +16,8 @@ import { parseBoundaries, pointInRing, tooltipRows, cellsInLasso, renderNhoodHea
     tooltipRows: hover tooltip content
     cellsInLasso: lasso selection by cell centroid
     renderNhoodHeatmap: enrichment z-score matrix rendering
+    renderSimilarSearch: no-op guard without dataset addressing (the rest needs a live server, see wsi.integration.spec.ts)
+    focusExtent: niche box µm -> px, same transform as parseBoundaries
 */
 
 // two cells, µm coords; mpp 0.5 doubles px values, y negated for OL
@@ -41,6 +51,17 @@ tape('boundary csv -> one ring per cell', test => {
 		'µm scaled to px by mpp, y negated, id unquoted'
 	)
 	test.equal(polys[1].id, 'cell-2', 'last cell not dropped')
+	test.end()
+})
+
+tape('focusExtent boxes a niche in the same µm -> px space as parseBoundaries', test => {
+	const box = focusExtent(100, 200, 40, 0.5, 0.5) // 40µm-wide box centered on (100,200), mpp 0.5
+	test.deepEqual(box, [160, -440, 240, -360], 'min/max px, y negated for OL, half the window on each side')
+	const [cellX, cellY] = [100 / 0.5, -200 / 0.5] // the same transform parseBoundaries applies to a cell vertex
+	test.ok(
+		cellX >= box[0] && cellX <= box[2] && cellY >= box[1] && cellY <= box[3],
+		"the query's own center point falls inside its box"
+	)
 	test.end()
 })
 
@@ -210,6 +231,34 @@ tape('renderNhoodHeatmap k/permutation controls rerun with clamped values', test
 	inputs[1].value = '3'
 	;(panel.querySelector('[data-testid="sjpp-wsi-nhood-rerun"]') as HTMLButtonElement).click()
 	test.deepEqual(calls[1], [30, 10], 'out-of-range entries are clamped to the route bounds')
+	holder.remove()
+	test.end()
+})
+
+tape('renderSimilarSearch is a no-op without dataset addressing', async test => {
+	// direct-file mode (opts.genome/dslabel/sampleId absent) has no dataset to
+	// search, and must return before making any network request -- the only
+	// part of this function testable without a live server (see
+	// wsi.integration.spec.ts for the rest)
+	const holder = select(document.body).append('div')
+	const query = {
+		types: ['A', 'B'],
+		typeCounts: [3, 2],
+		count: [
+			[1, 2],
+			[2, 1]
+		],
+		zscore: [
+			[0.5, -0.5],
+			[-0.5, 0.5]
+		],
+		cells: 5,
+		skipped: 0,
+		k: 6,
+		perms: 50
+	}
+	await renderSimilarSearch(holder, {}, query)
+	test.equal((holder.node() as HTMLElement).children.length, 0, 'nothing rendered, no fetch attempted')
 	holder.remove()
 	test.end()
 })

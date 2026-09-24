@@ -148,17 +148,22 @@ function init({ genomes }) {
 			}
 
 			if (!q.sample_id) {
-				// no sample given: list samples for the standalone Whole Slide
-				// Images plot — PLAIN slides on disk only (spatial images are
-				// viewed through the single-cell app, which asks per sample_id)
-				const ids = wsiBase ? await subdirs(wsiBase) : [] // each subfolder = one sample
+				// no sample given: by default, samples for the standalone Whole
+				// Slide Images plot — PLAIN slides on disk only (spatial images are
+				// normally viewed through the single-cell app, which asks per
+				// sample_id). imageType=spatial opts into listing SPATIAL samples
+				// instead — the w2 viewer's similar-region search uses this to
+				// offer the dataset's other spatial samples
+				const spatial = q.imageType == 'spatial'
+				const base = spatial ? spatialBase : wsiBase
+				const ids = base ? await subdirs(base) : [] // each subfolder = one sample
 				const samples: WsiSampleSummary[] = []
 				for (const name of ids.sort()) {
-					// count each sample's plain slides by enumerating only the wsi
-					// root — the spatial tree is never touched here, so listing
-					// cost and failures can't depend on unrelated spatial data
-					const count = (await getImages(name, 'wsi')).length
-					if (count) samples.push({ sampleId: name, count }) // a folder without slides isn't listed
+					// count each sample's images by enumerating only the requested
+					// root — the other tree is never touched here, so listing cost
+					// and failures can't depend on unrelated data
+					const count = (await getImages(name, spatial ? 'spatial' : 'wsi')).length
+					if (count) samples.push({ sampleId: name, count }) // a folder without images isn't listed
 				}
 				res.status(200).json({ samples } satisfies WsiBySampleResponse)
 				return
