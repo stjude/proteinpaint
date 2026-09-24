@@ -513,7 +513,7 @@ def _cosine(a, b):
 
 
 def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=1000,
-                     seed=0, window=200.0, stride=100.0, top_k=10):
+                     seed=0, window=200.0, stride=100.0, top_k=10, size_tolerance=0.1):
     """Windows of `h5ad` whose cell-type makeup and local neighbourhood
     resemble a query region (typically another image's lasso selection,
     summarised by an earlier nhood_enrichment() call and handed in here as
@@ -521,21 +521,27 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
     needs to read the query's own h5ad).
 
     Two-stage, coarse-to-fine: `h5ad`'s cells are tiled into `window`-sized,
-    `stride`-spaced (i.e. overlapping when stride < window) square windows;
-    each gets a cheap signature (its per-type composition + row-normalized
-    kNN neighbour-count matrix, both aligned to the query's `types` -- cells
-    of any other type are ignored, same as an unannotated cell) compared to
-    the query's own signature by cosine similarity, no permutation test. The
-    `top_k` cheap-stage windows are then confirmed with the SAME permutation
-    z-score test nhood_enrichment runs, and ranked by distance to the query's
-    z-score matrix (mean absolute difference over cells finite in both) when
-    the caller supplied one, else left in cheap-score order."""
+    `stride`-spaced (i.e. overlapping when stride < window) square windows.
+    A window outside +-`size_tolerance` (default 0.1 = +-10%) of the query's
+    own cell count (sum(type_counts)) is dropped before anything else -- a
+    "similar" niche must be a similar SIZE, not just a similar mix, so a tiny
+    or huge window never wins on composition alone. Each survivor gets a cheap
+    signature (its per-type
+    composition + row-normalized kNN neighbour-count matrix, both aligned to
+    the query's `types` -- cells of any other type are ignored, same as an
+    unannotated cell) compared to the query's own signature by cosine
+    similarity, no permutation test. The `top_k` cheap-stage windows are then
+    confirmed with the SAME permutation z-score test nhood_enrichment runs,
+    and ranked by distance to the query's z-score matrix (mean absolute
+    difference over cells finite in both) when the caller supplied one, else
+    left in cheap-score order."""
     import h5py
     C = len(types)
     if C < 2:
         return {"error": f"similarity search needs at least 2 query cell types, found {C}"}
     type_counts = np.asarray(type_counts, dtype=np.float64)
-    comp_q = type_counts / type_counts.sum() if type_counts.sum() > 0 else type_counts
+    ref_n = type_counts.sum()                              # the query region's own cell count
+    comp_q = type_counts / ref_n if ref_n > 0 else type_counts
     adj_q = _row_normalize(count)
     cheap_q = np.concatenate([comp_q, adj_q.ravel()])
     zscore_q = np.array(zscore, dtype=np.float64) if zscore is not None else None
@@ -569,6 +575,10 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
         return {"error": f"scan too large ({xs.size * ys.size} windows x {n} cells): use a larger window/stride"}
 
     min_cells = max(4, k + 1)                              # too few cells for a meaningful kNN graph
+    # a "similar niche" must be a similar SIZE, not just a similar mix: within
+    # +-size_tolerance of the query region's own cell count, tested before any
+    # signature math runs
+    size_lo, size_hi = ref_n * (1 - size_tolerance), ref_n * (1 + size_tolerance)
     candidates = []                                        # (cheap_score, cx, cy, member index array)
     # ponytail: O(windows * cells) full-array scan per window, cells ~10-100k
     # and windows ~hundreds is fine; a whole-slide-scale search would want a
@@ -578,7 +588,7 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
             m = (coords[:, 0] >= x0) & (coords[:, 0] < x0 + window) & \
                 (coords[:, 1] >= y0) & (coords[:, 1] < y0 + window)
             idx = np.nonzero(m)[0]
-            if idx.size < min_cells:
+            if idx.size < min_cells or not (size_lo <= idx.size <= size_hi):
                 continue
             w_code = code[idx]
             rows, cols, kk = _knn_edges(coords[idx], k)
@@ -628,6 +638,8 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
         "perms": int(perms),
         "window": window,
         "stride": stride,
+        "refCells": int(ref_n),           # the query region's own cell count, for the UI to show %-diff per candidate
+        "sizeTolerance": size_tolerance,
     }
 
 
@@ -676,7 +688,8 @@ def main():
             similar_regions(
                 job["h5ad"], job["types"], job["typeCounts"], job["count"], job.get("zscore"),
                 job.get("k", 6), job.get("perms", 1000), job.get("seed", 0),
-                job.get("window", 200.0), job.get("stride", 100.0), job.get("topK", 10)),
+                job.get("window", 200.0), job.get("stride", 100.0), job.get("topK", 10),
+                job.get("sizeTolerance", 0.1)),
             separators=(",", ":")))
     elif job["action"] == "selftest":
         _test()  # tier-math self-check as a job, for the node unit spec

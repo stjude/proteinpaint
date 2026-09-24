@@ -169,7 +169,12 @@ tape('similar finds a window as its own best match when searched against itself'
 				count: wide.count,
 				window: 100,
 				stride: 50,
-				topK: 6
+				topK: 6,
+				// this bootstrap step only wants SOME real window to build the next
+				// query from; the whole-image cell count (`wide`) is nowhere near a
+				// 100x100 sub-window's, so the default +-10% size filter would empty
+				// it out here -- neutralize it (0/1 always sit inside [n*0, n*2])
+				sizeTolerance: 1
 			})
 		)
 	)
@@ -201,11 +206,60 @@ tape('similar finds a window as its own best match when searched against itself'
 		)
 	)
 	t.deepEqual(selfSearch.types, query.types, 'window result aligned to the query type vocabulary')
+	t.equal(selfSearch.refCells, query.cells, 'refCells echoes the query cell count')
+	t.equal(selfSearch.sizeTolerance, 0.1, 'default +-10% size tolerance, not overridden here')
 	const best = selfSearch.windows[0]
 	t.ok(best.cheapScore > 0.999, `top match is (near) cosine-identical to the query (got ${best.cheapScore})`)
 	t.ok(best.distance !== null && best.distance < 0.5, `top match has a small rigorous distance (got ${best.distance})`)
 	const overlap = best.ids.filter((id: string) => chosen.ids.includes(id)).length
 	t.equal(overlap, chosen.ids.length, "the winning window is exactly the query's own window")
+	t.end()
+})
+
+tape('similar excludes a candidate outside the size tolerance, by default +-10%', async t => {
+	// deterministic setup: a window wider than the fixture's own spatial
+	// extent always has exactly ONE grid position, covering every cell of the
+	// query's vocabulary -- so its cell count is known exactly (= the query's
+	// own `cells`), with no dependence on how cells happen to be distributed
+	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
+	const wide = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({ action: 'nhood', h5ad, ids: Object.keys(ann.cells), k: 6, perms: 20, seed: 1 })
+		)
+	)
+	const wholeExtentScan = (typeCounts: number[], sizeTolerance?: number) =>
+		run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'similar',
+				h5ad,
+				types: wide.types,
+				typeCounts,
+				count: wide.count,
+				window: 1000, // larger than the fixture's ~212x209 µm extent: exactly one grid window
+				stride: 1000,
+				topK: 1,
+				perms: 10, // the rigorous stage isn't under test here
+				...(sizeTolerance == null ? {} : { sizeTolerance })
+			})
+		).then(JSON.parse)
+
+	const exact = await wholeExtentScan(wide.typeCounts)
+	t.equal(exact.windows.length, 1, 'the single whole-extent window matches its own exact cell count')
+	t.equal(exact.windows[0].cells, wide.cells, 'and its cell count is exactly the query size (0% diff)')
+
+	const halved = wide.typeCounts.map((n: number) => Math.round(n / 2)) // same mix, half the cells
+	const excluded = await wholeExtentScan(halved)
+	t.equal(
+		excluded.windows.length,
+		0,
+		'a query at half the real window size is outside the default +-10% tolerance -- excluded despite an identical type mix'
+	)
+
+	const included = await wholeExtentScan(halved, 1.5) // +-150%: the same halved query, now well inside tolerance
+	t.equal(included.windows.length, 1, 'the SAME halved query is included once sizeTolerance is widened past the gap')
+	t.equal(included.sizeTolerance, 1.5, 'sizeTolerance is echoed back as given')
 	t.end()
 })
 
