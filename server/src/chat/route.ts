@@ -108,13 +108,11 @@ export function init({ genomes }) {
 			const cohortKey = cohortFilter ? cohortFilter.tvs.values[0].key : ''
 			const supportedPlotTypes = ds.cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
 			const chatSupportedPlotTypes = getChatRelatedPlotTypes(supportedPlotTypes)
-			const genedb = path.join(serverconfig.tpmasterdir, genome.genedb.dbfile)
 			const allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
 				llm,
 				ds,
-				genedb,
 				agentFiles,
 				aiFilesDir,
 				chatSupportedPlotTypes,
@@ -134,7 +132,6 @@ export async function run_chat_pipeline(
 	userPrompt: string,
 	llm: LlmConfig,
 	ds: any,
-	genedb: string,
 	agentFiles: string[],
 	aiFilesDir: string,
 	supportedPlotTypes: string[],
@@ -190,14 +187,14 @@ export async function run_chat_pipeline(
 			return ai_output_json
 		}
 
-		const genes_list = await parse_geneset_db(genedb)
+		const genes_list = await parse_geneset_db(genome.genedb.db)
 
 		// If supported plot type, figure out the scaffold according to the plot type
 		mayLog('#################################################')
 		mayLog('####### First phase: Infer Plot Scaffolds #######')
 		mayLog('#################################################')
 		time = new Date().valueOf()
-		const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
+		const dataset_db = ds.cohort.db.connection
 		const scaffoldResult = await inferScaffold(
 			userPrompt,
 			plotType,

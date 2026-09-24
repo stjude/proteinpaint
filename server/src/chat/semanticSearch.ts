@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3'
+import type Database from 'better-sqlite3'
 import fs from 'fs'
 import path from 'path'
 import type { LlmConfig } from '#types'
@@ -55,23 +55,18 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 // read tables from the DB
-function readTable(dbPath: string): TermRow[] {
-	const db = new Database(dbPath, { readonly: true })
-	try {
-		const rows = db
-			.prepare(
-				`
+function readTable(db: Database.Database): TermRow[] {
+	const rows = db
+		.prepare(
+			`
       SELECT t.id, t.name, t.type, h.jsonhtml
       FROM terms t
       INNER JOIN termhtmldef h ON t.id = h.id
     `
-			)
-			.all() as TermRow[]
-		console.log(`Read ${rows.length} rows from DB`)
-		return rows
-	} finally {
-		db.close()
-	}
+		)
+		.all() as TermRow[]
+	console.log(`Read ${rows.length} rows from DB`)
+	return rows
 }
 
 // Extract sentences from the descriptions of the DB
@@ -103,8 +98,8 @@ function loadEmbeddings(): TermEmbedding[] | null {
 }
 
 // Build embeddings of the DB
-async function buildEmbeddingStore(dbPath: string, llm: LlmConfig): Promise<TermEmbedding[]> {
-	const rows = readTable(dbPath)
+async function buildEmbeddingStore(db: Database.Database, llm: LlmConfig): Promise<TermEmbedding[]> {
+	const rows = readTable(db)
 
 	// Flatten all sentences into one array, tracking which row each belongs to
 	const allSentences: string[] = []
@@ -139,12 +134,12 @@ async function buildEmbeddingStore(dbPath: string, llm: LlmConfig): Promise<Term
 }
 
 // Load or build the embeddings
-export async function loadOrBuildEmbeddings(dbPath: string, llm: LlmConfig): Promise<TermEmbedding[]> {
+export async function loadOrBuildEmbeddings(db: Database.Database, llm: LlmConfig): Promise<TermEmbedding[]> {
 	const cached = loadEmbeddings()
 	if (cached) return cached
 
 	console.log('No cache found — building from DB...')
-	const store = await buildEmbeddingStore(dbPath, llm)
+	const store = await buildEmbeddingStore(db, llm)
 	saveEmbeddings(store)
 	return store
 }

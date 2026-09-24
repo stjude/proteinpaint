@@ -1,4 +1,5 @@
 import type { LlmConfig, GeneDataTypeResult } from '#types'
+import type Database from 'better-sqlite3'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
@@ -754,7 +755,7 @@ async function hierarchicalGeneExpression(
 	genes_list: string[],
 	dataset_json?: any,
 	ds?: any,
-	dbPath?: string
+	db?: Database.Database
 ): Promise<any | MsgToUser> {
 	const prompt = `You are a ProteinPaint hierarchical clustering assistant. Your task is to extract the list of genes (and optionally gene sets) and an optional cohort filter from a user's natural language question.
 
@@ -828,10 +829,10 @@ Query: ${user_prompt}
 		// resolves it to the geneExpression term type rather than flagging it as ambiguous.
 		let filterTvs: any
 		if (parsed.filter) {
-			if (!genes_list || !dataset_json || !ds || !dbPath) {
-				throw 'generateFilterTerm requires genes_list, dataset_json, ds, and dbPath to be provided'
+			if (!genes_list || !dataset_json || !ds || !db) {
+				throw 'generateFilterTerm requires genes_list, dataset_json, ds, and db to be provided'
 			}
-			filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, dbPath, genome)
+			filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, db, genome)
 			if (filterTvs && 'type' in filterTvs && filterTvs.type === 'text') {
 				return filterTvs as { type: 'text'; text: string }
 			}
@@ -1117,7 +1118,7 @@ export async function getScaffold_hierarchical(
 	genes_list: string[],
 	allowedTermTypes: string[],
 	ds: any,
-	dbPath: string,
+	db: Database.Database,
 	dataset_json: any
 ): Promise<any | HierarchicalScaffold | MsgToUser> {
 	const prompt = `You are a ProteinPaint hierarchical clustering classifier. Your task is to determine what kind of variable the user wants to cluster on.
@@ -1189,7 +1190,7 @@ Query: ${user_prompt}
 	const variableType: string = parsedClassifier.variableType
 	if (variableType === TermTypes.GENE_EXPRESSION) {
 		if (allowedTermTypes.includes(TermTypes.GENE_EXPRESSION)) {
-			return await hierarchicalGeneExpression(user_prompt, llm, genome, genes_list, dataset_json, ds, dbPath)
+			return await hierarchicalGeneExpression(user_prompt, llm, genome, genes_list, dataset_json, ds, db)
 		} else {
 			return {
 				type: 'text',
@@ -1216,7 +1217,7 @@ Query: ${user_prompt}
 		}
 	} else if (variableType === TermTypes.SSGSEA) {
 		if (allowedTermTypes.includes(TermTypes.SSGSEA)) {
-			return await hierarchicalDictionaryssGSEA(user_prompt, llm, ds, dbPath, genes_list, dataset_json, genome)
+			return await hierarchicalDictionaryssGSEA(user_prompt, llm, ds, db, genes_list, dataset_json, genome)
 		} else {
 			return {
 				type: 'text',
@@ -1224,7 +1225,7 @@ Query: ${user_prompt}
 			}
 		}
 	} else if (variableType === 'dictionary') {
-		return await hierarchicalDictionaryssGSEA(user_prompt, llm, ds, dbPath, genes_list, dataset_json, genome)
+		return await hierarchicalDictionaryssGSEA(user_prompt, llm, ds, db, genes_list, dataset_json, genome)
 	} else {
 		throw new Error(`Unexpected variableType "${variableType}" returned by hierarchical classifier`)
 	}
@@ -1234,7 +1235,7 @@ export async function hierarchicalDictionaryssGSEA(
 	user_prompt: string,
 	llm: LlmConfig,
 	ds: any,
-	dbPath: string,
+	db: Database.Database,
 	genes_list: string[],
 	dataset_json: any,
 	genome: any
@@ -1330,7 +1331,7 @@ Query: ${user_prompt}
 		}
 	} else {
 		if (parsed.filter) {
-			const filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, dbPath, genome)
+			const filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, db, genome)
 			if (filterTvs && 'type' in filterTvs && filterTvs.type === 'text') {
 				throw new Error(filterTvs.text)
 			}
@@ -1349,7 +1350,7 @@ export async function inferScaffold(
 	allowedTermTypes: string[],
 	dataset_json: any,
 	ds: any,
-	dbPath: string
+	db: Database.Database
 ): Promise<Scaffold | MsgToUser | any> {
 	// any is for final output in case of hierarchical clustering
 	switch (plotType) {
@@ -1371,7 +1372,7 @@ export async function inferScaffold(
 				genes_list,
 				allowedTermTypes,
 				ds,
-				dbPath,
+				db,
 				dataset_json
 			)
 		case 'matrix':
