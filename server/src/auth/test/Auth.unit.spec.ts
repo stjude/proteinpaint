@@ -241,6 +241,54 @@ tape('getRequiredCred: checks lower-precedence dslabel entries for a route', fun
 	test.end()
 })
 
+tape('getMatchedEntry: exact, then glob, then wildcard key precedence', function (test) {
+	test.timeoutAfter(500)
+
+	const obj = {
+		// declared first, to confirm that key order in the object does not affect precedence
+		'*': 'wildcard',
+		'*.example.org': 'glob',
+		'portal.example.org': 'exact'
+	}
+	test.equal(getMatchedEntry(obj, 'portal.example.org'), 'exact', 'should prefer an exact key')
+	test.equal(getMatchedEntry(obj, 'other.example.org'), 'glob', 'should prefer a glob key over the wildcard key')
+	test.equal(getMatchedEntry(obj, 'other.org'), 'wildcard', 'should fall back to the wildcard key')
+	test.equal(getMatchedEntry(obj, 'a/b'), 'wildcard', 'should fall back to the wildcard key for a value with a slash')
+	test.equal(
+		getMatchedEntry({ '*.example.org': 'glob' }, 'other.org'),
+		undefined,
+		'should return undefined with no match'
+	)
+	test.end()
+})
+
+tape('getRequiredCred: a glob embedder key takes precedence over the wildcard embedder key', function (test) {
+	test.timeoutAfter(500)
+
+	const forbiddenCred = makeCred({ type: 'forbidden' })
+	const loginCred = makeCred()
+	const creds = {
+		[dslabel]: {
+			termdb: {
+				'*': forbiddenCred,
+				'*.example.org': loginCred
+			}
+		}
+	}
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	test.equal(
+		auth.getRequiredCred({ dslabel, embedder: 'portal.example.org' }, '/termdb/matrix'),
+		loginCred,
+		'should return the login cred for an embedder that matches the glob key'
+	)
+	test.equal(
+		auth.getRequiredCred({ dslabel, embedder: 'other.org' }, '/termdb/matrix'),
+		forbiddenCred,
+		'should return the forbidden cred for an embedder that only matches the wildcard key'
+	)
+	test.end()
+})
+
 tape('getRequiredCred: uses wildcard dslabel when specific dslabel not found', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)

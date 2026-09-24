@@ -30,10 +30,13 @@ function isMatch(path: string, pattern: string) {
 	return mmIsMatch(path, pattern, { nocase: true })
 }
 
-// match a client-supplied value against a dsCredentials key: an exact key match or the '*' wildcard
-// always apply, otherwise try a glob. Note that a glob '*' alone does not match values with a '/',
-// such as embedder='a/b', so the wildcard must be checked explicitly to avoid treating a protected
-// dataset as open access.
+// returns true if a client-supplied value matches a single dsCredentials key: the '*' wildcard
+// or an identical key always matches, any other key is tried as a glob pattern. Note that a glob '*'
+// alone does not match values with a '/', such as embedder='a/b', so the wildcard must be checked
+// explicitly to avoid treating a protected dataset as open access.
+//
+// This only decides whether one key matches. When more than one key matches, see getMatchedEntry()
+// and Auth.getMatchedDsEntries() for which key takes precedence.
 export function patternMatches(value, pattern) {
 	if (pattern === '*' || value === pattern) return true
 	if (typeof value != 'string' || !value || !pattern) return false
@@ -56,8 +59,11 @@ export function assertStringOrUndefined(value, name) {
 		throw Object.assign(new Error(`invalid ${name}: must be a string`), { status: 400 })
 }
 
-// return the value for the key in obj that best matches a client-supplied value:
-// an exact key first, then a glob pattern key, then the '*' wildcard
+// return the value for the key in obj that best matches a client-supplied value, from the most to the
+// least specific key: an exact key first, then a glob pattern key, then the '*' wildcard. A glob key
+// takes precedence over '*', so that a config like { '*': forbidden, '*.example.org': jwt } requires
+// a login for the matching embedders and forbids all others. The same order is used for dslabel keys
+// in Auth.getMatchedDsEntries().
 export function getMatchedEntry(obj, value) {
 	assertStringOrUndefined(value, 'embedder')
 	if (!obj) return
