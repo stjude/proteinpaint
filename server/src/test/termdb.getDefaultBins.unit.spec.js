@@ -108,3 +108,48 @@ tape(
 		test.end()
 	}
 )
+
+// tw.term.sample for a singleCellGeneExpression term is often a {sID, eID?} object, deserialized
+// fresh from JSON on every request -- a new object identity each time even for the same logical
+// sample. A Map compares object keys by identity, so caching on the raw object would never hit
+// across requests and would grow the cache unboundedly. The cache key must be normalized to the
+// stable sID instead.
+tape(
+	'getDefaultBins caches by the stable sID, not by object identity, for an object-shaped tw.term.sample',
+	async test => {
+		let getCalls = 0
+		const sample2gene2expressionBins = new Map()
+		const ds = {
+			queries: {
+				singleCell: {
+					geneExpression: {
+						sample2gene2expressionBins,
+						async get() {
+							getCalls++
+							return { c1: 1, c2: 2 }
+						}
+					}
+				}
+			}
+		}
+		// two separate requests: JSON.parse produces a new object each time, but with the same sID
+		const makeReq = () => ({
+			tw: {
+				$id: 'geneA',
+				term: { type: 'singleCellGeneExpression', sample: JSON.parse('{"sID":"sample1"}'), gene: 'TP53' }
+			}
+		})
+		let response1, response2
+		await trigger_getDefaultBins(makeReq(), ds, { send: v => (response1 = v) })
+		await trigger_getDefaultBins(makeReq(), ds, { send: v => (response2 = v) })
+
+		test.equal(getCalls, 1, 'the second request hits the cache instead of re-querying expression data')
+		test.equal(
+			sample2gene2expressionBins.size,
+			1,
+			'the outer cache does not grow on repeated requests for the same sample'
+		)
+		test.deepEqual(response1, response2, 'both requests get the same cached result')
+		test.end()
+	}
+)

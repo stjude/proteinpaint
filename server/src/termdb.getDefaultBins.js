@@ -44,12 +44,20 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			// values (tw.term.sample, tw.$id) with no reserved-name concerns -- a Map key is never
 			// coerced through the object property system, so a value of '__proto__' is just an
 			// ordinary key, unlike a plain object where it can resolve to Object.prototype.
+			//
+			// tw.term.sample may be a {sID, eID?} object -- deserialized fresh from JSON on every
+			// request, so it's a new object identity each time even for the same logical sample. A
+			// Map compares object keys by identity, not value, so using the raw object directly would
+			// never hit this cache across requests and would grow it unboundedly. Normalize to the
+			// stable sID (or the string itself, for callers that already pass a plain string) for the
+			// cache key only; the data getter below still receives the original tw.term.sample.
+			const sampleKey = typeof tw.term.sample === 'string' ? tw.term.sample : tw.term.sample?.sID
 			const sample2bins = ds.queries.singleCell.geneExpression.sample2gene2expressionBins
-			if (!sample2bins.has(tw.term.sample)) {
+			if (!sample2bins.has(sampleKey)) {
 				binsCache = new Map()
-				sample2bins.set(tw.term.sample, binsCache)
+				sample2bins.set(sampleKey, binsCache)
 			} else {
-				binsCache = sample2bins.get(tw.term.sample)
+				binsCache = sample2bins.get(sampleKey)
 				if (binsCache.has(tw.$id)) return res.send(binsCache.get(tw.$id))
 			}
 			const data = await ds.queries.singleCell.geneExpression.get(q, tw.term.sample, tw.term.gene)
