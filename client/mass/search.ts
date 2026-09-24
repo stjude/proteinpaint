@@ -12,6 +12,7 @@ import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
 import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { getSampleFilter } from './groups.js'
+import { escapeHtml } from './chat.ts'
 
 // Minimum prompt length per search family. Gene search runs from a single character; dictionary and
 // sample search require 3 (they match more loosely and, for samples, scan every sample name). Coordinate
@@ -509,6 +510,112 @@ export function setSearchRenderers(self: any) {
 		})
 	}
 
+	// Open the termdb tree to pick a survival outcome term, then dispatch a survival plot with
+	// `covariateField` pre-set to `covariateTw` (e.g. term2 = the gene's expression/variant/methylation
+	// term). survival's getPlotConfig() requires config.term to already be a resolved term wrapper, so
+	// unlike launchPlot() this can't dispatch directly — it must collect the outcome term first, mirroring
+	// charts.ts's showTree_select1term (which this component doesn't have access to, different class).
+	self.launchSurvivalWithCovariate = async (covariateField: 'term2', covariateTw: any) => {
+		self.dom.tip.clear()
+		self.dom.tip.showunder(self.dom.inputNode)
+		const action: any = { type: 'plot_create', config: { chartType: 'survival', [covariateField]: covariateTw } }
+		const termdb = await import('../termdb/app')
+		termdb.appInit({
+			vocabApi: self.app.vocabApi,
+			holder: self.dom.tip.d.append('div'),
+			state: { nav: { header_mode: 'search_only' }, tree: { usecase: { target: 'survival', detail: 'term' } } },
+			tree: {
+				click_term: (term: any) => {
+					action.config.term = term.term ? term : { term }
+					self.dom.tip.hide()
+					self.app.dispatch(action)
+				}
+			}
+		})
+	}
+
+	// Render the category rows for a selected gene (Gene expression / SNV-indel-CNV-SV-fusion /
+	// DNA methylation) into `holder` — one label + action button(s) per available category, reusing the
+	// exact same launch calls the old inline row used. "Survival" buttons are gated on the dataset
+	// allowing the survival term type at all; PSEUDO BULK is not yet implemented (needs server-side
+	// per-gene pseudobulk detection first).
+	self.renderGeneCategories = (holder: any, item: any) => {
+		const hasSurvival = self.app.vocabApi.termdbConfig?.allowedTermTypes?.includes('survival')
+
+		const addRow = (label: string) => {
+			const row = holder.append('div').style('margin', '4px 0')
+			row
+				.append('span')
+				.style('font-weight', 'bold')
+				.style('margin-right', '8px')
+				.text(label + ':')
+			return row
+		}
+		const addBtn = (row: any, label: string, testid: string, onClick: () => Promise<void>) => {
+			row
+				.append('span')
+				.attr('class', 'sja_menuoption')
+				.attr('data-testid', testid)
+				.style('display', 'inline-block')
+				.style('margin', '0px 3px')
+				.style('padding', '5px 10px')
+				.style('border-radius', '5px')
+				.style('cursor', 'pointer')
+				.text(label)
+				.on('click', () => void onClick().catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e))))
+		}
+
+		if (item.isGeneExpression) {
+			const row = addRow('Gene Expression')
+			addBtn(row, 'Summary', `sjpp-mass-chat-gene-exp-${item.gene}`, async () => {
+				await self.launchPlot({
+					chartType: 'summary',
+					term: { term: { gene: item.gene, name: item.name, type: 'geneExpression' } }
+				})
+			})
+			if (hasSurvival) {
+				addBtn(row, 'Survival', `sjpp-mass-chat-gene-exp-survival-${item.gene}`, async () => {
+					await self.launchSurvivalWithCovariate('term2', {
+						term: { gene: item.gene, name: item.name, type: 'geneExpression' }
+					})
+				})
+			}
+		}
+
+		if (item.isGeneVariant) {
+			const label = (item.geneVariantTypes || []).map((vt: any) => vt.label).join('/')
+			const allDtCandidates = (item.geneVariantTypes || []).flatMap((vt: any) => vt.dtCandidates)
+			const row = addRow(label)
+			addBtn(row, 'Summary', `sjpp-mass-chat-gene-variant-${item.gene}`, async () => {
+				await self.launchGeneVariantPlot(item.gene, allDtCandidates)
+			})
+			addBtn(row, 'Protein view', `sjpp-mass-chat-gene-protein-${item.gene}`, async () => {
+				await self.launchGenomeBrowserView('protein', { gene: item.gene })
+			})
+			addBtn(row, 'Genome view', `sjpp-mass-chat-gene-genomic-${item.gene}`, async () => {
+				await self.launchGenomeBrowserView('genomic', { coord: item.coord })
+			})
+			// TODO Survival for this category: needs the same fillTermWrapper resolution
+			// launchGeneVariantPlot does, then launchSurvivalWithCovariate('term2', tw) instead of
+			// launchPlot(). Not yet built/verified.
+		}
+
+		if (item.isMethylation) {
+			const row = addRow('DNA methylation')
+			addBtn(row, 'Summary', `sjpp-mass-chat-gene-methylation-${item.gene}`, async () => {
+				await self.launchMethylationPlot(item.gene, item.coord)
+			})
+			// TODO Survival for this category: needs the region-picker's resolved term passed to
+			// launchSurvivalWithCovariate('term2', {term}) instead of launchPlot(). Not yet built/verified.
+		}
+
+		// TODO PSEUDO BULK category: not implemented. Needs server-side work first — GeneDataTypeAvailability
+		// (shared/types/src/routes/termdb.chat.ts) and getGeneDataTypes/getGeneDataTypesForEachGene
+		// (server/src/chat/search.ts) don't know about ds.queries.singleCell.pseudobulk at all yet, and a
+		// pseudobulk term needs assay+memberId+category (shared/types/src/terms/pseudobulk.ts), not a flat
+		// per-gene boolean like the other categories.
+	}
+
 	self.showTerm = function (this: any, item: any) {
 		const tr = select(this)
 
@@ -669,55 +776,22 @@ export function setSearchRenderers(self: any) {
 		}
 
 		if (item.isGene) {
-			// Gene row: gene name as a plain label, with an action button per available data type
-			// ('Gene expression', variant types, 'DNA methylation') — all shown together in the same row.
-			tr.append('td').text(item.name).style('padding', '5px 10px')
-			const btnTd = tr.append('td')
-			const addBtn = (label: string, testid: string, onClick: () => Promise<void>) => {
-				btnTd
-					.append('span')
-					.attr('class', 'sja_menuoption')
-					.attr('data-testid', testid)
-					.style('display', 'inline-block')
-					.style('margin', '0px 3px')
-					.style('padding', '5px 10px')
-					.style('border-radius', '5px')
-					.style('cursor', 'pointer')
-					.text(label)
-					.on('click', () => void onClick().catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e))))
-			}
-			if (item.isGeneExpression) {
-				// open a summary plot of the gene's expression
-				addBtn('Gene expression', `sjpp-mass-chat-gene-exp-${item.gene}`, async () => {
-					await self.launchPlot({
-						chartType: 'summary',
-						term: { term: { gene: item.gene, name: item.name, type: 'geneExpression' } }
-					})
+			// Gene row: clicking the name selects it — echoes into chat history as "[ME] <name> (gene)",
+			// then renders the available data-type categories (renderGeneCategories) into a new bubble
+			// right below it, each with the action button(s) to actually launch a plot.
+			tr.append('td')
+				.text(item.name)
+				.style('padding', '5px 10px')
+				.style('cursor', 'pointer')
+				.attr('class', 'sja_menuoption')
+				.attr('data-testid', `sjpp-mass-chat-gene-select-${item.gene}`)
+				.on('click', () => {
+					self.dom.inputNode.value = ''
+					self.clear({ hide: true })
+					self.addBubble({ msg: escapeHtml(item.name) + ' (gene)', me: 1 })
+					const holder = self.addBubble({ msg: '' })
+					self.renderGeneCategories(holder, item)
 				})
-			}
-			if (item.isGeneVariant) {
-				// one button per variant data type available for THIS gene (snvindel/cnv/svfusion);
-				// each opens a mutated-vs-wildtype barchart restricted to that data type.
-				for (const vt of item.geneVariantTypes || []) {
-					addBtn(vt.label, `sjpp-mass-chat-gene-${vt.testid}-${item.gene}`, async () => {
-						await self.launchGeneVariantPlot(item.gene, vt.dtCandidates)
-					})
-				}
-			}
-			if (item.isGenomeBrowser) {
-				// open a chooser window offering "Protein view"/"Genomic view" of the gene; picking a view
-				// opens the genome browser as a separate mass chart with plot state, whose mds3 track shows
-				// the gene's SNV/indel, CNV and SV/fusion data (whichever the dataset has). See launchGenomeBrowser.
-				addBtn('Genome Browser', `sjpp-mass-chat-gene-genomebrowser-${item.gene}`, async () => {
-					await self.launchGenomeBrowser(item.gene, item.coord)
-				})
-			}
-			if (item.isMethylation) {
-				// open a violin plot of the gene's per-sample DNA methylation beta values
-				addBtn('DNA methylation', `sjpp-mass-chat-gene-methylation-${item.gene}`, async () => {
-					await self.launchMethylationPlot(item.gene, item.coord)
-				})
-			}
 			return
 		}
 
@@ -729,6 +803,7 @@ export function setSearchRenderers(self: any) {
 				.attr('class', 'sja_menuoption')
 				.attr('data-testid', `sjpp-mass-chat-term-${item.id}`)
 				.on('click', async () => {
+					self.addBubble({ msg: escapeHtml(item.name) + ' (dictionary variable)', me: 1 })
 					await self.launchPlot({
 						chartType: item.type == 'survival' ? 'survival' : 'summary',
 						term: { term: item }

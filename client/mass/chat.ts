@@ -224,7 +224,7 @@ return the created bubble and allow to be modified
 export const chatInit = getCompInit(MassAiChatBot)
 
 // Prevents HTML/script injection in the chat UI (XSS) by entering markup in the prompt (Proposed fix by copilot)
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
 	return s
 		.replace(/&/g, '&amp;')
 		.replace(/</g, '&lt;')
