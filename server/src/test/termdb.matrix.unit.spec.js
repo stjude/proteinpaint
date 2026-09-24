@@ -2,6 +2,7 @@ import tape from 'tape'
 import {
 	divideTerms,
 	getData,
+	getSampleData_dictionaryTerms_termdb,
 	id2sampleRef,
 	setSampleLstData,
 	isNegatedSampleLstOnlyRequest,
@@ -169,6 +170,28 @@ tape('getData: rejects a term wrapper whose $id is a non-string that coerces to 
 	t.ok(result.error, 'returns an error instead of writing through the coerced key')
 	t.end()
 })
+
+// mds3.variant2samples.js calls this function directly, bypassing getData()/validateArg() entirely,
+// so it must reject a dangerous $id on its own rather than relying on an upstream caller to have checked
+tape(
+	'getSampleData_dictionaryTerms_termdb: rejects a reserved or coercible $id independently of getData()',
+	async t => {
+		const q = { ds: emptyDs, filter: null }
+		try {
+			await getSampleData_dictionaryTerms_termdb(q, [{ $id: '__proto__', term: { id: 'x' } }])
+			t.fail('should have thrown for a reserved $id')
+		} catch (e) {
+			t.ok(String(e).includes('invalid $id'), 'rejects a reserved $id called the way mds3.variant2samples.js calls it')
+		}
+		try {
+			await getSampleData_dictionaryTerms_termdb(q, [{ $id: ['__proto__'], term: { id: 'x' } }])
+			t.fail('should have thrown for a coercible $id')
+		} catch (e) {
+			t.ok(String(e).includes('invalid $id'), 'rejects a non-string $id that would coerce to a reserved key')
+		}
+		t.end()
+	}
+)
 
 tape('divideTerms: drops role-restricted dict terms via isTermVisible', t => {
 	const visible = { term: { type: 'categorical', id: 'ok' } }
