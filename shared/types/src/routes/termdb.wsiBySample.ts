@@ -2,22 +2,24 @@ export type WsiBySampleRequest = {
 	genome: string
 	dslabel: string
 	/** sample name = the sample's subfolder under a ds.queries.w2 root
-	 (folder for spatial, wsiFolder for plain); omit to list the samples that
-	 have plain slides — spatial-only samples are not listed, their images are
-	 fetched per sample_id by the single-cell app */
+	 (folder for spatial, wsiFolder for plain); omit to list samples instead —
+	 plain-slide samples by default, or spatial samples with imageType='spatial' */
 	sample_id?: string
-	/** only with sample_id: enumerate just this root ('wsi' = wsiFolder,
-	 'spatial' = folder), so the other tree is never read or stat'ed; omit
-	 for both kinds */
+	/** with sample_id: enumerate just this root ('wsi' = wsiFolder, 'spatial'
+	 = folder), so the other tree is never read or stat'ed; omit for both
+	 kinds. Without sample_id: 'spatial' lists spatial-image samples instead
+	 of the default plain-slide listing (the w2 viewer's similar-region
+	 search uses this to offer the dataset's other spatial samples) */
 	imageType?: 'spatial' | 'wsi'
 }
 
-/** one sample that has plain whole-slide images on disk (the standalone
- Whole Slide Images plot's sample table; spatial images are excluded) */
+/** one sample that has whole-slide images on disk of the listed kind (plain
+ slides by default — the standalone Whole Slide Images plot's sample table;
+ spatial images with imageType='spatial') */
 export type WsiSampleSummary = {
 	sampleId: string
-	/** number of plain slides in the sample's wsiFolder subfolder — NOT the
-	 total image count; spatial images are not included */
+	/** number of images of the listed kind in the sample's folder — NOT the
+	 total image count across both kinds */
 	count: number
 }
 

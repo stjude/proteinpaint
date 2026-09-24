@@ -96,6 +96,11 @@ export class View {
 			await direct.init(
 				{
 					slideQuery: params, // addresses the slide through the dataset (no direct-path gate)
+					// lets the neighborhood-enrichment panel offer a similar-region
+					// search against the dataset's other spatial samples
+					genome: this.vocab.genome,
+					dslabel: this.vocab.dslabel,
+					sampleId: sample.sampleId,
 					label: image.fileName, // display name in the info line
 					spatialData: image.spatialData, // the consolidated h5ad, source of every overlay
 					hideCellStrokes: !s.showCellBoundaries, // polygons without their green outlines
