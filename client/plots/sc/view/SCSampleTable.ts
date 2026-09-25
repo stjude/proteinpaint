@@ -1,4 +1,4 @@
-import type { SCDom, SCSampleSandbox, SCTableData } from '../SCTypes'
+import type { SCDom, SCTableData } from '../SCTypes'
 import { icons, sortTableCallBack } from '#dom'
 
 /**
@@ -34,7 +34,6 @@ export class SCSampleTable {
 	tbody: any
 	thead: any
 	tableHeaderRow: any
-	activeSandboxes = new Map<string, SCSampleSandbox[]>()
 	onRowClick?: (sampleId: string) => void
 
 	constructor(dom: SCDom | any, tableData: SCTableData, opts: { onRowClick?: (sampleId: string) => void } = {}) {
@@ -126,7 +125,6 @@ export class SCSampleTable {
 			for (const [colIdx, cell] of row.entries()) {
 				const td = tr.append('td').attr('class', 'sjpp_table_item').attr('data-testid', 'sjpp-table-cell-item')
 				if (this.columns[colIdx]?.label === 'Shown plots' && !this.showPlotsColumn) td.style('display', 'none')
-				cell.__td = td
 				if (colIdx === this.sampleColIdx) {
 					entry.cells.sample = td
 				}
@@ -196,16 +194,6 @@ export class SCSampleTable {
 		}
 	}
 
-	updatePlotBtns(activeSandboxes: Map<string, SCSampleSandbox[]>) {
-		this.activeSandboxes = activeSandboxes
-		const shouldShow = [...activeSandboxes.values()].reduce((total, items) => total + items.length, 0) >= 2
-		this.setShownPlotsColumnVisibility(shouldShow)
-
-		for (const [sampleId, sandboxes] of activeSandboxes) {
-			this.updateSamplePlotButtons(sampleId, sandboxes)
-		}
-	}
-
 	setShownPlotsColumnVisibility(visible: boolean) {
 		if (visible !== this.showPlotsColumn) this.toggleShownPlotsColumn(visible)
 	}
@@ -226,36 +214,6 @@ export class SCSampleTable {
 			if (!entry) continue
 			const rowCells = entry.row.selectAll('td').nodes()
 			if (rowCells[domColumnIndex]) rowCells[domColumnIndex].style.display = visibleState
-		}
-	}
-
-	private updateSamplePlotButtons(sampleId: string, sandboxes: SCSampleSandbox[]) {
-		const entry = this.rowMap.get(sampleId)
-		if (!entry) return
-		const shownPlotsCell = entry.cells.shownPlots
-		if (!shownPlotsCell) return
-
-		shownPlotsCell.selectAll('*').remove()
-		for (const sandbox of sandboxes) {
-			const text = sandbox.plotName.length > 25 ? sandbox.plotName.slice(0, 12) + '...' : sandbox.plotName
-			const btn = shownPlotsCell
-				.append('button')
-				.attr('class', 'sjpp-sc-table-plot-btn')
-				.attr('data-testid', `sjpp-sc-table-${sampleId}-${sandbox.plotName}-btn`)
-				.style('padding', '2px 5px')
-				.style('margin-left', '4px')
-				.style('font-size', '0.8em')
-				.style('border-radius', '20px')
-				.style('border', '0.5px solid black')
-				.style('cursor', 'pointer')
-				.text(text)
-				.attr('aria-label', `Scroll to ${sandbox.plotName}`)
-				.attr('title', `Scroll to ${sandbox.plotName}`)
-				.attr('tabindex', 0)
-				.on('click', () => {
-					sandbox.div.node().scrollIntoView({ behavior: 'smooth', block: 'start' })
-				})
-			btn.node()
 		}
 	}
 

@@ -274,10 +274,10 @@ tape('reapplyAllPlotButtons() should apply buttons for each active sample', test
 
 	renderer.updatePlotBtns(sandboxes)
 
-	const s1Row = renderer.tableData.rows.find(r => r[renderer.tableData.sampleColIdx].value === 'S1') as any
-	const s2Row = renderer.tableData.rows.find(r => r[renderer.tableData.sampleColIdx].value === 'S2') as any
-	test.equal(s1Row[1].__td.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 1, 'Should render button for S1')
-	test.equal(s2Row[1].__td.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 1, 'Should render button for S2')
+	const s1Cell = renderer.table!.rowMap.get('S1').cells.shownPlots
+	const s2Cell = renderer.table!.rowMap.get('S2').cells.shownPlots
+	test.equal(s1Cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 1, 'Should render button for S1')
+	test.equal(s2Cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 1, 'Should render button for S2')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -294,8 +294,7 @@ tape('updateTable() should remove buttons when sample no longer in activeSandbox
 	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
 	renderer.updatePlotBtns(sandboxes)
 
-	const row = renderer.tableData.rows[0] as any
-	const cell = row[1].__td
+	const cell = renderer.table!.rowMap.get('S1').cells.shownPlots
 	test.equal(cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 1, 'Should have 1 button before removal')
 
 	// Update with empty map - sample no longer active
@@ -318,8 +317,7 @@ tape('updateTable() should not append buttons when no sandboxes exist for sample
 	sandboxes.set('S1', [])
 	renderer.updatePlotBtns(sandboxes)
 
-	const row = renderer.tableData.rows[0] as any
-	const cell = row[1].__td
+	const cell = renderer.table!.rowMap.get('S1').cells.shownPlots
 	const btns = cell.selectAll('.sjpp-sc-table-plot-btn').nodes()
 	test.equal(btns.length, 0, 'Should not append buttons when sandboxes array is empty')
 
@@ -341,8 +339,7 @@ tape('updateTable() should append plot buttons for each sandbox', test => {
 	])
 	renderer.updatePlotBtns(sandboxes)
 
-	const row = renderer.tableData.rows[0] as any
-	const cell = row[1].__td
+	const cell = renderer.table!.rowMap.get('S1').cells.shownPlots
 	const btns = cell.selectAll('.sjpp-sc-table-plot-btn').nodes()
 	test.equal(btns.length, 2, 'Should append 2 plot buttons')
 
@@ -358,7 +355,9 @@ tape('updateTable() should show the Shown plots column when there are multiple p
 		.filter(function (this: any) {
 			return (this as HTMLElement).textContent?.includes('Shown plots')
 		})
-	const shownPlotsCells = renderer.tableData.rows.map(row => (row[1] as any).__td)
+	const shownPlotsCells = renderer.tableData.rows.map(
+		row => renderer.table!.rowMap.get(String(row[renderer.tableData.sampleColIdx].value)).cells.shownPlots
+	)
 
 	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
 	const onePlot = new Map<string, { plotId: string; div: any; plotName: string }[]>()
@@ -394,18 +393,14 @@ tape('applyButtonsForSample() should find row by sample ID after sort mutation',
 	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
 	renderer.updatePlotBtns(sandboxes)
 
-	const s1Row = renderer.tableData.rows.find(r => r[renderer.tableData.sampleColIdx].value === 'S1') as any
-	const s2Row = renderer.tableData.rows.find(r => r[renderer.tableData.sampleColIdx].value === 'S2') as any
+	const s1Cell = renderer.table!.rowMap.get('S1').cells.shownPlots
+	const s2Cell = renderer.table!.rowMap.get('S2').cells.shownPlots
 	test.equal(
-		s1Row[1].__td.selectAll('.sjpp-sc-table-plot-btn').nodes().length,
+		s1Cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length,
 		1,
 		'Should render button in the moved S1 row'
 	)
-	test.equal(
-		s2Row[1].__td.selectAll('.sjpp-sc-table-plot-btn').nodes().length,
-		0,
-		'Should not render button in other rows'
-	)
+	test.equal(s2Cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 0, 'Should not render button in other rows')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -422,8 +417,7 @@ tape('updateTable() should skip rerendering btn when cell and plotIds are unchan
 	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
 	renderer.updatePlotBtns(sandboxes)
 
-	const row = renderer.tableData.rows[0] as any
-	const cell = row[1].__td
+	const cell = renderer.table!.rowMap.get('S1').cells.shownPlots
 	// Add a marker to verify btn is not re-created
 	const btn = cell.select('.sjpp-sc-table-plot-btn').node() as HTMLElement
 	;(btn as any).__marker = true
@@ -449,8 +443,7 @@ tape('updateTable() should re-render when plotIds change', test => {
 	sandboxes1.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
 	renderer.updatePlotBtns(sandboxes1)
 
-	const row = renderer.tableData.rows[0] as any
-	const cell = row[1].__td
+	const cell = renderer.table!.rowMap.get('S1').cells.shownPlots
 	test.equal(cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 1, 'Should have 1 button initially')
 
 	// Change plots for the same sample
@@ -536,8 +529,7 @@ tape('deleteBtns() should remove buttons and clear rendered entry', test => {
 	renderer.deleteBtns('S1')
 
 	test.false(renderer.rendered.has('S1'), 'Should remove from rendered map')
-	const row = renderer.tableData.rows[0] as any
-	const cell = row[1].__td
+	const cell = renderer.table!.rowMap.get('S1').cells.shownPlots
 	test.equal(cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 0, 'Should remove buttons from table')
 
 	if ((test as any)._ok) holder.remove()
@@ -549,11 +541,7 @@ tape('deleteBtns() should remove buttons and clear rendered entry', test => {
 tape('appendPlotBtn() should truncate long plot names', test => {
 	const { renderer, holder } = getRenderer()
 
-	// Click first row so __td is populated
-	const firstRow = holder.select('tr.sjpp_row_wrapper').node() as HTMLElement
-	firstRow.click()
-
-	const cell = (renderer.tableData.rows[0] as any)[1].__td
+	const cell = renderer.table!.rowMap.get('S1').cells.shownPlots
 	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
 
 	const longName = 'This is a very long plot name that exceeds 25 chars'
@@ -569,10 +557,7 @@ tape('appendPlotBtn() should truncate long plot names', test => {
 tape('appendPlotBtn() should not truncate short plot names', test => {
 	const { renderer, holder } = getRenderer()
 
-	const firstRow = holder.select('tr.sjpp_row_wrapper').node() as HTMLElement
-	firstRow.click()
-
-	const cell = (renderer.tableData.rows[0] as any)[1].__td
+	const cell = renderer.table!.rowMap.get('S1').cells.shownPlots
 	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
 
 	renderer.appendPlotBtn(cell, mockDiv, 'UMAP', 'S1')
@@ -587,10 +572,7 @@ tape('appendPlotBtn() should not truncate short plot names', test => {
 tape('appendPlotBtn() should scroll sandbox into view on click', test => {
 	const { renderer, holder } = getRenderer()
 
-	const firstRow = holder.select('tr.sjpp_row_wrapper').node() as HTMLElement
-	firstRow.click()
-
-	const cell = (renderer.tableData.rows[0] as any)[1].__td
+	const cell = renderer.table!.rowMap.get('S1').cells.shownPlots
 	let scrollCalled = false
 	const mockDiv = {
 		node: () => ({
