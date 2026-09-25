@@ -179,6 +179,19 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							}
 						},
 						{
+							/* The outcome itself. A plot opened from another chart (e.g. a DM volcano's
+							per-point Survival) starts on the dataset's default survival term, so without
+							this there is no way to switch it to another outcome such as PFS. */
+							type: 'term',
+							configKey: 'term',
+							chartType: 'survival',
+							usecase: { target: 'survival', detail: 'term' },
+							title: 'The survival outcome',
+							label: 'Survival',
+							vocabApi: this.app.vocabApi,
+							menuOptions: '{edit,replace}'
+						},
+						{
 							type: 'term',
 							configKey: 'term2',
 							chartType: 'survival',

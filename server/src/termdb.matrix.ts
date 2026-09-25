@@ -8,6 +8,7 @@ import {
 	isDictionaryType,
 	isNonDictionaryType,
 	isSingleCellTerm,
+	isNumericTerm,
 	getBin,
 	getTwSampleTypes,
 	type TwSampleTypes,
@@ -839,8 +840,9 @@ export async function getSampleData_dictionaryTerms_cached(q, termWrappers, samp
 	for (const tw of termWrappers) {
 		const sample2value = q.ds.termid2sample2value.get(tw.term.id)
 		const limitSamples = await mayLimitSamples(q, [...sample2value.keys()], q.ds)
-		let lstOfBins // of this tw. only set when q.mode is discrete
-		if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {
+		let lstOfBins // of this tw. only set when a numeric term is in discrete mode
+		// a cached categorical term is also mode "discrete", but its values are already the categories
+		if (isNumericTerm(tw.term) && (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary')) {
 			lstOfBins = await findListOfBins(q, tw, q.ds)
 			byTermId[tw.$id] = { bins: lstOfBins }
 		}

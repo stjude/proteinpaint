@@ -357,7 +357,16 @@ export class VolcanoInteractions {
 	/** The methylation term a volcano point stands for: its coordinates, named after the element
 	 * class actually tested. Shared by every action that turns a point into a term -- the violin and
 	 * the survival split -- so the two plots always label and value the same region the same way. */
-	dnaMethTermFor(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
+	/** `d.noun` names the element when the caller knows better than the volcano's element class, as the
+	 * promoter-silencing panel does: its rows are promoters whatever class the volcano shows. */
+	dnaMethTermFor(d: {
+		chr: string
+		start: number
+		stop: number
+		gene_name?: string
+		promoter_id?: string
+		noun?: string
+	}) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const genomicFeatureType = d.promoter_id ? 'promoter' : 'gene'
 		const featureName = genomicFeatureType === 'gene' ? d.gene_name?.split(',')[0]?.trim() || '' : ''
@@ -375,7 +384,7 @@ export class VolcanoInteractions {
 		Built here, where the selected class is known, rather than left to the tw fill step, which
 		only sees the term. */
 		if (genomicFeatureType === 'promoter') {
-			const noun = elementNoun(config?.settings?.volcano?.elementType).one
+			const noun = d.noun || elementNoun(config?.settings?.volcano?.elementType).one
 			const unit = getDNAMethUnit(genomicFeatureType, this.app.vocabApi)
 			term.unit = unit
 			term.name = getDNAMethTermName(term, unit, noun)
@@ -412,6 +421,7 @@ export class VolcanoInteractions {
 		stop: number
 		gene_name?: string
 		promoter_id?: string
+		noun?: string
 	}) {
 		const survDefault = this.app.vocabApi.termdbConfig?.defaultTw4correlationPlot?.survival
 		if (!survDefault)
@@ -445,6 +455,7 @@ export class VolcanoInteractions {
 		stop: number
 		gene_name?: string
 		promoter_id?: string
+		noun?: string
 	}) {
 		const genes = (d.gene_name || '')
 			.split(',')

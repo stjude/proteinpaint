@@ -84,9 +84,11 @@ export async function silencingPanel(tip: any, config: any, interactions: any) {
 		// the promoter id carries its window, e.g. SEL1L.p1_chr14:81484028-81486028
 		const regionOf = (r: any) => {
 			const m = /_(chr[^:]+):(\d+)-(\d+)$/.exec(r.promoter)
+			// named as the gene's promoter, not after the volcano's element class (e.g. "DMR")
+			const named = { gene_name: r.gene, promoter_id: r.promoter, noun: `${r.gene} promoter` }
 			return m
-				? { chr: m[1], start: Number(m[2]), stop: Number(m[3]), gene_name: r.gene, promoter_id: r.promoter }
-				: { chr: r.chr, start: r.start, stop: r.start + 2000, gene_name: r.gene, promoter_id: r.promoter }
+				? { chr: m[1], start: Number(m[2]), stop: Number(m[3]), ...named }
+				: { chr: r.chr, start: r.start, stop: r.start + 2000, ...named }
 		}
 		const act = (fn: (d: any) => any) => (_e: any, i: number) => {
 			const r = rowOf.get(rows[i])
