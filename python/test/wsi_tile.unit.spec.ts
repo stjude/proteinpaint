@@ -345,6 +345,31 @@ tape('similar rejects a query with fewer than two cell types', async t => {
 	t.end()
 })
 
+tape('similar rejects a query with too many cell types, before allocating anything', async t => {
+	// types/typeCounts/count are just JSON the caller supplies (never
+	// cross-checked against a real h5ad), and _permute_zscore allocates
+	// perms*C*C floats -- an unbounded C would let a tiny, cheap-looking
+	// request (few cells, low perms) still force a multi-GB allocation.
+	// A fake, self-consistent 65-type triple exercises exactly that shape
+	// without needing a real dataset with that many annotated types
+	const C = 65
+	const fakeTypes = Array.from({ length: C }, (_, i) => `FakeType${i}`)
+	const out = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'similar',
+				h5ad,
+				types: fakeTypes,
+				typeCounts: Array(C).fill(1),
+				count: Array.from({ length: C }, () => Array(C).fill(0))
+			})
+		)
+	)
+	t.ok(String(out.error).includes('too many distinct cell types'), 'error names the requirement, not a crash/timeout')
+	t.end()
+})
+
 tape('similar rejects a query vocabulary absent from the target image', async t => {
 	const out = JSON.parse(
 		await run_python(
