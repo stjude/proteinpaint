@@ -154,6 +154,7 @@ function init({ genomes }) {
 				// sample_id). imageType=spatial opts into listing SPATIAL samples
 				// instead — the w2 viewer's similar-region search uses this to
 				// offer the dataset's other spatial samples
+				if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw new Error('invalid imageType')
 				const spatial = q.imageType == 'spatial'
 				const base = spatial ? spatialBase : wsiBase
 				const ids = base ? await subdirs(base) : [] // each subfolder = one sample
