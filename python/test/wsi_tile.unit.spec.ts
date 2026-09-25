@@ -72,6 +72,15 @@ tape('h5ad_annotations maps annotated cells to their types', async t => {
 	t.end()
 })
 
+tape('h5ad_annotations_file writes the same answer to a temp file', async t => {
+	const tmp = String(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations_file', h5ad }))).trim()
+	const fromFile = JSON.parse(fs.readFileSync(tmp, 'utf8'))
+	fs.unlinkSync(tmp) // the caller (node route) deletes the temp file; so does the test
+	const fromStdout = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
+	t.deepEqual(fromFile, fromStdout, 'the file-based and stdout-based actions agree')
+	t.end()
+})
+
 tape('h5ad_csv regenerates the boundary CSVs', async t => {
 	for (const [kind, rows] of [
 		['cell', 10283],
@@ -93,6 +102,142 @@ tape('h5ad_csv rejects an unknown polygon kind without leaking a temp file', asy
 	} catch (err) {
 		t.ok(String(err).includes('bogus_boundaries'), 'error names the missing polygon store')
 	}
+	t.end()
+})
+
+// the fixture's own obsm/spatial extent is roughly x:[329.2,540.8] y:[328.6,537.1] um;
+// this is its bottom-left quarter, used below to exercise bbox-scoped actions
+const bbox = [329.21158, 328.62308, 434.99573, 432.838]
+
+tape('h5ad_cell_count answers whole-sample and bbox-scoped counts', async t => {
+	const whole = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_cell_count', h5ad })))
+	t.equal(whole.count, 791, 'all fixture cells, no bbox')
+	const scoped = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_cell_count', h5ad, bbox })))
+	t.equal(scoped.count, 253, 'cells whose centroid falls in the quarter bbox')
+	t.end()
+})
+
+tape('h5ad_annotations and h5ad_csv restrict to a bbox the same way h5ad_cell_count does', async t => {
+	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad, bbox })))
+	t.equal(Object.keys(ann.cells).length, 243, 'bbox-scoped annotated cells (253 minus QC-filtered)')
+	const tmp = String(
+		await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_csv', h5ad, kind: 'cell', bbox }))
+	).trim()
+	const lines = fs.readFileSync(tmp, 'utf8').trim().split('\n')
+	fs.unlinkSync(tmp)
+	t.equal(lines.length - 1, 3289, 'bbox-scoped boundary vertex rows, fewer than the whole-sample 10283')
+	t.end()
+})
+
+tape('overlay_tile rasterizes bbox cell fills into a transparent PNG tile', async t => {
+	const slide = path.resolve(
+		'server/test/tp/files/hg38/TermdbTest/spatial/TCGA-22-1017/image1/image1_morphology.ome.tif'
+	)
+	const m = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'meta', slide })))
+	const [slide_w, slide_h] = m.slide_dimensions
+	const [mpp_x, mpp_y] = m.mpp
+	// 'r, g, b' strings, matching wsi.direct.ts's own CELL_TYPE_COLORS format
+	const type_colors = {
+		'B cells': '31, 119, 180',
+		Fibroblasts: '255, 127, 14',
+		Macrophages: '44, 160, 44',
+		'T cells': '214, 39, 40',
+		Tumor: '148, 103, 189'
+	}
+	// z = highest-detail tier (levels - 1); tile (6,6) at that tier falls inside the fixture's own cell extent
+	const tmp = String(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'overlay_tile',
+				h5ad,
+				slide_w,
+				slide_h,
+				z: m.levels - 1,
+				x: 6,
+				y: 6,
+				mpp_x,
+				mpp_y,
+				type_colors
+			})
+		)
+	).trim()
+	t.ok(fs.existsSync(tmp), 'wrote a PNG to a temp path')
+	const png = fs.readFileSync(tmp)
+	fs.unlinkSync(tmp)
+	t.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'valid PNG signature') // pragma: allowlist secret
+	t.end()
+})
+
+tape('overlay_tile renders a gene-expression fill (one gene, or several summed) instead of cell types', async t => {
+	const slide = path.resolve(
+		'server/test/tp/files/hg38/TermdbTest/spatial/TCGA-22-1017/image1/image1_morphology.ome.tif'
+	)
+	const m = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'meta', slide })))
+	const [slide_w, slide_h] = m.slide_dimensions
+	const [mpp_x, mpp_y] = m.mpp
+	const z = m.levels - 1 // same tile the cell-type overlay_tile test uses
+	const x = 6
+	const y = 6
+
+	// single gene: max_count comes from the same genecounts() route the client
+	// fetches once (whole-sample), exactly as wsi.direct.ts passes it through
+	const ptprc = JSON.parse(
+		await run_python('wsi_tile.py', JSON.stringify({ action: 'genecounts', h5: h5ad, gene: 'PTPRC' }))
+	)
+	const singleTmp = String(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'overlay_tile',
+				h5ad,
+				slide_w,
+				slide_h,
+				z,
+				x,
+				y,
+				mpp_x,
+				mpp_y,
+				genes: ['PTPRC'],
+				rgb: '255, 0, 0',
+				max_count: ptprc.max
+			})
+		)
+	).trim()
+	const singlePng = fs.readFileSync(singleTmp)
+	fs.unlinkSync(singleTmp)
+	t.equal(singlePng.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'single-gene fill: valid PNG') // pragma: allowlist secret
+
+	// gene group: sum of several genes into ONE fill -- the group's own max,
+	// summed the same way wsi.direct.ts sums it for the vector path
+	const found = await Promise.all(
+		['ACE2', 'ACTA2'].map(gene => run_python('wsi_tile.py', JSON.stringify({ action: 'genecounts', h5: h5ad, gene })))
+	)
+	const total: { [id: string]: number } = {}
+	for (const r of found.map(r => JSON.parse(r))) for (const id in r.cells) total[id] = (total[id] || 0) + r.cells[id]
+	const groupMax = Math.max(0, ...Object.values(total))
+	const groupTmp = String(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'overlay_tile',
+				h5ad,
+				slide_w,
+				slide_h,
+				z,
+				x,
+				y,
+				mpp_x,
+				mpp_y,
+				genes: ['ACE2', 'ACTA2'],
+				rgb: '0, 90, 255',
+				max_count: groupMax
+			})
+		)
+	).trim()
+	const groupPng = fs.readFileSync(groupTmp)
+	fs.unlinkSync(groupTmp)
+	t.equal(groupPng.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'gene-group fill: valid PNG') // pragma: allowlist secret
 	t.end()
 })
 
@@ -342,6 +487,31 @@ tape('similar rejects a query with fewer than two cell types', async t => {
 		)
 	)
 	t.ok(String(out.error).includes('at least 2 query cell types'), 'error names the requirement')
+	t.end()
+})
+
+tape('similar rejects a query with too many cell types, before allocating anything', async t => {
+	// types/typeCounts/count are just JSON the caller supplies (never
+	// cross-checked against a real h5ad), and _permute_zscore allocates
+	// perms*C*C floats -- an unbounded C would let a tiny, cheap-looking
+	// request (few cells, low perms) still force a multi-GB allocation.
+	// A fake, self-consistent 65-type triple exercises exactly that shape
+	// without needing a real dataset with that many annotated types
+	const C = 65
+	const fakeTypes = Array.from({ length: C }, (_, i) => `FakeType${i}`)
+	const out = JSON.parse(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'similar',
+				h5ad,
+				types: fakeTypes,
+				typeCounts: Array(C).fill(1),
+				count: Array.from({ length: C }, () => Array(C).fill(0))
+			})
+		)
+	)
+	t.ok(String(out.error).includes('too many distinct cell types'), 'error names the requirement, not a crash/timeout')
 	t.end()
 })
 

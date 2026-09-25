@@ -30,6 +30,7 @@ warnings to stderr (run_python() rejects on any stderr output).
 Dev usage (bypasses stdin):  python wsi_tile.py --test
 """
 
+import heapq       # bounded top-top_k heap in similar_regions(), see its note
 import io          # BytesIO: hand an in-memory JPEG-2000 codestream to PIL
 import json        # stdin job parsing / stdout result encoding
 import math        # ceil for edge-tile output sizes
@@ -48,6 +49,18 @@ Image.MAX_IMAGE_PIXELS = None
 
 # Zoomify tile edge in px; must match the client's ol/source/Zoomify default
 TILE_SIZE = 256
+
+# ceiling on the number of distinct cell types (C) fed into a C x C matrix.
+# _permute_zscore alone allocates perms * C * C floats (P = np.empty((perms,
+# C, C))) -- memory that scales with C^2 * perms and is untouched by the
+# ids/cells*k*perms work budgets below (those track edge-visit time, not this
+# allocation). nhood_enrichment's C is real data (distinct obs/cell_type
+# values), bounded here defensively; similar_regions' C is `len(types)` from
+# the request body with no other upper bound anywhere in that path, so this
+# is the one thing standing between a crafted `types` array and an
+# uncontrolled allocation (perms=5000, C=500 -> ~10GB) regardless of how
+# cheap the rest of the request looks
+MAX_CELL_TYPES = 64
 
 
 # --- Zoomify pyramid geometry (mirrors ol/source/Zoomify.js 'default') -----
@@ -280,6 +293,149 @@ def _h5ad_index(f, df):
     return f[df][key][:].astype(str)
 
 
+def _bbox_cell_ids(f, bbox):
+    """Cell ids (obs order) whose own centroid (obsm/spatial) falls within
+    bbox = (x0, y0, x1, y1), um. Centroid-based membership, not an exact
+    polygon clip: obsm/spatial is tiny compared to the boundary polygons (2
+    floats/cell vs ~25 vertices), so this stays fast regardless of sample
+    size — the whole point of the viewport-scoped actions it backs. Drawing
+    code that wants rings reaching slightly past the box (e.g. overlay_tile,
+    to avoid a seam at tile edges) passes an already-padded bbox in."""
+    x0, y0, x1, y1 = bbox
+    xy = f["obsm/spatial"][:]
+    ids = _h5ad_index(f, "obs")
+    mask = (xy[:, 0] >= x0) & (xy[:, 0] < x1) & (xy[:, 1] >= y0) & (xy[:, 1] < y1)
+    return ids[mask]
+
+
+def h5ad_cell_count(h5ad, bbox=None):
+    """Cheap cell count for a spatial .h5ad, overall or within a um bbox —
+    only obsm/spatial, never the boundary polygons, so this stays fast
+    regardless of sample size. Drives wsi.direct.ts's raster-vs-vector
+    decision for the current view: above cellCountLimit cells in view, it
+    shows a server-rendered raster overlay tile (overlay_tile) instead of
+    fetching per-cell vector data for that many cells."""
+    import h5py
+    with h5py.File(h5ad, "r") as f:
+        if bbox is None:
+            return {"count": int(f["obsm/spatial"].shape[0])}
+        return {"count": int(len(_bbox_cell_ids(f, bbox)))}
+
+
+def _rgb_to_rgba(rgb_color, alpha=255):
+    """'r, g, b' (the client's own CELL_TYPE_COLORS format, wsi.direct.ts) ->
+    (r, g, b, alpha), for PIL's fill= argument."""
+    r, g, b = (int(v) for v in rgb_color.split(","))
+    return (r, g, b, alpha)
+
+
+def _gene_fill_alpha(n, max_n):
+    """Log-scaled opacity 0..255 for a gene-expression fill, bucketed into
+    SHADES=8 steps exactly like the client's own expressionLayer
+    (wsi.direct.ts) -- so a gene's raster shading looks the same as its
+    vector one. 0 for a zero count or an unset max (nothing to shade against)."""
+    if not n or not max_n:
+        return 0
+    SHADES = 8
+    shade = min(SHADES - 1, int((math.log1p(n) / math.log1p(max_n)) * SHADES))
+    return int(255 * (0.15 + 0.75 * (shade + 1) / SHADES))  # faintest ~38 .. strongest ~230
+
+
+def overlay_tile(h5ad, slide_w, slide_h, z, x, y, mpp_x, mpp_y, type_colors=None, genes=None, rgb=None, max_count=None):
+    """Renders one Zoomify {z,x,y} tile (same geometry tile() uses, via
+    tile_region()) of the sample's cell fills directly as a
+    transparent-background PNG, instead of shipping per-cell vector data —
+    used once a view's own cell count exceeds cellCountLimit
+    (wsi.direct.ts), where fetching boundaries/annotations/gene counts the
+    normal way would scale with the sample's TOTAL cell count regardless of
+    how few are actually visible at that zoom.
+
+    Two mutually exclusive fill modes, mirroring wsi.direct.ts's own vector
+    fills (cell-type fills win over expression fills when both are
+    requested — the caller decides that, same as today):
+    - type_colors={type: 'r, g, b'}: cell-type fills, the original mode. The
+      SAME categorical palette the client's vector-mode legend already
+      assigned (passed in, not recomputed here).
+    - genes=[gene,...] + rgb='r, g, b' + max_count=<int>: a gene-expression
+      fill — one gene, or several summed into one 'gene group' overlay
+      (wsi.direct.ts's own sum, redone here instead of shipping per-cell
+      counts through the URL). Counts come from the SAME h5ad's X matrix
+      _h5ad_gene_counts() reads for genecounts(); max_count is the
+      WHOLE-SAMPLE max from that route, so shading stays comparable across
+      tiles, not just within one.
+
+    Either way, slide_w/h and mpp come from the client's own already-fetched
+    /meta — this never opens the slide file itself, only the h5ad.
+
+    ponytail: fills only, no boundary strokes in raster mode yet — add a
+    second pass drawing each ring's outline if the overview needs them.
+    ponytail: scans every polygon in uns/cell_boundaries per tile (the store
+    isn't spatially sorted/indexed) — O(total cells), same cost h5ad_csv
+    already pays once per h5ad version; a gene fill pays this once per gene
+    on top (one _h5ad_gene_counts() scan each). Fine while raster mode only
+    kicks in well above cellCountLimit (rare, zoomed-out views); add an
+    on-disk spatial index (e.g. an R-tree keyed by vertex bbox) if per-tile
+    latency at high cell counts becomes the bottleneck."""
+    import os
+    import h5py
+    from PIL import ImageDraw
+    reg = tile_region(slide_w, slide_h, z, x, y)
+    if reg is None:
+        raise ValueError(f"tile z={z} x={x} y={y} out of range")
+    x0_px, y0_px, w0_px, h0_px, out_w, out_h = reg
+    x0, y0 = x0_px * mpp_x, y0_px * mpp_y          # level-0 px -> um, this tile's box
+    x1, y1 = (x0_px + w0_px) * mpp_x, (y0_px + h0_px) * mpp_y
+    sx, sy = out_w / w0_px, out_h / h0_px          # um -> this tile's own output px
+    img = Image.new("RGBA", (out_w, out_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    with h5py.File(h5ad, "r") as f:
+        # a margin around the box (~max cell radius) so a cell whose centroid
+        # sits just outside still gets drawn if its polygon pokes in --
+        # trades a little redundant drawing across adjacent tiles for fewer
+        # missing-sliver seams at tile edges
+        margin = 15.0
+        keep_ids = set(_bbox_cell_ids(f, (x0 - margin, y0 - margin, x1 + margin, y1 + margin)).tolist())
+        fills = {}  # cell_id -> RGBA fill, built once over just this tile's cells
+        if keep_ids:
+            if genes:
+                total = {}
+                for gene in genes:
+                    cell_ids, vals = _h5ad_gene_counts(f, gene)
+                    for cid, v in zip(cell_ids.tolist(), vals.tolist()):
+                        if cid in keep_ids:
+                            total[cid] = total.get(cid, 0) + int(v)
+                for cid, n in total.items():
+                    alpha = _gene_fill_alpha(n, max_count)
+                    if alpha:
+                        fills[cid] = _rgb_to_rgba(rgb, alpha)
+            else:
+                types = _h5ad_cell_types(f)
+                ids = _h5ad_index(f, "obs")
+                id2type = dict(zip(ids.tolist(), types.tolist()))
+                for cid in keep_ids:
+                    color = (type_colors or {}).get(id2type.get(cid, ""))
+                    if color:
+                        fills[cid] = _rgb_to_rgba(color, round(255 * 0.45))
+        if fills:
+            b = f["uns/cell_boundaries"]
+            cb_ids = b["cell_id"][:].astype(str)
+            indptr = b["indptr"][:]
+            verts = b["vertices"][:]
+            for i, cid in enumerate(cb_ids):
+                fill = fills.get(cid)
+                if not fill:
+                    continue  # outside the tile, or no fill for this cell in the chosen mode
+                ring = verts[indptr[i]:indptr[i + 1]]
+                if len(ring) < 3:
+                    continue
+                px = [((vx - x0) * sx / mpp_x, (vy - y0) * sy / mpp_y) for vx, vy in ring]
+                draw.polygon(px, fill=fill)
+    fd, out = tempfile.mkstemp(suffix=".png", prefix="wsioverlay-")
+    os.close(fd)
+    img.save(out, "PNG")
+    return out  # node caches, serves, deletes -- same contract as tile()
+
+
 def genenames(h5ad):
     """All gene names of a spatial .h5ad, in file order (the var index). Lets
     the client discover/validate genes instead of trusting configuration."""
@@ -288,56 +444,101 @@ def genenames(h5ad):
         return {"genes": _h5ad_index(f, "var").tolist()}
 
 
+def _h5ad_gene_counts(f, gene):
+    """(cell_ids, vals): the non-zero per-cell counts of one gene, from an
+    open .h5ad's X matrix (cells x genes; CSR, CSC or dense, dispatched on
+    AnnData's encoding-type attribute). Raises ValueError naming the gene or
+    encoding on failure — genecounts() and overlay_tile() each turn that into
+    whatever error shape their own contract wants, rather than duplicating
+    this lookup."""
+    import h5py
+    names = _h5ad_index(f, "var")                     # all gene names
+    hit = np.nonzero(names == gene)[0]                # index of the gene
+    if hit.size == 0:
+        raise ValueError(f"gene '{gene}' not found")
+    gi = int(hit[0])                                  # the gene's column index
+    X = f["X"]                                        # cells x genes, encoding varies
+    enc = str(X.attrs.get("encoding-type", ""))
+    if isinstance(X, h5py.Dataset):
+        # dense X: the gene's column, nonzero cells only
+        col = X[:, gi]
+        cells = np.nonzero(col)[0]
+        vals = col[cells]
+    elif enc == "csr_matrix":
+        # cell-major: scan the column indices for this gene's entries
+        mask = X["indices"][:] == gi
+        vals = X["data"][:][mask]
+        # entry k belongs to the cell whose indptr range contains k
+        cells = np.searchsorted(X["indptr"][:], np.nonzero(mask)[0], side="right") - 1
+    elif enc == "csc_matrix":
+        # gene-major: the gene's column is one contiguous slice
+        s, e = X["indptr"][gi : gi + 2]
+        cells = X["indices"][s:e]
+        vals = X["data"][s:e]
+    else:
+        raise ValueError(f"unsupported X encoding '{enc}'")
+    barcodes = _h5ad_index(f, "obs")                  # cell ids, obs order
+    return barcodes[cells], vals.astype(np.int64)
+
+
 def genecounts(h5ad, gene):
-    """Per-cell counts of one gene from a spatial .h5ad. X (cells x genes) may
-    be CSR, CSC or dense — dispatched on AnnData's encoding-type attribute;
-    anything else is rejected with a clear error, as is an absent gene, so
-    the UI gets a message instead of a traceback. Zero-count cells are
-    omitted."""
+    """Per-cell counts of one gene from a spatial .h5ad — an absent gene or
+    unsupported X encoding is rejected with a clear error, so the UI gets a
+    message instead of a traceback. Zero-count cells are omitted."""
     import os
     import h5py
     with h5py.File(h5ad, "r") as f:
-        names = _h5ad_index(f, "var")                     # all gene names
-        hit = np.nonzero(names == gene)[0]                # index of the gene
-        if hit.size == 0:
-            return {"error": f"gene '{gene}' not found in {os.path.basename(h5ad)}"}
-        gi = int(hit[0])                                  # the gene's column index
-        X = f["X"]                                        # cells x genes, encoding varies
-        enc = str(X.attrs.get("encoding-type", ""))
-        if isinstance(X, h5py.Dataset):
-            # dense X: the gene's column, nonzero cells only
-            col = X[:, gi]
-            cells = np.nonzero(col)[0]
-            vals = col[cells]
-        elif enc == "csr_matrix":
-            # cell-major: scan the column indices for this gene's entries
-            mask = X["indices"][:] == gi
-            vals = X["data"][:][mask]
-            # entry k belongs to the cell whose indptr range contains k
-            cells = np.searchsorted(X["indptr"][:], np.nonzero(mask)[0], side="right") - 1
-        elif enc == "csc_matrix":
-            # gene-major: the gene's column is one contiguous slice
-            s, e = X["indptr"][gi : gi + 2]
-            cells = X["indices"][s:e]
-            vals = X["data"][s:e]
-        else:
-            return {"error": f"unsupported X encoding '{enc}' in {os.path.basename(h5ad)}"}
-        barcodes = _h5ad_index(f, "obs")                  # cell ids, obs order
+        try:
+            cell_ids, vals = _h5ad_gene_counts(f, gene)
+        except ValueError as e:
+            return {"error": f"{e} in {os.path.basename(h5ad)}"}
     return {
-        "cells": dict(zip(barcodes[cells].tolist(), vals.astype(int).tolist())),
+        "cells": dict(zip(cell_ids.tolist(), vals.tolist())),
         "max": int(vals.max()) if vals.size else 0,  # legend upper bound
     }
 
 
-def h5ad_annotations(h5ad):
+def h5ad_annotations(h5ad, bbox=None):
     """Every annotated cell's type from a spatial .h5ad, as JSON — cell types
     are free text (may contain commas/quotes), so they travel as JSON, never
-    CSV. QC-filtered cells ('' type) are omitted."""
+    CSV. QC-filtered cells ('' type) are omitted.
+
+    bbox=(x0,y0,x1,y1) um, optional: restricts to cells whose centroid falls
+    in that box (see _bbox_cell_ids), same viewport-scoped use as h5ad_csv's
+    bbox param — not disk-cached by node for the same reason."""
     import h5py
     with h5py.File(h5ad, "r") as f:
         types = _h5ad_cell_types(f)                       # one string per cell, '' = untyped
         ids = _h5ad_index(f, "obs")                       # cell ids, obs order
-    return {"cells": {i: t for i, t in zip(ids.tolist(), types.tolist()) if t}}
+        keep = set(_bbox_cell_ids(f, bbox).tolist()) if bbox is not None else None
+    return {
+        "cells": {
+            i: t for i, t in zip(ids.tolist(), types.tolist()) if t and (keep is None or i in keep)
+        }
+    }
+
+
+def h5ad_annotations_file(h5ad, bbox=None):
+    """Same answer as h5ad_annotations(), written to a temp file and returned
+    by path instead of printed to stdout directly — the route-facing action
+    (server/src/routes/wsitiles.ts's /annotations), so node can stream the
+    file instead of ever holding it as one JS string. A sample with enough
+    annotated cells can approach V8's ~512MiB max string length the same way
+    h5ad_csv()'s boundary CSV did (same print-a-path contract as that
+    function and the tile job) — no real sample has hit it yet (one type
+    string per cell is far more compact than a boundary CSV's repeated
+    vertices), but the fix is identical and cheap, so it's applied
+    preemptively rather than waiting for one to."""
+    import os
+    data = h5ad_annotations(h5ad, bbox)
+    fd, out = tempfile.mkstemp(suffix=".json", prefix="wsih5ad_")
+    try:
+        with os.fdopen(fd, "w") as w:
+            json.dump(data, w, separators=(",", ":"))
+    except BaseException:
+        os.unlink(out)                                       # a failed write never leaks the file
+        raise
+    return out  # node reads, serves, deletes
 
 
 def _h5ad_cell_types(f):
@@ -361,35 +562,63 @@ def _h5ad_cell_types(f):
     raise ValueError(f"unsupported obs/cell_type layout {type(ct).__name__}")
 
 
-def h5ad_csv(h5ad, kind):
+def h5ad_csv(h5ad, kind, bbox=None):
     """Regenerate a boundary CSV from a spatial .h5ad's ragged polygon store
     (uns/{kind}_boundaries: cell_id[i] owns vertices[indptr[i]:indptr[i+1]]).
     kind: 'cell' | 'nucleus'. CSV is safe as this wire format because every
     column is a Xenium cell id or a number — never free text (cell types are
     served as JSON by h5ad_annotations instead). Writes the CSV to a temp
     file and returns its path (large output; same print-a-path contract as
-    tile()). Node caches the result per (h5ad mtime, kind) on disk, so this
-    ~700k-row extraction runs once per h5ad version, not per request."""
+    tile()). Node caches the whole-sample (bbox=None) result per (h5ad
+    mtime, kind) on disk, so this ~700k-row extraction runs once per h5ad
+    version, not per request.
+
+    bbox=(x0,y0,x1,y1) um, optional: restricts to cells whose centroid falls
+    in that box (see _bbox_cell_ids) — the under-cellCountLimit viewport
+    fetch wsi.direct.ts makes once a zoomed-in view's own cell count is small
+    enough for vector rendering. Bbox requests vary continuously with the
+    view, so node does NOT disk-cache these (see wsitiles.ts)."""
     import os
     import h5py
-    # read (and thereby validate) the store BEFORE creating the temp file, so
-    # a missing/corrupt h5ad can't leak an orphan into the temp directory
     with h5py.File(h5ad, "r") as f:
         b = f[f"uns/{kind}_boundaries"]                      # the ragged polygon store
-        ids = b["cell_id"][:].astype(str)                    # one id per polygon
+        ids = b["cell_id"][:].astype(str)                    # one id per polygon (cheap: one string, not ~13-25 vertex pairs, per cell)
         indptr = b["indptr"][:]                              # ring offsets into vertices
-        verts = b["vertices"][:]                             # (N, 2) um coordinates
-    fd, out = tempfile.mkstemp(suffix=".csv", prefix="wsih5ad_")
-    try:
-        with os.fdopen(fd, "w") as w:                        # closes the fd, error or not
-            w.write('"cell_id","vertex_x","vertex_y"\n')
-            for i, cid in enumerate(ids):
-                for x, y in verts[indptr[i]:indptr[i + 1]]:
-                    w.write(f'"{cid}",{x:.4f},{y:.4f}\n')
-    except BaseException:
-        os.unlink(out)                                       # a failed write never leaks the file
-        raise
-    return out  # node reads, serves, deletes
+        if bbox is None:
+            # whole-sample: one bulk read. Disk-cached by node per h5ad
+            # version and served from there after (see this function's own
+            # docstring), so the ~700k-row read here is amortized across
+            # every later request, not repeated per request.
+            indices = range(len(ids))
+            verts = b["vertices"][:]                         # (N, 2) um coordinates, the whole store
+            vertex_range = lambda i: verts[indptr[i]:indptr[i + 1]]
+        else:
+            # bbox requests vary continuously with the view and are NEVER
+            # disk-cached (see this function's own docstring) -- a naive
+            # verts[:] bulk read here would therefore cost the same on every
+            # single pan regardless of how few of the sample's cells the
+            # bbox actually keeps. Select which polygons match FIRST (cheap:
+            # cell_id is a small per-cell array), then read only THEIR OWN
+            # vertex ranges from the still-open HDF5 dataset -- a bbox
+            # keeping a handful of cells out of 700k now reads a handful of
+            # small ranges instead of the whole multi-hundred-MB array.
+            keep = set(_bbox_cell_ids(f, bbox).tolist())
+            indices = [i for i, cid in enumerate(ids) if cid in keep]
+            vertices_ds = b["vertices"]                      # kept as a Dataset: indexed lazily below, not read whole
+            vertex_range = lambda i: vertices_ds[indptr[i]:indptr[i + 1]]
+
+        fd, out = tempfile.mkstemp(suffix=".csv", prefix="wsih5ad_")
+        try:
+            with os.fdopen(fd, "w") as w:                    # closes the fd, error or not
+                w.write('"cell_id","vertex_x","vertex_y"\n')
+                for i in indices:
+                    cid = ids[i]
+                    for x, y in vertex_range(i):
+                        w.write(f'"{cid}",{x:.4f},{y:.4f}\n')
+        except BaseException:
+            os.unlink(out)                                   # a failed write never leaks the file
+            raise
+        return out  # node reads, serves, deletes
 
 
 def h5ad_celltypes(h5ad):
@@ -481,6 +710,8 @@ def nhood_enrichment(h5ad, ids, k=6, perms=1000, seed=0):
     C, n = len(cats), int(sel.size)
     if C < 2:
         return {"error": f"neighborhood enrichment needs at least 2 cell types, found {C}"}
+    if C > MAX_CELL_TYPES:
+        return {"error": f"too many distinct cell types ({C}); at most {MAX_CELL_TYPES} supported"}
     rows, cols, kk = _knn_edges(coords, k)
     if kk < 1:
         return {"error": "neighborhood enrichment needs at least 2 annotated cells"}
@@ -554,6 +785,8 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
     C = len(types)
     if C < 2:
         return {"error": f"similarity search needs at least 2 query cell types, found {C}"}
+    if C > MAX_CELL_TYPES:
+        return {"error": f"too many distinct cell types ({C}); at most {MAX_CELL_TYPES} supported"}
     required_types = required_types or []
     missing = [t for t in required_types if t not in types]
     if missing:
@@ -609,7 +842,19 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
     # +-size_tolerance of the query region's own cell count, tested before any
     # signature math runs
     size_lo, size_hi = ref_n * (1 - size_tolerance), ref_n * (1 + size_tolerance)
-    candidates = []                                        # (cheap_score, cx, cy, member index array)
+    # a bounded min-heap of at most top_k entries (cheap_score, tiebreak, cx,
+    # cy, member index array), NOT a list of every surviving window: the scan
+    # guard above permits up to 200M window*cell visits, and overlapping
+    # windows (stride < window) routinely leave thousands of windows passing
+    # every filter, each carrying its own idx array (up to size_hi cells) --
+    # retaining all of them until after sorting can hold hundreds of MB to
+    # over 1GB resident alongside the permutation matrices below, for a
+    # result only the top_k ever use. tiebreak (a strictly increasing
+    # counter) keeps every heap entry comparable without ever comparing two
+    # idx arrays, which numpy raises on for size>1 arrays
+    top_k = int(top_k)                                     # may arrive as a string/float from the route's query params
+    heap = []                                              # heapq min-heap, smallest cheap_score first
+    n_scored = 0                                            # every window that reached scoring, not just the kept top_k
     # ponytail: O(windows * cells) full-array scan per window, cells ~10-100k
     # and windows ~hundreds is fine; a whole-slide-scale search would want a
     # spatial grid/bucket index instead of re-masking every cell per window
@@ -632,9 +877,15 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
             comp_w = np.bincount(w_code, minlength=C).astype(np.float64)
             comp_w = comp_w / comp_w.sum() if comp_w.sum() > 0 else comp_w
             cheap_w = np.concatenate([comp_w, _row_normalize(count_w).ravel()]) * w_full
-            candidates.append((_cosine(cheap_q, cheap_w), float(x0 + window / 2), float(y0 + window / 2), idx))
-    candidates.sort(key=lambda c: c[0], reverse=True)
-    top = candidates[: int(top_k)]
+            score = _cosine(cheap_q, cheap_w)                               # this window's cheap-stage similarity
+            entry = (score, n_scored, float(x0 + window / 2), float(y0 + window / 2), idx)  # window center + its members
+            n_scored += 1                                                   # counts every scored window, kept or not
+            if len(heap) < top_k:                                           # heap not yet full: always keep
+                heapq.heappush(heap, entry)
+            elif score > heap[0][0]:                        # beats the current worst kept candidate
+                heapq.heapreplace(heap, entry)               # evicts that worst candidate, keeps heap size == top_k
+    # unwrap back to (score, cx, cy, idx) 4-tuples, best cheap score first, dropping the tiebreak counter
+    top = [(score, cx, cy, idx) for score, _, cx, cy, idx in sorted(heap, key=lambda e: e[0], reverse=True)]
 
     # same per-run budget the /nhood route enforces (ids*k*perms edge tallies);
     # a window's cell count is only known after the cheap stage, so a window
@@ -669,7 +920,7 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
     windows.sort(key=lambda w: w["distance"] if w["distance"] is not None else float("inf"))
     return {
         "types": types,
-        "scanned": len(candidates),
+        "scanned": n_scored,  # every window that passed the filters, not just the top_k kept in the heap
         "windows": windows,
         "k": k,
         "perms": int(perms),
@@ -681,6 +932,60 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
         "excluded": bool(exclude_ids),    # whether the same-sample overlap check was active
         "typeWeights": weights.tolist(),
     }
+
+
+def _selftest_similar_regions_topk():
+    """similar_regions()'s bounded top-top_k heap must shortlist the same
+    top-k cheap SCORES a naive collect-everything-then-sort approach would --
+    the one property the heap refactor must never change, since the heap
+    only exists to avoid retaining every surviving window's member-index
+    array in memory, not to change which ones win. Checked by score, not
+    window identity: this fixture is intentionally periodic, so many windows
+    tie exactly on score, and which specific tied window wins a boundary slot
+    is implementation-defined (heapq's tie-break isn't the same as a stable
+    sort's) -- only the top-k score VALUES are actually guaranteed equal. A
+    synthetic h5ad (60 cells on a line, alternating type, no real dataset
+    needed) with a dense stride gives 50+ surviving windows, enough to
+    actually exercise heap eviction rather than just fill it once."""
+    import h5py      # writes the synthetic fixture file
+    import os        # temp-file create/cleanup
+    import tempfile  # a throwaway .h5ad path, deleted in the finally below
+    n = 60  # cell count: enough to tile into 50+ overlapping windows below
+    xs = np.arange(n, dtype=np.float32) * 10.0  # evenly spaced along x, 10um apart
+    ys = np.zeros(n, dtype=np.float32)  # all on one line (y=0): a 1D layout is enough to exercise the heap
+    types = np.array(["A" if i % 2 == 0 else "B" for i in range(n)], dtype=object)  # alternating 2-type labeling
+    fd, path = tempfile.mkstemp(suffix=".h5ad")  # the fixture's path; fd is closed immediately below
+    os.close(fd)  # only the path is needed -- h5py.File reopens it
+    try:
+        str_dt = h5py.string_dtype(encoding="utf-8")  # variable-length UTF-8, matching xenium2pp.py's own string dtype
+        with h5py.File(path, "w") as f:
+            obs = f.create_group("obs")
+            obs.attrs["_index"] = "_index"  # names which obs dataset is the cell-id index, as a real h5ad does
+            obs.create_dataset("_index", data=np.array([f"cell{i}" for i in range(n)], dtype=object), dtype=str_dt)
+            obs.create_dataset("cell_type", data=types, dtype=str_dt)  # plain string dataset form (no categorical group)
+            f.create_dataset("obsm/spatial", data=np.stack([xs, ys], axis=1))  # (n, 2) centroids, um
+        q_types, q_type_counts, q_count = ["A", "B"], [10, 10], [[5, 5], [5, 5]]  # an even, symmetric query signature
+        common = dict(k=2, perms=1, window=50.0, stride=10.0, size_tolerance=5.0)  # same scan geometry for both calls below
+        r_small = similar_regions(path, q_types, q_type_counts, q_count, None, top_k=3, **common)  # bounded heap, size 3
+        r_big = similar_regions(path, q_types, q_type_counts, q_count, None, top_k=100_000, **common)  # heap never evicts
+        assert "error" not in r_small, r_small
+        assert "error" not in r_big, r_big
+        assert r_small["scanned"] == r_big["scanned"] > 3  # enough candidates to force eviction, not just one fill
+        # compare by SCORE VALUE, not window identity (cx, cy): this fixture's
+        # perfect periodicity (evenly spaced, strictly alternating types) means
+        # many windows are exact translations of each other and so tie exactly
+        # on cheap score. At a tie landing on the top_k boundary, heapreplace
+        # evicts whichever tied entry is currently the heap root -- a different
+        # (but equally "correct", since the SCORES are identical) member than a
+        # stable sort's tie-break would keep. That particular tie-resolution
+        # pick can depend on floating-point/platform specifics, so asserting
+        # exact window identity here was never actually guaranteed -- only the
+        # top-k SCORES are
+        small_scores = sorted((w["cheapScore"] for w in r_small["windows"]), reverse=True)  # top_k=3 result's own scores
+        big_top3_scores = sorted((w["cheapScore"] for w in r_big["windows"]), reverse=True)[:3]  # r_big's true top-3 scores
+        assert small_scores == big_top3_scores, "bounded heap must shortlist the same top-k scores as collect-all"
+    finally:
+        os.unlink(path)  # always clean up the temp fixture, pass or fail
 
 
 def _test():
@@ -696,6 +1001,7 @@ def _test():
     assert tile_region(W, H, tiers - 1, last, 0)[0] + tile_region(W, H, tiers - 1, last, 0)[2] == W
     assert tile_region(W, H, tiers - 1, 10 ** 9, 0) is None  # x past the edge
     assert tile_region(W, H, tiers, 0, 0) is None            # z past the pyramid
+    _selftest_similar_regions_topk()  # separate self-check: similar_regions()'s heap-based top_k selection
     print("self-check OK")
 
 
@@ -714,11 +1020,22 @@ def main():
     elif job["action"] == "genenames":
         print(json.dumps(genenames(job["h5"]), separators=(",", ":")))
     elif job["action"] == "h5ad_csv":
-        print(h5ad_csv(job["h5ad"], job["kind"]))  # temp csv path
+        print(h5ad_csv(job["h5ad"], job["kind"], job.get("bbox")))  # temp csv path
     elif job["action"] == "h5ad_annotations":
-        print(json.dumps(h5ad_annotations(job["h5ad"]), separators=(",", ":")))
+        print(json.dumps(h5ad_annotations(job["h5ad"], job.get("bbox")), separators=(",", ":")))
+    elif job["action"] == "h5ad_annotations_file":
+        print(h5ad_annotations_file(job["h5ad"], job.get("bbox")))  # temp json path
     elif job["action"] == "h5ad_celltypes":
         print(json.dumps(h5ad_celltypes(job["h5ad"]), separators=(",", ":")))
+    elif job["action"] == "h5ad_cell_count":
+        print(json.dumps(h5ad_cell_count(job["h5ad"], job.get("bbox")), separators=(",", ":")))
+    elif job["action"] == "overlay_tile":
+        print(overlay_tile(
+            job["h5ad"], int(job["slide_w"]), int(job["slide_h"]),
+            int(job["z"]), int(job["x"]), int(job["y"]),
+            float(job["mpp_x"]), float(job["mpp_y"]),
+            type_colors=job.get("type_colors"), genes=job.get("genes"),
+            rgb=job.get("rgb"), max_count=job.get("max_count")))  # temp png path
     elif job["action"] == "nhood":
         print(json.dumps(
             nhood_enrichment(job["h5ad"], job["ids"], job.get("k", 6), job.get("perms", 1000), job.get("seed", 0)),

@@ -7,7 +7,8 @@ import {
 	cellsInLasso,
 	renderNhoodHeatmap,
 	renderSimilarSearch,
-	focusExtent
+	focusExtent,
+	choosePaddedFetchBbox
 } from '../wsi.direct'
 
 /* Tests
@@ -18,6 +19,7 @@ import {
     renderNhoodHeatmap: enrichment z-score matrix rendering
     renderSimilarSearch: no-op guard without dataset addressing (the rest needs a live server, see wsi.integration.spec.ts)
     focusExtent: niche box µm -> px, same transform as parseBoundaries
+    choosePaddedFetchBbox: padded-vs-exact viewport fallback, updateMode's own cellCountLimit guard
 */
 
 // two cells, µm coords; mpp 0.5 doubles px values, y negated for OL
@@ -61,6 +63,31 @@ tape('focusExtent boxes a niche in the same µm -> px space as parseBoundaries',
 	test.ok(
 		cellX >= box[0] && cellX <= box[2] && cellY >= box[1] && cellY <= box[3],
 		"the query's own center point falls inside its box"
+	)
+	test.end()
+})
+
+tape('choosePaddedFetchBbox falls back to the exact viewport when padding would bust the budget', test => {
+	const bbox: [number, number, number, number] = [0, 0, 10, 10] // the exact viewport
+	const paddedBbox: [number, number, number, number] = [-5, -5, 15, 15] // padBbox(bbox, 0.5): 4x the area
+
+	test.deepEqual(
+		choosePaddedFetchBbox(bbox, paddedBbox, 30, 50),
+		paddedBbox,
+		'padded count under budget: use the padded bbox (the common, nicer-UX case)'
+	)
+	test.deepEqual(
+		choosePaddedFetchBbox(bbox, paddedBbox, 80, 50),
+		bbox,
+		// a sparse/empty viewport next to denser tissue just outside it: the
+		// exact view alone (already confirmed <= limit by the caller) must be
+		// used instead, or the padded fetch would silently blow the budget
+		'padded count over budget: fall back to the exact (unpadded) viewport'
+	)
+	test.deepEqual(
+		choosePaddedFetchBbox(bbox, paddedBbox, 50, 50),
+		paddedBbox,
+		'padded count exactly at the limit (not over it): still fine, use the padded bbox'
 	)
 	test.end()
 })
@@ -235,11 +262,26 @@ tape('renderNhoodHeatmap k/permutation controls rerun with clamped values', test
 	test.end()
 })
 
-tape('renderSimilarSearch is a no-op without dataset addressing', async test => {
+tape('renderSimilarSearch is a no-op with nothing to search with', async test => {
+	// no query.typeCounts (nhood_enrichment never ran, or it errored) must
+	// return before making any network request -- the only part of this
+	// function testable without a live server (see wsi.integration.spec.ts
+	// for the rest)
+	const holder = select(document.body).append('div') // detached container, never attached to the page
+	await renderSimilarSearch(holder, {}, {} as any) // empty query: no typeCounts field
+	test.equal((holder.node() as HTMLElement).children.length, 0, 'nothing rendered, no fetch attempted') // early return left the holder untouched
+	holder.remove() // detached node, but tidy up anyway
+	test.end() // tape: signal this test is done
+})
+
+tape('renderSimilarSearch offers the same-sample option without dataset addressing', async test => {
 	// direct-file mode (opts.genome/dslabel/sampleId absent) has no dataset to
-	// search, and must return before making any network request -- the only
-	// part of this function testable without a live server (see
-	// wsi.integration.spec.ts for the rest)
+	// list OTHER samples from, but searching THIS image needs no dataset --
+	// it reuses opts.spatialData/slideQuery, already known from how the
+	// viewer itself was addressed -- so that option still renders, with no
+	// network request (the sibling-listing fetch is skipped entirely without
+	// opts.genome/dslabel), which is why this is testable without a live
+	// server too
 	const holder = select(document.body).append('div')
 	const query = {
 		types: ['A', 'B'],
@@ -258,7 +300,11 @@ tape('renderSimilarSearch is a no-op without dataset addressing', async test => 
 		perms: 50
 	}
 	await renderSimilarSearch(holder, {}, query)
-	test.equal((holder.node() as HTMLElement).children.length, 0, 'nothing rendered, no fetch attempted')
+	const el = holder.node() as HTMLElement // the rendered DOM, for querying below
+	test.ok(el.querySelector('[data-testid="sjpp-wsi-similar"]'), 'the search panel renders') // the whole "Find similar regions" section exists
+	const options = [...el.querySelectorAll('[data-testid="sjpp-wsi-similar-sample"] option')] // every <option> in the sample dropdown
+	test.equal(options.length, 1, 'only the same-sample option, no sibling fetch without genome/dslabel') // no genome/dslabel -> siblings never fetched
+	test.equal((options[0] as HTMLOptionElement).textContent, 'this image', 'labeled generically without a real sampleId') // selfLabel fallback text
 	holder.remove()
 	test.end()
 })
