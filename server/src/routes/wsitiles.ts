@@ -331,8 +331,16 @@ function init({ genomes }) {
 				const typeCounts = Array.isArray(q.typeCounts) ? q.typeCounts.map(Number) : []
 				const count = Array.isArray(q.count) ? q.count : []
 				const C = types.length
+				// must match wsi_tile.py's MAX_CELL_TYPES: _permute_zscore allocates
+				// perms*C*C floats (a C x C matrix per permutation), which the
+				// ids*k*perms work budgets below don't account for at all -- an
+				// unbounded C here (typeCounts/count are just JSON the caller
+				// supplies, not cross-checked against a real h5ad) lets a tiny,
+				// cheap-looking request allocate gigabytes on the python worker
+				const MAX_TYPES = 64
 				const shapeOk =
 					C >= 2 &&
+					C <= MAX_TYPES &&
 					typeCounts.length == C &&
 					typeCounts.every((v: number) => Number.isFinite(v)) &&
 					count.length == C &&
@@ -340,7 +348,7 @@ function init({ genomes }) {
 				if (!shapeOk) {
 					res.status(400).send({
 						status: 'error',
-						error: 'similar needs types/typeCounts/count from a prior nhood result (>=2 types, matching shapes)'
+						error: `similar needs types/typeCounts/count from a prior nhood result (2-${MAX_TYPES} types, matching shapes)`
 					})
 					return
 				}
