@@ -817,8 +817,9 @@ export type MetaboliteIntensityQuery = {
 	find?: (param: string[]) => void
 	/** dynamically added on init */
 	getTopTerms?: (param: any) => any
-	/** bins cache, created on init */
-	metaboliteIntensity2bins?: { [index: string]: any }
+	/** bins cache, created on init. A Map, not a plain object: keyed by dataset-derived content
+	 * with no reserved-name concerns. */
+	metaboliteIntensity2bins?: Map<string, any>
 }
 
 /** the proteomics query */
@@ -1023,8 +1024,10 @@ export type GeneExpressionQuery = {
 	sampleTypesByTerms?: SampleTypesByTerms
 	/** dynamically added flag during launch */
 	nochr?: boolean
-	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term when initialized in the fillTermWrapper */
-	geneExpression2bins?: { [index: string]: any }
+	/** This dictionary is used to store/cache the default bins calculated for a geneExpression term
+	 * when initialized in the fillTermWrapper. A Map, not a plain object: keyed by dataset-derived
+	 * content with no reserved-name concerns. */
+	geneExpression2bins?: Map<string, any>
 	/** gene expression unit (e.g. 'FPKM') */
 	unit?: string
 }
@@ -1039,8 +1042,9 @@ export type IsoformExpressionQuery = {
 	file?: string
 	/** dynamically added during server launch, list of sample integer IDs from file */
 	samples?: number[]
-	/** cache for default bins per isoform */
-	geneExpression2bins?: { [index: string]: any }
+	/** cache for default bins per isoform. A Map, not a plain object: keyed by dataset-derived
+	 * content with no reserved-name concerns. */
+	geneExpression2bins?: Map<string, any>
 	/** expression unit (e.g. 'TPM') */
 	unit?: string
 	/** ENST IDs available in the HDF5 file, populated during server validation */

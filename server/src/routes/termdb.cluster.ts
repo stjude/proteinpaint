@@ -299,7 +299,11 @@ function getZscore(l: number[]) {
 export async function validate_query_geneExpression(ds: any, _genome: any) {
 	const q: GeneExpressionQuery = ds.queries.geneExpression
 	if (!q) return
-	q.geneExpression2bins = {} //this dict is used to store the default bin config for each gene searched, so it doesn't have to be recalculated each time
+	// Map, not a plain object: keyed by gene name from client/dataset content, with no reserved-name
+	// concerns -- a Map key is never coerced through the object property system, unlike a plain
+	// object where a gene name of '__proto__' could resolve to Object.prototype.
+	// this dict is used to store the default bin config for each gene searched, so it doesn't have to be recalculated each time
+	q.geneExpression2bins = new Map()
 
 	if (typeof q.get == 'function') return // ds supplied getter
 
@@ -467,7 +471,8 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 export async function validateQueryIsoformExpression(ds: any, _genome: any) {
 	const q: IsoformExpressionQuery = ds.queries.isoformExpression
 	if (!q) return
-	q.geneExpression2bins = {}
+	// Map, not a plain object: same reasoning as validate_query_geneExpression() above
+	q.geneExpression2bins = new Map()
 
 	if (typeof q.get == 'function') return // ds supplied getter
 

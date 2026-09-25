@@ -28,22 +28,24 @@ function defaultValidator(query) {
 	}
 }
 
-const byIpAddr = {}
+const byIpAddr = new Map()
 
 export function floodCatch(req, res, error) {
 	const time = +new Date()
-	if (!(req.ip in byIpAddr)) {
-		byIpAddr[req.ip] = { time, count: 0 }
+	let entry = byIpAddr.get(req.ip)
+	if (!entry) {
+		entry = { time, count: 0 }
+		byIpAddr.set(req.ip, entry)
 	}
-	if (time - byIpAddr[req.ip].time > 30000) {
+	if (time - entry.time > 30000) {
 		// purge this remote IP address from the tracker
-		delete byIpAddr[req.ip]
-	} else if (byIpAddr[req.ip].count > 10) {
+		byIpAddr.delete(req.ip)
+	} else if (entry.count > 10) {
 		res.send({ error: 'busy' })
 		// no need to throw and clutter the err log
 		return
 	} else {
-		byIpAddr[req.ip].count++
+		entry.count++
 	}
 
 	res.send({ error })

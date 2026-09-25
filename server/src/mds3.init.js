@@ -2474,7 +2474,10 @@ function makeElementMethylationGetter(q, entry, ds) {
 export async function validate_query_metaboliteIntensity(ds, genome) {
 	const q = ds.queries.metaboliteIntensity
 	if (!q) return
-	q.metaboliteIntensity2bins = {}
+	// Map, not a plain object: keyed by metabolite name from client/dataset content, with no
+	// reserved-name concerns -- a Map key is never coerced through the object property system,
+	// unlike a plain object where a name of '__proto__' could resolve to Object.prototype.
+	q.metaboliteIntensity2bins = new Map()
 	await validateMetaboliteIntensityNative(q, ds, genome)
 }
 
