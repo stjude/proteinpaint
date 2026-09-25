@@ -49,6 +49,18 @@ Image.MAX_IMAGE_PIXELS = None
 # Zoomify tile edge in px; must match the client's ol/source/Zoomify default
 TILE_SIZE = 256
 
+# ceiling on the number of distinct cell types (C) fed into a C x C matrix.
+# _permute_zscore alone allocates perms * C * C floats (P = np.empty((perms,
+# C, C))) -- memory that scales with C^2 * perms and is untouched by the
+# ids/cells*k*perms work budgets below (those track edge-visit time, not this
+# allocation). nhood_enrichment's C is real data (distinct obs/cell_type
+# values), bounded here defensively; similar_regions' C is `len(types)` from
+# the request body with no other upper bound anywhere in that path, so this
+# is the one thing standing between a crafted `types` array and an
+# uncontrolled allocation (perms=5000, C=500 -> ~10GB) regardless of how
+# cheap the rest of the request looks
+MAX_CELL_TYPES = 64
+
 
 # --- Zoomify pyramid geometry (mirrors ol/source/Zoomify.js 'default') -----
 
@@ -481,6 +493,8 @@ def nhood_enrichment(h5ad, ids, k=6, perms=1000, seed=0):
     C, n = len(cats), int(sel.size)
     if C < 2:
         return {"error": f"neighborhood enrichment needs at least 2 cell types, found {C}"}
+    if C > MAX_CELL_TYPES:
+        return {"error": f"too many distinct cell types ({C}); at most {MAX_CELL_TYPES} supported"}
     rows, cols, kk = _knn_edges(coords, k)
     if kk < 1:
         return {"error": "neighborhood enrichment needs at least 2 annotated cells"}
@@ -554,6 +568,8 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
     C = len(types)
     if C < 2:
         return {"error": f"similarity search needs at least 2 query cell types, found {C}"}
+    if C > MAX_CELL_TYPES:
+        return {"error": f"too many distinct cell types ({C}); at most {MAX_CELL_TYPES} supported"}
     required_types = required_types or []
     missing = [t for t in required_types if t not in types]
     if missing:
