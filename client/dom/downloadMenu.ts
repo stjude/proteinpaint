@@ -85,6 +85,43 @@ export class DownloadMenu {
 	}
 }
 
+/* jsPDF's built-in fonts encode WinAnsi (CP1252) only, and svg2pdf hands text straight to them, so a
+character outside it comes out as mojibake -- a bin label "≥14" printed as `"e14`. Embedding a Unicode
+font would cost hundreds of KB on every PDF, so the characters this codebase actually emits in labels
+are spelled out instead. Applied to the CLONE, so the page keeps the real glyphs. */
+const PDF_CHAR_MAP: [RegExp, string][] = [
+	[/≥/g, '>='],
+	[/≤/g, '<='],
+	[/≠/g, '!='],
+	[/≈/g, '~'],
+	[/[−–—]/g, '-'],
+	[/[‘’]/g, "'"],
+	[/[“”]/g, '"'],
+	[/…/g, '...'],
+	[/Δ/g, 'delta-'],
+	[/β/g, 'beta'],
+	[/ρ/g, 'rho'],
+	[/α/g, 'alpha'],
+	[/μ/g, 'u'],
+	[/₀/g, '0'],
+	[/₁/g, '1'],
+	[/₂/g, '2']
+]
+
+export function pdfSafeText(s: string) {
+	let out = s
+	for (const [re, to] of PDF_CHAR_MAP) out = out.replace(re, to)
+	return out
+}
+
+/** Rewrite every text node of an SVG clone to what jsPDF's fonts can encode. */
+function makeTextPdfSafe(svg: Element) {
+	const walker = svg.ownerDocument.createTreeWalker(svg, NodeFilter.SHOW_TEXT)
+	for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+		if (n.nodeValue) n.nodeValue = pdfSafeText(n.nodeValue)
+	}
+}
+
 export async function downloadSVGsAsPdf(chartImages, filename, orientation, filterImgs: any[] = []) {
 	const JSPDF = await import('jspdf')
 	const { jsPDF } = JSPDF
@@ -117,6 +154,7 @@ export async function downloadSVGsAsPdf(chartImages, filename, orientation, filt
 		for (const [prop, value] of Object.entries(svgStyles)) {
 			if (prop.startsWith('font')) svg.style[prop] = value
 		}
+		makeTextPdfSafe(svg)
 		parent.appendChild(svg) //Added otherwise does not print, will remove later
 		const svgWidth = svg.getAttribute('width')
 		const svgHeight = svg.getAttribute('height')
@@ -128,7 +166,8 @@ export async function downloadSVGsAsPdf(chartImages, filename, orientation, filt
 			doc.addPage()
 			y = 50
 		}
-		if (name.trim()) doc.text(name.length > 90 ? name.slice(0, 90) + '...' : name, x + 10, y - 20)
+		const safeName = pdfSafeText(name)
+		if (safeName.trim()) doc.text(safeName.length > 90 ? safeName.slice(0, 90) + '...' : safeName, x + 10, y - 20)
 		else y -= 20
 		svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`)
 

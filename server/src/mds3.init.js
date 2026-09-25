@@ -2086,6 +2086,14 @@ async function validate_query_ssGSEA(ds, genome) {
 async function validate_query_dnaMethylation(ds, genome) {
 	const q = ds.queries.dnaMethylation
 	if (!q) return
+	/* The scale term values are served on, when it should differ from what the matrices store.
+	Declared once for the whole query rather than per element entry: every class of one dataset
+	must agree, or a violin and a scatter of two classes would be on silently different axes. */
+	if (q.termValueUnit) {
+		if (q.termValueUnit != 'beta' && q.termValueUnit != 'mvalue')
+			throw 'dnaMethylation.termValueUnit must be "beta" or "mvalue"'
+		q.termUnitLabel = q.termValueUnit == 'beta' ? 'Average Beta Value' : 'Average M-value'
+	}
 	try {
 		/* Two independent HDF5s, and a dataset may supply either or both:
 		   .file          CpG/probe-level, powers the dnaMethylation term type
@@ -2218,7 +2226,7 @@ async function validate_query_dnaMethylation(ds, genome) {
 		would be plotted on an axis labelled beta -- values near -6 on a 0-1 scale. The numbers
 		would still be right (the getter reads this same entry.unit to decide whether to
 		logit-transform); only the label would lie, which is worse than an error. */
-		q.unit = q.unit || entry.unit
+		q.unit = q.termUnitLabel || q.unit || entry.unit
 		q.get = makeElementMethylationGetter(q, entry, ds)
 		return
 	}
@@ -2364,6 +2372,19 @@ function makeElementMethylationGetter(q, entry, ds) {
 
 	// Stored values are already M-values unless the entry says otherwise.
 	const storesBeta = /beta/i.test(entry.unit || '')
+	/* What the getter RETURNS, which a dataset can set apart from what its matrices store
+	(dnaMethylation.termValueUnit). Serving beta off an M-value matrix is worth the conversion
+	because M has no finite value at beta 0: the build floors those samples at about -20, which
+	on a plot is a column of points 14 units from every other value. Beta puts them at 0.
+	Only term values move; the stored scale, and the differential-methylation fit that reads
+	these matrices directly, are untouched. */
+	const wantBeta = q.termValueUnit ? q.termValueUnit === 'beta' : storesBeta
+	const toServed = (avg, sourceIsBeta) => {
+		if (sourceIsBeta === wantBeta) return avg
+		if (wantBeta) return 2 ** avg / (2 ** avg + 1)
+		const clamped = Math.min(Math.max(avg, 1e-6), 1 - 1e-6)
+		return Math.log2(clamped / (1 - clamped))
+	}
 
 	return async param => {
 		const limitSamples = await mayLimitSamples(param, sampleIds, ds)
@@ -2419,14 +2440,8 @@ function makeElementMethylationGetter(q, entry, ds) {
 					}
 					if (!n) continue
 					const avg = sum / n
-					/* A CpG shard always stores betas, so here the source scale is known and the
-					conversion is TO the advertised unit -- the same invariant as the element branch
-					above, where source and target are already the same. */
-					if (storesBeta) s2v[sid] = avg
-					else {
-						const clamped = Math.min(Math.max(avg, 1e-6), 1 - 1e-6)
-						s2v[sid] = Math.log2(clamped / (1 - clamped))
-					}
+					// a CpG shard always stores betas, so the source scale is known
+					s2v[sid] = toServed(avg, true)
 				}
 				if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v)
 				continue
@@ -2455,13 +2470,10 @@ function makeElementMethylationGetter(q, entry, ds) {
 					n++
 				}
 				if (!n) continue
-				/* No conversion: an element matrix stores what its entry's unit says, and that unit
-				is what q.unit advertises, so the stored scale IS the returned scale. Converting a
-				beta entry to an M-value here returned M under a label saying beta -- unreachable
-				today (every configured element entry declares M-values) but the CpG-shard branch
-				below converts TO the advertised unit, and two branches of one getter must not
-				disagree about what the number they return is. */
-				s2v[sid] = sum / n
+				/* Converted to the served unit, which is the stored one unless the dataset asked
+				otherwise. Both branches of this getter go through toServed, so they cannot disagree
+				about what the number they return is. */
+				s2v[sid] = toServed(sum / n, storesBeta)
 			}
 			if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v)
 		}

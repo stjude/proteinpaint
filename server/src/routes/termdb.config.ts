@@ -399,7 +399,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		/* Not gated on .file any more: validate_query_dnaMethylation() also sets .unit from the
 		element matrix that serves terms when there is no CpG file, and the client needs it to
 		label a region term with the unit it will actually receive. */
-		if (q.dnaMethylation.unit) q2.dnaMethylation.unit = q.dnaMethylation.unit
+		/* termUnitLabel wins: it is what the term getter actually returns when the dataset serves a
+		scale other than the stored one, and these units are only ever used to label axes. */
+		const termUnit = q.dnaMethylation.termUnitLabel
+		if (termUnit || q.dnaMethylation.unit) q2.dnaMethylation.unit = termUnit || q.dnaMethylation.unit
 		// only the fact that it exists; the rows come from termdb/dmrSilencing
 		if (q.dnaMethylation.silencingScreen) q2.dnaMethylation.silencingScreen = true
 		if (q.dnaMethylation.geneExpressionLevel) q2.dnaMethylation.geneExpressionLevel = true
@@ -415,7 +418,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		if (q.dnaMethylation.cpgByChr && !q.dnaMethylation.file && q.dnaMethylation.cpgChroms)
 			q2.dnaMethylation.cpgChroms = [...q.dnaMethylation.cpgChroms]
 		if (q.dnaMethylation.promoter) {
-			q2.dnaMethylation.promoter = { unit: q.dnaMethylation.promoter.unit }
+			q2.dnaMethylation.promoter = { unit: termUnit || q.dnaMethylation.promoter.unit }
 		}
 		/* Regulatory-element classes available for differential methylation, as
 		{key, label} for the element-type picker. Only file paths are withheld -- the
@@ -452,7 +455,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 				.filter(([, e]) => e?.file)
 				.map(([key, e]) => ({ key, label: e.label || key }))
 			if (!q2.dnaMethylation.promoter && elements.promoter?.file) {
-				q2.dnaMethylation.promoter = { unit: elements.promoter.unit }
+				q2.dnaMethylation.promoter = { unit: termUnit || elements.promoter.unit }
 			}
 		}
 		if (q.dnaMethylation.promoter?.file) {

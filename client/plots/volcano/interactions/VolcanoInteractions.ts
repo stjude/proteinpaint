@@ -429,14 +429,19 @@ export class VolcanoInteractions {
 		const { term } = this.dnaMethTermFor(d)
 		const survTw: any = structuredClone(survDefault)
 		await fillTermWrapper(survTw, this.app.vocabApi)
+		/* The screen calls a promoter methylated at beta 0.5, which is 0 on an M-value axis. Which
+		of the two the values arrive on is the dataset's choice (dnaMethylation.termValueUnit), so
+		the cut is read off the unit rather than hardcoded -- a 0 cut on beta would put almost every
+		patient in the methylated arm. */
+		const cut = /beta/i.test(term.unit || '') ? 0.5 : 0
 		const methTw: any = {
 			term,
 			q: {
 				mode: 'discrete',
 				type: 'custom-bin',
 				lst: [
-					{ startunbounded: true, stop: 0, stopinclusive: false, label: 'Unmethylated (beta < 0.5)' },
-					{ start: 0, startinclusive: true, stopunbounded: true, label: 'Methylated (beta >= 0.5)' }
+					{ startunbounded: true, stop: cut, stopinclusive: false, label: 'Unmethylated (beta < 0.5)' },
+					{ start: cut, startinclusive: true, stopunbounded: true, label: 'Methylated (beta >= 0.5)' }
 				]
 			}
 		}

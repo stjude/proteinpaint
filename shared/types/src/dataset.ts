@@ -1454,6 +1454,14 @@ type Mds3Queries = {
 		 * Also set at init from the element matrix that serves terms when there is no .file,
 		 * so the client can label a region term with the unit it will actually receive. */
 		unit?: string
+		/** Scale the TERM getter serves values on, when it should differ from what the matrices
+		 * store: 'beta' converts an M-value matrix on read. Serving beta avoids M's floor at
+		 * beta 0 (about -20), which plots as a column of points far from every other value.
+		 * Element classes share one setting. Differential methylation is unaffected: it reads
+		 * the matrices directly, on their stored scale. */
+		termValueUnit?: 'beta' | 'mvalue'
+		/** Set at init from termValueUnit: the unit label for what the getter returns. */
+		termUnitLabel?: string
 		/** How the methylation was measured. Defaults to 'array' when absent, so existing
 		 * array-based datasets keep their behavior.
 		 *
