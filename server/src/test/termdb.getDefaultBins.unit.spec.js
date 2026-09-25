@@ -52,7 +52,7 @@ tape('getDefaultBins rejects a reserved tw.$id before touching the single-cell b
 		queries: {
 			singleCell: {
 				geneExpression: {
-					sample2gene2expressionBins: {},
+					sample2gene2expressionBins: new Map(),
 					async get() {
 						test.fail('should not query gene expression data for a rejected $id')
 						return {}
@@ -73,9 +73,9 @@ tape('getDefaultBins rejects a reserved tw.$id before touching the single-cell b
 })
 
 tape(
-	'getDefaultBins safely stores a reserved tw.term.sample without resolving the outer cache key through Object.prototype',
+	'getDefaultBins stores a __proto__-named tw.term.sample as an ordinary Map key, not a prototype reassignment',
 	async test => {
-		const sample2gene2expressionBins = {}
+		const sample2gene2expressionBins = new Map()
 		const ds = {
 			queries: {
 				singleCell: {
@@ -94,12 +94,98 @@ tape(
 		let response
 		await trigger_getDefaultBins(q, ds, { send: value => (response = value) })
 
-		test.equal(response.error, undefined, 'processes normally instead of resolving binsCache to Object.prototype')
+		test.equal(response.error, undefined, 'processes normally, no special-casing needed for a Map key')
 		test.notOk({}.someGeneId, 'does not pollute Object.prototype')
 		test.ok(
-			Object.hasOwn(sample2gene2expressionBins, '__proto__'),
-			'stores the cache entry as a real own property of the outer map'
+			sample2gene2expressionBins.has('__proto__'),
+			'stores the cache entry under an ordinary Map key, same as any other sample name'
+		)
+		test.equal(
+			sample2gene2expressionBins.get('__proto__').get('someGeneId').min,
+			1,
+			'the cached bin config is retrievable from the nested Map'
 		)
 		test.end()
 	}
 )
+
+// tw.term.sample for a singleCellGeneExpression term is often a {sID, eID?} object, deserialized
+// fresh from JSON on every request -- a new object identity each time even for the same logical
+// sample. A Map compares object keys by identity, so caching on the raw object would never hit
+// across requests and would grow the cache unboundedly. The cache key must be normalized to the
+// stable sID instead.
+tape(
+	'getDefaultBins caches by the stable sID, not by object identity, for an object-shaped tw.term.sample',
+	async test => {
+		let getCalls = 0
+		const sample2gene2expressionBins = new Map()
+		const ds = {
+			queries: {
+				singleCell: {
+					geneExpression: {
+						sample2gene2expressionBins,
+						async get() {
+							getCalls++
+							return { c1: 1, c2: 2 }
+						}
+					}
+				}
+			}
+		}
+		// two separate requests: JSON.parse produces a new object each time, but with the same sID
+		const makeReq = () => ({
+			tw: {
+				$id: 'geneA',
+				term: { type: 'singleCellGeneExpression', sample: JSON.parse('{"sID":"sample1"}'), gene: 'TP53' }
+			}
+		})
+		let response1, response2
+		await trigger_getDefaultBins(makeReq(), ds, { send: v => (response1 = v) })
+		await trigger_getDefaultBins(makeReq(), ds, { send: v => (response2 = v) })
+
+		test.equal(getCalls, 1, 'the second request hits the cache instead of re-querying expression data')
+		test.equal(
+			sample2gene2expressionBins.size,
+			1,
+			'the outer cache does not grow on repeated requests for the same sample'
+		)
+		test.deepEqual(response1, response2, 'both requests get the same cached result')
+		test.end()
+	}
+)
+
+// When eID is present, the native getter reads expression data from a file named by eID, not sID
+// (see validSampleId() in samplesRoute.ts: sample?.eID || sample?.sID). Two samples that share an
+// sID but differ in eID are therefore different underlying data and must not collide in the cache.
+tape('getDefaultBins does not conflate two experiments that share an sID but differ in eID', async test => {
+	const requestedSamples = []
+	const sample2gene2expressionBins = new Map()
+	const ds = {
+		queries: {
+			singleCell: {
+				geneExpression: {
+					sample2gene2expressionBins,
+					async get(q, sample) {
+						requestedSamples.push(sample)
+						// simulate two genuinely different data files for the two experiments
+						return sample.eID === 'exp1' ? { c1: 1, c2: 2 } : { c1: 10, c2: 20 }
+					}
+				}
+			}
+		}
+	}
+	const makeReq = eID => ({
+		tw: {
+			$id: 'geneA',
+			term: { type: 'singleCellGeneExpression', sample: { sID: 'sampleX', eID }, gene: 'TP53' }
+		}
+	})
+	let response1, response2
+	await trigger_getDefaultBins(makeReq('exp1'), ds, { send: v => (response1 = v) })
+	await trigger_getDefaultBins(makeReq('exp2'), ds, { send: v => (response2 = v) })
+
+	test.equal(requestedSamples.length, 2, 'both experiments are queried, not served from a shared cache entry')
+	test.equal(sample2gene2expressionBins.size, 2, 'each experiment gets its own cache bucket, keyed by eID')
+	test.notDeepEqual(response1, response2, 'the two experiments get their own, distinct bins')
+	test.end()
+})

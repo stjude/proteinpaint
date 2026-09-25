@@ -121,8 +121,10 @@ export async function validate_query_singleCell(ds: any, _genome: any): Promise<
 	if (q.geneExpression) {
 		if (typeof q.geneExpression != 'object') throw new Error('singleCell.geneExpression not object')
 		// bins cache. termdb.getDefaultBins.js indexes it unconditionally, so seed it here rather than
-		// in the native validator only -- ds-supplied getters (gdc) need it too
-		if (!q.geneExpression.sample2gene2expressionBins) q.geneExpression.sample2gene2expressionBins = {}
+		// in the native validator only -- ds-supplied getters (gdc) need it too. A Map (not a plain
+		// object) since it's keyed by dataset-derived sample names, matching the other per-request
+		// caches in termdb.getDefaultBins.js (ds.termid2sample2value, data.term2sample2value).
+		if (!q.geneExpression.sample2gene2expressionBins) q.geneExpression.sample2gene2expressionBins = new Map()
 		if (typeof q.geneExpression.get != 'function') validateGeneExpressionNative(q.geneExpression)
 	}
 	if (q.DEgenes) {
@@ -255,7 +257,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 		if (!plot.colorColumns || plot.colorColumns.length == 0) continue
 	}
 	if (W2?.folder) {
-		for (const dir of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, W2.folder!))){
+		for (const dir of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, W2.folder!))) {
 			//dir: string directory name, should match a sample name.
 			const sampleName = dir
 			if (!sampleName) throw new Error(`Spatial sample: cannot derive sample name from file name ${dir}`)
@@ -454,7 +456,7 @@ function validateDataNative(D: SingleCellData, ds: any): void {
 	}
 }
 
-/** When q.checkPlotAvailability is true, returns only plots with available data files. 
+/** When q.checkPlotAvailability is true, returns only plots with available data files.
  * *** Note: When updating this function, ensure `ppgdc/active/dataset/gdc/singleCell.ts`,
  * gdc_validate_query_singleCell_data() is also updated. */
 async function getAvailablePlots(
@@ -479,12 +481,12 @@ async function getAvailablePlots(
 			await file_is_readable(tsvfile)
 			// file exists for this sample
 			plots.push({ name: plot.name })
-			/** Do not show the summary button in the UI unless there 
+			/** Do not show the summary button in the UI unless there
 			 * are terms from the plot file to use. Entirely possible
 			 * the sample only has spatial images and no other data. */
 			if (dictAdded == false) {
 				dictAdded = true
-				plots.push({ name: 'dictionary'})
+				plots.push({ name: 'dictionary' })
 			}
 		} catch (_) {
 			// file doesn't exist for this sample. this is allowed
