@@ -39,7 +39,7 @@ export const payload: RoutePayload = {
 }
 
 // one endpoint, `action` selects meta/tile/boundaries/annotations/genecounts/
-// genenames; z/x/y only for tile
+// genenames/nhood/similar; z/x/y only for tile
 export const api: RouteApi = {
 	endpoint: `wsitiles/:action/:z?/:x?/:y?`,
 	methods: { get: payload, post: payload }
@@ -252,6 +252,180 @@ function init({ genomes }) {
 						: { action: 'genenames', h5: full }
 				const out = await run_python('wsi_tile.py', JSON.stringify(job))
 				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim
+				return
+			}
+
+			if (req.params.action == 'nhood') {
+				// neighborhood enrichment of a cell selection (the viewer's lasso):
+				// POST {file, ids[], k?, perms?, seed?} — file is the consolidated
+				// .h5ad (tpmasterdir-relative, slide-folder scoped like the other
+				// companion reads), ids the selected cell ids (body-merged into q by
+				// the json middleware; the list can run to ~1MB, hence POST). Answers
+				// python's {types, count, zscore, cells, skipped, k, perms} or {error}
+				const file = String(q.file || '')
+				if (!file.toLowerCase().endsWith('.h5ad')) {
+					res.status(400).send({ status: 'error', error: 'nhood file must be a .h5ad' })
+					return
+				}
+				const full = path.resolve(serverconfig.tpmasterdir, file)
+				if (!full.startsWith(companionBase + path.sep)) {
+					res.status(400).send({ status: 'error', error: 'nhood path escapes the slide folder' })
+					return
+				}
+				const ids = Array.isArray(q.ids) ? q.ids.map(String) : [] // the selection
+				if (!ids.length) {
+					res.status(400).send({ status: 'error', error: 'nhood needs a non-empty ids list' })
+					return
+				}
+				// bounded so a request cannot pin python indefinitely
+				const int = (v: any, d: number, lo: number, hi: number) =>
+					Math.min(hi, Math.max(lo, Number.isInteger(Number(v)) ? Number(v) : d))
+				const k = int(q.k, 6, 1, 30)
+				const perms = int(q.perms, 1000, 10, 5000)
+				// wsi_tile.py's nhood_enrichment does ids.length * k * perms edge tallies
+				// per run (kNN graph x permutations); k and perms alone don't bound that
+				// when ids is huge (the request body allows up to ~5MB of ids), so bound
+				// the product directly instead of guessing a flat ids cap
+				const MAX_NHOOD_WORK = 50_000_000
+				if (ids.length * k * perms > MAX_NHOOD_WORK) {
+					res.status(400).send({
+						status: 'error',
+						error: `selection too large for k=${k}, perms=${perms}: at most ${Math.floor(
+							MAX_NHOOD_WORK / (k * perms)
+						)} cells (draw a smaller lasso, or lower k/permutations)`
+					})
+					return
+				}
+				const job = {
+					action: 'nhood',
+					h5ad: full,
+					ids,
+					k,
+					perms,
+					seed: int(q.seed, 0, 0, 2 ** 31)
+				}
+				const out = await run_python('wsi_tile.py', JSON.stringify(job))
+				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim
+				return
+			}
+
+			if (req.params.action == 'similar') {
+				// find windows of THIS slide's h5ad that resemble a region of ANOTHER
+				// slide: the request addresses the TARGET slide/sample the normal way
+				// (genome/dslabel/sample_id/wsimage or ?slide=) and ?file= is the
+				// target's own consolidated .h5ad, scoped exactly like nhood/annotations —
+				// only the query's SIGNATURE travels in the body (types/typeCounts/count
+				// from an earlier /nhood run on the source slide, +optional zscore), never
+				// a path to the source's own h5ad, so this route only ever reads one file
+				const file = String(q.file || '')
+				if (!file.toLowerCase().endsWith('.h5ad')) {
+					res.status(400).send({ status: 'error', error: 'similar file must be a .h5ad' })
+					return
+				}
+				const full = path.resolve(serverconfig.tpmasterdir, file)
+				if (!full.startsWith(companionBase + path.sep)) {
+					res.status(400).send({ status: 'error', error: 'similar path escapes the slide folder' })
+					return
+				}
+				const types = Array.isArray(q.types) ? q.types.map(String) : []
+				const typeCounts = Array.isArray(q.typeCounts) ? q.typeCounts.map(Number) : []
+				const count = Array.isArray(q.count) ? q.count : []
+				const C = types.length
+				// must match wsi_tile.py's MAX_CELL_TYPES: _permute_zscore allocates
+				// perms*C*C floats (a C x C matrix per permutation), which the
+				// ids*k*perms work budgets below don't account for at all -- an
+				// unbounded C here (typeCounts/count are just JSON the caller
+				// supplies, not cross-checked against a real h5ad) lets a tiny,
+				// cheap-looking request allocate gigabytes on the python worker
+				const MAX_TYPES = 64
+				const shapeOk =
+					C >= 2 &&
+					C <= MAX_TYPES &&
+					typeCounts.length == C &&
+					typeCounts.every((v: number) => Number.isFinite(v)) &&
+					count.length == C &&
+					count.every((row: any) => Array.isArray(row) && row.length == C && row.every(Number.isFinite))
+				if (!shapeOk) {
+					res.status(400).send({
+						status: 'error',
+						error: `similar needs types/typeCounts/count from a prior nhood result (2-${MAX_TYPES} types, matching shapes)`
+					})
+					return
+				}
+				let zscore: any = undefined
+				if (q.zscore !== undefined) {
+					const zOk =
+						Array.isArray(q.zscore) &&
+						q.zscore.length == C &&
+						q.zscore.every((row: any) => Array.isArray(row) && row.length == C)
+					if (!zOk) {
+						res.status(400).send({ status: 'error', error: 'similar zscore must be a C x C matrix matching types' })
+						return
+					}
+					zscore = q.zscore
+				}
+				let requiredTypes: string[] = []
+				if (q.requiredTypes !== undefined) {
+					requiredTypes = Array.isArray(q.requiredTypes) ? q.requiredTypes.map(String) : []
+					if (requiredTypes.some((t: string) => !types.includes(t))) {
+						res.status(400).send({ status: 'error', error: 'similar requiredTypes must be a subset of types' })
+						return
+					}
+				}
+				// the reference selection's own cell ids, when searching the SAME
+				// sample the selection came from — lets a same-sample search skip
+				// windows that are mostly just the reference region again, rather
+				// than trivially "matching" itself. Meaningless (and never sent by
+				// the client) across samples, since ids are only unique per h5ad
+				const excludeIds = Array.isArray(q.excludeIds) ? q.excludeIds.map(String) : []
+				// per-type emphasis in the cheap-score comparison (soft: a high weight
+				// counts for more when the type IS present, unlike requiredTypes it
+				// never guarantees presence). One entry per type, default all 1 (no
+				// effect); negative or mismatched-length is rejected rather than
+				// silently ignored, since a caller bug here would silently skew every
+				// score without any error signal otherwise
+				let typeWeights: number[] | undefined
+				if (q.typeWeights !== undefined) {
+const w = Array.isArray(q.typeWeights) ? q.typeWeights.map(Number) : null
+if (!w || w.length != C || w.some((v: number) => !Number.isFinite(v) || v < 0 || v > 10) || w.every(v => v === 0)) {
+	res.status(400).send({
+		status: 'error',
+		error: `similar typeWeights must have ${C} numbers from 0 to 10, one per type, with at least one positive weight`
+	})
+						return
+					}
+					typeWeights = w
+				}
+				const int = (v: any, d: number, lo: number, hi: number) =>
+					Math.min(hi, Math.max(lo, Number.isInteger(Number(v)) ? Number(v) : d))
+				const num = (v: any, d: number, lo: number, hi: number) =>
+					Math.min(hi, Math.max(lo, Number.isFinite(Number(v)) ? Number(v) : d))
+				const job = {
+					action: 'similar',
+					h5ad: full,
+					types,
+					typeCounts,
+					count,
+					zscore,
+					k: int(q.k, 6, 1, 30),
+					perms: int(q.perms, 1000, 10, 5000),
+					seed: int(q.seed, 0, 0, 2 ** 31),
+					window: num(q.window, 200, 10, 2000),
+					stride: num(q.stride, 100, 5, 2000),
+					topK: int(q.topK, 10, 1, 50),
+					// how far a candidate's cell count may differ from the query's own
+					// (fraction, default 0.1 = +-10%) before it's dropped, regardless of
+					// how well its composition matches — a bound of 5 (+-500%) still
+					// keeps a caller from disabling the check with an absurd value
+					sizeTolerance: num(q.sizeTolerance, 0.1, 0, 5),
+					// types a candidate must contain at least one cell of, not merely be
+					// weighted toward in the composition score; default none required
+					requiredTypes,
+					excludeIds,
+					typeWeights
+				}
+				const out = await run_python('wsi_tile.py', JSON.stringify(job))
+				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim (windows[], or {error})
 				return
 			}
 

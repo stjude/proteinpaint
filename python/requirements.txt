@@ -20,6 +20,8 @@ pillow==12.3.0
 psutil==7.2.1
 pyBigWig==0.3.25 --no-binary=pyBigWig
 pydantic==2.12.3
+# wsi_tile.py nhood: KD-tree kNN over cell centroids (already a statsmodels dependency)
+scipy==1.16.3
 statsmodels==0.14.4
 tifffile==2026.7.31
 typing_extensions==4.15.0

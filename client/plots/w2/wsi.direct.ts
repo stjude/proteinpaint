@@ -39,6 +39,16 @@
  and draws ONE overlay of the totals in a single color. Can be combined with
  gene_expression (the group takes the next unused palette color).
 
+ Lasso: the button under the zoom controls toggles a freehand lasso (an
+ OpenLayers Draw interaction). Releasing the pointer selects every cell whose
+ centroid lies inside the drawn ring and opens a menu listing the selection:
+ per-type counts, then a table of cell ids and their annotated types. Only
+ one lasso is kept; drawing again replaces it, toggling off clears it.
+ The menu's 'Neighborhood enrichment' button (annotated h5ad only) POSTs the
+ selected ids to wsitiles/nhood, which runs the squidpy-style analysis (kNN
+ graph over centroids, type-to-neighbour edge counts, permutation z-scores)
+ and draws the z-score matrix as a heatmap in a panel under the map.
+
  Bypasses datasets/samples: hits the wsitiles route with a direct slide path
  (resolved relative to serverconfig.tpmasterdir; gated by features.wsi.allowDirectSlidePath). Minimal
  pan/zoom viewer — the same OpenLayers Zoomify setup the full viewer uses.
@@ -54,8 +64,13 @@ import Feature from 'ol/Feature.js' // one drawable geometry + style
 import MultiPolygon from 'ol/geom/MultiPolygon.js' // many cell rings in one feature
 import { Fill, Stroke, Style } from 'ol/style.js' // polygon styling primitives
 import RBush from 'ol/structs/RBush.js' // spatial index for the hover hit test
+import Draw from 'ol/interaction/Draw.js' // freehand polygon drawing = the lasso
+import Control from 'ol/control/Control.js' // hosts the lasso toggle inside the map's viewport
+import { select } from 'd3-selection' // wraps the control element for the icon helper
+import { scaleLinear } from 'd3-scale' // diverging z-score color scale of the enrichment heatmap
 import { dofetch3 } from '#common/dofetch' // fetch wrapper for meta/genecounts
-import { sayerror } from '#dom' // inline error banner
+import { sayerror, Menu, renderTable, icons, ColorScale } from '#dom' // error banner, lasso menu + table, lasso icon, heatmap legend
+import { addScaleBar } from './scaleBar' // bottom-right µm scale bar, every image (spatial or plain)
 
 /** Build the viewer in `holder`; opts mirror the URL params documented above */
 export async function init(
@@ -67,6 +82,13 @@ export async function init(
 		 lets the w2 plot reuse this viewer for spatial images without the
 		 allowDirectSlidePath gate */
 		slideQuery?: string
+		/** dataset addressing (only set alongside slideQuery): lets the
+		 neighborhood-enrichment panel offer "find similar regions" against the
+		 dataset's OTHER spatial samples (termdb/wsiBySample + wsitiles/similar).
+		 Absent in direct-file mode, which has no dataset to search */
+		genome?: string
+		dslabel?: string
+		sampleId?: string
 		/** display name when slide is not given (e.g. the spatial image fileName) */
 		label?: string
 		/** = spatial_data: the consolidated spatial .h5ad, tpmasterdir-relative —
@@ -98,6 +120,11 @@ export async function init(
 		/** map div size; defaults fit the full-window direct viewer */
 		width?: string
 		height?: string
+		/** open already panned/zoomed to this niche (a wsitiles/similar result,
+		 e.g. from another sample's similar-region search) instead of the
+		 whole-slide overview, with a dashed box drawn around it. cx/cy/window
+		 are µm, the same obsm/spatial space the server computed them in */
+		focus?: { cx: number; cy: number; window: number }
 	},
 	/** d3 selection the viewer renders into */
 	holder: any
@@ -177,6 +204,9 @@ export async function init(
 			view: new View({ resolutions: grid.getResolutions(), extent }) // camera locked to the pyramid
 		})
 		map.getView().fit(extent) // start fully zoomed out, whole slide visible
+		// real, known mpp only — never the µm-math fallback below, which would
+		// draw a scale bar for pixels that aren't actually micrometers
+		addScaleBar(map, Array.isArray(meta.mpp) && meta.mpp.length === 2 ? meta.mpp[0] : undefined)
 
 		// info line under the map: name, pixel size, µm/px, level count
 		holder
@@ -190,6 +220,7 @@ export async function init(
 						: ''
 				}, ${meta.levels} levels`
 			)
+		const resultsDiv = holder.append('div') // analysis panels under the map (lasso enrichment)
 
 		// Legends are position:fixed and placed from the map's live viewport
 		// rectangle, so they are confined to the map's on-screen area no matter
@@ -235,6 +266,27 @@ export async function init(
 		// pixels via the slide's mpp (defaulting to 1 = coords already in px)
 		const [mppX, mppY] = Array.isArray(meta.mpp) && meta.mpp.length === 2 ? meta.mpp : [1, 1]
 
+		// open straight to a specific niche instead of the whole-slide overview:
+		// fit its extent with margin and outline it
+		if (opts.focus) {
+			const { cx, cy, window: winSize } = opts.focus
+			const box = focusExtent(cx, cy, winSize, mppX, mppY)
+			map.getView().fit(box, { padding: [40, 40, 40, 40] })
+			const ring = [
+				[box[0], box[1]],
+				[box[2], box[1]],
+				[box[2], box[3]],
+				[box[0], box[3]],
+				[box[0], box[1]]
+			]
+			map.addLayer(
+				new VectorLayer({
+					source: new VectorSource({ features: [new Feature(new MultiPolygon([[ring]]))] }),
+					style: new Style({ stroke: new Stroke({ color: '#e08a00', width: 3, lineDash: [8, 6] }) })
+				})
+			)
+		}
+
 		// annotation_level=n: show the overlays only within the n most zoomed-in
 		// levels. OL picks the tile level with resolution <= the view resolution,
 		// so "within the n finest levels" means view resolution < the (n+1)'th
@@ -259,11 +311,10 @@ export async function init(
 		const groupGenes = geneList(opts.geneGroups) // summed into a single overlay
 
 		// which overlays need the h5ad: cell polygons serve the strokes, the
-		// type/expression fills and the hover tooltip; nucleus polygons only
-		// their own strokes
-		const needCellPolys =
-			!!opts.spatialData &&
-			(!opts.hideCellStrokes || opts.showCellTypes || exprGenes.length > 0 || groupGenes.length > 0)
+		// type/expression fills, the hover tooltip and the lasso (hit-testing
+		// needs the rings even with every fill/stroke option off); nucleus
+		// polygons only their own strokes
+		const needCellPolys = !!opts.spatialData
 		const overlays: Array<['cell' | 'nucleus', boolean, string]> = [
 			['cell', needCellPolys, 'rgba(0, 200, 80, 0.9)'],
 			['nucleus', !!opts.spatialData && !opts.hideNucleusStrokes, 'rgba(0, 150, 255, 0.9)']
@@ -508,6 +559,100 @@ export async function init(
 					.style('top', `${mr.top + evt.pixel[1] + 12}px`)
 					.text(rows.join('\n'))
 			})
+
+			// lasso: freehand polygon drawn on its own vector layer; on release,
+			// the cells whose centroid falls inside it are listed in a menu.
+			// Reuses the hover index: only cells whose bbox meets the lasso's
+			// extent are ray-cast. Not gated by annotation_level — a region can
+			// be selected at any zoom.
+			const lassoSource = new VectorSource() // holds the one drawn ring
+			map.addLayer(
+				new VectorLayer({
+					source: lassoSource,
+					style: new Style({
+						stroke: new Stroke({ color: 'rgba(255, 140, 0, 0.9)', width: 2 }), // orange outline
+						fill: new Fill({ color: 'rgba(255, 140, 0, 0.1)' }) // faint tint of the region
+					})
+				})
+			)
+			const draw = new Draw({ source: lassoSource, type: 'Polygon', freehand: true }) // the lasso itself
+			const lassoMenu = new Menu({ padding: '8px', testid: 'sjpp-wsi-lasso-menu' }) // the selection popup
+			let lassoOn = false // whether the Draw interaction is on the map
+			// the toggle lives in an OL control so it sits inside the map's
+			// viewport with the zoom buttons (just below them)
+			const ctl = document.createElement('div') // the control's element
+			ctl.className = 'ol-unselectable ol-control' // OL styles it as a control
+			// inline, not left to .ol-control: a global rule wins on this element and
+			// makes it position:relative, i.e. a full-width block whose grey control
+			// background paints a band across the map
+			ctl.style.position = 'absolute'
+			ctl.style.top = '65px' // right under the +/- zoom buttons
+			ctl.style.left = '.5em' // aligned with them
+			map.addControl(new Control({ element: ctl }))
+			const btn = icons.lasso(select(ctl).attr('data-testid', 'sjpp-wsi-lasso-btn'), {
+				title: 'Lasso: drag to select cells',
+				enabled: false, // starts off; the handler repaints the button
+				handler: () => {
+					lassoOn = !lassoOn
+					btn.select('button').style('background-color', lassoOn ? 'rgb(207, 226, 243)' : 'transparent') // on = tinted
+					if (lassoOn) map.addInteraction(draw) // drags now draw instead of panning
+					else {
+						map.removeInteraction(draw) // back to pan/zoom
+						lassoSource.clear() // drop the drawn region
+						lassoMenu.hide()
+					}
+				}
+			})
+			draw.on('drawstart', () => {
+				lassoSource.clear() // one lasso at a time
+				lassoMenu.hide()
+			})
+			draw.on('drawend', (evt: any) => {
+				const geom = evt.feature.getGeometry() // the finished polygon
+				const ring: number[][] = geom.getCoordinates()[0] // its outer ring, map coords
+				const hits = cellsInLasso(ring, index.getInExtent(geom.getExtent())) // bbox prefilter, then ray cast
+				const px = map.getPixelFromCoordinate(ring[ring.length - 1]) // where the pointer was released
+				const mr = mapDiv.node().getBoundingClientRect() // map rect: OL pixel -> viewport coords
+				showLassoMenu(lassoMenu, hits, cellTypes, mr.left + px[0], mr.top + px[1], runNhood)
+			})
+
+			// neighborhood enrichment of the lasso selection: the server reads the
+			// selected cells' centroids and types from the h5ad, so only ids travel.
+			// Rendered into a panel under the map (replacing the previous run) so
+			// the result outlives the menu. Absent without annotations: the
+			// analysis is over cell types.
+			const runNhood =
+				opts.spatialData && cellTypes
+					? async (ids: string[], k = 6, perms = 1000) => {
+							lassoMenu.hide()
+							resultsDiv.selectAll('*').remove() // one panel at a time
+							const panel = resultsDiv
+								.append('div')
+								.attr('data-testid', 'sjpp-wsi-nhood')
+								.style('margin', '8px')
+								.style('font', '12px system-ui')
+							panel
+								.append('div')
+								.text(`Neighborhood enrichment: running on ${ids.length} cells, k=${k}, ${perms} permutations …`) // permutations take a moment
+							try {
+								const r = await dofetch3(`wsitiles/nhood?${sq}`, {
+									method: 'POST', // explicit: dofetch3's GET path would URL-encode the id list (and re-encode it as strings past the URL length limit)
+									body: { file: opts.spatialData, ids, k, perms }
+								})
+								if (!r || r.error) throw new Error(r?.error || 'failed to compute neighborhood enrichment')
+								panel.selectAll('*').remove()
+								// the panel's k/permutation controls rerun on the SAME selection
+								renderNhoodHeatmap(panel, r, (k2, p2) => runNhood!(ids, k2, p2))
+								// offer to search this sample or the dataset's other spatial
+								// samples for a similarly-composed, similarly-organized region
+								// (no-op in direct-file mode, which has no dataset to search)
+								await renderSimilarSearch(panel, opts, r, ids)
+							} catch (e: any) {
+								panel.selectAll('*').remove()
+								sayerror(panel, `Neighborhood enrichment error: ${e.message || e}`) // the lasso and viewer live on
+							}
+					  }
+					: undefined
 		}
 	} catch (e: any) {
 		loading.remove() // drop the placeholder before showing the error
@@ -546,6 +691,90 @@ export function pointInRing(x: number, y: number, ring: number[][]): boolean {
 		if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside
 	}
 	return inside // odd crossings = inside
+}
+
+/** The cells whose centroid (vertex mean) lies inside the lasso ring; order
+ preserved from `cells` (exported for tests). Centroid-in-ring, not polygon
+ overlap: a cell counts when most of it is inside, which is what a hand-drawn
+ region means, and it keeps the test to one ray cast per candidate. */
+export function cellsInLasso(
+	/** the lasso's outer ring, map coords */
+	ring: number[][],
+	/** candidate cells (typically the bbox-index hits for the ring's extent) */
+	cells: Iterable<CellPoly>
+): CellPoly[] {
+	const hits: CellPoly[] = [] // selected cells
+	for (const c of cells) {
+		let sx = 0, // running vertex sums
+			sy = 0
+		for (const [x, y] of c.ring) {
+			sx += x
+			sy += y
+		}
+		if (pointInRing(sx / c.ring.length, sy / c.ring.length, ring)) hits.push(c) // centroid inside = selected
+	}
+	return hits
+}
+
+/** Fill and show the lasso menu at viewport (x, y): a per-type count summary
+ (types by descending count, unannotated cells last), then a table of every
+ selected cell's id and type. An empty selection shows a one-line notice. */
+function showLassoMenu(
+	menu: Menu,
+	hits: CellPoly[],
+	cellTypes: { [id: string]: string } | undefined,
+	x: number,
+	y: number,
+	/** runs the neighborhood enrichment on the selected ids; absent = no button */
+	runNhood?: (ids: string[]) => Promise<void>
+) {
+	menu.clear().show(x, y)
+	const d = menu.d.append('div').style('font', '12px system-ui')
+	if (!hits.length) {
+		d.text('No cells in the lasso') // nothing to list
+		return
+	}
+	d.append('div').style('font-weight', 'bold').text(`${hits.length} cells selected`) // headline count
+	if (runNhood) {
+		// mirrors the route's ids*k*perms cap (server/src/routes/wsitiles.ts) at the
+		// default k=6/perms=1000 the button runs with, so an oversized lasso gets an
+		// instant explanation instead of a POST the server would reject anyway
+		const maxCells = Math.floor(50_000_000 / (6 * 1000))
+		if (hits.length > maxCells)
+			d.append('div')
+				.style('margin', '4px 0')
+				.style('color', '#a00')
+				.text(`Selection too large for neighborhood enrichment (max ${maxCells} cells) — draw a smaller lasso`)
+		else
+			d.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('data-testid', 'sjpp-wsi-nhood-btn')
+				.style('margin', '4px 0')
+				.text('Neighborhood enrichment')
+				.on('click', () => runNhood(hits.map(c => c.id)))
+	}
+	if (cellTypes) {
+		// per-type tally of the selection, the input the enrichment step will consume
+		const counts: { [t: string]: number } = Object.create(null)
+		for (const c of hits) {
+			const t = cellTypes[c.id] || 'unannotated' // cells the h5ad left unannotated get their own bucket
+			counts[t] = (counts[t] || 0) + 1
+		}
+		const types = Object.keys(counts).sort((a, b) =>
+			a == 'unannotated' ? 1 : b == 'unannotated' ? -1 : counts[b] - counts[a]
+		)
+		const sum = d.append('div').attr('data-testid', 'sjpp-wsi-lasso-summary').style('margin', '4px 0 6px 0') // the tally
+		for (const t of types) sum.append('div').text(`${t}: ${counts[t]}`) // one line per type
+	}
+	const columns = [{ label: 'Cell ID' }] as { label: string }[] // id always; type only when annotated
+	if (cellTypes) columns.push({ label: 'Cell type' })
+	renderTable({
+		columns,
+		rows: hits.map(c => (cellTypes ? [{ value: c.id }, { value: cellTypes[c.id] || '' }] : [{ value: c.id }])), // one row per cell
+		div: d.append('div').attr('data-testid', 'sjpp-wsi-lasso-table'),
+		showLines: true,
+		maxHeight: '40vh'
+	})
 }
 
 /** Fetch one polygon set of the h5ad (via wsitiles/boundaries) and parse it
@@ -599,6 +828,22 @@ export function parseBoundaries(
 	}
 	if (ring.length > 2) cells.push({ id: curId.replace(/"/g, ''), ring }) // don't drop the last cell
 	return cells
+}
+
+/** A `window`-µm-wide/tall box centered on (cx, cy) (µm, obsm/spatial space —
+ e.g. a wsitiles/similar result), as an OL extent [minX, minY, maxX, maxY] in
+ level-0 px: the SAME µm -> px transform parseBoundaries uses (y negated for
+ OL), so a niche's box lines up with the cell polygons drawn in the same
+ coordinate space. (exported for tests) */
+export function focusExtent(
+	cx: number,
+	cy: number,
+	window: number,
+	mppX: number,
+	mppY: number
+): [number, number, number, number] {
+	const half = window / 2
+	return [(cx - half) / mppX, -(cy + half) / mppY, (cx + half) / mppX, -(cy - half) / mppY]
 }
 
 /** One stroke-only vector layer holding every polygon; maxResolution (when
@@ -695,4 +940,404 @@ function expressionLayer(cells: CellPoly[], counts: { [id: string]: number }, ma
 		features.push(f)
 	}
 	return new VectorLayer({ source: new VectorSource({ features }) }) // fills only, no strokes
+}
+
+/** The wsitiles/nhood answer: one row/column per cell type, in `types` order */
+export type NhoodResult = {
+	types: string[]
+	/** typeCounts[i]: how many selected cells are of types[i] (the wsitiles/similar
+	 query's composition vector); optional here only because older test fixtures
+	 predate it — the live route always includes it */
+	typeCounts?: number[]
+	/** count[a][b]: edges from a type-a cell to a type-b neighbour */
+	count: number[][]
+	/** z-score of count vs. permuted labels; null where the permutations had no variance */
+	zscore: (number | null)[][]
+	cells: number
+	skipped: number
+	k: number
+	perms: number
+}
+
+/** Draw the enrichment z-score matrix as a heatmap into `holder`: diverging
+ blue (depleted) – gray (neutral) – red (enriched) around 0, symmetric domain
+ ±max|z|, the value printed in each cell, a native tooltip with the edge
+ count, a legend bar, and a close button. Types are rows (the cell) and
+ columns (its neighbour). (exported for tests) */
+export function renderNhoodHeatmap(
+	holder: any,
+	r: NhoodResult,
+	/** rerun the analysis with new k / permutations; absent = no controls */
+	rerun?: (k: number, perms: number) => void
+) {
+	const C = r.types.length // matrix size
+	let m = 1 // color domain half-width: the largest finite |z|, at least 1
+	for (const row of r.zscore) for (const z of row) if (z != null && Math.abs(z) > m) m = Math.abs(z)
+	const color = scaleLinear<string>().domain([-m, 0, m]).range(['#2a78d6', '#f0efec', '#d0342c']) // blue–gray–red
+	const cs = 34, // cell size, px
+		gap = 2, // surface gap between fills
+		labelW = Math.min(180, 14 + 6.5 * Math.max(...r.types.map(t => t.length))), // row label column
+		topH = Math.min(140, 14 + 5 * Math.max(...r.types.map(t => t.length))) // rotated column labels
+
+	const head = holder.append('div').style('display', 'flex').style('align-items', 'baseline').style('gap', '10px')
+	head
+		.append('div')
+		.style('font-weight', 'bold')
+		.text(
+			`Neighborhood enrichment — ${r.cells} cells, ${r.k} nearest neighbours, ${r.perms} permutations` +
+				(r.skipped ? `, ${r.skipped} unannotated cells skipped` : '')
+		)
+	if (rerun) {
+		// k and permutation controls, prefilled with the values that ran; bounds
+		// mirror the route's clamps. Native number inputs, no widget library.
+		const ctl = head.append('span').attr('data-testid', 'sjpp-wsi-nhood-controls').style('opacity', 0.85)
+		const numInput = (label: string, value: number, min: number, max: number, title: string) => {
+			ctl.append('label').attr('title', title).style('margin-left', '6px').text(`${label} `)
+			return ctl
+				.append('input')
+				.attr('type', 'number')
+				.attr('min', min)
+				.attr('max', max)
+				.attr('step', 1)
+				.style('width', '5em')
+				.property('value', value)
+		}
+		const kIn = numInput('k', r.k, 1, 30, 'nearest neighbours per cell')
+		const pIn = numInput('permutations', r.perms, 10, 5000, 'random relabellings for the null distribution')
+		const clamp = (el: any, lo: number, hi: number) =>
+			Math.min(hi, Math.max(lo, Math.round(Number(el.property('value')) || lo)))
+		ctl
+			.append('button')
+			.attr('data-testid', 'sjpp-wsi-nhood-rerun')
+			.style('margin-left', '6px')
+			.text('Rerun')
+			.on('click', () => rerun(clamp(kIn, 1, 30), clamp(pIn, 10, 5000)))
+	}
+	head
+		.append('span')
+		.attr('role', 'button')
+		.attr('tabindex', 0)
+		.style('cursor', 'pointer')
+		.style('opacity', 0.6)
+		.attr('title', 'Close')
+		.text('✕')
+		.on('click', () => holder.remove())
+	holder
+		.append('div')
+		.style('opacity', 0.7)
+		.style('margin', '2px 0 6px 0')
+		.text(
+			'z-score of edge counts from each cell type (row) to its neighbours (column) vs. shuffled labels: red = enriched, blue = depleted'
+		)
+
+	const svg = holder
+		.append('svg')
+		.attr('width', labelW + C * (cs + gap) + 10)
+		.attr('height', topH + C * (cs + gap) + 10)
+		.style('font', '11px system-ui')
+	const g = svg.append('g').attr('transform', `translate(${labelW},${topH})`)
+	for (const [i, t] of r.types.entries()) {
+		// row label (right-aligned at the matrix's left edge) and rotated column label
+		g.append('text')
+			.attr('x', -6)
+			.attr('y', i * (cs + gap) + cs / 2)
+			.attr('dy', '0.35em')
+			.attr('text-anchor', 'end')
+			.attr('fill', '#0b0b0b')
+			.text(t)
+		g.append('text')
+			.attr('transform', `translate(${i * (cs + gap) + cs / 2},-6) rotate(-45)`)
+			.attr('text-anchor', 'start')
+			.attr('fill', '#0b0b0b')
+			.text(t)
+	}
+	for (const [i, a] of r.types.entries()) {
+		for (const [j, b] of r.types.entries()) {
+			const z = r.zscore[i][j] // this pair's z-score (null = undefined)
+			const cell = g
+				.append('g')
+				.attr('class', 'sjpp-wsi-nhood-cell')
+				.attr('transform', `translate(${j * (cs + gap)},${i * (cs + gap)})`)
+			cell
+				.append('rect')
+				.attr('width', cs)
+				.attr('height', cs)
+				.attr('rx', 3)
+				.attr('fill', z == null ? '#f0efec' : color(z))
+			cell
+				.append('text')
+				.attr('x', cs / 2)
+				.attr('y', cs / 2)
+				.attr('dy', '0.35em')
+				.attr('text-anchor', 'middle')
+				.attr('fill', z != null && Math.abs(z) / m > 0.6 ? '#fff' : '#0b0b0b') // readable on the saturated ends
+				.text(z == null ? '–' : z.toFixed(1))
+			cell.append('title').text(`${a} → ${b}\nz-score: ${z == null ? 'n/a' : z.toFixed(2)}\nedges: ${r.count[i][j]}`) // hover detail
+		}
+	}
+	// legend: the same diverging scale, ticks at nice values of ±m
+	const legendSvg = holder.append('svg').attr('width', 220).attr('height', 45).style('font', '11px system-ui')
+	new ColorScale({
+		holder: legendSvg,
+		domain: [-m, 0, m],
+		colors: ['#2a78d6', '#f0efec', '#d0342c'],
+		width: 180,
+		height: 40,
+		position: '15,5',
+		ticks: 5
+	})
+}
+
+/** After a neighborhood-enrichment run, offer to search the DATASET's other
+ spatial samples for a region with a similar cell-type composition and
+ neighbourhood structure: wsitiles/similar coarse-scans each candidate sample
+ by cosine similarity, then confirms only the top candidates with the same
+ permutation z-score test nhood_enrichment ran on this selection. No-op in
+ direct-file mode (opts.genome/dslabel/sampleId absent — there is no dataset
+ to search). (exported for tests) */
+export async function renderSimilarSearch(
+	holder: any,
+	opts: { genome?: string; dslabel?: string; sampleId?: string },
+	/** the just-completed nhood_enrichment result: its composition/adjacency
+	 become the search query */
+	query: NhoodResult,
+	/** the lasso's own selected cell ids — passed to the server as excludeIds
+	 when searching THIS sample, so the reference region itself (an otherwise
+	 trivial cheapScore~1/distance~0 "match") doesn't dominate the results */
+	queryIds?: string[]
+) {
+	if (!opts.genome || !opts.dslabel || !opts.sampleId || !query.typeCounts) return // no dataset, or nothing to search with
+	const data = await dofetch3(
+		`termdb/wsiBySample?genome=${encodeURIComponent(opts.genome)}&dslabel=${encodeURIComponent(
+			opts.dslabel
+		)}&imageType=spatial`
+	).catch(() => null)
+	// this sample first (search elsewhere in the SAME image), then every other
+	// spatial sample in the dataset; wsiBySample's own listing may also include
+	// this sample, so it's filtered out of the "other samples" half to avoid a
+	// duplicate entry
+	const siblings = ((data?.samples || []) as { sampleId: string }[]).filter(s => s.sampleId != opts.sampleId)
+	const sampleOptions = [{ sampleId: opts.sampleId, label: `${opts.sampleId} (this sample)` }].concat(
+		siblings.map(s => ({ sampleId: s.sampleId, label: s.sampleId }))
+	)
+
+	const section = holder
+		.append('div')
+		.attr('data-testid', 'sjpp-wsi-similar')
+		.style('margin-top', '10px')
+		.style('padding-top', '8px')
+		.style('border-top', '1px solid #ddd')
+		.style('font', '12px system-ui')
+	section.append('div').style('font-weight', 'bold').text('Find similar regions')
+	const row = section.append('div').style('margin', '4px 0')
+	const sampleSelect = row.append('select').attr('data-testid', 'sjpp-wsi-similar-sample').style('margin-right', '6px')
+	for (const s of sampleOptions) sampleSelect.append('option').attr('value', s.sampleId).text(s.label)
+	row
+		.append('label')
+		.attr('title', 'A candidate must be within this % of the reference niche’s own cell count')
+		.text(' size tolerance ±')
+	const toleranceInput = row
+		.append('input')
+		.attr('data-testid', 'sjpp-wsi-similar-tolerance')
+		.attr('type', 'number')
+		.attr('min', 0)
+		.attr('max', 500)
+		.attr('step', 1)
+		.style('width', '4em')
+		.style('margin', '0 2px')
+		.property('value', 10)
+	row.append('span').text('%')
+	// per-type controls: which types a candidate MUST contain at least one
+	// cell of (hard gate, unchecked by default = no requirement), and how
+	// much each type counts toward the cheap-score comparison (soft emphasis,
+	// weight 1 = default/no effect; a required type can still carry any
+	// weight — the two are independent knobs, not a spectrum of one setting)
+	const typesRow = section.append('div').style('margin', '2px 0 4px 0').style('opacity', 0.85)
+	typesRow.append('div').text('per cell type: require present, and/or weight its importance in the match score')
+	const typeControls: { type: string; required: any; weight: any }[] = query.types.map(t => {
+		const line = typesRow.append('div').style('margin', '2px 0').style('display', 'flex').style('align-items', 'center')
+		const label = line.append('label').style('cursor', 'pointer').style('margin-right', '10px')
+		const required = label
+			.append('input')
+			.attr('type', 'checkbox')
+			.attr('data-testid', `sjpp-wsi-similar-required-${t}`)
+			.property('checked', false)
+		label.append('span').style('margin-left', '2px').text(`require ${t}`)
+		line.append('span').style('margin', '0 4px 0 12px').text('weight')
+		const weight = line
+			.append('input')
+			.attr('data-testid', `sjpp-wsi-similar-weight-${t}`)
+			.attr('type', 'number')
+			.attr('min', 0)
+			.attr('max', 10)
+			.attr('step', 0.5)
+			.style('width', '4em')
+			.property('value', 1)
+		return { type: t, required, weight }
+	})
+	const resultsDiv = section.append('div')
+	row
+		.append('button')
+		.attr('data-testid', 'sjpp-wsi-similar-search')
+		.style('margin-left', '6px')
+		.text('Search')
+		.on('click', async () => {
+			const sampleId = sampleSelect.property('value')
+			const searchingSameSample = sampleId == opts.sampleId
+			// percent in the UI, fraction over the wire (route clamps to 0-5, i.e. 0-500%)
+			const sizeTolerance = Math.max(0, Number(toleranceInput.property('value')) || 0) / 100
+			const requiredTypes = typeControls.filter(c => c.required.property('checked')).map(c => c.type)
+			const typeWeights = typeControls.map(c => Math.max(0, Number(c.weight.property('value')) || 0))
+			resultsDiv.selectAll('*').remove()
+			resultsDiv.append('div').text(`Searching ${sampleId} …`)
+			try {
+				// the target's own spatial image + consolidated h5ad (wsitiles/similar
+				// reads only this file — the query travels as data, not a path)
+				const imgData = await dofetch3(
+					`termdb/wsiBySample?genome=${encodeURIComponent(opts.genome!)}&dslabel=${encodeURIComponent(
+						opts.dslabel!
+					)}&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial`
+				)
+				const image = (imgData?.images || []).find((im: any) => im.type == 'spatial' && im.spatialData)
+				if (!image) throw new Error(`${sampleId} has no spatial image with cell data`)
+				const targetParams =
+					`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${encodeURIComponent(opts.dslabel!)}` +
+					`&genome=${encodeURIComponent(opts.genome!)}&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial`
+				const r = await dofetch3(`wsitiles/similar?${targetParams}`, {
+					method: 'POST', // the query signature (typeCounts/count/zscore matrices) travels in the body
+					body: {
+						file: image.spatialData,
+						types: query.types,
+						typeCounts: query.typeCounts,
+						count: query.count,
+						zscore: query.zscore,
+						// the target's kNN graph (cheap stage) and rigorous confirmation
+						// must use the SAME k/perms the query's own count/zscore matrices
+						// were built with — otherwise the comparison is between graphs of
+						// different density / z-scores of different permutation-noise
+						// levels, which can mis-rank the results. k is essentially free to
+						// forward (no permutation loop); perms only costs more for the
+						// already-budget-capped rigorous stage on the topK shortlist, not
+						// the full scan
+						k: query.k,
+						perms: query.perms,
+						sizeTolerance,
+						requiredTypes,
+						typeWeights,
+						// only meaningful (and only sent) when searching the SAME sample:
+						// cell ids are per-sample, so applying them cross-sample risks
+						// coincidentally excluding unrelated cells that happen to share an id
+						excludeIds: searchingSameSample ? queryIds : undefined
+					}
+				})
+				if (!r || r.error) throw new Error(r?.error || 'similarity search failed')
+				resultsDiv.selectAll('*').remove()
+				const pct = (r.sizeTolerance * 100).toFixed(0)
+				const weighted = (r.typeWeights || []).some((w: number, i: number) => w != 1 && r.types[i])
+				const weightSuffix = weighted
+					? `, weighted: ${r.types
+							.map((t: string, i: number) => [t, r.typeWeights[i]])
+							.filter(([, w]: [string, number]) => w != 1)
+							.map(([t, w]: [string, number]) => `${t}×${w}`)
+							.join(', ')}`
+					: ''
+				const reqSuffix =
+					(r.requiredTypes?.length ? `, must contain: ${r.requiredTypes.join(', ')}` : '') + weightSuffix
+				if (!r.windows?.length) {
+					resultsDiv
+						.append('div')
+						.text(
+							`No matching regions found in ${sampleId} (${r.scanned} windows scanned, none within ±${pct}% of the reference's ${r.refCells} cells${reqSuffix}).`
+						)
+					return
+				}
+				resultsDiv
+					.append('div')
+					.style('opacity', 0.7)
+					.style('margin-bottom', '4px')
+					.text(
+						`${sampleId}: top ${r.windows.length} of ${r.scanned} windows scanned (reference: ${r.refCells} cells, ±${pct}% tolerance${reqSuffix}) — click a row to view it`
+					)
+				const tableDiv = resultsDiv.append('div')
+				const nicheDiv = resultsDiv
+					.append('div')
+					.attr('data-testid', 'sjpp-wsi-similar-niche')
+					.style('margin-top', '10px')
+				renderTable({
+					div: tableDiv,
+					columns: [
+						{ label: '#' },
+						{ label: 'Cells' },
+						{ label: 'Δ vs. reference' },
+						{ label: 'Cheap score' },
+						{ label: 'Distance' },
+						{ label: 'Center (x, y)' }
+					],
+					rows: r.windows.map((w: any, i: number) => [
+						{ value: String(i + 1) },
+						{ value: String(w.cells) },
+						{
+							value: `${w.cells >= r.refCells ? '+' : ''}${(((w.cells - r.refCells) / r.refCells) * 100).toFixed(1)}%`
+						},
+						{ value: w.cheapScore.toFixed(3) },
+						{ value: w.distance == null ? 'n/a' : w.distance.toFixed(3) },
+						{ value: `${w.cx.toFixed(0)}, ${w.cy.toFixed(0)}` }
+					]),
+					singleMode: true,
+					noRadioBtn: true, // whole row is the click target, no visible selector column
+					noButtonCallback: async (rowIdx: number) => {
+						const w = r.windows[rowIdx]
+						nicheDiv.selectAll('*').remove()
+						nicheDiv
+							.append('div')
+							.style('font-weight', 'bold')
+							.text(`${sampleId} — niche #${rowIdx + 1}`)
+						const mapDiv = nicheDiv.append('div')
+						// re-enter this same module's viewer, addressed at the target
+						// image, panned/zoomed to this window (opts.focus) with its
+						// outline drawn — a small self-contained map, not tied into the
+						// mass app's sample table/state
+						await init(
+							{
+								slideQuery: targetParams,
+								spatialData: image.spatialData,
+								label: `${sampleId} — niche #${rowIdx + 1}`,
+								hideNucleusStrokes: true, // keep the preview lightweight
+								showCellTypes: true, // the point of the preview is comparing cell-type composition by eye
+								focus: { cx: w.cx, cy: w.cy, window: r.window },
+								width: '100%',
+								height: '45vh'
+							},
+							mapDiv
+						)
+						// the window's own enrichment matrix travels with the similar
+						// search response already (the rigorous-confirmation stage) — no
+						// extra request needed; side by side with the ORIGINAL heatmap
+						// (still shown above, in `panel`) this is the actual point of the
+						// search: comparing the two niches' neighbourhood structure
+						const heatmapDiv = nicheDiv.append('div').style('margin-top', '8px') // own container: its ✕ shouldn't remove the map above it
+						if (w.zscore) {
+							renderNhoodHeatmap(heatmapDiv, {
+								types: r.types,
+								count: w.count,
+								zscore: w.zscore,
+								cells: w.cells,
+								skipped: 0,
+								k: r.k,
+								perms: r.perms
+							})
+						} else {
+							// the per-window budget guard (server/src/routes/wsitiles.ts
+							// mirrors this in wsi_tile.py) skipped confirming this window
+							heatmapDiv
+								.style('opacity', 0.7)
+								.text('This window was too large to confirm within the permutation-test budget.')
+						}
+					}
+				})
+			} catch (e: any) {
+				resultsDiv.selectAll('*').remove()
+				sayerror(resultsDiv, `Similar-region search error: ${e.message || e}`)
+			}
+		})
 }
