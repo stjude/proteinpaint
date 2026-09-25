@@ -574,7 +574,8 @@ tape('Official - sv/fusion with multiple partner breakpoints', test => {
 		const chart = await detectOne({ elem: tip, selector: '[data-testid="sjpp-mds3tk-svfusionBreakpointChart"]' })
 		test.ok(chart, 'breakpoint chart is rendered in place of a single fusion structure')
 		test.ok(
-			chart.querySelector('[data-testid="sjpp-isoformPairSelect-links"]'),
+			// the links are drawn once the gene models of both genes are fetched, after the chart holder is created
+			await detectOne({ elem: chart, selector: '[data-testid="sjpp-isoformPairSelect-links"]' }),
 			'chart links the AKT1 breakpoint to the TP53 breakpoints'
 		)
 		const graph = await detectOne({ elem: tip, selector: '[data-testid="sjpp-mds3tk-singlesvfusiongraph"]' })
