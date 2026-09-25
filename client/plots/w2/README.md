@@ -336,7 +336,13 @@ never read again, so the search only ever opens the *target* sample's file.
 target's cells (restricted to the query's own type vocabulary — a cell of
 any other type is ignored, like an unannotated one) are tiled into
 `window`-sized, `stride`-spaced square windows (overlapping when
-`stride < window`). Two workload guards, mirroring the `/nhood` route's cap
+`stride < window`). The client forwards the query's own `k`/`perms` (the
+values `query.count`/`query.zscore` were actually computed with — the
+heatmap's rerun controls can change these before searching) alongside the
+signature, so every target window's kNN graph and rigorous confirmation use
+the SAME parameters as the query; comparing graphs built at different
+neighbourhood sizes, or z-scores with different permutation-noise levels,
+would otherwise skew the ranking. Two workload guards, mirroring the `/nhood` route's cap
 but computed here since window count depends on the target's own extent:
 `windows × cells > 200M` rejects the whole scan outright (use a larger
 window/stride); the rigorous-confirmation stage below shares a single 50M
