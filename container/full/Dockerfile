@@ -23,7 +23,10 @@ COPY ./full/package.json  ./
 RUN npm install --omit=dev --cache=/root/.npm
 COPY ./full/app-full.mjs .
 COPY ./public .
+COPY ./envHelpers.mjs ./
 
 EXPOSE 3000
-CMD ["sh", "-c", "node --enable-source-maps app-full.mjs"]
+# envHelpers.mjs generates node.config.json and adds --experimental-default-config-file to apply it,
+# to limit the server process file access, and passes any <NAME>_CREDS_FILE content as a <NAME>_CREDS env variable
+CMD ["node", "envHelpers.mjs", "node", "--enable-source-maps", "app-full.mjs"]
 # CMD ["sleep", "3600"]
