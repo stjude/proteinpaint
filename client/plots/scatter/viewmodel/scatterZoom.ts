@@ -40,7 +40,7 @@ export class ScatterZoom {
 			.style('display', display)
 			.style('margin', '15px 10px')
 			.attr('name', 'sjpp-reset-btn') //For unit tests
-		icon_functions['restart'](resetDiv, { handler: () => this.resetToIdentity(), title: 'Reset plot to defaults' })
+		icon_functions['restart'](resetDiv, { handler: () => this.resetToIdentity(), title: 'Reset to original zoom' })
 
 		const zoomInDiv = toolsDiv
 			.insert('div')

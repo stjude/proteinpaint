@@ -21,7 +21,7 @@ import { get_bin_label } from '#shared/termdb.bins.js'
 import { getNumericColorDomain } from './colorDomain.ts'
 import { makeCanvas } from './canvasRendering.ts'
 import { getData } from '../termdb.matrix.js'
-import { getSampleCoordinatesByTerms } from '../routes/termdb.sampleScatter.js'
+import { getSampleCoordinatesByTerms, refColor } from '../routes/termdb.sampleScatter.js'
 
 const payload: RoutePayload = {
 	init,
@@ -42,9 +42,6 @@ export const api: RouteApi = {
 }
 
 function validTermdbSingleCellPlotsRequest(input): TermdbSingleCellPlotsRequest {
-	if (!input.colorTW && (!input.coordTWs || input.coordTWs.length == 0)) {
-		throw new Error('colorTW or coordTWs must be provided for single cell scatter plot')
-	}
 	return {
 		...validGenomeDs(input),
 		singleCellPlot: {
@@ -155,7 +152,9 @@ async function getSingleCellScatter(req, res, ds) {
 		if (isMetaResult && (q.filter?.lst?.length || q.filter0)) {
 			filteredSamples = await ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
 		}
-		if (q.colorTW) {
+		// fetch plot cells whenever colorTW drives the coloring, or when neither colorTW nor coordTWs
+		// is given: in that case every cell is still rendered, as a single reference-colored group
+		if (q.colorTW || !q.coordTWs?.length) {
 			if (genes.length > 0) {
 				for (const gene of genes) {
 					const tmpArg = { ...arg, gene }
@@ -174,12 +173,15 @@ async function getSingleCellScatter(req, res, ds) {
 			ds,
 			data
 		)
-		if (tw.term.type == SINGLECELL_NUMERIC_VALUE && !totalCellCount) {
+		if (tw?.term.type == SINGLECELL_NUMERIC_VALUE && !totalCellCount) {
 			throw new Error(`No numeric data for ${tw.term.name}`)
 		}
 		const colorMap = {}
 
-		if (tw.term.type == SINGLECELL_NUMERIC_VALUE && tw.q?.mode != 'continuous') {
+		if (!tw) {
+			// neither colorTW nor coordTWs was provided; render every cell as one reference-colored group
+			colorMap['Ref'] = { sampleCount: totalCellCount, color: refColor, key: 'Ref' }
+		} else if (tw.term.type == SINGLECELL_NUMERIC_VALUE && tw.q?.mode != 'continuous') {
 			for (const bin of data.refs.byTermId[tw.$id]?.bins || []) {
 				const label = get_bin_label(bin, tw.q)
 				const count = categoryCounts.get(label)
@@ -217,7 +219,7 @@ async function getSingleCellScatter(req, res, ds) {
 				samples,
 				colorMap,
 				{ xMin, xMax, yMin, yMax, geMin, geMax },
-				tw.term.type,
+				tw?.term.type || '',
 				colorDomain
 			)
 			output.result.Default.src = src
@@ -264,10 +266,10 @@ function getSingleCellDataArgs(q, name, sample) {
 			// else throw new Error('unsupported single cell term type for coordTWs: ' + tw.term.type)
 		}
 	}
-	if (!arg.terms.length) throw new Error('At least one term must be provided for single cell scatter plot')
-
+	// arg.terms is empty only when neither colorTW nor coordTWs was provided; that is a valid
+	// request for a reference-only scatter (all cells rendered as one reference-colored group)
 	const tw: any = arg.terms[0]
-	if (tw.term.type == SINGLECELL_CELLTYPE || tw.term.type == SINGLECELL_NUMERIC_VALUE) arg.colorBy = tw.term.name
+	if (tw?.term.type == SINGLECELL_CELLTYPE || tw?.term.type == SINGLECELL_NUMERIC_VALUE) arg.colorBy = tw.term.name
 
 	return { arg, tw, genes }
 }
@@ -316,9 +318,12 @@ export function processSamples(coords: any, colorData: { plots: Plot[] }, filter
 		}
 	} else if (!coords?.length && colorData.plots?.length) {
 		const plot = colorData.plots[0]
-		const isNumericValue = tw.term.type == SINGLECELL_NUMERIC_VALUE
+		const isNumericValue = tw?.term.type == SINGLECELL_NUMERIC_VALUE
+		// neither colorTW nor coordTWs was provided: ignore the plot's own default column and
+		// render every cell under a single reference category, matching the bulk scatter's refColor dots
+		const isReferenceOnly = !tw
 
-		const groups = tw.q?.customset?.groups
+		const groups = tw?.q?.customset?.groups
 		const cat2GrpName = new Map<any, string>()
 		if (groups) {
 			for (const group of groups) {
@@ -339,7 +344,7 @@ export function processSamples(coords: any, colorData: { plots: Plot[] }, filter
 
 				/** Since getData() from termdb.matrix is not called again for single cell scatter,
 				 * the groups formatting logic for category (i.e. value) is recreated here. */
-				let category = cell.category
+				let category = isReferenceOnly ? 'Ref' : cell.category
 				let numericValue: number | undefined
 				if (isNumericValue) {
 					// Reuse the matrix's validation, filtering and bins for the selected column.
@@ -353,7 +358,7 @@ export function processSamples(coords: any, colorData: { plots: Plot[] }, filter
 
 				const isHidden = tw?.q?.hiddenValues ? category in tw.q.hiddenValues : false
 				totalCellCount++
-				if (!isNumericValue || tw.q?.mode != 'continuous') {
+				if (!isNumericValue || tw?.q?.mode != 'continuous') {
 					categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1)
 				}
 				if (numericValue !== undefined) {

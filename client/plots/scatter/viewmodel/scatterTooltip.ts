@@ -235,8 +235,9 @@ export class ScatterTooltip {
 		}
 
 		if ('info' in sample) for (const [k, v] of Object.entries(sample.info)) table.addRow(k, v)
-		const name = sample.sample || sample.cellId
-		if (name) table.addRow(this.scatter.settings.itemLabel, name)
+		// single-cell samples only carry .sampleId (the cell id), not .sample/.cellId
+		const name = sample.sample || sample.cellId || sample.sampleId
+		if (name != null && name !== '') table.addRow(this.scatter.settings.itemLabel, name)
 	}
 
 	/** A color/shape term row, drawn with the dot's own glyph so the tooltip matches the plot. */

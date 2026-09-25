@@ -1,15 +1,18 @@
 import tape from 'tape'
+import { TermTypes } from '#types'
 import { getSingleCellSpecialCase } from '../utils/specialCase'
 
 /**
  * Tests
- *   - getSingleCellSpecialCase: returns default when isSingleCellTerm is false
+ *   - getSingleCellSpecialCase: supports a sample with a non-single-cell term
  *   - getSingleCellSpecialCase: uses default parameter key when not specified
  *   - getSingleCellSpecialCase: respects custom key parameter
  *   - getSingleCellSpecialCase: handles missing term.term property
  *   - getSingleCellSpecialCase: preserves sample object with name property
  *   - getSingleCellSpecialCase: preserves sample object with plots property
  *   - getSingleCellSpecialCase: can access plot from term when present
+ *   - getSingleCellSpecialCase: supports sample from singleCellPlot
+ *   - getSingleCellSpecialCase: returns default for a single-cell term without sample
  *   - getSingleCellSpecialCase: returns string or object
  */
 
@@ -44,14 +47,14 @@ tape('getSingleCellSpecialCase: returns default when term object is missing', te
 	test.end()
 })
 
-tape('getSingleCellSpecialCase: returns default when isSingleCellTerm is false', test => {
+tape('getSingleCellSpecialCase: supports a sample with a non-single-cell term', test => {
 	const config = {
 		term: {
 			term: { sample: { name: 'sample1' } }
 		}
 	}
 	const result = getSingleCellSpecialCase(config)
-	test.equal(result, 'default', 'should return "default" string for non-single-cell terms')
+	test.deepEqual(result, { type: 'singleCell', isMeta: false, config: { sample: config.term.term.sample } })
 	test.end()
 })
 
@@ -62,7 +65,7 @@ tape('getSingleCellSpecialCase: uses default parameter key when not specified', 
 		}
 	}
 	const result = getSingleCellSpecialCase(config)
-	test.equal(result, 'default', 'should use "term" as default key')
+	test.deepEqual(result, { type: 'singleCell', isMeta: false, config: { sample: config.term.term.sample } })
 	test.end()
 })
 
@@ -73,7 +76,7 @@ tape('getSingleCellSpecialCase: respects custom key parameter', test => {
 		}
 	}
 	const result = getSingleCellSpecialCase(config, 'customKey')
-	test.equal(result, 'default', 'should use custom key parameter')
+	test.deepEqual(result, { type: 'singleCell', isMeta: false, config: { sample: config.customKey.term.sample } })
 	test.end()
 })
 
@@ -98,7 +101,7 @@ tape('getSingleCellSpecialCase: preserves sample object with name property', tes
 		}
 	}
 	const result = getSingleCellSpecialCase(config)
-	test.equal(result, 'default', 'returns default for non-single-cell terms')
+	test.deepEqual(result, { type: 'singleCell', isMeta: false, config: { sample } })
 	test.end()
 })
 
@@ -110,7 +113,7 @@ tape('getSingleCellSpecialCase: preserves sample object with plots property', te
 		}
 	}
 	const result = getSingleCellSpecialCase(config)
-	test.equal(result, 'default', 'returns default for non-single-cell terms')
+	test.deepEqual(result, { type: 'singleCell', isMeta: false, config: { sample } })
 	test.end()
 })
 
@@ -121,7 +124,25 @@ tape('getSingleCellSpecialCase: can access plot from term when present', test =>
 		}
 	}
 	const result = getSingleCellSpecialCase(config)
-	test.equal(result, 'default', 'returns default for non-single-cell terms')
+	test.deepEqual(result, { type: 'singleCell', isMeta: false, config: { sample: { plots: ['myPlot'] } } })
+	test.end()
+})
+
+tape('getSingleCellSpecialCase: supports sample from singleCellPlot', test => {
+	const sample = { name: 'testSample' }
+	const config = {
+		singleCellPlot: { sample },
+		term: { term: { type: TermTypes.SINGLECELL_CELLTYPE } }
+	}
+	const result = getSingleCellSpecialCase(config)
+	test.deepEqual(result, { type: 'singleCell', isMeta: false, config: { sample } })
+	test.end()
+})
+
+tape('getSingleCellSpecialCase: returns default for a single-cell term without sample', test => {
+	const config = { term: { term: { type: TermTypes.SINGLECELL_CELLTYPE } } }
+	const result = getSingleCellSpecialCase(config)
+	test.equal(result, 'default')
 	test.end()
 })
 
