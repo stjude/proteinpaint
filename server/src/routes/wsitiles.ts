@@ -379,10 +379,10 @@ function init({ genomes }) {
 				let typeWeights: number[] | undefined
 				if (q.typeWeights !== undefined) {
 					const w = Array.isArray(q.typeWeights) ? q.typeWeights.map(Number) : null
-					if (!w || w.length != C || w.some((v: number) => !Number.isFinite(v) || v < 0)) {
+					if (!w || w.length != C || w.some((v: number) => !Number.isFinite(v) || v < 0) || w.every(v => v === 0)) {
 						res.status(400).send({
 							status: 'error',
-							error: `similar typeWeights must have ${C} non-negative numbers, one per type`
+							error: `similar typeWeights must have ${C} non-negative numbers, one per type, with at least one positive weight`
 						})
 						return
 					}
