@@ -178,19 +178,19 @@ export class SCSampleTable {
 			if (tableData.columns[i]?.label !== column.label) return false
 		}
 		if (tableData.rows.length !== this.rows.length) return false
-		const currentIds = new Set(this.rows.map(row => String(row[this.sampleColIdx]?.value ?? '')))
 		const incomingSampleColIdx = tableData.sampleColIdx ?? this.sampleColIdx
-		return tableData.rows.every(row => currentIds.has(String(row[incomingSampleColIdx]?.value ?? '')))
+		return tableData.rows.every(row => this.rowMap.has(String(row[incomingSampleColIdx]?.value ?? '')))
 	}
 
+	/** selectedRows is always 0 or 1 entries (radio selection), see SCViewModel. */
 	private syncSelectedRows(tableData: SCTableData) {
 		const sampleColIdx = tableData.sampleColIdx ?? this.sampleColIdx
-		const selectedIds = new Set(
-			tableData.selectedRows.map(rowIndex => String(tableData.rows[rowIndex]?.[sampleColIdx]?.value ?? ''))
-		)
+		const selectedRowIndex = tableData.selectedRows[0]
+		const selectedId =
+			selectedRowIndex != null ? String(tableData.rows[selectedRowIndex]?.[sampleColIdx]?.value ?? '') : ''
 		for (const [sampleId, entry] of this.rowMap) {
 			const input = entry.row.select('input[type="radio"]').node()
-			if (input) input.checked = selectedIds.has(sampleId)
+			if (input) input.checked = sampleId === selectedId
 		}
 	}
 
@@ -208,12 +208,8 @@ export class SCSampleTable {
 		const visibleState = visible ? 'table-cell' : 'none'
 		if (headerCells[domColumnIndex]) headerCells[domColumnIndex].style.display = visibleState
 
-		for (const row of this.rows) {
-			const sampleId = String(row[this.sampleColIdx]?.value ?? '')
-			const entry = this.rowMap.get(sampleId)
-			if (!entry) continue
-			const rowCells = entry.row.selectAll('td').nodes()
-			if (rowCells[domColumnIndex]) rowCells[domColumnIndex].style.display = visibleState
+		for (const entry of this.rowMap.values()) {
+			entry.cells.shownPlots?.style('display', visibleState)
 		}
 	}
 
