@@ -70,6 +70,17 @@ function getMockInteractions(overrides: any = {}) {
 	} as any
 }
 
+/** Stand-in for a subplot's sandbox div; only scrollIntoView() is ever invoked on it. */
+function getMockDiv() {
+	return { node: () => ({ scrollIntoView: () => {} }) }
+}
+
+/** Shared test teardown: remove the holder on success (leave it for inspection on failure), then end. */
+function endTest(test: any, holder: any) {
+	if (test._ok) holder.remove()
+	test.end()
+}
+
 function getRenderer(overrides: any = {}) {
 	const holder = getHolder()
 	const dom = overrides.dom || getMockDom(holder)
@@ -97,8 +108,7 @@ tape('constructor should set dom, interactions, and tableData', test => {
 	test.equal(renderer.interactions, interactions, 'Should set interactions reference')
 	test.equal(renderer.tableData, tableData, 'Should set tableData reference')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('buildItemFromRow() should skip empty cell values', test => {
@@ -115,8 +125,7 @@ tape('buildItemFromRow() should skip empty cell values', test => {
 	test.equal(item.sID, 'S1', 'Should keep required sID field')
 	test.equal('eID' in item, false, 'Should omit mapped keys for empty values')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 /* ---- renderSamplesTable() ---- */
@@ -130,8 +139,7 @@ tape('renderSamplesTable() should render table headers from columns', test => {
 	test.ok(headerTexts.includes('Shown plots'), 'Should render Shown plots header')
 	test.ok(headerTexts.includes('Experiment'), 'Should render Experiment header')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('renderSamplesTable() should render correct number of rows', test => {
@@ -141,8 +149,7 @@ tape('renderSamplesTable() should render correct number of rows', test => {
 	test.equal(rows.length, 3, 'Should render 3 rows')
 	test.equal(holder.selectAll('input[type="radio"]').nodes().length, 3, 'Should render one radio button per row')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('renderSamplesTable() noButtonCallback should build item with sID from sample column', test => {
@@ -158,8 +165,7 @@ tape('renderSamplesTable() noButtonCallback should build item with sID from samp
 
 	test.equal(capturedItem.sID, 'S1', 'Should map sample column to sID')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('renderSamplesTable() noButtonCallback should build item with eID from experiment column', test => {
@@ -175,8 +181,7 @@ tape('renderSamplesTable() noButtonCallback should build item with eID from expe
 
 	test.equal(capturedItem.eID, 'EXP1', 'Should map experiment column to eID')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('renderSamplesTable() noButtonCallback should map custom column labels to keys', test => {
@@ -207,8 +212,7 @@ tape('renderSamplesTable() noButtonCallback should map custom column labels to k
 
 	test.equal(capturedItem.project, 'PROJ1', 'Should use lowercase column label as key for custom columns')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('renderSamplesTable() noButtonCallback should throw when sID is missing', test => {
@@ -229,8 +233,7 @@ tape('renderSamplesTable() noButtonCallback should throw when sID is missing', t
 		'Should throw error about missing sID'
 	)
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('renderSamplesTable() noButtonCallback should call interactions.updateItem', test => {
@@ -246,8 +249,7 @@ tape('renderSamplesTable() noButtonCallback should call interactions.updateItem'
 
 	test.ok(called, 'Should call interactions.updateItem')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('renderSamplesTable() noButtonCallback should show plotsBtnsDiv', test => {
@@ -258,8 +260,7 @@ tape('renderSamplesTable() noButtonCallback should show plotsBtnsDiv', test => {
 
 	test.equal(dom.plotsBtnsDiv.style('display'), 'block', 'Should set plotsBtnsDiv display to block')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 /* ---- updateTable() ---- */
@@ -267,7 +268,7 @@ tape('renderSamplesTable() noButtonCallback should show plotsBtnsDiv', test => {
 tape('reapplyAllPlotButtons() should apply buttons for each active sample', test => {
 	const { renderer, holder } = getRenderer()
 
-	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const mockDiv = getMockDiv()
 	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
 	sandboxes.set('S2', [{ plotId: 'p2', div: mockDiv, plotName: 'tSNE' }])
@@ -279,8 +280,7 @@ tape('reapplyAllPlotButtons() should apply buttons for each active sample', test
 	test.equal(s1Cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 1, 'Should render button for S1')
 	test.equal(s2Cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 1, 'Should render button for S2')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('updateTable() should remove buttons when sample no longer in activeSandboxes', test => {
@@ -289,7 +289,7 @@ tape('updateTable() should remove buttons when sample no longer in activeSandbox
 	const firstRow = holder.select('tr.sjpp_row_wrapper').node() as HTMLElement
 	firstRow.click()
 
-	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const mockDiv = getMockDiv()
 	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
 	renderer.updatePlotBtns(sandboxes)
@@ -303,8 +303,7 @@ tape('updateTable() should remove buttons when sample no longer in activeSandbox
 	test.equal(cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 0, 'Should remove buttons when sample removed')
 	test.false(renderer.rendered.has('S1'), 'Should remove from rendered map')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('updateTable() should not append buttons when no sandboxes exist for sample', test => {
@@ -321,8 +320,7 @@ tape('updateTable() should not append buttons when no sandboxes exist for sample
 	const btns = cell.selectAll('.sjpp-sc-table-plot-btn').nodes()
 	test.equal(btns.length, 0, 'Should not append buttons when sandboxes array is empty')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('updateTable() should append plot buttons for each sandbox', test => {
@@ -331,7 +329,7 @@ tape('updateTable() should append plot buttons for each sandbox', test => {
 	const firstRow = holder.select('tr.sjpp_row_wrapper').node() as HTMLElement
 	firstRow.click()
 
-	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const mockDiv = getMockDiv()
 	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes.set('S1', [
 		{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' },
@@ -343,8 +341,7 @@ tape('updateTable() should append plot buttons for each sandbox', test => {
 	const btns = cell.selectAll('.sjpp-sc-table-plot-btn').nodes()
 	test.equal(btns.length, 2, 'Should append 2 plot buttons')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('updateTable() should show the Shown plots column when there are multiple plots total', test => {
@@ -353,13 +350,13 @@ tape('updateTable() should show the Shown plots column when there are multiple p
 	const shownPlotsHeader = holder
 		.selectAll('th')
 		.filter(function (this: any) {
-			return (this as HTMLElement).textContent?.includes('Shown plots')
+			return !!(this as HTMLElement).textContent?.includes('Shown plots')
 		})
 	const shownPlotsCells = renderer.tableData.rows.map(
 		row => renderer.table!.rowMap.get(String(row[renderer.tableData.sampleColIdx].value)).cells.shownPlots
 	)
 
-	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const mockDiv = getMockDiv()
 	const onePlot = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	onePlot.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
 	renderer.updatePlotBtns(onePlot)
@@ -375,8 +372,7 @@ tape('updateTable() should show the Shown plots column when there are multiple p
 	test.equal(shownPlotsCells.length, 3, 'Should keep one Shown plots cell per data row')
 	test.equal(shownPlotsCells[0].style('display'), 'table-cell', 'Should show Shown plots cells for multiple plots')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('applyButtonsForSample() should find row by sample ID after sort mutation', test => {
@@ -388,7 +384,7 @@ tape('applyButtonsForSample() should find row by sample ID after sort mutation',
 	const rows = renderer.tableData.rows
 	renderer.tableData.rows = [rows[1], rows[0], rows[2]]
 
-	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const mockDiv = getMockDiv()
 	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
 	renderer.updatePlotBtns(sandboxes)
@@ -402,8 +398,7 @@ tape('applyButtonsForSample() should find row by sample ID after sort mutation',
 	)
 	test.equal(s2Cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 0, 'Should not render button in other rows')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('updateTable() should skip rerendering btn when cell and plotIds are unchanged', test => {
@@ -412,7 +407,7 @@ tape('updateTable() should skip rerendering btn when cell and plotIds are unchan
 	const firstRow = holder.select('tr.sjpp_row_wrapper').node() as HTMLElement
 	firstRow.click()
 
-	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const mockDiv = getMockDiv()
 	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
 	renderer.updatePlotBtns(sandboxes)
@@ -428,8 +423,7 @@ tape('updateTable() should skip rerendering btn when cell and plotIds are unchan
 	const sameBtn = cell.select('.sjpp-sc-table-plot-btn').node() as HTMLElement
 	test.ok((sameBtn as any).__marker, 'Should preserve existing btn elements (no re-render)')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('updateTable() should re-render when plotIds change', test => {
@@ -438,7 +432,7 @@ tape('updateTable() should re-render when plotIds change', test => {
 	const firstRow = holder.select('tr.sjpp_row_wrapper').node() as HTMLElement
 	firstRow.click()
 
-	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const mockDiv = getMockDiv()
 	const sandboxes1 = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes1.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
 	renderer.updatePlotBtns(sandboxes1)
@@ -456,8 +450,7 @@ tape('updateTable() should re-render when plotIds change', test => {
 
 	test.equal(cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 2, 'Should re-render with 2 buttons')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('updateTable() should preserve row DOM identity when sample list is unchanged', test => {
@@ -474,8 +467,7 @@ tape('updateTable() should preserve row DOM identity when sample list is unchang
 	test.equal(renderer.table!.rowMap.get('S1').row.node(), firstRowNode, 'Should keep the same row DOM node')
 	test.equal(renderer.table!.parentDiv.node(), parentDivNode, 'Should not tear down and rebuild the table shell')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('updateTable() should rebuild when the sample list changes', test => {
@@ -490,8 +482,7 @@ tape('updateTable() should rebuild when the sample list changes', test => {
 	test.notEqual(renderer.table!.parentDiv.node(), parentDivNode, 'Should rebuild the table shell when rows change')
 	test.equal(renderer.table!.rowMap.size, 4, 'Should render all rows including the new one')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('updateTable() should sync radio selection without rebuilding', test => {
@@ -507,8 +498,7 @@ tape('updateTable() should sync radio selection without rebuilding', test => {
 	const s2Input = renderer.table!.rowMap.get('S2').row.select('input[type="radio"]').node() as HTMLInputElement
 	test.ok(s2Input.checked, 'Should check the newly selected row')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 /* ---- deleteBtns() ---- */
@@ -519,7 +509,7 @@ tape('deleteBtns() should remove buttons and clear rendered entry', test => {
 	const firstRow = holder.select('tr.sjpp_row_wrapper').node() as HTMLElement
 	firstRow.click()
 
-	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const mockDiv = getMockDiv()
 	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
 	renderer.updatePlotBtns(sandboxes)
@@ -532,8 +522,7 @@ tape('deleteBtns() should remove buttons and clear rendered entry', test => {
 	const cell = renderer.table!.rowMap.get('S1').cells.shownPlots
 	test.equal(cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 0, 'Should remove buttons from table')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 /* ---- appendPlotBtn() ---- */
@@ -542,7 +531,7 @@ tape('appendPlotBtn() should truncate long plot names', test => {
 	const { renderer, holder } = getRenderer()
 
 	const cell = renderer.table!.rowMap.get('S1').cells.shownPlots
-	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const mockDiv = getMockDiv()
 
 	const longName = 'This is a very long plot name that exceeds 25 chars'
 	renderer.appendPlotBtn(cell, mockDiv, longName, 'S1')
@@ -550,23 +539,21 @@ tape('appendPlotBtn() should truncate long plot names', test => {
 	const btn = cell.select('.sjpp-sc-table-plot-btn').node() as HTMLElement
 	test.equal(btn.textContent, 'This is a ve...', 'Should truncate to 12 chars + ...')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('appendPlotBtn() should not truncate short plot names', test => {
 	const { renderer, holder } = getRenderer()
 
 	const cell = renderer.table!.rowMap.get('S1').cells.shownPlots
-	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const mockDiv = getMockDiv()
 
 	renderer.appendPlotBtn(cell, mockDiv, 'UMAP', 'S1')
 
 	const btn = cell.select('.sjpp-sc-table-plot-btn').node() as HTMLElement
 	test.equal(btn.textContent, 'UMAP', 'Should show full name for short plot names')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
 
 tape('appendPlotBtn() should scroll sandbox into view on click', test => {
@@ -588,6 +575,5 @@ tape('appendPlotBtn() should scroll sandbox into view on click', test => {
 	btn.click()
 	test.ok(scrollCalled, 'Should call scrollIntoView on click')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
+	endTest(test, holder)
 })
