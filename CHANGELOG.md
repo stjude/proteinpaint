@@ -8,6 +8,9 @@ Features:
 - Lollipop: when a breakpoint has multiple partner breakpoints, clicking the disc would first show breakpoints diagram for users to select range, and below it show the corresponding fusion diagram and fusion event table.
 - When no color term of coordinate terms are provided for the single cell scatter plot, the plot will still render with every data point as the reference instead of showing an error message.
 
+Fixes:
+- The SC app no longer scrolls to the top of the page when there is a state change within one of the subplots.
+
 
 ## 2.211.0
 
