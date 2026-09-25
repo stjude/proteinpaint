@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { envHelpers, createContext, getNodeConfig, getCreds } from '../envHelpers.mjs'
+import { envHelpers, createContext, getNodeConfig, getCreds, findPrefixConflicts } from '../envHelpers.mjs'
 
 const SCRIPT = path.join(import.meta.dirname, '../envHelpers.mjs')
 
@@ -62,11 +62,33 @@ test('container: a dir is listed before, and not after, its allowed subpaths', (
 	assert.ok(!read.some(p => p.startsWith('/home/root/pp/')))
 })
 
+test('prefix conflicts: paths that share a string prefix without one being under the other are reported', () => {
+	const conflicts = findPrefixConflicts({
+		nodeOptions: {
+			'allow-fs-read': ['/app', '/data/tp'],
+			'allow-fs-write': ['/home/root/pp/cache', '/home/root/pp/cachedir', '/tmp/user']
+		}
+	})
+	assert.equal(conflicts.length, 1)
+	assert.match(conflicts[0], /allow-fs-write paths '\/home\/root\/pp\/cache' and '\/home\/root\/pp\/cachedir'/)
+	// the default container config has no conflicts
+	const ctx = fakeContext({ env: { PP_MODE: 'container-prod' }, cwd: '/home/root/pp/app/active' })
+	assert.deepEqual(findPrefixConflicts(getNodeConfig(ctx, ['node', 'app-full.mjs'])), [])
+})
+
 test('covered paths: only ancestor dirs cover a path, not a path with the same string prefix', () => {
 	const ctx = fakeContext({ env: { PP_ALLOW_FS_READ: '/app/sub:/apple:/app' } })
 	const read = getNodeConfig(ctx).nodeOptions['allow-fs-read']
 	assert.ok(read.includes('/app') && read.includes('/apple'))
 	assert.ok(!read.includes('/app/sub'))
+})
+
+test('serverconfig.python is allowed when it is a path, since its existence is checked at startup', () => {
+	const config = python => fakeContext({ files: { '/app/serverconfig.json': JSON.stringify({ python }) } })
+	const read = python => getNodeConfig(config(python)).nodeOptions['allow-fs-read']
+	assert.ok(read('/opt/venv/bin/python3').includes('/opt/venv/bin/python3'))
+	// resolved from PATH when spawned
+	assert.ok(!read('python3').some(p => p.endsWith('python3')))
 })
 
 test('case-insensitive file system: the inverted-case cwd is allowed for the tsx probe', () => {

@@ -58,6 +58,7 @@ export function envHelpers(args, deps = {}) {
 	const ctx = createContext(deps)
 	const command = routeCommand(args)
 	const config = getNodeConfig(ctx, command)
+	for (const conflict of findPrefixConflicts(config)) console.warn(`envHelpers.mjs: WARNING ${conflict}`)
 	const credsFiles = getCredsFiles(ctx)
 	assertCredsFilesNotAllowed(credsFiles, config, ctx)
 	ctx.fs.writeFileSync(path.join(ctx.cwd, 'node.config.json'), JSON.stringify(config, null, '\t') + '\n')
@@ -115,6 +116,8 @@ export function getNodeConfig(ctx, command = []) {
 	allow(write, serverconfig.cachedir)
 	allow(read, serverconfig.sslKey)
 	allow(read, serverconfig.sslCert)
+	// a bare command name, such as python3, is resolved from PATH when spawned
+	if (serverconfig.python?.includes(path.sep)) allow(read, serverconfig.python)
 	// app-server.mjs and app-full.mjs in a container image rewrite serverconfig.json, with or without PP_MODE
 	if (command.some(arg => /^app-(server|full)\.mjs$/.test(path.basename(arg))))
 		allow(write, path.join(ctx.cwd, 'serverconfig.json'))
@@ -149,9 +152,14 @@ function getServerconfigPaths(ctx) {
 		tp_native_dir: serverconfig.features?.tp_native_dir,
 		cachedir: serverconfig.cachedir,
 		sslKey: serverconfig.ssl?.key,
-		sslCert: serverconfig.ssl?.cert
+		sslCert: serverconfig.ssl?.cert,
+		// python/index.js setPythonBinPath() checks that this file exists; other tool paths, such as
+		// serverconfig.bigBedToBed or hicstraw, are only spawned, which the permission model does not restrict
+		python: serverconfig.python
 	}
 	if (!ctx.env.PP_MODE?.startsWith('container')) return paths
+	// do not also allow writing to /home/root/pp/cachedir, which some deployments mount: the permission
+	// model then denies writing to /home/root/pp/cache itself, see findPrefixConflicts()
 	return { ...paths, tpmasterdir: '/home/root/pp/tp', cachedir: '/home/root/pp/cache' }
 }
 
@@ -261,6 +269,23 @@ function removeCoveredPaths(paths) {
 		if (!kept.some(k => isCoveredBy(p, k))) kept.push(p)
 	}
 	return kept
+}
+
+// the permission model denies access to an allowed path, or to paths under it, when another allowed path
+// has it as a string prefix without being under it, such as /home/root/pp/cache and /home/root/pp/cachedir,
+// in either order and with or without a trailing slash; returns a message for each such pair
+export function findPrefixConflicts(config) {
+	const conflicts = []
+	for (const key of ['allow-fs-read', 'allow-fs-write']) {
+		const paths = config.nodeOptions[key]
+		for (const a of paths) {
+			for (const b of paths) {
+				if (a != b && b.startsWith(a) && !isCoveredBy(b, a))
+					conflicts.push(`${key} paths '${a}' and '${b}' share a prefix, so node may deny access to either`)
+			}
+		}
+	}
+	return conflicts
 }
 
 // true if p is the same as, or under, the dir path
