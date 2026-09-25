@@ -641,13 +641,16 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
     # too dense to confirm within budget just skips confirmation rather than
     # failing the whole scan -- its cheap score still stands
     MAX_NHOOD_WORK = 50_000_000
+    remaining_nhood_work = MAX_NHOOD_WORK
     windows = []
     for cheap_score, cx, cy, idx in top:
         w_code = code[idx]
         rows, cols, kk = _knn_edges(coords[idx], k)
         observed = _knn_count(w_code, rows, cols, C)
         zl, distance = None, None
-        if idx.size * kk * perms <= MAX_NHOOD_WORK:
+        work = int(idx.size) * kk * int(perms)
+        if work <= remaining_nhood_work:
+            remaining_nhood_work -= work
             observed, zl = _permute_zscore(w_code, rows, cols, C, perms, seed)
             if zscore_q is not None:
                 z = np.array([[v if v is not None else np.nan for v in row] for row in zl])
