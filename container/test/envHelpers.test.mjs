@@ -51,7 +51,12 @@ test('container: tp and cache dirs are fixed, and serverconfig.json is writable'
 	assert.ok(opts['allow-fs-read'].includes('/home/root/pp'))
 	assert.ok(!opts['allow-fs-read'].includes('/home/root/pp/tp'))
 	assert.ok(!opts['allow-fs-read'].includes('/host/tp'))
-	assert.deepEqual(opts['allow-fs-write'].toSorted(), ['/app/serverconfig.json', '/home/root/pp/cache', '/tmp/user'])
+	assert.deepEqual(opts['allow-fs-write'].toSorted(), [
+		'/app/serverconfig.json',
+		'/home/root/pp/cache',
+		'/home/root/pp/tp_write',
+		'/tmp/user'
+	])
 })
 
 test('container: a dir is listed before, and not after, its allowed subpaths', () => {

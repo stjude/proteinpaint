@@ -114,6 +114,7 @@ export function getNodeConfig(ctx, command = []) {
 	allow(read, serverconfig.tp_native_dir)
 	allow(read, serverconfig.cachedir)
 	allow(write, serverconfig.cachedir)
+	allow(write, serverconfig.tpWriteDir)
 	allow(read, serverconfig.sslKey)
 	allow(read, serverconfig.sslCert)
 	// a bare command name, such as python3, is resolved from PATH when spawned
@@ -160,7 +161,14 @@ function getServerconfigPaths(ctx) {
 	if (!ctx.env.PP_MODE?.startsWith('container')) return paths
 	// do not also allow writing to /home/root/pp/cachedir, which some deployments mount: the permission
 	// model then denies writing to /home/root/pp/cache itself, see findPrefixConflicts()
-	return { ...paths, tpmasterdir: '/home/root/pp/tp', cachedir: '/home/root/pp/cache' }
+	return {
+		...paths,
+		tpmasterdir: '/home/root/pp/tp',
+		cachedir: '/home/root/pp/cache',
+		// a writable dir that some deployments mount, such as for a burden db; allowing it is harmless when
+		// nothing is mounted on it, and it does not share a string prefix with any other allowed write path
+		tpWriteDir: '/home/root/pp/tp_write'
+	}
 }
 
 // returns {<NAME>_CREDS: file content} for each <NAME>_CREDS_FILE in the env or ./.env
