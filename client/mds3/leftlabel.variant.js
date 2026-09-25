@@ -532,9 +532,9 @@ async function downloadVariants(tk, block) {
 					} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 						line.push('')
 						line.push(mclass[m.class].label)
-						line.push(
-							m.pairlst[0].a.chr + ':' + m.pairlst[0].a.pos + '>' + m.pairlst[0].b.chr + ':' + m.pairlst[0].b.pos
-						)
+						// the partner point of an aggregated event may hold multiple breakpoints (see mayUpdatePairlst() in mds3.load.js)
+						const { a, b } = m.pairlst[0]
+						line.push([a, b].map(p => p.chr + ':' + (p.breakpoints?.map(bp => bp.pos).join(',') ?? p.pos)).join('>'))
 					} else if (m.dt == dtcnv) {
 						line.push(Number.isFinite(m.value) ? m.value : '')
 						line.push(mclass[m.class].label)

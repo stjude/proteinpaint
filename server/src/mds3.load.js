@@ -96,6 +96,7 @@ function finalize_result(q, ds, result) {
 			if (m.samples) {
 				m.occurrence = m.samples.length
 
+				mayUpdatePairlst(m)
 				mayAddSkewerRimCount(m, q, ds)
 				mayAddFormatSampleCount(m, ds)
 
@@ -159,6 +160,51 @@ function finalize_result(q, ds, result) {
 		// has samples, report total number of unique samples across all data types
 		result.sampleTotalNumber = sampleSet.size
 	}
+}
+
+/*
+a sv/fusion event is aggregated by [dt, chr, pos, strand, pairlstIdx, mname] (see svfusionByRangeGetter_file),
+which pins down the breakpoint on the queried gene and the NAME of the partner gene, but not the breakpoint on
+the partner gene. thus the samples of one event can break at different positions of the partner gene, while
+m.pairlst[] only holds the breakpoints of the first sample read.
+when they do, replace .pos/.strand of the partner point with .breakpoints[], so that client can tell the event
+has multiple partner breakpoints and chart them, rather than any consumer printing an arbitrary one as if it
+were the only one. the point becomes:
+	{ chr, name, breakpoints:[ {chr, pos, strand, samplecount}, ... ] } sorted by samplecount descending
+.samplecount counts events; a sample with events at two partner breakpoints is counted at both.
+an event whose samples all break at the same position of the partner gene is left as is.
+
+must be called before m.samples[] is deleted, as it reads the per-sample breakpoints in m.samples[]._pairlst
+*/
+export function mayUpdatePairlst(m) {
+	if (m.dt != dtsv && m.dt != dtfusionrna) return
+	if (!Array.isArray(m.samples)) return
+	// only 2-gene events are aggregated by partner name; the multi-gene pairlst format is not yet supported
+	if (!Array.isArray(m.pairlst) || m.pairlst.length != 1) return
+	if (m.pairlstIdx !== 0 && m.pairlstIdx !== 1) return
+	const partnerSide = m.pairlstIdx == 0 ? 'b' : 'a'
+
+	const key2bp = new Map() // k: chr.pos.strand, v: breakpoint {}
+	for (const s of m.samples) {
+		const p = s._pairlst?.[0]?.[partnerSide]
+		// a byname event may lack a coordinate; such an event cannot be told apart by breakpoint
+		if (!p || !Number.isFinite(p.pos)) continue
+		const key = p.chr + '.' + p.pos + '.' + p.strand
+		if (!key2bp.has(key)) key2bp.set(key, { chr: p.chr, pos: p.pos, strand: p.strand, samplecount: 0 })
+		key2bp.get(key).samplecount++
+	}
+	if (key2bp.size < 2) return
+
+	const partner = m.pairlst[0][partnerSide]
+	/* build a new pair rather than editing in place: the event's pairlst[] is the same object as the
+	_pairlst of its first sample, which must keep its own breakpoint */
+	const pair = Object.assign({}, m.pairlst[0])
+	pair[partnerSide] = {
+		chr: partner.chr,
+		name: partner.name,
+		breakpoints: [...key2bp.values()].sort((i, j) => j.samplecount - i.samplecount)
+	}
+	m.pairlst = [pair]
 }
 
 // todo unit test

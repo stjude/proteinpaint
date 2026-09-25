@@ -17,6 +17,7 @@ Official - hidegenelegend
 Official - hardcodeCnvOnly hidegenelegend
 Official - hardcodeCnvOnly
 Official - snvIndelOnly
+Official - sv/fusion with multiple partner breakpoints
 Incorrect dslabel
 Custom cnv, numeric, no sample
 Custom cnv, categorical, no sample
@@ -529,6 +530,61 @@ tape('Official - snvIndelOnly', test => {
 		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
 
 		testLegend(test, tk)
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+tape('Official - sv/fusion with multiple partner breakpoints', test => {
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		genome: 'hg38-test',
+		gene: 'AKT1',
+		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', callbackOnRender }]
+	})
+	async function callbackOnRender(tk) {
+		/* in the test data AKT1 chr14:104779348 is joined with TP53 at two positions of TP53. the server
+		aggregates the events by partner NAME and lists the partner breakpoints (see mayUpdatePairlst() in
+		mds3.load.js), rather than showing the breakpoint of whichever sample was read first */
+		const m = tk.skewer.rawmlst.find(m => m.pairlst?.[0]?.a?.breakpoints)
+		test.ok(m, 'an sv/fusion event with partner breakpoints[] is loaded')
+		if (!m) {
+			test.end()
+			return
+		}
+		test.equal(m.pairlstIdx, 1, 'AKT1 is on the b side of the pair, and the partner TP53 on the a side')
+		test.deepEqual(
+			m.pairlst[0].a.breakpoints.map(b => b.pos),
+			[7674289, 7674915],
+			'TP53 partner has 2 breakpoints, sorted by sample count'
+		)
+		test.notOk('pos' in m.pairlst[0].a, 'partner point has no .pos when it holds breakpoints[]')
+
+		const disc = tk.skewer.g
+			.selectAll('.sja_aa_disckick')
+			.nodes()
+			.find(i => (i.__data__.mlst?.[0] || i.__data__).ssm_id == m.ssm_id)
+		test.ok(disc, 'disc of the event is found')
+		disc.dispatchEvent(new Event('click'))
+		await whenVisible(tk.itemtip.d.node())
+		const tip = tk.itemtip.d.node()
+
+		const chart = await detectOne({ elem: tip, selector: '[data-testid="sjpp-mds3tk-svfusionBreakpointChart"]' })
+		test.ok(chart, 'breakpoint chart is rendered in place of a single fusion structure')
+		test.ok(
+			chart.querySelector('[data-testid="sjpp-isoformPairSelect-links"]'),
+			'chart links the AKT1 breakpoint to the TP53 breakpoints'
+		)
+		const graph = await detectOne({ elem: tip, selector: '[data-testid="sjpp-mds3tk-singlesvfusiongraph"]' })
+		test.ok(graph, 'fusion structure of the most frequent breakpoint is rendered under the chart')
+
+		// the sample table is limited to the samples of the most frequent breakpoint (2 of the 3 events)
+		const table = await detectOne({ elem: tip, selector: '[data-testid="sjpp_mds3tk_sampletable"]' })
+		test.ok(table, 'sample table of the selected breakpoint is rendered')
+		const rows = table.querySelectorAll('tbody tr, tr.sjpp_row_wrapper')
+		test.equal(rows.length, 2, 'sample table has the 2 samples of the most frequent breakpoint')
 
 		if (test._ok) holder.remove()
 		test.end()

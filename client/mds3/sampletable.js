@@ -12,6 +12,9 @@ init_sampletable()
 	always return list of samples, does not return summaries
 	mlst can be mixture of data types, doesn't matter
 
+getSamples()
+	query the samples of mlst[] without rendering; init_sampletable() = getSamples() + displaySampleTable()
+
 displaySampleTable()
 	call this function to render one or multiple samples
 	calls make_singleSampleTable() or renderTable()
@@ -48,6 +51,22 @@ export async function init_sampletable(arg) {
 		.style('font-size', '1.25em')
 		.style('font-weight', 'bold')
 
+	try {
+		const samples = await getSamples(arg)
+		await displaySampleTable(samples, arg)
+		wait.remove()
+	} catch (e) {
+		wait.text('Error: ' + (e.message || e))
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+/*
+query the list of samples carrying the variants of arg.mlst[] via variant2samples.get()
+also used by the svfusion breakpoint chart of itemtable.js, which limits the samples to the selected
+breakpoint before rendering them with displaySampleTable()
+*/
+export async function getSamples(arg) {
 	// may not be used!
 	//terms from sunburst ring
 	// Note: in ordered to keep term-values related to sunburst immuatable, these term names are
@@ -55,15 +74,9 @@ export async function init_sampletable(arg) {
 	arg.tid2value_orig = new Set()
 	if (arg.tid2value) Object.keys(arg.tid2value).forEach(arg.tid2value_orig.add, arg.tid2value_orig)
 
-	try {
-		arg.querytype = arg.tk.mds.variant2samples.type_samples
-		const out = await arg.tk.mds.variant2samples.get(arg) // returns list of samples
-		await displaySampleTable(out.samples, arg)
-		wait.remove()
-	} catch (e) {
-		wait.text('Error: ' + (e.message || e))
-		if (e.stack) console.log(e.stack)
-	}
+	arg.querytype = arg.tk.mds.variant2samples.type_samples
+	const out = await arg.tk.mds.variant2samples.get(arg)
+	return out.samples // list of samples
 }
 
 export async function displaySampleTable(samples, args) {
@@ -493,9 +506,10 @@ export async function samples2columnsRows(samples, tk) {
 							pairArrayIdx++
 							if (p) {
 								oneHtml.push(
-									`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${
+									// print 1-based position, as printSvPair() does for the same breakpoints
+									`${p.a.name || ''} ${p.a.chr}:${p.a.pos + 1} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${
 										p.b.name || ''
-									} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
+									} ${p.b.chr}:${p.b.pos + 1} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
 								)
 								showClass = true
 							} else {
