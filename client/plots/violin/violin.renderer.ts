@@ -18,6 +18,7 @@ type ViolinDensityBin = {
 
 type LegendItem = {
 	text: string
+	testIDSuffix: string
 	noIcon: boolean
 	isHidden?: boolean
 	isClickable?: boolean
@@ -88,6 +89,7 @@ export default function setViolinRenderer(self: any) {
 			const chartDiv = self.dom.violinDiv
 				.append('div')
 				.attr('class', 'sjpp-vp-chartDiv')
+				.attr('data-testid', `sjpp-vp-chartDiv-${chartKey}`)
 				.style('padding', Object.keys(self.data.charts).length > 1 ? '20px 20px 0px 0px' : '0px')
 			chart.chartDiv = chartDiv
 			if (plots.length === 0) {
@@ -257,7 +259,7 @@ export default function setViolinRenderer(self: any) {
 		})
 	}
 
-	self.getChartTitle = function (chartId: string, totalCount?:number) {
+	self.getChartTitle = function (chartId: string, totalCount?: number) {
 		return getChartTitle(self.config, chartId, totalCount)
 	}
 
@@ -434,7 +436,7 @@ export default function setViolinRenderer(self: any) {
 	function renderLabels(t1: any, t2: any, violinG: any, plot: any, isH: boolean, settings: any) {
 		violinG
 			.append('text')
-			.attr('data-testid', 'sjpp-violin-label')
+			.attr('data-testid', `sjpp-violin-label-${plot.label}`)
 			.text(`${plot.label}, n=${plot.plotValueCount}`)
 			.style('cursor', 'pointer')
 			.on('click', function (event: MouseEvent) {
@@ -463,6 +465,7 @@ export default function setViolinRenderer(self: any) {
 		violinG
 			.append('path')
 			.attr('class', 'sjpp-vp-path')
+			.attr('data-testid', `sjpp-vp-path-${plot.seriesId}`)
 			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color)
 			.style('opacity', 0)
 			.attr('stroke', rgb(plot.color).darker())
@@ -477,6 +480,7 @@ export default function setViolinRenderer(self: any) {
 			.append('image')
 			.style('opacity', 0)
 			.classed(self.config.settings.violin.datasymbol === 'rug' ? 'sjpp-rug-img' : 'sjpp-beans-img', true)
+			.attr('data-testid', `sjpp-violin-img-${plot.seriesId}`)
 			.style('opacity', 1)
 			.attr('xlink:href', plot.src)
 			.attr(
@@ -622,9 +626,9 @@ function addDescriptiveStats(term: TermWrapper, legendGrps: LegendGroup[], headi
 			}
 		})
 
-			const title = self.config.term2?.q.descrStats
-				? `Descriptive statistics: ${term.term.name}`
-				: `Descriptive statistics`
+		const title = self.config.term2?.q.descrStats
+			? `Descriptive statistics: ${term.term.name}`
+			: `Descriptive statistics`
 		const name = `<span style="${headingStyle}">${title}</span>`
 		legendGrps.push({ name, items })
 	}
@@ -666,6 +670,7 @@ function addHiddenValues(term: TermWrapper, legendGrps: LegendGroup[], headingSt
 	for (const key of Object.keys(term.q.hiddenValues || {})) {
 		items.push({
 			text: `${key}`,
+			testIDSuffix: key,
 			noIcon: true,
 			/** Need to specify that this is a hidden value for
 			 * text styling in the legend and  a plot for

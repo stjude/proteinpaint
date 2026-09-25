@@ -7,6 +7,22 @@ function applyAttrs(selection, attrs) {
 	}
 }
 
+/**
+ * Create an SVG legend renderer.
+ *
+ * Attribute callbacks return SVG attributes for the generated label text:
+ *
+ * ```js
+ * svgLegend({
+ *   holder,
+ *   groupLabelAttrs: group => ({ 'data-testid': `sjpp-legend-group-${group.name}` }),
+ *   itemLabelAttrs: (item, index) => ({ 'data-testid': `sjpp-legend-item-${index}` })
+ * })
+ * ```
+ *
+ * `groupLabelAttrs` receives a group object, while `itemLabelAttrs` receives
+ * an item object and its zero-based index.
+ */
 export default function svgLegend(opts) {
 	let currlinex = 0
 	let currliney = 0
@@ -105,6 +121,7 @@ export default function svgLegend(opts) {
 			.attr('dominant-baseline', 'central')
 			.text(d.name)
 			.style('text-decoration', d.crossedOut ? 'line-through' : '')
+		// groupLabelAttrs(d) may return SVG attributes for the group-name text.
 		if (opts.groupLabelAttrs) applyAttrs(grplabel, opts.groupLabelAttrs(d))
 
 		if (settings.linesep) {
@@ -160,6 +177,7 @@ export default function svgLegend(opts) {
 					: ''
 			)
 
+		// itemLabelAttrs(d, i) may return SVG attributes for each item-label text.
 		if (opts.itemLabelAttrs) applyAttrs(itemlabel, opts.itemLabelAttrs(d, i))
 		itemlabel.each(function (d) {
 			const t = select(this)
