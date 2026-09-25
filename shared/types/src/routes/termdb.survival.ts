@@ -18,7 +18,6 @@ export type TermdbSurvivalRequest = {
 	term0?: TermWrapper | Term
 	term1?: TermWrapper | Term
 	term2?: TermWrapper | Term
-
 	/** @deprecated post the term wrapper in term0 */
 	term0_q?: any
 	/** @deprecated post the term wrapper in term0 */
@@ -45,7 +44,6 @@ export type TermdbSurvivalRequest = {
 	term2_$id?: string
 	/** @deprecated post the term wrapper in term2 */
 	term2_type?: string
-
 	filter?: Filter
 	filter0?: any
 	hiddenValues?: {

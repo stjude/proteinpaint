@@ -670,6 +670,7 @@ class MassCumInc extends PlotBase implements RxComponent {
 					legendItems.push({
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
+						testID: series.seriesId,
 						color: this.term2toColor[series.seriesId].adjusted,
 						isHidden: this.settings.hidden.includes(series.seriesId)
 					})

@@ -118,6 +118,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 		setDimensions()
 		_chart.name = hm.handlers.chart.title(chart)
 		chartTitle
+			.attr('data-testid', 'sjpp-chart-title-' + _chart.chartId)
 			.style('width', hm.svgw + 100 + 'px')
 			//.style('font-weight', 600)
 			.style('font-size', '1.1em')
@@ -436,6 +437,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 		if (!series || !series.data.length) return
 		select(this)
 			.attr('class', 'bars-cell-grp')
+			.attr('data-testid', 'sjpp-bar-cell-grp-' + series.seriesId)
 			.selectAll('g')
 			.data(series.data.filter(filterData), cellKey)
 			.enter()
@@ -448,7 +450,10 @@ export default function barsRenderer(barsapp: any, holder: any) {
 	}
 
 	function addCell(this: any, d: any) {
-		const g = select(this).attr('class', 'bars-cell').datum(d)
+		const g = select(this)
+			.attr('class', 'bars-cell')
+			.attr('data-testid', 'sjpp-bars-cell-' + d.dataId)
+			.datum(d)
 
 		g.style('display', d => {
 			return hm.cols.includes(d.colId) ? 'block' : 'none'
@@ -612,12 +617,12 @@ export default function barsRenderer(barsapp: any, holder: any) {
 	function addRowLabel(this: any, d) {
 		if (!this || d === undefined) return
 		const g = select(this).attr('transform', rowLabelTransform).style('opacity', 0)
-
 		g.append('text')
 			.attr('x', 2) //hm.colw / 3)
 			.attr('text-anchor', 'end')
 			.attr('font-size', computed.rowfontsize + 'px')
 			.html(hm.handlers.barLabel.text)
+			.attr('data-testid', 'sjpp-row-label-' + d.id)
 
 		g.transition().delay(hm.delay).duration(hm.duration).style('opacity', 1)
 	}
