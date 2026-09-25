@@ -21,7 +21,7 @@ export class SCViewRenderer {
 	interactions: SCInteractions
 	plotBtns!: PlotButtons
 	sectionRenderer!: SectionRenderer
-	sampleTableRenderer!: SampleTableRenderer
+	sampleTableRenderer?: SampleTableRenderer
 	groupsWrapper!: any
 
 	constructor(sc: SCViewer) {
@@ -98,7 +98,11 @@ export class SCViewRenderer {
 		tableData: SCTableData,
 		subplotManager: SubplotManager
 	) {
-		this.sampleTableRenderer = new SampleTableRenderer(this.dom, this.interactions, tableData)
+		if (!this.sampleTableRenderer) {
+			this.sampleTableRenderer = new SampleTableRenderer(this.dom, this.interactions, tableData)
+		} else {
+			this.sampleTableRenderer.updateTable(tableData)
+		}
 		this.plotBtns.update(settings, data)
 		//Also handles when settings.sc.groupBy == 'none' to show all plots in one section
 		await this.sectionRenderer.update(

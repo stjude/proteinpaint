@@ -1,7 +1,7 @@
 import type { SCDom, SCSampleSandbox, SCTableData } from '../SCTypes'
 import type { TableCell } from '#dom'
-import { renderTable } from '#dom'
 import type { SCInteractions } from '../interactions/SCInteractions'
+import { SCSampleTable } from './SCSampleTable'
 
 /** Renders the sample table for selection on SC app init()
  * On selecting a sample, the plot buttons will appear and
@@ -13,6 +13,7 @@ export class SampleTableRenderer {
 	activeSandboxes: Map<string, SCSampleSandbox[]> = new Map()
 	/** Tracks rendered btns per sample to avoid unnecessary destroy/recreate pattern. */
 	rendered: Map<string, { cell: any; plotIds: string }> = new Map()
+	table: SCSampleTable | null = null
 
 	constructor(dom: SCDom, interactions: SCInteractions, tableData: SCTableData) {
 		this.dom = dom
@@ -24,30 +25,19 @@ export class SampleTableRenderer {
 	/** Users select one item at a time to render the plot buttons
 	 * to init() plots in the dashboard.*/
 	renderSamplesTable(tableData: SCTableData) {
-		this.dom.tableDiv.selectAll('*').remove()
-
-		renderTable({
-			rows: tableData.rows,
-			columns: tableData.columns,
-			div: this.dom.tableDiv,
-			singleMode: true,
-			// maxWidth: tableData.columns.length > 3 ? '95vw' : 'auto',
-			maxHeight: '30vh',
-			header: {
-				allowSort: true,
-				style: { 'text-transform': 'capitalize' }
-			},
-			striped: true,
-			selectedRows: tableData.selectedRows,
-			afterRender: () => {
-				this.reapplyAllPlotButtons()
-			},
-			noButtonCallback: index => {
-				const item = this.buildItemFromRow(tableData, index)
+		this.tableData = tableData
+		this.table = new SCSampleTable(this.dom, tableData, {
+			onRowClick: sampleId => {
+				const data = this.tableData
+				const sampleColIdx = data.sampleColIdx ?? 0
+				const rowIndex = data.rows.findIndex(row => String(row[sampleColIdx]?.value ?? '') === sampleId)
+				if (rowIndex === -1) return
+				const item = this.buildItemFromRow(data, rowIndex)
 				this.interactions.updateItem(item)
 				this.dom.plotsBtnsDiv.style('display', 'block')
 			}
 		})
+		this.reapplyAllPlotButtons()
 	}
 
 	/** Builds an item object from a table row, mapping column labels to keys.
@@ -70,12 +60,19 @@ export class SampleTableRenderer {
 
 	updateTable(tableData: SCTableData) {
 		this.tableData = tableData
-		this.dom.tableDiv.selectAll('*').remove()
-		this.renderSamplesTable(tableData)
+		if (!this.table) {
+			this.renderSamplesTable(tableData)
+			return
+		}
+		this.table.setTableData(tableData)
+		this.reapplyAllPlotButtons()
 	}
 
 	updatePlotBtns(activeSandboxes: Map<string, SCSampleSandbox[]>) {
 		this.activeSandboxes = activeSandboxes
+		let totalPlots = 0
+		for (const sandboxes of activeSandboxes.values()) totalPlots += sandboxes.length
+		this.table?.setShownPlotsColumnVisibility(totalPlots >= 2)
 		this.reapplyAllPlotButtons()
 	}
 
@@ -104,19 +101,15 @@ export class SampleTableRenderer {
 
 	/** Applies buttons for a single sample. Skips DOM work if cell and plots are unchanged. */
 	applyButtonsForSample(sampleId: string) {
-		const sampleIdx = this.tableData.sampleColIdx
-
-		/** Rows array mutates on sort. Find the row by matching sampleId.*/
-		const row = this.tableData.rows.find(r => r[sampleIdx].value === sampleId)
-		if (!row) return
-
-		const cell = row[sampleIdx + 1].__td
 		const sampleSandboxes = this.activeSandboxes.get(sampleId)
 		if (!sampleSandboxes || sampleSandboxes.length === 0) return
+		if (!this.table) return
+
+		const cell = this.table.rowMap.get(sampleId)?.cells?.shownPlots
+		if (!cell) return
 
 		const plotIds = sampleSandboxes.map(s => s.plotId).join(',')
 		const cached = this.rendered.get(sampleId)
-		/** Guard against rerendering btns */
 		if (cached && cached.cell === cell && cached.plotIds === plotIds) return
 
 		cell.selectAll('.sjpp-sc-table-plot-btn').remove()
