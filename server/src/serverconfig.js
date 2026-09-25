@@ -178,7 +178,19 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	serverconfig.routeSetters = routeSetters
 }
 
-if (typeof serverconfig.dsCredentials == 'string') {
+if (process.env.PP_CREDS) {
+	// preferred over a dsCredentials file path, so that the server process does not need
+	// read access to a credentials file that a path traversal bug could expose;
+	// see container/envHelpers.mjs for how to set this env variable from a file
+	try {
+		serverconfig.dsCredentials = JSON.parse(process.env.PP_CREDS)
+	} catch {
+		// do not include the parse error message, since it may quote part of the credentials
+		throw `invalid JSON in process.env.PP_CREDS`
+	}
+	// not inherited by spawned child processes, and not exposed by any code that reads process.env later
+	delete process.env.PP_CREDS
+} else if (typeof serverconfig.dsCredentials == 'string') {
 	const dsCredentialsFile = serverconfig.dsCredentials
 	try {
 		const json = fs.readFileSync(dsCredentialsFile, { encoding: 'utf8' })

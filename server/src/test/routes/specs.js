@@ -67,9 +67,14 @@ export function findMatchingSpecs(opts) {
 	const allSpecs = []
 	for (const dir of dirnames) {
 		const pattern = path.join(dir.abs, specPattern)
+		// glob with a relative pattern and cwd: with the node permission model, fs.globSync() returns no matches
+		// for an absolute pattern, apparently since it tries to read ancestor dirs that are not allowed
 		const specs =
 			getFromCache(pattern) ||
-			fs.globSync(pattern, { cwd: path.join(dir.abs, `./**`) }).filter(f => !exclude || !f.includes(exclude))
+			fs
+				.globSync(specPattern, { cwd: dir.abs })
+				.map(f => path.join(dir.abs, f))
+				.filter(f => !exclude || !f.includes(exclude))
 		specs.sort()
 		if (!specsCache[pattern]) specsCache[pattern] = specs
 		allSpecs.push(...specs.map(file => file.replace(dir.abs + '/', dir.rel)))

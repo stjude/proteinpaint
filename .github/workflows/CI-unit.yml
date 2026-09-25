@@ -72,6 +72,10 @@ jobs:
             echo "WS_TO_TEST=$(./build/requiresTest.sh)" >> $GITHUB_ENV
           fi
 
+      # container/ is not a workspace detected by requiresTest.sh, and these tests take less than a second
+      - name: 🔎 Run container envHelpers test
+        run: npm run test:container
+
       - name: 🔎 Run shared/utils test
         if: contains(env.WS_TO_TEST, 'shared/utils')
         run: npm test --workspace="shared/utils"

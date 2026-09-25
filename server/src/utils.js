@@ -558,7 +558,11 @@ export function read_file(file) {
 	return new Promise((resolve, reject) => {
 		fs.readFile(file, { encoding: 'utf8' }, (err, txt) => {
 			// must use reject in callback, not throw
-			if (err) reject('cannot read file: ' + file)
+			if (err) {
+				if (err.code === 'ERR_ACCESS_DENIED') reject(`file access denied`)
+				else reject('cannot read file: ' + file)
+				return
+			}
 			resolve(txt)
 		})
 	})

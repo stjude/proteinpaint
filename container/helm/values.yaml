@@ -38,12 +38,25 @@ container:
   name: proteinpaint
   containerPort: 3456
   command: ["/bin/bash"]
+  # envHelpers.mjs generates node.config.json to limit the server process file access, and passes any
+  # <NAME>_CREDS_FILE content as a <NAME>_CREDS env variable. Images published before envHelpers.mjs was
+  # added, such as the default image.tag above, do not have it, so the server then runs without those
+  # restrictions, as it did before; update image.tag to a newer release to apply them.
   args:
     - "-c"
     - |
       cp /home/root/pp/app/active/serverconfig /home/root/pp/app/active/serverconfig.json
-      node --enable-source-maps app-server.mjs
-  env: [] 
+      if [ -f envHelpers.mjs ]; then
+        exec node envHelpers.mjs node --enable-source-maps app-server.mjs
+      fi
+      echo "WARNING: this image does not have envHelpers.mjs, running the server without file access restrictions" >&2
+      exec node --enable-source-maps app-server.mjs
+  # the image defaults to PP_MODE=container-prod, which would override the port and tpmasterdir/cachedir
+  # paths below in config.serverConfig, so this chart sets it to empty to use its own values instead;
+  # set with ppMode instead of container.env, which the deployment template appends after PP_MODE
+  ppMode: ""
+  # additional env entries, such as PP_CREDS_FILE
+  env: []
 
 mounts:
   data:

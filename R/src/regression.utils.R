@@ -592,7 +592,9 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype, formulatype,
   
   # plot data
   # Use PNG device instead of SVG to avoid X11 dependency (following pattern from edge_newh5.R plotQLDisp)
-  plotfile <- paste0(cachedir, "splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".png")
+  # file.path() adds the "/" separator, since serverconfig.cachedir does not end with one,
+  # otherwise the plot file would be written outside of cachedir, as a sibling of it
+  plotfile <- file.path(cachedir, paste0("splinePlot_", ifelse(is.null(formulatype), "", paste0(formulatype, "_")), createRandString(), ".png"))
   # Quick fix to hardcode "*2" factor to width/height/res to show img at proper res on modern screen, without supporting low-res screens
   png(filename = plotfile, width = 670*2, height = ifelse(is.null(formulatype),525*2,535*2), res = 100*2, pointsize = 20)
   par(mar = c(2, 2, ifelse(is.null(formulatype),0.7,1), 5) + 0.1, mgp = c(1, 1, 0))
