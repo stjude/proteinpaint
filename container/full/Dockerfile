@@ -26,6 +26,9 @@ COPY ./public .
 COPY ./envHelpers.mjs ./
 
 EXPOSE 3000
+# default to the container paths and port in server/src/serverconfig.js and envHelpers.mjs,
+# may be overridden at runtime, such as `docker run -e PP_MODE= ...` to use the serverconfig.json paths and port
+ENV PP_MODE=container-prod
 # envHelpers.mjs generates node.config.json and adds --experimental-default-config-file to apply it,
 # to limit the server process file access, and passes any <NAME>_CREDS_FILE content as a <NAME>_CREDS env variable
 CMD ["node", "envHelpers.mjs", "node", "--enable-source-maps", "app-full.mjs"]
