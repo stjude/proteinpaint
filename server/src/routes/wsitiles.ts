@@ -386,12 +386,12 @@ function init({ genomes }) {
 				// score without any error signal otherwise
 				let typeWeights: number[] | undefined
 				if (q.typeWeights !== undefined) {
-					const w = Array.isArray(q.typeWeights) ? q.typeWeights.map(Number) : null
-					if (!w || w.length != C || w.some((v: number) => !Number.isFinite(v) || v < 0) || w.every(v => v === 0)) {
-						res.status(400).send({
-							status: 'error',
-							error: `similar typeWeights must have ${C} non-negative numbers, one per type, with at least one positive weight`
-						})
+const w = Array.isArray(q.typeWeights) ? q.typeWeights.map(Number) : null
+if (!w || w.length != C || w.some((v: number) => !Number.isFinite(v) || v < 0 || v > 10) || w.every(v => v === 0)) {
+	res.status(400).send({
+		status: 'error',
+		error: `similar typeWeights must have ${C} numbers from 0 to 10, one per type, with at least one positive weight`
+	})
 						return
 					}
 					typeWeights = w
