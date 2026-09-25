@@ -123,6 +123,8 @@ All viewer traffic hits `wsitiles/:action`:
   the gene actions answer per-cell counts of one gene / every gene name in the
   file. `?file=` is scoped to the selected slide's own image folder, so a
   valid slide query cannot read other samples' or datasets' files.
+- **`/nhood`, `/similar`** (spatial only): the lasso's neighborhood
+  enrichment and its similar-region search — see sections 8 and 9 below.
 
 ### 3. Decoding & tile production — `python/src/wsi_tile.py`
 
@@ -275,24 +277,119 @@ menu.
 ### 8. Neighborhood enrichment — `wsitiles/nhood`, `python/src/wsi_tile.py`
 
 The lasso menu's **Neighborhood enrichment** button (`sjpp-wsi-nhood-btn`,
-shown only when the h5ad carries cell types) POSTs `{file, ids}` to
-`wsitiles/nhood` — ids only, since the server reads the selected cells'
-`obsm/spatial` centroids and `obs/cell_type` from the h5ad itself. The
-route bounds `k` (default 6), `perms` (default 1000) and `seed`, then runs
-`nhood_enrichment()` in `wsi_tile.py`, a scipy/numpy port of the squidpy
-pipeline the MMRF notebook uses (`sq.gr.spatial_neighbors(coord_type=
-'generic', n_neighs=6)` + `sq.gr.nhood_enrichment`): a **directed** kNN
-graph over the centroids (each cell → its k nearest others; squidpy's
-KNNBuilder does not symmetrise), `count[a][b]` = edges from a type-a cell
-to a type-b neighbour, and a z-score of each count against `perms` random
-relabellings of the same cells (population std, as squidpy). Unannotated
-cells are dropped first (reported as `skipped`); unknown ids are ignored.
-Fewer than two types is an `{error}`.
+shown only when the h5ad carries cell types, and hidden in favor of a
+warning once the selection is too large — see the workload cap below) POSTs
+`{file, ids, k, perms}` to `wsitiles/nhood` — ids only, since the server
+reads the selected cells' `obsm/spatial` centroids and `obs/cell_type` from
+the h5ad itself. The route bounds `k` (default 6, 1–30), `perms` (default
+1000, 10–5000) and `seed`, then runs `nhood_enrichment()` in `wsi_tile.py`, a
+scipy/numpy port of the squidpy pipeline the MMRF notebook uses
+(`sq.gr.spatial_neighbors(coord_type='generic', n_neighs=6)` +
+`sq.gr.nhood_enrichment`):
+
+1. A **directed** kNN graph over the selected cells' centroids
+   (`_knn_edges`): each cell → its k nearest others (squidpy's KNNBuilder
+   does not symmetrise). k is capped at `cells - 1` for a tiny selection.
+2. `count[a][b]` (`_knn_count`) = number of kNN edges from a type-a cell to
+   a type-b neighbour — the real, observed tally.
+3. The same cells are relabelled by a random permutation of their types
+   `perms` times, re-tallying `count` each time (`_permute_zscore`); the
+   observed count is turned into a z-score against that permutation
+   distribution's mean/population-std. A pair whose count never varies
+   across permutations (tiny or lopsided selections) has std 0 — reported as
+   `null` (not a stderr warning, which `run_python()` would treat as a
+   failure) rather than `NaN`/`Infinity`.
+
+Unannotated cells are dropped first (reported as `skipped`); unknown ids are
+ignored. Fewer than two types, or fewer than two annotated cells, comes back
+as `{error}`. The response also includes `typeCounts` (per-type composition,
+aligned to `types`) — not used by the heatmap itself, but the exact query
+signature the similarity search below is built from.
+
+**Workload cap**: `ids.length * k * perms` is the actual cost (one
+permutation re-tallies every edge), so the route rejects a request over 50M
+regardless of how `k`/`perms` individually clamp — a selection alone can't
+be bounded server-side without spawning python, so the client mirrors the
+same cap at the button's default k=6/perms=1000 and shows a message instead
+of the button for an oversized lasso, before ever making the request.
 
 The client draws the answer with `renderNhoodHeatmap()` into a panel under
 the map (`sjpp-wsi-nhood`, one at a time): a diverging blue–gray–red
 matrix symmetric around 0, the z-score printed in every cell, a hover
-tooltip with the edge count, a legend bar, and a close button.
+tooltip with the edge count, a legend bar, k/permutation inputs that rerun
+the same selection, and a close button. Directly below it (same panel), the
+**Find similar regions** controls from the next section pick up where this
+leaves off.
+
+### 9. Similar-region search — `wsitiles/similar`, `python/src/wsi_tile.py`
+
+Below the heatmap, `renderSimilarSearch()` offers to search for niches
+elsewhere that resemble the just-analyzed selection — in this same sample
+(a different location) or in any other spatial sample of the dataset
+(`termdb/wsiBySample?imageType=spatial` lists candidates, this sample listed
+first as "(this sample)"). Only the query's **signature** — `types`,
+`typeCounts`, `count`, optionally `zscore`, all already computed by the
+neighborhood enrichment above — travels to the server; the source h5ad is
+never read again, so the search only ever opens the *target* sample's file.
+
+**Two-stage, coarse-to-fine** (`similar_regions()` in `wsi_tile.py`): the
+target's cells (restricted to the query's own type vocabulary — a cell of
+any other type is ignored, like an unannotated one) are tiled into
+`window`-sized, `stride`-spaced square windows (overlapping when
+`stride < window`). Two independent workload guards, mirroring the `/nhood`
+route's cap but computed here since window count depends on the target's own
+extent: `windows × cells > 200M` rejects the whole scan (use a larger
+window/stride); a window too dense to afford the rigorous stage's
+`cells × k × perms > 50M` just skips confirmation rather than failing.
+
+For every window, in order:
+
+1. **Size filter** — dropped if its cell count falls outside
+   ±`sizeTolerance` (client: "size tolerance ±_%", default 10%) of the
+   query's own cell count. A similar niche has to be a similar *size*, not
+   just a similar mix — otherwise a tiny or huge window could win purely on
+   composition.
+2. **Same-sample exclusion** — only when searching this sample: dropped if
+   more than 50% of its cells are among the query's own selected ids
+   (`excludeIds`, threaded through by the client only when the chosen target
+   sample equals the source sample — cell ids are per-h5ad, so this is never
+   sent cross-sample). Without it, the reference region would trivially
+   "find" itself.
+3. **Required types** — dropped if it's missing any type the user checked
+   "require _ present" for (client: one checkbox per query type, none
+   checked by default). A hard gate: no partial credit for scoring well
+   otherwise.
+4. **Cheap score** — a composition vector (fraction of cells per type) and a
+   row-normalized kNN neighbour-count matrix (same kNN construction as
+   `nhood_enrichment`, no permutation test) are built for the window and
+   compared to the query's own by cosine similarity. Both vectors are first
+   scaled by `typeWeights` (client: a "weight" number input per type,
+   default 1) — a composition entry for type i by `weight[i]`, an adjacency
+   entry (i,j) by `weight[i]*weight[j]` — so weighting a type to 0 removes it
+   from the score entirely and a high weight makes matching that type's
+   amount/pattern dominate the ranking. Unlike "required", a heavily-weighted
+   type is never *guaranteed* present — it's a soft emphasis on top of the
+   hard gate, not a replacement for it.
+
+The `topK` (default 10) highest cheap scores are then **confirmed**: each
+gets the exact same permutation z-score test `nhood_enrichment` runs
+(weights play no part here — this is the real statistical test, not a
+tunable score), and — when the query carried a `zscore` matrix — a
+`distance` to it (mean absolute difference over cell-type pairs finite in
+both; a pair with no cells of one of its types on either side is simply
+excluded from the average, not penalized). Results are re-ranked by that
+distance, the more rigorous of the two scores.
+
+The client's results table (`sjpp-wsi-similar-niche`'s sibling) lists each
+returned window's cell count, its %-difference from the reference, cheap
+score, distance, and center coordinates. **Clicking a row** re-enters this
+same viewer (`init()`) addressed at the target image, panned and zoomed to
+that window (`opts.focus` → `focusExtent()`, the same µm→px transform
+`parseBoundaries` uses) with a dashed outline drawn around it, and renders
+that window's own enrichment heatmap directly underneath — using the
+z-score/count matrices the confirmation stage already computed, no extra
+request — so the reference niche's heatmap (still visible above, unscrolled)
+and the candidate's sit side by side for a direct comparison.
 
 ## SVS vs OME-TIFF: what actually differs
 
