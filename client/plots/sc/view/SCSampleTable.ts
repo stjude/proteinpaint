@@ -117,6 +117,7 @@ export class SCSampleTable {
 				.attr('type', 'radio')
 				.attr('name', 'sjpp-sc-row-selection')
 				.attr('value', sampleId)
+				.attr('aria-label', `Select ${sampleId}`)
 				.property('checked', this.tableData.selectedRows.includes(rowIndex))
 				.on('change', () => {
 					if (this.onRowClick) this.onRowClick(rowIndex)
@@ -132,9 +133,9 @@ export class SCSampleTable {
 				if (this.columns[colIdx]?.label === 'Shown plots') {
 					entry.cells.shownPlots = td
 				}
-				if ('value' in cell) td.text(cell.value)
+				if ('value' in cell) td.text(cell.value).attr('aria-label', cell.value)
 				else if (cell.html) td.html(cell.html)
-				else if (cell.url) td.append('a').text(cell.value || cell.url).attr('href', cell.url)
+				else if (cell.url) td.append('a').text(cell.value || cell.url).attr('href', cell.url).attr('aria-label', `Click to ${cell.url}`)
 			}
 
 			tr.on('click', () => {

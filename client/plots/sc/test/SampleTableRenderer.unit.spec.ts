@@ -355,7 +355,7 @@ tape('updateTable() should show the Shown plots column when there are multiple p
 
 	const shownPlotsHeader = holder
 		.selectAll('th')
-		.filter(function () {
+		.filter(function (this: any) {
 			return (this as HTMLElement).textContent?.includes('Shown plots')
 		})
 	const shownPlotsCells = renderer.tableData.rows.map(row => (row[1] as any).__td)
