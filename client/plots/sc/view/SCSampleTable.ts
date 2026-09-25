@@ -35,9 +35,9 @@ export class SCSampleTable {
 	thead: any
 	tableHeaderRow: any
 	activeSandboxes = new Map<string, SCSampleSandbox[]>()
-	onRowClick?: (rowIndex: number) => void
+	onRowClick?: (sampleId: string) => void
 
-	constructor(dom: SCDom | any, tableData: SCTableData, opts: { onRowClick?: (rowIndex: number) => void } = {}) {
+	constructor(dom: SCDom | any, tableData: SCTableData, opts: { onRowClick?: (sampleId: string) => void } = {}) {
 		this.dom = dom
 		this.holder = dom?.tableDiv || dom
 		this.tableData = tableData
@@ -120,7 +120,7 @@ export class SCSampleTable {
 				.attr('aria-label', `Select ${sampleId}`)
 				.property('checked', this.tableData.selectedRows.includes(rowIndex))
 				.on('change', () => {
-					if (this.onRowClick) this.onRowClick(rowIndex)
+					if (this.onRowClick) this.onRowClick(sampleId)
 				})
 
 			for (const [colIdx, cell] of row.entries()) {
@@ -139,11 +139,11 @@ export class SCSampleTable {
 			}
 
 			tr.on('click', () => {
-				if (this.onRowClick) this.onRowClick(rowIndex)
+				if (this.onRowClick) this.onRowClick(sampleId)
 			})
 			tr.on('keydown', event => {
 				if (event.key === 'Enter') {
-					if (this.onRowClick) this.onRowClick(rowIndex)
+					if (this.onRowClick) this.onRowClick(sampleId)
 				}
 			})
 

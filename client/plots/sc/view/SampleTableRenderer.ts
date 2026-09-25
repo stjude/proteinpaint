@@ -27,8 +27,12 @@ export class SampleTableRenderer {
 	renderSamplesTable(tableData: SCTableData) {
 		this.tableData = tableData
 		this.table = new SCSampleTable(this.dom, tableData, {
-			onRowClick: rowIndex => {
-				const item = this.buildItemFromRow(tableData, rowIndex)
+			onRowClick: sampleId => {
+				const data = this.tableData
+				const sampleColIdx = data.sampleColIdx ?? 0
+				const rowIndex = data.rows.findIndex(row => String(row[sampleColIdx]?.value ?? '') === sampleId)
+				if (rowIndex === -1) return
+				const item = this.buildItemFromRow(data, rowIndex)
 				this.interactions.updateItem(item)
 				this.dom.plotsBtnsDiv.style('display', 'block')
 			}
