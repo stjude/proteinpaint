@@ -129,6 +129,37 @@ test('credentials: an unreadable file throws', () => {
 	assert.throws(() => getCreds(ctx), /ENOENT/)
 })
 
+test('credentials: a file under an allowed read path fails closed, before any file is written or read', t => {
+	for (const [label, opts] of [
+		['under the cwd', { env: { PP_CREDS_FILE: './creds.json' }, files: { '/app/creds.json': '{}' } }],
+		[
+			'under a container dir',
+			{ env: { PP_MODE: 'container-prod', PP_CREDS_FILE: '/home/root/pp/secrets/c.json' }, files: {} }
+		],
+		[
+			'a symlink that resolves under the cwd',
+			{
+				env: { PP_CREDS_FILE: '/secrets/link.json' },
+				files: { '/secrets/link.json': '{}' },
+				realpaths: { '/secrets/link.json': '/app/creds.json' }
+			}
+		],
+		[
+			'a differently-cased path in a case-insensitive file system',
+			{ env: { PP_CREDS_FILE: '/APP/creds.json' }, exists: ['/APP'], files: { '/APP/creds.json': '{}' } }
+		]
+	]) {
+		const ctx = fakeContext(opts)
+		assert.throws(
+			() => runInProcess(t, ['node', 'app.mjs'], ctx),
+			/PP_CREDS_FILE=.* must not be under an allowed read path/,
+			label
+		)
+		assert.deepEqual(ctx.written, {}, label)
+		assert.equal(ctx.spawned.length, 0, label)
+	}
+})
+
 test('router: the config flag is inserted where node or tsx parses it as an option', t => {
 	for (const [args, expected] of [
 		[
@@ -184,19 +215,26 @@ test('writes node.config.json and passes credentials only in the child env', t =
 
 test('smoke: the child runs with the permission model and credentials, and its exit code propagates', () => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'envHelpers-smoke-'))
+	// the credentials file must not be under an allowed read path, such as the cwd or OS temp dir
+	const credsFile = path.join(import.meta.dirname, `.smoke-creds-${process.pid}.json`)
 	try {
-		fs.writeFileSync(path.join(dir, 'creds.json'), '{"a":1}')
-		const child = `console.log(JSON.stringify({ permission: !!process.permission, creds: process.env.PP_CREDS })); process.exit(3)`
+		fs.writeFileSync(credsFile, '{"a":1}')
+		const child = `
+			let canReadCredsFile = true
+			try { require('fs').readFileSync(${JSON.stringify(credsFile)}) } catch { canReadCredsFile = false }
+			console.log(JSON.stringify({ permission: !!process.permission, creds: process.env.PP_CREDS, canReadCredsFile }))
+			process.exit(3)`
 		const ps = spawnSync(process.execPath, [SCRIPT, 'node', '-e', child], {
 			cwd: dir,
 			encoding: 'utf8',
-			env: { ...process.env, PP_CREDS_FILE: path.join(dir, 'creds.json') }
+			env: { ...process.env, PP_CREDS_FILE: credsFile }
 		})
 		assert.equal(ps.status, 3, ps.stderr)
-		assert.deepEqual(JSON.parse(ps.stdout), { permission: true, creds: '{"a":1}' })
+		assert.deepEqual(JSON.parse(ps.stdout), { permission: true, creds: '{"a":1}', canReadCredsFile: false })
 		assert.ok(fs.existsSync(path.join(dir, 'node.config.json')))
 	} finally {
 		fs.rmSync(dir, { recursive: true })
+		fs.rmSync(credsFile, { force: true })
 	}
 })
 

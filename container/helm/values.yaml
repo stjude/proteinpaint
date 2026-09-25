@@ -51,11 +51,12 @@ container:
       fi
       echo "WARNING: this image does not have envHelpers.mjs, running the server without file access restrictions" >&2
       exec node --enable-source-maps app-server.mjs
-  env:
-    # the image defaults to PP_MODE=container-prod, which would override the port and
-    # tpmasterdir/cachedir paths below in config.serverConfig, so use this chart's values instead
-    - name: PP_MODE
-      value: ""
+  # the image defaults to PP_MODE=container-prod, which would override the port and tpmasterdir/cachedir
+  # paths below in config.serverConfig, so this chart sets it to empty to use its own values instead;
+  # set with ppMode instead of container.env, which the deployment template appends after PP_MODE
+  ppMode: ""
+  # additional env entries, such as PP_CREDS_FILE
+  env: []
 
 mounts:
   data:

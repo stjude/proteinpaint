@@ -14,7 +14,8 @@
 	     PP_MMRF_CREDS_FILE -> PP_MMRF_CREDS (parsed by the MMRF dataset)
 	   The code that reads a <NAME>_CREDS env variable must delete it from process.env right after
 	   reading it. An existing <NAME>_CREDS env variable, such as one set from a k8s secret, is not
-	   overwritten. The credentials files are not added to the allow-fs-read paths.
+	   overwritten. A credentials file must not be under any allow-fs-read path, such as the cwd or
+	   /home/root/pp in a container, otherwise this script exits, since the server could still read it.
 
 	usage: node envHelpers.mjs <node | tsx> [args...]
 	examples:
@@ -57,8 +58,10 @@ export function envHelpers(args, deps = {}) {
 	const ctx = createContext(deps)
 	const command = routeCommand(args)
 	const config = getNodeConfig(ctx, command)
+	const credsFiles = getCredsFiles(ctx)
+	assertCredsFilesNotAllowed(credsFiles, config, ctx)
 	ctx.fs.writeFileSync(path.join(ctx.cwd, 'node.config.json'), JSON.stringify(config, null, '\t') + '\n')
-	const creds = getCreds(ctx)
+	const creds = readCreds(credsFiles, ctx)
 	return runCommand(command, creds, ctx)
 }
 
@@ -98,8 +101,7 @@ export function getNodeConfig(ctx, command = []) {
 	allow(read, ctx.cwd)
 	// tsx detects if the file system is case-sensitive by checking if an inverted-case cwd exists,
 	// which the permission model sees as a different path in a case-insensitive file system, like in macOS
-	const invertedCwd = invertCase(ctx.cwd)
-	if (invertedCwd != ctx.cwd && ctx.fs.existsSync(invertedCwd)) read.add(invertedCwd)
+	if (isCaseInsensitive(ctx)) read.add(invertCase(ctx.cwd))
 	// the node install that runs this script
 	allow(read, path.dirname(path.dirname(ctx.execPath)))
 	// per-user temp dir, such as for the tsx cache and server temp files
@@ -155,15 +157,49 @@ function getServerconfigPaths(ctx) {
 
 // returns {<NAME>_CREDS: file content} for each <NAME>_CREDS_FILE in the env or ./.env
 export function getCreds(ctx) {
-	const creds = {}
+	return readCreds(getCredsFiles(ctx), ctx)
+}
+
+// returns [{name: <NAME>_CREDS_FILE, credsName: <NAME>_CREDS, file: absolute path}]
+function getCredsFiles(ctx) {
+	const credsFiles = []
 	for (const name of new Set([...Object.keys(ctx.env), ...Object.keys(ctx.dotenv)])) {
 		if (!name.endsWith('_CREDS_FILE')) continue
 		const file = getEnvValue(name, ctx)
 		const credsName = name.slice(0, -'_FILE'.length)
 		// an existing <NAME>_CREDS env variable, even if empty, is not overwritten
 		if (!file || credsName in ctx.env) continue
-		creds[credsName] = ctx.fs.readFileSync(resolvePath(file, ctx), 'utf8')
+		credsFiles.push({ name, credsName, file: resolvePath(file, ctx) })
 	}
+	return credsFiles
+}
+
+// fail closed: a credentials file under an allow-fs-read path, such as when mounted under the cwd or
+// /home/root/pp, could still be read by the server process after its content is passed as <NAME>_CREDS
+function assertCredsFilesNotAllowed(credsFiles, config, ctx) {
+	const allowed = config.nodeOptions['allow-fs-read']
+	// the permission model compares path strings, but a case-insensitive file system, like in macOS,
+	// resolves a differently-cased path to the same file
+	const normalize = isCaseInsensitive(ctx) ? p => p.toLowerCase() : p => p
+	for (const { name, file } of credsFiles) {
+		const paths = [file]
+		try {
+			// a symlinked credentials file is readable through either path
+			paths.push(ctx.fs.realpathSync(file))
+		} catch {
+			// an unreadable file is reported by readCreds()
+		}
+		for (const p of paths) {
+			const root = allowed.find(a => isCoveredBy(normalize(p), normalize(a)))
+			if (root)
+				throw `${name}='${p}' must not be under an allowed read path '${root}', since the server could still read that file`
+		}
+	}
+}
+
+function readCreds(credsFiles, ctx) {
+	const creds = {}
+	for (const { credsName, file } of credsFiles) creds[credsName] = ctx.fs.readFileSync(file, 'utf8')
 	return creds
 }
 
@@ -222,9 +258,20 @@ function addPath(set, p, ctx) {
 function removeCoveredPaths(paths) {
 	const kept = []
 	for (const p of [...paths].sort((a, b) => a.length - b.length)) {
-		if (!kept.some(k => p == k || p.startsWith(k.endsWith(path.sep) ? k : k + path.sep))) kept.push(p)
+		if (!kept.some(k => isCoveredBy(p, k))) kept.push(p)
 	}
 	return kept
+}
+
+// true if p is the same as, or under, the dir path
+function isCoveredBy(p, dir) {
+	return p == dir || p.startsWith(dir.endsWith(path.sep) ? dir : dir + path.sep)
+}
+
+// tsx and the case-sensitivity check in getNodeConfig() use the same inverted-case cwd test
+function isCaseInsensitive(ctx) {
+	const invertedCwd = invertCase(ctx.cwd)
+	return invertedCwd != ctx.cwd && ctx.fs.existsSync(invertedCwd)
 }
 
 function resolvePath(p, ctx) {
