@@ -116,12 +116,13 @@ tape('Change mutation type', async test => {
 		tw = _tw
 	}
 	const holder = getHolder()
-	await initializeSearchHandler({ holder, callback })
+	const handler = await initializeSearchHandler({ holder, callback })
 	const mutationTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
 	const mutationTypeRadios = mutationTypeRadiosDiv.selectAll('input[type="radio"]')
 	// select CNV mutation type
-	const thirdRadio: any = mutationTypeRadios.nodes()[2]
-	thirdRadio.click()
+	const cnvMutationTypeIdx = handler.mutationTypeTerms.findIndex((term: any) => term.dt == dtcnv)
+	const cnvRadio: any = mutationTypeRadios.nodes()[cnvMutationTypeIdx]
+	cnvRadio.click()
 	// verify gene set option is hidden for CNV
 	const inputTypeRadiosDiv = holder.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
 	const geneSetDiv = inputTypeRadiosDiv.selectAll('div').filter((d: any) => d.value == 'geneset')
@@ -134,7 +135,11 @@ tape('Change mutation type', async test => {
 	geneSearchInput.value = 'TP53'
 	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
 	await sleep(100)
-	test.equal(tw.q.predefined_groupset_idx, 2, 'q.predefined_groupset_idx should be 2 upon selecting third radio button')
+	test.equal(
+		tw.q.predefined_groupset_idx,
+		handler.mutationTypeTerms[cnvMutationTypeIdx].childTermIdx,
+		'q.predefined_groupset_idx should map the CNV mutation type to its child term'
+	)
 	if (test['_ok']) holder.remove()
 	test.end()
 })
@@ -231,6 +236,114 @@ function getVocabApiWithSampleTypes() {
 	termdbConfig.queries.cnv = { ...termdbConfig.queries.cnv, cnvGainCutoff: 1 }
 	return Object.assign(Object.create(vocabApi), { termdbConfig })
 }
+
+function getVocabApiWithOrigins() {
+	const termdbConfig = structuredClone(vocabApi.termdbConfig)
+	termdbConfig.sampleTypes = {
+		1: { name: 'Primary' },
+		2: { name: 'Relapse' },
+		3: { name: 'Normal' }
+	}
+	termdbConfig.assayAvailability ??= { byDt: {} }
+	termdbConfig.assayAvailability.byDt ??= {}
+	termdbConfig.assayAvailability.byDt[dtsnvindel] = {
+		byOrigin: {
+			somatic: {
+				label: 'Tumor acquired',
+				bySampleType: { 1: { hasSamples: true }, 2: { hasSamples: true } }
+			},
+			germline: {
+				label: 'Inherited',
+				bySampleType: { 2: { hasSamples: true }, 3: { hasSamples: true } }
+			}
+		}
+	}
+	termdbConfig.assayAvailability.byDt[dtcnv] = {
+		bySampleType: { 1: { hasSamples: true } }
+	}
+	return Object.assign(Object.create(vocabApi), { termdbConfig })
+}
+
+tape('Origins are selected separately from mutation type', async test => {
+	let tw
+	const holder = getHolder()
+	const handler = await initializeSearchHandler({
+		holder,
+		callback: _tw => (tw = _tw),
+		vocabApi: getVocabApiWithOrigins()
+	})
+
+	const snvindelMutationTypes = handler.mutationTypeTerms.filter((term: any) => term.dt == dtsnvindel)
+	test.equal(snvindelMutationTypes.length, 1, 'should offer one mutation type for an origin-split dt')
+	test.equal(snvindelMutationTypes[0].name, 'SNV/indel', 'should omit origin from its label')
+	test.equal(
+		handler.term.childTerms.filter((term: any) => term.dt == dtsnvindel).length,
+		1,
+		'should create one child term for an origin-split dt'
+	)
+	test.equal(
+		handler.term.childTerms.find((term: any) => term.dt == dtsnvindel).origin,
+		undefined,
+		'should omit child origin'
+	)
+
+	const originCheckboxes: any = holder.selectAll('.sjpp-genesearch-origin-checkboxes input')
+	test.equal(originCheckboxes.size(), 2, 'should render the available origins')
+	test.deepEqual(
+		holder
+			.selectAll('.sjpp-genesearch-origin-checkboxes span')
+			.nodes()
+			.map((node: any) => node.textContent),
+		['Tumor acquired', 'Inherited'],
+		'should use configured origin labels'
+	)
+	test.ok(
+		originCheckboxes.nodes().every((checkbox: any) => checkbox.checked),
+		'should select all origins by default'
+	)
+	test.equal(
+		holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').size(),
+		3,
+		'should show the union of sample types across selected origins'
+	)
+
+	originCheckboxes.nodes()[0].click()
+	test.deepEqual(handler.getSelectedOrigins(), ['germline'], 'should retain the checked origin')
+	test.deepEqual(handler.getQuerySampleTypes(), [2, 3], 'should refresh sample types from the checked origin')
+	test.equal(
+		holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').size(),
+		2,
+		'should rerender the sample type choices'
+	)
+	test.equal(
+		originCheckboxes.nodes()[1].parentNode.title,
+		'At least one origin must be selected',
+		'should identify the last checked origin'
+	)
+	originCheckboxes.nodes()[1].click()
+	test.equal(originCheckboxes.nodes()[1].checked, true, 'should prevent unchecking the last origin')
+
+	await pickGene(holder)
+	test.deepEqual(tw.term.origins, ['germline'], 'should submit selected origins on the term')
+	test.deepEqual(tw.term.sampleTypes, [2, 3], 'should submit sample types available to the selected origin')
+
+	const cnvMutationTypeIdx = handler.mutationTypeTerms.findIndex((term: any) => term.dt == dtcnv)
+	const cnvRadio: any = holder
+		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
+		.selectAll('input[type="radio"]')
+		.nodes()[cnvMutationTypeIdx]
+	cnvRadio.click()
+	test.equal(
+		holder.selectAll('.sjpp-genesearch-origin-checkboxes input').size(),
+		0,
+		'should hide origins for a dt without origin availability'
+	)
+	await pickGene(holder, 'KRAS')
+	test.equal(tw.term.origins, undefined, 'should clear stale origins before submission')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
 
 tape('Sample types are derived from current assay availability', async test => {
 	const holder = getHolder()
@@ -474,17 +587,18 @@ tape('Applying remembered settings applies the selected sample type', async test
 tape('Remembered settings of another mutation type do not lead', async test => {
 	let tw
 	const holder = getHolder()
-	await initializeSearchHandler({
+	const handler = await initializeSearchHandler({
 		holder,
 		callback: _tw => (tw = _tw),
 		vocabApi: getVocabApiWithRememberedQ(rememberedLst),
 		keepsQ: true
 	})
 	// the settings above group SNV/indel (somatic) variants, so select CNV instead
+	const cnvMutationTypeIdx = handler.mutationTypeTerms.findIndex((term: any) => term.dt == dtcnv)
 	const cnvRadio: any = holder
 		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
 		.selectAll('input[type="radio"]')
-		.nodes()[2]
+		.nodes()[cnvMutationTypeIdx]
 	cnvRadio.click()
 	await pickGene(holder)
 
@@ -498,7 +612,11 @@ tape('Remembered settings of another mutation type do not lead', async test => {
 
 	options[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
 	await sleep(100)
-	test.equal(tw?.q?.predefined_groupset_idx, 2, 'should continue with the selected mutation type on Enter')
+	test.equal(
+		tw?.q?.predefined_groupset_idx,
+		handler.mutationTypeTerms[cnvMutationTypeIdx].childTermIdx,
+		'should continue with the selected mutation type on Enter'
+	)
 
 	if (test['_ok']) holder.remove()
 	test.end()
@@ -507,7 +625,7 @@ tape('Remembered settings of another mutation type do not lead', async test => {
 tape('Remembered settings are cleared on changing the mutation type', async test => {
 	let tw
 	const holder = getHolder()
-	await initializeSearchHandler({
+	const handler = await initializeSearchHandler({
 		holder,
 		callback: _tw => (tw = _tw),
 		vocabApi: getVocabApiWithRememberedQ(rememberedLst),
@@ -518,10 +636,11 @@ tape('Remembered settings are cleared on changing the mutation type', async test
 	test.equal(holder.selectAll('.sja_menuoption').size(), 3, 'should offer the settings of the picked gene')
 
 	// the options were offered against the mutation type selected above, so they no longer apply
+	const cnvMutationTypeIdx = handler.mutationTypeTerms.findIndex((term: any) => term.dt == dtcnv)
 	const cnvRadio: any = holder
 		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
 		.selectAll('input[type="radio"]')
-		.nodes()[2]
+		.nodes()[cnvMutationTypeIdx]
 	cnvRadio.click()
 	await sleep(100)
 

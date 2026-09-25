@@ -1,4 +1,5 @@
 import type { SampleTypes } from '#types'
+import { getSelectedCheckboxValues, renderCheckboxSelect } from './checkboxSelect.ts'
 
 // renders sample type checkboxes, all checked by default. At least one sample
 // type always stays checked: a click that would uncheck the last checked box is cancelled
@@ -12,55 +13,20 @@ export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, term
 		sampleTypeConfig[sampleType] = termdbConfig.sampleTypes[sampleType]
 	}
 
-	const sampleTypeCheckboxDiv = holder
-		.append('div')
-		.attr('class', 'sjpp-genesearch-sampletype-checkboxes')
-		.style('margin-right', '8px')
-
-	const sampleTypeCheckboxes: any[] = []
-
-	for (const [k, v] of Object.entries(sampleTypeConfig)) {
-		const label = sampleTypeCheckboxDiv
-			.append('label')
-			.style('display', 'inline-flex')
-			.style('align-items', 'center')
-			.style('margin-right', '10px')
-		const input = label
-			.append('input')
-			.attr('type', 'checkbox')
-			.attr('value', k)
-			.property('checked', true)
-			.on('click', event => {
-				// the click has already toggled the box, and cancelling it restores the box
-				if (!sampleTypeCheckboxes.some(checkbox => checkbox.property('checked'))) event.preventDefault()
-			})
-			.on('change', () => markLastChecked(sampleTypeCheckboxes))
-		label.append('span').style('margin-left', '4px').text(v.name)
-		sampleTypeCheckboxes.push(input)
-	}
-
-	return sampleTypeCheckboxes
-}
-
-// marks the only checked box as not uncheckable with a hint and cursor on its
-// label, which covers both the box and its text. The box stays enabled so that
-// it still looks checked
-function markLastChecked(sampleTypeCheckboxes: any[]) {
-	const checked = sampleTypeCheckboxes.filter(checkbox => checkbox.property('checked'))
-	for (const checkbox of sampleTypeCheckboxes) {
-		const isLast = checked.length == 1 && checked[0] === checkbox
-		const label = checkbox.node().parentNode
-		label.title = isLast ? 'At least one sample type must be selected' : ''
-		label.style.cursor = isLast ? 'not-allowed' : ''
-	}
+	return renderCheckboxSelect(
+		holder,
+		Object.entries(sampleTypeConfig).map(([value, config]) => ({ value, label: config.name })),
+		{
+			className: 'sjpp-genesearch-sampletype-checkboxes',
+			lastCheckedTitle: 'At least one sample type must be selected'
+		}
+	)
 }
 
 // returns selected sample types from checkboxes created by renderSampleTypeSelect().
 export function getSelectedSampleTypes(sampleTypeSelect?: any[]) {
 	if (!sampleTypeSelect) return
-	const selectedSampleTypes = sampleTypeSelect
-		.filter(checkbox => checkbox.property('checked'))
-		.map(checkbox => Number(checkbox.property('value')))
+	const selectedSampleTypes = getSelectedCheckboxValues(sampleTypeSelect)!.map(Number)
 	if (!selectedSampleTypes.length) window.alert('Please select at least one sample type.')
 	return selectedSampleTypes
 }

@@ -377,6 +377,29 @@ test('filterByItem: mname with origin', t => {
 	}
 })
 
+test('filterByItem: mname with parent origins', t => {
+	t.plan(4)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel', parentTerm: { origins: ['germline'] } },
+			values: [{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }],
+			genotype: 'variant',
+			mcount: 'any'
+		}
+	}
+	{
+		const [pass, tested] = filterByItem(filter, [{ dt: 1, class: 'M', mname: 'G12D', origin: 'germline' }])
+		t.equal(pass, true, 'selected germline G12D matches')
+		t.equal(tested, true, 'sample is tested for the selected origin')
+	}
+	{
+		const [pass, tested] = filterByItem(filter, [{ dt: 1, class: 'M', mname: 'G12D', origin: 'somatic' }])
+		t.equal(pass, false, 'unselected somatic G12D does not match')
+		t.equal(tested, false, 'sample is not tested for the selected origin')
+	}
+})
+
 test('filterByItem: mname mcount single/multiple', t => {
 	t.plan(4)
 	const filter = {
@@ -3129,4 +3152,63 @@ test('mayGetGeneVariantData: requests read depth from the snvindel getter only w
 	// a caller that applies its own dt-term filter afterwards asks through q, see get_dtTerm()
 	data = await ds.mayGetGeneVariantData({ $id, term, q: { type: 'values' } }, { addReadDepth: true })
 	t.equal(calls.at(-1), true, 'q.addReadDepth requests read depth without a groupset')
+})
+
+test('mayGetGeneVariantData: limits values to selected origins', async t => {
+	t.plan(3)
+	const ds = {
+		genomename: 'hg38',
+		cohort: { termdb: {} },
+		assayAvailability: {
+			byDt: {
+				1: {
+					byOrigin: {
+						somatic: { yesSamples: new Set(), noSamples: new Set() },
+						germline: { yesSamples: new Set(), noSamples: new Set() }
+					}
+				}
+			}
+		},
+		queries: {
+			snvindel: {
+				byisoform: {
+					get: async arg => [
+						{
+							dt: 1,
+							class: 'M',
+							mname: 'G12D',
+							isoform: arg.isoform,
+							pos: 25245350,
+							samples: [
+								{ sample_id: 'somatic-case', formatK2v: { origin: 'somatic' } },
+								{ sample_id: 'germline-case', formatK2v: { origin: 'germline' } }
+							]
+						}
+					]
+				}
+			}
+		}
+	}
+	mayAdd_mayGetGeneVariantData(ds, null)
+
+	const gene = {
+		kind: 'gene',
+		id: 'KRAS',
+		gene: 'KRAS',
+		name: 'KRAS',
+		type: 'geneVariant',
+		isoform: 'ENST00000256078'
+	}
+	const term = {
+		type: 'geneVariant',
+		name: 'KRAS',
+		genes: [gene],
+		origins: ['germline'],
+		groupsetting: { disabled: false }
+	}
+	const data = await ds.mayGetGeneVariantData({ $id: 'kras', term, q: { type: 'values' } }, {})
+
+	t.equal(data.has('somatic-case'), false, 'should omit values from an unselected origin')
+	t.equal(data.has('germline-case'), true, 'should retain values from a selected origin')
+	t.equal(data.get('germline-case').kras.values[0].origin, 'germline', 'should preserve the selected origin annotation')
 })

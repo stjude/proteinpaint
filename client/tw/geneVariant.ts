@@ -99,6 +99,23 @@ export class GvBase extends TwBase {
 
 		if (!Object.keys(tw.q).includes('type')) tw.q.type = 'values'
 
+		/* Support legacy term structure:
+		Origin-specific child terms were used before origins became a parent-term selection.
+		For a saved predefined groupset, preserve its selected origin and dt before rebuilding
+		the child terms in their current one-per-dt shape. */
+		if (tw.term.childTerms?.some(term => term.origin)) {
+			if (tw.q.type == 'predefined-groupset' && Number.isInteger(tw.q.predefined_groupset_idx)) {
+				const selected = tw.term.childTerms[tw.q.predefined_groupset_idx as number]
+				if (selected?.origin && !tw.term.origins?.length) tw.term.origins = [selected.origin]
+				if (Number.isInteger(selected?.dt)) {
+					tw.q.dtLst = [selected.dt]
+					delete tw.q.predefined_groupset_idx
+				}
+			}
+			getChildTerms(tw.term, opts.vocabApi)
+			delete tw.term.groupsetting
+		}
+
 		// fill term.groupsetting
 		if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
 
@@ -238,11 +255,7 @@ export class GvPredefinedGS extends GvBase {
 
 		if (tw.term.type != 'geneVariant') throw `expecting tw.term.type='geneVariant', got '${tw.term.type}'`
 		if (tw.q.type != 'predefined-groupset') throw `expecting tw.q.type='predefined-groupset', got '${tw.q.type}'`
-		/* an index that is already on the raw q is the selected groupset, while q.dtLst is
-		derived from it below. tracked here, before the index is defaulted, so that the two
-		can be told apart when resolving the selection */
-		const hasIdx = Object.keys(tw.q).includes('predefined_groupset_idx')
-		if (!hasIdx) tw.q.predefined_groupset_idx = 0
+		if (!Object.keys(tw.q).includes('predefined_groupset_idx')) tw.q.predefined_groupset_idx = 0
 		if (!Number.isInteger(tw.q.predefined_groupset_idx)) throw 'invalid tw.q.predefined_groupset_idx'
 
 		// list the predefined groupsets. only names and dts are filled in, which is all
@@ -256,15 +269,12 @@ export class GvPredefinedGS extends GvBase {
 
 		const { term, q } = tw
 		if (!term.groupsetting?.lst?.length) throw 'term.groupsetting.lst[] is empty'
-		if (!hasIdx && q.dtLst?.length) {
-			/* query dts specified without an index, by an entry point that knows a dt but not
-			a groupset index (see launchGeneVariantPlot() in client/mass/search.ts). select the
-			groupset that has the query dts.
-
-			only done when no index was supplied: q.dtLst does not identify a groupset uniquely,
-			since the somatic and germline SNV/indel groupsets both report dt=1, so resolving a
-			filled-in tw this way would reselect the first groupset of the dt and silently turn
-			a saved germline tw into a somatic one */
+		if (q.dtLst?.length) {
+			/* an entry point may know a groupset's dt(s) but not its index, e.g.
+			launchGeneVariantPlot() in client/mass/search.ts, or a saved/rehydrated tw. each
+			groupset now declares a distinct dt (or dt set, for the bi-/mono-allelic groupset),
+			so q.dtLst identifies exactly one groupset and can always be trusted over an index
+			that may be stale, e.g. left over from a previously selected groupset */
 			const groupsetIdx = term.groupsetting.lst.findIndex(groupset => {
 				const dts = getGroupsetDts(groupset)
 				if (!dts?.length) return false
@@ -274,17 +284,14 @@ export class GvPredefinedGS extends GvBase {
 			})
 			if (groupsetIdx == -1) throw new Error('groupset with query dt(s) not found')
 			q.predefined_groupset_idx = groupsetIdx
-			q.dtLst = getGroupsetDts(term.groupsetting.lst[groupsetIdx])
 		} else {
-			/* the index is the selection, so always re-derive the query dts from it, rather
-			than trusting a q.dtLst that may be left over from a previously selected groupset
-			and would otherwise limit the dts queried (see getDtsToQuery() in mds3.init.js) */
-			// TODO: remove these type assertions
-			const idx = q.predefined_groupset_idx as number
-			const lst = term.groupsetting.lst as any[]
-			if (!lst[idx]) throw 'q.predefined_groupset_idx out of bound'
-			q.dtLst = getGroupsetDts(lst[idx])
+			// no dtLst to resolve/verify against, so trust the given (or defaulted) index
+			if (!term.groupsetting.lst[q.predefined_groupset_idx as number]) throw 'q.predefined_groupset_idx out of bound'
 		}
+		// always (re)derived from the selected groupset, rather than trusting a q.dtLst that
+		// may be left over from a previously selected groupset and would otherwise limit the
+		// dts queried (see getDtsToQuery() in mds3.init.js)
+		q.dtLst = getGroupsetDts((term.groupsetting.lst as any[])[q.predefined_groupset_idx as number])
 		// only the selected groupset needs its groups[], see fillGroupsetGroups()
 		await fillGroupsetGroups(term, q.predefined_groupset_idx as number, opts.vocabApi)
 		set_hiddenvalues(q, term)
@@ -368,16 +375,14 @@ fillGroupsetGroups().
 
 Keeping the two apart matters: building a groupset requires querying the mutation
 classes of its dt term in the dataset, so building all of them cost one request per
-child dt term on every fill (6 for a dataset with all dts), for groupsets that are
-then never read. Only lst[q.predefined_groupset_idx] is consumed, by the client
-legend/edit code and by get_active_groupset() on the server.
+child dt term on every fill for groupsets that are then never read. Only
+lst[q.predefined_groupset_idx] is consumed, by the client legend/edit code and by
+get_active_groupset() on the server.
 */
 function listPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 	if (!term.childTerms?.length) throw 'term.childTerms[] is missing'
 	const lst: GvGroupset[] = term.childTerms.map((dtTerm: any) => {
-		const groupset: GvGroupset = { name: dtTerm.name, dt: dtTerm.dt }
-		if (dtTerm.origin) groupset.origin = dtTerm.origin
-		return groupset
+		return { name: dtTerm.name, dt: dtTerm.dt }
 	})
 	// this groupset spans two dts, so it declares them instead of carrying a single .dt
 	if (isEligibleForAllelicGroupset(term, vocabApi)) {
@@ -411,9 +416,7 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 	if (groupset.name == allelicGroupsetName) {
 		await getAllelicGroupset(groupset)
 	} else {
-		const dtTerm: any = term.childTerms.find(
-			(t: any) => t.dt == groupset.dt && (groupset.origin ? t.origin == groupset.origin : !t.origin)
-		)
+		const dtTerm: any = term.childTerms.find((t: any) => t.dt == groupset.dt)
 		if (!dtTerm) throw 'child dt term of the selected groupset not found'
 		// fill dt term values with mutation classes of gene in dataset
 		await getDtTermValues(dtTerm, filter, vocabApi)
@@ -442,7 +445,7 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 		}
 		// gain group
 		const gainGroup = {
-			name: `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Gain (${dtTerm.origin})` : 'Gain'}`,
+			name: `${geneName} ${dtTerm.name} Gain`,
 			type: 'filter',
 			filter: getWrappedTvslst([
 				{
@@ -462,7 +465,7 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 		}
 		// loss group
 		const lossGroup = {
-			name: `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Loss (${dtTerm.origin})` : 'Loss'}`,
+			name: `${geneName} ${dtTerm.name} Loss`,
 			type: 'filter',
 			filter: getWrappedTvslst([
 				{
@@ -482,7 +485,7 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 		}
 		// neutral group
 		const wtGroup = {
-			name: `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Neutral (${dtTerm.origin})` : 'Neutral'}`,
+			name: `${geneName} ${dtTerm.name} Neutral`,
 			type: 'filter',
 			filter: getWrappedTvslst([
 				{
@@ -529,13 +532,13 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 					}
 				}
 			])
-			const name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `${v.label} (${dtTerm.origin})` : v.label}`
+			const name = `${geneName} ${dtTerm.name} ${v.label}`
 			const color = typeof v.key === 'string' ? mclass[v.key].color : undefined
 			groupset.groups.push({ name, type: 'filter', filter, color })
 		}
 		// wildtype value
 		groupset.groups.push({
-			name: `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`,
+			name: `${geneName} ${dtTerm.name} Wildtype`,
 			type: 'filter',
 			filter: getWrappedTvslst([
 				{
@@ -557,7 +560,7 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 	function getNonCnvGroupset(groupset, dtTerm, geneName) {
 		groupset.groups = []
 		// group 1: mutant
-		const grp1Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Mutated (${dtTerm.origin})` : 'Mutated'}`
+		const grp1Name = `${geneName} ${dtTerm.name} Mutated`
 		const values = dtTerm.values as TermValues
 		const grp1Tvs: any = {
 			term: dtTerm,
@@ -580,7 +583,7 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 			color: '#e75480'
 		})
 		// group 2: wildtype
-		const grp2Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
+		const grp2Name = `${geneName} ${dtTerm.name} Wildtype`
 		const grp2Tvs = {
 			term: dtTerm,
 			values: [],
@@ -709,7 +712,11 @@ export function isEligibleForAllelicGroupset(term: RawGvTerm, vocabApi: VocabApi
 	const snvIndelTerm = term.childTerms.find(t => t.dt == dtsnvindel)
 	const cnvTerm = term.childTerms.find(t => t.dt == dtcnv)
 	if (!snvIndelTerm || !cnvTerm) return false
-	if (snvIndelTerm.origin || cnvTerm.origin) return false // different origins not supported (may support later)
+	if (
+		vocabApi.termdbConfig.assayAvailability?.byDt?.[dtsnvindel]?.byOrigin ||
+		vocabApi.termdbConfig.assayAvailability?.byDt?.[dtcnv]?.byOrigin
+	)
+		return false // different origins across data types are not supported
 	return true
 }
 
