@@ -1,5 +1,6 @@
 import tape from 'tape'
 import { DTCNV, DTFUSION, DTITD, DTSNVINDEL, DTSV, TermTypes } from '#types'
+import { dtTerms } from '../common.js'
 import {
 	dtTermTypes,
 	getGvGeneKey,
@@ -17,6 +18,7 @@ import {
 /* test sections
 
 dt term types are declared in TermTypes
+dt terms are origin agnostic
 trimGvTermsForSave()
 setGroupsetParentTerms()
 getGvGeneKey()
@@ -102,6 +104,20 @@ tape('dt term types are declared in TermTypes', t => {
 	for (const dtTermType of dtTermTypes) {
 		t.ok(termTypeValues.has(dtTermType), `TermTypes has an entry for '${dtTermType}'`)
 	}
+	t.end()
+})
+
+tape('dt terms are origin agnostic', t => {
+	t.equal(dtTerms.length, 5, 'declares one term per data type')
+	t.deepEqual(
+		dtTerms.map(term => term.id),
+		['snvindel', 'cnv', 'fusion', 'sv', 'itd'],
+		'declares only the base data type terms'
+	)
+	t.ok(
+		dtTerms.every(term => !('origin' in term) && !('name_noOrigin' in term)),
+		'does not carry origin annotations'
+	)
 	t.end()
 })
 
@@ -490,7 +506,11 @@ tape('matchesGvQueryEntry()', t => {
 })
 
 tape('isSingleCellTerm() should throw for an invalid term object', t => {
-	t.throws(() => isSingleCellTerm(TermTypes.SINGLECELL_CELLTYPE), /Term is not an object/, 'Should throw when term is not an object')
+	t.throws(
+		() => isSingleCellTerm(TermTypes.SINGLECELL_CELLTYPE),
+		/Term is not an object/,
+		'Should throw when term is not an object'
+	)
 	t.end()
 })
 
@@ -509,8 +529,20 @@ tape('isSingleCellTerm() should return correct boolean based on term.type', t =>
 	t.equal(isSingleCellTerm({ type: TermTypes.PSEUDOBULK }), false, 'Should return false for a PSEUDOBULK term')
 
 	/** True for single cell terms */
-	t.equal(isSingleCellTerm({ type: TermTypes.SINGLECELL_CELLTYPE }), true, 'Should return true for a SINGLECELL_CELLTYPE term')
-	t.equal(isSingleCellTerm({ type: TermTypes.SINGLECELL_GENE_EXPRESSION }), true, 'Should return true for a SINGLECELL_GENE_EXPRESSION term')
-	t.equal(isSingleCellTerm({ type: TermTypes.SINGLECELL_NUMERIC_VALUE }), true, 'Should return true for a SINGLECELL_NUMERIC_VALUE term')
+	t.equal(
+		isSingleCellTerm({ type: TermTypes.SINGLECELL_CELLTYPE }),
+		true,
+		'Should return true for a SINGLECELL_CELLTYPE term'
+	)
+	t.equal(
+		isSingleCellTerm({ type: TermTypes.SINGLECELL_GENE_EXPRESSION }),
+		true,
+		'Should return true for a SINGLECELL_GENE_EXPRESSION term'
+	)
+	t.equal(
+		isSingleCellTerm({ type: TermTypes.SINGLECELL_NUMERIC_VALUE }),
+		true,
+		'Should return true for a SINGLECELL_NUMERIC_VALUE term'
+	)
 	t.end()
 })

@@ -346,13 +346,8 @@ function processGeneVariantSamples(map, bins, categories, data, samplesMap, ds, 
 					}
 
 					// map chartId to dtTerm, will be used for listing samples
-					const dtTerm = structuredClone(
-						dtTerms.find(t => {
-							if (t.dt != v1.dt) return false
-							if (v1.origin && t.origin != v1.origin) return false
-							return true
-						})
-					)
+					const dtTerm = structuredClone(dtTerms.find(t => t.dt == v1.dt))
+					if (v1.origin) dtTerm.origin = v1.origin
 					dtTerm.parentTerm = structuredClone(tw1.term)
 					if (!Object.keys(chartid2dtterm).includes(item.key0)) chartid2dtterm[item.key0] = dtTerm
 

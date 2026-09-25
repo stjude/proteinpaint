@@ -27,9 +27,9 @@ type RememberedQOpts = {
 	 * mutation type can lead -- a dt term, or an entry declaring the dts[] it spans as the
 	 * Bi/mono-allelic groupset does. Omitted by a UI that offers no such choice, which leaves
 	 * the remembered settings in the order they arrived */
-	mutationType?: { dt?: number; origin?: string; dts?: number[] }
+	mutationType?: { dt?: number; dts?: number[] }
 	/** names the option that declines the remembered settings, in the caller's own terms,
-	 * e.g. 'Continue with SNV/indel (somatic)' */
+	 * e.g. 'Continue with SNV/indel' */
 	skipLabel: string
 	/** called with the q of the picked setting, or with nothing when it is declined */
 	callback: (q?: any) => void | Promise<void>
@@ -116,10 +116,8 @@ export function mayShowRememberedGvQ(opts: RememberedQOpts): boolean {
 
 /*
 Whether a remembered setting was built for the mutation type the caller has selected: it
-filters by exactly the dt term(s) of that type, e.g. a grouping of SNV/indel (somatic)
-classes when that radio is selected, or one spanning snvindel and cnv for Bi/mono-allelic.
-Origin counts, since a dataset that separates somatic from germline offers a mutation type,
-and hence a grouping, for each.
+filters by exactly the data type(s) of that type, e.g. an SNV/indel grouping or one spanning
+SNV/indel and CNV for Bi/mono-allelic. Origin is selected independently on the parent term.
 
 A caller that names no mutation type matches everything, leaving the settings in the order
 it found them.
@@ -128,30 +126,22 @@ function matchesMutationType(q: any, mutationType?: RememberedQOpts['mutationTyp
 	if (!mutationType) return true
 	// a mutation type that names no dt cannot be matched against, so nothing leads
 	if (!mutationType.dts?.length && !Number.isInteger(mutationType.dt)) return false
-	const selected = new Set(
-		mutationType.dts?.length
-			? mutationType.dts.map(dt => getDtKey(dt))
-			: [getDtKey(mutationType.dt, mutationType.origin)]
-	)
-	const filtered = getFilteredDtKeys(q)
-	return filtered.size == selected.size && [...filtered].every(key => selected.has(key))
+	const selected = new Set(mutationType.dts?.length ? mutationType.dts : [mutationType.dt])
+	const filtered = getFilteredDts(q)
+	return filtered.size == selected.size && [...filtered].every(dt => selected.has(dt))
 }
 
-const getDtKey = (dt?: number, origin?: string) => `${dt}|${origin || ''}`
-
-/* the dt term(s) a remembered setting filters by, as dt+origin keys.
-
-Reads the tvs of each group filter rather than every nested tvs, the way getDtsFromGroups()
+/* Reads the tvs of each group filter rather than every nested tvs, the way getDtsFromGroups()
 in shared/utils/src/terms.ts does: the maf filter nested in a bi/mono-allelic tvs wraps a
 dictionary term, which is not a dt the setting filters by. */
-function getFilteredDtKeys(q: any): Set<string> {
-	const keys = new Set<string>()
+function getFilteredDts(q: any): Set<number> {
+	const dts = new Set<number>()
 	const readFilter = (filter: any) => {
 		for (const item of filter?.lst || []) {
 			if (item.type == 'tvslst') readFilter(item)
-			else if (item.tvs?.term) keys.add(getDtKey(item.tvs.term.dt, item.tvs.term.origin))
+			else if (Number.isInteger(item.tvs?.term?.dt)) dts.add(item.tvs.term.dt)
 		}
 	}
 	for (const group of q?.customset?.groups || []) readFilter(group.filter)
-	return keys
+	return dts
 }

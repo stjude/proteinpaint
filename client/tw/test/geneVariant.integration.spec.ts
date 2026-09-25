@@ -209,9 +209,13 @@ tape('fill(): q.type=predefined-groupset', async test => {
 	if (fullTw.q.type != 'predefined-groupset') throw 'q.type must be predefined-groupset'
 	test.equal(fullTw.type, 'GvPredefinedGsTW', 'should fill in tw.type')
 	test.equal(fullTw.q.predefined_groupset_idx, 0, 'should fill q.predefined_groupset_idx to be 0')
-	test.equal(fullTw.term.childTerms.length, 6, 'should create 6 child dt terms')
+	test.equal(fullTw.term.childTerms.length, 5, 'should create one child term per data type')
+	test.ok(
+		fullTw.term.childTerms.every(term => !term.origin),
+		'should keep origins off child terms'
+	)
 	if (!fullTw.term.groupsetting.lst) throw 'term.groupsetting.lst is missing'
-	test.equal(fullTw.term.groupsetting.lst.length, 6, 'should list 6 predefined groupsets')
+	test.equal(fullTw.term.groupsetting.lst.length, 5, 'should list one predefined groupset per data type')
 
 	/* only the selected groupset carries groups[]; the rest are name/dt listings, since
 	building a groupset costs a data request per dt term (see listPredefinedGroupsets) */
@@ -270,7 +274,7 @@ tape('fill(): a defaultQ must not override an explicit q.type', async test => {
 
 tape('fill(): predefined groupset of each dt', async test => {
 	// each groupset is only built when it is the selected one, so fill once per index
-	for (let idx = 0; idx < 6; idx++) {
+	for (let idx = 0; idx < 5; idx++) {
 		const tw: any = {
 			term: {
 				name: 'TP53',
@@ -312,35 +316,47 @@ tape('fill(): selects a predefined groupset by q.dtLst', async test => {
 	test.end()
 })
 
-tape('fill(): rehydrated predefined groupset', async test => {
-	/* the somatic and germline SNV/indel groupsets both report dt=1, so a filled-in q.dtLst
-	does not identify which of the two is selected. re-filling must not reselect by dt,
-	otherwise a saved germline tw comes back as a somatic one */
-	const germlineIdx = 1
-	const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: germlineIdx })
-	const fullTw: any = await GvBase.fill(tw, { vocabApi })
-	test.equal(
-		fullTw.term.groupsetting.lst[germlineIdx].name,
-		'SNV/indel (germline)',
-		'should select the germline groupset'
-	)
-	test.deepEqual(fullTw.q.dtLst, [dtsnvindel], 'should derive q.dtLst from the selected groupset')
+tape('fill(): migrates a legacy origin-specific predefined groupset', async test => {
+	const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: 1 })
+	tw.term.childTerms = [
+		{
+			id: 'snvindel_somatic',
+			query: 'snvindel',
+			name: 'SNV/indel (somatic)',
+			name_noOrigin: 'SNV/indel',
+			type: 'dtsnvindel',
+			dt: dtsnvindel,
+			origin: 'somatic',
+			values: {}
+		},
+		{
+			id: 'snvindel_germline',
+			query: 'snvindel',
+			name: 'SNV/indel (germline)',
+			name_noOrigin: 'SNV/indel',
+			type: 'dtsnvindel',
+			dt: dtsnvindel,
+			origin: 'germline',
+			values: {}
+		}
+	]
 
-	// a saved session is rehydrated by re-filling its serialized tw, see init() in mass/store.ts
-	const rehydrated: any = await GvBase.fill(JSON.parse(JSON.stringify(fullTw)), { vocabApi })
-	test.equal(rehydrated.q.predefined_groupset_idx, germlineIdx, 'should keep q.predefined_groupset_idx')
-	test.equal(
-		rehydrated.term.groupsetting.lst[rehydrated.q.predefined_groupset_idx].name,
-		'SNV/indel (germline)',
-		'should keep the germline groupset selected'
+	const fullTw: any = await GvBase.fill(tw, { vocabApi })
+	test.deepEqual(fullTw.term.origins, ['germline'], 'should preserve the selected legacy origin on the parent term')
+	test.ok(
+		fullTw.term.childTerms.every(term => !term.origin),
+		'should rebuild origin-agnostic child terms'
 	)
+	test.equal(fullTw.q.predefined_groupset_idx, 0, 'should resolve the selected data type to its new groupset index')
+	test.equal(fullTw.term.groupsetting.lst[0].name, 'SNV/indel', 'should use an origin-agnostic groupset')
+	test.deepEqual(fullTw.q.dtLst, [dtsnvindel], 'should preserve the selected data type')
 	test.end()
 })
 
 tape('trimGvTermsForSave(): a trimmed tw refills to the same tw', async test => {
 	/* a session is serialized without the derived properties of a geneVariant term, so
 	whatever is dropped there has to be rebuilt by fill() when the session is opened */
-	for (const idx of [0, 1, 2, 3, 4, 5]) {
+	for (const idx of [0, 1, 2, 3, 4]) {
 		const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: idx })
 		const fullTw: any = await GvBase.fill(tw, { vocabApi })
 

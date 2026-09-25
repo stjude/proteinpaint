@@ -15,7 +15,6 @@ export type GvGroupset = {
 	dt?: number
 	/** dts of a groupset that spans more than one, e.g. bi-/mono-allelic */
 	dts?: number[]
-	origin?: string
 	/** absent until this groupset is the selected one */
 	groups?: GroupEntry[]
 }
@@ -95,6 +94,8 @@ type GvBaseTerm = BaseTerm &
 	(Gene | Coord) & {
 		type: 'geneVariant'
 		genes: GvGeneTerm[]
+		/** origins selected for an origin-split data type */
+		origins?: string[]
 	}
 
 export type RawGvTerm = GvBaseTerm & {
@@ -152,12 +153,14 @@ export type DtTerm = {
 	id: string
 	query: string
 	name: string
-	name_noOrigin: string
+	/** legacy label from origin-specific child terms */
+	name_noOrigin?: string
 	parentTerm?: RawGvTerm
 	parent_id: any
 	isleaf: boolean
 	type: string
 	dt: number
+	/** legacy origin-specific child/custom terms; new child terms inherit parentTerm.origins */
 	origin?: string
 	values: TermValues
 }

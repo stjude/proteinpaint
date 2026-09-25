@@ -3461,6 +3461,8 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 							m2[k] = s.formatK2v[k]
 						}
 					}
+					const origins = getTermOrigins(tw.term)
+					if (origins && !origins.includes(m2.origin)) continue
 
 					// can supply dt specific attributes
 					if (m.dt == dtsnvindel) {
@@ -3582,8 +3584,11 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) 
 
 	const dts = []
 	if (_dt.byOrigin) {
+		const origins = getTermOrigins(tw.term)
+		const unknown = origins?.find(origin => !(origin in _dt.byOrigin))
+		if (unknown) throw `unknown origin '${unknown}' for dt ${dtKey}`
 		for (const o in _dt.byOrigin) {
-			if (tw.term.origin && tw.term.origin != o) continue
+			if (origins && !origins.includes(o)) continue
 			const dt = _dt.byOrigin[o]
 			if (dt.bySampleType) {
 				// this origin is further split by sample type; each leaf carries its own yes/no sample sets
@@ -3617,6 +3622,12 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) 
 			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter, gene)
 		}
 	}
+}
+
+function getTermOrigins(term) {
+	if (term.origin) return [term.origin] // legacy term structure
+	const origins = term.origins || term.parentTerm?.origins
+	return Array.isArray(origins) && origins.length ? origins : undefined
 }
 
 function addDataAvailability(sid, sample2mlst, dtKey, c, origin, sampleFilter, gene) {
@@ -3693,7 +3704,8 @@ export function filterByItem(filter, mlst, values) {
 	// get all tested mutations for the dt (and origin) of the filter
 	const mlst_tested = mlst.filter(m => {
 		if (tvs.term.dt != m.dt) return false
-		if (tvs.term.origin && tvs.term.origin != m.origin) return false
+		const origins = getTermOrigins(tvs.term)
+		if (origins && !origins.includes(m.origin)) return false
 		if (m.class == mclass['Blank'].key && !tvs.includeNotTested) return false
 		return true
 	})

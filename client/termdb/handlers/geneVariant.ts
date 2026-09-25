@@ -8,15 +8,15 @@ import {
 	renderSampleTypesByTermsSelect,
 	getSelectedSampleTypes,
 	getSelectedSampleTypesByTerms,
-	getSampleTypeLabelByTerms
+	getSampleTypeLabelByTerms,
+	renderCheckboxSelect,
+	getSelectedCheckboxValues
 } from '#dom'
 import type { VocabApi, DtAssayAvailabilityTerm } from '#types'
 import { getQuerySampleTypesByTerms } from '#shared/terms.js'
 import { dtTerms, dtcnv, dtsnvindel } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
 import { mayShowRememberedGvQ } from './rememberedGvQ.ts'
-
-// TODO: output of this handler should not be q.predefined_groupset_idx, instead should be q.dt and q.origin. Then, in client/tw/geneVariant.ts, should fill in q.predefined_groupset_idx based on q.dt and q.origin. This will also allow easy specification of desired dt/origin in url. Will need to make separate radio buttons for dt and origin to support the different q properties.
 
 type Opts = {
 	holder: any
@@ -38,6 +38,8 @@ export class SearchHandler {
 	mutationTypeRadio: any
 	mutationTypeTerms!: any[]
 	inputTypeRadio: any
+	originSelect?: any[]
+	queryOrigins?: string[]
 	sampleTypeSelect?: any
 	querySampleTypes?: any
 	querySampleTypesByTerms?: any
@@ -72,14 +74,22 @@ export class SearchHandler {
 		// get child dt terms
 		getChildTerms(this.term, this.opts.app.vocabApi)
 
-		// collect mutation type terms
-		const mutationTypeTerms = structuredClone(this.term.childTerms)
+		// child terms and mutation types are both origin-agnostic and ordered by data type
+		const mutationTypeTerms: any[] = this.term.childTerms.map((childTerm, childTermIdx) => ({
+			...structuredClone(childTerm),
+			childTermIdx
+		}))
+
 		// add in bi/mono-allelic mutation type, if applicable
 		if (isEligibleForAllelicGroupset(this.term, this.opts.app.vocabApi))
 			/* unlike the child dt terms above, this one spans two dts, so it declares them rather
 			than carrying a single .dt -- the same way its groupset does, see
 			listPredefinedGroupsets() in client/tw/geneVariant.ts. Read by mayShowRememberedQ() */
-			mutationTypeTerms.push({ name: 'Bi/mono-allelic', dts: [dtsnvindel, dtcnv] })
+			mutationTypeTerms.push({
+				name: 'Bi/mono-allelic',
+				dts: [dtsnvindel, dtcnv],
+				childTermIdx: this.term.childTerms.length
+			})
 
 		// kept to name and match the selected mutation type in mayShowRememberedQ()
 		this.mutationTypeTerms = mutationTypeTerms
@@ -108,7 +118,7 @@ export class SearchHandler {
 					}),
 					callback: v => {
 						this.toggleGeneSetRadioDisplay(v)
-						this.updateSampleTypeSelect()
+						this.updateOriginSelect()
 						/* any remembered settings still waiting for a choice were offered against the
 						mutation type selected when the gene was picked -- both their order and their
 						"Continue with ..." option, see mayShowRememberedQ() -- so a changed radio leaves
@@ -145,12 +155,67 @@ export class SearchHandler {
 				})
 			}
 			{
+				this.dom.originSelectRow = table.addRow()
 				this.dom.sampleTypeSelectRow = table.addRow()
-				this.updateSampleTypeSelect()
+				this.updateOriginSelect()
 			}
 		}
 		this.toggleGeneSetRadioDisplay(mutationTypeTermIdx)
 		this.searchGene()
+	}
+
+	getSelectedMutationType() {
+		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
+		if (!selectedMutationType) return
+		const mutationTypeIdx = Number(selectedMutationType.value)
+		if (!Number.isInteger(mutationTypeIdx)) return
+		return this.mutationTypeTerms[mutationTypeIdx]
+	}
+
+	getQueryOrigins(): string[] | undefined {
+		const mutationType = this.getSelectedMutationType()
+		if (!Number.isInteger(mutationType?.dt)) return
+		const byOrigin = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[mutationType.dt]?.byOrigin
+		if (!byOrigin) return
+		return Object.keys(byOrigin)
+	}
+
+	getSelectedOrigins(): string[] | undefined {
+		if (!this.originSelect) return
+		const selectedOrigins = getSelectedCheckboxValues(this.originSelect)
+		if (!selectedOrigins.length) window.alert('Please select at least one origin.')
+		return selectedOrigins
+	}
+
+	updateOriginSelect() {
+		const [td1, td2] = this.dom.originSelectRow
+		td2.selectAll('*').remove()
+		this.queryOrigins = this.getQueryOrigins()
+		this.originSelect = this.renderOriginSelect()
+		if (this.originSelect) {
+			td1.style('display', null).text('Origins')
+			td2.style('display', null).style('padding-left', '10px')
+		} else {
+			td1.style('display', 'none')
+			td2.style('display', 'none')
+		}
+		this.updateSampleTypeSelect()
+	}
+
+	renderOriginSelect() {
+		if (!this.queryOrigins || this.queryOrigins.length <= 1) return
+		const [, td2] = this.dom.originSelectRow
+		const byOrigin =
+			this.opts.app.vocabApi.termdbConfig.assayAvailability.byDt[this.getSelectedMutationType().dt].byOrigin
+		return renderCheckboxSelect(
+			td2,
+			this.queryOrigins.map(origin => ({ value: origin, label: byOrigin[origin].label || origin })),
+			{
+				className: 'sjpp-genesearch-origin-checkboxes',
+				lastCheckedTitle: 'At least one origin must be selected',
+				onChange: () => this.updateSampleTypeSelect()
+			}
+		)
 	}
 
 	updateSampleTypeSelect() {
@@ -181,23 +246,17 @@ export class SearchHandler {
 
 	// get sample types that are present in the selected data type
 	getQuerySampleTypes(): number[] | undefined {
-		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
-		if (!selectedMutationType) return
-		const mutationTypeIdx = Number(selectedMutationType.value)
-		if (!Number.isInteger(mutationTypeIdx)) return
-		const mutationType = this.mutationTypeTerms[mutationTypeIdx]
+		const mutationType = this.getSelectedMutationType()
 		if (!mutationType) return
 		const querySampleTypes: number[] = []
 		if (mutationType.dt) {
-			// mutation type has single dt, and an origin when the dt is split by origin
-			// get available sample types for that dt (and origin)
-			const sampleTypes = this.getDtSampleTypes(mutationType.dt, mutationType.origin)
+			const sampleTypes = this.getDtSampleTypes(mutationType.dt, this.getSelectedOrigins())
 			if (!sampleTypes) return
 			querySampleTypes.push(...sampleTypes)
 		} else if (mutationType.dts) {
 			// mutation type has multiple dts
 			// get intersection of sample types available for those dts
-			const sampleTypeSets = mutationType.dts.map(dt => this.getDtSampleTypes(dt, mutationType.origin))
+			const sampleTypeSets = mutationType.dts.map(dt => this.getDtSampleTypes(dt))
 			if (!sampleTypeSets.length) throw new Error('no sample types available')
 			// a dt that declares no sample types leaves nothing to intersect, so return
 			// undefined for the mutation type, as the single-dt branch above does. an
@@ -219,27 +278,26 @@ export class SearchHandler {
 
 	/* sample types that have samples for one dt. they may be declared directly on the dt,
 	or nested under one or more origins (e.g. somatic and germline each assayed on primary
-	and PDX samples). when the dt is split by origin, only the given origin's sample types
-	are read, as origins may be assayed on different sample types. a sample type is included
-	when its entry has samples. returns undefined when the dt declares no sample types */
-	getDtSampleTypes(dt: number, origin?: string): Set<number> | undefined {
+	and PDX samples). for an origin-split dt, return the union across selected origins.
+	returns undefined when the dt declares no sample types */
+	getDtSampleTypes(dt: number, origins?: string[]): Set<number> | undefined {
 		const dtConfig = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]
 		if (!dtConfig) return
-		let bySampleType: BySampleType | undefined
-		if (dtConfig.bySampleType) bySampleType = dtConfig.bySampleType
+		const bySampleTypes: BySampleType[] = []
+		if (dtConfig.bySampleType) bySampleTypes.push(dtConfig.bySampleType)
 		else if (dtConfig.byOrigin) {
-			/* an origin-split dt is only reached with an origin: a single-dt mutation type carries
-			one (see getChildTerms()), and the multi-dt allelic type is not offered when its dts are
-			split by origin (see isEligibleForAllelicGroupset() in client/tw/geneVariant.ts) */
-			if (!origin) throw new Error(`origin is required for dt ${dt} split by origin`)
-			const o: { bySampleType?: BySampleType } | undefined = dtConfig.byOrigin[origin]
-			if (!o) throw new Error(`unknown origin '${origin}' for dt ${dt}`)
-			bySampleType = o.bySampleType
+			for (const origin of origins || Object.keys(dtConfig.byOrigin)) {
+				const o: { bySampleType?: BySampleType } | undefined = dtConfig.byOrigin[origin]
+				if (!o) throw new Error(`unknown origin '${origin}' for dt ${dt}`)
+				if (o.bySampleType) bySampleTypes.push(o.bySampleType)
+			}
 		}
-		if (!bySampleType) return
+		if (!bySampleTypes.length) return
 		const sampleTypes = new Set<number>()
-		for (const [k, v] of Object.entries(bySampleType)) {
-			if (v.hasSamples) sampleTypes.add(Number(k))
+		for (const bySampleType of bySampleTypes) {
+			for (const [k, v] of Object.entries(bySampleType)) {
+				if (v.hasSamples) sampleTypes.add(Number(k))
+			}
 		}
 		return sampleTypes
 	}
@@ -249,8 +307,8 @@ export class SearchHandler {
 	// example: if sample has cnv amplification in geneA and
 	// cnv deletion in geneB, classification of the sample will
 	// be ambiguous
-	toggleGeneSetRadioDisplay(childTermIdx) {
-		const childTerm = this.term.childTerms[childTermIdx]
+	toggleGeneSetRadioDisplay(mutationTypeIdx) {
+		const childTerm = this.mutationTypeTerms[mutationTypeIdx]
 		const geneSetDiv = this.inputTypeRadio.divs.filter(d => {
 			if (d.value != 'single' && d.value != 'geneset') throw new Error('unexpected input type radio value')
 			return d.value == 'geneset'
@@ -430,8 +488,24 @@ export class SearchHandler {
 	// more streamlined/centralized
 	async applyMutationType() {
 		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
-		this.q.predefined_groupset_idx = Number(selectedMutationType.value)
+		const mutationType = this.mutationTypeTerms[Number(selectedMutationType.value)]
+		this.q.predefined_groupset_idx = mutationType.childTermIdx
 		await this.submit(this.q)
+	}
+
+	mayApplyOrigins() {
+		this.term.origins = this.getSelectedOrigins()
+		if (this.originSelect && !this.term.origins?.length) {
+			const geneSetEditUI = this.dom.geneSetEditUI
+			if (geneSetEditUI) {
+				// the gene set edit UI's submit button was disabled on
+				// click to prevent repeated submissions, so it must be
+				// re-enabled here since the submission was aborted
+				geneSetEditUI.api.dom.submitBtn.property('disabled', false).text('Submit')
+			}
+			return false
+		}
+		return true
 	}
 
 	mayApplySampleType() {
@@ -460,7 +534,7 @@ export class SearchHandler {
 	}
 
 	async submit(q) {
-		if (!this.mayApplySampleType()) return
+		if (!this.mayApplyOrigins() || !this.mayApplySampleType()) return
 		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
 		// add geneVariant term to each child term
 		addParentTerm(this.term)
@@ -479,15 +553,6 @@ export function getChildTerms(term, vocabApi: VocabApi) {
 		const query = vocabApi.termdbConfig.queries[t.query]
 		if (!query) continue // dt is not in dataset
 		if (query.dtLst?.length && !query.dtLst.includes(t.dt)) continue
-		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
-		if (byOrigin) {
-			// dt has origins in dataset
-			if (!t.origin) continue // dt term does not have origin, so skip
-			if (!Object.keys(byOrigin).includes(t.origin)) throw 'unexpected origin of dt term'
-		} else {
-			// dt does not have origins in dataset
-			if (t.origin) continue // dt term has origin, so skip
-		}
 		term.childTerms.push(t)
 	}
 }
