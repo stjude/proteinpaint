@@ -336,11 +336,15 @@ never read again, so the search only ever opens the *target* sample's file.
 target's cells (restricted to the query's own type vocabulary — a cell of
 any other type is ignored, like an unannotated one) are tiled into
 `window`-sized, `stride`-spaced square windows (overlapping when
-`stride < window`). Two independent workload guards, mirroring the `/nhood`
-route's cap but computed here since window count depends on the target's own
-extent: `windows × cells > 200M` rejects the whole scan (use a larger
-window/stride); a window too dense to afford the rigorous stage's
-`cells × k × perms > 50M` just skips confirmation rather than failing.
+`stride < window`). Two workload guards, mirroring the `/nhood` route's cap
+but computed here since window count depends on the target's own extent:
+`windows × cells > 200M` rejects the whole scan outright (use a larger
+window/stride); the rigorous-confirmation stage below shares a single 50M
+budget across all `topK` windows it confirms (decremented by each window's
+actual `cells × k × perms` as it's spent, not a fresh 50M per window), so a
+window that would exceed what's left of it just skips confirmation — its
+cheap score still stands — rather than the search failing outright or the
+total cost scaling with `topK`.
 
 For every window, in order:
 
