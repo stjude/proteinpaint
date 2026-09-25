@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Lollipop: when a breakpoint has multiple partner breakpoints, clicking the disc would first show breakpoints diagram for users to select range, and below it show the corresponding fusion diagram and fusion event table.
+
 
 ## 2.211.0
 
