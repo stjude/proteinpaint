@@ -1211,6 +1211,16 @@ export async function renderSimilarSearch(
 						typeCounts: query.typeCounts,
 						count: query.count,
 						zscore: query.zscore,
+						// the target's kNN graph (cheap stage) and rigorous confirmation
+						// must use the SAME k/perms the query's own count/zscore matrices
+						// were built with — otherwise the comparison is between graphs of
+						// different density / z-scores of different permutation-noise
+						// levels, which can mis-rank the results. k is essentially free to
+						// forward (no permutation loop); perms only costs more for the
+						// already-budget-capped rigorous stage on the topK shortlist, not
+						// the full scan
+						k: query.k,
+						perms: query.perms,
 						sizeTolerance,
 						requiredTypes,
 						typeWeights,
