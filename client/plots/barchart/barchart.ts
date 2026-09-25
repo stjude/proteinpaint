@@ -954,7 +954,7 @@ export class Barchart extends PlotBase implements RxComponent {
 					const ntotal = total ? ', n=' + total : ''
 					return [
 						{
-							testID: collabel,
+							testIdSuffix: collabel,
 							id: collabel,
 							text: label + ntotal,
 							color: '#fff',
@@ -998,7 +998,7 @@ export class Barchart extends PlotBase implements RxComponent {
 				: t2.term.name
 			legendGrps.push({
 				name: `<span style="${headingStyle}">` + legendName + (value_by_label ? ', ' + value_by_label : '') + '</span>',
-				testID: 'Overlay',
+				testIdSuffix: 'Overlay',
 				items: s.rows
 					.flatMap(d => {
 						// for the synthetic membership overlay, a shared sample sits in several
@@ -1019,7 +1019,7 @@ export class Barchart extends PlotBase implements RxComponent {
 								text: label + ntotal,
 								color: this.term2toColor[d],
 								type: 'row',
-								testID: d,
+								testIdSuffix: d,
 								isHidden: s.exclude.rows.includes(d)
 							}
 						]

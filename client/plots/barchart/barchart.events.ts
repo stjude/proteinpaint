@@ -417,7 +417,7 @@ function handle_click(event, self, chart) {
 		if (visibleSerieses.length > 1) {
 			options.push({
 				label: data.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
-				testID: `sjpp-barchart-hide-series-${data.seriesId}`,
+				testId: `sjpp-barchart-hide-series-${data.seriesId}`,
 				callback: () => {
 					const term = self.config.term
 					self.app.dispatch({
@@ -539,7 +539,7 @@ function handle_click(event, self, chart) {
 		.enter()
 		.append('div')
 		.attr('class', 'sja_menuoption')
-		.attr('data-testid', d => d.testID || null)
+		.attr('data-testid', d => d.testId || null)
 		.html(d => d.label)
 		.on('click', async (event, d) => {
 			if (event.target._clicked) return

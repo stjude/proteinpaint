@@ -18,7 +18,7 @@ type ViolinDensityBin = {
 
 type LegendItem = {
 	text: string
-	testIDSuffix: string
+	testIdSuffix: string
 	noIcon: boolean
 	isHidden?: boolean
 	isClickable?: boolean
@@ -403,7 +403,12 @@ export default function setViolinRenderer(self: any) {
 		// <g> of one plot
 		// adding .5 to plotIdx allows to anchor each plot <g> to the middle point
 		const svg = svgData.svgG
-		const violinG = svg.append('g').datum(plot).attr('class', 'sjpp-violinG')
+		const violinG = svg
+			.append('g')
+			.datum(plot)
+			.attr('class', 'sjpp-violinG')
+			.attr('data-testid', `sjpp-violinG-${plot.seriesId}`)
+
 		renderArea(violinG, plot, areaBuilder)
 		//render symmetrical violin plot
 		renderArea(violinG, plot, isH ? areaBuilder.y(d => -wScale(d.density)) : areaBuilder.x(d => -wScale(d.density)))
@@ -670,7 +675,7 @@ function addHiddenValues(term: TermWrapper, legendGrps: LegendGroup[], headingSt
 	for (const key of Object.keys(term.q.hiddenValues || {})) {
 		items.push({
 			text: `${key}`,
-			testIDSuffix: key,
+			testIdSuffix: `hidden-${key}`,
 			noIcon: true,
 			/** Need to specify that this is a hidden value for
 			 * text styling in the legend and  a plot for
