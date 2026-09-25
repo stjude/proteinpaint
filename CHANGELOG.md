@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Lollipop: when a breakpoint has multiple partner breakpoints, clicking the disc would first show breakpoints diagram for users to select range, and below it show the corresponding fusion diagram and fusion event table.
+- When no color term of coordinate terms are provided for the single cell scatter plot, the plot will still render with every data point as the reference instead of showing an error message.
 
 
 ## 2.211.0

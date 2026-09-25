@@ -1,2 +1,1 @@
-Features:
-- When no color term of coordinate terms are provided for the single cell scatter plot, the plot will still render with every data point as the reference instead of showing an error message.
+
