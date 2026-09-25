@@ -81,7 +81,7 @@ export default function setViolinRenderer(self: any) {
 			const chart: ViolinResponseChart & { chartDiv?: any } = data.charts[chartKey]
 			const plots = chart.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
 			if (settings.orderByMedian == true) {
-				plots.sort((a, b) => a.summaryStats.median.value - b.summaryStats.median.value)
+				plots.sort((a, b) => (a.summaryStats?.median?.value ?? 0) - (b.summaryStats?.median?.value ?? 0))
 			}
 			if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
 
