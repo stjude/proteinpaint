@@ -9,6 +9,7 @@ import { api } from '../hicgenome.ts'
 Tests:
 	hicgenome reports the straw errors of a chromosome pair and keeps the data of the other pairs
 	hicgenome reports a straw binary that cannot be spawned
+	hicgenome validates a chromosome name after removing chr for a nochr file
 */
 
 // a fake straw binary: args are matrixType nmeth file pos1 pos2 BP resolution
@@ -75,6 +76,22 @@ tape('hicgenome reports a straw binary that cannot be spawned', async test => {
 	try {
 		const res = await request(query())
 		test.match(res.error, /cannot run straw/, 'should report that straw cannot be run, instead of crashing')
+	} finally {
+		serverconfig.hicstraw = hicstraw
+	}
+	test.end()
+})
+
+tape('hicgenome validates a chromosome name after removing chr for a nochr file', async test => {
+	const hicstraw = serverconfig.hicstraw
+	// straw must not be spawned for an invalid request
+	serverconfig.hicstraw = path.join(os.tmpdir(), 'no-such-straw-binary')
+	try {
+		for (const chr of ['chr-o', 'chr']) {
+			const res = await request({ ...query(), chrlst: ['chr1', chr], nochr: true })
+			test.equal(res.error, 'invalid chromosome name', `should reject chr=${chr} that is invalid without chr`)
+			test.notOk(res.data, `should not return data for chr=${chr}`)
+		}
 	} finally {
 		serverconfig.hicstraw = hicstraw
 	}

@@ -5,7 +5,7 @@ import { spawn } from 'child_process'
 import readline from 'readline'
 import serverconfig from '#src/serverconfig.js'
 import { mapConcurrent } from '#src/utils/concurrencyLimiter.ts'
-import { getStrawArgs, validChrlst, STRAW_CONCURRENCY } from '#src/utils/hicStraw.ts'
+import { getStrawArgs, validChrlst, validHicChr, STRAW_CONCURRENCY } from '#src/utils/hicStraw.ts'
 
 export const payload: RoutePayload = {
 	init,
@@ -34,9 +34,14 @@ function init() {
 		}
 
 		let strawArgs: ReturnType<typeof getStrawArgs>, chrlst: string[]
+		// k: chromosome name in chrlst, v: the name that is passed to straw, without 'chr' for a nochr file
+		const strawChr = new Map<string, string>()
 		try {
 			strawArgs = getStrawArgs(query)
 			chrlst = validChrlst(query.chrlst)
+			// validate the name after removing 'chr', since a valid name such as 'chr-o' would become '-o',
+			// which straw would parse as an option, and 'chr' would become an empty argument
+			for (const chr of chrlst) strawChr.set(chr, validHicChr(query.nochr ? chr.replace('chr', '') : chr))
 		} catch (e) {
 			res.send({ error: e })
 			return
@@ -52,9 +57,7 @@ function init() {
 
 		const runStraw = ({ lead, follow, items }: (typeof pairs)[number]) =>
 			new Promise<void>((resolve, reject): void => {
-				const pos1 = query.nochr ? lead.replace('chr', '') : lead
-				const pos2 = query.nochr ? follow.replace('chr', '') : follow
-				const par = [strawMatrixType, nmeth, file, pos1, pos2, 'BP', resolution]
+				const par = [strawMatrixType, nmeth, file, strawChr.get(lead)!, strawChr.get(follow)!, 'BP', resolution]
 
 				const ps = spawn(serverconfig.hicstraw, par)
 				const rl = readline.createInterface({ input: ps.stdout })
