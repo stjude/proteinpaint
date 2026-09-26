@@ -94,6 +94,11 @@ ruleTester.run('no-unbound-sql', rule, {
 			filename: routeFile, // resolves to server/src/routes/sql.ts
 			errors: template
 		},
+		// a schema-qualified or quoted table name
+		{ code: 'const q = `update main.${table} set value = ${value}`', errors: template },
+		{ code: 'const q = \'update "main"."t" set value = \' + value', errors: concat },
+		{ code: "const q = 'update [t] set value = ' + value", errors: concat },
+		{ code: 'const q = `select "a" from t where "id" = ${id}`', errors: template },
 		// a partially dynamic initializer keeps its text for a later concatenation
 		{ code: "const head = 'update ' + table; const q = head + ' set value=' + value", errors: concat },
 		// a later reassignment does not hide the earlier construction

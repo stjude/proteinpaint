@@ -26,7 +26,9 @@ const sqlRule = [
 		message: 'Do not interpolate into sql passed to prepare()/exec(), use the sql`` tag from server/src/sql.ts'
 	},
 	{
-		selector: `CallExpression[callee.property.name=/^(prepare|exec)$/] > BinaryExpression.arguments[operator='+']`,
+		// a concatenation with a dynamic part, even if it does not look like sql by itself, such as prepare(base + id);
+		// a concatenation of only static strings is allowed, the same as in sql/no-unbound-sql
+		selector: `CallExpression[callee.property.name=/^(prepare|exec)$/] > BinaryExpression.arguments[operator='+']:has(:not(BinaryExpression, Literal))`,
 		message: 'Do not concatenate sql passed to prepare()/exec(), use the sql`` tag from server/src/sql.ts'
 	},
 	{

@@ -32,10 +32,22 @@ const serverSrc = path.dirname(sqlModule)
 
 // uppercase keywords, case-sensitive so that ordinary text such as 'from' or 'where' does not match
 const sqlKeywords = /\b(SELECT|FROM|WHERE|JOIN|UNION|INSERT INTO|DELETE FROM|GROUP BY|ORDER BY)\b/
+// a table or column name, which may be schema-qualified or quoted in sqlite, such as main.t, "t", [t] or `t`
+const identifier = String.raw`[\w."\[\]\`]+`
 // case-insensitive multi-word sql phrases, to also match lowercase sql without matching
 // ordinary text such as 'error from server'
-const sqlPhrases =
-	/\bselect\s+[\w*.,()\s]+\s+from\b|\binsert\s+(or\s+\w+\s+)?into\b|\bdelete\s+from\b|\bupdate\s+\w+\s+set\b|\bwhere\s+[\w."]+\s*(=|!=|<>|<=|>=|<|>|\bin\b|\blike\b|\bis\b|\bbetween\b|\bglob\b)|\b(group|order)\s+by\s+\w|\bvalues\s*\(/i
+const sqlPhrases = new RegExp(
+	[
+		String.raw`\bselect\s+[\w*.,()\s"\[\]\`]+\s+from\b`,
+		String.raw`\binsert\s+(or\s+\w+\s+)?into\b`,
+		String.raw`\bdelete\s+from\b`,
+		String.raw`\bupdate\s+(or\s+\w+\s+)?${identifier}\s+set\b`,
+		String.raw`\bwhere\s+${identifier}\s*(=|!=|<>|<=|>=|<|>|\bin\b|\blike\b|\bis\b|\bbetween\b|\bglob\b)`,
+		String.raw`\b(group|order)\s+by\s+\w`,
+		String.raw`\bvalues\s*\(`
+	].join('|'),
+	'i'
+)
 
 export function isSqlLike(text) {
 	return sqlKeywords.test(text) || sqlPhrases.test(text)
