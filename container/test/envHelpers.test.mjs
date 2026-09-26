@@ -41,22 +41,18 @@ test('dev: allowed paths are computed from cwd, node install, tmpdir, and server
 	assert.deepEqual(opts['allow-fs-write'].toSorted(), ['/home/dev/cache', '/private/tmp/user', '/tmp/user'])
 })
 
-test('container: tp and cache dirs are fixed, and serverconfig.json is writable', () => {
+test('container: tp and cache dirs are fixed, and serverconfig.json is not writable', () => {
 	const ctx = fakeContext({
 		env: { PP_MODE: 'container-prod' },
 		files: { '/app/serverconfig.json': JSON.stringify({ tpmasterdir: '/host/tp', cachedir: '/host/cache' }) }
 	})
-	const opts = getNodeConfig(ctx, ['node', '--experimental-default-config-file', 'app-full.mjs']).nodeOptions
+	const opts = getNodeConfig(ctx).nodeOptions
 	// the fixed tp dir is covered by the allowed /home/root/pp, and the mounted config's tp dir is not used
 	assert.ok(opts['allow-fs-read'].includes('/home/root/pp'))
 	assert.ok(!opts['allow-fs-read'].includes('/home/root/pp/tp'))
 	assert.ok(!opts['allow-fs-read'].includes('/host/tp'))
-	assert.deepEqual(opts['allow-fs-write'].toSorted(), [
-		'/app/serverconfig.json',
-		'/home/root/pp/cache',
-		'/home/root/pp/tp_write',
-		'/tmp/user'
-	])
+	// app-server.mjs and app-full.mjs pass derived settings to the server instead of rewriting serverconfig.json
+	assert.deepEqual(opts['allow-fs-write'].toSorted(), ['/home/root/pp/cache', '/home/root/pp/tp_write', '/tmp/user'])
 })
 
 test('container: a dir is listed before, and not after, its allowed subpaths', () => {
@@ -78,7 +74,7 @@ test('prefix conflicts: paths that share a string prefix without one being under
 	assert.match(conflicts[0], /allow-fs-write paths '\/home\/root\/pp\/cache' and '\/home\/root\/pp\/cachedir'/)
 	// the default container config has no conflicts
 	const ctx = fakeContext({ env: { PP_MODE: 'container-prod' }, cwd: '/home/root/pp/app/active' })
-	assert.deepEqual(findPrefixConflicts(getNodeConfig(ctx, ['node', 'app-full.mjs'])), [])
+	assert.deepEqual(findPrefixConflicts(getNodeConfig(ctx)), [])
 })
 
 test('covered paths: only ancestor dirs cover a path, not a path with the same string prefix', () => {
@@ -119,16 +115,6 @@ test('an explicitly empty env variable overrides its .env value', () => {
 	})
 	assert.ok(!getNodeConfig(ctx).nodeOptions['allow-fs-read'].includes('/stale'))
 	assert.deepEqual(getCreds(ctx), {})
-})
-
-test('serverconfig.json is writable only for the app-*.mjs container entry scripts, with or without PP_MODE', () => {
-	const ctx = fakeContext()
-	assert.ok(
-		getNodeConfig(ctx, ['node', 'app-server.mjs']).nodeOptions['allow-fs-write'].includes('/app/serverconfig.json')
-	)
-	assert.ok(
-		!getNodeConfig(ctx, ['tsx', 'watch', 'server.ts']).nodeOptions['allow-fs-write'].includes('/app/serverconfig.json')
-	)
 })
 
 test('credentials: file contents from env or .env, an existing <NAME>_CREDS is not overwritten', () => {

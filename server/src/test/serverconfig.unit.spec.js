@@ -43,3 +43,45 @@ tape('process.env.PP_CREDS: invalid JSON throws a message without the credential
 	}
 	test.end()
 })
+
+/*
+	process.env.PP_SERVERCONFIG_OVERRIDES is also applied when serverconfig.js is evaluated,
+	such as from the container app-server.mjs and app-full.mjs, instead of rewriting serverconfig.json
+*/
+tape('process.env.PP_SERVERCONFIG_OVERRIDES: applied before derived settings, and kept in process.env', async test => {
+	const genomes = [{ name: 'zzOverrideTest', species: 'human', file: './genome/hg38.test.js', datasets: [] }]
+	process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({ backend_only: true, genomes })
+	try {
+		const { default: config } = await import('../serverconfig.js?pp_serverconfig_overrides=valid')
+		test.equal(config.backend_only, true, 'should override backend_only')
+		test.deepEqual(config.genomes, genomes, 'should override genomes')
+		test.equal(config.binDir, undefined, 'should apply backend_only to the derived binDir')
+		test.equal(
+			'PP_SERVERCONFIG_OVERRIDES' in process.env,
+			true,
+			'should keep PP_SERVERCONFIG_OVERRIDES for spawned child processes'
+		)
+	} finally {
+		delete process.env.PP_SERVERCONFIG_OVERRIDES
+	}
+	test.end()
+})
+
+tape('process.env.PP_SERVERCONFIG_OVERRIDES: must be a JSON object', async test => {
+	for (const [value, expected] of [
+		['{"backend_only": tr', /^invalid JSON in process.env.PP_SERVERCONFIG_OVERRIDES/],
+		['[]', /^process.env.PP_SERVERCONFIG_OVERRIDES must be a JSON object$/],
+		['null', /^process.env.PP_SERVERCONFIG_OVERRIDES must be a JSON object$/]
+	]) {
+		process.env.PP_SERVERCONFIG_OVERRIDES = value
+		try {
+			await import(`../serverconfig.js?pp_serverconfig_overrides=${encodeURIComponent(value)}`)
+			test.fail(`should throw for ${value}`)
+		} catch (e) {
+			test.match(String(e.message || e), expected, `should throw for ${value}`)
+		} finally {
+			delete process.env.PP_SERVERCONFIG_OVERRIDES
+		}
+	}
+	test.end()
+})
