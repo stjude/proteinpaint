@@ -22,8 +22,8 @@ const errOrWarn = fs.existsSync(sjppDir) ? 'error' : 'warn'
 // uppercase keywords, or a lowercase 'select <columns> from'
 const sqlKeywords = String.raw`/\b(SELECT|FROM|WHERE|JOIN|UNION|INSERT INTO|DELETE FROM|GROUP BY|ORDER BY)\b|\bselect\s+[\w*.,()\s]+\s+from\b/`
 
-const sqlRule = level => [
-	level,
+const sqlRule = [
+	'error',
 	{
 		selector: `CallExpression[callee.property.name=/^(prepare|exec)$/] > TemplateLiteral.arguments[expressions.length>0]`,
 		message: 'Do not interpolate into sql passed to prepare()/exec(), use the sql`` tag from server/src/sql.ts'
@@ -41,20 +41,6 @@ const sqlRule = level => [
 		selector: `CallExpression[callee.name='sql'], CallExpression[callee.object.name='sql'][callee.property.name=/^(call|apply|bind)$/]`,
 		message: 'Only use sql as a tagged template, sql`...`, calling it directly can pass arbitrary text as trusted sql'
 	}
-]
-
-// TODO: convert the termdb filter/CTE pipeline to sql`` fragments, then remove this list;
-// these files still build sql text with server-generated CTE/table names and ? placeholder lists,
-// so the sql rule is only a warning in them, do not add more files here
-const sqlRuleWarnOnly = [
-	'server/src/termdb.filter.js',
-	'server/src/termdb.sql.js',
-	'server/src/termdb.sql.categorical.js',
-	'server/src/termdb.sql.condition.js',
-	'server/src/termdb.sql.multivalue.js',
-	'server/src/termdb.sql.numeric.js',
-	'server/src/termdb.sql.samplelst.js',
-	'server/src/termdb.sql.termCollection.js'
 ]
 
 export default tseslint.config(
@@ -114,11 +100,7 @@ export default tseslint.config(
 		// sql statements should bind values as parameters instead of interpolating them into the sql text,
 		// use the sql`` tag from server/src/sql.ts, see also guardDb() there for the runtime check
 		files: ['server/**/*.ts', 'server/src/**/*.js'],
-		rules: { 'no-restricted-syntax': sqlRule('error') }
-	},
-	{
-		files: sqlRuleWarnOnly,
-		rules: { 'no-restricted-syntax': sqlRule('warn') }
+		rules: { 'no-restricted-syntax': sqlRule }
 	},
 	{
 		files: ['shared/**/*.ts'],

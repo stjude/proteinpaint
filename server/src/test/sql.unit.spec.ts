@@ -48,6 +48,7 @@ tape('sql.id(), sql.list(), sql.join() and nested fragments', t => {
 	for (const name of ['my"table', 'a b', '1abc', '', 't; DROP TABLE t', null])
 		t.throws(() => sql.id(name as any), /invalid identifier/, `should reject a non-plain identifier: ${name}`)
 	t.throws(() => sql.list([]), /empty list/, 'should throw on an empty list')
+	t.equal(sql.list([], { allowEmpty: true }).text, '', 'should allow an empty list when opted in')
 
 	const db = getDb('throw')
 	const where = sql`WHERE id IN (${sql.list([1, 3])})`
@@ -60,6 +61,12 @@ tape('sql.id(), sql.list(), sql.join() and nested fragments', t => {
 			.map(r => r.name),
 		['a', 'd'],
 		'should run a statement composed from fragments'
+	)
+
+	t.deepEqual(
+		db.prepare(sql`SELECT id FROM t WHERE id IN (${sql.list([], { allowEmpty: true })})`).all(),
+		[],
+		'should run an empty IN () that matches nothing'
 	)
 
 	const joined = sql.join([sql`id = ${1}`, sql`id = ${3}`], sql` OR `)

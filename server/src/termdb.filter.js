@@ -3,6 +3,7 @@ import { TermTypes } from '#types'
 import { validateTermCollectionTvs, getTvsDenominators } from '#shared/filter.js'
 import { getSnpData, getData, shouldMapParent2Children, getSampleTypesSqlList } from './termdb.matrix.js'
 import { filterByItem, tvsUsesMafFilter } from './mds3.init.js'
+import { sql } from './sql.ts'
 
 /*
 ds: required by get_numerical()
@@ -15,6 +16,14 @@ Recursively generates CTE statements based on the nested filter
 each run processes one level of filter.lst[]
 One CTE is made for each item of filter.lst[], with name "CTEname_<i>"
 A superCTE is made to cap this level, with name "CTEname"
+
+returns
+{
+	filters: sql`` fragment of the CTE cascade, with the values bound as parameters,
+		to be used as sql`WITH ${filter.filters} ... FROM ${sql.id(filter.CTEname)}`
+	CTEs: [] sql`` fragment of each individual CTE
+	CTEname: str
+}
 */
 
 // dummy $id for making up tw from tvs ({$id,term:tvs:term}) as required by getters
@@ -45,10 +54,8 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleTypes,
 
 	// list of CTEnames in filter.lst[]
 	const thislevelCTEnames = []
-	// cumulative CTE of this level and sub levels
+	// cumulative CTE of this level and sub levels, as sql`` fragments that also carry the bound values
 	const CTEs = []
-	// cumulative values
-	const values = []
 	for (const [i, item] of filter.lst.entries()) {
 		if (item.tvs?.term?.id && (!item.tvs.term.type || !item.tvs.term.name)) {
 			// handle stripped-down dictionary termwrapper
@@ -62,9 +69,8 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleTypes,
 			if (item.lst.length == 0) continue // do not process blank list
 
 			f = await getFilterCTEs(item, ds, mapParent2Children, sampleTypes, CTEname_i)
-			// .filters: str, the CTE cascade, not used here!
-			// .CTEs: [] list of individual CTE string
-			// .values: []
+			// .filters: the CTE cascade, not used here!
+			// .CTEs: [] list of individual CTE fragments
 			// .CTEname: str
 		} else if (!item.tvs) {
 			throw `filter item should have a 'tvs' or 'lst' property`
@@ -89,7 +95,6 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleTypes,
 		} else if (item.tvs.term.type == 'categorical') {
 			f = get_categorical(item.tvs, CTEname_i, ds, mapParent2Children, sampleTypes)
 			// .CTEs: []
-			// .values:[]
 			// .CTEname
 		} else if (item.tvs.term.type == 'survival') {
 			f = get_survival(item.tvs, CTEname_i, ds, mapParent2Children, sampleTypes)
@@ -112,33 +117,55 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleTypes,
 		}
 		thislevelCTEnames.push(f.CTEname)
 		CTEs.push(...f.CTEs)
-		values.push(...f.values)
 	}
-	const JOINOPER = filter.join == 'and' ? 'INTERSECT' : 'UNION'
-	const superCTE = thislevelCTEnames.map(name => 'SELECT * FROM ' + name).join('\n' + JOINOPER + '\n')
+	const JOINOPER = filter.join == 'and' ? sql`\nINTERSECT\n` : sql`\nUNION\n`
+	const superCTE = sql.join(
+		thislevelCTEnames.map(name => sql`SELECT * FROM ${sql.id(name)}`),
+		JOINOPER
+	)
 	if (filter.in) {
-		CTEs.push(`
-				${CTEname} AS (
-					${superCTE}
-				)
-			`)
+		CTEs.push(toCTE(CTEname, superCTE))
 	} else {
-		CTEs.push(`
-				${CTEname} AS (
-					SELECT id as sample
+		CTEs.push(
+			toCTE(
+				CTEname,
+				sql`SELECT id as sample
 					FROM sampleidmap
 					WHERE sample NOT IN (
 						${superCTE}
-					)
-				)
-			`)
+					)`
+			)
+		)
 	}
 	return {
-		filters: CTEs.join(',\n'),
+		filters: sql.join(CTEs, sql`,\n`),
 		CTEs,
-		values,
 		CTEname
 	}
+}
+
+/* a CTE named by CTEname, for a query that returns the sample column */
+function toCTE(CTEname, query) {
+	return sql`
+		${sql.id(CTEname)} AS (
+			${query}
+		)`
+}
+
+/* a query of samples by their ids, an empty list matches no sample */
+function sampleIdsQuery(samples) {
+	return sql`SELECT id as sample
+				FROM sampleidmap
+				WHERE id IN (${sql.list(samples, { allowEmpty: true })})`
+}
+
+/* a filter result of the samples by their ids, see sampleIdsQuery() */
+function sampleIdsResult(CTEname, samples, tvs, ds, mapParent2Children, sampleTypes) {
+	let query = sampleIdsQuery(samples)
+	if (tvs && shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
+		query = getChildren(query, sampleTypes, ds)
+	}
+	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
 // makesql_by_tvsfilter helpers
@@ -146,43 +173,33 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleTypes,
 // to parse function once at server start instead of
 // multiple times per server request
 function get_categorical(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
-	let query = `SELECT sample
+	let query = sql`SELECT sample
 	FROM anno_categorical 
-	WHERE term_id = ?
-	AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
+	WHERE term_id = ${tvs.term.id}
+	AND value ${tvs.isnot ? sql`NOT` : sql``} IN (${sql.list(
+		tvs.values.map(i => i.key),
+		{ allowEmpty: true }
+	)})`
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
 		query = getChildren(query, sampleTypes, ds)
 	}
-	return {
-		CTEs: [` ${CTEname} AS (${query})`],
-		values: [tvs.term.id, ...tvs.values.map(i => i.key)],
-		CTEname
-	}
+	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
 function get_survival(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
-	let query = `SELECT sample
+	let query = sql`SELECT sample
 	FROM survival
-	WHERE term_id = ?
-	${tvs.q?.cutoff ? 'AND tte >= ?' : ''}
-	AND exit_code ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
-	const values = [tvs.term.id]
-	if (tvs.q?.cutoff) values.push(tvs.q.cutoff)
-	values.push(...tvs.values.map(i => i.key))
+	WHERE term_id = ${tvs.term.id}
+	${tvs.q?.cutoff ? sql`AND tte >= ${tvs.q.cutoff}` : sql``}
+	AND exit_code ${tvs.isnot ? sql`NOT` : sql``} IN (${sql.list(
+		tvs.values.map(i => i.key),
+		{ allowEmpty: true }
+	)})`
 
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
 		query = getChildren(query, sampleTypes, ds)
 	}
-	return {
-		CTEs: [
-			`
-		  ${CTEname} AS (
-			${query}
-			)`
-		],
-		values,
-		CTEname
-	}
+	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
 function get_samplelst(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
@@ -191,26 +208,16 @@ function get_samplelst(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 		const list = tvs.term.values[field].list
 		samples.push(...list)
 	}
-	const values = []
-	const samplesString = Array(samples.length).fill('?').join(',')
-	let query = `	SELECT id as sample
+	let query = sql`SELECT id as sample
 				FROM sampleidmap
-				WHERE id ${tvs.isnot ? 'NOT IN' : 'IN'} (${samplesString}) `
-
-	values.push(...samples.map(i => i.sampleId || i.sample))
+				WHERE id ${tvs.isnot ? sql`NOT IN` : sql`IN`} (${sql.list(
+		samples.map(i => i.sampleId || i.sample),
+		{ allowEmpty: true }
+	)})`
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
 		query = getChildren(query, sampleTypes, ds)
 	}
-	return {
-		CTEs: [
-			`
-		  ${CTEname} AS (
-			${query}
-			)`
-		],
-		values,
-		CTEname
-	}
+	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
 // TODO: may retire get_geneVariant() as geneVariant filtering is now
@@ -257,24 +264,7 @@ async function get_geneVariant(tvs, CTEname, ds, mapParent2Children, sampleTypes
 		}
 		if (includeSample) samplenames.push(key)
 	}
-
-	let query = `SELECT id as sample
-				FROM sampleidmap
-				WHERE id IN (${samplenames.map(i => '?').join(', ')})`
-	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
-		query = getChildren(query, sampleTypes, ds)
-	}
-
-	return {
-		CTEs: [
-			`
-		  ${CTEname} AS (
-				${query}
-			)`
-		],
-		values: [...samplenames],
-		CTEname
-	}
+	return sampleIdsResult(CTEname, samplenames, tvs, ds, mapParent2Children, sampleTypes)
 }
 
 function isInRange(val, range, isnot) {
@@ -287,11 +277,11 @@ function isInRange(val, range, isnot) {
 }
 
 function emptyFilterResult(CTEname, mapParent2Children, ds, sampleTypes) {
-	let query = `SELECT id as sample FROM sampleidmap WHERE 0`
+	let query = sql`SELECT id as sample FROM sampleidmap WHERE 0`
 	if (shouldMapParent2Children({}, ds, mapParent2Children, sampleTypes)) {
 		query = getChildren(query, sampleTypes, ds)
 	}
-	return { CTEs: [`${CTEname} AS (${query})`], values: [], CTEname }
+	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
 /** FIXME deadcode. revive for categorical collection tvs
@@ -406,19 +396,7 @@ async function get_termCollection_nonDict_fraction(tvs, CTEname, ds, mapParent2C
 	}
 
 	if (!samplenames.length) return emptyFilterResult(CTEname, mapParent2Children, ds, sampleTypes)
-
-	let query = `SELECT id as sample
-				FROM sampleidmap
-				WHERE id IN (${samplenames.map(() => '?').join(', ')})`
-	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
-		query = getChildren(query, sampleTypes, ds)
-	}
-
-	return {
-		CTEs: [`${CTEname} AS (${query})`],
-		values: [...samplenames],
-		CTEname
-	}
+	return sampleIdsResult(CTEname, samplenames, tvs, ds, mapParent2Children, sampleTypes)
 }
 
 async function get_termCollection(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
@@ -477,24 +455,7 @@ async function get_termCollection(tvs, CTEname, ds, mapParent2Children, sampleTy
 
 	// no matching sample, e.g. none has a computable value: an empty IN () is invalid sql
 	if (!samplenames.length) return emptyFilterResult(CTEname, mapParent2Children, ds, sampleTypes)
-
-	let query = `SELECT id as sample
-				FROM sampleidmap
-				WHERE id IN (${samplenames.map(i => '?').join(', ')})`
-	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
-		query = getChildren(query, sampleTypes, ds)
-	}
-
-	return {
-		CTEs: [
-			`
-		  ${CTEname} AS (
-				${query}
-			)`
-		],
-		values: [...samplenames],
-		CTEname
-	}
+	return sampleIdsResult(CTEname, samplenames, tvs, ds, mapParent2Children, sampleTypes)
 }
 
 async function get_snp(tvs, CTEname, ds) {
@@ -504,23 +465,7 @@ async function get_snp(tvs, CTEname, ds) {
 	const filterGTs = tvs.values.map(v => v.key)
 	// filter for samples with genotypes in filter
 	const samples = sampleGTs.filter(s => filterGTs.includes(s.gt)).map(s => s.sample_id)
-	// build CTE
-
-	let query = `SELECT id as sample
-				FROM sampleidmap
-				WHERE id IN (${samples.map(i => '?').join(', ')})`
-
-	const result = {
-		CTEs: [
-			`
-		  ${CTEname} AS (
-				${query}
-			)`
-		],
-		values: [...samples],
-		CTEname
-	}
-	return result
+	return sampleIdsResult(CTEname, samples)
 }
 
 async function get_geneExpression(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
@@ -594,22 +539,7 @@ function numericSampleData2tvs(tvs, CTEname, termData) {
 		const inRanges = getBin(tvs.ranges, value) != -1
 		if (tvs.isnot ? !inRanges : inRanges) samples.push(sample)
 	}
-
-	const query = `SELECT id as sample
-				FROM sampleidmap
-				WHERE id IN (${samples.map(i => '?').join(', ')})`
-
-	const result = {
-		CTEs: [
-			`
-		  ${CTEname} AS (
-				${query}
-			)`
-		],
-		values: [...samples],
-		CTEname
-	}
-	return result
+	return sampleIdsResult(CTEname, samples)
 }
 
 async function get_dtTerm(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
@@ -633,22 +563,7 @@ async function get_dtTerm(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 		const [pass, tested] = filterByItem(filter, mlst)
 		if (pass) samples.push(sample)
 	}
-
-	let query = `SELECT id as sample
-				FROM sampleidmap
-				WHERE id IN (${samples.map(i => '?').join(', ')})`
-
-	const result = {
-		CTEs: [
-			`
-		  ${CTEname} AS (
-				${query}
-			)`
-		],
-		values: [...samples],
-		CTEname
-	}
-	return result
+	return sampleIdsResult(CTEname, samples)
 }
 
 function get_numerical(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
@@ -659,7 +574,6 @@ so here need to allow both string and number as range.value
 */
 	if (!tvs.ranges)
 		throw `tvs.ranges{} missing, tvs.ranges = ${tvs.ranges} [server/src/termdb.filter.js get_numerical()]`
-	const values = [tvs.term.id]
 	// get term object
 	const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
 	const annoTable = `anno_${term.type}`
@@ -672,31 +586,19 @@ so here need to allow both string and number as range.value
 		if ('value' in range) {
 			// special category
 			// where value for ? can be number or string, doesn't matter
-			const negator = tvs.isnot ? '!' : ''
-			rangeclauses.push(`value ${negator}= ?`)
-			values.push('' + range.value)
+			const v = '' + range.value
+			rangeclauses.push(tvs.isnot ? sql`value != ${v}` : sql`value = ${v}`)
 		} else {
 			// actual range
 			hasactualrange = true
 			const lst = []
 			if (!range.startunbounded) {
-				if (range.startinclusive) {
-					lst.push('value >= ?')
-				} else {
-					lst.push('value > ? ')
-				}
-				values.push(range.start)
+				lst.push(range.startinclusive ? sql`value >= ${range.start}` : sql`value > ${range.start}`)
 			}
 			if (!range.stopunbounded) {
-				if (range.stopinclusive) {
-					lst.push('value <= ?')
-				} else {
-					lst.push('value < ? ')
-				}
-				values.push(range.stop)
+				lst.push(range.stopinclusive ? sql`value <= ${range.stop}` : sql`value < ${range.stop}`)
 			}
-			const negator = tvs.isnot ? 'NOT ' : ''
-			if (lst.length) rangeclauses.push(negator + '(' + lst.join(' AND ') + ')')
+			if (lst.length) rangeclauses.push(sql`${tvs.isnot ? sql`NOT ` : sql``}(${sql.join(lst, sql` AND `)})`)
 		}
 	}
 
@@ -706,30 +608,19 @@ so here need to allow both string and number as range.value
 			.filter(key => term.values[key].uncomputable)
 			.map(Number)
 			.filter(key => tvs.isnot || !tvs.ranges.find(range => 'value' in range && Number(range.value) == key))
-		if (excludevalues.length) values.push(...excludevalues)
 	}
-	const combinedClauses = rangeclauses.join(' OR ')
 
-	let query = `SELECT sample
-					FROM ${annoTable}
-					WHERE term_id = ?
-					${combinedClauses ? 'AND (' + combinedClauses + ')' : ''}
-					${excludevalues && excludevalues.length ? `AND value NOT IN (${excludevalues.map(d => '?').join(',')}) ` : ''}`
+	let query = sql`SELECT sample
+					FROM ${sql.id(annoTable)}
+					WHERE term_id = ${tvs.term.id}
+					${rangeclauses.length ? sql`AND (${sql.join(rangeclauses, sql` OR `)})` : sql``}
+					${excludevalues?.length ? sql`AND value NOT IN (${sql.list(excludevalues)})` : sql``}`
 
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
 		query = getChildren(query, sampleTypes, ds)
 	}
 
-	return {
-		CTEs: [
-			`
-		    ${CTEname} AS (
-			${query}
-			)`
-		],
-		values,
-		CTEname
-	}
+	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
 function get_condition(tvs, CTEname) {
@@ -744,49 +635,27 @@ function get_condition(tvs, CTEname) {
 	else if (tvs.value_by_computable_grade) restriction = 'computable_grade'
 	else throw 'unknown setting of value_by_?'
 
+	// table and column names are selected from fixed values above, not from request values
+	const table = value_for == 'grade' ? sql`precomputed_chc_grade` : sql`precomputed_chc_child`
 	const CTEs = []
-	const values = []
 	if (tvs.values) {
-		values.push(tvs.term.id, ...tvs.values.map(i => '' + i.key))
-
-		let query = `	SELECT sample
-				FROM ${value_for == 'grade' ? 'precomputed_chc_grade' : 'precomputed_chc_child'}
-				WHERE term_id = ? 
-				AND ${restriction} = 1
-				AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
-
-		CTEs.push(`
-			${CTEname} AS (
-				${query}
-			)`)
+		const query = sql`SELECT sample
+				FROM ${table}
+				WHERE term_id = ${tvs.term.id}
+				AND ${sql.id(restriction)} = 1
+				AND value ${tvs.isnot ? sql`NOT` : sql``} IN (${sql.list(
+			tvs.values.map(i => '' + i.key),
+			{ allowEmpty: true }
+		)})`
+		CTEs.push(toCTE(CTEname, query))
 	} else if (tvs.grade_and_child) {
-		throw `-- Todo: tvs.grade_and_child`
 		//grade_and_child: [{grade, child_id}]
-		for (const gc of tvs.grade_and_child) {
-			values.push(tvs.term.id, '' + gc.grade)
-			CTEs.push(`
-				SELECT sample
-				FROM precomputed
-				WHERE term_id = ? 
-				AND value_for = 'grade'
-				AND ${restriction} = 1
-				AND value ${tvs.isnot ? 'NOT' : ''} IN (?)`)
-
-			values.push(tvs.term.id, gc.child_id)
-			CTEs.push(`
-				SELECT sample
-				FROM precomputed
-				WHERE term_id = ? 
-				AND value_for = 'child'
-				AND ${restriction} = 1
-				AND value ${tvs.isnot ? 'NOT' : ''} IN (?)`)
-		}
+		throw `-- Todo: tvs.grade_and_child`
 	} else {
 		throw 'unknown condition term filter type: expecting term-value "values" or "grade_and_child" key'
 	}
 	return {
 		CTEs,
-		values,
 		CTEname
 	}
 }
@@ -800,22 +669,21 @@ function get_multivalue(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 		a membership outside the list hides the sample. Used by a dataset
 		getAdditionalFilter() to restrict samples to authorized categories */
 		if (!tvs.values.every(v => v && v.key !== undefined)) throw 'tvs.values[].key missing for withinValues'
-		const query = `SELECT sample	
+		const query = sql`SELECT sample	
 		    FROM anno_multivalue
-			WHERE term_id = ?
+			WHERE term_id = ${tvs.term.id}
 			AND EXISTS (SELECT 1 FROM json_each(anno_multivalue.value) j WHERE j.value > 0)
 			AND NOT EXISTS (
 				SELECT 1 FROM json_each(anno_multivalue.value) j
-				WHERE j.value > 0 AND j.key NOT IN (${tvs.values.map(() => '?').join(',')})
+				WHERE j.value > 0 AND j.key NOT IN (${sql.list(
+					tvs.values.map(v => v.key),
+					{ allowEmpty: true }
+				)})
 			)`
 		const mappedQuery = shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)
 			? getChildren(query, sampleTypes, ds)
 			: query
-		return {
-			CTEs: [` ${CTEname} AS (${mappedQuery})`],
-			values: [tvs.term.id, ...tvs.values.map(v => v.key)],
-			CTEname
-		}
+		return { CTEs: [toCTE(CTEname, mappedQuery)], CTEname }
 	}
 	// default to join = 'or', more permissive/less likely to break,
 	// and also compatible with default join operator for categorical terms
@@ -828,29 +696,28 @@ function get_multivalue(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	// tvs.join will not be needed or used to "join" values
 	// each key is tested via json_each with a bound parameter, so keys containing
 	// json-path or sql metacharacters (period, quote) are safe
-	const membershipTest = tvs.values
-		.map(() => `EXISTS (SELECT 1 FROM json_each(anno_multivalue.value) j WHERE j.key = ? AND j.value > 0)`)
-		.join(` ${tvs.join} `)
+	const membershipTest = sql.join(
+		tvs.values.map(
+			v => sql`EXISTS (SELECT 1 FROM json_each(anno_multivalue.value) j WHERE j.key = ${v.key} AND j.value > 0)`
+		),
+		tvs.join == 'and' ? sql` and ` : sql` or `
+	)
 	// isnot negates the whole membership test over annotated samples,
 	// matching the NOT IN semantics of categorical terms
-	let query = `SELECT sample
+	let query = sql`SELECT sample
 	FROM anno_multivalue
-	WHERE term_id = ? AND ${tvs.isnot ? `NOT (${membershipTest})` : `(${membershipTest})`}`
+	WHERE term_id = ${tvs.term.id} AND ${tvs.isnot ? sql`NOT (${membershipTest})` : sql`(${membershipTest})`}`
 	if (shouldMapParent2Children({ term: tvs.term }, ds, mapParent2Children, sampleTypes)) {
 		query = getChildren(query, sampleTypes, ds)
 	}
-	return {
-		CTEs: [` ${CTEname} AS (${query})`],
-		values: [tvs.term.id, ...tvs.values.map(v => v.key)],
-		CTEname
-	}
+	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
 function getChildren(query, sampleTypes, ds) {
 	const sampleTypeFilter = sampleTypes?.length
-		? `AND sm.sample_type IN (${getSampleTypesSqlList(sampleTypes, ds)})`
-		: ''
-	return `SELECT sa.sample_id as sample
+		? sql`AND sm.sample_type IN (${getSampleTypesSqlList(sampleTypes, ds)})`
+		: sql``
+	return sql`SELECT sa.sample_id as sample
 	FROM sample_ancestry sa
 	JOIN sampleidmap sm ON sa.sample_id = sm.id
 	WHERE sa.ancestor_id in (${query})

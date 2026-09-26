@@ -78,9 +78,11 @@ sql.id = (name: string) => {
 	return fragment(`"${name}"`, [])
 }
 
-/* comma-separated placeholders for a list of values, for use in an IN (...) clause */
-sql.list = (values: unknown[]) => {
-	if (!Array.isArray(values) || !values.length) throw 'sql.list(): empty list'
+/* comma-separated placeholders for a list of values, for use in an IN (...) clause;
+an empty list throws unless opts.allowEmpty is true, then it is an empty IN () that sqlite supports and matches nothing */
+sql.list = (values: unknown[], opts: { allowEmpty?: boolean } = {}) => {
+	if (!Array.isArray(values)) throw 'sql.list(): not an array'
+	if (!values.length && !opts.allowEmpty) throw 'sql.list(): empty list'
 	return fragment(values.map(() => '?').join(','), [...values])
 }
 
