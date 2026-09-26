@@ -66,6 +66,10 @@ export async function cache_index(gzurl, indexurl) {
 	}
 	const [e, protocol, body] = test_url(gzurl)
 	if (e) throw '.gz file URL error: ' + e
+	// some routes pass a request url to cache_index() without fileurl(), and the url is then fetched by
+	// spawned tools such as tabix and samtools, so its host is checked here as well
+	const gzHostErr = illegalUrlHost(gzurl)
+	if (gzHostErr) throw '.gz file URL error: ' + gzHostErr
 	// build cache directory using gz file url and do not include index portion
 	// e.g. cache/https/domain/path/to/file.gz/
 	const dir = path.join(serverconfig.cachedir, protocol, body)
@@ -262,8 +266,10 @@ export function illegalUrlHost(u) {
 	} catch (_) {
 		return 'invalid url'
 	}
-	if (!host) return 'url must have a host'
 	if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1) // ipv6
+	// a fully qualified name may end with a dot, such as localhost. or a.org., which resolves the same as without it
+	if (host.endsWith('.')) host = host.slice(0, -1)
+	if (!host) return 'url must have a host'
 	if (serverconfig.urlHosts) {
 		for (const h of serverconfig.urlHosts) {
 			if (h[0] == '.' ? host.endsWith(h) : host == h) return

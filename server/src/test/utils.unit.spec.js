@@ -347,6 +347,9 @@ tape('fileurl() url protocol and host', test => {
 	for (const url of [
 		'http://localhost/x.bb',
 		'http://a.localhost/x.bb',
+		'http://localhost./x.bb', // a trailing dot resolves the same as localhost
+		'http://a.localhost./x.bb',
+		'http://127.0.0.1./x.bb',
 		'http://127.0.0.1:3000/x.bb',
 		'http://2130706433/x.bb', // decimal form of 127.0.0.1
 		'http://0x7f.1/x.bb',
@@ -365,9 +368,15 @@ tape('fileurl() url protocol and host', test => {
 		test.equal(utils.fileurl({ query: { url } })[1], url, `should accept url=${url}`)
 
 	serverconfig.urlHosts = ['a.org', '.b.org', '127.0.0.1']
-	for (const url of ['https://a.org/x.bb', 'https://c.b.org/x.bb', 'http://127.0.0.1:3000/x.bb'])
+	for (const url of ['https://a.org/x.bb', 'https://a.org./x.bb', 'https://c.b.org/x.bb', 'http://127.0.0.1:3000/x.bb'])
 		test.equal(utils.fileurl({ query: { url } })[1], url, `should accept url=${url} listed in serverconfig.urlHosts`)
-	for (const url of ['https://c.a.org/x.bb', 'https://b.org/x.bb', 'https://xb.org/x.bb', 'http://localhost/x.bb'])
+	for (const url of [
+		'https://c.a.org/x.bb',
+		'https://b.org/x.bb',
+		'https://xb.org/x.bb',
+		'http://localhost/x.bb',
+		'http://localhost./x.bb'
+	])
 		test.deepEqual(
 			utils.fileurl({ query: { url } }),
 			['url host is not allowed'],
