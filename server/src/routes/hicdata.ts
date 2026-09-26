@@ -3,6 +3,7 @@ import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'
 import serverconfig from '#src/serverconfig.js'
+import { getStrawArgs, validHicPos } from '#src/utils/hicStraw.ts'
 
 export const payload: RoutePayload = {
 	init,
@@ -40,9 +41,22 @@ function handle_hicdata(q: HicdataRequest): Promise<HicdataResponse> {
 		Must convert to straw parameter and apply the corresponding maths to the result.
 		Use 'observed' as default if not provided.
 		*/
-		const matrixType = q.matrixType == 'log(oe)' ? 'oe' : q.matrixType ? q.matrixType : 'observed'
-
-		const par = [matrixType, q.nmeth || 'NONE', file, q.pos1, q.pos2, q.isfrag ? 'FRAG' : 'BP', q.resolution]
+		let par: string[]
+		try {
+			const { strawMatrixType, nmeth, resolution } = getStrawArgs(q)
+			par = [
+				strawMatrixType,
+				nmeth,
+				file,
+				validHicPos(q.pos1),
+				validHicPos(q.pos2),
+				q.isfrag ? 'FRAG' : 'BP',
+				resolution
+			]
+		} catch (e) {
+			// the client reads the error message from data.error.error
+			return reject({ error: e })
+		}
 
 		const ps = spawn(serverconfig.hicstraw, par)
 		const rl = readline.createInterface({ input: ps.stdout })
