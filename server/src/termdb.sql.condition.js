@@ -1,4 +1,5 @@
 import { getUncomputableClause } from './termdb.sql.js'
+import { sql } from './sql.ts'
 
 export const discrete = {
 	/*
@@ -11,7 +12,6 @@ export const discrete = {
 	Arguments
 		- tablename: string name for this CTE
 		- term{}
-		- values: the array of values to fill-in the '?' in the prepared sql statement, may append to this array
 		- ds: dataset with db connection
 		- value_for: required for condition terms, "grade" or "child"
 		- restriction: required for condition terms, "computable_grade" | "max_grade" | "most_recent_grade"
@@ -21,28 +21,25 @@ export const discrete = {
 		- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
 
 	*/
-	getCTE(tablename, term, ds, q, values) {
+	getCTE(tablename, term, ds, q) {
 		if (q.breaks && q.breaks.length > 0) {
 			// breaks present, split grades into groups
-			return getCTE_discreteWithBreaks(tablename, term, q, values)
+			return getCTE_discreteWithBreaks(tablename, term, q)
 		} else {
 			// no breaks, so all grades in one group
 			const [value_for, restriction] = validateQ(q)
-			values.push(term.id)
-			const uncomputable = getUncomputableClause(term, q)
-			values.push(...uncomputable.values)
 			return {
-				sql: `${tablename} AS (
+				sql: sql`${sql.id(tablename)} AS (
 					SELECT
 						sample,
 						value as key,
 						value
 					FROM
-						${value_for == 'grade' ? 'precomputed_chc_grade' : 'precomputed_chc_child'}
+						${value_for == 'grade' ? sql`precomputed_chc_grade` : sql`precomputed_chc_child`}
 					WHERE
-						term_id = ?
-						AND ${restriction} = 1
-						${uncomputable.clause}
+						term_id = ${term.id}
+						AND ${sql.id(restriction)} = 1
+						${getUncomputableClause(term, q)}
 				)`,
 				tablename
 			}
@@ -53,9 +50,9 @@ export const discrete = {
 export const binary = {
 	// Get CTE for binary term
 	// must have a single breakpoint
-	getCTE(tablename, term, ds, q, values) {
+	getCTE(tablename, term, ds, q) {
 		if (q.breaks?.length != 1) throw 'binary mode requires one break'
-		return getCTE_discreteWithBreaks(tablename, term, q, values)
+		return getCTE_discreteWithBreaks(tablename, term, q)
 	}
 }
 
@@ -74,11 +71,10 @@ export const cuminc = {
 			When key=1, time is from diagnosis to first occurence of event
 			When key=2, time is from diagnosis to death
 	*/
-	getCTE(tablename, term, ds, q, values) {
+	getCTE(tablename, term, ds, q) {
 		if (q.breaks?.length != 1) throw 'cuminc mode requires one break'
-		values.push(term.id, q.breaks[0])
 		return {
-			sql: `${tablename} AS (
+			sql: sql`${sql.id(tablename)} AS (
 				SELECT
 					sample,
 					event AS key,
@@ -86,8 +82,8 @@ export const cuminc = {
 				FROM
 					precomputed_cuminc
 				WHERE
-					term_id = ?
-					AND grade_cutoff = ?
+					term_id = ${term.id}
+					AND grade_cutoff = ${q.breaks[0]}
 			)`,
 			tablename
 		}
@@ -113,13 +109,12 @@ export const cox = {
 				- when event=1/-1:
 					- end age is age at first occurence of event
 	*/
-	getCTE(tablename, term, ds, q, values) {
+	getCTE(tablename, term, ds, q) {
 		if (q.breaks?.length != 1) throw 'cox mode requires one break'
-		values.push(term.id, q.breaks[0])
 		const grades = Object.keys(term.values).map(Number)
 		const maxgrade = Math.max(...grades)
 		return {
-			sql: `${tablename} AS (
+			sql: sql`${sql.id(tablename)} AS (
 				SELECT
 					sample,
 					event AS key,
@@ -127,8 +122,8 @@ export const cox = {
 				FROM
 					precomputed_cox
 				WHERE
-					term_id = ?
-					AND grade_cutoff = ?
+					term_id = ${term.id}
+					AND grade_cutoff = ${q.breaks[0]}
 			)`,
 			tablename,
 			events: [
@@ -155,25 +150,27 @@ function validateQ(q) {
 	return [value_for, restriction]
 }
 
-function getCTE_discreteWithBreaks(tablename, term, q, values) {
+function getCTE_discreteWithBreaks(tablename, term, q) {
 	// build CTE
 	const [value_for, restriction] = validateQ(q)
 	if (value_for != 'grade') throw 'breaks must be used on grade values'
 	const categories = []
 	for (const g of q.groups) {
-		categories.push(`SELECT sample, ? as key, value
+		categories.push(sql`SELECT sample, ${g.name} as key, value
 			FROM precomputed_chc_grade
 			WHERE
-				term_id=?
-				AND ${restriction}=1
-				AND value IN (${g.values.map(v => '?').join(',')})
+				term_id=${term.id}
+				AND ${sql.id(restriction)}=1
+				AND value IN (${sql.list(
+					g.values.map(v => v.toString()),
+					{ allowEmpty: true }
+				)})
 		`)
-		values.push(g.name, term.id, ...g.values.map(v => v.toString()))
 	}
 
 	return {
-		sql: `${tablename} AS (
-			${categories.join('\nUNION ALL\n')}
+		sql: sql`${sql.id(tablename)} AS (
+			${sql.join(categories, sql`\nUNION ALL\n`)}
 		)`,
 		tablename
 	}

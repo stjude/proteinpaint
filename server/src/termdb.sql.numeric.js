@@ -1,22 +1,20 @@
 import { getUncomputableClause, get_bins } from './termdb.sql.js'
 import { dictionaryNumericTypes } from '#shared/terms.js'
+import { sql } from './sql.ts'
 
 export const continuous = {
-	getCTE(tablename, term, ds, q, values, index, filter) {
+	getCTE(tablename, term, ds, q) {
 		const annoTable = `anno_${term.type}`
 		if (!dictionaryNumericTypes.has(term.type)) throw `unknown '${annoTable}' table (continuous.getCTE)`
 
-		values.push(term.id)
-		const uncomputable = getUncomputableClause(term, q)
-		values.push(...uncomputable.values)
 		return {
-			sql: `${tablename} AS (
+			sql: sql`${sql.id(tablename)} AS (
 				SELECT 
 					sample,
 					value as key, 
 					value
-				FROM ${annoTable}
-				WHERE term_id=? ${uncomputable.clause}
+				FROM ${sql.id(annoTable)}
+				WHERE term_id=${term.id} ${getUncomputableClause(term, q)}
 			)`,
 			tablename
 		}
@@ -39,7 +37,7 @@ export const discrete = {
 
 	returns { sql, tablename, name2bin, bins }
 	*/
-	getCTE(tablename, term, ds, q, values, index, filter) {
+	getCTE(tablename, term, ds, q, index, filter) {
 		const annoTable = `anno_${term.type}`
 		if (!dictionaryNumericTypes.has(term.type)) throw `unknown '${annoTable}' table (discrete.getCTE)`
 
@@ -53,18 +51,17 @@ export const discrete = {
 		for (const b of bins) {
 			if (!('name' in b) && b.label) b.name = b.label
 			name2bin.set(b.name, b)
+			// names are bound as strings, same as the previously quoted sql literals
 			bin_def_lst.push(
-				`SELECT ? AS name,
-				? AS start,
-				? AS stop,
+				sql`SELECT ${String(b.name)} AS name,
+				${getBinBoundary(b.start, b.startunbounded)} AS start,
+				${getBinBoundary(b.stop, b.stopunbounded)} AS stop,
 				0 AS unannotated,
 				${b.startunbounded ? 1 : 0} AS startunbounded,
 				${b.stopunbounded ? 1 : 0} AS stopunbounded,
 				${b.startinclusive ? 1 : 0} AS startinclusive,
 				${b.stopinclusive ? 1 : 0} AS stopinclusive`
 			)
-			// names are bound as strings, same as the previously quoted sql literals
-			values.push(String(b.name), getBinBoundary(b.start, b.startunbounded), getBinBoundary(b.stop, b.stopunbounded))
 		}
 		const excludevalues = []
 		if (term.values) {
@@ -77,8 +74,8 @@ export const discrete = {
 				excludevalues.push(numKey)
 				const v = term.values[key]
 				bin_def_lst.push(
-					`SELECT ? AS name,
-	        ? AS start,
+					sql`SELECT ${String(v.label)} AS name,
+	        ${numKey} AS start,
 	        0 AS stop,
 	        1 AS unannotated,
 	        0 AS startunbounded,
@@ -86,7 +83,6 @@ export const discrete = {
 	        0 AS startinclusive,
 	        0 AS stopinclusive`
 				)
-				values.push(String(v.label), numKey)
 				name2bin.set(v.label, {
 					is_unannotated: true,
 					value: key,
@@ -95,28 +91,24 @@ export const discrete = {
 			}
 		}
 
-		// values must be pushed in the order that their placeholders appear in the sql below
-		values.push(...excludevalues, term.id)
-		const bin_def_table = 'bin_defs_' + index
-		const uncomputable = getUncomputableClause(term, q, 'a')
-		values.push(...uncomputable.values)
+		const bin_def_table = sql.id('bin_defs_' + index)
 
-		const sql = `${bin_def_table} AS (
-				${bin_def_lst.join('\nUNION ALL\n')}
+		const query = sql`${bin_def_table} AS (
+				${sql.join(bin_def_lst, sql`\nUNION ALL\n`)}
 			),
-			${tablename} AS (
+			${sql.id(tablename)} AS (
 				SELECT
 					sample,
 					b.name AS key,
 					value
 				FROM
-					${annoTable} a
+					${sql.id(annoTable)} a
 				JOIN ${bin_def_table} b ON
 					( b.unannotated=1 AND value=b.start )
 					OR
 					(
 						b.unannotated=0 AND
-						${excludevalues.length ? 'value NOT IN (' + excludevalues.map(() => '?').join(',') + ') AND' : ''}
+						${excludevalues.length ? sql`value NOT IN (${sql.list(excludevalues)}) AND` : sql``}
 						(
 							b.startunbounded = 1
 							OR value > b.start
@@ -130,11 +122,11 @@ export const discrete = {
 						)
 					)
 				WHERE
-				term_id=? ${uncomputable.clause}
+				term_id=${term.id} ${getUncomputableClause(term, q, 'a')}
 			)`
 
 		return {
-			sql,
+			sql: query,
 			tablename,
 			name2bin,
 			bins
