@@ -8,13 +8,6 @@ FROM r-base:4.5.0 AS ppbase
 ARG ARCH='x86_64'
 ENV ARCH=$ARCH
 
-ARG IMGREV=""
-ARG IMGVER=""
-
-LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
-    org.opencontainers.image.revision="$IMGREV" \
-    org.opencontainers.image.version="$IMGVER"
-
 RUN apt-get update && apt-get install --allow-downgrades -y \
     curl \
     wget \
@@ -146,6 +139,14 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
         exit 1; \
     fi
 
+# Declared after all the dependency install steps: a changed ARG value invalidates the cache of every
+# later RUN step in the stage, and IMGREV changes with every commit.
+ARG IMGREV=""
+ARG IMGVER=""
+LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
+    org.opencontainers.image.revision="$IMGREV" \
+    org.opencontainers.image.version="$IMGVER"
+
 #####################
 # Server-only install
 ######################
@@ -207,6 +208,8 @@ CMD ["sh", "-c", "node app-server.mjs"]
 # target for the backend-only SJ server app
 FROM ppbase AS ppserver
 
+ARG IMGREV=""
+ARG IMGVER=""
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
@@ -248,6 +251,8 @@ CMD ["sleep", "3600"]
 # target for the full (backend + frontend) SJ app
 FROM ppbase AS ppfull
 
+ARG IMGREV=""
+ARG IMGVER=""
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
