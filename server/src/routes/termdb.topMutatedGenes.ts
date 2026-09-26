@@ -1,6 +1,7 @@
 import type { RoutePayload, topMutatedGeneRequest, topMutatedGeneResponse, MutatedGene, RouteApi } from '#types'
 import { get_samples } from '#src/termdb.sql.js'
 import { mayLog } from '#src/helpers.ts'
+import { sql } from '#src/sql.ts'
 
 export const payload: RoutePayload = {
 	init,
@@ -104,13 +105,11 @@ export function validate_query_getTopMutatedGenes(ds: any) {
 	}
 
 	q.get = async (param: topMutatedGeneRequest) => {
-		const values: (string | number)[] = []
-		let sampleStatement = ''
+		let sampleStatement = sql``
 		if (param.filter) {
 			const lst = await get_samples(param, ds)
 			if (lst.length == 0) throw 'empty sample filter'
-			sampleStatement = `WHERE sample IN (${lst.map(() => '?').join(',')})`
-			values.push(...lst.map(i => i.id))
+			sampleStatement = sql`WHERE sample IN (${sql.list(lst.map(i => i.id))})`
 		}
 
 		const fields: string[] = []
@@ -130,21 +129,23 @@ export function validate_query_getTopMutatedGenes(ds: any) {
 		if (!fields.length) throw 'no fields'
 		const maxGenes = param.maxGenes ? Number(param.maxGenes) : 20
 		if (!Number.isInteger(maxGenes) || maxGenes < 1) throw 'invalid maxGenes'
-		values.push(maxGenes)
 
 		// TODO preserve count per data type to return as mutation stat
-		const query = `WITH
+		const query = sql`WITH
 		filtered AS (
-			SELECT genesymbol, ${fields.join('+')} AS total FROM genesamplemutationcount
+			SELECT genesymbol, ${sql.join(
+				fields.map(f => sql.id(f)),
+				sql`+`
+			)} AS total FROM genesamplemutationcount
 			${sampleStatement}
 		)
 		SELECT genesymbol, SUM(total) AS count
 		FROM filtered
 		GROUP BY genesymbol
 		ORDER BY count DESC
-		LIMIT ?`
+		LIMIT ${maxGenes}`
 		const t = Date.now()
-		const genes = ds.cohort.db.connection.prepare(query).all(values)
+		const genes = ds.cohort.db.connection.prepare(query).all()
 		mayLog('Top mutated gene sql', Date.now() - t, 'ms')
 		const results: MutatedGene[] = []
 		for (const g of genes) {

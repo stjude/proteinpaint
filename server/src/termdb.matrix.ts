@@ -3,6 +3,7 @@ import { string2pos } from '#shared/common.js'
 import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
+import { sql } from './sql.ts'
 import { read_file, trackXfetch } from './utils.js'
 import {
 	isDictionaryType,
@@ -949,6 +950,9 @@ When querying sample annotations for dictionary terms, the query is split into t
 Mapping parent annotations onto child samples: when mapParent2Children is true and the term sample type is a parent of the query sample type, then map the annotations of the term onto child samples with sample type matching the query sample type
 */
 export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
+	// TODO: remove this eslint-disable when the termdb filter/CTE pipeline returns sql`` fragments,
+	// see sqlRuleWarnOnly in eslint.config.js
+	/* eslint-disable no-restricted-syntax */
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTEs.map(t => t.sql).join(',\n')}
@@ -972,6 +976,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 			}
 			return query
 		}).join('\nUNION ALL\n')}`
+	/* eslint-enable no-restricted-syntax */
 
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 	return rows
@@ -1465,15 +1470,13 @@ function checkAccessToSampleData(data, ds, q) {
 	if (hiddenIds?.length) {
 		rows = ds.cohort.db.connection
 			.prepare(
-				`SELECT distinct value as name FROM anno_categorical WHERE term_id in (${hiddenIds
-					.map(() => '?')
-					.join(',')}) and sample in (${sampleIds.map(() => '?').join(',')})`
+				sql`SELECT distinct value as name FROM anno_categorical WHERE term_id in (${sql.list(
+					hiddenIds
+				)}) and sample in (${sql.list(sampleIds)})`
 			)
-			.all([...hiddenIds, ...sampleIds])
+			.all()
 	} else {
-		rows = ds.cohort.db.connection
-			.prepare(`SELECT name FROM sampleidmap WHERE id in (${sampleIds.map(() => '?').join(',')})`)
-			.all(sampleIds)
+		rows = ds.cohort.db.connection.prepare(sql`SELECT name FROM sampleidmap WHERE id in (${sql.list(sampleIds)})`).all()
 	}
 	const names = rows.map(s => s.name)
 	// pass sampleNames since portal token does not know internal sample ID-to-name mapping

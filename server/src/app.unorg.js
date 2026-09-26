@@ -368,7 +368,7 @@ async function handle_mdsgenecount(req, res) {
 	filtered AS (
 		SELECT gene, ${sql.join(
 			mutTypes.map(t => sql.id(t)),
-			'+'
+			sql`+`
 		)} AS total FROM genecount
 		WHERE sample IN (${sql.list(samples.map(String))})
 	)
