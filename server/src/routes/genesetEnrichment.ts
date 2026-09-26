@@ -12,6 +12,7 @@ import { getDmCacheResult, scanChromosomes } from '../../routes/termdb.diffMeth.
 import { getGeneBodyDeltas } from './termdb.geneBodyMeth.ts'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { validGeneSetGroup, validNumPermutations } from '#src/utils/genesetGroups.ts'
 import { get_ds_tdb } from '#src/termdb.js'
 import type { GseaCacheResult } from '../../routes/types.ts'
 
@@ -98,7 +99,12 @@ async function run_genesetEnrichment_analysis(
 		return { data: { genes, fold_change } } as unknown as GenesetEnrichmentResponse
 	}
 
+	// the geneSetGroup value is passed to gsea.py and cerno, which query the msigdb db with it
+	validGeneSetGroup(genomes[q.genome], q.geneSetGroup, q.method == 'blitzgsea')
+
 	if (q.method == 'blitzgsea') {
+		// the permutation count sets the blitzgsea compute time
+		q.num_permutations = validNumPermutations(q.num_permutations)
 		// Initial table requests cache the result as JSON so cache hits skip
 		// Python startup entirely. Detail-image requests (geneset_name set)
 		// always invoke Python — image generation is per-geneset and not
