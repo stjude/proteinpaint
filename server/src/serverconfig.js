@@ -46,6 +46,23 @@ if (!serverconfigfile) {
 	}
 }
 
+// Derived settings from a launcher script, such as the container app-server.mjs and app-full.mjs,
+// applied as if these were in serverconfig.json. This avoids rewriting a mounted serverconfig.json,
+// which may be read-only or not writable by the container user. Applied before any other processing,
+// so that settings that are computed below, such as allowedEmbedders, reflect these values.
+// Not deleted from process.env, so that spawned child processes that load this module apply the same values.
+if (process.env.PP_SERVERCONFIG_OVERRIDES) {
+	let overrides
+	try {
+		overrides = JSON.parse(process.env.PP_SERVERCONFIG_OVERRIDES)
+	} catch (e) {
+		throw `invalid JSON in process.env.PP_SERVERCONFIG_OVERRIDES: ${e}`
+	}
+	if (!overrides || typeof overrides != 'object' || Array.isArray(overrides))
+		throw `process.env.PP_SERVERCONFIG_OVERRIDES must be a JSON object`
+	Object.assign(serverconfig, overrides)
+}
+
 // this default port may be overwritten when using a Docker container
 if (!serverconfig.port) serverconfig.port = process.env.PP_PORT || 3000
 // default binary cmd paths
