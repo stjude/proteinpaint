@@ -13,6 +13,7 @@ doUpdateAttr
 get_fasta
 checkChr
 fileurl() argv safety
+fileurl() url protocol and host
 */
 
 tape('\n', function (test) {
@@ -337,5 +338,41 @@ tape('fileurl() argv safety', test => {
 		'https://a.org/b.bam',
 		'should accept a normal url'
 	)
+	test.end()
+})
+
+tape('fileurl() url protocol and host', test => {
+	for (const url of ['/etc/passwd.bb', 'x/y.hic', 'file:///etc/x.bb', 'data://text/plain,abcde'])
+		test.equal(utils.fileurl({ query: { url } }).length, 1, `should reject url=${url}`)
+	for (const url of [
+		'http://localhost/x.bb',
+		'http://a.localhost/x.bb',
+		'http://127.0.0.1:3000/x.bb',
+		'http://2130706433/x.bb', // decimal form of 127.0.0.1
+		'http://0x7f.1/x.bb',
+		'http://169.254.169.254/latest/meta-data',
+		'http://10.1.2.3/x.bb',
+		'http://172.16.0.1/x.bb',
+		'http://192.168.1.1/x.bb',
+		'http://0.0.0.0/x.bb',
+		'http://[::1]/x.bb',
+		'http://[::ffff:127.0.0.1]/x.bb',
+		'http://[fe80::1]/x.bb',
+		'http://[fd00::1]/x.bb'
+	])
+		test.deepEqual(utils.fileurl({ query: { url } }), ['url host is not allowed'], `should reject url=${url}`)
+	for (const url of ['https://a.org/b.bb', 'ftp://ftp.a.org/b.bb', 'http://8.8.8.8/b.hic', 'http://172.32.0.1/b.bb'])
+		test.equal(utils.fileurl({ query: { url } })[1], url, `should accept url=${url}`)
+
+	serverconfig.urlHosts = ['a.org', '.b.org', '127.0.0.1']
+	for (const url of ['https://a.org/x.bb', 'https://c.b.org/x.bb', 'http://127.0.0.1:3000/x.bb'])
+		test.equal(utils.fileurl({ query: { url } })[1], url, `should accept url=${url} listed in serverconfig.urlHosts`)
+	for (const url of ['https://c.a.org/x.bb', 'https://b.org/x.bb', 'https://xb.org/x.bb', 'http://localhost/x.bb'])
+		test.deepEqual(
+			utils.fileurl({ query: { url } }),
+			['url host is not allowed'],
+			`should reject url=${url} not listed in serverconfig.urlHosts`
+		)
+	delete serverconfig.urlHosts
 	test.end()
 })
