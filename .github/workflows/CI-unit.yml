@@ -46,6 +46,10 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      # only the sql injection rule S608 is enabled, see ruff.toml
+      - name: Run ruff
+        run: pipx run ruff==0.8.1 check .
+
       - name: Run tsc
         run: |
           # !!! TODO: run type check at the proteinpaint dir !!!
@@ -167,6 +171,7 @@ jobs:
           toolchain: ${{ steps.get_rust_version.outputs.rust_version }}
           override: true
           rust-src-dir: rust
+          components: clippy
 
       - name: 🔎 Rust unit tests
         if: contains(env.WS_TO_TEST, 'rust')
@@ -175,3 +180,9 @@ jobs:
           cp container/ci/serverconfig.json rust/ 
           npm run test:unit --workspace="rust"
           cd rust && cargo test
+
+      # only the disallowed-methods lint is enforced, so that sqlite statements are prepared with
+      # prepare_static() from rust/src/sqlite_static.rs, see rust/clippy.toml
+      - name: 🔎 Rust sql lint
+        if: contains(env.WS_TO_TEST, 'rust')
+        run: cd rust && cargo clippy --release --all-targets -- -A clippy::all -D clippy::disallowed_methods
