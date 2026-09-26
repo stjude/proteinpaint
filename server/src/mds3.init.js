@@ -2378,8 +2378,12 @@ function makeElementMethylationGetter(q, entry, ds) {
 	on a plot is a column of points 14 units from every other value. Beta puts them at 0.
 	Only term values move; the stored scale, and the differential-methylation fit that reads
 	these matrices directly, are untouched. */
-	const wantBeta = q.termValueUnit ? q.termValueUnit === 'beta' : storesBeta
-	const toServed = (avg, sourceIsBeta) => {
+	const dsWantsBeta = q.termValueUnit ? q.termValueUnit === 'beta' : storesBeta
+	/* Per term, because the unit is a display choice a user can change from the term's edit menu:
+	tw.term.unit names the scale that term is to be returned on, and only then the dataset default.
+	A term that says nothing behaves exactly as the dataset alone would. */
+	const wantsBeta = tw => (tw?.term?.unit ? /beta/i.test(tw.term.unit) : dsWantsBeta)
+	const toServed = (avg, sourceIsBeta, wantBeta) => {
 		if (sourceIsBeta === wantBeta) return avg
 		if (wantBeta) return 2 ** avg / (2 ** avg + 1)
 		const clamped = Math.min(Math.max(avg, 1e-6), 1 - 1e-6)
@@ -2441,7 +2445,7 @@ function makeElementMethylationGetter(q, entry, ds) {
 					if (!n) continue
 					const avg = sum / n
 					// a CpG shard always stores betas, so the source scale is known
-					s2v[sid] = toServed(avg, true)
+					s2v[sid] = toServed(avg, true, wantsBeta(tw))
 				}
 				if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v)
 				continue
@@ -2473,7 +2477,7 @@ function makeElementMethylationGetter(q, entry, ds) {
 				/* Converted to the served unit, which is the stored one unless the dataset asked
 				otherwise. Both branches of this getter go through toServed, so they cannot disagree
 				about what the number they return is. */
-				s2v[sid] = toServed(sum / n, storesBeta)
+				s2v[sid] = toServed(sum / n, storesBeta, wantsBeta(tw))
 			}
 			if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v)
 		}
