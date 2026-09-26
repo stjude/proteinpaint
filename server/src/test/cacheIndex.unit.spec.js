@@ -21,6 +21,7 @@ system paths.
 test sections:
 - cache_index() rejects traversal
 - cache_index() rejects non-remote protocols
+- cache_index() rejects a primary url host that is not allowed
 - cache_index() still caches valid urls
 - fileurl() url branch
 - /tkbedj, /tabixheader, /bamnochr via the real route table
@@ -119,6 +120,21 @@ tape('cache_index() rejects non-remote protocols', async test => {
 			`should reject ${p}://`
 		)
 		test.notOk(fs.existsSync(path.join(serverconfig.cachedir, p, H)), `should not create cachedir/${p}/${H}`)
+	}
+	test.end()
+})
+
+tape('cache_index() rejects a primary url host that is not allowed', async test => {
+	// some routes, such as /bedgraphdot and a custom /junction track, call cache_index() with a request url
+	// without fileurl(), so cache_index() must also check the host of the primary url, not only the index url
+	for (const host of ['10.1.2.3', 'localhost', 'localhost.', '169.254.169.254']) {
+		await rejects(
+			test,
+			() => utils.cache_index(`http://${host}/x/t.gz`),
+			/url host is not allowed/,
+			`should reject a primary url on host=${host}`
+		)
+		test.notOk(fs.existsSync(path.join(serverconfig.cachedir, 'http', host)), `should not create cachedir/http/${host}`)
 	}
 	test.end()
 })
