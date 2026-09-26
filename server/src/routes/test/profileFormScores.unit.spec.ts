@@ -59,7 +59,8 @@ tape('getPercentsDict() accepts numeric value labels', function (test) {
 })
 
 tape('getScoreTermValues() reads labels from the termdb for a get_multivalue_tws() wrapper', function (test) {
-	// same shape as get_multivalue_tws(): no term.values
+	// previous comment: same shape as get_multivalue_tws(): no term.values
+	// a q.get_multivalue_tws() wrapper whose terms.jsondata has no values, so term.values is missing
 	const tw = { $id: 'Q1', term: { id: 'Q1', name: 'Q1', type: 'multivalue', subtype: 'Likert', details: '' } }
 	const ds = {
 		cohort: { termdb: { q: { termjsonByOneid: id => (id == 'Q1' ? { values: LIKERT_VALUES } : undefined) } } }
