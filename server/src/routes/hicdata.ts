@@ -87,6 +87,8 @@ function handle_hicdata(q: HicdataRequest): Promise<HicdataResponse> {
 		})
 
 		ps.stderr.on('data', i => erroutput.push(i))
+		// such as when the straw binary cannot be spawned; an unhandled 'error' event would throw
+		ps.on('error', e => reject({ error: 'cannot run straw: ' + e.message }))
 		ps.on('close', () => {
 			const err = erroutput.join('')
 			if (err) reject({ error: err })
