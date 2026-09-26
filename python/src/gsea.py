@@ -156,8 +156,8 @@ try:
               msigdb_library = blitz.enrichr.get_library("WikiPathways_2019_Human")              
             else: # Use geneset groups from msigdb    
               # Query to get gene set IDs
-              query = f"SELECT id FROM terms WHERE parent_id='{table_name}'"  # SQL query to get gene set IDs
-              cursor.execute(query)  # Execute the query
+              # bound parameters, since table_name is the request's geneSetGroup value
+              cursor.execute("SELECT id FROM terms WHERE parent_id=?", (table_name,))  # Get gene set IDs
               
               # Fetch all gene set IDs
               rows = cursor.fetchall()  # Fetch all rows from the executed query
@@ -166,8 +166,7 @@ try:
               
               # Iterate over gene set IDs and fetch corresponding genes
               for row in rows:
-                  query2 = f"SELECT genes FROM term2genes WHERE id='{row[0]}'"  # SQL query to get genes for a gene set ID
-                  cursor.execute(query2)  # Execute the query
+                  cursor.execute("SELECT genes FROM term2genes WHERE id=?", (row[0],))  # Get genes for a gene set ID
                   rows2 = cursor.fetchall()  # Fetch all rows from the executed query
                   row3 = json.loads(rows2[0][0])  # Parse the JSON data
                   msigdb_library[row[0]] = list(set(map(extract_symbols, row3)))  # Extract only unique gene symbols and add them to the library. "set" command selects only unique genes 

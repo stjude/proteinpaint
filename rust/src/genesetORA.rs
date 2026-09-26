@@ -153,24 +153,23 @@ fn main() -> Result<()> {
                     let num_items_output = 100; // Number of top pathways to be specified in the output
 
                     let msigdbconn = Connection::open(msigdb)?;
-                    let stmt_result = msigdbconn
-                        .prepare(&("select id from terms where parent_id='".to_owned() + &genesetgroup + "'"));
+                    // bound parameters, since genesetgroup is the request's geneSetGroup value
+                    let stmt_result = msigdbconn.prepare("select id from terms where parent_id=?");
                     match stmt_result {
                         Ok(mut stmt) => {
                             #[allow(non_snake_case)]
-                            let GO_iter = stmt.query_map([], |row| Ok(GO_pathway { GO_id: row.get(0)? }))?;
+                            let GO_iter =
+                                stmt.query_map([&genesetgroup], |row| Ok(GO_pathway { GO_id: row.get(0)? }))?;
                             #[allow(non_snake_case)]
                             for GO_term in GO_iter {
                                 match GO_term {
                                     Ok(n) => {
                                         //println!("GO term {:?}", n);
-                                        let sql_statement =
-                                            "select genes from term2genes where id='".to_owned() + &n.GO_id + &"'";
-                                        //println!("sql_statement:{}", sql_statement);
-                                        let mut gene_stmt = msigdbconn.prepare(&(sql_statement))?;
+                                        let mut gene_stmt =
+                                            msigdbconn.prepare("select genes from term2genes where id=?")?;
                                         //println!("gene_stmt:{:?}", gene_stmt);
 
-                                        let mut rows = gene_stmt.query([])?;
+                                        let mut rows = gene_stmt.query([&n.GO_id])?;
                                         let mut names = HashSet::<String>::new();
                                         while let Some(row) = rows.next()? {
                                             let a: String = row.get(0)?;
