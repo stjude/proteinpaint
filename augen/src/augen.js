@@ -8,21 +8,48 @@ export function setRoutes(app, routes, _opts = {}) {
 		const opts = Object.assign({ basepath: '' }, _opts)
 		for (const route of routes) {
 			const api = route.api
+			if (api.middlewares && !Array.isArray(api.middlewares))
+				throw new Error(`${api.endpoint}: middlewares must be an array`)
 			for (const [method, handler] of Object.entries(api.methods)) {
 				try {
 					const endpoint = `${opts.basepath}/${api.endpoint}`
-					if (handler.middleware) app[method](endpoint, handler.middleware, handler.init(opts))
-					else app[method](endpoint, handler.init(opts))
+					// route-level middlewares apply to all methods, and are called before a method-specific middleware
+					const middlewares = [...(api.middlewares || [])]
+					if (handler.middleware) middlewares.push(handler.middleware)
+					app[method](endpoint, ...middlewares, handler.init(opts))
 				} catch (e) {
 					throw new Error(`${api.endpoint} ${method}: ${e}`)
 				}
 			}
 		}
+		if (opts.debugmode && opts.protectedRoutesJson) emitProtectedRoutes(routes, opts.protectedRoutesJson)
 		//emitFiles(routes, opts)
 	} catch (e) {
 		console.trace(e)
 		throw e
 	}
+}
+
+// returns {endpoint: [middleware names]} for the routes that have route-level middlewares,
+// sorted by endpoint so that the emitted json has a stable order
+export function getProtectedRoutes(routes) {
+	const protectedRoutes = {}
+	const apis = routes.map(r => r.api).filter(api => api?.middlewares?.length)
+	for (const api of apis.sort((a, b) => (a.endpoint < b.endpoint ? -1 : a.endpoint > b.endpoint ? 1 : 0))) {
+		protectedRoutes[api.endpoint] = api.middlewares.map(m => m.name || '(anonymous)')
+	}
+	return protectedRoutes
+}
+
+// Emit the protected route endpoints into a git-tracked json file, so that a unit test may detect
+// when a middleware is removed from a route endpoint, or when an endpoint is renamed without its middlewares.
+// Only emitted when the file's directory exists, and only written when the content has changed,
+// to avoid triggering a file watcher that restarts the server.
+export function emitProtectedRoutes(routes, file) {
+	if (!fs.existsSync(path.dirname(file))) return
+	const content = JSON.stringify(getProtectedRoutes(routes), null, '\t') + '\n'
+	if (fs.existsSync(file) && fs.readFileSync(file, { encoding: 'utf8' }) === content) return
+	fs.writeFileSync(file, content)
 }
 
 export function emitFiles(routes, opts) {

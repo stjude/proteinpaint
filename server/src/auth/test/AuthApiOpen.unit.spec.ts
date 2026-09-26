@@ -30,7 +30,8 @@ tape('AuthApiOpen: has expected interface properties', function (test) {
 			'getRequiredCredForDsEmbedder',
 			'isUserLoggedIn',
 			'mayAdjustFilter',
-			'maySetAuthRoutes'
+			'maySetAuthRoutes',
+			'routeMiddlewares'
 		],
 		'should expose the expected AuthInterface methods and properties'
 	)
@@ -74,7 +75,7 @@ tape('AuthApiOpen.isUserLoggedIn: always returns true', function (test) {
 		'should return true for any request'
 	)
 	test.equal(
-		AuthApiOpen.isUserLoggedIn({} as any, {} as any, []),
+		AuthApiOpen.isUserLoggedIn({} as any, {} as any, true),
 		true,
 		'should always return true regardless of arguments'
 	)
@@ -233,6 +234,17 @@ tape('AuthApiOpen.maySetAuthRoutes: throws when q.sessionid already exists', fun
 		test.fail('should have thrown when q.sessionid already exists')
 	} catch (e) {
 		test.ok(String(e).includes('q.sessionid already exists'), 'should throw mentioning q.sessionid already exists')
+	}
+	test.end()
+})
+
+tape('AuthApiOpen.routeMiddlewares: always call next()', function (test) {
+	test.timeoutAfter(500)
+	test.ok(Object.isFrozen(AuthApiOpen.routeMiddlewares), 'should be frozen')
+	for (const [name, middleware] of Object.entries(AuthApiOpen.routeMiddlewares)) {
+		let nextCalled = false
+		middleware({ query: {} }, {}, () => (nextCalled = true))
+		test.ok(nextCalled, `should call next() from ${name}`)
 	}
 	test.end()
 })

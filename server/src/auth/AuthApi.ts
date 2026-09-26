@@ -1,8 +1,8 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
-import { type AuthInterface } from '../auth.ts'
+import { type AuthInterface, type ProtectedRouteMiddlewares } from '../auth.ts'
 import { Auth, patternMatches, assertStringOrUndefined } from './Auth.ts'
-import { setAuthMiddleware } from './AuthMiddleWare.ts'
+import { setAuthMiddleware, getProtectedRouteMiddlewares, getSampleLogin } from './AuthMiddleWare.ts'
 import { setAuthRoutes } from './AuthRoutes.ts'
 import { sleep } from '../utils.js'
 
@@ -18,9 +18,12 @@ import { sleep } from '../utils.js'
 export class AuthApi implements AuthInterface {
 	#auth: Auth
 	credEmbedders: string[] = []
+	// see ./protectedRoutes.ts for the route-level usage of these middlewares
+	routeMiddlewares: ProtectedRouteMiddlewares
 
 	constructor(creds, app, genome, serverconfig) {
 		this.#auth = new Auth(creds, app, genome, serverconfig)
+		this.routeMiddlewares = getProtectedRouteMiddlewares(this, this.#auth)
 	}
 
 	async maySetAuthRoutes(app, genomes, basepath = '', serverconfig) {
@@ -41,9 +44,10 @@ export class AuthApi implements AuthInterface {
 		if (!displaySampleIds) return false
 		// the sample-id-bearing routes require the request to be logged in. This method is only called
 		// by code that returns sample-level data, so fail closed: require a session whenever the dataset has
-		// a termdb credential for this embedder, instead of relying only on a list of known route/q.for names
-		// that a client can avoid (e.g. getsamplelist=1, for[]=getAllSamples)
-		if (!this.isUserLoggedIn(req, ds, this.#auth.protectedRoutes.samples, true)) return false
+		// a termdb credential for this embedder, regardless of the request path or q.for. The login status
+		// may have already been determined by the route-level protectedRoutes.samples middleware.
+		const isUserLoggedIn = getSampleLogin(req, ds) ?? this.isUserLoggedIn(req, ds, true)
+		if (!isUserLoggedIn) return false
 		// displaySampleIds may be a boolean or a per-request policy (a function of the request's
 		// clientAuthResult). A truthy non-function value is an unconditional allow; a function must be
 		// evaluated for THIS request's role and fail closed, so a role the dataset denies never leaks
@@ -176,12 +180,14 @@ export class AuthApi implements AuthInterface {
 		return requiredCred.length ? requiredCred : undefined
 	}
 
-	// requireTermdbCred: if true, also require a session when the dataset has any termdb credential
-	// for the request's embedder, even when the request path/q.for is not in protectedRoutes
-	isUserLoggedIn(req, ds, protectedRoutes, requireTermdbCred = false) {
-		const cred =
-			this.#auth.getRequiredCred(req.query, req.path, protectedRoutes) ||
-			(requireTermdbCred ? this.#auth.getTermdbCred(req.query) : undefined)
+	// requireTermdbCred:
+	// - if false, only the serverconfig.dsCredentials route patterns that match the request path are considered
+	// - if true, require a session when the dataset has any termdb credential for the request's embedder,
+	//   regardless of the request path or q.for; this is used for the protected route groups in ./protectedRoutes.ts
+	isUserLoggedIn(req, ds, requireTermdbCred = false) {
+		const cred = requireTermdbCred
+			? this.#auth.getTermdbCred(req.query) || this.#auth.getRequiredCred(req.query, req.path)
+			: this.#auth.getRequiredCred(req.query, req.path)
 		if (!cred) return true
 		// NOTE: Basic (password) credentials are converted to session token upon log-in,
 		// so that a user does not have to login again for each runproteinpaint() call.

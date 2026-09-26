@@ -1,5 +1,10 @@
 import tape from 'tape'
-import { setAuthMiddleware, isForcedOpenRoute } from '#src/auth/AuthMiddleWare.ts'
+import {
+	setAuthMiddleware,
+	isForcedOpenRoute,
+	getProtectedRouteMiddlewares,
+	getSampleLogin
+} from '#src/auth/AuthMiddleWare.ts'
 import { Auth } from '#src/auth/Auth.ts'
 import { AuthApiOpen } from '#src/auth/AuthApiOpen.ts'
 
@@ -235,7 +240,8 @@ tape('middleware: returns 401 error for missing session on protected route', fun
 	test.timeoutAfter(500)
 	test.plan(2)
 
-	const auth = makeAuth()
+	// the app-level middleware only protects the dsCredentials route patterns
+	const auth = makeAuth({ protectedRoutes: ['/termdb/matrix'] })
 	const mockAuthApi = {
 		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
 		mayAdjustFilter: () => {},
@@ -262,7 +268,7 @@ tape('middleware: returns 401 error for missing session on protected route', fun
 tape('middleware: returns 401 for a protected route under a configured basepath', function (test) {
 	test.timeoutAfter(500)
 
-	const auth = makeAuth()
+	const auth = makeAuth({ protectedRoutes: ['/termdb/matrix'] })
 	auth.basepath = '/api'
 	const mockAuthApi = {
 		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
@@ -317,7 +323,7 @@ tape('middleware: clears sessions when sessionTracking is jwt-only', function (t
 	test.timeoutAfter(500)
 	test.plan(2)
 
-	const auth = makeAuth({}, { features: { sessionTracking: 'jwt-only' } })
+	const auth = makeAuth({ protectedRoutes: ['/termdb/matrix'] }, { features: { sessionTracking: 'jwt-only' } })
 	// Pre-populate sessions
 	;(auth as any).sessions[dslabel] = { 'fake-session-id': { time: Date.now(), ip: '127.0.0.1' } }
 
@@ -351,7 +357,7 @@ tape('middleware: valid session - calls next() and updates session time', async 
 	test.timeoutAfter(1000)
 	test.plan(2)
 
-	const auth = makeAuth()
+	const auth = makeAuth({ protectedRoutes: ['/termdb/matrix'] })
 
 	// Manually create a session in auth.sessions with a known ID and matching IP
 	const sessionId = 'test-session-id-00'
@@ -688,5 +694,194 @@ tape('middleware: rejects non-string auth query params with 400 before any crede
 		test.equal(res.statusCode, 400, `should set 400 status for ${label}`)
 		test.ok(String(res.sentData?.error).includes('must be a string'), `should explain the error for ${label}`)
 	}
+	test.end()
+})
+
+tape('middleware: does not hardcode protection for a termdb data route', function (test) {
+	test.timeoutAfter(500)
+
+	// the /termdb/matrix route is protected by the route-level protectedRoutes.termdb middleware instead
+	const auth = makeAuth()
+	const mockAuthApi = {
+		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+		mayAdjustFilter: () => {},
+		isUserLoggedIn: () => true
+	}
+	const middleware = registerMiddleware(auth, mockAuthApi)
+	const req: any = { query: { dslabel, embedder }, path: '/termdb/matrix', cookies: {}, headers: {} }
+	const res = makeMockRes()
+	let nextCalled = false
+	middleware(req, res, () => (nextCalled = true))
+	test.ok(nextCalled, 'should call next() when no dsCredentials route pattern matches the request path')
+	test.end()
+})
+
+/*** route-level middlewares ***/
+
+function makeRouteMiddlewares(auth, authApi: any = {}) {
+	return getProtectedRouteMiddlewares(authApi, auth)
+}
+
+tape('getProtectedRouteMiddlewares: returns a frozen object of named middlewares', function (test) {
+	test.timeoutAfter(500)
+	const mw = makeRouteMiddlewares(makeAuth())
+	test.deepEqual(Object.keys(mw), ['termdb', 'samples', 'minSampleSize'], 'should have the expected middleware keys')
+	test.ok(Object.isFrozen(mw), 'should be frozen')
+	test.end()
+})
+
+tape('protectedRoutes.termdb: returns 401 without a session when the dataset has a termdb cred', function (test) {
+	test.timeoutAfter(500)
+	const { termdb } = makeRouteMiddlewares(makeAuth())
+	const req: any = { query: { dslabel, embedder }, path: '/termdb/matrix', cookies: {}, headers: {} }
+	const res = makeMockRes()
+	let nextCalled = false
+	termdb(req, res, () => (nextCalled = true))
+	test.notOk(nextCalled, 'should NOT call next()')
+	test.equal(res.statusCode, 401, 'should set 401 status')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('protectedRoutes.termdb: calls next() with a valid session', function (test) {
+	test.timeoutAfter(500)
+	const auth = makeAuth()
+	const sessionId = 'test-session-id-01'
+	;(auth as any).sessions[dslabel] = { [sessionId]: { time: Date.now(), ip: '127.0.0.1' } }
+	const { termdb } = makeRouteMiddlewares(auth)
+	const req: any = {
+		query: { dslabel, embedder },
+		path: '/termdb/matrix',
+		cookies: { [headerKey]: sessionId },
+		headers: {},
+		ip: '127.0.0.1'
+	}
+	const res = makeMockRes()
+	let nextCalled = false
+	termdb(req, res, () => (nextCalled = true))
+	test.ok(nextCalled, 'should call next()')
+	test.equal(res.statusCode, null, 'should not set an error status')
+	test.end()
+})
+
+tape('protectedRoutes.termdb: calls next() for an open-access dataset or embedder', function (test) {
+	test.timeoutAfter(500)
+	const { termdb } = makeRouteMiddlewares(makeAuth())
+	for (const query of [{ dslabel: 'openDs', embedder }, { dslabel, embedder: 'other.org' }, { embedder }]) {
+		const req: any = { query, path: '/termdb/matrix', cookies: {}, headers: {} }
+		let nextCalled = false
+		termdb(req, makeMockRes(), () => (nextCalled = true))
+		test.ok(nextCalled, `should call next() for ${JSON.stringify(query)}`)
+	}
+	test.end()
+})
+
+tape('protectedRoutes.termdb: skips the session check that the app-level middleware already passed', function (test) {
+	test.timeoutAfter(500)
+	const auth = makeAuth({ protectedRoutes: ['/termdb/matrix'] })
+	const sessionId = 'test-session-id-02'
+	;(auth as any).sessions[dslabel] = { [sessionId]: { time: Date.now(), ip: '127.0.0.1' } }
+	const mockAuthApi = {
+		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+		mayAdjustFilter: () => {},
+		isUserLoggedIn: () => true
+	}
+	const appMiddleware = registerMiddleware(auth, mockAuthApi)
+	const { termdb } = makeRouteMiddlewares(auth)
+	const req: any = {
+		query: { dslabel, embedder },
+		path: '/termdb/matrix',
+		cookies: { [headerKey]: sessionId },
+		headers: {},
+		ip: '127.0.0.1'
+	}
+	let appNextCalled = false
+	appMiddleware(req, makeMockRes(), () => (appNextCalled = true))
+	test.ok(appNextCalled, 'should pass the app-level middleware')
+	// a session check would fail for this changed ip address, so calling next() means that it was skipped
+	req.ip = '10.0.0.1'
+	let routeNextCalled = false
+	termdb(req, makeMockRes(), () => (routeNextCalled = true))
+	test.ok(routeNextCalled, 'should call next() without repeating the session check')
+	test.end()
+})
+
+tape('protectedRoutes.termdb: responds with an error for a non-string dslabel or embedder', function (test) {
+	test.timeoutAfter(500)
+	const { termdb } = makeRouteMiddlewares(makeAuth())
+	for (const query of [
+		{ dslabel: [dslabel], embedder },
+		{ dslabel, embedder: [embedder] }
+	]) {
+		const req: any = { query, path: '/termdb/matrix', cookies: {}, headers: {} }
+		const res = makeMockRes()
+		let nextCalled = false
+		termdb(req, res, () => (nextCalled = true))
+		test.notOk(nextCalled, `should NOT call next() for ${JSON.stringify(query)}`)
+		test.equal(res.statusCode, 400, `should set 400 status for ${JSON.stringify(query)}`)
+	}
+	test.end()
+})
+
+tape('protectedRoutes.samples: records the sample-level login status for the request dataset', function (test) {
+	test.timeoutAfter(500)
+	const ds = { label: dslabel }
+	const auth = new Auth(
+		{ [dslabel]: { termdb: { [embedder]: makeShapedCred() } } },
+		{},
+		{ hg38: { datasets: { [dslabel]: ds } } },
+		{
+			port: 3000
+		}
+	)
+	const calls: any[] = []
+	const mockAuthApi = {
+		isUserLoggedIn: (req, _ds, requireTermdbCred) => {
+			calls.push({ ds: _ds, requireTermdbCred })
+			return false
+		}
+	}
+	const { samples } = makeRouteMiddlewares(auth, mockAuthApi)
+	const req: any = { query: { dslabel, embedder, genome: 'hg38' }, path: '/termdb/matrix', cookies: {}, headers: {} }
+	let nextCalled = false
+	samples(req, makeMockRes(), () => (nextCalled = true))
+	test.ok(nextCalled, 'should call next()')
+	test.deepEqual(calls, [{ ds, requireTermdbCred: true }], 'should require the termdb cred for the request dataset')
+	test.equal(getSampleLogin(req, ds), false, 'should record the login status')
+	test.equal(getSampleLogin(req, {}), undefined, 'should not return the login status for a different dataset')
+	test.equal(getSampleLogin({}, ds), undefined, 'should not return the login status for a different request')
+	test.end()
+})
+
+tape('protectedRoutes.minSampleSize: sets a frozen __protected__.isUserLoggedIn', function (test) {
+	test.timeoutAfter(500)
+	const ds = { label: dslabel }
+	const auth = new Auth(
+		{ [dslabel]: { termdb: { [embedder]: makeShapedCred() } } },
+		{},
+		{ hg38: { datasets: { [dslabel]: ds } } },
+		{
+			port: 3000
+		}
+	)
+	const mockAuthApi = { isUserLoggedIn: (req, _ds, requireTermdbCred) => !requireTermdbCred }
+	const { minSampleSize } = makeRouteMiddlewares(auth, mockAuthApi)
+	const ignoredTermIds = []
+	const __protected__ = Object.freeze({ isUserLoggedIn: true, ignoredTermIds })
+	const req: any = { query: { dslabel, embedder, genome: 'hg38', __protected__ }, path: '/termdb/barsql' }
+	let nextCalled = false
+	minSampleSize(req, makeMockRes(), () => (nextCalled = true))
+	test.ok(nextCalled, 'should call next()')
+	test.equal(req.query.__protected__.isUserLoggedIn, false, 'should override isUserLoggedIn with the termdb cred check')
+	test.equal(req.query.__protected__.ignoredTermIds, ignoredTermIds, 'should keep the other __protected__ values')
+	test.ok(Object.isFrozen(req.query.__protected__), 'should freeze the replaced __protected__')
+
+	const req2: any = { query: { dslabel: 'msigdb', embedder, genome: 'hg38', __protected__ }, path: '/termdb/barsql' }
+	minSampleSize(req2, makeMockRes(), () => {})
+	test.equal(
+		req2.query.__protected__,
+		__protected__,
+		'should not change __protected__ when there is no applicable dataset'
+	)
 	test.end()
 })

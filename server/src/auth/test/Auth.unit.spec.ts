@@ -96,13 +96,32 @@ tape('getRequiredCred: returns undefined for unprotected path/dslabel combinatio
 	test.end()
 })
 
-tape('getRequiredCred: returns cred for matching termdb/matrix route', function (test) {
+// the /termdb/matrix route is protected by the route-level protectedRoutes.termdb middleware,
+// not by the app-level middleware that calls getRequiredCred()
+tape('getRequiredCred: does not hardcode protection for a termdb data route', function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuth()
+	test.equal(
+		auth.getRequiredCred({ dslabel, embedder }, '/termdb/matrix'),
+		undefined,
+		'should not return a cred for /termdb/matrix without a dsCredentials route pattern for it'
+	)
+	test.equal(
+		auth.getRequiredCred({ dslabel, embedder, for: 'getAllSamples' }, '/termdb'),
+		undefined,
+		'should not return a cred based on q.for without a dsCredentials route pattern for it'
+	)
+	test.end()
+})
+
+tape('getRouteCred: returns the termdb cred that protectedRoutes.termdb would require', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
 
 	const auth = makeAuth()
-	const result = auth.getRequiredCred({ dslabel, embedder }, '/termdb/matrix')
-	test.ok(result, 'should return a cred for a matching termdb/matrix route')
+	test.ok(auth.getRouteCred(dslabel, ['termdb'], embedder), 'should return a termdb cred')
 	test.end()
 })
 
@@ -152,7 +171,7 @@ tape('getRequiredCred: glob dslabel and embedder keys', function (test) {
 	const embedder = 'portal.example.org'
 
 	test.equal(
-		auth.getRequiredCred({ dslabel: 'realDs1', embedder }, '/termdb/matrix'),
+		auth.getRouteCred('realDs1', ['termdb'], embedder),
 		termdbCred,
 		'should return the termdb cred for glob-matched dslabel and embedder keys'
 	)
@@ -172,7 +191,7 @@ tape('getRequiredCred: glob dslabel and embedder keys', function (test) {
 		'should return the all-routes cred for glob-matched dslabel and embedder keys'
 	)
 	test.equal(
-		auth.getRequiredCred({ dslabel: 'realDs1', embedder: 'other.org' }, '/termdb/matrix'),
+		auth.getRouteCred('realDs1', ['termdb'], 'other.org'),
 		undefined,
 		'should return undefined when the embedder does not match the glob key'
 	)
@@ -184,7 +203,7 @@ tape('getRequiredCred: glob dslabel and embedder keys', function (test) {
 	test.end()
 })
 
-tape('getRequiredCred: exact keys take precedence over glob and wildcard keys', function (test) {
+tape('getRouteCred: exact keys take precedence over glob and wildcard keys', function (test) {
 	test.timeoutAfter(500)
 
 	const exactCred = makeCred({ dslabel: 'realDs1' })
@@ -199,17 +218,17 @@ tape('getRequiredCred: exact keys take precedence over glob and wildcard keys', 
 	}
 	const auth = new Auth(creds, {}, {}, { port: 3000 })
 	test.equal(
-		auth.getRequiredCred({ dslabel: 'realDs1', embedder: 'portal.example.org' }, '/termdb/matrix'),
+		auth.getRouteCred('realDs1', ['termdb'], 'portal.example.org'),
 		exactCred,
 		'should prefer the exact dslabel and embedder keys'
 	)
 	test.equal(
-		auth.getRequiredCred({ dslabel: 'realDs2', embedder: 'portal.example.org' }, '/termdb/matrix'),
+		auth.getRouteCred('realDs2', ['termdb'], 'portal.example.org'),
 		globCred,
 		'should prefer a glob dslabel key over the wildcard dslabel key'
 	)
 	test.equal(
-		auth.getRequiredCred({ dslabel: 'otherDs', embedder: 'a/b' }, '/termdb/matrix'),
+		auth.getRouteCred('otherDs', ['termdb'], 'a/b'),
 		wildcardCred,
 		'should fall back to the wildcard dslabel and embedder keys'
 	)
@@ -229,7 +248,7 @@ tape('getRequiredCred: checks lower-precedence dslabel entries for a route', fun
 	const auth = new Auth(creds, {}, {}, { port: 3000 })
 	const q = { dslabel: 'realDs1', embedder: 'portal.example.org' }
 	test.equal(
-		auth.getRequiredCred(q, '/termdb/matrix'),
+		auth.getRouteCred(q.dslabel, ['termdb'], q.embedder),
 		termdbCred,
 		'should return the termdb cred from a glob entry when the exact entry has no termdb route'
 	)
@@ -263,7 +282,7 @@ tape('getMatchedEntry: exact, then glob, then wildcard key precedence', function
 	test.end()
 })
 
-tape('getRequiredCred: a glob embedder key takes precedence over the wildcard embedder key', function (test) {
+tape('getRouteCred: a glob embedder key takes precedence over the wildcard embedder key', function (test) {
 	test.timeoutAfter(500)
 
 	const forbiddenCred = makeCred({ type: 'forbidden' })
@@ -278,19 +297,19 @@ tape('getRequiredCred: a glob embedder key takes precedence over the wildcard em
 	}
 	const auth = new Auth(creds, {}, {}, { port: 3000 })
 	test.equal(
-		auth.getRequiredCred({ dslabel, embedder: 'portal.example.org' }, '/termdb/matrix'),
+		auth.getRouteCred(dslabel, ['termdb'], 'portal.example.org'),
 		loginCred,
 		'should return the login cred for an embedder that matches the glob key'
 	)
 	test.equal(
-		auth.getRequiredCred({ dslabel, embedder: 'other.org' }, '/termdb/matrix'),
+		auth.getRouteCred(dslabel, ['termdb'], 'other.org'),
 		forbiddenCred,
 		'should return the forbidden cred for an embedder that only matches the wildcard key'
 	)
 	test.end()
 })
 
-tape('getRequiredCred: uses wildcard dslabel when specific dslabel not found', function (test) {
+tape('getRouteCred: uses wildcard dslabel when specific dslabel not found', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
 
@@ -302,7 +321,7 @@ tape('getRequiredCred: uses wildcard dslabel when specific dslabel not found', f
 		}
 	}
 	const auth = new Auth(creds, {}, {}, { port: 3000 })
-	const result = auth.getRequiredCred({ dslabel: 'anyDs', embedder }, '/termdb/matrix')
+	const result = auth.getRouteCred('anyDs', ['termdb'], embedder)
 	test.ok(result, 'should match wildcard dslabel (*) when exact dslabel not found')
 	test.end()
 })
@@ -321,27 +340,18 @@ tape('normalizeReqPath: lowercases and strips trailing slashes', function (test)
 
 // Express routes case-insensitively and ignores a trailing slash, so these paths reach the
 // protected handlers and must not bypass the auth check
-tape('getRequiredCred: matches protected termdb routes regardless of case or trailing slash', function (test) {
-	test.timeoutAfter(500)
+tape(
+	'getRequiredCred: matches a cred.protectedRoutes termdb route regardless of case or trailing slash',
+	function (test) {
+		test.timeoutAfter(500)
 
-	const auth = makeAuth()
-	for (const path of ['/TERMDB/MATRIX', '/termdb/matrix/', '/Termdb/Matrix//', '/termdb/MATRIX']) {
-		test.ok(auth.getRequiredCred({ dslabel, embedder }, path), `should return a cred for path='${path}'`)
+		const auth = makeAuth({ protectedRoutes: ['/termdb/matrix'] })
+		for (const path of ['/TERMDB/MATRIX', '/termdb/matrix/', '/Termdb/Matrix//', '/termdb/MATRIX']) {
+			test.ok(auth.getRequiredCred({ dslabel, embedder }, path), `should return a cred for path='${path}'`)
+		}
+		test.end()
 	}
-	for (const path of ['/TERMDB', '/termdb/']) {
-		test.ok(
-			auth.getRequiredCred({ dslabel, embedder, for: 'getAllSamples' }, path, auth.protectedRoutes.samples),
-			`should return a cred for path='${path}' with for=getAllSamples`
-		)
-	}
-	for (const path of ['/termdb/SampleScatter', '/TERMDB/samplescatter/', '/termdb/sampleScatter']) {
-		test.ok(
-			auth.getRequiredCred({ dslabel, embedder }, path, auth.protectedRoutes.samples),
-			`should return a cred for path='${path}'`
-		)
-	}
-	test.end()
-})
+)
 
 tape('getRequiredCred: matches cred.protectedRoutes regardless of case or trailing slash', function (test) {
 	test.timeoutAfter(500)
@@ -404,21 +414,15 @@ tape('stripBasepath: removes a matching basepath prefix from the normalized path
 tape('getRequiredCred: matches protected routes under a configured basepath', function (test) {
 	test.timeoutAfter(500)
 
-	const auth = makeAuth()
+	const auth = makeAuth({ protectedRoutes: ['/termdb/matrix', '/termdb/sampleScatter'] })
 	test.equal(auth.basepath, '', 'should default to an empty basepath')
 	// set by AuthApi.maySetAuthRoutes() in the server
 	auth.basepath = '/api'
 	for (const path of ['/api/termdb/matrix', '/API/TERMDB/MATRIX/', '/api/termdb/matrix/']) {
 		test.ok(auth.getRequiredCred({ dslabel, embedder }, path), `should return a cred for path='${path}'`)
 	}
-	for (const path of ['/api/termdb', '/Api/Termdb/']) {
-		test.ok(
-			auth.getRequiredCred({ dslabel, embedder, for: 'getAllSamples' }, path, auth.protectedRoutes.samples),
-			`should return a cred for path='${path}' with for=getAllSamples`
-		)
-	}
 	test.ok(
-		auth.getRequiredCred({ dslabel, embedder }, '/api/termdb/sampleScatter', auth.protectedRoutes.samples),
+		auth.getRequiredCred({ dslabel, embedder }, '/api/termdb/sampleScatter'),
 		'should return a cred for /api/termdb/sampleScatter'
 	)
 	test.ok(
@@ -971,10 +975,7 @@ tape('getRequiredCred: fails closed for a non-string embedder or dslabel', funct
 	const exactEmbedder = 'portal.example.org'
 	const auth = makeAuth()
 	auth.creds[dslabel].termdb = { [exactEmbedder]: makeCred() }
-	test.ok(
-		auth.getRequiredCred({ dslabel, embedder: exactEmbedder }, '/termdb/matrix'),
-		'should return the cred for the exact embedder'
-	)
+	test.ok(auth.getRouteCred(dslabel, ['termdb'], exactEmbedder), 'should return the cred for the exact embedder')
 	for (const [q, label] of [
 		[{ dslabel, embedder: [exactEmbedder] }, 'embedder[]'],
 		[{ dslabel, embedder: { 0: exactEmbedder } }, 'an object embedder'],
@@ -982,9 +983,9 @@ tape('getRequiredCred: fails closed for a non-string embedder or dslabel', funct
 	] as any) {
 		test.throws(() => auth.getRequiredCred(q, '/termdb/matrix'), /must be a string/, `should throw for ${label}`)
 		test.throws(
-			() => auth.getRequiredCred({ ...q, for: 'getAllSamples' }, '/termdb', auth.protectedRoutes.samples),
+			() => auth.getRouteCred(q.dslabel, ['termdb'], q.embedder),
 			/must be a string/,
-			`should throw for ${label} with for=getAllSamples`
+			`should throw for ${label} in getRouteCred(), as used by the protectedRoutes.termdb middleware`
 		)
 	}
 	test.throws(
