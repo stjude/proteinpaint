@@ -11,21 +11,13 @@ import globals from 'globals' //ready made list of environment globals
 import fs from 'fs' //Node's file-system module
 import path from 'path' //Node's path module
 import { fileURLToPath } from 'url'
+import noUnboundSql from './build/eslint/noUnboundSql.mjs'
 
 // Some lint issues should be errors locally to force developers to address them sooner,
 // but only warnings in remote CI so they don't block workflows.
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
 const sjppDir = path.join(currentDir, '../../sjpp')
 const errOrWarn = fs.existsSync(sjppDir) ? 'error' : 'warn'
-
-// esquery regexes for string or template text that looks like a sql statement, used by the server sql lint rule:
-// - sqlKeywords: uppercase keywords, case-sensitive so that ordinary text such as 'from' or 'where' does not match
-// - sqlPhrases: case-insensitive multi-word sql phrases, to also match lowercase sql
-//   such as `update t set a = 1 where id = ${id}`, without matching ordinary text such as 'error from server'
-const sqlKeywords = String.raw`/\b(SELECT|FROM|WHERE|JOIN|UNION|INSERT INTO|DELETE FROM|GROUP BY|ORDER BY)\b/`
-const sqlPhrases = String.raw`/\bselect\s+[\w*.,()\s]+\s+from\b|\binsert\s+(or\s+\w+\s+)?into\b|\bdelete\s+from\b|\bupdate\s+\w+\s+set\b|\bwhere\s+[\w."]+\s*(=|!=|<>|<=|>=|<|>|\bin\b|\blike\b|\bis\b|\bbetween\b|\bglob\b)|\b(group|order)\s+by\s+\w|\bvalues\s*\(/i`
-// template text or a string literal that matches either regex
-const sqlText = (node, prop) => `${node}[${prop}=${sqlKeywords}], ${node}[${prop}=${sqlPhrases}]`
 
 const sqlRule = [
 	'error',
@@ -36,22 +28,6 @@ const sqlRule = [
 	{
 		selector: `CallExpression[callee.property.name=/^(prepare|exec)$/] > BinaryExpression.arguments[operator='+']`,
 		message: 'Do not concatenate sql passed to prepare()/exec(), use the sql`` tag from server/src/sql.ts'
-	},
-	{
-		selector: `TemplateLiteral[expressions.length>0]:not(TaggedTemplateExpression > .quasi):has(> :matches(${sqlText(
-			'TemplateElement',
-			'value.raw'
-		)}))`,
-		message: 'Sql-like template with ${} interpolation, use the sql`` tag from server/src/sql.ts to bind values'
-	},
-	{
-		// concatenation such as 'SELECT ... WHERE id = ' + id, also when it is assigned to a variable before prepare();
-		// a concatenation of only static strings is allowed
-		selector: `BinaryExpression[operator='+']:not([left.type='Literal'][right.type='Literal']):has(> :matches(${sqlText(
-			'Literal',
-			'value'
-		)}))`,
-		message: 'Sql-like string concatenation, use the sql`` tag from server/src/sql.ts to bind values'
 	},
 	{
 		// sql() cannot verify at runtime that it was called as a tag, so direct calls are prohibited here
@@ -117,7 +93,9 @@ export default tseslint.config(
 		// sql statements should bind values as parameters instead of interpolating them into the sql text,
 		// use the sql`` tag from server/src/sql.ts, see also guardDb() there for the runtime check
 		files: ['server/**/*.ts', 'server/src/**/*.js'],
-		rules: { 'no-restricted-syntax': sqlRule }
+		// sql-like templates and concatenations anywhere, not only in prepare()/exec(), see build/eslint/noUnboundSql.mjs
+		plugins: { sql: { rules: { 'no-unbound-sql': noUnboundSql } } },
+		rules: { 'no-restricted-syntax': sqlRule, 'sql/no-unbound-sql': 'error' }
 	},
 	{
 		files: ['shared/**/*.ts'],

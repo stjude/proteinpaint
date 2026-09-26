@@ -46,6 +46,9 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: 🔎 Run custom ESLint rule tests
+        run: npm run test:eslint-rules
+
       # only the sql injection rule S608 is enabled, see ruff.toml
       - name: Run ruff
         run: pipx run ruff==0.8.1 check .
