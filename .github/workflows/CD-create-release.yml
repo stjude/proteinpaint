@@ -45,6 +45,16 @@ jobs:
       - name: Fetch All Tags
         run: git fetch --all --tags
 
+      # Fail before any package, tag or release is published: the release tag is cut from this commit,
+      # and the docker jobs would fail if its server/full Dockerfiles still use a root-based deps image.
+      # Re-running those jobs would not help, since they check out the same tag with the same ARG VERSION.
+      - name: Check that the Docker base images run as non-root
+        if: github.event.inputs.include == 'npm packages + Docker image'
+        working-directory: container
+        run: |
+          ./check_base_user.sh server
+          ./check_base_user.sh full
+
       - name: Install dependencies for canvas
         run: |
           sudo apt-get update

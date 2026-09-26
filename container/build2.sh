@@ -72,6 +72,9 @@ fi
 # which can be too noisy
 set -x
 
+# fail early if the base deps image still runs as root
+./check_base_user.sh $SUBDIR
+
 IMGVER="$(node -p "require('./$SUBDIR/package.json').version")"
 # assumes that the branch head is currently checked out
 IMGREV="head"

@@ -23,6 +23,10 @@ RUN wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/gfServer \
 
 RUN mkdir -p ./genomes
 
+# run as an unprivileged user, gfServer only reads the mounted genomes
+RUN useradd --uid 1000 --user-group --create-home app
+USER app
+
 EXPOSE $PORT
 
 CMD ["sh", "-c", "./gfServer start 127.0.0.1 $PORT -stepSize=$STEPSIZE /home/root/blat/genomes/$HGNUM.2bit"]

@@ -85,17 +85,19 @@ COPY ./R/utils ./R/utils
 RUN Rscript R/utils/install.pkgs.R
 
 # Install NVM and Node.js
-ENV NVM_DIR=/root/.nvm
+# NVM_DIR must not be under /root, which is not readable by the unprivileged app user
+ENV NVM_DIR=/opt/nvm
 ARG NODE_VERSION=24.10.0
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
+RUN mkdir -p "$NVM_DIR" && \
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
     . "$NVM_DIR/nvm.sh" && \
     nvm install $NODE_VERSION && \
     nvm alias default $NODE_VERSION && \
     nvm use $NODE_VERSION && \
-    echo 'export NVM_DIR="$NVM_DIR"' >> /root/.bashrc && \
-    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /root/.bashrc
+    echo 'export NVM_DIR="$NVM_DIR"' >> /etc/bash.bashrc && \
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /etc/bash.bashrc
 
-ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin:$PATH"
+ENV PATH="/opt/nvm/versions/node/v${NODE_VERSION}/bin:$PATH"
 
 # Verify node installation
 RUN node -v && npm -v
@@ -123,6 +125,14 @@ RUN curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}
     (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
 
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
+
+# The app runs as an unprivileged user. The r-base image already has a 'docker' user
+# with UID/GID 1000, rename it to 'app' instead of creating another user. The UID must
+# stay 1000: container/run.sh maps the rootless podman host account to it, and
+# check_base_user.sh expects a non-root user in the published ppserver/ppfull images.
+RUN groupmod -n app docker && \
+    usermod -l app -d /home/app -m docker && \
+    chown app:app /home/root/pp/cache
 
 RUN if [ "$ARCH" = "x86_64" ]; then \
         wget https://proteinpaint.stjude.org/ppdemo/tools/linux/straw -P /home/root/pp/tools/ && \
@@ -202,11 +212,12 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.version="$IMGVER"
 
 WORKDIR /home/root/pp/app
-COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
+COPY --from=ppserverdeps --chown=app:app /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
-COPY ./app-server.mjs ./
+COPY --chown=app:app ./app-server.mjs ./
+USER app
 EXPOSE 3000
 CMD ["sh", "-c", "node --enable-source-maps app-server.mjs && @sjcrh/proteinpaint-server"]
 # CMD ["sleep", "3600"]
@@ -242,12 +253,13 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.version="$IMGVER"
 
 WORKDIR /home/root/pp/app
-COPY --from=ppfulldeps /home/root/pp/app/active /home/root/pp/app/active
+COPY --from=ppfulldeps --chown=app:app /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
-COPY ./app-full.mjs ./
-COPY public ./public
+COPY --chown=app:app ./app-full.mjs ./
+COPY --chown=app:app public ./public
+USER app
 EXPOSE 3000
 CMD ["sh", "-c", "node --enable-source-maps app-full.mjs && @sjcrh/proteinpaint-server"]
 # CMD ["sleep", "3600"]
