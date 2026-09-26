@@ -13,9 +13,9 @@ const concat = [{ messageId: 'concat' }]
 
 ruleTester.run('no-unbound-sql', rule, {
 	valid: [
-		// values bound with the sql`` tag
-		'const q = sql`update t set a = 1 where id = ${id}`',
-		'const q = sql`select ${sql.id(column)} from users`',
+		// values bound with the sql`` tag that is imported from server/src/sql.ts
+		'import { sql } from "./sql.ts"; const q = sql`update t set a = 1 where id = ${id}`',
+		'import { sql } from "#src/sql.ts"; const q = sql`select ${sql.id(column)} from users`',
 		// static sql with ? placeholders
 		'db.prepare("SELECT * FROM t WHERE id = ?").all(id)',
 		// concatenation of only static strings, including resolved local variables
@@ -64,6 +64,17 @@ ruleTester.run('no-unbound-sql', rule, {
 		{ code: 'const q = html`update ${table} set a = 1`', errors: template },
 		// a tagged template in a concatenation is reported once, as a concatenation
 		{ code: 'const q = String.raw`select * from t where id = ${id}` + " limit 1"', errors: concat },
-		{ code: "let q = 'select * from t'; q += String.raw` where id = ${id}`", errors: template }
+		{ code: "let q = 'select * from t'; q += String.raw` where id = ${id}`", errors: template },
+		// a sql tag that is not imported from server/src/sql.ts
+		{ code: 'const sql = String.raw; const q = sql`update t set a = 1 where id = ${id}`', errors: template },
+		{ code: 'const q = sql`update t set a = 1 where id = ${id}`', errors: template },
+		{ code: 'import { sql } from "./other.ts"; const q = sql`update t set a = 1 where id = ${id}`', errors: template },
+		// sql that is split across several += appends, reported at each dynamic append
+		{
+			code: "let q = 'update '; q += table; q += ' set value = '; q += value",
+			errors: [...concat, ...concat]
+		},
+		// a phrase that is completed by a later static append
+		{ code: "let q = 'update '; q += table; q += ' set a = 1'", errors: concat }
 	]
 })
