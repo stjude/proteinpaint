@@ -49,8 +49,9 @@ export function isSqlFragment(f: unknown): f is SqlFragment {
 }
 
 export function sql(strings: TemplateStringsArray, ...exprs: unknown[]): SqlFragment {
-	// a template strings array is frozen and has .raw, unlike an array that is
-	// constructed at runtime to pass arbitrary text as sql(['...'])
+	// detects accidental misuse such as sql(['...']), this is not a security boundary: javascript
+	// cannot tell if a function was called as a tag, so a forged frozen array with .raw would pass;
+	// calling sql() directly is instead prohibited by the sql lint rule in eslint.config.js
 	if (!Array.isArray(strings?.raw) || !Object.isFrozen(strings))
 		throw 'sql() must be used as a tagged template: sql`...`'
 	let text = strings[0]

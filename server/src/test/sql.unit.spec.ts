@@ -79,7 +79,12 @@ tape('sql fragments are branded and frozen', t => {
 	t.notOk(isSqlFragment(forged), 'should not trust an object with the same shape')
 	t.equal(sql`id = ${forged}`.text, 'id = ?', 'should bind a forged fragment as a value')
 	t.throws(() => getDb('throw').exec(forged as any), /TypeError|argument/i, 'should not run a forged fragment as sql')
-	t.throws(() => sql(['DROP TABLE t'] as any), /tagged template/, 'should not accept a runtime-constructed array')
+	t.throws(
+		// eslint-disable-next-line no-restricted-syntax -- intentionally calls sql() directly to test the misuse check
+		() => sql(['DROP TABLE t'] as any),
+		/tagged template/,
+		'should detect the accidental misuse of sql() as a plain function'
+	)
 	t.ok(Object.isFrozen(f) && Object.isFrozen(f.values), 'should freeze a fragment and its values')
 	t.throws(
 		() => {

@@ -35,6 +35,11 @@ const sqlRule = level => [
 	{
 		selector: `TemplateLiteral[expressions.length>0]:not(TaggedTemplateExpression > .quasi):has(> TemplateElement[value.raw=${sqlKeywords}])`,
 		message: 'Sql-like template with ${} interpolation, use the sql`` tag from server/src/sql.ts to bind values'
+	},
+	{
+		// sql() cannot verify at runtime that it was called as a tag, so direct calls are prohibited here
+		selector: `CallExpression[callee.name='sql'], CallExpression[callee.object.name='sql'][callee.property.name=/^(call|apply|bind)$/]`,
+		message: 'Only use sql as a tagged template, sql`...`, calling it directly can pass arbitrary text as trusted sql'
 	}
 ]
 
