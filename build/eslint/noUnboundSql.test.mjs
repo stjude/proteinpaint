@@ -22,6 +22,11 @@ ruleTester.run('no-unbound-sql', rule, {
 		'const q = "SELECT a " + "FROM t WHERE id = ?"',
 		'const base = "select * from t"; const q = base + " where id = ?"',
 		'let q = "select * from t"; q += " where id = ?"',
+		// a static variable that is used more than once in the same concatenation
+		"const part = 'SELECT * FROM t'; const q = part + part",
+		"const part = 'select * from t'; let q = part; q += part",
+		// another tag without interpolation
+		'const q = String.raw`SELECT * FROM t WHERE name = ?`',
 		// ordinary messages that are not sql
 		'console.log(`error from server: ${e}`)',
 		'const m = `no term found where the id is missing: ${id}` + " (order of terms)"',
@@ -53,6 +58,12 @@ ruleTester.run('no-unbound-sql', rule, {
 		// += of a sql-like concatenation is reported once
 		{ code: 'let q = "SELECT a FROM t"; q += " WHERE id = " + n', errors: concat },
 		// a local variable with static sql text
-		{ code: 'const base = "select * from t where id="; const q = base + id', errors: concat }
+		{ code: 'const base = "select * from t where id="; const q = base + id', errors: concat },
+		// only the sql`` tag is exempt, another tag does not bind the values
+		{ code: 'db.prepare(String.raw`select * from t where id = ${id}`)', errors: template },
+		{ code: 'const q = html`update ${table} set a = 1`', errors: template },
+		// a tagged template in a concatenation is reported once, as a concatenation
+		{ code: 'const q = String.raw`select * from t where id = ${id}` + " limit 1"', errors: concat },
+		{ code: "let q = 'select * from t'; q += String.raw` where id = ${id}`", errors: template }
 	]
 })
