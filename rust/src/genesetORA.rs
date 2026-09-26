@@ -10,6 +10,8 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::io;
 //use std::time::Instant;
+mod sqlite_static;
+use sqlite_static::prepare_static;
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
@@ -103,7 +105,7 @@ fn main() -> Result<()> {
                     let filter_non_coding_genes: bool = filter_non_coding_genes_input.as_bool().unwrap();
 
                     let genedbconn = Connection::open(genedb)?;
-                    let genedb_result = genedbconn.prepare(&("select * from codingGenes"));
+                    let genedb_result = prepare_static(&genedbconn, "select * from codingGenes");
                     let mut num_coding_genes: usize = 0;
                     let mut sample_coding_genes: HashSet<String> = HashSet::with_capacity(24000);
                     match genedb_result {
@@ -154,7 +156,7 @@ fn main() -> Result<()> {
 
                     let msigdbconn = Connection::open(msigdb)?;
                     // bound parameters, since genesetgroup is the request's geneSetGroup value
-                    let stmt_result = msigdbconn.prepare("select id from terms where parent_id=?");
+                    let stmt_result = prepare_static(&msigdbconn, "select id from terms where parent_id=?");
                     match stmt_result {
                         Ok(mut stmt) => {
                             #[allow(non_snake_case)]
@@ -166,7 +168,7 @@ fn main() -> Result<()> {
                                     Ok(n) => {
                                         //println!("GO term {:?}", n);
                                         let mut gene_stmt =
-                                            msigdbconn.prepare("select genes from term2genes where id=?")?;
+                                            prepare_static(&msigdbconn, "select genes from term2genes where id=?")?;
                                         //println!("gene_stmt:{:?}", gene_stmt);
 
                                         let mut rows = gene_stmt.query([&n.GO_id])?;

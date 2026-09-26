@@ -12,7 +12,9 @@ use std::io;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
 
+mod sqlite_static;
 mod stats_functions;
+use sqlite_static::prepare_static;
 #[cfg(test)]
 mod test_cerno; // Contains test examples to test cerno
 
@@ -118,7 +120,7 @@ fn main() -> Result<()> {
                     let filter_non_coding_genes: bool = filter_non_coding_genes_input.as_bool().unwrap();
 
                     let genedbconn = Connection::open(genedb)?;
-                    let genedb_result = genedbconn.prepare(&("select * from codingGenes"));
+                    let genedb_result = prepare_static(&genedbconn, "select * from codingGenes");
                     let mut sample_coding_genes: Vec<stats_functions::gene_order> = Vec::with_capacity(24000);
                     match genedb_result {
                         Ok(mut x) => {
@@ -169,7 +171,7 @@ fn main() -> Result<()> {
 
                     let msigdbconn = Connection::open(&msigdb)?;
                     // bound parameters, since genesetgroup is the request's geneSetGroup value
-                    let stmt_result = msigdbconn.prepare("select id from terms where parent_id=?");
+                    let stmt_result = prepare_static(&msigdbconn, "select id from terms where parent_id=?");
                     match stmt_result {
                         Ok(mut stmt) => {
                             #[allow(non_snake_case)]
@@ -191,7 +193,7 @@ fn main() -> Result<()> {
                             if genesets.len() < PAR_CUTOFF {
                                 for gs in genesets {
                                     let mut gene_stmt =
-                                        msigdbconn.prepare("select genes from term2genes where id=?")?;
+                                        prepare_static(&msigdbconn, "select genes from term2genes where id=?")?;
                                     //println!("gene_stmt:{:?}", gene_stmt);
 
                                     let mut rows = gene_stmt.query([&gs])?;
@@ -257,7 +259,8 @@ fn main() -> Result<()> {
                                             if remainder == thread_num {
                                                 let conn = pool_arc.get().unwrap();
                                                 let mut gene_stmt =
-                                                    conn.prepare("select genes from term2genes where id=?").unwrap();
+                                                    prepare_static(&conn, "select genes from term2genes where id=?")
+                                                        .unwrap();
                                                 //println!("gene_stmt:{:?}", gene_stmt);
 
                                                 let mut rows = gene_stmt.query([&genesets[iter]]).unwrap();
