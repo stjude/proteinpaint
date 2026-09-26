@@ -31,8 +31,15 @@ resources:
     cpu: "2"
     memory: "8Gi"
 
-securityContext: {}
-podSecurityContext: {}
+securityContext:
+  allowPrivilegeEscalation: false
+# the image runs as the unprivileged app user (UID 1000, see container/deps/Dockerfile);
+# fsGroup makes the mounted volumes, such as the tp/cache dir, writable by that user
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
 
 container:
   name: proteinpaint
