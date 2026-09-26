@@ -65,7 +65,23 @@ sh createPPNetwork.sh
 echo "Starting container process='$CONTAINER_NAME' ..."
 APPDIR=$(pwd)
 CONTAPP=/home/root/pp/app/active
-docker run -d \
+
+# The image runs as the unprivileged app user (UID 1000), which must be able to write
+# the bind-mounted serverconfig.json, since app-server.mjs and app-full.mjs rewrite it
+function getUserOpt {
+	if docker --version 2>/dev/null | grep -qi podman; then
+		# rootless podman: map the host account that runs this script to the app user
+		echo "--userns=keep-id:uid=1000,gid=1000"
+	elif [[ "$(uname -s)" == "Linux" && "$(id -u)" != "1000" ]]; then
+		# docker on linux, such as in a CI runner, cannot map a different host UID to the app user
+		echo "running as root: docker cannot map host UID=$(id -u) to the container app user UID=1000" >&2
+		echo "--user=0:0"
+	fi
+	# docker desktop in macOS already maps bind-mounted file ownership to the container user
+}
+USEROPT=$(getUserOpt)
+
+docker run -d $USEROPT \
 	--name $CONTAINER_NAME \
 	--network pp_network \
 	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \

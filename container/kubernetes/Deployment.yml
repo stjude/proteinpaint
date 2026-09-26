@@ -14,6 +14,12 @@ spec:
       labels:
         app: nodejs
     spec:
+      # the image runs as the unprivileged app user (UID 1000, see container/deps/Dockerfile)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: container0
           image: ghcr.io/stjude/ppserver:version
