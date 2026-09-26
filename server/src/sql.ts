@@ -12,7 +12,9 @@ Nested fragments are merged, so statements can be composed from parts:
 	const where = sql`WHERE term_id = ${termId}`
 	db.prepare(sql`SELECT sample FROM anno_float ${where} AND value IN (${sql.list(keys)})`).all()
 
-Identifiers such as table names cannot be bound as parameters, use sql.id() for those.
+Identifiers such as table names cannot be bound as parameters, use sql.id() for those,
+which only accepts plain identifiers. Fragments are frozen and branded, an object that
+merely has the same shape as a fragment is bound as a value instead of used as sql text.
 
 guardDb() wraps a better-sqlite3 connection so that its prepare() and exec() accept a
 sql fragment, and check plain sql strings for manually quoted values, which are a sign
@@ -26,20 +28,35 @@ import path from 'path'
 import bettersqlite from 'better-sqlite3'
 import serverconfig from './serverconfig.js'
 
-export class SqlFragment {
+export type SqlFragment = {
 	readonly text: string
-	readonly values: unknown[]
-	constructor(text: string, values: unknown[]) {
-		this.text = text
-		this.values = values
-	}
+	readonly values: readonly unknown[]
+}
+
+// fragments are branded by membership in this module-private set, so that an object with
+// the same shape but constructed elsewhere, such as { text: userInput, values: [] }, is not trusted
+const fragments = new WeakSet<SqlFragment>()
+
+function fragment(text: string, values: unknown[]): SqlFragment {
+	const f = Object.freeze({ text, values: Object.freeze(values) })
+	fragments.add(f)
+	return f
+}
+
+/* true only for a fragment that was created by sql`` or its helpers */
+export function isSqlFragment(f: unknown): f is SqlFragment {
+	return typeof f == 'object' && f !== null && fragments.has(f as SqlFragment)
 }
 
 export function sql(strings: TemplateStringsArray, ...exprs: unknown[]): SqlFragment {
+	// a template strings array is frozen and has .raw, unlike an array that is
+	// constructed at runtime to pass arbitrary text as sql(['...'])
+	if (!Array.isArray(strings?.raw) || !Object.isFrozen(strings))
+		throw 'sql() must be used as a tagged template: sql`...`'
 	let text = strings[0]
 	const values: unknown[] = []
 	for (const [i, e] of exprs.entries()) {
-		if (e instanceof SqlFragment) {
+		if (isSqlFragment(e)) {
 			text += e.text
 			values.push(...e.values)
 		} else {
@@ -48,24 +65,40 @@ export function sql(strings: TemplateStringsArray, ...exprs: unknown[]): SqlFrag
 		}
 		text += strings[i + 1]
 	}
-	return new SqlFragment(text, values)
+	return fragment(text, values)
 }
 
+// only plain identifiers are allowed, instead of relying on escaping alone
+const identifier = /^[A-Za-z_][A-Za-z0-9_]*$/
+
 /* a quoted identifier, such as a table or column name */
-sql.id = (name: string) => new SqlFragment(`"${String(name).replaceAll('"', '""')}"`, [])
+sql.id = (name: string) => {
+	if (typeof name != 'string' || !identifier.test(name)) throw `sql.id(): invalid identifier '${name}'`
+	return fragment(`"${name}"`, [])
+}
 
 /* comma-separated placeholders for a list of values, for use in an IN (...) clause */
 sql.list = (values: unknown[]) => {
-	if (!values.length) throw 'sql.list(): empty list'
-	return new SqlFragment(values.map(() => '?').join(','), [...values])
+	if (!Array.isArray(values) || !values.length) throw 'sql.list(): empty list'
+	return fragment(values.map(() => '?').join(','), [...values])
 }
 
-/* joins fragments with a separator that is written as-is into the sql text, so it must be static */
-sql.join = (fragments: SqlFragment[], separator = ', ') =>
-	new SqlFragment(
-		fragments.map(f => f.text).join(separator),
-		fragments.flatMap(f => f.values)
-	)
+/* joins fragments with a separator that is also a fragment, such as sql` OR ` */
+sql.join = (lst: SqlFragment[], separator: SqlFragment = sql`, `) => {
+	if (!isSqlFragment(separator)) throw 'sql.join(): the separator must be a sql`` fragment'
+	const text: string[] = []
+	const values: unknown[] = []
+	for (const [i, f] of lst.entries()) {
+		if (!isSqlFragment(f)) throw 'sql.join(): every item must be a sql`` fragment'
+		if (i > 0) {
+			text.push(separator.text)
+			values.push(...separator.values)
+		}
+		text.push(f.text)
+		values.push(...f.values)
+	}
+	return fragment(text.join(''), values)
+}
 
 export type SqlCheckMode = 'off' | 'warn' | 'throw'
 
@@ -111,7 +144,7 @@ export function guardDb(db: any, mode: SqlCheckMode = 'warn') {
 		get(target, prop) {
 			if (prop == 'prepare') {
 				return (source: string | SqlFragment, opts?: PrepareOpts) => {
-					if (source instanceof SqlFragment) {
+					if (isSqlFragment(source)) {
 						const stmt = target.prepare(source.text)
 						// bound values persist on the statement, so .all()/.get()/.run() are called without arguments
 						if (source.values.length) stmt.bind(...source.values)
@@ -123,7 +156,7 @@ export function guardDb(db: any, mode: SqlCheckMode = 'warn') {
 			}
 			if (prop == 'exec') {
 				return (source: string | SqlFragment, opts?: PrepareOpts) => {
-					if (source instanceof SqlFragment) {
+					if (isSqlFragment(source)) {
 						// exec() cannot bind values
 						if (source.values.length) throw 'db.exec() does not support bound values, use db.prepare()'
 						return target.exec(source.text)

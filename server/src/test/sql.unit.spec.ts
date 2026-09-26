@@ -1,11 +1,12 @@
 import tape from 'tape'
 import Database from 'better-sqlite3'
-import { sql, guardDb } from '../sql.ts'
+import { sql, guardDb, isSqlFragment } from '../sql.ts'
 
 /*
 Tests:
 	sql`` tag binds interpolated values as parameters
 	sql.id(), sql.list(), sql.join() and nested fragments
+	sql fragments are branded and frozen
 	guardDb() in 'throw' mode
 	guardDb() in 'warn' mode logs once per call site
 	guardDb() passes through other connection methods and properties
@@ -43,7 +44,9 @@ tape('sql`` tag binds interpolated values as parameters', t => {
 })
 
 tape('sql.id(), sql.list(), sql.join() and nested fragments', t => {
-	t.equal(sql.id('my"table').text, '"my""table"', 'should quote an identifier and escape its double quotes')
+	t.equal(sql.id('my_table1').text, '"my_table1"', 'should quote an identifier')
+	for (const name of ['my"table', 'a b', '1abc', '', 't; DROP TABLE t', null])
+		t.throws(() => sql.id(name as any), /invalid identifier/, `should reject a non-plain identifier: ${name}`)
 	t.throws(() => sql.list([]), /empty list/, 'should throw on an empty list')
 
 	const db = getDb('throw')
@@ -59,9 +62,33 @@ tape('sql.id(), sql.list(), sql.join() and nested fragments', t => {
 		'should run a statement composed from fragments'
 	)
 
-	const joined = sql.join([sql`id = ${1}`, sql`id = ${3}`], ' OR ')
+	const joined = sql.join([sql`id = ${1}`, sql`id = ${3}`], sql` OR `)
 	t.equal(joined.text, 'id = ? OR id = ?', 'should join fragment texts with the separator')
 	t.deepEqual(joined.values, [1, 3], 'should concatenate the values of joined fragments')
+	t.equal(sql.join([sql`a`, sql`b`]).text, 'a, b', 'should join with a comma by default')
+	t.equal(sql.join([]).text, '', 'should return an empty fragment for an empty list')
+	t.throws(() => sql.join([sql`a`, sql`b`], ' OR ' as any), /separator/, 'should reject a plain string separator')
+	t.throws(() => sql.join(['a' as any]), /every item/, 'should reject a plain string item')
+	t.end()
+})
+
+tape('sql fragments are branded and frozen', t => {
+	const f = sql`SELECT * FROM t WHERE id = ${1}`
+	t.ok(isSqlFragment(f), 'should recognize a fragment made by sql``')
+	const forged = { text: 'SELECT * FROM t', values: [] }
+	t.notOk(isSqlFragment(forged), 'should not trust an object with the same shape')
+	t.equal(sql`id = ${forged}`.text, 'id = ?', 'should bind a forged fragment as a value')
+	t.throws(() => getDb('throw').exec(forged as any), /TypeError|argument/i, 'should not run a forged fragment as sql')
+	t.throws(() => sql(['DROP TABLE t'] as any), /tagged template/, 'should not accept a runtime-constructed array')
+	t.ok(Object.isFrozen(f) && Object.isFrozen(f.values), 'should freeze a fragment and its values')
+	t.throws(
+		() => {
+			'use strict'
+			;(f as any).text = 'DROP TABLE t'
+		},
+		TypeError,
+		'should not allow a fragment to be modified'
+	)
 	t.end()
 })
 

@@ -1,4 +1,5 @@
 import { connect_db } from './utils.js'
+import { sql } from './sql.ts'
 import { authApi } from './auth.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { DEFAULT_SAMPLE_TYPE, numericTypes } from '#shared/terms.js'
@@ -568,42 +569,33 @@ export function server_init_db_queries(ds) {
 			if (!access.canAccess) throw access.message || 'No accessible data found for the sample provided'
 		}
 
-		const termClause = !term_ids?.length ? '' : `and term_id in (${term_ids.map(() => '?').join(',')})`
-		const query = `
+		const termClause = !term_ids?.length ? sql`` : sql`and term_id in (${sql.list(term_ids)})`
+		const query = sql`
 		select term_id, value, jsondata from ( select term_id, value 
 		from anno_categorical 
-		where sample=? ${termClause}
+		where sample=${sampleId} ${termClause}
 		union all 
 		select term_id, 
 		value from anno_float 
-		where sample=? ${termClause}
+		where sample=${sampleId} ${termClause}
 		union all  
 		select term_id, value 
 		from anno_integer 
-		where sample=? ${termClause}
-		${tables.has('anno_date') ? 'union all select term_id, value from anno_date where sample=? ' + termClause : ''}
+		where sample=${sampleId} ${termClause}
+		${
+			tables.has('anno_date')
+				? sql`union all select term_id, value from anno_date where sample=${sampleId} ${termClause}`
+				: sql``
+		}
 		union all 
 		select term_id, (min_years_to_event || ' ' || value) as value 
 		from precomputed_chc_grade 
-		where max_grade=1 and sample=? ${termClause}
+		where max_grade=1 and sample=${sampleId} ${termClause}
 		union all 
 		select term_id, (tte || ' ' || exit_code) as value 
 		from survival 
-		where sample=? ${termClause}) join terms on terms.id = term_id`
-		const params = [
-			sampleId,
-			...term_ids,
-			sampleId,
-			...term_ids,
-			sampleId,
-			...term_ids,
-			sampleId,
-			...term_ids,
-			sampleId,
-			...term_ids
-		]
-		if (tables.has('anno_date')) params.push(sampleId, ...term_ids)
-		const rows = cn.prepare(query).all(params)
+		where sample=${sampleId} ${termClause}) join terms on terms.id = term_id`
+		const rows = cn.prepare(query).all()
 		return rows
 	}
 

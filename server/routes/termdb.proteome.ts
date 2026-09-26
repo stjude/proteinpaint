@@ -3,6 +3,7 @@ import { get_ds_tdb } from '#src/termdb.js'
 import * as utils from '#src/utils.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import serverconfig from '#src/serverconfig.js'
+import { sql } from '#src/sql.ts'
 import { readGeneRows, baseUniProtAcc } from '../src/routes/termdb.bubbleHeatmap.ts'
 
 const missingDapWarned = new Set<string>()
@@ -224,8 +225,8 @@ export async function validate_query_proteome(ds) {
 	const geneIndexHint = q.db
 		.prepare('SELECT 1 FROM sqlite_master WHERE type = ? AND name = ?')
 		.get('index', 'proteome_abundance_gene')
-		? ' INDEXED BY proteome_abundance_gene'
-		: ''
+		? sql` INDEXED BY proteome_abundance_gene`
+		: sql``
 
 	q.find = async arg => {
 		const proteins = arg?.proteins
@@ -270,22 +271,21 @@ export async function validate_query_proteome(ds) {
 			const rawRows: { gene: string; identifier: string }[] = []
 
 			if (filters?.length) {
-				const { conditions, params } = buildFilterClause(filters)
 				// INDEXED BY: with a cohort filter the planner otherwise walks the whole
 				// cohort (10M+ rows for the human cohorts, 15-20s) looking for the gene
 				// prefix; the gene index answers the same query in well under a second.
 				// Only forced when the db actually has that index (SQLite errors otherwise).
-				const sql = `SELECT DISTINCT gene, identifier FROM proteome_abundance${geneIndexHint} WHERE gene >= ? COLLATE NOCASE AND gene < ? COLLATE NOCASE AND ${conditions.join(
-					' AND '
+				const query = sql`SELECT DISTINCT gene, identifier FROM proteome_abundance${geneIndexHint} WHERE gene >= ${token} COLLATE NOCASE AND gene < ${upperToken} COLLATE NOCASE AND ${buildFilterClause(
+					filters
 				)} LIMIT ${MAX_FIND_RESULTS}`
-				rawRows.push(...q.db.prepare(sql).all(token, upperToken, ...params))
+				rawRows.push(...q.db.prepare(query).all())
 			} else {
 				rawRows.push(
 					...q.db
 						.prepare(
-							`SELECT DISTINCT gene, identifier FROM proteome_abundance WHERE gene >= ? COLLATE NOCASE AND gene < ? COLLATE NOCASE LIMIT ${MAX_FIND_RESULTS}`
+							sql`SELECT DISTINCT gene, identifier FROM proteome_abundance WHERE gene >= ${token} COLLATE NOCASE AND gene < ${upperToken} COLLATE NOCASE LIMIT ${MAX_FIND_RESULTS}`
 						)
-						.all(token, upperToken)
+						.all()
 				)
 			}
 
@@ -322,16 +322,12 @@ function resolveColumnName(idx: number) {
 	return name
 }
 
-// Build a WHERE clause and params array from a filter array like [{columnIdx:6, columnValue:'AD1'}, {columnIdx:1, columnValue:'Ctl'}]
+// Build AND-joined WHERE conditions as a sql fragment from a filter array like [{columnIdx:6, columnValue:'AD1'}, {columnIdx:1, columnValue:'Ctl'}]
 function buildFilterClause(filters: { columnIdx: number; columnValue: string | number }[]) {
-	const conditions: string[] = []
-	const params: (string | number)[] = []
-	for (const f of filters) {
-		const colName = resolveColumnName(f.columnIdx)
-		conditions.push(`${colName} = ?`)
-		params.push(f.columnValue)
-	}
-	return { conditions, params }
+	return sql.join(
+		filters.map(f => sql`${sql.id(resolveColumnName(f.columnIdx))} = ${f.columnValue}`),
+		sql` AND `
+	)
 }
 
 /** distinct sample names matching a cohort's filters. Selects only columns of the
@@ -346,10 +342,9 @@ export function listCohortSamples(db: any, filters: { columnIdx: number; columnV
 	const key = JSON.stringify(filters)
 	const hit = perDb.get(key)
 	if (hit) return hit
-	const { conditions, params } = buildFilterClause(filters)
 	const samples: string[] = db
-		.prepare(`SELECT DISTINCT sample FROM proteome_abundance WHERE ${conditions.join(' AND ')}`)
-		.all(...params)
+		.prepare(sql`SELECT DISTINCT sample FROM proteome_abundance WHERE ${buildFilterClause(filters)}`)
+		.all()
 		.map((r: any) => String(r.sample))
 	perDb.set(key, samples)
 	return samples
@@ -362,24 +357,21 @@ export function listIdentifierAnnotations(
 	gene: string,
 	filters: { columnIdx: number; columnValue: string | number }[]
 ) {
-	const { conditions, params } = buildFilterClause(filters)
 	const rows = db
 		.prepare(
-			`SELECT identifier, modsite, isoform FROM proteome_abundance WHERE gene = ? COLLATE NOCASE${
-				conditions.length ? ' AND ' + conditions.join(' AND ') : ''
+			sql`SELECT identifier, modsite, isoform FROM proteome_abundance WHERE gene = ${gene} COLLATE NOCASE${
+				filters.length ? sql` AND ${buildFilterClause(filters)}` : sql``
 			} GROUP BY identifier`
 		)
-		.all(gene, ...params) as { identifier: string; modsite: string | null; isoform: string | null }[]
+		.all() as { identifier: string; modsite: string | null; isoform: string | null }[]
 	return new Map(rows.map(r => [r.identifier, { modsite: r.modsite, isoform: r.isoform }]))
 }
 
 export function queryDbRows(db, identifier: string, filters: { columnIdx: number; columnValue: string | number }[]) {
-	const { conditions, params } = buildFilterClause(filters)
-	const allConditions = [`identifier = ? COLLATE NOCASE`, ...conditions]
-	const sql = `SELECT organism, disease, identifier, protein_accession, isoform, modsite, gene, sample, value, brain_region
+	const query = sql`SELECT organism, disease, identifier, protein_accession, isoform, modsite, gene, sample, value, brain_region
 		FROM proteome_abundance
-		WHERE ${allConditions.join(' AND ')}`
-	return db.prepare(sql).all(identifier, ...params)
+		WHERE identifier = ${identifier} COLLATE NOCASE${filters.length ? sql` AND ${buildFilterClause(filters)}` : sql``}`
+	return db.prepare(query).all()
 }
 
 async function getProteomeValuesFromCohort(ds, param, q) {

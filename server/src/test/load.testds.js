@@ -90,8 +90,11 @@ function get_term_lineage(lineage, termid, child2parent) {
 function load_annotations(ds, db, term_id) {
 	const anno = ds.cohort.annotation
 	const termjson = ds.cohort.termdb.termjson
-	const anno_tables = `SELECT * FROM anno_categorical UNION ALL SELECT * FROM anno_float UNION_ALL SELECT * FROM anno_integer`
-	const rows = db.prepare(`SELECT * FROM (${anno_tables}) WHERE term_id = ?`).all(term_id)
+	const rows = db
+		.prepare(
+			`SELECT * FROM (SELECT * FROM anno_categorical UNION ALL SELECT * FROM anno_float UNION ALL SELECT * FROM anno_integer) WHERE term_id = ?`
+		)
+		.all(term_id)
 	for (const row of rows) {
 		if (!anno[row.sample]) {
 			anno[row.sample] = { sample: row.sample }
