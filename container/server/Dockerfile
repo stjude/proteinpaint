@@ -15,14 +15,18 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
 
+# the base image runs as the unprivileged app user (UID 1000, see deps/Dockerfile),
+# which build2.sh verifies with check_base_user.sh; numeric ids are used so that
+# a build against an older root-based image fails on that check, not on a missing user
+USER 1000:1000
+
 WORKDIR /home/root/pp
 COPY ./tmppack ./tmppack
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
-COPY ./server/package.json  ./
-RUN npm install --omit=dev --cache=/root/.npm
-COPY ./server/app-server.mjs  ./
-COPY ./envHelpers.mjs ./
+COPY --chown=1000:1000 ./server/package.json  ./
+RUN npm install --omit=dev --cache=/home/app/.npm
+COPY --chown=1000:1000 ./server/app-server.mjs ./envHelpers.mjs ./
 
 EXPOSE 3000
 # default to the container paths and port in server/src/serverconfig.js and envHelpers.mjs,
