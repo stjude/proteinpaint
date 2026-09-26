@@ -57,7 +57,9 @@ function getBaseConfig() {
 		allow_env_overrides: false,
 		binpath: serverDir,
 		tpmasterdir: path.join(serverDir, 'test/tp'),
-		backend_only: true
+		backend_only: true,
+		// same as the CI serverconfig: a plain sql string with quoted values throws instead of only warning, see server/src/sql.ts
+		sqlCheck: 'throw'
 	}
 }
 
