@@ -1,4 +1,5 @@
 import fs from 'fs'
+import net from 'net'
 import path from 'path'
 import { spawn } from 'child_process'
 import readline from 'readline'
@@ -88,6 +89,8 @@ export async function cache_index(gzurl, indexurl) {
 		// index url given, may download it
 		const [e, protocol2, body2] = test_url(indexurl)
 		if (e) throw 'indexl url error: ' + e
+		const hostErr = illegalUrlHost(indexurl)
+		if (hostErr) throw 'index url error: ' + hostErr
 		// first, detect if the index file already exists in the dir+indexfile
 		const path2file = path.join(dir, path.basename(body2))
 		if (!isUnderDir(path2file, dir)) throw 'index URL file name escapes cache dir'
@@ -133,6 +136,12 @@ export function fileurl(req, checkWhiteList = true) {
 		if (file.split('/').includes('..')) return ['url must not contain ".." path segment']
 		// url goes into samtools/tabix argv, where a leading '-' would be parsed as an option
 		if (file[0] == '-') return ['url must not start with "-"']
+		// a url is passed to spawned tools, which the node permission model does not restrict, so
+		// a bare local path such as /etc/x.bb would be read from outside tpmasterdir and allow-fs-read
+		const [e] = test_url(file)
+		if (e) return [e]
+		const hostErr = illegalUrlHost(file)
+		if (hostErr) return [hostErr]
 		isurl = true
 	}
 	if (!file) return ['file unspecified']
@@ -209,6 +218,61 @@ function test_url(u) {
 	if (tmp[1].split(/[/\\]/).includes('..')) return ['must not contain ".." path segment']
 	if (tmp[1].length < 5) return ['body string length too short'] // a/b.gz at minimum
 	return [null, protocol, tmp[1]]
+}
+
+// loopback, private, link-local (including the cloud metadata address 169.254.169.254), and other
+// non-public ranges; an ipv4-mapped ipv6 address, such as ::ffff:7f00:1, is matched by the ipv4 rules
+const nonPublicIps = new net.BlockList()
+for (const [ip, prefix] of [
+	['0.0.0.0', 8],
+	['10.0.0.0', 8],
+	['100.64.0.0', 10],
+	['127.0.0.0', 8],
+	['169.254.0.0', 16],
+	['172.16.0.0', 12],
+	['192.168.0.0', 16]
+])
+	nonPublicIps.addSubnet(ip, prefix, 'ipv4')
+for (const [ip, prefix] of [
+	['::', 128],
+	['::1', 128],
+	['fc00::', 7],
+	['fe80::', 10]
+])
+	nonPublicIps.addSubnet(ip, prefix, 'ipv6')
+
+/*
+	u: a url that passed test_url()
+
+	returns an error message if the url host is not allowed, or undefined if allowed
+
+	A url is fetched by spawned tools, such as straw, bigBedToBed, tabix, and pyBigWig, so a request
+	could otherwise make the server fetch from its internal network (SSRF).
+	- serverconfig.urlHosts[], if set, is the list of allowed hosts: 'a.org' matches only that host,
+	  '.a.org' matches any subdomain of a.org. A listed host is allowed even if it is not public.
+	- otherwise, any host is allowed except localhost and literal non-public ip addresses. A hostname
+	  that resolves to a non-public ip address is not detected, so set serverconfig.urlHosts to fully
+	  prevent SSRF.
+*/
+export function illegalUrlHost(u) {
+	let host
+	try {
+		// the WHATWG parser normalizes ip address forms, such as http://2130706433/ to 127.0.0.1
+		host = new URL(u).hostname.toLowerCase()
+	} catch (_) {
+		return 'invalid url'
+	}
+	if (!host) return 'url must have a host'
+	if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1) // ipv6
+	if (serverconfig.urlHosts) {
+		for (const h of serverconfig.urlHosts) {
+			if (h[0] == '.' ? host.endsWith(h) : host == h) return
+		}
+		return 'url host is not allowed'
+	}
+	if (host == 'localhost' || host.endsWith('.localhost')) return 'url host is not allowed'
+	const ipType = net.isIP(host)
+	if (ipType && nonPublicIps.check(host, ipType == 4 ? 'ipv4' : 'ipv6')) return 'url host is not allowed'
 }
 
 // true if file resolves strictly inside dir

@@ -71,6 +71,8 @@ async function send(handler, query) {
 tape('\n', async function (test) {
 	test.comment('-***- cache_index specs -***-')
 	await startServer()
+	// the local stand-in host is a loopback address, which fileurl() and cache_index() reject unless listed
+	serverconfig.urlHosts = ['127.0.0.1']
 	test.end()
 })
 
@@ -218,6 +220,7 @@ tape('cache_index() index download is atomic', async test => {
 })
 
 tape('cleanup', test => {
+	delete serverconfig.urlHosts
 	server.close()
 	fs.rmSync(tmpdir, { recursive: true, force: true })
 	test.end()

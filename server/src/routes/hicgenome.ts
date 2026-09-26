@@ -26,7 +26,10 @@ function init() {
 		const erroutput: string[] = []
 
 		const [e, file] = fileurl({ query })
-		if (e) res.send({ error: 'illegal file name' })
+		if (e) {
+			res.send({ error: 'illegal file name' })
+			return
+		}
 
 		/*Value passed from client is not the proper straw parameter.
         Must convert to straw parameter and apply the corresponding maths to the result.

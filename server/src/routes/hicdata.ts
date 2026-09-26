@@ -34,7 +34,7 @@ function init() {
 function handle_hicdata(q: HicdataRequest): Promise<HicdataResponse> {
 	return new Promise((resolve, reject) => {
 		const [e, file] = fileurl({ query: q })
-		if (e) reject({ error: 'illegal file name' })
+		if (e) return reject({ error: 'illegal file name' })
 
 		/*Value passed from client is not the proper straw parameter.
 		Must convert to straw parameter and apply the corresponding maths to the result.
