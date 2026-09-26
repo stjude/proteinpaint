@@ -59,9 +59,9 @@ RUN apt-get update && apt-get install --allow-downgrades -y \
     # read the new ones and re-pin, do NOT drop the pins --
     #   docker run --rm --platform linux/amd64 r-base:4.5.0 bash -c \
     #     'apt-get update -qq >/dev/null 2>&1; apt-cache policy python3 python3-dev python3-venv python3-pip'
-    python3=3.14.6-1 \
-    python3-dev=3.14.6-1 \
-    python3-venv=3.14.6-1 \
+    python3=3.14.7-3 \
+    python3-dev=3.14.7-3 \
+    python3-venv=3.14.7-3 \
     python3-pip=26.1.2+dfsg-1 \
     x11-common \
     libx11-dev \
