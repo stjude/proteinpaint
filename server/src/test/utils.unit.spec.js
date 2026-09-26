@@ -361,11 +361,45 @@ tape('fileurl() url protocol and host', test => {
 		'http://[::1]/x.bb',
 		'http://[::ffff:127.0.0.1]/x.bb',
 		'http://[fe80::1]/x.bb',
-		'http://[fd00::1]/x.bb'
+		'http://[fd00::1]/x.bb',
+		// other ranges that are not globally reachable
+		'http://192.0.0.1/x.bb',
+		'http://192.0.2.1/x.bb',
+		'http://198.18.0.1/x.bb',
+		'http://198.19.255.255/x.bb',
+		'http://198.51.100.1/x.bb',
+		'http://203.0.113.5/x.bb',
+		'http://224.0.0.1/x.bb',
+		'http://255.255.255.255/x.bb',
+		'http://[64:ff9b::7f00:1]/x.bb', // translates to 127.0.0.1
+		'http://[2002:7f00:1::]/x.bb', // 6to4 of 127.0.0.1
+		'http://[2001:db8::1]/x.bb',
+		'http://[fec0::1]/x.bb',
+		'http://[ff02::1]/x.bb'
 	])
 		test.deepEqual(utils.fileurl({ query: { url } }), ['url host is not allowed'], `should reject url=${url}`)
-	for (const url of ['https://a.org/b.bb', 'ftp://ftp.a.org/b.bb', 'http://8.8.8.8/b.hic', 'http://172.32.0.1/b.bb'])
+	for (const url of [
+		'https://a.org/b.bb',
+		'ftp://ftp.a.org/b.bb',
+		'http://8.8.8.8/b.hic',
+		'http://172.32.0.1/b.bb',
+		'http://198.20.0.1/b.bb', // just outside the benchmarking range 198.18.0.0/15
+		'http://[2606:4700::1111]/b.bb'
+	])
 		test.equal(utils.fileurl({ query: { url } })[1], url, `should accept url=${url}`)
+
+	// another url parser may read a backslash as part of the user info, and the text after @ as the host
+	for (const url of [
+		'http://a.org\\@127.0.0.1/x.bb',
+		'http://a.org\\x.bb',
+		'http://a.org/x\t.bb',
+		'http://a.org/x\n.bb'
+	])
+		test.deepEqual(
+			utils.fileurl({ query: { url } }),
+			['url must not contain a backslash, whitespace, or control character'],
+			`should reject url=${JSON.stringify(url)}`
+		)
 
 	serverconfig.urlHosts = ['a.org', '.b.org', '127.0.0.1']
 	for (const url of ['https://a.org/x.bb', 'https://a.org./x.bb', 'https://c.b.org/x.bb', 'http://127.0.0.1:3000/x.bb'])
@@ -382,6 +416,11 @@ tape('fileurl() url protocol and host', test => {
 			['url host is not allowed'],
 			`should reject url=${url} not listed in serverconfig.urlHosts`
 		)
+	test.deepEqual(
+		utils.fileurl({ query: { url: 'http://a.org\\@10.0.0.1/x.bb' } }),
+		['url must not contain a backslash, whitespace, or control character'],
+		'should reject a url with a backslash even if its WHATWG host a.org is listed in serverconfig.urlHosts'
+	)
 	delete serverconfig.urlHosts
 	test.end()
 })

@@ -224,24 +224,42 @@ function test_url(u) {
 	return [null, protocol, tmp[1]]
 }
 
-// loopback, private, link-local (including the cloud metadata address 169.254.169.254), and other
-// non-public ranges; an ipv4-mapped ipv6 address, such as ::ffff:7f00:1, is matched by the ipv4 rules
+// ip ranges that are not globally reachable, from the IANA special-purpose address registries: loopback,
+// private, link-local (including the cloud metadata address 169.254.169.254), shared, benchmarking,
+// documentation, multicast, reserved, and ipv6 ranges that embed or translate to an ipv4 address;
+// an ipv4-mapped ipv6 address, such as ::ffff:7f00:1, is matched by the ipv4 rules
 const nonPublicIps = new net.BlockList()
 for (const [ip, prefix] of [
-	['0.0.0.0', 8],
-	['10.0.0.0', 8],
-	['100.64.0.0', 10],
-	['127.0.0.0', 8],
-	['169.254.0.0', 16],
-	['172.16.0.0', 12],
-	['192.168.0.0', 16]
+	['0.0.0.0', 8], // "this" network
+	['10.0.0.0', 8], // private
+	['100.64.0.0', 10], // shared address space (carrier-grade nat)
+	['127.0.0.0', 8], // loopback
+	['169.254.0.0', 16], // link-local
+	['172.16.0.0', 12], // private
+	['192.0.0.0', 24], // ietf protocol assignments
+	['192.0.2.0', 24], // documentation (TEST-NET-1)
+	['192.88.99.0', 24], // 6to4 relay anycast (deprecated)
+	['192.168.0.0', 16], // private
+	['198.18.0.0', 15], // benchmarking
+	['198.51.100.0', 24], // documentation (TEST-NET-2)
+	['203.0.113.0', 24], // documentation (TEST-NET-3)
+	['224.0.0.0', 4], // multicast
+	['240.0.0.0', 4] // reserved, including the broadcast address 255.255.255.255
 ])
 	nonPublicIps.addSubnet(ip, prefix, 'ipv4')
 for (const [ip, prefix] of [
-	['::', 128],
-	['::1', 128],
-	['fc00::', 7],
-	['fe80::', 10]
+	['::', 128], // unspecified
+	['::1', 128], // loopback
+	['64:ff9b::', 96], // ipv4/ipv6 translation, embeds an ipv4 address
+	['64:ff9b:1::', 48], // local-use ipv4/ipv6 translation
+	['100::', 64], // discard-only
+	['2001::', 23], // ietf protocol assignments, including teredo 2001::/32
+	['2001:db8::', 32], // documentation
+	['2002::', 16], // 6to4, embeds an ipv4 address
+	['fc00::', 7], // unique local
+	['fe80::', 10], // link-local
+	['fec0::', 10], // site-local (deprecated)
+	['ff00::', 8] // multicast
 ])
 	nonPublicIps.addSubnet(ip, prefix, 'ipv6')
 
@@ -263,6 +281,11 @@ for (const [ip, prefix] of [
 	  restrict the outbound network access of the server to fully prevent that.
 */
 export function illegalUrlHost(u) {
+	// the WHATWG parser below treats a backslash as a path separator, but a spawned tool with another url
+	// parser may not, e.g. it may read http://a.org\@127.0.0.1/x as user a.org\ at host 127.0.0.1,
+	// so a url with a backslash, whitespace, or control character is not allowed
+	if (typeof u != 'string' || /[\\\s\x00-\x1f\x7f]/.test(u))
+		return 'url must not contain a backslash, whitespace, or control character'
 	let host
 	try {
 		// the WHATWG parser normalizes ip address forms, such as http://2130706433/ to 127.0.0.1
