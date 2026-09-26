@@ -5,8 +5,8 @@
 # may be called from any dir:
 # ./build.sh [-m MODE] [-b BUILDARGS] [-c CROSSENV]
 #
-# The build context is staged in a temporary dir that is always removed on exit, so that
-# a successful, failed, or interrupted build does not add or change any file in the repo.
+# The Dockerfile and build context are staged in a temporary dir that is always removed on exit, so
+# that a build does not add or change any file in the repo, and is not affected by a branch checkout.
 #
 # To install the server package from the local code instead of the published version,
 # first run container/pack.sh to create the tarballs in container/tmppack or deps/tmppack.
@@ -94,7 +94,8 @@ function detectVersions {
 	echo "IMGVER=$IMGVER SERVERPKGVER=$SERVERPKGVER FRONTPKGVER=$FRONTPKGVER IMGREV=$IMGREV ARCH=$ARCH"
 }
 
-# copies the files that the Dockerfile COPYs into a temporary build context dir
+# Copies the Dockerfile, and the files that it COPYs, into a temporary build context dir. All 3 image
+# builds use these staged copies, so that a branch checkout during a long build cannot mix versions.
 function stageContext {
 	CTX="$(mktemp -d "${TMPDIR:-/tmp}/ppdeps-build.XXXXXX")"
 	trap 'rm -rf "$CTX"' EXIT
@@ -102,6 +103,7 @@ function stageContext {
 	trap 'exit 130' INT TERM
 
 	mkdir -p "$CTX/R" "$CTX/python" "$CTX/tmppack"
+	cp "$DEPSDIR/Dockerfile" "$CTX/"
 	cp -R "$REPODIR/R/utils" "$CTX/R/"
 	cp "$REPODIR/python/requirements.txt" "$CTX/python/"
 	cp "$CONTAINERDIR/full/app-full.mjs" "$CONTAINERDIR/server/app-server.mjs" "$CTX/"
@@ -137,7 +139,7 @@ function stageTarballs {
 # NOTE: important to supply the same ARCH, IMGVER, and IMGREV arguments for all 3 build jobs
 # to ensure that the ppbase stage of the build is cached for the ppserver and ppfull stages
 function buildImages {
-	local common=(--file "$DEPSDIR/Dockerfile" --build-arg ARCH="$ARCH" --build-arg IMGVER="$IMGVER" --build-arg IMGREV="$IMGREV")
+	local common=(--file "$CTX/Dockerfile" --build-arg ARCH="$ARCH" --build-arg IMGVER="$IMGVER" --build-arg IMGREV="$IMGREV")
 	set -x
 	docker buildx build "$CTX" "${common[@]}" --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM $BUILDARGS --output type=docker
 

@@ -48,9 +48,10 @@ cd proteinpaint/container
 ./deps/build.sh
 ```
 
-`deps/build.sh` may be called from any dir. It stages the files that the `Dockerfile` copies in a
-temporary build context dir, which is removed whether the build succeeds, fails, or is interrupted, so
-it does not add or change any file in the repo. Only the tracked files in `container/public` are copied,
+`deps/build.sh` may be called from any dir. It stages the `Dockerfile`, and the files that it copies,
+in a temporary build context dir, which is removed whether the build succeeds, fails, or is interrupted,
+so it does not add or change any file in the repo. All 3 image builds use these staged copies, so a
+branch checkout during a long build does not affect it. Only the tracked files in `container/public` are copied,
 so local leftovers there are not included in the image.
 
 The versions are read from `deps/package.json` when `deps/version.sh` has set them, as in CI, and are
