@@ -2,6 +2,7 @@
 import { describe, it } from 'node:test'
 import { RuleTester } from 'eslint'
 import path from 'path'
+import tseslint from 'typescript-eslint'
 import rule from './noUnboundSql.mjs'
 
 // linted file names, to resolve a relative or #src/ import of server/src/sql.ts
@@ -15,6 +16,7 @@ RuleTester.itOnly = it.only
 const ruleTester = new RuleTester({ languageOptions: { ecmaVersion: 2022, sourceType: 'module' } })
 const template = [{ messageId: 'template' }]
 const concat = [{ messageId: 'concat' }]
+const prepare = [{ messageId: 'prepare' }]
 
 ruleTester.run('no-unbound-sql', rule, {
 	valid: [
@@ -34,6 +36,9 @@ ruleTester.run('no-unbound-sql', rule, {
 		'const q = "SELECT a " + "FROM t WHERE id = ?"',
 		'const base = "select * from t"; const q = base + " where id = ?"',
 		'let q = "select * from t"; q += " where id = ?"',
+		// static sql passed to prepare(), including a template without interpolation
+		'db.prepare("SELECT a " + `FROM t WHERE id = ?`)',
+		'db.exec(`CREATE TABLE t (id INTEGER)`)',
 		// a static value that is reassigned
 		"let q = 'select * from t'; q = 'update t set a = 1'",
 		// a static variable that is used more than once in the same concatenation
@@ -46,6 +51,9 @@ ruleTester.run('no-unbound-sql', rule, {
 		'const m = `no term found where the id is missing: ${id}` + " (order of terms)"',
 		'const m = "please select a file: " + name',
 		// note: an ordinary message with 'select ... from' is detected as sql, such as "select a file from the list: " + name
+		// sentences in an llm prompt, where 'select' and 'from' are in different sentences or lines
+		'const p = `Select the SINGLE row whose term (and one of its values) is similar to the phrase.\n- From that row, pick one of: ${keys}`',
+		'const p = `Select the best match. From the list below: ${list}`',
 		// no interpolation or concatenation
 		'const q = `SELECT * FROM t`'
 	],
@@ -99,6 +107,17 @@ ruleTester.run('no-unbound-sql', rule, {
 		{ code: 'const q = \'update "main"."t" set value = \' + value', errors: concat },
 		{ code: "const q = 'update [t] set value = ' + value", errors: concat },
 		{ code: 'const q = `select "a" from t where "id" = ${id}`', errors: template },
+		// a select list with an expression
+		{ code: 'const q = `select a + ${n} from t`', errors: template },
+		{ code: "const q = 'select a || ' + s + ' from t'", errors: concat },
+		{ code: 'const q = `select count(*) * ${n} as total from t`', errors: template },
+		// a select list followed by from on the next line
+		{ code: 'const q = `select a + ${n}\nfrom t`', errors: template },
+		// a dynamic template or concatenation passed to prepare()/exec(), even if it does not look like sql
+		{ code: 'db.prepare(base + id)', errors: prepare },
+		{ code: 'db.prepare(`${query}`)', errors: prepare },
+		{ code: 'db.prepare(String.raw`${query}`)', errors: prepare },
+		{ code: 'db.exec(`${ddl}`)', errors: prepare },
 		// a partially dynamic initializer keeps its text for a later concatenation
 		{ code: "const head = 'update ' + table; const q = head + ' set value=' + value", errors: concat },
 		// a later reassignment does not hide the earlier construction
@@ -112,5 +131,20 @@ ruleTester.run('no-unbound-sql', rule, {
 		},
 		// a phrase that is completed by a later static append
 		{ code: "let q = 'update '; q += table; q += ' set a = 1'", errors: concat }
+	]
+})
+
+// typescript expression wrappers, such as ('...' as string), do not hide the sql text
+const tsRuleTester = new RuleTester({ languageOptions: { parser: tseslint.parser } })
+tsRuleTester.run('no-unbound-sql with typescript', rule, {
+	valid: ['db.prepare(("SELECT a " as string) + "FROM t WHERE id = ?")', "const q = 'SELECT * FROM t' as const"],
+	invalid: [
+		{ code: "const q = ('select * from t where id=' as string) + id", errors: concat },
+		{ code: "const q = ('select * from t where id=' satisfies string) + id", errors: concat },
+		{ code: "const q = (<string>'select * from t where id=') + id", errors: concat },
+		{ code: "let q = 'update t set a = '; q += value!", errors: concat },
+		// a wrapped template in a concatenation is reported once, as a concatenation
+		{ code: "const q = (`select * from t where id = ${id}` as string) + ' limit 1'", errors: concat },
+		{ code: 'db.prepare((base as string) + id!)', errors: prepare }
 	]
 })

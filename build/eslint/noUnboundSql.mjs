@@ -38,7 +38,10 @@ const identifier = String.raw`[\w."\[\]\`]+`
 // ordinary text such as 'error from server'
 const sqlPhrases = new RegExp(
 	[
-		String.raw`\bselect\s+[\w*.,()\s"\[\]\`]+\s+from\b`,
+		// the select list may have expressions, such as select a + ${n} from t; to not match an ordinary sentence
+		// that is followed by 'from', such as in an llm prompt, it must be on one line and not have a period
+		// that ends a sentence
+		String.raw`\bselect\s+(?:(?!\.\s)[\w \t*.,()"'\[\]\`+\-/%|<>=!&?])+?\s+from\b`,
 		String.raw`\binsert\s+(or\s+\w+\s+)?into\b`,
 		String.raw`\bdelete\s+from\b`,
 		String.raw`\bupdate\s+(or\s+\w+\s+)?${identifier}\s+set\b`,
@@ -56,6 +59,14 @@ export function isSqlLike(text) {
 // placeholder for a dynamic part in the reconstructed text
 const DYNAMIC = 'x'
 
+// typescript expression wrappers that do not change the runtime value, such as ('...' as string) or value!
+const tsWrappers = new Set(['TSAsExpression', 'TSSatisfiesExpression', 'TSNonNullExpression', 'TSTypeAssertion'])
+
+function unwrap(node) {
+	while (node && tsWrappers.has(node.type)) node = node.expression
+	return node
+}
+
 export default {
 	meta: {
 		type: 'problem',
@@ -63,7 +74,9 @@ export default {
 		schema: [],
 		messages: {
 			template: 'Sql-like template with ${} interpolation, use the sql`` tag from server/src/sql.ts to bind values',
-			concat: 'Sql-like string concatenation, use the sql`` tag from server/src/sql.ts to bind values'
+			concat: 'Sql-like string concatenation, use the sql`` tag from server/src/sql.ts to bind values',
+			prepare:
+				'Do not build the sql passed to prepare()/exec() with interpolation or concatenation, use the sql`` tag from server/src/sql.ts'
 		}
 	},
 	create(context) {
@@ -76,6 +89,7 @@ export default {
 		and is not modified so that sibling operands such as part + part are resolved independently
 		*/
 		function getText(node, seen = new Set()) {
+			node = unwrap(node)
 			if (!node) return { text: DYNAMIC, dynamic: true }
 			if (node.type == 'Literal') {
 				return typeof node.value == 'string' ? { text: node.value, dynamic: false } : { text: DYNAMIC, dynamic: true }
@@ -162,8 +176,11 @@ export default {
 			return null
 		}
 
+		/* true if node is an operand of a + concatenation, including through a typescript wrapper */
 		function isNestedConcat(node) {
-			return node.parent?.type == 'BinaryExpression' && node.parent.operator == '+'
+			let p = node.parent
+			while (p && tsWrappers.has(p.type)) p = p.parent
+			return p?.type == 'BinaryExpression' && p.operator == '+'
 		}
 
 		/* only the sql`` tag that is imported from server/src/sql.ts binds the interpolated values as parameters */
@@ -183,6 +200,21 @@ export default {
 		}
 
 		return {
+			CallExpression(node) {
+				// the sql passed to db.prepare() or db.exec() must not be built with a dynamic part, even if it
+				// does not look like sql by itself, such as prepare(base + id); a sql-like one is reported below
+				const callee = node.callee
+				if (callee.type != 'MemberExpression' || callee.computed || !node.arguments.length) return
+				if (callee.property.type != 'Identifier' || !/^(prepare|exec)$/.test(callee.property.name)) return
+				const arg = unwrap(node.arguments[0])
+				const built =
+					(arg.type == 'BinaryExpression' && arg.operator == '+') ||
+					arg.type == 'TemplateLiteral' ||
+					(arg.type == 'TaggedTemplateExpression' && !isSqlTag(arg))
+				if (!built) return
+				const { text, dynamic } = getText(arg)
+				if (dynamic && !isSqlLike(text)) context.report({ node: node.arguments[0], messageId: 'prepare' })
+			},
 			TemplateLiteral(node) {
 				if (!node.expressions.length) return
 				// the quasi of a tagged template, such as String.raw`...`, is checked unless the tag is sql``
@@ -206,7 +238,7 @@ export default {
 				// a sql-like template or concatenation on the right side is already reported by itself
 				if (
 					isSqlLike(appended.text) &&
-					['TemplateLiteral', 'TaggedTemplateExpression', 'BinaryExpression'].includes(node.right.type)
+					['TemplateLiteral', 'TaggedTemplateExpression', 'BinaryExpression'].includes(unwrap(node.right).type)
 				)
 					return
 				// the text of the variable until the next assignment that sets its value, so that sql that is split
