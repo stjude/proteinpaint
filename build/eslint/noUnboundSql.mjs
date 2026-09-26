@@ -6,12 +6,17 @@ The text of a template literal or a + / += concatenation is reconstructed as a w
 of each dynamic part, before it is tested against the sql regexes below. This way a sql phrase that is
 split by a dynamic part is still detected, such as `select ${column} from users` -> 'select x from users'.
 
-Local variables are resolved to their static string text, including any static += appends, so that
-	let q = 'select * from t where id='
-	q += userId
-is detected. A concatenation of only static strings is allowed, since there is no value to bind.
-Only the sql`` tag is exempt, since it binds the values as parameters; other tagged templates such as
-String.raw`...` are checked like an untagged template.
+Local variables are resolved to their text, including all += appends in source order, with 'x' in
+place of each dynamic append, so that incremental construction such as
+	let q = 'update '
+	q += table
+	q += ' set value = '
+	q += value
+is detected as 'update x set value = x'. A concatenation of only static strings is allowed, since
+there is no value to bind.
+Only the sql`` tag that is imported from server/src/sql.ts is exempt, since it binds the values as
+parameters; other tagged templates, such as String.raw`...` or a local variable named sql, are checked
+like an untagged template.
 */
 
 // uppercase keywords, case-sensitive so that ordinary text such as 'from' or 'where' does not match
@@ -70,15 +75,17 @@ export default {
 				return { text: left.text + right.text, dynamic: left.dynamic || right.dynamic }
 			}
 			if (node.type == 'Identifier') {
-				const text = resolveVariableText(node, seen)
-				// a variable with static string text is not a value to bind
-				return text === null ? { text: DYNAMIC, dynamic: true } : { text, dynamic: false }
+				// a variable with only static string text is not a value to bind
+				return resolveVariable(node, seen) || { text: DYNAMIC, dynamic: true }
 			}
 			return { text: DYNAMIC, dynamic: true }
 		}
 
-		/* the static text of a local variable: its initializer plus any static += appends, or null */
-		function resolveVariableText(identifier, seen) {
+		/*
+		returns {text, dynamic} of a local variable: its static initializer plus all += appends in source order,
+		with DYNAMIC in place of each dynamic append, or null if the variable cannot be resolved
+		*/
+		function resolveVariable(identifier, seen) {
 			const variable = findVariable(identifier)
 			if (!variable || seen.has(variable) || variable.defs.length != 1) return null
 			const def = variable.defs[0]
@@ -86,21 +93,27 @@ export default {
 			// a copy, so that the caller's set is not modified
 			const branch = new Set(seen).add(variable)
 			let text = ''
+			let dynamic = false
 			if (def.node.init) {
 				const init = getText(def.node.init, branch)
+				// a dynamic initializer is reported where it is built
 				if (init.dynamic) return null
 				text = init.text
 			}
+			const appends = []
 			for (const ref of variable.references) {
 				const p = ref.identifier.parent
 				if (p.type != 'AssignmentExpression' || p.left != ref.identifier) continue
 				// any other assignment makes the value unknown at a given point
 				if (p.operator != '+=') return null
-				const appended = getText(p.right, branch)
-				if (appended.dynamic) continue // reported where it is appended, see AssignmentExpression below
-				text += appended.text
+				appends.push(p)
 			}
-			return text
+			for (const p of appends.sort((a, b) => a.range[0] - b.range[0])) {
+				const appended = getText(p.right, branch)
+				text += appended.text
+				dynamic = dynamic || appended.dynamic
+			}
+			return { text, dynamic }
 		}
 
 		function findVariable(identifier) {
@@ -117,9 +130,16 @@ export default {
 			return node.parent?.type == 'BinaryExpression' && node.parent.operator == '+'
 		}
 
-		/* only the sql`` tag from server/src/sql.ts binds the interpolated values as parameters */
+		/* only the sql`` tag that is imported from server/src/sql.ts binds the interpolated values as parameters */
 		function isSqlTag(node) {
-			return node.tag.type == 'Identifier' && node.tag.name == 'sql'
+			if (node.tag.type != 'Identifier' || node.tag.name != 'sql') return false
+			const def = findVariable(node.tag)?.defs[0]
+			return (
+				def?.type == 'ImportBinding' &&
+				def.node.type == 'ImportSpecifier' &&
+				def.node.imported.name == 'sql' &&
+				/(^|\/)sql\.ts$/.test(def.parent.source.value)
+			)
 		}
 
 		return {
@@ -149,9 +169,10 @@ export default {
 					['TemplateLiteral', 'TaggedTemplateExpression', 'BinaryExpression'].includes(node.right.type)
 				)
 					return
-				// the variable's static text before this append, if it can be resolved
-				const base = node.left.type == 'Identifier' ? resolveVariableText(node.left, new Set()) ?? '' : ''
-				if (isSqlLike(base + appended.text)) context.report({ node, messageId: 'concat' })
+				// the whole text of the variable, with all appends in source order, so that sql that is split
+				// across several appends is detected, including a phrase that is completed by a later append
+				const variable = node.left.type == 'Identifier' ? resolveVariable(node.left, new Set()) : null
+				if (isSqlLike(variable ? variable.text : appended.text)) context.report({ node, messageId: 'concat' })
 			}
 		}
 	}
