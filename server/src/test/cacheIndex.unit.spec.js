@@ -26,6 +26,7 @@ test sections:
 - fileurl() url branch
 - /tkbedj, /tabixheader, /bamnochr via the real route table
 - cache_index() index download is atomic
+- cache_index() checks the host of each index url redirect
 */
 
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-cacheidx-'))
@@ -37,7 +38,14 @@ function startServer() {
 		server = http
 			.createServer((req, res) => {
 				// /slow/ pauses mid-body; /broken/ drops the connection mid-body
-				if (req.url.startsWith('/slow/')) {
+				// /redirect-internal/ redirects to a blocked host, /redirect-ok/ to this host, /redirect-loop/ to itself
+				if (req.url.startsWith('/redirect-internal/')) {
+					res.writeHead(302, { location: 'http://169.254.169.254/latest/meta-data' }).end()
+				} else if (req.url.startsWith('/redirect-ok/')) {
+					res.writeHead(301, { location: '/moved' + req.url }).end()
+				} else if (req.url.startsWith('/redirect-loop/')) {
+					res.writeHead(302, { location: req.url }).end()
+				} else if (req.url.startsWith('/slow/')) {
 					res.write('PART1-')
 					setTimeout(() => res.end('PART2'), 400)
 				} else if (req.url.startsWith('/broken/')) {
@@ -230,6 +238,35 @@ tape('cache_index() index download is atomic', async test => {
 	)
 	test.notOk(fs.existsSync(path.join(dir2, 't.gz.tbi')), 'should not leave a partial index after a failure')
 	test.deepEqual(tmpFiles(dir2), [], 'should leave no temp file after a failure')
+
+	fs.rmSync(path.join(serverconfig.cachedir, 'http', H), { recursive: true, force: true })
+	test.end()
+})
+
+tape('cache_index() checks the host of each index url redirect', async test => {
+	// fetch would follow a redirect from an allowed index url to an internal host (SSRF), unless each redirect is checked
+	const dir = path.join(serverconfig.cachedir, 'http', H, 'redirect/t.gz')
+	await rejects(
+		test,
+		() => utils.cache_index(`http://${H}/redirect/t.gz`, `http://${H}/redirect-internal/t.gz.tbi`),
+		/index url redirect error: url host is not allowed/,
+		'should reject a redirect to a host that is not allowed'
+	)
+	test.notOk(fs.existsSync(path.join(dir, 't.gz.tbi')), 'should not save an index after a rejected redirect')
+
+	await utils.cache_index(`http://${H}/redirect/t.gz`, `http://${H}/redirect-ok/t.gz.tbi`)
+	test.equal(
+		fs.readFileSync(path.join(dir, 't.gz.tbi'), 'utf8'),
+		'ATTACKER_BYTES /moved/redirect-ok/t.gz.tbi',
+		'should follow a redirect to an allowed host'
+	)
+
+	await rejects(
+		test,
+		() => utils.cache_index(`http://${H}/redirect2/t.gz`, `http://${H}/redirect-loop/t.gz.tbi`),
+		/too many redirects/,
+		'should stop following a redirect loop'
+	)
 
 	fs.rmSync(path.join(serverconfig.cachedir, 'http', H), { recursive: true, force: true })
 	test.end()

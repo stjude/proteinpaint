@@ -257,6 +257,10 @@ for (const [ip, prefix] of [
 	- otherwise, any host is allowed except localhost and literal non-public ip addresses. A hostname
 	  that resolves to a non-public ip address is not detected, so set serverconfig.urlHosts to fully
 	  prevent SSRF.
+	- an index url that is downloaded by download_index() has each redirect destination checked as well.
+	  A url that is fetched by a spawned tool, such as tabix, samtools, straw or bigBedToBed, may still
+	  follow a redirect to a host that is not allowed, since these tools follow redirects internally;
+	  restrict the outbound network access of the server to fully prevent that.
 */
 export function illegalUrlHost(u) {
 	let host
@@ -285,23 +289,46 @@ export function illegalUrlHost(u) {
 function isUnderDir(file, dir) {
 	return path.resolve(file).startsWith(path.resolve(dir) + path.sep)
 }
+// redirects of an index url that are followed by download_index(), see there
+const MAX_INDEX_REDIRECTS = 5
+
 async function download_index(url, tofile) {
 	/* try to download the index file
 
 	must detect following:
 	- downloading throws an HTTPError (https://proteinpaint.stjude.org/invalid)
 	- downloaded text data but not binary (https://pecan.stjude.cloud/invalid)
+	- a redirect to a url whose host is not allowed, see illegalUrlHost(): fetch would otherwise
+	  follow a redirect from an allowed url to an internal host such as 169.254.169.254, so redirects
+	  are followed here and the destination of each is checked
 
-	if either is true, should not 
+	if any is true, the index file is not saved
 	*/
+	let res
+	for (let redirects = 0; ; redirects++) {
+		try {
+			res = await ky(url, { throwHttpErrors: false, redirect: 'manual' })
+		} catch (e) {
+			// fetch thrown, must be invalid url
+			throw 'cannot download from url'
+		}
+		if (res.status < 300 || res.status > 399) break
+		const location = res.headers.get('location')
+		await res.body?.cancel()
+		if (!location) throw 'cannot download from url'
+		if (redirects >= MAX_INDEX_REDIRECTS) throw 'index url has too many redirects'
+		url = new URL(location, url).href
+		const [e] = test_url(url)
+		if (e) throw 'index url redirect error: ' + e
+		const hostErr = illegalUrlHost(url)
+		if (hostErr) throw 'index url redirect error: ' + hostErr
+	}
 	try {
-		const res = await ky(url, { throwHttpErrors: false })
 		if (res.status != 200) {
 			throw 'index file not accessible from url with status code ' + res.status
 		}
 		await stream2file(Readable.fromWeb(res.body), tofile)
 	} catch (e) {
-		// fetch thrown, must be invalid url
 		throw 'cannot download from url'
 	}
 }
