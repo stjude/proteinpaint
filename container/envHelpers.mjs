@@ -57,7 +57,7 @@ export function envHelpers(args, deps = {}) {
 		throw 'must not run with the permission model, remove --experimental-default-config-file from the envHelpers.mjs arguments'
 	const ctx = createContext(deps)
 	const command = routeCommand(args)
-	const config = getNodeConfig(ctx, command)
+	const config = getNodeConfig(ctx)
 	for (const conflict of findPrefixConflicts(config)) console.warn(`envHelpers.mjs: WARNING ${conflict}`)
 	const credsFiles = getCredsFiles(ctx)
 	assertCredsFilesNotAllowed(credsFiles, config, ctx)
@@ -93,7 +93,7 @@ function insertConfigFlag(args, i) {
 	return [...args.slice(0, i), '--experimental-default-config-file', ...args.slice(i)]
 }
 
-export function getNodeConfig(ctx, command = []) {
+export function getNodeConfig(ctx) {
 	const read = new Set()
 	const write = new Set()
 	const allow = (set, p) => addPath(set, p, ctx)
@@ -119,9 +119,6 @@ export function getNodeConfig(ctx, command = []) {
 	allow(read, serverconfig.sslCert)
 	// a bare command name, such as python3, is resolved from PATH when spawned
 	if (serverconfig.python?.includes(path.sep)) allow(read, serverconfig.python)
-	// app-server.mjs and app-full.mjs in a container image rewrite serverconfig.json, with or without PP_MODE
-	if (command.some(arg => /^app-(server|full)\.mjs$/.test(path.basename(arg))))
-		allow(write, path.join(ctx.cwd, 'serverconfig.json'))
 	// server/genome/copyDataFilesFromRepo2Tp.js checks if this container dir exists
 	read.add('/home/root/pp')
 
