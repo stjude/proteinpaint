@@ -19,18 +19,9 @@ const currentDir = path.dirname(fileURLToPath(import.meta.url))
 const sjppDir = path.join(currentDir, '../../sjpp')
 const errOrWarn = fs.existsSync(sjppDir) ? 'error' : 'warn'
 
+// sql built with interpolation or concatenation is detected by the sql/no-unbound-sql rule, see build/eslint/noUnboundSql.mjs
 const sqlRule = [
 	'error',
-	{
-		selector: `CallExpression[callee.property.name=/^(prepare|exec)$/] > TemplateLiteral.arguments[expressions.length>0]`,
-		message: 'Do not interpolate into sql passed to prepare()/exec(), use the sql`` tag from server/src/sql.ts'
-	},
-	{
-		// a concatenation with a dynamic part, even if it does not look like sql by itself, such as prepare(base + id);
-		// a concatenation of only static strings is allowed, the same as in sql/no-unbound-sql
-		selector: `CallExpression[callee.property.name=/^(prepare|exec)$/] > BinaryExpression.arguments[operator='+']:has(:not(BinaryExpression, Literal))`,
-		message: 'Do not concatenate sql passed to prepare()/exec(), use the sql`` tag from server/src/sql.ts'
-	},
 	{
 		// sql() cannot verify at runtime that it was called as a tag, so direct calls are prohibited here
 		selector: `CallExpression[callee.name='sql'], CallExpression[callee.object.name='sql'][callee.property.name=/^(call|apply|bind)$/]`,
@@ -95,7 +86,7 @@ export default tseslint.config(
 		// sql statements should bind values as parameters instead of interpolating them into the sql text,
 		// use the sql`` tag from server/src/sql.ts, see also guardDb() there for the runtime check
 		files: ['server/**/*.ts', 'server/src/**/*.js'],
-		// sql-like templates and concatenations anywhere, not only in prepare()/exec(), see build/eslint/noUnboundSql.mjs
+		// sql built with interpolation or concatenation, anywhere or passed to prepare()/exec(), see build/eslint/noUnboundSql.mjs
 		plugins: { sql: { rules: { 'no-unbound-sql': noUnboundSql } } },
 		rules: { 'no-restricted-syntax': sqlRule, 'sql/no-unbound-sql': 'error' }
 	},

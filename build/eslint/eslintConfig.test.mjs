@@ -1,6 +1,6 @@
 /*
-Tests the combined server sql lint rules of eslint.config.js: the no-restricted-syntax selectors (sqlRule)
-and the sql/no-unbound-sql rule, see build/eslint/noUnboundSql.mjs
+Tests the combined server sql lint rules of eslint.config.js: the no-restricted-syntax selector (sqlRule)
+that prohibits a direct sql() call, and the sql/no-unbound-sql rule, see build/eslint/noUnboundSql.mjs
 
 run from the proteinpaint dir: npm run test:eslint-rules
 */
@@ -25,6 +25,8 @@ describe('eslint.config.js server sql rules', () => {
 			await lint('export const f = db => db.prepare("SELECT a " + "FROM t " + "WHERE id = ?").all()'),
 			[]
 		)
+		// a template without interpolation and a typescript assertion are static too
+		assert.deepEqual(await lint('export const f = db => db.prepare(("SELECT a " as string) + `FROM t`).all()'), [])
 	})
 	it('allows the sql`` tag imported from server/src/sql.ts', async () => {
 		const code =
@@ -33,17 +35,22 @@ describe('eslint.config.js server sql rules', () => {
 	})
 	it('rejects a dynamic concatenation passed to prepare(), even if it does not look like sql', async () => {
 		assert.deepEqual(await lint('export const f = (db, base, id) => db.prepare(base + id).all()'), [
-			'no-restricted-syntax'
+			'sql/no-unbound-sql'
 		])
 	})
 	it('rejects an interpolated template passed to prepare()', async () => {
 		const ids = await lint('export const f = (db, id) => db.prepare(`SELECT * FROM t WHERE id = ${id}`).all()')
-		assert.deepEqual(ids.sort(), ['no-restricted-syntax', 'sql/no-unbound-sql'])
+		// reported once
+		assert.deepEqual(ids, ['sql/no-unbound-sql'])
 	})
 	it('rejects sql built in a variable before prepare()', async () => {
 		const code =
 			"export const f = (db, table, v) => { let q = 'update '; q += table; q += ' set a = ' + v; return db.prepare(q).run() }"
 		assert.ok((await lint(code)).includes('sql/no-unbound-sql'))
+	})
+	it('rejects sql text wrapped in a typescript assertion', async () => {
+		const code = "export const f = (db, id) => db.prepare(('SELECT * FROM t WHERE id = ' as string) + id).all()"
+		assert.deepEqual(await lint(code), ['sql/no-unbound-sql'])
 	})
 	it('rejects a direct call of sql()', async () => {
 		const code = 'import { sql } from "./sql.ts"\nexport const f = s => sql([s])'
