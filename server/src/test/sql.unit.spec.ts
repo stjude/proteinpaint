@@ -133,7 +133,7 @@ tape("guardDb() in 'warn' mode logs once per call site", t => {
 	const messages: string[] = []
 	console.warn = (m: string) => messages.push(m)
 	try {
-		// eslint-disable-next-line no-restricted-syntax -- intentionally unsafe sql to trigger the warning
+		// eslint-disable-next-line no-restricted-syntax, sql/no-unbound-sql -- intentionally unsafe sql to trigger the warning
 		for (let i = 0; i < 3; i++) db.prepare(`SELECT * FROM t WHERE name = '${'a'}'`).all()
 	} finally {
 		console.warn = warn
