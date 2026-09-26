@@ -78,18 +78,30 @@ function init() {
 					}
 					items.push([n1, n2, v] satisfies XYZCoord)
 				})
+				// stderr is reported in the response through erroutput[]
 				ps.stderr.on('data', i => erroutput.push(`${lead} - ${follow}: `, i))
+				// such as when the straw binary cannot be spawned; an unhandled 'error' event would throw
+				ps.on('error', e => reject(`${lead} - ${follow}: cannot run straw: ${e.message}`))
 				ps.on('close', () => {
-					if (erroutput.length) reject({ error: erroutput.join('') })
-					if (linenot3fields) reject({ error: `${linenot3fields} lines have other than 3 fields` })
-
-					if (fieldnotnumerical) reject(`${fieldnotnumerical} lines have non-numerical values in any of the 3 fields`)
-					resolve()
+					const errs: string[] = []
+					if (linenot3fields) errs.push(`${linenot3fields} lines have other than 3 fields`)
+					if (fieldnotnumerical)
+						errs.push(`${fieldnotnumerical} lines have non-numerical values in any of the 3 fields`)
+					if (errs.length) reject(`${lead} - ${follow}: ${errs.join(', ')}`)
+					else resolve()
 				})
 			})
 
 		mapConcurrent(pairs, STRAW_CONCURRENCY, runStraw)
-			.then(() => res.send({ data, error: erroutput.join('') } satisfies HicGenomeResponse))
+			.then(results => {
+				// mapConcurrent() has Promise.allSettled semantics, so a rejected pair is in results[] instead of
+				// reaching .catch(); keep the data of the other pairs and report why a pair failed
+				const errors = [erroutput.join('')]
+				for (const r of results) {
+					if (r?.status == 'rejected') errors.push(String(r.reason?.message || r.reason))
+				}
+				res.send({ data, error: errors.filter(Boolean).join('\n') } satisfies HicGenomeResponse)
+			})
 			.catch(e => {
 				res.send({ error: e?.message || e })
 				if (e instanceof Error && e.stack) console.log(e)
