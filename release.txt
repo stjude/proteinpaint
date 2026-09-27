@@ -1,1 +1,2 @@
-
+Features:
+- A `"ssl": false` in serverconfig.json skips loading a local `./.ssl` dir when `allow_env_overrides` or `debugmode` is enabled
