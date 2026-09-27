@@ -1,1 +1,3 @@
-
+Fixes:
+- Reject a JSON request body or a urljson-encoded URL query parameter that has a `__proto__` or `constructor.prototype` key, which could otherwise replace the prototype of the request query object
+- The `encoding=json` URL query parameter no longer causes an error, and correctly JSON-parses all other query parameter values
