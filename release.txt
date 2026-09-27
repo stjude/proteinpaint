@@ -1,2 +1,1 @@
-Features:
-- Remote files by URL (e.g. custom tracks by URL) are disabled by default; set serverconfig.features.ALLOW_remotefilefromurl=true to allow them. When disabled, the custom track inputs only take a server-side file path and show "Remote file not supported on this server."
+

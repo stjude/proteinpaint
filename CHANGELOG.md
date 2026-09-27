@@ -8,6 +8,7 @@ Features:
 - A url given to a spawned tool (straw, bigBedToBed, pyBigWig, samtools/tabix) must use http, https or ftp, and must not point to localhost or a non-global ip range from the IANA registries, unless the host is listed in the optional `serverconfig.urlHosts[]`
 - CI, the dev container and the request test server set `sqlCheck: 'throw'`, so a plain sql string with quoted values fails tests instead of only logging a warning
 - New `sql/no-unbound-sql` ESLint rule flags string-built or template sql, including lowercase, schema-qualified or quoted identifiers, outside of the `sql` tag from `server/src/sql.ts`; ruff S608 flags string-built python sql, and rust sqlite statements are prepared from a `&'static str`
+- Remote files by URL (e.g. custom tracks by URL) are disabled by default; set serverconfig.features.ALLOW_remotefilefromurl=true to allow them. When disabled, the custom track inputs only take a server-side file path and show "Remote file not supported on this server."
 
 Fixes:
 - Matrix: a request that is not allowed to display sample IDs no longer receives sample rows or sample labels in the streamed refs
