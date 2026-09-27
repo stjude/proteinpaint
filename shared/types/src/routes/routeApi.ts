@@ -2,7 +2,7 @@ export type RouteApi = {
 	endpoint: string
 	/**
 	 * optional route-level middlewares that apply to all methods of this endpoint,
-	 * called before the method-specific RoutePayload.middleware and route handler,
+	 * called after the method-specific RoutePayload.middleware (request validator) and before the route handler,
 	 * such as the protectedRoutes middlewares from server/src/auth/protectedRoutes.ts
 	 */
 	middlewares?: RouteMiddleware[]

@@ -13,9 +13,10 @@ export function setRoutes(app, routes, _opts = {}) {
 			for (const [method, handler] of Object.entries(api.methods)) {
 				try {
 					const endpoint = `${opts.basepath}/${api.endpoint}`
-					// route-level middlewares apply to all methods, and are called before a method-specific middleware
-					const middlewares = [...(api.middlewares || [])]
-					if (handler.middleware) middlewares.push(handler.middleware)
+					// a method-specific middleware, such as a request validator, is called first so that
+					// the route-level middlewares that apply to all methods will use the validated request
+					const middlewares = handler.middleware ? [handler.middleware] : []
+					if (api.middlewares) middlewares.push(...api.middlewares)
 					app[method](endpoint, ...middlewares, handler.init(opts))
 				} catch (e) {
 					throw new Error(`${api.endpoint} ${method}: ${e}`)
