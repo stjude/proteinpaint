@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.213.0
 
 Features:
 - The `ppserver` and `ppfull` images, and any image built on them, run as the unprivileged `app` user (UID/GID 1000) instead of root. Bind-mounted files and dirs, such as the `tp` dir, `serverconfig.json` or a CA certificate for `NODE_EXTRA_CA_CERTS`, must be readable by UID 1000 (or by others), and a mounted cache dir must be writable by it. Another UID, such as the owner of the bind-mounted files, may run the images with `docker run --user <uid>:0`. With rootless podman, use `--userns=keep-id:uid=1000,gid=1000`. A Dockerfile that builds on these images and installs packages must switch to `USER root` for those steps, and back to `USER app` for the runtime. Kubernetes can use `runAsUser: 1000` and `fsGroup: 1000`, see `container/helm/values.yaml`
