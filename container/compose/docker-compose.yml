@@ -11,8 +11,11 @@ services:
       - /path/to/local/proteinpaint/container/dataset:/home/root/pp/app/active/dataset
       - /path/to/local/proteinpaint/container/public:/home/root/pp/app/active/public
     restart: unless-stopped
-    # the image runs as the unprivileged app user (UID 1000); with rootless podman-compose,
-    # map the host account to it so that the bind-mounted files owned by that account are accessible:
+    # No `user:` override, so that the image's own user is used: this example tag predates the non-root
+    # images and runs as root, while a newer image runs as the unprivileged app user (UID 1000). Do not
+    # force UID 1000 on an older image, since its node install is under /root. With a non-root image and
+    # rootless podman-compose, map the host account to the app user, so that the bind-mounted files owned
+    # by that account are accessible:
     # userns_mode: "keep-id:uid=1000,gid=1000"
     networks:
       - pp_network

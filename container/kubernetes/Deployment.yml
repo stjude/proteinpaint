@@ -14,7 +14,8 @@ spec:
       labels:
         app: nodejs
     spec:
-      # the image runs as the unprivileged app user (UID 1000, see container/deps/Dockerfile)
+      # for a non-root image, which runs as the unprivileged app user (UID 1000, see container/deps/Dockerfile);
+      # remove this securityContext for an older, root-based image, since its node install is under /root
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
