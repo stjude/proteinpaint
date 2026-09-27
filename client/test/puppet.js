@@ -10,6 +10,7 @@ import bodyParser from 'body-parser'
 import { ReqResCache, emitRelevantSpecCovDetails, publicSpecsDir } from '@sjcrh/augen/dev'
 import { getRelevantClientSpecs, getUrlParams } from './closestSpec.js'
 import { minimatch } from 'minimatch'
+import { createTapFailureTracker } from './tapFailures.js'
 
 // user __dirname later to detect relative path to public dir,
 // since the unit test may be triggered from the pp dir with --workspace option
@@ -70,10 +71,14 @@ async function runTest(patternsStr) {
 	const page = await browser.newPage()
 	const lastLines = []
 	let reachedSummary = false
+	// the failed assertions of the pattern being tested, to summarize at the end of a long test run
+	let failureTracker
+	const failureSummaries = []
 	page
 		.on('console', m => {
 			const msg = m.text()
 			console.log(msg)
+			failureTracker?.add(msg)
 			/*
         detected last lines are expected to look like below, 
         with empty lines before and after "# ok" line,
@@ -119,6 +124,7 @@ async function runTest(patternsStr) {
 		])
 
 		const [pattern, testedFiles] = _pattern.split('#')
+		failureTracker = createTapFailureTracker()
 		//console.log(101, DATAPORT, pattern)
 		console.log(`\n--- testing http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern} ---\n`)
 		// Navigate to test page
@@ -155,6 +161,8 @@ async function runTest(patternsStr) {
 		}).catch(error => {
 			errors[pattern] = error
 		})
+		const summary = failureTracker.format({ title: `Failed assertions for spec pattern=${pattern}` })
+		if (summary) failureSummaries.push(summary)
 	}
 
 	// returns the failed test output, or undefined if the tests passed
@@ -266,6 +274,8 @@ async function runTest(patternsStr) {
 	if (!Object.keys(errors).length) {
 		fs.writeFileSync('passedTests.txt', lastLines.join('\n'), { encoding: 'utf8' })
 	} else {
+		// the failed assertions, without having to search the whole test output for them
+		if (failureSummaries.length) console.log(`\n${failureSummaries.join('\n\n')}`)
 		console.log(`\n!!! Errors detected !!!`)
 		for (const [pattern, error] of Object.entries(errors)) {
 			console.log(`\nErrors testing spec pattern=${pattern}`)
