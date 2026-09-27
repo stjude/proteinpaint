@@ -1,5 +1,5 @@
 import tape from 'tape'
-import serverconfig, { lockFeatures, mergeDsFeatures } from '../serverconfig.js'
+import serverconfig, { lockServerconfig, mergeDsFeatures } from '../serverconfig.js'
 import path from 'path'
 
 const __dirname = import.meta.dirname
@@ -87,10 +87,10 @@ tape('process.env.PP_SERVERCONFIG_OVERRIDES: must be a JSON object', async test 
 })
 
 /*
-	lockFeatures() is called by app.ts launch() after dataset init, and is tested here against
-	a copy of the config, so that other unit tests can still toggle the shared serverconfig.features{}
+	lockServerconfig() is called by app.ts launch() after dataset init, and is tested here against
+	other config objects, so that other unit tests can still modify the shared serverconfig
 */
-tape('lockFeatures(): serverconfig.features{} cannot be changed after launch', test => {
+tape('lockServerconfig(): serverconfig.features{} cannot be changed after launch', test => {
 	const sc = {
 		features: {
 			customFlag: true,
@@ -103,7 +103,7 @@ tape('lockFeatures(): serverconfig.features{} cannot be changed after launch', t
 	// like `const bamCache = serverconfig.features.bamCache` in bam.js, captured when a module is imported
 	const alias = sc.features
 	const nestedAlias = sc.features.cacheMonitor
-	lockFeatures(sc)
+	lockServerconfig(sc)
 
 	// compare as JSON, since tape deepEqual() also compares the now-null prototypes
 	test.deepEqual(JSON.parse(JSON.stringify(sc.features)), original, 'should keep the same feature keys and values')
@@ -141,9 +141,9 @@ tape('lockFeatures(): serverconfig.features{} cannot be changed after launch', t
 	test.end()
 })
 
-tape('lockFeatures(): a polluted Object.prototype is not read as a feature', test => {
+tape('lockServerconfig(): a polluted Object.prototype is not read as a feature', test => {
 	const sc = { features: { customFlag: true, wsi: {}, dslabelFilter: ['TermdbTest'] } }
-	lockFeatures(sc)
+	lockServerconfig(sc)
 	Object.prototype.zzPollutedFeature = true
 	Object.prototype.allowDirectSlidePath = true
 	try {
@@ -201,7 +201,7 @@ tape('mergeDsFeatures(): copies only own ds.serverconfigFeatures keys, without o
 		test.deepEqual(Object.keys(sc.features), ['sse', 'gdcBam'], 'should only have own keys')
 		test.equal(Object.hasOwn(sc.features, 'zzPollutedFeature'), false, 'should not copy a polluted inherited key')
 		test.equal(sc.features.sse, false, 'should not overwrite an existing feature')
-		lockFeatures(sc)
+		lockServerconfig(sc)
 		test.equal(sc.features.zzPollutedFeature, undefined, 'should not have a polluted feature after locking')
 	} finally {
 		delete Object.prototype.zzPollutedFeature
@@ -209,38 +209,38 @@ tape('mergeDsFeatures(): copies only own ds.serverconfigFeatures keys, without o
 	test.end()
 })
 
-tape('lockFeatures(): fully locks or fails for already-frozen, sealed, circular, or accessor values', test => {
+tape('lockServerconfig(): fully locks or fails for already-frozen, sealed, circular, or accessor values', test => {
 	{
 		const child = { x: 1 }
 		const sc = { features: { frozenNullProto: Object.freeze(Object.assign(Object.create(null), { child })) } }
-		lockFeatures(sc)
+		lockServerconfig(sc)
 		test.equal(Object.isFrozen(child), true, 'should traverse into an already-frozen object and freeze its descendants')
 		test.equal(Object.getPrototypeOf(child), null, 'should set a null prototype on a descendant of a frozen object')
 	}
 	{
 		const child = { x: 1 }
-		lockFeatures({ features: { list: Object.freeze([child]) } })
+		lockServerconfig({ features: { list: Object.freeze([child]) } })
 		test.equal(Object.isFrozen(child), true, 'should traverse into an already-frozen array')
 	}
 	{
 		const features = { a: {} }
 		features.a.parent = features
-		lockFeatures({ features })
+		lockServerconfig({ features })
 		test.equal(Object.isFrozen(features.a), true, 'should lock a circular reference without infinite recursion')
 	}
 	test.throws(
-		() => lockFeatures({ features: { wsi: Object.freeze({ allowDirectSlidePath: false }) } }),
+		() => lockServerconfig({ features: { wsi: Object.freeze({ allowDirectSlidePath: false }) } }),
 		/serverconfig.features.wsi cannot be locked/,
 		'should throw for an already-frozen plain object, which would keep inheriting from Object.prototype'
 	)
 	test.throws(
-		() => lockFeatures({ features: { wsi: Object.seal({}) } }),
+		() => lockServerconfig({ features: { wsi: Object.seal({}) } }),
 		/serverconfig.features.wsi cannot be locked/,
 		'should throw for a sealed plain object'
 	)
 	test.throws(
 		() =>
-			lockFeatures({
+			lockServerconfig({
 				features: {
 					get loosenCORS() {
 						return false
@@ -250,5 +250,63 @@ tape('lockFeatures(): fully locks or fails for already-frozen, sealed, circular,
 		/serverconfig.features.loosenCORS cannot be locked/,
 		'should throw for a getter, which can return a different value on each call'
 	)
+	test.end()
+})
+
+tape(
+	'lockServerconfig(): the whole serverconfig{} is frozen, but only features{} objects get a null prototype',
+	test => {
+		const sc = {
+			port: 3000,
+			allowedEmbedders: ['a.org'],
+			genomes: [{ name: 'hg38', tracks: [{ file: 'a.gz' }], datasets: [{ name: 'ds1', jsfile: 'ds1.js' }] }],
+			cache_snpgt: { fileNameRegexp: /[^\w]/ },
+			// already frozen by other code, outside of features{}
+			ssl: Object.freeze({ key: 'a.key', nested: { cert: 'a.crt' } }),
+			features: { wsi: {} }
+		}
+		lockServerconfig(sc)
+
+		test.throws(() => (sc.port = 1), TypeError, 'should not change a top-level setting')
+		test.throws(() => (sc.debugmode = true), TypeError, 'should not add a top-level setting')
+		test.throws(() => delete sc.port, TypeError, 'should not delete a top-level setting')
+		test.throws(() => sc.allowedEmbedders.push('*'), TypeError, 'should not change a top-level array')
+		test.throws(() => sc.genomes.push({ name: 'zz' }), TypeError, 'should not add a genome')
+		test.throws(() => (sc.genomes[0].tracks[0].file = 'b.gz'), TypeError, 'should not change a deeply nested object')
+		test.throws(() => (sc.genomes[0].datasets[0].jsfile = 'b.js'), TypeError, 'should not change a raw dataset entry')
+		test.throws(
+			() => (sc.ssl.nested.cert = 'b.crt'),
+			TypeError,
+			'should freeze a descendant of an already-frozen object'
+		)
+		test.equal(
+			Object.getPrototypeOf(sc.genomes[0]),
+			Object.prototype,
+			'should only freeze, not set a null prototype, outside of features{}'
+		)
+		test.equal(Object.getPrototypeOf(sc.features.wsi), null, 'should set a null prototype for a features{} object')
+		test.equal(
+			sc.cache_snpgt.fileNameRegexp.test('a/b'),
+			true,
+			'should keep a frozen RegExp without the g or y flag usable'
+		)
+		test.end()
+	}
+)
+
+tape('lockServerconfig(): fails at launch for a value that freezing cannot protect', test => {
+	for (const [label, sc, expected] of [
+		[
+			'a RegExp with the g flag',
+			{ cache_snpgt: { fileNameRegexp: /[^\w]/g } },
+			/serverconfig.cache_snpgt.fileNameRegexp/
+		],
+		['a RegExp with the y flag', { features: { re: /a/y } }, /serverconfig.features.re/],
+		['a Map', { features: { cache: new Map() } }, /serverconfig.features.cache/],
+		['a Set', { genomes: [{ tracks: new Set() }] }, /serverconfig.genomes.0.tracks/],
+		['a Date', { maintenance: { start: new Date() } }, /serverconfig.maintenance.start/]
+	]) {
+		test.throws(() => lockServerconfig({ features: {}, ...sc }), expected, `should throw for ${label}`)
+	}
 	test.end()
 })

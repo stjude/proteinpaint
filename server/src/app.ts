@@ -8,7 +8,7 @@ import http from 'http'
 import https from 'https'
 import { spawnSync } from 'child_process'
 import * as augen from '@sjcrh/augen'
-import serverconfig, { lockFeatures } from './serverconfig.js'
+import serverconfig, { lockServerconfig } from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares } from './app.middlewares.js'
 import * as oldApp from './app.unorg.js'
@@ -36,8 +36,8 @@ export async function launch() {
 		// setting up auth routes before any other routes are set up
 		const validatedCreds = await extractValidatedCreds(serverconfig)
 		const trackedDatasets = await initGenomesDs(serverconfig, { credDslabels: Object.keys(validatedCreds) })
-		// all launch-time writes to serverconfig.features{} are done by now, lock it before any route is set
-		lockFeatures(serverconfig)
+		// all launch-time writes to serverconfig are done by now, lock it before any route is set
+		lockServerconfig(serverconfig)
 		const { doneLoading, pendingNotification } = processTrackedDs(trackedDatasets)
 
 		// no error from server initiation
