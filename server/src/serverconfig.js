@@ -382,6 +382,12 @@ if (!serverconfig.cache_snpgt) {
 	if (!fs.existsSync(serverconfig.cache_snpgt.dir)) fs.mkdirSync(serverconfig.cache_snpgt.dir, { recursive: true })
 }
 
+// an absent top-level setting must read as undefined, instead of from a polluted Object.prototype,
+// e.g. `if (serverconfig.debugmode)` when debugmode is not set in a prod serverconfig.json;
+// done in place so that it applies to every module that imports serverconfig,
+// but unlike lockFeatures(), the top-level settings are not frozen since tests and launch code still modify them
+Object.setPrototypeOf(serverconfig, null)
+
 export default serverconfig
 
 /*

@@ -160,3 +160,15 @@ tape('lockFeatures(): a polluted Object.prototype is not read as a feature', tes
 	}
 	test.end()
 })
+
+tape('serverconfig: a polluted Object.prototype is not read as a top-level setting', test => {
+	test.equal(Object.getPrototypeOf(serverconfig), null, 'should have a null prototype')
+	Object.prototype.zzPollutedSetting = true
+	try {
+		test.equal({}.zzPollutedSetting, true, 'should confirm that Object.prototype was polluted for this test')
+		test.equal(serverconfig.zzPollutedSetting, undefined, 'should not inherit a polluted Object.prototype property')
+	} finally {
+		delete Object.prototype.zzPollutedSetting
+	}
+	test.end()
+})
