@@ -1,1 +1,2 @@
-
+Fixes:
+- Harden the client-side `copyMerge()` against prototype pollution by skipping `__proto__`, `constructor`, and `prototype` keys.
