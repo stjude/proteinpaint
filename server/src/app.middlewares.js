@@ -92,6 +92,13 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 			res.status(400).send({ error: `invalid json body: ${e.message}` })
 			return
 		}
+		// preserve the object/array-only contract of bodyParser.json()'s default strict mode: sjson.parse()
+		// (like JSON.parse) also accepts a scalar, which would reach Object.assign(req.query, req.body) below
+		// as a malformed payload (a string copies its character indexes, other scalars are silently dropped)
+		if (req.body === null || typeof req.body != 'object') {
+			res.status(400).send({ error: 'invalid json body: must be an object or array' })
+			return
+		}
 		next()
 	})
 	app.use(bodyParser.text({ limit: '5mb' }))
