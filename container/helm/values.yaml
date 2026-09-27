@@ -43,6 +43,8 @@ securityContext:
 #     runAsUser: 1000
 #     runAsGroup: 1000
 #     fsGroup: 1000
+# Another runAsUser may be used with runAsGroup: 0, since the dirs that the app writes at runtime are
+# also writable for group 0.
 podSecurityContext: {}
 
 container:
