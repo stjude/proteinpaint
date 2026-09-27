@@ -1,2 +1,2 @@
 Fixes:
-- Harden the client-side `copyMerge()` against prototype pollution by skipping `__proto__`, `constructor`, and `prototype` keys.
+- Harden the client-side `copyMerge()` (both the shared utility and `StoreBase.copyMerge()`) against prototype pollution by skipping `__proto__`, `constructor`, and `prototype` keys.
