@@ -1,3 +1,4 @@
 Fixes:
 - Reject a JSON request body or a urljson-encoded URL query parameter that has a `__proto__` or `constructor.prototype` key, which could otherwise replace the prototype of the request query object
+- Reject a request payload that uses a prototype-related name (`__proto__`, `constructor`, `prototype`, `toString`, etc.) as an object key or a string value, and look up a genome or dataset by an own property only, so that a name such as `dslabel=__proto__` cannot select an inherited object
 - The `encoding=json` URL query parameter no longer causes an error, and correctly JSON-parses all other query parameter values

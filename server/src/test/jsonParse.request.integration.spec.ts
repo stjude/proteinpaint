@@ -13,6 +13,7 @@ import tape from 'tape'
 import { startTestServer, type TestServer } from '../../test/testServer.ts'
 
 const protoError = /prototype property/
+const forbiddenNameError = /forbidden request payload name/
 
 let server: TestServer
 
@@ -72,6 +73,29 @@ tape('a urljson query param with a prototype key is rejected', async test => {
 		test.equal(res.status, 400, `should respond with 400 for a ${label} key in a urljson query param`)
 		test.match(res.body.error, protoError, `should explain that the ${label} key is not allowed`)
 	}
+	test.end()
+})
+
+tape('a prototype-related name as a query param value is rejected', async test => {
+	test.timeoutAfter(10000)
+	// a dslabel/genome that names an inherited property must not select an Object.prototype member,
+	// see findForbiddenName() and the Object.hasOwn lookups in app.middlewares.js
+	for (const value of ['__proto__', 'constructor', 'toString', 'hasOwnProperty']) {
+		const res = await get(server, '/termdb/config', `genome=hg38-test&dslabel=${value}&embedder=localhost`)
+		test.equal(res.status, 400, `should respond with 400 for dslabel=${value}`)
+		test.match(res.body.error, forbiddenNameError, `should reject dslabel=${value} as a forbidden name`)
+
+		const g = await get(server, '/termdb/config', `genome=${value}&dslabel=TermdbTest&embedder=localhost`)
+		test.equal(g.status, 400, `should respond with 400 for genome=${value}`)
+	}
+	test.end()
+})
+
+tape('a prototype-related name nested in a json body value is rejected', async test => {
+	test.timeoutAfter(10000)
+	const res = await post(server, '/termdb', '{"embedder":"localhost","filter":{"lst":["toString"]}}')
+	test.equal(res.status, 400, 'should respond with 400 for a forbidden name nested in a body value')
+	test.match(res.body.error, forbiddenNameError, 'should report the forbidden name path')
 	test.end()
 })
 
