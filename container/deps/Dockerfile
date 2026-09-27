@@ -126,9 +126,16 @@ RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir
 # with UID/GID 1000, rename it to 'app' instead of creating another user. The UID must
 # stay 1000: container/run.sh maps the rootless podman host account to it, and
 # check_base_user.sh expects a non-root user in the published ppserver/ppfull images.
+#
+# Another UID may also run the image, such as to match the owner of the bind-mounted files, with
+# `docker run --user <uid>:0` or a Kubernetes runAsUser with runAsGroup 0: a runtime assigns group 0 to
+# a UID that has no account in the image, so the dirs that the app writes at runtime are also owned by,
+# and writable for, group 0. See also the ppserver and ppfull stages.
 RUN groupmod -n app docker && \
     usermod -l app -d /home/app -m docker && \
-    chown app:app /home/root/pp/cache
+    chown app:app /home/root/pp/cache && \
+    chgrp -R 0 /home/root/pp/cache /home/app && \
+    chmod -R g=u /home/root/pp/cache /home/app
 
 RUN if [ "$ARCH" = "x86_64" ]; then \
         wget https://proteinpaint.stjude.org/ppdemo/tools/linux/straw -P /home/root/pp/tools/ && \
@@ -223,6 +230,10 @@ COPY --from=ppserverdeps --chown=app:app /home/root/pp/app/active /home/root/pp/
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
 COPY --chown=app:app ./app-server.mjs ./
+# writable for group 0, see the user setup in the ppbase stage; only the dir, for the files created at runtime
+RUN chgrp 0 /home/root/pp/app/active && chmod g=u /home/root/pp/app/active
+# the HOME of another UID, which has no account in the image
+ENV HOME=/home/app
 USER app
 EXPOSE 3000
 CMD ["sh", "-c", "node --enable-source-maps app-server.mjs && @sjcrh/proteinpaint-server"]
@@ -267,6 +278,12 @@ WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
 COPY --chown=app:app ./app-full.mjs ./
 COPY --chown=app:app public ./public
+# writable for group 0, see the user setup in the ppbase stage; only the dirs, for the files created at runtime,
+# such as the client bundle in active/bin and the cards that are copied to active/public
+RUN chgrp 0 /home/root/pp/app/active /home/root/pp/app/active/public && \
+    chmod g=u /home/root/pp/app/active /home/root/pp/app/active/public
+# the HOME of another UID, which has no account in the image
+ENV HOME=/home/app
 USER app
 EXPOSE 3000
 CMD ["sh", "-c", "node --enable-source-maps app-full.mjs && @sjcrh/proteinpaint-server"]

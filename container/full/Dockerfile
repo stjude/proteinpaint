@@ -25,7 +25,8 @@ COPY ./tmppack ./tmppack
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
 COPY --chown=1000:1000 ./full/package.json  ./
-RUN npm install --omit=dev --cache=/home/app/.npm
+# a temporary npm cache, instead of one under HOME that only UID 1000 could write, when the image runs as another UID
+RUN npm install --omit=dev --cache=/tmp/npm-cache && rm -rf /tmp/npm-cache
 # the ./public dir contents, not the dir itself, are copied into ./
 COPY --chown=1000:1000 ./full/app-full.mjs ./envHelpers.mjs ./public ./
 

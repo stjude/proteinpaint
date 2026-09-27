@@ -13,6 +13,12 @@ of ProteinPaint, which the release images in `container/server` and `container/f
 With rootless podman, map the host account to that user with `--userns=keep-id:uid=1000,gid=1000`,
 as `container/run.sh` does.
 
+Another UID may also run these images, such as the owner of the bind-mounted data files, with
+`docker run --user <uid>:0` (or a Kubernetes `runAsUser` with `runAsGroup: 0`). A runtime assigns
+group 0 to a UID that has no account in the image, and the dirs that the app writes at runtime, such as
+the cache dir and `HOME=/home/app`, are writable for group 0. Do not use another group ID, since the app
+could not write those dirs.
+
 A new deps image is needed when a system, R, or Python dependency changes, or when the
 `deps/Dockerfile` changes. A routine release only rebuilds the `server` and `full` images on top of
 the deps image version that is set as `ARG VERSION` in `container/server/Dockerfile` and
