@@ -117,7 +117,7 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 		})
 	}
 
-	const lines = (await utils.read_file(path.join(serverconfig.cache_snpgt.dir, q.cacheid))).split('\n')
+	const lines = (await utils.read_file(utils.snpgtCacheFile(q.cacheid))).split('\n')
 	const samplewithgt = new Set() // collect samples with valid gt for any snp
 	const snps = []
 	for (let i = 1; i < lines.length; i++) {

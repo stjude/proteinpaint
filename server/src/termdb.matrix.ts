@@ -4,7 +4,7 @@ import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
 import { sql } from './sql.ts'
-import { read_file, trackXfetch } from './utils.js'
+import { read_file, snpgtCacheFile, trackXfetch } from './utils.js'
 import {
 	isDictionaryType,
 	isNonDictionaryType,
@@ -1205,7 +1205,8 @@ useAllSamples true/false
 		-do not perform imputation
 */
 async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
-	const lines = (await read_file(path.join(serverconfig.cache_snpgt.dir, tw.q.cacheid))).split('\n')
+	// tw.q.cacheid is client-provided, from any route that passes request terms to getData()
+	const lines = (await read_file(snpgtCacheFile(tw.q.cacheid))).split('\n')
 	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 
 	// array of sample ids from the cache file; note cache file contains all the samples from the dataset
