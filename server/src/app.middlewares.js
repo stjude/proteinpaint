@@ -10,6 +10,7 @@ import * as validator from './validator.js'
 import { authApi } from './auth.js'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import jsonwebtoken from 'jsonwebtoken'
+import sjson from 'secure-json-parse'
 import fs from 'fs'
 import crypto from 'crypto'
 import { ReqResCache } from '@sjcrh/augen'
@@ -70,14 +71,28 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 			urlJsonDecode(req.query)
 		} catch (e) {
 			console.trace(e)
-			res.send({ error: e })
+			res.status(400).send({ error: e.message || e })
 			return
 		}
 		next()
 	})
 
 	app.use(cookieParser())
-	app.use(bodyParser.json({ limit: '5mb' }))
+	// read a json body as text and parse it with secure-json-parse, which rejects a __proto__ or
+	// constructor.prototype key, since Object.assign(req.query, req.body) below would otherwise
+	// replace the prototype of req.query
+	app.use(bodyParser.text({ type: 'application/json', limit: '5mb' }))
+	app.use((req, res, next) => {
+		if (req.headers['content-type'] != 'application/json' || typeof req.body != 'string') return next()
+		try {
+			// bodyParser.json() sets an empty body to {}, keep that behavior
+			req.body = req.body ? sjson.parse(req.body) : {}
+		} catch (e) {
+			res.status(400).send({ error: `invalid json body: ${e.message}` })
+			return
+		}
+		next()
+	})
 	app.use(bodyParser.text({ limit: '5mb' }))
 	app.use(bodyParser.urlencoded({ extended: true }))
 	if (testDataCacheDir)

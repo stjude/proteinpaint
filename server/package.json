@@ -80,6 +80,7 @@
     "micromatch": "^4.0.5",
     "minimatch": "^10.0.1",
     "partjson": "^0.58.2",
+    "secure-json-parse": "^4.1.0",
     "skia-canvas": "~3.0.8",
     "tiny-async-pool": "^1.2.0",
     "tough-cookie": "^4.1.4"

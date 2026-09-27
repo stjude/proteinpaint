@@ -1,3 +1,4 @@
+import sjson from 'secure-json-parse'
 import { isNumeric } from './helpers.js'
 
 /*
@@ -10,11 +11,12 @@ import { isNumeric } from './helpers.js'
 	- numeric values using the isNumeric() function below
 	- values that are wrapped by "", {}, []
 
-	In addition, a URL-payload that includes an `encoding=urljson` parameter
-	will cause all query parameter values to be processed by the decode()
-	function below. This is not required, but may help remove ambiguity, especially
-	to distinguish urljson-encoded params vs legacy URL params that have 
-	been manually coded in a way that doesn't conform to the expectations here.
+	In addition, a URL-payload that includes an `encoding=json` parameter
+	will cause all other query parameter values to be JSON-parsed by the decode()
+	function below, so that a string value must be wrapped by "". This is not required,
+	but may help remove ambiguity, especially to distinguish json-encoded params vs
+	legacy URL params that have been manually coded in a way that doesn't conform
+	to the expectations here.
 
 	Why not just encode every URL query parameter value as JSON?
 
@@ -27,6 +29,10 @@ import { isNumeric } from './helpers.js'
 	- The decoder will always accept and correctly process values that are JSON-encoded.
 	  So the encoding exceptions above do not prevent harder-to-read JSON-encoded string
 	  values. 
+
+	The decoder uses secure-json-parse, which throws a SyntaxError for a value with a
+	__proto__ or constructor.prototype key, since a later Object.assign() or merge of
+	the decoded object can otherwise replace the prototype of the target object.
 */
 
 // a URL query parameters object with values to be encoded
@@ -66,6 +72,10 @@ export function decode(query: UrlJsonEncoded) {
 		// 	query[key] = undefined
 		// 	continue
 		// }
+		// a non-string value is already decoded
+		if (typeof value != 'string') continue
+		// the encoding param value is not json-encoded
+		if (key == 'encoding') continue
 		if (
 			encoding == 'json' ||
 			value == 'null' || // not new, always been
@@ -76,7 +86,7 @@ export function decode(query: UrlJsonEncoded) {
 			(typeof value == 'string' && value.startsWith('{') && value.endsWith('}')) ||
 			(typeof value == 'string' && value.startsWith('[') && value.endsWith(']'))
 		)
-			query[key] = JSON.parse(value)
+			query[key] = sjson.parse(value)
 		// else the value is already a string
 	}
 	return query
