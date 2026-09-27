@@ -45,6 +45,18 @@ tape('a json request body is parsed', async test => {
 	test.end()
 })
 
+tape('a scalar json request body is rejected', async test => {
+	test.timeoutAfter(10000)
+	// bodyParser.json()'s default strict mode accepted only an object or array; a scalar body must
+	// not reach Object.assign(req.query, req.body) as a malformed payload
+	for (const body of ['"a string"', '123', 'true', 'null']) {
+		const res = await post(server, '/genomes', body)
+		test.equal(res.status, 400, `should respond with 400 for a scalar json body ${body}`)
+		test.match(res.body.error, /must be an object or array/, `should reject the scalar body ${body}`)
+	}
+	test.end()
+})
+
 tape('a json request body with a prototype key is rejected', async test => {
 	test.timeoutAfter(10000)
 	for (const [label, body] of [
