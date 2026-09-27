@@ -76,7 +76,9 @@ export async function getAuthApi(
 	// no need to set up auth middleware and routes if there are no dsCredential entries
 	const _authApi = credEmbedders.size ? new AuthApi(creds, app, genomes, serverconfig) : AuthApiOpen
 	//console.log(44, credEmbedders, authApi === AuthApiProtected)
-	_authApi.credEmbedders.push(...credEmbedders)
+	// AuthApiOpen is a shared singleton that is frozen by the first getAuthApi() call, and has no
+	// credEmbedders to add, so do not push into its frozen array when getAuthApi() is called again
+	if (credEmbedders.size) _authApi.credEmbedders.push(...credEmbedders)
 	if (!serverconfig.debugmode || !app.doNotFreezeAuthApi) {
 		Object.freeze(_authApi)
 		Object.freeze(_authApi.credEmbedders)
