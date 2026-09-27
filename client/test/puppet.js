@@ -148,6 +148,8 @@ async function runTest(patternsStr) {
 					else resolve()
 				} catch (e) {
 					reject(e)
+				} finally {
+					lastLines.splice(0, lastLines.length)
 				}
 			}, 100)
 		}).catch(error => {
