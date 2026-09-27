@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- A url given to a spawned tool (straw, bigBedToBed, pyBigWig, samtools/tabix) must use http, https or ftp, and must not point to localhost or a non-global ip range from the IANA registries, unless the host is listed in the optional `serverconfig.urlHosts[]`
+- CI, the dev container and the request test server set `sqlCheck: 'throw'`, so a plain sql string with quoted values fails tests instead of only logging a warning
+- New `sql/no-unbound-sql` ESLint rule flags string-built or template sql, including lowercase, schema-qualified or quoted identifiers, outside of the `sql` tag from `server/src/sql.ts`; ruff S608 flags string-built python sql, and rust sqlite statements are prepared from a `&'static str`
+
+Fixes:
+- Matrix: a request that is not allowed to display sample IDs no longer receives sample rows or sample labels in the streamed refs
+- Facet: sample selection from table cells requires `termdbConfig.displaySampleIds` in addition to a verified token
+- Hi-C: validate the straw arguments (matrixType, nmeth, resolution, positions and chromosome names) in the hicdata and hicgenome routes, limit chrlst to 100 chromosomes and the genome view to 8 concurrent straw processes, and report straw errors per chromosome pair
+- Hi-C: validate a chromosome name after removing `chr` for a nochr file
+- cache_index() checks the host of both the primary and index urls, and download_index() checks the host of each redirect destination
+- illegalUrlHost() rejects a url with a backslash, whitespace or control character, and ignores a trailing dot in the host name
+- The genesetEnrichment and genesetOverrepresentation routes require geneSetGroup to be one of the genome's msigdb analysisGenesetGroups (or a blitzgsea library for the blitzgsea method), and num_permutations to be an integer from 0 to 40000
+- Use bound parameters for the geneSetGroup and gene set id sqlite queries in cerno, genesetORA and gsea.py
+
 
 ## 2.212.0
 
