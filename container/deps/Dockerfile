@@ -112,7 +112,7 @@ RUN python3 -m venv /opt/venv && \
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
-ARG htsversion=1.14
+ARG htsversion=1.24
 
 RUN curl -L https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \
     (cd htslib-${htsversion} && ./configure --enable-plugins --with-plugin-path='$(libexecdir)/htslib:/usr/libexec/htslib' && make install) && \
