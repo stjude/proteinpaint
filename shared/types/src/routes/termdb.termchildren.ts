@@ -3,10 +3,11 @@ export type TermChildrenRequest = {
 	genome: string
 	/** a user-defined dataset label in the serverconfig.json, such as ClinVar, SJLife, GDC, etc */
 	dslabel: string
-	embedder: string
-	get_children: number
+	embedder?: string
+	/** parent term id; when missing, the dataset's root terms are returned */
+	tid?: string
 	cohortValues?: string
-	tid: string
+	treeFilter?: string
 }
 
 interface Entries {
@@ -35,10 +36,23 @@ export const termChildrenPayloadExamples = {
 					genome: 'hg38-test',
 					dslabel: 'TermdbTest',
 					embedder: 'localhost',
-					get_children: 1,
 					cohortValues: 'ABC',
 					tid: 'GO:0000001'
-				} satisfies TermChildrenRequest // TODO: enable type check
+				} satisfies TermChildrenRequest
+			},
+			response: {
+				header: { status: 200 }
+			}
+		},
+		{
+			// root terms
+			request: {
+				body: {
+					genome: 'hg38-test',
+					dslabel: 'TermdbTest',
+					embedder: 'localhost',
+					cohortValues: 'ABC'
+				} satisfies TermChildrenRequest
 			},
 			response: {
 				header: { status: 200 }

@@ -35,23 +35,21 @@ function init({ genomes }) {
 
 async function trigger_children(
 	req: any,
-	q: {
-		genome?: string
-		dslabel?: string
-		embedder?: string
-		get_children?: number
-		tid: any
-		cohortValues?: any
-		treeFilter?: any
-	},
-	tdb: { q: { getTermChildren: (req: any, arg0: any, arg1: any, arg2: any) => any } }
+	q: TermChildrenRequest,
+	tdb: {
+		q: {
+			getRootTerms: (req: any, cohortValues: string, treeFilter: string) => any
+			getTermChildren: (req: any, tid: string, cohortValues: string, treeFilter: string) => any
+		}
+	}
 ): Promise<TermChildrenResponse> {
-	/* get children terms
+	/* get children terms of q.tid, or the root terms when q.tid is missing
 may apply ssid: a premade sample set
 */
-	if (!q.tid) throw 'no parent term id'
-	const cohortValues = q.cohortValues ? q.cohortValues : ''
-	const treeFilter = q.treeFilter ? q.treeFilter : ''
-	const terms = await tdb.q.getTermChildren(req, q.tid, cohortValues, treeFilter)
+	const cohortValues = q.cohortValues || ''
+	const treeFilter = q.treeFilter || ''
+	const terms = q.tid
+		? await tdb.q.getTermChildren(req, q.tid, cohortValues, treeFilter)
+		: await tdb.q.getRootTerms(req, cohortValues, treeFilter)
 	return { lst: terms.map(copy_term) }
 }

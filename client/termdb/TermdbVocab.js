@@ -54,7 +54,6 @@ export class TermdbVocab extends Vocab {
 	}
 
 	async getTermChildren(term, cohortValuelst, filter) {
-		let data
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
@@ -66,14 +65,9 @@ export class TermdbVocab extends Vocab {
 		if (this.state.treeFilter) {
 			body.treeFilter = this.state.treeFilter
 		}
-		if (term.__tree_isroot) {
-			body.default_rootterm = 1
-			data = await this.dofetch3('termdb/rootterm', { body }, this.opts.fetchOpts)
-		} else {
-			body.get_children = 1
-			body.tid = term.id
-			data = await this.dofetch3('termdb/termchildren', { body }, this.opts.fetchOpts)
-		}
+		// a missing tid will return the root terms
+		if (!term.__tree_isroot) body.tid = term.id
+		const data = await this.dofetch3('termdb/termchildren', { body }, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		for (const term of data.lst) {
 			if (term.type == 'integer' || term.type == 'float') {

@@ -73,7 +73,6 @@ export const routeFiles = [
 	import('./routes/termdb.profileFormScores.ts'),
 	import('./routes/termdb.proteome.ts'),
 	import('./routes/termdb.proteomeCohortCompare.ts'),
-	import('./routes/termdb.rootterm.ts'),
 	import('./routes/termdb.runChart.ts'),
 	import('./routes/termdb.sampleImages.ts'),
 	import('./routes/termdb.sampleScatter.ts'),
