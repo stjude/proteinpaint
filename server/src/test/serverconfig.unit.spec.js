@@ -1,6 +1,8 @@
 import tape from 'tape'
 import serverconfig from '../serverconfig.js'
 import path from 'path'
+import fs from 'fs'
+import os from 'os'
 
 const __dirname = import.meta.dirname
 
@@ -82,6 +84,48 @@ tape('process.env.PP_SERVERCONFIG_OVERRIDES: must be a JSON object', async test 
 		} finally {
 			delete process.env.PP_SERVERCONFIG_OVERRIDES
 		}
+	}
+	test.end()
+})
+
+/*
+	a local ./.ssl dir is detected relative to process.cwd(), so this test evaluates serverconfig.js
+	from a temporary working dir that has its own serverconfig.json, without any ssl setting
+*/
+tape('ssl: a local ./.ssl dir is loaded unless ssl=false', async test => {
+	const cwd = process.cwd()
+	const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-serverconfig-ssl-'))
+	try {
+		fs.mkdirSync(path.join(tmpdir, '.ssl'))
+		fs.writeFileSync(path.join(tmpdir, '.ssl/test.key'), '')
+		fs.writeFileSync(path.join(tmpdir, '.ssl/test.crt'), '')
+		const minimalConfig = {
+			debugmode: true,
+			allow_env_overrides: true,
+			binpath: sc.binpath,
+			tpmasterdir: sc.tpmasterdir,
+			cachedir: sc.cachedir,
+			genomes: []
+		}
+		fs.writeFileSync(path.join(tmpdir, 'serverconfig.json'), JSON.stringify(minimalConfig))
+		process.chdir(tmpdir)
+		// process.cwd() may resolve symlinks in the tmpdir path, such as /var -> /private/var in macOS
+		const sslDir = path.join(process.cwd(), '.ssl')
+		const expectedSsl = { key: `${sslDir}/test.key`, cert: `${sslDir}/test.crt` }
+
+		for (const [label, overrides, expected] of [
+			['missing', {}, expectedSsl],
+			['null', { ssl: null }, expectedSsl],
+			['false', { ssl: false }, false]
+		]) {
+			process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify(overrides)
+			const { default: config } = await import(`../serverconfig.js?ssl=${label}`)
+			test.deepEqual(config.ssl, expected, `should set the expected ssl value when ssl is ${label}`)
+		}
+	} finally {
+		delete process.env.PP_SERVERCONFIG_OVERRIDES
+		process.chdir(cwd)
+		fs.rmSync(tmpdir, { recursive: true, force: true })
 	}
 	test.end()
 })
