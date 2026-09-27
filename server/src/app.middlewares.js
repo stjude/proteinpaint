@@ -148,7 +148,10 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 		}
 
 		// reject a request whose payload uses a prototype-related name (see forbiddenNames) as an object key
-		// or a whole string value, before any code assigns it onto another object or uses it to index one
+		// or a whole string value, before any code assigns it onto another object or uses it to index one.
+		// NOTE: this intentionally scans values everywhere, not just known lookup fields, and accepts the
+		// rare false positive of a value that equals one of these reserved names; see findForbiddenName()
+		// in routes/common.ts for the full rationale before narrowing it.
 		const forbiddenName = findForbiddenName(req.query)
 		if (forbiddenName) {
 			res.status(400).send({ error: `forbidden request payload name at ${forbiddenName}` })

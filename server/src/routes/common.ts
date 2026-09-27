@@ -2,13 +2,34 @@
 // Route-specific validators should be coded in server/routes or server/checkers files.
 
 /*
-Property names that a plain object inherits from Object.prototype, plus 'prototype'. Used as a request
-payload object key, one of these can replace the prototype of the object it is assigned onto (for example
-Object.assign(req.query, req.body) with a __proto__ key). Used as a string value, one of these can select
-an inherited property when it later indexes an object (for example genomes[req.query.dslabel] returning
-Object.prototype for dslabel='__proto__'). findForbiddenName() below rejects both, see setAppMiddlewares().
+Property names that a plain object inherits from Object.prototype, plus 'prototype', plus the auth-reserved
+'__protected__'. Used as a request payload object key, a prototype-related name can replace the prototype of
+the object it is assigned onto (for example Object.assign(req.query, req.body) with a __proto__ key). Used as
+a string value, it can select an inherited property when it later indexes an object (for example
+genomes[req.query.dslabel] returning Object.prototype for dslabel='__proto__'). '__protected__' is included
+for a different reason: the server sets req.query.__protected__ itself and trusts it for per-request auth
+info (see setQueryProtectedProps/AuthMiddleWare), so a client must never be able to supply it. findForbiddenName()
+below rejects all of these as a key or a value, see setAppMiddlewares().
+
+DELIBERATE TRADEOFF — please do not "fix" this by narrowing the value check to specific lookup fields.
+findForbiddenName() rejects these names as a string value ANYWHERE in the payload, not only at the
+fields that are known today to index an object (dslabel, genome, sampleId, term/gene id, ...). This is a
+chosen defense-in-depth posture, not an oversight:
+  - A blocklist at the single request-entry chokepoint cannot be forgotten. Per-sink Object.hasOwn/Map
+    guards must be re-added at every current AND future lookup, and one missed site reopens the hole;
+    request payloads flow into far too many bracket lookups across routes to enumerate reliably.
+  - The only cost is a false positive: a request whose WHOLE string value equals one of these ~14
+    reserved names (e.g. a sample ID or gene literally named '__proto__', 'constructor' or 'toString').
+    In this domain that does not occur in practice, so we accept rejecting it with a 400 over maintaining
+    an ever-drifting allowlist of "safe" fields. A substring like 'toString of x' is NOT rejected.
+Some unit tests DO exercise such names as legitimate data (e.g. server/src/termdb.matrix.ts setSampleLstData
+with sampleId '__proto__', shared terms tests with genes named '__proto__'/'constructor'/'toString'); those
+call the lower-level code directly and keep their own Object.hasOwn/Map handling, so they are unaffected —
+they verify the sink is safe even if this middleware were bypassed. If a real payload ever needs one of
+these as a value, prefer changing that value's encoding (e.g. wrap/prefix it) over weakening this check.
 */
 export const forbiddenNames: ReadonlySet<string> = new Set([
+	'__protected__', // auth-middleware reserved query property
 	'__proto__',
 	'prototype',
 	// constructor, toString, hasOwnProperty, valueOf, isPrototypeOf, propertyIsEnumerable,
