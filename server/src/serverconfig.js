@@ -393,25 +393,26 @@ export default serverconfig
 	- mds3.init.js init(), which copies ds.serverconfigFeatures{} into serverconfig.features{} on the
 	  first, awaited init attempt; init retries after listen() do not write, since all keys already exist
 
-	- features{} is replaced by a null-prototype copy, so that a flag check such as
-	  `if (serverconfig.features.loosenCORS)` cannot read a value from a polluted Object.prototype
-	- nested objects and arrays are frozen too, e.g. features.dslabelFilter[] or features.altGenomeByDslabel{}
+	- features{} and every plain object nested in it get a null prototype, so that a flag check such as
+	  `if (serverconfig.features.loosenCORS)` or `if (serverconfig.features.wsi?.allowDirectSlidePath)`
+	  cannot read a value from a polluted Object.prototype; arrays keep their prototype for .includes() etc
+	- features{} and everything nested in it are frozen, e.g. features.dslabelFilter[] or features.altGenomeByDslabel{}
 	- the serverconfig.features property is made non-writable and non-configurable, so it cannot be replaced
 
-	NOTE do not keep a module-level alias such as `const features = serverconfig.features`,
-	since it would keep referencing the original, unlocked object; read serverconfig.features directly
+	the objects are locked in place instead of copied, so that a reference that a module captured at import time,
+	e.g. `const bamCache = serverconfig.features.bamCache` in bam.js, is locked too
 */
 export function lockFeatures(sc) {
-	const features = deepFreeze(Object.assign(Object.create(null), sc.features))
-	Object.defineProperty(sc, 'features', { value: features, writable: false, configurable: false, enumerable: true })
+	deepLock(sc.features)
+	Object.defineProperty(sc, 'features', { writable: false, configurable: false })
 }
 
-function deepFreeze(obj) {
-	if (obj && typeof obj == 'object' && !Object.isFrozen(obj)) {
-		Object.freeze(obj)
-		for (const v of Object.values(obj)) deepFreeze(v)
-	}
-	return obj
+function deepLock(obj) {
+	if (!obj || typeof obj != 'object' || Object.isFrozen(obj)) return
+	// must be done before freezing, since the prototype of a frozen object cannot be changed
+	if (Object.getPrototypeOf(obj) === Object.prototype) Object.setPrototypeOf(obj, null)
+	Object.freeze(obj)
+	for (const v of Object.values(obj)) deepLock(v)
 }
 
 /*

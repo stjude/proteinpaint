@@ -1,7 +1,6 @@
 import tape from 'tape'
 import serverconfig, { lockFeatures } from '../serverconfig.js'
 import path from 'path'
-import fs from 'fs'
 
 const __dirname = import.meta.dirname
 
@@ -100,11 +99,25 @@ tape('lockFeatures(): serverconfig.features{} cannot be changed after launch', t
 			cacheMonitor: { subdirs: { massSession: { maxAge: 1 } } }
 		}
 	}
-	const original = sc.features
+	const original = structuredClone(sc.features)
+	// like `const bamCache = serverconfig.features.bamCache` in bam.js, captured when a module is imported
+	const alias = sc.features
+	const nestedAlias = sc.features.cacheMonitor
 	lockFeatures(sc)
 
-	test.deepEqual({ ...sc.features }, { ...original }, 'should keep the same feature keys and values')
+	// compare as JSON, since tape deepEqual() also compares the now-null prototypes
+	test.deepEqual(JSON.parse(JSON.stringify(sc.features)), original, 'should keep the same feature keys and values')
+	test.equal(sc.features, alias, 'should lock features{} in place, so that a captured alias is locked too')
+	test.equal(sc.features.cacheMonitor, nestedAlias, 'should lock nested objects in place')
+	test.equal(Object.isFrozen(nestedAlias.subdirs), true, 'should freeze a nested object through a captured alias')
 	test.equal(Object.getPrototypeOf(sc.features), null, 'should have a null prototype')
+	test.equal(
+		Object.getPrototypeOf(sc.features.cacheMonitor.subdirs.massSession),
+		null,
+		'should have a null prototype for a nested object'
+	)
+	test.equal(Array.isArray(sc.features.dslabelFilter), true, 'should keep a nested array as an array')
+	test.equal(sc.features.dslabelFilter.includes('TermdbTest'), true, 'should keep array methods')
 	test.equal('customFlag' in sc.features, true, 'should still support the `in` operator used by mds3.init.js')
 
 	// test files are ES modules and so run in strict mode, where writing to a frozen object throws
@@ -129,29 +142,21 @@ tape('lockFeatures(): serverconfig.features{} cannot be changed after launch', t
 })
 
 tape('lockFeatures(): a polluted Object.prototype is not read as a feature', test => {
-	const sc = { features: { customFlag: true } }
+	const sc = { features: { customFlag: true, wsi: {}, dslabelFilter: ['TermdbTest'] } }
 	lockFeatures(sc)
 	Object.prototype.zzPollutedFeature = true
+	Object.prototype.allowDirectSlidePath = true
 	try {
-		test.equal(sc.features.zzPollutedFeature, undefined, 'should not inherit a polluted Object.prototype property')
 		test.equal({}.zzPollutedFeature, true, 'should confirm that Object.prototype was polluted for this test')
+		test.equal(sc.features.zzPollutedFeature, undefined, 'should not inherit a polluted Object.prototype property')
+		test.equal(
+			sc.features.wsi.allowDirectSlidePath,
+			undefined,
+			'should not inherit a polluted Object.prototype property in a nested object, e.g. the check in routes/wsitiles.ts'
+		)
 	} finally {
 		delete Object.prototype.zzPollutedFeature
+		delete Object.prototype.allowDirectSlidePath
 	}
-	test.end()
-})
-
-tape('no module-level alias of serverconfig.features{}', test => {
-	// an alias captured when a module is first imported keeps referencing the original features{} object,
-	// which lockFeatures() replaces with a locked copy, so the alias would remain mutable after launch
-	const srcDir = path.join(__dirname, '..')
-	const aliasPattern = /^(export\s+)?(const|let|var)\s+\w+\s*=\s*serverconfig\.features\s*;?\s*$/m
-	const offenders = []
-	for (const f of fs.readdirSync(srcDir, { recursive: true })) {
-		if (!/\.(js|ts|mjs|cjs)$/.test(f) || f.includes('node_modules') || f.includes('test/')) continue
-		const code = fs.readFileSync(path.join(srcDir, f), { encoding: 'utf8' })
-		if (aliasPattern.test(code)) offenders.push(f)
-	}
-	test.deepEqual(offenders, [], 'should read serverconfig.features directly instead of from a module-level alias')
 	test.end()
 })
