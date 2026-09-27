@@ -43,7 +43,7 @@ cd proteinpaint/container
 
 # optional: use the local server code instead of the published server package version,
 # the tarball name must match the server/package.json version
-(cd ../server && npm pack --pack-destination ../container/tmppack)
+mkdir -p tmppack && (cd ../server && npm pack --pack-destination ../container/tmppack)
 
 ./deps/build.sh
 ```

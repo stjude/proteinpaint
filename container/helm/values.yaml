@@ -33,13 +33,17 @@ resources:
 
 securityContext:
   allowPrivilegeEscalation: false
-# the image runs as the unprivileged app user (UID 1000, see container/deps/Dockerfile);
-# fsGroup makes the mounted volumes, such as the tp/cache dir, writable by that user
-podSecurityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
-  runAsGroup: 1000
-  fsGroup: 1000
+# Empty by default, since the default image.tag above predates the non-root images, which run as the
+# unprivileged app user (UID/GID 1000, see container/deps/Dockerfile). Forcing UID 1000 on an older,
+# root-based image fails, since its node install is under /root. With an image.tag whose
+# `docker image inspect --format '{{.Config.User}}'` is `app`, use the settings below, where fsGroup
+# makes the mounted volumes, such as the tp/cache dir, writable by that user:
+#   podSecurityContext:
+#     runAsNonRoot: true
+#     runAsUser: 1000
+#     runAsGroup: 1000
+#     fsGroup: 1000
+podSecurityContext: {}
 
 container:
   name: proteinpaint
