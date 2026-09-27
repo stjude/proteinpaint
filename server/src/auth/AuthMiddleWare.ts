@@ -222,7 +222,8 @@ function getReqDs(req, genomes) {
 	The route-level auth middlewares, one for each group of data routes that are protected
 	by code instead of by serverconfig.dsCredentials route patterns. These are applied to a route by
 	listing the matching ./protectedRoutes.ts middleware in the route's RouteApi.middlewares[],
-	and must run after the app-level middleware from setAuthMiddleware().
+	and must run after the app-level middleware from setAuthMiddleware(). augen.setRoutes() also calls
+	these after a route method's request validator, so that the checks use the validated req.query.
 
 	termdb: before the route handler, requires a valid session when the dataset has a termdb credential
 	  for the request's embedder, otherwise responds with an error and the route handler is not called
