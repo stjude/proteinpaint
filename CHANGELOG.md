@@ -26,6 +26,8 @@ Fixes:
 - Reject a JSON request body or a urljson-encoded URL query parameter that has a `__proto__` or `constructor.prototype` key, which could otherwise replace the prototype of the request query object
 - Reject a request payload that uses a prototype-related name (`__proto__`, `constructor`, `prototype`, `toString`, etc.) as an object key or a string value, and look up a genome or dataset by an own property only, so that a name such as `dslabel=__proto__` cannot select an inherited object
 - The `encoding=json` URL query parameter no longer causes an error, and correctly JSON-parses all other query parameter values
+- Reject a snplst or snplocus term cache id, or a /termdb/barsql `ssid`, that is not a single file name, so that a request cannot read a file outside of the snp genotype or ssid cache directories
+- In the test data response cache, only use a plain `get<word>` request key as a subroute name, so that a key such as `get../../x` cannot write a cache file outside of the cache directory
 
 
 ## 2.212.0

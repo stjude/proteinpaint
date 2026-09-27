@@ -1,3 +1,1 @@
-Fixes:
-- Reject a snplst or snplocus term cache id, or a /termdb/barsql `ssid`, that is not a single file name, so that a request cannot read a file outside of the snp genotype or ssid cache directories
-- In the test data response cache, only use a plain `get<word>` request key as a subroute name, so that a key such as `get../../x` cannot write a cache file outside of the cache directory
+
