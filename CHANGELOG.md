@@ -19,6 +19,7 @@ Fixes:
 - illegalUrlHost() rejects a url with a backslash, whitespace or control character, and ignores a trailing dot in the host name
 - The genesetEnrichment and genesetOverrepresentation routes require geneSetGroup to be one of the genome's msigdb analysisGenesetGroups (or a blitzgsea library for the blitzgsea method), and num_permutations to be an integer from 0 to 40000
 - Use bound parameters for the geneSetGroup and gene set id sqlite queries in cerno, genesetORA and gsea.py
+- Harden the client-side `copyMerge()` (both the shared utility and `StoreBase.copyMerge()`) against prototype pollution by skipping `__proto__`, `constructor`, and `prototype` keys.
 
 
 ## 2.212.0
