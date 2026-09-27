@@ -1,1 +1,2 @@
-
+Features:
+- Combine the `/termdb/rootterm` and `/termdb/termchildren` server routes, so that a `/termdb/termchildren` request without a `tid` returns the root terms
