@@ -4,24 +4,28 @@ import mm from 'micromatch'
 
 const { isMatch: mmIsMatch } = mm
 
-// Returns sessions[dslabel], creating it as a null-prototype own property first if needed.
-// A plain read/assign pattern (if (!sessions[dslabel]) sessions[dslabel] = ...) is not safe here:
-// this.sessions is null-prototype, but this method also accepts a caller-supplied sessions map
-// (e.g. in unit tests) that may be an ordinary {}. On an ordinary object, dslabel === '__proto__'
-// makes the read resolve to the real Object.prototype instead of undefined, so the assignment is
-// skipped and the next line writes the session payload directly onto Object.prototype. Checking
-// Object.hasOwn first, and creating the entry via defineProperty (not sessions[dslabel] = ...),
-// keeps this safe regardless of the caller's map prototype.
-function getOrCreateDslabelSessions(sessions: Record<string, any>, dslabel: string) {
-	if (!Object.hasOwn(sessions, dslabel) || !sessions[dslabel]) {
-		Object.defineProperty(sessions, dslabel, {
-			value: Object.create(null),
-			enumerable: true,
-			configurable: true,
-			writable: true
-		})
+// The auth session store is a two-level Map keyed by [dslabel][sessionId]. Both keys are
+// request-controlled (dslabel from req.query/JWT payloads, sessionId from getSessionId()'s
+// cookie/header/query resolution), so a Map -- rather than a plain object -- is used deliberately:
+// Map keys are arbitrary strings that never touch Object.prototype, so a key such as '__proto__',
+// 'constructor' or 'toString' is stored and looked up literally and can never resolve to (or pollute)
+// an inherited value. This removes the need for Object.hasOwn / Object.create(null) guards at the
+// individual read/write sites.
+export type SessionsMap = Map<string, Map<string, any>>
+
+// Returns the inner Map for a dslabel, creating an empty one on first use.
+function getOrCreateDslabelSessions(sessions: SessionsMap, dslabel: string) {
+	let dslabelSessions = sessions.get(dslabel)
+	if (!dslabelSessions) {
+		dslabelSessions = new Map<string, any>()
+		sessions.set(dslabel, dslabelSessions)
 	}
-	return sessions[dslabel]
+	return dslabelSessions
+}
+
+// Returns the session tracking object for [dslabel][id], or undefined if there is no such entry.
+export function getSessionEntry(sessions: SessionsMap, dslabel: string, id: string) {
+	return sessions.get(dslabel)?.get(id)
 }
 
 // Express routes requests case-insensitively and ignores a trailing slash (non-strict routing),
@@ -106,11 +110,9 @@ export class Auth {
 	genomes: any
 	maxSessionAge: number = 1000 * 3600 * 16
 	authHealth: Map<string, any> = new Map()
-	sessions: {
-		[dslabel: string]: {
-			[sessionId: string]: any
-		}
-	} = Object.create(null)
+	// keyed [dslabel][sessionId]; a Map is used so request-controlled keys can never pollute or
+	// resolve through Object.prototype -- see SessionsMap and getSessionEntry()
+	sessions: SessionsMap = new Map()
 	sessionTracking: '' | 'jwt-only' = ''
 	// the basepath that auth and data routes are registered under, see stripBasepath(),
 	// set by AuthApi.maySetAuthRoutes() so that route registration, the middleware forced-open check,
@@ -378,7 +380,7 @@ export class Auth {
 	}
 
 	// proteinpaint-issued JWT
-	getSignedJwt(req, res, q, cred, clientAuthResult, maxSessionAge, email = '', sessions) {
+	getSignedJwt(req, res, q, cred, clientAuthResult, maxSessionAge, email = '', sessions: SessionsMap) {
 		if (!cred.secret) return
 		try {
 			const time = Date.now()
@@ -401,7 +403,7 @@ export class Auth {
 			const jwt = jsonwebtoken.sign(payload, secret)
 			const id = this.getSessionIdFromJwt(jwt)
 			//const ip = req.ip // may use req.ips?
-			getOrCreateDslabelSessions(sessions, q.dslabel)[id] = payload
+			getOrCreateDslabelSessions(sessions, q.dslabel).set(id, payload)
 			if (!cred.cookieMode || cred.cookieMode == 'set-cookie') {
 				// For basic/password login that protects all routes (including /genomes),
 				// must use session cookie, since it's not practical for the client dofetch code
@@ -428,7 +430,7 @@ export class Auth {
 
 	// in a server farm, where the session state is not shared by all active PP servers,
 	// the login details that is created by one server can be obtained from the JWT payload
-	mayAddSessionFromJwt(sessions, req, cred) {
+	mayAddSessionFromJwt(sessions: SessionsMap, req, cred) {
 		const { dslabel, embedder } = req.query
 		if (!req.headers?.authorization) return
 		if (!cred.secret)
@@ -443,13 +445,11 @@ export class Auth {
 		const id = this.getSessionIdFromJwt(token)
 		try {
 			const { secret } = getApplicableSecret(req.headers, cred, token)
-			// id is attacker-controlled (the last 20 chars of the raw, unverified token -- or the
-			// whole token if shorter), so an own-property check is required on both levels: a
-			// naive sessions[dslabel]?.[id] read-through would let dslabel/id of '__proto__' (or
-			// any other name colliding with something already on Object.prototype) resolve to an
-			// inherited value and skip jsonwebtoken.verify() entirely, bypassing signature checking
-			const cachedPayload =
-				Object.hasOwn(sessions, dslabel) && Object.hasOwn(sessions[dslabel], id) ? sessions[dslabel][id] : undefined
+			// id is attacker-controlled (the last 20 chars of the raw, unverified token -- or the whole
+			// token if shorter), so a cache hit must come from a real stored entry, never an inherited
+			// value: reading from the sessions Map (see SessionsMap) guarantees this, so a dslabel/id of
+			// '__proto__' cannot resolve a fake payload that would skip jsonwebtoken.verify() below
+			const cachedPayload = getSessionEntry(sessions, dslabel, id)
 			const payload = cachedPayload || jsonwebtoken.verify(token, secret)
 			// signed payload dataset must match the requested dataset
 			if (payload.dslabel) {
@@ -470,13 +470,13 @@ export class Auth {
 				path == 'authorizedactions' ||
 				path.startsWith(cred.route.toLowerCase() + '/')
 			) {
-				if (!dslabelSessions[id])
-					dslabelSessions[id] = {
+				if (!dslabelSessions.has(id))
+					dslabelSessions.set(id, {
 						...payload,
 						dslabel,
 						embedder,
 						route: cred.route
-					}
+					})
 				return id
 			}
 		} catch (e) {
