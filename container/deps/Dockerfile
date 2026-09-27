@@ -88,7 +88,10 @@ RUN mkdir -p "$NVM_DIR" && \
     nvm alias default $NODE_VERSION && \
     nvm use $NODE_VERSION && \
     echo 'export NVM_DIR="$NVM_DIR"' >> /etc/bash.bashrc && \
-    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /etc/bash.bashrc
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /etc/bash.bashrc && \
+    # the node release tarball files are owned by UID 1000, which nvm keeps when extracting as root,
+    # but that is the app user's UID, which then could modify its own node install
+    chown -R root:root "$NVM_DIR"
 
 ENV PATH="/opt/nvm/versions/node/v${NODE_VERSION}/bin:$PATH"
 
