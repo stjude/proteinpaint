@@ -16,8 +16,12 @@ fileurl() argv safety
 fileurl() url protocol and host
 */
 
+// the fileurl() specs exercise url handling, which only runs when remote files are allowed
+const allowRemoteFile = serverconfig.features.ALLOW_remotefilefromurl
+
 tape('\n', function (test) {
 	test.comment('-***- server/utils specs -***-')
+	serverconfig.features.ALLOW_remotefilefromurl = true
 	test.end()
 })
 
@@ -422,5 +426,11 @@ tape('fileurl() url protocol and host', test => {
 		'should reject a url with a backslash even if its WHATWG host a.org is listed in serverconfig.urlHosts'
 	)
 	delete serverconfig.urlHosts
+	test.end()
+})
+
+tape('cleanup', test => {
+	if (allowRemoteFile === undefined) delete serverconfig.features.ALLOW_remotefilefromurl
+	else serverconfig.features.ALLOW_remotefilefromurl = allowRemoteFile
 	test.end()
 })

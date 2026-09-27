@@ -74,8 +74,12 @@ function sha(file) {
 	return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')
 }
 
+// the url payloads below must reach the url checks, which only run when remote files are allowed
+const allowRemoteFile = serverconfig.features.ALLOW_remotefilefromurl
+
 tape('\n', function (test) {
 	test.comment('-***- argv injection specs -***-')
+	serverconfig.features.ALLOW_remotefilefromurl = true
 	test.end()
 })
 
@@ -370,6 +374,8 @@ tape('/mdsgeneboxplot and /isoformbycoord, via the real route table', async test
 })
 
 tape('cleanup', test => {
+	if (allowRemoteFile === undefined) delete serverconfig.features.ALLOW_remotefilefromurl
+	else serverconfig.features.ALLOW_remotefilefromurl = allowRemoteFile
 	fs.rmSync(tmpdir, { recursive: true, force: true })
 	test.end()
 })

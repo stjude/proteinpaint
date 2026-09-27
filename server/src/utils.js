@@ -48,6 +48,11 @@ validateRglst
 ********************** INTERNAL
 */
 
+// reading a file from a url makes the server fetch a caller-supplied url and may save the downloaded index
+// under cachedir, so it is off by default; enable with serverconfig.features.ALLOW_remotefilefromurl=true
+// on environments that support remote files, e.g. custom tracks by url
+const remoteFileNotAllowed = 'Remote file not supported on this server.'
+
 /*
 -- for tabix files, if no indexURL is given, allow using either tbi or csi file at the same location
 
@@ -59,6 +64,7 @@ validateRglst
 
 */
 export async function cache_index(gzurl, indexurl) {
+	if (!serverconfig.features.ALLOW_remotefilefromurl) throw remoteFileNotAllowed
 	if (!gzurl) throw '.gz file URL missing'
 	if (typeof gzurl != 'string') throw '.gz file URL not string'
 	if (indexurl) {
@@ -128,6 +134,7 @@ export function fileurl(req, checkWhiteList = true) {
 		if (illegalpath(file, checkWhiteList, false)) return ['illegal file path']
 		file = path.join(serverconfig.tpmasterdir, file)
 	} else if (req.query.url) {
+		if (!serverconfig.features.ALLOW_remotefilefromurl) return [remoteFileNotAllowed]
 		// a non-string, such as an array from a repeated query parameter, would bypass the checks below
 		if (typeof req.query.url != 'string') return ['url must be a string']
 		file = req.query.url
