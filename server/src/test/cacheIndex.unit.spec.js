@@ -19,6 +19,7 @@ A local http server stands in for the attacker's host. Escape targets are under 
 system paths.
 
 test sections:
+- remote file is off by default
 - cache_index() rejects traversal
 - cache_index() rejects non-remote protocols
 - cache_index() rejects a primary url host that is not allowed
@@ -32,7 +33,7 @@ test sections:
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-cacheidx-'))
 const up = '/..'.repeat(40) // more than enough to reach "/" from any cachedir
 
-let server, H
+let server, H, allowRemoteFile
 function startServer() {
 	return new Promise(resolve => {
 		server = http
@@ -82,6 +83,31 @@ tape('\n', async function (test) {
 	await startServer()
 	// the local stand-in host is a loopback address, which fileurl() and cache_index() reject unless listed
 	serverconfig.urlHosts = ['127.0.0.1']
+	allowRemoteFile = serverconfig.features.ALLOW_remotefilefromurl
+	test.end()
+})
+
+tape('remote file is off by default', async test => {
+	delete serverconfig.features.ALLOW_remotefilefromurl
+	await rejects(
+		test,
+		() => utils.cache_index(`http://${H}/off/t.gz`, `http://${H}/off/t.gz.tbi`),
+		/Remote file not supported on this server/,
+		'cache_index() should reject when ALLOW_remotefilefromurl is not set'
+	)
+	test.notOk(fs.existsSync(path.join(serverconfig.cachedir, 'http', H, 'off')), 'should not create a cache dir')
+	test.deepEqual(
+		utils.fileurl({ query: { url: `http://${H}/off/t.gz` } }),
+		['Remote file not supported on this server.'],
+		'fileurl() should reject a url when ALLOW_remotefilefromurl is not set'
+	)
+	test.equal(
+		utils.fileurl({ query: { file: 'files/hg38/TermdbTest/TermdbTest_ITD.gz' } })[0],
+		null,
+		'fileurl() should still accept a server-side file'
+	)
+	// the remaining specs exercise url handling
+	serverconfig.features.ALLOW_remotefilefromurl = true
 	test.end()
 })
 
@@ -274,6 +300,8 @@ tape('cache_index() checks the host of each index url redirect', async test => {
 
 tape('cleanup', test => {
 	delete serverconfig.urlHosts
+	if (allowRemoteFile === undefined) delete serverconfig.features.ALLOW_remotefilefromurl
+	else serverconfig.features.ALLOW_remotefilefromurl = allowRemoteFile
 	server.close()
 	fs.rmSync(tmpdir, { recursive: true, force: true })
 	test.end()

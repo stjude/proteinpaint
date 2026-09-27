@@ -35,8 +35,12 @@ async function request(query) {
 
 const query = () => ({ url: 'https://a.org/x.hic', chrlst: ['chr1', 'chr2'], resolution: 1000000 })
 
+// the specs request a url, which fileurl() only accepts when remote files are allowed
+const allowRemoteFile = serverconfig.features.ALLOW_remotefilefromurl
+
 tape('\n', test => {
 	test.comment('-***- routes/hicgenome specs -***-')
+	serverconfig.features.ALLOW_remotefilefromurl = true
 	test.end()
 })
 
@@ -95,5 +99,11 @@ tape('hicgenome validates a chromosome name after removing chr for a nochr file'
 	} finally {
 		serverconfig.hicstraw = hicstraw
 	}
+	test.end()
+})
+
+tape('cleanup', test => {
+	if (allowRemoteFile === undefined) delete serverconfig.features.ALLOW_remotefilefromurl
+	else serverconfig.features.ALLOW_remotefilefromurl = allowRemoteFile
 	test.end()
 })
