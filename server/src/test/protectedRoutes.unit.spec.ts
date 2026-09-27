@@ -4,6 +4,7 @@ import path from 'path'
 import { getProtectedRoutes } from '@sjcrh/augen'
 import { routeFiles } from '../app.routes.js'
 import { protectedRoutes } from '../auth/protectedRoutes.ts'
+import { getAuthApi } from '../auth.ts'
 
 /*
 	server/test/protectedRoutes.json is emitted by augen.setRoutes() when the server
@@ -47,6 +48,42 @@ tape('protectedRoutes.json only lists known protectedRoutes middlewares', functi
 				`should be a known protectedRoutes middleware name='${name}' for '${endpoint}'`
 			)
 		}
+	}
+	test.end()
+})
+
+tape('protectedRoutes middlewares have a protectedRoute property with their name', function (test) {
+	for (const [name, middleware] of Object.entries(protectedRoutes)) {
+		test.equal((middleware as any).protectedRoute, name, `should have protectedRoute='${name}'`)
+		test.equal(middleware.name, name, `should have name='${name}'`)
+		test.ok(Object.isFrozen(middleware), `should freeze the ${name} middleware`)
+	}
+	test.end()
+})
+
+tape(
+	'protectedRoutes middlewares fail closed for an express app that was not set up with getAuthApi()',
+	function (test) {
+		for (const [name, middleware] of Object.entries(protectedRoutes)) {
+			let nextCalled = false
+			test.throws(
+				() => middleware({ app: {}, query: {} }, {}, () => (nextCalled = true)),
+				/authApi has not been set up for this app/,
+				`should throw for an unregistered app in the ${name} middleware`
+			)
+			test.notOk(nextCalled, `should not call next() for an unregistered app in the ${name} middleware`)
+		}
+		test.end()
+	}
+)
+
+tape('protectedRoutes middlewares use the authApi that was set up for the request app', async function (test) {
+	const app: any = {}
+	await getAuthApi(app, {}, { validatedCreds: {} } as any)
+	for (const [name, middleware] of Object.entries(protectedRoutes)) {
+		let nextCalled = false
+		middleware({ app, query: {} }, {}, () => (nextCalled = true))
+		test.ok(nextCalled, `should call next() from the open-access ${name} middleware of the registered app`)
 	}
 	test.end()
 })

@@ -31,13 +31,15 @@ export function setRoutes(app, routes, _opts = {}) {
 	}
 }
 
-// returns {endpoint: [middleware names]} for the routes that have route-level middlewares,
-// sorted by endpoint so that the emitted json has a stable order
+// returns {endpoint: [protectedRoute names]} for the routes that have route-level protection middlewares,
+// sorted by endpoint so that the emitted json has a stable order. Only a middleware with a string
+// protectedRoute property is tracked, so that other route-level middlewares are not treated as protection.
 export function getProtectedRoutes(routes) {
 	const protectedRoutes = {}
 	const apis = routes.map(r => r.api).filter(api => api?.middlewares?.length)
 	for (const api of apis.sort((a, b) => (a.endpoint < b.endpoint ? -1 : a.endpoint > b.endpoint ? 1 : 0))) {
-		protectedRoutes[api.endpoint] = api.middlewares.map(m => m.name || '(anonymous)')
+		const names = api.middlewares.filter(m => typeof m?.protectedRoute == 'string').map(m => m.protectedRoute)
+		if (names.length) protectedRoutes[api.endpoint] = names
 	}
 	return protectedRoutes
 }
