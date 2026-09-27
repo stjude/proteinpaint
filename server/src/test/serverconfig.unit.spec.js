@@ -1,5 +1,5 @@
 import tape from 'tape'
-import serverconfig, { lockFeatures } from '../serverconfig.js'
+import serverconfig, { lockFeatures, mergeDsFeatures } from '../serverconfig.js'
 import path from 'path'
 
 const __dirname = import.meta.dirname
@@ -170,5 +170,85 @@ tape('serverconfig: a polluted Object.prototype is not read as a top-level setti
 	} finally {
 		delete Object.prototype.zzPollutedSetting
 	}
+	test.end()
+})
+
+tape('serverconfig: the prototype is removed before any setting is read or defaulted', async test => {
+	// cache_snpgt is defaulted by serverconfig.js when not set, and its fileNameRegexp guards client-provided cache file names
+	Object.prototype.cache_snpgt = { dir: '/zz-polluted', fileNameRegexp: /(?!)/ }
+	try {
+		const { default: config } = await import('../serverconfig.js?pollution=before-import')
+		test.equal(Object.getPrototypeOf(config), null, 'should have a null prototype')
+		test.equal(
+			Object.hasOwn(config, 'cache_snpgt'),
+			true,
+			'should apply the default instead of using an inherited value'
+		)
+		test.notEqual(config.cache_snpgt.dir, '/zz-polluted', 'should not use the polluted cache_snpgt.dir')
+	} finally {
+		delete Object.prototype.cache_snpgt
+	}
+	test.end()
+})
+
+tape('mergeDsFeatures(): copies only own ds.serverconfigFeatures keys, without overwriting', test => {
+	const sc = { features: { sse: false } }
+	Object.prototype.zzPollutedFeature = true
+	try {
+		// a ds without serverconfigFeatures still iterates the `|| {}` fallback, which inherits from Object.prototype
+		mergeDsFeatures(sc, { label: 'ds1', init: {} })
+		mergeDsFeatures(sc, { label: 'ds2', init: {}, serverconfigFeatures: { gdcBam: { cacheMaxSize: 1 }, sse: true } })
+		test.deepEqual(Object.keys(sc.features), ['sse', 'gdcBam'], 'should only have own keys')
+		test.equal(Object.hasOwn(sc.features, 'zzPollutedFeature'), false, 'should not copy a polluted inherited key')
+		test.equal(sc.features.sse, false, 'should not overwrite an existing feature')
+		lockFeatures(sc)
+		test.equal(sc.features.zzPollutedFeature, undefined, 'should not have a polluted feature after locking')
+	} finally {
+		delete Object.prototype.zzPollutedFeature
+	}
+	test.end()
+})
+
+tape('lockFeatures(): fully locks or fails for already-frozen, sealed, circular, or accessor values', test => {
+	{
+		const child = { x: 1 }
+		const sc = { features: { frozenNullProto: Object.freeze(Object.assign(Object.create(null), { child })) } }
+		lockFeatures(sc)
+		test.equal(Object.isFrozen(child), true, 'should traverse into an already-frozen object and freeze its descendants')
+		test.equal(Object.getPrototypeOf(child), null, 'should set a null prototype on a descendant of a frozen object')
+	}
+	{
+		const child = { x: 1 }
+		lockFeatures({ features: { list: Object.freeze([child]) } })
+		test.equal(Object.isFrozen(child), true, 'should traverse into an already-frozen array')
+	}
+	{
+		const features = { a: {} }
+		features.a.parent = features
+		lockFeatures({ features })
+		test.equal(Object.isFrozen(features.a), true, 'should lock a circular reference without infinite recursion')
+	}
+	test.throws(
+		() => lockFeatures({ features: { wsi: Object.freeze({ allowDirectSlidePath: false }) } }),
+		/serverconfig.features.wsi cannot be locked/,
+		'should throw for an already-frozen plain object, which would keep inheriting from Object.prototype'
+	)
+	test.throws(
+		() => lockFeatures({ features: { wsi: Object.seal({}) } }),
+		/serverconfig.features.wsi cannot be locked/,
+		'should throw for a sealed plain object'
+	)
+	test.throws(
+		() =>
+			lockFeatures({
+				features: {
+					get loosenCORS() {
+						return false
+					}
+				}
+			}),
+		/serverconfig.features.loosenCORS cannot be locked/,
+		'should throw for a getter, which can return a different value on each call'
+	)
 	test.end()
 })

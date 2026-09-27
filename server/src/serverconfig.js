@@ -46,6 +46,13 @@ if (!serverconfigfile) {
 	}
 }
 
+// an absent top-level setting must read as undefined, instead of from a polluted Object.prototype,
+// e.g. `if (serverconfig.debugmode)` when debugmode is not set in a prod serverconfig.json;
+// done right after parsing so that every setting read and default applied below in this module is also covered,
+// and in place so that it applies to every module that imports serverconfig;
+// unlike lockFeatures(), the top-level settings are not frozen since tests and launch code still modify them
+Object.setPrototypeOf(serverconfig, null)
+
 // Derived settings from a launcher script, such as the container app-server.mjs and app-full.mjs,
 // applied as if these were in serverconfig.json. This avoids rewriting a mounted serverconfig.json,
 // which may be read-only or not writable by the container user. Applied before any other processing,
@@ -382,12 +389,6 @@ if (!serverconfig.cache_snpgt) {
 	if (!fs.existsSync(serverconfig.cache_snpgt.dir)) fs.mkdirSync(serverconfig.cache_snpgt.dir, { recursive: true })
 }
 
-// an absent top-level setting must read as undefined, instead of from a polluted Object.prototype,
-// e.g. `if (serverconfig.debugmode)` when debugmode is not set in a prod serverconfig.json;
-// done in place so that it applies to every module that imports serverconfig,
-// but unlike lockFeatures(), the top-level settings are not frozen since tests and launch code still modify them
-Object.setPrototypeOf(serverconfig, null)
-
 export default serverconfig
 
 /*
@@ -396,8 +397,8 @@ export default serverconfig
 
 	Must be called by app.ts launch() as soon as all launch-time writes are done, which are:
 	- the defaults applied above in this module
-	- mds3.init.js init(), which copies ds.serverconfigFeatures{} into serverconfig.features{} on the
-	  first, awaited init attempt; init retries after listen() do not write, since all keys already exist
+	- mergeDsFeatures() as called by mds3.init.js init(), on the first, awaited init attempt;
+	  init retries after listen() do not write, since all keys already exist
 
 	- features{} and every plain object nested in it get a null prototype, so that a flag check such as
 	  `if (serverconfig.features.loosenCORS)` or `if (serverconfig.features.wsi?.allowDirectSlidePath)`
@@ -407,18 +408,50 @@ export default serverconfig
 
 	the objects are locked in place instead of copied, so that a reference that a module captured at import time,
 	e.g. `const bamCache = serverconfig.features.bamCache` in bam.js, is locked too
+
+	throws, to fail the launch, when a value cannot be fully locked
 */
 export function lockFeatures(sc) {
-	deepLock(sc.features)
+	deepLock(sc.features, 'serverconfig.features', new WeakSet())
 	Object.defineProperty(sc, 'features', { writable: false, configurable: false })
 }
 
-function deepLock(obj) {
-	if (!obj || typeof obj != 'object' || Object.isFrozen(obj)) return
-	// must be done before freezing, since the prototype of a frozen object cannot be changed
-	if (Object.getPrototypeOf(obj) === Object.prototype) Object.setPrototypeOf(obj, null)
+function deepLock(obj, keyPath, visited) {
+	if (!obj || typeof obj != 'object' || visited.has(obj)) return // visited{} handles a circular reference
+	visited.add(obj)
+	if (Object.getPrototypeOf(obj) === Object.prototype) {
+		// the prototype of a frozen, sealed, or otherwise non-extensible object cannot be changed,
+		// so an object that was already frozen by other code, e.g. a dataset, would keep inheriting from Object.prototype
+		if (!Object.isExtensible(obj)) throw `${keyPath} cannot be locked, since it is already non-extensible`
+		Object.setPrototypeOf(obj, null)
+	}
 	Object.freeze(obj)
-	for (const v of Object.values(obj)) deepLock(v)
+	// always traverse, since an object that was already frozen by other code may still have mutable descendants;
+	// use all own keys, not just enumerable string keys, so that no nested value is skipped
+	for (const key of Reflect.ownKeys(obj)) {
+		const d = Object.getOwnPropertyDescriptor(obj, key)
+		// a getter may return a different or mutable value on each call, which freezing cannot prevent
+		if (!('value' in d)) throw `${keyPath}.${String(key)} cannot be locked, since it is a getter/setter property`
+		deepLock(d.value, `${keyPath}.${String(key)}`, visited)
+	}
+}
+
+/*
+	Copy the optional ds.serverconfigFeatures{} into serverconfig.features{}, for keys that are not already set.
+	Overwrite not allowed! to prevent hard-to-trace error that 2nd ds changes value set by 1st ds etc...
+
+	Only own keys are copied and checked, so that a key inherited from a polluted Object.prototype
+	is never copied as an own feature, which lockFeatures() would then freeze as enabled.
+*/
+export function mergeDsFeatures(sc, ds) {
+	for (const k of Object.keys(ds.serverconfigFeatures || {})) {
+		if (Object.hasOwn(sc.features, k)) {
+			// on init retry, no need to see this message
+			if (!ds.init?.status) console.log(`!!! NO OVERWRITING SERVERCONFIG.FEATURES.${k} (from ${ds.label}) !!!`)
+		} else {
+			sc.features[k] = ds.serverconfigFeatures[k]
+		}
+	}
 }
 
 /*
