@@ -385,6 +385,36 @@ if (!serverconfig.cache_snpgt) {
 export default serverconfig
 
 /*
+	Make serverconfig.features{} immutable for the rest of the server process lifetime, so that
+	a request handler, whether by bug or a malicious payload, cannot turn on a dev-only or dangerous feature.
+
+	Must be called by app.ts launch() as soon as all launch-time writes are done, which are:
+	- the defaults applied above in this module
+	- mds3.init.js init(), which copies ds.serverconfigFeatures{} into serverconfig.features{} on the
+	  first, awaited init attempt; init retries after listen() do not write, since all keys already exist
+
+	- features{} is replaced by a null-prototype copy, so that a flag check such as
+	  `if (serverconfig.features.loosenCORS)` cannot read a value from a polluted Object.prototype
+	- nested objects and arrays are frozen too, e.g. features.dslabelFilter[] or features.altGenomeByDslabel{}
+	- the serverconfig.features property is made non-writable and non-configurable, so it cannot be replaced
+
+	NOTE do not keep a module-level alias such as `const features = serverconfig.features`,
+	since it would keep referencing the original, unlocked object; read serverconfig.features directly
+*/
+export function lockFeatures(sc) {
+	const features = deepFreeze(Object.assign(Object.create(null), sc.features))
+	Object.defineProperty(sc, 'features', { value: features, writable: false, configurable: false, enumerable: true })
+}
+
+function deepFreeze(obj) {
+	if (obj && typeof obj == 'object' && !Object.isFrozen(obj)) {
+		Object.freeze(obj)
+		for (const v of Object.values(obj)) deepFreeze(v)
+	}
+	return obj
+}
+
+/*
 	Option to add datasets under hg38-test and also feature flags, dsCredentials
 
 	datasets[]: the raw datasets array from a serverconfig genomes entry

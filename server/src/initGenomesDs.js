@@ -55,8 +55,6 @@ export const genomes = {} // { hg19: {...}, ... }
 */
 export const trackedDatasets = []
 
-const features = serverconfig.features
-
 export async function initGenomesDs(serverconfig, opts = {}) {
 	// verify if tp directory is readable
 	// ppr has this situation where its tp/ is from a nfs mount and can go down...

@@ -8,7 +8,7 @@ import http from 'http'
 import https from 'https'
 import { spawnSync } from 'child_process'
 import * as augen from '@sjcrh/augen'
-import serverconfig from './serverconfig.js'
+import serverconfig, { lockFeatures } from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares } from './app.middlewares.js'
 import * as oldApp from './app.unorg.js'
@@ -36,6 +36,8 @@ export async function launch() {
 		// setting up auth routes before any other routes are set up
 		const validatedCreds = await extractValidatedCreds(serverconfig)
 		const trackedDatasets = await initGenomesDs(serverconfig, { credDslabels: Object.keys(validatedCreds) })
+		// all launch-time writes to serverconfig.features{} are done by now, lock it before any route is set
+		lockFeatures(serverconfig)
 		const { doneLoading, pendingNotification } = processTrackedDs(trackedDatasets)
 
 		// no error from server initiation
@@ -156,9 +158,7 @@ init with bad config, data, and/or code
 	}
 }
 
-async function handle_argv(
-	argv: string[]
-): Promise<{ message?: string; error?: string; code?: number } | undefined> {
+async function handle_argv(argv: string[]): Promise<{ message?: string; error?: string; code?: number } | undefined> {
 	if (!argv?.length) return
 	if (argv.includes('validate'))
 		// exit early if only doing a validation of configuration + data + startup code
