@@ -319,7 +319,7 @@ tape('middleware: clears sessions when sessionTracking is jwt-only', function (t
 
 	const auth = makeAuth({}, { features: { sessionTracking: 'jwt-only' } })
 	// Pre-populate sessions
-	;(auth as any).sessions[dslabel] = { 'fake-session-id': { time: Date.now(), ip: '127.0.0.1' } }
+	;(auth as any).sessions.set(dslabel, new Map([['fake-session-id', { time: Date.now(), ip: '127.0.0.1' }]]))
 
 	const mockAuthApi = {
 		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
@@ -338,11 +338,10 @@ tape('middleware: clears sessions when sessionTracking is jwt-only', function (t
 	middleware(req, res, () => {})
 
 	// After the middleware runs, sessions should be cleared (jwt-only mode)
-	test.deepEqual(Object.keys((auth as any).sessions), [], 'should clear all sessions when sessionTracking is jwt-only')
-	test.equal(
-		Object.getPrototypeOf((auth as any).sessions),
-		null,
-		'should clear sessions into a null-prototype map when sessionTracking is jwt-only'
+	test.equal((auth as any).sessions.size, 0, 'should clear all sessions when sessionTracking is jwt-only')
+	test.ok(
+		(auth as any).sessions instanceof Map,
+		'should clear sessions into a fresh Map when sessionTracking is jwt-only'
 	)
 	test.end()
 })
@@ -355,9 +354,10 @@ tape('middleware: valid session - calls next() and updates session time', async 
 
 	// Manually create a session in auth.sessions with a known ID and matching IP
 	const sessionId = 'test-session-id-00'
-	;(auth as any).sessions[dslabel] = {
-		[sessionId]: { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }
-	}
+	;(auth as any).sessions.set(
+		dslabel,
+		new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]])
+	)
 
 	const mockAuthApi = {
 		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
@@ -384,6 +384,49 @@ tape('middleware: valid session - calls next() and updates session time', async 
 
 	test.ok(nextCalled, 'should call next() for a valid session')
 	test.ok(res.statusCode === null, 'should not set an error status code for valid session')
+	test.end()
+})
+
+tape('middleware: an inherited-name session id resolves to no session (401)', function (test) {
+	test.timeoutAfter(1000)
+	// The session id is request-controlled (here via the session cookie), so an id colliding with an
+	// Object.prototype member must never resolve an inherited value into a live session at the
+	// middleware read (~L86), even though a real session already populates the dslabel's Map.
+	const inheritedIds = ['__proto__', 'constructor', 'toString']
+	test.plan(inheritedIds.length * 2 + 2)
+
+	const auth = makeAuth()
+	// a real session exists for the dslabel, so the dslabel level of the map is populated
+	;(auth as any).sessions.set(
+		dslabel,
+		new Map([['real-session-id-00', { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]])
+	)
+
+	const mockAuthApi = {
+		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+		mayAdjustFilter: () => {},
+		isUserLoggedIn: () => true
+	}
+
+	for (const id of inheritedIds) {
+		const middleware = registerMiddleware(auth, mockAuthApi)
+		const req: any = {
+			query: { dslabel, embedder },
+			path: '/termdb/matrix',
+			cookies: { [headerKey]: id },
+			headers: {},
+			ip: '127.0.0.1'
+		}
+		const res = makeMockRes()
+		let nextCalled = false
+		middleware(req, res, () => (nextCalled = true))
+		test.notOk(nextCalled, `should NOT call next() for inherited session id '${id}'`)
+		test.equal(res.statusCode, 401, `should set 401 status for inherited session id '${id}'`)
+	}
+
+	// the real stored session must be untouched, and Object.prototype must not be polluted
+	test.ok((auth as any).sessions.get(dslabel).get('real-session-id-00'), 'the real stored session is preserved')
+	test.equal(Object.getPrototypeOf({}), Object.prototype, 'Object prototype chain is intact')
 	test.end()
 })
 

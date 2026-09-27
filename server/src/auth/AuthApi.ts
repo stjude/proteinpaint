@@ -1,7 +1,7 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import { type AuthInterface } from '../auth.ts'
-import { Auth, patternMatches, assertStringOrUndefined } from './Auth.ts'
+import { Auth, patternMatches, assertStringOrUndefined, getSessionEntry } from './Auth.ts'
 import { setAuthMiddleware } from './AuthMiddleWare.ts'
 import { setAuthRoutes } from './AuthRoutes.ts'
 import { sleep } from '../utils.js'
@@ -84,7 +84,7 @@ export class AuthApi implements AuthInterface {
 				// insession — a cookie some browsers (webkit) won't send over plain
 				// http since it is flagged Secure
 				const id = this.#auth.getSessionId({ query, headers: req.headers, cookies: req.cookies, path: req.path }, cred)
-				const activeSession = this.#auth.sessions[dslabel]?.[id]
+				const activeSession = getSessionEntry(this.#auth.sessions, dslabel, id)
 				const sessionStart = activeSession?.time || 0
 				// support a dataset-specific override to maxSessionAge
 				const maxAge = cred.maxSessionAge || this.#auth.maxSessionAge
@@ -145,7 +145,7 @@ export class AuthApi implements AuthInterface {
 			}
 		}
 		const id = this.#auth.getSessionId(req, cred)
-		const activeSession = id && this.#auth.sessions[req.query.dslabel]?.[id]
+		const activeSession = id && getSessionEntry(this.#auth.sessions, req.query.dslabel, id)
 		return {
 			forbiddenRoutes,
 			clientAuthResult: activeSession?.clientAuthResult || {}
@@ -186,7 +186,7 @@ export class AuthApi implements AuthInterface {
 		// NOTE: Basic (password) credentials are converted to session token upon log-in,
 		// so that a user does not have to login again for each runproteinpaint() call.
 		const id = this.#auth.getSessionId(req, cred)
-		const activeSession = this.#auth.sessions[ds.label]?.[id]
+		const activeSession = getSessionEntry(this.#auth.sessions, ds.label, id)
 		const sessionStart = activeSession?.time || 0
 		return Date.now() - sessionStart < this.#auth.maxSessionAge
 	}

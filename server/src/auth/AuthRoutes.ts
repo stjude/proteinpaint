@@ -1,6 +1,7 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { promises as fs } from 'fs'
 import path from 'path'
+import { getSessionEntry } from './Auth.ts'
 
 export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
@@ -41,12 +42,12 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 			const cred = auth.getRequiredCred(q, req.path)
 			const id = auth.getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
-			const session = auth.sessions[q.dslabel]?.[id]
+			const session = getSessionEntry(auth.sessions, q.dslabel, id)
 			if (!session) {
 				res.send({ status: 'ok' })
 				return
 			}
-			delete auth.sessions[q.dslabel][id]
+			auth.sessions.get(q.dslabel)?.delete(id)
 			//const ip = req.ip
 			res.header('Set-Cookie', `${cred.cookieId}=; HttpOnly; SameSite=None; Secure; Max-Age=0`)
 			res.send({ status: 'ok' })
@@ -104,7 +105,7 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 				return
 			}
 			const id = auth.getSessionId(req)
-			const session = auth.sessions[q.dslabel]?.[id]
+			const session = getSessionEntry(auth.sessions, q.dslabel, id)
 			const email = session?.email || ''
 			const time = new Date()
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)

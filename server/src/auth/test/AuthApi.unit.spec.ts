@@ -887,6 +887,86 @@ tape('AuthApi.isUserLoggedIn: returns false when session is expired (no active s
 	test.end()
 })
 
+tape('AuthApi: an inherited-name session id resolves to no session at every read path', async function (test) {
+	test.timeoutAfter(1000)
+	// getSessionId resolves the request-controlled id from req.query['x-sjppds-sessionid'], so a
+	// session id colliding with an Object.prototype member (e.g. '__proto__', 'constructor',
+	// 'toString') must never resolve an inherited value into a live session at getDsAuth (~L87),
+	// getNonsensitiveInfo (~L148) or isUserLoggedIn (~L189).
+	const inheritedIds = ['__proto__', 'constructor', 'toString']
+
+	const genomes = { hg38: { datasets: { [dslabel]: {} } } }
+	const clientAuthResult = { role: 'user' }
+	const loginToken = jsonwebtoken.sign(
+		{ iat: time, exp: time + 300, ip: '127.0.0.1', email: 'user@test.com', clientAuthResult },
+		secret
+	)
+	const { authApi, app } = await makeAuthApiWithRoutes({}, genomes)
+
+	// establish a real session for dslabel so the dslabel's session Map exists -- the inherited-name reads
+	// must still miss even when the dslabel level is populated
+	await new Promise<void>(resolve => {
+		const req = {
+			query: { embedder, dslabel },
+			headers: { [headerKey]: loginToken },
+			path: '/jwt-status',
+			ip: '127.0.0.1',
+			cookies: {}
+		}
+		const res = {
+			send() {
+				resolve()
+			},
+			header() {},
+			status() {}
+		}
+		app.routes['/jwt-status'].post(req, res)
+	})
+	await sleep(50)
+
+	for (const id of inheritedIds) {
+		// getNonsensitiveInfo (~L148)
+		const infoReq = {
+			query: { dslabel, embedder, 'x-sjppds-sessionid': id },
+			headers: {},
+			cookies: {}
+		}
+		test.deepEqual(
+			authApi.getNonsensitiveInfo(infoReq as any).clientAuthResult,
+			{},
+			`getNonsensitiveInfo returns no clientAuthResult for session id '${id}'`
+		)
+
+		// isUserLoggedIn (~L189)
+		const loginReq = {
+			query: { embedder, dslabel, 'x-sjppds-sessionid': id },
+			headers: {},
+			path: '/termdb/matrix',
+			cookies: {}
+		}
+		test.equal(
+			authApi.isUserLoggedIn(loginReq as any, { label: dslabel } as any, ['/termdb/matrix']),
+			false,
+			`isUserLoggedIn is false for session id '${id}'`
+		)
+
+		// getDsAuth (~L87)
+		const dsAuthReq = {
+			query: { embedder, 'x-sjppds-sessionid': id },
+			headers: {},
+			cookies: {},
+			get: () => embedder
+		}
+		const dsAuthEntry = authApi.getDsAuth(dsAuthReq as any).find((e: any) => e.dslabel == dslabel)
+		test.equal(dsAuthEntry?.insession, false, `getDsAuth shows insession=false for session id '${id}'`)
+	}
+
+	// none of the reads above may leak a session payload onto Object.prototype
+	test.equal(Object.getPrototypeOf({}), Object.prototype, 'Object prototype chain is intact')
+	test.notOk(({} as any).time, 'Object.prototype was not polluted with a session tracking object')
+	test.end()
+})
+
 tape('AuthApi.getPayloadFromHeaderAuth: returns {} when no authorization header', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)

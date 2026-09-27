@@ -1,6 +1,13 @@
 import tape from 'tape'
 import jsonwebtoken from 'jsonwebtoken'
-import { Auth, getMatchedEntry, getNonStringAuthParam, normalizeReqPath, stripBasepath } from '#src/auth/Auth.ts'
+import {
+	Auth,
+	getMatchedEntry,
+	getNonStringAuthParam,
+	getSessionEntry,
+	normalizeReqPath,
+	stripBasepath
+} from '#src/auth/Auth.ts'
 
 /*************************
  reusable constants and helper functions
@@ -54,8 +61,8 @@ tape('Auth constructor: sets default properties', function (test) {
 	test.equal(auth.port, 3000, 'should set port from serverconfig')
 	test.equal(auth.maxSessionAge, 1000 * 3600 * 16, 'should set default maxSessionAge')
 	test.equal(auth.sessionTracking, '', 'should set empty sessionTracking by default')
-	test.deepEqual(Object.keys(auth.sessions), [], 'should initialize empty sessions')
-	test.equal(Object.getPrototypeOf(auth.sessions), null, 'should initialize sessions without a prototype')
+	test.ok(auth.sessions instanceof Map, 'should initialize sessions as a Map')
+	test.equal(auth.sessions.size, 0, 'should initialize empty sessions')
 	test.end()
 })
 
@@ -729,7 +736,7 @@ tape('getSignedJwt: returns undefined when cred has no secret', function (test) 
 	const req = { ip: '127.0.0.1', headers: {} }
 	const res = { header() {} }
 	const q = { dslabel, embedder }
-	const sessions = {}
+	const sessions = new Map()
 	const result = auth.getSignedJwt(req, res, q, cred, {}, 60000, 'user@test.com', sessions)
 	test.equal(result, undefined, 'should return undefined when cred has no secret')
 	test.end()
@@ -749,12 +756,12 @@ tape('getSignedJwt: creates a valid jwt and stores session', function (test) {
 		}
 	}
 	const q = { dslabel, embedder }
-	const sessions: any = {}
+	const sessions = new Map()
 	const clientAuthResult = { role: 'user' }
 	const jwt = auth.getSignedJwt(req, res, q, cred, clientAuthResult, 60000, 'user@test.com', sessions)
 	test.equal(typeof jwt, 'string', 'should return a jwt string')
 	test.ok(jwt && jwt.length > 50, 'should return a non-trivial jwt string')
-	test.ok(sessions[dslabel], 'should create a session entry for the dslabel')
+	test.ok(sessions.get(dslabel), 'should create a session entry for the dslabel')
 	test.equal(setCookieCalled, true, `should include Set-Cookie in the response header`)
 	test.end()
 })
@@ -768,13 +775,12 @@ tape('getSignedJwt: a dslabel of __proto__ does not pollute Object.prototype', f
 	const req = { ip: '127.0.0.1', headers: {} }
 	const res = { header() {} }
 	const q = { dslabel: '__proto__', embedder }
-	// a plain {} sessions map, same as this file's other getSignedJwt tests use, rather than
-	// the null-prototype auth.sessions -- this method must be safe independently of that
-	const sessions: any = {}
+	// the sessions store is a Map, so a dslabel of '__proto__' is just a literal string key
+	const sessions = new Map()
 	auth.getSignedJwt(req, res, q, cred, { role: 'user' }, 60000, 'user@test.com', sessions)
 
-	test.ok(Object.hasOwn(sessions, '__proto__'), 'stores the dslabel entry as a real own __proto__ key')
-	const sessionIds = Object.keys(sessions['__proto__'])
+	test.ok(sessions.has('__proto__'), 'stores the dslabel entry under a literal __proto__ Map key')
+	const sessionIds = [...sessions.get('__proto__').keys()]
 	test.equal(sessionIds.length, 1, 'stores exactly one session under that dslabel')
 	test.notOk(({} as any)[sessionIds[0]], 'does not pollute Object.prototype with the session id')
 	test.end()
@@ -787,7 +793,7 @@ tape('mayAddSessionFromJwt: returns undefined when no authorization header', fun
 	const auth = makeAuth()
 	const cred = auth.creds[dslabel].termdb[embedder]
 	const req = { headers: {}, query: { dslabel, embedder } }
-	const result = auth.mayAddSessionFromJwt({}, req, cred)
+	const result = auth.mayAddSessionFromJwt(new Map(), req, cred)
 	test.equal(result, undefined, 'should return undefined when no authorization header is present')
 	test.end()
 })
@@ -803,7 +809,7 @@ tape('mayAddSessionFromJwt: throws for unsupported authorization type', function
 		query: { dslabel, embedder }
 	}
 	try {
-		auth.mayAddSessionFromJwt({}, req, cred)
+		auth.mayAddSessionFromJwt(new Map(), req, cred)
 		test.fail('should have thrown for unsupported authorization type')
 	} catch (e) {
 		test.ok(
@@ -838,10 +844,10 @@ tape('mayAddSessionFromJwt: adds session from valid bearer jwt', function (test)
 		query: { dslabel, embedder },
 		path: '/termdb'
 	}
-	const sessions: any = {}
+	const sessions = new Map()
 	const id = auth.mayAddSessionFromJwt(sessions, req, cred)
 	test.ok(id, 'should return a session id from a valid bearer jwt')
-	test.ok(sessions[dslabel]?.[id], 'should add the session to the sessions object')
+	test.ok(sessions.get(dslabel)?.get(id), 'should add the session to the sessions Map')
 	test.end()
 })
 
@@ -868,12 +874,11 @@ tape('mayAddSessionFromJwt: a dslabel of __proto__ does not pollute Object.proto
 		query: { dslabel: '__proto__', embedder },
 		path: '/termdb'
 	}
-	// a plain {} sessions map, same as this file's other mayAddSessionFromJwt tests use, rather
-	// than the null-prototype auth.sessions -- this method must be safe independently of that
-	const sessions: any = {}
+	// the sessions store is a Map, so a dslabel of '__proto__' is just a literal string key
+	const sessions = new Map()
 	const id = auth.mayAddSessionFromJwt(sessions, req, cred)
 	test.ok(id, 'should return a session id')
-	test.ok(Object.hasOwn(sessions, '__proto__'), 'stores the dslabel entry as a real own __proto__ key')
+	test.ok(sessions.has('__proto__'), 'stores the dslabel entry under a literal __proto__ Map key')
 	test.notOk(({} as any)[id as any], 'does not pollute Object.prototype with the session id')
 	test.end()
 })
@@ -899,9 +904,9 @@ tape(
 			time: Date.now()
 		}
 		try {
-			// a plain {} sessions map, and dslabel = '__proto__', so sessions[dslabel] would resolve
-			// to Object.prototype on a naive read -- the fix must check ownership before trusting it
-			const sessions: any = {}
+			// the sessions store is a Map, so a get('__proto__') is a genuine cache miss regardless of
+			// the polluted Object.prototype -- the forged entry can never be read as a cache hit
+			const sessions = new Map()
 			const req = {
 				headers: { authorization: `Bearer ${Buffer.from(forgedId).toString('base64')}` },
 				query: { dslabel: '__proto__', embedder },
@@ -929,10 +934,10 @@ tape('mayAddSessionFromJwt: matches the signed route under a configured basepath
 	const b64token = Buffer.from(jsonwebtoken.sign(payload, secret)).toString('base64')
 	for (const path of ['/api/termdb', '/API/TERMDB/MATRIX/', '/api/authorizedActions']) {
 		const req = { headers: { authorization: `Bearer ${b64token}` }, query: { dslabel, embedder }, path }
-		test.ok(auth.mayAddSessionFromJwt({}, req, cred), `should return a session id for path='${path}'`)
+		test.ok(auth.mayAddSessionFromJwt(new Map(), req, cred), `should return a session id for path='${path}'`)
 	}
 	const req = { headers: { authorization: `Bearer ${b64token}` }, query: { dslabel, embedder }, path: '/api/burden' }
-	test.notOk(auth.mayAddSessionFromJwt({}, req, cred), 'should not return a session id for a different route')
+	test.notOk(auth.mayAddSessionFromJwt(new Map(), req, cred), 'should not return a session id for a different route')
 	test.end()
 })
 
@@ -947,7 +952,7 @@ tape(
 		const b64token = Buffer.from(jsonwebtoken.sign(payload, secret)).toString('base64')
 		for (const path of ['/TERMDB', '/termdb/MATRIX/', '/authorizedActions']) {
 			const req = { headers: { authorization: `Bearer ${b64token}` }, query: { dslabel, embedder }, path }
-			test.ok(auth.mayAddSessionFromJwt({}, req, cred), `should return a session id for path='${path}'`)
+			test.ok(auth.mayAddSessionFromJwt(new Map(), req, cred), `should return a session id for path='${path}'`)
 		}
 		test.end()
 	}
@@ -996,5 +1001,42 @@ tape('getRequiredCred: fails closed for a non-string embedder or dslabel', funct
 		getMatchedEntry({ '*': makeCred() }, undefined),
 		"getMatchedEntry should still use '*' for an undefined value"
 	)
+	test.end()
+})
+
+tape('getSessionEntry: resolves only real stored entries', function (test) {
+	test.timeoutAfter(500)
+
+	const sessionObj = { time: Date.now(), email: 'user@test.com' }
+	const sessions = new Map<string, Map<string, any>>()
+	sessions.set(dslabel, new Map([['real-session-id', sessionObj]]))
+
+	test.equal(
+		getSessionEntry(sessions, dslabel, 'real-session-id'),
+		sessionObj,
+		'returns the stored session for an existing dslabel/id'
+	)
+	test.equal(getSessionEntry(sessions, dslabel, 'missing-id'), undefined, 'returns undefined for a missing id')
+	test.equal(
+		getSessionEntry(sessions, 'missing-ds', 'real-session-id'),
+		undefined,
+		'returns undefined for a missing dslabel'
+	)
+
+	// an inherited name is just a literal Map key that was never set, so it can never resolve to an
+	// Object.prototype value -- this holds whether or not the dslabel level exists
+	for (const id of ['__proto__', 'constructor', 'toString']) {
+		test.equal(
+			getSessionEntry(new Map(), dslabel, id),
+			undefined,
+			`returns undefined for inherited id '${id}' with no dslabel entry`
+		)
+		const populated = new Map<string, Map<string, any>>([[dslabel, new Map()]])
+		test.equal(
+			getSessionEntry(populated, dslabel, id),
+			undefined,
+			`returns undefined for inherited id '${id}' on an existing dslabel entry`
+		)
+	}
 	test.end()
 })

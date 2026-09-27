@@ -1,4 +1,4 @@
-import { normalizeReqPath, getNonStringAuthParam } from './Auth.ts'
+import { normalizeReqPath, getNonStringAuthParam, getSessionEntry } from './Auth.ts'
 
 // these server routes should not be protected by default,
 // since a user that is not logged should be able to have a way to login,
@@ -78,12 +78,12 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 		// may configure to avoid in-memory session tracking, to simulate a multi-server process setup
 		if (auth.sessionTracking == 'jwt-only') {
 			console.log('!!! --- CLEARING ALL SESSION DATA TO simulate stateless service --- !!!')
-			auth.sessions = Object.create(null)
+			auth.sessions = new Map()
 		}
 
 		try {
 			const id = auth.getSessionId(req, cred, auth.sessions)
-			const session = id && auth.sessions[q.dslabel]?.[id]
+			const session = id && getSessionEntry(auth.sessions, q.dslabel, id)
 			if (!session) {
 				code = 401
 				throw `unestablished or expired browser session`
@@ -99,7 +99,7 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 				const { iat } = auth.getJwtPayload(q, req.headers, cred, session)
 				const elapsedSinceIssue = time - iat
 				if (elapsedSinceIssue > auth.maxSessionAge) {
-					delete auth.sessions[q.dslabel][id]
+					auth.sessions.get(q.dslabel)?.delete(id)
 					throw 'Please login again to access this feature. (expired session)'
 				}
 				if (elapsedSinceIssue < 300000) {
