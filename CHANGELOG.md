@@ -11,6 +11,7 @@ Features:
 - CI, the dev container and the request test server set `sqlCheck: 'throw'`, so a plain sql string with quoted values fails tests instead of only logging a warning
 - New `sql/no-unbound-sql` ESLint rule flags string-built or template sql, including lowercase, schema-qualified or quoted identifiers, outside of the `sql` tag from `server/src/sql.ts`; ruff S608 flags string-built python sql, and rust sqlite statements are prepared from a `&'static str`
 - Remote files by URL (e.g. custom tracks by URL) are disabled by default; set serverconfig.features.ALLOW_remotefilefromurl=true to allow them. When disabled, the custom track inputs only take a server-side file path and show "Remote file not supported on this server."
+- A `"ssl": false` in serverconfig.json skips loading a local `./.ssl` dir when `allow_env_overrides` or `debugmode` is enabled
 
 Fixes:
 - Matrix: a request that is not allowed to display sample IDs no longer receives sample rows or sample labels in the streamed refs
