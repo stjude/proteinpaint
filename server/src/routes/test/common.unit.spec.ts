@@ -11,7 +11,15 @@ tape('\n', function (test) {
 })
 
 tape('forbiddenNames set', test => {
-	for (const name of ['__proto__', 'prototype', 'constructor', 'toString', 'hasOwnProperty', 'valueOf']) {
+	for (const name of [
+		'__proto__',
+		'prototype',
+		'constructor',
+		'toString',
+		'hasOwnProperty',
+		'valueOf',
+		'__protected__'
+	]) {
 		test.ok(forbiddenNames.has(name), `should include ${name}`)
 	}
 	test.notOk(forbiddenNames.has('dslabel'), 'should not include an ordinary name')
