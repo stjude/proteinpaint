@@ -1,2 +1,1 @@
-Fixes:
-- Store the auth in-memory sessions as a two-level Map keyed by [dslabel][sessionId], so a request-controlled dslabel or session id colliding with an inherited name (e.g. `__proto__`, `constructor`, `toString`) can never resolve through or pollute Object.prototype
+

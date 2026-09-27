@@ -20,6 +20,7 @@ Fixes:
 - The genesetEnrichment and genesetOverrepresentation routes require geneSetGroup to be one of the genome's msigdb analysisGenesetGroups (or a blitzgsea library for the blitzgsea method), and num_permutations to be an integer from 0 to 40000
 - Use bound parameters for the geneSetGroup and gene set id sqlite queries in cerno, genesetORA and gsea.py
 - Harden the client-side `copyMerge()` (both the shared utility and `StoreBase.copyMerge()`) against prototype pollution by skipping `__proto__`, `constructor`, and `prototype` keys.
+- Store the auth in-memory sessions as a two-level Map keyed by [dslabel][sessionId], so a request-controlled dslabel or session id colliding with an inherited name (e.g. `__proto__`, `constructor`, `toString`) can never resolve through or pollute Object.prototype
 
 
 ## 2.212.0
