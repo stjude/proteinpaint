@@ -23,6 +23,9 @@ Fixes:
 - Use bound parameters for the geneSetGroup and gene set id sqlite queries in cerno, genesetORA and gsea.py
 - Harden the client-side `copyMerge()` (both the shared utility and `StoreBase.copyMerge()`) against prototype pollution by skipping `__proto__`, `constructor`, and `prototype` keys.
 - Store the auth in-memory sessions as a two-level Map keyed by [dslabel][sessionId], so a request-controlled dslabel or session id colliding with an inherited name (e.g. `__proto__`, `constructor`, `toString`) can never resolve through or pollute Object.prototype
+- Reject a JSON request body or a urljson-encoded URL query parameter that has a `__proto__` or `constructor.prototype` key, which could otherwise replace the prototype of the request query object
+- Reject a request payload that uses a prototype-related name (`__proto__`, `constructor`, `prototype`, `toString`, etc.) as an object key or a string value, and look up a genome or dataset by an own property only, so that a name such as `dslabel=__proto__` cannot select an inherited object
+- The `encoding=json` URL query parameter no longer causes an error, and correctly JSON-parses all other query parameter values
 
 
 ## 2.212.0
