@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 Features:
+- The `ppserver` and `ppfull` images, and any image built on them, run as the unprivileged `app` user (UID/GID 1000) instead of root. Bind-mounted files and dirs, such as the `tp` dir, `serverconfig.json` or a CA certificate for `NODE_EXTRA_CA_CERTS`, must be readable by UID 1000 (or by others), and a mounted cache dir must be writable by it. With rootless podman, use `--userns=keep-id:uid=1000,gid=1000`. A Dockerfile that builds on these images and installs packages must switch to `USER root` for those steps, and back to `USER app` for the runtime. Kubernetes can use `runAsUser: 1000` and `fsGroup: 1000`, see `container/helm/values.yaml`
+- The container `app-server.mjs` and `app-full.mjs` no longer rewrite the mounted `serverconfig.json`, which may now be mounted read-only; the derived settings are passed to the server with `PP_SERVERCONFIG_OVERRIDES`
 - A url given to a spawned tool (straw, bigBedToBed, pyBigWig, samtools/tabix) must use http, https or ftp, and must not point to localhost or a non-global ip range from the IANA registries, unless the host is listed in the optional `serverconfig.urlHosts[]`
 - CI, the dev container and the request test server set `sqlCheck: 'throw'`, so a plain sql string with quoted values fails tests instead of only logging a warning
 - New `sql/no-unbound-sql` ESLint rule flags string-built or template sql, including lowercase, schema-qualified or quoted identifiers, outside of the `sql` tag from `server/src/sql.ts`; ruff S608 flags string-built python sql, and rust sqlite statements are prepared from a `&'static str`
