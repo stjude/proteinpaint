@@ -64,6 +64,7 @@ export const routeFiles = [
 	import('./routes/termdb.dmrLiterature.ts'),
 	import('./routes/termdb.dmrSilencing.ts'),
 	import('./routes/termdb.dmrSurvival.ts'),
+	import('./routes/termdb.dmrTopGenes.ts'),
 	import('./routes/termdb.geneBodyMeth.ts'),
 	import('./routes/termdb.facet.ts'),
 	import('./routes/termdb.filterTermValues.ts'),

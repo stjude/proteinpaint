@@ -13,6 +13,7 @@ import { geneBodyLossTest } from '../interactions/geneBodyLossDE'
 import { dmrSurvivalScreen } from '../interactions/dmrSurvivalScreen'
 import { silencingPanel } from '../interactions/silencingPanel'
 import { dmrGeneLinkPanel } from '../interactions/dmrGeneLink'
+import { dmrTopGenesPanel } from '../interactions/dmrTopGenes'
 import { bplen } from '#shared/common.js'
 import { getCurrentCohortChartTypes } from '#mass/charts'
 
@@ -161,6 +162,15 @@ export class VolcanoPlotView {
 					this.viewData.scan!,
 					this.interactions.app,
 					this.interactions
+				)
+			)
+			this.addActionButton('Top expression changes and their methylation', [tt.DNA_METHYLATION], () =>
+				dmrTopGenesPanel(
+					this.dom.actionsTip,
+					this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id),
+					this.interactions.app.vocabApi.vocab,
+					this.viewData.scan!,
+					this.interactions.app
 				)
 			)
 		}

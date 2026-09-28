@@ -1,3 +1,5 @@
+import { mclasscnvgain, mclasscnvloss } from '#shared/common.js'
+
 /* Link a scan's DMRs to the genes they could regulate, and read each link against expression.
 
 A DMR's `genes` (dmrGenes.ts) are the genes whose SPAN it overlaps, which misses the case that
@@ -96,6 +98,75 @@ export function linkDmrsToGenes(dmrs: Dmr[], idx: TssIndex, minCpgs: number): Ge
 		}
 	}
 	return [...links.values()]
+}
+
+export type SketchDmr = {
+	/** bp from the TSS in the direction of transcription, clipped to the sketch */
+	from: number
+	to: number
+	context: 'promoter' | 'body'
+	chr: string
+	start: number
+	stop: number
+	deltaBeta: number
+	cpgs: number
+	fdr: number
+}
+
+/** A gene's exons and DMRs as bp from its TSS, 5′→3′, so every gene reads promoter-first whatever its
+ * strand. The sketch runs from TSS − PROMOTER_PAD to the TES, or to TSS + PROMOTER_PAD for a gene
+ * shorter than the window; contexts follow genesForDmr for this one model. */
+export function geneSketch(
+	m: GeneModel & { exon?: [number, number][] },
+	dmrs: Dmr[],
+	minCpgs: number
+): { length: number; exons: [number, number][]; dmrs: SketchDmr[] } {
+	const minus = m.strand == '-'
+	const tss = minus ? m.stop : m.start
+	const length = m.stop - m.start
+	const end = Math.max(length, PROMOTER_PAD)
+	const along = (a: number, b: number): [number, number] => (minus ? [tss - b, tss - a] : [a - tss, b - tss])
+	const out: SketchDmr[] = []
+	for (const d of dmrs) {
+		if (d.chr != m.chr || d.no_cpgs < minCpgs) continue
+		const [from, to] = along(d.start, d.stop)
+		if (to <= -PROMOTER_PAD || from >= end) continue
+		out.push({
+			from: Math.max(from, -PROMOTER_PAD),
+			to: Math.min(to, end),
+			context: from < PROMOTER_PAD ? 'promoter' : 'body',
+			chr: d.chr,
+			start: d.start,
+			stop: d.stop,
+			deltaBeta: d.meandiff,
+			cpgs: d.no_cpgs,
+			fdr: d.min_smoothed_fdr
+		})
+	}
+	const exons = (m.exon || []).map(([a, b]) => along(a, b)).sort((x, y) => x[0] - y[0])
+	return { length, exons, dmrs: out }
+}
+
+/** Per group, how many CNV-assayed samples carry a gain and a loss segment over the gene. A sample
+ * with a breakpoint inside the gene can count as both. */
+export function cnvByGroup(
+	cnvs: { class: string; samples?: { sample_id: number | string }[] }[],
+	groups: Set<number | string>[],
+	assayed: Set<number | string>
+): { assayed: number; gain: number; loss: number }[] {
+	const gain = new Set<number | string>()
+	const loss = new Set<number | string>()
+	for (const c of cnvs)
+		for (const s of c.samples || [])
+			(c.class == mclasscnvgain ? gain : c.class == mclasscnvloss ? loss : null)?.add(s.sample_id)
+	return groups.map(g => {
+		const ids = [...g].filter(id => assayed.has(id))
+		return {
+			assayed: ids.length,
+			gain: ids.filter(id => gain.has(id)).length,
+			loss: ids.filter(id => loss.has(id)).length
+		}
+	})
 }
 
 export type Relationship = 'concordant' | 'discordant' | 'no expression change' | 'not tested'

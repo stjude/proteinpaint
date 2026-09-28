@@ -41,45 +41,49 @@ function getTssIndex(genome: any): TssIndex {
 	return idx
 }
 
+/** The scan q.cacheId names, and DE on its two groups narrowed to the samples with methylation. */
+export async function scanWithExpression(q: any, genomes: any) {
+	const genome = genomes[q.genome]
+	if (!genome) throw new Error('unknown genome')
+	const ds = genome.datasets?.[q.dslabel]
+	if (!ds) throw new Error('unknown dataset')
+	if (!ds.queries?.dnaMethylation) throw new Error('This dataset has no DNA methylation data.')
+	if (typeof q.cacheId != 'string' || !/^[0-9a-f]+$/i.test(q.cacheId)) throw new Error('cacheId missing')
+	if (q.samplelst?.groups?.length != 2) throw new Error('Two sample groups are required.')
+	const file = cacheFilePath('dmr', q.cacheId)
+	if (!fs.existsSync(file)) throw new Error('This scan is no longer cached; rerun it first.')
+	const scan = JSON.parse(await fs.promises.readFile(file, 'utf8'))
+	/* The auth gate ran for q.dslabel, but the cacheId names a result computed for some dataset:
+	refuse one computed for another. */
+	if (scan.genome !== q.genome || scan.dslabel !== q.dslabel)
+		throw new Error('This scan does not belong to the requested dataset; rerun it first.')
+	const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
+	const samplelst = await matchedSamplelst(q.samplelst, eligibleMethylationSamples(ds, undefined), ds)
+	const { result } = await getDeCacheResult(
+		{
+			genome: q.genome,
+			dslabel: q.dslabel,
+			samplelst,
+			min_count: q.min_count ?? 10,
+			min_total_count: q.min_total_count ?? 15,
+			cpm_cutoff: q.cpm_cutoff,
+			method: q.method,
+			filter: q.filter,
+			filter0: q.filter0
+		} as any,
+		genomes
+	)
+	return { genome, ds, scan, minCpgs, samplelst, de: result as any }
+}
+
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
-			const q = req.query
-			const genome = genomes[q.genome]
-			if (!genome) throw new Error('unknown genome')
-			const ds = genome.datasets?.[q.dslabel]
-			if (!ds) throw new Error('unknown dataset')
-			if (!ds.queries?.dnaMethylation) throw new Error('This dataset has no DNA methylation data.')
-			if (typeof q.cacheId != 'string' || !/^[0-9a-f]+$/i.test(q.cacheId)) throw new Error('cacheId missing')
-			if (q.samplelst?.groups?.length != 2) throw new Error('Two sample groups are required.')
-			const file = cacheFilePath('dmr', q.cacheId)
-			if (!fs.existsSync(file)) throw new Error('This scan is no longer cached; rerun it first.')
-			const scan = JSON.parse(await fs.promises.readFile(file, 'utf8'))
-			/* The auth gate ran for q.dslabel, but the cacheId names a result computed for some dataset:
-			refuse one computed for another. */
-			if (scan.genome !== q.genome || scan.dslabel !== q.dslabel)
-				throw new Error('This scan does not belong to the requested dataset; rerun it first.')
-			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
+			const { genome, scan, minCpgs, de: result } = await scanWithExpression(req.query, genomes)
 			const links = linkDmrsToGenes(
 				(scan.regions || []).flatMap((r: any) => r.dmrs || []),
 				getTssIndex(genome),
 				minCpgs
-			)
-
-			const samplelst = await matchedSamplelst(q.samplelst, eligibleMethylationSamples(ds, undefined), ds)
-			const { result } = await getDeCacheResult(
-				{
-					genome: q.genome,
-					dslabel: q.dslabel,
-					samplelst,
-					min_count: q.min_count ?? 10,
-					min_total_count: q.min_total_count ?? 15,
-					cpm_cutoff: q.cpm_cutoff,
-					method: q.method,
-					filter: q.filter,
-					filter0: q.filter0
-				} as any,
-				genomes
 			)
 			const expr = new Map<string, { fc: number; p: number }>()
 			for (const r of (result as any)?.geneRows || [])
