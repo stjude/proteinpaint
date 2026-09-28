@@ -67,7 +67,11 @@ export async function launch() {
 			app,
 			genomes,
 			basepath: serverconfig.basepath || '',
-			apiJson: path.join(__dirname, '../../public/docs/server-api.json')
+			apiJson: path.join(__dirname, '../../public/docs/server-api.json'),
+			// in debugmode, emit the protected route endpoints into a git-tracked file,
+			// see src/test/protectedRoutes.unit.spec.ts
+			debugmode: serverconfig.debugmode,
+			protectedRoutesJson: path.join(__dirname, '../test/protectedRoutes.json')
 			/**
 As an alternative to manually adding/removing imports in shared/types/src/routes, 
 you may temporarily uncomment below to generate runtime route checker code, 

@@ -285,7 +285,8 @@ if (serverconfig.allow_env_overrides) {
 		serverconfig.basepath = process.env.PP_BASEPATH
 	}
 
-	if (fs.existsSync('./.ssl') && !serverconfig.ssl) {
+	// `"ssl": false` skips loading a local ./.ssl dir
+	if (!serverconfig.ssl && serverconfig.ssl !== false && fs.existsSync('./.ssl')) {
 		serverconfig.ssl = {}
 		const files = fs.readdirSync('./.ssl')
 		for (const filename of files) {

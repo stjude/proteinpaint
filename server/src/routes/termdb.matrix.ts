@@ -1,6 +1,7 @@
 import type { RouteApi, RoutePayload } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import { get_matrix } from '#src/termdb.get_matrix.ts'
+import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 
 const payload: RoutePayload = {
 	init,
@@ -10,6 +11,7 @@ const payload: RoutePayload = {
 
 export const api: RouteApi = {
 	endpoint: 'termdb/matrix',
+	middlewares: [protectedRoutes.termdb, protectedRoutes.samples, protectedRoutes.minSampleSize],
 	methods: {
 		get: payload,
 		post: payload

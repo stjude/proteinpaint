@@ -4,7 +4,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { setAuthRoutes } from '#src/auth/AuthRoutes.ts'
 import { Auth, normalizeReqPath } from '#src/auth/Auth.ts'
-import { setAuthMiddleware } from '#src/auth/AuthMiddleWare.ts'
+import { setAuthMiddleware, getProtectedRouteMiddlewares } from '#src/auth/AuthMiddleWare.ts'
 
 /*************************
  reusable constants and helper functions
@@ -905,7 +905,9 @@ const flowAuthApi = {
 
 // Registers the auth middleware and auth routes on the same mock app, and returns a function that
 // sends a request through the middleware, then to the registered handler the way Express would route it:
-// case-insensitive and ignoring a trailing slash, without stripping the basepath from req.path
+// case-insensitive and ignoring a trailing slash, without stripping the basepath from req.path.
+// A data route that is protected by a route-level middleware is also simulated, the way augen.setRoutes()
+// would register the /termdb/matrix route with its RouteApi.middlewares.
 function makeFlow(auth: Auth) {
 	// same as AuthApi.maySetAuthRoutes(), which sets auth.basepath from the route registration basepath
 	auth.basepath = flowBasepath
@@ -913,6 +915,8 @@ function makeFlow(auth: Auth) {
 	const middlewares: any[] = []
 	app.use = (handler: any) => middlewares.push(handler)
 	setAuthMiddleware(app, {}, flowAuthApi, auth)
+	const { termdb } = getProtectedRouteMiddlewares(flowAuthApi, auth)
+	const routeMiddlewares = { [flowBasepath + '/termdb/matrix']: [termdb] }
 
 	return async function send(req: any) {
 		req.cookies = req.cookies || {}
@@ -922,6 +926,12 @@ function makeFlow(auth: Auth) {
 		let nextCalled = false
 		middlewares[0](req, res, () => (nextCalled = true))
 		if (!nextCalled) return { res, nextCalled }
+		const dataRoute = Object.keys(routeMiddlewares).find(r => r.toLowerCase() == normalizeReqPath(req.path))
+		for (const middleware of routeMiddlewares[dataRoute as string] || []) {
+			nextCalled = false
+			middleware(req, res, () => (nextCalled = true))
+			if (!nextCalled) return { res, nextCalled }
+		}
 		const route = Object.keys(app.routes).find(r => r.toLowerCase() == normalizeReqPath(req.path))
 		if (route && app.routes[route].post) await app.routes[route].post(req, res)
 		return { res, nextCalled, route }

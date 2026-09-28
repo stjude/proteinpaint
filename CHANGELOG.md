@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.213.0
 
 Features:
 - The `ppserver` and `ppfull` images, and any image built on them, run as the unprivileged `app` user (UID/GID 1000) instead of root. Bind-mounted files and dirs, such as the `tp` dir, `serverconfig.json` or a CA certificate for `NODE_EXTRA_CA_CERTS`, must be readable by UID 1000 (or by others), and a mounted cache dir must be writable by it. Another UID, such as the owner of the bind-mounted files, may run the images with `docker run --user <uid>:0`. With rootless podman, use `--userns=keep-id:uid=1000,gid=1000`. A Dockerfile that builds on these images and installs packages must switch to `USER root` for those steps, and back to `USER app` for the runtime. Kubernetes can use `runAsUser: 1000` and `fsGroup: 1000`, see `container/helm/values.yaml`
@@ -11,6 +11,7 @@ Features:
 - CI, the dev container and the request test server set `sqlCheck: 'throw'`, so a plain sql string with quoted values fails tests instead of only logging a warning
 - New `sql/no-unbound-sql` ESLint rule flags string-built or template sql, including lowercase, schema-qualified or quoted identifiers, outside of the `sql` tag from `server/src/sql.ts`; ruff S608 flags string-built python sql, and rust sqlite statements are prepared from a `&'static str`
 - Remote files by URL (e.g. custom tracks by URL) are disabled by default; set serverconfig.features.ALLOW_remotefilefromurl=true to allow them. When disabled, the custom track inputs only take a server-side file path and show "Remote file not supported on this server."
+- A `"ssl": false` in serverconfig.json skips loading a local `./.ssl` dir when `allow_env_overrides` or `debugmode` is enabled
 
 Fixes:
 - Matrix: a request that is not allowed to display sample IDs no longer receives sample rows or sample labels in the streamed refs
@@ -26,6 +27,8 @@ Fixes:
 - Reject a JSON request body or a urljson-encoded URL query parameter that has a `__proto__` or `constructor.prototype` key, which could otherwise replace the prototype of the request query object
 - Reject a request payload that uses a prototype-related name (`__proto__`, `constructor`, `prototype`, `toString`, etc.) as an object key or a string value, and look up a genome or dataset by an own property only, so that a name such as `dslabel=__proto__` cannot select an inherited object
 - The `encoding=json` URL query parameter no longer causes an error, and correctly JSON-parses all other query parameter values
+- Reject a snplst or snplocus term cache id, or a /termdb/barsql `ssid`, that is not a single file name, so that a request cannot read a file outside of the snp genotype or ssid cache directories
+- In the test data response cache, only use a plain `get<word>` request key as a subroute name, so that a key such as `get../../x` cannot write a cache file outside of the cache directory
 
 
 ## 2.212.0

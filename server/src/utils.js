@@ -39,6 +39,7 @@ get_header_bcf
 get_header_txt
 get_fasta
 connect_db
+snpgtCacheFile
 loadfile_ssid
 bam_ifnochr
 testIfFileIsBigbed
@@ -730,11 +731,20 @@ export const genotype_types = {
 export const cachedir_ssid = serverconfig.cachedir_ssid || path.join(serverconfig.cachedir, 'ssid')
 if (!fs.existsSync(cachedir_ssid)) fs.mkdirSync(cachedir_ssid)
 
+// a client-provided snp genotype cache id, such as tw.q.cacheid, must name a file directly under
+// cache_snpgt.dir; the callers that also apply cache_snpgt.fileNameRegexp keep that stricter check
+export function snpgtCacheFile(cacheid) {
+	if (illegalPathSegment(cacheid)) throw 'invalid cacheid'
+	return path.join(serverconfig.cache_snpgt.dir, cacheid)
+}
+
 export async function loadfile_ssid(id, samplefilterset) {
 	/*
 samplefilterset:
 	optional Set of samples to restrict to
 */
+	// the id is client-provided, such as q.ssid of /termdb/barsql, and must name a file directly under cachedir_ssid
+	if (illegalPathSegment(id)) throw 'invalid ssid'
 	const text = await read_file(path.join(cachedir_ssid, id))
 	const sample2gt = new Map()
 	// k: sample, v: genotype str
