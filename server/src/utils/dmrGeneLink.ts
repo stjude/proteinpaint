@@ -20,7 +20,17 @@ export const PROMOTER_PAD = 2000
 export type GeneModel = { name: string; chr: string; start: number; stop: number; strand: string }
 export type TssIndex = Map<string, { tss: number[]; genes: GeneModel[]; maxSpan: number }>
 
-type Dmr = { chr: string; start: number; stop: number; no_cpgs: number; meandiff: number; min_smoothed_fdr: number }
+type Dmr = {
+	chr: string
+	start: number
+	stop: number
+	no_cpgs: number
+	meandiff: number
+	min_smoothed_fdr: number
+	/** present when the scan ran with background correction */
+	bgP?: number | null
+	excess?: number
+}
 
 export type GeneLink = {
 	gene: string
@@ -109,17 +119,25 @@ export type SketchDmr = {
 	start: number
 	stop: number
 	deltaBeta: number
+	/** excess Δβ over matched background and its p, when the scan was corrected */
+	excess?: number
+	bgP?: number
+	/** from the excess when corrected, else from Δβ */
+	direction: 'hyper' | 'hypo'
 	cpgs: number
 	fdr: number
 }
 
 /** A gene's exons and DMRs as bp from its TSS, 5′→3′, so every gene reads promoter-first whatever its
  * strand. The sketch runs from TSS − PROMOTER_PAD to the TES, or to TSS + PROMOTER_PAD for a gene
- * shorter than the window; contexts follow genesForDmr for this one model. */
+ * shorter than the window; contexts follow genesForDmr for this one model. With backgroundCorrection
+ * only DMRs beating matched background (bgP < 0.05) are kept and read by their excess, the same
+ * reading the corrected volcano and dmrScanRows' gene-body loss set use. */
 export function geneSketch(
 	m: GeneModel & { exon?: [number, number][] },
 	dmrs: Dmr[],
-	minCpgs: number
+	minCpgs: number,
+	backgroundCorrection = false
 ): { length: number; exons: [number, number][]; dmrs: SketchDmr[] } {
 	const minus = m.strand == '-'
 	const tss = minus ? m.stop : m.start
@@ -129,6 +147,7 @@ export function geneSketch(
 	const out: SketchDmr[] = []
 	for (const d of dmrs) {
 		if (d.chr != m.chr || d.no_cpgs < minCpgs) continue
+		if (backgroundCorrection && !(d.bgP != null && d.bgP < 0.05)) continue
 		const [from, to] = along(d.start, d.stop)
 		if (to <= -PROMOTER_PAD || from >= end) continue
 		out.push({
@@ -139,6 +158,8 @@ export function geneSketch(
 			start: d.start,
 			stop: d.stop,
 			deltaBeta: d.meandiff,
+			...(backgroundCorrection ? { excess: d.excess, bgP: d.bgP! } : {}),
+			direction: (backgroundCorrection ? d.excess ?? 0 : d.meandiff) < 0 ? 'hypo' : 'hyper',
 			cpgs: d.no_cpgs,
 			fdr: d.min_smoothed_fdr
 		})

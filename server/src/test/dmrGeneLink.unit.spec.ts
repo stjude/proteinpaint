@@ -127,6 +127,31 @@ tape('geneSketch orients both strands 5′→3′ and agrees with genesForDmr', 
 	t.end()
 })
 
+tape('geneSketch with background correction keeps DMRs beating background, read by excess', t => {
+	const gene = { name: 'A', chr: 'chr1', start: 10_000, stop: 50_000, strand: '+' }
+	const dmrs = [
+		{ ...dmr(20_000, 21_000, 0.02), bgP: 0.001, excess: -0.07 },
+		{ ...dmr(30_000, 31_000, 0.1), bgP: 0.4, excess: 0.01 },
+		{ ...dmr(40_000, 41_000, 0.1), bgP: null }
+	]
+	const corrected = geneSketch(gene, dmrs, 5, true)
+	t.deepEqual(
+		corrected.dmrs.map(d => [d.start, d.direction, d.excess]),
+		[[20_000, 'hypo', -0.07]],
+		'raw gain but negative excess reads as loss; failing and unscored DMRs are dropped'
+	)
+	t.deepEqual(
+		geneSketch(gene, dmrs, 5).dmrs.map(d => [d.start, d.direction, d.excess]),
+		[
+			[20_000, 'hyper', undefined],
+			[30_000, 'hyper', undefined],
+			[40_000, 'hyper', undefined]
+		],
+		'uncorrected, every DMR is kept and read by its Δβ'
+	)
+	t.end()
+})
+
 tape('cnvByGroup counts assayed samples with a gain or loss', t => {
 	const cnvs = [
 		{ class: 'CNV_amp', samples: [{ sample_id: 1 }] },

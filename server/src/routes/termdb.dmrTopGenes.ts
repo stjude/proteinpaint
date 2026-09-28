@@ -19,6 +19,7 @@ const MAX_TOP = 100
 10 Mb cap drops arm-level ones, so neither is a copy-number state. ±0.15 with no cap is what the
 dataset's ABL1 ploidy override and hyperdiploidy term use. */
 const CNV_CUTOFF = 0.15
+const SEX_CHR = new Set(['chrX', 'chrY'])
 
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
@@ -31,6 +32,8 @@ function init({ genomes }) {
 			const up = sig.filter((r: any) => r.fold_change > 0).sort((a: any, b: any) => b.fold_change - a.fold_change)
 			const down = sig.filter((r: any) => r.fold_change < 0).sort((a: any, b: any) => a.fold_change - b.fold_change)
 			const dmrs = (scan.regions || []).flatMap((r: any) => r.dmrs || [])
+			// the cached scan carries this block only when it ran corrected
+			const corrected = !!scan.backgroundCorrection
 
 			// the samples DE compared: methylation-matched, and with RNA
 			const rna: Set<string> | undefined = ds.queries?.rnaseqGeneCount?.allSampleSet
@@ -47,8 +50,9 @@ function init({ genomes }) {
 				const m = defaultModel(genome, r.gene_name)
 				if (!m) return out
 				out.model = { chr: m.chr, start: m.start, stop: m.stop, strand: m.strand }
-				out.sketch = geneSketch(m, dmrs, minCpgs)
-				if (cnvq?.get) {
+				out.sketch = geneSketch(m, dmrs, minCpgs, corrected)
+				// a segment mean against a diploid reference calls every male X a loss: sex, not copy number
+				if (cnvq?.get && !SEX_CHR.has(m.chr)) {
 					const { cnvs } = await cnvq.get({
 						rglst: [{ chr: m.chr, start: m.start, stop: m.stop }],
 						cnvGainCutoff: CNV_CUTOFF,
@@ -65,6 +69,7 @@ function init({ genomes }) {
 				pairedSizes: groups.map(g => g.size),
 				nSignificant: sig.length,
 				promoterPad: PROMOTER_PAD,
+				backgroundCorrection: corrected,
 				cnvCutoff: cnvq?.get ? CNV_CUTOFF : undefined,
 				up: await Promise.all(up.slice(0, top).map(row)),
 				down: await Promise.all(down.slice(0, top).map(row))

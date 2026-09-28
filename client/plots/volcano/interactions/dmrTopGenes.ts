@@ -85,7 +85,10 @@ export async function dmrTopGenesPanel(
 		.text(
 			`${n1} ${control} and ${n2} ${caseName} (${res.deMethod}). ${res.nSignificant.toLocaleString()} genes reach ` +
 				`adjusted p < 0.05; shown are those with the largest log₂ fold change each way. DMRs are this scan's, ` +
-				`${scan.minCpgs}+ CpGs. ` +
+				`${scan.minCpgs}+ CpGs` +
+				(res.backgroundCorrection
+					? `, only those beating matched background (p < 0.05), coloured by their excess Δβ as in the volcano. `
+					: '. ') +
 				(res.cnvCutoff
 					? `CNV: share of each group's CNV-assayed samples with a segment mean ≥ +${res.cnvCutoff} (gain) or ≤ −${res.cnvCutoff} ` +
 					  `(loss) over the gene, ${control} above ${caseName}.`
@@ -185,8 +188,16 @@ function drawGenes(
 		drawSketch(g.append('g').attr('transform', `translate(${X.sketch},0)`), r, pad)
 		text(X.len, bplen(r.sketch.length)).attr('fill', '#888').attr('font-size', 11)
 		if (r.cnv) drawCnv(g.append('g').attr('transform', `translate(${X.cnv},0)`), r.cnv, groupNames)
+		else if (/^chr[XY]$/.test(r.model.chr))
+			text(X.cnv, `${r.model.chr}: n/a`)
+				.attr('fill', '#999')
+				.attr('font-size', 11)
+				.append('title')
+				.text('Not shown: a segment mean against a diploid reference calls every male X a loss')
 	}
 }
+
+const signed = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(3)}`
 
 function drawSketch(g: any, r: any, pad: number) {
 	const { length, exons, dmrs } = r.sketch
@@ -228,11 +239,13 @@ function drawSketch(g: any, r: any, pad: number) {
 			.attr('y', cy + 5)
 			.attr('width', Math.max(2, x(d.to) - x(d.from)))
 			.attr('height', 6)
-			.attr('fill', d.deltaBeta >= 0 ? HYPER_COLOR : HYPO_COLOR)
+			.attr('fill', d.direction == 'hyper' ? HYPER_COLOR : HYPO_COLOR)
 			.append('title')
 			.text(
 				`${r.gene} ${d.context} DMR ${d.chr}:${d.start}-${d.stop}\n` +
-					`Δβ ${d.deltaBeta >= 0 ? '+' : ''}${d.deltaBeta.toFixed(3)}, ${d.cpgs} CpGs, FDR ${d.fdr.toExponential(1)}`
+					`Δβ ${signed(d.deltaBeta)}` +
+					(d.excess != null ? `, excess over background ${signed(d.excess)} (p ${d.bgP.toPrecision(2)})` : '') +
+					`, ${d.cpgs} CpGs, FDR ${d.fdr.toExponential(1)}`
 			)
 	g.append('title').text(
 		`${r.gene} ${r.model.chr}:${r.model.start}-${r.model.stop} (${r.model.strand}), ${dmrs.length} DMR${
