@@ -1,4 +1,4 @@
-import type { DERequest, DiffMethRequest } from '#types'
+import type { DERequest, DiffMethRequest, DiffSpliceRequest } from '#types'
 import { getData, maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 
@@ -25,7 +25,7 @@ export type SampleGroups = {
  * runner) and by the preAnalysis short-circuit (which needs ds for
  * sample-count derivation). */
 export async function resolveDaContext(
-	req: DERequest | DiffMethRequest,
+	req: DERequest | DiffMethRequest | DiffSpliceRequest,
 	genomes: any
 ): Promise<{ ds: any; term_results: any; term_results2: any }> {
 	const genome = genomes[req.genome]

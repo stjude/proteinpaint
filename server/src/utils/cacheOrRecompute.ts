@@ -38,7 +38,8 @@ export const cacheJobPolicies = {
 	surfaces rather than treating as a failed download -- and buildGdcCountsFile fails the whole run
 	on it, so a cap set below real concurrency would kill a legitimate second user's analysis rather
 	than queue it. raise this in step with gdcDEconcurrency. */
-	gdcCounts: { maxPending: 200 }
+	gdcCounts: { maxPending: 200 },
+	ds: { maxPending: 2 }
 } as const satisfies Record<string, { maxPending: number }>
 
 export type CacheSubdir = keyof typeof cacheJobPolicies

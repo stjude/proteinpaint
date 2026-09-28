@@ -611,6 +611,63 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			})
 	}
 
+	/* Differential splicing on intron clusters. Gated on the splicing query, which
+	termdb.config.ts emits only when the dataset declares a cohort h5, so this never offers an
+	analysis that errors on submit.
+
+	No method radio here, unlike gene expression: the engine choice lives in the volcano's own
+	control panel (VolcanoControlInputs.addSplicingControlInputs), and only edgeR is wired, so a
+	launch-time radio with one option would ask a question with no alternative. renderPreAnalysisData
+	returns [] for any termType it has no options for, which is what methylation already does. */
+	if (self.app.vocabApi.termdbConfig.queries?.splicing) {
+		const itemDiv = div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', 'sjpp-da-splicing-option')
+			.text(`Differential ${termType2label(TermTypes.SPLICING)} Analysis`)
+			.on('click', async () => {
+				const groups = []
+				for (const group of samplelstTW.q.groups) {
+					if (group.values && group.values.length > 0) {
+						groups.push(group)
+					} else {
+						throw 'group does not contain samples for differential analysis'
+					}
+				}
+
+				// get actual numbers of samples with splicing data
+				const body = {
+					genome: self.app.vocabApi.vocab.genome,
+					dslabel: self.app.vocabApi.vocab.dslabel,
+					samplelst: { groups },
+					filter: self.state.termfilter.filter,
+					filter0: self.state.termfilter.filter0,
+					preAnalysis: true
+				}
+				const preAnalysisData = await dofetch3('termdb/diffSplice', { body })
+
+				const tip = self.tip2
+				if (!preAnalysisData?.data) {
+					tip.clear().showunderoffset(itemDiv.node())
+					sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
+					throw new Error('no data returned from pre-analysis request')
+				}
+
+				tip.clear().showunderoffset(itemDiv.node())
+				/* Shared with differential expression and methylation; termType selects the label
+				and drops the method radios. The per-group cap is enforced server-side and arrives
+				as preAnalysisData.alert, which hides the Run button. */
+				renderPreAnalysisData({
+					preAnalysisData,
+					samplelstTW,
+					groups,
+					tip,
+					termType: TermTypes.SPLICING,
+					self
+				})
+			})
+	}
+
 	/* Region (DMR) analysis off the same two groups. The volcano reaches this by clicking a hit,
 	which supplies the region; here the user names one instead, for the case where the region of
 	interest is already known and the genome-wide scan is not the point.

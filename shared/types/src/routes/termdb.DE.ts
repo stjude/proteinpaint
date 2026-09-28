@@ -60,7 +60,7 @@ export type VolcanoRenderRequest = {
 	 * Whichever field is chosen, significanceThresholds.foldChangeCutoff is interpreted in THAT
 	 * field's units -- the caller sends the cutoff matching the axis it asked for. Otherwise the
 	 * threshold lines would sit at coordinates unrelated to what is classified significant. */
-	xField?: 'fold_change' | 'delta_beta'
+	xField?: 'fold_change' | 'delta_beta' | 'delta_psi'
 	/** Recentre the x axis on the median effect size across all tested rows, so the origin is the
 	 * typical row rather than zero. Off by default.
 	 *

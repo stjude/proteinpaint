@@ -1,7 +1,14 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
 import { getSampleNum } from './settings/defaults'
-import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, DMR_SCAN_ELEMENT_TYPE } from '#types'
+import {
+	PROTEOME_DAP,
+	DNA_METHYLATION,
+	GENE_EXPRESSION,
+	SINGLECELL_CELLTYPE,
+	DMR_SCAN_ELEMENT_TYPE,
+	SPLICING
+} from '#types'
 
 /** Handles settings the controls in the menu based on the app
  * termType.
@@ -83,8 +90,10 @@ export class VolcanoControlInputs {
 			},
 			/* Hidden for differential methylation: a DM run plots and thresholds on delta-beta,
 			so a log2 cutoff would set a limit in units the plot never shows. Every other term
-			type still gets it. */
-			...(this.termType === DNA_METHYLATION
+			type still gets it.
+			Splicing is hidden for the same reason -- it plots and thresholds on delta-PSI, and
+			supplies its own |dPSI| control in addSplicingControlInputs(). */
+			...(this.termType === DNA_METHYLATION || this.termType === SPLICING
 				? []
 				: [
 						{
@@ -165,6 +174,7 @@ export class VolcanoControlInputs {
 	setVolcanoControlInputs() {
 		this.addGeneExpControlInputs()
 		this.addDNAMethControlInputs()
+		this.addSplicingControlInputs()
 		this.addSingleCellCTControlInputs()
 	}
 
@@ -399,6 +409,81 @@ export class VolcanoControlInputs {
 		const scctInputs = []
 
 		this.inputs.splice(0, 0, ...scctInputs)
+	}
+
+	addSplicingControlInputs() {
+		if (this.termType !== SPLICING) return
+		const dsInputs = [
+			{
+				label: 'Method',
+				type: 'radio',
+				chartType: 'volcano',
+				settingsKey: 'method',
+				title: 'Which engine computes the test',
+				options: this.getSpliceMethodOptions()
+			},
+			{
+				label: 'Minimum counts per cluster',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'minCountsPerCluster',
+				title: 'Intron clusters with fewer total reads across all samples are not tested',
+				min: 0,
+				max: 10000
+			},
+			{
+				/* leafcutter's -i: an intron must be seen in at least this many samples. Defaulted by
+				validateDSSettings to a fraction of cohort size rather than a fixed count, because a
+				fixed one silently loosens as N grows -- 5 samples is a third of a 15-sample run and
+				0.2% of a 2,500-sample one. Editable here so a user can override that default. */
+				label: 'Minimum samples per intron',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'minSamplesPerIntron',
+				title:
+					'An intron must be observed in at least this many samples to be kept. Defaults to 2% of the cohort, floor 5.',
+				min: 1,
+				max: 10000
+			},
+			{
+				// leafcutter's -g: the same floor, applied within each of the two groups
+				label: 'Minimum samples per group',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'minSamplesPerGroup',
+				title:
+					'An intron must be observed in at least this many samples in EACH group. Defaults to 1% of the cohort, floor 3.',
+				min: 1,
+				max: 10000
+			},
+			{
+				/* The cutoff that actually matters for this term type. At large cohorts the p-value
+				stops discriminating -- at ~1000 per group most "significant" clusters shift under a
+				percentage point of PSI -- so the effect size is the filter, not the p. The unit is
+				named in the title because 0.05 here is 5 percentage points, not a p-value. */
+				label: 'Minimum |\u0394PSI|',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'deltaPsiCutoff',
+				title: 'Clusters must shift at least this much in PSI to count as significant. 0.05 = 5 percentage points.',
+				min: 0,
+				max: 1,
+				step: 0.01
+			}
+		]
+
+		this.inputs.splice(0, 0, ...dsInputs)
+	}
+
+	/** The engines offered for differential splicing.
+	 *
+	 * One entry renders a single preselected radio, which is deliberate rather than wasteful: it
+	 * names the engine that ran, so a saved figure is attributable, and it is the one place
+	 * leafcutter appends once diffSpliceLeafcutter.py lands. Gene expression already ships the
+	 * same one-option shape on large cohorts, where only Wilcoxon is offered. */
+	getSpliceMethodOptions() {
+		if (this.termType !== SPLICING) return
+		return [{ label: 'edgeR (diffSplice)', value: 'edgeR' }]
 	}
 
 	getMethodOptions() {

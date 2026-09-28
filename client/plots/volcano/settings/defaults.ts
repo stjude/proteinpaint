@@ -5,6 +5,7 @@ import type {
 	ValidatedVolcanoSettings,
 	GEVolcanoSettings,
 	DMVolcanoSettings,
+	DSVolcanoSettings,
 	DefaultVolcanoSettings
 } from '../settings/Settings'
 
@@ -37,6 +38,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 
 	addGEDefaults(opts.termType, defaults)
 	addDMDefaults(opts.termType, defaults, opts)
+	addDSDefaults(opts.termType, defaults, opts)
 
 	return Object.assign(defaults, overrides)
 }
@@ -98,6 +100,22 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	defaults.profileBinBp = 100_000
 }
 
+function addDSDefaults(termType: string, defaults: Partial<DSVolcanoSettings>, opts?: any) {
+	if (termType != tt.SPLICING) return
+	/* The dataset may cap group size lower (or higher) than the built-in default. Read here rather
+	than in validateDSSettings because only this function is handed the app -- see the comment on
+	DSVolcanoSettings.maxSamplesPerGroup. The server re-checks whatever arrives, so a hand-edited
+	value cannot lift the real limit. */
+	const dsCap = opts?.app?.vocabApi?.termdbConfig?.queries?.splicing?.maxSamplesPerGroup
+	defaults.maxSamplesPerGroup = Number.isInteger(dsCap) && dsCap > 0 ? dsCap : MAX_DS_SAMPLES_PER_GROUP
+	defaults.method = 'edgeR'
+	defaults.minSamplesPerIntron = 5
+	defaults.minSamplesPerGroup = 3
+	defaults.minCountsPerCluster = 20
+	/* 0.05 = a 5-point PSI shift. */
+	defaults.deltaPsiCutoff = 0.05
+}
+
 /*********** Setting Validation Functions ***********
  * Validates user input settings after merging with defaults */
 const typesUseDefaultSettings = new Set([tt.SINGLECELL_CELLTYPE, tt.PROTEOME_DAP, tt.SINGLECELL_GENE_EXPRESSION])
@@ -115,10 +133,51 @@ export function validateVolcanoSettings(config: any, opts: any) {
 
 	validateGESettings(config.termType, settings, sampleNum, opts)
 	validateDMSettings(config.termType, settings)
+	validateDSSettings(config.termType, config)
+}
+
+/** Max samples ONE GROUP may contribute to a differential splicing run. */
+export const MAX_DS_SAMPLES_PER_GROUP = 250
+
+function validateDSSettings(termType: string, config: any) {
+	if (termType != tt.SPLICING) return
+	const settings = config.settings?.volcano
+	if (!settings) return
+
+	const groups = config.samplelst?.groups || []
+
+	// A per-group cap.
+	const cap = settings.maxSamplesPerGroup || MAX_DS_SAMPLES_PER_GROUP
+	for (const g of groups) {
+		const n = g.values?.length || 0
+		if (n > cap) {
+			throw new Error(
+				`Group "${g.name}" has ${n} samples, which exceeds the limit of ${cap} per group for differential splicing. Please narrow the group.`
+			)
+		}
+	}
+
+	/* leafcutter's -i/-g are absolute sample counts, so they silently loosen as the cohort grows:
+	the same "5 samples" floor is a third of a 15-sample run and 0.2% of a 2,500-sample one. Scale
+	them to a floor plus a fraction of N so the filter means the same thing at both sizes.
+
+	Counted from config.samplelst directly. getSampleNum() would give the same answer now that
+	splicing is named in it, but it returns maxSampleCutoff (4000) for any term type that is
+	NOT -- which would silently compute a floor of 80 for every run regardless of its real size.
+	Counting locally keeps that failure impossible here. */
+	const sampleNum = groups.reduce((sum: number, g: any) => sum + (g.values?.length || 0), 0)
+	if (sampleNum > 0) {
+		settings.minSamplesPerIntron = Math.max(5, Math.round(sampleNum * 0.02))
+		settings.minSamplesPerGroup = Math.max(3, Math.round(sampleNum * 0.01))
+	}
 }
 
 export function getSampleNum(config: any) {
-	if (config.termType == tt.GENE_EXPRESSION || config.termType == tt.DNA_METHYLATION) {
+	if (
+		config.termType == tt.GENE_EXPRESSION ||
+		config.termType == tt.DNA_METHYLATION ||
+		config.termType == tt.SPLICING
+	) {
 		return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
 	} else {
 		return maxSampleCutoff

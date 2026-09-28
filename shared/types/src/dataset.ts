@@ -803,6 +803,21 @@ type RnaseqGeneCount = {
 	allSampleSet?: Set<string>
 }
 
+type SplicingQuery = {
+	/** HDF5 file: X[n_samples, n_introns], one sample per row,
+	 * introns pre-sorted by cluster with cluster_starts boundaries alongside. */
+	file: string
+	/** h5 path to the sample-name dataset, for getH5samples(). */
+	samplesPath?: string
+	/** which engine the method radio preselects. only reorders — both stay selectable. */
+	defaultMethod?: 'edgeR' | 'leafcutter'
+	/** max samples ONE GROUP may contribute to a run, counted after filtering to samples that
+	 * actually have splicing data. Defaults to MAX_SAMPLES_PER_GROUP (250) in the route. */
+	maxSamplesPerGroup?: number
+	/** filled at init from the h5 */
+	allSampleSet?: Set<string>
+}
+
 /** the metabolite query */
 export type MetaboliteIntensityQuery = {
 	/** metabolite-by-sample matrix file */
@@ -1549,6 +1564,8 @@ type Mds3Queries = {
 		scanOnly?: boolean
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
+	/** intron-cluster splicing matrix, for differential splicing analysis */
+	splicing?: SplicingQuery
 	/** Used to create the top mutated genes UI in the gene
 	 * set edit ui and data requests. */
 	topMutatedGenes?: TopMutatedGenes
