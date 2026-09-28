@@ -472,7 +472,12 @@ export function mergeDsFeatures(sc, ds) {
 			// on init retry, no need to see this message
 			if (!ds.init?.status) console.log(`!!! NO OVERWRITING SERVERCONFIG.FEATURES.${k} (from ${ds.label}) !!!`)
 		} else {
-			sc.features[k] = ds.serverconfigFeatures[k]
+			Object.defineProperty(sc.features, k, {
+				value: ds.serverconfigFeatures[k],
+				enumerable: true,
+				writable: true,
+				configurable: true
+			})
 		}
 	}
 }
