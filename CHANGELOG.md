@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.214.0
 
 Features:
 - Combine the `/termdb/rootterm` and `/termdb/termchildren` server routes, so that a `/termdb/termchildren` request without a `tid` returns the root terms
