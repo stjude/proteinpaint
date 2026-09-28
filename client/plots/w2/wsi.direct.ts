@@ -1097,7 +1097,18 @@ export function renderNhoodHeatmap(
  to search). (exported for tests) */
 export async function renderSimilarSearch(
 	holder: any,
-	opts: { genome?: string; dslabel?: string; sampleId?: string },
+	opts: {
+		genome?: string
+		dslabel?: string
+		sampleId?: string
+		/** the ACTIVE image already open in this viewer (same object passed to
+		 init(), see View.ts): reused as-is for same-sample searches so the
+		 request addresses the exact image on screen, whose queryIds/excludeIds
+		 this closure was captured for, instead of re-picking (possibly a
+		 different) image from a fresh wsiBySample listing */
+		spatialData?: string
+		slideQuery?: string
+	},
 	/** the just-completed nhood_enrichment result: its composition/adjacency
 	 become the search query */
 	query: NhoodResult,
@@ -1191,150 +1202,174 @@ export async function renderSimilarSearch(
 			resultsDiv.selectAll('*').remove()
 			resultsDiv.append('div').text(`Searching ${sampleId} …`)
 			try {
-				// the target's own spatial image + consolidated h5ad (wsitiles/similar
-				// reads only this file — the query travels as data, not a path)
-				const imgData = await dofetch3(
-					`termdb/wsiBySample?genome=${encodeURIComponent(opts.genome!)}&dslabel=${encodeURIComponent(
-						opts.dslabel!
-					)}&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial`
-				)
-				const image = (imgData?.images || []).find((im: any) => im.type == 'spatial' && im.spatialData)
-				if (!image) throw new Error(`${sampleId} has no spatial image with cell data`)
-				const targetParams =
-					`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${encodeURIComponent(opts.dslabel!)}` +
-					`&genome=${encodeURIComponent(opts.genome!)}&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial`
-				const r = await dofetch3(`wsitiles/similar?${targetParams}`, {
-					method: 'POST', // the query signature (typeCounts/count/zscore matrices) travels in the body
-					body: {
-						file: image.spatialData,
-						types: query.types,
-						typeCounts: query.typeCounts,
-						count: query.count,
-						zscore: query.zscore,
-						// the target's kNN graph (cheap stage) and rigorous confirmation
-						// must use the SAME k/perms the query's own count/zscore matrices
-						// were built with — otherwise the comparison is between graphs of
-						// different density / z-scores of different permutation-noise
-						// levels, which can mis-rank the results. k is essentially free to
-						// forward (no permutation loop); perms only costs more for the
-						// already-budget-capped rigorous stage on the topK shortlist, not
-						// the full scan
-						k: query.k,
-						perms: query.perms,
-						sizeTolerance,
-						requiredTypes,
-						typeWeights,
-						// only meaningful (and only sent) when searching the SAME sample:
-						// cell ids are per-sample, so applying them cross-sample risks
-						// coincidentally excluding unrelated cells that happen to share an id
-						excludeIds: searchingSameSample ? queryIds : undefined
-					}
-				})
-				if (!r || r.error) throw new Error(r?.error || 'similarity search failed')
+				// the image(s) to search, each with its consolidated h5ad
+				// (wsitiles/similar reads only this file — the query travels as
+				// data, not a path). Same sample: reuse the ACTIVE image already
+				// open in this viewer — the one queryIds/excludeIds actually came
+				// from — instead of re-fetching wsiBySample and possibly picking a
+				// DIFFERENT one of the sample's image subfolders/tabs. Another
+				// sample: that sample may also have more than one spatial image and
+				// there's no per-image picker here, so search all of them
+				const images: { fileName: string; spatialData: string }[] = searchingSameSample
+					? opts.spatialData && opts.slideQuery
+						? [{ fileName: '', spatialData: opts.spatialData }] // fileName unused: targetParams reuses opts.slideQuery directly below
+						: []
+					: (
+							(
+								await dofetch3(
+									`termdb/wsiBySample?genome=${encodeURIComponent(opts.genome!)}&dslabel=${encodeURIComponent(
+										opts.dslabel!
+									)}&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial`
+								)
+							)?.images || []
+					  ).filter((im: any) => im.type == 'spatial' && im.spatialData)
+				if (!images.length) throw new Error(`${sampleId} has no spatial image with cell data`)
+
 				resultsDiv.selectAll('*').remove()
-				const pct = (r.sizeTolerance * 100).toFixed(0)
-				const weighted = (r.typeWeights || []).some((w: number, i: number) => w != 1 && r.types[i])
-				const weightSuffix = weighted
-					? `, weighted: ${r.types
-							.map((t: string, i: number) => [t, r.typeWeights[i]])
-							.filter(([, w]: [string, number]) => w != 1)
-							.map(([t, w]: [string, number]) => `${t}×${w}`)
-							.join(', ')}`
-					: ''
-				const reqSuffix =
-					(r.requiredTypes?.length ? `, must contain: ${r.requiredTypes.join(', ')}` : '') + weightSuffix
-				if (!r.windows?.length) {
+				// the folder name of an image's fileName ('<imageName>/<file>'), for
+				// labeling results when a sample has more than one spatial image
+				const imageLabel = (fileName: string) => fileName.split('/').slice(-2)[0] || fileName
+				for (const image of images) {
+					const targetParams =
+						searchingSameSample && opts.slideQuery
+							? opts.slideQuery
+							: `wsimage=${encodeURIComponent(image.fileName)}&dslabel=${encodeURIComponent(opts.dslabel!)}` +
+							  `&genome=${encodeURIComponent(opts.genome!)}&sample_id=${encodeURIComponent(
+									sampleId
+							  )}&imageType=spatial`
+					const label = images.length > 1 ? `${sampleId} (${imageLabel(image.fileName)})` : sampleId
+					const r = await dofetch3(`wsitiles/similar?${targetParams}`, {
+						method: 'POST', // the query signature (typeCounts/count/zscore matrices) travels in the body
+						body: {
+							file: image.spatialData,
+							types: query.types,
+							typeCounts: query.typeCounts,
+							count: query.count,
+							zscore: query.zscore,
+							// the target's kNN graph (cheap stage) and rigorous confirmation
+							// must use the SAME k/perms the query's own count/zscore matrices
+							// were built with — otherwise the comparison is between graphs of
+							// different density / z-scores of different permutation-noise
+							// levels, which can mis-rank the results. k is essentially free to
+							// forward (no permutation loop); perms only costs more for the
+							// already-budget-capped rigorous stage on the topK shortlist, not
+							// the full scan
+							k: query.k,
+							perms: query.perms,
+							sizeTolerance,
+							requiredTypes,
+							typeWeights,
+							// only meaningful (and only sent) when searching the SAME sample:
+							// cell ids are per-sample, so applying them cross-sample risks
+							// coincidentally excluding unrelated cells that happen to share an id
+							excludeIds: searchingSameSample ? queryIds : undefined
+						}
+					})
+					if (!r || r.error) throw new Error(r?.error || 'similarity search failed')
+					const pct = (r.sizeTolerance * 100).toFixed(0)
+					const weighted = (r.typeWeights || []).some((w: number, i: number) => w != 1 && r.types[i])
+					const weightSuffix = weighted
+						? `, weighted: ${r.types
+								.map((t: string, i: number) => [t, r.typeWeights[i]])
+								.filter(([, w]: [string, number]) => w != 1)
+								.map(([t, w]: [string, number]) => `${t}×${w}`)
+								.join(', ')}`
+						: ''
+					const reqSuffix =
+						(r.requiredTypes?.length ? `, must contain: ${r.requiredTypes.join(', ')}` : '') + weightSuffix
+					if (!r.windows?.length) {
+						resultsDiv
+							.append('div')
+							.text(
+								`No matching regions found in ${label} (${r.scanned} windows scanned, none within ±${pct}% of the reference's ${r.refCells} cells${reqSuffix}).`
+							)
+						continue
+					}
 					resultsDiv
 						.append('div')
+						.style('opacity', 0.7)
+						.style('margin-bottom', '4px')
 						.text(
-							`No matching regions found in ${sampleId} (${r.scanned} windows scanned, none within ±${pct}% of the reference's ${r.refCells} cells${reqSuffix}).`
+							`${label}: top ${r.windows.length} of ${r.scanned} windows scanned (reference: ${r.refCells} cells, ±${pct}% tolerance${reqSuffix}) — click a row to view it`
 						)
-					return
-				}
-				resultsDiv
-					.append('div')
-					.style('opacity', 0.7)
-					.style('margin-bottom', '4px')
-					.text(
-						`${sampleId}: top ${r.windows.length} of ${r.scanned} windows scanned (reference: ${r.refCells} cells, ±${pct}% tolerance${reqSuffix}) — click a row to view it`
-					)
-				const tableDiv = resultsDiv.append('div')
-				const nicheDiv = resultsDiv
-					.append('div')
-					.attr('data-testid', 'sjpp-wsi-similar-niche')
-					.style('margin-top', '10px')
-				renderTable({
-					div: tableDiv,
-					columns: [
-						{ label: '#' },
-						{ label: 'Cells' },
-						{ label: 'Δ vs. reference' },
-						{ label: 'Cheap score' },
-						{ label: 'Distance' },
-						{ label: 'Center (x, y)' }
-					],
-					rows: r.windows.map((w: any, i: number) => [
-						{ value: String(i + 1) },
-						{ value: String(w.cells) },
-						{
-							value: `${w.cells >= r.refCells ? '+' : ''}${(((w.cells - r.refCells) / r.refCells) * 100).toFixed(1)}%`
-						},
-						{ value: w.cheapScore.toFixed(3) },
-						{ value: w.distance == null ? 'n/a' : w.distance.toFixed(3) },
-						{ value: `${w.cx.toFixed(0)}, ${w.cy.toFixed(0)}` }
-					]),
-					singleMode: true,
-					noRadioBtn: true, // whole row is the click target, no visible selector column
-					noButtonCallback: async (rowIdx: number) => {
-						const w = r.windows[rowIdx]
-						nicheDiv.selectAll('*').remove()
-						nicheDiv
-							.append('div')
-							.style('font-weight', 'bold')
-							.text(`${sampleId} — niche #${rowIdx + 1}`)
-						const mapDiv = nicheDiv.append('div')
-						// re-enter this same module's viewer, addressed at the target
-						// image, panned/zoomed to this window (opts.focus) with its
-						// outline drawn — a small self-contained map, not tied into the
-						// mass app's sample table/state
-						await init(
+					const tableDiv = resultsDiv.append('div')
+					const nicheDiv = resultsDiv
+						.append('div')
+						.attr('data-testid', 'sjpp-wsi-similar-niche')
+						.style('margin-top', '10px')
+					renderTable({
+						div: tableDiv,
+						columns: [
+							{ label: '#' },
+							{ label: 'Cells' },
+							{ label: 'Δ vs. reference' },
+							{ label: 'Cheap score' },
+							{ label: 'Distance' },
+							{ label: 'Center (x, y)' }
+						],
+						rows: r.windows.map((w: any, i: number) => [
+							{ value: String(i + 1) },
+							{ value: String(w.cells) },
 							{
-								slideQuery: targetParams,
-								spatialData: image.spatialData,
-								label: `${sampleId} — niche #${rowIdx + 1}`,
-								hideNucleusStrokes: true, // keep the preview lightweight
-								showCellTypes: true, // the point of the preview is comparing cell-type composition by eye
-								focus: { cx: w.cx, cy: w.cy, window: r.window },
-								width: '100%',
-								height: '45vh'
+								value: `${w.cells >= r.refCells ? '+' : ''}${(((w.cells - r.refCells) / r.refCells) * 100).toFixed(1)}%`
 							},
-							mapDiv
-						)
-						// the window's own enrichment matrix travels with the similar
-						// search response already (the rigorous-confirmation stage) — no
-						// extra request needed; side by side with the ORIGINAL heatmap
-						// (still shown above, in `panel`) this is the actual point of the
-						// search: comparing the two niches' neighbourhood structure
-						const heatmapDiv = nicheDiv.append('div').style('margin-top', '8px') // own container: its ✕ shouldn't remove the map above it
-						if (w.zscore) {
-							renderNhoodHeatmap(heatmapDiv, {
-								types: r.types,
-								count: w.count,
-								zscore: w.zscore,
-								cells: w.cells,
-								skipped: 0,
-								k: r.k,
-								perms: r.perms
-							})
-						} else {
-							// the per-window budget guard (server/src/routes/wsitiles.ts
-							// mirrors this in wsi_tile.py) skipped confirming this window
-							heatmapDiv
-								.style('opacity', 0.7)
-								.text('This window was too large to confirm within the permutation-test budget.')
+							{ value: w.cheapScore.toFixed(3) },
+							{ value: w.distance == null ? 'n/a' : w.distance.toFixed(3) },
+							{ value: `${w.cx.toFixed(0)}, ${w.cy.toFixed(0)}` }
+						]),
+						singleMode: true,
+						noRadioBtn: true, // whole row is the click target, no visible selector column
+						noButtonCallback: async (rowIdx: number) => {
+							const w = r.windows[rowIdx]
+							nicheDiv.selectAll('*').remove()
+							nicheDiv
+								.append('div')
+								.style('font-weight', 'bold')
+								.text(`${label} — niche #${rowIdx + 1}`)
+							const mapDiv = nicheDiv.append('div')
+							// re-enter this same module's viewer, addressed at the target
+							// image, panned/zoomed to this window (opts.focus) with its
+							// outline drawn — a small self-contained map, not tied into the
+							// mass app's sample table/state
+							await init(
+								{
+									slideQuery: targetParams,
+									spatialData: image.spatialData,
+									label: `${label} — niche #${rowIdx + 1}`,
+									hideNucleusStrokes: true, // keep the preview lightweight
+									showCellTypes: true, // the point of the preview is comparing cell-type composition by eye
+									focus: { cx: w.cx, cy: w.cy, window: r.window },
+									width: '100%',
+									height: '45vh'
+								},
+								mapDiv
+							)
+							// the window's own enrichment matrix travels with the similar
+							// search response already (the rigorous-confirmation stage) — no
+							// extra request needed; side by side with the ORIGINAL heatmap
+							// (still shown above, in `panel`) this is the actual point of the
+							// search: comparing the two niches' neighbourhood structure
+							const heatmapDiv = nicheDiv.append('div').style('margin-top', '8px') // own container: its ✕ shouldn't remove the map above it
+							if (w.zscore) {
+								renderNhoodHeatmap(heatmapDiv, {
+									types: r.types,
+									count: w.count,
+									zscore: w.zscore,
+									cells: w.cells,
+									skipped: 0,
+									k: r.k,
+									perms: r.perms
+								})
+							} else {
+								// the per-window budget guard (server/src/routes/wsitiles.ts
+								// mirrors this in wsi_tile.py) skipped confirming this window
+								heatmapDiv
+									.style('opacity', 0.7)
+									.text('This window was too large to confirm within the permutation-test budget.')
+							}
 						}
-					}
-				})
+					})
+				}
 			} catch (e: any) {
 				resultsDiv.selectAll('*').remove()
 				sayerror(resultsDiv, `Similar-region search error: ${e.message || e}`)
