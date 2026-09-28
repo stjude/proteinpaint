@@ -1,0 +1,5 @@
+{
+    "maxAgeDays":365,
+    "maxDeletionsPerRun":3,
+    "packages":["ppfull","ppserver","proteinpaint-deps","rust","ppbase"]
+}
