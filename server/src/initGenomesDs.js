@@ -13,6 +13,7 @@ import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 import { clinsig } from '../dataset/clinvar.ts'
 import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
 import { mayLog } from './helpers.ts'
+import { sendMessageToSlack } from './postOnSlack.ts'
 import { mapConcurrent } from './utils/concurrencyLimiter.ts'
 import { initGeneDbLookups } from './genedbLookups.ts'
 // server-internal utilities that GDC query code depends on; injected so that code can move to

@@ -40,6 +40,9 @@ export async function sendMessageToSlack(
 			fs.writeFileSync(lastMessageHashFile, '', 'utf8')
 		}
 
+		// a validation run is not the live server, such as a pre-deploy trial of a new release
+		message = labelValidationRun(message)
+
 		// Calculate the current message hash
 		const hash = crypto.createHash('sha256').update(message).digest('hex')
 
@@ -117,4 +120,16 @@ export async function sendMessageToSlack(
 		req.write(data)
 		req.end()
 	})
+}
+
+/**
+ * Prefixes a message from a validation run, as started with the `validate` positional argument
+ * (see server/src/serverconfig.js), so that it is not mistaken for a message from the live server,
+ * whose serverconfig.URL it may name. The label is part of the hashed message, so that the last
+ * message hash of a validation run and of the live server do not suppress each other.
+ * @param message The message to be sent.
+ * @param argv The process arguments, defaults to process.argv.
+ */
+export function labelValidationRun(message: string, argv: string[] = process.argv): string {
+	return argv.includes('validate') ? `[validation run only] ${message}` : message
 }
