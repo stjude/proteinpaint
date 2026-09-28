@@ -65,7 +65,17 @@ sh createPPNetwork.sh
 echo "Starting container process='$CONTAINER_NAME' ..."
 APPDIR=$(pwd)
 CONTAPP=/home/root/pp/app/active
-docker run -d \
+
+# The image runs as the unprivileged app user (UID 1000). With rootless podman, map the host
+# account that runs this script to that user, so that bind-mounted files owned by that account,
+# such as serverconfig.json and dataset/, are accessible even when not readable by others.
+# Docker does not support this option; there, the bind-mounted files must be readable by others.
+USERNS=""
+if docker --version 2>/dev/null | grep -qi podman; then
+	USERNS="--userns=keep-id:uid=1000,gid=1000"
+fi
+
+docker run -d $USERNS \
 	--name $CONTAINER_NAME \
 	--network pp_network \
 	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \

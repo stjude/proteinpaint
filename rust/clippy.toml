@@ -1,0 +1,11 @@
+# sqlite statements must be prepared from a static sql string with prepare_static() in src/sqlite_static.rs,
+# so that request values are bound as parameters instead of being written into the sql text
+disallowed-methods = [
+	{ path = "rusqlite::Connection::prepare", reason = "use prepare_static() from src/sqlite_static.rs" },
+	{ path = "rusqlite::Connection::prepare_cached", reason = "use prepare_static() from src/sqlite_static.rs" },
+	{ path = "rusqlite::Connection::prepare_with_flags", reason = "use prepare_static() from src/sqlite_static.rs" },
+	{ path = "rusqlite::Connection::execute", reason = "use prepare_static() from src/sqlite_static.rs, then stmt.execute()" },
+	{ path = "rusqlite::Connection::execute_batch", reason = "add a &'static str wrapper to src/sqlite_static.rs" },
+	{ path = "rusqlite::Connection::query_row", reason = "use prepare_static() from src/sqlite_static.rs, then stmt.query_row()" },
+	{ path = "rusqlite::Connection::query_row_and_then", reason = "use prepare_static() from src/sqlite_static.rs, then stmt.query_row()" },
+]

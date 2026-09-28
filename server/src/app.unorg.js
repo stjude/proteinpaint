@@ -64,6 +64,7 @@ import * as fimo from './fimo.js'
 import { draw_partition } from './partitionmatrix.js'
 import mdsgeneboxplot_closure from './mds.geneboxplot.js'
 import { handle_mdssurvivalplot } from './km.js'
+import { protectedRoutes } from './auth/protectedRoutes.ts'
 
 export const tabixnoterror = s => {
 	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
@@ -72,9 +73,7 @@ export const tabixnoterror = s => {
 // cache
 // ??? ch_genemcount is not used anywhere ???
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
-const ch_dbtable = new Map() // k: db path, v: db stuff
 
-export const features = serverconfig.features
 const tabix = serverconfig.tabix
 const samtools = serverconfig.samtools
 const bcftools = serverconfig.bcftools
@@ -131,8 +130,9 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.post(basepath + '/mdssamplesignature', handle_mdssamplesignature)
 	app.post(basepath + '/mdssurvivalplot', handle_mdssurvivalplot(genomes))
 	app.post(basepath + '/fimo', fimo.handle_closure(genomes))
-	app.all(basepath + '/termdb', termdb.handle_request_closure(genomes))
-	app.all(basepath + '/termdb/barsql', termdbbarsql.handle_request_closure(genomes))
+	// the legacy /termdb route handler calls authApi.canDisplaySampleIds() for the q.for sample data requests
+	app.all(basepath + '/termdb', protectedRoutes.samples, termdb.handle_request_closure(genomes))
+	app.all(basepath + '/termdb/barsql', protectedRoutes.minSampleSize, termdbbarsql.handle_request_closure(genomes))
 	app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
 	app.post(basepath + '/massSession', massSession.save)
 	app.get(basepath + '/massSession', massSession.get)
@@ -201,70 +201,6 @@ async function handle_tabixheader(req, res) {
 		if (e.stack) console.log(e.stack)
 		res.send({ error: e.message || e })
 	}
-}
-
-function handle_dbdata(req, res) {
-	const query = () => {
-		const config = ch_dbtable.get(req.query.db)
-		let sql
-		if (config.makequery) {
-			sql = config.makequery(req.query)
-			if (!sql) {
-				res.send({ error: 'cannot make query' })
-				return
-			}
-		} else {
-			if (!req.query.tablename) {
-				res.send({ error: 'no db table name' })
-				return
-			}
-			if (!req.query.keyname) {
-				res.send({ error: 'no db table key name' })
-				return
-			}
-			if (!req.query.key) {
-				res.send({ error: 'no value to query for' })
-				return
-			}
-			sql =
-				'select * from ' +
-				req.query.tablename +
-				' where ' +
-				req.query.keyname +
-				'="' +
-				req.query.key.toLowerCase() +
-				'"'
-		}
-		config.db.all(sql, (err, rows) => {
-			if (err) return res.send({ error: 'error querying db: ' + err })
-			if (config.tidy) {
-				config.tidy(rows)
-			}
-			res.send({ rows: rows })
-		})
-	}
-
-	/*
-	// req.query.db db file path
-	if (ch_dbtable.has(req.query.db)) {
-		query()
-	} else {
-		const config = {}
-		const [e, file, isurl] = utils.fileurl({ query: { file: req.query.db } })
-		if (e) {
-			res.send({ error: 'db file error: ' + e })
-			return
-		}
-		config.db = new sqlite3.Database(file, sqlite3.OPEN_READONLY, err => {
-			if (err) {
-				res.send({ error: 'error connecting db' })
-				return
-			}
-			ch_dbtable.set(req.query.db, config)
-			query()
-		})
-	}
-	*/
 }
 
 function handle_svmr(req, res) {
@@ -368,7 +304,7 @@ async function handle_mdsgenecount(req, res) {
 	filtered AS (
 		SELECT gene, ${sql.join(
 			mutTypes.map(t => sql.id(t)),
-			'+'
+			sql`+`
 		)} AS total FROM genecount
 		WHERE sample IN (${sql.list(samples.map(String))})
 	)
@@ -1443,7 +1379,7 @@ async function handle_mdssvcnv_vcf(
 	let viewrangeupperlimit = vcfquery.viewrangeupperlimit
 	if (!viewrangeupperlimit && dsquery.iscustom) {
 		// no limit set for custom track
-		if (features.customMdsSingleSampleVcfNoRangeLimit) {
+		if (serverconfig.features.customMdsSingleSampleVcfNoRangeLimit) {
 			// this server has no range limit
 			viewrangeupperlimit = 0
 		} else {

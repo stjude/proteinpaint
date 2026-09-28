@@ -105,7 +105,8 @@ tape(`initialization, empty credentials`, async test => {
 			'getRequiredCredForDsEmbedder',
 			'isUserLoggedIn',
 			'mayAdjustFilter',
-			'maySetAuthRoutes'
+			'maySetAuthRoutes',
+			'routeMiddlewares'
 		],
 		'should set the expected methods with an empty dsCredentials'
 	)
@@ -235,7 +236,8 @@ tape(`initialization, non-empty credentials`, async test => {
 				'getRequiredCredForDsEmbedder',
 				'isUserLoggedIn',
 				'mayAdjustFilter',
-				'maySetAuthRoutes'
+				'maySetAuthRoutes',
+				'routeMiddlewares'
 			],
 			'should set the expected methods with a non-empty dsCredentials'
 		)
@@ -487,9 +489,9 @@ tape(`sample-level access without a session`, async test => {
 		`should not display sample ids when q.for is a multi-value array`
 	)
 	test.equal(
-		authApi.isUserLoggedIn(getReq({ for: ['singleSampleData'] }), ds, ['singleSampleData']),
+		authApi.isUserLoggedIn(getReq({ for: ['singleSampleData'] }), ds, true),
 		false,
-		`should match an array q.for against the protected routes in isUserLoggedIn()`
+		`should require a session for an array q.for when a termdb credential is required in isUserLoggedIn()`
 	)
 	test.equal(
 		authApi.canDisplaySampleIds(getReq({ getsamplelist: 1 }), ds),
@@ -502,12 +504,12 @@ tape(`sample-level access without a session`, async test => {
 		`should not display sample ids on /termdb/chat for an embedder with a slash`
 	)
 	test.equal(
-		authApi.isUserLoggedIn(getReq({ for: 'convertSampleId' }), ds, [], true),
+		authApi.isUserLoggedIn(getReq({ for: 'convertSampleId' }), ds, true),
 		false,
 		`should require a session for convertSampleId when the dataset has a termdb credential`
 	)
 	test.equal(
-		authApi.isUserLoggedIn(getReq({ dslabel: 'openDs', for: 'convertSampleId' }), { label: 'openDs' }, [], true),
+		authApi.isUserLoggedIn(getReq({ dslabel: 'openDs', for: 'convertSampleId' }), { label: 'openDs' }, true),
 		true,
 		`should not require a session for convertSampleId on an open-access dataset`
 	)
@@ -728,7 +730,7 @@ tape(`session flow for glob dslabel and embedder credential keys`, async test =>
 		get: () => embedder
 	})
 	test.equal(
-		authApi.isUserLoggedIn(getReq({ getsamplelist: 1 }), ds, [], true),
+		authApi.isUserLoggedIn(getReq({ getsamplelist: 1 }), ds, true),
 		true,
 		'should find the session in isUserLoggedIn()'
 	)
@@ -756,7 +758,8 @@ tape(`session flow for glob dslabel and embedder credential keys`, async test =>
 				},
 				header() {}
 			}
-			app.middlewares['*'](req, res, () => resolve({ passed: true }))
+			// the app-level middleware, then the route-level middleware for the /termdb/matrix data route
+			app.middlewares['*'](req, res, () => authApi.routeMiddlewares.termdb(req, res, () => resolve({ passed: true })))
 		})
 	test.deepEqual(
 		await runMiddleware(getReq({}, '/termdb/matrix')),
@@ -1196,6 +1199,10 @@ tape(`session handling by the middleware`, async test => {
 		//await app.middlewares['*'](req, res, next)
 		await sleep(100)
 
+		// the app-level middleware, then the route-level middleware for the /termdb/matrix data route
+		const runProtected = (req, res, next) =>
+			app.middlewares['*'](req, res, () => authApi.routeMiddlewares.termdb(req, res, next))
+
 		/*** valid session ***/
 		const req1 = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -1219,7 +1226,7 @@ tape(`session handling by the middleware`, async test => {
 		function next1() {
 			test.pass(message1)
 		}
-		await app.middlewares['*'](req1, res1, next1)
+		await runProtected(req1, res1, next1)
 		await sleep(100)
 
 		// **** invalid session id ***/
@@ -1283,7 +1290,7 @@ tape(`session handling by the middleware`, async test => {
 			test.fail('should NOT call the next function on an invalid session')
 		}
 
-		await app.middlewares['*'](req3, res3, next3)
+		await runProtected(req3, res3, next3)
 	}
 })
 

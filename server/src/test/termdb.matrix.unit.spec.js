@@ -38,6 +38,7 @@ setSampleLstData: throws when q.groups is not an array
 isNegatedSampleLstOnlyRequest: only fires when a negation has no universe to subtract from
 hasFilterTermsUnsupportedByFilterSamples: detects filter terms filterSamples() cannot resolve
 getData: samplelst overlay resolves on a dataset without a sqlite db
+getData: a categorical groupset with filter groups is assigned by each group filter
 getData: an untrustworthy scope adds no absent group member
 getData: a request of only a negated samplelst group is rejected
 shouldMapParent2Children: handles object sample type metadata with child sample types
@@ -1127,5 +1128,45 @@ tape('getData: custom bins of a single-cell gene expression term come back color
 	t.equal(data.samples.cell1.scexp.key, '<6', 'a cell below the cutoff is keyed by the first bin')
 	t.equal(data.samples.cell2.scexp.key, '≥6', 'a cell at or above the cutoff is keyed by the last bin')
 	t.equal(tw.q.lst.filter(b => 'color' in b).length, 0, 'no color leaks onto the request q.lst[]')
+	t.end()
+})
+
+// the filter groups of a groupset are built as extra CTEs by termdb.sql.categorical.js,
+// which previously failed with a ReferenceError since getFilterCTEs() was not imported
+tape('getData: a categorical groupset with filter groups is assigned by each group filter', async t => {
+	await ensureOpenAuth()
+	const tdb = await init('termdb.test.ts')
+	server_init_db_queries(tdb.ds)
+	const termjson = id => structuredClone(tdb.ds.cohort.termdb.q.termjsonByOneid(id))
+	const sexFilter = key => ({
+		type: 'tvslst',
+		join: '',
+		in: true,
+		lst: [{ type: 'tvs', tvs: { term: termjson('sex'), values: [{ key }] } }]
+	})
+	const tw = {
+		$id: 'diaggrp',
+		term: { ...termjson('diaggrp'), groupsetting: { disabled: false } },
+		q: {
+			type: 'custom-groupset',
+			groupsetting: { activeCohort: 0 },
+			customset: {
+				groups: [
+					{ name: 'males', type: 'filter', filter4activeCohort: [sexFilter('1')] },
+					{ name: 'females', type: 'filter', filter4activeCohort: [sexFilter('2')] }
+				]
+			}
+		}
+	}
+	const data = await getData({ terms: [tw] }, tdb.ds)
+	t.notOk(data.error, 'no error')
+	const counts = {}
+	for (const s of Object.values(data.samples)) counts[s.diaggrp.key] = (counts[s.diaggrp.key] || 0) + 1
+	const sexCounts = {}
+	for (const r of tdb.ds.cohort.db.connection
+		.prepare('SELECT value, count(*) AS n FROM anno_categorical WHERE term_id = ? GROUP BY value')
+		.all('sex'))
+		sexCounts[r.value] = r.n
+	t.deepEqual(counts, { males: sexCounts['1'], females: sexCounts['2'] }, 'assigns samples by each group filter')
 	t.end()
 })

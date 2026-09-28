@@ -8,13 +8,6 @@ FROM r-base:4.5.0 AS ppbase
 ARG ARCH='x86_64'
 ENV ARCH=$ARCH
 
-ARG IMGREV=""
-ARG IMGVER=""
-
-LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
-    org.opencontainers.image.revision="$IMGREV" \
-    org.opencontainers.image.version="$IMGVER"
-
 RUN apt-get update && apt-get install --allow-downgrades -y \
     curl \
     wget \
@@ -59,9 +52,9 @@ RUN apt-get update && apt-get install --allow-downgrades -y \
     # read the new ones and re-pin, do NOT drop the pins --
     #   docker run --rm --platform linux/amd64 r-base:4.5.0 bash -c \
     #     'apt-get update -qq >/dev/null 2>&1; apt-cache policy python3 python3-dev python3-venv python3-pip'
-    python3=3.14.6-1 \
-    python3-dev=3.14.6-1 \
-    python3-venv=3.14.6-1 \
+    python3=3.14.7-3 \
+    python3-dev=3.14.7-3 \
+    python3-venv=3.14.7-3 \
     python3-pip=26.1.2+dfsg-1 \
     x11-common \
     libx11-dev \
@@ -85,17 +78,22 @@ COPY ./R/utils ./R/utils
 RUN Rscript R/utils/install.pkgs.R
 
 # Install NVM and Node.js
-ENV NVM_DIR=/root/.nvm
+# NVM_DIR must not be under /root, which is not readable by the unprivileged app user
+ENV NVM_DIR=/opt/nvm
 ARG NODE_VERSION=24.10.0
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
+RUN mkdir -p "$NVM_DIR" && \
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
     . "$NVM_DIR/nvm.sh" && \
     nvm install $NODE_VERSION && \
     nvm alias default $NODE_VERSION && \
     nvm use $NODE_VERSION && \
-    echo 'export NVM_DIR="$NVM_DIR"' >> /root/.bashrc && \
-    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /root/.bashrc
+    echo 'export NVM_DIR="$NVM_DIR"' >> /etc/bash.bashrc && \
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /etc/bash.bashrc && \
+    # the node release tarball files are owned by UID 1000, which nvm keeps when extracting as root,
+    # but that is the app user's UID, which then could modify its own node install
+    chown -R root:root "$NVM_DIR"
 
-ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin:$PATH"
+ENV PATH="/opt/nvm/versions/node/v${NODE_VERSION}/bin:$PATH"
 
 # Verify node installation
 RUN node -v && npm -v
@@ -112,7 +110,7 @@ RUN python3 -m venv /opt/venv && \
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
-ARG htsversion=1.14
+ARG htsversion=1.24
 
 RUN curl -L https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \
     (cd htslib-${htsversion} && ./configure --enable-plugins --with-plugin-path='$(libexecdir)/htslib:/usr/libexec/htslib' && make install) && \
@@ -123,6 +121,21 @@ RUN curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}
     (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
 
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
+
+# The app runs as an unprivileged user. The r-base image already has a 'docker' user
+# with UID/GID 1000, rename it to 'app' instead of creating another user. The UID must
+# stay 1000: container/run.sh maps the rootless podman host account to it, and
+# check_base_user.sh expects a non-root user in the published ppserver/ppfull images.
+#
+# Another UID may also run the image, such as to match the owner of the bind-mounted files, with
+# `docker run --user <uid>:0` or a Kubernetes runAsUser with runAsGroup 0: a runtime assigns group 0 to
+# a UID that has no account in the image, so the dirs that the app writes at runtime are also owned by,
+# and writable for, group 0. See also the ppserver and ppfull stages.
+RUN groupmod -n app docker && \
+    usermod -l app -d /home/app -m docker && \
+    chown app:app /home/root/pp/cache && \
+    chgrp -R 0 /home/root/pp/cache /home/app && \
+    chmod -R g=u /home/root/pp/cache /home/app
 
 RUN if [ "$ARCH" = "x86_64" ]; then \
         wget https://proteinpaint.stjude.org/ppdemo/tools/linux/straw -P /home/root/pp/tools/ && \
@@ -135,6 +148,14 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
         echo "unknown ARCH='$ARCH'" && \
         exit 1; \
     fi
+
+# Declared after all the dependency install steps: a changed ARG value invalidates the cache of every
+# later RUN step in the stage, and IMGREV changes with every commit.
+ARG IMGREV=""
+ARG IMGVER=""
+LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
+    org.opencontainers.image.revision="$IMGREV" \
+    org.opencontainers.image.version="$IMGVER"
 
 #####################
 # Server-only install
@@ -197,16 +218,23 @@ CMD ["sh", "-c", "node app-server.mjs"]
 # target for the backend-only SJ server app
 FROM ppbase AS ppserver
 
+ARG IMGREV=""
+ARG IMGVER=""
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
 
 WORKDIR /home/root/pp/app
-COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
+COPY --from=ppserverdeps --chown=app:app /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
-COPY ./app-server.mjs ./
+COPY --chown=app:app ./app-server.mjs ./
+# writable for group 0, see the user setup in the ppbase stage; only the dir, for the files created at runtime
+RUN chgrp 0 /home/root/pp/app/active && chmod g=u /home/root/pp/app/active
+# the HOME of another UID, which has no account in the image
+ENV HOME=/home/app
+USER app
 EXPOSE 3000
 CMD ["sh", "-c", "node --enable-source-maps app-server.mjs && @sjcrh/proteinpaint-server"]
 # CMD ["sleep", "3600"]
@@ -237,17 +265,26 @@ CMD ["sleep", "3600"]
 # target for the full (backend + frontend) SJ app
 FROM ppbase AS ppfull
 
+ARG IMGREV=""
+ARG IMGVER=""
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
 
 WORKDIR /home/root/pp/app
-COPY --from=ppfulldeps /home/root/pp/app/active /home/root/pp/app/active
+COPY --from=ppfulldeps --chown=app:app /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
-COPY ./app-full.mjs ./
-COPY public ./public
+COPY --chown=app:app ./app-full.mjs ./
+COPY --chown=app:app public ./public
+# writable for group 0, see the user setup in the ppbase stage; only the dirs, for the files created at runtime,
+# such as the client bundle in active/bin and the cards that are copied to active/public
+RUN chgrp 0 /home/root/pp/app/active /home/root/pp/app/active/public && \
+    chmod g=u /home/root/pp/app/active /home/root/pp/app/active/public
+# the HOME of another UID, which has no account in the image
+ENV HOME=/home/app
+USER app
 EXPOSE 3000
 CMD ["sh", "-c", "node --enable-source-maps app-full.mjs && @sjcrh/proteinpaint-server"]
 # CMD ["sleep", "3600"]

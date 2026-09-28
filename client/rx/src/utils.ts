@@ -169,6 +169,8 @@ export function copyMerge(base, ...args) {
 		if (!arg) continue
 		const source = typeof base == 'string' ? fromJson(toJson(arg)) : arg
 		for (const [key, value] of Object.entries(source)) {
+			// skip prototype-polluting keys so they can never be walked or assigned
+			if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue
 			if (
 				!target[key] ||
 				Array.isArray(target[key]) ||

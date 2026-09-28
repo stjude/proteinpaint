@@ -4,7 +4,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { setAuthRoutes } from '#src/auth/AuthRoutes.ts'
 import { Auth, normalizeReqPath } from '#src/auth/Auth.ts'
-import { setAuthMiddleware } from '#src/auth/AuthMiddleWare.ts'
+import { setAuthMiddleware, getProtectedRouteMiddlewares } from '#src/auth/AuthMiddleWare.ts'
 
 /*************************
  reusable constants and helper functions
@@ -340,7 +340,7 @@ tape('/dslogout: deletes session and clears cookie on valid logout', async funct
 	// Use '/**' route key so getRequiredCred finds the cred for /dslogout path
 	const auth = makeAuthWithBasic()
 	const sessionId = 'test-logout-session-id'
-	auth.sessions[dslabel] = { [sessionId]: { time: Date.now(), ip: '127.0.0.1' } }
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
 
 	const app = makeApp(auth)
 	const req = {
@@ -354,7 +354,7 @@ tape('/dslogout: deletes session and clears cookie on valid logout', async funct
 	await app.routes['/dslogout'].post(req, res)
 	test.equal(res.sentData?.status, 'ok', 'should return ok status on successful logout')
 	test.equal(res.statusCode, 200, 'should return 200 status')
-	test.equal(auth.sessions[dslabel][sessionId], undefined, 'should remove session from auth.sessions')
+	test.equal(auth.sessions.get(dslabel)?.get(sessionId), undefined, 'should remove session from auth.sessions')
 	test.ok(res.headers['Set-Cookie']?.includes(`${headerKey}=;`), 'should clear the session cookie')
 	test.end()
 })
@@ -567,7 +567,7 @@ tape('/authorizedActions: appends action to file and returns ok', async function
 
 	const auth = makeAuthWithJwt()
 	const sessionId = 'test-action-session-id'
-	auth.sessions[dslabel] = { [sessionId]: { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' } }
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
 
 	const app = makeApp(auth)
 	const actionFile = path.join(cachedir, 'authorizedActions')
@@ -905,7 +905,9 @@ const flowAuthApi = {
 
 // Registers the auth middleware and auth routes on the same mock app, and returns a function that
 // sends a request through the middleware, then to the registered handler the way Express would route it:
-// case-insensitive and ignoring a trailing slash, without stripping the basepath from req.path
+// case-insensitive and ignoring a trailing slash, without stripping the basepath from req.path.
+// A data route that is protected by a route-level middleware is also simulated, the way augen.setRoutes()
+// would register the /termdb/matrix route with its RouteApi.middlewares.
 function makeFlow(auth: Auth) {
 	// same as AuthApi.maySetAuthRoutes(), which sets auth.basepath from the route registration basepath
 	auth.basepath = flowBasepath
@@ -913,6 +915,8 @@ function makeFlow(auth: Auth) {
 	const middlewares: any[] = []
 	app.use = (handler: any) => middlewares.push(handler)
 	setAuthMiddleware(app, {}, flowAuthApi, auth)
+	const { termdb } = getProtectedRouteMiddlewares(flowAuthApi, auth)
+	const routeMiddlewares = { [flowBasepath + '/termdb/matrix']: [termdb] }
 
 	return async function send(req: any) {
 		req.cookies = req.cookies || {}
@@ -922,6 +926,12 @@ function makeFlow(auth: Auth) {
 		let nextCalled = false
 		middlewares[0](req, res, () => (nextCalled = true))
 		if (!nextCalled) return { res, nextCalled }
+		const dataRoute = Object.keys(routeMiddlewares).find(r => r.toLowerCase() == normalizeReqPath(req.path))
+		for (const middleware of routeMiddlewares[dataRoute as string] || []) {
+			nextCalled = false
+			middleware(req, res, () => (nextCalled = true))
+			if (!nextCalled) return { res, nextCalled }
+		}
 		const route = Object.keys(app.routes).find(r => r.toLowerCase() == normalizeReqPath(req.path))
 		if (route && app.routes[route].post) await app.routes[route].post(req, res)
 		return { res, nextCalled, route }
@@ -951,7 +961,7 @@ tape(
 			test.equal(login.res.sentData?.status, 'ok', `should return ok for '${path}'`)
 			test.ok(login.res.sentData?.jwt, `should return a session jwt for '${path}'`)
 			test.equal(login.res.sentData?.route, 'termdb', `should return the cred route for '${path}'`)
-			test.equal(Object.keys(auth.sessions[dslabel] || {}).length, 1, `should establish a session for '${path}'`)
+			test.equal(auth.sessions.get(dslabel)?.size || 0, 1, `should establish a session for '${path}'`)
 
 			const protectedPath = '/API/TERMDB/MATRIX/'
 			const anon = await send({ query: { dslabel, embedder }, path: protectedPath })
@@ -988,7 +998,7 @@ tape('auth flow: /dslogin and /dslogout variants under a basepath', async functi
 	test.equal(login.res.sentData?.status, 'ok', 'should return ok for /API/DSLOGIN/')
 	test.ok(login.res.sentData?.jwt, 'should return a session jwt for /API/DSLOGIN/')
 	const sessionId = login.res.sentData?.jwt?.slice(-20)
-	test.ok(sessionId && auth.sessions[dslabel]?.[sessionId], 'should establish a session for /API/DSLOGIN/')
+	test.ok(sessionId && auth.sessions.get(dslabel)?.get(sessionId), 'should establish a session for /API/DSLOGIN/')
 
 	const logout = await send({
 		query: { dslabel, embedder },
@@ -997,6 +1007,6 @@ tape('auth flow: /dslogin and /dslogout variants under a basepath', async functi
 	})
 	test.ok(logout.nextCalled, 'should let /Api/DsLogout/ through the middleware')
 	test.equal(logout.res.sentData?.status, 'ok', 'should return ok for /Api/DsLogout/')
-	test.equal(auth.sessions[dslabel]?.[sessionId], undefined, 'should remove the session for /Api/DsLogout/')
+	test.equal(auth.sessions.get(dslabel)?.get(sessionId), undefined, 'should remove the session for /Api/DsLogout/')
 	test.end()
 })

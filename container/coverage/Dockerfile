@@ -4,6 +4,11 @@
 
 FROM ppserver:latest
 
+# The ppserver image runs as the unprivileged app user (UID 1000), but this image links packages into
+# the root-owned npm global prefix under /opt/nvm, and only generates the combined coverage report,
+# so it runs as root.
+USER root
+
 WORKDIR /home/root/pp/app/
 COPY ./python ./
 RUN cd python && npm link

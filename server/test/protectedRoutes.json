@@ -1,0 +1,20 @@
+{
+	"termdb/cuminc": [
+		"minSampleSize"
+	],
+	"termdb/matrix": [
+		"termdb",
+		"samples",
+		"minSampleSize"
+	],
+	"termdb/regression": [
+		"minSampleSize"
+	],
+	"termdb/sampleScatter": [
+		"samples",
+		"minSampleSize"
+	],
+	"termdb/survival": [
+		"minSampleSize"
+	]
+}

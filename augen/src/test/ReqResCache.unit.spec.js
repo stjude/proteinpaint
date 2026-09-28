@@ -75,6 +75,18 @@ tape('ReqResCache instance', test => {
 		)
 		test.true(!fs.existsSync(loc.sudbir), 'should not mkdir in test mode')
 	}
+	{
+		// a request key becomes part of the cache subdir name only if it is a plain get<word> subroute
+		for (const key of ['get../../x', 'get/x', 'get', 'get.x']) {
+			const cache = new ReqResCache({ path: '/termdb', query: { [key]: 1 } })
+			const loc = cache.getLoc(cachedir, 'test')
+			test.equal(cache.customSubroute, '', `should not use '${key}' as a custom subroute`)
+			test.true(
+				loc.file.startsWith(`${cachedir}/termdb/`) && !loc.dirId.includes('..'),
+				`should keep the cache file for '${key}' under the route subdir`
+			)
+		}
+	}
 	fs.rmSync(cachedir, { recursive: true })
 	test.end()
 })

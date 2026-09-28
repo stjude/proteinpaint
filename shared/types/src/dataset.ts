@@ -568,8 +568,8 @@ type TopVariablyExpressedGenesQuery = {
 }
 
 type TopMutatedGenes = {
-	/** ds supplied getter. if not, dynamically adds one during launch */
-	get?: (f: any) => void
+	/** ds supplied getter, required. only for api-based ds (e.g. gdc); native ds should use grin2 instead */
+	get: (f: any) => void
 	/** Specifies the dom element rendered in the menu */
 	arguments?: GeneArgumentEntry[]
 }

@@ -56,17 +56,17 @@ tape('simple filter', async function (test) {
 		tdb.ds
 	)
 
-	//console.log(filter.CTEs.join(',\n'))
-	//console.log(filter.values)
+	//console.log(filter.filters.text)
+	//console.log(filter.filters.values)
 	test.deepEqual(
 		Object.keys(filter).sort((a, b) => (a < b ? -1 : 1)),
-		['CTEname', 'CTEs', 'filters', 'values'],
-		'should return an object with the four expected keys'
+		['CTEname', 'CTEs', 'filters'],
+		'should return an object with the three expected keys, the values are bound in the filters fragment'
 	)
 	test.equal(filter.CTEname, 'f', 'should return the default CTE name')
 	test.equal(
-		filter.filters.split('?').length - 1,
-		filter.values.length,
+		filter.filters.text.split('?').length - 1,
+		filter.filters.values.length,
 		'CTE string should have the same number of ? as values[]'
 	)
 	test.equal(filter.CTEs.length, 2, 'should return two CTE clauses for this simple filter')
@@ -134,17 +134,17 @@ tape('nested filter', async function (test) {
 		tdb.ds
 	)
 
-	//console.log(filter.CTEs.join(',\n'))
-	//console.log(filter.values)
+	//console.log(filter.filters.text)
+	//console.log(filter.filters.values)
 	test.deepEqual(
 		Object.keys(filter).sort((a, b) => (a < b ? -1 : 1)),
-		['CTEname', 'CTEs', 'filters', 'values'],
-		'should return an object with the four expected keys'
+		['CTEname', 'CTEs', 'filters'],
+		'should return an object with the three expected keys, the values are bound in the filters fragment'
 	)
 	test.equal(filter.CTEname, 'f', 'should return the default CTE name')
 	test.equal(
-		filter.filters.split('?').length - 1,
-		filter.values.length,
+		filter.filters.text.split('?').length - 1,
+		filter.filters.values.length,
 		'CTE string should have the same number of ? as values[]'
 	)
 	test.equal(filter.CTEs.length, 8, 'should return 8 CTE clauses for this complex filter')
@@ -179,9 +179,9 @@ tape('junction numeric filter', async function (test) {
 		tdb.ds
 	)
 
-	test.deepEqual(filter.values, ['2'], 'selects samples whose junction read count is in range')
+	test.deepEqual(filter.filters.values, ['2'], 'selects samples whose junction read count is in range')
 	test.deepEqual(requestedTerm, { $id: 'xx', term, q: { readcountCutoff: 3 } }, 'passes the junction term and query')
-	test.equal(filter.filters.split('?').length - 1, filter.values.length, 'CTE placeholders match values')
+	test.equal(filter.filters.text.split('?').length - 1, filter.filters.values.length, 'CTE placeholders match values')
 	test.end()
 })
 
@@ -219,10 +219,10 @@ tape('pseudobulk numeric filter', async function (test) {
 		tdb.ds
 	)
 
-	test.deepEqual(filter.values, ['2'], 'selects samples whose pseudobulk value is in range')
+	test.deepEqual(filter.filters.values, ['2'], 'selects samples whose pseudobulk value is in range')
 	test.deepEqual(requestedTerms, [{ $id: 'xx', term, q: undefined }], 'passes the pseudobulk term')
 	test.equal(requestedDs, tdb.ds, 'passes the dataset to the pseudobulk getter')
-	test.equal(filter.filters.split('?').length - 1, filter.values.length, 'CTE placeholders match values')
+	test.equal(filter.filters.text.split('?').length - 1, filter.filters.values.length, 'CTE placeholders match values')
 	test.end()
 })
 
@@ -250,10 +250,10 @@ tape('numeric filter honors tvs.isnot (junction)', async function (test) {
 	const group = await build(false)
 	const complement = await build(true)
 
-	test.deepEqual(group.values, ['2'], 'without isnot, selects the in-range sample')
-	test.deepEqual(complement.values.slice().sort(), ['1', '3'], 'with isnot, selects the out-of-range samples')
+	test.deepEqual(group.filters.values, ['2'], 'without isnot, selects the in-range sample')
+	test.deepEqual(complement.filters.values.slice().sort(), ['1', '3'], 'with isnot, selects the out-of-range samples')
 	test.deepEqual(
-		group.values.filter(v => complement.values.includes(v)),
+		group.filters.values.filter(v => complement.filters.values.includes(v)),
 		[],
 		'a group and its isnot complement share no sample'
 	)
@@ -261,13 +261,13 @@ tape('numeric filter honors tvs.isnot (junction)', async function (test) {
 	NEITHER side. Enumerating the cohort and subtracting the group -- a plausible way to "fix"
 	isnot -- would put 4 in the complement and fail this. */
 	test.deepEqual(
-		[...group.values, ...complement.values].sort(),
+		[...group.filters.values, ...complement.filters.values].sort(),
 		['1', '2', '3'],
 		'group plus complement covers the annotated samples only, never one without a value'
 	)
 	test.equal(
-		complement.filters.split('?').length - 1,
-		complement.values.length,
+		complement.filters.text.split('?').length - 1,
+		complement.filters.values.length,
 		'CTE placeholders match values when negated'
 	)
 	test.end()
@@ -285,7 +285,7 @@ tape('numeric filter honors tvs.isnot (pseudobulk)', async function (test) {
 		tdb.ds
 	)
 
-	test.deepEqual(filter.values.slice().sort(), ['1', '3'], 'isnot selects the out-of-range pseudobulk samples')
+	test.deepEqual(filter.filters.values.slice().sort(), ['1', '3'], 'isnot selects the out-of-range pseudobulk samples')
 	test.end()
 })
 
@@ -331,11 +331,11 @@ tape('custom termCollection fraction filter', async function (test) {
 
 	test.deepEqual(
 		Object.keys(filter).sort((a, b) => (a < b ? -1 : 1)),
-		['CTEname', 'CTEs', 'filters', 'values'],
-		'should return an object with the four expected keys'
+		['CTEname', 'CTEs', 'filters'],
+		'should return an object with the three expected keys, the values are bound in the filters fragment'
 	)
 	test.equal(filter.CTEname, 'f', 'should return the default CTE name')
-	test.ok(filter.values.length > 0, 'should return matching samples (fraction > 0)')
+	test.ok(filter.filters.values.length > 0, 'should return matching samples (fraction > 0)')
 	test.equal(filter.CTEs.length, 2, 'should return two CTE clauses')
 	test.end()
 })
@@ -396,7 +396,7 @@ tape('termCollection fraction filter routes by member term type, not term.isCust
 		['ENST00000256078', 'ENST00000311936'],
 		'queries both member terms with the isoformExpression handler'
 	)
-	test.ok(filter.values.length > 0, 'should return matching samples (fraction > 0)')
+	test.ok(filter.filters.values.length > 0, 'should return matching samples (fraction > 0)')
 	test.end()
 })
 
@@ -457,7 +457,7 @@ tape('custom termCollection fraction filter passes junction members intact', asy
 		junctions,
 		'passes each junction member term to the handler unchanged'
 	)
-	test.deepEqual(filter.values, ['2'], 'selects only the sample whose junction fraction is in range')
+	test.deepEqual(filter.filters.values, ['2'], 'selects only the sample whose junction fraction is in range')
 	test.end()
 })
 
@@ -495,14 +495,18 @@ tape('custom termCollection fraction filter uses term.denominators[]', async fun
 		)
 
 	const twoDenominators = await getFilter(isoforms.slice(0, 2))
-	test.ok(twoDenominators.values.length > 0, 'a 1 of 2 denominator selection is a 0.5 fraction, in range')
+	test.ok(twoDenominators.filters.values.length > 0, 'a 1 of 2 denominator selection is a 0.5 fraction, in range')
 
 	const allDenominators = await getFilter(isoforms)
-	test.equal(allDenominators.values.length, 0, 'a 1 of 3 denominator selection is a 0.33 fraction, out of range')
+	test.equal(
+		allDenominators.filters.values.length,
+		0,
+		'a 1 of 3 denominator selection is a 0.33 fraction, out of range'
+	)
 
 	const impliedDenominators = await getFilter(undefined)
 	test.equal(
-		impliedDenominators.values.length,
+		impliedDenominators.filters.values.length,
 		0,
 		'without term.denominators[], every member of term.termlst[] is a denominator'
 	)
@@ -598,13 +602,13 @@ tape('dt term filter requests read depth only when its tvs carries a maf filter'
 		})
 
 		let result = await getFilterCTEs(getFilter({}), tdb.ds)
-		test.deepEqual(result.values, [1], 'mutant sample passes a plain dt-term filter')
+		test.deepEqual(result.filters.values, [1], 'mutant sample passes a plain dt-term filter')
 
 		result = await getFilterCTEs(getFilter({ mafFilter: mafAtLeast(0.1) }), tdb.ds)
-		test.deepEqual(result.values, [1], 'mutant sample at maf 0.3 passes a maf >= 0.1 filter')
+		test.deepEqual(result.filters.values, [1], 'mutant sample at maf 0.3 passes a maf >= 0.1 filter')
 
 		result = await getFilterCTEs(getFilter({ mafFilter: mafAtLeast(0.5) }), tdb.ds)
-		test.deepEqual(result.values, [], 'mutant sample at maf 0.3 fails a maf >= 0.5 filter')
+		test.deepEqual(result.filters.values, [], 'mutant sample at maf 0.3 fails a maf >= 0.5 filter')
 
 		test.deepEqual(
 			requests,

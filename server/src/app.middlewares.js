@@ -10,12 +10,14 @@ import * as validator from './validator.js'
 import { authApi } from './auth.js'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import jsonwebtoken from 'jsonwebtoken'
+import sjson from 'secure-json-parse'
 import fs from 'fs'
 import crypto from 'crypto'
 import { ReqResCache } from '@sjcrh/augen'
 import { abortCtrlBy } from './xfetch.js'
 import { mayLog } from './helpers.ts'
 import { mayValidateRequestGeneRefs } from './geneRefValidation.ts'
+import { findForbiddenName } from './routes/common.ts'
 import { formatElapsedTime } from '#shared'
 
 const basepath = serverconfig.basepath || ''
@@ -70,14 +72,35 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 			urlJsonDecode(req.query)
 		} catch (e) {
 			console.trace(e)
-			res.send({ error: e })
+			res.status(400).send({ error: e.message || e })
 			return
 		}
 		next()
 	})
 
 	app.use(cookieParser())
-	app.use(bodyParser.json({ limit: '5mb' }))
+	// read a json body as text and parse it with secure-json-parse, which rejects a __proto__ or
+	// constructor.prototype key, since Object.assign(req.query, req.body) below would otherwise
+	// replace the prototype of req.query
+	app.use(bodyParser.text({ type: 'application/json', limit: '5mb' }))
+	app.use((req, res, next) => {
+		if (req.headers['content-type'] != 'application/json' || typeof req.body != 'string') return next()
+		try {
+			// bodyParser.json() sets an empty body to {}, keep that behavior
+			req.body = req.body ? sjson.parse(req.body) : {}
+		} catch (e) {
+			res.status(400).send({ error: `invalid json body: ${e.message}` })
+			return
+		}
+		// preserve the object/array-only contract of bodyParser.json()'s default strict mode: sjson.parse()
+		// (like JSON.parse) also accepts a scalar, which would reach Object.assign(req.query, req.body) below
+		// as a malformed payload (a string copies its character indexes, other scalars are silently dropped)
+		if (req.body === null || typeof req.body != 'object') {
+			res.status(400).send({ error: 'invalid json body: must be an object or array' })
+			return
+		}
+		next()
+	})
 	app.use(bodyParser.text({ limit: '5mb' }))
 	app.use(bodyParser.urlencoded({ extended: true }))
 	if (testDataCacheDir)
@@ -124,6 +147,17 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 			Object.assign(req.query, req.body)
 		}
 
+		// reject a request whose payload uses a prototype-related name (see forbiddenNames) as an object key
+		// or a whole string value, before any code assigns it onto another object or uses it to index one.
+		// NOTE: this intentionally scans values everywhere, not just known lookup fields, and accepts the
+		// rare false positive of a value that equals one of these reserved names; see findForbiddenName()
+		// in routes/common.ts for the full rationale before narrowing it.
+		const forbiddenName = findForbiddenName(req.query)
+		if (forbiddenName) {
+			res.status(400).send({ error: `forbidden request payload name at ${forbiddenName}` })
+			return
+		}
+
 		// log the request before adding additional or protected info
 		log(req)
 
@@ -142,7 +176,11 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 			dslabel = 'GDC'
 		}
 		if (genome && dslabel) {
-			const altGenome = serverconfig.features?.altGenomeByDslabel?.[dslabel]
+			// Object.hasOwn guards below so that a dslabel or genome that names an inherited property
+			// (e.g. 'toString', 'constructor') selects nothing instead of an Object.prototype member;
+			// findForbiddenName() above already rejects such values, this is defense in depth
+			const altByDs = serverconfig.features?.altGenomeByDslabel
+			const altGenome = altByDs && Object.hasOwn(altByDs, dslabel) ? altByDs[dslabel] : undefined
 			if (altGenome) {
 				req.query.genome = altGenome
 				genome = altGenome
@@ -151,14 +189,14 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 			// TODO: all server routes handlers that check for valid genome, dslabel
 			// should be edited to only check for prefilled req.query.[__protected__??].genome/ds instead,
 			// since these simple checks can be centralized in this middleware
-			const g = genomes[genome]
+			const g = Object.hasOwn(genomes, genome) ? genomes[genome] : undefined
 			if (!g) {
 				res.send({ error: 'invalid genome' })
 				return
 			}
-			ds = g.datasets?.[dslabel]
+			ds = g.datasets && Object.hasOwn(g.datasets, dslabel) ? g.datasets[dslabel] : undefined
 			// do not check genome-level termdb, not dataset-level termdb
-			if (!ds && !g.termdbs?.[dslabel]) {
+			if (!ds && !(g.termdbs && Object.hasOwn(g.termdbs, dslabel))) {
 				const paramName = mds3 ? 'mds3' : dsname ? 'dsname' : 'dslabel'
 				res.send({ error: `invalid ${paramName}` })
 				return

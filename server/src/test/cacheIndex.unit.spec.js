@@ -19,24 +19,34 @@ A local http server stands in for the attacker's host. Escape targets are under 
 system paths.
 
 test sections:
+- remote file is off by default
 - cache_index() rejects traversal
 - cache_index() rejects non-remote protocols
+- cache_index() rejects a primary url host that is not allowed
 - cache_index() still caches valid urls
 - fileurl() url branch
 - /tkbedj, /tabixheader, /bamnochr via the real route table
 - cache_index() index download is atomic
+- cache_index() checks the host of each index url redirect
 */
 
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-cacheidx-'))
 const up = '/..'.repeat(40) // more than enough to reach "/" from any cachedir
 
-let server, H
+let server, H, allowRemoteFile
 function startServer() {
 	return new Promise(resolve => {
 		server = http
 			.createServer((req, res) => {
 				// /slow/ pauses mid-body; /broken/ drops the connection mid-body
-				if (req.url.startsWith('/slow/')) {
+				// /redirect-internal/ redirects to a blocked host, /redirect-ok/ to this host, /redirect-loop/ to itself
+				if (req.url.startsWith('/redirect-internal/')) {
+					res.writeHead(302, { location: 'http://169.254.169.254/latest/meta-data' }).end()
+				} else if (req.url.startsWith('/redirect-ok/')) {
+					res.writeHead(301, { location: '/moved' + req.url }).end()
+				} else if (req.url.startsWith('/redirect-loop/')) {
+					res.writeHead(302, { location: req.url }).end()
+				} else if (req.url.startsWith('/slow/')) {
 					res.write('PART1-')
 					setTimeout(() => res.end('PART2'), 400)
 				} else if (req.url.startsWith('/broken/')) {
@@ -71,6 +81,33 @@ async function send(handler, query) {
 tape('\n', async function (test) {
 	test.comment('-***- cache_index specs -***-')
 	await startServer()
+	// the local stand-in host is a loopback address, which fileurl() and cache_index() reject unless listed
+	serverconfig.urlHosts = ['127.0.0.1']
+	allowRemoteFile = serverconfig.features.ALLOW_remotefilefromurl
+	test.end()
+})
+
+tape('remote file is off by default', async test => {
+	delete serverconfig.features.ALLOW_remotefilefromurl
+	await rejects(
+		test,
+		() => utils.cache_index(`http://${H}/off/t.gz`, `http://${H}/off/t.gz.tbi`),
+		/Remote file not supported on this server/,
+		'cache_index() should reject when ALLOW_remotefilefromurl is not set'
+	)
+	test.notOk(fs.existsSync(path.join(serverconfig.cachedir, 'http', H, 'off')), 'should not create a cache dir')
+	test.deepEqual(
+		utils.fileurl({ query: { url: `http://${H}/off/t.gz` } }),
+		['Remote file not supported on this server.'],
+		'fileurl() should reject a url when ALLOW_remotefilefromurl is not set'
+	)
+	test.equal(
+		utils.fileurl({ query: { file: 'files/hg38/TermdbTest/TermdbTest_ITD.gz' } })[0],
+		null,
+		'fileurl() should still accept a server-side file'
+	)
+	// the remaining specs exercise url handling
+	serverconfig.features.ALLOW_remotefilefromurl = true
 	test.end()
 })
 
@@ -117,6 +154,21 @@ tape('cache_index() rejects non-remote protocols', async test => {
 			`should reject ${p}://`
 		)
 		test.notOk(fs.existsSync(path.join(serverconfig.cachedir, p, H)), `should not create cachedir/${p}/${H}`)
+	}
+	test.end()
+})
+
+tape('cache_index() rejects a primary url host that is not allowed', async test => {
+	// some routes, such as /bedgraphdot and a custom /junction track, call cache_index() with a request url
+	// without fileurl(), so cache_index() must also check the host of the primary url, not only the index url
+	for (const host of ['10.1.2.3', 'localhost', 'localhost.', '169.254.169.254']) {
+		await rejects(
+			test,
+			() => utils.cache_index(`http://${host}/x/t.gz`),
+			/url host is not allowed/,
+			`should reject a primary url on host=${host}`
+		)
+		test.notOk(fs.existsSync(path.join(serverconfig.cachedir, 'http', host)), `should not create cachedir/http/${host}`)
 	}
 	test.end()
 })
@@ -217,7 +269,39 @@ tape('cache_index() index download is atomic', async test => {
 	test.end()
 })
 
+tape('cache_index() checks the host of each index url redirect', async test => {
+	// fetch would follow a redirect from an allowed index url to an internal host (SSRF), unless each redirect is checked
+	const dir = path.join(serverconfig.cachedir, 'http', H, 'redirect/t.gz')
+	await rejects(
+		test,
+		() => utils.cache_index(`http://${H}/redirect/t.gz`, `http://${H}/redirect-internal/t.gz.tbi`),
+		/index url redirect error: url host is not allowed/,
+		'should reject a redirect to a host that is not allowed'
+	)
+	test.notOk(fs.existsSync(path.join(dir, 't.gz.tbi')), 'should not save an index after a rejected redirect')
+
+	await utils.cache_index(`http://${H}/redirect/t.gz`, `http://${H}/redirect-ok/t.gz.tbi`)
+	test.equal(
+		fs.readFileSync(path.join(dir, 't.gz.tbi'), 'utf8'),
+		'ATTACKER_BYTES /moved/redirect-ok/t.gz.tbi',
+		'should follow a redirect to an allowed host'
+	)
+
+	await rejects(
+		test,
+		() => utils.cache_index(`http://${H}/redirect2/t.gz`, `http://${H}/redirect-loop/t.gz.tbi`),
+		/too many redirects/,
+		'should stop following a redirect loop'
+	)
+
+	fs.rmSync(path.join(serverconfig.cachedir, 'http', H), { recursive: true, force: true })
+	test.end()
+})
+
 tape('cleanup', test => {
+	delete serverconfig.urlHosts
+	if (allowRemoteFile === undefined) delete serverconfig.features.ALLOW_remotefilefromurl
+	else serverconfig.features.ALLOW_remotefilefromurl = allowRemoteFile
 	server.close()
 	fs.rmSync(tmpdir, { recursive: true, force: true })
 	test.end()

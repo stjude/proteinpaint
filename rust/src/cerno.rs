@@ -12,7 +12,9 @@ use std::io;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
 
+mod sqlite_static;
 mod stats_functions;
+use sqlite_static::prepare_static;
 #[cfg(test)]
 mod test_cerno; // Contains test examples to test cerno
 
@@ -118,7 +120,7 @@ fn main() -> Result<()> {
                     let filter_non_coding_genes: bool = filter_non_coding_genes_input.as_bool().unwrap();
 
                     let genedbconn = Connection::open(genedb)?;
-                    let genedb_result = genedbconn.prepare(&("select * from codingGenes"));
+                    let genedb_result = prepare_static(&genedbconn, "select * from codingGenes");
                     let mut sample_coding_genes: Vec<stats_functions::gene_order> = Vec::with_capacity(24000);
                     match genedb_result {
                         Ok(mut x) => {
@@ -168,12 +170,13 @@ fn main() -> Result<()> {
                     //println!("background_genes:{:?}", background_genes);
 
                     let msigdbconn = Connection::open(&msigdb)?;
-                    let stmt_result = msigdbconn
-                        .prepare(&("select id from terms where parent_id='".to_owned() + &genesetgroup + "'"));
+                    // bound parameters, since genesetgroup is the request's geneSetGroup value
+                    let stmt_result = prepare_static(&msigdbconn, "select id from terms where parent_id=?");
                     match stmt_result {
                         Ok(mut stmt) => {
                             #[allow(non_snake_case)]
-                            let GO_iter = stmt.query_map([], |row| Ok(GO_pathway { GO_id: row.get(0)? }))?;
+                            let GO_iter =
+                                stmt.query_map([&genesetgroup], |row| Ok(GO_pathway { GO_id: row.get(0)? }))?;
                             #[allow(non_snake_case)]
                             let mut genesets = Vec::<String>::new();
                             for GO_term in GO_iter {
@@ -189,13 +192,11 @@ fn main() -> Result<()> {
 
                             if genesets.len() < PAR_CUTOFF {
                                 for gs in genesets {
-                                    let sql_statement =
-                                        "select genes from term2genes where id='".to_owned() + &gs + &"'";
-                                    //println!("sql_statement:{}", sql_statement);
-                                    let mut gene_stmt = msigdbconn.prepare(&(sql_statement))?;
+                                    let mut gene_stmt =
+                                        prepare_static(&msigdbconn, "select genes from term2genes where id=?")?;
                                     //println!("gene_stmt:{:?}", gene_stmt);
 
-                                    let mut rows = gene_stmt.query([])?;
+                                    let mut rows = gene_stmt.query([&gs])?;
                                     let mut names = HashSet::<String>::new();
                                     while let Some(row) = rows.next()? {
                                         let a: String = row.get(0)?;
@@ -256,16 +257,13 @@ fn main() -> Result<()> {
                                         for iter in 0..genesets.len() {
                                             let remainder: usize = iter % max_threads;
                                             if remainder == thread_num {
-                                                let sql_statement = "select genes from term2genes where id='"
-                                                    .to_owned()
-                                                    + &genesets[iter]
-                                                    + &"'";
-                                                //println!("sql_statement:{}", sql_statement);
                                                 let conn = pool_arc.get().unwrap();
-                                                let mut gene_stmt = conn.prepare(&sql_statement).unwrap();
+                                                let mut gene_stmt =
+                                                    prepare_static(&conn, "select genes from term2genes where id=?")
+                                                        .unwrap();
                                                 //println!("gene_stmt:{:?}", gene_stmt);
 
-                                                let mut rows = gene_stmt.query([]).unwrap();
+                                                let mut rows = gene_stmt.query([&genesets[iter]]).unwrap();
                                                 let mut names = HashSet::<String>::new();
                                                 while let Some(row) = rows.next().unwrap() {
                                                     let a: String = row.get(0).unwrap();

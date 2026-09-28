@@ -1,7 +1,6 @@
 import fs from 'fs'
 import { spawnSync } from 'child_process'
 import path from 'path'
-import { launch } from '@sjcrh/proteinpaint-server'
 
 const serverconfigFile = path.join(import.meta.dirname, './serverconfig.json')
 
@@ -12,8 +11,13 @@ if (!fs.existsSync(serverconfigFile)) {
 const serverconfigData = fs.readFileSync(serverconfigFile, 'utf8')
 const serverconfig = JSON.parse(serverconfigData)
 
+// Do not rewrite the mounted serverconfig.json, which may be read-only or not writable by the
+// container user. Instead, pass the derived values to the server, which applies them as if these
+// were in serverconfig.json, see server/src/serverconfig.js.
+const overrides = { backend_only: true }
+
 if (!serverconfig.genomes) {
-	serverconfig.genomes = [
+	overrides.genomes = [
 		{
 			name: 'hg19',
 			species: 'human',
@@ -39,15 +43,9 @@ if (!serverconfig.genomes) {
 	]
 }
 
-serverconfig.backend_only = true
-// TODO: app-server.mjs (and app-full.mjs) should have NO side effects on mounted artifacts except
-// active/public. This writeback mutates the mounted serverconfig.json, which forces that bind mount to
-// be read-write — a :ro mount makes this fail with EROFS and crashes the container at startup (the
-// releaseRollout healthgate then times out and rolls back a good release; see its validate.js guard
-// against a :ro serverconfig mount). Prefer passing the derived values (backend_only, and the default
-// genomes above) to launch() directly, or via process.env, so the server picks them up without
-// rewriting serverconfig.json on disk.
-fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '), { charset: 'utf8' })
+// the server package must be imported only after this env variable is set,
+// since the serverconfig is processed when the server package is first imported
+process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify(overrides)
 
 // TODO: may re-enable support for serverconfig.releaseTag, will require replacing launch from update @sjcrh/proteinpaint-server,
 //       but it may be better to do npm re-installss with a docker build on top of ppserver instead of this hack
@@ -64,4 +62,5 @@ fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '
 // }
 
 console.log('starting the server ...')
+const { launch } = await import('@sjcrh/proteinpaint-server')
 launch()

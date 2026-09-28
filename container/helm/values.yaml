@@ -31,19 +31,45 @@ resources:
     cpu: "2"
     memory: "8Gi"
 
-securityContext: {}
+securityContext:
+  allowPrivilegeEscalation: false
+# Empty by default, since the default image.tag above predates the non-root images, which run as the
+# unprivileged app user (UID/GID 1000, see container/deps/Dockerfile). Forcing UID 1000 on an older,
+# root-based image fails, since its node install is under /root. With an image.tag whose
+# `docker image inspect --format '{{.Config.User}}'` is `app`, use the settings below, where fsGroup
+# makes the mounted volumes, such as the tp/cache dir, writable by that user:
+#   podSecurityContext:
+#     runAsNonRoot: true
+#     runAsUser: 1000
+#     runAsGroup: 1000
+#     fsGroup: 1000
+# Another runAsUser may be used with runAsGroup: 0, since the dirs that the app writes at runtime are
+# also writable for group 0.
 podSecurityContext: {}
 
 container:
   name: proteinpaint
   containerPort: 3456
   command: ["/bin/bash"]
+  # envHelpers.mjs generates node.config.json to limit the server process file access, and passes any
+  # <NAME>_CREDS_FILE content as a <NAME>_CREDS env variable. Images published before envHelpers.mjs was
+  # added, such as the default image.tag above, do not have it, so the server then runs without those
+  # restrictions, as it did before; update image.tag to a newer release to apply them.
   args:
     - "-c"
     - |
       cp /home/root/pp/app/active/serverconfig /home/root/pp/app/active/serverconfig.json
-      node --enable-source-maps app-server.mjs
-  env: [] 
+      if [ -f envHelpers.mjs ]; then
+        exec node envHelpers.mjs node --enable-source-maps app-server.mjs
+      fi
+      echo "WARNING: this image does not have envHelpers.mjs, running the server without file access restrictions" >&2
+      exec node --enable-source-maps app-server.mjs
+  # the image defaults to PP_MODE=container-prod, which would override the port and tpmasterdir/cachedir
+  # paths below in config.serverConfig, so this chart sets it to empty to use its own values instead;
+  # set with ppMode instead of container.env, which the deployment template appends after PP_MODE
+  ppMode: ""
+  # additional env entries, such as PP_CREDS_FILE
+  env: []
 
 mounts:
   data:

@@ -88,6 +88,21 @@ tape('object values', test => {
 	test.end()
 })
 
+tape('encoding=json', test => {
+	const query = { encoding: 'json', a: '"abc"', b: '"123"', c: '123', d: '{"x":1}', e: 'true' }
+	test.deepEqual(
+		decode(query),
+		{ encoding: 'json', a: 'abc', b: '123', c: 123, d: { x: 1 }, e: true },
+		'should json-parse all values except for the encoding param'
+	)
+	test.throws(
+		() => decode({ encoding: 'json', a: 'abc' }),
+		/is not valid JSON/,
+		'should throw for a string value that is not wrapped by double-quotes'
+	)
+	test.end()
+})
+
 tape('non-string value type safety', test => {
 	// This test demonstrates that decode() should handle non-string values gracefully
 	// without attempting to call .startsWith() on them
@@ -104,5 +119,37 @@ tape('non-string value type safety', test => {
 		decode(query)
 	}, 'should not throw when value types are not strings')
 
+	test.end()
+})
+
+tape('prototype keys', test => {
+	const pollutedProto = '{"__proto__":{"isAdmin":true}}'
+	test.throws(
+		() => decode({ a: pollutedProto }),
+		/prototype property/,
+		'should throw for a __proto__ key in an object value'
+	)
+	test.throws(
+		() => decode({ a: '[1,{"b":{"__proto__":{"isAdmin":true}}}]' }),
+		/prototype property/,
+		'should throw for a nested __proto__ key in an array value'
+	)
+	test.throws(
+		() => decode({ a: '{"constructor":{"prototype":{"isAdmin":true}}}' }),
+		/prototype property/,
+		'should throw for a constructor.prototype key'
+	)
+	test.deepEqual(
+		decode({ a: '{"constructor":"x","proto":1,"b":"__proto__"}' }),
+		{ a: { constructor: 'x', proto: 1, b: '__proto__' } },
+		'should allow a constructor key without prototype, and __proto__ as a string value'
+	)
+	test.deepEqual(decode({ a: '__proto__' }), { a: '__proto__' }, 'should leave an unwrapped string value as-is')
+	test.throws(
+		() => decode({ encoding: 'json', a: pollutedProto }),
+		/prototype property/,
+		'should throw for a __proto__ key when all values are json-encoded'
+	)
+	test.equal(({} as any).isAdmin, undefined, 'should not pollute Object.prototype')
 	test.end()
 })

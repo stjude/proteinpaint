@@ -71,10 +71,14 @@ async function getScoresDict(query, ds) {
 	}
 }
 
+// previous comment: Score term wrappers come from get_multivalue_tws(), which carries only id/name/type/subtype/details,
+// and getData() does not rehydrate a wrapper that already has a name. Read the value labels from the
+// termdb so getPercentsDict() can fold answer capitalization.
 /*
-Score term wrappers come from get_multivalue_tws(), which carries only id/name/type/subtype/details,
-and getData() does not rehydrate a wrapper that already has a name. Read the value labels from the
-termdb so getPercentsDict() can fold answer capitalization.
+Score term wrappers come from q.get_multivalue_tws() in termdb.server.init.ts, which returns the parsed
+terms.jsondata plus id/name/type, so term.values is only present if the jsondata has it; the wrappers are
+also sent back by the client, and getData() does not rehydrate a wrapper that already has a name. Read the
+value labels from the termdb so getPercentsDict() can fold answer capitalization.
 */
 export function getScoreTermValues(tw, ds) {
 	return ds.cohort.termdb.q.termjsonByOneid(tw.term.id)?.values

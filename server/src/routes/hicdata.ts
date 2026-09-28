@@ -3,6 +3,7 @@ import { fileurl } from '#src/utils.js'
 import { spawn } from 'child_process'
 import readline from 'readline'
 import serverconfig from '#src/serverconfig.js'
+import { getStrawArgs, validHicPos } from '#src/utils/hicStraw.ts'
 
 export const payload: RoutePayload = {
 	init,
@@ -34,15 +35,28 @@ function init() {
 function handle_hicdata(q: HicdataRequest): Promise<HicdataResponse> {
 	return new Promise((resolve, reject) => {
 		const [e, file] = fileurl({ query: q })
-		if (e) reject({ error: 'illegal file name' })
+		if (e) return reject({ error: 'illegal file name' })
 
 		/*Value passed from client is not the proper straw parameter.
 		Must convert to straw parameter and apply the corresponding maths to the result.
 		Use 'observed' as default if not provided.
 		*/
-		const matrixType = q.matrixType == 'log(oe)' ? 'oe' : q.matrixType ? q.matrixType : 'observed'
-
-		const par = [matrixType, q.nmeth || 'NONE', file, q.pos1, q.pos2, q.isfrag ? 'FRAG' : 'BP', q.resolution]
+		let par: string[]
+		try {
+			const { strawMatrixType, nmeth, resolution } = getStrawArgs(q)
+			par = [
+				strawMatrixType,
+				nmeth,
+				file,
+				validHicPos(q.pos1),
+				validHicPos(q.pos2),
+				q.isfrag ? 'FRAG' : 'BP',
+				resolution
+			]
+		} catch (e) {
+			// the client reads the error message from data.error.error
+			return reject({ error: e })
+		}
 
 		const ps = spawn(serverconfig.hicstraw, par)
 		const rl = readline.createInterface({ input: ps.stdout })
@@ -73,6 +87,8 @@ function handle_hicdata(q: HicdataRequest): Promise<HicdataResponse> {
 		})
 
 		ps.stderr.on('data', i => erroutput.push(i))
+		// such as when the straw binary cannot be spawned; an unhandled 'error' event would throw
+		ps.on('error', e => reject({ error: 'cannot run straw: ' + e.message }))
 		ps.on('close', () => {
 			const err = erroutput.join('')
 			if (err) reject({ error: err })

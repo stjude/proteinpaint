@@ -118,7 +118,8 @@ tape(
 	async function (test) {
 		test.timeoutAfter(1000)
 
-		const creds = { [dslabel]: { termdb: { [embedder]: makeShapedCred() } } }
+		// the app-level middleware only protects the dsCredentials route patterns
+		const creds = { [dslabel]: { termdb: { [embedder]: makeShapedCred({ protectedRoutes: ['/termdb/matrix'] }) } } }
 		const app = makeMockApp()
 		const authApi = new AuthApi(creds, app, {}, { validatedCreds: creds })
 		await authApi.maySetAuthRoutes(app, {}, '/api', { port: 3000, cachedir: '/tmp' })
@@ -203,11 +204,9 @@ tape('AuthApi.canDisplaySampleIds: returns false when user is not logged in', fu
 	test.end()
 })
 
-// Regression guard for the /termdb/sampleScatter entry in Auth.protectedRoutes.samples — this list is the
-// privacy boundary for the route. If that entry were missing or misspelled, getRequiredCred() would find no
-// required cred for the exact path, isUserLoggedIn() would short-circuit to true, and a LOGGED-OUT request
-// would wrongly be allowed to display sample ids. The generic '/termdb' + typeof-boolean test above cannot
-// catch that, so assert the exact path with the session both absent and present.
+// Regression guard for the /termdb/sampleScatter route: canDisplaySampleIds() must fail closed for a
+// LOGGED-OUT request when the dataset has a termdb credential, whether or not the route-level
+// protectedRoutes.samples middleware has run. Assert the exact path with the session both absent and present.
 tape(
 	'AuthApi.canDisplaySampleIds: denies a logged-out request on the exact /termdb/sampleScatter path',
 	function (test) {
@@ -284,11 +283,9 @@ tape(
 	}
 )
 
-// Regression guard for the /termdb/matrix entry in Auth.protectedRoutes.samples — this list is the
-// privacy boundary for the route. If that entry were missing or misspelled, getRequiredCred() would find no
-// required cred for the exact path, isUserLoggedIn() would short-circuit to true, and a LOGGED-OUT request
-// would wrongly be allowed to display sample ids. The generic '/termdb' + typeof-boolean test above cannot
-// catch that, so assert the exact path with the session both absent and present.
+// Regression guard for the /termdb/matrix route: canDisplaySampleIds() must fail closed for a
+// LOGGED-OUT request when the dataset has a termdb credential, whether or not the route-level
+// protectedRoutes.samples middleware has run. Assert the exact path with the session both absent and present.
 tape('AuthApi.canDisplaySampleIds: denies a logged-out request on the exact /termdb/matrix path', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
@@ -863,7 +860,7 @@ tape('AuthApi.isUserLoggedIn: returns true when no cred is required for the rout
 	// A path that is not 'termdb' or 'burden' won't match any cred
 	const req = { query: { embedder, dslabel: 'unknown-ds' }, headers: {}, path: '/some-open-route', cookies: {} }
 	test.equal(
-		authApi.isUserLoggedIn(req as any, { label: dslabel } as any, []),
+		authApi.isUserLoggedIn(req as any, { label: dslabel } as any),
 		true,
 		'should return true when no cred is required'
 	)
@@ -872,7 +869,7 @@ tape('AuthApi.isUserLoggedIn: returns true when no cred is required for the rout
 
 tape('AuthApi.isUserLoggedIn: returns false when session is expired (no active session)', function (test) {
 	test.timeoutAfter(500)
-	test.plan(1)
+	test.plan(2)
 
 	const { authApi } = makeAuthApi()
 	const req = {
@@ -882,8 +879,94 @@ tape('AuthApi.isUserLoggedIn: returns false when session is expired (no active s
 		cookies: {}
 	}
 	// The ds label must match what's in creds
-	const result = authApi.isUserLoggedIn(req as any, { label: dslabel } as any, ['/termdb/matrix'])
-	test.equal(result, false, 'should return false when there is no active session')
+	test.equal(
+		authApi.isUserLoggedIn(req as any, { label: dslabel } as any),
+		true,
+		'should return true when no dsCredentials route pattern matches the request path'
+	)
+	// as used by the protectedRoutes.samples and minSampleSize middlewares
+	const result = authApi.isUserLoggedIn(req as any, { label: dslabel } as any, true)
+	test.equal(result, false, 'should return false when there is no active session and a termdb cred is required')
+	test.end()
+})
+
+tape('AuthApi: an inherited-name session id resolves to no session at every read path', async function (test) {
+	test.timeoutAfter(1000)
+	// getSessionId resolves the request-controlled id from req.query['x-sjppds-sessionid'], so a
+	// session id colliding with an Object.prototype member (e.g. '__proto__', 'constructor',
+	// 'toString') must never resolve an inherited value into a live session at getDsAuth (~L87),
+	// getNonsensitiveInfo (~L148) or isUserLoggedIn (~L189).
+	const inheritedIds = ['__proto__', 'constructor', 'toString']
+
+	const genomes = { hg38: { datasets: { [dslabel]: {} } } }
+	const clientAuthResult = { role: 'user' }
+	const loginToken = jsonwebtoken.sign(
+		{ iat: time, exp: time + 300, ip: '127.0.0.1', email: 'user@test.com', clientAuthResult },
+		secret
+	)
+	const { authApi, app } = await makeAuthApiWithRoutes({}, genomes)
+
+	// establish a real session for dslabel so the dslabel's session Map exists -- the inherited-name reads
+	// must still miss even when the dslabel level is populated
+	await new Promise<void>(resolve => {
+		const req = {
+			query: { embedder, dslabel },
+			headers: { [headerKey]: loginToken },
+			path: '/jwt-status',
+			ip: '127.0.0.1',
+			cookies: {}
+		}
+		const res = {
+			send() {
+				resolve()
+			},
+			header() {},
+			status() {}
+		}
+		app.routes['/jwt-status'].post(req, res)
+	})
+	await sleep(50)
+
+	for (const id of inheritedIds) {
+		// getNonsensitiveInfo (~L148)
+		const infoReq = {
+			query: { dslabel, embedder, 'x-sjppds-sessionid': id },
+			headers: {},
+			cookies: {}
+		}
+		test.deepEqual(
+			authApi.getNonsensitiveInfo(infoReq as any).clientAuthResult,
+			{},
+			`getNonsensitiveInfo returns no clientAuthResult for session id '${id}'`
+		)
+
+		// isUserLoggedIn (~L189)
+		const loginReq = {
+			query: { embedder, dslabel, 'x-sjppds-sessionid': id },
+			headers: {},
+			path: '/termdb/matrix',
+			cookies: {}
+		}
+		test.equal(
+			authApi.isUserLoggedIn(loginReq as any, { label: dslabel } as any, true),
+			false,
+			`isUserLoggedIn is false for session id '${id}'`
+		)
+
+		// getDsAuth (~L87)
+		const dsAuthReq = {
+			query: { embedder, 'x-sjppds-sessionid': id },
+			headers: {},
+			cookies: {},
+			get: () => embedder
+		}
+		const dsAuthEntry = authApi.getDsAuth(dsAuthReq as any).find((e: any) => e.dslabel == dslabel)
+		test.equal(dsAuthEntry?.insession, false, `getDsAuth shows insession=false for session id '${id}'`)
+	}
+
+	// none of the reads above may leak a session payload onto Object.prototype
+	test.equal(Object.getPrototypeOf({}), Object.prototype, 'Object prototype chain is intact')
+	test.notOk(({} as any).time, 'Object.prototype was not polluted with a session tracking object')
 	test.end()
 })
 
@@ -946,7 +1029,8 @@ tape('AuthApi.getPayloadFromHeaderAuth: returns jwt payload for valid bearer tok
 		query: { embedder, dslabel },
 		headers: { authorization: `Bearer ${Buffer.from(validToken).toString('base64')}` }
 	}
-	const result = authApi.getPayloadFromHeaderAuth(req as any, '/termdb/matrix')
+	// massSession.js calls this with a dsCredentials route key, such as 'termdb'
+	const result = authApi.getPayloadFromHeaderAuth(req as any, 'termdb')
 	test.ok(result, 'should return a payload object')
 	test.equal((result as any).email, email, 'should include the email from the payload')
 	test.end()
@@ -1257,6 +1341,39 @@ tape('AuthApi.getRequiredCredForDsEmbedder: fails closed for a non-string dslabe
 		() => authApi.getRequiredCredForDsEmbedder(dslabel, [embedder]),
 		/must be a string/,
 		'should throw for embedder[]'
+	)
+	test.end()
+})
+
+tape('AuthApi.routeMiddlewares: are frozen and named for the protectedRoutes json', function (test) {
+	test.timeoutAfter(500)
+	const { authApi } = makeAuthApi()
+	test.deepEqual(
+		Object.keys(authApi.routeMiddlewares),
+		['termdb', 'samples', 'minSampleSize'],
+		'should have the protected route middleware keys'
+	)
+	test.ok(Object.isFrozen(authApi.routeMiddlewares), 'should be frozen')
+	test.end()
+})
+
+tape('AuthApi.canDisplaySampleIds: uses the login status from the protectedRoutes.samples middleware', function (test) {
+	test.timeoutAfter(500)
+	const ds = { cohort: { termdb: { displaySampleIds: true } }, label: dslabel }
+	const { authApi } = makeAuthApi({}, { hg38: { datasets: { [dslabel]: ds } } })
+	const req: any = {
+		query: { embedder, dslabel, genome: 'hg38' },
+		headers: {},
+		path: '/termdb/sampleScatter',
+		cookies: {}
+	}
+	let nextCalled = false
+	authApi.routeMiddlewares.samples(req, {}, () => (nextCalled = true))
+	test.ok(nextCalled, 'should call next() from the samples middleware')
+	test.equal(
+		authApi.canDisplaySampleIds(req, ds as any),
+		false,
+		'should not display sample ids to a logged-out request'
 	)
 	test.end()
 })

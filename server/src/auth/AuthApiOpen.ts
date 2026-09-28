@@ -7,6 +7,13 @@ export const AuthApiOpen: AuthInterface = {
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: [],
 
+	// open access, no route-level auth checks
+	routeMiddlewares: Object.freeze({
+		termdb: (req, res, next) => next(),
+		samples: (req, res, next) => next(),
+		minSampleSize: (req, res, next) => next()
+	}),
+
 	maySetAuthRoutes(app) {
 		app.use(function setQueryProtectedProps(req, res, next) {
 			const sessionid = req.cookies.sessionid // can be undefined
@@ -34,7 +41,7 @@ export const AuthApiOpen: AuthInterface = {
 		// displaySampleIds may be a boolean or a per-request policy (a function of clientAuthResult);
 		// a truthy non-function value is an unconditional allow, a function must be evaluated for this
 		// request's role and fail closed. Open access carries no clientAuthResult (only sessionid).
-		if (typeof displaySampleIds != 'function') return true //AuthApiOpen.isUserLoggedIn(req, ds, protectedRoutes.samples)
+		if (typeof displaySampleIds != 'function') return true
 		try {
 			return !!displaySampleIds(req?.query?.__protected__?.clientAuthResult ?? {})
 		} catch {

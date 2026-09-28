@@ -3,6 +3,11 @@
 # Pull the published base (whole environment: Node, /opt/venv Python, R, samtools) from GHCR
 FROM ghcr.io/stjude/ppserver:latest
 
+# The ppserver image runs as the unprivileged app user (UID 1000), but this image installs packages
+# into root-owned dirs, such as the npm global prefix under /opt/nvm and the python venv under /opt/venv,
+# and only runs the server and python unit tests in CI, so it runs as root.
+USER root
+
 WORKDIR /home/root/proteinpaint
 
 COPY . .

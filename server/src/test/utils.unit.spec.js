@@ -13,10 +13,17 @@ doUpdateAttr
 get_fasta
 checkChr
 fileurl() argv safety
+fileurl() url protocol and host
+snpgtCacheFile()
+loadfile_ssid()
 */
+
+// the fileurl() specs exercise url handling, which only runs when remote files are allowed
+const allowRemoteFile = serverconfig.features.ALLOW_remotefilefromurl
 
 tape('\n', function (test) {
 	test.comment('-***- server/utils specs -***-')
+	serverconfig.features.ALLOW_remotefilefromurl = true
 	test.end()
 })
 
@@ -337,5 +344,135 @@ tape('fileurl() argv safety', test => {
 		'https://a.org/b.bam',
 		'should accept a normal url'
 	)
+	test.end()
+})
+
+tape('fileurl() url protocol and host', test => {
+	for (const url of ['/etc/passwd.bb', 'x/y.hic', 'file:///etc/x.bb', 'data://text/plain,abcde'])
+		test.equal(utils.fileurl({ query: { url } }).length, 1, `should reject url=${url}`)
+	for (const url of [
+		'http://localhost/x.bb',
+		'http://a.localhost/x.bb',
+		'http://localhost./x.bb', // a trailing dot resolves the same as localhost
+		'http://a.localhost./x.bb',
+		'http://127.0.0.1./x.bb',
+		'http://127.0.0.1:3000/x.bb',
+		'http://2130706433/x.bb', // decimal form of 127.0.0.1
+		'http://0x7f.1/x.bb',
+		'http://169.254.169.254/latest/meta-data',
+		'http://10.1.2.3/x.bb',
+		'http://172.16.0.1/x.bb',
+		'http://192.168.1.1/x.bb',
+		'http://0.0.0.0/x.bb',
+		'http://[::1]/x.bb',
+		'http://[::ffff:127.0.0.1]/x.bb',
+		'http://[fe80::1]/x.bb',
+		'http://[fd00::1]/x.bb',
+		// other ranges that are not globally reachable
+		'http://192.0.0.1/x.bb',
+		'http://192.0.2.1/x.bb',
+		'http://198.18.0.1/x.bb',
+		'http://198.19.255.255/x.bb',
+		'http://198.51.100.1/x.bb',
+		'http://203.0.113.5/x.bb',
+		'http://224.0.0.1/x.bb',
+		'http://255.255.255.255/x.bb',
+		'http://[64:ff9b::7f00:1]/x.bb', // translates to 127.0.0.1
+		'http://[2002:7f00:1::]/x.bb', // 6to4 of 127.0.0.1
+		'http://[2001:db8::1]/x.bb',
+		'http://[fec0::1]/x.bb',
+		'http://[ff02::1]/x.bb'
+	])
+		test.deepEqual(utils.fileurl({ query: { url } }), ['url host is not allowed'], `should reject url=${url}`)
+	for (const url of [
+		'https://a.org/b.bb',
+		'ftp://ftp.a.org/b.bb',
+		'http://8.8.8.8/b.hic',
+		'http://172.32.0.1/b.bb',
+		'http://198.20.0.1/b.bb', // just outside the benchmarking range 198.18.0.0/15
+		'http://[2606:4700::1111]/b.bb'
+	])
+		test.equal(utils.fileurl({ query: { url } })[1], url, `should accept url=${url}`)
+
+	// another url parser may read a backslash as part of the user info, and the text after @ as the host
+	for (const url of [
+		'http://a.org\\@127.0.0.1/x.bb',
+		'http://a.org\\x.bb',
+		'http://a.org/x\t.bb',
+		'http://a.org/x\n.bb'
+	])
+		test.deepEqual(
+			utils.fileurl({ query: { url } }),
+			['url must not contain a backslash, whitespace, or control character'],
+			`should reject url=${JSON.stringify(url)}`
+		)
+
+	serverconfig.urlHosts = ['a.org', '.b.org', '127.0.0.1']
+	for (const url of ['https://a.org/x.bb', 'https://a.org./x.bb', 'https://c.b.org/x.bb', 'http://127.0.0.1:3000/x.bb'])
+		test.equal(utils.fileurl({ query: { url } })[1], url, `should accept url=${url} listed in serverconfig.urlHosts`)
+	for (const url of [
+		'https://c.a.org/x.bb',
+		'https://b.org/x.bb',
+		'https://xb.org/x.bb',
+		'http://localhost/x.bb',
+		'http://localhost./x.bb'
+	])
+		test.deepEqual(
+			utils.fileurl({ query: { url } }),
+			['url host is not allowed'],
+			`should reject url=${url} not listed in serverconfig.urlHosts`
+		)
+	test.deepEqual(
+		utils.fileurl({ query: { url: 'http://a.org\\@10.0.0.1/x.bb' } }),
+		['url must not contain a backslash, whitespace, or control character'],
+		'should reject a url with a backslash even if its WHATWG host a.org is listed in serverconfig.urlHosts'
+	)
+	delete serverconfig.urlHosts
+	test.end()
+})
+
+tape('snpgtCacheFile()', test => {
+	const cacheid = 'hg38_SJLife_1760000000000_1234'
+	test.equal(
+		utils.snpgtCacheFile(cacheid),
+		`${serverconfig.cache_snpgt.dir}/${cacheid}`,
+		'should return the file path directly under cache_snpgt.dir'
+	)
+	for (const cacheid of ['../../etc/passwd', 'a/b', '..', '.', '/etc/passwd', 'a\\b', '', undefined, ['a']]) {
+		test.throws(
+			() => utils.snpgtCacheFile(cacheid),
+			/invalid cacheid/,
+			`should reject cacheid=${JSON.stringify(cacheid)}`
+		)
+	}
+	test.end()
+})
+
+tape('loadfile_ssid()', async test => {
+	for (const id of ['../../etc/passwd', 'a/b', '..', '/etc/passwd', undefined]) {
+		try {
+			await utils.loadfile_ssid(id)
+			test.fail(`should reject ssid=${JSON.stringify(id)}`)
+		} catch (e) {
+			test.equal(e, 'invalid ssid', `should reject ssid=${JSON.stringify(id)} before reading a file`)
+		}
+	}
+
+	const id = 'test_' + Math.random().toString().slice(2)
+	const file = `${utils.cachedir_ssid}/${id}`
+	fs.writeFileSync(file, 'Heterozygous\t1,2\nHomozygous reference\t3\n')
+	try {
+		const [sample2gt, genotype2sample] = await utils.loadfile_ssid(id)
+		test.equal(sample2gt.get(3), 'Homozygous reference', 'should load a valid ssid file')
+		test.deepEqual([...genotype2sample.get('Heterozygous')], [1, 2], 'should group samples by genotype')
+	} finally {
+		fs.unlinkSync(file)
+	}
+	test.end()
+})
+
+tape('cleanup', test => {
+	if (allowRemoteFile === undefined) delete serverconfig.features.ALLOW_remotefilefromurl
+	else serverconfig.features.ALLOW_remotefilefromurl = allowRemoteFile
 	test.end()
 })

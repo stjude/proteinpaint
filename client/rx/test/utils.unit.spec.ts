@@ -1,5 +1,6 @@
 import tape from 'tape'
 import { copyMerge, deepFreeze, deepCopyFreeze } from '../src/utils.ts'
+import { StoreBase } from '../src/StoreBase.ts'
 
 tape('copyMerge()', test => {
 	const target = {
@@ -46,6 +47,52 @@ tape('copyMerge()', test => {
 		{ b: 2, c: { x: 'test', y: [4], z: { r: 2, x: 2 }, g: { isAtomic: true, i: 'new prop' } } },
 		`gives the expected copyMerged results`
 	)
+
+	// prototype-pollution hardening: a crafted source must not touch Object.prototype
+	test.doesNotThrow(() => {
+		// JSON.parse creates __proto__ as an own enumerable data property
+		copyMerge('{}', JSON.parse('{"__proto__":{"polluted":"yes"}}'))
+	}, 'should not throw when merging a source with a __proto__ key')
+	test.equal(({} as any).polluted, undefined, 'should not pollute Object.prototype via a __proto__ key')
+
+	test.doesNotThrow(() => {
+		copyMerge('{}', JSON.parse('{"constructor":{"prototype":{"polluted2":"yes"}}}'))
+	}, 'should not throw when merging a source with a constructor.prototype key')
+	test.equal(({} as any).polluted2, undefined, 'should not pollute Object.prototype via a constructor.prototype key')
+
+	// regression: a normal deep merge still works unchanged
+	const protoA = { b: 1, c: { x: 'test', y: [0, 1], z: { r: 2 } } }
+	const protoB = { b: 2, c: { z: { x: 2 }, y: [4] } }
+	test.deepEqual(
+		copyMerge(protoA, protoB),
+		{ b: 2, c: { x: 'test', y: [4], z: { r: 2, x: 2 } } },
+		'should still deep-merge ordinary keys unchanged'
+	)
+	test.equal(({} as any).polluted, undefined, 'Object.prototype should be left clean after all cases')
+
+	test.end()
+})
+
+tape('StoreBase.copyMerge()', test => {
+	// exercise the store path that is actually reachable from a crafted mass URL state param
+	const store = new StoreBase({})
+
+	test.deepEqual(
+		store.copyMerge({ b: 1, c: { x: 'test', z: { r: 2 } } }, { b: 2, c: { z: { x: 2 } } }),
+		{ b: 2, c: { x: 'test', z: { r: 2, x: 2 } } },
+		'should deep-merge ordinary keys unchanged'
+	)
+
+	test.doesNotThrow(() => {
+		// JSON.parse creates __proto__ as an own enumerable data property
+		store.copyMerge('{}', JSON.parse('{"__proto__":{"polluted":"yes"}}'))
+	}, 'should not throw when merging a source with a __proto__ key')
+	test.equal(({} as any).polluted, undefined, 'should not pollute Object.prototype via a __proto__ key')
+
+	test.doesNotThrow(() => {
+		store.copyMerge('{}', JSON.parse('{"constructor":{"prototype":{"polluted2":"yes"}}}'))
+	}, 'should not throw when merging a source with a constructor.prototype key')
+	test.equal(({} as any).polluted2, undefined, 'should not pollute Object.prototype via a constructor.prototype key')
 
 	test.end()
 })

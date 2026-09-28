@@ -1,4 +1,5 @@
 import fs from 'fs'
+import net from 'net'
 import path from 'path'
 import { spawn } from 'child_process'
 import readline from 'readline'
@@ -38,6 +39,7 @@ get_header_bcf
 get_header_txt
 get_fasta
 connect_db
+snpgtCacheFile
 loadfile_ssid
 bam_ifnochr
 testIfFileIsBigbed
@@ -46,6 +48,11 @@ spawnTool
 validateRglst
 ********************** INTERNAL
 */
+
+// reading a file from a url makes the server fetch a caller-supplied url and may save the downloaded index
+// under cachedir, so it is off by default; enable with serverconfig.features.ALLOW_remotefilefromurl=true
+// on environments that support remote files, e.g. custom tracks by url
+const remoteFileNotAllowed = 'Remote file not supported on this server.'
 
 /*
 -- for tabix files, if no indexURL is given, allow using either tbi or csi file at the same location
@@ -58,6 +65,7 @@ validateRglst
 
 */
 export async function cache_index(gzurl, indexurl) {
+	if (!serverconfig.features.ALLOW_remotefilefromurl) throw remoteFileNotAllowed
 	if (!gzurl) throw '.gz file URL missing'
 	if (typeof gzurl != 'string') throw '.gz file URL not string'
 	if (indexurl) {
@@ -65,6 +73,10 @@ export async function cache_index(gzurl, indexurl) {
 	}
 	const [e, protocol, body] = test_url(gzurl)
 	if (e) throw '.gz file URL error: ' + e
+	// some routes pass a request url to cache_index() without fileurl(), and the url is then fetched by
+	// spawned tools such as tabix and samtools, so its host is checked here as well
+	const gzHostErr = illegalUrlHost(gzurl)
+	if (gzHostErr) throw '.gz file URL error: ' + gzHostErr
 	// build cache directory using gz file url and do not include index portion
 	// e.g. cache/https/domain/path/to/file.gz/
 	const dir = path.join(serverconfig.cachedir, protocol, body)
@@ -88,6 +100,8 @@ export async function cache_index(gzurl, indexurl) {
 		// index url given, may download it
 		const [e, protocol2, body2] = test_url(indexurl)
 		if (e) throw 'indexl url error: ' + e
+		const hostErr = illegalUrlHost(indexurl)
+		if (hostErr) throw 'index url error: ' + hostErr
 		// first, detect if the index file already exists in the dir+indexfile
 		const path2file = path.join(dir, path.basename(body2))
 		if (!isUnderDir(path2file, dir)) throw 'index URL file name escapes cache dir'
@@ -121,6 +135,7 @@ export function fileurl(req, checkWhiteList = true) {
 		if (illegalpath(file, checkWhiteList, false)) return ['illegal file path']
 		file = path.join(serverconfig.tpmasterdir, file)
 	} else if (req.query.url) {
+		if (!serverconfig.features.ALLOW_remotefilefromurl) return [remoteFileNotAllowed]
 		// a non-string, such as an array from a repeated query parameter, would bypass the checks below
 		if (typeof req.query.url != 'string') return ['url must be a string']
 		file = req.query.url
@@ -133,6 +148,12 @@ export function fileurl(req, checkWhiteList = true) {
 		if (file.split('/').includes('..')) return ['url must not contain ".." path segment']
 		// url goes into samtools/tabix argv, where a leading '-' would be parsed as an option
 		if (file[0] == '-') return ['url must not start with "-"']
+		// a url is passed to spawned tools, which the node permission model does not restrict, so
+		// a bare local path such as /etc/x.bb would be read from outside tpmasterdir and allow-fs-read
+		const [e] = test_url(file)
+		if (e) return [e]
+		const hostErr = illegalUrlHost(file)
+		if (hostErr) return [hostErr]
 		isurl = true
 	}
 	if (!file) return ['file unspecified']
@@ -211,27 +232,134 @@ function test_url(u) {
 	return [null, protocol, tmp[1]]
 }
 
+// ip ranges that are not globally reachable, from the IANA special-purpose address registries: loopback,
+// private, link-local (including the cloud metadata address 169.254.169.254), shared, benchmarking,
+// documentation, multicast, reserved, and ipv6 ranges that embed or translate to an ipv4 address;
+// an ipv4-mapped ipv6 address, such as ::ffff:7f00:1, is matched by the ipv4 rules
+const nonPublicIps = new net.BlockList()
+for (const [ip, prefix] of [
+	['0.0.0.0', 8], // "this" network
+	['10.0.0.0', 8], // private
+	['100.64.0.0', 10], // shared address space (carrier-grade nat)
+	['127.0.0.0', 8], // loopback
+	['169.254.0.0', 16], // link-local
+	['172.16.0.0', 12], // private
+	['192.0.0.0', 24], // ietf protocol assignments
+	['192.0.2.0', 24], // documentation (TEST-NET-1)
+	['192.88.99.0', 24], // 6to4 relay anycast (deprecated)
+	['192.168.0.0', 16], // private
+	['198.18.0.0', 15], // benchmarking
+	['198.51.100.0', 24], // documentation (TEST-NET-2)
+	['203.0.113.0', 24], // documentation (TEST-NET-3)
+	['224.0.0.0', 4], // multicast
+	['240.0.0.0', 4] // reserved, including the broadcast address 255.255.255.255
+])
+	nonPublicIps.addSubnet(ip, prefix, 'ipv4')
+for (const [ip, prefix] of [
+	['::', 128], // unspecified
+	['::1', 128], // loopback
+	['64:ff9b::', 96], // ipv4/ipv6 translation, embeds an ipv4 address
+	['64:ff9b:1::', 48], // local-use ipv4/ipv6 translation
+	['100::', 64], // discard-only
+	['2001::', 23], // ietf protocol assignments, including teredo 2001::/32
+	['2001:db8::', 32], // documentation
+	['2002::', 16], // 6to4, embeds an ipv4 address
+	['fc00::', 7], // unique local
+	['fe80::', 10], // link-local
+	['fec0::', 10], // site-local (deprecated)
+	['ff00::', 8] // multicast
+])
+	nonPublicIps.addSubnet(ip, prefix, 'ipv6')
+
+/*
+	u: a url that passed test_url()
+
+	returns an error message if the url host is not allowed, or undefined if allowed
+
+	A url is fetched by spawned tools, such as straw, bigBedToBed, tabix, and pyBigWig, so a request
+	could otherwise make the server fetch from its internal network (SSRF).
+	- serverconfig.urlHosts[], if set, is the list of allowed hosts: 'a.org' matches only that host,
+	  '.a.org' matches any subdomain of a.org. A listed host is allowed even if it is not public.
+	- otherwise, any host is allowed except localhost and literal non-public ip addresses. A hostname
+	  that resolves to a non-public ip address is not detected, so set serverconfig.urlHosts to fully
+	  prevent SSRF.
+	- an index url that is downloaded by download_index() has each redirect destination checked as well.
+	  A url that is fetched by a spawned tool, such as tabix, samtools, straw or bigBedToBed, may still
+	  follow a redirect to a host that is not allowed, since these tools follow redirects internally;
+	  restrict the outbound network access of the server to fully prevent that.
+*/
+export function illegalUrlHost(u) {
+	// the WHATWG parser below treats a backslash as a path separator, but a spawned tool with another url
+	// parser may not, e.g. it may read http://a.org\@127.0.0.1/x as user a.org\ at host 127.0.0.1,
+	// so a url with a backslash, whitespace, or control character is not allowed
+	if (typeof u != 'string' || /[\\\s\x00-\x1f\x7f]/.test(u))
+		return 'url must not contain a backslash, whitespace, or control character'
+	let host
+	try {
+		// the WHATWG parser normalizes ip address forms, such as http://2130706433/ to 127.0.0.1
+		host = new URL(u).hostname.toLowerCase()
+	} catch (_) {
+		return 'invalid url'
+	}
+	if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1) // ipv6
+	// a fully qualified name may end with a dot, such as localhost. or a.org., which resolves the same as without it
+	if (host.endsWith('.')) host = host.slice(0, -1)
+	if (!host) return 'url must have a host'
+	if (serverconfig.urlHosts) {
+		for (const h of serverconfig.urlHosts) {
+			if (h[0] == '.' ? host.endsWith(h) : host == h) return
+		}
+		return 'url host is not allowed'
+	}
+	if (host == 'localhost' || host.endsWith('.localhost')) return 'url host is not allowed'
+	const ipType = net.isIP(host)
+	if (ipType && nonPublicIps.check(host, ipType == 4 ? 'ipv4' : 'ipv6')) return 'url host is not allowed'
+}
+
 // true if file resolves strictly inside dir
 function isUnderDir(file, dir) {
 	return path.resolve(file).startsWith(path.resolve(dir) + path.sep)
 }
+// redirects of an index url that are followed by download_index(), see there
+const MAX_INDEX_REDIRECTS = 5
+
 async function download_index(url, tofile) {
 	/* try to download the index file
 
 	must detect following:
 	- downloading throws an HTTPError (https://proteinpaint.stjude.org/invalid)
 	- downloaded text data but not binary (https://pecan.stjude.cloud/invalid)
+	- a redirect to a url whose host is not allowed, see illegalUrlHost(): fetch would otherwise
+	  follow a redirect from an allowed url to an internal host such as 169.254.169.254, so redirects
+	  are followed here and the destination of each is checked
 
-	if either is true, should not 
+	if any is true, the index file is not saved
 	*/
+	let res
+	for (let redirects = 0; ; redirects++) {
+		try {
+			res = await ky(url, { throwHttpErrors: false, redirect: 'manual' })
+		} catch (e) {
+			// fetch thrown, must be invalid url
+			throw 'cannot download from url'
+		}
+		if (res.status < 300 || res.status > 399) break
+		const location = res.headers.get('location')
+		await res.body?.cancel()
+		if (!location) throw 'cannot download from url'
+		if (redirects >= MAX_INDEX_REDIRECTS) throw 'index url has too many redirects'
+		url = new URL(location, url).href
+		const [e] = test_url(url)
+		if (e) throw 'index url redirect error: ' + e
+		const hostErr = illegalUrlHost(url)
+		if (hostErr) throw 'index url redirect error: ' + hostErr
+	}
 	try {
-		const res = await ky(url, { throwHttpErrors: false })
 		if (res.status != 200) {
 			throw 'index file not accessible from url with status code ' + res.status
 		}
 		await stream2file(Readable.fromWeb(res.body), tofile)
 	} catch (e) {
-		// fetch thrown, must be invalid url
 		throw 'cannot download from url'
 	}
 }
@@ -558,7 +686,11 @@ export function read_file(file) {
 	return new Promise((resolve, reject) => {
 		fs.readFile(file, { encoding: 'utf8' }, (err, txt) => {
 			// must use reject in callback, not throw
-			if (err) reject('cannot read file: ' + file)
+			if (err) {
+				if (err.code === 'ERR_ACCESS_DENIED') reject(`file access denied`)
+				else reject('cannot read file: ' + file)
+				return
+			}
 			resolve(txt)
 		})
 	})
@@ -599,11 +731,20 @@ export const genotype_types = {
 export const cachedir_ssid = serverconfig.cachedir_ssid || path.join(serverconfig.cachedir, 'ssid')
 if (!fs.existsSync(cachedir_ssid)) fs.mkdirSync(cachedir_ssid)
 
+// a client-provided snp genotype cache id, such as tw.q.cacheid, must name a file directly under
+// cache_snpgt.dir; the callers that also apply cache_snpgt.fileNameRegexp keep that stricter check
+export function snpgtCacheFile(cacheid) {
+	if (illegalPathSegment(cacheid)) throw 'invalid cacheid'
+	return path.join(serverconfig.cache_snpgt.dir, cacheid)
+}
+
 export async function loadfile_ssid(id, samplefilterset) {
 	/*
 samplefilterset:
 	optional Set of samples to restrict to
 */
+	// the id is client-provided, such as q.ssid of /termdb/barsql, and must name a file directly under cachedir_ssid
+	if (illegalPathSegment(id)) throw 'invalid ssid'
 	const text = await read_file(path.join(cachedir_ssid, id))
 	const sample2gt = new Map()
 	// k: sample, v: genotype str

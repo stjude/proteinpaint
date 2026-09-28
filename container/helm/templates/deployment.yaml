@@ -44,10 +44,14 @@ spec:
           {{- end }}
           ports:
             - containerPort: {{ .Values.container.containerPort }}
-          {{- if .Values.container.env }}
           env:
-            {{- toYaml .Values.container.env | nindent 12 }}
-          {{- end }}
+            # rendered separately from container.env, since helm replaces a list in a values override
+            # instead of merging it, which would drop this entry when container.env is overridden
+            - name: PP_MODE
+              value: {{ .Values.container.ppMode | quote }}
+            {{- with .Values.container.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- if .Values.probes.enabled }}
           livenessProbe:
             httpGet:

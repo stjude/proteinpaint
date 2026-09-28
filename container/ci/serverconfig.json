@@ -23,5 +23,6 @@
   "cachedir": "/home/runner/work/proteinpaint/proteinpaint/cache",
   "URL": "http://localhost:3000",
   "port": 3000,
-  "backend_only": true
+  "backend_only": true,
+  "sqlCheck": "throw"
 }

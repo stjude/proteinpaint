@@ -21,7 +21,8 @@ export class ReqResCache {
 		this.reqJson = JSON.stringify(this.data.req)
 		if (this.generalRoutes.includes(req.path)) {
 			for (const [k, v] of Object.entries(this.data.req)) {
-				if (k.startsWith('get') && v === 1) this.customSubroute = k
+				// the key becomes part of the cache subdir name, so it must not add a dir level or a '..' segment
+				if (/^get\w+$/.test(k) && v === 1) this.customSubroute = k
 				else if (k === 'for') this.customSubroute = k
 			}
 		}

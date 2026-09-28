@@ -8,7 +8,7 @@ import http from 'http'
 import https from 'https'
 import { spawnSync } from 'child_process'
 import * as augen from '@sjcrh/augen'
-import serverconfig from './serverconfig.js'
+import serverconfig, { lockServerconfig } from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares } from './app.middlewares.js'
 import * as oldApp from './app.unorg.js'
@@ -36,6 +36,8 @@ export async function launch() {
 		// setting up auth routes before any other routes are set up
 		const validatedCreds = await extractValidatedCreds(serverconfig)
 		const trackedDatasets = await initGenomesDs(serverconfig, { credDslabels: Object.keys(validatedCreds) })
+		// all launch-time writes to serverconfig are done by now, lock it before any route is set
+		lockServerconfig(serverconfig)
 		const { doneLoading, pendingNotification } = processTrackedDs(trackedDatasets)
 
 		// no error from server initiation
@@ -65,7 +67,11 @@ export async function launch() {
 			app,
 			genomes,
 			basepath: serverconfig.basepath || '',
-			apiJson: path.join(__dirname, '../../public/docs/server-api.json')
+			apiJson: path.join(__dirname, '../../public/docs/server-api.json'),
+			// in debugmode, emit the protected route endpoints into a git-tracked file,
+			// see src/test/protectedRoutes.unit.spec.ts
+			debugmode: serverconfig.debugmode,
+			protectedRoutesJson: path.join(__dirname, '../test/protectedRoutes.json')
 			/**
 As an alternative to manually adding/removing imports in shared/types/src/routes, 
 you may temporarily uncomment below to generate runtime route checker code, 
@@ -156,9 +162,7 @@ init with bad config, data, and/or code
 	}
 }
 
-async function handle_argv(
-	argv: string[]
-): Promise<{ message?: string; error?: string; code?: number } | undefined> {
+async function handle_argv(argv: string[]): Promise<{ message?: string; error?: string; code?: number } | undefined> {
 	if (!argv?.length) return
 	if (argv.includes('validate'))
 		// exit early if only doing a validation of configuration + data + startup code

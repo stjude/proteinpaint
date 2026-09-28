@@ -1,0 +1,4 @@
+# only the sql injection rule is enabled for now: flake8-bandit S608 flags sql that is built with
+# f-strings, .format(), % or + instead of binding values as parameters, e.g. cursor.execute(sql, (value,))
+[lint]
+select = ["S608"]

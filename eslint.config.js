@@ -11,6 +11,7 @@ import globals from 'globals' //ready made list of environment globals
 import fs from 'fs' //Node's file-system module
 import path from 'path' //Node's path module
 import { fileURLToPath } from 'url'
+import noUnboundSql from './build/eslint/noUnboundSql.mjs'
 
 // Some lint issues should be errors locally to force developers to address them sooner,
 // but only warnings in remote CI so they don't block workflows.
@@ -18,9 +19,15 @@ const currentDir = path.dirname(fileURLToPath(import.meta.url))
 const sjppDir = path.join(currentDir, '../../sjpp')
 const errOrWarn = fs.existsSync(sjppDir) ? 'error' : 'warn'
 
-// esquery regex for template text that looks like a sql statement, used by the server sql lint rule
-// uppercase keywords, or a lowercase 'select <columns> from'
-const sqlKeywords = String.raw`/\b(SELECT|FROM|WHERE|JOIN|UNION|INSERT INTO|DELETE FROM|GROUP BY|ORDER BY)\b|\bselect\s+[\w*.,()\s]+\s+from\b/`
+// sql built with interpolation or concatenation is detected by the sql/no-unbound-sql rule, see build/eslint/noUnboundSql.mjs
+const sqlRule = [
+	'error',
+	{
+		// sql() cannot verify at runtime that it was called as a tag, so direct calls are prohibited here
+		selector: `CallExpression[callee.name='sql'], CallExpression[callee.object.name='sql'][callee.property.name=/^(call|apply|bind)$/]`,
+		message: 'Only use sql as a tagged template, sql`...`, calling it directly can pass arbitrary text as trusted sql'
+	}
+]
 
 export default tseslint.config(
 	{
@@ -79,23 +86,9 @@ export default tseslint.config(
 		// sql statements should bind values as parameters instead of interpolating them into the sql text,
 		// use the sql`` tag from server/src/sql.ts, see also guardDb() there for the runtime check
 		files: ['server/**/*.ts', 'server/src/**/*.js'],
-		rules: {
-			'no-restricted-syntax': [
-				'warn',
-				{
-					selector: `CallExpression[callee.property.name=/^(prepare|exec)$/] > TemplateLiteral.arguments[expressions.length>0]`,
-					message: 'Do not interpolate into sql passed to prepare()/exec(), use the sql`` tag from server/src/sql.ts'
-				},
-				{
-					selector: `CallExpression[callee.property.name=/^(prepare|exec)$/] > BinaryExpression.arguments[operator='+']`,
-					message: 'Do not concatenate sql passed to prepare()/exec(), use the sql`` tag from server/src/sql.ts'
-				},
-				{
-					selector: `TemplateLiteral[expressions.length>0]:not(TaggedTemplateExpression > .quasi):has(> TemplateElement[value.raw=${sqlKeywords}])`,
-					message: 'Sql-like template with ${} interpolation, use the sql`` tag from server/src/sql.ts to bind values'
-				}
-			]
-		}
+		// sql built with interpolation or concatenation, anywhere or passed to prepare()/exec(), see build/eslint/noUnboundSql.mjs
+		plugins: { sql: { rules: { 'no-unbound-sql': noUnboundSql } } },
+		rules: { 'no-restricted-syntax': sqlRule, 'sql/no-unbound-sql': 'error' }
 	},
 	{
 		files: ['shared/**/*.ts'],

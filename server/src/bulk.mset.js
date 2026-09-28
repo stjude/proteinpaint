@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import * as utils from './utils.js'
+import { sql } from './sql.ts'
 import serverconfig from './serverconfig.js'
 import { get_samples } from './termdb.sql.js'
 import * as bulk from '#shared/bulk.js'
@@ -129,9 +130,15 @@ export async function getTermTypes(q) {
 	const ds = this
 	try {
 		const ids = typeof q.ids == 'string' ? JSON.parse(q.ids) : q.ids
-		const qmarks = ids.map(() => '?').join(',')
-		const sql = `SELECT id, name, type, jsondata, parent_id FROM terms WHERE id IN (${qmarks}) OR name IN (${qmarks})`
-		const rows = ds.cohort.db.connection.prepare(sql).all([...ids, ...ids])
+		const rows = !ids.length
+			? []
+			: ds.cohort.db.connection
+					.prepare(
+						sql`SELECT id, name, type, jsondata, parent_id FROM terms WHERE id IN (${sql.list(
+							ids
+						)}) OR name IN (${sql.list(ids)})`
+					)
+					.all()
 		const terms = {}
 		for (const r of rows) {
 			if (r.jsondata) Object.assign(r, JSON.parse(r.jsondata))

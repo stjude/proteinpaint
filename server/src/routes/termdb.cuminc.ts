@@ -2,6 +2,7 @@ import { getData } from '#src/termdb.matrix.js'
 import { getTwByIndex, getTwBins } from '#src/termdb.twFromRequest.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import type { RouteApi, RoutePayload } from '#types'
+import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 
 const payload: RoutePayload = {
 	init,
@@ -11,6 +12,7 @@ const payload: RoutePayload = {
 
 export const api: RouteApi = {
 	endpoint: 'termdb/cuminc',
+	middlewares: [protectedRoutes.minSampleSize],
 	methods: {
 		get: payload,
 		post: payload

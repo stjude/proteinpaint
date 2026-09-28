@@ -14,7 +14,7 @@ import { mayLog } from './helpers.ts'
 import { getH5samples } from './utils/h5samples.ts'
 import { withholdSampleNames } from './utils/sampleGroups.ts'
 import { compute_mclass } from './vcf.mclass.js'
-import serverconfig from './serverconfig.js'
+import serverconfig, { mergeDsFeatures } from './serverconfig.js'
 import {
 	dtsnvindel,
 	dtfusionrna,
@@ -123,15 +123,7 @@ const unannotatedKey = 'Unannotated'
 */
 export async function init(ds, genome, totalDsLst = 0) {
 	// optional features/settings supplied by ds, when missing from serverconfig.features{}, are centralized here.
-	// overwrite not allowed! to prevent hard-to-trace error that 2nd ds changes value set by 1st ds etc...
-	for (const k in ds.serverconfigFeatures || {}) {
-		if (k in serverconfig.features) {
-			// on init retry, no need to see this message
-			if (!ds.init.status) console.log(`!!! NO OVERWRITING SERVERCONFIG.FEATURES.${k} (from ${ds.label}) !!!`)
-		} else {
-			serverconfig.features[k] = ds.serverconfigFeatures[k]
-		}
-	}
+	mergeDsFeatures(serverconfig, ds)
 
 	if (ds.preInit?.getStatus) {
 		const response = await ds.preInit.getStatus(ds).catch(e => {

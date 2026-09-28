@@ -16,6 +16,9 @@ tkmenu()
 
 hardlist4block
 stringisurl()
+remoteFileAllowed()
+mayShowRemoteFileNote()
+urlNotAllowed()
 newtk_bw
 newtk_bedj
 newtk_junction
@@ -444,8 +447,9 @@ function newtk_bw(block, div) {
 			.append('p')
 			.append('input')
 			.attr('type', 'text')
-			.attr('placeholder', 'URL or server-side file path')
+			.attr('placeholder', remoteFileAllowed() ? 'URL or server-side file path' : 'Server-side file path')
 			.attr('size', 40)
+		mayShowRemoteFileNote(box)
 		const p2 = box.append('p')
 
 		p2.append('button')
@@ -453,6 +457,7 @@ function newtk_bw(block, div) {
 			.on('click', () => {
 				const text = iurl.property('value').trim()
 				if (text == '') return
+				if (urlNotAllowed(text)) return
 				let file, url
 				if (stringisurl(text)) {
 					url = text
@@ -482,15 +487,20 @@ function newtk_bw(block, div) {
 		const input = box
 			.append('p')
 			.append('textarea')
-			.attr('placeholder', 'one track per line: [track name],[path/to/file.bw or URL]')
+			.attr(
+				'placeholder',
+				'one track per line: [track name],' + (remoteFileAllowed() ? '[path/to/file.bw or URL]' : '[path/to/file.bw]')
+			)
 			.attr('rows', 2)
 			.attr('cols', 50)
+		mayShowRemoteFileNote(box)
 		const p2 = box.append('p')
 		p2.append('button')
 			.text('Add tracks')
 			.on('click', () => {
 				const text = input.property('value').trim()
 				if (text == '') return
+				if (text.split(/[\r\n]/).some(s => urlNotAllowed((s.split(',')[1] || '').trim()))) return
 				for (const s of text.split(/[\r\n]/)) {
 					const l = s.split(',')
 					if (l[0] && l[1]) {
@@ -543,14 +553,21 @@ function newtk_bws(block, div) {
 		.append('p')
 		.append('input')
 		.attr('type', 'text')
-		.attr('placeholder', 'Forward strand URL or server-side file path')
+		.attr(
+			'placeholder',
+			'Forward strand ' + (remoteFileAllowed() ? 'URL or server-side file path' : 'server-side file path')
+		)
 		.attr('size', 40)
 	const reverseurl = box
 		.append('p')
 		.append('input')
 		.attr('type', 'text')
-		.attr('placeholder', 'Reverse strand URL or server-side file path')
+		.attr(
+			'placeholder',
+			'Reverse strand ' + (remoteFileAllowed() ? 'URL or server-side file path' : 'server-side file path')
+		)
 		.attr('size', 40)
+	mayShowRemoteFileNote(box)
 	const p2 = box.append('p')
 	p2.append('button')
 		.text('Add stranded bigWig track')
@@ -558,6 +575,7 @@ function newtk_bws(block, div) {
 			let file1, url1, file2, url2
 			const text = forwardurl.property('value').trim()
 			if (text == '') return
+			if (urlNotAllowed(text)) return
 			if (stringisurl(text)) {
 				url1 = text
 			} else {
@@ -565,6 +583,7 @@ function newtk_bws(block, div) {
 			}
 			const text2 = reverseurl.property('value').trim()
 			if (text2 == '') return
+			if (urlNotAllowed(text2)) return
 			if (stringisurl(text2)) {
 				url2 = text2
 			} else {
@@ -627,14 +646,16 @@ function newtk_bedj(block, div) {
 		.append('p')
 		.append('input')
 		.attr('type', 'text')
-		.attr('placeholder', 'URL or server-side file path')
+		.attr('placeholder', remoteFileAllowed() ? 'URL or server-side file path' : 'Server-side file path')
 		.attr('size', 40)
+	mayShowRemoteFileNote(box)
 	const p = box.append('p')
 	p.append('button')
 		.text('Add JSON-BED track')
 		.on('click', () => {
 			const text = ta.property('value').trim()
 			if (text == '') return
+			if (urlNotAllowed(text)) return
 			let file, url
 			if (stringisurl(text)) {
 				url = text
@@ -681,14 +702,16 @@ function newtk_junction(block, div) {
 		.append('p')
 		.append('input')
 		.attr('type', 'text')
-		.attr('placeholder', 'URL or server-side file path')
+		.attr('placeholder', remoteFileAllowed() ? 'URL or server-side file path' : 'Server-side file path')
 		.attr('size', 40)
+	mayShowRemoteFileNote(box)
 	const p = box.append('p')
 	p.append('button')
 		.text('Add junction track')
 		.on('click', () => {
 			const text = ta.property('value').trim()
 			if (text == '') return
+			if (urlNotAllowed(text)) return
 			let file, url
 			if (stringisurl(text)) {
 				url = text
@@ -739,14 +762,16 @@ function newtk_vcf(block, div) {
 		.append('p')
 		.append('input')
 		.attr('type', 'text')
-		.attr('placeholder', 'URL or server-side file path')
+		.attr('placeholder', remoteFileAllowed() ? 'URL or server-side file path' : 'Server-side file path')
 		.attr('size', 40)
+	mayShowRemoteFileNote(box)
 	const p = box.append('p')
 	p.append('button')
 		.text('Add VCF track')
 		.on('click', () => {
 			const text = ta.property('value').trim()
 			if (text == '') return
+			if (urlNotAllowed(text)) return
 			let file, url
 			if (stringisurl(text)) {
 				url = text
@@ -862,8 +887,9 @@ function newtk_interaction(block, div) {
 			.append('p')
 			.append('input')
 			.attr('type', 'text')
-			.attr('placeholder', '*.hic file URL or server-side path')
+			.attr('placeholder', remoteFileAllowed() ? '*.hic file URL or server-side path' : '*.hic file server-side path')
 			.attr('size', 40)
+		mayShowRemoteFileNote(div1)
 		let enzymeselect
 		if (block.genome.hicenzymefragment) {
 			const p = div1.append('p')
@@ -881,6 +907,7 @@ function newtk_interaction(block, div) {
 			.on('click', () => {
 				const str = urlinput.property('value')
 				if (!str) return
+				if (urlNotAllowed(str)) return
 				const tk = {
 					type: client.tkt.hicstraw,
 					name: tknameinput.property('value') || 'Custom interaction',
@@ -911,8 +938,9 @@ function newtk_interaction(block, div) {
 			.append('p')
 			.append('input')
 			.attr('type', 'text')
-			.attr('placeholder', '*.gz file URL or server-side path')
+			.attr('placeholder', remoteFileAllowed() ? '*.gz file URL or server-side path' : '*.gz file server-side path')
 			.attr('size', 40)
+		mayShowRemoteFileNote(div2)
 		div2
 			.append('p')
 			.append('button')
@@ -920,6 +948,7 @@ function newtk_interaction(block, div) {
 			.on('click', () => {
 				const str = urlinput.property('value')
 				if (!str) return
+				if (urlNotAllowed(str)) return
 				const tk = {
 					type: client.tkt.hicstraw,
 					name: tknameinput.property('value') || 'Custom interaction',
@@ -1769,6 +1798,28 @@ function tkhtmllabel(tk, block) {
 		' combined</span>'
 	)
 	*/
+}
+
+/* the custom track inputs take either a url or a server-side file path;
+when the server does not allow remote files (serverconfig.features.ALLOW_remotefilefromurl),
+the inputs only take a server-side file path
+*/
+const remoteFileNotSupported = 'Remote file not supported on this server.'
+
+function remoteFileAllowed() {
+	return JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}').ALLOW_remotefilefromurl
+}
+
+function mayShowRemoteFileNote(holder) {
+	if (remoteFileAllowed()) return
+	holder.append('p').style('color', '#858585').style('font-size', '.8em').text(remoteFileNotSupported)
+}
+
+// returns true and alerts the user if s is a url that the server does not allow
+function urlNotAllowed(s) {
+	if (remoteFileAllowed() || !stringisurl(s)) return false
+	window.alert(remoteFileNotSupported)
+	return true
 }
 
 function stringisurl(s) {

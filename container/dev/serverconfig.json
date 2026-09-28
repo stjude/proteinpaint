@@ -20,5 +20,6 @@
     }
   ],
   "tpmasterdir": "/home/root/proteinpaint/server/test/tp",
-  "cachedir": "/home/root"
+  "cachedir": "/home/root",
+  "sqlCheck": "throw"
 }

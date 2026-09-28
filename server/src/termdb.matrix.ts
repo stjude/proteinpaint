@@ -3,7 +3,8 @@ import { string2pos } from '#shared/common.js'
 import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
-import { read_file, trackXfetch } from './utils.js'
+import { sql } from './sql.ts'
+import { read_file, snpgtCacheFile, trackXfetch } from './utils.js'
 import {
 	isDictionaryType,
 	isNonDictionaryType,
@@ -59,16 +60,17 @@ export function shouldMapParent2Children(tw, ds, mapParent2Children, qSampleType
 	)
 }
 
-/* sample type ids are integers; returns a comma-separated list that is safe to interpolate into a sql IN clause */
+/* validated integer sample type ids as a sql.list() fragment, for use in an IN (...) clause */
 export function getSampleTypesSqlList(sampleTypes, ds) {
-	return sampleTypes
-		.map(st => {
+	return sql.list(
+		sampleTypes.map(st => {
 			const n = Number(st)
 			if (!Number.isInteger(n)) throw `sample type='${st}' is not an integer`
 			if (!ds.cohort.termdb.sampleTypes[n]) throw `invalid sample type='${st}'`
 			return n
-		})
-		.join(',')
+		}),
+		{ allowEmpty: true }
+	)
 }
 
 /*
@@ -861,17 +863,13 @@ export async function getSampleData_dictionaryTerms_cached(q, termWrappers, samp
 
 export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const byTermId = {} // to return
-	// must copy filter.values as its copy may be used in separate SQL statements,
-	// for example get_rows or numeric min-max, and each CTE generator would
-	// have to independently extend its copy of filter values
 	const filter = await getFilterCTEs(q.filter, q.ds, q.mapParent2Children, q.sampleTypes)
-	const values = filter ? filter.values.slice() : []
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
 			if (!tw.$id) tw.$id = tw.term.id || tw.term.name
 			// resolve + freeze, not just validate: see the comment at the top-level validateArg() check
 			tw.$id = resolveTermId(tw.$id)
-			const CTE = await get_term_cte(q, values, i, filter, tw)
+			const CTE = await get_term_cte(q, i, filter, tw)
 			if (CTE.bins) {
 				byTermId[tw.$id] = { bins: CTE.bins }
 			}
@@ -894,9 +892,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		throw err
 	})
 
-	// for "samplelst" term, term.id is missing and must use term.name
-	values.push(...termWrappers.map(tw => tw.$id || tw.term.id || tw.term.name))
-	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values)
+	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs)
 	const samples = await getSamples(q, rows, termWrappers)
 	return [samples, byTermId]
 }
@@ -948,32 +944,37 @@ When querying sample annotations for dictionary terms, the query is split into t
 
 Mapping parent annotations onto child samples: when mapParent2Children is true and the term sample type is a parent of the query sample type, then map the annotations of the term onto child samples with sample type matching the query sample type
 */
-export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
-	const sql = `WITH
-		${filter ? filter.filters + ',' : ''}
-		${CTEs.map(t => t.sql).join(',\n')}
-		${CTEs.map((t, i) => {
-			const tw = termWrappers[i]
-			let query
-			if (shouldMapParent2Children(tw, q.ds, q.mapParent2Children, q.sampleTypes)) {
-				// need to map parent annotations onto child samples and
-				// term sample type is parent of query sample type
-				query = `SELECT sa.sample_id as sample, key, value, ? as term_id
+export async function getAnnotationRows(q, termWrappers, filter, CTEs) {
+	const filterCTE = filter ? sql.id(filter.CTEname) : null
+	const selects = CTEs.map((t, i) => {
+		const tw = termWrappers[i]
+		// for "samplelst" term, term.id is missing and must use term.name
+		const termId = tw.$id || tw.term.id || tw.term.name
+		const table = sql.id(t.tablename)
+		if (shouldMapParent2Children(tw, q.ds, q.mapParent2Children, q.sampleTypes)) {
+			// need to map parent annotations onto child samples and
+			// term sample type is parent of query sample type
+			return sql`SELECT sa.sample_id as sample, key, value, ${termId} as term_id
 				FROM sample_ancestry sa
-				JOIN ${t.tablename} ON sa.ancestor_id = sample
+				JOIN ${table} ON sa.ancestor_id = sample
 				JOIN sampleidmap sm ON sa.sample_id = sm.id
 				WHERE sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes, q.ds)})
-				${filter ? `AND sa.sample_id IN ${filter.CTEname}` : ''}`
-			} else {
-				// query annotations directly
-				query = `SELECT sample, key, value, ? as term_id
-				FROM ${t.tablename}
-				${filter ? `WHERE sample IN ${filter.CTEname}` : ''}`
-			}
-			return query
-		}).join('\nUNION ALL\n')}`
+				${filterCTE ? sql`AND sa.sample_id IN ${filterCTE}` : sql``}`
+		}
+		// query annotations directly
+		return sql`SELECT sample, key, value, ${termId} as term_id
+				FROM ${table}
+				${filterCTE ? sql`WHERE sample IN ${filterCTE}` : sql``}`
+	})
+	const query = sql`WITH
+		${filter ? sql`${filter.filters},` : sql``}
+		${sql.join(
+			CTEs.map(t => t.sql),
+			sql`,\n`
+		)}
+		${sql.join(selects, sql`\nUNION ALL\n`)}`
 
-	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+	const rows = q.ds.cohort.db.connection.prepare(query).all()
 	return rows
 }
 
@@ -1204,7 +1205,8 @@ useAllSamples true/false
 		-do not perform imputation
 */
 async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
-	const lines = (await read_file(path.join(serverconfig.cache_snpgt.dir, tw.q.cacheid))).split('\n')
+	// tw.q.cacheid is client-provided, from any route that passes request terms to getData()
+	const lines = (await read_file(snpgtCacheFile(tw.q.cacheid))).split('\n')
 	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 
 	// array of sample ids from the cache file; note cache file contains all the samples from the dataset
@@ -1465,15 +1467,13 @@ function checkAccessToSampleData(data, ds, q) {
 	if (hiddenIds?.length) {
 		rows = ds.cohort.db.connection
 			.prepare(
-				`SELECT distinct value as name FROM anno_categorical WHERE term_id in (${hiddenIds
-					.map(() => '?')
-					.join(',')}) and sample in (${sampleIds.map(() => '?').join(',')})`
+				sql`SELECT distinct value as name FROM anno_categorical WHERE term_id in (${sql.list(
+					hiddenIds
+				)}) and sample in (${sql.list(sampleIds)})`
 			)
-			.all([...hiddenIds, ...sampleIds])
+			.all()
 	} else {
-		rows = ds.cohort.db.connection
-			.prepare(`SELECT name FROM sampleidmap WHERE id in (${sampleIds.map(() => '?').join(',')})`)
-			.all(sampleIds)
+		rows = ds.cohort.db.connection.prepare(sql`SELECT name FROM sampleidmap WHERE id in (${sql.list(sampleIds)})`).all()
 	}
 	const names = rows.map(s => s.name)
 	// pass sampleNames since portal token does not know internal sample ID-to-name mapping

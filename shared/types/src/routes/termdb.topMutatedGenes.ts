@@ -9,16 +9,6 @@ export type topMutatedGeneRequest = {
 	filter?: object
 	/** gdc cohort filter */
 	filter0?: object
-	/** rest are arguments for built in query */
-	snv_mfndi?: number
-	snv_splice?: number
-	snv_utr?: number
-	snv_s?: number
-	sv?: number
-	fusion?: number
-	cnv?: number
-	cnv_ms?: { type: string; geneLst: null }
-	cnv_logratio?: { type: string; geneLst: null }
 }
 
 export type MutatedGene = {

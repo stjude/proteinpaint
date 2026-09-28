@@ -10,6 +10,7 @@ import bodyParser from 'body-parser'
 import { ReqResCache, emitRelevantSpecCovDetails, publicSpecsDir } from '@sjcrh/augen/dev'
 import { getRelevantClientSpecs, getUrlParams } from './closestSpec.js'
 import { minimatch } from 'minimatch'
+import { createTapFailureTracker } from './tapFailures.js'
 
 // user __dirname later to detect relative path to public dir,
 // since the unit test may be triggered from the pp dir with --workspace option
@@ -70,10 +71,14 @@ async function runTest(patternsStr) {
 	const page = await browser.newPage()
 	const lastLines = []
 	let reachedSummary = false
+	// the failed assertions of the pattern being tested, to summarize at the end of a long test run
+	let failureTracker
+	const failureSummaries = []
 	page
 		.on('console', m => {
 			const msg = m.text()
 			console.log(msg)
+			failureTracker?.add(msg)
 			/*
         detected last lines are expected to look like below, 
         with empty lines before and after "# ok" line,
@@ -119,6 +124,7 @@ async function runTest(patternsStr) {
 		])
 
 		const [pattern, testedFiles] = _pattern.split('#')
+		failureTracker = createTapFailureTracker()
 		//console.log(101, DATAPORT, pattern)
 		console.log(`\n--- testing http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern} ---\n`)
 		// Navigate to test page
@@ -140,103 +146,117 @@ async function runTest(patternsStr) {
 				if (lastLines.length < 4 || !lastLines.find(t => t.includes('# ok') || t.includes('# fail'))) return
 				clearInterval(i)
 				console.log(`test run time=${(Date.now() - startTime) / 1000} ms`)
-
-				// Disable both JavaScript and CSS coverage
-				const [jsCoverage /*, cssCoverage*/] = await Promise.all([
-					page.coverage.stopJSCoverage()
-					//page.coverage.stopCSSCoverage(),
-				])
-
-				const passedTests = lastLines.findIndex(l => l.startsWith('# ok')) !== -1
-				if (!passedTests) {
-					console.error(`\n!!! test failed !!!\n`)
-					reject(lastLines.join('\n'))
+				// settle only after the coverage report is generated, otherwise a failed test would continue to the
+				// next pattern or to process.exit() while this callback is still generating the coverage report
+				try {
+					const failure = await reportCoverage(pattern, testedFiles)
+					if (failure) reject(failure)
+					else resolve()
+				} catch (e) {
+					reject(e)
+				} finally {
+					lastLines.splice(0, lastLines.length)
 				}
-
-				const matched = jsCoverage.filter(({ rawScriptCoverage: c }) => {
-					//if (!c.url.includes('node_modules') && !c.url.includes('sjcrh/proteinpaint-')) console.log(c.url)
-					return (
-						c.url.includes('/bin/test') &&
-						!c.url.includes('_.._') &&
-						!c.url.includes('node_modules') &&
-						!c.url.includes('appdrawer') &&
-						!c.url.includes('sjcrh/proteinpaint-')
-					) // appdrawer tests do not use TermdbTest
-				})
-				//fs.writeFileSync(`${process.cwd()}/results-${patternsArr.indexOf(pattern)}.json`, JSON.stringify(matched))
-
-				const coverageList = matched.map((it, i) => {
-					return {
-						source: it.text,
-						...it.rawScriptCoverage
-					}
-				})
-
-				const outputDir = path.join(__dirname, '../.coverage')
-				const mcr = MCR({
-					name: `Client test coverage for pattern '${pattern}'`,
-					sourceFilter: path => {
-						//if (!path.includes('node_modules')) console.log(path)
-						return (
-							(path.includes('client') || path.includes('shared')) &&
-							!path.includes('/bin/test') &&
-							!path.includes('_.._') &&
-							!path.includes('node_modules') &&
-							!path.includes('appdrawer') &&
-							!path.includes('sjcrh/proteinpaint-')
-						)
-					},
-					outputDir,
-					reports: ['v8', 'console-summary', 'html', 'json-summary', 'markdown-summary', 'markdown-details'],
-					cleanCache: true
-				})
-
-				const report = await mcr.add(coverageList)
-				await mcr.generate()
-
-				if (testedFiles) {
-					if (relevantSpecs) {
-						const extracts = await emitRelevantSpecCovDetails({
-							workspace: 'client',
-							relevantSpecs,
-							reportDir,
-							testedSpecs: patternToSpecs.get(pattern),
-							specPattern: pattern
-						})
-						if (extracts) {
-							//if (!title) title = extracts.title
-							html.push(extracts.html)
-							markdowns.push(extracts.markdown)
-						}
-					}
-
-					const { default: summary } = await import(`${outputDir}/coverage-summary.json`, { with: { type: 'json' } })
-					const files = testedFiles.split(',')
-					// disinguish reports from different spec-pattern-coverage runs,
-					// so that a user may interactively view the applicable coverage html
-					// const publicDir = pattern.replaceAll('&', '`_').replaceAll('=', '~')
-					// fs.renameSync(outputDir, path.join(__dirname, '../.nyc_output'))
-					const summaryFiles = Object.keys(summary)
-					for (const f of files) {
-						for (const key of summaryFiles) {
-							if (key.endsWith(`/${f}`)) {
-								relevantCoverage[key.replace('client/', '')] = summary[key]
-								//relevantCoverage[f].link = `/coverage/client/${dirname}/`
-
-								if (Object.hasOwn(json, f)) console.log(`non-unique coverage result for client file='${f}'`)
-								else json[f] = summary[key]
-							}
-						}
-					}
-				}
-
-				// delete all entries
-				lastLines.splice(0, lastLines.length)
-				if (passedTests) resolve()
 			}, 100)
 		}).catch(error => {
 			errors[pattern] = error
 		})
+		const summary = failureTracker.format({ title: `Failed assertions for spec pattern=${pattern}` })
+		if (summary) failureSummaries.push(summary)
+	}
+
+	// returns the failed test output, or undefined if the tests passed
+	async function reportCoverage(pattern, testedFiles) {
+		// Disable both JavaScript and CSS coverage
+		const [jsCoverage /*, cssCoverage*/] = await Promise.all([
+			page.coverage.stopJSCoverage()
+			//page.coverage.stopCSSCoverage(),
+		])
+
+		const passedTests = lastLines.findIndex(l => l.startsWith('# ok')) !== -1
+		const failure = passedTests ? undefined : lastLines.join('\n')
+		if (failure) console.error(`\n!!! test failed !!!\n`)
+
+		const matched = jsCoverage.filter(({ rawScriptCoverage: c }) => {
+			//if (!c.url.includes('node_modules') && !c.url.includes('sjcrh/proteinpaint-')) console.log(c.url)
+			return (
+				c.url.includes('/bin/test') &&
+				!c.url.includes('_.._') &&
+				!c.url.includes('node_modules') &&
+				!c.url.includes('appdrawer') &&
+				!c.url.includes('sjcrh/proteinpaint-')
+			) // appdrawer tests do not use TermdbTest
+		})
+		//fs.writeFileSync(`${process.cwd()}/results-${patternsArr.indexOf(pattern)}.json`, JSON.stringify(matched))
+
+		const coverageList = matched.map((it, i) => {
+			return {
+				source: it.text,
+				...it.rawScriptCoverage
+			}
+		})
+
+		const outputDir = path.join(__dirname, '../.coverage')
+		const mcr = MCR({
+			name: `Client test coverage for pattern '${pattern}'`,
+			sourceFilter: path => {
+				//if (!path.includes('node_modules')) console.log(path)
+				return (
+					(path.includes('client') || path.includes('shared')) &&
+					!path.includes('/bin/test') &&
+					!path.includes('_.._') &&
+					!path.includes('node_modules') &&
+					!path.includes('appdrawer') &&
+					!path.includes('sjcrh/proteinpaint-')
+				)
+			},
+			outputDir,
+			reports: ['v8', 'console-summary', 'html', 'json-summary', 'markdown-summary', 'markdown-details'],
+			cleanCache: true
+		})
+
+		const report = await mcr.add(coverageList)
+		await mcr.generate()
+
+		if (testedFiles) {
+			if (relevantSpecs) {
+				const extracts = await emitRelevantSpecCovDetails({
+					workspace: 'client',
+					relevantSpecs,
+					reportDir,
+					testedSpecs: patternToSpecs.get(pattern),
+					specPattern: pattern
+				})
+				if (extracts) {
+					//if (!title) title = extracts.title
+					html.push(extracts.html)
+					markdowns.push(extracts.markdown)
+				}
+			}
+
+			const { default: summary } = await import(`${outputDir}/coverage-summary.json`, { with: { type: 'json' } })
+			const files = testedFiles.split(',')
+			// disinguish reports from different spec-pattern-coverage runs,
+			// so that a user may interactively view the applicable coverage html
+			// const publicDir = pattern.replaceAll('&', '`_').replaceAll('=', '~')
+			// fs.renameSync(outputDir, path.join(__dirname, '../.nyc_output'))
+			const summaryFiles = Object.keys(summary)
+			for (const f of files) {
+				for (const key of summaryFiles) {
+					if (key.endsWith(`/${f}`)) {
+						relevantCoverage[key.replace('client/', '')] = summary[key]
+						//relevantCoverage[f].link = `/coverage/client/${dirname}/`
+
+						if (Object.hasOwn(json, f)) console.log(`non-unique coverage result for client file='${f}'`)
+						else json[f] = summary[key]
+					}
+				}
+			}
+		}
+
+		// delete all entries
+		lastLines.splice(0, lastLines.length)
+		return failure
 	}
 
 	await browser.close()
@@ -254,6 +274,8 @@ async function runTest(patternsStr) {
 	if (!Object.keys(errors).length) {
 		fs.writeFileSync('passedTests.txt', lastLines.join('\n'), { encoding: 'utf8' })
 	} else {
+		// the failed assertions, without having to search the whole test output for them
+		if (failureSummaries.length) console.log(`\n${failureSummaries.join('\n\n')}`)
 		console.log(`\n!!! Errors detected !!!`)
 		for (const [pattern, error] of Object.entries(errors)) {
 			console.log(`\nErrors testing spec pattern=${pattern}`)
