@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- A Slack notification from a server that was started with the `validate` argument, such as a pre-deploy trial run, is prefixed with `[validation run only]`, so that it is not mistaken for a startup error of the live server that it names
+- A fatal dataset init error or exhausted init retries no longer throw a `ReferenceError` instead of posting the Slack notification, since `initGenomesDs.js` did not import `sendMessageToSlack`
+
+
 ## 2.213.0
 
 Features:
