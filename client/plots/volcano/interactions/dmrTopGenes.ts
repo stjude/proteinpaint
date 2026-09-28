@@ -169,7 +169,10 @@ function drawGenes(
 				.attr('dominant-baseline', 'middle')
 				.attr('font-size', 12)
 				.text(s)
-		text(X.gene, r.gene).attr('font-weight', 'bold')
+		text(X.gene, r.gene.length > 12 ? r.gene.slice(0, 11) + '…' : r.gene)
+			.attr('font-weight', 'bold')
+			.append('title')
+			.text(r.gene)
 		text(X.fc, `${r.fc > 0 ? '+' : ''}${r.fc.toFixed(2)}`).attr(
 			'fill',
 			r.fc > 0 ? colors.caseColor : colors.controlColor
@@ -218,14 +221,14 @@ function drawSketch(g: any, r: any, pad: number) {
 			.attr('width', Math.max(1, x(b) - x(a)))
 			.attr('height', 8)
 			.attr('fill', '#666')
+	// in a strip under the gene, so a DMR spanning the body does not hide its exons
 	for (const d of dmrs)
 		g.append('rect')
 			.attr('x', x(d.from))
-			.attr('y', cy - 7)
+			.attr('y', cy + 5)
 			.attr('width', Math.max(2, x(d.to) - x(d.from)))
-			.attr('height', 14)
+			.attr('height', 6)
 			.attr('fill', d.deltaBeta >= 0 ? HYPER_COLOR : HYPO_COLOR)
-			.attr('fill-opacity', 0.8)
 			.append('title')
 			.text(
 				`${r.gene} ${d.context} DMR ${d.chr}:${d.start}-${d.stop}\n` +
