@@ -1,5 +1,6 @@
 import './dataset/termdb.test.ts'
 import { execSync } from 'child_process'
+import tape from 'tape'
 import path from 'path'
 import './src/serverconfig.js'
 
@@ -31,6 +32,9 @@ try {
 // TODO: handler spec:coverage package script to only test relevant specs
 try {
 	await import('./serverTests.js')
+	// launch() freezes the whole serverconfig, so all unit tests must finish first, since some of them modify serverconfig;
+	// must register after the import, since calling tape.onFinish() before any test is defined ends an empty test run
+	await new Promise(resolve => tape.onFinish(resolve))
 	await sleep(5000)
 	const { launch } = await import('./src/app.ts')
 	await launch()

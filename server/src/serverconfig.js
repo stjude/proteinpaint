@@ -46,6 +46,13 @@ if (!serverconfigfile) {
 	}
 }
 
+// an absent top-level setting must read as undefined, instead of from a polluted Object.prototype,
+// e.g. `if (serverconfig.debugmode)` when debugmode is not set in a prod serverconfig.json;
+// done right after parsing so that every setting read and default applied below in this module is also covered,
+// and in place so that it applies to every module that imports serverconfig;
+// the whole object is frozen later by lockServerconfig() in app.ts launch(), not here, since launch code and tests still modify it
+Object.setPrototypeOf(serverconfig, null)
+
 // Derived settings from a launcher script, such as the container app-server.mjs and app-full.mjs,
 // applied as if these were in serverconfig.json. This avoids rewriting a mounted serverconfig.json,
 // which may be read-only or not writable by the container user. Applied before any other processing,
@@ -384,6 +391,96 @@ if (!serverconfig.cache_snpgt) {
 }
 
 export default serverconfig
+
+/*
+	Make the whole serverconfig{} immutable for the rest of the server process lifetime, so that a request handler,
+	whether by bug or a malicious payload, cannot change a setting, e.g. turn on a dev-only or dangerous feature.
+
+	Must be called by app.ts launch() as soon as all launch-time writes are done, which are:
+	- the defaults and derived settings applied above in this module
+	- the removal of serverconfig.dsCredentials by auth.ts extractValidatedCreds()
+	- initGenomesDs(), which normalizes some settings, e.g. base_zindex, modifies serverconfig.genomes[] entries or
+	  their objects that are shared with the in-memory genome objects, e.g. snp{} and the raw dataset entries,
+	  and calls mergeDsFeatures() on the first, awaited dataset init attempt;
+	  dataset init retries after listen() only read serverconfig
+	Do not call this when serverconfig.js is imported, since many unit tests modify serverconfig.
+
+	- the whole object and everything nested in it are frozen, e.g. serverconfig.genomes[] and allowedEmbedders[],
+	  including the objects that are shared with in-memory genome objects, which are then also read-only
+	- features{} and every plain object nested in it also get a null prototype, so that a flag check such as
+	  `if (serverconfig.features.loosenCORS)` or `if (serverconfig.features.wsi?.allowDirectSlidePath)`
+	  cannot read a value from a polluted Object.prototype; arrays keep their prototype for .includes() etc;
+	  the top-level serverconfig{} already has a null prototype, as set above right after parsing
+
+	objects are locked in place instead of copied, so that a reference that a module captured at import time,
+	e.g. `const bamCache = serverconfig.features.bamCache` in bam.js, is locked too
+
+	throws, to fail the launch, when a value cannot be fully locked
+*/
+export function lockServerconfig(sc) {
+	const visited = new WeakSet()
+	// lock features{} first, so that its objects get a null prototype before the whole-object pass visits them
+	deepLock(sc.features, 'serverconfig.features', visited, true)
+	deepLock(sc, 'serverconfig', visited, false)
+}
+
+/*
+	obj: the value to lock
+	keyPath: for error messages
+	visited: to handle a circular or repeated reference
+	nullProto: true to also set a null prototype on a plain object
+*/
+function deepLock(obj, keyPath, visited, nullProto) {
+	// like a getter, a function may return a different value on each call, which freezing cannot prevent
+	if (typeof obj == 'function') throw `${keyPath} cannot be locked, since it is a function`
+	if (!obj || typeof obj != 'object' || visited.has(obj)) return
+	visited.add(obj)
+	const proto = Object.getPrototypeOf(obj)
+	if (obj instanceof RegExp) {
+		// test() and exec() on a regex with the g or y flag write to its lastIndex, which throws when frozen
+		if (obj.global || obj.sticky) throw `${keyPath} cannot be locked, since it is a RegExp with the g or y flag`
+	} else if (proto !== Object.prototype && proto !== null && !Array.isArray(obj)) {
+		// e.g. a Map, Set, or Date, whose contents are not protected by Object.freeze()
+		throw `${keyPath} cannot be locked, since only plain objects, arrays, and RegExps are supported`
+	} else if (nullProto && proto === Object.prototype) {
+		// the prototype of a frozen, sealed, or otherwise non-extensible object cannot be changed,
+		// so an object that was already frozen by other code, e.g. a dataset, would keep inheriting from Object.prototype
+		if (!Object.isExtensible(obj)) throw `${keyPath} cannot be locked, since it is already non-extensible`
+		Object.setPrototypeOf(obj, null)
+	}
+	Object.freeze(obj)
+	// always traverse, since an object that was already frozen by other code may still have mutable descendants;
+	// use all own keys, not just enumerable string keys, so that no nested value is skipped
+	for (const key of Reflect.ownKeys(obj)) {
+		const d = Object.getOwnPropertyDescriptor(obj, key)
+		// a getter may return a different or mutable value on each call, which freezing cannot prevent
+		if (!('value' in d)) throw `${keyPath}.${String(key)} cannot be locked, since it is a getter/setter property`
+		deepLock(d.value, `${keyPath}.${String(key)}`, visited, nullProto)
+	}
+}
+
+/*
+	Copy the optional ds.serverconfigFeatures{} into serverconfig.features{}, for keys that are not already set.
+	Overwrite not allowed! to prevent hard-to-trace error that 2nd ds changes value set by 1st ds etc...
+
+	Only own keys are copied and checked, so that a key inherited from a polluted Object.prototype
+	is never copied as an own feature, which lockServerconfig() would then freeze as enabled.
+*/
+export function mergeDsFeatures(sc, ds) {
+	for (const k of Object.keys(ds.serverconfigFeatures || {})) {
+		if (Object.hasOwn(sc.features, k)) {
+			// on init retry, no need to see this message
+			if (!ds.init?.status) console.log(`!!! NO OVERWRITING SERVERCONFIG.FEATURES.${k} (from ${ds.label}) !!!`)
+		} else {
+			Object.defineProperty(sc.features, k, {
+				value: ds.serverconfigFeatures[k],
+				enumerable: true,
+				writable: true,
+				configurable: true
+			})
+		}
+	}
+}
 
 /*
 	Option to add datasets under hg38-test and also feature flags, dsCredentials

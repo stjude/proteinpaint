@@ -74,7 +74,6 @@ export const tabixnoterror = s => {
 // ??? ch_genemcount is not used anywhere ???
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 
-export const features = serverconfig.features
 const tabix = serverconfig.tabix
 const samtools = serverconfig.samtools
 const bcftools = serverconfig.bcftools
@@ -1380,7 +1379,7 @@ async function handle_mdssvcnv_vcf(
 	let viewrangeupperlimit = vcfquery.viewrangeupperlimit
 	if (!viewrangeupperlimit && dsquery.iscustom) {
 		// no limit set for custom track
-		if (features.customMdsSingleSampleVcfNoRangeLimit) {
+		if (serverconfig.features.customMdsSingleSampleVcfNoRangeLimit) {
 			// this server has no range limit
 			viewrangeupperlimit = 0
 		} else {
