@@ -431,6 +431,8 @@ export function lockServerconfig(sc) {
 	nullProto: true to also set a null prototype on a plain object
 */
 function deepLock(obj, keyPath, visited, nullProto) {
+	// like a getter, a function may return a different value on each call, which freezing cannot prevent
+	if (typeof obj == 'function') throw `${keyPath} cannot be locked, since it is a function`
 	if (!obj || typeof obj != 'object' || visited.has(obj)) return
 	visited.add(obj)
 	const proto = Object.getPrototypeOf(obj)

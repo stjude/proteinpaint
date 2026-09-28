@@ -306,9 +306,16 @@ tape('lockServerconfig(): fails at launch for a value that freezing cannot prote
 		['a RegExp with the y flag', { features: { re: /a/y } }, /serverconfig.features.re/],
 		['a Map', { features: { cache: new Map() } }, /serverconfig.features.cache/],
 		['a Set', { genomes: [{ tracks: new Set() }] }, /serverconfig.genomes.0.tracks/],
-		['a Date', { maintenance: { start: new Date() } }, /serverconfig.maintenance.start/]
+		['a Date', { maintenance: { start: new Date() } }, /serverconfig.maintenance.start/],
+		['a function in features{}', { features: { errorNotifier: () => {} } }, /serverconfig.features.errorNotifier/],
+		['a function outside of features{}', { genomes: [{ getTracks() {} }] }, /serverconfig.genomes.0.getTracks/]
 	]) {
 		test.throws(() => lockServerconfig({ features: {}, ...sc }), expected, `should throw for ${label}`)
+	}
+	test.end()
+})
+
+/*
 	a local ./.ssl dir is detected relative to process.cwd(), so this test evaluates serverconfig.js
 	from a temporary working dir that has its own serverconfig.json, without any ssl setting
 */
