@@ -1,0 +1,115 @@
+name: "Cleanup old images"
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        type: boolean
+        description: Dry run (log what should be deleted, delete nothing)
+        default: true
+
+jobs:
+  cleanup:
+    environment: release
+    runs-on: ubuntu-22.04
+    permissions:
+      packages: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with: 
+          token: ${{ secrets.PAT }}
+
+      - name: Read Config
+        run: | 
+          CONFIG=.github/cleanup-config.json
+          echo "MAX_AGE_DAYS=$(jq -r '.maxAgeDays' "$CONFIG")" >> "$GITHUB_ENV"
+          echo "MAX_DELETIONS=$(jq -r '.maxDeletionsPerRun' "$CONFIG")" >> "$GITHUB_ENV"
+          echo "PACKAGES=$(jq -c '.packages' "$CONFIG")" >> "$GITHUB_ENV"
+
+      - name: List release branches
+        run: |
+          echo "RELEASE_BRANCHES=$(gh api repos/stjude/proteinpaint/branches --paginate --jq '[.[].name] | map(select(startswith("release-")))' -c)" >> "$GITHUB_ENV"
+        env:
+          GH_TOKEN: ${{secrets.PAT}}
+        
+      - name: List package versions
+        run: |
+          ALL="[]"
+          for pkg in $(echo "$PACKAGES" | jq -r '.[]'); do
+            v=$(gh api "orgs/stjude/packages/container/${pkg}/versions" --paginate \
+              --jq '[.[] | {package: "'"$pkg"'", id, created_at, tags: .metadata.container.tags}]')
+            ALL=$(jq -c -n --argjson a "$ALL" --argjson b "$v" '$a + $b')
+          done
+          echo "IMAGE_VERSIONS=$ALL" >> "$GITHUB_ENV"
+        env:
+          GH_TOKEN: ${{secrets.PAT}}
+
+      - name: Filter Packages
+        run: |
+          Filtered="[]"
+          NOW=$(date +%s)
+
+          while read -r version; do
+            tags=$(echo "$version" | jq -c '.tags')
+            tag_count=$(echo "$tags" | jq 'length')
+            keep=false
+            
+            if [ "$tag_count" -eq 0 ]; then
+              : #digest-only, no branch check possible - falls through to age check
+            elif echo "$tags" | jq -e 'index("latest") != null' > /dev/null; then
+              keep=true
+            elif echo "$tags" | jq -e 'any(. == "protected" or startswith("paper-"))' > /dev/null; then
+              keep=true
+            else
+              for tag in $(echo "$tags" | jq -r '.[]'); do
+                if [[" $tag" =~ ^v([0-9]+\.[0-9]+)\.[0-9]+-.+$ ]]; then
+                  prefix="release-${BASH_REMATCH[1]}"
+                  if echo "$RELEASE_BRANCHES" | jq -e --arg p "$prefix" 'any(.[]; startswith($p))' > /dev/null; then
+                    keep=true
+                    break
+                  fi
+                fi
+              done
+            fi
+
+            if [ "$keep" = false ]; then
+              created_at=$(echo "$version" | jq -r '.created_at')
+              age_days=$(( (NOW - $(date -d "$created_at" +%s)) / 86400 ))
+              [ "$age_days" -lt "$MAX_AGE_DAYS" ] && keep=true
+            fi
+            
+            if [ "$keep" = false ]; then
+              Filtered=$(jq -c -n --argjson a "$Filtered" --argjson b "$version" '$a + [$b]')
+            fi
+          done < <(echo "$IMAGE_VERSIONS" | jq -c '.[]')
+
+          echo "ELIGIBLE=$Filtered" >> "$GITHUB_ENV"
+        
+      - name: Throttle and Delete
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
+          GH_TOKEN: ${{ secrets.PAT }}
+        run: |
+          BATCH=$(echo "$ELIGIBLE" | jq -c "sort_by(.created_at)[0:$MAX_DELETIONS]")
+
+          while read -r item; do
+            package=$(echo "$item" | jq -r '.package')
+            id=$(echo "$item" | jq -r '.id')
+            tags=$(echo "$item" | jq -c '.tags')
+            created_at=$(echo "$item" | jq -r '.created_at')
+
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "[dry-run] would delete: package=$package id=$id created_at=$created_at tags=$tags"
+            else
+              echo "deleting: package=$package id=$id created_at=$created_at tags=$tags"
+              gh api --method DELETE "orgs/stjude/packages/container/${package}/versions/${id}"
+            fi
+          done < <(echo "$BATCH" | jq -c '.[]')
+
+          
+
+
+
+
+
