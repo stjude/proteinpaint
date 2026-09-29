@@ -21,6 +21,9 @@ if filter is applied, return set of sample id
 if not filtering, undefined
 */
 export async function mayLimitSamples(param, _allSamples, ds) {
+	// sampleTypes is a request parameter and may be tampered with, so only accept an array
+	if (param.sampleTypes != null && !Array.isArray(param.sampleTypes)) throw new Error('sampleTypes must be an array')
+
 	let allSamples
 	if (_allSamples) {
 		allSamples = typeof _allSamples[0] === 'object' ? new Set(_allSamples.map(i => i.name)) : new Set(_allSamples)
