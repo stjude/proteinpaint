@@ -17,6 +17,7 @@ import crypto from 'crypto'
 import { ReqResCache } from '@sjcrh/augen'
 import { abortCtrlBy } from './xfetch.js'
 import { mayLog } from './helpers.ts'
+import { validateRglst } from './utils.js'
 import { mayValidateRequestGeneRefs } from './geneRefValidation.ts'
 import { findForbiddenName } from './routes/common.ts'
 import { formatElapsedTime } from '#shared'
@@ -176,12 +177,12 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 			genome = 'hg38'
 			dslabel = 'GDC'
 		}
-		if (genome && dslabel) {
+		if (genome) {
 			// Object.hasOwn guards below so that a dslabel or genome that names an inherited property
 			// (e.g. 'toString', 'constructor') selects nothing instead of an Object.prototype member;
 			// findForbiddenName() above already rejects such values, this is defense in depth
 			const altByDs = serverconfig.features?.altGenomeByDslabel
-			const altGenome = altByDs && Object.hasOwn(altByDs, dslabel) ? altByDs[dslabel] : undefined
+			const altGenome = dslabel && altByDs && Object.hasOwn(altByDs, dslabel) ? altByDs[dslabel] : undefined
 			if (altGenome) {
 				req.query.genome = altGenome
 				genome = altGenome
@@ -195,26 +196,42 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 				res.send({ error: 'invalid genome' })
 				return
 			}
-			ds = g.datasets && Object.hasOwn(g.datasets, dslabel) ? g.datasets[dslabel] : undefined
-			// do not check genome-level termdb, not dataset-level termdb
-			if (!ds && !(g.termdbs && Object.hasOwn(g.termdbs, dslabel))) {
-				const paramName = mds3 ? 'mds3' : dsname ? 'dsname' : 'dslabel'
-				res.send({ error: `invalid ${paramName}` })
-				return
-			}
-			// a ds that caches at launch reports its own not-ready state; no dslabel check needed
-			const notReady = ds?.init?.notReadyMessage?.()
-			if (notReady) {
-				res.send({ error: notReady })
-				return
+
+			// genome is validated
+
+			if (Object.hasOwn(req.query, 'rglst')) {
+				// only validate if present; not every query has rglst param
+				// may replace a stringified req.query.rglst with the parsed array
+				try {
+					validateRglst(req.query, g)
+				} catch (e) {
+					res.send({ error: e.message || e })
+					return
+				}
 			}
 
-			/* reject a gene/isoform name the genome does not know, before any route handler
-			can query data with it, locally or against a remote api */
-			const geneRefError = mayValidateRequestGeneRefs(req, g, ds)
-			if (geneRefError) {
-				res.send({ error: geneRefError })
-				return
+			if (dslabel) {
+				ds = g.datasets && Object.hasOwn(g.datasets, dslabel) ? g.datasets[dslabel] : undefined
+				// do not check genome-level termdb, not dataset-level termdb
+				if (!ds && !(g.termdbs && Object.hasOwn(g.termdbs, dslabel))) {
+					const paramName = mds3 ? 'mds3' : dsname ? 'dsname' : 'dslabel'
+					res.send({ error: `invalid ${paramName}` })
+					return
+				}
+				// a ds that caches at launch reports its own not-ready state; no dslabel check needed
+				const notReady = ds?.init?.notReadyMessage?.()
+				if (notReady) {
+					res.send({ error: notReady })
+					return
+				}
+
+				/* reject a gene/isoform name the genome does not know, before any route handler
+				can query data with it, locally or against a remote api */
+				const geneRefError = mayValidateRequestGeneRefs(req, g, ds)
+				if (geneRefError) {
+					res.send({ error: geneRefError })
+					return
+				}
 			}
 		}
 

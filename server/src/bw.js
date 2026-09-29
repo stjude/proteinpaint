@@ -27,7 +27,6 @@ export default function (genomes) {
 async function handle_tkbigwig(req, res, genomes) {
 	const gn = genomes[req.query.genome]
 	if (!gn) throw 'invalid genome'
-	utils.validateRglst(req.query, gn)
 
 	const pa = {
 		// plot arg

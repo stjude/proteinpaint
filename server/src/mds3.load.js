@@ -1,4 +1,4 @@
-import { fileurl, validateRglst } from './utils.js'
+import { fileurl } from './utils.js'
 import { snvindelByRangeGetter_bcf } from './mds3.init.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import {
@@ -52,7 +52,7 @@ export function mds3_request_closure(genomes) {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
 
-			const q = init_q(req, genome)
+			const q = init_q(req)
 
 			const ds = await get_ds(q, genome)
 
@@ -67,7 +67,7 @@ export function mds3_request_closure(genomes) {
 	}
 }
 
-function init_q(req, genome) {
+function init_q(req) {
 	const query = req.query
 
 	if (req.get('X-Auth-Token')) {
@@ -80,10 +80,6 @@ function init_q(req, genome) {
 		query.hiddenmclass = new Set(JSON.parse(query.hiddenmclasslst))
 		delete query.hiddenmclasslst
 		// this filter set is passed to actual data querying method, after class is set for each item, will check it to decide if to drop
-	}
-	if (query.rglst) {
-		// only some queries use rglst
-		validateRglst(query, genome)
 	}
 	return query
 }

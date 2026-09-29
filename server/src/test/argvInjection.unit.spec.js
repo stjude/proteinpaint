@@ -188,8 +188,12 @@ tape('/mdsjunction', async test => {
 			junctionAposlst: []
 		})
 		test.equal(jB?.error, 'invalid chr', `junctionB should reject chr=${chr}`)
-		const rg = await send(handler, { genome: 'hg38', iscustom: 1, file, rglst: [{ chr, start: 1, stop: 2 }] })
-		test.ok(rg?.error, `rglst should reject chr=${chr}`)
+		// rglst is validated by the app middleware (app.middlewares.js) before the handler runs, not by the handler itself
+		test.throws(
+			() => utils.validateRglst({ rglst: [{ chr, start: 1, stop: 2 }] }, getGenome()),
+			/invalid chr name/,
+			`middleware rglst validation should reject chr=${chr}`
+		)
 	}
 
 	const urlAttack = await send(handler, {
