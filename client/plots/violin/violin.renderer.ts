@@ -29,7 +29,12 @@ type LegendGroup = {
 	items: LegendItem[]
 }
 
-export function getVisiblePvalues(chart: any, t1: TermWrapper, t2?: TermWrapper) {
+type PvalueTerm = {
+	term: { type: string }
+	q: { mode?: string; hiddenValues?: Record<string, number> }
+}
+
+export function getVisiblePvalues(chart: any, t1: PvalueTerm, t2?: PvalueTerm) {
 	const termNum =
 		t2?.term.type === 'condition' ||
 		t2?.term.type === 'samplelst' ||
