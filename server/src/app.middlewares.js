@@ -198,7 +198,7 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 
 			// genome is validated
 
-			if (req.query.rglst) {
+			if (Object.hasOwn(req.query, 'rglst')) {
 				// only validate if present; not every query has rglst param
 				// may replace a stringified req.query.rglst with the parsed array
 				try {
