@@ -1,3 +1,4 @@
+import { escapeHtml } from '#dom'
 import { getCompInit, type RxComponent } from '#rx'
 import type { MassAppApi } from './types/mass'
 import { Menu } from '#dom'
@@ -224,14 +225,6 @@ return the created bubble and allow to be modified
 export const chatInit = getCompInit(MassAiChatBot)
 
 // Prevents HTML/script injection in the chat UI (XSS) by entering markup in the prompt (Proposed fix by copilot)
-export function escapeHtml(s: string): string {
-	return s
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-		.replace(/'/g, '&#39;')
-}
 
 // Scan a plot state for a field whose value carries a `possible_options` array, indicating the
 // server could not resolve that term and is offering the user a list of choices. Returns the field

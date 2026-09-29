@@ -225,11 +225,17 @@ class MassGroups {
 		const table = table2col({ holder: groupsInfo })
 		table.table.style('scale', 0.9).style('margin-left', '0px')
 		for (const [grpKey, grp] of Object.entries(tw.term.values)) {
-			const colorSquare = grp.color
-				? `<span style="display:inline-block; width:12px; height:12px; background-color:${grp.color}" ></span>`
-				: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
 			const [c1, c2] = table.addRow()
-			c1.html(`${colorSquare} ${grp.label}`)
+			// color via CSSOM (.style) and label via .text() — never interpolate user values into markup
+			const square = c1.append('span').style('display', 'inline-block').style('margin', '0 4px')
+			if (grp.color) square.style('width', '12px').style('height', '12px').style('background-color', grp.color)
+			else
+				square
+					.style('width', '11px')
+					.style('height', '11px')
+					.style('background-color', '#fff')
+					.style('border', '0.1px solid black')
+			c1.append('span').text(grp.label)
 			// gdc etc. call them cases, not samples
 			const sampleLabel = this.app.vocabApi.termdbConfig?.uiLabels?.samples || 'samples'
 			c2.html(`${grp.othersGroupSampleNum || grp.list.length} ${sampleLabel}`)
