@@ -93,16 +93,32 @@ export function getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms) {
 	return selectedSampleTypes
 }
 
-// builds a sample type label based on the selected term values from dropdowns
-// created by renderSampleTypesByTermsSelect(). Terms for which the 'Any' option
-// was selected do not contribute to the label, since that selection is not
-// restrictive/informative. If every term used 'Any' (or there are no terms),
-// then return is undefined.
-export function getSampleTypeLabelByTerms(termSelects) {
-	if (!termSelects) return
-	const selected = getSelectedTermValues(termSelects)
-	if (!selected) return
-	const parts = Object.values(selected).filter(value => value != 'any')
-	if (!parts.length) return
-	return parts.join(' ')
+// builds a sample type label based on sample type selections,
+// unrestricted/all selections produce an empty label.
+export function mayGetSampleTypeLabel(opts: {
+	sampleTypeSelect?: any
+	querySampleTypes?: number[]
+	querySampleTypesByTerms?: any
+	termdbConfig?: any
+}) {
+	const { sampleTypeSelect, querySampleTypes, querySampleTypesByTerms, termdbConfig } = opts
+	let labelParts: string[]
+	let allSelected: boolean
+	let separator: string
+	if (querySampleTypes) {
+		const selected = getSelectedCheckboxValues(sampleTypeSelect)
+		if (!selected) return
+		allSelected = selected.length == querySampleTypes.length
+		labelParts = selected.map(sampleType => termdbConfig.sampleTypes[sampleType].plural_name)
+		separator = ', '
+	} else if (querySampleTypesByTerms) {
+		const selected = getSelectedTermValues(sampleTypeSelect)
+		if (!selected) return
+		labelParts = Object.values(selected).filter(value => value != 'any')
+		allSelected = labelParts.length == 0
+		separator = ' '
+	} else {
+		return
+	}
+	return allSelected ? '' : labelParts.join(separator)
 }
