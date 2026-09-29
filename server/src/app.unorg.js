@@ -232,15 +232,36 @@ async function handle_textfile(req, res) {
 	}
 }
 
+// redirects of a /urltextfile url that are followed by handle_urltextfile(), see there
+const MAX_URLTEXTFILE_REDIRECTS = 5
+
+/*
+	fetch a text file from req.query.url and return its text
+
+	the url is fetched by this server and the response is returned to the requester, so the url and the
+	destination of each redirect must pass utils.checkRemoteUrl(), otherwise a request could read from
+	the internal network of the server (SSRF)
+
+	a url that starts with serverconfig.URL, the public url of this server, is fetched from the loopback
+	address instead. This fixed a loopback request issue on prp1, where https links were not properly
+	downgrading to http.
+*/
 async function handle_urltextfile(req, res) {
-	// const url = req.query.url
-	const url = req.query.url.replace(serverconfig.URL, `http://127.0.0.1:${serverconfig.port}`)
-	/* 
-	Fix for loopback request issue on prp1. https links were not properly
-	downgrading to http. 
-	*/
+	const url = req.query.url
 	try {
-		const response = await ky(url, { throwHttpErrors: false })
+		let [e, fetchUrl] = urltextfileFetchUrl(url)
+		if (e) return res.send({ error: 'invalid url: ' + e })
+		let response
+		for (let redirects = 0; ; redirects++) {
+			response = await ky(fetchUrl, { throwHttpErrors: false, redirect: 'manual' })
+			if (response.status < 300 || response.status > 399) break
+			const location = response.headers.get('location')
+			await response.body?.cancel()
+			if (!location) break
+			if (redirects >= MAX_URLTEXTFILE_REDIRECTS) return res.send({ error: 'url has too many redirects' })
+			;[e, fetchUrl] = urltextfileFetchUrl(new URL(location, fetchUrl).href)
+			if (e) return res.send({ error: 'invalid url redirect: ' + e })
+		}
 		switch (response.status) {
 			case 200:
 				res.send({ text: utils.stripJsScript(await response.text()) })
@@ -254,6 +275,38 @@ async function handle_urltextfile(req, res) {
 	} catch (e) {
 		return res.send({ error: 'Error downloading file: ' + url })
 	}
+}
+
+/*
+	returns [error] if url must not be fetched, or [null, url to fetch]; the url is validated before
+	a url of this server is rewritten to the loopback address
+*/
+function urltextfileFetchUrl(url) {
+	const loopbackUrl = selfLoopbackUrl(url)
+	const e = utils.checkRemoteUrl(url, !!loopbackUrl)
+	if (e) return [e]
+	return [null, loopbackUrl || url]
+}
+
+/*
+	returns the loopback url for a url of this server, or undefined if url is not under serverconfig.URL;
+	only an exact prefix match that is followed by a path, query, or nothing is rewritten, so that a url
+	like https://pp.org.evil.com or https://pp.org@evil.com is not treated as this server
+*/
+function selfLoopbackUrl(url) {
+	const self = serverconfig.URL
+	if (!self || typeof url != 'string' || !url.startsWith(self)) return
+	const rest = url.slice(self.length)
+	if (rest && rest[0] != '/' && rest[0] != '?') return
+	// the rest must not change the host once it is appended to the loopback origin
+	const loopback = `http://127.0.0.1:${serverconfig.port}`
+	const rewritten = loopback + rest
+	try {
+		if (new URL(rewritten).origin != new URL(loopback).origin) return
+	} catch (_) {
+		return
+	}
+	return rewritten
 }
 
 function mds_query_arg_check(q) {
