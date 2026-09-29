@@ -52,6 +52,7 @@ term1=singleCellExpression, term2=singleCellCellType
 term1=dnameth, term2=geneExp
 
 ***************/
+const seriesLabelPrefixTestId = 'sjpp-violin-series-label-'
 
 tape('\n', function (test) {
 	test.comment('-***- plots/violin -***-')
@@ -523,7 +524,7 @@ tape('test hide option on label clicking', function (test) {
 		const hiddenPlot = violin.Inner.data.charts[''].plots[0]
 		const labels = await detectLst({
 			elem: violinDiv.node(),
-			selector: '[data-testid="sjpp-violin-label"]',
+			selector: `[data-testid^="${seriesLabelPrefixTestId}"]`,
 			count: 2
 		})
 		labels[0].dispatchEvent(new Event('click', { bubbles: true }))
@@ -533,7 +534,7 @@ tape('test hide option on label clicking', function (test) {
 		})
 		hideOption.dispatchEvent(new Event('click', { bubbles: true }))
 
-		await detectLst({ elem: violinDiv.node(), selector: '[data-testid="sjpp-violin-label"]', count: 1 })
+		await detectLst({ elem: violinDiv.node(), selector: `[data-testid^="${seriesLabelPrefixTestId}"]`, count: 1 })
 		test.equal(
 			violin.Inner.config.term2.q.hiddenValues[hiddenPlot.label],
 			1,
@@ -552,10 +553,10 @@ tape('test hide option on label clicking', function (test) {
 			'q.hiddenValues match legend'
 		)
 		const unhideLegendValue = htmlLegends.filter(c => hiddenKeys.find(k => c.__data__.text === k))
-		unhideLegendValue[0].dispatchEvent(new Event('click'), { bubbles: true })
+		unhideLegendValue[0].dispatchEvent(new Event('click', { bubbles: true }))
 		const hiddenValueRendered = await detectGte({
 			elem: violinDiv.node(),
-			selector: '[data-testid="sjpp-violin-label"]',
+			selector: `[data-testid^="${seriesLabelPrefixTestId}"]`,
 			count: 2
 		})
 		test.ok(hiddenValueRendered, 'hidden value rendered')
@@ -1453,7 +1454,7 @@ const open_state = {
 async function testLabelHoverClick(test, violin, violinDiv, labelcount) {
 	const labs = await detectLst({
 		elem: violinDiv.node(),
-		selector: '[data-testid="sjpp-violin-label"]',
+		selector: `[data-testid^="${seriesLabelPrefixTestId}"]`,
 		count: labelcount
 	})
 	test.ok(labs, `Detected ${labelcount} violin labels`)

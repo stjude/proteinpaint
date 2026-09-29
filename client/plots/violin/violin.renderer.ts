@@ -97,7 +97,6 @@ export default function setViolinRenderer(self: any) {
 			self.dom.legendDiv.selectAll('*').remove()
 			return
 		}
-		console.log('Finished rendering violin chart', self.opts.mode != 'minimal', 2)
 		for (const chartKey of chartKeys) {
 			const chart: ViolinResponseChart & { chartDiv?: any } = data.charts[chartKey]
 			const plots = chart.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
@@ -441,7 +440,7 @@ export default function setViolinRenderer(self: any) {
 	function renderLabels(t1: any, t2: any, violinG: any, plot: any, isH: boolean, settings: any) {
 		violinG
 			.append('text')
-			.attr('data-testid', `sjpp-violin-label-${plot.label}`)
+			.attr('data-testid', `sjpp-violin-series-label-${plot.label}`)
 			.text(`${plot.label}, n=${plot.plotValueCount}`)
 			.style('cursor', 'pointer')
 			.on('click', function (event: MouseEvent) {
