@@ -35,6 +35,7 @@ export class SampleTableRenderer {
 				const item = this.buildItemFromRow(data, rowIndex)
 				this.interactions.updateItem(item)
 				this.dom.plotsBtnsDiv.style('display', 'block')
+				this.dom.selectBtn!.toggle()
 			}
 		})
 		this.reapplyAllPlotButtons()

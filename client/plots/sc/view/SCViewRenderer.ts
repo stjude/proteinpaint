@@ -50,16 +50,21 @@ export class SCViewRenderer {
 			.style('padding', '5px 10px')
 			.style('background-color', 'transparent')
 			//Will need to use ds specific keys/logic here
-			.text('Select sample and plots')
+			.text('Select sample') as SCDom['selectBtn']
 
-		const arrowSpan = btn.append('span').style('font-size', '0.8em').style('padding-left', '3px').text('▼')
+		const arrowSpan = btn!.append('span').style('font-size', '0.8em').style('padding-left', '3px').text('▼')
 
-		btn.on('click', () => {
+		btn!.toggle = () => {
 			SCViewRenderer.inUse = !SCViewRenderer.inUse
 			arrowSpan.text(SCViewRenderer.inUse ? '▼' : '▲')
 			this.dom.tableDiv.style('display', SCViewRenderer.inUse ? 'block' : 'none')
-			this.dom.plotsBtnsDiv.style('display', SCViewRenderer.inUse ? 'block' : 'none')
+		}
+
+		btn!.on('click', () => {
+			btn!.toggle()
 		})
+
+		this.dom.selectBtn = btn
 	}
 
 	renderGroupByOptions(settings: SCSettings) {

@@ -14,6 +14,7 @@ import { SampleTableRenderer } from '../view/SampleTableRenderer.ts'
  *   - renderSamplesTable() noButtonCallback should throw when sID is missing
  *   - renderSamplesTable() noButtonCallback should call interactions.updateItem
  *   - renderSamplesTable() noButtonCallback should show plotsBtnsDiv
+ *   - renderSamplesTable() noButtonCallback should toggle the select btn on sample selection
  *   - reapplyAllPlotButtons() should apply buttons for each active sample
  *   - updateTable() should remove buttons when sample no longer in activeSandboxes
  *   - updateTable() should not append buttons when no sandboxes exist for sample
@@ -57,9 +58,12 @@ function getTestTableData() {
 }
 
 function getMockDom(holder: any) {
+	const selectBtn = holder.append('button') as any
+	selectBtn.toggle = () => {}
 	return {
 		tableDiv: holder,
-		plotsBtnsDiv: holder.append('div').style('display', 'none')
+		plotsBtnsDiv: holder.append('div').style('display', 'none'),
+		selectBtn
 	} as any
 }
 
@@ -259,6 +263,25 @@ tape('renderSamplesTable() noButtonCallback should show plotsBtnsDiv', test => {
 	firstRow.click()
 
 	test.equal(dom.plotsBtnsDiv.style('display'), 'block', 'Should set plotsBtnsDiv display to block')
+
+	endTest(test, holder)
+})
+
+tape('renderSamplesTable() noButtonCallback should toggle the select btn on sample selection', test => {
+	let toggled = false
+	const holder = getHolder()
+	const dom = getMockDom(holder)
+	dom.selectBtn.toggle = () => {
+		toggled = true
+	}
+	const interactions = getMockInteractions()
+	const tableData = getTestTableData()
+	new SampleTableRenderer(dom, interactions, tableData)
+
+	const firstRow = holder.select('tr.sjpp_row_wrapper').node() as HTMLElement
+	firstRow.click()
+
+	test.ok(toggled, 'Should call selectBtn.toggle() when a sample is selected')
 
 	endTest(test, holder)
 })
