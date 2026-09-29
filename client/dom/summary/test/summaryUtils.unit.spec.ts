@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { setDescrStatsByTerm } from '../violinBoxUtils'
+import { setDescrStatsByTerm } from '../summaryUtils'
 
 
 /** Tests
@@ -11,7 +11,7 @@ import { setDescrStatsByTerm } from '../violinBoxUtils'
 ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- dom/summary/violinBoxUtils -***-')
+	test.comment('-***- dom/summary/summaryUtils -***-')
 	test.end()
 })
 

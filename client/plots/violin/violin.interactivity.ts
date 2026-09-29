@@ -1,5 +1,13 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
-import { niceNumLabels, ListSamples, renderTable, CustomDownloadMenu, type DownloadMenuOption } from '#dom'
+import {
+	niceNumLabels,
+	ListSamples,
+	renderTable,
+	CustomDownloadMenu,
+	type DownloadMenuOption,
+	descrStatsToTSV,
+	testRowsToTSV
+} from '#dom'
 import { isSingleCellTerm } from '#shared'
 
 type MenuOption = {
@@ -33,14 +41,7 @@ export function setInteractivity(self: any) {
 				label: 'Descriptive statistics',
 				testid: 'sjpp-download-descrstats',
 				filename: `${filename}_descriptive_stats`,
-				callback: () => {
-					const lines = ['Term\tStatistic\tValue']
-					for (const tw of statTerms) {
-						for (const s of Object.values(tw.q.descrStats) as any[])
-							lines.push(`${tw.term.name}\t${s.label}\t${s.value}`)
-					}
-					return lines.join('\n')
-				}
+				callback: () => descrStatsToTSV(statTerms.map(tw => ({ name: tw.term.name, stats: tw.q.descrStats })))
 			})
 		}
 
@@ -50,16 +51,14 @@ export function setInteractivity(self: any) {
 				label: 'Group comparisons',
 				testid: 'sjpp-download-pvalues',
 				filename: `${filename}_wilcoxon_group_comparisons`,
-				callback: () => {
-					const lines = ['Wilcoxon\'s rank sum test', 'Chart\tGroup 1\tGroup 2\tP-value']
-					for (const chart of charts) {
-						if (!chart.pvalues) continue
-						const title = self.getChartTitle(chart.chartId)
-						for (const row of chart.pvalues)
-							lines.push([title, ...row.map(cell => cell.value ?? cell.html)].join('\t'))
-					}
-					return lines.join('\n')
-				}
+				callback: () =>
+					testRowsToTSV(
+						"Wilcoxon's rank sum test",
+						['Group 1', 'Group 2', 'P-value'],
+						charts
+							.filter(chart => chart.pvalues)
+							.map(chart => ({ chartLabel: self.getChartTitle(chart.chartId), rows: chart.pvalues }))
+					)
 			})
 		}
 		const menuOpts = {

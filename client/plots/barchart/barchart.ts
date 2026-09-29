@@ -7,7 +7,9 @@ import {
 	/** svgLegend, */ renderTable,
 	CustomDownloadMenu,
 	type DownloadMenuOption,
-	type TableRow
+	type TableRow,
+	descrStatsToTSV,
+	testRowsToTSV
 } from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
@@ -1312,14 +1314,7 @@ function setInteractivity(self) {
 				label: 'Descriptive statistics',
 				testid: 'sjpp-download-descrstats',
 				filename: `${filename}_descriptive_stats`,
-				callback: () => {
-					const lines = ['Term\tStatistic\tValue']
-					for (const tw of statTerms) {
-						for (const stat of Object.values(tw.q.descrStats) as any[])
-							lines.push(`${tw.term.name}\t${stat.label}\t${stat.value}`)
-					}
-					return lines.join('\n')
-				}
+				callback: () => descrStatsToTSV(statTerms.map(tw => ({ name: tw.term.name, stats: tw.q.descrStats })))
 			})
 		}
 
@@ -1329,15 +1324,13 @@ function setInteractivity(self) {
 				label: 'Association test',
 				testid: 'sjpp-download-pvalues',
 				filename: `${filename}_fischer_association_test`,
-				callback: () => {
-					/** Note: Update this is chi-square test is ever enabled. */
-					const lines = ['Fisher\'s exact test', 'Chart\tRow 1\tRow 2\tColumn 1\tColumn 2\tP-value']
-					for (const chart of testCharts) {
-						const { rows } = self.getPvalueRows(chart)
-						for (const row of rows) lines.push([chart.chartId, ...row.map(cell => cell.value ?? cell.html)].join('\t'))
-					}
-					return lines.join('\n')
-				}
+				callback: () =>
+					/** Note: Update this if chi-square test is ever enabled. */
+					testRowsToTSV(
+						"Fisher's exact test",
+						['Row 1', 'Row 2', 'Column 1', 'Column 2', 'P-value'],
+						testCharts.map(chart => ({ chartLabel: chart.chartId, rows: self.getPvalueRows(chart).rows }))
+					)
 			})
 		}
 

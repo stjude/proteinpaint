@@ -9,7 +9,9 @@ import {
 	CustomDownloadMenu,
 	type DownloadMenuOption,
 	getChartTitle,
-	setDescrStatsByTerm
+	setDescrStatsByTerm,
+	descrStatsToTSV,
+	testRowsToTSV
 } from '#dom'
 import type { Elem } from '../../types/d3'
 import type { MassAppApi, MassState } from '#mass/types/mass'
@@ -241,14 +243,8 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 				label: 'Descriptive statistics',
 				testid: 'sjpp-download-descrstats',
 				filename: `${filename}_descriptive_stats`,
-				callback: () => {
-					const lines = ['Term\tStatistic\tValue']
-					for (const tw of statTerms) {
-						for (const s of Object.values(descrStatsByTerm[tw.$id]) as any[])
-							lines.push(`${tw.term.name}\t${s.label}\t${s.value}`)
-					}
-					return lines.join('\n')
-				}
+				callback: () =>
+					descrStatsToTSV(statTerms.map(tw => ({ name: tw.term.name, stats: descrStatsByTerm[tw.$id] })))
 			})
 		}
 
@@ -259,16 +255,14 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 				label: 'Group comparisons',
 				testid: 'sjpp-download-comparison',
 				filename: `${filename}_wilcoxon_group_comparisons`,
-				callback: () => {
-					const lines = ['Wilcoxon\'s rank sum test', 'Chart\tGroup 1\tGroup 2\tP-value']
-					for (const [chartId, chart] of charts) {
-						if (!chart.wilcoxon) continue
-						const title = getChartTitle(config, chartId)
-						for (const row of chart.wilcoxon)
-							lines.push([title, ...row.map(cell => cell.value ?? cell.html)].join('\t'))
-					}
-					return lines.join('\n')
-				}
+				callback: () =>
+					testRowsToTSV(
+						"Wilcoxon's rank sum test",
+						['Group 1', 'Group 2', 'P-value'],
+						charts
+							.filter(([, chart]) => chart.wilcoxon)
+							.map(([chartId, chart]) => ({ chartLabel: getChartTitle(config, chartId), rows: chart.wilcoxon }))
+					)
 			})
 		}
 
