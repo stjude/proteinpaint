@@ -5,7 +5,7 @@ import {
 	renderSampleTypesByTermsSelect,
 	getSelectedSampleTypes,
 	getSelectedSampleTypesByTerms,
-	getSampleTypeLabelByTerms,
+	mayGetSampleTypeLabel,
 	table2col
 } from '#dom'
 import { TermTypes } from '#types'
@@ -69,12 +69,15 @@ export class SearchHandler {
 		const unit = getGEunit(this.app.vocabApi)
 		const name = `${gene} ${unit}`
 		const term: any = { gene, name, type: TermTypes.GENE_EXPRESSION, sampleTypes }
-		if (this.querySampleTypesByTerms) {
-			const sampleTypeLabel = getSampleTypeLabelByTerms(this.sampleTypeSelect)
-			if (sampleTypeLabel) {
-				term.sampleTypeLabel = sampleTypeLabel
-				term.name += ` (${sampleTypeLabel})`
-			}
+		const sampleTypeLabel = mayGetSampleTypeLabel({
+			sampleTypeSelect: this.sampleTypeSelect,
+			querySampleTypes: this.querySampleTypes,
+			querySampleTypesByTerms: this.querySampleTypesByTerms,
+			termdbConfig: this.app.vocabApi.termdbConfig
+		})
+		if (sampleTypeLabel) {
+			term.sampleTypeLabel = sampleTypeLabel
+			term.name += ` (${sampleTypeLabel})`
 		}
 		this.callback(term)
 	}

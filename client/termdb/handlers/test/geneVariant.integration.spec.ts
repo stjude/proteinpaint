@@ -404,6 +404,26 @@ tape('Sample type selection is cleared when changing to a mutation type without 
 	test.end()
 })
 
+tape('Sample type label is empty for all types and names a selected subset', async test => {
+	let tw
+	const holder = getHolder()
+	await initializeSearchHandler({
+		holder,
+		callback: _tw => (tw = _tw),
+		vocabApi: getVocabApiWithSampleTypes()
+	})
+
+	await pickGene(holder)
+	test.equal(tw.term.sampleTypeLabel, '', 'should use an empty label when all sample types are selected')
+
+	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].click()
+	await pickGene(holder)
+	test.equal(tw.term.sampleTypeLabel, 'Relapse', 'should name the selected sample type subset')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
 /* The initial selection writes sampleTypes to the handler term. A remembered setting on the
 next selection exercises the "Continue with ..." path, which must replace those values. */
 tape('Continuing past remembered settings does not retain sample types from another mutation type', async test => {

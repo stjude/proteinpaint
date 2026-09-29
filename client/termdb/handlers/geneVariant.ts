@@ -8,7 +8,7 @@ import {
 	renderSampleTypesByTermsSelect,
 	getSelectedSampleTypes,
 	getSelectedSampleTypesByTerms,
-	getSampleTypeLabelByTerms,
+	mayGetSampleTypeLabel,
 	renderCheckboxSelect,
 	getSelectedCheckboxValues
 } from '#dom'
@@ -522,9 +522,12 @@ export class SearchHandler {
 			}
 			return false
 		}
-		if (this.querySampleTypesByTerms) {
-			this.term.sampleTypeLabel = getSampleTypeLabelByTerms(this.sampleTypeSelect)
-		}
+		this.term.sampleTypeLabel = mayGetSampleTypeLabel({
+			sampleTypeSelect: this.sampleTypeSelect,
+			querySampleTypes: this.querySampleTypes,
+			querySampleTypesByTerms: this.querySampleTypesByTerms,
+			termdbConfig: this.opts.app.vocabApi.termdbConfig
+		})
 		return true
 	}
 
