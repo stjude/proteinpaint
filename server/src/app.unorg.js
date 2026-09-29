@@ -31,7 +31,6 @@ import { sql } from './sql.ts'
 import util from 'util'
 import fs from 'fs'
 import path from 'path'
-import ky from 'ky'
 import child_process from 'child_process'
 import readline from 'readline'
 import { stratify as d3stratify } from 'd3-hierarchy'
@@ -239,40 +238,47 @@ const MAX_URLTEXTFILE_REDIRECTS = 5
 	fetch a text file from req.query.url and return its text
 
 	the url is fetched by this server and the response is returned to the requester, so the url and the
-	destination of each redirect must pass utils.checkRemoteUrl(), otherwise a request could read from
-	the internal network of the server (SSRF)
+	destination of each redirect must pass utils.checkRemoteUrl(), and utils.requestRemoteUrl() rejects a
+	hostname that resolves to a non-public address; otherwise a request could read from the internal network
+	of the server (SSRF)
 
 	a url that starts with serverconfig.URL, the public url of this server, is fetched from the loopback
 	address instead. This fixed a loopback request issue on prp1, where https links were not properly
-	downgrading to http.
+	downgrading to http. A relative redirect is resolved against the public url, not the loopback url,
+	and then rewritten again.
 */
 async function handle_urltextfile(req, res) {
 	const url = req.query.url
 	try {
 		let [e, fetchUrl] = urltextfileFetchUrl(url)
 		if (e) return res.send({ error: 'invalid url: ' + e })
+		let publicUrl = url
 		let response
 		for (let redirects = 0; ; redirects++) {
-			response = await ky(fetchUrl, { throwHttpErrors: false, redirect: 'manual' })
-			if (response.status < 300 || response.status > 399) break
-			const location = response.headers.get('location')
-			await response.body?.cancel()
+			response = await utils.requestRemoteUrl(fetchUrl)
+			if (response.statusCode < 300 || response.statusCode > 399) break
+			const location = response.headers.location
+			response.resume()
 			if (!location) break
 			if (redirects >= MAX_URLTEXTFILE_REDIRECTS) return res.send({ error: 'url has too many redirects' })
-			;[e, fetchUrl] = urltextfileFetchUrl(new URL(location, fetchUrl).href)
+			publicUrl = new URL(location, publicUrl).href
+			;[e, fetchUrl] = urltextfileFetchUrl(publicUrl)
 			if (e) return res.send({ error: 'invalid url redirect: ' + e })
 		}
-		switch (response.status) {
+		switch (response.statusCode) {
 			case 200:
-				res.send({ text: utils.stripJsScript(await response.text()) })
+				res.send({ text: utils.stripJsScript(await utils.readResponseText(response)) })
 				return
 			case 404:
+				response.resume()
 				res.send({ error: 'File not found: ' + url })
 				return
 			default:
-				res.send({ error: 'unknown status code: ' + response.status })
+				response.resume()
+				res.send({ error: 'unknown status code: ' + response.statusCode })
 		}
 	} catch (e) {
+		if (e.code == 'ENOTPUBLIC') return res.send({ error: 'invalid url: ' + e.message })
 		return res.send({ error: 'Error downloading file: ' + url })
 	}
 }

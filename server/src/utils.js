@@ -1,5 +1,9 @@
 import fs from 'fs'
 import net from 'net'
+import dns from 'dns'
+import http from 'http'
+import https from 'https'
+import zlib from 'zlib'
 import path from 'path'
 import { spawn } from 'child_process'
 import readline from 'readline'
@@ -9,6 +13,7 @@ import ky from 'ky'
 import serverconfig from './serverconfig.js'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
+import { text as streamText } from 'stream/consumers'
 import { minimatch } from 'minimatch'
 export * from './cachedFetch.js'
 export * from './xfetch.js'
@@ -291,22 +296,8 @@ for (const [ip, prefix] of [
 	  restrict the outbound network access of the server to fully prevent that.
 */
 export function illegalUrlHost(u) {
-	// the WHATWG parser below treats a backslash as a path separator, but a spawned tool with another url
-	// parser may not, e.g. it may read http://a.org\@127.0.0.1/x as user a.org\ at host 127.0.0.1,
-	// so a url with a backslash, whitespace, or control character is not allowed
-	if (typeof u != 'string' || /[\\\s\x00-\x1f\x7f]/.test(u))
-		return 'url must not contain a backslash, whitespace, or control character'
-	let host
-	try {
-		// the WHATWG parser normalizes ip address forms, such as http://2130706433/ to 127.0.0.1
-		host = new URL(u).hostname.toLowerCase()
-	} catch (_) {
-		return 'invalid url'
-	}
-	if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1) // ipv6
-	// a fully qualified name may end with a dot, such as localhost. or a.org., which resolves the same as without it
-	if (host.endsWith('.')) host = host.slice(0, -1)
-	if (!host) return 'url must have a host'
+	const [e, host] = parseUrlHost(u)
+	if (e) return e
 	if (serverconfig.urlHosts) {
 		for (const h of serverconfig.urlHosts) {
 			if (h[0] == '.' ? host.endsWith(h) : host == h) return
@@ -314,14 +305,46 @@ export function illegalUrlHost(u) {
 		return 'url host is not allowed'
 	}
 	if (host == 'localhost' || host.endsWith('.localhost')) return 'url host is not allowed'
-	const ipType = net.isIP(host)
-	if (ipType && nonPublicIps.check(host, ipType == 4 ? 'ipv4' : 'ipv6')) return 'url host is not allowed'
+	if (isNonPublicIp(host)) return 'url host is not allowed'
 }
 
 /*
-	u: a url that the server will fetch itself, such as for the /urltextfile route
+	u: a url
+
+	returns [error] if the url is not safe to parse or has no host, or [null, host] with the host lowercased,
+	without the brackets of an ipv6 address and without a trailing dot
+*/
+function parseUrlHost(u) {
+	// the WHATWG parser below treats a backslash as a path separator, but a spawned tool with another url
+	// parser may not, e.g. it may read http://a.org\@127.0.0.1/x as user a.org\ at host 127.0.0.1,
+	// so a url with a backslash, whitespace, or control character is not allowed
+	if (typeof u != 'string' || /[\\\s\x00-\x1f\x7f]/.test(u))
+		return ['url must not contain a backslash, whitespace, or control character']
+	let host
+	try {
+		// the WHATWG parser normalizes ip address forms, such as http://2130706433/ to 127.0.0.1
+		host = new URL(u).hostname.toLowerCase()
+	} catch (_) {
+		return ['invalid url']
+	}
+	if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1) // ipv6
+	// a fully qualified name may end with a dot, such as localhost. or a.org., which resolves the same as without it
+	if (host.endsWith('.')) host = host.slice(0, -1)
+	if (!host) return ['url must have a host']
+	return [null, host]
+}
+
+// true if ip is a literal ip address that is not globally reachable, see nonPublicIps
+function isNonPublicIp(ip) {
+	const ipType = net.isIP(ip)
+	return ipType != 0 && nonPublicIps.check(ip, ipType == 4 ? 'ipv4' : 'ipv6')
+}
+
+/*
+	u: a url that the server will fetch itself, such as for the /urltextfile route; fetch it with
+	  requestRemoteUrl(), which also checks the addresses that a hostname resolves to
 	skipHostCheck: true only for a url of this server (under serverconfig.URL), whose host may be
-	  localhost or not listed in serverconfig.urlHosts
+	  localhost or not listed in serverconfig.urlHosts; the url syntax is still checked
 
 	returns an error message if the url is not an http(s) url with an allowed host, see test_url() and illegalUrlHost(),
 	or undefined if allowed
@@ -331,7 +354,84 @@ export function checkRemoteUrl(u, skipHostCheck = false) {
 	const [e, protocol] = test_url(u)
 	if (e) return e
 	if (protocol != 'http' && protocol != 'https') return 'protocol must be http or https'
-	if (!skipHostCheck) return illegalUrlHost(u)
+	if (skipHostCheck) return parseUrlHost(u)[0] || undefined
+	return illegalUrlHost(u)
+}
+
+/*
+	resolve: a dns.lookup()-like function, only replaced in tests
+
+	returns a lookup function for http(s) requests that fails when a hostname resolves to any address that is
+	not globally reachable, see nonPublicIps. As the check runs on the addresses that the request connects to,
+	a hostname that is changed to resolve to an internal address after checkRemoteUrl() (dns rebinding) is
+	rejected as well. When serverconfig.urlHosts is set, a listed host is allowed even if it is not public, as in
+	illegalUrlHost(), so the addresses are not checked. A literal ip address is not looked up, and is checked
+	by illegalUrlHost() instead.
+*/
+export function makePublicAddressLookup(resolve = dns.lookup) {
+	return function (hostname, options, callback) {
+		if (typeof options == 'function') {
+			callback = options
+			options = {}
+		}
+		resolve(hostname, { ...options, all: true }, (err, addresses) => {
+			if (err) return callback(err)
+			if (!serverconfig.urlHosts) {
+				for (const a of addresses) {
+					if (isNonPublicIp(a.address)) {
+						const e = new Error('url host resolves to an address that is not allowed')
+						e.code = 'ENOTPUBLIC'
+						return callback(e)
+					}
+				}
+			}
+			if (options.all) return callback(null, addresses)
+			if (!addresses.length) return callback(Object.assign(new Error('no address'), { code: 'ENOTFOUND' }))
+			callback(null, addresses[0].address, addresses[0].family)
+		})
+	}
+}
+export const publicAddressLookup = makePublicAddressLookup()
+
+// same as the ky default, since requestRemoteUrl() replaced ky for urls fetched on behalf of a request
+const remoteUrlTimeout = 10000
+
+/*
+	url: a url that passed checkRemoteUrl()
+	lookup: see makePublicAddressLookup(), only replaced in tests
+
+	returns a promise of the http.IncomingMessage of a GET request, without following a redirect. A request that
+	connects to a hostname that resolves to a non-public address, or is idle for remoteUrlTimeout, is rejected.
+	Read the body with readResponseText(), or call res.resume() to discard it.
+*/
+export function requestRemoteUrl(url, lookup = publicAddressLookup) {
+	return new Promise((resolve, reject) => {
+		const u = new URL(url)
+		const client = u.protocol == 'https:' ? https : http
+		const req = client.get(
+			u,
+			{ lookup, timeout: remoteUrlTimeout, headers: { 'accept-encoding': 'gzip, deflate, br' } },
+			resolve
+		)
+		req.on('timeout', () => req.destroy(new Error('request timed out')))
+		req.on('error', reject)
+	})
+}
+
+// returns the utf8 text of a response from requestRemoteUrl(), decompressed as ky would do
+export async function readResponseText(res) {
+	const encoding = (res.headers['content-encoding'] || '').trim().toLowerCase()
+	const decoder =
+		encoding == 'gzip' || encoding == 'x-gzip'
+			? zlib.createGunzip()
+			: encoding == 'deflate'
+			? zlib.createInflate()
+			: encoding == 'br'
+			? zlib.createBrotliDecompress()
+			: null
+	if (!decoder) return await streamText(res)
+	const [text] = await Promise.all([streamText(decoder), pipeline(res, decoder)])
+	return text
 }
 
 // true if file resolves strictly inside dir
