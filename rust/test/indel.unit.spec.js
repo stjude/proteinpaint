@@ -39,7 +39,7 @@ run as: $ node indel.unit.spec.js
 
 to add a new test example:
 - first obtain the bam slice file on your computer and the browser url for it
-- uncomment console.log() line at 160 of bam.kmer.indel.js
+- add console.log(JSON.stringify(input_data)) before the run_rust('indel', ...) call in bam.indel.js
 - run the example from browser, use server log to create a new object in examples[] array
 - to add individual reads of this example:
   - click on a representative read and show the read panel

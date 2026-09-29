@@ -56,3 +56,24 @@ export function duplicateRegions(regions) {
 		}
 	})
 }
+
+/*
+Validate user-supplied per-allele arrays (e.g. q.leftflankseqs) sent by client.
+Must be a real array of expected length with all elements of expected type, so that
+an object such as {length: 1e9} or a scalar cannot be used as a loop bound.
+	obj: object holding the arrays
+	names: array of keys to check
+	n: expected array length (number of variants)
+	type: 'string' or 'integer' (non-negative safe integer, no coercion)
+*/
+export function validateAlleleArrays(obj, names, n, type) {
+	for (const name of names) {
+		const arr = obj[name]
+		if (!Array.isArray(arr)) throw name + ' is not an array'
+		if (arr.length != n) throw name + ' length does not match number of variants'
+		for (const v of arr) {
+			const ok = type == 'integer' ? Number.isSafeInteger(v) && v >= 0 : typeof v == 'string'
+			if (!ok) throw name + ' has invalid element'
+		}
+	}
+}
