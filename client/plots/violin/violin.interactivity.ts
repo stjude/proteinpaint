@@ -25,11 +25,11 @@ export function setInteractivity(self: any) {
 		if (!self.state) return
 		const name2svg = self.getChartImages()
 		const filename = self.config.term.term.name
-		const options: DownloadMenuOption[] = []
+		const extraOptions: DownloadMenuOption[] = []
 
 		const statTerms = [self.config.term, self.config.term2].filter(tw => tw?.q?.descrStats)
 		if (self.settings.showStats && statTerms.length) {
-			options.push({
+			extraOptions.push({
 				label: 'Descriptive statistics',
 				testid: 'sjpp-download-descrstats',
 				filename: `${filename}_descriptive_stats`,
@@ -46,7 +46,7 @@ export function setInteractivity(self: any) {
 
 		const charts = Object.values(self.data?.charts || {}) as any[]
 		if (self.settings.showAssociationTests && self.config.term2 && charts.some(c => c.pvalues?.length)) {
-			options.push({
+			extraOptions.push({
 				label: 'Group comparisons',
 				testid: 'sjpp-download-pvalues',
 				filename: `${filename}_group_comparisons`,
@@ -65,8 +65,7 @@ export function setInteractivity(self: any) {
 		const menuOpts = {
 			chartImages: name2svg,
 			filename,
-			textCallback: undefined,
-			extraOptions: options
+			extraOptions
 		}
 
 		const dm = new CustomDownloadMenu(menuOpts)

@@ -20,7 +20,8 @@ export class CustomDownloadMenu extends DownloadMenu {
 	extraOptions: DownloadMenuOption[]
 
 	constructor(opts) {
-		super(opts.chartImages, opts.filename, opts.textCallback)
+		if (!opts.chartImages) throw new Error('chartImages is required')
+		super(opts.chartImages, opts?.filename, opts?.textCallback)
 		this.extraOptions = []
 		for (const opt of opts.extraOptions || []) this.addOption(opt)
 	}
