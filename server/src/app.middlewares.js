@@ -8,6 +8,7 @@ import { URL } from 'url'
 import serverconfig from './serverconfig.js'
 import * as validator from './validator.js'
 import { authApi } from './auth.js'
+import { patternMatches } from './auth/Auth.ts'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import jsonwebtoken from 'jsonwebtoken'
 import sjson from 'secure-json-parse'
@@ -247,15 +248,42 @@ function log(req) {
 
 // returns the parsed URL of the request origin, or undefined if it is missing or malformed
 export function getRequestOrigin(req) {
-	const origin = req.get('origin') || req.get('referrer') || (req.get('host') && `${req.protocol}://${req.get('host')}`)
-	if (!origin || origin == 'null') return
+	const origin = req.get('origin')
+	// an Origin header must already be a serialized http(s) origin, i.e., scheme://host[:port]
+	// with no path, query, or userinfo, otherwise it is rejected instead of being normalized
+	if (origin) return parseOrigin(origin, true)
+	// a referrer is a full URL, so only this fallback may include a path
+	const referrer = req.get('referrer')
+	if (referrer) return parseOrigin(referrer, false)
+	const host = req.get('host')
+	if (host) return parseOrigin(`${req.protocol}://${host}`, true)
+}
+
+function parseOrigin(value, mustBeSerializedOrigin) {
+	if (typeof value != 'string' || value == 'null') return
 	try {
-		const url = new URL(origin)
+		const url = new URL(value)
 		if (url.protocol != 'http:' && url.protocol != 'https:') return
+		if (url.username || url.password) return
+		if (mustBeSerializedOrigin && url.origin !== value) return
 		return url
 	} catch (_) {
 		return
 	}
+}
+
+// an allowedEmbedders[] entry must be '*' or exactly equal the origin hostname (or hostname:port);
+// a substring match would let an origin like 'https://trusted.org.evil.com' match 'trusted.org'
+export function isAllowedEmbedder(origin, host) {
+	return host == '*' || (!!origin && (host == origin.hostname || host == origin.host))
+}
+
+// a dsCredentials embedder key is matched with the same case-insensitive glob semantics
+// as used for auth, so that a key like '*.example.org' also gets credentialed CORS headers
+export function isCredEmbedder(origin, pattern) {
+	return (
+		pattern == '*' || (!!origin && (patternMatches(origin.hostname, pattern) || patternMatches(origin.host, pattern)))
+	)
 }
 
 function setHeaders(req, res, next) {
@@ -268,15 +296,11 @@ function setHeaders(req, res, next) {
 	const debugtest =
 		serverconfig.debugmode || serverconfig.defaultgenome == 'hg38-test' || serverconfig.features?.loosenCORS
 	const origin = getRequestOrigin(req)
-	// the embedder entry must exactly equal the parsed origin hostname (or hostname:port);
-	// a substring match would let an origin like 'https://trusted.org.evil.com' match 'trusted.org'
-	const getMatchingHost = hostname =>
-		hostname == '*' || (origin && (hostname == origin.hostname || hostname == origin.host))
 	// detect if the request origin has a matching entry in serverconfig.dsCredentials
-	const credEmbedder = authApi.credEmbedders.find(getMatchingHost)
+	const credEmbedder = authApi.credEmbedders.find(pattern => isCredEmbedder(origin, pattern))
 	// detect if the request origin is allowed as an embedders
 	// note that serverconfig.js sets [*] as default serverconfig.allowedEmbedders, if not present
-	const matchedHost = serverconfig.allowedEmbedders.find(getMatchingHost)
+	const matchedHost = serverconfig.allowedEmbedders.find(host => isAllowedEmbedder(origin, host))
 
 	// only set CORS-related headers for a valid request origin that is a credentialed or allowed embedder,
 	// otherwise a missing or 'null' origin could be echoed back along with Access-Control-Allow-Credentials
@@ -297,8 +321,8 @@ function setHeaders(req, res, next) {
 
 	if (isAllowedOrigin && (credEmbedder || debugtest)) {
 		// allow credentialed embedders to submit authorization header;
-		// TODO: require a wildcard dsCredentials embedder key to be domain-limited, such as '*.<domain>.<tld>',
-		// matched against origin.hostname as an exact domain or subdomain
+		// TODO: require a wildcard dsCredentials embedder key to be a domain-limited glob,
+		// such as '*.<domain>.<tld>', instead of a bare '*'
 		res.header('Access-Control-Allow-Credentials', true)
 	}
 
