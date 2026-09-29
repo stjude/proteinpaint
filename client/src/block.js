@@ -43,7 +43,6 @@ import {
 import { bedjfromtemplate, bedjmaketk, bedjload, bedjloadsubpanel } from './block.tk.bedj'
 import { gmtkfromtemplate, gmtkmaketk, gmtkrender } from './block.tk.usegm'
 import { hicstrawfromtemplate, hicstrawmaketk, hicstrawload } from './block.tk.hicstraw.adaptor'
-import { asefromtemplate, asemaketk, aseload } from './block.tk.ase.adaptor'
 
 import { mdsjunctionfromtemplate, mdsjunctionmaketk, mdsjunctionload } from './block.mds.junction.adaptor'
 import { mdssvcnvfromtemplate, mdssvcnvmaketk, mdssvcnvload } from './block.mds.svcnv.adaptor'
@@ -2590,13 +2589,6 @@ seekrange(chr,start,stop) {
 					return
 				}
 				break
-			case client.tkt.ase:
-				const e9 = asefromtemplate(tk, template)
-				if (e9) {
-					this.error(e9)
-					return
-				}
-				break
 			default:
 				this.error('addtk: unknown template tk type ' + template.type)
 		}
@@ -2772,9 +2764,6 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.hicstraw:
 				hicstrawmaketk(tk, this)
-				break
-			case client.tkt.ase:
-				asemaketk(tk, this)
 				break
 			default:
 				this.error('maketk: unknown template tk type ' + tk.type)
@@ -3133,9 +3122,6 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.hicstraw:
 				hicstrawload(tk, this)
-				break
-			case client.tkt.ase:
-				aseload(tk, this)
 				break
 			default:
 				this.error('tk_load: unknown tk type')
@@ -4063,9 +4049,6 @@ seekrange(chr,start,stop) {
 						break
 					case client.tkt.hicstraw:
 						hicstrawload(tk, this)
-						break
-					case client.tkt.ase:
-						aseload(tk, this)
 						break
 					case client.tkt.mdsjunction:
 						mdsjunctionload(tk, this)

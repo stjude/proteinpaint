@@ -22,7 +22,6 @@ import { render_singlesample } from './block.mds.svcnv.single'
 import { createbutton_addfeature, may_show_samplematrix_button } from './block.mds.svcnv.samplematrix'
 import { render_multi_genebar, genebarconfig_fixed } from './block.mds.svcnv.addcolumn'
 import { vcfparsemeta } from '#shared/vcf.js'
-import { rnabamtk_initparam, configPanel_rnabam } from './block.mds.svcnv.share'
 
 /*
 JUMP __multi __maketk __sm
@@ -118,9 +117,6 @@ export function loadTk(tk, block) {
 	Promise.resolve()
 		.then(() => {
 			return loadTk_mayinitiatecustomvcf(tk, block)
-		})
-		.then(() => {
-			return loadTk_mayinitiaternabam(tk, block)
 		})
 		.then(() => {
 			/*
@@ -239,23 +235,6 @@ function may_showgeneexp_nomutationdata(tk, block) {
 	})
 }
 
-function loadTk_mayinitiaternabam(tk, block) {
-	if (!tk.checkrnabam) return
-	const tasks = []
-	for (const s in tk.checkrnabam.samples) {
-		const b = tk.checkrnabam.samples[s]
-		tasks.push(
-			client
-				.dofetch('bamnochr', { genome: block.genome.name, file: b.file, url: b.url, indexURL: b.indexURL })
-				.then(data => {
-					if (data.error) throw { message: data.error }
-					b.nochr = data.nochr
-				})
-		)
-	}
-	return Promise.all(tasks)
-}
-
 function loadTk_mayinitiatecustomvcf(tk, block) {
 	if (!tk.iscustom) return
 
@@ -358,16 +337,6 @@ function loadTk_do(tk, block) {
 					tk.sampleAttribute.samples = {}
 				}
 			}
-
-			if (tk.checkrnabam) {
-				for (const samplename in tk.checkrnabam.samples) {
-					delete tk.checkrnabam.samples[samplename].genes
-					if (data.checkrnabam) {
-						const g = data.checkrnabam.find(i => i.sample == samplename)
-						if (g) tk.checkrnabam.samples[samplename].genes = g.genes
-					}
-				}
-			}
 		}
 
 		// preps common to both single and multi sample
@@ -423,10 +392,6 @@ function addLoadParameter(par, tk) {
 
 		if (tk.checkvcf) {
 			par.checkvcf = tk.checkvcf.stringifiedObj
-		}
-
-		if (tk.checkrnabam) {
-			rnabamtk_copyparam(tk, par, true)
 		}
 	} else {
 		par.dslabel = tk.mds.label
@@ -597,8 +562,6 @@ function render_samplegroups(tk, block) {
 	const cnvheight = render_multi_cnvloh(tk, block)
 
 	multi_expressionstatus_ase_outlier(tk)
-
-	multi_rnabam_asestatus(tk)
 
 	const genebaraxisheight = render_multi_genebar(tk, block)
 
@@ -1761,23 +1724,6 @@ m{}
 sample{}
 	.samplename
 */
-	if (tk.checkrnabam) {
-		/* in rnabam mode
-		if the variant has valid pvalue, show bright color, else gray
-		*/
-		const sbam = tk.checkrnabam.samples[sample.samplename]
-		if (sbam && sbam.genes) {
-			for (const g of sbam.genes) {
-				if (g.snps) {
-					const m2 = g.snps.find(i => i.pos == m.pos && i.ref == m.ref && i.alt == m.alt)
-					if (m2 && m2.rnacount && m2.rnacount.pvalue != undefined) {
-						return tk.checkrnabam.clientcolor_snpinuse
-					}
-				}
-			}
-		}
-		return tk.checkrnabam.clientcolor_markernotinuse
-	}
 	return common.mclass[m.class].color
 }
 
@@ -2132,21 +2078,6 @@ function dostack(sample, items) {
 	sample.height = stackheight * stacks.length
 }
 
-export function multi_rnabam_asestatus(tk) {
-	/*
-	multi-sample, only ase for rna bam mode
-	*/
-	if (!tk.checkrnabam) return
-	for (const s in tk.checkrnabam.samples) {
-		const sbam = tk.checkrnabam.samples[s]
-		if (sbam.genes) {
-			for (const gene of sbam.genes) {
-				expressionstat.measure(gene, tk.gecfg)
-			}
-		}
-	}
-}
-
 export function multi_expressionstatus_ase_outlier(tk) {
 	/*
 	multi-sample
@@ -2248,40 +2179,6 @@ export async function focus_singlesample(p) {
 	}
 
 	client.first_genetrack_tolist(block.genome, arg.tklst)
-
-	if (tk.checkrnabam && tk.checkvcf) {
-		// detour
-		// do not consider other assay tracks
-		const sbam = tk.checkrnabam.samples[sample.samplename]
-		if (sbam) {
-			arg.chr = block.rglst[0].chr
-			arg.start = block.rglst[0].start
-			arg.stop = block.rglst[0].stop
-
-			const asetk = {
-				type: common.tkt.ase,
-				name: sample.samplename + ' ASE',
-				samplename: sample.samplename,
-				rnabamfile: sbam.file,
-				rnabamurl: sbam.url,
-				rnabamindexURL: sbam.indexURL,
-				rnabamtotalreads: sbam.totalreads,
-				vcffile: tk.checkvcf.file,
-				vcfurl: tk.checkvcf.url,
-				vcfindexURL: tk.checkvcf.indexURL
-			}
-
-			rnabamtk_copyparam(tk, asetk, false)
-
-			arg.tklst.push(asetk)
-			const b = block.newblock(arg)
-			if (block.debugmode) {
-				window.bbb = b
-			}
-
-			return
-		}
-	}
 
 	// should also root out error when showing that
 
@@ -2477,32 +2374,6 @@ export async function focus_singlesample(p) {
 					}
 				})
 			label.append('span').text(t.name)
-		}
-	}
-}
-
-export function rnabamtk_copyparam(from, to, copysample) {
-	// both tk obj
-	if (!from.checkrnabam) return
-	to.checkrnabam = {}
-	for (const k in from.checkrnabam) {
-		if (k == 'samples') continue
-		if (k == 'legend') continue
-		to.checkrnabam[k] = from.checkrnabam[k]
-	}
-	// the sample part is only for xhr
-	if (copysample) {
-		to.checkrnabam.samples = {}
-		for (const samplename in from.checkrnabam.samples) {
-			const s = from.checkrnabam.samples[samplename]
-			to.checkrnabam.samples[samplename] = {
-				file: s.file,
-				url: s.url,
-				indexURL: s.indexURL,
-				nochr: s.nochr,
-				totalreads: s.totalreads,
-				pairedend: s.pairedend
-			}
 		}
 	}
 }
@@ -2803,7 +2674,7 @@ for both multi- and single-sample
 		}
 	} else if (tk.iscustom) {
 		if (!tk.file && !tk.url) {
-			// custom track without svcnv file, should be in rnabam mode
+			// custom track without svcnv file
 			// do not show legend and config for cnv loh sv fusion
 			tk.nocnvlohsv = true
 		}
@@ -2974,13 +2845,6 @@ for both multi- and single-sample
 		configPanel(tk, block)
 	})
 
-	if (tk.checkrnabam) {
-		/* defaults for parameters
-		make this before legend
-		*/
-		rnabamtk_initparam(tk.checkrnabam)
-	}
-
 	makeTk_legend(block, tk)
 
 	// gene expression config
@@ -2993,10 +2857,6 @@ for both multi- and single-sample
 			hasexpression = true
 			if (!tk.gecfg) tk.gecfg = {}
 			tk.gecfg.datatype = tk.checkexpressionrank.datatype
-		} else if (tk.checkrnabam) {
-			hasexpression = true
-			if (!tk.gecfg) tk.gecfg = {}
-			tk.gecfg.datatype = 'FPKM'
 		}
 	} else {
 		// official
@@ -3169,8 +3029,6 @@ function configPanel(tk, block) {
 	may_allow_togglewaterfall_single(tk, block)
 
 	configPanel_cnvloh(tk, block)
-
-	configPanel_rnabam(tk, block, loadTk)
 
 	tk.tkconfigtip.showunder(tk.config_handle.node())
 }
