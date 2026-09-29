@@ -121,6 +121,10 @@ may attach coloring scheme to result{} for returning to client
 		q.textfile = file
 	}
 
+	// hidden_types is a request parameter and may be tampered with, so only accept an array of strings
+	if (q.hidden_types !== undefined && !Array.isArray(q.hidden_types)) throw 'hidden_types must be an array'
+	const hidden_types = new Set((q.hidden_types || []).filter(t => typeof t == 'string'))
+
 	// set up coloring scheme
 	let categorical_color_function
 	let cell2color_byexp // color by gene expression values
@@ -234,7 +238,7 @@ may attach coloring scheme to result{} for returning to client
 			if (categorical_color_function) {
 				const ca = l[q.getpcd.category_index]
 				const co = categorical_color_function(ca)
-				if (q.hidden_types.includes(ca)) {
+				if (hidden_types.has(ca)) {
 					if (q.background_color) {
 						const c = d3color.color(q.background_color)
 						const color = Number.parseInt(rgbToHex(c.r, c.g, c.b), 16)
