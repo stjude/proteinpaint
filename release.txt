@@ -1,2 +1,1 @@
-Features: 
-- New custom download menu includes options to download the descriptive stats and association tests in the bar chart, violin, and box plot.
+

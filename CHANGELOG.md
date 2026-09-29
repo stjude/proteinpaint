@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- New custom download menu includes options to download the descriptive stats and association tests in the bar chart, violin, and box plot.
+
 
 ## 2.214.0
 
