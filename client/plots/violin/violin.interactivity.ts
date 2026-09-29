@@ -272,10 +272,10 @@ export function setInteractivity(self: any) {
 	self.labelHideLegendClicking = function (t2: any) {
 		self.dom.legendDiv
 			.on('click.violinHideLegend', event => {
-				event.stopPropagation()
 				const target = (event.target as HTMLElement).closest('.sjpp-htmlLegend') as HTMLElement & { __data__?: any }
 				const d = target?.__data__
-				if (!d) return
+				if (d?.isHidden !== true || d?.isClickable !== true) return
+				event.stopPropagation()
 				const termNum =
 					t2?.term.type === 'condition' ||
 					t2?.term.type === 'samplelst' ||
