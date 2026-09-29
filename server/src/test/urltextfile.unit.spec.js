@@ -19,6 +19,9 @@ test sections:
 - /urltextfile fetches an allowed url
 - /urltextfile rewrites only an exact serverconfig.URL prefix to the loopback address
 - /urltextfile checks the host of each redirect
+- /urltextfile resolves a relative redirect of a serverconfig.URL url against the public url
+- makePublicAddressLookup() checks every resolved address
+- requestRemoteUrl() rejects a hostname that resolves to a non-public address
 */
 
 let server, H, port
@@ -32,6 +35,8 @@ function startServer() {
 					res.writeHead(302, { location: 'http://169.254.169.254/latest/meta-data' }).end()
 				} else if (req.url.startsWith('/redirect-ok/')) {
 					res.writeHead(301, { location: '/moved' + req.url }).end()
+				} else if (req.url.startsWith('/redirect-loopback/')) {
+					res.writeHead(302, { location: `http://${H}/a/b.txt` }).end()
 				} else if (req.url.startsWith('/redirect-loop/')) {
 					res.writeHead(302, { location: req.url }).end()
 				} else {
@@ -97,6 +102,13 @@ tape('checkRemoteUrl()', test => {
 		undefined,
 		'should skip only the host check when skipHostCheck is true'
 	)
+	for (const u of ['http://a b/path', 'http://a.org\\@127.0.0.1/x', 'http://a.org/x\ty']) {
+		test.equal(
+			utils.checkRemoteUrl(u, true),
+			'url must not contain a backslash, whitespace, or control character',
+			`should still check the url syntax of ${JSON.stringify(u)} when skipHostCheck is true`
+		)
+	}
 	test.equal(
 		utils.checkRemoteUrl('file:///etc/passwd', true),
 		'protocol must be http, https or ftp',
@@ -183,6 +195,95 @@ tape('/urltextfile checks the host of each redirect', async test => {
 
 	r = await send(routes['/urltextfile'], { url: `http://${H}/redirect-loop/a.txt` })
 	test.equal(r?.error, 'url has too many redirects', 'should stop following a redirect loop')
+	delete serverconfig.urlHosts
+	test.end()
+})
+
+tape('/urltextfile resolves a relative redirect of a serverconfig.URL url against the public url', async test => {
+	delete serverconfig.urlHosts
+	serverconfig.URL = 'https://pp.example.org'
+	serverconfig.port = port
+	let r = await send(routes['/urltextfile'], { url: 'https://pp.example.org/redirect-ok/a.txt' })
+	test.equal(r?.text, 'INTERNAL /moved/redirect-ok/a.txt', 'should follow a relative redirect on this server')
+
+	r = await send(routes['/urltextfile'], { url: 'https://pp.example.org/redirect-loopback/a.txt' })
+	test.equal(
+		r?.error,
+		'invalid url redirect: url host is not allowed',
+		'should reject an absolute redirect to the loopback address'
+	)
+	delete serverconfig.URL
+	test.end()
+})
+
+// a dns.lookup() stand-in that resolves each hostname to the listed addresses
+function fakeResolver(hosts) {
+	return (hostname, options, callback) => {
+		const ips = hosts[hostname]
+		if (!ips) return callback(Object.assign(new Error('not found'), { code: 'ENOTFOUND' }))
+		callback(
+			null,
+			ips.map(address => ({ address, family: address.includes(':') ? 6 : 4 }))
+		)
+	}
+}
+
+function lookupResult(lookup, hostname, options) {
+	return new Promise(resolve => lookup(hostname, options, (err, ...rest) => resolve([err, ...rest])))
+}
+
+tape('makePublicAddressLookup() checks every resolved address', async test => {
+	delete serverconfig.urlHosts
+	const lookup = utils.makePublicAddressLookup(
+		fakeResolver({
+			'public.test': ['93.184.215.14', '2606:2800:21f:cb07:6820:80da:af6b:8b2c'],
+			'loopback.test': ['127.0.0.1'],
+			'metadata.test': ['169.254.169.254'],
+			'mixed.test': ['93.184.215.14', '10.0.0.1'],
+			'mapped.test': ['::ffff:7f00:1']
+		})
+	)
+
+	let [err, address, family] = await lookupResult(lookup, 'public.test', {})
+	test.equal(err, null, 'should allow a hostname that resolves to public addresses')
+	test.deepEqual([address, family], ['93.184.215.14', 4], 'should return the first address when options.all is not set')
+
+	let addresses
+	;[err, addresses] = await lookupResult(lookup, 'public.test', { all: true })
+	test.equal(addresses?.length, 2, 'should return all addresses when options.all is set')
+
+	for (const h of ['loopback.test', 'metadata.test', 'mixed.test', 'mapped.test']) {
+		;[err] = await lookupResult(lookup, h, { all: true })
+		test.equal(err?.code, 'ENOTPUBLIC', `should reject ${h}`)
+	}
+
+	;[err] = await lookupResult(lookup, 'missing.test', {})
+	test.equal(err?.code, 'ENOTFOUND', 'should pass on a lookup error')
+
+	serverconfig.urlHosts = ['loopback.test']
+	;[err, address] = await lookupResult(lookup, 'loopback.test', {})
+	test.equal(address, '127.0.0.1', 'should not check the addresses of a host when urlHosts is set')
+	delete serverconfig.urlHosts
+	test.end()
+})
+
+tape('requestRemoteUrl() rejects a hostname that resolves to a non-public address', async test => {
+	delete serverconfig.urlHosts
+	// rebind.test passes checkRemoteUrl() as a hostname, but resolves to the loopback address
+	const lookup = utils.makePublicAddressLookup(fakeResolver({ 'rebind.test': ['127.0.0.1'] }))
+	const url = `http://rebind.test:${port}/a/b.txt`
+	test.equal(utils.checkRemoteUrl(url), undefined, 'the hostname alone should pass checkRemoteUrl()')
+	try {
+		const res = await utils.requestRemoteUrl(url, lookup)
+		res.resume()
+		test.fail('should not connect to a hostname that resolves to the loopback address')
+	} catch (e) {
+		test.equal(e.code, 'ENOTPUBLIC', 'should not connect to a hostname that resolves to the loopback address')
+	}
+
+	serverconfig.urlHosts = ['rebind.test']
+	const res = await utils.requestRemoteUrl(url, lookup)
+	test.equal(await utils.readResponseText(res), 'INTERNAL /a/b.txt', 'should connect to a host listed in urlHosts')
 	delete serverconfig.urlHosts
 	test.end()
 })
