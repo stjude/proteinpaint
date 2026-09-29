@@ -11,6 +11,7 @@ import {
 import { appInit } from '#termdb/app'
 import { fillTermWrapper, get$id } from '#termsetting'
 import { getCurrentCohortChartTypes } from './charts'
+import { escapeHtml } from './chat'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { isNumericTerm, termType2label } from '#shared/terms.js'
@@ -226,10 +227,12 @@ class MassGroups {
 		table.table.style('scale', 0.9).style('margin-left', '0px')
 		for (const [grpKey, grp] of Object.entries(tw.term.values)) {
 			const colorSquare = grp.color
-				? `<span style="display:inline-block; width:12px; height:12px; background-color:${grp.color}" ></span>`
+				? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
+						String(grp.color)
+				  )}" ></span>`
 				: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
 			const [c1, c2] = table.addRow()
-			c1.html(`${colorSquare} ${grp.label}`)
+			c1.html(`${colorSquare} ${escapeHtml(String(grp.label))}`)
 			// gdc etc. call them cases, not samples
 			const sampleLabel = this.app.vocabApi.termdbConfig?.uiLabels?.samples || 'samples'
 			c2.html(`${grp.othersGroupSampleNum || grp.list.length} ${sampleLabel}`)
