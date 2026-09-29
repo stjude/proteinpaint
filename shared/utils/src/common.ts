@@ -699,7 +699,6 @@ export const tkt = {
 	hicstraw: 'hicstraw',
 	expressionrank: 'expressionrank',
 	aicheck: 'aicheck',
-	ase: 'ase',
 	mds3: 'mds3', //
 	bedgraphdot: 'bedgraphdot',
 	bam: 'bam',
