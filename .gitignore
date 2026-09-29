@@ -146,3 +146,6 @@ log.txt
 build/sj/env.sh
 build/unpublishedPkgs.txt
 rust/Dockerfile
+
+# local security scan triage reports, must not be committed to this public repo
+.security-triage/
