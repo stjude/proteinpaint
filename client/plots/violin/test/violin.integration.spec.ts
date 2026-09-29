@@ -14,6 +14,7 @@ import { getFilterItemByTag, filterJoin } from '#filter'
 import { sleep, detectOne, detectGte, detectLst, whenVisible } from '../../../test/test.helpers.js'
 import { testViolinByCount } from '../../test/helpers.spec'
 import { SINGLECELL_CELLTYPE } from '#types'
+import { getVisiblePvalues } from '../violin.renderer'
 
 /**************
  test sections
@@ -54,6 +55,22 @@ term1=dnameth, term2=geneExp
 
 tape('\n', function (test) {
 	test.comment('-***- plots/violin -***-')
+	test.end()
+})
+
+tape('violin p-values exclude hidden categories', function (test) {
+	const term = { term: { type: 'categorical' }, q: { hiddenValues: { Hidden: 1 } } }
+	const numericTerm = { term: { type: 'integer' }, q: { mode: 'continuous' } }
+	const visibleRow = [{ value: 'Visible' }, { value: 'Other' }, { value: 0.25 }]
+	const hiddenRow = [{ value: 'Hidden' }, { value: 'Other' }, { value: 0.5 }]
+	const chart = { pvalues: [visibleRow, hiddenRow] }
+
+	test.deepEqual(getVisiblePvalues(chart, numericTerm, term), [visibleRow], 'Filters comparisons with a hidden category')
+	test.deepEqual(
+		getVisiblePvalues({ pvalues: [hiddenRow] }, numericTerm, term),
+		[],
+		'No visible comparisons remain when every category is hidden'
+	)
 	test.end()
 })
 

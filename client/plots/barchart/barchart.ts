@@ -2,7 +2,15 @@ import { getCompInit, copyMerge, deepEqual, type RxComponent, type ComponentApi 
 import getHandlers from './barchart.events'
 import barsRenderer from './bars.renderer'
 import { rendererSettings, plotLength } from './bars.settings'
-import { htmlLegend, /** svgLegend, */ renderTable, DownloadMenu, type TableRow } from '#dom'
+import {
+	htmlLegend,
+	/** svgLegend, */ renderTable,
+	CustomDownloadMenu,
+	type DownloadMenuOption,
+	type TableRow,
+	descrStatsToTSV,
+	testRowsToTSV
+} from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
 import { controlsInit, renderTerm1Label } from '#plots/controls.js'
@@ -1163,6 +1171,41 @@ function setRenderers(self) {
 			.style('vertical-align', 'top')
 			.style('text-align', 'center')
 			.append('div')
+		const { columns, rows, noSkipped } = self.getPvalueRows(chart)
+
+		//adding a title for the pvalue table
+		//title is "Group comparisons (Fisher's exact test)" if all tests are Fisher's exact test, otherwise title is 'Group comparisons (Chi-square test)'
+		/*const title = */ holder
+			.append('div')
+			.style('font-weight', 'bold')
+			.style('padding-bottom', '0.5em')
+			.attr('data-testid', 'sjpp-massbarchart-2x2assotestlabel')
+			.html("2x2 Association test (Fisher's exact test)")
+			.style('font-size', '0.9em')
+
+		const table = holder.append('div').style('font-size', '0.9em')
+		renderTable({
+			columns,
+			rows,
+			div: table,
+			showLines: false,
+			maxWidth: '70vw',
+			maxHeight: `${chart.svgh - 100}px`,
+			resize: true
+		})
+
+		//footnote: superscript letter 'a' indicates the pvalue was computed by Fisher's exact test
+		table
+			.append('div')
+			.style('margin-top', '10px')
+			.style('text-align', 'left')
+			.style('font-size', '10px')
+			.style('font-weight', 'normal')
+			.html(noSkipped ? '' : 'N/A: association test skipped because of limited sample size <br>')
+	}
+
+	/** Builds the visible 2x2 association test rows for a chart; shared by the table and the download */
+	self.getPvalueRows = function (chart) {
 		// sort term1 categories based on self.chartsData.refs.cols
 		// const cols = self.settings.dedup ?  self.chartsData.refs.cols
 		self.chartsData.tests[chart.chartId].sort(function (a, b) {
@@ -1236,35 +1279,7 @@ function setRenderers(self) {
 				])
 			}
 		}
-		//adding a title for the pvalue table
-		//title is "Group comparisons (Fisher's exact test)" if all tests are Fisher's exact test, otherwise title is 'Group comparisons (Chi-square test)'
-		/*const title = */ holder
-			.append('div')
-			.style('font-weight', 'bold')
-			.style('padding-bottom', '0.5em')
-			.attr('data-testid', 'sjpp-massbarchart-2x2assotestlabel')
-			.html("2x2 Association test (Fisher's exact test)")
-			.style('font-size', '0.9em')
-
-		const table = holder.append('div').style('font-size', '0.9em')
-		renderTable({
-			columns,
-			rows,
-			div: table,
-			showLines: false,
-			maxWidth: '70vw',
-			maxHeight: `${chart.svgh - 100}px`,
-			resize: true
-		})
-
-		//footnote: superscript letter 'a' indicates the pvalue was computed by Fisher's exact test
-		table
-			.append('div')
-			.style('margin-top', '10px')
-			.style('text-align', 'left')
-			.style('font-size', '10px')
-			.style('font-weight', 'normal')
-			.html(noSkipped ? '' : 'N/A: association test skipped because of limited sample size <br>')
+		return { columns, rows, noSkipped }
 	}
 }
 
@@ -1283,7 +1298,47 @@ function setInteractivity(self) {
 
 	self.download = function (event) {
 		const charts = self.getChartImages()
-		const dm = new DownloadMenu(charts, self.config.term.term.name)
+		const filename = self.config.term.term.name
+		const extraOptions: DownloadMenuOption[] = []
+		const s = self.settings
+		const t1 = self.config.term
+		const t2 = self.config.term2
+
+		// mirrors getOneLegendGrps(): term2 stats are tied to showAssociationTests, not showStats
+		const statTerms = [
+			t1?.q?.descrStats && s.showStats ? t1 : null,
+			t2?.q?.descrStats && s.showAssociationTests ? t2 : null
+		].filter(Boolean)
+		if (statTerms.length) {
+			extraOptions.push({
+				label: 'Descriptive statistics',
+				testid: 'sjpp-download-descrstats',
+				filename: `${filename}_descriptive_stats`,
+				callback: () => descrStatsToTSV(statTerms.map(tw => ({ name: tw.term.name, stats: tw.q.descrStats })))
+			})
+		}
+
+		const testCharts = (self.visibleCharts || []).filter(chart => self.chartsData?.tests?.[chart.chartId])
+		if (s.showAssociationTests && testCharts.length) {
+			extraOptions.push({
+				label: 'Association test',
+				testid: 'sjpp-download-pvalues',
+				filename: `${filename}_fisher_association_test`,
+				callback: () =>
+					/** Note: Update this if chi-square test is ever enabled. */
+					testRowsToTSV(
+						"Fisher's exact test",
+						['Row 1', 'Row 2', 'Column 1', 'Column 2', 'P-value'],
+						testCharts.map(chart => ({
+ 							chartLabel: self.handlers.chart.title(chart),
+ 							rows: self.getPvalueRows(chart).rows
+ 						}))
+					)
+			})
+		}
+
+		const opts = { chartImages: charts, filename, extraOptions }
+		const dm = new CustomDownloadMenu(opts)
 		dm.show(event.clientX, event.clientY, event.target)
 	}
 

@@ -388,6 +388,9 @@ export class Menu {
 	// the MASS nav header, whereas the menu div that's attached to the body will scroll freely past the
 	// 'stuck' clicked element
 	stickyPosition(elem, _opts = {}) {
+		// disconnect any observer from a prior show() call before deciding whether this one needs it
+		this.stopObserver()
+
 		// only setup an observer on click event, not other transient mouse events such as mousemove,
 		// to limit the performance penalty to known static button/label interactions
 		if (!window.event || window.event.type != 'click' || !elem.__data__?.stickyAncestor) return

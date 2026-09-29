@@ -1,6 +1,15 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
-import { DownloadMenu, niceNumLabels, ListSamples, renderTable } from '#dom'
+import {
+	niceNumLabels,
+	ListSamples,
+	renderTable,
+	CustomDownloadMenu,
+	type DownloadMenuOption,
+	descrStatsToTSV,
+	testRowsToTSV
+} from '#dom'
 import { isSingleCellTerm } from '#shared'
+import { getVisiblePvalues } from './violin.renderer'
 
 type MenuOption = {
 	label: string
@@ -24,7 +33,49 @@ export function setInteractivity(self: any) {
 	self.download = function (event: MouseEvent) {
 		if (!self.state) return
 		const name2svg = self.getChartImages()
-		const dm = new DownloadMenu(name2svg, self.config.term.term.name)
+		const filename = self.config.term.term.name
+		const extraOptions: DownloadMenuOption[] = []
+
+		const statTerms = [self.config.term, self.config.term2].filter(tw => tw?.q?.descrStats)
+		if (self.settings.showStats && statTerms.length) {
+			extraOptions.push({
+				label: 'Descriptive statistics',
+				testid: 'sjpp-download-descrstats',
+				filename: `${filename}_descriptive_stats`,
+				callback: () => descrStatsToTSV(statTerms.map(tw => ({ name: tw.term.name, stats: tw.q.descrStats })))
+			})
+		}
+
+		const charts = Object.values(self.data?.charts || {}) as any[]
+		if (
+			self.settings.showAssociationTests &&
+			self.config.term2 &&
+			charts.some(chart => getVisiblePvalues(chart, self.config.term, self.config.term2).length)
+		) {
+			extraOptions.push({
+				label: 'Group comparisons',
+				testid: 'sjpp-download-pvalues',
+				filename: `${filename}_wilcoxon_group_comparisons`,
+				callback: () =>
+					testRowsToTSV(
+						"Wilcoxon's rank sum test",
+						['Group 1', 'Group 2', 'P-value'],
+						charts
+							.map(chart => ({
+								chartLabel: self.getChartTitle(chart.chartId),
+								rows: getVisiblePvalues(chart, self.config.term, self.config.term2)
+							}))
+							.filter(chart => chart.rows.length)
+					)
+			})
+		}
+		const menuOpts = {
+			chartImages: name2svg,
+			filename,
+			extraOptions
+		}
+
+		const dm = new CustomDownloadMenu(menuOpts)
 		dm.show(event.clientX, event.clientY, undefined)
 	}
 
