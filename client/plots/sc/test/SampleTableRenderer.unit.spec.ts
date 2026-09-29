@@ -1,6 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { SampleTableRenderer } from '../view/SampleTableRenderer.ts'
+import { SCViewRenderer } from '../view/SCViewRenderer.ts'
 
 /**
  * Tests
@@ -81,7 +82,7 @@ function getMockDiv() {
 
 /** Shared test teardown: remove the holder on success (leave it for inspection on failure), then end. */
 function endTest(test: any, holder: any) {
-	if (test._ok) holder.remove()
+	if (test['_ok']) holder.remove()
 	test.end()
 }
 
@@ -267,23 +268,25 @@ tape('renderSamplesTable() noButtonCallback should show plotsBtnsDiv', test => {
 	endTest(test, holder)
 })
 
-tape('renderSamplesTable() noButtonCallback should toggle the select btn on sample selection', test => {
-	let toggled = false
-	const holder = getHolder()
-	const dom = getMockDom(holder)
-	dom.selectBtn.toggle = () => {
-		toggled = true
+tape('renderSamplesTable() should hide the table on selection in each viewer', test => {
+	const holders = [] as ReturnType<typeof getHolder>[]
+	for (let viewer = 1; viewer <= 2; viewer++) {
+		const holder = getHolder()
+		holders.push(holder)
+		const dom = getMockDom(holder)
+		dom.tableDiv = holder.append('div')
+		dom.controlsDiv = holder.append('div')
+		const interactions = getMockInteractions()
+		new SCViewRenderer({ dom, interactions } as any).renderSelectBtn()
+		new SampleTableRenderer(dom, interactions, getTestTableData())
+
+		const firstRow = dom.tableDiv.select('tr.sjpp_row_wrapper').node() as HTMLElement
+		firstRow.click()
+
+		test.equal(dom.tableDiv.style('display'), 'none', `Should hide the table in viewer ${viewer}`)
 	}
-	const interactions = getMockInteractions()
-	const tableData = getTestTableData()
-	new SampleTableRenderer(dom, interactions, tableData)
-
-	const firstRow = holder.select('tr.sjpp_row_wrapper').node() as HTMLElement
-	firstRow.click()
-
-	test.ok(toggled, 'Should call selectBtn.toggle() when a sample is selected')
-
-	endTest(test, holder)
+	if (test['_ok']) holders.forEach(holder => holder.remove())
+	test.end()
 })
 
 /* ---- updateTable() ---- */
