@@ -733,12 +733,11 @@ export class Barchart extends PlotBase implements RxComponent {
 			chart.settings.colLabels = chart.visibleSerieses.map(series => {
 				const id = series.seriesId
 				const label = t1.term.values && id in t1.term.values ? t1.term.values[id].label : id
-				const af = series && 'AF' in series ? ', AF=' + series.AF : ''
 				const ntotal =
 					t2 && t2.term.type == 'condition' && t2.q.value_by_computable_grade ? '' : `, n=${series.visibleTotal}`
 				return {
 					id,
-					label: label + af + ntotal
+					label: label + ntotal
 				}
 			})
 			chart.maxVisibleSeriesTotal = chart.visibleSerieses.reduce((max, series) => {

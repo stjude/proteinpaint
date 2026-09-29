@@ -1,5 +1,4 @@
 import path from 'path'
-import * as utils from './utils.js'
 import Partjson from 'partjson'
 import { format } from 'd3-format'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
@@ -79,12 +78,6 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 	there should be no need to check for isMds3 flag
 	*/
 	q.ds = ds
-
-	if (q.ssid) {
-		const [sample2gt, genotype2sample] = await utils.loadfile_ssid(q.ssid)
-		q.sample2gt = sample2gt
-		q.genotype2sample = genotype2sample
-	}
 
 	const startTime = +new Date()
 	q.results = {}
@@ -450,8 +443,7 @@ const seriesTemplate = {
 	'~sum': '+$nval2',
 	'~samples': ['$sample', 'set'],
 	'__:total': '=sampleCount()',
-	'__:boxplot': '=boxplot()',
-	'__:AF': '=getAF()'
+	'__:boxplot': '=boxplot()'
 }
 
 const template = JSON.stringify({
@@ -602,22 +594,6 @@ function getPj(q, data, ds, twByIndex) {
 				stat.max = context.self.max
 				return stat
 			},
-			getAF(row, context) {
-				// only get AF when termdb_bygenotype.getAF is true
-				if (!ds.track || !ds.track.vcf || !ds.track.vcf.termdb_bygenotype || !ds.track.vcf.termdb_bygenotype.getAF)
-					return
-				if (!q.term2_is_genotype) return
-				if (!q.chr) throw 'chr missing for getting AF'
-				if (!q.pos) throw 'pos missing for getting AF'
-
-				return get_AF(
-					context.self.samples ? [...context.self.samples] : [],
-					q.chr,
-					Number(q.pos),
-					q.genotype2sample,
-					ds
-				)
-			},
 			filterEmptySeries(result) {
 				const nonempty = result.serieses.filter(series => series.total)
 				result.serieses.splice(0, result.serieses.length, ...nonempty)
@@ -718,64 +694,6 @@ function getTermDetails(twByIndex, index) {
 	// isComputableVal is needed for boxplot
 	const isComputableVal = val => termIsNumeric && !unannotatedValues.includes(val)
 	return { term, isComputableVal, q: tw?.q || {} }
-}
-
-function get_AF(samples, chr, pos, genotype2sample, ds) {
-	/*
-as configured by ds.track.vcf.termdb_bygenotype,
-at genotype overlay of a barchart,
-to show AF=? for each bar, based on the current variant
-
-arguments:
-- samples[]
-  list of sample names from a bar
-- chr
-  chromosome of the variant
-- genotype2sample Map
-    returned by loadfile_ssid()
-- ds{}
-*/
-	const afconfig = ds.track.vcf.termdb_bygenotype // location of configurations
-	const href = genotype2sample.has(utils.genotype_types.href)
-		? genotype2sample.get(utils.genotype_types.href)
-		: new Set()
-	const halt = genotype2sample.has(utils.genotype_types.halt)
-		? genotype2sample.get(utils.genotype_types.halt)
-		: new Set()
-	const het = genotype2sample.has(utils.genotype_types.het) ? genotype2sample.get(utils.genotype_types.het) : new Set()
-	let AC = 0,
-		AN = 0
-	for (const sample of samples) {
-		let isdiploid = false
-		if (afconfig.sex_chrs.has(chr)) {
-			if (afconfig.male_samples.has(sample)) {
-				if (afconfig.chr2par && afconfig.chr2par[chr]) {
-					for (const par of afconfig.chr2par[chr]) {
-						if (pos >= par.start && pos <= par.stop) {
-							isdiploid = true
-							break
-						}
-					}
-				}
-			} else {
-				isdiploid = true
-			}
-		} else {
-			isdiploid = true
-		}
-		if (isdiploid) {
-			AN += 2
-			if (halt.has(sample)) {
-				AC += 2
-			} else if (het.has(sample)) {
-				AC++
-			}
-		} else {
-			AN++
-			if (!href.has(sample)) AC++
-		}
-	}
-	return AN == 0 || AC == 0 ? 0 : (AC / AN).toFixed(3)
 }
 
 /*
