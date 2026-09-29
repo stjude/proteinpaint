@@ -11,7 +11,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import crypto from 'crypto'
 import ky from 'ky'
 import { interpolateRgb } from 'd3-interpolate'
-import { match_complexvariant_rust } from './bam.kmer.indel.js'
+import { match_complexvariant_rust } from './bam.indel.js'
 import { basecolor, bplen } from '#shared/common.js'
 import { gdcCheckPermission } from './bam.gdc.js'
 import { fileSize } from '#shared/fileSize.js'
@@ -786,8 +786,17 @@ async function get_q(genome, req) {
 		const t = req.query.variant.split('.')
 		q.strictness = req.query.strictness
 		if (!Number.isInteger(t.length % 4)) throw 'invalid variant, not chr.pos.ref.alt'
+		const num_variants = t.length / 4
 		q.alleleAlreadyUpdated = req.query.alleleAlreadyUpdated
 		if (q.alleleAlreadyUpdated) {
+			// must be arrays with one element per variant, as they are used as loop bounds
+			bamcommon.validateAlleleArrays(
+				req.query,
+				['altseqs', 'refseqs', 'altalleles', 'refalleles', 'leftflankseqs', 'rightflankseqs'],
+				num_variants,
+				'string'
+			)
+			bamcommon.validateAlleleArrays(req.query, ['ref_positions'], num_variants, 'number')
 			q.altseqs = req.query.altseqs
 			q.refseqs = req.query.refseqs
 			q.altalleles = req.query.altalleles
@@ -797,7 +806,6 @@ async function get_q(genome, req) {
 			q.ref_positions = req.query.ref_positions
 		}
 
-		const num_variants = t.length / 4
 		const variants = []
 		for (let i = 0; i < num_variants; i++) {
 			variants.push({ chr: t[i * 4], pos: Number(t[i * 4 + 1]), ref: t[i * 4 + 2], alt: t[i * 4 + 3] })
@@ -3216,6 +3224,10 @@ async function query_oneread(req, r) {
 	if (lst) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
 		if (req.query.altseqs) {
+			if (!Array.isArray(req.query.refseqs)) throw 'refseqs is not an array'
+			const n = req.query.refseqs.length
+			bamcommon.validateAlleleArrays(req.query, ['refseqs', 'altseqs', 'refalleles', 'altalleles'], n, 'string')
+			bamcommon.validateAlleleArrays(req.query, ['ref_positions'], n, 'number')
 			const input_data = {
 				query_seq: lst[0].seq,
 				refseqs: req.query.refseqs,

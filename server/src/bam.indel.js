@@ -1,9 +1,4 @@
-import fs from 'fs'
-import path from 'path'
 import * as utils from './utils.js'
-import { spawn } from 'child_process'
-import { Readable } from 'stream'
-import readline from 'readline'
 import * as bamcommon from './bam.common.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 
@@ -140,6 +135,15 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			altseqs.push(altseq)
 		}
 	} else {
+		// defend against non-array input, which would otherwise be used as loop bound
+		const n = q.variant.length
+		bamcommon.validateAlleleArrays(
+			q,
+			['leftflankseqs', 'rightflankseqs', 'refseqs', 'altseqs', 'refalleles', 'altalleles'],
+			n,
+			'string'
+		)
+		bamcommon.validateAlleleArrays(q, ['ref_positions'], n, 'number')
 		{
 			leftflankseqs = q.leftflankseqs
 			rightflankseqs = q.rightflankseqs
