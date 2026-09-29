@@ -1,3 +1,4 @@
+import { escapeHtml } from './filter.utils'
 import { select } from 'd3-selection'
 import { scaleLinear } from 'd3'
 import { addBrushes, addNewBrush } from './tvs.density'
@@ -42,7 +43,9 @@ export const handler = {
 
 function term_name_gen(d) {
 	const name = d.term.name
-	return name.length < 26 ? name : '<label title="' + name + '">' + name.substring(0, 24) + '...' + '</label>'
+	return name.length < 26
+		? escapeHtml(name)
+		: '<label title="' + escapeHtml(name) + '">' + escapeHtml(name.substring(0, 24)) + '...' + '</label>'
 }
 
 function get_pill_label(tvs) {

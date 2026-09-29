@@ -1,3 +1,4 @@
+import { escapeHtml } from './filter.utils'
 import { handler as _handler } from './tvs.categorical.js'
 import { renderVariantConfig, breakpointRangeLabel } from '#dom'
 import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
@@ -63,7 +64,9 @@ async function fillMenu(self, div, tvs) {
 
 function term_name_gen(d) {
 	const name = d.term.parentTerm && !d.excludeGeneName ? `${d.term.parentTerm.name} ${d.term.name}` : d.term.name
-	return name.length < 31 ? name : '<label title="' + name + '">' + name.substring(0, 28) + '...' + '</label>'
+	return name.length < 31
+		? escapeHtml(name)
+		: '<label title="' + escapeHtml(name) + '">' + escapeHtml(name.substring(0, 28)) + '...' + '</label>'
 }
 
 function get_pill_label(tvs) {

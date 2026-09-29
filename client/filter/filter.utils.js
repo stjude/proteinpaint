@@ -296,3 +296,19 @@ function processTW(tw, values, lst) {
 			})
 	}
 }
+
+/*
+Escape user-supplied text before it is passed to a d3 .html() sink. Filter pill term
+names and value labels render via .html() (tvs.js, tvs.*.js term_name_gen), so raw
+user input (e.g. a term.name or values[].label injected via ?mass= state) would be
+parsed as live HTML — a stored-XSS vector. Escaping neutralizes both element and
+double-quoted-attribute contexts.
+*/
+export function escapeHtml(s) {
+	return String(s)
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;')
+}

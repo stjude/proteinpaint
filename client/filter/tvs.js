@@ -1,3 +1,4 @@
+import { escapeHtml } from './filter.utils'
 import * as rx from '../rx'
 import { select } from 'd3-selection'
 import { Menu } from '../dom/menu'
@@ -195,14 +196,14 @@ function setRenderers(self) {
 			.style('padding', '6px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')
 			.style('font-style', 'italic')
-			.html(d => d.txt)
+			.html(d => escapeHtml(d.txt))
 			.append('div')
 			.attr('class', 'grade_type_btn')
 			.style('display', 'inline-block')
 			.style('margin', '0 5px')
 			.style('font-size', '.6em')
 			.style('text-transform', 'uppercase')
-			.html(d => d.grade_type)
+			.html(d => escapeHtml(d.grade_type))
 			.style('opacity', 0)
 			.transition()
 			.duration(200)

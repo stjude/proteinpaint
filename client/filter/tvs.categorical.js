@@ -1,3 +1,4 @@
+import { escapeHtml } from './filter.utils'
 /*
 ********************** EXPORTED
 handler:
@@ -50,7 +51,9 @@ async function fillMenu(self, div, tvs) {
 
 function term_name_gen(d) {
 	const name = d.term.name
-	return name.length < 21 ? name : '<label title="' + name + '">' + name.substring(0, 18) + '...' + '</label>'
+	return name.length < 21
+		? escapeHtml(name)
+		: '<label title="' + escapeHtml(name) + '">' + escapeHtml(name.substring(0, 18)) + '...' + '</label>'
 }
 
 function get_pill_label(tvs) {
