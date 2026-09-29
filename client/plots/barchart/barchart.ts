@@ -1323,13 +1323,16 @@ function setInteractivity(self) {
 			extraOptions.push({
 				label: 'Association test',
 				testid: 'sjpp-download-pvalues',
-				filename: `${filename}_fischer_association_test`,
+				filename: `${filename}_fisher_association_test`,
 				callback: () =>
 					/** Note: Update this if chi-square test is ever enabled. */
 					testRowsToTSV(
 						"Fisher's exact test",
 						['Row 1', 'Row 2', 'Column 1', 'Column 2', 'P-value'],
-						testCharts.map(chart => ({ chartLabel: chart.chartId, rows: self.getPvalueRows(chart).rows }))
+						testCharts.map(chart => ({
+ 							chartLabel: self.handlers.chart.title(chart),
+ 							rows: self.getPvalueRows(chart).rows
+ 						}))
 					)
 			})
 		}

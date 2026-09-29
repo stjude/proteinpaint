@@ -53,7 +53,7 @@ export class CustomDownloadMenu extends DownloadMenu {
 							to_textfile(`${name}.${opt.ext || 'txt'}`, content)
 						}
 					} catch (e: any) {
-						console.error(`Error executing ${opt.label} callback, ${e.message || e}`)
+						console.error(`Error executing ${opt.label} callback, ${e instanceof Error ? e.message : String(e)}`)
 					}
 				})
 		}
