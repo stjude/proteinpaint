@@ -57,8 +57,8 @@ tape('both series: a line+dot for SC, a square for POC, a square per zone', func
 	)
 	test.deepEqual(
 		textsOf(holder, 'g.impression-legend-zone'),
-		ZONES.map(z => z.label),
-		'every zone is named'
+		['Weak (1–5)', 'Intermediate (6–7)', 'Strong (8–10)'],
+		'every zone is named with its rating range'
 	)
 
 	/*
@@ -157,7 +157,7 @@ tape('zones are ordered low to high whatever order they arrive in', function (te
 
 	test.deepEqual(
 		textsOf(holder, 'g.impression-legend-zone'),
-		['Weak', 'Intermediate', 'Strong'],
+		['Weak (1–5)', 'Intermediate (6–7)', 'Strong (8–10)'],
 		'zones read low to high'
 	)
 	// The caller's array is shared with both chart renderers, so it must not be sorted in place.

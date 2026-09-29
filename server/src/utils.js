@@ -9,10 +9,12 @@ import ky from 'ky'
 import serverconfig from './serverconfig.js'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
-import { minimatch } from 'minimatch'
+import * as minimatchModule from 'minimatch'
 export * from './cachedFetch.js'
 export * from './xfetch.js'
 export { connect_db } from './sql.ts'
+
+const minimatch = minimatchModule.minimatch || minimatchModule.default
 
 const { tabix, samtools, bcftools, bigBedToBed, bigBedNamedItems, bigBedInfo } = serverconfig
 

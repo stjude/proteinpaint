@@ -291,16 +291,12 @@ export class profileForms extends profilePlot {
 		const scColor = this.impressionScColor || '#888'
 		const data = this.data
 
-		// Resolve each performance-zone color from this module's colorMap gradient (config gives the
-		// shade key, not a literal color): Weak=SOMETIMES (lightest) … Strong=ALMOST ALWAYS (darkest).
-		// Falls back to the base module color if a shade is absent for the module.
-		const moduleShades = this.state.termdbConfig?.colorMap?.[this.module] || {}
-		const zones = texts.zones.map((z: any) => ({
-			label: z.label,
-			min: z.min,
-			max: z.max,
-			color: moduleShades[z.shade] || scColor
-		}))
+		// Performance-zone colors are fixed per zone in config (the same for every module), so a zone
+		// missing one fails here with a named cause rather than rendering an unfilled band.
+		const zones = texts.zones.map((z: any) => {
+			if (!z.color) throw `Missing impression.zones[].color for the zone "${z.label}" in this dataset`
+			return { label: z.label, min: z.min, max: z.max, color: z.color }
+		})
 
 		// Bind tooltip text + optional hover descriptor as the element's datum. The shared
 		// profilePlot mousemove→onMouseOver delegation reads __data__ (same pattern as polar2/radar2).

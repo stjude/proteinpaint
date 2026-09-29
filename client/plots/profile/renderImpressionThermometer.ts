@@ -339,9 +339,9 @@ export function renderImpressionThermometer(a: ImpressionThermometerArgs) {
 	/*
 	1) Distribution track: one band per performance zone, filling tube and bulb (the empty state).
 	Same colors, same 0.3 opacity and same discrete-band form the sibling response-distribution
-	chart uses, so the pair reads as one system. Bands are discrete rather than a blended gradient
-	because a module's zone shades are three tints of one hue — smoothing the boundaries away
-	leaves a single flat wash with no readable zones. Extents come from zoneExtent().
+	chart uses, so the pair reads as one system. Bands are discrete rather than a blended gradient:
+	the hard edges mark exactly where one zone ends and the next begins, which a blend would smear
+	across neighbouring ratings. Extents come from zoneExtent().
 	*/
 	const trackG = inVessel()
 	sortedZones.forEach((z, i) => {
