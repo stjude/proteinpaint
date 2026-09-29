@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { tid2value2filter, combinePPfilterAndTid2value } from '../mds3.filter.js'
+import { tid2value2filter, combinePPfilterAndTid2value, mayLimitSamples } from '../mds3.filter.js'
 /*
 test sections:
 tid2value2filter - empty tid2value
@@ -12,6 +12,9 @@ combinePPfilterAndTid2value - filterObj only
 combinePPfilterAndTid2value - tid2value only
 combinePPfilterAndTid2value - filter + tid2value combined
 combinePPfilterAndTid2value - filterObj + filter + tid2value combined
+mayLimitSamples - sampleTypes must be an array
+mayLimitSamples - sampleTypes array filters samples
+mayLimitSamples - omitted sampleTypes does not filter
 */
 tape('\n', function (test) {
 	test.comment('-***- src/mds3.filter specs -***-')
@@ -184,9 +187,55 @@ tape('combinePPfilterAndTid2value - filterObj + filter + tid2value combined', fu
 	)
 	test.end()
 })
+tape('mayLimitSamples - sampleTypes must be an array', async function (test) {
+	const ds = getMockSampleTypeDs()
+	for (const sampleTypes of ['1', 1, { 0: 1, length: 1 }]) {
+		try {
+			await mayLimitSamples({ sampleTypes }, null, ds)
+			test.fail(`should throw on sampleTypes=${JSON.stringify(sampleTypes)}`)
+		} catch (e: any) {
+			test.equal(
+				e.message,
+				'sampleTypes must be an array',
+				`should throw on sampleTypes=${JSON.stringify(sampleTypes)}`
+			)
+		}
+	}
+	test.end()
+})
+tape('mayLimitSamples - sampleTypes array filters samples', async function (test) {
+	const ds = getMockSampleTypeDs()
+	const result = await mayLimitSamples({ sampleTypes: [1] }, null, ds)
+	test.deepEqual([...result!].sort(), [10, 12], 'should return samples of the requested sample type')
+	const limited = await mayLimitSamples({ sampleTypes: [1] }, [12, 13], ds)
+	test.deepEqual([...limited!], [12], 'should intersect with the supplied sample list')
+	test.end()
+})
+tape('mayLimitSamples - omitted sampleTypes does not filter', async function (test) {
+	const ds = getMockSampleTypeDs()
+	test.equal(await mayLimitSamples({}, null, ds), undefined, 'should return undefined when sampleTypes is omitted')
+	test.equal(
+		await mayLimitSamples({ sampleTypes: null }, null, ds),
+		undefined,
+		'should return undefined when sampleTypes is null'
+	)
+	test.end()
+})
 /**************
  helpers
 ***************/
+// build a minimal ds mock with sampleId2Type and no filtering method
+function getMockSampleTypeDs() {
+	return {
+		cohort: {},
+		sampleId2Type: new Map([
+			[10, 1],
+			[11, 2],
+			[12, 1],
+			[13, 2]
+		])
+	}
+}
 // build a minimal ds mock supplying termjsonByOneid()
 function getMockDs(terms: { [id: string]: any }) {
 	return {
