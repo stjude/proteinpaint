@@ -78,8 +78,10 @@ export async function cache_index(gzurl, indexurl) {
 	if (gzHostErr) throw '.gz file URL error: ' + gzHostErr
 	// build cache directory using gz file url and do not include index portion
 	// e.g. cache/https/domain/path/to/file.gz/
-	const dir = path.join(serverconfig.cachedir, protocol, body)
-	if (!isUnderDir(dir, path.join(serverconfig.cachedir, protocol))) throw '.gz file URL escapes cache dir'
+	// resolve and check inline so the returned dir, which becomes the cwd of spawned tools, is confined to the cache dir
+	const protocolDir = path.resolve(serverconfig.cachedir, protocol)
+	const dir = path.resolve(protocolDir, body)
+	if (!dir.startsWith(protocolDir + path.sep)) throw '.gz file URL escapes cache dir'
 	try {
 		await fs.promises.stat(dir)
 	} catch (e) {
