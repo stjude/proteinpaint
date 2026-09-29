@@ -13,7 +13,7 @@ Repo-specific facts for assessing scanner findings. Verify a helper's current be
 | Helper | Use for | Notes |
 |---|---|---|
 | `illegalpath(s, checkWhiteList = false, checkBlackList = true)` | A relative path under `serverconfig.tpmasterdir` | Returns true (illegal) for non-strings, absolute paths, `..`, quotes, `\|`, `&`, whitespace, control characters, `<script`. **The default blacklist rejects `.bam .bai .gz .tbi .csi .bw .bb`**, so pass `checkBlackList = false` for data files. |
-| `illegalPathSegment(s)` | A single file or folder name, such as a session id or cache id | `illegalpath` plus no `/`, `\`, or `.` |
+| `illegalPathSegment(s)` | A single file or folder name, such as a session id or cache id | `illegalpath` plus no `/` or `\`, and not the name `.` itself. Periods within a name, such as `a.b_at_c.org` or `FI.bam`, are allowed |
 | `fileurl(req, checkWhiteList = true)` | `req.query.file` or `req.query.url` together | Returns `[err, file, isurl]`; joins a file onto `tpmasterdir` after `illegalpath`, validates a url with `test_url` and `illegalUrlHost` |
 | `test_url(u)` (not exported) | A remote url | Protocol must be http, https or ftp; no `..` path segment; no leading `-` |
 | `illegalUrlHost(u)` | SSRF | Rejects localhost and non-public IP literals, or hosts not in `serverconfig.urlHosts` when set. Does not catch a hostname that resolves to a private IP. |
