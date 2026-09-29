@@ -55,10 +55,9 @@ class MassAiChatBot implements RxComponent {
 	initDom() {
 		//const cohortStr = this.getState(appState).cohortStr
 		let text = 'Search an item'
-		let height = '1px' // No white space needed for search only
+		const height = '200px' // No white space needed for search only
 		if (this.isChat) {
 			text = 'Ask a question'
-			height = '200px'
 		}
 		this.dom = {
 			tip: new Menu({ padding: '5px' }),
