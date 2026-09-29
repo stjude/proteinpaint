@@ -55,7 +55,7 @@ class MassAiChatBot implements RxComponent {
 	initDom() {
 		//const cohortStr = this.getState(appState).cohortStr
 		let text = 'Search an item'
-		const height = '200px' // No white space needed for search only
+		const height = '200px'
 		if (this.isChat) {
 			text = 'Ask a question'
 		}
