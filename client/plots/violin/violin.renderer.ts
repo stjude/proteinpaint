@@ -18,7 +18,7 @@ type ViolinDensityBin = {
 
 type LegendItem = {
 	text: string
-	testIdSuffix: string
+	testIdSuffix?: string
 	noIcon: boolean
 	isHidden?: boolean
 	isClickable?: boolean
@@ -97,6 +97,7 @@ export default function setViolinRenderer(self: any) {
 			self.dom.legendDiv.selectAll('*').remove()
 			return
 		}
+		console.log('Finished rendering violin chart', self.opts.mode != 'minimal', 2)
 		for (const chartKey of chartKeys) {
 			const chart: ViolinResponseChart & { chartDiv?: any } = data.charts[chartKey]
 			const plots = chart.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
@@ -115,9 +116,8 @@ export default function setViolinRenderer(self: any) {
 				chartDiv.html(
 					` <span style="opacity:.6;font-size:1em;margin-left:90px;">No visible violin plot data to render</span>`
 				)
-				return
+				continue
 			}
-
 			// append the svg object to the body of the page
 			chartDiv.select('.sjpp-violin-plot').remove()
 
@@ -174,13 +174,12 @@ export default function setViolinRenderer(self: any) {
 					// enable brushing
 					if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svgData)
 				}
-
-				self.labelHideLegendClicking(t2, plot) // FIXME
 			}
 
 			// render p-value table
 			if (self.settings.showAssociationTests) self.renderPvalueTable(chartDiv, chart)
 		}
+		if (self.opts.mode != 'minimal') self.labelHideLegendClicking(t2)
 	}
 
 	self.displaySummaryStats = function (
