@@ -1554,3 +1554,70 @@ tape(`req.query.filter, __protected__`, async test => {
 		)
 	}
 })
+
+/*
+mayAdjustFilter(): removing a stale auth filter must remove ONLY that entry.
+
+A route may append its own tvs after the middleware-injected auth filter — profile's
+latest-submission narrowing does. A bare splice(i) truncates from i to the end and
+silently ate that entry, which was invisible while the auth filter was always last.
+*/
+tape('\n', function (test) {
+	test.comment('-***- auth.mayAdjustFilter -***-')
+	test.end()
+})
+
+tape('mayAdjustFilter: drops only the tagged auth entry, keeps route-appended entries', async test => {
+	const dsCredentials = { testds: { '*': { '*': { type: 'basic', password: '...' } } } }
+	const genomes = { hg38: { datasets: { testds: {} } } }
+	const { authApi } = await appInit({ debugmode, dsCredentials, cachedir }, genomes)
+	// getAdditionalFilter returns undefined => the role has full access, so a previously
+	// injected auth filter must be taken back out
+	const ds = { cohort: { termdb: { getAdditionalFilter: () => undefined } } }
+	const routeTvs = { type: 'tvs', tvs: { term: { id: 'appended_by_route' }, values: [{ key: 'Yes' }] } }
+	const q = {
+		__protected__: { clientAuthResult: {}, ignoredTermIds: [] },
+		filter: {
+			type: 'tvslst',
+			join: 'and',
+			in: true,
+			lst: [
+				{ type: 'tvs', tvs: { term: { id: 'cohort' }, values: [{ key: 'full' }] } },
+				{ type: 'tvslst', join: 'or', lst: [], tag: 'termLevelAuthFilter' },
+				routeTvs
+			]
+		}
+	}
+
+	authApi.mayAdjustFilter(q, ds)
+
+	const ids = q.filter.lst.map(f => f.tvs?.term?.id || f.tag)
+	test.deepEqual(ids, ['cohort', 'appended_by_route'], 'auth entry removed, route entry survives')
+	test.equal(q.filter.join, 'and', 'join stays "and" while two entries remain')
+	test.end()
+})
+
+tape('mayAdjustFilter: still clears join when only one entry is left', async test => {
+	const dsCredentials = { testds: { '*': { '*': { type: 'basic', password: '...' } } } }
+	const genomes = { hg38: { datasets: { testds: {} } } }
+	const { authApi } = await appInit({ debugmode, dsCredentials, cachedir }, genomes)
+	const ds = { cohort: { termdb: { getAdditionalFilter: () => undefined } } }
+	const q = {
+		__protected__: { clientAuthResult: {}, ignoredTermIds: [] },
+		filter: {
+			type: 'tvslst',
+			join: 'and',
+			in: true,
+			lst: [
+				{ type: 'tvs', tvs: { term: { id: 'cohort' }, values: [{ key: 'full' }] } },
+				{ type: 'tvslst', join: 'or', lst: [], tag: 'termLevelAuthFilter' }
+			]
+		}
+	}
+
+	authApi.mayAdjustFilter(q, ds)
+
+	test.equal(q.filter.lst.length, 1, 'only the non-auth entry remains')
+	test.equal(q.filter.join, '', 'join reset to empty for a single-entry filter')
+	test.end()
+})

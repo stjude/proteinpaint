@@ -273,7 +273,8 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 					scScoreTerms: this.scScoreTerms,
 					filter: this.filter,
 					facilityTW: this.config.facilityTW,
-					filterByUserSites: this.settings.filterByUserSites
+					filterByUserSites: this.settings.filterByUserSites,
+					includeAllRounds: this.includeAllRounds()
 				})
 			else if (this.type == 'profileRadarFacility2')
 				// profileRadarFacility2 fetches aggregate + single-site in one dedicated-route call;
@@ -412,6 +413,36 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 				)
 			}
 			if (this.state.logged) {
+				/*
+				Submission round. Public never gets this control — they always see each site's most
+				recent round — matching how Sites and Facility site are already withheld below.
+
+				Only pushed when the round is its own term. While it is still Year_implementation the
+				dropdown above already serves as the round selector, and a second input on the same
+				settingsKey would clobber it.
+
+				Rounds with no data under the current filter are dropped rather than greyed out —
+				same treatment the Sites dropdown gives its own unavailable entries — so the list
+				only ever offers rounds you can actually select.
+
+				It deliberately opens on the server's blank sentinel rather than a preselected year.
+				Blank means the server applies Latest_submission=Yes, so charts plot each site's
+				most recent data — and because the value is empty, addFilterLegendItem() skips it
+				and no "Assessment Year: 2026" caption is drawn beside the chart. A preselected
+				year would both pin one assessment wave (dropping every site not assessed that
+				year) and label the chart with a round the user never chose.
+				*/
+				if (this.config.roundTW !== this.config.yearOfImplementationTW) {
+					const rounds = this.filteredTermValues[this.config.roundTW.id].filter(o => !o.disabled || o.value === '')
+					inputs.push({
+						label: this.config.roundTW.term.name,
+						type: 'dropdown',
+						chartType,
+						settingsKey: this.config.roundTW.term.id,
+						options: rounds,
+						callback: value => this.setFilterValue(this.config.roundTW.term.id, value)
+					})
+				}
 				if (isAggregate && this.sites.length > 1) {
 					const sitesInput = {
 						label: 'Sites',
@@ -518,6 +549,18 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 
 	hasFilterValue(value) {
 		return !!value && value.length !== 0
+	}
+
+	/*
+	The server narrows every aggregate to each site's most recent submission, so a site
+	that was assessed twice is not counted twice. That narrowing has to stand down as soon
+	as the user picks a specific round from the global filter: the older round carries
+	Latest_submission=No, so ANDing the two conditions would drop exactly the resubmitted
+	sites while leaving the never-resubmitted ones in place — a partial chart rather than
+	an obviously empty one. Sent with every scores request.
+	*/
+	includeAllRounds() {
+		return this.hasFilterValue(this.settings[this.config.roundTW.term.id])
 	}
 
 	/*
@@ -711,6 +754,22 @@ export async function loadFilterTerms(config, activeCohort, app) {
 	config.hospitalVolumeTW = { id: cohortPreffix + 'PO_HospitalVolume' }
 	config.yearOfImplementationTW = { id: cohortPreffix + 'Year_implementation' }
 
+	/*
+	Which term marks a site's submission round is data-driven, mirroring ROUND_VARIABLES in
+	utils/sjglobal-profile/profile_rounds.py: a dedicated Assessment_year term when the dictionary
+	defines one, else Year_implementation. termsbyids returns undefined for an unknown id rather
+	than throwing, so both candidates can be probed in one request. Resolving it here means the
+	eventual switch to Assessment_year is a dictionary change, not a code change.
+
+	When the round is still Year_implementation the two point at the SAME tw object: two filter
+	controls cannot share a settingsKey (controls.config.js keys inputs by it), so there is one
+	dropdown serving both meanings until a distinct term exists.
+	*/
+	const roundCandidates = [cohortPreffix + 'Assessment_year', config.yearOfImplementationTW.id]
+	const foundRoundTerms = await app.vocabApi.getTerms(roundCandidates)
+	const roundId = roundCandidates.find(id => foundRoundTerms[id]) || config.yearOfImplementationTW.id
+	config.roundTW = roundId == config.yearOfImplementationTW.id ? config.yearOfImplementationTW : { id: roundId }
+
 	const filterTWs = [
 		config.facilityTW,
 		config.countryTW,
@@ -724,6 +783,7 @@ export async function loadFilterTerms(config, activeCohort, app) {
 		config.hospitalVolumeTW,
 		config.yearOfImplementationTW
 	]
+	if (config.roundTW !== config.yearOfImplementationTW) filterTWs.push(config.roundTW)
 	await fillTwLst(filterTWs, app.vocabApi)
 	config.filterTWs = filterTWs
 }

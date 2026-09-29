@@ -1,5 +1,6 @@
 import tape from 'tape'
 import {
+	checkAccessToSampleData,
 	divideTerms,
 	getData,
 	getSamples,
@@ -44,6 +45,8 @@ getData: a request of only a negated samplelst group is rejected
 shouldMapParent2Children: handles object sample type metadata with child sample types
 getData: custom bins of a non-dict numeric term come back colored and distinct
 getData: custom bins of a single-cell gene expression term come back colored and distinct
+checkAccessToSampleData: min size counts distinct hidden-term entities, not samples
+checkAccessToSampleData: without hiddenIds the count stays per sample
 */
 
 tape('id2sampleRef(): prefers id2sampleRefs, else id2sampleName raw-then-Number, no NaN on string ids', test => {
@@ -1168,5 +1171,97 @@ tape('getData: a categorical groupset with filter groups is assigned by each gro
 		.all('sex'))
 		sexCounts[r.value] = r.n
 	t.deepEqual(counts, { males: sexCounts['1'], females: sexCounts['2'] }, 'assigns samples by each group filter')
+	t.end()
+})
+
+/*
+checkAccessToSampleData(): a dataset that declares hiddenIds protects the hidden
+term's value (e.g. a site), and one such entity may own several samples — for
+instance a site that submits data in more than one round. The min-size check
+must therefore count distinct entities, so two samples of the same site do not
+read as two sites.
+*/
+
+// records the {count} handed to the dataset hook by each of the two checks
+function buildMinSizeDs({ hiddenIds, annoRows, sampleNameRows, minSize = 2 }) {
+	const seenCounts = []
+	return {
+		seenCounts,
+		ds: {
+			cohort: {
+				db: {
+					connection: {
+						prepare: sql => ({
+							all: () => (sql.text.includes('anno_categorical') ? annoRows : sampleNameRows)
+						})
+					}
+				},
+				termdb: {
+					hiddenIds,
+					checkAccessToSampleData: (_q, data) => {
+						seenCounts.push(data.count)
+						return { minSize, canAccess: data.count >= minSize, message: 'blocked' }
+					}
+				}
+			}
+		}
+	}
+}
+
+tape('checkAccessToSampleData: two samples of one hidden-term entity count as one', t => {
+	// one site, two submission rounds -> sample ids 1 and 49, both FUNIT=site_a
+	const { ds, seenCounts } = buildMinSizeDs({
+		hiddenIds: ['FUNIT', 'AUNIT'],
+		annoRows: [
+			{ sample: 1, name: 'site_a' },
+			{ sample: 49, name: 'site_a' }
+		]
+	})
+	const data = { samples: { 1: { t1: {} }, 49: { t1: {} } } }
+	let thrown
+	try {
+		checkAccessToSampleData(data, ds, {})
+	} catch (e) {
+		thrown = e
+	}
+	// the route layer throws a plain object carrying the code, not an Error
+	t.deepEqual(
+		thrown,
+		{ message: 'blocked', code: 'ERR_MIN_SIZE' },
+		'a single site with two rounds is blocked below minSize'
+	)
+	t.deepEqual(seenCounts, [1], 'quick check counted 1 distinct site, so the per-term check never ran')
+	t.end()
+})
+
+tape('checkAccessToSampleData: two distinct entities pass, per-term count is entity-based', t => {
+	const { ds, seenCounts } = buildMinSizeDs({
+		hiddenIds: ['FUNIT', 'AUNIT'],
+		annoRows: [
+			{ sample: 1, name: 'site_a' },
+			{ sample: 49, name: 'site_a' },
+			{ sample: 2, name: 'site_b' }
+		]
+	})
+	const data = { samples: { 1: { t1: {} }, 49: { t1: {} }, 2: { t1: {} } } }
+	t.doesNotThrow(() => checkAccessToSampleData(data, ds, {}), 'two distinct sites are allowed')
+	t.deepEqual(seenCounts, [2, 2], 'both checks counted 2 sites, not 3 samples')
+	t.end()
+})
+
+tape('checkAccessToSampleData: without hiddenIds the count stays per sample', t => {
+	const { ds, seenCounts } = buildMinSizeDs({
+		hiddenIds: undefined,
+		sampleNameRows: [{ name: 's1' }, { name: 's2' }]
+	})
+	const data = { samples: { 1: { t1: {} }, 2: { t1: {} } } }
+	t.doesNotThrow(() => checkAccessToSampleData(data, ds, {}), 'two samples pass')
+	t.deepEqual(seenCounts, [2, 2], 'sample ids are counted directly when no entity mapping exists')
+	t.end()
+})
+
+tape('checkAccessToSampleData: no-op when the dataset defines no hook', t => {
+	const ds = { cohort: { termdb: {} } }
+	t.doesNotThrow(() => checkAccessToSampleData({ samples: { 1: { t1: {} } } }, ds, {}), 'returns early')
 	t.end()
 })

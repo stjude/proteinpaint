@@ -81,6 +81,7 @@ class ProfileRadarFacility2 extends profilePlot {
 				})),
 				filter: this.filter,
 				filterByUserSites: this.settings?.filterByUserSites,
+				includeAllRounds: this.includeAllRounds(),
 				facilitySite: this.settings?.facilitySite || null
 			}
 		})

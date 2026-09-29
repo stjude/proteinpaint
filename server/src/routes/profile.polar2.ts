@@ -1,5 +1,6 @@
 import type { RouteApi, RoutePayload } from '#types'
 import { getData } from '#src/termdb.matrix.js'
+import { buildSitesList, derivePrefix, withLatestSubmissionFilter } from '#src/termdb.profileScores.ts'
 
 /*
 Route for the profile polar chart. Returns the aggregated median percentage
@@ -41,24 +42,6 @@ function init({ genomes }) {
 	}
 }
 
-/**
- * Derives the cohort prefix from term IDs already present in the request.
- * Primary source: scoreTerms (always present in the request).
- * Fallback: filter term IDs (may be absent if no filters are applied).
- * Term IDs share the same prefix as the facility term for a given cohort.
- */
-function derivePrefix(query: any): string {
-	const firstScoreId = query.scoreTerms?.[0]?.score?.term?.id
-	if (firstScoreId?.startsWith('F')) return 'F'
-	if (firstScoreId?.startsWith('A')) return 'A'
-	for (const entry of query.filter?.lst || []) {
-		const id = entry.tvs?.term?.id
-		if (id?.startsWith('F')) return 'F'
-		if (id?.startsWith('A')) return 'A'
-	}
-	throw 'cannot determine cohort prefix from scoreTerms or filter term IDs'
-}
-
 async function getScores(query: any, ds: any) {
 	// 1. Derive facility term id from term IDs already in the request.
 	//    scoreTerms and filter terms share the same cohort prefix as the facility term,
@@ -90,7 +73,7 @@ async function getScores(query: any, ds: any) {
 	const raw = await getData(
 		{
 			terms,
-			filter: query.filter,
+			filter: withLatestSubmissionFilter(query.filter, prefix, query.includeAllRounds),
 			__protected__: query.__protected__
 		},
 		ds
@@ -99,14 +82,7 @@ async function getScores(query: any, ds: any) {
 
 	// 5. Build eligible sites list (filter to user's accessible sites if needed)
 	const sampleList: any[] = Object.values(raw.samples)
-	let sites = sampleList
-		.filter(s => s[facilityTW.$id])
-		.map(s => {
-			const val = s[facilityTW.$id].value
-			let label = facilityTW.term.values?.[val]?.label || val
-			if (label.length > 50) label = label.slice(0, 47) + '...'
-			return { value: val, label }
-		})
+	let sites = buildSitesList(sampleList, facilityTW)
 	if (userSites && query.filterByUserSites) {
 		// getData() already enforces access control via checkAccessToSampleData();
 		// this further narrows the site list to what the user is authorised to see

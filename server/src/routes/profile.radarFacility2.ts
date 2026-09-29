@@ -1,5 +1,6 @@
 import type { RouteApi, RoutePayload } from '#types'
 import { getData } from '#src/termdb.matrix.js'
+import { buildSitesList, derivePrefix, withLatestSubmissionFilter } from '#src/termdb.profileScores.ts'
 
 /*
 Route for the profile facility-radar chart. Returns both the aggregate median
@@ -52,18 +53,6 @@ function init({ genomes }) {
 	}
 }
 
-function derivePrefix(query: any): string {
-	const firstScoreId = query.scoreTerms?.[0]?.score?.term?.id
-	if (firstScoreId?.startsWith('F')) return 'F'
-	if (firstScoreId?.startsWith('A')) return 'A'
-	for (const entry of query.filter?.lst || []) {
-		const id = entry.tvs?.term?.id
-		if (id?.startsWith('F')) return 'F'
-		if (id?.startsWith('A')) return 'A'
-	}
-	throw 'cannot determine cohort prefix from scoreTerms or filter term IDs'
-}
-
 async function getScores(query: any, ds: any) {
 	const { activeCohort, clientAuthResult } = query.__protected__
 	const prefix = derivePrefix(query)
@@ -91,7 +80,7 @@ async function getScores(query: any, ds: any) {
 	const raw = await getData(
 		{
 			terms,
-			filter: query.filter,
+			filter: withLatestSubmissionFilter(query.filter, prefix, query.includeAllRounds),
 			__protected__: query.__protected__
 		},
 		ds
@@ -101,14 +90,7 @@ async function getScores(query: any, ds: any) {
 	const samples: any[] = Object.values(raw.samples)
 
 	// Build the sites list — user sees their own accessible sites; admin sees all.
-	let sites = samples
-		.filter(s => s[facilityTW.$id])
-		.map(s => {
-			const val = s[facilityTW.$id].value
-			let label = facilityTW.term.values?.[val]?.label || val
-			if (label.length > 50) label = label.slice(0, 47) + '...'
-			return { value: val, label }
-		})
+	let sites = buildSitesList(samples, facilityTW)
 	if (userSites && !isAdmin) {
 		sites = sites.filter(s => userSites.includes(s.value))
 	}

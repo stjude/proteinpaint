@@ -1455,7 +1455,7 @@ function hasValues(term) {
 	ds: dataset object
 	q: req.query
 */
-function checkAccessToSampleData(data, ds, q) {
+export function checkAccessToSampleData(data, ds, q) {
 	// handle the option to require a minimum sample size for data
 	if (!ds.cohort.termdb.checkAccessToSampleData) return
 	// quick check
@@ -1464,14 +1464,23 @@ function checkAccessToSampleData(data, ds, q) {
 	if (!sampleIds.length) return
 	const hiddenIds = ds.cohort.termdb.hiddenIds
 	let rows
+	/*
+	When the dataset declares hiddenIds, the protected entity is the hidden term's
+	value (e.g. a site) rather than the sample row, and one entity may own several
+	samples. Collect the sample-to-entity mapping alongside the names so the
+	per-term check below can count distinct entities.
+	*/
+	const sampleId2entity = new Map()
 	if (hiddenIds?.length) {
 		rows = ds.cohort.db.connection
 			.prepare(
-				sql`SELECT distinct value as name FROM anno_categorical WHERE term_id in (${sql.list(
+				sql`SELECT distinct sample, value as name FROM anno_categorical WHERE term_id in (${sql.list(
 					hiddenIds
 				)}) and sample in (${sql.list(sampleIds)})`
 			)
 			.all()
+		for (const r of rows) sampleId2entity.set(String(r.sample), r.name)
+		rows = [...new Set(rows.map(r => r.name))].map(name => ({ name }))
 	} else {
 		rows = ds.cohort.db.connection.prepare(sql`SELECT name FROM sampleidmap WHERE id in (${sql.list(sampleIds)})`).all()
 	}
@@ -1492,7 +1501,10 @@ function checkAccessToSampleData(data, ds, q) {
 	for (const [sid, dataByTermId] of Object.entries(data.samples) as [string, any][]) {
 		for (const tid of Object.keys(dataByTermId)) {
 			if (!sampleSizeByTermId.has(tid)) sampleSizeByTermId.set(tid, new Set())
-			sampleSizeByTermId.get(tid).add(sid)
+			// count distinct protected entities where the dataset defines them, so the
+			// min-size threshold keeps meaning "at least N distinct entities" even when
+			// one entity contributes several samples
+			sampleSizeByTermId.get(tid).add(sampleId2entity.get(String(sid)) ?? sid)
 		}
 	}
 	const counts = [...sampleSizeByTermId.values()].map(v => v.size) // list of sample counts for each and every term

@@ -3,7 +3,8 @@ import {
 	buildSitesList,
 	filterSitesByUserAccess,
 	sortSitesByLabel,
-	pickSampleAndSite
+	pickSampleAndSite,
+	withLatestSubmissionFilter
 } from '../termdb.profileScores.ts'
 
 /*
@@ -13,6 +14,7 @@ Tests for the pure transformation helpers in termdb.profileScores.
  - filterSitesByUserAccess()
  - sortSitesByLabel()
  - pickSampleAndSite()
+ - withLatestSubmissionFilter()
 
 The async getScoresData() orchestrator is not unit-tested here because it
 delegates to getData() — exercise it via the e2e Templates flow.
@@ -258,5 +260,62 @@ tape('pickSampleAndSite: returns undefined when facilitySite refers to a site th
 	)
 	test.equal(sampleData, undefined, 'sampleData is undefined for unknown site')
 	test.equal(site, undefined, 'site is undefined for unknown site')
+	test.end()
+})
+
+/*
+withLatestSubmissionFilter(): aggregates default to each site's most recent round so a
+site assessed twice is not weighted twice. The narrowing must stand down when the caller
+asks for all rounds — otherwise picking an older round from the global filter ANDs an
+impossible condition and silently drops exactly the resubmitted sites.
+*/
+
+const latestTvs = {
+	type: 'tvs',
+	tvs: { term: { id: 'FLatest_submission', type: 'categorical' }, values: [{ key: 'Yes' }] }
+}
+
+function tvsOn(termId, key) {
+	return {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [{ type: 'tvs', tvs: { term: { id: termId }, values: [{ key }] } }]
+	}
+}
+
+tape('withLatestSubmissionFilter: adds the latest-round tvs when no filter is supplied', test => {
+	const f: any = withLatestSubmissionFilter(undefined, 'F')
+	test.deepEqual(f.lst, [latestTvs], 'returns a filter holding only the latest-round tvs')
+	test.end()
+})
+
+tape('withLatestSubmissionFilter: ANDs onto an existing filter, keeping both conditions', test => {
+	const existing = tvsOn('Fcountry', 'Mexico')
+	const f: any = withLatestSubmissionFilter(existing, 'F')
+	test.equal(f.join, 'and', 'joined with and')
+	test.equal(f.lst.length, 2, 'both the incoming tvs and the latest-round tvs are present')
+	test.deepEqual(f.lst[1], latestTvs, 'latest-round tvs appended')
+	test.deepEqual(existing.lst.length, 1, 'the incoming filter is not mutated')
+	test.end()
+})
+
+tape('withLatestSubmissionFilter: uses the cohort prefix for the flag term', test => {
+	const f: any = withLatestSubmissionFilter(undefined, 'A')
+	test.equal(f.lst[0].tvs.term.id, 'ALatest_submission', 'abbreviated cohort gets the A-prefixed flag')
+	test.end()
+})
+
+tape('withLatestSubmissionFilter: includeAllRounds returns the filter untouched', test => {
+	// the regression guard: selecting an explicit round must not be ANDed with
+	// Latest_submission=Yes, or every resubmitted site drops out of that round's view
+	const existing = tvsOn('FYear_implementation', '2022')
+	const f = withLatestSubmissionFilter(existing, 'F', true)
+	test.equal(f, existing, 'same filter object returned, no latest-round narrowing added')
+	test.end()
+})
+
+tape('withLatestSubmissionFilter: includeAllRounds with no filter yields no filter', test => {
+	test.equal(withLatestSubmissionFilter(undefined, 'F', true), undefined, 'stays undefined')
 	test.end()
 })

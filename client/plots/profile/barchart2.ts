@@ -115,6 +115,7 @@ class ProfileBarchart2 extends profilePlot {
 					maxScore: typeof t.maxScore === 'number' ? t.maxScore : { term: { id: t.maxScore.term.id }, q: t.maxScore.q }
 				})),
 				filterByUserSites: this.settings?.filterByUserSites,
+				includeAllRounds: this.includeAllRounds(),
 				filter: this.filter
 			}
 		})

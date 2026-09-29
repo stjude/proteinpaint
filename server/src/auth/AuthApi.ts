@@ -300,8 +300,10 @@ export class AuthApi implements AuthInterface {
 			// certain roles (from jwt payload) may have access to everything,
 			// revert or do not adjust the q.filter in this case
 			if (i !== -1) {
-				// remove a previously added auth filter
-				q.filter.lst.splice(i)
+				// remove a previously added auth filter. deleteCount must be 1: a bare splice(i)
+				// truncates everything from i onwards, which silently ate any entry a route had
+				// appended after the auth filter (harmless only while it was always last)
+				q.filter.lst.splice(i, 1)
 				if (q.filter.lst.length < 2) q.filter.join = ''
 			} else if (q.filter.tag === FILTER_TAG) {
 				// replace a previous authFilter that was set as the q.filter
