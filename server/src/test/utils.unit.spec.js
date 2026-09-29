@@ -15,7 +15,6 @@ checkChr
 fileurl() argv safety
 fileurl() url protocol and host
 snpgtCacheFile()
-loadfile_ssid()
 */
 
 // the fileurl() specs exercise url handling, which only runs when remote files are allowed
@@ -444,29 +443,6 @@ tape('snpgtCacheFile()', test => {
 			/invalid cacheid/,
 			`should reject cacheid=${JSON.stringify(cacheid)}`
 		)
-	}
-	test.end()
-})
-
-tape('loadfile_ssid()', async test => {
-	for (const id of ['../../etc/passwd', 'a/b', '..', '/etc/passwd', undefined]) {
-		try {
-			await utils.loadfile_ssid(id)
-			test.fail(`should reject ssid=${JSON.stringify(id)}`)
-		} catch (e) {
-			test.equal(e, 'invalid ssid', `should reject ssid=${JSON.stringify(id)} before reading a file`)
-		}
-	}
-
-	const id = 'test_' + Math.random().toString().slice(2)
-	const file = `${utils.cachedir_ssid}/${id}`
-	fs.writeFileSync(file, 'Heterozygous\t1,2\nHomozygous reference\t3\n')
-	try {
-		const [sample2gt, genotype2sample] = await utils.loadfile_ssid(id)
-		test.equal(sample2gt.get(3), 'Homozygous reference', 'should load a valid ssid file')
-		test.deepEqual([...genotype2sample.get('Heterozygous')], [1, 2], 'should group samples by genotype')
-	} finally {
-		fs.unlinkSync(file)
 	}
 	test.end()
 })

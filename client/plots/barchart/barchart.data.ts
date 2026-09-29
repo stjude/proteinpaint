@@ -59,7 +59,6 @@ const templateBar = JSON.stringify({
 						'~sum': '+&idVal.dataVal',
 						'__:boxplot': '=boxplot()',
 						'~samples': ['$sample', 'set'],
-						//'__:AF': '=getAF()',
 						data: [
 							{
 								dataId: '@key',
@@ -340,7 +339,7 @@ export function getCategoryData(q, data) {
 			prep(row) {
 				return sample_match_termvaluesetting(row.data, q.filter)
 			},
-			idVal(row, /*context*/) {
+			idVal(row /*context*/) {
 				const [id, value] = getCategoricalIdVal(row.data, q.term)
 				return { id: id[0], value }
 			}
