@@ -224,19 +224,20 @@ tape('stickyPosition() disconnects a prior stickyObserver on repeated show()', a
 	const holder = getHolder({ position: 'fixed' })
 	const elem = holder.append('div').style('width', '10px').style('height', '10px').node()
 	elem.__data__ = { stickyAncestor: holder.node() }
+	const nonStickyElem = holder.append('div').node()
 	const testMenu = getTestMenu()
 
 	// stickyPosition() only runs when window.event.type == 'click', so show() must be
 	// called synchronously from within a real dispatched click event's handler
-	function showViaClick(x, y) {
+	function showViaClick(x, y, launcher = elem) {
 		return new Promise(resolve => {
 			function handler() {
-				testMenu.show(x, y, true, true, true, elem)
-				elem.removeEventListener('click', handler)
+				testMenu.show(x, y, true, true, true, launcher)
+				launcher.removeEventListener('click', handler)
 				resolve()
 			}
-			elem.addEventListener('click', handler)
-			elem.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+			launcher.addEventListener('click', handler)
+			launcher.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 		})
 	}
 
@@ -254,6 +255,17 @@ tape('stickyPosition() disconnects a prior stickyObserver on repeated show()', a
 	await showViaClick(80, 80)
 	test.ok(disconnected, 'Should disconnect the previous stickyObserver before creating a new one on a repeated show()')
 	test.notEqual(testMenu.stickyObserver, firstObserver, 'Should replace the stickyObserver with a new instance')
+	const secondObserver = testMenu.stickyObserver
+	let secondDisconnected = false
+	const secondDisconnect = secondObserver.disconnect.bind(secondObserver)
+	secondObserver.disconnect = () => {
+		secondDisconnected = true
+		secondDisconnect()
+	}
+
+	await showViaClick(100, 100, nonStickyElem)
+	test.ok(secondDisconnected, 'Should disconnect the stickyObserver when reused with a non-sticky launcher')
+	test.equal(testMenu.stickyObserver, undefined, 'Should not create a new observer for a non-sticky launcher')
 
 	testMenu.destroy()
 	holder.remove()
