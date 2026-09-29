@@ -785,7 +785,7 @@ async function get_q(genome, req) {
 		}
 		const t = req.query.variant.split('.')
 		q.strictness = req.query.strictness
-		if (!Number.isInteger(t.length % 4)) throw 'invalid variant, not chr.pos.ref.alt'
+		if (t.length == 0 || t.length % 4 != 0) throw 'invalid variant, not chr.pos.ref.alt'
 		const num_variants = t.length / 4
 		q.alleleAlreadyUpdated = req.query.alleleAlreadyUpdated
 		if (q.alleleAlreadyUpdated) {
@@ -796,7 +796,7 @@ async function get_q(genome, req) {
 				num_variants,
 				'string'
 			)
-			bamcommon.validateAlleleArrays(req.query, ['ref_positions'], num_variants, 'number')
+			bamcommon.validateAlleleArrays(req.query, ['ref_positions'], num_variants, 'integer')
 			q.altseqs = req.query.altseqs
 			q.refseqs = req.query.refseqs
 			q.altalleles = req.query.altalleles
@@ -808,14 +808,15 @@ async function get_q(genome, req) {
 
 		const variants = []
 		for (let i = 0; i < num_variants; i++) {
-			variants.push({ chr: t[i * 4], pos: Number(t[i * 4 + 1]), ref: t[i * 4 + 2], alt: t[i * 4 + 3] })
+			const pos = Number(t[i * 4 + 1])
+			if (!Number.isInteger(pos)) throw 'variant pos not integer'
+			variants.push({ chr: t[i * 4], pos, ref: t[i * 4 + 2], alt: t[i * 4 + 3] })
 		}
 		q.variant = variants
 		if (req.query.alignOneGroup) {
 			// value is group name to be realigned
 			q.alignOneGroup = req.query.alignOneGroup
 		}
-		if (Number.isNaN(q.variant.pos)) throw 'variant pos not integer'
 	} else if (req.query.sv) {
 		const t = req.query.sv.split('.')
 		if (t.length < 6) throw 'invalid sv, not chrA.posA.chrB.posB'
@@ -3227,7 +3228,7 @@ async function query_oneread(req, r) {
 			if (!Array.isArray(req.query.refseqs)) throw 'refseqs is not an array'
 			const n = req.query.refseqs.length
 			bamcommon.validateAlleleArrays(req.query, ['refseqs', 'altseqs', 'refalleles', 'altalleles'], n, 'string')
-			bamcommon.validateAlleleArrays(req.query, ['ref_positions'], n, 'number')
+			bamcommon.validateAlleleArrays(req.query, ['ref_positions'], n, 'integer')
 			const input_data = {
 				query_seq: lst[0].seq,
 				refseqs: req.query.refseqs,

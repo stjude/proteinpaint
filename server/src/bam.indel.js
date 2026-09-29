@@ -143,7 +143,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			n,
 			'string'
 		)
-		bamcommon.validateAlleleArrays(q, ['ref_positions'], n, 'number')
+		bamcommon.validateAlleleArrays(q, ['ref_positions'], n, 'integer')
 		{
 			leftflankseqs = q.leftflankseqs
 			rightflankseqs = q.rightflankseqs

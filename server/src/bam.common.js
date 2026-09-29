@@ -64,7 +64,7 @@ an object such as {length: 1e9} or a scalar cannot be used as a loop bound.
 	obj: object holding the arrays
 	names: array of keys to check
 	n: expected array length (number of variants)
-	type: 'string' or 'number'
+	type: 'string' or 'integer' (non-negative safe integer, no coercion)
 */
 export function validateAlleleArrays(obj, names, n, type) {
 	for (const name of names) {
@@ -72,7 +72,8 @@ export function validateAlleleArrays(obj, names, n, type) {
 		if (!Array.isArray(arr)) throw name + ' is not an array'
 		if (arr.length != n) throw name + ' length does not match number of variants'
 		for (const v of arr) {
-			if (type == 'number' ? !Number.isFinite(Number(v)) : typeof v != 'string') throw name + ' has invalid element'
+			const ok = type == 'integer' ? Number.isSafeInteger(v) && v >= 0 : typeof v == 'string'
+			if (!ok) throw name + ' has invalid element'
 		}
 	}
 }
