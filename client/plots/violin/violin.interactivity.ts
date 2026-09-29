@@ -9,6 +9,7 @@ import {
 	testRowsToTSV
 } from '#dom'
 import { isSingleCellTerm } from '#shared'
+import { getVisiblePvalues } from './violin.renderer'
 
 type MenuOption = {
 	label: string
@@ -46,7 +47,11 @@ export function setInteractivity(self: any) {
 		}
 
 		const charts = Object.values(self.data?.charts || {}) as any[]
-		if (self.settings.showAssociationTests && self.config.term2 && charts.some(c => c.pvalues?.length)) {
+		if (
+			self.settings.showAssociationTests &&
+			self.config.term2 &&
+			charts.some(chart => getVisiblePvalues(chart, self.config.term, self.config.term2).length)
+		) {
 			extraOptions.push({
 				label: 'Group comparisons',
 				testid: 'sjpp-download-pvalues',
@@ -56,8 +61,11 @@ export function setInteractivity(self: any) {
 						"Wilcoxon's rank sum test",
 						['Group 1', 'Group 2', 'P-value'],
 						charts
-							.filter(chart => chart.pvalues)
-							.map(chart => ({ chartLabel: self.getChartTitle(chart.chartId), rows: chart.pvalues }))
+							.map(chart => ({
+								chartLabel: self.getChartTitle(chart.chartId),
+								rows: getVisiblePvalues(chart, self.config.term, self.config.term2)
+							}))
+							.filter(chart => chart.rows.length)
 					)
 			})
 		}

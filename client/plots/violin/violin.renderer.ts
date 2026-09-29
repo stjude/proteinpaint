@@ -29,6 +29,20 @@ type LegendGroup = {
 	items: LegendItem[]
 }
 
+export function getVisiblePvalues(chart: any, t1: TermWrapper, t2?: TermWrapper) {
+	const termNum =
+		t2?.term.type === 'condition' ||
+		t2?.term.type === 'samplelst' ||
+		t2?.term.type === 'categorical' ||
+		((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1.q.mode === 'continuous')
+			? t2
+			: t1
+
+	return (chart.pvalues || []).filter((arr: any[]) =>
+		arr.every(item => typeof item.value !== 'string' || !termNum.q?.hiddenValues || !(item.value in termNum.q.hiddenValues))
+	)
+}
+
 // const minSampleSize = 5 // a group below cutoff will not render a violin plot
 
 /* the term whose values the numeric axis is of. a term with valueConversion{} stores its values in
@@ -213,25 +227,7 @@ export default function setViolinRenderer(self: any) {
 			return
 		}
 
-		const termNum =
-			t2?.term.type === 'condition' ||
-			t2?.term.type === 'samplelst' ||
-			t2?.term.type === 'categorical' ||
-			((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1.q.mode === 'continuous')
-				? t2
-				: t1
-
-		//hide p-values for categories that are hidden
-		const pvalues = chart.pvalues.filter(arr => {
-			for (let i = 0; i < arr.length; i++) {
-				if (typeof arr[i].value === 'string') {
-					if (termNum.q?.hiddenValues && arr[i].value in termNum.q.hiddenValues) {
-						return false
-					}
-				}
-			}
-			return true
-		})
+		const pvalues = getVisiblePvalues(chart, t1, t2)
 
 		tableHolder
 			.style('display', 'inline-block')
