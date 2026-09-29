@@ -5,7 +5,8 @@ import type { ImpressionZone } from './renderImpressionThermometer.js'
 One legend per chart in an impression card: the thermometer and the response-distribution chart each
 draw their own, so each names its series with the mark that carries it there. The distribution chart
 uses a line with a vertex dot for the SC series and a square for the POC columns; the thermometer
-uses a circle for each fill. Both legends also name the three performance zones (shared swatches).
+uses a circle for each fill. Both legends also name the three performance zones (shared swatches),
+each labelled with its rating range, e.g. "Weak (1–5)", so the zones read without relying on color.
 */
 
 const SWATCH_SIZE = 14 // square swatches: the POC series and the zone bands
@@ -121,7 +122,7 @@ export function renderImpressionLegend(a: ImpressionLegendArgs) {
 			.attr('y', zonesCy)
 			.attr('dominant-baseline', 'central')
 			.attr('font-size', FONT_SIZE)
-			.text(z.label)
+			.text(`${z.label} (${z.min}–${z.max})`)
 		zx += SWATCH_SIZE + LABEL_GAP + textWidth(label) + ITEM_GAP
 	}
 	const zonesW = Math.max(0, zx - ITEM_GAP)
