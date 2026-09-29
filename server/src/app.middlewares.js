@@ -245,6 +245,19 @@ function log(req) {
 	)
 }
 
+// returns the parsed URL of the request origin, or undefined if it is missing or malformed
+export function getRequestOrigin(req) {
+	const origin = req.get('origin') || req.get('referrer') || (req.get('host') && `${req.protocol}://${req.get('host')}`)
+	if (!origin || origin == 'null') return
+	try {
+		const url = new URL(origin)
+		if (url.protocol != 'http:' && url.protocol != 'https:') return
+		return url
+	} catch (_) {
+		return
+	}
+}
+
 function setHeaders(req, res, next) {
 	// indicates that caching should be unique to each request origin, i.e., include the origin when computing the cache key
 	res.header('Vary', 'Origin')
@@ -254,18 +267,23 @@ function setHeaders(req, res, next) {
 
 	const debugtest =
 		serverconfig.debugmode || serverconfig.defaultgenome == 'hg38-test' || serverconfig.features?.loosenCORS
-	const origin = req.get('origin') || req.get('referrer') || req.protocol + '://' + (req.get('host') || '*')
-	const getMatchingHost = hostname => hostname == '*' || origin.includes(`://${hostname}`)
+	const origin = getRequestOrigin(req)
+	// the embedder entry must exactly equal the parsed origin hostname (or hostname:port);
+	// a substring match would let an origin like 'https://trusted.org.evil.com' match 'trusted.org'
+	const getMatchingHost = hostname =>
+		hostname == '*' || (origin && (hostname == origin.hostname || hostname == origin.host))
 	// detect if the request origin has a matching entry in serverconfig.dsCredentials
 	const credEmbedder = authApi.credEmbedders.find(getMatchingHost)
 	// detect if the request origin is allowed as an embedders
 	// note that serverconfig.js sets [*] as default serverconfig.allowedEmbedders, if not present
 	const matchedHost = serverconfig.allowedEmbedders.find(getMatchingHost)
 
-	if (credEmbedder || matchedHost || debugtest) {
-		// only set these CORS-related headers for credentialed or allowed embedders
-		const host = matchedHost || credEmbedder
-		res.header('Access-Control-Allow-Origin', host === '*' ? origin : `${req.protocol}://${host}`)
+	// only set CORS-related headers for a valid request origin that is a credentialed or allowed embedder,
+	// otherwise a missing or 'null' origin could be echoed back along with Access-Control-Allow-Credentials
+	const isAllowedOrigin = origin && (credEmbedder || matchedHost || debugtest)
+	if (isAllowedOrigin) {
+		// the origin is only echoed after it has been parsed and matched above
+		res.header('Access-Control-Allow-Origin', origin.origin)
 		// embedder sites may use HTTP 2.0 which requires lowercased header key names
 		// must support mixed casing and all lowercased for compatibility
 		res.header(
@@ -277,8 +295,10 @@ function setHeaders(req, res, next) {
 		)
 	}
 
-	if (credEmbedder || debugtest) {
-		// allow credentialed embedders to submit authorization header
+	if (isAllowedOrigin && (credEmbedder || debugtest)) {
+		// allow credentialed embedders to submit authorization header;
+		// TODO: require a wildcard dsCredentials embedder key to be domain-limited, such as '*.<domain>.<tld>',
+		// matched against origin.hostname as an exact domain or subdomain
 		res.header('Access-Control-Allow-Credentials', true)
 	}
 
