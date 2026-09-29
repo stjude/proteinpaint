@@ -118,15 +118,17 @@ export class SCSampleTable {
 			.join('tr')
 			.attr('class', 'sjpp_row_wrapper')
 			.attr('tabindex', 0)
-			.style('background-color', (_row: any, rowIndex: number) => (rowIndex % 2 === 1 ? 'rgb(245,245,245)' : null))
 			.each((row: any[], rowIndex: number, nodes: any) => this.renderRow(select(nodes[rowIndex]), row, rowIndex))
+
+		this.renumberRows()
 	}
 
 	private renderRow(tr: any, row: any[], rowIndex: number) {
 		const sampleId = String(row[this.sampleColIdx]?.value ?? '')
 		if (!sampleId) return
 
-		tr.append('td') // row-index cell
+		tr.append('td')
+			.attr('class', 'sjpp_row_index')
 			.text(rowIndex + 1)
 			.style('text-align', 'center')
 			.style('width', '1vw')
@@ -232,10 +234,12 @@ export class SCSampleTable {
 	}
 
 	/**
-	 * Placeholder for future sorted-row updates.
-	 *
-	 * This intentionally keeps row identity stable and reorders existing DOM nodes
-	 * instead of deleting/recreating the whole table when sorting.
+	 * Reorders existing DOM nodes to match a sort, instead of deleting/recreating the
+	 * whole table -- this intentionally keeps row identity (and any injected plot
+	 * buttons) stable. The row-index text and striping were set once at creation from
+	 * that row's original position, so they're now stale for any row that moved;
+	 * renumberRows() recomputes both from the new DOM order, the same way the generic
+	 * renderTable() derives them from visible row position (client/dom/table.ts).
 	 */
 	sortRows(sortedRows: any[]) {
 		const parentNode = this.tbody.node()
@@ -246,5 +250,14 @@ export class SCSampleTable {
 			parentNode.appendChild(entry.row.node())
 		}
 		this.rows = sortedRows
+		this.renumberRows()
+	}
+
+	private renumberRows() {
+		this.tbody.selectAll('tr.sjpp_row_wrapper').each((_row: any, rowIndex: number, nodes: any) => {
+			const tr = select(nodes[rowIndex])
+			tr.select('td.sjpp_row_index').text(rowIndex + 1)
+			tr.style('background-color', () => (rowIndex % 2 === 1 ? 'rgb(245,245,245)' : null))
+		})
 	}
 }
