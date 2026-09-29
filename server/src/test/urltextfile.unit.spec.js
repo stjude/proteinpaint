@@ -22,6 +22,8 @@ test sections:
 */
 
 let server, H, port
+// the paths that the specs expect the stand-in server to receive
+const knownPaths = new Map(['/a/b.txt', '//a/b.txt', '/moved/redirect-ok/a.txt'].map(p => [p, p]))
 function startServer() {
 	return new Promise(resolve => {
 		server = http
@@ -32,7 +34,11 @@ function startServer() {
 					res.writeHead(301, { location: '/moved' + req.url }).end()
 				} else if (req.url.startsWith('/redirect-loop/')) {
 					res.writeHead(302, { location: req.url }).end()
-				} else res.end('INTERNAL ' + req.url)
+				} else {
+					// respond with a fixed body per known path instead of reflecting req.url
+					res.writeHead(200, { 'content-type': 'text/plain' })
+					res.end(knownPaths.has(req.url) ? 'INTERNAL ' + knownPaths.get(req.url) : 'INTERNAL unknown')
+				}
 			})
 			.listen(0, '127.0.0.1', () => {
 				port = server.address().port
