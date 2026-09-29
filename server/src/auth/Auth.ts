@@ -33,7 +33,10 @@ export function getSessionEntry(sessions: SessionsMap, dslabel: string, id: stri
 // would not match a protected route pattern but would still be handled by the protected route
 export function normalizeReqPath(path: string) {
 	if (typeof path != 'string') return ''
-	const p = path.toLowerCase().replace(/\/+$/, '')
+	// strip trailing slashes without a regex, to avoid polynomial backtracking on long runs of '/'
+	let end = path.length
+	while (end > 0 && path[end - 1] == '/') end--
+	const p = path.slice(0, end).toLowerCase()
 	return p || (path.startsWith('/') ? '/' : '')
 }
 
