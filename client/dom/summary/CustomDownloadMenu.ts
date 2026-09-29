@@ -46,10 +46,14 @@ export class CustomDownloadMenu extends DownloadMenu {
 				.text(opt.label)
 				.on('click', async () => {
 					this.menu.hide()
-					const content = await opt.callback()
-					if (typeof content == 'string') {
-						const name = (opt.filename || this.filename).replace(/\s/g, '_')
-						to_textfile(`${name}.${opt.ext || 'txt'}`, content)
+					try {
+						const content = await opt.callback()
+						if (typeof content == 'string') {
+							const name = (opt.filename || this.filename).replace(/\s/g, '_')
+							to_textfile(`${name}.${opt.ext || 'txt'}`, content)
+						}
+					} catch (e: any) {
+						console.error(`Error executing ${opt.label} callback, ${e.message || e}`)
 					}
 				})
 		}
