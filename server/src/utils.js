@@ -318,6 +318,22 @@ export function illegalUrlHost(u) {
 	if (ipType && nonPublicIps.check(host, ipType == 4 ? 'ipv4' : 'ipv6')) return 'url host is not allowed'
 }
 
+/*
+	u: a url that the server will fetch itself, such as for the /urltextfile route
+	skipHostCheck: true only for a url of this server (under serverconfig.URL), whose host may be
+	  localhost or not listed in serverconfig.urlHosts
+
+	returns an error message if the url is not an http(s) url with an allowed host, see test_url() and illegalUrlHost(),
+	or undefined if allowed
+*/
+export function checkRemoteUrl(u, skipHostCheck = false) {
+	if (typeof u != 'string') return 'url must be a string'
+	const [e, protocol] = test_url(u)
+	if (e) return e
+	if (protocol != 'http' && protocol != 'https') return 'protocol must be http or https'
+	if (!skipHostCheck) return illegalUrlHost(u)
+}
+
 // true if file resolves strictly inside dir
 function isUnderDir(file, dir) {
 	return path.resolve(file).startsWith(path.resolve(dir) + path.sep)
