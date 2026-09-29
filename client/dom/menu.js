@@ -392,6 +392,10 @@ export class Menu {
 		// to limit the performance penalty to known static button/label interactions
 		if (!window.event || window.event.type != 'click' || !elem.__data__?.stickyAncestor) return
 
+		// disconnect any observer from a prior show() call (e.g. a menu that repositions itself
+		// after appending more content), otherwise it's overwritten below without ever disconnecting
+		this.stopObserver()
+
 		const top = this.d.style('top')
 		if (!top.endsWith('px')) return
 		const { height: elemHeight } = elem.getBoundingClientRect()
