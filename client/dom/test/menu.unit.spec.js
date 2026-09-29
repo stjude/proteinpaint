@@ -9,6 +9,7 @@ Tests:
 	show(), clear(), and hide(), no args
 	clear() with arg
 	show() with args
+	stickyPosition() disconnects a prior stickyObserver on repeated show()
 	onHide() callback
 	showunder()
 	showunderoffset()
@@ -213,6 +214,49 @@ tape('show() with args', async test => {
 		)
 	}
 	testMenu.destroy()
+	test.end()
+})
+
+// async callback so that tape can end the test on uncaught error
+tape('stickyPosition() disconnects a prior stickyObserver on repeated show()', async test => {
+	test.timeoutAfter(500)
+	// only stickyPosition() when the click's target element has a stickyAncestor set
+	const holder = getHolder({ position: 'fixed' })
+	const elem = holder.append('div').style('width', '10px').style('height', '10px').node()
+	elem.__data__ = { stickyAncestor: holder.node() }
+	const testMenu = getTestMenu()
+
+	// stickyPosition() only runs when window.event.type == 'click', so show() must be
+	// called synchronously from within a real dispatched click event's handler
+	function showViaClick(x, y) {
+		return new Promise(resolve => {
+			function handler() {
+				testMenu.show(x, y, true, true, true, elem)
+				elem.removeEventListener('click', handler)
+				resolve()
+			}
+			elem.addEventListener('click', handler)
+			elem.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+		})
+	}
+
+	await showViaClick(50, 50)
+	const firstObserver = testMenu.stickyObserver
+	test.ok(firstObserver, 'Should create a stickyObserver when shown via a click on an element with a stickyAncestor')
+
+	let disconnected = false
+	const origDisconnect = firstObserver.disconnect.bind(firstObserver)
+	firstObserver.disconnect = () => {
+		disconnected = true
+		origDisconnect()
+	}
+
+	await showViaClick(80, 80)
+	test.ok(disconnected, 'Should disconnect the previous stickyObserver before creating a new one on a repeated show()')
+	test.notEqual(testMenu.stickyObserver, firstObserver, 'Should replace the stickyObserver with a new instance')
+
+	testMenu.destroy()
+	holder.remove()
 	test.end()
 })
 
