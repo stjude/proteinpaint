@@ -323,6 +323,7 @@ export class QualCustomGS extends QualitativeBase {
 		if (tw.q.type != 'custom-groupset') throw `expecting tw.q.type='custom-groupset', got '${tw.q.type}'`
 
 		const { term, q } = tw
+		// must not overwrite an existing customset, which may have been edited by the user
 		if (!q.customset) await mayFillCustomSet(q, term, opts.vocabApi)
 		if (q.mode == 'binary') {
 			if (q.customset.groups.filter((g: any) => !g.uncomputable).length != 2) throw 'there must be exactly two groups'
@@ -373,8 +374,19 @@ export class QualCustomGS extends QualitativeBase {
 					key: value.key,
 					label: label,
 					group: i,
-					samplecount: value.samplecount || c2s.samplecount
+					// category2samplecount reflects the current filter, whereas a samplecount
+					// saved in the customset may be stale; a category that is missing from
+					// category2samplecount has no samples under the current filter
+					samplecount: category2samplecount ? c2s?.samplecount || 0 : value.samplecount
 				})
+			}
+		}
+		// the customset may have been created under a different filter, so categories
+		// that are not assigned to any group are shown as excluded
+		if (groups.some(g => g.currentIdx === 0)) {
+			for (const c2s of category2samplecount || []) {
+				if (c2s.uncomputable || values.some(v => v.key == c2s.key)) continue
+				values.push({ key: c2s.key, label: c2s.label || c2s.key, group: 0, samplecount: c2s.samplecount })
 			}
 		}
 		return { groups, values }
@@ -382,43 +394,39 @@ export class QualCustomGS extends QualitativeBase {
 }
 
 async function mayFillCustomSet(q, term, vocabApi) {
-	if (q.mode == 'binary') {
-		// binary mode, divide categories evenly into two groups
-		const data = await vocabApi.getCategories(term, vocabApi.state.termfilter.filter)
-		const sorted = [...data.lst].sort((a, b) => b.samplecount - a.samplecount)
-		const group1: GroupEntry = { name: 'Group 1', type: 'values', values: [] }
-		const group2: GroupEntry = { name: 'Group 2', type: 'values', values: [] }
-		let sum1 = 0
-		let sum2 = 0
-		for (const item of sorted) {
-			if (sum1 <= sum2) {
-				group1.values.push({ key: item.key, label: item.label })
-				sum1 += item.samplecount
-			} else {
-				group2.values.push({ key: item.key, label: item.label })
-				sum2 += item.samplecount
-			}
+	if (q.mode != 'binary') throw 'tw.q.customset is required for q.mode=discrete'
+	// binary mode, divide categories evenly into two groups
+	const data = await vocabApi.getCategories(term, vocabApi.state.termfilter.filter)
+	const sorted = [...data.lst].sort((a, b) => b.samplecount - a.samplecount)
+	const group1: GroupEntry = { name: 'Group 1', type: 'values', values: [] }
+	const group2: GroupEntry = { name: 'Group 2', type: 'values', values: [] }
+	let sum1 = 0
+	let sum2 = 0
+	for (const item of sorted) {
+		if (sum1 <= sum2) {
+			group1.values.push({ key: item.key, label: item.label })
+			sum1 += item.samplecount
+		} else {
+			group2.values.push({ key: item.key, label: item.label })
+			sum2 += item.samplecount
 		}
-
-		if (sum1 == 0 || sum2 == 0) throw 'both groups must have non-zero sample counts'
-
-		const customset: BaseGroupSet = {
-			// creating 3 groups instead of 2 groups since current groupset UI expects first group to be excluded group
-			// TODO: refactor client/termsetting/handlers/qualitative.ts to not consider the first group (i.e. group.currentIdx === 0) as the excluded group, but rather to consider group.excluded=true as the excluded group
-			groups: [
-				{
-					name: 'Excluded categories',
-					type: 'values',
-					values: [],
-					uncomputable: true
-				},
-				group1,
-				group2
-			]
-		}
-		q.customset = customset
-	} else {
-		// discrete mode, should already have custom set
-		throw 'tw.q.customset is required for q.mode=discrete'
 	}
+
+	if (sum1 == 0 || sum2 == 0) throw 'both groups must have non-zero sample counts'
+
+	const customset: BaseGroupSet = {
+		// creating 3 groups instead of 2 groups since current groupset UI expects first group to be excluded group
+		// TODO: refactor client/termsetting/handlers/qualitative.ts to not consider the first group (i.e. group.currentIdx === 0) as the excluded group, but rather to consider group.excluded=true as the excluded group
+		groups: [
+			{
+				name: 'Excluded categories',
+				type: 'values',
+				values: [],
+				uncomputable: true
+			},
+			group1,
+			group2
+		]
+	}
+	q.customset = customset
 }
