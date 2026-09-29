@@ -49,9 +49,9 @@ export function setInteractivity(self: any) {
 			extraOptions.push({
 				label: 'Group comparisons',
 				testid: 'sjpp-download-pvalues',
-				filename: `${filename}_group_comparisons`,
+				filename: `${filename}_wilcoxon_group_comparisons`,
 				callback: () => {
-					const lines = ['Chart\tGroup 1\tGroup 2\tP-value']
+					const lines = ['Wilcoxon\'s rank sum test', 'Chart\tGroup 1\tGroup 2\tP-value']
 					for (const chart of charts) {
 						if (!chart.pvalues) continue
 						const title = self.getChartTitle(chart.chartId)

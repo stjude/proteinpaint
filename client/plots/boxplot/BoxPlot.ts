@@ -3,7 +3,14 @@ import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getCombinedTermFilter } from '#filter'
 import { controlsInit } from '#plots/controls.js'
-import { Menu, getMaxLabelWidth, DownloadMenu, getChartTitle, setDescrStatsByTerm } from '#dom'
+import {
+	Menu,
+	getMaxLabelWidth,
+	CustomDownloadMenu,
+	type DownloadMenuOption,
+	getChartTitle,
+	setDescrStatsByTerm
+} from '#dom'
 import type { Elem } from '../../types/d3'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { TdbBoxPlotOpts, BoxPlotDom, BoxPlotConfigOpts } from './BoxPlotTypes'
@@ -219,8 +226,54 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 
 	download(event) {
 		if (!this.state) return
+		const config = this.state.config
 		const name2svg = this.getChartImages()
-		const dm = new DownloadMenu(name2svg, this.state.config.term.term.name)
+		const filename = config.term.term.name
+		const extraOptions: DownloadMenuOption[] = []
+
+		// descrStats live on the mutable config copy in main(), so read them from the response instead
+		const descrStatsByTerm = this.data?.descrStats || {}
+		const statTerms = [config.term, config.term2].filter(
+			tw => tw?.$id && descrStatsByTerm[tw.$id] && tw.term.type != 'termCollection'
+		)
+		if (statTerms.length) {
+			extraOptions.push({
+				label: 'Descriptive statistics',
+				testid: 'sjpp-download-descrstats',
+				filename: `${filename}_descriptive_stats`,
+				callback: () => {
+					const lines = ['Term\tStatistic\tValue']
+					for (const tw of statTerms) {
+						for (const s of Object.values(descrStatsByTerm[tw.$id]) as any[])
+							lines.push(`${tw.term.name}\t${s.label}\t${s.value}`)
+					}
+					return lines.join('\n')
+				}
+			})
+		}
+
+		// server only returns wilcoxon results when showAssocTests is on and term2 is present
+		const charts = Object.entries(this.data?.charts || {}) as [string, any][]
+		if (charts.some(([, chart]) => chart.wilcoxon?.length)) {
+			extraOptions.push({
+				label: 'Group comparisons',
+				testid: 'sjpp-download-comparison',
+				filename: `${filename}_wilcoxon_group_comparisons`,
+				callback: () => {
+					const lines = ['Wilcoxon\'s rank sum test', 'Chart\tGroup 1\tGroup 2\tP-value']
+					for (const [chartId, chart] of charts) {
+						if (!chart.wilcoxon) continue
+						const title = getChartTitle(config, chartId)
+						for (const row of chart.wilcoxon)
+							lines.push([title, ...row.map(cell => cell.value ?? cell.html)].join('\t'))
+					}
+					return lines.join('\n')
+				}
+			})
+		}
+
+		const dm = new CustomDownloadMenu({ chartImages: name2svg, filename, extraOptions })
+
 		dm.show(event.clientX, event.clientY, event.target)
 	}
 }
