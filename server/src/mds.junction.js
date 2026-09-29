@@ -126,8 +126,6 @@ async function do_query(q, ds, dsquery, gn) {
 		}
 	}
 
-	utils.validateRglst(q, gn)
-
 	if (dsquery.viewrangeupperlimit) {
 		const len = q.rglst.reduce((i, j) => i + j.stop - j.start, 0)
 		if (len >= dsquery.viewrangeupperlimit)

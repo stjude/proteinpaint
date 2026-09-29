@@ -41,7 +41,6 @@ export function init({ genomes }) {
 async function do_query(q: TermdbJunctionOneSampleTkRequest, genomes): Promise<TermdbJunctionOneSampleTkItem[]> {
 	const gn = genomes[q.genome]
 	if (!gn) throw 'invalid genome'
-	utils.validateRglst(q, gn)
 
 	const [e, file, isurl] = utils.fileurl({ query: q })
 	if (e) throw e

@@ -167,7 +167,6 @@ async function do_query(req, genomeobj) {
 		if (Number.isNaN(req.query.bplengthUpperLimit)) throw 'bplengthUpperLimit not number'
 	}
 
-	utils.validateRglst(req.query, genomeobj)
 	for (const r of req.query.rglst) {
 		if (r.reverse) {
 			r.scale = p => Math.ceil((r.width * (r.stop - p)) / (r.stop - r.start))

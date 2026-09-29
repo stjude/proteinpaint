@@ -348,11 +348,6 @@ async function handle_mdssvcnv(req, res) {
 		const gn = genomes[req.query.genome]
 		if (!gn) throw 'invalid genome'
 
-		if (req.query.rglst) {
-			// only validate if present; not every query has rglst param
-			utils.validateRglst(req.query, gn)
-		}
-
 		let ds, dsquery
 
 		if (req.query.iscustom) {
@@ -1048,7 +1043,7 @@ async function handle_mdssvcnv_vcf(
 				const variants = []
 
 				const tasks = []
-				// utils.validateRglst() was aleady called in the route handler that calls this function
+				// rglst was already validated by the app middleware (app.middlewares.js)
 				for (const r of req.query.rglst) {
 					const task = new Promise((resolve, reject) => {
 						const ps = utils.spawnTool(
@@ -1381,7 +1376,7 @@ bad repetition
 	const variants = []
 
 	const tasks = []
-	// utils.validateRglst() was aleady called in the route handler that calls this function
+	// rglst was already validated by the app middleware (app.middlewares.js)
 	for (const r of req.query.rglst) {
 		const task = new Promise((resolve, reject) => {
 			const ps = utils.spawnTool(tabix, [
@@ -1561,7 +1556,7 @@ function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hidde
 
 	const tasks = []
 
-	// utils.validateRglst() was aleady called in the route handler that calls this function
+	// rglst was already validated by the app middleware (app.middlewares.js)
 	for (const r of req.query.rglst) {
 		const task = new Promise((resolve, reject) => {
 			const data = []
@@ -2098,8 +2093,6 @@ function handle_mdsexpressionrank(req, res) {
 				// check if the said sample exists
 				if (dsquery.samples.indexOf(req.query.sample) == -1) throw { nodata: 1 }
 			}
-
-			utils.validateRglst(req.query, gn)
 
 			if (req.query.rglst.reduce((i, j) => i + j.stop - j.start, 0) > 10000000)
 				throw 'Zoom in below 10 Mb to show expression rank'
