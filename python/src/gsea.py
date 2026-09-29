@@ -32,10 +32,9 @@ def _safe_blitz_gsea(signature, library, permutations):
         return blitz.gsea(signature, library, permutations=permutations)
     except (ValueError, ZeroDivisionError, RuntimeError) as e:
         msg = (
-            'GSEA failed: the input signature could not be calibrated by blitzgsea. '
-            'This usually means too few genes overlap the selected gene-set library, '
-            'or the fold-change values are degenerate (all zero / all identical). '
-            f'Underlying error: {type(e).__name__}: {e}'
+            'GSEA could not run on this gene set group: too few genes or the fold-change values do not vary.'
+            'Please choose a different gene set group. '
+            f'({type(e).__name__}: {e})'
         )
         # Single-line JSON; the Node side already parses any `result: ` line.
         print(f'result: {json.dumps({"error": msg})}')
