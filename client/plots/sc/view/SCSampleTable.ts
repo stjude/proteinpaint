@@ -172,7 +172,14 @@ export class SCSampleTable {
 		if (colIdx === this.sampleColIdx) entry.cells.sample = td
 		if (isShownPlotsCol) entry.cells.shownPlots = td
 
-		if (cell.url) td.append('a').text(cell.value || cell.url).attr('href', cell.url).attr('aria-label', `Click to ${cell.url}`)
+		if (cell.url)
+			td.append('a')
+				.text(cell.value || cell.value === 0 ? cell.value : cell.url)
+				.attr('href', cell.url)
+				.attr('target', '_blank')
+				.attr('rel', 'noopener noreferrer')
+				.attr('aria-label', `Click to ${cell.url}`)
+				.on('click', (event: MouseEvent) => event.stopPropagation())
 		else if (cell.html) td.html(cell.html)
 		else if ('value' in cell) td.text(cell.value).attr('aria-label', cell.value)
 	}
