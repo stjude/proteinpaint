@@ -1,3 +1,4 @@
+import { select } from 'd3-selection'
 import type { SCDom, SCTableData } from '../SCTypes'
 import { icons, sortTableCallBack } from '#dom'
 
@@ -22,8 +23,8 @@ import { icons, sortTableCallBack } from '#dom'
  */
 export class SCSampleTable {
 	dom: SCDom | any
-	tableData: SCTableData
-	sampleColIdx: number
+	tableData!: SCTableData
+	sampleColIdx = 0
 	showPlotsColumn = false
 	rowMap = new Map<string, any>()
 	rows: any[] = []
@@ -39,12 +40,16 @@ export class SCSampleTable {
 	constructor(dom: SCDom | any, tableData: SCTableData, opts: { onRowClick?: (sampleId: string) => void } = {}) {
 		this.dom = dom
 		this.holder = dom?.tableDiv || dom
+		this.onRowClick = opts.onRowClick
+		this.applyTableData(tableData)
+		this.renderStaticTable()
+	}
+
+	private applyTableData(tableData: SCTableData) {
 		this.tableData = tableData
-		this.sampleColIdx = tableData.sampleColIdx ?? 0
 		this.rows = tableData.rows
 		this.columns = tableData.columns
-		this.onRowClick = opts.onRowClick
-		this.renderStaticTable()
+		this.sampleColIdx = tableData.sampleColIdx ?? 0
 	}
 
 	private renderStaticTable() {
@@ -60,11 +65,7 @@ export class SCSampleTable {
 
 		this.table = this.parentDiv.append('table').style('width', '100%')
 		this.thead = this.table.append('thead')
-		this.thead
-			.style('position', 'sticky')
-			.style('top', '0')
-			.style('background-color', 'white')
-			.style('z-index', '1')
+		this.thead.style('position', 'sticky').style('top', '0').style('background-color', 'white').style('z-index', '1')
 		this.tableHeaderRow = this.thead.append('tr')
 		this.tbody = this.table.append('tbody')
 
@@ -72,81 +73,115 @@ export class SCSampleTable {
 		this.renderRows()
 	}
 
+	/** Renders into a freshly emptied header row (see renderStaticTable()), so this join
+	 * never has anything to match against existing DOM -- every column enters. Still uses
+	 * .data().join() over the manual loop so per-column attrs are declarative and the
+	 * heterogeneous per-cell setup (label + optional sort icon) is isolated in one place. */
 	private renderHeader() {
-		this.tableHeaderRow.append('th').style('width', '1.5vw').style('padding', '0')
-		for (const [columnIndex, column] of this.columns.entries()) {
-			const th = this.tableHeaderRow.append('th').attr('class', 'sjpp_table_item sjpp_table_header')
-			if (column.label === 'Shown plots' && !this.showPlotsColumn) th.style('display', 'none')
-			if (column.width) th.style('width', column.width)
-			if (column.tooltip) th.attr('title', column.tooltip)
-			const labelWrap = th.append('span').style('display', 'inline-flex').style('align-items', 'center')
-			labelWrap.append('span').text(column.label)
-			if (column.sortable) {
-				const sortDiv = labelWrap.append('div').style('display', 'inline-block').style('padding-left', '6px')
-				let isAscending = false
-				icons['updown'](sortDiv, {
-					handler: () => {
-						isAscending = !isAscending
-						const nextRows = sortTableCallBack(columnIndex, this.rows, isAscending)
-						this.sortRows(nextRows)
-					}
-				})
-			}
-		}
+		this.tableHeaderRow.append('td').style('width', '1vw') // row-index gutter
+		this.tableHeaderRow.append('th').style('width', '1.5vw').style('padding', '0') // radio placeholder
+
+		this.tableHeaderRow
+			.selectAll('th.sjpp_table_header')
+			.data(this.columns)
+			.join('th')
+			.attr('class', 'sjpp_table_item sjpp_table_header')
+			.style('display', (column: any) => (column.label === 'Shown plots' && !this.showPlotsColumn ? 'none' : null))
+			.style('width', (column: any) => column.width || null)
+			.attr('title', (column: any) => column.tooltip || null)
+			.each((column: any, columnIndex: number, nodes: any) => this.renderHeaderLabel(select(nodes[columnIndex]), column, columnIndex))
 	}
 
+	private renderHeaderLabel(th: any, column: any, columnIndex: number) {
+		const labelWrap = th.append('span').style('display', 'inline-flex').style('align-items', 'center')
+		labelWrap.append('span').text(column.label)
+		if (!column.sortable) return
+
+		const sortDiv = labelWrap.append('div').style('display', 'inline-block').style('padding-left', '6px')
+		let isAscending = false
+		icons['updown'](sortDiv, {
+			handler: () => {
+				isAscending = !isAscending
+				this.sortRows(sortTableCallBack(columnIndex, this.rows, isAscending))
+			}
+		})
+	}
+
+	/** Renders into a freshly emptied tbody (see renderStaticTable()), so this join
+	 * never has anything to match against existing DOM -- every row enters. */
 	private renderRows() {
 		this.rowMap.clear()
-		for (const [rowIndex, row] of this.rows.entries()) {
-			const tr = this.tbody.append('tr').attr('class', 'sjpp_row_wrapper').attr('tabindex', 0)
-			if (rowIndex % 2 === 1) tr.style('background-color', 'rgb(245,245,245)')
-			const sampleCell = row[this.sampleColIdx]
-			const sampleId = String(sampleCell?.value ?? '')
-			if (!sampleId) continue
 
-			const entry: any = {
-				sampleId,
-				row: tr,
-				cells: {}
-			}
+		this.tbody
+			.selectAll('tr.sjpp_row_wrapper')
+			.data(this.rows)
+			.join('tr')
+			.attr('class', 'sjpp_row_wrapper')
+			.attr('tabindex', 0)
+			.each((row: any[], rowIndex: number, nodes: any) => this.renderRow(select(nodes[rowIndex]), row, rowIndex))
 
-			const radioCell = tr.append('td').style('width', '1.5vw').style('padding', '0 6px').style('text-align', 'center')
-			radioCell
-				.append('input')
-				.attr('type', 'radio')
-				.attr('name', 'sjpp-sc-row-selection')
-				.attr('value', sampleId)
-				.attr('aria-label', `Select ${sampleId}`)
-				.property('checked', this.tableData.selectedRows.includes(rowIndex))
-				.on('change', () => {
-					if (this.onRowClick) this.onRowClick(sampleId)
-				})
+		this.renumberRows()
+	}
 
-			for (const [colIdx, cell] of row.entries()) {
-				const td = tr.append('td').attr('class', 'sjpp_table_item').attr('data-testid', 'sjpp-table-cell-item')
-				if (this.columns[colIdx]?.label === 'Shown plots' && !this.showPlotsColumn) td.style('display', 'none')
-				if (colIdx === this.sampleColIdx) {
-					entry.cells.sample = td
-				}
-				if (this.columns[colIdx]?.label === 'Shown plots') {
-					entry.cells.shownPlots = td
-				}
-				if ('value' in cell) td.text(cell.value).attr('aria-label', cell.value)
-				else if (cell.html) td.html(cell.html)
-				else if (cell.url) td.append('a').text(cell.value || cell.url).attr('href', cell.url).attr('aria-label', `Click to ${cell.url}`)
-			}
+	private renderRow(tr: any, row: any[], rowIndex: number) {
+		const sampleId = String(row[this.sampleColIdx]?.value ?? '')
+		if (!sampleId) return
 
-			tr.on('click', () => {
-				if (this.onRowClick) this.onRowClick(sampleId)
-			})
-			tr.on('keydown', event => {
-				if (event.key === 'Enter') {
-					if (this.onRowClick) this.onRowClick(sampleId)
-				}
-			})
+		tr.append('td')
+			.attr('class', 'sjpp_row_index')
+			.text(rowIndex + 1)
+			.style('text-align', 'center')
+			.style('width', '1vw')
+			.style('font-size', '0.8rem')
 
-			this.rowMap.set(sampleId, entry)
-		}
+		tr.append('td') // radio cell
+			.style('width', '1.5vw')
+			.style('padding', '0 6px')
+			.style('text-align', 'center')
+			.append('input')
+			.attr('type', 'radio')
+			.attr('name', 'sjpp-sc-row-selection')
+			.attr('value', sampleId)
+			.attr('aria-label', `Select ${sampleId}`)
+			.property('checked', this.tableData.selectedRows.includes(rowIndex))
+			.on('change', () => this.onRowClick?.(sampleId))
+
+		const entry: any = { sampleId, row: tr, cells: {} }
+		tr.selectAll('td.sjpp_table_item')
+			.data(row)
+			.join('td')
+			.attr('id', (cell: any) => cell.elemId || null)
+			.attr('class', 'sjpp_table_item')
+			.attr('data-testid', (cell: any) => cell.dataTestId || 'sjpp-table-cell-item')
+			.each((cell: any, colIdx: number, nodes: any) => this.renderDataCell(select(nodes[colIdx]), cell, colIdx, entry))
+
+		tr.on('click', () => this.onRowClick?.(sampleId))
+		tr.on('keydown', (event: KeyboardEvent) => {
+			if (event.key === 'Enter') this.onRowClick?.(sampleId)
+		})
+
+		this.rowMap.set(sampleId, entry)
+	}
+
+	/** url > html > value, matching the old renderTable() priority (client/dom/table.ts):
+	 * meta-result rows set both html (display label) and value (raw sample id, used
+	 * elsewhere for lookups), and html is meant to win for rendering. */
+	private renderDataCell(td: any, cell: any, colIdx: number, entry: any) {
+		const isShownPlotsCol = this.columns[colIdx]?.label === 'Shown plots'
+		if (isShownPlotsCol && !this.showPlotsColumn) td.style('display', 'none')
+		if (colIdx === this.sampleColIdx) entry.cells.sample = td
+		if (isShownPlotsCol) entry.cells.shownPlots = td
+
+		if (cell.url)
+			td.append('a')
+				.text(cell.value || cell.value === 0 ? cell.value : cell.url)
+				.attr('href', cell.url)
+				.attr('target', '_blank')
+				.attr('rel', 'noopener noreferrer')
+				.attr('aria-label', `Click to ${cell.url}`)
+				.on('click', (event: MouseEvent) => event.stopPropagation())
+		else if (cell.html) td.html(cell.html)
+		else if ('value' in cell) td.text(cell.value).attr('aria-label', cell.value)
 	}
 
 	/** Patches the table in place when the incoming data describes the same
@@ -154,18 +189,12 @@ export class SCSampleTable {
 	 * main()/update() without the sample list itself changing). Only falls
 	 * back to a full teardown+rebuild when the sample list or columns
 	 * actually changed, so row identity (and scroll position) survives
-	 * updates that only affect the "Shown plots" column. */
+	 * updates that only affect plot buttons. */
 	setTableData(tableData: SCTableData) {
 		const needsRebuild = !this.isSameShape(tableData)
-		this.tableData = tableData
-		this.rows = tableData.rows
-		this.columns = tableData.columns
-		this.sampleColIdx = tableData.sampleColIdx ?? 0
-		if (needsRebuild) {
-			this.renderStaticTable()
-		} else {
-			this.syncSelectedRows(tableData)
-		}
+		this.applyTableData(tableData)
+		if (needsRebuild) this.renderStaticTable()
+		else this.syncSelectedRows(tableData)
 	}
 
 	/** Compares by the set of sample IDs rather than row order, since sortRows()
@@ -202,22 +231,22 @@ export class SCSampleTable {
 		this.showPlotsColumn = visible
 		const shownPlotsHeaderIndex = this.columns.findIndex(c => c.label === 'Shown plots')
 		if (shownPlotsHeaderIndex === -1) return
-		const domColumnIndex = shownPlotsHeaderIndex + 1
+		const domColumnIndex = shownPlotsHeaderIndex + 1 // +1 for the radio placeholder <th> (see renderHeader())
 
 		const headerCells = this.tableHeaderRow.selectAll('th').nodes()
 		const visibleState = visible ? 'table-cell' : 'none'
 		if (headerCells[domColumnIndex]) headerCells[domColumnIndex].style.display = visibleState
 
-		for (const entry of this.rowMap.values()) {
-			entry.cells.shownPlots?.style('display', visibleState)
-		}
+		for (const entry of this.rowMap.values()) entry.cells.shownPlots?.style('display', visibleState)
 	}
 
 	/**
-	 * Placeholder for future sorted-row updates.
-	 *
-	 * This intentionally keeps row identity stable and reorders existing DOM nodes
-	 * instead of deleting/recreating the whole table when sorting.
+	 * Reorders existing DOM nodes to match a sort, instead of deleting/recreating the
+	 * whole table -- this intentionally keeps row identity (and any injected plot
+	 * buttons) stable. The row-index text and striping were set once at creation from
+	 * that row's original position, so they're now stale for any row that moved;
+	 * renumberRows() recomputes both from the new DOM order, the same way the generic
+	 * renderTable() derives them from visible row position (client/dom/table.ts).
 	 */
 	sortRows(sortedRows: any[]) {
 		const parentNode = this.tbody.node()
@@ -228,5 +257,14 @@ export class SCSampleTable {
 			parentNode.appendChild(entry.row.node())
 		}
 		this.rows = sortedRows
+		this.renumberRows()
+	}
+
+	private renumberRows() {
+		this.tbody.selectAll('tr.sjpp_row_wrapper').each((_row: any, rowIndex: number, nodes: any) => {
+			const tr = select(nodes[rowIndex])
+			tr.select('td.sjpp_row_index').text(rowIndex + 1)
+			tr.style('background-color', () => (rowIndex % 2 === 1 ? 'rgb(245,245,245)' : null))
+		})
 	}
 }

@@ -88,7 +88,7 @@ tape('Test initial SC app rendering', test => {
 		const bodyRows = table.querySelectorAll('tbody tr')
 		test.ok(bodyRows.length >= 1, 'Table has at least one data row')
 		const firstRowCells = bodyRows[0].querySelectorAll('td')
-		const sampleCell = firstRowCells[1]
+		const sampleCell = firstRowCells[2]
 		test.ok(sampleCell, 'Sample column exists in the first row')
 		test.equal(sampleCell.innerText.trim(), scTestSample, `First data row has ${scTestSample} as the sample value`)
 

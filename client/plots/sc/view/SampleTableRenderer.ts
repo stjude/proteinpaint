@@ -26,7 +26,7 @@ export class SampleTableRenderer {
 	 * to init() plots in the dashboard.*/
 	renderSamplesTable(tableData: SCTableData) {
 		this.tableData = tableData
-		this.table = new SCSampleTable(this.dom, tableData, {
+		this.table = new SCSampleTable(this.dom.tableDiv, tableData, {
 			onRowClick: sampleId => {
 				const data = this.tableData
 				const sampleColIdx = data.sampleColIdx ?? 0
