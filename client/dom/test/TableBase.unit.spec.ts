@@ -1039,6 +1039,241 @@ tape('select: the selection column sits after the line numbers, and inputs are l
 })
 
 /**************
+ pagination tests
+***************/
+
+tape('\n', test => {
+	test.comment('-***- dom/TableBase - pagination -***-')
+	test.end()
+})
+
+function makePagedRows(n: number): TableBaseRow[] {
+	return Array.from({ length: n }, (_, i) => [{ value: `name-${String(i).padStart(2, '0')}` }, { value: i }])
+}
+
+const pagedColumns: TableBaseColumn[] = [
+	{ label: 'Name', sortable: true, filterable: true },
+	{ label: 'Num', sortable: true, filterable: true }
+]
+
+function makePagedTable(n: number, pageSize: number, extra: Partial<ConstructorParameters<typeof TableBase>[0]> = {}) {
+	const holder = getHolder()
+	const changes: { currentPage: number; pageSize: number }[] = []
+	const table = new TableBase({
+		columns: pagedColumns,
+		rows: makePagedRows(n),
+		div: holder,
+		pagination: { pageSize, onChange: s => changes.push(s) },
+		...extra
+	}).render()
+	return { holder, table, changes }
+}
+
+const pagerButton = (holder: any, label: string) =>
+	(holder.selectAll('.sjpp-table-page-nav button').nodes() as HTMLButtonElement[]).find(b => b.textContent === label)!
+const pageInfo = (holder: any) => holder.select('.sjpp-table-page-info').text()
+
+tape('page: no pagination option means no pager and every row is shown', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: pagedColumns, rows: makePagedRows(25), div: holder }).render()
+
+	test.equal(holder.selectAll('.sjpp-table-pager').size(), 0, 'Should render no pager')
+	test.equal(holder.selectAll('tbody tr').size(), 25, 'Should render every row')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('page: shows one page at the bottom with info, page-size select and buttons', test => {
+	test.timeoutAfter(100)
+	const { holder } = makePagedTable(25, 10)
+
+	test.equal(holder.selectAll('tbody tr').size(), 10, 'Should render pageSize rows')
+	test.deepEqual(bodyColumn(holder, 0).slice(0, 2), ['name-00', 'name-01'], 'Should start at the first row')
+	test.equal(pageInfo(holder), 'Showing 1 to 10 of 25 entries', 'Should describe the page')
+	const select = holder.select('select.sjpp-table-page-size').node() as HTMLSelectElement
+	test.equal(select.value, '10', 'Should select the current page size')
+	test.equal(select.getAttribute('aria-label'), 'Rows per page', 'Should label the select')
+	test.ok(pagerButton(holder, 'Previous').disabled, 'Previous should be disabled on page 1')
+	test.notOk(pagerButton(holder, 'Next').disabled, 'Next should be enabled')
+	test.equal(pagerButton(holder, '1').getAttribute('aria-current'), 'page', 'Should mark the current page')
+	const tableNode = holder.select('table').node() as HTMLElement
+	const pagerNode = holder.select('.sjpp-table-pager').node() as HTMLElement
+	test.ok(tableNode.compareDocumentPosition(pagerNode) & Node.DOCUMENT_POSITION_FOLLOWING, 'Pager should come after the table')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('page: Next and Previous change the page, redraw only the body, and call onChange', test => {
+	test.timeoutAfter(100)
+	const { holder, changes } = makePagedTable(25, 10)
+	const theadBefore = holder.select('thead').node()
+
+	pagerButton(holder, 'Next').click()
+	test.deepEqual(bodyColumn(holder, 0).slice(0, 1), ['name-10'], 'Should show the second page')
+	test.equal(pageInfo(holder), 'Showing 11 to 20 of 25 entries', 'Should update the info')
+	test.deepEqual(changes, [{ currentPage: 2, pageSize: 10 }], 'Should call onChange')
+	test.equal(holder.select('thead').node(), theadBefore, 'Should not rebuild the header')
+
+	pagerButton(holder, '3').click()
+	test.equal(holder.selectAll('tbody tr').size(), 5, 'Last page should hold the remainder')
+	test.ok(pagerButton(holder, 'Next').disabled, 'Next should be disabled on the last page')
+
+	pagerButton(holder, 'Previous').click()
+	test.equal(pageInfo(holder), 'Showing 11 to 20 of 25 entries', 'Previous should go back one page')
+	test.equal(changes.length, 3, 'Should call onChange once per change')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('page: line numbers and striping continue across pages', test => {
+	test.timeoutAfter(100)
+	const { holder, table } = makePagedTable(25, 10, { styles: { showLines: true } })
+
+	table.goToPage(2)
+	const trs = holder.selectAll('tbody tr').nodes() as HTMLTableRowElement[]
+	test.equal(trs[0].cells[0].textContent, '11', 'First row on page 2 should be numbered 11')
+	test.equal(trs[0].style.backgroundColor, '', 'Row 11 (index 10) should not be striped')
+	test.equal(trs[1].style.backgroundColor, 'rgb(245, 245, 245)', 'Row 12 (index 11) should be striped')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('page: changing page size returns to page 1 and calls onChange', test => {
+	test.timeoutAfter(100)
+	const { holder, changes } = makePagedTable(60, 10)
+	pagerButton(holder, '3').click()
+
+	const select = holder.select('select.sjpp-table-page-size').node() as HTMLSelectElement
+	select.value = '25'
+	select.dispatchEvent(new Event('change', { bubbles: true }))
+	test.equal(holder.selectAll('tbody tr').size(), 25, 'Should show the new page size')
+	test.equal(pageInfo(holder), 'Showing 1 to 25 of 60 entries', 'Should be back on page 1')
+	test.deepEqual(changes.pop(), { currentPage: 1, pageSize: 25 }, 'Should call onChange with the new size')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('page: a long page list collapses with ellipses', test => {
+	test.timeoutAfter(100)
+	const { holder, table } = makePagedTable(200, 10) // 20 pages
+
+	const labels = () => (holder.selectAll('.sjpp-table-page-nav button').nodes() as HTMLElement[]).map(b => b.textContent)
+	test.deepEqual(labels(), ['Previous', '1', '2', '3', '20', 'Next'], 'Page 1 should show 1-3 and the last page')
+	table.goToPage(10)
+	test.deepEqual(labels(), ['Previous', '1', '8', '9', '10', '11', '12', '20', 'Next'], 'A middle page should show a window')
+	test.equal(holder.selectAll('.sjpp-table-page-nav span').size(), 2, 'Should render an ellipsis for each gap')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('page: sort and filter act on all rows, reset to page 1, and report it', test => {
+	test.timeoutAfter(100)
+	const { holder, table, changes } = makePagedTable(25, 10)
+	table.goToPage(3)
+	changes.length = 0
+
+	clickHeaderLabel(holder, 0) // name ascending
+	clickHeaderLabel(holder, 0) // name descending
+	test.deepEqual(bodyColumn(holder, 0).slice(0, 1), ['name-24'], 'Descending sort should use every row, not just the page')
+	test.equal(pageInfo(holder), 'Showing 1 to 10 of 25 entries', 'Sort should go back to page 1')
+	test.deepEqual(changes, [{ currentPage: 1, pageSize: 10 }], 'Should report the reset once, not when already on page 1')
+
+	pagerButton(holder, 'Next').click()
+	changes.length = 0
+	typeFilter(holder, 0, 'name-1')
+	test.equal(pageInfo(holder), 'Showing 1 to 10 of 10 entries', 'Filter should count only matching rows and reset the page')
+	test.deepEqual(changes, [{ currentPage: 1, pageSize: 10 }], 'Filter should report the reset')
+
+	typeFilter(holder, 0, 'zzz')
+	test.equal(pageInfo(holder), 'Showing 0 entries', 'Should handle no matches')
+	test.equal(holder.selectAll('tbody tr').size(), 0, 'Should render no rows')
+	test.ok(pagerButton(holder, 'Next').disabled && pagerButton(holder, 'Previous').disabled, 'Both arrows should be disabled')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('page: currentPage option, clamping, and invalid page sizes', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({
+		columns: pagedColumns,
+		rows: makePagedRows(25),
+		div: holder,
+		pagination: { pageSize: 10, currentPage: 3 }
+	}).render()
+	test.equal(pageInfo(holder), 'Showing 21 to 25 of 25 entries', 'Should open on the requested page')
+
+	const { holder: h2, table } = makePagedTable(25, 10, { pagination: { pageSize: 10, currentPage: 99 } })
+	test.equal(pageInfo(h2), 'Showing 21 to 25 of 25 entries', 'Should clamp an out-of-range page')
+	table.goToPage(-5)
+	test.equal(pageInfo(h2), 'Showing 1 to 10 of 25 entries', 'goToPage should clamp too')
+
+	for (const bad of [0, -1, 2.5]) {
+		try {
+			new TableBase({ columns: pagedColumns, rows: [], div: holder, pagination: { pageSize: bad } })
+			test.fail(`Should throw for pageSize ${bad}`)
+		} catch (e: any) {
+			test.pass(`Should throw for pageSize ${bad}: ${e.message}`)
+		}
+	}
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('page: selection and original indexes hold across pages', test => {
+	test.timeoutAfter(100)
+	const calls: number[] = []
+	const { holder, table } = makePagedTable(25, 10, { onSelect: idx => calls.push(idx) })
+
+	;(holder.select('tbody input').node() as HTMLInputElement).click() // row 0
+	table.goToPage(2)
+	;(holder.select('tbody input').node() as HTMLInputElement).click() // row 10
+	test.deepEqual(calls, [0, 10], 'Should report original indexes on later pages')
+	test.deepEqual(table.getSelectedIndexes(), [0, 10], 'Should keep selections from other pages')
+	table.goToPage(1)
+	test.ok((holder.select('tbody input').node() as HTMLInputElement).checked, 'Should restore the checkbox when coming back')
+	test.deepEqual(table.getRows().length, 10, 'getRows() should return the displayed page')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('page: page changes are announced and the pager is labelled', test => {
+	test.timeoutAfter(100)
+	const { holder, table } = makePagedTable(25, 10)
+	const status = holder.select('[role="status"]').node() as HTMLElement
+
+	table.goToPage(2)
+	test.equal(status.textContent, 'Page 2 of 3', 'Should announce the page')
+	test.equal(holder.select('nav').attr('aria-label'), 'Pagination', 'Should label the nav')
+	test.equal(pagerButton(holder, '2').getAttribute('aria-label'), 'Page 2', 'Page buttons should have a full label')
+	test.equal(pagerButton(holder, 'Next').getAttribute('aria-label'), 'Go to next page', 'Arrows should have a full label')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('page: update(rows) paginates the rows it is given', test => {
+	test.timeoutAfter(100)
+	const { holder, table } = makePagedTable(25, 10)
+
+	table.update(makePagedRows(12))
+	test.equal(pageInfo(holder), 'Showing 1 to 10 of 12 entries', 'Should page the replacement rows')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+/**************
  accessibility tests
 ***************/
 
