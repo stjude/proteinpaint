@@ -67,8 +67,10 @@ async function runTests(data, test) {
 	// 1. Plan the tests
 	// Track examples that are testable and how they should be tested
 	const testable = [],
-		notTested = { hidden: [], nonCards: [] }
+		notTested = { hidden: [], nonCards: [], disabledFeature: [] }
 	let numPlannedTests = 1 // including the cardsjson download
+	// examples with a .configFeature that is not enabled on the test server, e.g. ALLOW_remotefilefromurl, are not rendered
+	const features = (await dofetch3('genomes')).features || {}
 	for (const x of data.elements) {
 		if (x.type != 'card') {
 			notTested.nonCards.push(x.name)
@@ -90,6 +92,8 @@ async function runTests(data, test) {
 			for (const call of ppcalls) {
 				if (typeof call.runargs !== 'object') {
 					test.fail('runargs is not object for ' + call.label)
+				} else if (call.configFeature && !features[call.configFeature]) {
+					notTested.disabledFeature.push(`${x.name}: ${call.label} (${call.configFeature})`)
 				} else if (!call.isUi) {
 					const tracks = call.runargs.tracks || []
 					// for tracks, use callback tests only if there is one track
