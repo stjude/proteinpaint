@@ -1029,7 +1029,7 @@ tape('AuthApi.getPayloadFromHeaderAuth: returns jwt payload for valid bearer tok
 		query: { embedder, dslabel },
 		headers: { authorization: `Bearer ${Buffer.from(validToken).toString('base64')}` }
 	}
-	// massSession.js calls this with a dsCredentials route key, such as 'termdb'
+	// routes/massSession.ts calls this with a dsCredentials route key, such as 'termdb'
 	const result = authApi.getPayloadFromHeaderAuth(req as any, 'termdb')
 	test.ok(result, 'should return a payload object')
 	test.equal((result as any).email, email, 'should include the email from the payload')
