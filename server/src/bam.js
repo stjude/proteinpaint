@@ -361,7 +361,11 @@ async function clientdownloadgdcsliceFromCache_withDenial(req, res) {
 		throw 'clientdownloadgdcslice: unauthorized access'
 	}
 	// read the cached bam slice for client to download
-	const file = path.join(cachedir_bam, req.query.file)
+	const cacheRoot = path.resolve(cachedir_bam)
+	const file = path.resolve(cacheRoot, String(req.query.file))
+	if (file !== cacheRoot && !file.startsWith(cacheRoot + path.sep)) {
+		throw 'clientdownloadgdcslice: unauthorized access'
+	}
 	let data
 	try {
 		data = await fs.promises.readFile(file)
