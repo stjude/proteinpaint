@@ -36,8 +36,8 @@ export const api: RouteApi = {
 const cachedir_massSession = serverconfig.cachedir_massSession || path.join(serverconfig.cachedir, 'massSession')
 if (!fs.existsSync(cachedir_massSession)) fs.mkdirSync(cachedir_massSession)
 
-// the maximum size of a saved session file, in bytes
-const maxBytes = serverconfig.features?.massSessionMaxBytes || 1e6
+// the maximum size of a saved session file, in bytes; an explicit 0 rejects every save
+const maxBytes = serverconfig.features?.massSessionMaxBytes ?? 1e6
 
 function notEnabled(req, res) {
 	res.status(404).send({ error: 'saved sessions are not enabled on this server' })
