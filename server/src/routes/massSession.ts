@@ -7,26 +7,27 @@ import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 
 // a zero maxAge or maxSize for the massSession cache subdir means that the cache monitor
-// would evict every saved session, so all /massSession methods respond as not found instead
+// would evict every saved session, so the /massSession and /sessionIds routes are not set up at all,
+// to reduce the attack surface on a server that does not support saved sessions, such as for GDC
 const cacheOpts = serverconfig.features?.cacheMonitor?.subdirs?.massSession
-const isDisabled = cacheOpts?.maxAge === 0 || cacheOpts?.maxSize === 0
+export const isDisabled = cacheOpts?.maxAge === 0 || cacheOpts?.maxSize === 0
 
 export const api: RouteApi = {
 	// saves, gets, or deletes a mass app state as a server-side session file
 	endpoint: 'massSession',
 	methods: {
 		get: {
-			init: () => (isDisabled ? notEnabled : get),
+			init: isDisabled ? null : () => get,
 			request: { typeId: 'MassSessionGetRequest' /*, checkers: TODO write validator */ },
 			response: { typeId: 'MassSessionGetResponse' }
 		},
 		post: {
-			init: () => (isDisabled ? notEnabled : save),
+			init: isDisabled ? null : () => save,
 			request: { typeId: 'MassSessionSaveRequest' },
 			response: { typeId: 'MassSessionSaveResponse' }
 		},
 		delete: {
-			init: () => (isDisabled ? notEnabled : _delete),
+			init: isDisabled ? null : () => _delete,
 			request: { typeId: 'MassSessionDeleteRequest' },
 			response: { typeId: 'MassSessionDeleteResponse' }
 		}
@@ -34,14 +35,10 @@ export const api: RouteApi = {
 }
 
 const cachedir_massSession = serverconfig.cachedir_massSession || path.join(serverconfig.cachedir, 'massSession')
-if (!fs.existsSync(cachedir_massSession)) fs.mkdirSync(cachedir_massSession)
+if (!isDisabled && !fs.existsSync(cachedir_massSession)) fs.mkdirSync(cachedir_massSession)
 
 // the maximum size of a saved session file, in bytes; an explicit 0 rejects every save
 const maxBytes = serverconfig.features?.massSessionMaxBytes ?? 1e6
-
-function notEnabled(req, res) {
-	res.status(404).send({ error: 'saved sessions are not enabled on this server' })
-}
 
 async function save(req, res) {
 	// POST

@@ -16,7 +16,8 @@ export type RouteApi = {
 }
 
 export type RoutePayload = {
-	init: RouteInit
+	/** a null init means this method is not set up, such as when disabled by serverconfig */
+	init: RouteInit | null
 	request: RouteMethod
 	response: RouteMethod
 	middleware?: RouteMiddleware

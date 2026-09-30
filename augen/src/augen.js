@@ -11,8 +11,14 @@ export function setRoutes(app, routes, _opts = {}) {
 			if (api.middlewares && !Array.isArray(api.middlewares))
 				throw new Error(`${api.endpoint}: middlewares must be an array`)
 			for (const [method, handler] of Object.entries(api.methods)) {
+				const endpoint = `${opts.basepath}/${api.endpoint}`
+				// a route may opt out of setting up a method with init: null, such as when disabled by serverconfig;
+				// an undefined or other non-function init is still an error
+				if (handler.init === null) {
+					console.log(`!! Skipped setting up route: ${method.toUpperCase()} ${endpoint}`)
+					continue
+				}
 				try {
-					const endpoint = `${opts.basepath}/${api.endpoint}`
 					// a method-specific middleware, such as a request validator, is called first so that
 					// the route-level middlewares that apply to all methods will use the validated request
 					const middlewares = handler.middleware ? [handler.middleware] : []
