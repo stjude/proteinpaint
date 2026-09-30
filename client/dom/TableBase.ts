@@ -51,7 +51,14 @@ export type TableBaseEdit = {
 	cell: TableBaseCell
 }
 
-type SortState = { colIdx: number; ascending: boolean }
+/** incremented id plus a random suffix: unique on the page even with several tables or other code using the same prefix */
+let idIncr = 0
+const randomSuffix = Math.random()
+function uniqueId(str: string) {
+	return `sjpp-${str}-${idIncr++}-${randomSuffix}`
+}
+
+type SortState ={ colIdx: number; ascending: boolean }
 
 /** Sorts rows in place by one column. A column of numeric strings (e.g. file names used as ids)
  * sorts numerically rather than lexically. Rows with a missing value keep their relative position. */
@@ -135,6 +142,14 @@ export type TableBaseOpts = {
 	ariaLabel?: string
 	/** called after the user commits an edit in an editable column */
 	onEdit?: (edit: TableBaseEdit) => void
+	/** Makes rows selectable. Called whenever the user selects or deselects a row, however they do it:
+	 * the input, a click anywhere on the row, or Enter/Space on the focused row. There is one code path,
+	 * so the callback is identical in single and multiple mode.
+	 * idx is the row's index in the array the caller passed in, regardless of sort/filter.
+	 * node is the row's <input>; read node.checked for the new state. Without this, no selection column is rendered. */
+	onSelect?: (idx: number, node: HTMLInputElement) => void
+	/** radio buttons, one row selected at a time. Default is checkboxes, any number of rows */
+	singleMode?: boolean
 }
 
 /**
@@ -165,6 +180,13 @@ export class TableBase {
 	protected dataTestId?: string
 	protected ariaLabel?: string
 	protected onEdit?: (edit: TableBaseEdit) => void
+	protected onSelect?: (idx: number, node: HTMLInputElement) => void
+	protected singleMode: boolean
+	/** shared by every selection input so radios group and checkboxes post together */
+	protected inputName = uniqueId('input')
+	/** selected row objects. Keyed by row, not by position or DOM, so it survives sort, filter and redraws.
+	 * Rows hidden by a filter stay selected */
+	protected selected = new Set<TableBaseRow>()
 
 	protected wrapper?: any
 	protected table?: Table
@@ -187,6 +209,8 @@ export class TableBase {
 		this.dataTestId = opts.dataTestId
 		this.ariaLabel = opts.ariaLabel
 		this.onEdit = opts.onEdit
+		this.onSelect = opts.onSelect
+		this.singleMode = opts.singleMode ?? false
 	}
 
 	protected static validate(opts: TableBaseOpts) {
@@ -229,6 +253,11 @@ export class TableBase {
 
 	getRows(): TableBaseRow[] {
 		return this.rows
+	}
+
+	/** Original indexes of the selected rows, ascending, including rows a filter is currently hiding. */
+	getSelectedIndexes(): number[] {
+		return [...this.selected].map(row => this.getOriginalIndex(row)).sort((a, b) => a - b)
 	}
 
 	/** Index of a row in the array the caller passed in, regardless of the current sort/filter. -1 if unknown.
@@ -347,6 +376,12 @@ export class TableBase {
 		this.sortIndicators.clear()
 		const tr: Tr = this.thead.append('tr')
 		if (this.showLines) tr.append('th').attr('scope', 'col').attr('aria-label', 'Row number').style('width', '1vw')
+		if (this.onSelect) {
+			tr.append('th')
+				.attr('scope', 'col')
+				.attr('aria-label', this.singleMode ? 'Select a row' : 'Select rows')
+				.style('width', '1.5vw')
+		}
 		this.columns.forEach((column, colIdx) => this.renderHeaderCell(tr, column, colIdx))
 		this.updateSortIndicators()
 	}
@@ -416,8 +451,64 @@ export class TableBase {
 				.style('width', '1vw')
 				.style('font-size', '0.8rem')
 		}
+		const input = this.onSelect ? this.renderSelector(tr, row) : undefined
 		row.forEach((cell, colIdx) => this.renderCell(tr, cell, colIdx, /*rowIdx*/))
+		if (input) this.labelSelector(input, row, rowIdx)
 		return tr
+	}
+
+	/** Extension point: the selection input and the row behavior that drives it. Every route to a
+	 * selection change ends in the input's 'change' event, handled once in onSelectChange(). */
+	protected renderSelector(tr: Tr, row: TableBaseRow): any {
+		const input: any = tr
+			.append('td')
+			.style('width', '1.5vw')
+			.append('input')
+			.attr('type', this.singleMode ? 'radio' : 'checkbox')
+			.attr('name', this.inputName)
+			.attr('value', this.getOriginalIndex(row))
+			.property('checked', this.selected.has(row))
+			.on('change', () => this.onSelectChange(row, input))
+
+		tr.attr('tabindex', 0)
+			.on('click', (event: MouseEvent) => {
+				// links, buttons and inputs do their own thing; do not also toggle the row
+				if (['A', 'BUTTON', 'INPUT'].includes((event.target as HTMLElement).tagName)) return
+				this.toggleRow(input)
+			})
+			.on('keydown', (event: KeyboardEvent) => {
+				// ignore keys that bubbled up from a descendant
+				if (event.target !== tr.node()) return
+				if (event.key == 'Enter' || event.key == ' ') {
+					event.preventDefault()
+					this.toggleRow(input)
+				}
+			})
+		return input
+	}
+
+	protected toggleRow(input: any): void {
+		const checked = input.property('checked') as boolean
+		if (this.singleMode && checked) return
+		input.property('checked', !checked)
+		input.dispatch('change')
+	}
+
+	protected onSelectChange(row: TableBaseRow, input: any): void {
+		if (input.property('checked')) {
+			if (this.singleMode) this.selected.clear()
+			this.selected.add(row)
+		} else this.selected.delete(row)
+		this.onSelect!(this.getOriginalIndex(row), input.node())
+	}
+
+	/** Names the input after the row's first cell with text, for screen readers. */
+	protected labelSelector(input: any, row: TableBaseRow, rowIdx: number): void {
+		const td = row.find(cell => cell.value != null && cell.value !== '')?.__td
+		if (!td) return void input.attr('aria-label', `Select row ${rowIdx + 1}`)
+		let id = td.attr('id')
+		if (!id) td.attr('id', (id = uniqueId('td')))
+		input.attr('aria-labelledby', id)
 	}
 
 	/** Extension point: render a single cell. Subclasses adding editing,
@@ -452,7 +543,11 @@ export class TableBase {
 			td.style('cursor', 'text')
 				.attr('tabindex', 0)
 				.attr('aria-description', 'Press Enter to edit')
-				.on('click', () => this.startEdit(td, tr, cell, colIdx))
+				.on('click', (event: MouseEvent) => {
+					// editing a cell must not also select the row
+					event.stopPropagation()
+					this.startEdit(td, tr, cell, colIdx)
+				})
 				.on('keydown', (event: KeyboardEvent) => {
 					// ignore keys that bubbled up from the edit input
 					if (event.target !== td.node()) return
