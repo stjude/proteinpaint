@@ -398,23 +398,31 @@ const remoteUrlTimeout = 10000
 
 /*
 	url: a url that passed checkRemoteUrl()
-	lookup: see makePublicAddressLookup(), only replaced in tests
+	opts{}
+	.lookup: see makePublicAddressLookup(), only replaced in tests
+	.timeout: ms, only replaced in tests
 
-	returns a promise of the http.IncomingMessage of a GET request, without following a redirect. A request that
-	connects to a hostname that resolves to a non-public address, or is idle for remoteUrlTimeout, is rejected.
+	returns a promise of the http.IncomingMessage of a GET request, without following a redirect. The request is
+	rejected if it connects to a hostname that resolves to a non-public address, or if the response headers have
+	not all arrived within the timeout, as ky would do, since a server could otherwise keep the request pending by
+	sending a header byte at a time. After the headers, the response is destroyed if it is idle for the timeout.
 	Read the body with readResponseText(), or call res.destroy() to discard it.
 */
-export function requestRemoteUrl(url, lookup = publicAddressLookup) {
+export function requestRemoteUrl(url, opts = {}) {
+	const { lookup = publicAddressLookup, timeout = remoteUrlTimeout } = opts
 	return new Promise((resolve, reject) => {
 		const u = new URL(url)
 		const client = u.protocol == 'https:' ? https : http
-		const req = client.get(
-			u,
-			{ lookup, timeout: remoteUrlTimeout, headers: { 'accept-encoding': 'gzip, deflate, br' } },
-			resolve
-		)
+		const req = client.get(u, { lookup, timeout, headers: { 'accept-encoding': 'gzip, deflate, br' } }, res => {
+			clearTimeout(headersTimer)
+			resolve(res)
+		})
+		const headersTimer = setTimeout(() => req.destroy(new Error('response headers timed out')), timeout)
 		req.on('timeout', () => req.destroy(new Error('request timed out')))
-		req.on('error', reject)
+		req.on('error', e => {
+			clearTimeout(headersTimer)
+			reject(e)
+		})
 	})
 }
 
