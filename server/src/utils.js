@@ -871,12 +871,16 @@ export async function run_fdr(plst) {
 	// list of pvalues
 	const infile = path.join(serverconfig.cachedir, Math.random().toString())
 	const outfile = infile + '.out'
-	await write_file(infile, plst.join('\t'))
-	await run_fdr_2(infile, outfile)
-	const text = await read_file(outfile)
-	fs.unlink(infile, () => {})
-	fs.unlink(outfile, () => {})
-	return text.trim().split('\n').map(Number)
+	try {
+		await write_file(infile, plst.join('\t'))
+		await run_fdr_2(infile, outfile)
+		const text = await read_file(outfile)
+		return text.trim().split('\n').map(Number)
+	} finally {
+		// also when Rscript fails, so that the temporary files do not accumulate in cachedir
+		fs.unlink(infile, () => {})
+		fs.unlink(outfile, () => {})
+	}
 }
 
 function run_fdr_2(infile, outfile) {
