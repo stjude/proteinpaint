@@ -18,7 +18,39 @@ export const versionInfo: VersionInfo = {
 	hostImage: getHostImage(),
 	deps,
 	// launchdate captured at module load so it is the actual process start, outside of any function call
-	launchdate: new Date().toString().split(' ').slice(0, 5).join(' ')
+	launchdate: new Date().toString().split(' ').slice(0, 5).join(' '),
+	// a getter, since proteinpaint-front's init may generate the served bundle after this module is loaded;
+	// a getter is still included when versionInfo is serialized as JSON
+	get clientVersion() {
+		return getServedClientVersion()
+	}
+}
+
+let servedClientVersion: string | undefined
+
+/*
+	the client version of the bundle that is served at /bin, as written by the
+	front/webpack.config.js BundleVersionPlugin; used by an already loaded page to detect
+	if its client code is outdated (see client/src/bundleVersion.ts)
+*/
+function getServedClientVersion(): string | undefined {
+	if (servedClientVersion) return servedClientVersion
+	// same precedence as the /bin static routes in app.middlewares.js
+	const binDirs: string[] = []
+	if (serverconfig.binDir && fs.existsSync(path.join(serverconfig.binDir, '.pp-bundle-ready')))
+		binDirs.push(serverconfig.binDir)
+	if (serverconfig.publicDir) binDirs.push(path.join(serverconfig.publicDir, 'bin'))
+	for (const dir of binDirs) {
+		const file = path.join(dir, 'version.json')
+		if (!fs.existsSync(file)) continue
+		try {
+			// cache only a found version, since the bundle may not be generated yet
+			servedClientVersion = JSON.parse(fs.readFileSync(file, 'utf8')).clientVersion
+		} catch (_) {
+			// a partially written file may be read on the next call
+		}
+		return servedClientVersion
+	}
 }
 
 /*

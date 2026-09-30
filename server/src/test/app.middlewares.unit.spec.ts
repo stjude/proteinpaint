@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getRequestOrigin, isAllowedEmbedder, isCredEmbedder } from '../app.middlewares.js'
+import { getRequestOrigin, isAllowedEmbedder, isCredEmbedder, getCacheControl } from '../app.middlewares.js'
 
 function getReq(headers: { [key: string]: string }, protocol = 'http') {
 	return { protocol, get: (key: string) => headers[key] }
@@ -106,5 +106,31 @@ tape('isCredEmbedder()', test => {
 		'should match a hostname for an origin with a port'
 	)
 	test.equal(isCredEmbedder(undefined, '*.example.org'), false, 'should not match a glob pattern without an origin')
+	test.end()
+})
+
+tape('getCacheControl()', test => {
+	const immutable = 'public, max-age=31536000, immutable'
+	test.equal(
+		getCacheControl('/bin/123.abcd1234.proteinpaint.js'),
+		immutable,
+		'should cache a hashed chunk as immutable'
+	)
+	test.equal(
+		getCacheControl('/bin/123.abcd1234.proteinpaint.js.map'),
+		immutable,
+		'should cache a hashed chunk source map as immutable'
+	)
+	test.equal(getCacheControl('/bin/proteinpaint.js'), 'no-cache', 'should require revalidation of the bundle entry')
+	test.equal(
+		getCacheControl('/base/bin/proteinpaint.js'),
+		'no-cache',
+		'should require revalidation of the bundle entry under a basepath'
+	)
+	test.equal(getCacheControl('/bin/version.json'), 'no-cache', 'should require revalidation of the bundle version')
+	test.equal(getCacheControl('/bin/123.proteinpaint.js'), undefined, 'should not set a header for an unhashed chunk')
+	test.equal(getCacheControl('/bin/dist/app.js'), undefined, 'should not set a header for other static files')
+	test.equal(getCacheControl('/genomes'), 'immutable,max-age=1', 'should default to a 1 second max-age for a route')
+	test.equal(getCacheControl('/genomes', 5), 'immutable,max-age=5', 'should use the responseMaxAge for a route')
 	test.end()
 })
