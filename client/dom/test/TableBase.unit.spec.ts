@@ -855,9 +855,11 @@ function makeSelectTable(opts: { singleMode?: boolean; showLines?: boolean; rows
 		columns: sortFilterColumns,
 		rows: opts.rows || makeSortFilterRows(),
 		div: holder,
-		singleMode: opts.singleMode,
 		styles: { showLines: opts.showLines },
-		onSelect: (idx, node) => calls.push({ idx, checked: node.checked, isInput: node instanceof HTMLInputElement })
+		selection: {
+			singleMode: opts.singleMode,
+			onSelect: (idx, node) => calls.push({ idx, checked: node.checked, isInput: node instanceof HTMLInputElement })
+		}
 	}).render()
 	return { holder, table, calls }
 }
@@ -1006,7 +1008,7 @@ tape('select: editing a cell does not select the row', test => {
 		columns: editColumns,
 		rows: makeEditRows(),
 		div: holder,
-		onSelect: idx => calls.push(idx)
+		selection: { onSelect: idx => calls.push(idx) }
 	}).render()
 
 	const td = trAt(holder, 0).cells[1] // cells[0] is the selection column
@@ -1033,6 +1035,308 @@ tape('select: the selection column sits after the line numbers, and inputs are l
 	const labelId = input.getAttribute('aria-labelledby')!
 	test.equal(document.getElementById(labelId)!.textContent, 'Alice', 'Should be labelled by the first cell with text')
 	test.equal(inputAt(holder, 1).getAttribute('aria-label'), 'Select row 2', 'Should fall back to a generic label')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+/**************
+ selection: preselection, check-all, buttons, selectedRow style
+***************/
+
+tape('\n', test => {
+	test.comment('-***- dom/TableBase - selection options and buttons -***-')
+	test.end()
+})
+
+function makeOptTable(opts: Partial<ConstructorParameters<typeof TableBase>[0]> = {}) {
+	const holder = getHolder()
+	const table = new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder, ...opts }).render()
+	return { holder, table }
+}
+const checkAll = (holder: any) => holder.select('input[data-testid="sjpp-table-checkall"]').node() as HTMLInputElement
+
+tape('select: selectedRows preselects by index without calling onSelect, and selectAll selects everything', test => {
+	test.timeoutAfter(100)
+	let called = 0
+	const pre = makeOptTable({ selection: { selectedRows: [0, 2], onSelect: () => called++ } })
+	test.deepEqual(checkedNames(pre.holder), ['Charlie', 'Bob'], 'Should check the requested rows')
+	test.deepEqual(pre.table.getSelectedIndexes(), [0, 2], 'Should report them as selected')
+	test.equal(called, 0, 'Should not call onSelect for preselection')
+
+	const all = makeOptTable({ selection: { selectAll: true } })
+	test.deepEqual(checkedNames(all.holder), ['Charlie', 'Alice', 'Bob'], 'selectAll should check every row')
+	test.ok(checkAll(all.holder).checked, 'The check-all box should be checked')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: invalid selection options throw', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const make = (selection: any) => () =>
+		new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder, selection })
+	test.throws(make({ selectedRows: [5] }), /out of range/, 'Should reject an index past the last row')
+	test.throws(make({ singleMode: true, selectAll: true }), /singleMode/, 'Should reject selectAll with singleMode')
+	test.throws(make({ singleMode: true, selectedRows: [0, 1] }), /only one/, 'Should reject two preselected rows in singleMode')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: the check-all box selects and clears displayed rows, calls onSelect per change, and shows a dash for some', test => {
+	test.timeoutAfter(100)
+	const calls: Call[] = []
+	const { holder, table } = makeOptTable({
+		selection: { onSelect: (idx, node) => calls.push({ idx, checked: node.checked, isInput: true }) }
+	})
+
+	checkAll(holder).click()
+	test.deepEqual(table.getSelectedIndexes(), [0, 1, 2], 'Should select every displayed row')
+	test.deepEqual(calls.map(c => c.idx), [0, 1, 2], 'Should call onSelect once per row that changed')
+
+	inputAt(holder, 1).click()
+	test.notOk(checkAll(holder).checked, 'Should uncheck when a row is deselected')
+	test.ok(checkAll(holder).indeterminate, 'Should show a dash when only some rows are selected')
+
+	calls.length = 0
+	checkAll(holder).click() // dash -> all
+	test.deepEqual(calls.map(c => c.idx), [1], 'Should only call for the row that was not already selected')
+	checkAll(holder).click() // all -> none
+	test.deepEqual(table.getSelectedIndexes(), [], 'Should clear every displayed row')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: there is no check-all box in singleMode', test => {
+	test.timeoutAfter(100)
+	const { holder } = makeOptTable({ selection: { singleMode: true } })
+
+	test.ok(holder.select('input[data-testid="sjpp-table-checkall"]').empty(), 'Should not render check-all')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: check-all acts on the current page only', test => {
+	test.timeoutAfter(100)
+	const { holder, table } = makePagedTable(25, 10, { selection: {} })
+
+	checkAll(holder).click()
+	test.deepEqual(table.getSelectedIndexes(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 'Should select the 10 rows on this page')
+	table.goToPage(2)
+	test.notOk(checkAll(holder).checked, 'Check-all should reflect the new page')
+	test.equal(checkAll(holder).getAttribute('aria-label'), 'Select all rows on this page', 'Should say it acts on the page')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: hideInput hides the input and header cell but rows still select', test => {
+	test.timeoutAfter(100)
+	const calls: Call[] = []
+	const { holder } = makeOptTable({
+		selection: { singleMode: true, hideInput: true, onSelect: (idx, node) => calls.push({ idx, checked: node.checked, isInput: true }) }
+	})
+
+	const input = inputAt(holder, 0)
+	test.equal((input.parentElement as HTMLElement).style.display, 'none', 'Should hide the input cell')
+	test.equal((holder.select('thead th').node() as HTMLElement).style.display, 'none', 'Should hide the matching header cell')
+	trAt(holder, 1).cells[1].dispatchEvent(new Event('click', { bubbles: true }))
+	test.deepEqual(calls, [{ idx: 1, checked: true, isInput: true }], 'A row click should still select')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: styles.selectedRow is applied to selected rows and removed on deselect, keeping stripes', test => {
+	test.timeoutAfter(100)
+	const { holder } = makeOptTable({
+		selection: { selectedRows: [0] },
+		styles: { selectedRow: { 'text-decoration': 'line-through', 'background-color': 'yellow' } }
+	})
+
+	test.equal(trAt(holder, 0).style.textDecoration, 'line-through', 'Preselected row should be styled')
+	inputAt(holder, 1).click()
+	test.equal(trAt(holder, 1).style.backgroundColor, 'yellow', 'A newly selected row should be styled')
+	inputAt(holder, 1).click()
+	test.equal(trAt(holder, 1).style.backgroundColor, 'rgb(245, 245, 245)', 'Deselecting should restore the stripe')
+	test.equal(trAt(holder, 1).style.textDecoration, '', 'Deselecting should clear the other properties')
+	inputAt(holder, 0).click()
+	test.equal(trAt(holder, 0).style.backgroundColor, '', 'Deselecting an unstriped row should clear the background')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: singleMode restyles the row the radio silently unchecked', test => {
+	test.timeoutAfter(100)
+	const { holder } = makeOptTable({
+		selection: { singleMode: true, selectedRows: [0] },
+		styles: { selectedRow: { 'text-decoration': 'line-through' } }
+	})
+
+	inputAt(holder, 2).click()
+	test.equal(trAt(holder, 0).style.textDecoration, '', 'The previously selected row should lose the style')
+	test.equal(trAt(holder, 2).style.textDecoration, 'line-through', 'The new row should get it')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: styles.selectedRow survives sort and page redraws', test => {
+	test.timeoutAfter(100)
+	const { holder, table } = makePagedTable(25, 10, {
+		selection: { selectedRows: [0] },
+		styles: { selectedRow: { 'text-decoration': 'line-through' } }
+	})
+
+	table.goToPage(2)
+	table.goToPage(1)
+	test.equal(trAt(holder, 0).style.textDecoration, 'line-through', 'Should restyle the selected row when it is redrawn')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: autoScroll scrolls the first preselected row into view, unless disabled or selectAll', async test => {
+	test.timeoutAfter(3000)
+	const scrolled: string[] = []
+	const original = Element.prototype.scrollIntoView
+	// earlier tests also preselect rows, and their own scroll timers may fire during this one
+	const mine: HTMLElement[] = []
+	Element.prototype.scrollIntoView = function (this: any) {
+		if (mine.some(holder => holder.contains(this))) scrolled.push(this.cells[1].textContent || '')
+	} as any
+	try {
+		for (const selection of [{ selectedRows: [2, 0] }, { selectedRows: [1], autoScroll: false }, { selectAll: true }]) {
+			mine.push(makeOptTable({ selection }).holder.node() as HTMLElement)
+		}
+		test.deepEqual(scrolled, [], 'Should not scroll before the delay')
+		await new Promise(resolve => setTimeout(resolve, 700))
+		test.deepEqual(scrolled, ['Bob'], 'Should scroll only to the first preselected row of the table that allows it')
+	} finally {
+		Element.prototype.scrollIntoView = original
+	}
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+function makeButtonTable(opts: Partial<ConstructorParameters<typeof TableBase>[0]> = {}) {
+	const pressed: { idxs: number[]; isButton: boolean }[] = []
+	const changes: number[][] = []
+	const made = makeOptTable({
+		buttons: [
+			{
+				text: 'Go',
+				class: 'go-btn',
+				dataTestId: 'go',
+				callback: (idxs, button) => pressed.push({ idxs, isButton: button instanceof HTMLButtonElement }),
+				onChange: (idxs, button) => {
+					changes.push(idxs)
+					button.textContent = `Go (${idxs.length})`
+				}
+			}
+		],
+		...opts
+	})
+	const button = made.holder.select('button[data-testid="go"]').node() as HTMLButtonElement
+	return { ...made, pressed, changes, button }
+}
+
+tape('buttons: render below the table, are disabled until a row is selected, and report original indexes', test => {
+	test.timeoutAfter(100)
+	const { holder, table, pressed, button } = makeButtonTable()
+
+	test.ok(button.classList.contains('go-btn'), 'Should apply the class')
+	test.ok(button.disabled, 'Should start disabled with nothing selected')
+	test.ok(holder.select('tbody input').size() > 0, 'Buttons alone should make rows selectable')
+	const tableNode = holder.select('table').node() as HTMLElement
+	test.ok(tableNode.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING, 'Should come after the table')
+
+	table.sortByColumn(0) // Alice(1), Bob(2), Charlie(0)
+	inputAt(holder, 0).click()
+	inputAt(holder, 2).click()
+	test.notOk(button.disabled, 'Should enable once a row is selected')
+	button.click()
+	test.deepEqual(pressed, [{ idxs: [0, 1], isButton: true }], 'Should pass original indexes and the button')
+	inputAt(holder, 0).click()
+	inputAt(holder, 2).click()
+	test.ok(button.disabled, 'Should disable again when the selection is cleared')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('buttons: onChange runs on render and on every selection change, but not on sort', test => {
+	test.timeoutAfter(100)
+	const { holder, table, changes, button } = makeButtonTable({ selection: { selectedRows: [1] } })
+
+	test.deepEqual(changes, [[1]], 'Should call onChange once on render with the preselection')
+	test.equal(button.textContent, 'Go (1)', 'The button can reflect the preselection')
+	test.notOk(button.disabled, 'Should start enabled with a preselected row')
+
+	inputAt(holder, 0).click()
+	test.deepEqual(changes.pop(), [0, 1], 'Should call onChange when a row is selected')
+	table.sortByColumn(0)
+	test.equal(changes.length, 1, 'Sorting does not change the selection, so no call')
+	checkAll(holder).click()
+	test.equal(changes.length, 2, 'Check-all should call onChange once, not once per row')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('buttons: buttonsAlign, selectAll enabling, and validation', test => {
+	test.timeoutAfter(100)
+	const left = makeButtonTable({ styles: { buttonsAlign: 'left' } })
+	test.equal((left.holder.select('.sjpp-table-buttons').node() as HTMLElement).style.justifyContent, 'flex-start', 'Should align left')
+	const right = makeButtonTable()
+	test.equal((right.holder.select('.sjpp-table-buttons').node() as HTMLElement).style.justifyContent, 'flex-end', 'Should align right by default')
+	test.notOk(makeButtonTable({ selection: { selectAll: true } }).button.disabled, 'selectAll should enable the buttons')
+
+	const holder = getHolder()
+	const make = (buttons: any) => () => new TableBase({ columns: sortFilterColumns, rows: [], div: holder, buttons })
+	test.throws(make([{ callback: () => 1 }]), /text/, 'Should require button text')
+	test.throws(make([{ text: 'x' }]), /callback/, 'Should require a button callback')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('buttons: sit in the footer together with the pager', test => {
+	test.timeoutAfter(100)
+	const { holder } = makePagedTable(25, 10, {
+		buttons: [{ text: 'Go', callback: () => 1, dataTestId: 'go' }]
+	})
+
+	const footer = holder.select('.sjpp-table-footer').node() as HTMLElement
+	test.ok(footer.querySelector('.sjpp-table-pager'), 'Footer should hold the pager')
+	test.ok(footer.querySelector('button[data-testid="go"]'), 'Footer should hold the buttons')
+	test.equal(footer.style.position, 'sticky', 'Footer should stay in view')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('styles.header is applied to column headers', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({
+		columns: testColumns,
+		rows: testRows,
+		div: holder,
+		styles: { header: { 'font-size': '1.3em', 'background-color': 'rgb(1, 2, 3)' } }
+	}).render()
+
+	const ths = holder.selectAll('thead th').nodes() as HTMLElement[]
+	test.ok(
+		ths.every(th => th.style.fontSize === '1.3em' && th.style.backgroundColor === 'rgb(1, 2, 3)'),
+		'Every column header should get the style'
+	)
 
 	//if ((test as any)._ok) holder.remove()
 	test.end()
@@ -1232,7 +1536,7 @@ tape('page: currentPage option, clamping, and invalid page sizes', test => {
 tape('page: selection and original indexes hold across pages', test => {
 	test.timeoutAfter(100)
 	const calls: number[] = []
-	const { holder, table } = makePagedTable(25, 10, { onSelect: idx => calls.push(idx) })
+	const { holder, table } = makePagedTable(25, 10, { selection: { onSelect: idx => calls.push(idx) } })
 
 	;(holder.select('tbody input').node() as HTMLInputElement).click() // row 0
 	table.goToPage(2)

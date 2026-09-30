@@ -51,6 +51,8 @@ export type TableBaseEdit = {
 	cell: TableBaseCell
 }
 
+const STRIPE = 'rgb(245,245,245)'
+
 /** incremented id plus a random suffix: unique on the page even with several tables or other code using the same prefix */
 let idIncr = 0
 const randomSuffix = Math.random()
@@ -140,6 +142,44 @@ export type TableBaseStyles = {
 	maxWidth?: string
 	/** default 40vh */
 	maxHeight?: string
+	/** css for every column header <th>, e.g. { 'font-size': '1.1em' } */
+	header?: Record<string, string>
+	/** css for selected rows, e.g. { 'text-decoration': 'line-through' }. Each property is cleared when the row is deselected */
+	selectedRow?: Record<string, string>
+	/** which side of the table the buttons sit on. Default 'right' */
+	buttonsAlign?: 'left' | 'right'
+}
+
+export type TableBaseSelection = {
+	/** Called whenever the user selects or deselects a row, however they do it: the input, a click anywhere
+	 * on the row, the header check-all, or Enter/Space on the focused row. There is one code path, so the
+	 * callback is identical in single and multiple mode.
+	 * idx is the row's index in the array the caller passed in, regardless of sort/filter/page.
+	 * node is the row's <input>; read node.checked for the new state. */
+	onSelect?: (idx: number, node: HTMLInputElement) => void
+	/** radio buttons, one row selected at a time. Default is checkboxes, any number of rows */
+	singleMode?: boolean
+	/** Hide the radio/checkbox. Rows are still selected by click or keyboard, but screen readers get no
+	 * selected state, so only use this when the selection is conveyed another way */
+	hideInput?: boolean
+	/** Rows selected on first render, as indexes into rows. Does not call onSelect */
+	selectedRows?: number[]
+	/** Select every row on first render. Not allowed with singleMode */
+	selectAll?: boolean
+	/** Scroll the first selectedRows row into view on first render. Default true */
+	autoScroll?: boolean
+}
+
+export type TableBaseButton = {
+	text: string
+	/** Called on click with the selected rows' original indexes (including rows hidden by a filter or on
+	 * other pages) and the button. */
+	callback: (idxs: number[], button: HTMLButtonElement) => void
+	/** Called whenever the selection changes, and once on render, so the button can reflect the selection,
+	 * e.g. by changing its text. A button is disabled while nothing is selected. */
+	onChange?: (idxs: number[], button: HTMLButtonElement) => void
+	class?: string
+	dataTestId?: string
 }
 
 export type TableBaseOpts = {
@@ -155,23 +195,19 @@ export type TableBaseOpts = {
 	ariaLabel?: string
 	/** called after the user commits an edit in an editable column */
 	onEdit?: (edit: TableBaseEdit) => void
-	/** Makes rows selectable. Called whenever the user selects or deselects a row, however they do it:
-	 * the input, a click anywhere on the row, or Enter/Space on the focused row. There is one code path,
-	 * so the callback is identical in single and multiple mode.
-	 * idx is the row's index in the array the caller passed in, regardless of sort/filter.
-	 * node is the row's <input>; read node.checked for the new state. Without this, no selection column is rendered. */
-	onSelect?: (idx: number, node: HTMLInputElement) => void
-	/** radio buttons, one row selected at a time. Default is checkboxes, any number of rows */
-	singleMode?: boolean
+	/** Makes rows selectable: adds the selection column (checkboxes, or radios in singleMode). Without this
+	 * or buttons, rows are not selectable */
+	selection?: TableBaseSelection
+	/** Action buttons below the table. Their presence also makes rows selectable */
+	buttons?: TableBaseButton[]
 }
 
 /**
- * Minimal, extendable table renderer. Holds only what every table needs -
- * structure, columns, rows, cell rendering - and exposes protected extension
- * points (renderHeader/renderHeaderCell/renderBody/renderRow/renderCell) for
- * subclasses to override when they need sorting, pagination, selection,
- * editing, etc. Add those features by extending this class, not by adding
- * options here.
+ * Extendable table renderer. Options are grouped by concern: `styles` for appearance, `selection` and
+ * `buttons` for row selection, `pagination`, and per-column flags on `columns` (sortable, filterable, editable).
+ * Protected extension points (renderHeader/renderHeaderCell/renderBody/renderRow/renderCell/renderSelector/
+ * createFooter) are what subclasses override for behavior that does not belong here, such as hover effects or
+ * post-render hooks. Add that kind of feature by extending this class, not by adding options.
  */
 export class TableBase {
 	protected div: any
@@ -202,8 +238,19 @@ export class TableBase {
 	protected dataTestId?: string
 	protected ariaLabel?: string
 	protected onEdit?: (edit: TableBaseEdit) => void
+	protected selectable: boolean
 	protected onSelect?: (idx: number, node: HTMLInputElement) => void
 	protected singleMode: boolean
+	protected hideInput: boolean
+	protected autoScroll: boolean
+	/** first preselected row, scrolled into view after the first render */
+	protected scrollTarget?: TableBaseRow
+	protected buttons: TableBaseButton[]
+	protected buttonsAlign: 'left' | 'right'
+	protected headerStyle: Record<string, string>
+	protected selectedRowStyle: Record<string, string>
+	/** true while check-all changes many rows, so buttons and the check-all box update once at the end */
+	protected bulkSelecting = false
 	/** shared by every selection input so radios group and checkboxes post together */
 	protected inputName = uniqueId('input')
 	/** selected row objects. Keyed by row, not by position or DOM, so it survives sort, filter and redraws.
@@ -215,6 +262,9 @@ export class TableBase {
 	protected thead?: any
 	protected tbody?: any
 	protected status?: any
+	protected footer?: any
+	protected buttonEls: any[] = []
+	protected selectAllInput?: any
 	protected pagerInfo?: any
 	protected pagerNav?: any
 
@@ -242,8 +292,21 @@ export class TableBase {
 		this.dataTestId = opts.dataTestId
 		this.ariaLabel = opts.ariaLabel
 		this.onEdit = opts.onEdit
-		this.onSelect = opts.onSelect
-		this.singleMode = opts.singleMode ?? false
+		this.headerStyle = styles.header ?? {}
+		this.selectedRowStyle = styles.selectedRow ?? {}
+		this.buttonsAlign = styles.buttonsAlign ?? 'right'
+		const selection = opts.selection
+		this.buttons = opts.buttons ?? []
+		this.selectable = !!selection || this.buttons.length > 0
+		this.onSelect = selection?.onSelect
+		this.singleMode = selection?.singleMode ?? false
+		this.hideInput = selection?.hideInput ?? false
+		this.autoScroll = selection?.autoScroll ?? true
+		if (selection?.selectAll) for (const row of opts.rows) this.selected.add(row)
+		else {
+			for (const i of selection?.selectedRows ?? []) this.selected.add(opts.rows[i])
+			this.scrollTarget = opts.rows[selection?.selectedRows?.[0] ?? -1]
+		}
 	}
 
 	protected static validate(opts: TableBaseOpts) {
@@ -256,6 +319,16 @@ export class TableBase {
 			for (const size of [pageSize, ...pageSizeOptions]) {
 				if (!Number.isInteger(size) || size < 1) throw new Error(`TableBase: invalid page size ${size}`)
 			}
+		}
+		for (const [i, button] of (opts.buttons ?? []).entries()) {
+			if (!button.text) throw new Error(`TableBase: missing buttons[${i}].text`)
+			if (!button.callback) throw new Error(`TableBase: missing buttons[${i}].callback`)
+		}
+		const { singleMode, selectAll, selectedRows = [] } = opts.selection ?? {}
+		if (singleMode && selectAll) throw new Error('TableBase: selection.selectAll is not allowed with singleMode')
+		if (singleMode && selectedRows.length > 1) throw new Error('TableBase: singleMode allows only one selected row')
+		for (const i of selectedRows) {
+			if (!opts.rows[i]) throw new Error(`TableBase: selection.selectedRows index ${i} is out of range`)
 		}
 	}
 
@@ -273,12 +346,22 @@ export class TableBase {
 		this.wrapper = this.createWrapper()
 		this.table = this.createTable()
 		this.status = this.createStatus()
-		if (this.paginated) this.createPager()
+		if (this.paginated || this.buttons.length) this.createFooter()
 		this.thead = this.table.append('thead')
 		this.tbody = this.table.append('tbody')
 		this.renderHeader()
 		this.update()
+		this.scrollToSelected()
 		return this
+	}
+
+	/** Scrolls the first preselected row into view, unless that row is not on the displayed page. */
+	protected scrollToSelected(): void {
+		const target = this.autoScroll ? this.scrollTarget : undefined
+		if (!target) return
+		const tr = this.tbody.selectAll('tr').filter((row: TableBaseRow) => row === target).node() as HTMLElement | null
+		// the delay lets the table settle in its container first
+		if (tr) setTimeout(() => tr.scrollIntoView?.({ behavior: 'smooth', block: 'center' }), 500)
 	}
 
 	/** Removes the rendered table from the DOM, if present. */
@@ -329,6 +412,7 @@ export class TableBase {
 		}
 		this.renderBody()
 		this.renderPager()
+		this.syncSelectAll()
 	}
 
 	protected totalPages(): number {
@@ -466,21 +550,33 @@ export class TableBase {
 	protected renderHeader(): void {
 		this.thead.selectAll('tr').remove()
 		this.sortIndicators.clear()
+		this.selectAllInput = undefined
 		const tr: Tr = this.thead.append('tr')
 		if (this.showLines) tr.append('th').attr('scope', 'col').attr('aria-label', 'Row number').style('width', '1vw')
-		if (this.onSelect) {
-			tr.append('th')
-				.attr('scope', 'col')
-				.attr('aria-label', this.singleMode ? 'Select a row' : 'Select rows')
-				.style('width', '1.5vw')
-		}
+		if (this.selectable) this.renderSelectHeader(tr)
 		this.columns.forEach((column, colIdx) => this.renderHeaderCell(tr, column, colIdx))
 		this.updateSortIndicators()
+	}
+
+	/** Extension point: the selection column's header. Multiple mode gets a check-all box that acts on the
+	 * rows displayed now (the current page), and shows a dash when only some of them are selected. */
+	protected renderSelectHeader(tr: Tr): Th {
+		const th: Th = tr.append('th').attr('scope', 'col').style('width', '1.5vw')
+		if (this.hideInput) th.style('display', 'none')
+		if (this.singleMode) return th.attr('aria-label', 'Select a row')
+		this.selectAllInput = th
+			.append('input')
+			.attr('type', 'checkbox')
+			.attr('aria-label', this.paginated ? 'Select all rows on this page' : 'Select all rows')
+			.attr('data-testid', 'sjpp-table-checkall')
+			.on('change', () => this.selectAllDisplayed(this.selectAllInput.property('checked')))
+		return th
 	}
 
 	/** Extension point: render a single header cell, including its sort and filter controls. */
 	protected renderHeaderCell(tr: Tr, column: TableBaseColumn, colIdx: number): Th {
 		const th: Th = tr.append('th').attr('class', 'sjpp_table_header').attr('scope', 'col')
+		for (const [key, value] of Object.entries(this.headerStyle)) th.style(key, value)
 		if (column.width) th.style('width', column.width)
 		if (column.headerTestId) th.attr('data-testid', column.headerTestId)
 		if (column.tooltip) th.attr('title', column.tooltip)
@@ -532,14 +628,55 @@ export class TableBase {
 		this.rows.forEach((row, i) => this.renderRow(row, this.pageStart + i))
 	}
 
-	/** Extension point: builds the pager container once per render(). Its contents are redrawn by renderPager(). */
-	protected createPager(): void {
-		const pager = this.wrapper
+	/** Extension point: the area below the table holding the pager and buttons. Sticky, so it stays in view
+	 * while the table scrolls. */
+	protected createFooter(): void {
+		this.footer = this.wrapper
 			.append('div')
-			.attr('class', 'sjpp-table-pager')
+			.attr('class', 'sjpp-table-footer')
 			.style('position', 'sticky')
 			.style('bottom', '0')
 			.style('background-color', 'white')
+		if (this.paginated) this.createPager()
+		if (this.buttons.length) this.createButtons()
+	}
+
+	protected createButtons(): void {
+		const bar = this.footer
+			.append('div')
+			.attr('class', 'sjpp-table-buttons')
+			.style('display', 'flex')
+			.style('gap', '10px')
+			.style('padding', '5px 4px')
+			.style('justify-content', this.buttonsAlign == 'left' ? 'flex-start' : 'flex-end')
+		this.buttonEls = this.buttons.map(config => {
+			const button: any = bar
+				.append('button')
+				.attr('type', 'button')
+				.text(config.text)
+				.on('click', () => config.callback(this.getSelectedIndexes(), button.node()))
+			if (config.class) button.attr('class', config.class)
+			if (config.dataTestId) button.attr('data-testid', config.dataTestId)
+			return button
+		})
+		this.updateButtons()
+	}
+
+	/** Disables the buttons while nothing is selected and lets each one react to the new selection. */
+	protected updateButtons(): void {
+		const idxs = this.getSelectedIndexes()
+		this.buttons.forEach((config, i) => {
+			const node = this.buttonEls[i].node() as HTMLButtonElement
+			node.disabled = idxs.length == 0
+			config.onChange?.(idxs, node)
+		})
+	}
+
+	/** Extension point: builds the pager once per render(). Its contents are redrawn by renderPager(). */
+	protected createPager(): void {
+		const pager = this.footer
+			.append('div')
+			.attr('class', 'sjpp-table-pager')
 			.style('display', 'flex')
 			.style('align-items', 'center')
 			.style('justify-content', 'space-between')
@@ -616,7 +753,7 @@ export class TableBase {
 	 * behavior should override this. */
 	protected renderRow(row: TableBaseRow, rowIdx: number): Tr {
 		const tr: Tr = this.tbody.append('tr').attr('class', 'sjpp_row_wrapper').datum(row)
-		if (this.striped && rowIdx % 2 === 1) tr.style('background-color', 'rgb(245,245,245)')
+		if (this.striped && rowIdx % 2 === 1) tr.style('background-color', STRIPE)
 		if (this.showLines) {
 			tr.append('td')
 				.text(rowIdx + 1)
@@ -624,24 +761,37 @@ export class TableBase {
 				.style('width', '1vw')
 				.style('font-size', '0.8rem')
 		}
-		const input = this.onSelect ? this.renderSelector(tr, row) : undefined
+		const input = this.selectable ? this.renderSelector(tr, row, rowIdx) : undefined
 		row.forEach((cell, colIdx) => this.renderCell(tr, cell, colIdx, /*rowIdx*/))
-		if (input) this.labelSelector(input, row, rowIdx)
+		if (input) {
+			this.labelSelector(input, row, rowIdx)
+			this.paintRow(tr.node() as HTMLElement, row, rowIdx)
+		}
 		return tr
+	}
+
+	/** Applies the selectedRow style to a selected row and clears it from a deselected one. Clearing the
+	 * background must not wipe the stripe. */
+	protected paintRow(tr: HTMLElement, row: TableBaseRow, rowIdx: number): void {
+		const selected = this.selected.has(row)
+		for (const [key, value] of Object.entries(this.selectedRowStyle)) {
+			const resting = key == 'background-color' && this.striped && rowIdx % 2 === 1 ? STRIPE : ''
+			tr.style.setProperty(key, selected ? value : resting)
+		}
 	}
 
 	/** Extension point: the selection input and the row behavior that drives it. Every route to a
 	 * selection change ends in the input's 'change' event, handled once in onSelectChange(). */
-	protected renderSelector(tr: Tr, row: TableBaseRow): any {
-		const input: any = tr
-			.append('td')
-			.style('width', '1.5vw')
+	protected renderSelector(tr: Tr, row: TableBaseRow, rowIdx: number): any {
+		const cell = tr.append('td').style('width', '1.5vw')
+		if (this.hideInput) cell.style('display', 'none')
+		const input: any = cell
 			.append('input')
 			.attr('type', this.singleMode ? 'radio' : 'checkbox')
 			.attr('name', this.inputName)
 			.attr('value', this.getOriginalIndex(row))
 			.property('checked', this.selected.has(row))
-			.on('change', () => this.onSelectChange(row, input))
+			.on('change', () => this.onSelectChange(row, input, tr, rowIdx))
 
 		tr.attr('tabindex', 0)
 			.on('click', (event: MouseEvent) => {
@@ -667,12 +817,50 @@ export class TableBase {
 		input.dispatch('change')
 	}
 
-	protected onSelectChange(row: TableBaseRow, input: any): void {
+	protected onSelectChange(row: TableBaseRow, input: any, tr: Tr, rowIdx: number): void {
 		if (input.property('checked')) {
 			if (this.singleMode) this.selected.clear()
 			this.selected.add(row)
 		} else this.selected.delete(row)
-		this.onSelect!(this.getOriginalIndex(row), input.node())
+		// a radio does not fire change on the row it unchecks, so restyle every displayed row
+		if (this.singleMode) this.repaintRows()
+		else this.paintRow(tr.node() as HTMLElement, row, rowIdx)
+		if (!this.bulkSelecting) this.afterSelectionChange()
+		this.onSelect?.(this.getOriginalIndex(row), input.node())
+	}
+
+	protected repaintRows(): void {
+		this.tbody.selectAll('tr').each((row: TableBaseRow, i: number, nodes: HTMLElement[]) => {
+			this.paintRow(nodes[i], row, this.pageStart + i)
+		})
+	}
+
+	protected afterSelectionChange(): void {
+		this.syncSelectAll()
+		this.updateButtons()
+	}
+
+	/** Selects or deselects every displayed row through each row's own input, so onSelect and styling
+	 * behave exactly as if the user had clicked the rows one by one. */
+	protected selectAllDisplayed(checked: boolean): void {
+		this.bulkSelecting = true
+		this.tbody.selectAll('tr').each((row: TableBaseRow, i: number, nodes: HTMLElement[]) => {
+			const input = nodes[i].querySelector(`input[name="${this.inputName}"]`) as HTMLInputElement | null
+			if (!input || this.selected.has(row) == checked) return
+			input.checked = checked
+			input.dispatchEvent(new Event('change'))
+		})
+		this.bulkSelecting = false
+		this.afterSelectionChange()
+	}
+
+	/** Reflects the displayed rows in the check-all box: checked for all, a dash for some. */
+	protected syncSelectAll(): void {
+		if (!this.selectAllInput) return
+		const count = this.rows.filter(row => this.selected.has(row)).length
+		const node = this.selectAllInput.node() as HTMLInputElement
+		node.checked = count > 0 && count === this.rows.length
+		node.indeterminate = count > 0 && count < this.rows.length
 	}
 
 	/** Names the input after the row's first cell with text, for screen readers. */
