@@ -110,7 +110,10 @@ All viewer traffic hits `wsitiles/:action`:
   `?cellAnnotations=<h5ad>` it also reads the distinct `cell_type` values out
   of the consolidated store and adds `cellTypes: [...]` (sorted, cached by
   file mtime) — how the client discovers the types for its filter dropdowns
-  up front.
+  up front — and, from that same `stat()`, `spatialVersion` (the h5ad's own
+  mtime, independent of the slide file's), which the client bakes into the
+  `/boundaries` and `/annotations` URLs below so a regenerated h5ad busts
+  *their* cache the same way a regenerated slide busts tiles'.
 - **`/tile/z/x/y`**: checks the disk cache
   (`cachedir/wsitiles/<sha1(slide:mtime)>_<plane>_<z>_<x>_<y>.jpg`); on a miss
   spawns `wsi_tile.py tile`, copies the produced JPEG into the cache, and
@@ -122,7 +125,12 @@ All viewer traffic hits `wsitiles/:action`:
   JSON, since cell types are free text that CSV comma-splitting would corrupt;
   the gene actions answer per-cell counts of one gene / every gene name in the
   file. `?file=` is scoped to the selected slide's own image folder, so a
-  valid slide query cannot read other samples' or datasets' files.
+  valid slide query cannot read other samples' or datasets' files. The first
+  two responses carry `Cache-Control: public, max-age=3600` with no slide-mtime
+  versioning of their own, so the client appends `?v=<spatialVersion>` (from
+  `/meta` above) to both requests — otherwise a reprocessed h5ad (e.g. a
+  corrected cell-boundary export) would stay invisible behind the browser's
+  stale hour-old cache of the old file's response.
 - **`/nhood`, `/similar`** (spatial only): the lasso's neighborhood
   enrichment and its similar-region search — see sections 8 and 9 below.
 
@@ -233,7 +241,21 @@ from the h5ad's cell/nucleus polygons (`/boundaries`, µm→px via `meta.mpp`).
 - **Legend pinning** — the legends are absolutely positioned at the map's
   top corners; a scroll listener pushes them down by however much of the
   map's top is scrolled out of view (clamped to the map's bottom), so they
-  stay visible as long as any of the image is.
+  stay visible as long as any of the image is. A `MutationObserver` on the
+  whole page's `style`/`class` attributes (coalesced to one reposition per
+  animation frame) catches layout shifts that aren't a scroll or a resize at
+  all — the burger menu's own settings panel opens by changing its height/
+  visibility style, which pushes the map down without firing either event.
+- **Default framing** — the view opens fit to the *sample's own cells*
+  (the fetched boundary polygons' bounding box), not the whole slide canvas,
+  unless `opts.focus` already picked a specific niche (the similar-search
+  preview below). A no-op for a well-cropped single-section slide, where the
+  cells already fill most of the frame — but some raw exports are a shared
+  multi-section slide where a sample's own tissue is a small, oddly-placed
+  fraction of a much larger image (two GEO accessions imaged on one physical
+  Xenium slide, say); framing on the full canvas there left the cells too
+  small to see, which looked like a missing-overlay bug rather than a
+  framing one.
 - **Dataset defaults** — `ds.queries.w2` can set `cellTypes: true` to open
   the spatial viewer with the cell-type overlay on (seeded once into the
   burger settings, expression fills off; the checkboxes override after).
@@ -277,8 +299,11 @@ menu.
 ### 8. Neighborhood enrichment — `wsitiles/nhood`, `python/src/wsi_tile.py`
 
 The lasso menu's **Neighborhood enrichment** button (`sjpp-wsi-nhood-btn`,
-shown only when the h5ad carries cell types, and hidden in favor of a
-warning once the selection is too large — see the workload cap below) POSTs
+shown only when the h5ad carries cell types AND the current lasso selection
+has at least 2 distinct annotated types — the server rejects anything less
+anyway (see below), so the button simply isn't offered for a selection that
+could only ever error — and hidden in favor of a warning once the selection
+is too large — see the workload cap below) POSTs
 `{file, ids, k, perms}` to `wsitiles/nhood` — ids only, since the server
 reads the selected cells' `obsm/spatial` centroids and `obs/cell_type` from
 the h5ad itself. The route bounds `k` (default 6, 1–30), `perms` (default
@@ -332,6 +357,14 @@ first as "(this sample)"). Only the query's **signature** — `types`,
 neighborhood enrichment above — travels to the server; the source h5ad is
 never read again, so the search only ever opens the *target* sample's file.
 
+Searching **this** sample needs no dataset at all — it reuses the viewer's
+own already-known addressing (`opts.spatialData` + the same `slideQuery`/
+`slide=` fallback `init()` computed), so the option is offered in direct-file
+mode too (`runpp ?image_file=…`, no `genome`/`dslabel`/`sampleId`). Listing
+the dataset's *other* spatial samples does need `genome`/`dslabel` and is
+skipped without them, leaving the sample dropdown a single "this image" entry
+in that mode.
+
 **Two-stage, coarse-to-fine** (`similar_regions()` in `wsi_tile.py`): the
 target's cells (restricted to the query's own type vocabulary — a cell of
 any other type is ignored, like an unannotated one) are tiled into
@@ -351,6 +384,13 @@ actual `cells × k × perms` as it's spent, not a fresh 50M per window), so a
 window that would exceed what's left of it just skips confirmation — its
 cheap score still stands — rather than the search failing outright or the
 total cost scaling with `topK`.
+
+Candidates that pass every filter below are kept in a **bounded min-heap of
+at most `topK` entries**, not a list of every survivor — overlapping windows
+routinely leave thousands passing, each carrying its own member-cell-index
+array, and retaining all of them until a final sort could hold hundreds of MB
+to over 1GB resident alongside the permutation matrices for a result only the
+top few ever use.
 
 For every window, in order:
 

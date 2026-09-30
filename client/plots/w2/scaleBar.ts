@@ -35,7 +35,9 @@ export function addScaleBar(map: Map, mppX: number | undefined): void {
 	const el = document.createElement('div')
 	el.className = 'ol-unselectable ol-control sjpp-wsi-scalebar'
 	el.style.cssText =
-		'right:.5em; bottom:.5em; background:rgba(255,255,255,.8); padding:2px 6px; border-radius:3px; font:11px system-ui; color:#222;'
+		// position set explicitly inline (Copilot Autofix) rather than relying on
+		// ol.css's .ol-control rule to supply it
+		'position:absolute; right:.5em; bottom:.5em; background:rgba(255,255,255,.8); padding:2px 6px; border-radius:3px; font:11px system-ui; color:#222;'
 	const bar = document.createElement('div')
 	bar.style.cssText = 'border:solid #222; border-width:0 2px 2px 2px; height:6px;'
 	el.appendChild(bar)

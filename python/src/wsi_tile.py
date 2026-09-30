@@ -30,6 +30,7 @@ warnings to stderr (run_python() rejects on any stderr output).
 Dev usage (bypasses stdin):  python wsi_tile.py --test
 """
 
+import heapq       # bounded top-top_k heap in similar_regions(), see its note
 import io          # BytesIO: hand an in-memory JPEG-2000 codestream to PIL
 import json        # stdin job parsing / stdout result encoding
 import math        # ceil for edge-tile output sizes
@@ -625,7 +626,19 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
     # +-size_tolerance of the query region's own cell count, tested before any
     # signature math runs
     size_lo, size_hi = ref_n * (1 - size_tolerance), ref_n * (1 + size_tolerance)
-    candidates = []                                        # (cheap_score, cx, cy, member index array)
+    # a bounded min-heap of at most top_k entries (cheap_score, tiebreak, cx,
+    # cy, member index array), NOT a list of every surviving window: the scan
+    # guard above permits up to 200M window*cell visits, and overlapping
+    # windows (stride < window) routinely leave thousands of windows passing
+    # every filter, each carrying its own idx array (up to size_hi cells) --
+    # retaining all of them until after sorting can hold hundreds of MB to
+    # over 1GB resident alongside the permutation matrices below, for a
+    # result only the top_k ever use. tiebreak (a strictly increasing
+    # counter) keeps every heap entry comparable without ever comparing two
+    # idx arrays, which numpy raises on for size>1 arrays
+    top_k = int(top_k)                                     # may arrive as a string/float from the route's query params
+    heap = []                                              # heapq min-heap, smallest cheap_score first
+    n_scored = 0                                            # every window that reached scoring, not just the kept top_k
     # ponytail: O(windows * cells) full-array scan per window, cells ~10-100k
     # and windows ~hundreds is fine; a whole-slide-scale search would want a
     # spatial grid/bucket index instead of re-masking every cell per window
@@ -648,9 +661,15 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
             comp_w = np.bincount(w_code, minlength=C).astype(np.float64)
             comp_w = comp_w / comp_w.sum() if comp_w.sum() > 0 else comp_w
             cheap_w = np.concatenate([comp_w, _row_normalize(count_w).ravel()]) * w_full
-            candidates.append((_cosine(cheap_q, cheap_w), float(x0 + window / 2), float(y0 + window / 2), idx))
-    candidates.sort(key=lambda c: c[0], reverse=True)
-    top = candidates[: int(top_k)]
+            score = _cosine(cheap_q, cheap_w)                               # this window's cheap-stage similarity
+            entry = (score, n_scored, float(x0 + window / 2), float(y0 + window / 2), idx)  # window center + its members
+            n_scored += 1                                                   # counts every scored window, kept or not
+            if len(heap) < top_k:                                           # heap not yet full: always keep
+                heapq.heappush(heap, entry)
+            elif score > heap[0][0]:                        # beats the current worst kept candidate
+                heapq.heapreplace(heap, entry)               # evicts that worst candidate, keeps heap size == top_k
+    # unwrap back to (score, cx, cy, idx) 4-tuples, best cheap score first, dropping the tiebreak counter
+    top = [(score, cx, cy, idx) for score, _, cx, cy, idx in sorted(heap, key=lambda e: e[0], reverse=True)]
 
     # same per-run budget the /nhood route enforces (ids*k*perms edge tallies);
     # a window's cell count is only known after the cheap stage, so a window
@@ -685,7 +704,7 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
     windows.sort(key=lambda w: w["distance"] if w["distance"] is not None else float("inf"))
     return {
         "types": types,
-        "scanned": len(candidates),
+        "scanned": n_scored,  # every window that passed the filters, not just the top_k kept in the heap
         "windows": windows,
         "k": k,
         "perms": int(perms),
@@ -697,6 +716,60 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
         "excluded": bool(exclude_ids),    # whether the same-sample overlap check was active
         "typeWeights": weights.tolist(),
     }
+
+
+def _selftest_similar_regions_topk():
+    """similar_regions()'s bounded top-top_k heap must shortlist the same
+    top-k cheap SCORES a naive collect-everything-then-sort approach would --
+    the one property the heap refactor must never change, since the heap
+    only exists to avoid retaining every surviving window's member-index
+    array in memory, not to change which ones win. Checked by score, not
+    window identity: this fixture is intentionally periodic, so many windows
+    tie exactly on score, and which specific tied window wins a boundary slot
+    is implementation-defined (heapq's tie-break isn't the same as a stable
+    sort's) -- only the top-k score VALUES are actually guaranteed equal. A
+    synthetic h5ad (60 cells on a line, alternating type, no real dataset
+    needed) with a dense stride gives 50+ surviving windows, enough to
+    actually exercise heap eviction rather than just fill it once."""
+    import h5py      # writes the synthetic fixture file
+    import os        # temp-file create/cleanup
+    import tempfile  # a throwaway .h5ad path, deleted in the finally below
+    n = 60  # cell count: enough to tile into 50+ overlapping windows below
+    xs = np.arange(n, dtype=np.float32) * 10.0  # evenly spaced along x, 10um apart
+    ys = np.zeros(n, dtype=np.float32)  # all on one line (y=0): a 1D layout is enough to exercise the heap
+    types = np.array(["A" if i % 2 == 0 else "B" for i in range(n)], dtype=object)  # alternating 2-type labeling
+    fd, path = tempfile.mkstemp(suffix=".h5ad")  # the fixture's path; fd is closed immediately below
+    os.close(fd)  # only the path is needed -- h5py.File reopens it
+    try:
+        str_dt = h5py.string_dtype(encoding="utf-8")  # variable-length UTF-8, matching xenium2pp.py's own string dtype
+        with h5py.File(path, "w") as f:
+            obs = f.create_group("obs")
+            obs.attrs["_index"] = "_index"  # names which obs dataset is the cell-id index, as a real h5ad does
+            obs.create_dataset("_index", data=np.array([f"cell{i}" for i in range(n)], dtype=object), dtype=str_dt)
+            obs.create_dataset("cell_type", data=types, dtype=str_dt)  # plain string dataset form (no categorical group)
+            f.create_dataset("obsm/spatial", data=np.stack([xs, ys], axis=1))  # (n, 2) centroids, um
+        q_types, q_type_counts, q_count = ["A", "B"], [10, 10], [[5, 5], [5, 5]]  # an even, symmetric query signature
+        common = dict(k=2, perms=1, window=50.0, stride=10.0, size_tolerance=5.0)  # same scan geometry for both calls below
+        r_small = similar_regions(path, q_types, q_type_counts, q_count, None, top_k=3, **common)  # bounded heap, size 3
+        r_big = similar_regions(path, q_types, q_type_counts, q_count, None, top_k=100_000, **common)  # heap never evicts
+        assert "error" not in r_small, r_small
+        assert "error" not in r_big, r_big
+        assert r_small["scanned"] == r_big["scanned"] > 3  # enough candidates to force eviction, not just one fill
+        # compare by SCORE VALUE, not window identity (cx, cy): this fixture's
+        # perfect periodicity (evenly spaced, strictly alternating types) means
+        # many windows are exact translations of each other and so tie exactly
+        # on cheap score. At a tie landing on the top_k boundary, heapreplace
+        # evicts whichever tied entry is currently the heap root -- a different
+        # (but equally "correct", since the SCORES are identical) member than a
+        # stable sort's tie-break would keep. That particular tie-resolution
+        # pick can depend on floating-point/platform specifics, so asserting
+        # exact window identity here was never actually guaranteed -- only the
+        # top-k SCORES are
+        small_scores = sorted((w["cheapScore"] for w in r_small["windows"]), reverse=True)  # top_k=3 result's own scores
+        big_top3_scores = sorted((w["cheapScore"] for w in r_big["windows"]), reverse=True)[:3]  # r_big's true top-3 scores
+        assert small_scores == big_top3_scores, "bounded heap must shortlist the same top-k scores as collect-all"
+    finally:
+        os.unlink(path)  # always clean up the temp fixture, pass or fail
 
 
 def _test():
@@ -712,6 +785,7 @@ def _test():
     assert tile_region(W, H, tiers - 1, last, 0)[0] + tile_region(W, H, tiers - 1, last, 0)[2] == W
     assert tile_region(W, H, tiers - 1, 10 ** 9, 0) is None  # x past the edge
     assert tile_region(W, H, tiers, 0, 0) is None            # z past the pyramid
+    _selftest_similar_regions_topk()  # separate self-check: similar_regions()'s heap-based top_k selection
     print("self-check OK")
 
 

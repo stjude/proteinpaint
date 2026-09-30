@@ -134,7 +134,10 @@ export async function init(
 	try {
 		// every wsitiles request carries this query to address the slide
 		const sq = opts.slideQuery ?? `slide=${encodeURIComponent(opts.slide!)}`
-		const meta = await dofetch3(`wsitiles/meta?${sq}`) // geometry first: tiles need it
+		// ?cellAnnotations= also gets back spatialVersion (the h5ad's own mtime),
+		// needed below to cache-bust the boundaries/annotations fetches
+		const metaQuery = opts.spatialData ? `${sq}&cellAnnotations=${encodeURIComponent(opts.spatialData)}` : sq
+		const meta = await dofetch3(`wsitiles/meta?${metaQuery}`) // geometry first: tiles need it
 		if (!meta || meta.error || meta.status === 'error') throw meta?.error || 'failed to load slide metadata'
 
 		const [w, h] = meta.slide_dimensions // level-0 slide size in px
@@ -239,6 +242,7 @@ export async function init(
 				// viewer re-rendered: this render's listeners are dead weight
 				window.removeEventListener('scroll', repin, true)
 				window.removeEventListener('resize', repin)
+				layoutObserver.disconnect()
 				return
 			}
 			const r = node.getBoundingClientRect() // where the map sits in the viewport
@@ -261,6 +265,24 @@ export async function init(
 		}
 		window.addEventListener('scroll', repin, { capture: true, passive: true })
 		window.addEventListener('resize', repin) // map rectangle moves on resize too
+		// the burger menu's settings panel toggles open/closed by changing its
+		// own height/visibility style (controls.config.js), which pushes the map
+		// down without firing either a scroll or a resize event — nothing above
+		// catches that shift, so the legends stayed pinned at their stale
+		// position. Catches any such layout-affecting style/class change
+		// anywhere on the page; coalesced to one repin() per animation frame
+		// regardless of how many mutations land in a tick.
+		let repinQueued = false
+		const queueRepin = () => {
+			if (repinQueued) return
+			repinQueued = true
+			requestAnimationFrame(() => {
+				repinQueued = false
+				repin()
+			})
+		}
+		const layoutObserver = new MutationObserver(queueRepin)
+		layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'], subtree: true })
 
 		// segmentation overlays: boundary CSVs are in µm, converted to level-0
 		// pixels via the slide's mpp (defaulting to 1 = coords already in px)
@@ -323,7 +345,7 @@ export async function init(
 		for (const [kind, wanted, color] of overlays) {
 			if (!wanted) continue // that overlay was not requested
 			try {
-				const polys = await fetchBoundaries(host, sq, opts.spatialData!, kind, mppX, mppY) // h5ad -> px polygons
+				const polys = await fetchBoundaries(host, sq, opts.spatialData!, kind, mppX, mppY, meta.spatialVersion) // h5ad -> px polygons
 				if (kind == 'cell') {
 					cellPolys = polys // expression/type fills reuse these rings
 					if (opts.hideCellStrokes) continue // polygons fetched, strokes suppressed
@@ -368,7 +390,9 @@ export async function init(
 		let cellTypes: { [id: string]: string } | undefined // cell_id -> annotated type
 		if (opts.spatialData && cellPolys) {
 			try {
-				const r = await dofetch3(`wsitiles/annotations?${sq}&file=${encodeURIComponent(opts.spatialData)}`)
+				const r = await dofetch3(
+					`wsitiles/annotations?${sq}&file=${encodeURIComponent(opts.spatialData)}&v=${meta.spatialVersion || 0}`
+				)
 				if (!r || r.error) throw new Error(r?.error || 'failed to load annotations')
 				cellTypes = r.cells // the id->type map, served ready to use
 			} catch (e: any) {
@@ -650,7 +674,11 @@ export async function init(
 			// the result outlives the menu. Absent without annotations: the
 			// analysis is over cell types.
 			const runNhood =
-				opts.spatialData && cellTypes
+				// nhood_enrichment needs >= 2 distinct annotated types to build a
+				// meaningful type-by-type matrix (server-side validation agrees: see
+				// wsi_tile.py's own "needs at least 2 cell types" check) — offering the
+				// menu item for a single-type selection would only error after the fact
+				opts.spatialData && cellTypes && new Set(Object.values(cellTypes)).size >= 2
 					? async (ids: string[], k = 6, perms = 1000) => {
 							lassoMenu.hide()
 							resultsDiv.selectAll('*').remove() // one panel at a time
@@ -671,10 +699,10 @@ export async function init(
 								panel.selectAll('*').remove()
 								// the panel's k/permutation controls rerun on the SAME selection
 								renderNhoodHeatmap(panel, r, (k2, p2) => runNhood!(ids, k2, p2))
-								// offer to search this sample or the dataset's other spatial
-								// samples for a similarly-composed, similarly-organized region
-								// (no-op in direct-file mode, which has no dataset to search)
-								await renderSimilarSearch(panel, opts, r, ids)
+								// offer to search this sample (any mode) or the dataset's other
+								// spatial samples (dataset-addressed mode only) for a
+								// similarly-composed, similarly-organized region
+								await renderSimilarSearch(panel, opts, r, ids, sq)
 							} catch (e: any) {
 								panel.selectAll('*').remove()
 								sayerror(panel, `Neighborhood enrichment error: ${e.message || e}`) // the lasso and viewer live on
@@ -818,9 +846,15 @@ async function fetchBoundaries(
 	kind: 'cell' | 'nucleus',
 	/** µm per pixel, x and y, from meta.mpp */
 	mppX: number,
-	mppY: number
+	mppY: number,
+	/** meta.spatialVersion (the h5ad's own mtime): the route caches this
+	 * response for an hour by URL, so a regenerated h5ad needs a new URL to
+	 * bust the browser's copy — mirrors the tile URLs' own v=<slide mtime> */
+	version?: number
 ): Promise<CellPoly[]> {
-	const res = await fetch(`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}&kind=${kind}`) // raw csv text
+	const res = await fetch(
+		`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}&kind=${kind}&v=${version || 0}`
+	) // raw csv text
 	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`) // http failure = overlay error banner
 	return parseBoundaries(await res.text(), mppX, mppY) // csv -> polygons
 }
@@ -1050,6 +1084,16 @@ export function renderNhoodHeatmap(
 		.attr('title', 'Close')
 		.text('✕')
 		.on('click', () => holder.remove())
+		// a role="button" span isn't a native <button>, so the browser never fires
+		// a click from the keyboard on its own — wire Enter/Space to the same close
+		// action so the control is keyboard-accessible, matching its tabindex=0
+		.on('keydown', (event: KeyboardEvent) => {
+			// both keys: the two activation keys a real <button> responds to
+			if (event.key == 'Enter' || event.key == ' ') {
+				event.preventDefault() // Space would otherwise scroll the page
+				holder.remove() // same action as the click handler above
+			}
+		})
 	holder
 		.append('div')
 		.style('opacity', 0.7)
@@ -1116,13 +1160,17 @@ export function renderNhoodHeatmap(
 	})
 }
 
-/** After a neighborhood-enrichment run, offer to search the DATASET's other
- spatial samples for a region with a similar cell-type composition and
- neighbourhood structure: wsitiles/similar coarse-scans each candidate sample
- by cosine similarity, then confirms only the top candidates with the same
- permutation z-score test nhood_enrichment ran on this selection. No-op in
- direct-file mode (opts.genome/dslabel/sampleId absent — there is no dataset
- to search). (exported for tests) */
+/** After a neighborhood-enrichment run, offer to search for a region with a
+ similar cell-type composition and neighbourhood structure: wsitiles/similar
+ coarse-scans each candidate by cosine similarity, then confirms only the top
+ candidates with the same permutation z-score test nhood_enrichment ran on
+ this selection. Searching THIS sample's own image needs no dataset — it
+ reuses opts.spatialData + activeQuery, already known from how the viewer
+ itself was addressed — so that option is offered in direct-file mode too;
+ searching the DATASET's other spatial samples needs opts.genome/dslabel to
+ list them and is skipped without it (direct-file mode has no dataset to
+ search), which leaves the sample dropdown a single ("this image") entry.
+ (exported for tests) */
 export async function renderSimilarSearch(
 	holder: any,
 	opts: {
@@ -1135,7 +1183,6 @@ export async function renderSimilarSearch(
 		 this closure was captured for, instead of re-picking (possibly a
 		 different) image from a fresh wsiBySample listing */
 		spatialData?: string
-		slideQuery?: string
 	},
 	/** the just-completed nhood_enrichment result: its composition/adjacency
 	 become the search query */
@@ -1143,22 +1190,33 @@ export async function renderSimilarSearch(
 	/** the lasso's own selected cell ids — passed to the server as excludeIds
 	 when searching THIS sample, so the reference region itself (an otherwise
 	 trivial cheapScore~1/distance~0 "match") doesn't dominate the results */
-	queryIds?: string[]
+	queryIds?: string[],
+	/** the SAME wsitiles query string init() computed to address the slide
+	 currently on screen (opts.slideQuery when the viewer is dataset-addressed,
+	 else its own slide= fallback — see init()'s `sq`) — same-sample search
+	 reuses it as-is, rather than opts.slideQuery alone, which direct-file mode
+	 (runpp ?image_file=) never sets */
+	activeQuery?: string
 ) {
-	if (!opts.genome || !opts.dslabel || !opts.sampleId || !query.typeCounts) return // no dataset, or nothing to search with
-	const data = await dofetch3(
-		`termdb/wsiBySample?genome=${encodeURIComponent(opts.genome)}&dslabel=${encodeURIComponent(
-			opts.dslabel
-		)}&imageType=spatial`
-	).catch(() => null)
-	// this sample first (search elsewhere in the SAME image), then every other
-	// spatial sample in the dataset; wsiBySample's own listing may also include
-	// this sample, so it's filtered out of the "other samples" half to avoid a
-	// duplicate entry
-	const siblings = ((data?.samples || []) as { sampleId: string }[]).filter(s => s.sampleId != opts.sampleId)
-	const sampleOptions = [{ sampleId: opts.sampleId, label: `${opts.sampleId} (this sample)` }].concat(
-		siblings.map(s => ({ sampleId: s.sampleId, label: s.sampleId }))
-	)
+	if (!query.typeCounts) return // nothing to search with
+	// a stable dropdown value for "this image": the real sampleId when the
+	// viewer is dataset-addressed, or a sentinel in direct-file mode (which
+	// has none) — either way, distinct from any real sibling sampleId below
+	const selfId = opts.sampleId || '__self__'
+	const selfLabel = opts.sampleId ? `${opts.sampleId} (this sample)` : 'this image'
+	let sampleOptions = [{ sampleId: selfId, label: selfLabel }]
+	if (opts.genome && opts.dslabel) {
+		const data = await dofetch3(
+			`termdb/wsiBySample?genome=${encodeURIComponent(opts.genome)}&dslabel=${encodeURIComponent(
+				opts.dslabel
+			)}&imageType=spatial`
+		).catch(() => null)
+		// every other spatial sample in the dataset; wsiBySample's own listing
+		// may also include this sample, so it's filtered out here to avoid a
+		// duplicate entry (the "this image" option above already covers it)
+		const siblings = ((data?.samples || []) as { sampleId: string }[]).filter(s => s.sampleId != opts.sampleId)
+		sampleOptions = sampleOptions.concat(siblings.map(s => ({ sampleId: s.sampleId, label: s.sampleId })))
+	}
 
 	const section = holder
 		.append('div')
@@ -1222,13 +1280,17 @@ export async function renderSimilarSearch(
 		.text('Search')
 		.on('click', async () => {
 			const sampleId = sampleSelect.property('value')
-			const searchingSameSample = sampleId == opts.sampleId
+			const searchingSameSample = sampleId == selfId
+			// for status/error text: the real sampleId for a sibling sample, or
+			// the human label ('this image'/'<id> (this sample)') for the self
+			// option, whose dropdown value may be the '__self__' sentinel
+			const displayName = searchingSameSample ? selfLabel : sampleId
 			// percent in the UI, fraction over the wire (route clamps to 0-5, i.e. 0-500%)
 			const sizeTolerance = Math.max(0, Number(toleranceInput.property('value')) || 0) / 100
 			const requiredTypes = typeControls.filter(c => c.required.property('checked')).map(c => c.type)
 			const typeWeights = typeControls.map(c => Math.max(0, Number(c.weight.property('value')) || 0))
 			resultsDiv.selectAll('*').remove()
-			resultsDiv.append('div').text(`Searching ${sampleId} …`)
+			resultsDiv.append('div').text(`Searching ${displayName} …`)
 			try {
 				// the image(s) to search, each with its consolidated h5ad
 				// (wsitiles/similar reads only this file — the query travels as
@@ -1239,8 +1301,8 @@ export async function renderSimilarSearch(
 				// sample: that sample may also have more than one spatial image and
 				// there's no per-image picker here, so search all of them
 				const images: { fileName: string; spatialData: string }[] = searchingSameSample
-					? opts.spatialData && opts.slideQuery
-						? [{ fileName: '', spatialData: opts.spatialData }] // fileName unused: targetParams reuses opts.slideQuery directly below
+					? opts.spatialData && activeQuery
+						? [{ fileName: '', spatialData: opts.spatialData }] // fileName unused: targetParams reuses activeQuery directly below
 						: []
 					: (
 							(
@@ -1251,7 +1313,7 @@ export async function renderSimilarSearch(
 								)
 							)?.images || []
 					  ).filter((im: any) => im.type == 'spatial' && im.spatialData)
-				if (!images.length) throw new Error(`${sampleId} has no spatial image with cell data`)
+				if (!images.length) throw new Error(`${displayName} has no spatial image with cell data`)
 
 				resultsDiv.selectAll('*').remove()
 				// the folder name of an image's fileName ('<imageName>/<file>'), for
@@ -1259,13 +1321,13 @@ export async function renderSimilarSearch(
 				const imageLabel = (fileName: string) => fileName.split('/').slice(-2)[0] || fileName
 				for (const image of images) {
 					const targetParams =
-						searchingSameSample && opts.slideQuery
-							? opts.slideQuery
+						searchingSameSample && activeQuery
+							? activeQuery
 							: `wsimage=${encodeURIComponent(image.fileName)}&dslabel=${encodeURIComponent(opts.dslabel!)}` +
 							  `&genome=${encodeURIComponent(opts.genome!)}&sample_id=${encodeURIComponent(
 									sampleId
 							  )}&imageType=spatial`
-					const label = images.length > 1 ? `${sampleId} (${imageLabel(image.fileName)})` : sampleId
+					const label = images.length > 1 ? `${displayName} (${imageLabel(image.fileName)})` : displayName
 					const r = await dofetch3(`wsitiles/similar?${targetParams}`, {
 						method: 'POST', // the query signature (typeCounts/count/zscore matrices) travels in the body
 						body: {

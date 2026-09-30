@@ -235,11 +235,26 @@ tape('renderNhoodHeatmap k/permutation controls rerun with clamped values', test
 	test.end()
 })
 
-tape('renderSimilarSearch is a no-op without dataset addressing', async test => {
+tape('renderSimilarSearch is a no-op with nothing to search with', async test => {
+	// no query.typeCounts (nhood_enrichment never ran, or it errored) must
+	// return before making any network request -- the only part of this
+	// function testable without a live server (see wsi.integration.spec.ts
+	// for the rest)
+	const holder = select(document.body).append('div') // detached container, never attached to the page
+	await renderSimilarSearch(holder, {}, {} as any) // empty query: no typeCounts field
+	test.equal((holder.node() as HTMLElement).children.length, 0, 'nothing rendered, no fetch attempted') // early return left the holder untouched
+	holder.remove() // detached node, but tidy up anyway
+	test.end() // tape: signal this test is done
+})
+
+tape('renderSimilarSearch offers the same-sample option without dataset addressing', async test => {
 	// direct-file mode (opts.genome/dslabel/sampleId absent) has no dataset to
-	// search, and must return before making any network request -- the only
-	// part of this function testable without a live server (see
-	// wsi.integration.spec.ts for the rest)
+	// list OTHER samples from, but searching THIS image needs no dataset --
+	// it reuses opts.spatialData/slideQuery, already known from how the
+	// viewer itself was addressed -- so that option still renders, with no
+	// network request (the sibling-listing fetch is skipped entirely without
+	// opts.genome/dslabel), which is why this is testable without a live
+	// server too
 	const holder = select(document.body).append('div')
 	const query = {
 		types: ['A', 'B'],
@@ -258,7 +273,11 @@ tape('renderSimilarSearch is a no-op without dataset addressing', async test => 
 		perms: 50
 	}
 	await renderSimilarSearch(holder, {}, query)
-	test.equal((holder.node() as HTMLElement).children.length, 0, 'nothing rendered, no fetch attempted')
+	const el = holder.node() as HTMLElement // the rendered DOM, for querying below
+	test.ok(el.querySelector('[data-testid="sjpp-wsi-similar"]'), 'the search panel renders') // the whole "Find similar regions" section exists
+	const options = [...el.querySelectorAll('[data-testid="sjpp-wsi-similar-sample"] option')] // every <option> in the sample dropdown
+	test.equal(options.length, 1, 'only the same-sample option, no sibling fetch without genome/dslabel') // no genome/dslabel -> siblings never fetched
+	test.equal((options[0] as HTMLOptionElement).textContent, 'this image', 'labeled generically without a real sampleId') // selfLabel fallback text
 	holder.remove()
 	test.end()
 })

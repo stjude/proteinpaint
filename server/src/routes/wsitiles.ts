@@ -338,26 +338,41 @@ function init({ genomes }) {
 				// supplies, not cross-checked against a real h5ad) lets a tiny,
 				// cheap-looking request allocate gigabytes on the python worker
 				const MAX_TYPES = 64
-				const shapeOk =
-					C >= 2 &&
-					C <= MAX_TYPES &&
-					typeCounts.length == C &&
-					typeCounts.every((v: number) => Number.isFinite(v)) &&
-					count.length == C &&
-					count.every((row: any) => Array.isArray(row) && row.length == C && row.every(Number.isFinite))
-				if (!shapeOk) {
-					res.status(400).send({
-						status: 'error',
-						error: `similar needs types/typeCounts/count from a prior nhood result (2-${MAX_TYPES} types, matching shapes)`
-					})
+const typesAreCanonical = types.every(
+	(t: string, i: number) => t.length > 0 && (i == 0 || types[i - 1] < t)
+)
+const shapeOk =
+	C >= 2 &&
+	C <= MAX_TYPES &&
+	typesAreCanonical &&
+	typeCounts.length == C &&
+	typeCounts.every((v: number) => Number.isFinite(v)) &&
+	count.length == C &&
+	count.every((row: any) => Array.isArray(row) && row.length == C && row.every(Number.isFinite))
+if (!shapeOk) {
+	res.status(400).send({
+		status: 'error',
+		error: `similar needs sorted unique types/typeCounts/count from a prior nhood result (2-${MAX_TYPES} types, matching shapes)`
+	})
 					return
 				}
 				let zscore: any = undefined
 				if (q.zscore !== undefined) {
+					// a C x C matrix (one row/col per query type); each entry is either
+					// null (nhood_enrichment's own "zero-variance pair" marker, see
+					// wsi_tile.py's _permute_zscore) or a finite number -- NaN/Infinity
+					// would otherwise sneak into the distance math downstream
+					// (similar_regions' rigorous-confirmation stage) and corrupt its
+					// ranking without ever raising
 					const zOk =
 						Array.isArray(q.zscore) &&
 						q.zscore.length == C &&
-						q.zscore.every((row: any) => Array.isArray(row) && row.length == C)
+						q.zscore.every(
+							(row: any) =>
+								Array.isArray(row) &&
+								row.length == C &&
+								row.every((v: any) => v === null || (typeof v == 'number' && Number.isFinite(v))) // guards each matrix entry individually
+						)
 					if (!zOk) {
 						res.status(400).send({ status: 'error', error: 'similar zscore must be a C x C matrix matching types' })
 						return
@@ -447,6 +462,11 @@ function init({ genomes }) {
 						if (!full.startsWith(companionBase + path.sep)) throw new Error('path escapes the slide folder')
 						// scan the file only when its mtime changed; else answer from cache
 						const mtime = (await stat(full)).mtimeMs
+						// the client puts this in boundaries/annotations URLs (they're
+						// cached by the browser for an hour, unlike tiles which key their
+						// own cache on the SLIDE's mtime) so a regenerated h5ad — the
+						// slide file itself untouched — also busts that cache
+						out.spatialVersion = mtime
 						let hit = cellTypesCache.get(full)
 						if (!hit || hit.mtime !== mtime) {
 							// python reads the distinct types out of the h5ad
