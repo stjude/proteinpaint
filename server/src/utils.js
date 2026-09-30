@@ -402,7 +402,7 @@ const remoteUrlTimeout = 10000
 
 	returns a promise of the http.IncomingMessage of a GET request, without following a redirect. A request that
 	connects to a hostname that resolves to a non-public address, or is idle for remoteUrlTimeout, is rejected.
-	Read the body with readResponseText(), or call res.resume() to discard it.
+	Read the body with readResponseText(), or call res.destroy() to discard it.
 */
 export function requestRemoteUrl(url, lookup = publicAddressLookup) {
 	return new Promise((resolve, reject) => {

@@ -233,6 +233,8 @@ async function handle_textfile(req, res) {
 
 // redirects of a /urltextfile url that are followed by handle_urltextfile(), see there
 const MAX_URLTEXTFILE_REDIRECTS = 5
+// only these statuses are redirects, as in fetch(); another 3xx, such as 300 or 304, is returned as an error
+const URLTEXTFILE_REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 
 /*
 	fetch a text file from req.query.url and return its text
@@ -256,9 +258,10 @@ async function handle_urltextfile(req, res) {
 		let response
 		for (let redirects = 0; ; redirects++) {
 			response = await utils.requestRemoteUrl(fetchUrl)
-			if (response.statusCode < 300 || response.statusCode > 399) break
+			if (!URLTEXTFILE_REDIRECT_STATUSES.has(response.statusCode)) break
 			const location = response.headers.location
-			response.resume()
+			// destroy, not resume(), since draining would keep reading a body that the server may trickle endlessly
+			response.destroy()
 			if (!location) break
 			if (redirects >= MAX_URLTEXTFILE_REDIRECTS) return res.send({ error: 'url has too many redirects' })
 			publicUrl = new URL(location, publicUrl).href
@@ -270,11 +273,11 @@ async function handle_urltextfile(req, res) {
 				res.send({ text: utils.stripJsScript(await utils.readResponseText(response)) })
 				return
 			case 404:
-				response.resume()
+				response.destroy()
 				res.send({ error: 'File not found: ' + url })
 				return
 			default:
-				response.resume()
+				response.destroy()
 				res.send({ error: 'unknown status code: ' + response.statusCode })
 		}
 	} catch (e) {
