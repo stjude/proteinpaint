@@ -413,7 +413,7 @@ export default serverconfig
 	  the top-level serverconfig{} already has a null prototype, as set above right after parsing
 
 	objects are locked in place instead of copied, so that a reference that a module captured at import time,
-	e.g. `const bamCache = serverconfig.features.bamCache` in bam.js, is locked too
+	e.g. `const opts = serverconfig.features.cacheMonitor`, is locked too
 
 	throws, to fail the launch, when a value cannot be fully locked
 */

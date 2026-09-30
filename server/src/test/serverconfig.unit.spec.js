@@ -102,7 +102,7 @@ tape('lockServerconfig(): serverconfig.features{} cannot be changed after launch
 		}
 	}
 	const original = structuredClone(sc.features)
-	// like `const bamCache = serverconfig.features.bamCache` in bam.js, captured when a module is imported
+	// like `const opts = serverconfig.features.cacheMonitor`, captured when a module is imported
 	const alias = sc.features
 	const nestedAlias = sc.features.cacheMonitor
 	lockServerconfig(sc)

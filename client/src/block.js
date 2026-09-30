@@ -594,6 +594,7 @@ export class Block {
 			.style('display', 'none')
 			.text('Download GDC BAM slice')
 			.on('click', async () => {
+				const block = this
 				const tks = this.tklst.filter(i => i.type == 'bam' && i.gdcFile)
 				if (tks.length == 0) return
 				if (tks.length == 1) {
@@ -627,17 +628,36 @@ export class Block {
 					if (tk.gdcToken) {
 						headers['X-Auth-Token'] = tk.gdcToken
 					}
-					const lst = []
-					const data = await dofetch3('tkbam', {
-						headers,
-						body: {
-							clientdownloadgdcslice: 1,
-							gdcFileUUID: tk.gdcFile.uuid,
-							gdcFilePosition: tk.gdcFile.position
-						}
-					})
+					let data
+					try {
+						data = await dofetch3('tkbam', {
+							headers,
+							body: {
+								clientdownloadgdcslice: 1,
+								gdcFileUUID: tk.gdcFile.uuid,
+								gdcFilePosition: tk.gdcFile.position
+							}
+						})
+					} catch (e) {
+						data = { error: e.message || e }
+					}
 
 					button.property('disabled', false)
+
+					if (data.error) {
+						// same message as thrown by the server when the cached slice file has been evicted
+						if (data.error == 'BAM slice no longer available') {
+							// replace the button with the message, reusing the button style for the same placement
+							d3select(button.node().parentNode)
+								.insert('span', () => button.node())
+								.attr('style', button.attr('style'))
+								.text(data.error)
+							button.remove()
+						} else {
+							block.error('Cannot download GDC BAM slice: ' + data.error)
+						}
+						return
+					}
 
 					const a = document.createElement('a')
 					a.href = URL.createObjectURL(data)

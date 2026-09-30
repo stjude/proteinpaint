@@ -23,10 +23,26 @@ Object.freeze(process.argv)
 
 if (serverconfig.python) setPythonBinPath(serverconfig.python)
 
+/** features.cacheMonitor.subdirs{}, plus overrides for the bam subdir:
+ * - features.bamCache{maxAge, maxSize} is still supported; must not be moved into gdc ds serverconfigFeatures{},
+ *   since that prevents bamtk to work in an instance without gdc ds
+ * - an entry in features.cacheMonitor.subdirs.bam takes precedence */
+function getCacheSubdirs() {
+	const subdirs = Object.assign({}, serverconfig.features?.cacheMonitor?.subdirs)
+	if ('bam' in subdirs && subdirs.bam === undefined) return subdirs // explicitly disabled
+	const bam: { maxAge?: number; maxSize?: number } = {}
+	const bamCache = serverconfig.features?.bamCache
+	if (bamCache?.maxAge) bam.maxAge = bamCache.maxAge
+	if (bamCache?.maxSize) bam.maxSize = bamCache.maxSize
+	subdirs.bam = Object.assign(bam, subdirs.bam)
+	return subdirs
+}
+
 export async function launch() {
 	try {
 		new CacheManager(
 			Object.assign({ cachedir: serverconfig.cachedir }, serverconfig.features?.cacheMonitor || {}, {
+				subdirs: getCacheSubdirs(),
 				mustExitPendingValidation: serverconfig.features?.mustExitPendingValidation
 			})
 		)

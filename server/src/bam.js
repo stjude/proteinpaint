@@ -362,7 +362,15 @@ async function clientdownloadgdcsliceFromCache_withDenial(req, res) {
 	}
 	// read the cached bam slice for client to download
 	const file = path.join(cachedir_bam, req.query.file)
-	const data = await fs.promises.readFile(file)
+	let data
+	try {
+		data = await fs.promises.readFile(file)
+	} catch (e) {
+		// the slice may have been evicted from cache; do not reveal the cache file path in the ENOENT message.
+		// client/src/block.js detects this exact message to replace the download button
+		if (e.code == 'ENOENT') throw 'BAM slice no longer available'
+		throw e
+	}
 	res.writeHead(200, {
 		'Content-Type': 'application/octet-stream',
 		'Content-Disposition': 'attachment; filename=gdc.bam',
@@ -888,12 +896,13 @@ async function mayReSliceFile(req, cachefile) {
 	await fs.promises.unlink(cachefile+'.bai')
 	*/
 	try {
-		if (!(await utils.file_not_exist(cachefile))) {
-			// bam file exists
+		if (!(await utils.file_not_exist(cachefile)) && !(await utils.file_not_exist(cachefile + '.bai'))) {
+			// bam and index files exist
 			return
 		}
 
-		// slice file not found; force to download slice here
+		// slice file not found, or its index is missing since cache eviction deletes .bam and .bai separately;
+		// force to download slice here. if the slice still exists, get_gdc_bam() only re-indexes it (unless truncated)
 
 		const bakRegions = req.query.regions
 		const tmp = req.query.gdcFilePosition.split(/[.:-]/)
@@ -3603,8 +3612,9 @@ async function streamGdcBam2response(req, res) {
 */
 
 /*
-	BAM deletion is prioritized by last modified time, not access time (to avoid relatime issues),
-	although they will be equal due to using utimes() to reset both in get_gdc_bam(). From
+	cached bam slices and their .bai files are evicted by CacheManager (see the "bam" subdir in CacheManager.ts and app.ts),
+	by last modified time, not access time (to avoid relatime issues). get_gdc_bam() uses utimes() to reset
+	the modified time of both files on every access. From
 	https://manpages.ubuntu.com/manpages/bionic/en/man8/mount.8.html:
     
     relatime (default mount used in GDC hosts for PP container)
@@ -3612,129 +3622,13 @@ async function streamGdcBam2response(req, res) {
       updated if the previous access time was earlier than the current modify or change
       time.
 
-	Each call to get_gdc_bam() will trigger mayDeleteCacheFiles() if 
-	there is no pending timeout for it already, to avoid multiples of that 
-	function running at the same time unnecessarily. 
-
-	Another setTimeout() may also be triggered at the end of mayDeleteCacheFiles(),
-	if there are remaining files, with the wait time set to the oldest mtime.
-
-	must not move features.bamCache{} into gdc ds serverconfigFeatures{}! that prevents bamtk to work in an instance without gdc ds
+	features.bamCache{maxAge, maxSize} is applied to the CacheManager bam subdir in app.ts
 */
 
-const bamCache = serverconfig.features.bamCache || {}
-// the max age for the modified time, will delete files whose modified time exceeds this "aged" access
-const maxAge = bamCache.maxAge || 2 * 60 * 60 * 1000 // in milliseconds
-// maximum allowed cache size in bytes
-const maxSize = bamCache.maxSize || 5e9
-// checkWait:
-// time to wait before triggering another call to mayDeleteCacheFiles(),
-// this is used to debounce/prevent multiple active calls to mayDeleteCacheFiles()
-// also assumed to be roughly equivalent to the minimum required time for a bam file read
-// to complete, otherwise deleting sooner than this may cause a bam file read error;
-// this last assumption only applies to file deletion when the maxSize is exceeded
-const checkWait = bamCache.checkWait || 1 * 60 * 1000
-
-const cachedir_bam = serverconfig.cachedir_bam || path.join(serverconfig.cachedir, 'bam')
-if (!fs.existsSync(cachedir_bam)) fs.mkdirSync(cachedir_bam, { recursive: true })
-
-// a pending timeout reference from setTimeout that calls mayDeleteCacheFiles
-let cacheCheckTimeout,
-	nextCheckTime = 0
-// only run this loop if configured, otherwise will only rely on
-// cleanup as new bam requests come in
-if (serverconfig.features.bamCache) mayResetCacheCheckTimeout(checkWait)
-
-function mayResetCacheCheckTimeout(wait = 0) {
-	// do not trigger the cache check when only validating the server
-	if (process.argv.includes('validate')) return
-
-	const checkTime = Date.now() + wait
-	if (cacheCheckTimeout) {
-		if (nextCheckTime && nextCheckTime <= checkTime + 5) return
-		else {
-			clearTimeout(cacheCheckTimeout)
-			cacheCheckTimeout = undefined
-		}
-	}
-	nextCheckTime = checkTime
-	console.log(`will trigger mayDeleteCacheFiles() in ${wait} ms`)
-	cacheCheckTimeout = setTimeout(mayDeleteCacheFiles, wait)
-}
-
-async function mayDeleteCacheFiles() {
-	console.log(`checking for cached bam files to delete ...`)
-	try {
-		const minTime = Date.now() - maxAge
-		const filenames = await fs.promises.readdir(cachedir_bam)
-		const files = [] // keep list of undeleted bam files. may need to rank them and delete old ones ranked by age
-		let totalSize = 0,
-			deletedSize = 0,
-			totalCount = 0,
-			deletedCount = 0
-		for (const filename of filenames) {
-			if (!filename.endsWith('.bam') && !filename.endsWith('.bai')) continue
-			totalCount++
-			const fp = path.join(cachedir_bam, filename)
-			const s = await fs.promises.stat(fp)
-			if (!s.isFile()) continue
-			const time = s.mtimeMs
-			if (time < minTime) {
-				await fs.promises.unlink(fp)
-				deletedCount++
-				deletedSize += s.size
-				continue
-			}
-			files.push({
-				path: fp,
-				time,
-				size: s.size
-			})
-			totalSize += s.size
-		}
-		files.sort((i, j) => j.time - i.time) // descending
-		if (totalSize >= maxSize) {
-			/*
-			storage use is still above limit, deleting files just older than cutoff is not enough
-			a lot of recent requests may have deposited lots of cache files
-			must delete more old files ranked by age
-			*/
-			const minMtime = Date.now() - checkWait
-			for (const f of files) {
-				// do not delete files too soon that it may affect a current file read
-				if (f.time > minMtime) break
-				await fs.promises.unlink(f.path)
-				f.deleted = true
-				deletedCount++
-				deletedSize += f.size
-				totalSize -= f.size
-				if (totalSize < maxSize) break
-			}
-		}
-		console.log(
-			`deleted ${deletedCount} of ${totalCount} cached bam files (${deletedSize} bytes deleted, ${totalSize} remaining)`
-		)
-		// empty out the following tracking variables
-		cacheCheckTimeout = undefined
-		nextCheckTime = 0
-		const nextFile = totalSize && files.find(f => !f.deleted)
-		if (nextFile) {
-			// trigger another mayDeleteCachefile() call with setTimeout,
-			// using the oldest file mtime + checkWait as the wait time,
-			// or much sooner if the max cache size is currently exceeded
-			const wait = checkWait + Math.round(totalSize >= maxSize ? 0 : Math.max(0, nextFile.time + maxAge - Date.now()))
-			mayResetCacheCheckTimeout(wait)
-		}
-	} catch (e) {
-		console.error('Error in mayDeleteCacheFiles(): ' + e)
-	}
-}
+// created by CacheManager at server launch
+const cachedir_bam = path.join(serverconfig.cachedir, 'bam')
 
 async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
-	// before creating new cache file, check if possible to delete cache files
-	// only trigger a new check if a pending timeout doesn't already exist
-	mayResetCacheCheckTimeout(checkWait)
-
 	// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
 	// which may not be handled properly by the GDC API in qa-uat
 	// per Phil, should only be used as a temporary workaround
