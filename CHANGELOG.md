@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- serverconfig.features.massSessionMaxBytes limits the size of a saved session, default 1MB
+- a zero cacheMonitor.subdirs.massSession maxAge or maxSize disables the /massSession route
+
 Fixes:
 - harden user-keyed object maps against prototype pollution
 - harden nested patient2st buckets against prototype pollution too
