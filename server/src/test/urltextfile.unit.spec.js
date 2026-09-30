@@ -14,6 +14,7 @@ A local http server on 127.0.0.1 stands in for an internal host, and for this se
 serverconfig.URL is rewritten to the loopback address.
 
 test sections:
+- /urltextfile is only set when ALLOW_remotefilefromurl is true
 - checkRemoteUrl()
 - /urltextfile rejects loopback, private ip, and non-http urls
 - /urltextfile fetches an allowed url
@@ -82,9 +83,26 @@ tape('\n', async function (test) {
 	await startServer()
 	for (const k of ['URL', 'port', 'urlHosts']) saved[k] = serverconfig[k]
 	delete serverconfig.urlHosts
+	test.end()
+})
+
+// returns the routes that setRoutes() registers for the given serverconfig
+function getRoutes(config) {
+	const routes = {}
 	const record = (p, h) => (routes[p] = h)
-	setRoutes({ get: record, post: record, all: record, put: record, delete: record, use: () => {} }, {}, {})
-	test.ok(routes['/urltextfile'], 'should register the /urltextfile route')
+	setRoutes({ get: record, post: record, all: record, put: record, delete: record, use: () => {} }, {}, config)
+	return routes
+}
+
+tape('/urltextfile is only set when ALLOW_remotefilefromurl is true', test => {
+	test.notOk(getRoutes({})['/urltextfile'], 'should not set the route without serverconfig.features')
+	test.notOk(getRoutes({ features: {} })['/urltextfile'], 'should not set the route by default')
+	test.notOk(
+		getRoutes({ features: { ALLOW_remotefilefromurl: false } })['/urltextfile'],
+		'should not set the route when ALLOW_remotefilefromurl is false'
+	)
+	Object.assign(routes, getRoutes({ features: { ALLOW_remotefilefromurl: true } }))
+	test.ok(routes['/urltextfile'], 'should set the route when ALLOW_remotefilefromurl is true')
 	test.end()
 })
 

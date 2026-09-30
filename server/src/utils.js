@@ -55,7 +55,7 @@ validateRglst
 
 // reading a file from a url makes the server fetch a caller-supplied url and may save the downloaded index
 // under cachedir, so it is off by default; enable with serverconfig.features.ALLOW_remotefilefromurl=true
-// on environments that support remote files, e.g. custom tracks by url
+// on environments that support remote files, e.g. custom tracks by url; the /urltextfile route is also only set with it
 const remoteFileNotAllowed = 'Remote file not supported on this server.'
 
 /*
