@@ -19,12 +19,13 @@ test sections:
 - /urltextfile fetches an allowed url
 - /urltextfile rewrites only an exact serverconfig.URL prefix to the loopback address
 - /urltextfile checks the host of each redirect
+- /urltextfile follows only redirect statuses and destroys an unused body
 - /urltextfile resolves a relative redirect of a serverconfig.URL url against the public url
 - makePublicAddressLookup() checks every resolved address
 - requestRemoteUrl() rejects a hostname that resolves to a non-public address
 */
 
-let server, H, port
+let server, H, port, trickleClosed
 // the paths that the specs expect the stand-in server to receive
 const knownPaths = new Map(['/a/b.txt', '//a/b.txt', '/moved/redirect-ok/a.txt'].map(p => [p, p]))
 function startServer() {
@@ -37,6 +38,18 @@ function startServer() {
 					res.writeHead(301, { location: '/moved' + req.url }).end()
 				} else if (req.url.startsWith('/redirect-loopback/')) {
 					res.writeHead(302, { location: `http://${H}/a/b.txt` }).end()
+				} else if (req.url.startsWith('/status-300/')) {
+					res.writeHead(300, { location: '/a/b.txt' }).end()
+				} else if (req.url.startsWith('/redirect-trickle/')) {
+					// a redirect whose body never ends, which the handler must not keep reading
+					res.writeHead(302, { location: '/a/b.txt' })
+					const timer = setInterval(() => res.write('x'), 20)
+					trickleClosed = new Promise(resolve =>
+						res.on('close', () => {
+							clearInterval(timer)
+							resolve(true)
+						})
+					)
 				} else if (req.url.startsWith('/redirect-loop/')) {
 					res.writeHead(302, { location: req.url }).end()
 				} else {
@@ -199,6 +212,20 @@ tape('/urltextfile checks the host of each redirect', async test => {
 	test.end()
 })
 
+tape('/urltextfile follows only redirect statuses and destroys an unused body', async test => {
+	delete serverconfig.URL
+	serverconfig.urlHosts = ['127.0.0.1']
+	let r = await send(routes['/urltextfile'], { url: `http://${H}/status-300/a.txt` })
+	test.equal(r?.error, 'unknown status code: 300', 'should not follow the location of a 300 response')
+
+	r = await send(routes['/urltextfile'], { url: `http://${H}/redirect-trickle/a.txt` })
+	test.equal(r?.text, 'INTERNAL /a/b.txt', 'should follow a redirect whose body never ends')
+	const closed = await Promise.race([trickleClosed, new Promise(resolve => setTimeout(() => resolve(false), 1000))])
+	test.equal(closed, true, 'should close the connection of the redirect instead of reading its endless body')
+	delete serverconfig.urlHosts
+	test.end()
+})
+
 tape('/urltextfile resolves a relative redirect of a serverconfig.URL url against the public url', async test => {
 	delete serverconfig.urlHosts
 	serverconfig.URL = 'https://pp.example.org'
@@ -293,6 +320,8 @@ tape('cleanup', test => {
 		if (v === undefined) delete serverconfig[k]
 		else serverconfig[k] = v
 	}
+	// close any connection left open, such as an endless redirect body, so that a regression fails instead of hanging
+	server.closeAllConnections()
 	server.close()
 	test.end()
 })
