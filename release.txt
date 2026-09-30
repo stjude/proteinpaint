@@ -1,1 +1,2 @@
-
+Fixes:
+- move the /massSession route setup to src/routes/massSession.ts (code-scanning #110, #111)
