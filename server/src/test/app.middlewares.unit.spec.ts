@@ -121,6 +121,11 @@ tape('getCacheControl()', test => {
 		immutable,
 		'should cache a hashed chunk source map as immutable'
 	)
+	test.equal(
+		getCacheControl('/bin/123.abcd1234.proteinpaint.js', undefined, true),
+		'private, max-age=31536000, immutable',
+		'should not allow a shared cache to store a hashed chunk when isPrivate'
+	)
 	test.equal(getCacheControl('/bin/proteinpaint.js'), 'no-cache', 'should require revalidation of the bundle entry')
 	test.equal(
 		getCacheControl('/base/bin/proteinpaint.js'),

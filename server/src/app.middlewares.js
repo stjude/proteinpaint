@@ -353,7 +353,8 @@ function setHeaders(req, res, next) {
 	}
 
 	if (req.method == 'GET') {
-		const cacheControl = getCacheControl(req.path, serverconfig.responseMaxAge)
+		// with basic auth, a shared cache must not reuse an authenticated response for other requests
+		const cacheControl = getCacheControl(req.path, serverconfig.responseMaxAge, !!serverconfig.users)
 		// express.static() does not override an already set cache-control header
 		if (cacheControl) res.header('Cache-control', cacheControl)
 	}
@@ -369,12 +370,14 @@ function setHeaders(req, res, next) {
 /*
 	path: a GET request path
 	responseMaxAge: optional serverconfig.responseMaxAge, in seconds
+	isPrivate: true to only allow a browser cache and not a shared cache to store a static bundle file
 */
-export function getCacheControl(path, responseMaxAge) {
+export function getCacheControl(path, responseMaxAge, isPrivate = false) {
 	const filename = path.split('/').pop()
 	// a webpack chunk filename with a content hash, e.g. 123.abcd1234.proteinpaint.js(.map),
 	// has a new URL whenever its content changes, see front/webpack.config.js
-	if (/^[^.]+\.[0-9a-f]{8}\.proteinpaint\.js(\.map)?$/.test(filename)) return 'public, max-age=31536000, immutable'
+	if (/^[^.]+\.[0-9a-f]{8}\.proteinpaint\.js(\.map)?$/.test(filename))
+		return `${isPrivate ? 'private' : 'public'}, max-age=31536000, immutable`
 	// the bundle entry has a stable URL and embeds the hashed chunk filenames,
 	// so any cache (browser or proxy) must revalidate it to detect a new deployment
 	if (filename == 'proteinpaint.js' || filename == 'version.json') return 'no-cache'
