@@ -468,6 +468,26 @@ tape('spawn helpers reject when the process cannot be spawned', async test => {
 	test.end()
 })
 
+tape('run_fdr() rejects and removes its temporary files when Rscript cannot be spawned', async test => {
+	const before = new Set(fs.readdirSync(serverconfig.cachedir))
+	const PATH = process.env.PATH
+	// Rscript is looked up in PATH, so an empty PATH makes the spawn fail
+	process.env.PATH = ''
+	try {
+		await utils.run_fdr([0.01, 0.02])
+		test.fail('run_fdr() should reject')
+	} catch (e) {
+		test.equal(e?.code, 'ENOENT', 'run_fdr() should reject with the spawn error')
+	} finally {
+		process.env.PATH = PATH
+	}
+	// unlink() is asynchronous, give it a moment
+	await new Promise(r => setTimeout(r, 100))
+	const added = fs.readdirSync(serverconfig.cachedir).filter(f => !before.has(f))
+	test.deepEqual(added, [], 'run_fdr() should not leave temporary files in cachedir')
+	test.end()
+})
+
 tape('cleanup', test => {
 	if (allowRemoteFile === undefined) delete serverconfig.features.ALLOW_remotefilefromurl
 	else serverconfig.features.ALLOW_remotefilefromurl = allowRemoteFile
