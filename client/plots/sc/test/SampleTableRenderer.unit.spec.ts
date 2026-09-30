@@ -1,6 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { SampleTableRenderer } from '../view/SampleTableRenderer.ts'
+import { SCViewRenderer } from '../view/SCViewRenderer.ts'
 
 /**
  * Tests
@@ -14,6 +15,7 @@ import { SampleTableRenderer } from '../view/SampleTableRenderer.ts'
  *   - renderSamplesTable() noButtonCallback should throw when sID is missing
  *   - renderSamplesTable() noButtonCallback should call interactions.updateItem
  *   - renderSamplesTable() noButtonCallback should show plotsBtnsDiv
+ *   - renderSamplesTable() noButtonCallback should toggle the select btn on sample selection
  *   - reapplyAllPlotButtons() should apply buttons for each active sample
  *   - updateTable() should remove buttons when sample no longer in activeSandboxes
  *   - updateTable() should not append buttons when no sandboxes exist for sample
@@ -57,9 +59,12 @@ function getTestTableData() {
 }
 
 function getMockDom(holder: any) {
+	const selectBtn = holder.append('button') as any
+	selectBtn.toggle = () => {}
 	return {
 		tableDiv: holder,
-		plotsBtnsDiv: holder.append('div').style('display', 'none')
+		plotsBtnsDiv: holder.append('div').style('display', 'none'),
+		selectBtn
 	} as any
 }
 
@@ -77,7 +82,7 @@ function getMockDiv() {
 
 /** Shared test teardown: remove the holder on success (leave it for inspection on failure), then end. */
 function endTest(test: any, holder: any) {
-	if (test._ok) holder.remove()
+	if (test['_ok']) holder.remove()
 	test.end()
 }
 
@@ -261,6 +266,27 @@ tape('renderSamplesTable() noButtonCallback should show plotsBtnsDiv', test => {
 	test.equal(dom.plotsBtnsDiv.style('display'), 'block', 'Should set plotsBtnsDiv display to block')
 
 	endTest(test, holder)
+})
+
+tape('renderSamplesTable() should hide the table on selection in each viewer', test => {
+	const holders = [] as ReturnType<typeof getHolder>[]
+	for (let viewer = 1; viewer <= 2; viewer++) {
+		const holder = getHolder()
+		holders.push(holder)
+		const dom = getMockDom(holder)
+		dom.tableDiv = holder.append('div')
+		dom.controlsDiv = holder.append('div')
+		const interactions = getMockInteractions()
+		new SCViewRenderer({ dom, interactions } as any).renderSelectBtn()
+		new SampleTableRenderer(dom, interactions, getTestTableData())
+
+		const firstRow = dom.tableDiv.select('tr.sjpp_row_wrapper').node() as HTMLElement
+		firstRow.click()
+
+		test.equal(dom.tableDiv.style('display'), 'none', `Should hide the table in viewer ${viewer}`)
+	}
+	if (test['_ok']) holders.forEach(holder => holder.remove())
+	test.end()
 })
 
 /* ---- updateTable() ---- */

@@ -1,4 +1,4 @@
-import type { Elem, Div } from '../../types/d3'
+import type { Elem, Div, Button } from '../../types/d3'
 import type { TableRow, TableColumn } from '#dom'
 import type { Settings } from './settings/Settings'
 import type { Filter } from '#types'
@@ -34,6 +34,9 @@ export type SCDom = {
 	sectionsDiv: Div
 	/** Sandbox header, if provided */
 	header?: Elem
+	/** Toggles the sample table's visibility. Extends the native
+	 * button selection with a toggle() method set in renderSelectBtn(). */
+	selectBtn?: Button & { toggle: () => void }
 }
 
 /** Standardized sample identifier used throughout the SC app */
