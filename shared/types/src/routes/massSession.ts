@@ -19,14 +19,25 @@ export type MassSessionSaveResponse = {
 	error?: string
 }
 
-export type MassSessionGetRequest = {
+/** a session in the shared massSession cache dir */
+type MassSessionGetUnscoped = {
 	/** session id */
 	id: string
-	/** route, dslabel, embedder are required for a credentials-scoped session */
-	route?: string
-	dslabel?: string
-	embedder?: string
+	route?: never
+	dslabel?: never
+	embedder?: never
 }
+
+/** a credentials-scoped session, which requires all of route, dslabel, embedder */
+type MassSessionGetScoped = {
+	/** session id */
+	id: string
+	route: string
+	dslabel: string
+	embedder: string
+}
+
+export type MassSessionGetRequest = MassSessionGetUnscoped | MassSessionGetScoped
 
 export type MassSessionGetResponse = {
 	/** the saved mass app state */
