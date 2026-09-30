@@ -307,6 +307,9 @@ tape('Origins are selected separately from mutation type', async test => {
 		'should show the union of sample types across selected origins'
 	)
 
+	await pickGene(holder)
+	test.equal(tw.term.originLabel, '', 'should use an empty label when all origins are selected')
+
 	originCheckboxes.nodes()[0].click()
 	test.deepEqual(handler.getSelectedOrigins(), ['germline'], 'should retain the checked origin')
 	test.deepEqual(handler.getQuerySampleTypes(), [2, 3], 'should refresh sample types from the checked origin')
@@ -325,6 +328,7 @@ tape('Origins are selected separately from mutation type', async test => {
 
 	await pickGene(holder)
 	test.deepEqual(tw.term.origins, ['germline'], 'should submit selected origins on the term')
+	test.equal(tw.term.originLabel, 'Inherited', 'should name the selected origin subset')
 	test.deepEqual(tw.term.sampleTypes, [2, 3], 'should submit sample types available to the selected origin')
 
 	const cnvMutationTypeIdx = handler.mutationTypeTerms.findIndex((term: any) => term.dt == dtcnv)
@@ -340,6 +344,7 @@ tape('Origins are selected separately from mutation type', async test => {
 	)
 	await pickGene(holder, 'KRAS')
 	test.equal(tw.term.origins, undefined, 'should clear stale origins before submission')
+	test.equal(tw.term.originLabel, '', 'should clear the origin label when origins are not available')
 
 	if (test['_ok']) holder.remove()
 	test.end()

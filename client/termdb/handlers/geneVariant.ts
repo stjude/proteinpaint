@@ -505,6 +505,17 @@ export class SearchHandler {
 			}
 			return false
 		}
+		const selectedOrigins = this.term.origins
+		const queryOrigins = this.queryOrigins
+		if (!selectedOrigins?.length) throw new Error('no origins selected')
+		if (!queryOrigins?.length) throw new Error('no origins available to query')
+		if (selectedOrigins.length == queryOrigins.length) {
+			this.term.originLabel = ''
+		} else {
+			const dt = this.getSelectedMutationType()?.dt
+			const byOrigin = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.byOrigin
+			this.term.originLabel = selectedOrigins.map(origin => byOrigin?.[origin]?.label || origin).join(', ')
+		}
 		return true
 	}
 
