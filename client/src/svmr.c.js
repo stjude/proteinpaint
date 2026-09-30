@@ -1269,7 +1269,9 @@ for(const i of atlst) {
 					}
 					const n = (prod.geneA ? prod.geneA : '<' + prod.chrA) + ' - ' + (prod.geneB ? prod.geneB : '<' + prod.chrB)
 					if (!(n in events)) {
-						events[n] = {}
+						// sample.name (an attacker/user-reachable sample name) indexes this
+						// nested bucket, so it must not inherit from Object.prototype
+						events[n] = Object.create(null)
 					}
 					if (!(sample.name in events[n])) {
 						events[n][sample.name] = []
