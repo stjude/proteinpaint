@@ -334,6 +334,34 @@ export async function init(
 			}
 		}
 
+		// default framing: fit the view to this sample's own cells instead of
+		// leaving the whole-slide overview from map.getView().fit(extent) above.
+		// On a well-cropped single-section slide the two are nearly identical
+		// (cells already fill most of the frame), but some raw exports are a
+		// shared multi-section slide where this sample's own tissue is a small
+		// fraction of the image (e.g. two GEO accessions imaged on one physical
+		// Xenium slide) — framing on the canvas there leaves the cells
+		// imperceptibly small, which looks like missing boundaries/annotations.
+		// Skipped when opts.focus already picked a specific niche (the
+		// similar-search preview re-entering this module above).
+		if (!opts.focus && cellPolys?.length) {
+			// a manual min/max scan, not Math.min(...xs): a large sample's
+			// vertex count (500k+) can exceed the engine's max call arguments
+			let minX = Infinity,
+				minY = Infinity,
+				maxX = -Infinity,
+				maxY = -Infinity
+			for (const { ring } of cellPolys) {
+				for (const [x, y] of ring) {
+					if (x < minX) minX = x
+					if (x > maxX) maxX = x
+					if (y < minY) minY = y
+					if (y > maxY) maxY = y
+				}
+			}
+			map.getView().fit([minX, minY, maxX, maxY], { padding: [40, 40, 40, 40] })
+		}
+
 		// per-cell annotations from the h5ad, as JSON {cells:{cell_id:type}} —
 		// cell types are free text, so they never travel as CSV; feeds the
 		// type fills + tooltip. Useless without the cell polygons.
