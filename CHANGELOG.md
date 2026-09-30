@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- harden user-keyed object maps against prototype pollution
+- harden nested patient2st buckets against prototype pollution too
+- harden step_gene() per-event sample buckets against prototype pollution
+
+
 ## 2.215.0
 
 Features:
