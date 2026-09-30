@@ -111,6 +111,33 @@ tape('a prototype-related name nested in a json body value is rejected', async t
 	test.end()
 })
 
+tape('a POST /massSession body is saved without being merged into the query', async test => {
+	test.timeoutAfter(10000)
+	// the saved mass state may have an embedder{} object, which the auth middleware would reject
+	// as a non-string query parameter if the body were merged into req.query
+	const state = { plots: [], vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' }, embedder: { host: 'localhost' } }
+	// Express matches routes case-insensitively and ignores a trailing slash, so should the exception
+	for (const path of ['/massSession', '/MassSession/']) {
+		const saved = await post(server, path, JSON.stringify(state))
+		test.equal(saved.status, 200, `should respond with 200 when saving a state with an embedder{} object to ${path}`)
+		test.equal(typeof saved.body.id, 'string', `should respond with a session id for ${path}`)
+
+		const res = await get(server, '/massSession', `id=${saved.body.id}`)
+		test.equal(res.status, 200, 'should respond with 200 when getting the saved session')
+		test.deepEqual(res.body.state, state, 'should respond with the saved state')
+	}
+
+	const forbidden = await post(server, '/massSession', '{"plots":[{"name":"toString"}]}')
+	test.equal(forbidden.status, 400, 'should respond with 400 for a forbidden name in a saved state')
+	test.match(forbidden.body.error, forbiddenNameError, 'should report the forbidden name path')
+
+	// the exception is only for saving a mass session, not for other routes
+	const termdb = await post(server, '/termdb', '{"embedder":{"host":"localhost"}}')
+	test.equal(termdb.status, 400, 'should respond with 400 for an embedder{} object in a /termdb body')
+	test.match(termdb.body.error, /invalid embedder: must be a string/, 'should reject a non-string embedder')
+	test.end()
+})
+
 tape('stop server', async test => {
 	test.timeoutAfter(10000)
 	await server?.stop()
