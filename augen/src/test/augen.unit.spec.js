@@ -138,6 +138,52 @@ tape('setRoutes(): registers the method validator, then all route middlewares, t
 	test.end()
 })
 
+tape('setRoutes(): skips a method with init: null, but not a missing init', test => {
+	const payload = { init: () => () => {}, request: { typeId: 'any' }, response: { typeId: 'any' } }
+	const { app, registered } = getMockApp()
+	const logged = []
+	const { log } = console
+	console.log = (...args) => logged.push(args.join(' '))
+	try {
+		setRoutes(
+			app,
+			[
+				{ api: { endpoint: 'partial', methods: { get: { ...payload, init: null }, post: payload } } },
+				{ api: { endpoint: 'disabled', methods: { get: { ...payload, init: null } } } },
+				{ api: { endpoint: 'enabled', methods: { get: payload } } }
+			],
+			{ basepath: '/api' }
+		)
+	} finally {
+		console.log = log
+	}
+	test.deepEqual(
+		Object.keys(registered).sort(),
+		['get /api/enabled', 'post /api/partial'],
+		'should only register the methods that do not have init: null'
+	)
+	test.deepEqual(
+		logged,
+		['!! Skipped setting up route: GET /api/partial', '!! Skipped setting up route: GET /api/disabled'],
+		'should log each skipped method and endpoint'
+	)
+
+	const { app: app2, registered: registered2 } = getMockApp()
+	const { trace } = console
+	console.trace = () => {}
+	try {
+		test.throws(
+			() => setRoutes(app2, [{ api: { endpoint: 'noInit', methods: { get: { ...payload, init: undefined } } } }]),
+			/noInit get: TypeError/,
+			'should still throw on a missing init'
+		)
+	} finally {
+		console.trace = trace
+	}
+	test.deepEqual(registered2, {}, 'should not register a method with a missing init')
+	test.end()
+})
+
 tape('getProtectedRoutes(): only tracks the middlewares with a protectedRoute property', test => {
 	const calls = []
 	const payload = { init: () => () => {}, request: { typeId: 'any' }, response: { typeId: 'any' } }
