@@ -248,13 +248,13 @@ function getVocabApiWithOrigins() {
 	termdbConfig.assayAvailability.byDt ??= {}
 	termdbConfig.assayAvailability.byDt[dtsnvindel] = {
 		byOrigin: {
-			somatic: {
-				label: 'Tumor acquired',
-				bySampleType: { 1: { hasSamples: true }, 2: { hasSamples: true } }
-			},
 			germline: {
 				label: 'Inherited',
 				bySampleType: { 2: { hasSamples: true }, 3: { hasSamples: true } }
+			},
+			somatic: {
+				label: 'Tumor acquired',
+				bySampleType: { 1: { hasSamples: true }, 2: { hasSamples: true } }
 			}
 		}
 	}
@@ -276,6 +276,10 @@ tape('Origins are selected separately from mutation type', async test => {
 	const snvindelMutationTypes = handler.mutationTypeTerms.filter((term: any) => term.dt == dtsnvindel)
 	test.equal(snvindelMutationTypes.length, 1, 'should offer one mutation type for an origin-split dt')
 	test.equal(snvindelMutationTypes[0].name, 'SNV/indel', 'should omit origin from its label')
+	const byOrigin = handler.opts.app.vocabApi.termdbConfig.assayAvailability.byDt[dtsnvindel].byOrigin
+	byOrigin.unsupported = {}
+	test.throws(() => handler.getQueryOrigins(), /unknown origin 'unsupported'/, 'should reject an unrecognized origin')
+	delete byOrigin.unsupported
 	test.equal(
 		handler.term.childTerms.filter((term: any) => term.dt == dtsnvindel).length,
 		1,
@@ -326,10 +330,14 @@ tape('Origins are selected separately from mutation type', async test => {
 	originCheckboxes.nodes()[1].click()
 	test.equal(originCheckboxes.nodes()[1].checked, true, 'should prevent unchecking the last origin')
 
+	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].click()
 	await pickGene(holder)
 	test.deepEqual(tw.term.origins, ['germline'], 'should submit selected origins on the term')
 	test.equal(tw.term.originLabel, 'Inherited', 'should name the selected origin subset')
-	test.deepEqual(tw.term.sampleTypes, [2, 3], 'should submit sample types available to the selected origin')
+	test.deepEqual(tw.term.sampleTypes, [3], 'should submit selected sample types available to the selected origin')
+	test.equal(tw.term.sampleTypeLabel, 'Normal', 'should name the selected sample type subset')
+	test.equal(tw.term.label, 'Normal, Inherited', 'should combine sample type and origin labels')
+	test.equal(tw.term.name, 'TP53', 'should not append labels to the term name')
 
 	const cnvMutationTypeIdx = handler.mutationTypeTerms.findIndex((term: any) => term.dt == dtcnv)
 	const cnvRadio: any = holder
@@ -424,6 +432,8 @@ tape('Sample type label is empty for all types and names a selected subset', asy
 	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].click()
 	await pickGene(holder)
 	test.equal(tw.term.sampleTypeLabel, 'Relapse', 'should name the selected sample type subset')
+	test.equal(tw.term.label, 'Relapse', 'should set the term label to the selected sample type')
+	test.equal(tw.term.name, 'TP53', 'should not append the sample type label to the term name')
 
 	if (test['_ok']) holder.remove()
 	test.end()

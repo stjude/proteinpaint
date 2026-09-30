@@ -14,7 +14,7 @@ import {
 } from '#dom'
 import type { VocabApi, DtAssayAvailabilityTerm } from '#types'
 import { getQuerySampleTypesByTerms } from '#shared/terms.js'
-import { dtTerms, dtcnv, dtsnvindel } from '#shared/common.js'
+import { dtTerms, dtcnv, dtsnvindel, morigin } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
 import { mayShowRememberedGvQ } from './rememberedGvQ.ts'
 
@@ -177,7 +177,11 @@ export class SearchHandler {
 		if (!Number.isInteger(mutationType?.dt)) return
 		const byOrigin = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[mutationType.dt]?.byOrigin
 		if (!byOrigin) return
-		return Object.keys(byOrigin)
+		const origins = Object.keys(byOrigin)
+		for (const origin of origins) {
+			if (!morigin[origin]) throw new Error(`unknown origin '${origin}'`)
+		}
+		return origins.sort((a, b) => (morigin[a].order ?? Infinity) - (morigin[b].order ?? Infinity))
 	}
 
 	getSelectedOrigins(): string[] | undefined {
@@ -549,6 +553,7 @@ export class SearchHandler {
 
 	async submit(q) {
 		if (!this.mayApplyOrigins() || !this.mayApplySampleType()) return
+		this.term.label = [this.term.originLabel, this.term.sampleTypeLabel].filter(Boolean).join(', ')
 		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
 		// add geneVariant term to each child term
 		addParentTerm(this.term)

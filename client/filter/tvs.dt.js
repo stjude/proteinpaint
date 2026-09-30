@@ -63,7 +63,13 @@ async function fillMenu(self, div, tvs) {
 }
 
 function term_name_gen(d) {
-	const name = d.term.parentTerm && !d.excludeGeneName ? `${d.term.parentTerm.name} ${d.term.name}` : d.term.name
+	let name
+	if (d.term.parentTerm && !d.excludeGeneName) {
+		name = `${d.term.parentTerm.name} ${d.term.name}`
+		if (d.term.parentTerm.label) name += ` (${d.term.parentTerm.label})`
+	} else {
+		name = d.term.name
+	}
 	return name.length < 31
 		? escapeHtml(name)
 		: '<label title="' + escapeHtml(name) + '">' + escapeHtml(name.substring(0, 28)) + '...' + '</label>'
