@@ -577,3 +577,22 @@ tape('rejects attempts to disable a required cacheOrRecompute subdir', test => {
 	fs.rmSync(cachedir, { force: true, recursive: true })
 	test.end()
 })
+
+tape('rejects attempts to disable the bam subdir', test => {
+	const cachedir = path.join(process.cwd(), '.cache-test9')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.throws(
+		() =>
+			new CacheManager({
+				quiet: true,
+				cachedir,
+				mustExitPendingValidation: true,
+				subdirs: { bam: undefined },
+				callbacks: {}
+			}),
+		/Cannot disable required subdir 'bam'/,
+		'constructor throws synchronously when the bam subdir is set to undefined'
+	)
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
+})

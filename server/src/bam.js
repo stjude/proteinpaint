@@ -3626,7 +3626,7 @@ async function streamGdcBam2response(req, res) {
       updated if the previous access time was earlier than the current modify or change
       time.
 
-	features.bamCache{maxAge, maxSize} is applied to the CacheManager bam subdir in app.ts
+	eviction is configured with serverconfig.features.cacheMonitor.subdirs.bam{maxAge, maxSize}
 */
 
 // created by CacheManager at server launch

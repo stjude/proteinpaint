@@ -127,7 +127,8 @@ const defaultOpts = {
 			skipMs: halfDay,
 			fileExtensions: new Set(['.gz', '.tbi', '.csi', '.bb'])
 		},
-		// GDC bam slices and their index files, written by get_gdc_bam() in bam.js
+		// GDC bam slices and their index files, written by get_gdc_bam() in bam.js;
+		// required and cannot be disabled, but may override its options with serverconfig.features.cacheMonitor.subdirs.bam{}
 		bam: {
 			...subdirOptsDefaults,
 			fileExtensions: new Set(['.bam', '.bai'])
@@ -172,6 +173,10 @@ export class CacheManager {
 						`Cannot disable required cacheOrRecompute subdir '${dirName}'. ` +
 							`Remove it from cacheJobPolicies in utils/cacheOrRecompute.ts if it is no longer used.`
 					)
+				}
+				if (dirName == 'bam') {
+					// bam.js does not create this subdir, and relies on CacheManager to create it
+					throw new Error(`Cannot disable required subdir 'bam', which is used for caching GDC bam slices.`)
 				}
 				delete subdirs[dirName]
 			} else {

@@ -909,7 +909,7 @@ function deleteGroupDom(g) {
 
 function makeTk(tk, block) {
 	if (tk.gdcFile) {
-		block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
+		block.showGdcBamSliceDownloadBtn(true)
 	}
 
 	may_add_urlparameter(tk, block)

@@ -647,12 +647,21 @@ export class Block {
 					if (data.error) {
 						// same message as thrown by the server when the cached slice file has been evicted
 						if (data.error == 'BAM slice no longer available') {
-							// replace the button with the message, reusing the button style for the same placement
-							d3select(button.node().parentNode)
+							// show the message in place of the button, reusing the button style for the same placement
+							const msg = d3select(button.node().parentNode)
 								.insert('span', () => button.node())
 								.attr('style', button.attr('style'))
 								.text(data.error)
-							button.remove()
+							if (button.node() == block.gdcBamSliceDownloadBtn.node()) {
+								// keep the block button, which is shown again for a gdc bam tk created later,
+								// see showGdcBamSliceDownloadBtn()
+								block.gdcBamSliceUnavailable?.remove()
+								block.gdcBamSliceUnavailable = msg
+								button.style('display', 'none')
+							} else {
+								// button of one tk in headerTip, which is recreated on every click of the block button
+								button.remove()
+							}
 						} else {
 							block.error('Cannot download GDC BAM slice: ' + data.error)
 						}
@@ -4505,6 +4514,14 @@ seekrange(chr,start,stop) {
 
 	error(m) {
 		sayerror(this.errdiv, m)
+	}
+
+	/* show or hide the block button to download gdc bam slices, when a gdc bam tk is created or deleted;
+	either way, remove the message that had replaced the button when a slice was no longer available */
+	showGdcBamSliceDownloadBtn(show) {
+		this.gdcBamSliceUnavailable?.remove()
+		delete this.gdcBamSliceUnavailable
+		this.gdcBamSliceDownloadBtn.style('display', show ? 'inline-block' : 'none')
 	}
 
 	moremenu(tip) {
