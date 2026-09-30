@@ -1,1 +1,3 @@
-
+Features:
+- serverconfig.features.massSessionMaxBytes limits the size of a saved session, default 1MB
+- a zero cacheMonitor.subdirs.massSession maxAge or maxSize disables the /massSession route
