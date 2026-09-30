@@ -7,6 +7,10 @@ All notable changes to this project will be documented in this file.
 Features:
 - New custom download menu includes options to download the descriptive stats and association tests in the bar chart, violin, and box plot.
 
+Fixes:
+- keep the /bamnochr cache dir server-side and handle spawn errors (code-scanning #92)
+- remove run_fdr temporary files when Rscript fails
+
 
 ## 2.214.0
 
