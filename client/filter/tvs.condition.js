@@ -153,7 +153,7 @@ function term_name_gen(d) {
 
 function get_pill_label(tvs) {
 	return {
-		txt: get_value_text(tvs),
+		txt: escapeHtml(get_value_text(tvs)),
 		grade_type: tvs.bar_by_children
 			? ''
 			: tvs.value_by_max_grade

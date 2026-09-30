@@ -53,11 +53,11 @@ function get_pill_label(tvs) {
 		const v = tvs.ranges[0]
 		if ('value' in v) {
 			// category
-			if (v.label) return { txt: v.label }
+			if (v.label) return { txt: escapeHtml(v.label) }
 			if (tvs.term.values && tvs.term.values[v.value] && tvs.term.values[v.value].label)
-				return { txt: tvs.term.values[v.value].label }
+				return { txt: escapeHtml(tvs.term.values[v.value].label) }
 			console.error(`key "${v.value}" not found in values{} of ${tvs.term.name}`)
-			return { txt: v.value }
+			return { txt: escapeHtml(v.value) }
 		}
 		// numeric range
 		return { txt: format_val_text(v, tvs.term) + mafDepthText(tvs) }

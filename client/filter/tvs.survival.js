@@ -96,7 +96,7 @@ function get_pill_label(tvs) {
 		else txt = tvs.values.length + ' groups'
 	}
 	if (cutoff) txt = `${txt} (${cutoff == '1' ? '1 year later' : cutoff + ' years later'})`
-	return { txt }
+	return { txt: escapeHtml(txt) }
 }
 
 function getSelectRemovePos(j) {

@@ -105,7 +105,7 @@ function get_pill_label(tvs) {
 	} else {
 		throw 'tvs.genotype not recognized'
 	}
-	return { txt, grade_type }
+	return { txt: escapeHtml(txt), grade_type }
 }
 
 /*
