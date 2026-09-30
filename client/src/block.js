@@ -594,6 +594,7 @@ export class Block {
 			.style('display', 'none')
 			.text('Download GDC BAM slice')
 			.on('click', async () => {
+				const block = this
 				const tks = this.tklst.filter(i => i.type == 'bam' && i.gdcFile)
 				if (tks.length == 0) return
 				if (tks.length == 1) {
@@ -627,17 +628,45 @@ export class Block {
 					if (tk.gdcToken) {
 						headers['X-Auth-Token'] = tk.gdcToken
 					}
-					const lst = []
-					const data = await dofetch3('tkbam', {
-						headers,
-						body: {
-							clientdownloadgdcslice: 1,
-							gdcFileUUID: tk.gdcFile.uuid,
-							gdcFilePosition: tk.gdcFile.position
-						}
-					})
+					let data
+					try {
+						data = await dofetch3('tkbam', {
+							headers,
+							body: {
+								clientdownloadgdcslice: 1,
+								gdcFileUUID: tk.gdcFile.uuid,
+								gdcFilePosition: tk.gdcFile.position
+							}
+						})
+					} catch (e) {
+						data = { error: e.message || e }
+					}
 
 					button.property('disabled', false)
+
+					if (data.error) {
+						// same message as thrown by the server when the cached slice file has been evicted
+						if (data.error == 'BAM slice no longer available') {
+							// show the message in place of the button, reusing the button style for the same placement
+							const msg = d3select(button.node().parentNode)
+								.insert('span', () => button.node())
+								.attr('style', button.attr('style'))
+								.text(data.error)
+							if (button.node() == block.gdcBamSliceDownloadBtn.node()) {
+								// keep the block button, which is shown again for a gdc bam tk created later,
+								// see showGdcBamSliceDownloadBtn()
+								block.gdcBamSliceUnavailable?.remove()
+								block.gdcBamSliceUnavailable = msg
+								button.style('display', 'none')
+							} else {
+								// button of one tk in headerTip, which is recreated on every click of the block button
+								button.remove()
+							}
+						} else {
+							block.error('Cannot download GDC BAM slice: ' + data.error)
+						}
+						return
+					}
 
 					const a = document.createElement('a')
 					a.href = URL.createObjectURL(data)
@@ -4485,6 +4514,14 @@ seekrange(chr,start,stop) {
 
 	error(m) {
 		sayerror(this.errdiv, m)
+	}
+
+	/* show or hide the block button to download gdc bam slices, when a gdc bam tk is created or deleted;
+	either way, remove the message that had replaced the button when a slice was no longer available */
+	showGdcBamSliceDownloadBtn(show) {
+		this.gdcBamSliceUnavailable?.remove()
+		delete this.gdcBamSliceUnavailable
+		this.gdcBamSliceDownloadBtn.style('display', show ? 'inline-block' : 'none')
 	}
 
 	moremenu(tip) {

@@ -144,6 +144,14 @@ tape('defaults', function (test) {
 							fileExtensions: new Set(['.gz', '.tbi', '.csi', '.bb']),
 							absPath: `${m.cachedir}/bedj`,
 							skipUntil: 0
+						},
+						bam: {
+							maxAge: 7200000,
+							maxSize: 5000000000,
+							skipMs: 0,
+							fileExtensions: new Set(['.bam', '.bai']),
+							absPath: `${m.cachedir}/bam`,
+							skipUntil: 0
 						}
 					},
 					`should set default subdir properties`
@@ -167,7 +175,8 @@ tape('defaults', function (test) {
 							gdcCounts: { deletedCount: 0, totalCount: 0 },
 							daAnalysis: { deletedCount: 0, totalCount: 0 },
 							wsitiles: { deletedCount: 0, totalCount: 0 },
-							bedj: { deletedCount: 0, totalCount: 0 }
+							bedj: { deletedCount: 0, totalCount: 0 },
+							bam: { deletedCount: 0, totalCount: 0 }
 						},
 						`should detect no cache files to delete`
 					)
@@ -176,10 +185,10 @@ tape('defaults', function (test) {
 					test.deepEqual(
 						results,
 						{
-							// All subdirs now have skipMs >= halfDay, so the 2nd
-							// iteration (fired ~100ms after the first) has no
-							// subdirs eligible for checking. Post-check still
-							// fires but with an empty results map.
+							// All subdirs except bam have skipMs >= halfDay, so the 2nd
+							// iteration (fired ~100ms after the first) only checks bam,
+							// which has skipMs == 0 to be checked on every interval.
+							bam: { deletedCount: 0, totalCount: 0 }
 						},
 						`should detect no cache files to delete`
 					)
@@ -326,10 +335,102 @@ tape('move or delete by maxAge', test => {
 	})
 })
 
-// TODO:
-// tape('delete by maxSize', async function (test) {
-// 	...
-// })
+tape('delete by maxSize', test => {
+	test.timeoutAfter(1000)
+
+	const cachedir = path.join(process.cwd(), '.cache-test7')
+	// clear any previously created test cache dir
+	fs.rmSync(cachedir, { force: true, recursive: true })
+
+	const interval = 100
+	const monitor = new CacheManager({
+		quiet: true,
+		cachedir,
+		interval,
+		subdirs: {
+			massSession: undefined,
+			massSessionTrash: undefined,
+			daAnalysis: undefined,
+			test0: {
+				maxAge: 60000, // no file expires by age
+				maxSize: 25 // bytes, four 10-byte files exceed this limit
+			}
+		},
+		callbacks: {
+			preStart: () => {
+				const now = Date.now()
+				// file-4 is newer than the interval and must not be deleted even when over maxSize
+				for (const [i, ageMs] of [
+					[1, 10000],
+					[2, 5000],
+					[3, 3000],
+					[4, 0]
+				]) {
+					const f = `${cachedir}/test0/file-${i}`
+					fs.writeFileSync(f, '0123456789')
+					const time = (now - ageMs) / 1000
+					fs.utimesSync(f, time, time)
+				}
+			},
+			postCheck: results => {
+				if (monitor.intervalId) {
+					// the initial check has been tested below, before setInterval() was called
+					monitor.stop()
+					fs.rmSync(cachedir, { force: true, recursive: true })
+					test.end()
+					return
+				}
+				test.deepEqual(results.test0, { deletedCount: 2, totalCount: 4 }, 'should delete files until below maxSize')
+				test.deepEqual(
+					fs.readdirSync(`${cachedir}/test0`).sort(),
+					['file-3', 'file-4'],
+					'should delete the oldest files first'
+				)
+			}
+		}
+	})
+})
+
+tape('subdir overrides', test => {
+	const cachedir = path.join(process.cwd(), '.cache-test8')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	const monitor = new CacheManager({
+		quiet: true,
+		cachedir,
+		mustExitPendingValidation: true,
+		subdirs: {
+			bedj: { maxSize: 1 },
+			bam: { maxAge: 1000 }
+		},
+		callbacks: {}
+	})
+	test.deepEqual(
+		monitor.subdirs.get('bedj'),
+		{
+			maxAge: 2592000000,
+			maxSize: 1,
+			skipMs: 43200000,
+			fileExtensions: new Set(['.gz', '.tbi', '.csi', '.bb']),
+			absPath: `${cachedir}/bedj`,
+			skipUntil: 0
+		},
+		'should keep the subdir-specific defaults that are not overridden'
+	)
+	test.deepEqual(
+		monitor.subdirs.get('bam'),
+		{
+			maxAge: 1000,
+			maxSize: 5000000000,
+			skipMs: 0,
+			fileExtensions: new Set(['.bam', '.bai']),
+			absPath: `${cachedir}/bam`,
+			skipUntil: 0
+		},
+		'should keep the bam file extensions when overriding its maxAge'
+	)
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
+})
 
 tape('limit deletion by file extension', test => {
 	test.timeoutAfter(1000)
@@ -472,6 +573,25 @@ tape('rejects attempts to disable a required cacheOrRecompute subdir', test => {
 			}),
 		/Cannot disable required cacheOrRecompute subdir 'de'/,
 		'constructor throws synchronously when a required subdir is set to undefined'
+	)
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
+})
+
+tape('rejects attempts to disable the bam subdir', test => {
+	const cachedir = path.join(process.cwd(), '.cache-test9')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.throws(
+		() =>
+			new CacheManager({
+				quiet: true,
+				cachedir,
+				mustExitPendingValidation: true,
+				subdirs: { bam: undefined },
+				callbacks: {}
+			}),
+		/Cannot disable required subdir 'bam'/,
+		'constructor throws synchronously when the bam subdir is set to undefined'
 	)
 	fs.rmSync(cachedir, { force: true, recursive: true })
 	test.end()
