@@ -705,6 +705,8 @@ export async function get_header_txt(file, dir) {
 		const ps = spawn('head', ['-1', file], { cwd: dir })
 		const out = []
 		ps.stdout.on('data', i => out.push(i))
+		// e.g. a missing cwd; without a listener, the 'error' event would crash the process
+		ps.on('error', reject)
 		ps.on('close', () => {
 			resolve(out.join('').trim())
 		})
@@ -716,6 +718,7 @@ export function get_header_bcf(file, dir) {
 		const ps = spawnTool(bcftools, ['view', '-h', file], { cwd: dir })
 		const out = []
 		ps.stdout.on('data', i => out.push(i))
+		ps.on('error', reject)
 		ps.on('close', () => {
 			resolve(vcf.vcfparsemeta(out.join('').trim().split('\n')))
 		})
@@ -761,6 +764,8 @@ export function get_lines_bigfile({ args, callback, dir = null, isbcf = false, i
 		const em = []
 		rl.on('line', line => callback(line, ps))
 		ps.stderr.on('data', d => em.push(d))
+		// e.g. a missing cwd; without a listener, the 'error' event would crash the process
+		ps.on('error', reject)
 		ps.on('close', () => {
 			const e = em.join('').trim()
 			if (e && !tabixnoterror(e)) {
@@ -783,6 +788,7 @@ export function get_lines_txtfile({ args, dir, callback }) {
 		const em = []
 		rl.on('line', line => callback(line, ps))
 		ps.stderr.on('data', d => em.push(d))
+		ps.on('error', reject)
 		ps.on('close', () => {
 			const e = em.join('').trim()
 			if (e) {
@@ -877,7 +883,7 @@ function run_fdr_2(infile, outfile) {
 	return new Promise((resolve, reject) => {
 		const sp = spawn('Rscript', [path.join(serverconfig.binpath, 'utils/fdr.R'), infile, outfile])
 		sp.on('close', () => resolve())
-		sp.on('error', () => reject(e))
+		sp.on('error', reject)
 	})
 }
 
@@ -916,7 +922,7 @@ export async function bam_ifnochr(file, genome, dir, fileIsTruncated) {
 		if fileIsTruncated=true, samtools view -H will print one line to stderr while continue to output all header lines
 		in such case must ignore the err, for truncated gdc slice to work
 		*/
-		if (fileIsTruncated && e.endsWith(SAMTOOLS_ERR_MSG.view)) {
+		if (fileIsTruncated && typeof e == 'string' && e.endsWith(SAMTOOLS_ERR_MSG.view)) {
 			// expected. ignore this err and continue to parse header lines
 		} else {
 			// unexpected err
@@ -929,10 +935,10 @@ export async function bam_ifnochr(file, genome, dir, fileIsTruncated) {
 	for (const line of lines) {
 		if (!line.startsWith('@SQ')) continue
 		const tmp = line.split('\t')[1]
-		if (!tmp) reject('2nd field missing from @SQ line')
+		if (!tmp) throw '2nd field missing from @SQ line'
 		const l = tmp.split(':')
-		if (l[0] != 'SN') reject('@SQ line 2nd field is not "SN" but ' + l[0])
-		if (!l[1]) reject('@SQ line no value for SN')
+		if (l[0] != 'SN') throw '@SQ line 2nd field is not "SN" but ' + l[0]
+		if (!l[1]) throw '@SQ line no value for SN'
 		chrlst.push(l[1])
 	}
 	return common.contigNameNoChr(genome, chrlst)

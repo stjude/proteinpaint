@@ -2069,15 +2069,18 @@ async function handle_bamnochr(req, res) {
 	try {
 		const genome = genomes[q.genome]
 		if (!genome) throw 'invalid genome'
+		// the cache dir becomes the cwd of samtools, so it is only computed here and never read from the request
+		let file, dir
 		if (q.file) {
 			if (utils.illegalpath(q.file, false, false)) throw 'illegal file path'
-			q.file = path.join(serverconfig.tpmasterdir, q.file)
+			file = path.join(serverconfig.tpmasterdir, q.file)
 		} else {
 			if (!q.url) throw 'no bam file or url'
-			q.url_dir = await utils.cache_index(q.url, q.indexURL || q.url + '.bai')
+			file = q.url
+			dir = await utils.cache_index(q.url, q.indexURL || q.url + '.bai')
 		}
 
-		const nochr = await utils.bam_ifnochr(q.file || q.url, genome, q.url_dir)
+		const nochr = await utils.bam_ifnochr(file, genome, dir)
 		res.send({ nochr: nochr })
 	} catch (e) {
 		if (e.stack) console.log(e.stack)

@@ -237,6 +237,15 @@ tape('/tkbedj, /tabixheader, /bamnochr via the real route table', async test => 
 
 	const r = await send(routes['/bamnochr'], { genome: 'hg38', file: '../../../etc/x.bam' })
 	test.equal(r?.error, 'illegal file path', '/bamnochr should reject ".." in file')
+
+	// url_dir is a server-side cache dir; one supplied by the request must not become the samtools cwd,
+	// where a nonexistent dir used to crash the process with an unhandled spawn 'error' event
+	const missingDir = path.join(tmpdir, 'no-such-dir')
+	const r2 = await send(routes['/bamnochr'], { genome: 'hg38', file: 'x.bam', url_dir: missingDir })
+	test.ok(r2?.error, '/bamnochr should return an error, not crash, when the request has url_dir')
+	// samtools then runs and reports the missing file, instead of failing to spawn in the requested cwd
+	test.doesNotMatch(String(r2?.error), /ENOENT/, '/bamnochr should not use the requested url_dir as the samtools cwd')
+	test.notOk(fs.existsSync(missingDir), '/bamnochr should not create the requested url_dir')
 	test.end()
 })
 
