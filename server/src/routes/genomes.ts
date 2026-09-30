@@ -63,6 +63,8 @@ return error message as the service is out
 			pkgver: versionInfo.pkgver,
 			codedate: versionInfo.codedate, // still useful to know the package build/publish date in the response payload, even if it's not displayed
 			launchdate: versionInfo.launchdate,
+			// an already loaded page compares this against its own client version
+			clientVersion: versionInfo.clientVersion,
 			hasblat,
 			features: serverconfig.features,
 			dsAuth: authApi.getDsAuth(req),

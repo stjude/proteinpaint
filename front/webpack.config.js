@@ -1,6 +1,8 @@
 const path = require('path')
 const fs = require('fs')
 const webpack = require('webpack')
+// the client version that gets bundled; the client code embeds the same version string (see client package.json sedver)
+const clientVersion = require('@sjcrh/proteinpaint-client/package.json').version
 
 // TODO: delete webpack use, once esbuild migration is fully tested and unlikely to be reverted
 // as of 1/24/2025: still using webpack since esbuild chunks are still too granular,
@@ -18,7 +20,13 @@ module.exports = function getPortalConfig(env = {}) {
 		output: {
 			path: path.join(__dirname, 'public/bin/'),
 			publicPath: 'auto',
+			// the entry filename must stay stable, since embedder pages load /bin/proteinpaint.js;
+			// the server sets a no-cache header for it, so that it's always revalidated (see server app.middlewares.js)
 			filename: 'proteinpaint.js',
+			// a content hash in chunk filenames forces a new URL whenever the chunk code changes,
+			// so that stale chunks from a previous deployment cannot be served by browser or proxy caches
+			// and can be cached as immutable; the .proteinpaint.js suffix is used to detect hashed chunks in the server
+			chunkFilename: '[id].[contenthash:8].proteinpaint.js',
 			chunkLoadingGlobal: 'ppJsonp',
 			// the library name exposed by this bundle
 			library: 'runproteinpaint',
@@ -46,7 +54,8 @@ module.exports = function getPortalConfig(env = {}) {
 		plugins: [
 			new webpack.ProvidePlugin({
 				Buffer: ['buffer', 'Buffer']
-			})
+			}),
+			new BundleVersionPlugin()
 		],
 		module: {
 			strictExportPresence: true,
@@ -68,6 +77,21 @@ module.exports = function getPortalConfig(env = {}) {
 	}
 
 	return config
+}
+
+// emit a version.json file next to the bundle, so that the server can report the client version
+// that it actually serves, which is compared against the client version of an already loaded page
+class BundleVersionPlugin {
+	apply(compiler) {
+		compiler.hooks.thisCompilation.tap('BundleVersionPlugin', compilation => {
+			compilation.hooks.processAssets.tap(
+				{ name: 'BundleVersionPlugin', stage: webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL },
+				() => {
+					compilation.emitAsset('version.json', new webpack.sources.RawSource(JSON.stringify({ clientVersion })))
+				}
+			)
+		})
+	}
 }
 
 process.traceDeprecation = true

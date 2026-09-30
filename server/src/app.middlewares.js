@@ -352,11 +352,10 @@ function setHeaders(req, res, next) {
 		res.header('Document-Policy', 'js-profiling')
 	}
 
-	if (req.method == 'GET' && (!req.path.includes('.') || req.path.endsWith('proteinpaint.js'))) {
-		// immutable response before expiration, client must revalidate after max-age;
-		// by convention, any path that has a dot will be treated as
-		// a static file and not handled here with cache-control
-		res.header('Cache-control', `immutable,max-age=${serverconfig.responseMaxAge || 1}`)
+	if (req.method == 'GET') {
+		const cacheControl = getCacheControl(req.path, serverconfig.responseMaxAge)
+		// express.static() does not override an already set cache-control header
+		if (cacheControl) res.header('Cache-control', cacheControl)
 	}
 
 	if (req.method == 'OPTIONS') {
@@ -365,6 +364,24 @@ function setHeaders(req, res, next) {
 	} else {
 		next()
 	}
+}
+
+/*
+	path: a GET request path
+	responseMaxAge: optional serverconfig.responseMaxAge, in seconds
+*/
+export function getCacheControl(path, responseMaxAge) {
+	const filename = path.split('/').pop()
+	// a webpack chunk filename with a content hash, e.g. 123.abcd1234.proteinpaint.js(.map),
+	// has a new URL whenever its content changes, see front/webpack.config.js
+	if (/^[^.]+\.[0-9a-f]{8}\.proteinpaint\.js(\.map)?$/.test(filename)) return 'public, max-age=31536000, immutable'
+	// the bundle entry has a stable URL and embeds the hashed chunk filenames,
+	// so any cache (browser or proxy) must revalidate it to detect a new deployment
+	if (filename == 'proteinpaint.js' || filename == 'version.json') return 'no-cache'
+	// immutable response before expiration, client must revalidate after max-age;
+	// by convention, any path that has a dot will be treated as
+	// a static file and not handled here with cache-control
+	if (!path.includes('.')) return `immutable,max-age=${responseMaxAge || 1}`
 }
 
 function maySetTestDataCacheDir(doneLoading) {

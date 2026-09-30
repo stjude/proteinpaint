@@ -20,6 +20,7 @@ import { Menu, renderSandboxFormDiv, sayerror } from '#dom'
 import { mayLaunchGdcPlotFromRunpp } from '../gdc/launch.ts'
 import { childCorsMessage } from '#common/embedder-helpers'
 import { observeElem } from './app.observer.js'
+import { bundleCheck, checkBundleVersion, notifyChunkLoadError } from './bundleVersion.ts'
 
 /*
 exports a function runproteinpaint(), referred to as "runpp"
@@ -79,6 +80,10 @@ gdcbamslice
 // should see `Uncaught TypeError: Cannot set properties of null (setting 'ancestor_menus')` in the
 // browser console; TODO: create an automated test for front bundling to detect bug-fix regressions
 let headtip // = new Menu({ padding: '0px', offsetX: 0, offsetY: 0 }); headtip.d.style('z-index', 5555);
+
+// replaced with the package version by the client package.json sedver script on publish,
+// which only edits dist/chunk-*.js, so keep this declaration in this app.js file
+const clientVersion = `___current-proteinpaint-client-version___`
 
 export function runproteinpaint(arg) {
 	if (document.body === null || arg.holder === null) {
@@ -147,7 +152,7 @@ export function runproteinpaint(arg) {
 		.append('div')
 		.attr('class', 'sja_root_holder')
 		//must not use the method of ".datum({ clientVersion })", as d3 propagates bound data custom property to all descendents and are accidentally passed to event listeners
-		.attr('data-ppclientversion', `___current-proteinpaint-client-version___`)
+		.attr('data-ppclientversion', clientVersion)
 		.style('font-size', '1em')
 		.style('color', 'black')
 		.on('click', e => {
@@ -215,6 +220,8 @@ export function runproteinpaint(arg) {
 			app.cardsPath = data.cardsPath
 			app.pkgver = data.pkgver
 			app.launchDate = data.launchdate
+			// notify if this page's client code does not match the client bundle that the server currently serves
+			checkBundleVersion(clientVersion, data.clientVersion)
 			await setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
 			if (data.commonOverrides || arg.commonOverrides) {
@@ -443,6 +450,13 @@ runproteinpaint.getStatus = async function getStatus(outputAs = '') {
 		})
 		.catch(console.error)
 }
+
+// the webpack-bundled /bin/proteinpaint.js calls these (see front/src/index.js),
+// an embedder portal that bundles the client package separately should not
+runproteinpaint.enableBundleCheck = () => {
+	bundleCheck.enabled = true
+}
+runproteinpaint.onChunkLoadError = e => notifyChunkLoadError(e, clientVersion)
 
 // KEEP THIS ppsrc DECLARATION AT THE TOP SCOPE !!!
 // need to know the script src when pp is first loaded

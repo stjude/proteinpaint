@@ -1,1 +1,2 @@
-
+Features:
+- use content-hashed bundle chunk filenames and notify when the loaded client code is outdated
