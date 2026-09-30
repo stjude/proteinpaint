@@ -336,7 +336,10 @@ class MassSessionBtn {
 					const name = input.property('value') || placeholder
 					this.savedSessions[name] = this.getSavableState()
 					const res = await this.getSessionUrl(name)
-					if (res.id != name) throw `error saving ${name}`
+					if (res.error || res.id != name) {
+						sayerror(submitDiv, `Unable to save '${name}' on the server: ${res.error || 'unexpected session id'}`)
+						return
+					}
 					// this.download(name)
 					this.confirmAction(`Saved '<b>${name}</b>' on the server`)
 				})
@@ -389,8 +392,13 @@ class MassSessionBtn {
 		if (filename) {
 			return res
 		} else {
-			const url = `${this.hostURL}/?mass-session-id=${res.id}&noheader=1`
 			this.dom.tip.showunder(this.dom.button.node())
+			if (res.error || !res.id) {
+				// for example, a session state that is too large, or a server that does not enable saved sessions
+				sayerror(this.dom.tip.d.append('div'), `Unable to create a session link: ${res.error || 'missing session id'}`)
+				return
+			}
+			const url = `${this.hostURL}/?mass-session-id=${res.id}&noheader=1`
 			const linkDiv = this.dom.tip.d.append('div').style('margin', '10px')
 			linkDiv
 				.append('div')
