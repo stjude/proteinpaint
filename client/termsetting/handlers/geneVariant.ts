@@ -38,9 +38,7 @@ export function getHandler(self: TermSetting) {
 			} else {
 				text = 'any variant class'
 			}
-			if (self.term.sampleTypeLabel) {
-				text += ` (${self.term.sampleTypeLabel})`
-			}
+			if (self.term.label) text += ` (${self.term.label})`
 			return { text }
 		},
 

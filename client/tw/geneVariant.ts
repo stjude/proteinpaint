@@ -302,8 +302,7 @@ export class GvPredefinedGS extends GvBase {
 		let text = this.term.name
 		const gsname = this.term?.groupsetting?.lst?.[this.q.predefined_groupset_idx].name
 		if (gsname) text += ` ${gsname}`
-		const sampleTypeLabel = this.term.sampleTypeLabel
-		if (sampleTypeLabel) text += ` (${sampleTypeLabel})`
+		if (this.term.label) text += ` (${this.term.label})`
 		return text
 	}
 }

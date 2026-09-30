@@ -649,13 +649,15 @@ export const moriginsomatic = 'S'
 morigin[moriginsomatic] = {
 	label: 'Somatic',
 	desc: 'A variant found only in a tumor sample. The proportion is indicated by lack of any arc.',
-	legend: '<circle cx="7" cy="12" r="7" fill="#b1b1b1"></circle>'
+	legend: '<circle cx="7" cy="12" r="7" fill="#b1b1b1"></circle>',
+	order: 1
 }
 export const morigingermline = 'G'
 morigin[morigingermline] = {
 	label: 'Germline',
 	desc: 'A constitutional variant found in a normal sample. The proportion is indicated by the span of the solid arc within the whole circle.',
-	legend: germlinelegend
+	legend: germlinelegend,
+	order: 2
 }
 
 morigin.germline = morigin[morigingermline]
