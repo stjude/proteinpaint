@@ -1,26 +1,32 @@
 import fs from 'fs'
 import path from 'path'
+import crypto from 'crypto'
 import type { RouteApi } from '#types'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
+
+// a zero maxAge or maxSize for the massSession cache subdir means that the cache monitor
+// would evict every saved session, so all /massSession methods respond as not found instead
+const cacheOpts = serverconfig.features?.cacheMonitor?.subdirs?.massSession
+const isDisabled = cacheOpts?.maxAge === 0 || cacheOpts?.maxSize === 0
 
 export const api: RouteApi = {
 	// saves, gets, or deletes a mass app state as a server-side session file
 	endpoint: 'massSession',
 	methods: {
 		get: {
-			init: () => get,
+			init: () => (isDisabled ? notEnabled : get),
 			request: { typeId: 'MassSessionGetRequest' /*, checkers: TODO write validator */ },
 			response: { typeId: 'MassSessionGetResponse' }
 		},
 		post: {
-			init: () => save,
+			init: () => (isDisabled ? notEnabled : save),
 			request: { typeId: 'MassSessionSaveRequest' },
 			response: { typeId: 'MassSessionSaveResponse' }
 		},
 		delete: {
-			init: () => _delete,
+			init: () => (isDisabled ? notEnabled : _delete),
 			request: { typeId: 'MassSessionDeleteRequest' },
 			response: { typeId: 'MassSessionDeleteResponse' }
 		}
@@ -29,6 +35,13 @@ export const api: RouteApi = {
 
 const cachedir_massSession = serverconfig.cachedir_massSession || path.join(serverconfig.cachedir, 'massSession')
 if (!fs.existsSync(cachedir_massSession)) fs.mkdirSync(cachedir_massSession)
+
+// the maximum size of a saved session file, in bytes
+const maxBytes = serverconfig.features?.massSessionMaxBytes || 1e6
+
+function notEnabled(req, res) {
+	res.status(404).send({ error: 'saved sessions are not enabled on this server' })
+}
 
 async function save(req, res) {
 	// POST
@@ -49,6 +62,7 @@ async function save(req, res) {
 
 		// req.body is some string data, save it to file named by the session id
 		const content = JSON.stringify(req.body)
+		if (Buffer.byteLength(content) > maxBytes) throw `session state is too large to save`
 		const dir = filename ? getSessionPath(q, payload) : cachedir_massSession
 		const dirExists = await fs.promises
 			.access(dir)
@@ -133,21 +147,12 @@ async function _delete(req, res) {
 	}
 }
 
+const idChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+
+// returns a 15-character session id in [0-9A-Za-z], same format as before, from a cryptographically secure source
 function makeID() {
-	/*
-	to come up with a character in the session string, get an integer in the following range and convert to char
-	decimal to char range:
-		48-57: 0-9
-		65-90: A-Z
-		97-122: a-z
-	*/
 	const lst: string[] = []
-	while (lst.length < 15) {
-		const i = 46 + Math.floor(80 * Math.random())
-		if ((i >= 48 && i <= 57) || (i >= 65 && i <= 90) || (i >= 97 && i <= 122)) {
-			lst.push(String.fromCharCode(i))
-		}
-	}
+	while (lst.length < 15) lst.push(idChars[crypto.randomInt(idChars.length)])
 	return lst.join('')
 }
 
