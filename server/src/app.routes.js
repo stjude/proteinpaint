@@ -31,6 +31,7 @@ export const routeFiles = [
 	import('./routes/hicstat.ts'),
 	import('./routes/img.ts'),
 	import('./routes/isoformlst.ts'),
+	import('./routes/massSession.ts'),
 	import('./routes/ntseq.ts'),
 	import('./routes/pdomain.ts'),
 	import('./routes/profile.barchart2.ts'),

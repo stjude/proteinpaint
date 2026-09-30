@@ -55,7 +55,7 @@ import bedj_request_closure from './bedj.js'
 import { request_closure as blat_request_closure } from './blat.js'
 import { mds3_request_closure } from './mds3.load.js'
 import { handle_mdssvcnv_expression } from './handle_mdssvcnv_expression.js'
-import * as massSession from './massSession.js'
+import { getSessionIdsByCred } from './massSession.js'
 import * as singlecell from './singlecell.js'
 import * as fimo from './fimo.js'
 import { draw_partition } from './partitionmatrix.js'
@@ -130,10 +130,7 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.all(basepath + '/termdb', protectedRoutes.samples, termdb.handle_request_closure(genomes))
 	app.all(basepath + '/termdb/barsql', protectedRoutes.minSampleSize, termdbbarsql.handle_request_closure(genomes))
 	app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
-	app.post(basepath + '/massSession', massSession.save)
-	app.get(basepath + '/massSession', massSession.get)
-	app.delete(basepath + '/massSession', massSession._delete)
-	app.get(basepath + '/sessionIds', massSession.getSessionIdsByCred)
+	app.get(basepath + '/sessionIds', getSessionIdsByCred)
 	app.get(basepath + '/isoformbycoord', handle_isoformbycoord)
 	app.post(basepath + '/bamnochr', handle_bamnochr)
 	app.get(basepath + '/ideogram', handle_ideogram)
