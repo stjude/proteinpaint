@@ -82,7 +82,7 @@ gdcbamslice
 let headtip // = new Menu({ padding: '0px', offsetX: 0, offsetY: 0 }); headtip.d.style('z-index', 5555);
 
 // replaced with the package version by the client package.json sedver script on publish,
-// which only edits dist/chunk-*.js, so keep this declaration in this app.js file
+// which only edits dist/app.js and dist/chunk-*.js, so keep this declaration in this app.js file
 const clientVersion = `___current-proteinpaint-client-version___`
 
 export function runproteinpaint(arg) {
