@@ -1,1 +1,2 @@
-
+Fixes:
+- harden user-keyed object maps against prototype pollution

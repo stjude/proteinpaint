@@ -517,8 +517,10 @@ for(const i of atlst) {
 			prod.eventlabel = (prod.geneA ? prod.geneA : prod.chrA) + '-' + (prod.geneB ? prod.geneB : prod.chrB)
 		}
 		// group by sample
-		const tmp = {}
-		const sampleless = {}
+		// prod.sample is attacker-reachable data (fusioneditor upload/runpp arg); use
+		// null-prototype objects so a sample name of "__proto__" cannot pollute Object.prototype
+		const tmp = Object.create(null)
+		const sampleless = Object.create(null)
 		let hassampleless = false
 		for (const prod of items) {
 			let n = prod.sample
