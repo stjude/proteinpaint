@@ -1,2 +1,1 @@
-Fixes:
-- minor rendering adjustment in scatterplot legend
+

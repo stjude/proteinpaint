@@ -14,6 +14,7 @@ Fixes:
 - harden step_gene() per-event sample buckets against prototype pollution
 - move the /massSession route setup to src/routes/massSession.ts (code-scanning #110, #111)
 - save a mass session whose state has an embedder{} object
+- minor rendering adjustment in scatterplot legend
 
 
 ## 2.215.0
