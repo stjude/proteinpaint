@@ -838,6 +838,207 @@ tape('edit: the input is length-limited and over-long text is rejected', test =>
 })
 
 /**************
+ selection tests (onSelect, singleMode)
+***************/
+
+tape('\n', test => {
+	test.comment('-***- dom/TableBase - selection -***-')
+	test.end()
+})
+
+type Call = { idx: number; checked: boolean; isInput: boolean }
+
+function makeSelectTable(opts: { singleMode?: boolean; showLines?: boolean; rows?: TableBaseRow[] } = {}) {
+	const holder = getHolder()
+	const calls: Call[] = []
+	const table = new TableBase({
+		columns: sortFilterColumns,
+		rows: opts.rows || makeSortFilterRows(),
+		div: holder,
+		singleMode: opts.singleMode,
+		styles: { showLines: opts.showLines },
+		onSelect: (idx, node) => calls.push({ idx, checked: node.checked, isInput: node instanceof HTMLInputElement })
+	}).render()
+	return { holder, table, calls }
+}
+
+const trAt = (holder: any, i: number) => holder.selectAll('tbody tr').nodes()[i] as HTMLTableRowElement
+const inputAt = (holder: any, i: number) => trAt(holder, i).querySelector('input') as HTMLInputElement
+const checkedNames = (holder: any) =>
+	(holder.selectAll('tbody tr').nodes() as HTMLTableRowElement[])
+		.filter(tr => (tr.querySelector('input') as HTMLInputElement).checked)
+		.map(tr => tr.cells[1].textContent)
+
+tape('select: no onSelect means no selection column', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+
+	test.equal(holder.selectAll('tbody input').size(), 0, 'Should render no selection inputs')
+	test.equal(trAt(holder, 0).getAttribute('tabindex'), null, 'Rows should not be focusable')
+	test.equal(trAt(holder, 0).cells.length, sortFilterColumns.length, 'Should add no extra cell')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: multiple mode renders checkboxes, single mode renders radios sharing one name', test => {
+	test.timeoutAfter(100)
+	const multi = makeSelectTable()
+	const single = makeSelectTable({ singleMode: true })
+
+	const multiInputs = multi.holder.selectAll('tbody input').nodes() as HTMLInputElement[]
+	const singleInputs = single.holder.selectAll('tbody input').nodes() as HTMLInputElement[]
+	test.ok(multiInputs.every(i => i.type === 'checkbox'), 'Should render checkboxes by default')
+	test.ok(singleInputs.every(i => i.type === 'radio'), 'Should render radios in singleMode')
+	test.equal(new Set(singleInputs.map(i => i.name)).size, 1, 'Radios should share one name so they group')
+	test.notEqual(singleInputs[0].name, multiInputs[0].name, 'Two tables should not share an input name')
+	test.equal(multi.holder.selectAll('thead th').size(), sortFilterColumns.length + 1, 'Should add a header cell for the column')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: clicking the input, the row, or pressing Enter/Space all call the same callback', test => {
+	test.timeoutAfter(100)
+	const { holder, calls } = makeSelectTable()
+	const rowCell = (i: number) => trAt(holder, i).cells[1]
+
+	inputAt(holder, 0).click()
+	test.deepEqual(calls.pop(), { idx: 0, checked: true, isInput: true }, 'Input click: original index, node.checked, input node')
+
+	rowCell(1).dispatchEvent(new Event('click', { bubbles: true }))
+	test.deepEqual(calls.pop(), { idx: 1, checked: true, isInput: true }, 'Row click: same arguments')
+	rowCell(1).dispatchEvent(new Event('click', { bubbles: true }))
+	test.deepEqual(calls.pop(), { idx: 1, checked: false, isInput: true }, 'Row click again deselects and reports checked=false')
+
+	trAt(holder, 2).focus()
+	trAt(holder, 2).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+	test.deepEqual(calls.pop(), { idx: 2, checked: true, isInput: true }, 'Enter on the focused row: same arguments')
+	trAt(holder, 2).dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }))
+	test.deepEqual(calls.pop(), { idx: 2, checked: false, isInput: true }, 'Space on the focused row: same arguments')
+	test.equal(calls.length, 0, 'Every action should have called the callback exactly once')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: keys from a descendant and clicks on links or inputs do not toggle the row', test => {
+	test.timeoutAfter(100)
+	const rows: TableBaseRow[] = [[{ value: 'A' }, { value: 1 }, { url: 'https://example.com', value: 'link' }]]
+	const { holder, calls } = makeSelectTable({ rows })
+
+	const link = trAt(holder, 0).querySelector('a') as HTMLElement
+	link.dispatchEvent(new Event('click', { bubbles: true }))
+	test.equal(calls.length, 0, 'A link click should not select the row')
+	link.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+	test.equal(calls.length, 0, 'Enter on a descendant should not select the row')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: single mode selects one row at a time and ignores a click on the selected row', test => {
+	test.timeoutAfter(100)
+	const { holder, table, calls } = makeSelectTable({ singleMode: true })
+
+	trAt(holder, 0).cells[1].dispatchEvent(new Event('click', { bubbles: true }))
+	trAt(holder, 2).cells[1].dispatchEvent(new Event('click', { bubbles: true }))
+	test.deepEqual(
+		calls,
+		[
+			{ idx: 0, checked: true, isInput: true },
+			{ idx: 2, checked: true, isInput: true }
+		],
+		'Should call back only for the newly selected row'
+	)
+	test.deepEqual(table.getSelectedIndexes(), [2], 'Should keep only the last selected row')
+	test.deepEqual(checkedNames(holder), ['Bob'], 'Only one radio should be checked')
+
+	trAt(holder, 2).cells[1].dispatchEvent(new Event('click', { bubbles: true }))
+	test.equal(calls.length, 2, 'Clicking the already selected row should not call back again')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: multiple mode tracks selected original indexes', test => {
+	test.timeoutAfter(100)
+	const { holder, table } = makeSelectTable()
+
+	inputAt(holder, 2).click()
+	inputAt(holder, 0).click()
+	test.deepEqual(table.getSelectedIndexes(), [0, 2], 'Should list original indexes, ascending')
+	inputAt(holder, 0).click()
+	test.deepEqual(table.getSelectedIndexes(), [2], 'Should drop a deselected row')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: the callback reports the original index after sort, and selection survives sort and filter', test => {
+	test.timeoutAfter(100)
+	const { holder, table, calls } = makeSelectTable()
+
+	table.sortByColumn(0) // Alice, Bob, Charlie
+	inputAt(holder, 0).click() // Alice is original row 1
+	test.equal(calls.pop()!.idx, 1, 'Should report the index in the caller array, not the displayed position')
+	test.equal((inputAt(holder, 0).getAttribute('value')), '1', "Input value should be the original index")
+
+	table.sortByColumn(0) // Charlie, Bob, Alice
+	test.deepEqual(checkedNames(holder), ['Alice'], 'Selection should follow the row through a re-sort')
+
+	table.setColumnFilter(2, 'manager') // Charlie only; Alice is hidden but still selected
+	test.deepEqual(checkedNames(holder), [], 'Hidden row is not displayed')
+	test.deepEqual(table.getSelectedIndexes(), [1], 'Hidden row should stay selected')
+	table.setColumnFilter(2, '')
+	test.deepEqual(checkedNames(holder), ['Alice'], 'Selection should reappear when the filter is cleared')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: editing a cell does not select the row', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const calls: number[] = []
+	new TableBase({
+		columns: editColumns,
+		rows: makeEditRows(),
+		div: holder,
+		onSelect: idx => calls.push(idx)
+	}).render()
+
+	const td = trAt(holder, 0).cells[1] // cells[0] is the selection column
+	td.dispatchEvent(new Event('click', { bubbles: true }))
+	test.ok(td.querySelector('input'), 'Should start editing')
+	test.equal(calls.length, 0, 'Should not select the row')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('select: the selection column sits after the line numbers, and inputs are labelled for screen readers', test => {
+	test.timeoutAfter(100)
+	const rows: TableBaseRow[] = [
+		[{ value: 'Alice' }, { value: 30 }, { value: 'x' }],
+		[{ value: '' }, { color: '#fff' }, { value: '' }]
+	]
+	const { holder } = makeSelectTable({ showLines: true, rows })
+
+	test.equal(trAt(holder, 0).cells[0].textContent, '1', 'Line number should come first')
+	test.ok(trAt(holder, 0).cells[1].querySelector('input'), 'Selection input should come second')
+
+	const input = inputAt(holder, 0)
+	const labelId = input.getAttribute('aria-labelledby')!
+	test.equal(document.getElementById(labelId)!.textContent, 'Alice', 'Should be labelled by the first cell with text')
+	test.equal(inputAt(holder, 1).getAttribute('aria-label'), 'Select row 2', 'Should fall back to a generic label')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+/**************
  accessibility tests
 ***************/
 
