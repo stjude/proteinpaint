@@ -447,6 +447,27 @@ tape('snpgtCacheFile()', test => {
 	test.end()
 })
 
+tape('spawn helpers reject when the process cannot be spawned', async test => {
+	// a nonexistent cwd makes spawn() emit 'error', which crashes the process if nothing listens for it
+	const dir = `/nonexistent-${Date.now()}`
+	const helpers = {
+		get_lines_bigfile: () => utils.get_lines_bigfile({ args: ['-H', 'x.gz'], dir, callback: () => {} }),
+		get_lines_txtfile: () => utils.get_lines_txtfile({ args: ['x.txt'], dir, callback: () => {} }),
+		get_header_txt: () => utils.get_header_txt('x.txt', dir),
+		get_header_bcf: () => utils.get_header_bcf('x.bcf', dir),
+		bam_ifnochr: () => utils.bam_ifnochr('x.bam', {}, dir)
+	}
+	for (const [name, fn] of Object.entries(helpers)) {
+		try {
+			await fn()
+			test.fail(`${name}() should reject`)
+		} catch (e) {
+			test.equal(e?.code, 'ENOENT', `${name}() should reject with the spawn error`)
+		}
+	}
+	test.end()
+})
+
 tape('cleanup', test => {
 	if (allowRemoteFile === undefined) delete serverconfig.features.ALLOW_remotefilefromurl
 	else serverconfig.features.ALLOW_remotefilefromurl = allowRemoteFile

@@ -1,1 +1,2 @@
-
+Fixes:
+- keep the /bamnochr cache dir server-side and handle spawn errors (code-scanning #92)
