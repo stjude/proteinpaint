@@ -1,5 +1,6 @@
 import tape from 'tape'
 import http from 'http'
+import net from 'net'
 import serverconfig from '../serverconfig.js'
 import * as utils from '../utils.js'
 import { setRoutes } from '../app.unorg.js'
@@ -24,6 +25,7 @@ test sections:
 - /urltextfile resolves a relative redirect of a serverconfig.URL url against the public url
 - makePublicAddressLookup() checks every resolved address
 - requestRemoteUrl() rejects a hostname that resolves to a non-public address
+- requestRemoteUrl() times out response headers that trickle in
 */
 
 let server, H, port, trickleClosed
@@ -319,7 +321,7 @@ tape('requestRemoteUrl() rejects a hostname that resolves to a non-public addres
 	const url = `http://rebind.test:${port}/a/b.txt`
 	test.equal(utils.checkRemoteUrl(url), undefined, 'the hostname alone should pass checkRemoteUrl()')
 	try {
-		const res = await utils.requestRemoteUrl(url, lookup)
+		const res = await utils.requestRemoteUrl(url, { lookup })
 		res.resume()
 		test.fail('should not connect to a hostname that resolves to the loopback address')
 	} catch (e) {
@@ -327,9 +329,34 @@ tape('requestRemoteUrl() rejects a hostname that resolves to a non-public addres
 	}
 
 	serverconfig.urlHosts = ['rebind.test']
-	const res = await utils.requestRemoteUrl(url, lookup)
+	const res = await utils.requestRemoteUrl(url, { lookup })
 	test.equal(await utils.readResponseText(res), 'INTERNAL /a/b.txt', 'should connect to a host listed in urlHosts')
 	delete serverconfig.urlHosts
+	test.end()
+})
+
+tape('requestRemoteUrl() times out response headers that trickle in', async test => {
+	// a raw tcp server that sends one response header byte at a time, so the socket is never idle
+	const slow = net.createServer(socket => {
+		socket.on('error', () => {})
+		const head = 'HTTP/1.1 200 OK\r\nx-slow: ' + 'x'.repeat(1000)
+		let i = 0
+		const timer = setInterval(() => (i < head.length ? socket.write(head[i++]) : clearInterval(timer)), 20)
+		socket.on('close', () => clearInterval(timer))
+	})
+	await new Promise(resolve => slow.listen(0, '127.0.0.1', resolve))
+	serverconfig.urlHosts = ['127.0.0.1']
+	const start = Date.now()
+	try {
+		const res = await utils.requestRemoteUrl(`http://127.0.0.1:${slow.address().port}/a/b.txt`, { timeout: 300 })
+		res.destroy()
+		test.fail('should reject response headers that do not arrive within the timeout')
+	} catch (e) {
+		test.equal(e.message, 'response headers timed out', 'should reject response headers that trickle in')
+		test.ok(Date.now() - start < 2000, 'should reject at the timeout even though the socket is never idle')
+	}
+	delete serverconfig.urlHosts
+	slow.close()
 	test.end()
 })
 
