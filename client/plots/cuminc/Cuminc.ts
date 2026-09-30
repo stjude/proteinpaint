@@ -9,7 +9,7 @@ import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter, type Line } from 'd3-shape'
 import { rgb } from 'd3-color'
-import { getSeriesTip, htmlLegend, Menu, renderAtRiskG, renderPvalues, sayerror } from '#dom'
+import { escapeHtml, getSeriesTip, htmlLegend, Menu, renderAtRiskG, renderPvalues, sayerror } from '#dom'
 import Partjson from 'partjson'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
@@ -174,7 +174,7 @@ export class Cuminc extends PlotBase implements RxComponent {
 		if (this.config.term2 && legendItems.length) {
 			this.legendData = [
 				{
-					name: this.config.term2.term.name,
+					name: escapeHtml(this.config.term2.term.name),
 					items: legendItems
 				}
 			]
@@ -680,7 +680,7 @@ class MassCumInc extends PlotBase implements RxComponent {
 		if (this.config.term2 && legendItems.length) {
 			this.legendData = [
 				{
-					name: this.config.term2.term.name,
+					name: escapeHtml(this.config.term2.term.name),
 					items: legendItems.filter(s => !s.isHidden)
 				}
 			]

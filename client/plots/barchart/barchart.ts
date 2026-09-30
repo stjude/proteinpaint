@@ -3,6 +3,7 @@ import getHandlers from './barchart.events'
 import barsRenderer from './bars.renderer'
 import { rendererSettings, plotLength } from './bars.settings'
 import {
+	escapeHtml,
 	htmlLegend,
 	/** svgLegend, */ renderTable,
 	CustomDownloadMenu,
@@ -922,7 +923,7 @@ export class Barchart extends PlotBase implements RxComponent {
 				}
 			})
 			// title of descriptive stats should include the term1 name if term2 is present
-			const title = t2 ? `Descriptive statistics: ${t1.term.name}` : 'Descriptive statistics'
+			const title = t2 ? `Descriptive statistics: ${escapeHtml(t1.term.name)}` : 'Descriptive statistics'
 			const name = `<span style="${headingStyle}">${title}</span>`
 			legendGrps.push({ name, items })
 		}
@@ -936,7 +937,7 @@ export class Barchart extends PlotBase implements RxComponent {
 			})
 			// title of descriptive stats will include the term2 name
 			// because two terms are present
-			const title = `Descriptive statistics: ${t2.term.name}`
+			const title = `Descriptive statistics: ${escapeHtml(t2.term.name)}`
 			const name = `<span style="${headingStyle}">${title}</span>`
 			legendGrps.push({ name, items })
 		}
@@ -978,7 +979,7 @@ export class Barchart extends PlotBase implements RxComponent {
 				.sort(this.barSorter)
 
 			if (items.length) {
-				const name = t2 ? t1.term.name : 'Other categories'
+				const name = t2 ? escapeHtml(t1.term.name) : 'Other categories'
 				legendGrps.push({
 					name: `<span style="${headingStyle}">${name}</span>`,
 					items
@@ -996,13 +997,15 @@ export class Barchart extends PlotBase implements RxComponent {
 					: t2.q.value_by_most_recent
 					? 'most recent'
 					: ''
-			const legendName = !t2
-				? this.hasMembershipOverlay
-					? t1.term.name
-					: 'Category'
-				: t2.term.type == 'geneVariant'
-				? ''
-				: t2.term.name
+			const legendName = escapeHtml(
+				!t2
+					? this.hasMembershipOverlay
+						? t1.term.name
+						: 'Category'
+					: t2.term.type == 'geneVariant'
+					? ''
+					: t2.term.name
+			)
 			legendGrps.push({
 				name: `<span style="${headingStyle}">` + legendName + (value_by_label ? ', ' + value_by_label : '') + '</span>',
 				testIdSuffix: 'Overlay',

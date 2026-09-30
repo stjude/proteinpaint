@@ -11,7 +11,7 @@ import { line, area, curveStepAfter } from 'd3-shape'
 import { rgb } from 'd3-color'
 import Partjson from 'partjson'
 import { fillTermWrapper } from '#termsetting'
-import { DownloadMenu, getSeriesTip, htmlLegend, Menu, renderAtRiskG, renderPvalues } from '#dom'
+import { DownloadMenu, escapeHtml, getSeriesTip, htmlLegend, Menu, renderAtRiskG, renderPvalues } from '#dom'
 import { downloadChart } from '#common/svg.download'
 import { getCombinedTermFilter } from '#filter'
 import { isNumericTerm } from '#shared/terms.js'
@@ -539,7 +539,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 			const termNum = config.term.term.type == 'survival' && config.term2 ? 'term2' : 'term'
 			this.legendData = [
 				{
-					name: config[termNum].term.name,
+					name: escapeHtml(config[termNum].term.name),
 					items: legendItems.filter(s => !s.isHidden)
 				}
 			]
