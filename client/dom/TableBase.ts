@@ -1,45 +1,3 @@
-/**
- * TableBase class is for rendering HTML tables with advanced features and interactions.
- * This is the follow up to renderTable() in ./table.ts. This should be a more sophisticated, 
- * maintainable solution for table rendering. 
- * 
- * Rationale: For use cases requiring advanced functions, another class can 
- * extended TableBase for specific advanced functionalities. This will prevent a main
- * class from becoming overly complex and difficult to maintain.
- * 
- * TODOs: 
- * Architecture and design consider actions:
- * 1. TableBase should be designed to be easily extendable for advanced functionalities.
- * 2. Consider separation of concerns to keep the core table logic independent from advanced features.
- * 
- * What to implement: 
- * - Clean and maintainable code. Encapsulation, optimization, and testing is key. 
- * - Data processing should be enforced for the caller but if required, encapsulated and tested. 
- * 
- * What to avoid: 
- * - Excessive code complexity. This is a constant struggle in this code base. I want something
- * clean, understandable, and maintainable. 
- * - Excessive feature bloat and by extension, excessive init options. This class should have the essential features
- * of the a table, but not overloaded with unnecessary features. 
- * - Guardrails from misuse or unintended side effects. A structure that will discourage developers from 
- * making additions rather than extending the class. 
- * - Excessive rerendering or updating. The CALLER is responsible for triggering updates when necessary but 
- * this code should make it easy for the caller to do so with some helper methods or hooks.
- * 
- * 
- * Features to implement: 
- * 1. Basic table structure and initialization
- * 2. Row and column management
- * 3. Cell editing and interaction, ad hoc. On columns denoted as editable.
- * 4. Sorting and filtering capabilities
- * 5. Pagination support
- * 6. Responsive design and layout adjustments
- * 7. Accessibility support (keyboard navigation, screen reader compatibility)
- * 8. Export and import functionality (CSV, Excel, etc.)
- * 9. Customizable cell rendering and formatting
- */
-
-
 import type { Table, Th, Tr, Td } from '../types/d3'
 
 export type TableBaseCell = {
@@ -68,8 +26,29 @@ export type TableBaseColumn = {
 	tooltip?: string
 	/** clicking the header label toggles ascending/descending sort on this column */
 	sortable?: boolean
-	/** renders a text input in the header; rows are kept only if this column's text contains the input (case-insensitive) */
+	/** renders a text input in the header; rows are kept only if this column's text contains the input (case-insensitive).
+	 * Number cells also accept >n, >=n, <n, <=n, =n and lo-hi */
 	filterable?: boolean
+	/** clicking a text cell in this column turns it into an input. Enter or blur commits, Escape cancels.
+	 * Cells with a url or html are not editable. Changes are reported through opts.onEdit */
+	editable?: boolean
+	/** Allowlist check on edited text in an editable column, e.g. text => /^[\w .-]+$/.test(text).
+	 * An edit it rejects is reverted and onEdit is not called. Cells that hold a number only accept numbers regardless */
+	validate?: (text: string) => boolean
+}
+
+/** Longest text an edit may commit. Keeps an oversized paste from reaching whatever handles onEdit */
+const MAX_EDIT_LENGTH = 500
+
+/** WARNING: cell.value is raw user input. The table rejects obviously bad edits (see TableBaseColumn.validate)
+ * but cannot make a value safe for a query, file path or shell. If it is sent to a server, the server must
+ * validate it and use parameterized queries. Never build SQL or commands by string concatenation. */
+export type TableBaseEdit = {
+	/** index of the edited row in the array the caller passed in, regardless of sort/filter */
+	rowIdx: number
+	colIdx: number
+	/** the cell, with cell.value already updated */
+	cell: TableBaseCell
 }
 
 type SortState = { colIdx: number; ascending: boolean }
@@ -94,18 +73,66 @@ function sortRows(rows: TableBaseRow[], colIdx: number, ascending: boolean): Tab
 	})
 }
 
+type ColumnFilter = {
+	/** lowercased text the user typed */
+	text: string
+	/** set when the text is a numeric expression such as >30, <=5 or 20-30; applied to number cells only */
+	test?: (n: number) => boolean
+}
+
+const NUM = '-?(?:\\d+\\.?\\d*|\\.\\d+)'
+const COMPARE = new RegExp(`^(>=|<=|>|<|=)\\s*(${NUM})$`)
+const RANGE = new RegExp(`^(${NUM})\\s*-\\s*(${NUM})$`)
+
+/** Reads >n, >=n, <n, <=n, =n and lo-hi (inclusive). Anything else is plain text and returns undefined,
+ * so a number cell is still matched by substring, e.g. "3" keeps 30 and 35. */
+function parseNumericFilter(text: string): ((n: number) => boolean) | undefined {
+	const compare = COMPARE.exec(text)
+	if (compare) {
+		const limit = Number(compare[2])
+		switch (compare[1]) {
+			case '>':
+				return n => n > limit
+			case '>=':
+				return n => n >= limit
+			case '<':
+				return n => n < limit
+			case '<=':
+				return n => n <= limit
+			default:
+				return n => n === limit
+		}
+	}
+	const range = RANGE.exec(text)
+	if (range) {
+		const a = Number(range[1])
+		const b = Number(range[2])
+		const [lo, hi] = a <= b ? [a, b] : [b, a]
+		return n => n >= lo && n <= hi
+	}
+}
+
+/** Appearance only. Anything that changes how the table looks rather than what it does belongs here. */
+export type TableBaseStyles = {
+	/** alternate row background color. default true */
+	striped?: boolean
+	/** show a left-hand line-number column. default false */
+	showLines?: boolean
+	/** default 90vw */
+	maxWidth?: string
+	/** default 40vh */
+	maxHeight?: string
+}
+
 export type TableBaseOpts = {
 	/** d3 selection to render the table into */
 	div: any
 	columns: TableBaseColumn[]
 	rows: TableBaseRow[]
-	/** alternate row background color. default true */
-	striped?: boolean
-	/** show a left-hand line-number column. default false */
-	showLines?: boolean
-	maxWidth?: string
-	maxHeight?: string
+	styles?: TableBaseStyles
 	dataTestId?: string
+	/** called after the user commits an edit in an editable column */
+	onEdit?: (edit: TableBaseEdit) => void
 }
 
 /**
@@ -126,14 +153,15 @@ export class TableBase {
 	/** the rows currently displayed, after filtering and sorting */
 	protected rows: TableBaseRow[]
 	protected sortState?: SortState
-	/** active column filters: column index -> text the cell must contain */
-	protected filters = new Map<number, string>()
+	/** active column filters, by column index */
+	protected filters = new Map<number, ColumnFilter>()
 	protected sortIndicators = new Map<number, any>()
 	protected striped: boolean
 	protected showLines: boolean
 	protected maxWidth: string
 	protected maxHeight: string
 	protected dataTestId?: string
+	protected onEdit?: (edit: TableBaseEdit) => void
 
 	protected wrapper?: any
 	protected table?: Table
@@ -147,11 +175,13 @@ export class TableBase {
 		this.originalRows = opts.rows
 		this.originalIndex = new Map(opts.rows.map((row, i) => [row, i]))
 		this.rows = opts.rows
-		this.striped = opts.striped ?? true
-		this.showLines = opts.showLines ?? false
-		this.maxWidth = opts.maxWidth || '90vw'
-		this.maxHeight = opts.maxHeight || '40vh'
+		const styles = opts.styles || {}
+		this.striped = styles.striped ?? true
+		this.showLines = styles.showLines ?? false
+		this.maxWidth = styles.maxWidth || '90vw'
+		this.maxHeight = styles.maxHeight || '40vh'
 		this.dataTestId = opts.dataTestId
+		this.onEdit = opts.onEdit
 	}
 
 	protected static validate(opts: TableBaseOpts) {
@@ -221,10 +251,11 @@ export class TableBase {
 		return this.update()
 	}
 
-	/** Keeps only rows whose cell in this column contains text (case-insensitive). Empty text clears the filter. */
+	/** Keeps only rows whose cell in this column contains text (case-insensitive). Number cells also accept
+	 * >n, >=n, <n, <=n, =n and lo-hi. Empty text clears the filter. */
 	setColumnFilter(colIdx: number, text: string): this {
 		const trimmed = text.trim().toLowerCase()
-		if (trimmed) this.filters.set(colIdx, trimmed)
+		if (trimmed) this.filters.set(colIdx, { text: trimmed, test: parseNumericFilter(trimmed) })
 		else this.filters.delete(colIdx)
 		return this.update()
 	}
@@ -240,8 +271,12 @@ export class TableBase {
 	}
 
 	protected matchesFilters(row: TableBaseRow): boolean {
-		for (const [colIdx, text] of this.filters) {
+		for (const [colIdx, { text, test }] of this.filters) {
 			const cell = row[colIdx]
+			if (test && typeof cell.value === 'number') {
+				if (!test(cell.value)) return false
+				continue
+			}
 			const shown = cell.value ?? cell.url ?? ''
 			if (!String(shown).toLowerCase().includes(text)) return false
 		}
@@ -304,7 +339,7 @@ export class TableBase {
 				.attr('placeholder', 'Filter')
 				.attr('class', 'sjpp-table-filter-input')
 				.attr('data-testid', `sjpp-table-filter-${colIdx}`)
-				.attr('value', this.filters.get(colIdx) ?? '')
+				.attr('value', this.filters.get(colIdx)?.text ?? '')
 				.style('display', 'block')
 				.style('width', '90%')
 				.style('font-weight', 'normal')
@@ -322,7 +357,7 @@ export class TableBase {
 	/** Extension point: render a single row. Subclasses adding selection/click
 	 * behavior should override this. */
 	protected renderRow(row: TableBaseRow, rowIdx: number): Tr {
-		const tr: Tr = this.tbody.append('tr').attr('class', 'sjpp_row_wrapper')
+		const tr: Tr = this.tbody.append('tr').attr('class', 'sjpp_row_wrapper').datum(row)
 		if (this.striped && rowIdx % 2 === 1) tr.style('background-color', 'rgb(245,245,245)')
 		if (this.showLines) {
 			tr.append('td')
@@ -361,7 +396,56 @@ export class TableBase {
 			td.style('background-color', cell.color)
 		}
 
+		if (column.editable && !cell.url && !cell.html) {
+			td.style('cursor', 'text').on('click', () => this.startEdit(td, tr, cell, colIdx))
+		}
+
 		cell.__td = td
 		return td
+	}
+
+	/** Swaps the cell text for an input. A number cell only accepts a number, so a numeric column cannot
+	 * be filled with arbitrary text and sorting keeps working. Invalid edits revert silently.
+	 * The table is not redrawn: the caller decides when to call update(). */
+	protected startEdit(td: Td, tr: Tr, cell: TableBaseCell, colIdx: number): void {
+		if (!td.select('input').empty()) return
+		const before = cell.value ?? ''
+		let finished = false
+		const input = td
+			.text('')
+			.append('input')
+			.attr('type', 'text')
+			.attr('class', 'sjpp-table-edit-input')
+			.attr('maxlength', MAX_EDIT_LENGTH)
+			.style('width', '100%')
+			.property('value', before)
+
+		const isNumber = typeof before === 'number'
+		const validate = this.columns[colIdx].validate
+		const isValid = (text: string) =>
+			text.length <= MAX_EDIT_LENGTH &&
+			(!isNumber || (text.trim() !== '' && Number.isFinite(+text))) &&
+			(!validate || validate(text))
+
+		const finish = (commit: boolean) => {
+			if (finished) return
+			finished = true
+			const text = input.property('value') as string
+			if (commit && text !== String(before) && isValid(text)) {
+				cell.value = isNumber ? +text : text
+				td.text(cell.value)
+				this.onEdit?.({ rowIdx: this.getOriginalIndex(tr.datum() as TableBaseRow), colIdx, cell })
+			} else td.text(before)
+		}
+		input
+			.on('keydown', (event: KeyboardEvent) => {
+				if (event.key == 'Enter') finish(true)
+				else if (event.key == 'Escape') finish(false)
+			})
+			.on('blur', () => finish(true))
+
+		const node = input.node() as HTMLInputElement
+		node.focus()
+		node.select()
 	}
 }
