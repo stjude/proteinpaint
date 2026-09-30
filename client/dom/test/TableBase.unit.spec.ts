@@ -142,7 +142,7 @@ tape('showLines renders a line-number column', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 
-	new TableBase({ columns: testColumns, rows: testRows, div: holder, showLines: true }).render()
+	new TableBase({ columns: testColumns, rows: testRows, div: holder, styles: { showLines: true } }).render()
 
 	const firstDataRowCells = holder.selectAll('tbody tr').nodes()[0] as HTMLTableRowElement
 	test.equal(firstDataRowCells.cells.length, testColumns.length + 1, 'Should add one extra <td> for the line number')
@@ -178,7 +178,7 @@ tape('striped: false disables row highlighting', test => {
 		columns: [{ label: 'A' }],
 		rows: [[{ value: '1' }], [{ value: '2' }]],
 		div: holder,
-		striped: false
+		styles: { striped: false }
 	}).render()
 
 	const trs = holder.selectAll('tbody tr').nodes() as HTMLElement[]
@@ -544,6 +544,60 @@ tape('filter: matching nothing renders an empty body, and the filter input survi
 	test.end()
 })
 
+const numericFilterColumns: TableBaseColumn[] = [
+	{ label: 'Name', filterable: true },
+	{ label: 'Age', filterable: true }
+]
+
+function namesAfterAgeFilter(text: string): string[] {
+	const holder = getHolder()
+	new TableBase({ columns: numericFilterColumns, rows: makeSortFilterRows().map(r => [r[0], r[1]]), div: holder }).render()
+	typeFilter(holder, 1, text)
+	return bodyColumn(holder, 0)
+}
+
+tape('filter: a numeric column accepts comparison and range expressions', test => {
+	test.timeoutAfter(100)
+
+	test.deepEqual(namesAfterAgeFilter('>30'), ['Charlie'], '>30')
+	test.deepEqual(namesAfterAgeFilter('>=30'), ['Charlie', 'Alice'], '>=30')
+	test.deepEqual(namesAfterAgeFilter('<30'), ['Bob'], '<30')
+	test.deepEqual(namesAfterAgeFilter('<= 30'), ['Alice', 'Bob'], '<= 30 (space allowed)')
+	test.deepEqual(namesAfterAgeFilter('=35'), ['Charlie'], '=35')
+	test.deepEqual(namesAfterAgeFilter('25-30'), ['Alice', 'Bob'], '25-30 is inclusive')
+	test.deepEqual(namesAfterAgeFilter('30-25'), ['Alice', 'Bob'], 'a reversed range still works')
+
+	test.end()
+})
+
+tape('filter: plain text in a numeric column falls back to substring matching', test => {
+	test.timeoutAfter(100)
+
+	test.deepEqual(namesAfterAgeFilter('3'), ['Charlie', 'Alice'], '3 matches 35 and 30')
+	test.deepEqual(namesAfterAgeFilter('>abc'), [], 'an invalid expression is treated as text and matches nothing')
+
+	test.end()
+})
+
+tape('filter: numeric expressions combine with sort and do not break text columns', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({
+		columns: [{ label: 'Name', filterable: true }, { label: 'Age', filterable: true, sortable: true }],
+		rows: makeSortFilterRows().map(r => [r[0], r[1]]),
+		div: holder
+	}).render()
+
+	typeFilter(holder, 1, '>=30')
+	clickHeaderLabel(holder, 1)
+	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Charlie'], 'Should sort the rows the numeric filter kept')
+
+	typeFilter(holder, 0, '>30')
+	test.deepEqual(bodyColumn(holder, 0), [], 'A comparison typed in a text column is just text')
+
+	test.end()
+})
+
 tape('filter: only filterable columns render an input', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
@@ -595,6 +649,189 @@ tape('getOriginalIndex: reports the index in the caller array after sort and fil
 		'Should map filtered rows back to their original positions'
 	)
 	test.equal(table.getOriginalIndex([{ value: 'stranger' }]), -1, 'Should return -1 for a row it does not own')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+/**************
+ editing tests
+***************/
+
+tape('\n', test => {
+	test.comment('-***- dom/TableBase - editing -***-')
+	test.end()
+})
+
+const editColumns: TableBaseColumn[] = [
+	{ label: 'Name', editable: true, sortable: true },
+	{ label: 'Age', editable: true },
+	{ label: 'Fixed' }
+]
+
+function makeEditRows(): TableBaseRow[] {
+	return [
+		[{ value: 'Charlie' }, { value: 35 }, { value: 'a' }],
+		[{ value: 'Alice' }, { value: 30 }, { value: 'b' }]
+	]
+}
+
+function editCell(holder: any, rowIdx: number, colIdx: number, text: string | null, key = 'Enter') {
+	const tr = holder.selectAll('tbody tr').nodes()[rowIdx] as HTMLTableRowElement
+	const td = tr.cells[colIdx]
+	td.dispatchEvent(new Event('click', { bubbles: true }))
+	const input = td.querySelector('input') as HTMLInputElement | null
+	if (input && text !== null) {
+		input.value = text
+		input.dispatchEvent(new KeyboardEvent('keydown', { key }))
+	}
+	return { td, input }
+}
+
+tape('edit: clicking an editable cell shows an input holding the current text', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: editColumns, rows: makeEditRows(), div: holder }).render()
+
+	const { input } = editCell(holder, 0, 0, null)
+	test.ok(input, 'Should render an input in the clicked cell')
+	test.equal(input!.value, 'Charlie', 'Should start with the current text')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('edit: non-editable, url and html cells do not become inputs', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const columns: TableBaseColumn[] = [{ label: 'A', editable: true }, { label: 'B' }]
+	const rows: TableBaseRow[] = [[{ url: 'https://example.com' }, { value: 'x' }], [{ html: '<b>b</b>' }, { value: 'y' }]]
+	new TableBase({ columns, rows, div: holder }).render()
+
+	test.notOk(editCell(holder, 0, 0, null).input, 'Should not edit a url cell')
+	test.notOk(editCell(holder, 1, 0, null).input, 'Should not edit an html cell')
+	test.notOk(editCell(holder, 0, 1, null).input, 'Should not edit a cell in a non-editable column')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('edit: Enter commits, updates the cell and reports the original row index', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows = makeEditRows()
+	const edits: any[] = []
+	const table = new TableBase({ columns: editColumns, rows, div: holder, onEdit: e => edits.push(e) }).render()
+
+	table.sortByColumn(0) // Alice, Charlie: displayed position 0 is original row 1
+	const { td } = editCell(holder, 0, 0, 'Alicia')
+
+	test.equal(td.textContent, 'Alicia', 'Should show the new text')
+	test.equal(td.querySelector('input'), null, 'Should remove the input')
+	test.equal(rows[1][0].value, 'Alicia', "Should update the caller's cell")
+	test.equal(edits.length, 1, 'Should call onEdit once')
+	test.equal(edits[0].rowIdx, 1, 'Should report the index in the original array, not the displayed position')
+	test.equal(edits[0].colIdx, 0, 'Should report the column index')
+	test.equal(edits[0].cell, rows[1][0], 'Should report the edited cell')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('edit: Escape cancels and leaves the value and callback alone', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows = makeEditRows()
+	let called = 0
+	new TableBase({ columns: editColumns, rows, div: holder, onEdit: () => called++ }).render()
+
+	const { td } = editCell(holder, 0, 0, 'changed', 'Escape')
+	test.equal(td.textContent, 'Charlie', 'Should restore the original text')
+	test.equal(rows[0][0].value, 'Charlie', 'Should not change the cell value')
+	test.equal(called, 0, 'Should not call onEdit')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('edit: blur commits, and an unchanged value does not call onEdit', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows = makeEditRows()
+	let called = 0
+	new TableBase({ columns: editColumns, rows, div: holder, onEdit: () => called++ }).render()
+
+	const first = editCell(holder, 0, 0, null)
+	first.input!.value = 'Chuck'
+	first.input!.dispatchEvent(new Event('blur'))
+	test.equal(rows[0][0].value, 'Chuck', 'Blur should commit')
+	test.equal(called, 1, 'Should call onEdit for the change')
+
+	editCell(holder, 1, 0, 'Alice')
+	test.equal(called, 1, 'Should not call onEdit when the text is unchanged')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('edit: a number cell only accepts numbers and stays a number', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows = makeEditRows()
+	let called = 0
+	new TableBase({ columns: editColumns, rows, div: holder, onEdit: () => called++ }).render()
+
+	editCell(holder, 0, 1, '40')
+	test.strictEqual(rows[0][1].value, 40, 'Should store a number')
+	test.equal(called, 1, 'Should call onEdit for a valid number')
+
+	for (const bad of ['n/a', "1; DROP TABLE users", '', '  ']) {
+		const { td } = editCell(holder, 1, 1, bad)
+		test.strictEqual(rows[1][1].value, 30, `Should reject "${bad}" and keep the number`)
+		test.equal(td.textContent, '30', `Should revert the displayed text after "${bad}"`)
+	}
+	test.equal(called, 1, 'Should not call onEdit for rejected edits')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('edit: column.validate rejects disallowed text and reverts', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows = makeEditRows()
+	let called = 0
+	const columns: TableBaseColumn[] = [
+		{ label: 'Name', editable: true, validate: text => /^[\w .-]+$/.test(text) },
+		{ label: 'Age' },
+		{ label: 'Fixed' }
+	]
+	new TableBase({ columns, rows, div: holder, onEdit: () => called++ }).render()
+
+	const bad = editCell(holder, 0, 0, "x'; DROP TABLE users;--")
+	test.equal(rows[0][0].value, 'Charlie', 'Should keep the old value')
+	test.equal(bad.td.textContent, 'Charlie', 'Should revert the displayed text')
+	test.equal(called, 0, 'Should not call onEdit')
+
+	editCell(holder, 0, 0, 'Chuck-2')
+	test.equal(rows[0][0].value, 'Chuck-2', 'Should accept text the validator allows')
+	test.equal(called, 1, 'Should call onEdit for accepted text')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('edit: the input is length-limited and over-long text is rejected', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows = makeEditRows()
+	let called = 0
+	new TableBase({ columns: editColumns, rows, div: holder, onEdit: () => called++ }).render()
+
+	const { input } = editCell(holder, 0, 0, 'x'.repeat(501))
+	test.equal(input!.getAttribute('maxlength'), '500', 'Should set maxlength on the input')
+	test.equal(rows[0][0].value, 'Charlie', 'Should reject text over the limit even if maxlength is bypassed')
+	test.equal(called, 0, 'Should not call onEdit')
 
 	//if ((test as any)._ok) holder.remove()
 	test.end()
