@@ -18,6 +18,7 @@ type ViolinDensityBin = {
 
 type LegendItem = {
 	text: string
+	testIdSuffix?: string
 	noIcon: boolean
 	isHidden?: boolean
 	isClickable?: boolean
@@ -107,15 +108,15 @@ export default function setViolinRenderer(self: any) {
 			const chartDiv = self.dom.violinDiv
 				.append('div')
 				.attr('class', 'sjpp-vp-chartDiv')
+				.attr('data-testid', `sjpp-vp-chartDiv-${chartKey}`)
 				.style('padding', Object.keys(self.data.charts).length > 1 ? '20px 20px 0px 0px' : '0px')
 			chart.chartDiv = chartDiv
 			if (plots.length === 0) {
 				chartDiv.html(
 					` <span style="opacity:.6;font-size:1em;margin-left:90px;">No visible violin plot data to render</span>`
 				)
-				return
+				continue
 			}
-
 			// append the svg object to the body of the page
 			chartDiv.select('.sjpp-violin-plot').remove()
 
@@ -172,13 +173,12 @@ export default function setViolinRenderer(self: any) {
 					// enable brushing
 					if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svgData)
 				}
-
-				self.labelHideLegendClicking(t2, plot) // FIXME
 			}
 
 			// render p-value table
 			if (self.settings.showAssociationTests) self.renderPvalueTable(chartDiv, chart)
 		}
+		if (self.opts.mode != 'minimal') self.labelHideLegendClicking(t2)
 	}
 
 	self.displaySummaryStats = function (
@@ -258,7 +258,7 @@ export default function setViolinRenderer(self: any) {
 		})
 	}
 
-	self.getChartTitle = function (chartId: string, totalCount?:number) {
+	self.getChartTitle = function (chartId: string, totalCount?: number) {
 		return getChartTitle(self.config, chartId, totalCount)
 	}
 
@@ -402,7 +402,12 @@ export default function setViolinRenderer(self: any) {
 		// <g> of one plot
 		// adding .5 to plotIdx allows to anchor each plot <g> to the middle point
 		const svg = svgData.svgG
-		const violinG = svg.append('g').datum(plot).attr('class', 'sjpp-violinG')
+		const violinG = svg
+			.append('g')
+			.datum(plot)
+			.attr('class', 'sjpp-violinG')
+			.attr('data-testid', `sjpp-violinG-${plot.seriesId}`)
+
 		renderArea(violinG, plot, areaBuilder)
 		//render symmetrical violin plot
 		renderArea(violinG, plot, isH ? areaBuilder.y(d => -wScale(d.density)) : areaBuilder.x(d => -wScale(d.density)))
@@ -435,7 +440,7 @@ export default function setViolinRenderer(self: any) {
 	function renderLabels(t1: any, t2: any, violinG: any, plot: any, isH: boolean, settings: any) {
 		violinG
 			.append('text')
-			.attr('data-testid', 'sjpp-violin-label')
+			.attr('data-testid', `sjpp-violin-series-label-${plot.label}`)
 			.text(`${plot.label}, n=${plot.plotValueCount}`)
 			.style('cursor', 'pointer')
 			.on('click', function (event: MouseEvent) {
@@ -464,6 +469,7 @@ export default function setViolinRenderer(self: any) {
 		violinG
 			.append('path')
 			.attr('class', 'sjpp-vp-path')
+			.attr('data-testid', `sjpp-vp-path-${plot.seriesId}`)
 			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color)
 			.style('opacity', 0)
 			.attr('stroke', rgb(plot.color).darker())
@@ -478,6 +484,7 @@ export default function setViolinRenderer(self: any) {
 			.append('image')
 			.style('opacity', 0)
 			.classed(self.config.settings.violin.datasymbol === 'rug' ? 'sjpp-rug-img' : 'sjpp-beans-img', true)
+			.attr('data-testid', `sjpp-violin-img-${plot.seriesId}`)
 			.style('opacity', 1)
 			.attr('xlink:href', plot.src)
 			.attr(
@@ -623,9 +630,9 @@ function addDescriptiveStats(term: TermWrapper, legendGrps: LegendGroup[], headi
 			}
 		})
 
-			const title = self.config.term2?.q.descrStats
-				? `Descriptive statistics: ${term.term.name}`
-				: `Descriptive statistics`
+		const title = self.config.term2?.q.descrStats
+			? `Descriptive statistics: ${term.term.name}`
+			: `Descriptive statistics`
 		const name = `<span style="${headingStyle}">${title}</span>`
 		legendGrps.push({ name, items })
 	}
@@ -667,6 +674,7 @@ function addHiddenValues(term: TermWrapper, legendGrps: LegendGroup[], headingSt
 	for (const key of Object.keys(term.q.hiddenValues || {})) {
 		items.push({
 			text: `${key}`,
+			testIdSuffix: `hidden-${key}`,
 			noIcon: true,
 			/** Need to specify that this is a hidden value for
 			 * text styling in the legend and  a plot for

@@ -110,6 +110,7 @@ export type ViolinPlotEntry = {
 	seriesId: string
 	src: string
 	summaryStats: DescrStats
+	values?: number[]
 }
 
 export type ViolinResponseChart = {
