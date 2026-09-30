@@ -299,6 +299,7 @@
         },
         {
             "label": "Remote File",
+            "configFeature": "ALLOW_remotefilefromurl",
             "urlparam": "?block=on&genome=hg19&bedjurl=Remote%20file,https://hgdownload.soe.ucsc.edu/gbdb/hg19/knownGene.bb",
             "runargs": {
                 "parseurl": true,
