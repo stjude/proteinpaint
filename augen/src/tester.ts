@@ -27,6 +27,7 @@ function getApp({ api }, getHandlerInitArg = null) {
 	}
 	for (const method in api.methods) {
 		const m = api.methods[method]
+		if (m.init === null) continue
 		app[method](api.endpoint, m.init(getHandlerInitArg))
 	}
 	return app
@@ -48,6 +49,7 @@ export function testApi(route, f, checkers) {
 	for (const method in api.methods) {
 		console.log(method)
 		const m = api.methods[method]
+		if (m.init === null) continue
 		const METHOD = method.toUpperCase()
 		if (!m.examples) m.examples = [{ request: {}, response: {} }]
 

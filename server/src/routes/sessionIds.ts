@@ -1,14 +1,14 @@
 import fs from 'fs'
 import type { RouteApi } from '#types'
 import { authApi } from '#src/auth.js'
-import { getSessionPath } from './massSession.ts'
+import { getSessionPath, isDisabled } from './massSession.ts'
 
 export const api: RouteApi = {
 	// lists the mass session ids that were saved under the requester's credentials
 	endpoint: 'sessionIds',
 	methods: {
 		get: {
-			init: () => getSessionIdsByCred,
+			init: isDisabled ? null : () => getSessionIdsByCred,
 			request: { typeId: 'SessionIdsRequest' /*, checkers: TODO write validator */ },
 			response: { typeId: 'SessionIdsResponse' }
 		}
