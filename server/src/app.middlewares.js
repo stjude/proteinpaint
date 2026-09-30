@@ -8,7 +8,7 @@ import { URL } from 'url'
 import serverconfig from './serverconfig.js'
 import * as validator from './validator.js'
 import { authApi } from './auth.js'
-import { patternMatches } from './auth/Auth.ts'
+import { patternMatches, normalizeReqPath } from './auth/Auth.ts'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import jsonwebtoken from 'jsonwebtoken'
 import sjson from 'secure-json-parse'
@@ -142,7 +142,11 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 			res.send({ error: `invalid HTTP request.header['content-type'], must be 'application/json'` })
 			return
 		}
-		if (req.headers['content-type'] == 'application/json') {
+		// a POST /massSession body is the mass app state to save, which may have keys such as an embedder{}
+		// object that the auth middleware rejects as a query parameter, so do not merge it into req.query
+		const isMassSessionSave =
+			req.method.toUpperCase() == 'POST' && normalizeReqPath(req.path) == normalizeReqPath(basepath + '/massSession')
+		if (req.headers['content-type'] == 'application/json' && !isMassSessionSave) {
 			if (!req.query) req.query = {}
 			// TODO: in the future, may have to combine req.query + req.params + req.body
 			// if using req.params based on expressjs server route /:paramName interpolation
@@ -154,7 +158,7 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 		// NOTE: this intentionally scans values everywhere, not just known lookup fields, and accepts the
 		// rare false positive of a value that equals one of these reserved names; see findForbiddenName()
 		// in routes/common.ts for the full rationale before narrowing it.
-		const forbiddenName = findForbiddenName(req.query)
+		const forbiddenName = findForbiddenName(req.query) || (isMassSessionSave && findForbiddenName(req.body))
 		if (forbiddenName) {
 			res.status(400).send({ error: `forbidden request payload name at ${forbiddenName}` })
 			return
