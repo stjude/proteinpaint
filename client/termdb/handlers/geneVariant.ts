@@ -498,8 +498,9 @@ export class SearchHandler {
 	}
 
 	mayApplyOrigins() {
+		if (!this.originSelect) return true
 		this.term.origins = this.getSelectedOrigins()
-		if (this.originSelect && !this.term.origins?.length) {
+		if (!this.term.origins?.length) {
 			const geneSetEditUI = this.dom.geneSetEditUI
 			if (geneSetEditUI) {
 				// the gene set edit UI's submit button was disabled on
@@ -524,10 +525,11 @@ export class SearchHandler {
 	}
 
 	mayApplySampleType() {
+		if (!this.sampleTypeSelect) return true
 		this.term.sampleTypes = this.querySampleTypesByTerms
 			? getSelectedSampleTypesByTerms(this.sampleTypeSelect, this.querySampleTypesByTerms)
 			: getSelectedSampleTypes(this.sampleTypeSelect) || this.querySampleTypes
-		if (this.sampleTypeSelect && !this.term.sampleTypes?.length) {
+		if (!this.term.sampleTypes?.length) {
 			const geneSetEditUI = this.dom.geneSetEditUI
 			if (geneSetEditUI) {
 				// the gene set edit UI's submit button was disabled on
