@@ -119,6 +119,17 @@ function parseNumericFilter(text: string): ((n: number) => boolean) | undefined 
 	}
 }
 
+export type TableBasePagination = {
+	/** rows per page */
+	pageSize: number
+	/** choices offered in the rows-per-page <select>. Default [10, 25, 50, 100]; pageSize is added if missing */
+	pageSizeOptions?: number[]
+	/** 1-based page to show first. Default 1 */
+	currentPage?: number
+	/** called when the page or page size changes, whether the user changed it or a sort/filter reset it to page 1 */
+	onChange?: (state: { currentPage: number; pageSize: number }) => void
+}
+
 /** Appearance only. Anything that changes how the table looks rather than what it does belongs here. */
 export type TableBaseStyles = {
 	/** alternate row background color. default true */
@@ -137,6 +148,8 @@ export type TableBaseOpts = {
 	columns: TableBaseColumn[]
 	rows: TableBaseRow[]
 	styles?: TableBaseStyles
+	/** Show one page of rows at a time, with a pager at the bottom. Sort and filter apply to all rows, not just the page */
+	pagination?: TableBasePagination
 	dataTestId?: string
 	/** accessible name for the table, read by screen readers. Recommended: say what the table contains */
 	ariaLabel?: string
@@ -167,8 +180,17 @@ export class TableBase {
 	protected originalRows: TableBaseRow[]
 	/** original index of each row object, built once, so callbacks can report indexes into the caller's array */
 	protected originalIndex: Map<TableBaseRow, number>
-	/** the rows currently displayed, after filtering and sorting */
+	/** every row that passes the filters, in sort order: what the pager counts */
+	protected matched: TableBaseRow[]
+	/** the rows currently displayed: the current page of matched */
 	protected rows: TableBaseRow[]
+	/** index in matched of the first displayed row, so line numbers continue across pages */
+	protected pageStart = 0
+	protected paginated: boolean
+	protected pageSize: number
+	protected currentPage: number
+	protected pageSizeOptions: number[]
+	protected onPageChange?: TableBasePagination['onChange']
 	protected sortState?: SortState
 	/** active column filters, by column index */
 	protected filters = new Map<number, ColumnFilter>()
@@ -193,6 +215,8 @@ export class TableBase {
 	protected thead?: any
 	protected tbody?: any
 	protected status?: any
+	protected pagerInfo?: any
+	protected pagerNav?: any
 
 	constructor(opts: TableBaseOpts) {
 		TableBase.validate(opts)
@@ -200,7 +224,16 @@ export class TableBase {
 		this.columns = opts.columns
 		this.originalRows = opts.rows
 		this.originalIndex = new Map(opts.rows.map((row, i) => [row, i]))
+		this.matched = opts.rows
 		this.rows = opts.rows
+		const pagination = opts.pagination
+		this.paginated = !!pagination
+		this.pageSize = pagination?.pageSize ?? opts.rows.length
+		this.currentPage = pagination?.currentPage ?? 1
+		this.pageSizeOptions = [...new Set([...(pagination?.pageSizeOptions ?? [10, 25, 50, 100]), this.pageSize])].sort(
+			(a, b) => a - b
+		)
+		this.onPageChange = pagination?.onChange
 		const styles = opts.styles || {}
 		this.striped = styles.striped ?? true
 		this.showLines = styles.showLines ?? false
@@ -218,6 +251,12 @@ export class TableBase {
 		if (!opts.columns?.length) throw new Error('TableBase: missing columns')
 		if (!opts.rows) throw new Error('TableBase: missing rows')
 		TableBase.validateRows(opts.rows, opts.columns)
+		if (opts.pagination) {
+			const { pageSize, pageSizeOptions = [] } = opts.pagination
+			for (const size of [pageSize, ...pageSizeOptions]) {
+				if (!Number.isInteger(size) || size < 1) throw new Error(`TableBase: invalid page size ${size}`)
+			}
+		}
 	}
 
 	protected static validateRows(rows: TableBaseRow[], columns: TableBaseColumn[]) {
@@ -234,6 +273,7 @@ export class TableBase {
 		this.wrapper = this.createWrapper()
 		this.table = this.createTable()
 		this.status = this.createStatus()
+		if (this.paginated) this.createPager()
 		this.thead = this.table.append('thead')
 		this.tbody = this.table.append('tbody')
 		this.renderHeader()
@@ -272,9 +312,57 @@ export class TableBase {
 	update(rows?: TableBaseRow[]): this {
 		const next = rows ?? this.computeVisibleRows()
 		TableBase.validateRows(next, this.columns)
-		this.rows = next
-		this.renderBody()
+		this.matched = next
+		this.renderPage()
 		return this
+	}
+
+	/** Shows the current page of matched rows and redraws the pager. Keeps the page in range as matched shrinks. */
+	protected renderPage(): void {
+		if (this.paginated) {
+			this.currentPage = Math.min(Math.max(1, this.currentPage), this.totalPages())
+			this.pageStart = (this.currentPage - 1) * this.pageSize
+			this.rows = this.matched.slice(this.pageStart, this.pageStart + this.pageSize)
+		} else {
+			this.pageStart = 0
+			this.rows = this.matched
+		}
+		this.renderBody()
+		this.renderPager()
+	}
+
+	protected totalPages(): number {
+		return Math.max(1, Math.ceil(this.matched.length / this.pageSize))
+	}
+
+	/** Shows a page, 1-based, clamped to the valid range. No-op without pagination. */
+	goToPage(page: number): this {
+		if (!this.paginated) return this
+		const next = Math.min(Math.max(1, Math.trunc(page)), this.totalPages())
+		if (next === this.currentPage) return this
+		this.currentPage = next
+		this.renderPage()
+		this.announce(`Page ${next} of ${this.totalPages()}`)
+		this.onPageChange?.({ currentPage: this.currentPage, pageSize: this.pageSize })
+		return this
+	}
+
+	/** Changes rows per page and returns to page 1. No-op without pagination. */
+	setPageSize(size: number): this {
+		if (!this.paginated || !Number.isInteger(size) || size < 1 || size === this.pageSize) return this
+		this.pageSize = size
+		this.currentPage = 1
+		this.renderPage()
+		this.announce(`${size} rows per page, page 1 of ${this.totalPages()}`)
+		this.onPageChange?.({ currentPage: 1, pageSize: size })
+		return this
+	}
+
+	/** A sort or filter changes which rows are on each page, so go back to page 1. Returns whether the page moved. */
+	protected resetPage(): boolean {
+		const moved = this.paginated && this.currentPage !== 1
+		this.currentPage = 1
+		return moved
 	}
 
 	/** Sorts by a sortable column. Repeat calls on the same column toggle ascending/descending. */
@@ -283,8 +371,10 @@ export class TableBase {
 		const ascending = this.sortState?.colIdx === colIdx ? !this.sortState.ascending : true
 		this.sortState = { colIdx, ascending }
 		this.updateSortIndicators()
+		const moved = this.resetPage()
 		this.update()
 		this.announce(`Sorted by ${this.columns[colIdx].label}, ${ascending ? 'ascending' : 'descending'}`)
+		if (moved) this.onPageChange?.({ currentPage: 1, pageSize: this.pageSize })
 		return this
 	}
 
@@ -299,8 +389,10 @@ export class TableBase {
 		const trimmed = text.trim().toLowerCase()
 		if (trimmed) this.filters.set(colIdx, { text: trimmed, test: parseNumericFilter(trimmed) })
 		else this.filters.delete(colIdx)
+		const moved = this.resetPage()
 		this.update()
-		this.announce(`Showing ${this.rows.length} of ${this.originalRows.length} rows`)
+		this.announce(`Showing ${this.matched.length} of ${this.originalRows.length} rows`)
+		if (moved) this.onPageChange?.({ currentPage: 1, pageSize: this.pageSize })
 		return this
 	}
 
@@ -436,7 +528,88 @@ export class TableBase {
 	/** Extension point: rebuilds all body rows. Called by render() and update(). */
 	protected renderBody(): void {
 		this.tbody.selectAll('tr').remove()
-		this.rows.forEach((row, rowIdx) => this.renderRow(row, rowIdx))
+		// rowIdx is the position in matched, so striping and line numbers continue across pages
+		this.rows.forEach((row, i) => this.renderRow(row, this.pageStart + i))
+	}
+
+	/** Extension point: builds the pager container once per render(). Its contents are redrawn by renderPager(). */
+	protected createPager(): void {
+		const pager = this.wrapper
+			.append('div')
+			.attr('class', 'sjpp-table-pager')
+			.style('position', 'sticky')
+			.style('bottom', '0')
+			.style('background-color', 'white')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('justify-content', 'space-between')
+			.style('flex-wrap', 'wrap')
+			.style('gap', '8px')
+			.style('padding', '8px 4px')
+			.style('font-size', '0.9em')
+
+		const left = pager.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '8px')
+		left.append('span').text('Show')
+		const select = left
+			.append('select')
+			.attr('aria-label', 'Rows per page')
+			.attr('class', 'sjpp-table-page-size')
+			.style('padding', '2px 4px')
+			.on('change', (event: Event) => this.setPageSize(Number((event.target as HTMLSelectElement).value)))
+		for (const size of this.pageSizeOptions) {
+			select.append('option').attr('value', size).property('selected', size === this.pageSize).text(size)
+		}
+		left.append('span').text('entries')
+
+		this.pagerInfo = pager.append('div').attr('class', 'sjpp-table-page-info')
+		this.pagerNav = pager.append('nav').attr('aria-label', 'Pagination').attr('class', 'sjpp-table-page-nav')
+	}
+
+	/** Redraws the page info and buttons. The rows-per-page <select> is left alone. */
+	protected renderPager(): void {
+		if (!this.pagerNav) return
+		const total = this.matched.length
+		const pages = this.totalPages()
+		const end = Math.min(this.pageStart + this.pageSize, total)
+		this.pagerInfo.text(
+			total === 0
+				? 'Showing 0 entries'
+				: `Showing ${(this.pageStart + 1).toLocaleString()} to ${end.toLocaleString()} of ${total.toLocaleString()} entries`
+		)
+
+		this.pagerNav.selectAll('*').remove()
+		const addButton = (text: string, page: number, disabled: boolean, label?: string) => {
+			const active = page === this.currentPage
+			const button = this.pagerNav
+				.append('button')
+				.attr('type', 'button')
+				.text(text)
+				.style('margin', '0 2px')
+				.style('padding', '3px 8px')
+				.style('border', '1px solid #ccc')
+				.style('border-radius', '3px')
+				.style('background-color', active ? '#000' : 'white')
+				.style('color', active ? 'white' : disabled ? '#999' : '#000')
+				.style('cursor', disabled ? 'not-allowed' : 'pointer')
+			if (label) button.attr('aria-label', label)
+			if (active) button.attr('aria-current', 'page')
+			if (disabled) button.attr('disabled', 'disabled')
+			else button.on('click', () => this.goToPage(page))
+		}
+
+		addButton('Previous', this.currentPage - 1, this.currentPage === 1, 'Go to previous page')
+		// first, last, and two either side of the current page; a gap becomes an ellipsis
+		const shown = new Set([1, pages])
+		for (let p = this.currentPage - 2; p <= this.currentPage + 2; p++) if (p >= 1 && p <= pages) shown.add(p)
+		let previous = 0
+		for (const page of [...shown].sort((a, b) => a - b)) {
+			if (previous && page - previous > 1) {
+				this.pagerNav.append('span').attr('aria-hidden', 'true').text('…').style('margin', '0 4px').style('color', '#999')
+			}
+			addButton(String(page), page, false, `Page ${page}`)
+			previous = page
+		}
+		addButton('Next', this.currentPage + 1, this.currentPage === pages, 'Go to next page')
 	}
 
 	/** Extension point: render a single row. Subclasses adding selection/click
