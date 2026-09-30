@@ -517,8 +517,10 @@ for(const i of atlst) {
 			prod.eventlabel = (prod.geneA ? prod.geneA : prod.chrA) + '-' + (prod.geneB ? prod.geneB : prod.chrB)
 		}
 		// group by sample
-		const tmp = {}
-		const sampleless = {}
+		// prod.sample is attacker-reachable data (fusioneditor upload/runpp arg); use
+		// null-prototype objects so a sample name of "__proto__" cannot pollute Object.prototype
+		const tmp = Object.create(null)
+		const sampleless = Object.create(null)
 		let hassampleless = false
 		for (const prod of items) {
 			let n = prod.sample
@@ -1267,7 +1269,9 @@ for(const i of atlst) {
 					}
 					const n = (prod.geneA ? prod.geneA : '<' + prod.chrA) + ' - ' + (prod.geneB ? prod.geneB : '<' + prod.chrB)
 					if (!(n in events)) {
-						events[n] = {}
+						// sample.name (an attacker/user-reachable sample name) indexes this
+						// nested bucket, so it must not inherit from Object.prototype
+						events[n] = Object.create(null)
 					}
 					if (!(sample.name in events[n])) {
 						events[n][sample.name] = []
