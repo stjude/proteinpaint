@@ -243,9 +243,15 @@ tape('/tkbedj, /tabixheader, /bamnochr via the real route table', async test => 
 	const missingDir = path.join(tmpdir, 'no-such-dir')
 	const r2 = await send(routes['/bamnochr'], { genome: 'hg38', file: 'x.bam', url_dir: missingDir })
 	test.ok(r2?.error, '/bamnochr should return an error, not crash, when the request has url_dir')
-	// samtools then runs and reports the missing file, instead of failing to spawn in the requested cwd
-	test.doesNotMatch(String(r2?.error), /ENOENT/, '/bamnochr should not use the requested url_dir as the samtools cwd')
 	test.notOk(fs.existsSync(missingDir), '/bamnochr should not create the requested url_dir')
+
+	// a regular file as the cwd fails the spawn with ENOTDIR, which is checked before the binary is looked up,
+	// so this detects the requested url_dir being used whether or not samtools is installed
+	const notADir = path.join(tmpdir, 'not-a-dir')
+	fs.writeFileSync(notADir, '')
+	const r3 = await send(routes['/bamnochr'], { genome: 'hg38', file: 'x.bam', url_dir: notADir })
+	test.ok(r3?.error, '/bamnochr should return an error for a nonexistent file')
+	test.doesNotMatch(String(r3?.error), /ENOTDIR/, '/bamnochr should not use the requested url_dir as the samtools cwd')
 	test.end()
 })
 
