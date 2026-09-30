@@ -1,2 +1,3 @@
 Fixes:
 - harden user-keyed object maps against prototype pollution
+- harden nested patient2st buckets against prototype pollution too

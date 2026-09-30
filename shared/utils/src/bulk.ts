@@ -164,12 +164,12 @@ export function parsesample(m, flag, i, lst) {
 
 	if (m.patient) {
 		if (!flag.patient2st[m.patient]) {
-			flag.patient2st[m.patient] = {}
+			flag.patient2st[m.patient] = Object.create(null)
 		}
 		flag.patient2st[m.patient][m.sampletype] = m.sample
 	} else {
 		if (!flag.patient2st[nopatientname]) {
-			flag.patient2st[nopatientname] = {}
+			flag.patient2st[nopatientname] = Object.create(null)
 		}
 		flag.patient2st[nopatientname][m.sampletype] = m.sample
 	}

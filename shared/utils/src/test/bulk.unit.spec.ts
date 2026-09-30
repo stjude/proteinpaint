@@ -42,3 +42,23 @@ tape('parsesample() does not pollute Object.prototype via sample="__proto__"', f
 	)
 	test.end()
 })
+
+tape('parsesample() does not lose a nested patient2st bucket entry keyed "__proto__"', function (test) {
+	const flag = init_bulk_flag({})
+
+	// sampletype defaults to m.sample when unset, so sample="__proto__" also indexes
+	// the nested flag.patient2st[patient] bucket by "__proto__"
+	parsesample({ patient: 'patient1', sample: '__proto__' }, flag, 0, [])
+
+	test.equal(
+		Object.getPrototypeOf(flag.patient2st['patient1']),
+		null,
+		'the nested bucket must not have its own prototype reassigned'
+	)
+	test.equal(
+		flag.patient2st['patient1']['__proto__'],
+		'__proto__',
+		'the sample mapping must not be silently dropped when sampletype is "__proto__"'
+	)
+	test.end()
+})
