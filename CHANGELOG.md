@@ -8,6 +8,7 @@ Fixes:
 - harden user-keyed object maps against prototype pollution
 - harden nested patient2st buckets against prototype pollution too
 - harden step_gene() per-event sample buckets against prototype pollution
+- move the /massSession route setup to src/routes/massSession.ts (code-scanning #110, #111)
 
 
 ## 2.215.0
