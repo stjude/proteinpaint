@@ -837,6 +837,139 @@ tape('edit: the input is length-limited and over-long text is rejected', test =>
 	test.end()
 })
 
+/**************
+ accessibility tests
+***************/
+
+tape('\n', test => {
+	test.comment('-***- dom/TableBase - accessibility -***-')
+	test.end()
+})
+
+tape('a11y: headers have scope=col and the table can be given an accessible name', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({
+		columns: testColumns,
+		rows: testRows,
+		div: holder,
+		ariaLabel: 'People',
+		styles: { showLines: true }
+	}).render()
+
+	const ths = holder.selectAll('thead th').nodes() as HTMLElement[]
+	test.ok(ths.every(th => th.getAttribute('scope') === 'col'), 'Every <th> should have scope="col"')
+	test.equal(ths[0].getAttribute('aria-label'), 'Row number', 'Should name the otherwise empty line-number header')
+	test.equal(holder.select('table').attr('aria-label'), 'People', 'Should set aria-label on the table')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('a11y: a sortable header is a keyboard-focusable button with aria-sort', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	const nameTh = holder.selectAll('thead th').nodes()[0] as HTMLElement
+	const ageTh = holder.selectAll('thead th').nodes()[1] as HTMLElement
+	const roleTh = holder.selectAll('thead th').nodes()[2] as HTMLElement
+
+	const button = nameTh.querySelector('button') as HTMLButtonElement
+	test.ok(button, 'Should render a <button> for a sortable column')
+	test.equal(button.type, 'button', 'Should not act as a form submit button')
+	test.ok(button.tabIndex >= 0, 'Should be in the tab order')
+	test.equal(roleTh.querySelector('button'), null, 'Should not render a button for a non-sortable column')
+	test.equal(nameTh.querySelector('.sjpp-table-sort-indicator')!.getAttribute('aria-hidden'), 'true', 'Should hide the decorative arrow')
+
+	test.equal(nameTh.getAttribute('aria-sort'), 'none', 'Should start unsorted')
+	button.click()
+	test.equal(nameTh.getAttribute('aria-sort'), 'ascending', 'Should report ascending')
+	button.click()
+	test.equal(nameTh.getAttribute('aria-sort'), 'descending', 'Should report descending')
+	;(ageTh.querySelector('button') as HTMLButtonElement).click()
+	test.equal(nameTh.getAttribute('aria-sort'), 'none', 'Should reset the previous column')
+	test.equal(ageTh.getAttribute('aria-sort'), 'ascending', 'Should report the new column')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('a11y: filter inputs are labelled and sort/filter changes are announced', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	const status = holder.select('[role="status"]').node() as HTMLElement
+
+	test.equal(status.getAttribute('aria-live'), 'polite', 'Should render a polite live region')
+	test.equal(status.textContent, '', 'Should announce nothing on initial render')
+	test.equal(
+		(holder.select('input[data-testid="sjpp-table-filter-0"]').node() as HTMLElement).getAttribute('aria-label'),
+		'Filter Name',
+		'Should give the filter input an accessible name'
+	)
+
+	clickHeaderLabel(holder, 0)
+	test.equal(status.textContent, 'Sorted by Name, ascending', 'Should announce the sort')
+	clickHeaderLabel(holder, 0)
+	test.equal(status.textContent, 'Sorted by Name, descending', 'Should announce the toggled sort')
+
+	typeFilter(holder, 2, 'manager')
+	test.equal(status.textContent, 'Showing 1 of 3 rows', 'Should announce how many rows the filter kept')
+	typeFilter(holder, 2, 'zzz')
+	test.equal(status.textContent, 'Showing 0 of 3 rows', 'Should announce an empty result')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('a11y: a color-only cell has a text alternative', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: [{ label: 'Color' }], rows: [[{ color: '#ff0000' }]], div: holder }).render()
+
+	test.equal(holder.select('tbody td').attr('aria-label'), '#ff0000', 'Should name the cell after its color')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('a11y: editable cells are reachable and operable by keyboard', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows = makeEditRows()
+	new TableBase({ columns: editColumns, rows, div: holder }).render()
+	const cell = (r: number, c: number) => (holder.selectAll('tbody tr').nodes()[r] as HTMLTableRowElement).cells[c]
+
+	test.equal(cell(0, 0).getAttribute('tabindex'), '0', 'Editable cell should be in the tab order')
+	test.ok(cell(0, 0).getAttribute('aria-description'), 'Should describe how to start editing')
+	test.equal(cell(0, 2).getAttribute('tabindex'), null, 'Non-editable cell should not be focusable')
+
+	const td = cell(0, 0)
+	td.focus()
+	td.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+	const input = td.querySelector('input') as HTMLInputElement
+	test.ok(input, 'Enter on the focused cell should start editing')
+	test.equal(input.getAttribute('aria-label'), 'Edit Name', 'Should name the edit input')
+	test.equal(document.activeElement, input, 'Should move focus into the input')
+
+	input.value = 'Chuck'
+	input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+	test.equal(rows[0][0].value, 'Chuck', 'Enter should commit and not restart editing')
+	test.equal(td.querySelector('input'), null, 'Should close the input')
+	test.equal(document.activeElement, td, 'Should return focus to the cell after Enter')
+
+	td.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }))
+	const second = td.querySelector('input') as HTMLInputElement
+	test.ok(second, 'F2 should also start editing')
+	second.value = 'ignored'
+	second.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+	test.equal(rows[0][0].value, 'Chuck', 'Escape should cancel')
+	test.equal(document.activeElement, td, 'Should return focus to the cell after Escape')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
 tape('render(): a second render keeps the current sort and filter state', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()

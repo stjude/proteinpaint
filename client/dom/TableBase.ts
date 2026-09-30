@@ -131,6 +131,8 @@ export type TableBaseOpts = {
 	rows: TableBaseRow[]
 	styles?: TableBaseStyles
 	dataTestId?: string
+	/** accessible name for the table, read by screen readers. Recommended: say what the table contains */
+	ariaLabel?: string
 	/** called after the user commits an edit in an editable column */
 	onEdit?: (edit: TableBaseEdit) => void
 }
@@ -161,12 +163,14 @@ export class TableBase {
 	protected maxWidth: string
 	protected maxHeight: string
 	protected dataTestId?: string
+	protected ariaLabel?: string
 	protected onEdit?: (edit: TableBaseEdit) => void
 
 	protected wrapper?: any
 	protected table?: Table
 	protected thead?: any
 	protected tbody?: any
+	protected status?: any
 
 	constructor(opts: TableBaseOpts) {
 		TableBase.validate(opts)
@@ -181,6 +185,7 @@ export class TableBase {
 		this.maxWidth = styles.maxWidth || '90vw'
 		this.maxHeight = styles.maxHeight || '40vh'
 		this.dataTestId = opts.dataTestId
+		this.ariaLabel = opts.ariaLabel
 		this.onEdit = opts.onEdit
 	}
 
@@ -204,6 +209,7 @@ export class TableBase {
 		this.remove()
 		this.wrapper = this.createWrapper()
 		this.table = this.createTable()
+		this.status = this.createStatus()
 		this.thead = this.table.append('thead')
 		this.tbody = this.table.append('tbody')
 		this.renderHeader()
@@ -248,7 +254,14 @@ export class TableBase {
 		const ascending = this.sortState?.colIdx === colIdx ? !this.sortState.ascending : true
 		this.sortState = { colIdx, ascending }
 		this.updateSortIndicators()
-		return this.update()
+		this.update()
+		this.announce(`Sorted by ${this.columns[colIdx].label}, ${ascending ? 'ascending' : 'descending'}`)
+		return this
+	}
+
+	/** Tells screen readers about a change they cannot see. The status element is created in render(). */
+	protected announce(message: string): void {
+		this.status?.text(message)
 	}
 
 	/** Keeps only rows whose cell in this column contains text (case-insensitive). Number cells also accept
@@ -257,7 +270,9 @@ export class TableBase {
 		const trimmed = text.trim().toLowerCase()
 		if (trimmed) this.filters.set(colIdx, { text: trimmed, test: parseNumericFilter(trimmed) })
 		else this.filters.delete(colIdx)
-		return this.update()
+		this.update()
+		this.announce(`Showing ${this.rows.length} of ${this.originalRows.length} rows`)
+		return this
 	}
 
 	/** Filters first so the sort only handles the rows that remain. Never mutates originalRows. */
@@ -287,6 +302,8 @@ export class TableBase {
 		for (const [colIdx, indicator] of this.sortIndicators) {
 			const sorted = this.sortState?.colIdx === colIdx
 			indicator.text(!sorted ? '' : this.sortState!.ascending ? '▲' : '▼')
+			const th = (indicator.node() as HTMLElement).closest('th')
+			th?.setAttribute('aria-sort', !sorted ? 'none' : this.sortState!.ascending ? 'ascending' : 'descending')
 		}
 	}
 
@@ -305,7 +322,23 @@ export class TableBase {
 	protected createTable(): Table {
 		const table = this.wrapper.append('table').style('width', '100%')
 		if (this.dataTestId) table.attr('data-testid', this.dataTestId)
+		if (this.ariaLabel) table.attr('aria-label', this.ariaLabel)
 		return table
+	}
+
+	/** Extension point: a visually hidden live region for screen reader announcements. */
+	protected createStatus() {
+		return this.wrapper
+			.append('div')
+			.attr('role', 'status')
+			.attr('aria-live', 'polite')
+			.attr('class', 'sjpp-table-status')
+			.style('position', 'absolute')
+			.style('width', '1px')
+			.style('height', '1px')
+			.style('overflow', 'hidden')
+			.style('clip', 'rect(0 0 0 0)')
+			.style('white-space', 'nowrap')
 	}
 
 	/** Extension point: rebuilds the header row. Only runs from render(), never on update(). */
@@ -313,29 +346,46 @@ export class TableBase {
 		this.thead.selectAll('tr').remove()
 		this.sortIndicators.clear()
 		const tr: Tr = this.thead.append('tr')
-		if (this.showLines) tr.append('th').style('width', '1vw')
+		if (this.showLines) tr.append('th').attr('scope', 'col').attr('aria-label', 'Row number').style('width', '1vw')
 		this.columns.forEach((column, colIdx) => this.renderHeaderCell(tr, column, colIdx))
 		this.updateSortIndicators()
 	}
 
 	/** Extension point: render a single header cell, including its sort and filter controls. */
 	protected renderHeaderCell(tr: Tr, column: TableBaseColumn, colIdx: number): Th {
-		const th: Th = tr.append('th').attr('class', 'sjpp_table_header')
+		const th: Th = tr.append('th').attr('class', 'sjpp_table_header').attr('scope', 'col')
 		if (column.width) th.style('width', column.width)
 		if (column.headerTestId) th.attr('data-testid', column.headerTestId)
 		if (column.tooltip) th.attr('title', column.tooltip)
 
-		const label = th.append('span').attr('class', 'sjpp-table-header-label').text(column.label)
 		if (column.sortable) {
-			const indicator = th.append('span').attr('class', 'sjpp-table-sort-indicator').style('margin-left', '4px')
-			for (const clickable of [label, indicator]) {
-				clickable.style('cursor', 'pointer').on('click', () => this.sortByColumn(colIdx))
-			}
+			// a real <button> is focusable and answers Enter/Space without extra key handling
+			const button = th
+				.append('button')
+				.attr('type', 'button')
+				.attr('class', 'sjpp-table-sort-button')
+				.style('background', 'none')
+				.style('border', 'none')
+				.style('padding', '0')
+				.style('font', 'inherit')
+				.style('color', 'inherit')
+				.style('cursor', 'pointer')
+				.on('click', () => this.sortByColumn(colIdx))
+			button.append('span').attr('class', 'sjpp-table-header-label').text(column.label)
+			// the arrow is decorative: aria-sort on the <th> carries the state for screen readers
+			const indicator = button
+				.append('span')
+				.attr('class', 'sjpp-table-sort-indicator')
+				.attr('aria-hidden', 'true')
+				.style('margin-left', '4px')
 			this.sortIndicators.set(colIdx, indicator)
+		} else {
+			th.append('span').attr('class', 'sjpp-table-header-label').text(column.label)
 		}
 		if (column.filterable) {
 			th.append('input')
 				.attr('type', 'text')
+				.attr('aria-label', `Filter ${column.label}`)
 				.attr('placeholder', 'Filter')
 				.attr('class', 'sjpp-table-filter-input')
 				.attr('data-testid', `sjpp-table-filter-${colIdx}`)
@@ -394,10 +444,23 @@ export class TableBase {
 			if (cell.color) td.style('color', cell.color)
 		} else if (cell.color) {
 			td.style('background-color', cell.color)
+			// the color is the only content, so give screen readers something to read
+			td.attr('aria-label', cell.color)
 		}
 
 		if (column.editable && !cell.url && !cell.html) {
-			td.style('cursor', 'text').on('click', () => this.startEdit(td, tr, cell, colIdx))
+			td.style('cursor', 'text')
+				.attr('tabindex', 0)
+				.attr('aria-description', 'Press Enter to edit')
+				.on('click', () => this.startEdit(td, tr, cell, colIdx))
+				.on('keydown', (event: KeyboardEvent) => {
+					// ignore keys that bubbled up from the edit input
+					if (event.target !== td.node()) return
+					if (event.key == 'Enter' || event.key == 'F2') {
+						event.preventDefault()
+						this.startEdit(td, tr, cell, colIdx)
+					}
+				})
 		}
 
 		cell.__td = td
@@ -416,6 +479,7 @@ export class TableBase {
 			.append('input')
 			.attr('type', 'text')
 			.attr('class', 'sjpp-table-edit-input')
+			.attr('aria-label', `Edit ${this.columns[colIdx].label}`)
 			.attr('maxlength', MAX_EDIT_LENGTH)
 			.style('width', '100%')
 			.property('value', before)
@@ -439,8 +503,10 @@ export class TableBase {
 		}
 		input
 			.on('keydown', (event: KeyboardEvent) => {
-				if (event.key == 'Enter') finish(true)
-				else if (event.key == 'Escape') finish(false)
+				if (event.key != 'Enter' && event.key != 'Escape') return
+				finish(event.key == 'Enter')
+				// the input is gone, so hand focus back to the cell rather than dropping it on <body>
+				;(td.node() as HTMLElement).focus()
 			})
 			.on('blur', () => finish(true))
 
