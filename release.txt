@@ -1,2 +1,1 @@
-Fixes:
-- save a mass session whose state has an embedder{} object
+
