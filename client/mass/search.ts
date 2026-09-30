@@ -515,20 +515,38 @@ export function setSearchRenderers(self: any) {
 	// term). survival's getPlotConfig() requires config.term to already be a resolved term wrapper, so
 	// unlike launchPlot() this can't dispatch directly — it must collect the outcome term first, mirroring
 	// charts.ts's showTree_select1term (which this component doesn't have access to, different class).
-	self.launchSurvivalWithCovariate = async (covariateField: 'term2', covariateTw: any) => {
-		self.dom.tip.clear()
-		self.dom.tip.showunder(self.dom.inputNode)
-		const action: any = { type: 'plot_create', config: { chartType: 'survival', [covariateField]: covariateTw } }
+	self.launchSurvivalWithCovariate = async (covariateField: 'term2', covariateTw: any, holder: any) => {
+		const config: any = { chartType: 'survival', [covariateField]: covariateTw }
 		const termdb = await import('../termdb/app')
+		const pickerDiv = holder
+			.append('div')
+			.style('display', 'inline-block')
+			.style('width', '800px')
+			.style('border', 'solid 1px rgb(133,182,225)')
+			.style('border-radius', '5px')
+			.style('padding', '10px')
+			.style('margin', '4px 0')
+			.style('background-color', 'white')
+			.style('box-shadow', '0px 2px 4px 1px #999')
+
+		const outsideClick = (event: MouseEvent) => {
+			if (!pickerDiv.node().contains(event.target as Node)) {
+				pickerDiv.remove()
+				document.body.removeEventListener('mousedown', outsideClick)
+			}
+		}
+		document.body.addEventListener('mousedown', outsideClick)
+
 		termdb.appInit({
 			vocabApi: self.app.vocabApi,
-			holder: self.dom.tip.d.append('div'),
+			holder: pickerDiv, // was: self.dom.tip.d.append('div') — now renders inline in the bubble
 			state: { nav: { header_mode: 'search_only' }, tree: { usecase: { target: 'survival', detail: 'term' } } },
 			tree: {
 				click_term: (term: any) => {
-					action.config.term = term.term ? term : { term }
-					self.dom.tip.hide()
-					self.app.dispatch(action)
+					config.term = term.term ? term : { term }
+					document.body.removeEventListener('mousedown', outsideClick)
+					pickerDiv.remove()
+					self.app.dispatch({ type: 'plot_create', config })
 				}
 			}
 		})
@@ -554,7 +572,7 @@ export function setSearchRenderers(self: any) {
 		const addBtn = (row: any, label: string, testid: string, onClick: () => Promise<void>) => {
 			row
 				.append('span')
-				.attr('class', 'sja_menuoption')
+				.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 				.attr('data-testid', testid)
 				.style('display', 'inline-block')
 				.style('margin', '0px 3px')
@@ -575,9 +593,13 @@ export function setSearchRenderers(self: any) {
 			})
 			if (hasSurvival) {
 				addBtn(row, 'Survival', `sjpp-mass-chat-gene-exp-survival-${item.gene}`, async () => {
-					await self.launchSurvivalWithCovariate('term2', {
-						term: { gene: item.gene, name: item.name, type: 'geneExpression' }
-					})
+					await self.launchSurvivalWithCovariate(
+						'term2',
+						{
+							term: { gene: item.gene, name: item.name, type: 'geneExpression' }
+						},
+						row
+					)
 				})
 			}
 		}
@@ -652,7 +674,7 @@ export function setSearchRenderers(self: any) {
 			tr.append('td').text(item.name).style('padding', '5px 10px')
 			tr.append('td')
 				.append('span')
-				.attr('class', 'sja_menuoption')
+				.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 				.attr('data-testid', 'sjpp-mass-chat-coord-genomebrowser')
 				.style('display', 'inline-block')
 				.style('margin', '0px 3px')
@@ -678,7 +700,7 @@ export function setSearchRenderers(self: any) {
 			tr.append('td').text(item.name).style('padding', '5px 10px')
 			tr.append('td')
 				.append('span')
-				.attr('class', 'sja_menuoption')
+				.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 				.attr('data-testid', `sjpp-mass-chat-sample-view-${item.sampleId}`)
 				.style('display', 'inline-block')
 				.style('margin', '0px 3px')
@@ -700,7 +722,7 @@ export function setSearchRenderers(self: any) {
 				tr.select('td:nth-child(2)')
 					.append('button')
 					.attr('type', 'button')
-					.attr('class', 'sja_menuoption')
+					.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 					.attr('data-testid', `sjpp-mass-chat-single-cell-${item.sampleId}`)
 					.style('display', 'inline-block')
 					.style('margin', '0px 3px')
@@ -727,7 +749,7 @@ export function setSearchRenderers(self: any) {
 				tr.select('td:nth-child(2)')
 					.append('button')
 					.attr('type', 'button')
-					.attr('class', 'sja_menuoption')
+					.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 					.attr('data-testid', `sjpp-mass-chat-wsimages-${item.sampleId}`)
 					.style('display', 'inline-block')
 					.style('margin', '0px 3px')
@@ -752,7 +774,7 @@ export function setSearchRenderers(self: any) {
 				tr.select('td:nth-child(2)')
 					.append('button')
 					.attr('type', 'button')
-					.attr('class', 'sja_menuoption')
+					.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 					.attr('data-testid', `sjpp-mass-chat-assays-${item.sampleId}`)
 					.style('display', 'inline-block')
 					.style('margin', '0px 3px')
@@ -783,7 +805,7 @@ export function setSearchRenderers(self: any) {
 				.text(item.name)
 				.style('padding', '5px 10px')
 				.style('cursor', 'pointer')
-				.attr('class', 'sja_menuoption')
+				.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 				.attr('data-testid', `sjpp-mass-chat-gene-select-${item.gene}`)
 				.on('click', () => {
 					self.dom.inputNode.value = ''
@@ -800,7 +822,7 @@ export function setSearchRenderers(self: any) {
 		if (item.type) {
 			button
 				.style('cursor', 'pointer')
-				.attr('class', 'sja_menuoption')
+				.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 				.attr('data-testid', `sjpp-mass-chat-term-${item.id}`)
 				.on('click', async () => {
 					self.addBubble({ msg: escapeHtml(item.name) + ' (dictionary variable)', me: 1 })

@@ -250,6 +250,17 @@ by normalize.css are covered here
     color: #cc0000;
     background-color: #FCE2E1;
 }
+
+.sjpp-mass-search-btn {
+    background-color: #3b7dd8;
+    color: white;
+}
+.sjpp-mass-search-btn:hover {
+    background-color: #2f66b3;
+}
+.sjpp-mass-search-btn:active {
+    background-color: #1f4a8a;
+}
 /* /client/src/app.js end */
 
 .sja_filter_tag_btn {
