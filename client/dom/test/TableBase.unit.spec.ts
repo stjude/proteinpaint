@@ -358,3 +358,263 @@ tape('remove() detaches the table from the DOM', test => {
 	holder.remove()
 	test.end()
 })
+
+/**************
+ sort and filter tests
+***************/
+
+tape('\n', test => {
+	test.comment('-***- dom/TableBase - sort and filter -***-')
+	test.end()
+})
+
+const sortFilterColumns: TableBaseColumn[] = [
+	{ label: 'Name', sortable: true, filterable: true },
+	{ label: 'Age', sortable: true },
+	{ label: 'Role', filterable: true }
+]
+
+function makeSortFilterRows(): TableBaseRow[] {
+	return [
+		[{ value: 'Charlie' }, { value: 35 }, { value: 'Manager' }],
+		[{ value: 'Alice' }, { value: 30 }, { value: 'Engineer' }],
+		[{ value: 'Bob' }, { value: 25 }, { value: 'Engineer' }]
+	]
+}
+
+function bodyColumn(holder: any, colIdx: number): string[] {
+	return (holder.selectAll('tbody tr').nodes() as HTMLTableRowElement[]).map(tr => tr.cells[colIdx].textContent || '')
+}
+
+function clickHeaderLabel(holder: any, colIdx: number) {
+	const th = holder.selectAll('thead th').nodes()[colIdx] as HTMLElement
+	const label = th.querySelector('.sjpp-table-header-label') as HTMLElement
+	label.dispatchEvent(new Event('click', { bubbles: true }))
+}
+
+function typeFilter(holder: any, colIdx: number, text: string) {
+	const input = holder.select(`input[data-testid="sjpp-table-filter-${colIdx}"]`).node() as HTMLInputElement
+	input.value = text
+	input.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
+tape('sort: only sortable columns get a clickable label and indicator', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+
+	test.equal(holder.selectAll('.sjpp-table-sort-indicator').size(), 2, 'Should render an indicator per sortable column')
+	const roleTh = holder.selectAll('thead th').nodes()[2] as HTMLElement
+	const roleLabel = roleTh.querySelector('.sjpp-table-header-label') as HTMLElement
+	test.equal(roleLabel.style.cursor, '', 'Should not style a non-sortable label as clickable')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('sort: clicking a header sorts ascending, then toggles descending, with a matching indicator', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	const indicators = () => (holder.selectAll('.sjpp-table-sort-indicator').nodes() as HTMLElement[]).map(n => n.textContent)
+
+	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Alice', 'Bob'], 'Should start in the input order')
+	test.deepEqual(indicators(), ['', ''], 'Should show no indicator before any sort')
+
+	clickHeaderLabel(holder, 0)
+	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Bob', 'Charlie'], 'First click should sort ascending')
+	test.deepEqual(indicators(), ['▲', ''], 'Should show ▲ on the sorted column')
+
+	clickHeaderLabel(holder, 0)
+	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Bob', 'Alice'], 'Second click should sort descending')
+	test.deepEqual(indicators(), ['▼', ''], 'Should show ▼ on the sorted column')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('sort: clicking the arrow indicator also toggles the sort', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+
+	clickHeaderLabel(holder, 0) // ascending, arrow now visible
+	const arrow = holder.select('.sjpp-table-sort-indicator').node() as HTMLElement
+	arrow.dispatchEvent(new Event('click', { bubbles: true }))
+	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Bob', 'Alice'], 'Clicking the arrow should sort descending')
+	test.equal(arrow.textContent, '▼', 'Should show ▼ after clicking the arrow')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('sort: sorting a different column resets the previous indicator and starts ascending', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	const indicators = () => (holder.selectAll('.sjpp-table-sort-indicator').nodes() as HTMLElement[]).map(n => n.textContent)
+
+	clickHeaderLabel(holder, 0)
+	clickHeaderLabel(holder, 0) // name descending
+	clickHeaderLabel(holder, 1)
+	test.deepEqual(bodyColumn(holder, 1), ['25', '30', '35'], 'Should sort numbers ascending on the new column')
+	test.deepEqual(indicators(), ['', '▲'], 'Should clear the old indicator and show ▲ on the new column')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('sort: numeric strings sort numerically, not lexically', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows: TableBaseRow[] = [[{ value: '1000' }], [{ value: '50' }], [{ value: '5' }], [{ value: '500' }]]
+	new TableBase({ columns: [{ label: 'Id', sortable: true }], rows, div: holder }).render()
+
+	clickHeaderLabel(holder, 0)
+	test.deepEqual(bodyColumn(holder, 0), ['5', '50', '500', '1000'], 'Should sort numeric-string ids by number')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('sort: does not sort when the column is not sortable', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const table = new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+
+	table.sortByColumn(2)
+	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Alice', 'Bob'], 'Should leave the order unchanged')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('sort: does not rebuild the header or mutate the caller rows array', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows = makeSortFilterRows()
+	const firstRow = rows[0]
+	new TableBase({ columns: sortFilterColumns, rows, div: holder }).render()
+	const theadBefore = holder.select('thead').node()
+	const thBefore = holder.select('thead th').node()
+
+	clickHeaderLabel(holder, 0)
+	test.equal(holder.select('thead').node(), theadBefore, 'Should keep the same <thead>')
+	test.equal(holder.select('thead th').node(), thBefore, 'Should keep the same header cells')
+	test.equal(rows[0], firstRow, 'Should leave the caller rows array in its original order')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('filter: per-column text filter keeps matching rows, case-insensitively', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+
+	typeFilter(holder, 2, 'ENGI')
+	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Bob'], 'Should show only rows whose Role contains the text')
+
+	typeFilter(holder, 0, 'bo')
+	test.deepEqual(bodyColumn(holder, 0), ['Bob'], 'Should AND filters across columns')
+
+	typeFilter(holder, 0, '')
+	typeFilter(holder, 2, '')
+	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Alice', 'Bob'], 'Should restore every row when filters are cleared')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('filter: matching nothing renders an empty body, and the filter input survives updates', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	const inputBefore = holder.select('input[data-testid="sjpp-table-filter-0"]').node()
+
+	typeFilter(holder, 0, 'zzz')
+	test.equal(holder.selectAll('tbody tr').size(), 0, 'Should render no rows when nothing matches')
+	test.equal(
+		holder.select('input[data-testid="sjpp-table-filter-0"]').node(),
+		inputBefore,
+		'Should keep the same <input> so typing focus is not lost'
+	)
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('filter: only filterable columns render an input', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+
+	test.equal(holder.selectAll('.sjpp-table-filter-input').size(), 2, 'Should render an input per filterable column')
+	test.ok(holder.select('input[data-testid="sjpp-table-filter-1"]').empty(), 'Should not render an input for Age')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('sort + filter: sort persists while filtering and vice versa', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+
+	clickHeaderLabel(holder, 1) // age ascending
+	typeFilter(holder, 2, 'engineer')
+	test.deepEqual(bodyColumn(holder, 0), ['Bob', 'Alice'], 'Should keep the age sort within the filtered rows')
+
+	clickHeaderLabel(holder, 1) // age descending
+	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Bob'], 'Should re-sort the filtered rows')
+
+	typeFilter(holder, 2, '')
+	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Alice', 'Bob'], 'Should apply the age-descending sort to all rows once unfiltered')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('getOriginalIndex: reports the index in the caller array after sort and filter', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows = makeSortFilterRows()
+	const table = new TableBase({ columns: sortFilterColumns, rows, div: holder }).render()
+
+	table.sortByColumn(0) // Alice, Bob, Charlie
+	test.deepEqual(
+		table.getRows().map(row => table.getOriginalIndex(row)),
+		[1, 2, 0],
+		'Should map sorted rows back to their original positions'
+	)
+
+	table.setColumnFilter(2, 'engineer') // Alice, Bob
+	test.deepEqual(
+		table.getRows().map(row => table.getOriginalIndex(row)),
+		[1, 2],
+		'Should map filtered rows back to their original positions'
+	)
+	test.equal(table.getOriginalIndex([{ value: 'stranger' }]), -1, 'Should return -1 for a row it does not own')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('render(): a second render keeps the current sort and filter state', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const table = new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+
+	table.sortByColumn(0)
+	table.setColumnFilter(2, 'engineer')
+	table.render()
+
+	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Bob'], 'Should still show the filtered and sorted rows')
+	const indicators = (holder.selectAll('.sjpp-table-sort-indicator').nodes() as HTMLElement[]).map(n => n.textContent)
+	test.deepEqual(indicators, ['▲', ''], 'Should restore the sort indicator')
+	const input = holder.select('input[data-testid="sjpp-table-filter-2"]').node() as HTMLInputElement
+	test.equal(input.value, 'engineer', 'Should restore the filter text')
+
+	//if ((test as any)._ok) holder.remove()
+	test.end()
+})

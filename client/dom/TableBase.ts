@@ -66,6 +66,32 @@ export type TableBaseColumn = {
 	nowrap?: boolean
 	headerTestId?: string
 	tooltip?: string
+	/** clicking the header label toggles ascending/descending sort on this column */
+	sortable?: boolean
+	/** renders a text input in the header; rows are kept only if this column's text contains the input (case-insensitive) */
+	filterable?: boolean
+}
+
+type SortState = { colIdx: number; ascending: boolean }
+
+/** Sorts rows in place by one column. A column of numeric strings (e.g. file names used as ids)
+ * sorts numerically rather than lexically. Rows with a missing value keep their relative position. */
+function sortRows(rows: TableBaseRow[], colIdx: number, ascending: boolean): TableBaseRow[] {
+	const allNumericStrings = rows.every(row => {
+		const v = row[colIdx]?.value
+		return typeof v === 'string' && Number.isFinite(+v)
+	})
+	return rows.sort((a, b) => {
+		const aVal = a[colIdx]?.value
+		const bVal = b[colIdx]?.value
+		if (aVal == null || bVal == null) return 0
+		if (typeof aVal === 'number' && typeof bVal === 'number') return ascending ? aVal - bVal : bVal - aVal
+		if (allNumericStrings) return ascending ? +aVal - +bVal : +bVal - +aVal
+		if (typeof aVal === 'string' && typeof bVal === 'string') {
+			return ascending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+		}
+		return 0
+	})
 }
 
 export type TableBaseOpts = {
@@ -93,7 +119,16 @@ export type TableBaseOpts = {
 export class TableBase {
 	protected div: any
 	protected columns: TableBaseColumn[]
+	/** the caller's rows in their original order. Never reordered or filtered; sort/filter work on copies */
+	protected originalRows: TableBaseRow[]
+	/** original index of each row object, built once, so callbacks can report indexes into the caller's array */
+	protected originalIndex: Map<TableBaseRow, number>
+	/** the rows currently displayed, after filtering and sorting */
 	protected rows: TableBaseRow[]
+	protected sortState?: SortState
+	/** active column filters: column index -> text the cell must contain */
+	protected filters = new Map<number, string>()
+	protected sortIndicators = new Map<number, any>()
 	protected striped: boolean
 	protected showLines: boolean
 	protected maxWidth: string
@@ -109,6 +144,8 @@ export class TableBase {
 		TableBase.validate(opts)
 		this.div = opts.div
 		this.columns = opts.columns
+		this.originalRows = opts.rows
+		this.originalIndex = new Map(opts.rows.map((row, i) => [row, i]))
 		this.rows = opts.rows
 		this.striped = opts.striped ?? true
 		this.showLines = opts.showLines ?? false
@@ -140,7 +177,7 @@ export class TableBase {
 		this.thead = this.table.append('thead')
 		this.tbody = this.table.append('tbody')
 		this.renderHeader()
-		this.renderBody()
+		this.update()
 		return this
 	}
 
@@ -158,16 +195,64 @@ export class TableBase {
 		return this.rows
 	}
 
-	/** Caller-triggered hook: optionally replace the rows, then redraw the body.
-	 * Does not touch the header, so it is cheap to call after e.g. a sort or filter
-	 * implemented by a subclass. */
+	/** Index of a row in the array the caller passed in, regardless of the current sort/filter. -1 if unknown.
+	 * Use this, not the displayed position, when reporting rows back to the caller. */
+	getOriginalIndex(row: TableBaseRow): number {
+		return this.originalIndex.get(row) ?? -1
+	}
+
+	/** Redraws the body only; the header (and any filter input focus) is untouched.
+	 * With no argument, shows the caller's rows filtered and sorted by the current state.
+	 * With rows, shows exactly those rows instead (an override for subclasses, e.g. pagination). */
 	update(rows?: TableBaseRow[]): this {
-		if (rows) {
-			TableBase.validateRows(rows, this.columns)
-			this.rows = rows
-		}
+		const next = rows ?? this.computeVisibleRows()
+		TableBase.validateRows(next, this.columns)
+		this.rows = next
 		this.renderBody()
 		return this
+	}
+
+	/** Sorts by a sortable column. Repeat calls on the same column toggle ascending/descending. */
+	sortByColumn(colIdx: number): this {
+		if (!this.columns[colIdx]?.sortable) return this
+		const ascending = this.sortState?.colIdx === colIdx ? !this.sortState.ascending : true
+		this.sortState = { colIdx, ascending }
+		this.updateSortIndicators()
+		return this.update()
+	}
+
+	/** Keeps only rows whose cell in this column contains text (case-insensitive). Empty text clears the filter. */
+	setColumnFilter(colIdx: number, text: string): this {
+		const trimmed = text.trim().toLowerCase()
+		if (trimmed) this.filters.set(colIdx, trimmed)
+		else this.filters.delete(colIdx)
+		return this.update()
+	}
+
+	/** Filters first so the sort only handles the rows that remain. Never mutates originalRows. */
+	protected computeVisibleRows(): TableBaseRow[] {
+		let visible = this.originalRows
+		if (this.filters.size) visible = visible.filter(row => this.matchesFilters(row))
+		if (this.sortState) {
+			visible = sortRows(visible === this.originalRows ? visible.slice() : visible, this.sortState.colIdx, this.sortState.ascending)
+		}
+		return visible
+	}
+
+	protected matchesFilters(row: TableBaseRow): boolean {
+		for (const [colIdx, text] of this.filters) {
+			const cell = row[colIdx]
+			const shown = cell.value ?? cell.url ?? ''
+			if (!String(shown).toLowerCase().includes(text)) return false
+		}
+		return true
+	}
+
+	protected updateSortIndicators(): void {
+		for (const [colIdx, indicator] of this.sortIndicators) {
+			const sorted = this.sortState?.colIdx === colIdx
+			indicator.text(!sorted ? '' : this.sortState!.ascending ? '▲' : '▼')
+		}
 	}
 
 	/** Extension point: customize the outer scrollable wrapper. */
@@ -188,21 +273,43 @@ export class TableBase {
 		return table
 	}
 
-	/** Extension point: rebuilds the header row. Subclasses adding sort/filter
-	 * controls to the header should override this or renderHeaderCell(). */
+	/** Extension point: rebuilds the header row. Only runs from render(), never on update(). */
 	protected renderHeader(): void {
 		this.thead.selectAll('tr').remove()
+		this.sortIndicators.clear()
 		const tr: Tr = this.thead.append('tr')
 		if (this.showLines) tr.append('th').style('width', '1vw')
-		for (const column of this.columns) this.renderHeaderCell(tr, column)
+		this.columns.forEach((column, colIdx) => this.renderHeaderCell(tr, column, colIdx))
+		this.updateSortIndicators()
 	}
 
-	/** Extension point: render a single header cell. */
-	protected renderHeaderCell(tr: Tr, column: TableBaseColumn): Th {
-		const th: Th = tr.append('th').attr('class', 'sjpp_table_header').text(column.label)
+	/** Extension point: render a single header cell, including its sort and filter controls. */
+	protected renderHeaderCell(tr: Tr, column: TableBaseColumn, colIdx: number): Th {
+		const th: Th = tr.append('th').attr('class', 'sjpp_table_header')
 		if (column.width) th.style('width', column.width)
 		if (column.headerTestId) th.attr('data-testid', column.headerTestId)
 		if (column.tooltip) th.attr('title', column.tooltip)
+
+		const label = th.append('span').attr('class', 'sjpp-table-header-label').text(column.label)
+		if (column.sortable) {
+			const indicator = th.append('span').attr('class', 'sjpp-table-sort-indicator').style('margin-left', '4px')
+			for (const clickable of [label, indicator]) {
+				clickable.style('cursor', 'pointer').on('click', () => this.sortByColumn(colIdx))
+			}
+			this.sortIndicators.set(colIdx, indicator)
+		}
+		if (column.filterable) {
+			th.append('input')
+				.attr('type', 'text')
+				.attr('placeholder', 'Filter')
+				.attr('class', 'sjpp-table-filter-input')
+				.attr('data-testid', `sjpp-table-filter-${colIdx}`)
+				.attr('value', this.filters.get(colIdx) ?? '')
+				.style('display', 'block')
+				.style('width', '90%')
+				.style('font-weight', 'normal')
+				.on('input', (event: Event) => this.setColumnFilter(colIdx, (event.target as HTMLInputElement).value))
+		}
 		return th
 	}
 
@@ -224,13 +331,13 @@ export class TableBase {
 				.style('width', '1vw')
 				.style('font-size', '0.8rem')
 		}
-		row.forEach((cell, colIdx) => this.renderCell(tr, cell, colIdx, rowIdx))
+		row.forEach((cell, colIdx) => this.renderCell(tr, cell, colIdx, /*rowIdx*/))
 		return tr
 	}
 
 	/** Extension point: render a single cell. Subclasses adding editing,
 	 * barplots, buttons, etc. should override this. */
-	protected renderCell(tr: Tr, cell: TableBaseCell, colIdx: number, rowIdx: number): Td {
+	protected renderCell(tr: Tr, cell: TableBaseCell, colIdx: number, /*rowIdx: number*/): Td {
 		const column = this.columns[colIdx]
 		const td: Td = tr.append('td').attr('class', 'sjpp_table_item')
 		if (cell.dataTestId) td.attr('data-testid', cell.dataTestId)
