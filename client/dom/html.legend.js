@@ -180,7 +180,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 			.style('line-height', s.legendFontSize)
 			.style('vertical-align', d.svg ? 'top' : null)
 			.style('text-decoration', d.isHidden ? 'line-through' : 'none')
-			.html(d.text)
+			.text(d.text)
 			.on('click', viz.handlers.legend?.click)
 
 		if (Object.keys(viz.handlers).length) {

@@ -123,7 +123,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 			//.style('font-weight', 600)
 			.style('font-size', '1.1em')
 			.style('margin-bottom', '24px')
-			.html(_chart.name)
+			.text(_chart.name)
 
 		// only set this initially to prevent
 		// jerky svg resize on update
@@ -578,7 +578,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 			.attr('y', 2) //hm.colw / 3)
 			.attr('text-anchor', 'end')
 			.attr('font-size', computed.colfontsize + 'px')
-			.html(hm.handlers.barLabel.text)
+			.text(hm.handlers.barLabel.text)
 
 		g.transition().delay(hm.delay).duration(hm.duration).style('opacity', 1)
 	}
@@ -595,7 +595,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 			.attr('y', 2) //hm.colw / 3)
 			.attr('text-anchor', 'end')
 			.attr('font-size', computed.colfontsize + 'px')
-			.html(hm.handlers.barLabel.text)
+			.text(hm.handlers.barLabel.text)
 	}
 
 	function rowLabelsTransform() {
@@ -621,7 +621,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 			.attr('x', 2) //hm.colw / 3)
 			.attr('text-anchor', 'end')
 			.attr('font-size', computed.rowfontsize + 'px')
-			.html(hm.handlers.barLabel.text)
+			.text(hm.handlers.barLabel.text)
 			.attr('data-testid', 'sjpp-row-label-' + d.id)
 
 		g.transition().delay(hm.delay).duration(hm.duration).style('opacity', 1)
@@ -639,7 +639,7 @@ export default function barsRenderer(barsapp: any, holder: any) {
 			.attr('x', 2) //hm.colw / 3)
 			.attr('text-anchor', 'end')
 			.attr('font-size', computed.rowfontsize + 'px')
-			.html(hm.handlers.barLabel.text)
+			.text(hm.handlers.barLabel.text)
 	}
 
 	function rowTextWeight(d) {
