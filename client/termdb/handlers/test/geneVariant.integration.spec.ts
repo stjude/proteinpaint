@@ -48,6 +48,7 @@ async function initializeSearchHandler(opts) {
 		genomeObj: hg38,
 		keepsQ: opts.keepsQ,
 		msg: opts.msg,
+		usecase: opts.usecase,
 		callback
 	})
 	return handler
@@ -78,6 +79,48 @@ tape('Search handler layout', async test => {
 	)
 	const searchDiv = holder.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
 	test.equal(searchDiv.selectAll('input[type="search"]').size(), 1, 'Gene search input should be present')
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Matrix search handler only shows gene search', async test => {
+	let tw
+	const holder = getHolder()
+	const handler = await initializeSearchHandler({
+		holder,
+		usecase: { target: 'matrix' },
+		callback: _tw => (tw = _tw)
+	})
+
+	test.equal(handler.q.type, 'values', 'matrix q should use values')
+	test.equal(holder.selectAll('input[type="search"]').size(), 1, 'should show one gene search input')
+	test.equal(
+		holder.selectAll('input[type="radio"], input[type="checkbox"], select').size(),
+		0,
+		'should show no other selectors'
+	)
+	test.equal(handler.mutationTypeRadio, undefined, 'should not initialize mutation type selector')
+	test.equal(handler.inputTypeRadio, undefined, 'should not initialize gene set selector')
+	test.equal(handler.mutationTypeTerms, undefined, 'should not initialize mutation type selector state')
+	test.equal(handler.maxNumGenes, undefined, 'should not initialize gene set selector state')
+	test.equal(handler.originSelect, undefined, 'should not initialize origin selector')
+	test.equal(handler.queryOrigins, undefined, 'should not initialize origin selector state')
+	test.equal(handler.sampleTypeSelect, undefined, 'should not initialize sample type selector')
+	test.equal(handler.querySampleTypes, undefined, 'should not initialize sample type selector state')
+	test.equal(handler.querySampleTypesByTerms, undefined, 'should not initialize sample type selector state')
+
+	const geneSearchInput: any = holder.select('input[type="search"]').node()
+	geneSearchInput.value = 'TP53'
+	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
+	await sleep(100)
+	test.equal(tw.q.type, 'values', 'submitted matrix q should use values')
+	test.deepEqual(Object.keys(tw.q), ['type'], 'matrix q should not include mutation selector properties')
+	test.equal(tw.term.genes[0].gene, 'TP53', 'should submit the selected gene')
+	test.equal(tw.term.childTerms, undefined, 'should not initialize mutation type terms')
+	test.equal(tw.term.origins, undefined, 'should not set origin selector values')
+	test.equal(tw.term.sampleTypes, undefined, 'should not set sample type selector values')
+	test.equal(tw.term.label, undefined, 'should not set selector-derived term label')
+
 	if (test['_ok']) holder.remove()
 	test.end()
 })
