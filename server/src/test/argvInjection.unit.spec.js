@@ -355,9 +355,12 @@ tape('spawnTool() central guard', async test => {
 tape('/mdsgeneboxplot and /isoformbycoord, via the real route table', async test => {
 	const routes = {}
 	const record = (p, h) => (routes[p] = h)
+	const genome = getGenome()
+	// legacy mds routes are only mounted when there is at least one mds dataset
+	genome.datasets.FakeMds = { isMds: true }
 	setRoutes(
 		{ get: record, post: record, all: record, put: record, delete: record, use: () => {} },
-		{ hg38: getGenome() },
+		{ hg38: genome },
 		{}
 	)
 	for (const chr of chrAttacks) {
