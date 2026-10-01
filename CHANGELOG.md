@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - serverconfig.features.massSessionMaxBytes limits the size of a saved session, default 1MB
 - a zero cacheMonitor.subdirs.massSession maxAge or maxSize disables the /massSession route
+- use content-hashed bundle chunk filenames and notify when the loaded client code is outdated
 
 Fixes:
 - harden user-keyed object maps against prototype pollution
