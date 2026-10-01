@@ -3,9 +3,14 @@ import type { GdcMafRequest, GdcMafResponse, GdcMafFile } from '#types'
 import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from '#src/serverconfig.js'
+import { genomes } from '#src/initGenomesDs.js'
 
 const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when the GDC ds is loaded
+	get init() {
+		return hasGdcDs(genomes) ? init : null
+	},
 	request: { typeId: 'GdcMafRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'GdcMafResponse' }
 }
@@ -33,6 +38,11 @@ const allowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Maskin
 
 // change to 400 so it won't limit number of files; should keep this setting as a safeguard; also it's fast to check file size (.5s in gdc.mafBuild.ts)
 export const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 400000000 // 400Mb
+
+// returns true when any genome has a ds with label "GDC"
+export function hasGdcDs(genomes) {
+	return Object.values(genomes).some((g: any) => Object.values(g.datasets || {}).some((ds: any) => ds.label == 'GDC'))
+}
 
 export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {

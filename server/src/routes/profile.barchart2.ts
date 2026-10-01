@@ -1,4 +1,5 @@
 import type { RouteApi, RoutePayload } from '#types'
+import { genomes } from '#src/initGenomesDs.js'
 import { getData } from '#src/termdb.matrix.js'
 
 /*
@@ -16,7 +17,11 @@ sending.
 */
 
 const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when the profile ds is loaded
+	get init() {
+		return hasProfileDs(genomes) ? init : null
+	},
 	request: { typeId: 'ProfileScoresRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'ProfileScoresResponse' }
 }
@@ -27,6 +32,13 @@ export const api: RouteApi = {
 		get: payload,
 		post: payload
 	}
+}
+
+// returns true when any genome has a ds with label "profile"
+export function hasProfileDs(genomes) {
+	return Object.values(genomes).some((g: any) =>
+		Object.values(g.datasets || {}).some((ds: any) => ds.label == 'profile')
+	)
 }
 
 function init({ genomes }) {

@@ -1,4 +1,6 @@
 import type { RouteApi, RoutePayload } from '#types'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasProfileDs } from './profile.barchart2.ts'
 import { getData } from '#src/termdb.matrix.js'
 
 /*
@@ -24,7 +26,10 @@ Response shape:
   (defense-in-depth; the chart is also gated by isSupportedChartOverride).
 */
 const payload: RoutePayload = {
-	init,
+	// only set up when the profile ds is loaded, see profile.barchart2.ts
+	get init() {
+		return hasProfileDs(genomes) ? init : null
+	},
 	request: { typeId: 'any' /*, checkers: TODO write validator */ },
 	response: { typeId: 'any' }
 }

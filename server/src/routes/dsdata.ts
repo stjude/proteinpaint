@@ -4,9 +4,14 @@ import serverconfig from '#src/serverconfig.js'
 import { checkChr, spawnTool } from '#src/utils.js'
 import * as common from '#shared/common.js'
 import type { DsDataRequest, DsDataResponse } from '#types'
+import { genomes } from '#src/initGenomesDs.js'
 
 const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one legacy ds is loaded
+	get init() {
+		return hasLegacyDs(genomes) ? init : null
+	},
 	request: { typeId: 'DsDataRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'DsDataResponse' }
 }
@@ -21,6 +26,17 @@ export const api: RouteApi = {
 		get: payload,
 		post: payload
 	}
+}
+
+/*
+returns true when any genome has a legacy (non-mds, non-mds3) ds, identified by ds.queries[] as an array,
+which is iterated by this route; mds and mds3 use an object for ds.queries{}
+a legacy ds may not have ds.dbfile, e.g. a vcf-only ds
+*/
+export function hasLegacyDs(genomes) {
+	return Object.values(genomes).some((g: any) =>
+		Object.values(g.datasets || {}).some((ds: any) => Array.isArray(ds.queries))
+	)
 }
 
 export function init({ genomes }) {

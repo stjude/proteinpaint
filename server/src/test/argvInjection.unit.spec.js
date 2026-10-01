@@ -7,7 +7,7 @@ import { spawnSync } from 'child_process'
 import serverconfig from '../serverconfig.js'
 import * as utils from '../utils.js'
 import { api as ntseqApi } from '../routes/ntseq.ts'
-import { api as dsdataApi } from '../routes/dsdata.ts'
+import { init as dsdataInit } from '../routes/dsdata.ts'
 import bamRequestClosure from '../bam.js'
 import { mdsjunction_request_closure } from '../mds.junction.js'
 import { handle_singlecell_closure } from '../singlecell.js'
@@ -216,7 +216,7 @@ tape('/dsdata', async test => {
 	genome.datasets.testds = {
 		queries: [{ vcffile: 'files/hg38/TermdbTest/TermdbTest_ITD.gz', vcf: {} }]
 	}
-	const handler = dsdataApi.methods.get.init({ genomes: { hg38: genome } })
+	const handler = dsdataInit({ genomes: { hg38: genome } })
 	for (const chr of chrAttacks) {
 		const r = await send(handler, { genome: 'hg38', dsname: 'testds', range: { chr, start: 1, stop: 2 } })
 		test.equal(r?.error, 'invalid chr', `range should reject chr=${chr}`)
