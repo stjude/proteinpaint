@@ -99,7 +99,7 @@ tape('notifyChunkLoadError()', async test => {
 	const requested: string[] = []
 	window.fetch = (async url => {
 		requested.push(url)
-		return { json: async () => ({ versionInfo: { clientVersion: '2.215.0' } }) }
+		return { json: async () => ({ versionInfo: { deps: { '@sjcrh/proteinpaint-client': { bundled: '2.215.0' } } } }) }
 	}) as any
 	try {
 		await notifyChunkLoadError({ request: 'https://pp.test/base/bin/123.abcd1234.proteinpaint.js' }, '2.214.0')

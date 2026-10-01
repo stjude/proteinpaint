@@ -7,6 +7,7 @@ import { trackedDatasets } from './initGenomesDs.js'
 
 const SERVER_PKG = '@sjcrh/proteinpaint-server'
 const FRONT_PKG = '@sjcrh/proteinpaint-front'
+export const CLIENT_PKG = '@sjcrh/proteinpaint-client'
 const pkg = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../package.json'), { encoding: 'utf8' }))
 const deps = getDeps()
 const codedate = computeCodeDate(deps)
@@ -18,39 +19,7 @@ export const versionInfo: VersionInfo = {
 	hostImage: getHostImage(),
 	deps,
 	// launchdate captured at module load so it is the actual process start, outside of any function call
-	launchdate: new Date().toString().split(' ').slice(0, 5).join(' '),
-	// a getter, since proteinpaint-front's init may generate the served bundle after this module is loaded;
-	// a getter is still included when versionInfo is serialized as JSON
-	get clientVersion() {
-		return getServedClientVersion()
-	}
-}
-
-let servedClientVersion: string | undefined
-
-/*
-	the client version of the bundle that is served at /bin, as written by the
-	front/webpack.config.js BundleVersionPlugin; used by an already loaded page to detect
-	if its client code is outdated (see client/src/bundleVersion.ts)
-*/
-function getServedClientVersion(): string | undefined {
-	if (servedClientVersion) return servedClientVersion
-	// same precedence as the /bin static routes in app.middlewares.js
-	const binDirs: string[] = []
-	if (serverconfig.binDir && fs.existsSync(path.join(serverconfig.binDir, '.pp-bundle-ready')))
-		binDirs.push(serverconfig.binDir)
-	if (serverconfig.publicDir) binDirs.push(path.join(serverconfig.publicDir, 'bin'))
-	for (const dir of binDirs) {
-		const file = path.join(dir, 'version.json')
-		if (!fs.existsSync(file)) continue
-		try {
-			// cache only a found version, since the bundle may not be generated yet
-			servedClientVersion = JSON.parse(fs.readFileSync(file, 'utf8')).clientVersion
-		} catch (_) {
-			// a partially written file may be read on the next call
-		}
-		return servedClientVersion
-	}
+	launchdate: new Date().toString().split(' ').slice(0, 5).join(' ')
 }
 
 /*
@@ -123,6 +92,9 @@ function getDeps() {
 	if (fs.existsSync(frontPkgFile)) {
 		const p = JSON.parse(fs.readFileSync(frontPkgFile, 'utf8'))
 		deps[FRONT_PKG] = { installed: p.version, buildTime: p._buildTime }
+		// the client is not installed at runtime, but bundled by front's prepack with this pinned version
+		const bundled = p.devDependencies?.[CLIENT_PKG]
+		if (bundled) deps[CLIENT_PKG] = { bundled }
 	}
 
 	const targetPkgFile = path.join(process.cwd(), 'package.json')

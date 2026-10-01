@@ -1,8 +1,6 @@
 const path = require('path')
 const fs = require('fs')
 const webpack = require('webpack')
-// the client version that gets bundled; the client code embeds the same version string (see client package.json sedver)
-const clientVersion = require('@sjcrh/proteinpaint-client/package.json').version
 
 // TODO: delete webpack use, once esbuild migration is fully tested and unlikely to be reverted
 // as of 1/24/2025: still using webpack since esbuild chunks are still too granular,
@@ -54,8 +52,7 @@ module.exports = function getPortalConfig(env = {}) {
 		plugins: [
 			new webpack.ProvidePlugin({
 				Buffer: ['buffer', 'Buffer']
-			}),
-			new BundleVersionPlugin()
+			})
 		],
 		module: {
 			strictExportPresence: true,
@@ -77,21 +74,6 @@ module.exports = function getPortalConfig(env = {}) {
 	}
 
 	return config
-}
-
-// emit a version.json file next to the bundle, so that the server can report the client version
-// that it actually serves, which is compared against the client version of an already loaded page
-class BundleVersionPlugin {
-	apply(compiler) {
-		compiler.hooks.thisCompilation.tap('BundleVersionPlugin', compilation => {
-			compilation.hooks.processAssets.tap(
-				{ name: 'BundleVersionPlugin', stage: webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL },
-				() => {
-					compilation.emitAsset('version.json', new webpack.sources.RawSource(JSON.stringify({ clientVersion })))
-				}
-			)
-		})
-	}
 }
 
 process.traceDeprecation = true
