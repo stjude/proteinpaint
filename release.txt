@@ -1,1 +1,2 @@
-
+Fixes:
+- report a declared sjcrh package entry in the /healthcheck versionInfo.deps, without throwing when that package is not installed
