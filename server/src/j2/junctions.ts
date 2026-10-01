@@ -1,11 +1,16 @@
 import type { RouteApi, RoutePayload, TermdbJunctionsRequest, TermdbJunctionsResponse } from '#types'
+import { genomes } from '#src/initGenomesDs.js'
 
 /*
 list junctions from a locus
 */
 
 const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one mds3 ds has a junction query
+	get init() {
+		return hasJunctionDs(genomes) ? init : null
+	},
 	request: { typeId: 'TermdbJunctionsRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'TermdbJunctionsResponse' }
 }
@@ -16,6 +21,16 @@ export const api: RouteApi = {
 		get: payload,
 		post: payload
 	}
+}
+
+/*
+returns true when any loaded mds3 ds from any genome has .queries.junction
+legacy mds ds may also have .queries.junction (type=mdsjunction) but are not served by j2 routes
+*/
+export function hasJunctionDs(genomes) {
+	return Object.values(genomes).some((g: any) =>
+		Object.values(g.datasets || {}).some((ds: any) => ds.isMds3 && ds.queries?.junction)
+	)
 }
 
 export function init({ genomes }) {

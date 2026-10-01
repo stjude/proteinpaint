@@ -1,12 +1,17 @@
 import type { RouteApi, RoutePayload, TermdbJunctionsAbyBRequest, TermdbJunctionsAbyBResponse } from '#types'
 import computePercentile from '#shared/compute.percentile.js'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasJunctionDs } from './junctions.ts'
 
 /*
 get junction A median read count for the same set of samples with junction B
 */
 
 const payload: RoutePayload = {
-	init,
+	// only set up when at least one mds3 ds has a junction query, see junctions.ts
+	get init() {
+		return hasJunctionDs(genomes) ? init : null
+	},
 	request: { typeId: 'TermdbJunctionsAbyBRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'TermdbJunctionsAbyBResponse' }
 }
