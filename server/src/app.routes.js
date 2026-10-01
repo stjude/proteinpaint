@@ -12,6 +12,7 @@ export const routeFiles = [
 	import('./j2/AbyB.ts'),
 	import('./j2/junctions.ts'),
 	import('./j2/onesampletk.ts'),
+	import('./routes/blat.ts'),
 	import('./routes/burden.ts'),
 	import('./routes/correlationVolcano.ts'),
 	import('./routes/dataset.ts'),

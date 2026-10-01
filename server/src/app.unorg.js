@@ -52,7 +52,6 @@ import { gdc_bam_request } from './bam.gdc.js'
 import aicheck_request_closure from './aicheck.js'
 import bampile_request_closure from './bampile.js'
 import bedj_request_closure from './bedj.js'
-import { request_closure as blat_request_closure } from './blat.js'
 import { mds3_request_closure } from './mds3.load.js'
 import { handle_mdssvcnv_expression } from './handle_mdssvcnv_expression.js'
 import * as singlecell from './singlecell.js'
@@ -97,7 +96,6 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.all(basepath + '/tkbam', bam_request_closure(genomes))
 	app.get(basepath + '/gdcbam', gdc_bam_request(genomes))
 	app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
-	app.get(basepath + '/blat', blat_request_closure(genomes))
 	app.all(basepath + '/mds3', mds3_request_closure(genomes))
 	app.get(basepath + '/tkbampile', bampile_request_closure(genomes))
 	app.post(basepath + '/tkbigwig', bw_request_closure(genomes))
