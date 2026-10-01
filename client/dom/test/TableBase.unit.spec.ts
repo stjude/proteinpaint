@@ -67,7 +67,7 @@ tape('Render table structure', test => {
 	test.equal(holder.selectAll('tbody').size(), 1, 'Should render a <tbody>')
 	test.equal(holder.selectAll('tbody tr').size(), testRows.length, 'Should render one <tr> per row')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -84,7 +84,7 @@ tape('Renders header labels', test => {
 		'Should render one <th> per column, in order, with the column label'
 	)
 
-	// //if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -98,7 +98,6 @@ tape('Renders row and cell content: value, url, html, color', test => {
 	test.equal(cells[0].textContent, 'plain', 'Should render cell.value as text')
 	test.equal((cells[1] as HTMLElement).style.backgroundColor, 'red', 'Should render cell.color as background when no value')
 	test.equal(cells[2].textContent, '0', 'Should render a numeric 0 value, not treat it as empty')
-	valueHolder.remove()
 
 	const urlHolder = getHolder()
 	new TableBase({
@@ -110,7 +109,6 @@ tape('Renders row and cell content: value, url, html, color', test => {
 	test.equal(link.getAttribute('href'), 'https://example.com', 'Should render cell.url as <a href>')
 	test.equal(link.textContent, 'Example', 'Should prefer cell.value as the link text when present')
 	test.equal(link.getAttribute('rel'), 'noopener noreferrer', 'Should set rel=noopener noreferrer on links')
-	urlHolder.remove()
 
 	const urlOnlyHolder = getHolder()
 	new TableBase({
@@ -120,7 +118,6 @@ tape('Renders row and cell content: value, url, html, color', test => {
 	}).render()
 	const linkOnly = urlOnlyHolder.select('tbody a').node() as HTMLAnchorElement
 	test.equal(linkOnly.textContent, 'https://example.com', 'Should fall back to the url as link text when value is missing')
-	urlOnlyHolder.remove()
 
 	const htmlHolder = getHolder()
 	new TableBase({
@@ -133,8 +130,8 @@ tape('Renders row and cell content: value, url, html, color', test => {
 		'<b>bold</b>',
 		'Should render cell.html verbatim'
 	)
-	htmlHolder.remove()
 
+	if ((test as any)._ok) for (const holder of [valueHolder, urlHolder, urlOnlyHolder, htmlHolder]) holder.remove()
 	test.end()
 })
 
@@ -151,7 +148,7 @@ tape('showLines renders a line-number column', test => {
 	const headerRow = holder.select('thead tr').node() as HTMLTableRowElement
 	test.equal(headerRow.cells.length, testColumns.length + 1, 'Should add a matching blank <th> in the header')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -166,7 +163,7 @@ tape('striped alternates row background color', test => {
 	test.equal(trs[1].style.backgroundColor, 'rgb(245, 245, 245)', 'Second row should be highlighted')
 	test.equal(trs[2].style.backgroundColor, '', 'Third row should not be highlighted')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -184,7 +181,7 @@ tape('striped: false disables row highlighting', test => {
 	const trs = holder.selectAll('tbody tr').nodes() as HTMLElement[]
 	test.ok(trs.every(tr => tr.style.backgroundColor === ''), 'No row should be highlighted when striped=false')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -205,7 +202,7 @@ tape('Column width/align/nowrap styling', test => {
 	test.equal(td.style.textAlign, 'right', 'Should apply column align to the data cell')
 	test.equal(td.style.whiteSpace, 'nowrap', 'Should apply column nowrap to the data cell')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -217,7 +214,7 @@ tape('dataTestId applied to <table>', test => {
 
 	test.equal(holder.select('table').attr('data-testid'), 'my-table', 'Should set data-testid on the <table>')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -306,7 +303,7 @@ tape('update() replaces rows and redraws body only', test => {
 		'getRows() should reflect the update'
 	)
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -325,7 +322,7 @@ tape('update() validates replacement rows', test => {
 		test.pass(`${message}: ${e.message || e}`)
 	}
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -340,7 +337,7 @@ tape('render() is idempotent (no duplicate tables on repeat calls)', test => {
 
 	test.equal(holder.selectAll('table').size(), 1, 'Repeated render() calls should not accumulate extra <table> elements')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -408,7 +405,7 @@ tape('sort: only sortable columns get a clickable label and indicator', test => 
 	const roleLabel = roleTh.querySelector('.sjpp-table-header-label') as HTMLElement
 	test.equal(roleLabel.style.cursor, '', 'Should not style a non-sortable label as clickable')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -429,7 +426,7 @@ tape('sort: clicking a header sorts ascending, then toggles descending, with a m
 	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Bob', 'Alice'], 'Second click should sort descending')
 	test.deepEqual(indicators(), ['▼', ''], 'Should show ▼ on the sorted column')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -444,7 +441,7 @@ tape('sort: clicking the arrow indicator also toggles the sort', test => {
 	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Bob', 'Alice'], 'Clicking the arrow should sort descending')
 	test.equal(arrow.textContent, '▼', 'Should show ▼ after clicking the arrow')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -460,7 +457,7 @@ tape('sort: sorting a different column resets the previous indicator and starts 
 	test.deepEqual(bodyColumn(holder, 1), ['25', '30', '35'], 'Should sort numbers ascending on the new column')
 	test.deepEqual(indicators(), ['', '▲'], 'Should clear the old indicator and show ▲ on the new column')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -473,7 +470,7 @@ tape('sort: numeric strings sort numerically, not lexically', test => {
 	clickHeaderLabel(holder, 0)
 	test.deepEqual(bodyColumn(holder, 0), ['5', '50', '500', '1000'], 'Should sort numeric-string ids by number')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -485,7 +482,7 @@ tape('sort: does not sort when the column is not sortable', test => {
 	table.sortByColumn(2)
 	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Alice', 'Bob'], 'Should leave the order unchanged')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -503,7 +500,7 @@ tape('sort: does not rebuild the header or mutate the caller rows array', test =
 	test.equal(holder.select('thead th').node(), thBefore, 'Should keep the same header cells')
 	test.equal(rows[0], firstRow, 'Should leave the caller rows array in its original order')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -522,7 +519,7 @@ tape('filter: per-column text filter keeps matching rows, case-insensitively', t
 	typeFilter(holder, 2, '')
 	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Alice', 'Bob'], 'Should restore every row when filters are cleared')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -540,7 +537,7 @@ tape('filter: matching nothing renders an empty body, and the filter input survi
 		'Should keep the same <input> so typing focus is not lost'
 	)
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -549,8 +546,11 @@ const numericFilterColumns: TableBaseColumn[] = [
 	{ label: 'Age', filterable: true }
 ]
 
-function namesAfterAgeFilter(text: string): string[] {
+/** Renders a fresh table, types into the Age filter and returns the names left. The holder is added to
+ * `holders` so the calling test can remove it when it passes. */
+function namesAfterAgeFilter(text: string, holders: any[]): string[] {
 	const holder = getHolder()
+	holders.push(holder)
 	new TableBase({ columns: numericFilterColumns, rows: makeSortFilterRows().map(r => [r[0], r[1]]), div: holder }).render()
 	typeFilter(holder, 1, text)
 	return bodyColumn(holder, 0)
@@ -558,24 +558,28 @@ function namesAfterAgeFilter(text: string): string[] {
 
 tape('filter: a numeric column accepts comparison and range expressions', test => {
 	test.timeoutAfter(100)
+	const holders: any[] = []
 
-	test.deepEqual(namesAfterAgeFilter('>30'), ['Charlie'], '>30')
-	test.deepEqual(namesAfterAgeFilter('>=30'), ['Charlie', 'Alice'], '>=30')
-	test.deepEqual(namesAfterAgeFilter('<30'), ['Bob'], '<30')
-	test.deepEqual(namesAfterAgeFilter('<= 30'), ['Alice', 'Bob'], '<= 30 (space allowed)')
-	test.deepEqual(namesAfterAgeFilter('=35'), ['Charlie'], '=35')
-	test.deepEqual(namesAfterAgeFilter('25-30'), ['Alice', 'Bob'], '25-30 is inclusive')
-	test.deepEqual(namesAfterAgeFilter('30-25'), ['Alice', 'Bob'], 'a reversed range still works')
+	test.deepEqual(namesAfterAgeFilter('>30', holders), ['Charlie'], '>30')
+	test.deepEqual(namesAfterAgeFilter('>=30', holders), ['Charlie', 'Alice'], '>=30')
+	test.deepEqual(namesAfterAgeFilter('<30', holders), ['Bob'], '<30')
+	test.deepEqual(namesAfterAgeFilter('<= 30', holders), ['Alice', 'Bob'], '<= 30 (space allowed)')
+	test.deepEqual(namesAfterAgeFilter('=35', holders), ['Charlie'], '=35')
+	test.deepEqual(namesAfterAgeFilter('25-30', holders), ['Alice', 'Bob'], '25-30 is inclusive')
+	test.deepEqual(namesAfterAgeFilter('30-25', holders), ['Alice', 'Bob'], 'a reversed range still works')
 
+	if ((test as any)._ok) for (const holder of holders) holder.remove()
 	test.end()
 })
 
 tape('filter: plain text in a numeric column falls back to substring matching', test => {
 	test.timeoutAfter(100)
+	const holders: any[] = []
 
-	test.deepEqual(namesAfterAgeFilter('3'), ['Charlie', 'Alice'], '3 matches 35 and 30')
-	test.deepEqual(namesAfterAgeFilter('>abc'), [], 'an invalid expression is treated as text and matches nothing')
+	test.deepEqual(namesAfterAgeFilter('3', holders), ['Charlie', 'Alice'], '3 matches 35 and 30')
+	test.deepEqual(namesAfterAgeFilter('>abc', holders), [], 'an invalid expression is treated as text and matches nothing')
 
+	if ((test as any)._ok) for (const holder of holders) holder.remove()
 	test.end()
 })
 
@@ -595,6 +599,7 @@ tape('filter: numeric expressions combine with sort and do not break text column
 	typeFilter(holder, 0, '>30')
 	test.deepEqual(bodyColumn(holder, 0), [], 'A comparison typed in a text column is just text')
 
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -606,7 +611,7 @@ tape('filter: only filterable columns render an input', test => {
 	test.equal(holder.selectAll('.sjpp-table-filter-input').size(), 2, 'Should render an input per filterable column')
 	test.ok(holder.select('input[data-testid="sjpp-table-filter-1"]').empty(), 'Should not render an input for Age')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -625,7 +630,7 @@ tape('sort + filter: sort persists while filtering and vice versa', test => {
 	typeFilter(holder, 2, '')
 	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Alice', 'Bob'], 'Should apply the age-descending sort to all rows once unfiltered')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -650,7 +655,7 @@ tape('getOriginalIndex: reports the index in the caller array after sort and fil
 	)
 	test.equal(table.getOriginalIndex([{ value: 'stranger' }]), -1, 'Should return -1 for a row it does not own')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -697,7 +702,7 @@ tape('edit: clicking an editable cell shows an input holding the current text', 
 	test.ok(input, 'Should render an input in the clicked cell')
 	test.equal(input!.value, 'Charlie', 'Should start with the current text')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -712,7 +717,7 @@ tape('edit: non-editable, url and html cells do not become inputs', test => {
 	test.notOk(editCell(holder, 1, 0, null).input, 'Should not edit an html cell')
 	test.notOk(editCell(holder, 0, 1, null).input, 'Should not edit a cell in a non-editable column')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -734,7 +739,7 @@ tape('edit: Enter commits, updates the cell and reports the original row index',
 	test.equal(edits[0].colIdx, 0, 'Should report the column index')
 	test.equal(edits[0].cell, rows[1][0], 'Should report the edited cell')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -750,7 +755,7 @@ tape('edit: Escape cancels and leaves the value and callback alone', test => {
 	test.equal(rows[0][0].value, 'Charlie', 'Should not change the cell value')
 	test.equal(called, 0, 'Should not call onEdit')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -770,7 +775,7 @@ tape('edit: blur commits, and an unchanged value does not call onEdit', test => 
 	editCell(holder, 1, 0, 'Alice')
 	test.equal(called, 1, 'Should not call onEdit when the text is unchanged')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -792,7 +797,7 @@ tape('edit: a number cell only accepts numbers and stays a number', test => {
 	}
 	test.equal(called, 1, 'Should not call onEdit for rejected edits')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -817,7 +822,7 @@ tape('edit: column.validate rejects disallowed text and reverts', test => {
 	test.equal(rows[0][0].value, 'Chuck-2', 'Should accept text the validator allows')
 	test.equal(called, 1, 'Should call onEdit for accepted text')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -833,7 +838,7 @@ tape('edit: the input is length-limited and over-long text is rejected', test =>
 	test.equal(rows[0][0].value, 'Charlie', 'Should reject text over the limit even if maxlength is bypassed')
 	test.equal(called, 0, 'Should not call onEdit')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -880,7 +885,7 @@ tape('select: no onSelect means no selection column', test => {
 	test.equal(trAt(holder, 0).getAttribute('tabindex'), null, 'Rows should not be focusable')
 	test.equal(trAt(holder, 0).cells.length, sortFilterColumns.length, 'Should add no extra cell')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -897,7 +902,7 @@ tape('select: multiple mode renders checkboxes, single mode renders radios shari
 	test.notEqual(singleInputs[0].name, multiInputs[0].name, 'Two tables should not share an input name')
 	test.equal(multi.holder.selectAll('thead th').size(), sortFilterColumns.length + 1, 'Should add a header cell for the column')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) for (const { holder } of [multi, single]) holder.remove()
 	test.end()
 })
 
@@ -921,7 +926,7 @@ tape('select: clicking the input, the row, or pressing Enter/Space all call the 
 	test.deepEqual(calls.pop(), { idx: 2, checked: false, isInput: true }, 'Space on the focused row: same arguments')
 	test.equal(calls.length, 0, 'Every action should have called the callback exactly once')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -936,7 +941,7 @@ tape('select: keys from a descendant and clicks on links or inputs do not toggle
 	link.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
 	test.equal(calls.length, 0, 'Enter on a descendant should not select the row')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -960,7 +965,7 @@ tape('select: single mode selects one row at a time and ignores a click on the s
 	trAt(holder, 2).cells[1].dispatchEvent(new Event('click', { bubbles: true }))
 	test.equal(calls.length, 2, 'Clicking the already selected row should not call back again')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -974,7 +979,7 @@ tape('select: multiple mode tracks selected original indexes', test => {
 	inputAt(holder, 0).click()
 	test.deepEqual(table.getSelectedIndexes(), [2], 'Should drop a deselected row')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -996,7 +1001,7 @@ tape('select: the callback reports the original index after sort, and selection 
 	table.setColumnFilter(2, '')
 	test.deepEqual(checkedNames(holder), ['Alice'], 'Selection should reappear when the filter is cleared')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1016,7 +1021,7 @@ tape('select: editing a cell does not select the row', test => {
 	test.ok(td.querySelector('input'), 'Should start editing')
 	test.equal(calls.length, 0, 'Should not select the row')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1036,7 +1041,7 @@ tape('select: the selection column sits after the line numbers, and inputs are l
 	test.equal(document.getElementById(labelId)!.textContent, 'Alice', 'Should be labelled by the first cell with text')
 	test.equal(inputAt(holder, 1).getAttribute('aria-label'), 'Select row 2', 'Should fall back to a generic label')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1068,7 +1073,7 @@ tape('select: selectedRows preselects by index without calling onSelect, and sel
 	test.deepEqual(checkedNames(all.holder), ['Charlie', 'Alice', 'Bob'], 'selectAll should check every row')
 	test.ok(checkAll(all.holder).checked, 'The check-all box should be checked')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) for (const { holder } of [pre, all]) holder.remove()
 	test.end()
 })
 
@@ -1081,7 +1086,7 @@ tape('select: invalid selection options throw', test => {
 	test.throws(make({ singleMode: true, selectAll: true }), /singleMode/, 'Should reject selectAll with singleMode')
 	test.throws(make({ singleMode: true, selectedRows: [0, 1] }), /only one/, 'Should reject two preselected rows in singleMode')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1106,7 +1111,7 @@ tape('select: the check-all box selects and clears displayed rows, calls onSelec
 	checkAll(holder).click() // all -> none
 	test.deepEqual(table.getSelectedIndexes(), [], 'Should clear every displayed row')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1116,7 +1121,7 @@ tape('select: there is no check-all box in singleMode', test => {
 
 	test.ok(holder.select('input[data-testid="sjpp-table-checkall"]').empty(), 'Should not render check-all')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1130,7 +1135,7 @@ tape('select: check-all acts on the current page only', test => {
 	test.notOk(checkAll(holder).checked, 'Check-all should reflect the new page')
 	test.equal(checkAll(holder).getAttribute('aria-label'), 'Select all rows on this page', 'Should say it acts on the page')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1147,7 +1152,7 @@ tape('select: hideInput hides the input and header cell but rows still select', 
 	trAt(holder, 1).cells[1].dispatchEvent(new Event('click', { bubbles: true }))
 	test.deepEqual(calls, [{ idx: 1, checked: true, isInput: true }], 'A row click should still select')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1167,7 +1172,7 @@ tape('select: styles.selectedRow is applied to selected rows and removed on dese
 	inputAt(holder, 0).click()
 	test.equal(trAt(holder, 0).style.backgroundColor, '', 'Deselecting an unstriped row should clear the background')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1182,7 +1187,7 @@ tape('select: singleMode restyles the row the radio silently unchecked', test =>
 	test.equal(trAt(holder, 0).style.textDecoration, '', 'The previously selected row should lose the style')
 	test.equal(trAt(holder, 2).style.textDecoration, 'line-through', 'The new row should get it')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1197,7 +1202,7 @@ tape('select: styles.selectedRow survives sort and page redraws', test => {
 	table.goToPage(1)
 	test.equal(trAt(holder, 0).style.textDecoration, 'line-through', 'Should restyle the selected row when it is redrawn')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1219,9 +1224,9 @@ tape('select: autoScroll scrolls the first preselected row into view, unless dis
 		test.deepEqual(scrolled, ['Bob'], 'Should scroll only to the first preselected row of the table that allows it')
 	} finally {
 		Element.prototype.scrollIntoView = original
-	}
+	} 
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) for (const table of mine) table.remove()
 	test.end()
 })
 
@@ -1267,7 +1272,7 @@ tape('buttons: render below the table, are disabled until a row is selected, and
 	inputAt(holder, 2).click()
 	test.ok(button.disabled, 'Should disable again when the selection is cleared')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1286,7 +1291,7 @@ tape('buttons: onChange runs on render and on every selection change, but not on
 	checkAll(holder).click()
 	test.equal(changes.length, 2, 'Check-all should call onChange once, not once per row')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1296,14 +1301,15 @@ tape('buttons: buttonsAlign, selectAll enabling, and validation', test => {
 	test.equal((left.holder.select('.sjpp-table-buttons').node() as HTMLElement).style.justifyContent, 'flex-start', 'Should align left')
 	const right = makeButtonTable()
 	test.equal((right.holder.select('.sjpp-table-buttons').node() as HTMLElement).style.justifyContent, 'flex-end', 'Should align right by default')
-	test.notOk(makeButtonTable({ selection: { selectAll: true } }).button.disabled, 'selectAll should enable the buttons')
+	const all = makeButtonTable({ selection: { selectAll: true } })
+	test.notOk(all.button.disabled, 'selectAll should enable the buttons')
 
 	const holder = getHolder()
 	const make = (buttons: any) => () => new TableBase({ columns: sortFilterColumns, rows: [], div: holder, buttons })
 	test.throws(make([{ callback: () => 1 }]), /text/, 'Should require button text')
 	test.throws(make([{ text: 'x' }]), /callback/, 'Should require a button callback')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) for (const h of [left.holder, right.holder, all.holder, holder]) h.remove()
 	test.end()
 })
 
@@ -1318,7 +1324,7 @@ tape('buttons: sit in the footer together with the pager', test => {
 	test.ok(footer.querySelector('button[data-testid="go"]'), 'Footer should hold the buttons')
 	test.equal(footer.style.position, 'sticky', 'Footer should stay in view')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1338,7 +1344,7 @@ tape('styles.header is applied to column headers', test => {
 		'Every column header should get the style'
 	)
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1385,7 +1391,7 @@ tape('page: no pagination option means no pager and every row is shown', test =>
 	test.equal(holder.selectAll('.sjpp-table-pager').size(), 0, 'Should render no pager')
 	test.equal(holder.selectAll('tbody tr').size(), 25, 'Should render every row')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1406,7 +1412,7 @@ tape('page: shows one page at the bottom with info, page-size select and buttons
 	const pagerNode = holder.select('.sjpp-table-pager').node() as HTMLElement
 	test.ok(tableNode.compareDocumentPosition(pagerNode) & Node.DOCUMENT_POSITION_FOLLOWING, 'Pager should come after the table')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1429,7 +1435,7 @@ tape('page: Next and Previous change the page, redraw only the body, and call on
 	test.equal(pageInfo(holder), 'Showing 11 to 20 of 25 entries', 'Previous should go back one page')
 	test.equal(changes.length, 3, 'Should call onChange once per change')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1443,7 +1449,7 @@ tape('page: line numbers and striping continue across pages', test => {
 	test.equal(trs[0].style.backgroundColor, '', 'Row 11 (index 10) should not be striped')
 	test.equal(trs[1].style.backgroundColor, 'rgb(245, 245, 245)', 'Row 12 (index 11) should be striped')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1459,7 +1465,7 @@ tape('page: changing page size returns to page 1 and calls onChange', test => {
 	test.equal(pageInfo(holder), 'Showing 1 to 25 of 60 entries', 'Should be back on page 1')
 	test.deepEqual(changes.pop(), { currentPage: 1, pageSize: 25 }, 'Should call onChange with the new size')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1473,7 +1479,7 @@ tape('page: a long page list collapses with ellipses', test => {
 	test.deepEqual(labels(), ['Previous', '1', '8', '9', '10', '11', '12', '20', 'Next'], 'A middle page should show a window')
 	test.equal(holder.selectAll('.sjpp-table-page-nav span').size(), 2, 'Should render an ellipsis for each gap')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1500,7 +1506,7 @@ tape('page: sort and filter act on all rows, reset to page 1, and report it', te
 	test.equal(holder.selectAll('tbody tr').size(), 0, 'Should render no rows')
 	test.ok(pagerButton(holder, 'Next').disabled && pagerButton(holder, 'Previous').disabled, 'Both arrows should be disabled')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1529,7 +1535,7 @@ tape('page: currentPage option, clamping, and invalid page sizes', test => {
 		}
 	}
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) for (const h of [holder, h2]) h.remove()
 	test.end()
 })
 
@@ -1547,7 +1553,7 @@ tape('page: selection and original indexes hold across pages', test => {
 	test.ok((holder.select('tbody input').node() as HTMLInputElement).checked, 'Should restore the checkbox when coming back')
 	test.deepEqual(table.getRows().length, 10, 'getRows() should return the displayed page')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1562,7 +1568,7 @@ tape('page: page changes are announced and the pager is labelled', test => {
 	test.equal(pagerButton(holder, '2').getAttribute('aria-label'), 'Page 2', 'Page buttons should have a full label')
 	test.equal(pagerButton(holder, 'Next').getAttribute('aria-label'), 'Go to next page', 'Arrows should have a full label')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1573,7 +1579,7 @@ tape('page: update(rows) paginates the rows it is given', test => {
 	table.update(makePagedRows(12))
 	test.equal(pageInfo(holder), 'Showing 1 to 10 of 12 entries', 'Should page the replacement rows')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1602,7 +1608,7 @@ tape('a11y: headers have scope=col and the table can be given an accessible name
 	test.equal(ths[0].getAttribute('aria-label'), 'Row number', 'Should name the otherwise empty line-number header')
 	test.equal(holder.select('table').attr('aria-label'), 'People', 'Should set aria-label on the table')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1630,7 +1636,7 @@ tape('a11y: a sortable header is a keyboard-focusable button with aria-sort', te
 	test.equal(nameTh.getAttribute('aria-sort'), 'none', 'Should reset the previous column')
 	test.equal(ageTh.getAttribute('aria-sort'), 'ascending', 'Should report the new column')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1658,7 +1664,7 @@ tape('a11y: filter inputs are labelled and sort/filter changes are announced', t
 	typeFilter(holder, 2, 'zzz')
 	test.equal(status.textContent, 'Showing 0 of 3 rows', 'Should announce an empty result')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1669,7 +1675,7 @@ tape('a11y: a color-only cell has a text alternative', test => {
 
 	test.equal(holder.select('tbody td').attr('aria-label'), '#ff0000', 'Should name the cell after its color')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1706,7 +1712,7 @@ tape('a11y: editable cells are reachable and operable by keyboard', test => {
 	test.equal(rows[0][0].value, 'Chuck', 'Escape should cancel')
 	test.equal(document.activeElement, td, 'Should return focus to the cell after Escape')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
@@ -1725,6 +1731,6 @@ tape('render(): a second render keeps the current sort and filter state', test =
 	const input = holder.select('input[data-testid="sjpp-table-filter-2"]').node() as HTMLInputElement
 	test.equal(input.value, 'engineer', 'Should restore the filter text')
 
-	//if ((test as any)._ok) holder.remove()
+	if ((test as any)._ok) holder.remove()
 	test.end()
 })
