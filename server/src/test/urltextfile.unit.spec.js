@@ -1,9 +1,10 @@
 import tape from 'tape'
 import http from 'http'
 import net from 'net'
+import { spawnSync } from 'child_process'
 import serverconfig from '../serverconfig.js'
 import * as utils from '../utils.js'
-import { setRoutes } from '../app.unorg.js'
+import { handle_urltextfile } from '../routes/urltextfile.ts'
 
 /*
 Regression specs for server-side request forgery in the /urltextfile route.
@@ -77,7 +78,7 @@ async function send(handler, query) {
 	return sent[0]
 }
 
-const routes = {}
+const routes = { '/urltextfile': handle_urltextfile }
 const saved = {}
 
 tape('\n', async function (test) {
@@ -88,23 +89,46 @@ tape('\n', async function (test) {
 	test.end()
 })
 
-// returns the routes that setRoutes() registers for the given serverconfig
-function getRoutes(config) {
-	const routes = {}
-	const record = (p, h) => (routes[p] = h)
-	setRoutes({ get: record, post: record, all: record, put: record, delete: record, use: () => {} }, {}, config)
-	return routes
+// prints the route methods that augen sets up from routes/urltextfile.ts
+const childScript = `
+import { setRoutes } from '@sjcrh/augen'
+const urltextfile = await import('#src/routes/urltextfile.ts')
+const mounted = []
+const app = {}
+for (const method of ['get', 'post', 'put', 'delete']) app[method] = endpoint => mounted.push(method + ' ' + endpoint)
+setRoutes(app, [urltextfile])
+console.log('RESULT=' + JSON.stringify(mounted))
+`
+
+/*
+	returns the route methods that are set up for the given serverconfig.features;
+	isDisabled in routes/urltextfile.ts is computed from serverconfig when the module is first evaluated,
+	so each case is loaded in a child process with process.env.PP_SERVERCONFIG_OVERRIDES
+*/
+function getMounted(features) {
+	const overrides = features ? { features } : {}
+	const child = spawnSync(
+		process.execPath,
+		['--import', 'tsx', '--conditions=sjpp/dev', '--input-type=module', '--eval', childScript],
+		{ encoding: 'utf8', env: { ...process.env, PP_SERVERCONFIG_OVERRIDES: JSON.stringify(overrides) } }
+	)
+	const line = child.stdout.split('\n').find(l => l.startsWith('RESULT='))
+	if (!line) throw `child process did not report a result: ${child.stderr || child.stdout}`
+	return JSON.parse(line.slice('RESULT='.length))
 }
 
 tape('/urltextfile is only set when ALLOW_remotefilefromurl is true', test => {
-	test.notOk(getRoutes({})['/urltextfile'], 'should not set the route without serverconfig.features')
-	test.notOk(getRoutes({ features: {} })['/urltextfile'], 'should not set the route by default')
-	test.notOk(
-		getRoutes({ features: { ALLOW_remotefilefromurl: false } })['/urltextfile'],
+	test.deepEqual(getMounted({}), [], 'should not set the route by default')
+	test.deepEqual(
+		getMounted({ ALLOW_remotefilefromurl: false }),
+		[],
 		'should not set the route when ALLOW_remotefilefromurl is false'
 	)
-	Object.assign(routes, getRoutes({ features: { ALLOW_remotefilefromurl: true } }))
-	test.ok(routes['/urltextfile'], 'should set the route when ALLOW_remotefilefromurl is true')
+	test.deepEqual(
+		getMounted({ ALLOW_remotefilefromurl: true }),
+		['post /urltextfile'],
+		'should set the route when ALLOW_remotefilefromurl is true'
+	)
 	test.end()
 })
 
