@@ -416,15 +416,15 @@ tape('sort: clicking a header sorts ascending, then toggles descending, with a m
 	const indicators = () => (holder.selectAll('.sjpp-table-sort-indicator').nodes() as HTMLElement[]).map(n => n.textContent)
 
 	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Alice', 'Bob'], 'Should start in the input order')
-	test.deepEqual(indicators(), ['', ''], 'Should show no indicator before any sort')
+	test.deepEqual(indicators(), ['⇅', '⇅'], 'Should show a neutral marker on every sortable column before any sort')
 
 	clickHeaderLabel(holder, 0)
 	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Bob', 'Charlie'], 'First click should sort ascending')
-	test.deepEqual(indicators(), ['▲', ''], 'Should show ▲ on the sorted column')
+	test.deepEqual(indicators(), ['▲', '⇅'], 'Should show ▲ on the sorted column')
 
 	clickHeaderLabel(holder, 0)
 	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Bob', 'Alice'], 'Second click should sort descending')
-	test.deepEqual(indicators(), ['▼', ''], 'Should show ▼ on the sorted column')
+	test.deepEqual(indicators(), ['▼', '⇅'], 'Should show ▼ on the sorted column')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -455,7 +455,7 @@ tape('sort: sorting a different column resets the previous indicator and starts 
 	clickHeaderLabel(holder, 0) // name descending
 	clickHeaderLabel(holder, 1)
 	test.deepEqual(bodyColumn(holder, 1), ['25', '30', '35'], 'Should sort numbers ascending on the new column')
-	test.deepEqual(indicators(), ['', '▲'], 'Should clear the old indicator and show ▲ on the new column')
+	test.deepEqual(indicators(), ['⇅', '▲'], 'Should reset the old indicator and show ▲ on the new column')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -1349,6 +1349,80 @@ tape('styles.header is applied to column headers', test => {
 })
 
 /**************
+ sticky header, setSelectedIndexes
+***************/
+
+tape('\n', test => {
+	test.comment('-***- dom/TableBase - header, programmatic selection -***-')
+	test.end()
+})
+
+tape('header: the <thead> is pinned to the top of the scrolling wrapper', test => {
+	test.timeoutAfter(100)
+	const { holder } = makeOptTable()
+
+	const thead = holder.select('thead').node() as HTMLElement
+	test.equal(thead.style.position, 'sticky', 'Should be sticky')
+	test.equal(thead.style.top, '0px', 'Should stick to the top')
+	test.equal(thead.style.backgroundColor, 'white', 'Should cover the rows scrolling under it')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('setSelectedIndexes: updates the inputs, styles, check-all and buttons without calling onSelect', test => {
+	test.timeoutAfter(100)
+	const calls: number[] = []
+	const holder = getHolder()
+	const changes: number[][] = []
+	const table = new TableBase({
+		columns: sortFilterColumns,
+		rows: makeSortFilterRows(),
+		div: holder,
+		selection: { onSelect: idx => calls.push(idx) },
+		buttons: [{ text: 'Go', callback: () => 1, onChange: idxs => changes.push(idxs) }],
+		styles: { selectedRow: { 'text-decoration': 'line-through' } }
+	}).render()
+	const button = holder.select('.sjpp-table-buttons button').node() as HTMLButtonElement
+
+	table.setSelectedIndexes([0, 2])
+	test.deepEqual(checkedNames(holder), ['Charlie', 'Bob'], 'Should check the rows')
+	test.deepEqual(table.getSelectedIndexes(), [0, 2], 'Should report them')
+	test.equal(trAt(holder, 0).style.textDecoration, 'line-through', 'Should style selected rows')
+	test.ok(checkAll(holder).indeterminate, 'Should show the check-all dash')
+	test.notOk(button.disabled, 'Should enable the buttons')
+	test.deepEqual(changes.pop(), [0, 2], 'Should tell buttons the new selection')
+	test.equal(calls.length, 0, 'Should not call onSelect')
+
+	table.setSelectedIndexes([1])
+	test.deepEqual(checkedNames(holder), ['Alice'], 'Should replace the previous selection')
+	test.equal(trAt(holder, 0).style.textDecoration, '', 'Should clear the style from deselected rows')
+
+	table.setSelectedIndexes([])
+	test.deepEqual(checkedNames(holder), [], 'Should clear the selection')
+	test.ok(button.disabled, 'Should disable the buttons when nothing is selected')
+
+	table.setSelectedIndexes([99])
+	test.deepEqual(table.getSelectedIndexes(), [], 'Should ignore an index that does not exist')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('setSelectedIndexes: singleMode accepts one row, and selection survives a sort', test => {
+	test.timeoutAfter(100)
+	const { holder, table } = makeOptTable({ selection: { singleMode: true } })
+
+	test.throws(() => table.setSelectedIndexes([0, 1]), /only one/, 'Should reject two rows in singleMode')
+	table.setSelectedIndexes([2])
+	table.sortByColumn(0) // Alice, Bob, Charlie
+	test.deepEqual(checkedNames(holder), ['Bob'], 'Should keep the selected row through a sort')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+/**************
  pagination tests
 ***************/
 
@@ -1727,7 +1801,7 @@ tape('render(): a second render keeps the current sort and filter state', test =
 
 	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Bob'], 'Should still show the filtered and sorted rows')
 	const indicators = (holder.selectAll('.sjpp-table-sort-indicator').nodes() as HTMLElement[]).map(n => n.textContent)
-	test.deepEqual(indicators, ['▲', ''], 'Should restore the sort indicator')
+	test.deepEqual(indicators, ['▲', '⇅'], 'Should restore the sort indicator')
 	const input = holder.select('input[data-testid="sjpp-table-filter-2"]').node() as HTMLInputElement
 	test.equal(input.value, 'engineer', 'Should restore the filter text')
 
