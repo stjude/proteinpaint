@@ -85,6 +85,7 @@ export const routeFiles = [
 	import('./routes/termdb.topTermsByType.ts'),
 	import('./routes/termdb.topVariablyExpressedGenes.ts'),
 	import('./routes/termdb.violinBox.ts'),
+	import('./routes/urltextfile.ts'),
 	import('./routes/wsitiles.ts'),
 	import('../routes/profile.impressionDistribution.ts'),
 	import('./singleCell/dataRoute.ts'),
