@@ -1,4 +1,7 @@
 import type { Table, Th, Tr, Td } from '../types/d3'
+import { Menu } from './menu'
+// Menu.show() calls selection.transition() but does not import d3-transition itself
+import 'd3-transition'
 
 export type TableBaseCell = {
 	/** primary text/number content, rendered with .text() */
@@ -52,6 +55,8 @@ export type TableBaseEdit = {
 }
 
 const STRIPE = 'rgb(245,245,245)'
+/** color of a column's sort/filter button while a sort or filter is applied on the column */
+const ACTIVE_COLOR = 'rgb(13, 110, 253)'
 
 /** incremented id plus a random suffix: unique on the page even with several tables or other code using the same prefix */
 let idIncr = 0
@@ -231,6 +236,13 @@ export class TableBase {
 	/** active column filters, by column index */
 	protected filters = new Map<number, ColumnFilter>()
 	protected sortIndicators = new Map<number, any>()
+	protected filterIcons = new Map<number, any>()
+	protected columnButtons = new Map<number, any>()
+	/** the popup shared by every column's button, created the first time one is opened */
+	protected menu?: any
+	protected menuId = uniqueId('menu')
+	/** the button the open popup belongs to */
+	protected menuButton?: any
 	protected striped: boolean
 	protected showLines: boolean
 	protected maxWidth: string
@@ -372,6 +384,10 @@ export class TableBase {
 
 	/** Removes the rendered table from the DOM, if present. */
 	remove(): void {
+		// the popup lives in <body>, so it has to be removed along with the table
+		this.menu?.destroy()
+		this.menu = undefined
+		this.menuButton = undefined
 		this.wrapper?.remove()
 		this.wrapper = undefined
 	}
@@ -469,12 +485,14 @@ export class TableBase {
 		return moved
 	}
 
-	/** Sorts by a sortable column. Repeat calls on the same column toggle ascending/descending. */
-	sortByColumn(colIdx: number): this {
+	/** Sorts by a sortable column, in the given direction. Without one, repeat calls on the same column
+	 * toggle ascending/descending, starting with ascending. */
+	sortByColumn(colIdx: number, direction?: boolean): this {
 		if (!this.columns[colIdx]?.sortable) return this
-		const ascending = this.sortState?.colIdx === colIdx ? !this.sortState.ascending : true
+		const ascending = direction ?? (this.sortState?.colIdx === colIdx ? !this.sortState.ascending : true)
 		this.sortState = { colIdx, ascending }
 		this.updateSortIndicators()
+		this.updateColumnButtons()
 		const moved = this.resetPage()
 		this.update()
 		this.announce(`Sorted by ${this.columns[colIdx].label}, ${ascending ? 'ascending' : 'descending'}`)
@@ -493,6 +511,7 @@ export class TableBase {
 		const trimmed = text.trim().toLowerCase()
 		if (trimmed) this.filters.set(colIdx, { text: trimmed, test: parseNumericFilter(trimmed) })
 		else this.filters.delete(colIdx)
+		this.updateColumnButtons()
 		const moved = this.resetPage()
 		this.update()
 		this.announce(`Showing ${this.matched.length} of ${this.originalRows.length} rows`)
@@ -571,12 +590,15 @@ export class TableBase {
 	protected renderHeader(): void {
 		this.thead.selectAll('tr').remove()
 		this.sortIndicators.clear()
+		this.filterIcons.clear()
+		this.columnButtons.clear()
 		this.selectAllInput = undefined
 		const tr: Tr = this.thead.append('tr')
 		if (this.showLines) tr.append('th').attr('scope', 'col').attr('aria-label', 'Row number').style('width', '1vw')
 		if (this.selectable) this.renderSelectHeader(tr)
 		this.columns.forEach((column, colIdx) => this.renderHeaderCell(tr, column, colIdx))
 		this.updateSortIndicators()
+		this.updateColumnButtons()
 	}
 
 	/** Extension point: the selection column's header. Multiple mode gets a check-all box that acts on the
@@ -602,44 +624,156 @@ export class TableBase {
 		if (column.headerTestId) th.attr('data-testid', column.headerTestId)
 		if (column.tooltip) th.attr('title', column.tooltip)
 
+		th.append('span').attr('class', 'sjpp-table-header-label').text(column.label)
+		if (column.sortable || column.filterable) this.renderColumnMenuButton(th, column, colIdx)
+		return th
+	}
+
+	/** One icon button per sortable/filterable column. It shows a sort symbol if the column is sortable (the
+	 * arrow that points the sort direction once sorted) and a filter symbol if it is filterable. Clicking it
+	 * opens a popup with the sort directions and the filter input. */
+	protected renderColumnMenuButton(th: Th, column: TableBaseColumn, colIdx: number): void {
+		const action = column.sortable && column.filterable ? 'Sort and filter' : column.sortable ? 'Sort' : 'Filter'
+		// a real <button> is focusable and answers Enter/Space without extra key handling
+		const button: any = th
+			.append('button')
+			.attr('type', 'button')
+			.attr('class', 'sjpp-table-column-menu-btn')
+			.attr('data-testid', `sjpp-table-column-menu-btn-${colIdx}`)
+			.attr('aria-label', `${action} ${column.label}`)
+			.attr('aria-haspopup', 'true')
+			.attr('aria-expanded', 'false')
+			.attr('aria-controls', this.menuId)
+			.style('background', 'none')
+			.style('border', 'none')
+			.style('padding', '0')
+			.style('margin-left', '6px')
+			.style('font', 'inherit')
+			.style('color', 'inherit')
+			.style('cursor', 'pointer')
+			.on('click', () => this.openColumnMenu(button, column, colIdx))
+		this.columnButtons.set(colIdx, button)
+
 		if (column.sortable) {
-			// a real <button> is focusable and answers Enter/Space without extra key handling
-			const button = th
-				.append('button')
-				.attr('type', 'button')
-				.attr('class', 'sjpp-table-sort-button')
-				.style('background', 'none')
-				.style('border', 'none')
-				.style('padding', '0')
-				.style('font', 'inherit')
-				.style('color', 'inherit')
-				.style('cursor', 'pointer')
-				.on('click', () => this.sortByColumn(colIdx))
-			button.append('span').attr('class', 'sjpp-table-header-label').text(column.label)
-			// the arrow is decorative: aria-sort on the <th> carries the state for screen readers
-			const indicator = button
-				.append('span')
-				.attr('class', 'sjpp-table-sort-indicator')
-				.attr('aria-hidden', 'true')
-				.style('margin-left', '4px')
+			// the symbols are decorative: aria-sort on the <th> carries the sort state for screen readers
+			const indicator = button.append('span').attr('class', 'sjpp-table-sort-indicator').attr('aria-hidden', 'true')
 			this.sortIndicators.set(colIdx, indicator)
-		} else {
-			th.append('span').attr('class', 'sjpp-table-header-label').text(column.label)
 		}
 		if (column.filterable) {
-			th.append('input')
-				.attr('type', 'text')
-				.attr('aria-label', `Filter ${column.label}`)
-				.attr('placeholder', 'Filter')
-				.attr('class', 'sjpp-table-filter-input')
-				.attr('data-testid', `sjpp-table-filter-${colIdx}`)
-				.attr('value', this.filters.get(colIdx)?.text ?? '')
-				.style('display', 'block')
-				.style('width', '90%')
-				.style('font-weight', 'normal')
-				.on('input', (event: Event) => this.setColumnFilter(colIdx, (event.target as HTMLInputElement).value))
+			const icon = button
+				.append('span')
+				.attr('class', 'sjpp-table-filter-icon')
+				.attr('aria-hidden', 'true')
+				.style('margin-left', column.sortable ? '1px' : null)
+			icon
+				.append('svg')
+				// sized in em to follow the header text. The viewBox hugs the drawn shape, with just enough room
+				// for the outline's stroke, so the funnel is as wide as the ▲/▼ glyph beside it
+				.attr('width', '1em')
+				.attr('height', '0.87em')
+				.attr('viewBox', '0.25 1.25 15.5 13.5')
+				.style('vertical-align', 'middle')
+				.append('path')
+				.attr('d', 'M1 2h14l-5.5 6.5V14l-3-1.5V8.5z')
+				// an empty outline until a filter is applied, see updateColumnButtons()
+				.attr('fill', 'none')
+				.attr('stroke', 'currentColor')
+				.attr('stroke-width', 1.4)
+				.attr('stroke-linejoin', 'round')
+			this.filterIcons.set(colIdx, icon)
 		}
-		return th
+	}
+
+	/** A column's button turns blue while a sort or a filter is applied on that column, so the user can
+	 * see at a glance which columns are shaping the rows. */
+	protected updateColumnButtons(): void {
+		for (const [colIdx, button] of this.columnButtons) {
+			const filtered = this.filters.has(colIdx)
+			const active = filtered || this.sortState?.colIdx === colIdx
+			button
+				.classed('sjpp-table-column-active', active)
+				.style('color', active ? ACTIVE_COLOR : 'inherit')
+			// an empty funnel when no filter is applied, a filled one when there is
+			const icon = this.filterIcons.get(colIdx)
+			icon?.classed('sjpp-table-filter-active', filtered)
+			icon?.select('path').attr('fill', filtered ? 'currentColor' : 'none')
+		}
+	}
+
+	/** Fills the shared popup for one column and shows it under that column's button. */
+	protected openColumnMenu(button: any, column: TableBaseColumn, colIdx: number): void {
+		if (!this.menu) {
+			this.menu = new Menu({
+				padding: '8px',
+				testid: 'sjpp-table-column-menu',
+				onHide: () => this.menuButton?.attr('aria-expanded', 'false')
+			})
+			this.menu.d
+				.attr('id', this.menuId)
+				.attr('role', 'dialog')
+				.on('keydown.tablebase', (event: KeyboardEvent) => {
+					if (event.key == 'Escape') this.closeColumnMenu()
+				})
+		}
+		this.menuButton?.attr('aria-expanded', 'false')
+		this.menuButton = button
+		button.attr('aria-expanded', 'true')
+
+		const d = this.menu.clear().d
+		d.attr('aria-label', button.attr('aria-label'))
+		if (column.sortable) this.renderSortOptions(d, column, colIdx)
+		if (column.filterable) this.renderFilterInput(d, column, colIdx, !!column.sortable)
+		this.menu.showunder(button.node())
+		;(d.select('input').node() || d.select('button').node())?.focus()
+	}
+
+	protected closeColumnMenu(): void {
+		this.menu?.hide()
+		this.menuButton?.node()?.focus()
+	}
+
+	protected renderSortOptions(menu: any, column: TableBaseColumn, colIdx: number): void {
+		const sorted = this.sortState?.colIdx === colIdx ? this.sortState : undefined
+		for (const ascending of [true, false]) {
+			const current = sorted?.ascending === ascending
+			menu
+				.append('button')
+				.attr('type', 'button')
+				.attr('class', 'sja_menuoption')
+				.attr('data-testid', `sjpp-table-sort-${ascending ? 'asc' : 'desc'}-${colIdx}`)
+				.attr('aria-current', current ? 'true' : null)
+				.style('display', 'block')
+				.style('width', '100%')
+				.style('text-align', 'left')
+				.style('border', 'none')
+				.style('background', 'none')
+				.style('font', 'inherit')
+				.style('font-weight', current ? 'bold' : 'normal')
+				.style('cursor', 'pointer')
+				.text(`${ascending ? '▲' : '▼'} Sort ${ascending ? 'ascending' : 'descending'}`)
+				.on('click', () => {
+					this.sortByColumn(colIdx, ascending)
+					this.closeColumnMenu()
+				})
+		}
+	}
+
+	protected renderFilterInput(menu: any, column: TableBaseColumn, colIdx: number, afterSort: boolean): void {
+		const section = menu.append('div').style('margin-top', afterSort ? '8px' : null)
+		section.append('div').text('Filter').style('font-size', '0.85em').style('color', '#555')
+		section
+			.append('input')
+			.attr('type', 'text')
+			.attr('aria-label', `Filter ${column.label}`)
+			.attr('placeholder', 'Filter')
+			.attr('class', 'sjpp-table-filter-input')
+			.attr('data-testid', `sjpp-table-filter-${colIdx}`)
+			.attr('value', this.filters.get(colIdx)?.text ?? '')
+			.style('width', '180px')
+			.on('input', (event: Event) => this.setColumnFilter(colIdx, (event.target as HTMLInputElement).value))
+			.on('keydown', (event: KeyboardEvent) => {
+				if (event.key == 'Enter') this.closeColumnMenu()
+			})
 	}
 
 	/** Extension point: rebuilds all body rows. Called by render() and update(). */
