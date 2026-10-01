@@ -43,6 +43,9 @@ export const api: RouteApi = {
 	}
 }
 
+/** an input error, answered with 400 instead of 500 */
+const badRequest = (message: string) => Object.assign(new Error(message), { status: 400 })
+
 /** plain slide formats: .svs plus pyramidal OME-TIFF (.ome.tif/.ome.tiff) */
 const SLIDE_EXT = /\.(svs|ome\.tiff?)$/i
 
@@ -105,7 +108,7 @@ function init({ genomes }) {
 				// spatial: one image per subfolder of the sample's directory
 				if (spatialBase && kind != 'wsi') {
 					const spSampleDir = path.resolve(spatialBase, sampleId) // folder/<sample>/
-					if (!spSampleDir.startsWith(spatialBase + path.sep)) throw new Error('invalid sample_id') // traversal guard
+					if (!spSampleDir.startsWith(spatialBase + path.sep)) throw badRequest('invalid sample_id') // traversal guard
 					for (const img of await subdirs(spSampleDir)) {
 						// files inside one image folder (slide + its annotation companions)
 						const files = await readdir(path.join(spSampleDir, img)).catch(() => [] as string[])
@@ -134,7 +137,7 @@ function init({ genomes }) {
 				// plain wsi: one image per subfolder of the sample's directory
 				if (wsiBase && kind != 'spatial') {
 					const wsiSampleDir = path.resolve(wsiBase, sampleId) // wsiFolder/<sample>/
-					if (!wsiSampleDir.startsWith(wsiBase + path.sep)) throw new Error('invalid sample_id') // traversal guard
+					if (!wsiSampleDir.startsWith(wsiBase + path.sep)) throw badRequest('invalid sample_id') // traversal guard
 					for (const img of await subdirs(wsiSampleDir)) {
 						const files = await readdir(path.join(wsiSampleDir, img)).catch(() => [] as string[]) // image folder contents
 						const slide = files.find(f => SLIDE_EXT.test(f)) // first file with a slide extension
@@ -166,13 +169,14 @@ function init({ genomes }) {
 
 			// optional root restriction (the standalone plot asks for 'wsi', the
 			// sc app for 'spatial'); absent = both kinds
-			if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw new Error('invalid imageType')
+			if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw badRequest('invalid imageType')
 			// String(): numeric-looking sample names arrive as numbers from query parsing
 			const images = await getImages(String(q.sample_id), q.imageType)
 			res.status(200).json({ images } satisfies WsiBySampleResponse)
 		} catch (e: any) {
 			console.warn(e)
-			res.status(500).send({ status: 'error', error: e.message || e })
+			// invalid input is the client's error; anything else is the server's
+			res.status(e.status || 500).send({ status: 'error', error: e.message || e })
 		}
 	}
 }

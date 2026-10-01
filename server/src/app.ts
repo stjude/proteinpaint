@@ -10,7 +10,7 @@ import { spawnSync } from 'child_process'
 import * as augen from '@sjcrh/augen'
 import serverconfig, { lockServerconfig } from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
-import { setAppMiddlewares } from './app.middlewares.js'
+import { setAppMiddlewares, jsonErrorHandler } from './app.middlewares.js'
 import * as oldApp from './app.unorg.js'
 import { getAuthApi, extractValidatedCreds } from './auth.ts'
 import { sendMessageToSlack } from './postOnSlack.ts'
@@ -85,6 +85,9 @@ shared/types/src/routes and not when modified.
 		})
 
 		oldApp.setRoutes(app, genomes, serverconfig)
+
+		// last, so that it handles an error passed to next() by any middleware or route above
+		app.use(jsonErrorHandler)
 
 		// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
 		// a serverconfig.preListenScript may rely on detecting this exact pre-listen() message
