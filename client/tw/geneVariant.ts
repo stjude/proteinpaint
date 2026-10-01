@@ -65,8 +65,10 @@ export class GvBase extends TwBase {
 		}
 
 		if (!tw.term.genes?.length) {
-			// support legacy term structure that lacks term.genes[]
-			const gene = structuredClone(tw.term)
+			// support legacy term structure that lacks term.genes[]. .kind is not
+			// guaranteed yet at this point (see LegacyGvSingleGeneTerm in #types), so cast
+			// rather than assert a shape the loop below is what actually normalizes
+			const gene: any = structuredClone(tw.term)
 			tw.term.genes = [gene]
 		}
 
@@ -255,7 +257,11 @@ export class GvPredefinedGS extends GvBase {
 
 		if (tw.term.type != 'geneVariant') throw `expecting tw.term.type='geneVariant', got '${tw.term.type}'`
 		if (tw.q.type != 'predefined-groupset') throw `expecting tw.q.type='predefined-groupset', got '${tw.q.type}'`
-		if (!Object.keys(tw.q).includes('predefined_groupset_idx')) tw.q.predefined_groupset_idx = 0
+		/* an index that is already on the raw q is the selected groupset, while q.dtLst is
+		derived from it below. tracked here, before the index is defaulted, so that the two
+		can be told apart when resolving the selection */
+		const hasIdx = Object.keys(tw.q).includes('predefined_groupset_idx')
+		if (!hasIdx) tw.q.predefined_groupset_idx = 0
 		if (!Number.isInteger(tw.q.predefined_groupset_idx)) throw 'invalid tw.q.predefined_groupset_idx'
 
 		// list the predefined groupsets. only names and dts are filled in, which is all
@@ -269,12 +275,18 @@ export class GvPredefinedGS extends GvBase {
 
 		const { term, q } = tw
 		if (!term.groupsetting?.lst?.length) throw 'term.groupsetting.lst[] is empty'
-		if (q.dtLst?.length) {
-			/* an entry point may know a groupset's dt(s) but not its index, e.g.
-			launchGeneVariantPlot() in client/mass/search.ts, or a saved/rehydrated tw. each
-			groupset now declares a distinct dt (or dt set, for the bi-/mono-allelic groupset),
-			so q.dtLst identifies exactly one groupset and can always be trusted over an index
-			that may be stale, e.g. left over from a previously selected groupset */
+		if (!hasIdx && q.dtLst?.length) {
+			/* query dts specified without an index, by an entry point that knows a dt but not
+			a groupset index, e.g. launchGeneVariantPlot() in client/mass/search.ts, or a legacy
+			origin-specific groupset that GvBase.fill() has just migrated (see "Support legacy
+			term structure" above, which deletes q.predefined_groupset_idx for this reason).
+			each groupset now declares a distinct dt (or dt set, for the bi-/mono-allelic
+			groupset), so q.dtLst identifies exactly one groupset.
+
+			only done when no index was supplied: q.dtLst does not identify a groupset uniquely
+			when an index is also given, and trusting it over a given index would silently
+			reselect a different groupset whenever q.dtLst is stale, e.g. left over from a
+			previously selected groupset (see the test title below) */
 			const groupsetIdx = term.groupsetting.lst.findIndex(groupset => {
 				const dts = getGroupsetDts(groupset)
 				if (!dts?.length) return false
@@ -285,7 +297,8 @@ export class GvPredefinedGS extends GvBase {
 			if (groupsetIdx == -1) throw new Error('groupset with query dt(s) not found')
 			q.predefined_groupset_idx = groupsetIdx
 		} else {
-			// no dtLst to resolve/verify against, so trust the given (or defaulted) index
+			// an index was given (or defaulted above), so always trust it over a q.dtLst
+			// that may be stale, e.g. left over from a previously selected groupset
 			if (!term.groupsetting.lst[q.predefined_groupset_idx as number]) throw 'q.predefined_groupset_idx out of bound'
 		}
 		// always (re)derived from the selected groupset, rather than trusting a q.dtLst that
