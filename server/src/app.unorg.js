@@ -104,23 +104,12 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.post(basepath + '/svmr', handle_svmr)
 	app.post(basepath + '/study', handle_study)
 	app.post(basepath + '/textfile', handle_textfile)
-	app.post(basepath + '/mdsjunction', mdsjunction_request_closure(genomes))
-	app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
-	app.post(basepath + '/mdsgenecount', handle_mdsgenecount)
-	app.post(basepath + '/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
-	app.post(basepath + '/mdsgeneboxplot', mdsgeneboxplot_closure(genomes))
-	app.post(basepath + '/mdsgenevalueonesample', handle_mdsgenevalueonesample)
 
 	app.get(basepath + '/vcfheader', handle_vcfheader)
 	app.get(basepath + '/bcfheader', handle_bcfheader)
 
 	app.post(basepath + '/translategm', handle_translategm)
 
-	app.post(basepath + '/samplematrix', handle_samplematrix)
-	app.get(basepath + '/mdssamplescatterplot', handle_mdssamplescatterplot)
-	app.post(basepath + '/mdssamplesignature', handle_mdssamplesignature)
-	app.post(basepath + '/mdssurvivalplot', handle_mdssurvivalplot(genomes))
-	app.post(basepath + '/fimo', fimo.handle_closure(genomes))
 	// the legacy /termdb route handler calls authApi.canDisplaySampleIds() for the q.for sample data requests
 	app.all(basepath + '/termdb', protectedRoutes.samples, termdb.handle_request_closure(genomes))
 	app.all(basepath + '/termdb/barsql', protectedRoutes.minSampleSize, termdbbarsql.handle_request_closure(genomes))
@@ -128,6 +117,34 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.get(basepath + '/isoformbycoord', handle_isoformbycoord)
 	app.post(basepath + '/bamnochr', handle_bamnochr)
 	app.get(basepath + '/ideogram', handle_ideogram)
+
+	/* rest of routes are for deprecated mds
+	conditionally mount them, to avoid having to migrate them to routes/ and to keep single-ds environments lean
+	delete these when mds is phased out
+	note: when not mounted, custom file-based (iscustom) mdsjunction/mdssvcnv/mdsexpressionrank tracks will also not work
+	*/
+	const genomeLst = Object.values(genomes)
+	if (genomeLst.some(g => Object.values(g.datasets || {}).some(ds => ds.isMds))) {
+		app.post(basepath + '/mdsjunction', mdsjunction_request_closure(genomes))
+		app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
+		app.post(basepath + '/mdsgenecount', handle_mdsgenecount)
+		app.post(basepath + '/mdsexpressionrank', handle_mdsexpressionrank) // expression rank as a browser track
+		app.post(basepath + '/mdsgeneboxplot', mdsgeneboxplot_closure(genomes))
+		app.post(basepath + '/mdsgenevalueonesample', handle_mdsgenevalueonesample)
+		app.post(basepath + '/samplematrix', handle_samplematrix)
+		app.get(basepath + '/mdssamplescatterplot', handle_mdssamplescatterplot)
+		app.post(basepath + '/mdssamplesignature', handle_mdssamplesignature)
+		app.post(basepath + '/mdssurvivalplot', handle_mdssurvivalplot(genomes))
+	} else {
+		console.log('!! Skipped setting up route: legacy mds routes')
+	}
+
+	// fimo is a genome-level feature (also launched standalone via runpp({fimo})), not tied to mds datasets
+	if (genomeLst.some(g => g.fimo_motif)) {
+		app.post(basepath + '/fimo', fimo.handle_closure(genomes))
+	} else {
+		console.log('!! Skipped setting up route: fimo')
+	}
 }
 
 /****
