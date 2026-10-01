@@ -380,7 +380,7 @@ export function getCacheControl(path, responseMaxAge, isPrivate = false) {
 		return `${isPrivate ? 'private' : 'public'}, max-age=31536000, immutable`
 	// the bundle entry has a stable URL and embeds the hashed chunk filenames,
 	// so any cache (browser or proxy) must revalidate it to detect a new deployment
-	if (filename == 'proteinpaint.js' || filename == 'version.json') return 'no-cache'
+	if (filename == 'proteinpaint.js') return 'no-cache'
 	// immutable response before expiration, client must revalidate after max-age;
 	// by convention, any path that has a dot will be treated as
 	// a static file and not handled here with cache-control

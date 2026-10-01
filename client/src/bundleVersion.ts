@@ -63,7 +63,7 @@ export async function notifyChunkLoadError(e: any, pageVersion: any) {
 		if (i != -1) {
 			// the chunk URL prefix includes any server basepath
 			const res = await fetch(`${url.slice(0, i)}/healthcheck`, { cache: 'no-store' }).then(r => r.json())
-			status = getBundleStatus(pageVersion, res?.versionInfo?.clientVersion)
+			status = getBundleStatus(pageVersion, res?.versionInfo?.deps?.['@sjcrh/proteinpaint-client']?.bundled)
 		}
 	} catch (_) {
 		// the server may be restarting or unreachable, fall back to a generic notice

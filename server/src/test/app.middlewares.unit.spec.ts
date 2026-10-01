@@ -132,7 +132,6 @@ tape('getCacheControl()', test => {
 		'no-cache',
 		'should require revalidation of the bundle entry under a basepath'
 	)
-	test.equal(getCacheControl('/bin/version.json'), 'no-cache', 'should require revalidation of the bundle version')
 	test.equal(getCacheControl('/bin/123.proteinpaint.js'), undefined, 'should not set a header for an unhashed chunk')
 	test.equal(getCacheControl('/bin/dist/app.js'), undefined, 'should not set a header for other static files')
 	test.equal(getCacheControl('/genomes'), 'immutable,max-age=1', 'should default to a 1 second max-age for a route')
