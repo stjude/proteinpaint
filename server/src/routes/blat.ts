@@ -1,24 +1,28 @@
 import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'
-import type { BlatRequest, BlatResponse, RouteApi } from '#types'
+import type { BlatRequest, BlatResponse, RouteApi, RoutePayload } from '#types'
 import { read_file, write_tmpfile } from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import { genomes } from '#src/initGenomesDs.js'
+
+const payload: RoutePayload = {
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one genome has a blat server
+	get init() {
+		return hasBlat(genomes) ? init : null
+	},
+	request: { typeId: 'BlatRequest' },
+	response: { typeId: 'BlatResponse' }
+}
 
 export const api: RouteApi = {
 	// aligns a sequence against a genome on its blat server, or reports the status of the blat servers
 	endpoint: 'blat',
 	methods: {
-		get: {
-			// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
-			// is evaluated; the route is only set up when at least one genome has a blat server
-			get init() {
-				return hasBlat(genomes) ? init : null
-			},
-			request: { typeId: 'BlatRequest' },
-			response: { typeId: 'BlatResponse' }
-		}
+		get: payload,
+		// the client converts a GET request with a long sequence to POST, see client/common/dofetch.js
+		post: payload
 	}
 }
 
@@ -35,7 +39,7 @@ function init({ genomes }) {
 				for (const n in genomes) {
 					const g = genomes[n]
 					if (!g.blat) continue
-					lst.push(await server_stat(n, g))
+					lst.push(await server_stat(g))
 				}
 				if (lst.length == 0) throw 'found no genome with blat'
 				res.send({ lst })
@@ -54,23 +58,19 @@ function init({ genomes }) {
 	}
 }
 
-async function server_stat(name, g): Promise<string> {
-	// query a random sequence to see if the server is up
-	const infile = path.join(serverconfig.cachedir, await write_tmpfile('>query\n' + 'ATCG' + '\n'))
+// a server that is down is reported as OFF, so that the status of the other servers is still reported
+async function server_stat(g): Promise<string> {
 	try {
-		await run_blat2(g, infile)
+		// query a random sequence to see if the server is up
+		await run_blat(g, 'ATCG')
 		return `ON for ${g.blat.host} ${g.blat.port}`
 	} catch (_) {
-		throw `OFF for ${g.blat.host} ${g.blat.port}`
+		return `OFF for ${g.blat.host} ${g.blat.port}`
 	}
 }
 
 async function do_blat(genome, seq): Promise<BlatResponse> {
-	const infile = path.join(serverconfig.cachedir, await write_tmpfile('>query\n' + seq + '\n'))
-	const outfile = await run_blat2(genome, infile)
-	const outputstr = (await read_file(outfile)).trim()
-	fs.unlink(outfile, () => {})
-	fs.unlink(infile, () => {})
+	const outputstr = (await run_blat(genome, seq)).trim()
 	if (outputstr == '') return { nohit: 1 }
 	const lines = outputstr.split('\n')
 	const hits: any[] = []
@@ -89,7 +89,7 @@ async function do_blat(genome, seq): Promise<BlatResponse> {
 		h.ref_chr = line2[13]
 		h.ref_startpos = (parseInt(line2[15]) + 1).toString()
 		h.ref_stoppos = line2[16]
-		h.ref_alignlen = Math.abs(line2[16] - line2[15]).toString()
+		h.ref_alignlen = Math.abs(parseInt(line2[16]) - parseInt(line2[15])).toString()
 		h.ref_totallen = line2[14] // This is actually the chromosome length
 		hits.push(h)
 	}
@@ -100,8 +100,20 @@ async function do_blat(genome, seq): Promise<BlatResponse> {
 	return { hits }
 }
 
-function run_blat2(genome, infile): Promise<string> {
+// returns the gfClient psl output of aligning seq against the genome; the temporary files are always deleted
+async function run_blat(genome, seq): Promise<string> {
+	const infile = path.join(serverconfig.cachedir, await write_tmpfile('>query\n' + seq + '\n'))
 	const outfile = path.join(serverconfig.cachedir, Math.random().toString())
+	try {
+		await run_gfClient(genome, infile, outfile)
+		return await read_file(outfile)
+	} finally {
+		fs.unlink(outfile, () => {})
+		fs.unlink(infile, () => {})
+	}
+}
+
+function run_gfClient(genome, infile, outfile): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const ps = spawn(serverconfig.gfClient, [
 			genome.blat.host,
@@ -121,13 +133,13 @@ function run_blat2(genome, infile): Promise<string> {
 			const e = out2.join('')
 			if (e) {
 				console.log('BLAT error', e)
-				reject('blat server problem')
+				return reject('blat server problem')
 			}
-			resolve(outfile)
+			resolve()
 		})
 
 		ps.on('error', err => {
-			resolve('Error spawning gfClient: ' + err.message)
+			reject('Error spawning gfClient: ' + err.message)
 		})
 	})
 }

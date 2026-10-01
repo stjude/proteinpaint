@@ -40,6 +40,10 @@ tape('blat route is not set up when no genome has blat', test => {
 
 tape('blat route is set up when a genome has blat', test => {
 	const mounted = getMounted({ hg19: {}, hg38: { blat: { host: 'localhost', port: 1234 } } })
-	test.deepEqual(mounted, ['get /blat'], 'should set up the GET route when at least one genome has blat')
+	test.deepEqual(
+		mounted,
+		['get /blat', 'post /blat'],
+		'should set up the GET and POST routes when at least one genome has blat'
+	)
 	test.end()
 })
