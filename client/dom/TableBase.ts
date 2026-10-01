@@ -347,7 +347,13 @@ export class TableBase {
 		this.table = this.createTable()
 		this.status = this.createStatus()
 		if (this.paginated || this.buttons.length) this.createFooter()
-		this.thead = this.table.append('thead')
+		// the wrapper scrolls, so pin the header to its top
+		this.thead = this.table
+			.append('thead')
+			.style('position', 'sticky')
+			.style('top', '0')
+			.style('background-color', 'white')
+			.style('z-index', '1')
 		this.tbody = this.table.append('tbody')
 		this.renderHeader()
 		this.update()
@@ -376,6 +382,20 @@ export class TableBase {
 
 	getRows(): TableBaseRow[] {
 		return this.rows
+	}
+
+	/** Replaces the selection from code, e.g. when app state changes which row is selected. Updates the
+	 * inputs, row styles, check-all and buttons, but does not call onSelect: the caller already knows. */
+	setSelectedIndexes(idxs: number[]): this {
+		if (this.singleMode && idxs.length > 1) throw new Error('TableBase: singleMode allows only one selected row')
+		this.selected = new Set(idxs.map(i => this.originalRows[i]).filter(Boolean))
+		this.tbody?.selectAll('tr').each((row: TableBaseRow, i: number, nodes: HTMLElement[]) => {
+			const input = nodes[i].querySelector(`input[name="${this.inputName}"]`) as HTMLInputElement | null
+			if (input) input.checked = this.selected.has(row)
+		})
+		this.repaintRows()
+		this.afterSelectionChange()
+		return this
 	}
 
 	/** Original indexes of the selected rows, ascending, including rows a filter is currently hiding. */
@@ -506,7 +526,8 @@ export class TableBase {
 	protected updateSortIndicators(): void {
 		for (const [colIdx, indicator] of this.sortIndicators) {
 			const sorted = this.sortState?.colIdx === colIdx
-			indicator.text(!sorted ? '' : this.sortState!.ascending ? '▲' : '▼')
+			// a neutral marker on unsorted columns is what tells the user the header can be clicked
+			indicator.text(!sorted ? '⇅' : this.sortState!.ascending ? '▲' : '▼')
 			const th = (indicator.node() as HTMLElement).closest('th')
 			th?.setAttribute('aria-sort', !sorted ? 'none' : this.sortState!.ascending ? 'ascending' : 'descending')
 		}
