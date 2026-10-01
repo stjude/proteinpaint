@@ -411,7 +411,13 @@ tape('trimGvTermsForSave(): shrinks a saved geneVariant tw', async test => {
 tape('fill(): q.type=predefined-groupset, stale q.dtLst', async test => {
 	// dtLst of the previously selected groupset would otherwise limit the dts queried
 	// for the term (see getDtsToQuery() in server/src/mds3.init.js)
-	const cnvIdx = 2
+
+	// looked up rather than hardcoded, so the index does not go stale whenever the dt
+	// term order changes, e.g. when a dt no longer splits into origin-specific terms
+	const probeQTw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', dtLst: [dtcnv] })
+	const probeTw: any = await GvBase.fill(probeQTw, { vocabApi })
+	const cnvIdx = probeTw.q.predefined_groupset_idx
+
 	const tw: any = getGsTw({
 		isAtomic: true,
 		type: 'predefined-groupset',
