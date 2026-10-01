@@ -25,7 +25,7 @@ test sections:
 - cache_index() rejects a primary url host that is not allowed
 - cache_index() still caches valid urls
 - fileurl() url branch
-- /tkbedj, /tabixheader, /bamnochr via the real route table
+- /tkbedj, /tabixheader via the real route table
 - cache_index() index download is atomic
 - cache_index() checks the host of each index url redirect
 */
@@ -216,7 +216,7 @@ tape('fileurl() url branch', test => {
 	test.end()
 })
 
-tape('/tkbedj, /tabixheader, /bamnochr via the real route table', async test => {
+tape('/tkbedj, /tabixheader via the real route table', async test => {
 	const routes = {}
 	const record = (p, h) => (routes[p] = h)
 	const genome = { name: 'hg38', chrlookup: { CHR1: { name: 'chr1', len: 248956422 } }, datasets: {} }
@@ -229,29 +229,12 @@ tape('/tkbedj, /tabixheader, /bamnochr via the real route table', async test => 
 	const url = `http://${H}${up}${escape}/a`
 	const indexURL = `http://${H}/payload.so`
 
-	for (const route of ['/tkbedj', '/tabixheader', '/bamnochr']) {
+	for (const route of ['/tkbedj', '/tabixheader']) {
 		const r = await send(routes[route], { genome: 'hg38', url, indexURL, rglst: [{ chr: 'chr1', start: 1, stop: 2 }] })
 		test.ok(r?.error, `${route} should return an error for a traversal url`)
 		test.notOk(fs.existsSync(escape), `${route} should not write outside cachedir`)
 	}
 
-	const r = await send(routes['/bamnochr'], { genome: 'hg38', file: '../../../etc/x.bam' })
-	test.equal(r?.error, 'illegal file path', '/bamnochr should reject ".." in file')
-
-	// url_dir is a server-side cache dir; one supplied by the request must not become the samtools cwd,
-	// where a nonexistent dir used to crash the process with an unhandled spawn 'error' event
-	const missingDir = path.join(tmpdir, 'no-such-dir')
-	const r2 = await send(routes['/bamnochr'], { genome: 'hg38', file: 'x.bam', url_dir: missingDir })
-	test.ok(r2?.error, '/bamnochr should return an error, not crash, when the request has url_dir')
-	test.notOk(fs.existsSync(missingDir), '/bamnochr should not create the requested url_dir')
-
-	// a regular file as the cwd fails the spawn with ENOTDIR, which is checked before the binary is looked up,
-	// so this detects the requested url_dir being used whether or not samtools is installed
-	const notADir = path.join(tmpdir, 'not-a-dir')
-	fs.writeFileSync(notADir, '')
-	const r3 = await send(routes['/bamnochr'], { genome: 'hg38', file: 'x.bam', url_dir: notADir })
-	test.ok(r3?.error, '/bamnochr should return an error for a nonexistent file')
-	test.doesNotMatch(String(r3?.error), /ENOTDIR/, '/bamnochr should not use the requested url_dir as the samtools cwd')
 	test.end()
 })
 

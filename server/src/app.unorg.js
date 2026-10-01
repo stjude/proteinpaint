@@ -115,7 +115,6 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.all(basepath + '/termdb/barsql', protectedRoutes.minSampleSize, termdbbarsql.handle_request_closure(genomes))
 	app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
 	app.get(basepath + '/isoformbycoord', handle_isoformbycoord)
-	app.post(basepath + '/bamnochr', handle_bamnochr)
 	app.get(basepath + '/ideogram', handle_ideogram)
 
 	/* rest of routes are for deprecated mds
@@ -1982,30 +1981,6 @@ function mdssvcnv_grouper(samplename, items, key2group, headlesssamples, ds, dsq
 			samplename: samplename, // hardcoded
 			items: items
 		})
-	}
-}
-
-async function handle_bamnochr(req, res) {
-	const q = req.query
-	try {
-		const genome = genomes[q.genome]
-		if (!genome) throw 'invalid genome'
-		// the cache dir becomes the cwd of samtools, so it is only computed here and never read from the request
-		let file, dir
-		if (q.file) {
-			if (utils.illegalpath(q.file, false, false)) throw 'illegal file path'
-			file = path.join(serverconfig.tpmasterdir, q.file)
-		} else {
-			if (!q.url) throw 'no bam file or url'
-			file = q.url
-			dir = await utils.cache_index(q.url, q.indexURL || q.url + '.bai')
-		}
-
-		const nochr = await utils.bam_ifnochr(file, genome, dir)
-		res.send({ nochr: nochr })
-	} catch (e) {
-		if (e.stack) console.log(e.stack)
-		res.send({ error: e.message || e })
 	}
 }
 
