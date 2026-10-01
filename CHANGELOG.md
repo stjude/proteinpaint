@@ -16,6 +16,7 @@ Fixes:
 - move the /massSession route setup to src/routes/massSession.ts (code-scanning #110, #111)
 - save a mass session whose state has an embedder{} object
 - minor rendering adjustment in scatterplot legend
+- report a declared sjcrh package entry in the /healthcheck versionInfo.deps, without throwing when that package is not installed
 
 
 ## 2.215.0
