@@ -3,6 +3,7 @@ import { handler as categorical } from '../tvs.categorical.js'
 import { handler as condition } from '../tvs.condition.js'
 import { handler as dt } from '../tvs.dt.js'
 import { handler as numeric } from '../tvs.numeric.js'
+import { handler as samplelst } from '../tvs.samplelst.js'
 import { handler as survival } from '../tvs.survival.js'
 
 /*
@@ -17,6 +18,7 @@ test sections:
 	- get_pill_label: geneVariant (dt)
 	- get_pill_label: numeric categories
 	- get_pill_label: survival
+	- get_pill_label: samplelst
 */
 
 const text = `<img src="x"> Tom & 'Jerry'`
@@ -144,5 +146,12 @@ tape('get_pill_label: survival', test => {
 		text,
 		'groupset label'
 	)
+	test.end()
+})
+
+tape('get_pill_label: samplelst', test => {
+	// a user-defined group name becomes the samplelst term name
+	const tvs = { term: { name: text, values: { a: { list: [{ sampleId: 1 }, { sampleId: 2 }] } } } }
+	assertLiteral(test, samplelst.get_pill_label(tvs).txt, `${text} n=2`, 'group name')
 	test.end()
 })

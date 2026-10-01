@@ -2,7 +2,7 @@ import { axisLeft, axisTop } from 'd3-axis'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { curveBasis, line } from 'd3-shape'
 import { brushX, brushY } from 'd3-brush'
-import { renderTable, getMaxLabelWidth, table2col, getChartTitle } from '#dom'
+import { escapeHtml, renderTable, getMaxLabelWidth, table2col, getChartTitle } from '#dom'
 import { rgb } from 'd3-color'
 import { format as d3format } from 'd3-format'
 import { isSingleCellTerm } from '#shared'
@@ -45,7 +45,9 @@ export function getVisiblePvalues(chart: any, t1: PvalueTerm, t2?: PvalueTerm) {
 			: t1
 
 	return (chart.pvalues || []).filter((arr: any[]) =>
-		arr.every(item => typeof item.value !== 'string' || !termNum.q?.hiddenValues || !(item.value in termNum.q.hiddenValues))
+		arr.every(
+			item => typeof item.value !== 'string' || !termNum.q?.hiddenValues || !(item.value in termNum.q.hiddenValues)
+		)
 	)
 }
 
@@ -631,7 +633,7 @@ function addDescriptiveStats(term: TermWrapper, legendGrps: LegendGroup[], headi
 		})
 
 		const title = self.config.term2?.q.descrStats
-			? `Descriptive statistics: ${term.term.name}`
+			? `Descriptive statistics: ${escapeHtml(term.term.name)}`
 			: `Descriptive statistics`
 		const name = `<span style="${headingStyle}">${title}</span>`
 		legendGrps.push({ name, items })
@@ -662,7 +664,7 @@ function addUncomputableValues(term: TermWrapper | null, legendGrps: LegendGroup
 		if (items.length) {
 			const name =
 				self.config.term2?.term.type === 'float' || self.config.term2?.term.type === 'integer'
-					? `<span style="${headingStyle}">${term.term.name}</span>`
+					? `<span style="${headingStyle}">${escapeHtml(term.term.name)}</span>`
 					: `<span style="${headingStyle}">Other categories</span>`
 			legendGrps.push({ name, items })
 		}
@@ -685,7 +687,7 @@ function addHiddenValues(term: TermWrapper, legendGrps: LegendGroup[], headingSt
 			hiddenOpacity: 1
 		})
 	}
-	const title = `${term.term.name}`
+	const title = escapeHtml(term.term.name)
 	const name = `<span style="${headingStyle}">${title}</span>`
 	legendGrps.push({ name, items })
 }
