@@ -577,21 +577,27 @@ tape('subplot state updates should not move the page or the table scroll positio
 	endTest(test, holder)
 })
 
-tape('clicking a sortable header should sort the rows, and show that the column is sortable', test => {
+tape('the column button should show sort and filter symbols and sort the rows from its popup', test => {
 	const { holder } = getRenderer()
 	const names = () => (holder.selectAll('tbody tr').nodes() as HTMLTableRowElement[]).map(tr => tr.cells[2].textContent)
 	const headerButtons = holder.selectAll('thead th button').nodes() as HTMLButtonElement[]
+	const menuOf = (button: HTMLButtonElement) => document.getElementById(button.getAttribute('aria-controls')!) as HTMLElement
+	const choose = (dir: string) => {
+		headerButtons[0].click()
+		;(menuOf(headerButtons[0]).querySelector(`[data-testid="sjpp-table-sort-${dir}-0"]`) as HTMLElement).click()
+	}
 
-	test.equal(headerButtons.length, 2, 'Sample and Experiment are sortable, Shown plots is not')
+	test.equal(headerButtons.length, 2, 'Sample and Experiment are sortable and filterable, Shown plots is neither')
 	test.ok(
-		headerButtons.every(button => (button.textContent || '').trim().length > button.textContent!.trim().replace(/\W/g, '').length),
-		'Every sortable header should show a sort indicator before it is clicked'
+		headerButtons.every(b => b.querySelector('.sjpp-table-sort-indicator') && b.querySelector('.sjpp-table-filter-icon')),
+		'Every such column should show both symbols before anything is clicked'
 	)
 
-	headerButtons[0].click()
-	test.deepEqual(names(), ['S1', 'S2', 'S3'], 'First click sorts ascending')
-	headerButtons[0].click()
-	test.deepEqual(names(), ['S3', 'S2', 'S1'], 'Second click sorts descending')
+	choose('asc')
+	test.deepEqual(names(), ['S1', 'S2', 'S3'], 'Ascending')
+	choose('desc')
+	test.deepEqual(names(), ['S3', 'S2', 'S1'], 'Descending')
+	test.equal(headerButtons[0].querySelector('.sjpp-table-sort-indicator')!.textContent, '▼', 'The arrow shows the direction')
 
 	endTest(test, holder)
 })
@@ -599,10 +605,14 @@ tape('clicking a sortable header should sort the rows, and show that the column 
 tape('sortable columns should have a filter box, and filtering should keep the plot buttons and selection', test => {
 	const { renderer, holder } = getRenderer()
 	const names = () => (holder.selectAll('tbody tr').nodes() as HTMLTableRowElement[]).map(tr => tr.cells[2].textContent)
-	const input = holder.select('input[data-testid="sjpp-table-filter-0"]').node() as HTMLInputElement
 
-	test.equal(holder.selectAll('.sjpp-table-filter-input').size(), 2, 'Should render a filter for Sample and Experiment')
-	test.ok(holder.select('input[data-testid="sjpp-table-filter-1"]').empty(), 'Should not render one for Shown plots')
+	test.equal(holder.selectAll('.sjpp-table-filter-icon').size(), 2, 'Should offer a filter for Sample and Experiment')
+	test.ok(holder.select('[data-testid="sjpp-table-column-menu-btn-1"]').empty(), 'Should not offer one for Shown plots')
+	const button = holder.select('[data-testid="sjpp-table-column-menu-btn-0"]').node() as HTMLButtonElement
+	button.click()
+	const input = document
+		.getElementById(button.getAttribute('aria-controls')!)!
+		.querySelector('input[data-testid="sjpp-table-filter-0"]') as HTMLInputElement
 
 	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes.set('S2', [{ plotId: 'p1', div: getMockDiv(), plotName: 'UMAP' }])

@@ -383,27 +383,43 @@ function bodyColumn(holder: any, colIdx: number): string[] {
 	return (holder.selectAll('tbody tr').nodes() as HTMLTableRowElement[]).map(tr => tr.cells[colIdx].textContent || '')
 }
 
-function clickHeaderLabel(holder: any, colIdx: number) {
+/** Clicks a column's icon button. The popup it opens lives in <body>, so it is found through aria-controls. */
+function openColumnMenu(holder: any, colIdx: number): HTMLElement {
 	const th = holder.selectAll('thead th').nodes()[colIdx] as HTMLElement
-	const label = th.querySelector('.sjpp-table-header-label') as HTMLElement
-	label.dispatchEvent(new Event('click', { bubbles: true }))
+	const button = th.querySelector('button.sjpp-table-column-menu-btn') as HTMLButtonElement
+	button.click()
+	return document.getElementById(button.getAttribute('aria-controls')!) as HTMLElement
+}
+
+/** Sorts the way a user does: open the popup and pick a direction. Ascending, unless the column is
+ * already sorted ascending, so repeated calls toggle like the old header click did. */
+function sortViaMenu(holder: any, colIdx: number) {
+	const th = holder.selectAll('thead th').nodes()[colIdx] as HTMLElement
+	const direction = th.getAttribute('aria-sort') == 'ascending' ? 'desc' : 'asc'
+	const menu = openColumnMenu(holder, colIdx)
+	;(menu.querySelector(`[data-testid="sjpp-table-sort-${direction}-${colIdx}"]`) as HTMLElement).click()
 }
 
 function typeFilter(holder: any, colIdx: number, text: string) {
-	const input = holder.select(`input[data-testid="sjpp-table-filter-${colIdx}"]`).node() as HTMLInputElement
+	const menu = openColumnMenu(holder, colIdx)
+	const input = menu.querySelector(`input[data-testid="sjpp-table-filter-${colIdx}"]`) as HTMLInputElement
 	input.value = text
 	input.dispatchEvent(new Event('input', { bubbles: true }))
 }
 
-tape('sort: only sortable columns get a clickable label and indicator', test => {
+tape('sort and filter: one icon button per column, showing a symbol for each feature the column has', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	const th = (i: number) => holder.selectAll('thead th').nodes()[i] as HTMLElement
+	const has = (i: number, selector: string) => !!th(i).querySelector(selector)
 
-	test.equal(holder.selectAll('.sjpp-table-sort-indicator').size(), 2, 'Should render an indicator per sortable column')
-	const roleTh = holder.selectAll('thead th').nodes()[2] as HTMLElement
-	const roleLabel = roleTh.querySelector('.sjpp-table-header-label') as HTMLElement
-	test.equal(roleLabel.style.cursor, '', 'Should not style a non-sortable label as clickable')
+	test.equal(holder.selectAll('thead button').size(), 3, 'Should render one button per column, not one per feature')
+	test.ok(has(0, '.sjpp-table-sort-indicator') && has(0, '.sjpp-table-filter-icon'), 'Name is sortable and filterable: both symbols')
+	test.ok(has(1, '.sjpp-table-sort-indicator') && !has(1, '.sjpp-table-filter-icon'), 'Age is sortable only: sort symbol only')
+	test.ok(!has(2, '.sjpp-table-sort-indicator') && has(2, '.sjpp-table-filter-icon'), 'Role is filterable only: filter symbol only')
+	test.equal(holder.selectAll('input').size(), 0, 'Should render no filter input in the header')
+	test.equal((th(0).querySelector('.sjpp-table-header-label') as HTMLElement).style.cursor, '', 'The label itself is not clickable')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -418,11 +434,11 @@ tape('sort: clicking a header sorts ascending, then toggles descending, with a m
 	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Alice', 'Bob'], 'Should start in the input order')
 	test.deepEqual(indicators(), ['⇅', '⇅'], 'Should show a neutral marker on every sortable column before any sort')
 
-	clickHeaderLabel(holder, 0)
+	sortViaMenu(holder, 0)
 	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Bob', 'Charlie'], 'First click should sort ascending')
 	test.deepEqual(indicators(), ['▲', '⇅'], 'Should show ▲ on the sorted column')
 
-	clickHeaderLabel(holder, 0)
+	sortViaMenu(holder, 0)
 	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Bob', 'Alice'], 'Second click should sort descending')
 	test.deepEqual(indicators(), ['▼', '⇅'], 'Should show ▼ on the sorted column')
 
@@ -430,16 +446,124 @@ tape('sort: clicking a header sorts ascending, then toggles descending, with a m
 	test.end()
 })
 
-tape('sort: clicking the arrow indicator also toggles the sort', test => {
+tape('sort: the icon button opens a popup with both directions and marks the current one', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	const option = (menu: HTMLElement, dir: string) => menu.querySelector(`[data-testid="sjpp-table-sort-${dir}-0"]`) as HTMLElement
+	const indicator = holder.select('.sjpp-table-sort-indicator').node() as HTMLElement
 
-	clickHeaderLabel(holder, 0) // ascending, arrow now visible
-	const arrow = holder.select('.sjpp-table-sort-indicator').node() as HTMLElement
-	arrow.dispatchEvent(new Event('click', { bubbles: true }))
-	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Bob', 'Alice'], 'Clicking the arrow should sort descending')
-	test.equal(arrow.textContent, '▼', 'Should show ▼ after clicking the arrow')
+	let menu = openColumnMenu(holder, 0)
+	test.ok(option(menu, 'asc') && option(menu, 'desc'), 'Should offer ascending and descending')
+	test.equal(option(menu, 'asc').getAttribute('aria-current'), null, 'Should mark neither before a sort')
+	test.notEqual(menu.style.display, 'none', 'Should show the popup')
+
+	option(menu, 'desc').click()
+	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Bob', 'Alice'], 'Choosing descending should sort descending first')
+	test.equal(indicator.textContent, '▼', 'Should show ▼ on the button')
+	test.equal(menu.style.display, 'none', 'Should close the popup after choosing')
+
+	menu = openColumnMenu(holder, 0)
+	test.equal(option(menu, 'desc').getAttribute('aria-current'), 'true', 'Should mark the current direction')
+	test.equal(option(menu, 'asc').getAttribute('aria-current'), null, 'Should not mark the other')
+	option(menu, 'desc').click()
+	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Bob', 'Alice'], 'Choosing the current direction keeps it, it does not toggle')
+	option(openColumnMenu(holder, 0), 'asc').click()
+	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Bob', 'Charlie'], 'Choosing ascending should sort ascending')
+	test.equal(indicator.textContent, '▲', 'Should show ▲ on the button')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('column button: turns blue while a sort or a filter is applied on its column', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	const button = (i: number) => holder.select(`[data-testid="sjpp-table-column-menu-btn-${i}"]`).node() as HTMLElement
+	const blue = 'rgb(13, 110, 253)'
+	const size = (i: number) => parseFloat(getComputedStyle(button(i)).fontSize)
+	const isActive = (i: number) => getComputedStyle(button(i)).color == blue && button(i).classList.contains('sjpp-table-column-active')
+	const baseSize = size(0)
+
+	test.deepEqual([0, 1, 2].map(isActive), [false, false, false], 'No column should look active before anything is applied')
+
+	sortViaMenu(holder, 1)
+	test.deepEqual([0, 1, 2].map(isActive), [false, true, false], 'A sort should mark only its own column')
+	test.ok(Math.abs(size(1) - baseSize) < 0.01, 'The color change should not change the size')
+
+	typeFilter(holder, 2, 'eng')
+	test.deepEqual([0, 1, 2].map(isActive), [false, true, true], 'A filter should mark its column too')
+
+	typeFilter(holder, 2, '')
+	test.deepEqual([0, 1, 2].map(isActive), [false, true, false], 'Emptying the filter should reset that column')
+	test.ok(Math.abs(size(2) - baseSize) < 0.01, 'Should stay the normal size')
+
+	sortViaMenu(holder, 0)
+	test.deepEqual([0, 1, 2].map(isActive), [true, false, false], 'Sorting another column should move the mark')
+
+	typeFilter(holder, 0, 'a')
+	sortViaMenu(holder, 1)
+	test.ok(isActive(0), 'A filtered column stays active when the sort moves to another column')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('column button: the funnel is empty until a filter is applied, then filled', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	const fills = () =>
+		(holder.selectAll('.sjpp-table-filter-icon path').nodes() as SVGPathElement[]).map(path => path.getAttribute('fill'))
+	const outlined = () =>
+		(holder.selectAll('.sjpp-table-filter-icon path').nodes() as SVGPathElement[]).every(
+			path => path.getAttribute('stroke') == 'currentColor'
+		)
+
+	test.deepEqual(fills(), ['none', 'none'], 'Both funnels should start empty')
+	test.ok(outlined(), 'An empty funnel is an outline')
+
+	typeFilter(holder, 0, 'a')
+	test.deepEqual(fills(), ['currentColor', 'none'], 'Only the filtered column should be filled')
+	sortViaMenu(holder, 2 - 1) // sorting Age must not fill any funnel
+	test.deepEqual(fills(), ['currentColor', 'none'], 'A sort alone should not fill a funnel')
+
+	typeFilter(holder, 2, 'eng')
+	test.deepEqual(fills(), ['currentColor', 'currentColor'], 'Every filtered column should be filled')
+	typeFilter(holder, 0, '')
+	typeFilter(holder, 2, '')
+	test.deepEqual(fills(), ['none', 'none'], 'Emptying the filters should empty the funnels')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('column button: the active look comes back after the header is rebuilt', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const table = new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	table.sortByColumn(1)
+	table.setColumnFilter(2, 'eng')
+	table.render()
+
+	const colors = [1, 2, 0].map(i => getComputedStyle(holder.select(`[data-testid="sjpp-table-column-menu-btn-${i}"]`).node() as Element).color)
+	test.deepEqual(colors.slice(0, 2), ['rgb(13, 110, 253)', 'rgb(13, 110, 253)'], 'Sorted and filtered columns should still be blue')
+	test.notEqual(colors[2], 'rgb(13, 110, 253)', 'Other columns should not be')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('sort: the popup removes with the table so none are left in <body>', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const table = new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	const menu = openColumnMenu(holder, 0)
+	test.ok(document.body.contains(menu), 'Should have a popup while the table is rendered')
+
+	table.remove()
+	test.notOk(document.body.contains(menu), 'Should remove the popup with the table')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -451,9 +575,9 @@ tape('sort: sorting a different column resets the previous indicator and starts 
 	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
 	const indicators = () => (holder.selectAll('.sjpp-table-sort-indicator').nodes() as HTMLElement[]).map(n => n.textContent)
 
-	clickHeaderLabel(holder, 0)
-	clickHeaderLabel(holder, 0) // name descending
-	clickHeaderLabel(holder, 1)
+	sortViaMenu(holder, 0)
+	sortViaMenu(holder, 0) // name descending
+	sortViaMenu(holder, 1)
 	test.deepEqual(bodyColumn(holder, 1), ['25', '30', '35'], 'Should sort numbers ascending on the new column')
 	test.deepEqual(indicators(), ['⇅', '▲'], 'Should reset the old indicator and show ▲ on the new column')
 
@@ -467,7 +591,7 @@ tape('sort: numeric strings sort numerically, not lexically', test => {
 	const rows: TableBaseRow[] = [[{ value: '1000' }], [{ value: '50' }], [{ value: '5' }], [{ value: '500' }]]
 	new TableBase({ columns: [{ label: 'Id', sortable: true }], rows, div: holder }).render()
 
-	clickHeaderLabel(holder, 0)
+	sortViaMenu(holder, 0)
 	test.deepEqual(bodyColumn(holder, 0), ['5', '50', '500', '1000'], 'Should sort numeric-string ids by number')
 
 	if ((test as any)._ok) holder.remove()
@@ -495,7 +619,7 @@ tape('sort: does not rebuild the header or mutate the caller rows array', test =
 	const theadBefore = holder.select('thead').node()
 	const thBefore = holder.select('thead th').node()
 
-	clickHeaderLabel(holder, 0)
+	sortViaMenu(holder, 0)
 	test.equal(holder.select('thead').node(), theadBefore, 'Should keep the same <thead>')
 	test.equal(holder.select('thead th').node(), thBefore, 'Should keep the same header cells')
 	test.equal(rows[0], firstRow, 'Should leave the caller rows array in its original order')
@@ -523,19 +647,30 @@ tape('filter: per-column text filter keeps matching rows, case-insensitively', t
 	test.end()
 })
 
-tape('filter: matching nothing renders an empty body, and the filter input survives updates', test => {
+tape('filter: matching nothing renders an empty body, and the popup input survives updates', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
-	const inputBefore = holder.select('input[data-testid="sjpp-table-filter-0"]').node()
+	const menu = openColumnMenu(holder, 0)
+	const input = menu.querySelector('input[data-testid="sjpp-table-filter-0"]') as HTMLInputElement
 
-	typeFilter(holder, 0, 'zzz')
+	input.value = 'zzz'
+	input.dispatchEvent(new Event('input', { bubbles: true }))
 	test.equal(holder.selectAll('tbody tr').size(), 0, 'Should render no rows when nothing matches')
 	test.equal(
-		holder.select('input[data-testid="sjpp-table-filter-0"]').node(),
-		inputBefore,
+		menu.querySelector('input[data-testid="sjpp-table-filter-0"]'),
+		input,
 		'Should keep the same <input> so typing focus is not lost'
 	)
+	test.notEqual(menu.style.display, 'none', 'Should keep the popup open while typing')
+
+	input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+	test.equal(menu.style.display, 'none', 'Enter should close the popup')
+
+	const icon = holder.select('.sjpp-table-filter-icon').node() as HTMLElement
+	test.ok(icon.classList.contains('sjpp-table-filter-active'), 'Should mark the filter symbol active')
+	typeFilter(holder, 0, '')
+	test.notOk(icon.classList.contains('sjpp-table-filter-active'), 'Should clear the active mark when the filter is emptied')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -593,7 +728,7 @@ tape('filter: numeric expressions combine with sort and do not break text column
 	}).render()
 
 	typeFilter(holder, 1, '>=30')
-	clickHeaderLabel(holder, 1)
+	sortViaMenu(holder, 1)
 	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Charlie'], 'Should sort the rows the numeric filter kept')
 
 	typeFilter(holder, 0, '>30')
@@ -603,13 +738,20 @@ tape('filter: numeric expressions combine with sort and do not break text column
 	test.end()
 })
 
-tape('filter: only filterable columns render an input', test => {
+tape('popup: shows only the sort options and filter input a column has', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	const sortOptions = (menu: HTMLElement) => menu.querySelectorAll('[data-testid^="sjpp-table-sort-"]').length
+	const inputs = (menu: HTMLElement) => menu.querySelectorAll('input').length
 
-	test.equal(holder.selectAll('.sjpp-table-filter-input').size(), 2, 'Should render an input per filterable column')
-	test.ok(holder.select('input[data-testid="sjpp-table-filter-1"]').empty(), 'Should not render an input for Age')
+	let menu = openColumnMenu(holder, 0)
+	test.deepEqual([sortOptions(menu), inputs(menu)], [2, 1], 'Name: both directions and the filter input')
+	menu = openColumnMenu(holder, 1)
+	test.deepEqual([sortOptions(menu), inputs(menu)], [2, 0], 'Age: sort only')
+	menu = openColumnMenu(holder, 2)
+	test.deepEqual([sortOptions(menu), inputs(menu)], [0, 1], 'Role: filter only')
+	test.equal(document.querySelectorAll(`#${CSS.escape(menu.id)}`).length, 1, 'All columns share one popup')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -620,11 +762,11 @@ tape('sort + filter: sort persists while filtering and vice versa', test => {
 	const holder = getHolder()
 	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
 
-	clickHeaderLabel(holder, 1) // age ascending
+	sortViaMenu(holder, 1) // age ascending
 	typeFilter(holder, 2, 'engineer')
 	test.deepEqual(bodyColumn(holder, 0), ['Bob', 'Alice'], 'Should keep the age sort within the filtered rows')
 
-	clickHeaderLabel(holder, 1) // age descending
+	sortViaMenu(holder, 1) // age descending
 	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Bob'], 'Should re-sort the filtered rows')
 
 	typeFilter(holder, 2, '')
@@ -1563,8 +1705,8 @@ tape('page: sort and filter act on all rows, reset to page 1, and report it', te
 	table.goToPage(3)
 	changes.length = 0
 
-	clickHeaderLabel(holder, 0) // name ascending
-	clickHeaderLabel(holder, 0) // name descending
+	sortViaMenu(holder, 0) // name ascending
+	sortViaMenu(holder, 0) // name descending
 	test.deepEqual(bodyColumn(holder, 0).slice(0, 1), ['name-24'], 'Descending sort should use every row, not just the page')
 	test.equal(pageInfo(holder), 'Showing 1 to 10 of 25 entries', 'Sort should go back to page 1')
 	test.deepEqual(changes, [{ currentPage: 1, pageSize: 10 }], 'Should report the reset once, not when already on page 1')
@@ -1686,29 +1828,42 @@ tape('a11y: headers have scope=col and the table can be given an accessible name
 	test.end()
 })
 
-tape('a11y: a sortable header is a keyboard-focusable button with aria-sort', test => {
+tape('a11y: the column button is focusable, named, and announces its popup; aria-sort reports the sort', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
-	const nameTh = holder.selectAll('thead th').nodes()[0] as HTMLElement
-	const ageTh = holder.selectAll('thead th').nodes()[1] as HTMLElement
-	const roleTh = holder.selectAll('thead th').nodes()[2] as HTMLElement
+	const th = (i: number) => holder.selectAll('thead th').nodes()[i] as HTMLElement
+	const nameTh = th(0)
+	const ageTh = th(1)
 
 	const button = nameTh.querySelector('button') as HTMLButtonElement
-	test.ok(button, 'Should render a <button> for a sortable column')
 	test.equal(button.type, 'button', 'Should not act as a form submit button')
 	test.ok(button.tabIndex >= 0, 'Should be in the tab order')
-	test.equal(roleTh.querySelector('button'), null, 'Should not render a button for a non-sortable column')
+	test.equal(button.getAttribute('aria-label'), 'Sort and filter Name', 'Should name both features')
+	test.equal((th(1).querySelector('button') as HTMLElement).getAttribute('aria-label'), 'Sort Age', 'Should name sort only')
+	test.equal((th(2).querySelector('button') as HTMLElement).getAttribute('aria-label'), 'Filter Role', 'Should name filter only')
+	test.equal(button.getAttribute('aria-haspopup'), 'true', 'Should announce a popup')
+	test.equal(button.getAttribute('aria-expanded'), 'false', 'Should start collapsed')
 	test.equal(nameTh.querySelector('.sjpp-table-sort-indicator')!.getAttribute('aria-hidden'), 'true', 'Should hide the decorative arrow')
+	test.equal(nameTh.querySelector('.sjpp-table-filter-icon')!.getAttribute('aria-hidden'), 'true', 'Should hide the decorative filter symbol')
 
 	test.equal(nameTh.getAttribute('aria-sort'), 'none', 'Should start unsorted')
-	button.click()
+	sortViaMenu(holder, 0)
 	test.equal(nameTh.getAttribute('aria-sort'), 'ascending', 'Should report ascending')
-	button.click()
+	sortViaMenu(holder, 0)
 	test.equal(nameTh.getAttribute('aria-sort'), 'descending', 'Should report descending')
-	;(ageTh.querySelector('button') as HTMLButtonElement).click()
+	sortViaMenu(holder, 1)
 	test.equal(nameTh.getAttribute('aria-sort'), 'none', 'Should reset the previous column')
 	test.equal(ageTh.getAttribute('aria-sort'), 'ascending', 'Should report the new column')
+
+	const menu = openColumnMenu(holder, 0)
+	test.equal(button.getAttribute('aria-expanded'), 'true', 'Should report expanded while the popup is open')
+	test.equal(button.getAttribute('aria-controls'), menu.id, 'Should point at the popup')
+	test.equal(document.activeElement, menu.querySelector('input'), 'Should move focus to the filter input')
+	menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+	test.equal(menu.style.display, 'none', 'Escape should close the popup')
+	test.equal(button.getAttribute('aria-expanded'), 'false', 'Should report collapsed again')
+	test.equal(document.activeElement, button, 'Should return focus to the button')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -1723,14 +1878,14 @@ tape('a11y: filter inputs are labelled and sort/filter changes are announced', t
 	test.equal(status.getAttribute('aria-live'), 'polite', 'Should render a polite live region')
 	test.equal(status.textContent, '', 'Should announce nothing on initial render')
 	test.equal(
-		(holder.select('input[data-testid="sjpp-table-filter-0"]').node() as HTMLElement).getAttribute('aria-label'),
+		(openColumnMenu(holder, 0).querySelector('input') as HTMLElement).getAttribute('aria-label'),
 		'Filter Name',
 		'Should give the filter input an accessible name'
 	)
 
-	clickHeaderLabel(holder, 0)
+	sortViaMenu(holder, 0)
 	test.equal(status.textContent, 'Sorted by Name, ascending', 'Should announce the sort')
-	clickHeaderLabel(holder, 0)
+	sortViaMenu(holder, 0)
 	test.equal(status.textContent, 'Sorted by Name, descending', 'Should announce the toggled sort')
 
 	typeFilter(holder, 2, 'manager')
@@ -1802,8 +1957,9 @@ tape('render(): a second render keeps the current sort and filter state', test =
 	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Bob'], 'Should still show the filtered and sorted rows')
 	const indicators = (holder.selectAll('.sjpp-table-sort-indicator').nodes() as HTMLElement[]).map(n => n.textContent)
 	test.deepEqual(indicators, ['▲', '⇅'], 'Should restore the sort indicator')
-	const input = holder.select('input[data-testid="sjpp-table-filter-2"]').node() as HTMLInputElement
+	const input = openColumnMenu(holder, 2).querySelector('input') as HTMLInputElement
 	test.equal(input.value, 'engineer', 'Should restore the filter text')
+	test.ok(holder.select('.sjpp-table-filter-icon.sjpp-table-filter-active').node(), 'Should restore the active filter symbol')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
