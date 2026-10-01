@@ -7,7 +7,6 @@ import {
 	renderSampleTypeSelect,
 	renderSampleTypesByTermsSelect,
 	getSelectedSampleTypes,
-	getSelectedSampleTypesByTerms,
 	mayGetSampleTypeLabel,
 	renderCheckboxSelect,
 	getSelectedCheckboxValues
@@ -199,7 +198,11 @@ export class SearchHandler {
 	}
 
 	getSelectedOrigins(): string[] | undefined {
-		if (!this.originSelect) return
+		// a mutation type with no origins has nothing to select
+		if (!this.queryOrigins?.length) return
+		// a single configured origin has no checkboxes to select from (see renderOriginSelect()),
+		// so that one origin is implicitly selected
+		if (!this.originSelect) return this.queryOrigins
 		const selectedOrigins = getSelectedCheckboxValues(this.originSelect)
 		if (!selectedOrigins.length) window.alert('Please select at least one origin.')
 		return selectedOrigins
@@ -515,55 +518,59 @@ export class SearchHandler {
 		await this.submit(this.q)
 	}
 
-	mayApplyOrigins() {
-		if (!this.originSelect) return true
+	mayApplyOrigins(): boolean {
 		this.term.origins = this.getSelectedOrigins()
-		if (!this.term.origins?.length) {
-			const geneSetEditUI = this.dom.geneSetEditUI
-			if (geneSetEditUI) {
-				// the gene set edit UI's submit button was disabled on
-				// click to prevent repeated submissions, so it must be
-				// re-enabled here since the submission was aborted
-				geneSetEditUI.api.dom.submitBtn.property('disabled', false).text('Submit')
-			}
-			return false
-		}
-		const selectedOrigins = this.term.origins
-		const queryOrigins = this.queryOrigins
-		if (!selectedOrigins?.length) throw new Error('no origins selected')
-		if (!queryOrigins?.length) throw new Error('no origins available to query')
-		if (selectedOrigins.length == queryOrigins.length) {
-			this.term.originLabel = ''
-		} else {
-			const dt = this.getSelectedMutationType()?.dt
-			const byOrigin = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.byOrigin
-			this.term.originLabel = selectedOrigins.map(origin => byOrigin?.[origin]?.label || origin).join(', ')
+		this.term.originLabel = this.getOriginLabel()
+		if (this.originSelect && !this.term.origins?.length) {
+			// selector rendered, but no origins selected
+			return this.abortSubmit()
 		}
 		return true
 	}
 
-	mayApplySampleType() {
-		if (!this.sampleTypeSelect) return true
-		this.term.sampleTypes = this.querySampleTypesByTerms
-			? getSelectedSampleTypesByTerms(this.sampleTypeSelect, this.querySampleTypesByTerms)
-			: getSelectedSampleTypes(this.sampleTypeSelect) || this.querySampleTypes
-		if (!this.term.sampleTypes?.length) {
-			const geneSetEditUI = this.dom.geneSetEditUI
-			if (geneSetEditUI) {
-				// the gene set edit UI's submit button was disabled on
-				// click to prevent repeated submissions, so it must be
-				// re-enabled here since the submission was aborted
-				geneSetEditUI.api.dom.submitBtn.property('disabled', false).text('Submit')
-			}
-			return false
+	/** no label when there are no origins to assign; empty when the one available origin, or
+	 * all available origins, is assigned; otherwise the assigned origins' labels */
+	getOriginLabel(): string | undefined {
+		const origins = this.term.origins
+		if (!origins?.length) return undefined
+		if (origins.length == this.queryOrigins?.length) return ''
+		const dt = this.getSelectedMutationType()?.dt
+		const byOrigin = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.byOrigin
+		return origins.map(origin => byOrigin?.[origin]?.label || origin).join(', ')
+	}
+
+	mayApplySampleType(): boolean {
+		this.term.sampleTypes = getSelectedSampleTypes({
+			sampleTypeSelect: this.sampleTypeSelect,
+			querySampleTypes: this.querySampleTypes,
+			querySampleTypesByTerms: this.querySampleTypesByTerms
+		})
+		this.term.sampleTypeLabel = this.getSampleTypeLabel()
+		if (this.sampleTypeSelect && !this.term.sampleTypes?.length) {
+			// selector rendered, but no sample types selected
+			return this.abortSubmit()
 		}
-		this.term.sampleTypeLabel = mayGetSampleTypeLabel({
+		return true
+	}
+
+	/** no label when there are no sample types to assign; empty when the one available sample
+	 * type, or all available sample types, is assigned; otherwise names the assigned subset */
+	getSampleTypeLabel(): string | undefined {
+		if (!this.term.sampleTypes?.length) return undefined
+		if (!this.sampleTypeSelect) return '' // the one available sample type, implicitly assigned
+		return mayGetSampleTypeLabel({
 			sampleTypeSelect: this.sampleTypeSelect,
 			querySampleTypes: this.querySampleTypes,
 			querySampleTypesByTerms: this.querySampleTypesByTerms,
 			termdbConfig: this.opts.app.vocabApi.termdbConfig
 		})
-		return true
+	}
+
+	/** re-enables the gene set edit UI's submit button, which is disabled on click to prevent
+	 * repeated submissions, since the submission is now aborted */
+	abortSubmit(): false {
+		this.dom.geneSetEditUI?.api.dom.submitBtn.property('disabled', false).text('Submit')
+		return false
 	}
 
 	async applyRememberedQ(q) {

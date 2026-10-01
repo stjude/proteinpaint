@@ -23,12 +23,25 @@ export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, term
 	)
 }
 
-// returns selected sample types from checkboxes created by renderSampleTypeSelect().
-export function getSelectedSampleTypes(sampleTypeSelect?: any[]) {
-	if (!sampleTypeSelect) return
-	const selectedSampleTypes = getSelectedCheckboxValues(sampleTypeSelect)!.map(Number)
-	if (!selectedSampleTypes.length) window.alert('Please select at least one sample type.')
-	return selectedSampleTypes
+/** returns the sample types to assign on the termwrapper: those selected via the
+ * checkboxes/dropdowns rendered by renderSampleTypeSelect()/renderSampleTypesByTermsSelect(),
+ * or the one available sample type implicitly assigned when it is alone and so renders no
+ * selector. undefined when there are no sample types to assign at all. */
+export function getSelectedSampleTypes(opts: {
+	sampleTypeSelect?: any
+	querySampleTypes?: number[]
+	querySampleTypesByTerms?: any
+}) {
+	const { sampleTypeSelect, querySampleTypes, querySampleTypesByTerms } = opts
+	if (querySampleTypesByTerms) return getSelectedSampleTypesByTerms(sampleTypeSelect, querySampleTypesByTerms)
+	if (sampleTypeSelect) {
+		const selectedSampleTypes = getSelectedCheckboxValues(sampleTypeSelect)!.map(Number)
+		if (!selectedSampleTypes.length) window.alert('Please select at least one sample type.')
+		return selectedSampleTypes
+	}
+	// no selector was rendered: either there is nothing to select, or a single available sample
+	// type is implicitly assigned (see renderSampleTypeSelect())
+	return querySampleTypes?.length ? querySampleTypes : undefined
 }
 
 // renders a dropdown menu for each term in sampleTypesByTerms, with the term's
