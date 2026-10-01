@@ -81,9 +81,12 @@ function getHostImage() {
 // _buildTime is set by each package's prepack via `npm pkg set` — package CONTENT, so (unlike a file
 // mtime, which npm normalizes in the published tarball) it is a valid build date, and it ships in the
 // installed package.json read here.
-function getDeps() {
+//
+// binpath: the installed proteinpaint-server package dir; front is expected to be installed as a sibling package
+// projectDir: the embedding project dir, whose package.json may declare the sjcrh packages
+export function getDeps(binpath = serverconfig.binpath, projectDir = process.cwd()) {
 	const deps: any = {}
-	const serverPkgFile = path.join(serverconfig.binpath, 'package.json')
+	const serverPkgFile = path.join(binpath, 'package.json')
 	if (fs.existsSync(serverPkgFile)) {
 		const p = JSON.parse(fs.readFileSync(serverPkgFile, 'utf8'))
 		deps[SERVER_PKG] = { installed: p.version, buildTime: p._buildTime }
@@ -97,7 +100,7 @@ function getDeps() {
 		if (bundled) deps[CLIENT_PKG] = { bundled }
 	}
 
-	const targetPkgFile = path.join(process.cwd(), 'package.json')
+	const targetPkgFile = path.join(projectDir, 'package.json')
 	if (fs.existsSync(targetPkgFile)) {
 		const projectDeps = JSON.parse(fs.readFileSync(targetPkgFile, { encoding: 'utf8' })).dependencies || {}
 		for (const name of [SERVER_PKG, FRONT_PKG] as const) {
