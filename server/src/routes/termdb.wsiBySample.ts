@@ -10,6 +10,7 @@ import type {
 import { readdir, stat } from 'fs/promises' // directory listing + slide mtime (cache version)
 import path from 'path' // root/sample/image path assembly
 import serverconfig from '#src/serverconfig.js' // tpmasterdir, the root of all data paths
+import { genomes } from '#src/initGenomesDs.js' // checked when augen sets up the route
 
 /*
  termdb/wsiBySample — whole-slide images for the w2 plot.
@@ -30,9 +31,17 @@ import serverconfig from '#src/serverconfig.js' // tpmasterdir, the root of all 
 */
 
 export const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has ds.queries.w2
+	get init() {
+		return hasW2Ds(genomes) ? init : null
+	},
 	request: { typeId: 'WsiBySampleRequest' },
 	response: { typeId: 'WsiBySampleResponse' }
+}
+
+export function hasW2Ds(genomes) {
+	return Object.values(genomes).some((g: any) => Object.values(g.datasets || {}).some((ds: any) => ds.queries?.w2))
 }
 
 export const api: RouteApi = {
