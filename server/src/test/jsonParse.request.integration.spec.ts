@@ -1,5 +1,6 @@
 /*
-	Request-based regression tests for json parsing of the request body and URL query params.
+	Request-based regression tests for json parsing of the request body and URL query params,
+	and for the json error responses to unreadable request bodies and invalid wsiBySample input.
 
 	The app middlewares parse a json request body and urljson-encoded URL query params with
 	secure-json-parse, which rejects a __proto__ or constructor.prototype key. Otherwise,
@@ -138,6 +139,38 @@ tape('a POST /massSession body is saved without being merged into the query', as
 	test.end()
 })
 
+tape('an unreadable request body gets a json error, not an html page', async test => {
+	test.timeoutAfter(10000)
+	const encoding = await post(server, '/genomes', '{"embedder":"localhost"}', { 'content-encoding': 'bogus' })
+	test.equal(encoding.status, 415, 'should respond with 415 for an unsupported content encoding')
+	test.match(encoding.body.error, /unsupported content encoding/, 'should explain the error in a json body')
+	test.notOk(encoding.body.text, 'should not respond with an html error page')
+
+	const oversized = await post(server, '/genomes', `{"a":"${'x'.repeat(5 * 1024 * 1024 + 1)}"}`)
+	test.equal(oversized.status, 413, 'should respond with 413 for an oversized body')
+	test.equal(typeof oversized.body.error, 'string', 'should explain the error in a json body')
+	test.notOk(oversized.body.text, 'should not respond with an html error page')
+	test.end()
+})
+
+tape('termdb/wsiBySample answers invalid input with 400', async test => {
+	test.timeoutAfter(10000)
+	const ds = { genome: 'hg38-test', dslabel: 'TermdbTest' }
+	const ok = await post(server, '/termdb/wsiBySample', JSON.stringify(ds))
+	test.equal(ok.status, 200, 'should respond with 200 for a valid request')
+	test.ok(Array.isArray(ok.body.samples), 'should list the samples for a valid request')
+
+	for (const [label, q] of [
+		['a sample_id outside the image folder', { ...ds, sample_id: '..' }],
+		['an unknown imageType', { ...ds, sample_id: '2660', imageType: 'bogus' }]
+	] as const) {
+		const res = await post(server, '/termdb/wsiBySample', JSON.stringify(q))
+		test.equal(res.status, 400, `should respond with 400 for ${label}`)
+		test.equal(typeof res.body.error, 'string', `should explain the error for ${label}`)
+	}
+	test.end()
+})
+
 tape('stop server', async test => {
 	test.timeoutAfter(10000)
 	await server?.stop()
@@ -151,10 +184,10 @@ async function get(server: TestServer, path: string, query: string) {
 }
 
 /** body is the raw text, to send json that JSON.stringify() would not produce, such as a __proto__ key */
-async function post(server: TestServer, path: string, body: string) {
+async function post(server: TestServer, path: string, body: string, headers = {}) {
 	const res = await fetch(`${server.url}${path}`, {
 		method: 'POST',
-		headers: { 'content-type': 'application/json' },
+		headers: { 'content-type': 'application/json', ...headers },
 		body
 	})
 	return { status: res.status, body: await parseBody(res) }

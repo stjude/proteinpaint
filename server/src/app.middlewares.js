@@ -267,6 +267,19 @@ function log(req) {
 	)
 }
 
+/*
+	The final error handler. An error passed to next(), such as an unreadable or oversized request
+	body, would otherwise get Express's default HTML error page, which includes the stack trace when
+	NODE_ENV is not 'production'. Reply with JSON instead, and only expose client-error messages.
+	A missing or invalid status (not 400-599) is answered as 500.
+*/
+export function jsonErrorHandler(err, req, res, next) {
+	if (res.headersSent) return next(err)
+	const s = err?.status || err?.statusCode
+	const status = Number.isInteger(s) && s >= 400 && s < 600 ? s : 500
+	res.status(status).send({ error: status < 500 && err.expose ? err.message : 'request failed' })
+}
+
 // returns the parsed URL of the request origin, or undefined if it is missing or malformed
 export function getRequestOrigin(req) {
 	const origin = req.get('origin')

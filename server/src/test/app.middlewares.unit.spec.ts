@@ -1,5 +1,11 @@
 import tape from 'tape'
-import { getRequestOrigin, isAllowedEmbedder, isCredEmbedder, getCacheControl } from '../app.middlewares.js'
+import {
+	getRequestOrigin,
+	isAllowedEmbedder,
+	isCredEmbedder,
+	getCacheControl,
+	jsonErrorHandler
+} from '../app.middlewares.js'
 
 function getReq(headers: { [key: string]: string }, protocol = 'http') {
 	return { protocol, get: (key: string) => headers[key] }
@@ -136,5 +142,48 @@ tape('getCacheControl()', test => {
 	test.equal(getCacheControl('/bin/dist/app.js'), undefined, 'should not set a header for other static files')
 	test.equal(getCacheControl('/genomes'), 'immutable,max-age=1', 'should default to a 1 second max-age for a route')
 	test.equal(getCacheControl('/genomes', 5), 'immutable,max-age=5', 'should use the responseMaxAge for a route')
+	test.end()
+})
+
+tape('jsonErrorHandler()', test => {
+	function respond(err, headersSent = false) {
+		const out: any = { nextErr: undefined }
+		const res: any = {
+			headersSent,
+			status(code) {
+				out.status = code
+				return res
+			},
+			send(body) {
+				out.body = body
+			}
+		}
+		jsonErrorHandler(err, {}, res, e => (out.nextErr = e))
+		return out
+	}
+
+	const clientErr = Object.assign(new Error('unsupported content encoding "bogus"'), { status: 415, expose: true })
+	test.deepEqual(
+		respond(clientErr),
+		{ nextErr: undefined, status: 415, body: { error: 'unsupported content encoding "bogus"' } },
+		'should expose the message of a client error'
+	)
+
+	const serverErr = Object.assign(new Error('ENOENT: /home/root/pp/tp/secret'), { status: 500, expose: false })
+	test.deepEqual(respond(serverErr).body, { error: 'request failed' }, 'should hide the message of a server error')
+
+	const exposed5xx = Object.assign(new Error('internal detail'), { statusCode: 503, expose: true })
+	const r = respond(exposed5xx)
+	test.equal(r.status, 503, 'should use statusCode when status is missing')
+	test.deepEqual(r.body, { error: 'request failed' }, 'should hide the message of a 5xx even when expose is set')
+
+	for (const status of [undefined, 'x', 200, 302, 700]) {
+		const res = respond(Object.assign(new Error('m'), { status, expose: true }))
+		test.equal(res.status, 500, `should answer a missing or invalid status (${status}) as 500`)
+	}
+
+	const sent = respond(clientErr, true)
+	test.equal(sent.nextErr, clientErr, 'should pass the error on when the response has already started')
+	test.equal(sent.status, undefined, 'should not set a status when the response has already started')
 	test.end()
 })

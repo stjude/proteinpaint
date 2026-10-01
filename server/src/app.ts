@@ -10,7 +10,7 @@ import { spawnSync } from 'child_process'
 import * as augen from '@sjcrh/augen'
 import serverconfig, { lockServerconfig } from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
-import { setAppMiddlewares } from './app.middlewares.js'
+import { setAppMiddlewares, jsonErrorHandler } from './app.middlewares.js'
 import * as oldApp from './app.unorg.js'
 import { getAuthApi, extractValidatedCreds } from './auth.ts'
 import { sendMessageToSlack } from './postOnSlack.ts'
@@ -86,14 +86,8 @@ shared/types/src/routes and not when modified.
 
 		oldApp.setRoutes(app, genomes, serverconfig)
 
-		// Last: an error passed to next(), such as an unreadable or oversized request body, would
-		// otherwise get Express's default HTML error page, which includes the stack trace when
-		// NODE_ENV is not 'production'. Reply with JSON instead, and only expose client-error messages.
-		app.use((err, req, res, next) => {
-			if (res.headersSent) return next(err)
-			const status = err.status || err.statusCode || 500
-			res.status(status).send({ error: status < 500 && err.expose ? err.message : 'request failed' })
-		})
+		// last, so that it handles an error passed to next() by any middleware or route above
+		app.use(jsonErrorHandler)
 
 		// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
 		// a serverconfig.preListenScript may rely on detecting this exact pre-listen() message
