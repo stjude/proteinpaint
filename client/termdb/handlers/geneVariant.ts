@@ -24,6 +24,7 @@ type Opts = {
 	genomeObj: any
 	dt?: number // dt to search, if missing will use first available dt in ds
 	msg?: string // message to be displayed below search bar
+	usecase?: { target?: string }
 	/** true when the consumer keeps the q of the selected term, see SearchHandlerOpts in
 	 * client/termdb/TermTypeSearch.ts. Remembered settings are only offered when it does */
 	keepsQ?: boolean
@@ -52,8 +53,21 @@ export class SearchHandler {
 		this.opts = opts
 		this.dom = {}
 		this.term = { type: 'geneVariant' }
-		this.q = { type: 'predefined-groupset' }
+		// for matrix, only display gene search box and not other
+		// selectors (e.g. mutation type/origin/etc.) because matrix will
+		// ignore properties set by these selectors in tw.q{}
+		// TODO: support full geneVariant termwrapper in matrix
+		this.q = { type: opts.usecase?.target == 'matrix' ? 'values' : 'predefined-groupset' }
 		this.callback = opts.callback
+		if (opts.usecase?.target == 'matrix') {
+			opts.holder.style('padding', '5px 10px 10px 25px')
+			this.dom.searchDiv = opts.holder
+				.append('div')
+				.attr('data-testid', 'sjpp-genevariant-geneSearchDiv')
+				.style('padding-left', '3px')
+			this.searchGene()
+			return
+		}
 		this.maxNumGenes = this.opts.app.vocabApi.termdbConfig?.maxGeneVariantGeneSetSize || 200 // max # genes allowed
 		opts.holder.style('padding', '5px 10px 10px 25px')
 		this.dom.typeSettingDiv = opts.holder.append('div')
@@ -442,6 +456,10 @@ export class SearchHandler {
 	}
 
 	async runCallback() {
+		if (this.opts.usecase?.target == 'matrix') {
+			await this.callback({ term: this.term, q: this.q })
+			return
+		}
 		// a setting the user built for this gene before is worth offering, and is only known
 		// once the gene is picked, so the selected mutation type is not applied until the user
 		// either picks one of those settings or skips them
