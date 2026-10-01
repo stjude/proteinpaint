@@ -1,3 +1,4 @@
+import { escapeHtml } from '#dom'
 import { renderTable } from '../dom/table'
 
 export const handler = {
@@ -78,5 +79,6 @@ function getGroupLabel(term) {
 		if (term.values[item].in === false) continue
 		n += term.values[item].list.length
 	}
-	return `${term.name} n=${n}`
+	// the pill renders this with .html(); the name is a user-defined group name
+	return `${escapeHtml(term.name)} n=${n}`
 }
