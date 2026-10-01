@@ -101,7 +101,10 @@ function getDeps() {
 	if (fs.existsSync(targetPkgFile)) {
 		const projectDeps = JSON.parse(fs.readFileSync(targetPkgFile, { encoding: 'utf8' })).dependencies || {}
 		for (const name of [SERVER_PKG, FRONT_PKG] as const) {
-			if (projectDeps[name]) deps[name].entry = projectDeps[name]
+			if (!projectDeps[name]) continue
+			// a declared package may not be installed, still report its entry to help detect a missing install
+			if (!deps[name]) deps[name] = {}
+			deps[name].entry = projectDeps[name]
 		}
 	}
 	return deps
