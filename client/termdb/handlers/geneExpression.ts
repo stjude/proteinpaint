@@ -4,7 +4,6 @@ import {
 	renderSampleTypeSelect,
 	renderSampleTypesByTermsSelect,
 	getSelectedSampleTypes,
-	getSelectedSampleTypesByTerms,
 	mayGetSampleTypeLabel,
 	table2col
 } from '#dom'
@@ -60,9 +59,11 @@ export class SearchHandler {
 	async selectGene(geneSearch) {
 		const gene = geneSearch?.geneSymbol
 		if (!gene) throw new Error('No gene selected')
-		const sampleTypes = this.querySampleTypesByTerms
-			? getSelectedSampleTypesByTerms(this.sampleTypeSelect, this.querySampleTypesByTerms)
-			: getSelectedSampleTypes(this.sampleTypeSelect) || this.querySampleTypes
+		const sampleTypes = getSelectedSampleTypes({
+			sampleTypeSelect: this.sampleTypeSelect,
+			querySampleTypes: this.querySampleTypes,
+			querySampleTypesByTerms: this.querySampleTypesByTerms
+		})
 		if (this.sampleTypeSelect && !sampleTypes?.length) {
 			return
 		}

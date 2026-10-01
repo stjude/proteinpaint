@@ -395,7 +395,7 @@ tape('Origins are selected separately from mutation type', async test => {
 	)
 	await pickGene(holder, 'KRAS')
 	test.equal(tw.term.origins, undefined, 'should clear stale origins before submission')
-	test.equal(tw.term.originLabel, '', 'should clear the origin label when origins are not available')
+	test.equal(tw.term.originLabel, undefined, 'should clear the origin label when origins are not available')
 
 	if (test['_ok']) holder.remove()
 	test.end()
