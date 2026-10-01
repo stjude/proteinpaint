@@ -12,7 +12,7 @@ import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
 import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { getSampleFilter } from './groups.js'
-import { escapeHtml } from './chat.ts'
+import { escapeHtml } from '#dom'
 
 // Minimum prompt length per search family. Gene search runs from a single character; dictionary and
 // sample search require 3 (they match more loosely and, for samples, scan every sample name). Coordinate
