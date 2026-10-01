@@ -177,37 +177,6 @@ export class SearchHandler {
 		this.searchGene()
 	}
 
-	getSelectedMutationType() {
-		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
-		if (!selectedMutationType) return
-		const mutationTypeIdx = Number(selectedMutationType.value)
-		if (!Number.isInteger(mutationTypeIdx)) return
-		return this.mutationTypeTerms[mutationTypeIdx]
-	}
-
-	getQueryOrigins(): string[] | undefined {
-		const mutationType = this.getSelectedMutationType()
-		if (!Number.isInteger(mutationType?.dt)) return
-		const byOrigin = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[mutationType.dt]?.byOrigin
-		if (!byOrigin) return
-		const origins = Object.keys(byOrigin)
-		for (const origin of origins) {
-			if (!morigin[origin]) throw new Error(`unknown origin '${origin}'`)
-		}
-		return origins.sort((a, b) => (morigin[a].order ?? Infinity) - (morigin[b].order ?? Infinity))
-	}
-
-	getSelectedOrigins(): string[] | undefined {
-		// a mutation type with no origins has nothing to select
-		if (!this.queryOrigins?.length) return
-		// a single configured origin has no checkboxes to select from (see renderOriginSelect()),
-		// so that one origin is implicitly selected
-		if (!this.originSelect) return this.queryOrigins
-		const selectedOrigins = getSelectedCheckboxValues(this.originSelect)
-		if (!selectedOrigins.length) window.alert('Please select at least one origin.')
-		return selectedOrigins
-	}
-
 	updateOriginSelect() {
 		const [td1, td2] = this.dom.originSelectRow
 		td2.selectAll('*').remove()
@@ -221,6 +190,18 @@ export class SearchHandler {
 			td2.style('display', 'none')
 		}
 		this.updateSampleTypeSelect()
+	}
+
+	getQueryOrigins(): string[] | undefined {
+		const mutationType = this.getSelectedMutationType()
+		if (!Number.isInteger(mutationType?.dt)) return
+		const byOrigin = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[mutationType.dt]?.byOrigin
+		if (!byOrigin) return
+		const origins = Object.keys(byOrigin)
+		for (const origin of origins) {
+			if (!morigin[origin]) throw new Error(`unknown origin '${origin}'`)
+		}
+		return origins.sort((a, b) => (morigin[a].order ?? Infinity) - (morigin[b].order ?? Infinity))
 	}
 
 	renderOriginSelect() {
@@ -376,6 +357,22 @@ export class SearchHandler {
 		this.dom.searchbox?.node()?.focus()
 	}
 
+	// TODO: support sample type selection here too
+	searchGeneSet() {
+		this.dom.searchDiv.selectAll('*').remove()
+		this.dom.searchDiv.style('margin-top', '0px')
+		this.dom.geneSetEditUI = new GeneSetEditUI({
+			holder: this.dom.searchDiv.append('div'),
+			genome: this.opts.genomeObj,
+			vocabApi: this.opts.app.vocabApi,
+			nameInput: true,
+			maxNumGenes: this.maxNumGenes,
+			callback: async result => await this.selectGeneSet(result)
+		})
+		this.dom.searchbox = this.dom.geneSetEditUI.geneSearch?.searchbox
+		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px').style('margin-top', '-10px')
+	}
+
 	async selectGene(geneSearch) {
 		if (geneSearch.geneSymbol) {
 			const name = geneSearch.geneSymbol
@@ -416,22 +413,6 @@ export class SearchHandler {
 			throw 'no gene or position specified'
 		}
 		await this.runCallback()
-	}
-
-	// TODO: support sample type selection here too
-	searchGeneSet() {
-		this.dom.searchDiv.selectAll('*').remove()
-		this.dom.searchDiv.style('margin-top', '0px')
-		this.dom.geneSetEditUI = new GeneSetEditUI({
-			holder: this.dom.searchDiv.append('div'),
-			genome: this.opts.genomeObj,
-			vocabApi: this.opts.app.vocabApi,
-			nameInput: true,
-			maxNumGenes: this.maxNumGenes,
-			callback: async result => await this.selectGeneSet(result)
-		})
-		this.dom.searchbox = this.dom.geneSetEditUI.geneSearch?.searchbox
-		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px').style('margin-top', '-10px')
 	}
 
 	async selectGeneSet(result) {
@@ -500,11 +481,9 @@ export class SearchHandler {
 		return shown
 	}
 
-	/** clear the remembered settings offered for the gene last picked, and put back any caller
-	message that mayShowRememberedQ() hid while they waited for a choice */
-	clearRememberedQ() {
-		this.dom.reuseDiv.style('display', 'none').selectAll('*').remove()
-		if (this.opts.msg) this.dom.msgDiv.style('display', 'block').text(this.opts.msg)
+	async applyRememberedQ(q) {
+		// copied, since the same entry may be picked again for another plot
+		await this.submit({ ...structuredClone(q), isAtomic: true })
 	}
 
 	/** apply the mutation type that the radios select, which is the default for a new term */
@@ -512,10 +491,21 @@ export class SearchHandler {
 	// function and evaluate whether the submission process can be
 	// more streamlined/centralized
 	async applyMutationType() {
-		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
-		const mutationType = this.mutationTypeTerms[Number(selectedMutationType.value)]
+		const mutationType = this.getSelectedMutationType()
+		if (!mutationType) throw new Error('no mutation type selected')
 		this.q.predefined_groupset_idx = mutationType.childTermIdx
 		await this.submit(this.q)
+	}
+
+	async submit(q) {
+		if (!this.mayApplyOrigins() || !this.mayApplySampleType()) return
+		this.term.label = [this.term.originLabel, this.term.sampleTypeLabel].filter(Boolean).join(', ')
+		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
+		// add geneVariant term to each child term
+		addParentTerm(this.term)
+		await this.callback({ term: this.term, q })
+		this.clearRememberedQ()
+		this.dom.msgDiv.style('display', 'none')
 	}
 
 	mayApplyOrigins(): boolean {
@@ -526,17 +516,6 @@ export class SearchHandler {
 			return this.abortSubmit()
 		}
 		return true
-	}
-
-	/** no label when there are no origins to assign; empty when the one available origin, or
-	 * all available origins, is assigned; otherwise the assigned origins' labels */
-	getOriginLabel(): string | undefined {
-		const origins = this.term.origins
-		if (!origins?.length) return undefined
-		if (origins.length == this.queryOrigins?.length) return ''
-		const dt = this.getSelectedMutationType()?.dt
-		const byOrigin = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.byOrigin
-		return origins.map(origin => byOrigin?.[origin]?.label || origin).join(', ')
 	}
 
 	mayApplySampleType(): boolean {
@@ -551,6 +530,28 @@ export class SearchHandler {
 			return this.abortSubmit()
 		}
 		return true
+	}
+
+	getSelectedOrigins(): string[] | undefined {
+		// a mutation type with no origins has nothing to select
+		if (!this.queryOrigins?.length) return
+		// a single configured origin has no checkboxes to select from (see renderOriginSelect()),
+		// so that one origin is implicitly selected
+		if (!this.originSelect) return this.queryOrigins
+		const selectedOrigins = getSelectedCheckboxValues(this.originSelect)
+		if (!selectedOrigins.length) window.alert('Please select at least one origin.')
+		return selectedOrigins
+	}
+
+	/** no label when there are no origins to assign; empty when the one available origin, or
+	 * all available origins, is assigned; otherwise the assigned origins' labels */
+	getOriginLabel(): string | undefined {
+		const origins = this.term.origins
+		if (!origins?.length) return undefined
+		if (origins.length == this.queryOrigins?.length) return ''
+		const dt = this.getSelectedMutationType()?.dt
+		const byOrigin = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.byOrigin
+		return origins.map(origin => byOrigin?.[origin]?.label || origin).join(', ')
 	}
 
 	/** no label when there are no sample types to assign; empty when the one available sample
@@ -573,20 +574,19 @@ export class SearchHandler {
 		return false
 	}
 
-	async applyRememberedQ(q) {
-		// copied, since the same entry may be picked again for another plot
-		await this.submit({ ...structuredClone(q), isAtomic: true })
+	getSelectedMutationType() {
+		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
+		if (!selectedMutationType) return
+		const mutationTypeIdx = Number(selectedMutationType.value)
+		if (!Number.isInteger(mutationTypeIdx)) return
+		return this.mutationTypeTerms[mutationTypeIdx]
 	}
 
-	async submit(q) {
-		if (!this.mayApplyOrigins() || !this.mayApplySampleType()) return
-		this.term.label = [this.term.originLabel, this.term.sampleTypeLabel].filter(Boolean).join(', ')
-		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
-		// add geneVariant term to each child term
-		addParentTerm(this.term)
-		await this.callback({ term: this.term, q })
-		this.clearRememberedQ()
-		this.dom.msgDiv.style('display', 'none')
+	/** clear the remembered settings offered for the gene last picked, and put back any caller
+	message that mayShowRememberedQ() hid while they waited for a choice */
+	clearRememberedQ() {
+		this.dom.reuseDiv.style('display', 'none').selectAll('*').remove()
+		if (this.opts.msg) this.dom.msgDiv.style('display', 'block').text(this.opts.msg)
 	}
 }
 
