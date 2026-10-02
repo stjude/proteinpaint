@@ -310,7 +310,9 @@ tape('GENE_EXPRESSION should open TVS when no selection callback is defined', as
 				gene: 'EGFR',
 				name: 'EGFR log2 TPM',
 				type: TermTypes.GENE_EXPRESSION,
-				sampleTypes: [1]
+				sampleTypes: [1],
+				sampleTypeLabel: '',
+				label: ''
 			}
 		},
 		'Should open TVS with the selected gene-expression term'
