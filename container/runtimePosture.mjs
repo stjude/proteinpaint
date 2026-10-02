@@ -30,7 +30,7 @@ if (isMainModule()) {
 	const writableDirs = args.filter(a => a != '--strict')
 	const result = checkRuntimePosture({ writableDirs })
 	logRuntimePosture(result)
-	if (strict && result.warnings.length) process.exit(1)
+	if (strict && result.warnings?.length) process.exit(1)
 }
 
 // deps may be fakes in tests; returns {skipped} on a non-Linux platform, otherwise {warnings[], unchecked[]}
@@ -82,8 +82,9 @@ export function checkRuntimePosture({
 	}
 
 	for (const dir of libDirs) {
-		if (!_fs.existsSync(dir)) continue
+		// existsSync() also throws for a dir that the permission model denies
 		try {
+			if (!_fs.existsSync(dir)) continue
 			_fs.accessSync(dir, fs.constants.W_OK)
 			warnings.push(`${dir} is writable by the process, it should be read-only`)
 		} catch (e) {
@@ -145,5 +146,11 @@ function realpath(_fs, p) {
 
 // true when this file is run as a CLI script, not imported, such as by tests
 function isMainModule() {
-	return !!process.argv[1] && import.meta.filename == fs.realpathSync(process.argv[1])
+	if (!process.argv[1]) return false
+	try {
+		return import.meta.filename == fs.realpathSync(process.argv[1])
+	} catch {
+		// such as '-' for a script from stdin, or a path that the permission model denies
+		return false
+	}
 }
