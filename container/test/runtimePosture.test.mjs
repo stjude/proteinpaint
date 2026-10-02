@@ -111,6 +111,22 @@ test('logRuntimePosture() prints each warning and the unchecked items', () => {
 
 test('cli: runs and exits 0 without --strict', () => {
 	const r = spawnSync(process.execPath, [SCRIPT], { encoding: 'utf8' })
+
+	test('cli: --strict exits 1 only for a warning, and skips other platforms', () => {
+		const r = spawnSync(process.execPath, [SCRIPT, '--strict'], { encoding: 'utf8' })
+		assert.doesNotMatch(r.stderr, /TypeError/)
+		if (process.platform == 'linux') assert.equal(r.status, r.stderr.includes('WARNING') ? 1 : 0, r.stderr)
+		else assert.equal(r.status, 0, r.stderr)
+	})
+
+	test('cli: the module can be imported from a script on stdin', () => {
+		const r = spawnSync(process.execPath, ['--input-type=module', '-'], {
+			input: `import { checkRuntimePosture } from ${JSON.stringify(SCRIPT)}; console.log(typeof checkRuntimePosture)`,
+			encoding: 'utf8'
+		})
+		assert.equal(r.status, 0, r.stderr)
+		assert.equal(r.stdout.trim(), 'function')
+	})
 	assert.equal(r.status, 0, r.stderr)
 })
 
@@ -143,7 +159,10 @@ function fakeDeps({
 				if (allFiles[file] === undefined) throw error('ENOENT')
 				return allFiles[file]
 			},
-			existsSync: p => libDirs.includes(p),
+			existsSync: p => {
+				if (denied.includes(p)) throw error('ERR_ACCESS_DENIED')
+				return libDirs.includes(p)
+			},
 			accessSync(p) {
 				if (denied.includes(p)) throw error('ERR_ACCESS_DENIED')
 				if (!writable.includes(p)) throw error('EACCES')
