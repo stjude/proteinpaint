@@ -13,10 +13,12 @@ CWD=${CWD:-$(pwd)}
 
 GITCMD='(^|[^[:alnum:]_.-])git[[:space:]]'
 GHCMD='(^|[^[:alnum:]_.-])gh[[:space:]]+((pr|issue|release|label)[[:space:]]+(create|edit|comment|review|close|merge)|api[[:space:]])'
+# the rest of one git command, which ends at a shell separator, a newline, or a backtick
+GITARGS=$'[^;&|`\n]*'
 
 if [[ "$CMD" =~ SKIP_TEXT_CHECK=[^[:space:]]*[[:space:]]+(git|gh)[[:space:]] ]] ||
 	[[ "$CMD" =~ export[[:space:]]+SKIP_TEXT_CHECK ]] ||
-	[[ "$CMD" =~ $GITCMD.*(--no-verify|core\.hooksPath) ]] ||
+	[[ "$CMD" =~ $GITCMD$GITARGS(--no-verify|core\.hooksPath) ]] ||
 	[[ "$CMD" =~ $GITCMD[[:space:]]*commit([[:space:]]+-[[:alpha:]]+)*[[:space:]]+-[[:alpha:]]*n[[:alpha:]]*([[:space:]]|$) ]]; then
 	echo "Do not skip the git hooks or the text check. If the check flags a false positive, or the fix is already deployed to prod, ask the user to run the command." >&2
 	exit 2
