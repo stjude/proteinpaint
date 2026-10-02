@@ -12,7 +12,14 @@ ln -sf $PPDIR/utils/hooks/pre-commit .
 ln -sf $PPDIR/utils/hooks/commit-msg .
 ln -sf $PPDIR/utils/hooks/post-commit .
 ln -sf $PPDIR/utils/hooks/pre-push .
+ln -sf $PPDIR/utils/hooks/reference-transaction .
 cd $PPDIR
+
+# optional private terms for check-text.sh, when this repo is checked out within sjpp
+TERMS="$(dirname $PPDIR)/security-triage/text-check-terms.txt"
+if [[ -f "$TERMS" ]]; then
+    git config pp.textCheckTerms "$TERMS"
+fi
 
 STATUS="$(which pre-commit)"
 if [[ "$STATUS" == "" || "$STATUS" == "pre-commit not found" ]]; then 
