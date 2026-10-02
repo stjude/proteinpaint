@@ -36,7 +36,12 @@ tape('pageInfoText: first page, last partial page, empty', test => {
 })
 
 function getHolder() {
-	return d3s.select('body').append('div').style('border', '1px solid #aaa').style('padding', '5px').style('margin', '5px')
+	return d3s
+		.select('body')
+		.append('div')
+		.style('border', '1px solid #aaa')
+		.style('padding', '5px')
+		.style('margin', '5px')
 }
 
 tape('renderPagerNav: buttons, disabled ends, current page, ellipses, click', test => {
@@ -45,7 +50,8 @@ tape('renderPagerNav: buttons, disabled ends, current page, ellipses, click', te
 	const nav = holder.append('nav')
 	const went: number[] = []
 	const labels = () => (nav.selectAll('button').nodes() as HTMLButtonElement[]).map(b => b.textContent)
-	const button = (text: string) => (nav.selectAll('button').nodes() as HTMLButtonElement[]).find(b => b.textContent === text)!
+	const button = (text: string) =>
+		(nav.selectAll('button').nodes() as HTMLButtonElement[]).find(b => b.textContent === text)!
 
 	renderPagerNav(nav, 1, 20, page => went.push(page))
 	test.deepEqual(labels(), ['Previous', '1', '2', '3', '20', 'Next'], 'buttons on page 1')
@@ -74,11 +80,19 @@ tape('createPager: page size select', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	const sizes: number[] = []
-	const { info, nav } = createPager(holder, { pageSizeOptions: [10, 25, 50], pageSize: 25, onPageSize: size => sizes.push(size) })
+	const { info, nav } = createPager(holder, {
+		pageSizeOptions: [10, 25, 50],
+		pageSize: 25,
+		onPageSize: size => sizes.push(size)
+	})
 	const select = holder.select('select').node() as HTMLSelectElement
 
 	test.equal(select.getAttribute('aria-label'), 'Rows per page', 'the select is labelled')
-	test.deepEqual(Array.from(select.options).map(o => o.value), ['10', '25', '50'], 'one option per size')
+	test.deepEqual(
+		Array.from(select.options).map(o => o.value),
+		['10', '25', '50'],
+		'one option per size'
+	)
 	test.equal(select.value, '25', 'the current size is selected')
 	select.value = '50'
 	select.dispatchEvent(new Event('change', { bubbles: true }))

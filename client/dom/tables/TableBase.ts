@@ -524,7 +524,7 @@ export class TableBase {
 				.style('font-size', '0.8rem')
 		}
 		const input = this.selectable ? this.renderSelector(tr, row, rowIdx) : undefined
-		row.forEach((cell, colIdx) => this.renderCell(tr, cell, colIdx /*rowIdx*/))
+		row.forEach((cell, colIdx) => this.renderCell(tr, cell, colIdx))
 		if (input) {
 			this.labelSelector(input, row, rowIdx)
 			this.paintRow(tr.node() as HTMLElement, row, rowIdx)
@@ -533,7 +533,7 @@ export class TableBase {
 	}
 
 	/** Extension point: render a single cell. Subclasses adding barplots, buttons, etc. should override this. */
-	protected renderCell(tr: Tr, cell: TableBaseCell, colIdx: number /*rowIdx: number*/): Td {
+	protected renderCell(tr: Tr, cell: TableBaseCell, colIdx: number): Td {
 		const column = this.columns[colIdx]
 		const td: Td = tr.append('td').attr('class', 'sjpp_table_item')
 		if (cell.dataTestId) td.attr('data-testid', cell.dataTestId)
