@@ -1945,6 +1945,160 @@ tape('a11y: editable cells are reachable and operable by keyboard', test => {
 	test.end()
 })
 
+/**************
+ security and robustness
+***************/
+
+tape('\n', test => {
+	test.comment('-***- dom/TableBase - security and robustness -***-')
+	test.end()
+})
+
+tape('url: only web, mail and relative urls become links; anything else is shown as text', test => {
+	test.timeoutAfter(200)
+	const holder = getHolder()
+	const safe = ['https://example.com/a?b=1', 'http://example.com', 'mailto:someone@example.com', '/relative/path', 'page.html']
+	const unsafe = ['javascript:alert(1)', 'JaVaScRiPt:alert(1)', '  javascript:alert(1)', '\tjavascript:alert(1)', 'data:text/html,<b>x</b>', 'vbscript:msgbox(1)']
+	const rows: TableBaseRow[] = [...safe, ...unsafe].map(url => [{ url }])
+	new TableBase({ columns: [{ label: 'Link' }], rows, div: holder }).render()
+	const cells = holder.selectAll('tbody td').nodes() as HTMLElement[]
+
+	for (const [i, url] of safe.entries()) {
+		test.equal(cells[i].querySelector('a')?.getAttribute('href'), url, `Should link ${url}`)
+	}
+	for (const [i, url] of unsafe.entries()) {
+		const cell = cells[safe.length + i]
+		test.equal(cell.querySelector('a'), null, `Should not link ${JSON.stringify(url)}`)
+		test.equal(cell.textContent, url, `Should still show ${JSON.stringify(url)} as text`)
+	}
+	test.equal(holder.selectAll('a[href^="javascript" i]').size(), 0, 'No javascript: link anywhere in the table')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('url: an unsafe url does not hide the cell value, html or color', test => {
+	test.timeoutAfter(200)
+	const holder = getHolder()
+	const rows: TableBaseRow[] = [
+		[{ url: 'javascript:alert(1)', value: 'label' }],
+		[{ url: 'javascript:alert(1)', html: '<b>bold</b>' }],
+		[{ url: 'javascript:alert(1)', color: '#00ff00' }]
+	]
+	new TableBase({ columns: [{ label: 'Link' }], rows, div: holder }).render()
+	const cells = holder.selectAll('tbody td').nodes() as HTMLElement[]
+
+	test.equal(cells[0].textContent, 'label', 'Should show the value')
+	test.equal(cells[1].innerHTML, '<b>bold</b>', 'Should show the html')
+	test.equal(cells[2].style.backgroundColor, 'rgb(0, 255, 0)', 'Should show the color')
+	test.equal(holder.selectAll('a').size(), 0, 'None should be links')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('filter: a very long numeric-looking filter is truncated and does not hang', test => {
+	test.timeoutAfter(2000)
+	const holder = getHolder()
+	const table = new TableBase({
+		columns: [{ label: 'Name', filterable: true }, { label: 'Age', filterable: true }],
+		rows: makeSortFilterRows().map(r => [r[0], r[1]]),
+		div: holder
+	}).render()
+
+	for (const hostile of ['>' + '1'.repeat(200000) + 'x', '1'.repeat(200000) + '-' + '1'.repeat(200000) + 'x', '-'.repeat(200000)]) {
+		const start = performance.now()
+		table.setColumnFilter(1, hostile)
+		test.ok(performance.now() - start < 500, `Should return promptly for a ${hostile.length}-character filter`)
+	}
+	const input = openColumnMenu(holder, 1).querySelector('input') as HTMLInputElement
+	test.equal(input.getAttribute('maxlength'), '100', 'The input should cap the length')
+	test.ok(input.value.length <= 100, 'The kept filter text should be capped')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('styles: maxWidth and maxHeight size the wrapper, with defaults', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows: TableBaseRow[] = [[{ value: 'x' }]]
+	const custom = new TableBase({ columns: [{ label: 'A' }], rows, div: holder, styles: { maxWidth: '300px', maxHeight: '120px' } }).render()
+	const wrapper = holder.select('.sjpp-table-base').node() as HTMLElement
+	test.equal(wrapper.style.maxWidth, '300px', 'Should apply maxWidth')
+	test.equal(wrapper.style.maxHeight, '120px', 'Should apply maxHeight')
+
+	custom.remove()
+	new TableBase({ columns: [{ label: 'A' }], rows, div: holder }).render()
+	const defaults = holder.select('.sjpp-table-base').node() as HTMLElement
+	test.equal(defaults.style.maxWidth, '90vw', 'Default maxWidth is 90vw')
+	test.equal(defaults.style.maxHeight, '40vh', 'Default maxHeight is 40vh')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('cells and headers: data-testid, tooltip, __td and getColumns()', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const columns: TableBaseColumn[] = [{ label: 'A', headerTestId: 'hdr-a', tooltip: 'about A' }]
+	const rows: TableBaseRow[] = [[{ value: 'x', dataTestId: 'cell-x' }]]
+	const table = new TableBase({ columns, rows, div: holder }).render()
+
+	const th = holder.select('thead th').node() as HTMLElement
+	test.equal(th.getAttribute('data-testid'), 'hdr-a', 'Should set headerTestId')
+	test.equal(th.getAttribute('title'), 'about A', 'Should set the tooltip')
+	test.equal(holder.select('tbody td').attr('data-testid'), 'cell-x', 'Should set the cell dataTestId')
+	test.equal(rows[0][0].__td?.node(), holder.select('tbody td').node(), 'Should attach the rendered <td> to the cell')
+	test.equal(table.getColumns(), columns, 'getColumns() should return the columns')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('sort: missing values keep their place, and a column of mixed types does not throw', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows: TableBaseRow[] = [[{ value: 'b' }], [{}], [{ value: 'a' }], [{ value: 3 }]]
+	const table = new TableBase({ columns: [{ label: 'V', sortable: true }], rows, div: holder }).render()
+
+	test.doesNotThrow(() => table.sortByColumn(0, true), 'Ascending should not throw')
+	test.doesNotThrow(() => table.sortByColumn(0, false), 'Descending should not throw')
+	test.equal(holder.selectAll('tbody tr').size(), 4, 'No row should be lost')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('filter: a url-only cell is matched on its url', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const rows: TableBaseRow[] = [[{ url: 'https://alpha.example.com' }], [{ url: 'https://beta.example.com' }]]
+	new TableBase({ columns: [{ label: 'Link', filterable: true }], rows, div: holder }).render()
+
+	typeFilter(holder, 0, 'beta')
+	test.equal(holder.selectAll('tbody tr').size(), 1, 'Should keep only the matching url')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('pagination: goToPage() and setPageSize() are harmless without pagination or with a bad size', test => {
+	test.timeoutAfter(100)
+	const plain = getHolder()
+	const noPaging = new TableBase({ columns: pagedColumns, rows: makePagedRows(12), div: plain }).render()
+	noPaging.goToPage(2).setPageSize(5)
+	test.equal(plain.selectAll('tbody tr').size(), 12, 'Should ignore both without pagination')
+
+	const { holder, table, changes } = makePagedTable(25, 10)
+	for (const bad of [0, -3, 2.5, NaN, 10]) table.setPageSize(bad)
+	test.equal(pageInfo(holder), 'Showing 1 to 10 of 25 entries', 'Should ignore invalid and unchanged sizes')
+	test.equal(changes.length, 0, 'Should not call onChange for them')
+
+	if ((test as any)._ok) for (const h of [plain, holder]) h.remove()
+	test.end()
+})
+
 tape('render(): a second render keeps the current sort and filter state', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()

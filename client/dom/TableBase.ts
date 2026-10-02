@@ -6,7 +6,8 @@ import 'd3-transition'
 export type TableBaseCell = {
 	/** primary text/number content, rendered with .text() */
 	value?: string | number
-	/** renders the cell as an <a href>; used as the link text too when value is not set */
+	/** renders the cell as an <a href>; used as the link text too when value is not set. Only http, https,
+	 * mailto and relative urls become links; any other scheme (e.g. javascript:) is shown as plain text */
 	url?: string
 	/** raw html for the cell, rendered with .html(). caller is responsible for sanitizing */
 	html?: string
@@ -42,6 +43,22 @@ export type TableBaseColumn = {
 
 /** Longest text an edit may commit. Keeps an oversized paste from reaching whatever handles onEdit */
 const MAX_EDIT_LENGTH = 500
+
+/** Longest filter text kept. A filter is matched against every row on each keystroke. */
+const MAX_FILTER_LENGTH = 100
+
+const SAFE_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
+
+/** A cell.url is only made a link when it is a web or mail link. A javascript:, data: or vbscript: url would
+ * run when clicked, and cell urls can come from data the table's caller does not control. Relative urls
+ * resolve against the page and pass. */
+function isSafeUrl(url: string): boolean {
+	try {
+		return SAFE_URL_PROTOCOLS.has(new URL(url, window.location.href).protocol)
+	} catch {
+		return false
+	}
+}
 
 /** WARNING: cell.value is raw user input. The table rejects obviously bad edits (see TableBaseColumn.validate)
  * but cannot make a value safe for a query, file path or shell. If it is sent to a server, the server must
@@ -94,7 +111,9 @@ type ColumnFilter = {
 	test?: (n: number) => boolean
 }
 
-const NUM = '-?(?:\\d+\\.?\\d*|\\.\\d+)'
+// Written so that no digit can match two ways. The looser '\d+\.?\d*' backtracks quadratically on a long
+// run of digits followed by a character that fails the match.
+const NUM = '-?(?:\\d+(?:\\.\\d*)?|\\.\\d+)'
 const COMPARE = new RegExp(`^(>=|<=|>|<|=)\\s*(${NUM})$`)
 const RANGE = new RegExp(`^(${NUM})\\s*-\\s*(${NUM})$`)
 
@@ -508,7 +527,7 @@ export class TableBase {
 	/** Keeps only rows whose cell in this column contains text (case-insensitive). Number cells also accept
 	 * >n, >=n, <n, <=n, =n and lo-hi. Empty text clears the filter. */
 	setColumnFilter(colIdx: number, text: string): this {
-		const trimmed = text.trim().toLowerCase()
+		const trimmed = text.trim().slice(0, MAX_FILTER_LENGTH).toLowerCase()
 		if (trimmed) this.filters.set(colIdx, { text: trimmed, test: parseNumericFilter(trimmed) })
 		else this.filters.delete(colIdx)
 		this.updateColumnButtons()
@@ -767,6 +786,7 @@ export class TableBase {
 			.attr('aria-label', `Filter ${column.label}`)
 			.attr('placeholder', 'Filter')
 			.attr('class', 'sjpp-table-filter-input')
+			.attr('maxlength', MAX_FILTER_LENGTH)
 			.attr('data-testid', `sjpp-table-filter-${colIdx}`)
 			.attr('value', this.filters.get(colIdx)?.text ?? '')
 			.style('width', '180px')
@@ -1037,7 +1057,7 @@ export class TableBase {
 		if (column.align) td.style('text-align', column.align)
 		if (column.nowrap) td.style('white-space', 'nowrap')
 
-		if (cell.url) {
+		if (cell.url && isSafeUrl(cell.url)) {
 			td.append('a')
 				.text(cell.value != null ? cell.value : cell.url)
 				.attr('href', cell.url)
@@ -1053,6 +1073,9 @@ export class TableBase {
 			td.style('background-color', cell.color)
 			// the color is the only content, so give screen readers something to read
 			td.attr('aria-label', cell.color)
+		} else if (cell.url) {
+			// a url that is not safe to link (see isSafeUrl) is still shown, as plain text
+			td.text(cell.url)
 		}
 
 		if (column.editable && !cell.url && !cell.html) {
