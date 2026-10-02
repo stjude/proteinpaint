@@ -34,6 +34,7 @@ EXPOSE 3000
 # may be overridden at runtime, such as `docker run -e PP_MODE= ...` to use the serverconfig.json paths and port
 ENV PP_MODE=container-prod
 # envHelpers.mjs generates node.config.json and adds --experimental-default-config-file to apply it,
-# to limit the server process file access, and passes any <NAME>_CREDS_FILE content as a <NAME>_CREDS env variable
+# to limit the server process file access, passes any <NAME>_CREDS_FILE content as <NAME>_CREDS, and then
+# replaces itself with the server process
 CMD ["node", "envHelpers.mjs", "node", "--enable-source-maps", "app-server.mjs"]
 # CMD ["sleep", "3600"]

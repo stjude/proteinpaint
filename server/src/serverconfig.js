@@ -4,6 +4,7 @@
 */
 
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -200,6 +201,33 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	// since the serverconfig.binpath prefix may
 	// have been applied to locate optional routeSetter files
 	serverconfig.routeSetters = routeSetters
+}
+
+if (process.env.PP_CREDS_HANDOFF_FILE) {
+	// set by container/envHelpers.mjs, which passes {<NAME>_CREDS: value} as JSON in a private temp file instead
+	// of in this process env, so that the credentials are not in the initial env of this process
+	const file = process.env.PP_CREDS_HANDOFF_FILE
+	delete process.env.PP_CREDS_HANDOFF_FILE
+	const dir = path.dirname(file)
+	// only remove a dir as created by envHelpers.mjs
+	if (
+		path.basename(file) != 'creds.json' ||
+		path.dirname(dir) != os.tmpdir() ||
+		!path.basename(dir).startsWith('pp-creds-')
+	)
+		throw `invalid process.env.PP_CREDS_HANDOFF_FILE`
+	let creds
+	try {
+		creds = JSON.parse(fs.readFileSync(file, 'utf8'))
+	} catch {
+		// do not include the parse error message, since it may quote part of the credentials
+		throw `unable to read credentials from process.env.PP_CREDS_HANDOFF_FILE`
+	} finally {
+		// before the server starts listening, so that a request cannot read this file
+		fs.rmSync(dir, { recursive: true, force: true })
+	}
+	// set at runtime instead of in the initial env; each <NAME>_CREDS is then read and deleted as before
+	for (const [name, value] of Object.entries(creds)) process.env[name] = value
 }
 
 if (process.env.PP_CREDS) {

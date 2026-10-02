@@ -170,6 +170,7 @@ test('credentials: a file under an allowed read path fails closed, before any fi
 		)
 		assert.deepEqual(ctx.written, {}, label)
 		assert.equal(ctx.spawned.length, 0, label)
+		assert.equal(ctx.execved.length, 0, label)
 	}
 })
 
@@ -194,7 +195,21 @@ test('router: the config flag is inserted where node or tsx parses it as an opti
 	]) {
 		const ctx = fakeContext()
 		runInProcess(t, args, ctx)
-		assert.deepEqual([ctx.spawned[0].cmd, ...ctx.spawned[0].args], expected)
+		// a node command replaces this process, and a tsx command runs as a child process
+		const actual = ctx.execved.length ? ctx.execved[0].args : [ctx.spawned[0].cmd, ...ctx.spawned[0].args]
+		assert.deepEqual(actual, expected)
+	}
+})
+
+test('router: process.execve() is called with a node path, since it does not search PATH', t => {
+	for (const [cmd, file] of [
+		['node', '/node/v24/bin/node'],
+		['/usr/bin/node', '/usr/bin/node']
+	]) {
+		const ctx = fakeContext()
+		runInProcess(t, [cmd, 'app.mjs'], ctx)
+		assert.equal(ctx.execved[0].file, file)
+		assert.equal(ctx.spawned.length, 0)
 	}
 })
 
@@ -212,9 +227,14 @@ test('refuses to run with the permission model, before any file access', () => {
 	)
 })
 
-test('writes node.config.json and passes credentials only in the child env', t => {
+test('writes node.config.json, and a node command replaces this process with credentials only in a handoff file', t => {
 	const ctx = fakeContext({
-		env: { PP_CREDS_FILE: '/secrets/pp.json' },
+		env: {
+			PP_CREDS_FILE: '/secrets/pp.json',
+			PP_MMRF_CREDS: 'm',
+			PP_CREDS_HANDOFF_FILE: '/tmp/other.json',
+			PP_MODE: 'container-prod'
+		},
 		files: { '/secrets/pp.json': '{"a":1}' }
 	})
 	runInProcess(t, ['node', 'app.mjs'], ctx)
@@ -222,29 +242,98 @@ test('writes node.config.json and passes credentials only in the child env', t =
 	// newer node versions reject any other top-level key
 	assert.deepEqual(Object.keys(written), ['nodeOptions'])
 	assert.equal(written.nodeOptions.permission, true)
+	const handoff = '/tmp/user/pp-creds-XXXXXX/creds.json'
+	// both a <NAME>_CREDS_FILE content and an existing <NAME>_CREDS env variable
+	assert.deepEqual(ctx.written[handoff], {
+		content: JSON.stringify({ PP_MMRF_CREDS: 'm', PP_CREDS: '{"a":1}' }),
+		opts: { mode: 0o600, flag: 'wx' }
+	})
+	assert.equal(ctx.execved.length, 1)
+	// an existing PP_CREDS_HANDOFF_FILE is replaced, and no <NAME>_CREDS is in the initial env
+	assert.deepEqual(ctx.execved[0].env, {
+		PP_CREDS_FILE: '/secrets/pp.json',
+		PP_MODE: 'container-prod',
+		PP_CREDS_HANDOFF_FILE: handoff
+	})
+	assert.equal(ctx.spawned.length, 0)
+	assert.equal(ctx.env.PP_CREDS, undefined)
+	assert.deepEqual(ctx.removed, [])
+})
+
+test('without credentials, a node command has no handoff file', t => {
+	const ctx = fakeContext({ env: { PP_CREDS_HANDOFF_FILE: '/tmp/other.json' } })
+	runInProcess(t, ['node', 'app.mjs'], ctx)
+	assert.equal('PP_CREDS_HANDOFF_FILE' in ctx.execved[0].env, false)
+	assert.deepEqual(Object.keys(ctx.written), ['/app/node.config.json'])
+})
+
+test('the handoff dir is removed when process.execve() fails', t => {
+	const ctx = fakeContext({
+		env: { PP_CREDS: '{"a":1}' },
+		execve: () => {
+			throw new Error('execve failed')
+		}
+	})
+	assert.throws(() => runInProcess(t, ['node', 'app.mjs'], ctx), /execve failed/)
+	assert.deepEqual(ctx.removed, [{ p: '/tmp/user/pp-creds-XXXXXX', opts: { recursive: true, force: true } }])
+})
+
+test('a tsx command runs as a child process with credentials in its env, since tsx watch reloads the server', t => {
+	const ctx = fakeContext({
+		env: { PP_CREDS_FILE: '/secrets/pp.json' },
+		files: { '/secrets/pp.json': '{"a":1}' }
+	})
+	runInProcess(t, ['tsx', 'watch', 'server.ts'], ctx)
+	assert.equal(ctx.execved.length, 0)
 	assert.equal(ctx.spawned[0].opts.env.PP_CREDS, '{"a":1}')
 	assert.equal(ctx.env.PP_CREDS, undefined)
 })
 
-test('smoke: the child runs with the permission model and credentials, and its exit code propagates', () => {
+test('without process.execve(), a node command runs as a child process with a warning', t => {
+	const ctx = fakeContext({ env: { PP_CREDS: '{"a":1}' }, execve: null })
+	const warnings = []
+	t.mock.method(console, 'warn', m => warnings.push(m))
+	runInProcess(t, ['node', 'app.mjs'], ctx)
+	assert.match(warnings.join('\n'), /process\.execve\(\) is not supported/)
+	assert.equal(ctx.spawned[0].opts.env.PP_CREDS, '{"a":1}')
+})
+
+test('smoke: the command replaces this process, with the permission model and credentials, and its exit code propagates', () => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'envHelpers-smoke-'))
+	// the handoff dir is created in os.tmpdir(), which is set here to check that the command can remove it
+	const tmpdir = path.join(dir, 'tmp')
 	// the credentials file must not be under an allowed read path, such as the cwd or OS temp dir
 	const credsFile = path.join(import.meta.dirname, `.smoke-creds-${process.pid}.json`)
 	try {
+		fs.mkdirSync(tmpdir)
 		fs.writeFileSync(credsFile, '{"a":1}')
+		// reads and removes the handoff file like server/src/serverconfig.js
 		const child = `
+			const fs = require('fs')
 			let canReadCredsFile = true
-			try { require('fs').readFileSync(${JSON.stringify(credsFile)}) } catch { canReadCredsFile = false }
-			console.log(JSON.stringify({ permission: !!process.permission, creds: process.env.PP_CREDS, canReadCredsFile }))
+			try { fs.readFileSync(${JSON.stringify(credsFile)}) } catch { canReadCredsFile = false }
+			const file = process.env.PP_CREDS_HANDOFF_FILE
+			const handoff = JSON.parse(fs.readFileSync(file, 'utf8'))
+			fs.rmSync(require('path').dirname(file), { recursive: true })
+			const envCreds = Object.keys(process.env).filter(k => k.endsWith('_CREDS'))
+			console.log(JSON.stringify({ permission: !!process.permission, handoff, envCreds, canReadCredsFile, pid: process.pid }))
 			process.exit(3)`
 		const ps = spawnSync(process.execPath, [SCRIPT, 'node', '-e', child], {
 			cwd: dir,
 			encoding: 'utf8',
-			env: { ...process.env, PP_CREDS_FILE: credsFile }
+			env: { ...process.env, TMPDIR: tmpdir, PP_CREDS_FILE: credsFile, PP_ZZTEST_CREDS: 'z' }
 		})
 		assert.equal(ps.status, 3, ps.stderr)
-		assert.deepEqual(JSON.parse(ps.stdout), { permission: true, creds: '{"a":1}', canReadCredsFile: false })
+		assert.deepEqual(JSON.parse(ps.stdout), {
+			permission: true,
+			handoff: { PP_ZZTEST_CREDS: 'z', PP_CREDS: '{"a":1}' },
+			envCreds: [],
+			canReadCredsFile: false,
+			// the envHelpers.mjs process that spawnSync() started, which process.execve() replaced
+			pid: ps.pid
+		})
 		assert.ok(fs.existsSync(path.join(dir, 'node.config.json')))
+		assert.deepEqual(fs.readdirSync(tmpdir), [], 'the command should be able to remove the handoff dir')
 	} finally {
 		fs.rmSync(dir, { recursive: true })
 		fs.rmSync(credsFile, { force: true })
@@ -268,9 +357,11 @@ test('smoke: a flag in the envHelpers.mjs arguments is rejected with a non-zero 
 
 // a context from a fake fs and spawn that FAIL CLOSED: reading an unmodeled file throws ENOENT,
 // and only <cwd>/node.config.json may be written; ctx.deps is for calling envHelpers(args, deps)
-function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = '/app' } = {}) {
+function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = '/app', execve } = {}) {
 	const written = {}
 	const spawned = []
+	const execved = []
+	const removed = []
 	const fakeFs = {
 		existsSync: p => p in files || exists.includes(p),
 		readFileSync: p => {
@@ -281,18 +372,24 @@ function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = 
 			if (p in realpaths) return realpaths[p]
 			throw Object.assign(new Error(`ENOENT: ${p}`), { code: 'ENOENT' })
 		},
-		writeFileSync: (p, content) => {
-			if (p != path.join(cwd, 'node.config.json')) throw new Error(`unexpected write: ${p}`)
-			written[p] = content
-		}
+		writeFileSync: (p, content, opts) => {
+			// or the credentials handoff file in a dir from mkdtempSync()
+			if (p != path.join(cwd, 'node.config.json') && p != '/tmp/user/pp-creds-XXXXXX/creds.json')
+				throw new Error(`unexpected write: ${p}`)
+			written[p] = opts ? { content, opts } : content
+		},
+		mkdtempSync: prefix => prefix + 'XXXXXX',
+		rmSync: (p, opts) => removed.push({ p, opts })
 	}
 	const fakeSpawn = (cmd, args, opts) => {
 		spawned.push({ cmd, args, opts })
 		return Object.assign(new EventEmitter(), { kill: () => {} })
 	}
+	const fakeExecve = (file, args, env) => execved.push({ file, args, env })
 	const deps = {
 		fs: fakeFs,
 		spawn: fakeSpawn,
+		execve: execve === undefined ? fakeExecve : execve,
 		env,
 		cwd,
 		execPath: '/node/v24/bin/node',
@@ -300,7 +397,7 @@ function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = 
 		homedir: '/home/dev',
 		hasPermissionModel: false
 	}
-	return Object.assign(createContext(deps), { deps, written, spawned })
+	return Object.assign(createContext(deps), { deps, written, spawned, execved, removed })
 }
 
 // runs envHelpers() with the fake context, and removes the signal listeners that it adds to this test process

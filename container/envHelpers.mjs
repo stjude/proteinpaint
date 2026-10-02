@@ -13,9 +13,18 @@
 	     PP_CREDS_FILE      -> PP_CREDS      (parsed as serverconfig.dsCredentials in server/src/serverconfig.js)
 	     PP_MMRF_CREDS_FILE -> PP_MMRF_CREDS (parsed by the MMRF dataset)
 	   The code that reads a <NAME>_CREDS env variable must delete it from process.env right after
-	   reading it. An existing <NAME>_CREDS env variable, such as one set from a k8s secret, is not
-	   overwritten. A credentials file must not be under any allow-fs-read path, such as the cwd or
+	   reading it. An existing <NAME>_CREDS env variable, such as one set from a k8s or podman secret, is
+	   not overwritten. A credentials file must not be under any allow-fs-read path, such as the cwd or
 	   /home/root/pp in a container, otherwise this script exits, since the server could still read it.
+
+	3. does not have any credentials in its initial env, which is set when a process starts and is not
+	   changed by deleting an env variable from process.env. So a node command replaces this script's
+	   process with process.execve(), without any <NAME>_CREDS env variable, and receives all
+	   credentials as JSON in a private temp file named by PP_CREDS_HANDOFF_FILE, which
+	   server/src/serverconfig.js reads and removes before the server starts listening. This script is then no longer running, and the
+	   server is PID 1 in a container. A tsx command, as used in a dev environment, still runs as a child
+	   process that receives the credentials as env variables, since tsx watch reloads the server code,
+	   which would no longer find a removed handoff file.
 
 	usage: node envHelpers.mjs <node | tsx> [args...]
 	examples:
@@ -29,9 +38,9 @@
 	The PP_ALLOW_FS_* and <NAME>_CREDS_FILE values are read from the environment, or else from
 	./.env, such as in a dev environment where npm scripts do not load .env.
 
-	This script must run without the permission model, and runs the command as a child process,
-	since Node.js cannot replace its own process like a shell exec. The credentials are passed
-	only in the child process env, and are not set in this script's own process.env.
+	This script must run without the permission model. process.execve() replaces it with a node
+	command that runs with the permission model from the --experimental-default-config-file flag.
+	The credentials are passed only to the command, and are not set in this script's own process.env.
 */
 
 import fs from 'node:fs'
@@ -50,7 +59,8 @@ if (isMainModule()) {
 	}
 }
 
-// deps are passed to createContext(), and may be fakes in tests; returns the spawned child process
+// deps are passed to createContext(), and may be fakes in tests; returns the spawned child process, or nothing
+// after a process.execve() call, which does not return except with a fake in tests
 export function envHelpers(args, deps = {}) {
 	// checked before any file access, which would be denied by the permission model
 	if (deps.hasPermissionModel ?? !!process.permission)
@@ -62,7 +72,7 @@ export function envHelpers(args, deps = {}) {
 	const credsFiles = getCredsFiles(ctx)
 	assertCredsFilesNotAllowed(credsFiles, config, ctx)
 	ctx.fs.writeFileSync(path.join(ctx.cwd, 'node.config.json'), JSON.stringify(config, null, '\t') + '\n')
-	const creds = readCreds(credsFiles, ctx)
+	const creds = { ...getEnvCreds(ctx), ...readCreds(credsFiles, ctx) }
 	return runCommand(command, creds, ctx)
 }
 
@@ -70,6 +80,7 @@ export function envHelpers(args, deps = {}) {
 export function createContext({
 	fs: _fs = fs,
 	spawn: _spawn = spawn,
+	execve = process.execve,
 	env = process.env,
 	cwd = process.cwd(),
 	execPath = process.execPath,
@@ -78,7 +89,7 @@ export function createContext({
 } = {}) {
 	const dotenvFile = path.join(cwd, '.env')
 	const dotenv = _fs.existsSync(dotenvFile) ? parseEnv(_fs.readFileSync(dotenvFile, 'utf8')) : {}
-	return { fs: _fs, spawn: _spawn, env, dotenv, cwd, execPath, tmpdir, homedir }
+	return { fs: _fs, spawn: _spawn, execve, env, dotenv, cwd, execPath, tmpdir, homedir }
 }
 
 // router: each supported command has its own position for the config flag, where it is parsed as an option
@@ -216,7 +227,54 @@ function readCreds(credsFiles, ctx) {
 	return creds
 }
 
-function runCommand([cmd, ...cmdArgs], creds, ctx) {
+// the <NAME>_CREDS env variable names, not including a <NAME>_CREDS_FILE path
+function getEnvCredsNames(env) {
+	return Object.keys(env).filter(name => name.endsWith('_CREDS'))
+}
+
+function getEnvCreds(ctx) {
+	return Object.fromEntries(getEnvCredsNames(ctx.env).map(name => [name, ctx.env[name]]))
+}
+
+// router: a node command replaces this process, and a tsx command runs as a child process
+function runCommand(command, creds, ctx) {
+	if (path.basename(command[0]) != 'node') return spawnCommand(command, creds, ctx)
+	if (typeof ctx.execve != 'function') {
+		console.warn(
+			`envHelpers.mjs: WARNING process.execve() is not supported, so the command runs as a child process, ` +
+				`with the credentials in its initial env`
+		)
+		return spawnCommand(command, creds, ctx)
+	}
+	execCommand(command, creds, ctx)
+}
+
+// replaces this process with the command, without any <NAME>_CREDS env variable in its initial env
+function execCommand([cmd, ...cmdArgs], creds, ctx) {
+	const env = { ...ctx.env }
+	for (const name of getEnvCredsNames(env)) delete env[name]
+	// an existing handoff file name, such as from a container env entry, is not passed
+	delete env.PP_CREDS_HANDOFF_FILE
+	let dir
+	if (Object.keys(creds).length) {
+		// a new dir with mode 0700, so readable only by this user, in the OS temp dir where the server is allowed
+		// to remove it; a credentials file is otherwise not allowed under an allow-fs-read path, but this one is
+		// removed before the server starts listening
+		dir = ctx.fs.mkdtempSync(path.join(ctx.tmpdir, 'pp-creds-'))
+		env.PP_CREDS_HANDOFF_FILE = path.join(dir, 'creds.json')
+	}
+	// process.execve() requires a path, and does not search PATH like spawn()
+	const file = cmd.includes(path.sep) ? cmd : ctx.execPath
+	try {
+		if (dir) ctx.fs.writeFileSync(env.PP_CREDS_HANDOFF_FILE, JSON.stringify(creds), { mode: 0o600, flag: 'wx' })
+		ctx.execve(file, [cmd, ...cmdArgs], env)
+	} catch (e) {
+		if (dir) ctx.fs.rmSync(dir, { recursive: true, force: true })
+		throw e
+	}
+}
+
+function spawnCommand([cmd, ...cmdArgs], creds, ctx) {
 	const child = ctx.spawn(cmd, cmdArgs, { stdio: 'inherit', env: { ...ctx.env, ...creds } })
 	child.on('error', e => {
 		console.error(`envHelpers.mjs: unable to run '${cmd}': ${e.message}`)

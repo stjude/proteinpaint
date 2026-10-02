@@ -21,9 +21,27 @@ import { CacheManager } from './CacheManager.ts'
 const basepath = serverconfig.basepath || ''
 Object.freeze(process.argv)
 
+// A process that runs as PID 1, such as the server in a container after container/envHelpers.mjs replaces itself
+// with process.execve(), ignores a termination signal that it does not handle, so that `podman stop` would wait
+// for its timeout and then kill the server. Exit with the same code as a process that is terminated by the signal.
+function exitOnSignalAsPid1() {
+	if (process.pid != 1) return
+	for (const [signal, code] of [
+		['SIGTERM', 143],
+		['SIGINT', 130],
+		['SIGHUP', 129]
+	]) {
+		process.once(signal, () => {
+			console.log(`exiting on ${signal}`)
+			process.exit(code)
+		})
+	}
+}
+
 if (serverconfig.python) setPythonBinPath(serverconfig.python)
 
 export async function launch() {
+	exitOnSignalAsPid1()
 	try {
 		new CacheManager(
 			Object.assign({ cachedir: serverconfig.cachedir }, serverconfig.features?.cacheMonitor || {}, {

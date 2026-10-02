@@ -51,10 +51,10 @@ container:
   name: proteinpaint
   containerPort: 3456
   command: ["/bin/bash"]
-  # envHelpers.mjs generates node.config.json to limit the server process file access, and passes any
-  # <NAME>_CREDS_FILE content as a <NAME>_CREDS env variable. Images published before envHelpers.mjs was
-  # added, such as the default image.tag above, do not have it, so the server then runs without those
-  # restrictions, as it did before; update image.tag to a newer release to apply them.
+  # envHelpers.mjs generates node.config.json to limit the server process file access, passes any
+  # <NAME>_CREDS_FILE content as <NAME>_CREDS, and then replaces itself with the server. Images published
+  # before envHelpers.mjs was added, such as the default image.tag above, do not have it, so the server then
+  # runs without those restrictions, as it did before; update image.tag to a newer release to apply them.
   args:
     - "-c"
     - |
