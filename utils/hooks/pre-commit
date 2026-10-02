@@ -4,9 +4,6 @@ set -e
 
 STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
 
-# check the added lines, such as code comments and test names
-git diff --cached -U0 --no-color --no-ext-diff | ./utils/hooks/check-text.sh diff "staged changes"
-
 # doing per GDC requirements
 pre-commit run --files "$STAGEDFILES"
 
@@ -61,5 +58,9 @@ if [[ "$RUST_FULL_PATHS" != "" ]]; then
     # Return to original directory
   cd "$ORIG_DIR"
 fi
+
+# check the added lines, such as code comments and test names, after the steps above that can stage changes
+cd "$(git rev-parse --show-toplevel)"
+git diff --cached -U0 --no-color --no-ext-diff | ./utils/hooks/check-text.sh diff "staged changes"
 
 exit 0
