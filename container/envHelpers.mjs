@@ -22,9 +22,9 @@
 	   process with process.execve(), without any <NAME>_CREDS env variable, and receives all
 	   credentials as JSON in a private temp file named by PP_CREDS_HANDOFF_FILE, which
 	   server/src/serverconfig.js reads and removes before the server starts listening. This script is then no longer running, and the
-	   server is PID 1 in a container. A tsx command, as used in a dev environment, still runs as a child
-	   process that receives the credentials as env variables, since tsx watch reloads the server code,
-	   which would no longer find a removed handoff file.
+	   server is PID 1 in a container. A tsx command, as used in a dev environment, or a node command with
+	   a --watch or --watch-path option, still runs as a child process that receives the credentials as env
+	   variables, since a watch mode restarts the server, which would no longer find a removed handoff file.
 
 	usage: node envHelpers.mjs <node | tsx> [args...]
 	examples:
@@ -236,9 +236,9 @@ function getEnvCreds(ctx) {
 	return Object.fromEntries(getEnvCredsNames(ctx.env).map(name => [name, ctx.env[name]]))
 }
 
-// router: a node command replaces this process, and a tsx command runs as a child process
+// router: a node command replaces this process, and a tsx command or node watch mode runs as a child process
 function runCommand(command, creds, ctx) {
-	if (path.basename(command[0]) != 'node') return spawnCommand(command, creds, ctx)
+	if (path.basename(command[0]) != 'node' || isNodeWatchMode(command)) return spawnCommand(command, creds, ctx)
 	if (typeof ctx.execve != 'function') {
 		console.warn(
 			`envHelpers.mjs: WARNING process.execve() is not supported, so the command runs as a child process, ` +
@@ -247,6 +247,12 @@ function runCommand(command, creds, ctx) {
 		return spawnCommand(command, creds, ctx)
 	}
 	execCommand(command, creds, ctx)
+}
+
+// node --watch restarts the server with its initial env, which would name a removed handoff file; a matching
+// argument after the script name, which is not a node option, also runs the command as a child process
+function isNodeWatchMode([, ...args]) {
+	return args.some(arg => /^--watch(-path)?(=|$)/.test(arg))
 }
 
 // replaces this process with the command, without any <NAME>_CREDS env variable in its initial env

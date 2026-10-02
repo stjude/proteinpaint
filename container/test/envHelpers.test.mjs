@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -289,6 +289,20 @@ test('a tsx command runs as a child process with credentials in its env, since t
 	assert.equal(ctx.env.PP_CREDS, undefined)
 })
 
+test('a node command in watch mode runs as a child process with credentials in its env, since it restarts the server', t => {
+	for (const args of [
+		['node', '--watch', 'app.mjs'],
+		['node', '--watch-path=./src', 'app.mjs'],
+		['node', '--watch-path', './src', 'app.mjs']
+	]) {
+		const ctx = fakeContext({ env: { PP_CREDS: '{"a":1}' } })
+		runInProcess(t, args, ctx)
+		assert.equal(ctx.execved.length, 0, args.join(' '))
+		assert.equal(ctx.spawned[0].opts.env.PP_CREDS, '{"a":1}', args.join(' '))
+		assert.equal('PP_CREDS_HANDOFF_FILE' in ctx.spawned[0].opts.env, false, args.join(' '))
+	}
+})
+
 test('without process.execve(), a node command runs as a child process with a warning', t => {
 	const ctx = fakeContext({ env: { PP_CREDS: '{"a":1}' }, execve: null })
 	const warnings = []
@@ -337,6 +351,63 @@ test('smoke: the command replaces this process, with the permission model and cr
 	} finally {
 		fs.rmSync(dir, { recursive: true })
 		fs.rmSync(credsFile, { force: true })
+	}
+})
+
+test('smoke: node --watch restarts the command with the credentials', async () => {
+	// resolved, since node resolves the script path, which the permission model denies through a symlinked dir,
+	// such as /var/folders/... in macOS
+	const dir = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'envHelpers-smoke-'))
+	// the watched script edits itself to be restarted once, so it must be under an allowed write path
+	const tmpdir = path.join(dir, 'tmp')
+	const script = path.join(tmpdir, 'watched.cjs')
+	try {
+		fs.mkdirSync(tmpdir)
+		fs.writeFileSync(
+			script,
+			`const fs = require('fs')
+			const restarted = fs.existsSync(__filename + '.started')
+			console.log(JSON.stringify({ restarted, creds: process.env.PP_CREDS ?? null }))
+			if (!restarted) {
+				fs.writeFileSync(__filename + '.started', '')
+				fs.appendFileSync(__filename, '\\n')
+			}`
+		)
+		const child = spawn(process.execPath, [SCRIPT, 'node', '--watch', script], {
+			cwd: dir,
+			env: { ...process.env, TMPDIR: tmpdir, PP_CREDS: '{"a":1}' }
+		})
+		const runs = []
+		let stdout = ''
+		let stderr = ''
+		child.stderr.on('data', data => (stderr += data))
+		const done = new Promise((resolve, reject) => {
+			const timeout = setTimeout(
+				() => reject(new Error(`no restart within 20s, stdout: ${stdout}, stderr: ${stderr}`)),
+				20000
+			)
+			child.stdout.on('data', data => {
+				stdout += data
+				for (const line of stdout.split('\n')) {
+					if (line.startsWith('{') && !runs.includes(line)) runs.push(line)
+				}
+				if (runs.length == 2) {
+					clearTimeout(timeout)
+					resolve()
+				}
+			})
+		})
+		try {
+			await done
+		} finally {
+			child.kill()
+		}
+		assert.deepEqual(runs.map(JSON.parse), [
+			{ restarted: false, creds: '{"a":1}' },
+			{ restarted: true, creds: '{"a":1}' }
+		])
+	} finally {
+		fs.rmSync(dir, { recursive: true, force: true })
 	}
 })
 
