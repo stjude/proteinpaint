@@ -1,5 +1,5 @@
 import type { AppApi } from '#rx'
-import type { TableColumn, TableRow } from '#dom'
+import type { TableBaseColumn, TableBaseRow } from '#dom'
 import type { SCConfig, SCFormattedState, SampleColumn, SCTableData } from '../SCTypes'
 import type { SingleCellSample } from '#types'
 
@@ -33,8 +33,8 @@ export class SCViewModel {
 		/** Returning this data separately from the eventual
 		 * viewData because it's static. */
 		this.tableData = {
-			rows: rows as any,
-			columns: columns as any,
+			rows,
+			columns,
 			selectedRows,
 			sampleColIdx
 		}
@@ -51,8 +51,8 @@ export class SCViewModel {
 		plotConfig: SCConfig,
 		items: SingleCellSample[],
 		sampleColumns?: SampleColumn[]
-	): [TableRow[], TableColumn[], number] {
-		const rows: TableRow[] = []
+	): [TableBaseRow[], TableBaseColumn[], number] {
+		const rows: TableBaseRow[] = []
 		const hasExperiments = items.some(i => i.experiments)
 		let sampleColIdx = -1
 
@@ -60,7 +60,7 @@ export class SCViewModel {
 		 * Only use 'Sample' or config setting if everything is a sample. */
 		let firstColLabel = plotConfig.settings.sc.columns.sample
 		if (items[0]?.isMetaResult) firstColLabel = ''
-		const columns: TableColumn[] = [{ label: firstColLabel, sortable: true }]
+		const columns: TableBaseColumn[] = [{ label: firstColLabel, sortable: true }]
 		if (hasExperiments) {
 			columns.push({ label: 'Sample', sortable: true }) //add after the case column
 			sampleColIdx = 1
