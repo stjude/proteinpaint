@@ -177,7 +177,8 @@ async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
 		const { cmd, args } = serverconfig.preListenScript
 		// not spawnSync(), which would block a termination signal handler, such as in a container launcher
 		const ps = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-			const child = spawn(cmd, args)
+			// stdin is ignored, like the empty stdin of spawnSync(), so that a script that reads it does not wait
+			const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] })
 			let stdout = ''
 			let stderr = ''
 			child.stdout.setEncoding('utf-8').on('data', data => (stdout += data))

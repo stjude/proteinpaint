@@ -386,12 +386,16 @@ test('smoke: node --watch restarts the command with the credentials', async () =
 				() => reject(new Error(`no restart within 20s, stdout: ${stdout}, stderr: ${stderr}`)),
 				20000
 			)
+			// the last line of a chunk may be unfinished, and is completed by a later chunk
+			let unfinished = ''
 			child.stdout.on('data', data => {
 				stdout += data
-				for (const line of stdout.split('\n')) {
-					if (line.startsWith('{') && !runs.includes(line)) runs.push(line)
+				const lines = (unfinished + data).split('\n')
+				unfinished = lines.pop()
+				for (const line of lines) {
+					if (line.startsWith('{')) runs.push(line)
 				}
-				if (runs.length == 2) {
+				if (runs.length >= 2) {
 					clearTimeout(timeout)
 					resolve()
 				}
