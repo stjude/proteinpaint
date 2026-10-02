@@ -4,7 +4,14 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
-import { checkRuntimePosture, logRuntimePosture, parseMountinfo, findMount, STRICT_CHECKS } from '../runtimePosture.mjs'
+import {
+	checkRuntimePosture,
+	logRuntimePosture,
+	parseMountinfo,
+	findMount,
+	STRICT_CHECKS,
+	APP_DIR
+} from '../runtimePosture.mjs'
 
 const SCRIPT = path.join(import.meta.dirname, '../runtimePosture.mjs')
 const messages = result => result.findings.map(f => f.message)
@@ -237,6 +244,7 @@ test('logRuntimePosture() in strict mode: a STRICT_CHECKS finding and an uncheck
 	])
 	// the host kernel setting and the noexec of other write dirs are not required yet
 	assert.deepEqual([...STRICT_CHECKS].toSorted(), [
+		'app-files',
 		'capabilities',
 		'lib-dirs',
 		'no-new-privileges',
@@ -244,6 +252,54 @@ test('logRuntimePosture() in strict mode: a STRICT_CHECKS finding and an uncheck
 		'tmp-noexec',
 		'user'
 	])
+})
+
+test('the app dir, node_modules, @sjcrh packages, bundle dir, and .mjs files are checked, not public', () => {
+	const writable = [...appPaths]
+	const result = checkRuntimePosture(fakeDeps({ writable }))
+	const expected = [
+		APP_DIR,
+		`${APP_DIR}/node_modules`,
+		`${APP_DIR}/node_modules/@sjcrh`,
+		`${APP_DIR}/bin`,
+		`${APP_DIR}/app-full.mjs`,
+		`${APP_DIR}/envHelpers.mjs`,
+		`${APP_DIR}/node_modules/@sjcrh/proteinpaint-front`,
+		`${APP_DIR}/node_modules/@sjcrh/proteinpaint-server`
+	]
+	assert.deepEqual(
+		result.findings.map(f => [f.check, f.message]),
+		expected.map(p => ['app-files', `${p} is writable by the process, it should be read-only`])
+	)
+	assert.deepEqual(result.unchecked, [])
+	// an error in strict mode
+	const errors = logRuntimePosture(result, { strict: true, log: () => {} })
+	assert.equal(errors.length, expected.length)
+})
+
+test('a missing app dir is not checked, such as outside of the image', () => {
+	assert.deepEqual(checkRuntimePosture(fakeDeps({ dirs: {}, exists: [], writable: [APP_DIR] })), {
+		findings: [],
+		unchecked: []
+	})
+})
+
+test('an app file that cannot be probed or listed is unchecked', () => {
+	const server = `${APP_DIR}/node_modules/@sjcrh/proteinpaint-server`
+	assert.deepEqual(checkRuntimePosture(fakeDeps({ probeErrors: { [server]: 'EIO' } })).unchecked, [server])
+	assert.deepEqual(checkRuntimePosture(fakeDeps({ denied: [`${APP_DIR}/envHelpers.mjs`] })).unchecked, [
+		`${APP_DIR}/envHelpers.mjs`
+	])
+	for (const code of ['EACCES', 'ERR_ACCESS_DENIED']) {
+		const result = checkRuntimePosture(fakeDeps({ listErrors: { [APP_DIR]: code } }))
+		assert.deepEqual(result.unchecked, [APP_DIR], code)
+		assert.deepEqual(result.findings, [], code)
+	}
+	// a read-only root filesystem is not writable either
+	assert.deepEqual(checkRuntimePosture(fakeDeps({ probeErrors: { [APP_DIR]: 'EROFS' } })), {
+		findings: [],
+		unchecked: []
+	})
 })
 
 test('cli: runs and exits 0 without --strict', () => {
@@ -267,6 +323,23 @@ test('cli: the module can be imported from a script on stdin', () => {
 	assert.equal(r.stdout.trim(), 'function')
 })
 
+// the app files in the full image; public, which is writable here, is not checked
+const appDirs = {
+	[APP_DIR]: ['app-full.mjs', 'envHelpers.mjs', 'package.json', 'serverconfig.json', 'bin', 'public', 'node_modules'],
+	[`${APP_DIR}/node_modules/@sjcrh`]: ['proteinpaint-front', 'proteinpaint-server']
+}
+const appPaths = [
+	APP_DIR,
+	`${APP_DIR}/node_modules`,
+	`${APP_DIR}/node_modules/@sjcrh`,
+	`${APP_DIR}/bin`,
+	`${APP_DIR}/public`,
+	`${APP_DIR}/app-full.mjs`,
+	`${APP_DIR}/envHelpers.mjs`,
+	`${APP_DIR}/node_modules/@sjcrh/proteinpaint-front`,
+	`${APP_DIR}/node_modules/@sjcrh/proteinpaint-server`
+]
+
 function fakeDeps({
 	platform = 'linux',
 	uid = 1000,
@@ -275,9 +348,9 @@ function fakeDeps({
 	denied = [],
 	realpaths = {},
 	writableDirs = ['/home/root/pp/cache'],
-	// dir -> entries, for readdirSync(), and the dirs that exist besides libDirs
-	dirs = { '/opt/venv/lib': ['python3.14'] },
-	exists = ['/opt/venv/lib/python3.14/site-packages'],
+	// dir -> entries, for readdirSync(), and the paths that exist besides libDirs
+	dirs = { '/opt/venv/lib': ['python3.14'], ...appDirs },
+	exists = ['/opt/venv/lib/python3.14/site-packages', ...appPaths],
 	// dir -> error code, for readdirSync()
 	listErrors = {},
 	// dir -> error code, for accessSync(), instead of EACCES for a dir that is not writable

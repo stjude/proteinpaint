@@ -7,6 +7,8 @@
 	- a read-only root filesystem
 	- noexec on the writable dirs, such as the OS temp dir and the cache dir
 	- read-only interpreter library dirs, such as /opt/venv
+	- read-only app files: the app dir, its node_modules and client bundle dirs, and the app .mjs files,
+	  which are owned by root in the image; the public dir may be written in debugmode, so it is not checked
 
 	usage:
 	  node runtimePosture.mjs [--strict] [writable-dir ...]
@@ -28,10 +30,13 @@ import path from 'node:path'
 // venv, such as /opt/venv/lib/python3.14/site-packages, and any mount under these dirs are found at check time
 export const IMAGE_LIB_DIRS = Object.freeze(['/opt/venv', '/usr/local/lib/R/site-library', '/usr/lib/R/site-library'])
 
+// the dir with the server code, node_modules, and in the full image the client bundle in bin and public
+export const APP_DIR = '/home/root/pp/app/active'
+
 // the checks whose finding is an error in strict mode; every one of these can be applied by the container
 // runtime, see the releaseRollout .container units
 export const STRICT_CHECKS = Object.freeze(
-	new Set(['user', 'capabilities', 'no-new-privileges', 'read-only-root', 'tmp-noexec', 'lib-dirs'])
+	new Set(['user', 'capabilities', 'no-new-privileges', 'read-only-root', 'tmp-noexec', 'lib-dirs', 'app-files'])
 )
 
 // the accessSync(W_OK) errors that mean a dir is not writable, or does not exist
@@ -54,7 +59,8 @@ export function checkRuntimePosture({
 	uid = process.getuid?.(),
 	tmpdir = os.tmpdir(),
 	writableDirs = [],
-	libDirs = IMAGE_LIB_DIRS
+	libDirs = IMAGE_LIB_DIRS,
+	appDir = APP_DIR
 } = {}) {
 	if (platform != 'linux') return { skipped: `not checked on platform='${platform}'` }
 	const findings = []
@@ -104,18 +110,20 @@ export function checkRuntimePosture({
 		}
 	}
 
-	for (const dir of findLibDirs(_fs, libDirs, mounts, unchecked)) {
-		// existsSync() also throws for a dir that the permission model denies
+	// existsSync() also throws for a path that the permission model denies
+	const probe = (check, p) => {
 		try {
-			if (!_fs.existsSync(dir)) continue
-			_fs.accessSync(dir, fs.constants.W_OK)
-			add('lib-dirs', `${dir} is writable by the process, it should be read-only`)
+			if (!_fs.existsSync(p)) return
+			_fs.accessSync(p, fs.constants.W_OK)
+			add(check, `${p} is writable by the process, it should be read-only`)
 		} catch (e) {
 			// an expected result: not writable, or the path does not exist; any other error, such as EIO, or
-			// ERR_ACCESS_DENIED from the permission model, leaves the dir unchecked
-			if (!PROBE_RESULT_CODES.has(e.code)) unchecked.push(dir)
+			// ERR_ACCESS_DENIED from the permission model, leaves the path unchecked
+			if (!PROBE_RESULT_CODES.has(e.code)) unchecked.push(p)
 		}
 	}
+	for (const dir of findLibDirs(_fs, libDirs, mounts, unchecked)) probe('lib-dirs', dir)
+	for (const p of findAppFiles(_fs, appDir, unchecked)) probe('app-files', p)
 
 	return { findings, unchecked }
 }
@@ -142,6 +150,27 @@ function findLibDirs(_fs, libDirs, mounts, unchecked) {
 		if ([...dirs].some(dir => m.mountPoint.startsWith(dir + '/'))) dirs.add(m.mountPoint)
 	}
 	return dirs
+}
+
+// returns the app dir, its node_modules dir, the @sjcrh package dirs, the client bundle dir, and the .mjs files in
+// the app dir; not the public dir, which the server writes to in debugmode, or other dirs that a deployment mounts
+function findAppFiles(_fs, appDir, unchecked) {
+	const nodeModules = path.join(appDir, 'node_modules')
+	const sjcrh = path.join(nodeModules, '@sjcrh')
+	const paths = [appDir, nodeModules, sjcrh, path.join(appDir, 'bin')]
+	for (const [dir, select] of [
+		[appDir, name => name.endsWith('.mjs')],
+		[sjcrh, () => true]
+	]) {
+		try {
+			for (const name of _fs.readdirSync(dir)) if (select(name)) paths.push(path.join(dir, name))
+		} catch (e) {
+			// ENOENT or ENOTDIR for a missing dir, such as outside of the image; another error leaves the dir
+			// entries unknown
+			if (e.code != 'ENOENT' && e.code != 'ENOTDIR') unchecked.push(dir)
+		}
+	}
+	return paths
 }
 
 // logs each finding as a warning, or in strict mode as an error for a STRICT_CHECKS finding or a check that
