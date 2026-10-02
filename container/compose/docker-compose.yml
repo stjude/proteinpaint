@@ -1,13 +1,13 @@
 services:
   pp0:
-    image: ghcr.io/stjude/ppfull:2.122.0-dca7a83a7
+    image: ghcr.io/stjude/ppfull:2.215.0-4e121393d
     container_name: container0
     platform: linux/amd64
     ports:
       - "3456:3000"
     volumes:
       - /path/to/local/data/tp/:/home/root/pp/tp/
-      - /path/to/local/proteinpaint/container/serverconfig.json:/home/root/pp/app/active/serverconfig.json
+      - /path/to/local/proteinpaint/container/serverconfig.json:/home/root/pp/app/active/serverconfig.json:ro
       - /path/to/local/proteinpaint/container/dataset:/home/root/pp/app/active/dataset
       - /path/to/local/proteinpaint/container/public:/home/root/pp/app/active/public
     restart: unless-stopped

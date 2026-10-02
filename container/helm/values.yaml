@@ -6,7 +6,7 @@ annotations: {}
 
 image:
   repository: ghcr.io/stjude/ppserver
-  tag: "2.138.3-5-04830bbd8"
+  tag: "2.215.0-4e121393d"
   pullPolicy: IfNotPresent
   pullSecrets: []
 
@@ -33,32 +33,28 @@ resources:
 
 securityContext:
   allowPrivilegeEscalation: false
-# Empty by default, since the default image.tag above predates the non-root images, which run as the
-# unprivileged app user (UID/GID 1000, see container/deps/Dockerfile). Forcing UID 1000 on an older,
-# root-based image fails, since its node install is under /root. With an image.tag whose
-# `docker image inspect --format '{{.Config.User}}'` is `app`, use the settings below, where fsGroup
-# makes the mounted volumes, such as the tp/cache dir, writable by that user:
-#   podSecurityContext:
-#     runAsNonRoot: true
-#     runAsUser: 1000
-#     runAsGroup: 1000
-#     fsGroup: 1000
-# Another runAsUser may be used with runAsGroup: 0, since the dirs that the app writes at runtime are
-# also writable for group 0.
-podSecurityContext: {}
+# The image runs as the unprivileged app user (UID/GID 1000, see container/deps/Dockerfile), and fsGroup makes
+# the mounted volumes, such as the tp/cache dir, writable by that user. Another runAsUser may be used with
+# runAsGroup: 0, since the dirs that the app writes at runtime are also writable for group 0. An image.tag
+# from before the non-root images, whose node install is under /root, needs podSecurityContext: {} instead.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
 
 container:
   name: proteinpaint
   containerPort: 3456
   command: ["/bin/bash"]
-  # envHelpers.mjs generates node.config.json to limit the server process file access, passes any
+  # envHelpers.mjs applies the node permission model to limit the server process file access, passes any
   # <NAME>_CREDS_FILE content as <NAME>_CREDS, and then replaces itself with the server. Images published
-  # before envHelpers.mjs was added, such as the default image.tag above, do not have it, so the server then
-  # runs without those restrictions, as it did before; update image.tag to a newer release to apply them.
+  # before envHelpers.mjs was added do not have it, so the server then runs without those restrictions.
+  # The serverconfig.json is mounted read-only from the config map, which needs an image from v2.213.0 or
+  # later; an older image rewrites serverconfig.json at startup.
   args:
     - "-c"
     - |
-      cp /home/root/pp/app/active/serverconfig /home/root/pp/app/active/serverconfig.json
       if [ -f envHelpers.mjs ]; then
         exec node envHelpers.mjs node --enable-source-maps app-server.mjs
       fi
@@ -79,7 +75,7 @@ mounts:
     pvcName: proteinpaint-pvc
   config:
     name: config-volume
-    mountPath: /home/root/pp/app/active/serverconfig
+    mountPath: /home/root/pp/app/active/serverconfig.json
     subPath: serverconfig.json
     configMapName: proteinpaint-config
 
