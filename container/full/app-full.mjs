@@ -1,6 +1,22 @@
 import fs from 'fs'
-import { spawnSync } from 'child_process'
+import { spawn } from 'child_process'
 import path from 'path'
+
+// When container/envHelpers.mjs replaces itself with this script, it runs as PID 1, which ignores a termination
+// signal that it does not handle, so that stopping the container would wait for its timeout and then kill it.
+// Exit with the same code as a process that is terminated by the signal, also before the server is launched.
+if (process.pid == 1) {
+	for (const [signal, code] of [
+		['SIGTERM', 143],
+		['SIGINT', 130],
+		['SIGHUP', 129]
+	]) {
+		process.once(signal, () => {
+			console.log(`exiting on ${signal}`)
+			process.exit(code)
+		})
+	}
+}
 
 const serverconfigFile = path.join(import.meta.dirname, './serverconfig.json')
 
@@ -87,15 +103,19 @@ if (!serverconfig.URL) serverconfig.URL = process.env.URL || serverconfig.url ||
 // and front/init.js). This container therefore serves the same bundle regardless of the mount URL.
 console.log(`generating the client bundle (bin/)`)
 const publicBinOnly = process.argv.includes('--publicBinOnly')
-const result = spawnSync('npx', ['proteinpaint-front', ...(publicBinOnly ? ['--publicBinOnly'] : [])], {
-	encoding: 'utf-8',
-	stdio: 'inherit'
+// not spawnSync(), which would block the termination signal handlers above until the bundle is generated
+const status = await new Promise(resolve => {
+	const child = spawn('npx', ['proteinpaint-front', ...(publicBinOnly ? ['--publicBinOnly'] : [])], {
+		stdio: 'inherit'
+	})
+	child.on('error', e => {
+		console.error(`unable to generate the client bundle: ${e.message}`)
+		resolve(null)
+	})
+	child.on('close', resolve)
 })
-if (result.stderr) {
-	console.warn(result.stderr)
-}
-if (result.status !== 0) {
-	console.error(`Process exited with non-zero status code: ${result.status}`)
+if (status !== 0) {
+	console.error(`Process exited with non-zero status code: ${status}`)
 	process.exit(1)
 }
 // the npx command above (proteinpaint-front) generates the client bundle into ./bin (this container's
