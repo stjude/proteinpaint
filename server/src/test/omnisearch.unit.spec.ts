@@ -56,7 +56,7 @@ const genome: any = {
 const ds: any = {
 	cohort: {
 		termdb: {
-			termtypeByCohort: [],
+			termtypeByCohort: {},
 			q: {
 				findTermByName: async (str: string) => (/SEX/i.test(str) ? [sexTerm] : []),
 				getAncestorIDs: () => ['Demographic Variables'],
@@ -157,7 +157,7 @@ function makeSampleDs(displaySampleIds: boolean | ((clientAuthResult: any) => bo
 	return {
 		cohort: {
 			termdb: {
-				termtypeByCohort: [],
+				termtypeByCohort: {},
 				displaySampleIds,
 				q: { findTermByName: async () => [], getAncestorIDs: () => [], getAncestorNames: () => [] }
 			}
