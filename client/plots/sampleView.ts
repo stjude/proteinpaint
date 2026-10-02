@@ -113,7 +113,7 @@ class SampleView extends PlotBase implements RxComponent {
 				.append('option')
 				.attr('value', d => d.sampleId)
 				.property('selected', (d, _i) => _i < samplesLimit)
-				.html((d, _) => d.sampleName)
+				.text(d => d.sampleName)
 
 			this.dom.noteDiv = sampleDiv
 				.insert('div')
@@ -739,8 +739,8 @@ function setRenderers(self) {
 	self.renderTHead = function (data, theadrow) {
 		const trs = theadrow.selectAll('th').data(data)
 		trs.exit().remove()
-		trs.html(self.getThHtml)
-		trs.enter().append('th').style('padding', '5px 10px').style('text-align', 'end').html(self.getThHtml)
+		trs.text(self.getThHtml)
+		trs.enter().append('th').style('padding', '5px 10px').style('text-align', 'end').text(self.getThHtml)
 	}
 
 	self.getThHtml = d => d
@@ -784,7 +784,7 @@ function setRenderers(self) {
 			.style('padding', '5px 10px')
 
 			// !!! TODO: use getTermValue only for actual data !!!
-			.html(d.sample[d.term.id]?.label || value)
+			.text(d.sample[d.term.id]?.label || value)
 		if (isNumeric)
 			td.append('button')
 				.style('margin-left', '5px')
@@ -818,7 +818,7 @@ function setRenderers(self) {
 			.select('button')
 			.style('display', d.term.isleaf ? 'none' : '')
 			.html(self.config.expandedTermIds.includes(d.term.id) ? '-' : '+')
-		span.select('span').html(d.term.name)
+		span.select('span').text(d.term.name)
 		return
 	}
 }

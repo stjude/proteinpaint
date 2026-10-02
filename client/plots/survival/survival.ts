@@ -344,9 +344,9 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		const { term, term2 } = this.state.config
 		const mainTerm = term.term.name
 		if (term2?.type) {
-			this.dom.header.html(`${term2.getTitleText?.() || term2.term.name}  vs ${mainTerm}`)
+			this.dom.header.text(`${term2.getTitleText?.() || term2.term.name}  vs ${mainTerm}`)
 		} else {
-			this.dom.header.html(`${mainTerm} plot`)
+			this.dom.header.text(`${mainTerm} plot`)
 		}
 	}
 
@@ -642,7 +642,7 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('width', 'fit-content')
 			.datum(chart)
-			.html(chart => chart.chartId)
+			.text(chart => chart.chartId)
 
 		if (chart.serieses) {
 			const svg = div.append('svg').attr('class', 'pp-survival-svg')
@@ -734,7 +734,7 @@ function setRenderers(self) {
 			.style('width', s.svgw + 50)
 			.style('height', s.chartTitleDivHt + 'px')
 			.datum(chart.chartId)
-			.html(chart.chartId)
+			.text(chart.chartId)
 
 		div.selectAll('.sjpp-lock-icon').style('display', s.scale == 'byChart' ? 'block' : 'none')
 
@@ -1209,7 +1209,7 @@ function setInteractivity(self) {
 		const term2 = self.state.config.term2?.term || null
 		const seriesLabel = term2?.values?.[d.seriesId]?.label || d.seriesId
 
-		const header = `<div style='padding-bottom:8px'><b>${seriesLabel}</b></div>`
+		const header = `<div style='padding-bottom:8px'><b>${escapeHtml(seriesLabel)}</b></div>`
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
 		if (!data.seriesId && !data.dataId) {
 			if (!term2) {
