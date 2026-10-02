@@ -118,18 +118,18 @@ export function mayGetSampleTypeLabel(opts: {
 	let labelParts: string[]
 	let allSelected: boolean
 	let separator: string
-	if (querySampleTypes) {
-		const selected = getSelectedCheckboxValues(sampleTypeSelect)
-		if (!selected) return
-		allSelected = selected.length == querySampleTypes.length
-		labelParts = selected.map(sampleType => termdbConfig.sampleTypes[sampleType].plural_name)
-		separator = ', '
-	} else if (querySampleTypesByTerms) {
+	if (querySampleTypesByTerms) {
 		const selected = getSelectedTermValues(sampleTypeSelect)
 		if (!selected) return
 		labelParts = Object.values(selected).filter(value => value != 'any')
 		allSelected = labelParts.length == 0
 		separator = ' '
+	} else if (querySampleTypes) {
+		const selected = getSelectedCheckboxValues(sampleTypeSelect)
+		if (!selected) return
+		allSelected = selected.length == querySampleTypes.length
+		labelParts = selected.map(sampleType => termdbConfig.sampleTypes[sampleType].plural_name)
+		separator = ', '
 	} else {
 		return
 	}

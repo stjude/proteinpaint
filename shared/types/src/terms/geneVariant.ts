@@ -142,6 +142,10 @@ type GvBaseTerm = BaseTerm &
 		genes: GvGeneTerm[]
 		/** origins selected for an origin-split data type */
 		origins?: string[]
+		/** display label for the selected origin subset */
+		originLabel?: string
+		/** combined sample-type and origin display label */
+		label?: string
 	}
 
 export type RawGvTerm = GvBaseTerm & {
