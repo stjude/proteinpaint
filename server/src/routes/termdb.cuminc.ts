@@ -3,9 +3,16 @@ import { getTwByIndex, getTwBins } from '#src/termdb.twFromRequest.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import type { RouteApi, RoutePayload } from '#types'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasTermTypeDs } from '#src/utils/hasTermTypeDs.ts'
+import { TermTypes } from '#types'
 
 const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has condition terms
+	get init() {
+		return hasTermTypeDs(genomes, TermTypes.CONDITION) ? init : null
+	},
 	request: { typeId: 'TermdbCumincRequest' },
 	response: { typeId: 'TermdbCumincResponse' }
 }

@@ -6,9 +6,14 @@ import { mayLog } from '#src/helpers.ts'
 import { resolveMethylationMatrix, resolveGroupNames } from '#src/utils/methylationMatrix.ts'
 import serverconfig from '#src/serverconfig.js'
 import { formatElapsedTime } from '#shared'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
 export const payload: RoutePayload = {
-	init,
+	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
+	get init() {
+		return hasDnaMethylationDs(genomes) ? init : null
+	},
 	request: { typeId: 'TermdbDmrRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'TermdbDmrResponse' }
 }

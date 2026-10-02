@@ -20,8 +20,10 @@ import path from 'path'
 import { read_file, file_is_readable, illegalpath } from '#src/utils.js'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
+import { genomes } from '#src/initGenomesDs.js'
 import { validGenomeDs } from '#routes/common.ts'
 import { validate_query_singleCell_DEgenes } from './DEgenesRoute.ts'
+import { hasSingleCellDs } from './dataRoute.ts'
 import { SINGLECELL_CELLTYPE, SINGLECELL_NUMERIC_VALUE } from '#types'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { maySetMapParent2Children } from '#src/termdb.matrix.js'
@@ -32,7 +34,10 @@ import type { ReqQueryAddons } from '#routes/types.js'
 import initBinConfig from '#shared/termdb.initbinconfig.js'
 
 export const payload: RoutePayload = {
-	init,
+	// only set up when at least one ds has ds.queries.singleCell, see dataRoute.ts
+	get init() {
+		return hasSingleCellDs(genomes) ? init : null
+	},
 	request: {
 		typeId: 'TermdbSingleCellSamplesRequest',
 		checker: validTermdbSingleCellSamplesRequest

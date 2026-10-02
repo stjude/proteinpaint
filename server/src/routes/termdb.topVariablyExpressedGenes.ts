@@ -11,9 +11,15 @@ import { formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import type { TopVeCacheResult } from '../../routes/types.ts'
 import { maySetMapParent2Children } from '#src/termdb.matrix.js'
+import { genomes } from '#src/initGenomesDs.js'
 
 export const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated (this module is also imported by mds3.init.js, which is imported by initGenomesDs.js);
+	// the route is only set up when at least one ds has ds.queries.topVariablyExpressedGenes
+	get init() {
+		return hasTopVariablyExpressedGenesDs(genomes) ? init : null
+	},
 	request: { typeId: 'TermdbTopVariablyExpressedGenesRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'TermdbTopVariablyExpressedGenesResponse' }
 }
@@ -24,6 +30,12 @@ export const api: RouteApi = {
 		get: payload,
 		post: payload
 	}
+}
+
+export function hasTopVariablyExpressedGenesDs(genomes) {
+	return Object.values(genomes).some((g: any) =>
+		Object.values(g.datasets || {}).some((ds: any) => ds.queries?.topVariablyExpressedGenes)
+	)
 }
 
 function init({ genomes }) {

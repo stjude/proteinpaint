@@ -4,9 +4,15 @@ import { run_R } from '@sjcrh/proteinpaint-r'
 import { TermTypes } from '#types'
 import type { RouteApi, RoutePayload } from '#types'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasTermTypeDs } from '#src/utils/hasTermTypeDs.ts'
 
 const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has survival terms
+	get init() {
+		return hasTermTypeDs(genomes, TermTypes.SURVIVAL) ? init : null
+	},
 	request: { typeId: 'TermdbSurvivalRequest' },
 	response: { typeId: 'TermdbSurvivalResponse' }
 }

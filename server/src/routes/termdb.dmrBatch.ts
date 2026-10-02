@@ -28,6 +28,8 @@ import {
 } from '#src/utils/dmrBackground.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import fs from 'fs'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
 /* Call DMRs across many regions at once — the whole hit list of a differential methylation run,
 rather than one clicked element at a time.
@@ -42,7 +44,10 @@ The consequence is that cost scales with CHROMOSOMES, not regions, so drilling a
 hit list costs barely more than drilling the top 400. */
 
 export const payload: RoutePayload = {
-	init,
+	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
+	get init() {
+		return hasDnaMethylationDs(genomes) ? init : null
+	},
 	request: { typeId: 'TermdbDmrBatchRequest' },
 	response: { typeId: 'TermdbDmrBatchResponse' }
 }

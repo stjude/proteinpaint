@@ -14,9 +14,15 @@ import {
 	type SampleGroups
 } from '#src/utils/sampleGroups.ts'
 import type { DeCacheResult } from '../../routes/types.ts'
+import { genomes } from '#src/initGenomesDs.js'
 
 export const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has ds.queries.rnaseqGeneCount or
+	// ds.queries.singleCell.pseudobulk, the two count sources supported by resolveDE()
+	get init() {
+		return hasDeDs(genomes) ? init : null
+	},
 	request: { typeId: 'DERequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'DEResponse' }
 }
@@ -27,6 +33,12 @@ export const api: RouteApi = {
 		get: payload,
 		post: payload
 	}
+}
+
+export function hasDeDs(genomes) {
+	return Object.values(genomes).some((g: any) =>
+		Object.values(g.datasets || {}).some((ds: any) => ds.queries?.rnaseqGeneCount || ds.queries?.singleCell?.pseudobulk)
+	)
 }
 
 /*

@@ -4,17 +4,28 @@ import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
 import { buildTssIndex, linkDmrsToGenes, classifyLink, type GeneModel, type TssIndex } from '#src/utils/dmrGeneLink.ts'
 import fs from 'fs'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
 /* Every gene a scan's DMRs touch, where they touch it, and whether its expression moved the way
 that position predicts. The scan comes from its cache, expression
 from the same DE run the volcano and termdb/dmrGeneDE use, on the patients with methylation. See
 utils/dmrGeneLink.ts for the promoter/body rules. */
 
+const payload = {
+	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
+	get init() {
+		return hasDnaMethylationDs(genomes) ? init : null
+	},
+	request: { typeId: undefined },
+	response: { typeId: undefined }
+} as any as RoutePayload
+
 export const api: RouteApi = {
 	endpoint: 'termdb/dmrGeneLink',
 	methods: {
-		get: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload,
-		post: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload
+		get: payload,
+		post: payload
 	}
 }
 
