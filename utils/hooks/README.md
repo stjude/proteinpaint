@@ -39,6 +39,9 @@ see the "Security-related changes" section in `AGENTS.md`. The generic terms are
 More specific terms, which should not be in this public repo, are read from an optional private terms file
 at `$PP_TEXT_CHECK_TERMS`, `git config pp.textCheckTerms` (set by `init.sh` when this repo is checked out
 within sjpp), or `../../../security-triage/text-check-terms.txt` relative to this directory.
+Each line is checked, and also each pair of consecutive lines joined as one line, without the indent and comment
+marker of the second line, to find a term that is wrapped onto the next line, such as in a code comment or commit
+message. A pair is only reported when neither of its lines matches by itself.
 Set `SKIP_TEXT_CHECK=1` to skip the check, such as when the fix is already deployed to prod.
 
 ### claude-bash-check.cjs

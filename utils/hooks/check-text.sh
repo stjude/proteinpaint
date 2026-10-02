@@ -13,6 +13,8 @@
 # private terms file, which is found at $PP_TEXT_CHECK_TERMS, `git config pp.textCheckTerms`,
 # or ../../../security-triage/text-check-terms.txt relative to this directory.
 #
+# Each line is checked, and also each pair of consecutive lines, for a term that is wrapped onto the next line.
+#
 # Set SKIP_TEXT_CHECK=1 to skip the check, such as when the fix is already deployed to prod.
 
 MODE=$1
@@ -88,9 +90,10 @@ if [[ $? -gt 1 ]]; then
 	exit 1
 fi
 
+# each line to check is printed as <file>\037<line>\037<text>, with an empty <file> for text
 if [[ "$MODE" == "diff" ]]; then
-	# print each added line as <file>:<line>: <text>, except in files that list the terms or do the check
-	HITS=$(awk '
+	# the added lines, except in files that list the terms or do the check
+	LINES=$(awk '
 		/^--- / { header = 1; next }
 		header && /^\+\+\+ / {
 			header = 0
@@ -99,12 +102,56 @@ if [[ "$MODE" == "diff" ]]; then
 			next
 		}
 		/^@@ / { split($3, a, ","); line = substr(a[1], 2) + 0; next }
-		/^\+/ { if (!skip) print file ":" line ": " substr($0, 2); line++; next }
+		/^\+/ { if (!skip) print file "\037" line "\037" substr($0, 2); line++; next }
 		/^ / { line++ }
-	' | grep -i -E -f "$PATTERNS")
+	')
 else
-	HITS=$(grep -n -i -E -f "$PATTERNS")
+	LINES=$(awk '{ print "\037" NR "\037" $0 }')
 fi
+
+# each line as <file>:<line>: <text>, or <line>:<text> for text, like grep -n
+FORMATTED=$(printf '%s\n' "$LINES" | awk -F '\037' 'NF { print ($1 == "" ? $2 ":" : $1 ":" $2 ": ") $3 }')
+# the matching lines as <index>:<formatted line>, where <index> is its line number in FORMATTED
+MATCHED=$(printf '%s\n' "$FORMATTED" | grep -n -i -E -f "$PATTERNS")
+
+# Also check each pair of consecutive lines as one line, for a term that is wrapped onto the next line, such as
+# in a code comment or commit message. The next line is joined without its indent and comment marker. Line <index>
+# of JOINED is the pair of FORMATTED lines <index> and <index> + 1, or empty when those are not consecutive lines.
+JOINED=$(printf '%s\n' "$LINES" | awk -F '\037' '
+	!NF { next }
+	n++ {
+		if ($1 != file || $2 != line + 1) print ""
+		else {
+			a = text
+			sub(/[[:space:]]+$/, "", a)
+			b = $3
+			sub(/^[[:space:]]*(\/\/+|#+|\/?\*+|--|;+|<!--)?[[:space:]]*/, "", b)
+			print ($1 == "" ? line "-" $2 ":" : $1 ":" line "-" $2 ": ") a " " b
+		}
+	}
+	{ file = $1; line = $2; text = $3 }
+')
+PAIRED=$(printf '%s\n' "$JOINED" | grep -n -i -E -f "$PATTERNS")
+
+# a pair is only reported when neither of its lines matches by itself, since that line is already reported
+HITS=$({
+	printf '%s\n' "$MATCHED"
+	printf '%s\n' "$PAIRED" | sed 's/^/pair:/'
+} | awk '
+	/^pair:./ {
+		sub(/^pair:/, "")
+		i = $0
+		sub(/:.*/, "", i)
+		if (!((i in single) || ((i + 1) in single))) print substr($0, length(i) + 2)
+		next
+	}
+	NF {
+		i = $0
+		sub(/:.*/, "", i)
+		single[i] = 1
+		print substr($0, length(i) + 2)
+	}
+')
 
 if [[ "$HITS" == "" ]]; then exit 0; fi
 
