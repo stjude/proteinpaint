@@ -27,7 +27,7 @@ WORKDIR /home/root/pp/app/active
 COPY --chown=1000:1000 ./server/package.json  ./
 # a temporary npm cache, instead of one under HOME that only UID 1000 could write, when the image runs as another UID
 RUN npm install --omit=dev --cache=/tmp/npm-cache && rm -rf /tmp/npm-cache
-COPY --chown=1000:1000 ./server/app-server.mjs ./envHelpers.mjs ./
+COPY --chown=1000:1000 ./server/app-server.mjs ./envHelpers.mjs ./runtimePosture.mjs ./
 
 EXPOSE 3000
 # default to the container paths and port in server/src/serverconfig.js and envHelpers.mjs,
