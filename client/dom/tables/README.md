@@ -13,7 +13,10 @@ import { TableBase } from '#dom'
 const table = new TableBase({
 	div: holder, // d3 selection to render into
 	ariaLabel: 'Samples', // name for screen readers: say what the table holds
-	columns: [{ label: 'Sample', sortable: true, filterable: true }, { label: 'Age', sortable: true }],
+	columns: [
+		{ label: 'Sample', sortable: true, filterable: true },
+		{ label: 'Age', sortable: true }
+	],
 	rows: [
 		[{ value: 'S1' }, { value: 30 }],
 		[{ value: 'S2' }, { value: 41 }]
@@ -27,15 +30,15 @@ const table = new TableBase({
 
 Options are grouped by concern. Types and per-field docs are in `tableTypes.ts`.
 
-| Option | What it is for |
-| --- | --- |
-| `columns` | `label`, `width`, `align`, `nowrap`, `tooltip`, `headerTestId`, plus the feature flags `sortable`, `filterable`, `editable` and `validate` |
-| `rows` | an array per row, one cell per column. A cell has `value`, `url`, `html` or `color` (see below) |
-| `styles` | appearance only: `striped`, `showLines`, `maxWidth`, `maxHeight`, `header`, `selectedRow`, `buttonsAlign` |
-| `selection` | `onSelect`, `singleMode`, `hideInput`, `selectedRows`, `selectAll`, `autoScroll` |
-| `buttons` | action buttons below the table; they also make rows selectable |
-| `pagination` | `pageSize`, `pageSizeOptions`, `currentPage`, `onChange` |
-| `onEdit`, `ariaLabel`, `dataTestId` | edit callback, accessible name, test id |
+| Option                              | What it is for                                                                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `columns`                           | `label`, `width`, `align`, `nowrap`, `tooltip`, `headerTestId`, plus the feature flags `sortable`, `filterable`, `editable` and `validate` |
+| `rows`                              | an array per row, one cell per column. A cell has `value`, `url`, `html` or `color` (see below)                                            |
+| `styles`                            | appearance only: `striped`, `showLines`, `maxWidth`, `maxHeight`, `header`, `selectedRow`, `buttonsAlign`                                  |
+| `selection`                         | `onSelect`, `singleMode`, `hideInput`, `selectedRows`, `selectAll`, `autoScroll`                                                           |
+| `buttons`                           | action buttons below the table; they also make rows selectable                                                                             |
+| `pagination`                        | `pageSize`, `pageSizeOptions`, `currentPage`, `onChange`                                                                                   |
+| `onEdit`, `ariaLabel`, `dataTestId` | edit callback, accessible name, test id                                                                                                    |
 
 Invalid options throw with a `TableBase:` message (missing `div`/`columns`/`rows`, a row whose length is not
 the column count, a bad page size, a button without `text` or `callback`, an out-of-range `selectedRows`).
@@ -105,12 +108,12 @@ sends the table back to page 1. Line numbers and striping continue across pages.
 
 ## Updating
 
-| Call | What it does |
-| --- | --- |
-| `update()` | redraws the body from the current rows, sort, filter and page |
-| `update(rows)` | replaces the table's data: re-indexes the rows, keeps the selection of rows that are still present (matched by object) and redraws. `onSelect` is not called |
-| `render()` | rebuilds everything, keeping the sort and filters |
-| `getOriginalIndex(row)` | the row's index in the data, or -1 if the table does not have it |
+| Call                    | What it does                                                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `update()`              | redraws the body from the current rows, sort, filter and page                                                                                                |
+| `update(rows)`          | replaces the table's data: re-indexes the rows, keeps the selection of rows that are still present (matched by object) and redraws. `onSelect` is not called |
+| `render()`              | rebuilds everything, keeping the sort and filters                                                                                                            |
+| `getOriginalIndex(row)` | the row's index in the data, or -1 if the table does not have it                                                                                             |
 
 The table holds the array you give it, not a copy. Pass a new array to `update(rows)` rather than changing
 the old one.
@@ -154,15 +157,15 @@ Useful protected members: `columns`, `originalRows`, `rows` (the displayed page)
 
 ## Files
 
-| File | Holds |
-| --- | --- |
-| `TableBase.ts` | the class |
-| `tableTypes.ts` | option, cell and column types |
+| File                 | Holds                                                     |
+| -------------------- | --------------------------------------------------------- |
+| `TableBase.ts`       | the class                                                 |
+| `tableTypes.ts`      | option, cell and column types                             |
 | `tableSortFilter.ts` | sorting and filtering rows, and the numeric filter syntax |
-| `tableColumnMenu.ts` | the header icon button and its popup |
-| `tablePager.ts` | the pager |
-| `tableEdit.ts` | editing a cell |
-| `tableUtils.ts` | unique ids, url safety, shared button style |
+| `tableColumnMenu.ts` | the header icon button and its popup                      |
+| `tablePager.ts`      | the pager                                                 |
+| `tableEdit.ts`       | editing a cell                                            |
+| `tableUtils.ts`      | unique ids, url safety, shared button style               |
 
 ## Tests
 

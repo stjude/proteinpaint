@@ -44,7 +44,11 @@ export function createPager(
 		.style('padding', '2px 4px')
 		.on('change', (event: Event) => opts.onPageSize(Number((event.target as HTMLSelectElement).value)))
 	for (const size of opts.pageSizeOptions) {
-		select.append('option').attr('value', size).property('selected', size === opts.pageSize).text(size)
+		select
+			.append('option')
+			.attr('value', size)
+			.property('selected', size === opts.pageSize)
+			.text(size)
 	}
 	left.append('span').text('entries')
 
@@ -78,7 +82,8 @@ export function renderPagerNav(nav: any, current: number, pages: number, onGo: (
 
 	addButton('Previous', current - 1, current === 1, 'Go to previous page')
 	for (const item of pageWindow(current, pages)) {
-		if (item === '…') nav.append('span').attr('aria-hidden', 'true').text('…').style('margin', '0 4px').style('color', '#999')
+		if (item === '…')
+			nav.append('span').attr('aria-hidden', 'true').text('…').style('margin', '0 4px').style('color', '#999')
 		else addButton(String(item), item, false, `Page ${item}`)
 	}
 	addButton('Next', current + 1, current === pages, 'Go to next page')

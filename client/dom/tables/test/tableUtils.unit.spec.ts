@@ -15,7 +15,15 @@ tape('\n', test => {
 })
 
 tape('isSafeUrl: web, mail and relative urls pass; script-running schemes and junk do not', test => {
-	for (const url of ['https://example.com', 'http://example.com/a?b=1#c', 'mailto:a@example.com', '/relative', 'page.html', '?q=1', '#top']) {
+	for (const url of [
+		'https://example.com',
+		'http://example.com/a?b=1#c',
+		'mailto:a@example.com',
+		'/relative',
+		'page.html',
+		'?q=1',
+		'#top'
+	]) {
 		test.ok(isSafeUrl(url), `safe: ${url}`)
 	}
 	for (const url of [
