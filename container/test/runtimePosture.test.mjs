@@ -69,6 +69,33 @@ test('a lib dir is unchecked when the permission model denies access to it', () 
 	assert.deepEqual(result, { findings: [], unchecked: ['/opt/venv'] })
 })
 
+test('a venv package dir is checked on its own, since its access can differ from the venv dir', () => {
+	// the venv dir itself is not writable, but its package dir is
+	const result = checkRuntimePosture(fakeDeps({ writable: ['/opt/venv/lib/python3.14/site-packages'] }))
+	assert.deepEqual(result.findings, [
+		{
+			check: 'lib-dirs',
+			message: '/opt/venv/lib/python3.14/site-packages is writable by the process, it should be read-only'
+		}
+	])
+	// a lib dir that is not a venv has no lib/ dir to list, which is not a finding
+	assert.deepEqual(checkRuntimePosture(fakeDeps({ dirs: {}, exists: [] })), { findings: [], unchecked: [] })
+	// a venv lib dir that the permission model denies listing
+	assert.deepEqual(checkRuntimePosture(fakeDeps({ denied: ['/opt/venv/lib'] })).unchecked, ['/opt/venv/lib'])
+})
+
+test('a mount point under a lib dir is checked on its own', () => {
+	const mount = '/usr/local/lib/R/site-library/somepkg'
+	const result = checkRuntimePosture(
+		fakeDeps({
+			files: { '/proc/self/mountinfo': `${hardenedMounts}\n9 1 0:9 / ${mount} rw - xfs d rw` },
+			exists: [mount],
+			writable: [mount]
+		})
+	)
+	assert.deepEqual(messages(result), [`${mount} is writable by the process, it should be read-only`])
+})
+
 test('a writable dir is resolved to its real path before finding its mount', () => {
 	const result = checkRuntimePosture(
 		fakeDeps({
@@ -185,7 +212,10 @@ function fakeDeps({
 	writable = [],
 	denied = [],
 	realpaths = {},
-	writableDirs = ['/home/root/pp/cache']
+	writableDirs = ['/home/root/pp/cache'],
+	// dir -> entries, for readdirSync(), and the dirs that exist besides libDirs
+	dirs = { '/opt/venv/lib': ['python3.14'] },
+	exists = ['/opt/venv/lib/python3.14/site-packages']
 } = {}) {
 	const allFiles = {
 		'/proc/self/status': hardenedStatus,
@@ -209,7 +239,12 @@ function fakeDeps({
 			},
 			existsSync: p => {
 				if (denied.includes(p)) throw error('ERR_ACCESS_DENIED')
-				return libDirs.includes(p)
+				return libDirs.includes(p) || exists.includes(p)
+			},
+			readdirSync(p) {
+				if (denied.includes(p)) throw error('ERR_ACCESS_DENIED')
+				if (!dirs[p]) throw error('ENOENT')
+				return dirs[p]
 			},
 			accessSync(p) {
 				if (denied.includes(p)) throw error('ERR_ACCESS_DENIED')

@@ -22,8 +22,10 @@
 
 import fs from 'node:fs'
 import os from 'node:os'
+import path from 'node:path'
 
-// dirs of the interpreters that the server spawns, in the deps/Dockerfile image
+// dirs of the interpreters that the server spawns, in the deps/Dockerfile image; the package dirs of a python
+// venv, such as /opt/venv/lib/python3.14/site-packages, and any mount under these dirs are found at check time
 export const IMAGE_LIB_DIRS = Object.freeze(['/opt/venv', '/usr/local/lib/R/site-library', '/usr/lib/R/site-library'])
 
 // the checks whose finding is an error in strict mode; every one of these can be applied by the container
@@ -80,8 +82,8 @@ export function checkRuntimePosture({
 	else if (ptraceScope.trim() == '0') add('ptrace-scope', 'kernel.yama.ptrace_scope=0, set it to 1 or higher')
 
 	const mountinfo = read('/proc/self/mountinfo')
+	const mounts = mountinfo === undefined ? [] : parseMountinfo(mountinfo)
 	if (mountinfo !== undefined) {
-		const mounts = parseMountinfo(mountinfo)
 		// the same selection as for the other dirs, the last of any stacked mounts on /
 		const root = findMount(mounts, '/')
 		if (root && !root.options.includes('ro'))
@@ -98,7 +100,7 @@ export function checkRuntimePosture({
 		}
 	}
 
-	for (const dir of libDirs) {
+	for (const dir of findLibDirs(_fs, libDirs, mounts, unchecked)) {
 		// existsSync() also throws for a dir that the permission model denies
 		try {
 			if (!_fs.existsSync(dir)) continue
@@ -110,6 +112,27 @@ export function checkRuntimePosture({
 	}
 
 	return { findings, unchecked }
+}
+
+// returns the lib dirs and the dirs in them whose write access may differ from the parent dir's: the package
+// dirs of a python venv, lib/python<version>/site-packages, and the mount points under any of these dirs
+function findLibDirs(_fs, libDirs, mounts, unchecked) {
+	const dirs = new Set()
+	for (const dir of libDirs) {
+		dirs.add(dir)
+		const venvLib = path.join(dir, 'lib')
+		try {
+			for (const name of _fs.readdirSync(venvLib))
+				if (/^python\d/.test(name)) dirs.add(path.join(venvLib, name, 'site-packages'))
+		} catch (e) {
+			// ENOENT for a dir that is not a venv
+			if (e.code == 'ERR_ACCESS_DENIED') unchecked.push(venvLib)
+		}
+	}
+	for (const m of mounts) {
+		if ([...dirs].some(dir => m.mountPoint.startsWith(dir + '/'))) dirs.add(m.mountPoint)
+	}
+	return dirs
 }
 
 // logs each finding as a warning, or in strict mode as an error for a STRICT_CHECKS finding or a check that
