@@ -17,6 +17,8 @@ Fixes:
 - save a mass session whose state has an embedder{} object
 - minor rendering adjustment in scatterplot legend
 - report a declared sjcrh package entry in the /healthcheck versionInfo.deps, without throwing when that package is not installed
+- DNA methylation promoter, gene, and enhancer terms read the matrix named by elementForTerms instead of a CpG shard; only region terms, such as scan DMRs, read the shard
+- a dataset whose CpG shard directory is missing or empty initializes and falls back to its element matrices
 
 
 ## 2.215.0
