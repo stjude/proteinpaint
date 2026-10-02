@@ -56,7 +56,9 @@ export class NumericHandler extends HandlerBase implements Handler {
 
 	getPillStatus() {
 		this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins | NumCont | NumSpline // TODO: do not force type
-		return this.tw.getStatus(this.termsetting.usecase, this.termsetting.data)
+		const status = this.tw.getStatus(this.termsetting.usecase, this.termsetting.data)
+		if (this.tw.term.type == 'geneExpression' && this.tw.term.label) status.text += ` (${this.tw.term.label})`
+		return status
 	}
 
 	setTabData() {

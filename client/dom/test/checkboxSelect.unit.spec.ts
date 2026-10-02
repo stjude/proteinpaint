@@ -19,7 +19,7 @@ tape('renderCheckboxSelect(): renders options and returns selected values', test
 	test.equal(holder.selectAll('.origin-checkboxes input').size(), 2, 'renders every option')
 	test.deepEqual(
 		holder
-			.selectAll('.origin-checkboxes span')
+			.selectAll<HTMLSpanElement, unknown>('.origin-checkboxes span')
 			.nodes()
 			.map(node => node.textContent),
 		['Tumor acquired', 'Inherited'],

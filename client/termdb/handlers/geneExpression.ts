@@ -70,16 +70,13 @@ export class SearchHandler {
 		const unit = getGEunit(this.app.vocabApi)
 		const name = `${gene} ${unit}`
 		const term: any = { gene, name, type: TermTypes.GENE_EXPRESSION, sampleTypes }
-		const sampleTypeLabel = mayGetSampleTypeLabel({
+		term.sampleTypeLabel = mayGetSampleTypeLabel({
 			sampleTypeSelect: this.sampleTypeSelect,
 			querySampleTypes: this.querySampleTypes,
 			querySampleTypesByTerms: this.querySampleTypesByTerms,
 			termdbConfig: this.app.vocabApi.termdbConfig
 		})
-		if (sampleTypeLabel) {
-			term.sampleTypeLabel = sampleTypeLabel
-			term.name += ` (${sampleTypeLabel})`
-		}
+		term.label = term.sampleTypeLabel
 		this.callback(term)
 	}
 }

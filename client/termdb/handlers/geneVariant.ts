@@ -524,7 +524,12 @@ export class SearchHandler {
 			querySampleTypes: this.querySampleTypes,
 			querySampleTypesByTerms: this.querySampleTypesByTerms
 		})
-		this.term.sampleTypeLabel = this.getSampleTypeLabel()
+		this.term.sampleTypeLabel = mayGetSampleTypeLabel({
+			sampleTypeSelect: this.sampleTypeSelect,
+			querySampleTypes: this.querySampleTypes,
+			querySampleTypesByTerms: this.querySampleTypesByTerms,
+			termdbConfig: this.opts.app.vocabApi.termdbConfig
+		})
 		if (this.sampleTypeSelect && !this.term.sampleTypes?.length) {
 			// selector rendered, but no sample types selected
 			return this.abortSubmit()
@@ -539,7 +544,7 @@ export class SearchHandler {
 		// so that one origin is implicitly selected
 		if (!this.originSelect) return this.queryOrigins
 		const selectedOrigins = getSelectedCheckboxValues(this.originSelect)
-		if (!selectedOrigins.length) window.alert('Please select at least one origin.')
+		if (!selectedOrigins?.length) window.alert('Please select at least one origin.')
 		return selectedOrigins
 	}
 
@@ -552,19 +557,6 @@ export class SearchHandler {
 		const dt = this.getSelectedMutationType()?.dt
 		const byOrigin = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.byOrigin
 		return origins.map(origin => byOrigin?.[origin]?.label || origin).join(', ')
-	}
-
-	/** no label when there are no sample types to assign; empty when the one available sample
-	 * type, or all available sample types, is assigned; otherwise names the assigned subset */
-	getSampleTypeLabel(): string | undefined {
-		if (!this.term.sampleTypes?.length) return undefined
-		if (!this.sampleTypeSelect) return '' // the one available sample type, implicitly assigned
-		return mayGetSampleTypeLabel({
-			sampleTypeSelect: this.sampleTypeSelect,
-			querySampleTypes: this.querySampleTypes,
-			querySampleTypesByTerms: this.querySampleTypesByTerms,
-			termdbConfig: this.opts.app.vocabApi.termdbConfig
-		})
 	}
 
 	/** re-enables the gene set edit UI's submit button, which is disabled on click to prevent
