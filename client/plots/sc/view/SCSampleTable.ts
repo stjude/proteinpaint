@@ -45,7 +45,7 @@ export class SCSampleTable extends TableBase {
 		this.sampleColIdx = tableData.sampleColIdx ?? 0
 		this.onRowClick = opts.onRowClick
 		this.onBodyRendered = opts.onBodyRendered
-		this.onSelect = idx => this.onRowClick?.(this.sampleIdOf(this.originalRows[idx]))
+		this.selection.onSelect = idx => this.onRowClick?.(this.sampleIdOf(this.originalRows[idx]))
 		this.render()
 	}
 

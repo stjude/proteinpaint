@@ -297,11 +297,6 @@ tape('update() replaces rows and redraws body only', test => {
 		['two', 'three'],
 		'Should render the replacement row values'
 	)
-	test.deepEqual(
-		table.getRows().map(row => row.map(cell => cell.value)),
-		[['two'], ['three']],
-		'getRows() should reflect the update'
-	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -782,19 +777,15 @@ tape('getOriginalIndex: reports the index in the caller array after sort and fil
 	const rows = makeSortFilterRows()
 	const table = new TableBase({ columns: sortFilterColumns, rows, div: holder }).render()
 
+	// each displayed <tr> carries its row object as its datum
+	const shownOriginalIndexes = () =>
+		(holder.selectAll('tbody tr').nodes() as HTMLElement[]).map(tr => table.getOriginalIndex(d3s.select(tr).datum() as TableBaseRow))
+
 	table.sortByColumn(0) // Alice, Bob, Charlie
-	test.deepEqual(
-		table.getRows().map(row => table.getOriginalIndex(row)),
-		[1, 2, 0],
-		'Should map sorted rows back to their original positions'
-	)
+	test.deepEqual(shownOriginalIndexes(), [1, 2, 0], 'Should map sorted rows back to their original positions')
 
 	table.setColumnFilter(2, 'engineer') // Alice, Bob
-	test.deepEqual(
-		table.getRows().map(row => table.getOriginalIndex(row)),
-		[1, 2],
-		'Should map filtered rows back to their original positions'
-	)
+	test.deepEqual(shownOriginalIndexes(), [1, 2], 'Should map filtered rows back to their original positions')
 	test.equal(table.getOriginalIndex([{ value: 'stranger' }]), -1, 'Should return -1 for a row it does not own')
 
 	if ((test as any)._ok) holder.remove()
@@ -1767,7 +1758,7 @@ tape('page: selection and original indexes hold across pages', test => {
 	test.deepEqual(table.getSelectedIndexes(), [0, 10], 'Should keep selections from other pages')
 	table.goToPage(1)
 	test.ok((holder.select('tbody input').node() as HTMLInputElement).checked, 'Should restore the checkbox when coming back')
-	test.deepEqual(table.getRows().length, 10, 'getRows() should return the displayed page')
+	test.equal(holder.selectAll('tbody tr').size(), 10, 'Should show one page of rows')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -2038,19 +2029,18 @@ tape('styles: maxWidth and maxHeight size the wrapper, with defaults', test => {
 	test.end()
 })
 
-tape('cells and headers: data-testid, tooltip, __td and getColumns()', test => {
+tape('cells and headers: data-testid, tooltip and __td', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	const columns: TableBaseColumn[] = [{ label: 'A', headerTestId: 'hdr-a', tooltip: 'about A' }]
 	const rows: TableBaseRow[] = [[{ value: 'x', dataTestId: 'cell-x' }]]
-	const table = new TableBase({ columns, rows, div: holder }).render()
+	new TableBase({ columns, rows, div: holder }).render()
 
 	const th = holder.select('thead th').node() as HTMLElement
 	test.equal(th.getAttribute('data-testid'), 'hdr-a', 'Should set headerTestId')
 	test.equal(th.getAttribute('title'), 'about A', 'Should set the tooltip')
 	test.equal(holder.select('tbody td').attr('data-testid'), 'cell-x', 'Should set the cell dataTestId')
 	test.equal(rows[0][0].__td?.node(), holder.select('tbody td').node(), 'Should attach the rendered <td> to the cell')
-	test.equal(table.getColumns(), columns, 'getColumns() should return the columns')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
