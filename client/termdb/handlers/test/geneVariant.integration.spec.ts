@@ -334,13 +334,13 @@ tape('Origins are selected separately from mutation type', async test => {
 		'should omit child origin'
 	)
 
-	const originCheckboxes: any = holder.selectAll('.sjpp-genesearch-origin-checkboxes input')
+	const originCheckboxes = holder.selectAll<HTMLInputElement, unknown>('.sjpp-genesearch-origin-checkboxes input')
 	test.equal(originCheckboxes.size(), 2, 'should render the available origins')
 	test.deepEqual(
 		holder
-			.selectAll('.sjpp-genesearch-origin-checkboxes span')
+			.selectAll<HTMLSpanElement, unknown>('.sjpp-genesearch-origin-checkboxes span')
 			.nodes()
-			.map((node: any) => node.textContent),
+			.map(node => node.textContent),
 		['Tumor acquired', 'Inherited'],
 		'should use configured origin labels'
 	)
@@ -366,14 +366,14 @@ tape('Origins are selected separately from mutation type', async test => {
 		'should rerender the sample type choices'
 	)
 	test.equal(
-		originCheckboxes.nodes()[1].parentNode.title,
+		originCheckboxes.nodes()[1].parentElement?.title,
 		'At least one origin must be selected',
 		'should identify the last checked origin'
 	)
 	originCheckboxes.nodes()[1].click()
 	test.equal(originCheckboxes.nodes()[1].checked, true, 'should prevent unchecking the last origin')
 
-	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].click()
+	holder.selectAll<HTMLInputElement, unknown>('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].click()
 	await pickGene(holder)
 	test.deepEqual(tw.term.origins, ['germline'], 'should submit selected origins on the term')
 	test.equal(tw.term.originLabel, 'Inherited', 'should name the selected origin subset')
@@ -472,7 +472,7 @@ tape('Sample type label is empty for all types and names a selected subset', asy
 	await pickGene(holder)
 	test.equal(tw.term.sampleTypeLabel, '', 'should use an empty label when all sample types are selected')
 
-	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].click()
+	holder.selectAll<HTMLInputElement, unknown>('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].click()
 	await pickGene(holder)
 	test.equal(tw.term.sampleTypeLabel, 'Relapses', 'should name the selected sample type subset')
 	test.equal(tw.term.label, 'Relapses', 'should set the term label to the selected sample type')

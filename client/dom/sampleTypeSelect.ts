@@ -106,8 +106,8 @@ export function getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms) {
 	return selectedSampleTypes
 }
 
-// builds a sample type label based on sample type selections,
-// unrestricted/all selections produce an empty label.
+// builds a sample type label based on sample type selections;
+// unrestricted/all selections and a single implicit selection produce an empty label.
 export function mayGetSampleTypeLabel(opts: {
 	sampleTypeSelect?: any
 	querySampleTypes?: number[]
@@ -125,6 +125,7 @@ export function mayGetSampleTypeLabel(opts: {
 		allSelected = labelParts.length == 0
 		separator = ' '
 	} else if (querySampleTypes) {
+		if (!sampleTypeSelect) return querySampleTypes.length ? '' : undefined
 		const selected = getSelectedCheckboxValues(sampleTypeSelect)
 		if (!selected) return
 		allSelected = selected.length == querySampleTypes.length
