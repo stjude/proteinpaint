@@ -8,6 +8,7 @@ import type { ChatRequest, ChatResponse } from '#types'
 // Mass omnisearch (search-as-you-type) lives in ./search.ts; this file owns the AI-chat path and the
 // shared DOM scaffold (the input + result popup + chat bubbles).
 import { setSearchRenderers, handleOmnisearchKeyup } from './search.ts'
+import { select } from 'd3-selection'
 
 const MIN_PROMPT_LENGTH_FOR_CHAT = 5 // Set a minimum prompt length for chat submission
 
@@ -71,6 +72,45 @@ class MassAiChatBot implements RxComponent {
 				.style('overflow', 'auto')
 				.style('scroll-behavior', 'smooth')
 		}
+		this.dom.bubbleContent = this.dom.bubbleDiv.append('div')
+		let manualFloor = 200 // starts at the default; becomes the user's own height once they drag
+		const maxBubbleHeight = window.innerHeight * 0.8 // A cap so the chat box can never grow past 80% of the visible screen, always leaving at least 20% of the viewport for everything else.
+
+		new ResizeObserver(() => {
+			const contentHeight = this.dom.bubbleContent.node().scrollHeight
+			const newHeight = Math.min(Math.max(contentHeight + 20, manualFloor), maxBubbleHeight)
+			this.dom.bubbleDiv.style('height', `${newHeight}px`)
+		}).observe(this.dom.bubbleContent.node()) //.observe(node) tells the browser "watch this specific element's size continuously."
+
+		this.dom.resizeHandle = this.opts.subheader
+			.append('div')
+			.style('height', '6px')
+			.style('margin', '2px 20px')
+			.style('background', '#ddd')
+			.style('border-radius', '3px')
+			.style('cursor', 'ns-resize')
+			.on('mouseenter', function (this: any) {
+				select(this).style('background', '#bbb')
+			})
+			.on('mouseleave', function (this: any) {
+				select(this).style('background', '#ddd')
+			})
+			.on('mousedown', (event: MouseEvent) => {
+				event.preventDefault()
+				const startY = event.clientY //the mouse cursor's vertical pixel position, measured from the top of the browser's viewport (the visible window), at that instant. where was the cursor when the drag began
+				const startHeight = this.dom.bubbleDiv.node().offsetHeight //the element's actual rendered height in pixels (including padding/border, not margin). How tall was the box when the drag began
+				const onMouseMove = (moveEvent: MouseEvent) => {
+					const newHeight = Math.max(50, startHeight + (moveEvent.clientY - startY)) //computes how far the cursor has moved since the drag started and adds that to the original height
+					this.dom.bubbleDiv.style('height', `${newHeight}px`)
+				}
+				const onMouseUp = () => {
+					manualFloor = this.dom.bubbleDiv.node().offsetHeight //lock in the user's size as the new floor
+					document.removeEventListener('mousemove', onMouseMove) //Cleanup
+					document.removeEventListener('mouseup', onMouseUp) //Cleanup
+				}
+				document.addEventListener('mousemove', onMouseMove)
+				document.addEventListener('mouseup', onMouseUp)
+			})
 
 		const inputSel = this.dom.div
 			.append('input')
@@ -156,7 +196,7 @@ me: if 1, is me; otherwise is ai
 }
 return the created bubble and allow to be modified
 */
-		const bubble = this.dom.bubbleDiv
+		const bubble = this.dom.bubbleContent
 			.append('div')
 			.style('padding', '10px')
 			.html(`${arg.me ? '<span style="font-size:.7em">[ME]</span> ' : ''}${arg.msg}`)

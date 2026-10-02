@@ -252,14 +252,26 @@ by normalize.css are covered here
 }
 
 .sjpp-mass-search-btn {
-    background-color: #3b7dd8;
+    background-color: #4caf72;
     color: white;
 }
 .sjpp-mass-search-btn:hover {
-    background-color: #2f66b3;
+    background-color: #3d8f5c;
 }
 .sjpp-mass-search-btn:active {
-    background-color: #1f4a8a;
+    background-color: #2e7048;
+}
+/* Chat bubble category-action buttons (Summary/Survival/etc.) — match Charts tab's .sjpp-chart-btn look */
+.sjpp-mass-chat-btn {
+    background-color: #fff !important;
+    color: black !important;
+    border: 1px solid #ededed !important;
+    border-radius: 20px !important;
+    padding: 10px 15px !important;
+    box-shadow: none !important;
+}
+.sjpp-mass-chat-btn:hover {
+    background-color: #f2f2f2;
 }
 /* /client/src/app.js end */
 
