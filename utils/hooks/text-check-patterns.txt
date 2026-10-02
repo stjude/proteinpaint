@@ -1,0 +1,36 @@
+# Case-insensitive extended regular expressions, one per line, used by check-text.sh.
+# These are generic terms that describe a security issue instead of what the code does,
+# see the "Security-related changes" section in AGENTS.md. Do not add terms that are
+# specific to an unfixed issue here, since this repo is public: add those to the private
+# terms file instead (see check-text.sh).
+
+vulnerab
+exploit
+security[ -]?(fix|issue|bug|hole|flaw|patch|advisory|alert|finding|report|risk)
+\bcve-[0-9]{4}-[0-9]+
+\bghsa(-[0-9a-z]{4}){3}
+\bcwe-[0-9]+
+codeql.{0,20}(alert|warning|finding|issue)
+code[ -]scanning
+\balert[ #-]*[0-9]+
+\balert-fix-[0-9]+
+snyk.{0,20}(alert|issue|finding|vuln)
+\bsnyk:[0-9a-f]+
+\b(xss|csrf|xsrf|ssrf|sqli|rce|lfi|rfi|xxe|idor|redos)\b
+cross[ -]site
+(sql|command|shell|code|header|crlf|log|template|ldap|nosql|path|html|script)[ -]injection
+prototype[ -]pollution
+(path|directory)[ -]traversal
+open[ -]redirect
+arbitrary (file|code|command)
+remote code execution
+denial[ -]of[ -]service
+privilege escalation
+auth(entication|orization)? bypass
+(information|data|credential|secret|token) (leak|exposure|disclosure)
+disclos
+attacker
+malicious
+pen(etration)?[ -]?test
+bug bounty
+unsanitized

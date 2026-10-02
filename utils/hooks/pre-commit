@@ -4,6 +4,9 @@ set -e
 
 STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
 
+# check the added lines, such as code comments and test names
+git diff --cached -U0 --no-color --no-ext-diff | ./utils/hooks/check-text.sh diff "staged changes"
+
 # doing per GDC requirements
 pre-commit run --files "$STAGEDFILES"
 

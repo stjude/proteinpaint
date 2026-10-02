@@ -6,6 +6,9 @@
 #   exit 0
 # fi
 
+# check the message before it's used in the release notes
+git stripspace --strip-comments < "$1" | ./utils/hooks/check-text.sh text "commit message" || exit 1
+
 MSG="$(cat $1)"
 NOTES="$(cat release.txt)"
   
