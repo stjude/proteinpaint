@@ -49,7 +49,7 @@ export class TableBase {
 	protected columns: TableBaseColumn[]
 	/** the caller's rows in their original order. Never reordered or filtered; sort/filter work on copies */
 	protected originalRows: TableBaseRow[]
-	/** original index of each row object, built once, so callbacks can report indexes into the caller's array */
+	/** original index of each row object, rebuilt on replacement, so callbacks report indexes into the caller's array */
 	protected originalIndex: Map<TableBaseRow, number>
 	/** every row that passes the filters, in sort order: what the pager counts */
 	protected matched: TableBaseRow[]
@@ -224,7 +224,8 @@ export class TableBase {
 	/** Replaces the selection from code, e.g. when app state changes which row is selected. Updates the
 	 * inputs, row styles, check-all and buttons, but does not call onSelect: the caller already knows. */
 	setSelectedIndexes(idxs: number[]): this {
-		if (this.selection.singleMode && idxs.length > 1) throw new Error('TableBase: singleMode allows only one selected row')
+		if (this.selection.singleMode && idxs.length > 1)
+			throw new Error('TableBase: singleMode allows only one selected row')
 		this.selected = new Set(idxs.map(i => this.originalRows[i]).filter(Boolean))
 		this.eachDisplayedRow((row, tr) => {
 			const input = this.rowInput(tr)
@@ -236,13 +237,19 @@ export class TableBase {
 	}
 
 	/** Redraws the body only; the header (and any filter input focus) is untouched.
-	 * With no argument, shows the caller's rows filtered and sorted by the current state.
-	 * With rows, shows exactly those rows instead (an override for subclasses, e.g. pagination). */
+	 * With rows, replaces the caller's data and retains selection only for row objects still present.
+	 * With or without rows, applies the current filters, sort and pagination. */
 	update(rows?: TableBaseRow[]): this {
-		const next = rows ?? filterAndSort(this.originalRows, this.filters, this.sortState)
-		TableBase.validateRows(next, this.columns)
-		this.matched = next
+		if (rows !== undefined) {
+			TableBase.validateRows(rows, this.columns)
+			this.originalRows = rows
+			this.originalIndex = new Map(rows.map((row, i) => [row, i]))
+			this.selected = new Set([...this.selected].filter(row => this.originalIndex.has(row)))
+			if (this.scrollTarget && !this.originalIndex.has(this.scrollTarget)) this.scrollTarget = undefined
+		}
+		this.matched = filterAndSort(this.originalRows, this.filters, this.sortState)
 		this.renderPage()
+		if (rows !== undefined) this.updateButtons()
 		return this
 	}
 
@@ -334,7 +341,10 @@ export class TableBase {
 	protected scrollToSelected(): void {
 		const target = this.selection.autoScroll ? this.scrollTarget : undefined
 		if (!target) return
-		const tr = this.tbody.selectAll('tr').filter((row: TableBaseRow) => row === target).node() as HTMLElement | null
+		const tr = this.tbody
+			.selectAll('tr')
+			.filter((row: TableBaseRow) => row === target)
+			.node() as HTMLElement | null
 		// the delay lets the table settle in its container first
 		if (tr) setTimeout(() => tr.scrollIntoView?.({ behavior: 'smooth', block: 'center' }), 500)
 	}
@@ -383,7 +393,8 @@ export class TableBase {
 		this.controls.clear()
 		this.selectAllInput = undefined
 		const tr: Tr = this.thead.append('tr')
-		if (this.styles.showLines) tr.append('th').attr('scope', 'col').attr('aria-label', 'Row number').style('width', '1vw')
+		if (this.styles.showLines)
+			tr.append('th').attr('scope', 'col').attr('aria-label', 'Row number').style('width', '1vw')
 		if (this.selectable) this.renderSelectHeader(tr)
 		this.columns.forEach((column, colIdx) => this.renderHeaderCell(tr, column, colIdx))
 		this.updateColumnControls()
@@ -513,7 +524,7 @@ export class TableBase {
 				.style('font-size', '0.8rem')
 		}
 		const input = this.selectable ? this.renderSelector(tr, row, rowIdx) : undefined
-		row.forEach((cell, colIdx) => this.renderCell(tr, cell, colIdx, /*rowIdx*/))
+		row.forEach((cell, colIdx) => this.renderCell(tr, cell, colIdx /*rowIdx*/))
 		if (input) {
 			this.labelSelector(input, row, rowIdx)
 			this.paintRow(tr.node() as HTMLElement, row, rowIdx)
@@ -522,7 +533,7 @@ export class TableBase {
 	}
 
 	/** Extension point: render a single cell. Subclasses adding barplots, buttons, etc. should override this. */
-	protected renderCell(tr: Tr, cell: TableBaseCell, colIdx: number, /*rowIdx: number*/): Td {
+	protected renderCell(tr: Tr, cell: TableBaseCell, colIdx: number /*rowIdx: number*/): Td {
 		const column = this.columns[colIdx]
 		const td: Td = tr.append('td').attr('class', 'sjpp_table_item')
 		if (cell.dataTestId) td.attr('data-testid', cell.dataTestId)

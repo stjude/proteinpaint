@@ -96,7 +96,11 @@ tape('Renders row and cell content: value, url, html, color', test => {
 	new TableBase({ columns: [{ label: 'A' }, { label: 'B' }, { label: 'C' }], rows, div: valueHolder }).render()
 	const cells = valueHolder.selectAll('tbody td').nodes() as HTMLElement[]
 	test.equal(cells[0].textContent, 'plain', 'Should render cell.value as text')
-	test.equal((cells[1] as HTMLElement).style.backgroundColor, 'red', 'Should render cell.color as background when no value')
+	test.equal(
+		(cells[1] as HTMLElement).style.backgroundColor,
+		'red',
+		'Should render cell.color as background when no value'
+	)
 	test.equal(cells[2].textContent, '0', 'Should render a numeric 0 value, not treat it as empty')
 
 	const urlHolder = getHolder()
@@ -117,7 +121,11 @@ tape('Renders row and cell content: value, url, html, color', test => {
 		div: urlOnlyHolder
 	}).render()
 	const linkOnly = urlOnlyHolder.select('tbody a').node() as HTMLAnchorElement
-	test.equal(linkOnly.textContent, 'https://example.com', 'Should fall back to the url as link text when value is missing')
+	test.equal(
+		linkOnly.textContent,
+		'https://example.com',
+		'Should fall back to the url as link text when value is missing'
+	)
 
 	const htmlHolder = getHolder()
 	new TableBase({
@@ -156,7 +164,11 @@ tape('striped alternates row background color', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 
-	new TableBase({ columns: [{ label: 'A' }], rows: [[{ value: '1' }], [{ value: '2' }], [{ value: '3' }]], div: holder }).render()
+	new TableBase({
+		columns: [{ label: 'A' }],
+		rows: [[{ value: '1' }], [{ value: '2' }], [{ value: '3' }]],
+		div: holder
+	}).render()
 
 	const trs = holder.selectAll('tbody tr').nodes() as HTMLElement[]
 	test.equal(trs[0].style.backgroundColor, '', 'First row should not be highlighted')
@@ -179,7 +191,10 @@ tape('striped: false disables row highlighting', test => {
 	}).render()
 
 	const trs = holder.selectAll('tbody tr').nodes() as HTMLElement[]
-	test.ok(trs.every(tr => tr.style.backgroundColor === ''), 'No row should be highlighted when striped=false')
+	test.ok(
+		trs.every(tr => tr.style.backgroundColor === ''),
+		'No row should be highlighted when striped=false'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -302,6 +317,68 @@ tape('update() replaces rows and redraws body only', test => {
 	test.end()
 })
 
+tape('update() persists replacement rows through sort, filter and render', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const table = new TableBase({
+		columns: [{ label: 'A', sortable: true, filterable: true }],
+		rows: [[{ value: 'old' }]],
+		div: holder
+	}).render()
+	const replacement: TableBaseRow[] = [[{ value: 'two' }], [{ value: 'three' }]]
+	const values = () => (holder.selectAll('tbody td').nodes() as HTMLElement[]).map(td => td.textContent)
+	table.sortByColumn(0)
+	table.setColumnFilter(0, 't')
+	table.update(replacement)
+	test.deepEqual(values(), ['three', 'two'], 'Replacement respects the active sort and filter')
+	table.sortByColumn(0, false)
+	test.deepEqual(values(), ['two', 'three'], 'Sorting uses replacement data')
+	table.setColumnFilter(0, 'three')
+	test.deepEqual(values(), ['three'], 'Filtering uses replacement data')
+	table.setColumnFilter(0, '')
+	table.update()
+	table.render()
+	test.deepEqual(values(), ['two', 'three'], 'Redraw and render retain replacement data')
+	table.update([])
+	table.setColumnFilter(0, '')
+	test.equal(holder.selectAll('tbody tr').size(), 0, 'Empty replacement remains empty')
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('update() reindexes rows and reconciles selection', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const retained: TableBaseRow = [{ value: 'retained' }]
+	const removed: TableBaseRow = [{ value: 'removed' }]
+	const added: TableBaseRow = [{ value: 'added' }]
+	const selectedIndexes: number[] = []
+	const buttonIndexes: number[][] = []
+	const table = new TableBase({
+		columns: [{ label: 'A' }],
+		rows: [retained, removed],
+		div: holder,
+		selection: { selectedRows: [0, 1], autoScroll: false, onSelect: index => selectedIndexes.push(index) },
+		buttons: [{ text: 'Apply', callback: () => {}, onChange: indexes => buttonIndexes.push(indexes) }]
+	}).render()
+	table.update([added, retained])
+	test.deepEqual(table.getSelectedIndexes(), [1], 'Retains selected row identity at its new index')
+	test.equal(table.getOriginalIndex(removed), -1, 'Removed row is no longer indexed')
+	test.deepEqual(buttonIndexes[buttonIndexes.length - 1], [1], 'Button state reflects reindexed selection')
+	const inputs = holder.selectAll('tbody input').nodes() as HTMLInputElement[]
+	test.equal(inputs[1].checked, true, 'Retained row remains checked')
+	inputs[0].checked = true
+	inputs[0].dispatchEvent(new Event('change'))
+	test.deepEqual(selectedIndexes, [0], 'Selecting an added row reports its replacement index')
+	test.deepEqual(table.getSelectedIndexes(), [0, 1], 'Added row can be selected')
+	table.update([[{ value: 'new' }]])
+	test.deepEqual(table.getSelectedIndexes(), [], 'Drops selection when all selected objects are removed')
+	test.equal(holder.select('button').property('disabled'), true, 'Disables action when selection is empty')
+	test.deepEqual(buttonIndexes[buttonIndexes.length - 1], [], 'Notifies button of cleared selection')
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
 tape('update() validates replacement rows', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
@@ -316,6 +393,9 @@ tape('update() validates replacement rows', test => {
 	} catch (e: any) {
 		test.pass(`${message}: ${e.message || e}`)
 	}
+	table.update()
+	test.equal(holder.selectAll('tbody tr').size(), testRows.length, 'Invalid replacement leaves source rows unchanged')
+	test.equal(table.getOriginalIndex(testRows[0]), 0, 'Invalid replacement leaves indexes unchanged')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -330,7 +410,11 @@ tape('render() is idempotent (no duplicate tables on repeat calls)', test => {
 	table.render()
 	table.render()
 
-	test.equal(holder.selectAll('table').size(), 1, 'Repeated render() calls should not accumulate extra <table> elements')
+	test.equal(
+		holder.selectAll('table').size(),
+		1,
+		'Repeated render() calls should not accumulate extra <table> elements'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -410,11 +494,24 @@ tape('sort and filter: one icon button per column, showing a symbol for each fea
 	const has = (i: number, selector: string) => !!th(i).querySelector(selector)
 
 	test.equal(holder.selectAll('thead button').size(), 3, 'Should render one button per column, not one per feature')
-	test.ok(has(0, '.sjpp-table-sort-indicator') && has(0, '.sjpp-table-filter-icon'), 'Name is sortable and filterable: both symbols')
-	test.ok(has(1, '.sjpp-table-sort-indicator') && !has(1, '.sjpp-table-filter-icon'), 'Age is sortable only: sort symbol only')
-	test.ok(!has(2, '.sjpp-table-sort-indicator') && has(2, '.sjpp-table-filter-icon'), 'Role is filterable only: filter symbol only')
+	test.ok(
+		has(0, '.sjpp-table-sort-indicator') && has(0, '.sjpp-table-filter-icon'),
+		'Name is sortable and filterable: both symbols'
+	)
+	test.ok(
+		has(1, '.sjpp-table-sort-indicator') && !has(1, '.sjpp-table-filter-icon'),
+		'Age is sortable only: sort symbol only'
+	)
+	test.ok(
+		!has(2, '.sjpp-table-sort-indicator') && has(2, '.sjpp-table-filter-icon'),
+		'Role is filterable only: filter symbol only'
+	)
 	test.equal(holder.selectAll('input').size(), 0, 'Should render no filter input in the header')
-	test.equal((th(0).querySelector('.sjpp-table-header-label') as HTMLElement).style.cursor, '', 'The label itself is not clickable')
+	test.equal(
+		(th(0).querySelector('.sjpp-table-header-label') as HTMLElement).style.cursor,
+		'',
+		'The label itself is not clickable'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -424,7 +521,8 @@ tape('sort: clicking a header sorts ascending, then toggles descending, with a m
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
-	const indicators = () => (holder.selectAll('.sjpp-table-sort-indicator').nodes() as HTMLElement[]).map(n => n.textContent)
+	const indicators = () =>
+		(holder.selectAll('.sjpp-table-sort-indicator').nodes() as HTMLElement[]).map(n => n.textContent)
 
 	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Alice', 'Bob'], 'Should start in the input order')
 	test.deepEqual(indicators(), ['⇅', '⇅'], 'Should show a neutral marker on every sortable column before any sort')
@@ -445,7 +543,8 @@ tape('sort: the icon button opens a popup with both directions and marks the cur
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
-	const option = (menu: HTMLElement, dir: string) => menu.querySelector(`[data-testid="sjpp-table-sort-${dir}-0"]`) as HTMLElement
+	const option = (menu: HTMLElement, dir: string) =>
+		menu.querySelector(`[data-testid="sjpp-table-sort-${dir}-0"]`) as HTMLElement
 	const indicator = holder.select('.sjpp-table-sort-indicator').node() as HTMLElement
 
 	let menu = openColumnMenu(holder, 0)
@@ -462,7 +561,11 @@ tape('sort: the icon button opens a popup with both directions and marks the cur
 	test.equal(option(menu, 'desc').getAttribute('aria-current'), 'true', 'Should mark the current direction')
 	test.equal(option(menu, 'asc').getAttribute('aria-current'), null, 'Should not mark the other')
 	option(menu, 'desc').click()
-	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Bob', 'Alice'], 'Choosing the current direction keeps it, it does not toggle')
+	test.deepEqual(
+		bodyColumn(holder, 0),
+		['Charlie', 'Bob', 'Alice'],
+		'Choosing the current direction keeps it, it does not toggle'
+	)
 	option(openColumnMenu(holder, 0), 'asc').click()
 	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Bob', 'Charlie'], 'Choosing ascending should sort ascending')
 	test.equal(indicator.textContent, '▲', 'Should show ▲ on the button')
@@ -478,10 +581,15 @@ tape('column button: turns blue while a sort or a filter is applied on its colum
 	const button = (i: number) => holder.select(`[data-testid="sjpp-table-column-menu-btn-${i}"]`).node() as HTMLElement
 	const blue = 'rgb(13, 110, 253)'
 	const size = (i: number) => parseFloat(getComputedStyle(button(i)).fontSize)
-	const isActive = (i: number) => getComputedStyle(button(i)).color == blue && button(i).classList.contains('sjpp-table-column-active')
+	const isActive = (i: number) =>
+		getComputedStyle(button(i)).color == blue && button(i).classList.contains('sjpp-table-column-active')
 	const baseSize = size(0)
 
-	test.deepEqual([0, 1, 2].map(isActive), [false, false, false], 'No column should look active before anything is applied')
+	test.deepEqual(
+		[0, 1, 2].map(isActive),
+		[false, false, false],
+		'No column should look active before anything is applied'
+	)
 
 	sortViaMenu(holder, 1)
 	test.deepEqual([0, 1, 2].map(isActive), [false, true, false], 'A sort should mark only its own column')
@@ -510,7 +618,9 @@ tape('column button: the funnel is empty until a filter is applied, then filled'
 	const holder = getHolder()
 	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
 	const fills = () =>
-		(holder.selectAll('.sjpp-table-filter-icon path').nodes() as SVGPathElement[]).map(path => path.getAttribute('fill'))
+		(holder.selectAll('.sjpp-table-filter-icon path').nodes() as SVGPathElement[]).map(path =>
+			path.getAttribute('fill')
+		)
 	const outlined = () =>
 		(holder.selectAll('.sjpp-table-filter-icon path').nodes() as SVGPathElement[]).every(
 			path => path.getAttribute('stroke') == 'currentColor'
@@ -542,8 +652,14 @@ tape('column button: the active look comes back after the header is rebuilt', te
 	table.setColumnFilter(2, 'eng')
 	table.render()
 
-	const colors = [1, 2, 0].map(i => getComputedStyle(holder.select(`[data-testid="sjpp-table-column-menu-btn-${i}"]`).node() as Element).color)
-	test.deepEqual(colors.slice(0, 2), ['rgb(13, 110, 253)', 'rgb(13, 110, 253)'], 'Sorted and filtered columns should still be blue')
+	const colors = [1, 2, 0].map(
+		i => getComputedStyle(holder.select(`[data-testid="sjpp-table-column-menu-btn-${i}"]`).node() as Element).color
+	)
+	test.deepEqual(
+		colors.slice(0, 2),
+		['rgb(13, 110, 253)', 'rgb(13, 110, 253)'],
+		'Sorted and filtered columns should still be blue'
+	)
 	test.notEqual(colors[2], 'rgb(13, 110, 253)', 'Other columns should not be')
 
 	if ((test as any)._ok) holder.remove()
@@ -568,7 +684,8 @@ tape('sort: sorting a different column resets the previous indicator and starts 
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
-	const indicators = () => (holder.selectAll('.sjpp-table-sort-indicator').nodes() as HTMLElement[]).map(n => n.textContent)
+	const indicators = () =>
+		(holder.selectAll('.sjpp-table-sort-indicator').nodes() as HTMLElement[]).map(n => n.textContent)
 
 	sortViaMenu(holder, 0)
 	sortViaMenu(holder, 0) // name descending
@@ -636,7 +753,11 @@ tape('filter: per-column text filter keeps matching rows, case-insensitively', t
 
 	typeFilter(holder, 0, '')
 	typeFilter(holder, 2, '')
-	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Alice', 'Bob'], 'Should restore every row when filters are cleared')
+	test.deepEqual(
+		bodyColumn(holder, 0),
+		['Charlie', 'Alice', 'Bob'],
+		'Should restore every row when filters are cleared'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -665,7 +786,10 @@ tape('filter: matching nothing renders an empty body, and the popup input surviv
 	const icon = holder.select('.sjpp-table-filter-icon').node() as HTMLElement
 	test.ok(icon.classList.contains('sjpp-table-filter-active'), 'Should mark the filter symbol active')
 	typeFilter(holder, 0, '')
-	test.notOk(icon.classList.contains('sjpp-table-filter-active'), 'Should clear the active mark when the filter is emptied')
+	test.notOk(
+		icon.classList.contains('sjpp-table-filter-active'),
+		'Should clear the active mark when the filter is emptied'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -681,7 +805,11 @@ const numericFilterColumns: TableBaseColumn[] = [
 function namesAfterAgeFilter(text: string, holders: any[]): string[] {
 	const holder = getHolder()
 	holders.push(holder)
-	new TableBase({ columns: numericFilterColumns, rows: makeSortFilterRows().map(r => [r[0], r[1]]), div: holder }).render()
+	new TableBase({
+		columns: numericFilterColumns,
+		rows: makeSortFilterRows().map(r => [r[0], r[1]]),
+		div: holder
+	}).render()
 	typeFilter(holder, 1, text)
 	return bodyColumn(holder, 0)
 }
@@ -707,7 +835,11 @@ tape('filter: plain text in a numeric column falls back to substring matching', 
 	const holders: any[] = []
 
 	test.deepEqual(namesAfterAgeFilter('3', holders), ['Charlie', 'Alice'], '3 matches 35 and 30')
-	test.deepEqual(namesAfterAgeFilter('>abc', holders), [], 'an invalid expression is treated as text and matches nothing')
+	test.deepEqual(
+		namesAfterAgeFilter('>abc', holders),
+		[],
+		'an invalid expression is treated as text and matches nothing'
+	)
 
 	if ((test as any)._ok) for (const holder of holders) holder.remove()
 	test.end()
@@ -717,7 +849,10 @@ tape('filter: numeric expressions combine with sort and do not break text column
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	new TableBase({
-		columns: [{ label: 'Name', filterable: true }, { label: 'Age', filterable: true, sortable: true }],
+		columns: [
+			{ label: 'Name', filterable: true },
+			{ label: 'Age', filterable: true, sortable: true }
+		],
 		rows: makeSortFilterRows().map(r => [r[0], r[1]]),
 		div: holder
 	}).render()
@@ -765,7 +900,11 @@ tape('sort + filter: sort persists while filtering and vice versa', test => {
 	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Bob'], 'Should re-sort the filtered rows')
 
 	typeFilter(holder, 2, '')
-	test.deepEqual(bodyColumn(holder, 0), ['Charlie', 'Alice', 'Bob'], 'Should apply the age-descending sort to all rows once unfiltered')
+	test.deepEqual(
+		bodyColumn(holder, 0),
+		['Charlie', 'Alice', 'Bob'],
+		'Should apply the age-descending sort to all rows once unfiltered'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -779,7 +918,9 @@ tape('getOriginalIndex: reports the index in the caller array after sort and fil
 
 	// each displayed <tr> carries its row object as its datum
 	const shownOriginalIndexes = () =>
-		(holder.selectAll('tbody tr').nodes() as HTMLElement[]).map(tr => table.getOriginalIndex(d3s.select(tr).datum() as TableBaseRow))
+		(holder.selectAll('tbody tr').nodes() as HTMLElement[]).map(tr =>
+			table.getOriginalIndex(d3s.select(tr).datum() as TableBaseRow)
+		)
 
 	table.sortByColumn(0) // Alice, Bob, Charlie
 	test.deepEqual(shownOriginalIndexes(), [1, 2, 0], 'Should map sorted rows back to their original positions')
@@ -843,7 +984,10 @@ tape('edit: non-editable, url and html cells do not become inputs', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	const columns: TableBaseColumn[] = [{ label: 'A', editable: true }, { label: 'B' }]
-	const rows: TableBaseRow[] = [[{ url: 'https://example.com' }, { value: 'x' }], [{ html: '<b>b</b>' }, { value: 'y' }]]
+	const rows: TableBaseRow[] = [
+		[{ url: 'https://example.com' }, { value: 'x' }],
+		[{ html: '<b>b</b>' }, { value: 'y' }]
+	]
 	new TableBase({ columns, rows, div: holder }).render()
 
 	test.notOk(editCell(holder, 0, 0, null).input, 'Should not edit a url cell')
@@ -923,7 +1067,7 @@ tape('edit: a number cell only accepts numbers and stays a number', test => {
 	test.strictEqual(rows[0][1].value, 40, 'Should store a number')
 	test.equal(called, 1, 'Should call onEdit for a valid number')
 
-	for (const bad of ['n/a', "1; DROP TABLE users", '', '  ']) {
+	for (const bad of ['n/a', '1; DROP TABLE users', '', '  ']) {
 		const { td } = editCell(holder, 1, 1, bad)
 		test.strictEqual(rows[1][1].value, 30, `Should reject "${bad}" and keep the number`)
 		test.equal(td.textContent, '30', `Should revert the displayed text after "${bad}"`)
@@ -1029,11 +1173,21 @@ tape('select: multiple mode renders checkboxes, single mode renders radios shari
 
 	const multiInputs = multi.holder.selectAll('tbody input').nodes() as HTMLInputElement[]
 	const singleInputs = single.holder.selectAll('tbody input').nodes() as HTMLInputElement[]
-	test.ok(multiInputs.every(i => i.type === 'checkbox'), 'Should render checkboxes by default')
-	test.ok(singleInputs.every(i => i.type === 'radio'), 'Should render radios in singleMode')
+	test.ok(
+		multiInputs.every(i => i.type === 'checkbox'),
+		'Should render checkboxes by default'
+	)
+	test.ok(
+		singleInputs.every(i => i.type === 'radio'),
+		'Should render radios in singleMode'
+	)
 	test.equal(new Set(singleInputs.map(i => i.name)).size, 1, 'Radios should share one name so they group')
 	test.notEqual(singleInputs[0].name, multiInputs[0].name, 'Two tables should not share an input name')
-	test.equal(multi.holder.selectAll('thead th').size(), sortFilterColumns.length + 1, 'Should add a header cell for the column')
+	test.equal(
+		multi.holder.selectAll('thead th').size(),
+		sortFilterColumns.length + 1,
+		'Should add a header cell for the column'
+	)
 
 	if ((test as any)._ok) for (const { holder } of [multi, single]) holder.remove()
 	test.end()
@@ -1045,12 +1199,20 @@ tape('select: clicking the input, the row, or pressing Enter/Space all call the 
 	const rowCell = (i: number) => trAt(holder, i).cells[1]
 
 	inputAt(holder, 0).click()
-	test.deepEqual(calls.pop(), { idx: 0, checked: true, isInput: true }, 'Input click: original index, node.checked, input node')
+	test.deepEqual(
+		calls.pop(),
+		{ idx: 0, checked: true, isInput: true },
+		'Input click: original index, node.checked, input node'
+	)
 
 	rowCell(1).dispatchEvent(new Event('click', { bubbles: true }))
 	test.deepEqual(calls.pop(), { idx: 1, checked: true, isInput: true }, 'Row click: same arguments')
 	rowCell(1).dispatchEvent(new Event('click', { bubbles: true }))
-	test.deepEqual(calls.pop(), { idx: 1, checked: false, isInput: true }, 'Row click again deselects and reports checked=false')
+	test.deepEqual(
+		calls.pop(),
+		{ idx: 1, checked: false, isInput: true },
+		'Row click again deselects and reports checked=false'
+	)
 
 	trAt(holder, 2).focus()
 	trAt(holder, 2).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
@@ -1123,7 +1285,7 @@ tape('select: the callback reports the original index after sort, and selection 
 	table.sortByColumn(0) // Alice, Bob, Charlie
 	inputAt(holder, 0).click() // Alice is original row 1
 	test.equal(calls.pop()!.idx, 1, 'Should report the index in the caller array, not the displayed position')
-	test.equal((inputAt(holder, 0).getAttribute('value')), '1', "Input value should be the original index")
+	test.equal(inputAt(holder, 0).getAttribute('value'), '1', 'Input value should be the original index')
 
 	table.sortByColumn(0) // Charlie, Bob, Alice
 	test.deepEqual(checkedNames(holder), ['Alice'], 'Selection should follow the row through a re-sort')
@@ -1217,36 +1379,51 @@ tape('select: invalid selection options throw', test => {
 		new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder, selection })
 	test.throws(make({ selectedRows: [5] }), /out of range/, 'Should reject an index past the last row')
 	test.throws(make({ singleMode: true, selectAll: true }), /singleMode/, 'Should reject selectAll with singleMode')
-	test.throws(make({ singleMode: true, selectedRows: [0, 1] }), /only one/, 'Should reject two preselected rows in singleMode')
+	test.throws(
+		make({ singleMode: true, selectedRows: [0, 1] }),
+		/only one/,
+		'Should reject two preselected rows in singleMode'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
 })
 
-tape('select: the check-all box selects and clears displayed rows, calls onSelect per change, and shows a dash for some', test => {
-	test.timeoutAfter(100)
-	const calls: Call[] = []
-	const { holder, table } = makeOptTable({
-		selection: { onSelect: (idx, node) => calls.push({ idx, checked: node.checked, isInput: true }) }
-	})
+tape(
+	'select: the check-all box selects and clears displayed rows, calls onSelect per change, and shows a dash for some',
+	test => {
+		test.timeoutAfter(100)
+		const calls: Call[] = []
+		const { holder, table } = makeOptTable({
+			selection: { onSelect: (idx, node) => calls.push({ idx, checked: node.checked, isInput: true }) }
+		})
 
-	checkAll(holder).click()
-	test.deepEqual(table.getSelectedIndexes(), [0, 1, 2], 'Should select every displayed row')
-	test.deepEqual(calls.map(c => c.idx), [0, 1, 2], 'Should call onSelect once per row that changed')
+		checkAll(holder).click()
+		test.deepEqual(table.getSelectedIndexes(), [0, 1, 2], 'Should select every displayed row')
+		test.deepEqual(
+			calls.map(c => c.idx),
+			[0, 1, 2],
+			'Should call onSelect once per row that changed'
+		)
 
-	inputAt(holder, 1).click()
-	test.notOk(checkAll(holder).checked, 'Should uncheck when a row is deselected')
-	test.ok(checkAll(holder).indeterminate, 'Should show a dash when only some rows are selected')
+		inputAt(holder, 1).click()
+		test.notOk(checkAll(holder).checked, 'Should uncheck when a row is deselected')
+		test.ok(checkAll(holder).indeterminate, 'Should show a dash when only some rows are selected')
 
-	calls.length = 0
-	checkAll(holder).click() // dash -> all
-	test.deepEqual(calls.map(c => c.idx), [1], 'Should only call for the row that was not already selected')
-	checkAll(holder).click() // all -> none
-	test.deepEqual(table.getSelectedIndexes(), [], 'Should clear every displayed row')
+		calls.length = 0
+		checkAll(holder).click() // dash -> all
+		test.deepEqual(
+			calls.map(c => c.idx),
+			[1],
+			'Should only call for the row that was not already selected'
+		)
+		checkAll(holder).click() // all -> none
+		test.deepEqual(table.getSelectedIndexes(), [], 'Should clear every displayed row')
 
-	if ((test as any)._ok) holder.remove()
-	test.end()
-})
+		if ((test as any)._ok) holder.remove()
+		test.end()
+	}
+)
 
 tape('select: there is no check-all box in singleMode', test => {
 	test.timeoutAfter(100)
@@ -1266,7 +1443,11 @@ tape('select: check-all acts on the current page only', test => {
 	test.deepEqual(table.getSelectedIndexes(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 'Should select the 10 rows on this page')
 	table.goToPage(2)
 	test.notOk(checkAll(holder).checked, 'Check-all should reflect the new page')
-	test.equal(checkAll(holder).getAttribute('aria-label'), 'Select all rows on this page', 'Should say it acts on the page')
+	test.equal(
+		checkAll(holder).getAttribute('aria-label'),
+		'Select all rows on this page',
+		'Should say it acts on the page'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -1276,12 +1457,20 @@ tape('select: hideInput hides the input and header cell but rows still select', 
 	test.timeoutAfter(100)
 	const calls: Call[] = []
 	const { holder } = makeOptTable({
-		selection: { singleMode: true, hideInput: true, onSelect: (idx, node) => calls.push({ idx, checked: node.checked, isInput: true }) }
+		selection: {
+			singleMode: true,
+			hideInput: true,
+			onSelect: (idx, node) => calls.push({ idx, checked: node.checked, isInput: true })
+		}
 	})
 
 	const input = inputAt(holder, 0)
 	test.equal((input.parentElement as HTMLElement).style.display, 'none', 'Should hide the input cell')
-	test.equal((holder.select('thead th').node() as HTMLElement).style.display, 'none', 'Should hide the matching header cell')
+	test.equal(
+		(holder.select('thead th').node() as HTMLElement).style.display,
+		'none',
+		'Should hide the matching header cell'
+	)
 	trAt(holder, 1).cells[1].dispatchEvent(new Event('click', { bubbles: true }))
 	test.deepEqual(calls, [{ idx: 1, checked: true, isInput: true }], 'A row click should still select')
 
@@ -1357,7 +1546,7 @@ tape('select: autoScroll scrolls the first preselected row into view, unless dis
 		test.deepEqual(scrolled, ['Bob'], 'Should scroll only to the first preselected row of the table that allows it')
 	} finally {
 		Element.prototype.scrollIntoView = original
-	} 
+	}
 
 	if ((test as any)._ok) for (const table of mine) table.remove()
 	test.end()
@@ -1431,9 +1620,17 @@ tape('buttons: onChange runs on render and on every selection change, but not on
 tape('buttons: buttonsAlign, selectAll enabling, and validation', test => {
 	test.timeoutAfter(100)
 	const left = makeButtonTable({ styles: { buttonsAlign: 'left' } })
-	test.equal((left.holder.select('.sjpp-table-buttons').node() as HTMLElement).style.justifyContent, 'flex-start', 'Should align left')
+	test.equal(
+		(left.holder.select('.sjpp-table-buttons').node() as HTMLElement).style.justifyContent,
+		'flex-start',
+		'Should align left'
+	)
 	const right = makeButtonTable()
-	test.equal((right.holder.select('.sjpp-table-buttons').node() as HTMLElement).style.justifyContent, 'flex-end', 'Should align right by default')
+	test.equal(
+		(right.holder.select('.sjpp-table-buttons').node() as HTMLElement).style.justifyContent,
+		'flex-end',
+		'Should align right by default'
+	)
 	const all = makeButtonTable({ selection: { selectAll: true } })
 	test.notOk(all.button.disabled, 'selectAll should enable the buttons')
 
@@ -1617,7 +1814,10 @@ tape('page: shows one page at the bottom with info, page-size select and buttons
 	test.equal(pagerButton(holder, '1').getAttribute('aria-current'), 'page', 'Should mark the current page')
 	const tableNode = holder.select('table').node() as HTMLElement
 	const pagerNode = holder.select('.sjpp-table-pager').node() as HTMLElement
-	test.ok(tableNode.compareDocumentPosition(pagerNode) & Node.DOCUMENT_POSITION_FOLLOWING, 'Pager should come after the table')
+	test.ok(
+		tableNode.compareDocumentPosition(pagerNode) & Node.DOCUMENT_POSITION_FOLLOWING,
+		'Pager should come after the table'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -1680,10 +1880,15 @@ tape('page: a long page list collapses with ellipses', test => {
 	test.timeoutAfter(100)
 	const { holder, table } = makePagedTable(200, 10) // 20 pages
 
-	const labels = () => (holder.selectAll('.sjpp-table-page-nav button').nodes() as HTMLElement[]).map(b => b.textContent)
+	const labels = () =>
+		(holder.selectAll('.sjpp-table-page-nav button').nodes() as HTMLElement[]).map(b => b.textContent)
 	test.deepEqual(labels(), ['Previous', '1', '2', '3', '20', 'Next'], 'Page 1 should show 1-3 and the last page')
 	table.goToPage(10)
-	test.deepEqual(labels(), ['Previous', '1', '8', '9', '10', '11', '12', '20', 'Next'], 'A middle page should show a window')
+	test.deepEqual(
+		labels(),
+		['Previous', '1', '8', '9', '10', '11', '12', '20', 'Next'],
+		'A middle page should show a window'
+	)
 	test.equal(holder.selectAll('.sjpp-table-page-nav span').size(), 2, 'Should render an ellipsis for each gap')
 
 	if ((test as any)._ok) holder.remove()
@@ -1698,20 +1903,35 @@ tape('page: sort and filter act on all rows, reset to page 1, and report it', te
 
 	sortViaMenu(holder, 0) // name ascending
 	sortViaMenu(holder, 0) // name descending
-	test.deepEqual(bodyColumn(holder, 0).slice(0, 1), ['name-24'], 'Descending sort should use every row, not just the page')
+	test.deepEqual(
+		bodyColumn(holder, 0).slice(0, 1),
+		['name-24'],
+		'Descending sort should use every row, not just the page'
+	)
 	test.equal(pageInfo(holder), 'Showing 1 to 10 of 25 entries', 'Sort should go back to page 1')
-	test.deepEqual(changes, [{ currentPage: 1, pageSize: 10 }], 'Should report the reset once, not when already on page 1')
+	test.deepEqual(
+		changes,
+		[{ currentPage: 1, pageSize: 10 }],
+		'Should report the reset once, not when already on page 1'
+	)
 
 	pagerButton(holder, 'Next').click()
 	changes.length = 0
 	typeFilter(holder, 0, 'name-1')
-	test.equal(pageInfo(holder), 'Showing 1 to 10 of 10 entries', 'Filter should count only matching rows and reset the page')
+	test.equal(
+		pageInfo(holder),
+		'Showing 1 to 10 of 10 entries',
+		'Filter should count only matching rows and reset the page'
+	)
 	test.deepEqual(changes, [{ currentPage: 1, pageSize: 10 }], 'Filter should report the reset')
 
 	typeFilter(holder, 0, 'zzz')
 	test.equal(pageInfo(holder), 'Showing 0 entries', 'Should handle no matches')
 	test.equal(holder.selectAll('tbody tr').size(), 0, 'Should render no rows')
-	test.ok(pagerButton(holder, 'Next').disabled && pagerButton(holder, 'Previous').disabled, 'Both arrows should be disabled')
+	test.ok(
+		pagerButton(holder, 'Next').disabled && pagerButton(holder, 'Previous').disabled,
+		'Both arrows should be disabled'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -1757,7 +1977,10 @@ tape('page: selection and original indexes hold across pages', test => {
 	test.deepEqual(calls, [0, 10], 'Should report original indexes on later pages')
 	test.deepEqual(table.getSelectedIndexes(), [0, 10], 'Should keep selections from other pages')
 	table.goToPage(1)
-	test.ok((holder.select('tbody input').node() as HTMLInputElement).checked, 'Should restore the checkbox when coming back')
+	test.ok(
+		(holder.select('tbody input').node() as HTMLInputElement).checked,
+		'Should restore the checkbox when coming back'
+	)
 	test.equal(holder.selectAll('tbody tr').size(), 10, 'Should show one page of rows')
 
 	if ((test as any)._ok) holder.remove()
@@ -1773,7 +1996,11 @@ tape('page: page changes are announced and the pager is labelled', test => {
 	test.equal(status.textContent, 'Page 2 of 3', 'Should announce the page')
 	test.equal(holder.select('nav').attr('aria-label'), 'Pagination', 'Should label the nav')
 	test.equal(pagerButton(holder, '2').getAttribute('aria-label'), 'Page 2', 'Page buttons should have a full label')
-	test.equal(pagerButton(holder, 'Next').getAttribute('aria-label'), 'Go to next page', 'Arrows should have a full label')
+	test.equal(
+		pagerButton(holder, 'Next').getAttribute('aria-label'),
+		'Go to next page',
+		'Arrows should have a full label'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -1811,7 +2038,10 @@ tape('a11y: headers have scope=col and the table can be given an accessible name
 	}).render()
 
 	const ths = holder.selectAll('thead th').nodes() as HTMLElement[]
-	test.ok(ths.every(th => th.getAttribute('scope') === 'col'), 'Every <th> should have scope="col"')
+	test.ok(
+		ths.every(th => th.getAttribute('scope') === 'col'),
+		'Every <th> should have scope="col"'
+	)
 	test.equal(ths[0].getAttribute('aria-label'), 'Row number', 'Should name the otherwise empty line-number header')
 	test.equal(holder.select('table').attr('aria-label'), 'People', 'Should set aria-label on the table')
 
@@ -1831,12 +2061,28 @@ tape('a11y: the column button is focusable, named, and announces its popup; aria
 	test.equal(button.type, 'button', 'Should not act as a form submit button')
 	test.ok(button.tabIndex >= 0, 'Should be in the tab order')
 	test.equal(button.getAttribute('aria-label'), 'Sort and filter Name', 'Should name both features')
-	test.equal((th(1).querySelector('button') as HTMLElement).getAttribute('aria-label'), 'Sort Age', 'Should name sort only')
-	test.equal((th(2).querySelector('button') as HTMLElement).getAttribute('aria-label'), 'Filter Role', 'Should name filter only')
+	test.equal(
+		(th(1).querySelector('button') as HTMLElement).getAttribute('aria-label'),
+		'Sort Age',
+		'Should name sort only'
+	)
+	test.equal(
+		(th(2).querySelector('button') as HTMLElement).getAttribute('aria-label'),
+		'Filter Role',
+		'Should name filter only'
+	)
 	test.equal(button.getAttribute('aria-haspopup'), 'true', 'Should announce a popup')
 	test.equal(button.getAttribute('aria-expanded'), 'false', 'Should start collapsed')
-	test.equal(nameTh.querySelector('.sjpp-table-sort-indicator')!.getAttribute('aria-hidden'), 'true', 'Should hide the decorative arrow')
-	test.equal(nameTh.querySelector('.sjpp-table-filter-icon')!.getAttribute('aria-hidden'), 'true', 'Should hide the decorative filter symbol')
+	test.equal(
+		nameTh.querySelector('.sjpp-table-sort-indicator')!.getAttribute('aria-hidden'),
+		'true',
+		'Should hide the decorative arrow'
+	)
+	test.equal(
+		nameTh.querySelector('.sjpp-table-filter-icon')!.getAttribute('aria-hidden'),
+		'true',
+		'Should hide the decorative filter symbol'
+	)
 
 	test.equal(nameTh.getAttribute('aria-sort'), 'none', 'Should start unsorted')
 	sortViaMenu(holder, 0)
@@ -1948,8 +2194,21 @@ tape('\n', test => {
 tape('url: only web, mail and relative urls become links; anything else is shown as text', test => {
 	test.timeoutAfter(200)
 	const holder = getHolder()
-	const safe = ['https://example.com/a?b=1', 'http://example.com', 'mailto:someone@example.com', '/relative/path', 'page.html']
-	const unsafe = ['javascript:alert(1)', 'JaVaScRiPt:alert(1)', '  javascript:alert(1)', '\tjavascript:alert(1)', 'data:text/html,<b>x</b>', 'vbscript:msgbox(1)']
+	const safe = [
+		'https://example.com/a?b=1',
+		'http://example.com',
+		'mailto:someone@example.com',
+		'/relative/path',
+		'page.html'
+	]
+	const unsafe = [
+		'javascript:alert(1)',
+		'JaVaScRiPt:alert(1)',
+		'  javascript:alert(1)',
+		'\tjavascript:alert(1)',
+		'data:text/html,<b>x</b>',
+		'vbscript:msgbox(1)'
+	]
 	const rows: TableBaseRow[] = [...safe, ...unsafe].map(url => [{ url }])
 	new TableBase({ columns: [{ label: 'Link' }], rows, div: holder }).render()
 	const cells = holder.selectAll('tbody td').nodes() as HTMLElement[]
@@ -1992,12 +2251,19 @@ tape('filter: a very long numeric-looking filter is truncated and does not hang'
 	test.timeoutAfter(2000)
 	const holder = getHolder()
 	const table = new TableBase({
-		columns: [{ label: 'Name', filterable: true }, { label: 'Age', filterable: true }],
+		columns: [
+			{ label: 'Name', filterable: true },
+			{ label: 'Age', filterable: true }
+		],
 		rows: makeSortFilterRows().map(r => [r[0], r[1]]),
 		div: holder
 	}).render()
 
-	for (const hostile of ['>' + '1'.repeat(200000) + 'x', '1'.repeat(200000) + '-' + '1'.repeat(200000) + 'x', '-'.repeat(200000)]) {
+	for (const hostile of [
+		'>' + '1'.repeat(200000) + 'x',
+		'1'.repeat(200000) + '-' + '1'.repeat(200000) + 'x',
+		'-'.repeat(200000)
+	]) {
 		const start = performance.now()
 		table.setColumnFilter(1, hostile)
 		test.ok(performance.now() - start < 500, `Should return promptly for a ${hostile.length}-character filter`)
@@ -2014,7 +2280,12 @@ tape('styles: maxWidth and maxHeight size the wrapper, with defaults', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	const rows: TableBaseRow[] = [[{ value: 'x' }]]
-	const custom = new TableBase({ columns: [{ label: 'A' }], rows, div: holder, styles: { maxWidth: '300px', maxHeight: '120px' } }).render()
+	const custom = new TableBase({
+		columns: [{ label: 'A' }],
+		rows,
+		div: holder,
+		styles: { maxWidth: '300px', maxHeight: '120px' }
+	}).render()
 	const wrapper = holder.select('.sjpp-table-base').node() as HTMLElement
 	test.equal(wrapper.style.maxWidth, '300px', 'Should apply maxWidth')
 	test.equal(wrapper.style.maxHeight, '120px', 'Should apply maxHeight')
@@ -2103,7 +2374,10 @@ tape('render(): a second render keeps the current sort and filter state', test =
 	test.deepEqual(indicators, ['▲', '⇅'], 'Should restore the sort indicator')
 	const input = openColumnMenu(holder, 2).querySelector('input') as HTMLInputElement
 	test.equal(input.value, 'engineer', 'Should restore the filter text')
-	test.ok(holder.select('.sjpp-table-filter-icon.sjpp-table-filter-active').node(), 'Should restore the active filter symbol')
+	test.ok(
+		holder.select('.sjpp-table-filter-icon.sjpp-table-filter-active').node(),
+		'Should restore the active filter symbol'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
