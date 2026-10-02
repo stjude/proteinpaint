@@ -26,6 +26,9 @@
 	   a --watch or --watch-path option, still runs as a child process that receives the credentials as env
 	   variables, since a watch mode restarts the server, which would no longer find a removed handoff file.
 
+	4. in a container (PP_MODE=container*), logs a warning for each recommended container runtime setting
+	   that is not applied, see runtimePosture.mjs; the warnings do not stop the server from starting.
+
 	usage: node envHelpers.mjs <node | tsx> [args...]
 	examples:
 	  node envHelpers.mjs node --enable-source-maps app-server.mjs
@@ -48,6 +51,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { parseEnv } from 'node:util'
 import { spawn } from 'node:child_process'
+// imported only without the permission model, which would deny reading it before envHelpers() can report that error
+const runtimePosture = process.permission ? undefined : await import('./runtimePosture.mjs')
 
 if (isMainModule()) {
 	try {
@@ -73,6 +78,7 @@ export function envHelpers(args, deps = {}) {
 	assertCredsFilesNotAllowed(credsFiles, config, ctx)
 	ctx.fs.writeFileSync(path.join(ctx.cwd, 'node.config.json'), JSON.stringify(config, null, '\t') + '\n')
 	const creds = { ...getEnvCreds(ctx), ...readCreds(credsFiles, ctx) }
+	mayCheckRuntimePosture(config, ctx)
 	return runCommand(command, creds, ctx)
 }
 
@@ -85,11 +91,12 @@ export function createContext({
 	cwd = process.cwd(),
 	execPath = process.execPath,
 	tmpdir = os.tmpdir(),
-	homedir = os.homedir()
+	homedir = os.homedir(),
+	checkPosture = runtimePosture?.checkRuntimePosture
 } = {}) {
 	const dotenvFile = path.join(cwd, '.env')
 	const dotenv = _fs.existsSync(dotenvFile) ? parseEnv(_fs.readFileSync(dotenvFile, 'utf8')) : {}
-	return { fs: _fs, spawn: _spawn, execve, env, dotenv, cwd, execPath, tmpdir, homedir }
+	return { fs: _fs, spawn: _spawn, execve, env, dotenv, cwd, execPath, tmpdir, homedir, checkPosture }
 }
 
 // router: each supported command has its own position for the config flag, where it is parsed as an option
@@ -149,6 +156,18 @@ export function getNodeConfig(ctx) {
 			// needed for native modules such as sqlite, which are also not restricted by the permission model
 			'allow-addons': true
 		}
+	}
+}
+
+// in a container, logs the recommended runtime settings that are not applied; the allowed write dirs
+// that exist are expected to be on noexec mounts
+function mayCheckRuntimePosture(config, ctx) {
+	if (!ctx.env.PP_MODE?.startsWith('container') || !ctx.checkPosture) return
+	try {
+		const writableDirs = config.nodeOptions['allow-fs-write'].filter(p => ctx.fs.existsSync(p))
+		runtimePosture.logRuntimePosture(ctx.checkPosture({ tmpdir: ctx.tmpdir, writableDirs }))
+	} catch (e) {
+		console.warn(`envHelpers.mjs: WARNING unable to check the runtime settings: ${e.message || e}`)
 	}
 }
 

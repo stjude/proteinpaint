@@ -1,5 +1,6 @@
 Features:
 - add container/runtimePosture.mjs, a CLI that reports which recommended container runtime settings are not applied
+- in a container, envHelpers.mjs logs a warning for each recommended runtime setting that is not applied, using runtimePosture.mjs
 
 Fixes:
 - run Rscript with --vanilla and python with -E -s, to use only the interpreter defaults

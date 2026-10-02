@@ -432,8 +432,9 @@ test('smoke: a flag in the envHelpers.mjs arguments is rejected with a non-zero 
 
 // a context from a fake fs and spawn that FAIL CLOSED: reading an unmodeled file throws ENOENT,
 // and only <cwd>/node.config.json may be written; ctx.deps is for calling envHelpers(args, deps)
-function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = '/app', execve } = {}) {
+function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = '/app', execve, posture } = {}) {
 	const written = {}
+	const postureCalls = []
 	const spawned = []
 	const execved = []
 	const removed = []
@@ -470,10 +471,52 @@ function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = 
 		execPath: '/node/v24/bin/node',
 		tmpdir: '/tmp/user',
 		homedir: '/home/dev',
-		hasPermissionModel: false
+		hasPermissionModel: false,
+		checkPosture: opts => {
+			postureCalls.push(opts)
+			if (posture instanceof Error) throw posture
+			return posture || { warnings: [], unchecked: [] }
+		}
 	}
-	return Object.assign(createContext(deps), { deps, written, spawned, execved, removed })
+	return Object.assign(createContext(deps), { deps, written, spawned, execved, removed, postureCalls })
 }
+
+test('container: the runtime settings are checked with the allowed write dirs that exist, and warnings are logged', t => {
+	const warn = t.mock.method(console, 'warn', () => {})
+	const ctx = fakeContext({
+		env: { PP_MODE: 'container-prod' },
+		exists: ['/home/root/pp/cache', '/tmp/user'],
+		posture: { warnings: ['the root filesystem is writable, mount it read-only'], unchecked: [] }
+	})
+	runInProcess(t, ['node', 'app.mjs'], ctx)
+	assert.equal(ctx.postureCalls.length, 1)
+	assert.equal(ctx.postureCalls[0].tmpdir, '/tmp/user')
+	// /home/root/pp/tp_write is also allowed, but is skipped since it does not exist
+	assert.deepEqual(ctx.postureCalls[0].writableDirs.toSorted(), ['/home/root/pp/cache', '/tmp/user'])
+	assert.deepEqual(
+		warn.mock.calls.map(c => c.arguments[0]),
+		['runtimePosture.mjs: WARNING the root filesystem is writable, mount it read-only']
+	)
+	assert.equal(ctx.execved.length, 1, 'the server still starts')
+})
+
+test('dev: the runtime settings are not checked', t => {
+	const ctx = fakeContext({ files: { '/secrets/pp.json': '{}' } })
+	runInProcess(t, ['node', 'app.mjs'], ctx)
+	assert.equal(ctx.postureCalls.length, 0)
+	assert.equal(ctx.execved.length, 1)
+})
+
+test('container: an error from the runtime settings check is logged, and the server still starts', t => {
+	const warn = t.mock.method(console, 'warn', () => {})
+	const ctx = fakeContext({ env: { PP_MODE: 'container-prod' }, posture: new Error('boom') })
+	runInProcess(t, ['node', 'app.mjs'], ctx)
+	assert.deepEqual(
+		warn.mock.calls.map(c => c.arguments[0]),
+		['envHelpers.mjs: WARNING unable to check the runtime settings: boom']
+	)
+	assert.equal(ctx.execved.length, 1)
+})
 
 // runs envHelpers() with the fake context, and removes the signal listeners that it adds to this test process
 function runInProcess(t, args, ctx) {
