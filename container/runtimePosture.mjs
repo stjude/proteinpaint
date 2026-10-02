@@ -72,7 +72,8 @@ export function checkRuntimePosture({
 	const mountinfo = read('/proc/self/mountinfo')
 	if (mountinfo !== undefined) {
 		const mounts = parseMountinfo(mountinfo)
-		const root = mounts.find(m => m.mountPoint == '/')
+		// the same selection as for the other dirs, the last of any stacked mounts on /
+		const root = findMount(mounts, '/')
 		if (root && !root.options.includes('ro')) warnings.push('the root filesystem is writable, mount it read-only')
 		for (const dir of new Set([tmpdir, ...writableDirs])) {
 			const mount = findMount(mounts, realpath(_fs, dir))
