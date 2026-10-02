@@ -84,6 +84,22 @@ test('a venv package dir is checked on its own, since its access can differ from
 	assert.deepEqual(checkRuntimePosture(fakeDeps({ denied: ['/opt/venv/lib'] })).unchecked, ['/opt/venv/lib'])
 })
 
+test('an unexpected lib dir probe error is unchecked, which is an error in strict mode', () => {
+	const result = checkRuntimePosture(fakeDeps({ probeErrors: { '/opt/venv': 'EIO' } }))
+	assert.deepEqual(result, { findings: [], unchecked: ['/opt/venv'] })
+	const logged = []
+	assert.deepEqual(logRuntimePosture(result, { strict: true, log: m => logged.push(m) }), ['unable to check /opt/venv'])
+	assert.deepEqual(logged, ['runtimePosture.mjs: ERROR unable to check /opt/venv'])
+	// a dir that is not writable, such as on a read-only mount, or that is removed after existsSync(), is checked
+	for (const code of ['EACCES', 'EROFS', 'EPERM', 'ENOENT', 'ENOTDIR']) {
+		assert.deepEqual(
+			checkRuntimePosture(fakeDeps({ probeErrors: { '/opt/venv': code } })),
+			{ findings: [], unchecked: [] },
+			code
+		)
+	}
+})
+
 test('a mount point under a lib dir is checked on its own', () => {
 	const mount = '/usr/local/lib/R/site-library/somepkg'
 	const result = checkRuntimePosture(
@@ -263,7 +279,9 @@ function fakeDeps({
 	dirs = { '/opt/venv/lib': ['python3.14'] },
 	exists = ['/opt/venv/lib/python3.14/site-packages'],
 	// dir -> error code, for readdirSync()
-	listErrors = {}
+	listErrors = {},
+	// dir -> error code, for accessSync(), instead of EACCES for a dir that is not writable
+	probeErrors = {}
 } = {}) {
 	const allFiles = {
 		'/proc/self/status': hardenedStatus,
@@ -297,6 +315,7 @@ function fakeDeps({
 			},
 			accessSync(p) {
 				if (denied.includes(p)) throw error('ERR_ACCESS_DENIED')
+				if (probeErrors[p]) throw error(probeErrors[p])
 				if (!writable.includes(p)) throw error('EACCES')
 			},
 			realpathSync: p => realpaths[p] || p
