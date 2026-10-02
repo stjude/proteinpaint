@@ -10,9 +10,14 @@ import type {
 	ValidSingleCellPlotsResponse,
 	ValidGetDataResponse,
 	ScatterSample,
-	TermWrapper 
+	TermWrapper
 } from '#types'
-import { SINGLECELL_NUMERIC_VALUE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE, TermdbSingleCellPlotsExample } from '#types'
+import {
+	SINGLECELL_NUMERIC_VALUE,
+	SINGLECELL_GENE_EXPRESSION,
+	SINGLECELL_CELLTYPE,
+	TermdbSingleCellPlotsExample
+} from '#types'
 import { validGenomeDs, validString, validNumber } from '#routes/common.ts'
 import { getColors, plotColor } from '#shared'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
@@ -20,11 +25,16 @@ import { isSingleCellTerm } from '#shared/terms.js'
 import { get_bin_label } from '#shared/termdb.bins.js'
 import { getNumericColorDomain } from './colorDomain.ts'
 import { makeCanvas } from './canvasRendering.ts'
+import { hasSingleCellDs } from './dataRoute.ts'
 import { getData } from '../termdb.matrix.js'
 import { getSampleCoordinatesByTerms, refColor } from '../routes/termdb.sampleScatter.js'
+import { genomes } from '#src/initGenomesDs.js'
 
 const payload: RoutePayload = {
-	init,
+	// only set up when at least one ds has ds.queries.singleCell, see dataRoute.ts
+	get init() {
+		return hasSingleCellDs(genomes) ? init : null
+	},
 	request: {
 		typeId: 'TermdbSingleCellPlotsRequest',
 		checker: validTermdbSingleCellPlotsRequest
@@ -210,9 +220,10 @@ async function getSingleCellScatter(req, res, ds) {
 		}
 
 		if (totalCellCount >= q.canvasSettings.cutoff) {
-			const colorDomain = q.colorTW?.term.type == SINGLECELL_NUMERIC_VALUE && q.colorTW.q?.['mode'] == 'continuous'
-				? getNumericColorDomain(samples, q.canvasSettings)
-				: undefined
+			const colorDomain =
+				q.colorTW?.term.type == SINGLECELL_NUMERIC_VALUE && q.colorTW.q?.['mode'] == 'continuous'
+					? getNumericColorDomain(samples, q.canvasSettings)
+					: undefined
 			if (colorDomain) output.result.Default.colorDomain = colorDomain
 			const { src, canvasWidth, canvasHeight } = await makeCanvas(
 				q,
@@ -274,7 +285,15 @@ function getSingleCellDataArgs(q, name, sample) {
 	return { arg, tw, genes }
 }
 
-export function processSamples(coords: any, colorData: { plots: Plot[] }, filteredSamples: Set<string>, tw, sample, ds, data: ValidGetDataResponse) {
+export function processSamples(
+	coords: any,
+	colorData: { plots: Plot[] },
+	filteredSamples: Set<string>,
+	tw,
+	sample,
+	ds,
+	data: ValidGetDataResponse
+) {
 	const samples: FormattedCell2Sample[] = []
 	const categoryCounts = new Map<string, number>()
 	let xMin = Infinity,

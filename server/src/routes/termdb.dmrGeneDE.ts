@@ -4,6 +4,8 @@ import { lengthStratifiedDE, type GeneFC } from '#src/utils/dmrGeneDE.ts'
 import { mayLog } from '#src/helpers.ts'
 import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
 import { formatElapsedTime } from '#shared'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
 /* Do the genes losing gene-body methylation also lose expression?
 
@@ -20,11 +22,20 @@ ZBTB20, CNTNAP2 -- are all 1-2Mb, because a long gene collects more DMRs simply 
 length also predicts expression level and variance. Comparing hits to all other genes would
 recover gene length. See utils/dmrGeneDE.ts for the stratification and its permutation null. */
 
+const payload = {
+	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
+	get init() {
+		return hasDnaMethylationDs(genomes) ? init : null
+	},
+	request: { typeId: undefined },
+	response: { typeId: undefined }
+} as any as RoutePayload
+
 export const api: RouteApi = {
 	endpoint: 'termdb/dmrGeneDE',
 	methods: {
-		get: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload,
-		post: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload
+		get: payload,
+		post: payload
 	}
 }
 

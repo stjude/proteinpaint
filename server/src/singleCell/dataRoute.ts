@@ -1,8 +1,13 @@
 import { validGenomeDs, validBoolean, validString } from '#routes/common.ts'
 import type { RoutePayload, TermdbSingleCellDataRequest, TermdbSingleCellDataResponse, RouteApi } from '#types'
+import { genomes } from '#src/initGenomesDs.js'
 
 export const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has ds.queries.singleCell
+	get init() {
+		return hasSingleCellDs(genomes) ? init : null
+	},
 	request: {
 		typeId: 'TermdbSingleCellDataRequest',
 		checker: validTermdbSingleCellDataRequest
@@ -11,6 +16,13 @@ export const payload: RoutePayload = {
 }
 
 /* given a sample, return it's singlecell data from dataset */
+
+/* also used by the other single cell routes (DEgenesRoute, plotsRoute, samplesRoute) to decide if they are set up */
+export function hasSingleCellDs(genomes) {
+	return Object.values(genomes).some((g: any) =>
+		Object.values(g.datasets || {}).some((ds: any) => ds.queries?.singleCell)
+	)
+}
 
 export const api: RouteApi = {
 	endpoint: 'termdb/singlecellData',

@@ -23,6 +23,8 @@ import {
 	scoreAgainstBackground,
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
 /* Is gene-body methylation loss a cause of reduced transcription, or a footprint of it?
 
@@ -42,11 +44,20 @@ at fold change zero.
 Cheap because the fit already carries both group means per probe: gene bodies go in as
 background_regions, which returns a plain delta and skips smoothing and segmentation entirely. */
 
+const payload = {
+	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
+	get init() {
+		return hasDnaMethylationDs(genomes) ? init : null
+	},
+	request: { typeId: undefined },
+	response: { typeId: undefined }
+} as any as RoutePayload
+
 export const api: RouteApi = {
 	endpoint: 'termdb/geneBodyMeth',
 	methods: {
-		get: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload,
-		post: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload
+		get: payload,
+		post: payload
 	}
 }
 
