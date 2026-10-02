@@ -373,11 +373,9 @@ tape('updateTable() should append plot buttons for each sandbox', test => {
 tape('updateTable() should show the Shown plots column when there are multiple plots total', test => {
 	const { renderer, holder } = getRenderer()
 
-	const shownPlotsHeader = holder
-		.selectAll('th')
-		.filter(function (this: any) {
-			return !!(this as HTMLElement).textContent?.includes('Shown plots')
-		})
+	const shownPlotsHeader = holder.selectAll('th').filter(function (this: any) {
+		return !!(this as HTMLElement).textContent?.includes('Shown plots')
+	})
 	const shownPlotsCells = renderer.tableData.rows.map(
 		row => renderer.table!.rowMap.get(String(row[renderer.tableData.sampleColIdx].value)).cells.shownPlots
 	)
@@ -417,11 +415,7 @@ tape('applyButtonsForSample() should find row by sample ID after sort mutation',
 
 	const s1Cell = renderer.table!.rowMap.get('S1').cells.shownPlots
 	const s2Cell = renderer.table!.rowMap.get('S2').cells.shownPlots
-	test.equal(
-		s1Cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length,
-		1,
-		'Should render button in the moved S1 row'
-	)
+	test.equal(s1Cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 1, 'Should render button in the moved S1 row')
 	test.equal(s2Cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 0, 'Should not render button in other rows')
 
 	endTest(test, holder)
@@ -581,7 +575,8 @@ tape('the column button should show sort and filter symbols and sort the rows fr
 	const { holder } = getRenderer()
 	const names = () => (holder.selectAll('tbody tr').nodes() as HTMLTableRowElement[]).map(tr => tr.cells[2].textContent)
 	const headerButtons = holder.selectAll('thead th button').nodes() as HTMLButtonElement[]
-	const menuOf = (button: HTMLButtonElement) => document.getElementById(button.getAttribute('aria-controls')!) as HTMLElement
+	const menuOf = (button: HTMLButtonElement) =>
+		document.getElementById(button.getAttribute('aria-controls')!) as HTMLElement
 	const choose = (dir: string) => {
 		headerButtons[0].click()
 		;(menuOf(headerButtons[0]).querySelector(`[data-testid="sjpp-table-sort-${dir}-0"]`) as HTMLElement).click()
@@ -589,7 +584,9 @@ tape('the column button should show sort and filter symbols and sort the rows fr
 
 	test.equal(headerButtons.length, 2, 'Sample and Experiment are sortable and filterable, Shown plots is neither')
 	test.ok(
-		headerButtons.every(b => b.querySelector('.sjpp-table-sort-indicator') && b.querySelector('.sjpp-table-filter-icon')),
+		headerButtons.every(
+			b => b.querySelector('.sjpp-table-sort-indicator') && b.querySelector('.sjpp-table-filter-icon')
+		),
 		'Every such column should show both symbols before anything is clicked'
 	)
 
@@ -597,7 +594,11 @@ tape('the column button should show sort and filter symbols and sort the rows fr
 	test.deepEqual(names(), ['S1', 'S2', 'S3'], 'Ascending')
 	choose('desc')
 	test.deepEqual(names(), ['S3', 'S2', 'S1'], 'Descending')
-	test.equal(headerButtons[0].querySelector('.sjpp-table-sort-indicator')!.textContent, '▼', 'The arrow shows the direction')
+	test.equal(
+		headerButtons[0].querySelector('.sjpp-table-sort-indicator')!.textContent,
+		'▼',
+		'The arrow shows the direction'
+	)
 
 	endTest(test, holder)
 })
@@ -640,12 +641,18 @@ tape('the Shown plots column should stay hidden or shown through a sort and a fi
 		).display
 
 	renderer.table!.sortByColumn(0)
-	test.ok(shownPlotsDisplays().every(d => d == 'none'), 'Cells should stay hidden after a sort')
+	test.ok(
+		shownPlotsDisplays().every(d => d == 'none'),
+		'Cells should stay hidden after a sort'
+	)
 	test.equal(headerDisplay(), 'none', 'Header should stay hidden after a sort')
 
 	renderer.table!.setShownPlotsColumnVisibility(true)
 	renderer.table!.sortByColumn(0)
-	test.ok(shownPlotsDisplays().every(d => d == 'table-cell'), 'Cells should stay shown after a sort')
+	test.ok(
+		shownPlotsDisplays().every(d => d == 'table-cell'),
+		'Cells should stay shown after a sort'
+	)
 	renderer.table!.setColumnFilter(0, 's1')
 	test.deepEqual(shownPlotsDisplays(), ['table-cell'], 'Cells should stay shown after a filter')
 	test.equal(headerDisplay(), 'table-cell', 'Header should stay shown')
@@ -659,7 +666,11 @@ tape('sorting should restore the plot buttons that the row redraw removed', test
 	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes.set('S1', [{ plotId: 'p1', div: getMockDiv(), plotName: 'UMAP' }])
 	renderer.updatePlotBtns(sandboxes)
-	test.equal(renderer.table!.rowMap.get('S1').cells.shownPlots.selectAll('.sjpp-sc-table-plot-btn').size(), 1, 'Has a button')
+	test.equal(
+		renderer.table!.rowMap.get('S1').cells.shownPlots.selectAll('.sjpp-sc-table-plot-btn').size(),
+		1,
+		'Has a button'
+	)
 
 	renderer.table!.sortByColumn(0) // ascending
 	renderer.table!.sortByColumn(0) // descending: S3, S2, S1
@@ -683,6 +694,23 @@ tape('clicking the already selected sample should select it again', test => {
 	firstRow.click()
 
 	test.equal(selected, 2, 'Should call updateItem on every click, because selecting also closes the table')
+
+	endTest(test, holder)
+})
+
+tape('clicking the radio of the already selected sample should select it again, once', test => {
+	const picked: string[] = []
+	const { holder } = getRenderer({ updateItem: (item: any) => picked.push(item.sID) })
+	const radio = (i: number) => holder.selectAll('tbody input[type="radio"]').nodes()[i] as HTMLInputElement
+
+	radio(0).click()
+	test.deepEqual(picked, ['S1'], 'Clicking an unselected radio selects its sample exactly once')
+	radio(0).click()
+	test.deepEqual(picked, ['S1', 'S1'], 'Clicking the checked radio again selects the sample again')
+	radio(1).click()
+	test.deepEqual(picked, ['S1', 'S1', 'S2'], 'Clicking another radio selects that sample once')
+	radio(1).click()
+	test.deepEqual(picked, ['S1', 'S1', 'S2', 'S2'], 'And the same on the new selection')
 
 	endTest(test, holder)
 })
