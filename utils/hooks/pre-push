@@ -3,7 +3,7 @@
 set -e
 
 # check the pushed branch name and the commit messages and added lines to push
-./utils/hooks/check-text.sh push
+./utils/hooks/check-text.sh push "$1"
 
 FILES=$(git diff-tree --no-commit-id --name-only --diff-filter=ACM -r origin/master..HEAD)
 echo "number of files to be checked=$(echo "$FILES" | wc -w)"
