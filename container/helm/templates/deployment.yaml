@@ -84,6 +84,7 @@ spec:
             - name: {{ .Values.mounts.config.name }}
               mountPath: {{ .Values.mounts.config.mountPath }}
               subPath: {{ .Values.mounts.config.subPath }}
+              readOnly: true
             {{- range .Values.extraVolumeMounts }}
             - {{- toYaml . | nindent 14 }}
             {{- end }}
