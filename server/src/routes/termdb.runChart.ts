@@ -24,6 +24,9 @@ export const api: RouteApi = {
 ds.isSupportedChartOverride.runChart2 */
 export function hasRunChartDs(genomes) {
 	return Object.values(genomes).some((g: any) =>
-		Object.values(g.datasets || {}).some((ds: any) => ds.isSupportedChartOverride?.['runChart2'])
+		Object.values(g.datasets || {}).some((ds: any) => {
+			const runChart2 = ds.isSupportedChartOverride?.runChart2 ?? ds.commonCharts?.runChart2
+			return !!runChart2
+		})
 	)
 }
