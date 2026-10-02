@@ -138,7 +138,7 @@ tape('/tkbam', async test => {
 			stop: 2,
 			file: 'files/hg38/TermdbTest/trackLst/bam.bam'
 		})
-		test.equal(r?.error, 'invalid chr', `getread should reject chr=${chr}`)
+		test.equal(r?.error, 'q.rglst[].chr invalid chr name', `getread should reject chr=${chr}`)
 	}
 
 	const urlAttack = await send(handler, {
@@ -156,7 +156,7 @@ tape('/tkbam', async test => {
 			nochr: false,
 			regions: [{ chr, start: 1, stop: 100, width: 100 }]
 		})
-		test.equal(r?.error, 'invalid chr', `regions[] should reject chr=${chr}`)
+		test.equal(r?.error, 'q.rglst[].chr invalid chr name', `regions[] should reject chr=${chr}`)
 	}
 	if (hasSamtools) test.notOk(fs.existsSync(outFile), 'samtools view should not write to a requested path')
 	test.end()
@@ -176,7 +176,7 @@ tape('/mdsjunction', async test => {
 			file,
 			junction: { chr, start: 1, stop: 2 }
 		})
-		test.equal(j?.error, 'invalid chr', `junction should reject chr=${chr}`)
+		test.equal(j?.error, 'q.rglst[].chr invalid chr name', `junction should reject chr=${chr}`)
 		const jB = await send(handler, {
 			genome: 'hg38',
 			iscustom: 1,
@@ -185,7 +185,7 @@ tape('/mdsjunction', async test => {
 			junctionB: { chr, start: 1, stop: 2 },
 			junctionAposlst: []
 		})
-		test.equal(jB?.error, 'invalid chr', `junctionB should reject chr=${chr}`)
+		test.equal(jB?.error, 'q.rglst[].chr invalid chr name', `junctionB should reject chr=${chr}`)
 		// rglst is validated by the app middleware (app.middlewares.js) before the handler runs, not by the handler itself
 		test.throws(
 			() => utils.validateRglst({ rglst: [{ chr, start: 1, stop: 2 }] }, getGenome()),
@@ -217,10 +217,10 @@ tape('/dsdata', async test => {
 	const handler = dsdataInit({ genomes: { hg38: genome } })
 	for (const chr of chrAttacks) {
 		const r = await send(handler, { genome: 'hg38', dsname: 'testds', range: { chr, start: 1, stop: 2 } })
-		test.equal(r?.error, 'invalid chr', `range should reject chr=${chr}`)
+		test.equal(r?.error, 'q.rglst[].chr invalid chr name', `range should reject chr=${chr}`)
 	}
 	const noRange = await send(handler, { genome: 'hg38', dsname: 'testds' })
-	test.equal(noRange?.error, 'invalid chr', 'should reject a missing range')
+	test.equal(noRange?.error, 'element of q.rglst[] not object', 'should reject a missing range')
 	test.end()
 })
 
@@ -241,7 +241,7 @@ tape('/mdssurvivalplot', async test => {
 				type: 'os',
 				samplerule: { full: { useall: 1 }, set: { [kind]: 1, gene: 'TP53', chr, start: 1, stop: 2 } }
 			})
-			test.equal(r?.error, 'invalid chr', `samplerule.set.${kind} should reject chr=${chr}`)
+			test.equal(r?.error, 'q.rglst[].chr invalid chr name', `samplerule.set.${kind} should reject chr=${chr}`)
 		}
 	}
 	test.end()
@@ -262,7 +262,7 @@ tape('/termdb?getLDdata', async test => {
 			ldtkname: 'ld',
 			m: { chr, pos: 1, ref: 'A', alt: 'T' }
 		})
-		test.equal(r?.error, 'invalid chr', `m.chr should reject chr=${chr}`)
+		test.equal(r?.error, 'invalid q.m.chr/pos', `m.chr should reject chr=${chr}`)
 	}
 	test.end()
 })
@@ -285,7 +285,7 @@ tape('spawnTool() central guard', async test => {
 		test.doesNotThrow(() => utils.spawnTool('true', args).kill(), `should allow ${JSON.stringify(args)}`)
 	}
 
-	// get_lines_bigfile() goes through the guard, so a route that forgot checkChr is still covered
+	// get_lines_bigfile() goes through the guard, so a route that forgot to validate its chr is still covered
 	const file = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest/TermdbTest_ITD.gz')
 	const tbiHash = sha(file + '.tbi')
 	try {
@@ -319,9 +319,9 @@ tape('/mdsgeneboxplot and /isoformbycoord, via the real route table', async test
 			start: 1,
 			stop: 2
 		})
-		test.equal(box?.error, 'invalid chr', `/mdsgeneboxplot should reject chr=${chr}`)
+		test.equal(box?.error, 'q.rglst[].chr invalid chr name', `/mdsgeneboxplot should reject chr=${chr}`)
 		const iso = await send(routes['/isoformbycoord'], { genome: 'hg38', chr, pos: 1 })
-		test.equal(iso?.error, 'invalid chr', `/isoformbycoord should reject chr=${chr}`)
+		test.equal(iso?.error, 'invalid chr/pos', `/isoformbycoord should reject chr=${chr}`)
 	}
 	test.end()
 })

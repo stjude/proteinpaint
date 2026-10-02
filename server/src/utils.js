@@ -47,7 +47,6 @@ connect_db
 snpgtCacheFile
 bam_ifnochr
 testIfFileIsBigbed
-checkChr
 spawnTool
 validateRglst
 ********************** INTERNAL
@@ -1054,12 +1053,6 @@ genome is used for validating chr names. when routes are fixed, genome should be
 
 throws on any err. makes no return. may update q
 */
-// a request-supplied chr must be a known chromosome before it goes into a samtools/tabix/bcftools argv,
-// otherwise a value like "-o/path" is parsed as an option
-export function checkChr(genome, chr) {
-	if (typeof chr != 'string' || !genome?.chrlookup?.[chr.toUpperCase()]) throw 'invalid chr'
-}
-
 // every samtools/tabix/bcftools spawn goes through here: an argument that starts with "-" and contains ":" is a
 // region built from a request chr (e.g. "-o/path:1-2"), which the tool would parse as an option
 // ponytail: catches region-shaped injection only; request values used as a whole argument must still be validated at the route

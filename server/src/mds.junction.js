@@ -100,12 +100,12 @@ async function get_q(req, genomes) {
 async function do_query(q, ds, dsquery, gn) {
 	if (q.junction) {
 		// details about a clicked junction
-		utils.checkChr(gn, q.junction.chr)
+		utils.validateRglst({ rglst: [q.junction] }, gn)
 		return await get_singlejunction(q, ds, dsquery)
 	}
 	if (q.readcountByjBsamples) {
 		// get median read count for A junctions from the same set of samples as junctionB
-		utils.checkChr(gn, q.junctionB?.chr)
+		utils.validateRglst({ rglst: [q.junctionB] }, gn)
 		return await get_readcountByjBsamples(q, ds, dsquery)
 	}
 

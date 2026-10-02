@@ -1,7 +1,7 @@
 import type { RoutePayload, RouteApi } from '#types'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import { checkChr, spawnTool } from '#src/utils.js'
+import { validateRglst, spawnTool } from '#src/utils.js'
 import * as common from '#shared/common.js'
 import type { DsDataRequest, DsDataResponse } from '#types'
 import { genomes } from '#src/initGenomesDs.js'
@@ -76,7 +76,8 @@ export function init({ genomes }) {
 				}
 
 				if (query.vcffile) {
-					checkChr(genomes[q.genome], req.query.range?.chr)
+					// validates range chr/start/stop before they are used to build the tabix region
+					validateRglst({ rglst: [req.query.range] }, genomes[q.genome])
 					const d = await handle_dsdata_vcf(query, req)
 					data.push(d)
 					continue
