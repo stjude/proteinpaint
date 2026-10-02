@@ -830,17 +830,14 @@ export function read_file(file) {
 
 export async function get_fasta(gn, coord) {
 	// coord may come from a request; rebuild it from validated parts so it can never be read as a samtools option
-	const m = typeof coord == 'string' && coord.match(/^(.+):(\d+)-(\d+)$/)
-	const c = m && gn.chrlookup?.[m[1].toUpperCase()]
-	if (!c) throw 'invalid coordinate'
-	const pos = `${c.name}:${m[2]}-${m[3]}`
+	// donotextend=true keeps the given range as is; a missing actualposition means only a chr name was given
+	const p = typeof coord == 'string' && gn.chrlookup ? common.string2pos(coord, gn, true) : null
+	if (!p?.actualposition) throw 'invalid coordinate'
+	const pos = `${p.chr}:${p.start}-${p.stop}`
 
 	if (gn.genomefile == 'NA') {
 		// not using a real fasta file, return Ns by the length of region
-		const tmp = pos.split(/[:-]/)
-		const fakent = []
-		for (let i = Number(tmp[1]); i <= Number(tmp[2]); i++) fakent.push('N')
-		return `>${pos}\n${fakent.join('')}` // must include fasta header line
+		return `>${pos}\n${'N'.repeat(p.stop - p.start + 1)}` // must include fasta header line
 	}
 
 	// chr:start-stop, positions are 1-based

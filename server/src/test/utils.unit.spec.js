@@ -303,7 +303,11 @@ tape('get_fasta', async test => {
 		'-cr/etc/passwd',
 		'--fai-idx=/tmp/x',
 		'chrX:1-2',
+		'chr1',
 		'chr1:-5-10',
+		'chr1:5--10',
+		'chr1:5-2000',
+		'chr1:10-5',
 		'chr1:1-2 -o/tmp/x',
 		undefined
 	]) {

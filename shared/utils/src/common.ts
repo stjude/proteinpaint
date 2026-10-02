@@ -1475,6 +1475,8 @@ export function string2pos(s, genome, donotextend) {
 			}
 		}
 	}
+	// a "-" right after a delimiter is a minus sign, e.g. "chr1:-5-10"; reject it rather than letting the split below drop it
+	if (/[-:\s]-\d/.test(s)) return null
 	const tmp = s.split(/[-:\s]+/)
 	if (tmp.length == 2) {
 		// must be chr - pos
