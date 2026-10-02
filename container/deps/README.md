@@ -10,6 +10,9 @@ of ProteinPaint, which the release images in `container/server` and `container/f
 | `ppfull` | `ppserver` + the `@sjcrh/proteinpaint-front` package, `app-full.mjs`, and `container/public` |
 
 `ppserver` and `ppfull` run as the unprivileged `app` user (UID/GID 1000), while `ppbase` runs as root.
+The app files under `/home/root/pp/app/active`, including `node_modules` and, in `ppfull`, the client bundle in
+`bin/` and `public/`, are owned by root and only read by the `app` user. The `ppfull` client bundle is generated at
+build time, so nothing under the app dir is written at runtime, except to a dir that a deployment mounts there.
 With rootless podman, map the host account to that user with `--userns=keep-id:uid=1000,gid=1000`,
 as `container/run.sh` does.
 
