@@ -15,6 +15,7 @@ export const GENE_EXPRESSION = 'geneExpression'
 export const ISOFORM_EXPRESSION = 'isoformExpression'
 export const INTEGER = 'integer'
 export const JUNCTION = 'junction'
+export const SPLICING = 'splicing'
 export const METABOLITE_INTENSITY = 'metaboliteIntensity'
 export const MULTIVALUE = 'multivalue'
 export const PROTEOME_ABUNDANCE = 'proteomeAbundance'
@@ -54,6 +55,7 @@ export const TermTypes = {
 	SAMPLELST,
 	METABOLITE_INTENSITY,
 	PROTEOME_ABUNDANCE,
+	SPLICING,
 	PSEUDOBULK,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,

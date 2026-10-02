@@ -519,6 +519,16 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		for the boolean form. */
 		q2.rnaseqGeneCount = q.rnaseqGeneCount.defaultMethod ? { defaultMethod: q.rnaseqGeneCount.defaultMethod } : true
 	}
+	if (q.splicing) {
+		/* Stays `true` unless the ds sets an option, so a dataset that sets none is unchanged on the
+		wire -- both client gates are truthy checks. maxSamplesPerGroup is forwarded because the
+		client enforces the same cap to fail before a round trip; without it the two disagree
+		whenever a dataset overrides the default. The h5 path is never forwarded. */
+		const so: any = {}
+		if (q.splicing.defaultMethod) so.defaultMethod = q.splicing.defaultMethod
+		if (q.splicing.maxSamplesPerGroup) so.maxSamplesPerGroup = q.splicing.maxSamplesPerGroup
+		q2.splicing = Object.keys(so).length ? so : true
+	}
 	if (q.w2) {
 		/* presence-only capability marker: the ds has whole-slide/spatial images.
 		The sc app gates its per-sample spatial probe (SCModel.hasSpatialImage)

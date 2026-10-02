@@ -60,6 +60,7 @@ export const routeFiles = [
 	import('./routes/termdb.descrstats.ts'),
 	import('./routes/termdb.DE.ts'),
 	import('./routes/termdb.diffMeth.ts'),
+	import('./routes/termdb.diffSplice.ts'),
 	import('./routes/termdb.dmr.ts'),
 	import('./routes/termdb.dmrBatch.ts'),
 	import('./routes/termdb.dmrGeneDE.ts'),

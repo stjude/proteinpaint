@@ -162,6 +162,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_getTopMutatedGenes(ds, genome)
 			await validate_query_getSampleImages(ds, genome)
 			await validate_query_rnaseqGeneCount(ds, genome)
+			await validate_query_splicing(ds, genome)
 			await validate_query_singleSampleMutation(ds, genome)
 			await validate_query_singleSampleGenomeQuantification(ds, genome)
 			await validate_query_singleSampleGbtk(ds, genome)
@@ -4230,4 +4231,17 @@ async function validate_query_rnaseqGeneCount(ds) {
 		if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
 	}
 	console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
+}
+
+async function validate_query_splicing(ds) {
+	const q = ds.queries.splicing
+	if (!q) return
+	await setFile(q, 'splicing')
+	const samples = await getH5samples(q.file, q.samplesPath || 'samples')
+	q.allSampleSet = new Set(samples)
+	const unknownSamples = []
+	for (const n of q.allSampleSet) {
+		if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
+	}
+	console.log(q.allSampleSet.size, `splicing samples from ${ds.label}`)
 }
