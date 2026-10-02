@@ -2317,14 +2317,20 @@ tape('cells and headers: data-testid, tooltip and __td', test => {
 	test.end()
 })
 
-tape('sort: missing values keep their place, and a column of mixed types does not throw', test => {
+tape('sort: rows with no value keep their place; numbers sort before text in a mixed column', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	const rows: TableBaseRow[] = [[{ value: 'b' }], [{}], [{ value: 'a' }], [{ value: 3 }]]
 	const table = new TableBase({ columns: [{ label: 'V', sortable: true }], rows, div: holder }).render()
 
-	test.doesNotThrow(() => table.sortByColumn(0, true), 'Ascending should not throw')
-	test.doesNotThrow(() => table.sortByColumn(0, false), 'Descending should not throw')
+	table.sortByColumn(0, true)
+	test.deepEqual(
+		bodyColumn(holder, 0),
+		['3', '', 'a', 'b'],
+		'Ascending: the empty row stays second, the others sort around it'
+	)
+	table.sortByColumn(0, false)
+	test.deepEqual(bodyColumn(holder, 0), ['b', '', 'a', '3'], 'Descending: the empty row still stays second')
 	test.equal(holder.selectAll('tbody tr').size(), 4, 'No row should be lost')
 
 	if ((test as any)._ok) holder.remove()
