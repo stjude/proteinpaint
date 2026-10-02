@@ -12,7 +12,8 @@ test sections:
 - getpcd: valid request
 - getpcd: invalid parameters
 - getpcd: textfile is a directory
-- getpcd: custom color that is not a string
+- getpcd: custom colors
+- unknown request
 - getgeneboxplot: cellfile is a directory
 */
 
@@ -79,6 +80,7 @@ tape('getpcd: invalid parameters', async test => {
 		[{ getpcd: { coord: [0, 1, 2], category_index: '3', category_autocolor: true } }, 'getpcd.category_index'],
 		[{ getpcd: { coord: [0, 1, 2], category_index: 3, category_customcolor: true, cat_values: {} } }, 'cat_values'],
 		[{ getpcd: 'x' }, 'getpcd'],
+		[{ getpcd: null }, 'getpcd'],
 		[{ delimiter: undefined }, 'delimiter'],
 		[{ delimiter: ['\t'] }, 'delimiter'],
 		[{ background_color: 'notacolor' }, 'background_color'],
@@ -100,16 +102,35 @@ tape('getpcd: textfile is a directory', async test => {
 	test.end()
 })
 
-tape('getpcd: custom color that is not a string', async test => {
-	// a custom color that is not a string
-	const getpcd = {
+tape('getpcd: custom colors', async test => {
+	const getpcd = color => ({
 		coord: [0, 1, 2],
 		category_index: 3,
 		category_customcolor: true,
-		cat_values: [{ value: 'A', color: 5 }]
+		cat_values: [{ value: 'A', color }]
+	})
+	const result = await send(getpcdQuery({ getpcd: getpcd('red') }))
+	test.notOk(result.error, 'should accept a named color')
+	test.equal(result.category2color.A, '#ff0000', 'should return a custom color as hex')
+	const line = result.pcddata.split('\n').find(l => l.startsWith('1 '))
+	test.equal(line.split(' ')[3], String(0xff0000), 'should use the custom color for the cell')
+
+	for (const color of [5, 'notacolor', {}]) {
+		const r = await send(getpcdQuery({ getpcd: getpcd(color) }))
+		test.equal(r?.error, 'invalid getpcd.cat_values color', `should return an error for color=${JSON.stringify(color)}`)
 	}
-	const result = await send(getpcdQuery({ getpcd }))
-	test.ok(result?.error, 'should return an error')
+	const r = await send(getpcdQuery({ getpcd: { ...getpcd('red'), cat_values: [null] } }))
+	test.equal(
+		r?.error,
+		'getpcd.cat_values must be an array of objects',
+		'should return an error for a null cat_values entry'
+	)
+	test.end()
+})
+
+tape('unknown request', async test => {
+	const result = await send({ genome: 'hg38', getpcd: undefined })
+	test.equal(result?.error, 'unknown request', 'should return an error when no request type is given')
 	test.end()
 })
 

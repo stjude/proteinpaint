@@ -1,9 +1,11 @@
 import fs from 'fs'
+import path from 'path'
 import readline from 'readline'
 import * as d3scale from 'd3-scale'
 import * as d3color from 'd3-color'
 import * as d3interpolate from 'd3-interpolate'
 import * as utils from './utils.js'
+import serverconfig from './serverconfig.js'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import { boxplot_getvalue } from '#shared/boxplot.js'
 
@@ -54,18 +56,20 @@ export function handle_singlecell_closure(genomes) {
 			const gn = genomes[q.genome]
 			if (!gn) throw 'invalid genome'
 
-			if (q.getpcd) {
+			// dispatch on presence, so that an invalid value such as null is answered by the validation below
+			if (q.getpcd !== undefined) {
 				await get_pcd(q, gn, res)
 				return
 			}
-			if (q.getgeneboxplot) {
+			if (q.getgeneboxplot !== undefined) {
 				await get_geneboxplot(q, gn, res)
 				return
 			}
-			if (q.getheatmap) {
+			if (q.getheatmap !== undefined) {
 				await get_heatmap(q, gn, res)
 				return
 			}
+			throw 'unknown request'
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -116,7 +120,6 @@ may attach coloring scheme to result{} for returning to client
 		if (!isurl) {
 			if (await utils.file_not_exist(file)) throw 'file not exist: ' + q.textfile
 			if (await utils.file_not_readable(file)) throw 'file not readable: ' + q.textfile
-			if (!(await fs.promises.stat(file)).isFile()) throw 'not a file: ' + q.textfile
 		}
 
 		q.textfile = file
@@ -129,6 +132,8 @@ may attach coloring scheme to result{} for returning to client
 		throw 'getpcd.coord must be an array of 2 or 3 column indices'
 	checkDelimiter(q.delimiter)
 	const background_color = q.background_color ? parseColor(q.background_color, 'background_color') : 16777215 //white color
+	const cat_values =
+		q.getpcd.category_customcolor || q.getpcd.category_customorder ? checkCatValues(q.getpcd.cat_values) : undefined
 
 	// hidden_types is a request parameter and may be tampered with, so only accept an array of strings
 	if (q.hidden_types !== undefined && !Array.isArray(q.hidden_types)) throw 'hidden_types must be an array'
@@ -150,9 +155,8 @@ may attach coloring scheme to result{} for returning to client
 		collect_category_count = {}
 		// k: category, v: color
 	} else if (q.getpcd.category_customcolor) {
-		if (!Array.isArray(q.getpcd.cat_values)) throw 'getpcd.cat_values must be an array'
 		const auto_color_fn = d3scale.scaleOrdinal(schemeCategory20)
-		categorical_color_function = getCustomCatColor(q.getpcd.cat_values, auto_color_fn)
+		categorical_color_function = getCustomCatColor(cat_values, auto_color_fn)
 		collect_category2color = {}
 		collect_category_count = {}
 		collect_gene_expression2color = {}
@@ -288,8 +292,7 @@ may attach coloring scheme to result{} for returning to client
 	if (collect_category2color) {
 		// if legend order is defined in the config, add that to return to client
 		if (q.getpcd.category_customorder) {
-			if (!Array.isArray(q.getpcd.cat_values)) throw 'getpcd.cat_values must be an array'
-			collect_category2color = getCustomCatOrder(collect_category2color, q.getpcd.cat_values)
+			collect_category2color = getCustomCatOrder(collect_category2color, cat_values)
 		}
 		result.category2color = collect_category2color
 		result.categorycount = collect_category_count
@@ -301,11 +304,16 @@ may attach coloring scheme to result{} for returning to client
 }
 
 /*
-read a text file line by line; errors from the file stream, such as EISDIR,
+read a text file under tpmasterdir line by line; errors from the file stream
 or thrown by the callback reject the returned promise
 */
 async function forEachLine(file, callback) {
-	const input = fs.createReadStream(file)
+	const base = path.resolve(serverconfig.tpmasterdir)
+	const full = path.resolve(file)
+	// the file path must stay inside tpmasterdir
+	if (!full.startsWith(base + path.sep)) throw 'file must be under tpmasterdir'
+	if (!(await fs.promises.stat(full)).isFile()) throw 'not a file: ' + path.relative(base, full)
+	const input = fs.createReadStream(full)
 	const rl = readline.createInterface({ input, crlfDelay: Infinity })
 	try {
 		for await (const line of rl) callback(line)
@@ -323,11 +331,25 @@ function checkDelimiter(d) {
 	if (typeof d != 'string' || !d || d.length > 10) throw 'delimiter must be a short string'
 }
 
-// returns the color as a decimal integer
-function parseColor(color, key) {
+// returns the color as a '#rrggbb' string
+function toHexColor(color, key) {
 	const c = typeof color == 'string' ? d3color.rgb(color) : null
 	if (!c || !Number.isFinite(c.r) || !Number.isFinite(c.g) || !Number.isFinite(c.b)) throw `invalid ${key}`
-	return Number.parseInt(rgbToHex(c.r, c.g, c.b), 16)
+	return c.formatHex()
+}
+
+// returns the color as a decimal integer
+function parseColor(color, key) {
+	return Number.parseInt(toHexColor(color, key).slice(1), 16)
+}
+
+// returns a copy of cat_values with each defined color as '#rrggbb'
+function checkCatValues(catValues) {
+	if (!Array.isArray(catValues)) throw 'getpcd.cat_values must be an array'
+	return catValues.map(v => {
+		if (!v || typeof v != 'object') throw 'getpcd.cat_values must be an array of objects'
+		return v.color === undefined ? v : { ...v, color: toHexColor(v.color, 'getpcd.cat_values color') }
+	})
 }
 
 function getCustomCatColor(catValues, auto_color) {
