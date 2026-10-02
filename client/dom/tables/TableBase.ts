@@ -275,7 +275,7 @@ export class TableBase {
 
 	/** Shows a page, 1-based, clamped to the valid range. No-op without pagination. */
 	goToPage(page: number): this {
-		if (!this.paginated) return this
+		if (!this.paginated || !Number.isFinite(page)) return this
 		const next = Math.min(Math.max(1, Math.trunc(page)), this.totalPages())
 		if (next === this.currentPage) return this
 		this.currentPage = next
@@ -417,7 +417,7 @@ export class TableBase {
 
 	/** Extension point: render a single header cell, including its sort and filter button. */
 	protected renderHeaderCell(tr: Tr, column: TableBaseColumn, colIdx: number): Th {
-		const th: Th = tr.append('th').attr('class', 'sjpp_table_header').attr('scope', 'col')
+		const th: Th = tr.append('th').attr('class', 'sjpp_table_item sjpp_table_header').attr('scope', 'col')
 		for (const [key, value] of Object.entries(this.styles.header)) th.style(key, value)
 		if (column.width) th.style('width', column.width)
 		if (column.headerTestId) th.attr('data-testid', column.headerTestId)

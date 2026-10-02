@@ -10,9 +10,7 @@ export function uniqueId(str: string) {
 
 const SAFE_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
 
-/** A cell.url is only made a link when it is a web or mail link. A javascript:, data: or vbscript: url would
- * run when clicked, and cell urls can come from data the table's caller does not control. Relative urls
- * resolve against the page and pass. */
+/** cell.url is only made a link when it is a web or mail link. */
 export function isSafeUrl(url: string): boolean {
 	try {
 		return SAFE_URL_PROTOCOLS.has(new URL(url, window.location.href).protocol)
@@ -23,9 +21,5 @@ export function isSafeUrl(url: string): boolean {
 
 /** Strips a <button> of the browser's button look, for icon buttons and menu items. Callers add what differs. */
 export function plainButton(button: any) {
-	return button
-		.style('background', 'none')
-		.style('border', 'none')
-		.style('font', 'inherit')
-		.style('cursor', 'pointer')
+	return button.style('background', 'none').style('border', 'none').style('font', 'inherit').style('cursor', 'pointer')
 }
