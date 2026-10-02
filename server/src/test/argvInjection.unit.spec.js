@@ -245,8 +245,9 @@ tape('/singlecell', async test => {
 	const getpcd = chr => ({
 		genome: 'hg38',
 		textfile: 'files/hg38/TermdbTest/tsne.txt',
+		delimiter: '\t',
 		getpcd: {
-			coord: [],
+			coord: [0, 1],
 			gene_expression: {
 				file: expfile,
 				barcodecolumnidx: 4,

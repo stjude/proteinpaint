@@ -116,10 +116,19 @@ may attach coloring scheme to result{} for returning to client
 		if (!isurl) {
 			if (await utils.file_not_exist(file)) throw 'file not exist: ' + q.textfile
 			if (await utils.file_not_readable(file)) throw 'file not readable: ' + q.textfile
+			if (!(await fs.promises.stat(file)).isFile()) throw 'not a file: ' + q.textfile
 		}
 
 		q.textfile = file
 	}
+
+	// check parameter types before reading the file
+	if (!q.getpcd || typeof q.getpcd != 'object') throw 'getpcd must be an object'
+	const xyz = q.getpcd.coord
+	if (!Array.isArray(xyz) || (xyz.length != 2 && xyz.length != 3) || !xyz.every(isColumnIndex))
+		throw 'getpcd.coord must be an array of 2 or 3 column indices'
+	checkDelimiter(q.delimiter)
+	const background_color = q.background_color ? parseColor(q.background_color, 'background_color') : 16777215 //white color
 
 	// hidden_types is a request parameter and may be tampered with, so only accept an array of strings
 	if (q.hidden_types !== undefined && !Array.isArray(q.hidden_types)) throw 'hidden_types must be an array'
@@ -141,6 +150,7 @@ may attach coloring scheme to result{} for returning to client
 		collect_category_count = {}
 		// k: category, v: color
 	} else if (q.getpcd.category_customcolor) {
+		if (!Array.isArray(q.getpcd.cat_values)) throw 'getpcd.cat_values must be an array'
 		const auto_color_fn = d3scale.scaleOrdinal(schemeCategory20)
 		categorical_color_function = getCustomCatColor(q.getpcd.cat_values, auto_color_fn)
 		collect_category2color = {}
@@ -154,7 +164,7 @@ may attach coloring scheme to result{} for returning to client
 			if (e) throw e
 			ge.file = file
 		}
-		if (!Number.isInteger(ge.barcodecolumnidx)) throw 'gene_expression.barcodecolumnidx missing'
+		if (!isColumnIndex(ge.barcodecolumnidx)) throw 'gene_expression.barcodecolumnidx missing'
 		utils.checkChr(gn, ge.chr)
 		if (!ge.start) throw 'gene_expression.start missing'
 		if (!ge.stop) throw 'gene_expression.stop missing'
@@ -207,94 +217,117 @@ may attach coloring scheme to result{} for returning to client
 		}
 	}
 
-	return new Promise((resolve, reject) => {
-		const lines = []
-		const rl = readline.createInterface({ input: fs.createReadStream(q.textfile) })
-		let firstline = true
-		// get max and min from all 3 coordinates and to get radius of point cloud
-		let maxcord = 0,
-			mincord = 0
+	if (categorical_color_function && !isColumnIndex(q.getpcd.category_index))
+		throw 'getpcd.category_index must be a column index'
+	const color_no_exp = q.getpcd.gene_expression?.color_no_exp
+		? parseColor(q.getpcd.gene_expression.color_no_exp, 'gene_expression.color_no_exp')
+		: '2894892' // dark grey
+	//: '14540253' //light grey
 
-		rl.on('line', line => {
-			if (firstline) {
-				firstline = false
-				return
+	const lines = []
+	let firstline = true
+	// get max and min from all 3 coordinates and to get radius of point cloud
+	let maxcord = 0,
+		mincord = 0
+
+	// errors from the file stream or the callback are reported by the route's catch
+	await forEachLine(q.textfile, line => {
+		if (firstline) {
+			firstline = false
+			return
+		}
+
+		const l = line.split(q.delimiter)
+
+		const newl = []
+
+		for (const i of q.getpcd.coord) {
+			newl.push(l[i])
+			maxcord = Math.max(maxcord, l[i])
+			mincord = Math.min(mincord, l[i])
+		}
+
+		if (q.getpcd.coord.length == 2) {
+			newl.push('0')
+		}
+
+		if (categorical_color_function) {
+			const ca = l[q.getpcd.category_index]
+			const co = categorical_color_function(ca)
+			if (hidden_types.has(ca)) {
+				newl.push(background_color)
+			} else {
+				newl.push(Number.parseInt(co.slice(1), 16))
 			}
-
-			const l = line.split(q.delimiter)
-
-			const newl = []
-
-			for (const i of q.getpcd.coord) {
-				newl.push(l[i])
-				maxcord = Math.max(maxcord, l[i])
-				mincord = Math.min(mincord, l[i])
-			}
-
-			if (q.getpcd.coord.length == 2) {
-				newl.push('0')
-			}
-
-			if (categorical_color_function) {
-				const ca = l[q.getpcd.category_index]
-				const co = categorical_color_function(ca)
-				if (hidden_types.has(ca)) {
-					if (q.background_color) {
-						const c = d3color.color(q.background_color)
-						const color = Number.parseInt(rgbToHex(c.r, c.g, c.b), 16)
-						newl.push(color)
-					} else newl.push(16777215) //white color
-				} else {
-					newl.push(Number.parseInt(co.slice(1), 16))
-				}
-				if (collect_category2color) {
-					collect_category2color[ca] = co
-				}
-				if (collect_category_count) {
-					if (ca in collect_category_count) {
-						collect_category_count[ca] = collect_category_count[ca] + 1
-					} else {
-						collect_category_count[ca] = 1
-					}
-				}
-			} else if (cell2color_byexp) {
-				result.numbercelltotal++
-
-				const barcode = l[q.getpcd.gene_expression.barcodecolumnidx]
-				let color = cell2color_byexp.get(barcode)
-				// if(!color) return
-
-				// add color for cells without expression to retain cluster shape
-				// if color_min is black, then it will be converted to 00000, and will reassing, so check for type rahter than !color
-				if (typeof color == 'undefined') {
-					if (q.getpcd.gene_expression.color_no_exp) {
-						const c = d3color.color(q.getpcd.gene_expression.color_no_exp)
-						color = Number.parseInt(rgbToHex(c.r, c.g, c.b), 16)
-					} else {
-						color = '2894892' // dark grey
-						//color = '14540253' //light grey
-					}
-				}
-				newl.push(color)
-			}
-
-			lines.push(newl.join(' '))
-		})
-		rl.on('close', () => {
 			if (collect_category2color) {
-				// if legend order is defined in the config, add that to return to client
-				if (q.getpcd.category_customorder) {
-					collect_category2color = getCustomCatOrder(collect_category2color, q.getpcd.cat_values)
-				}
-				result.category2color = collect_category2color
-				result.categorycount = collect_category_count
+				collect_category2color[ca] = co
 			}
+			if (collect_category_count) {
+				if (ca in collect_category_count) {
+					collect_category_count[ca] = collect_category_count[ca] + 1
+				} else {
+					collect_category_count[ca] = 1
+				}
+			}
+		} else if (cell2color_byexp) {
+			result.numbercelltotal++
 
-			// get abs of min and max to get radius of point cloud
-			result.data_sphere_r = Math.max(Math.abs(maxcord), Math.abs(mincord))
-			resolve(lines)
-		})
+			const barcode = l[q.getpcd.gene_expression.barcodecolumnidx]
+			let color = cell2color_byexp.get(barcode)
+			// if(!color) return
+
+			// add color for cells without expression to retain cluster shape
+			// if color_min is black, then it will be converted to 00000, and will reassing, so check for type rahter than !color
+			if (typeof color == 'undefined') color = color_no_exp
+			newl.push(color)
+		}
+
+		lines.push(newl.join(' '))
 	})
+
+	if (collect_category2color) {
+		// if legend order is defined in the config, add that to return to client
+		if (q.getpcd.category_customorder) {
+			if (!Array.isArray(q.getpcd.cat_values)) throw 'getpcd.cat_values must be an array'
+			collect_category2color = getCustomCatOrder(collect_category2color, q.getpcd.cat_values)
+		}
+		result.category2color = collect_category2color
+		result.categorycount = collect_category_count
+	}
+
+	// get abs of min and max to get radius of point cloud
+	result.data_sphere_r = Math.max(Math.abs(maxcord), Math.abs(mincord))
+	return lines
+}
+
+/*
+read a text file line by line; errors from the file stream, such as EISDIR,
+or thrown by the callback reject the returned promise
+*/
+async function forEachLine(file, callback) {
+	const input = fs.createReadStream(file)
+	const rl = readline.createInterface({ input, crlfDelay: Infinity })
+	try {
+		for await (const line of rl) callback(line)
+	} finally {
+		rl.close()
+		input.destroy()
+	}
+}
+
+function isColumnIndex(i) {
+	return Number.isInteger(i) && i >= 0
+}
+
+function checkDelimiter(d) {
+	if (typeof d != 'string' || !d || d.length > 10) throw 'delimiter must be a short string'
+}
+
+// returns the color as a decimal integer
+function parseColor(color, key) {
+	const c = typeof color == 'string' ? d3color.rgb(color) : null
+	if (!c || !Number.isFinite(c.r) || !Number.isFinite(c.g) || !Number.isFinite(c.b)) throw `invalid ${key}`
+	return Number.parseInt(rgbToHex(c.r, c.g, c.b), 16)
 }
 
 function getCustomCatColor(catValues, auto_color) {
@@ -559,7 +592,7 @@ async function get_heatmap(q, gn, res) {
 	res.send({ gene_heatmap })
 }
 
-function cellfile_get_barcode2category(p) {
+async function cellfile_get_barcode2category(p) {
 	/*
 .cellfile
 .barcodecolumnidx
@@ -576,29 +609,23 @@ v: { category, expvalue }
 		if (e) throw 'cellfile error: ' + e
 		p.cellfile = file
 	}
-	if (!p.delimiter) throw 'delimiter missing'
-	if (!Number.isInteger(p.barcodecolumnidx)) throw 'barcodecolumnidx missing'
-	if (!Number.isInteger(p.categorycolumnidx)) throw 'categorycolumnidx missing'
+	checkDelimiter(p.delimiter)
+	if (!isColumnIndex(p.barcodecolumnidx)) throw 'barcodecolumnidx missing'
+	if (!isColumnIndex(p.categorycolumnidx)) throw 'categorycolumnidx missing'
 
-	return new Promise((resolve, reject) => {
-		const barcode2category = new Map()
-
-		const rl = readline.createInterface({ input: fs.createReadStream(p.cellfile) })
-		let first = true
-		rl.on('line', line => {
-			if (first) {
-				first = false
-				return
-			}
-			const l = line.split(p.delimiter)
-			//barcode2category.set( l[ p.barcodecolumnidx ], l[ p.categorycolumnidx ] )
-			barcode2category.set(l[p.barcodecolumnidx], {
-				category: l[p.categorycolumnidx],
-				expvalue: 0 // FIXME hardcoded baseline value (e.g. the gene is not expressed in this sample)
-			})
-		})
-		rl.on('close', () => {
-			resolve(barcode2category)
+	const barcode2category = new Map()
+	let first = true
+	await forEachLine(p.cellfile, line => {
+		if (first) {
+			first = false
+			return
+		}
+		const l = line.split(p.delimiter)
+		//barcode2category.set( l[ p.barcodecolumnidx ], l[ p.categorycolumnidx ] )
+		barcode2category.set(l[p.barcodecolumnidx], {
+			category: l[p.categorycolumnidx],
+			expvalue: 0 // FIXME hardcoded baseline value (e.g. the gene is not expressed in this sample)
 		})
 	})
+	return barcode2category
 }
