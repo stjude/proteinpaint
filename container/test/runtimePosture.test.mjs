@@ -4,9 +4,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
-import { checkRuntimePosture, logRuntimePosture, parseMountinfo, findMount } from '../runtimePosture.mjs'
+import { checkRuntimePosture, logRuntimePosture, parseMountinfo, findMount, STRICT_CHECKS } from '../runtimePosture.mjs'
 
 const SCRIPT = path.join(import.meta.dirname, '../runtimePosture.mjs')
+const messages = result => result.findings.map(f => f.message)
 
 const hardenedStatus = 'Name:\tnode\nCapEff:\t0000000000000000\nNoNewPrivs:\t1\n'
 const hardenedMounts = [
@@ -17,7 +18,7 @@ const hardenedMounts = [
 
 test('a hardened container has no warnings', () => {
 	const result = checkRuntimePosture(fakeDeps())
-	assert.deepEqual(result, { warnings: [], unchecked: [] })
+	assert.deepEqual(result, { findings: [], unchecked: [] })
 })
 
 test('each missing setting is reported', () => {
@@ -35,34 +36,37 @@ test('each missing setting is reported', () => {
 			writable: ['/opt/venv']
 		})
 	)
-	assert.deepEqual(result.warnings, [
-		'the process runs as root (uid=0)',
-		'the process has effective capabilities (CapEff=00000000a80425fb), drop all capabilities',
-		'no_new_privs is not set, set the no-new-privileges option',
-		'kernel.yama.ptrace_scope=0, set it to 1 or higher',
-		'the root filesystem is writable, mount it read-only',
-		'/tmp is on a mount without noexec (mount point /)',
-		'/home/root/pp/cache is on a mount without noexec (mount point /home/root/pp/cache)',
-		'/opt/venv is writable by the process, it should be read-only'
-	])
+	assert.deepEqual(
+		result.findings.map(f => [f.check, f.message]),
+		[
+			['user', 'the process runs as root (uid=0)'],
+			['capabilities', 'the process has effective capabilities (CapEff=00000000a80425fb), drop all capabilities'],
+			['no-new-privileges', 'no_new_privs is not set, set the no-new-privileges option'],
+			['ptrace-scope', 'kernel.yama.ptrace_scope=0, set it to 1 or higher'],
+			['read-only-root', 'the root filesystem is writable, mount it read-only'],
+			['tmp-noexec', '/tmp is on a mount without noexec (mount point /)'],
+			['dir-noexec', '/home/root/pp/cache is on a mount without noexec (mount point /home/root/pp/cache)'],
+			['lib-dirs', '/opt/venv is writable by the process, it should be read-only']
+		]
+	)
 	assert.deepEqual(result.unchecked, [])
 })
 
 test('a missing Yama LSM is a warning, a denied read is unchecked', () => {
 	const files = { '/proc/sys/kernel/yama/ptrace_scope': undefined }
-	assert.deepEqual(checkRuntimePosture(fakeDeps({ files })).warnings, ['the Yama LSM is not enabled'])
+	assert.deepEqual(messages(checkRuntimePosture(fakeDeps({ files }))), ['the Yama LSM is not enabled'])
 	const denied = checkRuntimePosture(
 		fakeDeps({ denied: ['/proc/self/status', '/proc/self/mountinfo', '/proc/sys/kernel/yama/ptrace_scope'] })
 	)
 	assert.deepEqual(denied, {
-		warnings: [],
+		findings: [],
 		unchecked: ['/proc/self/status', '/proc/sys/kernel/yama/ptrace_scope', '/proc/self/mountinfo']
 	})
 })
 
 test('a lib dir is unchecked when the permission model denies access to it', () => {
 	const result = checkRuntimePosture(fakeDeps({ denied: ['/opt/venv'] }))
-	assert.deepEqual(result, { warnings: [], unchecked: ['/opt/venv'] })
+	assert.deepEqual(result, { findings: [], unchecked: ['/opt/venv'] })
 })
 
 test('a writable dir is resolved to its real path before finding its mount', () => {
@@ -72,7 +76,7 @@ test('a writable dir is resolved to its real path before finding its mount', () 
 			realpaths: { '/home/root/pp/cachelink': '/home/root/pp/cache' }
 		})
 	)
-	assert.deepEqual(result.warnings, [])
+	assert.deepEqual(result.findings, [])
 })
 
 test('other platforms are skipped', () => {
@@ -80,12 +84,12 @@ test('other platforms are skipped', () => {
 		skipped: "not checked on platform='darwin'"
 	})
 	const logged = []
-	logRuntimePosture({ skipped: 'x' }, m => logged.push(m))
+	assert.deepEqual(logRuntimePosture({ skipped: 'x' }, { strict: true, log: m => logged.push(m) }), [])
 	assert.deepEqual(logged, [])
 })
 
 test('the root filesystem check uses the last of stacked mounts on /, as for the other dirs', () => {
-	const stacked = mountinfo => checkRuntimePosture(fakeDeps({ files: { '/proc/self/mountinfo': mountinfo } })).warnings
+	const stacked = mountinfo => messages(checkRuntimePosture(fakeDeps({ files: { '/proc/self/mountinfo': mountinfo } })))
 	const tmp = '2 1 0:2 / /tmp rw,noexec - tmpfs t rw\n3 1 0:3 / /home/root/pp/cache rw,noexec - xfs d rw'
 	assert.deepEqual(stacked(`1 0 0:1 / / rw - overlay o rw\n4 0 0:4 / / ro - overlay o rw\n${tmp}`), [])
 	assert.deepEqual(stacked(`1 0 0:1 / / ro - overlay o rw\n4 0 0:4 / / rw - overlay o rw\n${tmp}`), [
@@ -108,35 +112,70 @@ test('parseMountinfo() decodes escaped paths, findMount() uses the longest and l
 	assert.deepEqual(findMount(mounts, '/tmp/y').options, ['ro', 'noexec'])
 })
 
-test('logRuntimePosture() prints each warning and the unchecked items', () => {
+test('logRuntimePosture() prints each finding and the unchecked items as warnings by default', () => {
 	const logged = []
-	logRuntimePosture({ warnings: ['a', 'b'], unchecked: ['/x', '/y'] }, m => logged.push(m))
+	const result = {
+		findings: [
+			{ check: 'user', message: 'a' },
+			{ check: 'ptrace-scope', message: 'b' }
+		],
+		unchecked: ['/x', '/y']
+	}
+	assert.deepEqual(logRuntimePosture(result, { log: m => logged.push(m) }), [])
 	assert.deepEqual(logged, [
 		'runtimePosture.mjs: WARNING a',
 		'runtimePosture.mjs: WARNING b',
-		'runtimePosture.mjs: unable to check /x, /y'
+		'runtimePosture.mjs: WARNING unable to check /x, /y'
+	])
+})
+
+test('logRuntimePosture() in strict mode: a STRICT_CHECKS finding and an unchecked item are errors', () => {
+	const logged = []
+	const result = {
+		findings: [
+			{ check: 'user', message: 'a' },
+			{ check: 'ptrace-scope', message: 'b' },
+			{ check: 'dir-noexec', message: 'c' }
+		],
+		unchecked: ['/x']
+	}
+	assert.deepEqual(logRuntimePosture(result, { strict: true, log: m => logged.push(m) }), ['a', 'unable to check /x'])
+	assert.deepEqual(logged, [
+		'runtimePosture.mjs: ERROR a',
+		'runtimePosture.mjs: WARNING b',
+		'runtimePosture.mjs: WARNING c',
+		'runtimePosture.mjs: ERROR unable to check /x'
+	])
+	// the host kernel setting and the noexec of other write dirs are not required yet
+	assert.deepEqual([...STRICT_CHECKS].toSorted(), [
+		'capabilities',
+		'lib-dirs',
+		'no-new-privileges',
+		'read-only-root',
+		'tmp-noexec',
+		'user'
 	])
 })
 
 test('cli: runs and exits 0 without --strict', () => {
 	const r = spawnSync(process.execPath, [SCRIPT], { encoding: 'utf8' })
+	assert.equal(r.status, 0, r.stderr)
+})
 
-	test('cli: --strict exits 1 only for a warning, and skips other platforms', () => {
-		const r = spawnSync(process.execPath, [SCRIPT, '--strict'], { encoding: 'utf8' })
-		assert.doesNotMatch(r.stderr, /TypeError/)
-		if (process.platform == 'linux') assert.equal(r.status, r.stderr.includes('WARNING') ? 1 : 0, r.stderr)
-		else assert.equal(r.status, 0, r.stderr)
-	})
+test('cli: --strict exits 1 only for an error, and skips other platforms', () => {
+	const r = spawnSync(process.execPath, [SCRIPT, '--strict'], { encoding: 'utf8' })
+	assert.doesNotMatch(r.stderr, /TypeError/)
+	if (process.platform == 'linux') assert.equal(r.status, r.stderr.includes('ERROR') ? 1 : 0, r.stderr)
+	else assert.equal(r.status, 0, r.stderr)
+})
 
-	test('cli: the module can be imported from a script on stdin', () => {
-		const r = spawnSync(process.execPath, ['--input-type=module', '-'], {
-			input: `import { checkRuntimePosture } from ${JSON.stringify(SCRIPT)}; console.log(typeof checkRuntimePosture)`,
-			encoding: 'utf8'
-		})
-		assert.equal(r.status, 0, r.stderr)
-		assert.equal(r.stdout.trim(), 'function')
+test('cli: the module can be imported from a script on stdin', () => {
+	const r = spawnSync(process.execPath, ['--input-type=module', '-'], {
+		input: `import { checkRuntimePosture } from ${JSON.stringify(SCRIPT)}; console.log(typeof checkRuntimePosture)`,
+		encoding: 'utf8'
 	})
 	assert.equal(r.status, 0, r.stderr)
+	assert.equal(r.stdout.trim(), 'function')
 })
 
 function fakeDeps({

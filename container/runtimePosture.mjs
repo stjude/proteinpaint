@@ -13,7 +13,9 @@
 	  # such as in a running container
 	  podman exec <container> node runtimePosture.mjs /home/root/pp/cache
 
-	Prints a warning for each missing setting. With --strict, exits with code 1 when there is a warning.
+	Prints a warning for each missing setting. With --strict, the settings in STRICT_CHECKS, and any check
+	that cannot be done, are printed as errors instead, and the exit code is 1 when there is an error.
+	The other settings, such as ptrace_scope, which is a host kernel setting, stay warnings.
 	Reports a check as unchecked when its /proc file cannot be read, such as under the Node.js permission
 	model, so this must run without the permission model to check everything.
 */
@@ -24,16 +26,22 @@ import os from 'node:os'
 // dirs of the interpreters that the server spawns, in the deps/Dockerfile image
 export const IMAGE_LIB_DIRS = Object.freeze(['/opt/venv', '/usr/local/lib/R/site-library', '/usr/lib/R/site-library'])
 
+// the checks whose finding is an error in strict mode; every one of these can be applied by the container
+// runtime, see the releaseRollout .container units
+export const STRICT_CHECKS = Object.freeze(
+	new Set(['user', 'capabilities', 'no-new-privileges', 'read-only-root', 'tmp-noexec', 'lib-dirs'])
+)
+
 if (isMainModule()) {
 	const args = process.argv.slice(2)
 	const strict = args.includes('--strict')
 	const writableDirs = args.filter(a => a != '--strict')
-	const result = checkRuntimePosture({ writableDirs })
-	logRuntimePosture(result)
-	if (strict && result.warnings?.length) process.exit(1)
+	const errors = logRuntimePosture(checkRuntimePosture({ writableDirs }), { strict })
+	if (errors.length) process.exit(1)
 }
 
-// deps may be fakes in tests; returns {skipped} on a non-Linux platform, otherwise {warnings[], unchecked[]}
+// deps may be fakes in tests; returns {skipped} on a non-Linux platform, otherwise
+// {findings: [{check, message}], unchecked: [file or dir]}
 export function checkRuntimePosture({
 	fs: _fs = fs,
 	platform = process.platform,
@@ -43,8 +51,9 @@ export function checkRuntimePosture({
 	libDirs = IMAGE_LIB_DIRS
 } = {}) {
 	if (platform != 'linux') return { skipped: `not checked on platform='${platform}'` }
-	const warnings = []
+	const findings = []
 	const unchecked = []
+	const add = (check, message) => findings.push({ check, message })
 	const read = file => {
 		try {
 			return _fs.readFileSync(file, 'utf8')
@@ -53,32 +62,39 @@ export function checkRuntimePosture({
 		}
 	}
 
-	if (uid === 0) warnings.push('the process runs as root (uid=0)')
+	if (uid === 0) add('user', 'the process runs as root (uid=0)')
 
 	const status = read('/proc/self/status')
 	if (status !== undefined) {
 		const capEff = /^CapEff:\s*([0-9a-f]+)$/im.exec(status)?.[1]
 		if (capEff && BigInt('0x' + capEff) != 0n)
-			warnings.push(`the process has effective capabilities (CapEff=${capEff}), drop all capabilities`)
-		if (/^NoNewPrivs:\s*0$/m.test(status)) warnings.push('no_new_privs is not set, set the no-new-privileges option')
+			add('capabilities', `the process has effective capabilities (CapEff=${capEff}), drop all capabilities`)
+		if (/^NoNewPrivs:\s*0$/m.test(status))
+			add('no-new-privileges', 'no_new_privs is not set, set the no-new-privileges option')
 	}
 
 	const ptraceFile = '/proc/sys/kernel/yama/ptrace_scope'
 	const ptraceScope = readOptional(_fs, ptraceFile)
 	if (ptraceScope === null) unchecked.push(ptraceFile)
-	else if (ptraceScope === undefined) warnings.push('the Yama LSM is not enabled')
-	else if (ptraceScope.trim() == '0') warnings.push('kernel.yama.ptrace_scope=0, set it to 1 or higher')
+	else if (ptraceScope === undefined) add('ptrace-scope', 'the Yama LSM is not enabled')
+	else if (ptraceScope.trim() == '0') add('ptrace-scope', 'kernel.yama.ptrace_scope=0, set it to 1 or higher')
 
 	const mountinfo = read('/proc/self/mountinfo')
 	if (mountinfo !== undefined) {
 		const mounts = parseMountinfo(mountinfo)
 		// the same selection as for the other dirs, the last of any stacked mounts on /
 		const root = findMount(mounts, '/')
-		if (root && !root.options.includes('ro')) warnings.push('the root filesystem is writable, mount it read-only')
-		for (const dir of new Set([tmpdir, ...writableDirs])) {
-			const mount = findMount(mounts, realpath(_fs, dir))
+		if (root && !root.options.includes('ro'))
+			add('read-only-root', 'the root filesystem is writable, mount it read-only')
+		const realTmpdir = realpath(_fs, tmpdir)
+		const dirs = new Map([tmpdir, ...writableDirs].map(dir => [realpath(_fs, dir), dir]))
+		for (const [real, dir] of dirs) {
+			const mount = findMount(mounts, real)
 			if (mount && !mount.options.includes('noexec'))
-				warnings.push(`${dir} is on a mount without noexec (mount point ${mount.mountPoint})`)
+				add(
+					real == realTmpdir ? 'tmp-noexec' : 'dir-noexec',
+					`${dir} is on a mount without noexec (mount point ${mount.mountPoint})`
+				)
 		}
 	}
 
@@ -87,19 +103,27 @@ export function checkRuntimePosture({
 		try {
 			if (!_fs.existsSync(dir)) continue
 			_fs.accessSync(dir, fs.constants.W_OK)
-			warnings.push(`${dir} is writable by the process, it should be read-only`)
+			add('lib-dirs', `${dir} is writable by the process, it should be read-only`)
 		} catch (e) {
 			if (e.code == 'ERR_ACCESS_DENIED') unchecked.push(dir)
 		}
 	}
 
-	return { warnings, unchecked }
+	return { findings, unchecked }
 }
 
-export function logRuntimePosture(result, log = console.warn) {
-	if (result.skipped) return
-	for (const w of result.warnings) log(`runtimePosture.mjs: WARNING ${w}`)
-	if (result.unchecked.length) log(`runtimePosture.mjs: unable to check ${result.unchecked.join(', ')}`)
+// logs each finding as a warning, or in strict mode as an error for a STRICT_CHECKS finding or a check that
+// cannot be done; returns the error messages
+export function logRuntimePosture(result, { strict = false, log = console.warn } = {}) {
+	const errors = []
+	if (result.skipped) return errors
+	const report = (isError, message) => {
+		log(`runtimePosture.mjs: ${isError ? 'ERROR' : 'WARNING'} ${message}`)
+		if (isError) errors.push(message)
+	}
+	for (const { check, message } of result.findings) report(strict && STRICT_CHECKS.has(check), message)
+	if (result.unchecked.length) report(strict, `unable to check ${result.unchecked.join(', ')}`)
+	return errors
 }
 
 // returns [{mountPoint, options[]}]; the mount options are the per-mount ones, such as ro and noexec,

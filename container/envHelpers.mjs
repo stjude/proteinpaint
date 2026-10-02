@@ -30,6 +30,8 @@
 
 	4. in a container (PP_MODE=container*), logs a warning for each recommended container runtime setting
 	   that is not applied, see runtimePosture.mjs; the warnings do not stop the server from starting.
+	   With PP_RUNTIME_CHECK=strict, a missing setting in runtimePosture.mjs STRICT_CHECKS, or a check that
+	   cannot be done, is an error instead, and this script exits before it starts the server.
 
 	usage: node envHelpers.mjs <node | tsx> [args...]
 	examples:
@@ -187,15 +189,26 @@ export function getNodeConfig(ctx) {
 }
 
 // in a container, logs the recommended runtime settings that are not applied; the allowed write dirs
-// that exist are expected to be on noexec mounts
+// that exist are expected to be on noexec mounts. Throws for an error in strict mode.
 function mayCheckRuntimePosture(config, ctx) {
 	if (!ctx.env.PP_MODE?.startsWith('container') || !ctx.checkPosture) return
+	const mode = getEnvValue('PP_RUNTIME_CHECK', ctx)
+	// an unknown value, such as a typo of strict, must not silently skip the errors
+	if (mode != '' && mode != 'strict') throw `invalid PP_RUNTIME_CHECK='${mode}', must be 'strict' or empty`
+	const strict = mode == 'strict'
+	let result
 	try {
 		const writableDirs = config.nodeOptions['allow-fs-write'].filter(p => ctx.fs.existsSync(p))
-		runtimePosture.logRuntimePosture(ctx.checkPosture({ tmpdir: ctx.tmpdir, writableDirs }))
+		result = ctx.checkPosture({ tmpdir: ctx.tmpdir, writableDirs })
 	} catch (e) {
-		console.warn(`envHelpers.mjs: WARNING unable to check the runtime settings: ${e.message || e}`)
+		const message = `unable to check the runtime settings: ${e.message || e}`
+		if (strict) throw `${message}, which PP_RUNTIME_CHECK=strict requires`
+		console.warn(`envHelpers.mjs: WARNING ${message}`)
+		return
 	}
+	const errors = runtimePosture.logRuntimePosture(result, { strict })
+	if (errors.length)
+		throw `${errors.length} runtime setting(s) that PP_RUNTIME_CHECK=strict requires are not applied, see the errors above`
 }
 
 // router: a container uses fixed paths, same as the container overrides in server/src/serverconfig.js
