@@ -2,6 +2,7 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import 'd3-transition' // so that selection.transition would be defined
 import { Menu } from '#dom/menu'
+import { renderWait } from '#src/app.observer'
 import { detectStyle } from '../../test/test.helpers.js'
 /**
 Tests:
@@ -12,6 +13,7 @@ Tests:
 	stickyPosition() disconnects a prior stickyObserver on repeated show()
 	onHide() callback
 	showunder()
+	setTabNavigation(), blur of the first menu item
 	showunderoffset()
 	fadeout()
 	toggle()
@@ -309,6 +311,43 @@ tape('showunder()', async test => {
 		Math.round(menuP.y),
 		`Should show menu with the shifted style.top value relative to test element.`
 	)
+
+	if (test._ok) {
+		testMenu.destroy()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('setTabNavigation(), blur of the first menu item', async test => {
+	test.timeoutAfter(2000)
+	const holder = getHolder({ position: 'fixed' })
+	const btn = holder.append('button').text('Launcher')
+	const testMenu = new Menu()
+	const first = testMenu.d.append('button').text('Item 1').node()
+	testMenu.d.append('button').text('Item 2')
+
+	testMenu.showunder(btn.node())
+	// a programmatic focus shift right after showing the menu, before any shift-tab keydown
+	first.focus()
+	first.blur()
+	test.notEqual(
+		testMenu.d.style('display'),
+		'none',
+		'Should keep the menu open on a blur that is not preceded by shift-tab'
+	)
+
+	// let the menu's own delayed autofocus run first
+	await new Promise(resolve => setTimeout(resolve, renderWait + 50))
+	first.focus()
+	first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }))
+	first.blur()
+	test.equal(
+		testMenu.d.style('display'),
+		'none',
+		'Should hide the menu when shift-tabbing away from the first menu item'
+	)
+	test.equal(document.activeElement, btn.node(), 'Should move the focus back to the launcher element')
 
 	if (test._ok) {
 		testMenu.destroy()
