@@ -526,7 +526,7 @@ function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = 
 		checkPosture: opts => {
 			postureCalls.push(opts)
 			if (posture instanceof Error) throw posture
-			return posture || { warnings: [], unchecked: [] }
+			return posture || { findings: [], unchecked: [] }
 		}
 	}
 	return Object.assign(createContext(deps), { deps, written, spawned, execved, removed, postureCalls })
@@ -537,7 +537,10 @@ test('container: the runtime settings are checked with the allowed write dirs th
 	const ctx = fakeContext({
 		env: { PP_MODE: 'container-prod' },
 		exists: ['/home/root/pp/cache', '/tmp/user'],
-		posture: { warnings: ['the root filesystem is writable, mount it read-only'], unchecked: [] }
+		posture: {
+			findings: [{ check: 'read-only-root', message: 'the root filesystem is writable, mount it read-only' }],
+			unchecked: []
+		}
 	})
 	runInProcess(t, ['node', 'app.mjs'], ctx)
 	assert.equal(ctx.postureCalls.length, 1)
@@ -567,6 +570,52 @@ test('container: an error from the runtime settings check is logged, and the ser
 		['envHelpers.mjs: WARNING unable to check the runtime settings: boom']
 	)
 	assert.equal(ctx.execved.length, 1)
+})
+
+test('container: with PP_RUNTIME_CHECK=strict, a required setting stops the start, and other findings are warnings', t => {
+	const warn = t.mock.method(console, 'warn', () => {})
+	const findings = [
+		{ check: 'read-only-root', message: 'the root filesystem is writable, mount it read-only' },
+		{ check: 'ptrace-scope', message: 'the Yama LSM is not enabled' }
+	]
+	const env = { PP_MODE: 'container-prod', PP_RUNTIME_CHECK: 'strict' }
+	const ctx = fakeContext({ env, posture: { findings, unchecked: [] } })
+	assert.throws(
+		() => runInProcess(t, ['node', 'app.mjs'], ctx),
+		/1 runtime setting\(s\) that PP_RUNTIME_CHECK=strict requires/
+	)
+	assert.deepEqual(
+		warn.mock.calls.map(c => c.arguments[0]),
+		[
+			'runtimePosture.mjs: ERROR the root filesystem is writable, mount it read-only',
+			'runtimePosture.mjs: WARNING the Yama LSM is not enabled'
+		]
+	)
+	assert.equal(ctx.execved.length, 0, 'the server does not start')
+
+	// only a finding that is not required
+	const ok = fakeContext({ env, posture: { findings: [findings[1]], unchecked: [] } })
+	runInProcess(t, ['node', 'app.mjs'], ok)
+	assert.equal(ok.execved.length, 1)
+})
+
+test('container: PP_RUNTIME_CHECK=strict also stops the start when the check cannot be done, and an unknown value is rejected', t => {
+	t.mock.method(console, 'warn', () => {})
+	const failed = fakeContext({
+		env: { PP_MODE: 'container-prod', PP_RUNTIME_CHECK: 'strict' },
+		posture: new Error('boom')
+	})
+	assert.throws(
+		() => runInProcess(t, ['node', 'app.mjs'], failed),
+		/unable to check the runtime settings: boom, which PP_RUNTIME_CHECK=strict requires/
+	)
+	assert.equal(failed.execved.length, 0)
+	const typo = fakeContext({ env: { PP_MODE: 'container-prod', PP_RUNTIME_CHECK: 'strcit' } })
+	assert.throws(
+		() => runInProcess(t, ['node', 'app.mjs'], typo),
+		/invalid PP_RUNTIME_CHECK='strcit', must be 'strict' or empty/
+	)
+	assert.equal(typo.execved.length, 0)
 })
 
 // runs envHelpers() with the fake context, and removes the signal listeners that it adds to this test process
