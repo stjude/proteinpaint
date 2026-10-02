@@ -550,6 +550,25 @@ function clearGroupsetParentTerms(groupset: any) {
 	return groupset
 }
 
+/* before origins became a parent-term selection, the dt term of a groupset tvs carried its
+own origin. returns the origins found on the tvs of a groupset */
+export function getLegacyGroupsetOrigins(groupset: any): string[] {
+	const origins = new Set<string>()
+	walkTvs(groupset, (tvs: any) => {
+		if (tvs.term?.origin) origins.add(tvs.term.origin)
+	})
+	return [...origins]
+}
+
+/* strips the legacy origin of getLegacyGroupsetOrigins() from every tvs, in place */
+export function stripLegacyGroupsetOrigins(groupset: any) {
+	walkTvs(groupset, (tvs: any) => {
+		if (!tvs.term) return
+		delete tvs.term.origin
+		delete tvs.term.name_noOrigin
+	})
+}
+
 /* run fn on every tvs of a groupset, a group, or a filter.
 
 A tvs is a leaf: a nested tvslst is a sibling of it in filter.lst[], never inside it. Not
