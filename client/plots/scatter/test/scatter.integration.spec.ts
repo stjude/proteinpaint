@@ -571,7 +571,7 @@ tape('colorTW=geneVariant with groupsetting', function (test) {
 	})
 	async function runTests(scatter) {
 		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
-		const lab = 'TP53 SNV/indel Mutated (somatic)'
+		const lab = 'TP53 SNV/indel Mutated'
 		test.true(
 			dots.find(d => d.__data__.category == lab),
 			`A dot with category=${lab}`
@@ -579,7 +579,7 @@ tape('colorTW=geneVariant with groupsetting', function (test) {
 		// dots must use the colors the groupset carries, not an arbitrary ordinal scale.
 		// predefined_groupset_idx 0 is the SNV/indel groupset from getNonCnvGroupset() in
 		// client/tw/geneVariant.ts, which sets mutated='#e75480' and wildtype=mclass.WT.color
-		const wtLab = 'TP53 SNV/indel Wildtype (somatic)'
+		const wtLab = 'TP53 SNV/indel Wildtype'
 		test.true(
 			dots.find(d => d.__data__.category == lab && d.getAttribute('fill') == '#e75480'),
 			`${lab} dots must use the groupset color #e75480`
@@ -609,7 +609,7 @@ tape('colorTW=geneVariant with gene list', function (test) {
 	})
 	async function runTests(scatter) {
 		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
-		const lab = 'TP53, KRAS, AKT1, BCR SNV/indel Mutated (somatic)'
+		const lab = 'TP53, KRAS, AKT1, BCR SNV/indel Mutated'
 		test.true(
 			dots.find(d => d.__data__.category == lab),
 			`A dot with category=${lab}`
