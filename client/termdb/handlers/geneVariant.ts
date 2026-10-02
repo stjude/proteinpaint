@@ -183,7 +183,7 @@ export class SearchHandler {
 		this.queryOrigins = this.getQueryOrigins()
 		this.originSelect = this.renderOriginSelect()
 		if (this.originSelect) {
-			td1.style('display', null).text('Origins')
+			td1.style('display', null).text('Origin')
 			td2.style('display', null).style('padding-left', '10px')
 		} else {
 			td1.style('display', 'none')
