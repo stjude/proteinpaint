@@ -3,24 +3,48 @@ import type { ColumnFilter, SortState, TableBaseRow } from './tableTypes'
 /** Longest filter text kept. A filter is matched against every row on each keystroke. */
 export const MAX_FILTER_LENGTH = 100
 
-/** Sorts rows in place by one column. A column of numeric strings (e.g. file names used as ids)
- * sorts numerically rather than lexically. Rows with a missing value keep their relative position. */
+/** Sorts rows in place by one column and returns them.
+ *
+ * Rows with no value in the column (undefined, null or NaN) keep the exact positions they hold. Only the
+ * rows that have a value are sorted, and are written back into the positions that held a value. Returning
+ * 0 from a comparator whenever a value is missing would make "equal" intransitive (b < a is false,
+ * a == missing, missing == b), and the result of the sort would depend on the engine.
+ *
+ * A column whose values are all numeric strings (e.g. file names used as ids) sorts by number rather than
+ * as text. In a column that mixes numbers and text, numbers come before text (after it when descending). */
 export function sortRows(rows: TableBaseRow[], colIdx: number, ascending: boolean): TableBaseRow[] {
-	const allNumericStrings = rows.every(row => {
-		const v = row[colIdx]?.value
+	const valueOf = (row: TableBaseRow) => row[colIdx]?.value
+	const hasValue = (row: TableBaseRow) => {
+		const v = valueOf(row)
+		return v != null && !(typeof v === 'number' && Number.isNaN(v))
+	}
+
+	// the positions that hold a value, and the rows in them
+	const slots: number[] = []
+	const withValue: TableBaseRow[] = []
+	rows.forEach((row, i) => {
+		if (!hasValue(row)) return
+		slots.push(i)
+		withValue.push(row)
+	})
+
+	const allNumericStrings = withValue.every(row => {
+		const v = valueOf(row)
 		return typeof v === 'string' && Number.isFinite(+v)
 	})
-	return rows.sort((a, b) => {
-		const aVal = a[colIdx]?.value
-		const bVal = b[colIdx]?.value
-		if (aVal == null || bVal == null) return 0
-		if (typeof aVal === 'number' && typeof bVal === 'number') return ascending ? aVal - bVal : bVal - aVal
-		if (allNumericStrings) return ascending ? +aVal - +bVal : +bVal - +aVal
-		if (typeof aVal === 'string' && typeof bVal === 'string') {
-			return ascending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
-		}
-		return 0
+	withValue.sort((a, b) => {
+		const aVal = valueOf(a)!
+		const bVal = valueOf(b)!
+		let order: number
+		if (typeof aVal === 'number' && typeof bVal === 'number') order = aVal - bVal
+		else if (allNumericStrings) order = +aVal - +bVal
+		else if (typeof aVal === 'string' && typeof bVal === 'string') order = aVal.localeCompare(bVal)
+		else order = typeof aVal === 'number' ? -1 : 1
+		return ascending ? order : -order
 	})
+
+	slots.forEach((slot, k) => (rows[slot] = withValue[k]))
+	return rows
 }
 
 // Written so that no digit can match two ways. The looser '\d+\.?\d*' backtracks quadratically on a long
@@ -78,7 +102,11 @@ export function rowMatchesFilters(row: TableBaseRow, filters: Map<number, Column
 }
 
 /** Filters first so the sort only handles the rows that remain. Never reorders or changes `rows`. */
-export function filterAndSort(rows: TableBaseRow[], filters: Map<number, ColumnFilter>, sort?: SortState): TableBaseRow[] {
+export function filterAndSort(
+	rows: TableBaseRow[],
+	filters: Map<number, ColumnFilter>,
+	sort?: SortState
+): TableBaseRow[] {
 	let visible = filters.size ? rows.filter(row => rowMatchesFilters(row, filters)) : rows
 	if (sort) visible = sortRows(visible === rows ? visible.slice() : visible, sort.colIdx, sort.ascending)
 	return visible
