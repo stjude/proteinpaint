@@ -2,6 +2,7 @@ import { select } from 'd3-selection'
 import type { SCTableData } from '../SCTypes'
 import type { Div } from '../../../types/d3'
 import { TableBase } from '#dom'
+import type { TableBaseRow } from '#dom'
 import type { TableBaseCell, TableBaseColumn } from '#dom'
 
 const SHOWN_PLOTS = 'Shown plots'
@@ -58,11 +59,25 @@ export class SCSampleTable extends TableBase {
 		return String(row?.[colIdx]?.value ?? '')
 	}
 
-	/** SC re-selects on every click, even the selected row, because selecting also closes the table.
-	 * The base ignores a click on the selected radio, so report it here instead. */
+	/** SC re-selects on every click, even on the selected row, because selecting also closes the table.
+	 * The base does nothing for a row that is already selected: a click on its checked radio emits no
+	 * change, and the row's own handler ignores clicks that land on the input. So report it here, from the
+	 * row handler (toggleRow) and from a click on the radio itself (renderSelector). */
+	private reselect(row: TableBaseRow): boolean {
+		if (!this.selected.has(row)) return false
+		this.onRowClick?.(this.sampleIdOf(row))
+		return true
+	}
+
 	protected toggleRow(input: any): void {
-		if (!input.property('checked')) return super.toggleRow(input)
-		this.onRowClick?.(this.sampleIdOf(this.originalRows[Number(input.attr('value'))]))
+		if (!this.reselect(this.originalRows[Number(input.attr('value'))])) super.toggleRow(input)
+	}
+
+	/** A click on an unselected radio is not a reselect: it is reported once, by the base's change handler. */
+	protected renderSelector(tr: any, row: TableBaseRow, rowIdx: number): any {
+		const input = super.renderSelector(tr, row, rowIdx)
+		input.on('click.reselect', () => this.reselect(row))
+		return input
 	}
 
 	/** Rebuilds the sample -> row/cell lookup after every body redraw, then lets SC re-add its buttons,
