@@ -131,8 +131,10 @@ RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir
 # `docker run --user <uid>:0` or a Kubernetes runAsUser with runAsGroup 0: a runtime assigns group 0 to
 # a UID that has no account in the image, so the dirs that the app writes at runtime are also owned by,
 # and writable for, group 0. See also the ppserver and ppfull stages.
+# the app user does not need the r-base 'staff' group
 RUN groupmod -n app docker && \
     usermod -l app -d /home/app -m docker && \
+    gpasswd -d app staff && \
     chown app:app /home/root/pp/cache && \
     chgrp -R 0 /home/root/pp/cache /home/app && \
     chmod -R g=u /home/root/pp/cache /home/app
@@ -148,6 +150,12 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
         echo "unknown ARCH='$ARCH'" && \
         exit 1; \
     fi
+
+# the interpreter and tool dirs are installed by root and are only read by the app user
+RUN for d in /opt/venv /opt/venv/lib/python3*/site-packages /usr/local/lib/R/site-library /usr/lib/R/site-library \
+        /usr/local/bin /home/root/pp/tools "$NVM_DIR"; do \
+        if [ -e "$d" ] && su -s /bin/sh app -c "test -w '$d'"; then echo "ERROR: $d is writable by the app user"; exit 1; fi; \
+    done
 
 # Declared after all the dependency install steps: a changed ARG value invalidates the cache of every
 # later RUN step in the stage, and IMGREV changes with every commit.
