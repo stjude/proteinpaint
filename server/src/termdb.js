@@ -4,7 +4,8 @@ import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { trigger_getLowessCurve } from '#routes/termdb.sampleScatter.ts'
 import { get_mds3variantData } from './mds3.variant.js'
-import { get_lines_bigfile, checkChr } from './utils.js'
+import { get_lines_bigfile } from './utils.js'
+import { string2pos } from '#shared/common.js'
 import { authApi } from './auth.js'
 import { searchSNP } from '#routes/snp.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
@@ -372,11 +373,15 @@ async function LDoverlay(q, ds, res, genome) {
 	const tk = ds.queries.ld.tracks.find(i => i.name == q.ldtkname)
 	if (!tk) throw 'unknown ld tk'
 	if (typeof q.m != 'object') throw 'q.m{} not object'
-	checkChr(genome, q.m.chr)
-	if (!Number.isInteger(q.m.pos)) throw 'q.m.pos not integer'
+	// validated chr/pos from string2pos() are used below instead of raw q.m.chr/pos
+if (!Number.isInteger(q.m.pos)) throw 'invalid q.m.chr/pos'
+	const p = string2pos(q.m.chr + ':' + q.m.pos, genome)
+	if (!p?.actualposition) throw 'invalid q.m.chr/pos'
+	const chr = p.chr,
+		pos = p.actualposition.position
 	if (!q.m.ref || !q.m.alt) throw 'q.m{} invalid alleles'
 	const thisalleles = q.m.ref + '.' + q.m.alt
-	const coord = (tk.nochr ? q.m.chr.replace('chr', '') : q.m.chr) + ':' + q.m.pos + '-' + (q.m.pos + 1)
+	const coord = (tk.nochr ? chr.replace('chr', '') : chr) + ':' + pos + '-' + (pos + 1)
 	const lst = []
 	await get_lines_bigfile({
 		args: [path.join(serverconfig.tpmasterdir, tk.file), coord],
@@ -387,13 +392,13 @@ async function LDoverlay(q, ds, res, genome) {
 			const alleles1 = l[3]
 			const alleles2 = l[4]
 			const r2 = Number.parseFloat(l[5])
-			if (start == q.m.pos && alleles1 == thisalleles) {
+			if (start == pos && alleles1 == thisalleles) {
 				lst.push({
 					pos: stop,
 					alleles: alleles2,
 					r2
 				})
-			} else if (stop == q.m.pos && alleles2 == thisalleles) {
+			} else if (stop == pos && alleles2 == thisalleles) {
 				lst.push({
 					pos: start,
 					alleles: alleles1,

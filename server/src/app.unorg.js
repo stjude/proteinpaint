@@ -2892,15 +2892,17 @@ async function handle_isoformbycoord(req, res) {
 	try {
 		const genome = genomes[req.query.genome]
 		if (!genome) throw 'invalid genome'
-		utils.checkChr(genome, req.query.chr)
-		const pos = Number(req.query.pos)
-		if (!Number.isInteger(pos)) throw 'pos must be positive integer'
+		// validated chr/pos from string2pos() are used below instead of raw req.query.chr/pos
+		const p = common.string2pos(req.query.chr + ':' + req.query.pos, genome)
+		if (!p?.actualposition?.position) throw 'invalid chr/pos'
+		const chr = p.chr,
+			pos = p.actualposition.position
 
 		const genetk = genome.tracks.find(i => i.__isgene)
-		if (!genetk) reject('no gene track')
+		if (!genetk) throw 'no gene track'
 		const isoforms = []
 		await utils.get_lines_bigfile({
-			args: [path.join(serverconfig.tpmasterdir, genetk.file), req.query.chr + ':' + pos + '-' + pos],
+			args: [path.join(serverconfig.tpmasterdir, genetk.file), chr + ':' + pos + '-' + pos],
 			callback: line => {
 				const str = line.split('\t')[3]
 				if (!str) return
@@ -2920,31 +2922,6 @@ async function handle_isoformbycoord(req, res) {
 		if (e.stack) console.log(e.stack)
 		res.send({ error: e.message || e })
 	}
-}
-
-function isoformbycoord_tabix(genome, chr, pos) {
-	return new Promise((resolve, reject) => {
-		const ps = utils.spawnTool('tabix', [path.join(serverconfig.tpmasterdir, genetk.file), chr + ':' + pos + '-' + pos])
-		const out = [],
-			out2 = []
-		ps.stdout.on('data', d => out.push(d))
-		ps.stderr.on('data', d => out2.push(d))
-		ps.on('close', () => {
-			const err = out2.join('')
-			if (err && !tabixnoterror(err)) reject(err)
-			const str = out.join('').trim()
-			if (!str) resolve([])
-			const lst = []
-			for (const line of str.split('\n')) {
-				const js = line.split('\t')[3]
-				if (js) {
-					const j = JSON.parse(js)
-					if (j.isoform) lst.push({ isoform: j.isoform })
-				}
-			}
-			resolve(lst)
-		})
-	})
 }
 
 /***********  __smat ************/

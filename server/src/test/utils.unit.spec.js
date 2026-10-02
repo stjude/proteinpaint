@@ -11,7 +11,6 @@ validateRglst
 illegalpath()
 doUpdateAttr
 get_fasta
-checkChr
 fileurl() argv safety
 fileurl() url protocol and host
 snpgtCacheFile()
@@ -317,16 +316,6 @@ tape('get_fasta', async test => {
 		} catch (e) {
 			test.equal(e, 'invalid coordinate', `should reject coord=${coord}`)
 		}
-	}
-	test.end()
-})
-
-tape('checkChr', test => {
-	const g = { chrlookup: { CHR1: { name: 'chr1', len: 1000 } } }
-	test.doesNotThrow(() => utils.checkChr(g, 'chr1'), 'should accept a known chr')
-	test.doesNotThrow(() => utils.checkChr(g, 'Chr1'), 'should accept a known chr case-insensitively')
-	for (const chr of ['-o/tmp/x', '-fc', 'chrX', '', undefined, { a: 1 }]) {
-		test.throws(() => utils.checkChr(g, chr), /invalid chr/, `should reject chr=${JSON.stringify(chr)}`)
 	}
 	test.end()
 })

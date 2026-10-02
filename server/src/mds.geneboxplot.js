@@ -486,7 +486,7 @@ function get_param(genomes, req) {
 
 	const gn = genomes[req.query.genome]
 	if (!gn) throw 'invalid genome'
-	utils.checkChr(gn, req.query.chr)
+	utils.validateRglst({ rglst: [req.query] }, gn) // req.query={chr,start,stop}
 
 	let ds, dsquery
 	if (req.query.iscustom) {

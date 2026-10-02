@@ -53,7 +53,13 @@ export function handle_mdssurvivalplot(genomes) {
 
 			// samplerule.set.chr goes into tabix argv
 			const st = q.samplerule?.set
-			if (st?.geneexpression || st?.mutation) utils.checkChr(gn, st.chr)
+			if (st?.geneexpression || st?.mutation) {
+				// validate the range actually queried; mutation queries chr:start-(stop+1) since a snvindel/sv/fusion set has start==stop
+				utils.validateRglst(
+					{ rglst: [{ chr: st.chr, start: st.start, stop: st.mutation ? st.stop + 1 : st.stop }] },
+					gn
+				)
+			}
 
 			const samplesets = await divide_samples(samples, q, ds, samples)
 

@@ -762,9 +762,8 @@ async function getFilefullpathOrUrl(req) {
 }
 
 async function get_q(genome, req) {
-	// validate region chr before any samtools process is launched (quickcheck below)
-	if (!Array.isArray(req.query.regions) || req.query.regions.length == 0) throw 'q.regions[] not non-empty array'
-	for (const r of req.query.regions) utils.checkChr(genome, r.chr)
+	// validate regions before any samtools process is launched (quickcheck below)
+	utils.validateRglst({ rglst: req.query.regions }, genome)
 
 	const [filefullpath, dir] = await getFilefullpathOrUrl(req)
 	const q = {
@@ -3110,11 +3109,9 @@ Insertion  BBBBBBBBBBBBBBBBB
 
 async function route_getread(genome, req) {
 	// cannot use the point position under cursor to query, as if clicking on softclip
-	utils.checkChr(genome, req.query.chr)
 	if (!req.query.qname) throw '.qname missing'
 	req.query.qname = decodeURIComponent(req.query.qname) // convert %2B to +
-	if (!Number.isInteger(req.query.start)) throw '.start is not integer'
-	if (!Number.isInteger(req.query.stop)) throw '.stop is not integer'
+	utils.validateRglst({ rglst: [req.query] }, genome) // req.query={chr,start,stop}
 	const r = {
 		chr: req.query.chr,
 		start: req.query.start,
