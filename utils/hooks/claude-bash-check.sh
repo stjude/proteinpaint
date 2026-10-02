@@ -39,7 +39,8 @@ TARGET=$(git -C "$TARGETDIR" remote get-url origin 2>/dev/null)
 if [[ "$CMD" =~ (-R|--repo)[=[:space:]]+([^[:space:]]+) ]]; then TARGET=${BASH_REMATCH[2]}; fi
 if [[ "$CMD" =~ $GHCMD && "$CMD" =~ repos/([^/[:space:]]+/[^/[:space:]]+) ]]; then TARGET=${BASH_REMATCH[1]}; fi
 if [[ "$TARGET" =~ stjude/sjpp(\.git)?$ ]]; then
-	if [[ ! "$CMD" =~ $GITCMD || ! "$CMD" =~ (ppgdc|ppmmrf) ]]; then exit 0; fi
+	# in sjpp, only the commits that change a subrepo will be public
+	if [[ "$CMD" =~ $GHCMD || ! "$CMD" =~ (ppgdc|ppmmrf) ]]; then exit 0; fi
 fi
 
 # also check the text in files that are passed to gh, such as with --body-file
