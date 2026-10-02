@@ -47,6 +47,80 @@ tape('process.env.PP_CREDS: invalid JSON throws a message without the credential
 })
 
 /*
+	process.env.PP_CREDS_HANDOFF_FILE is a private temp file from container/envHelpers.mjs
+*/
+function writeHandoffFile(content) {
+	const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pp-creds-')), 'creds.json')
+	fs.writeFileSync(file, content)
+	return file
+}
+
+tape('process.env.PP_CREDS_HANDOFF_FILE: sets each <NAME>_CREDS from the file, then removes its dir', async test => {
+	const creds = { zzCredsTest: { '*': { '*': { type: 'basic', password: 'test-only' } } } } // pragma: allowlist secret
+	const file = writeHandoffFile(JSON.stringify({ PP_CREDS: JSON.stringify(creds), PP_ZZTEST_CREDS: 'other' }))
+	process.env.PP_CREDS_HANDOFF_FILE = file
+	try {
+		const { default: config } = await import('../serverconfig.js?pp_creds_handoff=valid')
+		test.deepEqual(config.dsCredentials.zzCredsTest, creds.zzCredsTest, 'should set dsCredentials from the file')
+		test.equal('PP_CREDS' in process.env, false, 'should delete PP_CREDS from process.env')
+		test.equal('PP_CREDS_HANDOFF_FILE' in process.env, false, 'should delete PP_CREDS_HANDOFF_FILE from process.env')
+		test.equal(process.env.PP_ZZTEST_CREDS, 'other', 'should set another <NAME>_CREDS for the code that reads it')
+		test.equal(fs.existsSync(path.dirname(file)), false, 'should remove the handoff dir')
+	} finally {
+		delete process.env.PP_CREDS_HANDOFF_FILE
+		delete process.env.PP_ZZTEST_CREDS
+		fs.rmSync(path.dirname(file), { recursive: true, force: true })
+	}
+	test.end()
+})
+
+tape('process.env.PP_CREDS_HANDOFF_FILE: invalid JSON throws a message without the credentials content', async test => {
+	const file = writeHandoffFile('{"PP_CREDS": "secret-value-not-in-message') // pragma: allowlist secret
+	process.env.PP_CREDS_HANDOFF_FILE = file
+	try {
+		await import('../serverconfig.js?pp_creds_handoff=invalid')
+		test.fail('should throw on invalid JSON')
+	} catch (e) {
+		const message = String(e.message || e)
+		test.equal(
+			message,
+			'unable to read credentials from process.env.PP_CREDS_HANDOFF_FILE',
+			'should throw a sanitized message'
+		)
+		test.equal(fs.existsSync(path.dirname(file)), false, 'should still remove the handoff dir')
+	} finally {
+		delete process.env.PP_CREDS_HANDOFF_FILE
+		fs.rmSync(path.dirname(file), { recursive: true, force: true })
+	}
+	test.end()
+})
+
+tape(
+	'process.env.PP_CREDS_HANDOFF_FILE: a path not created by envHelpers.mjs is rejected, and not removed',
+	async test => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'other-'))
+		const file = path.join(dir, 'creds.json')
+		fs.writeFileSync(file, '{}')
+		try {
+			for (const value of [file, '/etc/passwd', path.join(os.tmpdir(), 'pp-creds-x', 'other.json')]) {
+				process.env.PP_CREDS_HANDOFF_FILE = value
+				try {
+					await import(`../serverconfig.js?pp_creds_handoff=bad-${encodeURIComponent(value)}`)
+					test.fail(`should reject '${value}'`)
+				} catch (e) {
+					test.equal(String(e.message || e), 'invalid process.env.PP_CREDS_HANDOFF_FILE', `should reject '${value}'`)
+				}
+			}
+			test.equal(fs.existsSync(file), true, 'should not remove a rejected file')
+		} finally {
+			delete process.env.PP_CREDS_HANDOFF_FILE
+			fs.rmSync(dir, { recursive: true, force: true })
+		}
+		test.end()
+	}
+)
+
+/*
 	process.env.PP_SERVERCONFIG_OVERRIDES is also applied when serverconfig.js is evaluated,
 	such as from the container app-server.mjs and app-full.mjs, instead of rewriting serverconfig.json
 */
