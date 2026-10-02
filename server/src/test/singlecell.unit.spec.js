@@ -14,7 +14,7 @@ test sections:
 - getpcd: textfile is a directory
 - getpcd: custom colors
 - unknown request
-- getgeneboxplot: cellfile is a directory
+- gene expression requests are no longer supported
 */
 
 // test files are written to a temporary dir under tpmasterdir, since file paths are relative to it
@@ -134,22 +134,11 @@ tape('unknown request', async test => {
 	test.end()
 })
 
-tape('getgeneboxplot: cellfile is a directory', async test => {
-	const result = await send({
-		genome: 'hg38',
-		getgeneboxplot: {
-			expfile: 'files/hg38/TermdbTest/TermdbTest_ITD.gz',
-			chr: 'chr1',
-			start: 1,
-			stop: 2,
-			genename: 'TP53',
-			cellfile: reldir,
-			delimiter: '\t',
-			barcodecolumnidx: 0,
-			categorycolumnidx: 1
-		}
-	})
-	test.ok(result?.error, 'should return an error')
+tape('gene expression requests are no longer supported', async test => {
+	const box = await send({ genome: 'hg38', getgeneboxplot: {} })
+	test.equal(box?.error, 'unknown request', 'should reject getgeneboxplot')
+	const heat = await send({ genome: 'hg38', getheatmap: {} })
+	test.equal(heat?.error, 'unknown request', 'should reject getheatmap')
 	test.end()
 })
 

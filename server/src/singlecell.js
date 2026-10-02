@@ -3,11 +3,9 @@ import path from 'path'
 import readline from 'readline'
 import * as d3scale from 'd3-scale'
 import * as d3color from 'd3-color'
-import * as d3interpolate from 'd3-interpolate'
 import * as utils from './utils.js'
 import serverconfig from './serverconfig.js'
 import { schemeCategory10 } from 'd3-scale-chromatic'
-import { boxplot_getvalue } from '#shared/boxplot.js'
 
 const schemeCategory20 = [
 	'#1f77b4',
@@ -37,14 +35,12 @@ const schemeCategory20 = [
 handle_singlecell_closure()
 ********************** INTERNAL
 get_pcd() // reformat UMAP data into PCD 
-slice_file_add_color() // add color (decimal) to each dot by auto, custom categorical color or expression
+slice_file_add_color() // add color (decimal) to each dot by auto or custom categorical color
 getCustomCatColor() // get custom color if defined in json
 getCustomCatOrder() // if legend order is defined in the json
-rgbToHex() // convert rgb to hex
-get_geneboxplot() // also get kernel density for violin plot
-get_histogram()
-get_heatmap() // get heatmap data for group of genes
-cellfile_get_barcode2category() // k: barcode, v: {category, expvalue}
+
+gene expression (tabix-indexed exp file) is no longer supported, including
+getpcd.gene_expression for overlay, getgeneboxplot for violin, and getheatmap
 
 TODO need to test the existence of the json file
 */
@@ -58,15 +54,7 @@ export function handle_singlecell_closure(genomes) {
 
 			// dispatch on presence, so that an invalid value such as null is answered by the validation below
 			if (q.getpcd !== undefined) {
-				await get_pcd(q, gn, res)
-				return
-			}
-			if (q.getgeneboxplot !== undefined) {
-				await get_geneboxplot(q, gn, res)
-				return
-			}
-			if (q.getheatmap !== undefined) {
-				await get_heatmap(q, gn, res)
+				await get_pcd(q, res)
 				return
 			}
 			throw 'unknown request'
@@ -77,7 +65,7 @@ export function handle_singlecell_closure(genomes) {
 	}
 }
 
-async function get_pcd(q, gn, res) {
+async function get_pcd(q, res) {
 	/* hardcoded to 3d
 		TODO 2d, svg
 		PCD file format guide: https://pcl.readthedocs.io/projects/tutorials/en/latest/pcd_file_format.html
@@ -85,7 +73,7 @@ async function get_pcd(q, gn, res) {
 
 	const result = {}
 
-	const lines = await slice_file_add_color(q, gn, result)
+	const lines = await slice_file_add_color(q, result)
 
 	const header = `# .PCD v.7 - Point Cloud Data file format
 VERSION .7
@@ -104,7 +92,7 @@ DATA ascii
 	res.send(result)
 }
 
-async function slice_file_add_color(q, gn, result) {
+async function slice_file_add_color(q, result) {
 	/*
 to slice the csv/tab file of all cells
 for each cell, assign color based on desired method
@@ -141,10 +129,8 @@ may attach coloring scheme to result{} for returning to client
 
 	// set up coloring scheme
 	let categorical_color_function
-	let cell2color_byexp // color by gene expression values
 	let collect_category2color
 	let collect_category_count
-	let collect_gene_expression2color
 	// if color scheme is automatic, collect colors here for returning to client
 
 	if (q.getpcd.category_autocolor) {
@@ -159,74 +145,10 @@ may attach coloring scheme to result{} for returning to client
 		categorical_color_function = getCustomCatColor(cat_values, auto_color_fn)
 		collect_category2color = {}
 		collect_category_count = {}
-		collect_gene_expression2color = {}
-	} else if (q.getpcd.gene_expression) {
-		const ge = q.getpcd.gene_expression
-		if (!ge.file) throw 'gene_expression.file missing'
-		{
-			const [e, file, isurl] = utils.fileurl({ query: { file: ge.file } })
-			if (e) throw e
-			ge.file = file
-		}
-		if (!isColumnIndex(ge.barcodecolumnidx)) throw 'gene_expression.barcodecolumnidx missing'
-		utils.checkChr(gn, ge.chr)
-		if (!ge.start) throw 'gene_expression.start missing'
-		if (!ge.stop) throw 'gene_expression.stop missing'
-		if (!ge.genename) throw 'gene_expression.genename missing'
-		if (ge.autoscale) {
-			if (!ge.color_min) throw 'gene_expression.color_min missing at autoscale'
-			if (!ge.color_max) throw 'gene_expression.color_max missing at autoscale'
-		} else {
-			throw 'gene_expression: unknown scaling method'
-		}
-
-		const coord = (ge.nochr ? ge.chr.replace('chr', '') : ge.chr) + ':' + ge.start + '-' + ge.stop
-		const cell2value = new Map()
-		cell2color_byexp = new Map()
-
-		let minexpvalue = 0,
-			maxexpvalue = 0
-
-		// collect number of cells
-		result.numbercellwithgeneexp = 0
-		result.numbercelltotal = 0
-
-		await utils.get_lines_bigfile({
-			args: [ge.file, coord],
-			callback: line => {
-				const j = JSON.parse(line.split('\t')[3])
-				if (j.gene != ge.genename) return
-				if (!Number.isFinite(j.value)) return
-				result.numbercellwithgeneexp++
-
-				if (ge.autoscale) {
-					minexpvalue = Math.min(minexpvalue, j.value)
-					maxexpvalue = Math.max(maxexpvalue, j.value)
-				}
-
-				cell2value.set(j.sample, j.value)
-			}
-		})
-
-		// record scaling to return to client
-		if (ge.autoscale) {
-			result.minexpvalue = minexpvalue
-			result.maxexpvalue = maxexpvalue
-			const interpolate = d3interpolate.interpolateRgb(ge.color_min, ge.color_max)
-			for (const [k, v] of cell2value) {
-				const c = d3color.color(interpolate((v - minexpvalue) / (maxexpvalue - minexpvalue)))
-
-				cell2color_byexp.set(k, Number.parseInt(rgbToHex(c.r, c.g, c.b), 16))
-			}
-		}
 	}
 
 	if (categorical_color_function && !isColumnIndex(q.getpcd.category_index))
 		throw 'getpcd.category_index must be a column index'
-	const color_no_exp = q.getpcd.gene_expression?.color_no_exp
-		? parseColor(q.getpcd.gene_expression.color_no_exp, 'gene_expression.color_no_exp')
-		: '2894892' // dark grey
-	//: '14540253' //light grey
 
 	const lines = []
 	let firstline = true
@@ -273,17 +195,6 @@ may attach coloring scheme to result{} for returning to client
 					collect_category_count[ca] = 1
 				}
 			}
-		} else if (cell2color_byexp) {
-			result.numbercelltotal++
-
-			const barcode = l[q.getpcd.gene_expression.barcodecolumnidx]
-			let color = cell2color_byexp.get(barcode)
-			// if(!color) return
-
-			// add color for cells without expression to retain cluster shape
-			// if color_min is black, then it will be converted to 00000, and will reassing, so check for type rahter than !color
-			if (typeof color == 'undefined') color = color_no_exp
-			newl.push(color)
 		}
 
 		lines.push(newl.join(' '))
@@ -392,262 +303,4 @@ function getCustomCatOrder(category2color, catValues) {
 		if (!found) new_cat2col[key] = category2color[key]
 	}
 	return new_cat2col
-}
-
-function componentToHex(c) {
-	const hex = c.toString(16)
-	return hex.length == 1 ? '0' + hex : hex
-}
-
-function rgbToHex(r, g, b) {
-	return componentToHex(r) + componentToHex(g) + componentToHex(b)
-}
-
-async function get_geneboxplot(q, gn, res) {
-	// also get kernel density for violin plot
-
-	const ge = q.getgeneboxplot
-	const categorical_color_function =
-		q.getgeneboxplot.values_count && q.getgeneboxplot.values_count <= 10
-			? d3scale.scaleOrdinal(schemeCategory10)
-			: d3scale.scaleOrdinal(schemeCategory20)
-
-	if (!ge.expfile) throw 'getgeneboxplot.expfile missing'
-	{
-		const [e, file, isurl] = utils.fileurl({ query: { file: ge.expfile } })
-		if (e) throw 'getgeneboxplot.expfile error: ' + e
-		ge.expfile = file
-	}
-	utils.checkChr(gn, ge.chr)
-	if (!ge.start) throw 'getgeneboxplot.start missing'
-	if (!ge.stop) throw 'getgeneboxplot.stop missing'
-	if (!ge.genename) throw 'getgeneboxplot.genename missing'
-
-	const barcode2catvalue = await cellfile_get_barcode2category(ge)
-	// k: barcode, v: {category, expvalue}
-
-	const coord = (ge.nochr ? ge.chr.replace('chr', '') : ge.chr) + ':' + ge.start + '-' + ge.stop
-
-	let minexpvalue = 0,
-		maxexpvalue = 0
-
-	await utils.get_lines_bigfile({
-		args: [ge.expfile, coord],
-		callback: line => {
-			const j = JSON.parse(line.split('\t')[3])
-			if (j.gene != ge.genename) return
-			if (!j.sample) return
-			if (!Number.isFinite(j.value)) return
-
-			const c = barcode2catvalue.get(j.sample)
-			if (!c) return
-			c.expvalue = j.value
-
-			minexpvalue = Math.min(minexpvalue, j.value)
-			maxexpvalue = Math.max(maxexpvalue, j.value)
-		}
-	})
-
-	const category2values = new Map()
-	// k: category, v: array of exp values, from all cells of that category
-
-	// divide cells to categories
-	for (const [barcode, v] of barcode2catvalue) {
-		if (!category2values.has(v.category)) category2values.set(v.category, [])
-		if (ge.exclude_cells && parseInt(v.expvalue) == 0) continue
-		category2values.get(v.category).push({ value: v.expvalue })
-	}
-
-	const boxplots_ = []
-	// each element is one category
-
-	const scaleticks = d3scale.scaleLinear().domain([minexpvalue, maxexpvalue]).ticks(20)
-
-	// kde doesn't work -- using the wrong kernel??
-	//const kde = kernelDensityEstimator( kernelEpanechnikov(7), scaleticks )
-
-	const histofunc = get_histogram(scaleticks)
-
-	for (const [category, values] of category2values) {
-		values.sort((i, j) => i.value - j.value)
-
-		const b = boxplot_getvalue(values)
-		delete b.out // remove outliers
-		const co = categorical_color_function(category)
-
-		b.category = category
-		b.color = co
-
-		b.numberofcells = values.length // now is just the total number of cells
-
-		//b.density =  kde( values.map( i=> i.value ) )
-		b.density = histofunc(values)
-
-		boxplots_.push(b)
-	}
-
-	let boxplots = []
-	if (q.getgeneboxplot.cat_values) {
-		const cat_len = Object.keys(q.getgeneboxplot.cat_values).length
-
-		// Add values in new vat2col in order
-		for (var i = 1; i <= cat_len; i++) {
-			const found = q.getgeneboxplot.cat_values.find(v => {
-				if (v.order == i) return v.value
-			})
-			if (found) boxplots.push(boxplots_.filter(bx => bx.category == found.value)[0])
-		}
-
-		// // Add values which doesn't have order defined in config file
-		for (const v of q.getgeneboxplot.cat_values) {
-			if (!v.order) boxplots.push(boxplots_.filter(bx => bx.category == v.value)[0])
-		}
-
-		// // Add values which are not defined in config file
-		for (const bx of boxplots_) {
-			const found = q.getgeneboxplot.cat_values.find(v => {
-				if (v.value == bx['category']) return true
-			})
-			if (!found) boxplots.push(bx)
-		}
-
-		for (const bx of boxplots) {
-			const found = q.getgeneboxplot.cat_values.find(v => {
-				if (v.value == bx['category']) return v
-			})
-			if (found && found.color) bx.color = found.color
-		}
-	} else boxplots = boxplots_
-
-	res.send({ boxplots, minexpvalue, maxexpvalue })
-}
-
-function get_histogram(ticks) {
-	return values => {
-		// array of {value}
-		const bins = []
-		for (let i = 1; i < ticks.length; i++) bins.push(0)
-		for (const v of values) {
-			for (let i = 1; i < ticks.length; i++) {
-				if (v.value <= ticks[i]) {
-					bins[i - 1]++
-					break
-				}
-			}
-		}
-		return bins
-	}
-}
-
-async function get_heatmap(q, gn, res) {
-	const ge = q.getheatmap
-	const gene_heatmap = [] //for each gene, new array will be created with each catagory
-
-	if (!ge.expfile) throw 'getgeneboxplot.expfile missing'
-	{
-		const [e, file, isurl] = utils.fileurl({ query: { file: ge.expfile } })
-		if (e) throw 'getgeneboxplot.expfile error: ' + e
-		ge.expfile = file
-	}
-	ge.gene_list.forEach(gene => {
-		utils.checkChr(gn, gene.chr)
-		if (!gene.start) throw 'getgeneboxplot.start missing'
-		if (!gene.stop) throw 'getgeneboxplot.stop missing'
-		if (!gene.gene) throw 'getgeneboxplot.genename missing'
-	})
-
-	const barcode2catvalue = await cellfile_get_barcode2category(ge)
-
-	for (const gene of ge.gene_list) {
-		const coord = (gene.nochr ? gene.chr.replace('chr', '') : gene.chr) + ':' + gene.start + '-' + gene.stop
-
-		let minexpvalue = 0,
-			maxexpvalue = 0
-
-		const genename = gene.gene
-
-		await utils.get_lines_bigfile({
-			args: [ge.expfile, coord],
-			callback: line => {
-				const j = JSON.parse(line.split('\t')[3])
-				if (j.gene.toUpperCase() !== gene.gene.toUpperCase()) return
-				if (!j.sample) return
-				if (!Number.isFinite(j.value)) return
-
-				const c = barcode2catvalue.get(j.sample)
-				if (!c) return
-				c.expvalue = j.value
-
-				minexpvalue = Math.min(minexpvalue, j.value)
-				maxexpvalue = Math.max(maxexpvalue, j.value)
-			}
-		})
-
-		const category2values = new Map()
-		// k: category, v: array of exp values, from all cells of that category
-
-		// divide cells to categories
-		for (const [barcode, v] of barcode2catvalue) {
-			if (!category2values.has(v.category)) category2values.set(v.category, [])
-			category2values.get(v.category).push({ value: v.expvalue })
-		}
-
-		const heatmap = []
-		// each element is one category
-
-		for (const [category, values] of category2values) {
-			// values.sort((i,j)=> i.value-j.value )
-			let total = 0
-			for (const v of values) {
-				total += v.value
-			}
-
-			const numberofcells = values.length
-
-			const mean = (total / numberofcells).toFixed(3)
-
-			heatmap.push({ category, mean, numberofcells })
-		}
-		// const heatmap_data = {boxplots, maxexpvalue, minexpvalue}
-		gene_heatmap.push({ genename, heatmap })
-	}
-	res.send({ gene_heatmap })
-}
-
-async function cellfile_get_barcode2category(p) {
-	/*
-.cellfile
-.barcodecolumnidx
-.categorycolumnidx
-.delimiter
-
-returns map, note the value is an object!!
-k: barcode
-v: { category, expvalue }
-*/
-	if (!p.cellfile) throw 'cellfile missing'
-	{
-		const [e, file, isurl] = utils.fileurl({ query: { file: p.cellfile } })
-		if (e) throw 'cellfile error: ' + e
-		p.cellfile = file
-	}
-	checkDelimiter(p.delimiter)
-	if (!isColumnIndex(p.barcodecolumnidx)) throw 'barcodecolumnidx missing'
-	if (!isColumnIndex(p.categorycolumnidx)) throw 'categorycolumnidx missing'
-
-	const barcode2category = new Map()
-	let first = true
-	await forEachLine(p.cellfile, line => {
-		if (first) {
-			first = false
-			return
-		}
-		const l = line.split(p.delimiter)
-		//barcode2category.set( l[ p.barcodecolumnidx ], l[ p.categorycolumnidx ] )
-		barcode2category.set(l[p.barcodecolumnidx], {
-			category: l[p.categorycolumnidx],
-			expvalue: 0 // FIXME hardcoded baseline value (e.g. the gene is not expressed in this sample)
-		})
-	})
-	return barcode2category
 }

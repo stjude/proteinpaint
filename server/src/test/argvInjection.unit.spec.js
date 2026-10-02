@@ -10,7 +10,6 @@ import { api as ntseqApi } from '../routes/ntseq.ts'
 import { init as dsdataInit } from '../routes/dsdata.ts'
 import bamRequestClosure from '../bam.js'
 import { mdsjunction_request_closure } from '../mds.junction.js'
-import { handle_singlecell_closure } from '../singlecell.js'
 import { handle_mdssurvivalplot } from '../km.js'
 import { handle_request_closure as termdbClosure } from '../termdb.js'
 import { setRoutes } from '../app.unorg.js'
@@ -31,7 +30,6 @@ test sections:
 - /tkbam
 - /mdsjunction
 - /dsdata
-- /singlecell
 - /mdssurvivalplot
 - /termdb?getLDdata
 - spawnTool() central guard
@@ -223,59 +221,6 @@ tape('/dsdata', async test => {
 	}
 	const noRange = await send(handler, { genome: 'hg38', dsname: 'testds' })
 	test.equal(noRange?.error, 'invalid chr', 'should reject a missing range')
-	test.end()
-})
-
-tape('/singlecell', async test => {
-	const handler = handle_singlecell_closure({ hg38: getGenome() })
-	const expfile = 'files/hg38/TermdbTest/TermdbTest_ITD.gz'
-	for (const chr of chrAttacks) {
-		const box = await send(handler, {
-			genome: 'hg38',
-			getgeneboxplot: { expfile, chr, start: 1, stop: 2, genename: 'TP53' }
-		})
-		test.equal(box?.error, 'invalid chr', `getgeneboxplot should reject chr=${chr}`)
-		const heat = await send(handler, {
-			genome: 'hg38',
-			getheatmap: { expfile, gene_list: [{ chr, start: 1, stop: 2, gene: 'TP53' }] }
-		})
-		test.equal(heat?.error, 'invalid chr', `getheatmap should reject chr=${chr}`)
-	}
-
-	const getpcd = chr => ({
-		genome: 'hg38',
-		textfile: 'files/hg38/TermdbTest/tsne.txt',
-		delimiter: '\t',
-		getpcd: {
-			coord: [0, 1],
-			gene_expression: {
-				file: expfile,
-				barcodecolumnidx: 4,
-				chr,
-				start: 1,
-				stop: 2,
-				genename: 'TP53',
-				autoscale: true,
-				color_min: '#000',
-				color_max: '#fff'
-			}
-		}
-	})
-	for (const chr of chrAttacks) {
-		const pcd = await send(handler, getpcd(chr))
-		test.equal(pcd?.error, 'invalid chr', `getpcd.gene_expression should reject chr=${chr}`)
-	}
-	// a valid chr must get past the check, not fail with a ReferenceError from an out-of-scope genome;
-	// a valid request runs tabix, so this needs the binary
-	if (hasTabix) {
-		const validPcd = await send(handler, getpcd('chr17'))
-		test.notOk(
-			/invalid chr|is not defined/.test(String(validPcd?.error)),
-			'getpcd.gene_expression should accept a valid chr'
-		)
-	} else {
-		test.comment('tabix not found, skipped the valid getpcd request')
-	}
 	test.end()
 })
 
