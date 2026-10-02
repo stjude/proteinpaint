@@ -304,7 +304,7 @@ export async function validate_termdb(ds) {
 	}
 	// ds.cohort.termdb.q={} ready
 	setSupportedChartTypes(ds) // centralized: runs for every dataset regardless of the init path above
-	findLoneTermByType(ds) // requires termtypeByCohort.nested, computed by the call above
+	findLoneTermByType(ds) // requires termtypeByCohort{}, computed by the call above
 
 	// blocking launch-time case-sample caching, for datasets whose preInit.cacheSamples must
 	// run before queries (e.g. mmrf: it sets q.id2sampleName/convertSampleId, needed by the

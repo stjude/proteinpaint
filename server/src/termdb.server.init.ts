@@ -621,14 +621,17 @@ function sortByAncestorDistance(a, b) {
 
 	Guards keep this a no-op for datasets that don't need it:
 	- a ds that supplies its own getSupportedChartTypes (gdc/mmrf/etc.) is left untouched
-	- a ds with no way to compute term types (no preset termtypeByCohort and no db connection) is skipped,
+	- a ds with no way to compute term types (no preset termtypeByCohort{} and no db connection) is skipped,
 	  same as before (only sqlite datasets got a getSupportedChartTypes previously)
 */
 export function setSupportedChartTypes(ds) {
 	const tdb = ds.cohort?.termdb
 	if (!tdb?.q) return // no query object to attach to
-	if (tdb.q.getSupportedChartTypes) return // ds supplied its own; don't clobber
 	if (!tdb.termtypeByCohort && !ds.cohort.db?.connection) return // can't compute term types; leave unset
+	// ds.cohort.termdb.termtypeByCohort{} is set. done before the check below, as it is also read by
+	// getDsAllowedTermTypes(), findLoneTermByType() etc, not only by getSupportedChartTypes()
+	mayComputeTermtypeByCohort(ds)
+	if (tdb.q.getSupportedChartTypes) return // ds supplied its own; don't clobber
 
 	/*
 		generates commonCharts with optional overrides to ensure that ds-specific overrides are not shared across different datasets
@@ -645,8 +648,6 @@ export function setSupportedChartTypes(ds) {
 		(ds.isSupportedChartOverride as isSupportedChartCallbacks) || {}
 	)
 
-	mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set. needed by getSupportedChartTypes()
-
 	/*
 	compute and return list of chart types based on term types from each subcohort, and non-dictionary query data
 	for showing as chart buttons in mass ui
@@ -658,7 +659,7 @@ export function setSupportedChartTypes(ds) {
 		const authInfo = typeof info == 'object' ? info : { forbiddenRoutes: [] }
 		const supportedChartTypes = {} // key: subcohort string, value: list of chart types allowed for this cohort
 
-		for (const [cohort, cohortTermTypes] of Object.entries(ds.cohort.termdb.termtypeByCohort.nested)) {
+		for (const [cohort, cohortTermTypes] of Object.entries(ds.cohort.termdb.termtypeByCohort)) {
 			supportedChartTypes[cohort] = []
 
 			for (const [chartType, isSupported] of Object.entries(commonCharts)) {
@@ -688,7 +689,7 @@ const loneTermTypes = ['survival', 'condition']
 /*
 	When a cohort has exactly one term of a type listed in loneTermTypes[], record that term in
 		ds.cohort.termdb.loneTermByType = { <cohort>: { survival: <term>, condition: <term> } }
-	keyed by cohort string, same as termtypeByCohort.nested and supportedChartTypes, since term
+	keyed by cohort string, same as termtypeByCohort and supportedChartTypes, since term
 	counts differ between subcohorts of the same ds. The whole term object is stored (not just its
 	id) so client code receiving it via termdbConfig can build a tw without a round trip.
 
@@ -702,12 +703,12 @@ export function findLoneTermByType(ds) {
 	const tdb = ds.cohort?.termdb
 	if (!tdb) return
 	if (tdb.loneTermByType) return // ds supplied its own; don't clobber
-	const nested = tdb.termtypeByCohort?.nested
-	if (!nested) return // term types unknown for this ds
+	const counts = tdb.termtypeByCohort
+	if (!counts) return // term types unknown for this ds
 	if (typeof tdb.q?.getTermsByTermType != 'function') return // no way to retrieve the term
 
 	const loneTermByType = {}
-	for (const [cohort, cohortTermTypes] of Object.entries(nested) as [string, any][]) {
+	for (const [cohort, cohortTermTypes] of Object.entries(counts) as [string, any][]) {
 		for (const termType of loneTermTypes) {
 			if (cohortTermTypes[termType] !== 1) continue // not a lone term of this type
 			const terms = tdb.q.getTermsByTermType(termType, cohort)
@@ -885,74 +886,82 @@ export function listTableColumns(cn, table) {
 	return rows.map(i => i.name)
 }
 
+/*
+	sets ds.cohort.termdb.termtypeByCohort{}, the number of dictionary terms of each type in each cohort:
+	{
+		<cohort>: { <termType>: <termCount>, numeric: <total count of numeric types> }
+	}
+	cohort is '' for a ds without subcohort, otherwise a comma-joined subcohort combination as in the
+	subcohort_terms table, e.g. { ABC: {categorical: 457, ...}, XYZ: {...}, 'ABC,XYZ': {...} }
+	only describes dictionary terms; non-dict term types are derived from ds.queries in getDsAllowedTermTypes()
+
+	the value is either preset by the ds (e.g. gdc/mmrf dictionary building), or computed here from the db.
+	either way it goes through finalizeTermtypeByCohort(), so it always has .numeric and is frozen
+*/
 function mayComputeTermtypeByCohort(ds) {
-	if (ds.cohort.termdb.termtypeByCohort) {
-		if (!Array.isArray(ds.cohort.termdb.termtypeByCohort)) throw 'termtypeByCohort is not array'
-		// already set, by one of two methods:
-		// 1. db query below
-		// 2. gdc dictionary building
+	const preset = ds.cohort.termdb.termtypeByCohort
+	if (preset) {
+		ds.cohort.termdb.termtypeByCohort = finalizeTermtypeByCohort(
+			// legacy shape: array of {cohort, termType, termCount} rows with an extra .nested{}
+			Array.isArray(preset) ? (preset as any).nested || termCountRows2object(preset) : preset
+		)
 		return
 	}
 
-	if (!ds.cohort?.db?.connection) throw 'termtypeByCohort[] not set but cohort.db.connection missing'
+	if (!ds.cohort?.db?.connection) throw 'termtypeByCohort{} not set but cohort.db.connection missing'
 
-	/*
-	not available; perform db query for the first request, and cache the results
-
-	(as this query may be expensive thus do not want to run it for every request...)
-	
-	when termType: '', it indicates a branch term that is not used to annotate samples
-
-	for dataset with subcohort:
+	/* computed once at server launch, as this query may be expensive. a branch term has termType ''
+	and does not annotate samples, so it is excluded. returns rows like:
 	[
-	  { cohort: 'XYZ', termType: '', termCount: 615 }, // filtered out in sql, can add back as needed
-	  { cohort: 'XYZ', termType: 'categorical', termCount: 393 },
-	  { cohort: 'ABC', termType: '', termCount: 636 },
-	  { cohort: 'ABC', termType: 'categorical', termCount: 457 },
-	  ...
-	  { cohort: 'XYZ,ABC', termType: '', termCount: 614 },
-	  { cohort: 'XYZ,ABC', termType: 'categorical', termCount: 393 },
-	  ...
+		{ cohort: 'XYZ', termType: 'categorical', termCount: 393 },
+		{ cohort: 'XYZ', termType: 'float', termCount: 1 },
+		{ cohort: 'XYZ,ABC', termType: 'categorical', termCount: 393 },
+		...
 	]
-
-	for dataset without subcohort:
-	[
-		  { cohort: '', termType: '', termCount: 11 }, // filtered out in sql, can add back as needed
-		  { cohort: '', termType: 'categorical', termCount: 65 },
-		  { cohort: '', termType: 'float', termCount: 1 },
-		  { cohort: '', termType: 'survival', termCount: 2 }
-	]
-
 	*/
 	const rows = ds.cohort.db.connection
 		.prepare(
 			`WITH c AS (
-			SELECT cohort, term_id
-			FROM subcohort_terms s
-			GROUP BY cohort, term_id
-		) 
-		SELECT cohort, type as termType, count(*) as termCount 
+			SELECT DISTINCT cohort, term_id
+			FROM subcohort_terms
+		)
+		SELECT cohort, type as termType, count(*) as termCount
 		FROM terms t
-		JOIN c ON c.term_id = t.id AND t.type != '' AND t.type IS NOT NULL
+		JOIN c ON c.term_id = t.id AND t.type != ''
 		GROUP BY cohort, termType`
 		)
 		.all()
+	ds.cohort.termdb.termtypeByCohort = finalizeTermtypeByCohort(termCountRows2object(rows))
+}
 
-	// flat list/array
-	ds.cohort.termdb.termtypeByCohort = rows
-	// freeze to avoid accidental rewrites by consumer code
-	for (const r of rows) Object.freeze(r)
-
-	// nested data by cohort name, more convenient to use in some cases
-	const nested = {}
+function termCountRows2object(rows) {
+	const counts = {}
 	for (const r of rows) {
-		if (!nested[r.cohort]) nested[r.cohort] = { numeric: 0 } // guarantees that this convenience property exists
-		nested[r.cohort][r.termType] = r.termCount
-		// for convenience, precompute the number of numeric terms in cohort
-		if (numericTypes.has(r.termType)) nested[r.cohort].numeric += r.termCount
+		if (!r.termType) continue // branch term, not used to annotate samples
+		if (!counts[r.cohort]) counts[r.cohort] = {}
+		counts[r.cohort][r.termType] = r.termCount
 	}
-	Object.freeze(nested)
-	// freeze to avoid accidental rewrites by consumer code
-	for (const v of Object.values(nested)) Object.freeze(v)
-	ds.cohort.termdb.termtypeByCohort.nested = nested
+	return counts
+}
+
+/* validate per-cohort term type counts and return a frozen copy, with .numeric (re)computed
+for every cohort, so consumer code can always rely on it without checking the property exists */
+function finalizeTermtypeByCohort(counts) {
+	if (!counts || typeof counts != 'object' || Array.isArray(counts)) throw 'termtypeByCohort{} is not an object'
+	const result = {}
+	for (const [cohort, typeCounts] of Object.entries(counts)) {
+		if (!typeCounts || typeof typeCounts != 'object' || Array.isArray(typeCounts))
+			throw `termtypeByCohort["${cohort}"] is not an object`
+		const c = { numeric: 0 }
+		for (const [termType, termCount] of Object.entries(typeCounts)) {
+			if (termType == 'numeric') continue // derived, always recomputed below
+			if (!Number.isInteger(termCount) || (termCount as number) < 0)
+				throw `termtypeByCohort["${cohort}"].${termType} is not a non-negative integer`
+			c[termType] = termCount
+			if (numericTypes.has(termType)) c.numeric += termCount as number
+		}
+		// freeze to avoid accidental rewrites by consumer code
+		result[cohort] = Object.freeze(c)
+	}
+	return Object.freeze(result)
 }

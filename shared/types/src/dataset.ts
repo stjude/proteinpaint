@@ -2037,12 +2037,22 @@ keep this setting here for reason of:
 		scrnaExperimentId?: UrlTemplateBase
 	}
 
-	termtypeByCohort?: any // FIXME see below
+	/** number of dictionary terms of each type in each cohort, keyed by cohort string
+	('' for a ds without subcohort), e.g. { '': { categorical: 65, float: 1, numeric: 1 } }.
+	only describes dictionary terms; non-dict term types are derived from ds.queries in
+	getDsAllowedTermTypes() of termdb.config.ts.
+	ds-defined (e.g. gdc/mmrf dictionary building) or computed from the db at server launch;
+	.numeric (total count of numeric types) is always (re)computed by the server, so a ds need not set it */
+	termtypeByCohort?: {
+		[cohort: string]: {
+			[termType: string]: number
+		}
+	}
 
 	/** computed at server launch by findLoneTermByType(). for a cohort with exactly one term of a
 	given type, maps that type to the term object, so a plot can prefill a term selector with the
 	only possible choice (e.g. cox outcome for a ds with a single survival term).
-	keyed by cohort string like termtypeByCohort.nested.
+	keyed by cohort string like termtypeByCohort.
 	a ds may preset this to bypass the computation */
 	loneTermByType?: {
 		[cohort: string]: {
@@ -2050,22 +2060,6 @@ keep this setting here for reason of:
 			condition?: BaseTerm
 		}
 	}
-	/** TODO not declared due to tsc err
-	ds-defined or dynamically created. the array has an extra "nested" property
-	only describes dictionary terms,
-	non-dict terms are dynamically generated in getAllowedTermTypes() of termdb.config.ts based on query types
-	termtypeByCohort?: {
-		cohort: string
-		termType: string
-		termCount: number
-	}[] & {
-		nested: {
-			[cohort: string]: {
-				[termType: string]: number
-			}
-		}
-	}
-	*/
 
 	/** ds defined add on to termtypeByCohort; note that this is not cohort-specific!
 	this is combined with termtypeByCohort in getAllowedTermTypes()

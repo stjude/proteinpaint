@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { getDsAllowedTermTypes, getLoneTermByType } from '../termdb.config.ts'
 import {
-	CATEGORICAL, 
+	CATEGORICAL,
 	FLOAT,
 	SURVIVAL,
 	TERM_COLLECTION,
@@ -22,7 +22,7 @@ import {
  *
  * This function extracts the unique list of term types from a dataset configuration
  * by examining multiple sources:
- * - termtypeByCohort array
+ * - termtypeByCohort object of per-cohort term type counts
  * - allowedTermTypes array (optional)
  * - queries object (various data types)
  * - termCollections (optional)
@@ -40,7 +40,7 @@ tape('getDsAllowedTermTypes() - basic termtypeByCohort', function (test) {
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: [{ termType: 'categorical' }, { termType: 'float' }, { termType: 'integer' }]
+				termtypeByCohort: { '': { categorical: 2, float: 1, integer: 1, numeric: 2 } }
 			}
 		}
 	}
@@ -57,7 +57,7 @@ tape('getDsAllowedTermTypes() - with allowedTermTypes', function (test) {
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: [{ termType: 'categorical' }],
+				termtypeByCohort: { '': { categorical: 1, numeric: 0 } },
 				allowedTermTypes: ['survival', 'condition']
 			}
 		}
@@ -73,7 +73,7 @@ tape('getDsAllowedTermTypes() - with allowedTermTypes', function (test) {
 
 tape('getDsAllowedTermTypes() - with junction query', function (test) {
 	const ds: any = {
-		cohort: { termdb: { termtypeByCohort: [] } },
+		cohort: { termdb: { termtypeByCohort: {} } },
 		queries: { junction: {} }
 	}
 	test.deepEqual(getDsAllowedTermTypes(ds), [JUNCTION], 'adds the junction numeric term type')
@@ -84,7 +84,7 @@ tape('getDsAllowedTermTypes() - with geneExpression query', function (test) {
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: [{ termType: 'categorical' }]
+				termtypeByCohort: { '': { categorical: 1, numeric: 0 } }
 			}
 		},
 		queries: {
@@ -101,7 +101,7 @@ tape('getDsAllowedTermTypes() - with isoformExpression query', function (test) {
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: []
+				termtypeByCohort: {}
 			}
 		},
 		queries: {
@@ -117,7 +117,7 @@ tape('getDsAllowedTermTypes() - with metaboliteIntensity query', function (test)
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: []
+				termtypeByCohort: {}
 			}
 		},
 		queries: {
@@ -133,7 +133,7 @@ tape('getDsAllowedTermTypes() - with proteome query', function (test) {
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: []
+				termtypeByCohort: {}
 			}
 		},
 		queries: {
@@ -153,7 +153,7 @@ tape('getDsAllowedTermTypes() - with ssGSEA query', function (test) {
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: []
+				termtypeByCohort: {}
 			}
 		},
 		queries: {
@@ -169,7 +169,7 @@ tape('getDsAllowedTermTypes() - with dnaMethylation query', function (test) {
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: []
+				termtypeByCohort: {}
 			}
 		},
 		queries: {
@@ -185,7 +185,7 @@ tape('getDsAllowedTermTypes() - with singleCell query', function (test) {
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: []
+				termtypeByCohort: {}
 			}
 		},
 		queries: {
@@ -204,7 +204,7 @@ tape('getDsAllowedTermTypes() - with singleCell and geneExpression', function (t
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: []
+				termtypeByCohort: {}
 			}
 		},
 		queries: {
@@ -225,7 +225,7 @@ tape('getDsAllowedTermTypes() - singleCell without geneExpression', function (te
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: []
+				termtypeByCohort: {}
 			}
 		},
 		queries: {
@@ -248,7 +248,7 @@ tape('getDsAllowedTermTypes() - singleCell with numeric but without geneExpressi
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: []
+				termtypeByCohort: {}
 			}
 		},
 		queries: {
@@ -273,7 +273,7 @@ tape('getDsAllowedTermTypes() - with termCollections', function (test) {
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: [],
+				termtypeByCohort: {},
 				termCollections: [{ name: 'Collection1' }, { name: 'Collection2' }]
 			}
 		}
@@ -283,16 +283,16 @@ tape('getDsAllowedTermTypes() - with termCollections', function (test) {
 	test.end()
 })
 
-tape('getDsAllowedTermTypes() - empty termtypeByCohort with undefined termType', function (test) {
+tape('getDsAllowedTermTypes() - termtypeByCohort with only zero counts', function (test) {
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: [{ termType: undefined }, { termType: null }]
+				termtypeByCohort: { '': { categorical: 0, numeric: 0 } }
 			}
 		}
 	}
 	const result = getDsAllowedTermTypes(ds)
-	test.equal(result.length, 0, 'Should return empty array when termTypes are undefined or null')
+	test.equal(result.length, 0, 'Should skip zero counts and the precomputed .numeric total')
 	test.end()
 })
 
@@ -300,7 +300,7 @@ tape('getDsAllowedTermTypes() - mixed termTypes with duplicates', function (test
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: [{ termType: 'categorical' }, { termType: 'float' }, { termType: 'categorical' }],
+				termtypeByCohort: { A: { categorical: 1, float: 1, numeric: 1 }, B: { categorical: 3, numeric: 0 } },
 				allowedTermTypes: ['categorical', 'survival']
 			}
 		}
@@ -318,7 +318,7 @@ tape('getDsAllowedTermTypes() - comprehensive dataset', function (test) {
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: [{ termType: 'categorical' }, { termType: 'float' }],
+				termtypeByCohort: { '': { categorical: 1, float: 1, numeric: 1 } },
 				allowedTermTypes: ['survival'],
 				termCollections: [{ name: 'Collection1' }]
 			}
@@ -363,7 +363,7 @@ tape('getDsAllowedTermTypes() - no queries object', function (test) {
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: [{ termType: 'categorical' }]
+				termtypeByCohort: { '': { categorical: 1, numeric: 0 } }
 			}
 		}
 	}

@@ -581,8 +581,11 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 // allowedTermTypes[] is an unique list of term types from this dataset. allows plot to determine if term type specific feature is applicable for a ds
 export function getDsAllowedTermTypes(ds) {
 	const typeSet = new Set()
-	for (const r of ds.cohort.termdb.termtypeByCohort) {
-		if (r.termType) typeSet.add(r.termType)
+	for (const typeCounts of Object.values<any>(ds.cohort.termdb.termtypeByCohort || {})) {
+		for (const [termType, termCount] of Object.entries(typeCounts)) {
+			// .numeric is a precomputed total of numeric types, not a term type
+			if (termType != 'numeric' && termCount) typeSet.add(termType)
+		}
 	}
 	if (ds.cohort.termdb.allowedTermTypes) {
 		// optional predefined term types, append to set
