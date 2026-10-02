@@ -4,15 +4,25 @@
 
 PPDIR=$(pwd)
 HOOKS=$(git rev-parse --git-path hooks)
-mv -f $HOOKS/pre-commit $HOOKS/pre-commit-bkup
 cd $HOOKS
 ls $PPDIR/utils/hooks/
-ln -sf $PPDIR/utils/hooks/post-checkout .
-ln -sf $PPDIR/utils/hooks/pre-commit .
-ln -sf $PPDIR/utils/hooks/commit-msg .
-ln -sf $PPDIR/utils/hooks/post-commit .
-ln -sf $PPDIR/utils/hooks/pre-push .
-ln -sf $PPDIR/utils/hooks/reference-transaction .
+# links a tracked hook, after moving an existing hook that is not a link to a backup,
+# without replacing an earlier backup
+link() {
+	if [[ -f $1 && ! -L $1 ]]; then
+		BKUP=$1-bkup
+		if [[ -e $BKUP ]]; then BKUP=$1-bkup-$(date +%Y%m%d%H%M%S); fi
+		mv $1 $BKUP
+		echo "moved the existing $1 hook to $BKUP"
+	fi
+	ln -sf $PPDIR/utils/hooks/$1 .
+}
+link post-checkout
+link pre-commit
+link commit-msg
+link post-commit
+link pre-push
+link reference-transaction
 cd $PPDIR
 
 # optional private terms for check-text.sh, when this repo is checked out within sjpp
