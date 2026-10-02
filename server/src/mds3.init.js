@@ -2075,7 +2075,7 @@ async function validate_query_ssGSEA(ds, genome) {
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }
-async function validate_query_dnaMethylation(ds, genome) {
+export async function validate_query_dnaMethylation(ds, genome) {
 	const q = ds.queries.dnaMethylation
 	if (!q) return
 	try {
@@ -2353,6 +2353,13 @@ getData() and every caller downstream are unchanged. Two deliberate differences:
   - Averaging happens across ELEMENTS overlapping the term, not across CpGs. For a term
     that names one element this is a no-op; for a pasted gene span it is a mean over the
     elements in that span, which is the same semantics the CpG path gives for a span. */
+/* Only 'region' terms (a scan DMR or typed coordinates) read a CpG shard. A promoter/gene/enhancer
+term IS an element and must read the matrix elementForTerms nominates; letting the shard take it too
+made that setting dead on every sharded chromosome. */
+export function readsCpgShard(q, term) {
+	return term.genomicFeatureType == 'region' && !!q.cpgChroms?.has(term.chr)
+}
+
 function makeElementMethylationGetter(q, entry, ds) {
 	// Sample ids for this matrix, resolved once. Unknown names are skipped rather than
 	// fatal: a methylation cohort is routinely a subset of the dataset's samples.
@@ -2390,12 +2397,8 @@ function makeElementMethylationGetter(q, entry, ds) {
 			element average is what a promoter or cCRE term wants, but a region a scan called is not
 			an element: a DMR overlapping no cCRE would have no value at all, and one overlapping half
 			of a cCRE would get that element's whole-span average. The shard gives the region's own
-			CpGs, averaged per sample, on the unit the entry advertises.
-
-			Only for 'region' terms (a scan DMR or typed coordinates). A promoter/gene/enhancer term
-			IS an element and must read the matrix elementForTerms nominates; letting the shard take
-			it too made that setting dead on every sharded chromosome. */
-			if (tw.term.genomicFeatureType == 'region' && q.cpgChroms?.has(tw.term.chr)) {
+			CpGs, averaged per sample, on the unit the entry advertises. */
+			if (readsCpgShard(q, tw.term)) {
 				const shardNames = queryNames.filter(n => !q.regionSampleSet || q.regionSampleSet.has(n))
 				if (!shardNames.length) continue
 				const input = {
