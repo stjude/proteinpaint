@@ -125,11 +125,14 @@ function findLibDirs(_fs, libDirs, mounts, unchecked) {
 			for (const name of _fs.readdirSync(venvLib))
 				if (/^python\d/.test(name)) dirs.add(path.join(venvLib, name, 'site-packages'))
 		} catch (e) {
-			// ENOENT for a dir that is not a venv
-			if (e.code == 'ERR_ACCESS_DENIED') unchecked.push(venvLib)
+			// ENOENT or ENOTDIR for a dir that is not a venv; another error, such as EACCES, EIO, or ERR_ACCESS_DENIED
+			// from the permission model, leaves the package dirs unknown
+			if (e.code != 'ENOENT' && e.code != 'ENOTDIR') unchecked.push(venvLib)
 		}
 	}
 	for (const m of mounts) {
+		// only a mount that the process sees, not one that a later mount hides
+		if (findMount(mounts, m.mountPoint) !== m) continue
 		if ([...dirs].some(dir => m.mountPoint.startsWith(dir + '/'))) dirs.add(m.mountPoint)
 	}
 	return dirs
@@ -149,8 +152,8 @@ export function logRuntimePosture(result, { strict = false, log = console.warn }
 	return errors
 }
 
-// returns [{mountPoint, options[]}]; the mount options are the per-mount ones, such as ro and noexec,
-// in the 6th field of each /proc/self/mountinfo line
+// returns [{id, parentId, mountPoint, options[]}] in mountinfo order; the mount options are the per-mount ones,
+// such as ro and noexec, in the 6th field of each /proc/self/mountinfo line
 export function parseMountinfo(text) {
 	const mounts = []
 	for (const line of text.split('\n')) {
@@ -158,20 +161,38 @@ export function parseMountinfo(text) {
 		if (fields.length < 6) continue
 		// the kernel escapes a space, tab, newline, or backslash in a path as an octal \ooo sequence
 		const mountPoint = fields[4].replace(/\\([0-7]{3})/g, (_, o) => String.fromCharCode(parseInt(o, 8)))
-		mounts.push({ mountPoint, options: fields[5].split(',') })
+		mounts.push({ id: fields[0], parentId: fields[1], mountPoint, options: fields[5].split(',') })
 	}
 	return mounts
 }
 
-// the mount that contains a path is the one with the longest matching mount point; for a mount point
-// that is mounted over more than once, the last one in mountinfo is the visible one
+// returns the mount that the process sees at a path, following the mount tree from the root mount: a mount over
+// the same mount point as its parent mount hides that parent, and a later mount at a sibling's mount point or at
+// one of its parent dirs hides that sibling and the mounts under it
 export function findMount(mounts, p) {
-	let found
-	for (const m of mounts) {
-		const contains = m.mountPoint == '/' || p == m.mountPoint || p.startsWith(m.mountPoint + '/')
-		if (contains && (!found || m.mountPoint.length >= found.mountPoint.length)) found = m
+	const contains = (mountPoint, dir) => mountPoint == '/' || dir == mountPoint || dir.startsWith(mountPoint + '/')
+	const ids = new Set(mounts.map(m => m.id))
+	// the root of this mount namespace, whose parent is outside of it; the last one, if / is mounted again
+	let current = mounts.filter(m => m.mountPoint == '/' && !ids.has(m.parentId)).at(-1)
+	const visited = new Set()
+	while (current && !visited.has(current)) {
+		visited.add(current)
+		const children = mounts.filter(m => m.parentId == current.id && m !== current)
+		const over = children.filter(m => m.mountPoint == current.mountPoint).at(-1)
+		if (over) {
+			current = over
+			continue
+		}
+		let next
+		for (const [i, child] of children.entries()) {
+			if (!contains(child.mountPoint, p)) continue
+			const hidden = children.slice(i + 1).some(later => contains(later.mountPoint, child.mountPoint))
+			if (!hidden && (!next || child.mountPoint.length > next.mountPoint.length)) next = child
+		}
+		if (!next) return current
+		current = next
 	}
-	return found
+	return current
 }
 
 // returns undefined for a missing file, which is a result, such as no Yama LSM, and null for

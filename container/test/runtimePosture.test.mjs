@@ -117,12 +117,58 @@ test('other platforms are skipped', () => {
 
 test('the root filesystem check uses the last of stacked mounts on /, as for the other dirs', () => {
 	const stacked = mountinfo => messages(checkRuntimePosture(fakeDeps({ files: { '/proc/self/mountinfo': mountinfo } })))
-	const tmp = '2 1 0:2 / /tmp rw,noexec - tmpfs t rw\n3 1 0:3 / /home/root/pp/cache rw,noexec - xfs d rw'
-	assert.deepEqual(stacked(`1 0 0:1 / / rw - overlay o rw\n4 0 0:4 / / ro - overlay o rw\n${tmp}`), [])
-	assert.deepEqual(stacked(`1 0 0:1 / / ro - overlay o rw\n4 0 0:4 / / rw - overlay o rw\n${tmp}`), [
+	// a mount over / has the earlier / mount as its parent, and the later mounts are under the new one
+	const tmp = '2 4 0:2 / /tmp rw,noexec - tmpfs t rw\n3 4 0:3 / /home/root/pp/cache rw,noexec - xfs d rw'
+	assert.deepEqual(stacked(`1 0 0:1 / / rw - overlay o rw\n4 1 0:4 / / ro - overlay o rw\n${tmp}`), [])
+	assert.deepEqual(stacked(`1 0 0:1 / / ro - overlay o rw\n4 1 0:4 / / rw - overlay o rw\n${tmp}`), [
 		'the root filesystem is writable, mount it read-only'
 	])
 })
+
+test('findMount() skips a mount that a later mount over one of its parent dirs hides', () => {
+	// the cache mount 2 is under /home/root/pp, where the later mount 3 hides it, so the process sees mount 3
+	const mounts = parseMountinfo(
+		[
+			'1 0 0:1 / / ro - overlay o rw',
+			'2 1 0:2 / /home/root/pp/cache rw - xfs d rw',
+			'3 1 0:3 / /home/root/pp rw,noexec - xfs d rw',
+			'4 1 0:4 / /tmp rw,noexec - tmpfs t rw'
+		].join('\n')
+	)
+	assert.equal(findMount(mounts, '/home/root/pp/cache/x').id, '3')
+	assert.equal(findMount(mounts, '/tmp').id, '4')
+	assert.equal(findMount(mounts, '/opt').id, '1')
+	const result = checkRuntimePosture(fakeDeps({ files: { '/proc/self/mountinfo': mounts.map(toLine).join('\n') } }))
+	assert.deepEqual(result.findings, [], 'the hidden cache mount without noexec is not reported')
+
+	// a mount after the covering mount, at the same path, is under it and is seen
+	const later = parseMountinfo(
+		[
+			'1 0 0:1 / / ro - o o rw',
+			'3 1 0:3 / /home/root/pp rw - x d rw',
+			'5 3 0:5 / /home/root/pp/cache rw - x d rw'
+		].join('\n')
+	)
+	assert.equal(findMount(later, '/home/root/pp/cache').id, '5')
+})
+
+test('a lib dir listing failure other than a missing dir is unchecked, and a hidden mount under a lib dir is not checked', () => {
+	for (const code of ['EACCES', 'EIO']) {
+		const result = checkRuntimePosture(fakeDeps({ listErrors: { '/opt/venv/lib': code } }))
+		assert.deepEqual(result.unchecked, ['/opt/venv/lib'], code)
+	}
+	assert.deepEqual(checkRuntimePosture(fakeDeps({ listErrors: { '/opt/venv/lib': 'ENOTDIR' } })).unchecked, [])
+	// a writable package mount that a later mount over the R library dir hides
+	const pkg = '/usr/local/lib/R/site-library/somepkg'
+	const mountinfo = `${hardenedMounts}\n9 1 0:9 / ${pkg} rw - xfs d rw\n10 1 0:10 / /usr/local/lib/R/site-library ro - xfs d rw`
+	const result = checkRuntimePosture(
+		fakeDeps({ files: { '/proc/self/mountinfo': mountinfo }, exists: [pkg], writable: [pkg] })
+	)
+	assert.deepEqual(result.findings, [])
+})
+
+// a mountinfo line for a parsed mount, with placeholder device and source fields
+const toLine = m => `${m.id} ${m.parentId} 0:0 / ${m.mountPoint} ${m.options.join(',')} - fs src rw`
 
 test('parseMountinfo() decodes escaped paths, findMount() uses the longest and last mount point', () => {
 	const mounts = parseMountinfo(
@@ -215,7 +261,9 @@ function fakeDeps({
 	writableDirs = ['/home/root/pp/cache'],
 	// dir -> entries, for readdirSync(), and the dirs that exist besides libDirs
 	dirs = { '/opt/venv/lib': ['python3.14'] },
-	exists = ['/opt/venv/lib/python3.14/site-packages']
+	exists = ['/opt/venv/lib/python3.14/site-packages'],
+	// dir -> error code, for readdirSync()
+	listErrors = {}
 } = {}) {
 	const allFiles = {
 		'/proc/self/status': hardenedStatus,
@@ -243,6 +291,7 @@ function fakeDeps({
 			},
 			readdirSync(p) {
 				if (denied.includes(p)) throw error('ERR_ACCESS_DENIED')
+				if (listErrors[p]) throw error(listErrors[p])
 				if (!dirs[p]) throw error('ENOENT')
 				return dirs[p]
 			},
