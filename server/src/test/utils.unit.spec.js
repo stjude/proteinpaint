@@ -299,11 +299,14 @@ tape('get_fasta', async test => {
 	const g = { genomefile: 'NA', chrlookup: { CHR1: { name: 'chr1', len: 1000 } } }
 	test.equal(await utils.get_fasta(g, 'chr1:2-4'), '>chr1:2-4\nNNN', 'should return sequence for a valid coord')
 	test.equal(await utils.get_fasta(g, 'CHR1:2-4'), '>chr1:2-4\nNNN', 'should use the canonical chr name')
+	test.equal(await utils.get_fasta(g, 'chr1:-5-7'), '>chr1:5-7\nNNN', 'should rebuild the region from parsed numbers')
 	for (const coord of [
 		'-cr/etc/passwd',
 		'--fai-idx=/tmp/x',
 		'chrX:1-2',
-		'chr1:-5-10',
+		'chr1',
+		'chr1:5-2000',
+		'chr1:10-5',
 		'chr1:1-2 -o/tmp/x',
 		undefined
 	]) {
