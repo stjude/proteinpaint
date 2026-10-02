@@ -35,8 +35,19 @@ if [[ "$MODE" == "commit-msg" ]]; then
 	else
 		STRIP=(cat)
 	fi
-	# remove the diff that `git commit -v` adds below the scissors line
-	sed '/^# -* >8 -*$/,$d' "$2" | "${STRIP[@]}" | "$0" text "${3:-commit message}"
+	# remove the text below a scissors line that git adds, such as for the `git commit -v` diff,
+	# which git also removes, but not below a scissors line in a message from `-m` or `-F`
+	awk '
+		/^# -* >8 -*$/ {
+			cut = $0
+			if ((getline line) <= 0) { print cut; next }
+			if (line ~ /^# Do not modify or remove the line above/) exit
+			print cut
+			print line
+			next
+		}
+		{ print }
+	' "$2" | "${STRIP[@]}" | "$0" text "${3:-commit message}"
 	exit
 fi
 
