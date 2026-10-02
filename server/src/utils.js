@@ -8,7 +8,6 @@ import path from 'path'
 import { spawn } from 'child_process'
 import readline from 'readline'
 import * as common from '#shared/common.js'
-import { string2pos } from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import ky from 'ky'
 import serverconfig from './serverconfig.js'
@@ -832,7 +831,7 @@ export function read_file(file) {
 export async function get_fasta(gn, coord) {
 	// coord may come from a request; rebuild it from validated parts so it can never be read as a samtools option
 	// donotextend=true keeps the given range as is; a missing actualposition means only a chr name was given
-	const p = typeof coord == 'string' && gn.chrlookup ? string2pos(coord, gn, true) : null
+	const p = typeof coord == 'string' && gn.chrlookup ? common.string2pos(coord, gn, true) : null
 	if (!p?.actualposition) throw 'invalid coordinate'
 	const pos = `${p.chr}:${p.start}-${p.stop}`
 
