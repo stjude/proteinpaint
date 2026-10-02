@@ -146,6 +146,12 @@ tape('getDNAMethTermName() should format name for default type', test => {
 		'chr1:100-200 Average Beta Value',
 		'Should format default name with id and unit'
 	)
+	// a scan DMR is a 'region' term, but the volcano knows what it is and names it
+	test.equal(
+		getDNAMethTermName(term as any, undefined, 'DMR'),
+		'DMR Average Beta Value (chr1:100-200)',
+		'Should use the supplied noun for a region term'
+	)
 	test.end()
 })
 

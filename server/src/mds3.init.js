@@ -2075,7 +2075,7 @@ async function validate_query_ssGSEA(ds, genome) {
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }
-async function validate_query_dnaMethylation(ds, genome) {
+export async function validate_query_dnaMethylation(ds, genome) {
 	const q = ds.queries.dnaMethylation
 	if (!q) return
 	try {
@@ -2115,13 +2115,24 @@ async function validate_query_dnaMethylation(ds, genome) {
 			q.cpgByChr = path.join(serverconfig.tpmasterdir, q.cpgByChr)
 			const [prefix, suffix] = path.basename(q.cpgByChr).split('{chr}')
 			const dir = path.dirname(q.cpgByChr)
-			const files = fs.readdirSync(dir)
+			const files = fs.existsSync(dir) ? fs.readdirSync(dir) : []
 			q.cpgChroms = new Set(
 				files
 					.filter(f => f.startsWith(prefix) && f.endsWith(suffix) && f.length > prefix.length + suffix.length)
 					.map(f => f.slice(prefix.length, f.length - suffix.length))
 			)
-			if (!q.cpgChroms.size) throw `dnaMethylation.cpgByChr matched no file under ${dir}`
+			/* No shard built yet is the far end of a partial build, not a broken config: drop the
+			setting so every path (term getter, region view, genome-wide scans) takes the element
+			fallback it already takes for a chromosome without a shard. */
+			if (!q.cpgChroms.size) {
+				console.warn(
+					`${ds.label}: WARNING dnaMethylation.cpgByChr matched no file under ${dir}; using element matrices`
+				)
+				delete q.cpgByChr
+				delete q.cpgChroms
+			}
+		}
+		if (q.cpgByChr) {
 			/* Sample gate on one shard, since all shards come out of the same build. A CpG matrix
 			written from the raw count files carries the sequencing sample names, which are not the
 			portal's until the build appends its suffix -- catching that here rather than at request
@@ -2342,6 +2353,13 @@ getData() and every caller downstream are unchanged. Two deliberate differences:
   - Averaging happens across ELEMENTS overlapping the term, not across CpGs. For a term
     that names one element this is a no-op; for a pasted gene span it is a mean over the
     elements in that span, which is the same semantics the CpG path gives for a span. */
+/* Only 'region' terms (a scan DMR or typed coordinates) read a CpG shard. A promoter/gene/enhancer
+term IS an element and must read the matrix elementForTerms nominates; letting the shard take it too
+made that setting dead on every sharded chromosome. */
+export function readsCpgShard(q, term) {
+	return term.genomicFeatureType == 'region' && !!q.cpgChroms?.has(term.chr)
+}
+
 function makeElementMethylationGetter(q, entry, ds) {
 	// Sample ids for this matrix, resolved once. Unknown names are skipped rather than
 	// fatal: a methylation cohort is routinely a subset of the dataset's samples.
@@ -2380,7 +2398,7 @@ function makeElementMethylationGetter(q, entry, ds) {
 			an element: a DMR overlapping no cCRE would have no value at all, and one overlapping half
 			of a cCRE would get that element's whole-span average. The shard gives the region's own
 			CpGs, averaged per sample, on the unit the entry advertises. */
-			if (q.cpgByChr && q.cpgChroms?.has(tw.term.chr)) {
+			if (readsCpgShard(q, tw.term)) {
 				const shardNames = queryNames.filter(n => !q.regionSampleSet || q.regionSampleSet.has(n))
 				if (!shardNames.length) continue
 				const input = {

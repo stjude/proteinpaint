@@ -353,7 +353,10 @@ export class VolcanoInteractions {
 	 * The tw handler fills in id and unit from termdbConfig. */
 	launchDNAMethViolin(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		const genomicFeatureType = d.promoter_id ? 'promoter' : 'gene'
+		const elementType = config?.settings?.volcano?.elementType
+		/* A scan DMR is de novo coordinates, not an element: 'region' is what tells the server to read
+		it from the CpG shard rather than average whatever elements happen to overlap it. */
+		const genomicFeatureType = elementType === DMR_SCAN_ELEMENT_TYPE ? 'region' : d.promoter_id ? 'promoter' : 'gene'
 		const featureName = genomicFeatureType === 'gene' ? d.gene_name?.split(',')[0]?.trim() || '' : ''
 		const term: any = {
 			genomicFeatureType,
@@ -368,8 +371,8 @@ export class VolcanoInteractions {
 		header read "Promoter Average M-value (chr9:...)" for something that is not a promoter.
 		Built here, where the selected class is known, rather than left to the tw fill step, which
 		only sees the term. */
-		if (genomicFeatureType === 'promoter') {
-			const noun = elementNoun(config?.settings?.volcano?.elementType).one
+		if (genomicFeatureType !== 'gene') {
+			const noun = elementNoun(elementType).one
 			const unit = getDNAMethUnit(genomicFeatureType, this.app.vocabApi)
 			term.unit = unit
 			term.name = getDNAMethTermName(term, unit, noun)
