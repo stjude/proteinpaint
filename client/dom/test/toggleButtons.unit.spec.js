@@ -11,6 +11,7 @@ Tests:
 	Invalid linePosition
 	Invalid tabsPosition
 	Render Tabs, vertical stack, right border
+	Render Tabs, keep the focus on a search input
  */
 
 /*************************
@@ -194,6 +195,24 @@ tape('Render Tabs, vertical stack, right border', async test => {
 			`Should show content for each tab to the right, inline of tabs`
 		)
 	}
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('Render Tabs, keep the focus on a search input', async test => {
+	test.timeoutAfter(1000)
+	const holder = getHolder()
+	const input = holder.append('input').attr('type', 'search').node()
+	input.focus()
+
+	const tabs = tabsData.map((tab, i) => ({ label: tab.label, active: i == 0 }))
+	await new Tabs({ holder: holder.append('div'), tabs }).main()
+	test.equal(
+		document.activeElement,
+		input,
+		'Should not move the focus away from a search input rendered before the tabs'
+	)
 
 	if (test._ok) holder.remove()
 	test.end()
