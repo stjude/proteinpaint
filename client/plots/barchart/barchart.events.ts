@@ -48,11 +48,7 @@ export default function getHandlers(self) {
 				} else {
 					dataLabel = d.dataId
 				}
-				const icon = !hasOverlay
-					? ''
-					: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
-					  escapeHtml(d.color) +
-					  "'>&nbsp;</div>"
+				const icon = !hasOverlay ? '' : swatchHtml(d.color)
 				const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${escapeHtml(seriesLabel)}</td></tr>`]
 				if (hasOverlay) {
 					rows.push(
@@ -401,11 +397,7 @@ function handle_click(event, self, chart) {
 	const dataLabel =
 		(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
 		term2unit
-	const icon = !term2
-		? ''
-		: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
-		  escapeHtml(d.color) +
-		  "'>&nbsp;</div>"
+	const icon = !term2 ? '' : swatchHtml(d.color)
 	const header =
 		`<div style='padding:2px'><b>${escapeHtml(term1.name)}</b>: ${escapeHtml(seriesLabel)}</div>` +
 		(d.seriesId && term2
@@ -1195,4 +1187,17 @@ function getTermValues(d, self) {
 		}
 	}
 	return termValues.map(f => wrapTvs(f))
+}
+
+// a color square as HTML: the color is set through the element style, which drops any value that is not a valid color
+function swatchHtml(color: string) {
+	return create('div')
+		.style('display', 'inline-block')
+		.style('width', '14px')
+		.style('height', '14px')
+		.style('margin', '2px 3px')
+		.style('vertical-align', 'top')
+		.style('background', color)
+		.html('&nbsp;')
+		.node()!.outerHTML
 }

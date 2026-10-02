@@ -1,4 +1,4 @@
-import { select, pointer } from 'd3-selection'
+import { select, pointer, create } from 'd3-selection'
 import { format as d3format } from 'd3-format'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons, newSandboxDiv, Menu, renderTable, table2col, renderCnvConfig, escapeHtml } from '#dom'
@@ -136,16 +136,12 @@ export function setInteractivity(self) {
 			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
 				const [c1, c2] = table.addRow()
 				c1.text(dtLabel)
-				c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-					classArray[0].color
-				)}" ></span>
+				c2.html(`${swatchHtml(classArray[0].color)}
 					${escapeHtml(classArray[0].label)}`)
 				for (const classType of classArray.slice(1)) {
 					const [c1, c2] = table.addRow()
 					c1.html('')
-					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-						classType.color
-					)}" ></span>
+					c2.html(`${swatchHtml(classType.color)}
 						${escapeHtml(classType.label)}`)
 				}
 			}
@@ -172,9 +168,7 @@ export function setInteractivity(self) {
 					{
 						const colorSquare =
 							(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
-								? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-										d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-								  )}" ></span>`
+								? swatchHtml(d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill)
 								: ''
 
 						const [c1, c2] = table.addRow()
@@ -194,9 +188,7 @@ export function setInteractivity(self) {
 					{
 						const colorSquare =
 							(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
-								? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-										d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-								  )}" ></span>`
+								? swatchHtml(d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill)
 								: ''
 
 						const [c1, c2] = table.addRow()
@@ -216,9 +208,7 @@ export function setInteractivity(self) {
 					{
 						const colorSquare =
 							(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
-								? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-										d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-								  )}" ></span>`
+								? swatchHtml(d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill)
 								: ''
 
 						const [c1, c2] = table.addRow()
@@ -233,9 +223,7 @@ export function setInteractivity(self) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.text(d.term.name)
-						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-						)}" ></span>
+						c2.html(`${swatchHtml(d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill)}
 							${escapeHtml(survivalInfo || d.label)}`)
 					}
 
@@ -256,9 +244,7 @@ export function setInteractivity(self) {
 					const sortedRenderedValues = renderedValues.filter(rv => rv.value !== 0).sort((a, b) => b.value - a.value)
 
 					for (const renderedValue of sortedRenderedValues) {
-						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-							renderedValue.color
-						)}"></span>`
+						const colorSquare = swatchHtml(renderedValue.color)
 						const [c1, c2] = table.addRow()
 						c1.html(`${colorSquare} ${escapeHtml(renderedValue.label)}`)
 						c2.html(`${renderedValue.value.toFixed(2)}%`)
@@ -269,9 +255,7 @@ export function setInteractivity(self) {
 					const sibs = d.siblingCells?.filter(c => c.$id == d.$id)
 					const cells = sibs?.length ? sibs : [d]
 					for (const [i, c] of cells.entries()) {
-						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-							c.fill
-						)}"></span>`
+						const colorSquare = swatchHtml(c.fill)
 						const [c1, c2] = table.addRow()
 						c1.text(i == 0 ? d.term.name : '')
 						c2.html(`${colorSquare} ${escapeHtml(c.label)}`)
@@ -279,9 +263,7 @@ export function setInteractivity(self) {
 				} else {
 					const colorSquare =
 						(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
-							? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-									d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-							  )}" ></span>`
+							? swatchHtml(d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill)
 							: ''
 
 					const [c1, c2] = table.addRow()
@@ -494,16 +476,12 @@ export function setInteractivity(self) {
 				for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
 					const [c1, c2] = table.addRow()
 					c1.text(dtLabel)
-					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-						classArray[0].color
-					)}" ></span>
+					c2.html(`${swatchHtml(classArray[0].color)}
 						${escapeHtml(classArray[0].label)}`)
 					for (const classType of classArray.slice(1)) {
 						const [c1, c2] = table.addRow()
 						c1.html('')
-						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-							classType.color
-						)}" ></span>
+						c2.html(`${swatchHtml(classType.color)}
 							${escapeHtml(classType.label)}`)
 					}
 				}
@@ -526,9 +504,7 @@ export function setInteractivity(self) {
 						const colorSquare =
 							(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
 							sampleData.tw.q.mode !== 'continuous'
-								? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-										sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-								  )}" ></span>`
+								? swatchHtml(sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill)
 								: ''
 
 						const [c1, c2] = table.addRow()
@@ -551,9 +527,7 @@ export function setInteractivity(self) {
 						const colorSquare =
 							(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
 							sampleData.tw.q.mode !== 'continuous'
-								? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-										sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-								  )}" ></span>`
+								? swatchHtml(sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill)
 								: ''
 
 						const [c1, c2] = table.addRow()
@@ -576,9 +550,7 @@ export function setInteractivity(self) {
 						const colorSquare =
 							(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
 							sampleData.tw.q.mode !== 'continuous'
-								? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-										sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-								  )}" ></span>`
+								? swatchHtml(sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill)
 								: ''
 
 						const [c1, c2] = table.addRow()
@@ -595,9 +567,7 @@ export function setInteractivity(self) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.text(sampleData.term.name)
-						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-						)}" ></span>
+						c2.html(`${swatchHtml(sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill)}
 							${escapeHtml(survivalInfo || sampleData.label)}`)
 					}
 					const timeToEventKey =
@@ -618,9 +588,7 @@ export function setInteractivity(self) {
 					const sortedRenderedValues = renderedValues.filter(rv => rv.value !== 0).sort((a, b) => b.value - a.value)
 
 					for (const renderedValue of sortedRenderedValues) {
-						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-							renderedValue.color
-						)}"></span>`
+						const colorSquare = swatchHtml(renderedValue.color)
 						const [c1, c2] = table.addRow()
 						c1.html(`${colorSquare} ${escapeHtml(renderedValue.label)}`)
 						c2.html(`${renderedValue.value.toFixed(2)}%`)
@@ -631,9 +599,7 @@ export function setInteractivity(self) {
 					const sibs = sampleData.siblingCells?.filter(c => c.$id == sampleData.$id)
 					const cells = sibs?.length ? sibs : [sampleData]
 					for (const [i, c] of cells.entries()) {
-						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-							c.fill
-						)}"></span>`
+						const colorSquare = swatchHtml(c.fill)
 						const [c1, c2] = table.addRow()
 						c1.text(i == 0 ? sampleData.term.name : '')
 						c2.html(`${colorSquare} ${escapeHtml(c.label)}`)
@@ -642,9 +608,7 @@ export function setInteractivity(self) {
 					const colorSquare =
 						(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
 						sampleData.tw.q.mode !== 'continuous'
-							? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
-									sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-							  )}" ></span>`
+							? swatchHtml(sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill)
 							: ''
 
 					const [c1, c2] = table.addRow()
@@ -3901,4 +3865,14 @@ function mayAddEditMsg(arg, t) {
 	const editMsg =
 		'Cannot edit variable because group value filter is in use.<br>Please add new variable/variable group to enable editing.'
 	arg.editMsg = editMsg
+}
+
+// a color square as HTML: the color is set through the element style, which drops any value that is not a valid color
+function swatchHtml(color) {
+	return create('span')
+		.style('display', 'inline-block')
+		.style('width', '12px')
+		.style('height', '12px')
+		.style('background-color', color)
+		.node().outerHTML
 }
