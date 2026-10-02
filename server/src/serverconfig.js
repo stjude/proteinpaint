@@ -212,7 +212,8 @@ if (process.env.PP_CREDS_HANDOFF_FILE) {
 	// only remove a dir as created by envHelpers.mjs
 	if (
 		path.basename(file) != 'creds.json' ||
-		path.dirname(dir) != os.tmpdir() ||
+		// resolved, like the dir from path.join() in envHelpers.mjs, such as for TMPDIR=/tmp/.
+		path.dirname(dir) != path.resolve(os.tmpdir()) ||
 		!path.basename(dir).startsWith('pp-creds-')
 	)
 		throw `invalid process.env.PP_CREDS_HANDOFF_FILE`

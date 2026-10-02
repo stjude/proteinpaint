@@ -6,7 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import http from 'http'
 import https from 'https'
-import { spawnSync } from 'child_process'
+import { spawn, spawnSync } from 'child_process'
 import * as augen from '@sjcrh/augen'
 import serverconfig, { lockServerconfig } from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
@@ -175,7 +175,16 @@ async function handle_argv(argv: string[]): Promise<{ message?: string; error?: 
 async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
 	if (serverconfig.preListenScript) {
 		const { cmd, args } = serverconfig.preListenScript
-		const ps = spawnSync(cmd, args, { encoding: 'utf-8' })
+		// not spawnSync(), which would block a termination signal handler, such as in a container launcher
+		const ps = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+			const child = spawn(cmd, args)
+			let stdout = ''
+			let stderr = ''
+			child.stdout.setEncoding('utf-8').on('data', data => (stdout += data))
+			child.stderr.setEncoding('utf-8').on('data', data => (stderr += data))
+			child.on('error', reject)
+			child.on('close', () => resolve({ stdout, stderr }))
+		})
 		if (ps.stderr.trim()) throw ps.stderr.trim()
 		console.log(ps.stdout)
 	}
