@@ -1,1 +1,2 @@
-
+Features:
+- add TableBase, an extendable table with sort, filter, paging, row selection and cell editing; the SC sample table is now built on it
