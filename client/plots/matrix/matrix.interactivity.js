@@ -1,7 +1,7 @@
 import { select, pointer } from 'd3-selection'
 import { format as d3format } from 'd3-format'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
-import { icons, newSandboxDiv, Menu, renderTable, table2col, renderCnvConfig } from '#dom'
+import { icons, newSandboxDiv, Menu, renderTable, table2col, renderCnvConfig, escapeHtml } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { getBrainImagingSampleSet } from '#plots/getBrainImagingSampleSet.ts'
 import { isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
@@ -80,13 +80,13 @@ export function setInteractivity(self) {
 		if (d.term.type == 'geneVariant' && d.tw.q?.type == 'values') {
 			{
 				const [c1, c2] = table.addRow()
-				c1.html(l.Sample)
-				c2.html(d.row._ref_.label || d.value?.sample)
+				c1.text(l.Sample)
+				c2.text(d.row._ref_.label || d.value?.sample)
 			}
 			{
 				const [c1, c2] = table.addRow()
 				c1.html('Gene')
-				c2.html(d.term.name)
+				c2.text(d.term.name)
 			}
 
 			const siblingCellLabels = {}
@@ -135,21 +135,25 @@ export function setInteractivity(self) {
 				}
 			for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
 				const [c1, c2] = table.addRow()
-				c1.html(dtLabel)
-				c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
-					${classArray[0].label}`)
+				c1.text(dtLabel)
+				c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
+					classArray[0].color
+				)}" ></span>
+					${escapeHtml(classArray[0].label)}`)
 				for (const classType of classArray.slice(1)) {
 					const [c1, c2] = table.addRow()
 					c1.html('')
-					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classType.color}" ></span>
-						${classType.label}`)
+					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
+						classType.color
+					)}" ></span>
+						${escapeHtml(classType.label)}`)
 				}
 			}
 		} else {
 			{
 				const [c1, c2] = table.addRow()
-				c1.html(l.Sample)
-				c2.html(d.row._ref_.label)
+				c1.text(l.Sample)
+				c2.text(d.row._ref_.label)
 			}
 
 			let survivalInfo
@@ -163,20 +167,20 @@ export function setInteractivity(self) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.html('Gene')
-						c2.html(d.term.gene)
+						c2.text(d.term.gene)
 					}
 					{
 						const colorSquare =
 							(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
-								? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+								? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
 										d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-								  }" ></span>`
+								  )}" ></span>`
 								: ''
 
 						const [c1, c2] = table.addRow()
 						c1.html('Gene Expression')
 						c2.html(
-							`${colorSquare} ${d.convertedValueLabel || d.label}${
+							`${colorSquare} ${escapeHtml(d.convertedValueLabel || d.label)}${
 								d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
 							}`
 						)
@@ -185,20 +189,20 @@ export function setInteractivity(self) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.html('Metabolite')
-						c2.html(d.term.name)
+						c2.text(d.term.name)
 					}
 					{
 						const colorSquare =
 							(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
-								? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+								? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
 										d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-								  }" ></span>`
+								  )}" ></span>`
 								: ''
 
 						const [c1, c2] = table.addRow()
 						c1.html('Metabolite Intensity')
 						c2.html(
-							`${colorSquare} ${d.convertedValueLabel || d.label}${
+							`${colorSquare} ${escapeHtml(d.convertedValueLabel || d.label)}${
 								d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
 							}`
 						)
@@ -207,20 +211,20 @@ export function setInteractivity(self) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.html('gene')
-						c2.html(d.term.name)
+						c2.text(d.term.name)
 					}
 					{
 						const colorSquare =
 							(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
-								? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+								? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
 										d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-								  }" ></span>`
+								  )}" ></span>`
 								: ''
 
 						const [c1, c2] = table.addRow()
 						c1.html('Protein Abundance')
 						c2.html(
-							`${colorSquare} ${d.convertedValueLabel || d.label}${
+							`${colorSquare} ${escapeHtml(d.convertedValueLabel || d.label)}${
 								d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
 							}`
 						)
@@ -228,11 +232,11 @@ export function setInteractivity(self) {
 				} else if (d.term.type == TermTypes.SURVIVAL) {
 					{
 						const [c1, c2] = table.addRow()
-						c1.html(d.term.name)
-						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
+						c1.text(d.term.name)
+						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
 							d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-						}" ></span>
-							${survivalInfo || d.label}`)
+						)}" ></span>
+							${escapeHtml(survivalInfo || d.label)}`)
 					}
 
 					const timeToEventKey =
@@ -245,16 +249,18 @@ export function setInteractivity(self) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.html('')
-						c2.html(timeToEventKey)
+						c2.text(timeToEventKey)
 					}
 				} else if (d.term.type == TermTypes.TERM_COLLECTION) {
 					const renderedValues = d.row[d.$id].renderedValues
 					const sortedRenderedValues = renderedValues.filter(rv => rv.value !== 0).sort((a, b) => b.value - a.value)
 
 					for (const renderedValue of sortedRenderedValues) {
-						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${renderedValue.color}"></span>`
+						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
+							renderedValue.color
+						)}"></span>`
 						const [c1, c2] = table.addRow()
-						c1.html(`${colorSquare} ${renderedValue.label}`)
+						c1.html(`${colorSquare} ${escapeHtml(renderedValue.label)}`)
 						c2.html(`${renderedValue.value.toFixed(2)}%`)
 					}
 				} else if (d.term.type == 'multivalue') {
@@ -263,23 +269,25 @@ export function setInteractivity(self) {
 					const sibs = d.siblingCells?.filter(c => c.$id == d.$id)
 					const cells = sibs?.length ? sibs : [d]
 					for (const [i, c] of cells.entries()) {
-						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${c.fill}"></span>`
+						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
+							c.fill
+						)}"></span>`
 						const [c1, c2] = table.addRow()
-						c1.html(i == 0 ? d.term.name : '')
-						c2.html(`${colorSquare} ${c.label}`)
+						c1.text(i == 0 ? d.term.name : '')
+						c2.html(`${colorSquare} ${escapeHtml(c.label)}`)
 					}
 				} else {
 					const colorSquare =
 						(d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous') || d.tw.q.mode !== 'continuous'
-							? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+							? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
 									d.fill == '#fff' || d.fill == 'transparent' ? '' : d.fill
-							  }" ></span>`
+							  )}" ></span>`
 							: ''
 
 					const [c1, c2] = table.addRow()
-					c1.html(d.term.name)
+					c1.text(d.term.name)
 					c2.html(
-						`${colorSquare} ${d.convertedValueLabel || d.label}${
+						`${colorSquare} ${escapeHtml(d.convertedValueLabel || d.label)}${
 							d.tw?.q?.convert2ZScore && d.tw.q.mode == 'continuous' && d.zscoreLabel ? d.zscoreLabel : ''
 						}`
 					)
@@ -440,14 +448,16 @@ export function setInteractivity(self) {
 		if (templates?.sample) {
 			const name = sampleData[templates.sample.namekey] || sampleData.sample || sampleData.row.sample
 			const [c1, c2] = table.addRow()
-			c1.html(l.Sample)
+			c1.text(l.Sample)
 			c2.html(
-				`<a href="${templates.sample.base}${name}" target="_blank">${sampleData.row._ref_.label} ${svgIcons.externalLink}</a>`
+				`<a href="${templates.sample.base}${escapeHtml(name)}" target="_blank">${escapeHtml(
+					sampleData.row._ref_.label
+				)} ${svgIcons.externalLink}</a>`
 			)
 		} else {
 			const [c1, c2] = table.addRow()
-			c1.html(l.Sample)
-			c2.html(sampleData.row._ref_.label || sampleData.value.sample)
+			c1.text(l.Sample)
+			c2.text(sampleData.row._ref_.label || sampleData.value.sample)
 		}
 		if (sampleData.term?.type == 'geneVariant' && sampleData.tw.q?.type == 'values') {
 			if (sampleData.value) {
@@ -456,12 +466,14 @@ export function setInteractivity(self) {
 					const [c1, c2] = table.addRow()
 					c1.html('Gene')
 					c2.html(
-						`<a href="${templates.gene.base}${name}" target="_blank">${sampleData.tw.term.name} ${svgIcons.externalLink}</a>`
+						`<a href="${templates.gene.base}${escapeHtml(name)}" target="_blank">${escapeHtml(
+							sampleData.tw.term.name
+						)} ${svgIcons.externalLink}</a>`
 					)
 				} else {
 					const [c1, c2] = table.addRow()
 					c1.html('Gene')
-					c2.html(sampleData.term.name)
+					c2.text(sampleData.term.name)
 				}
 
 				const siblingCellLabels = {}
@@ -481,14 +493,18 @@ export function setInteractivity(self) {
 				}
 				for (const [dtLabel, classArray] of Object.entries(siblingCellLabels).sort((a, b) => b.length - a.length)) {
 					const [c1, c2] = table.addRow()
-					c1.html(dtLabel)
-					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classArray[0].color}" ></span>
-						${classArray[0].label}`)
+					c1.text(dtLabel)
+					c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
+						classArray[0].color
+					)}" ></span>
+						${escapeHtml(classArray[0].label)}`)
 					for (const classType of classArray.slice(1)) {
 						const [c1, c2] = table.addRow()
 						c1.html('')
-						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${classType.color}" ></span>
-							${classType.label}`)
+						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
+							classType.color
+						)}" ></span>
+							${escapeHtml(classType.label)}`)
 					}
 				}
 			}
@@ -504,21 +520,21 @@ export function setInteractivity(self) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.html('Gene')
-						c2.html(sampleData.term.name)
+						c2.text(sampleData.term.name)
 					}
 					{
 						const colorSquare =
 							(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
 							sampleData.tw.q.mode !== 'continuous'
-								? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+								? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
 										sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-								  }" ></span>`
+								  )}" ></span>`
 								: ''
 
 						const [c1, c2] = table.addRow()
 						c1.html('Gene Expression')
 						c2.html(
-							`${colorSquare} ${sampleData.convertedValueLabel || sampleData.label}${
+							`${colorSquare} ${escapeHtml(sampleData.convertedValueLabel || sampleData.label)}${
 								sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' && sampleData.zscoreLabel
 									? sampleData.zscoreLabel
 									: ''
@@ -529,21 +545,21 @@ export function setInteractivity(self) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.html('Metabolite')
-						c2.html(sampleData.term.name)
+						c2.text(sampleData.term.name)
 					}
 					{
 						const colorSquare =
 							(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
 							sampleData.tw.q.mode !== 'continuous'
-								? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+								? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
 										sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-								  }" ></span>`
+								  )}" ></span>`
 								: ''
 
 						const [c1, c2] = table.addRow()
 						c1.html('Metabolite Intensity')
 						c2.html(
-							`${colorSquare} ${sampleData.convertedValueLabel || sampleData.label}${
+							`${colorSquare} ${escapeHtml(sampleData.convertedValueLabel || sampleData.label)}${
 								sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' && sampleData.zscoreLabel
 									? sampleData.zscoreLabel
 									: ''
@@ -554,21 +570,21 @@ export function setInteractivity(self) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.html('Gene')
-						c2.html(sampleData.term.name)
+						c2.text(sampleData.term.name)
 					}
 					{
 						const colorSquare =
 							(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
 							sampleData.tw.q.mode !== 'continuous'
-								? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+								? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
 										sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-								  }" ></span>`
+								  )}" ></span>`
 								: ''
 
 						const [c1, c2] = table.addRow()
 						c1.html('Protein Abundance')
 						c2.html(
-							`${colorSquare} ${sampleData.convertedValueLabel || sampleData.label}${
+							`${colorSquare} ${escapeHtml(sampleData.convertedValueLabel || sampleData.label)}${
 								sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' && sampleData.zscoreLabel
 									? sampleData.zscoreLabel
 									: ''
@@ -578,11 +594,11 @@ export function setInteractivity(self) {
 				} else if (sampleData.term.type == TermTypes.SURVIVAL) {
 					{
 						const [c1, c2] = table.addRow()
-						c1.html(sampleData.term.name)
-						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${
+						c1.text(sampleData.term.name)
+						c2.html(`<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
 							sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-						}" ></span>
-							${survivalInfo || sampleData.label}`)
+						)}" ></span>
+							${escapeHtml(survivalInfo || sampleData.label)}`)
 					}
 					const timeToEventKey =
 						'Time to Event: ' +
@@ -595,16 +611,18 @@ export function setInteractivity(self) {
 					{
 						const [c1, c2] = table.addRow()
 						c1.html('')
-						c2.html(timeToEventKey)
+						c2.text(timeToEventKey)
 					}
 				} else if (sampleData.term.type == TermTypes.TERM_COLLECTION) {
 					const renderedValues = sampleData.row[sampleData.$id].renderedValues
 					const sortedRenderedValues = renderedValues.filter(rv => rv.value !== 0).sort((a, b) => b.value - a.value)
 
 					for (const renderedValue of sortedRenderedValues) {
-						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${renderedValue.color}"></span>`
+						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
+							renderedValue.color
+						)}"></span>`
 						const [c1, c2] = table.addRow()
-						c1.html(`${colorSquare} ${renderedValue.label}`)
+						c1.html(`${colorSquare} ${escapeHtml(renderedValue.label)}`)
 						c2.html(`${renderedValue.value.toFixed(2)}%`)
 					}
 				} else if (sampleData.term.type == 'multivalue') {
@@ -613,24 +631,26 @@ export function setInteractivity(self) {
 					const sibs = sampleData.siblingCells?.filter(c => c.$id == sampleData.$id)
 					const cells = sibs?.length ? sibs : [sampleData]
 					for (const [i, c] of cells.entries()) {
-						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${c.fill}"></span>`
+						const colorSquare = `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
+							c.fill
+						)}"></span>`
 						const [c1, c2] = table.addRow()
-						c1.html(i == 0 ? sampleData.term.name : '')
-						c2.html(`${colorSquare} ${c.label}`)
+						c1.text(i == 0 ? sampleData.term.name : '')
+						c2.html(`${colorSquare} ${escapeHtml(c.label)}`)
 					}
 				} else {
 					const colorSquare =
 						(sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous') ||
 						sampleData.tw.q.mode !== 'continuous'
-							? `<span style="display:inline-block; width:12px; height:12px; background-color:${
+							? `<span style="display:inline-block; width:12px; height:12px; background-color:${escapeHtml(
 									sampleData.fill == '#fff' || sampleData.fill == 'transparent' ? '' : sampleData.fill
-							  }" ></span>`
+							  )}" ></span>`
 							: ''
 
 					const [c1, c2] = table.addRow()
-					c1.html(sampleData.term.name)
+					c1.text(sampleData.term.name)
 					c2.html(
-						`${colorSquare} ${sampleData.convertedValueLabel || sampleData.label}${
+						`${colorSquare} ${escapeHtml(sampleData.convertedValueLabel || sampleData.label)}${
 							sampleData.tw?.q?.convert2ZScore && sampleData.tw.q.mode == 'continuous' && sampleData.zscoreLabel
 								? sampleData.zscoreLabel
 								: ''
@@ -1480,7 +1500,7 @@ function setTermActions(self) {
 		const t = self.activeLabel
 		self.dom.menubody.selectAll('*').remove()
 
-		self.dom.menubody.append('div').style('margin-top', '10px').style('text-align', 'center').html(t.tw.term.name)
+		self.dom.menubody.append('div').style('margin-top', '10px').style('text-align', 'center').text(t.tw.term.name)
 
 		self.moveInput = undefined
 		//if (t.grp.lst.length > 1) self.showTermMoveOptions(t)
@@ -1590,7 +1610,7 @@ function setTermActions(self) {
 				st.sortSamples.priority = i
 				st.div = select(this)
 				const label = st.$id == 'sample' ? `${l.Sample} name` : st.term.name
-				st.div.append('span').style('margin-right', '10px').html(label)
+				st.div.append('span').style('margin-right', '10px').text(label)
 				st.up = st.div
 					.append('span')
 					.html(' &#9650; ')
@@ -1813,7 +1833,7 @@ function setSampleGroupActions(self) {
 		self.dom.menubody
 			.append('div')
 			.style('padding-top', '10px')
-			.html(`Use "<b>${self.config.divideBy.term.name}</b>" to`)
+			.html(`Use "<b>${escapeHtml(self.config.divideBy.term.name)}</b>" to`)
 
 		const radioDiv = self.dom.menubody.append('div').style('padding', '0 10px')
 
@@ -1937,11 +1957,14 @@ function setSampleGroupActions(self) {
 		self.dom.menubody
 			.append('div')
 			.style('text-align', 'center')
-			.html(`<b>${grp.name}</b> (${n} ${n < 2 ? l.sample : l.samples})`)
+			.html(`<b>${escapeHtml(grp.name)}</b> (${n} ${n < 2 ? l.sample : l.samples})`)
 		const div = self.dom.menubody.append('div').style('max-width', '400px').style('padding', '5px')
 		for (const key in event.target.__data__.grp.legendData) {
 			const g = event.target.__data__.grp.legendData[key]
-			div.append('div').style('padding-top', '10px').html(`<b>${g.name}</b>`)
+			div
+				.append('div')
+				.style('padding-top', '10px')
+				.html(`<b>${escapeHtml(g.name)}</b>`)
 			const t = div.append('table')
 			for (const i of g.items) {
 				const tr = t.append('tr')
@@ -1952,7 +1975,7 @@ function setSampleGroupActions(self) {
 					.style('height', '12px')
 					.style('background-color', i.color)
 					.style('border', `1px soloid ${i.stroke}`)
-				tr.append('td').html(i.text)
+				tr.append('td').text(i.text)
 			}
 		}
 		self.dom.tip.show(event.clientX, event.clientY)
@@ -2196,7 +2219,7 @@ function setLabelDragEvents(self, prefix) {
 				.append('div')
 				.style('text-align', 'left')
 				.style('font-size', '1.1em')
-				.html(groupName ? `<b>${groupName}: ${termName}</b>` : `<b>${termName}</b>`)
+				.html(groupName ? `<b>${escapeHtml(groupName)}: ${escapeHtml(termName)}</b>` : `<b>${escapeHtml(termName)}</b>`)
 
 			const div = self.dom.menubody.append('div').style('max-width', '400px')
 
@@ -2231,7 +2254,7 @@ function setLabelDragEvents(self, prefix) {
 						.style('padding-top', '10px')
 						.html(
 							grpName
-								? `<b>${grpName}</b>: Mutated samples (${counts.samplesTotal} of ${
+								? `<b>${escapeHtml(grpName)}</b>: Mutated samples (${counts.samplesTotal} of ${
 										groupSampleTotal - counts.samplesNotTested
 								  }, ${d3format('.1%')(mRate)})`
 								: `<b>Mutated samples (${counts.samplesTotal} of ${
@@ -2278,7 +2301,7 @@ function setLabelDragEvents(self, prefix) {
 							.style('width', '12px')
 							.style('height', '12px')
 							.style('background-color', classType.color)
-						tr.append('td').html(`${classType.key}: ${classType.count}`)
+						tr.append('td').text(`${classType.key}: ${classType.count}`)
 					}
 				} else {
 					// when legend data is not available, use subGroupCounts
@@ -2289,7 +2312,7 @@ function setLabelDragEvents(self, prefix) {
 							.style('padding-top', '10px')
 							.html(
 								grpName !== ''
-									? `<b>${grpName}</b>: ${counts.samplesTotal} of ${groupSampleTotal}`
+									? `<b>${escapeHtml(grpName)}</b>: ${counts.samplesTotal} of ${groupSampleTotal}`
 									: `<b>${counts.samplesTotal} of ${groupSampleTotal}`
 							)
 						const t = div.append('table').style('margin-left', '15px')
@@ -2303,7 +2326,7 @@ function setLabelDragEvents(self, prefix) {
 								.style('width', '12px')
 								.style('height', '12px')
 								.style('background-color', classColor)
-							tr.append('td').html(`${classType}: ${num}`)
+							tr.append('td').text(`${classType}: ${num}`)
 						}
 					}
 				}
@@ -2316,7 +2339,7 @@ function setLabelDragEvents(self, prefix) {
 						.style('padding-top', '10px')
 						.html(
 							grpName !== ''
-								? `<b>${grpName}</b>: ${counts.samplesTotal} of ${groupSampleTotal}`
+								? `<b>${escapeHtml(grpName)}</b>: ${counts.samplesTotal} of ${groupSampleTotal}`
 								: `<b>${counts.samplesTotal} of ${groupSampleTotal}`
 						)
 					const subGrp = self.sampleGroups.find(g => g.name == grpName)
@@ -2333,7 +2356,7 @@ function setLabelDragEvents(self, prefix) {
 								.style('width', '12px')
 								.style('height', '12px')
 								.style('background-color', classType.color)
-							tr.append('td').html(`${classType.key}: ${classType.count}`)
+							tr.append('td').text(`${classType.key}: ${classType.count}`)
 						}
 					} else {
 						// when legend data is not available, use subGroupCounts
@@ -2348,7 +2371,7 @@ function setLabelDragEvents(self, prefix) {
 								.style('width', '12px')
 								.style('height', '12px')
 								.style('background-color', classColor)
-							tr.append('td').html(`${classType}: ${num}`)
+							tr.append('td').text(`${classType}: ${num}`)
 						}
 					}
 				}

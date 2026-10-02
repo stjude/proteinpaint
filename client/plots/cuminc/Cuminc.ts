@@ -464,7 +464,7 @@ class MassCumInc extends PlotBase implements RxComponent {
 			this.dom.errorDiv.html('')
 			if (this.dom.header)
 				this.dom.header.html(
-					this.state.config.term.term.name +
+					escapeHtml(this.state.config.term.term.name) +
 						' <span style="opacity:.6;font-size:.7em;margin-left:10px;">CUMULATIVE INCIDENCE</span>'
 				)
 
@@ -801,7 +801,7 @@ function setRenderers(self: any) {
 			.style('font-weight', '600')
 			.style('margin', '5px')
 			.datum(chart.chartId)
-			.html(chart.chartTitle)
+			.text(chart.chartTitle)
 
 		if (self.hidePlotTitle) div.select('.sjpcb-cuminc-title').style('display', 'none')
 
@@ -894,7 +894,7 @@ function setRenderers(self: any) {
 			.style('width', `${s.svgw + 50}px`)
 			.style('height', s.chartTitleDivHt + 'px')
 			.datum(chart.chartId)
-			.html(chart.chartTitle)
+			.text(chart.chartTitle)
 
 		if (self.hidePlotTitle) div.select('.sjpcb-cuminc-title').style('display', 'none')
 
