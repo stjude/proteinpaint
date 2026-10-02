@@ -2115,13 +2115,24 @@ async function validate_query_dnaMethylation(ds, genome) {
 			q.cpgByChr = path.join(serverconfig.tpmasterdir, q.cpgByChr)
 			const [prefix, suffix] = path.basename(q.cpgByChr).split('{chr}')
 			const dir = path.dirname(q.cpgByChr)
-			const files = fs.readdirSync(dir)
+			const files = fs.existsSync(dir) ? fs.readdirSync(dir) : []
 			q.cpgChroms = new Set(
 				files
 					.filter(f => f.startsWith(prefix) && f.endsWith(suffix) && f.length > prefix.length + suffix.length)
 					.map(f => f.slice(prefix.length, f.length - suffix.length))
 			)
-			if (!q.cpgChroms.size) throw `dnaMethylation.cpgByChr matched no file under ${dir}`
+			/* No shard built yet is the far end of a partial build, not a broken config: drop the
+			setting so every path (term getter, region view, genome-wide scans) takes the element
+			fallback it already takes for a chromosome without a shard. */
+			if (!q.cpgChroms.size) {
+				console.warn(
+					`${ds.label}: WARNING dnaMethylation.cpgByChr matched no file under ${dir}; using element matrices`
+				)
+				delete q.cpgByChr
+				delete q.cpgChroms
+			}
+		}
+		if (q.cpgByChr) {
 			/* Sample gate on one shard, since all shards come out of the same build. A CpG matrix
 			written from the raw count files carries the sequencing sample names, which are not the
 			portal's until the build appends its suffix -- catching that here rather than at request
@@ -2379,8 +2390,12 @@ function makeElementMethylationGetter(q, entry, ds) {
 			element average is what a promoter or cCRE term wants, but a region a scan called is not
 			an element: a DMR overlapping no cCRE would have no value at all, and one overlapping half
 			of a cCRE would get that element's whole-span average. The shard gives the region's own
-			CpGs, averaged per sample, on the unit the entry advertises. */
-			if (q.cpgByChr && q.cpgChroms?.has(tw.term.chr)) {
+			CpGs, averaged per sample, on the unit the entry advertises.
+
+			Only for 'region' terms (a scan DMR or typed coordinates). A promoter/gene/enhancer term
+			IS an element and must read the matrix elementForTerms nominates; letting the shard take
+			it too made that setting dead on every sharded chromosome. */
+			if (tw.term.genomicFeatureType == 'region' && q.cpgChroms?.has(tw.term.chr)) {
 				const shardNames = queryNames.filter(n => !q.regionSampleSet || q.regionSampleSet.has(n))
 				if (!shardNames.length) continue
 				const input = {
