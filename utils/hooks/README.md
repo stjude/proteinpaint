@@ -41,11 +41,13 @@ at `$PP_TEXT_CHECK_TERMS`, `git config pp.textCheckTerms` (set by `init.sh` when
 within sjpp), or `../../../security-triage/text-check-terms.txt` relative to this directory.
 Set `SKIP_TEXT_CHECK=1` to skip the check, such as when the fix is already deployed to prod.
 
-### claude-bash-check.sh
+### claude-bash-check.cjs
 
 A Claude Code `PreToolUse` hook, configured in `.claude/settings.json`. It blocks an agent's git command
 that skips the git hooks or the text check, and checks the text of git and gh commands that will be public,
-such as PR titles and descriptions, with `check-text.sh`.
+such as PR titles and descriptions, and the files that gh reads such as with `--body-file`, with `check-text.sh`.
+It splits the command into simple commands without running it, to find the working directory and target repo
+of each git and gh invocation.
 
 ## Install
 

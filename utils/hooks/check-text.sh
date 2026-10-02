@@ -6,7 +6,8 @@
 # usage:
 #   <text> | check-text.sh text <label>        # commit message, branch name, PR text
 #   <unified diff> | check-text.sh diff <label> # only the added lines are checked
-#   check-text.sh push                          # from a pre-push hook, reads its stdin
+#   check-text.sh commit-msg <file> [label]     # from a commit-msg hook
+#   check-text.sh push <remote>                 # from a pre-push hook, reads its stdin
 #
 # The terms are read from text-check-patterns.txt in this directory, and from an optional
 # private terms file, which is found at $PP_TEXT_CHECK_TERMS, `git config pp.textCheckTerms`,
@@ -23,7 +24,24 @@ if [[ "$SKIP_TEXT_CHECK" == "1" ]]; then
 	exit 0
 fi
 
+if [[ "$MODE" == "commit-msg" ]]; then
+	# check the text that git will keep: like git's default cleanup, the comment lines are
+	# removed only when the message is from the editor, which adds the comment below,
+	# and not when it's from `git commit -m` or `-F`
+	CLEANUP=$(git config --get commit.cleanup)
+	if [[ "$CLEANUP" != "verbatim" && "$CLEANUP" != "whitespace" && "$CLEANUP" != "scissors" ]] &&
+		grep -q '^# Please enter the commit message' "$2"; then
+		STRIP=(git stripspace --strip-comments)
+	else
+		STRIP=(cat)
+	fi
+	# remove the diff that `git commit -v` adds below the scissors line
+	sed '/^# -* >8 -*$/,$d' "$2" | "${STRIP[@]}" | "$0" text "${3:-commit message}"
+	exit
+fi
+
 if [[ "$MODE" == "push" ]]; then
+	REMOTE=$2
 	STATUS=0
 	while read -r LOCALREF LOCALSHA REMOTEREF REMOTESHA; do
 		# skip the deletion of a remote ref
@@ -32,11 +50,17 @@ if [[ "$MODE" == "push" ]]; then
 		if [[ "$REMOTESHA" =~ [1-9a-f] ]] && git cat-file -e "$REMOTESHA" 2>/dev/null; then
 			RANGE=("$REMOTESHA..$LOCALSHA")
 		else
-			# a new remote ref: only check the commits that are not on any remote yet
-			RANGE=("$LOCALSHA" --not --remotes)
+			# a new remote ref: only check the commits that are not on the destination remote yet,
+			# or on any remote when the destination is a url instead of a configured remote
+			if [[ "$REMOTE" != "" ]] && git remote get-url "$REMOTE" > /dev/null 2>&1; then
+				RANGE=("$LOCALSHA" --not "--remotes=$REMOTE")
+			else
+				RANGE=("$LOCALSHA" --not --remotes)
+			fi
 		fi
 		git log --format=%B "${RANGE[@]}" | "$0" text "commit messages to push" || STATUS=1
-		git log -p -U0 --no-color --no-ext-diff --format= "${RANGE[@]}" | "$0" diff "commits to push" || STATUS=1
+		# --remerge-diff shows the lines that a merge commit adds, such as when resolving a conflict
+		git log -p --remerge-diff -U0 --no-color --no-ext-diff --format= "${RANGE[@]}" | "$0" diff "commits to push" || STATUS=1
 	done
 	exit $STATUS
 fi
@@ -46,6 +70,12 @@ TERMS=${TERMS:-$DIR/../../../security-triage/text-check-terms.txt}
 PATTERNS=$(mktemp)
 trap 'rm -f "$PATTERNS"' EXIT
 cat "$DIR/text-check-patterns.txt" "$TERMS" 2>/dev/null | grep -v -E '^[[:space:]]*(#|$)' > "$PATTERNS"
+grep -i -E -f "$PATTERNS" < /dev/null > /dev/null 2>&1
+if [[ $? -gt 1 ]]; then
+	cat > /dev/null
+	echo "!!! $LABEL: not checked, since there is an invalid expression in $DIR/text-check-patterns.txt or $TERMS !!!" >&2
+	exit 1
+fi
 
 if [[ "$MODE" == "diff" ]]; then
 	# print each added line as <file>:<line>: <text>, except in files that list the terms or do the check
@@ -54,7 +84,7 @@ if [[ "$MODE" == "diff" ]]; then
 		header && /^\+\+\+ / {
 			header = 0
 			file = substr($0, 7)
-			skip = file ~ /(^|\/)(AGENTS\.md|CLAUDE\.md|text-check-patterns\.txt|text-check-terms\.txt|check-text\.sh|claude-bash-check\.sh|package-lock\.json)$/
+			skip = file ~ /(^|\/)(AGENTS\.md|CLAUDE\.md|text-check-patterns\.txt|text-check-terms\.txt|check-text\.sh|claude-bash-check\.cjs|package-lock\.json)$/
 			next
 		}
 		/^@@ / { split($3, a, ","); line = substr(a[1], 2) + 0; next }
