@@ -366,7 +366,9 @@ export class GvCustomGS extends GvBase {
 	}
 
 	getTitleText() {
-		return `${this.term.name} Custom Groups`
+		let text = `${this.term.name} Custom Groups`
+		if (this.term.label) text += ` (${this.term.label})`
+		return text
 	}
 }
 

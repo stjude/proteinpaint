@@ -261,8 +261,8 @@ function getVocabApiWithRememberedQ(lst) {
 function getVocabApiWithSampleTypes() {
 	const termdbConfig = structuredClone(vocabApi.termdbConfig)
 	termdbConfig.sampleTypes = {
-		1: { name: 'Primary' },
-		2: { name: 'Relapse' }
+		1: { name: 'Primary', plural_name: 'Primary tumors' },
+		2: { name: 'Relapse', plural_name: 'Relapses' }
 	}
 	termdbConfig.assayAvailability ??= { byDt: {} }
 	termdbConfig.assayAvailability.byDt ??= {}
@@ -283,9 +283,9 @@ function getVocabApiWithSampleTypes() {
 function getVocabApiWithOrigins() {
 	const termdbConfig = structuredClone(vocabApi.termdbConfig)
 	termdbConfig.sampleTypes = {
-		1: { name: 'Primary' },
-		2: { name: 'Relapse' },
-		3: { name: 'Normal' }
+		1: { name: 'Primary', plural_name: 'Primary tumors' },
+		2: { name: 'Relapse', plural_name: 'Relapses' },
+		3: { name: 'Normal', plural_name: 'Normals' }
 	}
 	termdbConfig.assayAvailability ??= { byDt: {} }
 	termdbConfig.assayAvailability.byDt ??= {}
@@ -378,8 +378,8 @@ tape('Origins are selected separately from mutation type', async test => {
 	test.deepEqual(tw.term.origins, ['germline'], 'should submit selected origins on the term')
 	test.equal(tw.term.originLabel, 'Inherited', 'should name the selected origin subset')
 	test.deepEqual(tw.term.sampleTypes, [3], 'should submit selected sample types available to the selected origin')
-	test.equal(tw.term.sampleTypeLabel, 'Normal', 'should name the selected sample type subset')
-	test.equal(tw.term.label, 'Normal, Inherited', 'should combine sample type and origin labels')
+	test.equal(tw.term.sampleTypeLabel, 'Normals', 'should name the selected sample type subset')
+	test.equal(tw.term.label, 'Inherited, Normals', 'should combine origin and sample type labels')
 	test.equal(tw.term.name, 'TP53', 'should not append labels to the term name')
 
 	const cnvMutationTypeIdx = handler.mutationTypeTerms.findIndex((term: any) => term.dt == dtcnv)
@@ -474,8 +474,8 @@ tape('Sample type label is empty for all types and names a selected subset', asy
 
 	holder.selectAll('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].click()
 	await pickGene(holder)
-	test.equal(tw.term.sampleTypeLabel, 'Relapse', 'should name the selected sample type subset')
-	test.equal(tw.term.label, 'Relapse', 'should set the term label to the selected sample type')
+	test.equal(tw.term.sampleTypeLabel, 'Relapses', 'should name the selected sample type subset')
+	test.equal(tw.term.label, 'Relapses', 'should set the term label to the selected sample type')
 	test.equal(tw.term.name, 'TP53', 'should not append the sample type label to the term name')
 
 	if (test['_ok']) holder.remove()
