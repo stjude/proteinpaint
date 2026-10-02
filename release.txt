@@ -1,1 +1,6 @@
+Features:
+- add container/runtimePosture.mjs, a CLI that reports which recommended container runtime settings are not applied
 
+Fixes:
+- run Rscript with --vanilla and python with -E -s, to use only the interpreter defaults
+- the deps image build checks the permissions of the interpreter and tool dirs

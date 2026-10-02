@@ -608,7 +608,7 @@ export async function validate_cumburden(ds) {
 			throw `'..' path segment is not allowed in ds.cohort.cumburden.files.${name}`
 		const f = path.join(serverconfig.tpmasterdir, dir, fname)
 		if (!fs.existsSync(f)) throw `ds.cohort.burden.files.${name}='${fname}' not found`
-		const out = spawnSync(serverconfig.Rscript, ['-e', `load('${f}')`], {
+		const out = spawnSync(serverconfig.Rscript, ['--vanilla', '-e', `load('${f}')`], {
 			encoding: 'utf-8'
 		})
 		if (out?.status || out?.stderr) {

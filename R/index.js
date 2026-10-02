@@ -25,7 +25,8 @@ export async function run_R(filename, data, args, subdir = 'src') {
 		const _stdout = []
 		const _stderr = []
 		// spawn R child process
-		const sp = spawn('Rscript', args ? [filepath, ...args] : [filepath])
+		// --vanilla: use only the R installation defaults, not user or site startup files
+		const sp = spawn('Rscript', ['--vanilla', filepath, ...(args || [])])
 		if (data) {
 			// stream input data into R
 			try {

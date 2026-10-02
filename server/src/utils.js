@@ -881,7 +881,8 @@ export async function run_fdr(plst) {
 
 function run_fdr_2(infile, outfile) {
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', [path.join(serverconfig.binpath, 'utils/fdr.R'), infile, outfile])
+		// --vanilla, same as run_R()
+		const sp = spawn('Rscript', ['--vanilla', path.join(serverconfig.binpath, 'utils/fdr.R'), infile, outfile])
 		sp.on('close', () => resolve())
 		sp.on('error', reject)
 	})
