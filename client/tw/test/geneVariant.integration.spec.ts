@@ -317,7 +317,12 @@ tape('fill(): selects a predefined groupset by q.dtLst', async test => {
 })
 
 tape('fill(): migrates a legacy origin-specific predefined groupset', async test => {
-	const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: 1 })
+	const tw: any = getGsTw({
+		isAtomic: true,
+		type: 'predefined-groupset',
+		predefined_groupset_idx: 1,
+		dtLst: [dtsnvindel]
+	})
 	tw.term.childTerms = [
 		{
 			id: 'snvindel_somatic',
@@ -353,11 +358,53 @@ tape('fill(): migrates a legacy origin-specific predefined groupset', async test
 	test.end()
 })
 
+tape('fill(): migrates a trimmed legacy origin-specific predefined groupset', async test => {
+	// as saved in a session, where trimGvTermsForSave() dropped term.childTerms
+	const tw: any = getGsTw({
+		isAtomic: true,
+		type: 'predefined-groupset',
+		predefined_groupset_idx: 1,
+		dtLst: [dtsnvindel]
+	})
+	const fullTw: any = await GvBase.fill(tw, { vocabApi })
+	test.deepEqual(fullTw.term.origins, ['germline'], 'should recover the legacy origin from the groupset index')
+	test.deepEqual(fullTw.q.dtLst, [dtsnvindel], 'should keep the selected data type')
+	test.equal(fullTw.term.groupsetting.lst[fullTw.q.predefined_groupset_idx].name, 'SNV/indel')
+	test.end()
+})
+
+tape('fill(): migrates the origin of a legacy custom groupset', async test => {
+	const tvs = (origin: string) => ({
+		type: 'tvs',
+		tvs: {
+			term: { id: `snvindel_${origin}`, type: 'dtsnvindel', dt: dtsnvindel, origin, name_noOrigin: 'SNV/indel' },
+			values: [{ key: 'M', label: 'MISSENSE', value: 'M' }]
+		}
+	})
+	const group = (name: string) => ({
+		name,
+		type: 'filter',
+		filter: { type: 'tvslst', in: true, join: '', lst: [tvs('germline')] }
+	})
+	const tw: any = getGsTw({
+		isAtomic: true,
+		type: 'custom-groupset',
+		customset: { name: 'legacy', groups: [group('g1'), group('g2')] }
+	})
+	const fullTw: any = await GvBase.fill(tw, { vocabApi })
+	test.deepEqual(fullTw.term.origins, ['germline'], 'should move the tvs origin to the parent term')
+	const term = fullTw.q.customset.groups[0].filter.lst[0].tvs.term
+	test.notOk('origin' in term || 'name_noOrigin' in term, 'should strip the legacy origin from the tvs term')
+	test.end()
+})
+
 tape('trimGvTermsForSave(): a trimmed tw refills to the same tw', async test => {
 	/* a session is serialized without the derived properties of a geneVariant term, so
 	whatever is dropped there has to be rebuilt by fill() when the session is opened */
 	for (const idx of [0, 1, 2, 3, 4]) {
 		const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: idx })
+		// a tw without selected origins would be read as a legacy tw once trimmed
+		tw.term.origins = ['somatic', 'germline']
 		const fullTw: any = await GvBase.fill(tw, { vocabApi })
 
 		// what sessionBtn.getSavableState() writes, then what opening the session reads
@@ -424,6 +471,8 @@ tape('fill(): q.type=predefined-groupset, stale q.dtLst', async test => {
 		predefined_groupset_idx: cnvIdx,
 		dtLst: [dtsnvindel]
 	})
+	// a tw without selected origins would be read as a legacy tw, where this index is germline snvindel
+	tw.term.origins = ['somatic', 'germline']
 	const fullTw: any = await GvBase.fill(tw, { vocabApi })
 	test.equal(fullTw.term.groupsetting.lst[cnvIdx].name, 'CNV', 'should keep the selected groupset')
 	test.equal(fullTw.q.predefined_groupset_idx, cnvIdx, 'should keep q.predefined_groupset_idx')

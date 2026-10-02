@@ -23,8 +23,15 @@ import { set_hiddenvalues } from '#termsetting'
 import { getWrappedTvslst } from '#filter/filter'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getChildTerms, addParentTerm } from '../termdb/handlers/geneVariant'
-import { getColors, dtcnv, dtsnvindel, mclass } from '#shared/common.js'
-import { trimGvTermCopy, clearDtTermMnames, getDtsFromGroups, setGroupsetParentTerms } from '#shared/terms.js'
+import { getColors, dtcnv, dtsnvindel, dtTerms, mclass } from '#shared/common.js'
+import {
+	trimGvTermCopy,
+	clearDtTermMnames,
+	getDtsFromGroups,
+	setGroupsetParentTerms,
+	getLegacyGroupsetOrigins,
+	stripLegacyGroupsetOrigins
+} from '#shared/terms.js'
 import { validateVariantFilter } from '#shared/geneVariantFilter.js'
 import { rgb } from 'd3-color'
 
@@ -101,22 +108,7 @@ export class GvBase extends TwBase {
 
 		if (!Object.keys(tw.q).includes('type')) tw.q.type = 'values'
 
-		/* Support legacy term structure:
-		Origin-specific child terms were used before origins became a parent-term selection.
-		For a saved predefined groupset, preserve its selected origin and dt before rebuilding
-		the child terms in their current one-per-dt shape. */
-		if (tw.term.childTerms?.some(term => term.origin)) {
-			if (tw.q.type == 'predefined-groupset' && Number.isInteger(tw.q.predefined_groupset_idx)) {
-				const selected = tw.term.childTerms[tw.q.predefined_groupset_idx as number]
-				if (selected?.origin && !tw.term.origins?.length) tw.term.origins = [selected.origin]
-				if (Number.isInteger(selected?.dt)) {
-					tw.q.dtLst = [selected.dt]
-					delete tw.q.predefined_groupset_idx
-				}
-			}
-			getChildTerms(tw.term, opts.vocabApi)
-			delete tw.term.groupsetting
-		}
+		migrateLegacyOrigins(tw, opts.vocabApi)
 
 		// fill term.groupsetting
 		if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
@@ -278,8 +270,8 @@ export class GvPredefinedGS extends GvBase {
 		if (!hasIdx && q.dtLst?.length) {
 			/* query dts specified without an index, by an entry point that knows a dt but not
 			a groupset index, e.g. launchGeneVariantPlot() in client/mass/search.ts, or a legacy
-			origin-specific groupset that GvBase.fill() has just migrated (see "Support legacy
-			term structure" above, which deletes q.predefined_groupset_idx for this reason).
+			origin-specific groupset that GvBase.fill() has just migrated (see
+			migrateLegacyOrigins(), which deletes q.predefined_groupset_idx for this reason).
 			each groupset now declares a distinct dt (or dt set, for the bi-/mono-allelic
 			groupset), so q.dtLst identifies exactly one groupset.
 
@@ -376,6 +368,62 @@ export class GvCustomGS extends GvBase {
 	getTitleText() {
 		return `${this.term.name} Custom Groups`
 	}
+}
+
+/* Support legacy term structure:
+Before origins became a parent-term selection (term.origins[]), each origin of a dt had its
+own child term (term.childTerms[].origin) and a predefined groupset was selected by its index
+in those child terms, while a custom groupset kept the origin on the dt term of each tvs.
+Moves the selected origin to term.origins[], and the selected dt to q.dtLst, so that the
+current child terms and groupsets are rebuilt from them. */
+function migrateLegacyOrigins(tw: RawGvTW, vocabApi: VocabApi) {
+	const legacyChildTerms = getLegacyChildTerms(tw.term, vocabApi)
+	const legacyCustomOrigins = tw.q.type == 'custom-groupset' ? getLegacyGroupsetOrigins(tw.q.customset) : []
+	if (!legacyChildTerms.length && !legacyCustomOrigins.length) return // not legacy
+
+	if (tw.q.type == 'predefined-groupset') migrateLegacyPredefinedGroupset(tw, legacyChildTerms)
+	else if (tw.q.type == 'custom-groupset') migrateLegacyCustomGroupset(tw, legacyCustomOrigins)
+	// rebuilt in their current one-per-dt shape
+	delete tw.term.childTerms
+	delete tw.term.groupsetting
+}
+
+/* the origin-specific child terms that a legacy predefined_groupset_idx points into, or an
+empty array for a term that is not legacy. A saved session drops term.childTerms (see
+trimGvTermsForSave()), so they are rebuilt from the dataset in their legacy order, which is
+the order of dtTerms with each origin-split dt expanded into somatic then germline. */
+function getLegacyChildTerms(term: RawGvTerm, vocabApi: VocabApi): { dt: number; origin?: string }[] {
+	if (term.childTerms) return term.childTerms.some(t => t.origin) ? term.childTerms : []
+	if (term.origins?.length) return [] // origins are already selected
+	const { queries, assayAvailability } = vocabApi.termdbConfig
+	const lst: { dt: number; origin?: string }[] = []
+	for (const t of dtTerms) {
+		const query = queries?.[t.query]
+		if (!query || (query.dtLst?.length && !query.dtLst.includes(t.dt))) continue
+		const byOrigin = assayAvailability?.byDt?.[t.dt]?.byOrigin
+		if (!byOrigin) lst.push({ dt: t.dt })
+		else for (const origin of ['somatic', 'germline']) if (origin in byOrigin) lst.push({ dt: t.dt, origin })
+	}
+	return lst.some(t => t.origin) ? lst : []
+}
+
+function migrateLegacyPredefinedGroupset(tw: RawGvTW, legacyChildTerms: { dt: number; origin?: string }[]) {
+	const { term, q } = tw
+	if (q.type != 'predefined-groupset' || !Number.isInteger(q.predefined_groupset_idx)) return
+	const selected = legacyChildTerms[q.predefined_groupset_idx as number]
+	// no match for an index past the child terms, or a q.dtLst of another groupset
+	if (!selected || !q.dtLst?.includes(selected.dt)) return
+	if (selected.origin && !term.origins?.length) term.origins = [selected.origin]
+	q.dtLst = [selected.dt]
+	// resolved from q.dtLst by GvPredefinedGS.fill(), against the current groupsets
+	delete q.predefined_groupset_idx
+}
+
+function migrateLegacyCustomGroupset(tw: RawGvTW, legacyOrigins: string[]) {
+	const { term, q } = tw
+	if (q.type != 'custom-groupset') return
+	if (legacyOrigins.length && !term.origins?.length) term.origins = legacyOrigins
+	stripLegacyGroupsetOrigins(q.customset)
 }
 
 const allelicGroupsetName = 'Bi-/mono-allelic'
