@@ -74,6 +74,27 @@ tape('process.env.PP_CREDS_HANDOFF_FILE: sets each <NAME>_CREDS from the file, t
 	test.end()
 })
 
+tape('process.env.PP_CREDS_HANDOFF_FILE: a TMPDIR that is not normalized is resolved', async test => {
+	const tmpdir = os.tmpdir()
+	// such as TMPDIR=/tmp/., which path.join() in envHelpers.mjs normalizes for the handoff file path
+	const file = writeHandoffFile(JSON.stringify({ PP_ZZTEST_CREDS: 'other' }))
+	const env = { TMPDIR: process.env.TMPDIR }
+	process.env.TMPDIR = tmpdir + '/.'
+	process.env.PP_CREDS_HANDOFF_FILE = file
+	try {
+		await import('../serverconfig.js?pp_creds_handoff=tmpdir')
+		test.equal(process.env.PP_ZZTEST_CREDS, 'other', 'should read the handoff file')
+		test.equal(fs.existsSync(path.dirname(file)), false, 'should remove the handoff dir')
+	} finally {
+		if (env.TMPDIR === undefined) delete process.env.TMPDIR
+		else process.env.TMPDIR = env.TMPDIR
+		delete process.env.PP_CREDS_HANDOFF_FILE
+		delete process.env.PP_ZZTEST_CREDS
+		fs.rmSync(path.dirname(file), { recursive: true, force: true })
+	}
+	test.end()
+})
+
 tape('process.env.PP_CREDS_HANDOFF_FILE: invalid JSON throws a message without the credentials content', async test => {
 	const file = writeHandoffFile('{"PP_CREDS": "secret-value-not-in-message') // pragma: allowlist secret
 	process.env.PP_CREDS_HANDOFF_FILE = file
@@ -102,10 +123,12 @@ tape(
 		const file = path.join(dir, 'creds.json')
 		fs.writeFileSync(file, '{}')
 		try {
-			for (const value of [file, '/etc/passwd', path.join(os.tmpdir(), 'pp-creds-x', 'other.json')]) {
+			const values = [file, '/etc/passwd', path.join(os.tmpdir(), 'pp-creds-x', 'other.json')]
+			for (const [i, value] of values.entries()) {
 				process.env.PP_CREDS_HANDOFF_FILE = value
 				try {
-					await import(`../serverconfig.js?pp_creds_handoff=bad-${encodeURIComponent(value)}`)
+					// not the value in the query string, since tsx imports a module path that ends with .json as JSON
+					await import(`../serverconfig.js?pp_creds_handoff=bad-${i}`)
 					test.fail(`should reject '${value}'`)
 				} catch (e) {
 					test.equal(String(e.message || e), 'invalid process.env.PP_CREDS_HANDOFF_FILE', `should reject '${value}'`)
