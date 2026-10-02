@@ -794,7 +794,8 @@ function showLassoMenu(
 		return
 	}
 	d.append('div').style('font-weight', 'bold').text(`${hits.length} cells selected`) // headline count
-	if (runNhood) {
+const selectedTypes = new Set(hits.map(c => cellTypes?.[c.id]).filter(Boolean))
+	if (runNhood && selectedTypes.size >= 2) {
 		// mirrors the route's ids*k*perms cap (server/src/routes/wsitiles.ts) at the
 		// default k=6/perms=1000 the button runs with, so an oversized lasso gets an
 		// instant explanation instead of a POST the server would reject anyway
