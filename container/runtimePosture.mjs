@@ -34,6 +34,10 @@ export const STRICT_CHECKS = Object.freeze(
 	new Set(['user', 'capabilities', 'no-new-privileges', 'read-only-root', 'tmp-noexec', 'lib-dirs'])
 )
 
+// the accessSync(W_OK) errors that mean a dir is not writable, or does not exist
+const PROBE_RESULT_CODES = new Set(['EACCES', 'EROFS', 'EPERM', 'ENOENT', 'ENOTDIR'])
+
+// declared before this CLI block, which runs when the module loads
 if (isMainModule()) {
 	const args = process.argv.slice(2)
 	const strict = args.includes('--strict')
@@ -107,7 +111,9 @@ export function checkRuntimePosture({
 			_fs.accessSync(dir, fs.constants.W_OK)
 			add('lib-dirs', `${dir} is writable by the process, it should be read-only`)
 		} catch (e) {
-			if (e.code == 'ERR_ACCESS_DENIED') unchecked.push(dir)
+			// an expected result: not writable, or the path does not exist; any other error, such as EIO, or
+			// ERR_ACCESS_DENIED from the permission model, leaves the dir unchecked
+			if (!PROBE_RESULT_CODES.has(e.code)) unchecked.push(dir)
 		}
 	}
 
