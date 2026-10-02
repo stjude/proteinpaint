@@ -1,5 +1,5 @@
 Features:
-- add container/runtimePosture.mjs, a CLI that reports which recommended container runtime settings are not applied
+- add container/runtimePosture.mjs, a CLI that reports which recommended container runtime settings are not applied; it also checks the python venv package dirs, such as lib/python3.14/site-packages, and any mount under the interpreter library dirs
 - in a container, envHelpers.mjs logs a warning for each recommended runtime setting that is not applied, using runtimePosture.mjs
 - with PP_RUNTIME_CHECK=strict, envHelpers.mjs exits before starting the server when a required runtime setting is not applied: a non-root user, no capabilities, no_new_privs, a read-only root filesystem, a noexec temp dir, and read-only interpreter library dirs; runtimePosture.mjs --strict checks the same settings
 - envHelpers.mjs passes the node permission model settings as --permission and --allow-* flags, and logs the allowed paths, so that a node command does not need a writable node.config.json; a tsx command still uses node.config.json, in ./ or in the optional PP_NODE_CONFIG_DIR
