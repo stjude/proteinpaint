@@ -8,7 +8,14 @@ import { spawn, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { envHelpers, createContext, getNodeConfig, getCreds, findPrefixConflicts } from '../envHelpers.mjs'
+import {
+	envHelpers,
+	createContext,
+	getNodeConfig,
+	getCreds,
+	findPrefixConflicts,
+	permissionFlags
+} from '../envHelpers.mjs'
 
 const SCRIPT = path.join(import.meta.dirname, '../envHelpers.mjs')
 
@@ -174,15 +181,16 @@ test('credentials: a file under an allowed read path fails closed, before any fi
 	}
 })
 
-test('router: the config flag is inserted where node or tsx parses it as an option', t => {
+test('router: the permission flags or config file flag are inserted where node or tsx parses them as options', t => {
+	const flags = permissionFlags(getNodeConfig(fakeContext()))
 	for (const [args, expected] of [
 		[
 			['node', 'app.mjs'],
-			['node', '--experimental-default-config-file', 'app.mjs']
+			['node', ...flags, 'app.mjs']
 		],
 		[
 			['/usr/bin/node', '--enable-source-maps', 'app.mjs'],
-			['/usr/bin/node', '--experimental-default-config-file', '--enable-source-maps', 'app.mjs']
+			['/usr/bin/node', ...flags, '--enable-source-maps', 'app.mjs']
 		],
 		[
 			['tsx', 'watch', 'server.ts'],
@@ -194,11 +202,49 @@ test('router: the config flag is inserted where node or tsx parses it as an opti
 		]
 	]) {
 		const ctx = fakeContext()
+		t.mock.method(console, 'error', () => {})
 		runInProcess(t, args, ctx)
 		// a node command replaces this process, and a tsx command runs as a child process
 		const actual = ctx.execved.length ? ctx.execved[0].args : [ctx.spawned[0].cmd, ...ctx.spawned[0].args]
 		assert.deepEqual(actual, expected)
+		// only a tsx command has a config file
+		assert.deepEqual(Object.keys(ctx.written), path.basename(args[0]) == 'tsx' ? ['/app/node.config.json'] : [])
 	}
+})
+
+test('permissionFlags(): one flag per allowed path, and a flag for each enabled option', () => {
+	const config = {
+		nodeOptions: { permission: true, 'allow-fs-read': ['/a', '/b,c'], 'allow-fs-write': ['/w'], 'allow-worker': true }
+	}
+	assert.deepEqual(permissionFlags(config), [
+		'--permission',
+		'--allow-fs-read=/a',
+		'--allow-fs-read=/b,c',
+		'--allow-fs-write=/w',
+		'--allow-worker'
+	])
+})
+
+test('tsx: the config file is written in PP_NODE_CONFIG_DIR when it is set, and passed by name', t => {
+	t.mock.method(console, 'error', () => {})
+	const ctx = fakeContext({ env: { PP_NODE_CONFIG_DIR: '/run/pp' } })
+	runInProcess(t, ['tsx', 'watch', 'server.ts'], ctx)
+	assert.deepEqual(Object.keys(ctx.written), ['/run/pp/node.config.json'])
+	assert.deepEqual(ctx.spawned[0].args, ['watch', '--experimental-config-file=/run/pp/node.config.json', 'server.ts'])
+})
+
+test('the allowed paths are logged to stderr', t => {
+	const error = t.mock.method(console, 'error', () => {})
+	const ctx = fakeContext()
+	runInProcess(t, ['node', 'app.mjs'], ctx)
+	const { nodeOptions } = getNodeConfig(ctx)
+	assert.deepEqual(
+		error.mock.calls.map(c => c.arguments[0]),
+		[
+			`envHelpers.mjs: allow-fs-read ${nodeOptions['allow-fs-read'].join(' ')}`,
+			`envHelpers.mjs: allow-fs-write ${nodeOptions['allow-fs-write'].join(' ')}`
+		]
+	)
 })
 
 test('router: process.execve() is called with a node path, since it does not search PATH', t => {
@@ -238,10 +284,9 @@ test('writes node.config.json, and a node command replaces this process with cre
 		files: { '/secrets/pp.json': '{"a":1}' }
 	})
 	runInProcess(t, ['node', 'app.mjs'], ctx)
-	const written = JSON.parse(ctx.written['/app/node.config.json'])
-	// newer node versions reject any other top-level key
-	assert.deepEqual(Object.keys(written), ['nodeOptions'])
-	assert.equal(written.nodeOptions.permission, true)
+	// the permission model is from the flags, not a config file
+	assert.equal(ctx.execved[0].args[1], '--permission')
+	assert.equal(ctx.written['/app/node.config.json'], undefined)
 	const handoff = '/tmp/user/pp-creds-XXXXXX/creds.json'
 	// both a <NAME>_CREDS_FILE content and an existing <NAME>_CREDS env variable
 	assert.deepEqual(ctx.written[handoff], {
@@ -264,7 +309,7 @@ test('without credentials, a node command has no handoff file', t => {
 	const ctx = fakeContext({ env: { PP_CREDS_HANDOFF_FILE: '/tmp/other.json' } })
 	runInProcess(t, ['node', 'app.mjs'], ctx)
 	assert.equal('PP_CREDS_HANDOFF_FILE' in ctx.execved[0].env, false)
-	assert.deepEqual(Object.keys(ctx.written), ['/app/node.config.json'])
+	assert.deepEqual(Object.keys(ctx.written), [])
 })
 
 test('the handoff dir is removed when process.execve() fails', t => {
@@ -346,7 +391,9 @@ test('smoke: the command replaces this process, with the permission model and cr
 			// the envHelpers.mjs process that spawnSync() started, which process.execve() replaced
 			pid: ps.pid
 		})
-		assert.ok(fs.existsSync(path.join(dir, 'node.config.json')))
+		// a node command gets the permission model from flags, so no config file is written
+		assert.equal(fs.existsSync(path.join(dir, 'node.config.json')), false)
+		assert.match(ps.stderr, /envHelpers\.mjs: allow-fs-read /)
 		assert.deepEqual(fs.readdirSync(tmpdir), [], 'the command should be able to remove the handoff dir')
 	} finally {
 		fs.rmSync(dir, { recursive: true })
@@ -450,7 +497,11 @@ function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = 
 		},
 		writeFileSync: (p, content, opts) => {
 			// or the credentials handoff file in a dir from mkdtempSync()
-			if (p != path.join(cwd, 'node.config.json') && p != '/tmp/user/pp-creds-XXXXXX/creds.json')
+			if (
+				p != path.join(cwd, 'node.config.json') &&
+				p != '/run/pp/node.config.json' &&
+				p != '/tmp/user/pp-creds-XXXXXX/creds.json'
+			)
 				throw new Error(`unexpected write: ${p}`)
 			written[p] = opts ? { content, opts } : content
 		},

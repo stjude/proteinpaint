@@ -84,6 +84,15 @@ test('other platforms are skipped', () => {
 	assert.deepEqual(logged, [])
 })
 
+test('the root filesystem check uses the last of stacked mounts on /, as for the other dirs', () => {
+	const stacked = mountinfo => checkRuntimePosture(fakeDeps({ files: { '/proc/self/mountinfo': mountinfo } })).warnings
+	const tmp = '2 1 0:2 / /tmp rw,noexec - tmpfs t rw\n3 1 0:3 / /home/root/pp/cache rw,noexec - xfs d rw'
+	assert.deepEqual(stacked(`1 0 0:1 / / rw - overlay o rw\n4 0 0:4 / / ro - overlay o rw\n${tmp}`), [])
+	assert.deepEqual(stacked(`1 0 0:1 / / ro - overlay o rw\n4 0 0:4 / / rw - overlay o rw\n${tmp}`), [
+		'the root filesystem is writable, mount it read-only'
+	])
+})
+
 test('parseMountinfo() decodes escaped paths, findMount() uses the longest and last mount point', () => {
 	const mounts = parseMountinfo(
 		[

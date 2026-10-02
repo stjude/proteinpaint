@@ -1,9 +1,11 @@
 /*
 	Runs a node or tsx command in a limited environment, where the server process
 
-	1. has Node.js permission model restrictions from a generated ./node.config.json, which
-	   is applied by adding the --experimental-default-config-file flag to the node or tsx command.
-	   The allow-fs-read and allow-fs-write paths are computed from the current working
+	1. has Node.js permission model restrictions. A node command gets them as --permission and --allow-* flags,
+	   so nothing is written at startup, such as with a read-only root filesystem, and the allowed paths are
+	   visible in the server process command line. A tsx command gets them from a generated node.config.json,
+	   in ./ or else in the PP_NODE_CONFIG_DIR dir, since tsx would apply the flags to its own process too.
+	   The allowed paths are logged at startup. The allow-fs-read and allow-fs-write paths are computed from the current working
 	   directory, the node install, the OS temp dir, and ./serverconfig.json entries, so that
 	   a path traversal bug in a server route cannot read or write files outside of those paths.
 	   Additional paths may be set as colon-separated PP_ALLOW_FS_READ and PP_ALLOW_FS_WRITE values.
@@ -34,15 +36,15 @@
 	  node envHelpers.mjs node --enable-source-maps app-server.mjs
 	  node envHelpers.mjs tsx watch server.ts
 
-	Do not include --experimental-default-config-file in the arguments: node detects that flag
-	anywhere in its argv, even after the script name, so it would apply ./node.config.json to
-	this script instead of only to the command. This script adds that flag to the command.
+	Do not include --permission or --experimental-default-config-file in the arguments: node detects
+	--experimental-default-config-file anywhere in its argv, even after the script name, so it would apply
+	./node.config.json to this script instead of only to the command. This script adds these to the command.
 
 	The PP_ALLOW_FS_* and <NAME>_CREDS_FILE values are read from the environment, or else from
 	./.env, such as in a dev environment where npm scripts do not load .env.
 
 	This script must run without the permission model. process.execve() replaces it with a node
-	command that runs with the permission model from the --experimental-default-config-file flag.
+	command that runs with the permission model from the --permission and --allow-* flags.
 	The credentials are passed only to the command, and are not set in this script's own process.env.
 */
 
@@ -69,14 +71,14 @@ if (isMainModule()) {
 export function envHelpers(args, deps = {}) {
 	// checked before any file access, which would be denied by the permission model
 	if (deps.hasPermissionModel ?? !!process.permission)
-		throw 'must not run with the permission model, remove --experimental-default-config-file from the envHelpers.mjs arguments'
+		throw 'must not run with the permission model, remove --permission or --experimental-default-config-file from the envHelpers.mjs arguments'
 	const ctx = createContext(deps)
-	const command = routeCommand(args)
 	const config = getNodeConfig(ctx)
 	for (const conflict of findPrefixConflicts(config)) console.warn(`envHelpers.mjs: WARNING ${conflict}`)
 	const credsFiles = getCredsFiles(ctx)
 	assertCredsFilesNotAllowed(credsFiles, config, ctx)
-	ctx.fs.writeFileSync(path.join(ctx.cwd, 'node.config.json'), JSON.stringify(config, null, '\t') + '\n')
+	const command = routeCommand(args, config, ctx)
+	logAllowedPaths(config)
 	const creds = { ...getEnvCreds(ctx), ...readCreds(credsFiles, ctx) }
 	mayCheckRuntimePosture(config, ctx)
 	return runCommand(command, creds, ctx)
@@ -99,16 +101,41 @@ export function createContext({
 	return { fs: _fs, spawn: _spawn, execve, env, dotenv, cwd, execPath, tmpdir, homedir, checkPosture }
 }
 
-// router: each supported command has its own position for the config flag, where it is parsed as an option
-function routeCommand(args) {
+// router: a node command gets the permission flags, and a tsx command gets a config file; each is inserted
+// where the command parses it as an option
+function routeCommand(args, config, ctx) {
 	const cmd = path.basename(args[0] || '')
-	if (cmd == 'node') return insertConfigFlag(args, 1)
-	if (cmd == 'tsx') return insertConfigFlag(args, args[1] == 'watch' ? 2 : 1)
+	if (cmd == 'node') return insertAt(args, 1, permissionFlags(config))
+	if (cmd == 'tsx') return insertAt(args, args[1] == 'watch' ? 2 : 1, [writeConfigFile(config, ctx)])
 	throw 'the command must be node or tsx, usage: node envHelpers.mjs <node | tsx> [args...]'
 }
 
-function insertConfigFlag(args, i) {
-	return [...args.slice(0, i), '--experimental-default-config-file', ...args.slice(i)]
+function insertAt(args, i, flags) {
+	return [...args.slice(0, i), ...flags, ...args.slice(i)]
+}
+
+// such as --permission --allow-fs-read=/a --allow-fs-read=/b --allow-child-process, one path per flag
+export function permissionFlags(config) {
+	const flags = []
+	for (const [key, value] of Object.entries(config.nodeOptions)) {
+		if (Array.isArray(value)) for (const p of value) flags.push(`--${key}=${p}`)
+		else if (value === true) flags.push(`--${key}`)
+	}
+	return flags
+}
+
+// returns the node flag that applies the written config file
+function writeConfigFile(config, ctx) {
+	const dir = getEnvValue('PP_NODE_CONFIG_DIR', ctx)
+	const file = path.join(dir ? resolvePath(dir, ctx) : ctx.cwd, 'node.config.json')
+	ctx.fs.writeFileSync(file, JSON.stringify(config, null, '\t') + '\n')
+	return dir ? `--experimental-config-file=${file}` : '--experimental-default-config-file'
+}
+
+// to stderr, so that the stdout of the command, such as a message that a preListenScript detects, is unchanged
+function logAllowedPaths(config) {
+	for (const key of ['allow-fs-read', 'allow-fs-write'])
+		console.error(`envHelpers.mjs: ${key} ${config.nodeOptions[key].join(' ')}`)
 }
 
 export function getNodeConfig(ctx) {
