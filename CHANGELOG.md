@@ -8,6 +8,10 @@ Features:
 - serverconfig.features.massSessionMaxBytes limits the size of a saved session, default 1MB
 - a zero cacheMonitor.subdirs.massSession maxAge or maxSize disables the /massSession route
 - use content-hashed bundle chunk filenames and notify when the loaded client code is outdated
+- add container/runtimePosture.mjs, a CLI that reports which recommended container runtime settings are not applied; it also checks the python venv package dirs, such as lib/python3.14/site-packages, and any mount under the interpreter library dirs
+- in a container, envHelpers.mjs logs a warning for each recommended runtime setting that is not applied, using runtimePosture.mjs
+- with PP_RUNTIME_CHECK=strict, envHelpers.mjs exits before starting the server when a required runtime setting is not applied: a non-root user, no capabilities, no_new_privs, a read-only root filesystem, a noexec temp dir, and read-only interpreter library dirs; runtimePosture.mjs --strict checks the same settings
+- envHelpers.mjs passes the node permission model settings as --permission and --allow-* flags, and logs the allowed paths, so that a node command does not need a writable node.config.json; a tsx command still uses node.config.json, in ./ or in the optional PP_NODE_CONFIG_DIR
 
 Fixes:
 - harden user-keyed object maps against prototype pollution
@@ -19,6 +23,9 @@ Fixes:
 - report a declared sjcrh package entry in the /healthcheck versionInfo.deps, without throwing when that package is not installed
 - DNA methylation promoter, gene, and enhancer terms read the matrix named by elementForTerms instead of a CpG shard; only region terms, such as scan DMRs, read the shard
 - a dataset whose CpG shard directory is missing or empty initializes and falls back to its element matrices
+- the helm chart, the kubernetes and compose examples, and container/run.sh mount serverconfig.json read-only, and the helm chart and compose example default to the v2.215.0 images; the helm chart mounts its config map at serverconfig.json instead of copying it at startup, and runs as the image's app user
+- run Rscript with --vanilla and python with -E -s, to use only the interpreter defaults
+- the deps image build checks the permissions of the interpreter and tool dirs
 
 
 ## 2.215.0
