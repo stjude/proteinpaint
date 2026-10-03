@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.216.0
 
 Features:
 - serverconfig.features.massSessionMaxBytes limits the size of a saved session, default 1MB
