@@ -353,6 +353,29 @@ def h5ad_annotations(h5ad):
     return {"cells": {i: t for i, t in zip(ids.tolist(), types.tolist()) if t}}
 
 
+def h5ad_annotations_file(h5ad):
+    """Same answer as h5ad_annotations(), written to a temp file and returned
+    by path instead of printed to stdout directly — the route-facing action
+    (server/src/routes/wsitiles.ts's /annotations), so node can stream the
+    file instead of ever holding it as one JS string. A sample with enough
+    annotated cells can approach V8's ~512MiB max string length the same way
+    h5ad_csv()'s boundary CSV did (same print-a-path contract as that
+    function and the tile job) — no real sample has hit it yet (one type
+    string per cell is far more compact than a boundary CSV's repeated
+    vertices), but the fix is identical and cheap, so it's applied
+    preemptively rather than waiting for one to."""
+    import os
+    data = h5ad_annotations(h5ad)
+    fd, out = tempfile.mkstemp(suffix=".json", prefix="wsih5ad_")
+    try:
+        with os.fdopen(fd, "w") as w:
+            json.dump(data, w, separators=(",", ":"))
+    except BaseException:
+        os.unlink(out)                                       # a failed write never leaks the file
+        raise
+    return out  # node reads, serves, deletes
+
+
 def _h5ad_cell_types(f):
     """obs/cell_type of an open .h5ad as one string per cell: handles the
     categorical group anndata usually writes (categories + integer codes,
@@ -807,6 +830,8 @@ def main():
         print(h5ad_csv(job["h5ad"], job["kind"]))  # temp csv path
     elif job["action"] == "h5ad_annotations":
         print(json.dumps(h5ad_annotations(job["h5ad"]), separators=(",", ":")))
+    elif job["action"] == "h5ad_annotations_file":
+        print(h5ad_annotations_file(job["h5ad"]))  # temp json path
     elif job["action"] == "h5ad_celltypes":
         print(json.dumps(h5ad_celltypes(job["h5ad"]), separators=(",", ":")))
     elif job["action"] == "nhood":

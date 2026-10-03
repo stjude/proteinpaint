@@ -72,6 +72,15 @@ tape('h5ad_annotations maps annotated cells to their types', async t => {
 	t.end()
 })
 
+tape('h5ad_annotations_file writes the same answer to a temp file', async t => {
+	const tmp = String(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations_file', h5ad }))).trim()
+	const fromFile = JSON.parse(fs.readFileSync(tmp, 'utf8'))
+	fs.unlinkSync(tmp) // the caller (node route) deletes the temp file; so does the test
+	const fromStdout = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
+	t.deepEqual(fromFile, fromStdout, 'the file-based and stdout-based actions agree')
+	t.end()
+})
+
 tape('h5ad_csv regenerates the boundary CSVs', async t => {
 	for (const [kind, rows] of [
 		['cell', 10283],
