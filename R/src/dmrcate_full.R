@@ -11,6 +11,15 @@
 # Output: JSON to stdout with { dmrs, diagnostic }
 
 start_time <- proc.time()
+# This validation backend needs Bioconductor packages that are not in R/utils/*.pkgs.txt,
+# so report the missing ones by name instead of failing on library()
+missing_pkgs <- Filter(function(p) !suppressWarnings(suppressPackageStartupMessages(requireNamespace(p, quietly = TRUE))),
+  c("jsonlite", "rhdf5", "limma", "DMRcate", "GenomicRanges"))
+if (length(missing_pkgs) > 0) {
+  cat(sprintf('{"error":"The R DMR backend needs these R packages, which are not installed: %s"}',
+    paste(missing_pkgs, collapse = ", ")))
+  quit(save = "no", status = 0)
+}
 suppressWarnings({
   library(jsonlite)
   library(rhdf5)
