@@ -149,13 +149,17 @@ tape(
 */
 tape('process.env.PP_SERVERCONFIG_OVERRIDES: applied before derived settings, and kept in process.env', async test => {
 	const genomes = [{ name: 'zzOverrideTest', species: 'human', file: './genome/hg38.test.js', datasets: [] }]
-	process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({ backend_only: true, genomes })
+	process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({ backend_only: true, genomes, frontPublicDir: '/tmp' })
 	try {
 		const { default: config } = await import('../serverconfig.js?pp_serverconfig_overrides=valid')
 		test.equal(config.backend_only, true, 'should override backend_only')
 		test.deepEqual(config.genomes, genomes, 'should override genomes')
 		test.equal(config.binDir, undefined, 'should apply backend_only to the derived binDir')
-		test.equal(config.frontPublicDir, undefined, 'should apply backend_only to the derived frontPublicDir')
+		test.equal(
+			config.frontPublicDir,
+			undefined,
+			'should apply backend_only to the derived frontPublicDir, and not keep an override value'
+		)
 		test.equal(
 			'PP_SERVERCONFIG_OVERRIDES' in process.env,
 			true,
