@@ -40,6 +40,8 @@ class SampleView extends PlotBase implements RxComponent {
 	imagePlots!: any[]
 	/** holder of the swimmer lane(s) of the shown samples' patient, one for all samples */
 	swimmerDiv?: any
+	/** renderer of swimmerDiv, kept to destroy its body-mounted menus when replaced or when sample view closes */
+	swimmerRenderer?: any
 	visiblePlots!: boolean
 	renderSampleDictionary!: () => void
 
@@ -605,6 +607,8 @@ class SampleView extends PlotBase implements RxComponent {
 		this.brainPlots = []
 		this.imagePlots = []
 		delete this.swimmerDiv
+		this.swimmerRenderer?.destroy()
+		delete this.swimmerRenderer
 		// const q = state.termdbConfig.queries
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
 			const div = plotsDiv.append('div')
@@ -738,7 +742,12 @@ class SampleView extends PlotBase implements RxComponent {
 			noteDiv: div.append('div').style('padding', '0 20px').style('font-size', '.9em').style('opacity', 0.7),
 			tip: new Menu({ padding: '5px' })
 		})
+		this.swimmerRenderer = renderer
 		renderer.update({ swimmer: state.termdbConfig.queries.swimmer, settings: getDefaultSwimmerSettings(), lanes })
+	}
+
+	destroy() {
+		this.swimmerRenderer?.destroy()
 	}
 }
 
