@@ -48,6 +48,8 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 		// because it's already set at the beginning of this function
 		app.use(express.static(serverconfig.publicDir))
 	}
+	// after the public static, so that a file in public/ takes priority over its proteinpaint-front package copy
+	if (serverconfig.frontPublicDir) app.use(getFrontPublicFallback(serverconfig.frontPublicDir))
 	const testDataCacheDir = maySetTestDataCacheDir(doneLoading)
 
 	app.use(
@@ -273,6 +275,16 @@ function log(req) {
 	NODE_ENV is not 'production'. Reply with JSON instead, and only expose client-error messages.
 	A missing or invalid status (not 400-599) is answered as 500.
 */
+// serves only index.html, for / and /index.html, and the cards/ files from dir, see serverconfig.frontPublicDir;
+// any other path is passed on, so that the other files in dir, if any, are not published
+export function getFrontPublicFallback(dir) {
+	const serve = express.static(dir)
+	return (req, res, next) => {
+		if (req.path == '/' || req.path == '/index.html' || req.path.startsWith('/cards/')) return serve(req, res, next)
+		next()
+	}
+}
+
 export function jsonErrorHandler(err, req, res, next) {
 	if (res.headersSent) return next(err)
 	const s = err?.status || err?.statusCode
