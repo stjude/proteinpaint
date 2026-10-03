@@ -169,6 +169,78 @@ tape('overlay_tile rasterizes bbox cell fills into a transparent PNG tile', asyn
 	t.end()
 })
 
+tape('overlay_tile renders a gene-expression fill (one gene, or several summed) instead of cell types', async t => {
+	const slide = path.resolve(
+		'server/test/tp/files/hg38/TermdbTest/spatial/TCGA-22-1017/image1/image1_morphology.ome.tif'
+	)
+	const m = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'meta', slide })))
+	const [slide_w, slide_h] = m.slide_dimensions
+	const [mpp_x, mpp_y] = m.mpp
+	const z = m.levels - 1 // same tile the cell-type overlay_tile test uses
+	const x = 6
+	const y = 6
+
+	// single gene: max_count comes from the same genecounts() route the client
+	// fetches once (whole-sample), exactly as wsi.direct.ts passes it through
+	const ptprc = JSON.parse(
+		await run_python('wsi_tile.py', JSON.stringify({ action: 'genecounts', h5: h5ad, gene: 'PTPRC' }))
+	)
+	const singleTmp = String(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'overlay_tile',
+				h5ad,
+				slide_w,
+				slide_h,
+				z,
+				x,
+				y,
+				mpp_x,
+				mpp_y,
+				genes: ['PTPRC'],
+				rgb: '255, 0, 0',
+				max_count: ptprc.max
+			})
+		)
+	).trim()
+	const singlePng = fs.readFileSync(singleTmp)
+	fs.unlinkSync(singleTmp)
+	t.equal(singlePng.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'single-gene fill: valid PNG') // pragma: allowlist secret
+
+	// gene group: sum of several genes into ONE fill -- the group's own max,
+	// summed the same way wsi.direct.ts sums it for the vector path
+	const found = await Promise.all(
+		['ACE2', 'ACTA2'].map(gene => run_python('wsi_tile.py', JSON.stringify({ action: 'genecounts', h5: h5ad, gene })))
+	)
+	const total: { [id: string]: number } = {}
+	for (const r of found.map(r => JSON.parse(r))) for (const id in r.cells) total[id] = (total[id] || 0) + r.cells[id]
+	const groupMax = Math.max(0, ...Object.values(total))
+	const groupTmp = String(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'overlay_tile',
+				h5ad,
+				slide_w,
+				slide_h,
+				z,
+				x,
+				y,
+				mpp_x,
+				mpp_y,
+				genes: ['ACE2', 'ACTA2'],
+				rgb: '0, 90, 255',
+				max_count: groupMax
+			})
+		)
+	).trim()
+	const groupPng = fs.readFileSync(groupTmp)
+	fs.unlinkSync(groupTmp)
+	t.equal(groupPng.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'gene-group fill: valid PNG') // pragma: allowlist secret
+	t.end()
+})
+
 tape('nhood computes squidpy-style neighborhood enrichment over a selection', async t => {
 	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
 	const ids = Object.keys(ann.cells) // the 760 annotated fixture cells

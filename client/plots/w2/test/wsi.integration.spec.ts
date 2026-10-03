@@ -197,6 +197,71 @@ tape('raster mode: a cellCountLimit below the fixture cell count renders the ras
 	}
 })
 
+tape('raster mode: gene expression renders instead of cell types when showCellTypes is off', test => {
+	test.timeoutAfter(30000) // meta/cellcount/overlaytile spawn python server-side
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'wsi',
+					sample: { sID: 'TCGA-22-1017' }, // fixed-sample mode; this image has 791 cells
+					settings: {
+						wsi: {
+							geneExpression: 'PTPRC',
+							showCellTypes: false, // off: the raster overlay falls back to gene expression
+							showGeneExpression: true,
+							annotationLevel: 0,
+							cellCountLimit: 20 // far below the fixture's 791 cells: forces raster mode
+						}
+					}
+				}
+			]
+		},
+		wsi: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(wsi) {
+		wsi.on('postRender.test', null) // run once
+		try {
+			const dom = wsi.Inner.dom
+
+			const canvases = await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
+			test.ok(canvases.length >= 1, 'OpenLayers canvas rendered for the tiff slide')
+
+			// raster mode's own gene legend (gradient rows, not type swatches)
+			const [legend] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-raster-genelegend"]')
+			const rows = [...legend.children].map((r: any) => r.textContent)
+			test.ok(
+				rows.some(r => r.includes('PTPRC')),
+				'raster gene legend names the requested gene'
+			)
+
+			// neither the type-fill raster legend nor vector mode's own legend
+			// should be showing while the raster overlay is in gene-expression mode
+			test.equal(
+				dom.viewer.selectAll('div[data-testid="sjpp-wsi-raster-typelegend"]').size(),
+				0,
+				'raster type legend absent while raster is in gene-expression mode'
+			)
+			test.equal(
+				dom.viewer.selectAll('div[data-testid="sjpp-wsi-typelegend"]').size(),
+				0,
+				'vector mode legend absent while in raster mode'
+			)
+
+			if (test['_ok']) wsi.Inner.app.destroy()
+		} catch (e) {
+			test.fail(`raster gene-expression test error: ${e}`) // never leave tape hanging
+		}
+		test.end()
+	}
+})
+
 tape('plain SVS image renders the map without the spatial machinery', test => {
 	test.timeoutAfter(30000) // first tiles may spawn python server-side
 

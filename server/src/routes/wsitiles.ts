@@ -541,17 +541,22 @@ function init({ genomes }) {
 			}
 
 			if (req.params.action == 'overlaytile') {
-				// server-rendered cell-type-fill raster for ONE Zoomify tile: shown
-				// instead of fetching per-cell vector data once the CURRENT view's own
-				// cell count exceeds wsi.direct.ts's cellCountLimit, since boundaries/
-				// annotations otherwise cost roughly the sample's TOTAL cell count
-				// regardless of how few are visible at that zoom. Path/query:
-				// z/x/y (Zoomify tile address, same as /tile), ?file= the consolidated
-				// h5ad (scoped like boundaries/annotations), ?slide_w=&slide_h=&
-				// mpp_x=&mpp_y= from the client's own already-fetched /meta response
-				// (this action never opens the slide file itself), ?colors= JSON
-				// {type:'#rrggbb'} — the SAME palette the client's vector-mode legend
-				// assigned, so colors agree between raster and vector rendering.
+				// server-rendered cell fill raster for ONE Zoomify tile: shown instead
+				// of fetching per-cell vector data once the CURRENT view's own cell
+				// count exceeds wsi.direct.ts's cellCountLimit, since boundaries/
+				// annotations/gene counts otherwise cost roughly the sample's TOTAL
+				// cell count regardless of how few are visible at that zoom. Path/
+				// query: z/x/y (Zoomify tile address, same as /tile), ?file= the
+				// consolidated h5ad (scoped like boundaries/annotations), ?slide_w=&
+				// slide_h=&mpp_x=&mpp_y= from the client's own already-fetched /meta
+				// response (this action never opens the slide file itself). Exactly
+				// one fill mode, mirroring wsi.direct.ts's own vector fills:
+				// - ?colors= JSON {type:'r, g, b'} — cell-type fills, the SAME
+				//   palette the client's vector-mode legend assigned.
+				// - ?genes= JSON [gene,...] + ?rgb=&?max_count= — a gene-expression
+				//   fill (one gene, or several summed into one 'gene group' overlay);
+				//   max_count is the whole-sample max from /genecounts, so shading
+				//   stays comparable across tiles.
 				const zi = Number.parseInt(req.params.z, 10)
 				const xi = Number.parseInt(req.params.x, 10)
 				const yi = Number.parseInt(req.params.y, 10)
@@ -577,24 +582,48 @@ function init({ genomes }) {
 					res.status(400).send({ status: 'error', error: 'overlaytile needs slide_w/slide_h/mpp_x/mpp_y' })
 					return
 				}
-				// a {"type":"r, g, b"} query value is already parsed into an object by
-				// app.middlewares.js's urlJsonDecode (it auto-JSON-decodes any query
-				// value wrapped in {}/[]/"") by the time it reaches req.query here —
-				// only a plain string (not auto-decoded, e.g. '{}'’s own default)
-				// still needs JSON.parse
-				let type_colors: Record<string, string>
+				// a {"type":"r, g, b"} or ["gene",...] query value is already parsed
+				// into an object/array by app.middlewares.js's urlJsonDecode (it
+				// auto-JSON-decodes any query value wrapped in {}/[]/"") by the time
+				// it reaches req.query here — only a plain string (not auto-decoded,
+				// e.g. a default) still needs JSON.parse
+				let type_colors: Record<string, string> | undefined
+				let genes: string[] | undefined
 				try {
-					type_colors = typeof q.colors == 'string' ? JSON.parse(q.colors || '{}') : q.colors || {}
-				} catch {
-					res.status(400).send({ status: 'error', error: 'overlaytile colors must be JSON' })
+					if (q.genes !== undefined) {
+						genes = typeof q.genes == 'string' ? JSON.parse(q.genes) : q.genes
+						if (!Array.isArray(genes) || !genes.length || !genes.every(g => typeof g == 'string' && g)) {
+							throw new Error('genes must be a non-empty array of gene names')
+						}
+					} else if (q.colors !== undefined) {
+						type_colors = typeof q.colors == 'string' ? JSON.parse(q.colors) : q.colors
+					} else {
+						type_colors = {} // neither given: an empty-fill tile, same as today's default
+					}
+				} catch (e: any) {
+					res.status(400).send({ status: 'error', error: `overlaytile colors/genes: ${e.message || e}` })
 					return
 				}
-				// cached like /tile: one PNG per (h5ad version, tile address, color
-				// assignment) under the TTL-swept cache dir. The color assignment is
+				let rgb: string | undefined
+				let max_count: number | undefined
+				if (genes) {
+					rgb = String(q.rgb || '')
+					max_count = Number(q.max_count)
+					if (!rgb || !Number.isFinite(max_count)) {
+						res.status(400).send({ status: 'error', error: 'overlaytile genes needs rgb and max_count' })
+						return
+					}
+				}
+				// cached like /tile: one PNG per (h5ad version, tile address, fill
+				// mode) under the TTL-swept cache dir. The fill mode's own inputs are
 				// part of the key too — the same tile must re-render if the legend
-				// palette ever changes (e.g. the dataset's cell types change)
+				// palette or the chosen gene(s)/color/max ever change
 				const key = createHash('sha1')
-					.update(`${full}:${(await stat(full)).mtimeMs}:${zi}:${xi}:${yi}:${JSON.stringify(type_colors)}`)
+					.update(
+						`${full}:${(await stat(full)).mtimeMs}:${zi}:${xi}:${yi}:${JSON.stringify(type_colors)}:${JSON.stringify(
+							genes
+						)}:${rgb}:${max_count}`
+					)
 					.digest('hex')
 				const cacheFile = path.join(serverconfig.cachedir, 'wsitiles', `${key}_overlay.png`)
 				let png: Buffer
@@ -614,7 +643,10 @@ function init({ genomes }) {
 								y: yi,
 								mpp_x,
 								mpp_y,
-								type_colors
+								type_colors,
+								genes,
+								rgb,
+								max_count
 							})
 						)
 					).trim()

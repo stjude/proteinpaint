@@ -377,17 +377,20 @@ export async function init(
 			: meta.cellTypes || []
 		const shownColor: { [t: string]: string } = Object.create(null) // color subset acting as the fill filter
 		for (const t of shownTypes) shownColor[t] = typeColor[t]
-		// the raster overlay can only draw type fills (see overlay_tile's own
-		// ponytail note on strokes) -- without showCellTypes there's nothing
-		// for it to draw, so it's never requested
-		const rasterEnabled = needCellPolys && !!opts.showCellTypes && shownTypes.length > 0
 
 		// per-gene count maps, fetched ONCE for the whole sample (this route
 		// isn't bbox-scoped: one int per expressing cell is far lighter than a
 		// boundary CSV's repeated vertices, so it hasn't needed to be) and
 		// reused by every buildVector() rebuild below -- only the cell/nucleus
-		// polygons and annotations are re-fetched per viewport
-		const geneCounts: { gene: string; cells: { [id: string]: number }; max: number }[] = []
+		// polygons and annotations are re-fetched per viewport. `genes` (the
+		// underlying gene list) and `rgb` (assigned once here, by position —
+		// expr genes then the group overlay, same order the fetch below uses)
+		// are what the raster overlay's own gene-expression mode needs: it
+		// re-sums `genes` server-side instead of receiving `cells` itself,
+		// and `rgb` must match the vector fill's color exactly, same as the
+		// type palette already does for the cell-type raster fills.
+		const geneCounts: { gene: string; genes: string[]; cells: { [id: string]: number }; max: number; rgb: string }[] =
+			[]
 		if (needCellPolys && (exprGenes.length || groupGenes.length)) {
 			try {
 				const results = await Promise.all(
@@ -403,7 +406,13 @@ export async function init(
 						sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`) // surface it
 						continue // one bad gene doesn't block the others
 					}
-					geneCounts.push({ gene, cells: r.cells, max: r.max }) // tooltip (+ fill, below) shows this gene
+					geneCounts.push({
+						gene,
+						genes: [gene],
+						cells: r.cells,
+						max: r.max,
+						rgb: GENE_COLORS[geneCounts.length % GENE_COLORS.length]
+					}) // tooltip (+ fill, below) shows this gene
 				}
 				if (groupGenes.length) {
 					const total: { [id: string]: number } = {} // per-cell sum across the group
@@ -420,13 +429,34 @@ export async function init(
 					if (found.length) {
 						let max = 0 // the summed overlay's own count ceiling
 						for (const id in total) if (total[id] > max) max = total[id] // find it
-						geneCounts.push({ gene: found.join('+'), cells: total, max }) // summed count in the tooltip + fill
+						geneCounts.push({
+							gene: found.join('+'),
+							genes: found,
+							cells: total,
+							max,
+							rgb: GENE_COLORS[geneCounts.length % GENE_COLORS.length]
+						}) // summed count in the tooltip + fill
 					}
 				}
 			} catch (e: any) {
 				sayerror(holder, `Gene expression error: ${e.message || e}`) // config errors from the throws above
 			}
 		}
+		// what the raster overlay will show, decided ONCE (the burger's own
+		// checkboxes choose this, not the viewport, so it never changes
+		// without a full re-render): cell-type fills win over expression
+		// fills when both are requested, same mutual exclusion buildVector's
+		// own typesShown/hideExpressionFills gate applies to the vector path.
+		// Raster can only draw a fill (see overlay_tile's own ponytail note
+		// on strokes), so with neither requested there's nothing to show.
+		type RasterFill = { kind: 'types' } | { kind: 'gene'; genes: string[]; rgb: string; max: number; label: string }
+		const rasterFills: RasterFill[] =
+			needCellPolys && opts.showCellTypes && shownTypes.length > 0
+				? [{ kind: 'types' }]
+				: needCellPolys && geneCounts.length && !opts.hideExpressionFills
+				? geneCounts.map(g => ({ kind: 'gene', genes: g.genes, rgb: g.rgb, max: g.max, label: g.gene }))
+				: []
+		const rasterEnabled = rasterFills.length > 0
 
 		// mutable per-rebuild state: the hover tooltip and lasso below close
 		// over these `let`s by reference, so neither listener is ever torn
@@ -667,13 +697,11 @@ export async function init(
 					row.append('span').style('margin-left', '4px').text(`1–${max}`) // the count range the gradient spans
 					repin() // re-place: each added row changes the legend's size
 				}
-				let colorIdx = 0 // next palette slot; expr genes then the group overlay, same order as the fetch above
 				for (const g of geneCounts) {
-					const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length]
-					const layer = expressionLayer(cellPolys, g.cells, g.max, rgb) // fill the expressing cells
+					const layer = expressionLayer(cellPolys, g.cells, g.max, g.rgb) // fill the expressing cells
 					map.addLayer(layer)
 					vectorLayers.push(layer)
-					addLegend(rgb, g.gene, g.max) // gradient + count range in the legend
+					addLegend(g.rgb, g.gene, g.max) // gradient + count range in the legend
 				}
 			}
 
@@ -856,89 +884,131 @@ export async function init(
 				showLassoMenu(lassoMenu, hits, cellTypes, mr.left + px[0], mr.top + px[1], offerNhood ? runNhood : undefined)
 			})
 
-			// the raster overlay: ONE persistent Zoomify-tiled layer (same tile
-			// grid/addressing as the slide itself), created lazily and just
-			// shown/hidden by updateMode -- cheaper than tearing down/rebuilding
-			// per transition, and its own tiles are cached server-side per
-			// (h5ad version, tile, color assignment) like /tile
-			let rasterLayer: TileLayer | undefined
-			// in-flight count of the raster layer's own tile requests -- lets
-			// updateMode() know whether showLoading() can be hidden right away
-			// (every needed tile already cached) or must wait for these events
+			// the raster overlay: ONE persistent Zoomify-tiled layer PER
+			// rasterFills entry (same tile grid/addressing as the slide itself;
+			// 'types' mode is always exactly one entry, 'gene' mode one per
+			// gene/gene-group), created lazily and just shown/hidden by
+			// updateMode -- cheaper than tearing down/rebuilding per transition,
+			// and each tile is cached server-side per (h5ad version, tile, fill
+			// mode) like /tile
+			const rasterLayers: TileLayer[] = []
+			// in-flight count of the raster layers' own tile requests, summed
+			// across however many there are -- lets updateMode() know whether
+			// showLoading() can be hidden right away (every needed tile already
+			// cached) or must wait for these events
 			let rasterTilesLoading = 0
-			function ensureRasterLayer(): TileLayer {
-				if (rasterLayer) return rasterLayer
-				const colors = encodeURIComponent(JSON.stringify(shownColor))
-				const source = new Zoomify({
-					url: `${host}/wsitiles/overlaytile/{z}/{x}/{y}?${sq}&file=${encodeURIComponent(
-						opts.spatialData!
-					)}&slide_w=${w}&slide_h=${h}&mpp_x=${mppX}&mpp_y=${mppY}&colors=${colors}&v=${
-						meta.spatialVersion || 0
-					}&_={TileGroup}`,
-					size: [w, h],
-					crossOrigin: 'anonymous',
-					zDirection: -1
-				})
-				source.on('tileloadstart', () => rasterTilesLoading++)
-				source.on(['tileloadend', 'tileloaderror'], () => {
-					rasterTilesLoading = Math.max(0, rasterTilesLoading - 1)
-					// a stale event from a since-abandoned mode (e.g. panned into
-					// vector mode while an old raster tile was still in flight)
-					// must not hide an indicator some OTHER, still-running wait put up
-					if (rasterTilesLoading === 0 && mode === 'raster') hideLoading()
-				})
-				rasterLayer = new TileLayer({ source }) // no maxResolution: fills show at all zooms, like the vector ones
-				map.addLayer(rasterLayer)
-				return rasterLayer
-			}
-			// the raster legend: same type -> color swatches as vector mode's own
-			// (section 5's "Cell-type filter"), but with no per-view counts -- raster
-			// mode never fetches per-cell annotations, so there is nothing to count.
-			// Built once and shown/hidden alongside the raster layer, separately from
-			// vector mode's own legend (which teardownVector()/buildVector() manage).
-			let rasterLegend: any
-			function ensureRasterLegend() {
-				if (rasterLegend) return rasterLegend
-				const legend = mapDiv
-					.append('div')
-					// its own testid, not vector mode's 'sjpp-wsi-typelegend': rows here
-					// never carry a per-cell count (see below), so the two shouldn't be
-					// mistaken for each other by anything asserting on that shape
-					.attr('data-testid', 'sjpp-wsi-raster-typelegend')
-					.style('position', 'fixed')
-					.style('z-index', '10')
-					.style('background', 'rgba(255,255,255,0.85)')
-					.style('padding', '6px 10px')
-					.style('border-radius', '4px')
-					.style('font', '12px system-ui')
-					.style('max-height', '50vh')
-					.style('overflow-y', 'auto')
-				legend.append('div').style('font-weight', 'bold').style('margin-bottom', '2px').text('Cell type')
-				for (const t of shownTypes) {
-					const row = legend.append('div').style('margin', '2px 0')
-					row
-						.append('span')
-						.style('display', 'inline-block')
-						.style('width', '10px')
-						.style('height', '10px')
-						.style('margin-right', '6px')
-						.style('border', '1px solid #ccc')
-						.style('background', `rgb(${typeColor[t]})`)
-					row.append('span').text(t) // no per-cell count: raster mode never fetches annotations
+			function ensureRasterLayers(): TileLayer[] {
+				if (rasterLayers.length) return rasterLayers
+				for (const fill of rasterFills) {
+					const params =
+						fill.kind == 'types'
+							? `colors=${encodeURIComponent(JSON.stringify(shownColor))}`
+							: `genes=${encodeURIComponent(JSON.stringify(fill.genes))}&rgb=${encodeURIComponent(
+									fill.rgb
+							  )}&max_count=${fill.max}`
+					const source = new Zoomify({
+						url: `${host}/wsitiles/overlaytile/{z}/{x}/{y}?${sq}&file=${encodeURIComponent(
+							opts.spatialData!
+						)}&slide_w=${w}&slide_h=${h}&mpp_x=${mppX}&mpp_y=${mppY}&${params}&v=${
+							meta.spatialVersion || 0
+						}&_={TileGroup}`,
+						size: [w, h],
+						crossOrigin: 'anonymous',
+						zDirection: -1
+					})
+					source.on('tileloadstart', () => rasterTilesLoading++)
+					source.on(['tileloadend', 'tileloaderror'], () => {
+						rasterTilesLoading = Math.max(0, rasterTilesLoading - 1)
+						// a stale event from a since-abandoned mode (e.g. panned into
+						// vector mode while an old raster tile was still in flight)
+						// must not hide an indicator some OTHER, still-running wait put up
+						if (rasterTilesLoading === 0 && mode === 'raster') hideLoading()
+					})
+					const layer = new TileLayer({ source }) // no maxResolution: fills show at all zooms, like the vector ones
+					map.addLayer(layer)
+					rasterLayers.push(layer)
 				}
-				pinned.push({ box: legend, side: 'left' })
-				rasterLegend = legend
-				return legend
+				return rasterLayers
+			}
+			// the raster legend(s): 'types' mode draws the same type -> color
+			// swatches as vector mode's own (section 5's "Cell-type filter"), but
+			// with no per-view counts -- raster mode never fetches per-cell
+			// annotations, so there is nothing to count. 'gene' mode draws the
+			// same gradient-legend style as vector mode's own gene legend, one
+			// row per entry, in ONE box (not one per layer). Built once and
+			// shown/hidden alongside the raster layers, separately from vector
+			// mode's own legend (which teardownVector()/buildVector() manage).
+			const rasterLegends: any[] = []
+			function ensureRasterLegends() {
+				if (rasterLegends.length || !rasterFills.length) return rasterLegends
+				if (rasterFills[0].kind == 'types') {
+					const legend = mapDiv
+						.append('div')
+						// its own testid, not vector mode's 'sjpp-wsi-typelegend': rows
+						// here never carry a per-cell count, so the two shouldn't be
+						// mistaken for each other by anything asserting on that shape
+						.attr('data-testid', 'sjpp-wsi-raster-typelegend')
+						.style('position', 'fixed')
+						.style('z-index', '10')
+						.style('background', 'rgba(255,255,255,0.85)')
+						.style('padding', '6px 10px')
+						.style('border-radius', '4px')
+						.style('font', '12px system-ui')
+						.style('max-height', '50vh')
+						.style('overflow-y', 'auto')
+					legend.append('div').style('font-weight', 'bold').style('margin-bottom', '2px').text('Cell type')
+					for (const t of shownTypes) {
+						const row = legend.append('div').style('margin', '2px 0')
+						row
+							.append('span')
+							.style('display', 'inline-block')
+							.style('width', '10px')
+							.style('height', '10px')
+							.style('margin-right', '6px')
+							.style('border', '1px solid #ccc')
+							.style('background', `rgb(${typeColor[t]})`)
+						row.append('span').text(t) // no per-cell count: raster mode never fetches annotations
+					}
+					pinned.push({ box: legend, side: 'left' })
+					rasterLegends.push(legend)
+				} else {
+					const legend = mapDiv
+						.append('div')
+						.attr('data-testid', 'sjpp-wsi-raster-genelegend')
+						.style('position', 'fixed')
+						.style('z-index', '10')
+						.style('background', 'rgba(255,255,255,0.85)')
+						.style('padding', '6px 10px')
+						.style('border-radius', '4px')
+						.style('font', '12px system-ui')
+					for (const fill of rasterFills) {
+						if (fill.kind != 'gene') continue // narrows the union for TS; always true here
+						const row = legend.append('div').style('margin', '2px 0')
+						row.append('span').style('margin-right', '6px').text(fill.label)
+						row // alpha range mirrors overlay_tile's own shading (log-scaled counts)
+							.append('span')
+							.style('display', 'inline-block')
+							.style('width', '80px')
+							.style('height', '10px')
+							.style('vertical-align', 'middle')
+							.style('border', '1px solid #ccc')
+							.style('background', `linear-gradient(to right, rgba(${fill.rgb}, 0.15), rgba(${fill.rgb}, 0.9))`)
+						row.append('span').style('margin-left', '4px').text(`1–${fill.max}`)
+					}
+					pinned.push({ box: legend, side: 'right' })
+					rasterLegends.push(legend)
+				}
+				return rasterLegends
 			}
 			function showRaster() {
 				if (!rasterEnabled) return
-				ensureRasterLayer().setVisible(true)
-				ensureRasterLegend().style('display', 'block')
+				for (const l of ensureRasterLayers()) l.setVisible(true)
+				for (const l of ensureRasterLegends()) l.style('display', 'block')
 				repin()
 			}
 			function hideRaster() {
-				rasterLayer?.setVisible(false)
-				rasterLegend?.style('display', 'none')
+				for (const l of rasterLayers) l.setVisible(false)
+				for (const l of rasterLegends) l.style('display', 'none')
 			}
 
 			// the raster/vector switch itself: above cellCountLimit cells in the
