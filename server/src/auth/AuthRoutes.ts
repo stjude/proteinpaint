@@ -3,11 +3,14 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { getSessionEntry, getOriginFromHeaders } from './Auth.ts'
 
-// true only when the resolved session id came from one of the cookie checks in Auth.ts's
-// getSessionId(), not from the Authorization header (handled earlier in getSessionId(), before
-// any of these cookie checks run) or the x-sjppds-sessionid header/query fallback, which a caller
-// must set deliberately and a browser does not attach on its own
+// true only when `id` can only have come from one of the cookie checks in Auth.ts's
+// getSessionId(), not from the Authorization header or the x-sjppds-sessionid header/query
+// fallback, which a caller must set deliberately and a browser does not attach on its own.
+// An Authorization header's presence is checked directly, rather than comparing its resolved id
+// against `id`, so that an id value that happens to also match a cookie is still classified by
+// which header actually supplied it.
 function wasResolvedFromCookie(req, cred, id) {
+	if (req.headers?.authorization) return false
 	return (
 		!!id &&
 		(id === req.cookies?.[`${cred?.cookieId}`] ||
@@ -28,10 +31,14 @@ function assertAllowedSessionOrigin(auth, req, dslabel, routeKeys, cred, id) {
 	if (!wasResolvedFromCookie(req, cred, id)) return cred
 	const origin = getOriginFromHeaders(req)
 	// try both forms, same as isCredEmbedder(), so a dataset configured with a port-qualified
-	// embedder key (e.g. 'localhost:3000') is not rejected
+	// embedder key (e.g. 'localhost:3000') is not rejected; a matched entry whose type is
+	// 'forbidden' is a configured deny (e.g. a '*' catch-all with specific allowed exceptions)
+	// and must not count as an allowed origin
 	const resolved =
 		origin &&
-		[origin.hostname, origin.host].map(embedder => auth.getRouteCred(dslabel, routeKeys, embedder)).find(Boolean)
+		[origin.hostname, origin.host]
+			.map(embedder => auth.getRouteCred(dslabel, routeKeys, embedder))
+			.find(matched => matched && matched.type != 'forbidden')
 	if (!resolved) throw 'disallowed origin for a cookie-authenticated request'
 	return resolved
 }

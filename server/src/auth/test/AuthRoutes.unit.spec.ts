@@ -528,6 +528,63 @@ tape('/dslogout: an origin valid for a different dataset does not satisfy this o
 	test.end()
 })
 
+tape('/dslogout: a forbidden wildcard entry does not count as an allowed origin', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(1)
+
+	// '*' is a configured deny; only 'allowed.example' is actually permitted
+	const creds: any = {
+		[dslabel]: {
+			'/**': {
+				'allowed.example': makeBasicCred(),
+				'*': { type: 'forbidden', dslabel, route: '/**' }
+			}
+		}
+	}
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	const sessionId = 'test-logout-forbidden-wildcard-session-id'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder: 'allowed.example' },
+		path: '/dslogout',
+		// matches only the forbidden '*' entry, not the allowed one
+		headers: { host: 'some-other-origin.example' },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/dslogout'].post(req, res)
+	test.equal(res.statusCode, 401, 'should set 401 even though a forbidden entry matches')
+	test.end()
+})
+
+tape('/dslogout: an Authorization header exempts the request from the ambient-cookie check', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(1)
+
+	// an invalid/unrelated Authorization header still makes getSessionId() fall back to the
+	// cookie, but its presence alone is enough to skip the origin check, so a mismatched
+	// origin must not be rejected
+	const auth = makeAuthWithBasic()
+	const sessionId = 'test-logout-authz-present-session-id'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder },
+		path: '/dslogout',
+		headers: { authorization: 'Bearer not-a-real-token', origin: 'https://other.example' },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/dslogout'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should return ok, not rejected for a mismatched origin')
+	test.end()
+})
+
 tape('/dslogout: accepts a port-qualified origin matching a port-qualified embedder key', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
