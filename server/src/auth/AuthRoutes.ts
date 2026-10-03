@@ -142,7 +142,7 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 				res.send({ status: 'ok' })
 				return
 			}
-			const id = auth.getSessionId(req)
+			const id = auth.getSessionId(req, cred)
 			assertAllowedSessionOrigin(auth, req, q.dslabel, ['termdb'], cred, id)
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
 			const email = session?.email || ''

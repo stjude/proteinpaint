@@ -794,6 +794,41 @@ tape('/authorizedActions: appends action to file and returns ok', async function
 	test.end()
 })
 
+tape('/authorizedActions: finds the session cookie under a non-default cookieId', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	// cred.cookieId is not one of getSessionId()'s generic fallback names (x-ds-access-token,
+	// ${dslabel}SessionId), so the session is found only when cred is passed into getSessionId()
+	const customCookieId = 'custom-cookie-name'
+	const auth = makeAuthWithJwt({ cookieId: customCookieId })
+	const sessionId = 'test-action-custom-cookie-session-id'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const actionFile = path.join(cachedir, 'authorizedActions')
+	try {
+		await fs.unlink(actionFile)
+	} catch {
+		// ok if it doesn't exist
+	}
+
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		headers: { host: embedder },
+		cookies: { [customCookieId]: sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should return ok')
+
+	const content = await fs.readFile(actionFile, 'utf8')
+	test.ok(content.includes('user@test.com'), 'action file should attribute the action to the session email')
+	test.end()
+})
+
 tape('/authorizedActions: rejects a request from an origin that is not a configured embedder', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(2)
