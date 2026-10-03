@@ -27,24 +27,27 @@ class DmrPlot extends PlotBase implements RxComponent {
 			.style('position', 'absolute')
 			.style('z-index', '10')
 			.style('background-color', 'rgba(255,255,255,0.65)')
-		// Backend toggle button (temporary — for R vs Rust validation)
-		const toggleDiv = opts.holder.append('div').style('padding', '2px 0')
-		const initBackend = opts.state?.config?.settings?.dmr?.backend || 'rust'
-		const toggleBtn = toggleDiv
-			.append('button')
-			.style('font-size', '11px')
-			.text(`Backend: ${initBackend === 'rust' ? 'Rust' : 'R (DMRCate)'}`)
-			.on('click', () => {
-				const config = this.state.config as DmrConfig
-				const curr = config.settings.dmr.backend || 'rust'
-				const next = curr === 'rust' ? 'r' : 'rust'
-				toggleBtn.text(`Backend: ${next === 'rust' ? 'Rust' : 'R (DMRCate)'}`)
-				this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: { settings: { dmr: { ...config.settings.dmr, backend: next } } }
+		/* Backend toggle (temporary, for R vs Rust validation). Shown only in debugmode, the only
+		mode in which the server accepts the R backend, see termdb.dmr.ts. */
+		if (opts.app?.opts?.debug) {
+			const toggleDiv = opts.holder.append('div').style('padding', '2px 0')
+			const initBackend = opts.state?.config?.settings?.dmr?.backend || 'rust'
+			const toggleBtn = toggleDiv
+				.append('button')
+				.style('font-size', '11px')
+				.text(`Backend: ${initBackend === 'rust' ? 'Rust' : 'R (DMRCate)'}`)
+				.on('click', () => {
+					const config = this.state.config as DmrConfig
+					const curr = config.settings.dmr.backend || 'rust'
+					const next = curr === 'rust' ? 'r' : 'rust'
+					toggleBtn.text(`Backend: ${next === 'rust' ? 'Rust' : 'R (DMRCate)'}`)
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { dmr: { ...config.settings.dmr, backend: next } } }
+					})
 				})
-			})
+		}
 
 		this.dom = {
 			header: opts?.header,

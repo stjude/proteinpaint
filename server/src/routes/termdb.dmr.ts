@@ -66,6 +66,11 @@ function init({ genomes }) {
 				)
 
 			const useR = q.backend === 'r'
+			/* The R backend is a validation path for comparing against the Rust implementation, not a
+			production feature: its DMRcate and GenomicRanges dependencies are not in R/utils/*.pkgs.txt,
+			so the published images do not have them. Gated on debugmode, like the client toggle. */
+			if (useR && !serverconfig.debugmode)
+				throw new Error('The R backend is only available when the server runs in debug mode. Use the Rust backend.')
 			// dmrcate_full.R reads the CpG layout only (chrom_lengths attribute, meta/probe/probeID)
 			if (useR && useElement)
 				throw new Error('The R backend does not read element-level methylation matrices. Use the Rust backend.')
