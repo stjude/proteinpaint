@@ -30,6 +30,18 @@ async function waitForSelector(root: Element, selector: string, ms = 15000) {
 	throw new Error(`'${selector}' did not render within ${ms}ms`)
 }
 
+/** Poll until `cond()` is truthy, or fail — used below to confirm the
+ loading indicator (wsi.direct.ts's showLoading/hideLoading) settles back to
+ hidden instead of getting stuck visible once a mode's own data has arrived. */
+async function waitForCondition(cond: () => boolean, message: string, ms = 15000) {
+	const t0 = Date.now()
+	while (Date.now() - t0 < ms) {
+		if (cond()) return
+		await new Promise(r => setTimeout(r, 100))
+	}
+	throw new Error(`${message} did not become true within ${ms}ms`)
+}
+
 const runpp = helpers.getRunPp('mass', {
 	state: {
 		nav: { header_mode: 'hidden' },
@@ -104,6 +116,147 @@ tape('spatial OME-TIFF image renders the map with overlays and the burger menu',
 			if (test['_ok']) wsi.Inner.app.destroy()
 		} catch (e) {
 			test.fail(`spatial viewer test error: ${e}`) // never leave tape hanging
+		}
+		test.end()
+	}
+})
+
+tape('raster mode: a cellCountLimit below the fixture cell count renders the raster overlay, not vector', test => {
+	test.timeoutAfter(30000) // meta/cellcount/overlaytile spawn python server-side
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'wsi',
+					sample: { sID: 'TCGA-22-1017' }, // fixed-sample mode; this image has 791 cells
+					settings: {
+						wsi: {
+							geneExpression: 'PTPRC',
+							showCellTypes: true, // cell-type fills: the raster overlay's only mode (wsi.direct.ts)
+							showGeneExpression: false,
+							annotationLevel: 0,
+							cellCountLimit: 20 // far below the fixture's 791 cells: forces raster mode
+						}
+					}
+				}
+			]
+		},
+		wsi: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(wsi) {
+		wsi.on('postRender.test', null) // run once
+		try {
+			const dom = wsi.Inner.dom
+
+			const canvases = await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
+			test.ok(canvases.length >= 1, 'OpenLayers canvas rendered for the tiff slide')
+
+			// raster mode's own legend (no per-cell counts — see wsi.direct.ts)
+			const [legend] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-raster-typelegend"]')
+			test.equal(legend.firstChild?.textContent, 'Cell type', 'raster legend is titled Cell type')
+			const rows = [...legend.children].slice(1).map((r: any) => r.textContent)
+			test.ok(rows.length >= 1, 'raster legend lists at least one cell type')
+			test.ok(
+				rows.every(r => !/\(\d+\)$/.test(r)),
+				'raster legend rows carry no per-cell count, unlike vector mode'
+			)
+
+			// vector mode's own legend must NOT be showing at the same time
+			test.equal(
+				dom.viewer.selectAll('div[data-testid="sjpp-wsi-typelegend"]').size(),
+				0,
+				'vector mode legend absent while in raster mode'
+			)
+
+			// the lasso is disabled in raster mode (too many cells in view for a
+			// selection/enrichment flow to stay cheap — see setLassoEnabled)
+			const [lassoBtn] = await waitForSelector(dom.viewer.node(), '[data-testid="sjpp-wsi-lasso-btn"] button')
+			test.equal((lassoBtn as HTMLElement).style.cursor, 'not-allowed', 'lasso button shows as disabled')
+
+			// the loading indicator (shown while /cellcount + the raster tiles'
+			// own render latency are in flight) must settle back to hidden once
+			// the overlay tiles actually load, not get stuck visible
+			const [loading] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-loading"]')
+			await waitForCondition(
+				() => (loading as HTMLElement).style.display == 'none',
+				'loading indicator hidden once the raster tiles finish'
+			)
+			test.pass('loading indicator settled back to hidden, not stuck visible')
+
+			if (test['_ok']) wsi.Inner.app.destroy()
+		} catch (e) {
+			test.fail(`raster mode test error: ${e}`) // never leave tape hanging
+		}
+		test.end()
+	}
+})
+
+tape('raster mode: gene expression renders instead of cell types when showCellTypes is off', test => {
+	test.timeoutAfter(30000) // meta/cellcount/overlaytile spawn python server-side
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'wsi',
+					sample: { sID: 'TCGA-22-1017' }, // fixed-sample mode; this image has 791 cells
+					settings: {
+						wsi: {
+							geneExpression: 'PTPRC',
+							showCellTypes: false, // off: the raster overlay falls back to gene expression
+							showGeneExpression: true,
+							annotationLevel: 0,
+							cellCountLimit: 20 // far below the fixture's 791 cells: forces raster mode
+						}
+					}
+				}
+			]
+		},
+		wsi: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(wsi) {
+		wsi.on('postRender.test', null) // run once
+		try {
+			const dom = wsi.Inner.dom
+
+			const canvases = await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
+			test.ok(canvases.length >= 1, 'OpenLayers canvas rendered for the tiff slide')
+
+			// raster mode's own gene legend (gradient rows, not type swatches)
+			const [legend] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-raster-genelegend"]')
+			const rows = [...legend.children].map((r: any) => r.textContent)
+			test.ok(
+				rows.some(r => r.includes('PTPRC')),
+				'raster gene legend names the requested gene'
+			)
+
+			// neither the type-fill raster legend nor vector mode's own legend
+			// should be showing while the raster overlay is in gene-expression mode
+			test.equal(
+				dom.viewer.selectAll('div[data-testid="sjpp-wsi-raster-typelegend"]').size(),
+				0,
+				'raster type legend absent while raster is in gene-expression mode'
+			)
+			test.equal(
+				dom.viewer.selectAll('div[data-testid="sjpp-wsi-typelegend"]').size(),
+				0,
+				'vector mode legend absent while in raster mode'
+			)
+
+			if (test['_ok']) wsi.Inner.app.destroy()
+		} catch (e) {
+			test.fail(`raster gene-expression test error: ${e}`) // never leave tape hanging
 		}
 		test.end()
 	}

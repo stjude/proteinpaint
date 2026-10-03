@@ -130,7 +130,27 @@ All viewer traffic hits `wsitiles/:action`:
   versioning of their own, so the client appends `?v=<spatialVersion>` (from
   `/meta` above) to both requests — otherwise a reprocessed h5ad (e.g. a
   corrected cell-boundary export) would stay invisible behind the browser's
-  stale hour-old cache of the old file's response.
+  stale hour-old cache of the old file's response. Both also accept an
+  optional `?bbox=x0,y0,x1,y1` (µm) that restricts the answer to cells whose
+  centroid falls in that box — see "Raster vs. vector rendering" below. A
+  bbox request varies continuously with the view, so (unlike the whole-sample
+  request) it is never written to `/boundaries`' own on-disk cache; it
+  streams python's temp file straight through instead.
+- **`/cellcount`** (spatial only): `{count}` — how many of the sample's cells
+  fall in `?bbox=` (or the whole sample without one). Cheap regardless of
+  sample size (reads only `obsm/spatial`, never the boundary polygons) — the
+  raster-vs-vector decision below is built on it.
+- **`/overlaytile/z/x/y`** (spatial only): a server-rendered PNG fill for one
+  Zoomify tile, cached like `/tile` (keyed on h5ad version + tile address +
+  the fill mode's own fingerprint, since the same tile must re-render if the
+  color assignment or gene selection ever changes). `?slide_w=&slide_h=&
+  mpp_x=&mpp_y=` come from the client's own already-fetched `/meta` (this
+  action never opens the slide file itself); exactly one fill mode, mirroring
+  the vector fills' own mutual exclusion — `?colors=` a `{type:'r, g, b'}`
+  JSON object for cell-type fills, or `?genes=` a JSON gene-name array +
+  `?rgb=&?max_count=` for a gene-expression fill (one gene, or several summed
+  into one 'gene group' overlay, same as the vector path) — see "Raster vs.
+  vector rendering" below.
 - **`/nhood`, `/similar`** (spatial only): the lasso's neighborhood
   enrichment and its similar-region search — see sections 8 and 9 below.
 
@@ -169,6 +189,27 @@ For a `tile` job the flow is (identical for both formats, because
 `genecounts` reads the 10x `cell_feature_matrix` HDF5 (CSC sparse) and returns
 per-cell counts for one gene; `genenames` returns every gene name in that
 file, in file order.
+
+`h5ad_cell_count` and the `bbox=` parameter of `h5ad_csv`/`h5ad_annotations`
+(`_bbox_cell_ids()`) all filter on `obsm/spatial` centroids only — a
+cell-count check or a viewport-scoped fetch never touches the boundary
+polygon store, so they stay cheap independent of sample size. `overlay_tile`
+renders one Zoomify tile's worth of cell fills directly as a
+transparent-background PNG (`tile_region()` for the crop geometry, same as a
+normal `tile` job; PIL `ImageDraw.polygon()` for the fills) — the
+server-rendered stand-in for per-cell vector data once a view holds more
+cells than the client's limit (see the client section below). Two mutually
+exclusive fill modes, mirroring the client's own vector fills: `type_colors`
+(cell-type fills, the original mode) or `genes` + `rgb` + `max_count` (a
+gene-expression fill — `_h5ad_gene_counts()`, shared with `genecounts()`,
+looked up per gene and summed server-side for a gene group, so the client
+never ships per-cell counts through the URL; shaded via `_gene_fill_alpha()`,
+the same log-scaled SHADES=8 bucketing as the client's `expressionLayer`). It
+currently scans every polygon in `uns/cell_boundaries` per tile (the store
+isn't spatially indexed) — once per gene on top of that, for a gene fill —
+and draws fills only, no strokes — both are deliberate simplifications for
+now (ponytail comments on the function note the upgrade path: a spatial
+index on the boundary store, and a second stroke-drawing pass).
 
 ### 4. Client rendering — `client/plots/w2/`
 
@@ -230,8 +271,11 @@ from the h5ad's cell/nucleus polygons (`/boundaries`, µm→px via `meta.mpp`).
   per selected type plus an "Add type…" dropdown of the remaining ones;
   no selection = all types). The available types are discovered up front by
   the meta request — `wsitiles/meta?cellAnnotations=<h5ad>` scans the file
-  and returns `cellTypes:[…]`. Colors are assigned over ALL types by
-  abundance, so a type keeps its color when the filter changes.
+  and returns `cellTypes:[…]`. Colors are assigned over `meta.cellTypes`'
+  own sorted order (not abundance, as it used to be) — cheap regardless of
+  sample size, and the SAME order the raster overlay below is colored by, so
+  a type keeps its color both when the filter changes and when the view
+  switches between raster and vector rendering.
 - **Mutual exclusion** — cell-type fills and expression fills never draw
   together (unreadable on top of each other). While cell types are shown the
   expression fills/legend are suppressed, and in the mass plot the two
@@ -246,19 +290,99 @@ from the h5ad's cell/nucleus polygons (`/boundaries`, µm→px via `meta.mpp`).
   animation frame) catches layout shifts that aren't a scroll or a resize at
   all — the burger menu's own settings panel opens by changing its height/
   visibility style, which pushes the map down without firing either event.
-- **Default framing** — the view opens fit to the *sample's own cells*
-  (the fetched boundary polygons' bounding box), not the whole slide canvas,
-  unless `opts.focus` already picked a specific niche (the similar-search
-  preview below). A no-op for a well-cropped single-section slide, where the
-  cells already fill most of the frame — but some raw exports are a shared
-  multi-section slide where a sample's own tissue is a small, oddly-placed
-  fraction of a much larger image (two GEO accessions imaged on one physical
-  Xenium slide, say); framing on the full canvas there left the cells too
-  small to see, which looked like a missing-overlay bug rather than a
-  framing one.
+- **Default framing** — the *first* vector load opens fit to the *sample's
+  own cells* (the fetched boundary polygons' bounding box) rather than the
+  whole slide canvas, unless `opts.focus` already picked a specific niche
+  (the similar-search preview below). A no-op for a well-cropped
+  single-section slide, where the cells already fill most of the frame — but
+  some raw exports are a shared multi-section slide where a sample's own
+  tissue is a small, oddly-placed fraction of a much larger image (two GEO
+  accessions imaged on one physical Xenium slide, say); framing on the full
+  canvas there left the cells too small to see, which looked like a
+  missing-overlay bug rather than a framing one. Later vector rebuilds
+  (panning into a new region once below the cell-count limit) don't refit —
+  only the user's own pan/zoom moves the view after the first load.
 - **Dataset defaults** — `ds.queries.w2` can set `cellTypes: true` to open
   the spatial viewer with the cell-type overlay on (seeded once into the
   burger settings, expression fills off; the checkboxes override after).
+
+### 5b. Raster vs. vector rendering — `client/plots/w2/wsi.direct.ts`
+
+Fetching and rendering every cell's polygon doesn't scale: a 700k-cell sample's
+boundary CSV can approach V8's ~512MiB max string length (the exact bug that
+motivated this — see `/boundaries`' own streaming fix in section 2), and even
+once that's fixed, holding every ring as one `MultiPolygon` OpenLayers feature
+is a large in-memory and render-time cost the browser pays regardless of how
+much of it is actually on screen. `opts.cellCountLimit` (default
+`DEFAULT_CELL_COUNT_LIMIT` = 20,000) draws the line: above that many cells in
+the *current view*, a server-rendered raster image stands in for the vector
+overlays; at or below it, the normal per-cell vector pipeline (boundaries,
+annotations, type/expression fills, hover, lasso) runs as described above,
+scoped to just that view.
+
+- **Mode decision (`updateMode()`)** — on load and on every `moveend`, the
+  view's extent is converted to a µm bbox (`viewBboxUm()`, the inverse of
+  `focusExtent()`'s own transform) and sent to `wsitiles/cellcount`. Above the
+  limit: raster. At or below it: vector, but only re-fetched when the mode
+  just switched TO vector or the new bbox isn't already contained in what's
+  loaded (`bboxContains()`) — a small pan within an already-fetched region
+  (itself padded 50% past the exact viewport, `padBbox()`) is a no-op, not a
+  refetch. A failed `/cellcount` call leaves the current mode as-is rather
+  than guessing.
+- **Raster mode** — one persistent `Zoomify`-tiled `TileLayer` per
+  `rasterFills` entry (same tile grid as the slide itself) pointed at
+  `wsitiles/overlaytile/{z}/{x}/{y}`, just shown/hidden by `updateMode`
+  rather than re-created per transition. `rasterFills` is decided ONCE
+  (the burger's checkboxes choose it, not the viewport, so it never changes
+  without a full re-render), mirroring the vector fills' own mutual
+  exclusion: cell-type fills (`showCellTypes` on, at least one type
+  selected) win when both are requested; otherwise, if gene expression fills
+  are on (`geneCounts.length && !hideExpressionFills`), one raster layer per
+  `geneCounts` entry (one gene, or the one summed gene-group overlay) —
+  `overlay_tile` re-sums the group's genes server-side itself rather than
+  the client shipping per-cell counts through the URL. With neither
+  requested, `rasterFills` is empty and raster mode has nothing to draw (see
+  `overlay_tile`'s own ponytail note on strokes — there is no bare
+  "boundaries only" raster mode). Boundary strokes, hover, and the lasso are
+  all unavailable in this mode regardless of which fill is shown.
+- **Vector mode** — `buildVector(bbox)` fetches `/boundaries` (cell +
+  nucleus) and `/annotations` scoped to `bbox`, tears down the previous
+  view's layers/legends first (`teardownVector()`), and rebuilds the stroke/
+  type-fill/expression-fill layers from just that region's cells. Gene
+  counts themselves are fetched once for the whole sample (not bbox-scoped —
+  one int per expressing cell is far lighter than a boundary CSV's repeated
+  vertices, so it hasn't needed to be) and reused by every rebuild; only
+  which cells to actually draw changes.
+- **Hover and lasso, set up once** — the tooltip and lasso's `Draw`
+  interaction/control/menu are created a single time (whenever `spatialData`
+  is given at all), not per mode transition. They close over the same
+  mutable `cellPolys`/`cellTypes`/`index` the hover tooltip already used, so
+  a rebuild just changes what those point at; the listeners themselves are
+  never torn down or re-attached. The lasso button is explicitly
+  enabled/disabled by mode (`setLassoEnabled()`) — disabled, it clears any
+  in-progress drawing and ignores clicks, since raster mode's cell count is,
+  by definition, too large for the lasso's selection/enrichment flow to stay
+  cheap.
+- **Color consistency** — a stable `type -> 'r, g, b'` assignment, built once
+  from `meta.cellTypes`' own sorted order (see the cell-type filter bullet
+  above), is the single source of truth both rendering paths draw from:
+  vector mode's `cellTypeLayer` fill, and the `colors=` JSON object sent to
+  `wsitiles/overlaytile`. A type never changes color when the view crosses
+  the cell-count threshold. Gene colors are likewise assigned once (one
+  `GENE_COLORS` slot per `geneCounts` entry, by position) and carried on
+  each entry (`.rgb`, plus `.genes` — the underlying gene list a group
+  overlay needs to re-sum), so a gene/gene-group keeps the exact same color
+  whether `expressionLayer` (vector) or `overlay_tile`'s `genes=`/`rgb=`
+  (raster) is drawing it.
+- **Loading indicator** — a "Loading…" box, centered over the map, covers
+  `updateMode()`'s `/cellcount` round trip and, in raster mode, stays up
+  until that mode's own raster layers have no tiles left in flight (tracked
+  via each `Zoomify` source's `tileloadstart`/`tileloadend`/`tileloaderror`
+  events, summed into one `rasterTilesLoading` counter) — otherwise the
+  slide's own tiles (unaffected by any of this) render first and the cell
+  overlay visibly catches up later. Vector mode has no equivalent tile
+  latency of its own: its fetch IS the wait, so it hides the indicator the
+  moment `buildVector()` resolves.
 
 ### 6. Cell hover — `client/plots/w2/wsi.direct.ts`
 
@@ -287,7 +411,8 @@ layer (orange). On release, `cellsInLasso()` keeps every cell whose centroid
 (vertex mean) falls inside the ring — candidates come from the same RBush
 bbox index the hover uses, queried with the ring's extent, so a lasso costs
 one ray cast per candidate, not per cell. Selection is not gated by
-`annotationLevel`.
+`annotationLevel`, but it IS gated by the raster/vector mode (section 5b):
+disabled while the view is dense enough to be in raster mode.
 
 The result opens a `Menu` (`sjpp-wsi-lasso-menu`): a headline count, a
 per-type tally (`sjpp-wsi-lasso-summary`, descending, unannotated last —
