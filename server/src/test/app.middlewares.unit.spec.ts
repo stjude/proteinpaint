@@ -4,8 +4,13 @@ import {
 	isAllowedEmbedder,
 	isCredEmbedder,
 	getCacheControl,
-	jsonErrorHandler
+	jsonErrorHandler,
+	getFrontPublicFallback
 } from '../app.middlewares.js'
+import express from 'express'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
 
 function getReq(headers: { [key: string]: string }, protocol = 'http') {
 	return { protocol, get: (key: string) => headers[key] }
@@ -185,5 +190,43 @@ tape('jsonErrorHandler()', test => {
 	const sent = respond(clientErr, true)
 	test.equal(sent.nextErr, clientErr, 'should pass the error on when the response has already started')
 	test.equal(sent.status, undefined, 'should not set a status when the response has already started')
+	test.end()
+})
+
+tape('getFrontPublicFallback()', async test => {
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-front-public-'))
+	const publicDir = path.join(dir, 'public')
+	const frontDir = path.join(dir, 'front')
+	fs.mkdirSync(publicDir)
+	fs.mkdirSync(path.join(frontDir, 'cards'), { recursive: true })
+	fs.writeFileSync(path.join(frontDir, 'index.html'), 'front index')
+	fs.writeFileSync(path.join(frontDir, 'cards/a.json'), 'front card')
+	fs.writeFileSync(path.join(frontDir, 'other.txt'), 'other')
+	fs.writeFileSync(path.join(publicDir, 'b.json'), 'public file')
+	const app = express()
+	app.use(express.static(publicDir))
+	app.use(getFrontPublicFallback(frontDir))
+	const server = app.listen(0)
+	await new Promise(resolve => server.once('listening', resolve))
+	const port = (server.address() as any).port
+	const get = async (p: string) => {
+		const r = await fetch(`http://127.0.0.1:${port}${p}`)
+		return [r.status, r.status == 200 ? await r.text() : '']
+	}
+	try {
+		test.deepEqual(await get('/'), [200, 'front index'], 'should serve the front index.html when public/ has none')
+		test.deepEqual(await get('/index.html'), [200, 'front index'], 'should serve /index.html from the front copy')
+		test.deepEqual(await get('/cards/a.json'), [200, 'front card'], 'should serve a front card when public/ has none')
+		test.deepEqual(await get('/other.txt'), [404, ''], 'should not serve other files in the front dir')
+		test.deepEqual(await get('/b.json'), [200, 'public file'], 'should still serve the public/ files')
+		fs.writeFileSync(path.join(publicDir, 'index.html'), 'public index')
+		fs.mkdirSync(path.join(publicDir, 'cards'))
+		fs.writeFileSync(path.join(publicDir, 'cards/a.json'), 'public card')
+		test.deepEqual(await get('/'), [200, 'public index'], 'should prefer the public/ index.html')
+		test.deepEqual(await get('/cards/a.json'), [200, 'public card'], 'should prefer a public/ card')
+	} finally {
+		server.close()
+		fs.rmSync(dir, { recursive: true, force: true })
+	}
 	test.end()
 })
