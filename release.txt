@@ -1,5 +1,1 @@
-Features:
-- runtimePosture.mjs and PP_RUNTIME_CHECK=strict also report on the app dir, its node_modules and package dirs, the client bundle dir, and the app .mjs files
 
-Fixes:
-- the full image generates the client bundle at build time instead of at startup, and the server and full image builds verify the app dir file modes

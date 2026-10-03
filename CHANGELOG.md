@@ -12,6 +12,7 @@ Features:
 - in a container, envHelpers.mjs logs a warning for each recommended runtime setting that is not applied, using runtimePosture.mjs
 - with PP_RUNTIME_CHECK=strict, envHelpers.mjs exits before starting the server when a required runtime setting is not applied: a non-root user, no capabilities, no_new_privs, a read-only root filesystem, a noexec temp dir, and read-only interpreter library dirs; runtimePosture.mjs --strict checks the same settings
 - envHelpers.mjs passes the node permission model settings as --permission and --allow-* flags, and logs the allowed paths, so that a node command does not need a writable node.config.json; a tsx command still uses node.config.json, in ./ or in the optional PP_NODE_CONFIG_DIR
+- runtimePosture.mjs and PP_RUNTIME_CHECK=strict also report on the app dir, its node_modules and package dirs, the client bundle dir, and the app .mjs files
 
 Fixes:
 - harden user-keyed object maps against prototype pollution
@@ -26,6 +27,7 @@ Fixes:
 - the helm chart, the kubernetes and compose examples, and container/run.sh mount serverconfig.json read-only, and the helm chart and compose example default to the v2.215.0 images; the helm chart mounts its config map at serverconfig.json instead of copying it at startup, and runs as the image's app user
 - run Rscript with --vanilla and python with -E -s, to use only the interpreter defaults
 - the deps image build checks the permissions of the interpreter and tool dirs
+- the full image generates the client bundle at build time instead of at startup, and the server and full image builds verify the app dir file modes
 
 
 ## 2.215.0
