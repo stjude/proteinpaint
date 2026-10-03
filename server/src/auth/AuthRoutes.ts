@@ -25,7 +25,12 @@ function wasResolvedFromCookie(req, cred, id) {
 function assertAllowedSessionOrigin(auth, req, routePath, cred, id) {
 	if (!wasResolvedFromCookie(req, cred, id)) return
 	const origin = getOriginFromHeaders(req)
-	if (!auth.getRequiredCred({ ...req.query, embedder: origin?.hostname }, routePath)) {
+	// try both forms, same as isCredEmbedder(), so a dataset configured with a port-qualified
+	// embedder key (e.g. 'localhost:3000') is not rejected
+	if (
+		!origin ||
+		![origin.hostname, origin.host].some(embedder => auth.getRequiredCred({ ...req.query, embedder }, routePath))
+	) {
 		throw 'disallowed origin for a cookie-authenticated request'
 	}
 }

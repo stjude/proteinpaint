@@ -463,6 +463,34 @@ tape('/dslogout: an origin valid for a different dataset does not satisfy this o
 	test.end()
 })
 
+tape('/dslogout: accepts a port-qualified origin matching a port-qualified embedder key', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(1)
+
+	const portEmbedder = 'localhost:3000'
+	const creds: any = { [dslabel]: { '/**': { [portEmbedder]: makeBasicCred() } } }
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	const sessionId = 'test-logout-port-qualified-session-id'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		// q.embedder matches the configured key so the original (pre-existing) cred lookup succeeds,
+		// same as it would for any other credentialed request
+		query: { dslabel, embedder: portEmbedder },
+		path: '/dslogout',
+		// origin.hostname alone ('localhost') would not match the 'localhost:3000' embedder key;
+		// origin.host ('localhost:3000') must also be tried
+		headers: { origin: 'https://localhost:3000' },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/dslogout'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should return ok')
+	test.end()
+})
+
 // ─────────────────────────────────────────
 // POST /jwt-status
 // ─────────────────────────────────────────
