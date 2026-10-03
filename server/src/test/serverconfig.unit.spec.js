@@ -155,6 +155,7 @@ tape('process.env.PP_SERVERCONFIG_OVERRIDES: applied before derived settings, an
 		test.equal(config.backend_only, true, 'should override backend_only')
 		test.deepEqual(config.genomes, genomes, 'should override genomes')
 		test.equal(config.binDir, undefined, 'should apply backend_only to the derived binDir')
+		test.equal(config.frontPublicDir, undefined, 'should apply backend_only to the derived frontPublicDir')
 		test.equal(
 			'PP_SERVERCONFIG_OVERRIDES' in process.env,
 			true,

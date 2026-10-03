@@ -390,6 +390,12 @@ if (!serverconfig.backend_only && fs.existsSync(publicDir)) serverconfig.publicD
 const binDir = path.join(process.cwd(), './bin')
 if (!serverconfig.backend_only) serverconfig.binDir = binDir
 
+// The proteinpaint-front package's own public/index.html and public/cards, which its init copies into public/ when
+// missing there. The server serves these paths from this dir when public/ does not have them, such as a public/ mount
+// that the init cannot write to (see app.middlewares.js). Auto-computed from cwd like binDir, never operator-set.
+const frontPublicDir = path.join(process.cwd(), 'node_modules/@sjcrh/proteinpaint-front/public')
+if (!serverconfig.backend_only && fs.existsSync(frontPublicDir)) serverconfig.frontPublicDir = frontPublicDir
+
 if (serverconfig.publicDir) {
 	const defaultTarget = path.join(serverconfig.binpath, 'cards')
 	if (!serverconfig.cards) {
