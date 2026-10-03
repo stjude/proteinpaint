@@ -111,6 +111,7 @@ export class View {
 					geneGroups: s.spatialMode == 'gene_groups' ? genes : undefined, // or one summed overlay
 					hideExpressionFills: !s.showGeneExpression, // checkbox off = hover counts only, no fills
 					annotationLevel: s.annotationLevel ?? image.annotationLevel, // burger overrides dataset
+					cellCountLimit: s.cellCountLimit ?? undefined, // null = wsi.direct.ts's own default
 					width: '100%', // fill the sandbox
 					height: this.settings.viewerHeight // e.g. 70vh
 				},

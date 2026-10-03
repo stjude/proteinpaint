@@ -105,6 +105,70 @@ tape('h5ad_csv rejects an unknown polygon kind without leaking a temp file', asy
 	t.end()
 })
 
+// the fixture's own obsm/spatial extent is roughly x:[329.2,540.8] y:[328.6,537.1] um;
+// this is its bottom-left quarter, used below to exercise bbox-scoped actions
+const bbox = [329.21158, 328.62308, 434.99573, 432.838]
+
+tape('h5ad_cell_count answers whole-sample and bbox-scoped counts', async t => {
+	const whole = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_cell_count', h5ad })))
+	t.equal(whole.count, 791, 'all fixture cells, no bbox')
+	const scoped = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_cell_count', h5ad, bbox })))
+	t.equal(scoped.count, 253, 'cells whose centroid falls in the quarter bbox')
+	t.end()
+})
+
+tape('h5ad_annotations and h5ad_csv restrict to a bbox the same way h5ad_cell_count does', async t => {
+	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad, bbox })))
+	t.equal(Object.keys(ann.cells).length, 243, 'bbox-scoped annotated cells (253 minus QC-filtered)')
+	const tmp = String(
+		await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_csv', h5ad, kind: 'cell', bbox }))
+	).trim()
+	const lines = fs.readFileSync(tmp, 'utf8').trim().split('\n')
+	fs.unlinkSync(tmp)
+	t.equal(lines.length - 1, 3289, 'bbox-scoped boundary vertex rows, fewer than the whole-sample 10283')
+	t.end()
+})
+
+tape('overlay_tile rasterizes bbox cell fills into a transparent PNG tile', async t => {
+	const slide = path.resolve(
+		'server/test/tp/files/hg38/TermdbTest/spatial/TCGA-22-1017/image1/image1_morphology.ome.tif'
+	)
+	const m = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'meta', slide })))
+	const [slide_w, slide_h] = m.slide_dimensions
+	const [mpp_x, mpp_y] = m.mpp
+	// 'r, g, b' strings, matching wsi.direct.ts's own CELL_TYPE_COLORS format
+	const type_colors = {
+		'B cells': '31, 119, 180',
+		Fibroblasts: '255, 127, 14',
+		Macrophages: '44, 160, 44',
+		'T cells': '214, 39, 40',
+		Tumor: '148, 103, 189'
+	}
+	// z = highest-detail tier (levels - 1); tile (6,6) at that tier falls inside the fixture's own cell extent
+	const tmp = String(
+		await run_python(
+			'wsi_tile.py',
+			JSON.stringify({
+				action: 'overlay_tile',
+				h5ad,
+				slide_w,
+				slide_h,
+				z: m.levels - 1,
+				x: 6,
+				y: 6,
+				mpp_x,
+				mpp_y,
+				type_colors
+			})
+		)
+	).trim()
+	t.ok(fs.existsSync(tmp), 'wrote a PNG to a temp path')
+	const png = fs.readFileSync(tmp)
+	fs.unlinkSync(tmp)
+	t.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', 'valid PNG signature') // pragma: allowlist secret
+	t.end()
+})
+
 tape('nhood computes squidpy-style neighborhood enrichment over a selection', async t => {
 	const ann = JSON.parse(await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_annotations', h5ad })))
 	const ids = Object.keys(ann.cells) // the 760 annotated fixture cells

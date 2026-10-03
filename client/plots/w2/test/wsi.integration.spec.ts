@@ -109,6 +109,72 @@ tape('spatial OME-TIFF image renders the map with overlays and the burger menu',
 	}
 })
 
+tape('raster mode: a cellCountLimit below the fixture cell count renders the raster overlay, not vector', test => {
+	test.timeoutAfter(30000) // meta/cellcount/overlaytile spawn python server-side
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'wsi',
+					sample: { sID: 'TCGA-22-1017' }, // fixed-sample mode; this image has 791 cells
+					settings: {
+						wsi: {
+							geneExpression: 'PTPRC',
+							showCellTypes: true, // cell-type fills: the raster overlay's only mode (wsi.direct.ts)
+							showGeneExpression: false,
+							annotationLevel: 0,
+							cellCountLimit: 20 // far below the fixture's 791 cells: forces raster mode
+						}
+					}
+				}
+			]
+		},
+		wsi: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(wsi) {
+		wsi.on('postRender.test', null) // run once
+		try {
+			const dom = wsi.Inner.dom
+
+			const canvases = await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
+			test.ok(canvases.length >= 1, 'OpenLayers canvas rendered for the tiff slide')
+
+			// raster mode's own legend (no per-cell counts — see wsi.direct.ts)
+			const [legend] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-raster-typelegend"]')
+			test.equal(legend.firstChild?.textContent, 'Cell type', 'raster legend is titled Cell type')
+			const rows = [...legend.children].slice(1).map((r: any) => r.textContent)
+			test.ok(rows.length >= 1, 'raster legend lists at least one cell type')
+			test.ok(
+				rows.every(r => !/\(\d+\)$/.test(r)),
+				'raster legend rows carry no per-cell count, unlike vector mode'
+			)
+
+			// vector mode's own legend must NOT be showing at the same time
+			test.equal(
+				dom.viewer.selectAll('div[data-testid="sjpp-wsi-typelegend"]').size(),
+				0,
+				'vector mode legend absent while in raster mode'
+			)
+
+			// the lasso is disabled in raster mode (too many cells in view for a
+			// selection/enrichment flow to stay cheap — see setLassoEnabled)
+			const [lassoBtn] = await waitForSelector(dom.viewer.node(), '[data-testid="sjpp-wsi-lasso-btn"] button')
+			test.equal((lassoBtn as HTMLElement).style.cursor, 'not-allowed', 'lasso button shows as disabled')
+
+			if (test['_ok']) wsi.Inner.app.destroy()
+		} catch (e) {
+			test.fail(`raster mode test error: ${e}`) // never leave tape hanging
+		}
+		test.end()
+	}
+})
+
 tape('plain SVS image renders the map without the spatial machinery', test => {
 	test.timeoutAfter(30000) // first tiles may spawn python server-side
 

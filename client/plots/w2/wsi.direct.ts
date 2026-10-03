@@ -72,6 +72,10 @@ import { dofetch3 } from '#common/dofetch' // fetch wrapper for meta/genecounts
 import { sayerror, Menu, renderTable, icons, ColorScale } from '#dom' // error banner, lasso menu + table, lasso icon, heatmap legend
 import { addScaleBar } from './scaleBar' // bottom-right µm scale bar, every image (spatial or plain)
 
+// default opts.cellCountLimit: above this many cells in the current view, show
+// the raster overlay instead of fetching/rendering per-cell vector data
+const DEFAULT_CELL_COUNT_LIMIT = 20_000
+
 /** Build the viewer in `holder`; opts mirror the URL params documented above */
 export async function init(
 	opts: {
@@ -105,9 +109,16 @@ export async function init(
 		showCellTypes?: boolean
 		/** cell types to fill, as a list (type names are free text and may
 		 contain commas); empty/undefined = all types. Colors are assigned over
-		 ALL types by abundance, so a type keeps its color when the filter
-		 changes */
+		 ALL types (meta's own sorted cellTypes order), so a type keeps its
+		 color when the filter changes AND when the raster overlay (below)
+		 renders the same types */
 		cellTypeFilter?: string[]
+		/** above this many cells in the CURRENT view, a server-rendered raster
+		 image replaces the per-cell vector boundaries/fills, and the lasso is
+		 disabled; zooming/panning back under the limit restores vector
+		 rendering + the lasso, scoped to the smaller region now in view.
+		 Default DEFAULT_CELL_COUNT_LIMIT. No-op without spatialData. */
+		cellCountLimit?: number
 		/** = annotation_level: strokes only in the n most zoomed-in levels */
 		annotationLevel?: string | number
 		/** = gene_expression: comma-separated genes, one fill overlay per gene */
@@ -281,11 +292,11 @@ export async function init(
 				repin()
 			})
 		}
-const layoutObserver = new MutationObserver(records => {
-	// repin() changes the pinned legends' own styles; do not let those writes reschedule repin forever
-	if (records.some(r => !pinned.some(p => p.box.node().contains(r.target as Node)))) queueRepin()
-})
-layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'], subtree: true })
+		const layoutObserver = new MutationObserver(records => {
+			// repin() changes the pinned legends' own styles; do not let those writes reschedule repin forever
+			if (records.some(r => !pinned.some(p => p.box.node().contains(r.target as Node)))) queueRepin()
+		})
+		layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'], subtree: true })
 
 		// segmentation overlays: boundary CSVs are in µm, converted to level-0
 		// pixels via the slide's mpp (defaulting to 1 = coords already in px)
@@ -339,130 +350,46 @@ layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['sty
 		// type/expression fills, the hover tooltip and the lasso (hit-testing
 		// needs the rings even with every fill/stroke option off); nucleus
 		// polygons only their own strokes
+		// which overlays need the h5ad: cell polygons serve the strokes, the
+		// type/expression fills, the hover tooltip and the lasso (hit-testing
+		// needs the rings even with every fill/stroke option off); nucleus
+		// polygons only their own strokes. Below the cellCountLimit, both are
+		// fetched viewport-scoped (?bbox=, see buildVector/updateMode) rather
+		// than for the whole sample at once — avoiding the client-side analog
+		// of the server's own V8 string-length limit (fixed for /boundaries
+		// and /annotations) and the much larger in-memory footprint of one
+		// MultiPolygon feature per hundred-thousand-cell sample.
 		const needCellPolys = !!opts.spatialData
-		const overlays: Array<['cell' | 'nucleus', boolean, string]> = [
-			['cell', needCellPolys, 'rgba(0, 200, 80, 0.9)'],
-			['nucleus', !!opts.spatialData && !opts.hideNucleusStrokes, 'rgba(0, 150, 255, 0.9)']
-		]
-		let cellPolys: CellPoly[] | undefined // kept for the expression/type fills below
-		for (const [kind, wanted, color] of overlays) {
-			if (!wanted) continue // that overlay was not requested
+
+		// stable type -> color assignment, from meta's own sorted cellTypes
+		// (cheap regardless of sample size, unlike a whole-sample abundance
+		// tally) rather than per-load abundance order: a type must keep the
+		// SAME color whether it's drawn by the vector fill below or by the
+		// raster overlay (wsitiles/overlaytile), which only ever receives
+		// whatever this assigns — there is no cheaper shared source of truth
+		const typeColor: { [t: string]: string } = Object.create(null) // type -> 'r, g, b'
+		if (Array.isArray(meta.cellTypes))
+			for (const [i, t] of meta.cellTypes.entries()) typeColor[t] = CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
+		// optional filter: fill/legend/raster tiles only show these types (colors unchanged)
+		const filterList = opts.cellTypeFilter || [] // the requested type list
+		const shownTypes: string[] = filterList.length
+			? (meta.cellTypes || []).filter((t: string) => filterList.includes(t))
+			: meta.cellTypes || []
+		const shownColor: { [t: string]: string } = Object.create(null) // color subset acting as the fill filter
+		for (const t of shownTypes) shownColor[t] = typeColor[t]
+		// the raster overlay can only draw type fills (see overlay_tile's own
+		// ponytail note on strokes) -- without showCellTypes there's nothing
+		// for it to draw, so it's never requested
+		const rasterEnabled = needCellPolys && !!opts.showCellTypes && shownTypes.length > 0
+
+		// per-gene count maps, fetched ONCE for the whole sample (this route
+		// isn't bbox-scoped: one int per expressing cell is far lighter than a
+		// boundary CSV's repeated vertices, so it hasn't needed to be) and
+		// reused by every buildVector() rebuild below -- only the cell/nucleus
+		// polygons and annotations are re-fetched per viewport
+		const geneCounts: { gene: string; cells: { [id: string]: number }; max: number }[] = []
+		if (needCellPolys && (exprGenes.length || groupGenes.length)) {
 			try {
-				const polys = await fetchBoundaries(host, sq, opts.spatialData!, kind, mppX, mppY, meta.spatialVersion) // h5ad -> px polygons
-				if (kind == 'cell') {
-					cellPolys = polys // expression/type fills reuse these rings
-					if (opts.hideCellStrokes) continue // polygons fetched, strokes suppressed
-				}
-				map.addLayer(strokeLayer(polys, color, maxResolution)) // draw on top of the slide
-			} catch (e: any) {
-				sayerror(holder, `Error loading ${kind} boundaries: ${e.message || e}`) // one overlay failing kills nothing else
-			}
-		}
-
-		// default framing: fit the view to this sample's own cells instead of
-		// leaving the whole-slide overview from map.getView().fit(extent) above.
-		// On a well-cropped single-section slide the two are nearly identical
-		// (cells already fill most of the frame), but some raw exports are a
-		// shared multi-section slide where this sample's own tissue is a small
-		// fraction of the image (e.g. two GEO accessions imaged on one physical
-		// Xenium slide) — framing on the canvas there leaves the cells
-		// imperceptibly small, which looks like missing boundaries/annotations.
-		// Skipped when opts.focus already picked a specific niche (the
-		// similar-search preview re-entering this module above).
-		if (!opts.focus && cellPolys?.length) {
-			// a manual min/max scan, not Math.min(...xs): a large sample's
-			// vertex count (500k+) can exceed the engine's max call arguments
-			let minX = Infinity,
-				minY = Infinity,
-				maxX = -Infinity,
-				maxY = -Infinity
-			for (const { ring } of cellPolys) {
-				for (const [x, y] of ring) {
-					if (x < minX) minX = x
-					if (x > maxX) maxX = x
-					if (y < minY) minY = y
-					if (y > maxY) maxY = y
-				}
-			}
-			map.getView().fit([minX, minY, maxX, maxY], { padding: [40, 40, 40, 40] })
-		}
-
-		// per-cell annotations from the h5ad, as JSON {cells:{cell_id:type}} —
-		// cell types are free text, so they never travel as CSV; feeds the
-		// type fills + tooltip. Useless without the cell polygons.
-		let cellTypes: { [id: string]: string } | undefined // cell_id -> annotated type
-		if (opts.spatialData && cellPolys) {
-			try {
-				const r = await dofetch3(
-					`wsitiles/annotations?${sq}&file=${encodeURIComponent(opts.spatialData)}&v=${meta.spatialVersion || 0}`
-				)
-				if (!r || r.error) throw new Error(r?.error || 'failed to load annotations')
-				cellTypes = r.cells // the id->type map, served ready to use
-			} catch (e: any) {
-				sayerror(holder, `Error loading annotations: ${e.message || e}`) // overlay lost, viewer lives
-			}
-		}
-
-		// cell-type overlay: fill each annotated cell in its type's categorical
-		// color, with its own legend (top-left; the gene legend uses top-right).
-		// No-op when the h5ad held no cell types.
-		// While it is shown, the gene expression FILLS are suppressed below (the
-		// two fills are unreadable on top of each other) — gene counts are still
-		// fetched so hovering a cell reports its expression.
-		const typesShown = !!(opts.showCellTypes && cellPolys && cellTypes && Object.keys(cellTypes).length)
-		if (typesShown && cellPolys && cellTypes) {
-			// types ordered by abundance so colors go to the biggest populations first
-			const counts: { [t: string]: number } = Object.create(null) // cells per type, for ordering + legend
-			for (const id in cellTypes) counts[cellTypes[id]] = (counts[cellTypes[id]] || 0) + 1 // tally
-			const types = Object.keys(counts).sort((a, b) => counts[b] - counts[a]) // most abundant first
-			const typeColor: { [t: string]: string } = Object.create(null) // type -> its stable palette color
-			for (const [i, t] of types.entries()) typeColor[t] = CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
-			// optional filter: fill + legend only these types (colors unchanged)
-			const wanted = opts.cellTypeFilter || [] // the requested type list
-			const shown = wanted.length ? types.filter(t => wanted.includes(t)) : types // empty filter = all
-			const shownColor: { [t: string]: string } = Object.create(null) // color subset acting as the fill filter
-			for (const t of shown) shownColor[t] = typeColor[t] // only shown types get a fill
-			map.addLayer(cellTypeLayer(cellPolys, cellTypes, shownColor)) // draw the type fills
-
-			// the type legend box, over the map's top-left; repin() places it
-			const legend = mapDiv
-				.append('div')
-				.attr('data-testid', 'sjpp-wsi-typelegend') // stable hook for tests
-				.style('position', 'fixed') // viewport-placed by repin(), confined to the map's rectangle
-				.style('z-index', '10')
-				.style('background', 'rgba(255,255,255,0.85)')
-				.style('padding', '6px 10px')
-				.style('border-radius', '4px')
-				.style('font', '12px system-ui')
-				.style('max-height', '50vh')
-				.style('overflow-y', 'auto')
-			legend.append('div').style('font-weight', 'bold').style('margin-bottom', '2px').text('Cell type') // title
-			for (const t of shown) {
-				const row = legend.append('div').style('margin', '2px 0') // one legend row per type
-				row // the type's color swatch
-					.append('span')
-					.style('display', 'inline-block')
-					.style('width', '10px')
-					.style('height', '10px')
-					.style('margin-right', '6px')
-					.style('border', '1px solid #ccc')
-					.style('background', `rgb(${typeColor[t]})`)
-				row.append('span').text(`${t} (${counts[t]})`) // type name + its cell count
-			}
-			pinned.push({ box: legend, side: 'left' }) // top-left corner, clear of the zoom buttons
-			repin() // place it now; scrolling keeps it placed
-		}
-
-		// per-gene count maps kept for the hover tooltip below
-		const geneCounts: { gene: string; cells: { [id: string]: number } }[] = []
-
-		if (exprGenes.length || groupGenes.length) {
-			try {
-				if (!opts.spatialData)
-					// counts live in the h5ad; genes without it can't render
-					throw new Error('gene_expression/gene_groups requires spatial_data=<h5ad file>')
-				if (!cellPolys) throw new Error('gene_expression/gene_groups needs the cell polygons') // nothing to fill
-				// one genecounts request per gene, expr + group genes together
 				const results = await Promise.all(
 					[...exprGenes, ...groupGenes].map(gene =>
 						dofetch3(
@@ -470,6 +397,213 @@ layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['sty
 						).catch((e: any) => ({ error: e.message || String(e) }))
 					)
 				)
+				for (const [i, gene] of exprGenes.entries()) {
+					const r = results[i] // this gene's genecounts answer
+					if (!r || r.error) {
+						sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`) // surface it
+						continue // one bad gene doesn't block the others
+					}
+					geneCounts.push({ gene, cells: r.cells, max: r.max }) // tooltip (+ fill, below) shows this gene
+				}
+				if (groupGenes.length) {
+					const total: { [id: string]: number } = {} // per-cell sum across the group
+					const found: string[] = [] // genes that actually answered
+					for (const [i, gene] of groupGenes.entries()) {
+						const r = results[exprGenes.length + i] // group answers follow the expr ones
+						if (!r || r.error) {
+							sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`) // surface it
+							continue // skip the missing gene, keep summing the rest
+						}
+						found.push(gene) // this gene contributes to the sum
+						for (const id in r.cells) total[id] = (total[id] || 0) + r.cells[id] // accumulate per cell
+					}
+					if (found.length) {
+						let max = 0 // the summed overlay's own count ceiling
+						for (const id in total) if (total[id] > max) max = total[id] // find it
+						geneCounts.push({ gene: found.join('+'), cells: total, max }) // summed count in the tooltip + fill
+					}
+				}
+			} catch (e: any) {
+				sayerror(holder, `Gene expression error: ${e.message || e}`) // config errors from the throws above
+			}
+		}
+
+		// mutable per-rebuild state: the hover tooltip and lasso below close
+		// over these `let`s by reference, so neither listener is ever torn
+		// down/recreated on a mode switch -- only buildVector()/teardownVector()
+		// change what they point at
+		let cellPolys: CellPoly[] | undefined
+		let cellTypes: { [id: string]: string } | undefined
+		let index: RBush<CellPoly> | undefined
+		let vectorLayers: any[] = [] // layers added by the current buildVector(), removed by teardownVector()
+		let legendEls: any[] = [] // legend DOM boxes added by the current buildVector(), ditto
+		let firstBuild = true // "fit to cells" framing (below) runs once, on the first vector load only
+
+		// the tooltip box, following the cursor; fixed and placed from the
+		// map's viewport rectangle, immune to the surrounding page's layout.
+		// Created once (not per rebuild) whenever cell polygons are possible at
+		// all; pointermove below no-ops while index is unset (raster mode, or
+		// before the first vector load finishes)
+		const tip = needCellPolys
+			? mapDiv
+					.append('div')
+					.attr('data-testid', 'sjpp-wsi-tooltip') // stable hook for e2e tests
+					.style('position', 'fixed')
+					.style('display', 'none')
+					.style('z-index', '20')
+					.style('pointer-events', 'none') // never steal the pointer from the map
+					.style('background', 'rgba(255,255,255,0.9)')
+					.style('padding', '4px 8px')
+					.style('border-radius', '4px')
+					.style('font', '12px system-ui')
+					.style('white-space', 'pre') // one datum per line via \n
+			: undefined
+
+		function teardownVector() {
+			for (const l of vectorLayers) map.removeLayer(l)
+			vectorLayers = []
+			for (const el of legendEls) {
+				el.remove()
+				const i = pinned.findIndex(p => p.box === el)
+				if (i >= 0) pinned.splice(i, 1)
+			}
+			legendEls = []
+			cellPolys = undefined
+			cellTypes = undefined
+			index = undefined
+			tip?.style('display', 'none')
+		}
+
+		/** (Re)fetches boundaries/annotations scoped to `bbox` (µm) and rebuilds
+		 every vector layer + legend from them. Called by updateMode() whenever
+		 the view enters vector mode or pans somewhere not already loaded. */
+		async function buildVector(bbox: [number, number, number, number]) {
+			teardownVector()
+			const bboxParam = bbox.join(',')
+			for (const [kind, wanted, color] of [
+				['cell', needCellPolys, 'rgba(0, 200, 80, 0.9)'],
+				['nucleus', needCellPolys && !opts.hideNucleusStrokes, 'rgba(0, 150, 255, 0.9)']
+			] as const) {
+				if (!wanted) continue // that overlay was not requested
+				try {
+					const polys = await fetchBoundaries(
+						host,
+						sq,
+						opts.spatialData!,
+						kind,
+						mppX,
+						mppY,
+						meta.spatialVersion,
+						bboxParam
+					) // h5ad -> px polygons
+					if (kind == 'cell') {
+						cellPolys = polys // expression/type fills + hover/lasso reuse these rings
+						if (opts.hideCellStrokes) continue // polygons fetched, strokes suppressed
+					}
+					const layer = strokeLayer(polys, color, maxResolution)
+					map.addLayer(layer) // draw on top of the slide
+					vectorLayers.push(layer)
+				} catch (e: any) {
+					sayerror(holder, `Error loading ${kind} boundaries: ${e.message || e}`) // one overlay failing kills nothing else
+				}
+			}
+
+			// default framing: fit the view to this sample's own cells instead of
+			// leaving the whole-slide overview from map.getView().fit(extent) above.
+			// On a well-cropped single-section slide the two are nearly identical
+			// (cells already fill most of the frame), but some raw exports are a
+			// shared multi-section slide where this sample's own tissue is a small
+			// fraction of the image (e.g. two GEO accessions imaged on one physical
+			// Xenium slide) — framing on the canvas there leaves the cells
+			// imperceptibly small, which looks like missing boundaries/annotations.
+			// Skipped when opts.focus already picked a specific niche (the
+			// similar-search preview re-entering this module above), and after
+			// the first load — later rebuilds follow the user's own pan/zoom.
+			if (firstBuild && !opts.focus && cellPolys?.length) {
+				// a manual min/max scan, not Math.min(...xs): a large sample's
+				// vertex count (500k+) can exceed the engine's max call arguments
+				let minX = Infinity,
+					minY = Infinity,
+					maxX = -Infinity,
+					maxY = -Infinity
+				for (const { ring } of cellPolys) {
+					for (const [x, y] of ring) {
+						if (x < minX) minX = x
+						if (x > maxX) maxX = x
+						if (y < minY) minY = y
+						if (y > maxY) maxY = y
+					}
+				}
+				map.getView().fit([minX, minY, maxX, maxY], { padding: [40, 40, 40, 40] })
+			}
+			firstBuild = false
+
+			// per-cell annotations from the h5ad, as JSON {cells:{cell_id:type}} —
+			// cell types are free text, so they never travel as CSV; feeds the
+			// type fills + tooltip. Useless without the cell polygons.
+			if (needCellPolys && cellPolys) {
+				try {
+					const r = await dofetch3(
+						`wsitiles/annotations?${sq}&file=${encodeURIComponent(opts.spatialData!)}&bbox=${bboxParam}&v=${
+							meta.spatialVersion || 0
+						}`
+					)
+					if (!r || r.error) throw new Error(r?.error || 'failed to load annotations')
+					cellTypes = r.cells // the id->type map, served ready to use
+				} catch (e: any) {
+					sayerror(holder, `Error loading annotations: ${e.message || e}`) // overlay lost, viewer lives
+				}
+			}
+
+			// cell-type overlay: fill each annotated cell in its type's categorical
+			// color (the stable typeColor/shownColor built above), with its own
+			// legend (top-left; the gene legend uses top-right). No-op when this
+			// view's cells held no annotated types.
+			// While it is shown, the gene expression FILLS are suppressed below (the
+			// two fills are unreadable on top of each other) — gene counts are still
+			// shown in the hover tooltip.
+			const typesShown = !!(opts.showCellTypes && cellPolys && cellTypes && Object.keys(cellTypes).length)
+			if (typesShown && cellPolys && cellTypes) {
+				const counts: { [t: string]: number } = Object.create(null) // cells per type, for the legend
+				for (const id in cellTypes) counts[cellTypes[id]] = (counts[cellTypes[id]] || 0) + 1 // tally
+				const shown = shownTypes.filter(t => counts[t]) // only types actually present in THIS view
+				const layer = cellTypeLayer(cellPolys, cellTypes, shownColor) // draw the type fills
+				map.addLayer(layer)
+				vectorLayers.push(layer)
+
+				// the type legend box, over the map's top-left; repin() places it
+				const legend = mapDiv
+					.append('div')
+					.attr('data-testid', 'sjpp-wsi-typelegend') // stable hook for tests
+					.style('position', 'fixed') // viewport-placed by repin(), confined to the map's rectangle
+					.style('z-index', '10')
+					.style('background', 'rgba(255,255,255,0.85)')
+					.style('padding', '6px 10px')
+					.style('border-radius', '4px')
+					.style('font', '12px system-ui')
+					.style('max-height', '50vh')
+					.style('overflow-y', 'auto')
+				legend.append('div').style('font-weight', 'bold').style('margin-bottom', '2px').text('Cell type') // title
+				for (const t of shown) {
+					const row = legend.append('div').style('margin', '2px 0') // one legend row per type
+					row // the type's color swatch
+						.append('span')
+						.style('display', 'inline-block')
+						.style('width', '10px')
+						.style('height', '10px')
+						.style('margin-right', '6px')
+						.style('border', '1px solid #ccc')
+						.style('background', `rgb(${typeColor[t]})`)
+					row.append('span').text(`${t} (${counts[t]})`) // type name + its cell count in THIS view
+				}
+				pinned.push({ box: legend, side: 'left' }) // top-left corner, clear of the zoom buttons
+				legendEls.push(legend)
+				repin() // place it now; scrolling keeps it placed
+			}
+
+			// gene expression fills, from the whole-sample geneCounts fetched once
+			// above -- only which cells to actually draw changes per rebuild
+			if (cellPolys && geneCounts.length && !typesShown && !opts.hideExpressionFills) {
 				// legend overlaid on the map's top-right corner — anything appended
 				// below the 90vh map div lands below the fold and is never seen.
 				// Created lazily so an all-errors run doesn't leave an empty box.
@@ -485,6 +619,7 @@ layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['sty
 							.style('border-radius', '4px')
 							.style('font', '12px system-ui')
 						pinned.push({ box: legend, side: 'right' }) // hug the map's top-right corner
+						legendEls.push(legend)
 					}
 					const row = legend.append('div').style('margin', '2px 0') // one legend row per gene
 					row.append('span').style('margin-right', '6px').text(name) // the gene's name
@@ -500,62 +635,21 @@ layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['sty
 					row.append('span').style('margin-left', '4px').text(`1–${max}`) // the count range the gradient spans
 					repin() // re-place: each added row changes the legend's size
 				}
-
-				// gene_expression: one layer per gene, each its own color
-				let colorIdx = 0 // next palette slot; shared with the group overlay
-				for (const [i, gene] of exprGenes.entries()) {
-					const r = results[i] // this gene's genecounts answer
-					if (!r || r.error) {
-						sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`) // surface it
-						continue // one bad gene doesn't block the others
-					}
-					geneCounts.push({ gene, cells: r.cells }) // tooltip shows this gene's per-cell count
-					// cell-type fills win / fills unchecked; counts stay hover-only
-					if (typesShown || opts.hideExpressionFills) continue
-					const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length] // this gene's fill color
-					map.addLayer(expressionLayer(cellPolys, r.cells, r.max, rgb)) // fill the expressing cells
-					addLegend(rgb, gene, r.max) // gradient + count range in the legend
+				let colorIdx = 0 // next palette slot; expr genes then the group overlay, same order as the fetch above
+				for (const g of geneCounts) {
+					const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length]
+					const layer = expressionLayer(cellPolys, g.cells, g.max, rgb) // fill the expressing cells
+					map.addLayer(layer)
+					vectorLayers.push(layer)
+					addLegend(rgb, g.gene, g.max) // gradient + count range in the legend
 				}
-
-				// gene_groups: sum each cell's counts over the group, one layer/color
-				if (groupGenes.length) {
-					const total: { [id: string]: number } = {} // per-cell sum across the group
-					const found: string[] = [] // genes that actually answered
-					for (const [i, gene] of groupGenes.entries()) {
-						const r = results[exprGenes.length + i] // group answers follow the expr ones
-						if (!r || r.error) {
-							sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`) // surface it
-							continue // skip the missing gene, keep summing the rest
-						}
-						found.push(gene) // this gene contributes to the sum
-						for (const id in r.cells) total[id] = (total[id] || 0) + r.cells[id] // accumulate per cell
-					}
-					if (found.length) {
-						geneCounts.push({ gene: found.join('+'), cells: total }) // summed count in the tooltip
-						if (!typesShown && !opts.hideExpressionFills) {
-							// fills allowed (no cell-type overlay, checkbox on): draw the sum
-							let max = 0 // the summed overlay's own count ceiling
-							for (const id in total) if (total[id] > max) max = total[id] // find it
-							const rgb = GENE_COLORS[colorIdx++ % GENE_COLORS.length] // next unused palette color
-							map.addLayer(expressionLayer(cellPolys, total, max, rgb)) // ONE overlay of the totals
-							addLegend(rgb, found.join('+'), max) // e.g. 'PTPRC+EPCAM'
-						}
-					}
-				}
-			} catch (e: any) {
-				sayerror(holder, `Gene expression error: ${e.message || e}`) // config errors from the throws above
 			}
-		}
 
-		// hover tooltip: cell id, annotated type, per-gene counts. Active only
-		// while the boundary strokes are visible, i.e. zoomed within
-		// annotation_level (always, when that param is not set).
-		if (cellPolys) {
-			// spatial index over the cell bounding boxes, built once: each
-			// pointermove queries only the handful of cells whose bbox contains
-			// the pointer instead of scanning all ~100k (OL's bundled rbush)
-			const index = new RBush<CellPoly>()
-			for (const c of cellPolys) {
+			// spatial index over the cell bounding boxes, rebuilt per view: the
+			// hover/lasso listeners below (set up once, outside buildVector) read
+			// this `let` by reference, so they always see the latest view's cells
+			index = new RBush<CellPoly>()
+			for (const c of cellPolys || []) {
 				let minX = Infinity, // the ring's bounding box
 					minY = Infinity,
 					maxX = -Infinity,
@@ -568,29 +662,24 @@ layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['sty
 				}
 				index.insert([minX, minY, maxX, maxY], c) // bbox -> its cell
 			}
-			// the tooltip box, following the cursor; fixed and placed from the
-			// map's viewport rectangle, immune to the surrounding page's layout
-			const tip = mapDiv
-				.append('div')
-				.attr('data-testid', 'sjpp-wsi-tooltip') // stable hook for e2e tests
-				.style('position', 'fixed')
-				.style('display', 'none')
-				.style('z-index', '20')
-				.style('pointer-events', 'none') // never steal the pointer from the map
-				.style('background', 'rgba(255,255,255,0.9)')
-				.style('padding', '4px 8px')
-				.style('border-radius', '4px')
-				.style('font', '12px system-ui')
-				.style('white-space', 'pre') // one datum per line via \n
+		}
+
+		// hover tooltip: cell id, annotated type, per-gene counts. Set up once;
+		// no-ops while index is unset (raster mode) or outside annotation_level.
+		if (needCellPolys) {
 			// zooming without moving the mouse fires no pointermove, which would
 			// leave a stale tooltip up (e.g. wheel-zooming out past
 			// annotation_level); hide on every zoom change — the next pointermove
 			// re-shows it when a cell is under the cursor and the zoom allows
-			map.getView().on('change:resolution', () => tip.style('display', 'none'))
+			map.getView().on('change:resolution', () => tip!.style('display', 'none'))
 			map.on('pointermove', (evt: any) => {
 				const res = map.getView().getResolution() // current zoom, in map units/px
-				if (evt.dragging || (maxResolution !== undefined && !(typeof res == 'number' && res < maxResolution))) {
-					tip.style('display', 'none') // panning, or zoomed out past annotation_level
+				if (
+					!index ||
+					evt.dragging ||
+					(maxResolution !== undefined && !(typeof res == 'number' && res < maxResolution))
+				) {
+					tip!.style('display', 'none') // no cells loaded, panning, or zoomed out past annotation_level
 					return
 				}
 				const [x, y] = evt.coordinate // pointer position in map (level-0 px) coords
@@ -603,12 +692,12 @@ layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['sty
 					}
 				}
 				if (!hit) {
-					tip.style('display', 'none') // pointer over no cell
+					tip!.style('display', 'none') // pointer over no cell
 					return
 				}
 				const rows = tooltipRows(hit.id, cellTypes, geneCounts) // the tooltip's lines
 				const mr = mapDiv.node().getBoundingClientRect() // map rect: OL pixel -> viewport coords
-				tip // place the box just below-right of the cursor and fill it
+				tip! // place the box just below-right of the cursor and fill it
 					.style('display', 'block')
 					.style('left', `${mr.left + evt.pixel[0] + 12}px`)
 					.style('top', `${mr.top + evt.pixel[1] + 12}px`)
@@ -619,7 +708,8 @@ layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['sty
 			// the cells whose centroid falls inside it are listed in a menu.
 			// Reuses the hover index: only cells whose bbox meets the lasso's
 			// extent are ray-cast. Not gated by annotation_level — a region can
-			// be selected at any zoom.
+			// be selected at any zoom, but only while in vector mode (see
+			// setLassoEnabled, called from updateMode below).
 			const lassoSource = new VectorSource() // holds the one drawn ring
 			map.addLayer(
 				new VectorLayer({
@@ -633,6 +723,7 @@ layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['sty
 			const draw = new Draw({ source: lassoSource, type: 'Polygon', freehand: true }) // the lasso itself
 			const lassoMenu = new Menu({ padding: '8px', testid: 'sjpp-wsi-lasso-menu' }) // the selection popup
 			let lassoOn = false // whether the Draw interaction is on the map
+			let lassoEnabled = false // whether the button may be toggled at all (vector mode only)
 			// the toggle lives in an OL control so it sits inside the map's
 			// viewport with the zoom buttons (just below them)
 			const ctl = document.createElement('div') // the control's element
@@ -648,6 +739,7 @@ layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['sty
 				title: 'Lasso: drag to select cells',
 				enabled: false, // starts off; the handler repaints the button
 				handler: () => {
+					if (!lassoEnabled) return // raster mode (too many cells in view): draw a smaller view first
 					lassoOn = !lassoOn
 					btn.select('button').style('background-color', lassoOn ? 'rgb(207, 226, 243)' : 'transparent') // on = tinted
 					if (lassoOn) map.addInteraction(draw) // drags now draw instead of panning
@@ -658,60 +750,200 @@ layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['sty
 					}
 				}
 			})
+			/** vector mode only: raster mode's cell count is, by definition, too
+			 large for the lasso's own selection/enrichment flow to stay cheap */
+			function setLassoEnabled(on: boolean) {
+				lassoEnabled = on
+				btn
+					.select('button')
+					.style('opacity', on ? '1' : '0.35')
+					.style('cursor', on ? 'pointer' : 'not-allowed')
+				if (!on && lassoOn) {
+					lassoOn = false
+					map.removeInteraction(draw)
+					lassoSource.clear()
+					lassoMenu.hide()
+					btn.select('button').style('background-color', 'transparent')
+				}
+			}
 			draw.on('drawstart', () => {
 				lassoSource.clear() // one lasso at a time
 				lassoMenu.hide()
-			})
-			draw.on('drawend', (evt: any) => {
-				const geom = evt.feature.getGeometry() // the finished polygon
-				const ring: number[][] = geom.getCoordinates()[0] // its outer ring, map coords
-				const hits = cellsInLasso(ring, index.getInExtent(geom.getExtent())) // bbox prefilter, then ray cast
-				const px = map.getPixelFromCoordinate(ring[ring.length - 1]) // where the pointer was released
-				const mr = mapDiv.node().getBoundingClientRect() // map rect: OL pixel -> viewport coords
-				showLassoMenu(lassoMenu, hits, cellTypes, mr.left + px[0], mr.top + px[1], runNhood)
 			})
 
 			// neighborhood enrichment of the lasso selection: the server reads the
 			// selected cells' centroids and types from the h5ad, so only ids travel.
 			// Rendered into a panel under the map (replacing the previous run) so
-			// the result outlives the menu. Absent without annotations: the
-			// analysis is over cell types.
-			const runNhood =
+			// the result outlives the menu. A function declaration (not const/let):
+			// drawend below references it before this textual point, which is fine
+			// since drawend only ever runs later, after setup finishes -- but a
+			// hoisted declaration sidesteps the ordering question entirely.
+			async function runNhood(ids: string[], k = 6, perms = 1000) {
+				lassoMenu.hide()
+				resultsDiv.selectAll('*').remove() // one panel at a time
+				const panel = resultsDiv
+					.append('div')
+					.attr('data-testid', 'sjpp-wsi-nhood')
+					.style('margin', '8px')
+					.style('font', '12px system-ui')
+				panel
+					.append('div')
+					.text(`Neighborhood enrichment: running on ${ids.length} cells, k=${k}, ${perms} permutations …`) // permutations take a moment
+				try {
+					const r = await dofetch3(`wsitiles/nhood?${sq}`, {
+						method: 'POST', // explicit: dofetch3's GET path would URL-encode the id list (and re-encode it as strings past the URL length limit)
+						body: { file: opts.spatialData, ids, k, perms }
+					})
+					if (!r || r.error) throw new Error(r?.error || 'failed to compute neighborhood enrichment')
+					panel.selectAll('*').remove()
+					// the panel's k/permutation controls rerun on the SAME selection
+					renderNhoodHeatmap(panel, r, (k2, p2) => runNhood(ids, k2, p2))
+					// offer to search this sample (any mode) or the dataset's other
+					// spatial samples (dataset-addressed mode only) for a
+					// similarly-composed, similarly-organized region
+					await renderSimilarSearch(panel, opts, r, ids, sq)
+				} catch (e: any) {
+					panel.selectAll('*').remove()
+					sayerror(panel, `Neighborhood enrichment error: ${e.message || e}`) // the lasso and viewer live on
+				}
+			}
+
+			draw.on('drawend', (evt: any) => {
+				if (!index) return // defensive: the button is disabled whenever index is unset
+				const geom = evt.feature.getGeometry() // the finished polygon
+				const ring: number[][] = geom.getCoordinates()[0] // its outer ring, map coords
+				const hits = cellsInLasso(ring, index.getInExtent(geom.getExtent())) // bbox prefilter, then ray cast
+				const px = map.getPixelFromCoordinate(ring[ring.length - 1]) // where the pointer was released
+				const mr = mapDiv.node().getBoundingClientRect() // map rect: OL pixel -> viewport coords
 				// nhood_enrichment needs >= 2 distinct annotated types to build a
 				// meaningful type-by-type matrix (server-side validation agrees: see
 				// wsi_tile.py's own "needs at least 2 cell types" check) — offering the
-				// menu item for a single-type selection would only error after the fact
-				opts.spatialData && cellTypes && new Set(Object.values(cellTypes)).size >= 2
-					? async (ids: string[], k = 6, perms = 1000) => {
-							lassoMenu.hide()
-							resultsDiv.selectAll('*').remove() // one panel at a time
-							const panel = resultsDiv
-								.append('div')
-								.attr('data-testid', 'sjpp-wsi-nhood')
-								.style('margin', '8px')
-								.style('font', '12px system-ui')
-							panel
-								.append('div')
-								.text(`Neighborhood enrichment: running on ${ids.length} cells, k=${k}, ${perms} permutations …`) // permutations take a moment
-							try {
-								const r = await dofetch3(`wsitiles/nhood?${sq}`, {
-									method: 'POST', // explicit: dofetch3's GET path would URL-encode the id list (and re-encode it as strings past the URL length limit)
-									body: { file: opts.spatialData, ids, k, perms }
-								})
-								if (!r || r.error) throw new Error(r?.error || 'failed to compute neighborhood enrichment')
-								panel.selectAll('*').remove()
-								// the panel's k/permutation controls rerun on the SAME selection
-								renderNhoodHeatmap(panel, r, (k2, p2) => runNhood!(ids, k2, p2))
-								// offer to search this sample (any mode) or the dataset's other
-								// spatial samples (dataset-addressed mode only) for a
-								// similarly-composed, similarly-organized region
-								await renderSimilarSearch(panel, opts, r, ids, sq)
-							} catch (e: any) {
-								panel.selectAll('*').remove()
-								sayerror(panel, `Neighborhood enrichment error: ${e.message || e}`) // the lasso and viewer live on
-							}
-					  }
-					: undefined
+				// menu item for a single-type selection would only error after the fact.
+				// Evaluated now (not once at setup): cellTypes changes every rebuild.
+				const offerNhood = opts.spatialData && cellTypes && new Set(Object.values(cellTypes)).size >= 2
+				showLassoMenu(lassoMenu, hits, cellTypes, mr.left + px[0], mr.top + px[1], offerNhood ? runNhood : undefined)
+			})
+
+			// the raster overlay: ONE persistent Zoomify-tiled layer (same tile
+			// grid/addressing as the slide itself), created lazily and just
+			// shown/hidden by updateMode -- cheaper than tearing down/rebuilding
+			// per transition, and its own tiles are cached server-side per
+			// (h5ad version, tile, color assignment) like /tile
+			let rasterLayer: TileLayer | undefined
+			function ensureRasterLayer(): TileLayer {
+				if (rasterLayer) return rasterLayer
+				const colors = encodeURIComponent(JSON.stringify(shownColor))
+				const source = new Zoomify({
+					url: `${host}/wsitiles/overlaytile/{z}/{x}/{y}?${sq}&file=${encodeURIComponent(
+						opts.spatialData!
+					)}&slide_w=${w}&slide_h=${h}&mpp_x=${mppX}&mpp_y=${mppY}&colors=${colors}&v=${
+						meta.spatialVersion || 0
+					}&_={TileGroup}`,
+					size: [w, h],
+					crossOrigin: 'anonymous',
+					zDirection: -1
+				})
+				rasterLayer = new TileLayer({ source }) // no maxResolution: fills show at all zooms, like the vector ones
+				map.addLayer(rasterLayer)
+				return rasterLayer
+			}
+			// the raster legend: same type -> color swatches as vector mode's own
+			// (section 5's "Cell-type filter"), but with no per-view counts -- raster
+			// mode never fetches per-cell annotations, so there is nothing to count.
+			// Built once and shown/hidden alongside the raster layer, separately from
+			// vector mode's own legend (which teardownVector()/buildVector() manage).
+			let rasterLegend: any
+			function ensureRasterLegend() {
+				if (rasterLegend) return rasterLegend
+				const legend = mapDiv
+					.append('div')
+					// its own testid, not vector mode's 'sjpp-wsi-typelegend': rows here
+					// never carry a per-cell count (see below), so the two shouldn't be
+					// mistaken for each other by anything asserting on that shape
+					.attr('data-testid', 'sjpp-wsi-raster-typelegend')
+					.style('position', 'fixed')
+					.style('z-index', '10')
+					.style('background', 'rgba(255,255,255,0.85)')
+					.style('padding', '6px 10px')
+					.style('border-radius', '4px')
+					.style('font', '12px system-ui')
+					.style('max-height', '50vh')
+					.style('overflow-y', 'auto')
+				legend.append('div').style('font-weight', 'bold').style('margin-bottom', '2px').text('Cell type')
+				for (const t of shownTypes) {
+					const row = legend.append('div').style('margin', '2px 0')
+					row
+						.append('span')
+						.style('display', 'inline-block')
+						.style('width', '10px')
+						.style('height', '10px')
+						.style('margin-right', '6px')
+						.style('border', '1px solid #ccc')
+						.style('background', `rgb(${typeColor[t]})`)
+					row.append('span').text(t) // no per-cell count: raster mode never fetches annotations
+				}
+				pinned.push({ box: legend, side: 'left' })
+				rasterLegend = legend
+				return legend
+			}
+			function showRaster() {
+				if (!rasterEnabled) return
+				ensureRasterLayer().setVisible(true)
+				ensureRasterLegend().style('display', 'block')
+				repin()
+			}
+			function hideRaster() {
+				rasterLayer?.setVisible(false)
+				rasterLegend?.style('display', 'none')
+			}
+
+			// the raster/vector switch itself: above cellCountLimit cells in the
+			// CURRENT view, show the raster overlay and disable the lasso; at or
+			// below it, fetch/draw this view's own cells as vectors (padded a
+			// little past the exact viewport so a small pan doesn't immediately
+			// require a refetch) and enable the lasso. Checked on load and on
+			// every pan/zoom (moveend); a transient /cellcount failure just
+			// leaves the current mode in place rather than guessing.
+			let mode: 'vector' | 'raster' | undefined
+			let loadedBbox: [number, number, number, number] | undefined
+			async function updateMode() {
+				const ext = map.getView().calculateExtent() as [number, number, number, number]
+				const bbox = viewBboxUm(ext, mppX, mppY)
+				let count: number
+				try {
+					const r = await dofetch3(
+						`wsitiles/cellcount?${sq}&file=${encodeURIComponent(opts.spatialData!)}&bbox=${bbox.join(',')}&v=${
+							meta.spatialVersion || 0
+						}`
+					)
+					if (!r || r.error) throw new Error(r?.error || 'failed to count cells')
+					count = r.count
+				} catch (e: any) {
+					sayerror(holder, `Cell count error: ${e.message || e}`)
+					return // keep the current mode rather than guessing
+				}
+				const limit = opts.cellCountLimit ?? DEFAULT_CELL_COUNT_LIMIT
+				if (count > limit) {
+					if (mode !== 'raster') {
+						teardownVector()
+						showRaster()
+						mode = 'raster'
+						setLassoEnabled(false)
+					}
+				} else if (mode !== 'vector' || !loadedBbox || !bboxContains(loadedBbox, bbox)) {
+					hideRaster()
+					const fetchBbox = padBbox(bbox, 0.5) // margin so a small pan stays inside loadedBbox
+					await buildVector(fetchBbox)
+					loadedBbox = fetchBbox
+					mode = 'vector'
+					setLassoEnabled(true)
+				}
+			}
+
+			await updateMode() // the starting view's own mode
+			map.on('moveend', () => {
+				updateMode().catch((e: any) => sayerror(holder, `Cell count error: ${e.message || e}`))
+			})
 		}
 	} catch (e: any) {
 		loading.remove() // drop the placeholder before showing the error
@@ -794,7 +1026,7 @@ function showLassoMenu(
 		return
 	}
 	d.append('div').style('font-weight', 'bold').text(`${hits.length} cells selected`) // headline count
-const selectedTypes = new Set(hits.map(c => cellTypes?.[c.id]).filter(Boolean))
+	const selectedTypes = new Set(hits.map(c => cellTypes?.[c.id]).filter(Boolean))
 	if (runNhood && selectedTypes.size >= 2) {
 		// mirrors the route's ids*k*perms cap (server/src/routes/wsitiles.ts) at the
 		// default k=6/perms=1000 the button runs with, so an oversized lasso gets an
@@ -854,10 +1086,15 @@ async function fetchBoundaries(
 	/** meta.spatialVersion (the h5ad's own mtime): the route caches this
 	 * response for an hour by URL, so a regenerated h5ad needs a new URL to
 	 * bust the browser's copy — mirrors the tile URLs' own v=<slide mtime> */
-	version?: number
+	version?: number,
+	/** 'x0,y0,x1,y1' µm, optional: restricts to this viewport instead of the
+	 whole sample (see updateMode) */
+	bbox?: string
 ): Promise<CellPoly[]> {
 	const res = await fetch(
-		`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}&kind=${kind}&v=${version || 0}`
+		`${host}/wsitiles/boundaries?${sq}&file=${encodeURIComponent(file)}&kind=${kind}&v=${version || 0}${
+			bbox ? `&bbox=${bbox}` : ''
+		}`
 	) // raw csv text
 	if (!res.ok) throw new Error(`${res.status} ${res.statusText}`) // http failure = overlay error banner
 	return parseBoundaries(await res.text(), mppX, mppY) // csv -> polygons
@@ -910,6 +1147,34 @@ export function focusExtent(
 ): [number, number, number, number] {
 	const half = window / 2
 	return [(cx - half) / mppX, -(cy + half) / mppY, (cx + half) / mppX, -(cy - half) / mppY]
+}
+
+/** The inverse of focusExtent's µm -> level-0 px transform: the current map
+ view extent (OL coordinates) back to a µm bbox — what wsitiles/cellcount,
+ /boundaries and /annotations' own ?bbox= expects. (exported for tests) */
+export function viewBboxUm(
+	/** map view extent [minX, minY, maxX, maxY], level-0 px */
+	extent: [number, number, number, number],
+	mppX: number,
+	mppY: number
+): [number, number, number, number] {
+	const [minX, minY, maxX, maxY] = extent
+	return [minX * mppX, -maxY * mppY, maxX * mppX, -minY * mppY]
+}
+
+/** Grows a µm bbox by `frac` of its own width/height on each side, so a small
+ pan within an already-fetched vector region doesn't immediately require a
+ refetch (see updateMode's `contains` check). */
+function padBbox(bbox: [number, number, number, number], frac: number): [number, number, number, number] {
+	const [x0, y0, x1, y1] = bbox
+	const px = (x1 - x0) * frac
+	const py = (y1 - y0) * frac
+	return [x0 - px, y0 - py, x1 + px, y1 + py]
+}
+
+/** Is `inner` fully within `outer` (both µm bboxes)? */
+function bboxContains(outer: [number, number, number, number], inner: [number, number, number, number]): boolean {
+	return inner[0] >= outer[0] && inner[1] >= outer[1] && inner[2] <= outer[2] && inner[3] <= outer[3]
 }
 
 /** One stroke-only vector layer holding every polygon; maxResolution (when

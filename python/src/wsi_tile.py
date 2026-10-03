@@ -293,6 +293,110 @@ def _h5ad_index(f, df):
     return f[df][key][:].astype(str)
 
 
+def _bbox_cell_ids(f, bbox):
+    """Cell ids (obs order) whose own centroid (obsm/spatial) falls within
+    bbox = (x0, y0, x1, y1), um. Centroid-based membership, not an exact
+    polygon clip: obsm/spatial is tiny compared to the boundary polygons (2
+    floats/cell vs ~25 vertices), so this stays fast regardless of sample
+    size — the whole point of the viewport-scoped actions it backs. Drawing
+    code that wants rings reaching slightly past the box (e.g. overlay_tile,
+    to avoid a seam at tile edges) passes an already-padded bbox in."""
+    x0, y0, x1, y1 = bbox
+    xy = f["obsm/spatial"][:]
+    ids = _h5ad_index(f, "obs")
+    mask = (xy[:, 0] >= x0) & (xy[:, 0] < x1) & (xy[:, 1] >= y0) & (xy[:, 1] < y1)
+    return ids[mask]
+
+
+def h5ad_cell_count(h5ad, bbox=None):
+    """Cheap cell count for a spatial .h5ad, overall or within a um bbox —
+    only obsm/spatial, never the boundary polygons, so this stays fast
+    regardless of sample size. Drives wsi.direct.ts's raster-vs-vector
+    decision for the current view: above cellCountLimit cells in view, it
+    shows a server-rendered raster overlay tile (overlay_tile) instead of
+    fetching per-cell vector data for that many cells."""
+    import h5py
+    with h5py.File(h5ad, "r") as f:
+        if bbox is None:
+            return {"count": int(f["obsm/spatial"].shape[0])}
+        return {"count": int(len(_bbox_cell_ids(f, bbox)))}
+
+
+def _rgb_to_rgba(rgb_color, alpha=255):
+    """'r, g, b' (the client's own CELL_TYPE_COLORS format, wsi.direct.ts) ->
+    (r, g, b, alpha), for PIL's fill= argument."""
+    r, g, b = (int(v) for v in rgb_color.split(","))
+    return (r, g, b, alpha)
+
+
+def overlay_tile(h5ad, slide_w, slide_h, z, x, y, mpp_x, mpp_y, type_colors):
+    """Renders one Zoomify {z,x,y} tile (same geometry tile() uses, via
+    tile_region()) of the sample's cell-type fills directly as a
+    transparent-background PNG, instead of shipping per-cell vector data —
+    used once a view's own cell count exceeds cellCountLimit
+    (wsi.direct.ts), where fetching boundaries/annotations the normal way
+    would scale with the sample's TOTAL cell count regardless of how few are
+    actually visible at that zoom.
+
+    type_colors: {type: 'r, g, b'}, the SAME categorical palette the
+    client's vector-mode legend already assigned (passed in, not recomputed
+    here, in wsi.direct.ts's own CELL_TYPE_COLORS format), so colors agree
+    between the two rendering paths. slide_w/h and mpp come from the
+    client's own already-fetched /meta — this never opens the slide file
+    itself, only the h5ad.
+
+    ponytail: fills only, no boundary strokes in raster mode yet — add a
+    second pass drawing each ring's outline if the overview needs them.
+    ponytail: scans every polygon in uns/cell_boundaries per tile (the store
+    isn't spatially sorted/indexed) — O(total cells), same cost h5ad_csv
+    already pays once per h5ad version. Fine while raster mode only kicks in
+    well above cellCountLimit (rare, zoomed-out views); add an on-disk
+    spatial index (e.g. an R-tree keyed by vertex bbox) if per-tile latency
+    at high cell counts becomes the bottleneck."""
+    import os
+    import h5py
+    from PIL import ImageDraw
+    reg = tile_region(slide_w, slide_h, z, x, y)
+    if reg is None:
+        raise ValueError(f"tile z={z} x={x} y={y} out of range")
+    x0_px, y0_px, w0_px, h0_px, out_w, out_h = reg
+    x0, y0 = x0_px * mpp_x, y0_px * mpp_y          # level-0 px -> um, this tile's box
+    x1, y1 = (x0_px + w0_px) * mpp_x, (y0_px + h0_px) * mpp_y
+    sx, sy = out_w / w0_px, out_h / h0_px          # um -> this tile's own output px
+    img = Image.new("RGBA", (out_w, out_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    with h5py.File(h5ad, "r") as f:
+        # a margin around the box (~max cell radius) so a cell whose centroid
+        # sits just outside still gets drawn if its polygon pokes in --
+        # trades a little redundant drawing across adjacent tiles for fewer
+        # missing-sliver seams at tile edges
+        margin = 15.0
+        keep_ids = set(_bbox_cell_ids(f, (x0 - margin, y0 - margin, x1 + margin, y1 + margin)).tolist())
+        if keep_ids:
+            types = _h5ad_cell_types(f)
+            ids = _h5ad_index(f, "obs")
+            id2type = dict(zip(ids.tolist(), types.tolist()))
+            b = f["uns/cell_boundaries"]
+            cb_ids = b["cell_id"][:].astype(str)
+            indptr = b["indptr"][:]
+            verts = b["vertices"][:]
+            for i, cid in enumerate(cb_ids):
+                if cid not in keep_ids:
+                    continue
+                color = type_colors.get(id2type.get(cid, ""))
+                if not color:
+                    continue  # unannotated, or a type the client didn't assign a color to
+                ring = verts[indptr[i]:indptr[i + 1]]
+                if len(ring) < 3:
+                    continue
+                px = [((vx - x0) * sx / mpp_x, (vy - y0) * sy / mpp_y) for vx, vy in ring]
+                draw.polygon(px, fill=_rgb_to_rgba(color, 180))
+    fd, out = tempfile.mkstemp(suffix=".png", prefix="wsioverlay-")
+    os.close(fd)
+    img.save(out, "PNG")
+    return out  # node caches, serves, deletes -- same contract as tile()
+
+
 def genenames(h5ad):
     """All gene names of a spatial .h5ad, in file order (the var index). Lets
     the client discover/validate genes instead of trusting configuration."""
@@ -342,18 +446,27 @@ def genecounts(h5ad, gene):
     }
 
 
-def h5ad_annotations(h5ad):
+def h5ad_annotations(h5ad, bbox=None):
     """Every annotated cell's type from a spatial .h5ad, as JSON — cell types
     are free text (may contain commas/quotes), so they travel as JSON, never
-    CSV. QC-filtered cells ('' type) are omitted."""
+    CSV. QC-filtered cells ('' type) are omitted.
+
+    bbox=(x0,y0,x1,y1) um, optional: restricts to cells whose centroid falls
+    in that box (see _bbox_cell_ids), same viewport-scoped use as h5ad_csv's
+    bbox param — not disk-cached by node for the same reason."""
     import h5py
     with h5py.File(h5ad, "r") as f:
         types = _h5ad_cell_types(f)                       # one string per cell, '' = untyped
         ids = _h5ad_index(f, "obs")                       # cell ids, obs order
-    return {"cells": {i: t for i, t in zip(ids.tolist(), types.tolist()) if t}}
+        keep = set(_bbox_cell_ids(f, bbox).tolist()) if bbox is not None else None
+    return {
+        "cells": {
+            i: t for i, t in zip(ids.tolist(), types.tolist()) if t and (keep is None or i in keep)
+        }
+    }
 
 
-def h5ad_annotations_file(h5ad):
+def h5ad_annotations_file(h5ad, bbox=None):
     """Same answer as h5ad_annotations(), written to a temp file and returned
     by path instead of printed to stdout directly — the route-facing action
     (server/src/routes/wsitiles.ts's /annotations), so node can stream the
@@ -365,7 +478,7 @@ def h5ad_annotations_file(h5ad):
     vertices), but the fix is identical and cheap, so it's applied
     preemptively rather than waiting for one to."""
     import os
-    data = h5ad_annotations(h5ad)
+    data = h5ad_annotations(h5ad, bbox)
     fd, out = tempfile.mkstemp(suffix=".json", prefix="wsih5ad_")
     try:
         with os.fdopen(fd, "w") as w:
@@ -397,15 +510,22 @@ def _h5ad_cell_types(f):
     raise ValueError(f"unsupported obs/cell_type layout {type(ct).__name__}")
 
 
-def h5ad_csv(h5ad, kind):
+def h5ad_csv(h5ad, kind, bbox=None):
     """Regenerate a boundary CSV from a spatial .h5ad's ragged polygon store
     (uns/{kind}_boundaries: cell_id[i] owns vertices[indptr[i]:indptr[i+1]]).
     kind: 'cell' | 'nucleus'. CSV is safe as this wire format because every
     column is a Xenium cell id or a number — never free text (cell types are
     served as JSON by h5ad_annotations instead). Writes the CSV to a temp
     file and returns its path (large output; same print-a-path contract as
-    tile()). Node caches the result per (h5ad mtime, kind) on disk, so this
-    ~700k-row extraction runs once per h5ad version, not per request."""
+    tile()). Node caches the whole-sample (bbox=None) result per (h5ad
+    mtime, kind) on disk, so this ~700k-row extraction runs once per h5ad
+    version, not per request.
+
+    bbox=(x0,y0,x1,y1) um, optional: restricts to cells whose centroid falls
+    in that box (see _bbox_cell_ids) — the under-cellCountLimit viewport
+    fetch wsi.direct.ts makes once a zoomed-in view's own cell count is small
+    enough for vector rendering. Bbox requests vary continuously with the
+    view, so node does NOT disk-cache these (see wsitiles.ts)."""
     import os
     import h5py
     # read (and thereby validate) the store BEFORE creating the temp file, so
@@ -415,11 +535,14 @@ def h5ad_csv(h5ad, kind):
         ids = b["cell_id"][:].astype(str)                    # one id per polygon
         indptr = b["indptr"][:]                              # ring offsets into vertices
         verts = b["vertices"][:]                             # (N, 2) um coordinates
+        keep = set(_bbox_cell_ids(f, bbox).tolist()) if bbox is not None else None
     fd, out = tempfile.mkstemp(suffix=".csv", prefix="wsih5ad_")
     try:
         with os.fdopen(fd, "w") as w:                        # closes the fd, error or not
             w.write('"cell_id","vertex_x","vertex_y"\n')
             for i, cid in enumerate(ids):
+                if keep is not None and cid not in keep:
+                    continue
                 for x, y in verts[indptr[i]:indptr[i + 1]]:
                     w.write(f'"{cid}",{x:.4f},{y:.4f}\n')
     except BaseException:
@@ -827,13 +950,20 @@ def main():
     elif job["action"] == "genenames":
         print(json.dumps(genenames(job["h5"]), separators=(",", ":")))
     elif job["action"] == "h5ad_csv":
-        print(h5ad_csv(job["h5ad"], job["kind"]))  # temp csv path
+        print(h5ad_csv(job["h5ad"], job["kind"], job.get("bbox")))  # temp csv path
     elif job["action"] == "h5ad_annotations":
-        print(json.dumps(h5ad_annotations(job["h5ad"]), separators=(",", ":")))
+        print(json.dumps(h5ad_annotations(job["h5ad"], job.get("bbox")), separators=(",", ":")))
     elif job["action"] == "h5ad_annotations_file":
-        print(h5ad_annotations_file(job["h5ad"]))  # temp json path
+        print(h5ad_annotations_file(job["h5ad"], job.get("bbox")))  # temp json path
     elif job["action"] == "h5ad_celltypes":
         print(json.dumps(h5ad_celltypes(job["h5ad"]), separators=(",", ":")))
+    elif job["action"] == "h5ad_cell_count":
+        print(json.dumps(h5ad_cell_count(job["h5ad"], job.get("bbox")), separators=(",", ":")))
+    elif job["action"] == "overlay_tile":
+        print(overlay_tile(
+            job["h5ad"], int(job["slide_w"]), int(job["slide_h"]),
+            int(job["z"]), int(job["x"]), int(job["y"]),
+            float(job["mpp_x"]), float(job["mpp_y"]), job["type_colors"]))  # temp png path
     elif job["action"] == "nhood":
         print(json.dumps(
             nhood_enrichment(job["h5ad"], job["ids"], job.get("k", 6), job.get("perms", 1000), job.get("seed", 0)),
