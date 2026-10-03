@@ -1,2 +1,2 @@
 Features:
-- PP_RUNTIME_CHECK=strict also applies to the dir-noexec check, which now also covers the mounts under each allowed write dir
+- stricter dir check during server startup
