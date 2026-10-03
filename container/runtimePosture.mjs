@@ -116,7 +116,12 @@ export function checkRuntimePosture({
 			// the dir's own mount, then the mounts under the dir that the process sees, since a write allowance
 			// for a dir also covers the paths under it
 			const mount = findMount(mounts, real)
-			const under = mounts.filter(m => m.mountPoint.startsWith(real + '/') && findMount(mounts, m.mountPoint) === m)
+		const under = mounts.filter(
+			m =>
+				m.mountPoint != real &&
+				(real == '/' || m.mountPoint.startsWith(real + '/')) &&
+				findMount(mounts, m.mountPoint) === m
+		)
 			for (const m of mount ? [mount, ...under] : under) {
 				// the noexec option does not matter for a ro mount, where nothing can be written
 				if (m.options.includes('noexec') || m.options.includes('ro') || reported.has(m)) continue
