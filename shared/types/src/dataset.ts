@@ -501,6 +501,63 @@ type NIdataQueryRef = {
 	sampleColumns?: { termid: string }[]
 }
 
+/** swimmer plot data: per-patient time intervals (treatment phases) and point events,
+served by the termdb/swimmer route and rendered by the mass "swimmer" chart.
+Both files are tab-delimited with a header row and are read by column position:
+- rangeFile: patient, category, start, end. a blank or NA end is an ongoing interval, drawn up to the lane end
+- pointFile: patient, event, time, and an optional 4th column naming a sample the event refers to
+  (e.g. a CSF sample id on a CSF collection event). that sample can be at any level
+Each lane is a patient: column 1 must match the sampleidmap.name of a sample of a root sample type
+(sample_types.parent_id is null, e.g. "<id>_patient"). The cohort/access
+filter resolves to leaf samples (getFilterSampleIdSet), so a patient lane passes when any of its samples
+does. Rows whose patient is not in the db or not of a root sample type are dropped at server launch with
+a console warning. */
+export type SwimmerQuery = {
+	/** (server-side) optional access rule, same contract as NIdata.checkDataAccess: receives the
+	route query (auth info at q.__protected__.clientAuthResult) and returns false to deny */
+	checkDataAccess?: (q: any) => boolean
+	/** tp-relative path to the interval file */
+	rangeFile?: string
+	/** tp-relative path to the event file */
+	pointFile?: string
+	/** x axis label, e.g. "Days after treatment started" */
+	timeLabel?: string
+	/** interval categories keyed by the raw value in rangeFile column 2. categories sharing a label are
+	merged in the legend (e.g. RT and CSI both labeled "CSI/RT"). unlisted categories get a default color */
+	categories?: { [category: string]: SwimmerLegendItem }
+	/** events keyed by the raw value in pointFile column 2. unlisted events get a default color */
+	events?: { [event: string]: SwimmerLegendItem }
+	/** event key (e.g. "Death") that terminates a lane; a lane with this event ends at its time,
+	otherwise at its latest event or interval end */
+	terminalEvent?: string
+	/** set at server launch by validate_query_swimmer(): sample types (sample_types.id, as strings like
+	term.sample_type) of the point samples (pointFile 4th column, e.g. CSF) of events with markBy:true. the
+	client lists only terms of these types to mark the linked points by. unset hides the "mark by" control */
+	pointSampleTypes?: string[]
+	/** set at server launch: keys of the markBy events that have point samples (e.g. CSF), for the control
+	label */
+	pointSampleEvents?: string[]
+	/** set at server launch by validate_query_swimmer(); parsed rows keyed by patient name. the patient's
+	samples come from ds.cohort.termdb.q.id2descendantIds() */
+	data?: Map<string, { sampleId: number; ranges: any[]; points: any[] }>
+}
+
+export type SwimmerLegendItem = {
+	label?: string
+	color?: string
+	/** events only: marker shape, a key of the client's shared shapes (client/dom/shapes.js, the same set
+	as the scatter plot "shape by"), e.g. filledCircle, filledTriangle, largeCross, filledEgg.
+	missing or unknown keys draw a filled circle */
+	shape?: string
+	/** events only: term ids of the point's own sample (the pointFile 4th column, e.g. a CSF sample) to list
+	in the hover tooltip, in this order. without it, the tooltip shows no annotations, as for other events.
+	ids missing from the termdb are dropped at server launch with a warning */
+	sampleTerms?: string[]
+	/** events only: set true to offer a "Mark <event label> by" control, coloring this event's markers by a
+	variable of their own samples (pointFile 4th column). needs linked samples; off by default */
+	markBy?: boolean
+}
+
 type NIdataQueryRefParams = {
 	/** index of slice for default sagittal plane */
 	l: number
@@ -1415,6 +1472,7 @@ type Mds3Queries = {
 	defaultCoord?: string
 	singleSampleMutation?: SingleSampleMutationQuery
 	NIdata?: NIdataQuery
+	swimmer?: SwimmerQuery
 	geneExpression?: GeneExpressionQuery
 	isoformExpression?: IsoformExpressionQuery
 	/** single-sample gsea precomputed scores for rnaseq samples, for genesets from geneset db

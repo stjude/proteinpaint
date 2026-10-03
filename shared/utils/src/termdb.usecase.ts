@@ -306,6 +306,26 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 			return uses
 		}
 
+		case 'swimmer': {
+			if (usecase.detail == 'pointTerm') {
+				/* term to mark the linked points by (e.g. CSF dots): only terms and branches of the point
+				samples' types (usecase.sampleTypes, from ds.queries.swimmer.pointSampleTypes). one marker has
+				one color, so multivalue is excluded; survival has no categories */
+				const types: string[] = usecase.sampleTypes || []
+				if (term.sample_type == null || !types.includes(String(term.sample_type))) return uses
+				const excluded = ['survival', 'multivalue']
+				if (graphableTypes.has(term.type) && !excluded.includes(term.type)) uses.add('plot')
+				if (hasAllowedChildTypes(child_types, excluded)) uses.add('branch')
+				return uses
+			}
+			/* divide-by (term0). multivalue is allowed: a lane is drawn in each
+			of its patient's groups. survival is excluded, as it has no categories to divide by */
+			const excluded = ['survival']
+			if (graphableTypes.has(term.type) && !excluded.includes(term.type)) uses.add('plot')
+			if (hasAllowedChildTypes(child_types, excluded)) uses.add('branch')
+			return uses
+		}
+
 		case 'dictionary':
 			// dictionary browsing must show every graphable term, including multivalue
 			if (graphableTypes.has(term.type)) uses.add('plot')
