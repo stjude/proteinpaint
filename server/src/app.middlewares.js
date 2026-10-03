@@ -269,12 +269,6 @@ function log(req) {
 	)
 }
 
-/*
-	The final error handler. An error passed to next(), such as an unreadable or oversized request
-	body, would otherwise get Express's default HTML error page, which includes the stack trace when
-	NODE_ENV is not 'production'. Reply with JSON instead, and only expose client-error messages.
-	A missing or invalid status (not 400-599) is answered as 500.
-*/
 // serves only index.html, for / and /index.html, and the cards/ files from dir, see serverconfig.frontPublicDir;
 // the dir static handler is reached only by the exact / and /index.html routes, and the cards static handler is
 // rooted at dir/cards, so that the other files in dir, if any, are not published
@@ -285,6 +279,12 @@ export function getFrontPublicFallback(dir) {
 	return router
 }
 
+/*
+	The final error handler. An error passed to next(), such as an unreadable or oversized request
+	body, would otherwise get Express's default HTML error page, which includes the stack trace when
+	NODE_ENV is not 'production'. Reply with JSON instead, and only expose client-error messages.
+	A missing or invalid status (not 400-599) is answered as 500.
+*/
 export function jsonErrorHandler(err, req, res, next) {
 	if (res.headersSent) return next(err)
 	const s = err?.status || err?.statusCode
