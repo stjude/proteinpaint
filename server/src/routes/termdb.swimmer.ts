@@ -219,7 +219,7 @@ export function parseSwimmerFiles(rangeText: string, pointText: string): ParsedS
 	for (const line of splitLines(rangeText)) {
 		const [sample, category, startStr, endStr] = line.split('\t').map(s => s.trim())
 		const start = Number(startStr)
-		if (!sample || !category || !Number.isFinite(start)) {
+		if (!sample || !category || !startStr || !Number.isFinite(start)) {
 			skipped.badRange++
 			continue
 		}
