@@ -221,8 +221,17 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 			// server-resolved default coordinate, used to seed the genome browser region picker
 			entry.coord = g.coord
 		}
+		if (dt.pseudobulk) {
+			entry.isPseudobulk = true
+		}
 		// only list a gene if it has at least one available data type / action
-		if (entry.isGeneExpression || entry.isGeneVariant || entry.isGenomeBrowser || entry.isMethylation) {
+		if (
+			entry.isGeneExpression ||
+			entry.isGeneVariant ||
+			entry.isGenomeBrowser ||
+			entry.isMethylation ||
+			entry.isPseudobulk
+		) {
 			geneMap.set(gene.toUpperCase(), entry)
 		}
 	}
@@ -483,29 +492,112 @@ export function setSearchRenderers(self: any) {
 		if (coord) addViewBtn(`Genomic view of ${gene}`, `sjpp-mass-chat-gb-genomic-${gene}`, 'genomic')
 	}
 
+	self.launchPseudobulkPlot = async (gene: string, holder: any, target: 'summary' | 'survival' = 'summary') => {
+		const terms = self.app.getState().termdbConfig?.termType2terms?.Pseudobulk || []
+		if (!terms.length) throw new Error('No pseudobulk terms configured for this dataset')
+
+		const pickerDiv = holder
+			.append('div')
+			.style('display', 'block')
+			.style('width', '400px')
+			.style('max-height', '300px')
+			.style('overflow', 'auto')
+			.style('border', 'solid 1px rgb(133,182,225)')
+			.style('border-radius', '5px')
+			.style('padding', '10px')
+			.style('margin', '4px 0')
+			.style('background-color', 'white')
+			.style('box-shadow', '0px 2px 4px 1px #999')
+
+		const outSideClick = (event: MouseEvent) => {
+			if (!pickerDiv.node().contains(event.target as Node)) {
+				pickerDiv.remove()
+				document.body.removeEventListener('mousedown', outSideClick)
+			}
+		}
+		document.body.addEventListener('mousedown', outSideClick)
+
+		pickerDiv
+			.append('div')
+			.style('font-weight', 'bold')
+			.style('margin-bottom', '5px')
+			.text('Select a cell type category')
+
+		const byMember = new Map<string, any[]>()
+		for (const term of terms) {
+			if (!byMember.has(term.memberId)) byMember.set(term.memberId, [])
+			byMember.get(term.memberId)!.push(term)
+		}
+
+		for (const [memberId, memberTerms] of byMember) {
+			pickerDiv
+				.append('div')
+				.style('font-weight', 'bold')
+				.style('margin-top', '8px')
+				.style('opacity', 0.7)
+				.text(memberId)
+			for (const term of memberTerms) {
+				pickerDiv
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.style('padding', '3px 8px')
+					.style('cursor', 'pointer')
+					.text(term.name)
+					.on('click', async () => {
+						document.body.removeEventListener('mousedown', outSideClick)
+						pickerDiv.remove()
+						const pseudobulkTerm = { ...term, gene, category: term.id }
+						if (target == 'survival') await self.launchSurvivalWithCovariate('term2', { term: pseudobulkTerm }, holder)
+						else await self.launchPlot({ chartType: 'summary', term: { term: pseudobulkTerm } })
+					})
+			}
+		}
+	}
+
 	// DNA methylation: open a genome browser at the gene's default coordinates inline in the result
 	// area with a "Submit Region" button (see embedMethylationRegionPicker above); on submit, open a
 	// violin plot of the region-based dnaMethylation term's per-sample beta values.
-	self.launchMethylationPlot = async (gene: string, coord: { chr: string; start: number; stop: number }) => {
+	self.launchMethylationPlot = async (
+		gene: string,
+		coord: { chr: string; start: number; stop: number },
+		holder: any,
+		target: 'summary' | 'survival' = 'summary'
+	) => {
 		// coord is the gene's default genomic coordinate, resolved server-side by the omnisearch
 		// (GeneMatch.coord) and used to seed the genome browser track — no genelookup request here.
 		if (!coord) throw new Error(`Could not resolve coordinates for gene "${gene}"`)
 
-		// render the region picker inline in the chat result area, replacing the result list
-		self.dom.tip.clear()
-		self.dom.tip.showunder(self.dom.inputNode)
-		const holder = self.dom.resultDiv.append('div').style('margin', '10px')
-		holder.append('div').style('margin-bottom', '5px').text(gene)
+		const pickerDiv = holder
+			.append('div')
+			.style('display', 'block')
+			.style('width', '800px')
+			.style('border', 'solid 1px rgb(133,182,225)')
+			.style('border-radius', '5px')
+			.style('padding', '10px')
+			.style('margin', '4px 0')
+			.style('background-color', 'white')
+			.style('box-shadow', '0px 2px 4px 1px #999')
+
+		const outsideClick = (event: MouseEvent) => {
+			if (!pickerDiv.node().contains(event.target as Node)) {
+				pickerDiv.remove()
+				document.body.removeEventListener('mousedown', outsideClick)
+			}
+		}
+		document.body.addEventListener('mousedown', outsideClick)
 
 		await embedMethylationRegionPicker({
-			holder: holder.append('div'),
+			holder: pickerDiv.append('div'),
 			genomeObj: self.app.opts.genome,
 			vocabApi: self.app.vocabApi,
 			chr: coord.chr,
 			start: coord.start,
 			stop: coord.stop,
 			callback: async (term: any) => {
-				await self.launchPlot({ chartType: 'summary', term: { term } })
+				document.body.removeEventListener('mousedown', outsideClick)
+				pickerDiv.remove()
+				if (target == 'survival') await self.launchSurvivalWithCovariate('term2', { term }, holder)
+				else await self.launchPlot({ chartType: 'summary', term: { term } })
 			}
 		})
 	}
@@ -515,20 +607,38 @@ export function setSearchRenderers(self: any) {
 	// term). survival's getPlotConfig() requires config.term to already be a resolved term wrapper, so
 	// unlike launchPlot() this can't dispatch directly — it must collect the outcome term first, mirroring
 	// charts.ts's showTree_select1term (which this component doesn't have access to, different class).
-	self.launchSurvivalWithCovariate = async (covariateField: 'term2', covariateTw: any) => {
-		self.dom.tip.clear()
-		self.dom.tip.showunder(self.dom.inputNode)
-		const action: any = { type: 'plot_create', config: { chartType: 'survival', [covariateField]: covariateTw } }
+	self.launchSurvivalWithCovariate = async (covariateField: 'term2', covariateTw: any, holder: any) => {
+		const config: any = { chartType: 'survival', [covariateField]: covariateTw }
 		const termdb = await import('../termdb/app')
+		const pickerDiv = holder
+			.append('div')
+			.style('display', 'block')
+			.style('width', '800px')
+			.style('border', 'solid 1px rgb(133,182,225)')
+			.style('border-radius', '5px')
+			.style('padding', '10px')
+			.style('margin', '4px 0')
+			.style('background-color', 'white')
+			.style('box-shadow', '0px 2px 4px 1px #999')
+
+		const outsideClick = (event: MouseEvent) => {
+			if (!pickerDiv.node().contains(event.target as Node)) {
+				pickerDiv.remove()
+				document.body.removeEventListener('mousedown', outsideClick)
+			}
+		}
+		document.body.addEventListener('mousedown', outsideClick)
+
 		termdb.appInit({
 			vocabApi: self.app.vocabApi,
-			holder: self.dom.tip.d.append('div'),
+			holder: pickerDiv, // was: self.dom.tip.d.append('div') — now renders inline in the bubble
 			state: { nav: { header_mode: 'search_only' }, tree: { usecase: { target: 'survival', detail: 'term' } } },
 			tree: {
 				click_term: (term: any) => {
-					action.config.term = term.term ? term : { term }
-					self.dom.tip.hide()
-					self.app.dispatch(action)
+					config.term = term.term ? term : { term }
+					document.body.removeEventListener('mousedown', outsideClick)
+					pickerDiv.remove()
+					self.app.dispatch({ type: 'plot_create', config })
 				}
 			}
 		})
@@ -537,8 +647,7 @@ export function setSearchRenderers(self: any) {
 	// Render the category rows for a selected gene (Gene expression / SNV-indel-CNV-SV-fusion /
 	// DNA methylation) into `holder` — one label + action button(s) per available category, reusing the
 	// exact same launch calls the old inline row used. "Survival" buttons are gated on the dataset
-	// allowing the survival term type at all; PSEUDO BULK is not yet implemented (needs server-side
-	// per-gene pseudobulk detection first).
+	// allowing the survival term type at all;
 	self.renderGeneCategories = (holder: any, item: any) => {
 		const hasSurvival = self.app.vocabApi.termdbConfig?.allowedTermTypes?.includes('survival')
 
@@ -553,8 +662,8 @@ export function setSearchRenderers(self: any) {
 		}
 		const addBtn = (row: any, label: string, testid: string, onClick: () => Promise<void>) => {
 			row
-				.append('span')
-				.attr('class', 'sja_menuoption')
+				.append('button')
+				.attr('class', 'sja_menuoption sjpp-mass-chat-btn')
 				.attr('data-testid', testid)
 				.style('display', 'inline-block')
 				.style('margin', '0px 3px')
@@ -575,9 +684,13 @@ export function setSearchRenderers(self: any) {
 			})
 			if (hasSurvival) {
 				addBtn(row, 'Survival', `sjpp-mass-chat-gene-exp-survival-${item.gene}`, async () => {
-					await self.launchSurvivalWithCovariate('term2', {
-						term: { gene: item.gene, name: item.name, type: 'geneExpression' }
-					})
+					await self.launchSurvivalWithCovariate(
+						'term2',
+						{
+							term: { gene: item.gene, name: item.name, type: 'geneExpression' }
+						},
+						row
+					)
 				})
 			}
 		}
@@ -586,15 +699,26 @@ export function setSearchRenderers(self: any) {
 			const label = (item.geneVariantTypes || []).map((vt: any) => vt.label).join('/')
 			const allDtCandidates = (item.geneVariantTypes || []).flatMap((vt: any) => vt.dtCandidates)
 			const row = addRow(label)
-			addBtn(row, 'Summary', `sjpp-mass-chat-gene-variant-${item.gene}`, async () => {
-				await self.launchGeneVariantPlot(item.gene, allDtCandidates)
-			})
-			addBtn(row, 'Protein view', `sjpp-mass-chat-gene-protein-${item.gene}`, async () => {
-				await self.launchGenomeBrowserView('protein', { gene: item.gene })
-			})
-			addBtn(row, 'Genome view', `sjpp-mass-chat-gene-genomic-${item.gene}`, async () => {
-				await self.launchGenomeBrowserView('genomic', { coord: item.coord })
-			})
+			const gbRestrictMode = self.app.getState().termdbConfig?.queries?.gbRestrictMode
+			const allowedTermTypes = self.app.getState().termdbConfig?.allowedTermTypes?.includes('geneVariant')
+			if (allowedTermTypes) {
+				addBtn(row, 'Summary', `sjpp-mass-chat-gene-variant-${item.gene}`, async () => {
+					await self.launchGeneVariantPlot(item.gene, allDtCandidates)
+				})
+			}
+
+			if (gbRestrictMode != 'genomic') {
+				addBtn(row, 'Protein view', `sjpp-mass-chat-gene-genomic-${item.gene}`, async () => {
+					await self.launchGenomeBrowserView('protein', { gene: item.gene })
+				})
+			}
+
+			if (gbRestrictMode != 'protein') {
+				addBtn(row, 'Genome view', `sjpp-mass-chat-gene-protein-${item.gene}`, async () => {
+					await self.launchGenomeBrowserView('genomic', { coord: item.coord })
+				})
+			}
+
 			// TODO Survival for this category: needs the same fillTermWrapper resolution
 			// launchGeneVariantPlot does, then launchSurvivalWithCovariate('term2', tw) instead of
 			// launchPlot(). Not yet built/verified.
@@ -603,8 +727,14 @@ export function setSearchRenderers(self: any) {
 		if (item.isMethylation) {
 			const row = addRow('DNA methylation')
 			addBtn(row, 'Summary', `sjpp-mass-chat-gene-methylation-${item.gene}`, async () => {
-				await self.launchMethylationPlot(item.gene, item.coord)
+				await self.launchMethylationPlot(item.gene, item.coord, row)
 			})
+
+			if (hasSurvival) {
+				addBtn(row, 'Survival', `sjpp-mass-chat-gene-methylation-survival-${item.gene}`, async () => {
+					await self.launchMethylationPlot(item.gene, item.coord, row, 'survival')
+				})
+			}
 			// TODO Survival for this category: needs the region-picker's resolved term passed to
 			// launchSurvivalWithCovariate('term2', {term}) instead of launchPlot(). Not yet built/verified.
 		}
@@ -614,6 +744,18 @@ export function setSearchRenderers(self: any) {
 		// (server/src/chat/search.ts) don't know about ds.queries.singleCell.pseudobulk at all yet, and a
 		// pseudobulk term needs assay+memberId+category (shared/types/src/terms/pseudobulk.ts), not a flat
 		// per-gene boolean like the other categories.
+
+		if (item.isPseudobulk) {
+			const row = addRow('Pseudo Bulk')
+			addBtn(row, 'Summary', `sjpp-mass-chat-gene-pseudobulk-${item.gene}`, async () => {
+				await self.launchPseudobulkPlot(item.gene, row)
+			})
+			if (hasSurvival) {
+				addBtn(row, 'Survival', `sjpp-mass-chat-gene-pseudobulk-survival-${item.gene}`, async () => {
+					await self.launchPseudobulkPlot(item.gene, row, 'survival')
+				})
+			}
+		}
 	}
 
 	self.showTerm = function (this: any, item: any) {
@@ -652,7 +794,7 @@ export function setSearchRenderers(self: any) {
 			tr.append('td').text(item.name).style('padding', '5px 10px')
 			tr.append('td')
 				.append('span')
-				.attr('class', 'sja_menuoption')
+				.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 				.attr('data-testid', 'sjpp-mass-chat-coord-genomebrowser')
 				.style('display', 'inline-block')
 				.style('margin', '0px 3px')
@@ -678,7 +820,7 @@ export function setSearchRenderers(self: any) {
 			tr.append('td').text(item.name).style('padding', '5px 10px')
 			tr.append('td')
 				.append('span')
-				.attr('class', 'sja_menuoption')
+				.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 				.attr('data-testid', `sjpp-mass-chat-sample-view-${item.sampleId}`)
 				.style('display', 'inline-block')
 				.style('margin', '0px 3px')
@@ -700,7 +842,7 @@ export function setSearchRenderers(self: any) {
 				tr.select('td:nth-child(2)')
 					.append('button')
 					.attr('type', 'button')
-					.attr('class', 'sja_menuoption')
+					.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 					.attr('data-testid', `sjpp-mass-chat-single-cell-${item.sampleId}`)
 					.style('display', 'inline-block')
 					.style('margin', '0px 3px')
@@ -727,7 +869,7 @@ export function setSearchRenderers(self: any) {
 				tr.select('td:nth-child(2)')
 					.append('button')
 					.attr('type', 'button')
-					.attr('class', 'sja_menuoption')
+					.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 					.attr('data-testid', `sjpp-mass-chat-wsimages-${item.sampleId}`)
 					.style('display', 'inline-block')
 					.style('margin', '0px 3px')
@@ -752,7 +894,7 @@ export function setSearchRenderers(self: any) {
 				tr.select('td:nth-child(2)')
 					.append('button')
 					.attr('type', 'button')
-					.attr('class', 'sja_menuoption')
+					.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 					.attr('data-testid', `sjpp-mass-chat-assays-${item.sampleId}`)
 					.style('display', 'inline-block')
 					.style('margin', '0px 3px')
@@ -783,7 +925,7 @@ export function setSearchRenderers(self: any) {
 				.text(item.name)
 				.style('padding', '5px 10px')
 				.style('cursor', 'pointer')
-				.attr('class', 'sja_menuoption')
+				.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 				.attr('data-testid', `sjpp-mass-chat-gene-select-${item.gene}`)
 				.on('click', () => {
 					self.dom.inputNode.value = ''
@@ -800,7 +942,7 @@ export function setSearchRenderers(self: any) {
 		if (item.type) {
 			button
 				.style('cursor', 'pointer')
-				.attr('class', 'sja_menuoption')
+				.attr('class', 'sja_menuoption sjpp-mass-search-btn')
 				.attr('data-testid', `sjpp-mass-chat-term-${item.id}`)
 				.on('click', async () => {
 					self.addBubble({ msg: escapeHtml(item.name) + ' (dictionary variable)', me: 1 })

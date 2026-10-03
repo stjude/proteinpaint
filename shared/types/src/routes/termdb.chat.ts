@@ -45,6 +45,7 @@ export interface GeneDataTypeAvailability {
 	snvindel: boolean
 	cnv: boolean
 	svfusion: boolean
+	pseudobulk: boolean
 	/** True when any genomic-alteration data type (snvindel/cnv/svfusion) is available, meaning a
 	 * genome browser can be seeded for the gene. Derived from the three flags above. */
 	genomeBrowser: boolean
