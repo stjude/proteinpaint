@@ -281,8 +281,11 @@ export async function init(
 				repin()
 			})
 		}
-		const layoutObserver = new MutationObserver(queueRepin)
-		layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'], subtree: true })
+const layoutObserver = new MutationObserver(records => {
+	// repin() changes the pinned legends' own styles; do not let those writes reschedule repin forever
+	if (records.some(r => !pinned.some(p => p.box.node().contains(r.target as Node)))) queueRepin()
+})
+layoutObserver.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'], subtree: true })
 
 		// segmentation overlays: boundary CSVs are in µm, converted to level-0
 		// pixels via the slide's mpp (defaulting to 1 = coords already in px)
@@ -791,7 +794,8 @@ function showLassoMenu(
 		return
 	}
 	d.append('div').style('font-weight', 'bold').text(`${hits.length} cells selected`) // headline count
-	if (runNhood) {
+const selectedTypes = new Set(hits.map(c => cellTypes?.[c.id]).filter(Boolean))
+	if (runNhood && selectedTypes.size >= 2) {
 		// mirrors the route's ids*k*perms cap (server/src/routes/wsitiles.ts) at the
 		// default k=6/perms=1000 the button runs with, so an oversized lasso gets an
 		// instant explanation instead of a POST the server would reject anyway
