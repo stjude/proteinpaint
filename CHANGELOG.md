@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- the server serves index.html and the cards from the proteinpaint-front package when they are missing from public/, and the front init logs a warning instead of exiting when it cannot add them to public/
+
+
 ## 2.216.0
 
 Features:
