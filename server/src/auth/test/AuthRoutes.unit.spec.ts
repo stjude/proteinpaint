@@ -470,6 +470,37 @@ tape(
 	}
 )
 
+tape(
+	'/dslogout: clears the cookie using the origin-resolved credential when q.embedder did not match any',
+	async function (test) {
+		test.timeoutAfter(500)
+		test.plan(3)
+
+		// q.embedder is missing/mismatched, so the initial getRouteCred(dslabel, routeKeys, q.embedder)
+		// call finds no credential; the real Origin does match, so assertAllowedSessionOrigin()'s
+		// returned credential -- not the initial undefined one -- must be used for Set-Cookie,
+		// or this would delete the session and then crash on cred.cookieId
+		const auth = makeAuthWithBasic()
+		const sessionId = 'test-logout-embedder-mismatch-session-id'
+		auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+		const app = makeApp(auth)
+		const req = {
+			query: { dslabel }, // no embedder supplied
+			path: '/dslogout',
+			headers: { host: embedder },
+			cookies: { 'x-ds-access-token': sessionId }
+		}
+		const res = makeMockRes()
+
+		await app.routes['/dslogout'].post(req, res)
+		test.equal(res.sentData?.status, 'ok', 'should return ok')
+		test.equal(auth.sessions.get(dslabel)?.get(sessionId), undefined, 'should remove the session')
+		test.ok(res.headers['Set-Cookie']?.includes(`${headerKey}=;`), 'should clear the session cookie')
+		test.end()
+	}
+)
+
 tape('/dslogout: an origin valid for a different dataset does not satisfy this one', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
