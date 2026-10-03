@@ -70,6 +70,52 @@ export function patternMatches(value, pattern) {
 	return isMatch(value, pattern)
 }
 
+// returns the parsed URL of the request origin, or undefined if it is missing or malformed
+export function getRequestOrigin(req) {
+	const origin = req.get('origin')
+	// an Origin header must already be a serialized http(s) origin, i.e., scheme://host[:port]
+	// with no path, query, or userinfo, otherwise it is rejected instead of being normalized
+	if (origin) return parseOrigin(origin, true)
+	// a referrer is a full URL, so only this fallback may include a path
+	const referrer = req.get('referrer')
+	if (referrer) return parseOrigin(referrer, false)
+	const host = req.get('host')
+	if (host) return parseOrigin(`${req.protocol}://${host}`, true)
+}
+
+// same as getRequestOrigin(), reading req.headers directly instead of calling the Express-only
+// req.get(), for code (such as AuthRoutes.ts) that already follows that convention
+export function getOriginFromHeaders(req) {
+	const h = req.headers || {}
+	const origin = h.origin
+	if (origin) return parseOrigin(origin, true)
+	const referrer = h.referrer || h.referer
+	if (referrer) return parseOrigin(referrer, false)
+	const host = h.host
+	if (host) return parseOrigin(`https://${host}`, true)
+}
+
+export function parseOrigin(value, mustBeSerializedOrigin) {
+	if (typeof value != 'string' || value == 'null') return
+	try {
+		const url = new URL(value)
+		if (url.protocol != 'http:' && url.protocol != 'https:') return
+		if (url.username || url.password) return
+		if (mustBeSerializedOrigin && url.origin !== value) return
+		return url
+	} catch (_) {
+		return
+	}
+}
+
+// a dsCredentials embedder key is matched with the same case-insensitive glob semantics
+// as used for auth, so that a key like '*.example.org' also gets credentialed CORS headers
+export function isCredEmbedder(origin, pattern) {
+	return (
+		pattern == '*' || (!!origin && (patternMatches(origin.hostname, pattern) || patternMatches(origin.host, pattern)))
+	)
+}
+
 // client-supplied query parameters that are used to resolve dsCredentials entries. A non-string value,
 // e.g. an array from `embedder[]=...`, would not match an exact key and could fall through to no
 // credential, treating a protected dataset as open access, so these must be strings when present

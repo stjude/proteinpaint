@@ -74,7 +74,9 @@ function makeAuthWithBasic(credOpts: any = {}, genomes: any = {}) {
 }
 
 // Build a mock express app and register routes, returning the app
-function makeApp(auth: Auth, basepath = '') {
+// credEmbedders defaults to this fixture's own embedder, matching what validateDsCredentials()
+// would compute from the creds built by makeAuthWithJwt()/makeAuthWithBasic() above
+function makeApp(auth: Auth, basepath = '', credEmbedders: string[] = [embedder]) {
 	const app: any = {
 		routes: {} as Record<string, any>
 	}
@@ -85,7 +87,7 @@ function makeApp(auth: Auth, basepath = '') {
 			app.routes[route][method] = handler
 		}
 	}
-	setAuthRoutes(app, auth, basepath, { cachedir })
+	setAuthRoutes(app, auth, basepath, { cachedir }, credEmbedders)
 	return app
 }
 
@@ -346,7 +348,8 @@ tape('/dslogout: deletes session and clears cookie on valid logout', async funct
 	const req = {
 		query: { dslabel, embedder },
 		path: '/dslogout',
-		headers: {},
+		// a same-embedder request, so it passes the credentialed-origin check
+		headers: { host: embedder },
 		cookies: { 'x-ds-access-token': sessionId }
 	}
 	const res = makeMockRes()
@@ -356,6 +359,30 @@ tape('/dslogout: deletes session and clears cookie on valid logout', async funct
 	test.equal(res.statusCode, 200, 'should return 200 status')
 	test.equal(auth.sessions.get(dslabel)?.get(sessionId), undefined, 'should remove session from auth.sessions')
 	test.ok(res.headers['Set-Cookie']?.includes(`${headerKey}=;`), 'should clear the session cookie')
+	test.end()
+})
+
+tape('/dslogout: rejects a request from an origin that is not a configured embedder', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(3)
+
+	const auth = makeAuthWithBasic()
+	const sessionId = 'test-logout-other-origin-session-id'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder },
+		path: '/dslogout',
+		headers: { origin: 'https://other.example' },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/dslogout'].post(req, res)
+	test.equal(res.statusCode, 401, 'should set 401 for a disallowed origin')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.equal(auth.sessions.get(dslabel)?.get(sessionId)?.time !== undefined, true, 'should not remove the session')
 	test.end()
 })
 
@@ -581,7 +608,8 @@ tape('/authorizedActions: appends action to file and returns ok', async function
 	const req = {
 		query: { dslabel, embedder, action: 'download', details: JSON.stringify({ key: 'val' }) },
 		path: '/authorizedActions',
-		headers: {},
+		// a same-embedder request, so it passes the credentialed-origin check
+		headers: { host: embedder },
 		cookies: { 'x-ds-access-token': sessionId }
 	}
 	const res = makeMockRes()
@@ -593,6 +621,29 @@ tape('/authorizedActions: appends action to file and returns ok', async function
 	const content = await fs.readFile(actionFile, 'utf8')
 	test.ok(content.includes(dslabel), 'action file should include the dslabel')
 	test.ok(content.includes('download'), 'action file should include the action name')
+	test.end()
+})
+
+tape('/authorizedActions: rejects a request from an origin that is not a configured embedder', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-other-origin-session-id'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		headers: { origin: 'https://other.example' },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should set 401 for a disallowed origin')
+	test.ok(res.sentData?.error, 'should send an error message')
 	test.end()
 })
 
@@ -610,12 +661,13 @@ tape('/authorizedActions: returns 401 on file system error', async function (tes
 		}
 	}
 	// Invalid cachedir to trigger file-write error
-	setAuthRoutes(app, auth, '', { cachedir: '/nonexistent/path/to/nowhere' })
+	setAuthRoutes(app, auth, '', { cachedir: '/nonexistent/path/to/nowhere' }, [embedder])
 
 	const req = {
 		query: { dslabel, embedder, action: 'export', details: '{}' },
 		path: '/authorizedActions',
-		headers: {},
+		// a same-embedder request, so it reaches the file write (and fails there, as intended)
+		headers: { host: embedder },
 		cookies: {}
 	}
 	const res = makeMockRes()
@@ -1003,6 +1055,8 @@ tape('auth flow: /dslogin and /dslogout variants under a basepath', async functi
 	const logout = await send({
 		query: { dslabel, embedder },
 		path: '/Api/DsLogout/',
+		// a same-embedder request, so it passes the credentialed-origin check
+		headers: { host: embedder },
 		cookies: { [headerKey]: sessionId }
 	})
 	test.ok(logout.nextCalled, 'should let /Api/DsLogout/ through the middleware')
