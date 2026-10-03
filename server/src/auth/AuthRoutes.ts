@@ -3,11 +3,24 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { getSessionEntry, getOriginFromHeaders, isCredEmbedder } from './Auth.ts'
 
+// true only when the resolved session id came from one of the cookie checks in Auth.ts's
+// getSessionId(), not from the Authorization header (handled earlier in getSessionId(), before
+// any of these cookie checks run) or the x-sjppds-sessionid header/query fallback, which a caller
+// must set deliberately and a browser does not attach on its own
+function wasResolvedFromCookie(req, cred, id) {
+	return (
+		!!id &&
+		(id === req.cookies?.[`${cred?.cookieId}`] ||
+			id === req.cookies?.[`${req.query?.dslabel}SessionId`] ||
+			id === req.cookies?.['x-ds-access-token'])
+	)
+}
+
 // Checks that a request using a session cookie has an Origin (or, lacking one, its own host) that
 // is one of the dataset's credentialed embedders, the same check setHeaders() in app.middlewares.js
 // uses to decide whether to answer with CORS headers at all.
-function assertAllowedSessionOrigin(req, credEmbedders, cred) {
-	if (!cred) return // open access, nothing to protect
+function assertAllowedSessionOrigin(req, credEmbedders, cred, id) {
+	if (!cred || !wasResolvedFromCookie(req, cred, id)) return
 	const origin = getOriginFromHeaders(req)
 	if (!credEmbedders.some(pattern => isCredEmbedder(origin, pattern))) {
 		throw 'disallowed origin for a cookie-authenticated request'
@@ -53,7 +66,7 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig, credEmbedd
 			const cred = auth.getRequiredCred(q, req.path)
 			const id = auth.getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
-			assertAllowedSessionOrigin(req, credEmbedders, cred)
+			assertAllowedSessionOrigin(req, credEmbedders, cred, id)
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
 			if (!session) {
 				res.send({ status: 'ok' })
@@ -116,8 +129,8 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig, credEmbedd
 				res.send({ status: 'ok' })
 				return
 			}
-			assertAllowedSessionOrigin(req, credEmbedders, cred)
 			const id = auth.getSessionId(req)
+			assertAllowedSessionOrigin(req, credEmbedders, cred, id)
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
 			const email = session?.email || ''
 			const time = new Date()

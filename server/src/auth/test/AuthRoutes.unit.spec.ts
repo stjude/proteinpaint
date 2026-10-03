@@ -386,6 +386,31 @@ tape('/dslogout: rejects a request from an origin that is not a configured embed
 	test.end()
 })
 
+tape('/dslogout: does not check origin when the session id comes from a header, not a cookie', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	// resolved via the x-sjppds-sessionid header, not a cookie; a mismatched Origin must not
+	// block this, since a browser does not attach this header to a request on its own
+	const auth = makeAuthWithBasic()
+	const sessionId = 'test-logout-header-session-id'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder },
+		path: '/dslogout',
+		headers: { origin: 'https://other.example', 'x-sjppds-sessionid': sessionId },
+		cookies: {}
+	}
+	const res = makeMockRes()
+
+	await app.routes['/dslogout'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should return ok')
+	test.equal(auth.sessions.get(dslabel)?.get(sessionId), undefined, 'should remove the session')
+	test.end()
+})
+
 // ─────────────────────────────────────────
 // POST /jwt-status
 // ─────────────────────────────────────────

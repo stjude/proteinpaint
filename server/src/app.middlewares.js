@@ -83,7 +83,9 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 	// replace the prototype of req.query
 	app.use(bodyParser.text({ type: 'application/json', limit: '5mb' }))
 	app.use((req, res, next) => {
-		if (req.headers['content-type'] != 'application/json' || typeof req.body != 'string') return next()
+		// req.is() matches the media type and ignores parameters such as charset, the same way
+		// bodyParser.text({type: 'application/json'}) above decided whether to read this body
+		if (!req.is('application/json') || typeof req.body != 'string') return next()
 		try {
 			// bodyParser.json() sets an empty body to {}, keep that behavior
 			req.body = req.body ? sjson.parse(req.body) : {}
@@ -135,7 +137,7 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 	}
 
 	app.use((req, res, next) => {
-		if (req.method.toUpperCase() == 'POST' && req.body && req.headers['content-type'] != 'application/json') {
+		if (req.method.toUpperCase() == 'POST' && req.body && !req.is('application/json')) {
 			res.send({ error: `invalid HTTP request.header['content-type'], must be 'application/json'` })
 			return
 		}
@@ -143,7 +145,7 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 		// object that the auth middleware rejects as a query parameter, so do not merge it into req.query
 		const isMassSessionSave =
 			req.method.toUpperCase() == 'POST' && normalizeReqPath(req.path) == normalizeReqPath(basepath + '/massSession')
-		if (req.headers['content-type'] == 'application/json' && !isMassSessionSave) {
+		if (req.is('application/json') && !isMassSessionSave) {
 			if (!req.query) req.query = {}
 			// TODO: in the future, may have to combine req.query + req.params + req.body
 			// if using req.params based on expressjs server route /:paramName interpolation
