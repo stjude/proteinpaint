@@ -103,6 +103,19 @@ tape('tabs data and pill status', async test => {
 	test.end()
 })
 
+tape('gene-expression pill status includes the term label', test => {
+	const handler = Object.create(NumericHandler.prototype) as NumericHandler
+	handler.termsetting = {
+		tw: {
+			term: { type: 'geneExpression', label: 'Relapses' },
+			getStatus: () => ({ text: 'continuous' })
+		}
+	} as any
+
+	test.deepEqual(handler.getPillStatus(), { text: 'continuous (Relapses)' }, 'should append the gene-expression label')
+	test.end()
+})
+
 tape('editHandler', async test => {
 	const { handler, destroy } = await getNumericHandler()
 

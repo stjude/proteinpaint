@@ -63,7 +63,13 @@ async function fillMenu(self, div, tvs) {
 }
 
 function term_name_gen(d) {
-	const name = d.term.parentTerm && !d.excludeGeneName ? `${d.term.parentTerm.name} ${d.term.name}` : d.term.name
+	let name
+	if (d.term.parentTerm && !d.excludeGeneName) {
+		name = `${d.term.parentTerm.name} ${d.term.name}`
+		if (d.term.parentTerm.label) name += ` (${d.term.parentTerm.label})`
+	} else {
+		name = d.term.name
+	}
 	return name.length < 31
 		? escapeHtml(name)
 		: '<label title="' + escapeHtml(name) + '">' + escapeHtml(name.substring(0, 28)) + '...' + '</label>'
@@ -146,7 +152,25 @@ export async function getDtTermValues(dtTerm, filter, vocabApi, opts = {}) {
 	const data = categories?.lst.find(x => x.dt == dtTerm.dt)
 	if (!data) return
 	const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[dtTerm.dt]?.byOrigin
-	const classes = byOrigin ? data.classes.byOrigin[dtTerm.origin] : data.classes
+	const origins = byOrigin
+		? dtTerm.origin // legacy term structure
+			? [dtTerm.origin]
+			: dtTerm.parentTerm?.origins?.length
+			? dtTerm.parentTerm.origins
+			: Object.keys(byOrigin)
+		: undefined
+	if (origins) {
+		const unknown = origins.find(origin => !(origin in byOrigin))
+		if (unknown) throw new Error(`unknown origin '${unknown}' for dt ${dtTerm.dt}`)
+	}
+	const classes = origins
+		? origins.reduce((merged, origin) => {
+				for (const [key, count] of Object.entries(data.classes.byOrigin[origin] || {})) {
+					merged[key] = (merged[key] || 0) + count
+				}
+				return merged
+		  }, {})
+		: data.classes
 	// store mutation classes in term.values
 	dtTerm.values = Object.fromEntries(
 		Object.keys(classes)
@@ -168,6 +192,39 @@ export async function getDtTermValues(dtTerm, filter, vocabApi, opts = {}) {
 	}
 	// store amino acid changes (e.g. "G12D") in term.mnames
 	// entries are { mname, class, samplecount }, sorted by descending sample count
-	const mnames = byOrigin ? data.mnames?.byOrigin?.[dtTerm.origin] : data.mnames
+	const mnames = origins ? mergeMnames(origins.flatMap(origin => data.mnames?.byOrigin?.[origin] || [])) : data.mnames
 	dtTerm.mnames = mnames?.length ? mnames : undefined
+}
+
+/* combine the per-origin mname entries of a dt term's selected origins into one list, so
+that a variant found under more than one origin (e.g. both germline and somatic) is shown
+as a single row rather than a duplicate one per origin. entries are matched by mname/class/
+gene/region, with samplecount, noPositionCount, and breakpoints[] (see BreakpointEntry)
+summed/merged across the matching entries, and the result re-sorted by descending
+samplecount since merging may change the relative ranking of variants. */
+function mergeMnames(entries) {
+	const merged = new Map()
+	for (const entry of entries) {
+		const key = JSON.stringify([entry.mname, entry.class, entry.gene, entry.region])
+		const existing = merged.get(key)
+		if (!existing) {
+			merged.set(key, structuredClone(entry))
+			continue
+		}
+		existing.samplecount += entry.samplecount
+		if (entry.noPositionCount) existing.noPositionCount = (existing.noPositionCount || 0) + entry.noPositionCount
+		if (entry.breakpoints) {
+			const breakpoints = new Map(
+				(existing.breakpoints || []).map(b => [JSON.stringify([b.pos, b.partnerChr, b.partnerPos]), b])
+			)
+			for (const breakpoint of entry.breakpoints) {
+				const breakpointKey = JSON.stringify([breakpoint.pos, breakpoint.partnerChr, breakpoint.partnerPos])
+				const existingBreakpoint = breakpoints.get(breakpointKey)
+				if (existingBreakpoint) existingBreakpoint.samplecount += breakpoint.samplecount
+				else breakpoints.set(breakpointKey, structuredClone(breakpoint))
+			}
+			existing.breakpoints = [...breakpoints.values()].sort((a, b) => a.pos - b.pos || a.partnerPos - b.partnerPos)
+		}
+	}
+	return [...merged.values()].sort((a, b) => b.samplecount - a.samplecount)
 }

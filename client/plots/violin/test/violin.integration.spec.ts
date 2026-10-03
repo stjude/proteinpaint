@@ -66,7 +66,11 @@ tape('violin p-values exclude hidden categories', function (test) {
 	const hiddenRow = [{ value: 'Hidden' }, { value: 'Other' }, { value: 0.5 }]
 	const chart = { pvalues: [visibleRow, hiddenRow] }
 
-	test.deepEqual(getVisiblePvalues(chart, numericTerm, term), [visibleRow], 'Filters comparisons with a hidden category')
+	test.deepEqual(
+		getVisiblePvalues(chart, numericTerm, term),
+		[visibleRow],
+		'Filters comparisons with a hidden category'
+	)
 	test.deepEqual(
 		getVisiblePvalues({ pvalues: [hiddenRow] }, numericTerm, term),
 		[],
@@ -699,7 +703,7 @@ tape('term1=numeric, term2=geneVariant geneset', function (test) {
 	})
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
-		await testViolinByCount(test, violinDiv, 1)
+		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
@@ -852,7 +856,7 @@ tape('term1=geneExp, term2=geneVariant geneset', function (test) {
 	})
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
-		await testViolinByCount(test, violinDiv, 1)
+		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
@@ -962,7 +966,7 @@ tape('term1=ssgsea, term2=geneVariant geneset', function (test) {
 	})
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
-		await testViolinByCount(test, violinDiv, 1)
+		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()

@@ -41,6 +41,12 @@ function getDtTerm(origin?: string) {
 	return term
 }
 
+function getDtTermWithOrigins(origins: string[]) {
+	const term = getDtTerm()
+	term.parentTerm.origins = origins
+	return term
+}
+
 // stub vocabApi returning a fixed /termdb/categories response
 function getVocabApi(categories: any, byOrigin = false) {
 	return {
@@ -110,6 +116,47 @@ tape('getDtTermValues: classes and mnames, byOrigin', async test => {
 			{ mname: 'K100fs', class: 'F', samplecount: 1 }
 		],
 		'mnames should be the somatic list'
+	)
+	test.end()
+})
+
+tape('getDtTermValues: merges selected origins', async test => {
+	const dtTerm = getDtTermWithOrigins(['germline', 'somatic'])
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesByOrigin, true), { withMnames: true })
+
+	test.deepEqual(
+		dtTerm.values,
+		{
+			M: { key: 'M', label: mclass.M.label, samplecount: 3 },
+			F: { key: 'F', label: mclass.F.label, samplecount: 1 }
+		},
+		'should merge classes and counts across selected origins'
+	)
+	test.deepEqual(
+		dtTerm.mnames,
+		[
+			{ mname: 'G12D', class: 'M', samplecount: 2 },
+			{ mname: 'P34R', class: 'M', samplecount: 1 },
+			{ mname: 'K100fs', class: 'F', samplecount: 1 }
+		],
+		'should merge and sort mnames across selected origins'
+	)
+	test.end()
+})
+
+tape('getDtTermValues: limits values to selected parent origins', async test => {
+	const dtTerm = getDtTermWithOrigins(['germline'])
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesByOrigin, true), { withMnames: true })
+
+	test.deepEqual(
+		dtTerm.values,
+		{ M: { key: 'M', label: mclass.M.label, samplecount: 1 } },
+		'should use classes from the selected parent origin'
+	)
+	test.deepEqual(
+		dtTerm.mnames,
+		[{ mname: 'P34R', class: 'M', samplecount: 1 }],
+		'should use mnames from the selected parent origin'
 	)
 	test.end()
 })

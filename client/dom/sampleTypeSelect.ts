@@ -1,4 +1,5 @@
 import type { SampleTypes } from '#types'
+import { getSelectedCheckboxValues, renderCheckboxSelect } from './checkboxSelect.ts'
 
 // renders sample type checkboxes, all checked by default. At least one sample
 // type always stays checked: a click that would uncheck the last checked box is cancelled
@@ -12,57 +13,35 @@ export function renderSampleTypeSelect(holder: any, querySampleTypes?: any, term
 		sampleTypeConfig[sampleType] = termdbConfig.sampleTypes[sampleType]
 	}
 
-	const sampleTypeCheckboxDiv = holder
-		.append('div')
-		.attr('class', 'sjpp-genesearch-sampletype-checkboxes')
-		.style('margin-right', '8px')
-
-	const sampleTypeCheckboxes: any[] = []
-
-	for (const [k, v] of Object.entries(sampleTypeConfig)) {
-		const label = sampleTypeCheckboxDiv
-			.append('label')
-			.style('display', 'inline-flex')
-			.style('align-items', 'center')
-			.style('margin-right', '10px')
-		const input = label
-			.append('input')
-			.attr('type', 'checkbox')
-			.attr('value', k)
-			.property('checked', true)
-			.on('click', event => {
-				// the click has already toggled the box, and cancelling it restores the box
-				if (!sampleTypeCheckboxes.some(checkbox => checkbox.property('checked'))) event.preventDefault()
-			})
-			.on('change', () => markLastChecked(sampleTypeCheckboxes))
-		label.append('span').style('margin-left', '4px').text(v.name)
-		sampleTypeCheckboxes.push(input)
-	}
-
-	return sampleTypeCheckboxes
+	return renderCheckboxSelect(
+		holder,
+		Object.entries(sampleTypeConfig).map(([value, config]) => ({ value, label: config.name })),
+		{
+			className: 'sjpp-genesearch-sampletype-checkboxes',
+			lastCheckedTitle: 'At least one sample type must be selected'
+		}
+	)
 }
 
-// marks the only checked box as not uncheckable with a hint and cursor on its
-// label, which covers both the box and its text. The box stays enabled so that
-// it still looks checked
-function markLastChecked(sampleTypeCheckboxes: any[]) {
-	const checked = sampleTypeCheckboxes.filter(checkbox => checkbox.property('checked'))
-	for (const checkbox of sampleTypeCheckboxes) {
-		const isLast = checked.length == 1 && checked[0] === checkbox
-		const label = checkbox.node().parentNode
-		label.title = isLast ? 'At least one sample type must be selected' : ''
-		label.style.cursor = isLast ? 'not-allowed' : ''
+/** returns the sample types to assign on the termwrapper: those selected via the
+ * checkboxes/dropdowns rendered by renderSampleTypeSelect()/renderSampleTypesByTermsSelect(),
+ * or the one available sample type implicitly assigned when it is alone and so renders no
+ * selector. undefined when there are no sample types to assign at all. */
+export function getSelectedSampleTypes(opts: {
+	sampleTypeSelect?: any
+	querySampleTypes?: number[]
+	querySampleTypesByTerms?: any
+}) {
+	const { sampleTypeSelect, querySampleTypes, querySampleTypesByTerms } = opts
+	if (querySampleTypesByTerms) return getSelectedSampleTypesByTerms(sampleTypeSelect, querySampleTypesByTerms)
+	if (sampleTypeSelect) {
+		const selectedSampleTypes = getSelectedCheckboxValues(sampleTypeSelect)!.map(Number)
+		if (!selectedSampleTypes.length) window.alert('Please select at least one sample type.')
+		return selectedSampleTypes
 	}
-}
-
-// returns selected sample types from checkboxes created by renderSampleTypeSelect().
-export function getSelectedSampleTypes(sampleTypeSelect?: any[]) {
-	if (!sampleTypeSelect) return
-	const selectedSampleTypes = sampleTypeSelect
-		.filter(checkbox => checkbox.property('checked'))
-		.map(checkbox => Number(checkbox.property('value')))
-	if (!selectedSampleTypes.length) window.alert('Please select at least one sample type.')
-	return selectedSampleTypes
+	// no selector was rendered: either there is nothing to select, or a single available sample
+	// type is implicitly assigned (see renderSampleTypeSelect())
+	return querySampleTypes?.length ? querySampleTypes : undefined
 }
 
 // renders a dropdown menu for each term in sampleTypesByTerms, with the term's
@@ -127,16 +106,33 @@ export function getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms) {
 	return selectedSampleTypes
 }
 
-// builds a sample type label based on the selected term values from dropdowns
-// created by renderSampleTypesByTermsSelect(). Terms for which the 'Any' option
-// was selected do not contribute to the label, since that selection is not
-// restrictive/informative. If every term used 'Any' (or there are no terms),
-// then return is undefined.
-export function getSampleTypeLabelByTerms(termSelects) {
-	if (!termSelects) return
-	const selected = getSelectedTermValues(termSelects)
-	if (!selected) return
-	const parts = Object.values(selected).filter(value => value != 'any')
-	if (!parts.length) return
-	return parts.join(' ')
+// builds a sample type label based on sample type selections;
+// unrestricted/all selections and a single implicit selection produce an empty label.
+export function mayGetSampleTypeLabel(opts: {
+	sampleTypeSelect?: any
+	querySampleTypes?: number[]
+	querySampleTypesByTerms?: any
+	termdbConfig?: any
+}) {
+	const { sampleTypeSelect, querySampleTypes, querySampleTypesByTerms, termdbConfig } = opts
+	let labelParts: string[]
+	let allSelected: boolean
+	let separator: string
+	if (querySampleTypesByTerms) {
+		const selected = getSelectedTermValues(sampleTypeSelect)
+		if (!selected) return
+		labelParts = Object.values(selected).filter(value => value != 'any')
+		allSelected = labelParts.length == 0
+		separator = ' '
+	} else if (querySampleTypes) {
+		if (!sampleTypeSelect) return querySampleTypes.length ? '' : undefined
+		const selected = getSelectedCheckboxValues(sampleTypeSelect)
+		if (!selected) return
+		allSelected = selected.length == querySampleTypes.length
+		labelParts = selected.map(sampleType => termdbConfig.sampleTypes[sampleType].plural_name)
+		separator = ', '
+	} else {
+		return
+	}
+	return allSelected ? '' : labelParts.join(separator)
 }

@@ -10,6 +10,7 @@ GeneExpressionTermSettingInstance
 export type GeneExpressionTerm = NumericBaseTerm & {
 	type: 'geneExpression'
 	gene: string
+	label?: string
 	bins?: PresetNumericBins
 }
 

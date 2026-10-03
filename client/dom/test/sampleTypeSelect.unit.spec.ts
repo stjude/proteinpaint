@@ -1,6 +1,10 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { getSelectedSampleTypesByTerms, renderSampleTypesByTermsSelect } from '../sampleTypeSelect'
+import {
+	getSelectedSampleTypesByTerms,
+	mayGetSampleTypeLabel,
+	renderSampleTypesByTermsSelect
+} from '../sampleTypeSelect'
 
 const sampleTypesByTerms = {
 	'samples.collection_event': {
@@ -29,6 +33,20 @@ const termdbConfig = {
 		'samples.sample_type': { name: 'Sample Type' }
 	}
 }
+
+tape('mayGetSampleTypeLabel(): handles an implicit single sample type', test => {
+	test.equal(
+		mayGetSampleTypeLabel({ querySampleTypes: [2], termdbConfig }),
+		'',
+		'uses an empty label when the only available sample type is implicitly selected'
+	)
+	test.equal(
+		mayGetSampleTypeLabel({ querySampleTypes: [], termdbConfig }),
+		undefined,
+		'returns no label when there are no available sample types'
+	)
+	test.end()
+})
 
 function getTermSelects() {
 	const holder = d3s.select('body').append('div')
