@@ -410,31 +410,65 @@ tape('/dslogout: does not check origin when the session id comes from a header, 
 	test.end()
 })
 
-tape('/dslogout: rejects a cookie-derived session when this route has no matching credential', async function (test) {
-	test.timeoutAfter(500)
-	test.plan(2)
+tape(
+	'/dslogout: rejects a cookie-derived session when the request has no Origin or Host at all',
+	async function (test) {
+		test.timeoutAfter(500)
+		test.plan(2)
 
-	// cred is configured only under 'termdb', so getRequiredCred(q, '/dslogout') finds nothing for
-	// the original request; getSessionId() can still resolve a real session via the generic
-	// x-ds-access-token cookie regardless, so the origin check must still run and reject it
-	const auth = makeAuthWithJwt()
-	const sessionId = 'test-logout-no-route-cred-session-id'
-	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+		// getSessionId() can still resolve a real session via the generic x-ds-access-token cookie
+		// even with no Origin/Referer/Host header at all (not realistic for a real HTTP request, but
+		// the check must fail closed rather than treat a missing origin as allowed)
+		const auth = makeAuthWithBasic()
+		const sessionId = 'test-logout-no-origin-session-id'
+		auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
 
-	const app = makeApp(auth)
-	const req = {
-		query: { dslabel, embedder },
-		path: '/dslogout',
-		headers: {},
-		cookies: { 'x-ds-access-token': sessionId }
+		const app = makeApp(auth)
+		const req = {
+			query: { dslabel, embedder },
+			path: '/dslogout',
+			headers: {},
+			cookies: { 'x-ds-access-token': sessionId }
+		}
+		const res = makeMockRes()
+
+		await app.routes['/dslogout'].post(req, res)
+		test.equal(res.statusCode, 401, 'should set 401')
+		test.equal(auth.sessions.get(dslabel)?.get(sessionId)?.time !== undefined, true, 'should not remove the session')
+		test.end()
 	}
-	const res = makeMockRes()
+)
 
-	await app.routes['/dslogout'].post(req, res)
-	test.equal(res.statusCode, 401, 'should set 401')
-	test.equal(auth.sessions.get(dslabel)?.get(sessionId)?.time !== undefined, true, 'should not remove the session')
-	test.end()
-})
+tape(
+	'/dslogout: deletes session and clears cookie for a termdb-only credential with no "/**" entry',
+	async function (test) {
+		test.timeoutAfter(500)
+		test.plan(3)
+
+		// makeAuthWithJwt() configures a credential only under the 'termdb' route key, not '/**';
+		// req.path ('/dslogout') does not match either key by itself, so both the credential used to
+		// resolve the session and the origin re-check must fall back through q.route/'termdb'/'/**'
+		// rather than req.path, or a legitimate cookie-backed logout would be rejected
+		const auth = makeAuthWithJwt()
+		const sessionId = 'test-logout-termdb-only-session-id'
+		auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+		const app = makeApp(auth)
+		const req = {
+			query: { dslabel, embedder },
+			path: '/dslogout',
+			headers: { host: embedder },
+			cookies: { 'x-ds-access-token': sessionId }
+		}
+		const res = makeMockRes()
+
+		await app.routes['/dslogout'].post(req, res)
+		test.equal(res.sentData?.status, 'ok', 'should return ok')
+		test.equal(auth.sessions.get(dslabel)?.get(sessionId), undefined, 'should remove the session')
+		test.ok(res.headers['Set-Cookie']?.includes(`${headerKey}=;`), 'should clear the session cookie')
+		test.end()
+	}
+)
 
 tape('/dslogout: an origin valid for a different dataset does not satisfy this one', async function (test) {
 	test.timeoutAfter(500)
