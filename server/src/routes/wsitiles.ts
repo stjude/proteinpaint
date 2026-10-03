@@ -144,7 +144,7 @@ function boundariesCachePath(h5ad: string, mtime: number, kind: string): string 
 	const key = createHash('sha1').update(`${h5ad}:${mtime}`).digest('hex') // stable id per h5ad version
 	return path.join(serverconfig.cachedir, 'wsitiles', `${key}_bnd_${kind}.csv`) // one file per polygon set
 }
-const boundariesInflight = new Map<string, Promise<string>>() // cacheFile -> pending csv
+const boundariesInflight = new Map<string, Promise<void>>() // cacheFile -> pending generation (resolves once the cache file itself is ready to stream)
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
@@ -190,10 +190,7 @@ function init({ genomes }) {
 					// share the one python run via the in-flight map
 					const kind = q.kind == 'nucleus' ? 'nucleus' : 'cell' // which polygon set
 					const cacheFile = boundariesCachePath(full, (await stat(full)).mtimeMs, kind)
-					let csv: string
-					if (await exists(cacheFile)) {
-						csv = await readFile(cacheFile, 'utf8') // cache hit: no python involved
-					} else {
+					if (!(await exists(cacheFile))) {
 						let pending = boundariesInflight.get(cacheFile) // another request already generating?
 						if (!pending) {
 							pending = (async () => {
@@ -204,8 +201,9 @@ function init({ genomes }) {
 								).trim()
 								try {
 									await mkdir(path.dirname(cacheFile), { recursive: true }) // ensure the cache dir exists
-									await copyFile(tmp, cacheFile).catch(() => {}) // best-effort; races are harmless
-									return await readFile(tmp, 'utf8') // serve from the temp file this time
+									// NOT best-effort: sendFile below streams cacheFile itself, with
+									// no in-memory copy to fall back to if this didn't land
+									await copyFile(tmp, cacheFile)
 								} finally {
 									await unlink(tmp).catch(() => {}) // python's temp file is no longer needed
 								}
@@ -213,10 +211,22 @@ function init({ genomes }) {
 							boundariesInflight.set(cacheFile, pending) // let concurrent misses share it
 							pending.finally(() => boundariesInflight.delete(cacheFile)).catch(() => {}) // settled = no longer in flight
 						}
-						csv = await pending
+						await pending // propagates a generation failure to the catch below
 					}
-					// cacheable for an hour; the h5ad changes with the slide, rarely
-					res.status(200).set('Content-Type', 'text/csv').set('Cache-Control', 'public, max-age=3600').send(csv)
+					// streamed from disk, never read into one JS string first: a large
+					// sample's boundary CSV (hundreds of thousands of cells x ~25
+					// vertices each) can exceed V8's ~512MB max string length, which
+					// fs.readFile(cacheFile, 'utf8') hit as a hard "Invalid string
+					// length" failure for every request once a sample got that big
+					res.set('Content-Type', 'text/csv').set('Cache-Control', 'public, max-age=3600')
+					res.sendFile(cacheFile, err => {
+						if (err && !res.headersSent) {
+							res.status((err as any)?.code === 'ENOENT' ? 404 : 500).send({
+								status: 'error',
+								error: err.message || String(err)
+							})
+						}
+					})
 				} catch (e: any) {
 					// distinguish a missing file (404) from a read failure (500)
 					res.status(e?.code === 'ENOENT' ? 404 : 500).send({
@@ -338,22 +348,20 @@ function init({ genomes }) {
 				// supplies, not cross-checked against a real h5ad) lets a tiny,
 				// cheap-looking request allocate gigabytes on the python worker
 				const MAX_TYPES = 64
-const typesAreCanonical = types.every(
-	(t: string, i: number) => t.length > 0 && (i == 0 || types[i - 1] < t)
-)
-const shapeOk =
-	C >= 2 &&
-	C <= MAX_TYPES &&
-	typesAreCanonical &&
-	typeCounts.length == C &&
-	typeCounts.every((v: number) => Number.isFinite(v)) &&
-	count.length == C &&
-	count.every((row: any) => Array.isArray(row) && row.length == C && row.every(Number.isFinite))
-if (!shapeOk) {
-	res.status(400).send({
-		status: 'error',
-		error: `similar needs sorted unique types/typeCounts/count from a prior nhood result (2-${MAX_TYPES} types, matching shapes)`
-	})
+				const typesAreCanonical = types.every((t: string, i: number) => t.length > 0 && (i == 0 || types[i - 1] < t))
+				const shapeOk =
+					C >= 2 &&
+					C <= MAX_TYPES &&
+					typesAreCanonical &&
+					typeCounts.length == C &&
+					typeCounts.every((v: number) => Number.isFinite(v)) &&
+					count.length == C &&
+					count.every((row: any) => Array.isArray(row) && row.length == C && row.every(Number.isFinite))
+				if (!shapeOk) {
+					res.status(400).send({
+						status: 'error',
+						error: `similar needs sorted unique types/typeCounts/count from a prior nhood result (2-${MAX_TYPES} types, matching shapes)`
+					})
 					return
 				}
 				let zscore: any = undefined
