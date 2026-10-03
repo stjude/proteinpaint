@@ -238,6 +238,7 @@ export function loadstudycohort(genomes, file, holder, hostURL, jwt, noshow, app
 	wait.text('Loading ' + file + ' ...')
 	return fetch(hostURL + '/study', {
 		method: 'POST',
+		headers: { 'content-type': 'application/json' },
 		body: JSON.stringify({ file: file, jwt: jwt })
 	})
 		.then(res => res.json())

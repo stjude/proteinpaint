@@ -589,6 +589,7 @@ export function bulkembed(arg) {
 				if (mset.snvindel) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
+						headers: { 'content-type': 'application/json' },
 						body: '{"file":"' + mset.snvindel + '"}'
 					})
 					const task = fetch(req)
@@ -615,6 +616,7 @@ export function bulkembed(arg) {
 				if (mset.cnv) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
+						headers: { 'content-type': 'application/json' },
 						body: '{"file":"' + mset.cnv + '"}'
 					})
 					const task = fetch(req)
@@ -642,6 +644,7 @@ export function bulkembed(arg) {
 				if (mset.sv) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
+						headers: { 'content-type': 'application/json' },
 						body: '{"file":"' + mset.sv + '"}'
 					})
 					const task = fetch(req)
@@ -669,6 +672,7 @@ export function bulkembed(arg) {
 				if (mset.fusion) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
+						headers: { 'content-type': 'application/json' },
 						body: '{"file":"' + mset.fusion + '"}'
 					})
 					const task = fetch(req)
@@ -685,6 +689,7 @@ export function bulkembed(arg) {
 				if (mset.svjson) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
+						headers: { 'content-type': 'application/json' },
 						body: '{"file":"' + mset.svjson + '"}'
 					})
 					const task = fetch(req)
@@ -701,6 +706,7 @@ export function bulkembed(arg) {
 				if (mset.deletion) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
+						headers: { 'content-type': 'application/json' },
 						body: '{"file":"' + mset.deletion + '"}'
 					})
 					const task = fetch(req)
@@ -728,6 +734,7 @@ export function bulkembed(arg) {
 				if (mset.truncation) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
+						headers: { 'content-type': 'application/json' },
 						body: '{"file":"' + mset.truncation + '"}'
 					})
 					const task = fetch(req)
@@ -755,6 +762,7 @@ export function bulkembed(arg) {
 				if (mset.itd) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
+						headers: { 'content-type': 'application/json' },
 						body: '{"file":"' + mset.itd + '"}'
 					})
 					const task = fetch(req)

@@ -1,7 +1,47 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { promises as fs } from 'fs'
 import path from 'path'
-import { getSessionEntry } from './Auth.ts'
+import { getSessionEntry, getOriginFromHeaders } from './Auth.ts'
+
+// true only when `id` can only have come from one of the cookie checks in Auth.ts's
+// getSessionId(), not from the Authorization header or the x-sjppds-sessionid header/query
+// fallback, which a caller must set deliberately and a browser does not attach on its own.
+// An Authorization header's presence is checked directly, rather than comparing its resolved id
+// against `id`, so that an id value that happens to also match a cookie is still classified by
+// which header actually supplied it.
+function wasResolvedFromCookie(req, cred, id) {
+	if (req.headers?.authorization) return false
+	return (
+		!!id &&
+		(id === req.cookies?.[`${cred?.cookieId}`] ||
+			id === req.cookies?.[`${req.query?.dslabel}SessionId`] ||
+			id === req.cookies?.['x-ds-access-token'])
+	)
+}
+
+// Returns the credential to use after this check: when the session id was not cookie-derived,
+// `cred` is returned unchanged, since there is nothing to re-check. Otherwise, re-resolves the
+// credential for the same dslabel/routeKeys using the request's real Origin (or, lacking one, its
+// own Host) as the embedder value instead of the client-supplied q.embedder that resolved `cred`,
+// to confirm this exact dataset/route (not some other, unrelated one) authorizes that origin, and
+// returns that freshly-resolved credential: q.embedder may not have matched the same entry, or any
+// entry, even when the real origin does, so the caller must use this return value, not the
+// original `cred`, for anything that dereferences it afterward.
+function assertAllowedSessionOrigin(auth, req, dslabel, routeKeys, cred, id) {
+	if (!wasResolvedFromCookie(req, cred, id)) return cred
+	const origin = getOriginFromHeaders(req)
+	// try both forms, same as isCredEmbedder(), so a dataset configured with a port-qualified
+	// embedder key (e.g. 'localhost:3000') is not rejected; a matched entry whose type is
+	// 'forbidden' is a configured deny (e.g. a '*' catch-all with specific allowed exceptions)
+	// and must not count as an allowed origin
+	const resolved =
+		origin &&
+		[origin.hostname, origin.host]
+			.map(embedder => auth.getRouteCred(dslabel, routeKeys, embedder))
+			.find(matched => matched && matched.type != 'forbidden')
+	if (!resolved) throw 'disallowed origin for a cookie-authenticated request'
+	return resolved
+}
 
 export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
@@ -39,9 +79,14 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 	app.post(basepath + '/dslogout', async (req, res) => {
 		try {
 			const q = req.query
-			const cred = auth.getRequiredCred(q, req.path)
+			// same route-key precedence used elsewhere to resolve the credential that governs an
+			// established session, so this matches that same credential regardless of how the
+			// session came to exist
+			const routeKeys = [q.route, 'termdb', '/**']
+			let cred = auth.getRouteCred(q.dslabel, routeKeys, q.embedder)
 			const id = auth.getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
+			cred = assertAllowedSessionOrigin(auth, req, q.dslabel, routeKeys, cred, id)
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
 			if (!session) {
 				res.send({ status: 'ok' })
@@ -104,7 +149,8 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 				res.send({ status: 'ok' })
 				return
 			}
-			const id = auth.getSessionId(req)
+			const id = auth.getSessionId(req, cred)
+			assertAllowedSessionOrigin(auth, req, q.dslabel, ['termdb'], cred, id)
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
 			const email = session?.email || ''
 			const time = new Date()
