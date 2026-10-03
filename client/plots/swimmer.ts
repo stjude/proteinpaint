@@ -262,6 +262,10 @@ class Swimmer extends PlotBase implements RxComponent {
 		}
 	}
 
+	destroy() {
+		this.renderer?.destroy()
+	}
+
 	async fetchLanes(): Promise<SwimmerResponse> {
 		const body: any = {
 			genome: this.state.genome,
@@ -297,6 +301,8 @@ export class SwimmerRenderer {
 	laneType?: { name: string; plural_name: string }
 	/** annotations of point samples (e.g. CSF) shown on hover, fetched once per sample id */
 	pointSampleAnno = new Map<string, Promise<{ label: string; value: string }[]>>()
+	/** menu to edit a legend entry, reused across legend clicks */
+	legendMenu?: Menu
 
 	/** called with changed settings (e.g. legend edits); without it the renderer keeps the change itself and
 	redraws, as in sample view where the lane has no plot config to save it to */
@@ -812,8 +818,9 @@ export class SwimmerRenderer {
 		opts: { allowColor: boolean; allowShape: boolean }
 	) {
 		this.dom.tip.hide()
-		const menu = new Menu({ padding: '0px' })
-		const div = menu.d.append('div')
+		if (!this.legendMenu) this.legendMenu = new Menu({ padding: '0px' })
+		const menu = this.legendMenu
+		const div = menu.clear().d.append('div')
 		const option = (text: string, edit: () => { [label: string]: LegendOverride }) =>
 			div
 				.append('div')
@@ -856,6 +863,12 @@ export class SwimmerRenderer {
 				})
 		}
 		menu.showunder(event.target)
+	}
+
+	/** remove the body-mounted menus and their body listeners */
+	destroy() {
+		this.dom.tip.destroy()
+		this.legendMenu?.destroy()
 	}
 
 	/** merge changes into the legend overrides, then save them through onSettingsChange or redraw locally */
