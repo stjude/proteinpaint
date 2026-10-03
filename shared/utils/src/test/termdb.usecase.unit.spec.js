@@ -225,6 +225,57 @@ tape('summaryInput term0', test => {
 	test.end()
 })
 
+tape('swimmer pointTerm', test => {
+	const usecase = { target: 'swimmer', detail: 'pointTerm', sampleTypes: ['4'] }
+	const uses = term => isUsableTerm(term, usecase)
+	test.deepEqual(
+		uses({ type: 'categorical', isleaf: true, sample_type: '4' }),
+		new Set(['plot']),
+		'should allow a categorical term of a point sample type'
+	)
+	test.deepEqual(
+		uses({ type: 'float', isleaf: true, sample_type: 4 }),
+		new Set(['plot']),
+		'should allow a numeric term of a point sample type, also with a numeric sample_type'
+	)
+	test.deepEqual(
+		uses({ type: 'multivalue', isleaf: true, sample_type: '4' }),
+		new Set(),
+		'should not allow a multivalue term, a marker has one color'
+	)
+	test.deepEqual(
+		uses({ type: 'survival', isleaf: true, sample_type: '4' }),
+		new Set(),
+		'should not allow a survival term'
+	)
+	test.deepEqual(
+		uses({ type: 'categorical', isleaf: true, sample_type: '2' }),
+		new Set(),
+		'should not allow a term of another sample type'
+	)
+	test.deepEqual(
+		uses({ type: 'categorical', isleaf: true }),
+		new Set(),
+		'should not allow a term without a sample type'
+	)
+	test.deepEqual(
+		uses({ isleaf: false, sample_type: '4', child_types: ['categorical', 'float'] }),
+		new Set(['branch']),
+		'should allow a branch of a point sample type'
+	)
+	test.deepEqual(
+		uses({ isleaf: false, sample_type: '1', child_types: ['categorical'] }),
+		new Set(),
+		'should not allow a branch of another sample type'
+	)
+	test.deepEqual(
+		isUsableTerm({ type: 'categorical', isleaf: true, sample_type: '2' }, { target: 'swimmer', detail: 'term0' }),
+		new Set(['plot']),
+		'should still allow any sample type for divide-by (term0)'
+	)
+	test.end()
+})
+
 /*************************
  reusable helper functions
 **************************/
