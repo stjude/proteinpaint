@@ -229,7 +229,7 @@ export function parseSwimmerFiles(rangeText: string, pointText: string): ParsedS
 	for (const line of splitLines(pointText)) {
 		const [sample, event, timeStr, pointSample] = line.split('\t').map(s => s.trim())
 		const time = Number(timeStr)
-		if (!sample || !event || !Number.isFinite(time)) {
+		if (!sample || !event || !timeStr || !Number.isFinite(time)) {
 			skipped.badPoint++
 			continue
 		}
