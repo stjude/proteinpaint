@@ -74,9 +74,7 @@ function makeAuthWithBasic(credOpts: any = {}, genomes: any = {}) {
 }
 
 // Build a mock express app and register routes, returning the app
-// credEmbedders defaults to this fixture's own embedder, matching what validateDsCredentials()
-// would compute from the creds built by makeAuthWithJwt()/makeAuthWithBasic() above
-function makeApp(auth: Auth, basepath = '', credEmbedders: string[] = [embedder]) {
+function makeApp(auth: Auth, basepath = '') {
 	const app: any = {
 		routes: {} as Record<string, any>
 	}
@@ -87,7 +85,7 @@ function makeApp(auth: Auth, basepath = '', credEmbedders: string[] = [embedder]
 			app.routes[route][method] = handler
 		}
 	}
-	setAuthRoutes(app, auth, basepath, { cachedir }, credEmbedders)
+	setAuthRoutes(app, auth, basepath, { cachedir })
 	return app
 }
 
@@ -319,12 +317,13 @@ tape('/dslogout: returns ok when session does not exist (already expired)', asyn
 	test.timeoutAfter(500)
 	test.plan(2)
 
-	const auth = makeAuthWithJwt()
+	// '/**' route key so getRequiredCred finds a cred for /dslogout, same as a real logout call
+	const auth = makeAuthWithBasic()
 	const app = makeApp(auth)
 	const req = {
 		query: { dslabel, embedder },
 		path: '/dslogout',
-		headers: {},
+		headers: { host: embedder },
 		cookies: { 'x-ds-access-token': 'nonexistent-session-id' }
 	}
 	const res = makeMockRes()
@@ -408,6 +407,59 @@ tape('/dslogout: does not check origin when the session id comes from a header, 
 	await app.routes['/dslogout'].post(req, res)
 	test.equal(res.sentData?.status, 'ok', 'should return ok')
 	test.equal(auth.sessions.get(dslabel)?.get(sessionId), undefined, 'should remove the session')
+	test.end()
+})
+
+tape('/dslogout: rejects a cookie-derived session when this route has no matching credential', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	// cred is configured only under 'termdb', so getRequiredCred(q, '/dslogout') finds nothing for
+	// the original request; getSessionId() can still resolve a real session via the generic
+	// x-ds-access-token cookie regardless, so the origin check must still run and reject it
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-logout-no-route-cred-session-id'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder },
+		path: '/dslogout',
+		headers: {},
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/dslogout'].post(req, res)
+	test.equal(res.statusCode, 401, 'should set 401')
+	test.equal(auth.sessions.get(dslabel)?.get(sessionId)?.time !== undefined, true, 'should not remove the session')
+	test.end()
+})
+
+tape('/dslogout: an origin valid for a different dataset does not satisfy this one', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(1)
+
+	// 'otherDs' allows any origin ('*'), but the request is for `dslabel`, which only allows `embedder`
+	const creds: any = {
+		[dslabel]: { '/**': { [embedder]: makeBasicCred() } },
+		otherDs: { '/**': { '*': makeBasicCred({ dslabel: 'otherDs' }) } }
+	}
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	const sessionId = 'test-logout-cross-dataset-session-id'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder },
+		path: '/dslogout',
+		headers: { host: 'some-other-origin.example' },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/dslogout'].post(req, res)
+	test.equal(res.statusCode, 401, 'should set 401 even though another dataset allows any origin')
 	test.end()
 })
 
@@ -686,7 +738,7 @@ tape('/authorizedActions: returns 401 on file system error', async function (tes
 		}
 	}
 	// Invalid cachedir to trigger file-write error
-	setAuthRoutes(app, auth, '', { cachedir: '/nonexistent/path/to/nowhere' }, [embedder])
+	setAuthRoutes(app, auth, '', { cachedir: '/nonexistent/path/to/nowhere' })
 
 	const req = {
 		query: { dslabel, embedder, action: 'export', details: '{}' },

@@ -1,7 +1,7 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { promises as fs } from 'fs'
 import path from 'path'
-import { getSessionEntry, getOriginFromHeaders, isCredEmbedder } from './Auth.ts'
+import { getSessionEntry, getOriginFromHeaders } from './Auth.ts'
 
 // true only when the resolved session id came from one of the cookie checks in Auth.ts's
 // getSessionId(), not from the Authorization header (handled earlier in getSessionId(), before
@@ -16,18 +16,21 @@ function wasResolvedFromCookie(req, cred, id) {
 	)
 }
 
-// Checks that a request using a session cookie has an Origin (or, lacking one, its own host) that
-// is one of the dataset's credentialed embedders, the same check setHeaders() in app.middlewares.js
-// uses to decide whether to answer with CORS headers at all.
-function assertAllowedSessionOrigin(req, credEmbedders, cred, id) {
-	if (!cred || !wasResolvedFromCookie(req, cred, id)) return
+// Re-resolves the dataset/route credential using the request's real Origin (or, lacking one, its
+// own Host) as the embedder value, instead of the client-supplied q.embedder that resolved `cred`,
+// to confirm this exact dataset/route (not some other, unrelated one) authorizes that origin. This
+// runs independently of whether the original `cred` lookup found anything, since getSessionId() can
+// still resolve a cookie-derived session id (via the generic cookie names below) even when `cred`
+// is falsy for this request's q.embedder/path.
+function assertAllowedSessionOrigin(auth, req, routePath, cred, id) {
+	if (!wasResolvedFromCookie(req, cred, id)) return
 	const origin = getOriginFromHeaders(req)
-	if (!credEmbedders.some(pattern => isCredEmbedder(origin, pattern))) {
+	if (!auth.getRequiredCred({ ...req.query, embedder: origin?.hostname }, routePath)) {
 		throw 'disallowed origin for a cookie-authenticated request'
 	}
 }
 
-export function setAuthRoutes(app, auth, basepath = '', serverconfig, credEmbedders: string[] = []) {
+export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
 
 	// TODO: should check if the app already has an auth route handlers,
@@ -66,7 +69,7 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig, credEmbedd
 			const cred = auth.getRequiredCred(q, req.path)
 			const id = auth.getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
-			assertAllowedSessionOrigin(req, credEmbedders, cred, id)
+			assertAllowedSessionOrigin(auth, req, req.path, cred, id)
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
 			if (!session) {
 				res.send({ status: 'ok' })
@@ -130,7 +133,7 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig, credEmbedd
 				return
 			}
 			const id = auth.getSessionId(req)
-			assertAllowedSessionOrigin(req, credEmbedders, cred, id)
+			assertAllowedSessionOrigin(auth, req, 'termdb', cred, id)
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
 			const email = session?.email || ''
 			const time = new Date()

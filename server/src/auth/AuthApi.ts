@@ -36,7 +36,7 @@ export class AuthApi implements AuthInterface {
 		// app.use() from other route setters must be called before app.get|post|all
 		// so delay setting these optional routes (this is done in server/src/test/routes/gdc.js also)
 		await sleep(0)
-		setAuthRoutes(app, this.#auth, basepath, serverconfig, this.credEmbedders)
+		setAuthRoutes(app, this.#auth, basepath, serverconfig)
 	}
 
 	canDisplaySampleIds(req, ds) {
