@@ -394,6 +394,7 @@ if (!serverconfig.backend_only) serverconfig.binDir = binDir
 // missing there. The server serves these paths from this dir when public/ does not have them, such as a public/ mount
 // that the init cannot write to (see app.middlewares.js). Auto-computed from cwd like binDir, never operator-set.
 const frontPublicDir = path.join(process.cwd(), 'node_modules/@sjcrh/proteinpaint-front/public')
+delete serverconfig.frontPublicDir
 if (!serverconfig.backend_only && fs.existsSync(frontPublicDir)) serverconfig.frontPublicDir = frontPublicDir
 
 if (serverconfig.publicDir) {

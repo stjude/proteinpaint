@@ -219,6 +219,9 @@ tape('getFrontPublicFallback()', async test => {
 		test.deepEqual(await get('/cards/a.json'), [200, 'front card'], 'should serve a front card when public/ has none')
 		test.deepEqual(await get('/other.txt'), [404, ''], 'should not serve other files in the front dir')
 		test.deepEqual(await get('/b.json'), [200, 'public file'], 'should still serve the public/ files')
+		for (const p of ['/cards/%2e%2e/other.txt', '/cards/..%2fother.txt', '/cards%2f..%2fother.txt']) {
+			test.notEqual((await get(p))[0], 200, `should not serve other files in the front dir for ${p}`)
+		}
 		fs.writeFileSync(path.join(publicDir, 'index.html'), 'public index')
 		fs.mkdirSync(path.join(publicDir, 'cards'))
 		fs.writeFileSync(path.join(publicDir, 'cards/a.json'), 'public card')
