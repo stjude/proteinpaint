@@ -106,8 +106,7 @@ export function checkRuntimePosture({
 	if (mountinfo !== undefined) {
 		// the same selection as for the other dirs, the last of any stacked mounts on /
 		const root = findMount(mounts, '/')
-		if (root && !root.options.includes('ro'))
-			add('read-only-root', 'the root filesystem is writable, mount it read-only')
+		if (root && !isReadOnly(root)) add('read-only-root', 'the root filesystem is writable, mount it read-only')
 		const realTmpdir = realpath(_fs, tmpdir)
 		const dirs = new Map([tmpdir, ...writableDirs].map(dir => [realpath(_fs, dir), dir]))
 		const reported = new Set()
@@ -116,15 +115,15 @@ export function checkRuntimePosture({
 			// the dir's own mount, then the mounts under the dir that the process sees, since a write allowance
 			// for a dir also covers the paths under it
 			const mount = findMount(mounts, real)
-		const under = mounts.filter(
-			m =>
-				m.mountPoint != real &&
-				(real == '/' || m.mountPoint.startsWith(real + '/')) &&
-				findMount(mounts, m.mountPoint) === m
-		)
+			const under = mounts.filter(
+				m =>
+					m.mountPoint != real &&
+					(real == '/' || m.mountPoint.startsWith(real + '/')) &&
+					findMount(mounts, m.mountPoint) === m
+			)
 			for (const m of mount ? [mount, ...under] : under) {
 				// the noexec option does not matter for a ro mount, where nothing can be written
-				if (m.options.includes('noexec') || m.options.includes('ro') || reported.has(m)) continue
+				if (m.options.includes('noexec') || isReadOnly(m) || reported.has(m)) continue
 				reported.add(m)
 				add(
 					check,
@@ -213,8 +212,9 @@ export function logRuntimePosture(result, { strict = false, log = console.warn }
 	return errors
 }
 
-// returns [{id, parentId, mountPoint, options[]}] in mountinfo order; the mount options are the per-mount ones,
-// such as ro and noexec, in the 6th field of each /proc/self/mountinfo line
+// returns [{id, parentId, mountPoint, options[], superOptions[]}] in mountinfo order; the mount options are the
+// per-mount ones, such as ro and noexec, in the 6th field of each /proc/self/mountinfo line, and the super options
+// are the filesystem ones, in the 3rd field after the '-' separator that follows the optional fields
 export function parseMountinfo(text) {
 	const mounts = []
 	for (const line of text.split('\n')) {
@@ -222,9 +222,17 @@ export function parseMountinfo(text) {
 		if (fields.length < 6) continue
 		// the kernel escapes a space, tab, newline, or backslash in a path as an octal \ooo sequence
 		const mountPoint = fields[4].replace(/\\([0-7]{3})/g, (_, o) => String.fromCharCode(parseInt(o, 8)))
-		mounts.push({ id: fields[0], parentId: fields[1], mountPoint, options: fields[5].split(',') })
+		const separator = fields.indexOf('-', 6)
+		const superOptions = separator == -1 ? [] : fields[separator + 3]?.split(',') ?? []
+		mounts.push({ id: fields[0], parentId: fields[1], mountPoint, options: fields[5].split(','), superOptions })
 	}
 	return mounts
+}
+
+// true when the mount or its filesystem has the ro option, such as a filesystem that the kernel has
+// remounted ro after an error, while the per-mount options still have rw
+function isReadOnly(mount) {
+	return mount.options.includes('ro') || mount.superOptions.includes('ro')
 }
 
 // returns the mount that the process sees at a path, following the mount tree from the root mount: a mount over
