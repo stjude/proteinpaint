@@ -276,16 +276,11 @@ function log(req) {
 	A missing or invalid status (not 400-599) is answered as 500.
 */
 // serves only index.html, for / and /index.html, and the cards/ files from dir, see serverconfig.frontPublicDir;
-// the static handler is rooted at dir/cards and index.html is sent as a single file, so that the other files
-// in dir, if any, are not published
+// the dir static handler is reached only by the exact / and /index.html routes, and the cards static handler is
+// rooted at dir/cards, so that the other files in dir, if any, are not published
 export function getFrontPublicFallback(dir) {
 	const router = express.Router()
-	const indexFile = path.join(dir, 'index.html')
-	router.get(['/', '/index.html'], (req, res, next) => {
-		res.sendFile(indexFile, err => {
-			if (err && !res.headersSent) next()
-		})
-	})
+	router.get(['/', '/index.html'], express.static(dir))
 	router.use('/cards', express.static(path.join(dir, 'cards'), { index: false }))
 	return router
 }
