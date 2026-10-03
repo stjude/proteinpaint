@@ -38,7 +38,7 @@ class MassCharts {
 	// TODO later add reactsTo() to react to filter change
 
 	getState(appState) {
-		const state: { [index: string]: any} = {
+		const state: { [index: string]: any } = {
 			vocab: appState.vocab, // TODO delete it as vocabApi should be used instead
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
@@ -54,7 +54,7 @@ class MassCharts {
 	main() {
 		this.dom.btns.style('display', d => {
 			if (this.state.currentCohortChartTypes.includes(d.chartType)) {
-				if (d.isVisible) return d.isVisible() 
+				if (d.isVisible) return d.isVisible()
 				else return ''
 			} else return 'none'
 		})
@@ -101,11 +101,11 @@ class MassCharts {
 		// todo customize Diagnosis
 		return `${t.length > 2 ? 'Alterations' : t.join('/')} vs ${phrase}`
 	}
-	getBtnLabel_geneExpression(state){
+	getBtnLabel_geneExpression(state) {
 		const l: string[] = []
 		if (state.termdbConfig?.queries?.geneExpression) l.push('Gene Expression')
 		if (state.termdbConfig?.termType2terms?.Pseudobulk) l.push('Pseudobulk Gene Expression')
-		if (l.length > 1 || !l.length ) return 'Gene Expression'
+		if (l.length > 1 || !l.length) return 'Gene Expression'
 		return l[0]
 	}
 }
@@ -337,6 +337,14 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
+			label: 'Swimmer Plot',
+			clickTo: self.prepPlot,
+			chartType: 'swimmer',
+			config: {
+				chartType: 'swimmer'
+			}
+		},
+		{
 			label: 'Brain Imaging',
 			// launches a sandbox with the sample table; the plot itself handles sample/template selection
 			clickTo: self.prepPlot,
@@ -360,7 +368,7 @@ function getChartTypeList(self, state) {
 			config: { chartType: 'GeneExpInput' },
 			isVisible: () => {
 				/** Ds may only contain scge data, allowing the GeneExpInput form
-				 * to be visible within the SC app but not appropriate to show here. 
+				 * to be visible within the SC app but not appropriate to show here.
 				 * Limit its visibility to appropriate contexts. */
 				const isAvailable = getSelectableGETermTypes(state.termdbConfig)
 				return isAvailable.length > 0 ? '' : 'none'
@@ -567,7 +575,7 @@ function setRenderers(self) {
 				.html(chart.usecase.label)
 		}
 
-		const action: { [index: string]: any} = {
+		const action: { [index: string]: any } = {
 			type: 'plot_create',
 			id: getId(),
 			config: { chartType: chart.chartType, activeCohort: self.state.activeCohort }
