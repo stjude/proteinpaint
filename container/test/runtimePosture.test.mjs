@@ -206,6 +206,11 @@ test('parseMountinfo() decodes escaped paths, findMount() uses the longest and l
 	assert.equal(findMount(mounts, '/my data/x').mountPoint, '/my data')
 	assert.equal(findMount(mounts, '/my datax').mountPoint, '/')
 	assert.deepEqual(findMount(mounts, '/tmp/y').options, ['ro', 'noexec'])
+	assert.deepEqual(mounts[0].superOptions, ['rw'])
+	// optional fields before the separator, and a line without a separator
+	const [shared, short] = parseMountinfo('5 1 0:5 / /x rw shared:1 master:2 - xfs d ro,attr2\n6 1 0:6 / /y rw')
+	assert.deepEqual(shared.superOptions, ['ro', 'attr2'])
+	assert.deepEqual(short.superOptions, [])
 })
 
 test('logRuntimePosture() prints each finding and the unchecked items as warnings by default', () => {
@@ -307,6 +312,30 @@ test('the noexec check of a write dir skips a ro mount and includes the mounts u
 		findings: [],
 		unchecked: []
 	})
+
+	// a filesystem with the ro super option, while the per-mount options have rw
+	const superRo = hardenedMounts
+		.replace('/ / ro,relatime - overlay overlay rw', '/ / rw,relatime - overlay overlay ro')
+		.replace(
+			'/home/root/pp/cache rw,nosuid,nodev,noexec - xfs /dev/sda1 rw',
+			'/home/root/pp/cache rw - xfs /dev/sda1 ro'
+		)
+	assert.deepEqual(checkRuntimePosture(fakeDeps({ writableDirs, files: { '/proc/self/mountinfo': superRo } })), {
+		findings: [],
+		unchecked: []
+	})
+
+	// a write dir of /, which covers all of the mounts that the process sees
+	const all = checkRuntimePosture(fakeDeps({ writableDirs: ['/'], files: { '/proc/self/mountinfo': mountinfo } }))
+	assert.deepEqual(
+		all.findings.filter(f => f.check == 'dir-noexec').map(f => f.message),
+		['/ is on a mount without noexec (mount point /)']
+	)
+	const rootRo = `${hardenedMounts}\n9 1 0:9 / /data rw - xfs d rw`
+	assert.deepEqual(
+		checkRuntimePosture(fakeDeps({ writableDirs: ['/'], files: { '/proc/self/mountinfo': rootRo } })).findings,
+		[{ check: 'dir-noexec', message: '/ has a mount without noexec under it (mount point /data)' }]
+	)
 
 	// a mount under a write dir is checked, even when the dir itself is on a ro mount; a hidden one is not
 	const nested = [
