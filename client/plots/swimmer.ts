@@ -655,10 +655,19 @@ export class SwimmerRenderer {
 						const sample = { sampleId: p.sampleId, sampleName: p.sample }
 						dot
 							.attr('data-testid', 'sjpp-swimmer-linked-point')
+							.attr('role', 'button')
+							.attr('tabindex', 0)
+							.attr('aria-label', `Open sample view of ${p.sample}`)
 							.style('cursor', 'pointer')
 							.on('click', () => {
 								tip.hide()
 								this.openSampleView(sample)
+							})
+							.on('keydown', (event: KeyboardEvent) => {
+								if (event.key === 'Enter' || event.key === ' ') {
+									event.preventDefault()
+									this.openSampleView(sample)
+								}
 							})
 					}
 				}
@@ -671,9 +680,18 @@ export class SwimmerRenderer {
 						.attr('dominant-baseline', 'central')
 						.attr('font-size', fontSize)
 						.attr('fill', '#333')
+						.attr('role', 'button')
+						.attr('tabindex', 0)
+						.attr('aria-label', `Open sample view of ${lane.sample}`)
 						.style('cursor', 'pointer')
 						.text(lane.sample)
 						.on('click', () => this.openSampleView({ sampleId: lane.sampleId, sampleName: lane.sample }, true))
+						.on('keydown', (event: KeyboardEvent) => {
+							if (event.key === 'Enter' || event.key === ' ') {
+								event.preventDefault()
+								this.openSampleView({ sampleId: lane.sampleId, sampleName: lane.sample }, true)
+							}
+						})
 						.on('mouseover', event => {
 							tip.clear().show(event.clientX, event.clientY)
 							tip.d.append('div').text('Click to open sample view')
@@ -746,14 +764,22 @@ export class SwimmerRenderer {
 				.attr('transform', `translate(${x},${y})`)
 				.attr('data-testid', 'sjpp-swimmer-legend-item')
 				.attr('data-legend-type', type)
+				.attr('role', 'button')
+				.attr('tabindex', 0)
+				.attr('aria-label', `Edit legend item ${opts.label || e.label}`)
 				.style('cursor', 'pointer')
 				.style('opacity', e.hidden ? 0.4 : 1)
-				.on('click', event =>
-					this.showLegendMenu(event, type, e, entries, {
-						allowColor: opts.allowColor !== false,
-						allowShape: type != 'categories' && opts.allowShape !== false
-					})
-				)
+			const showMenu = event =>
+				this.showLegendMenu(event, type, e, entries, {
+					allowColor: opts.allowColor !== false,
+					allowShape: type != 'categories' && opts.allowShape !== false
+				})
+			row.on('click', showMenu).on('keydown', (event: KeyboardEvent) => {
+				if (event.key === 'Enter' || event.key === ' ') {
+					event.preventDefault()
+					showMenu(event)
+				}
+			})
 			// transparent box so the gap between icon and label is clickable too
 			row
 				.append('rect')
