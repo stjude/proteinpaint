@@ -30,6 +30,18 @@ async function waitForSelector(root: Element, selector: string, ms = 15000) {
 	throw new Error(`'${selector}' did not render within ${ms}ms`)
 }
 
+/** Poll until `cond()` is truthy, or fail — used below to confirm the
+ loading indicator (wsi.direct.ts's showLoading/hideLoading) settles back to
+ hidden instead of getting stuck visible once a mode's own data has arrived. */
+async function waitForCondition(cond: () => boolean, message: string, ms = 15000) {
+	const t0 = Date.now()
+	while (Date.now() - t0 < ms) {
+		if (cond()) return
+		await new Promise(r => setTimeout(r, 100))
+	}
+	throw new Error(`${message} did not become true within ${ms}ms`)
+}
+
 const runpp = helpers.getRunPp('mass', {
 	state: {
 		nav: { header_mode: 'hidden' },
@@ -166,6 +178,16 @@ tape('raster mode: a cellCountLimit below the fixture cell count renders the ras
 			// selection/enrichment flow to stay cheap — see setLassoEnabled)
 			const [lassoBtn] = await waitForSelector(dom.viewer.node(), '[data-testid="sjpp-wsi-lasso-btn"] button')
 			test.equal((lassoBtn as HTMLElement).style.cursor, 'not-allowed', 'lasso button shows as disabled')
+
+			// the loading indicator (shown while /cellcount + the raster tiles'
+			// own render latency are in flight) must settle back to hidden once
+			// the overlay tiles actually load, not get stuck visible
+			const [loading] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-loading"]')
+			await waitForCondition(
+				() => (loading as HTMLElement).style.display == 'none',
+				'loading indicator hidden once the raster tiles finish'
+			)
+			test.pass('loading indicator settled back to hidden, not stuck visible')
 
 			if (test['_ok']) wsi.Inner.app.destroy()
 		} catch (e) {

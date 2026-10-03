@@ -459,6 +459,38 @@ export async function init(
 					.style('white-space', 'pre') // one datum per line via \n
 			: undefined
 
+		// shown while the CURRENT view's own data is still arriving: the
+		// /cellcount round trip updateMode() always makes, plus (raster mode)
+		// the overlay tiles' own server-side render latency on a cache miss --
+		// without this, the slide's own tiles (already loading, unaffected by
+		// any of this) render first and the cell overlay visibly catches up
+		// later. Vector mode has no equivalent tile latency: its fetch IS the
+		// wait, so updateMode() hides this the moment buildVector() resolves.
+		const loadingIndicator = needCellPolys
+			? mapDiv
+					.append('div')
+					.attr('data-testid', 'sjpp-wsi-loading')
+					.style('position', 'fixed')
+					.style('z-index', '30')
+					.style('display', 'none')
+					.style('background', 'rgba(255,255,255,0.9)')
+					.style('padding', '6px 12px')
+					.style('border-radius', '4px')
+					.style('font', '12px system-ui')
+					.text('Loading…')
+			: undefined
+		function showLoading() {
+			if (!loadingIndicator) return
+			const r = mapDiv.node().getBoundingClientRect() // centered over the map's own rectangle
+			loadingIndicator
+				.style('top', `${r.top + r.height / 2 - 12}px`)
+				.style('left', `${r.left + r.width / 2 - 30}px`)
+				.style('display', 'block')
+		}
+		function hideLoading() {
+			loadingIndicator?.style('display', 'none')
+		}
+
 		function teardownVector() {
 			for (const l of vectorLayers) map.removeLayer(l)
 			vectorLayers = []
@@ -830,6 +862,10 @@ export async function init(
 			// per transition, and its own tiles are cached server-side per
 			// (h5ad version, tile, color assignment) like /tile
 			let rasterLayer: TileLayer | undefined
+			// in-flight count of the raster layer's own tile requests -- lets
+			// updateMode() know whether showLoading() can be hidden right away
+			// (every needed tile already cached) or must wait for these events
+			let rasterTilesLoading = 0
 			function ensureRasterLayer(): TileLayer {
 				if (rasterLayer) return rasterLayer
 				const colors = encodeURIComponent(JSON.stringify(shownColor))
@@ -842,6 +878,14 @@ export async function init(
 					size: [w, h],
 					crossOrigin: 'anonymous',
 					zDirection: -1
+				})
+				source.on('tileloadstart', () => rasterTilesLoading++)
+				source.on(['tileloadend', 'tileloaderror'], () => {
+					rasterTilesLoading = Math.max(0, rasterTilesLoading - 1)
+					// a stale event from a since-abandoned mode (e.g. panned into
+					// vector mode while an old raster tile was still in flight)
+					// must not hide an indicator some OTHER, still-running wait put up
+					if (rasterTilesLoading === 0 && mode === 'raster') hideLoading()
 				})
 				rasterLayer = new TileLayer({ source }) // no maxResolution: fills show at all zooms, like the vector ones
 				map.addLayer(rasterLayer)
@@ -909,6 +953,7 @@ export async function init(
 			async function updateMode() {
 				const ext = map.getView().calculateExtent() as [number, number, number, number]
 				const bbox = viewBboxUm(ext, mppX, mppY)
+				showLoading()
 				let count: number
 				try {
 					const r = await dofetch3(
@@ -919,6 +964,7 @@ export async function init(
 					if (!r || r.error) throw new Error(r?.error || 'failed to count cells')
 					count = r.count
 				} catch (e: any) {
+					hideLoading()
 					sayerror(holder, `Cell count error: ${e.message || e}`)
 					return // keep the current mode rather than guessing
 				}
@@ -930,6 +976,10 @@ export async function init(
 						mode = 'raster'
 						setLassoEnabled(false)
 					}
+					// every needed tile may already be cached (no tileloadstart ever
+					// fires for those) -- only the tileloadend/error handler above
+					// can hide this otherwise, so check the already-settled case too
+					if (rasterTilesLoading === 0) hideLoading()
 				} else if (mode !== 'vector' || !loadedBbox || !bboxContains(loadedBbox, bbox)) {
 					hideRaster()
 					const fetchBbox = padBbox(bbox, 0.5) // margin so a small pan stays inside loadedBbox
@@ -937,6 +987,9 @@ export async function init(
 					loadedBbox = fetchBbox
 					mode = 'vector'
 					setLassoEnabled(true)
+					hideLoading() // vector rendering has no tile latency of its own: the fetch above WAS the wait
+				} else {
+					hideLoading() // already loaded and still in view: nothing to wait for
 				}
 			}
 
