@@ -235,23 +235,96 @@ test('logRuntimePosture() in strict mode: a STRICT_CHECKS finding and an uncheck
 		],
 		unchecked: ['/x']
 	}
-	assert.deepEqual(logRuntimePosture(result, { strict: true, log: m => logged.push(m) }), ['a', 'unable to check /x'])
+	assert.deepEqual(logRuntimePosture(result, { strict: true, log: m => logged.push(m) }), [
+		'a',
+		'c',
+		'unable to check /x'
+	])
 	assert.deepEqual(logged, [
 		'runtimePosture.mjs: ERROR a',
 		'runtimePosture.mjs: WARNING b',
-		'runtimePosture.mjs: WARNING c',
+		'runtimePosture.mjs: ERROR c',
 		'runtimePosture.mjs: ERROR unable to check /x'
 	])
-	// the host kernel setting and the noexec of other write dirs are not required yet
+	// the host kernel setting is not required
 	assert.deepEqual([...STRICT_CHECKS].toSorted(), [
 		'app-files',
 		'capabilities',
+		'dir-noexec',
 		'lib-dirs',
 		'no-new-privileges',
 		'read-only-root',
 		'tmp-noexec',
 		'user'
 	])
+})
+
+test('logRuntimePosture() in strict mode: a dir-noexec finding is an error', () => {
+	const mountinfo = hardenedMounts.replace(
+		'/home/root/pp/cache rw,nosuid,nodev,noexec',
+		'/home/root/pp/cache rw,nosuid,nodev'
+	)
+	const result = checkRuntimePosture(fakeDeps({ files: { '/proc/self/mountinfo': mountinfo } }))
+	assert.deepEqual(result.findings, [
+		{
+			check: 'dir-noexec',
+			message: '/home/root/pp/cache is on a mount without noexec (mount point /home/root/pp/cache)'
+		}
+	])
+	const logged = []
+	assert.deepEqual(logRuntimePosture(result, { strict: true, log: m => logged.push(m) }), [
+		'/home/root/pp/cache is on a mount without noexec (mount point /home/root/pp/cache)'
+	])
+	assert.deepEqual(logged, [
+		'runtimePosture.mjs: ERROR /home/root/pp/cache is on a mount without noexec (mount point /home/root/pp/cache)'
+	])
+})
+
+test('the noexec check of a write dir skips a ro mount and includes the mounts under the dir', () => {
+	// a write dir without its own mount, on the root mount with ro
+	const writableDirs = ['/home/root/pp/cache', '/home/root/pp/tp_write']
+	const result = checkRuntimePosture(fakeDeps({ writableDirs }))
+	assert.deepEqual(result, { findings: [], unchecked: [] })
+	assert.deepEqual(logRuntimePosture(result, { strict: true, log: () => {} }), [])
+
+	// the same dir on a root mount without ro
+	const mountinfo = hardenedMounts.replace('/ / ro,relatime', '/ / rw,relatime')
+	const rw = checkRuntimePosture(fakeDeps({ writableDirs, files: { '/proc/self/mountinfo': mountinfo } }))
+	assert.deepEqual(
+		rw.findings.map(f => [f.check, f.message]),
+		[
+			['read-only-root', 'the root filesystem is writable, mount it read-only'],
+			['dir-noexec', '/home/root/pp/tp_write is on a mount without noexec (mount point /)']
+		]
+	)
+
+	// a write dir mount with ro, and the OS temp dir on the root mount with ro
+	const ro = [
+		'1 0 0:1 / / ro,relatime - overlay overlay rw',
+		'3 1 0:3 /cache /home/root/pp/cache ro,nosuid,nodev - xfs /dev/sda1 rw'
+	].join('\n')
+	assert.deepEqual(checkRuntimePosture(fakeDeps({ files: { '/proc/self/mountinfo': ro } })), {
+		findings: [],
+		unchecked: []
+	})
+
+	// a mount under a write dir is checked, even when the dir itself is on a ro mount; a hidden one is not
+	const nested = [
+		ro,
+		'4 3 0:4 / /home/root/pp/cache/sub rw,nosuid - xfs /dev/sdb1 rw',
+		'5 1 0:5 / /home/root/pp/tp_write/a/b rw - xfs /dev/sdc1 rw',
+		'6 1 0:6 / /home/root/pp/tp_write/a ro - xfs /dev/sdd1 rw',
+		'7 1 0:7 / /home/root/pp/tp_writex rw - xfs /dev/sde1 rw'
+	].join('\n')
+	assert.deepEqual(
+		checkRuntimePosture(fakeDeps({ writableDirs, files: { '/proc/self/mountinfo': nested } })).findings,
+		[
+			{
+				check: 'dir-noexec',
+				message: '/home/root/pp/cache has a mount without noexec under it (mount point /home/root/pp/cache/sub)'
+			}
+		]
+	)
 })
 
 test('the app dir, node_modules, @sjcrh packages, bundle dir, and .mjs files are checked, not public', () => {

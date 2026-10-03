@@ -5,7 +5,8 @@
 	- a non-root user, no effective capabilities, and no_new_privs
 	- kernel.yama.ptrace_scope of at least 1
 	- a read-only root filesystem
-	- noexec on the writable dirs, such as the OS temp dir and the cache dir
+	- noexec on the writable dirs, such as the OS temp dir and the cache dir, and on the mounts under them;
+	  a mount with the ro option is not reported
 	- read-only interpreter library dirs, such as /opt/venv
 	- read-only app files: the app dir, its node_modules and client bundle dirs, and the app .mjs files,
 	  which are owned by root in the image; the public dir may be written in debugmode, so it is not checked
@@ -36,7 +37,16 @@ export const APP_DIR = '/home/root/pp/app/active'
 // the checks whose finding is an error in strict mode; every one of these can be applied by the container
 // runtime, see the releaseRollout .container units
 export const STRICT_CHECKS = Object.freeze(
-	new Set(['user', 'capabilities', 'no-new-privileges', 'read-only-root', 'tmp-noexec', 'lib-dirs', 'app-files'])
+	new Set([
+		'user',
+		'capabilities',
+		'no-new-privileges',
+		'read-only-root',
+		'tmp-noexec',
+		'dir-noexec',
+		'lib-dirs',
+		'app-files'
+	])
 )
 
 // the accessSync(W_OK) errors that mean a dir is not writable, or does not exist
@@ -100,13 +110,24 @@ export function checkRuntimePosture({
 			add('read-only-root', 'the root filesystem is writable, mount it read-only')
 		const realTmpdir = realpath(_fs, tmpdir)
 		const dirs = new Map([tmpdir, ...writableDirs].map(dir => [realpath(_fs, dir), dir]))
+		const reported = new Set()
 		for (const [real, dir] of dirs) {
+			const check = real == realTmpdir ? 'tmp-noexec' : 'dir-noexec'
+			// the dir's own mount, then the mounts under the dir that the process sees, since a write allowance
+			// for a dir also covers the paths under it
 			const mount = findMount(mounts, real)
-			if (mount && !mount.options.includes('noexec'))
+			const under = mounts.filter(m => m.mountPoint.startsWith(real + '/') && findMount(mounts, m.mountPoint) === m)
+			for (const m of mount ? [mount, ...under] : under) {
+				// the noexec option does not matter for a ro mount, where nothing can be written
+				if (m.options.includes('noexec') || m.options.includes('ro') || reported.has(m)) continue
+				reported.add(m)
 				add(
-					real == realTmpdir ? 'tmp-noexec' : 'dir-noexec',
-					`${dir} is on a mount without noexec (mount point ${mount.mountPoint})`
+					check,
+					m === mount
+						? `${dir} is on a mount without noexec (mount point ${m.mountPoint})`
+						: `${dir} has a mount without noexec under it (mount point ${m.mountPoint})`
 				)
+			}
 		}
 	}
 
