@@ -912,6 +912,22 @@ tape('get_bin_range_equation()', function (test) {
 	)
 	test.equal(labeled.label, '10 to <20 years', 'Should not mutate the bin it was given')
 
+	test.equal(
+		b.get_bin_range_equation({ start: '10950', stop: '21900', stopinclusive: true }, customConfig),
+		`10950 < ${x} ≤ 21900`,
+		'Should state numeric-string bounds as numbers'
+	)
+	test.equal(
+		b.get_bin_range_equation({ start: 10950, stop: '<b>21900</b>', stopinclusive: true }, customConfig),
+		`10950 < ${x} ≤ NaN`,
+		'Should state a non-numeric bound as NaN'
+	)
+	test.equal(
+		b.get_bin_range_equation({ start: '<b>1</b>', stopunbounded: true, startinclusive: true }, customConfig),
+		`${x} ≥NaN`,
+		'Should state a non-numeric bound of a stopunbounded bin as NaN'
+	)
+
 	// a bin that is neither unbounded nor marked inclusive on either side has no equation
 	test.equal(
 		b.get_bin_range_equation({ start: 3652.5, stop: 7305 }, customConfig),
