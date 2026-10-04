@@ -396,15 +396,24 @@ scoped to just that view.
   overlay needs to re-sum), so a gene/gene-group keeps the exact same color
   whether `expressionLayer` (vector) or `overlay_tile`'s `genes=`/`rgb=`
   (raster) is drawing it.
-- **Loading indicator** — a "Loading…" box, centered over the map, covers
-  `updateMode()`'s `/cellcount` round trip and, in raster mode, stays up
-  until that mode's own raster layers have no tiles left in flight (tracked
-  via each `Zoomify` source's `tileloadstart`/`tileloadend`/`tileloaderror`
-  events, summed into one `rasterTilesLoading` counter) — otherwise the
-  slide's own tiles (unaffected by any of this) render first and the cell
-  overlay visibly catches up later. Vector mode has no equivalent tile
-  latency of its own: its fetch IS the wait, so it hides the indicator the
-  moment `buildVector()` resolves.
+- **Loading indicator** — a "Loading…" box, centered over the map. A
+  reference count (`beginLoading()`/`endLoading()`) held open by both
+  `updateMode()`'s own `/cellcount` fetch and the map's own pending tile
+  loads — tracked via OL's map-level `loadstart`/`loadend` events, which
+  fire based on EVERY layer's tile queue collectively (slide tiles and
+  however many raster layers there are, not just the raster overlay), the
+  same authoritative signal OL itself uses rather than a hand-rolled
+  per-source counter (an earlier, per-source `tileloadstart`/`tileloadend`
+  version raced: a newly panned-into tile often hadn't started loading yet
+  at the exact instant it was checked). Without this, the slide's own tiles
+  render first and the cell overlay visibly catches up later. Vector mode
+  has no equivalent tile latency of its own: its fetch IS the wait, so it
+  calls `endLoading()` the moment `buildVector()` resolves. A
+  `STUCK_LOADING_MS` (8s) fallback timer force-hides the indicator and
+  resets the count if it's never cleared naturally — OL only dispatches
+  `loadend` once its WHOLE tile queue settles, so a single tile stuck
+  erroring/retrying (flaky network, a transient 5xx) could otherwise leave
+  the indicator up forever.
 
 ### 6. Cell hover — `client/plots/w2/wsi.direct.ts`
 

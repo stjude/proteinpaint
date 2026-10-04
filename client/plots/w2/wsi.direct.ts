@@ -544,13 +544,35 @@ export async function init(
 		// loading yet at that exact instant, so the indicator hid before OL had
 		// even begun requesting what the new view actually needs.
 		let pendingLoads = 0
+		// safety net: OL only dispatches 'loadend' once its whole tile queue
+		// reports settled (see Map.js's renderComplete_) -- a single tile stuck
+		// erroring/retrying (flaky network, a transient 5xx) can leave that
+		// never true, so 'loadend' never fires and the indicator would
+		// otherwise stay up forever. Cleared the moment a real endLoading()
+		// brings the count back to 0 on its own; only fires if that never
+		// happens within STUCK_LOADING_MS.
+		const STUCK_LOADING_MS = 8000
+		let stuckTimer: ReturnType<typeof setTimeout> | undefined
 		function beginLoading() {
 			pendingLoads++
 			showLoading()
+			if (!stuckTimer) {
+				stuckTimer = setTimeout(() => {
+					stuckTimer = undefined
+					pendingLoads = 0
+					hideLoading()
+				}, STUCK_LOADING_MS)
+			}
 		}
 		function endLoading() {
 			pendingLoads = Math.max(0, pendingLoads - 1)
-			if (pendingLoads === 0) hideLoading()
+			if (pendingLoads === 0) {
+				if (stuckTimer) {
+					clearTimeout(stuckTimer)
+					stuckTimer = undefined
+				}
+				hideLoading()
+			}
 		}
 		if (needCellPolys) {
 			map.on('loadstart', beginLoading)
