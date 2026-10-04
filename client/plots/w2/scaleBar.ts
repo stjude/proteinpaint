@@ -33,6 +33,16 @@ export function niceScaleLength(umPerScreenPx: number): number {
  scale bar" when the bar was, in fact, present, styled, and visible, just
  scrolled out of view.
 
+ Teardown is tied to the viewer's own, not to a later scroll/resize: the bar
+ is appended as a CHILD of the map's own target element (position:fixed
+ still positions it relative to the viewport regardless of DOM nesting), so
+ a full re-render that clears the viewer's container (View.ts's
+ `holder.selectAll('*').remove()`) removes the bar in the same stroke; a
+ MutationObserver on the target's own parent notices that removal
+ immediately (not on the next scroll/resize) and detaches the window-level
+ scroll/resize listeners + itself right then, rather than leaving them as
+ dead weight on `window`/`document` until some later event happens to fire.
+
  No-op when mppX isn't a real, known value (wsitiles/meta answers mpp:[] when
  the slide reports no pixel size) — a bar drawn in raw pixels would be a
  false scale, so this shows nothing rather than something misleading.
@@ -40,7 +50,7 @@ export function niceScaleLength(umPerScreenPx: number): number {
 export function addScaleBar(map: Map, mppX: number | undefined): void {
 	if (!mppX || !Number.isFinite(mppX) || mppX <= 0) return
 	const target = map.getTargetElement() // the map's own container div
-	if (!target) return
+	if (!target || !target.parentNode) return
 
 	const el = document.createElement('div')
 	el.className = 'sjpp-wsi-scalebar'
@@ -52,7 +62,7 @@ export function addScaleBar(map: Map, mppX: number | undefined): void {
 	const label = document.createElement('div')
 	label.style.cssText = 'text-align:center; margin-top:1px;'
 	el.appendChild(label)
-	document.body.appendChild(el) // position:fixed is relative to the viewport, not any scrolled ancestor
+	target.appendChild(el) // removed along with target by the viewer's own teardown; position:fixed is unaffected by DOM nesting
 
 	const update = () => {
 		const res = map.getView().getResolution() // level-0 px per screen px, current zoom
@@ -67,11 +77,6 @@ export function addScaleBar(map: Map, mppX: number | undefined): void {
 	// if that corner is scrolled out of view; hides it only once there is no
 	// visible map area left for it to sit in at all
 	const reposition = () => {
-		if (!target.isConnected) {
-			window.removeEventListener('scroll', reposition, true)
-			window.removeEventListener('resize', reposition)
-			return
-		}
 		const r = target.getBoundingClientRect()
 		const bottom = Math.min(r.bottom, window.innerHeight) - 8
 		const right = Math.min(r.right, window.innerWidth) - 8
@@ -83,6 +88,20 @@ export function addScaleBar(map: Map, mppX: number | undefined): void {
 		el.style.top = `${bottom - el.offsetHeight}px`
 		el.style.left = `${right - el.offsetWidth}px`
 	}
+
+	const destroy = () => {
+		window.removeEventListener('scroll', reposition, true)
+		window.removeEventListener('resize', reposition)
+		observer.disconnect()
+		// el itself is already gone (it was target's own child), nothing to remove here
+	}
+	// fires as soon as target is detached -- no need to wait for a scroll or
+	// resize to notice the viewer tore down; observing the parent (not target
+	// itself) because an already-detached node fires no further mutations
+	const observer = new MutationObserver(() => {
+		if (!target.isConnected) destroy()
+	})
+	observer.observe(target.parentNode, { childList: true })
 
 	map.getView().on('change:resolution', update)
 	// capture phase: catches a scrolling ANCESTOR too, not just the window

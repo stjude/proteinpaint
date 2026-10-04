@@ -121,6 +121,66 @@ tape('spatial OME-TIFF image renders the map with overlays and the burger menu',
 	}
 })
 
+tape('scale bar is torn down on re-render, not leaked as a stray fixed element', test => {
+	test.timeoutAfter(30000) // meta/tiles spawn python server-side
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'wsi',
+					sample: { sID: 'TCGA-22-1017' },
+					settings: { wsi: { annotationLevel: 0 } }
+				}
+			]
+		},
+		wsi: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(wsi) {
+		wsi.on('postRender.test', null) // run once
+		try {
+			const dom = wsi.Inner.dom
+			await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
+
+			const [bar] = await waitForSelector(document.body, '.sjpp-wsi-scalebar')
+			test.equal(
+				document.querySelectorAll('.sjpp-wsi-scalebar').length,
+				1,
+				'exactly one scale bar after the first render'
+			)
+			// owned by the map's own target (removed along with it on
+			// re-render), not appended straight to document.body
+			test.ok(dom.viewer.node().contains(bar), "scale bar's DOM parent is inside the viewer, not document.body")
+
+			// a settings change re-runs View.ts's renderViewer(), which clears
+			// and rebuilds the map -- the OLD scale bar + its window-level
+			// scroll/resize listeners must not survive this
+			await wsi.Inner.app.dispatch({
+				type: 'plot_edit',
+				id: wsi.Inner.id,
+				config: { settings: { wsi: { annotationLevel: 1 } } }
+			})
+			await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
+			await waitForSelector(document.body, '.sjpp-wsi-scalebar')
+			test.equal(
+				document.querySelectorAll('.sjpp-wsi-scalebar').length,
+				1,
+				'still exactly one scale bar after a re-render -- the old one was torn down, not leaked'
+			)
+
+			if (test['_ok']) wsi.Inner.app.destroy()
+		} catch (e) {
+			test.fail(`scale bar teardown test error: ${e}`) // never leave tape hanging
+		}
+		test.end()
+	}
+})
+
 tape('raster mode: a cellCountLimit below the fixture cell count renders the raster overlay, not vector', test => {
 	test.timeoutAfter(30000) // meta/cellcount/overlaytile spawn python server-side
 
