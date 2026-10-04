@@ -1095,6 +1095,7 @@ export async function init(
 				}
 				const limit = opts.cellCountLimit ?? DEFAULT_CELL_COUNT_LIMIT
 				if (count > limit) {
+					firstBuild = false // subsequent vector loads must preserve the user's framing
 					if (mode !== 'raster') {
 						teardownVector()
 						showRaster()
