@@ -918,14 +918,19 @@ tape('get_bin_range_equation()', function (test) {
 		'Should state numeric-string bounds as numbers'
 	)
 	test.equal(
-		b.get_bin_range_equation({ start: 10950, stop: '<b>21900</b>', stopinclusive: true }, customConfig),
+		b.get_bin_range_equation({ start: 10950, stop: 'abc', stopinclusive: true }, customConfig),
 		`10950 < ${x} ≤ NaN`,
 		'Should state a non-numeric bound as NaN'
 	)
 	test.equal(
-		b.get_bin_range_equation({ start: '<b>1</b>', stopunbounded: true, startinclusive: true }, customConfig),
+		b.get_bin_range_equation({ start: 'abc', stopunbounded: true, startinclusive: true }, customConfig),
 		`${x} ≥NaN`,
 		'Should state a non-numeric bound of a stopunbounded bin as NaN'
+	)
+	test.equal(
+		b.get_bin_range_equation({ start: '', stop: null, stopinclusive: true }, customConfig),
+		`NaN < ${x} ≤ NaN`,
+		'Should state blank and null bounds as NaN, not as 0'
 	)
 
 	// a bin that is neither unbounded nor marked inclusive on either side has no equation
