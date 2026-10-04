@@ -7,7 +7,8 @@ import {
 	cellsInLasso,
 	renderNhoodHeatmap,
 	renderSimilarSearch,
-	focusExtent
+	focusExtent,
+	choosePaddedFetchBbox
 } from '../wsi.direct'
 
 /* Tests
@@ -18,6 +19,7 @@ import {
     renderNhoodHeatmap: enrichment z-score matrix rendering
     renderSimilarSearch: no-op guard without dataset addressing (the rest needs a live server, see wsi.integration.spec.ts)
     focusExtent: niche box µm -> px, same transform as parseBoundaries
+    choosePaddedFetchBbox: padded-vs-exact viewport fallback, updateMode's own cellCountLimit guard
 */
 
 // two cells, µm coords; mpp 0.5 doubles px values, y negated for OL
@@ -61,6 +63,31 @@ tape('focusExtent boxes a niche in the same µm -> px space as parseBoundaries',
 	test.ok(
 		cellX >= box[0] && cellX <= box[2] && cellY >= box[1] && cellY <= box[3],
 		"the query's own center point falls inside its box"
+	)
+	test.end()
+})
+
+tape('choosePaddedFetchBbox falls back to the exact viewport when padding would bust the budget', test => {
+	const bbox: [number, number, number, number] = [0, 0, 10, 10] // the exact viewport
+	const paddedBbox: [number, number, number, number] = [-5, -5, 15, 15] // padBbox(bbox, 0.5): 4x the area
+
+	test.deepEqual(
+		choosePaddedFetchBbox(bbox, paddedBbox, 30, 50),
+		paddedBbox,
+		'padded count under budget: use the padded bbox (the common, nicer-UX case)'
+	)
+	test.deepEqual(
+		choosePaddedFetchBbox(bbox, paddedBbox, 80, 50),
+		bbox,
+		// a sparse/empty viewport next to denser tissue just outside it: the
+		// exact view alone (already confirmed <= limit by the caller) must be
+		// used instead, or the padded fetch would silently blow the budget
+		'padded count over budget: fall back to the exact (unpadded) viewport'
+	)
+	test.deepEqual(
+		choosePaddedFetchBbox(bbox, paddedBbox, 50, 50),
+		paddedBbox,
+		'padded count exactly at the limit (not over it): still fine, use the padded bbox'
 	)
 	test.end()
 })

@@ -350,7 +350,14 @@ scoped to just that view.
   loaded (`bboxContains()`) — a small pan within an already-fetched region
   (itself padded 50% past the exact viewport, `padBbox()`) is a no-op, not a
   refetch. A failed `/cellcount` call leaves the current mode as-is rather
-  than guessing.
+  than guessing. The 50%-a-side padding covers up to 4x the viewport's own
+  area, so its own cell count is re-checked with a second `/cellcount` call
+  before actually fetching it (`choosePaddedFetchBbox()`): a sparse or empty
+  viewport sitting right next to denser tissue just outside it could
+  otherwise make the padded fetch cost far more than `cellCountLimit` cells
+  — exactly the large-CSV/polygon-memory cost this whole switch exists to
+  avoid — so the fallback is the exact (unpadded) viewport, already
+  confirmed under budget by the first `/cellcount` call above.
 - **Raster mode** — one persistent `Zoomify`-tiled `TileLayer` per
   `rasterFills` entry (same tile grid as the slide itself) pointed at
   `wsitiles/overlaytile/{z}/{x}/{y}`, just shown/hidden by `updateMode`

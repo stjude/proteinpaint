@@ -1075,19 +1075,24 @@ export async function init(
 			// leaves the current mode in place rather than guessing.
 			let mode: 'vector' | 'raster' | undefined
 			let loadedBbox: [number, number, number, number] | undefined
+			/** wsitiles/cellcount for one µm bbox; throws on a server error. */
+			async function cellCountFor(b: [number, number, number, number]): Promise<number> {
+				const r = await dofetch3(
+					`wsitiles/cellcount?${sq}&file=${encodeURIComponent(opts.spatialData!)}&bbox=${b.join(',')}&v=${
+						meta.spatialVersion || 0
+					}`
+				)
+				if (!r || r.error) throw new Error(r?.error || 'failed to count cells')
+				return r.count
+			}
+
 			async function updateMode() {
 				const ext = map.getView().calculateExtent() as [number, number, number, number]
 				const bbox = viewBboxUm(ext, mppX, mppY)
 				beginLoading() // holds the indicator open for this fetch; map.on('loadstart'/'loadend') covers any tiles separately
 				let count: number
 				try {
-					const r = await dofetch3(
-						`wsitiles/cellcount?${sq}&file=${encodeURIComponent(opts.spatialData!)}&bbox=${bbox.join(',')}&v=${
-							meta.spatialVersion || 0
-						}`
-					)
-					if (!r || r.error) throw new Error(r?.error || 'failed to count cells')
-					count = r.count
+					count = await cellCountFor(bbox)
 				} catch (e: any) {
 					endLoading()
 					sayerrorOnTop(holder, `Cell count error: ${e.message || e}`)
@@ -1105,7 +1110,17 @@ export async function init(
 					endLoading() // this fetch is done; any newly-needed raster tiles are tracked by loadstart/loadend, not here
 				} else if (mode !== 'vector' || !loadedBbox || !bboxContains(loadedBbox, bbox)) {
 					hideRaster()
-					const fetchBbox = padBbox(bbox, 0.5) // margin so a small pan stays inside loadedBbox
+					const paddedBbox = padBbox(bbox, 0.5) // margin so a small pan stays inside loadedBbox
+					// re-check the PADDED region's own count -- see choosePaddedFetchBbox's
+					// own comment for why this matters -- falling back to the exact
+					// viewport (a failed check errs toward this smaller, already-safe
+					// fetch too) if the padding itself would bust the budget
+					let fetchBbox = bbox
+					try {
+						fetchBbox = choosePaddedFetchBbox(bbox, paddedBbox, await cellCountFor(paddedBbox), limit)
+					} catch {
+						/* fetchBbox already defaults to the exact viewport */
+					}
 					await buildVector(fetchBbox)
 					loadedBbox = fetchBbox
 					mode = 'vector'
@@ -1351,6 +1366,24 @@ function padBbox(bbox: [number, number, number, number], frac: number): [number,
 /** Is `inner` fully within `outer` (both µm bboxes)? */
 function bboxContains(outer: [number, number, number, number], inner: [number, number, number, number]): boolean {
 	return inner[0] >= outer[0] && inner[1] >= outer[1] && inner[2] <= outer[2] && inner[3] <= outer[3]
+}
+
+/** Which bbox updateMode() should actually fetch vectors for: the padded one
+ (nicer UX — a small pan stays within loadedBbox, no refetch) unless ITS OWN
+ cell count would bust cellCountLimit, in which case the exact (unpadded)
+ viewport — already confirmed under budget by the caller — is used instead.
+ padBbox()'s 50%-a-side margin covers up to 4x the viewport's own area; a
+ sparse or empty viewport sitting right next to denser tissue just outside
+ it could otherwise make the "padded" fetch cost far more than
+ cellCountLimit cells, exactly what this raster/vector switch exists to
+ avoid. (exported for tests) */
+export function choosePaddedFetchBbox(
+	bbox: [number, number, number, number],
+	paddedBbox: [number, number, number, number],
+	paddedCount: number,
+	limit: number
+): [number, number, number, number] {
+	return paddedCount > limit ? bbox : paddedBbox
 }
 
 /** One stroke-only vector layer holding every polygon; maxResolution (when
