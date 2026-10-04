@@ -580,27 +580,45 @@ def h5ad_csv(h5ad, kind, bbox=None):
     view, so node does NOT disk-cache these (see wsitiles.ts)."""
     import os
     import h5py
-    # read (and thereby validate) the store BEFORE creating the temp file, so
-    # a missing/corrupt h5ad can't leak an orphan into the temp directory
     with h5py.File(h5ad, "r") as f:
         b = f[f"uns/{kind}_boundaries"]                      # the ragged polygon store
-        ids = b["cell_id"][:].astype(str)                    # one id per polygon
+        ids = b["cell_id"][:].astype(str)                    # one id per polygon (cheap: one string, not ~13-25 vertex pairs, per cell)
         indptr = b["indptr"][:]                              # ring offsets into vertices
-        verts = b["vertices"][:]                             # (N, 2) um coordinates
-        keep = set(_bbox_cell_ids(f, bbox).tolist()) if bbox is not None else None
-    fd, out = tempfile.mkstemp(suffix=".csv", prefix="wsih5ad_")
-    try:
-        with os.fdopen(fd, "w") as w:                        # closes the fd, error or not
-            w.write('"cell_id","vertex_x","vertex_y"\n')
-            for i, cid in enumerate(ids):
-                if keep is not None and cid not in keep:
-                    continue
-                for x, y in verts[indptr[i]:indptr[i + 1]]:
-                    w.write(f'"{cid}",{x:.4f},{y:.4f}\n')
-    except BaseException:
-        os.unlink(out)                                       # a failed write never leaks the file
-        raise
-    return out  # node reads, serves, deletes
+        if bbox is None:
+            # whole-sample: one bulk read. Disk-cached by node per h5ad
+            # version and served from there after (see this function's own
+            # docstring), so the ~700k-row read here is amortized across
+            # every later request, not repeated per request.
+            indices = range(len(ids))
+            verts = b["vertices"][:]                         # (N, 2) um coordinates, the whole store
+            vertex_range = lambda i: verts[indptr[i]:indptr[i + 1]]
+        else:
+            # bbox requests vary continuously with the view and are NEVER
+            # disk-cached (see this function's own docstring) -- a naive
+            # verts[:] bulk read here would therefore cost the same on every
+            # single pan regardless of how few of the sample's cells the
+            # bbox actually keeps. Select which polygons match FIRST (cheap:
+            # cell_id is a small per-cell array), then read only THEIR OWN
+            # vertex ranges from the still-open HDF5 dataset -- a bbox
+            # keeping a handful of cells out of 700k now reads a handful of
+            # small ranges instead of the whole multi-hundred-MB array.
+            keep = set(_bbox_cell_ids(f, bbox).tolist())
+            indices = [i for i, cid in enumerate(ids) if cid in keep]
+            vertices_ds = b["vertices"]                      # kept as a Dataset: indexed lazily below, not read whole
+            vertex_range = lambda i: vertices_ds[indptr[i]:indptr[i + 1]]
+
+        fd, out = tempfile.mkstemp(suffix=".csv", prefix="wsih5ad_")
+        try:
+            with os.fdopen(fd, "w") as w:                    # closes the fd, error or not
+                w.write('"cell_id","vertex_x","vertex_y"\n')
+                for i in indices:
+                    cid = ids[i]
+                    for x, y in vertex_range(i):
+                        w.write(f'"{cid}",{x:.4f},{y:.4f}\n')
+        except BaseException:
+            os.unlink(out)                                   # a failed write never leaks the file
+            raise
+        return out  # node reads, serves, deletes
 
 
 def h5ad_celltypes(h5ad):

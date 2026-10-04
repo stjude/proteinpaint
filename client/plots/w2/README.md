@@ -193,7 +193,12 @@ file, in file order.
 `h5ad_cell_count` and the `bbox=` parameter of `h5ad_csv`/`h5ad_annotations`
 (`_bbox_cell_ids()`) all filter on `obsm/spatial` centroids only — a
 cell-count check or a viewport-scoped fetch never touches the boundary
-polygon store, so they stay cheap independent of sample size. `overlay_tile`
+polygon store, so they stay cheap independent of sample size. `h5ad_csv`'s
+own `bbox=` path selects which polygon indices match FIRST, then reads only
+THEIR OWN vertex ranges from the HDF5 dataset — never a bulk `vertices[:]`
+read, which bbox requests (never disk-cached, unlike the whole-sample
+`bbox=None` path) would otherwise pay in full on every single pan regardless
+of how few cells the bbox actually keeps. `overlay_tile`
 renders one Zoomify tile's worth of cell fills directly as a
 transparent-background PNG (`tile_region()` for the crop geometry, same as a
 normal `tile` job; PIL `ImageDraw.polygon()` for the fills) — the
