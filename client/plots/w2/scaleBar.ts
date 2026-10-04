@@ -75,7 +75,13 @@ export function addScaleBar(map: Map, mppX: number | undefined): void {
 
 	// clamps the bar to the map's own bottom-right corner, OR the viewport's
 	// if that corner is scrolled out of view; hides it only once there is no
-	// visible map area left for it to sit in at all
+	// visible map area left for it to sit in at all. right/bottom (not
+	// left/top): the box's own width changes on every zoom (update()'s
+	// bar.style.width -- a round µm length picks a different bar width at
+	// each resolution), and right/bottom keep the SAME corner anchored as
+	// that happens automatically, with no need to rerun reposition() on
+	// every resolution change too -- left/top, fixed in place, would instead
+	// let a widening bar grow past the map's or viewport's right edge.
 	const reposition = () => {
 		const r = target.getBoundingClientRect()
 		const bottom = Math.min(r.bottom, window.innerHeight) - 8
@@ -85,8 +91,8 @@ export function addScaleBar(map: Map, mppX: number | undefined): void {
 			return
 		}
 		el.style.display = 'block'
-		el.style.top = `${bottom - el.offsetHeight}px`
-		el.style.left = `${right - el.offsetWidth}px`
+		el.style.bottom = `${window.innerHeight - bottom}px`
+		el.style.right = `${window.innerWidth - right}px`
 	}
 
 	const destroy = () => {

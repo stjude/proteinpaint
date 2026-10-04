@@ -181,6 +181,77 @@ tape('scale bar is torn down on re-render, not leaked as a stray fixed element',
 	}
 })
 
+tape('scale bar keeps its corner anchored (right/bottom) when zooming changes its own width', test => {
+	test.timeoutAfter(30000) // meta/tiles spawn python server-side
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'wsi',
+					sample: { sID: 'TCGA-22-1017' },
+					settings: { wsi: { annotationLevel: 0 } }
+				}
+			]
+		},
+		wsi: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(wsi) {
+		wsi.on('postRender.test', null) // run once
+		try {
+			const dom = wsi.Inner.dom
+			await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
+			const [bar] = await waitForSelector(document.body, '.sjpp-wsi-scalebar')
+
+			// right/bottom, not left/top: a widening bar (update()'s own
+			// bar.style.width, picked fresh per zoom level) must grow away
+			// from its anchored corner, not push that corner off the map
+			const cs = getComputedStyle(bar as HTMLElement)
+			test.ok(
+				cs.right !== 'auto',
+				'positioned with right, not left, so its own width changes keep the right edge fixed'
+			)
+			test.ok(
+				cs.bottom !== 'auto',
+				'positioned with bottom, not top, so its own height changes keep the bottom edge fixed'
+			)
+
+			const rectBefore = (bar as HTMLElement).getBoundingClientRect()
+			const labelBefore = bar.querySelector('div:last-child')?.textContent
+
+			// a few zoom-in clicks: the resolution change runs update(), which
+			// picks a new "nice" µm length -- almost certainly a different bar
+			// width than the initial one
+			const zoomIn = await waitForSelector(dom.viewer.node(), '.ol-zoom-in')
+			for (let i = 0; i < 4; i++) (zoomIn[0] as HTMLElement).click()
+			await waitForCondition(
+				() => bar.querySelector('div:last-child')?.textContent !== labelBefore,
+				'scale bar label changes after zooming (confirms update() actually ran)'
+			)
+
+			const rectAfter = (bar as HTMLElement).getBoundingClientRect()
+			test.ok(
+				Math.abs(rectAfter.right - rectBefore.right) < 1,
+				`right edge stays put despite the width change (before=${rectBefore.right}, after=${rectAfter.right})`
+			)
+			test.ok(
+				Math.abs(rectAfter.bottom - rectBefore.bottom) < 1,
+				`bottom edge stays put despite the height change (before=${rectBefore.bottom}, after=${rectAfter.bottom})`
+			)
+
+			if (test['_ok']) wsi.Inner.app.destroy()
+		} catch (e) {
+			test.fail(`scale bar corner-anchoring test error: ${e}`) // never leave tape hanging
+		}
+		test.end()
+	}
+})
+
 tape('raster mode: a cellCountLimit below the fixture cell count renders the raster overlay, not vector', test => {
 	test.timeoutAfter(30000) // meta/cellcount/overlaytile spawn python server-side
 
