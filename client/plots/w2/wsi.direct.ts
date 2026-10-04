@@ -830,6 +830,13 @@ export async function init(
 			ctl.style.position = 'absolute'
 			ctl.style.top = '65px' // right under the +/- zoom buttons
 			ctl.style.left = '.5em' // aligned with them
+			// #dom's getHolder() (below, via icons.lasso) sets this element's own
+			// z-index to 1 so its aria-label CSS tooltip (z-index:10000, but that
+			// only matters WITHIN this element's own stacking context) renders
+			// above plain page content — far too low once this plot's own
+			// position:fixed legends (z-index:10) sit nearby: the tooltip was
+			// rendering, just behind the legend. getHolder() sets this AFTER this
+			// line runs, so override it after the icons.lasso() call below instead.
 			map.addControl(new Control({ element: ctl }))
 			const btn = icons.lasso(select(ctl).attr('data-testid', 'sjpp-wsi-lasso-btn'), {
 				title: 'Lasso: drag to select cells',
@@ -846,6 +853,7 @@ export async function init(
 					}
 				}
 			})
+			ctl.style.zIndex = '100' // overrides getHolder()'s z-index:1 -- see the comment above addControl()
 			/** vector mode only: raster mode's cell count is, by definition, too
 			 large for the lasso's own selection/enrichment flow to stay cheap */
 			function setLassoEnabled(on: boolean) {

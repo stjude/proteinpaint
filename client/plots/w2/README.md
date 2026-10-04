@@ -302,7 +302,16 @@ from the h5ad's cell/nucleus polygons (`/boundaries`, µm→px via `meta.mpp`).
   underlying reason: `.sja_errorbar` is `position:relative` with
   `z-index:auto`, which still paints BEHIND an explicitly z-indexed sibling
   in the same (page-root) stacking context — unreadable, hidden under
-  whichever legend happened to be pinned over it at the time.
+  whichever legend happened to be pinned over it at the time. The disabled
+  lasso button's own hover tooltip (an `aria-label`-based CSS tooltip, see
+  `client/src/style.css`'s `[aria-label]:hover:after`) had the identical
+  problem for a subtler reason: `#dom`'s `getHolder()` sets the button's own
+  wrapper to `z-index: 1` so the tooltip (itself `z-index: 10000`) outranks
+  *plain* page content — but a child's z-index only matters within its own
+  parent's stacking context; compared against this plot's own legend
+  (`z-index: 10`), it's the WRAPPER's z-index (1) that loses, regardless of
+  the tooltip's own value. Fixed by bumping the wrapper's z-index to 100
+  after `icons.lasso()` runs.
 - **Default framing** — the *first* vector load opens fit to the *sample's
   own cells* (the fetched boundary polygons' bounding box) rather than the
   whole slide canvas, unless `opts.focus` already picked a specific niche

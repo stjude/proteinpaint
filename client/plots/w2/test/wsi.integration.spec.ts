@@ -179,6 +179,17 @@ tape('raster mode: a cellCountLimit below the fixture cell count renders the ras
 			const [lassoBtn] = await waitForSelector(dom.viewer.node(), '[data-testid="sjpp-wsi-lasso-btn"] button')
 			test.equal((lassoBtn as HTMLElement).style.cursor, 'not-allowed', 'lasso button shows as disabled')
 
+			// the disabled button's own aria-label tooltip (client/src/style.css's
+			// [aria-label]:hover:after, z-index:10000 -- but that's scoped to its
+			// own stacking context) must still win against the cell-type legend's
+			// position:fixed z-index:10, or the tooltip explaining WHY it's
+			// disabled is unreadable underneath the legend
+			const [lassoCtl] = await waitForSelector(dom.viewer.node(), '[data-testid="sjpp-wsi-lasso-btn"]')
+			test.ok(
+				Number(getComputedStyle(lassoCtl as HTMLElement).zIndex) > 10,
+				'lasso control z-index beats the cell-type legend, so its tooltip is not hidden underneath it'
+			)
+
 			// the loading indicator (shown while /cellcount + the raster tiles'
 			// own render latency are in flight) must settle back to hidden once
 			// the overlay tiles actually load, not get stuck visible
