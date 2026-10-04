@@ -14,6 +14,7 @@
 # or ../../../security-triage/text-check-terms.txt relative to this directory.
 #
 # Each line is checked, and also each pair of consecutive lines, for a term that is wrapped onto the next line.
+# In the text mode, each all-caps word is also checked for a term from a line that starts with caps:.
 #
 # Set SKIP_TEXT_CHECK=1 to skip the check, such as when the fix is already deployed to prod.
 
@@ -81,10 +82,15 @@ fi
 TERMS=${PP_TEXT_CHECK_TERMS:-$(git config --get pp.textCheckTerms 2>/dev/null)}
 TERMS=${TERMS:-$DIR/../../../security-triage/text-check-terms.txt}
 PATTERNS=$(mktemp)
-trap 'rm -f "$PATTERNS"' EXIT
-cat "$DIR/text-check-patterns.txt" "$TERMS" 2>/dev/null | grep -v -E '^[[:space:]]*(#|$)' > "$PATTERNS"
+CAPS=$(mktemp)
+trap 'rm -f "$PATTERNS" "$CAPS"' EXIT
+ALLPATTERNS=$(cat "$DIR/text-check-patterns.txt" "$TERMS" 2>/dev/null | grep -v -E '^[[:space:]]*(#|$)')
+printf '%s\n' "$ALLPATTERNS" | grep -v '^caps:' > "$PATTERNS"
+printf '%s\n' "$ALLPATTERNS" | sed -n 's/^caps://p' > "$CAPS"
 grep -i -E -f "$PATTERNS" < /dev/null > /dev/null 2>&1
-if [[ $? -gt 1 ]]; then
+STATUS=$?
+grep -i -E -f "$CAPS" < /dev/null > /dev/null 2>&1
+if [[ $STATUS -gt 1 || $? -gt 1 ]]; then
 	cat > /dev/null
 	echo "!!! $LABEL: not checked, since there is an invalid expression in $DIR/text-check-patterns.txt or $TERMS !!!" >&2
 	exit 1
@@ -153,12 +159,47 @@ HITS=$({
 	}
 ')
 
-if [[ "$HITS" == "" ]]; then exit 0; fi
+# In the text mode, also check each all-caps word, such as an env var or constant name, for a caps: term.
+# Each word is printed as <line>\037<word>, and matched by itself, so that a caps: term can be anchored to the word.
+if [[ "$MODE" == "text" ]]; then
+	WORDS=$(printf '%s\n' "$LINES" | awk -F '\037' '
+		NF {
+			n = split($3, w, /[^A-Za-z0-9_]+/)
+			for (i = 1; i <= n; i++) {
+				if (w[i] ~ /^[A-Z0-9_]+$/ && w[i] ~ /[A-Z].*[A-Z]/) print $2 "\037" w[i]
+			}
+		}
+	')
+	# the index of each matching word in WORDS
+	WORDHITS=$(printf '%s\n' "$WORDS" | awk -F '\037' '{ print $2 }' | grep -n -i -E -f "$CAPS" | cut -d: -f1)
+	# each line with a matching word as <line>:<text>  (all-caps: <words>)
+	CAPSHITS=$(awk -F '\037' '
+		FNR == 1 { f++ }
+		f == 1 { if (NF) hit[$0] = 1; next }
+		f == 2 {
+			if ((FNR in hit) && !(($1, $2) in seen)) {
+				seen[$1, $2] = 1
+				words[$1] = (($1 in words) ? words[$1] ", " : "") $2
+			}
+			next
+		}
+		NF && ($2 in words) { print $2 ":" $3 "  (all-caps: " words[$2] ")" }
+	' <(printf '%s\n' "$WORDHITS") <(printf '%s\n' "$WORDS") <(printf '%s\n' "$LINES"))
+fi
+
+if [[ "$HITS" == "" && "$CAPSHITS" == "" ]]; then exit 0; fi
 
 echo "" >&2
-echo "!!! $LABEL: text that may describe a security issue instead of what the code does !!!" >&2
-echo "$HITS" | cut -c1-200 | sed 's/^/  /' >&2
-echo "Reword it, see the 'Security-related changes' section in AGENTS.md." >&2
+if [[ "$HITS" != "" ]]; then
+	echo "!!! $LABEL: text that may describe a security issue instead of what the code does !!!" >&2
+	echo "$HITS" | cut -c1-200 | sed 's/^/  /' >&2
+	echo "Reword it, see the 'Security-related changes' section in AGENTS.md." >&2
+fi
+if [[ "$CAPSHITS" != "" ]]; then
+	echo "!!! $LABEL: all-caps words that stand out and may be associated with security !!!" >&2
+	echo "$CAPSHITS" | cut -c1-200 | sed 's/^/  /' >&2
+	echo "Reword the text or remove the all-caps word, see the 'Security-related changes' section in AGENTS.md." >&2
+fi
 echo "If the fix is already deployed to prod, or this is a false positive, rerun with SKIP_TEXT_CHECK=1." >&2
 echo "" >&2
 exit 1
