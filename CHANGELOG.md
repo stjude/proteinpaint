@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - stricter dir check during server startup
+- Add support for swimmer plot
 
 
 ## 2.216.1
