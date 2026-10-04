@@ -506,6 +506,18 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			)
 		}
 	}
+	if (q.swimmer) {
+		q2.swimmer = JSON.parse(
+			JSON.stringify({
+				timeLabel: q.swimmer.timeLabel,
+				categories: q.swimmer.categories,
+				events: q.swimmer.events,
+				terminalEvent: q.swimmer.terminalEvent,
+				pointSampleTypes: q.swimmer.pointSampleTypes,
+				pointSampleEvents: q.swimmer.pointSampleEvents
+			})
+		)
+	}
 	if (q.singleSampleGbtk) {
 		q2.singleSampleGbtk = {}
 		for (const k in q.singleSampleGbtk) {

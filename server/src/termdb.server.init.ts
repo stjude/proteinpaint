@@ -144,6 +144,8 @@ export function server_init_db_queries(ds) {
 		// when the dataset has sample ancestry, store each sample's ancestors in its ref,
 		// so downstream (e.g. matrix) can group/label samples by ancestry. Built once here.
 		const i2ancestors = new Map()
+		// the reverse, from the same rows: each sample's descendant ids (e.g. a patient's primary/PDX/CSF samples)
+		const i2descendants = new Map<number, number[]>()
 		if (ds.cohort.termdb.hasSampleAncestry && tables.has('sample_ancestry')) {
 			const rows = cn.prepare('SELECT sample_id, ancestor_id, distance FROM sample_ancestry').all()
 			for (const { sample_id, ancestor_id, distance } of rows) {
@@ -154,11 +156,16 @@ export function server_init_db_queries(ds) {
 					sample_type: i2type.get(ancestor_id),
 					distance
 				})
+				if (!i2descendants.has(ancestor_id)) i2descendants.set(ancestor_id, [])
+				i2descendants.get(ancestor_id)!.push(sample_id)
 			}
 			// sort each sample's ancestors by lowest distance first, so samples can be
 			// grouped/sorted by ancestry "tree" from the nearest ancestor outward
 			for (const ancestors of i2ancestors.values()) ancestors.sort(sortByAncestorDistance)
 		}
+		/** descendant ids of a sample, [] when none or without sample ancestry. the array is shared, do not modify */
+		const noDescendants: number[] = []
+		q.id2descendantIds = (id: number): number[] => i2descendants.get(Number(id)) || noDescendants
 
 		// centralized id->display resolution (see termdb.matrix.js id2sampleRef()), wrapping id2sampleName.
 		// native sample ids are integer PKs (sampleidmap.id), so Number() only normalizes a stringified
@@ -853,6 +860,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 		ds.queries?.dnaMethylation?.promoter ||
 		(ds.queries?.dnaMethylation?.elements && Object.keys(ds.queries.dnaMethylation.elements).length),
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
+	swimmer: ({ ds }) => ds.queries?.swimmer,
 	wsi: ({ ds }) => ds.queries?.w2,
 	imagePlot: ({ ds }) => ds.queries?.images,
 	dataDownload: ({ forbiddenRoutes }) => {
