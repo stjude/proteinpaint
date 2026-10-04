@@ -358,6 +358,22 @@ scoped to just that view.
   — exactly the large-CSV/polygon-memory cost this whole switch exists to
   avoid — so the fallback is the exact (unpadded) viewport, already
   confirmed under budget by the first `/cellcount` call above.
+- **Concurrency (`modeGeneration`)** — `moveend` can fire again before a
+  previous `updateMode()`'s own `await`s (cellcount, `buildVector()`'s own
+  fetches) resolve, with nothing serializing them: a slow vector build
+  finishing after a newer, faster raster decision could otherwise restore
+  stale layers and re-enable the lasso for what is, by then, a dense view,
+  and two overlapping `buildVector()` calls writing the same
+  `cellPolys`/`cellTypes`/`vectorLayers` could mix one build's polygons with
+  another's annotations. A generation counter, bumped at the very top of
+  every `updateMode()` call before any other side effect, is checked at
+  every resumption point after an `await` in both `updateMode()` and
+  `buildVector()` (which takes the caller's generation as a parameter) —
+  superseded calls stop before committing anything further, rather than
+  overwriting a newer result once they finally resolve. The `moveend`
+  listener is also registered BEFORE the initial `updateMode()` call, not
+  after: a pan/zoom during that first, still-awaited call used to fire with
+  no listener attached yet to catch it.
 - **Raster mode** — one persistent `Zoomify`-tiled `TileLayer` per
   `rasterFills` entry (same tile grid as the slide itself) pointed at
   `wsitiles/overlaytile/{z}/{x}/{y}`, just shown/hidden by `updateMode`

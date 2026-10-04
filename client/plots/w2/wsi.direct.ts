@@ -482,6 +482,19 @@ export async function init(
 		let vectorLayers: any[] = [] // layers added by the current buildVector(), removed by teardownVector()
 		let legendEls: any[] = [] // legend DOM boxes added by the current buildVector(), ditto
 		let firstBuild = true // "fit to cells" framing (below) runs once, on the first vector load only
+		// bumped at the very top of every updateMode() call, before any other
+		// side effect -- lets a call detect, at each resumption point after an
+		// await, that a NEWER call has since started and its own eventual
+		// result must not be committed. Without this, successive moveend events
+		// start overlapping updateMode() calls (each one only async; nothing
+		// here was ever serialized), and a slow vector build finishing after a
+		// newer raster decision would restore stale layers and re-enable the
+		// lasso for what is, by then, a dense view; two overlapping
+		// buildVector() calls writing the same cellPolys/cellTypes/vectorLayers
+		// could likewise mix one build's polygons with another's annotations.
+		// buildVector() takes the caller's generation and checks it before each
+		// of its own shared-state commits too (see its own doc comment below).
+		let modeGeneration = 0
 
 		// the tooltip box, following the cursor; fixed and placed from the
 		// map's viewport rectangle, immune to the surrounding page's layout.
@@ -596,8 +609,18 @@ export async function init(
 
 		/** (Re)fetches boundaries/annotations scoped to `bbox` (µm) and rebuilds
 		 every vector layer + legend from them. Called by updateMode() whenever
-		 the view enters vector mode or pans somewhere not already loaded. */
-		async function buildVector(bbox: [number, number, number, number]) {
+		 the view enters vector mode or pans somewhere not already loaded.
+
+		 `gen` is the CALLER's own modeGeneration snapshot: checked before every
+		 shared-state commit below (cellPolys/cellTypes/vectorLayers/legendEls/
+		 index), so a call that's been superseded by a newer updateMode() (e.g. a
+		 fast raster decision for a later pan, while this slower vector build is
+		 still mid-flight) stops short of writing anything further the moment it
+		 notices -- otherwise two overlapping builds could each commit a few of
+		 their own steps, mixing one build's polygons with another's annotations,
+		 or a stale build could finish last and overwrite a newer, correct result.
+		 Returns false (nothing committed beyond this point) when superseded. */
+		async function buildVector(bbox: [number, number, number, number], gen: number): Promise<boolean> {
 			teardownVector()
 			const bboxParam = bbox.join(',')
 			for (const [kind, wanted, color] of [
@@ -616,6 +639,7 @@ export async function init(
 						meta.spatialVersion,
 						bboxParam
 					) // h5ad -> px polygons
+					if (gen !== modeGeneration) return false // superseded while this fetch was in flight: stop before committing it
 					if (kind == 'cell') {
 						cellPolys = polys // expression/type fills + hover/lasso reuse these rings
 						if (opts.hideCellStrokes) continue // polygons fetched, strokes suppressed
@@ -669,6 +693,7 @@ export async function init(
 						}`
 					)
 					if (!r || r.error) throw new Error(r?.error || 'failed to load annotations')
+					if (gen !== modeGeneration) return false // superseded while this fetch was in flight: stop before committing it
 					cellTypes = r.cells // the id->type map, served ready to use
 				} catch (e: any) {
 					sayerrorOnTop(holder, `Error loading annotations: ${e.message || e}`) // overlay lost, viewer lives
@@ -780,6 +805,7 @@ export async function init(
 				}
 				index.insert([minX, minY, maxX, maxY], c) // bbox -> its cell
 			}
+			return true
 		}
 
 		// hover tooltip: cell id, annotated type, per-gene counts. Set up once;
@@ -1087,6 +1113,7 @@ export async function init(
 			}
 
 			async function updateMode() {
+				const gen = ++modeGeneration // this call's own identity; must stay current to commit anything below
 				const ext = map.getView().calculateExtent() as [number, number, number, number]
 				const bbox = viewBboxUm(ext, mppX, mppY)
 				beginLoading() // holds the indicator open for this fetch; map.on('loadstart'/'loadend') covers any tiles separately
@@ -1095,8 +1122,12 @@ export async function init(
 					count = await cellCountFor(bbox)
 				} catch (e: any) {
 					endLoading()
-					sayerrorOnTop(holder, `Cell count error: ${e.message || e}`)
+					if (gen === modeGeneration) sayerrorOnTop(holder, `Cell count error: ${e.message || e}`)
 					return // keep the current mode rather than guessing
+				}
+				if (gen !== modeGeneration) {
+					endLoading() // superseded while awaiting the count: this view's decision is no longer relevant
+					return
 				}
 				const limit = opts.cellCountLimit ?? DEFAULT_CELL_COUNT_LIMIT
 				if (count > limit) {
@@ -1121,20 +1152,34 @@ export async function init(
 					} catch {
 						/* fetchBbox already defaults to the exact viewport */
 					}
-					await buildVector(fetchBbox)
-					loadedBbox = fetchBbox
-					mode = 'vector'
-					setLassoEnabled(true)
+					if (gen !== modeGeneration) {
+						endLoading() // superseded while awaiting the padded count
+						return
+					}
+					const built = await buildVector(fetchBbox, gen)
+					if (gen !== modeGeneration) {
+						endLoading() // superseded while buildVector() was in flight: its layers/data are already stale
+						return
+					}
+					if (built) {
+						loadedBbox = fetchBbox
+						mode = 'vector'
+						setLassoEnabled(true)
+					}
 					endLoading()
 				} else {
 					endLoading() // already loaded and still in view: nothing to wait for
 				}
 			}
 
-			await updateMode() // the starting view's own mode
+			// registered BEFORE the initial updateMode() call (not after): a pan/
+			// zoom that happens while that first call is still awaiting its own
+			// /cellcount would otherwise fire moveend with no listener attached
+			// yet to catch it, leaving the viewer showing the stale initial view
 			map.on('moveend', () => {
 				updateMode().catch((e: any) => sayerrorOnTop(holder, `Cell count error: ${e.message || e}`))
 			})
+			await updateMode() // the starting view's own mode
 		}
 	} catch (e: any) {
 		loading.remove() // drop the placeholder before showing the error
