@@ -520,6 +520,28 @@ export async function init(
 		function hideLoading() {
 			loadingIndicator?.style('display', 'none')
 		}
+		// reference-counted: updateMode()'s own /cellcount (etc) fetch AND the
+		// map's own pending tile loads (map.on('loadstart'/'loadend') below, which
+		// OL fires based on EVERY layer's own tile queue, slide + however many
+		// raster layers there are) each hold one count open while they're in
+		// flight, so the indicator can only hide once BOTH are done. Checking a
+		// per-layer tile counter synchronously right after a fetch resolves (the
+		// earlier approach) raced: a newly-panned-into tile often hadn't started
+		// loading yet at that exact instant, so the indicator hid before OL had
+		// even begun requesting what the new view actually needs.
+		let pendingLoads = 0
+		function beginLoading() {
+			pendingLoads++
+			showLoading()
+		}
+		function endLoading() {
+			pendingLoads = Math.max(0, pendingLoads - 1)
+			if (pendingLoads === 0) hideLoading()
+		}
+		if (needCellPolys) {
+			map.on('loadstart', beginLoading)
+			map.on('loadend', endLoading)
+		}
 
 		function teardownVector() {
 			for (const l of vectorLayers) map.removeLayer(l)
@@ -892,11 +914,6 @@ export async function init(
 			// and each tile is cached server-side per (h5ad version, tile, fill
 			// mode) like /tile
 			const rasterLayers: TileLayer[] = []
-			// in-flight count of the raster layers' own tile requests, summed
-			// across however many there are -- lets updateMode() know whether
-			// showLoading() can be hidden right away (every needed tile already
-			// cached) or must wait for these events
-			let rasterTilesLoading = 0
 			function ensureRasterLayers(): TileLayer[] {
 				if (rasterLayers.length) return rasterLayers
 				for (const fill of rasterFills) {
@@ -916,14 +933,8 @@ export async function init(
 						crossOrigin: 'anonymous',
 						zDirection: -1
 					})
-					source.on('tileloadstart', () => rasterTilesLoading++)
-					source.on(['tileloadend', 'tileloaderror'], () => {
-						rasterTilesLoading = Math.max(0, rasterTilesLoading - 1)
-						// a stale event from a since-abandoned mode (e.g. panned into
-						// vector mode while an old raster tile was still in flight)
-						// must not hide an indicator some OTHER, still-running wait put up
-						if (rasterTilesLoading === 0 && mode === 'raster') hideLoading()
-					})
+					// no per-tile load tracking here: map.on('loadstart'/'loadend')
+					// above already covers every layer's tile queue collectively
 					const layer = new TileLayer({ source }) // no maxResolution: fills show at all zooms, like the vector ones
 					map.addLayer(layer)
 					rasterLayers.push(layer)
@@ -1023,7 +1034,7 @@ export async function init(
 			async function updateMode() {
 				const ext = map.getView().calculateExtent() as [number, number, number, number]
 				const bbox = viewBboxUm(ext, mppX, mppY)
-				showLoading()
+				beginLoading() // holds the indicator open for this fetch; map.on('loadstart'/'loadend') covers any tiles separately
 				let count: number
 				try {
 					const r = await dofetch3(
@@ -1034,7 +1045,7 @@ export async function init(
 					if (!r || r.error) throw new Error(r?.error || 'failed to count cells')
 					count = r.count
 				} catch (e: any) {
-					hideLoading()
+					endLoading()
 					sayerror(holder, `Cell count error: ${e.message || e}`)
 					return // keep the current mode rather than guessing
 				}
@@ -1046,10 +1057,7 @@ export async function init(
 						mode = 'raster'
 						setLassoEnabled(false)
 					}
-					// every needed tile may already be cached (no tileloadstart ever
-					// fires for those) -- only the tileloadend/error handler above
-					// can hide this otherwise, so check the already-settled case too
-					if (rasterTilesLoading === 0) hideLoading()
+					endLoading() // this fetch is done; any newly-needed raster tiles are tracked by loadstart/loadend, not here
 				} else if (mode !== 'vector' || !loadedBbox || !bboxContains(loadedBbox, bbox)) {
 					hideRaster()
 					const fetchBbox = padBbox(bbox, 0.5) // margin so a small pan stays inside loadedBbox
@@ -1057,9 +1065,9 @@ export async function init(
 					loadedBbox = fetchBbox
 					mode = 'vector'
 					setLassoEnabled(true)
-					hideLoading() // vector rendering has no tile latency of its own: the fetch above WAS the wait
+					endLoading()
 				} else {
-					hideLoading() // already loaded and still in view: nothing to wait for
+					endLoading() // already loaded and still in view: nothing to wait for
 				}
 			}
 
