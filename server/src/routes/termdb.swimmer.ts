@@ -12,6 +12,7 @@ import type {
 } from '#types'
 import { filterSampleNamesByAccess } from '#src/termdb.sql.js'
 import { getData } from '#src/termdb.matrix.js'
+import { genomes } from '#src/initGenomesDs.js'
 
 /*
 returns swimmer plot lanes (per-patient time intervals and point events) for the patients passing
@@ -21,7 +22,11 @@ launch (validate_query_swimmer, called from mds3.init.js) and kept in ds.queries
 */
 
 export const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has ds.queries.swimmer
+	get init() {
+		return hasSwimmerDs(genomes) ? init : null
+	},
 	request: { typeId: 'SwimmerRequest' },
 	response: { typeId: 'SwimmerResponse' }
 }
@@ -32,6 +37,10 @@ export const api: RouteApi = {
 		get: payload,
 		post: payload
 	}
+}
+
+export function hasSwimmerDs(genomes) {
+	return Object.values(genomes).some((g: any) => Object.values(g.datasets || {}).some((ds: any) => ds.queries?.swimmer))
 }
 
 export function init({ genomes }) {
