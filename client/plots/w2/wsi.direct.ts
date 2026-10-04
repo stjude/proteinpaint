@@ -76,6 +76,20 @@ import { addScaleBar } from './scaleBar' // bottom-right µm scale bar, every im
 // the raster overlay instead of fetching/rendering per-cell vector data
 const DEFAULT_CELL_COUNT_LIMIT = 20_000
 
+/** sayerror(), then raises the new error bar above this plot's own
+ position:fixed legends/loading indicator (z-index 10/30 below). #dom's
+ .sja_errorbar is already position:relative (global CSS) but z-index:auto,
+ which still paints BEHIND any explicitly z-indexed positioned sibling in the
+ same stacking context (legends are position:fixed, escaping to the page's
+ root stacking context, same as this) — unreadable, the error hidden under
+ the legend. Only needed for errors raised once the map/legends can already
+ exist (not e.g. the outer catch's fatal "meta failed" error, before any of
+ that is ever built). */
+function sayerrorOnTop(holder: any, o: any) {
+	sayerror(holder, o)
+	holder.selectAll('.sja_errorbar').style('z-index', '50')
+}
+
 /** Build the viewer in `holder`; opts mirror the URL params documented above */
 export async function init(
 	opts: {
@@ -403,7 +417,7 @@ export async function init(
 				for (const [i, gene] of exprGenes.entries()) {
 					const r = results[i] // this gene's genecounts answer
 					if (!r || r.error) {
-						sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`) // surface it
+						sayerrorOnTop(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`) // surface it
 						continue // one bad gene doesn't block the others
 					}
 					geneCounts.push({
@@ -420,7 +434,7 @@ export async function init(
 					for (const [i, gene] of groupGenes.entries()) {
 						const r = results[exprGenes.length + i] // group answers follow the expr ones
 						if (!r || r.error) {
-							sayerror(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`) // surface it
+							sayerrorOnTop(holder, `Gene expression error (${gene}): ${r?.error || 'failed to load'}`) // surface it
 							continue // skip the missing gene, keep summing the rest
 						}
 						found.push(gene) // this gene contributes to the sum
@@ -439,7 +453,7 @@ export async function init(
 					}
 				}
 			} catch (e: any) {
-				sayerror(holder, `Gene expression error: ${e.message || e}`) // config errors from the throws above
+				sayerrorOnTop(holder, `Gene expression error: ${e.message || e}`) // config errors from the throws above
 			}
 		}
 		// what the raster overlay will show, decided ONCE (the burger's own
@@ -588,7 +602,7 @@ export async function init(
 					map.addLayer(layer) // draw on top of the slide
 					vectorLayers.push(layer)
 				} catch (e: any) {
-					sayerror(holder, `Error loading ${kind} boundaries: ${e.message || e}`) // one overlay failing kills nothing else
+					sayerrorOnTop(holder, `Error loading ${kind} boundaries: ${e.message || e}`) // one overlay failing kills nothing else
 				}
 			}
 
@@ -635,7 +649,7 @@ export async function init(
 					if (!r || r.error) throw new Error(r?.error || 'failed to load annotations')
 					cellTypes = r.cells // the id->type map, served ready to use
 				} catch (e: any) {
-					sayerror(holder, `Error loading annotations: ${e.message || e}`) // overlay lost, viewer lives
+					sayerrorOnTop(holder, `Error loading annotations: ${e.message || e}`) // overlay lost, viewer lives
 				}
 			}
 
@@ -1046,7 +1060,7 @@ export async function init(
 					count = r.count
 				} catch (e: any) {
 					endLoading()
-					sayerror(holder, `Cell count error: ${e.message || e}`)
+					sayerrorOnTop(holder, `Cell count error: ${e.message || e}`)
 					return // keep the current mode rather than guessing
 				}
 				const limit = opts.cellCountLimit ?? DEFAULT_CELL_COUNT_LIMIT
@@ -1073,7 +1087,7 @@ export async function init(
 
 			await updateMode() // the starting view's own mode
 			map.on('moveend', () => {
-				updateMode().catch((e: any) => sayerror(holder, `Cell count error: ${e.message || e}`))
+				updateMode().catch((e: any) => sayerrorOnTop(holder, `Cell count error: ${e.message || e}`))
 			})
 		}
 	} catch (e: any) {

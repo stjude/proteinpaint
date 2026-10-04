@@ -1,4 +1,3 @@
-import Control from 'ol/control/Control.js' // anchors the bar to the map's own viewport
 import type Map from 'ol/Map.js'
 
 /** "nice" round bar lengths (µm) to choose from, so the shown number always
@@ -19,11 +18,20 @@ export function niceScaleLength(umPerScreenPx: number): number {
 	return lenUm
 }
 
-/** Adds a scale bar (in micrometers) to the map's bottom-right corner, kept
- accurate as the user zooms: view resolution is level-0 px per screen px, so
- µm per screen px = resolution * mppX. A native OL Control, anchored to the
- map's own viewport — unlike the position:fixed legends elsewhere in this
- plot, it needs no scroll/resize tracking.
+/** Adds a scale bar (in micrometers) kept accurate as the user zooms: view
+ resolution is level-0 px per screen px, so µm per screen px = resolution *
+ mppX.
+
+ Pinned to whatever portion of the map is actually on screen, the same
+ problem the position:fixed legends elsewhere in this plot solve (their own
+ repin()) — a map taller than the browser's own viewport (90vh plus
+ whatever chrome sits above it easily exceeds 100vh) pushes the map's own
+ bottom-right corner below the fold, so a scale bar anchored there via a
+ native OL Control (position:absolute within the map's own container,
+ scrolling with the page) can end up permanently off-screen even though
+ nothing is technically hiding it — this was reported as "I can't see the
+ scale bar" when the bar was, in fact, present, styled, and visible, just
+ scrolled out of view.
 
  No-op when mppX isn't a real, known value (wsitiles/meta answers mpp:[] when
  the slide reports no pixel size) — a bar drawn in raw pixels would be a
@@ -31,20 +39,20 @@ export function niceScaleLength(umPerScreenPx: number): number {
  (exported for tests) */
 export function addScaleBar(map: Map, mppX: number | undefined): void {
 	if (!mppX || !Number.isFinite(mppX) || mppX <= 0) return
+	const target = map.getTargetElement() // the map's own container div
+	if (!target) return
 
 	const el = document.createElement('div')
-	el.className = 'ol-unselectable ol-control sjpp-wsi-scalebar'
+	el.className = 'sjpp-wsi-scalebar'
 	el.style.cssText =
-		// position set explicitly inline (Copilot Autofix) rather than relying on
-		// ol.css's .ol-control rule to supply it
-		'position:absolute; right:.5em; bottom:.5em; background:rgba(255,255,255,.8); padding:2px 6px; border-radius:3px; font:11px system-ui; color:#222;'
+		'position:fixed; z-index:10; display:none; background:rgba(255,255,255,.8); padding:2px 6px; border-radius:3px; font:11px system-ui; color:#222;'
 	const bar = document.createElement('div')
 	bar.style.cssText = 'border:solid #222; border-width:0 2px 2px 2px; height:6px;'
 	el.appendChild(bar)
 	const label = document.createElement('div')
 	label.style.cssText = 'text-align:center; margin-top:1px;'
 	el.appendChild(label)
-	map.addControl(new Control({ element: el }))
+	document.body.appendChild(el) // position:fixed is relative to the viewport, not any scrolled ancestor
 
 	const update = () => {
 		const res = map.getView().getResolution() // level-0 px per screen px, current zoom
@@ -54,6 +62,32 @@ export function addScaleBar(map: Map, mppX: number | undefined): void {
 		bar.style.width = `${lenUm / umPerScreenPx}px`
 		label.textContent = `${lenUm} µm`
 	}
+
+	// clamps the bar to the map's own bottom-right corner, OR the viewport's
+	// if that corner is scrolled out of view; hides it only once there is no
+	// visible map area left for it to sit in at all
+	const reposition = () => {
+		if (!target.isConnected) {
+			window.removeEventListener('scroll', reposition, true)
+			window.removeEventListener('resize', reposition)
+			return
+		}
+		const r = target.getBoundingClientRect()
+		const bottom = Math.min(r.bottom, window.innerHeight) - 8
+		const right = Math.min(r.right, window.innerWidth) - 8
+		if (bottom < r.top + 20 || right < r.left + 20) {
+			el.style.display = 'none' // no visible map area left to anchor to
+			return
+		}
+		el.style.display = 'block'
+		el.style.top = `${bottom - el.offsetHeight}px`
+		el.style.left = `${right - el.offsetWidth}px`
+	}
+
 	map.getView().on('change:resolution', update)
+	// capture phase: catches a scrolling ANCESTOR too, not just the window
+	window.addEventListener('scroll', reposition, { capture: true, passive: true })
+	window.addEventListener('resize', reposition)
 	update() // initial size, before any zoom change fires
+	reposition() // initial position, before any scroll/resize fires
 }

@@ -290,6 +290,19 @@ from the h5ad's cell/nucleus polygons (`/boundaries`, µm→px via `meta.mpp`).
   animation frame) catches layout shifts that aren't a scroll or a resize at
   all — the burger menu's own settings panel opens by changing its height/
   visibility style, which pushes the map down without firing either event.
+  The scale bar (`client/plots/w2/scaleBar.ts`, bottom-right) solves the same
+  problem on its own, self-contained `scroll`/`resize` listeners — it used to
+  be a plain OL `Control` anchored to the map's own container, which scrolls
+  normally with the page; on a map taller than the browser's own viewport
+  (90vh plus whatever sits above it easily exceeds 100vh) that put the bar
+  permanently below the fold, reported as "I can't see the scale bar" when
+  it was, in fact, present and correctly styled, just scrolled out of view.
+  Error banners (`sayerrorOnTop()`, wrapping `#dom`'s `sayerror()`) raise
+  their own z-index above the legends/loading indicator for the same
+  underlying reason: `.sja_errorbar` is `position:relative` with
+  `z-index:auto`, which still paints BEHIND an explicitly z-indexed sibling
+  in the same (page-root) stacking context — unreadable, hidden under
+  whichever legend happened to be pinned over it at the time.
 - **Default framing** — the *first* vector load opens fit to the *sample's
   own cells* (the fetched boundary polygons' bounding box) rather than the
   whole slide canvas, unless `opts.focus` already picked a specific niche
