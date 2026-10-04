@@ -19,6 +19,7 @@ with a matching name.
 
 ### commit-msg
 
+- Remove any `Co-Authored-By` line from the commit message, see `AGENTS.md`
 - Check the commit message with `check-text.sh`, see below
 - Update `release.txt` from the commit message
 
