@@ -620,7 +620,7 @@ function init({ genomes }) {
 				// palette or the chosen gene(s)/color/max ever change
 				const key = createHash('sha1')
 					.update(
-						`${full}:${(await stat(full)).mtimeMs}:${zi}:${xi}:${yi}:${JSON.stringify(type_colors)}:${JSON.stringify(
+						`${full}:${(await stat(full)).mtimeMs}:${slide_w}:${slide_h}:${mpp_x}:${mpp_y}:${zi}:${xi}:${yi}:${JSON.stringify(type_colors)}:${JSON.stringify(
 							genes
 						)}:${rgb}:${max_count}`
 					)
