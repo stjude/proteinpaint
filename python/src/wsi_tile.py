@@ -415,7 +415,7 @@ def overlay_tile(h5ad, slide_w, slide_h, z, x, y, mpp_x, mpp_y, type_colors=None
                 for cid in keep_ids:
                     color = (type_colors or {}).get(id2type.get(cid, ""))
                     if color:
-                        fills[cid] = _rgb_to_rgba(color, 180)
+                        fills[cid] = _rgb_to_rgba(color, round(255 * 0.45))
         if fills:
             b = f["uns/cell_boundaries"]
             cb_ids = b["cell_id"][:].astype(str)
