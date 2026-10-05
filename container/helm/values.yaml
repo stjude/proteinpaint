@@ -31,8 +31,14 @@ resources:
     cpu: "2"
     memory: "8Gi"
 
+# The server needs no capabilities and does not write to the image files, so the root filesystem is read-only;
+# it writes only to the data volume (tp/cache) and to the writableDirs below. These are the same settings as
+# the container units in the sjpp releaseRollout, see container/runtimePosture.mjs for what each one prevents.
 securityContext:
   allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
 # The image runs as the unprivileged app user (UID/GID 1000, see container/deps/Dockerfile), and fsGroup makes
 # the mounted volumes, such as the tp/cache dir, writable by that user. Another runAsUser may be used with
 # runAsGroup: 0, since the dirs that the app writes at runtime are also writable for group 0. An image.tag
@@ -42,6 +48,22 @@ podSecurityContext:
   runAsUser: 1000
   runAsGroup: 1000
   fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# emptyDir mounts for the dirs that the server, python, and R write to besides the cachedir, since the root
+# filesystem is read-only: /tmp, which the image uses as the OS temp dir, and the app user's HOME for the python
+# and R caches. A Kubernetes emptyDir or PVC cannot be mounted with noexec, which container/runtimePosture.mjs
+# recommends for the writable dirs. As this chart sets PP_MODE to empty, envHelpers.mjs does not run that check
+# at startup, and PP_RUNTIME_CHECK has no effect; to see which settings are not applied in a running pod, use
+#   kubectl exec <pod> -- node runtimePosture.mjs /home/root/pp/tp/cache
+writableDirs:
+  - name: tmp
+    mountPath: /tmp
+    sizeLimit: 2Gi
+  - name: app-home
+    mountPath: /home/app
+    sizeLimit: 256Mi
 
 container:
   name: proteinpaint
@@ -69,6 +91,8 @@ container:
 
 mounts:
   data:
+    # when disabled, an emptyDir is mounted at config.serverConfig.cachedir instead, since the root filesystem is
+    # read-only; its cache data, including saved sessions, is then lost when the pod is replaced
     enabled: true
     name: storage-volume
     mountPath: /home/root/pp/tp/

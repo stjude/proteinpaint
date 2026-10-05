@@ -80,11 +80,18 @@ spec:
             {{- if .Values.mounts.data.enabled }}
             - name: {{ .Values.mounts.data.name }}
               mountPath: {{ .Values.mounts.data.mountPath }}
+            {{- else }}
+            - name: cache
+              mountPath: {{ .Values.config.serverConfig.cachedir }}
             {{- end }}
             - name: {{ .Values.mounts.config.name }}
               mountPath: {{ .Values.mounts.config.mountPath }}
               subPath: {{ .Values.mounts.config.subPath }}
               readOnly: true
+            {{- range .Values.writableDirs }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+            {{- end }}
             {{- range .Values.extraVolumeMounts }}
             - {{- toYaml . | nindent 14 }}
             {{- end }}
@@ -95,6 +102,17 @@ spec:
         - name: {{ .Values.mounts.data.name }}
           persistentVolumeClaim:
             claimName: {{ .Values.mounts.data.pvcName }}
+        {{- else }}
+        - name: cache
+          emptyDir: {}
+        {{- end }}
+        {{- range .Values.writableDirs }}
+        - name: {{ .name }}
+          emptyDir:
+            {{- with .sizeLimit }}
+            sizeLimit: {{ . }}
+            {{- else }} {}
+            {{- end }}
         {{- end }}
         - name: {{ .Values.mounts.config.name }}
           configMap:
