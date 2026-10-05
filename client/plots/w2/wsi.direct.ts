@@ -376,22 +376,22 @@ export async function init(
 		// MultiPolygon feature per hundred-thousand-cell sample.
 		const needCellPolys = !!opts.spatialData
 
-		// stable type -> color assignment, from meta's own sorted cellTypes
-		// (cheap regardless of sample size, unlike a whole-sample abundance
-		// tally) rather than per-load abundance order: a type must keep the
-		// SAME color whether it's drawn by the vector fill below or by the
-		// raster overlay (wsitiles/overlaytile), which only ever receives
-		// whatever this assigns — there is no cheaper shared source of truth
+		// stable type -> color assignment, from meta's own sorted cellTypes when
+		// available. If meta could not scan the h5ad, buildVector() adds types
+		// from the annotations response below so fills still work.
 		const typeColor: { [t: string]: string } = Object.create(null) // type -> 'r, g, b'
-		if (Array.isArray(meta.cellTypes))
-			for (const [i, t] of meta.cellTypes.entries()) typeColor[t] = CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
+		const typeNames: string[] = Array.isArray(meta.cellTypes) ? [...meta.cellTypes] : []
+		for (const [i, t] of typeNames.entries()) typeColor[t] = CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
 		// optional filter: fill/legend/raster tiles only show these types (colors unchanged)
 		const filterList = opts.cellTypeFilter || [] // the requested type list
-		const shownTypes: string[] = filterList.length
-			? (meta.cellTypes || []).filter((t: string) => filterList.includes(t))
-			: meta.cellTypes || []
+		let shownTypes: string[] = []
 		const shownColor: { [t: string]: string } = Object.create(null) // color subset acting as the fill filter
-		for (const t of shownTypes) shownColor[t] = typeColor[t]
+		function refreshShownTypes() {
+			shownTypes = filterList.length ? typeNames.filter(t => filterList.includes(t)) : [...typeNames]
+			for (const t of Object.keys(shownColor)) delete shownColor[t]
+			for (const t of shownTypes) shownColor[t] = typeColor[t]
+		}
+		refreshShownTypes()
 
 		// per-gene count maps, fetched ONCE for the whole sample (this route
 		// isn't bbox-scoped: one int per expressing cell is far lighter than a
@@ -465,13 +465,18 @@ export async function init(
 		// Raster can only draw a fill (see overlay_tile's own ponytail note
 		// on strokes), so with neither requested there's nothing to show.
 		type RasterFill = { kind: 'types' } | { kind: 'gene'; genes: string[]; rgb: string; max: number; label: string }
-		const rasterFills: RasterFill[] =
-			needCellPolys && opts.showCellTypes && shownTypes.length > 0
-				? [{ kind: 'types' }]
-				: needCellPolys && geneCounts.length && !opts.hideExpressionFills
-				? geneCounts.map(g => ({ kind: 'gene', genes: g.genes, rgb: g.rgb, max: g.max, label: g.gene }))
-				: []
-		const rasterEnabled = rasterFills.length > 0
+		let rasterFills: RasterFill[] = []
+		let rasterEnabled = false
+		function refreshRasterFills() {
+			rasterFills =
+				needCellPolys && opts.showCellTypes && shownTypes.length > 0
+					? [{ kind: 'types' }]
+					: needCellPolys && geneCounts.length && !opts.hideExpressionFills
+					? geneCounts.map(g => ({ kind: 'gene' as const, genes: g.genes, rgb: g.rgb, max: g.max, label: g.gene }))
+					: []
+			rasterEnabled = rasterFills.length > 0
+		}
+		refreshRasterFills()
 
 		// mutable per-rebuild state: the hover tooltip and lasso below close
 		// over these `let`s by reference, so neither listener is ever torn
@@ -703,7 +708,20 @@ export async function init(
 					)
 					if (!r || r.error) throw new Error(r?.error || 'failed to load annotations')
 					if (gen !== modeGeneration) return false // superseded while this fetch was in flight: stop before committing it
-					cellTypes = r.cells // the id->type map, served ready to use
+					const annotations: { [id: string]: string } = r.cells // the id->type map, served ready to use
+					cellTypes = annotations
+					// meta.cellTypes is normally the stable global order, but it is
+					// optional when the metadata scan failed. Add any types discovered
+					// here so vector and later raster fills still have a palette.
+					const missingTypes = [...new Set(Object.values(annotations).filter(Boolean))]
+						.filter(t => !typeNames.includes(t))
+						.sort()
+					for (const t of missingTypes) {
+						typeColor[t] = CELL_TYPE_COLORS[typeNames.length % CELL_TYPE_COLORS.length]
+						typeNames.push(t)
+					}
+					refreshShownTypes()
+					refreshRasterFills()
 				} catch (e: any) {
 					sayerrorOnTop(holder, `Error loading annotations: ${e.message || e}`) // overlay lost, viewer lives
 				}
