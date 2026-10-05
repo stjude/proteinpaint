@@ -7,6 +7,11 @@ export type CacheOrRecomputeOpts<TArgs, TResult> = {
 	 * changing them still hits cache. */
 	computeArgument: TArgs
 
+	/** Optional, separates the cacheIds of identical computeArguments, e.g. a user or session
+	 * identifier when the result depends on what the requester may access. Omit it for results
+	 * that are the same for every requester, so that they share one cache file. */
+	cacheScope?: string
+
 	/** Subdir under serverconfig.cachedir. Must match a CacheManager-known
 	 * subdir so eviction applies. */
 	cacheSubdir: CacheSubdir
