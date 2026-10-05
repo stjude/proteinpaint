@@ -2287,7 +2287,7 @@ keep this setting here for reason of:
 	hidePlotDocumentation?: boolean
 	/** (client-side) hide: true omits the per-plot sample filter in every plot header. for a ds whose
 	plots are driven by sample sets rather than user-defined sample groups */
-	plotFilter?: { hide?: boolean }
+	plotFilter?: { hide?: boolean; disabledMessage?: string }
 	/** (client-side) if true, the genome browser recreates its block on track change rather than
 	updating tracks in the existing block instance */
 	gbRecreateBlock?: boolean
