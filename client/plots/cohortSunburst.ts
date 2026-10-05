@@ -1091,7 +1091,9 @@ function computeStat(leaves: TreeNode[], def: ProteomeSunburstStat): number | nu
 	const rows = leaves.map(l => l.cohort!).filter(r => !def.where || cohortMatches(def.where, r.organism, r.assay, r))
 	if (def.kind === 'count') return rows.length
 	if (def.kind === 'distinct') {
-		const vals = new Set(rows.map(r => r[def.key || '']).filter(Boolean))
+		const vals = new Set(
+			rows.map(r => r[def.key || '']).filter(v => v !== undefined && v !== null && v !== '')
+		)
 		return vals.size
 	}
 	// sum
