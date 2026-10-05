@@ -612,6 +612,25 @@ export class ProteomeInput extends PlotBase implements RxComponent {
 	async main() {
 		await this.mayMountVolcano()
 	}
+
+	/** remove the differential analysis child config here
+	 *  Deferred until app.main() has finished destroying the deleted plots
+	 *  skipped if the child is already gone (e.g. every plot was deleted). */
+	destroy() {
+		const app = this.app
+		const parentId = this.id
+		const childIds = app
+			.getState()
+			.plots.filter((p: any) => p.parentId === parentId && p.chartType === 'differentialAnalysis')
+			.map((p: any) => p.id)
+		if (!childIds.length) return
+		queueMicrotask(() => {
+			const ids = new Set(app.getState().plots.map((p: any) => p.id))
+			// only when this plot's own config is gone, so a child still in use is never removed
+			if (ids.has(parentId)) return
+			for (const id of childIds) if (ids.has(id)) app.dispatch({ type: 'plot_delete', id })
+		})
+	}
 }
 
 export const proteomeInputInit = getCompInit(ProteomeInput)
