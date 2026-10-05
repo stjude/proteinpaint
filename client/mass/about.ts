@@ -419,6 +419,11 @@ export class MassAbout {
 
 	// launch behavior shared by button and card layouts
 	launchActiveItem = async (item, anchorEl) => {
+		// an item grouping several launch items opens them as a menu under the item
+		if (item.menu) {
+			this.openItemMenu(item.menu, anchorEl)
+			return
+		}
 		// some charts (e.g. proteinView) require user input before a plot can be created;
 		// open their chart-specific menu instead of directly creating a plot
 		if (item.openChartMenu) {
@@ -441,6 +446,38 @@ export class MassAbout {
 			id: getId(),
 			config: structuredClone(item.plot)
 		})
+	}
+
+	// menu of launch items in labelled groups, anchored to the tile. An entry with its own
+	// chart menu (e.g. a gene search) replaces this menu's content in place; other entries
+	// hide the menu and launch their plot.
+	openItemMenu = (groups, anchorEl) => {
+		const menu = this.chartMenu || (this.chartMenu = new Menu({ padding: '0px' }))
+		menu.clear()
+		const holder = menu.d.append('div').style('padding', '6px 0').style('min-width', '260px')
+		for (const group of groups) {
+			if (group.label) {
+				holder
+					.append('div')
+					.style('padding', '6px 14px 2px')
+					.style('font-size', '0.75em')
+					.style('font-weight', 'bold')
+					.style('letter-spacing', '0.05em')
+					.style('text-transform', 'uppercase')
+					.style('color', '#777')
+					.text(group.label)
+			}
+			for (const entry of group.items || []) {
+				const row = holder.append('div').attr('class', 'sja_menuoption').style('padding', '6px 14px')
+				row.append('div').style('font-weight', '600').html(entry.title)
+				if (entry.subtitle) row.append('div').style('font-size', '0.8em').style('color', '#666').text(entry.subtitle)
+				this.makeActivatable(row, async () => {
+					if (!entry.openChartMenu && !entry.menu) menu.hide()
+					await this.launchActiveItem(entry, anchorEl)
+				})
+			}
+		}
+		menu.showunder(anchorEl)
 	}
 
 	// open a chart-specific launch menu (e.g. gene search for proteinView) anchored to the tile.
