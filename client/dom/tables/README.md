@@ -57,7 +57,8 @@ A cell is shown by the first of these that applies: `url` (a link), `html`, `val
 
 A `sortable` and/or `filterable` column gets one icon button in its header. It shows the sort arrow
 (⇅ unsorted, ▲ ascending, ▼ descending) and a filter funnel (an outline, filled while a filter is applied).
-The icon turns blue while a sort or filter is applied on that column. Clicking it opens a popup with
+Each symbol shows its own state: the arrow turns blue while the column is sorted, and the funnel turns blue
+(and fills) while it is filtered. Clicking the button opens a popup with
 "Sort ascending", "Sort descending" and the filter input.
 
 - Filtering is a case-insensitive substring match, and the filters of several columns combine with AND.
@@ -65,6 +66,9 @@ The icon turns blue while a sort or filter is applied on that column. Clicking i
   to 100 characters.
 - Sorting treats a column of numeric strings (e.g. file names used as ids) as numbers. A row with no value in
   the sorted column keeps its position, and the other rows sort around it.
+- Typing in the filter is debounced (250 ms), so the rows are redrawn after a pause rather than on every key.
+  Pending text is applied at once when the field is committed (it loses focus), on Enter or Escape, when
+  another column's popup opens, or when a sort is chosen. `setColumnFilter()` itself is not delayed.
 - Both apply to all rows, not only the current page, and both send the table back to page 1.
 - The same from code: `table.sortByColumn(colIdx, ascending?)` (without a direction it toggles) and
   `table.setColumnFilter(colIdx, text)`.

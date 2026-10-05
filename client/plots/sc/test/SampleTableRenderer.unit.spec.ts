@@ -621,6 +621,8 @@ tape('sortable columns should have a filter box, and filtering should keep the p
 
 	input.value = 's2'
 	input.dispatchEvent(new Event('input', { bubbles: true }))
+	// typing is debounced; the 'change' event, fired when the field is committed, applies it now
+	input.dispatchEvent(new Event('change', { bubbles: true }))
 	test.deepEqual(names(), ['S2'], 'Should keep only matching samples')
 	test.equal(
 		renderer.table!.rowMap.get('S2').cells.shownPlots.selectAll('.sjpp-sc-table-plot-btn').size(),

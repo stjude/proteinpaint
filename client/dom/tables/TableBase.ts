@@ -2,6 +2,7 @@ import type { Table, Th, Tr, Td } from '../../types/d3'
 import { Menu } from '../menu'
 // Menu.show() calls selection.transition() but does not import d3-transition itself
 import 'd3-transition'
+import { debounce } from 'debounce'
 import { filterAndSort, makeColumnFilter } from './tableSortFilter'
 import { appendColumnMenuButton, renderFilterInput, renderSortOptions, styleColumnControl } from './tableColumnMenu'
 import { createPager, pageInfoText, renderPagerNav } from './tablePager'
@@ -21,6 +22,9 @@ import type {
 	TableBaseRow,
 	TableBaseStyles
 } from './tableTypes'
+
+/** ms of no typing in a filter input before the filter is applied */
+const FILTER_TYPING_DELAY = 250
 
 export type {
 	TableBaseButton,
@@ -72,6 +76,12 @@ export class TableBase {
 	protected menuId = uniqueId('menu')
 	/** the button the open popup belongs to */
 	protected menuButton?: any
+	/** What the user types in a filter input. Applying a filter redraws every matching row, so wait for a
+	 * pause in typing. flush() applies it now, clear() drops it. setColumnFilter() itself is not delayed. */
+	protected typedFilter = debounce(
+		(colIdx: number, text: string) => this.setColumnFilter(colIdx, text),
+		FILTER_TYPING_DELAY
+	)
 	protected styles: Required<TableBaseStyles>
 	protected selection: ResolvedSelection
 	protected selectable: boolean
@@ -202,6 +212,8 @@ export class TableBase {
 
 	/** Removes the rendered table from the DOM, if present. */
 	remove(): void {
+		// typed text still waiting to be applied would redraw a table that is gone
+		this.typedFilter.clear()
 		// the popup lives in <body>, so it has to be removed along with the table
 		this.menu?.destroy()
 		this.menu = undefined
@@ -450,7 +462,7 @@ export class TableBase {
 				control.indicator.text({ none: '⇅', ascending: '▲', descending: '▼' }[direction])
 				control.button.node().closest('th')?.setAttribute('aria-sort', direction)
 			}
-			styleColumnControl(control, sorted || filtered, filtered)
+			styleColumnControl(control, sorted, filtered)
 		}
 	}
 
@@ -469,6 +481,8 @@ export class TableBase {
 					if (event.key == 'Escape') this.closeColumnMenu()
 				})
 		}
+		// text typed in another column's popup still counts: apply it before this popup replaces that one
+		this.typedFilter.flush()
 		this.menuButton?.attr('aria-expanded', 'false')
 		this.menuButton = button
 		button.attr('aria-expanded', 'true')
@@ -478,6 +492,7 @@ export class TableBase {
 		if (column.sortable) {
 			const sorted = this.sortState?.colIdx === colIdx ? this.sortState.ascending : undefined
 			renderSortOptions(d, colIdx, sorted, ascending => {
+				this.typedFilter.flush()
 				this.sortByColumn(colIdx, ascending)
 				this.closeColumnMenu()
 			})
@@ -488,7 +503,8 @@ export class TableBase {
 				label: column.label,
 				text: this.filters.get(colIdx)?.text ?? '',
 				afterSort: !!column.sortable,
-				onInput: text => this.setColumnFilter(colIdx, text),
+				onInput: text => this.typedFilter(colIdx, text),
+				onCommit: () => this.typedFilter.flush(),
 				onEnter: () => this.closeColumnMenu()
 			})
 		}
@@ -497,6 +513,7 @@ export class TableBase {
 	}
 
 	protected closeColumnMenu(): void {
+		this.typedFilter.flush()
 		this.menu?.hide()
 		this.menuButton?.node()?.focus()
 	}

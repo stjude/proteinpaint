@@ -479,11 +479,14 @@ function sortViaMenu(holder: any, colIdx: number) {
 	;(menu.querySelector(`[data-testid="sjpp-table-sort-${direction}-${colIdx}"]`) as HTMLElement).click()
 }
 
+/** Types into a column's filter and commits it. Typing alone is debounced; the browser's 'change' event, which
+ * fires when the field is committed, applies the filter at once, so tests can read the result right away. */
 function typeFilter(holder: any, colIdx: number, text: string) {
 	const menu = openColumnMenu(holder, colIdx)
 	const input = menu.querySelector(`input[data-testid="sjpp-table-filter-${colIdx}"]`) as HTMLInputElement
 	input.value = text
 	input.dispatchEvent(new Event('input', { bubbles: true }))
+	input.dispatchEvent(new Event('change', { bubbles: true }))
 }
 
 tape('sort and filter: one icon button per column, showing a symbol for each feature the column has', test => {
@@ -574,40 +577,76 @@ tape('sort: the icon button opens a popup with both directions and marks the cur
 	test.end()
 })
 
-tape('column button: turns blue while a sort or a filter is applied on its column', test => {
+tape('column button: only the symbol that is applied turns blue', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
 	new TableBase({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
-	const button = (i: number) => holder.select(`[data-testid="sjpp-table-column-menu-btn-${i}"]`).node() as HTMLElement
+	const symbol = (i: number, selector: string) =>
+		holder.select(`[data-testid="sjpp-table-column-menu-btn-${i}"] ${selector}`).node() as HTMLElement | null
 	const blue = 'rgb(13, 110, 253)'
-	const size = (i: number) => parseFloat(getComputedStyle(button(i)).fontSize)
-	const isActive = (i: number) =>
-		getComputedStyle(button(i)).color == blue && button(i).classList.contains('sjpp-table-column-active')
+	const isBlue = (el: HTMLElement | null) => !!el && getComputedStyle(el).color == blue
+	// [sort arrow, funnel] of a column; a column without that symbol reports false
+	const state = (i: number) => [
+		isBlue(symbol(i, '.sjpp-table-sort-indicator')),
+		isBlue(symbol(i, '.sjpp-table-filter-icon'))
+	]
+	const size = (i: number) =>
+		parseFloat(
+			getComputedStyle(symbol(i, '.sjpp-table-sort-indicator') || symbol(i, '.sjpp-table-filter-icon')!).fontSize
+		)
 	const baseSize = size(0)
 
 	test.deepEqual(
-		[0, 1, 2].map(isActive),
-		[false, false, false],
-		'No column should look active before anything is applied'
+		[0, 1, 2].map(state),
+		[
+			[false, false],
+			[false, false],
+			[false, false]
+		],
+		'Nothing is blue at first'
 	)
 
-	sortViaMenu(holder, 1)
-	test.deepEqual([0, 1, 2].map(isActive), [false, true, false], 'A sort should mark only its own column')
-	test.ok(Math.abs(size(1) - baseSize) < 0.01, 'The color change should not change the size')
-
-	typeFilter(holder, 2, 'eng')
-	test.deepEqual([0, 1, 2].map(isActive), [false, true, true], 'A filter should mark its column too')
-
-	typeFilter(holder, 2, '')
-	test.deepEqual([0, 1, 2].map(isActive), [false, true, false], 'Emptying the filter should reset that column')
-	test.ok(Math.abs(size(2) - baseSize) < 0.01, 'Should stay the normal size')
-
 	sortViaMenu(holder, 0)
-	test.deepEqual([0, 1, 2].map(isActive), [true, false, false], 'Sorting another column should move the mark')
+	test.deepEqual(
+		state(0),
+		[true, false],
+		'Sorting a sortable and filterable column: the arrow is blue, the funnel is not'
+	)
+	test.deepEqual(
+		[state(1), state(2)],
+		[
+			[false, false],
+			[false, false]
+		],
+		'Other columns are unchanged'
+	)
+	test.ok(Math.abs(size(0) - baseSize) < 0.01, 'The color change does not change the size')
 
 	typeFilter(holder, 0, 'a')
+	test.deepEqual(state(0), [true, true], 'Applying a filter as well turns the funnel blue too')
+
 	sortViaMenu(holder, 1)
-	test.ok(isActive(0), 'A filtered column stays active when the sort moves to another column')
+	test.deepEqual(
+		state(0),
+		[false, true],
+		'Moving the sort to another column: the funnel stays blue, the arrow does not'
+	)
+	test.deepEqual(state(1), [true, false], 'Sort-only column: its arrow is blue')
+
+	typeFilter(holder, 2, 'eng')
+	test.deepEqual(state(2), [false, true], 'Filter-only column: its funnel is blue')
+
+	typeFilter(holder, 0, '')
+	typeFilter(holder, 2, '')
+	test.deepEqual(
+		[0, 1, 2].map(state),
+		[
+			[false, false],
+			[true, false],
+			[false, false]
+		],
+		'Emptying a filter resets only its funnel'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -652,15 +691,13 @@ tape('column button: the active look comes back after the header is rebuilt', te
 	table.setColumnFilter(2, 'eng')
 	table.render()
 
-	const colors = [1, 2, 0].map(
-		i => getComputedStyle(holder.select(`[data-testid="sjpp-table-column-menu-btn-${i}"]`).node() as Element).color
-	)
-	test.deepEqual(
-		colors.slice(0, 2),
-		['rgb(13, 110, 253)', 'rgb(13, 110, 253)'],
-		'Sorted and filtered columns should still be blue'
-	)
-	test.notEqual(colors[2], 'rgb(13, 110, 253)', 'Other columns should not be')
+	const color = (selector: string) => getComputedStyle(holder.select(selector).node() as Element).color
+	const button = (i: number) => `[data-testid="sjpp-table-column-menu-btn-${i}"]`
+	const blue = 'rgb(13, 110, 253)'
+	test.equal(color(`${button(1)} .sjpp-table-sort-indicator`), blue, 'The sorted column keeps its blue arrow')
+	test.equal(color(`${button(2)} .sjpp-table-filter-icon`), blue, 'The filtered column keeps its blue funnel')
+	test.notEqual(color(`${button(0)} .sjpp-table-sort-indicator`), blue, 'An untouched arrow is not blue')
+	test.notEqual(color(`${button(0)} .sjpp-table-filter-icon`), blue, 'An untouched funnel is not blue')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -772,6 +809,7 @@ tape('filter: matching nothing renders an empty body, and the popup input surviv
 
 	input.value = 'zzz'
 	input.dispatchEvent(new Event('input', { bubbles: true }))
+	input.dispatchEvent(new Event('change', { bubbles: true }))
 	test.equal(holder.selectAll('tbody tr').size(), 0, 'Should render no rows when nothing matches')
 	test.equal(
 		menu.querySelector('input[data-testid="sjpp-table-filter-0"]'),
@@ -780,8 +818,14 @@ tape('filter: matching nothing renders an empty body, and the popup input surviv
 	)
 	test.notEqual(menu.style.display, 'none', 'Should keep the popup open while typing')
 
-	input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+	const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+	input.dispatchEvent(enter)
 	test.equal(menu.style.display, 'none', 'Enter should close the popup')
+	test.ok(enter.defaultPrevented, "Enter's default action is cancelled")
+	// A real Enter that is not cancelled sends its keypress to whatever has focus after the keydown, here the
+	// column button, and on a button that keypress is a click. Model that, to catch the popup reopening.
+	if (!enter.defaultPrevented) (document.activeElement as HTMLElement).click()
+	test.equal(menu.style.display, 'none', 'The popup stays closed after the whole Enter key press')
 
 	const icon = holder.select('.sjpp-table-filter-icon').node() as HTMLElement
 	test.ok(icon.classList.contains('sjpp-table-filter-active'), 'Should mark the filter symbol active')
@@ -863,6 +907,77 @@ tape('filter: numeric expressions combine with sort and do not break text column
 
 	typeFilter(holder, 0, '>30')
 	test.deepEqual(bodyColumn(holder, 0), [], 'A comparison typed in a text column is just text')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('filter typing: waits for a pause, applies once, and applies at once when committed', async test => {
+	test.timeoutAfter(5000)
+	const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+	const holder = getHolder()
+	const applied: string[] = []
+	class CountingTable extends TableBase {
+		setColumnFilter(colIdx: number, text: string) {
+			applied.push(text)
+			return super.setColumnFilter(colIdx, text)
+		}
+	}
+	const table = new CountingTable({ columns: sortFilterColumns, rows: makeSortFilterRows(), div: holder }).render()
+	const rowCount = () => holder.selectAll('tbody tr').size()
+	const type = (menu: HTMLElement, text: string) => {
+		const input = menu.querySelector('input') as HTMLInputElement
+		input.value = text
+		input.dispatchEvent(new Event('input', { bubbles: true }))
+		return input
+	}
+
+	// keystrokes in quick succession: nothing yet, then one filter with the last text
+	let menu = openColumnMenu(holder, 0)
+	for (const text of ['a', 'al', 'ali']) type(menu, text)
+	test.deepEqual(applied, [], 'Nothing is applied while the user is typing')
+	test.equal(rowCount(), 3, 'The rows are not redrawn while the user is typing')
+	await wait(450)
+	test.deepEqual(applied, ['ali'], 'After a pause the filter is applied once, with the last text')
+	test.equal(rowCount(), 1, 'And the rows are redrawn')
+
+	// committing the field (it loses focus) applies at once
+	const input = type(menu, 'bo')
+	test.equal(rowCount(), 1, 'Typing alone does not apply')
+	input.dispatchEvent(new Event('change', { bubbles: true }))
+	test.deepEqual(applied.slice(1), ['bo'], 'A change event applies the pending text at once')
+
+	// Enter applies and closes
+	type(menu, 'ch').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+	test.deepEqual(applied.slice(2), ['ch'], 'Enter applies the pending text')
+	test.equal(menu.style.display, 'none', 'And closes the popup')
+
+	// Escape closes without dropping what was typed
+	menu = openColumnMenu(holder, 0)
+	type(menu, 'x')
+	menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+	test.deepEqual(applied.slice(3), ['x'], 'Escape applies what was typed')
+
+	// opening another column's popup applies what is pending in this one
+	menu = openColumnMenu(holder, 0)
+	type(menu, 'a')
+	openColumnMenu(holder, 2)
+	test.deepEqual(applied.slice(4), ['a'], "Opening another column's popup applies the pending text first")
+
+	// choosing a sort applies it too
+	menu = openColumnMenu(holder, 0)
+	type(menu, 'li')
+	;(menu.querySelector('[data-testid="sjpp-table-sort-asc-0"]') as HTMLElement).click()
+	test.deepEqual(applied.slice(5), ['li'], 'Choosing a sort applies the pending text')
+	test.deepEqual(bodyColumn(holder, 0), ['Alice', 'Charlie'], 'And the sort and the filter both hold')
+
+	// removing the table drops what is still pending
+	menu = openColumnMenu(holder, 0)
+	type(menu, 'zzz')
+	const before = applied.length
+	table.remove()
+	await wait(450)
+	test.equal(applied.length, before, 'Text still pending when the table is removed is never applied')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()

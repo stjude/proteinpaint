@@ -62,11 +62,11 @@ export function appendColumnMenuButton(
 	return control
 }
 
-/** The button turns blue while a sort or a filter is applied on its column, and its funnel is filled
- * (not an outline) while a filter is applied. */
-export function styleColumnControl({ button, funnel }: ColumnControl, active: boolean, filtered: boolean): void {
-	button.classed('sjpp-table-column-active', active).style('color', active ? ACTIVE_COLOR : 'inherit')
-	funnel?.classed('sjpp-table-filter-active', filtered)
+/** Each symbol shows its own state: the sort arrow turns blue while the column is sorted, and the funnel
+ * turns blue and is filled (not an outline) while a filter is applied. */
+export function styleColumnControl({ indicator, funnel }: ColumnControl, sorted: boolean, filtered: boolean): void {
+	indicator?.classed('sjpp-table-sort-active', sorted).style('color', sorted ? ACTIVE_COLOR : null)
+	funnel?.classed('sjpp-table-filter-active', filtered).style('color', filtered ? ACTIVE_COLOR : null)
 	funnel?.select('path').attr('fill', filtered ? 'currentColor' : 'none')
 }
 
@@ -93,7 +93,8 @@ export function renderSortOptions(
 	}
 }
 
-/** The filter input in the popup. Filters as the user types; Enter closes the popup. */
+/** The filter input in the popup. Calls onInput on every keystroke (the caller debounces it), onCommit when
+ * the field is committed (it loses focus, or its value is confirmed), and onEnter on Enter, which closes the popup. */
 export function renderFilterInput(
 	menu: any,
 	opts: {
@@ -104,6 +105,7 @@ export function renderFilterInput(
 		/** true when sort options are above, to leave a gap */
 		afterSort: boolean
 		onInput: (text: string) => void
+		onCommit: () => void
 		onEnter: () => void
 	}
 ): void {
@@ -120,7 +122,13 @@ export function renderFilterInput(
 		.attr('value', opts.text)
 		.style('width', '180px')
 		.on('input', (event: Event) => opts.onInput((event.target as HTMLInputElement).value))
+		// the browser's 'change' fires when the field loses focus, so clicking away never drops typed text
+		.on('change', () => opts.onCommit())
 		.on('keydown', (event: KeyboardEvent) => {
-			if (event.key == 'Enter') opts.onEnter()
+			if (event.key != 'Enter') return
+			// onEnter() closes the popup and moves focus to the column button. Without this the same Enter
+			// keypress is then delivered to that button, which is a click that opens the popup again.
+			event.preventDefault()
+			opts.onEnter()
 		})
 }
