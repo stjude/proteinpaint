@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import * as child_process from 'child_process'
+import { spawnSync } from 'child_process'
 import * as utils from './utils.js'
 import serverconfig from './serverconfig.js'
 import * as common from '#shared/common.js'
@@ -11,6 +11,19 @@ const tabix = serverconfig.tabix
 // const samtools = serverconfig.samtools
 // const bcftools = serverconfig.bcftools
 // const hicstraw = serverconfig.hicstraw
+
+/*
+	args[]: tabix arguments
+	opts{}: spawnSync() options, such as cwd and encoding
+
+	runs tabix and returns its stdout; throws on failure
+*/
+function tabixSync(args, opts) {
+	const ps = spawnSync(tabix, args, opts)
+	if (ps.error) throw ps.error
+	if (ps.status !== 0) throw new Error(`tabix ${args.join(' ')} failed: ${ps.stderr}`)
+	return ps.stdout
+}
 
 export async function mds_init(ds, genome, rawds) {
 	/*
@@ -618,7 +631,7 @@ function mds_init_mdsjunction(query, ds, genome) {
 		arg.cwd = cwd
 	}
 
-	const header = child_process.execSync(tabix + ' -H ' + _file, arg).trim()
+	const header = tabixSync(['-H', _file], arg).trim()
 	if (header) {
 		// has header, get samples
 		const lines = header.split('\n')
@@ -638,7 +651,7 @@ function mds_init_mdsjunction(query, ds, genome) {
 	}
 
 	{
-		const tmp = child_process.execSync(tabix + ' -l ' + _file, arg).trim()
+		const tmp = tabixSync(['-l', _file], arg).trim()
 		if (!tmp) return 'no chromosomes found'
 		query.nochr = common.contigNameNoChr(genome, tmp.split('\n'))
 	}
@@ -780,7 +793,7 @@ function mds_init_mdscnv(query, ds, genome) {
 		arg.cwd = cwd
 	}
 
-	const header = child_process.execSync(tabix + ' -H ' + _file, arg).trim()
+	const header = tabixSync(['-H', _file], arg).trim()
 	if (header) {
 		// has header, get samples
 		const lines = header.split('\n')
@@ -797,7 +810,7 @@ function mds_init_mdscnv(query, ds, genome) {
 	}
 
 	{
-		const tmp = child_process.execSync(tabix + ' -l ' + _file, arg).trim()
+		const tmp = tabixSync(['-l', _file], arg).trim()
 		if (!tmp) return 'no chromosomes found'
 		query.nochr = common.contigNameNoChr(genome, tmp.split('\n'))
 	}
@@ -837,7 +850,7 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		arg.cwd = cwd
 	}
 
-	const header = child_process.execSync(tabix + ' -H ' + _file, arg).trim()
+	const header = tabixSync(['-H', _file], arg).trim()
 	if (header) {
 		// has header, get samples
 		const set = new Set()
@@ -877,7 +890,7 @@ function mds_init_mdssvcnv(query, ds, genome) {
 	}
 
 	{
-		const tmp = child_process.execSync(tabix + ' -l ' + _file, arg).trim()
+		const tmp = tabixSync(['-l', _file], arg).trim()
 		if (!tmp) return 'no chromosomes found'
 		query.nochr = common.contigNameNoChr(genome, tmp.split('\n'))
 	}
@@ -957,7 +970,7 @@ function mds_init_genenumeric(query, ds, genome) {
 	const arg = { cwd: cwd, encoding: 'utf8' }
 
 	{
-		const tmp = child_process.execSync(tabix + ' -H ' + _file, arg).trim()
+		const tmp = tabixSync(['-H', _file], arg).trim()
 		if (!tmp) return 'no header line (#sample <sample1> ...)'
 		// allow multiple # lines
 		const set = new Set()
