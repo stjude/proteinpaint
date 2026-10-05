@@ -4,6 +4,7 @@ import {
 	Auth,
 	getMatchedEntry,
 	getNonStringAuthParam,
+	getOriginFromHeaders,
 	getSessionEntry,
 	normalizeReqPath,
 	stripBasepath
@@ -1039,5 +1040,20 @@ tape('getSessionEntry: resolves only real stored entries', function (test) {
 			`returns undefined for inherited id '${id}' on an existing dslabel entry`
 		)
 	}
+	test.end()
+})
+
+tape('getOriginFromHeaders: uses req.protocol for the host fallback', function (test) {
+	test.plan(2)
+	test.equal(
+		getOriginFromHeaders({ headers: { host: 'example.com:80' }, protocol: 'http' })?.host,
+		'example.com',
+		'strips the default port for http'
+	)
+	test.equal(
+		getOriginFromHeaders({ headers: { host: 'example.com:443' }, protocol: 'https' })?.host,
+		'example.com',
+		'strips the default port for https'
+	)
 	test.end()
 })

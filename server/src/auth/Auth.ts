@@ -96,7 +96,7 @@ export function getOriginFromHeaders(req) {
 	if (referrer) return parseOrigin(referrer, false)
 	// see the matching host fallback in getRequestOrigin() above for why this is false
 	const host = h.host
-	if (host) return parseOrigin(`https://${host}`, false)
+	if (host) return parseOrigin(`${req.protocol || 'https'}://${host}`, false)
 }
 
 export function parseOrigin(value, mustBeSerializedOrigin) {
