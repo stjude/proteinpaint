@@ -58,6 +58,16 @@ tape('getRequestOrigin()', test => {
 		'http://localhost:3000',
 		'should fall back to the request protocol and host'
 	)
+	test.equal(
+		getRequestOrigin(getReq({ host: 'example.com:443' }, 'https'))?.origin,
+		'https://example.com',
+		'should accept a host fallback with an explicit default port'
+	)
+	test.equal(
+		getRequestOrigin(getReq({ host: 'Example.COM' }, 'https'))?.origin,
+		'https://example.com',
+		'should accept a host fallback with non-lowercase casing'
+	)
 	test.equal(getRequestOrigin(getReq({})), undefined, 'should return undefined when there is no origin')
 	test.end()
 })

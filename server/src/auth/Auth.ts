@@ -79,8 +79,11 @@ export function getRequestOrigin(req) {
 	// a referrer is a full URL, so only this fallback may include a path
 	const referrer = req.get('referrer')
 	if (referrer) return parseOrigin(referrer, false)
+	// this host is used to build a URL, not validated as an already-serialized origin (like the
+	// Origin header above), so mustBeSerializedOrigin is false: URL parsing normalizes it (default
+	// port removed, lowercased), which would otherwise never match an un-normalized but valid host
 	const host = req.get('host')
-	if (host) return parseOrigin(`${req.protocol}://${host}`, true)
+	if (host) return parseOrigin(`${req.protocol}://${host}`, false)
 }
 
 // same as getRequestOrigin(), reading req.headers directly instead of calling the Express-only
@@ -91,8 +94,9 @@ export function getOriginFromHeaders(req) {
 	if (origin) return parseOrigin(origin, true)
 	const referrer = h.referrer || h.referer
 	if (referrer) return parseOrigin(referrer, false)
+	// see the matching host fallback in getRequestOrigin() above for why this is false
 	const host = h.host
-	if (host) return parseOrigin(`https://${host}`, true)
+	if (host) return parseOrigin(`https://${host}`, false)
 }
 
 export function parseOrigin(value, mustBeSerializedOrigin) {
