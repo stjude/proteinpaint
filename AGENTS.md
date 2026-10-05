@@ -10,3 +10,7 @@ If you don't know whether a fix is deployed, assume it isn't.
 ## Commit messages
 Do not add a Co-Authored-By line, or other attribution line, to a commit message. The commit-msg hook
 removes any co-author line, so you don't need to remove one yourself.
+
+## Pull request descriptions
+Do not add a "Generated with Claude Code" line, or other AI-tool attribution, to a pull request
+title or description.
