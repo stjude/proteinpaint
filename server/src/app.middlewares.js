@@ -279,9 +279,8 @@ export function jsonErrorHandler(err, req, res, next) {
 	res.status(status).send({ error: status < 500 && err.expose ? err.message : 'request failed' })
 }
 
-// getRequestOrigin() and isCredEmbedder() moved to ./auth/Auth.ts, which AuthRoutes.ts also needs
-// for the same Origin check on cookie-authenticated POSTs; re-exported here since existing imports
-// (e.g. the test suite) reference them from this module.
+// Shared request-origin helpers are implemented in ./auth/Auth.ts and re-exported here
+// for compatibility with existing imports.
 export { getRequestOrigin, isCredEmbedder }
 
 // an allowedEmbedders[] entry must be '*' or exactly equal the origin hostname (or hostname:port);

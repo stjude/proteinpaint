@@ -13,7 +13,6 @@ function matchesKnownCookie(req, cred, id) {
 	)
 }
 
-// true only when id could only have come from a cookie, not from Authorization
 function wasResolvedFromCookie(auth, req, cred, id) {
 	if (!matchesKnownCookie(req, cred, id)) return false
 	if (req.headers?.authorization && auth.mayAddSessionFromJwt(auth.sessions, req, cred) === id) return false
