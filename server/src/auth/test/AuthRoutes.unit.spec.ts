@@ -323,7 +323,7 @@ tape('/dslogout: returns ok when session does not exist (already expired)', asyn
 	const req = {
 		query: { dslabel, embedder },
 		path: '/dslogout',
-		headers: { host: embedder },
+		headers: { origin: 'https://' + embedder },
 		cookies: { 'x-ds-access-token': 'nonexistent-session-id' }
 	}
 	const res = makeMockRes()
@@ -348,7 +348,7 @@ tape('/dslogout: deletes session and clears cookie on valid logout', async funct
 		query: { dslabel, embedder },
 		path: '/dslogout',
 		// a same-embedder request, so it passes the credentialed-origin check
-		headers: { host: embedder },
+		headers: { origin: 'https://' + embedder },
 		cookies: { 'x-ds-access-token': sessionId }
 	}
 	const res = makeMockRes()
@@ -457,7 +457,7 @@ tape(
 		const req = {
 			query: { dslabel, embedder },
 			path: '/dslogout',
-			headers: { host: embedder },
+			headers: { origin: 'https://' + embedder },
 			cookies: { 'x-ds-access-token': sessionId }
 		}
 		const res = makeMockRes()
@@ -488,7 +488,7 @@ tape(
 		const req = {
 			query: { dslabel }, // no embedder supplied
 			path: '/dslogout',
-			headers: { host: embedder },
+			headers: { origin: 'https://' + embedder },
 			cookies: { 'x-ds-access-token': sessionId }
 		}
 		const res = makeMockRes()
@@ -518,7 +518,7 @@ tape('/dslogout: an origin valid for a different dataset does not satisfy this o
 	const req = {
 		query: { dslabel, embedder },
 		path: '/dslogout',
-		headers: { host: 'some-other-origin.example' },
+		headers: { origin: 'https://some-other-origin.example' },
 		cookies: { 'x-ds-access-token': sessionId }
 	}
 	const res = makeMockRes()
@@ -550,7 +550,7 @@ tape('/dslogout: a forbidden wildcard entry does not count as an allowed origin'
 		query: { dslabel, embedder: 'allowed.example' },
 		path: '/dslogout',
 		// matches only the forbidden '*' entry, not the allowed one
-		headers: { host: 'some-other-origin.example' },
+		headers: { origin: 'https://some-other-origin.example' },
 		cookies: { 'x-ds-access-token': sessionId }
 	}
 	const res = makeMockRes()
@@ -945,7 +945,7 @@ tape('/authorizedActions: appends action to file and returns ok', async function
 		query: { dslabel, embedder, action: 'download', details: JSON.stringify({ key: 'val' }) },
 		path: '/authorizedActions',
 		// a same-embedder request, so it passes the credentialed-origin check
-		headers: { host: embedder },
+		headers: { origin: 'https://' + embedder },
 		cookies: { 'x-ds-access-token': sessionId }
 	}
 	const res = makeMockRes()
@@ -980,7 +980,7 @@ tape('/authorizedActions: finds the session with a non-default cookie name', asy
 	const req = {
 		query: { dslabel, embedder, action: 'download', details: '{}' },
 		path: '/authorizedActions',
-		headers: { host: embedder },
+		headers: { origin: 'https://' + embedder },
 		cookies: { [customCookieId]: sessionId }
 	}
 	const res = makeMockRes()
@@ -1036,7 +1036,7 @@ tape('/authorizedActions: returns 401 on file system error', async function (tes
 		query: { dslabel, embedder, action: 'export', details: '{}' },
 		path: '/authorizedActions',
 		// a same-embedder request, so it reaches the file write (and fails there, as intended)
-		headers: { host: embedder },
+		headers: { origin: 'https://' + embedder },
 		cookies: {}
 	}
 	const res = makeMockRes()
@@ -1425,7 +1425,7 @@ tape('auth flow: /dslogin and /dslogout variants under a basepath', async functi
 		query: { dslabel, embedder },
 		path: '/Api/DsLogout/',
 		// a same-embedder request, so it passes the credentialed-origin check
-		headers: { host: embedder },
+		headers: { origin: 'https://' + embedder },
 		cookies: { [headerKey]: sessionId }
 	})
 	test.ok(logout.nextCalled, 'should let /Api/DsLogout/ through the middleware')

@@ -86,17 +86,18 @@ export function getRequestOrigin(req) {
 	if (host) return parseOrigin(`${req.protocol}://${host}`, false)
 }
 
-// same as getRequestOrigin(), reading req.headers directly instead of calling the Express-only
-// req.get(), for code (such as AuthRoutes.ts) that already follows that convention
+// Reads req.headers directly instead of calling the Express-only req.get(), for callers (such as
+// AuthRoutes.ts) that already follow that convention. Unlike getRequestOrigin(), this has no Host
+// header fallback: Host names this server, not the caller, so treating it as the caller's origin
+// when Origin and Referer are both absent would accept any request with neither header set, which
+// a caller fully controls. Callers that need this value for an access decision must fail closed
+// (treat a missing return value as disallowed) rather than assume a same-origin caller.
 export function getOriginFromHeaders(req) {
 	const h = req.headers || {}
 	const origin = h.origin
 	if (origin) return parseOrigin(origin, true)
 	const referrer = h.referrer || h.referer
 	if (referrer) return parseOrigin(referrer, false)
-	// see the matching host fallback in getRequestOrigin() above for why this is false
-	const host = h.host
-	if (host) return parseOrigin(`${req.protocol || 'https'}://${host}`, false)
 }
 
 export function parseOrigin(value, mustBeSerializedOrigin) {

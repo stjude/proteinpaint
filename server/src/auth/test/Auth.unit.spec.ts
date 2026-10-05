@@ -1043,17 +1043,22 @@ tape('getSessionEntry: resolves only real stored entries', function (test) {
 	test.end()
 })
 
-tape('getOriginFromHeaders: uses req.protocol for the host fallback', function (test) {
-	test.plan(2)
+tape('getOriginFromHeaders: resolves from Origin or Referer, with no Host fallback', function (test) {
+	test.plan(3)
 	test.equal(
-		getOriginFromHeaders({ headers: { host: 'example.com:80' }, protocol: 'http' })?.host,
-		'example.com',
-		'strips the default port for http'
+		getOriginFromHeaders({ headers: { origin: 'https://trusted.org' } })?.origin,
+		'https://trusted.org',
+		'resolves from the Origin header'
 	)
 	test.equal(
-		getOriginFromHeaders({ headers: { host: 'example.com:443' }, protocol: 'https' })?.host,
-		'example.com',
-		'strips the default port for https'
+		getOriginFromHeaders({ headers: { referer: 'https://trusted.org/x' } })?.origin,
+		'https://trusted.org',
+		'resolves from the Referer header'
+	)
+	test.equal(
+		getOriginFromHeaders({ headers: { host: 'example.com' } }),
+		undefined,
+		'does not resolve from the Host header alone'
 	)
 	test.end()
 })
