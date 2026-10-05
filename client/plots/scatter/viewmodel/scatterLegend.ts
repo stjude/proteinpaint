@@ -201,7 +201,6 @@ export class ScatterLegend {
 							scale,
 							hidden
 						)
-						circleG.attr('data-testid', `sjpp-legend-color-dot-${name}`)
 						if (!this.scatter.config.colorColumn) {
 							circleG.on('click', e => this.legendInteractivity.onLegendClick(chart, 'colorTW', key, e, category))
 							itemG.on('click', event => this.legendInteractivity.onLegendClick(chart, 'colorTW', key, event, category))
@@ -292,7 +291,7 @@ export class ScatterLegend {
 					itemG
 						.append('text')
 						.attr('name', 'sjpp-scatter-legend-label')
-						.attr('data-testid', 'sjpp-scatter-shape-legend-label')
+						.attr('data-testid', 'sjpp-scatter-shape-legend-label-' + name)
 						.attr('x', offsetX + 25)
 						.attr('y', offsetY + 4)
 						.text(`${name}, n=${count}`)
@@ -319,6 +318,7 @@ export class ScatterLegend {
 			.attr('d', shapes[0])
 			.attr('hex-color', category.color)
 			.attr('transform', `translate(${x - 2}, ${y - 4}) scale(${scale})`)
+			.attr('data-testid', `sjpp-legend-color-dot-${name}`)
 			.style('fill', category.color)
 			.style('stroke', rgb(category.color).darker())
 		if (!this.scatter.config.colorColumn)
@@ -327,7 +327,7 @@ export class ScatterLegend {
 		itemG
 			.append('text')
 			.attr('name', 'sjpp-scatter-legend-label')
-			.attr('data-testid', 'sjpp-scatter-color-legend-label')
+			.attr('data-testid', 'sjpp-scatter-color-legend-label-' + name)
 			.attr('x', x + 20)
 			.attr('y', y + 4)
 			.text(`${name}, n=${category.sampleCount}`)
@@ -417,7 +417,10 @@ export class ScatterLegend {
 					.attr('x', offsetX - step + 24)
 					.attr('y', offsetY + 4)
 					.attr('name', 'sjpp-scatter-legend-label')
-					.attr('data-testid', cname == 'shape' ? 'sjpp-scatter-shape-legend-label' : 'sjpp-scatter-color-legend-label')
+					.attr(
+						'data-testid',
+						(cname == 'shape' ? 'sjpp-scatter-shape-legend-label-' : 'sjpp-scatter-color-legend-label') + name
+					)
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.text(text)
 					.on('click', event =>
