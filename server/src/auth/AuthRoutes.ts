@@ -80,8 +80,6 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 			const id = auth.getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
-			// re-resolve cred from the embedder the session was actually issued under, not the
-			// request's own (self-selected) embedder, so the check below is tied to this session
 			if (session?.embedder) cred = auth.getRouteCred(q.dslabel, routeKeys, session.embedder) || cred
 			cred = assertAllowedSessionOrigin(auth, req, q.dslabel, routeKeys, cred, id)
 			if (!session) {
@@ -147,8 +145,6 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 			}
 			const id = auth.getSessionId(req, cred)
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
-			// re-resolve cred from the embedder the session was actually issued under, not the
-			// request's own (self-selected) embedder, so the check below is tied to this session
 			if (session?.embedder) cred = auth.getRouteCred(q.dslabel, ['termdb'], session.embedder) || cred
 			assertAllowedSessionOrigin(auth, req, q.dslabel, ['termdb'], cred, id)
 			const email = session?.email || ''
