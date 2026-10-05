@@ -137,7 +137,8 @@ RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir
 # The cache dir is owned by root with mode 1733, so that the app user, or another UID, may create and use a subdir
 # with a known name, but may not list the entries, change the mode, or rename or remove the entries of another user:
 # the server uses a subdir whose name is derived from a key, see hideCachedir in server/src/serverconfig.js.
-# A mounted cache dir needs the same owner and mode on the host.
+# A new mounted cache dir needs the same owner and mode on the host. For an existing mount, keep it listable for
+# the first upgraded start so legacy entries can be migrated, then apply this owner and mode.
 RUN groupmod -n app docker && \
     usermod -l app -d /home/app -m docker && \
     gpasswd -d app staff && \
