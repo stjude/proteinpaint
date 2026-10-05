@@ -89,6 +89,16 @@ container:
   # additional env entries, such as PP_CREDS_FILE
   env: []
 
+# The key for deriving cache file names, set as PP_CACHEID_CREDS. Every replica and restart must use the same
+# value to keep finding the existing cache files; without it, each server process generates its own key.
+# When existingSecret is empty, the chart creates a Secret with a random value that is kept across upgrades,
+# see templates/cacheid.yaml. Set existingSecret when the chart is rendered without a cluster
+# connection, such as with `helm template` in a GitOps tool.
+cacheIdCreds:
+  enabled: true
+  existingSecret: ""
+  secretKey: cacheid
+
 mounts:
   data:
     # when disabled, an emptyDir is mounted at config.serverConfig.cachedir instead, since the root filesystem is
