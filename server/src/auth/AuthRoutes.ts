@@ -115,13 +115,12 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 			const id = auth.getSessionId(req, cred)
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
 			if (!session) throw 'missing or expired session'
-			// a stored entry is not necessarily still active: this route is not covered by the
-			// app-level gatekeeper's per-request checks (it resolves its own cred above instead
-			// of matching req.path), so repeat the same connection and age checks here
+			// confirm the session is still active (connection and age) before using it
 			auth.checkIPaddress(req, session.ip, cred)
 			if (Date.now() - session.time > auth.maxSessionAge) {
 				const { iat } = auth.getJwtPayload(q, req.headers, cred, session)
-				if (Date.now() - iat > auth.maxSessionAge) {
+				// iat is in seconds (standard jwt claim), session.time and maxSessionAge are in ms
+				if (Date.now() - iat * 1000 > auth.maxSessionAge) {
 					auth.sessions.get(q.dslabel)?.delete(id)
 					throw 'missing or expired session'
 				}

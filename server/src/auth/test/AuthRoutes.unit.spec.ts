@@ -631,7 +631,7 @@ tape('/authorizedActions: returns 401 on file system error', async function (tes
 	test.end()
 })
 
-tape('/authorizedActions: returns 401 when there is no session', async function (test) {
+tape('action-log route: validation case A', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(2)
 
@@ -646,12 +646,12 @@ tape('/authorizedActions: returns 401 when there is no session', async function 
 	const res = makeMockRes()
 
 	await app.routes['/authorizedActions'].post(req, res)
-	test.equal(res.statusCode, 401, 'should return 401 when there is no session')
+	test.equal(res.statusCode, 401, 'should return 401')
 	test.ok(res.sentData?.error, 'should send an error message')
 	test.end()
 })
 
-tape('/authorizedActions: returns 401 when the session entry is past maxSessionAge', async function (test) {
+tape('action-log route: validation case B', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(2)
 
@@ -671,12 +671,12 @@ tape('/authorizedActions: returns 401 when the session entry is past maxSessionA
 	const res = makeMockRes()
 
 	await app.routes['/authorizedActions'].post(req, res)
-	test.equal(res.statusCode, 401, 'should return 401 for a session entry past maxSessionAge')
+	test.equal(res.statusCode, 401, 'should return 401')
 	test.ok(res.sentData?.error, 'should send an error message')
 	test.end()
 })
 
-tape('/authorizedActions: rejects an action value with embedded tab/newline characters', async function (test) {
+tape('action-log route: validation case C', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(2)
 
@@ -695,12 +695,12 @@ tape('/authorizedActions: rejects an action value with embedded tab/newline char
 	const res = makeMockRes()
 
 	await app.routes['/authorizedActions'].post(req, res)
-	test.equal(res.statusCode, 401, 'should reject an action with embedded delimiter characters')
+	test.equal(res.statusCode, 401, 'should return 401')
 	test.ok(res.sentData?.error, 'should send an error message')
 	test.end()
 })
 
-tape('/authorizedActions: rejects an oversized details value', async function (test) {
+tape('action-log route: validation case D', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(2)
 
@@ -719,8 +719,58 @@ tape('/authorizedActions: rejects an oversized details value', async function (t
 	const res = makeMockRes()
 
 	await app.routes['/authorizedActions'].post(req, res)
-	test.equal(res.statusCode, 401, 'should reject an oversized details value')
+	test.equal(res.statusCode, 401, 'should return 401')
 	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case E', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-boundary-action'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'x'.repeat(100), details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: {},
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should accept a value at the boundary')
+	test.equal(res.statusCode, 200, 'should return 200')
+	test.end()
+})
+
+tape('action-log route: validation case F', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-boundary-details'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	// MAX_DETAILS_LENGTH is measured on the serialized value, so account for the two
+	// quote characters JSON.stringify() adds around a string input
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: 'x'.repeat(9998) },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: {},
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should accept a value at the boundary')
+	test.equal(res.statusCode, 200, 'should return 200')
 	test.end()
 })
 
