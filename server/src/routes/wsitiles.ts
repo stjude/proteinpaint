@@ -22,6 +22,8 @@ import type { RouteApi, RoutePayload } from '#types' // route registration types
 import { run_python } from '@sjcrh/proteinpaint-python' // spawns wsi_tile.py per job
 import { readFile, unlink, copyFile, mkdir, stat } from 'fs/promises' // async fs for cache/tile IO
 import { existsSync, statSync } from 'fs' // sync checks inside slidePath()
+import { genomes } from '#src/initGenomesDs.js'
+import { hasW2Ds } from './termdb.wsiBySample.js'
 
 /** slide formats accepted from the w2 wsiFolder root (matches the
  wsiBySample listing) plus OME-TIFF, the spatial fallback when no
@@ -36,7 +38,9 @@ const cachedir = serverconfig.cachedir
 
 // register this module as a route; request/response shapes are loose (any)
 export const payload: RoutePayload = {
-	init,
+	get init() {
+		return hasW2Ds(genomes) || serverconfig.features?.wsi?.allowDirectSlidePath ? init : null
+	},
 	request: { typeId: 'any' },
 	response: { typeId: 'any' }
 }
