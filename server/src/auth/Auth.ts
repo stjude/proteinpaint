@@ -521,6 +521,7 @@ export class Auth {
 				cred.route === '*' ||
 				isMatch(path, cred.route) ||
 				path == 'authorizedactions' ||
+				path == 'dslogout' ||
 				path.startsWith(cred.route.toLowerCase() + '/')
 			) {
 				if (!dslabelSessions.has(id))

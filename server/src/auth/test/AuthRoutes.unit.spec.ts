@@ -685,6 +685,44 @@ tape('/dslogout: exempts a request authenticated via a valid Authorization heade
 	test.end()
 })
 
+tape('/dslogout: succeeds for a bearer token tied to a custom route key', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const creds: any = { [dslabel]: { burden: { [embedder]: makeJwtCred({ route: 'burden' }) } } }
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	const app = makeApp(auth)
+
+	const q = { dslabel, embedder, route: 'burden' }
+	const cred = auth.getRouteCred(dslabel, ['burden'], embedder)
+	const loginRes = makeMockRes()
+	const jwt = auth.getSignedJwt(
+		{ ip: '127.0.0.1', headers: {} },
+		loginRes,
+		q,
+		cred,
+		{},
+		auth.maxSessionAge,
+		'user@test.com',
+		auth.sessions
+	)
+	const sessionId = jwt.slice(-20)
+	const b64token = Buffer.from(jwt).toString('base64')
+
+	const req = {
+		query: { dslabel, embedder, route: 'burden' },
+		path: '/dslogout',
+		headers: { authorization: `Bearer ${b64token}`, origin: 'https://other.example' },
+		cookies: {}
+	}
+	const res = makeMockRes()
+
+	await app.routes['/dslogout'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should return ok')
+	test.equal(auth.sessions.get(dslabel)?.get(sessionId), undefined, 'should remove the session')
+	test.end()
+})
+
 tape('/dslogout: accepts a request when the host value includes a matching port', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)

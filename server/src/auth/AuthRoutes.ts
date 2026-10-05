@@ -3,7 +3,6 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { getSessionEntry, getOriginFromHeaders } from './Auth.ts'
 
-// true when id matches a known session cookie name
 function matchesKnownCookie(req, cred, id) {
 	return (
 		!!id &&
