@@ -601,6 +601,9 @@ tape('/authorizedActions: returns 401 on file system error', async function (tes
 	test.plan(2)
 
 	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-fs-error'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
 	const app: any = { routes: {} as Record<string, any> }
 	const methods = ['get', 'post', 'put', 'delete', 'all']
 	for (const method of methods) {
@@ -616,13 +619,79 @@ tape('/authorizedActions: returns 401 on file system error', async function (tes
 		query: { dslabel, embedder, action: 'export', details: '{}' },
 		path: '/authorizedActions',
 		headers: {},
-		cookies: {}
+		cookies: { 'x-ds-access-token': sessionId }
 	}
 	const res = makeMockRes()
 
 	await app.routes['/authorizedActions'].post(req, res)
 	test.equal(res.statusCode, 401, 'should return 401 on write error')
 	test.ok(res.sentData, 'should send error data')
+	test.end()
+})
+
+tape('/authorizedActions: returns 401 when there is no session', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		headers: {},
+		cookies: {}
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401 when there is no session')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('/authorizedActions: rejects an action value with embedded tab/newline characters', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-bad-action'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download\tforged@test.com\t0\tx', details: '{}' },
+		path: '/authorizedActions',
+		headers: {},
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should reject an action with embedded delimiter characters')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('/authorizedActions: rejects an oversized details value', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-big-details'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: 'x'.repeat(20000) },
+		path: '/authorizedActions',
+		headers: {},
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should reject an oversized details value')
+	test.ok(res.sentData?.error, 'should send an error message')
 	test.end()
 })
 
