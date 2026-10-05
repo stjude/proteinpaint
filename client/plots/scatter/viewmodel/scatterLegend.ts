@@ -201,6 +201,7 @@ export class ScatterLegend {
 							scale,
 							hidden
 						)
+						circleG.attr('data-testid', `sjpp-legend-color-dot-${name}`)
 						if (!this.scatter.config.colorColumn) {
 							circleG.on('click', e => this.legendInteractivity.onLegendClick(chart, 'colorTW', key, e, category))
 							itemG.on('click', event => this.legendInteractivity.onLegendClick(chart, 'colorTW', key, event, category))
@@ -281,7 +282,7 @@ export class ScatterLegend {
 
 					itemG
 						.append('path')
-						.attr('data-testid', 'sjpp-legend-shape')
+						.attr('data-testid', `sjpp-legend-shape-${name}`)
 						.attr('transform', () => `translate(${offsetX}, ${offsetY - 4}) scale(${scale + 0.1})`) //shapes are a bit smaller than the circle shape
 						.style('pointer-events', 'bounding-box')
 						.style('fill', color)
@@ -316,6 +317,7 @@ export class ScatterLegend {
 		circleG
 			.append('path')
 			.attr('d', shapes[0])
+			.attr('hex-color', category.color)
 			.attr('transform', `translate(${x - 2}, ${y - 4}) scale(${scale})`)
 			.style('fill', category.color)
 			.style('stroke', rgb(category.color).darker())
