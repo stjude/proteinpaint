@@ -581,6 +581,7 @@ tape('/authorizedActions: appends action to file and returns ok', async function
 	const req = {
 		query: { dslabel, embedder, action: 'download', details: JSON.stringify({ key: 'val' }) },
 		path: '/authorizedActions',
+		ip: '127.0.0.1',
 		headers: {},
 		cookies: { 'x-ds-access-token': sessionId }
 	}
@@ -618,6 +619,7 @@ tape('/authorizedActions: returns 401 on file system error', async function (tes
 	const req = {
 		query: { dslabel, embedder, action: 'export', details: '{}' },
 		path: '/authorizedActions',
+		ip: '127.0.0.1',
 		headers: {},
 		cookies: { 'x-ds-access-token': sessionId }
 	}
@@ -649,6 +651,31 @@ tape('/authorizedActions: returns 401 when there is no session', async function 
 	test.end()
 })
 
+tape('/authorizedActions: returns 401 when the session entry is past maxSessionAge', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-stale'
+	const staleTime = Date.now() - auth.maxSessionAge - 1000
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: staleTime, ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: {},
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401 for a session entry past maxSessionAge')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
 tape('/authorizedActions: rejects an action value with embedded tab/newline characters', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(2)
@@ -661,6 +688,7 @@ tape('/authorizedActions: rejects an action value with embedded tab/newline char
 	const req = {
 		query: { dslabel, embedder, action: 'download\tforged@test.com\t0\tx', details: '{}' },
 		path: '/authorizedActions',
+		ip: '127.0.0.1',
 		headers: {},
 		cookies: { 'x-ds-access-token': sessionId }
 	}
@@ -684,6 +712,7 @@ tape('/authorizedActions: rejects an oversized details value', async function (t
 	const req = {
 		query: { dslabel, embedder, action: 'download', details: 'x'.repeat(20000) },
 		path: '/authorizedActions',
+		ip: '127.0.0.1',
 		headers: {},
 		cookies: { 'x-ds-access-token': sessionId }
 	}
