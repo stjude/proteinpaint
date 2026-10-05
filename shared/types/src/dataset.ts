@@ -895,7 +895,7 @@ type ProteomeCohortConfig = {
 	DAPfile: string
 	/** display attributes for the sample-set catalog and plots; `placeholder: true` marks a
 	 *  stand-in sample set (not real data), drawn distinctly until the real data arrives */
-	catalog?: { [columnKey: string]: string | boolean }
+	catalog?: { [columnKey: string]: string | number | boolean }
 	/** age/progression trajectory membership. Cohorts sharing `series` form one ordered series;
 	 *  `value` is the numeric x-axis position (e.g. months) giving true spacing; `label` is the tick text. */
 	trajectory?: { series: string; value: number; label: string }
