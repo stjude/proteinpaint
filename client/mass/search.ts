@@ -392,7 +392,7 @@ export function setSearchRenderers(self: any) {
 	// open a mutated-vs-wildtype barchart for one gene, restricted to a variant data type.
 	// dtCandidates are tried in order (svfusion has two dts) until a matching predefined groupset
 	// is found, since fillTermWrapper throws when the dataset lacks a groupset for a given dt.
-	self.launchGeneVariantPlot = async (gene: string, dtCandidates: number[]) => {
+	self.resolveGeneVariantTw = async (gene: string, dtCandidates: number[]) => {
 		let tw: any
 		let lastErr: any
 		for (const dt of dtCandidates) {
@@ -414,6 +414,11 @@ export function setSearchRenderers(self: any) {
 			}
 		}
 		if (!tw) throw lastErr
+		return tw
+	}
+
+	self.launchGeneVariantPlot = async (gene: string, dtCandidates: number[]) => {
+		const tw = await self.resolveGeneVariantTw(gene, dtCandidates)
 		await self.launchPlot({ chartType: 'summary', term: tw })
 	}
 
@@ -708,13 +713,13 @@ export function setSearchRenderers(self: any) {
 			}
 
 			if (gbRestrictMode != 'genomic') {
-				addBtn(row, 'Protein view', `sjpp-mass-chat-gene-genomic-${item.gene}`, async () => {
+				addBtn(row, 'Protein view', `sjpp-mass-chat-gene-protein-${item.gene}`, async () => {
 					await self.launchGenomeBrowserView('protein', { gene: item.gene })
 				})
 			}
 
 			if (gbRestrictMode != 'protein') {
-				addBtn(row, 'Genome view', `sjpp-mass-chat-gene-protein-${item.gene}`, async () => {
+				addBtn(row, 'Genome view', `sjpp-mass-chat-gene-genomic-${item.gene}`, async () => {
 					await self.launchGenomeBrowserView('genomic', { coord: item.coord })
 				})
 			}
@@ -722,6 +727,13 @@ export function setSearchRenderers(self: any) {
 			// TODO Survival for this category: needs the same fillTermWrapper resolution
 			// launchGeneVariantPlot does, then launchSurvivalWithCovariate('term2', tw) instead of
 			// launchPlot(). Not yet built/verified.
+
+			if (hasSurvival) {
+				addBtn(row, 'Survival', `sjpp-mass-chat-gene-variant-survival-${item.gene}`, async () => {
+					const tw = await self.resolveGeneVariantTw(item.gene, allDtCandidates)
+					await self.launchSurvivalWithCovariate('term2', tw, row)
+				})
+			}
 		}
 
 		if (item.isMethylation) {
