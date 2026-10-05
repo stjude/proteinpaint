@@ -561,6 +561,41 @@ tape('/dslogout: a forbidden wildcard entry does not count as an allowed origin'
 })
 
 tape(
+	'/dslogout: a forbidden exact-hostname entry is not bypassed through the port-qualified host form',
+	async function (test) {
+		test.timeoutAfter(500)
+		test.plan(1)
+
+		// 'example.com' is forbidden; '*' is a looser fallback that only the port-qualified host
+		// form would reach if hostname and host were resolved independently
+		const creds: any = {
+			[dslabel]: {
+				'/**': {
+					'example.com': { type: 'forbidden', dslabel, route: '/**' },
+					'*': makeBasicCred()
+				}
+			}
+		}
+		const auth = new Auth(creds, {}, {}, { port: 3000 })
+		const sessionId = 'test-logout-hostname-host-precedence-session-id'
+		auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+		const app = makeApp(auth)
+		const req = {
+			query: { dslabel, embedder: 'example.com:3000' },
+			path: '/dslogout',
+			headers: { origin: 'https://example.com:3000' },
+			cookies: { 'x-ds-access-token': sessionId }
+		}
+		const res = makeMockRes()
+
+		await app.routes['/dslogout'].post(req, res)
+		test.equal(res.statusCode, 401, 'should set 401 even though the host form alone would match the wildcard')
+		test.end()
+	}
+)
+
+tape(
 	'/dslogout: an Authorization header that does not resolve to the cookie id does not exempt it',
 	async function (test) {
 		test.timeoutAfter(500)

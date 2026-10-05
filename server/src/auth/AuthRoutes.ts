@@ -39,16 +39,13 @@ function wasResolvedFromCookie(auth, req, cred, id) {
 function assertAllowedSessionOrigin(auth, req, dslabel, routeKeys, cred, id) {
 	if (!wasResolvedFromCookie(auth, req, cred, id)) return cred
 	const origin = getOriginFromHeaders(req)
-	// try both forms, same as isCredEmbedder(), so a dataset configured with a port-qualified
-	// embedder key (e.g. 'localhost:3000') is not rejected; a matched entry whose type is
-	// 'forbidden' is a configured deny (e.g. a '*' catch-all with specific allowed exceptions)
-	// and must not count as an allowed origin
-	const resolved =
-		origin &&
-		[origin.hostname, origin.host]
-			.map(embedder => auth.getRouteCred(dslabel, routeKeys, embedder))
-			.find(matched => matched && matched.type != 'forbidden')
-	if (!resolved) throw 'disallowed origin for a cookie-authenticated request'
+	// resolves both forms (hostname and host, which includes a non-default port) as one combined
+	// precedence, so a dataset configured with a port-qualified embedder key is not rejected, and
+	// a more specific entry in one form cannot be bypassed by a less specific match in the other.
+	// A matched entry whose type is 'forbidden' is a configured deny (e.g. a '*' catch-all with
+	// specific allowed exceptions) and must not count as an allowed origin
+	const resolved = origin && auth.getRouteCredForEither(dslabel, routeKeys, origin.hostname, origin.host)
+	if (!resolved || resolved.type == 'forbidden') throw 'disallowed origin for a cookie-authenticated request'
 	return resolved
 }
 
