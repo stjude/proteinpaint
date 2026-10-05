@@ -293,6 +293,8 @@ export class TableBase {
 	setPageSize(size: number): this {
 		if (!this.paginated || !Number.isInteger(size) || size < 1 || size === this.pageSize) return this
 		this.pageSize = size
+		if (!this.pageSizeOptions.includes(size))
+			this.pageSizeOptions = [...this.pageSizeOptions, size].sort((a, b) => a - b)
 		this.currentPage = 1
 		this.renderPage()
 		this.announce(`${size} rows per page, page 1 of ${this.totalPages()}`)
@@ -622,9 +624,17 @@ export class TableBase {
 		if (this.buttons.length) this.createButtons()
 	}
 
-	/** Redraws the page info and buttons. The rows-per-page <select> is left alone. */
+	/** Synchronizes the rows-per-page control and redraws the page info and buttons. */
 	protected renderPager(): void {
 		if (!this.pagerNav) return
+		const select = this.footer.select('select.sjpp-table-page-size')
+		select
+			.selectAll('option')
+			.data(this.pageSizeOptions)
+			.join('option')
+			.attr('value', size => size)
+			.text(size => size)
+		select.property('value', this.pageSize)
 		this.pagerInfo.text(pageInfoText(this.pageStart, this.pageSize, this.matched.length))
 		renderPagerNav(this.pagerNav, this.currentPage, this.totalPages(), page => this.goToPage(page))
 	}

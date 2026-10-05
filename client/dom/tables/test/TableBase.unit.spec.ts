@@ -1876,6 +1876,56 @@ tape('page: changing page size returns to page 1 and calls onChange', test => {
 	test.end()
 })
 
+tape('page: programmatic page sizes keep the select and options synchronized', test => {
+	test.timeoutAfter(100)
+	const { holder, table, changes } = makePagedTable(60, 10)
+	const select = holder.select('select.sjpp-table-page-size').node() as HTMLSelectElement
+
+	table.goToPage(3)
+	changes.length = 0
+	table.setPageSize(25)
+	test.equal(select.value, '25', 'Should select an existing size after a programmatic change')
+	test.equal(holder.selectAll('tbody tr').size(), 25, 'Should render the selected number of rows')
+	test.equal(pageInfo(holder), 'Showing 1 to 25 of 60 entries', 'Should reset to page 1')
+
+	table.setPageSize(15)
+	test.equal(select.value, '15', 'Should select a newly added size')
+	test.deepEqual(
+		Array.from(select.options, option => Number(option.value)),
+		[10, 15, 25, 50, 100],
+		'Should keep options sorted'
+	)
+	test.equal(holder.selectAll('tbody tr').size(), 15, 'Should render the new number of rows')
+	test.deepEqual(
+		changes,
+		[
+			{ currentPage: 1, pageSize: 25 },
+			{ currentPage: 1, pageSize: 15 }
+		],
+		'Should notify once per size change'
+	)
+
+	table.setPageSize(25)
+	table.setPageSize(15)
+	test.equal(
+		Array.from(select.options).filter(option => option.value === '15').length,
+		1,
+		'Should not duplicate added sizes'
+	)
+	test.equal(holder.select('select.sjpp-table-page-size').node(), select, 'Should retain the select element')
+	table.render()
+	const rerendered = holder.select('select.sjpp-table-page-size').node() as HTMLSelectElement
+	test.equal(rerendered.value, '15', 'Should retain the selected size after a full render')
+	test.deepEqual(
+		Array.from(rerendered.options, option => Number(option.value)),
+		[10, 15, 25, 50, 100],
+		'Should retain added sizes after a full render'
+	)
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
 tape('page: a long page list collapses with ellipses', test => {
 	test.timeoutAfter(100)
 	const { holder, table } = makePagedTable(200, 10) // 20 pages
