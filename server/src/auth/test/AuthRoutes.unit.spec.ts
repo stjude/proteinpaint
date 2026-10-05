@@ -560,23 +560,61 @@ tape('/dslogout: a forbidden wildcard entry does not count as an allowed origin'
 	test.end()
 })
 
-tape('/dslogout: an Authorization header exempts the request from the ambient-cookie check', async function (test) {
+tape(
+	'/dslogout: an Authorization header that does not resolve to the cookie id does not exempt it',
+	async function (test) {
+		test.timeoutAfter(500)
+		test.plan(1)
+
+		// an invalid/unrelated Authorization header makes getSessionId() fall back to the cookie,
+		// same as having no Authorization header at all; the cookie id is still subject to the
+		// origin check
+		const auth = makeAuthWithBasic()
+		const sessionId = 'test-logout-authz-unrelated-session-id'
+		auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+		const app = makeApp(auth)
+		const req = {
+			query: { dslabel, embedder },
+			path: '/dslogout',
+			headers: { authorization: 'Bearer not-a-real-token', origin: 'https://other.example' },
+			cookies: { 'x-ds-access-token': sessionId }
+		}
+		const res = makeMockRes()
+
+		await app.routes['/dslogout'].post(req, res)
+		test.equal(res.statusCode, 401, 'should set 401 for a mismatched origin')
+		test.end()
+	}
+)
+
+tape('/dslogout: an Authorization header that resolves to the same id as the cookie exempts it', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
 
-	// an invalid/unrelated Authorization header still makes getSessionId() fall back to the
-	// cookie, but its presence alone is enough to skip the origin check, so a mismatched
-	// origin must not be rejected
+	// a login establishes a session whose id is used for both the signed jwt and the cookie
+	// that getSignedJwt() also sets; presenting that jwt as a Bearer token is the id's real
+	// source per getSessionId()'s own precedence, even though the same id also matches a cookie
 	const auth = makeAuthWithBasic()
-	const sessionId = 'test-logout-authz-present-session-id'
-	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
-
 	const app = makeApp(auth)
+	const encodedPwd = Buffer.from(password).toString('base64')
+
+	const loginReq = {
+		query: { dslabel, embedder },
+		path: '/dslogin',
+		headers: { authorization: `Basic ${encodedPwd}` }
+	}
+	const loginRes = makeMockRes()
+	await app.routes['/dslogin'].post(loginReq, loginRes)
+	const jwt = loginRes.sentData?.jwt
+	const sessionId = jwt.slice(-20)
+	const b64token = Buffer.from(jwt).toString('base64')
+
 	const req = {
 		query: { dslabel, embedder },
 		path: '/dslogout',
-		headers: { authorization: 'Bearer not-a-real-token', origin: 'https://other.example' },
-		cookies: { 'x-ds-access-token': sessionId }
+		headers: { authorization: `Bearer ${b64token}`, origin: 'https://other.example' },
+		cookies: { [headerKey]: sessionId }
 	}
 	const res = makeMockRes()
 

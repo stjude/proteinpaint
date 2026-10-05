@@ -3,20 +3,29 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { getSessionEntry, getOriginFromHeaders } from './Auth.ts'
 
-// true only when `id` can only have come from one of the cookie checks in Auth.ts's
-// getSessionId(), not from the Authorization header or the x-sjppds-sessionid header/query
-// fallback, which a caller must set deliberately and a browser does not attach on its own.
-// An Authorization header's presence is checked directly, rather than comparing its resolved id
-// against `id`, so that an id value that happens to also match a cookie is still classified by
-// which header actually supplied it.
-function wasResolvedFromCookie(req, cred, id) {
-	if (req.headers?.authorization) return false
+// true only when `id` matches one of the cookie checks in Auth.ts's getSessionId(), not the
+// x-sjppds-sessionid header/query fallback, which a caller must set deliberately and a browser
+// does not attach on its own
+function matchesKnownCookie(req, cred, id) {
 	return (
 		!!id &&
 		(id === req.cookies?.[`${cred?.cookieId}`] ||
 			id === req.cookies?.[`${req.query?.dslabel}SessionId`] ||
 			id === req.cookies?.['x-ds-access-token'])
 	)
+}
+
+// true only when `id` could only have come from one of the cookie checks above: it must match a
+// known cookie, and it must not be what getSessionId()'s Authorization/JWT branch would itself
+// produce, since that branch runs first and, when it succeeds, getSessionId() returns its result
+// without ever reaching the cookie checks. Re-running mayAddSessionFromJwt() here (rather than
+// comparing against the mere presence of an Authorization header) is safe to call again: it never
+// overwrites an existing session entry, and getSessionId() already called it once without
+// throwing for these same req/cred, which is the only way either call could throw.
+function wasResolvedFromCookie(auth, req, cred, id) {
+	if (!matchesKnownCookie(req, cred, id)) return false
+	if (req.headers?.authorization && auth.mayAddSessionFromJwt(auth.sessions, req, cred) === id) return false
+	return true
 }
 
 // Returns the credential to use after this check: when the session id was not cookie-derived,
@@ -28,7 +37,7 @@ function wasResolvedFromCookie(req, cred, id) {
 // entry, even when the real origin does, so the caller must use this return value, not the
 // original `cred`, for anything that dereferences it afterward.
 function assertAllowedSessionOrigin(auth, req, dslabel, routeKeys, cred, id) {
-	if (!wasResolvedFromCookie(req, cred, id)) return cred
+	if (!wasResolvedFromCookie(auth, req, cred, id)) return cred
 	const origin = getOriginFromHeaders(req)
 	// try both forms, same as isCredEmbedder(), so a dataset configured with a port-qualified
 	// embedder key (e.g. 'localhost:3000') is not rejected; a matched entry whose type is
