@@ -483,7 +483,7 @@ export class Auth {
 
 	// in a server farm, where the session state is not shared by all active PP servers,
 	// the login details that is created by one server can be obtained from the JWT payload
-	mayAddSessionFromJwt(sessions: SessionsMap, req, cred) {
+	mayAddSessionFromJwt(sessions: SessionsMap, req, cred, requireFreshVerification = false) {
 		const { dslabel, embedder } = req.query
 		if (!req.headers?.authorization) return
 		if (!cred.secret)
@@ -501,8 +501,10 @@ export class Auth {
 			// id is attacker-controlled (the last 20 chars of the raw, unverified token -- or the whole
 			// token if shorter), so a cache hit must come from a real stored entry, never an inherited
 			// value: reading from the sessions Map (see SessionsMap) guarantees this, so a dslabel/id of
-			// '__proto__' cannot resolve a fake payload that would skip jsonwebtoken.verify() below
-			const cachedPayload = getSessionEntry(sessions, dslabel, id)
+			// '__proto__' cannot resolve a fake payload that would skip jsonwebtoken.verify() below.
+			// requireFreshVerification skips this cache lookup entirely: a cache hit only proves that
+			// id matches an existing entry, not that this request's token is the one that produced it.
+			const cachedPayload = requireFreshVerification ? undefined : getSessionEntry(sessions, dslabel, id)
 			const payload = cachedPayload || jsonwebtoken.verify(token, secret)
 			// signed payload dataset must match the requested dataset
 			if (payload.dslabel) {

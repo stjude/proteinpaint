@@ -14,7 +14,7 @@ function matchesKnownCookie(req, cred, id) {
 
 function wasResolvedFromCookie(auth, req, cred, id) {
 	if (!matchesKnownCookie(req, cred, id)) return false
-	if (req.headers?.authorization && auth.mayAddSessionFromJwt(auth.sessions, req, cred) === id) return false
+	if (req.headers?.authorization && auth.mayAddSessionFromJwt(auth.sessions, req, cred, true) === id) return false
 	return true
 }
 

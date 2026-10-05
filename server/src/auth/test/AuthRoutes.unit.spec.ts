@@ -653,6 +653,36 @@ tape('/dslogout: does not exempt a request based on an unrelated Authorization h
 	test.end()
 })
 
+tape('/dslogout: does not exempt a request whose token is not cryptographically verified', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(1)
+
+	const auth = makeAuthWithBasic()
+	// an invalid token whose last 20 characters happen to equal an existing session id; the
+	// cached entry is shaped like a real one (dslabel/embedder/route) so a cache-based shortcut
+	// would treat it as a legitimate match without verifying this token's signature
+	const garbageToken = 'not-a-valid-jwt-at-all-' + 'X'.repeat(30)
+	const sessionId = garbageToken.slice(-20)
+	auth.sessions.set(
+		dslabel,
+		new Map([[sessionId, { dslabel, embedder, route: '/**', time: Date.now(), ip: '127.0.0.1' }]])
+	)
+
+	const app = makeApp(auth)
+	const b64token = Buffer.from(garbageToken).toString('base64')
+	const req = {
+		query: { dslabel, embedder },
+		path: '/dslogout',
+		headers: { authorization: `Bearer ${b64token}`, origin: 'https://other.example' },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/dslogout'].post(req, res)
+	test.equal(res.statusCode, 401, 'should set 401')
+	test.end()
+})
+
 tape('/dslogout: exempts a request authenticated via a valid Authorization header', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
