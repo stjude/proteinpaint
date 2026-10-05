@@ -190,7 +190,7 @@ export class VolcanoViewModel {
 		table header. Taken from the selected class rather than the server response so no
 		extra field has to be plumbed through. */
 		if (this.termType == tt.DNA_METHYLATION) return elementNoun(this.settings?.elementType).many
-		if (this.termType == tt.SPLICING) return 'clusters'
+		if (this.termType == tt.JUNCTION) return 'clusters'
 		if (this.termType == tt.SINGLECELL_CELLTYPE) return 'genes'
 		if (this.termType == tt.PROTEOME_DAP) return 'proteins'
 		if (this.termType == tt.SINGLECELL_GENE_EXPRESSION) return 'cells'
@@ -363,7 +363,7 @@ export class VolcanoViewModel {
 			const highlightKey =
 				this.termType === tt.DNA_METHYLATION
 					? d.promoter_id
-					: this.termType === tt.SPLICING
+					: this.termType === tt.JUNCTION
 					? (d as any).cluster_id
 					: d.gene_name
 			d.highlighted = this.config?.highlightedData?.includes(highlightKey)
@@ -409,7 +409,7 @@ export class VolcanoViewModel {
 						)
 					}
 					row.splice(0, 0, { value: formatPromoterLabel(d as any) }, { value: d.gene_name || '' })
-				} else if (this.termType == tt.SPLICING) {
+				} else if (this.termType == tt.JUNCTION) {
 					/* Same two-splice order as setPTableColumns: the effect-size cell is overwritten
 					in place (index 0 is the fold-change slot, which a splicing row does not use),
 					then the PSI cells go in after it, then the Cluster/Gene prefix shifts
@@ -463,14 +463,14 @@ export class VolcanoViewModel {
 
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {
 		// splicing rows carry `genes` (a cluster may span several, or none), never gene_name
-		if (!d.gene_name && this.termType != tt.DNA_METHYLATION && this.termType != tt.SPLICING)
+		if (!d.gene_name && this.termType != tt.DNA_METHYLATION && this.termType != tt.JUNCTION)
 			throw new Error(`Missing gene_name in data: ${JSON.stringify(d)}`)
 		if (significant) {
 			/* The value the server classified and drew: delta-beta on the Δβ axis, less the median when
 			centred. Colouring from raw fold_change painted a point between 0 and a positive median as
 			"up" over a PNG dot the server had drawn as "down". */
 			const x =
-				this.termType == tt.SPLICING
+				this.termType == tt.JUNCTION
 					? (d as any).delta_psi
 					: this.termType == tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
 					? (d as any).delta_beta - (this.response.data.xOffset ?? 0)
@@ -530,7 +530,7 @@ export class VolcanoViewModel {
 			parts.push(`exclude sex chromosomes: ${s.excludeSexChr ? 'yes' : 'no'}`)
 		} else if (this.termType == tt.GENE_EXPRESSION) {
 			parts.push(`method: ${s.method}`)
-		} else if (this.termType == tt.SPLICING) {
+		} else if (this.termType == tt.JUNCTION) {
 			/* The engine the server actually ran, not the requested one: pickDsEngine may override
 			the request, and the two engines compute different quantities (a Simes-adjusted
 			exon-level p vs a Dirichlet-multinomial LRT), so a file that does not name the engine
@@ -546,7 +546,7 @@ export class VolcanoViewModel {
 		const onDeltaBeta = this.termType == tt.DNA_METHYLATION && s.xAxis === 'delta_beta'
 		// splicing is always thresholded on delta-PSI; it never displays a log2 fold change
 		const effect =
-			this.termType == tt.SPLICING
+			this.termType == tt.JUNCTION
 				? `|delta-PSI| > ${s.deltaPsiCutoff}`
 				: onDeltaBeta
 				? `|delta-beta| > ${s.deltaBetaCutoff}`
@@ -571,7 +571,7 @@ export class VolcanoViewModel {
 				value: this.numSignificant + this.numNonSignificant
 			}
 		]
-		if (this.termType == tt.GENE_EXPRESSION || this.termType == tt.DNA_METHYLATION || this.termType == tt.SPLICING) {
+		if (this.termType == tt.GENE_EXPRESSION || this.termType == tt.DNA_METHYLATION || this.termType == tt.JUNCTION) {
 			tableRows.push(
 				{
 					label: this.config.samplelst.groups[0].name + ' sample size (control group)',
@@ -764,7 +764,7 @@ export class VolcanoViewModel {
 				{ label: elementNoun(this.settings?.elementType).one, sortable: true },
 				{ label: 'Gene(s)', sortable: true }
 			)
-		} else if (this.termType == tt.SPLICING) {
+		} else if (this.termType == tt.JUNCTION) {
 			/* The effect size is \u0394PSI, not a log2 fold change -- a splicing row carries no
 			fold_change at all. Relabelled in place rather than by branching where the base column
 			set is built, so the shared constructor is left alone. */

@@ -689,7 +689,6 @@ const typeMap: { [key: string]: string } = {
 	integer: 'Numerical',
 	date: 'Date',
 	geneExpression: 'Gene Expression',
-	splicing: 'Splicing',
 	isoformExpression: 'Isoform Expression',
 	[JUNCTION]: 'Splice junction',
 	ssGSEA: 'Geneset Expression',

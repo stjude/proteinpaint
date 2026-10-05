@@ -30,7 +30,7 @@ import type { DsCacheResult } from './types.ts'
 
 /** Max samples ONE GROUP may contribute to a run, counted AFTER filtering to samples that
  * actually have splicing data. A dataset may lower (or raise) it via
- * queries.splicing.maxSamplesPerGroup.
+ * queries.junction.cluster.maxSamplesPerGroup.
  *
  * Per-group rather than a total, because that is what the cost and the statistics both track:
  * the per-group fit dominates runtime, and past a few hundred per group the p-values stop
@@ -157,14 +157,12 @@ export async function getDsCacheResult(
 	return { result, cacheId }
 }
 
-/** Pull the splicing store off the dataset. `allSampleSet` is filled at startup by
- * validate_query_splicing() in mds3.init.js; read it here rather than earlier because it may
- * be a getter on api-backed datasets. */
 function resolveDs(ds: any): { countsFile: string; allSampleSet: Set<string> } {
-	const q = ds.queries?.splicing
-	if (!q) throw new Error('no splicing query for differential splicing')
-	if (!q.file) throw new Error('splicing query has no .file')
-	if (!q.allSampleSet) throw new Error('splicing query has no .allSampleSet; did validate_query_splicing run?')
+	const q = ds.queries?.junction?.cluster
+	if (!q) throw new Error('no junction.cluster query for differential splicing')
+	if (!q.file) throw new Error('junction.cluster query has no .file')
+	if (!q.allSampleSet)
+		throw new Error('junction.cluster query has no .allSampleSet; did validate_junction_cluster run?')
 	return { countsFile: q.file, allSampleSet: q.allSampleSet }
 }
 
@@ -265,7 +263,7 @@ async function runDsFresh(
  * non-positive or non-integer override is ignored rather than honoured, so a typo in a dataset
  * file cannot silently disable the cap. */
 function resolveMaxPerGroup(ds: any): number {
-	const v = ds.queries?.splicing?.maxSamplesPerGroup
+	const v = ds.queries?.junction?.cluster?.maxSamplesPerGroup
 	return Number.isInteger(v) && v > 0 ? v : MAX_SAMPLES_PER_GROUP
 }
 

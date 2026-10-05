@@ -7,7 +7,7 @@ import {
 	GENE_EXPRESSION,
 	SINGLECELL_CELLTYPE,
 	DMR_SCAN_ELEMENT_TYPE,
-	SPLICING
+	JUNCTION
 } from '#types'
 
 /** Handles settings the controls in the menu based on the app
@@ -93,7 +93,7 @@ export class VolcanoControlInputs {
 			type still gets it.
 			Splicing is hidden for the same reason -- it plots and thresholds on delta-PSI, and
 			supplies its own |dPSI| control in addSplicingControlInputs(). */
-			...(this.termType === DNA_METHYLATION || this.termType === SPLICING
+			...(this.termType === DNA_METHYLATION || this.termType === JUNCTION
 				? []
 				: [
 						{
@@ -412,7 +412,7 @@ export class VolcanoControlInputs {
 	}
 
 	addSplicingControlInputs() {
-		if (this.termType !== SPLICING) return
+		if (this.termType !== JUNCTION) return
 		const dsInputs = [
 			{
 				label: 'Method',
@@ -482,7 +482,7 @@ export class VolcanoControlInputs {
 	 * leafcutter appends once diffSpliceLeafcutter.py lands. Gene expression already ships the
 	 * same one-option shape on large cohorts, where only Wilcoxon is offered. */
 	getSpliceMethodOptions() {
-		if (this.termType !== SPLICING) return
+		if (this.termType !== JUNCTION) return
 		return [{ label: 'edgeR (diffSplice)', value: 'edgeR' }]
 	}
 

@@ -47,7 +47,7 @@ export class VolcanoModel {
 			if (response && !response.error) response.daRequest = body
 			return response
 		}
-		if (this.termType === tt.SPLICING) {
+		if (this.termType === tt.JUNCTION) {
 			const body = await this.getDSRequestBody()
 			const response = await dofetch3('termdb/diffSplice', { body, signal: this.plot.api?.getAbortSignal() })
 			if (response && !response.error) response.daRequest = body
@@ -216,7 +216,7 @@ export class VolcanoModel {
 		a PSI ratio is not a quantity anyone reads. Applied as an override on the object above
 		rather than as another arm of the ternaries inside it, so the gene-expression and
 		methylation paths are left exactly as they were. */
-		if (this.termType === tt.SPLICING) {
+		if (this.termType === tt.JUNCTION) {
 			render.xField = 'delta_psi'
 			render.significanceThresholds.foldChangeCutoff = this.settings.deltaPsiCutoff
 		}

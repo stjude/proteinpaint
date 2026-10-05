@@ -326,7 +326,7 @@ export class VolcanoPlotView {
 		this.volcanoDom.xAxisLabel.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
 		/* The axis must name what it is actually plotting. Delta-beta has no subscript, so it is
 		written as plain text rather than forced through the log-subscript helper. */
-		if (this.termType === tt.SPLICING) {
+		if (this.termType === tt.JUNCTION) {
 			/* Splicing always plots delta-PSI, so it never goes through the log-subscript helper.
 			Prefer the group-named form for the same reason methylation does: case/control are slot
 			names and do not say which direction a positive value points. */
@@ -868,7 +868,7 @@ export class VolcanoPlotView {
 	}
 
 	private buildMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
-		if (this.termType === tt.SPLICING) return this.buildSpliceMultiHitTable(dots)
+		if (this.termType === tt.JUNCTION) return this.buildSpliceMultiHitTable(dots)
 		const isDM = this.termType === tt.DNA_METHYLATION
 		const isDAP = this.termType === tt.PROTEOME_DAP
 		const effectLabel = this.onDeltaBeta ? 'Δβ' : 'log₂(FC)'
@@ -968,7 +968,7 @@ export class VolcanoPlotView {
 	/** Populates a `table2col` instance with the standard volcano hover rows
 	 * (gene/promoter, fold-change, original + adjusted p-values). */
 	private addTooltipRows(d: DataPointEntry, table: any) {
-		if (this.termType === tt.SPLICING) {
+		if (this.termType === tt.JUNCTION) {
 			this.addSpliceTooltipRows(d, table)
 			return
 		}

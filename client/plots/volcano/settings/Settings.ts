@@ -103,7 +103,7 @@ export type DSVolcanoSettings = DefaultVolcanoSettings & {
 	minSamplesPerGroup: number
 	minCountsPerCluster: number
 	/** Max samples ONE GROUP may contribute. Resolved at plot creation from the dataset's
-	 * queries.splicing.maxSamplesPerGroup, falling back to MAX_DS_SAMPLES_PER_GROUP. Held in
+	 * queries.junction.cluster.maxSamplesPerGroup, falling back to MAX_DS_SAMPLES_PER_GROUP. Held in
 	 * settings so validateDSSettings can read it -- it receives the raw opts, which do not
 	 * carry `app`, while addDSDefaults does. */
 	maxSamplesPerGroup: number

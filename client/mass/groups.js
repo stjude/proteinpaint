@@ -611,7 +611,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			})
 	}
 
-	/* Differential splicing on intron clusters. Gated on the splicing query, which
+	/* Differential splicing on intron clusters. Gated on the junction cluster query, which
 	termdb.config.ts emits only when the dataset declares a cohort h5, so this never offers an
 	analysis that errors on submit.
 
@@ -619,12 +619,12 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 	control panel (VolcanoControlInputs.addSplicingControlInputs), and only edgeR is wired, so a
 	launch-time radio with one option would ask a question with no alternative. renderPreAnalysisData
 	returns [] for any termType it has no options for, which is what methylation already does. */
-	if (self.app.vocabApi.termdbConfig.queries?.splicing) {
+	if (self.app.vocabApi.termdbConfig.queries?.junction?.cluster) {
 		const itemDiv = div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.attr('data-testid', 'sjpp-da-splicing-option')
-			.text(`Differential ${termType2label(TermTypes.SPLICING)} Analysis`)
+			.text(`Differential ${termType2label(TermTypes.JUNCTION)} Analysis`)
 			.on('click', async () => {
 				const groups = []
 				for (const group of samplelstTW.q.groups) {
@@ -662,7 +662,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					samplelstTW,
 					groups,
 					tip,
-					termType: TermTypes.SPLICING,
+					termType: TermTypes.JUNCTION,
 					self
 				})
 			})

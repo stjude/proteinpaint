@@ -101,12 +101,12 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 }
 
 function addDSDefaults(termType: string, defaults: Partial<DSVolcanoSettings>, opts?: any) {
-	if (termType != tt.SPLICING) return
+	if (termType != tt.JUNCTION) return
 	/* The dataset may cap group size lower (or higher) than the built-in default. Read here rather
 	than in validateDSSettings because only this function is handed the app -- see the comment on
 	DSVolcanoSettings.maxSamplesPerGroup. The server re-checks whatever arrives, so a hand-edited
 	value cannot lift the real limit. */
-	const dsCap = opts?.app?.vocabApi?.termdbConfig?.queries?.splicing?.maxSamplesPerGroup
+	const dsCap = opts?.app?.vocabApi?.termdbConfig?.queries?.junction?.cluster?.maxSamplesPerGroup
 	defaults.maxSamplesPerGroup = Number.isInteger(dsCap) && dsCap > 0 ? dsCap : MAX_DS_SAMPLES_PER_GROUP
 	defaults.method = 'edgeR'
 	defaults.minSamplesPerIntron = 5
@@ -140,7 +140,7 @@ export function validateVolcanoSettings(config: any, opts: any) {
 export const MAX_DS_SAMPLES_PER_GROUP = 250
 
 function validateDSSettings(termType: string, config: any) {
-	if (termType != tt.SPLICING) return
+	if (termType != tt.JUNCTION) return
 	const settings = config.settings?.volcano
 	if (!settings) return
 
@@ -176,7 +176,7 @@ export function getSampleNum(config: any) {
 	if (
 		config.termType == tt.GENE_EXPRESSION ||
 		config.termType == tt.DNA_METHYLATION ||
-		config.termType == tt.SPLICING
+		config.termType == tt.JUNCTION
 	) {
 		return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
 	} else {

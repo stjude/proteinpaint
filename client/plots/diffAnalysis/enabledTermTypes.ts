@@ -4,7 +4,7 @@ import {
 	PROTEOME_DAP,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
-	SPLICING
+	JUNCTION
 } from '#types'
 
 /** Use the exports in this file as the single source truth for
@@ -15,7 +15,7 @@ export const DATermTypes = {
 	DNA_METHYLATION,
 	PROTEOME_DAP,
 	SINGLECELL_GENE_EXPRESSION,
-	SPLICING
+	JUNCTION
 } as const
 
 export const diffAnalysisTermTypeValues = Object.values(DATermTypes)

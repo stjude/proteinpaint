@@ -6,6 +6,7 @@ import { mayLimitSamples } from '../mds3.filter.js'
 import { setFile, validateSampleHeader } from '../mds3.init.js'
 import type { Junction, TermdbJunctionsRequest } from '#types'
 import { maySetMapParent2Children } from '../termdb.matrix.js'
+import { getH5samples } from '../utils/h5samples.ts'
 
 export async function validate_query_junction(ds: any, genome: any) {
 	const tmp = ds.queries?.junction // fixme: tmp-to-q avoids tsc err
@@ -213,6 +214,20 @@ export async function validate_query_junction(ds: any, genome: any) {
 		return {}
 	}
 	*/
+
+	await validate_junction_cluster(ds, q)
+}
+
+/* Intron clusters for differential splicing, an h5 that sits beside the junction tabix file.
+The two describe the same junctions, which is what lets a differential splicing hit be shown on
+the junction track. allSampleSet is read by the diffSplice route. */
+async function validate_junction_cluster(ds: any, junctionQ: any) {
+	const q = junctionQ.cluster
+	if (!q) return
+	await setFile(q, 'junction.cluster')
+	const samples = await getH5samples(q.file, q.samplesPath || 'samples')
+	q.allSampleSet = new Set(samples)
+	console.log(q.allSampleSet.size, `junction cluster samples from ${ds.label}`)
 }
 
 export async function getJunctionData(

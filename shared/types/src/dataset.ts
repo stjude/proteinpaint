@@ -774,6 +774,8 @@ type JunctionQuery = {
 	hiddentypes?: string
 	/** default min read count to filter samples */
 	readcountCutoff?: number
+	/** intron clusters of these junctions, for differential splicing analysis */
+	cluster?: JunctionClusterQuery
 }
 
 type RnaseqGeneCount = {
@@ -803,7 +805,7 @@ type RnaseqGeneCount = {
 	allSampleSet?: Set<string>
 }
 
-type SplicingQuery = {
+type JunctionClusterQuery = {
 	/** HDF5 file: X[n_samples, n_introns], one sample per row,
 	 * introns pre-sorted by cluster with cluster_starts boundaries alongside. */
 	file: string
@@ -1564,8 +1566,6 @@ type Mds3Queries = {
 		scanOnly?: boolean
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
-	/** intron-cluster splicing matrix, for differential splicing analysis */
-	splicing?: SplicingQuery
 	/** Used to create the top mutated genes UI in the gene
 	 * set edit ui and data requests. */
 	topMutatedGenes?: TopMutatedGenes

@@ -1,7 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { Tabs, type RenderedTab } from '#dom'
 import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
-import { PROTEOME_DAP, SPLICING } from '#types'
+import { PROTEOME_DAP, JUNCTION } from '#types'
 
 export class DiffAnalysisView {
 	app: MassAppApi
@@ -53,7 +53,7 @@ function setRenderers(self) {
 				cluster per gene, or a Simes combination -- which is a statistical decision, not
 				wiring. The volcano already attaches response.daRequest for splicing, so the cacheId
 				contract GSEA needs is in place when that rule is chosen. */
-				isVisible: () => self.config.termType !== PROTEOME_DAP && self.config.termType !== SPLICING,
+				isVisible: () => self.config.termType !== PROTEOME_DAP && self.config.termType !== JUNCTION,
 				// isVisible: () => self.config.termType === TermTypes.GENE_EXPRESSION,
 				getPlotConfig: () => {
 					return {
