@@ -6,6 +6,7 @@ import http from 'http'
 import { spawnSync } from 'child_process'
 import { fileURLToPath } from 'url'
 import serverconfig from '../serverconfig.js'
+import * as common from '#shared/common.js'
 import { setRoutes } from '../app.unorg.js'
 import { init as onesampletkInit } from '../j2/onesampletk.ts'
 
@@ -239,6 +240,12 @@ const routeCases = [
 			indexURL
 		})
 	},
+	...['isgenevalue', 'iscnv', 'isloh', 'isitd', 'issvfusion', 'issvcnv', 'isvcf', 'ismutation'].map(flag => ({
+		name: 'samplematrix-' + flag,
+		route: '/samplematrix',
+		file: 'app.unorg.js',
+		query: (url, indexURL) => samplematrixQuery(flag, url, indexURL)
+	})),
 	{
 		name: 'mdsjunction',
 		route: '/mdsjunction',
@@ -267,6 +274,26 @@ const routeCases = [
 		query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, rglst: rglst() })
 	}
 ]
+
+/*
+	flag: a samplematrix feature flag
+	returns a /samplematrix request with one custom track, of the type that the flag reads
+*/
+function samplematrixQuery(flag, url, indexURL) {
+	const feature = { chr: 'chr1', start: 1, stop: 100, [flag]: true }
+	let tk
+	if (flag == 'isgenevalue') {
+		feature.genename = 'TP53'
+		tk = { type: common.tkt.mdsexpressionrank, url, indexURL }
+	} else if (flag == 'isvcf' || flag == 'ismutation') {
+		tk = { type: common.tkt.mdsvcf, url, indexURL }
+	} else {
+		tk = { type: common.tkt.mdssvcnv, url, indexURL }
+	}
+	if (flag == 'ismutation') feature.querykeylst = ['k']
+	else feature.querykey = 'k'
+	return { genome: 'hg38', iscustom: 1, querykey2tracks: { k: tk }, features: [feature] }
+}
 
 // callers whose url and indexURL come from a dataset config, not a request; they still go through utils.cache_index()
 const configCallers = ['km.js', 'mds3.init.js']
