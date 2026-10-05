@@ -924,12 +924,10 @@ tape('/authorizedActions: appends action to file and returns ok', async function
 	test.end()
 })
 
-tape('/authorizedActions: finds the session cookie under a non-default cookieId', async function (test) {
+tape('/authorizedActions: finds the session with a non-default cookie name', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(2)
 
-	// cred.cookieId is not one of getSessionId()'s generic fallback names (x-ds-access-token,
-	// ${dslabel}SessionId), so the session is found only when cred is passed into getSessionId()
 	const customCookieId = 'custom-cookie-name'
 	const auth = makeAuthWithJwt({ cookieId: customCookieId })
 	const sessionId = 'test-action-custom-cookie-session-id'
