@@ -1,9 +1,8 @@
 import fs from 'fs'
 import path from 'path'
-import serverconfig from '#src/serverconfig.js'
+import serverconfig, { generateHash } from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { fileSize, formatElapsedTime } from '#shared'
-import { generateHash } from '#src/utils/cacheKey.ts'
 import type { CacheOrRecomputeOpts, CacheOrRecomputeResult } from '#src/utils/types.ts'
 
 /** Subdirs of serverconfig.cachedir that the cacheOrRecompute module
@@ -43,7 +42,7 @@ export const cacheJobPolicies = {
 
 export type CacheSubdir = keyof typeof cacheJobPolicies
 
-// in a separate module, since serverconfig.js also uses the key, and cannot import this module that imports it
+// in serverconfig.js, which also uses the key; re-exported here for the existing importers
 export { generateHash }
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
