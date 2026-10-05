@@ -1036,7 +1036,7 @@ export async function testIfFileIsBigbed(file) {
 			// TODO also test extraIndexCount. return object but not true/false
 		})
 		ps.on('error', e => {
-			if (e.code === 'ENOENT') throw `cannot find bigBedInfo binary='${bigBedInfo}'`
+			if (e.code === 'ENOENT') return reject(`cannot find bigBedInfo binary='${bigBedInfo}'`)
 			// reject('Error detecting if file is bigbed')
 			console.log('\n--- testIfFileIsBigbed() error ---\n', e, '\n')
 			resolve(false)
