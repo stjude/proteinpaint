@@ -152,7 +152,7 @@ All viewer traffic hits `wsitiles/:action`:
   into one 'gene group' overlay, same as the vector path) — see "Raster vs.
   vector rendering" below.
 - **`/nhood`, `/similar`** (spatial only): the lasso's neighborhood
-  enrichment and its similar-region search — see sections 8 and 9 below.
+  enrichment and its similar-region search — see sections 9 and 10 below.
 
 ### 3. Decoding & tile production — `python/src/wsi_tile.py`
 
@@ -333,7 +333,7 @@ from the h5ad's cell/nucleus polygons (`/boundaries`, µm→px via `meta.mpp`).
   the spatial viewer with the cell-type overlay on (seeded once into the
   burger settings, expression fills off; the checkboxes override after).
 
-### 5b. Raster vs. vector rendering — `client/plots/w2/wsi.direct.ts`
+### 6. Raster vs. vector rendering — `client/plots/w2/wsi.direct.ts`
 
 Fetching and rendering every cell's polygon doesn't scale: a 700k-cell sample's
 boundary CSV can approach V8's ~512MiB max string length (the exact bug that
@@ -443,7 +443,7 @@ scoped to just that view.
   erroring/retrying (flaky network, a transient 5xx) could otherwise leave
   the indicator up forever.
 
-### 6. Cell hover — `client/plots/w2/wsi.direct.ts`
+### 7. Cell hover — `client/plots/w2/wsi.direct.ts`
 
 Whenever cell boundaries are loaded, hovering over a cell shows a tooltip
 next to the cursor:
@@ -461,7 +461,7 @@ most zoomed-in levels. Expression lines come from the same `/genecounts`
 data as the fills, so they work even when the fills are hidden (cell types
 shown, or "Gene expression" unchecked).
 
-### 7. Lasso selection — `client/plots/w2/wsi.direct.ts`
+### 8. Lasso selection — `client/plots/w2/wsi.direct.ts`
 
 A control button under the map's zoom buttons (`sjpp-wsi-lasso-btn`) toggles
 an OpenLayers `Draw` interaction in freehand polygon mode; while it is on,
@@ -470,7 +470,7 @@ layer (orange). On release, `cellsInLasso()` keeps every cell whose centroid
 (vertex mean) falls inside the ring — candidates come from the same RBush
 bbox index the hover uses, queried with the ring's extent, so a lasso costs
 one ray cast per candidate, not per cell. Selection is not gated by
-`annotationLevel`, but it IS gated by the raster/vector mode (section 5b):
+`annotationLevel`, but it IS gated by the raster/vector mode (section 6):
 disabled while the view is dense enough to be in raster mode.
 
 The result opens a `Menu` (`sjpp-wsi-lasso-menu`): a headline count, a
@@ -480,7 +480,7 @@ of cell id + type (`sjpp-wsi-lasso-table`). One lasso at a time: a new
 drawing replaces the old, and toggling the button off clears the ring and
 menu.
 
-### 8. Neighborhood enrichment — `wsitiles/nhood`, `python/src/wsi_tile.py`
+### 9. Neighborhood enrichment — `wsitiles/nhood`, `python/src/wsi_tile.py`
 
 The lasso menu's **Neighborhood enrichment** button (`sjpp-wsi-nhood-btn`,
 shown only when the h5ad carries cell types AND the current lasso selection
@@ -530,7 +530,7 @@ the same selection, and a close button. Directly below it (same panel), the
 **Find similar regions** controls from the next section pick up where this
 leaves off.
 
-### 9. Similar-region search — `wsitiles/similar`, `python/src/wsi_tile.py`
+### 10. Similar-region search — `wsitiles/similar`, `python/src/wsi_tile.py`
 
 Below the heatmap, `renderSimilarSearch()` offers to search for niches
 elsewhere that resemble the just-analyzed selection — in this same sample
