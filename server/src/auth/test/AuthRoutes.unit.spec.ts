@@ -747,6 +747,43 @@ tape('/dslogout: finds a non-default cookie name when q.embedder does not resolv
 	test.end()
 })
 
+tape(
+	'/dslogout: prefers the origin-resolved credential over a wildcard fallback when q.embedder is absent',
+	async function (test) {
+		test.timeoutAfter(500)
+		test.plan(2)
+
+		// a '*' entry would otherwise win when q.embedder is absent, since getRouteCred() falls
+		// back to it for any value, including undefined
+		const wildcardTestCookieId = 'custom-cookie-name-2'
+		const creds: any = {
+			[dslabel]: {
+				'/**': {
+					'sitea.com': makeBasicCred({ cookieId: wildcardTestCookieId }),
+					'*': { type: 'forbidden', dslabel, route: '/**' }
+				}
+			}
+		}
+		const auth = new Auth(creds, {}, {}, { port: 3000 })
+		const sessionId = 'test-logout-wildcard-fallback-session-id'
+		auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+		const app = makeApp(auth)
+		const req = {
+			query: { dslabel }, // no embedder
+			path: '/dslogout',
+			headers: { origin: 'https://sitea.com' },
+			cookies: { [wildcardTestCookieId]: sessionId }
+		}
+		const res = makeMockRes()
+
+		await app.routes['/dslogout'].post(req, res)
+		test.equal(res.sentData?.status, 'ok', 'should return ok')
+		test.equal(auth.sessions.get(dslabel)?.get(sessionId), undefined, 'should remove the session')
+		test.end()
+	}
+)
+
 // ─────────────────────────────────────────
 // POST /jwt-status
 // ─────────────────────────────────────────

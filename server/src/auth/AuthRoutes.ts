@@ -73,8 +73,10 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 		try {
 			const q = req.query
 			const routeKeys = [q.route, 'termdb', '/**']
-			let cred =
-				auth.getRouteCred(q.dslabel, routeKeys, q.embedder) || resolveCredFromOrigin(auth, req, q.dslabel, routeKeys)
+			const originCred = resolveCredFromOrigin(auth, req, q.dslabel, routeKeys)
+			let cred = q.embedder
+				? auth.getRouteCred(q.dslabel, routeKeys, q.embedder) || originCred
+				: originCred || auth.getRouteCred(q.dslabel, routeKeys, q.embedder)
 			const id = auth.getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
 			cred = assertAllowedSessionOrigin(auth, req, q.dslabel, routeKeys, cred, id)
