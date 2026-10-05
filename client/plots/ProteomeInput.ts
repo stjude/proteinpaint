@@ -457,7 +457,7 @@ export class ProteomeInput extends PlotBase implements RxComponent {
 						colorSignificantDown: DOWN_COLOR,
 						colorNonsignificant: '#9ca3af',
 						maxInteractiveDots: 0,
-						devicePixelRatio: Math.min(window.devicePixelRatio || 1, 3)
+						devicePixelRatio: Math.max(1, Math.min(window.devicePixelRatio || 1, 3))
 					}
 				}
 			}).then(res => {
