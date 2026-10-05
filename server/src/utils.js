@@ -167,6 +167,15 @@ export function fileurl(req, checkWhiteList = true) {
 
 const fileExtensionBlackList = Object.freeze(['.bam', '.bai', '.gz', '.tbi', '.csi', '.bw', '.bb'])
 
+/*
+	file: a request track file path, relative to tpmasterdir
+	throws unless file is a legal path; an empty value is allowed, for a track that uses a url instead
+*/
+export function checkTrackFile(file) {
+	if (file === undefined || file === null || file === '') return
+	if (illegalpath(file, false, false)) throw 'illegal file path'
+}
+
 export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
 	// a non-string, such as an array from a repeated query parameter, could bypass the substring checks below
 	if (typeof s != 'string' || !s) return true
