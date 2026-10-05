@@ -56,6 +56,14 @@ tape('defaults', function (test) {
 							absPath: `${m.cachedir}/dm`,
 							skipUntil: 0
 						},
+						ds: {
+							maxAge: 5184000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							maxPending: 2,
+							absPath: `${m.cachedir}/ds`,
+							skipUntil: 0
+						},
 						dmr: {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
@@ -176,7 +184,8 @@ tape('defaults', function (test) {
 							daAnalysis: { deletedCount: 0, totalCount: 0 },
 							wsitiles: { deletedCount: 0, totalCount: 0 },
 							bedj: { deletedCount: 0, totalCount: 0 },
-							bam: { deletedCount: 0, totalCount: 0 }
+							bam: { deletedCount: 0, totalCount: 0 },
+							ds: { deletedCount: 0, totalCount: 0 }
 						},
 						`should detect no cache files to delete`
 					)
