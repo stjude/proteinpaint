@@ -64,7 +64,11 @@ upon error, throw err message as a string
 				geneGroups: urlp.get('gene_groups'),
 				// optional: fill cells by their annotated type (list built above)
 				showCellTypes: urlp.has('cell_types'),
-				cellTypeFilter
+				cellTypeFilter,
+				// optional: cells-in-view above this count show the server-rendered
+				// raster overlay instead of per-cell vector data; default
+				// DEFAULT_CELL_COUNT_LIMIT (wsi.direct.ts) when omitted
+				cellCountLimit: urlp.get('cell_count_limit')
 			},
 			arg.holder
 		)
