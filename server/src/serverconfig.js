@@ -7,6 +7,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { takeCacheDirName, hasPersistentKey } from './utils/cacheKey.ts'
 
 // import.meta.dirname is undefined when using docker dev environment
 // use __dirname and __filename global variable convention from commonjs
@@ -363,6 +364,43 @@ if (process.env.PP_MODE?.startsWith('container')) {
 		// is not needed when calling via Node child_process.spawn() or exec()
 	})
 }
+
+/*
+	Use an unlisted subdir of the configured cachedir, whose name is derived from the PP_CACHEID_CREDS key, so that the
+	cache files cannot be found by listing directories. On by default in a container, and may be set with
+	serverconfig.hideCachedir in any mode. The configured cachedir must then be owned by another user than the server
+	process, such as root, with mode 1733: the server user may create and use a subdir with a known name, but may not
+	list the entries or change the mode. A dir that is owned by the server user can always be listed by that user,
+	since the owner may change its mode.
+
+	All code that uses the path must copy serverconfig.cachedir to a module-local variable when it is loaded:
+	app.ts deletes serverconfig.cachedir before the server starts listening.
+*/
+if (serverconfig.hideCachedir ?? process.env.PP_MODE?.startsWith('container')) {
+	const parent = serverconfig.cachedir
+	if (!parent) throw 'serverconfig.cachedir missing'
+	// a parent dir that is created here is owned by the server user, which the warning below reports
+	if (!fs.existsSync(parent)) fs.mkdirSync(parent, { recursive: true })
+	try {
+		fs.readdirSync(parent)
+		console.warn(
+			`WARNING: serverconfig.cachedir='${parent}' can be listed by the server process, so the cache subdir name ` +
+				`is not hidden; the dir should be owned by another user, such as root, with mode 1733`
+		)
+	} catch (e) {
+		// EACCES is the expected result; another error is reported by the mkdirSync() below
+	}
+	if (!hasPersistentKey()) {
+		console.warn(
+			`WARNING: PP_CACHEID_CREDS is not set, so the cache subdir name is generated for this process only, ` +
+				`and the files cached by an earlier process are not found or removed`
+		)
+	}
+	serverconfig.cachedir = path.join(parent, takeCacheDirName())
+	// the name is not logged, so that it is not in any log output
+	fs.mkdirSync(serverconfig.cachedir, { recursive: true, mode: 0o700 })
+}
+delete serverconfig.hideCachedir
 
 // when a mandatory setting is not defined in any ds, declare its default here
 

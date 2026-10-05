@@ -6,6 +6,10 @@ import readline from 'readline'
 import serverconfig from './serverconfig.js'
 import { compute_mclass } from './vcf.mclass.js'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+const cache_snpgt_dir = serverconfig.cache_snpgt.dir
+
 /*
 cache file has a header line, with one line per valid snp. columns: 
 1. snpid
@@ -295,8 +299,8 @@ async function queryBcf(q, snps, ds) {
 	}
 
 	// write coordinates, and bcf file paths to temp files for bcf query
-	const coordsfile = path.join(serverconfig.cachedir, await utils.write_tmpfile(coords.join('\n')))
-	const bcffiles = path.join(serverconfig.cachedir, await utils.write_tmpfile([...bcfs].join('\n')))
+	const coordsfile = path.join(cachedir, await utils.write_tmpfile(coords.join('\n')))
+	const bcffiles = path.join(cachedir, await utils.write_tmpfile([...bcfs].join('\n')))
 
 	// query bcf files for snp coordinates and sample genotypes
 	await utils.get_lines_bigfile({
@@ -364,7 +368,7 @@ async function queryBcf(q, snps, ds) {
 	// cache id is a file name and its characters are covered by \w
 	// will apply /[^\w]/ to check against attack
 	const cacheid = q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
-	await utils.write_file(path.join(serverconfig.cache_snpgt.dir, cacheid), lines.join('\n'))
+	await utils.write_file(path.join(cache_snpgt_dir, cacheid), lines.join('\n'))
 	return cacheid
 }
 
@@ -456,7 +460,7 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 		}
 	})
 	result.cacheid = q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
-	await utils.write_file(path.join(serverconfig.cache_snpgt.dir, result.cacheid), lines.join('\n'))
+	await utils.write_file(path.join(cache_snpgt_dir, result.cacheid), lines.join('\n'))
 	return result
 }
 

@@ -1,10 +1,14 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { promises as fs } from 'fs'
 import path from 'path'
+import launchServerconfig from '#src/serverconfig.js'
 import { getSessionEntry } from './Auth.ts'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening and calls setAuthRoutes()
+const cachedir = launchServerconfig.cachedir
+
 export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
-	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
+	const actionsFile = path.join(serverconfig.cachedir ?? cachedir, 'authorizedActions')
 
 	// TODO: should check if the app already has an auth route handlers,
 	// to avoid mutating what's already been set at server launch

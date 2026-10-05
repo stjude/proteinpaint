@@ -18,6 +18,9 @@ import { routeFiles } from './app.routes.js'
 import { setPythonBinPath } from '@sjcrh/proteinpaint-python'
 import { CacheManager } from './CacheManager.ts'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 const basepath = serverconfig.basepath || ''
 Object.freeze(process.argv)
 
@@ -26,7 +29,7 @@ if (serverconfig.python) setPythonBinPath(serverconfig.python)
 export async function launch() {
 	try {
 		new CacheManager(
-			Object.assign({ cachedir: serverconfig.cachedir }, serverconfig.features?.cacheMonitor || {}, {
+			Object.assign({ cachedir }, serverconfig.features?.cacheMonitor || {}, {
 				mustExitPendingValidation: serverconfig.features?.mustExitPendingValidation
 			})
 		)
@@ -36,6 +39,11 @@ export async function launch() {
 		// setting up auth routes before any other routes are set up
 		const validatedCreds = await extractValidatedCreds(serverconfig)
 		const trackedDatasets = await initGenomesDs(serverconfig, { credDslabels: Object.keys(validatedCreds) })
+		// the cache path is not kept in serverconfig, so that code which runs later cannot read it from there, see
+		// hideCachedir in serverconfig.js; the route, dataset, and other modules that use it are loaded by now,
+		// and have copied it to a module-local variable
+		delete serverconfig.cachedir
+		if (serverconfig.cache_snpgt) delete serverconfig.cache_snpgt.dir
 		// all launch-time writes to serverconfig are done by now, lock it before any route is set
 		lockServerconfig(serverconfig)
 		const { doneLoading, pendingNotification } = processTrackedDs(trackedDatasets)
@@ -151,7 +159,7 @@ init with bad config, data, and/or code
 			await sendMessageToSlack(
 				serverconfig.slackWebhookUrl,
 				message,
-				path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
+				path.join(cachedir, '/slack/last_message_hash.txt')
 			)
 				.then(() => {
 					process.exit(exitCode)
@@ -342,7 +350,7 @@ function processTrackedDs(trackedDatasets) {
 			pendingNotification = sendMessageToSlack(
 				serverconfig.slackWebhookUrl,
 				`\n${serverconfig.URL} ${hostname}: ${msg}`,
-				path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
+				path.join(cachedir, '/slack/last_message_hash.txt')
 			).catch(console.log)
 		}
 	}

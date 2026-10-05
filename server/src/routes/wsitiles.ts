@@ -31,6 +31,9 @@ import { createHash } from 'crypto' // sha1 for cache file names
 import path from 'path' // all slide/cache path resolution
 import serverconfig from '#src/serverconfig.js' // tpmasterdir, cachedir, feature gates
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 // register this module as a route; request/response shapes are loose (any)
 export const payload: RoutePayload = {
 	init,
@@ -59,7 +62,7 @@ const exists = (p: string) =>
 // fresh tile set instead of serving stale tiles of the old file.
 function tileCachePath(slide: string, mtime: number, plane: string, z: string, x: string, y: string): string {
 	const key = createHash('sha1').update(`${slide}:${mtime}`).digest('hex') // stable id per slide version
-	return path.join(serverconfig.cachedir, 'wsitiles', `${key}_${plane}_${z}_${x}_${y}.jpg`) // one file per tile
+	return path.join(cachedir, 'wsitiles', `${key}_${plane}_${z}_${x}_${y}.jpg`) // one file per tile
 }
 
 // Same path resolution the old wsimages.ts used, kept inside node.
@@ -142,7 +145,7 @@ const cellTypesCache = new Map<string, { mtime: number; types?: string[] }>()
 // instead of each spawning their own.
 function boundariesCachePath(h5ad: string, mtime: number, kind: string): string {
 	const key = createHash('sha1').update(`${h5ad}:${mtime}`).digest('hex') // stable id per h5ad version
-	return path.join(serverconfig.cachedir, 'wsitiles', `${key}_bnd_${kind}.csv`) // one file per polygon set
+	return path.join(cachedir, 'wsitiles', `${key}_bnd_${kind}.csv`) // one file per polygon set
 }
 const boundariesInflight = new Map<string, Promise<string>>() // cacheFile -> pending csv
 

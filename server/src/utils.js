@@ -15,6 +15,10 @@ import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import { text as streamText } from 'stream/consumers'
 import { minimatch } from 'minimatch'
+
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+const cache_snpgt_dir = serverconfig.cache_snpgt.dir
 export * from './cachedFetch.js'
 export * from './xfetch.js'
 export { connect_db } from './sql.ts'
@@ -83,7 +87,7 @@ export async function cache_index(gzurl, indexurl) {
 	// build cache directory using gz file url and do not include index portion
 	// e.g. cache/https/domain/path/to/file.gz/
 	// resolve and check inline so the returned dir, which becomes the cwd of spawned tools, is confined to the cache dir
-	const protocolDir = path.resolve(serverconfig.cachedir, protocol)
+	const protocolDir = path.resolve(cachedir, protocol)
 	const dir = path.resolve(protocolDir, body)
 	if (!dir.startsWith(protocolDir + path.sep)) throw '.gz file URL escapes cache dir'
 	try {
@@ -818,7 +822,7 @@ export function write_file(file, text) {
 
 export async function write_tmpfile(text) {
 	const tmp = Math.random().toString()
-	await write_file(path.join(serverconfig.cachedir, tmp), text)
+	await write_file(path.join(cachedir, tmp), text)
 	return tmp
 }
 
@@ -869,12 +873,12 @@ export const genotype_types = {
 // cache_snpgt.dir; the callers that also apply cache_snpgt.fileNameRegexp keep that stricter check
 export function snpgtCacheFile(cacheid) {
 	if (illegalPathSegment(cacheid)) throw 'invalid cacheid'
-	return path.join(serverconfig.cache_snpgt.dir, cacheid)
+	return path.join(cache_snpgt_dir, cacheid)
 }
 
 export async function run_fdr(plst) {
 	// list of pvalues
-	const infile = path.join(serverconfig.cachedir, Math.random().toString())
+	const infile = path.join(cachedir, Math.random().toString())
 	const outfile = infile + '.out'
 	try {
 		await write_file(infile, plst.join('\t'))
