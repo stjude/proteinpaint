@@ -11,6 +11,8 @@ import { canonicalizeSamplelst } from '#src/utils/sampleGroups.ts'
 test sections:
 
 generateHash is deterministic and 32 hex chars
+generateHash is keyed, not a plain sha256 of the args
+cacheScope separates the cacheIds and cache files of identical args
 canonicalizeSamplelst sorts values by sampleId
 first call: miss → computeFresh runs; second call: hit, no recompute
 100 concurrent same-input calls dedup to one computeFresh (conference-room property)
@@ -59,6 +61,42 @@ tape('generateHash is deterministic and 32 hex chars', t => {
 	t.equal(h1, generateHash(args), 'same input produces the same hash')
 	t.match(h1, /^[0-9a-f]{32}$/, 'hash matches the validator regex used by cacheFilePath')
 	t.notEqual(h1, generateHash({ a: 1, b: 'y' }), 'different inputs produce different hashes')
+	t.end()
+})
+
+tape('generateHash is keyed, not a plain sha256 of the args', t => {
+	const args = { a: 1, b: 'x' }
+	const plain = crypto.createHash('sha256').update(JSON.stringify(args)).digest('hex').slice(0, 32)
+	t.notEqual(generateHash(args), plain, 'cacheId cannot be computed from the args alone')
+	t.equal(generateHash(args), generateHash(args, ''), 'an empty scope equals no scope')
+	t.notEqual(generateHash(args, 'u1'), generateHash(args), 'a scope changes the hash')
+	t.notEqual(generateHash(args, 'u1'), generateHash(args, 'u2'), 'different scopes produce different hashes')
+	t.end()
+})
+
+tape('cacheScope separates the cacheIds and cache files of identical args', async t => {
+	ensureSubdir()
+	const tag = crypto.randomBytes(8).toString('hex')
+	const args = { tag, kind: 'scoped' }
+	let computeCount = 0
+	const run = (cacheScope?: string) =>
+		cacheOrRecompute({
+			computeArgument: args,
+			cacheSubdir: 'de',
+			cacheScope,
+			computeFresh: async () => ({ kind: 'TEST', tag, n: ++computeCount })
+		})
+	const r1 = await run('u1')
+	trackCachePath(r1.cacheId)
+	const r2 = await run('u2')
+	trackCachePath(r2.cacheId)
+	const r1again = await run('u1')
+
+	t.notEqual(r1.cacheId, r2.cacheId, 'different scopes get different cacheIds')
+	t.notEqual(r1.cacheFilePath, r2.cacheFilePath, 'different scopes get different cache files')
+	t.equal(r1again.cacheId, r1.cacheId, 'the same scope reuses its cacheId')
+	t.equal(computeCount, 2, 'computed once per scope, the repeated scope was a cache hit')
+	cleanup()
 	t.end()
 })
 

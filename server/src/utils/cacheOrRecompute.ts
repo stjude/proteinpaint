@@ -43,14 +43,34 @@ export const cacheJobPolicies = {
 
 export type CacheSubdir = keyof typeof cacheJobPolicies
 
-/** Hash the given object to a 32-hex-char cacheId via
- * sha256(JSON.stringify(args)). Truncation at 32 chars is safe for cache
- * keys — collision probability is negligible at realistic cache sizes.
+/** Key for deriving cacheIds. Kept module-local, not in serverconfig, so that it is never
+ * part of a config dump or a response. Set PP_CACHEID_KEY to the same value on every
+ * instance that shares a cachedir, so that they derive the same cacheIds and keep hitting
+ * the existing cache files across restarts. When not set, a random key is generated per process:
+ * the cache still works, but every restart or other instance misses on the files that were
+ * written before, which then age out through CacheManager eviction. */
+const cacheIdKey: Buffer = process.env.PP_CACHEID_KEY
+	? Buffer.from(process.env.PP_CACHEID_KEY, 'utf8')
+	: crypto.randomBytes(32)
+delete process.env.PP_CACHEID_KEY
+
+/** Derive a 32-hex-char cacheId from the given object via
+ * HMAC-sha256(cacheIdKey, scope + JSON.stringify(args)). Truncation at 32 chars is safe
+ * for cache keys — collision probability is negligible at realistic cache sizes.
  * Callers shape `args` to include only the fields whose identity
  * determines the cache key, and must construct it with a stable key order
- * (object literals do this naturally). */
-export function generateHash(args: any): string {
-	return crypto.createHash('sha256').update(JSON.stringify(args)).digest('hex').slice(0, 32)
+ * (object literals do this naturally).
+ *
+ * `scope` is optional, and separates cacheIds for the same args, e.g. per user or session
+ * when the result depends on what the requester may access. Without a scope, identical
+ * args share one cacheId, which is the intended behavior for results that are the same for
+ * every requester. */
+export function generateHash(args: any, scope = ''): string {
+	return crypto
+		.createHmac('sha256', cacheIdKey)
+		.update(JSON.stringify([scope, args]))
+		.digest('hex')
+		.slice(0, 32)
 }
 
 const HASH_RE = /^[0-9a-f]{32}$/
@@ -117,8 +137,8 @@ function makeBusyError(): Error {
 export async function cacheOrRecompute<TArgs, TResult>(
 	opts: CacheOrRecomputeOpts<TArgs, TResult>
 ): Promise<CacheOrRecomputeResult<TResult>> {
-	const { computeArgument, cacheSubdir, computeFresh } = opts
-	const cacheId = generateHash(computeArgument)
+	const { computeArgument, cacheSubdir, computeFresh, cacheScope } = opts
+	const cacheId = generateHash(computeArgument, cacheScope)
 	const file = cacheFilePath(cacheSubdir, cacheId)
 	const dedupKey = `${cacheSubdir}:${cacheId}`
 
