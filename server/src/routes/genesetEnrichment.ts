@@ -16,6 +16,9 @@ import { validGeneSetGroup, validNumPermutations } from '#src/utils/genesetGroup
 import { get_ds_tdb } from '#src/termdb.js'
 import type { GseaCacheResult } from '../../routes/types.ts'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 const payload: RoutePayload = {
 	init,
 	request: { typeId: 'GenesetEnrichmentRequest' /*, checkers: TODO write validator */ },
@@ -285,7 +288,7 @@ async function runGseaPythonForImage({
 	for (const line of gsea_output.split('\n')) {
 		if (line.startsWith('image: ')) {
 			const parsed = JSON.parse(line.replace('image: ', ''))
-			return path.join(serverconfig.cachedir, 'gsea', parsed.image_file)
+			return path.join(cachedir, 'gsea', parsed.image_file)
 		}
 		// gsea.py emits failures on the `result:` channel even from the
 		// detail-image path — forward those structurally so the route can
@@ -316,7 +319,7 @@ function buildPyInput(
 		geneset_group: cacheArg.geneSetGroup,
 		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),
 		filter_non_coding_genes: cacheArg.filter_non_coding_genes,
-		cachedir: path.join(serverconfig.cachedir, 'gsea'),
+		cachedir: path.join(cachedir, 'gsea'),
 		geneset_name: q.geneset_name,
 		num_permutations: cacheArg.num_permutations,
 		...(cacheArg.max_geneset_size ? { max_geneset_size: cacheArg.max_geneset_size } : {}),

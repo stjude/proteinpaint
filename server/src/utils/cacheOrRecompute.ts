@@ -1,9 +1,9 @@
-import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { fileSize, formatElapsedTime } from '#shared'
+import { generateHash } from '#src/utils/cacheKey.ts'
 import type { CacheOrRecomputeOpts, CacheOrRecomputeResult } from '#src/utils/types.ts'
 
 /** Subdirs of serverconfig.cachedir that the cacheOrRecompute module
@@ -43,37 +43,11 @@ export const cacheJobPolicies = {
 
 export type CacheSubdir = keyof typeof cacheJobPolicies
 
-/** Key for deriving cacheIds. Kept module-local, not in serverconfig, so that it is never
- * part of a config dump or a response. Set PP_CACHEID_CREDS, or PP_CACHEID_CREDS_FILE, to the same
- * value on every instance that shares a cachedir, so that they derive the same cacheIds and keep
- * hitting the existing cache files across restarts. container/envHelpers.mjs passes it like the other
- * <NAME>_CREDS values, so that it is not in the initial env of the server process. When not set, a
- * random key is generated per process: the cache still works, but every restart or other instance
- * misses on the files that were written before, which then age out through CacheManager eviction. */
-const cacheIdKey: Buffer = process.env.PP_CACHEID_CREDS
-	? Buffer.from(process.env.PP_CACHEID_CREDS, 'utf8')
-	: crypto.randomBytes(32)
-// not inherited by spawned child processes, and not exposed by any code that reads process.env later
-delete process.env.PP_CACHEID_CREDS
+// in a separate module, since serverconfig.js also uses the key, and cannot import this module that imports it
+export { generateHash }
 
-/** Derive a 32-hex-char cacheId from the given object via
- * HMAC-sha256(cacheIdKey, scope + JSON.stringify(args)). Truncation at 32 chars is safe
- * for cache keys — collision probability is negligible at realistic cache sizes.
- * Callers shape `args` to include only the fields whose identity
- * determines the cache key, and must construct it with a stable key order
- * (object literals do this naturally).
- *
- * `scope` is optional, and separates cacheIds for the same args, e.g. per user or session
- * when the result depends on what the requester may access. Without a scope, identical
- * args share one cacheId, which is the intended behavior for results that are the same for
- * every requester. */
-export function generateHash(args: any, scope = ''): string {
-	return crypto
-		.createHmac('sha256', cacheIdKey)
-		.update(JSON.stringify([scope, args]))
-		.digest('hex')
-		.slice(0, 32)
-}
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir: string = serverconfig.cachedir
 
 const HASH_RE = /^[0-9a-f]{32}$/
 
@@ -81,7 +55,7 @@ const HASH_RE = /^[0-9a-f]{32}$/
  * corrupted hash cannot inject path separators. */
 export function cacheFilePath(subdir: CacheSubdir, cacheId: string): string {
 	if (!HASH_RE.test(cacheId)) throw new Error('invalid cacheId')
-	return path.join(serverconfig.cachedir, subdir, `${cacheId}.json`)
+	return path.join(cachedir, subdir, `${cacheId}.json`)
 }
 
 /** Write a result JSON to the given path. Internal — callers never invoke

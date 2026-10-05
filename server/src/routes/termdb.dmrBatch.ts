@@ -31,6 +31,9 @@ import fs from 'fs'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 /* Call DMRs across many regions at once — the whole hit list of a differential methylation run,
 rather than one clicked element at a time.
 
@@ -376,7 +379,7 @@ export async function runDmrBatch(
 						const input = {
 							probe_h5_file: matrixFile,
 							mvalues,
-							cachedir: serverconfig.cachedir,
+							cachedir,
 							genome: q.genome,
 							chr: jobChrs[0],
 							start: 0,

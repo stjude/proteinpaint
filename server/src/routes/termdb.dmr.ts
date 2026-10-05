@@ -9,6 +9,9 @@ import { formatElapsedTime } from '#shared'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 export const payload: RoutePayload = {
 	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
 	get init() {
@@ -72,7 +75,7 @@ function init({ genomes }) {
 			const dmrInput = {
 				probe_h5_file: matrixFile,
 				mvalues,
-				cachedir: serverconfig.cachedir,
+				cachedir,
 				genome: q.genome,
 				chr: q.chr,
 				start: q.start,

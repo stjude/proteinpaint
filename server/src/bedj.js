@@ -6,6 +6,9 @@ import serverconfig from './serverconfig.js'
 import { nt2aa } from '#shared/common.js'
 import { parseBedLine } from './bedj.parseBed.js'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 /*
 should guard against file content error e.g. two tabs separating columns
 
@@ -894,7 +897,7 @@ async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 		if (utils.illegalpath(req.query.file, false, false)) throw 'illegal file path'
 		// the cache folder is flat: the CacheManager sweep is non-recursive, so a file in a subfolder would be readable but never evicted
 		if (req.query.file.includes('/')) throw 'cache file name must not contain "/"'
-		tkfile = path.join(serverconfig.cachedir, 'bedj', req.query.file)
+		tkfile = path.join(cachedir, 'bedj', req.query.file)
 	} else {
 		;[e, tkfile, isurl] = utils.fileurl(req)
 		if (e) throw e

@@ -130,15 +130,21 @@ RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir
 # Another UID may also run the image, such as to match the owner of the bind-mounted files, with
 # `docker run --user <uid>:0` or a Kubernetes runAsUser with runAsGroup 0: a runtime assigns group 0 to
 # a UID that has no account in the image, so the dirs that the app writes at runtime are also owned by,
-# and writable for, group 0. The app files under /home/root/pp/app/active are owned by root and are not
+# and writable for, group 0, or else writable for any UID, like the cache dir below. The app files under /home/root/pp/app/active are owned by root and are not
 # written at runtime, see the ppserver and ppfull stages.
 # the app user does not need the r-base 'staff' group
+#
+# The cache dir is owned by root with mode 1733, so that the app user, or another UID, may create and use a subdir
+# with a known name, but may not list the entries, change the mode, or rename or remove the entries of another user:
+# the server uses a subdir whose name is derived from a key, see hideCachedir in server/src/serverconfig.js.
+# A mounted cache dir needs the same owner and mode on the host.
 RUN groupmod -n app docker && \
     usermod -l app -d /home/app -m docker && \
     gpasswd -d app staff && \
-    chown app:app /home/root/pp/cache && \
-    chgrp -R 0 /home/root/pp/cache /home/app && \
-    chmod -R g=u /home/root/pp/cache /home/app
+    chown root:0 /home/root/pp/cache && \
+    chmod 1733 /home/root/pp/cache && \
+    chgrp -R 0 /home/app && \
+    chmod -R g=u /home/app
 
 RUN if [ "$ARCH" = "x86_64" ]; then \
         wget https://proteinpaint.stjude.org/ppdemo/tools/linux/straw -P /home/root/pp/tools/ && \
