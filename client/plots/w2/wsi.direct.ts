@@ -1145,10 +1145,10 @@ export async function init(
 					firstBuild = false // subsequent vector loads must preserve the user's framing
 					if (mode !== 'raster') {
 						teardownVector()
-						showRaster()
-						mode = 'raster'
-						setLassoEnabled(false)
 					}
+					showRaster() // restore visibility even if a superseded vector decision hid it
+					mode = 'raster'
+					setLassoEnabled(false)
 					endLoading() // this fetch is done; any newly-needed raster tiles are tracked by loadstart/loadend, not here
 				} else if (mode !== 'vector' || !loadedBbox || !bboxContains(loadedBbox, bbox)) {
 					hideRaster()
