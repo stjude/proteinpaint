@@ -104,7 +104,11 @@ spec:
             claimName: {{ .Values.mounts.data.pvcName }}
         {{- else }}
         - name: cache
-          emptyDir: {}
+          emptyDir:
+            {{- with .Values.mounts.data.cacheSizeLimit }}
+            sizeLimit: {{ . }}
+            {{- else }} {}
+            {{- end }}
         {{- end }}
         {{- range .Values.writableDirs }}
         - name: {{ .name }}

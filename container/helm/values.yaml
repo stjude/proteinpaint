@@ -92,8 +92,10 @@ container:
 mounts:
   data:
     # when disabled, an emptyDir is mounted at config.serverConfig.cachedir instead, since the root filesystem is
-    # read-only; its cache data, including saved sessions, is then lost when the pod is replaced
+    # read-only; its cache data, including saved sessions, is then lost when the pod is replaced. cacheSizeLimit
+    # is the sizeLimit of that emptyDir, and the pod is evicted when the cache grows past it
     enabled: true
+    cacheSizeLimit: 10Gi
     name: storage-volume
     mountPath: /home/root/pp/tp/
     pvcName: proteinpaint-pvc
