@@ -418,7 +418,7 @@ class StudyCatalog extends PlotBase implements RxComponent {
 		counts: Map<string, number>
 	) {
 		const byParent = new Map<string, string[]>()
-		for (const row of this.rows) {
+		for (const row of this.filteredRows(this.facetScopeExclusions(facet))) {
 			const v = row[facet]
 			if (!v || !counts.has(v)) continue
 			const p = row[nested.parent] || ''
