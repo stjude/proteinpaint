@@ -2008,10 +2008,30 @@ tape('page: page changes are announced and the pager is labelled', test => {
 
 tape('page: update(rows) paginates the rows it is given', test => {
 	test.timeoutAfter(100)
-	const { holder, table } = makePagedTable(25, 10)
+	const { holder, table, changes } = makePagedTable(25, 10)
 
+	test.deepEqual(changes, [], 'Initial render should not report a page change')
+	table.goToPage(3)
+	changes.length = 0
+	table.update(makePagedRows(12))
+	test.equal(pageInfo(holder), 'Showing 11 to 12 of 12 entries', 'Should clamp to the last replacement page')
+	test.deepEqual(changes, [{ currentPage: 2, pageSize: 10 }], 'Should report the clamped page once')
+
+	changes.length = 0
+	table.update(makePagedRows(15))
+	test.equal(pageInfo(holder), 'Showing 11 to 15 of 15 entries', 'Should retain a valid page')
+	test.deepEqual(changes, [], 'Replacement on the same page should not report a page change')
+	table.update()
+	test.deepEqual(changes, [], 'Redrawing without replacement should not report a page change')
+
+	table.update([])
+	test.equal(pageInfo(holder), 'Showing 0 entries', 'Should display an empty replacement')
+	test.deepEqual(changes, [{ currentPage: 1, pageSize: 10 }], 'Empty replacement should report page 1 once')
+
+	changes.length = 0
 	table.update(makePagedRows(12))
 	test.equal(pageInfo(holder), 'Showing 1 to 10 of 12 entries', 'Should page the replacement rows')
+	test.deepEqual(changes, [], 'Replacement that stays on page 1 should not report a page change')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()

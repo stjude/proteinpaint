@@ -240,6 +240,7 @@ export class TableBase {
 	 * With rows, replaces the caller's data and retains selection only for row objects still present.
 	 * With or without rows, applies the current filters, sort and pagination. */
 	update(rows?: TableBaseRow[]): this {
+		const previousPage = this.currentPage
 		if (rows !== undefined) {
 			TableBase.validateRows(rows, this.columns)
 			this.originalRows = rows
@@ -249,7 +250,10 @@ export class TableBase {
 		}
 		this.matched = filterAndSort(this.originalRows, this.filters, this.sortState)
 		this.renderPage()
-		if (rows !== undefined) this.updateButtons()
+		if (rows !== undefined) {
+			this.updateButtons()
+			if (this.paginated && this.currentPage !== previousPage) this.notifyPage()
+		}
 		return this
 	}
 
