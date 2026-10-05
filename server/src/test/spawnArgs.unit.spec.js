@@ -32,6 +32,8 @@ test sections:
 const srcDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-spawnargs-'))
 const hasSamtools = spawnSync(serverconfig.samtools, ['--version']).status === 0
+// /tkbedj only downloads an index after bigBedInfo runs, which some environments do not have
+const hasBigBedInfo = !spawnSync(serverconfig.bigBedInfo, []).error
 
 let markerCount = 0
 const markers = []
@@ -72,6 +74,7 @@ function specialValues() {
 
 const hits = new Set()
 let server, H, allowRemoteFile, routes
+let idxCount = 0
 
 function startServer() {
 	return new Promise(resolve => {
@@ -228,8 +231,16 @@ tape('url and indexURL of the routes that run samtools, tabix, bcftools or bigBe
 			const url = `http://${H}/x${p}/t.gz`
 			const r1 = await send(handler, c.query(url))
 			test.notOk(r1?.timeout, `${name} should respond to url=${show(url)}`)
-			const r2 = await send(handler, c.query(`http://${H}/ok/t.gz`, `http://${H}/x${p}/t.gz.tbi`))
+			// a new url for each indexURL, since an index that is already in the url's cache dir is not downloaded again;
+			// the numbered prefix identifies the request, since a value such as %s is not decoded by the local server
+			const n = ++idxCount
+			const r2 = await send(handler, c.query(`http://${H}/idx${n}/t.gz`, `http://${H}/idx${n}x${p}/t.gz.tbi`))
 			test.notOk(r2?.timeout, `${name} should respond to indexURL with ${show(p)}`)
+			if (c.route == '/tkbedj' && !hasBigBedInfo) continue
+			test.ok(
+				[...hits].some(h => h.startsWith(`/idx${n}x`)),
+				`${name} should request indexURL with ${show(p)}`
+			)
 		}
 	}
 	test.deepEqual(createdMarkers(), [], 'should not create any marker file')
