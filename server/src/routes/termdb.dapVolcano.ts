@@ -5,11 +5,16 @@ import type { DapVolcanoRequest, DapEntry } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import { renderVolcano } from '#src/renderVolcano.ts'
 import serverconfig from '#src/serverconfig.js'
-import { listCohortSamples } from '../../routes/termdb.proteome.ts'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasProteomeDs, listCohortSamples } from './termdb.proteome.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 
 export const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has ds.queries.proteome
+	get init() {
+		return hasProteomeDs(genomes) ? init : null
+	},
 	request: { typeId: 'DapVolcanoRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'DapVolcanoResponse' }
 }
