@@ -596,6 +596,42 @@ tape(
 )
 
 tape(
+	'/dslogout: an origin resolving a different allowed embedder does not satisfy the one that selected the cookie',
+	async function (test) {
+		test.timeoutAfter(500)
+		test.plan(2)
+
+		// two distinct embedders are each individually allowed for this dataset; q.embedder
+		// selects siteA's credential (and its cookie name), but the real origin is siteB
+		const creds: any = {
+			[dslabel]: {
+				'/**': {
+					'sitea.com': makeBasicCred({ cookieId: 'cookie-a' }),
+					'siteb.com': makeBasicCred({ cookieId: 'cookie-b' })
+				}
+			}
+		}
+		const auth = new Auth(creds, {}, {}, { port: 3000 })
+		const sessionId = 'test-logout-cross-embedder-session-id'
+		auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+		const app = makeApp(auth)
+		const req = {
+			query: { dslabel, embedder: 'sitea.com' },
+			path: '/dslogout',
+			headers: { origin: 'https://siteb.com' },
+			cookies: { 'cookie-a': sessionId }
+		}
+		const res = makeMockRes()
+
+		await app.routes['/dslogout'].post(req, res)
+		test.equal(res.statusCode, 401, 'should set 401')
+		test.equal(auth.sessions.get(dslabel)?.get(sessionId)?.time !== undefined, true, 'should not remove the session')
+		test.end()
+	}
+)
+
+tape(
 	'/dslogout: an Authorization header that does not resolve to the cookie id does not exempt it',
 	async function (test) {
 		test.timeoutAfter(500)

@@ -26,7 +26,8 @@ function assertAllowedSessionOrigin(auth, req, dslabel, routeKeys, cred, id) {
 	if (!wasResolvedFromCookie(auth, req, cred, id)) return cred
 	const origin = getOriginFromHeaders(req)
 	const resolved = origin && auth.getRouteCredForEither(dslabel, routeKeys, origin.hostname, origin.host)
-	if (!resolved || resolved.type == 'forbidden') throw 'disallowed origin for a cookie-authenticated request'
+	if (!resolved || resolved.type == 'forbidden' || (cred && resolved !== cred))
+		throw 'disallowed origin for a cookie-authenticated request'
 	return resolved
 }
 
