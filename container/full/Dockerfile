@@ -52,6 +52,12 @@ RUN if find . ! -type l \( ! -user 0 -o -perm /022 \) | grep .; then \
       echo "ERROR: the app files above are writable by the app user"; exit 1; \
     fi
 
+# The cache dir is owned by root with mode 1733, the same as in deps/Dockerfile, so that the app user may create and use
+# a subdir with a known name but may not list the entries, see hideCachedir in server/src/serverconfig.js. Also set
+# here, so that it applies with a base image from before that deps/Dockerfile change. A mounted cache dir needs the
+# same owner and mode on the host.
+RUN chown root:0 /home/root/pp/cache && chmod 1733 /home/root/pp/cache
+
 # numeric ids, the same as in the base image
 USER 1000:1000
 
