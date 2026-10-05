@@ -1,20 +1,19 @@
 import fs from 'fs'
 import path from 'path'
 import * as utils from './utils.js'
-import serverconfig from './serverconfig.js'
-import { spawn } from 'child_process'
+import serverconfig, { generateHash } from './serverconfig.js'
+// import { spawn } from 'child_process'
 import { Readable, Transform } from 'stream'
 import { pipeline } from 'node:stream/promises'
 import { createCanvas } from 'canvas'
 import * as bamcommon from './bam.common.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import crypto from 'crypto'
 import ky from 'ky'
 import { interpolateRgb } from 'd3-interpolate'
 import { match_complexvariant_rust } from './bam.indel.js'
 import { basecolor, bplen } from '#shared/common.js'
 import { gdcCheckPermission } from './bam.gdc.js'
-import { fileSize } from '#shared/fileSize.js'
+// import { fileSize } from '#shared/fileSize.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 
 /*
@@ -255,8 +254,6 @@ const max_read_alignment = 200 // Max number of reads that can be aligned to ref
 const readpanel_DN_maxlength = 20 // Variable to define whether a deletion is rendered showing the reference or simply shown how big the deletion is. If greater, only the size of deletion is shown. If lower, the reference sequence is shown
 
 const bases = new Set(['A', 'T', 'C', 'G'])
-const gdcHashSecret = Math.random.toString()
-
 /**************************
       gdc security
 ***************************
@@ -3543,13 +3540,12 @@ async function convertread2html(seg, genome, query) {
 /////////////////////// gdc slicing ///////////////////////
 
 function getGDCcacheFileName(req) {
-	const md5Hasher = crypto.createHmac('md5', gdcHashSecret)
 	const lst = [
 		req.get('X-Auth-Token') || req.cookies.sessionid, // use token or session, whichever is given
 		req.query.gdcFileUUID,
 		req.query.gdcFilePosition
 	]
-	return md5Hasher.update(lst.join('')).digest('hex') + '.bam'
+	return generateHash(lst, 'gdc-bam') + '.bam'
 }
 
 /*
