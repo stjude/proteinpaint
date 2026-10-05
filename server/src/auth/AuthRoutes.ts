@@ -79,8 +79,11 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 				: originCred || auth.getRouteCred(q.dslabel, routeKeys, q.embedder)
 			const id = auth.getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
-			cred = assertAllowedSessionOrigin(auth, req, q.dslabel, routeKeys, cred, id)
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
+			// re-resolve cred from the embedder the session was actually issued under, not the
+			// request's own (self-selected) embedder, so the check below is tied to this session
+			if (session?.embedder) cred = auth.getRouteCred(q.dslabel, routeKeys, session.embedder) || cred
+			cred = assertAllowedSessionOrigin(auth, req, q.dslabel, routeKeys, cred, id)
 			if (!session) {
 				res.send({ status: 'ok' })
 				return
@@ -137,14 +140,17 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 		const q = req.query
 		try {
 			// TODO: later, other routes besides /termdb may require tracking
-			const cred = auth.getRequiredCred(q, 'termdb')
+			let cred = auth.getRequiredCred(q, 'termdb')
 			if (!cred) {
 				res.send({ status: 'ok' })
 				return
 			}
 			const id = auth.getSessionId(req, cred)
-			assertAllowedSessionOrigin(auth, req, q.dslabel, ['termdb'], cred, id)
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
+			// re-resolve cred from the embedder the session was actually issued under, not the
+			// request's own (self-selected) embedder, so the check below is tied to this session
+			if (session?.embedder) cred = auth.getRouteCred(q.dslabel, ['termdb'], session.embedder) || cred
+			assertAllowedSessionOrigin(auth, req, q.dslabel, ['termdb'], cred, id)
 			const email = session?.email || ''
 			const time = new Date()
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)

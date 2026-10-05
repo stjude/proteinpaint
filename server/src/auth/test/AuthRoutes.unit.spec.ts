@@ -632,6 +632,45 @@ tape(
 )
 
 tape(
+	'/dslogout: a session is validated against the embedder it was issued under, not the one the request selects',
+	async function (test) {
+		test.timeoutAfter(500)
+		test.plan(2)
+
+		// siteA and siteB share a cookie name; the session was issued under siteA (recorded in
+		// session.embedder), but the request selects siteB's credential (and the real origin is
+		// genuinely siteB), so the request's own credential matches itself despite not being the
+		// one this particular session belongs to
+		const sharedCookieId = 'shared-cookie-name'
+		const creds: any = {
+			[dslabel]: {
+				'/**': {
+					'sitea.com': makeBasicCred({ cookieId: sharedCookieId }),
+					'siteb.com': makeBasicCred({ cookieId: sharedCookieId })
+				}
+			}
+		}
+		const auth = new Auth(creds, {}, {}, { port: 3000 })
+		const sessionId = 'test-logout-issuing-embedder-session-id'
+		auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', embedder: 'sitea.com' }]]))
+
+		const app = makeApp(auth)
+		const req2 = {
+			query: { dslabel, embedder: 'siteb.com' },
+			path: '/dslogout',
+			headers: { origin: 'https://siteb.com' },
+			cookies: { [sharedCookieId]: sessionId }
+		}
+		const res2 = makeMockRes()
+
+		await app.routes['/dslogout'].post(req2, res2)
+		test.equal(res2.statusCode, 401, 'should set 401')
+		test.equal(auth.sessions.get(dslabel)?.get(sessionId)?.time !== undefined, true, 'should not remove the session')
+		test.end()
+	}
+)
+
+tape(
 	'/dslogout: an Authorization header that does not resolve to the cookie id does not exempt it',
 	async function (test) {
 		test.timeoutAfter(500)
