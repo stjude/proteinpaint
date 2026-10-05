@@ -7,9 +7,15 @@ import { getSessionEntry } from './Auth.ts'
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening and calls setAuthRoutes()
 const cachedir = launchServerconfig.cachedir
 
-// generous caps on the two free-form fields appended to actionsFile per request
+// generous caps on the free-form fields appended to actionsFile per request
 const MAX_ACTION_LENGTH = 100
 const MAX_DETAILS_LENGTH = 10000
+const MAX_FIELD_LENGTH = 200
+
+// true when s is a string within len, with no tab/newline/CR characters
+function isBoundedPlainText(s, len) {
+	return typeof s == 'string' && s.length <= len && !/[\t\n\r]/.test(s)
+}
 
 export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 	const actionsFile = path.join(serverconfig.cachedir ?? cachedir, 'authorizedActions')
@@ -118,18 +124,15 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 			// confirm the session is still active (connection and age) before using it
 			auth.checkIPaddress(req, session.ip, cred)
 			if (Date.now() - session.time > auth.maxSessionAge) {
-				const { iat } = auth.getJwtPayload(q, req.headers, cred, session)
-				// iat is in seconds (standard jwt claim), session.time and maxSessionAge are in ms
-				if (Date.now() - iat * 1000 > auth.maxSessionAge) {
-					auth.sessions.get(q.dslabel)?.delete(id)
-					throw 'missing or expired session'
-				}
+				auth.sessions.get(q.dslabel)?.delete(id)
+				throw 'missing or expired session'
 			}
-			if (typeof q.action != 'string' || !q.action || q.action.length > MAX_ACTION_LENGTH || /[\t\n\r]/.test(q.action))
-				throw 'invalid action'
+			if (!isBoundedPlainText(q.dslabel, MAX_FIELD_LENGTH)) throw 'invalid dslabel'
+			if (!q.action || !isBoundedPlainText(q.action, MAX_ACTION_LENGTH)) throw 'invalid action'
 			const details = q.details === undefined ? '' : JSON.stringify(q.details)
 			if (details.length > MAX_DETAILS_LENGTH) throw 'invalid details'
 			const email = session.email || ''
+			if (!isBoundedPlainText(email, MAX_FIELD_LENGTH)) throw 'invalid session email'
 			const time = new Date()
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${details}\n`)
 			res.send({ status: 'ok' })

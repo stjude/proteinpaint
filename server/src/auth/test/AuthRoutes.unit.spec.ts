@@ -686,7 +686,7 @@ tape('action-log route: validation case C', async function (test) {
 
 	const app = makeApp(auth)
 	const req = {
-		query: { dslabel, embedder, action: 'download\tforged@test.com\t0\tx', details: '{}' },
+		query: { dslabel, embedder, action: 'download\tx\t0\tx', details: '{}' },
 		path: '/authorizedActions',
 		ip: '127.0.0.1',
 		headers: {},
@@ -771,6 +771,58 @@ tape('action-log route: validation case F', async function (test) {
 	await app.routes['/authorizedActions'].post(req, res)
 	test.equal(res.sentData?.status, 'ok', 'should accept a value at the boundary')
 	test.equal(res.statusCode, 200, 'should return 200')
+	test.end()
+})
+
+tape('action-log route: validation case G', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-bad-email'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com\tx' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: {},
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case H', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	// a wildcard dslabel entry, as an open-ended deployment might configure, so a query
+	// value does not have to match a specific key to resolve a cred
+	const creds: any = { '*': { termdb: { [embedder]: makeJwtCred() } } }
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	const oddDslabel = 'ds\tx'
+	const sessionId = 'test-action-session-id-bad-dslabel'
+	auth.sessions.set(oddDslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel: oddDslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: {},
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
 	test.end()
 })
 
