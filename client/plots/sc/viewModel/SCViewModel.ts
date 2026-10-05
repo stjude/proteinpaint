@@ -77,7 +77,7 @@ export class SCViewModel {
 		}
 
 		// if samples are using experiments, add the hardcoded experiment column at the end
-		if (hasExperiments) columns.push({ label: 'Experiment', sortable: true }) // corresponds to this.samples[].experiments[].experimentID
+		if (hasExperiments) columns.push({ label: 'Experiment' }) // corresponds to this.samples[].experiments[].experimentID
 
 		for (const item of items) {
 			if (item.isMetaResult) this.metaResultIds.add(item.sample)
