@@ -376,13 +376,17 @@ if (process.env.PP_MODE?.startsWith('container')) {
 	All code that uses the path must copy serverconfig.cachedir to a module-local variable when it is loaded:
 	app.ts deletes serverconfig.cachedir before the server starts listening.
 */
+// reads the cache key, and removes it from process.env, in every mode: it is otherwise read on the first hashed cache
+// request, and until then could be inherited by a child process that is started at launch
+const hasPersistentCacheKey = hasPersistentKey()
 if (serverconfig.hideCachedir ?? process.env.PP_MODE?.startsWith('container')) {
 	const parent = serverconfig.cachedir
 	if (!parent) throw 'serverconfig.cachedir missing'
 	// a parent dir that is created here is owned by the server user, which the warning below reports
 	if (!fs.existsSync(parent)) fs.mkdirSync(parent, { recursive: true })
+	let parentEntries
 	try {
-		fs.readdirSync(parent)
+		parentEntries = fs.readdirSync(parent)
 		console.warn(
 			`WARNING: serverconfig.cachedir='${parent}' can be listed by the server process, so the cache subdir name ` +
 				`is not hidden; the dir should be owned by another user, such as root, with mode 1733`
@@ -390,17 +394,44 @@ if (serverconfig.hideCachedir ?? process.env.PP_MODE?.startsWith('container')) {
 	} catch (e) {
 		// EACCES is the expected result; another error is reported by the mkdirSync() below
 	}
-	if (!hasPersistentKey()) {
+	if (!hasPersistentCacheKey) {
 		console.warn(
 			`WARNING: PP_CACHEID_CREDS is not set, so the cache subdir name is generated for this process only, ` +
 				`and the files cached by an earlier process are not found or removed`
 		)
 	}
-	serverconfig.cachedir = path.join(parent, takeCacheDirName())
+	const dirName = takeCacheDirName()
+	serverconfig.cachedir = path.join(parent, dirName)
 	// the name is not logged, so that it is not in any log output
 	fs.mkdirSync(serverconfig.cachedir, { recursive: true, mode: 0o700 })
+	if (parentEntries) moveEarlierCacheEntries(parent, parentEntries, dirName)
 }
 delete serverconfig.hideCachedir
+
+/*
+	Moves the entries of the earlier cache layout, such as the saved sessions in massSession/, from the configured
+	cachedir into the derived subdir, where they are still found by the server and evicted by the cache monitor.
+	This is only possible while the configured cachedir can be listed, such as on the first start with the derived
+	subdir, before the dir owner and mode are changed. An entry with the name shape of a derived subdir, such as from
+	another instance with a different key, is not moved, and neither is an entry whose name already exists in the
+	derived subdir.
+*/
+function moveEarlierCacheEntries(parent, entries, dirName) {
+	let moved = 0
+	for (const name of entries) {
+		if (name == dirName || /^[0-9a-f]{32}$/.test(name)) continue
+		const dest = path.join(parent, dirName, name)
+		if (fs.existsSync(dest)) continue
+		try {
+			fs.renameSync(path.join(parent, name), dest)
+			moved++
+		} catch (e) {
+			// such as EXDEV for a separately mounted entry, which then stays where it is
+			console.warn(`WARNING: unable to move the earlier cache entry '${name}' into the cache subdir: ${e.code || e}`)
+		}
+	}
+	if (moved) console.log(`moved ${moved} earlier cache entries into the cache subdir`)
+}
 
 // when a mandatory setting is not defined in any ds, declare its default here
 

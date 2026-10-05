@@ -97,7 +97,7 @@ container:
 cacheIdCreds:
   enabled: true
   existingSecret: ""
-  secretKey: cacheid
+  secretKey: cacheid # pragma: allowlist secret
 
 mounts:
   data:

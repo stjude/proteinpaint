@@ -11,6 +11,7 @@ a generated key is not persistent, and derives different names per module instan
 takeCacheDirName returns the name only once
 the cache dir name cannot be produced by generateHash
 serverconfig.hideCachedir uses a derived subdir of the configured cachedir
+serverconfig.js removes PP_CACHEID_CREDS from process.env without hideCachedir
 
 Each test imports cacheKey.ts with a unique query string, which evaluates a new instance of that module,
 since the key is read once per module instance.
@@ -86,8 +87,24 @@ tape('serverconfig.hideCachedir uses a derived subdir of the configured cachedir
 	const warnings: string[] = []
 	console.warn = (...args) => warnings.push(args.join(' '))
 	process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({ cachedir: parent, hideCachedir: true })
+	// entries of the earlier layout, and a subdir that another key would derive
+	fs.mkdirSync(path.join(parent, 'massSession'))
+	fs.writeFileSync(path.join(parent, 'massSession', 'saved'), '{}')
+	fs.writeFileSync(path.join(parent, 'tmpfile'), 'x')
+	const otherKeyDir = path.join(parent, 'a'.repeat(32))
+	fs.mkdirSync(otherKeyDir)
 	try {
 		const { default: sc } = await import(`#src/serverconfig.js?${'hidecache'}`)
+		t.ok(
+			fs.existsSync(path.join(sc.cachedir, 'massSession', 'saved')),
+			'an earlier cache subdir is moved into the subdir'
+		)
+		t.ok(fs.existsSync(path.join(sc.cachedir, 'tmpfile')), 'an earlier cache file is moved into the subdir')
+		t.deepEqual(
+			fs.readdirSync(parent).sort(),
+			[path.basename(otherKeyDir), path.basename(sc.cachedir)].sort(),
+			'only the derived subdirs are left in the configured cachedir'
+		)
 		t.equal(path.dirname(sc.cachedir), parent, 'cachedir is a subdir of the configured cachedir')
 		t.match(path.basename(sc.cachedir), HEX32, 'the subdir name is derived')
 		t.equal(fs.statSync(sc.cachedir).mode & 0o777, 0o700, 'the subdir is only accessible by the server user')
@@ -106,6 +123,17 @@ tape('serverconfig.hideCachedir uses a derived subdir of the configured cachedir
 		if (overrides === undefined) delete process.env.PP_SERVERCONFIG_OVERRIDES
 		else process.env.PP_SERVERCONFIG_OVERRIDES = overrides
 		fs.rmSync(parent, { recursive: true, force: true })
+	}
+	t.end()
+})
+
+tape('serverconfig.js removes PP_CACHEID_CREDS from process.env without hideCachedir', async t => {
+	process.env.PP_CACHEID_CREDS = 'test-only-unhidden'
+	try {
+		await import(`#src/serverconfig.js?${'unhidden'}`)
+		t.equal('PP_CACHEID_CREDS' in process.env, false, 'removed when serverconfig.js is loaded, before any request')
+	} finally {
+		delete process.env.PP_CACHEID_CREDS
 	}
 	t.end()
 })

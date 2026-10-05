@@ -5,14 +5,17 @@ import crypto from 'crypto'
 	serverconfig, so that it is never part of a config dump or a response. This module does not import
 	serverconfig.js, since serverconfig.js imports it.
 
-	Set PP_CACHEID_CREDS, or PP_CACHEID_CREDS_FILE, to the same value on every instance that shares a cachedir,
-	so that they derive the same names and keep finding the existing cache files across restarts.
-	container/envHelpers.mjs passes it like the other <NAME>_CREDS values, so that it is not in the initial env
-	of the server process. When not set, a random key is generated per process: the cache still works, but every
-	restart or other instance misses on the files that were written before.
+	Set PP_CACHEID_CREDS to the same value on every instance that shares a cachedir, so that they derive the same
+	names and keep finding the existing cache files across restarts. When the server is started with
+	container/envHelpers.mjs, as in the container images, PP_CACHEID_CREDS_FILE may name a file with the value
+	instead: envHelpers.mjs reads that file and passes its content like the other <NAME>_CREDS values, so that it
+	is not in the initial env of the server process. This module and serverconfig.js do not read
+	PP_CACHEID_CREDS_FILE, so without envHelpers.mjs it is ignored. When not set, a random key is generated per
+	process: the cache still works, but every restart or other instance misses on the files that were written before.
 
-	The key is read on first use instead of when this module is loaded, since serverconfig.js sets the
-	<NAME>_CREDS values in process.env from the envHelpers.mjs handoff file after its imports are loaded.
+	The key is not read when this module is loaded, since serverconfig.js sets the <NAME>_CREDS values in
+	process.env from the envHelpers.mjs handoff file after its imports are loaded. serverconfig.js reads it right
+	after that, with hasPersistentKey(), so that it is removed from process.env before any child process is started.
 */
 
 let key: Buffer | undefined
@@ -24,9 +27,10 @@ function getKey(): Buffer {
 		const value = process.env.PP_CACHEID_CREDS
 		keyIsPersistent = !!value
 		key = value ? Buffer.from(value, 'utf8') : crypto.randomBytes(32)
-		// not inherited by spawned child processes, and not exposed by any code that reads process.env later
-		delete process.env.PP_CACHEID_CREDS
 	}
+	// not inherited by spawned child processes, and not exposed by any code that reads process.env later;
+	// also removes a value that is set after the key is read, which is not used
+	delete process.env.PP_CACHEID_CREDS
 	return key
 }
 
