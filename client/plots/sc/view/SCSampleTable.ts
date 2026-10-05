@@ -103,8 +103,10 @@ export class SCSampleTable extends TableBase {
 		if (tableData.columns.length !== this.columns.length) return false
 		if (this.columns.some((column, i) => tableData.columns[i]?.label !== column.label)) return false
 		if (tableData.rows.length !== this.originalRows.length) return false
+		/** Prevent the table from rerendering after filter */
+		const existingSampleIds = new Set(this.originalRows.map(row => this.sampleIdOf(row)))
 		const colIdx = tableData.sampleColIdx ?? this.sampleColIdx
-		return tableData.rows.every(row => this.rowMap.has(this.sampleIdOf(row, colIdx)))
+		return tableData.rows.every(row => existingSampleIds.has(this.sampleIdOf(row, colIdx)))
 	}
 
 	/** Patches the table for tableData that isSameShape(): only the selected radio can differ. */
