@@ -46,6 +46,21 @@ tape('a json request body is parsed', async test => {
 	test.end()
 })
 
+tape('a json request body is matched by media type, not an exact content-type string', async test => {
+	test.timeoutAfter(10000)
+	const charset = await post(server, '/genomes', JSON.stringify({ embedder: 'localhost' }), {
+		'content-type': 'application/json; charset=utf-8'
+	})
+	test.ok(charset.body.genomes, 'should respond with the genomes for a charset-qualified content-type')
+
+	const wrongType = await post(server, '/genomes', JSON.stringify({ embedder: 'localhost' }), {
+		'content-type': 'text/plain'
+	})
+	test.notOk(wrongType.body.genomes, 'should not respond with data for a mismatched content-type')
+	test.match(wrongType.body.error, /content-type/, 'should explain the content-type is invalid')
+	test.end()
+})
+
 tape('a scalar json request body is rejected', async test => {
 	test.timeoutAfter(10000)
 	// bodyParser.json()'s default strict mode accepted only an object or array; a scalar body must

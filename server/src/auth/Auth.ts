@@ -86,12 +86,10 @@ export function getRequestOrigin(req) {
 	if (host) return parseOrigin(`${req.protocol}://${host}`, false)
 }
 
-// Reads req.headers directly instead of calling the Express-only req.get(), for callers (such as
-// AuthRoutes.ts) that already follow that convention. Unlike getRequestOrigin(), this has no Host
-// header fallback: Host names this server, not the caller, so treating it as the caller's origin
-// when Origin and Referer are both absent would accept any request with neither header set, which
-// a caller fully controls. Callers that need this value for an access decision must fail closed
-// (treat a missing return value as disallowed) rather than assume a same-origin caller.
+// Reads req.headers directly instead of calling the Express-only req.get(). Unlike
+// getRequestOrigin(), there is no Host header fallback: returns undefined when Origin and
+// Referer are both absent, which a caller using this for an access decision must treat as
+// disallowed.
 export function getOriginFromHeaders(req) {
 	const h = req.headers || {}
 	const origin = h.origin

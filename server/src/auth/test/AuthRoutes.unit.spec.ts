@@ -722,6 +722,31 @@ tape('/dslogout: accepts a port-qualified origin matching a port-qualified embed
 	test.end()
 })
 
+tape('/dslogout: finds a non-default cookie name when q.embedder does not resolve a credential', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const customCookieId = 'custom-cookie-name'
+	const creds: any = { [dslabel]: { '/**': { 'sitea.com': makeBasicCred({ cookieId: customCookieId }) } } }
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	const sessionId = 'test-logout-origin-fallback-session-id'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel }, // no embedder, so the initial getRouteCred() call finds nothing
+		path: '/dslogout',
+		headers: { origin: 'https://sitea.com' },
+		cookies: { [customCookieId]: sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/dslogout'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should return ok')
+	test.equal(auth.sessions.get(dslabel)?.get(sessionId), undefined, 'should remove the session')
+	test.end()
+})
+
 // ─────────────────────────────────────────
 // POST /jwt-status
 // ─────────────────────────────────────────

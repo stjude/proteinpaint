@@ -20,12 +20,17 @@ function wasResolvedFromCookie(auth, req, cred, id) {
 	return true
 }
 
+// resolves the credential for this request's origin, or undefined if there is none
+function resolveCredFromOrigin(auth, req, dslabel, routeKeys) {
+	const origin = getOriginFromHeaders(req)
+	return origin && auth.getRouteCredForEither(dslabel, routeKeys, origin.hostname, origin.host)
+}
+
 // resolves the credential for this request's origin; returns cred unchanged if there is
 // nothing to check
 function assertAllowedSessionOrigin(auth, req, dslabel, routeKeys, cred, id) {
 	if (!wasResolvedFromCookie(auth, req, cred, id)) return cred
-	const origin = getOriginFromHeaders(req)
-	const resolved = origin && auth.getRouteCredForEither(dslabel, routeKeys, origin.hostname, origin.host)
+	const resolved = resolveCredFromOrigin(auth, req, dslabel, routeKeys)
 	if (!resolved || resolved.type == 'forbidden' || (cred && resolved !== cred))
 		throw 'disallowed origin for a cookie-authenticated request'
 	return resolved
@@ -68,7 +73,8 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 		try {
 			const q = req.query
 			const routeKeys = [q.route, 'termdb', '/**']
-			let cred = auth.getRouteCred(q.dslabel, routeKeys, q.embedder)
+			let cred =
+				auth.getRouteCred(q.dslabel, routeKeys, q.embedder) || resolveCredFromOrigin(auth, req, q.dslabel, routeKeys)
 			const id = auth.getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
 			cred = assertAllowedSessionOrigin(auth, req, q.dslabel, routeKeys, cred, id)
