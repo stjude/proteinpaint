@@ -44,15 +44,17 @@ export const cacheJobPolicies = {
 export type CacheSubdir = keyof typeof cacheJobPolicies
 
 /** Key for deriving cacheIds. Kept module-local, not in serverconfig, so that it is never
- * part of a config dump or a response. Set PP_CACHEID_KEY to the same value on every
- * instance that shares a cachedir, so that they derive the same cacheIds and keep hitting
- * the existing cache files across restarts. When not set, a random key is generated per process:
- * the cache still works, but every restart or other instance misses on the files that were
- * written before, which then age out through CacheManager eviction. */
-const cacheIdKey: Buffer = process.env.PP_CACHEID_KEY
-	? Buffer.from(process.env.PP_CACHEID_KEY, 'utf8')
+ * part of a config dump or a response. Set PP_CACHEID_CREDS, or PP_CACHEID_CREDS_FILE, to the same
+ * value on every instance that shares a cachedir, so that they derive the same cacheIds and keep
+ * hitting the existing cache files across restarts. container/envHelpers.mjs passes it like the other
+ * <NAME>_CREDS values, so that it is not in the initial env of the server process. When not set, a
+ * random key is generated per process: the cache still works, but every restart or other instance
+ * misses on the files that were written before, which then age out through CacheManager eviction. */
+const cacheIdKey: Buffer = process.env.PP_CACHEID_CREDS
+	? Buffer.from(process.env.PP_CACHEID_CREDS, 'utf8')
 	: crypto.randomBytes(32)
-delete process.env.PP_CACHEID_KEY
+// not inherited by spawned child processes, and not exposed by any code that reads process.env later
+delete process.env.PP_CACHEID_CREDS
 
 /** Derive a 32-hex-char cacheId from the given object via
  * HMAC-sha256(cacheIdKey, scope + JSON.stringify(args)). Truncation at 32 chars is safe

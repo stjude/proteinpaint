@@ -49,6 +49,14 @@ spec:
             # instead of merging it, which would drop this entry when container.env is overridden
             - name: PP_MODE
               value: {{ .Values.container.ppMode | quote }}
+            {{- if .Values.cacheIdCreds.enabled }}
+            # envHelpers.mjs passes it to the server like the other <NAME>_CREDS values, not in the server's initial env
+            - name: PP_CACHEID_CREDS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cacheIdCreds.existingSecret | default (printf "%s-cacheid" (include "proteinpaint.fullname" .)) }}
+                  key: {{ .Values.cacheIdCreds.secretKey }}
+            {{- end }}
             {{- with .Values.container.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
