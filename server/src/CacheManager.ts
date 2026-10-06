@@ -73,7 +73,11 @@ export const cacheRegistry = {
 	// Flat tabix/bigbed files plus index, evicted by mtime like any other subdir.
 	bedj: { type: 'file', fileExtensions: new Set(['.gz', '.tbi', '.csi', '.bb']), maxAge: day * 30, skipMs: halfDay },
 	// GDC bam slices and their index files, written by get_gdc_bam() in bam.js
-	bam: { type: 'file', fileExtensions: new Set(['.bam', '.bai']) }
+	bam: { type: 'file', fileExtensions: new Set(['.bam', '.bai']) },
+	/* external API responses written by cachedFetch.js, only when serverconfig.features.extApiCache is set.
+	Flat files named by a sha1 hash without an extension, hence the '' extension. The cache is meant to
+	persist across server restarts, so the maxAge is long; a cache read does not update the file mtime. */
+	extApiResponse: { type: 'file', fileExtensions: new Set(['']), maxAge: day * 365, skipMs: halfDay }
 } as const satisfies Record<string, CacheRegistryItem>
 
 type CacheRegistry = typeof cacheRegistry

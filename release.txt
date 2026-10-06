@@ -1,1 +1,2 @@
-
+Features:
+- the extApiResponse cache subdir is declared in cacheRegistry and evicted by CacheManager after 365 days, which serverconfig.features.cacheMonitor.subdirs.extApiResponse may override; cached responses are now written directly under extApiResponse/, and the serverconfig.features.extApiCache values are no longer used as subdir names, so previously cached responses are not reused and the old subdirs may be deleted
