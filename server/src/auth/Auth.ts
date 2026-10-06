@@ -1,8 +1,8 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
-import mm from 'micromatch'
+import pm from 'picomatch'
 
-const { isMatch: mmIsMatch } = mm
+const { isMatch: pmIsMatch } = pm
 
 // The auth session store is a two-level Map keyed by [dslabel][sessionId]. Both keys are
 // request-controlled (dslabel from req.query/JWT payloads, sessionId from getSessionId()'s
@@ -54,7 +54,7 @@ export function stripBasepath(path: string, basepath = '') {
 }
 
 function isMatch(path: string, pattern: string) {
-	return mmIsMatch(path, pattern, { nocase: true })
+	return pmIsMatch(path, pattern, { nocase: true })
 }
 
 // returns true if a client-supplied value matches a single dsCredentials key: the '*' wildcard

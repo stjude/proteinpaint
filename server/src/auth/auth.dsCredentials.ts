@@ -1,7 +1,7 @@
 import { addDemoTokenCred } from './auth.demoToken.ts'
-import mm from 'micromatch'
+import pm from 'picomatch'
 
-const { isMatch } = mm
+const { isMatch } = pm
 
 // NOTES:
 // 1. list keys in the desired matching order, for example, the catch-all '*' pattern should be entered last
