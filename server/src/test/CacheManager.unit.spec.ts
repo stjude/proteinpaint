@@ -1,8 +1,7 @@
 import tape from 'tape'
 import path from 'path'
 import fs from 'fs'
-import { CacheManager } from '#src/CacheManager.ts'
-import { cacheJobPolicies } from '#src/utils/cacheOrRecompute.ts'
+import { CacheManager, cacheRegistry } from '#src/CacheManager.ts'
 
 /** Tests
  * - init() cache files
@@ -44,7 +43,6 @@ tape('defaults', function (test) {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							maxPending: 5,
 							absPath: `${m.cachedir}/de`,
 							skipUntil: 0
 						},
@@ -52,7 +50,6 @@ tape('defaults', function (test) {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							maxPending: 5,
 							absPath: `${m.cachedir}/dm`,
 							skipUntil: 0
 						},
@@ -60,9 +57,6 @@ tape('defaults', function (test) {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							// lower than the other analyses: each pending DMR job fans out to
-							// dmrBatchConcurrency rust processes, so the real ceiling is the product
-							maxPending: 2,
 							absPath: `${m.cachedir}/dmr`,
 							skipUntil: 0
 						},
@@ -70,8 +64,6 @@ tape('defaults', function (test) {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							// same fan-out as a scan, same ceiling
-							maxPending: 2,
 							absPath: `${m.cachedir}/geneBodyMeth`,
 							skipUntil: 0
 						},
@@ -79,7 +71,6 @@ tape('defaults', function (test) {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							maxPending: 5,
 							absPath: `${m.cachedir}/gsea`,
 							skipUntil: 0
 						},
@@ -87,7 +78,6 @@ tape('defaults', function (test) {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							maxPending: 5,
 							absPath: `${m.cachedir}/grin2`,
 							skipUntil: 0
 						},
@@ -95,7 +85,6 @@ tape('defaults', function (test) {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							maxPending: 5,
 							absPath: `${m.cachedir}/topve`,
 							skipUntil: 0
 						},
@@ -103,8 +92,6 @@ tape('defaults', function (test) {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							// many small per-case fetches rather than a few heavy computes
-							maxPending: 200,
 							absPath: `${m.cachedir}/gdcCounts`,
 							skipUntil: 0
 						},
@@ -120,13 +107,6 @@ tape('defaults', function (test) {
 							maxSize: 5000000000,
 							skipMs: 43200000,
 							absPath: `${m.cachedir}/massSessionTrash`,
-							skipUntil: 0
-						},
-						daAnalysis: {
-							maxAge: 5184000000,
-							maxSize: 5000000000,
-							skipMs: 43200000,
-							absPath: `${m.cachedir}/daAnalysis`,
 							skipUntil: 0
 						},
 						wsitiles: {
@@ -173,7 +153,6 @@ tape('defaults', function (test) {
 							geneBodyMeth: { deletedCount: 0, totalCount: 0 },
 							topve: { deletedCount: 0, totalCount: 0 },
 							gdcCounts: { deletedCount: 0, totalCount: 0 },
-							daAnalysis: { deletedCount: 0, totalCount: 0 },
 							wsitiles: { deletedCount: 0, totalCount: 0 },
 							bedj: { deletedCount: 0, totalCount: 0 },
 							bam: { deletedCount: 0, totalCount: 0 }
@@ -221,118 +200,108 @@ tape('move or delete by maxAge', test => {
 	// rounded down enough that trash files may be deleted 1 iteration sooner, has
 	// to subtract 5 milliseconds or less for less flakiness
 	const maxAge = interval - 3
-	const monitor = new CacheManager({
-		//quiet: true,
-		cachedir,
-		interval,
-		subdirs: {
-			// Clear optional default entries so they are not included in the test.
-			// cacheOrRecompute subdirs (de/dm/gsea/grin2/topve) cannot be disabled
-			// — they auto-register from utils/cacheOrRecompute.ts — but their presence does
-			// not affect this test, which only seeds files into test0/trash.
-			massSession: undefined,
-			massSessionTrash: undefined,
-			daAnalysis: undefined,
-			test0: {
-				maxAge,
-				moveTo: 'trash'
-			},
-			trash: {
-				// lifetime is twice as long as in test0 subdir;
-				// check the trash subdir 1/2 as often than test0
-				maxAge: maxAge * 2,
-				skipMs: interval * 2
+	const monitor = new CacheManager(
+		{
+			//quiet: true,
+			cachedir,
+			interval,
+			callbacks: {
+				preStart: m => {
+					const subdirs = Object.fromEntries(m.subdirs.entries())
+					test.deepEqual(
+						subdirs.test0,
+						{
+							maxAge,
+							maxSize: 5000000000,
+							skipMs: 0,
+							absPath: `${cachedir}/test0`,
+							skipUntil: 0,
+							moveTo: 'trash',
+							movePath: `${cachedir}/trash`
+						},
+						`should set override test0 subdir properties`
+					)
+					test.deepEqual(
+						subdirs.trash,
+						{
+							maxAge: maxAge * 2,
+							maxSize: 5000000000,
+							skipMs: interval * 2,
+							absPath: `${cachedir}/trash`,
+							skipUntil: 0
+						},
+						`should set override trash subdir properties`
+					)
+
+					const now = Date.now()
+					for (const i of [1, 2, 3]) {
+						const f = `${cachedir}/test0/file-${i}`
+						// decimals will be interpreted into milliseconds by utimesSync;
+						// the maxAge in this test has to be fine-tuned to avoid flaky subdir check results
+						// due to variations in file stat performance and timestamp across OS
+						const time = (now + (i - 1) * maxAge) / 1000
+						fs.openSync(f, 'w')
+						fs.utimesSync(f, time, time)
+					}
+				},
+				postCheck: results => {
+					// console.log(152, '--- postCheck()', numChecks, results)
+					// check #0 is before setInterval()
+					const expected =
+						numChecks < 1
+							? { deletedCount: 0, totalCount: 3 }
+							: numChecks == 1 // file with mtime == maxAge expires
+							? { deletedCount: 1, totalCount: 3 }
+							: numChecks == 2 // file with mtime == 2*maxAge expires
+							? { deletedCount: 1, totalCount: 2 }
+							: numChecks == 3 // file with mtime == 3*maxAge expires
+							? { deletedCount: 1, totalCount: 1 }
+							: { deletedCount: 0, totalCount: 0 }
+
+					test.deepEqual(results.test0, expected, `should have expected test0 subdir results after check #${numChecks}`)
+
+					// // NOTE: trash deletion is flaky when using interval and maxAge < 1 second,
+					// // will only test at the end that there are no remaining files
+					// const expectedTrash =
+					// 	numChecks == 0
+					// 		? { deletedCount: 0, totalCount: 0 }
+					// 		: numChecks == 1
+					// 		? undefined
+					// 		: numChecks == 2 // file with mtime == 1*maxAge expires, since maxAge in trash is 2*maxAge
+					// 		? { deletedCount: 1, totalCount: 2 }
+					// 		: numChecks == 3
+					// 		? undefined
+					// 		: numChecks == 4 // files with mtime == 2*maxAge and 3*maxAge expire, both mtimes are less than 2*2*maxAge
+					// 		? results.trash // however, system file stat does not give reliable result in github CI
+					// 		: results.trash != undefined // for check #5, should not equal the previous result.
+					// 		? { deletedCount: 2, totalCount: 2 } // so the result is either undefined or delete 2 files,
+					// 		: undefined // depending on the results of check #4
+
+					// // don't test results from check #4 because it's flaky, test check #5 instead
+					// if (numChecks !== 4)
+					// 	test.deepEqual(results.trash, expectedTrash, `should have expected trash after check #${numChecks}`)
+
+					numChecks++
+					if (numChecks > 6) {
+						monitor.stop()
+						const remainingFiles = fs.readdirSync(`${cachedir}/test0`)
+						test.equal(remainingFiles.length, 0, `should have no remaining cache files after the test`)
+						const remainingTrash = fs.readdirSync(`${cachedir}/trash`)
+						test.equal(remainingTrash.length, 0, `should have no remaining trash files after the test`)
+						fs.rmSync(cachedir, { force: true, recursive: true })
+						test.end()
+					}
+				}
 			}
 		},
-		callbacks: {
-			preStart: m => {
-				const subdirs = Object.fromEntries(m.subdirs.entries())
-				test.deepEqual(
-					subdirs.test0,
-					{
-						maxAge,
-						maxSize: 5000000000,
-						skipMs: 0,
-						absPath: `${cachedir}/test0`,
-						skipUntil: 0,
-						moveTo: 'trash',
-						movePath: `${cachedir}/trash`
-					},
-					`should set override test0 subdir properties`
-				)
-				test.deepEqual(
-					subdirs.trash,
-					{
-						maxAge: maxAge * 2,
-						maxSize: 5000000000,
-						skipMs: interval * 2,
-						absPath: `${cachedir}/trash`,
-						skipUntil: 0
-					},
-					`should set override trash subdir properties`
-				)
-
-				const now = Date.now()
-				for (const i of [1, 2, 3]) {
-					const f = `${cachedir}/test0/file-${i}`
-					// decimals will be interpreted into milliseconds by utimesSync;
-					// the maxAge in this test has to be fine-tuned to avoid flaky subdir check results
-					// due to variations in file stat performance and timestamp across OS
-					const time = (now + (i - 1) * maxAge) / 1000
-					fs.openSync(f, 'w')
-					fs.utimesSync(f, time, time)
-				}
-			},
-			postCheck: results => {
-				// console.log(152, '--- postCheck()', numChecks, results)
-				// check #0 is before setInterval()
-				const expected =
-					numChecks < 1
-						? { deletedCount: 0, totalCount: 3 }
-						: numChecks == 1 // file with mtime == maxAge expires
-						? { deletedCount: 1, totalCount: 3 }
-						: numChecks == 2 // file with mtime == 2*maxAge expires
-						? { deletedCount: 1, totalCount: 2 }
-						: numChecks == 3 // file with mtime == 3*maxAge expires
-						? { deletedCount: 1, totalCount: 1 }
-						: { deletedCount: 0, totalCount: 0 }
-
-				test.deepEqual(results.test0, expected, `should have expected test0 subdir results after check #${numChecks}`)
-
-				// // NOTE: trash deletion is flaky when using interval and maxAge < 1 second,
-				// // will only test at the end that there are no remaining files
-				// const expectedTrash =
-				// 	numChecks == 0
-				// 		? { deletedCount: 0, totalCount: 0 }
-				// 		: numChecks == 1
-				// 		? undefined
-				// 		: numChecks == 2 // file with mtime == 1*maxAge expires, since maxAge in trash is 2*maxAge
-				// 		? { deletedCount: 1, totalCount: 2 }
-				// 		: numChecks == 3
-				// 		? undefined
-				// 		: numChecks == 4 // files with mtime == 2*maxAge and 3*maxAge expire, both mtimes are less than 2*2*maxAge
-				// 		? results.trash // however, system file stat does not give reliable result in github CI
-				// 		: results.trash != undefined // for check #5, should not equal the previous result.
-				// 		? { deletedCount: 2, totalCount: 2 } // so the result is either undefined or delete 2 files,
-				// 		: undefined // depending on the results of check #4
-
-				// // don't test results from check #4 because it's flaky, test check #5 instead
-				// if (numChecks !== 4)
-				// 	test.deepEqual(results.trash, expectedTrash, `should have expected trash after check #${numChecks}`)
-
-				numChecks++
-				if (numChecks > 6) {
-					monitor.stop()
-					const remainingFiles = fs.readdirSync(`${cachedir}/test0`)
-					test.equal(remainingFiles.length, 0, `should have no remaining cache files after the test`)
-					const remainingTrash = fs.readdirSync(`${cachedir}/trash`)
-					test.equal(remainingTrash.length, 0, `should have no remaining trash files after the test`)
-					fs.rmSync(cachedir, { force: true, recursive: true })
-					test.end()
-				}
-			}
+		// a test registry, so that the real subdirs are not included in the test
+		{
+			test0: { type: 'session', maxAge, skipMs: 0, moveTo: 'trash' },
+			// lifetime is twice as long as in test0 subdir;
+			// check the trash subdir 1/2 as often than test0
+			trash: { type: 'session', maxAge: maxAge * 2, skipMs: interval * 2 }
 		}
-	})
+	)
 })
 
 tape('delete by maxSize', test => {
@@ -343,52 +312,53 @@ tape('delete by maxSize', test => {
 	fs.rmSync(cachedir, { force: true, recursive: true })
 
 	const interval = 100
-	const monitor = new CacheManager({
-		quiet: true,
-		cachedir,
-		interval,
-		subdirs: {
-			massSession: undefined,
-			massSessionTrash: undefined,
-			daAnalysis: undefined,
-			test0: {
-				maxAge: 60000, // no file expires by age
-				maxSize: 25 // bytes, four 10-byte files exceed this limit
+	const monitor = new CacheManager(
+		{
+			quiet: true,
+			cachedir,
+			interval,
+			callbacks: {
+				preStart: () => {
+					const now = Date.now()
+					// file-4 is newer than the interval and must not be deleted even when over maxSize
+					for (const [i, ageMs] of [
+						[1, 10000],
+						[2, 5000],
+						[3, 3000],
+						[4, 0]
+					]) {
+						const f = `${cachedir}/test0/file-${i}`
+						fs.writeFileSync(f, '0123456789')
+						const time = (now - ageMs) / 1000
+						fs.utimesSync(f, time, time)
+					}
+				},
+				postCheck: results => {
+					if (monitor.intervalId) {
+						// the initial check has been tested below, before setInterval() was called
+						monitor.stop()
+						fs.rmSync(cachedir, { force: true, recursive: true })
+						test.end()
+						return
+					}
+					test.deepEqual(results.test0, { deletedCount: 2, totalCount: 4 }, 'should delete files until below maxSize')
+					test.deepEqual(
+						fs.readdirSync(`${cachedir}/test0`).sort(),
+						['file-3', 'file-4'],
+						'should delete the oldest files first'
+					)
+				}
 			}
 		},
-		callbacks: {
-			preStart: () => {
-				const now = Date.now()
-				// file-4 is newer than the interval and must not be deleted even when over maxSize
-				for (const [i, ageMs] of [
-					[1, 10000],
-					[2, 5000],
-					[3, 3000],
-					[4, 0]
-				]) {
-					const f = `${cachedir}/test0/file-${i}`
-					fs.writeFileSync(f, '0123456789')
-					const time = (now - ageMs) / 1000
-					fs.utimesSync(f, time, time)
-				}
-			},
-			postCheck: results => {
-				if (monitor.intervalId) {
-					// the initial check has been tested below, before setInterval() was called
-					monitor.stop()
-					fs.rmSync(cachedir, { force: true, recursive: true })
-					test.end()
-					return
-				}
-				test.deepEqual(results.test0, { deletedCount: 2, totalCount: 4 }, 'should delete files until below maxSize')
-				test.deepEqual(
-					fs.readdirSync(`${cachedir}/test0`).sort(),
-					['file-3', 'file-4'],
-					'should delete the oldest files first'
-				)
+		{
+			test0: {
+				type: 'session',
+				maxAge: 60000, // no file expires by age
+				maxSize: 25, // bytes, four 10-byte files exceed this limit
+				skipMs: 0
 			}
 		}
-	})
+	)
 })
 
 tape('subdir overrides', test => {
@@ -442,42 +412,40 @@ tape('limit deletion by file extension', test => {
 
 	const interval = 100
 	// has to divide millisecond interval by 2 to force file to be rounded
-	const monitor = new CacheManager({
-		//quiet: true,
-		cachedir,
-		interval,
-		subdirs: {
-			// Clear optional default entries; required cacheOrRecompute
-			// subdirs auto-register but stay empty during this test.
-			massSession: undefined,
-			massSessionTrash: undefined,
-			daAnalysis: undefined,
+	const monitor = new CacheManager(
+		{
+			//quiet: true,
+			cachedir,
+			interval,
+			callbacks: {
+				preStart: () => {
+					for (const i of [1, 2, 3]) {
+						const f = `${cachedir}/test0/file-${i}.${i === 1 ? 'json' : 'txt'}`
+						fs.openSync(f, 'w')
+					}
+				},
+				postCheck: results => {
+					const remainingFiles = fs.readdirSync(`${cachedir}/test0`)
+					if (monitor.intervalId) {
+						monitor.stop()
+						test.equal(remainingFiles.length, 1, `should have no remaining cache files after the test`)
+						fs.rmSync(cachedir, { force: true, recursive: true })
+						test.end()
+						return
+					}
+					test.deepEqual(results.test0, { deletedCount: 2, totalCount: 2 }, `should only files with matching extension`)
+					test.equal(remainingFiles.length, 1, `should have no remaining cache files after the test`)
+				}
+			}
+		},
+		{
 			test0: {
+				type: 'file',
 				maxAge: -10, // force deletion of all files (with matching extension) by maxAge
 				fileExtensions: new Set(['.txt'])
 			}
-		},
-		callbacks: {
-			preStart: () => {
-				for (const i of [1, 2, 3]) {
-					const f = `${cachedir}/test0/file-${i}.${i === 1 ? 'json' : 'txt'}`
-					fs.openSync(f, 'w')
-				}
-			},
-			postCheck: results => {
-				const remainingFiles = fs.readdirSync(`${cachedir}/test0`)
-				if (monitor.intervalId) {
-					monitor.stop()
-					test.equal(remainingFiles.length, 1, `should have no remaining cache files after the test`)
-					fs.rmSync(cachedir, { force: true, recursive: true })
-					test.end()
-					return
-				}
-				test.deepEqual(results.test0, { deletedCount: 2, totalCount: 2 }, `should only files with matching extension`)
-				test.equal(remainingFiles.length, 1, `should have no remaining cache files after the test`)
-			}
 		}
-	})
+	)
 })
 
 tape('checks concurrency and postStop callback', test => {
@@ -542,57 +510,52 @@ tape('may skip start()', test => {
 	}, 200)
 })
 
-tape('auto-registers every cacheOrRecompute subdir', test => {
+tape('creates every cacheRegistry subdir', test => {
 	const cachedir = path.join(process.cwd(), '.cache-test5')
 	fs.rmSync(cachedir, { force: true, recursive: true })
 	const monitor = new CacheManager({
 		quiet: true,
 		cachedir,
 		mustExitPendingValidation: true,
+		// a disabled feature still has its subdir created
+		subdirs: { massSession: { maxAge: 0 } },
 		callbacks: {}
 	})
-	for (const name of Object.keys(cacheJobPolicies)) {
-		const registered = monitor.subdirs.get(name)
-		test.ok(registered, `subdir '${name}' from cacheJobPolicies is registered`)
+	for (const name of Object.keys(cacheRegistry)) {
+		test.ok(monitor.subdirs.get(name), `subdir '${name}' from cacheRegistry is registered`)
+		test.ok(fs.existsSync(path.join(cachedir, name)), `subdir '${name}' is created`)
 	}
 	fs.rmSync(cachedir, { force: true, recursive: true })
 	test.end()
 })
 
-tape('rejects attempts to disable a required cacheOrRecompute subdir', test => {
+tape('rejects invalid subdir overrides', test => {
 	const cachedir = path.join(process.cwd(), '.cache-test6')
 	fs.rmSync(cachedir, { force: true, recursive: true })
+	const construct = subdirs => () =>
+		new CacheManager({ quiet: true, cachedir, mustExitPendingValidation: true, subdirs, callbacks: {} })
+	for (const name of ['de', 'bam', 'massSession']) {
+		test.throws(
+			construct({ [name]: undefined }),
+			new RegExp(`cacheMonitor.subdirs.${name} must be an object of overrides, a cache subdir cannot be disabled`),
+			`constructor throws synchronously when the ${name} subdir is set to undefined`
+		)
+	}
 	test.throws(
-		() =>
-			new CacheManager({
-				quiet: true,
-				cachedir,
-				mustExitPendingValidation: true,
-				subdirs: { de: undefined },
-				callbacks: {}
-			}),
-		/Cannot disable required cacheOrRecompute subdir 'de'/,
-		'constructor throws synchronously when a required subdir is set to undefined'
+		construct({ massSesion: { maxAge: 0 } }),
+		/Unknown cache subdir 'massSesion'/,
+		'constructor throws on a subdir that is not in cacheRegistry'
 	)
-	fs.rmSync(cachedir, { force: true, recursive: true })
-	test.end()
-})
-
-tape('rejects attempts to disable the bam subdir', test => {
-	const cachedir = path.join(process.cwd(), '.cache-test9')
-	fs.rmSync(cachedir, { force: true, recursive: true })
 	test.throws(
-		() =>
-			new CacheManager({
-				quiet: true,
-				cachedir,
-				mustExitPendingValidation: true,
-				subdirs: { bam: undefined },
-				callbacks: {}
-			}),
-		/Cannot disable required subdir 'bam'/,
-		'constructor throws synchronously when the bam subdir is set to undefined'
+		construct({ bam: { type: 'compute' } }),
+		/cacheMonitor.subdirs.bam.type cannot be overridden/,
+		'constructor throws on an override of type'
 	)
-	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.throws(
+		construct({ de: { maxPending: 100 } }),
+		/cacheMonitor.subdirs.de.maxPending cannot be overridden/,
+		'constructor throws on an override of maxPending'
+	)
+	test.equal(fs.existsSync(cachedir), false, 'should not create the cachedir when an override is invalid')
 	test.end()
 })
