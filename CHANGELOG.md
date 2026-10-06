@@ -10,6 +10,7 @@ Features:
 - serverconfig.features.cacheMonitor.subdirs is validated at launch: a subdir that is not in the registry, a subdir set to undefined, or an option other than maxAge, maxSize, skipMs, moveTo or fileExtensions now fails the launch instead of being used or ignored
 - the daAnalysis cache subdir is no longer created or swept; a leftover daAnalysis dir may be deleted
 - the extApiResponse cache subdir is declared in cacheRegistry and evicted by CacheManager after 365 days, which serverconfig.features.cacheMonitor.subdirs.extApiResponse may override; cached responses are now written directly under extApiResponse/, and the serverconfig.features.extApiCache values are no longer used as subdir names, so previously cached responses are not reused and the old subdirs may be deleted
+- the snpgt cache subdir is declared in cacheRegistry and evicted by CacheManager after 30 days, which serverconfig.features.cacheMonitor.subdirs.snpgt may override
 
 Fixes:
 - the DMR plot shows the R backend toggle only in debugmode, and the server accepts the R backend only in debugmode
@@ -17,6 +18,7 @@ Fixes:
 - gene set enrichment on a differential methylation result ranks each gene by the mean of its promoters, instead of by its highest one
 - differential methylation: a violin plot opened from a volcano hit is labelled with the unit of the values it shows, on a dataset whose promoter matrix and methylation terms use different units
 - differential methylation runs on an element matrix that gives its chromosomes as a chrom_lengths attribute, as a CpG-level matrix does, instead of a chromosome per row
+- serverconfig.cache_snpgt is no longer used, and may be removed from a serverconfig.json; snp genotype cache files are always written under [cachedir]/snpgt
 
 
 ## 2.217.0
