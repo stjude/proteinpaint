@@ -124,8 +124,8 @@ tape('testedElementValues() - a term naming its element type reads that one row'
 	t.deepEqual(testedElementValues(term, out), out.values, 'no type named: a span, every overlapping row')
 	t.deepEqual(
 		testedElementValues({ start: 1, stop: 9, elementType: 'promoter' }, out),
-		out.values,
-		'no row has these exact coordinates: every overlapping row, not nothing'
+		[],
+		'no row has these exact coordinates: no row, not the overlapping ones'
 	)
 	t.end()
 })

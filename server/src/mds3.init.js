@@ -2380,12 +2380,12 @@ export function readsCpgShard(q, term) {
 
 /* The rows of an element query that one term reads. A term naming its element type IS one element,
 whose coordinates are the term's, so only that row counts: TSS windows of neighbouring promoters
-overlap, and averaging them in plotted a blend of the tested promoter and the one beside it. Any
-other term is a span and keeps every overlapping row. */
+overlap, and averaging them in plotted a blend of the tested promoter and the one beside it. When
+no row has those coordinates the term reads no row, and so has no data, rather than its neighbours.
+Any other term is a span and keeps every overlapping row. */
 export function testedElementValues(term, out) {
 	if (term.elementType == undefined) return out.values
-	const exact = out.values.filter((_, i) => out.rows[i].start === term.start && out.rows[i].stop === term.stop)
-	return exact.length ? exact : out.values
+	return out.values.filter((_, i) => out.rows[i].start === term.start && out.rows[i].stop === term.stop)
 }
 
 /* A methylation value on the unit the getter returns, from the unit it is stored in: beta to
