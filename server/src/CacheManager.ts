@@ -329,9 +329,12 @@ export class CacheManager {
 
 			/* walk the whole subdir tree, so that a file in a nested dir is evicted like a file at the top level.
 			A Dirent and lstat() do not follow a symlink: a symlink is evicted like a file and never descended into,
-			so that the sweep cannot reach files outside of the subdir. An entry that is removed during the walk,
-			such as by a concurrent request, is skipped. An error on one entry, such as a nested dir that cannot be
-			read, is logged and the walk continues with the next entry. */
+			so that the sweep cannot reach files outside of the subdir. The entry types are from a readdir snapshot,
+			and node cannot list or delete relative to an open dir handle, so the walk uses real paths and checks
+			that a path is still real right before it is used: before descending into a dir, and before deleting from
+			a dir. A path that has changed to go through a symlink is skipped and logged. An entry that is removed
+			during the walk, such as by a concurrent request, is skipped. An error on one entry, such as a nested
+			dir that cannot be read, is logged and the walk continues with the next entry. */
 			const sweep = async (dir: string, relDir: string) => {
 				const entries = await ignoreMissing(fs.promises.readdir(dir, { withFileTypes: true }))
 				for (const entry of entries || []) {
@@ -339,8 +342,9 @@ export class CacheManager {
 					const relPath = path.join(relDir, entry.name)
 					try {
 						if (entry.isDirectory()) {
+							if (!(await isRealPath(fp))) continue
 							await sweep(fp, relPath)
-							if (await mayRemoveEmptyDir(fp, minTime)) removedDirCount++
+							if ((await isRealPath(dir)) && (await mayRemoveEmptyDir(fp, minTime))) removedDirCount++
 							continue
 						}
 						if (fileExtensions?.size && !fileExtensions.has(cacheFileExtension(entry.name))) {
@@ -353,6 +357,7 @@ export class CacheManager {
 						const time = s.mtimeMs
 						// console.log(188, entry.name, time < minTime, time, minTime)
 						if (time < minTime) {
+							if (!(await isRealPath(dir))) continue
 							if (movePath) {
 								// keep the relative path, so that files of the same name in different dirs do not overwrite each other
 								const dest = path.join(movePath, relPath)
@@ -375,7 +380,10 @@ export class CacheManager {
 					}
 				}
 			}
-			await sweep(absPath, '')
+			// the subdir itself may be a symlink set up by a deployer, so it is resolved once at the start
+			const root = await ignoreMissing(fs.promises.realpath(absPath))
+			if (!root) return { deletedCount: 0, totalCount: 0 }
+			await sweep(root, '')
 
 			files.sort((i, j) => i.time - j.time) // ascending, so that the oldest files are deleted first
 			if (totalSize >= maxSize) {
@@ -389,7 +397,14 @@ export class CacheManager {
 					// do not delete files too soon that it may affect a current file read
 					if (f.time > minMtime) break
 
-					await ignoreMissing(fs.promises.unlink(f.path))
+					try {
+						if (!(await isRealPath(path.dirname(f.path)))) continue
+						await ignoreMissing(fs.promises.unlink(f.path))
+					} catch (e) {
+						errorCount++
+						console.error(`Error in mayDeleteCacheFiles() for ${f.path}: ${e}`)
+						continue
+					}
 					f.deleted = true
 					deletedCount++
 					deletedSize += f.size
@@ -435,12 +450,22 @@ async function ignoreMissing<T>(promise: Promise<T>): Promise<T | undefined> {
 	}
 }
 
+/* returns true if p, a real path when the sweep listed it, is still a real path, false if it no longer exists;
+throws if a dir level of p has been replaced by a symlink since, so that p now resolves to another location */
+async function isRealPath(p: string): Promise<boolean> {
+	const real = await ignoreMissing(fs.promises.realpath(p))
+	if (real === undefined) return false
+	if (real != p) throw 'path has changed to resolve through a symlink'
+	return true
+}
+
 /* removes a dir that is empty and has not been modified since minTime, the same cutoff as an expired file;
 a dir that just had its last file evicted has a new mtime, so it is removed by a later sweep, and a recently
 created dir, such as one that cache_index is about to download an index into, is kept */
 async function mayRemoveEmptyDir(dir: string, minTime: number): Promise<boolean> {
 	const s = await ignoreMissing(fs.promises.lstat(dir))
-	if (!s || s.mtimeMs >= minTime) return false
+	// a symlink that has replaced the dir since it was listed is not removed here
+	if (!s || !s.isDirectory() || s.mtimeMs >= minTime) return false
 	try {
 		await fs.promises.rmdir(dir) // only removes an empty dir
 		return true

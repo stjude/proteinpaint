@@ -609,6 +609,82 @@ tape('do not follow symlinks', async test => {
 	test.end()
 })
 
+/* replaces the dir at `from` by a symlink to `to`, once fs.promises[method] is called with `trigger`,
+after that call has returned, as if the dir was replaced right after the sweep listed or stated it */
+function swapDirAfter(method: 'readdir' | 'lstat', trigger: string, from: string, to: string) {
+	const original = fs.promises[method] as any
+	;(fs.promises as any)[method] = async (p, ...args) => {
+		const result = await original(p, ...args)
+		if (p == trigger) {
+			fs.rmSync(from, { recursive: true })
+			fs.symlinkSync(to, from)
+		}
+		return result
+	}
+	return () => ((fs.promises as any)[method] = original)
+}
+
+tape('do not descend into a dir that is replaced by a symlink after it is listed', async test => {
+	const cachedir = path.join(process.cwd(), '.cache-test17')
+	const outside = path.join(process.cwd(), '.cache-test17-outside')
+	for (const d of [cachedir, outside]) fs.rmSync(d, { force: true, recursive: true })
+	fs.mkdirSync(outside)
+	fs.writeFileSync(`${outside}/f`, 'x')
+	const monitor = new CacheManager(
+		{ quiet: true, cachedir, mustExitPendingValidation: true, callbacks: {} },
+		{ test0: { type: 'session', maxAge: -10 } }
+	)
+	const dir = `${cachedir}/test0`
+	fs.mkdirSync(`${dir}/a`)
+	fs.writeFileSync(`${dir}/a/f`, 'x')
+	const restore = swapDirAfter('readdir', dir, `${dir}/a`, outside)
+	const consoleError = console.error
+	const errors: string[] = []
+	console.error = (msg: string) => errors.push(msg)
+	try {
+		await monitor.mayDeleteCacheFiles('test0', monitor.subdirs.get('test0'), 0)
+	} finally {
+		console.error = consoleError
+		restore()
+	}
+	test.deepEqual(fs.readdirSync(outside), ['f'], 'should not delete a file in the dir that the symlink points to')
+	test.equal(errors.length, 1, 'should log one error')
+	test.ok(errors[0]?.includes('test0/a'), 'should log the path of the replaced dir')
+	for (const d of [cachedir, outside]) fs.rmSync(d, { force: true, recursive: true })
+	test.end()
+})
+
+tape('do not delete from a dir that is replaced by a symlink during the walk', async test => {
+	const cachedir = path.join(process.cwd(), '.cache-test18')
+	const outside = path.join(process.cwd(), '.cache-test18-outside')
+	for (const d of [cachedir, outside]) fs.rmSync(d, { force: true, recursive: true })
+	fs.mkdirSync(outside)
+	fs.writeFileSync(`${outside}/f`, 'x')
+	const monitor = new CacheManager(
+		{ quiet: true, cachedir, mustExitPendingValidation: true, callbacks: {} },
+		{ test0: { type: 'session', maxAge: -10 } }
+	)
+	const dir = `${cachedir}/test0`
+	fs.mkdirSync(`${dir}/a`)
+	fs.writeFileSync(`${dir}/a/f`, 'x')
+	// the parent dir is replaced after the expired file is stated and before it is deleted
+	const restore = swapDirAfter('lstat', `${dir}/a/f`, `${dir}/a`, outside)
+	const consoleError = console.error
+	const errors: string[] = []
+	console.error = (msg: string) => errors.push(msg)
+	try {
+		await monitor.mayDeleteCacheFiles('test0', monitor.subdirs.get('test0'), 0)
+	} finally {
+		console.error = consoleError
+		restore()
+	}
+	test.deepEqual(fs.readdirSync(outside), ['f'], 'should not delete a file in the dir that the symlink points to')
+	test.equal(errors.length, 1, 'should log one error')
+	test.ok(errors[0]?.includes('test0/a/f'), 'should log the path of the file that is not deleted')
+	for (const d of [cachedir, outside]) fs.rmSync(d, { force: true, recursive: true })
+	test.end()
+})
+
 tape('move nested files with their relative path', async test => {
 	const cachedir = path.join(process.cwd(), '.cache-test14')
 	fs.rmSync(cachedir, { force: true, recursive: true })
