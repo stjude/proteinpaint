@@ -419,7 +419,7 @@ export class ScatterLegend {
 					.attr('name', 'sjpp-scatter-legend-label')
 					.attr(
 						'data-testid',
-						(cname == 'shape' ? 'sjpp-scatter-shape-legend-label-' : 'sjpp-scatter-color-legend-label') + name
+						(cname == 'shape' ? 'sjpp-scatter-shape-legend-label-' : 'sjpp-scatter-color-legend-label-') + key
 					)
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.text(text)

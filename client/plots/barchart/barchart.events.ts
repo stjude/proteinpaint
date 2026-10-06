@@ -495,7 +495,6 @@ function handle_click(event, self, chart) {
 					self.app.tip.hide()
 					window.alert("Couldn't render samples")
 					console.trace(e)
-					throw e
 				}
 			}
 		})

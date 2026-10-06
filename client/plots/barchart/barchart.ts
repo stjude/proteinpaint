@@ -28,7 +28,6 @@ import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
 
 export class Barchart extends PlotBase implements RxComponent {
 	static type = 'barchart'
-
 	type: string
 	configTermKeys = ['term', 'term0', 'term2']
 	download!: any
@@ -639,6 +638,7 @@ export class Barchart extends PlotBase implements RxComponent {
 	}
 
 	processData(chartsData) {
+		const uncomputableCharts = this.getUncomputableChartIds()
 		this.seriesOrder = this.setMaxVisibleTotals(chartsData)
 		if (!chartsData.charts.length) {
 			this.seriesOrder = []
@@ -647,7 +647,6 @@ export class Barchart extends PlotBase implements RxComponent {
 		}
 
 		const rows = chartsData.refs.rows
-
 		this.barSorter = (a, b) => this.seriesOrder.indexOf(a) - this.seriesOrder.indexOf(b)
 		this.overlaySorter = chartsData.refs.useRowOrder
 			? (a, b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
@@ -660,13 +659,6 @@ export class Barchart extends PlotBase implements RxComponent {
 						? -1
 						: 1
 		// Don't render charts from uncomputable values
-		const uncomputableCharts = new Set(
-			Object.entries<any>(this.config.term0?.term.values || {}).flatMap(([key, valueInfo]) =>
-				valueInfo.computable === false || valueInfo.uncomputable === true
-					? [key, valueInfo.label].filter(value => value != null).map(String)
-					: []
-			)
-		)
 		this.visibleCharts = chartsData.charts.filter(
 			chart => chart.visibleSerieses.length && !uncomputableCharts.has(String(chart.chartId))
 		)
@@ -695,7 +687,18 @@ export class Barchart extends PlotBase implements RxComponent {
 		return chartsData
 	}
 
+	getUncomputableChartIds() {
+		return new Set(
+			Object.entries<any>(this.config.term0?.term.values || {}).flatMap(([key, valueInfo]) =>
+				valueInfo.computable === false || valueInfo.uncomputable === true
+					? [key, valueInfo.label].filter(value => value != null).map(String)
+					: []
+			)
+		)
+	}
+
 	setMaxVisibleTotals(chartsData) {
+		const uncomputableCharts = this.getUncomputableChartIds()
 		// chartsData = this.currServerData
 		this.totalsByDataId = {}
 		const t1 = this.config.term
@@ -705,6 +708,7 @@ export class Barchart extends PlotBase implements RxComponent {
 		const visibleTotalsByChartSeriesId = {}
 		let maxVisibleAcrossCharts = 0
 		for (const chart of chartsData.charts) {
+			const isUncomputableChart = uncomputableCharts.has(String(chart.chartId))
 			if (!chart.settings) chart.settings = JSON.parse(rendererSettings)
 			Object.assign(chart.settings, this.settings)
 			chart.visibleTotal = 0
@@ -715,10 +719,11 @@ export class Barchart extends PlotBase implements RxComponent {
 				series.visibleTotal = series.visibleData.reduce((sum, a) => sum + a.total, 0)
 				if (!series.visibleTotal) return false
 				chart.visibleTotal += series.visibleTotal
-				if (!(series.seriesId in visibleTotalsByChartSeriesId))
+				if (!isUncomputableChart && !(series.seriesId in visibleTotalsByChartSeriesId))
 					visibleTotalsByChartSeriesId[series.seriesId] = series.visibleTotal
 				for (const data of series.data) {
 					data.seriesId = series.seriesId
+					if (isUncomputableChart) continue
 					if (
 						(t1.term.type == 'geneVariant' && t1.q.type == 'values') ||
 						(t2?.term.type == 'geneVariant' && t2?.q.type == 'values')
@@ -761,7 +766,7 @@ export class Barchart extends PlotBase implements RxComponent {
 			chart.maxVisibleSeriesTotal = chart.visibleSerieses.reduce((max, series) => {
 				return series.visibleTotal > max ? series.visibleTotal : max
 			}, 0)
-			if (chart.maxVisibleSeriesTotal > maxVisibleAcrossCharts) {
+			if (!isUncomputableChart && chart.maxVisibleSeriesTotal > maxVisibleAcrossCharts) {
 				maxVisibleAcrossCharts = chart.maxVisibleSeriesTotal
 			}
 		}

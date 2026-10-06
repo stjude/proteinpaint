@@ -17,7 +17,14 @@ export class ScatterLegendInteractivity {
 		const isColorTW = name == 'colorTW'
 		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 		// Only consider values that are computable
-		const hiddenCount = tw.q.hiddenValues ? Object.entries(tw.q.hiddenValues).filter(([, v]) => v !== 1).length : 0
+		const hiddenCount = tw.q.hiddenValues
+			? Object.keys(tw.q.hiddenValues).filter(key => {
+					const valueInfo =
+						tw.term.values?.[key] ??
+						Object.values<any>(tw.term.values || {}).find(value => String(value.label) == String(key))
+					return valueInfo?.computable !== false && valueInfo?.uncomputable !== true
+			  }).length
+			: 0
 		if (hidden && hiddenCount == 1) {
 			//show hidden category and skip menu
 			this.hideCategory(tw, key, false)
