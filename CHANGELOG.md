@@ -9,6 +9,7 @@ Features:
 - all server cache subdirs are declared in one cacheRegistry in CacheManager.ts, each with a type that sets its eviction defaults; every subdir is created at server launch, even when the feature that uses it is disabled
 - serverconfig.features.cacheMonitor.subdirs is validated at launch: a subdir that is not in the registry, a subdir set to undefined, or an option other than maxAge, maxSize, skipMs, moveTo or fileExtensions now fails the launch instead of being used or ignored
 - the daAnalysis cache subdir is no longer created or swept; a leftover daAnalysis dir may be deleted
+- the extApiResponse cache subdir is declared in cacheRegistry and evicted by CacheManager after 365 days, which serverconfig.features.cacheMonitor.subdirs.extApiResponse may override; cached responses are now written directly under extApiResponse/, and the serverconfig.features.extApiCache values are no longer used as subdir names, so previously cached responses are not reused and the old subdirs may be deleted
 
 Fixes:
 - the DMR plot shows the R backend toggle only in debugmode, and the server accepts the R backend only in debugmode
