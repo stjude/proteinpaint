@@ -10,7 +10,9 @@ export type DiffSpliceRequest = {
 	/** which engine. absent = server default (edgeR) */
 	method?: DiffSpliceMethod
 	/** leafcutter's own filters, applied by both engines so they test the same cluster set.
-	 * Sent as fractions of N, not absolute counts — see the note in the client validator. */
+	 * All are absolute integer counts. minSamplesPerIntron and minSamplesPerGroup are sample
+	 * counts, derived by the client from fractions of N with a floor (see validateDSSettings);
+	 * minCountsPerCluster is a read count and does not scale with N. */
 	minSamplesPerIntron: number
 	minSamplesPerGroup: number
 	minCountsPerCluster: number

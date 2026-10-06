@@ -145,6 +145,7 @@ export async function getDsCacheResult(
 	req: DiffSpliceRequest,
 	genomes: any
 ): Promise<{ result: DsCacheResult; cacheId: string }> {
+	validateDsFilters(req)
 	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof dsKeyInputs>, DsCacheResult>({
 		computeArgument: dsKeyInputs(req),
 		cacheSubdir: 'ds',
@@ -263,6 +264,22 @@ async function runDsFresh(
 }
 
 // ─── helpers ─── //
+
+/** The three leafcutter filters are absolute counts, and diffSpliceScreen.py casts them with
+ * int(): a fraction such as 0.02 would become 0, which disables the filter without any error.
+ * Rejected here instead, before the value can reach the cache key or the script. An absent value
+ * is allowed and leaves the script's own default in force. */
+export function validateDsFilters(req: Partial<DiffSpliceRequest>) {
+	const filters: [string, any, string][] = [
+		['minSamplesPerIntron', req.minSamplesPerIntron, 'sample count'],
+		['minSamplesPerGroup', req.minSamplesPerGroup, 'sample count'],
+		['minCountsPerCluster', req.minCountsPerCluster, 'read count']
+	]
+	for (const [key, v, unit] of filters) {
+		if (v === undefined || v === null) continue
+		if (!Number.isInteger(v) || v < 0) throw new Error(`${key} must be a non-negative integer ${unit}, got ${v}`)
+	}
+}
 
 /** The per-group sample cap in force for this dataset. A ds may override the default; a
  * non-positive or non-integer override is ignored rather than honoured, so a typo in a dataset

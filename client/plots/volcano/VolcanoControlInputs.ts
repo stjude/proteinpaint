@@ -427,7 +427,7 @@ export class VolcanoControlInputs {
 				type: 'number',
 				chartType: 'volcano',
 				settingsKey: 'minCountsPerCluster',
-				title: 'Intron clusters with fewer total reads across all samples are not tested',
+				title: "Threshold on each sample's total read count in the cluster",
 				min: 0,
 				max: 10000
 			},
