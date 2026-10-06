@@ -880,17 +880,25 @@ export const genotype_types = {
 export const snpgtSampleColumn = 6
 
 /* a snp genotype cache id starts with this prefix of the dataset that made the cache file;
-a cache id is a file name, so a genome or dslabel that has . or - has them replaced with _ */
+a cache id is a file name, so a genome or dslabel that has a non-\w character has it replaced with _.
+as that replacement may give the same prefix to another dataset of the same genome, such as
+a-b and a.b, neither of those datasets can use the snp genotype cache */
 export function snpgtCacheidPrefix(ds) {
 	if (!ds?.genomename || !ds.label) throw 'dataset does not support snp genotype cache'
-	return (ds.genomename + '_' + ds.label).replace(/[^\w]/g, '_') + '_'
+	const normalize = label => (ds.genomename + '_' + label).replace(/[^\w]/g, '_') + '_'
+	const prefix = normalize(ds.label)
+	for (const label in ds.genomeObj?.datasets || {}) {
+		if (label != ds.label && normalize(label) == prefix)
+			throw `dataset label '${ds.label}' is not distinct from '${label}' for snp genotype cache`
+	}
+	return prefix
 }
 
 /* a snp genotype cache id, such as the client-provided tw.q.cacheid, must name a file directly under the
 snpgt cache subdir, and must have been made by termdb.snp.js makeCacheid() for the same ds:
 <prefix of ds><time>_<random number> */
 export function snpgtCacheFile(cacheid, ds) {
-	if (illegalPathSegment(cacheid) || /[^\w]/.test(cacheid)) throw 'invalid cacheid'
+	if (typeof cacheid != 'string' || illegalPathSegment(cacheid) || /[^\w]/.test(cacheid)) throw 'invalid cacheid'
 	const prefix = snpgtCacheidPrefix(ds)
 	if (!cacheid.startsWith(prefix) || !/^\d+_\d+$/.test(cacheid.slice(prefix.length))) throw 'invalid cacheid'
 	return path.join(cachedir, 'snpgt', cacheid)
