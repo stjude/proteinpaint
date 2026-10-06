@@ -235,6 +235,10 @@ async function runDsFresh(
 		const detail = result.stderr ? `\n${result.stderr}` : ''
 		throw new Error(`diffSpliceScreen.py failed: ${result.error || 'unknown error'}${detail}`)
 	}
+	/* Nothing surviving the filters is an outcome of the user's groups and thresholds, not a
+	failure, so the script reports it as status "no_clusters" on a successful body with no rows.
+	It needs no branch here: the empty clusterRows reach init(), which answers totalRows === 0
+	with its filtering guidance. The status is logged below so the two empty cases stay apart. */
 	mayLog(`Time taken to run ${label} diffSplice:`, formatElapsedTime(Date.now() - t0))
 	/* Logged unconditionally (not mayLog) because the point is diagnosing slow runs on deployed
 	servers, where debugmode is off. One line per run, and runs are rare. Absent from the log
@@ -242,6 +246,7 @@ async function runDsFresh(
 	console.log(
 		`[DS] ${groups.group1names.length}v${groups.group2names.length} samples, engine: ${label},`,
 		`clusters tested: ${result.cluster_data?.length ?? 0},`,
+		...(result.status ? [`status: ${result.status},`] : []),
 		'skipped:',
 		JSON.stringify(result.skipped ?? {})
 	)

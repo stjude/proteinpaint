@@ -225,7 +225,7 @@ async function validate_junction_cluster(ds: any, junctionQ: any) {
 	const q = junctionQ.cluster
 	if (!q) return
 	await setFile(q, 'junction.cluster')
-	const samples = await getH5samples(q.file, q.samplesPath || 'samples')
+	const samples = await getH5samples(q.file, 'samples')
 	q.allSampleSet = new Set(samples)
 	console.log(q.allSampleSet.size, `junction cluster samples from ${ds.label}`)
 }

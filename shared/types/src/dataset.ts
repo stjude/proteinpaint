@@ -809,8 +809,6 @@ type JunctionClusterQuery = {
 	/** HDF5 file: X[n_samples, n_introns], one sample per row,
 	 * introns pre-sorted by cluster with cluster_starts boundaries alongside. */
 	file: string
-	/** h5 path to the sample-name dataset, for getH5samples(). */
-	samplesPath?: string
 	/** which engine the method radio preselects. only reorders — both stay selectable. */
 	defaultMethod?: 'edgeR' | 'leafcutter'
 	/** max samples ONE GROUP may contribute to a run, counted after filtering to samples that

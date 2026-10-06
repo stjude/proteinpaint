@@ -28,6 +28,9 @@ RESPONSE
       "num_controls": N, "num_cases": M, "skipped": {},
       "n_clusters_tested": 20906, "n_significant_fdr05": 7508, "truncated": false }
 
+    When no cluster survives filtering the body is still ok, with "status": "no_clusters" and
+    an empty cluster_data: that is an outcome of the groups and thresholds, not a failure.
+
 `skipped` is empty here by construction: the screen tests every cluster that survives
 filtering and reports no per-cluster status. diffSpliceRun.py fills it.
 
@@ -470,6 +473,8 @@ def cmd_screen(args, return_data=False):
     print(f"  after filtering: {int(keep.sum())} introns in {int(keep_clu.sum())} clusters "
           f"(of {len(cluster_ids)})")
     if keep.sum() == 0:
+        if return_data:
+            return None              # handle() reports this as status "no_clusters"
         raise ValueError("nothing left to screen after filtering")
 
     clu_of_intron = np.repeat(cluster_ids, np.diff(cluster_starts))
@@ -761,6 +766,17 @@ def handle(req):
         raise ValueError("threads must be >= 1")
 
     out = cmd_screen(args, return_data=True)
+    if out is None:
+        return {
+            "status": "no_clusters",
+            "cluster_data": [],
+            "num_controls": len(_read_sample_list(group1)),
+            "num_cases": len(_read_sample_list(group2)),
+            "skipped": {},
+            "n_clusters_tested": 0,
+            "n_significant_fdr05": 0,
+            "truncated": False,
+        }
     n_tested = len(out)
     n_sig = int((out["fdr"] < 0.05).sum())
 
