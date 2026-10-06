@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- the DMR plot shows the R backend toggle only in debugmode, and the server accepts the R backend only in debugmode
+
 
 ## 2.217.0
 
