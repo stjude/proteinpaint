@@ -140,6 +140,14 @@ tape('defaults', function (test) {
 							fileExtensions: new Set(['']),
 							absPath: `${m.cachedir}/extApiResponse`,
 							skipUntil: 0
+						},
+						snpgt: {
+							maxAge: 2592000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							fileExtensions: new Set(['']),
+							absPath: `${m.cachedir}/snpgt`,
+							skipUntil: 0
 						}
 					},
 					`should set default subdir properties`
@@ -164,7 +172,8 @@ tape('defaults', function (test) {
 							wsitiles: { deletedCount: 0, totalCount: 0 },
 							bedj: { deletedCount: 0, totalCount: 0 },
 							bam: { deletedCount: 0, totalCount: 0 },
-							extApiResponse: { deletedCount: 0, totalCount: 0 }
+							extApiResponse: { deletedCount: 0, totalCount: 0 },
+							snpgt: { deletedCount: 0, totalCount: 0 }
 						},
 						`should detect no cache files to delete`
 					)
@@ -478,6 +487,30 @@ tape('delete files without an extension', async test => {
 		['file.json', 'subdir'],
 		'should keep the file with an extension and the subdir'
 	)
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
+})
+
+tape('delete expired snpgt files by mtime', async test => {
+	const cachedir = path.join(process.cwd(), '.cache-test10')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	const monitor = new CacheManager({
+		quiet: true,
+		cachedir,
+		mustExitPendingValidation: true,
+		callbacks: {}
+	})
+	const dir = `${cachedir}/snpgt`
+	// file names as written by termdb.snp.js: genome_dslabel_timestamp_random
+	const oldFile = `${dir}/hg38_ds1_1700000000000_1234`
+	const newFile = `${dir}/hg38_ds1_1700000000001_5678`
+	fs.writeFileSync(oldFile, 'snpid')
+	fs.writeFileSync(newFile, 'snpid')
+	const oldTime = new Date(Date.now() - 31 * 24 * 3600 * 1000)
+	fs.utimesSync(oldFile, oldTime, oldTime)
+	const results = await monitor.mayDeleteCacheFiles('snpgt', monitor.subdirs.get('snpgt'), 0)
+	test.equal(results?.deletedCount, 1, 'should delete the snpgt file older than the default maxAge')
+	test.deepEqual(fs.readdirSync(dir), ['hg38_ds1_1700000000001_5678'], 'should keep the recent snpgt file')
 	fs.rmSync(cachedir, { force: true, recursive: true })
 	test.end()
 })

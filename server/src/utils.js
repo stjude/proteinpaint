@@ -18,7 +18,6 @@ import { minimatch } from 'minimatch'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
-const cache_snpgt_dir = serverconfig.cache_snpgt.dir
 export * from './cachedFetch.js'
 export * from './xfetch.js'
 export { connect_db } from './sql.ts'
@@ -49,6 +48,7 @@ get_header_txt
 get_fasta
 connect_db
 snpgtCacheFile
+snpgtSampleColumn
 bam_ifnochr
 testIfFileIsBigbed
 spawnTool
@@ -869,11 +869,14 @@ export const genotype_types = {
 	het: 'Heterozygous'
 }
 
-// a client-provided snp genotype cache id, such as tw.q.cacheid, must name a file directly under
-// cache_snpgt.dir; the callers that also apply cache_snpgt.fileNameRegexp keep that stricter check
+// in a snp genotype cache file written by termdb.snp.js, the sample columns start from the 7th column
+export const snpgtSampleColumn = 6
+
+// a snp genotype cache id, such as the client-provided tw.q.cacheid, must name a file directly under the
+// snpgt cache subdir; the cache ids made by termdb.snp.js only have \w characters
 export function snpgtCacheFile(cacheid) {
-	if (illegalPathSegment(cacheid)) throw 'invalid cacheid'
-	return path.join(cache_snpgt_dir, cacheid)
+	if (illegalPathSegment(cacheid) || /[^\w]/.test(cacheid)) throw 'invalid cacheid'
+	return path.join(cachedir, 'snpgt', cacheid)
 }
 
 export async function run_fdr(plst) {

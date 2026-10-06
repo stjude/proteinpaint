@@ -4,7 +4,7 @@ import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
 import { sql } from './sql.ts'
-import { read_file, snpgtCacheFile, trackXfetch } from './utils.js'
+import { read_file, snpgtCacheFile, snpgtSampleColumn, trackXfetch } from './utils.js'
 import {
 	isDictionaryType,
 	isNonDictionaryType,
@@ -1212,7 +1212,7 @@ async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
 	// array of sample ids from the cache file; note cache file contains all the samples from the dataset
 	const cachesampleheader = lines[0]
 		.split('\t')
-		.slice(serverconfig.cache_snpgt.sampleColumn) // from 7th column
+		.slice(snpgtSampleColumn) // from 7th column
 		.map(Number) // sample ids are integer
 
 	if (useAllSamples) {
@@ -1259,7 +1259,7 @@ async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
 				// this sample is filtered out
 				continue
 			}
-			const gt = l[j + serverconfig.cache_snpgt.sampleColumn]
+			const gt = l[j + snpgtSampleColumn]
 			if (gt) {
 				snp2sample.get(snpid).samples.set(sampleid, gt)
 			}

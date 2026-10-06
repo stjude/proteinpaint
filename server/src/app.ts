@@ -43,7 +43,6 @@ export async function launch() {
 		// hideCachedir in serverconfig.js; the route, dataset, and other modules that use it are loaded by now,
 		// and have copied it to a module-local variable
 		delete serverconfig.cachedir
-		if (serverconfig.cache_snpgt) delete serverconfig.cache_snpgt.dir
 		// all launch-time writes to serverconfig are done by now, lock it before any route is set
 		lockServerconfig(serverconfig)
 		const { doneLoading, pendingNotification } = processTrackedDs(trackedDatasets)

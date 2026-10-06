@@ -427,10 +427,22 @@ tape('snpgtCacheFile()', test => {
 	const cacheid = 'hg38_SJLife_1760000000000_1234'
 	test.equal(
 		utils.snpgtCacheFile(cacheid),
-		`${serverconfig.cache_snpgt.dir}/${cacheid}`,
-		'should return the file path directly under cache_snpgt.dir'
+		`${serverconfig.cachedir}/snpgt/${cacheid}`,
+		'should return the file path directly under the snpgt cache subdir'
 	)
-	for (const cacheid of ['../../etc/passwd', 'a/b', '..', '.', '/etc/passwd', 'a\\b', '', undefined, ['a']]) {
+	for (const cacheid of [
+		'../../etc/passwd',
+		'a/b',
+		'..',
+		'.',
+		'/etc/passwd',
+		'a\\b',
+		'',
+		undefined,
+		['a'],
+		'hg38-test_ds_1_2',
+		'a.b'
+	]) {
 		test.throws(
 			() => utils.snpgtCacheFile(cacheid),
 			/invalid cacheid/,
