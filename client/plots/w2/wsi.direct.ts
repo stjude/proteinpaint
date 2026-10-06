@@ -501,6 +501,10 @@ export async function init(
 		// buildVector() takes the caller's generation and checks it before each
 		// of its own shared-state commits too (see its own doc comment below).
 		let modeGeneration = 0
+		// buildVector() fits the first view to the sample's cells. OpenLayers
+		// emits moveend for that programmatic fit; do not let it supersede the
+		// build while it is still fetching annotations.
+		let ignoreNextMoveend = false
 		// raster-vs-vector + which bbox is currently loaded, read/written by
 		// both updateMode() and buildVector() (moved up here, alongside
 		// modeGeneration, so buildVector() -- defined outside updateMode()'s
@@ -692,6 +696,7 @@ export async function init(
 						if (y > maxY) maxY = y
 					}
 				}
+				ignoreNextMoveend = true
 				map.getView().fit([minX, minY, maxX, maxY], { padding: [40, 40, 40, 40] })
 			}
 			firstBuild = false
@@ -1206,6 +1211,10 @@ export async function init(
 			// /cellcount would otherwise fire moveend with no listener attached
 			// yet to catch it, leaving the viewer showing the stale initial view
 			map.on('moveend', () => {
+				if (ignoreNextMoveend) {
+					ignoreNextMoveend = false
+					return
+				}
 				updateMode().catch((e: any) => sayerrorOnTop(holder, `Cell count error: ${e.message || e}`))
 			})
 			await updateMode() // the starting view's own mode
