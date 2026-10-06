@@ -634,7 +634,7 @@ function init({ genomes }) {
 						)}:${rgb}:${max_count}`
 					)
 					.digest('hex')
-				const cacheFile = path.join(serverconfig.cachedir, 'wsitiles', `${key}_overlay.png`)
+				const cacheFile = path.join(cachedir, 'wsitiles', `${key}_overlay.png`)
 				let png: Buffer
 				if (await exists(cacheFile)) {
 					png = await readFile(cacheFile)
