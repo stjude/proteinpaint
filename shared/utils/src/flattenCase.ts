@@ -359,9 +359,10 @@ function compileFilter0Tri(node): (d: any, caseObj: any) => number {
 	const field = node.content?.field
 	if (typeof field != 'string') return () => TRI_UNKNOWN
 	// GDC fields carry a "cases." or "case." prefix, e.g. "cases.diagnoses.age_at_diagnosis"
-	const dm = field.match(/(?:^|\.)diagnoses\.(.+)$/)
-	if (dm) {
-		const key = dm[1]
+	const fieldSegments = field.split('.')
+	const diagnosesIndex = fieldSegments.indexOf('diagnoses')
+	if (diagnosesIndex != -1 && diagnosesIndex < fieldSegments.length - 1) {
+		const key = fieldSegments.slice(diagnosesIndex + 1).join('.')
 		// only a direct diagnosis sub-field (e.g. age_at_diagnosis, primary_diagnosis) is supported.
 		// a dotted descendant (e.g. treatments.treatment_type) sits under a nested array; a literal
 		// lookup cannot read it and GDC's nested matching is not replicated here, so treat it as UNKNOWN
@@ -430,9 +431,12 @@ function collectDiagnosisLeaves(node, out) {
 	const field = node.content?.field
 	if (typeof field != 'string') return
 	// GDC fields carry a "cases." or "case." prefix, e.g. "cases.diagnoses.age_at_diagnosis"
-	const m = field.match(/(?:^|\.)diagnoses\.(.+)$/)
-	if (!m || m[1].includes('.')) return // skip non-diagnoses and unsupported dotted descendants
-	out.push({ op: node.op, key: m[1], value: node.content.value })
+	const fieldSegments = field.split('.')
+	const diagnosesIndex = fieldSegments.indexOf('diagnoses')
+	if (diagnosesIndex == -1 || diagnosesIndex == fieldSegments.length - 1) return
+	const key = fieldSegments.slice(diagnosesIndex + 1).join('.')
+	if (key.includes('.')) return // skip non-diagnoses and unsupported dotted descendants
+	out.push({ op: node.op, key, value: node.content.value })
 }
 
 function evalDiagnosisLeaf(l, d) {
