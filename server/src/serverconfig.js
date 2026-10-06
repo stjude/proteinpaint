@@ -540,16 +540,6 @@ if (fs.existsSync('./package.json')) {
 	serverconfig.version = JSON.parse(pkg).version
 }
 
-// a later copy may have no cachedir, see firstLoad above
-if (!serverconfig.cache_snpgt && serverconfig.cachedir) {
-	serverconfig.cache_snpgt = {
-		dir: path.join(serverconfig.cachedir, 'snpgt'),
-		fileNameRegexp: /[^\w]/, // client-provided cache file name matching with this are denied
-		sampleColumn: 6 // in cache file, sample column starts from 7th column
-	}
-	if (!fs.existsSync(serverconfig.cache_snpgt.dir)) fs.mkdirSync(serverconfig.cache_snpgt.dir, { recursive: true })
-}
-
 export default serverconfig
 
 /*

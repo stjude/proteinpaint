@@ -77,7 +77,11 @@ export const cacheRegistry = {
 	/* external API responses written by cachedFetch.js, only when serverconfig.features.extApiCache is set.
 	Flat files named by a sha1 hash without an extension, hence the '' extension. The cache is meant to
 	persist across server restarts, so the maxAge is long; a cache read does not update the file mtime. */
-	extApiResponse: { type: 'file', fileExtensions: new Set(['']), maxAge: day * 365, skipMs: halfDay }
+	extApiResponse: { type: 'file', fileExtensions: new Set(['']), maxAge: day * 365, skipMs: halfDay },
+	/* snp-by-sample genotype files written by termdb.snp.js, read back by the tw.q.cacheid of a snplst or snplocus term.
+	Flat files without an extension. A restored session revalidates the snps and writes a new file, so only a session
+	that stays open past maxAge would reference an evicted file; a cache read does not update the file mtime. */
+	snpgt: { type: 'file', fileExtensions: new Set(['']), maxAge: day * 30, skipMs: halfDay }
 } as const satisfies Record<string, CacheRegistryItem>
 
 type CacheRegistry = typeof cacheRegistry

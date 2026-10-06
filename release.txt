@@ -1,1 +1,5 @@
+Features:
+- the snpgt cache subdir is declared in cacheRegistry and evicted by CacheManager after 30 days, which serverconfig.features.cacheMonitor.subdirs.snpgt may override
 
+Fixes:
+- serverconfig.cache_snpgt is no longer used, and may be removed from a serverconfig.json; snp genotype cache files are always written under [cachedir]/snpgt

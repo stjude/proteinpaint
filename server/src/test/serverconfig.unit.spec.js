@@ -278,19 +278,15 @@ tape('serverconfig: a polluted Object.prototype is not read as a top-level setti
 })
 
 tape('serverconfig: the prototype is removed before any setting is read or defaulted', async test => {
-	// cache_snpgt is defaulted by serverconfig.js when not set, and its fileNameRegexp guards client-provided cache file names
-	Object.prototype.cache_snpgt = { dir: '/zz-polluted', fileNameRegexp: /(?!)/ }
+	// tabix is defaulted by serverconfig.js when not set, and is the executable path for spawned tabix processes
+	Object.prototype.tabix = '/zz-polluted'
 	try {
 		const { default: config } = await import('../serverconfig.js?pollution=before-import')
 		test.equal(Object.getPrototypeOf(config), null, 'should have a null prototype')
-		test.equal(
-			Object.hasOwn(config, 'cache_snpgt'),
-			true,
-			'should apply the default instead of using an inherited value'
-		)
-		test.notEqual(config.cache_snpgt.dir, '/zz-polluted', 'should not use the polluted cache_snpgt.dir')
+		test.equal(Object.hasOwn(config, 'tabix'), true, 'should apply the default instead of using an inherited value')
+		test.notEqual(config.tabix, '/zz-polluted', 'should not use the polluted tabix')
 	} finally {
-		delete Object.prototype.cache_snpgt
+		delete Object.prototype.tabix
 	}
 	test.end()
 })
@@ -364,7 +360,7 @@ tape(
 			port: 3000,
 			allowedEmbedders: ['a.org'],
 			genomes: [{ name: 'hg38', tracks: [{ file: 'a.gz' }], datasets: [{ name: 'ds1', jsfile: 'ds1.js' }] }],
-			cache_snpgt: { fileNameRegexp: /[^\w]/ },
+			namePattern: { re: /[^\w]/ },
 			// already frozen by other code, outside of features{}
 			ssl: Object.freeze({ key: 'a.key', nested: { cert: 'a.crt' } }),
 			features: { wsi: {} }
@@ -389,22 +385,14 @@ tape(
 			'should only freeze, not set a null prototype, outside of features{}'
 		)
 		test.equal(Object.getPrototypeOf(sc.features.wsi), null, 'should set a null prototype for a features{} object')
-		test.equal(
-			sc.cache_snpgt.fileNameRegexp.test('a/b'),
-			true,
-			'should keep a frozen RegExp without the g or y flag usable'
-		)
+		test.equal(sc.namePattern.re.test('a/b'), true, 'should keep a frozen RegExp without the g or y flag usable')
 		test.end()
 	}
 )
 
 tape('lockServerconfig(): fails at launch for a value that freezing cannot protect', test => {
 	for (const [label, sc, expected] of [
-		[
-			'a RegExp with the g flag',
-			{ cache_snpgt: { fileNameRegexp: /[^\w]/g } },
-			/serverconfig.cache_snpgt.fileNameRegexp/
-		],
+		['a RegExp with the g flag', { namePattern: { re: /[^\w]/g } }, /serverconfig.namePattern.re/],
 		['a RegExp with the y flag', { features: { re: /a/y } }, /serverconfig.features.re/],
 		['a Map', { features: { cache: new Map() } }, /serverconfig.features.cache/],
 		['a Set', { genomes: [{ tracks: new Set() }] }, /serverconfig.genomes.0.tracks/],

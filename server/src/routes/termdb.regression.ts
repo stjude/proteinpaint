@@ -12,6 +12,7 @@ import { runCumincR } from './termdb.cuminc.ts'
 import { isDictionaryType } from '#shared/terms.js'
 import { FRACTION_TW_TYPE, validateTermCollectionFraction } from '#shared/termCollection.js'
 import { getData } from '../termdb.matrix.js'
+import { snpgtCacheFile } from '#src/utils.js'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
@@ -343,7 +344,7 @@ function parse_q(q, ds) {
 			// non-dictionary term
 			if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
 				if (!tw.q.cacheid) throw 'q.cacheid missing'
-				if (serverconfig.cache_snpgt.fileNameRegexp.test(tw.q.cacheid)) throw 'invalid cacheid'
+				snpgtCacheFile(tw.q.cacheid) // throws on an invalid cacheid
 				if (typeof tw.q.snp2effAle != 'object') throw 'q.snp2effAle{} is not object'
 				if (!Number.isInteger(tw.q.alleleType)) throw 'q.alleleType is not integer'
 				if (!Number.isInteger(tw.q.geneticModel)) throw 'q.geneticModel is not integer'
