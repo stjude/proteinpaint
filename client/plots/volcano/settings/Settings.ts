@@ -102,11 +102,6 @@ export type DSVolcanoSettings = DefaultVolcanoSettings & {
 	minSamplesPerIntron: number
 	minSamplesPerGroup: number
 	minCountsPerCluster: number
-	/** Max samples ONE GROUP may contribute. Resolved at plot creation from the dataset's
-	 * queries.junction.cluster.maxSamplesPerGroup, falling back to MAX_DS_SAMPLES_PER_GROUP. Held in
-	 * settings so validateDSSettings can read it -- it receives the raw opts, which do not
-	 * carry `app`, while addDSDefaults does. */
-	maxSamplesPerGroup: number
 	/** |ΔPSI| threshold. The cutoff the plot is thresholded on — foldChangeCutoff
 	 * is not used for this term type, and no log2FC control is offered. */
 	deltaPsiCutoff: number

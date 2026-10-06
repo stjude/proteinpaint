@@ -38,7 +38,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 
 	addGEDefaults(opts.termType, defaults)
 	addDMDefaults(opts.termType, defaults, opts)
-	addDSDefaults(opts.termType, defaults, opts)
+	addDSDefaults(opts.termType, defaults)
 
 	return Object.assign(defaults, overrides)
 }
@@ -100,14 +100,8 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	defaults.profileBinBp = 100_000
 }
 
-function addDSDefaults(termType: string, defaults: Partial<DSVolcanoSettings>, opts?: any) {
+function addDSDefaults(termType: string, defaults: Partial<DSVolcanoSettings>) {
 	if (termType != tt.JUNCTION) return
-	/* The dataset may cap group size lower (or higher) than the built-in default. Read here rather
-	than in validateDSSettings because only this function is handed the app -- see the comment on
-	DSVolcanoSettings.maxSamplesPerGroup. The server re-checks whatever arrives, so a hand-edited
-	value cannot lift the real limit. */
-	const dsCap = opts?.app?.vocabApi?.termdbConfig?.queries?.junction?.cluster?.maxSamplesPerGroup
-	defaults.maxSamplesPerGroup = Number.isInteger(dsCap) && dsCap > 0 ? dsCap : MAX_DS_SAMPLES_PER_GROUP
 	defaults.method = 'edgeR'
 	defaults.minSamplesPerIntron = 5
 	defaults.minSamplesPerGroup = 3
@@ -133,42 +127,26 @@ export function validateVolcanoSettings(config: any, opts: any) {
 
 	validateGESettings(config.termType, settings, sampleNum, opts)
 	validateDMSettings(config.termType, settings)
-	validateDSSettings(config.termType, config)
+	validateDSSettings(config.termType, settings, opts)
 }
 
-/** Max samples ONE GROUP may contribute to a differential splicing run. */
-export const MAX_DS_SAMPLES_PER_GROUP = 250
+/* Read groups from opts; config.samplelst is populated only after copyMerge().
+Apply caps to eligible counts rather than raw groups, and enforce them in 
+preAnalysis and at run time. */
+function validateDSSettings(termType: string, settings: DSVolcanoSettings | undefined, opts: any) {
+	if (termType != tt.JUNCTION || !settings) return
+	const groups = opts.samplelst?.groups || []
 
-function validateDSSettings(termType: string, config: any) {
-	if (termType != tt.JUNCTION) return
-	const settings = config.settings?.volcano
-	if (!settings) return
-
-	const groups = config.samplelst?.groups || []
-
-	// A per-group cap.
-	const cap = settings.maxSamplesPerGroup || MAX_DS_SAMPLES_PER_GROUP
-	for (const g of groups) {
-		const n = g.values?.length || 0
-		if (n > cap) {
-			throw new Error(
-				`Group "${g.name}" has ${n} samples, which exceeds the limit of ${cap} per group for differential splicing. Please narrow the group.`
-			)
-		}
-	}
-
-	/* leafcutter's -i/-g are absolute sample counts, so they silently loosen as the cohort grows:
-	the same "5 samples" floor is a third of a 15-sample run and 0.2% of a 2,500-sample one. Scale
-	them to a floor plus a fraction of N so the filter means the same thing at both sizes.
-
-	Counted from config.samplelst directly. getSampleNum() would give the same answer now that
-	splicing is named in it, but it returns maxSampleCutoff (4000) for any term type that is
-	NOT -- which would silently compute a floor of 80 for every run regardless of its real size.
-	Counting locally keeps that failure impossible here. */
+	/* Leafcutter’s -i/-g thresholds are absolute sample counts, so their effective stringency decreases 
+	as cohort size grows. Scale the defaults as a floor plus a fraction of N to keep filtering comparable 
+	across cohort sizes. These are defaults only: opts.overrides takes precedence, followed by saved settings 
+	via copyMerge(config, opts) */
 	const sampleNum = groups.reduce((sum: number, g: any) => sum + (g.values?.length || 0), 0)
 	if (sampleNum > 0) {
-		settings.minSamplesPerIntron = Math.max(5, Math.round(sampleNum * 0.02))
-		settings.minSamplesPerGroup = Math.max(3, Math.round(sampleNum * 0.01))
+		if (opts.overrides?.minSamplesPerIntron == undefined)
+			settings.minSamplesPerIntron = Math.max(5, Math.round(sampleNum * 0.02))
+		if (opts.overrides?.minSamplesPerGroup == undefined)
+			settings.minSamplesPerGroup = Math.max(3, Math.round(sampleNum * 0.01))
 	}
 }
 
