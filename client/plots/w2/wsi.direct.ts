@@ -698,8 +698,11 @@ export async function init(
 						if (y > maxY) maxY = y
 					}
 				}
-				ignoreNextMoveend = true
-				map.getView().fit([minX, minY, maxX, maxY], { padding: [40, 40, 40, 40] })
+				const view = map.getView()
+				const previousExtent = view.calculateExtent()
+				view.fit([minX, minY, maxX, maxY], { padding: [40, 40, 40, 40] })
+				const fittedExtent = view.calculateExtent()
+				ignoreNextMoveend = previousExtent.some((v, i) => v !== fittedExtent[i])
 			}
 			firstBuild = false
 
@@ -1115,8 +1118,28 @@ export async function init(
 				}
 				return rasterLegends
 			}
+			let lastRasterFp = ''
+			function rasterFp(): string {
+				if (!rasterFills.length) return ''
+				return rasterFills[0].kind === 'types' ? `t:${JSON.stringify(shownColor)}` : `g:${JSON.stringify(rasterFills)}`
+			}
+			function teardownRaster() {
+				for (const l of rasterLayers) map.removeLayer(l)
+				rasterLayers.length = 0
+				for (const l of rasterLegends) {
+					l.remove()
+					const i = pinned.findIndex(p => p.box === l)
+					if (i >= 0) pinned.splice(i, 1)
+				}
+				rasterLegends.length = 0
+			}
 			function showRaster() {
 				if (!rasterEnabled) return
+				const fp = rasterFp()
+				if (fp !== lastRasterFp) {
+					teardownRaster()
+					lastRasterFp = fp
+				}
 				for (const l of ensureRasterLayers()) l.setVisible(true)
 				for (const l of ensureRasterLegends()) l.style('display', 'block')
 				repin()
