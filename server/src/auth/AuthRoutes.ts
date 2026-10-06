@@ -11,6 +11,7 @@ const cachedir = launchServerconfig.cachedir
 const MAX_ACTION_LENGTH = 100
 const MAX_DETAILS_LENGTH = 10000
 const MAX_FIELD_LENGTH = 200
+const MAX_CLOCK_SKEW = 300000
 
 // true when s is a string within len, with no tab/newline/CR characters
 function isBoundedPlainText(s, len) {
@@ -129,6 +130,7 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 			const now = Date.now()
 			if (
 				!Number.isFinite(sessionTime) ||
+				sessionTime - now > MAX_CLOCK_SKEW ||
 				(sessionExpiry !== undefined && (!Number.isFinite(sessionExpiry) || now >= sessionExpiry)) ||
 				now - sessionTime >= maxSessionAge
 			) {
