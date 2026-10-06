@@ -11,6 +11,7 @@ import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import ky from 'ky'
 import serverconfig from './serverconfig.js'
+import { cacheUrlProtocols } from './CacheManager.ts'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import { text as streamText } from 'stream/consumers'
@@ -90,19 +91,12 @@ export async function cache_index(gzurl, indexurl) {
 	const protocolDir = path.resolve(cachedir, protocol)
 	const dir = path.resolve(protocolDir, body)
 	if (!dir.startsWith(protocolDir + path.sep)) throw '.gz file URL escapes cache dir'
+	// mkdir on every call, which is a no-op for an existing dir, rather than only when a stat finds it missing,
+	// so that an empty dir that CacheManager removes between the two calls is still recreated
 	try {
-		await fs.promises.stat(dir)
+		await fs.promises.mkdir(dir, { recursive: true })
 	} catch (e) {
-		if (e.code == 'ENOENT') {
-			// make dir
-			try {
-				await fs.promises.mkdir(dir, { recursive: true })
-			} catch (e) {
-				throw 'url dir: cannot mkdir'
-			}
-		} else {
-			throw 'stating gz url dir: ' + e.code
-		}
+		throw 'url dir: cannot mkdir'
 	}
 	// dir is ready
 	if (indexurl) {
@@ -117,6 +111,7 @@ export async function cache_index(gzurl, indexurl) {
 		try {
 			await fs.promises.stat(path2file)
 			// index file exists
+			await touchCacheFiles([path2file])
 			return dir
 		} catch (e) {
 			if (e.code == 'ENOENT') {
@@ -131,8 +126,21 @@ export async function cache_index(gzurl, indexurl) {
 		// no url specified for index
 		// assume the appropriate index exists under dir
 		// let tabix 1.11 do the work of getting the tbi/csi file if missing
+		// the index that tabix downloaded into dir is not known by name, so every file in dir is touched;
+		// a nested dir is the cache dir of another url, and a partial download is not a usable index
+		const entries = await fs.promises.readdir(dir, { withFileTypes: true }).catch(() => [])
+		const files = entries.filter(e => e.isFile() && !e.name.endsWith('.tmp')).map(e => path.join(dir, e.name))
+		await touchCacheFiles(files)
 		return dir
 	}
+}
+
+/* CacheManager evicts a cached index by its mtime, so the mtime is set on each use: a track that is in use
+keeps its index, and only an index that has not been used for maxAge is evicted. A failure, such as a file
+evicted since it was found, is ignored, since the caller or tabix downloads a missing index again. */
+async function touchCacheFiles(files) {
+	const now = new Date()
+	await Promise.all(files.map(f => fs.promises.utimes(f, now, now).catch(() => {})))
 }
 
 export function fileurl(req, checkWhiteList = true) {
@@ -236,9 +244,8 @@ export function illegalPathSegment(s) {
 }
 
 // protocol and body of a url become path segments of a cache dir (see cache_index), so only
-// allow protocols that are real remote track sources: any other name could be a feature dir under
-// cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
-const cacheUrlProtocols = new Set(['http', 'https', 'ftp'])
+// allow the protocols that are declared as 'url' subdirs in cacheRegistry: any other name could be a
+// feature dir under cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
 
 function test_url(u) {
 	const tmp = u.split('://')

@@ -60,8 +60,7 @@ const exists = (p: string) =>
 	)
 
 // Flat .jpg files under the CacheManager-registered 'wsitiles' subdir of
-// serverconfig.cachedir, so the existing TTL sweep evicts them (it is
-// non-recursive, hence a flat name rather than nested z/x/y dirs).
+// serverconfig.cachedir, so the existing TTL sweep evicts them.
 // Keyed by slide path + mtime, so regenerating a slide file in place starts a
 // fresh tile set instead of serving stale tiles of the old file.
 function tileCachePath(slide: string, mtime: number, plane: string, z: string, x: string, y: string): string {

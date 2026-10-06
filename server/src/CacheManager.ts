@@ -21,21 +21,38 @@ const evictionKeys = ['maxAge', 'maxSize', 'skipMs', 'moveTo', 'fileExtensions']
   computes of distinct cacheIds, which is the only field cacheOrRecompute reads
 - file: files written by their own route; must have fileExtensions, so that only the cached files are evicted
 - session: saved user data written by the massSession route
+- url: index files of remote tracks, cached by cache_index in utils.js under <url protocol>/<url body>/; the entry name
+  is the url protocol, and only the protocols of these entries are accepted by cache_index
 */
 type CacheRegistryItem =
 	| ({ type: 'compute'; maxPending: number } & EvictionOpts)
 	| ({ type: 'file'; fileExtensions: Set<string | RegExp> } & EvictionOpts)
 	| ({ type: 'session' } & EvictionOpts)
+	| ({ type: 'url'; fileExtensions: Set<string | RegExp> } & EvictionOpts)
 
 // eviction defaults of each type, used for the options that a registry entry does not set
 const typeDefaults: { [T in CacheRegistryItem['type']]: EvictionOpts } = {
 	compute: { maxAge: day * 60, skipMs: halfDay },
 	file: {},
-	session: { maxAge: day * 30, skipMs: halfDay }
+	session: { maxAge: day * 30, skipMs: halfDay },
+	// cache_index sets the mtime of an index on each use, so maxAge is the time since last use;
+	// an evicted index is downloaded again by the next request of its track
+	url: { maxAge: day * 30, skipMs: halfDay }
+}
+
+/* index files that cache_index downloads, or that tabix and samtools download into their cwd;
+.tmp is a partial download that was left by an interrupted server, which is not used again */
+const urlIndexExtensions = new Set(['.tbi', '.csi', '.bai', '.crai', '.tmp'])
+
+/* the extension of a cached file name; cache_index names an index by the last segment of its url, which
+may keep a query string or fragment, such as track.tbi?token=x, so that part is not in the extension */
+function cacheFileExtension(name: string): string {
+	return path.extname(name.replace(/[?#].*$/, ''))
 }
 
 /** All subdirs of serverconfig.cachedir. This is the only place to declare a cache subdir: CacheManager
- * creates every entry at server launch, even when the feature that uses it is disabled, and evicts its files.
+ * creates every entry at server launch, even when the feature that uses it is disabled, and evicts its files,
+ * including those in nested dirs; an entry under cachedir that is not declared here is never evicted.
  * To add a new cacheOrRecompute analysis, append an entry with type 'compute'; no other file needs to be edited. */
 export const cacheRegistry = {
 	de: { type: 'compute', maxPending: 5 },
@@ -66,9 +83,9 @@ export const cacheRegistry = {
 	// saved sessions; a deployer may set maxAge: 0 to disable the /massSession and /sessionIds routes
 	massSession: { type: 'session' },
 	massSessionTrash: { type: 'session', maxAge: day * 60 },
-	// WSI tiles rendered on demand from .svs by wsitiles route. Flat .jpg
-	// files (the sweep is non-recursive), evicted by mtime like any other subdir.
-	wsitiles: { type: 'file', fileExtensions: new Set(['.jpg']), maxAge: day * 30, skipMs: halfDay },
+	// WSI tiles rendered on demand from .svs by wsitiles route, as .jpg tiles, .png overlay tiles
+	// and .csv boundary polygons, each regenerated on a cache miss; evicted by mtime like any other subdir.
+	wsitiles: { type: 'file', fileExtensions: new Set(['.jpg', '.png', '.csv']), maxAge: day * 30, skipMs: halfDay },
 	// Cached bedj track files served by tkbedj when req.query.isCache=true (see bedj.js).
 	// Flat tabix/bigbed files plus index, evicted by mtime like any other subdir.
 	bedj: { type: 'file', fileExtensions: new Set(['.gz', '.tbi', '.csi', '.bb']), maxAge: day * 30, skipMs: halfDay },
@@ -81,8 +98,19 @@ export const cacheRegistry = {
 	/* snp-by-sample genotype files written by termdb.snp.js, read back by the tw.q.cacheid of a snplst or snplocus term.
 	Flat files without an extension. A restored session revalidates the snps and writes a new file, so only a session
 	that stays open past maxAge would reference an evicted file; a cache read does not update the file mtime. */
-	snpgt: { type: 'file', fileExtensions: new Set(['']), maxAge: day * 30, skipMs: halfDay }
+	snpgt: { type: 'file', fileExtensions: new Set(['']), maxAge: day * 30, skipMs: halfDay },
+	// remote track indexes by url protocol, see cache_index in utils.js
+	http: { type: 'url', fileExtensions: urlIndexExtensions },
+	https: { type: 'url', fileExtensions: urlIndexExtensions },
+	ftp: { type: 'url', fileExtensions: urlIndexExtensions }
 } as const satisfies Record<string, CacheRegistryItem>
+
+/** the url protocols that cache_index in utils.js may cache, one cache subdir per protocol */
+export const cacheUrlProtocols: ReadonlySet<string> = new Set(
+	Object.entries(cacheRegistry)
+		.filter(([, item]) => item.type == 'url')
+		.map(([name]) => name)
+)
 
 type CacheRegistry = typeof cacheRegistry
 
@@ -249,6 +277,7 @@ export class CacheManager {
 
 	async start() {
 		console.log('starting cache monitor ...')
+		await this.mayLogUnregisteredEntries()
 
 		const checkCacheFiles = async () => {
 			if (this.hasActiveCheck) return // prevent two active checks from running at the same time
@@ -288,39 +317,74 @@ export class CacheManager {
 		//if (!this.quiet) console.log(`checking for cached ${subdir} files to delete ...`)
 		try {
 			const minTime = Date.now() - maxAge
-			const filenames = await fs.promises.readdir(absPath)
-			if (filenames.length == 0) {
-				//if (!this.quiet) console.log(`No ${subdir} cached files to delete`)
-				return { deletedCount: 0, totalCount: 0 }
-			}
 			// keep list of undeleted files. may need to rank them and delete old ones ranked by age
 			const files: { path: any; time: any; size: any; deleted?: any }[] = []
 			let totalSize = 0,
 				deletedSize = 0,
 				totalCount = 0,
-				deletedCount = 0
-			for (const filename of filenames) {
-				if (fileExtensions?.size && !fileExtensions.has(path.extname(filename))) continue
-				totalCount++
-				const fp = path.join(absPath, filename)
-				const s = await fs.promises.stat(fp)
-				if (!s.isFile()) continue
-				const time = s.mtimeMs
-				// console.log(188, filename, time < minTime, time, minTime)
-				if (time < minTime) {
-					if (movePath) await fs.promises.rename(fp, path.join(movePath, filename))
-					else await fs.promises.unlink(fp)
-					deletedCount++
-					deletedSize += s.size
-					continue
+				deletedCount = 0,
+				skippedCount = 0, // files without a matching extension, which are never evicted
+				removedDirCount = 0,
+				errorCount = 0
+
+			/* walk the whole subdir tree, so that a file in a nested dir is evicted like a file at the top level.
+			A Dirent and lstat() do not follow a symlink: a symlink is evicted like a file and never descended into,
+			so that the sweep cannot reach files outside of the subdir. The entry types are from a readdir snapshot,
+			and node cannot list or delete relative to an open dir handle, so the walk uses real paths and checks
+			that a path is still real right before it is used: before descending into a dir, and before deleting from
+			a dir. A path that has changed to go through a symlink is skipped and logged. An entry that is removed
+			during the walk, such as by a concurrent request, is skipped. An error on one entry, such as a nested
+			dir that cannot be read, is logged and the walk continues with the next entry. */
+			const sweep = async (dir: string, relDir: string) => {
+				const entries = await ignoreMissing(fs.promises.readdir(dir, { withFileTypes: true }))
+				for (const entry of entries || []) {
+					const fp = path.join(dir, entry.name)
+					const relPath = path.join(relDir, entry.name)
+					try {
+						if (entry.isDirectory()) {
+							if (!(await isRealPath(fp))) continue
+							await sweep(fp, relPath)
+							if ((await isRealPath(dir)) && (await mayRemoveEmptyDir(fp, minTime))) removedDirCount++
+							continue
+						}
+						if (fileExtensions?.size && !fileExtensions.has(cacheFileExtension(entry.name))) {
+							skippedCount++
+							continue
+						}
+						const s = await ignoreMissing(fs.promises.lstat(fp))
+						if (!s) continue
+						totalCount++
+						const time = s.mtimeMs
+						// console.log(188, entry.name, time < minTime, time, minTime)
+						if (time < minTime) {
+							if (!(await isRealPath(dir))) continue
+							if (movePath) {
+								// keep the relative path, so that files of the same name in different dirs do not overwrite each other
+								const dest = path.join(movePath, relPath)
+								await fs.promises.mkdir(path.dirname(dest), { recursive: true })
+								await ignoreMissing(fs.promises.rename(fp, dest))
+							} else await ignoreMissing(fs.promises.unlink(fp))
+							deletedCount++
+							deletedSize += s.size
+							continue
+						}
+						files.push({
+							path: fp,
+							time,
+							size: s.size
+						})
+						totalSize += s.size
+					} catch (e) {
+						errorCount++
+						console.error(`Error in mayDeleteCacheFiles() for ${subdir}/${relPath}: ${e}`)
+					}
 				}
-				files.push({
-					path: fp,
-					time,
-					size: s.size
-				})
-				totalSize += s.size
 			}
+			// the subdir itself may be a symlink set up by a deployer, so it is resolved once at the start
+			const root = await ignoreMissing(fs.promises.realpath(absPath))
+			if (!root) return { deletedCount: 0, totalCount: 0 }
+			await sweep(root, '')
+
 			files.sort((i, j) => i.time - j.time) // ascending, so that the oldest files are deleted first
 			if (totalSize >= maxSize) {
 				/*
@@ -333,7 +397,14 @@ export class CacheManager {
 					// do not delete files too soon that it may affect a current file read
 					if (f.time > minMtime) break
 
-					await fs.promises.unlink(f.path)
+					try {
+						if (!(await isRealPath(path.dirname(f.path)))) continue
+						await ignoreMissing(fs.promises.unlink(f.path))
+					} catch (e) {
+						errorCount++
+						console.error(`Error in mayDeleteCacheFiles() for ${f.path}: ${e}`)
+						continue
+					}
 					f.deleted = true
 					deletedCount++
 					deletedSize += f.size
@@ -343,12 +414,64 @@ export class CacheManager {
 			}
 			if (!this.quiet)
 				console.log(
-					`deleted ${deletedCount} of ${totalCount} ${subdir} cached files (${deletedSize} bytes deleted, ${totalSize} remaining)`
+					`deleted ${deletedCount} of ${totalCount} ${subdir} cached files (${deletedSize} bytes deleted, ${totalSize} remaining)` +
+						(removedDirCount ? `, removed ${removedDirCount} empty dirs` : '') +
+						(skippedCount ? `, skipped ${skippedCount} files without a matching extension` : '') +
+						(errorCount ? `, ${errorCount} errors` : '')
 				)
 			return { deletedCount, totalCount }
 		} catch (e) {
 			// console.trace(e)
 			console.error(`Error in mayDeleteCacheFiles() for ${subdir}: ${e}`)
 		}
+	}
+
+	/** log the cachedir entries that are not a registered subdir, since no sweep evicts them */
+	async mayLogUnregisteredEntries() {
+		if (this.quiet) return
+		try {
+			const names = (await fs.promises.readdir(this.cachedir)).filter(name => !this.subdirs.has(name))
+			if (!names.length) return
+			const shown = names.slice(0, 5).join(', ') + (names.length > 5 ? ', ...' : '')
+			console.log(`${names.length} entries under cachedir are not declared in cacheRegistry and not evicted: ${shown}`)
+		} catch (e) {
+			console.error(`Error in mayLogUnregisteredEntries(): ${e}`)
+		}
+	}
+}
+
+/** resolves to undefined instead of rejecting when the file or dir no longer exists */
+async function ignoreMissing<T>(promise: Promise<T>): Promise<T | undefined> {
+	try {
+		return await promise
+	} catch (e: any) {
+		if (e.code == 'ENOENT') return
+		throw e
+	}
+}
+
+/* returns true if p, a real path when the sweep listed it, is still a real path, false if it no longer exists;
+throws if a dir level of p has been replaced by a symlink since, so that p now resolves to another location */
+async function isRealPath(p: string): Promise<boolean> {
+	const real = await ignoreMissing(fs.promises.realpath(p))
+	if (real === undefined) return false
+	if (real != p) throw 'path has changed to resolve through a symlink'
+	return true
+}
+
+/* removes a dir that is empty and has not been modified since minTime, the same cutoff as an expired file;
+a dir that just had its last file evicted has a new mtime, so it is removed by a later sweep, and a recently
+created dir, such as one that cache_index is about to download an index into, is kept */
+async function mayRemoveEmptyDir(dir: string, minTime: number): Promise<boolean> {
+	const s = await ignoreMissing(fs.promises.lstat(dir))
+	// a symlink that has replaced the dir since it was listed is not removed here
+	if (!s || !s.isDirectory() || s.mtimeMs >= minTime) return false
+	try {
+		await fs.promises.rmdir(dir) // only removes an empty dir
+		return true
+	} catch (e: any) {
+		// a file may have been added since the walk
+		if (e.code == 'ENOTEMPTY' || e.code == 'EEXIST' || e.code == 'ENOENT') return false
+		throw e
 	}
 }
