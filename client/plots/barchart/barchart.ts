@@ -660,13 +660,15 @@ export class Barchart extends PlotBase implements RxComponent {
 						? -1
 						: 1
 		// Don't render charts from uncomputable values
-		const uncomputableCharts = this.config.term0
-			? Object.values(this.config.term0.term.values)
-					.filter((valueInfo: any) => !valueInfo.computable)
-					.map((valueInfo: any) => valueInfo.label)
-			: []
+		const uncomputableCharts = new Set(
+			Object.entries<any>(this.config.term0?.term.values || {}).flatMap(([key, valueInfo]) =>
+				valueInfo.computable === false || valueInfo.uncomputable === true
+					? [key, valueInfo.label].filter(value => value != null).map(String)
+					: []
+			)
+		)
 		this.visibleCharts = chartsData.charts.filter(
-			chart => chart.visibleSerieses.length && !uncomputableCharts.includes(chart.chartId)
+			chart => chart.visibleSerieses.length && !uncomputableCharts.has(String(chart.chartId))
 		)
 
 		const t1 = this.config.term
