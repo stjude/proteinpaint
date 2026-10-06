@@ -132,6 +132,14 @@ tape('defaults', function (test) {
 							fileExtensions: new Set(['.bam', '.bai']),
 							absPath: `${m.cachedir}/bam`,
 							skipUntil: 0
+						},
+						extApiResponse: {
+							maxAge: 31536000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							fileExtensions: new Set(['']),
+							absPath: `${m.cachedir}/extApiResponse`,
+							skipUntil: 0
 						}
 					},
 					`should set default subdir properties`
@@ -155,7 +163,8 @@ tape('defaults', function (test) {
 							gdcCounts: { deletedCount: 0, totalCount: 0 },
 							wsitiles: { deletedCount: 0, totalCount: 0 },
 							bedj: { deletedCount: 0, totalCount: 0 },
-							bam: { deletedCount: 0, totalCount: 0 }
+							bam: { deletedCount: 0, totalCount: 0 },
+							extApiResponse: { deletedCount: 0, totalCount: 0 }
 						},
 						`should detect no cache files to delete`
 					)
@@ -446,6 +455,31 @@ tape('limit deletion by file extension', test => {
 			}
 		}
 	)
+})
+
+tape('delete files without an extension', async test => {
+	const cachedir = path.join(process.cwd(), '.cache-test9')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	const monitor = new CacheManager({
+		quiet: true,
+		cachedir,
+		mustExitPendingValidation: true,
+		subdirs: { extApiResponse: { maxAge: -10 } }, // force deletion of all files with matching extension
+		callbacks: {}
+	})
+	const dir = `${cachedir}/extApiResponse`
+	fs.writeFileSync(`${dir}/da39a3ee5e6b4b0d3255bfef95601890afd80709`, '{}')
+	fs.writeFileSync(`${dir}/file.json`, '{}')
+	fs.mkdirSync(`${dir}/subdir`)
+	const results = await monitor.mayDeleteCacheFiles('extApiResponse', monitor.subdirs.get('extApiResponse'), 0)
+	test.equal(results?.deletedCount, 1, 'should delete the file without an extension')
+	test.deepEqual(
+		fs.readdirSync(dir).sort(),
+		['file.json', 'subdir'],
+		'should keep the file with an extension and the subdir'
+	)
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
 })
 
 tape('checks concurrency and postStop callback', test => {
