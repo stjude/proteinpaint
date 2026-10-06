@@ -11,6 +11,7 @@ import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import ky from 'ky'
 import serverconfig from './serverconfig.js'
+import { cacheUrlProtocols } from './CacheManager.ts'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import { text as streamText } from 'stream/consumers'
@@ -236,9 +237,8 @@ export function illegalPathSegment(s) {
 }
 
 // protocol and body of a url become path segments of a cache dir (see cache_index), so only
-// allow protocols that are real remote track sources: any other name could be a feature dir under
-// cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
-const cacheUrlProtocols = new Set(['http', 'https', 'ftp'])
+// allow the protocols that are declared as 'url' subdirs in cacheRegistry: any other name could be a
+// feature dir under cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
 
 function test_url(u) {
 	const tmp = u.split('://')

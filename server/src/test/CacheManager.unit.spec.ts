@@ -1,7 +1,7 @@
 import tape from 'tape'
 import path from 'path'
 import fs from 'fs'
-import { CacheManager, cacheRegistry } from '#src/CacheManager.ts'
+import { CacheManager, cacheRegistry, cacheUrlProtocols } from '#src/CacheManager.ts'
 
 /** Tests
  * - init() cache files
@@ -113,7 +113,7 @@ tape('defaults', function (test) {
 							maxAge: 2592000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							fileExtensions: new Set(['.jpg']),
+							fileExtensions: new Set(['.jpg', '.png', '.csv']),
 							absPath: `${m.cachedir}/wsitiles`,
 							skipUntil: 0
 						},
@@ -148,6 +148,30 @@ tape('defaults', function (test) {
 							fileExtensions: new Set(['']),
 							absPath: `${m.cachedir}/snpgt`,
 							skipUntil: 0
+						},
+						http: {
+							maxAge: 2592000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							fileExtensions: new Set(['.tbi', '.csi', '.bai', '.crai']),
+							absPath: `${m.cachedir}/http`,
+							skipUntil: 0
+						},
+						https: {
+							maxAge: 2592000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							fileExtensions: new Set(['.tbi', '.csi', '.bai', '.crai']),
+							absPath: `${m.cachedir}/https`,
+							skipUntil: 0
+						},
+						ftp: {
+							maxAge: 2592000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							fileExtensions: new Set(['.tbi', '.csi', '.bai', '.crai']),
+							absPath: `${m.cachedir}/ftp`,
+							skipUntil: 0
 						}
 					},
 					`should set default subdir properties`
@@ -173,7 +197,10 @@ tape('defaults', function (test) {
 							bedj: { deletedCount: 0, totalCount: 0 },
 							bam: { deletedCount: 0, totalCount: 0 },
 							extApiResponse: { deletedCount: 0, totalCount: 0 },
-							snpgt: { deletedCount: 0, totalCount: 0 }
+							snpgt: { deletedCount: 0, totalCount: 0 },
+							http: { deletedCount: 0, totalCount: 0 },
+							https: { deletedCount: 0, totalCount: 0 },
+							ftp: { deletedCount: 0, totalCount: 0 }
 						},
 						`should detect no cache files to delete`
 					)
@@ -484,8 +511,8 @@ tape('delete files without an extension', async test => {
 	test.equal(results?.deletedCount, 1, 'should delete the file without an extension')
 	test.deepEqual(
 		fs.readdirSync(dir).sort(),
-		['file.json', 'subdir'],
-		'should keep the file with an extension and the subdir'
+		['file.json'],
+		'should keep the file with an extension, and remove the empty subdir that is older than maxAge'
 	)
 	fs.rmSync(cachedir, { force: true, recursive: true })
 	test.end()
@@ -512,6 +539,144 @@ tape('delete expired snpgt files by mtime', async test => {
 	test.equal(results?.deletedCount, 1, 'should delete the snpgt file older than the default maxAge')
 	test.deepEqual(fs.readdirSync(dir), ['hg38_ds1_1700000000001_5678'], 'should keep the recent snpgt file')
 	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
+})
+
+tape('delete files in nested dirs', async test => {
+	const cachedir = path.join(process.cwd(), '.cache-test11')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	const monitor = new CacheManager(
+		{ quiet: true, cachedir, mustExitPendingValidation: true, callbacks: {} },
+		// force deletion of all files with matching extension by maxAge
+		{ test0: { type: 'file', maxAge: -10, fileExtensions: new Set(['.txt']) } }
+	)
+	const dir = `${cachedir}/test0`
+	fs.mkdirSync(`${dir}/a/b`, { recursive: true })
+	fs.mkdirSync(`${dir}/empty`)
+	fs.writeFileSync(`${dir}/top.txt`, 'x')
+	fs.writeFileSync(`${dir}/a/b/nested.txt`, 'x')
+	fs.writeFileSync(`${dir}/a/keep.json`, 'x')
+	const results = await monitor.mayDeleteCacheFiles('test0', monitor.subdirs.get('test0'), 0)
+	test.deepEqual(results, { deletedCount: 2, totalCount: 2 }, 'should delete the matching files at any dir level')
+	test.equal(fs.existsSync(`${dir}/a/b/nested.txt`), false, 'should delete the file in a nested dir')
+	test.equal(fs.existsSync(`${dir}/a/keep.json`), true, 'should keep the nested file without a matching extension')
+	test.deepEqual(fs.readdirSync(dir), ['a'], 'should remove the empty dirs, and keep the dir that is not empty')
+	test.deepEqual(
+		fs.readdirSync(`${dir}/a`),
+		['keep.json'],
+		'should remove the nested dir after its last file is deleted'
+	)
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
+})
+
+tape('keep a recent empty dir', async test => {
+	const cachedir = path.join(process.cwd(), '.cache-test12')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	const monitor = new CacheManager(
+		{ quiet: true, cachedir, mustExitPendingValidation: true, callbacks: {} },
+		{ test0: { type: 'session', maxAge: 60000 } }
+	)
+	const dir = `${cachedir}/test0`
+	fs.mkdirSync(`${dir}/old`)
+	fs.mkdirSync(`${dir}/recent`)
+	const oldTime = new Date(Date.now() - 120000)
+	fs.utimesSync(`${dir}/old`, oldTime, oldTime)
+	await monitor.mayDeleteCacheFiles('test0', monitor.subdirs.get('test0'), 0)
+	test.deepEqual(fs.readdirSync(dir), ['recent'], 'should only remove the empty dir that is older than maxAge')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
+})
+
+tape('do not follow symlinks', async test => {
+	const cachedir = path.join(process.cwd(), '.cache-test13')
+	const outside = path.join(process.cwd(), '.cache-test13-outside')
+	for (const d of [cachedir, outside]) fs.rmSync(d, { force: true, recursive: true })
+	fs.mkdirSync(outside)
+	fs.writeFileSync(`${outside}/target.txt`, 'x')
+	const monitor = new CacheManager(
+		{ quiet: true, cachedir, mustExitPendingValidation: true, callbacks: {} },
+		{ test0: { type: 'session', maxAge: -10 } }
+	)
+	const dir = `${cachedir}/test0`
+	fs.symlinkSync(outside, `${dir}/dirlink`)
+	fs.symlinkSync(`${outside}/target.txt`, `${dir}/filelink`)
+	const results = await monitor.mayDeleteCacheFiles('test0', monitor.subdirs.get('test0'), 0)
+	test.deepEqual(results, { deletedCount: 2, totalCount: 2 }, 'should delete each symlink like a file')
+	test.deepEqual(fs.readdirSync(dir), [], 'should not leave the symlinks')
+	test.deepEqual(fs.readdirSync(outside), ['target.txt'], 'should not delete a file outside of the subdir')
+	for (const d of [cachedir, outside]) fs.rmSync(d, { force: true, recursive: true })
+	test.end()
+})
+
+tape('move nested files with their relative path', async test => {
+	const cachedir = path.join(process.cwd(), '.cache-test14')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	const monitor = new CacheManager(
+		{ quiet: true, cachedir, mustExitPendingValidation: true, callbacks: {} },
+		{
+			test0: { type: 'session', maxAge: -10, moveTo: 'trash' },
+			trash: { type: 'session', maxAge: 60000 }
+		}
+	)
+	const dir = `${cachedir}/test0`
+	for (const sub of ['a', 'b']) {
+		fs.mkdirSync(`${dir}/${sub}`)
+		fs.writeFileSync(`${dir}/${sub}/same-name`, sub)
+	}
+	const results = await monitor.mayDeleteCacheFiles('test0', monitor.subdirs.get('test0'), 0)
+	test.deepEqual(results, { deletedCount: 2, totalCount: 2 }, 'should move both expired files')
+	for (const sub of ['a', 'b']) {
+		test.equal(
+			fs.readFileSync(`${cachedir}/trash/${sub}/same-name`, 'utf8'),
+			sub,
+			`should move ${sub}/same-name to the same relative path in trash`
+		)
+	}
+	test.deepEqual(fs.readdirSync(dir), [], 'should remove the source dirs after their files are moved')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
+})
+
+tape('continue the sweep after an unreadable dir', async test => {
+	// root can read a dir without permissions, so the error cannot be created
+	if (process.getuid?.() === 0) {
+		test.comment('skipped when running as root')
+		test.end()
+		return
+	}
+	const cachedir = path.join(process.cwd(), '.cache-test15')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	const monitor = new CacheManager(
+		{ quiet: true, cachedir, mustExitPendingValidation: true, callbacks: {} },
+		{ test0: { type: 'session', maxAge: -10 } }
+	)
+	const dir = `${cachedir}/test0`
+	for (const sub of ['a', 'b', 'c']) {
+		fs.mkdirSync(`${dir}/${sub}`)
+		fs.writeFileSync(`${dir}/${sub}/f`, 'x')
+	}
+	fs.chmodSync(`${dir}/b`, 0)
+	const consoleError = console.error
+	const errors: string[] = []
+	console.error = (msg: string) => errors.push(msg)
+	let results
+	try {
+		results = await monitor.mayDeleteCacheFiles('test0', monitor.subdirs.get('test0'), 0)
+	} finally {
+		console.error = consoleError
+		fs.chmodSync(`${dir}/b`, 0o755)
+	}
+	test.deepEqual(results, { deletedCount: 2, totalCount: 2 }, 'should delete the files in the other dirs')
+	test.deepEqual(fs.readdirSync(dir), ['b'], 'should only keep the unreadable dir')
+	test.equal(errors.length, 1, 'should log one error')
+	test.ok(errors[0]?.includes('test0/b'), 'should log the path of the unreadable dir')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
+})
+
+tape('url protocols are declared in cacheRegistry', test => {
+	test.deepEqual([...cacheUrlProtocols].sort(), ['ftp', 'http', 'https'], 'should list the url subdirs')
 	test.end()
 })
 
