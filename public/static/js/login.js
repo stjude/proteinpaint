@@ -15,7 +15,7 @@ async function logout(dslabel, reload = true) {
 	const route = await findMatchDsAuthRoute(dslabel)
 	const body = JSON.stringify({ dslabel, route })
 	// this will clear any active user session in the backend
-	await fetch(`/dslogout`, { method: 'POST', header: { 'Content-Type': 'application/json' }, body })
+	await fetch(`/dslogout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body })
 		.then(r => r.json())
 		.then(console.log)
 		.catch(console.error)
@@ -113,7 +113,7 @@ async function getJwt(dslabel, role = 'public') {
 	// otherwise, should reuse saved fake tokens that have not changed in serverconfig.features
 	const genome = dslabel === 'ProtectedTest' ? 'hg38-test' : 'hg38'
 	const body = JSON.stringify({ genome, dslabel, role })
-	const res = await fetch('/demoToken', { method: 'POST', header: { 'Content-Type': 'application/json' }, body })
+	const res = await fetch('/demoToken', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body })
 		.then(r => r.json())
 		.catch(console.error)
 	if (res.error) {
