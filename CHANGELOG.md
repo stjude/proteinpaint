@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- add TableBase, an extendable table with sort, filter, paging, row selection and cell editing; the SC sample table is now built on it
+
 Fixes:
 - the DMR plot shows the R backend toggle only in debugmode, and the server accepts the R backend only in debugmode
 
