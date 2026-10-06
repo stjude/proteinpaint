@@ -360,6 +360,8 @@ export async function init(
 				.filter(Boolean)
 		const exprGenes = geneList(opts.geneExpression) // one overlay per gene
 		const groupGenes = geneList(opts.geneGroups) // summed into a single overlay
+		if ((exprGenes.length || groupGenes.length) && !opts.spatialData)
+			throw new Error('gene_expression/gene_groups requires spatial_data=<h5ad file>')
 
 		// which overlays need the h5ad: cell polygons serve the strokes, the
 		// type/expression fills, the hover tooltip and the lasso (hit-testing
