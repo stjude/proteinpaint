@@ -286,9 +286,10 @@ export async function runDmrBatch(
 	re-run, or a second person running it, would otherwise pay in full again. The identical
 	request arriving twice concurrently is deduplicated to one compute by cacheOrRecompute,
 	so a demo and a colleague clicking along cost one scan, not two. */
+	const scope = sampleFilterScope(q, ds)
 	const { result: payload, cacheId } = await cacheOrRecompute<typeof cacheKey, TermdbDmrBatchSuccessResponse>({
 		computeArgument: cacheKey,
-		cacheScope: sampleFilterScope(q, ds),
+		cacheScope: scope,
 		cacheSubdir: 'dmr',
 		computeFresh: async () => {
 			const out: TermdbDmrBatchSuccessResponse['regions'] = []
@@ -564,9 +565,10 @@ export async function runDmrBatch(
 			}
 			return {
 				status: 'ok',
-				// which dataset this result belongs to, so a consumer holding only a cacheId can check it
+				// which dataset and cacheScope this result belongs to, so a consumer holding only a cacheId can check it
 				genome: q.genome,
 				dslabel: q.dslabel,
+				scope,
 				regions: out,
 				chromosomes: merged.size,
 				totalProbesAnalyzed: totalProbes,

@@ -3,6 +3,7 @@ import { getData, maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { filterSampleNamesByAccess } from '#src/termdb.sql.js'
 import { authApi } from '#src/auth.js'
+import { generateHash } from '#src/serverconfig.js'
 
 /** Two-group sample resolution result. The conf{1,2}_group{1,2} arrays
  * carry the confounder values for samples that survived the per-confounder
@@ -86,6 +87,23 @@ export function withholdSampleNames(allSampleSet: Set<string>, pattern?: string)
 	return withheld
 }
 
+/* The eligible samples that pass the dataset's sample filter for a request, same as for getData().
+Kept per eligible set and per request (its q.__protected__ object), since the groups of one analysis
+are resolved in separate buildGroupValues() calls. */
+const readableByRequest = new WeakMap<Set<string>, WeakMap<object, Promise<Set<string>>>>()
+
+function readableSamples(allSampleSet: Set<string>, ds: any, __protected__: any): Promise<Set<string>> | Set<string> {
+	if (!ds.cohort?.termdb?.getAdditionalFilter) return allSampleSet
+	const resolve = async () => new Set<string>(await filterSampleNamesByAccess({ __protected__ }, ds, [...allSampleSet]))
+	// there is no request object to keep the result by
+	if (!__protected__ || typeof __protected__ != 'object') return resolve()
+	let byRequest = readableByRequest.get(allSampleSet)
+	if (!byRequest) readableByRequest.set(allSampleSet, (byRequest = new WeakMap()))
+	let readable = byRequest.get(__protected__)
+	if (!readable) byRequest.set(__protected__, (readable = resolve()))
+	return readable
+}
+
 /** Walk one sample group's values and collect names + confounder values.
  * A name is included iff every configured confounder (tw, tw2) has data
  * for that sample — the two early-return guards enforce that without a
@@ -107,8 +125,7 @@ export async function buildGroupValues(
 	const conf1: (string | number)[] = []
 	const conf2: (string | number)[] = []
 	let sampleLst = values
-	// the eligible samples that pass the dataset's sample filter for this request, same as for getData()
-	const readable = new Set<string>(await filterSampleNamesByAccess({ __protected__ }, ds, [...allSampleSet]))
+	const readable = await readableSamples(allSampleSet, ds, __protected__)
 
 	if (ds.cohort.termdb.hasSampleAncestry) {
 		// ds has sample ancestry
@@ -165,14 +182,16 @@ export async function buildGroupValues(
 	return { names, conf1, conf2 }
 }
 
-/** The cacheScope for a result that is computed from sample groups: the dataset's sample
- * filter for this request, since buildGroupValues() resolves the groups with it. Empty when
- * the dataset has no sample filter, or when none applies to the request. */
+/** An id of the dataset's sample filter for this request, since buildGroupValues() resolves the
+ * groups with it. It is the cacheScope for a result that is computed from sample groups, and is
+ * recorded with a result that a later request may name by its cacheId alone, to compare with the
+ * scope of that request. Empty when the dataset has no sample filter, or when none applies to
+ * the request. */
 export function sampleFilterScope(q: { __protected__?: any }, ds: any): string {
 	if (!ds?.cohort?.termdb?.getAdditionalFilter) return ''
 	const fq: any = { __protected__: q.__protected__ }
 	authApi.mayAdjustFilter(fq, ds, undefined)
-	return fq.filter?.lst?.length ? JSON.stringify(fq.filter) : ''
+	return fq.filter?.lst?.length ? generateHash(fq.filter) : ''
 }
 
 /** Caller-side normalizer for two-group analyses (DE, DM): returns a

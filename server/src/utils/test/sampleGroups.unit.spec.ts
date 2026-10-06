@@ -22,7 +22,7 @@ buildGroupValues happy path: includes samples whose id is integer and name is in
 buildGroupValues skips non-integer sampleId
 buildGroupValues skips when id2sampleName returns falsy
 buildGroupValues skips when name is not in allSampleSet
-buildGroupValues skips when the sample does not pass the dataset sample filter
+buildGroupValues resolves the samples of a ds with a sample filter once per request
 sampleFilterScope is empty for a dataset without a sample filter
 buildGroupValues skips when tw is configured but term_results has no row for that sample
 buildGroupValues skips when tw2 is configured but term_results2 has no row for that sample
@@ -180,22 +180,30 @@ tape('buildGroupValues skips when name is not in allSampleSet', async t => {
 	t.end()
 })
 
-tape('buildGroupValues skips when the sample does not pass the dataset sample filter', async t => {
-	// the sample filter is resolved with authApi.mayAdjustFilter(): assign the shared open-access api
-	// once, the same idempotent way termdb.matrix.unit.spec.js does
+/* For a ds with a sample filter, the samples are resolved from the ds db. Here the db is a stub that
+returns sampleA only, and the shared authApi of a unit test run is the open-access one, which does
+not call getAdditionalFilter(): this covers which names are kept and how often the db is queried.
+The filter of a session's role is covered by sampleGroups.request.integration.spec.ts. */
+tape('buildGroupValues resolves the samples of a ds with a sample filter once per request', async t => {
+	// assign the shared open-access api once, the same idempotent way termdb.matrix.unit.spec.js does
 	if (!authApi) {
 		const app = { doNotFreezeAuthApi: true, get() {}, post() {}, all() {}, use() {} }
 		await getAuthApi(app, {}, {}, true)
 	}
-	const idToName: Record<number, string> = { 1: 'sampleA', 2: 'sampleB' }
-	const ds: any = makeDs(idToName)
+	const ds: any = makeDs({ 1: 'sampleA', 2: 'sampleB' })
 	ds.cohort.termdb.getAdditionalFilter = () => undefined
 	ds.cohort.termdb.q.sampleName2id = (name: string) => (name == 'sampleA' ? 1 : 2)
-	// the ds db returns the sample ids that pass the filter: only sampleA here
-	ds.cohort.db = { connection: { prepare: () => ({ all: () => [{ id: 1 }] }) } }
+	let queries = 0
+	ds.cohort.db = { connection: { prepare: () => ({ all: () => (queries++, [{ id: 1 }]) }) } }
 	const allSampleSet = new Set<string>(['sampleA', 'sampleB'])
-	const out = await buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], allSampleSet, ds, null, null, [], [], {})
-	t.deepEqual(out.names, ['sampleA'], 'only the sample that passes the filter is included')
+	const request = {} // the q.__protected__ of one request
+	const g1 = await buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], allSampleSet, ds, null, null, [], [], request)
+	const g2 = await buildGroupValues([{ sampleId: 2 }], allSampleSet, ds, null, null, [], [], request)
+	t.deepEqual(g1.names, ['sampleA'], 'only the sample that the ds db returns is included')
+	t.deepEqual(g2.names, [], 'a group of the other sample is empty')
+	t.equal(queries, 1, 'the two groups of a request share one db query')
+	await buildGroupValues([{ sampleId: 1 }], allSampleSet, ds, null, null, [], [], {})
+	t.equal(queries, 2, 'another request queries the db again')
 	t.end()
 })
 

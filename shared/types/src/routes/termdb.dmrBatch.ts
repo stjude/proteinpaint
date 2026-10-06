@@ -82,6 +82,10 @@ export type TermdbDmrBatchSuccessResponse = {
 	 * authorized for. Absent on results cached before they were recorded. */
 	genome?: string
 	dslabel?: string
+	/** The cacheScope the result was computed with (sampleFilterScope() in the server), which
+	 * termdb/dmrGeneLink compares with the scope of its own request. Empty for a dataset without
+	 * a sample filter, and absent on results cached before it was recorded. */
+	scope?: string
 	regions: {
 		chr: string
 		/** the merged window actually analysed, which may be wider than any single input region */
