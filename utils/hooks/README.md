@@ -19,6 +19,7 @@ with a matching name.
 
 ### commit-msg
 
+- Remove any `Co-Authored-By` line from the commit message, see `AGENTS.md`
 - Check the commit message with `check-text.sh`, see below
 - Update `release.txt` from the commit message
 
@@ -42,6 +43,10 @@ within sjpp), or `../../../security-triage/text-check-terms.txt` relative to thi
 Each line is checked, and also each pair of consecutive lines joined as one line, without the indent and comment
 marker of the second line, to find a term that is wrapped onto the next line, such as in a code comment or commit
 message. A pair is only reported when neither of its lines matches by itself.
+In a commit message, branch name, or PR text, but not in a diff, each all-caps word such as an env var or constant
+name is also checked for a term from a line that starts with `caps:` in either terms file. These are words that
+stand out in all caps and are associated with security, even when the lowercase word is fine, so reword the text
+or remove the all-caps word.
 Set `SKIP_TEXT_CHECK=1` to skip the check, such as when the fix is already deployed to prod.
 
 ### claude-bash-check.cjs

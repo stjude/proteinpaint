@@ -26,6 +26,9 @@ import {
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 /* Is gene-body methylation loss a cause of reduced transcription, or a footprint of it?
 
 Gene-body methylation is laid down BY transcription: Pol II carries SETD2, which deposits H3K36me3
@@ -303,7 +306,7 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 						JSON.stringify({
 							probe_h5_file: matrixFile,
 							mvalues,
-							cachedir: serverconfig.cachedir,
+							cachedir,
 							genome: q.genome,
 							chr: jobChrs[0],
 							start: 0,

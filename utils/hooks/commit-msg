@@ -6,6 +6,11 @@
 #   exit 0
 # fi
 
+# remove the co-author lines, which are not included in a commit message, see AGENTS.md,
+# and the blank lines that are left at the end
+MSG="$(grep -v -i -E '^[[:space:]]*co-authored-by:' "$1")"
+printf '%s\n' "$MSG" > "$1"
+
 # check the message before it's used in the release notes
 ./utils/hooks/check-text.sh commit-msg "$1" || exit 1
 

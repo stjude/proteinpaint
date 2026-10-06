@@ -14,6 +14,9 @@ import { FRACTION_TW_TYPE, validateTermCollectionFraction } from '#shared/termCo
 import { getData } from '../termdb.matrix.js'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 type TermWrapperLike = {
 	$id?: string
 	/** the term wrapper type, e.g. 'NumTWCont'; branch on term.type for the term type */
@@ -590,7 +593,7 @@ function makeRinput(q: RegressionQuery, sampledata: SampleDataEntry[]): RInput {
 
 	const Rinput: RInput = {
 		regressionType: q.regressionType,
-		cachedir: serverconfig.cachedir, // for creating spline plot file
+		cachedir, // for creating spline plot file
 		data,
 		outcome,
 		independent,

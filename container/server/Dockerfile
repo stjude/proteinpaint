@@ -1,7 +1,7 @@
 # Default to Docker Hub, but enable the base image to be pulled from a
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
-ARG VERSION=2.212.1-0
+ARG VERSION=2.217.0
 
 #########################
 # Server-only app update
@@ -41,6 +41,12 @@ RUN if find . ! -type l \( ! -user 0 -o -perm /022 \) | grep .; then \
     if su -s /bin/sh app -c "find /home/root/pp/app/active -writable" | grep .; then \
       echo "ERROR: the app files above are writable by the app user"; exit 1; \
     fi
+
+# The cache dir is owned by root with mode 1733, the same as in deps/Dockerfile, so that the app user may create and use
+# a subdir with a known name but may not list the entries, see hideCachedir in server/src/serverconfig.js. Also set
+# here, so that it applies with a base image from before that deps/Dockerfile change. A mounted cache dir needs the
+# same owner and mode on the host.
+RUN chown root:0 /home/root/pp/cache && chmod 1733 /home/root/pp/cache
 
 # numeric ids, the same as in the base image
 USER 1000:1000

@@ -48,6 +48,8 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 		// because it's already set at the beginning of this function
 		app.use(express.static(serverconfig.publicDir))
 	}
+	// after the public static, so that a file in public/ takes priority over its proteinpaint-front package copy
+	if (serverconfig.frontPublicDir) app.use(getFrontPublicFallback(serverconfig.frontPublicDir))
 	const testDataCacheDir = maySetTestDataCacheDir(doneLoading)
 
 	app.use(
@@ -264,6 +266,16 @@ function log(req) {
 		req.header('x-forwarded-for') || req.connection.remoteAddress,
 		JSON.stringify(j).replace(/\\"/g, '"')
 	)
+}
+
+// serves only index.html, for / and /index.html, and the cards/ files from dir, see serverconfig.frontPublicDir;
+// the dir static handler is reached only by the exact / and /index.html routes, and the cards static handler is
+// rooted at dir/cards, so that the other files in dir, if any, are not published
+export function getFrontPublicFallback(dir) {
+	const router = express.Router()
+	router.get(['/', '/index.html'], express.static(dir))
+	router.use('/cards', express.static(path.join(dir, 'cards'), { index: false }))
+	return router
 }
 
 /*

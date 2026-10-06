@@ -149,6 +149,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.maxAnnoTermsPerClientRequest) c.maxAnnoTermsPerClientRequest = tdb.maxAnnoTermsPerClientRequest
 	if (tdb.limitDictTermSamplesToMutated) c.limitDictTermSamplesToMutated = tdb.limitDictTermSamplesToMutated
 	if (tdb.hidePlotDocumentation) c.hidePlotDocumentation = tdb.hidePlotDocumentation
+	if (tdb.plotFilter) c.plotFilter = tdb.plotFilter
 	if (tdb.gbRecreateBlock) c.gbRecreateBlock = tdb.gbRecreateBlock
 	if (tdb.sampleTypeTerms) c.sampleTypeTerms = tdb.sampleTypeTerms
 	if (tdb.sampleTypesByTerms) c.sampleTypesByTerms = tdb.sampleTypesByTerms
@@ -323,6 +324,14 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			// self-contained table config; pass through as-is for the client studyCatalog plot
 			q2.proteome.studyCatalog = JSON.parse(JSON.stringify(q.proteome.studyCatalog))
 		}
+		if (q.proteome.cohortSunburst) {
+			// self-contained ring config for the client cohortSunburst plot
+			q2.proteome.cohortSunburst = JSON.parse(JSON.stringify(q.proteome.cohortSunburst))
+		}
+		if (q.proteome.dataQuality) {
+			// intro text for the Data quality views; the figures are per cohort (qcFigures)
+			q2.proteome.dataQuality = { description: q.proteome.dataQuality.description }
+		}
 		if (q.proteome.cellTypeBubbleHeatmap) {
 			// presence-only: lets the studyCatalog gate its "Cell-type Bubble Heatmap" button
 			q2.proteome.cellTypeBubbleHeatmap = JSON.parse(JSON.stringify(q.proteome.cellTypeBubbleHeatmap))
@@ -367,6 +376,12 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 								}
 								if (src.DAPfile) {
 									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].DAPfile = true
+								}
+								if (src.qcFigures) {
+									// static QC figures, loaded through the img route
+									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].qcFigures = JSON.parse(
+										JSON.stringify(src.qcFigures)
+									)
 								}
 								if (src.catalog) {
 									// per-cohort display fields for the studyCatalog table row
@@ -505,6 +520,18 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 				})
 			)
 		}
+	}
+	if (q.swimmer) {
+		q2.swimmer = JSON.parse(
+			JSON.stringify({
+				timeLabel: q.swimmer.timeLabel,
+				categories: q.swimmer.categories,
+				events: q.swimmer.events,
+				terminalEvent: q.swimmer.terminalEvent,
+				pointSampleTypes: q.swimmer.pointSampleTypes,
+				pointSampleEvents: q.swimmer.pointSampleEvents
+			})
+		)
 	}
 	if (q.singleSampleGbtk) {
 		q2.singleSampleGbtk = {}

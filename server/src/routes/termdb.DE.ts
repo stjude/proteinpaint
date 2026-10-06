@@ -16,6 +16,9 @@ import {
 import type { DeCacheResult } from '../../routes/types.ts'
 import { genomes } from '#src/initGenomesDs.js'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 export const payload: RoutePayload = {
 	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
 	// is evaluated; the route is only set up when at least one ds has ds.queries.rnaseqGeneCount or
@@ -261,7 +264,7 @@ async function runDeFresh(
 		control: groups.group1names.join(','),
 		data_type: 'do_DE',
 		input_file,
-		cachedir: serverconfig.cachedir,
+		cachedir,
 		DE_method,
 		mds_cutoff: 10000,
 		min_count: param.min_count,

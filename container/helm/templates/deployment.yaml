@@ -49,6 +49,14 @@ spec:
             # instead of merging it, which would drop this entry when container.env is overridden
             - name: PP_MODE
               value: {{ .Values.container.ppMode | quote }}
+            {{- if .Values.cacheIdCreds.enabled }}
+            # envHelpers.mjs passes it to the server like the other <NAME>_CREDS values, not in the server's initial env
+            - name: PP_CACHEID_CREDS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cacheIdCreds.existingSecret | default (printf "%s-cacheid" (include "proteinpaint.fullname" .)) }}
+                  key: {{ .Values.cacheIdCreds.secretKey }}
+            {{- end }}
             {{- with .Values.container.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -80,11 +88,18 @@ spec:
             {{- if .Values.mounts.data.enabled }}
             - name: {{ .Values.mounts.data.name }}
               mountPath: {{ .Values.mounts.data.mountPath }}
+            {{- else }}
+            - name: cache
+              mountPath: {{ .Values.config.serverConfig.cachedir }}
             {{- end }}
             - name: {{ .Values.mounts.config.name }}
               mountPath: {{ .Values.mounts.config.mountPath }}
               subPath: {{ .Values.mounts.config.subPath }}
               readOnly: true
+            {{- range .Values.writableDirs }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+            {{- end }}
             {{- range .Values.extraVolumeMounts }}
             - {{- toYaml . | nindent 14 }}
             {{- end }}
@@ -95,6 +110,21 @@ spec:
         - name: {{ .Values.mounts.data.name }}
           persistentVolumeClaim:
             claimName: {{ .Values.mounts.data.pvcName }}
+        {{- else }}
+        - name: cache
+          emptyDir:
+            {{- with .Values.mounts.data.cacheSizeLimit }}
+            sizeLimit: {{ . }}
+            {{- else }} {}
+            {{- end }}
+        {{- end }}
+        {{- range .Values.writableDirs }}
+        - name: {{ .name }}
+          emptyDir:
+            {{- with .sizeLimit }}
+            sizeLimit: {{ . }}
+            {{- else }} {}
+            {{- end }}
         {{- end }}
         - name: {{ .Values.mounts.config.name }}
           configMap:

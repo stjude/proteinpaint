@@ -7,6 +7,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import crypto from 'crypto'
 
 // import.meta.dirname is undefined when using docker dev environment
 // use __dirname and __filename global variable convention from commonjs
@@ -364,6 +365,128 @@ if (process.env.PP_MODE?.startsWith('container')) {
 	})
 }
 
+/*
+	The key for deriving the cache file names and the cachedir subdir name, kept module-local, not in serverconfig,
+	so that it is never part of a config dump or a response.
+
+	Set PP_CACHEID_CREDS to the same value on every instance that shares a cachedir, so that they derive the same names
+	and keep finding the existing cache files across restarts. When the server is started with container/envHelpers.mjs,
+	as in the container images, PP_CACHEID_CREDS_FILE may name a file with the value instead: envHelpers.mjs reads that
+	file and passes its content like the other <NAME>_CREDS values, so that it is not in the initial env of the server
+	process. This module does not read PP_CACHEID_CREDS_FILE, so without envHelpers.mjs it is ignored. When not set, a
+	random key is generated per process: the cache still works, but every restart or other instance misses on the
+	files that were written before.
+
+	Read here, after the handoff values are set in process.env above, and removed from process.env in every mode, so
+	that it is not inherited by a child process. Only native modules are imported by this file, since it is also
+	loaded unbundled from the published package, such as by genome/copyDataFilesFromRepo2Tp.js, besides its bundled
+	copy in app.js. Only the first loaded copy, which is the bundled one in a server process, reads the key and sets
+	up the cache subdir, see firstLoad below.
+*/
+const cacheIdKeyValue = process.env.PP_CACHEID_CREDS
+const hasPersistentCacheKey = !!cacheIdKeyValue
+const cacheIdKey = cacheIdKeyValue ? Buffer.from(cacheIdKeyValue, 'utf8') : crypto.randomBytes(32)
+delete process.env.PP_CACHEID_CREDS
+
+/** Derive a 32-hex-char cacheId from the given object via
+ * HMAC-sha256(key, JSON.stringify([scope, args])). Truncation at 32 chars is safe
+ * for cache keys — collision probability is negligible at realistic cache sizes.
+ * Callers shape `args` to include only the fields whose identity
+ * determines the cache key, and must construct it with a stable key order
+ * (object literals do this naturally).
+ *
+ * `scope` is optional, and separates cacheIds for the same args, e.g. per user or session
+ * when the result depends on what the requester may access. Without a scope, identical
+ * args share one cacheId, which is the intended behavior for results that are the same for
+ * every requester. */
+export function generateHash(args, scope = '') {
+	return crypto
+		.createHmac('sha256', cacheIdKey)
+		.update(JSON.stringify([scope, args]))
+		.digest('hex')
+		.slice(0, 32)
+}
+
+/*
+	true for the first loaded copy of this module in a process. A later copy, such as the unbundled file that a genome
+	file imports, finds no PP_CACHEID_CREDS since the first copy removed it, so it would derive a different cache
+	subdir. The flag only marks that the cache subdir is set up, and does not hold its name.
+*/
+const firstLoadFlag = Symbol.for('proteinpaint.serverconfig.firstLoad')
+const firstLoad = !globalThis[firstLoadFlag]
+// configurable, so that a test can evaluate another first copy
+if (firstLoad) Object.defineProperty(globalThis, firstLoadFlag, { value: true, configurable: true })
+
+/*
+	Use an unlisted subdir of the configured cachedir, whose name is derived from the PP_CACHEID_CREDS key, so that the
+	cache files cannot be found by listing directories. On by default in a container, and may be set with
+	serverconfig.hideCachedir in any mode. The configured cachedir must then be owned by another user than the server
+	process, such as root, with mode 1733: the server user may create and use a subdir with a known name, but may not
+	list the entries or change the mode. A dir that is owned by the server user can always be listed by that user,
+	since the owner may change its mode.
+
+	All code that uses the path must copy serverconfig.cachedir to a module-local variable when it is loaded:
+	app.ts deletes serverconfig.cachedir before the server starts listening.
+*/
+if (serverconfig.hideCachedir ?? process.env.PP_MODE?.startsWith('container')) {
+	// a later copy does not use the cache, and must not use the configured cachedir, which is the parent of the subdir
+	if (!firstLoad) delete serverconfig.cachedir
+	else {
+		const parent = serverconfig.cachedir
+		if (!parent) throw 'serverconfig.cachedir missing'
+		// a parent dir that is created here is owned by the server user, which the warning below reports
+		if (!fs.existsSync(parent)) fs.mkdirSync(parent, { recursive: true })
+		let parentEntries
+		try {
+			parentEntries = fs.readdirSync(parent)
+			console.warn(
+				`WARNING: serverconfig.cachedir='${parent}' can be listed by the server process, so the cache subdir name ` +
+					`is not hidden; the dir should be owned by another user, such as root, with mode 1733`
+			)
+		} catch (e) {
+			// EACCES is the expected result; another error is reported by the mkdirSync() below
+		}
+		if (!hasPersistentCacheKey) {
+			console.warn(
+				`WARNING: PP_CACHEID_CREDS is not set, so the cache subdir name is generated for this process only, ` +
+					`and the files cached by an earlier process are not found or removed`
+			)
+		}
+		// not a generateHash() value, since the HMAC input is not a JSON array
+		const dirName = crypto.createHmac('sha256', cacheIdKey).update('cachedir').digest('hex').slice(0, 32)
+		serverconfig.cachedir = path.join(parent, dirName)
+		// the name is not logged, so that it is not in any log output
+		fs.mkdirSync(serverconfig.cachedir, { recursive: true, mode: 0o700 })
+		if (parentEntries) moveEarlierCacheEntries(parent, parentEntries, dirName)
+	}
+}
+delete serverconfig.hideCachedir
+
+/*
+	Moves the entries of the earlier cache layout, such as the saved sessions in massSession/, from the configured
+	cachedir into the derived subdir, where they are still found by the server and evicted by the cache monitor.
+	This is only possible while the configured cachedir can be listed, such as on the first start with the derived
+	subdir, before the dir owner and mode are changed. An entry with the name shape of a derived subdir, such as from
+	another instance with a different key, is not moved, and neither is an entry whose name already exists in the
+	derived subdir.
+*/
+function moveEarlierCacheEntries(parent, entries, dirName) {
+	let moved = 0
+	for (const name of entries) {
+		if (name == dirName || /^[0-9a-f]{32}$/.test(name)) continue
+		const dest = path.join(parent, dirName, name)
+		if (fs.existsSync(dest)) continue
+		try {
+			fs.renameSync(path.join(parent, name), dest)
+			moved++
+		} catch (e) {
+			// such as EXDEV for a separately mounted entry, which then stays where it is
+			console.warn(`WARNING: unable to move the earlier cache entry '${name}' into the cache subdir: ${e.code || e}`)
+		}
+	}
+	if (moved) console.log(`moved ${moved} earlier cache entries into the cache subdir`)
+}
+
 // when a mandatory setting is not defined in any ds, declare its default here
 
 if (process.argv.find(a => a == 'validate')) {
@@ -390,6 +513,13 @@ if (!serverconfig.backend_only && fs.existsSync(publicDir)) serverconfig.publicD
 const binDir = path.join(process.cwd(), './bin')
 if (!serverconfig.backend_only) serverconfig.binDir = binDir
 
+// The proteinpaint-front package's own public/index.html and public/cards, which its init copies into public/ when
+// missing there. The server serves these paths from this dir when public/ does not have them, such as a public/ mount
+// that the init cannot write to (see app.middlewares.js). Auto-computed from cwd like binDir, never operator-set.
+const frontPublicDir = path.join(process.cwd(), 'node_modules/@sjcrh/proteinpaint-front/public')
+delete serverconfig.frontPublicDir
+if (!serverconfig.backend_only && fs.existsSync(frontPublicDir)) serverconfig.frontPublicDir = frontPublicDir
+
 if (serverconfig.publicDir) {
 	const defaultTarget = path.join(serverconfig.binpath, 'cards')
 	if (!serverconfig.cards) {
@@ -410,7 +540,8 @@ if (fs.existsSync('./package.json')) {
 	serverconfig.version = JSON.parse(pkg).version
 }
 
-if (!serverconfig.cache_snpgt) {
+// a later copy may have no cachedir, see firstLoad above
+if (!serverconfig.cache_snpgt && serverconfig.cachedir) {
 	serverconfig.cache_snpgt = {
 		dir: path.join(serverconfig.cachedir, 'snpgt'),
 		fileNameRegexp: /[^\w]/, // client-provided cache file name matching with this are denied

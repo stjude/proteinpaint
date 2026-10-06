@@ -9,9 +9,7 @@ import {
 	makeTileCard,
 	renderPlaceholderTiles,
 	renderTileError,
-	toggleTilePane,
-	closeTilePane,
-	closeTilePanes
+	tileExpandState
 } from './proteinView.tiles'
 
 /*
@@ -19,11 +17,12 @@ proteomeCohortCompare — cross-cohort comparison of standardized fold change (l
 
 Launched from the Studies catalog when ≥2 cohorts are selected. Fetches the aligned z matrix
 from termdb/proteomeCohortCompare and renders:
-  - 2 cohorts  → a concordance scatter (z vs z); points colored by shared DAP direction
+  - 2 cohorts  → a concordance scatter tile (z vs z); points colored by shared DAP direction
   - ≥3 cohorts → one live tile card per tool (as in the Protein View): a cohort correlation matrix,
                  a protein × cohort clustered heatmap, a shared-vs-specific DAP overlap (an UpSet
                  per up/down direction, each intersection click-through to its protein list), and
-                 the trajectory below; ⤢ opens the full interactive tool in a pane
+                 the trajectory below
+  every tile expands in place (click or ⤢) to the full interactive tool
   - a series   → an age/progression trajectory: when the selection contains ≥1 ordered series
                  (cohorts sharing dataset trajectory.series), one panel per k-means cluster showing
                  the member proteins' relative-abundance trajectories + a thick eigengene trend line
@@ -45,11 +44,11 @@ const NEUTRAL = '#cccccc' // not a shared DAP
 const Z_THRESH = 2
 const FDR_THRESH = 0.05
 
-type ViewKey = 'default' | 'heatmap' | 'overlap' | 'trajectory'
+type ViewKey = 'scatter' | 'default' | 'heatmap' | 'overlap' | 'trajectory'
 
-/** the comparison tools for ≥3 cohorts. Each is a live tile card (Protein View style): the
- *  card face shows the tool rendered at a reduced scale with its side panels hidden, ⤢ opens
- *  the full interactive tool in a floating pane. `available` gates the tile on the current
+/** the comparison tools. Each is a live tile card (Protein View style): the card face shows
+ *  the tool rendered at a reduced scale with its side panels hidden; expanding the card shows
+ *  the full interactive tool in place. `available` gates the tile on the current
  *  selection; an unavailable tool is shown as a greyed placeholder that says what it needs. */
 type ToolTile = {
 	key: ViewKey
@@ -59,7 +58,7 @@ type ToolTile = {
 	unavailableNote: string
 	render: (self: ProteomeCohortCompare, data: any) => void
 	/** optional tool-specific controls, rendered unscaled in the tile card (between subtitle and
-	 *  face) and at the top of the expanded pane, so they belong to the tool rather than the plot */
+	 *  face) and at the top of the expanded view, so they belong to the tool rather than the plot */
 	controls?: (self: ProteomeCohortCompare, holder: any) => void
 }
 
@@ -69,6 +68,19 @@ const PANEL_CLASS = 'sjpp-cc-panel'
 const FACE_W = 206
 const FACE_H = 170
 
+/** the 2-cohort tool */
+const PAIR_TILES: ToolTile[] = [
+	{
+		key: 'scatter',
+		title: 'Concordance scatter',
+		subtitle: 'log2FC-z of one cohort vs the other',
+		available: () => true,
+		unavailableNote: '',
+		render: (self, data) => self.renderScatter(data)
+	}
+]
+
+/** the ≥3-cohort tools */
 const TOOL_TILES: ToolTile[] = [
 	{
 		key: 'default',
@@ -129,9 +141,8 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 	data: any = null
 	/** signature of the current cohort selection — used to reset the trajectory drill-down when it changes */
 	cohortKey = ''
-	/** open expanded-tool panes (owned by the tiles module), keyed by tool; re-filled on reload
-	 *  so their controls stay live */
-	panes = new Map<ViewKey, any>()
+	/** key of the in-place expanded tile, kept so a refetch or redraw reopens it */
+	expandedTileKey: ViewKey | null = null
 
 	constructor(opts: any, api) {
 		super(opts, api)
@@ -159,7 +170,6 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		const config: any = this.state.config
 		this.cohorts = config.cohorts || []
 		if (this.cohorts.length < 2) {
-			this.closePanes()
 			this.dom.body.selectAll('*').remove()
 			this.dom.body.append('div').style('color', '#666').text('Select at least two cohorts to compare.')
 			return
@@ -195,8 +205,6 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 
 	async reload() {
 		const multi = this.cohorts.length > 2
-		this.dom.body.selectAll('*').remove()
-		// a rejected request must not leave panes from the previous data behind
 		const data = await dofetch3('termdb/proteomeCohortCompare', {
 			body: {
 				genome: this.app.opts.state.vocab.genome,
@@ -212,13 +220,12 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 				nClusters: this.nClusters
 			}
 		}).catch(e => {
-			this.closePanes()
+			this.dom.body.selectAll('*').remove()
 			throw e
 		})
-		// panes drawn from previous data must not outlive it; only the multi-tool
-		// path below keeps them (and refreshes them in place)
-		const keepPanes = data && !data.error && multi && data.sharedGeneCount >= 3
-		if (!keepPanes) this.closePanes()
+		// clear after the fetch (not before) so the page doesn't collapse and jump while
+		// a cutoff change inside an expanded tile refetches
+		this.dom.body.selectAll('*').remove()
 		// guard: a missing/failed endpoint (e.g. 404) returns no z matrix — fail clearly, don't crash
 		if (!data || data.error || !Array.isArray(data.z) || typeof data.sharedGeneCount !== 'number') {
 			this.dom.body
@@ -240,12 +247,11 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 				.text('Too few shared proteins to compare.')
 			return
 		}
-		if (!multi) {
-			this.renderScatter(data)
-			return
-		}
 		this.renderToolTiles(data)
-		this.refreshPanes(data)
+	}
+
+	tiles(): ToolTile[] {
+		return this.cohorts.length > 2 ? TOOL_TILES : PAIR_TILES
 	}
 
 	/** run a renderer (which draws into this.dom.body) against another holder */
@@ -260,12 +266,12 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 	}
 
 	/** one live tile card per tool (same cards as the Protein View study tiles): the face is the
-	 *  tool drawn at full size then scaled to fit, side panels hidden; ⤢ opens the full tool in a
-	 *  floating pane. Tools without data render as greyed placeholders after the live ones. */
+	 *  tool drawn at full size then scaled to fit, side panels hidden; expanding the card shows the
+	 *  full tool in place. Tools without data render as greyed placeholders after the live ones. */
 	renderToolTiles(data: any) {
 		const grid = makeTileGrid(this.dom.body)
 		const missing: ToolTile[] = []
-		for (const tile of TOOL_TILES) {
+		for (const tile of this.tiles()) {
 			if (!tile.available(this, data)) {
 				missing.push(tile)
 				continue
@@ -274,7 +280,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 				title: tile.title,
 				subtitle: tile.subtitle,
 				uniform: true,
-				onExpand: () => this.togglePane(tile)
+				expand: { render: holder => this.renderExpanded(tile, holder, data), ...tileExpandState(this, tile.key) }
 			})
 			if (tile.controls) {
 				tile.controls(this, body.append('div').style('margin-top', '2px'))
@@ -286,9 +292,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 				.style('height', `${FACE_H}px`)
 				.style('overflow', 'hidden')
 				.style('margin-top', '4px')
-				.style('cursor', 'pointer')
 				.attr('title', `Expand ${tile.title}`)
-				.on('click', () => this.togglePane(tile))
 			const inner = face.append('div').style('display', 'inline-block').style('transform-origin', 'top left')
 			try {
 				this.renderInto(inner, () => tile.render(this, data))
@@ -316,70 +320,18 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		)
 	}
 
-	/** ⤢: open the full interactive tool in a draggable pane; a second click closes it */
-	togglePane(tile: ToolTile) {
-		const pane = toggleTilePane(
-			this,
-			tile.key,
-			`Cohort comparison — ${tile.title}`,
-			() => {}, // body is filled by fillPane so refreshPanes can redraw it in place
-			() => this.panes.delete(tile.key)
-		)
-		if (!pane) return
-		this.panes.set(tile.key, pane)
-		this.fillPane(tile, pane, this.data)
-	}
-
-	fillPane(tile: ToolTile, pane: any, data: any) {
-		pane.body.selectAll('*').remove()
-		const body = pane.body.append('div').style('padding', '12px 16px')
-		body
-			.append('div')
-			.style('font-size', '.8em')
-			.style('color', '#6b7280')
-			.style('margin-bottom', '6px')
-			.text(tile.subtitle)
-		if (tile.controls) tile.controls(this, body.append('div').style('margin-bottom', '8px'))
+	/** the expanded tile: the full interactive tool with its side panels and controls */
+	renderExpanded(tile: ToolTile, holder: any, data: any) {
+		if (tile.controls) tile.controls(this, holder.append('div').style('margin-bottom', '8px'))
 		try {
-			this.renderInto(body.append('div'), () => tile.render(this, data))
+			this.renderInto(holder.append('div'), () => tile.render(this, data))
 		} catch (err: any) {
-			renderTileError(body, err, this)
+			renderTileError(holder, err, this)
 		}
-	}
-
-	/** after a refetch (cutoff change from inside a pane, new selection) redraw every open pane
-	 *  in place so its controls keep working; drop panes whose tool is no longer available */
-	refreshPanes(data: any) {
-		for (const [key, pane] of [...this.panes]) {
-			const tile = TOOL_TILES.find(t => t.key === key)
-			if (!tile || !tile.available(this, data)) {
-				closeTilePane(this, key) // onClose drops it from this.panes
-				continue
-			}
-			this.fillPane(tile, pane, data)
-		}
-	}
-
-	closePanes() {
-		closeTilePanes(this)
-		this.panes.clear()
-	}
-
-	/** rx calls this when the plot is deleted: floating panes live on document.body
-	 *  and would otherwise outlive the plot with handlers bound to a dead instance */
-	destroy() {
-		this.closePanes()
-	}
-
-	/** re-render just the scatter (e.g. after a threshold change) without refetching */
-	redrawScatter() {
-		if (!this.data) return
-		this.dom.body.selectAll('*').remove()
-		this.renderScatter(this.data)
 	}
 
 	/** Spearman/Pearson toggle for the correlation matrix. The response carries both matrices,
-	 *  so switching only redraws the tiles and open panes — no refetch. */
+	 *  so switching only redraws the tiles — no refetch. */
 	renderMatrixMetricSelect(holder: any) {
 		const label = holder.append('label').style('font-size', '0.8em').style('color', '#374151')
 		label.append('span').style('margin-right', '6px').text('Correlation:')
@@ -399,12 +351,11 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		}
 	}
 
-	/** re-render the tool tiles and open panes from the cached response (no refetch) */
+	/** re-render the tool tiles (and the expanded one) from the cached response (no refetch) */
 	redrawTools() {
 		if (!this.data) return
 		this.dom.body.selectAll('*').remove()
 		this.renderToolTiles(this.data)
-		this.refreshPanes(this.data)
 	}
 
 	renderScatter(data: any) {
@@ -586,7 +537,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 					const v = Number(event.target.value)
 					if (Number.isFinite(v) && v >= 0) {
 						onSet(v)
-						this.redrawScatter()
+						this.redrawTools()
 					}
 				})
 		}

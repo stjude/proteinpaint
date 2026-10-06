@@ -40,7 +40,7 @@ import { add_bcf_variant_filter } from './termdb.snp.js'
 import { validate_correlationVolcano } from './routes/correlationVolcano.ts'
 import { validate_query_singleCell } from './singleCell/samplesRoute.ts'
 import { initAggregateMethods } from './aggregateMatrix/aggregateMethods.ts'
-import { validate_query_proteome } from '../routes/termdb.proteome.ts'
+import { validate_query_proteome } from './routes/termdb.proteome.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
 import { validate_query_geneExpression, validateQueryIsoformExpression } from './routes/termdb.cluster.ts'
@@ -50,6 +50,7 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getTopMutatedGenes } from '#routes/termdb.topMutatedGenes.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
+import { validate_query_swimmer } from '#routes/termdb.swimmer.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import { dtTermTypes, getGvQueryRegion, getGvQueryKey, matchesGvQueryEntry } from '#shared/terms.js'
 import { TermTypes } from '#types'
@@ -169,6 +170,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_TopVariablyExpressedGenes(ds)
 			await validate_query_trackLst(ds, genome)
 			await validate_query_NIdata(ds)
+			await validate_query_swimmer(ds)
 
 			await validate_variant2samples(ds)
 			await validate_ssm2canonicalisoform(ds)

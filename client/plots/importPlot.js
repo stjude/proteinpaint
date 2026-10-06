@@ -132,6 +132,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'studyCatalog':
 			return await import('./studyCatalog.ts')
 
+		case 'cohortSunburst':
+			return await import('./cohortSunburst.ts')
+
 		case 'summarizeCnvGeneexp':
 			return await import(`./summarizeCnvGeneexp.ts`)
 
@@ -152,6 +155,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'summary':
 			return await import(`./summary.ts`)
+
+		case 'swimmer':
+			return await import('./swimmer.ts')
 
 		case 'survival':
 			return await import(`./survival/survival.js`)

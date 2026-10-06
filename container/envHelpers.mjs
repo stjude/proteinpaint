@@ -189,7 +189,8 @@ export function getNodeConfig(ctx) {
 }
 
 // in a container, logs the recommended runtime settings that are not applied; the allowed write dirs
-// that exist are expected to be on noexec mounts. Throws for an error in strict mode.
+// that exist, and the mounts under them, are expected to have the noexec or ro mount option. Throws for an
+// error in strict mode.
 function mayCheckRuntimePosture(config, ctx) {
 	if (!ctx.env.PP_MODE?.startsWith('container') || !ctx.checkPosture) return
 	const mode = getEnvValue('PP_RUNTIME_CHECK', ctx)

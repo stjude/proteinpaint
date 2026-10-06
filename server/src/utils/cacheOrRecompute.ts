@@ -1,7 +1,6 @@
-import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
-import serverconfig from '#src/serverconfig.js'
+import serverconfig, { generateHash } from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { fileSize, formatElapsedTime } from '#shared'
 import type { CacheOrRecomputeOpts, CacheOrRecomputeResult } from '#src/utils/types.ts'
@@ -43,15 +42,11 @@ export const cacheJobPolicies = {
 
 export type CacheSubdir = keyof typeof cacheJobPolicies
 
-/** Hash the given object to a 32-hex-char cacheId via
- * sha256(JSON.stringify(args)). Truncation at 32 chars is safe for cache
- * keys — collision probability is negligible at realistic cache sizes.
- * Callers shape `args` to include only the fields whose identity
- * determines the cache key, and must construct it with a stable key order
- * (object literals do this naturally). */
-export function generateHash(args: any): string {
-	return crypto.createHash('sha256').update(JSON.stringify(args)).digest('hex').slice(0, 32)
-}
+// in serverconfig.js, which also uses the key; re-exported here for the existing importers
+export { generateHash }
+
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir: string = serverconfig.cachedir
 
 const HASH_RE = /^[0-9a-f]{32}$/
 
@@ -59,7 +54,7 @@ const HASH_RE = /^[0-9a-f]{32}$/
  * corrupted hash cannot inject path separators. */
 export function cacheFilePath(subdir: CacheSubdir, cacheId: string): string {
 	if (!HASH_RE.test(cacheId)) throw new Error('invalid cacheId')
-	return path.join(serverconfig.cachedir, subdir, `${cacheId}.json`)
+	return path.join(cachedir, subdir, `${cacheId}.json`)
 }
 
 /** Write a result JSON to the given path. Internal — callers never invoke
@@ -117,8 +112,8 @@ function makeBusyError(): Error {
 export async function cacheOrRecompute<TArgs, TResult>(
 	opts: CacheOrRecomputeOpts<TArgs, TResult>
 ): Promise<CacheOrRecomputeResult<TResult>> {
-	const { computeArgument, cacheSubdir, computeFresh } = opts
-	const cacheId = generateHash(computeArgument)
+	const { computeArgument, cacheSubdir, computeFresh, cacheScope } = opts
+	const cacheId = generateHash(computeArgument, cacheScope)
 	const file = cacheFilePath(cacheSubdir, cacheId)
 	const dedupKey = `${cacheSubdir}:${cacheId}`
 
