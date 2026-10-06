@@ -928,6 +928,42 @@ tape('action-log route: validation case L', async function (test) {
 	test.end()
 })
 
+tape('action-log route: validation case M', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionToken = jsonwebtoken.sign(
+		{
+			dslabel,
+			embedder,
+			route: 'termdb',
+			iat: time,
+			time: Date.now(),
+			ip: '127.0.0.1',
+			email: 'user@test.com',
+			exp: time + 3600
+		},
+		secret
+	)
+	const b64token = Buffer.from(sessionToken).toString('base64')
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { authorization: `Bearer ${b64token}` },
+		cookies: {}
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should return ok')
+	test.equal(res.statusCode, 200, 'should return 200')
+	test.end()
+})
+
 // ─────────────────────────────────────────
 // POST /demoToken
 // ─────────────────────────────────────────
