@@ -493,7 +493,7 @@ export class Auth {
 				code: 403
 			}
 		const [type, b64token] = req.headers.authorization.split(' ')
-		if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
+		if (type.toLowerCase() != 'bearer') throw `unsupported authorization type, allowed: 'Bearer'`
 		const token = Buffer.from(b64token, 'base64').toString()
 		const id = this.getSessionIdFromJwt(token)
 		try {
