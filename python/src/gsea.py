@@ -12,7 +12,26 @@ import base64
 import io
 import numpy as np
 import pandas as pd
+from scipy import interpolate
+from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.stats.multitest import multipletests
+
+# blitzgsea does not permute for every gene set. It fits a gamma distribution to the permutation
+# scores at about 20 "anchor" set sizes, smooths the fitted parameters across sizes with lowess, and
+# reads every p-value off the smoothed curves. It calls lowess at statsmodels' default of 3 robust
+# iterations, which re-weight the points to discount outliers. Above 50 genes the anchors are few
+# and unevenly spaced on a steep curve, and a correctly fitted anchor is sometimes discounted
+# instead: the scale of the null at about 100 genes then comes out at half or a third of its fitted
+# value, or negative at the largest sizes (no p-value, infinite NES). Every gene set of a similar
+# size shares that curve, so hundreds of sets move together. Measured on random normal scores
+# against 5407 GO BP sets, where nothing is enriched: 7 of 20 runs gave between 1 and 418 sets at
+# FDR < 0.05, and on a real contrast the count swung between 432 and 951 from run to run.
+# This is the library's own function without the robust iterations (it=0): the same 20 runs gave
+# 0 sets 19 times and 1 set once. The frac default is the one of the pinned blitzgsea version.
+def _loess_interpolation(x, y, frac=0.5):
+    return interpolate.interp1d(x, lowess(y, x, frac=frac, it=0)[:, 1])
+
+blitz.loess_interpolation = _loess_interpolation
 
 # Helper function to extract gene symbols from a dictionary
 def extract_symbols(x):
@@ -75,9 +94,9 @@ def _recompute_fdr(res):
 def _finite_or_label(v):
     return ('Infinity' if v > 0 else '-Infinity') if isinstance(v, float) and np.isinf(v) else v
 
-# Offline check for the two pure helpers above, driven by python/test/gsea.unit.spec.js:
+# Offline check for the pure helpers above, driven by python/test/gsea.unit.spec.js:
 #   echo '/{"selftest":true}' | python python/src/gsea.py
-# Neither blitzgsea nor the msigdb sqlite is touched, so this runs anywhere.
+# No enrichment is run and the msigdb sqlite is not touched, so this runs anywhere.
 # The spelling asserted here is a cross-language contract: client formatStat() in
 # plots/gsea/viewModel/GSEAViewModel.ts matches these exact strings, and the
 # table's FDR sort/filter relies on JS Number() coercing them, which it only does
@@ -114,6 +133,20 @@ def _selftest():
     # and it must not touch a clean run: blitzgsea's own column is already correct there
     clean = pd.DataFrame({'pval': [0.0, 0.01, 0.9], 'fdr': ['untouched'] * 3})
     assert list(_recompute_fdr(clean.copy())['fdr']) == ['untouched'] * 3, 'clean runs must be left alone'
+
+    # the smoothed null must follow the anchor fits. These are the anchor sizes and the fitted
+    # scales of one run on random normal scores, for which lowess with its robust iterations puts
+    # the scale at 108 genes at 0.34 of its fitted value; without them every anchor of 5 genes or
+    # more (smaller sets are not tested) stays between 0.92 and 1.10. Read through blitzgsea, so
+    # this also fails if the replacement above is no longer the function the library calls.
+    sizes = [1, 4, 5, 6, 7, 8, 10, 11, 12, 14, 16, 18, 22, 26, 31, 39, 49, 69, 108, 2028, 4000]
+    scales = [0.031258, 0.0417733, 0.045009, 0.0360382, 0.0402187, 0.0376618, 0.0310034, 0.0330648,
+              0.0296003, 0.0277773, 0.0257849, 0.024948, 0.0201065, 0.0184957, 0.0197434, 0.0141217,
+              0.0111754, 0.0081409, 0.00655173, 0.000563282, 0.00028813]
+    smoothed = blitz.loess_interpolation(np.array(sizes, dtype=float), scales, frac=0.2)
+    for size, fitted in zip(sizes, scales):
+        ratio = float(smoothed(size)) / fitted
+        assert size < 5 or 0.8 < ratio < 1.25, f'smoothed null scale at {size} genes is {ratio:.2f} of its fitted value'
     return {'selftest': 'ok'}
 
 # Main function

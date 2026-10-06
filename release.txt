@@ -1,1 +1,2 @@
-
+Fixes:
+- gene set enrichment with blitzgsea: the null distribution follows its fitted values, so the number of significant gene sets no longer swings between runs of one analysis, and random scores no longer give significant sets
