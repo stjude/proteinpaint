@@ -3,10 +3,12 @@ import {
 	resolveDaContext,
 	buildGroupValues,
 	canonicalizeSamplelst,
-	withholdSampleNames
+	withholdSampleNames,
+	sampleFilterScope
 } from '#src/utils/sampleGroups.ts'
 import { init as initTestDs } from '#src/test/load.testds.js'
 import { server_init_db_queries } from '#src/termdb.server.init.ts'
+import { getAuthApi, authApi } from '#src/auth.js'
 
 /*
 test sections:
@@ -20,6 +22,8 @@ buildGroupValues happy path: includes samples whose id is integer and name is in
 buildGroupValues skips non-integer sampleId
 buildGroupValues skips when id2sampleName returns falsy
 buildGroupValues skips when name is not in allSampleSet
+buildGroupValues skips when the sample does not pass the dataset sample filter
+sampleFilterScope is empty for a dataset without a sample filter
 buildGroupValues skips when tw is configured but term_results has no row for that sample
 buildGroupValues skips when tw2 is configured but term_results2 has no row for that sample
 buildGroupValues reads .value for continuous mode and .key otherwise
@@ -173,6 +177,30 @@ tape('buildGroupValues skips when name is not in allSampleSet', async t => {
 	const allSampleSet = new Set<string>(['sampleA']) // sampleB missing
 	const out = await buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], allSampleSet, ds, null, null, [], [])
 	t.deepEqual(out.names, ['sampleA'], 'sample not in allSampleSet was skipped')
+	t.end()
+})
+
+tape('buildGroupValues skips when the sample does not pass the dataset sample filter', async t => {
+	// the sample filter is resolved with authApi.mayAdjustFilter(): assign the shared open-access api
+	// once, the same idempotent way termdb.matrix.unit.spec.js does
+	if (!authApi) {
+		const app = { doNotFreezeAuthApi: true, get() {}, post() {}, all() {}, use() {} }
+		await getAuthApi(app, {}, {}, true)
+	}
+	const idToName: Record<number, string> = { 1: 'sampleA', 2: 'sampleB' }
+	const ds: any = makeDs(idToName)
+	ds.cohort.termdb.getAdditionalFilter = () => undefined
+	ds.cohort.termdb.q.sampleName2id = (name: string) => (name == 'sampleA' ? 1 : 2)
+	// the ds db returns the sample ids that pass the filter: only sampleA here
+	ds.cohort.db = { connection: { prepare: () => ({ all: () => [{ id: 1 }] }) } }
+	const allSampleSet = new Set<string>(['sampleA', 'sampleB'])
+	const out = await buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], allSampleSet, ds, null, null, [], [], {})
+	t.deepEqual(out.names, ['sampleA'], 'only the sample that passes the filter is included')
+	t.end()
+})
+
+tape('sampleFilterScope is empty for a dataset without a sample filter', t => {
+	t.equal(sampleFilterScope({}, makeDs({})), '', 'same as no cacheScope, so the cacheId does not change')
 	t.end()
 })
 

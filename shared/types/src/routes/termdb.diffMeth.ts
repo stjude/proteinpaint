@@ -67,6 +67,7 @@ export type DiffMethRequest = {
 	/** Parameters for the server-side `da` Rust renderer. Always required — the
 	 * server always returns a rendered PNG plus the threshold-passing rows. */
 	volcanoRender: VolcanoRenderRequest
+	__protected__?: any
 }
 
 /** Response when DiffMethRequest.preAnalysis === true. Returns per-group

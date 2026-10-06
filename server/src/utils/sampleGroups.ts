@@ -1,6 +1,8 @@
 import type { DERequest, DiffMethRequest } from '#types'
 import { getData, maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
+import { filterSampleNamesByAccess } from '#src/termdb.sql.js'
+import { authApi } from '#src/auth.js'
 
 /** Two-group sample resolution result. The conf{1,2}_group{1,2} arrays
  * carry the confounder values for samples that survived the per-confounder
@@ -88,7 +90,9 @@ export function withholdSampleNames(allSampleSet: Set<string>, pattern?: string)
  * A name is included iff every configured confounder (tw, tw2) has data
  * for that sample — the two early-return guards enforce that without a
  * nested if/else cascade. Used by both DE and DM resolvers; the per-route
- * wrappers add their own validation + alert messages around this. */
+ * wrappers add their own validation + alert messages around this.
+ * `__protected__` is the request's q.__protected__, which a dataset with a
+ * sample filter (getAdditionalFilter) requires. */
 export async function buildGroupValues(
 	values: Array<{ sampleId: number | string }>,
 	allSampleSet: Set<string>,
@@ -96,12 +100,15 @@ export async function buildGroupValues(
 	tw: any,
 	tw2: any,
 	term_results: any,
-	term_results2: any
+	term_results2: any,
+	__protected__?: any
 ): Promise<{ names: string[]; conf1: (string | number)[]; conf2: (string | number)[] }> {
 	const names: string[] = []
 	const conf1: (string | number)[] = []
 	const conf2: (string | number)[] = []
 	let sampleLst = values
+	// the eligible samples that pass the dataset's sample filter for this request, same as for getData()
+	const readable = new Set<string>(await filterSampleNamesByAccess({ __protected__ }, ds, [...allSampleSet]))
 
 	if (ds.cohort.termdb.hasSampleAncestry) {
 		// ds has sample ancestry
@@ -121,7 +128,7 @@ export async function buildGroupValues(
 		}
 		const arg = { filter }
 		maySetMapParent2Children(arg, ds, true)
-		const allSamples = [...allSampleSet].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
+		const allSamples = [...readable].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
 		// filtering samples by samplelst term
 		// if samples are at parent-level then will get
 		// mapped to sample-level, otherwise will be used as is
@@ -141,7 +148,7 @@ export async function buildGroupValues(
 				: Number.isInteger(s.sampleId)
 				? ds.cohort.termdb.q.id2sampleName(s.sampleId)
 				: undefined
-		if (!n || !allSampleSet.has(n)) continue
+		if (!n || !readable.has(n)) continue
 		// If a confounder is configured but missing for this sample, skip it.
 		if (tw && !term_results.samples?.[s.sampleId]) continue
 		if (tw2 && !term_results2.samples?.[s.sampleId]) continue
@@ -156,6 +163,16 @@ export async function buildGroupValues(
 		names.push(n)
 	}
 	return { names, conf1, conf2 }
+}
+
+/** The cacheScope for a result that is computed from sample groups: the dataset's sample
+ * filter for this request, since buildGroupValues() resolves the groups with it. Empty when
+ * the dataset has no sample filter, or when none applies to the request. */
+export function sampleFilterScope(q: { __protected__?: any }, ds: any): string {
+	if (!ds?.cohort?.termdb?.getAdditionalFilter) return ''
+	const fq: any = { __protected__: q.__protected__ }
+	authApi.mayAdjustFilter(fq, ds, undefined)
+	return fq.filter?.lst?.length ? JSON.stringify(fq.filter) : ''
 }
 
 /** Caller-side normalizer for two-group analyses (DE, DM): returns a

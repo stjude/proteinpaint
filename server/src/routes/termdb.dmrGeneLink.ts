@@ -77,7 +77,8 @@ function init({ genomes }) {
 				minCpgs
 			)
 
-			const samplelst = await matchedSamplelst(q.samplelst, eligibleMethylationSamples(ds, undefined), ds)
+			const eligible = eligibleMethylationSamples(ds, undefined)
+			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds, q.__protected__)
 			const { result } = await getDeCacheResult(
 				{
 					genome: q.genome,
@@ -88,7 +89,8 @@ function init({ genomes }) {
 					cpm_cutoff: q.cpm_cutoff,
 					method: q.method,
 					filter: q.filter,
-					filter0: q.filter0
+					filter0: q.filter0,
+					__protected__: q.__protected__
 				} as any,
 				genomes
 			)

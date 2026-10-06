@@ -15,6 +15,7 @@ import {
 	buildGroupValues,
 	canonicalizeSamplelst,
 	resolveDaContext,
+	sampleFilterScope,
 	type SampleGroups
 } from '#src/utils/sampleGroups.ts'
 import type { DmCacheResult } from './types.ts'
@@ -187,11 +188,13 @@ export async function getDmCacheResult(
 	/* Cheap map lookup so the platform can reach the cache key without paying for
 	resolveDaContext on a cache hit. Absent platform means 'array', keeping every existing
 	dataset on the imputing path it was validated under. */
-	const imputeMissing = genomes?.[req.genome]?.datasets?.[req.dslabel]?.queries?.dnaMethylation?.platform != 'wgbs'
+	const ds = genomes?.[req.genome]?.datasets?.[req.dslabel]
+	const imputeMissing = ds?.queries?.dnaMethylation?.platform != 'wgbs'
 
 	// ─── cache lookup or recompute ─── //
 	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof dmKeyInputs>, DmCacheResult>({
 		computeArgument: dmKeyInputs(req, imputeMissing),
+		cacheScope: sampleFilterScope(req, ds),
 		cacheSubdir: 'dm',
 		computeFresh: async () => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
@@ -253,19 +256,26 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 			binMethylation: true,
 			lambda: positiveOrUndefined(req.scan?.lambda),
 			C: positiveOrUndefined(req.scan?.C),
-			fdr_cutoff: positiveOrUndefined(req.scan?.fdrCutoff)
+			fdr_cutoff: positiveOrUndefined(req.scan?.fdrCutoff),
+			__protected__: req.__protected__
 		},
 		genomes
 	)
 	// the analysis-wide eligible set, not whichever one chromosomes[0] happened to resolve
 	const eligible = eligibleMethylationSamples(ds, undefined)
-	const { group1, group2 } = await resolveGroupNames(groups[0].values, groups[1].values, eligible, ds)
+	const { group1, group2 } = await resolveGroupNames(
+		groups[0].values,
+		groups[1].values,
+		eligible,
+		ds,
+		req.__protected__
+	)
 	const { rows, scan } = dmrScanToRows(payload, {
 		chromosomes,
 		minCpgs: req.scan?.minCpgs,
 		backgroundCorrection: !!req.scan?.backgroundCorrection
 	})
-	scan.matchedSamplelst = await matchedSamplelst(req.samplelst, eligible, ds)
+	scan.matchedSamplelst = await matchedSamplelst(req.samplelst, eligible, ds, req.__protected__)
 	scan.cacheId = cacheId
 	/* The DMRs as a track file, so a genome browser opened on the scan is a plain bedj tk. The
 	track is optional -- the browser opens without it -- so a failed write (no bgzip, unwritable
@@ -523,7 +533,8 @@ export async function resolveDmSampleGroups(
 		param.tw,
 		param.tw2,
 		term_results,
-		term_results2
+		term_results2,
+		param.__protected__
 	)
 	const g2 = await buildGroupValues(
 		param.samplelst.groups[1].values,
@@ -532,7 +543,8 @@ export async function resolveDmSampleGroups(
 		param.tw,
 		param.tw2,
 		term_results,
-		term_results2
+		term_results2,
+		param.__protected__
 	)
 
 	const alerts: string[] = []

@@ -27,6 +27,7 @@ import {
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { sampleFilterScope } from '#src/utils/sampleGroups.ts'
 import fs from 'fs'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
@@ -287,6 +288,7 @@ export async function runDmrBatch(
 	so a demo and a colleague clicking along cost one scan, not two. */
 	const { result: payload, cacheId } = await cacheOrRecompute<typeof cacheKey, TermdbDmrBatchSuccessResponse>({
 		computeArgument: cacheKey,
+		cacheScope: sampleFilterScope(q, ds),
 		cacheSubdir: 'dmr',
 		computeFresh: async () => {
 			const out: TermdbDmrBatchSuccessResponse['regions'] = []
@@ -323,7 +325,8 @@ export async function runDmrBatch(
 				q.group1,
 				q.group2,
 				eligibleMethylationSamples(ds, q.element_type),
-				ds
+				ds,
+				q.__protected__
 			)
 			if (group1.length < 3 || group2.length < 3)
 				throw new Error(

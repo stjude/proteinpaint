@@ -69,7 +69,7 @@ function init({ genomes }) {
 			if (!ds) throw new Error('unknown dataset')
 			// analysis-wide, so this cohort is the one the scan ran on whatever chr1 resolves to
 			const eligible = eligibleMethylationSamples(ds, undefined)
-			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds)
+			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds, q.__protected__)
 			const { result } = await getDeCacheResult(
 				{
 					genome: q.genome,
@@ -81,7 +81,8 @@ function init({ genomes }) {
 					method: q.method,
 					// part of the DE cache key: sent so this run and the volcano's are one entry
 					filter: q.filter,
-					filter0: q.filter0
+					filter0: q.filter0,
+					__protected__: q.__protected__
 				} as any,
 				genomes
 			)

@@ -11,6 +11,7 @@ import {
 	buildGroupValues,
 	canonicalizeSamplelst,
 	resolveDaContext,
+	sampleFilterScope,
 	type SampleGroups
 } from '#src/utils/sampleGroups.ts'
 import type { DeCacheResult } from '../../routes/types.ts'
@@ -171,6 +172,7 @@ export async function getDeCacheResult(
 	// ─── cache lookup or recompute ─── //
 	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof deKeyInputs>, DeCacheResult>({
 		computeArgument: deKeyInputs(req),
+		cacheScope: sampleFilterScope(req, genomes?.[req.genome]?.datasets?.[req.dslabel]),
 		cacheSubdir: 'de',
 		computeFresh: async () => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
@@ -376,7 +378,8 @@ export async function resolveSampleGroups(
 		param.tw,
 		param.tw2,
 		term_results,
-		term_results2
+		term_results2,
+		param.__protected__
 	)
 	const g2 = await buildGroupValues(
 		param.samplelst.groups[1].values,
@@ -385,7 +388,8 @@ export async function resolveSampleGroups(
 		param.tw,
 		param.tw2,
 		term_results,
-		term_results2
+		term_results2,
+		param.__protected__
 	)
 
 	const alerts: string[] = []
