@@ -1,5 +1,10 @@
 import tape from 'tape'
-import { resolveElementEntryForTerms } from '../mds3.init.js'
+import {
+	resolveElementEntryForTerms,
+	resolveElementEntryForTerm,
+	testedElementValues,
+	toReturnedUnit
+} from '../mds3.init.js'
 
 /*
 Which element matrix answers dnaMethylation TERM queries on a dataset with no CpG-level
@@ -62,6 +67,78 @@ tape('resolveElementEntryForTerms() - elementForTerms naming an unconfigured ent
 		() => resolveElementEntryForTerms({ elementForTerms: 'nope', elements: { allccre: { file: '/a.h5' } } }),
 		/elementForTerms/,
 		'unknown key is rejected'
+	)
+	t.end()
+})
+
+tape('resolveElementEntryForTerm() - a term naming its element type reads that matrix', t => {
+	// The discover/mmrf shape: DM tests promoters in .promoter, terms are nominated to allccre.
+	const q = {
+		elementForTerms: 'allccre',
+		promoter: { file: '/p.h5' },
+		elements: { enhancer_distal: { file: '/a.h5', element_class: 'enhancer_distal' }, allccre: { file: '/a.h5' } }
+	}
+	const nominated = resolveElementEntryForTerms(q)
+	t.equal(resolveElementEntryForTerm(q, { elementType: 'promoter' }, nominated).file, '/p.h5', 'legacy .promoter key')
+	t.equal(
+		resolveElementEntryForTerm(q, { elementType: 'enhancer_distal' }, nominated).element_class,
+		'enhancer_distal',
+		'class-restricted entry, not the unrestricted one sharing its file'
+	)
+	t.equal(resolveElementEntryForTerm(q, {}, nominated), nominated, 'no type named: the nominated matrix')
+	t.end()
+})
+
+tape('resolveElementEntryForTerm() - an element type the dataset lacks throws', t => {
+	// Same reasoning as an unknown elementForTerms: falling back would plot another matrix's numbers.
+	const q = { promoter: { file: '/p.h5' }, elements: { allccre: { file: '/a.h5' } } }
+	for (const key of ['nope', 'dmr_scan', '__proto__', 'constructor']) {
+		t.throws(() => resolveElementEntryForTerm(q, { elementType: key }, q.elements.allccre), /element type/, key)
+	}
+	t.throws(
+		() => resolveElementEntryForTerm({ elements: { allccre: { file: '/a.h5' } } }, { elementType: 'promoter' }, {}),
+		/element type/,
+		'promoter on a dataset that declares none'
+	)
+	t.end()
+})
+
+tape('testedElementValues() - a term naming its element type reads that one row', t => {
+	// Two TSS windows that overlap, as neighbouring promoters do; the term is the second.
+	const out = {
+		rows: [
+			{ start: 100, stop: 2100 },
+			{ start: 1500, stop: 3500 }
+		],
+		values: [
+			[1, 2],
+			[3, 4]
+		]
+	}
+	const term = { start: 1500, stop: 3500 }
+	t.deepEqual(
+		testedElementValues({ ...term, elementType: 'promoter' }, out),
+		[[3, 4]],
+		'the row with the term coordinates'
+	)
+	t.deepEqual(testedElementValues(term, out), out.values, 'no type named: a span, every overlapping row')
+	t.deepEqual(
+		testedElementValues({ start: 1, stop: 9, elementType: 'promoter' }, out),
+		[],
+		'no row has these exact coordinates: no row, not the overlapping ones'
+	)
+	t.end()
+})
+
+tape('toReturnedUnit() - converts a value only when its matrix stores another unit', t => {
+	t.equal(toReturnedUnit(0.5, true, true), 0.5, 'beta stays beta')
+	t.equal(toReturnedUnit(-2, false, false), -2, 'M-value stays M-value')
+	t.equal(toReturnedUnit(0.5, true, false), 0, 'beta 0.5 is M-value 0')
+	t.equal(toReturnedUnit(0, false, true), 0.5, 'M-value 0 is beta 0.5')
+	t.ok(Math.abs(toReturnedUnit(toReturnedUnit(0.2, true, false), false, true) - 0.2) < 1e-12, 'there and back')
+	t.ok(
+		Number.isFinite(toReturnedUnit(0, true, false)) && Number.isFinite(toReturnedUnit(1, true, false)),
+		'beta 0 and 1 give finite M-values'
 	)
 	t.end()
 })

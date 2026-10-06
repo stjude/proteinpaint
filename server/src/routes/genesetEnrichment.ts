@@ -327,6 +327,40 @@ function buildPyInput(
 	}
 }
 
+/* One value per gene from a differential methylation result, which has one row per tested element
+and so repeats a gene once for each of its promoters: the mean fold change of the gene's rows.
+
+The rows cannot be ranked as they are. blitzgsea sorts the list by fold change and keeps the first
+row of a repeated name, which is the gene's HIGHEST row, so a gene with more promoters ranks higher
+whatever the data, and gene sets of multi-promoter genes come out enriched: with every name ranked,
+a contrast of two random halves of one group gave 2,847 of 7,647 GO sets at FDR < 0.05, against none
+with the mean. Keeping a gene's most significant row instead is biased the same way (723 sets on that
+contrast). A row naming several genes counts toward each.
+
+This removes that bias and no more. With only coding genes ranked, blitzgsea's count on that contrast
+still depends on its random seed, with the mean as without it (0 to 568 sets over six seeds, against
+74 to 526 without), so one run there is not evidence either way. */
+export function meanFoldChangeByGene(rows: { gene_name: string; fold_change: number }[]): {
+	genes: string[]
+	fold_change: number[]
+} {
+	const sums = new Map<string, { sum: number; n: number }>()
+	for (const r of rows) {
+		if (typeof r.gene_name != 'string' || !Number.isFinite(r.fold_change)) continue
+		for (const name of r.gene_name.split(',')) {
+			const gene = name.trim()
+			if (!gene) continue
+			const s = sums.get(gene)
+			if (s) {
+				s.sum += r.fold_change
+				s.n++
+			} else sums.set(gene, { sum: r.fold_change, n: 1 })
+		}
+	}
+	const genes = [...sums.keys()]
+	return { genes, fold_change: genes.map(g => sums.get(g)!.sum / sums.get(g)!.n) }
+}
+
 /** Resolve the `genes` + `fold_change` inputs that every GSEA path needs.
  * Shared between `computeGSEA` (blitzgsea), the cerno branch, and the
  * `fetchDE` short-circuit — a single source of truth for "where do the
@@ -350,9 +384,8 @@ async function resolveGseaGenesAndFoldChange({
 		// so `kind` may be absent (legacy snapshots, malformed external
 		// callers); validate up-front rather than silently falling through to
 		// one branch and producing a confusing cacheId-mismatch error.
-		// For DM, multiple promoters can map to the same gene_name —
-		// blitzgsea/CERNO may warn or down-rank duplicates; we pass them
-		// through without dedup for now.
+		// For DM, multiple promoters can map to the same gene_name, so the
+		// rows are reduced to one value per gene (meanFoldChangeByGene).
 		const kind = q.daRequest.kind
 		if (kind !== 'DE' && kind !== 'DM') throw new Error('daRequest.kind must be "DE" or "DM"')
 		// the daRequest, with the q.__protected__ of this request for resolving its sample groups
@@ -395,10 +428,7 @@ async function resolveGseaGenesAndFoldChange({
 			const genes = Object.keys(deltas)
 			return { genes, fold_change: genes.map(g => deltas[g]) }
 		}
-		return {
-			genes: result.promoterRows.map(p => p.gene_name),
-			fold_change: result.promoterRows.map(p => p.fold_change)
-		}
+		return meanFoldChangeByGene(result.promoterRows)
 	}
 	// Inline path (legacy single-cell). Reject early so we don't pass
 	// undefined down to Python/Rust.

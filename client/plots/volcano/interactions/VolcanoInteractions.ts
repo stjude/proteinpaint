@@ -366,6 +366,9 @@ export class VolcanoInteractions {
 			start: d.start,
 			stop: d.stop
 		}
+		/* Which matrix the hit was tested in, so the server plots that row instead of whatever the
+		dataset's default matrix holds at these coordinates. */
+		if (genomicFeatureType === 'promoter' && elementType) term.elementType = elementType
 		/* Name the term after the element class actually tested. Every class carries its id in
 		promoter_id, so genomicFeatureType is 'promoter' for a distal enhancer too and the sandbox
 		header read "Promoter Average M-value (chr9:...)" for something that is not a promoter.
@@ -373,7 +376,11 @@ export class VolcanoInteractions {
 		only sees the term. */
 		if (genomicFeatureType !== 'gene') {
 			const noun = elementNoun(elementType).one
-			const unit = getDNAMethUnit(genomicFeatureType, this.app.vocabApi)
+			/* A term naming its element type is returned on the unit the dataset advertises for its
+			methylation terms, whichever matrix it reads, and the tested matrix may store another. */
+			const unit =
+				(term.elementType && this.app.vocabApi.termdbConfig.queries?.dnaMethylation?.unit) ||
+				getDNAMethUnit(genomicFeatureType, this.app.vocabApi)
 			term.unit = unit
 			term.name = getDNAMethTermName(term, unit, noun)
 		}
