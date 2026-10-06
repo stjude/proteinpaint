@@ -344,7 +344,7 @@ function parse_q(q, ds) {
 			// non-dictionary term
 			if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
 				if (!tw.q.cacheid) throw 'q.cacheid missing'
-				snpgtCacheFile(tw.q.cacheid) // throws on an invalid cacheid
+				snpgtCacheFile(tw.q.cacheid, ds) // throws on an invalid cacheid
 				if (typeof tw.q.snp2effAle != 'object') throw 'q.snp2effAle{} is not object'
 				if (!Number.isInteger(tw.q.alleleType)) throw 'q.alleleType is not integer'
 				if (!Number.isInteger(tw.q.geneticModel)) throw 'q.geneticModel is not integer'
