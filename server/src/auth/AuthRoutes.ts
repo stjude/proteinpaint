@@ -123,7 +123,9 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 			if (!session) throw 'missing or expired session'
 			// confirm the session is still active (connection and age) before using it
 			auth.checkIPaddress(req, session.ip, cred)
-			if (Date.now() - session.time > auth.maxSessionAge) {
+			const sessionTime = Number.isFinite(session.time) ? session.time : Number(session.iat) * 1000
+			const maxSessionAge = cred.maxSessionAge || auth.maxSessionAge
+			if (!Number.isFinite(sessionTime) || Date.now() - sessionTime >= maxSessionAge) {
 				auth.sessions.get(q.dslabel)?.delete(id)
 				throw 'missing or expired session'
 			}
