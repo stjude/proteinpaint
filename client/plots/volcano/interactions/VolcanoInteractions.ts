@@ -366,6 +366,9 @@ export class VolcanoInteractions {
 			start: d.start,
 			stop: d.stop
 		}
+		/* Which matrix the hit was tested in, so the server plots that row instead of whatever the
+		dataset's default matrix holds at these coordinates. */
+		if (genomicFeatureType === 'promoter' && elementType) term.elementType = elementType
 		/* Name the term after the element class actually tested. Every class carries its id in
 		promoter_id, so genomicFeatureType is 'promoter' for a distal enhancer too and the sandbox
 		header read "Promoter Average M-value (chr9:...)" for something that is not a promoter.
