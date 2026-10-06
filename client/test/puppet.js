@@ -96,6 +96,9 @@ async function runTest(patternsStr) {
 			runOnePattern(browser, g, startTime, errors, CONCURRENCY > 1)
 		)
 
+		// the time taken by the tests, not including the coverage report generation below
+		console.log(`\ntest run time: ${formatDuration(Date.now() - startTime)}\n`)
+
 		// --- Merge V8 coverage from every page into ONE report. The original built a fresh
 		// MCR per pattern inside the run loop with cleanCache:true, which under parallelism
 		// would race and clobber the shared output dir; collecting first and generating once is
@@ -211,12 +214,21 @@ async function runTest(patternsStr) {
 			}
 			exitCode = 1
 		}
+	} catch (e) {
+		// an unexpected error, such as from the coverage report generation, must not look like a passed run
+		console.error(e)
+		exitCode = 1
 	} finally {
 		await browser?.close().catch(() => {})
 		if (server) server.close()
 	}
 	// exit after cleanup; process.exit() inside the try would skip the finally block
 	if (exitCode) process.exit(exitCode)
+}
+
+function formatDuration(ms) {
+	const sec = Math.round(ms / 1000)
+	return sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${sec % 60}s`
 }
 
 // Parse a page's full TAP log into counts + failing-assertion details. Each failure keeps
@@ -306,6 +318,8 @@ function formatSummary(results) {
 // then bucket them into one `dir=<specDir>&name=*` group per spec directory. specDir is
 // the folder immediately containing each spec's `test/` dir (matching closestSpec.js), and
 // `dir=<specDir>` maps in matchSpecs.js to the glob `**/<specDir>/test/*.spec.*s`.
+// A spec that is not in a `<specDir>/test/` folder, such as a root-level `test/*.spec.js`, cannot be
+// matched by any `dir=` group, so return no groups to keep the single unsplit `name=*` group.
 // NOTE: distinct physical dirs that share a leaf name (e.g. two different `test`-parent
 // folders both named `foo`) would collapse into one group — coarser, but still correct.
 function deriveDirGroups() {
@@ -315,7 +329,7 @@ function deriveDirGroups() {
 	const dirs = new Set()
 	for (const m of src.matchAll(/matchSpecs\('([^']+)'\)/g)) {
 		const file = m[1]
-		if (!file.includes('/test/')) continue
+		if (!file.includes('/test/')) return []
 		const specDir = file.split('/test/')[0].split('/').pop()
 		if (specDir) dirs.add(specDir)
 	}
@@ -330,8 +344,7 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 	const [pattern, testedFiles] = _pattern.split('#')
 	// parallel logs are interleaved, so each line is tagged with its pattern; a sequential run needs no tag
 	const tag = tagLogs ? `[${pattern}] ` : ''
-	const context = await browser.createBrowserContext()
-	const page = await context.newPage()
+	let context
 	const lastLines = []
 	// full TAP log for this page, used after the run to tally pass/fail counts and to
 	// extract failing-assertion details (which stream as `not ok` lines *before* the
@@ -339,37 +352,40 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 	const output = []
 	// the failed assertions of this pattern, to summarize at the end of a long test run
 	const failureTracker = createTapFailureTracker()
-	page
-		.on('console', m => {
-			const msg = m.text()
-			console.log(`${tag}${msg}`)
-			output.push(msg)
-			failureTracker.add(msg)
-			/*
-        detected last lines are expected to look like below,
-        with empty lines before and after "# ok" line,
-        which may be "# fail" instead (not ok)
-
-        1..977
-        # tests 977
-        # pass  977
-
-        # ok
-
-      */
-			if (msg.startsWith('1..') || lastLines.length) lastLines.push(msg)
-		})
-		.on('pageerror', e => {
-			console.log(`${tag}-- pageerror --`, e.message)
-		})
-		.on('requestfailed', request => {
-			const text = request.failure().errorText
-			if (!text.startsWith('net::ERR_ABORTED')) console.log(`${tag}-- requestfailed --`, `${text} ${request.url()}`)
-		})
-
-	// Enable JavaScript coverage (CSS coverage is left off, as in the original)
-	await page.coverage.startJSCoverage({ resetOnNavigation: true, includeRawScriptCoverage: true })
+	// the browser context setup is inside the try, so a failure to create it only fails this group
 	try {
+		context = await browser.createBrowserContext()
+		const page = await context.newPage()
+		page
+			.on('console', m => {
+				const msg = m.text()
+				console.log(`${tag}${msg}`)
+				output.push(msg)
+				failureTracker.add(msg)
+				/*
+	        detected last lines are expected to look like below,
+	        with empty lines before and after "# ok" line,
+	        which may be "# fail" instead (not ok)
+
+	        1..977
+	        # tests 977
+	        # pass  977
+
+	        # ok
+
+	      */
+				if (msg.startsWith('1..') || lastLines.length) lastLines.push(msg)
+			})
+			.on('pageerror', e => {
+				console.log(`${tag}-- pageerror --`, e.message)
+			})
+			.on('requestfailed', request => {
+				const text = request.failure().errorText
+				if (!text.startsWith('net::ERR_ABORTED')) console.log(`${tag}-- requestfailed --`, `${text} ${request.url()}`)
+			})
+
+		// Enable JavaScript coverage (CSS coverage is left off, as in the original)
+		await page.coverage.startJSCoverage({ resetOnNavigation: true, includeRawScriptCoverage: true })
 		console.log(`\n--- testing http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern} ---\n`)
 		// Navigate to test page
 		const r = await page.goto(`http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern}`, {
@@ -405,12 +421,13 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 		return { pattern, testedFiles, passed: false, coverageList: [], lastLines, error: String(error) }
 	} finally {
 		// closing the context also tears down its page(s) and in-flight coverage
-		await context.close()
+		await context?.close().catch(() => {})
 	}
 }
 
-// Promisified version of the original setInterval TAP-summary detector: resolve when the
-// harness prints a `# ok` summary, reject on `# fail` or if no summary arrives in time.
+// Promisified version of the original setInterval TAP-summary detector: resolves with 'ok' or
+// 'fail' when the harness prints its summary (a `# fail` is not a rejection), and rejects only
+// if no summary arrives in time.
 function waitForTap(lastLines) {
 	const expMs = Number(process.env.PUPPET_TAP_TIMEOUT) || 300000
 	const start = Date.now()
