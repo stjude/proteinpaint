@@ -491,6 +491,8 @@ function handle_click(event, self, chart) {
 				try {
 					await listSamples(arg, data.seriesId, data.dataId, chart.chartId)
 				} catch (e) {
+					self.app.tip.hide()
+					window.alert("Couldn't render samples")
 					console.trace(e)
 					throw e
 				}

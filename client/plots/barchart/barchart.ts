@@ -659,8 +659,15 @@ export class Barchart extends PlotBase implements RxComponent {
 						: a.dataId < b.dataId
 						? -1
 						: 1
-
-		this.visibleCharts = chartsData.charts.filter(chart => chart.visibleSerieses.length)
+		// Don't render charts from uncomputable values
+		const uncomputableCharts = this.config.term0
+			? Object.values(this.config.term0.term.values)
+					.filter((valueInfo: any) => !valueInfo.computable)
+					.map((valueInfo: any) => valueInfo.label)
+			: []
+		this.visibleCharts = chartsData.charts.filter(
+			chart => chart.visibleSerieses.length && !uncomputableCharts.includes(chart.chartId)
+		)
 
 		const t1 = this.config.term
 		const t2 = this.config.term2
@@ -1333,9 +1340,9 @@ function setInteractivity(self) {
 						"Fisher's exact test",
 						['Row 1', 'Row 2', 'Column 1', 'Column 2', 'P-value'],
 						testCharts.map(chart => ({
- 							chartLabel: self.handlers.chart.title(chart),
- 							rows: self.getPvalueRows(chart).rows
- 						}))
+							chartLabel: self.handlers.chart.title(chart),
+							rows: self.getPvalueRows(chart).rows
+						}))
 					)
 			})
 		}
