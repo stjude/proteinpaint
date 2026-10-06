@@ -16,6 +16,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 	view!: DmrView
 	private model!: DmrModel
 	private genomeObj: any
+	private backendBtn: any
 
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
@@ -27,24 +28,25 @@ class DmrPlot extends PlotBase implements RxComponent {
 			.style('position', 'absolute')
 			.style('z-index', '10')
 			.style('background-color', 'rgba(255,255,255,0.65)')
-		// Backend toggle button (temporary — for R vs Rust validation)
-		const toggleDiv = opts.holder.append('div').style('padding', '2px 0')
-		const initBackend = opts.state?.config?.settings?.dmr?.backend || 'rust'
-		const toggleBtn = toggleDiv
-			.append('button')
-			.style('font-size', '11px')
-			.text(`Backend: ${initBackend === 'rust' ? 'Rust' : 'R (DMRCate)'}`)
-			.on('click', () => {
-				const config = this.state.config as DmrConfig
-				const curr = config.settings.dmr.backend || 'rust'
-				const next = curr === 'rust' ? 'r' : 'rust'
-				toggleBtn.text(`Backend: ${next === 'rust' ? 'Rust' : 'R (DMRCate)'}`)
-				this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: { settings: { dmr: { ...config.settings.dmr, backend: next } } }
+		/* Backend toggle (temporary, for R vs Rust validation). Shown only in debugmode, the only
+		mode in which the server accepts the R backend, see termdb.dmr.ts. */
+		if (opts.app?.opts?.debug) {
+			const toggleDiv = opts.holder.append('div').style('padding', '2px 0')
+			// labelled in main(), the state is not available here
+			this.backendBtn = toggleDiv
+				.append('button')
+				.style('font-size', '11px')
+				.on('click', () => {
+					const config = this.state.config as DmrConfig
+					const curr = config.settings.dmr.backend || 'rust'
+					const next = curr === 'rust' ? 'r' : 'rust'
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { dmr: { ...config.settings.dmr, backend: next } } }
+					})
 				})
-			})
+		}
 
 		this.dom = {
 			header: opts?.header,
@@ -69,7 +71,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 		validateConfig(config)
 		if (this.dom.header) this.dom.header.text(config.headerText || 'DMR Analysis')
 		this.genomeObj = this.app.opts.genome
-		this.model = new DmrModel(config, this.app.vocabApi.vocab)
+		this.model = new DmrModel(config, this.app.vocabApi.vocab, this.app.opts.debug)
 
 		/* No fetch here. main() runs right after init and its full-rebuild branch does the first
 		render, so there is one code path for rendering and, more to the point, one for failing:
@@ -80,7 +82,8 @@ class DmrPlot extends PlotBase implements RxComponent {
 
 	async main() {
 		const config = this.state.config as DmrConfig
-		this.model = new DmrModel(config, this.app.vocabApi.vocab)
+		this.model = new DmrModel(config, this.app.vocabApi.vocab, this.app.opts.debug)
+		this.backendBtn?.text(`Backend: ${config.settings.dmr.backend === 'r' ? 'R (DMRCate)' : 'Rust'}`)
 
 		const c = config.coordinateOverride
 		if (!c) return

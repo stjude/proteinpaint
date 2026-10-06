@@ -1,1 +1,2 @@
-
+Fixes:
+- the DMR plot shows the R backend toggle only in debugmode, and the server accepts the R backend only in debugmode
