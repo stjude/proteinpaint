@@ -17,8 +17,8 @@ Why this exists separately from query_beta_values.py:
 
 HDF5 layout consumed (see createHdf5ForDnaMeth.py --format promoter):
     /beta/values                {n_elements, n_samples}  float32
-    /meta/chr                   {n_elements}             str
-    /meta/start                 {n_elements}             int    (0-based)
+    /meta/chr                   {n_elements}             str    (or a chrom_lengths root attribute, see read_chrs)
+    /meta/start                {n_elements}             int    (0-based)
     /meta/stop                  {n_elements}             int    (exclusive)
     /meta/gene_names            {n_elements}             str
     /meta/element/elementID     {n_elements}             str    (preferred)
@@ -89,6 +89,24 @@ def read_str(h5, path):
     return h5[path].asstr()[:]
 
 
+def read_chrs(h5):
+    """Chromosome per row, from either layout diffMeth.R also reads.
+
+    An element matrix carries a per-row /meta/chr. One built like the CpG-level matrix gives
+    a chrom_lengths root attribute instead: the number of rows of each chromosome, in row
+    order, over rows sorted by chromosome.
+    """
+    if 'meta/chr' in h5:
+        return read_str(h5, 'meta/chr')
+    lengths = h5.attrs.get('chrom_lengths')
+    if lengths is None:
+        raise KeyError('matrix has neither meta/chr nor a chrom_lengths attribute')
+    lengths = json.loads(lengths)
+    if sum(lengths.values()) != h5['meta/start'].shape[0]:
+        raise ValueError('chrom_lengths does not add up to the number of rows of the matrix')
+    return np.repeat(list(lengths), list(lengths.values()))
+
+
 def resolve_row_ids(h5):
     """Row identifiers, trying the generic layout before the promoter-only one.
 
@@ -119,7 +137,7 @@ def select_rows(h5, parsed, element_class):
         id2row = {v: i for i, v in enumerate(ids)}
         idx = [id2row[q] for q in parsed['ids'] if q in id2row]
     else:
-        chrs = read_str(h5, 'meta/chr')
+        chrs = read_chrs(h5)
         starts = h5['meta/start'][:]
         stops = h5['meta/stop'][:]
         # Half-open overlap on both sides: an element counts if any base is shared with
@@ -150,7 +168,7 @@ def query(h5_file, sample_names, query_string, element_class=None):
         if not row_idx:
             return {'rows': [], 'values': []}
 
-        chrs = read_str(h5, 'meta/chr')
+        chrs = read_chrs(h5)
         starts = h5['meta/start'][:]
         stops = h5['meta/stop'][:]
         genes = read_str(h5, 'meta/gene_names')
