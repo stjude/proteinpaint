@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - add TableBase, an extendable table with sort, filter, paging, row selection and cell editing; the SC sample table is now built on it
+- all server cache subdirs are declared in one cacheRegistry in CacheManager.ts, each with a type that sets its eviction defaults; every subdir is created at server launch, even when the feature that uses it is disabled
+- serverconfig.features.cacheMonitor.subdirs is validated at launch: a subdir that is not in the registry, a subdir set to undefined, or an option other than maxAge, maxSize, skipMs, moveTo or fileExtensions now fails the launch instead of being used or ignored
+- the daAnalysis cache subdir is no longer created or swept; a leftover daAnalysis dir may be deleted
 
 Fixes:
 - the DMR plot shows the R backend toggle only in debugmode, and the server accepts the R backend only in debugmode
