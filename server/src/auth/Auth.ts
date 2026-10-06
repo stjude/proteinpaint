@@ -489,7 +489,7 @@ export class Auth {
 		if (!cred.secret)
 			throw {
 				status: 'error',
-				error: `no credentials set up for this embedder='${req.query.embedder}'`,
+				error: `no credentials set up for this embedder`,
 				code: 403
 			}
 		const [type, b64token] = req.headers.authorization.split(' ')
