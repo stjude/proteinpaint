@@ -62,155 +62,161 @@ if (patternsStr) {
 async function runTest(patternsStr) {
 	const startTime = Date.now()
 	const server = initServer()
-	let groups = patternsStr.split(' ')
+	// close the browser and server even when a step below throws, otherwise the run hangs
+	let browser
+	let exitCode = 0
+	try {
+		let groups = patternsStr.split(' ')
 
-	// Optional concurrency: run each spec-pattern group in its own isolated browser
-	// context (own window/document/tape harness), N at a time. Defaults to 2, which balances
-	// with observed reliability; may set PUPPET_CONCURRENCY=1 for sequential runs with
-	// untagged logs, e.g. when debugging.
-	const CONCURRENCY = Math.max(1, Number(process.env.PUPPET_CONCURRENCY) || 2)
+		// Optional concurrency: run each spec-pattern group in its own isolated browser
+		// context (own window/document/tape harness), N at a time. Defaults to 2, which balances
+		// with observed reliability; may set PUPPET_CONCURRENCY=1 for sequential runs with
+		// untagged logs, e.g. when debugging.
+		const CONCURRENCY = Math.max(1, Number(process.env.PUPPET_CONCURRENCY) || 2)
 
-	// A lone `name=*` (the default when test.sh is called without a PATTERNSLIST, e.g.
-	// `./test.sh "*.integration.spec.*"`) is a single group => nothing to parallelize.
-	// When the caller opts into concurrency, split it into one `dir=<specDir>&name=*`
-	// group per spec directory, derived from the just-emitted internals-test.js (the exact
-	// set of specs that will run). Mirrors the dir+name pattern convention in closestSpec.js.
-	if (CONCURRENCY > 1 && groups.length === 1 && /^name=\*?$/.test(groups[0].trim())) {
-		const byDir = deriveDirGroups()
-		if (byDir.length > 1) groups = byDir
-	}
+		// A lone `name=*` (the default when test.sh is called without a PATTERNSLIST, e.g.
+		// `./test.sh "*.integration.spec.*"`) is a single group => nothing to parallelize.
+		// When the caller opts into concurrency, split it into one `dir=<specDir>&name=*`
+		// group per spec directory, derived from the just-emitted internals-test.js (the exact
+		// set of specs that will run). Mirrors the dir+name pattern convention in closestSpec.js.
+		if (CONCURRENCY > 1 && groups.length === 1 && /^name=\*?$/.test(groups[0].trim())) {
+			const byDir = deriveDirGroups()
+			if (byDir.length > 1) groups = byDir
+		}
 
-	const browser = await puppeteer.launch({
-		// headless: false, // uncomment to see puppeteer chrome instance
-		headless: fs.existsSync(path.join(__dirname, '../../../../sjpp')) ? true : 'shell',
-		args: [`--no-sandbox`, `--disable-setuid-sandbox`]
-	})
+		browser = await puppeteer.launch({
+			// headless: false, // uncomment to see puppeteer chrome instance
+			headless: fs.existsSync(path.join(__dirname, '../../../../sjpp')) ? true : 'shell',
+			args: [`--no-sandbox`, `--disable-setuid-sandbox`]
+		})
 
-	const errors = {}
-	// results[i] = { pattern, testedFiles, passed, coverageList, lastLines }
-	const results = await runPool(groups, Math.min(CONCURRENCY, groups.length), g =>
-		runOnePattern(browser, g, startTime, errors, CONCURRENCY > 1)
-	)
+		const errors = {}
+		// results[i] = { pattern, testedFiles, passed, coverageList, lastLines }
+		const results = await runPool(groups, Math.min(CONCURRENCY, groups.length), g =>
+			runOnePattern(browser, g, startTime, errors, CONCURRENCY > 1)
+		)
 
-	await browser.close()
-
-	// --- Merge V8 coverage from every page into ONE report. The original built a fresh
-	// MCR per pattern inside the run loop with cleanCache:true, which under parallelism
-	// would race and clobber the shared output dir; collecting first and generating once is
-	// both safe and more correct (a file covered by multiple groups gets unioned). ---
-	const outputDir = path.join(__dirname, '../.coverage')
-	const mcr = MCR({
-		name: `Client test coverage`,
-		sourceFilter: srcPath => {
-			//if (!srcPath.includes('node_modules')) console.log(srcPath)
-			return (
-				(srcPath.includes('client') || srcPath.includes('shared')) &&
-				!srcPath.includes('/bin/test') &&
-				!srcPath.includes('_.._') &&
-				!srcPath.includes('node_modules') &&
-				!srcPath.includes('appdrawer') &&
-				!srcPath.includes('sjcrh/proteinpaint-')
-			)
-		},
-		outputDir,
-		reports: ['v8', 'console-summary', 'html', 'json-summary', 'markdown-summary', 'markdown-details'],
-		cleanCache: true
-	})
-	for (const r of results) {
-		if (r?.coverageList?.length) await mcr.add(r.coverageList)
-	}
-	await mcr.generate()
-
-	// --- Per-pattern relevant-coverage extraction + summary mapping. Same logic as before,
-	// just moved out of the run loop and driven off the single aggregated summary. Only the
-	// RELEVANT_SPECS_ONLY path supplies `#testedFiles`, so a plain `name=*`/`dir=*` run skips
-	// this block, exactly as the original did. ---
-	const html = []
-	const markdowns = []
-	const json = {}
-	const relevantCoverage = {}
-	if (results.some(r => r?.testedFiles)) {
-		const { default: summary } = await import(`${outputDir}/coverage-summary.json`, { with: { type: 'json' } })
-		const summaryFiles = Object.keys(summary)
+		// --- Merge V8 coverage from every page into ONE report. The original built a fresh
+		// MCR per pattern inside the run loop with cleanCache:true, which under parallelism
+		// would race and clobber the shared output dir; collecting first and generating once is
+		// both safe and more correct (a file covered by multiple groups gets unioned). ---
+		const outputDir = path.join(__dirname, '../.coverage')
+		const mcr = MCR({
+			name: `Client test coverage`,
+			sourceFilter: srcPath => {
+				//if (!srcPath.includes('node_modules')) console.log(srcPath)
+				return (
+					(srcPath.includes('client') || srcPath.includes('shared')) &&
+					!srcPath.includes('/bin/test') &&
+					!srcPath.includes('_.._') &&
+					!srcPath.includes('node_modules') &&
+					!srcPath.includes('appdrawer') &&
+					!srcPath.includes('sjcrh/proteinpaint-')
+				)
+			},
+			outputDir,
+			reports: ['v8', 'console-summary', 'html', 'json-summary', 'markdown-summary', 'markdown-details'],
+			cleanCache: true
+		})
 		for (const r of results) {
-			if (!r?.testedFiles) continue
-			if (relevantSpecs) {
-				const extracts = await emitRelevantSpecCovDetails({
-					workspace: 'client',
-					relevantSpecs,
-					reportDir,
-					testedSpecs: patternToSpecs.get(r.pattern),
-					specPattern: r.pattern
-				})
-				if (extracts) {
-					//if (!title) title = extracts.title
-					html.push(extracts.html)
-					markdowns.push(extracts.markdown)
+			if (r?.coverageList?.length) await mcr.add(r.coverageList)
+		}
+		await mcr.generate()
+
+		// --- Per-pattern relevant-coverage extraction + summary mapping. Same logic as before,
+		// just moved out of the run loop and driven off the single aggregated summary. Only the
+		// RELEVANT_SPECS_ONLY path supplies `#testedFiles`, so a plain `name=*`/`dir=*` run skips
+		// this block, exactly as the original did. ---
+		const html = []
+		const markdowns = []
+		const json = {}
+		const relevantCoverage = {}
+		if (results.some(r => r?.testedFiles)) {
+			const { default: summary } = await import(`${outputDir}/coverage-summary.json`, { with: { type: 'json' } })
+			const summaryFiles = Object.keys(summary)
+			for (const r of results) {
+				if (!r?.testedFiles) continue
+				if (relevantSpecs) {
+					const extracts = await emitRelevantSpecCovDetails({
+						workspace: 'client',
+						relevantSpecs,
+						reportDir,
+						testedSpecs: patternToSpecs.get(r.pattern),
+						specPattern: r.pattern
+					})
+					if (extracts) {
+						//if (!title) title = extracts.title
+						html.push(extracts.html)
+						markdowns.push(extracts.markdown)
+					}
 				}
-			}
 
-			const files = r.testedFiles.split(',')
-			// disinguish reports from different spec-pattern-coverage runs,
-			// so that a user may interactively view the applicable coverage html
-			for (const f of files) {
-				for (const key of summaryFiles) {
-					if (key.endsWith(`/${f}`)) {
-						relevantCoverage[key.replace('client/', '')] = summary[key]
-						//relevantCoverage[f].link = `/coverage/client/${dirname}/`
+				const files = r.testedFiles.split(',')
+				// disinguish reports from different spec-pattern-coverage runs,
+				// so that a user may interactively view the applicable coverage html
+				for (const f of files) {
+					for (const key of summaryFiles) {
+						if (key.endsWith(`/${f}`)) {
+							relevantCoverage[key.replace('client/', '')] = summary[key]
+							//relevantCoverage[f].link = `/coverage/client/${dirname}/`
 
-						if (Object.hasOwn(json, f)) console.log(`non-unique coverage result for client file='${f}'`)
-						else json[f] = summary[key]
+							if (Object.hasOwn(json, f)) console.log(`non-unique coverage result for client file='${f}'`)
+							else json[f] = summary[key]
+						}
 					}
 				}
 			}
 		}
-	}
 
-	if (server) server.close()
-
-	if (html.length) {
-		const combinedHtml = html.join('\n')
-		fs.writeFileSync(extractFiles.html, combinedHtml, { encoding: 'utf8' })
-		const combinedMarkdown = markdowns.join('\n')
-		fs.writeFileSync(extractFiles.markdown, combinedMarkdown, { encoding: 'utf8' })
-	}
-	if (fs.existsSync(path.dirname(extractFiles.json)))
-		fs.writeFileSync(extractFiles.json, JSON.stringify(json, null, '  '), { encoding: 'utf8' })
-
-	// aggregate pass/fail counts across every group and print one summary, with the
-	// description + failure message of each failing test listed at the bottom
-	const summaryText = formatSummary(results)
-	console.log(summaryText)
-
-	const totalFail = results.reduce((n, r) => n + (r?.parsed?.fail || 0), 0)
-	// groups that never produced a TAP summary (timeout, page load error, thrown exception)
-	const erroredGroups = results.filter(r => !r?.parsed && !r?.passed)
-	const runPassed = totalFail === 0 && erroredGroups.length === 0
-
-	if (runPassed) {
-		// IMPORTANT: CI gates the whole integration run on the mere existence of this file
-		// (see .github/actions/run-integration-tests/action.yml, which sets
-		// INTEGRATION_TEST_PASSED=true iff client/passedTests.txt exists). It MUST therefore
-		// be written ONLY when everything passed — writing it on failure reports a green run.
-		fs.writeFileSync('passedTests.txt', summaryText, { encoding: 'utf8' })
-		// drop any stale failure record from a previous run
-		fs.rmSync('failedTests.txt', { force: true })
-	} else {
-		// keep the failure summary as an artifact, but under a name the CI gate does NOT check
-		fs.writeFileSync('failedTests.txt', summaryText, { encoding: 'utf8' })
-		// the failed assertions, without having to search the whole test output for them
-		const failureSummaries = results.map(r => r?.failureSummary).filter(Boolean)
-		if (failureSummaries.length) console.log(`\n${failureSummaries.join('\n\n')}`)
-		if (erroredGroups.length) {
-			console.log(`\n!!! Groups that did not complete (no TAP summary) !!!`)
-			for (const r of erroredGroups) {
-				console.log(`\nError testing spec pattern=${r?.pattern}`)
-				console.log(r?.error || errors[r?.pattern] || '(unknown error)')
-			}
-			console.log(`\n`)
+		if (html.length) {
+			const combinedHtml = html.join('\n')
+			fs.writeFileSync(extractFiles.html, combinedHtml, { encoding: 'utf8' })
+			const combinedMarkdown = markdowns.join('\n')
+			fs.writeFileSync(extractFiles.markdown, combinedMarkdown, { encoding: 'utf8' })
 		}
-		process.exit(1)
+		if (fs.existsSync(path.dirname(extractFiles.json)))
+			fs.writeFileSync(extractFiles.json, JSON.stringify(json, null, '  '), { encoding: 'utf8' })
+
+		// aggregate pass/fail counts across every group and print one summary, with the
+		// description + failure message of each failing test listed at the bottom
+		const summaryText = formatSummary(results)
+		console.log(summaryText)
+
+		const totalFail = results.reduce((n, r) => n + (r?.parsed?.fail || 0), 0)
+		// groups that never produced a TAP summary (timeout, page load error, thrown exception)
+		const erroredGroups = results.filter(r => !r?.parsed && !r?.passed)
+		const runPassed = totalFail === 0 && erroredGroups.length === 0
+
+		if (runPassed) {
+			// IMPORTANT: CI gates the whole integration run on the mere existence of this file
+			// (see .github/actions/run-integration-tests/action.yml, which sets
+			// INTEGRATION_TEST_PASSED=true iff client/passedTests.txt exists). It MUST therefore
+			// be written ONLY when everything passed — writing it on failure reports a green run.
+			fs.writeFileSync('passedTests.txt', summaryText, { encoding: 'utf8' })
+			// drop any stale failure record from a previous run
+			fs.rmSync('failedTests.txt', { force: true })
+		} else {
+			// keep the failure summary as an artifact, but under a name the CI gate does NOT check
+			fs.writeFileSync('failedTests.txt', summaryText, { encoding: 'utf8' })
+			// the failed assertions, without having to search the whole test output for them
+			const failureSummaries = results.map(r => r?.failureSummary).filter(Boolean)
+			if (failureSummaries.length) console.log(`\n${failureSummaries.join('\n\n')}`)
+			if (erroredGroups.length) {
+				console.log(`\n!!! Groups that did not complete (no TAP summary) !!!`)
+				for (const r of erroredGroups) {
+					console.log(`\nError testing spec pattern=${r?.pattern}`)
+					console.log(r?.error || errors[r?.pattern] || '(unknown error)')
+				}
+				console.log(`\n`)
+			}
+			exitCode = 1
+		}
+	} finally {
+		await browser?.close().catch(() => {})
+		if (server) server.close()
 	}
+	// exit after cleanup; process.exit() inside the try would skip the finally block
+	if (exitCode) process.exit(exitCode)
 }
 
 // Parse a page's full TAP log into counts + failing-assertion details. Each failure keeps
