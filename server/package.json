@@ -50,7 +50,6 @@
     "esbuild": "^0.28.1",
     "monocart-coverage-reports": "^2.12.1",
     "node-watch": "^0.7.1",
-    "nodemon": "^3.1.10",
     "prettier": "^2.8.8",
     "tape": "^5.2.2",
     "tsx": "^4.7.1",
