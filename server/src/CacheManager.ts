@@ -1,6 +1,87 @@
 import fs from 'fs'
 import path from 'path'
-import { cacheJobPolicies } from './utils/cacheOrRecompute.ts'
+
+const minute = 1000 * 60
+const hour = minute * 60 // 1 hour in milliseconds
+const halfDay = hour * 12 // 12 hours in milliseconds
+const day = halfDay * 2 // 24 hours in milliseconds
+
+// eviction options of a cache subdir, which a deployer may override with serverconfig.features.cacheMonitor.subdirs[name]
+type EvictionOpts = {
+	maxAge?: number // file expiration in milliseconds
+	maxSize?: number // total cache subdir size of all files, in bytes
+	skipMs?: number // milliseconds to wait before rerunning cache subdir checks, cause some check iterations to be skipped
+	moveTo?: string // move expired files to this abs path or cache subdir instead of deleting right away
+	fileExtensions?: Set<string | RegExp> // only check files with these extensions
+}
+const evictionKeys = ['maxAge', 'maxSize', 'skipMs', 'moveTo', 'fileExtensions'] as const
+
+/* .type of a cacheRegistry entry
+- compute: JSON results written by utils/cacheOrRecompute.ts; must have maxPending, the cap on concurrent
+  computes of distinct cacheIds, which is the only field cacheOrRecompute reads
+- file: files written by their own route; must have fileExtensions, so that only the cached files are evicted
+- session: saved user data written by the massSession route
+*/
+type CacheRegistryItem =
+	| ({ type: 'compute'; maxPending: number } & EvictionOpts)
+	| ({ type: 'file'; fileExtensions: Set<string | RegExp> } & EvictionOpts)
+	| ({ type: 'session' } & EvictionOpts)
+
+// eviction defaults of each type, used for the options that a registry entry does not set
+const typeDefaults: { [T in CacheRegistryItem['type']]: EvictionOpts } = {
+	compute: { maxAge: day * 60, skipMs: halfDay },
+	file: {},
+	session: { maxAge: day * 30, skipMs: halfDay }
+}
+
+/** All subdirs of serverconfig.cachedir. This is the only place to declare a cache subdir: CacheManager
+ * creates every entry at server launch, even when the feature that uses it is disabled, and evicts its files.
+ * To add a new cacheOrRecompute analysis, append an entry with type 'compute'; no other file needs to be edited. */
+export const cacheRegistry = {
+	de: { type: 'compute', maxPending: 5 },
+	dm: { type: 'compute', maxPending: 5 },
+	/* DMR scans. Lower than the analyses above because each pending job is not one process: it
+	fans out to `serverconfig.dmrBatchConcurrency` rust invocations (default 2), each holding one
+	chromosome's matrix at ~0.5GB and saturating a core. Total concurrent rust processes is
+	maxPending x dmrBatchConcurrency, so a deployer raising either must consider the other -- at 2
+	and 2 that is 4 processes and ~2GB, which is the ceiling a 4-core deployment can absorb.
+	Identical requests still share one compute through the in-flight dedup in cacheOrRecompute, so
+	several users running the SAME scan cost one. */
+	dmr: { type: 'compute', maxPending: 2 },
+	// per-gene gene-body methylation deltas for a contrast; same fan-out as a scan, same ceiling
+	geneBodyMeth: { type: 'compute', maxPending: 2 },
+	gsea: { type: 'compute', maxPending: 5 },
+	grin2: { type: 'compute', maxPending: 5 },
+	topve: { type: 'compute', maxPending: 5 },
+	/* per-case gene counts downloaded from GDC. unlike the analysis subdirs above, these are many
+	small fetches rather than a few heavy computes: one entry per STAR-Counts file, written from
+	inside a mapConcurrent fan-out. the real throttle is mapConcurrent, not this pool, so size this
+	above the download concurrency (gdcDEconcurrency, default 60) times the simultaneous DE runs to
+	tolerate: one run holds up to `concurrency` distinct cacheIds at once, so at 200 the third
+	overlapping run is the first that can hit the cap. exceeding it throws 429, which the caller
+	surfaces rather than treating as a failed download -- and buildGdcCountsFile fails the whole run
+	on it, so a cap set below real concurrency would kill a legitimate second user's analysis rather
+	than queue it. raise this in step with gdcDEconcurrency. */
+	gdcCounts: { type: 'compute', maxPending: 200 },
+	// saved sessions; a deployer may set maxAge: 0 to disable the /massSession and /sessionIds routes
+	massSession: { type: 'session' },
+	massSessionTrash: { type: 'session', maxAge: day * 60 },
+	// WSI tiles rendered on demand from .svs by wsitiles route. Flat .jpg
+	// files (the sweep is non-recursive), evicted by mtime like any other subdir.
+	wsitiles: { type: 'file', fileExtensions: new Set(['.jpg']), maxAge: day * 30, skipMs: halfDay },
+	// Cached bedj track files served by tkbedj when req.query.isCache=true (see bedj.js).
+	// Flat tabix/bigbed files plus index, evicted by mtime like any other subdir.
+	bedj: { type: 'file', fileExtensions: new Set(['.gz', '.tbi', '.csi', '.bb']), maxAge: day * 30, skipMs: halfDay },
+	// GDC bam slices and their index files, written by get_gdc_bam() in bam.js
+	bam: { type: 'file', fileExtensions: new Set(['.bam', '.bai']) }
+} as const satisfies Record<string, CacheRegistryItem>
+
+type CacheRegistry = typeof cacheRegistry
+
+/** the subdirs that cacheOrRecompute may write to */
+export type CacheSubdir = {
+	[K in keyof CacheRegistry]: CacheRegistry[K]['type'] extends 'compute' ? K : never
+}[keyof CacheRegistry]
 
 // configuration for each cache subdir
 type SubdirOpts = {
@@ -31,17 +112,8 @@ type CacheOpts = {
 	cachedir?: string // equals defaultOpts.cachedir or serverconfig.cachedir or runtime overrides (such as in spec files)
 	interval?: number // wait time between each interval loop to check cache files
 	quiet?: boolean
-	subdirs?: {
-		[dirName: string]:
-			| undefined
-			| {
-					maxAge?: number // file expiration in milliseconds
-					maxSize?: number // total cache subdir size of all files, in bytes
-					skipMs?: number // milliseconds to wait before rerunning cache subdir checks, cause some check iterations to be skipped
-					moveTo?: string
-					fileExtensions?: Set<string | RegExp>
-			  }
-	}
+	// overrides of the registry entries; a subdir cannot be disabled, and must be declared in the registry
+	subdirs?: { [dirName: string]: EvictionOpts }
 	callbacks: Callbacks
 	mustExitPendingValidation?: boolean
 }
@@ -54,11 +126,6 @@ type Callbacks = {
 	postStop?: (c: CacheManager) => void
 }
 
-const minute = 1000 * 60
-const hour = minute * 60 // 1 hour in milliseconds
-const halfDay = hour * 12 // 12 hours in milliseconds
-const day = halfDay * 2 // 24 hours in milliseconds
-
 // defaults
 const subdirOptsDefaults: SubdirOpts = {
 	maxAge: hour * 2, // 2 hours
@@ -66,76 +133,17 @@ const subdirOptsDefaults: SubdirOpts = {
 	skipMs: 0 // run on every interval check
 }
 
-// Eviction policy shared by every cacheOrRecompute subdir. Lives here
-// (not in cacheJobPolicies) because cacheOrRecompute itself doesn't read
-// these fields — only CacheManager does.
-const cacheOrRecomputeEvictionDefaults = {
-	maxAge: day * 60,
-	skipMs: halfDay
-}
-
-// Auto-registered subdirs owned by cacheOrRecompute. The single source
-// of truth is utils/types.ts so adding a new analysis type there
-// automatically activates eviction here.
-const cacheOrRecomputeSubdirDefaults = Object.fromEntries(
-	Object.entries(cacheJobPolicies).map(([name, opts]) => [
-		name,
-		{ ...subdirOptsDefaults, ...cacheOrRecomputeEvictionDefaults, ...opts }
-	])
-)
-
 // these configurations can be overriden by the argument to CacheManager constructor(),
-// which is primarily specified in serverconfig.features.cache
+// which is primarily specified in serverconfig.features.cacheMonitor
 const defaultOpts = {
 	cachedir: path.join(process.cwd(), '.cache'),
 	interval: minute,
-	subdirs: {
-		...cacheOrRecomputeSubdirDefaults,
-		massSession: {
-			...subdirOptsDefaults,
-			maxAge: day * 30, // total milliseconds in 30 days
-			skipMs: halfDay // every 12 hours
-		},
-		massSessionTrash: {
-			...subdirOptsDefaults,
-			maxAge: day * 60, // total milliseconds in 60 days
-			skipMs: halfDay // run every 12 hours
-		},
-		// Legacy combined DE/DM cache dir. Nothing writes here anymore
-		// (DE → de/, DM → dm/), but registering it keeps the TTL sweep
-		// running so leftover files from pre-upgrade deployments drain
-		// naturally instead of sitting forever. Safe to delete this entry
-		// once all environments have been upgraded and the dir is empty.
-		daAnalysis: {
-			...subdirOptsDefaults,
-			maxAge: day * 60,
-			skipMs: halfDay
-		},
-		// WSI tiles rendered on demand from .svs by wsitiles route. Flat .jpg
-		// files (the sweep is non-recursive), evicted by mtime like any other subdir.
-		wsitiles: {
-			...subdirOptsDefaults,
-			maxAge: day * 30,
-			skipMs: halfDay,
-			fileExtensions: new Set(['.jpg'])
-		},
-		// Cached bedj track files served by tkbedj when req.query.isCache=true (see bedj.js).
-		// Flat tabix/bigbed files plus index, evicted by mtime like any other subdir.
-		bedj: {
-			...subdirOptsDefaults,
-			maxAge: day * 30,
-			skipMs: halfDay,
-			fileExtensions: new Set(['.gz', '.tbi', '.csi', '.bb'])
-		},
-		// GDC bam slices and their index files, written by get_gdc_bam() in bam.js;
-		// required and cannot be disabled, but may override its options with serverconfig.features.cacheMonitor.subdirs.bam{}
-		bam: {
-			...subdirOptsDefaults,
-			fileExtensions: new Set(['.bam', '.bai'])
-		}
-	},
 	callbacks: {}
 } satisfies CacheOpts
+
+function pickEvictionOpts(o: object): EvictionOpts {
+	return Object.fromEntries(evictionKeys.filter(k => k in o).map(k => [k, o[k]]))
+}
 
 /** This class creates the subdirectories under the cache
  * and manages the cache files in those directories.*/
@@ -151,7 +159,8 @@ export class CacheManager {
 	hasActiveCheck = false
 	quiet = false
 
-	constructor(opts: CacheOpts = defaultOpts) {
+	/** registry is only an argument for spec files, a deployer can only override the entries with opts.subdirs */
+	constructor(opts: CacheOpts = defaultOpts, registry: Record<string, CacheRegistryItem> = cacheRegistry) {
 		/* v8 ignore start */
 		this.interval = opts.interval || defaultOpts.interval
 		this.cachedir = opts.cachedir || defaultOpts.cachedir
@@ -160,30 +169,41 @@ export class CacheManager {
 		/* v8 ignore stop */
 		this.subdirs = new Map()
 
-		// Synchronous setup: cachedir, subdir registration, and the
-		// required-subdir guard. Kept out of init() so the guard's throw
-		// surfaces as a real constructor error instead of an unhandled
-		// promise rejection.
-		if (!fs.existsSync(this.cachedir)) fs.mkdirSync(this.cachedir, { recursive: true })
-		const subdirs = Object.assign({}, defaultOpts.subdirs, opts.subdirs || {})
-		for (const [dirName, dirOpts] of Object.entries(subdirs)) {
-			if (dirOpts === undefined) {
-				if (dirName in cacheJobPolicies) {
+		// Synchronous setup: cachedir, override validation, and subdir creation.
+		// Kept out of init() so a validation throw surfaces as a real constructor
+		// error instead of an unhandled promise rejection.
+		const overrides = opts.subdirs || {}
+		for (const [dirName, override] of Object.entries(overrides)) {
+			if (!Object.hasOwn(registry, dirName)) {
+				throw new Error(
+					`Unknown cache subdir '${dirName}' in cacheMonitor.subdirs. Declare it in cacheRegistry in CacheManager.ts.`
+				)
+			}
+			if (!override || typeof override != 'object') {
+				throw new Error(
+					`cacheMonitor.subdirs.${dirName} must be an object of overrides, a cache subdir cannot be disabled.`
+				)
+			}
+			for (const key of Object.keys(override)) {
+				if (!(evictionKeys as readonly string[]).includes(key)) {
 					throw new Error(
-						`Cannot disable required cacheOrRecompute subdir '${dirName}'. ` +
-							`Remove it from cacheJobPolicies in utils/cacheOrRecompute.ts if it is no longer used.`
+						`cacheMonitor.subdirs.${dirName}.${key} cannot be overridden, only ${evictionKeys.join(', ')} can be.`
 					)
 				}
-				if (dirName == 'bam') {
-					// bam.js does not create this subdir, and relies on CacheManager to create it
-					throw new Error(`Cannot disable required subdir 'bam', which is used for caching GDC bam slices.`)
-				}
-				delete subdirs[dirName]
-			} else {
-				// an override only replaces the given properties, the rest fall back to this subdir's defaults
-				const subdirOpts = Object.assign({}, subdirOptsDefaults, defaultOpts.subdirs[dirName], dirOpts)
-				this.setComputedOpts(dirName, subdirOpts)
 			}
+		}
+
+		if (!fs.existsSync(this.cachedir)) fs.mkdirSync(this.cachedir, { recursive: true })
+		for (const [dirName, item] of Object.entries(registry)) {
+			// an override only replaces the given properties, the rest fall back to this entry and then to its type's defaults
+			const subdirOpts = Object.assign(
+				{},
+				subdirOptsDefaults,
+				typeDefaults[item.type],
+				pickEvictionOpts(item),
+				overrides[dirName]
+			)
+			this.setComputedOpts(dirName, subdirOpts)
 		}
 
 		this.init(opts) // do not await, since contructor() can only return an object instance and not a Promise

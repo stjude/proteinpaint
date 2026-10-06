@@ -4,43 +4,7 @@ import serverconfig, { generateHash } from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { fileSize, formatElapsedTime } from '#shared'
 import type { CacheOrRecomputeOpts, CacheOrRecomputeResult } from '#src/utils/types.ts'
-
-/** Subdirs of serverconfig.cachedir that the cacheOrRecompute module
- * writes JSON cache files to. `maxPending` caps the concurrent compute
- * jobs per subdir and is the only field cacheOrRecompute itself reads.
- * CacheManager registers every entry automatically and supplies the
- * eviction policy (maxAge/skipMs/maxSize) from its own defaults. To add
- * a new analysis type, append a new entry here — no other file needs
- * to be edited. */
-export const cacheJobPolicies = {
-	de: { maxPending: 5 },
-	dm: { maxPending: 5 },
-	/* DMR scans. Lower than the analyses above because each pending job is not one process: it
-	fans out to `serverconfig.dmrBatchConcurrency` rust invocations (default 2), each holding one
-	chromosome's matrix at ~0.5GB and saturating a core. Total concurrent rust processes is
-	maxPending x dmrBatchConcurrency, so a deployer raising either must consider the other -- at 2
-	and 2 that is 4 processes and ~2GB, which is the ceiling a 4-core deployment can absorb.
-	Identical requests still share one compute through the in-flight dedup below, so several users
-	running the SAME scan cost one. */
-	dmr: { maxPending: 2 },
-	// per-gene gene-body methylation deltas for a contrast; same fan-out as a scan, same ceiling
-	geneBodyMeth: { maxPending: 2 },
-	gsea: { maxPending: 5 },
-	grin2: { maxPending: 5 },
-	topve: { maxPending: 5 },
-	/* per-case gene counts downloaded from GDC. unlike the analysis subdirs above, these are many
-	small fetches rather than a few heavy computes: one entry per STAR-Counts file, written from
-	inside a mapConcurrent fan-out. the real throttle is mapConcurrent, not this pool, so size this
-	above the download concurrency (gdcDEconcurrency, default 60) times the simultaneous DE runs to
-	tolerate: one run holds up to `concurrency` distinct cacheIds at once, so at 200 the third
-	overlapping run is the first that can hit the cap. exceeding it throws 429, which the caller
-	surfaces rather than treating as a failed download -- and buildGdcCountsFile fails the whole run
-	on it, so a cap set below real concurrency would kill a legitimate second user's analysis rather
-	than queue it. raise this in step with gdcDEconcurrency. */
-	gdcCounts: { maxPending: 200 }
-} as const satisfies Record<string, { maxPending: number }>
-
-export type CacheSubdir = keyof typeof cacheJobPolicies
+import { cacheRegistry, type CacheSubdir } from '#src/CacheManager.ts'
 
 // in serverconfig.js, which also uses the key; re-exported here for the existing importers
 export { generateHash }
@@ -123,16 +87,19 @@ export async function cacheOrRecompute<TArgs, TResult>(
 	/** `maxAge`, `skipMs`, `maxSize` for each subdir are already
 	 deployer-overrideable via `serverconfig.features.cacheMonitor.subdirs`
 	 — that override flows through CacheManager's constructor merge. But
-	 `maxPending` is read straight from the static import below, so the
-	 same override path does NOT reach it. Close this gap when a workload
+	 `maxPending` is read straight from the static cacheRegistry import, and
+	 CacheManager rejects it as an override. Close this gap when a workload
 	 with a different concurrency profile (e.g. GDC BAM slice or MAF) is
-	 routed through cacheOrRecompute: at boot, merge
-	 `serverconfig.features?.cacheMonitor?.subdirs?.[subdir]?.maxPending`
-	 into a module-local map and read from that here instead. */
-	if (!cacheJobPolicies[cacheSubdir]) {
-		throw new Error(`Unknown cacheSubdir '${cacheSubdir}'. Add it to cacheJobPolicies in utils/cacheOrRecompute.ts.`)
+	 routed through cacheOrRecompute: allow `maxPending` as an override in
+	 CacheManager, merge `serverconfig.features?.cacheMonitor?.subdirs?.[subdir]?.maxPending`
+	 into a module-local map at boot, and read from that here instead. */
+	const entry = Object.hasOwn(cacheRegistry, cacheSubdir) ? cacheRegistry[cacheSubdir] : undefined
+	if (entry?.type != 'compute') {
+		throw new Error(
+			`Unknown cacheSubdir '${cacheSubdir}'. Add it to cacheRegistry in CacheManager.ts with type 'compute'.`
+		)
 	}
-	const cap = cacheJobPolicies[cacheSubdir].maxPending
+	const cap = entry.maxPending
 	const inUse = pendingCount.get(cacheSubdir) ?? 0
 	if (inUse >= cap) throw makeBusyError()
 

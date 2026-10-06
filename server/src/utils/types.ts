@@ -1,4 +1,4 @@
-import type { CacheSubdir } from '#src/utils/cacheOrRecompute.ts'
+import type { CacheSubdir } from '#src/CacheManager.ts'
 
 export type CacheOrRecomputeOpts<TArgs, TResult> = {
 	/** Hashed to derive the cacheId. Pass the subset of the request whose
