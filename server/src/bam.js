@@ -1,31 +1,20 @@
 import fs from 'fs'
 import path from 'path'
 import * as utils from './utils.js'
-import serverconfig from './serverconfig.js'
-import { spawn } from 'child_process'
+import serverconfig, { generateHash } from './serverconfig.js'
 import { Readable, Transform } from 'stream'
 import { pipeline } from 'node:stream/promises'
 import { createCanvas } from 'canvas'
 import * as bamcommon from './bam.common.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import crypto from 'crypto'
 import ky from 'ky'
 import { interpolateRgb } from 'd3-interpolate'
 import { match_complexvariant_rust } from './bam.indel.js'
 import { basecolor, bplen } from '#shared/common.js'
 import { gdcCheckPermission } from './bam.gdc.js'
-import { fileSize } from '#shared/fileSize.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 
 /*
-TODO
-separate into new routes
-/bam - tk rendering/read/align etc. for both gdc and non-gdc files
-/bam/read - get one read
-/bam/gdc/list - querying and listing files from gdc
-/bam/gdc/cache - query gdc slicing api and cache on pp
-
-
 XXX quick fix to be removed/disabled later
 -- __tempscore 
 
@@ -255,8 +244,6 @@ const max_read_alignment = 200 // Max number of reads that can be aligned to ref
 const readpanel_DN_maxlength = 20 // Variable to define whether a deletion is rendered showing the reference or simply shown how big the deletion is. If greater, only the size of deletion is shown. If lower, the reference sequence is shown
 
 const bases = new Set(['A', 'T', 'C', 'G'])
-const gdcHashSecret = Math.random.toString()
-
 /**************************
       gdc security
 ***************************
@@ -3543,13 +3530,12 @@ async function convertread2html(seg, genome, query) {
 /////////////////////// gdc slicing ///////////////////////
 
 function getGDCcacheFileName(req) {
-	const md5Hasher = crypto.createHmac('md5', gdcHashSecret)
 	const lst = [
 		req.get('X-Auth-Token') || req.cookies.sessionid, // use token or session, whichever is given
 		req.query.gdcFileUUID,
 		req.query.gdcFilePosition
 	]
-	return md5Hasher.update(lst.join('')).digest('hex') + '.bam'
+	return generateHash(lst, 'gdc-bam') + '.bam'
 }
 
 /*
@@ -3684,23 +3670,6 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 
 			// not using sourceStream.pipe() so no need to deal with those callbacks as on(close) and on(error)
 			await pipeline(sourceStream, transformStream, writeStream)
-
-			/* no longer aborts when streaming is killed
-			if (tooBigTerminated) {
-				//await appendEOF2truncatedFile2(fullpath)
-				try {
-					await fs.promises.stat(fullpath)
-					await fs.promises.unlink(fullpath) // do it after successful stat to be safe
-				} catch (e) {
-					// ignore case e.g. file is not found or error deleting it
-				}
-
-				// message client
-				throw `slice file size exceeds ${fileSize(
-					serverconfig.features.gdcBam.cacheMaxSize
-				)}. Please reduce query region size and try again.`
-			}
-			*/
 
 			if (await utils.file_not_exist(fullpath)) throw 'BAM file slice is not found after downloading' // unknown error
 
