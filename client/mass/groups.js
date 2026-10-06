@@ -18,7 +18,7 @@ import { uiLabel } from '#shared'
 import { TermTypes } from '#types'
 import { dofetch3 } from '#common/dofetch'
 import { getBrainImagingSampleSet } from '#plots/getBrainImagingSampleSet.ts'
-import { maxSampleCutoff, maxGESampleCutoff } from '../plots/volcano/settings/defaults.ts'
+import { maxSampleCutoff, maxGESampleCutoff, scaleDsFilters } from '../plots/volcano/settings/defaults.ts'
 import { getGEunit } from '#tw/geneExpression'
 
 /*
@@ -974,14 +974,19 @@ export function renderPreAnalysisData(arg) {
 			.attr('data-testid', 'sjpp-da-run-btn')
 			.text(`Run Differential ${termType2label(termType)} Analysis`)
 			.on('click', async () => {
+				const volcano = {}
+				// only expression carries a method; passing an undefined one would fail volcano settings validation
+				if (selectedMethod) volcano.method = selectedMethod
+				/* splicing filters scale with the samples that will actually be tested, which only the
+				pre-analysis counts know: the raw groups include samples absent from the splicing h5 */
+				if (termType == TermTypes.JUNCTION) Object.assign(volcano, scaleDsFilters(numControl + numCase))
 				const config = {
 					chartType: 'differentialAnalysis',
 					state: self.state,
 					samplelst: { groups },
 					termType,
 					tw: samplelstTW,
-					// only expression carries a method; passing an undefined one would fail volcano settings validation
-					...(selectedMethod ? { settings: { volcano: { method: selectedMethod } } } : {})
+					...(Object.keys(volcano).length ? { settings: { volcano } } : {})
 				}
 				if (tip) tip.hide()
 				if (self.tip) self.tip.hide()
