@@ -68,12 +68,14 @@ if git rev-parse -q --verify MERGE_HEAD > /dev/null; then
   ADDED=$(mktemp)
   trap 'rm -f "$ADDED"' EXIT
   git diff --cached -U0 --no-color --no-ext-diff MERGE_HEAD | awk '
-    /^\+\+\+ / { file = substr($0, 7); next }
+    /^diff --git / { header = 1; next }
+    header && /^\+\+\+ / { header = 0; file = substr($0, 7); next }
     /^\+/ { print file "\037" substr($0, 2) }
   ' > "$ADDED"
   git diff --cached -U0 --no-color --no-ext-diff HEAD | awk '
     FNR == NR { keep[$0] = 1; next }
-    /^\+\+\+ / { file = substr($0, 7); print; next }
+    /^diff --git / { header = 1; print; next }
+    header && /^\+\+\+ / { header = 0; file = substr($0, 7); print; next }
     /^\+/ && !((file "\037" substr($0, 2)) in keep) { print " " substr($0, 2); next }
     { print }
   ' "$ADDED" - | ./utils/hooks/check-text.sh diff "staged changes"
