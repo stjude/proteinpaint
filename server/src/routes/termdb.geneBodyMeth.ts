@@ -15,6 +15,7 @@ import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { median, chrSeed } from '#src/utils/dmrStats.ts'
 import { GENE_BODY_PAD } from '#src/utils/dmrGenes.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { sampleFilterScope } from '#src/utils/sampleGroups.ts'
 import { fingerprint } from '#src/routes/termdb.dmrBatch.ts'
 import { buildGeneIndex } from '#src/utils/dmrGenes.ts'
 import {
@@ -87,7 +88,7 @@ function init({ genomes }) {
 			// expression on the same patients the methylation was measured on; see matchedSamplelst
 			// analysis-wide, so this cohort is the one the scan ran on whatever chr1 resolves to
 			const eligible = eligibleMethylationSamples(ds, q.element_type)
-			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds)
+			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds, q.__protected__)
 			const { result } = await getDeCacheResult(
 				{
 					genome: q.genome,
@@ -95,7 +96,8 @@ function init({ genomes }) {
 					samplelst,
 					min_count: q.min_count ?? 10,
 					min_total_count: q.min_total_count ?? 15,
-					method: q.method
+					method: q.method,
+					__protected__: q.__protected__
 				} as any,
 				genomes
 			)
@@ -170,6 +172,7 @@ export async function getGeneBodyDeltas(
 		chromosomes?: string[]
 		element_type?: string
 		corrected?: boolean
+		__protected__?: any
 	},
 	genomes: any
 ): Promise<Record<string, number>> {
@@ -205,6 +208,7 @@ export async function getGeneBodyDeltas(
 			corrected: !!q.corrected,
 			files: fingerprint([...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile))
 		},
+		cacheScope: sampleFilterScope(q, ds),
 		cacheSubdir: 'geneBodyMeth',
 		// the validated list, so the compute cannot see the raw one
 		computeFresh: async () => computeGeneBodyDeltas({ ...q, chromosomes }, genome, ds)
@@ -248,7 +252,8 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 		q.group1,
 		q.group2,
 		eligibleMethylationSamples(ds, q.element_type),
-		ds
+		ds,
+		q.__protected__
 	)
 	if (group1.length < 3 || group2.length < 3) throw new Error('Each group needs at least 3 samples.')
 	const deltaOf: Record<string, number> = {}

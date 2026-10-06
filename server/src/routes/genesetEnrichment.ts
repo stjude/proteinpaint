@@ -355,15 +355,17 @@ async function resolveGseaGenesAndFoldChange({
 		// through without dedup for now.
 		const kind = q.daRequest.kind
 		if (kind !== 'DE' && kind !== 'DM') throw new Error('daRequest.kind must be "DE" or "DM"')
+		// the daRequest, with the q.__protected__ of this request for resolving its sample groups
+		const daRequest = { ...q.daRequest, __protected__: q.__protected__ }
 		if (kind === 'DE') {
-			const { result, cacheId } = await getDeCacheResult(q.daRequest as DERequest, genomes)
+			const { result, cacheId } = await getDeCacheResult(daRequest as DERequest, genomes)
 			if (cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
 			return {
 				genes: result.geneRows.map(g => g.gene_name),
 				fold_change: result.geneRows.map(g => g.fold_change)
 			}
 		}
-		const dm = q.daRequest as DiffMethRequest
+		const dm = daRequest as DiffMethRequest
 		const { result, cacheId } = await getDmCacheResult(dm, genomes)
 		if (cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
 		/* A scan's rows are DMRs, not genes: many per gene, none for half of them, and more for long
@@ -380,6 +382,7 @@ async function resolveGseaGenesAndFoldChange({
 					group1: groups[0].values,
 					group2: groups[1].values,
 					corrected: !!dm.scan?.backgroundCorrection,
+					__protected__: dm.__protected__,
 					/* The chromosomes the scan itself ran on. Without this the ranking covered the
 					whole genome while the volcano showed one chromosome, and on a sex-imbalanced
 					cohort chrX dominated a ranking the header called the scan's own. It also keeps

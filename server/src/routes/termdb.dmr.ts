@@ -64,7 +64,7 @@ function init({ genomes }) {
 					`Region too large (${(span / 1e6).toFixed(1)} Mb). Server maximum is ${SERVER_MAX_REGION_BP / 1e6} Mb.`
 				)
 
-			const { group1, group2 } = await resolveGroupNames(q.group1, q.group2, eligible, ds)
+			const { group1, group2 } = await resolveGroupNames(q.group1, q.group2, eligible, ds, q.__protected__)
 			/* Checked after id-to-name resolution, which is where a group actually shrinks: the R
 			backend does not check and, handed fewer than three, filters every probe and reports "too
 			few probes genome-wide", which misdiagnoses a sample problem as a data problem. */

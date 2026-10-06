@@ -1,6 +1,9 @@
 import type { DERequest, DiffMethRequest } from '#types'
 import { getData, maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
+import { filterSampleNamesByAccess } from '#src/termdb.sql.js'
+import { authApi } from '#src/auth.js'
+import { generateHash } from '#src/serverconfig.js'
 
 /** Two-group sample resolution result. The conf{1,2}_group{1,2} arrays
  * carry the confounder values for samples that survived the per-confounder
@@ -84,11 +87,30 @@ export function withholdSampleNames(allSampleSet: Set<string>, pattern?: string)
 	return withheld
 }
 
+/* The eligible samples that pass the dataset's sample filter for a request, same as for getData().
+Kept per eligible set and per request (its q.__protected__ object), since the groups of one analysis
+are resolved in separate buildGroupValues() calls. */
+const readableByRequest = new WeakMap<Set<string>, WeakMap<object, Promise<Set<string>>>>()
+
+function readableSamples(allSampleSet: Set<string>, ds: any, __protected__: any): Promise<Set<string>> | Set<string> {
+	if (!ds.cohort?.termdb?.getAdditionalFilter) return allSampleSet
+	const resolve = async () => new Set<string>(await filterSampleNamesByAccess({ __protected__ }, ds, [...allSampleSet]))
+	// there is no request object to keep the result by
+	if (!__protected__ || typeof __protected__ != 'object') return resolve()
+	let byRequest = readableByRequest.get(allSampleSet)
+	if (!byRequest) readableByRequest.set(allSampleSet, (byRequest = new WeakMap()))
+	let readable = byRequest.get(__protected__)
+	if (!readable) byRequest.set(__protected__, (readable = resolve()))
+	return readable
+}
+
 /** Walk one sample group's values and collect names + confounder values.
  * A name is included iff every configured confounder (tw, tw2) has data
  * for that sample — the two early-return guards enforce that without a
  * nested if/else cascade. Used by both DE and DM resolvers; the per-route
- * wrappers add their own validation + alert messages around this. */
+ * wrappers add their own validation + alert messages around this.
+ * `__protected__` is the request's q.__protected__, which a dataset with a
+ * sample filter (getAdditionalFilter) requires. */
 export async function buildGroupValues(
 	values: Array<{ sampleId: number | string }>,
 	allSampleSet: Set<string>,
@@ -96,12 +118,14 @@ export async function buildGroupValues(
 	tw: any,
 	tw2: any,
 	term_results: any,
-	term_results2: any
+	term_results2: any,
+	__protected__?: any
 ): Promise<{ names: string[]; conf1: (string | number)[]; conf2: (string | number)[] }> {
 	const names: string[] = []
 	const conf1: (string | number)[] = []
 	const conf2: (string | number)[] = []
 	let sampleLst = values
+	const readable = await readableSamples(allSampleSet, ds, __protected__)
 
 	if (ds.cohort.termdb.hasSampleAncestry) {
 		// ds has sample ancestry
@@ -121,7 +145,7 @@ export async function buildGroupValues(
 		}
 		const arg = { filter }
 		maySetMapParent2Children(arg, ds, true)
-		const allSamples = [...allSampleSet].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
+		const allSamples = [...readable].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
 		// filtering samples by samplelst term
 		// if samples are at parent-level then will get
 		// mapped to sample-level, otherwise will be used as is
@@ -141,7 +165,7 @@ export async function buildGroupValues(
 				: Number.isInteger(s.sampleId)
 				? ds.cohort.termdb.q.id2sampleName(s.sampleId)
 				: undefined
-		if (!n || !allSampleSet.has(n)) continue
+		if (!n || !readable.has(n)) continue
 		// If a confounder is configured but missing for this sample, skip it.
 		if (tw && !term_results.samples?.[s.sampleId]) continue
 		if (tw2 && !term_results2.samples?.[s.sampleId]) continue
@@ -156,6 +180,18 @@ export async function buildGroupValues(
 		names.push(n)
 	}
 	return { names, conf1, conf2 }
+}
+
+/** An id of the dataset's sample filter for this request, since buildGroupValues() resolves the
+ * groups with it. It is the cacheScope for a result that is computed from sample groups, and is
+ * recorded with a result that a later request may name by its cacheId alone, to compare with the
+ * scope of that request. Empty when the dataset has no sample filter, or when none applies to
+ * the request. */
+export function sampleFilterScope(q: { __protected__?: any }, ds: any): string {
+	if (!ds?.cohort?.termdb?.getAdditionalFilter) return ''
+	const fq: any = { __protected__: q.__protected__ }
+	authApi.mayAdjustFilter(fq, ds, undefined)
+	return fq.filter?.lst?.length ? generateHash(fq.filter) : ''
 }
 
 /** Caller-side normalizer for two-group analyses (DE, DM): returns a
