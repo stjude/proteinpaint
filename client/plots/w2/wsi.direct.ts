@@ -394,6 +394,27 @@ export async function init(
 			for (const t of shownTypes) shownColor[t] = typeColor[t]
 		}
 		refreshShownTypes()
+		// meta.cellTypes is optional. Recover the global type vocabulary before
+		// rasterFills is decided, since a dense initial view never enters the
+		// viewport-scoped annotation fetch in buildVector().
+		if (needCellPolys && opts.showCellTypes && !typeNames.length) {
+			try {
+				const r = await dofetch3(
+					`wsitiles/annotations?${sq}&file=${encodeURIComponent(opts.spatialData!)}&types=1&v=${
+						meta.spatialVersion || 0
+					}`
+				)
+				if (!r || r.error) throw new Error(r?.error || 'failed to load annotations')
+				const names: string[] = Array.isArray(r.cellTypes) ? r.cellTypes : []
+				for (const t of names) {
+					typeColor[t] = CELL_TYPE_COLORS[typeNames.length % CELL_TYPE_COLORS.length]
+					typeNames.push(t)
+				}
+				refreshShownTypes()
+			} catch (e: any) {
+				sayerrorOnTop(holder, `Error loading cell types: ${e.message || e}`)
+			}
+		}
 
 		// per-gene count maps, fetched ONCE for the whole sample (this route
 		// isn't bbox-scoped: one int per expressing cell is far lighter than a
@@ -1226,6 +1247,14 @@ export async function init(
 						setLassoEnabled(true)
 					}
 					endLoading()
+					// The first build may fit the map, or the user may have moved it
+					// while the requests were in flight. If the live viewport extends
+					// beyond the exact fetched region, make a fresh mode decision now
+					// rather than cancelling this completed annotation fetch.
+					const liveBbox = viewBboxUm(map.getView().calculateExtent() as [number, number, number, number], mppX, mppY)
+					if (built && !bboxContains(fetchBbox, liveBbox)) {
+						updateMode().catch((e: any) => sayerrorOnTop(holder, `Cell count error: ${e.message || e}`))
+					}
 				} else {
 					endLoading() // already loaded and still in view: nothing to wait for
 				}
