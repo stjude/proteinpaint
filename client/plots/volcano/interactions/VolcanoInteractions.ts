@@ -376,7 +376,11 @@ export class VolcanoInteractions {
 		only sees the term. */
 		if (genomicFeatureType !== 'gene') {
 			const noun = elementNoun(elementType).one
-			const unit = getDNAMethUnit(genomicFeatureType, this.app.vocabApi)
+			/* A term naming its element type is returned on the unit the dataset advertises for its
+			methylation terms, whichever matrix it reads, and the tested matrix may store another. */
+			const unit =
+				(term.elementType && this.app.vocabApi.termdbConfig.queries?.dnaMethylation?.unit) ||
+				getDNAMethUnit(genomicFeatureType, this.app.vocabApi)
 			term.unit = unit
 			term.name = getDNAMethTermName(term, unit, noun)
 		}

@@ -2416,8 +2416,9 @@ function makeElementMethylationGetter(q, nominated, ds) {
 		return samplesByEntry.get(entry)
 	}
 
-	// The unit the getter returns: the nominated entry's, which q.unit advertises. M-values unless it says beta.
-	const returnsBeta = /beta/i.test(nominated.unit || '')
+	/* The unit the getter returns is the one q.unit advertises: the nominated entry's, unless the
+	dataset sets its own. M-values unless it says beta. */
+	const returnsBeta = /beta/i.test(q.unit || '')
 
 	return async param => {
 		const term2sample2value = new Map()
@@ -2509,10 +2510,11 @@ function makeElementMethylationGetter(q, nominated, ds) {
 					n++
 				}
 				if (!n) continue
-				/* An element matrix stores what its entry's unit says. For the nominated entry that
-				is the returned unit, so there is nothing to convert. A term naming its own element
-				type may read an entry with another unit, and is converted like a CpG shard value
-				is, so that every value of the getter is on the unit that q.unit advertises. */
+				/* An element matrix stores what its entry's unit says. That is usually the returned
+				unit, so there is nothing to convert. A term naming its own element type may read an
+				entry with another unit, and a dataset may set a q.unit other than the nominated
+				entry's; such a value is converted like a CpG shard value is, so that every value of
+				the getter is on the unit that q.unit advertises. */
 				s2v[sid] = toReturnedUnit(sum / n, /beta/i.test(entry.unit || ''), returnsBeta)
 			}
 			if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v)
