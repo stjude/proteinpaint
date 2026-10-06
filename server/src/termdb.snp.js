@@ -364,9 +364,7 @@ async function queryBcf(q, snps, ds) {
 		delete snp.gtlst // do not return to client
 	}
 
-	// cache id is a file name and its characters are covered by \w
-	// will apply /[^\w]/ to check against attack
-	const cacheid = q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
+	const cacheid = makeCacheid(q)
 	await utils.write_file(utils.snpgtCacheFile(cacheid), lines.join('\n'))
 	return cacheid
 }
@@ -458,9 +456,16 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 			lines.push(lst.join('\t'))
 		}
 	})
-	result.cacheid = q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
+	result.cacheid = makeCacheid(q)
 	await utils.write_file(utils.snpgtCacheFile(result.cacheid), lines.join('\n'))
 	return result
+}
+
+/* cache id is a file name, which snpgtCacheFile() only accepts with \w characters;
+a genome or dslabel may also have . or -, which are replaced with _ */
+export function makeCacheid(q) {
+	const prefix = (q.genome + '_' + q.dslabel).replace(/[^\w]/g, '_')
+	return prefix + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
 }
 
 export function add_bcf_variant_filter(variant_filter, bcfargs) {
