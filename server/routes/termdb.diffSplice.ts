@@ -89,10 +89,9 @@ export function init({ genomes }) {
 			plot. The skip counts are the only thing that tells the two apart, so they are named
 			in the error rather than left in the response the client is about to discard. */
 			if (rendered.totalRows === 0) {
-				const why = result.skipped
-					? ` Clusters dropped before testing: ${Object.entries(result.skipped)
-							.map(([reason, n]) => `${reason}=${n}`)
-							.join(', ')}.`
+const skipped = Object.entries(result.skipped ?? {})
+				const why = skipped.length
+					? ` Clusters dropped before testing: ${skipped.map(([reason, n]) => `${reason}=${n}`).join(', ')}.`
 					: ''
 				throw new Error(
 					`No intron clusters passed filtering. Try lowering the minimum counts per cluster or selecting more samples.${why}`
