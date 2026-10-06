@@ -486,6 +486,7 @@ function handle_click(event, self, chart) {
 	if (self.config.displaySampleIds) {
 		options.push({
 			label: `List ${uiLabels.samples}`,
+			testId: `sjpp-barchart-list-samples-${data.seriesId}`,
 			callback: async () => {
 				const arg = getListSamplesArg(event, self, data.seriesId, data.dataId, chart.chartId)
 				try {
