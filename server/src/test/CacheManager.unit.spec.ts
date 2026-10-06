@@ -153,7 +153,7 @@ tape('defaults', function (test) {
 							maxAge: 2592000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							fileExtensions: new Set(['.tbi', '.csi', '.bai', '.crai']),
+							fileExtensions: new Set(['.tbi', '.csi', '.bai', '.crai', '.tmp']),
 							absPath: `${m.cachedir}/http`,
 							skipUntil: 0
 						},
@@ -161,7 +161,7 @@ tape('defaults', function (test) {
 							maxAge: 2592000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							fileExtensions: new Set(['.tbi', '.csi', '.bai', '.crai']),
+							fileExtensions: new Set(['.tbi', '.csi', '.bai', '.crai', '.tmp']),
 							absPath: `${m.cachedir}/https`,
 							skipUntil: 0
 						},
@@ -169,7 +169,7 @@ tape('defaults', function (test) {
 							maxAge: 2592000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							fileExtensions: new Set(['.tbi', '.csi', '.bai', '.crai']),
+							fileExtensions: new Set(['.tbi', '.csi', '.bai', '.crai', '.tmp']),
 							absPath: `${m.cachedir}/ftp`,
 							skipUntil: 0
 						}
@@ -671,6 +671,29 @@ tape('continue the sweep after an unreadable dir', async test => {
 	test.deepEqual(fs.readdirSync(dir), ['b'], 'should only keep the unreadable dir')
 	test.equal(errors.length, 1, 'should log one error')
 	test.ok(errors[0]?.includes('test0/b'), 'should log the path of the unreadable dir')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
+})
+
+tape('delete url index files by extension', async test => {
+	const cachedir = path.join(process.cwd(), '.cache-test16')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	const monitor = new CacheManager({
+		quiet: true,
+		cachedir,
+		mustExitPendingValidation: true,
+		subdirs: { https: { maxAge: -10 } }, // force deletion of all files with matching extension
+		callbacks: {}
+	})
+	// the cache dir of a track url, as created by cache_index
+	const dir = `${cachedir}/https/example.org/tracks/t.gz`
+	fs.mkdirSync(dir, { recursive: true })
+	// an index url with a query string, and a partial download of an index
+	for (const name of ['t.gz.tbi', 't.gz.tbi?token=x', 't.gz.csi#frag', 't.gz.tbi.123.456.tmp', 'notes.txt'])
+		fs.writeFileSync(`${dir}/${name}`, 'x')
+	const results = await monitor.mayDeleteCacheFiles('https', monitor.subdirs.get('https'), 0)
+	test.deepEqual(results, { deletedCount: 4, totalCount: 4 }, 'should delete the index files and the partial download')
+	test.deepEqual(fs.readdirSync(dir), ['notes.txt'], 'should keep the file without an index extension')
 	fs.rmSync(cachedir, { force: true, recursive: true })
 	test.end()
 })

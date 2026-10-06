@@ -35,12 +35,20 @@ const typeDefaults: { [T in CacheRegistryItem['type']]: EvictionOpts } = {
 	compute: { maxAge: day * 60, skipMs: halfDay },
 	file: {},
 	session: { maxAge: day * 30, skipMs: halfDay },
+	// cache_index sets the mtime of an index on each use, so maxAge is the time since last use;
 	// an evicted index is downloaded again by the next request of its track
 	url: { maxAge: day * 30, skipMs: halfDay }
 }
 
-// index files that cache_index downloads, or that tabix and samtools download into their cwd
-const urlIndexExtensions = new Set(['.tbi', '.csi', '.bai', '.crai'])
+/* index files that cache_index downloads, or that tabix and samtools download into their cwd;
+.tmp is a partial download that was left by an interrupted server, which is not used again */
+const urlIndexExtensions = new Set(['.tbi', '.csi', '.bai', '.crai', '.tmp'])
+
+/* the extension of a cached file name; cache_index names an index by the last segment of its url, which
+may keep a query string or fragment, such as track.tbi?token=x, so that part is not in the extension */
+function cacheFileExtension(name: string): string {
+	return path.extname(name.replace(/[?#].*$/, ''))
+}
 
 /** All subdirs of serverconfig.cachedir. This is the only place to declare a cache subdir: CacheManager
  * creates every entry at server launch, even when the feature that uses it is disabled, and evicts its files,
@@ -335,7 +343,7 @@ export class CacheManager {
 							if (await mayRemoveEmptyDir(fp, minTime)) removedDirCount++
 							continue
 						}
-						if (fileExtensions?.size && !fileExtensions.has(path.extname(entry.name))) {
+						if (fileExtensions?.size && !fileExtensions.has(cacheFileExtension(entry.name))) {
 							skippedCount++
 							continue
 						}
