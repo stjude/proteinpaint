@@ -90,7 +90,7 @@ runs:
         sleep 10
         cd ..
         # Run integration tests using headless Chrome (no X server / xvfb required)
-        PUPPET_CONCURRENCY=2 npm run test:integration
+        npm run test:integration
       continue-on-error: true
 
     - name: Check if integration tests passed
