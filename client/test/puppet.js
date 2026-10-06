@@ -65,9 +65,10 @@ async function runTest(patternsStr) {
 	let groups = patternsStr.split(' ')
 
 	// Optional concurrency: run each spec-pattern group in its own isolated browser
-	// context (own window/document/tape harness), N at a time. Defaults to 1, which
-	// preserves the original sequential single-context behavior.
-	const CONCURRENCY = Math.max(1, Number(process.env.PUPPET_CONCURRENCY) || 1)
+	// context (own window/document/tape harness), N at a time. Defaults to 2, which balances
+	// with observed reliability; may set PUPPET_CONCURRENCY=1 for sequential runs with
+	// untagged logs, e.g. when debugging.
+	const CONCURRENCY = Math.max(1, Number(process.env.PUPPET_CONCURRENCY) || 2)
 
 	// A lone `name=*` (the default when test.sh is called without a PATTERNSLIST, e.g.
 	// `./test.sh "*.integration.spec.*"`) is a single group => nothing to parallelize.
@@ -88,7 +89,7 @@ async function runTest(patternsStr) {
 	const errors = {}
 	// results[i] = { pattern, testedFiles, passed, coverageList, lastLines }
 	const results = await runPool(groups, Math.min(CONCURRENCY, groups.length), g =>
-		runOnePattern(browser, g, startTime, errors)
+		runOnePattern(browser, g, startTime, errors, CONCURRENCY > 1)
 	)
 
 	await browser.close()
@@ -319,8 +320,10 @@ function deriveDirGroups() {
 // window/document, own tape harness, and — crucially — its own lastLines buffer, so parallel
 // TAP streams never interleave into a single `# ok`/`# fail` detection buffer. Never throws;
 // records into `errors` and returns a result the caller aggregates.
-async function runOnePattern(browser, _pattern, startTime, errors) {
+async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 	const [pattern, testedFiles] = _pattern.split('#')
+	// parallel logs are interleaved, so each line is tagged with its pattern; a sequential run needs no tag
+	const tag = tagLogs ? `[${pattern}] ` : ''
 	const context = await browser.createBrowserContext()
 	const page = await context.newPage()
 	const lastLines = []
@@ -333,7 +336,7 @@ async function runOnePattern(browser, _pattern, startTime, errors) {
 	page
 		.on('console', m => {
 			const msg = m.text()
-			console.log(`[${pattern}] ${msg}`)
+			console.log(`${tag}${msg}`)
 			output.push(msg)
 			failureTracker.add(msg)
 			/*
@@ -351,12 +354,11 @@ async function runOnePattern(browser, _pattern, startTime, errors) {
 			if (msg.startsWith('1..') || lastLines.length) lastLines.push(msg)
 		})
 		.on('pageerror', e => {
-			console.log(`[${pattern}] -- pageerror --`, e.message)
+			console.log(`${tag}-- pageerror --`, e.message)
 		})
 		.on('requestfailed', request => {
 			const text = request.failure().errorText
-			if (!text.startsWith('net::ERR_ABORTED'))
-				console.log(`[${pattern}] -- requestfailed --`, `${text} ${request.url()}`)
+			if (!text.startsWith('net::ERR_ABORTED')) console.log(`${tag}-- requestfailed --`, `${text} ${request.url()}`)
 		})
 
 	// Enable JavaScript coverage (CSS coverage is left off, as in the original)
@@ -370,7 +372,7 @@ async function runOnePattern(browser, _pattern, startTime, errors) {
 		if (!r.ok()) throw `Error loading page: ${r.status()}`
 
 		const status = await waitForTap(lastLines)
-		console.log(`[${pattern}] test run time=${(Date.now() - startTime) / 1000} s`)
+		console.log(`${tag}test run time=${(Date.now() - startTime) / 1000} s`)
 
 		const jsCoverage = await page.coverage.stopJSCoverage()
 		const matched = jsCoverage.filter(({ rawScriptCoverage: c }) => {
