@@ -1,5 +1,1 @@
-Fixes:
-- differential methylation: a violin plot opened from a volcano hit shows the element that was tested, instead of the elements of another matrix that overlap it
-- gene set enrichment on a differential methylation result ranks each gene by the mean of its promoters, instead of by its highest one
-- differential methylation: a violin plot opened from a volcano hit is labelled with the unit of the values it shows, on a dataset whose promoter matrix and methylation terms use different units
-- differential methylation runs on an element matrix that gives its chromosomes as a chrom_lengths attribute, as a CpG-level matrix does, instead of a chromosome per row
+
