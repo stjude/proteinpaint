@@ -1,2 +1,3 @@
 Fixes:
 - differential methylation: a violin plot opened from a volcano hit shows the element that was tested, instead of the elements of another matrix that overlap it
+- gene set enrichment on a differential methylation result ranks each gene by the mean of its promoters, instead of by its highest one
