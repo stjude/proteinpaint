@@ -8,7 +8,7 @@ import { URL } from 'url'
 import serverconfig from './serverconfig.js'
 import * as validator from './validator.js'
 import { authApi } from './auth.js'
-import { patternMatches, normalizeReqPath } from './auth/Auth.ts'
+import { normalizeReqPath, getRequestOrigin, isCredEmbedder } from './auth/Auth.ts'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import jsonwebtoken from 'jsonwebtoken'
 import sjson from 'secure-json-parse'
@@ -64,11 +64,8 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 	)
 
 	app.use((req, res, next) => {
-		if (req.method.toUpperCase() == 'POST') {
-			// assume all post requests have json-encoded content
-			// TODO: change all client-side fetch(new Request(...)) to use dofetch*() to preset the content-type
-			req.headers['content-type'] = 'application/json'
-		}
+		// every client-side POST caller (dofetch*() or a direct fetch(new Request(...))) sets
+		// content-type: application/json itself; a POST that does not is rejected further down
 
 		// detect URL parameter values with matching JSON start-stop encoding characters
 		try {
@@ -88,7 +85,9 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 	// replace the prototype of req.query
 	app.use(bodyParser.text({ type: 'application/json', limit: '5mb' }))
 	app.use((req, res, next) => {
-		if (req.headers['content-type'] != 'application/json' || typeof req.body != 'string') return next()
+		// req.is() matches the media type and ignores parameters such as charset, the same way
+		// bodyParser.text({type: 'application/json'}) above decided whether to read this body
+		if (!req.is('application/json') || typeof req.body != 'string') return next()
 		try {
 			// bodyParser.json() sets an empty body to {}, keep that behavior
 			req.body = req.body ? sjson.parse(req.body) : {}
@@ -140,7 +139,7 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 	}
 
 	app.use((req, res, next) => {
-		if (req.method.toUpperCase() == 'POST' && req.body && req.headers['content-type'] != 'application/json') {
+		if (req.method.toUpperCase() == 'POST' && req.body && !req.is('application/json')) {
 			res.send({ error: `invalid HTTP request.header['content-type'], must be 'application/json'` })
 			return
 		}
@@ -148,7 +147,7 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 		// object that the auth middleware rejects as a query parameter, so do not merge it into req.query
 		const isMassSessionSave =
 			req.method.toUpperCase() == 'POST' && normalizeReqPath(req.path) == normalizeReqPath(basepath + '/massSession')
-		if (req.headers['content-type'] == 'application/json' && !isMassSessionSave) {
+		if (req.is('application/json') && !isMassSessionSave) {
 			if (!req.query) req.query = {}
 			// TODO: in the future, may have to combine req.query + req.params + req.body
 			// if using req.params based on expressjs server route /:paramName interpolation
@@ -292,44 +291,14 @@ export function jsonErrorHandler(err, req, res, next) {
 	res.status(status).send({ error: status < 500 && err.expose ? err.message : 'request failed' })
 }
 
-// returns the parsed URL of the request origin, or undefined if it is missing or malformed
-export function getRequestOrigin(req) {
-	const origin = req.get('origin')
-	// an Origin header must already be a serialized http(s) origin, i.e., scheme://host[:port]
-	// with no path, query, or userinfo, otherwise it is rejected instead of being normalized
-	if (origin) return parseOrigin(origin, true)
-	// a referrer is a full URL, so only this fallback may include a path
-	const referrer = req.get('referrer')
-	if (referrer) return parseOrigin(referrer, false)
-	const host = req.get('host')
-	if (host) return parseOrigin(`${req.protocol}://${host}`, true)
-}
-
-function parseOrigin(value, mustBeSerializedOrigin) {
-	if (typeof value != 'string' || value == 'null') return
-	try {
-		const url = new URL(value)
-		if (url.protocol != 'http:' && url.protocol != 'https:') return
-		if (url.username || url.password) return
-		if (mustBeSerializedOrigin && url.origin !== value) return
-		return url
-	} catch (_) {
-		return
-	}
-}
+// Shared request-origin helpers are implemented in ./auth/Auth.ts and re-exported here
+// for compatibility with existing imports.
+export { getRequestOrigin, isCredEmbedder }
 
 // an allowedEmbedders[] entry must be '*' or exactly equal the origin hostname (or hostname:port);
 // a substring match would let an origin like 'https://trusted.org.evil.com' match 'trusted.org'
 export function isAllowedEmbedder(origin, host) {
 	return host == '*' || (!!origin && (host == origin.hostname || host == origin.host))
-}
-
-// a dsCredentials embedder key is matched with the same case-insensitive glob semantics
-// as used for auth, so that a key like '*.example.org' also gets credentialed CORS headers
-export function isCredEmbedder(origin, pattern) {
-	return (
-		pattern == '*' || (!!origin && (patternMatches(origin.hostname, pattern) || patternMatches(origin.host, pattern)))
-	)
 }
 
 function setHeaders(req, res, next) {

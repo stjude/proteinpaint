@@ -4,9 +4,15 @@ import type { RouteApi, RoutePayload } from '#types'
 import type { AnimatedBubbleChartRequest, AnimatedBubble, AssaySlice } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import serverconfig from '#src/serverconfig.js'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasGeneRankingDs } from './termdb.geneRanking.ts'
 
 export const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has ds.queries.geneRanking
+	get init() {
+		return hasGeneRankingDs(genomes) ? init : null
+	},
 	request: { typeId: 'AnimatedBubbleChartRequest' },
 	response: { typeId: 'AnimatedBubbleChartResponse' }
 }

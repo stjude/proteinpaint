@@ -218,6 +218,7 @@ async function defaultAuthUi(dslabel, auth, opts = {}) {
 			fetch('/dslogin', {
 				method: 'POST',
 				headers: {
+					'content-type': 'application/json',
 					authorization: `Basic ${btoa(pwd.property('value'))}`
 				},
 				body: JSON.stringify({ dslabel, route: auth.route, embedder: window.location.hostname })

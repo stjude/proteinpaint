@@ -4,6 +4,7 @@ import {
 	Auth,
 	getMatchedEntry,
 	getNonStringAuthParam,
+	getOriginFromHeaders,
 	getSessionEntry,
 	normalizeReqPath,
 	stripBasepath
@@ -1039,5 +1040,25 @@ tape('getSessionEntry: resolves only real stored entries', function (test) {
 			`returns undefined for inherited id '${id}' on an existing dslabel entry`
 		)
 	}
+	test.end()
+})
+
+tape('getOriginFromHeaders: resolves from Origin or Referer, with no Host fallback', function (test) {
+	test.plan(3)
+	test.equal(
+		getOriginFromHeaders({ headers: { origin: 'https://trusted.org' } })?.origin,
+		'https://trusted.org',
+		'resolves from the Origin header'
+	)
+	test.equal(
+		getOriginFromHeaders({ headers: { referer: 'https://trusted.org/x' } })?.origin,
+		'https://trusted.org',
+		'resolves from the Referer header'
+	)
+	test.equal(
+		getOriginFromHeaders({ headers: { host: 'example.com' } }),
+		undefined,
+		'does not resolve from the Host header alone'
+	)
 	test.end()
 })

@@ -2,7 +2,38 @@ import jsonwebtoken from 'jsonwebtoken'
 import { promises as fs } from 'fs'
 import path from 'path'
 import launchServerconfig from '#src/serverconfig.js'
-import { getSessionEntry } from './Auth.ts'
+import { getSessionEntry, getOriginFromHeaders } from './Auth.ts'
+
+function matchesKnownCookie(req, cred, id) {
+	return (
+		!!id &&
+		(id === req.cookies?.[`${cred?.cookieId}`] ||
+			id === req.cookies?.[`${req.query?.dslabel}SessionId`] ||
+			id === req.cookies?.['x-ds-access-token'])
+	)
+}
+
+function wasResolvedFromCookie(auth, req, cred, id) {
+	if (!matchesKnownCookie(req, cred, id)) return false
+	if (req.headers?.authorization && auth.mayAddSessionFromJwt(auth.sessions, req, cred, true) === id) return false
+	return true
+}
+
+// resolves the credential for this request's origin, or undefined if there is none
+function resolveCredFromOrigin(auth, req, dslabel, routeKeys) {
+	const origin = getOriginFromHeaders(req)
+	return origin && auth.getRouteCredForEither(dslabel, routeKeys, origin.hostname, origin.host)
+}
+
+// resolves the credential for this request's origin; returns cred unchanged if there is
+// nothing to check
+function assertAllowedSessionOrigin(auth, req, dslabel, routeKeys, cred, id) {
+	if (!wasResolvedFromCookie(auth, req, cred, id)) return cred
+	const resolved = resolveCredFromOrigin(auth, req, dslabel, routeKeys)
+	if (!resolved || resolved.type == 'forbidden' || (cred && resolved !== cred))
+		throw 'disallowed origin for a cookie-authenticated request'
+	return resolved
+}
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening and calls setAuthRoutes()
 const cachedir = launchServerconfig.cachedir
@@ -54,10 +85,16 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 	app.post(basepath + '/dslogout', async (req, res) => {
 		try {
 			const q = req.query
-			const cred = auth.getRequiredCred(q, req.path)
+			const routeKeys = [q.route, 'termdb', '/**']
+			const originCred = resolveCredFromOrigin(auth, req, q.dslabel, routeKeys)
+			let cred = q.embedder
+				? auth.getRouteCred(q.dslabel, routeKeys, q.embedder) || originCred
+				: originCred || auth.getRouteCred(q.dslabel, routeKeys, q.embedder)
 			const id = auth.getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
+			if (session?.embedder) cred = auth.getRouteCred(q.dslabel, routeKeys, session.embedder) || cred
+			cred = assertAllowedSessionOrigin(auth, req, q.dslabel, routeKeys, cred, id)
 			if (!session) {
 				res.send({ status: 'ok' })
 				return
@@ -114,13 +151,15 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 		const q = req.query
 		try {
 			// TODO: later, other routes besides /termdb may require tracking
-			const cred = auth.getRequiredCred(q, 'termdb')
+			let cred = auth.getRequiredCred(q, 'termdb')
 			if (!cred) {
 				res.send({ status: 'ok' })
 				return
 			}
 			const id = auth.getSessionId(req, cred)
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
+			if (session?.embedder) cred = auth.getRouteCred(q.dslabel, ['termdb'], session.embedder) || cred
+			assertAllowedSessionOrigin(auth, req, q.dslabel, ['termdb'], cred, id)
 			if (!session) throw 'missing or expired session'
 			// confirm the session is still active (connection and age) before using it
 			auth.checkIPaddress(req, session.ip, cred)

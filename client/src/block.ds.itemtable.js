@@ -2412,6 +2412,7 @@ export function query_vcfcohorttrack(m, tk, block) {
 			return fetch(
 				new Request(block.hostURL + '/vcf', {
 					method: 'POST',
+					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify(par)
 				})
 			).then(data => {
@@ -2456,6 +2457,7 @@ export function query_vcfcohorttrack(m, tk, block) {
 			return fetch(
 				new Request(block.hostURL + '/vcf', {
 					method: 'POST',
+					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify(par)
 				})
 			)
