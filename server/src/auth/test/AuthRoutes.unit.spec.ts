@@ -964,6 +964,34 @@ tape('action-log route: validation case M', async function (test) {
 	test.end()
 })
 
+tape('action-log route: validation case N', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-exp-only-stale'
+	const pastExp = Math.floor(Date.now() / 1000) - 10
+	auth.sessions.set(
+		dslabel,
+		new Map([[sessionId, { time: Date.now(), exp: pastExp, ip: '127.0.0.1', email: 'user@test.com' }]])
+	)
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: {},
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
 // ─────────────────────────────────────────
 // POST /demoToken
 // ─────────────────────────────────────────
