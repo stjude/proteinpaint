@@ -810,17 +810,33 @@ tape('mayAddSessionFromJwt: throws for unsupported authorization type', function
 	const auth = makeAuth()
 	const cred = auth.creds[dslabel].termdb[embedder]
 	const req = {
-		headers: { authorization: 'Basic abc123' },
+		headers: { authorization: '<script>alert(1)</script> abc123' },
 		query: { dslabel, embedder }
 	}
 	try {
 		auth.mayAddSessionFromJwt(new Map(), req, cred)
 		test.fail('should have thrown for unsupported authorization type')
 	} catch (e) {
-		test.ok(
-			String(e).includes('unsupported authorization type'),
-			'should throw mentioning unsupported authorization type'
-		)
+		test.equal(e, `unsupported authorization type, allowed: 'Bearer'`, 'should throw the expected error')
+	}
+	test.end()
+})
+
+tape('mayAddSessionFromJwt: throws a fixed error when no secret is configured', function (test) {
+	test.timeoutAfter(500)
+	test.plan(1)
+
+	const auth = makeAuth({ secret: undefined })
+	const cred = auth.creds[dslabel].termdb[embedder]
+	const req = {
+		headers: { authorization: 'Bearer abc123' },
+		query: { dslabel, embedder: '<script>alert(1)</script>' }
+	}
+	try {
+		auth.mayAddSessionFromJwt(new Map(), req, cred)
+		test.fail('should have thrown when no secret is configured')
+	} catch (e: any) {
+		test.equal(e.error, 'no credentials set up for this embedder', 'should throw the expected error')
 	}
 	test.end()
 })

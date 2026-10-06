@@ -38,6 +38,17 @@ function assertAllowedSessionOrigin(auth, req, dslabel, routeKeys, cred, id) {
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening and calls setAuthRoutes()
 const cachedir = launchServerconfig.cachedir
 
+// generous caps on the free-form fields appended to actionsFile per request
+const MAX_ACTION_LENGTH = 100
+const MAX_DETAILS_LENGTH = 10000
+const MAX_FIELD_LENGTH = 200
+const MAX_CLOCK_SKEW = 300000
+
+// true when s is a string within len, with no tab/newline/CR characters
+function isBoundedPlainText(s, len) {
+	return typeof s == 'string' && s.length <= len && !/[\t\n\r]/.test(s)
+}
+
 export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 	const actionsFile = path.join(serverconfig.cachedir ?? cachedir, 'authorizedActions')
 
@@ -149,9 +160,30 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 			const session = getSessionEntry(auth.sessions, q.dslabel, id)
 			if (session?.embedder) cred = auth.getRouteCred(q.dslabel, ['termdb'], session.embedder) || cred
 			assertAllowedSessionOrigin(auth, req, q.dslabel, ['termdb'], cred, id)
-			const email = session?.email || ''
+			if (!session) throw 'missing or expired session'
+			// confirm the session is still active (connection and age) before using it
+			auth.checkIPaddress(req, session.ip, cred)
+			const sessionTime = Number.isFinite(session.time) ? session.time : Number(session.iat) * 1000
+			const sessionExpiry = session.exp === undefined ? undefined : Number(session.exp) * 1000
+			const maxSessionAge = cred.maxSessionAge || auth.maxSessionAge
+			const now = Date.now()
+			if (
+				!Number.isFinite(sessionTime) ||
+				sessionTime - now > MAX_CLOCK_SKEW ||
+				(sessionExpiry !== undefined && (!Number.isFinite(sessionExpiry) || now >= sessionExpiry)) ||
+				now - sessionTime >= maxSessionAge
+			) {
+				auth.sessions.get(q.dslabel)?.delete(id)
+				throw 'missing or expired session'
+			}
+			if (!isBoundedPlainText(q.dslabel, MAX_FIELD_LENGTH)) throw 'invalid dslabel'
+			if (!q.action || !isBoundedPlainText(q.action, MAX_ACTION_LENGTH)) throw 'invalid action'
+			const details = q.details === undefined ? '' : JSON.stringify(q.details)
+			if (details.length > MAX_DETAILS_LENGTH) throw 'invalid details'
+			const email = session.email || ''
+			if (!isBoundedPlainText(email, MAX_FIELD_LENGTH)) throw 'invalid session email'
 			const time = new Date()
-			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)
+			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${details}\n`)
 			res.send({ status: 'ok' })
 		} catch (e) {
 			res.status(401)

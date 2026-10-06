@@ -1056,6 +1056,7 @@ tape('/authorizedActions: appends action to file and returns ok', async function
 	const req = {
 		query: { dslabel, embedder, action: 'download', details: JSON.stringify({ key: 'val' }) },
 		path: '/authorizedActions',
+		ip: '127.0.0.1',
 		// a same-embedder request, so it passes the credentialed-origin check
 		headers: { origin: 'https://' + embedder },
 		cookies: { 'x-ds-access-token': sessionId }
@@ -1092,6 +1093,7 @@ tape('/authorizedActions: finds the session cookie under a customized name', asy
 	const req = {
 		query: { dslabel, embedder, action: 'download', details: '{}' },
 		path: '/authorizedActions',
+		ip: '127.0.0.1',
 		headers: { origin: 'https://' + embedder },
 		cookies: { [customCookieId]: sessionId }
 	}
@@ -1133,6 +1135,9 @@ tape('/authorizedActions: returns 401 on file system error', async function (tes
 	test.plan(2)
 
 	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-fs-error'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
 	const app: any = { routes: {} as Record<string, any> }
 	const methods = ['get', 'post', 'put', 'delete', 'all']
 	for (const method of methods) {
@@ -1147,15 +1152,429 @@ tape('/authorizedActions: returns 401 on file system error', async function (tes
 	const req = {
 		query: { dslabel, embedder, action: 'export', details: '{}' },
 		path: '/authorizedActions',
+		ip: '127.0.0.1',
 		// a same-embedder request, so it reaches the file write (and fails there, as intended)
 		headers: { origin: 'https://' + embedder },
-		cookies: {}
+		cookies: { 'x-ds-access-token': sessionId }
 	}
 	const res = makeMockRes()
 
 	await app.routes['/authorizedActions'].post(req, res)
 	test.equal(res.statusCode, 401, 'should return 401 on write error')
 	test.ok(res.sentData, 'should send error data')
+	test.end()
+})
+
+tape('action-log route: validation case A', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		headers: { origin: 'https://' + embedder },
+		cookies: {}
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case B', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-stale'
+	const staleTime = Date.now() - auth.maxSessionAge - 1000
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: staleTime, ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case C', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-bad-action'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download\tx\t0\tx', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case D', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-big-details'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: 'x'.repeat(20000) },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case E', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-boundary-action'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'x'.repeat(100), details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should accept a value at the boundary')
+	test.equal(res.statusCode, 200, 'should return 200')
+	test.end()
+})
+
+tape('action-log route: validation case F', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-boundary-details'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	// MAX_DETAILS_LENGTH is measured on the serialized value, so account for the two
+	// quote characters JSON.stringify() adds around a string input
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: 'x'.repeat(9998) },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should accept a value at the boundary')
+	test.equal(res.statusCode, 200, 'should return 200')
+	test.end()
+})
+
+tape('action-log route: validation case G', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-bad-email'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com\tx' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case H', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	// a wildcard dslabel entry, as an open-ended deployment might configure, so a query
+	// value does not have to match a specific key to resolve a cred
+	const creds: any = { '*': { termdb: { [embedder]: makeJwtCred() } } }
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	const oddDslabel = 'ds\tx'
+	const sessionId = 'test-action-session-id-bad-dslabel'
+	auth.sessions.set(oddDslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel: oddDslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case I', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-iat-only-fresh'
+	const recentIat = Math.floor((Date.now() - 1000) / 1000)
+	auth.sessions.set(dslabel, new Map([[sessionId, { iat: recentIat, ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should accept a value at the boundary')
+	test.equal(res.statusCode, 200, 'should return 200')
+	test.end()
+})
+
+tape('action-log route: validation case J', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-iat-only-stale'
+	const staleIat = Math.floor((Date.now() - auth.maxSessionAge - 1000) / 1000)
+	auth.sessions.set(dslabel, new Map([[sessionId, { iat: staleIat, ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case K', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-no-time-no-iat'
+	auth.sessions.set(dslabel, new Map([[sessionId, { ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case L', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	// a shorter, credential-specific value should be used in place of the global default
+	const auth = makeAuthWithJwt({ maxSessionAge: 5000 })
+	const sessionId = 'test-action-session-id-cred-specific-age'
+	auth.sessions.set(
+		dslabel,
+		new Map([[sessionId, { time: Date.now() - 6000, ip: '127.0.0.1', email: 'user@test.com' }]])
+	)
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case M', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionToken = jsonwebtoken.sign(
+		{
+			dslabel,
+			embedder,
+			route: 'termdb',
+			iat: time,
+			time: Date.now(),
+			ip: '127.0.0.1',
+			email: 'user@test.com',
+			exp: time + 3600
+		},
+		secret
+	)
+	const b64token = Buffer.from(sessionToken).toString('base64')
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { authorization: `Bearer ${b64token}` },
+		cookies: {}
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should return ok')
+	test.equal(res.statusCode, 200, 'should return 200')
+	test.end()
+})
+
+tape('action-log route: validation case N', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-exp-only-stale'
+	const pastExp = Math.floor(Date.now() / 1000) - 10
+	auth.sessions.set(
+		dslabel,
+		new Map([[sessionId, { time: Date.now(), exp: pastExp, ip: '127.0.0.1', email: 'user@test.com' }]])
+	)
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case O', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-future-time'
+	const farFutureTime = Date.now() + auth.maxSessionAge * 2
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: farFutureTime, ip: '127.0.0.1', email: 'user@test.com' }]]))
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.statusCode, 401, 'should return 401')
+	test.ok(res.sentData?.error, 'should send an error message')
+	test.end()
+})
+
+tape('action-log route: validation case P', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuthWithJwt()
+	const sessionId = 'test-action-session-id-slight-skew'
+	auth.sessions.set(
+		dslabel,
+		new Map([[sessionId, { time: Date.now() + 1000, ip: '127.0.0.1', email: 'user@test.com' }]])
+	)
+
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder, action: 'download', details: '{}' },
+		path: '/authorizedActions',
+		ip: '127.0.0.1',
+		headers: { origin: 'https://' + embedder },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/authorizedActions'].post(req, res)
+	test.equal(res.sentData?.status, 'ok', 'should return ok')
+	test.equal(res.statusCode, 200, 'should return 200')
 	test.end()
 })
 
