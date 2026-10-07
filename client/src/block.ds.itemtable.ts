@@ -1,7 +1,7 @@
 import * as client from './client'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
-import { stratify } from 'd3-hierarchy'
+// import { stratify } from 'd3-hierarchy'
 
 /*
 
@@ -41,7 +41,7 @@ info2table_value
 
 const separatorvp = '__'
 
-export function itemtable(arg) {
+export function itemtable(arg: any) {
 	/*
 	.mlst
 	.block
@@ -55,6 +55,7 @@ export function itemtable(arg) {
 	let holder
 	if (arg.pane) {
 		const pane = client.newpane({ x: arg.x, y: arg.y })
+		if (!pane) return
 		pane.header.html(mlst2headerhtml(mlst))
 		holder = pane.body
 	} else {
@@ -70,12 +71,12 @@ export function itemtable(arg) {
 	show separate table for each datatype
 	following incrementally adds components to the mlst panel
 	*/
-	const dt2mlst = new Map()
+	const dt2mlst = new Map<any, any[]>()
 	for (const m of mlst) {
 		if (!dt2mlst.has(m.dt)) {
 			dt2mlst.set(m.dt, [])
 		}
-		dt2mlst.get(m.dt).push(m)
+		dt2mlst.get(m.dt)!.push(m)
 	}
 
 	/**** a very quick fix!
@@ -118,7 +119,7 @@ export function itemtable(arg) {
 	handle_samplecart(mlst, holder, tk, block)
 }
 
-function mlst2headerhtml(mlst) {
+function mlst2headerhtml(mlst: any[]) {
 	if (mlst.length == 1) {
 		const m = mlst[0]
 		const c = common.mclass[m.class]
@@ -134,7 +135,7 @@ function mlst2headerhtml(mlst) {
 			)
 		}
 		if (m.dt == common.dtsv || m.dt == common.dtfusionrna) {
-			const names = []
+			const names: any[] = []
 			for (let i = 0; i < m.pairlst.length; i++) {
 				if (i == 0) names.push(m.pairlst[i].a.name ? m.pairlst[i].a.name : m.pairlst[i].a.chr)
 				names.push(m.pairlst[i].b.name ? m.pairlst[i].b.name : m.pairlst[i].b.chr)
@@ -152,18 +153,18 @@ function mlst2headerhtml(mlst) {
 		}
 		return 'unknown dt ' + m.dt
 	}
-	const set = new Set()
+	const set = new Set<any>()
 	for (const m of mlst) {
 		set.add(m.dt)
 	}
 	if (set.size == 1) {
 		const dt = [...set][0]
-		return mlst.length + ' ' + common.dt2label[dt]
+		return mlst.length + ' ' + common.dt2label[dt as keyof typeof common.dt2label]
 	}
 	return mlst.length + ' mutations'
 }
 
-function table_snvindel(mlst, holder, tk, block) {
+function table_snvindel(mlst: any[], holder: any, tk: any, block: any) {
 	if (tk.ds && tk.ds.id2vcf) {
 		if (mlst.length == 1) {
 			const vcfobj = tk.ds.id2vcf[mlst[0].vcfid]
@@ -186,6 +187,7 @@ function table_snvindel(mlst, holder, tk, block) {
 				.attr('class', 'sja_menuoption')
 				.on('click', event => {
 					const pane = client.newpane({ x: event.clientX + 100, y: Math.max(100, event.clientY - 100) })
+					if (!pane) return
 					vcfmdetail(m, vcfobj, pane.body, tk, block)
 				})
 			if (m.mname) {
@@ -211,14 +213,14 @@ function table_snvindel(mlst, holder, tk, block) {
 		return
 	}
 	const hasSNP = block.genome.hasSNP
-	const snpfind = {
+	const snpfind: any = {
 		chr: null,
 		bprange: [], // {start/stop}
 		holder: null,
 		says: null
 	}
-	const variantpage = {
-		set: new Map(),
+	const variantpage: any = {
+		set: new Map<string, any>(),
 		// k: chr SEP pos SEP ref SEP mut
 		// v: {mname, class}
 		butholder: null
@@ -258,10 +260,10 @@ function table_snvindel(mlst, holder, tk, block) {
 				})
 			}
 		}
-		const data = []
+		const data: any[] = []
 		for (const atr of tk.snvindelattr) {
 			if (atr.lst) {
-				const kvlst = []
+				const kvlst: any[] = []
 				for (const at of atr.lst) {
 					if (at.ismaf) {
 						const v = at.get(m)
@@ -378,11 +380,13 @@ function table_snvindel(mlst, holder, tk, block) {
 			variantpage.butholder = buttrow.append('span')
 		}
 		*/
-		let h_col, h_snp, h_exp, h_leg
+		// let h_exp
+		// eslint-disable-next-line prefer-const -- click handlers close over h_col before it is created
+		let h_col, h_snp, h_leg
 		buttrow
 			.append('button')
 			.text('Table columns')
-			.on('click', function () {
+			.on('click', function (this: any) {
 				if (h_col.style('display') == 'block') {
 					this.style.color = 'black'
 					client.disappear(h_col)
@@ -395,7 +399,7 @@ function table_snvindel(mlst, holder, tk, block) {
 			snpfind.button = buttrow
 				.append('button')
 				.text('loading...')
-				.on('click', function () {
+				.on('click', function (this: any) {
 					if (h_snp.style('display') == 'block') {
 						this.style.color = 'black'
 						client.disappear(h_snp)
@@ -414,7 +418,7 @@ function table_snvindel(mlst, holder, tk, block) {
 			buttrow
 				.append('button')
 				.text('Legend')
-				.on('click', function () {
+				.on('click', function (this: any) {
 					if (h_leg.style('display') == 'block') {
 						this.style.color = 'black'
 						client.disappear(h_leg)
@@ -446,10 +450,10 @@ function table_snvindel(mlst, holder, tk, block) {
 		}
 	}
 
-	if (hasSNP && snpfind.bprange.length) {
-		client
-			.may_findmatchingsnp(snpfind.chr, snpfind.bprange, block.genome, snpfind.alleleLst)
-			.then(hits => {
+	const mayFindMatchingSnp = client.may_findmatchingsnp
+	if (hasSNP && snpfind.bprange.length && mayFindMatchingSnp) {
+		mayFindMatchingSnp(snpfind.chr, snpfind.bprange, block.genome, snpfind.alleleLst)
+			?.then(hits => {
 				if (!hits || hits.length == 0) throw { message: 'no SNP' }
 				snpfind.says.text('')
 				if (snpfind.button) {
@@ -470,7 +474,7 @@ function table_snvindel(mlst, holder, tk, block) {
 	}
 	if (block.variantPageCall_snv) {
 		// call variant page button generator
-		const vlst = []
+		const vlst: any[] = []
 		for (const [what, m] of variantpage.set) {
 			const l = what.split(separatorvp)
 			vlst.push({
@@ -517,9 +521,9 @@ function table_snvindel(mlst, holder, tk, block) {
 	}
 }
 
-function table_sort(mlst, table, attrlst, tk, trclick) {
+function table_sort(mlst: any[], table: any, attrlst: any[], tk: any, trclick: any = undefined) {
 	table.selectAll('*').remove()
-	let sortkey = null
+	let sortkey: any = null
 	for (const a1 of attrlst) {
 		if (a1.lst) {
 			for (const a2 of a1.lst) {
@@ -621,9 +625,9 @@ function table_sort(mlst, table, attrlst, tk, trclick) {
 			tr.on('click', () => trclick(s))
 		}
 		if (tk.eplst) {
-			tr.on('mouseover', (event, m) => {
+			tr.on('mouseover', (_event, _m) => {
 				for (const ep of tk.eplst) ep.may_hl([s], true)
-			}).on('mouseout', (event, m) => {
+			}).on('mouseout', (_event, _m) => {
 				for (const ep of tk.eplst) ep.may_hl([s], false)
 			})
 		}
@@ -681,11 +685,11 @@ function table_sort(mlst, table, attrlst, tk, trclick) {
 	}
 }
 
-function tinylab(t) {
+function tinylab(t: any) {
 	return '<span style="font-size:70%;color:#858585">' + t + '</span>'
 }
 
-function vcfmdetail(m, vcfobj, holder, tk, block) {
+function vcfmdetail(m: any, vcfobj: any, holder: any, tk: any, block: any) {
 	/*
 	for a single variant from vcf
 	can be from a single vcf, or multiple vcf
@@ -809,7 +813,7 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 	if (vcfobj.infopipejoin) {
 		// for allele info only!
 		// designed for old clinvar vcf, no longer used
-		const lst0 = []
+		const lst0: any[] = []
 		if (m.altinfo) {
 			for (const k of vcfobj.infopipejoin) {
 				const tmp = m.altinfo[k.key]
@@ -827,7 +831,7 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 		if (lst0.length) {
 			const row2 = holder.append('div')
 			for (let i = 0; i < lst0[0].length; i++) {
-				const lst = []
+				const lst: any[] = []
 				for (let j = 0; j < vcfobj.infopipejoin.length; j++) {
 					const k = vcfobj.infopipejoin[j]
 					lst.push({
@@ -863,7 +867,7 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 
 	{
 		// alt allele info
-		const lst = []
+		const lst: any[] = []
 		for (const k in m.altinfo) {
 			// value from altinfo maybe array
 			const infovalue = Array.isArray(m.altinfo[k]) ? m.altinfo[k] : [m.altinfo[k]]
@@ -904,7 +908,7 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 
 	{
 		// locus info
-		const lst = []
+		const lst: any[] = []
 		for (const k in m.info) {
 			if (tk.info2table && tk.info2table[k]) {
 				// already shown in previous section
@@ -947,14 +951,14 @@ function vcfmdetail(m, vcfobj, holder, tk, block) {
 	}
 }
 
-function may_info2singletable(m, holder, tk) {
+function may_info2singletable(m: any, holder: any, tk: any) {
 	// from a csq-like field, only show first item as a vertical table with each row as a field of icfg.fields[]
 	if (!tk.info2singletable) return
 	for (const infokey in tk.info2singletable) {
 		const icfg = tk.info2singletable[infokey]
 		const rawvaluelst = m.info[infokey]
 		if (!rawvaluelst || !rawvaluelst[0]) continue
-		const table = []
+		const table: any[] = []
 		const lst = rawvaluelst[0].split(icfg.col_separator)
 		for (let i = 0; i < icfg.fields.length; i++) {
 			if (icfg.fields[i].hide) continue
@@ -967,7 +971,7 @@ function may_info2singletable(m, holder, tk) {
 	}
 }
 
-function may_info2table(m, holder, tk) {
+function may_info2table(m: any, holder: any, tk: any) {
 	if (!tk.info2table) return
 	for (const infokey in tk.info2table) {
 		const icfg = tk.info2table[infokey]
@@ -979,7 +983,7 @@ function may_info2table(m, holder, tk) {
 			tables.forEach(i => (i.rows = []))
 			for (const row of rawvaluelst) {
 				const lst = row.split(icfg.col_separator)
-				const field2value = new Map()
+				const field2value = new Map<any, any>()
 				for (let i = 0; i < icfg.fields.length; i++) {
 					field2value.set(icfg.fields[i].name, lst[i])
 				}
@@ -1044,7 +1048,7 @@ icfg: dataset.info2table
 lst: array of fields of a variant
 i: array index of both icfg.fields[] and lst[]
 */
-function info2table_value(icfg, lst, i) {
+function info2table_value(icfg: any, lst: any[], i: number) {
 	const field = icfg.fields[i]
 	if (field.hide) return
 	let value = lst[i]
@@ -1096,7 +1100,7 @@ function info2table_value(icfg, lst, i) {
 	return value
 }
 
-function mayephl_butt(ep, holder, mlst) {
+function mayephl_butt(ep: any, holder: any, mlst: any[]) {
 	let notfound = true
 	for (const m of mlst) {
 		if (m[ep.p.sampletype] in ep.sampletype2value) {
@@ -1123,7 +1127,7 @@ function mayephl_butt(ep, holder, mlst) {
 		})
 }
 
-function table_sv(mlst, holder, tk, block) {
+function table_sv(mlst: any[], holder: any, tk: any, block: any) {
 	const graphholder = holder.append('div').style('margin-bottom', '10px')
 	tosvgraph(mlst[0].pairlst, block, graphholder)
 	if (!tk.svattr) {
@@ -1131,11 +1135,12 @@ function table_sv(mlst, holder, tk, block) {
 	}
 	if (mlst.length == 1) {
 		const m = mlst[0]
-		const data = []
+		const data: any[] = []
 		for (const at of tk.svattr) {
 			data.push({ k: at.label, v: at.get(m) })
 		}
-		const table = client.make_table_2col(holder, data)
+		// const table = client.make_table_2col(holder, data)
+		client.make_table_2col(holder, data)
 		if (tk.eplst) {
 			const butrow = holder.append('div').style('margin-top', '10px')
 			for (const ep of tk.eplst) {
@@ -1165,7 +1170,7 @@ function table_sv(mlst, holder, tk, block) {
 	}
 }
 
-function tosvgraph(pairlst, block, holder) {
+function tosvgraph(pairlst: any[], block: any, holder: any) {
 	for (const p of pairlst) {
 		if (p.a.isoform) {
 			p.a.gm = { isoform: p.a.isoform }
@@ -1186,17 +1191,18 @@ function tosvgraph(pairlst, block, holder) {
 	})
 }
 
-function table_itd(mlst, holder, tk, genome) {
+function table_itd(mlst: any[], holder: any, tk: any, _genome: any) {
 	if (!tk.itdattr) {
 		runtimeattr_itd(tk, mlst)
 	}
 	if (mlst.length == 1) {
 		const m = mlst[0]
-		const data = []
+		const data: any[] = []
 		for (const at of tk.itdattr) {
 			data.push({ k: at.label, v: at.get(m) })
 		}
-		const table = client.make_table_2col(holder, data)
+		// const table = client.make_table_2col(holder, data)
+		client.make_table_2col(holder, data)
 		if (tk.eplst) {
 			const butrow = holder.append('div').style('margin-top', '10px')
 			for (const ep of tk.eplst) {
@@ -1223,17 +1229,18 @@ function table_itd(mlst, holder, tk, genome) {
 	}
 }
 
-function table_del(mlst, holder, tk, genome) {
+function table_del(mlst: any[], holder: any, tk: any, _genome: any) {
 	if (!tk.delattr) {
 		runtimeattr_del(tk, mlst)
 	}
 	if (mlst.length == 1) {
 		const m = mlst[0]
-		const data = []
+		const data: any[] = []
 		for (const at of tk.delattr) {
 			data.push({ k: at.label, v: at.get(m) })
 		}
-		const table = client.make_table_2col(holder, data)
+		// const table = client.make_table_2col(holder, data)
+		client.make_table_2col(holder, data)
 		if (tk.eplst) {
 			const butrow = holder.append('div').style('margin-top', '10px')
 			for (const ep of tk.eplst) {
@@ -1260,17 +1267,18 @@ function table_del(mlst, holder, tk, genome) {
 	}
 }
 
-function table_truncation(mlst, holder, tk, genome) {
+function table_truncation(mlst: any[], holder: any, tk: any, _genome: any) {
 	if (!tk.truncattr) {
 		runtimeattr_trunc(tk, mlst)
 	}
 	if (mlst.length == 1) {
 		const m = mlst[0]
-		const data = []
+		const data: any[] = []
 		for (const at of tk.truncattr) {
 			data.push({ k: at.label, v: at.get(m) })
 		}
-		const table = client.make_table_2col(holder, data)
+		// const table = client.make_table_2col(holder, data)
+		client.make_table_2col(holder, data)
 		if (tk.eplst) {
 			const butrow = holder.append('div').style('margin-top', '10px')
 			for (const ep of tk.eplst) {
@@ -1297,7 +1305,7 @@ function table_truncation(mlst, holder, tk, genome) {
 	}
 }
 
-export function runtimeattr_snvindel(tk, mlst) {
+export function runtimeattr_snvindel(tk: any, mlst: any[]): void {
 	tk.snvindelattr = []
 	if (tk.ds && tk.ds.snvindel_attributes) {
 		// use predefined
@@ -1306,13 +1314,13 @@ export function runtimeattr_snvindel(tk, mlst) {
 		}
 	} else {
 		// ds-free or nothing available from ds, figure out from data
-		const nouse = new Set(['pos', 'aapos', 'rnapos', 'dt', 'vcfid', 'isrim1', 'isrim2', 'alt', '__x'])
+		const nouse = new Set<string>(['pos', 'aapos', 'rnapos', 'dt', 'vcfid', 'isrim1', 'isrim2', 'alt', '__x'])
 		if (tk.ds.cohort && tk.ds.cohort.levels) {
 			for (const l of tk.ds.cohort.levels) {
 				nouse.add(l.k)
 			}
 		}
-		const lst = []
+		const lst: any[] = []
 		for (const k in mlst[0]) {
 			if (nouse.has(k)) continue
 			switch (k) {
@@ -1427,8 +1435,8 @@ export function runtimeattr_snvindel(tk, mlst) {
 	}
 }
 
-export function runtimeattr_trunc(tk, mlst) {
-	const skipset = new Set([
+export function runtimeattr_trunc(tk: any, mlst: any[]): void {
+	const skipset = new Set<string>([
 		'__x',
 		'mname',
 		'gene',
@@ -1455,7 +1463,7 @@ export function runtimeattr_trunc(tk, mlst) {
 		label: 'Position',
 		get: m => m.chr + ':' + m.pos
 	})
-	const dtset = new Set()
+	const dtset = new Set<any>()
 	for (const m of mlst) {
 		dtset.add(m.dt)
 	}
@@ -1477,7 +1485,7 @@ export function runtimeattr_trunc(tk, mlst) {
 			// cicero exports
 			tk.truncattr.push({
 				get: m => {
-					const lst = []
+					const lst: any[] = []
 					for (const k in m.partner) {
 						lst.push(k + ': ' + m.partner[k])
 					}
@@ -1506,8 +1514,8 @@ export function runtimeattr_trunc(tk, mlst) {
 	}
 }
 
-export function runtimeattr_del(tk, mlst) {
-	const skipset = new Set([
+export function runtimeattr_del(tk: any, mlst: any[]): void {
+	const skipset = new Set<string>([
 		'__x',
 		'mname',
 		'isoform',
@@ -1563,8 +1571,8 @@ export function runtimeattr_del(tk, mlst) {
 	}
 }
 
-export function runtimeattr_itd(tk, mlst) {
-	const skipset = new Set([
+export function runtimeattr_itd(tk: any, mlst: any[]): void {
+	const skipset = new Set<string>([
 		'__x',
 		'mname',
 		'isoform',
@@ -1620,8 +1628,8 @@ export function runtimeattr_itd(tk, mlst) {
 	}
 }
 
-export function runtimeattr_sv(tk, mlst) {
-	const skipset = new Set([
+export function runtimeattr_sv(tk: any, mlst: any[]): void {
+	const skipset = new Set<string>([
 		'__x',
 		'mname',
 		'aapos',
@@ -1723,7 +1731,7 @@ export function runtimeattr_sv(tk, mlst) {
 		tk.svattr.push({
 			label: 'Chimeric reads ratio',
 			get: m => {
-				const lst = []
+				const lst: any[] = []
 				const w = 40,
 					h = 12,
 					fill = '#FF850A',
@@ -1784,7 +1792,7 @@ export function runtimeattr_sv(tk, mlst) {
 	tk.svattr.push({
 		label: 'Frame',
 		get: m => {
-			function label(f) {
+			function label(f: any) {
 				if (f == 0)
 					return (
 						'<span style="white-space:nowrap;background-color:' +
@@ -1811,7 +1819,7 @@ export function runtimeattr_sv(tk, mlst) {
 					)
 				return 'err (' + f + ')'
 			}
-			const lst = []
+			const lst: any[] = []
 			for (const p of m.pairlst) {
 				if (p.frame != undefined) {
 					lst.push({
@@ -1843,7 +1851,7 @@ export function runtimeattr_sv(tk, mlst) {
 	}
 }
 
-function caller_pmid(m) {
+function caller_pmid(_m: any = undefined) {
 	return {
 		get: m => {
 			if (!m.pmid) {
@@ -1853,7 +1861,7 @@ function caller_pmid(m) {
 				return '<a target=_blank href=https://pubmed.ncbi.nlm.nih.gov/' + m.pmid + '>' + m.pmid + '</a>'
 			}
 			const lst = m.pmid.split(',')
-			const out = []
+			const out: string[] = []
 			for (const i of lst) {
 				if (i == '') continue
 				const j = Number.parseInt(i)
@@ -1869,7 +1877,7 @@ function caller_pmid(m) {
 	}
 }
 
-function vcfsamplelistbutton(m, holder, tk) {
+function vcfsamplelistbutton(m: any, holder: any, tk: any) {
 	/*
 	for sample objects about this variant loaded from cohort vcf
 	at header of itemtable
@@ -1947,7 +1955,7 @@ function vcfsamplelistbutton(m, holder, tk) {
 						.text(s.DP || '')
 				}
 				if (hascount) {
-					const lst = []
+					const lst: any[] = []
 					for (const a in s.allele2readcount) {
 						lst.push(a + ':' + s.allele2readcount[a])
 					}
@@ -1957,7 +1965,7 @@ function vcfsamplelistbutton(m, holder, tk) {
 		})
 }
 
-function vcfvepbutton(csqlst, holder, tk, headers) {
+function vcfvepbutton(csqlst: any[], holder: any, tk: any, headers: any[]) {
 	holder
 		.append('div')
 		.attr('class', 'sja_menuoption')
@@ -1971,7 +1979,7 @@ function vcfvepbutton(csqlst, holder, tk, headers) {
 				let blown = false
 				let thislabel
 				{
-					const lst = []
+					const lst: any[] = []
 					if (item.HGVSp) {
 						lst.push('<span style="font-size:.7em;color:#858585">HGVSp</span> ' + item.HGVSp)
 					} else if (item.HGVSc) {
@@ -1998,7 +2006,7 @@ function vcfvepbutton(csqlst, holder, tk, headers) {
 						} else {
 							blown = true
 							box.text('')
-							const lst = []
+							const lst: any[] = []
 							for (const h of headers) {
 								const v = item[h.name]
 								if (v) {
@@ -2034,7 +2042,7 @@ function vcfvepbutton(csqlst, holder, tk, headers) {
 		})
 }
 
-function vcfannbutton(annolst, holder, tk, headers) {
+function vcfannbutton(annolst: any[], holder: any, tk: any, headers: any[]) {
 	holder
 		.append('div')
 		.attr('class', 'sja_menuoption')
@@ -2048,7 +2056,7 @@ function vcfannbutton(annolst, holder, tk, headers) {
 				let blown = false
 				let thislabel
 				{
-					const lst = []
+					const lst: any[] = []
 					if (item['HGVS.p']) {
 						lst.push('<span style="font-size:.7em;color:#858585">HGVS.p</span> ' + item['HGVS.p'])
 					} else if (item['HGVS.c']) {
@@ -2075,7 +2083,7 @@ function vcfannbutton(annolst, holder, tk, headers) {
 						} else {
 							blown = true
 							box.text('')
-							const lst = []
+							const lst: any[] = []
 							for (const h of headers) {
 								const v = item[h.name]
 								if (v) {
@@ -2089,7 +2097,7 @@ function vcfannbutton(annolst, holder, tk, headers) {
 		})
 }
 
-function variant2imgbutton(m, buttonrow, imgholder, tk, block) {
+function variant2imgbutton(m: any, buttonrow: any, imgholder: any, tk: any, _block: any) {
 	let loaded = false
 
 	buttonrow
@@ -2116,13 +2124,13 @@ function variant2imgbutton(m, buttonrow, imgholder, tk, block) {
 					.attr('src', data.src)
 					.style('width', data.size.width + 'px')
 					.style('height', data.size.height + 'px')
-			} catch (e) {
+			} catch (_e) {
 				wait.text('Error loading image')
 			}
 		})
 }
 
-function mayshowcovmafplot(m, tk, holder) {
+function mayshowcovmafplot(m: any, tk: any, holder: any): boolean {
 	if (!tk.ds.vaf2coverageplot) {
 		return false
 	}
@@ -2143,19 +2151,19 @@ function mayshowcovmafplot(m, tk, holder) {
 	divide samples to groups by sampletype, make separate plot for each group
 	*/
 
-	const nostlst = []
+	const nostlst: any[] = []
 	/*
 	samples without sampletype, or vaf2coverageplot.samplegroupkey is not set
 	*/
 
-	const st2lst = {}
+	const st2lst: Record<string, any[]> = {}
 	/*
 	k: sampletype
 	v: list of samples
 	will not use if no vaf2coverageplot.samplegroupkey
 	*/
 
-	const categorycount = new Map() // use then vaf2coverageplot.categories is set
+	const categorycount = new Map<any, number>() // use then vaf2coverageplot.categories is set
 
 	let err = 0
 	for (const s of m.sampledata) {
@@ -2185,7 +2193,7 @@ function mayshowcovmafplot(m, tk, holder) {
 
 		// is a plottable sample
 		// ss is object to go to plotter
-		const ss = {
+		const ss: any = {
 			sampleobj: {},
 			mut: altv,
 			total: s.DP,
@@ -2236,7 +2244,7 @@ function mayshowcovmafplot(m, tk, holder) {
 				if (!categorycount.has(k)) {
 					categorycount.set(k, 0)
 				}
-				categorycount.set(k, categorycount.get(k) + 1)
+				categorycount.set(k, categorycount.get(k)! + 1)
 
 				// will swap the attribute
 				delete ss.sampleobj[tk.ds.vaf2coverageplot.categorykey]
@@ -2272,7 +2280,7 @@ function mayshowcovmafplot(m, tk, holder) {
 	}
 
 	// group to be plotted
-	const plotgroups = []
+	const plotgroups: any[] = []
 
 	if (nostlst.length) {
 		plotgroups.push({
@@ -2294,7 +2302,7 @@ function mayshowcovmafplot(m, tk, holder) {
 	if (categorycount.size > 0) {
 		// will show legend for counts per category
 		const div = holder.append('div').style('margin', '20px 20px 0px 20px')
-		for (const [k, count] of categorycount) {
+		for (const [k] of categorycount) {
 			const c = tk.ds.vaf2coverageplot.categories[k]
 			const row = div.append('div').style('margin-bottom', '3px')
 			row
@@ -2323,7 +2331,7 @@ function mayshowcovmafplot(m, tk, holder) {
 		so to enable mouse over a sample in one plot, and highlight samples from other plots of the same patient
 		*/
 
-		const name2sgp = {}
+		const name2sgp: Record<string, any> = {}
 
 		for (const g of plotgroups) {
 			let div = row.append('div').style('display', 'inline-block').style('vertical-align', 'top')
@@ -2386,7 +2394,7 @@ function mayshowcovmafplot(m, tk, holder) {
 	return true
 }
 
-export function query_vcfcohorttrack(m, tk, block) {
+export function query_vcfcohorttrack(m: any, tk: any, block: any): Promise<any> {
 	/*
 	query shadow track to get sample data for cov-vaf plot
 	*/
@@ -2430,9 +2438,9 @@ export function query_vcfcohorttrack(m, tk, block) {
 			vobj.format = format
 
 			if (vobj.samplenamemap) {
-				vobj.samples = samples.map(vobj.samplenamemap)
+				vobj.samples = (samples || []).map(vobj.samplenamemap)
 			} else {
-				vobj.samples = samples
+				vobj.samples = samples || []
 			}
 
 			vobj.nochr = common.contigNameNoChr(block.genome, data.chrstr.split('\n'))
@@ -2468,8 +2476,8 @@ export function query_vcfcohorttrack(m, tk, block) {
 					if (data.error) throw { message: 'Error querying vcf file: ' + data.error }
 					const lines = data.linestr ? data.linestr.trim().split('\n') : []
 					for (const line of lines) {
-						const [err, mlst, altinvalid] = vcf.vcfparseline(line, vobj)
-						for (const m2 of mlst) {
+						const [, mlst] = vcf.vcfparseline(line, vobj)
+						for (const m2 of mlst || []) {
 							if (m2.pos == m.pos && m2.ref == m.ref && m2.alt == m.alt) {
 								return m2
 							}
@@ -2480,7 +2488,7 @@ export function query_vcfcohorttrack(m, tk, block) {
 		})
 }
 
-function make_url4variant(holder, m, items) {
+function make_url4variant(holder: any, m: any, items: any[]) {
 	for (const item of items) {
 		if (!item.makeurl) continue
 		const url = item.makeurl(m)
@@ -2497,7 +2505,7 @@ function make_url4variant(holder, m, items) {
 	}
 }
 
-function make_button4variant(holder, m, lst) {
+function make_button4variant(holder: any, m: any, lst: any[]) {
 	lst.forEach(item => {
 		if (!item.makebutton) return
 		const div = holder.append('div').style('display', 'inline-block').style('margin', '0px 10px 2px 3px')
@@ -2505,13 +2513,13 @@ function make_button4variant(holder, m, lst) {
 	})
 }
 
-function mayshowgermline2dvaf(m, tk, holder) {
+function mayshowgermline2dvaf(m: any, tk: any, holder: any): boolean {
 	const cfg = tk.ds.germline2dvafplot
 	if (!cfg) return false
 
 	const ik = cfg.individualkey
 
-	const individualset = new Map()
+	const individualset = new Map<any, any>()
 
 	let err = 0
 	for (const s of m.sampledata) {
@@ -2558,14 +2566,14 @@ function mayshowgermline2dvaf(m, tk, holder) {
 	}
 
 	// for yleftsampletype and yrightsampletype, each add a new datapoint
-	const data = []
-	for (const [k, obj] of individualset) {
+	const data: any[] = []
+	for (const [, obj] of individualset) {
 		if (!obj.sampletypes[cfg.xsampletype]) {
 			continue
 		}
 
 		if (obj.sampletypes[cfg.yleftsampletype]) {
-			const n = {}
+			const n: any = {}
 			for (const k in obj) {
 				n[k] = obj[k]
 			}
@@ -2576,7 +2584,7 @@ function mayshowgermline2dvaf(m, tk, holder) {
 		}
 
 		if (cfg.yrightsampletype && obj.sampletypes[cfg.yrightsampletype]) {
-			const n = {}
+			const n: any = {}
 			for (const k in obj) {
 				n[k] = obj[k]
 			}
@@ -2596,7 +2604,7 @@ function mayshowgermline2dvaf(m, tk, holder) {
 	return false
 }
 
-function mayshowgenotype2boxplot(m, tk, holder) {
+function mayshowgenotype2boxplot(m: any, tk: any, holder: any): boolean {
 	const cfg = tk.ds.genotype2boxplot
 	if (!cfg) return false
 
@@ -2604,7 +2612,7 @@ function mayshowgenotype2boxplot(m, tk, holder) {
 		const v = m.info[cfg.boxplotvaluekey]
 		if (!v) return false
 		const tmp = v.split('|')
-		const plots = []
+		const plots: any[] = []
 		for (const s of tmp) {
 			const x = s.split('/')
 
@@ -2650,7 +2658,7 @@ function mayshowgenotype2boxplot(m, tk, holder) {
 		return false
 	}
 
-	const gt2samples = new Map()
+	const gt2samples = new Map<any, any[]>()
 	m.sampledata.forEach(s => {
 		if (!s.genotype) return
 		const k4a = s.sampleobj[tk.ds.cohort.key4annotation]
@@ -2662,7 +2670,7 @@ function mayshowgenotype2boxplot(m, tk, holder) {
 		if (!gt2samples.has(s.genotype)) {
 			gt2samples.set(s.genotype, [])
 		}
-		gt2samples.get(s.genotype).push({
+		gt2samples.get(s.genotype)!.push({
 			value: value,
 			key: k4a
 		})
@@ -2672,7 +2680,7 @@ function mayshowgenotype2boxplot(m, tk, holder) {
 		return false
 	}
 
-	const groups = []
+	const groups: any[] = []
 	for (const [genotype, samples] of gt2samples) {
 		groups.push({
 			label: genotype,
@@ -2694,10 +2702,10 @@ function mayshowgenotype2boxplot(m, tk, holder) {
 	return true
 }
 
-function singleSample2table(m, tk, holder) {
+function singleSample2table(m: any, tk: any, holder: any): void {
 	// only 1 sample
 	const s = m.sampledata[0]
-	const lst = []
+	const lst: any[] = []
 	if (s.genotype) {
 		lst.push({ k: 'genotype', v: s.genotype })
 	}
@@ -2749,7 +2757,7 @@ function singleSample2table(m, tk, holder) {
 	client.make_table_2col(holder, lst)
 }
 
-function may_addformat_singlesample(lst, m, tk) {
+function may_addformat_singlesample(lst: any[], m: any, tk: any): void {
 	// quick fix: may add format
 	let vcfobj
 	if (m.vcfid && tk.ds && tk.ds.id2vcf) vcfobj = tk.ds.id2vcf[m.vcfid]
@@ -2773,8 +2781,8 @@ function may_addformat_singlesample(lst, m, tk) {
 		if (isperallelevalue) {
 			// per allele value
 
-			const alleles = []
-			const values = []
+			const alleles: any[] = []
+			const values: any[] = []
 			let altvalue
 
 			// add alt first
@@ -2818,12 +2826,12 @@ function may_addformat_singlesample(lst, m, tk) {
 	}
 }
 
-function handle_samplecart(mlst, holder, tk, block) {
+function handle_samplecart(mlst: any[], holder: any, tk: any, block: any): void {
 	if (!block.samplecart || !tk.ds || !tk.ds.sampleselectable) return
 	/* select sample API applicable to this track
 	will make one single button for selecting sample, independent of how many datatypes
 	*/
-	const sampleset = new Set()
+	const sampleset = new Set<any>()
 	for (const m of mlst) {
 		if (m.sample) {
 			// FIXME hardcoded attribute
@@ -2835,7 +2843,7 @@ function handle_samplecart(mlst, holder, tk, block) {
 		return
 	}
 	// note for selection, try to use mname
-	const nameset = new Set()
+	const nameset = new Set<any>()
 	for (const m of mlst) {
 		const classlab = common.mclass[m.class].label
 		let thisnote
@@ -2854,12 +2862,14 @@ function handle_samplecart(mlst, holder, tk, block) {
 		}
 		nameset.add(thisnote)
 	}
+	/*
 	let note
 	if (nameset.size == 1) {
 		note = 'having ' + [...nameset][0]
 	} else {
 		note = 'having mutations' + (block.usegm ? ' in ' + block.usegm.name : '')
 	}
+	*/
 
 	block.samplecart.setBtns({
 		samplelst: [...sampleset],
