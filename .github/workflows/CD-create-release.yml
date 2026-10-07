@@ -25,6 +25,9 @@ on:
         description: Skip triggering the sj-pp deploy (run it manually, e.g. sjpp/build/deploy.sh)
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   
   publish-npm:
@@ -140,10 +143,15 @@ jobs:
   rust-build:
     if: needs.publish-npm.outputs.updated_rust == 'true'
     needs: publish-npm
+    permissions:
+      contents: read
+      packages: read
     uses: ./.github/workflows/CD-rust-build.yml
 
   upload-rust-assets:
     needs: rust-build
+    permissions:
+      contents: write
     runs-on: ubuntu-22.04
     steps:
       - name: Upload rust assets

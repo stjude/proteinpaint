@@ -14,6 +14,9 @@ on:
       # this is meant to avoid triggering the on.push event for the version bump
       - '**package*.json'
 
+permissions:
+  contents: read
+
 jobs:
   
   build:
@@ -64,6 +67,9 @@ jobs:
   rust-build:
     if: needs.build.outputs.updated_rust == 'true'
     needs: build
+    permissions:
+      contents: read
+      packages: read
     uses: ./.github/workflows/CD-rust-build.yml
 
   docker-with-rust:

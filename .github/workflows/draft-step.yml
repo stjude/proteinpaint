@@ -17,6 +17,9 @@ on:
     # types:
     #   - closed
 
+permissions:
+  contents: read
+
 jobs:
 
   example-debug:
