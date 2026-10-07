@@ -1,4 +1,4 @@
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 
@@ -37,14 +37,18 @@ export function getClosestSpec(dirname, relevantSubdirs = [], opts = {}) {
 	}
 
 	const workspace = dirname.replace(gitProjectRoot + '/', '')
-	const branch = execSync(`git rev-parse --abbrev-ref HEAD`, { encoding: 'utf8' })
+	const branch = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8' }).trim()
 
 	let changedFiles
 	if (opts.changedFiles) changedFiles = opts.changedFiles
 	/* c8 ignore start */ else {
-		const unstagedChanges = execSync(`git diff -M --name-status ${commitRef}`, { encoding: 'utf8' })
-		const stagedChanges = execSync(`git diff -M --staged --name-status ${commitRef}`, { encoding: 'utf8' })
-		const committedChanges = execSync(`git diff -M --name-status ${commitRef}..${branch}`, { encoding: 'utf8' })
+		const unstagedChanges = execFileSync('git', ['diff', '-M', '--name-status', commitRef], { encoding: 'utf8' })
+		const stagedChanges = execFileSync('git', ['diff', '-M', '--staged', '--name-status', commitRef], {
+			encoding: 'utf8'
+		})
+		const committedChanges = execFileSync('git', ['diff', '-M', '--name-status', `${commitRef}..${branch}`], {
+			encoding: 'utf8'
+		})
 		const modifiedFiles = [
 			...new Set([
 				...unstagedChanges.trim().split('\n'),
