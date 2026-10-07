@@ -683,22 +683,28 @@ export class Barchart extends PlotBase implements RxComponent {
 		return chartsData
 	}
 
-	getUncomputableChartIds() {
-		// series and overlays under non-categorical uncomputables will be gated from using menu options
-		// filter/group/list samples as they cant send valid ranges for these options
+	getUncomputableCharts(): Record<string, string[]> {
+		// series and overlays under uncomputables will be gated from using menu options
+		// filter/group/list samples as they can't send valid ranges for these options
+		// there are exceptions like categorical terms that can send filters
 		const typeExceptions = ['categorical']
-		if (typeExceptions.includes(this.config.term0?.term?.type)) return new Set()
-		return new Set(
-			Object.entries<any>(this.config.term0?.term.values || {}).flatMap(([key, valueInfo]) =>
-				valueInfo.computable === false || valueInfo.uncomputable === true
-					? [key, valueInfo.label].filter(value => value != null).map(String)
-					: []
-			)
-		)
+		const disabledOptions = ['list', 'filter', 'group']
+		const disabledOptionsForExemptions = ['list', 'group']
+		const isExemption = typeExceptions.includes(this.config.term0?.term?.type)
+		const options = isExemption ? disabledOptionsForExemptions : disabledOptions
+		const uncomputableCharts: Record<string, string[]> = {}
+		for (const [key, valueInfo] of Object.entries<any>(this.config.term0?.term.values || {})) {
+			if (valueInfo.computable !== false && valueInfo.uncomputable !== true) continue
+			for (const value of [key, valueInfo.label]) {
+				if (value != null) uncomputableCharts[String(value)] = options
+			}
+		}
+		return uncomputableCharts
 	}
 
 	setMaxVisibleTotals(chartsData) {
-		const uncomputableCharts = this.getUncomputableChartIds()
+		const uncomputableCharts = this.getUncomputableCharts()
+
 		// chartsData = this.currServerData
 		this.totalsByDataId = {}
 		const t1 = this.config.term
@@ -708,7 +714,7 @@ export class Barchart extends PlotBase implements RxComponent {
 		const visibleTotalsByChartSeriesId = {}
 		let maxVisibleAcrossCharts = 0
 		for (const chart of chartsData.charts) {
-			chart.uncomputable = uncomputableCharts.has(String(chart.chartId))
+			chart.disabledOptions = uncomputableCharts[String(chart.chartId)] || []
 			if (!chart.settings) chart.settings = JSON.parse(rendererSettings)
 			Object.assign(chart.settings, this.settings)
 			chart.visibleTotal = 0
@@ -723,7 +729,7 @@ export class Barchart extends PlotBase implements RxComponent {
 					visibleTotalsByChartSeriesId[series.seriesId] = series.visibleTotal
 				for (const data of series.data) {
 					data.seriesId = series.seriesId
-					data.uncomputable = chart.uncomputable
+					data.disabledOptions = chart.disabledOptions
 					if (
 						(t1.term.type == 'geneVariant' && t1.q.type == 'values') ||
 						(t2?.term.type == 'geneVariant' && t2?.q.type == 'values')
