@@ -110,8 +110,8 @@ tape('defaults', function (test) {
 							skipUntil: 0
 						},
 						sessionsByCred: {
-							maxAge: Infinity,
-							maxSize: Infinity,
+							maxAge: 2592000000,
+							maxSize: 5000000000,
 							skipMs: 43200000,
 							absPath: `${m.cachedir}/sessionsByCred`,
 							skipUntil: 0
@@ -550,7 +550,7 @@ tape('delete expired snpgt files by mtime', async test => {
 	test.end()
 })
 
-tape('keep old sessionsByCred files', async test => {
+tape('delete expired sessionsByCred files by mtime', async test => {
 	const cachedir = path.join(process.cwd(), '.cache-test19')
 	fs.rmSync(cachedir, { force: true, recursive: true })
 	const monitor = new CacheManager({
@@ -562,13 +562,15 @@ tape('keep old sessionsByCred files', async test => {
 	// same dir levels as getSessionPath() in routes/massSession.ts
 	const dir = `${cachedir}/sessionsByCred/embedder1/user_at_example.org/route1/ds1`
 	fs.mkdirSync(dir, { recursive: true })
-	const file = `${dir}/mySession`
-	fs.writeFileSync(file, '{}')
-	const oldTime = new Date(Date.now() - 10 * 365 * 24 * 3600 * 1000)
-	fs.utimesSync(file, oldTime, oldTime)
+	const oldFile = `${dir}/oldSession`
+	const newFile = `${dir}/newSession`
+	fs.writeFileSync(oldFile, '{}')
+	fs.writeFileSync(newFile, '{}')
+	const oldTime = new Date(Date.now() - 31 * 24 * 3600 * 1000)
+	fs.utimesSync(oldFile, oldTime, oldTime)
 	const results = await monitor.mayDeleteCacheFiles('sessionsByCred', monitor.subdirs.get('sessionsByCred'), 0)
-	test.deepEqual(results, { deletedCount: 0, totalCount: 1 }, 'should not delete an old saved session')
-	test.equal(fs.existsSync(file), true, 'should keep the session file in its nested dir')
+	test.deepEqual(results, { deletedCount: 1, totalCount: 2 }, 'should delete the session older than the default maxAge')
+	test.deepEqual(fs.readdirSync(dir), ['newSession'], 'should keep the recent session in its nested dir')
 	fs.rmSync(cachedir, { force: true, recursive: true })
 	test.end()
 })
