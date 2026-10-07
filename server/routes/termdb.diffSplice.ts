@@ -49,7 +49,6 @@ export function init({ genomes }) {
 				const { allSampleSet } = resolveDs(ds)
 				const groups = await resolveDsSampleGroups(q, allSampleSet, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
-				console.log(group1Name)
 				const group2Name = q.samplelst.groups[1].name
 				const alerts = [...groups.alerts]
 				/* Reported here, not just enforced at run time: the client hides the "Run" button
