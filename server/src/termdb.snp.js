@@ -100,7 +100,7 @@ export async function validate(q, tdb, ds, genome) {
 
 async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 	if (!q.cacheid) throw 'cacheid missing'
-	const cacheFile = utils.snpgtCacheFile(q.cacheid) // validates the cacheid before querying the samples
+	const cacheFile = utils.snpgtCacheFile(q.cacheid, ds) // validates the cacheid before querying the samples
 
 	const tk = ds.queries?.snvindel?.byrange?._tk
 	if (!tk) throw 'ds.queries.snvindel.byrange._tk missing'
@@ -364,8 +364,8 @@ async function queryBcf(q, snps, ds) {
 		delete snp.gtlst // do not return to client
 	}
 
-	const cacheid = makeCacheid(q)
-	await utils.write_file(utils.snpgtCacheFile(cacheid), lines.join('\n'))
+	const cacheid = makeCacheid(ds)
+	await utils.write_file(utils.snpgtCacheFile(cacheid, ds), lines.join('\n'))
 	return cacheid
 }
 
@@ -456,16 +456,14 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 			lines.push(lst.join('\t'))
 		}
 	})
-	result.cacheid = makeCacheid(q)
-	await utils.write_file(utils.snpgtCacheFile(result.cacheid), lines.join('\n'))
+	result.cacheid = makeCacheid(ds)
+	await utils.write_file(utils.snpgtCacheFile(result.cacheid, ds), lines.join('\n'))
 	return result
 }
 
-/* cache id is a file name, which snpgtCacheFile() only accepts with \w characters;
-a genome or dslabel may also have . or -, which are replaced with _ */
-export function makeCacheid(q) {
-	const prefix = (q.genome + '_' + q.dslabel).replace(/[^\w]/g, '_')
-	return prefix + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
+// cache id is a file name, in the format that snpgtCacheFile() accepts for this ds
+export function makeCacheid(ds) {
+	return utils.snpgtCacheidPrefix(ds) + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
 }
 
 export function add_bcf_variant_filter(variant_filter, bcfargs) {

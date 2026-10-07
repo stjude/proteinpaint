@@ -424,12 +424,36 @@ tape('fileurl() url protocol and host', test => {
 })
 
 tape('snpgtCacheFile()', test => {
+	const ds = { genomename: 'hg38', label: 'SJLife' }
 	const cacheid = 'hg38_SJLife_1760000000000_1234'
 	test.equal(
-		utils.snpgtCacheFile(cacheid),
+		utils.snpgtCacheFile(cacheid, ds),
 		`${serverconfig.cachedir}/snpgt/${cacheid}`,
 		'should return the file path directly under the snpgt cache subdir'
 	)
+	test.equal(
+		utils.snpgtCacheFile('hg38_test_a_b_c_1_2', { genomename: 'hg38-test', label: 'a.b-c' }),
+		`${serverconfig.cachedir}/snpgt/hg38_test_a_b_c_1_2`,
+		'should accept a cacheid with . and - in the genome and dslabel replaced with _'
+	)
+	for (const [id, _ds] of [
+		['hg19_SJLife_1760000000000_1234', ds],
+		['hg38_Other_1760000000000_1234', ds],
+		['hg38_SJLife_x_1760000000000_1234', ds],
+		['hg38_SJLife_1760000000000', ds],
+		['hg38_SJLife_1760000000000_1234_5', ds],
+		['hg38_SJLife', ds],
+		[cacheid, { genomename: 'hg38', label: 'SJLife_x' }],
+		[cacheid, { genomename: 'hg38', label: 'SJ' }],
+		[cacheid, {}],
+		[cacheid, undefined]
+	]) {
+		test.throws(
+			() => utils.snpgtCacheFile(id, _ds),
+			/invalid cacheid|does not support/,
+			`should reject cacheid=${id} for ds=${JSON.stringify(_ds)}`
+		)
+	}
 	for (const cacheid of [
 		'../../etc/passwd',
 		'a/b',
@@ -440,15 +464,44 @@ tape('snpgtCacheFile()', test => {
 		'',
 		undefined,
 		['a'],
+		['hg38_SJLife_1760000000000_1234'],
 		'hg38-test_ds_1_2',
 		'a.b'
 	]) {
 		test.throws(
-			() => utils.snpgtCacheFile(cacheid),
+			() => utils.snpgtCacheFile(cacheid, ds),
 			/invalid cacheid/,
 			`should reject cacheid=${JSON.stringify(cacheid)}`
 		)
 	}
+	test.end()
+})
+
+tape('snpgtCacheidPrefix()', test => {
+	const genomeObj = { datasets: {} }
+	const addDs = label => (genomeObj.datasets[label] = { genomename: 'hg38', label, genomeObj })
+	const ds = addDs('a-b')
+	addDs('SJLife')
+	test.equal(utils.snpgtCacheidPrefix(ds), 'hg38_a_b_', 'should accept a dslabel with a distinct prefix in the genome')
+
+	const ds2 = addDs('a.b')
+	for (const _ds of [ds, ds2]) {
+		test.throws(
+			() => utils.snpgtCacheidPrefix(_ds),
+			/is not distinct/,
+			`should reject dslabel='${_ds.label}' that has the same prefix as another dataset of the genome`
+		)
+	}
+	test.throws(
+		() => utils.snpgtCacheFile('hg38_a_b_1760000000000_1234', ds2),
+		/is not distinct/,
+		'should reject a cacheid for a dataset whose prefix is not distinct'
+	)
+	test.equal(
+		utils.snpgtCacheidPrefix(genomeObj.datasets.SJLife),
+		'hg38_SJLife_',
+		'should accept another dataset of the same genome'
+	)
 	test.end()
 })
 

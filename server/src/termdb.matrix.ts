@@ -302,7 +302,7 @@ async function getSampleData(q, ds) {
 			const sampleFilterSet = await mayGetSampleFilterSet4snplst(q, nonDictTerms) // conditionally returns a set of sample ids, FIXME *only* for snplst and snplocus data download in supported ds, not for anything else. TODO remove this bad quick fix
 
 			const _samples = new Map()
-			await getSampleData_snplstOrLocus(tw, _samples, true)
+			await getSampleData_snplstOrLocus(tw, _samples, true, ds)
 
 			for (const [sampleId, value] of _samples) {
 				if (sampleFilterSet && !sampleFilterSet.has(sampleId)) continue // filter in use and this sample not in filter
@@ -1203,10 +1203,13 @@ useAllSamples true/false
 	if true
 		-populate "samples" with all of those from cache file
 		-do not perform imputation
+
+ds{}
+	the request dataset, which must be the one that made the cache file of tw.q.cacheid
 */
-async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
+async function getSampleData_snplstOrLocus(tw, samples, useAllSamples, ds) {
 	// tw.q.cacheid is client-provided, from any route that passes request terms to getData()
-	const lines = (await read_file(snpgtCacheFile(tw.q.cacheid))).split('\n')
+	const lines = (await read_file(snpgtCacheFile(tw.q.cacheid, ds))).split('\n')
 	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 
 	// array of sample ids from the cache file; note cache file contains all the samples from the dataset
