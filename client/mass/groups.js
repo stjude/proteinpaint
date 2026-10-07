@@ -611,14 +611,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			})
 	}
 
-	/* Differential splicing on intron clusters. Gated on the junction cluster query, which
-	termdb.config.ts emits only when the dataset declares a cohort h5, so this never offers an
-	analysis that errors on submit.
-
-	No method radio here, unlike gene expression: the engine choice lives in the volcano's own
-	control panel (VolcanoControlInputs.addSplicingControlInputs), and only edgeR is wired, so a
-	launch-time radio with one option would ask a question with no alternative. renderPreAnalysisData
-	returns [] for any termType it has no options for, which is what methylation already does. */
+	// differential splicing; no method radio yet, only edgeR is wired (leafcutter to be added)
 	if (self.app.vocabApi.termdbConfig.queries?.junction?.cluster) {
 		const itemDiv = div
 			.append('div')
