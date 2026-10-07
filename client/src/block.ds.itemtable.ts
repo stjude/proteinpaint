@@ -326,7 +326,7 @@ function table_snvindel(mlst: any[], holder: any, tk: any, block: any) {
 				if (atr.hover) {
 					const hs = atr.hover(m)
 					if (hs) {
-						v += ' <span style="color:#aaa;font-size:80%">' + hs + '</span>'
+						v += ' <span style="color:#aaa;font-size:80%">' + escapeValue(hs) + '</span>'
 					}
 				}
 				data.push({ k: atr.label, v: v })
@@ -849,7 +849,7 @@ function vcfmdetail(m: any, vcfobj: any, holder: any, tk: any, block: any) {
 					const k = vcfobj.infopipejoin[j]
 					lst.push({
 						k: k.label,
-						v: k.values ? k.values[lst0[j][i]] : lst0[j][i]
+						v: escapeValue(k.values ? k.values[lst0[j][i]] : lst0[j][i])
 					})
 				}
 				client
@@ -1847,7 +1847,7 @@ export function runtimeattr_sv(tk: any, mlst: any[]): void {
 						client.colorinframe +
 						';font-size:80%;color:white;padding:1px 3px">IN frame</span> <span style="font-size:80%;color:#858585">alternative promoter</span>'
 					)
-				return 'err (' + f + ')'
+				return 'err (' + escapeValue(f) + ')'
 			}
 			const lst: any[] = []
 			for (const p of m.pairlst) {
@@ -1891,7 +1891,13 @@ function caller_pmid(_m: any = undefined) {
 				return ''
 			}
 			if (typeof m.pmid == 'number') {
-				return '<a target=_blank href="https://pubmed.ncbi.nlm.nih.gov/' + m.pmid + '">' + m.pmid + '</a>'
+				return (
+					'<a target=_blank rel="noopener noreferrer" href="https://pubmed.ncbi.nlm.nih.gov/' +
+					m.pmid +
+					'">' +
+					m.pmid +
+					'</a>'
+				)
 			}
 			const lst = m.pmid.split(',')
 			const out: string[] = []
@@ -1902,7 +1908,11 @@ function caller_pmid(_m: any = undefined) {
 					out.push(escapeHtml(i))
 				} else {
 					out.push(
-						'<a target=_blank href="https://pubmed.ncbi.nlm.nih.gov/' + escapeHtml(i) + '">' + escapeHtml(i) + '</a>'
+						'<a target=_blank rel="noopener noreferrer" href="https://pubmed.ncbi.nlm.nih.gov/' +
+							escapeHtml(i) +
+							'">' +
+							escapeHtml(i) +
+							'</a>'
 					)
 				}
 			}
@@ -2143,6 +2153,11 @@ function variant2imgbutton(m: any, buttonrow: any, imgholder: any, tk: any, _blo
 		.text('Image')
 		.on('click', async () => {
 			if (loaded) return
+			// allele and chromosome names come from the data and become part of the file name
+			if ([m.chr, m.ref, m.alt].some(v => typeof v != 'string' || /[\\/]|\.\./.test(v))) {
+				imgholder.append('div').style('margin', '20px').text('Image not available')
+				return
+			}
 			loaded = true
 			const wait = imgholder.append('div').style('margin', '20px').text('Loading...')
 			try {
@@ -2531,10 +2546,13 @@ function make_url4variant(holder: any, m: any, items: any[]) {
 			// somehow this variant cannot yield a url, ignore
 			continue
 		}
+		// only link to web urls, to avoid script urls built from variant fields
+		if (!/^https?:\/\//i.test(url)) continue
 		holder
 			.append('a')
 			.attr('href', url)
 			.attr('target', '_blank')
+			.attr('rel', 'noopener noreferrer')
 			.text(item.makelabel ? item.makelabel(m) : item.label || 'link')
 			.style('margin-right', '10px')
 	}
@@ -2843,21 +2861,21 @@ function may_addformat_singlesample(lst: any[], m: any, tk: any): void {
 			}
 
 			lst.push({
-				k: formatfield,
+				k: escapeHtml(formatfield),
 				v:
 					(barsvg ? barsvg + ' ' : '') +
 					'<span style="font-size:.8em;opacity:.5">' +
-					alleles.join(' / ') +
+					alleles.map(a => escapeValue(a)).join(' / ') +
 					'</span> ' +
-					values.join(' / ') +
+					values.map(v => escapeValue(v)).join(' / ') +
 					(formatdesc.Description
-						? ' <span style="font-size:.7em;opacity:.5">' + formatdesc.Description + '</span>'
+						? ' <span style="font-size:.7em;opacity:.5">' + escapeValue(formatdesc.Description) + '</span>'
 						: '')
 			})
 		} else {
 			lst.push({
-				k: formatfield,
-				v: s[formatfield]
+				k: escapeHtml(formatfield),
+				v: escapeValue(s[formatfield])
 			})
 		}
 	}
