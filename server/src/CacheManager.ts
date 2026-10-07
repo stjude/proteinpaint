@@ -83,6 +83,11 @@ export const cacheRegistry = {
 	// saved sessions; a deployer may set maxAge: 0 to disable the /massSession and /sessionIds routes
 	massSession: { type: 'session' },
 	massSessionTrash: { type: 'session', maxAge: day * 60 },
+	/* sessions saved by a signed-in user under <embedder>/<email>/<route>/<dslabel>/, see getSessionPath() in
+	routes/massSession.ts. Saving a session again rewrites its file, but a read does not update the file mtime, so
+	maxAge is the time since the last save. The /massSession and /sessionIds routes are only disabled by the
+	massSession entry, so a zero maxAge or maxSize here would delete every saved session instead. */
+	sessionsByCred: { type: 'session', maxAge: day * 30 },
 	// WSI tiles rendered on demand from .svs by wsitiles route, as .jpg tiles, .png overlay tiles
 	// and .csv boundary polygons, each regenerated on a cache miss; evicted by mtime like any other subdir.
 	wsitiles: { type: 'file', fileExtensions: new Set(['.jpg', '.png', '.csv']), maxAge: day * 30, skipMs: halfDay },

@@ -109,6 +109,13 @@ tape('defaults', function (test) {
 							absPath: `${m.cachedir}/massSessionTrash`,
 							skipUntil: 0
 						},
+						sessionsByCred: {
+							maxAge: 2592000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							absPath: `${m.cachedir}/sessionsByCred`,
+							skipUntil: 0
+						},
 						wsitiles: {
 							maxAge: 2592000000,
 							maxSize: 5000000000,
@@ -186,6 +193,7 @@ tape('defaults', function (test) {
 							gsea: { deletedCount: 0, totalCount: 0 },
 							massSession: { deletedCount: 0, totalCount: 0 },
 							massSessionTrash: { deletedCount: 0, totalCount: 0 },
+							sessionsByCred: { deletedCount: 0, totalCount: 0 },
 							grin2: { deletedCount: 0, totalCount: 0 },
 							de: { deletedCount: 0, totalCount: 0 },
 							dm: { deletedCount: 0, totalCount: 0 },
@@ -538,6 +546,31 @@ tape('delete expired snpgt files by mtime', async test => {
 	const results = await monitor.mayDeleteCacheFiles('snpgt', monitor.subdirs.get('snpgt'), 0)
 	test.equal(results?.deletedCount, 1, 'should delete the snpgt file older than the default maxAge')
 	test.deepEqual(fs.readdirSync(dir), ['hg38_ds1_1700000000001_5678'], 'should keep the recent snpgt file')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
+})
+
+tape('delete expired sessionsByCred files by mtime', async test => {
+	const cachedir = path.join(process.cwd(), '.cache-test19')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	const monitor = new CacheManager({
+		quiet: true,
+		cachedir,
+		mustExitPendingValidation: true,
+		callbacks: {}
+	})
+	// same dir levels as getSessionPath() in routes/massSession.ts
+	const dir = `${cachedir}/sessionsByCred/embedder1/user_at_example.org/route1/ds1`
+	fs.mkdirSync(dir, { recursive: true })
+	const oldFile = `${dir}/oldSession`
+	const newFile = `${dir}/newSession`
+	fs.writeFileSync(oldFile, '{}')
+	fs.writeFileSync(newFile, '{}')
+	const oldTime = new Date(Date.now() - 31 * 24 * 3600 * 1000)
+	fs.utimesSync(oldFile, oldTime, oldTime)
+	const results = await monitor.mayDeleteCacheFiles('sessionsByCred', monitor.subdirs.get('sessionsByCred'), 0)
+	test.deepEqual(results, { deletedCount: 1, totalCount: 2 }, 'should delete the session older than the default maxAge')
+	test.deepEqual(fs.readdirSync(dir), ['newSession'], 'should keep the recent session in its nested dir')
 	fs.rmSync(cachedir, { force: true, recursive: true })
 	test.end()
 })
