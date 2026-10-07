@@ -422,7 +422,9 @@
     // 	replace href='./...' with href='./${publicSubdir}/...', same with src='./...'
     // 
     function parseByAttr(parsedContent, attr='href') {
-    	const publicSubdir = window.location.hash.split('/public/')[1]?.split('/').slice(0,-1).join('/')
+    	const subdir = window.location.hash.split('/public/')[1]?.split('/').slice(0,-1).join('/')
+    	// the value is placed in an html attribute below, so only plain path characters are used
+    	const publicSubdir = /^[\w.%\/-]*$/.test(subdir) ? subdir : ''
     	return parsedContent.replaceAll(`${attr}="./`, `${attr}="${publicSubdir}/`)
     }
 
