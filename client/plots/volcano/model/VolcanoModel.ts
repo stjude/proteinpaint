@@ -57,7 +57,10 @@ export class VolcanoModel {
 		if (this.termType === tt.JUNCTION) {
 			const body = await this.getDSRequestBody()
 			const response = await dofetch3('termdb/diffSplice', { body, signal: this.plot.api?.getAbortSignal() })
-			if (response && !response.error) response.daRequest = body
+			if (response && !response.error) {
+				response.daRequest = body
+				this.setGroupSizes(response)
+			}
 			return response
 		}
 		if (this.termType === tt.SINGLECELL_CELLTYPE) {
@@ -149,7 +152,7 @@ export class VolcanoModel {
 
 	//Splicing
 	async getDSRequestBody() {
-		await this.getOtherSamples(this.config.samplelst)
+		this.setOthersGroup(this.config.samplelst)
 		const state = this.app.getState()
 		const body = {
 			kind: 'DS',

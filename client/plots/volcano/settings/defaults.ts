@@ -143,7 +143,7 @@ function validateDSSettings(termType: string, settings: DSVolcanoSettings | unde
 	via copyMerge(config, opts) */
 	/* The Run button in groups.js scales from the eligible pre-analysis counts
 	instead and passes the result in settings, which copyMerge lays over these values. */
-	const sampleNum = groups.reduce((sum: number, g: any) => sum + (g.values?.length || 0), 0)
+	const sampleNum = groups.reduce((sum: number, g: any) => sum + (g.values?.length ?? g.sampleCount ?? 0), 0)
 	if (sampleNum > 0) {
 		const scaled = scaleDsFilters(sampleNum)
 		if (opts.overrides?.minSamplesPerIntron == undefined) settings.minSamplesPerIntron = scaled.minSamplesPerIntron

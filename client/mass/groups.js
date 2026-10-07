@@ -598,7 +598,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			.on('click', async () => {
 				const groups = []
 				for (const group of samplelstTW.q.groups) {
-					if (group.values && group.values.length > 0) {
+					if (groupHasSamples(group)) {
 						groups.push(group)
 					} else {
 						throw 'group does not contain samples for differential analysis'
