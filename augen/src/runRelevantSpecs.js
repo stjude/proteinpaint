@@ -2,7 +2,7 @@ import { gitProjectRoot } from './closestSpec.js'
 import { emitRelevantSpecCovDetails } from './emitRelevantSpecCovDetails.js'
 import path from 'path'
 import fs from 'fs'
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 
 const publicSpecsDir = path.join(gitProjectRoot, 'public/coverage/specs')
 
@@ -28,7 +28,15 @@ export async function runRelevantSpecs({ workspace, specs, dirname }) {
 		process.exit(0)
 	}
 
-	const c8opts = `--experimental-monocart -r=v8 -r=html -r=json-summary -r=markdown-summary -r=markdown-details -o=./.coverage`
+	const c8opts = [
+		'--experimental-monocart',
+		'-r=v8',
+		'-r=html',
+		'-r=json-summary',
+		'-r=markdown-summary',
+		'-r=markdown-details',
+		'-o=./.coverage'
+	]
 
 	try {
 		const html = []
@@ -37,7 +45,7 @@ export async function runRelevantSpecs({ workspace, specs, dirname }) {
 		//let title
 		for (const spec of specs.matched) {
 			fs.rmSync(reportDir, { force: true, recursive: true })
-			const testLog = execSync(`npx c8 ${c8opts} tsx ${path.join(dirname, spec)}`, { encoding: 'utf8' })
+			const testLog = execFileSync('npx', ['c8', ...c8opts, 'tsx', path.join(dirname, spec)], { encoding: 'utf8' })
 			console.log(testLog)
 			if (fs.existsSync(reportDir)) {
 				const extracts = await emitRelevantSpecCovDetails({

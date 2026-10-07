@@ -1,7 +1,7 @@
 import { publicSpecsDir, gitProjectRoot } from './closestSpec.js'
 import path from 'path'
 import fs from 'fs'
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 
 const publicCovDir = path.dirname(publicSpecsDir)
 
@@ -95,7 +95,7 @@ export async function evalSpecCovResults({ workspace, jsonExtract }) {
 			try {
 				const updatedCov = Object.assign({}, previousCoverage, relevantCoverage)
 				fs.writeFileSync(covFile, JSON.stringify(updatedCov, null, '  '))
-				const out = execSync(`cd ${gitProjectRoot} && git add ${covFile}`, { encoding: 'utf8' })
+				const out = execFileSync('git', ['add', covFile], { cwd: gitProjectRoot, encoding: 'utf8' })
 				console.log(out)
 			} catch (e) {
 				console.log(`error updating '${covFile}'`, e)
