@@ -628,7 +628,6 @@ function getTvs(termIndex, value, self, geneVariant) {
 			if (!entry) return null
 			const [key, v] = entry
 			tvs.tvs.ranges = [{ value: Number(key), label: v.label }]
-			console.log(tvs)
 		}
 		delete tvs.tvs.values // numeric tvs is filtered by ranges only
 	} else if (term.term.type == 'samplelst') {
