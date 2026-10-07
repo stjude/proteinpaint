@@ -392,8 +392,13 @@
 		}
 
     async function render() {
-    	const file = location.hash?.slice(1) || 'README.md'
-    	const param = `file=${file}`
+    	let file = location.hash?.slice(1) || 'README.md'
+    	try {
+    		file = decodeURIComponent(file)
+    	} catch (e) {
+    		// keep the raw hash when it is not valid URL-encoding
+    	}
+    	const param = `file=${encodeURIComponent(file)}`
     	if (!serverCache[file]) {
     		serverCache[file] = await fetch(`/readme?${param}`).then(r=>r.text()).catch(alert)
     	}
