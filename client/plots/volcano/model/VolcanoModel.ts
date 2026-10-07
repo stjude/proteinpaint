@@ -1,6 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
+import type { DiffSpliceRequest } from '#types'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { getGroupColors, toHex } from '../colors'
@@ -43,6 +44,12 @@ export class VolcanoModel {
 			// Surface the DM request the same way the GE branch above does so
 			// the GSEA tab can snapshot it and the server can recompute the DM
 			// cache if the file is missing on a peer node or after TTL.
+			if (response && !response.error) response.daRequest = body
+			return response
+		}
+		if (this.termType === tt.JUNCTION) {
+			const body = await this.getDSRequestBody()
+			const response = await dofetch3('termdb/diffSplice', { body, signal: this.plot.api?.getAbortSignal() })
 			if (response && !response.error) response.daRequest = body
 			return response
 		}
@@ -133,6 +140,32 @@ export class VolcanoModel {
 		return body
 	}
 
+	//Splicing
+	async getDSRequestBody() {
+		await this.getOtherSamples(this.config.samplelst)
+		const state = this.app.getState()
+		const body = {
+			kind: 'DS',
+			genome: this.app.vocabApi.vocab.genome,
+			dslabel: this.app.vocabApi.vocab.dslabel,
+			samplelst: this.config.samplelst,
+			filter: state.termfilter.filter,
+			filter0: state.termfilter.filter0,
+			method: this.settings.method,
+			/* leafcutter's own cluster filters, applied by the edgeR screen too so both engines
+			rank the same cluster set. Sent already scaled to cohort size by validateDSSettings --
+			as absolute counts they silently loosen as N grows. */
+			minSamplesPerIntron: this.settings.minSamplesPerIntron,
+			minSamplesPerGroup: this.settings.minSamplesPerGroup,
+			minCountsPerCluster: this.settings.minCountsPerCluster,
+			volcanoRender: this.getVolcanoRender()
+		} as Partial<DiffSpliceRequest>
+
+		this.addConfounderTw(body)
+
+		return body
+	}
+
 	/** Parameters telling the server to run the `volcano` Rust renderer and return a
 	 * volcano PNG + top-significant rows instead of the full dot list. */
 	getVolcanoRender(): VolcanoRenderRequest {
@@ -149,7 +182,7 @@ export class VolcanoModel {
 		of the field sent -- otherwise the server draws threshold lines that do not correspond to
 		what it classified. */
 		const useDeltaBeta = this.termType === tt.DNA_METHYLATION && this.settings.xAxis == 'delta_beta'
-		return {
+		const render: VolcanoRenderRequest = {
 			significanceThresholds: {
 				pValueCutoff: this.settings.pValue,
 				pValueType: this.settings.pValueType,
@@ -178,6 +211,14 @@ export class VolcanoModel {
 			// bitmap memory bounded.
 			devicePixelRatio: (typeof window !== 'undefined' ? window.devicePixelRatio : 1) * 2
 		}
+
+		// Splicing always plots delta_psi
+		if (this.termType === tt.JUNCTION) {
+			render.xField = 'delta_psi'
+			render.significanceThresholds.foldChangeCutoff = this.settings.deltaPsiCutoff
+		}
+
+		return render
 	}
 
 	//This is a workaround until the server can accept an arr of confounder tws

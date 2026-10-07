@@ -831,6 +831,8 @@ type JunctionQuery = {
 	hiddentypes?: string
 	/** default min read count to filter samples */
 	readcountCutoff?: number
+	/** intron clusters of these junctions, for differential splicing analysis */
+	cluster?: JunctionClusterQuery
 }
 
 type RnaseqGeneCount = {
@@ -857,6 +859,19 @@ type RnaseqGeneCount = {
 	defaultMethod?: 'wilcoxon' | 'edgeR' | 'limma'
 	/** sample names present in the counts matrix. may be a getter on api-backed datasets whose
 	 * sample list is populated asynchronously after launch */
+	allSampleSet?: Set<string>
+}
+
+type JunctionClusterQuery = {
+	/** HDF5 file: X[n_samples, n_introns], one sample per row,
+	 * introns pre-sorted by cluster with cluster_starts boundaries alongside. */
+	file: string
+	/** which engine the method radio preselects. only reorders — both stay selectable. */
+	defaultMethod?: 'edgeR' | 'leafcutter'
+	/** max samples ONE GROUP may contribute to a run, counted after filtering to samples that
+	 * actually have splicing data. Defaults to MAX_SAMPLES_PER_GROUP (250) in the route. */
+	maxSamplesPerGroup?: number
+	/** filled at init from the h5 */
 	allSampleSet?: Set<string>
 }
 

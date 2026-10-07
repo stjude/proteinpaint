@@ -137,6 +137,7 @@ export class VolcanoViewModel {
 			provenance: this.setProvenance(),
 			userActions: this.setUserActions(),
 			deltaBetaAxisLabel: this.setDeltaBetaAxisLabel(),
+			deltaPsiAxisLabel: this.setDeltaPsiAxisLabel(),
 			volcanoPng: response.data.volcanoPng,
 			plotExtent: response.data.plotExtent
 		}
@@ -161,6 +162,15 @@ export class VolcanoViewModel {
 		return `Δβ${centered} (${shortenGroupName(cases)} − ${shortenGroupName(control)})`
 	}
 
+	// same as setDeltaBetaAxisLabel, for ΔPSI
+	setDeltaPsiAxisLabel(): string | undefined {
+		const groups = this.config?.samplelst?.groups
+		const control = groups?.[0]?.name
+		const cases = groups?.[1]?.name
+		if (!control || !cases) return undefined
+		return `ΔPSI (${shortenGroupName(cases)} − ${shortenGroupName(control)})`
+	}
+
 	/** What the y axis and the p column are called. Named here once so the axis, the table header,
 	 * the hover rows and the multi-hit table cannot disagree. */
 	setPValueLabel(settings: ValidatedVolcanoSettings): string {
@@ -177,6 +187,7 @@ export class VolcanoViewModel {
 		table header. Taken from the selected class rather than the server response so no
 		extra field has to be plumbed through. */
 		if (this.termType == tt.DNA_METHYLATION) return elementNoun(this.settings?.elementType).many
+		if (this.termType == tt.JUNCTION) return 'clusters'
 		if (this.termType == tt.SINGLECELL_CELLTYPE) return 'genes'
 		if (this.termType == tt.PROTEOME_DAP) return 'proteins'
 		if (this.termType == tt.SINGLECELL_GENE_EXPRESSION) return 'cells'
@@ -346,7 +357,12 @@ export class VolcanoViewModel {
 		this.pValueTable.rowKeys.clear()
 		const dataCopy: any = structuredClone(this.dataRows)
 		for (const d of dataCopy) {
-			const highlightKey = this.termType === tt.DNA_METHYLATION ? d.promoter_id : d.gene_name
+			const highlightKey =
+				this.termType === tt.DNA_METHYLATION
+					? d.promoter_id
+					: this.termType === tt.JUNCTION
+					? (d as any).cluster_id
+					: d.gene_name
 			d.highlighted = this.config?.highlightedData?.includes(highlightKey)
 			// Every row in response.data passed the server's thresholds by definition.
 			d.significant = true
@@ -390,6 +406,20 @@ export class VolcanoViewModel {
 						)
 					}
 					row.splice(0, 0, { value: formatPromoterLabel(d as any) }, { value: d.gene_name || '' })
+				} else if (this.termType == tt.JUNCTION) {
+					/* Same two-splice order as setPTableColumns: the effect-size cell is overwritten
+					in place (index 0 is the fold-change slot, which a splicing row does not use),
+					then the PSI cells go in after it, then the Cluster/Gene prefix shifts
+					everything right. */
+					row[0] = { value: roundValueAuto((d as any).delta_psi) }
+					row.splice(
+						1,
+						0,
+						{ value: roundValueAuto((d as any).psi_control) },
+						{ value: roundValueAuto((d as any).psi_case) },
+						{ value: (d as any).n_junc }
+					)
+					row.splice(0, 0, { value: (d as any).cluster_id }, { value: (d as any).genes || '' })
 				} else if (this.termType == tt.PROTEOME_DAP) {
 					row.splice(0, 0, { value: d.gene_name || '' }, { value: d.gene || '' })
 				} else {
@@ -429,14 +459,17 @@ export class VolcanoViewModel {
 	}
 
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {
-		if (!d.gene_name && this.termType != tt.DNA_METHYLATION)
+		// splicing rows carry `genes` (a cluster may span several, or none), never gene_name
+		if (!d.gene_name && this.termType != tt.DNA_METHYLATION && this.termType != tt.JUNCTION)
 			throw new Error(`Missing gene_name in data: ${JSON.stringify(d)}`)
 		if (significant) {
 			/* The value the server classified and drew: delta-beta on the Δβ axis, less the median when
 			centred. Colouring from raw fold_change painted a point between 0 and a positive median as
 			"up" over a PNG dot the server had drawn as "down". */
 			const x =
-				this.termType == tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
+				this.termType == tt.JUNCTION
+					? (d as any).delta_psi
+					: this.termType == tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
 					? (d as any).delta_beta - (this.response.data.xOffset ?? 0)
 					: d.fold_change
 			if (controlColor && caseColor) d.color = x > 0 ? caseColor : controlColor
@@ -494,12 +527,27 @@ export class VolcanoViewModel {
 			parts.push(`exclude sex chromosomes: ${s.excludeSexChr ? 'yes' : 'no'}`)
 		} else if (this.termType == tt.GENE_EXPRESSION) {
 			parts.push(`method: ${s.method}`)
+		} else if (this.termType == tt.JUNCTION) {
+			/* The engine the server actually ran, not the requested one: pickDsEngine may override
+			the request, and the two engines compute different quantities (a Simes-adjusted
+			exon-level p vs a Dirichlet-multinomial LRT), so a file that does not name the engine
+			cannot be compared with another. */
+			parts.push(`method: ${this.response.method || s.method}`)
+			// the cluster filters decide what was TESTED, so two exports are not comparable without them
+			parts.push(`min samples per intron: ${s.minSamplesPerIntron}; min samples per group: ${s.minSamplesPerGroup}`)
+			parts.push(`min counts per cluster: ${s.minCountsPerCluster}`)
 		}
 
 		// Name the effect-size measure the cutoff was applied to, not just its number — the
 		// threshold moves to deltaBetaCutoff when the axis does, and "0.1" alone is ambiguous.
 		const onDeltaBeta = this.termType == tt.DNA_METHYLATION && s.xAxis === 'delta_beta'
-		const effect = onDeltaBeta ? `|delta-beta| > ${s.deltaBetaCutoff}` : `|log2(fold-change)| > ${s.foldChangeCutoff}`
+		// splicing is always thresholded on delta-PSI; it never displays a log2 fold change
+		const effect =
+			this.termType == tt.JUNCTION
+				? `|delta-PSI| > ${s.deltaPsiCutoff}`
+				: onDeltaBeta
+				? `|delta-beta| > ${s.deltaBetaCutoff}`
+				: `|log2(fold-change)| > ${s.foldChangeCutoff}`
 		parts.push(`significance: ${s.pValueType} p < ${roundValueAuto(Math.pow(10, -s.pValue))}, ${effect}`)
 
 		return parts.join('; ')
@@ -520,7 +568,7 @@ export class VolcanoViewModel {
 				value: this.numSignificant + this.numNonSignificant
 			}
 		]
-		if (this.termType == tt.GENE_EXPRESSION || this.termType == tt.DNA_METHYLATION) {
+		if (this.termType == tt.GENE_EXPRESSION || this.termType == tt.DNA_METHYLATION || this.termType == tt.JUNCTION) {
 			tableRows.push(
 				{
 					label: this.config.samplelst.groups[0].name + ' sample size (control group)',
@@ -713,6 +761,17 @@ export class VolcanoViewModel {
 				{ label: elementNoun(this.settings?.elementType).one, sortable: true },
 				{ label: 'Gene(s)', sortable: true }
 			)
+		} else if (this.termType == tt.JUNCTION) {
+			this.pValueTable.columns[0].label = 'ΔPSI'
+			this.pValueTable.columns.splice(
+				1,
+				0,
+				{ label: 'PSI (group 1)', sortable: true },
+				{ label: 'PSI (group 2)', sortable: true },
+				{ label: 'Junctions', sortable: true }
+			)
+			// a cluster is the row, and it may map to several genes or none
+			this.pValueTable.columns.splice(0, 0, { label: 'Cluster', sortable: true }, { label: 'Gene(s)', sortable: true })
 		} else if (this.termType == tt.PROTEOME_DAP) {
 			this.pValueTable.columns.splice(0, 0, { label: 'Identifier', sortable: true }, { label: 'Gene', sortable: true })
 		} else {

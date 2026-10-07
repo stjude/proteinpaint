@@ -18,7 +18,7 @@ import { uiLabel } from '#shared'
 import { TermTypes } from '#types'
 import { dofetch3 } from '#common/dofetch'
 import { getBrainImagingSampleSet } from '#plots/getBrainImagingSampleSet.ts'
-import { maxSampleCutoff, maxGESampleCutoff } from '../plots/volcano/settings/defaults.ts'
+import { maxSampleCutoff, maxGESampleCutoff, scaleDsFilters } from '../plots/volcano/settings/defaults.ts'
 import { getGEunit } from '#tw/geneExpression'
 
 /*
@@ -611,6 +611,56 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			})
 	}
 
+	// differential splicing; no method radio yet, only edgeR is wired (leafcutter to be added)
+	if (self.app.vocabApi.termdbConfig.queries?.junction?.cluster) {
+		const itemDiv = div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', 'sjpp-da-splicing-option')
+			.text(`Differential ${termType2label(TermTypes.JUNCTION)} Analysis`)
+			.on('click', async () => {
+				const groups = []
+				for (const group of samplelstTW.q.groups) {
+					if (group.values && group.values.length > 0) {
+						groups.push(group)
+					} else {
+						throw 'group does not contain samples for differential analysis'
+					}
+				}
+
+				// get actual numbers of samples with splicing data
+				const body = {
+					genome: self.app.vocabApi.vocab.genome,
+					dslabel: self.app.vocabApi.vocab.dslabel,
+					samplelst: { groups },
+					filter: self.state.termfilter.filter,
+					filter0: self.state.termfilter.filter0,
+					preAnalysis: true
+				}
+				const preAnalysisData = await dofetch3('termdb/diffSplice', { body })
+
+				const tip = self.tip2
+				if (!preAnalysisData?.data) {
+					tip.clear().showunderoffset(itemDiv.node())
+					sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
+					throw new Error('no data returned from pre-analysis request')
+				}
+
+				tip.clear().showunderoffset(itemDiv.node())
+				/* Shared with differential expression and methylation; termType selects the label
+				and drops the method radios. The per-group cap is enforced server-side and arrives
+				as preAnalysisData.alert, which hides the Run button. */
+				renderPreAnalysisData({
+					preAnalysisData,
+					samplelstTW,
+					groups,
+					tip,
+					termType: TermTypes.JUNCTION,
+					self
+				})
+			})
+	}
+
 	/* Region (DMR) analysis off the same two groups. The volcano reaches this by clicking a hit,
 	which supplies the region; here the user names one instead, for the case where the region of
 	interest is already known and the genome-wide scan is not the point.
@@ -917,14 +967,19 @@ export function renderPreAnalysisData(arg) {
 			.attr('data-testid', 'sjpp-da-run-btn')
 			.text(`Run Differential ${termType2label(termType)} Analysis`)
 			.on('click', async () => {
+				const volcano = {}
+				// only expression carries a method; passing an undefined one would fail volcano settings validation
+				if (selectedMethod) volcano.method = selectedMethod
+				/* splicing filters scale with the samples that will actually be tested, which only the
+				pre-analysis counts know: the raw groups include samples absent from the splicing h5 */
+				if (termType == TermTypes.JUNCTION) Object.assign(volcano, scaleDsFilters(numControl + numCase))
 				const config = {
 					chartType: 'differentialAnalysis',
 					state: self.state,
 					samplelst: { groups },
 					termType,
 					tw: samplelstTW,
-					// only expression carries a method; passing an undefined one would fail volcano settings validation
-					...(selectedMethod ? { settings: { volcano: { method: selectedMethod } } } : {})
+					...(Object.keys(volcano).length ? { settings: { volcano } } : {})
 				}
 				if (tip) tip.hide()
 				if (self.tip) self.tip.hide()

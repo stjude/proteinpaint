@@ -5,6 +5,7 @@ import type {
 	ValidatedVolcanoSettings,
 	GEVolcanoSettings,
 	DMVolcanoSettings,
+	DSVolcanoSettings,
 	DefaultVolcanoSettings
 } from '../settings/Settings'
 
@@ -37,6 +38,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 
 	addGEDefaults(opts.termType, defaults)
 	addDMDefaults(opts.termType, defaults, opts)
+	addDSDefaults(opts.termType, defaults)
 
 	return Object.assign(defaults, overrides)
 }
@@ -98,6 +100,16 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	defaults.profileBinBp = 100_000
 }
 
+function addDSDefaults(termType: string, defaults: Partial<DSVolcanoSettings>) {
+	if (termType != tt.JUNCTION) return
+	defaults.method = 'edgeR'
+	defaults.minSamplesPerIntron = 5
+	defaults.minSamplesPerGroup = 3
+	defaults.minCountsPerCluster = 20
+	/* 0.05 = a 5-point PSI shift. */
+	defaults.deltaPsiCutoff = 0.05
+}
+
 /*********** Setting Validation Functions ***********
  * Validates user input settings after merging with defaults */
 const typesUseDefaultSettings = new Set([tt.SINGLECELL_CELLTYPE, tt.PROTEOME_DAP, tt.SINGLECELL_GENE_EXPRESSION])
@@ -115,10 +127,46 @@ export function validateVolcanoSettings(config: any, opts: any) {
 
 	validateGESettings(config.termType, settings, sampleNum, opts)
 	validateDMSettings(config.termType, settings)
+	validateDSSettings(config.termType, settings, opts)
+}
+
+/* Read groups from opts; config.samplelst is populated only after copyMerge().
+Apply caps to eligible counts rather than raw groups, and enforce them in 
+preAnalysis and at run time. */
+function validateDSSettings(termType: string, settings: DSVolcanoSettings | undefined, opts: any) {
+	if (termType != tt.JUNCTION || !settings) return
+	const groups = opts.samplelst?.groups || []
+
+	/* Leafcutter’s -i/-g thresholds are absolute sample counts, so their effective stringency decreases 
+	as cohort size grows. Scale the defaults as a floor plus a fraction of N to keep filtering comparable 
+	across cohort sizes. These are defaults only: opts.overrides takes precedence, followed by saved settings 
+	via copyMerge(config, opts) */
+	/* The Run button in groups.js scales from the eligible pre-analysis counts
+	instead and passes the result in settings, which copyMerge lays over these values. */
+	const sampleNum = groups.reduce((sum: number, g: any) => sum + (g.values?.length || 0), 0)
+	if (sampleNum > 0) {
+		const scaled = scaleDsFilters(sampleNum)
+		if (opts.overrides?.minSamplesPerIntron == undefined) settings.minSamplesPerIntron = scaled.minSamplesPerIntron
+		if (opts.overrides?.minSamplesPerGroup == undefined) settings.minSamplesPerGroup = scaled.minSamplesPerGroup
+	}
+}
+
+/** Default sample thresholds for n samples: max(5, 2% of n) per intron and max(3, 1% of n)
+ * per group. n should be the number of samples with splicing data; a larger raw count can
+ * push the thresholds above the group sizes and drop every cluster. */
+export function scaleDsFilters(n: number): { minSamplesPerIntron: number; minSamplesPerGroup: number } {
+	return {
+		minSamplesPerIntron: Math.max(5, Math.round(n * 0.02)),
+		minSamplesPerGroup: Math.max(3, Math.round(n * 0.01))
+	}
 }
 
 export function getSampleNum(config: any) {
-	if (config.termType == tt.GENE_EXPRESSION || config.termType == tt.DNA_METHYLATION) {
+	if (
+		config.termType == tt.GENE_EXPRESSION ||
+		config.termType == tt.DNA_METHYLATION ||
+		config.termType == tt.JUNCTION
+	) {
 		return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
 	} else {
 		return maxSampleCutoff

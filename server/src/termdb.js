@@ -374,7 +374,7 @@ async function LDoverlay(q, ds, res, genome) {
 	if (!tk) throw 'unknown ld tk'
 	if (typeof q.m != 'object') throw 'q.m{} not object'
 	// validated chr/pos from string2pos() are used below instead of raw q.m.chr/pos
-if (!Number.isInteger(q.m.pos)) throw 'invalid q.m.chr/pos'
+	if (!Number.isInteger(q.m.pos)) throw 'invalid q.m.chr/pos'
 	const p = string2pos(q.m.chr + ':' + q.m.pos, genome)
 	if (!p?.actualposition) throw 'invalid q.m.chr/pos'
 	const chr = p.chr,

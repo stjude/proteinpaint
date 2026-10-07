@@ -602,6 +602,14 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	}
 	if (q.junction) {
 		q2.junction = {}
+		if (q.junction.cluster) {
+			/* Defaults to true unless overridden by ds. The cap is enforced server-side 
+			on eligible samples; h5 and maxSamplesPerGroup are not forwarded.*/
+			const c = q.junction.cluster
+			const so: any = {}
+			if (c.defaultMethod) so.defaultMethod = c.defaultMethod
+			q2.junction.cluster = Object.keys(so).length ? so : true
+		}
 	}
 }
 

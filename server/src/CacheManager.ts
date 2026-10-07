@@ -57,6 +57,8 @@ function cacheFileExtension(name: string): string {
 export const cacheRegistry = {
 	de: { type: 'compute', maxPending: 5 },
 	dm: { type: 'compute', maxPending: 5 },
+	// differential splicing; each job is an edgeR or leafcutter run over every cluster in the h5
+	ds: { type: 'compute', maxPending: 2 },
 	/* DMR scans. Lower than the analyses above because each pending job is not one process: it
 	fans out to `serverconfig.dmrBatchConcurrency` rust invocations (default 2), each holding one
 	chromosome's matrix at ~0.5GB and saturating a core. Total concurrent rust processes is

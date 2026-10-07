@@ -53,6 +53,13 @@ tape('defaults', function (test) {
 							absPath: `${m.cachedir}/dm`,
 							skipUntil: 0
 						},
+						ds: {
+							maxAge: 5184000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							absPath: `${m.cachedir}/ds`,
+							skipUntil: 0
+						},
 						dmr: {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
@@ -204,6 +211,7 @@ tape('defaults', function (test) {
 							wsitiles: { deletedCount: 0, totalCount: 0 },
 							bedj: { deletedCount: 0, totalCount: 0 },
 							bam: { deletedCount: 0, totalCount: 0 },
+							ds: { deletedCount: 0, totalCount: 0 },
 							extApiResponse: { deletedCount: 0, totalCount: 0 },
 							snpgt: { deletedCount: 0, totalCount: 0 },
 							http: { deletedCount: 0, totalCount: 0 },

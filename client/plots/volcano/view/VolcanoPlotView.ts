@@ -324,9 +324,10 @@ export class VolcanoPlotView {
 		this.setSvgSubscriptLabel(this.volcanoDom.yAxisLabel, '-log', '10', `(${this.viewData.pValueLabel})`)
 
 		this.volcanoDom.xAxisLabel.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
-		/* The axis must name what it is actually plotting. Delta-beta has no subscript, so it is
-		written as plain text rather than forced through the log-subscript helper. */
-		if (this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta') {
+		if (this.termType === tt.JUNCTION) {
+			this.volcanoDom.xAxisLabel.selectAll('*').remove()
+			this.volcanoDom.xAxisLabel.text(this.viewData.deltaPsiAxisLabel || 'ΔPSI (case − control)')
+		} else if (this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta') {
 			this.volcanoDom.xAxisLabel.selectAll('*').remove()
 			/* Prefer the group-named form built by the view model ("Δβ (NSD2 Higher − NSD2 Lower)"):
 			case/control are slot names, so the role-based wording does not say which direction a
@@ -799,16 +800,55 @@ export class VolcanoPlotView {
 		}).attach()
 	}
 
-	/** Whether the effect size on show is delta-beta rather than log2 fold-change. Methylation
-	 * fold-change is a difference of logits: it ranks elements correctly but says nothing about
-	 * how much methylation moved, so it must not be what a reader is handed next to a delta-beta
-	 * axis. Read by both hover paths -- the single-point tooltip and the multi-point table -- so
-	 * the two cannot disagree about which number they show. */
+	/** Multi-hit hover table for differential splicing: one row per intron cluster. */
 	private get onDeltaBeta() {
 		return this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
 	}
 
+	private buildSpliceMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
+		const { pValueLabel, singlePValue } = this.viewData
+		const pLabel = pValueLabel.charAt(0).toUpperCase() + pValueLabel.slice(1)
+		const pField = (singlePValue ? 'original_p_value' : `${this.settings.pValueType}_p_value`) as
+			| 'original_p_value'
+			| 'adjusted_p_value'
+		const columns = [
+			{ label: 'Cluster' },
+			{ label: 'Gene(s)' },
+			{ label: 'ΔPSI', sortable: true },
+			{ label: pLabel, sortable: true }
+		]
+		const rows = dots.map(d => [
+			{ value: (d as any).cluster_id },
+			{ value: (d as any).genes || '' },
+			{ value: roundValueAuto((d as any).delta_psi) },
+			{ value: roundValueAuto(d[pField]) }
+		])
+		return { columns, rows }
+	}
+
+	// p-value rows duplicate those in addTooltipRows
+	private addSpliceTooltipRows(d: DataPointEntry, table: any) {
+		const c = d as any
+		addTooltipRow(table, 'Cluster', c.cluster_id)
+		if (c.genes) addTooltipRow(table, 'Gene(s)', c.genes)
+		if (c.chr) addTooltipRow(table, 'Position', `${c.chr}:${c.start}-${c.stop}`)
+		addTooltipRow(table, 'ΔPSI', roundValueAuto(c.delta_psi))
+		/** Both group means, because a ΔPSI of 0.2 means something different
+		 * depending on the underlying changes (e.g., 0.1→0.3 vs. 0.7→0.9) */
+		if (c.psi_control != null) addTooltipRow(table, 'PSI (group 1)', roundValueAuto(c.psi_control))
+		if (c.psi_case != null) addTooltipRow(table, 'PSI (group 2)', roundValueAuto(c.psi_case))
+		if (c.n_junc != null) addTooltipRow(table, 'Junctions', c.n_junc)
+		if (c.top_intron) addTooltipRow(table, 'Top intron', c.top_intron)
+		if (this.viewData.singlePValue) {
+			addTooltipRow(table, this.viewData.pValueLabel, roundValueAuto(d.original_p_value))
+		} else {
+			addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
+			if (d.adjusted_p_value != undefined) addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
+		}
+	}
+
 	private buildMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
+		if (this.termType === tt.JUNCTION) return this.buildSpliceMultiHitTable(dots)
 		const isDM = this.termType === tt.DNA_METHYLATION
 		const isDAP = this.termType === tt.PROTEOME_DAP
 		const effectLabel = this.onDeltaBeta ? 'Δβ' : 'log₂(FC)'
@@ -908,6 +948,10 @@ export class VolcanoPlotView {
 	/** Populates a `table2col` instance with the standard volcano hover rows
 	 * (gene/promoter, fold-change, original + adjusted p-values). */
 	private addTooltipRows(d: DataPointEntry, table: any) {
+		if (this.termType === tt.JUNCTION) {
+			this.addSpliceTooltipRows(d, table)
+			return
+		}
 		if (this.termType === tt.DNA_METHYLATION) {
 			if ('promoter_id' in d)
 				addTooltipRow(table, elementNoun(this.settings?.elementType).one, formatPromoterLabel(d as any))
