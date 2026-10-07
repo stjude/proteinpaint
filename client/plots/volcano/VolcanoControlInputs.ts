@@ -461,7 +461,7 @@ export class VolcanoControlInputs {
 				stops discriminating -- at ~1000 per group most "significant" clusters shift under a
 				percentage point of PSI -- so the effect size is the filter, not the p. The unit is
 				named in the title because 0.05 here is 5 percentage points, not a p-value. */
-				label: 'Minimum |\u0394PSI|',
+				label: 'Minimum |ΔPSI|',
 				type: 'number',
 				chartType: 'volcano',
 				settingsKey: 'deltaPsiCutoff',

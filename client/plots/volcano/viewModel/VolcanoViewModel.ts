@@ -168,7 +168,7 @@ export class VolcanoViewModel {
 		const control = groups?.[0]?.name
 		const cases = groups?.[1]?.name
 		if (!control || !cases) return undefined
-		return `\u0394PSI (${shortenGroupName(cases)} \u2212 ${shortenGroupName(control)})`
+		return `ΔPSI (${shortenGroupName(cases)} − ${shortenGroupName(control)})`
 	}
 
 	/** What the y axis and the p column are called. Named here once so the axis, the table header,
@@ -762,7 +762,7 @@ export class VolcanoViewModel {
 				{ label: 'Gene(s)', sortable: true }
 			)
 		} else if (this.termType == tt.JUNCTION) {
-			this.pValueTable.columns[0].label = '\u0394PSI'
+			this.pValueTable.columns[0].label = 'ΔPSI'
 			this.pValueTable.columns.splice(
 				1,
 				0,

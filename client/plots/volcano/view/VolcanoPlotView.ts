@@ -326,7 +326,7 @@ export class VolcanoPlotView {
 		this.volcanoDom.xAxisLabel.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
 		if (this.termType === tt.JUNCTION) {
 			this.volcanoDom.xAxisLabel.selectAll('*').remove()
-			this.volcanoDom.xAxisLabel.text(this.viewData.deltaPsiAxisLabel || '\u0394PSI (case \u2212 control)')
+			this.volcanoDom.xAxisLabel.text(this.viewData.deltaPsiAxisLabel || 'ΔPSI (case − control)')
 		} else if (this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta') {
 			this.volcanoDom.xAxisLabel.selectAll('*').remove()
 			/* Prefer the group-named form built by the view model ("Δβ (NSD2 Higher − NSD2 Lower)"):
@@ -814,7 +814,7 @@ export class VolcanoPlotView {
 		const columns = [
 			{ label: 'Cluster' },
 			{ label: 'Gene(s)' },
-			{ label: '\u0394PSI', sortable: true },
+			{ label: 'ΔPSI', sortable: true },
 			{ label: pLabel, sortable: true }
 		]
 		const rows = dots.map(d => [
@@ -832,9 +832,9 @@ export class VolcanoPlotView {
 		addTooltipRow(table, 'Cluster', c.cluster_id)
 		if (c.genes) addTooltipRow(table, 'Gene(s)', c.genes)
 		if (c.chr) addTooltipRow(table, 'Position', `${c.chr}:${c.start}-${c.stop}`)
-		addTooltipRow(table, '\u0394PSI', roundValueAuto(c.delta_psi))
-		/* Both group means, because a \u0394PSI of 0.2 means something different at 0.1\u21920.3
-		than at 0.7\u21920.9, and the reader cannot recover them from the difference alone. */
+		addTooltipRow(table, 'ΔPSI', roundValueAuto(c.delta_psi))
+		/** Both group means, because a ΔPSI of 0.2 means something different
+		 * depending on the underlying changes (e.g., 0.1→0.3 vs. 0.7→0.9) */
 		if (c.psi_control != null) addTooltipRow(table, 'PSI (group 1)', roundValueAuto(c.psi_control))
 		if (c.psi_case != null) addTooltipRow(table, 'PSI (group 2)', roundValueAuto(c.psi_case))
 		if (c.n_junc != null) addTooltipRow(table, 'Junctions', c.n_junc)
