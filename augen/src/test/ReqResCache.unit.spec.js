@@ -99,7 +99,9 @@ tape('ReqResCache instance', test => {
 			test.true(loc.file.startsWith(`${cachedir}/`), `should keep the cache file for '${reqPath}' in the cache dir`)
 		}
 		// the cache dir may be a filesystem root, whose path already ends with a separator
-		const rootLoc = new ReqResCache({ path: '/termdb/abc', query: { y: 1 } }).getLoc(path.parse(cachedir).root, 'test')
+		const rootLoc = new ReqResCache({ path: '/termdb/abc', query: { y: 1 } }, { mode: 'test' }).getLoc(
+			path.parse(cachedir).root
+		)
 		test.true(
 			rootLoc.file.startsWith(`${path.parse(cachedir).root}termdb.abc/`),
 			'should accept a subdir of a root cachedir'

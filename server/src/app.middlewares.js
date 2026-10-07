@@ -385,8 +385,9 @@ function maySetTestDataCacheDir(doneLoading) {
 	if (!serverconfig.features?.cacheTestData || !serverconfig.publicDir || !serverconfig.debugmode) return
 	if (!doneLoading.includes('hg38-test/TermdbTest') || !fs.existsSync(`${serverconfig.publicDir}/testrun.html`)) return
 
-	const testDataCacheDir = path.join(serverconfig.binpath, '../public/testrunData')
-	if (!fs.existsSync(testDataCacheDir)) fs.mkdirSync(testDataCacheDir)
+	// client/test/puppet.js reads the cached data from this dir, so it does not need to be under the public dir
+	const testDataCacheDir = path.join(serverconfig.binpath, '../client/test/testrunData')
+	if (!fs.existsSync(testDataCacheDir)) fs.mkdirSync(testDataCacheDir, { recursive: true })
 	console.log(`mayCacheReqRes at ${testDataCacheDir}`)
 	return testDataCacheDir
 }
@@ -402,7 +403,14 @@ function mayWrapResponseSend(cachedir, req, res) {
 	const send = res.send
 	res.send = async function (body) {
 		// TODO: will need to also set the actual status
-		if (!fs.existsSync(cache.loc.file)) await cache.write({ header: { status: 200 }, body }) // no need to await
+		if (!fs.existsSync(cache.loc.file)) {
+			// the response must still be sent when it could not be cached
+			try {
+				await cache.write({ header: { status: 200 }, body })
+			} catch (e) {
+				console.log(`could not cache the ${req.path} response:`, e.message || e)
+			}
+		}
 		send.call(this, body)
 	}
 }

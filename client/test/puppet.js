@@ -502,7 +502,7 @@ function initServer() {
 	app.get('*', routeHandler)
 	app.post('*', routeHandler)
 
-	const cachedir = `${publicDir}/testrunData`
+	const cachedir = path.join(__dirname, 'testrunData')
 
 	async function routeHandler(req, res) {
 		const query = Object.assign({}, req.query || {}, req.body || {})
