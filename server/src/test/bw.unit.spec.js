@@ -55,6 +55,21 @@ tape('validateBinTotal()', test => {
 	test.doesNotThrow(() => validateBinTotal({ rglst: [region], dotplotfactor: 20 }), 'accepts a normal request')
 	test.doesNotThrow(() => validateBinTotal({ rglst: [region] }), 'accepts a missing dotplotfactor')
 	test.throws(
+		() => validateBinTotal({ rglst: [{ start: 0, stop: 1000 }] }),
+		/invalid number of bins for a region/,
+		'rejects a region with no width'
+	)
+	test.throws(
+		() => validateBinTotal({ rglst: [{ start: 0, stop: 1000, width: 0 }] }),
+		/invalid number of bins for a region/,
+		'rejects a region with a width of 0'
+	)
+	test.throws(
+		() => validateBinTotal({ rglst: [region, { ...region, width: 'a' }] }),
+		/invalid number of bins for a region/,
+		'rejects a later region with a width that is not a number'
+	)
+	test.throws(
 		() => validateBinTotal({ rglst: Array.from({ length: 11 }, () => region), dotplotfactor: 20 }),
 		/too many bins requested/,
 		'rejects regions that are within the limit alone but over it in total'

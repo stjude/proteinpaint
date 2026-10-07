@@ -402,7 +402,12 @@ function getNBins(q, r) {
 
 export function validateBinTotal(q) {
 	let totalBins = 0
-	for (const r of q.rglst) totalBins += getNBins(q, r)
+	for (const r of q.rglst) {
+		const n = getNBins(q, r)
+		// the summary worker requires a positive integer
+		if (!Number.isInteger(n) || n < 1) throw 'invalid number of bins for a region'
+		totalBins += n
+	}
 	if (totalBins > maxBins) throw 'too many bins requested'
 }
 
