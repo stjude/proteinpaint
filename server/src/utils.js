@@ -1,9 +1,5 @@
 import fs from 'fs'
 import net from 'net'
-import dns from 'dns'
-import http from 'http'
-import https from 'https'
-import zlib from 'zlib'
 import path from 'path'
 import { spawn } from 'child_process'
 import readline from 'readline'
@@ -14,7 +10,6 @@ import serverconfig from './serverconfig.js'
 import { cacheUrlProtocols } from './CacheManager.ts'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
-import { text as streamText } from 'stream/consumers'
 import { minimatch } from 'minimatch'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
@@ -59,7 +54,7 @@ validateRglst
 
 // reading a file from a url makes the server fetch a caller-supplied url and may save the downloaded index
 // under cachedir, so it is off by default; enable with serverconfig.features.ALLOW_remotefilefromurl=true
-// on environments that support remote files, e.g. custom tracks by url; the /urltextfile route is also only set with it
+// on environments that support remote files, e.g. custom tracks by url
 const remoteFileNotAllowed = 'Remote file not supported on this server.'
 
 /*
@@ -357,108 +352,6 @@ function parseUrlHost(u) {
 function isNonPublicIp(ip) {
 	const ipType = net.isIP(ip)
 	return ipType != 0 && nonPublicIps.check(ip, ipType == 4 ? 'ipv4' : 'ipv6')
-}
-
-/*
-	u: a url that the server will fetch itself, such as for the /urltextfile route; fetch it with
-	  requestRemoteUrl(), which also checks the addresses that a hostname resolves to
-	skipHostCheck: true only for a url of this server (under serverconfig.URL), whose host may be
-	  localhost or not listed in serverconfig.urlHosts; the url syntax is still checked
-
-	returns an error message if the url is not an http(s) url with an allowed host, see test_url() and illegalUrlHost(),
-	or undefined if allowed
-*/
-export function checkRemoteUrl(u, skipHostCheck = false) {
-	if (typeof u != 'string') return 'url must be a string'
-	const [e, protocol] = test_url(u)
-	if (e) return e
-	if (protocol != 'http' && protocol != 'https') return 'protocol must be http or https'
-	if (skipHostCheck) return parseUrlHost(u)[0] || undefined
-	return illegalUrlHost(u)
-}
-
-/*
-	resolve: a dns.lookup()-like function, only replaced in tests
-
-	returns a lookup function for http(s) requests that fails when a hostname resolves to any address that is
-	not globally reachable, see nonPublicIps. As the check runs on the addresses that the request connects to,
-	a hostname that is changed to resolve to an internal address after checkRemoteUrl() (dns rebinding) is
-	rejected as well. When serverconfig.urlHosts is set, a listed host is allowed even if it is not public, as in
-	illegalUrlHost(), so the addresses are not checked. A literal ip address is not looked up, and is checked
-	by illegalUrlHost() instead.
-*/
-export function makePublicAddressLookup(resolve = dns.lookup) {
-	return function (hostname, options, callback) {
-		if (typeof options == 'function') {
-			callback = options
-			options = {}
-		}
-		resolve(hostname, { ...options, all: true }, (err, addresses) => {
-			if (err) return callback(err)
-			if (!serverconfig.urlHosts) {
-				for (const a of addresses) {
-					if (isNonPublicIp(a.address)) {
-						const e = new Error('url host resolves to an address that is not allowed')
-						e.code = 'ENOTPUBLIC'
-						return callback(e)
-					}
-				}
-			}
-			if (options.all) return callback(null, addresses)
-			if (!addresses.length) return callback(Object.assign(new Error('no address'), { code: 'ENOTFOUND' }))
-			callback(null, addresses[0].address, addresses[0].family)
-		})
-	}
-}
-export const publicAddressLookup = makePublicAddressLookup()
-
-// same as the ky default, since requestRemoteUrl() replaced ky for urls fetched on behalf of a request
-const remoteUrlTimeout = 10000
-
-/*
-	url: a url that passed checkRemoteUrl()
-	opts{}
-	.lookup: see makePublicAddressLookup(), only replaced in tests
-	.timeout: ms, only replaced in tests
-
-	returns a promise of the http.IncomingMessage of a GET request, without following a redirect. The request is
-	rejected if it connects to a hostname that resolves to a non-public address, or if the response headers have
-	not all arrived within the timeout, as ky would do, since a server could otherwise keep the request pending by
-	sending a header byte at a time. After the headers, the response is destroyed if it is idle for the timeout.
-	Read the body with readResponseText(), or call res.destroy() to discard it.
-*/
-export function requestRemoteUrl(url, opts = {}) {
-	const { lookup = publicAddressLookup, timeout = remoteUrlTimeout } = opts
-	return new Promise((resolve, reject) => {
-		const u = new URL(url)
-		const client = u.protocol == 'https:' ? https : http
-		const req = client.get(u, { lookup, timeout, headers: { 'accept-encoding': 'gzip, deflate, br' } }, res => {
-			clearTimeout(headersTimer)
-			resolve(res)
-		})
-		const headersTimer = setTimeout(() => req.destroy(new Error('response headers timed out')), timeout)
-		req.on('timeout', () => req.destroy(new Error('request timed out')))
-		req.on('error', e => {
-			clearTimeout(headersTimer)
-			reject(e)
-		})
-	})
-}
-
-// returns the utf8 text of a response from requestRemoteUrl(), decompressed as ky would do
-export async function readResponseText(res) {
-	const encoding = (res.headers['content-encoding'] || '').trim().toLowerCase()
-	const decoder =
-		encoding == 'gzip' || encoding == 'x-gzip'
-			? zlib.createGunzip()
-			: encoding == 'deflate'
-			? zlib.createInflate()
-			: encoding == 'br'
-			? zlib.createBrotliDecompress()
-			: null
-	if (!decoder) return await streamText(res)
-	const [text] = await Promise.all([streamText(decoder), pipeline(res, decoder)])
-	return text
 }
 
 // true if file resolves strictly inside dir
