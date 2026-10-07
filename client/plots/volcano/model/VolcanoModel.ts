@@ -212,10 +212,7 @@ export class VolcanoModel {
 			devicePixelRatio: (typeof window !== 'undefined' ? window.devicePixelRatio : 1) * 2
 		}
 
-		/* Splicing always plots delta_psi and offers no axis choice, because a log2 fold change of
-		a PSI ratio is not a quantity anyone reads. Applied as an override on the object above
-		rather than as another arm of the ternaries inside it, so the gene-expression and
-		methylation paths are left exactly as they were. */
+		// Splicing always plots delta_psi
 		if (this.termType === tt.JUNCTION) {
 			render.xField = 'delta_psi'
 			render.significanceThresholds.foldChangeCutoff = this.settings.deltaPsiCutoff
