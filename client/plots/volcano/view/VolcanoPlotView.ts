@@ -324,8 +324,6 @@ export class VolcanoPlotView {
 		this.setSvgSubscriptLabel(this.volcanoDom.yAxisLabel, '-log', '10', `(${this.viewData.pValueLabel})`)
 
 		this.volcanoDom.xAxisLabel.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
-		/* The axis must name what it is actually plotting. Delta-beta has no subscript, so it is
-		written as plain text rather than forced through the log-subscript helper. */
 		if (this.termType === tt.JUNCTION) {
 			/* Splicing always plots delta-PSI, so it never goes through the log-subscript helper.
 			Prefer the group-named form for the same reason methylation does: case/control are slot
