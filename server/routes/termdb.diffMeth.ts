@@ -17,7 +17,6 @@ import { renderManhattanPoints } from '../src/renderManhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import {
-	anyFromFilter,
 	buildGroupValues,
 	canonicalizeSamplelst,
 	resolveDaContext,
@@ -566,11 +565,7 @@ export async function resolveDmSampleGroups(
 	if (g2.names.length < 1) alerts.push('No samples in group 2 have methylation data available.')
 	const commonnames = g1.names.filter(x => g2.names.includes(x))
 	if (commonnames.length)
-		alerts.push(
-			`${commonnames.length} sample(s) appear in both groups${
-				anyFromFilter(groups) ? '' : ': ' + commonnames.join(', ')
-			}. Please remove duplicates.`
-		)
+		alerts.push(`${commonnames.length} sample(s) appear in both groups. Please remove duplicates.`)
 
 	return {
 		group1names: g1.names,

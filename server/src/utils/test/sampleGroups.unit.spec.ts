@@ -12,7 +12,6 @@ import {
 	resolveGroups,
 	resolveGroupPair,
 	withResolvedGroups,
-	describeCommonSamples,
 	maxFilterGroups
 } from '#src/utils/sampleGroups.ts'
 import { getData } from '#src/termdb.matrix.js'
@@ -54,7 +53,6 @@ resolveGroups refuses more filter groups than its limit
 resolveGroups takes a filter with a non-dictionary term only from a method that applies the whole filter
 getData holds the samplelst terms of a request to the limit of filter groups together
 withResolvedGroups gives a request the samples of its groups, for a cache key by samples
-describeCommonSamples gives names for groups that list their samples, and a number for a group that came as a filter
 resolveGroupPair takes each group as a list or as a filter
 */
 
@@ -699,38 +697,6 @@ tape('withResolvedGroups gives a request the samples of its groups, for a cache 
 	t.equal(await withResolvedGroups(none, ds), none, 'and so is a request without groups')
 	t.end()
 })
-
-tape(
-	'describeCommonSamples gives names for groups that list their samples, and a number for a group that came as a filter',
-	async t => {
-		const { ds } = countingDs()
-		const listed = [
-			{ name: 'a', in: true, values: [{ sampleId: 1 }] },
-			{ name: 'b', in: true, values: [{ sampleId: 1 }] }
-		]
-		t.equal(describeCommonSamples(['s1', 's2'], listed), 's1, s2', 'names for two groups that list their samples')
-		const [byFilter] = filterGroups(1)
-		t.equal(
-			describeCommonSamples(['s1', 's2'], [listed[0], byFilter]),
-			'2 samples',
-			'a number for a group that is a filter'
-		)
-		const resolved = await resolveGroups([listed[0], byFilter], {}, ds)
-		t.ok(Array.isArray(resolved[1].values) && !resolved[1].filter, 'a resolved group lists its samples')
-		t.equal(
-			describeCommonSamples(['s1', 's2'], resolved),
-			'2 samples',
-			'and a number for a group that was resolved from a filter'
-		)
-		// as a two-group analysis has it after withResolvedGroups(): the groups are resolved again, and returned as they are
-		t.equal(
-			describeCommonSamples(['s1'], await resolveGroups(resolved, {}, ds)),
-			'1 samples',
-			'also after the groups pass through resolveGroups() a second time'
-		)
-		t.end()
-	}
-)
 
 tape('resolveGroupPair takes each group as a list or as a filter', async t => {
 	const tdb = await ensureSharedTdb()

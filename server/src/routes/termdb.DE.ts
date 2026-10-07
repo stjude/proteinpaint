@@ -10,7 +10,6 @@ import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import {
 	buildGroupValues,
 	canonicalizeSamplelst,
-	describeCommonSamples,
 	resolveDaContext,
 	resolveGroups,
 	withResolvedGroups,
@@ -415,8 +414,7 @@ export async function resolveSampleGroups(
 	if (g1.names.length < 1) alerts.push('sample size of group1 < 1')
 	if (g2.names.length < 1) alerts.push('sample size of group2 < 1')
 	const commonnames = g1.names.filter(x => g2.names.includes(x))
-	if (commonnames.length)
-		alerts.push(`Common elements found between both groups: ${describeCommonSamples(commonnames, groups)}`)
+	if (commonnames.length) alerts.push(`Common elements found between both groups: ${commonnames.length} samples`)
 
 	return {
 		group1names: g1.names,

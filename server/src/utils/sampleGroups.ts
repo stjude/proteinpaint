@@ -242,8 +242,8 @@ export const isFilterGroup = (g: any) => !Array.isArray(g?.values) && !!g?.filte
 
 /** Sample groups, of a samplelst term or of a two-group analysis, with their samples listed.
  * A group either lists its samples in `values`, and is returned as it is, or is defined by a
- * `filter`, and is returned as a copy with the `values` that the filter selects for this request,
- * with `fromFilter` set and without the filter. The request's groups are not modified, so that a cache key made from
+ * `filter`, and is returned as a copy with the `values` that the filter selects for this request
+ * and without the filter. The request's groups are not modified, so that a cache key made from
  * them is the same before and after.
  *
  * The list of a filter is kept in the samplelst cache, by the filter and by the dataset's sample
@@ -288,20 +288,10 @@ export async function resolveGroups(groups: any, q: any, ds: any): Promise<any[]
 					g.mapParent2Children
 				)
 		})
-		resolved.push({ ...rest, in: true, values: result.map(sampleId => ({ sampleId })), fromFilter: true })
+		resolved.push({ ...rest, in: true, values: result.map(sampleId => ({ sampleId })) })
 	}
 	return resolved
 }
-
-/** The samples that are in both groups of a two-group analysis, for the text of an alert: their
- * names when the request listed the samples of both groups, and their number when a group came as
- * a filter. `groups` are the groups as resolveGroups() returns them. */
-export function describeCommonSamples(common: string[], groups: any[]): string {
-	return anyFromFilter(groups) ? `${common.length} samples` : common.join(', ')
-}
-
-/** True when a group of a two-group analysis came as a filter. */
-export const anyFromFilter = (groups: any[]) => groups.some(g => g?.fromFilter || isFilterGroup(g))
 
 /** A two-group analysis request with the samples of its samplelst groups listed, for a cache key
  * that is made from the samples of the groups: the result of an analysis is then kept for the

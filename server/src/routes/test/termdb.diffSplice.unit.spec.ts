@@ -99,7 +99,7 @@ tape('resolveDsSampleGroups lists the samples of a group that is defined by a fi
 	t.deepEqual(
 		out.alerts,
 		['Common samples found between both groups: 1 samples'],
-		'the number of shared samples for filter groups'
+		'the number of shared samples, for filter groups'
 	)
 
 	out = await resolveDsSampleGroups(
@@ -114,8 +114,8 @@ tape('resolveDsSampleGroups lists the samples of a group that is defined by a fi
 	)
 	t.deepEqual(
 		out.alerts,
-		['Common samples found between both groups: s2'],
-		'their names for groups that list their samples'
+		['Common samples found between both groups: 1 samples'],
+		'and for groups that list their samples'
 	)
 	t.end()
 })
