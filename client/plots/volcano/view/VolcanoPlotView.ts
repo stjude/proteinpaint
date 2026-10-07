@@ -803,11 +803,7 @@ export class VolcanoPlotView {
 		}).attach()
 	}
 
-	/** Whether the effect size on show is delta-beta rather than log2 fold-change. Methylation
-	 * fold-change is a difference of logits: it ranks elements correctly but says nothing about
-	 * how much methylation moved, so it must not be what a reader is handed next to a delta-beta
-	 * axis. Read by both hover paths -- the single-point tooltip and the multi-point table -- so
-	 * the two cannot disagree about which number they show. */
+	/** Multi-hit hover table for differential splicing: one row per intron cluster. */
 	private get onDeltaBeta() {
 		return this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
 	}
