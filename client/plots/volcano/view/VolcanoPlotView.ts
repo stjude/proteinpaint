@@ -808,13 +808,7 @@ export class VolcanoPlotView {
 		return this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
 	}
 
-	/** Multi-hit hover table for differential splicing. A separate method rather than more arms
-	 * inside buildMultiHitTable, so the gene-expression, methylation and DAP paths there are
-	 * untouched.
-	 *
-	 * The row is an intron cluster, not a gene: `genes` is plural because a cluster may span
-	 * several or none, and the effect size is \u0394PSI, since a splicing row carries no
-	 * fold_change at all. */
+
 	private buildSpliceMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
 		const { pValueLabel, singlePValue } = this.viewData
 		const pLabel = pValueLabel.charAt(0).toUpperCase() + pValueLabel.slice(1)
@@ -836,11 +830,7 @@ export class VolcanoPlotView {
 		return { columns, rows }
 	}
 
-	/** Single-point hover rows for differential splicing.
-	 *
-	 * Reached by an early return from addTooltipRows so that method's existing chain is left
-	 * exactly as it was. The p-value rows below duplicate the ones there rather than sharing
-	 * them, which is the price of not restructuring that method; keep the two in step. */
+	// p-value rows duplicate those in addTooltipRows
 	private addSpliceTooltipRows(d: DataPointEntry, table: any) {
 		const c = d as any
 		addTooltipRow(table, 'Cluster', c.cluster_id)
