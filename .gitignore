@@ -61,6 +61,7 @@ public/docs/*/*
 public/docs/readme.json
 public/docs/server-api.json
 public/testrunData/*
+client/test/testrunData/*
 public/coverage/**/*
 !public/coverage/*.*
 !public/coverage/commitRef

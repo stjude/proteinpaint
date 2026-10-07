@@ -87,6 +87,33 @@ tape('ReqResCache instance', test => {
 			)
 		}
 	}
+	{
+		// a request path must not resolve the cache subdir outside of the cache dir
+		test.throws(
+			() => new ReqResCache({ path: '/..', query: { y: 1 } }).getLoc(cachedir),
+			/outside of the cache dir/,
+			`should reject a request path of '/..'`
+		)
+		for (const reqPath of ['/.', '/', '/../x']) {
+			const loc = new ReqResCache({ path: reqPath, query: { y: 1 } }).getLoc(cachedir)
+			test.true(loc.file.startsWith(`${cachedir}/`), `should keep the cache file for '${reqPath}' in the cache dir`)
+		}
+		// the cache dir may be a filesystem root, whose path already ends with a separator
+		const rootLoc = new ReqResCache({ path: '/termdb/abc', query: { y: 1 } }, { mode: 'test' }).getLoc(
+			path.parse(cachedir).root
+		)
+		test.true(
+			rootLoc.file.startsWith(`${path.parse(cachedir).root}termdb.abc/`),
+			'should accept a subdir of a root cachedir'
+		)
+		// there is nothing above a root, so '/..' stays at the root
+		const rootUpLoc = new ReqResCache({ path: '/..', query: { y: 1 } }).getLoc(path.parse(cachedir).root)
+		test.equal(
+			path.dirname(rootUpLoc.file),
+			path.parse(cachedir).root.replace(/\/$/, '') || '/',
+			'should keep a /.. request at the root cachedir'
+		)
+	}
 	fs.rmSync(cachedir, { recursive: true })
 	test.end()
 })
