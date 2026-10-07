@@ -408,7 +408,7 @@ function mayWrapResponseSend(cachedir, req, res) {
 			try {
 				await cache.write({ header: { status: 200 }, body })
 			} catch (e) {
-				console.log(`could not cache the ${req.path} response:`, e.message || e)
+				console.log('could not cache the %s response:', req.path, e.message || e)
 			}
 		}
 		send.call(this, body)
