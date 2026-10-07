@@ -325,9 +325,6 @@ export class VolcanoPlotView {
 
 		this.volcanoDom.xAxisLabel.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
 		if (this.termType === tt.JUNCTION) {
-			/* Splicing always plots delta-PSI, so it never goes through the log-subscript helper.
-			Prefer the group-named form for the same reason methylation does: case/control are slot
-			names and do not say which direction a positive value points. */
 			this.volcanoDom.xAxisLabel.selectAll('*').remove()
 			this.volcanoDom.xAxisLabel.text(this.viewData.deltaPsiAxisLabel || '\u0394PSI (case \u2212 control)')
 		} else if (this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta') {
@@ -807,7 +804,6 @@ export class VolcanoPlotView {
 	private get onDeltaBeta() {
 		return this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
 	}
-
 
 	private buildSpliceMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
 		const { pValueLabel, singlePValue } = this.viewData

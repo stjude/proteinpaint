@@ -15,10 +15,8 @@ import type { ValidatedVolcanoSettings } from './settings/Settings'
 
 /** Attributes are added in the view model
  * to the response data for rendering. */
-/* DiffSpliceEntry is deliberately NOT a member: a splicing row keys on cluster_id and carries
-`genes` (plural) rather than gene_name, so adding it would remove gene_name from the union's
-common properties and break every existing accessor in the view. Splicing rows are read through
-`as any` at the few places that touch them. */
+// DiffSpliceEntry is left out because it has no gene_name, which would break the view's
+// accessors; splicing rows are read with `as any` instead.
 export type DataPointEntry = (GeneDEEntry | DiffMethEntry | SingleCellDEEntry | DapEntry) & {
 	/** color indicating significance */
 	color: string
@@ -198,9 +196,8 @@ export type VolcanoViewData = {
 	 * plot. undefined when group names are unavailable; the view then falls back to the
 	 * role-based "Δβ (case − control)". */
 	deltaBetaAxisLabel?: string
-	/** Splicing only: the \u0394PSI axis label, naming the two groups in subtraction order
-	 * (e.g. "\u0394PSI (Relapse \u2212 Diagnosis)"). undefined when group names are unavailable;
-	 * the view then falls back to the role-based "\u0394PSI (case \u2212 control)". */
+	/** ΔPSI axis label naming the two groups, like deltaBetaAxisLabel.
+	 * Splicing only. */
 	deltaPsiAxisLabel?: string
 	/** Base64-encoded PNG of the full scatter, rendered by the `da` Rust binary. */
 	volcanoPng: string

@@ -48,24 +48,13 @@ export type DmCacheResult = {
 
 /** ds/{cacheid}.json. Carries the intron-cluster rows and sample sizes —
  * enough for the volcano response on either a fresh run or a cache hit
- * without reopening the cohort h5.
- *
- * Rows are deliberately engine-independent: edgeR's diffSpliceDGE and the
- * leafcutter DM model have different native granularities (per-exon vs
- * per-cluster), and both are normalized to the cluster before they get
- * here, so nothing downstream branches on which engine ran. */
+ * without reopening the cohort h5. */
 export type DsCacheResult = {
 	clusterRows: DiffSpliceEntry[]
 	sample_size1: number
 	sample_size2: number
-	/** the engine that actually ran, which may differ from the requested one.
-	 * Stored rather than recomputed from the request so a cache hit reports
-	 * the same method the fresh run did — `method` is part of the cache key,
-	 * but `pickDsEngine` may have overridden it before the compute. */
 	method: DiffSpliceMethod
-	/** clusters dropped before testing, keyed by reason, as the engine
-	 * reported them. Used to tell "nothing was significant" apart from
-	 * "almost nothing was tested", which otherwise look identical. */
+	// clusters dropped before testing, keyed by reason, as the engine reported them
 	skipped?: { [reason: string]: number }
 }
 

@@ -475,12 +475,7 @@ export class VolcanoControlInputs {
 		this.inputs.splice(0, 0, ...dsInputs)
 	}
 
-	/** The engines offered for differential splicing.
-	 *
-	 * One entry renders a single preselected radio, which is deliberate rather than wasteful: it
-	 * names the engine that ran, so a saved figure is attributable, and it is the one place
-	 * leafcutter appends once diffSpliceLeafcutter.py lands. Gene expression already ships the
-	 * same one-option shape on large cohorts, where only Wilcoxon is offered. */
+	// only edgeR is wired; add leafcutter here later
 	getSpliceMethodOptions() {
 		if (this.termType !== JUNCTION) return
 		return [{ label: 'edgeR (diffSplice)', value: 'edgeR' }]

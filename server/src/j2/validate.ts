@@ -218,9 +218,8 @@ export async function validate_query_junction(ds: any, genome: any) {
 	await validate_junction_cluster(ds, q)
 }
 
-/* Intron clusters for differential splicing, an h5 that sits beside the junction tabix file.
-The two describe the same junctions, which is what lets a differential splicing hit be shown on
-the junction track. allSampleSet is read by the diffSplice route. */
+/* Intron clusters for differential splicing: an h5 beside the junction tabix file.
+allSampleSet is read by the diffSplice route. */
 async function validate_junction_cluster(ds: any, junctionQ: any) {
 	const q = junctionQ.cluster
 	if (!q) return

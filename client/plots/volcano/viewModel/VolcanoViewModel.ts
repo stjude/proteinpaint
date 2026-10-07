@@ -162,10 +162,7 @@ export class VolcanoViewModel {
 		return `Δβ${centered} (${shortenGroupName(cases)} − ${shortenGroupName(control)})`
 	}
 
-	/** The x-axis label for splicing, naming the two groups in subtraction order so the direction
-	 * of a positive ΔPSI is readable off the plot. Mirrors setDeltaBetaAxisLabel() rather than
-	 * extending it, so the methylation label is untouched. Returns undefined when the group names
-	 * are unavailable; the view then falls back to the role-based wording. */
+	// same as setDeltaBetaAxisLabel, for ΔPSI
 	setDeltaPsiAxisLabel(): string | undefined {
 		const groups = this.config?.samplelst?.groups
 		const control = groups?.[0]?.name
@@ -765,14 +762,7 @@ export class VolcanoViewModel {
 				{ label: 'Gene(s)', sortable: true }
 			)
 		} else if (this.termType == tt.JUNCTION) {
-			/* The effect size is \u0394PSI, not a log2 fold change -- a splicing row carries no
-			fold_change at all. Relabelled in place rather than by branching where the base column
-			set is built, so the shared constructor is left alone. */
 			this.pValueTable.columns[0].label = '\u0394PSI'
-			/* The two group PSIs follow it, because a \u0394PSI of 0.2 means something different at
-			0.1\u21920.3 than at 0.7\u21920.9, and the junction count says how much structure the
-			cluster has. Inserted at 1 BEFORE the Cluster/Gene prefix shifts indices -- setPointData
-			splices its cells in the same order for the same reason. */
 			this.pValueTable.columns.splice(
 				1,
 				0,

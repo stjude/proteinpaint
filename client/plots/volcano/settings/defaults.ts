@@ -151,9 +151,9 @@ function validateDSSettings(termType: string, settings: DSVolcanoSettings | unde
 	}
 }
 
-/** Default leafcutter -i/-g for a run of n samples: a floor plus a fraction of n. Pass the number
- * of samples that will actually be tested -- the eligible pre-analysis count -- not the raw
- * selection, or the thresholds can exceed the groups and filter out every cluster. */
+/** Default sample thresholds for n samples: max(5, 2% of n) per intron and max(3, 1% of n)
+ * per group. n should be the number of samples with splicing data; a larger raw count can
+ * push the thresholds above the group sizes and drop every cluster. */
 export function scaleDsFilters(n: number): { minSamplesPerIntron: number; minSamplesPerGroup: number } {
 	return {
 		minSamplesPerIntron: Math.max(5, Math.round(n * 0.02)),
