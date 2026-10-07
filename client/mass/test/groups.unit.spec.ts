@@ -6,7 +6,8 @@ import {
 	getSamplelstTWFromIds,
 	getSamplelstTWFromFilters,
 	getGroupFilterEntry,
-	getGroupForRegion
+	getGroupForRegion,
+	getOthersGroup
 } from '../groups'
 
 /**
@@ -405,5 +406,38 @@ tape('groups getGroupForRegion()', test => {
 		'a group defined by a filter is its filter, with its cohort filter and sample level'
 	)
 	test.deepEqual(getGroupForRegion({ name: 'a' }), [], 'a group with neither has no samples')
+	test.end()
+})
+
+tape('groups getOthersGroup()', test => {
+	test.timeoutAfter(100)
+
+	const placeholder = { name: 'Not in a', in: false, values: [{ sampleId: 1, sample: 's1' }, { sampleId: 2 }] }
+	const cohort = { type: 'tvs', tvs: { term: { id: 'sex', type: 'categorical' }, values: [{ key: '1' }] } }
+	const group: any = getOthersGroup(placeholder, {
+		filter: { type: 'tvslst', in: true, join: '', lst: [cohort] },
+		filter0: null
+	})
+	test.equal(group.values, undefined, 'the group lists no sample')
+	test.equal(group.in, true, 'the group is not a placeholder')
+	test.equal(group.filter0, null, 'the group carries the cohort filter that it was made with')
+	test.equal(group.filter.join, 'and', 'its filter joins two entries')
+	const [notListed, inCohort] = group.filter.lst
+	test.equal(notListed.tvs.isnot, true, 'the first entry excludes')
+	test.deepEqual(
+		Object.values(notListed.tvs.term.values).flatMap((v: any) => v.list.map(i => i.sampleId)),
+		[1, 2],
+		'the samples that the placeholder lists'
+	)
+	test.deepEqual(inCohort, cohort, 'the second entry is the filter of the app')
+	test.deepEqual(
+		getGroupForRegion(group),
+		{ filter: group.filter, filter0: null, mapParent2Children: undefined },
+		'a region request takes it as a filter'
+	)
+
+	const alone: any = getOthersGroup(placeholder, { filter: { type: 'tvslst', in: true, join: '', lst: [] } })
+	test.equal(alone.filter.lst.length, 1, 'without a filter of the app, the filter only excludes the listed samples')
+	test.notOk('filter0' in alone, 'and the group carries no cohort filter')
 	test.end()
 })

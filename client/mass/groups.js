@@ -337,19 +337,9 @@ function mayAddBrainImagingOption(menuDiv, self, samplelstTW) {
 			const seen = new Set()
 			const sampleNames = []
 			let listedItemCount = 0
-			const lists = Object.values(samplelstTW.term.values)
-				.filter(grp => grp.in !== false)
-				.map(grp => grp.list || [])
-			/* a group defined by a filter lists no sample, and this needs the names of its samples
-			to match them with the imaging files: request them. the names come back only where they
-			may be shown, as for a listed sample */
-			for (const grp of samplelstTW.q.groups) {
-				if (Array.isArray(grp.values) || !grp.filter) continue
-				const samples = await self.app.vocabApi.getFilteredSampleList(grp.filter, grp.filter0, grp.mapParent2Children)
-				lists.push(samples.map(s => ({ sampleId: s.id, sample: s.name })))
-			}
-			for (const list of lists) {
-				for (const item of list) {
+			for (const grp of Object.values(samplelstTW.term.values)) {
+				if (grp.in === false) continue
+				for (const item of grp.list || []) {
 					listedItemCount++
 					if (!item.sample || seen.has(item.sample)) continue
 					seen.add(item.sample)
@@ -661,22 +651,13 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			.on('click', async () => {
 				const groups = []
 				for (const group of samplelstTW.q.groups) {
-					if (groupHasSamples(group)) groups.push({ ...group })
-					else throw 'group does not contain samples for differential analysis'
+					if (!groupHasSamples(group)) throw 'group does not contain samples for differential analysis'
+					/* "One group vs everyone else" arrives as a second group with in:false whose values repeat
+					the first group's -- a placeholder. The region route takes a group literally, so send the
+					group that the placeholder stands for, or the first group is compared with itself. */
+					groups.push(group.in === false ? getOthersGroup(group, self.state.termfilter) : { ...group })
 				}
 				if (groups.length != 2) throw 'exactly 2 groups are required for region analysis'
-				/* "One group vs everyone else" arrives as a second group with in:false whose values repeat
-				the first group's -- a placeholder the volcano expands in VolcanoModel.getOtherSamples.
-				The region route takes the values literally, so expand it the same way here or the
-				group is compared with itself. */
-				const others = groups.find(g => g.in === false)
-				if (others) {
-					const inIds = new Set(groups.find(g => g !== others).values.map(v => v.sampleId))
-					others.values = (await self.app.vocabApi.getFilteredSampleList(self.state.termfilter.filter))
-						.filter(s => !inIds.has(s.id))
-						.map(s => ({ sampleId: s.id, sample: s.name }))
-					others.in = true
-				}
 				// the picker's colours, as the volcano's launcher carries them (groupColors)
 				const colors = {}
 				const c1 = samplelstTW.term.values?.[groups[0].name]?.color
@@ -1558,6 +1539,17 @@ export function getGroupForRegion(group) {
 	if (!group.filter) return []
 	const { filter, filter0, mapParent2Children } = group
 	return { filter, filter0, mapParent2Children }
+}
+
+/* The group that an in:false placeholder stands for: the samples of the cohort that the placeholder
+does not list, as a filter that the server resolves.
+termfilter: {filter, filter0} of the app state */
+export function getOthersGroup(group, termfilter) {
+	const notListed = getSamplelstFilter(group.values.map(v => v.sampleId))
+	notListed.lst[0].tvs.isnot = true
+	const others = { name: group.name, in: true, filter: filterJoin([notListed, termfilter.filter]) }
+	if (termfilter.filter0 !== undefined) others.filter0 = termfilter.filter0
+	return others
 }
 
 /* A samplelst tw whose groups are each defined by a filter.
