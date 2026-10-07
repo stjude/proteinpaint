@@ -117,7 +117,8 @@ export function init({ genomes }) {
 				aiFilesDir,
 				chatSupportedPlotTypes,
 				allowedTermTypes,
-				genome
+				genome,
+				q.__protected__
 			)
 			mayLog('From init: Final AI output JSON:', JSON.stringify(ai_output_json))
 			res.send(ai_output_json as ChatResponse)
@@ -136,7 +137,9 @@ export async function run_chat_pipeline(
 	aiFilesDir: string,
 	supportedPlotTypes: string[],
 	allowedTermTypes: string[],
-	genome: any
+	genome: any,
+	/** the q.__protected__ of the request, which a dataset with a sample filter requires */
+	__protected__?: any
 	// testing: boolean
 ) {
 	// Read main.json file
@@ -278,7 +281,7 @@ export async function run_chat_pipeline(
 		mayLog('####### Fifth/Final phase: From TwTvs Objects to Plot States #######')
 		mayLog('#################################################')
 		time = new Date().valueOf()
-		ai_output_json = await resolveToPlotState(twTvsObj, plotType, ds, subplotType)
+		ai_output_json = await resolveToPlotState(twTvsObj, plotType, ds, subplotType, __protected__)
 		mayLog('Time taken to resolve to plot state:', formatElapsedTime(Date.now() - time))
 		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
 		// are present in the dataset and compatible with the plot type, and if not return an error message to the user.

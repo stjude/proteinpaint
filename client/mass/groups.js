@@ -38,6 +38,8 @@ this
 */
 
 const colorScale = getColors(5)
+// the most groups that one variable is made from: their overlap is found from every pair of them
+export const maxGroupsPerVariable = 20
 
 class MassGroups {
 	static type = 'groups'
@@ -83,66 +85,61 @@ class MassGroups {
 		return f
 	}
 
+	/* Makes a samplelst tw from the selected groups, each of which is defined by a filter. The tw
+	carries the filters and lists no sample: the server resolves the samples of a group where they
+	are needed. Only sample counts are requested here. */
 	async groups2samplelst(groups) {
-		const samplelstGroups = []
-		const processedSamples = new Set(),
-			overlap = []
-		for (const g of groups) {
-			// filter0 must be passed: api-backed datasets (gdc) scope every query by the portal cohort
-			// filter, and without it this enumerates the entire dataset -- wrong numbers, and slow
-			const samples = await this.app.vocabApi.getFilteredSampleList(
-				filterJoin([g.filter, this.state.termfilter.filter]),
-				this.state.termfilter.filter0
-			)
-
-			const items = []
-			for (const sample of samples) {
-				const item = { sampleId: sample.id }
-				if ('name' in sample) {
-					item.sample = sample.name
-				}
-				//items.push(item)
-				if (!processedSamples.has(sample.id)) items.push(item)
-				else {
-					for (const pg of samplelstGroups) {
-						//if (pg.name === g.name) continue
-						const i = pg.items.findIndex(i => i.sampleId === sample.id)
-						if (i !== -1) overlap.push(...pg.items.splice(i, 1))
-					}
-				}
-				processedSamples.add(item.sampleId)
-			}
-			if (items.length) samplelstGroups.push({ name: g.name, items, color: g.color })
+		if (groups.length > maxGroupsPerVariable) throw `A variable can be made from up to ${maxGroupsPerVariable} groups`
+		// filter0 must be passed: api-backed datasets (gdc) scope every query by the portal cohort
+		// filter, and without it a count is over the entire dataset -- wrong numbers, and slow
+		const filter0 = this.state.termfilter.filter0
+		/* the count comes as text for display, such as "39 patients"; read its number.
+		undefined when it has none, and the size of the group is then not known */
+		const count = async filter => {
+			const n = Number.parseInt(await this.app.vocabApi.getFilteredSampleCount(filter, filter0))
+			return Number.isFinite(n) ? n : undefined
 		}
+		const lst = groups.map(g => ({
+			name: g.name,
+			color: g.color,
+			filter: filterJoin([g.filter, this.state.termfilter.filter])
+		}))
 
-		if (overlap.length) {
-			const ok = confirm(
-				'Overlap detected: 1 or more samples belong to >1 groups. A new group will be created for these "overlap" samples.'
-			)
-			if (!ok) return
-			samplelstGroups.push({ name: 'Group overlap', items: overlap })
+		if (lst.length > 1) {
+			// the samples that belong to more than one group: those of any two groups together
+			const pairs = []
+			for (const [i, g] of lst.entries()) {
+				for (const g2 of lst.slice(i + 1)) pairs.push(filterJoin([g.filter, g2.filter]))
+			}
+			const overlap = pairs.length == 1 ? pairs[0] : { type: 'tvslst', in: true, join: 'or', lst: pairs }
+			if (await count(overlap)) {
+				const ok = confirm(
+					'Overlap detected: 1 or more samples belong to >1 groups. A new group will be created for these "overlap" samples.'
+				)
+				if (!ok) return
+				const notOverlap = { ...overlap, in: false }
+				for (const g of lst) g.filter = filterJoin([g.filter, notOverlap])
+				lst.push({ name: 'Group overlap', filter: overlap })
+			}
 		}
 
 		if (groups.length == 1) {
-			/* request rest of samples not in this single group, to form group2
-			 */
-			const samples = await this.app.vocabApi.getFilteredSampleList(
-				filterJoin([negateFilter(groups[0].filter), this.state.termfilter.filter]),
-				this.state.termfilter.filter0
-			)
-			if (!samples.length) throw '0 samples for the other group'
-			const items = []
-			for (const sample of samples) {
-				const item = { sampleId: sample.id }
-				if ('name' in sample) {
-					item.sample = sample.name
-				}
-				items.push(item)
-			}
-			samplelstGroups.push({ name: 'Not in ' + groups[0].name, items, color: '#ccc' })
+			// the rest of samples not in this single group, to form group2
+			lst.push({
+				name: 'Not in ' + groups[0].name,
+				color: '#ccc',
+				filter: filterJoin([negateFilter(groups[0].filter), this.state.termfilter.filter])
+			})
 		}
 
-		return getSamplelstTW2(samplelstGroups)
+		for (const g of lst) {
+			g.sampleCount = await count(g.filter)
+			// the groups are resolved with the cohort filter that they are counted with here
+			if (filter0 !== undefined) g.filter0 = filter0
+		}
+		if (groups.length == 1 && lst[1].sampleCount === 0) throw '0 samples for the other group'
+		// a group without samples is left out
+		return getSamplelstTWFromFilters(lst.filter(g => g.sampleCount !== 0))
 	}
 
 	updateLaunchButton() {
@@ -340,9 +337,19 @@ function mayAddBrainImagingOption(menuDiv, self, samplelstTW) {
 			const seen = new Set()
 			const sampleNames = []
 			let listedItemCount = 0
-			for (const grp of Object.values(samplelstTW.term.values)) {
-				if (grp.in === false) continue
-				for (const item of grp.list || []) {
+			const lists = Object.values(samplelstTW.term.values)
+				.filter(grp => grp.in !== false)
+				.map(grp => grp.list || [])
+			/* a group defined by a filter lists no sample, and this needs the names of its samples
+			to match them with the imaging files: request them. the names come back only where they
+			may be shown, as for a listed sample */
+			for (const grp of samplelstTW.q.groups) {
+				if (Array.isArray(grp.values) || !grp.filter) continue
+				const samples = await self.app.vocabApi.getFilteredSampleList(grp.filter, grp.filter0, grp.mapParent2Children)
+				lists.push(samples.map(s => ({ sampleId: s.id, sample: s.name })))
+			}
+			for (const list of lists) {
+				for (const item of list) {
 					listedItemCount++
 					if (!item.sample || seen.has(item.sample)) continue
 					seen.add(item.sample)
@@ -421,12 +428,19 @@ function mayAddBrainImagingOption(menuDiv, self, samplelstTW) {
 	d.insert('div').html('›').style('float', 'right')
 }
 
+// a group of a samplelst tw lists its samples, or is defined by a filter that selected some
+function groupHasSamples(group) {
+	return group.values?.length > 0 || (!!group.filter && group.sampleCount !== 0)
+}
+
 function makeFiltersFromTwoSampleGroups(tw) {
 	const [g1, g2] = tw.q.groups
 	if (!g1 || !g2) throw 'not 2 groups in tw.q.groups[]'
-	return [
-		{
-			in: g1.in,
+	return [g1, g2].map(g => {
+		// a group defined by a filter is that filter
+		if (g.filter && !Array.isArray(g.values)) return structuredClone(g.filter)
+		return {
+			in: g.in,
 			join: '',
 			type: 'tvslst',
 			lst: [
@@ -434,44 +448,15 @@ function makeFiltersFromTwoSampleGroups(tw) {
 					type: 'tvs',
 					tvs: {
 						term: {
-							name: g1.name,
+							name: g.name,
 							type: 'samplelst',
-							values: {
-								[g1.name]: {
-									key: g1.name,
-									label: g1.name,
-									list: g1.values
-								}
-							}
-						}
-					}
-				}
-			]
-		},
-		{
-			in: g2.in,
-			join: '',
-			type: 'tvslst',
-			lst: [
-				{
-					type: 'tvs',
-					tvs: {
-						term: {
-							name: g2.name,
-							type: 'samplelst',
-							values: {
-								[g2.name]: {
-									key: g2.name,
-									label: g2.name,
-									list: g2.values
-								}
-							}
+							values: { [g.name]: { key: g.name, label: g.name, list: g.values } }
 						}
 					}
 				}
 			]
 		}
-	]
+	})
 }
 
 function mayAddSamplescatterOption(menuDiv, self, samplelstTW) {
@@ -526,7 +511,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 				//Do the check but not add to the state??
 				const groups = []
 				for (const group of samplelstTW.q.groups) {
-					if (group.values && group.values.length > 0) {
+					if (groupHasSamples(group)) {
 						groups.push(group)
 					} else {
 						throw 'group does not contain samples for differential analysis'
@@ -572,7 +557,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			.on('click', async () => {
 				const groups = []
 				for (const group of samplelstTW.q.groups) {
-					if (group.values && group.values.length > 0) {
+					if (groupHasSamples(group)) {
 						groups.push(group)
 					} else {
 						throw 'group does not contain samples for differential analysis'
@@ -676,7 +661,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			.on('click', async () => {
 				const groups = []
 				for (const group of samplelstTW.q.groups) {
-					if (group.values && group.values.length > 0) groups.push({ ...group })
+					if (groupHasSamples(group)) groups.push({ ...group })
 					else throw 'group does not contain samples for differential analysis'
 				}
 				if (groups.length != 2) throw 'exactly 2 groups are required for region analysis'
@@ -718,9 +703,10 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 									geneSearch.geneSymbol || `${geneSearch.chr}:${geneSearch.start}-${geneSearch.stop}`
 								}`,
 								coordinateOverride: { chr: geneSearch.chr, start: geneSearch.start, stop: geneSearch.stop },
-								// same shape the volcano hands over; the server resolves ids to sample names
-								group1: groups[0].values,
-								group2: groups[1].values,
+								// same shape the volcano hands over; the server resolves ids to sample names,
+								// and the filter of a group that is defined by one
+								group1: getGroupForRegion(groups[0]),
+								group2: getGroupForRegion(groups[1]),
 								group1Name: groups[0].name,
 								group2Name: groups[1].name,
 								...(Object.keys(colors).length ? { settings: { dmr: { colors } } } : {})
@@ -973,6 +959,10 @@ export function renderPreAnalysisData(arg) {
 				/* splicing filters scale with the samples that will actually be tested, which only the
 				pre-analysis counts know: the raw groups include samples absent from the splicing h5 */
 				if (termType == TermTypes.JUNCTION) Object.assign(volcano, scaleDsFilters(numControl + numCase))
+				// a group defined by a filter lists no sample: the plot counts it by its samples with data
+				for (const g of groups) {
+					if (g.filter && !Array.isArray(g.values)) g.sampleCount = preAnalysisData.data[g.name]
+				}
 				const config = {
 					chartType: 'differentialAnalysis',
 					state: self.state,
@@ -1561,25 +1551,49 @@ export function getSampleFilter(sampleId) {
 	return filter
 }
 
-// no special handling when groups.length=1
-export function getSamplelstTW2(groups) {
+/* A group as a region analysis takes it: the list of its samples, or the filter that defines it,
+with the cohort filter and the sample level that its samples depend on. */
+export function getGroupForRegion(group) {
+	if (Array.isArray(group.values)) return group.values
+	if (!group.filter) return []
+	const { filter, filter0, mapParent2Children } = group
+	return { filter, filter0, mapParent2Children }
+}
+
+/* A samplelst tw whose groups are each defined by a filter.
+groups[]: {name, filter, color?, filter0?, sampleCount?, mapParent2Children?}
+- filter: the server resolves the samples that it selects, where the samples of the group are needed.
+  the tw lists no sample: a group has no values[] and its category has no list[]
+- filter0: the cohort filter that the group was made with, on a dataset that takes one, so that the
+  group is resolved with it by every request. null is for none, and undefined leaves it to the request
+- sampleCount: the number of samples that the filter selected when the group was made, for the
+  places that only need the size of a group
+no special handling when groups.length=1 */
+export function getSamplelstTWFromFilters(groups, name = 'groups') {
 	const values = {}
 	const qgroups = []
 	for (const group of groups) {
-		const samples = getGroupSamples(group)
-		const qgroup = {
-			name: group.name,
-			in: true,
-			values: samples
-		}
+		const qgroup = { name: group.name, in: true, filter: group.filter }
+		if (group.filter0 !== undefined) qgroup.filter0 = group.filter0
+		if (Number.isFinite(group.sampleCount)) qgroup.sampleCount = group.sampleCount
+		if (group.mapParent2Children) qgroup.mapParent2Children = true
 		qgroups.push(qgroup)
-		values[group.name] = { key: group.name, label: group.name, color: group.color, list: samples } //samples need to be passed for the samplelst filter to work
+		values[group.name] = { key: group.name, label: group.name, color: group.color }
 	}
 	return {
 		isAtomic: true,
-		term: { name: 'groups', type: 'samplelst', values },
+		term: { name, type: 'samplelst', values },
 		q: { groups: qgroups }
 	}
+}
+
+/* The entry, for the lst[] of a filter, that selects the samples of one category of a samplelst tw:
+the filter of its group when the group is defined by one, else a tvs that lists its samples. */
+export function getGroupFilterEntry(tw, key) {
+	const group = tw.q?.groups?.find(g => g.name == key)
+	if (group?.filter && !Array.isArray(group.values)) return structuredClone(group.filter)
+	const ids = (tw.term.values?.[key]?.list || []).map(s => s.sampleId)
+	return getSamplelstFilter(ids).lst[0]
 }
 
 export function getSamplelstTW(groups, name = groups.length == 1 ? 'group' : 'groups', notIn = true) {

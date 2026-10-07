@@ -1,4 +1,5 @@
 import type { Filter } from '../filter.ts'
+import type { SampleFilterGroup } from '../terms/samplelst.ts'
 
 /** Call DMRs across many regions in one request — a whole differential-methylation hit list
  * rather than one clicked element. See server/src/routes/termdb.dmrBatch.ts for why this is a
@@ -6,9 +7,11 @@ import type { Filter } from '../filter.ts'
 export type TermdbDmrBatchRequest = {
 	genome: string
 	dslabel: string
-	/** list of samples from each group; sample ids are resolved server-side to matrix names */
-	group1: { sampleId: number | string }[]
-	group2: { sampleId: number | string }[]
+	/** each group as the list of its samples, or defined by a filter that the server resolves;
+	 * sample ids are resolved server-side to matrix names */
+	group1: { sampleId: number | string }[] | SampleFilterGroup
+	group2: { sampleId: number | string }[] | SampleFilterGroup
+	filter0?: any
 	/** Windows to call DMRs in. Overlapping windows are merged before analysis.
 	 * Ignored when scanChromosomes is given. */
 	regions?: { chr: string; start: number; stop: number }[]

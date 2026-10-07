@@ -167,7 +167,8 @@ export function getSampleNum(config: any) {
 		config.termType == tt.DNA_METHYLATION ||
 		config.termType == tt.JUNCTION
 	) {
-		return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
+		// a group defined by a filter lists no sample, and carries the number that its filter selected
+		return config.samplelst.groups.reduce((sum: number, g: any) => sum + (g.values?.length ?? g.sampleCount ?? 0), 0)
 	} else {
 		return maxSampleCutoff
 	}

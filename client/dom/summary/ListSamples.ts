@@ -2,7 +2,7 @@ import type { AppApi } from '#rx'
 import { TermTypes, type TermWrapper, type NumericBin } from '#types'
 import type { AnnotatedSampleData, AnnotatedSampleEntry } from '../../types/termdb'
 import type { TableColumn, TableRow } from '#dom'
-import { getSamplelstFilter } from '../../mass/groups.js'
+import { getGroupFilterEntry } from '../../mass/groups.js'
 import { isNumericTerm, roundValueAuto, isStrictNumeric, isFractionTw, getFractionTvsTerm } from '#shared'
 import { filterJoin } from '#filter'
 import { addGvRowVals, addGvCols } from '#plots/barchart/barchart.events.js'
@@ -171,10 +171,8 @@ export class ListSamples {
 			tvsEntry.tvs.values = group.values
 		} else if (tw.term.type === TermTypes.SAMPLELST) {
 			if (!tw.term.values?.[key]) throw new Error(`${Sample} list not found for ${tw.term.name}: ${key}`)
-			const ids = (tw.term.values[key].list || []).map(s => s.sampleId)
-			// Returns filter obj with lst array of 1 tvs
-			const tmpTvsLst = getSamplelstFilter(ids)
-			tvsEntry = tmpTvsLst.lst[0]
+			// a tvs that lists the samples of the category, or the filter that defines its group
+			tvsEntry = getGroupFilterEntry(tw, key)
 		} else {
 			tvsEntry.tvs.values = [{ key }]
 		}

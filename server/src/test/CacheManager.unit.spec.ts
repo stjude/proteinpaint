@@ -102,6 +102,13 @@ tape('defaults', function (test) {
 							absPath: `${m.cachedir}/gdcCounts`,
 							skipUntil: 0
 						},
+						samplelst: {
+							maxAge: 86400000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							absPath: `${m.cachedir}/samplelst`,
+							skipUntil: 0
+						},
 						massSession: {
 							maxAge: 2592000000,
 							maxSize: 5000000000,
@@ -208,6 +215,7 @@ tape('defaults', function (test) {
 							geneBodyMeth: { deletedCount: 0, totalCount: 0 },
 							topve: { deletedCount: 0, totalCount: 0 },
 							gdcCounts: { deletedCount: 0, totalCount: 0 },
+							samplelst: { deletedCount: 0, totalCount: 0 },
 							wsitiles: { deletedCount: 0, totalCount: 0 },
 							bedj: { deletedCount: 0, totalCount: 0 },
 							bam: { deletedCount: 0, totalCount: 0 },

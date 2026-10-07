@@ -9,7 +9,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { isNumericTw } from '#shared/terms.js'
 import { isFractionTw, getFractionTvsTerm } from '#shared/termCollection.js'
 import { negateTermLabel } from './barchart'
-import { getSamplelstFilter, getSamplelstTW, getFilter, addNewGroup } from '#mass/groups'
+import { getGroupFilterEntry, getSamplelstTW, getFilter, addNewGroup } from '#mass/groups'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -631,10 +631,8 @@ function getTvs(termIndex, value, self, geneVariant) {
 		}
 		delete tvs.tvs.values // numeric tvs is filtered by ranges only
 	} else if (term.term.type == 'samplelst') {
-		const list = term.term.values?.[value]?.list || []
-		const ids = list.map(s => s.sampleId)
-		const tvslst = getSamplelstFilter(ids)
-		tvs = tvslst.lst[0] // tvslst only has the tvs for the samplelst term
+		// a tvs that lists the samples of the category, or the filter that defines its group
+		tvs = getGroupFilterEntry(term, value)
 	} else if (term.term.type == 'geneVariant' && term.q.type == 'values') {
 		throw 'no longer supported in barchart'
 	}

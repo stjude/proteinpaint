@@ -1,6 +1,7 @@
 import tape from 'tape'
 import { VolcanoModel } from '../model/VolcanoModel'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
+import { getSampleNum } from '../settings/defaults'
 
 /* Tests:
     - getOtherSamples
@@ -91,5 +92,19 @@ tape('getOtherSamples()', async function (test) {
 	const result = await model.getOtherSamples(samplelst2)
 	test.equal(result, undefined, `should be a no-op when there is no "others" group`)
 
+	test.end()
+})
+
+tape('getSampleNum() counts the samples of groups that list them or that are defined by a filter', test => {
+	const groups = [
+		{ name: 'listed', in: true, values: [{ sampleId: 1 }, { sampleId: 2 }] },
+		{ name: 'by filter', in: true, filter: { type: 'tvslst', in: true, join: '', lst: [] }, sampleCount: 5 },
+		{ name: 'by filter, no count', in: true, filter: { type: 'tvslst', in: true, join: '', lst: [] } }
+	]
+	test.equal(
+		getSampleNum({ termType: 'geneExpression', samplelst: { groups } }),
+		7,
+		'should add the listed samples and the sample count of a group defined by a filter'
+	)
 	test.end()
 })

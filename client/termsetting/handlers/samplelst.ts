@@ -8,8 +8,17 @@ export function getHandler(self: TermSetting) {
 		showEditMenu(div: any) {
 			div.selectAll('*').remove()
 			const q = self.q as any // TODO: migrate this handler to use client/tw code
+			// a group either lists its samples, which can be edited here, or is defined by a filter
+			const groups = q.groups.filter((g: any) => Array.isArray(g.values))
+			for (const group of q.groups) {
+				if (groups.includes(group)) continue
+				// a group defined by a filter lists no sample: show its name and size
+				const row = div.append('div').style('padding', '6px 10px').style('font-size', '0.8rem')
+				row.append('b').text(group.name)
+				if (Number.isFinite(group.sampleCount)) row.append('span').text(`, n=${group.sampleCount}`)
+			}
+			if (!groups.length) return
 			if (self.vocabApi.termdbConfig?.displaySampleIds && self.vocabApi.hasVerifiedToken()) {
-				const groups = q.groups
 				for (const group of groups) {
 					const groupDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 					const noButtonCallback = (i: number, node: any) => {

@@ -1,5 +1,6 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { groupColors } from '../groupColors'
+import { getGroupForRegion } from '#mass/groups'
 import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
@@ -292,8 +293,9 @@ export class VolcanoInteractions {
 			chartType: 'dmr',
 			headerText: `DMR: ${label}`,
 			coordinateOverride: { chr: d.chr, start: d.start, stop: d.stop },
-			group1: config.samplelst.groups[0].values || [],
-			group2: config.samplelst.groups[1].values || [],
+			// the samples of each group, or the filter of a group that is defined by one
+			group1: getGroupForRegion(config.samplelst.groups[0]),
+			group2: getGroupForRegion(config.samplelst.groups[1]),
 			group1Name: config.samplelst.groups[0].name,
 			group2Name: config.samplelst.groups[1].name,
 			/* Which element matrix to drill into, for a dataset whose methylation is element-level

@@ -2,9 +2,10 @@
 	Request-based tests for the sample groups of the two-group analyses, on a dataset with a role-based
 	sample filter.
 
-	termdb/DE and termdb/diffMeth get the two groups as lists of sample ids, and resolve them with the
-	dataset's sample filter for the session (see buildGroupValues() in utils/sampleGroups.ts). The
-	preAnalysis request returns the number of samples that each group resolves to.
+	termdb/DE and termdb/diffMeth get the two groups as lists of sample ids, or as filters, and resolve
+	them with the dataset's sample filter for the session (see buildGroupValues() and resolveGroups() in
+	utils/sampleGroups.ts). The preAnalysis request returns the number of samples that each group
+	resolves to.
 
 	The server loads test/testdata/termdb.test.sampleFilter.ts, a TermdbTest whose getAdditionalFilter()
 	gives the 'admin' role no filter and any other role the samples with an id up to 50. Group 1 has the
@@ -76,6 +77,110 @@ for (const route of routes) {
 	})
 }
 
+/* A group may be defined by a filter in place of a list, see resolveGroups() in utils/sampleGroups.ts.
+The two forms of a group must resolve the same for a role: the list form is made here from what the
+getsamplelist query returns for the filter to the role without a sample filter. */
+const sexFilter = (key: string) => ({
+	type: 'tvslst',
+	in: true,
+	join: '',
+	lst: [{ type: 'tvs', tvs: { term: { id: 'sex', type: 'categorical' }, values: [{ key }] } }]
+})
+const filterGroups = [
+	{ name: 'group1', in: true, filter: sexFilter('1') },
+	{ name: 'group2', in: true, filter: sexFilter('2') }
+]
+let listGroups: { name: string; in: boolean; values: { sampleId: number }[] }[]
+
+tape('list form of the filter groups', async test => {
+	test.timeoutAfter(30000)
+	const jwt = await getSessionJwt(test, 'admin')
+	if (!jwt) return test.end()
+	listGroups = []
+	for (const g of filterGroups) {
+		const res = await post('/termdb', { genome, dslabel, embedder, getsamplelist: 1, filter: g.filter }, bearer(jwt))
+		if (!Array.isArray(res.body) || !res.body.length) {
+			test.fail(`no sample list for the filter of ${g.name}: ${JSON.stringify(res.body).slice(0, 200)}`)
+			return test.end()
+		}
+		listGroups.push({ name: g.name, in: true, values: res.body.map(s => ({ sampleId: s.id })) })
+	}
+	test.pass(`the filters select ${listGroups.map(g => g.values.length).join(' and ')} samples`)
+	test.end()
+})
+
+for (const route of routes) {
+	tape(`${route.path} sizes of groups given as filters, by role`, async test => {
+		test.timeoutAfter(30000)
+		if (!listGroups?.length) {
+			test.fail('the list form of the groups is missing')
+			return test.end()
+		}
+		const sizes: any = {}
+		for (const role of ['admin', 'user']) {
+			const asLists = await getGroupSizes(test, route, role, { groups: listGroups })
+			const asFilters = await getGroupSizes(test, route, role, { groups: filterGroups })
+			if (!asLists || !asFilters) return test.end()
+			test.deepEqual(asFilters, asLists, `should resolve filters as it resolves their lists for role='${role}'`)
+			sizes[role] = asFilters
+		}
+		test.ok(sizes.admin.group1 > 0 && sizes.admin.group2 > 0, `should resolve samples in both groups for role='admin'`)
+		test.ok(
+			sizes.user.group1 + sizes.user.group2 < sizes.admin.group1 + sizes.admin.group2,
+			`should resolve fewer samples for role='user'`
+		)
+		test.end()
+	})
+}
+
+tape('termdb/categories of a samplelst term with groups given as filters, by role', async test => {
+	test.timeoutAfter(30000)
+	if (!listGroups?.length) {
+		test.fail('the list form of the groups is missing')
+		return test.end()
+	}
+	const term = (withList: boolean) => ({
+		name: 'groups',
+		type: 'samplelst',
+		values: Object.fromEntries(
+			listGroups.map(g => [g.name, { key: g.name, label: g.name, ...(withList ? { list: g.values } : {}) }])
+		)
+	})
+	const counts: any = {}
+	for (const role of ['admin', 'user']) {
+		const jwt = await getSessionJwt(test, role)
+		if (!jwt) return test.end()
+		const get = async (tw: any) => {
+			const res = await post('/termdb/categories', { genome, dslabel, embedder, tw }, bearer(jwt))
+			if (!Array.isArray(res.body.lst))
+				return test.fail(`no categories for role='${role}': ${JSON.stringify(res.body)}`)
+			return Object.fromEntries(res.body.lst.map(c => [c.key, c.samplecount]))
+		}
+		const asLists = await get({ term: term(true), q: { groups: listGroups } })
+		const asFilters = await get({ term: term(false), q: { groups: filterGroups } })
+		if (!asLists || !asFilters) return test.end()
+		test.deepEqual(asFilters, asLists, `should give the categories of the list form for role='${role}'`)
+		counts[role] = asFilters
+	}
+
+	// a route may return the term wrappers of its request: the samples of a filter group are not in them
+	const jwt = await getSessionJwt(test, 'admin')
+	if (!jwt) return test.end()
+	const tw2 = { $id: 'groups', term: term(false), q: { groups: filterGroups } }
+	const tw1 = { $id: 'diaggrp', term: { id: 'diaggrp', type: 'categorical' }, q: {} }
+	for (const [path, body] of [
+		['/termdb/categories', { tw: tw2 }],
+		['/termdb/barsql', { term1: tw1, term2: tw2, hiddenValues: { term1: [], term2: [] } }]
+	] as const) {
+		const res = await post(path, { genome, dslabel, embedder, ...body }, bearer(jwt))
+		const text = JSON.stringify(res.body)
+		test.ok(res.status == 200 && !res.body.error, `${path} should answer${res.body.error ? ': ' + res.body.error : ''}`)
+		test.notOk(text.includes('"sampleId"'), `${path} should not list the samples of a group in its answer`)
+	}
+	test.ok(counts.admin.group1 > 0 && counts.admin.group2 > 0, `should have samples in both groups for role='admin'`)
+	test.end()
+})
+
 tape('stop server', async test => {
 	test.timeoutAfter(10000)
 	await server?.stop()
@@ -85,19 +190,23 @@ tape('stop server', async test => {
 
 /* logs in with the given role, then requests the group sizes of the route;
 returns {group1, group2}, or undefined after a failed assertion */
-async function getGroupSizes(test, route: (typeof routes)[number], role: string) {
-	const login = await post('/jwt-status', { genome, dslabel, embedder }, loginHeaders(role))
-	if (!login.body.jwt) {
-		test.fail(`missing session jwt for role='${role}': ${JSON.stringify(login.body)}`)
-		return
-	}
-	const body = { genome, dslabel, embedder, samplelst, preAnalysis: true, ...route.body }
-	const res = await post(route.path, body, bearer(login.body.jwt))
+async function getGroupSizes(test, route: (typeof routes)[number], role: string, groups: any = samplelst) {
+	const jwt = await getSessionJwt(test, role)
+	if (!jwt) return
+	const body = { genome, dslabel, embedder, samplelst: groups, preAnalysis: true, ...route.body }
+	const res = await post(route.path, body, bearer(jwt))
 	if (res.status != 200 || !res.body.data) {
 		test.fail(`${route.path} did not return group sizes for role='${role}': ${JSON.stringify(res.body)}`)
 		return
 	}
 	return res.body.data as { group1: number; group2: number }
+}
+
+// logs in with the given role; returns the session jwt, or undefined after a failed assertion
+async function getSessionJwt(test, role: string): Promise<string | undefined> {
+	const login = await post('/jwt-status', { genome, dslabel, embedder }, loginHeaders(role))
+	if (login.body.jwt) return login.body.jwt
+	test.fail(`missing session jwt for role='${role}': ${JSON.stringify(login.body)}`)
 }
 
 function loginHeaders(role: string) {

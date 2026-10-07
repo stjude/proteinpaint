@@ -50,7 +50,16 @@ export async function geneBodyLossTest(
 				genome: vocab.genome,
 				dslabel: vocab.dslabel,
 				// `in` is part of the DE cache key, so it must travel or the two runs get separate entries
-				samplelst: { groups: groups.map((g: any) => ({ name: g.name, in: g.in, values: g.values })) },
+				samplelst: {
+					groups: groups.map((g: any) => ({
+						name: g.name,
+						in: g.in,
+						values: g.values,
+						filter: g.filter,
+						filter0: g.filter0,
+						mapParent2Children: g.mapParent2Children
+					}))
+				},
 				genes: gb.genes,
 				method: de.method,
 				min_count: de.minCount,
@@ -78,7 +87,7 @@ function renderGeneDE(div: any, res: any, nRegions: number, config: any, scan: D
 	the server did the same for the test above, so the two agree on who was compared, and a
 	difference between the methylation and expression readings cannot be the extra patients. */
 	const samplelst = scan.matchedSamplelst || config.samplelst
-	const nMatched = samplelst.groups.reduce((n: number, g: any) => n + g.values.length, 0)
+	const nMatched = samplelst.groups.reduce((n: number, g: any) => n + (g.values?.length ?? g.sampleCount ?? 0), 0)
 	const dir = res.weightedDiff < 0 ? 'lower' : 'higher'
 	/* The same contrast as a differential-expression volcano, with the gene-body loss genes
 	highlighted. The stratified difference below is the test; the volcano is where a reader sees the
