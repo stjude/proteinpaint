@@ -1,5 +1,6 @@
 import * as common from '#shared/common.js'
 import * as client from './client'
+import { escapeHtml } from '#dom'
 import { string2pos, invalidcoord } from './coord'
 import { getsjcharts } from './getsjcharts'
 
@@ -220,10 +221,17 @@ export async function createnewmatrix_withafeature(_p) {
 		// from matrix view of a sample group
 		const a = limitsamplebyeitherannotation[0]
 		if (a) {
-			pane.header.html('<span style="font-size:.8em;opacity:.5">' + tk.name + '</span> ' + a.value)
+			pane.header.html(
+				'<span style="font-size:.8em;opacity:.5">' + escapeHtml(tk.name) + '</span> ' + escapeHtml(a.value)
+			)
 		}
 	} else if (limitbysamplesetgroup) {
-		pane.header.html('<span style="font-size:.8em;opacity:.5">' + tk.name + '</span> ' + limitbysamplesetgroup.name)
+		pane.header.html(
+			'<span style="font-size:.8em;opacity:.5">' +
+				escapeHtml(tk.name) +
+				'</span> ' +
+				escapeHtml(limitbysamplesetgroup.name)
+		)
 	} else {
 		pane.header.text(tk.name)
 	}
