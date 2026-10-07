@@ -257,7 +257,6 @@ export function runproteinpaint(arg) {
 				!window.location.search.includes('noheader') &&
 				!window.location.search.includes('mass-session-id') &&
 				!window.location.search.includes('mass-session-file') &&
-				!window.location.search.includes('mass-session-url') &&
 				!window.location.search.includes('massnative') &&
 				!window.location.search.includes('mass')
 			) {
@@ -707,25 +706,14 @@ async function parseEmbedThenUrl(arg, app) {
 		return
 	}
 
-	if (arg.massSessionFile || arg.massSessionURL) {
-		let state
-		if (arg.massSessionFile) {
-			const file = arg.massSessionFile
-			const jsonFile = await client.dofetch3(`/textfile`, {
-				method: 'POST',
-				body: JSON.stringify({ file })
-			})
-			if (jsonFile.error) throw jsonFile.error
-			state = JSON.parse(jsonFile.text)
-		} else {
-			const url = arg.massSessionURL
-			const jsonURL = await client.dofetch3(`/urltextfile`, {
-				method: 'POST',
-				body: JSON.stringify({ url })
-			})
-			if (jsonURL.error) throw jsonURL.error
-			state = JSON.parse(jsonURL.text)
-		}
+	if (arg.massSessionFile) {
+		const file = arg.massSessionFile
+		const jsonFile = await client.dofetch3(`/textfile`, {
+			method: 'POST',
+			body: JSON.stringify({ file })
+		})
+		if (jsonFile.error) throw jsonFile.error
+		const state = JSON.parse(jsonFile.text)
 		const opts = {
 			debug: app.debugmode,
 			holder: app.holder0,
