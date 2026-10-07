@@ -315,7 +315,9 @@ function getAddFilterCallback(self: any, plot: any, rangeStart?: number, rangeSt
 	const ls = self.getSampleList(plot, rangeStart, rangeStop)
 
 	return () => {
-		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
+		// the plot state termfilter may be combined with a plot-level filter that lacks the
+		// filterUiRoot tag, so look it up in the global filter that filter_replace will replace
+		const filterUiRoot = getFilterItemByTag(self.app.getState().termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([filterUiRoot, ls.tvslst])
 		filter.tag = 'filterUiRoot'
 		self.app.dispatch({
