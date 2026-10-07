@@ -17,7 +17,7 @@ export class ScatterLegendInteractivity {
 		const isColorTW = name == 'colorTW'
 		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 		// Only consider values that are not hidden by default
-		const hiddenCount = Object.values(tw.q.hiddenValues).filter(val => val !== 1).length
+		const hiddenCount = Object.values(tw.q?.hiddenValues ?? {}).filter(val => val !== 1).length
 		if (hidden && hiddenCount == 1) {
 			//show hidden category and skip menu
 			this.hideCategory(tw, key, false)
