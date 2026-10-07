@@ -3258,23 +3258,48 @@ test('mayGetGeneVariantData: an unknown tvs origin matches no sample', async t =
 /* filtering by origin on a dt whose values carry none would silently drop every value, so
 it fails where the origin is applied instead */
 test('filterByItem: rejects a tvs origin on a dt that is not origin-split', t => {
-	t.plan(1)
+	t.plan(9)
 	const filter = {
 		type: 'tvs',
 		tvs: {
 			term: { dt: 1, type: 'dtsnvindel' },
 			origins: ['germline'],
 			values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
-			genotype: 'variant'
+			genotype: 'variant',
+			mcount: 'any'
 		}
 	}
-	// no .origin on the value, as a dt the dataset does not split by origin yields
-	try {
-		filterByItem(filter, [{ dt: 1, class: 'M', mname: 'G12D' }])
-		t.fail('should throw for a value without an origin')
-	} catch (e) {
-		t.equal(String(e), 'dt 1 values carry no origin to filter by', 'should name the dt')
+	for (const value of [
+		{ dt: 1, class: 'M', mname: 'G12D' },
+		{ dt: 1, class: 'M', origin: null },
+		{ dt: 1, class: 'M', origin: '' },
+		{ dt: 1, class: 'WT' },
+		{ dt: 1, class: 'Blank' }
+	]) {
+		t.throws(
+			() => filterByItem(filter, [value]),
+			/dt 1 values carry no origin to filter by/,
+			'should name the dt when a value has no origin'
+		)
 	}
+	t.deepEqual(filterByItem(filter, []), [false, false], 'an empty sample remains untested')
+	t.deepEqual(
+		filterByItem(filter, [{ dt: 4, class: 'CNV_amp' }]),
+		[false, false],
+		'values of another dt do not require an origin'
+	)
+	const value = { dt: 1, class: 'M', mname: 'G12D' }
+	t.deepEqual(
+		filterByItem({ ...filter, tvs: { ...filter.tvs, origins: [] } }, [value]),
+		[true, true],
+		'an empty origin selection does not require an origin'
+	)
+	const { origins, ...tvs } = filter.tvs
+	t.deepEqual(
+		filterByItem({ ...filter, tvs }, [value]),
+		[true, true],
+		'an unrestricted filter does not require an origin'
+	)
 })
 
 // a custom groupset of one group, filtering the snvindel dt by the given origins

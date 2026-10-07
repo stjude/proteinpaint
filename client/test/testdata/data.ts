@@ -275,14 +275,13 @@ export function getFilter_genemutationset(isnot = false) {
 							term: {
 								id: 'snvindel_somatic',
 								query: 'snvindel',
-								name: 'SNV/indel (somatic)',
+								name: 'SNV/indel',
 								parent_id: null,
 								isleaf: true,
 								type: 'dtsnvindel',
 								dt: 1,
 								values: { M: { label: 'MISSENSE' }, F: { label: 'FRAMESHIFT' }, WT: { label: 'Wildtype' } },
 								name_noOrigin: 'SNV/indel',
-								origin: 'somatic',
 								parentTerm: {
 									type: 'geneVariant',
 									id: 'HALLMARK_ADIPOGENESIS',
@@ -299,6 +298,7 @@ export function getFilter_genemutationset(isnot = false) {
 								{ key: 'M', label: 'MISSENSE', value: 'M', bar_width_frac: null },
 								{ key: 'F', label: 'FRAMESHIFT', value: 'F', bar_width_frac: null }
 							],
+							origins: ['somatic'],
 							isnot,
 							genotype: 'variant',
 							mcount: 'any'
@@ -723,7 +723,6 @@ export function getPseudobulkTW(nameId = 'Blast') {
 		}
 	}
 }
-
 
 ////////////// following are gdc-specific! may move to separate file
 

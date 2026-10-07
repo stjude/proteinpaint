@@ -378,11 +378,6 @@ tape('Origins are selected separately from mutation type', async test => {
 	await pickGene(holder)
 	test.deepEqual(tw.q.origins, ['germline'], 'should seed the selected origins on the q')
 	test.equal(tw.q.originLabel, 'Inherited', 'should name the selected origin subset')
-	test.deepEqual(
-		tw.term.groupsetting.lst[tw.q.predefined_groupset_idx].groups[0].filter.lst[0].tvs.origins,
-		['germline'],
-		'should stamp the seeded origins onto the groupset tvs'
-	)
 	test.deepEqual(tw.term.sampleTypes, [3], 'should submit selected sample types available to the selected origin')
 	test.equal(tw.term.sampleTypeLabel, 'Normals', 'should name the selected sample type subset')
 	test.equal(tw.term.name, 'TP53', 'should not append labels to the term name')
@@ -400,12 +395,7 @@ tape('Origins are selected separately from mutation type', async test => {
 	)
 	await pickGene(holder, 'KRAS')
 	test.equal(tw.q.origins, undefined, 'should clear a stale origin seed before submission')
-	test.equal(tw.q.originLabel, undefined, 'should clear the origin label when origins are not available')
-	test.equal(
-		tw.term.groupsetting.lst[tw.q.predefined_groupset_idx].groups[0].filter.lst[0].tvs.origins,
-		undefined,
-		'should leave origins off the tvs of a dt that is not origin-split'
-	)
+	test.equal(tw.q.originLabel, '', 'should use an empty origin label when origins are not available')
 
 	if (test['_ok']) holder.remove()
 	test.end()

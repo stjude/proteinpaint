@@ -3696,7 +3696,10 @@ export function filterByItem(filter, mlst, values) {
 	// get all tested mutations for the dt (and origin) of the filter
 	const mlst_tested = mlst.filter(m => {
 		if (tvs.term.dt != m.dt) return false
-		if (tvs.origins?.length && !tvs.origins.includes(m.origin)) return false
+		if (tvs.origins?.length) {
+			if (!m.origin) throw `dt ${tvs.term.dt} values carry no origin to filter by`
+			if (!tvs.origins.includes(m.origin)) return false
+		}
 		if (m.class == mclass['Blank'].key && !tvs.includeNotTested) return false
 		return true
 	})

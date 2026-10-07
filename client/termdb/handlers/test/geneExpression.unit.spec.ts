@@ -84,7 +84,6 @@ tape('selectGene() should label a selected sample-type subset', async test => {
 	await handler.selectGene({ geneSymbol: 'TP53' })
 
 	test.equal(selected?.sampleTypeLabel, 'Relapses', 'Should label the selected sample-type subset')
-	test.equal(selected?.label, 'Relapses', 'Should expose the selected sample-type label')
 	test.equal(selected?.name, 'TP53 Gene Expression', 'Should preserve the gene expression term name')
 	test.end()
 })

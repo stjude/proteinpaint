@@ -923,7 +923,7 @@ tape('tvs: Gene Variant - SNV/indel', async test => {
 		const tipd = opts.filter.Inner.dom.termSrcDiv
 
 		let valueBtn = pill.querySelector('.value_btn')
-		test.equal(valueBtn.textContent, 'MISSENSE', 'Pill value should be the tvs value')
+		test.equal(valueBtn.textContent, 'MISSENSE (Somatic)', 'Pill value should include the selected origin')
 
 		// --- trigger and check tip menu ---
 		pill.click()
@@ -946,7 +946,11 @@ tape('tvs: Gene Variant - SNV/indel', async test => {
 			selector: '.value_btn',
 			trigger: () => applyBtn.click()
 		})
-		test.equal(valueBtn[0].textContent, 'Mutated', 'should change the pill value btn after adding value from menu')
+		test.equal(
+			valueBtn[0].textContent,
+			'Mutated (Somatic)',
+			'should change the pill value btn after adding value from menu'
+		)
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}
@@ -1015,7 +1019,7 @@ tape('tvs: Gene Variant - SNV/indel - Wildtype', async test => {
 		const tipd = opts.filter.Inner.dom.termSrcDiv
 
 		let valueBtn = pill.querySelector('.value_btn')
-		test.equal(valueBtn.textContent, 'MISSENSE', 'Pill value should be the tvs value')
+		test.equal(valueBtn.textContent, 'MISSENSE (Somatic)', 'Pill value should include the selected origin')
 
 		// --- trigger and check tip menu ---
 		pill.click()
@@ -1035,7 +1039,7 @@ tape('tvs: Gene Variant - SNV/indel - Wildtype', async test => {
 			selector: '.value_btn',
 			trigger: () => applyBtn.click()
 		})
-		test.equal(valueBtn[0].textContent, 'Wildtype', 'pill value btn should change to Wildtype')
+		test.equal(valueBtn[0].textContent, 'Wildtype (Somatic)', 'pill value btn should change to Wildtype')
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}
