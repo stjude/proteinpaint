@@ -1,6 +1,7 @@
 import * as client from './client'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
+import { escapeHtml } from '#dom'
 // import { stratify } from 'd3-hierarchy'
 
 /*
@@ -128,7 +129,7 @@ function mlst2headerhtml(mlst: any[]) {
 				'<span style="font-weight:bold;color:' +
 				c.color +
 				'">' +
-				(m.mname ? m.mname : m.pos ? m.chr + ':' + (m.pos + 1) : '') +
+				escapeHtml(m.mname ? m.mname : m.pos ? m.chr + ':' + (m.pos + 1) : '') +
 				'</span> <span style="font-size:80%">' +
 				c.label +
 				'</span>'
@@ -137,8 +138,8 @@ function mlst2headerhtml(mlst: any[]) {
 		if (m.dt == common.dtsv || m.dt == common.dtfusionrna) {
 			const names: any[] = []
 			for (let i = 0; i < m.pairlst.length; i++) {
-				if (i == 0) names.push(m.pairlst[i].a.name ? m.pairlst[i].a.name : m.pairlst[i].a.chr)
-				names.push(m.pairlst[i].b.name ? m.pairlst[i].b.name : m.pairlst[i].b.chr)
+				if (i == 0) names.push(escapeHtml(m.pairlst[i].a.name ? m.pairlst[i].a.name : m.pairlst[i].a.chr))
+				names.push(escapeHtml(m.pairlst[i].b.name ? m.pairlst[i].b.name : m.pairlst[i].b.chr))
 			}
 			return names.join(' - ') + '&nbsp;&nbsp;<span style="font-size:80%">' + c.label + '</span>'
 		}
@@ -192,22 +193,28 @@ function table_snvindel(mlst: any[], holder: any, tk: any, block: any) {
 				})
 			if (m.mname) {
 				d.append('span').html(
-					m.mname + '\t<span style="font-size:80%;color:#858585">' + common.mclass[m.class].label + '</span>'
+					escapeHtml(m.mname) +
+						'\t<span style="font-size:80%;color:#858585">' +
+						common.mclass[m.class].label +
+						'</span>'
 				)
 			} else if (m.csq) {
 				d.append('span').html(
-					m.csq[0]._mname + '\t<span style="font-size:80%;color:#858585">' + m.csq[0].Consequence + '</span>'
+					escapeHtml(m.csq[0]._mname) +
+						'\t<span style="font-size:80%;color:#858585">' +
+						escapeHtml(m.csq[0].Consequence) +
+						'</span>'
 				)
 			}
 			d.append('span').html(
 				'&nbsp;&nbsp;' +
-					m.chr +
+					escapeHtml(m.chr) +
 					':' +
 					(m.pos + 1) +
 					' <span style="font-size:70%">REF</span> ' +
-					m.ref +
+					escapeHtml(m.ref) +
 					' <span style="font-size:70%">ALT</span> ' +
-					m.alt
+					escapeHtml(m.alt)
 			)
 		}
 		return
@@ -716,7 +723,7 @@ function vcfmdetail(m: any, vcfobj: any, holder: any, tk: any, block: any) {
 		row1
 			.append('span')
 			.style('padding-right', '10px')
-			.html(tinylab('REF') + ' ' + m.ref + ' ' + tinylab('ALT') + ' ' + m.alt)
+			.html(tinylab('REF') + ' ' + escapeHtml(m.ref) + ' ' + tinylab('ALT') + ' ' + escapeHtml(m.alt))
 		if (block.variantPageCall_snv) {
 			const variant = {
 				chr: m.chr,
@@ -882,21 +889,21 @@ function vcfmdetail(m: any, vcfobj: any, holder: any, tk: any, block: any) {
 							';color:' +
 							(cat.textcolor || 'black') +
 							';">' +
-							i +
+							escapeHtml(i) +
 							'</span>'
 						)
 					}
-					return i
+					return escapeHtml(i)
 				})
 			} else {
-				showvalue = infovalue
+				showvalue = infovalue.map(i => escapeHtml(i))
 			}
 			lst.push({
 				k: k,
 				v:
 					showvalue.join(', ') +
 					(vcfobj.info && vcfobj.info[k]
-						? ' <span style="font-size:70%;color:#858585">' + vcfobj.info[k].Description + '</span>'
+						? ' <span style="font-size:70%;color:#858585">' + escapeHtml(vcfobj.info[k].Description) + '</span>'
 						: '')
 			})
 		}
@@ -926,21 +933,21 @@ function vcfmdetail(m: any, vcfobj: any, holder: any, tk: any, block: any) {
 							';color:' +
 							(cat.textcolor || 'black') +
 							';">' +
-							i +
+							escapeHtml(i) +
 							'</span>'
 						)
 					}
-					return i
+					return escapeHtml(i)
 				})
 			} else {
-				showvalue = infovalue
+				showvalue = infovalue.map(i => escapeHtml(i))
 			}
 			lst.push({
 				k: k,
 				v:
 					showvalue.join(', ') +
 					(vcfobj.info && vcfobj.info[k]
-						? ' <span style="font-size:70%;color:#858585">' + vcfobj.info[k].Description + '</span>'
+						? ' <span style="font-size:70%;color:#858585">' + escapeHtml(vcfobj.info[k].Description) + '</span>'
 						: '')
 			})
 		}
@@ -1981,14 +1988,14 @@ function vcfvepbutton(csqlst: any[], holder: any, tk: any, headers: any[]) {
 				{
 					const lst: any[] = []
 					if (item.HGVSp) {
-						lst.push('<span style="font-size:.7em;color:#858585">HGVSp</span> ' + item.HGVSp)
+						lst.push('<span style="font-size:.7em;color:#858585">HGVSp</span> ' + escapeHtml(item.HGVSp))
 					} else if (item.HGVSc) {
-						lst.push('<span style="font-size:.7em;color:#858585">HGVSc</span> ' + item.HGVSc)
+						lst.push('<span style="font-size:.7em;color:#858585">HGVSc</span> ' + escapeHtml(item.HGVSc))
 					} else {
 						lst.push('no_HGVS')
 					}
 					if (item.Consequence) {
-						lst.push('<span style="font-size:.7em;color:#858585">CONSEQUENCE</span> ' + item.Consequence)
+						lst.push('<span style="font-size:.7em;color:#858585">CONSEQUENCE</span> ' + escapeHtml(item.Consequence))
 					} else {
 						lst.push('no_consequence')
 					}
@@ -2010,7 +2017,7 @@ function vcfvepbutton(csqlst: any[], holder: any, tk: any, headers: any[]) {
 							for (const h of headers) {
 								const v = item[h.name]
 								if (v) {
-									lst.push({ k: h.name, v: v })
+									lst.push({ k: escapeHtml(h.name), v: escapeHtml(v) })
 								}
 							}
 							client.make_table_2col(box, lst)
@@ -2058,14 +2065,14 @@ function vcfannbutton(annolst: any[], holder: any, tk: any, headers: any[]) {
 				{
 					const lst: any[] = []
 					if (item['HGVS.p']) {
-						lst.push('<span style="font-size:.7em;color:#858585">HGVS.p</span> ' + item['HGVS.p'])
+						lst.push('<span style="font-size:.7em;color:#858585">HGVS.p</span> ' + escapeHtml(item['HGVS.p']))
 					} else if (item['HGVS.c']) {
-						lst.push('<span style="font-size:.7em;color:#858585">HGVS.c</span> ' + item['HGVS.c'])
+						lst.push('<span style="font-size:.7em;color:#858585">HGVS.c</span> ' + escapeHtml(item['HGVS.c']))
 					} else {
 						lst.push('no_HGVS')
 					}
 					if (item.Annotation) {
-						lst.push('<span style="font-size:.7em;color:#858585">Annotation</span> ' + item.Annotation)
+						lst.push('<span style="font-size:.7em;color:#858585">Annotation</span> ' + escapeHtml(item.Annotation))
 					} else {
 						lst.push('no_annotation')
 					}
@@ -2087,7 +2094,7 @@ function vcfannbutton(annolst: any[], holder: any, tk: any, headers: any[]) {
 							for (const h of headers) {
 								const v = item[h.name]
 								if (v) {
-									lst.push({ k: h.name, v: v })
+									lst.push({ k: escapeHtml(h.name), v: escapeHtml(v) })
 								}
 							}
 							client.make_table_2col(box, lst)
@@ -2723,7 +2730,7 @@ function singleSample2table(m: any, tk: any, holder: any): void {
 			if (k4a) {
 				// has valid key
 
-				lst.push({ k: tk.ds.cohort.key4annotation, v: k4a })
+				lst.push({ k: escapeHtml(tk.ds.cohort.key4annotation), v: escapeHtml(k4a) })
 
 				const na = tk.ds.cohort.annotation[k4a]
 
@@ -2735,23 +2742,25 @@ function singleSample2table(m: any, tk: any, holder: any): void {
 							if (!na[l.k]) continue
 
 							lst.push({
-								k: l.label || l.k,
+								k: escapeHtml(l.label || l.k),
 								v:
-									na[l.k] +
-									(l.full && na[l.full] ? ' <span style="font-size:.8em;color:#858585">' + na[l.full] + '</span>' : '')
+									escapeHtml(na[l.k]) +
+									(l.full && na[l.full]
+										? ' <span style="font-size:.8em;color:#858585">' + escapeHtml(na[l.full]) + '</span>'
+										: '')
 							})
 						}
 					} else {
 						// no levels, show all from annotation
 						for (const k in na) {
 							if (k == 'color') continue
-							lst.push({ k: k, v: na[k] })
+							lst.push({ k: escapeHtml(k), v: escapeHtml(na[k]) })
 						}
 					}
 				}
 			}
 		} else if (s.sampleobj.name) {
-			lst.push({ k: 'name', v: s.sampleobj.name })
+			lst.push({ k: 'name', v: escapeHtml(s.sampleobj.name) })
 		}
 	}
 	client.make_table_2col(holder, lst)
