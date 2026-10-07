@@ -1,270 +1,146 @@
 import { select } from 'd3-selection'
-import type { SCDom, SCTableData } from '../SCTypes'
-import { icons, sortTableCallBack } from '#dom'
+import type { SCTableData } from '../SCTypes'
+import type { Div } from '../../../types/d3'
+import { TableBase } from '#dom'
+import type { TableBaseRow } from '#dom'
+import type { TableBaseCell, TableBaseColumn } from '#dom'
+
+const SHOWN_PLOTS = 'Shown plots'
 
 /**
- * Focused, stable renderer for the SC sample table.
+ * The SC sample table: a single-select TableBase with a "Shown plots" column that SC fills with
+ * buttons.
  *
- * The shared renderTable() helper in client/dom/table.ts is a generic table system
- * that rebuilds rows/cells aggressively. That makes it awkward to preserve scroll
- * position when subplot state updates only change the "Shown plots" column.
- *
- * This class keeps the table shell stable and updates only the dynamic cells that
- * actually change:
- * - whether the "Shown plots" column is visible
- * - the buttons inside each sample's "Shown plots" cell
- * - the checked radio input, when the selected sample changes
- *
- * setTableData() is called on every SC update() (e.g. on every subplot state
- * change), so it only tears down and rebuilds the table shell when the sample
- * list or columns actually changed (see isSameShape()). Otherwise it leaves
- * existing row/cell DOM nodes in place so scroll position and row identity
- * survive updates that only affect plot buttons.
+ * SC calls setTableData() on every update (e.g. each subplot state change). Redrawing the table there
+ * moves the page scroll, so the rule is: construct once, and patch only what changed. setTableData()
+ * only syncs the selected radio, and setShownPlotsColumnVisibility() only toggles display. A
+ * different sample list or set of columns needs a new SCSampleTable (see isSameShape()).
+ * A sort does redraw the <tbody>, because the user is looking at the table, and onBodyRendered
+ * lets SC put its buttons back.
  */
-export class SCSampleTable {
-	dom: SCDom | any
-	tableData!: SCTableData
-	sampleColIdx = 0
-	showPlotsColumn = false
+export class SCSampleTable extends TableBase {
+	tableData: SCTableData
+	sampleColIdx: number
+	/** sample id -> { sampleId, row: the <tr>, cells: { sample, shownPlots } }, the cells SC writes into */
 	rowMap = new Map<string, any>()
-	rows: any[] = []
-	columns: any[] = []
-	holder: any
-	parentDiv: any
-	table: any
-	tbody: any
-	thead: any
-	tableHeaderRow: any
 	onRowClick?: (sampleId: string) => void
+	onBodyRendered?: () => void
+	showPlotsColumn = false
 
-	constructor(dom: SCDom | any, tableData: SCTableData, opts: { onRowClick?: (sampleId: string) => void } = {}) {
-		this.dom = dom
-		this.holder = dom?.tableDiv || dom
-		this.onRowClick = opts.onRowClick
-		this.applyTableData(tableData)
-		this.renderStaticTable()
-	}
-
-	private applyTableData(tableData: SCTableData) {
+	/** holder is the div to render the table into (SCDom.tableDiv). */
+	constructor(
+		holder: Div,
+		tableData: SCTableData,
+		opts: { onRowClick?: (sampleId: string) => void; onBodyRendered?: () => void } = {}
+	) {
+		super({
+			div: holder,
+			// every column SC lets you sort also gets a filter box
+			columns: tableData.columns.map(column => ({ ...column, filterable: column.sortable })),
+			rows: tableData.rows,
+			styles: { maxHeight: '30vh', maxWidth: '90vw', showLines: true },
+			// autoScroll off: scrolling the page to the table on every rebuild is the jump this class avoids
+			selection: { singleMode: true, selectedRows: tableData.selectedRows, autoScroll: false }
+		})
 		this.tableData = tableData
-		this.rows = tableData.rows
-		this.columns = tableData.columns
 		this.sampleColIdx = tableData.sampleColIdx ?? 0
+		this.onRowClick = opts.onRowClick
+		this.onBodyRendered = opts.onBodyRendered
+		this.selection.onSelect = idx => this.onRowClick?.(this.sampleIdOf(this.originalRows[idx]))
+		this.render()
 	}
 
-	private renderStaticTable() {
-		this.holder.selectAll('*').remove()
-
-		this.parentDiv = this.holder
-			.append('div')
-			.style('background-color', 'white')
-			.style('display', 'inline-block')
-			.style('max-height', '30vh')
-			.style('max-width', '90vw')
-			.classed('sjpp_show_scrollbar', true)
-
-		this.table = this.parentDiv.append('table').style('width', '100%')
-		this.thead = this.table.append('thead')
-		this.thead.style('position', 'sticky').style('top', '0').style('background-color', 'white').style('z-index', '1')
-		this.tableHeaderRow = this.thead.append('tr')
-		this.tbody = this.table.append('tbody')
-
-		this.renderHeader()
-		this.renderRows()
+	/** The element holding the table, for callers that need to know whether it was rebuilt. */
+	get parentDiv() {
+		return this.wrapper
 	}
 
-	/** Renders into a freshly emptied header row (see renderStaticTable()), so this join
-	 * never has anything to match against existing DOM -- every column enters. Still uses
-	 * .data().join() over the manual loop so per-column attrs are declarative and the
-	 * heterogeneous per-cell setup (label + optional sort icon) is isolated in one place. */
-	private renderHeader() {
-		this.tableHeaderRow.append('td').style('width', '1vw') // row-index gutter
-		this.tableHeaderRow.append('th').style('width', '1.5vw').style('padding', '0') // radio placeholder
-
-		this.tableHeaderRow
-			.selectAll('th.sjpp_table_header')
-			.data(this.columns)
-			.join('th')
-			.attr('class', 'sjpp_table_item sjpp_table_header')
-			.style('display', (column: any) => (column.label === 'Shown plots' && !this.showPlotsColumn ? 'none' : null))
-			.style('width', (column: any) => column.width || null)
-			.attr('title', (column: any) => column.tooltip || null)
-			.each((column: any, columnIndex: number, nodes: any) => this.renderHeaderLabel(select(nodes[columnIndex]), column, columnIndex))
+	private sampleIdOf(row: any[] | undefined, colIdx = this.sampleColIdx): string {
+		return String(row?.[colIdx]?.value ?? '')
 	}
 
-	private renderHeaderLabel(th: any, column: any, columnIndex: number) {
-		const labelWrap = th.append('span').style('display', 'inline-flex').style('align-items', 'center')
-		labelWrap.append('span').text(column.label)
-		if (!column.sortable) return
-
-		const sortDiv = labelWrap.append('div').style('display', 'inline-block').style('padding-left', '6px')
-		let isAscending = false
-		icons['updown'](sortDiv, {
-			handler: () => {
-				isAscending = !isAscending
-				this.sortRows(sortTableCallBack(columnIndex, this.rows, isAscending))
-			}
-		})
+	/** SC re-selects on every click, even on the selected row, because selecting also closes the table.
+	 * The base does nothing for a row that is already selected: a click on its checked radio emits no
+	 * change, and the row's own handler ignores clicks that land on the input. So report it here, from the
+	 * row handler (toggleRow) and from a click on the radio itself (renderSelector). */
+	private reselect(row: TableBaseRow): boolean {
+		if (!this.selected.has(row)) return false
+		this.onRowClick?.(this.sampleIdOf(row))
+		return true
 	}
 
-	/** Renders into a freshly emptied tbody (see renderStaticTable()), so this join
-	 * never has anything to match against existing DOM -- every row enters. */
-	private renderRows() {
+	protected toggleRow(input: any): void {
+		if (!this.reselect(this.originalRows[Number(input.attr('value'))])) super.toggleRow(input)
+	}
+
+	/** A click on an unselected radio is not a reselect: it is reported once, by the base's change handler. */
+	protected renderSelector(tr: any, row: TableBaseRow, rowIdx: number): any {
+		const input = super.renderSelector(tr, row, rowIdx)
+		input.on('click.reselect', () => this.reselect(row))
+		return input
+	}
+
+	/** Rebuilds the sample -> row/cell lookup after every body redraw, then lets SC re-add its buttons,
+	 * since the redraw replaced the cells they lived in. */
+	protected renderBody(): void {
+		super.renderBody()
 		this.rowMap.clear()
-
-		this.tbody
-			.selectAll('tr.sjpp_row_wrapper')
-			.data(this.rows)
-			.join('tr')
-			.attr('class', 'sjpp_row_wrapper')
-			.attr('tabindex', 0)
-			.each((row: any[], rowIndex: number, nodes: any) => this.renderRow(select(nodes[rowIndex]), row, rowIndex))
-
-		this.renumberRows()
-	}
-
-	private renderRow(tr: any, row: any[], rowIndex: number) {
-		const sampleId = String(row[this.sampleColIdx]?.value ?? '')
-		if (!sampleId) return
-
-		tr.append('td')
-			.attr('class', 'sjpp_row_index')
-			.text(rowIndex + 1)
-			.style('text-align', 'center')
-			.style('width', '1vw')
-			.style('font-size', '0.8rem')
-
-		tr.append('td') // radio cell
-			.style('width', '1.5vw')
-			.style('padding', '0 6px')
-			.style('text-align', 'center')
-			.append('input')
-			.attr('type', 'radio')
-			.attr('name', 'sjpp-sc-row-selection')
-			.attr('value', sampleId)
-			.attr('aria-label', `Select ${sampleId}`)
-			.property('checked', this.tableData.selectedRows.includes(rowIndex))
-			.on('change', () => this.onRowClick?.(sampleId))
-
-		const entry: any = { sampleId, row: tr, cells: {} }
-		tr.selectAll('td.sjpp_table_item')
-			.data(row)
-			.join('td')
-			.attr('id', (cell: any) => cell.elemId || null)
-			.attr('class', 'sjpp_table_item')
-			.attr('data-testid', (cell: any) => cell.dataTestId || 'sjpp-table-cell-item')
-			.each((cell: any, colIdx: number, nodes: any) => this.renderDataCell(select(nodes[colIdx]), cell, colIdx, entry))
-
-		tr.on('click', () => this.onRowClick?.(sampleId))
-		tr.on('keydown', (event: KeyboardEvent) => {
-			if (event.key === 'Enter') this.onRowClick?.(sampleId)
+		const shownPlotsIdx = this.columns.findIndex(c => c.label === SHOWN_PLOTS)
+		this.tbody.selectAll('tr').each((row: any[], i: number, nodes: any) => {
+			const sampleId = this.sampleIdOf(row)
+			if (!sampleId) return
+			this.rowMap.set(sampleId, {
+				sampleId,
+				row: select(nodes[i]),
+				cells: { sample: row[this.sampleColIdx].__td, shownPlots: row[shownPlotsIdx]?.__td }
+			})
 		})
-
-		this.rowMap.set(sampleId, entry)
+		this.onBodyRendered?.()
 	}
 
-	/** url > html > value, matching the old renderTable() priority (client/dom/table.ts):
-	 * meta-result rows set both html (display label) and value (raw sample id, used
-	 * elsewhere for lookups), and html is meant to win for rendering. */
-	private renderDataCell(td: any, cell: any, colIdx: number, entry: any) {
-		const isShownPlotsCol = this.columns[colIdx]?.label === 'Shown plots'
-		if (isShownPlotsCol && !this.showPlotsColumn) td.style('display', 'none')
-		if (colIdx === this.sampleColIdx) entry.cells.sample = td
-		if (isShownPlotsCol) entry.cells.shownPlots = td
-
-		if (cell.url)
-			td.append('a')
-				.text(cell.value || cell.value === 0 ? cell.value : cell.url)
-				.attr('href', cell.url)
-				.attr('target', '_blank')
-				.attr('rel', 'noopener noreferrer')
-				.attr('aria-label', `Click to ${cell.url}`)
-				.on('click', (event: MouseEvent) => event.stopPropagation())
-		else if (cell.html) td.html(cell.html)
-		else if ('value' in cell) td.text(cell.value).attr('aria-label', cell.value)
-	}
-
-	/** Patches the table in place when the incoming data describes the same
-	 * set of samples/columns (e.g. a subplot state change re-triggers SC's
-	 * main()/update() without the sample list itself changing). Only falls
-	 * back to a full teardown+rebuild when the sample list or columns
-	 * actually changed, so row identity (and scroll position) survives
-	 * updates that only affect plot buttons. */
-	setTableData(tableData: SCTableData) {
-		const needsRebuild = !this.isSameShape(tableData)
-		this.applyTableData(tableData)
-		if (needsRebuild) this.renderStaticTable()
-		else this.syncSelectedRows(tableData)
-	}
-
-	/** Compares by the set of sample IDs rather than row order, since sortRows()
-	 * reorders this.rows/DOM in place on user interaction. Comparing positionally
-	 * would treat that as a "shape change" on the next incoming tableData and
-	 * force an unnecessary rebuild that undoes the sort and resets scroll. */
-	private isSameShape(tableData: SCTableData): boolean {
+	/** True when tableData has the same columns and the same set of samples, in any order. */
+	isSameShape(tableData: SCTableData): boolean {
 		if (tableData.columns.length !== this.columns.length) return false
-		for (const [i, column] of this.columns.entries()) {
-			if (tableData.columns[i]?.label !== column.label) return false
-		}
-		if (tableData.rows.length !== this.rows.length) return false
-		const incomingSampleColIdx = tableData.sampleColIdx ?? this.sampleColIdx
-		return tableData.rows.every(row => this.rowMap.has(String(row[incomingSampleColIdx]?.value ?? '')))
+		if (this.columns.some((column, i) => tableData.columns[i]?.label !== column.label)) return false
+		if (tableData.rows.length !== this.originalRows.length) return false
+		/** Prevent the table from rerendering after applying a filter by checking the
+		 * existing sample ids */
+		const existingSampleIds = new Set(this.originalRows.map(row => this.sampleIdOf(row)))
+		const colIdx = tableData.sampleColIdx ?? this.sampleColIdx
+		return tableData.rows.every(row => existingSampleIds.has(this.sampleIdOf(row, colIdx)))
 	}
 
-	/** selectedRows is always 0 or 1 entries (radio selection), see SCViewModel. */
-	private syncSelectedRows(tableData: SCTableData) {
-		const sampleColIdx = tableData.sampleColIdx ?? this.sampleColIdx
-		const selectedRowIndex = tableData.selectedRows[0]
-		const selectedId =
-			selectedRowIndex != null ? String(tableData.rows[selectedRowIndex]?.[sampleColIdx]?.value ?? '') : ''
-		for (const [sampleId, entry] of this.rowMap) {
-			const input = entry.row.select('input[type="radio"]').node()
-			if (input) input.checked = sampleId === selectedId
-		}
+	/** Patches the table for tableData that isSameShape(): only the selected radio can differ. */
+	setTableData(tableData: SCTableData) {
+		this.tableData = tableData
+		const colIdx = tableData.sampleColIdx ?? this.sampleColIdx
+		const selectedId = this.sampleIdOf(tableData.rows[tableData.selectedRows[0]], colIdx)
+		const selectedIdx = this.originalRows.findIndex(row => this.sampleIdOf(row) === selectedId)
+		this.setSelectedIndexes(selectedId && selectedIdx != -1 ? [selectedIdx] : [])
 	}
 
+	/** The "Shown plots" column only appears once two or more plots are open. Hidden with display, not
+	 * by redrawing, so nothing moves; renderHeaderCell() and renderCell() reapply it after a redraw. */
 	setShownPlotsColumnVisibility(visible: boolean) {
-		if (visible !== this.showPlotsColumn) this.toggleShownPlotsColumn(visible)
-	}
-
-	private toggleShownPlotsColumn(visible: boolean) {
+		if (visible === this.showPlotsColumn) return
 		this.showPlotsColumn = visible
-		const shownPlotsHeaderIndex = this.columns.findIndex(c => c.label === 'Shown plots')
-		if (shownPlotsHeaderIndex === -1) return
-		const domColumnIndex = shownPlotsHeaderIndex + 1 // +1 for the radio placeholder <th> (see renderHeader())
-
-		const headerCells = this.tableHeaderRow.selectAll('th').nodes()
-		const visibleState = visible ? 'table-cell' : 'none'
-		if (headerCells[domColumnIndex]) headerCells[domColumnIndex].style.display = visibleState
-
-		for (const entry of this.rowMap.values()) entry.cells.shownPlots?.style('display', visibleState)
+		const colIdx = this.columns.findIndex(c => c.label === SHOWN_PLOTS)
+		if (colIdx == -1) return
+		const display = visible ? null : 'none'
+		const th = this.thead.selectAll('th.sjpp_table_header').nodes()[colIdx] as HTMLElement
+		th.style.setProperty('display', display)
+		for (const row of this.rows) row[colIdx].__td?.style('display', display as any)
 	}
 
-	/**
-	 * Reorders existing DOM nodes to match a sort, instead of deleting/recreating the
-	 * whole table -- this intentionally keeps row identity (and any injected plot
-	 * buttons) stable. The row-index text and striping were set once at creation from
-	 * that row's original position, so they're now stale for any row that moved;
-	 * renumberRows() recomputes both from the new DOM order, the same way the generic
-	 * renderTable() derives them from visible row position (client/dom/table.ts).
-	 */
-	sortRows(sortedRows: any[]) {
-		const parentNode = this.tbody.node()
-		for (const row of sortedRows) {
-			const sampleId = String(row[this.sampleColIdx]?.value ?? '')
-			const entry = this.rowMap.get(sampleId)
-			if (!entry) continue
-			parentNode.appendChild(entry.row.node())
-		}
-		this.rows = sortedRows
-		this.renumberRows()
+	protected renderHeaderCell(tr: any, column: TableBaseColumn, colIdx: number) {
+		const th = super.renderHeaderCell(tr, column, colIdx)
+		if (column.label === SHOWN_PLOTS && !this.showPlotsColumn) th.style('display', 'none')
+		return th
 	}
 
-	private renumberRows() {
-		this.tbody.selectAll('tr.sjpp_row_wrapper').each((_row: any, rowIndex: number, nodes: any) => {
-			const tr = select(nodes[rowIndex])
-			tr.select('td.sjpp_row_index').text(rowIndex + 1)
-			tr.style('background-color', () => (rowIndex % 2 === 1 ? 'rgb(245,245,245)' : null))
-		})
+	protected renderCell(tr: any, cell: TableBaseCell, colIdx: number) {
+		const td = super.renderCell(tr, cell, colIdx)
+		if (this.columns[colIdx].label === SHOWN_PLOTS && !this.showPlotsColumn) td.style('display', 'none')
+		return td
 	}
 }

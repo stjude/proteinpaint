@@ -1,15 +1,23 @@
 services:
   pp0:
-    image: ghcr.io/stjude/ppfull:2.122.0-dca7a83a7
+    image: ghcr.io/stjude/ppfull:2.215.0-4e121393d
     container_name: container0
     platform: linux/amd64
     ports:
       - "3456:3000"
     volumes:
       - /path/to/local/data/tp/:/home/root/pp/tp/
-      - /path/to/local/proteinpaint/container/serverconfig.json:/home/root/pp/app/active/serverconfig.json
+      - /path/to/local/proteinpaint/container/serverconfig.json:/home/root/pp/app/active/serverconfig.json:ro
       - /path/to/local/proteinpaint/container/dataset:/home/root/pp/app/active/dataset
       - /path/to/local/proteinpaint/container/public:/home/root/pp/app/active/public
+    # the key for deriving cache file names: keep the same file across restarts, so that the server keeps
+    # finding the existing cache files. Create it once, such as with `openssl rand -hex 32 > pp_cacheid.txt`.
+    # envHelpers.mjs reads the file named by PP_CACHEID_CREDS_FILE and passes its content to the server, which is
+    # not allowed to read /run/secrets.
+    secrets:
+      - pp_cacheid
+    environment:
+      PP_CACHEID_CREDS_FILE: /run/secrets/pp_cacheid
     restart: unless-stopped
     # No `user:` override, so that the image's own user is used: this example tag predates the non-root
     # images and runs as root, while a newer image runs as the unprivileged app user (UID 1000). Do not
@@ -22,3 +30,7 @@ services:
 
 networks:
   pp_network:
+
+secrets:
+  pp_cacheid:
+    file: /path/to/local/pp_cacheid.txt

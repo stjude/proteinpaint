@@ -1,4 +1,4 @@
-import { Menu, renderTable, type TableRow, getChartTitle } from '#dom'
+import { Menu, renderTable, type TableRow, getChartTitle, escapeHtml } from '#dom'
 // import { dofetch3 } from '#common/dofetch'
 import { mclass, dt2label } from '#shared/common.js'
 // import { /*newpane,*/ export_data } from '#src/client'
@@ -48,15 +48,13 @@ export default function getHandlers(self) {
 				} else {
 					dataLabel = d.dataId
 				}
-				const icon = !hasOverlay
-					? ''
-					: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
-					  d.color +
-					  "'>&nbsp;</div>"
-				const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${seriesLabel}</td></tr>`]
+				const icon = !hasOverlay ? '' : swatchHtml(d.color)
+				const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${escapeHtml(seriesLabel)}</td></tr>`]
 				if (hasOverlay) {
 					rows.push(
-						`<tr><td colspan=2 style='padding:3px; text-align:center'>${icon} <span>${dataLabel}</span></td></tr>`
+						`<tr><td colspan=2 style='padding:3px; text-align:center'>${icon} <span>${escapeHtml(
+							dataLabel
+						)}</span></td></tr>`
 					)
 				}
 
@@ -111,16 +109,16 @@ export default function getHandlers(self) {
 						<table style="margin: 5px; text-align:left; font-size: 0.8em; border-spacing: 5px; border-collapse: separate;"
 							<tr>
 								<td style='color:#aaa'></td>
-								<td style='color:#aaa'>${term2Label}</td>
-								<td style='color:#aaa'>${negateTerm2Label}</td>
+								<td style='color:#aaa'>${escapeHtml(term2Label)}</td>
+								<td style='color:#aaa'>${escapeHtml(negateTerm2Label)}</td>
 							</tr>
 							<tr>
-								<td style='color:#aaa'>${term1Label}</td>
+								<td style='color:#aaa'>${escapeHtml(term1Label)}</td>
 								<td>${tableValues.R1C1}</td>
 								<td>${tableValues.R1C2}</td>
 							</tr>
 							<tr>
-								<td style='color:#aaa'>${negateTerm1Label}</td>
+								<td style='color:#aaa'>${escapeHtml(negateTerm1Label)}</td>
 								<td>${tableValues.R2C1}</td>
 								<td>${tableValues.R2C2}</td>
 							</tr>
@@ -399,14 +397,12 @@ function handle_click(event, self, chart) {
 	const dataLabel =
 		(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
 		term2unit
-	const icon = !term2
-		? ''
-		: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
-		  d.color +
-		  "'>&nbsp;</div>"
+	const icon = !term2 ? '' : swatchHtml(d.color)
 	const header =
-		`<div style='padding:2px'><b>${term1.name}</b>: ${seriesLabel}</div>` +
-		(d.seriesId && term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel} ${icon}</div>` : '')
+		`<div style='padding:2px'><b>${escapeHtml(term1.name)}</b>: ${escapeHtml(seriesLabel)}</div>` +
+		(d.seriesId && term2
+			? `<div style='padding:2px'><b>${escapeHtml(term2.name)}</b>: ${escapeHtml(dataLabel)} ${icon}</div>`
+			: '')
 
 	const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
 
@@ -416,7 +412,7 @@ function handle_click(event, self, chart) {
 		const visibleSerieses = chart.visibleSerieses || self.charts.find(c => c.chartId === chartId)?.visibleSerieses || []
 		if (visibleSerieses.length > 1) {
 			options.push({
-				label: data.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
+				label: data.seriesId ? 'Hide "' + escapeHtml(seriesLabel) + '"' : 'Hide',
 				testId: `sjpp-barchart-hide-series-${data.seriesId}`,
 				callback: () => {
 					const term = self.config.term
@@ -442,7 +438,7 @@ function handle_click(event, self, chart) {
 		// present without a term2, e.g. membership multivalue) cannot offer it
 		if (self.config.term2 && hasMultipleCells && (data.dataId || data.dataId === 0)) {
 			options.push({
-				label: 'Hide "' + dataLabel + '" ' + icon,
+				label: 'Hide "' + escapeHtml(dataLabel) + '" ' + icon,
 				callback: () => {
 					const term2 = self.config.term2
 					self.app.dispatch({
@@ -1191,4 +1187,17 @@ function getTermValues(d, self) {
 		}
 	}
 	return termValues.map(f => wrapTvs(f))
+}
+
+// a color square as HTML: the color is set through the element style, which drops any value that is not a valid color
+function swatchHtml(color: string) {
+	return create('div')
+		.style('display', 'inline-block')
+		.style('width', '14px')
+		.style('height', '14px')
+		.style('margin', '2px 3px')
+		.style('vertical-align', 'top')
+		.style('background', color)
+		.html('&nbsp;')
+		.node()!.outerHTML
 }

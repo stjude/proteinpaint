@@ -4,18 +4,13 @@ import crypto from 'crypto'
 import serverconfig from './serverconfig.js'
 import { xfetch } from './xfetch.js'
 
+// the keys are url substrings to cache responses for, the values are not used
 const extApiCache = serverconfig.features?.extApiCache || {}
+// declared in cacheRegistry and evicted by CacheManager; also created here,
+// for when cachedFetch is used without a CacheManager, such as in spec files
 const extApiResponseDir = path.join(serverconfig.cachedir, 'extApiResponse')
-if (serverconfig.features?.extApiCache) {
-	if (!fs.existsSync(extApiResponseDir)) {
-		fs.mkdirSync(extApiResponseDir, { recursive: true })
-	}
-	for (const substr in extApiCache) {
-		const cacheDir = path.join(extApiResponseDir, extApiCache[substr])
-		if (!fs.existsSync(cacheDir)) {
-			fs.mkdirSync(cacheDir, { recursive: true })
-		}
-	}
+if (serverconfig.features?.extApiCache && !fs.existsSync(extApiResponseDir)) {
+	fs.mkdirSync(extApiResponseDir, { recursive: true })
 }
 
 /**
@@ -46,12 +41,7 @@ if (serverconfig.features?.extApiCache) {
  * !!! NOTE !!!: to clear the cache, `rm [cachedir]/extApiResponse/*`
  */
 export async function cachedFetch(url, opts = {}, use = {}) {
-	let cacheDir
-	for (const substr in extApiCache) {
-		if (url.includes(substr)) {
-			cacheDir = path.join(extApiResponseDir, extApiCache[substr])
-		}
-	}
+	const cacheDir = Object.keys(extApiCache).some(substr => url.includes(substr)) ? extApiResponseDir : undefined
 
 	// assume that a non-relative url indicates an external API
 

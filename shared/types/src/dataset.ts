@@ -501,6 +501,63 @@ type NIdataQueryRef = {
 	sampleColumns?: { termid: string }[]
 }
 
+/** swimmer plot data: per-patient time intervals (treatment phases) and point events,
+served by the termdb/swimmer route and rendered by the mass "swimmer" chart.
+Both files are tab-delimited with a header row and are read by column position:
+- rangeFile: patient, category, start, end. a blank or NA end is an ongoing interval, drawn up to the lane end
+- pointFile: patient, event, time, and an optional 4th column naming a sample the event refers to
+  (e.g. a CSF sample id on a CSF collection event). that sample can be at any level
+Each lane is a patient: column 1 must match the sampleidmap.name of a sample of a root sample type
+(sample_types.parent_id is null, e.g. "<id>_patient"). The cohort/access
+filter resolves to leaf samples (getFilterSampleIdSet), so a patient lane passes when any of its samples
+does. Rows whose patient is not in the db or not of a root sample type are dropped at server launch with
+a console warning. */
+export type SwimmerQuery = {
+	/** (server-side) optional access rule, same contract as NIdata.checkDataAccess: receives the
+	route query (auth info at q.__protected__.clientAuthResult) and returns false to deny */
+	checkDataAccess?: (q: any) => boolean
+	/** tp-relative path to the interval file */
+	rangeFile?: string
+	/** tp-relative path to the event file */
+	pointFile?: string
+	/** x axis label, e.g. "Days after treatment started" */
+	timeLabel?: string
+	/** interval categories keyed by the raw value in rangeFile column 2. categories sharing a label are
+	merged in the legend (e.g. RT and CSI both labeled "CSI/RT"). unlisted categories get a default color */
+	categories?: { [category: string]: SwimmerLegendItem }
+	/** events keyed by the raw value in pointFile column 2. unlisted events get a default color */
+	events?: { [event: string]: SwimmerLegendItem }
+	/** event key (e.g. "Death") that terminates a lane; a lane with this event ends at its time,
+	otherwise at its latest event or interval end */
+	terminalEvent?: string
+	/** set at server launch by validate_query_swimmer(): sample types (sample_types.id, as strings like
+	term.sample_type) of the point samples (pointFile 4th column, e.g. CSF) of events with markBy:true. the
+	client lists only terms of these types to mark the linked points by. unset hides the "mark by" control */
+	pointSampleTypes?: string[]
+	/** set at server launch: keys of the markBy events that have point samples (e.g. CSF), for the control
+	label */
+	pointSampleEvents?: string[]
+	/** set at server launch by validate_query_swimmer(); parsed rows keyed by patient name. the patient's
+	samples come from ds.cohort.termdb.q.id2descendantIds() */
+	data?: Map<string, { sampleId: number; ranges: any[]; points: any[] }>
+}
+
+export type SwimmerLegendItem = {
+	label?: string
+	color?: string
+	/** events only: marker shape, a key of the client's shared shapes (client/dom/shapes.js, the same set
+	as the scatter plot "shape by"), e.g. filledCircle, filledTriangle, largeCross, filledEgg.
+	missing or unknown keys draw a filled circle */
+	shape?: string
+	/** events only: term ids of the point's own sample (the pointFile 4th column, e.g. a CSF sample) to list
+	in the hover tooltip, in this order. without it, the tooltip shows no annotations, as for other events.
+	ids missing from the termdb are dropped at server launch with a warning */
+	sampleTerms?: string[]
+	/** events only: set true to offer a "Mark <event label> by" control, coloring this event's markers by a
+	variable of their own samples (pointFile 4th column). needs linked samples; off by default */
+	markBy?: boolean
+}
+
 type NIdataQueryRefParams = {
 	/** index of slice for default sagittal plane */
 	l: number
@@ -851,10 +908,22 @@ type ProteomeCohortConfig = {
 	/** precomputed differential-abundance file (acc, identifier, gene, log2FC, FDR[, pValue]),
 	 *  the single source of every fold change and significance */
 	DAPfile: string
-	catalog?: { [columnKey: string]: string }
+	/** display attributes for the sample-set catalog and plots; `placeholder: true` marks a
+	 *  stand-in sample set (not real data), drawn distinctly until the real data arrives */
+	catalog?: { [columnKey: string]: string | number | boolean }
 	/** age/progression trajectory membership. Cohorts sharing `series` form one ordered series;
 	 *  `value` is the numeric x-axis position (e.g. months) giving true spacing; `label` is the tick text. */
 	trajectory?: { series: string; value: number; label: string }
+	/** static QC figures shown in the Data quality views, in display order (needs
+	 *  queries.proteome.dataQuality) */
+	qcFigures?: DataQualityFigure[]
+}
+
+export type DataQualityFigure = {
+	/** tp-relative image path, fetched through the img route */
+	file: string
+	/** caption shown above the figure */
+	title: string
 }
 
 type ProteomeAssayConfig = {
@@ -904,7 +973,7 @@ export type ProteinViewTileConfig = {
 		y: ProteomeCohortMatch & { label: string; ageVaries?: boolean }
 	}[]
 	defaultAge?: string
-	/** footnote shown in the expanded pane */
+	/** footnote shown in the expanded tile */
 	note?: string
 }
 
@@ -919,6 +988,34 @@ export type ProteinViewConfig = {
 	/** cell type → optional footnote; key order is the row order */
 	cellTypes?: { [cellType: string]: { note?: string } }
 	tiles: ProteinViewTileConfig[]
+}
+
+/** one candidate value for a sunburst ring: a catalog key or a constant, optionally gated by a
+ *  cohortMatch rule. The first candidate that matches and yields a value wins. */
+export type ProteomeSunburstLevelValue = { key?: string; const?: string; when?: ProteomeCohortMatch }
+
+/** one sunburst stat box. count: number of sample sets; sum: total of a numeric catalog field
+ *  (null when no sample set carries it); distinct: number of distinct values of a catalog
+ *  field. `where` limits which sample sets are counted. */
+export type ProteomeSunburstStat = {
+	label: string
+	kind: 'count' | 'sum' | 'distinct'
+	key?: string
+	where?: ProteomeCohortMatch
+}
+
+export type ProteomeCohortSunburstConfig = {
+	/** rings, inside out; a ring with no value for a cohort is skipped for that cohort */
+	levels: { name: string; values: ProteomeSunburstLevelValue[] }[]
+	/** leaf label: the non-empty values of `keys` joined; if none, `fallbackKeys`; if none, the cohort key */
+	leafLabel: { keys: string[]; fallbackKeys?: string[] }
+	/** base colour per first-ring value; others get a default palette */
+	colors?: { [value: string]: string }
+	/** stat boxes above the selection panel, computed over the sample sets under the centre */
+	stats?: ProteomeSunburstStat[]
+	/** catalog keys whose values must agree across a selection (e.g. species + data type):
+	 *  once one sample set is selected, only those of the same kind can be added */
+	selectionKind?: { keys: string[] }
 }
 
 export type ProteomeAbundanceQuery = {
@@ -991,6 +1088,20 @@ export type ProteomeAbundanceQuery = {
 		 *  active at all times (defaulting to the facet's first value), so the catalog table
 		 *  never shows rows of two values at once, e.g. human and mouse cohorts */
 		singleSelectFacets?: string[]
+		/** facets whose values render grouped under the values of a parent catalog key, e.g.
+		 *  sampleSource values under their sampleType. A parent checkbox toggles all of its
+		 *  child values; `labels` renames parent values for display (e.g. plural headings) */
+		nestedFacets?: { [facet: string]: { parent: string; labels?: { [parentValue: string]: string } } }
+		/** value display order per facet (or nested-facet parent) key; unlisted values sort
+		 *  after the listed ones, alphabetically */
+		facetValueOrder?: { [key: string]: string[] }
+	}
+	/** zoomable sunburst of the sample sets (cohortSunburst plot) */
+	cohortSunburst?: ProteomeCohortSunburstConfig
+	/** Data quality: enables the QC views; the figures are listed per cohort (qcFigures) */
+	dataQuality?: {
+		/** intro text above the figures */
+		description?: string
 	}
 	/** organism-keyed structure (new format) */
 	organisms?: {
@@ -1430,6 +1541,7 @@ type Mds3Queries = {
 	defaultCoord?: string
 	singleSampleMutation?: SingleSampleMutationQuery
 	NIdata?: NIdataQuery
+	swimmer?: SwimmerQuery
 	geneExpression?: GeneExpressionQuery
 	isoformExpression?: IsoformExpressionQuery
 	/** single-sample gsea precomputed scores for rnaseq samples, for genesets from geneset db
@@ -2188,6 +2300,9 @@ keep this setting here for reason of:
 	limitDictTermSamplesToMutated?: boolean
 	/** (client-side) if true, plots omit the Documentation button. for a ds with no applicable user guide */
 	hidePlotDocumentation?: boolean
+	/** (client-side) hide: true omits the per-plot sample filter in every plot header. for a ds whose
+	plots are driven by sample sets rather than user-defined sample groups */
+	plotFilter?: { hide?: boolean; disabledMessage?: string }
 	/** (client-side) if true, the genome browser recreates its block on track change rather than
 	updating tracks in the existing block instance */
 	gbRecreateBlock?: boolean
@@ -2518,8 +2633,8 @@ type MassNavAboutTabEntry = MassNavTabEntry & {
 		/** link to data release page */
 		link: string
 	}
-	/** "active" items shown in the about tab. clicking an item either launches a plot
-	 * or opens a chart-specific menu (item.openChartMenu) */
+	/** "active" items shown in the about tab. clicking an item launches a plot, opens a
+	 * chart-specific menu (item.openChartMenu), or opens a menu of launch items (item.menu) */
 	activeItems?: {
 		/** how to render the items. 'buttons' (default) = compact inline buttons.
 		 * 'cards' = large square tiles that lift on hover */
@@ -2548,6 +2663,9 @@ type ActiveItem = {
 	/** instead of directly launching a plot, open a chart-specific menu (e.g. a gene
 	 * search) for chart types that require user input before a plot can be created.*/
 	openChartMenu?: string
+	/** instead of launching one plot, open a menu of launch items under the item, in
+	 *  labelled groups; each entry launches like an item (plot or openChartMenu) */
+	menu?: { label?: string; items: ActiveItem[] }[]
 }
 
 type Title = {

@@ -537,7 +537,7 @@ export class InputTerm {
 			.style('padding', '5px')
 			.style('font-size', '0.8em')
 			.style('color', graytextcolor)
-			.html(`Selected variables will each form pairwise interaction with ${this.term.term.name}`)
+			.text(`Selected variables will each form pairwise interaction with ${this.term.term.name}`)
 
 		this.dom.tip.d
 			.append('div')

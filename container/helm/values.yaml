@@ -6,7 +6,7 @@ annotations: {}
 
 image:
   repository: ghcr.io/stjude/ppserver
-  tag: "2.138.3-5-04830bbd8"
+  tag: "2.215.0-4e121393d"
   pullPolicy: IfNotPresent
   pullSecrets: []
 
@@ -31,34 +31,52 @@ resources:
     cpu: "2"
     memory: "8Gi"
 
+# The server needs no capabilities and does not write to the image files, so the root filesystem is read-only;
+# it writes only to the data volume (tp/cache) and to the writableDirs below. These are the same settings as
+# the container units in the sjpp releaseRollout, see container/runtimePosture.mjs for what each one prevents.
 securityContext:
   allowPrivilegeEscalation: false
-# Empty by default, since the default image.tag above predates the non-root images, which run as the
-# unprivileged app user (UID/GID 1000, see container/deps/Dockerfile). Forcing UID 1000 on an older,
-# root-based image fails, since its node install is under /root. With an image.tag whose
-# `docker image inspect --format '{{.Config.User}}'` is `app`, use the settings below, where fsGroup
-# makes the mounted volumes, such as the tp/cache dir, writable by that user:
-#   podSecurityContext:
-#     runAsNonRoot: true
-#     runAsUser: 1000
-#     runAsGroup: 1000
-#     fsGroup: 1000
-# Another runAsUser may be used with runAsGroup: 0, since the dirs that the app writes at runtime are
-# also writable for group 0.
-podSecurityContext: {}
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+# The image runs as the unprivileged app user (UID/GID 1000, see container/deps/Dockerfile), and fsGroup makes
+# the mounted volumes, such as the tp/cache dir, writable by that user. Another runAsUser may be used with
+# runAsGroup: 0, since the dirs that the app writes at runtime are also writable for group 0. An image.tag
+# from before the non-root images, whose node install is under /root, needs podSecurityContext: {} instead.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# emptyDir mounts for the dirs that the server, python, and R write to besides the cachedir, since the root
+# filesystem is read-only: /tmp, which the image uses as the OS temp dir, and the app user's HOME for the python
+# and R caches. A Kubernetes emptyDir or PVC cannot be mounted with noexec, which container/runtimePosture.mjs
+# recommends for the writable dirs. As this chart sets PP_MODE to empty, envHelpers.mjs does not run that check
+# at startup, and PP_RUNTIME_CHECK has no effect; to see which settings are not applied in a running pod, use
+#   kubectl exec <pod> -- node runtimePosture.mjs /home/root/pp/tp/cache
+writableDirs:
+  - name: tmp
+    mountPath: /tmp
+    sizeLimit: 2Gi
+  - name: app-home
+    mountPath: /home/app
+    sizeLimit: 256Mi
 
 container:
   name: proteinpaint
   containerPort: 3456
   command: ["/bin/bash"]
-  # envHelpers.mjs generates node.config.json to limit the server process file access, and passes any
-  # <NAME>_CREDS_FILE content as a <NAME>_CREDS env variable. Images published before envHelpers.mjs was
-  # added, such as the default image.tag above, do not have it, so the server then runs without those
-  # restrictions, as it did before; update image.tag to a newer release to apply them.
+  # envHelpers.mjs applies the node permission model to limit the server process file access, passes any
+  # <NAME>_CREDS_FILE content as <NAME>_CREDS, and then replaces itself with the server. Images published
+  # before envHelpers.mjs was added do not have it, so the server then runs without those restrictions.
+  # The serverconfig.json is mounted read-only from the config map, which needs an image from v2.213.0 or
+  # later; an older image rewrites serverconfig.json at startup.
   args:
     - "-c"
     - |
-      cp /home/root/pp/app/active/serverconfig /home/root/pp/app/active/serverconfig.json
       if [ -f envHelpers.mjs ]; then
         exec node envHelpers.mjs node --enable-source-maps app-server.mjs
       fi
@@ -71,15 +89,29 @@ container:
   # additional env entries, such as PP_CREDS_FILE
   env: []
 
+# The key for deriving cache file names, set as PP_CACHEID_CREDS. Every replica and restart must use the same
+# value to keep finding the existing cache files; without it, each server process generates its own key.
+# When existingSecret is empty, the chart creates a Secret with a random value that is kept across upgrades,
+# see templates/cacheid.yaml. Set existingSecret when the chart is rendered without a cluster
+# connection, such as with `helm template` in a GitOps tool.
+cacheIdCreds:
+  enabled: true
+  existingSecret: ""
+  secretKey: cacheid # pragma: allowlist secret
+
 mounts:
   data:
+    # when disabled, an emptyDir is mounted at config.serverConfig.cachedir instead, since the root filesystem is
+    # read-only; its cache data, including saved sessions, is then lost when the pod is replaced. cacheSizeLimit
+    # is the sizeLimit of that emptyDir, and the pod is evicted when the cache grows past it
     enabled: true
+    cacheSizeLimit: 10Gi
     name: storage-volume
     mountPath: /home/root/pp/tp/
     pvcName: proteinpaint-pvc
   config:
     name: config-volume
-    mountPath: /home/root/pp/app/active/serverconfig
+    mountPath: /home/root/pp/app/active/serverconfig.json
     subPath: serverconfig.json
     configMapName: proteinpaint-config
 

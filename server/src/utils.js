@@ -11,10 +11,14 @@ import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import ky from 'ky'
 import serverconfig from './serverconfig.js'
+import { cacheUrlProtocols } from './CacheManager.ts'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import { text as streamText } from 'stream/consumers'
 import { minimatch } from 'minimatch'
+
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
 export * from './cachedFetch.js'
 export * from './xfetch.js'
 export { connect_db } from './sql.ts'
@@ -45,9 +49,9 @@ get_header_txt
 get_fasta
 connect_db
 snpgtCacheFile
+snpgtSampleColumn
 bam_ifnochr
 testIfFileIsBigbed
-checkChr
 spawnTool
 validateRglst
 ********************** INTERNAL
@@ -84,22 +88,15 @@ export async function cache_index(gzurl, indexurl) {
 	// build cache directory using gz file url and do not include index portion
 	// e.g. cache/https/domain/path/to/file.gz/
 	// resolve and check inline so the returned dir, which becomes the cwd of spawned tools, is confined to the cache dir
-	const protocolDir = path.resolve(serverconfig.cachedir, protocol)
+	const protocolDir = path.resolve(cachedir, protocol)
 	const dir = path.resolve(protocolDir, body)
 	if (!dir.startsWith(protocolDir + path.sep)) throw '.gz file URL escapes cache dir'
+	// mkdir on every call, which is a no-op for an existing dir, rather than only when a stat finds it missing,
+	// so that an empty dir that CacheManager removes between the two calls is still recreated
 	try {
-		await fs.promises.stat(dir)
+		await fs.promises.mkdir(dir, { recursive: true })
 	} catch (e) {
-		if (e.code == 'ENOENT') {
-			// make dir
-			try {
-				await fs.promises.mkdir(dir, { recursive: true })
-			} catch (e) {
-				throw 'url dir: cannot mkdir'
-			}
-		} else {
-			throw 'stating gz url dir: ' + e.code
-		}
+		throw 'url dir: cannot mkdir'
 	}
 	// dir is ready
 	if (indexurl) {
@@ -114,6 +111,7 @@ export async function cache_index(gzurl, indexurl) {
 		try {
 			await fs.promises.stat(path2file)
 			// index file exists
+			await touchCacheFiles([path2file])
 			return dir
 		} catch (e) {
 			if (e.code == 'ENOENT') {
@@ -128,8 +126,21 @@ export async function cache_index(gzurl, indexurl) {
 		// no url specified for index
 		// assume the appropriate index exists under dir
 		// let tabix 1.11 do the work of getting the tbi/csi file if missing
+		// the index that tabix downloaded into dir is not known by name, so every file in dir is touched;
+		// a nested dir is the cache dir of another url, and a partial download is not a usable index
+		const entries = await fs.promises.readdir(dir, { withFileTypes: true }).catch(() => [])
+		const files = entries.filter(e => e.isFile() && !e.name.endsWith('.tmp')).map(e => path.join(dir, e.name))
+		await touchCacheFiles(files)
 		return dir
 	}
+}
+
+/* CacheManager evicts a cached index by its mtime, so the mtime is set on each use: a track that is in use
+keeps its index, and only an index that has not been used for maxAge is evicted. A failure, such as a file
+evicted since it was found, is ignored, since the caller or tabix downloads a missing index again. */
+async function touchCacheFiles(files) {
+	const now = new Date()
+	await Promise.all(files.map(f => fs.promises.utimes(f, now, now).catch(() => {})))
 }
 
 export function fileurl(req, checkWhiteList = true) {
@@ -167,6 +178,15 @@ export function fileurl(req, checkWhiteList = true) {
 }
 
 const fileExtensionBlackList = Object.freeze(['.bam', '.bai', '.gz', '.tbi', '.csi', '.bw', '.bb'])
+
+/*
+	file: a request track file path, relative to tpmasterdir
+	throws unless file is a legal path; an empty value is allowed, for a track that uses a url instead
+*/
+export function checkTrackFile(file) {
+	if (file === undefined || file === null || file === '') return
+	if (illegalpath(file, false, false)) throw 'illegal file path'
+}
 
 export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
 	// a non-string, such as an array from a repeated query parameter, could bypass the substring checks below
@@ -224,9 +244,8 @@ export function illegalPathSegment(s) {
 }
 
 // protocol and body of a url become path segments of a cache dir (see cache_index), so only
-// allow protocols that are real remote track sources: any other name could be a feature dir under
-// cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
-const cacheUrlProtocols = new Set(['http', 'https', 'ftp'])
+// allow the protocols that are declared as 'url' subdirs in cacheRegistry: any other name could be a
+// feature dir under cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
 
 function test_url(u) {
 	const tmp = u.split('://')
@@ -810,7 +829,7 @@ export function write_file(file, text) {
 
 export async function write_tmpfile(text) {
 	const tmp = Math.random().toString()
-	await write_file(path.join(serverconfig.cachedir, tmp), text)
+	await write_file(path.join(cachedir, tmp), text)
 	return tmp
 }
 
@@ -857,16 +876,37 @@ export const genotype_types = {
 	het: 'Heterozygous'
 }
 
-// a client-provided snp genotype cache id, such as tw.q.cacheid, must name a file directly under
-// cache_snpgt.dir; the callers that also apply cache_snpgt.fileNameRegexp keep that stricter check
-export function snpgtCacheFile(cacheid) {
-	if (illegalPathSegment(cacheid)) throw 'invalid cacheid'
-	return path.join(serverconfig.cache_snpgt.dir, cacheid)
+// in a snp genotype cache file written by termdb.snp.js, the sample columns start from the 7th column
+export const snpgtSampleColumn = 6
+
+/* a snp genotype cache id starts with this prefix of the dataset that made the cache file;
+a cache id is a file name, so a genome or dslabel that has a non-\w character has it replaced with _.
+as that replacement may give the same prefix to another dataset of the same genome, such as
+a-b and a.b, neither of those datasets can use the snp genotype cache */
+export function snpgtCacheidPrefix(ds) {
+	if (!ds?.genomename || !ds.label) throw 'dataset does not support snp genotype cache'
+	const normalize = label => (ds.genomename + '_' + label).replace(/[^\w]/g, '_') + '_'
+	const prefix = normalize(ds.label)
+	for (const label in ds.genomeObj?.datasets || {}) {
+		if (label != ds.label && normalize(label) == prefix)
+			throw `dataset label '${ds.label}' is not distinct from '${label}' for snp genotype cache`
+	}
+	return prefix
+}
+
+/* a snp genotype cache id, such as the client-provided tw.q.cacheid, must name a file directly under the
+snpgt cache subdir, and must have been made by termdb.snp.js makeCacheid() for the same ds:
+<prefix of ds><time>_<random number> */
+export function snpgtCacheFile(cacheid, ds) {
+	if (typeof cacheid != 'string' || illegalPathSegment(cacheid) || /[^\w]/.test(cacheid)) throw 'invalid cacheid'
+	const prefix = snpgtCacheidPrefix(ds)
+	if (!cacheid.startsWith(prefix) || !/^\d+_\d+$/.test(cacheid.slice(prefix.length))) throw 'invalid cacheid'
+	return path.join(cachedir, 'snpgt', cacheid)
 }
 
 export async function run_fdr(plst) {
 	// list of pvalues
-	const infile = path.join(serverconfig.cachedir, Math.random().toString())
+	const infile = path.join(cachedir, Math.random().toString())
 	const outfile = infile + '.out'
 	try {
 		await write_file(infile, plst.join('\t'))
@@ -882,7 +922,8 @@ export async function run_fdr(plst) {
 
 function run_fdr_2(infile, outfile) {
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', [path.join(serverconfig.binpath, 'utils/fdr.R'), infile, outfile])
+		// --vanilla, same as run_R()
+		const sp = spawn('Rscript', ['--vanilla', path.join(serverconfig.binpath, 'utils/fdr.R'), infile, outfile])
 		sp.on('close', () => resolve())
 		sp.on('error', reject)
 	})
@@ -1036,7 +1077,7 @@ export async function testIfFileIsBigbed(file) {
 			// TODO also test extraIndexCount. return object but not true/false
 		})
 		ps.on('error', e => {
-			if (e.code === 'ENOENT') throw `cannot find bigBedInfo binary='${bigBedInfo}'`
+			if (e.code === 'ENOENT') return reject(`cannot find bigBedInfo binary='${bigBedInfo}'`)
 			// reject('Error detecting if file is bigbed')
 			console.log('\n--- testIfFileIsBigbed() error ---\n', e, '\n')
 			resolve(false)
@@ -1054,12 +1095,6 @@ genome is used for validating chr names. when routes are fixed, genome should be
 
 throws on any err. makes no return. may update q
 */
-// a request-supplied chr must be a known chromosome before it goes into a samtools/tabix/bcftools argv,
-// otherwise a value like "-o/path" is parsed as an option
-export function checkChr(genome, chr) {
-	if (typeof chr != 'string' || !genome?.chrlookup?.[chr.toUpperCase()]) throw 'invalid chr'
-}
-
 // every samtools/tabix/bcftools spawn goes through here: an argument that starts with "-" and contains ":" is a
 // region built from a request chr (e.g. "-o/path:1-2"), which the tool would parse as an option
 // ponytail: catches region-shaped injection only; request values used as a whole argument must still be validated at the route

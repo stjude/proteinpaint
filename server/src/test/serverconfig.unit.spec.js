@@ -47,17 +47,119 @@ tape('process.env.PP_CREDS: invalid JSON throws a message without the credential
 })
 
 /*
+	process.env.PP_CREDS_HANDOFF_FILE is a private temp file from container/envHelpers.mjs
+*/
+function writeHandoffFile(content) {
+	const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pp-creds-')), 'creds.json')
+	fs.writeFileSync(file, content)
+	return file
+}
+
+tape('process.env.PP_CREDS_HANDOFF_FILE: sets each <NAME>_CREDS from the file, then removes its dir', async test => {
+	const creds = { zzCredsTest: { '*': { '*': { type: 'basic', password: 'test-only' } } } } // pragma: allowlist secret
+	const file = writeHandoffFile(JSON.stringify({ PP_CREDS: JSON.stringify(creds), PP_ZZTEST_CREDS: 'other' }))
+	process.env.PP_CREDS_HANDOFF_FILE = file
+	try {
+		const { default: config } = await import('../serverconfig.js?pp_creds_handoff=valid')
+		test.deepEqual(config.dsCredentials.zzCredsTest, creds.zzCredsTest, 'should set dsCredentials from the file')
+		test.equal('PP_CREDS' in process.env, false, 'should delete PP_CREDS from process.env')
+		test.equal('PP_CREDS_HANDOFF_FILE' in process.env, false, 'should delete PP_CREDS_HANDOFF_FILE from process.env')
+		test.equal(process.env.PP_ZZTEST_CREDS, 'other', 'should set another <NAME>_CREDS for the code that reads it')
+		test.equal(fs.existsSync(path.dirname(file)), false, 'should remove the handoff dir')
+	} finally {
+		delete process.env.PP_CREDS_HANDOFF_FILE
+		delete process.env.PP_ZZTEST_CREDS
+		fs.rmSync(path.dirname(file), { recursive: true, force: true })
+	}
+	test.end()
+})
+
+tape('process.env.PP_CREDS_HANDOFF_FILE: a TMPDIR that is not normalized is resolved', async test => {
+	const tmpdir = os.tmpdir()
+	// such as TMPDIR=/tmp/., which path.join() in envHelpers.mjs normalizes for the handoff file path
+	const file = writeHandoffFile(JSON.stringify({ PP_ZZTEST_CREDS: 'other' }))
+	const env = { TMPDIR: process.env.TMPDIR }
+	process.env.TMPDIR = tmpdir + '/.'
+	process.env.PP_CREDS_HANDOFF_FILE = file
+	try {
+		await import('../serverconfig.js?pp_creds_handoff=tmpdir')
+		test.equal(process.env.PP_ZZTEST_CREDS, 'other', 'should read the handoff file')
+		test.equal(fs.existsSync(path.dirname(file)), false, 'should remove the handoff dir')
+	} finally {
+		if (env.TMPDIR === undefined) delete process.env.TMPDIR
+		else process.env.TMPDIR = env.TMPDIR
+		delete process.env.PP_CREDS_HANDOFF_FILE
+		delete process.env.PP_ZZTEST_CREDS
+		fs.rmSync(path.dirname(file), { recursive: true, force: true })
+	}
+	test.end()
+})
+
+tape('process.env.PP_CREDS_HANDOFF_FILE: invalid JSON throws a message without the credentials content', async test => {
+	const file = writeHandoffFile('{"PP_CREDS": "secret-value-not-in-message') // pragma: allowlist secret
+	process.env.PP_CREDS_HANDOFF_FILE = file
+	try {
+		await import('../serverconfig.js?pp_creds_handoff=invalid')
+		test.fail('should throw on invalid JSON')
+	} catch (e) {
+		const message = String(e.message || e)
+		test.equal(
+			message,
+			'unable to read credentials from process.env.PP_CREDS_HANDOFF_FILE',
+			'should throw a sanitized message'
+		)
+		test.equal(fs.existsSync(path.dirname(file)), false, 'should still remove the handoff dir')
+	} finally {
+		delete process.env.PP_CREDS_HANDOFF_FILE
+		fs.rmSync(path.dirname(file), { recursive: true, force: true })
+	}
+	test.end()
+})
+
+tape(
+	'process.env.PP_CREDS_HANDOFF_FILE: a path not created by envHelpers.mjs is rejected, and not removed',
+	async test => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'other-'))
+		const file = path.join(dir, 'creds.json')
+		fs.writeFileSync(file, '{}')
+		try {
+			const values = [file, '/etc/passwd', path.join(os.tmpdir(), 'pp-creds-x', 'other.json')]
+			for (const [i, value] of values.entries()) {
+				process.env.PP_CREDS_HANDOFF_FILE = value
+				try {
+					// not the value in the query string, since tsx imports a module path that ends with .json as JSON
+					await import(`../serverconfig.js?pp_creds_handoff=bad-${i}`)
+					test.fail(`should reject '${value}'`)
+				} catch (e) {
+					test.equal(String(e.message || e), 'invalid process.env.PP_CREDS_HANDOFF_FILE', `should reject '${value}'`)
+				}
+			}
+			test.equal(fs.existsSync(file), true, 'should not remove a rejected file')
+		} finally {
+			delete process.env.PP_CREDS_HANDOFF_FILE
+			fs.rmSync(dir, { recursive: true, force: true })
+		}
+		test.end()
+	}
+)
+
+/*
 	process.env.PP_SERVERCONFIG_OVERRIDES is also applied when serverconfig.js is evaluated,
 	such as from the container app-server.mjs and app-full.mjs, instead of rewriting serverconfig.json
 */
 tape('process.env.PP_SERVERCONFIG_OVERRIDES: applied before derived settings, and kept in process.env', async test => {
 	const genomes = [{ name: 'zzOverrideTest', species: 'human', file: './genome/hg38.test.js', datasets: [] }]
-	process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({ backend_only: true, genomes })
+	process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({ backend_only: true, genomes, frontPublicDir: '/tmp' })
 	try {
 		const { default: config } = await import('../serverconfig.js?pp_serverconfig_overrides=valid')
 		test.equal(config.backend_only, true, 'should override backend_only')
 		test.deepEqual(config.genomes, genomes, 'should override genomes')
 		test.equal(config.binDir, undefined, 'should apply backend_only to the derived binDir')
+		test.equal(
+			config.frontPublicDir,
+			undefined,
+			'should apply backend_only to the derived frontPublicDir, and not keep an override value'
+		)
 		test.equal(
 			'PP_SERVERCONFIG_OVERRIDES' in process.env,
 			true,
@@ -176,19 +278,15 @@ tape('serverconfig: a polluted Object.prototype is not read as a top-level setti
 })
 
 tape('serverconfig: the prototype is removed before any setting is read or defaulted', async test => {
-	// cache_snpgt is defaulted by serverconfig.js when not set, and its fileNameRegexp guards client-provided cache file names
-	Object.prototype.cache_snpgt = { dir: '/zz-polluted', fileNameRegexp: /(?!)/ }
+	// tabix is defaulted by serverconfig.js when not set, and is the executable path for spawned tabix processes
+	Object.prototype.tabix = '/zz-polluted'
 	try {
 		const { default: config } = await import('../serverconfig.js?pollution=before-import')
 		test.equal(Object.getPrototypeOf(config), null, 'should have a null prototype')
-		test.equal(
-			Object.hasOwn(config, 'cache_snpgt'),
-			true,
-			'should apply the default instead of using an inherited value'
-		)
-		test.notEqual(config.cache_snpgt.dir, '/zz-polluted', 'should not use the polluted cache_snpgt.dir')
+		test.equal(Object.hasOwn(config, 'tabix'), true, 'should apply the default instead of using an inherited value')
+		test.notEqual(config.tabix, '/zz-polluted', 'should not use the polluted tabix')
 	} finally {
-		delete Object.prototype.cache_snpgt
+		delete Object.prototype.tabix
 	}
 	test.end()
 })
@@ -262,7 +360,7 @@ tape(
 			port: 3000,
 			allowedEmbedders: ['a.org'],
 			genomes: [{ name: 'hg38', tracks: [{ file: 'a.gz' }], datasets: [{ name: 'ds1', jsfile: 'ds1.js' }] }],
-			cache_snpgt: { fileNameRegexp: /[^\w]/ },
+			namePattern: { re: /[^\w]/ },
 			// already frozen by other code, outside of features{}
 			ssl: Object.freeze({ key: 'a.key', nested: { cert: 'a.crt' } }),
 			features: { wsi: {} }
@@ -287,22 +385,14 @@ tape(
 			'should only freeze, not set a null prototype, outside of features{}'
 		)
 		test.equal(Object.getPrototypeOf(sc.features.wsi), null, 'should set a null prototype for a features{} object')
-		test.equal(
-			sc.cache_snpgt.fileNameRegexp.test('a/b'),
-			true,
-			'should keep a frozen RegExp without the g or y flag usable'
-		)
+		test.equal(sc.namePattern.re.test('a/b'), true, 'should keep a frozen RegExp without the g or y flag usable')
 		test.end()
 	}
 )
 
 tape('lockServerconfig(): fails at launch for a value that freezing cannot protect', test => {
 	for (const [label, sc, expected] of [
-		[
-			'a RegExp with the g flag',
-			{ cache_snpgt: { fileNameRegexp: /[^\w]/g } },
-			/serverconfig.cache_snpgt.fileNameRegexp/
-		],
+		['a RegExp with the g flag', { namePattern: { re: /[^\w]/g } }, /serverconfig.namePattern.re/],
 		['a RegExp with the y flag', { features: { re: /a/y } }, /serverconfig.features.re/],
 		['a Map', { features: { cache: new Map() } }, /serverconfig.features.cache/],
 		['a Set', { genomes: [{ tracks: new Set() }] }, /serverconfig.genomes.0.tracks/],

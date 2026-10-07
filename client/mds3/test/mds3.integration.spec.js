@@ -63,6 +63,7 @@ tape('\n', function (test) {
 })
 
 tape('Official data on TP53, extensive ui test', test => {
+	test.timeoutAfter(60000)
 	const holder = getHolder()
 	const gene = 'TP53'
 	runproteinpaint({
@@ -72,26 +73,30 @@ tape('Official data on TP53, extensive ui test', test => {
 		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', callbackOnRender }]
 	})
 	async function callbackOnRender(tk, bb) {
-		// tk is mds3 track object; bb is block object
-		test.equal(bb.usegm.name, gene, 'block.usegm.name=' + gene)
-		test.equal(bb.tklst.length, 2, 'should have two tracks')
-		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
-		// in this first test, verify all ui parts are rendered
-		test.ok(tk.leftlabels.doms.variants, 'tk.leftlabels.doms.variants is set')
-		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
-		test.notOk(tk.leftlabels.doms.filterObj, 'tk.leftlabels.doms.filterObj is not set')
-		test.notOk(tk.leftlabels.doms.close, 'tk.leftlabels.doms.close is not set')
+		try {
+			// tk is mds3 track object; bb is block object
+			test.equal(bb.usegm.name, gene, 'block.usegm.name=' + gene)
+			test.equal(bb.tklst.length, 2, 'should have two tracks')
+			test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
+			// in this first test, verify all ui parts are rendered
+			test.ok(tk.leftlabels.doms.variants, 'tk.leftlabels.doms.variants is set')
+			test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
+			test.notOk(tk.leftlabels.doms.filterObj, 'tk.leftlabels.doms.filterObj is not set')
+			test.notOk(tk.leftlabels.doms.close, 'tk.leftlabels.doms.close is not set')
 
-		testLegend(test, tk)
+			testLegend(test, tk)
 
-		await findSingletonMutationTestClick(test, tk)
-		await testVariantLeftLabel(test, tk, bb)
-		{
-			const t = tk.duplicateTk()
-			test.notOk(t.filterObj, 'duplicateTk() should not attach filterObj for main tk')
-			test.notOk(t.hardcodeCnvOnly, 'duplicateTk() should not attach hardcodeCnvOnly for main tk')
+			await findSingletonMutationTestClick(test, tk)
+			await testVariantLeftLabel(test, tk, bb)
+			{
+				const t = tk.duplicateTk()
+				test.notOk(t.filterObj, 'duplicateTk() should not attach filterObj for main tk')
+				test.notOk(t.hardcodeCnvOnly, 'duplicateTk() should not attach hardcodeCnvOnly for main tk')
+			}
+			if (test._ok) holder.remove()
+		} catch (e) {
+			test.fail(e?.message || e)
 		}
-		if (test._ok) holder.remove()
 		test.end()
 	}
 })
@@ -384,6 +389,7 @@ export async function testVariantLeftLabel(test, tk, bb) {
 }
 
 tape('Official - allow2selectSamples', test => {
+	test.timeoutAfter(60000)
 	testAllow2selectSamples('hg38-test', 'tp53', 'TermdbTest', test)
 })
 
@@ -412,36 +418,40 @@ must use a gene with both single and multi occurrence mutations to test
 		]
 	})
 	async function callbackOnRender(tk, bb) {
-		await findSingletonMutationTestClick(test, tk)
+		try {
+			await findSingletonMutationTestClick(test, tk)
 
-		// 2: click on multi-sample mutation to show selection button in sample table
-		const multiMutationDisc = tk.skewer.g
-			.selectAll('.sja_aa_disckick')
-			.nodes()
-			.find(i => i.__data__.occurrence > 1)
-		multiMutationDisc.dispatchEvent(new Event('click'))
-		await whenVisible(tk.itemtip.d)
-		{
-			const button = await detectOne({ elem: tk.itemtip.dnode, selector: '.' + buttonClass })
-			test.equal(button.innerHTML, buttonText, buttonText + ' button created in multi-sample menu')
-			test.ok(button.disabled, 'button is also disabled (when no checkbox is checked)')
-			// must check one checkbox first to
-		}
+			// 2: click on multi-sample mutation to show selection button in sample table
+			const multiMutationDisc = tk.skewer.g
+				.selectAll('.sja_aa_disckick')
+				.nodes()
+				.find(i => i.__data__.occurrence > 1)
+			multiMutationDisc.dispatchEvent(new Event('click'))
+			await whenVisible(tk.itemtip.d)
+			{
+				const button = await detectOne({ elem: tk.itemtip.dnode, selector: '.' + buttonClass })
+				test.equal(button.innerHTML, buttonText, buttonText + ' button created in multi-sample menu')
+				test.ok(button.disabled, 'button is also disabled (when no checkbox is checked)')
+				// must check one checkbox first to
+			}
 
-		// 3: click on sample leftlabel to show selection button in sample table
-		tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
-		await whenVisible(tk.menutip.d)
-		{
-			const btn = await detectOne({ elem: tk.menutip.dnode, selector: '.sja_mds3_slb_sampletablebtn' })
-			btn.dispatchEvent(new Event('click'))
-			const button = await detectOne({ elem: tk.menutip.dnode, selector: '.' + buttonClass })
-			test.equal(button.innerHTML, buttonText, buttonText + ' button is created in leftlabel sample table')
-			test.ok(button.disabled, 'button is also disabled (when no checkbox is checked)')
-		}
-		if (test._ok) {
-			tk.menutip.d.remove()
-			tk.itemtip.d.remove()
-			holder.remove()
+			// 3: click on sample leftlabel to show selection button in sample table
+			tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
+			await whenVisible(tk.menutip.d)
+			{
+				const btn = await detectOne({ elem: tk.menutip.dnode, selector: '.sja_mds3_slb_sampletablebtn' })
+				btn.dispatchEvent(new Event('click'))
+				const button = await detectOne({ elem: tk.menutip.dnode, selector: '.' + buttonClass })
+				test.equal(button.innerHTML, buttonText, buttonText + ' button is created in leftlabel sample table')
+				test.ok(button.disabled, 'button is also disabled (when no checkbox is checked)')
+			}
+			if (test._ok) {
+				tk.menutip.d.remove()
+				tk.itemtip.d.remove()
+				holder.remove()
+			}
+		} catch (e) {
+			test.fail(e?.message || e)
 		}
 		test.end()
 	}
@@ -537,6 +547,7 @@ tape('Official - snvIndelOnly', test => {
 })
 
 tape('Official - sv/fusion with multiple partner breakpoints', test => {
+	test.timeoutAfter(60000)
 	const holder = getHolder()
 	runproteinpaint({
 		holder,
@@ -545,49 +556,53 @@ tape('Official - sv/fusion with multiple partner breakpoints', test => {
 		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', callbackOnRender }]
 	})
 	async function callbackOnRender(tk) {
-		/* in the test data AKT1 chr14:104779348 is joined with TP53 at two positions of TP53. the server
-		aggregates the events by partner NAME and lists the partner breakpoints (see mayUpdatePairlst() in
-		mds3.load.js), rather than showing the breakpoint of whichever sample was read first */
-		const m = tk.skewer.rawmlst.find(m => m.pairlst?.[0]?.a?.breakpoints)
-		test.ok(m, 'an sv/fusion event with partner breakpoints[] is loaded')
-		if (!m) {
-			test.end()
-			return
+		try {
+			/* in the test data AKT1 chr14:104779348 is joined with TP53 at two positions of TP53. the server
+			aggregates the events by partner NAME and lists the partner breakpoints (see mayUpdatePairlst() in
+			mds3.load.js), rather than showing the breakpoint of whichever sample was read first */
+			const m = tk.skewer.rawmlst.find(m => m.pairlst?.[0]?.a?.breakpoints)
+			test.ok(m, 'an sv/fusion event with partner breakpoints[] is loaded')
+			if (!m) {
+				test.end()
+				return
+			}
+			test.equal(m.pairlstIdx, 1, 'AKT1 is on the b side of the pair, and the partner TP53 on the a side')
+			test.deepEqual(
+				m.pairlst[0].a.breakpoints.map(b => b.pos),
+				[7674289, 7674915],
+				'TP53 partner has 2 breakpoints, sorted by sample count'
+			)
+			test.notOk('pos' in m.pairlst[0].a, 'partner point has no .pos when it holds breakpoints[]')
+
+			const disc = tk.skewer.g
+				.selectAll('.sja_aa_disckick')
+				.nodes()
+				.find(i => (i.__data__.mlst?.[0] || i.__data__).ssm_id == m.ssm_id)
+			test.ok(disc, 'disc of the event is found')
+			disc.dispatchEvent(new Event('click'))
+			await whenVisible(tk.itemtip.d.node())
+			const tip = tk.itemtip.d.node()
+
+			const chart = await detectOne({ elem: tip, selector: '[data-testid="sjpp-mds3tk-svfusionBreakpointChart"]' })
+			test.ok(chart, 'breakpoint chart is rendered in place of a single fusion structure')
+			test.ok(
+				// the links are drawn once the gene models of both genes are fetched, after the chart holder is created
+				await detectOne({ elem: chart, selector: '[data-testid="sjpp-isoformPairSelect-links"]' }),
+				'chart links the AKT1 breakpoint to the TP53 breakpoints'
+			)
+			const graph = await detectOne({ elem: tip, selector: '[data-testid="sjpp-mds3tk-singlesvfusiongraph"]' })
+			test.ok(graph, 'fusion structure of the most frequent breakpoint is rendered under the chart')
+
+			// the sample table is limited to the samples of the most frequent breakpoint (2 of the 3 events)
+			const table = await detectOne({ elem: tip, selector: '[data-testid="sjpp_mds3tk_sampletable"]' })
+			test.ok(table, 'sample table of the selected breakpoint is rendered')
+			const rows = table.querySelectorAll('tbody tr, tr.sjpp_row_wrapper')
+			test.equal(rows.length, 2, 'sample table has the 2 samples of the most frequent breakpoint')
+
+			if (test._ok) holder.remove()
+		} catch (e) {
+			test.fail(e?.message || e)
 		}
-		test.equal(m.pairlstIdx, 1, 'AKT1 is on the b side of the pair, and the partner TP53 on the a side')
-		test.deepEqual(
-			m.pairlst[0].a.breakpoints.map(b => b.pos),
-			[7674289, 7674915],
-			'TP53 partner has 2 breakpoints, sorted by sample count'
-		)
-		test.notOk('pos' in m.pairlst[0].a, 'partner point has no .pos when it holds breakpoints[]')
-
-		const disc = tk.skewer.g
-			.selectAll('.sja_aa_disckick')
-			.nodes()
-			.find(i => (i.__data__.mlst?.[0] || i.__data__).ssm_id == m.ssm_id)
-		test.ok(disc, 'disc of the event is found')
-		disc.dispatchEvent(new Event('click'))
-		await whenVisible(tk.itemtip.d.node())
-		const tip = tk.itemtip.d.node()
-
-		const chart = await detectOne({ elem: tip, selector: '[data-testid="sjpp-mds3tk-svfusionBreakpointChart"]' })
-		test.ok(chart, 'breakpoint chart is rendered in place of a single fusion structure')
-		test.ok(
-			// the links are drawn once the gene models of both genes are fetched, after the chart holder is created
-			await detectOne({ elem: chart, selector: '[data-testid="sjpp-isoformPairSelect-links"]' }),
-			'chart links the AKT1 breakpoint to the TP53 breakpoints'
-		)
-		const graph = await detectOne({ elem: tip, selector: '[data-testid="sjpp-mds3tk-singlesvfusiongraph"]' })
-		test.ok(graph, 'fusion structure of the most frequent breakpoint is rendered under the chart')
-
-		// the sample table is limited to the samples of the most frequent breakpoint (2 of the 3 events)
-		const table = await detectOne({ elem: tip, selector: '[data-testid="sjpp_mds3tk_sampletable"]' })
-		test.ok(table, 'sample table of the selected breakpoint is rendered')
-		const rows = table.querySelectorAll('tbody tr, tr.sjpp_row_wrapper')
-		test.equal(rows.length, 2, 'sample table has the 2 samples of the most frequent breakpoint')
-
-		if (test._ok) holder.remove()
 		test.end()
 	}
 })

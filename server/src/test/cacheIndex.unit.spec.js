@@ -24,6 +24,7 @@ test sections:
 - cache_index() rejects non-remote protocols
 - cache_index() rejects a primary url host that is not allowed
 - cache_index() still caches valid urls
+- cache_index() sets the mtime of a cached index on each use
 - fileurl() url branch
 - /tkbedj, /tabixheader via the real route table
 - cache_index() index download is atomic
@@ -198,6 +199,36 @@ tape('cache_index() still caches valid urls', async test => {
 	)
 	for (const p of ['http', 'https', 'ftp'])
 		fs.rmSync(path.join(serverconfig.cachedir, p, H), { recursive: true, force: true })
+	test.end()
+})
+
+tape('cache_index() sets the mtime of a cached index on each use', async test => {
+	const url = `http://${H}/touch/t.gz`
+	const dir = await utils.cache_index(url, `${url}.tbi`)
+	const index = path.join(dir, 't.gz.tbi')
+	// replace the downloaded content, so a second download would be detected
+	fs.writeFileSync(index, 'cached')
+	// an index that tabix downloaded into dir, when no index url is given
+	const tabixIndex = path.join(dir, 't.gz.csi')
+	const partial = path.join(dir, 't.gz.csi.1.2.tmp')
+	const old = new Date(Date.now() - 10 * 24 * 3600 * 1000)
+	for (const f of [tabixIndex, partial]) fs.writeFileSync(f, 'x')
+	for (const f of [index, tabixIndex, partial]) fs.utimesSync(f, old, old)
+
+	await utils.cache_index(url, `${url}.tbi`)
+	test.ok(fs.statSync(index).mtimeMs > old.getTime(), 'should set the mtime of the index of the index url')
+	test.equal(fs.readFileSync(index, 'utf8'), 'cached', 'should not download the index again')
+
+	fs.utimesSync(index, old, old)
+	await utils.cache_index(url)
+	test.ok(fs.statSync(index).mtimeMs > old.getTime(), 'should set the mtime of each index in dir without an index url')
+	test.ok(fs.statSync(tabixIndex).mtimeMs > old.getTime(), 'should set the mtime of an index downloaded by tabix')
+	test.ok(
+		Math.abs(fs.statSync(partial).mtimeMs - old.getTime()) < 1000,
+		'should not set the mtime of a partial download'
+	)
+
+	fs.rmSync(path.join(serverconfig.cachedir, 'http', H), { recursive: true, force: true })
 	test.end()
 })
 

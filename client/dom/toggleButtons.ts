@@ -119,7 +119,9 @@ function setRenderers(self) {
 			})
 			.property('disabled', tab => (tab.disabled ? tab.disabled() : false))
 			.each(async function (this: any, tab) {
-				if (tab.active) {
+				if (tab.active && !isTextEntryFocused()) {
+					// do not steal focus from an autofocused text entry, like a search input that is rendered
+					// before these tabs; otherwise the focus would end up on document.body after the blur below
 					// assume that an active tabbed content div should receive focus when first rendered,
 					// otherwise using tabs to navigate would not be intuitive or user-friendly if it
 					// starts far away from recently rendered content
@@ -259,4 +261,11 @@ function setRenderers(self) {
 				tab.tab.html(tab.label) // re-print tab label since the label value could have been updated by outside code
 			})
 	}
+}
+
+function isTextEntryFocused() {
+	const elem = document.activeElement as HTMLElement | null
+	if (!elem || elem === document.body) return false
+	if (elem.tagName == 'TEXTAREA' || elem.isContentEditable) return true
+	return elem.tagName == 'INPUT' && ['text', 'search'].includes((elem as HTMLInputElement).type)
 }

@@ -79,7 +79,7 @@ docker run -d $USERNS \
 	--name $CONTAINER_NAME \
 	--network pp_network \
 	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
-	--mount type=bind,source=$APPDIR/serverconfig.json,target=$CONTAPP/serverconfig.json \
+	--mount type=bind,source=$APPDIR/serverconfig.json,target=$CONTAPP/serverconfig.json,readonly \
 	--mount type=bind,source=$APPDIR/dataset,target=$CONTAPP/dataset \
 	--publish $HOSTPORT:$EXPOSED_PORT \
 	-e PP_MODE=container-prod \

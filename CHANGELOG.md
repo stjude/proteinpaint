@@ -4,21 +4,63 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+
+## 2.218.0
+
+Features:
+- add TableBase, an extendable table with sort, filter, paging, row selection and cell editing; the SC sample table is now built on it
+- all server cache subdirs are declared in one cacheRegistry in CacheManager.ts, each with a type that sets its eviction defaults; every subdir is created at server launch, even when the feature that uses it is disabled
+- serverconfig.features.cacheMonitor.subdirs is validated at launch: a subdir that is not in the registry, a subdir set to undefined, or an option other than maxAge, maxSize, skipMs, moveTo or fileExtensions now fails the launch instead of being used or ignored
+- the daAnalysis cache subdir is no longer created or swept; a leftover daAnalysis dir may be deleted
+- the extApiResponse cache subdir is declared in cacheRegistry and evicted by CacheManager after 365 days, which serverconfig.features.cacheMonitor.subdirs.extApiResponse may override; cached responses are now written directly under extApiResponse/, and the serverconfig.features.extApiCache values are no longer used as subdir names, so previously cached responses are not reused and the old subdirs may be deleted
+- the snpgt cache subdir is declared in cacheRegistry and evicted by CacheManager after 30 days, which serverconfig.features.cacheMonitor.subdirs.snpgt may override
+
+Fixes:
+- the DMR plot shows the R backend toggle only in debugmode, and the server accepts the R backend only in debugmode
+- differential methylation: a violin plot opened from a volcano hit shows the element that was tested, instead of the elements of another matrix that overlap it
+- gene set enrichment on a differential methylation result ranks each gene by the mean of its promoters, instead of by its highest one
+- differential methylation: a violin plot opened from a volcano hit is labelled with the unit of the values it shows, on a dataset whose promoter matrix and methylation terms use different units
+- differential methylation runs on an element matrix that gives its chromosomes as a chrom_lengths attribute, as a CpG-level matrix does, instead of a chromosome per row
+- serverconfig.cache_snpgt is no longer used, and may be removed from a serverconfig.json; snp genotype cache files are always written under [cachedir]/snpgt
+
+
+## 2.217.0
+
+Features:
+- more dirs in the server startup check
+- Add support for swimmer plot
+
+
+## 2.216.1
+
+Fixes:
+- the server serves index.html and the cards from the proteinpaint-front package when they are missing from public/, and the front init logs a warning instead of exiting when it cannot add them to public/
+
+
+## 2.216.0
+
 Features:
 - serverconfig.features.massSessionMaxBytes limits the size of a saved session, default 1MB
 - a zero cacheMonitor.subdirs.massSession maxAge or maxSize disables the /massSession route
 - use content-hashed bundle chunk filenames and notify when the loaded client code is outdated
+- add container/runtimePosture.mjs, a CLI that reports on the container runtime settings
+- in a container, envHelpers.mjs logs the runtimePosture.mjs report
+- an optional env setting, see envHelpers.mjs, makes envHelpers.mjs exit before starting the server when the runtimePosture.mjs report does not pass
+- envHelpers.mjs passes the node permission model settings as --permission and --allow-* flags, and logs the allowed paths, so that a node command does not need a writable node.config.json; a tsx command still uses node.config.json, in ./ or in the optional PP_NODE_CONFIG_DIR
+- runtimePosture.mjs also reports on the app files
 
 Fixes:
-- harden user-keyed object maps against prototype pollution
-- harden nested patient2st buckets against prototype pollution too
-- harden step_gene() per-event sample buckets against prototype pollution
-- move the /massSession route setup to src/routes/massSession.ts (code-scanning #110, #111)
+- refactor the user-keyed object maps, including the nested patient2st buckets and the step_gene() per-event sample buckets
+- move the /massSession route setup to src/routes/massSession.ts
 - save a mass session whose state has an embedder{} object
 - minor rendering adjustment in scatterplot legend
 - report a declared sjcrh package entry in the /healthcheck versionInfo.deps, without throwing when that package is not installed
 - DNA methylation promoter, gene, and enhancer terms read the matrix named by elementForTerms instead of a CpG shard; only region terms, such as scan DMRs, read the shard
 - a dataset whose CpG shard directory is missing or empty initializes and falls back to its element matrices
+- the helm chart, the kubernetes and compose examples, and container/run.sh mount serverconfig.json read-only, and the helm chart and compose example default to the v2.215.0 images; the helm chart mounts its config map at serverconfig.json instead of copying it at startup, and runs as the image's app user
+- run Rscript with --vanilla and python with -E -s, to use only the interpreter defaults
+- the deps image build checks the permissions of the interpreter and tool dirs
+- the full image generates the client bundle at build time instead of at startup, and the server and full image builds verify the app dir file modes
 
 
 ## 2.215.0
@@ -27,7 +69,7 @@ Features:
 - New custom download menu includes options to download the descriptive stats and association tests in the bar chart, violin, and box plot.
 
 Fixes:
-- keep the /bamnochr cache dir server-side and handle spawn errors (code-scanning #92)
+- refactor the /bamnochr cache dir handling, and handle spawn errors
 - remove run_fdr temporary files when Rscript fails
 
 
@@ -46,28 +88,24 @@ Fixes:
 Features:
 - The `ppserver` and `ppfull` images, and any image built on them, run as the unprivileged `app` user (UID/GID 1000) instead of root. Bind-mounted files and dirs, such as the `tp` dir, `serverconfig.json` or a CA certificate for `NODE_EXTRA_CA_CERTS`, must be readable by UID 1000 (or by others), and a mounted cache dir must be writable by it. Another UID, such as the owner of the bind-mounted files, may run the images with `docker run --user <uid>:0`. With rootless podman, use `--userns=keep-id:uid=1000,gid=1000`. A Dockerfile that builds on these images and installs packages must switch to `USER root` for those steps, and back to `USER app` for the runtime. Kubernetes can use `runAsUser: 1000` and `fsGroup: 1000`, see `container/helm/values.yaml`
 - The container `app-server.mjs` and `app-full.mjs` no longer rewrite the mounted `serverconfig.json`, which may now be mounted read-only; the derived settings are passed to the server with `PP_SERVERCONFIG_OVERRIDES`
-- A url given to a spawned tool (straw, bigBedToBed, pyBigWig, samtools/tabix) must use http, https or ftp, and must not point to localhost or a non-global ip range from the IANA registries, unless the host is listed in the optional `serverconfig.urlHosts[]`
-- CI, the dev container and the request test server set `sqlCheck: 'throw'`, so a plain sql string with quoted values fails tests instead of only logging a warning
-- New `sql/no-unbound-sql` ESLint rule flags string-built or template sql, including lowercase, schema-qualified or quoted identifiers, outside of the `sql` tag from `server/src/sql.ts`; ruff S608 flags string-built python sql, and rust sqlite statements are prepared from a `&'static str`
+- The url hosts for a spawned tool (straw, bigBedToBed, pyBigWig, samtools/tabix) can be configured with the optional `serverconfig.urlHosts[]`
+- CI, the dev container and the request test server set `sqlCheck: 'throw'`, so a plain sql string fails tests instead of only logging a warning
+- New `sql/no-unbound-sql` ESLint rule flags sql that is built outside of the `sql` tag from `server/src/sql.ts`; ruff S608 does the same for python, and rust sqlite statements are prepared from a `&'static str`
 - Remote files by URL (e.g. custom tracks by URL) are disabled by default; set serverconfig.features.ALLOW_remotefilefromurl=true to allow them. When disabled, the custom track inputs only take a server-side file path and show "Remote file not supported on this server."
 - A `"ssl": false` in serverconfig.json skips loading a local `./.ssl` dir when `allow_env_overrides` or `debugmode` is enabled
 
 Fixes:
-- Matrix: a request that is not allowed to display sample IDs no longer receives sample rows or sample labels in the streamed refs
-- Facet: sample selection from table cells requires `termdbConfig.displaySampleIds` in addition to a verified token
-- Hi-C: validate the straw arguments (matrixType, nmeth, resolution, positions and chromosome names) in the hicdata and hicgenome routes, limit chrlst to 100 chromosomes and the genome view to 8 concurrent straw processes, and report straw errors per chromosome pair
-- Hi-C: validate a chromosome name after removing `chr` for a nochr file
-- cache_index() checks the host of both the primary and index urls, and download_index() checks the host of each redirect destination
-- illegalUrlHost() rejects a url with a backslash, whitespace or control character, and ignores a trailing dot in the host name
-- The genesetEnrichment and genesetOverrepresentation routes require geneSetGroup to be one of the genome's msigdb analysisGenesetGroups (or a blitzgsea library for the blitzgsea method), and num_permutations to be an integer from 0 to 40000
-- Use bound parameters for the geneSetGroup and gene set id sqlite queries in cerno, genesetORA and gsea.py
-- Harden the client-side `copyMerge()` (both the shared utility and `StoreBase.copyMerge()`) against prototype pollution by skipping `__proto__`, `constructor`, and `prototype` keys.
-- Store the auth in-memory sessions as a two-level Map keyed by [dslabel][sessionId], so a request-controlled dslabel or session id colliding with an inherited name (e.g. `__proto__`, `constructor`, `toString`) can never resolve through or pollute Object.prototype
-- Reject a JSON request body or a urljson-encoded URL query parameter that has a `__proto__` or `constructor.prototype` key, which could otherwise replace the prototype of the request query object
-- Reject a request payload that uses a prototype-related name (`__proto__`, `constructor`, `prototype`, `toString`, etc.) as an object key or a string value, and look up a genome or dataset by an own property only, so that a name such as `dslabel=__proto__` cannot select an inherited object
+- Matrix: the streamed refs follow the sample ID display setting
+- Facet: sample selection from table cells follows `termdbConfig.displaySampleIds`
+- Hi-C: check the hicdata and hicgenome request parameters, including for a nochr file, and report straw errors per chromosome pair
+- cache_index() and download_index() use the url host check, which handles more url forms
+- The genesetEnrichment and genesetOverrepresentation routes check the geneSetGroup and num_permutations parameters, and use bound parameters in their sqlite queries
+- The client-side `copyMerge()`, both the shared utility and `StoreBase.copyMerge()`, skips the reserved object keys
+- Store the auth in-memory sessions in a Map keyed by dslabel and session id
+- Check the keys and values of a request payload, and refactor the genome and dataset lookup
 - The `encoding=json` URL query parameter no longer causes an error, and correctly JSON-parses all other query parameter values
-- Reject a snplst or snplocus term cache id, or a /termdb/barsql `ssid`, that is not a single file name, so that a request cannot read a file outside of the snp genotype or ssid cache directories
-- In the test data response cache, only use a plain `get<word>` request key as a subroute name, so that a key such as `get../../x` cannot write a cache file outside of the cache directory
+- Check the format of a snplst or snplocus term cache id, and of a /termdb/barsql `ssid`
+- In the test data response cache, only use a plain `get<word>` request key as a subroute name
 
 
 ## 2.212.0
@@ -83,21 +121,21 @@ Fixes:
 ## 2.211.0
 
 Features:
-- Gene/isoform names carried by a request are validated against the genome gene db in an app middleware, before any route handler can query data with them, locally or against a remote api (gdc). Covers geneVariant (term wrapper, filter tvs, and a dt term tvs via its parentTerm), geneExpression, isoformExpression, pseudobulk and singleCellGeneExpression; the error names the term type and never the rejected name. A dataset whose data declares names outside the gene db opts out with `cohort.termdb.skipGeneNameValidation` (TermdbTest does so for geneExpression, since the hg38-test gene db is a stub)
-- Gene db name/alias/isoform lookups are loaded into maps at server init and served from memory: `getnamebynameorisoform`, `getnamebyisoform`, `getNameByAlias`, `getAliasByName` and `get_gene2canonicalisoform` keep their statement shape but no longer query sqlite, so the per-request gene name check never blocks the event loop and needs no cache of client-supplied strings. The genemodel json, the name prefix search and the coord/ideogram tables stay in sqlite. Costs ~1.1s and ~78MB per genome with a full gene db (hg38: 81.5k genes, 506k isoforms, 145k aliases)
+- Gene/isoform names carried by a request are validated against the genome gene db in an app middleware, before any route handler can query data with them, locally or against a remote api (gdc). Covers geneVariant (term wrapper, filter tvs, and a dt term tvs via its parentTerm), geneExpression, isoformExpression, pseudobulk and singleCellGeneExpression. A dataset whose data declares names outside the gene db opts out with `cohort.termdb.skipGeneNameValidation` (TermdbTest does so for geneExpression, since the hg38-test gene db is a stub)
+- Gene db name/alias/isoform lookups are loaded into maps at server init and served from memory: `getnamebynameorisoform`, `getnamebyisoform`, `getNameByAlias`, `getAliasByName` and `get_gene2canonicalisoform` keep their statement shape but no longer query sqlite, so the per-request gene name check does not block the event loop. The genemodel json, the name prefix search and the coord/ideogram tables stay in sqlite. Costs ~1.1s and ~78MB per genome with a full gene db (hg38: 81.5k genes, 506k isoforms, 145k aliases)
 - Descriptive stats for the overlay term appear in the violin and box plot legends.
 - New README for the violin plot
 
 Fixes:
 - Restored violin label menu option to hide individual plots.
-- keep cache_index() url and index paths inside the cache dir
-- Auth: a `termdb` credential now requires sign-in for any sample-level response, including array `for[]` values, `getsamplelist`, `getsamples`, `convertSampleId`, and glob-matched dslabel/embedder keys
-- Auth: `/termdb/chat` sample search no longer treats a protected dataset as open for an embedder with a `/`
-- Auth: protected routes are matched case-insensitively and ignore a trailing slash
-- Mass session: harden session file path validation and fix deleting server-saved sessions
+- refactor the cache_index() file paths
+- Auth: the `termdb` credential sign-in requirement applies to more sample-level requests
+- Auth: `/termdb/chat` sample search uses the same dataset access check as other routes
+- Auth: consistent matching of the protected routes
+- Mass session: fix deleting server-saved sessions, and check the session file path
 - dofetch3: a request with a too-long URL is converted to POST only if it is a GET; a DELETE or PUT throws instead
-- SQL: parameterize or validate values and table names in constructed sql statements
-- validate request chr, coord and url before they reach samtools/tabix arguments
+- SQL: use bound parameters or checked names in constructed sql statements
+- check the request chr, coord and url parameters
 
 
 ## 2.210.1
@@ -145,7 +183,7 @@ Fixes:
 - GSEA's 500-gene ceiling applies only to a scan's gene-body ranking. It had been lowered from
 - A proteome DAP volcano calls its single p-value an FDR again. The label is read off the term type,
 - A genome-wide analysis refuses a chromosome whose CpG matrix shard is missing, naming it, rather
-- Hardening on the new routes: a caller-supplied chromosome list is bounded and deduplicated before
+- The new routes check a chromosome list in a request
 - consider filter0 when flattening GDC case-level data with multiple values such as age_at_diagnosis and primary_diagnosis
 
 

@@ -4,9 +4,10 @@ import { PlotBase } from './PlotBase'
 import { Menu, renderTable, addGeneSearchbox } from '#dom'
 import type { TableColumn, TableRow } from '#dom'
 import { orderBy } from './proteinView.tiles'
+import { deriveCatalogRows, type CatalogRow } from './proteome.catalog'
 
 /** The Proteome facet is nested under a derived single-select "Data type" facet
- *  (Protein → protein-level assays; PTM → assays marked PTMType in the dataset config).
+ *  (Proteome → protein-level assays; PTM → assays marked PTMType in the dataset config).
  *  PTM layers are kept separate from protein-level layers because PTM z is site-level
  *  collapsed to gene, so the two aren't directly comparable in a scatter/heatmap: the
  *  radio keeps them apart structurally and the Proteome checkboxes only ever list the
@@ -15,7 +16,7 @@ import { orderBy } from './proteinView.tiles'
 const DATA_TYPE_FACET = 'dataType'
 const DATA_TYPE_CHILD = 'proteome'
 const DATA_TYPE_LABEL = 'Data type'
-const DATA_TYPE_ORDER = ['Protein', 'PTM']
+const DATA_TYPE_ORDER = ['Proteome', 'PTM']
 
 /** proteome labels in dataset order (first appearance across organisms/assays) */
 function proteomeOrder(organisms: any): string[] {
@@ -48,7 +49,7 @@ const FACET_CHART: Record<
 		needsGene: true,
 		requires: q => !!q?.proteome?.cellTypeBubbleHeatmap
 	},
-	brainRegion: {
+	sampleSource: {
 		chartType: 'brainRegions',
 		label: 'Brain Regional Proteome',
 		needsGene: true,
@@ -68,8 +69,12 @@ type CatalogUiConfig = {
 	/** facets rendered as radio buttons instead of checkboxes: exactly one value is active at
 	 *  all times (defaults to the first value), so rows of different values never mix in the table */
 	singleSelectFacets?: string[]
+	/** facets whose values render grouped under a parent catalog key's values; a parent
+	 *  checkbox toggles all of its child values */
+	nestedFacets?: { [facet: string]: { parent: string; labels?: { [parentValue: string]: string } } }
+	/** value display order per facet (or nested-facet parent) key */
+	facetValueOrder?: { [key: string]: string[] }
 }
-type CatalogRow = { [key: string]: string } & { organism: string; assay: string; cohort: string }
 
 const PANEL_GAP = 24
 const FACET_WIDTH = 210
@@ -98,6 +103,10 @@ class StudyCatalog extends PlotBase implements RxComponent {
 	selectedKeys: Set<string> = new Set()
 	/** number of cohorts currently passing the filters (shown when nothing is selected) */
 	filteredCount = 0
+	/** data-quality mode (config.action = 'dataQuality', the homepage Data quality card): the
+	 *  action opens each selected sample set's tools with the Data quality tile expanded */
+	dqMode = false
+	initialFiltersApplied = false
 
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
@@ -140,7 +149,18 @@ class StudyCatalog extends PlotBase implements RxComponent {
 			return
 		}
 
-		this.rows = this.deriveRows(proteome.organisms)
+		// config.filters: facet values checked when the catalog opens (e.g. a homepage menu
+		// entry opening the biofluid sample sets); applied once, then the user owns the rail
+		if (this.state.config.filters && !this.initialFiltersApplied) {
+			for (const [facet, values] of Object.entries(this.state.config.filters as { [k: string]: string[] })) {
+				if (values?.length) this.activeFilters.set(facet, new Set(values))
+			}
+			this.initialFiltersApplied = true
+		}
+		this.dqMode = this.state.config.action === 'dataQuality'
+		if (this.dom.header) this.dom.header.html(this.dqMode ? 'Data quality: select sample sets' : 'Studies')
+
+		this.rows = deriveCatalogRows(proteome.organisms)
 		if (!this.rows.length) {
 			this.dom.body.append('div').style('padding', '20px').style('color', '#666').text('No cohorts found.')
 			return
@@ -183,35 +203,6 @@ class StudyCatalog extends PlotBase implements RxComponent {
 		this.renderTable(ui)
 	}
 
-	/** one row per organism→assay→cohort. `species` and `proteome` are derived from the query
-	 *  structure (organism key + the assay's proteomeLabel); every other display field comes from
-	 *  the cohort's `catalog` object in the dataset. A `catalog` key can still override either. */
-	deriveRows(organisms: any): CatalogRow[] {
-		const rows: CatalogRow[] = []
-		for (const organism in organisms) {
-			const species = organism.charAt(0).toUpperCase() + organism.slice(1)
-			const assays = organisms[organism].assays || {}
-			for (const assay in assays) {
-				const proteome = assays[assay].proteomeLabel || assay
-				const cohorts = assays[assay].cohorts || {}
-				for (const cohort in cohorts) {
-					// species/proteome first so catalog may override them; identity keys last so it can't
-					const dataType = assays[assay].PTMType ? 'PTM' : 'Protein'
-					rows.push({
-						species,
-						proteome,
-						dataType,
-						...(cohorts[cohort].catalog || {}),
-						organism,
-						assay,
-						cohort
-					} as CatalogRow)
-				}
-			}
-		}
-		return rows
-	}
-
 	/** rows passing every active filter, optionally excluding one facet (for that facet's own counts) */
 	filteredRows(excludeFacet?: string | string[]): CatalogRow[] {
 		const excluded = new Set(Array.isArray(excludeFacet) ? excludeFacet : excludeFacet ? [excludeFacet] : [])
@@ -242,7 +233,7 @@ class StudyCatalog extends PlotBase implements RxComponent {
 				? DATA_TYPE_ORDER
 				: facet === DATA_TYPE_CHILD
 				? proteomeOrder(this.app.vocabApi.termdbConfig?.queries?.proteome?.organisms)
-				: null
+				: this.app.vocabApi.termdbConfig?.queries?.proteome?.studyCatalog?.facetValueOrder?.[facet] || null
 		if (fixed)
 			return orderBy(
 				[...values].sort((a, b) => a.localeCompare(b)),
@@ -253,7 +244,7 @@ class StudyCatalog extends PlotBase implements RxComponent {
 
 	/** filters to ignore when computing a facet's own value counts: itself, plus — for the
 	 *  Data type parent — its nested proteome filter, so that ticking e.g. "Insoluble" under
-	 *  Protein never makes the PTM option disappear (it must stay clickable to switch class) */
+	 *  Proteome never makes the PTM option disappear (it must stay clickable to switch class) */
 	facetScopeExclusions(facet: string): string[] {
 		return facet === DATA_TYPE_FACET ? [DATA_TYPE_FACET, DATA_TYPE_CHILD] : [facet]
 	}
@@ -393,6 +384,12 @@ class StudyCatalog extends PlotBase implements RxComponent {
 					.on('click', (event: any) => this.openChartMenu(chart, event))
 			}
 
+			const nested = ui.nestedFacets?.[facet]
+			if (nested) {
+				this.renderNestedFacet(ui, group, facet, nested, counts)
+				continue
+			}
+
 			const single = singleSelect.has(facet)
 			const active = this.activeFilters.get(facet) || new Set<string>()
 			for (const value of this.sortValues(facet, [...counts.keys()])) {
@@ -405,6 +402,68 @@ class StudyCatalog extends PlotBase implements RxComponent {
 						this.appendFacetOption(ui, group, DATA_TYPE_CHILD, cv, childCounts.get(cv)!, false, childActive.has(cv), 22)
 					}
 				}
+			}
+		}
+	}
+
+	/** a facet whose values are listed under their parent-key value (e.g. sample sources under
+	 *  Brain regions / Biofluids). The parent line is a checkbox over all of its child values:
+	 *  checked when all are active, indeterminate when some are; the filter itself stays on
+	 *  the child facet only */
+	renderNestedFacet(
+		ui: CatalogUiConfig,
+		group: any,
+		facet: string,
+		nested: { parent: string; labels?: { [parentValue: string]: string } },
+		counts: Map<string, number>
+	) {
+		const byParent = new Map<string, string[]>()
+		for (const row of this.filteredRows(this.facetScopeExclusions(facet))) {
+			const v = row[facet]
+			if (!v || !counts.has(v)) continue
+			const p = row[nested.parent] || ''
+			if (!byParent.has(p)) byParent.set(p, [])
+			if (!byParent.get(p)!.includes(v)) byParent.get(p)!.push(v)
+		}
+		const active = this.activeFilters.get(facet) || new Set<string>()
+		for (const p of this.sortValues(nested.parent, [...byParent.keys()])) {
+			const children = this.sortValues(facet, byParent.get(p)!)
+			const n = children.reduce((sum, v) => sum + counts.get(v)!, 0)
+			const nActive = children.filter(v => active.has(v)).length
+			if (p) {
+				const line = group
+					.append('label')
+					.style('display', 'flex')
+					.style('align-items', 'center')
+					.style('gap', '6px')
+					.style('font-size', '0.85em')
+					.style('cursor', 'pointer')
+					.style('padding', '1px 0')
+				line
+					.append('input')
+					.attr('type', 'checkbox')
+					.property('checked', nActive === children.length)
+					.property('indeterminate', nActive > 0 && nActive < children.length)
+					.on('change', (event: any) => {
+						const set = this.activeFilters.get(facet) || new Set<string>()
+						for (const v of children) {
+							if (event.target.checked) set.add(v)
+							else set.delete(v)
+						}
+						if (set.size) this.activeFilters.set(facet, set)
+						else this.activeFilters.delete(facet)
+						this.renderFacets(ui)
+						this.renderTable(ui)
+					})
+				line
+					.append('span')
+					.style('flex', '1 1 auto')
+					.style('font-weight', '600')
+					.text(nested.labels?.[p] || p)
+				line.append('span').style('color', '#999').text(n)
+			}
+			for (const v of children) {
+				this.appendFacetOption(ui, group, facet, v, counts.get(v)!, false, active.has(v), p ? 22 : 0)
 			}
 		}
 	}
@@ -444,6 +503,15 @@ class StudyCatalog extends PlotBase implements RxComponent {
 					return c.urlBase && value ? { value, url: c.urlBase + value } : { value }
 				}) as TableRow
 		)
+		if (this.dqMode) {
+			const organisms = this.app.vocabApi.termdbConfig?.queries?.proteome?.organisms
+			columns.push({ label: 'QC figures', sortable: true })
+			rows.forEach((row, i) =>
+				tableRows[i].push({
+					value: organisms?.[row.organism]?.assays?.[row.assay]?.cohorts?.[row.cohort]?.qcFigures?.length || 0
+				})
+			)
+		}
 
 		renderTable({
 			columns,
@@ -484,7 +552,9 @@ class StudyCatalog extends PlotBase implements RxComponent {
 		const btn = this.dom.actionBtn
 		if (!btn) return
 		const n = this.selected.length
-		btn.property('disabled', n === 0).text(n >= 2 ? 'Compare cohorts' : 'Analyze Cohort')
+		btn
+			.property('disabled', n === 0)
+			.text(this.dqMode ? 'View data quality' : n >= 2 ? 'Compare cohorts' : 'Analyze Cohort')
 		const cs = this.dom.countSpan
 		if (n === 1) cs.style('display', 'none')
 		else if (n >= 2) cs.style('display', '').text(`${n} cohorts`)
@@ -494,6 +564,10 @@ class StudyCatalog extends PlotBase implements RxComponent {
 	/** run the action for the current selection: 1 cohort → Analyze; ≥2 → Compare */
 	onAction() {
 		const sel = this.selected
+		if (this.dqMode) {
+			for (const r of sel) this.openAnalyticsTools(r, 'dataQuality')
+			return
+		}
 		if (sel.length === 1) this.openAnalyticsTools(sel[0])
 		else if (sel.length >= 2) this.openCompare(sel)
 	}
@@ -522,14 +596,16 @@ class StudyCatalog extends PlotBase implements RxComponent {
 	}
 
 	/** open the ProteomeInput "Analytics Tools" panel for a cohort, mirroring the
-	 *  Sample Selection (proteomeAbundance) chart's "Analytics Tools" button */
-	openAnalyticsTools(row: CatalogRow) {
+	 *  Sample Selection (proteomeAbundance) chart's "Analytics Tools" button; expandedTile
+	 *  opens one of its tools on arrival */
+	openAnalyticsTools(row: CatalogRow, expandedTile?: string) {
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
 				chartType: 'ProteomeInput',
 				proteomeDetails: { organism: row.organism, assay: row.assay, cohort: row.cohort },
-				hidePlotFilter: true
+				hidePlotFilter: true,
+				expandedTile
 			}
 		})
 	}

@@ -130,12 +130,22 @@ RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir
 # Another UID may also run the image, such as to match the owner of the bind-mounted files, with
 # `docker run --user <uid>:0` or a Kubernetes runAsUser with runAsGroup 0: a runtime assigns group 0 to
 # a UID that has no account in the image, so the dirs that the app writes at runtime are also owned by,
-# and writable for, group 0. See also the ppserver and ppfull stages.
+# and writable for, group 0, or else writable for any UID, like the cache dir below. The app files under /home/root/pp/app/active are owned by root and are not
+# written at runtime, see the ppserver and ppfull stages.
+# the app user does not need the r-base 'staff' group
+#
+# The cache dir is owned by root with mode 1733, so that the app user, or another UID, may create and use a subdir
+# with a known name, but may not list the entries, change the mode, or rename or remove the entries of another user:
+# the server uses a subdir whose name is derived from a key, see hideCachedir in server/src/serverconfig.js.
+# A new mounted cache dir needs the same owner and mode on the host. For an existing mount, keep it listable for
+# the first upgraded start so legacy entries can be migrated, then apply this owner and mode.
 RUN groupmod -n app docker && \
     usermod -l app -d /home/app -m docker && \
-    chown app:app /home/root/pp/cache && \
-    chgrp -R 0 /home/root/pp/cache /home/app && \
-    chmod -R g=u /home/root/pp/cache /home/app
+    gpasswd -d app staff && \
+    chown root:0 /home/root/pp/cache && \
+    chmod 1733 /home/root/pp/cache && \
+    chgrp -R 0 /home/app && \
+    chmod -R g=u /home/app
 
 RUN if [ "$ARCH" = "x86_64" ]; then \
         wget https://proteinpaint.stjude.org/ppdemo/tools/linux/straw -P /home/root/pp/tools/ && \
@@ -148,6 +158,12 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
         echo "unknown ARCH='$ARCH'" && \
         exit 1; \
     fi
+
+# the interpreter and tool dirs are installed by root and are only read by the app user
+RUN for d in /opt/venv /opt/venv/lib/python3*/site-packages /usr/local/lib/R/site-library /usr/lib/R/site-library \
+        /usr/local/bin /home/root/pp/tools "$NVM_DIR"; do \
+        if [ -e "$d" ] && su -s /bin/sh app -c "test -w '$d'"; then echo "ERROR: $d is writable by the app user"; exit 1; fi; \
+    done
 
 # Declared after all the dependency install steps: a changed ARG value invalidates the cache of every
 # later RUN step in the stage, and IMGREV changes with every commit.
@@ -177,6 +193,10 @@ RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz 
     else \
       npm install @sjcrh/proteinpaint-server@${SERVERPKGVER}; \
     fi
+# a tar extraction run by root, such as for the rust binaries in the proteinpaint-rust postinstall, keeps the file owner
+# and modes from the archive, which are changed to root and go-w
+RUN find . \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
+    find . ! -type l -perm /022 -exec chmod go-w {} +
 
 # The rust binaries are compiled in a different image (container/rust/Dockerfile, Debian trixie) and
 # arrive here inside the npm package, so this is the first point where they meet the libraries they
@@ -224,14 +244,21 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
 
+# the app files are owned by root, which installed them, and are only read by the app user
 WORKDIR /home/root/pp/app
-COPY --from=ppserverdeps --chown=app:app /home/root/pp/app/active /home/root/pp/app/active
+COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
-COPY --chown=app:app ./app-server.mjs ./
-# writable for group 0, see the user setup in the ppbase stage; only the dir, for the files created at runtime
-RUN chgrp 0 /home/root/pp/app/active && chmod g=u /home/root/pp/app/active
+COPY ./app-server.mjs ./
+# Nothing under the app dir is written at runtime: fail the build for an app file that the app user, or another UID
+# with group 0, can write. A mount under this dir, such as for dataset/, is set by the container runtime.
+RUN if find . ! -type l \( ! -user 0 -o -perm /022 \) | grep .; then \
+      echo "ERROR: the app files above are not owned by root, or are writable by group or others"; exit 1; \
+    fi; \
+    if su -s /bin/sh app -c "find /home/root/pp/app/active -writable" | grep .; then \
+      echo "ERROR: the app files above are writable by the app user"; exit 1; \
+    fi
 # the HOME of another UID, which has no account in the image
 ENV HOME=/home/app
 USER app
@@ -254,6 +281,10 @@ COPY --from=ppserver /home/root/pp/app/active /home/root/pp/app/active
 WORKDIR /home/root/pp/app/active
 ARG FRONTPKGVER
 RUN npm install @sjcrh/proteinpaint-front@${FRONTPKGVER}
+# a tar extraction run by root, such as for the rust binaries in the proteinpaint-rust postinstall, keeps the file owner
+# and modes from the archive, which are changed to root and go-w
+RUN find . \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
+    find . ! -type l -perm /022 -exec chmod go-w {} +
 
 # enable ssh into this stage, for troubleshooting
 CMD ["sleep", "3600"]
@@ -271,17 +302,30 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
 
+# the app files are owned by root, which installed them, and are only read by the app user
 WORKDIR /home/root/pp/app
-COPY --from=ppfulldeps --chown=app:app /home/root/pp/app/active /home/root/pp/app/active
+COPY --from=ppfulldeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
-COPY --chown=app:app ./app-full.mjs ./
-COPY --chown=app:app public ./public
-# writable for group 0, see the user setup in the ppbase stage; only the dirs, for the files created at runtime,
-# such as the client bundle in active/bin and the cards that are copied to active/public
-RUN chgrp 0 /home/root/pp/app/active /home/root/pp/app/active/public && \
-    chmod g=u /home/root/pp/app/active /home/root/pp/app/active/public
+COPY ./app-full.mjs ./
+COPY public ./public
+# the client bundle in bin/ and the public/cards are generated at build time, so that app-full.mjs reuses them
+# at startup instead of writing them; tar run by root keeps the file owner and modes from the bundle archive,
+# which are changed to root and go-w
+RUN node node_modules/@sjcrh/proteinpaint-front/init.js && \
+    test -f bin/.pp-bundle-ready && \
+    find bin public \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
+    find bin public ! -type l -perm /022 -exec chmod go-w {} +
+# Nothing under the app dir is written at runtime: fail the build for an app file that the app user, or another UID
+# with group 0, can write. A mount under this dir, such as for dataset/ or public/, is set by the container runtime;
+# front/init.js may then add the missing index.html and cards to a mounted public/ at startup.
+RUN if find . ! -type l \( ! -user 0 -o -perm /022 \) | grep .; then \
+      echo "ERROR: the app files above are not owned by root, or are writable by group or others"; exit 1; \
+    fi; \
+    if su -s /bin/sh app -c "find /home/root/pp/app/active -writable" | grep .; then \
+      echo "ERROR: the app files above are writable by the app user"; exit 1; \
+    fi
 # the HOME of another UID, which has no account in the image
 ENV HOME=/home/app
 USER app

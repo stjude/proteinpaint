@@ -3,7 +3,7 @@ import { PlotBase } from '#plots/PlotBase.js'
 import { select } from 'd3-selection'
 import { getBrainImagingSampleSet } from './getBrainImagingSampleSet.ts'
 import { DEFAULT_SAMPLE_TYPE, isNumericTerm, ROOT_SAMPLE_TYPE, getDateStrFromNumber } from '#shared/terms.js'
-import { sayerror } from '#dom'
+import { sayerror, Menu } from '#dom'
 
 const root_ID = 'root'
 const samplesLimit = 15
@@ -38,6 +38,10 @@ class SampleView extends PlotBase implements RxComponent {
 	singleSamplePlots!: Record<string, any[]>
 	brainPlots!: any[]
 	imagePlots!: any[]
+	/** holder of the swimmer lane(s) of the shown samples' patient, one for all samples */
+	swimmerDiv?: any
+	/** renderer of swimmerDiv, kept to destroy its body-mounted menus when replaced or when sample view closes */
+	swimmerRenderer?: any
 	visiblePlots!: boolean
 	renderSampleDictionary!: () => void
 
@@ -113,7 +117,7 @@ class SampleView extends PlotBase implements RxComponent {
 				.append('option')
 				.attr('value', d => d.sampleId)
 				.property('selected', (d, _i) => _i < samplesLimit)
-				.html((d, _) => d.sampleName)
+				.text(d => d.sampleName)
 
 			this.dom.noteDiv = sampleDiv
 				.insert('div')
@@ -161,6 +165,7 @@ class SampleView extends PlotBase implements RxComponent {
 						div.forEach(p => p.cellDiv.style('display', 'none'))
 					}
 					for (const div of this.brainPlots) div.cellDiv.style('display', 'none')
+					this.swimmerDiv?.style('display', 'none')
 
 					if (sampleName != '') {
 						this.dom.downloadbt.property('disabled', true)
@@ -277,7 +282,8 @@ class SampleView extends PlotBase implements RxComponent {
 
 	async setControls(state) {
 		const q = state.termdbConfig.queries
-		const hasPlots = q?.singleSampleMutation || q?.singleSampleGenomeQuantification || q?.NIdata || q?.images
+		const hasPlots =
+			q?.singleSampleMutation || q?.singleSampleGenomeQuantification || q?.NIdata || q?.images || q?.swimmer
 		if (hasPlots) {
 			this.dom.showPlotsDiv
 				.append('input')
@@ -362,6 +368,22 @@ class SampleView extends PlotBase implements RxComponent {
 					})
 				})
 			this.dom.showPlotsDiv.append('label').text('Show brain imaging').attr('for', 'showBrainImaging')
+		}
+
+		if (q?.swimmer) {
+			this.dom.showPlotsDiv
+				.append('input')
+				.attr('type', 'checkbox')
+				.property('checked', true)
+				.attr('id', 'showSwimmer')
+				.on('change', e => {
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { settings: { sampleView: { showSwimmer: e.target.checked } } }
+					})
+				})
+			this.dom.showPlotsDiv.append('label').text('Show swimmer plot').attr('for', 'showSwimmer')
 		}
 	}
 
@@ -560,6 +582,10 @@ class SampleView extends PlotBase implements RxComponent {
 			this.showPlotsFromCategory(this.singleSamplePlots[ssgqKey], ssgqKey)
 		this.showPlotsFromCategory(this.brainPlots, 'showBrain')
 		this.showPlotsFromCategory(this.imagePlots, 'showImages')
+		if (this.swimmerDiv) {
+			this.swimmerDiv.style('display', this.settings.showSwimmer ? 'block' : 'none')
+			if (this.settings.showSwimmer) this.visiblePlots = true
+		}
 		if (this.state.samples.length == 1 && this.visiblePlots)
 			this.dom.tableDiv.style('max-width', '48vw').style('max-height', '40vw').attr('class', 'sjpp_show_scrollbar')
 		else this.dom.tableDiv.style('max-width', '').style('max-height', '').attr('class', '')
@@ -580,6 +606,9 @@ class SampleView extends PlotBase implements RxComponent {
 		this.singleSamplePlots = {}
 		this.brainPlots = []
 		this.imagePlots = []
+		delete this.swimmerDiv
+		this.swimmerRenderer?.destroy()
+		delete this.swimmerRenderer
 		// const q = state.termdbConfig.queries
 		if (state.termdbConfig?.queries?.singleSampleMutation) {
 			const div = plotsDiv.append('div')
@@ -682,6 +711,43 @@ class SampleView extends PlotBase implements RxComponent {
 				imagePlotImport.renderImagePlot(state, cellDiv, sample)
 			}
 		}
+		if (state.termdbConfig?.queries?.swimmer) await this.renderSwimmer(state, samples)
+	}
+
+	/** the swimmer lane of the shown samples' patient (found from any sample of the patient), drawn once
+	below the other plots. the checkbox is hidden when there is no lane */
+	async renderSwimmer(state, samples) {
+		if (!samples.length) return
+		const { fetchSwimmerLanes, SwimmerRenderer, getDefaultSwimmerSettings } = await import('./swimmer.ts')
+		let lanes: any[] = []
+		try {
+			// no user filter: the samples are already chosen; the route still applies access control
+			const result = await fetchSwimmerLanes({
+				genome: state.vocab.genome,
+				dslabel: state.vocab.dslabel,
+				samples: samples.map(s => s.sampleName)
+			})
+			lanes = result.lanes
+		} catch (e) {
+			console.error('swimmer request failed:', e)
+		}
+		this.dom.showPlotsDiv.select('input[id=showSwimmer]').style('display', lanes.length ? 'inline-block' : 'none')
+		this.dom.showPlotsDiv.select('label[for=showSwimmer]').style('display', lanes.length ? 'inline-block' : 'none')
+		if (!lanes.length) return
+		const div = this.dom.plotsDiv.append('div').attr('data-testid', 'sjpp-sampleview-swimmer').style('width', '100%')
+		this.swimmerDiv = div
+		div.append('div').style('font-weight', 'bold').style('padding', '10px 20px 0 20px').text('Swimmer plot')
+		const renderer = new SwimmerRenderer(this.app, {
+			plotDiv: div.append('div').style('padding', '10px'),
+			noteDiv: div.append('div').style('padding', '0 20px').style('font-size', '.9em').style('opacity', 0.7),
+			tip: new Menu({ padding: '5px' })
+		})
+		this.swimmerRenderer = renderer
+		renderer.update({ swimmer: state.termdbConfig.queries.swimmer, settings: getDefaultSwimmerSettings(), lanes })
+	}
+
+	destroy() {
+		this.swimmerRenderer?.destroy()
 	}
 }
 
@@ -739,8 +805,8 @@ function setRenderers(self) {
 	self.renderTHead = function (data, theadrow) {
 		const trs = theadrow.selectAll('th').data(data)
 		trs.exit().remove()
-		trs.html(self.getThHtml)
-		trs.enter().append('th').style('padding', '5px 10px').style('text-align', 'end').html(self.getThHtml)
+		trs.text(self.getThHtml)
+		trs.enter().append('th').style('padding', '5px 10px').style('text-align', 'end').text(self.getThHtml)
 	}
 
 	self.getThHtml = d => d
@@ -784,7 +850,7 @@ function setRenderers(self) {
 			.style('padding', '5px 10px')
 
 			// !!! TODO: use getTermValue only for actual data !!!
-			.html(d.sample[d.term.id]?.label || value)
+			.text(d.sample[d.term.id]?.label || value)
 		if (isNumeric)
 			td.append('button')
 				.style('margin-left', '5px')
@@ -818,7 +884,7 @@ function setRenderers(self) {
 			.select('button')
 			.style('display', d.term.isleaf ? 'none' : '')
 			.html(self.config.expandedTermIds.includes(d.term.id) ? '-' : '+')
-		span.select('span').html(d.term.name)
+		span.select('span').text(d.term.name)
 		return
 	}
 }
@@ -846,7 +912,8 @@ export async function getPlotConfig(opts: any, app: any) {
 			showDictionary: true,
 			showDisco: true,
 			showBrain: true,
-			showImages: true
+			showImages: true,
+			showSwimmer: true
 		}
 	}
 	if (q)

@@ -4,7 +4,7 @@ import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
 import { sql } from './sql.ts'
-import { read_file, snpgtCacheFile, trackXfetch } from './utils.js'
+import { read_file, snpgtCacheFile, snpgtSampleColumn, trackXfetch } from './utils.js'
 import {
 	isDictionaryType,
 	isNonDictionaryType,
@@ -302,7 +302,7 @@ async function getSampleData(q, ds) {
 			const sampleFilterSet = await mayGetSampleFilterSet4snplst(q, nonDictTerms) // conditionally returns a set of sample ids, FIXME *only* for snplst and snplocus data download in supported ds, not for anything else. TODO remove this bad quick fix
 
 			const _samples = new Map()
-			await getSampleData_snplstOrLocus(tw, _samples, true)
+			await getSampleData_snplstOrLocus(tw, _samples, true, ds)
 
 			for (const [sampleId, value] of _samples) {
 				if (sampleFilterSet && !sampleFilterSet.has(sampleId)) continue // filter in use and this sample not in filter
@@ -1203,16 +1203,19 @@ useAllSamples true/false
 	if true
 		-populate "samples" with all of those from cache file
 		-do not perform imputation
+
+ds{}
+	the request dataset, which must be the one that made the cache file of tw.q.cacheid
 */
-async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
+async function getSampleData_snplstOrLocus(tw, samples, useAllSamples, ds) {
 	// tw.q.cacheid is client-provided, from any route that passes request terms to getData()
-	const lines = (await read_file(snpgtCacheFile(tw.q.cacheid))).split('\n')
+	const lines = (await read_file(snpgtCacheFile(tw.q.cacheid, ds))).split('\n')
 	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 
 	// array of sample ids from the cache file; note cache file contains all the samples from the dataset
 	const cachesampleheader = lines[0]
 		.split('\t')
-		.slice(serverconfig.cache_snpgt.sampleColumn) // from 7th column
+		.slice(snpgtSampleColumn) // from 7th column
 		.map(Number) // sample ids are integer
 
 	if (useAllSamples) {
@@ -1259,7 +1262,7 @@ async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
 				// this sample is filtered out
 				continue
 			}
-			const gt = l[j + serverconfig.cache_snpgt.sampleColumn]
+			const gt = l[j + snpgtSampleColumn]
 			if (gt) {
 				snp2sample.get(snpid).samples.set(sampleid, gt)
 			}

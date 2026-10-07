@@ -98,6 +98,7 @@ read_json_mem <- mem_probe()
 #   /meta/gene_names             {n_promoters}             str      — comma-separated gene symbols per promoter
 #   /meta/samples/names          {n_samples}               str      — sample identifiers (column headers)
 #   /meta/promoter/promoterID    {n_promoters}             str      — ENCODE CRE IDs (e.g. EH38E2776539)
+#   /meta/chr                    {n_promoters}             str      — promoter chromosome; or a chrom_lengths root attribute, see below
 #   /meta/start                  {n_promoters}             int      — promoter start coordinate (0-based)
 #   /meta/stop                   {n_promoters}             int      — promoter end coordinate (exclusive)
 #   /meta/num_cpg_sites          {n_promoters}             int      — how many CpG probes fell in this promoter
@@ -107,7 +108,6 @@ read_data_time <- system.time({
   # Read metadata vectors we need:
   all_samples <- h5read(h5_file, "meta/samples/names") # All 1,544 sample names in the H5
   gene_names <- h5read(h5_file, "meta/gene_names") # Gene annotation per element (e.g. "TP53" or "TP53,TP53-AS1")
-  chrs <- h5read(h5_file, "meta/chr") # Chromosome per element (e.g. "chr1")
   starts <- h5read(h5_file, "meta/start") # Element start coordinate (0-based)
   stops <- h5read(h5_file, "meta/stop") # Element end coordinate (exclusive)
 
@@ -128,6 +128,19 @@ read_data_time <- system.time({
     leaf <- parts[length(parts)]
     grp <- if (length(parts) > 1) paste0("/", paste(parts[-length(parts)], collapse = "/")) else "/"
     any(h5_paths$group == grp & h5_paths$name == leaf)
+  }
+
+  # Chromosome per element (e.g. "chr1"), from either layout. An element matrix carries a per-row
+  # meta/chr. A matrix built like the CpG-level one gives a chrom_lengths root attribute instead:
+  # the number of rows of each chromosome, in row order, over rows sorted by chromosome.
+  if (has_path("meta/chr")) {
+    chrs <- h5read(h5_file, "meta/chr")
+  } else {
+    chrom_lengths <- h5readAttributes(h5_file, "/")$chrom_lengths
+    if (is.null(chrom_lengths)) stop("matrix has neither meta/chr nor a chrom_lengths attribute")
+    chrom_lengths <- unlist(fromJSON(chrom_lengths))
+    if (sum(chrom_lengths) != length(starts)) stop("chrom_lengths does not add up to the number of rows of the matrix")
+    chrs <- rep(names(chrom_lengths), times = chrom_lengths)
   }
 
   if (has_path("meta/element/elementID")) {

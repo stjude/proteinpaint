@@ -206,11 +206,12 @@ so ancestry mapping and the dataset's specimen exclusions apply identically. */
 export async function matchedSamplelst(
 	samplelst: { groups: { name: string; values: any[]; [k: string]: any }[] },
 	eligible: Set<string>,
-	ds: any
+	ds: any,
+	__protected__?: any
 ): Promise<{ groups: { name: string; values: { sampleId: number | string }[]; [k: string]: any }[] }> {
 	const groups: { name: string; values: { sampleId: number | string }[] }[] = []
 	for (const g of samplelst.groups) {
-		const { names } = await buildGroupValues(g.values, eligible, ds, undefined, undefined, undefined, undefined)
+		const { names } = await buildGroupValues(g.values, eligible, ds, null, null, null, null, __protected__)
 		/* Everything but the values is kept as it came, `in: true` included: the volcano treats a
 		group without `in` as the "all other samples" group and rebuilds its membership. */
 		groups.push({ ...g, values: names.map(n => ({ sampleId: ds.cohort?.termdb?.q?.sampleName2id?.(n) ?? n })) })
@@ -222,11 +223,12 @@ export async function resolveGroupNames(
 	group1: any[],
 	group2: any[],
 	eligible: Set<string>,
-	ds: any
+	ds: any,
+	__protected__?: any
 ): Promise<{ group1: string[]; group2: string[] }> {
 	const [g1, g2] = await Promise.all([
-		buildGroupValues(group1, eligible, ds, undefined, undefined, undefined, undefined),
-		buildGroupValues(group2, eligible, ds, undefined, undefined, undefined, undefined)
+		buildGroupValues(group1, eligible, ds, null, null, null, null, __protected__),
+		buildGroupValues(group2, eligible, ds, null, null, null, null, __protected__)
 	])
 	return { group1: g1.names, group2: g2.names }
 }

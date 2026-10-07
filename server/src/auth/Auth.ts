@@ -1,8 +1,8 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
-import mm from 'micromatch'
+import pm from 'picomatch'
 
-const { isMatch: mmIsMatch } = mm
+const { isMatch: pmIsMatch } = pm
 
 // The auth session store is a two-level Map keyed by [dslabel][sessionId]. Both keys are
 // request-controlled (dslabel from req.query/JWT payloads, sessionId from getSessionId()'s
@@ -54,7 +54,7 @@ export function stripBasepath(path: string, basepath = '') {
 }
 
 function isMatch(path: string, pattern: string) {
-	return mmIsMatch(path, pattern, { nocase: true })
+	return pmIsMatch(path, pattern, { nocase: true })
 }
 
 // returns true if a client-supplied value matches a single dsCredentials key: the '*' wildcard
@@ -68,6 +68,55 @@ export function patternMatches(value, pattern) {
 	if (pattern === '*' || value === pattern) return true
 	if (typeof value != 'string' || !value || !pattern) return false
 	return isMatch(value, pattern)
+}
+
+// returns the parsed URL of the request origin, or undefined if it is missing or malformed
+export function getRequestOrigin(req) {
+	const origin = req.get('origin')
+	// an Origin header must already be a serialized http(s) origin, i.e., scheme://host[:port]
+	// with no path, query, or userinfo, otherwise it is rejected instead of being normalized
+	if (origin) return parseOrigin(origin, true)
+	// a referrer is a full URL, so only this fallback may include a path
+	const referrer = req.get('referrer')
+	if (referrer) return parseOrigin(referrer, false)
+	// this host is used to build a URL, not validated as an already-serialized origin (like the
+	// Origin header above), so mustBeSerializedOrigin is false: URL parsing normalizes it (default
+	// port removed, lowercased), which would otherwise never match an un-normalized but valid host
+	const host = req.get('host')
+	if (host) return parseOrigin(`${req.protocol}://${host}`, false)
+}
+
+// Reads req.headers directly instead of calling the Express-only req.get(). Unlike
+// getRequestOrigin(), there is no Host header fallback: returns undefined when Origin and
+// Referer are both absent, which a caller using this for an access decision must treat as
+// disallowed.
+export function getOriginFromHeaders(req) {
+	const h = req.headers || {}
+	const origin = h.origin
+	if (origin) return parseOrigin(origin, true)
+	const referrer = h.referrer || h.referer
+	if (referrer) return parseOrigin(referrer, false)
+}
+
+export function parseOrigin(value, mustBeSerializedOrigin) {
+	if (typeof value != 'string' || value == 'null') return
+	try {
+		const url = new URL(value)
+		if (url.protocol != 'http:' && url.protocol != 'https:') return
+		if (url.username || url.password) return
+		if (mustBeSerializedOrigin && url.origin !== value) return
+		return url
+	} catch (_) {
+		return
+	}
+}
+
+// a dsCredentials embedder key is matched with the same case-insensitive glob semantics
+// as used for auth, so that a key like '*.example.org' also gets credentialed CORS headers
+export function isCredEmbedder(origin, pattern) {
+	return (
+		pattern == '*' || (!!origin && (patternMatches(origin.hostname, pattern) || patternMatches(origin.host, pattern)))
+	)
 }
 
 // client-supplied query parameters that are used to resolve dsCredentials entries. A non-string value,
@@ -97,6 +146,22 @@ export function getMatchedEntry(obj, value) {
 	if (typeof value == 'string' && Object.hasOwn(obj, value)) return obj[value]
 	for (const pattern in obj) {
 		if (pattern != '*' && patternMatches(value, pattern)) return obj[pattern]
+	}
+	return obj['*']
+}
+
+// Same precedence as getMatchedEntry() (exact, then glob, then '*'), but tests two forms of a
+// single value -- such as an origin's hostname and its host, which includes a non-default port
+// -- together at each precedence tier, so a resolution using one form alone cannot select a less
+// specific entry than the other form would have matched at a higher tier. The first form is
+// tried ahead of the second at each tier when the two differ.
+export function getMatchedEntryForEither(obj, value1, value2) {
+	if (!obj) return
+	if (typeof value1 == 'string' && Object.hasOwn(obj, value1)) return obj[value1]
+	if (typeof value2 == 'string' && value2 !== value1 && Object.hasOwn(obj, value2)) return obj[value2]
+	for (const pattern in obj) {
+		if (pattern == '*') continue
+		if (patternMatches(value1, pattern) || (value2 !== value1 && patternMatches(value2, pattern))) return obj[pattern]
 	}
 	return obj['*']
 }
@@ -216,6 +281,20 @@ export class Auth {
 			for (const ds of dsEntries) {
 				if (!Object.hasOwn(ds, routeKey)) continue
 				const cred = getMatchedEntry(ds[routeKey], embedder)
+				if (cred) return cred
+			}
+		}
+	}
+
+	// Same as getRouteCred(), but resolves a single most-specific credential across both forms of
+	// an origin (see getMatchedEntryForEither()), instead of resolving each form independently.
+	getRouteCredForEither(dslabel, routeKeys: any[], value1, value2) {
+		const dsEntries = this.getMatchedDsEntries(dslabel)
+		for (const routeKey of routeKeys) {
+			if (typeof routeKey != 'string' || !routeKey) continue
+			for (const ds of dsEntries) {
+				if (!Object.hasOwn(ds, routeKey)) continue
+				const cred = getMatchedEntryForEither(ds[routeKey], value1, value2)
 				if (cred) return cred
 			}
 		}
@@ -404,17 +483,17 @@ export class Auth {
 
 	// in a server farm, where the session state is not shared by all active PP servers,
 	// the login details that is created by one server can be obtained from the JWT payload
-	mayAddSessionFromJwt(sessions: SessionsMap, req, cred) {
+	mayAddSessionFromJwt(sessions: SessionsMap, req, cred, requireFreshVerification = false) {
 		const { dslabel, embedder } = req.query
 		if (!req.headers?.authorization) return
 		if (!cred.secret)
 			throw {
 				status: 'error',
-				error: `no credentials set up for this embedder='${req.query.embedder}'`,
+				error: `no credentials set up for this embedder`,
 				code: 403
 			}
 		const [type, b64token] = req.headers.authorization.split(' ')
-		if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
+		if (type.toLowerCase() != 'bearer') throw `unsupported authorization type, allowed: 'Bearer'`
 		const token = Buffer.from(b64token, 'base64').toString()
 		const id = this.getSessionIdFromJwt(token)
 		try {
@@ -422,8 +501,10 @@ export class Auth {
 			// id is attacker-controlled (the last 20 chars of the raw, unverified token -- or the whole
 			// token if shorter), so a cache hit must come from a real stored entry, never an inherited
 			// value: reading from the sessions Map (see SessionsMap) guarantees this, so a dslabel/id of
-			// '__proto__' cannot resolve a fake payload that would skip jsonwebtoken.verify() below
-			const cachedPayload = getSessionEntry(sessions, dslabel, id)
+			// '__proto__' cannot resolve a fake payload that would skip jsonwebtoken.verify() below.
+			// requireFreshVerification skips this cache lookup entirely: a cache hit only proves that
+			// id matches an existing entry, not that this request's token is the one that produced it.
+			const cachedPayload = requireFreshVerification ? undefined : getSessionEntry(sessions, dslabel, id)
 			const payload = cachedPayload || jsonwebtoken.verify(token, secret)
 			// signed payload dataset must match the requested dataset
 			if (payload.dslabel) {
@@ -442,6 +523,7 @@ export class Auth {
 				cred.route === '*' ||
 				isMatch(path, cred.route) ||
 				path == 'authorizedactions' ||
+				path == 'dslogout' ||
 				path.startsWith(cred.route.toLowerCase() + '/')
 			) {
 				if (!dslabelSessions.has(id))

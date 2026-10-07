@@ -2,6 +2,7 @@ import type { RouteApi, RoutePayload } from '#types'
 import { cacheFilePath } from '#src/utils/cacheOrRecompute.ts'
 import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
+import { sampleFilterScope } from '#src/utils/sampleGroups.ts'
 import { buildTssIndex, linkDmrsToGenes, classifyLink, type GeneModel, type TssIndex } from '#src/utils/dmrGeneLink.ts'
 import fs from 'fs'
 import { genomes } from '#src/initGenomesDs.js'
@@ -66,9 +67,9 @@ function init({ genomes }) {
 			const file = cacheFilePath('dmr', q.cacheId)
 			if (!fs.existsSync(file)) throw new Error('This scan is no longer cached; rerun it first.')
 			const scan = JSON.parse(await fs.promises.readFile(file, 'utf8'))
-			/* The auth gate ran for q.dslabel, but the cacheId names a result computed for some dataset:
-			refuse one computed for another. */
-			if (scan.genome !== q.genome || scan.dslabel !== q.dslabel)
+			/* The auth gate ran for q.dslabel, but the cacheId names a result computed for some dataset
+			and with some sample filter: refuse one computed for another. */
+			if (scan.genome !== q.genome || scan.dslabel !== q.dslabel || (scan.scope || '') !== sampleFilterScope(q, ds))
 				throw new Error('This scan does not belong to the requested dataset; rerun it first.')
 			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
 			const links = linkDmrsToGenes(
@@ -77,7 +78,8 @@ function init({ genomes }) {
 				minCpgs
 			)
 
-			const samplelst = await matchedSamplelst(q.samplelst, eligibleMethylationSamples(ds, undefined), ds)
+			const eligible = eligibleMethylationSamples(ds, undefined)
+			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds, q.__protected__)
 			const { result } = await getDeCacheResult(
 				{
 					genome: q.genome,
@@ -88,7 +90,8 @@ function init({ genomes }) {
 					cpm_cutoff: q.cpm_cutoff,
 					method: q.method,
 					filter: q.filter,
-					filter0: q.filter0
+					filter0: q.filter0,
+					__protected__: q.__protected__
 				} as any,
 				genomes
 			)

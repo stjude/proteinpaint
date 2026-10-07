@@ -6,7 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import http from 'http'
 import https from 'https'
-import { spawnSync } from 'child_process'
+import { spawn, spawnSync } from 'child_process'
 import * as augen from '@sjcrh/augen'
 import serverconfig, { lockServerconfig } from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
@@ -18,6 +18,9 @@ import { routeFiles } from './app.routes.js'
 import { setPythonBinPath } from '@sjcrh/proteinpaint-python'
 import { CacheManager } from './CacheManager.ts'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 const basepath = serverconfig.basepath || ''
 Object.freeze(process.argv)
 
@@ -26,7 +29,7 @@ if (serverconfig.python) setPythonBinPath(serverconfig.python)
 export async function launch() {
 	try {
 		new CacheManager(
-			Object.assign({ cachedir: serverconfig.cachedir }, serverconfig.features?.cacheMonitor || {}, {
+			Object.assign({ cachedir }, serverconfig.features?.cacheMonitor || {}, {
 				mustExitPendingValidation: serverconfig.features?.mustExitPendingValidation
 			})
 		)
@@ -36,6 +39,10 @@ export async function launch() {
 		// setting up auth routes before any other routes are set up
 		const validatedCreds = await extractValidatedCreds(serverconfig)
 		const trackedDatasets = await initGenomesDs(serverconfig, { credDslabels: Object.keys(validatedCreds) })
+		// the cache path is not kept in serverconfig, so that code which runs later cannot read it from there, see
+		// hideCachedir in serverconfig.js; the route, dataset, and other modules that use it are loaded by now,
+		// and have copied it to a module-local variable
+		delete serverconfig.cachedir
 		// all launch-time writes to serverconfig are done by now, lock it before any route is set
 		lockServerconfig(serverconfig)
 		const { doneLoading, pendingNotification } = processTrackedDs(trackedDatasets)
@@ -151,7 +158,7 @@ init with bad config, data, and/or code
 			await sendMessageToSlack(
 				serverconfig.slackWebhookUrl,
 				message,
-				path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
+				path.join(cachedir, '/slack/last_message_hash.txt')
 			)
 				.then(() => {
 					process.exit(exitCode)
@@ -175,7 +182,17 @@ async function handle_argv(argv: string[]): Promise<{ message?: string; error?: 
 async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
 	if (serverconfig.preListenScript) {
 		const { cmd, args } = serverconfig.preListenScript
-		const ps = spawnSync(cmd, args, { encoding: 'utf-8' })
+		// not spawnSync(), which would block a termination signal handler, such as in a container launcher
+		const ps = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+			// stdin is ignored, like the empty stdin of spawnSync(), so that a script that reads it does not wait
+			const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+			let stdout = ''
+			let stderr = ''
+			child.stdout.setEncoding('utf-8').on('data', data => (stdout += data))
+			child.stderr.setEncoding('utf-8').on('data', data => (stderr += data))
+			child.on('error', reject)
+			child.on('close', () => resolve({ stdout, stderr }))
+		})
 		if (ps.stderr.trim()) throw ps.stderr.trim()
 		console.log(ps.stdout)
 	}
@@ -332,7 +349,7 @@ function processTrackedDs(trackedDatasets) {
 			pendingNotification = sendMessageToSlack(
 				serverconfig.slackWebhookUrl,
 				`\n${serverconfig.URL} ${hostname}: ${msg}`,
-				path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
+				path.join(cachedir, '/slack/last_message_hash.txt')
 			).catch(console.log)
 		}
 	}

@@ -96,6 +96,7 @@ export function copyMerge(base, ...args) {
 		if (arg) {
 			const source = typeof base == 'string' ? JSON.parse(JSON.stringify(arg)) : arg
 			for (const key in source) {
+				if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue
 				if (!target[key] || Array.isArray(target[key]) || typeof target[key] !== 'object') target[key] = source[key]
 				else copyMerge(target[key], source[key])
 			}

@@ -1,0 +1,27 @@
+{{- /*
+	The key for deriving cache file names, see cacheIdCreds in values.yaml. Created only when no existingSecret is set.
+	The generated value is kept across upgrades by reading it back with lookup, and the Secret is kept on uninstall,
+	so that a reinstall still finds the existing cache files. lookup returns nothing without a cluster connection,
+	such as with `helm template` in a GitOps tool, which would generate a new value on every render: set
+	cacheIdCreds.existingSecret for such a deployment.
+*/ -}}
+{{- if and .Values.cacheIdCreds.enabled (not .Values.cacheIdCreds.existingSecret) }}
+{{- $name := printf "%s-cacheid" (include "proteinpaint.fullname" .) }}
+{{- $key := .Values.cacheIdCreds.secretKey }}
+{{- $existing := lookup "v1" "Secret" .Release.Namespace $name }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "proteinpaint.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+type: Opaque
+data:
+  {{- if and $existing (index ($existing.data | default dict) $key) }}
+  {{ $key }}: {{ index $existing.data $key }}
+  {{- else }}
+  {{ $key }}: {{ randAlphaNum 48 | b64enc }}
+  {{- end }}
+{{- end }}

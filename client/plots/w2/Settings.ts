@@ -21,6 +21,9 @@ type Settings = {
 	geneExpression: string | null
 	/** show boundary strokes only in the n most zoomed-in levels; null = dataset default, 0 = always show */
 	annotationLevel: number | null
+	/** cells-in-view above this count show the raster overlay instead of
+	 per-cell vector data; null = wsi.direct.ts's own default */
+	cellCountLimit: number | null
 	/** overlay each gene in its own color, or sum all genes into one overlay */
 	spatialMode: 'gene_expression' | 'gene_groups'
 }

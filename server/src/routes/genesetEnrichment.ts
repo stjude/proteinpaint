@@ -16,6 +16,9 @@ import { validGeneSetGroup, validNumPermutations } from '#src/utils/genesetGroup
 import { get_ds_tdb } from '#src/termdb.js'
 import type { GseaCacheResult } from '../../routes/types.ts'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 const payload: RoutePayload = {
 	init,
 	request: { typeId: 'GenesetEnrichmentRequest' /*, checkers: TODO write validator */ },
@@ -285,7 +288,7 @@ async function runGseaPythonForImage({
 	for (const line of gsea_output.split('\n')) {
 		if (line.startsWith('image: ')) {
 			const parsed = JSON.parse(line.replace('image: ', ''))
-			return path.join(serverconfig.cachedir, 'gsea', parsed.image_file)
+			return path.join(cachedir, 'gsea', parsed.image_file)
 		}
 		// gsea.py emits failures on the `result:` channel even from the
 		// detail-image path — forward those structurally so the route can
@@ -316,12 +319,46 @@ function buildPyInput(
 		geneset_group: cacheArg.geneSetGroup,
 		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),
 		filter_non_coding_genes: cacheArg.filter_non_coding_genes,
-		cachedir: path.join(serverconfig.cachedir, 'gsea'),
+		cachedir: path.join(cachedir, 'gsea'),
 		geneset_name: q.geneset_name,
 		num_permutations: cacheArg.num_permutations,
 		...(cacheArg.max_geneset_size ? { max_geneset_size: cacheArg.max_geneset_size } : {}),
 		...(pickleB64 ? { pickle_b64: pickleB64 } : {})
 	}
+}
+
+/* One value per gene from a differential methylation result, which has one row per tested element
+and so repeats a gene once for each of its promoters: the mean fold change of the gene's rows.
+
+The rows cannot be ranked as they are. blitzgsea sorts the list by fold change and keeps the first
+row of a repeated name, which is the gene's HIGHEST row, so a gene with more promoters ranks higher
+whatever the data, and gene sets of multi-promoter genes come out enriched: with every name ranked,
+a contrast of two random halves of one group gave 2,847 of 7,647 GO sets at FDR < 0.05, against none
+with the mean. Keeping a gene's most significant row instead is biased the same way (723 sets on that
+contrast). A row naming several genes counts toward each.
+
+This removes that bias and no more. With only coding genes ranked, blitzgsea's count on that contrast
+still depends on its random seed, with the mean as without it (0 to 568 sets over six seeds, against
+74 to 526 without), so one run there is not evidence either way. */
+export function meanFoldChangeByGene(rows: { gene_name: string; fold_change: number }[]): {
+	genes: string[]
+	fold_change: number[]
+} {
+	const sums = new Map<string, { sum: number; n: number }>()
+	for (const r of rows) {
+		if (typeof r.gene_name != 'string' || !Number.isFinite(r.fold_change)) continue
+		for (const name of r.gene_name.split(',')) {
+			const gene = name.trim()
+			if (!gene) continue
+			const s = sums.get(gene)
+			if (s) {
+				s.sum += r.fold_change
+				s.n++
+			} else sums.set(gene, { sum: r.fold_change, n: 1 })
+		}
+	}
+	const genes = [...sums.keys()]
+	return { genes, fold_change: genes.map(g => sums.get(g)!.sum / sums.get(g)!.n) }
 }
 
 /** Resolve the `genes` + `fold_change` inputs that every GSEA path needs.
@@ -347,20 +384,21 @@ async function resolveGseaGenesAndFoldChange({
 		// so `kind` may be absent (legacy snapshots, malformed external
 		// callers); validate up-front rather than silently falling through to
 		// one branch and producing a confusing cacheId-mismatch error.
-		// For DM, multiple promoters can map to the same gene_name —
-		// blitzgsea/CERNO may warn or down-rank duplicates; we pass them
-		// through without dedup for now.
+		// For DM, multiple promoters can map to the same gene_name, so the
+		// rows are reduced to one value per gene (meanFoldChangeByGene).
 		const kind = q.daRequest.kind
 		if (kind !== 'DE' && kind !== 'DM') throw new Error('daRequest.kind must be "DE" or "DM"')
+		// the daRequest, with the q.__protected__ of this request for resolving its sample groups
+		const daRequest = { ...q.daRequest, __protected__: q.__protected__ }
 		if (kind === 'DE') {
-			const { result, cacheId } = await getDeCacheResult(q.daRequest as DERequest, genomes)
+			const { result, cacheId } = await getDeCacheResult(daRequest as DERequest, genomes)
 			if (cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
 			return {
 				genes: result.geneRows.map(g => g.gene_name),
 				fold_change: result.geneRows.map(g => g.fold_change)
 			}
 		}
-		const dm = q.daRequest as DiffMethRequest
+		const dm = daRequest as DiffMethRequest
 		const { result, cacheId } = await getDmCacheResult(dm, genomes)
 		if (cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
 		/* A scan's rows are DMRs, not genes: many per gene, none for half of them, and more for long
@@ -377,6 +415,7 @@ async function resolveGseaGenesAndFoldChange({
 					group1: groups[0].values,
 					group2: groups[1].values,
 					corrected: !!dm.scan?.backgroundCorrection,
+					__protected__: dm.__protected__,
 					/* The chromosomes the scan itself ran on. Without this the ranking covered the
 					whole genome while the volcano showed one chromosome, and on a sex-imbalanced
 					cohort chrX dominated a ranking the header called the scan's own. It also keeps
@@ -389,10 +428,7 @@ async function resolveGseaGenesAndFoldChange({
 			const genes = Object.keys(deltas)
 			return { genes, fold_change: genes.map(g => deltas[g]) }
 		}
-		return {
-			genes: result.promoterRows.map(p => p.gene_name),
-			fold_change: result.promoterRows.map(p => p.fold_change)
-		}
+		return meanFoldChangeByGene(result.promoterRows)
 	}
 	// Inline path (legacy single-cell). Reject early so we don't pass
 	// undefined down to Python/Rust.

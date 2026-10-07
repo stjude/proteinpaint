@@ -3,6 +3,8 @@ import type { RouteApi, RoutePayload } from '#types'
 import type { BrainRegionsRequest, BrainRegionsIsoform } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import serverconfig from '#src/serverconfig.js'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasProteomeDs } from './termdb.proteome.ts'
 import { readGeneRows } from './termdb.bubbleHeatmap.ts'
 
 /*
@@ -13,7 +15,11 @@ fold-change view in the portal. No statistics are computed here.
 */
 
 export const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has ds.queries.proteome
+	get init() {
+		return hasProteomeDs(genomes) ? init : null
+	},
 	request: { typeId: 'BrainRegionsRequest' },
 	response: { typeId: 'BrainRegionsResponse' }
 }

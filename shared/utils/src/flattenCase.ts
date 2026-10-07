@@ -92,7 +92,13 @@ args:
 	When filter0 has no diagnoses constraint, or no diagnosis satisfies it, the deterministic SV-2770
 	selection is used.
 */
-export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1, opts: { filter0?: any } = {}) {
+export function flattenCaseByFields(
+	sample: any,
+	caseObj: any,
+	tw: any,
+	startIdx: number = 1,
+	opts: { filter0?: any } = {}
+): void {
 	const fields = tw.term.id.split('.')
 
 	/* the diagnoses decision tree below only governs terms whose value is read out of diagnoses[];
@@ -165,7 +171,7 @@ begin with query( case{}, 1 ):
 
 recursion is used to advance i and when current is array, to loop through it
 */
-function query(fields, sample, tw, current, i) {
+function query(fields: string[], sample: any, tw: any, current: any, i: number): void {
 	const field = fields[i]
 	if (i == fields.length - 1) {
 		// i is at the end of fields[], sample attr key is term.id
@@ -200,11 +206,11 @@ gdc declares it as a "keyword" (string) field -- see /cases/_mapping, whose face
 keyed "true"/"false". the /cases endpoint happens to coerce it to a json boolean on output, but
 /ssm_occurrences returns the raw string, so `=== true`/`=== false` silently failed on every case
 loaded by the mds3 lollipop. these two helpers accept either representation. */
-function isPrimaryDisease(d) {
+function isPrimaryDisease(d: any): boolean {
 	const v = d.diagnosis_is_primary_disease
 	return v === true || v === 'true'
 }
-function isNotPrimaryDisease(d) {
+function isNotPrimaryDisease(d: any): boolean {
 	const v = d.diagnosis_is_primary_disease
 	return v === false || v === 'false'
 }
@@ -226,7 +232,11 @@ deterministic SV-2770 selection. caseObj is passed so the evaluator can resolve 
 
 returns the chosen diagnosis entry, or undefined when the selection is undecidable (caller then
 leaves the term unset rather than blanking unrelated terms of the case). */
-function chooseDiagnosis(allDiagnoses, evalDiagnosis, caseObj) {
+function chooseDiagnosis(
+	allDiagnoses: any[],
+	evalDiagnosis: ((d: any, caseObj: any) => number) | null,
+	caseObj: any
+): any | undefined {
 	if (evalDiagnosis) {
 		const trueMatches: any[] = [],
 			unknownMatches: any[] = []
@@ -279,7 +289,7 @@ const TRI_TRUE = 1,
 	TRI_FALSE = 0,
 	TRI_UNKNOWN = -1
 const filter0EvalCache = new WeakMap<object, ((d: any, caseObj: any) => number) | null>()
-function getDiagnosisEvaluator(filter0) {
+function getDiagnosisEvaluator(filter0: any): ((d: any, caseObj: any) => number) | null {
 	// cache hit first: the hot path is repeat calls with the same filter0 over re.data.hits[].
 	// WeakMap.has/get tolerate a null/undefined/primitive key (return false/undefined, no throw),
 	// so the object guard below is only needed to protect the .set() further down
@@ -302,7 +312,7 @@ mixed OR branches: for "(diagnosis=A AND primary_site=lung) OR (diagnosis=B AND 
 a brain case, branch 1 resolves FALSE (site!=lung) and only the diagnosis-B branch admits the case, so
 B is chosen rather than an arbitrary UNKNOWN. Preserving UNKNOWN through and/or/not still handles a
 case-level field that was not fetched. */
-function compileFilter0Tri(node): (d: any, caseObj: any) => number {
+function compileFilter0Tri(node: any): (d: any, caseObj: any) => number {
 	if (!node || typeof node != 'object') return () => TRI_UNKNOWN
 	const op = node.op
 	if (op == 'or' && Array.isArray(node.content)) {
@@ -359,9 +369,10 @@ function compileFilter0Tri(node): (d: any, caseObj: any) => number {
 	const field = node.content?.field
 	if (typeof field != 'string') return () => TRI_UNKNOWN
 	// GDC fields carry a "cases." or "case." prefix, e.g. "cases.diagnoses.age_at_diagnosis"
-	const dm = field.match(/(?:^|\.)diagnoses\.(.+)$/)
-	if (dm) {
-		const key = dm[1]
+	const fieldSegments = field.split('.')
+	const diagnosesIndex = fieldSegments.indexOf('diagnoses')
+	if (diagnosesIndex != -1 && diagnosesIndex < fieldSegments.length - 1) {
+		const key = fieldSegments.slice(diagnosesIndex + 1).join('.')
 		// only a direct diagnosis sub-field (e.g. age_at_diagnosis, primary_diagnosis) is supported.
 		// a dotted descendant (e.g. treatments.treatment_type) sits under a nested array; a literal
 		// lookup cannot read it and GDC's nested matching is not replicated here, so treat it as UNKNOWN
@@ -389,13 +400,13 @@ case object), e.g. 'diagnoses.age_at_diagnosis' or 'primary_site'. A GDC getter 
 fields[] (with its endpoint's prefix) so caseObj carries both the diagnoses fields the diagnosis
 selection tests AND the case-level fields getDiagnosisEvaluator resolves -- otherwise those read as
 undefined and selection loses precision (or falls back). */
-export function filter0Fields(filter0): string[] {
+export function filter0Fields(filter0: any): string[] {
 	const out: string[] = []
 	collectFilter0Fields(filter0, out)
 	return [...new Set(out)]
 }
 
-function collectFilter0Fields(node, out) {
+function collectFilter0Fields(node: any, out: string[]): void {
 	if (!node || typeof node != 'object') return
 	if (Array.isArray(node.content) && (node.op == 'and' || node.op == 'or')) {
 		for (const c of node.content) collectFilter0Fields(c, out)
@@ -416,7 +427,7 @@ function collectFilter0Fields(node, out) {
 // sub-field leaf? A dotted descendant (e.g. diagnoses.treatments.treatment_type) is not evaluable here
 // (see compileFilter0Tri) so it must not, on its own, gate an evaluator into existence -- otherwise a
 // treatments-only filter0 would build an all-UNKNOWN evaluator instead of using the default selection.
-function collectDiagnosisLeaves(node, out) {
+function collectDiagnosisLeaves(node: any, out: Array<{ op: string; key: string; value: any }>): void {
 	if (!node || typeof node != 'object') return
 	if (Array.isArray(node.content) && (node.op == 'and' || node.op == 'or')) {
 		for (const c of node.content) collectDiagnosisLeaves(c, out)
@@ -430,12 +441,15 @@ function collectDiagnosisLeaves(node, out) {
 	const field = node.content?.field
 	if (typeof field != 'string') return
 	// GDC fields carry a "cases." or "case." prefix, e.g. "cases.diagnoses.age_at_diagnosis"
-	const m = field.match(/(?:^|\.)diagnoses\.(.+)$/)
-	if (!m || m[1].includes('.')) return // skip non-diagnoses and unsupported dotted descendants
-	out.push({ op: node.op, key: m[1], value: node.content.value })
+	const fieldSegments = field.split('.')
+	const diagnosesIndex = fieldSegments.indexOf('diagnoses')
+	if (diagnosesIndex == -1 || diagnosesIndex == fieldSegments.length - 1) return
+	const key = fieldSegments.slice(diagnosesIndex + 1).join('.')
+	if (key.includes('.')) return // skip non-diagnoses and unsupported dotted descendants
+	out.push({ op: node.op, key, value: node.content.value })
 }
 
-function evalDiagnosisLeaf(l, d) {
+function evalDiagnosisLeaf(l: { op: string; key: string; value: any }, d: any): boolean {
 	return evalLeafOp(l.op, l.value, d?.[l.key])
 }
 
@@ -443,14 +457,14 @@ function evalDiagnosisLeaf(l, d) {
 API returns the original casing, e.g. filter "bronchus and lung" vs returned "Bronchus and lung". So an
 exact compare here would wrongly reject a value the GDC server accepted; match strings case-insensitively
 (numbers compare exactly). */
-function looseEq(a, b) {
+function looseEq(a: any, b: any): boolean {
 	if (typeof a == 'string' && typeof b == 'string') return a.toLowerCase() === b.toLowerCase()
 	return a == b
 }
 
 /* evaluate one filter0 leaf operator: does actual value `v` satisfy `op` against filter value?
 Shared by diagnoses leaves (v read off the diagnosis) and case-level leaves (v resolved off caseObj). */
-function evalLeafOp(op, filterValue, v) {
+function evalLeafOp(op: string, filterValue: any, v: any): boolean {
 	if (v === undefined || v === null) return false
 	// membership / equality: works for a string field such as primary_diagnosis tested against
 	// filter0's value[] set (Array) -- or a scalar value; string compares are case-insensitive (GDC)
@@ -478,7 +492,7 @@ stripped), descending into arrays along the way. e.g. "primary_site" -> ["Bronch
 "samples.sample_type" over caseObj.samples[] -> ["Blood","Tumor"]. GDC cohort filters commonly point at
 array-backed nested fields (samples, exposures, ...), so a leaf on such a path must be tested as
 membership over ALL of the array's values, not read as a single scalar. Absent/empty -> [] (UNKNOWN). */
-function collectPathValues(node, segs, i, out) {
+function collectPathValues(node: any, segs: string[], i: number, out: any[]): void {
 	if (node == null) return
 	if (Array.isArray(node)) {
 		for (const el of node) collectPathValues(el, segs, i, out)
@@ -496,9 +510,10 @@ function collectPathValues(node, segs, i, out) {
 array element when correlated, or the whole case otherwise)? Positive ops (in/=/range): satisfied if ANY
 value matches. Negation (exclude/!=): GDC nested NOT-IN means NO value is in the set, so it is satisfied
 only when none of the values matches. */
-function caseLeafMatch(values, op, filterValue) {
+function caseLeafMatch(values: any[], op: string, filterValue: any): boolean {
 	if (op == 'exclude') {
-		const inSet = v => (Array.isArray(filterValue) ? filterValue.some(x => looseEq(x, v)) : looseEq(filterValue, v))
+		const inSet = (v: any) =>
+			Array.isArray(filterValue) ? filterValue.some(x => looseEq(x, v)) : looseEq(filterValue, v)
 		return !values.some(inSet)
 	}
 	if (op == '!=' || op == '<>') return !values.some(v => looseEq(filterValue, v))
@@ -508,7 +523,7 @@ function caseLeafMatch(values, op, filterValue) {
 /* Flatten nested AND nodes into a single content list (AND is associative), so leaves connected only by
 AND -- even through sub-AND groups -- become direct siblings and share one correlated case-level scope.
 Does NOT descend into OR or NOT, whose grouping is not associative with the enclosing AND. */
-function flattenAndContent(content, out) {
+function flattenAndContent(content: any[], out: any[]): void {
 	for (const c of content) {
 		if (c && typeof c == 'object' && c.op == 'and' && Array.isArray(c.content)) flattenAndContent(c.content, out)
 		else out.push(c)
@@ -518,7 +533,7 @@ function flattenAndContent(content, out) {
 /* describe a filter0 node if it is a case-level leaf (a leaf whose field is not a diagnoses.* path),
 returning the case-relative path segments (leading "cases."/"case." stripped). Returns null for groups,
 not-nodes, diagnoses leaves and malformed nodes. */
-function caseLevelLeafInfo(node) {
+function caseLevelLeafInfo(node: any): { segs: string[]; op: string; value: any } | null {
 	if (!node || typeof node != 'object') return null
 	if (node.op == 'and' || node.op == 'or' || node.op == 'not') return null
 	const field = node.content?.field
@@ -533,7 +548,7 @@ so constraints on the same nested object are satisfied by the same element -- e.
 samples.portions.x=A AND samples.portions.y=B requires one sample with one portion that has both, not A
 and B from different portions/samples. leaves[].segs are relative to `scope`. Tri-state: FALSE if any
 segment group is FALSE, else UNKNOWN if any is undecidable (field absent / not fetched), else TRUE. */
-function evalLeavesInScope(scope, leaves): number {
+function evalLeavesInScope(scope: any, leaves: Array<{ segs: string[]; op: string; value: any }>): number {
 	if (scope == null || typeof scope != 'object' || Array.isArray(scope)) return TRI_UNKNOWN
 	const byNext = new Map<string, any[]>()
 	for (const leaf of leaves) {
@@ -553,7 +568,7 @@ function evalLeavesInScope(scope, leaves): number {
 /* Evaluate the leaves under one segment (all grp[].segs[0] == that segment) against `child` = scope[seg].
 When `child` is an array, correlate: SOME element satisfies ALL of them (terminal leaves as membership on
 the element, deeper leaves recursed into it). A scalar/object child is a single element. */
-function evalChildGroup(child, grp): number {
+function evalChildGroup(child: any, grp: Array<{ segs: string[]; op: string; value: any }>): number {
 	if (child === undefined || child === null) return TRI_UNKNOWN
 	const terminal: any[] = [],
 		deeper: any[] = []
@@ -573,7 +588,11 @@ function evalChildGroup(child, grp): number {
 }
 
 // AND of terminal leaves (tested against `el`'s scalar values) and deeper leaves (recursed into `el`)
-function evalElementAll(el, terminal, deeper): number {
+function evalElementAll(
+	el: any,
+	terminal: Array<{ segs: string[]; op: string; value: any }>,
+	deeper: Array<{ segs: string[]; op: string; value: any }>
+): number {
 	let overall = TRI_TRUE
 	if (terminal.length) {
 		const values: any[] = []
@@ -595,7 +614,7 @@ function evalElementAll(el, terminal, deeper): number {
 // see the decision tree in https://gdc-ctds.atlassian.net/browse/SV-2770
 // default SV-2770 selection filter, used only when filter0 has no diagnoses constraint; the cohort
 // evaluator handles the filtered case in chooseDiagnosis, so a matcher never routes through here
-function diagnosisFilter(d) {
+function diagnosisFilter(d: any): boolean {
 	// strict equality, undefined and other non-null empty values are not matched,
 	// so this condition will not be applied if age_at_diagnosis or primary_diagnosis
 	// was not added to the requested fieldset
@@ -610,15 +629,15 @@ function diagnosisFilter(d) {
 // see the decision tree in https://gdc-ctds.atlassian.net/browse/SV-2770
 // this filter is meant to be applied ONLY when there are multiple diagnoses[] entries,
 // it's okay for a single-entry diagnoses[] to have diagnosis_is_primary_disease === null
-function diagnosisIsPrimaryDisease(d) {
+function diagnosisIsPrimaryDisease(d: any): boolean {
 	return isPrimaryDisease(d)
 }
 
-function primaryDiseasesIsDefined(d) {
+function primaryDiseasesIsDefined(d: any): boolean {
 	return d.diagnosis_is_primary_disease !== undefined
 }
 
-function diagnosisSort(a, b) {
+function diagnosisSort(a: any, b: any): number {
 	// must use the helper and not a truthy test: the string "false" is truthy
 	if (isPrimaryDisease(a)) return -1
 	if (isPrimaryDisease(b)) return 1
@@ -642,12 +661,12 @@ function basicSort(a: any, b: any) {
 	return a < b ? -1 : a > b ? 1 : 0
 }
 
-function mayApplyGroupsetting(v, tw) {
+function mayApplyGroupsetting(v: any, tw: any): any {
 	if (tw.q?.type == 'custom-groupset') {
 		if (!Array.isArray(tw.q?.customset?.groups)) throw 'q.customset.groups is not array'
 		for (const group of tw.q.customset.groups) {
 			if (!Array.isArray(group.values)) throw 'group.values[] not array from tw.q.customset.groups'
-			if (group.values.findIndex(i => i.key == v) != -1) {
+			if (group.values.findIndex((i: any) => i.key == v) != -1) {
 				// value "v" is in this group
 				return group.name
 			}
@@ -658,7 +677,7 @@ function mayApplyGroupsetting(v, tw) {
 		if (!tw.term.groupsetting?.lst?.length) throw 'term.groupsetting.lst is empty'
 		for (const group of tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]) {
 			if (!Array.isArray(group.values)) throw 'group.values[] not array from tw.term.groupsetting.lst[]'
-			if (group.values.findIndex(i => i.key == v) != -1) {
+			if (group.values.findIndex((i: any) => i.key == v) != -1) {
 				// value "v" is in this group
 				return group.name
 			}

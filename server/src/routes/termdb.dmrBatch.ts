@@ -27,9 +27,13 @@ import {
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { sampleFilterScope } from '#src/utils/sampleGroups.ts'
 import fs from 'fs'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
+
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
 
 /* Call DMRs across many regions at once — the whole hit list of a differential methylation run,
 rather than one clicked element at a time.
@@ -282,8 +286,10 @@ export async function runDmrBatch(
 	re-run, or a second person running it, would otherwise pay in full again. The identical
 	request arriving twice concurrently is deduplicated to one compute by cacheOrRecompute,
 	so a demo and a colleague clicking along cost one scan, not two. */
+	const scope = sampleFilterScope(q, ds)
 	const { result: payload, cacheId } = await cacheOrRecompute<typeof cacheKey, TermdbDmrBatchSuccessResponse>({
 		computeArgument: cacheKey,
+		cacheScope: scope,
 		cacheSubdir: 'dmr',
 		computeFresh: async () => {
 			const out: TermdbDmrBatchSuccessResponse['regions'] = []
@@ -320,7 +326,8 @@ export async function runDmrBatch(
 				q.group1,
 				q.group2,
 				eligibleMethylationSamples(ds, q.element_type),
-				ds
+				ds,
+				q.__protected__
 			)
 			if (group1.length < 3 || group2.length < 3)
 				throw new Error(
@@ -376,7 +383,7 @@ export async function runDmrBatch(
 						const input = {
 							probe_h5_file: matrixFile,
 							mvalues,
-							cachedir: serverconfig.cachedir,
+							cachedir,
 							genome: q.genome,
 							chr: jobChrs[0],
 							start: 0,
@@ -558,9 +565,10 @@ export async function runDmrBatch(
 			}
 			return {
 				status: 'ok',
-				// which dataset this result belongs to, so a consumer holding only a cacheId can check it
+				// which dataset and cacheScope this result belongs to, so a consumer holding only a cacheId can check it
 				genome: q.genome,
 				dslabel: q.dslabel,
+				scope,
 				regions: out,
 				chromosomes: merged.size,
 				totalProbesAnalyzed: totalProbes,

@@ -35,6 +35,7 @@ export type DERequest = {
 		category: string
 	}
 	signal?: any
+	__protected__?: any
 }
 
 /** Thresholds used to classify a data point as "significant" on the volcano plot.

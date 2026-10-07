@@ -34,3 +34,39 @@ malicious
 pen(etration)?[ -]?test
 bug bounty
 unsanitized
+
+# A line that starts with caps: is only matched against each all-caps word, such as an env var or
+# constant name like SOME_NAME, in a commit message, branch name, or PR text, but not in a diff.
+# These are words that stand out in all caps and are associated with security, even when the
+# lowercase word is fine, so reword the text or remove the all-caps word.
+caps:strict
+caps:harden
+caps:secur
+caps:safe
+caps:sandbox
+caps:seccomp
+caps:apparmor
+caps:selinux
+caps:noexec
+caps:nosuid
+caps:no_?new_?priv
+caps:priv
+caps:(^|_)root(_|$)
+caps:(^|_)caps?(_|$)
+caps:capabilit
+caps:auth([^o]|$)
+caps:token
+caps:secret
+caps:passw
+caps:cred
+caps:allow
+caps:deny
+caps:trust
+caps:sanitiz
+caps:audit
+caps:posture
+caps:lockdown
+caps:enforce
+caps:encrypt
+caps:read_?only
+caps:(^|_)(csp|cors|jwt|tls|ssl|acl)(_|$)
