@@ -452,7 +452,7 @@ export class VolcanoControlInputs {
 				chartType: 'volcano',
 				settingsKey: 'minSamplesPerGroup',
 				title:
-					'A cluster must have sufficient coverage in at least this many samples in EACH group. Defaults to 1% of the cohort, floor 3.'
+					'A cluster must have sufficient coverage in at least this many samples in EACH group. Defaults to 1% of the cohort, floor 3.',
 				min: 1,
 				max: 10000
 			},
