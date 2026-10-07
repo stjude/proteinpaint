@@ -24,13 +24,13 @@ export default function setRoutes(app, basepath) {
 			if (Object.keys(q).length) {
 				const file = path.resolve(cwd, String(q.file))
 				try {
-					const boundary = await getBoundary()
-					if (!file.endsWith('.md') || !file.startsWith(boundary + path.sep)) throw 'unsupported file'
-					if (await fs.promises.stat(file)) {
-						const md = await fs.promises.readFile(file, { encoding: 'utf8' })
-						res.header('content-type', 'text/markdown')
-						res.send(md)
-					}
+					// check the real paths, since reading a file follows symbolic links
+					const boundary = await fs.promises.realpath(await getBoundary())
+					const realFile = await fs.promises.realpath(file)
+					if (!realFile.endsWith('.md') || !realFile.startsWith(boundary + path.sep)) throw 'unsupported file'
+					const md = await fs.promises.readFile(realFile, { encoding: 'utf8' })
+					res.header('content-type', 'text/markdown')
+					res.send(md)
 				} catch (e) {
 					res.send({ error: 'file not found' })
 				}
