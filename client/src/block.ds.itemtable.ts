@@ -120,6 +120,11 @@ export function itemtable(arg: any) {
 	handle_samplecart(mlst, holder, tk, block)
 }
 
+// escape a dynamic value for use in markup; leaves null/undefined as-is so empty cells stay empty
+function escapeValue(v: any) {
+	return v == undefined ? v : escapeHtml(v)
+}
+
 function mlst2headerhtml(mlst: any[]) {
 	if (mlst.length == 1) {
 		const m = mlst[0]
@@ -129,7 +134,7 @@ function mlst2headerhtml(mlst: any[]) {
 				'<span style="font-weight:bold;color:' +
 				c.color +
 				'">' +
-				escapeHtml(m.mname ? m.mname : m.pos ? m.chr + ':' + (m.pos + 1) : '') +
+				escapeHtml(m.mname ? m.mname : m.pos != undefined ? m.chr + ':' + (m.pos + 1) : '') +
 				'</span> <span style="font-size:80%">' +
 				c.label +
 				'</span>'
@@ -233,7 +238,7 @@ function table_snvindel(mlst: any[], holder: any, tk: any, block: any) {
 		butholder: null
 	}
 	for (const m of mlst) {
-		if (hasSNP && m.chr && m.pos) {
+		if (hasSNP && m.chr && m.pos != undefined) {
 			snpfind.chr = m.chr
 			let nf = true
 			for (const r of snpfind.bprange) {
@@ -1062,25 +1067,33 @@ function info2table_value(icfg: any, lst: any[], i: number) {
 	if (value == undefined) return
 	// field config attributes are processed based on order of precedence
 	if (field.eval) {
-		// somehow decodeURIComponent() won't work here!!
-		// TODO: use a more specific string-to-code conversion
-		// per https://esbuild.github.io/content-types/#direct-eval
-		value = (0, eval)('"' + value + '"')
+		// decode \xNN and \uNNNN escape sequences without evaluating the value as code
+		value = String(value).replace(/\\(?:x([0-9a-fA-F]{2})|u([0-9a-fA-F]{4}))/g, (_m, x, u) =>
+			String.fromCharCode(parseInt(x || u, 16))
+		)
 	}
-	if (field.isurl) return '<a href=' + value + ' target=_blank>' + value + '</a>'
+	// all values are escaped; only the link and line break markup built here is passed as html
+	const link = (url: string, text: string) =>
+		'<a href="' + escapeHtml(url) + '" target=_blank rel="noopener noreferrer">' + escapeHtml(text) + '</a>'
+	if (field.isurl) return /^https?:\/\//i.test(value) ? link(value, value) : escapeHtml(value)
 	if (field.appendUrl) {
 		if (field.separator) {
 			return value
 				.split(field.separator)
-				.map(v => '<a href=' + field.appendUrl + v + ' target=_blank>' + v + '</a>')
+				.map(v => link(field.appendUrl + encodeURIComponent(v), v))
 				.join(', ')
 		}
-		return '<a href=' + field.appendUrl + value + ' target=_blank>' + value + '</a>'
+		return link(field.appendUrl + encodeURIComponent(value), value)
 	}
 	if (field.insert2url) {
-		return '<a href=' + field.insert2url.left + value + field.insert2url.right + ' target=_blank>' + value + '</a>'
+		return link(field.insert2url.left + encodeURIComponent(value) + field.insert2url.right, value)
 	}
-	if (field.ampersand2br) return value.replace(/&/g, '<br>')
+	if (field.ampersand2br) {
+		return value
+			.split('&')
+			.map(v => escapeHtml(v))
+			.join('<br>')
+	}
 	if (field.urlMatchLst) {
 		// 31566309_(PubMed), or 168986_(ASCO)
 		const lowervalue = value.toLowerCase()
@@ -1091,20 +1104,16 @@ function info2table_value(icfg: any, lst: any[], i: number) {
 					if (type.appendUrl) {
 						return (
 							'<span style="font-size:.7em">' +
-							type.type.toUpperCase() +
-							'</span> <a href=' +
-							type.appendUrl +
-							id +
-							' target=_blank>' +
-							id +
-							'</a>'
+							escapeHtml(type.type.toUpperCase()) +
+							'</span> ' +
+							link(type.appendUrl + encodeURIComponent(id), id)
 						)
 					}
 				}
 			}
 		}
 	}
-	return value
+	return escapeHtml(value)
 }
 
 function mayephl_butt(ep: any, holder: any, mlst: any[]) {
@@ -1332,20 +1341,20 @@ export function runtimeattr_snvindel(tk: any, mlst: any[]): void {
 			if (nouse.has(k)) continue
 			switch (k) {
 				case 'chr':
-					lst.push({ label: 'Genome pos.', get: m => m.chr + ':' + (m.pos + 1) })
+					lst.push({ label: 'Genome pos.', get: m => escapeHtml(m.chr) + ':' + (m.pos + 1) })
 					break
 				case 'class':
 					lst.push({ label: 'Class', get: m => common.mclass[m.class].label })
 					break
 				case 'mname':
-					lst.push({ label: 'Mutation', get: m => m.mname })
+					lst.push({ label: 'Mutation', get: m => escapeValue(m.mname) })
 					break
 				case 'ref':
 					lst.push({
 						label: 'Allele',
 						lst: [
-							{ label: 'Ref', get: m => m.ref },
-							{ label: 'Alt', get: m => m.alt }
+							{ label: 'Ref', get: m => escapeValue(m.ref) },
+							{ label: 'Alt', get: m => escapeValue(m.alt) }
 						]
 					})
 					break
@@ -1375,7 +1384,7 @@ export function runtimeattr_snvindel(tk: any, mlst: any[]): void {
 					})
 					break
 				default:
-					lst.push({ label: k, get: m => m[k] })
+					lst.push({ label: k, get: m => escapeValue(m[k]) })
 			}
 		}
 		tk.snvindelattr = lst
@@ -1388,8 +1397,12 @@ export function runtimeattr_snvindel(tk: any, mlst: any[]): void {
 				get: m => {
 					if (m[l.k])
 						return (
-							m[l.k] +
-							(l.full ? (m[l.full] ? ' <span style="font-size:.8em;color:#858585">' + m[l.full] + '</span>' : '') : '')
+							escapeValue(m[l.k]) +
+							(l.full
+								? m[l.full]
+									? ' <span style="font-size:.8em;color:#858585">' + escapeValue(m[l.full]) + '</span>'
+									: ''
+								: '')
 						)
 					return ''
 				}
@@ -1461,14 +1474,14 @@ export function runtimeattr_trunc(tk: any, mlst: any[]): void {
 	tk.truncattr = []
 	for (const m of mlst) {
 		if (m.sample) {
-			tk.truncattr.push({ label: 'Sample', get: m => m.sample })
+			tk.truncattr.push({ label: 'Sample', get: m => escapeValue(m.sample) })
 			skipset.add('sample')
 			break
 		}
 	}
 	tk.truncattr.push({
 		label: 'Position',
-		get: m => m.chr + ':' + m.pos
+		get: m => escapeHtml(m.chr) + ':' + m.pos
 	})
 	const dtset = new Set<any>()
 	for (const m of mlst) {
@@ -1494,7 +1507,7 @@ export function runtimeattr_trunc(tk: any, mlst: any[]): void {
 				get: m => {
 					const lst: any[] = []
 					for (const k in m.partner) {
-						lst.push(k + ': ' + m.partner[k])
+						lst.push(escapeHtml(k) + ': ' + escapeValue(m.partner[k]))
 					}
 					return lst.join('&nbsp;&nbsp;')
 				},
@@ -1511,13 +1524,16 @@ export function runtimeattr_trunc(tk: any, mlst: any[]): void {
 				label: l.label || l.k,
 				//hide:l.hide,
 				get: m =>
-					m[l.k] ? m[l.k] + (l.full ? ' <span style="color:#858585;font-size:.8em">' + m[l.full] + '</span>' : '') : ''
+					m[l.k]
+						? escapeValue(m[l.k]) +
+						  (l.full ? ' <span style="color:#858585;font-size:.8em">' + escapeValue(m[l.full]) + '</span>' : '')
+						: ''
 			})
 		}
 	}
 	for (const k in mlst[0]) {
 		if (skipset.has(k)) continue
-		tk.truncattr.push({ label: k, get: m => m[k] })
+		tk.truncattr.push({ label: k, get: m => escapeValue(m[k]) })
 	}
 }
 
@@ -1540,14 +1556,14 @@ export function runtimeattr_del(tk: any, mlst: any[]): void {
 	tk.delattr = []
 	for (const m of mlst) {
 		if (m.sample) {
-			tk.delattr.push({ label: 'Sample', get: m => m.sample })
+			tk.delattr.push({ label: 'Sample', get: m => escapeValue(m.sample) })
 			skipset.add('sample')
 			break
 		}
 	}
 	tk.delattr.push({
 		label: 'Position',
-		get: m => m.chr + ':' + m.pos
+		get: m => escapeHtml(m.chr) + ':' + m.pos
 	})
 	tk.delattr.push({
 		label: 'Del. length',
@@ -1568,13 +1584,16 @@ export function runtimeattr_del(tk: any, mlst: any[]): void {
 				label: l.label || l.k,
 				//hide:l.hide,
 				get: m =>
-					m[l.k] ? m[l.k] + (l.full ? ' <span style="color:#858585;font-size:.8em">' + m[l.full] + '</span>' : '') : ''
+					m[l.k]
+						? escapeValue(m[l.k]) +
+						  (l.full ? ' <span style="color:#858585;font-size:.8em">' + escapeValue(m[l.full]) + '</span>' : '')
+						: ''
 			})
 		}
 	}
 	for (const k in mlst[0]) {
 		if (skipset.has(k)) continue
-		tk.delattr.push({ label: k, get: m => m[k] })
+		tk.delattr.push({ label: k, get: m => escapeValue(m[k]) })
 	}
 }
 
@@ -1597,14 +1616,14 @@ export function runtimeattr_itd(tk: any, mlst: any[]): void {
 	tk.itdattr = []
 	for (const m of mlst) {
 		if (m.sample) {
-			tk.itdattr.push({ label: 'Sample', get: m => m.sample })
+			tk.itdattr.push({ label: 'Sample', get: m => escapeValue(m.sample) })
 			skipset.add('sample')
 			break
 		}
 	}
 	tk.itdattr.push({
 		label: 'Position',
-		get: m => m.chr + ':' + m.pos
+		get: m => escapeHtml(m.chr) + ':' + m.pos
 	})
 	tk.itdattr.push({
 		label: 'Dup. length',
@@ -1625,13 +1644,16 @@ export function runtimeattr_itd(tk: any, mlst: any[]): void {
 				label: l.label || l.k,
 				//hide:l.hide,
 				get: m =>
-					m[l.k] ? m[l.k] + (l.full ? ' <span style="color:#858585;font-size:.8em">' + m[l.full] + '</span>' : '') : ''
+					m[l.k]
+						? escapeValue(m[l.k]) +
+						  (l.full ? ' <span style="color:#858585;font-size:.8em">' + escapeValue(m[l.full]) + '</span>' : '')
+						: ''
 			})
 		}
 	}
 	for (const k in mlst[0]) {
 		if (skipset.has(k)) continue
-		tk.itdattr.push({ label: k, get: m => m[k] })
+		tk.itdattr.push({ label: k, get: m => escapeValue(m[k]) })
 	}
 }
 
@@ -1654,7 +1676,7 @@ export function runtimeattr_sv(tk: any, mlst: any[]): void {
 	tk.svattr = []
 	for (const m of mlst) {
 		if (m.sample) {
-			tk.svattr.push({ label: 'Sample', get: m => m.sample })
+			tk.svattr.push({ label: 'Sample', get: m => escapeValue(m.sample) })
 			skipset.add('sample')
 			break
 		}
@@ -1665,20 +1687,20 @@ export function runtimeattr_sv(tk: any, mlst: any[]): void {
 			if (!m.pairlst) return 'no pairlst'
 			const lst = m.pairlst.map(
 				p =>
-					(p.a.name ? '<strong>' + p.a.name + '</strong> ' : '') +
+					(p.a.name ? '<strong>' + escapeHtml(p.a.name) + '</strong> ' : '') +
 					(p.a.chr
 						? '<span style="color:#858585">' +
-						  p.a.chr +
+						  escapeHtml(p.a.chr) +
 						  ':' +
 						  (p.a.position + 1) +
 						  ' ' +
 						  (p.a.strand == '+' ? 'forward' : 'reverse') +
 						  '</span> &#10140; '
 						: '') +
-					(p.b.name ? '<strong>' + p.b.name + '</strong> ' : '') +
+					(p.b.name ? '<strong>' + escapeHtml(p.b.name) + '</strong> ' : '') +
 					(p.b.chr
 						? '<span style="color:#858585">' +
-						  p.b.chr +
+						  escapeHtml(p.b.chr) +
 						  ':' +
 						  (p.b.position + 1) +
 						  ' ' +
@@ -1697,11 +1719,11 @@ export function runtimeattr_sv(tk: any, mlst: any[]): void {
 					if (!m.pairlst) return 'no pairlst'
 					const lst = m.pairlst.map(
 						p =>
-							(p.a.name ? '<strong>' + p.a.name + '</strong> ' : '') +
+							(p.a.name ? '<strong>' + escapeHtml(p.a.name) + '</strong> ' : '') +
 							'<span style="color:#858585">r.' +
 							(p.a.rnaposition + 1) +
 							'</span> &#10140; ' +
-							(p.b.name ? '<strong>' + p.b.name + '</strong> ' : '') +
+							(p.b.name ? '<strong>' + escapeHtml(p.b.name) + '</strong> ' : '') +
 							'<span style="color:#858585">r.' +
 							(p.b.rnaposition + 1) +
 							'</span>'
@@ -1726,7 +1748,7 @@ export function runtimeattr_sv(tk: any, mlst: any[]): void {
 		for (const p of m.pairlst) {
 			if (p.translocationname) {
 				tk.svattr.push({
-					get: m => m.pairlst.map(i => (i.translocationname ? i.translocationname : '')).join('_'),
+					get: m => m.pairlst.map(i => (i.translocationname ? escapeHtml(i.translocationname) : '')).join('_'),
 					label: 'Translocation name'
 				})
 				hastn = true
@@ -1745,7 +1767,7 @@ export function runtimeattr_sv(tk: any, mlst: any[]): void {
 					fillbg = '#FFCF9E'
 				for (const i of m.pairlst) {
 					lst.push(
-						(i.a.name ? i.a.name : i.a.chr) +
+						escapeHtml(i.a.name ? i.a.name : i.a.chr) +
 							' <svg width=' +
 							w +
 							' height=' +
@@ -1768,7 +1790,7 @@ export function runtimeattr_sv(tk: any, mlst: any[]): void {
 							'"></rect>' +
 							'</g></svg>' +
 							'&nbsp;&nbsp;' +
-							(i.b.name ? i.b.name : i.b.chr) +
+							escapeHtml(i.b.name ? i.b.name : i.b.chr) +
 							' <svg width=' +
 							w +
 							' height=' +
@@ -1831,8 +1853,8 @@ export function runtimeattr_sv(tk: any, mlst: any[]): void {
 				if (p.frame != undefined) {
 					lst.push({
 						frame: p.frame,
-						a: p.a.name ? p.a.name : p.a.chr,
-						b: p.b.name ? p.b.name : p.b.chr
+						a: escapeHtml(p.a.name ? p.a.name : p.a.chr),
+						b: escapeHtml(p.b.name ? p.b.name : p.b.chr)
 					})
 				}
 			}
@@ -1848,13 +1870,16 @@ export function runtimeattr_sv(tk: any, mlst: any[]): void {
 				label: l.label || l.k,
 				hide: l.hide,
 				get: m =>
-					m[l.k] ? m[l.k] + (l.full ? ' <span style="color:#858585;font-size:.8em">' + m[l.full] + '</span>' : '') : ''
+					m[l.k]
+						? escapeValue(m[l.k]) +
+						  (l.full ? ' <span style="color:#858585;font-size:.8em">' + escapeValue(m[l.full]) + '</span>' : '')
+						: ''
 			})
 		}
 	}
 	for (const k in mlst[0]) {
 		if (skipset.has(k)) continue
-		tk.svattr.push({ label: k, get: m => m[k] })
+		tk.svattr.push({ label: k, get: m => escapeValue(m[k]) })
 	}
 }
 
@@ -1865,7 +1890,7 @@ function caller_pmid(_m: any = undefined) {
 				return ''
 			}
 			if (typeof m.pmid == 'number') {
-				return '<a target=_blank href=https://pubmed.ncbi.nlm.nih.gov/' + m.pmid + '>' + m.pmid + '</a>'
+				return '<a target=_blank href="https://pubmed.ncbi.nlm.nih.gov/' + m.pmid + '">' + m.pmid + '</a>'
 			}
 			const lst = m.pmid.split(',')
 			const out: string[] = []
@@ -1873,9 +1898,11 @@ function caller_pmid(_m: any = undefined) {
 				if (i == '') continue
 				const j = Number.parseInt(i)
 				if (Number.isNaN(j)) {
-					out.push(i)
+					out.push(escapeHtml(i))
 				} else {
-					out.push('<a target=_blank href=https://pubmed.ncbi.nlm.nih.gov/' + i + '>' + i + '</a>')
+					out.push(
+						'<a target=_blank href="https://pubmed.ncbi.nlm.nih.gov/' + escapeHtml(i) + '">' + escapeHtml(i) + '</a>'
+					)
 				}
 			}
 			return out.join(' ')
