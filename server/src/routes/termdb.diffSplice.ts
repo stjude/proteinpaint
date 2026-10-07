@@ -18,6 +18,7 @@ import {
 	resolveDaContext,
 	resolveGroups,
 	withResolvedGroups,
+	sampleFilterScope,
 	type SampleGroups
 } from '#src/utils/sampleGroups.ts'
 import type { DsCacheResult } from '../../routes/types.ts'
@@ -175,10 +176,12 @@ export async function getDsCacheResult(
 	genomes: any
 ): Promise<{ result: DsCacheResult; cacheId: string }> {
 	validateDsFilters(req)
+	const ds = genomes?.[req.genome]?.datasets?.[req.dslabel]
 	// the cache key holds the samples of the groups, also for a group that is defined by a filter
-	req = await withResolvedGroups(req, genomes?.[req.genome]?.datasets?.[req.dslabel])
+	req = await withResolvedGroups(req, ds)
 	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof dsKeyInputs>, DsCacheResult>({
 		computeArgument: dsKeyInputs(req),
+		cacheScope: sampleFilterScope(req, ds),
 		cacheSubdir: 'ds',
 		computeFresh: async () => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
@@ -352,8 +355,26 @@ export async function resolveDsSampleGroups(
 	if (groups[0].values?.length < 1) throw new Error('samplelst.groups[0].values.length<1')
 	if (groups[1].values?.length < 1) throw new Error('samplelst.groups[1].values.length<1')
 
-	const g1 = await buildGroupValues(groups[0].values, allSampleSet, ds, req.tw, req.tw2, term_results, term_results2)
-	const g2 = await buildGroupValues(groups[1].values, allSampleSet, ds, req.tw, req.tw2, term_results, term_results2)
+	const g1 = await buildGroupValues(
+		groups[0].values,
+		allSampleSet,
+		ds,
+		req.tw,
+		req.tw2,
+		term_results,
+		term_results2,
+		req.__protected__
+	)
+	const g2 = await buildGroupValues(
+		groups[1].values,
+		allSampleSet,
+		ds,
+		req.tw,
+		req.tw2,
+		term_results,
+		term_results2,
+		req.__protected__
+	)
 
 	const alerts: string[] = []
 	if (g1.names.length < 1) alerts.push('sample size of group1 < 1')

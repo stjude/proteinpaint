@@ -21,6 +21,7 @@ export type DiffSpliceRequest = {
 	preAnalysis?: boolean
 	volcanoRender: VolcanoRenderRequest
 	signal?: any
+	__protected__?: any
 }
 
 /** One intron cluster. Deliberately engine-independent: edgeR::diffSpliceDGE and the
