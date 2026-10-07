@@ -6,20 +6,22 @@ process.removeAllListeners('warning')
 
 export default function setRoutes(app, basepath) {
 	const cwd = path.join(serverconfig.binpath, '..')
+	const root = path.join(serverconfig.binpath, '../..')
 
 	app.get(basepath + '/readme', async (req, res) => {
 		const q = req.query
 		try {
 			if (Object.keys(q).length) {
-				const file = path.join(cwd, q.file)
+				const file = path.resolve(cwd, String(q.file))
 				try {
+					if (!file.endsWith('.md') || !file.startsWith(root + path.sep)) throw 'unsupported file'
 					if (await fs.promises.stat(file)) {
 						const md = await fs.promises.readFile(file, { encoding: 'utf8' })
 						res.header('content-type', 'text/markdown')
 						res.send(md)
 					}
 				} catch (e) {
-					res.send({ error: `file='${file}' not found: ` + e })
+					res.send({ error: 'file not found' })
 				}
 			} else {
 				const exclude = [

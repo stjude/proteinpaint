@@ -393,7 +393,7 @@
 
     async function render() {
     	const file = location.hash?.slice(1) || 'README.md'
-    	const param = `file=${file}`
+    	const param = `file=${encodeURIComponent(file)}`
     	if (!serverCache[file]) {
     		serverCache[file] = await fetch(`/readme?${param}`).then(r=>r.text()).catch(alert)
     	}
