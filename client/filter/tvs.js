@@ -301,6 +301,7 @@ export async function showTvsMenu(opts) {
 	self.tvs = {
 		term: opts.term
 	}
+	if (opts.origins) self.tvs.origins = [...opts.origins]
 	self.filter = opts.filter
 	//addExcludeCheckbox(opts.holder, self.tvs)
 

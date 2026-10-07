@@ -36,7 +36,15 @@ export const useCasesExcluded = {
 	filter: [SNP_LOCUS, SNP_LIST],
 	dictionary: [SNP_LOCUS, SNP_LIST, COHORT],
 	summary: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, COHORT],
-	summaryInput: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE, COHORT],
+	summaryInput: [
+		SNP_LOCUS,
+		SNP_LIST,
+		TERM_COLLECTION,
+		SINGLECELL_CELLTYPE,
+		SINGLECELL_GENE_EXPRESSION,
+		SINGLECELL_NUMERIC_VALUE,
+		COHORT
+	],
 	barchart: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, COHORT],
 	violin: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, COHORT],
 	sampleScatter: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, COHORT],
@@ -63,10 +71,34 @@ export const useCasesExcluded = {
 		SINGLECELL_NUMERIC_VALUE,
 		COHORT
 	], //Later on can support other term types like snplocus, snplst, geneVariant, non dictionary terms
-	survival: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE, COHORT],
+	survival: [
+		SNP_LOCUS,
+		SNP_LIST,
+		TERM_COLLECTION,
+		SINGLECELL_CELLTYPE,
+		SINGLECELL_GENE_EXPRESSION,
+		SINGLECELL_NUMERIC_VALUE,
+		COHORT
+	],
 	//Used from the termsetting when searching for a term, as any term with categories is allowed
-	default: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE, COHORT],
-	regression: [SNP_LIST, SNP_LOCUS, TERM_COLLECTION, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE, COHORT],
+	default: [
+		SNP_LOCUS,
+		SNP_LIST,
+		TERM_COLLECTION,
+		SINGLECELL_CELLTYPE,
+		SINGLECELL_GENE_EXPRESSION,
+		SINGLECELL_NUMERIC_VALUE,
+		COHORT
+	],
+	regression: [
+		SNP_LIST,
+		SNP_LOCUS,
+		TERM_COLLECTION,
+		SINGLECELL_CELLTYPE,
+		SINGLECELL_GENE_EXPRESSION,
+		SINGLECELL_NUMERIC_VALUE,
+		COHORT
+	],
 	metaboliteIntensity: [
 		SNP_LOCUS,
 		SNP_LIST,
@@ -498,7 +530,8 @@ export class TermTypeSearch {
 				type: 'submenu_set',
 				submenu: {
 					type: 'tvs',
-					term: term.term?.type == 'geneVariant' ? this.getDtTerm(term) : term
+					term: term.term?.type == 'geneVariant' ? this.getDtTerm(term) : term,
+					origins: term.term?.type == 'geneVariant' ? term.q.origins : undefined
 				}
 			})
 		}

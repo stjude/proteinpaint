@@ -5,7 +5,7 @@ import { renderCheckboxSelect, getSelectedCheckboxValues } from './checkboxSelec
 import type { GeneModel, BreakpointMarker, ScaleMode } from './types/isoformSelect'
 import type { BaseValue, BreakpointRange, BreakpointEntry, GvQueryRegion } from '#types'
 import { filterInit } from '#filter'
-import { dt2label, dtsnvindel, dtsv, dtfusionrna, mclass } from '#shared/common.js'
+import { dt2label, dtsnvindel, dtsv, dtfusionrna, mclass, morigin } from '#shared/common.js'
 import { matchesGvQueryEntry } from '#shared/terms.js'
 
 // a selectable value: either a mutation class (no .mname) or a
@@ -93,7 +93,7 @@ export type ByOrigin = { [origin: string]: { label?: string } }
 // render origin checkboxes of a data type that is split by origin
 export function renderOriginCheckboxes(holder: any, byOrigin: ByOrigin, selected?: string[]) {
 	if (!byOrigin) return
-	const origins = Object.keys(byOrigin)
+	const origins = Object.keys(byOrigin).sort((a, b) => (morigin[a].order ?? Infinity) - (morigin[b].order ?? Infinity))
 	if (origins.length < 2) return
 	const div = holder.append('div').attr('data-testid', 'sjpp-variantConfig-origin').style('margin-top', '10px')
 	div.append('div').style('display', 'inline-block').style('margin-right', '5px').style('opacity', 0.7).text('Origin')

@@ -2156,7 +2156,7 @@ tape('origin checkboxes', test => {
 		holder,
 		values,
 		dt: 1,
-		byOrigin: { somatic: { label: 'Tumor acquired' }, germline: {} },
+		byOrigin: { germline: {}, somatic: { label: 'Tumor acquired' } },
 		selectedOrigins: ['germline'],
 		callback: c => (config = c)
 	})
@@ -2169,7 +2169,7 @@ tape('origin checkboxes', test => {
 			.nodes()
 			.map(node => node.textContent),
 		['Tumor acquired', 'germline'],
-		'should label each origin, falling back to its key'
+		'should order origins as in gene search and label each origin, falling back to its key'
 	)
 	const checkboxes: any[] = originDiv.selectAll('input[type="checkbox"]').nodes()
 	test.deepEqual(

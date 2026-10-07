@@ -17,6 +17,7 @@ Tests:
 	- getDtTerm() should return child term and throw on invalid input
 	- initActiveHandler() should tell a handler whether the q survives the selection
 	- GENE_EXPRESSION should open TVS when no selection callback is defined
+	- GENE_VARIANT should retain selected origins in the TVS menu and applied filter
 */
 
 /*************************
@@ -43,6 +44,7 @@ async function getNewTermTypeSearch(opts: {
 	termdbConfig?: any
 	click_term?: (term: any) => void
 	submit_lst?: (terms: any[]) => void
+	click_term2select_tvs?: (tvs: any) => void
 }) {
 	const holder = d3s.select('body').append('div')
 
@@ -69,7 +71,8 @@ async function getNewTermTypeSearch(opts: {
 		tree: {
 			// TermTypeSearch reads both from opts.tree, see appInit() in client/termdb/app.ts
 			click_term: opts.click_term,
-			submit_lst: opts.submit_lst
+			submit_lst: opts.submit_lst,
+			click_term2select_tvs: opts.click_term2select_tvs
 		}
 	})
 	vocabApi.app = app
@@ -306,6 +309,7 @@ tape('GENE_EXPRESSION should open TVS when no selection callback is defined', as
 		action.submenu,
 		{
 			type: 'tvs',
+			origins: undefined,
 			term: {
 				gene: 'EGFR',
 				name: 'EGFR log2 TPM',
@@ -319,5 +323,69 @@ tape('GENE_EXPRESSION should open TVS when no selection callback is defined', as
 	)
 
 	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('GENE_VARIANT should retain selected origins in the TVS menu and applied filter', async test => {
+	for (const selectedOrigins of [['somatic'], ['germline'], ['somatic', 'germline']]) {
+		let appliedTvs
+		const { termTypeSearch, holder, dispatched, app } = await getNewTermTypeSearch({
+			appState: { tree: { usecase: { target: 'filter' } } },
+			termdbConfig: {
+				allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.GENE_VARIANT],
+				queries: { snvindel: {} },
+				assayAvailability: { byDt: { 1: { byOrigin: { germline: {}, somatic: {} } } } }
+			},
+			click_term2select_tvs: tvs => (appliedTvs = tvs)
+		})
+		termTypeSearch.app.vocabApi.getCategories = async () => ({
+			lst: [
+				{
+					dt: 1,
+					classes: { byOrigin: { germline: { M: 1 }, somatic: { M: 2 } } },
+					mnames: { byOrigin: { germline: [], somatic: [] } }
+				}
+			]
+		})
+		const tab = termTypeSearch.tabs.find(tab => tab.termType == TermTypes.GENE_VARIANT)
+		await tab.callback()
+		const handler = termTypeSearch.handlerByType[TermTypes.GENE_VARIANT]
+		for (const checkbox of handler.originSelect) {
+			if (!selectedOrigins.includes(checkbox.property('value'))) checkbox.node().click()
+		}
+		await handler.selectGene({ geneSymbol: 'TP53' })
+		await sleep(100)
+
+		const action = dispatched.find(action => action.type == 'submenu_set')
+		test.deepEqual(action.submenu.origins, selectedOrigins, 'Should pass selected origins to the submenu')
+		test.equal(action.submenu.term.origins, undefined, 'Should keep origin selection off the shared dt term')
+		const checkboxes = holder.selectAll<HTMLInputElement, unknown>('.sjpp-variantconfig-origin-checkboxes input')
+		test.equal(checkboxes.size(), 2, 'Should render both origins in the TVS menu')
+		test.deepEqual(
+			checkboxes.nodes().map(node => node.value),
+			handler.originSelect.map(checkbox => checkbox.property('value')),
+			'Should order TVS origins as in the search handler'
+		)
+		test.deepEqual(
+			checkboxes
+				.nodes()
+				.filter(node => node.checked)
+				.map(node => node.value)
+				.sort(),
+			[...selectedOrigins].sort(),
+			'Should check only the origins selected in the search handler'
+		)
+		test.equal(
+			holder.select('[data-testid="sjpp-variantConfig-class-count"]').text(),
+			String(selectedOrigins.reduce((count, origin) => count + (origin == 'somatic' ? 2 : 1), 0)),
+			'Should tally mutation classes only from selected origins'
+		)
+		holder.select<HTMLButtonElement>('[data-testid="sjpp-variantConfig-apply"]').node()!.click()
+		test.deepEqual(appliedTvs?.origins.sort(), [...selectedOrigins].sort(), 'Should apply the selected origins')
+
+		await app.dispatch({ type: 'submenu_set', submenu: {} })
+		test.equal(app.getState().submenu.origins, undefined, 'Should clear the seed on returning to selection')
+		if (test['_ok']) holder.remove()
+	}
 	test.end()
 })
