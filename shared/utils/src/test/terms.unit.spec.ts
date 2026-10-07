@@ -6,6 +6,8 @@ import {
 	getGvGeneKey,
 	getGvQCacheKey,
 	getGvQueryKey,
+	getOriginLabel,
+	getGvLabelSuffix,
 	matchesGvQueryEntry,
 	internGvQueryEntry,
 	isSingleCellTerm,
@@ -543,6 +545,60 @@ tape('isSingleCellTerm() should return correct boolean based on term.type', t =>
 		isSingleCellTerm({ type: TermTypes.SINGLECELL_NUMERIC_VALUE }),
 		true,
 		'Should return true for a SINGLECELL_NUMERIC_VALUE term'
+	)
+	t.end()
+})
+
+tape('getOriginLabel()', t => {
+	const byOrigin = { germline: { label: 'Inherited' }, somatic: { label: 'Tumor acquired' } }
+
+	t.equal(getOriginLabel(['germline'], byOrigin), 'Inherited', "Should use the dataset's label for the origin")
+	t.equal(
+		getOriginLabel(['germline', 'somatic'], byOrigin),
+		'',
+		'Should be empty when every origin of the data type is selected'
+	)
+	t.equal(getOriginLabel([], byOrigin), '', 'Should be empty when no origin is selected')
+	t.equal(getOriginLabel(undefined, byOrigin), '', 'Should be empty when there are no origins to name')
+	t.equal(getOriginLabel(['germline'], undefined), '', 'Should be empty for a data type that is not split by origin')
+	t.equal(
+		getOriginLabel(['germline'], { germline: {}, somatic: {} }),
+		'germline',
+		'Should fall back to the origin key when the dataset gives no label'
+	)
+	t.equal(
+		getOriginLabel(['germline', 'somatic'], { germline: {}, somatic: {}, relapse: {} }),
+		'germline, somatic',
+		'Should join a multi-origin subset'
+	)
+	t.end()
+})
+
+tape('getGvLabelSuffix()', t => {
+	t.equal(
+		getGvLabelSuffix({ originLabel: 'Inherited' }, { sampleTypeLabel: 'Normals' }),
+		' (Inherited, Normals)',
+		'Should list the origin before the sample type'
+	)
+	t.equal(getGvLabelSuffix({ originLabel: 'Inherited' }, {}), ' (Inherited)', 'Should use the origin label alone')
+	t.equal(getGvLabelSuffix({}, { sampleTypeLabel: 'Normals' }), ' (Normals)', 'Should use the sample type label alone')
+	t.equal(getGvLabelSuffix({}, {}), '', 'Should be empty when there is nothing to qualify')
+	// '' is what both labels use for "every option selected", so it must not render as "()"
+	t.equal(
+		getGvLabelSuffix({ originLabel: '' }, { sampleTypeLabel: '' }),
+		'',
+		'Should skip the empty label both selectors use for a full selection'
+	)
+	t.equal(
+		getGvLabelSuffix({ originLabel: '' }, { sampleTypeLabel: 'Normals' }),
+		' (Normals)',
+		'Should skip only the empty label'
+	)
+	// a custom groupset has no q.originLabel; its tvs name their own origins
+	t.equal(
+		getGvLabelSuffix({ type: 'custom-groupset' }, { sampleTypeLabel: 'Normals' }),
+		' (Normals)',
+		'Should tolerate a q that carries no origin label'
 	)
 	t.end()
 })

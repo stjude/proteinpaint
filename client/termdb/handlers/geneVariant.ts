@@ -12,7 +12,7 @@ import {
 	getSelectedCheckboxValues
 } from '#dom'
 import type { VocabApi, DtAssayAvailabilityTerm } from '#types'
-import { getQuerySampleTypesByTerms } from '#shared/terms.js'
+import { getQuerySampleTypesByTerms, getOriginLabel } from '#shared/terms.js'
 import { dtTerms, dtcnv, dtsnvindel, morigin } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
 import { mayShowRememberedGvQ } from './rememberedGvQ.ts'
@@ -192,10 +192,16 @@ export class SearchHandler {
 		this.updateSampleTypeSelect()
 	}
 
-	getQueryOrigins(): string[] | undefined {
+	/* the byOrigin{} of the selected mutation type's dt, present only when the dataset
+	splits that dt by origin */
+	getByOrigin() {
 		const mutationType = this.getSelectedMutationType()
 		if (!Number.isInteger(mutationType?.dt)) return
-		const byOrigin = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[mutationType.dt]?.byOrigin
+		return this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[mutationType.dt]?.byOrigin
+	}
+
+	getQueryOrigins(): string[] | undefined {
+		const byOrigin = this.getByOrigin()
 		if (!byOrigin) return
 		const origins = Object.keys(byOrigin)
 		for (const origin of origins) {
@@ -207,8 +213,7 @@ export class SearchHandler {
 	renderOriginSelect() {
 		if (!this.queryOrigins || this.queryOrigins.length <= 1) return
 		const [, td2] = this.dom.originSelectRow
-		const byOrigin =
-			this.opts.app.vocabApi.termdbConfig.assayAvailability.byDt[this.getSelectedMutationType().dt].byOrigin
+		const byOrigin = this.getByOrigin()
 		return renderCheckboxSelect(
 			td2,
 			this.queryOrigins.map(origin => ({ value: origin, label: byOrigin[origin].label || origin })),
@@ -498,8 +503,7 @@ export class SearchHandler {
 	}
 
 	async submit(q) {
-		if (!this.mayApplyOrigins() || !this.mayApplySampleType()) return
-		this.term.label = [this.term.originLabel, this.term.sampleTypeLabel].filter(Boolean).join(', ')
+		if (!this.mayApplyOrigins(q) || !this.mayApplySampleType()) return
 		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
 		// add geneVariant term to each child term
 		addParentTerm(this.term)
@@ -508,10 +512,16 @@ export class SearchHandler {
 		this.dom.msgDiv.style('display', 'none')
 	}
 
-	mayApplyOrigins(): boolean {
-		this.term.origins = this.getSelectedOrigins()
-		this.term.originLabel = this.getOriginLabel()
-		if (this.originSelect && !this.term.origins?.length) {
+	/* the origin selection seeds the predefined groupset that applyMutationType() picks, and
+	fillGroupsetGroups() stamps it onto that groupset's tvs (see OriginSeedQ in #types).
+	A remembered custom groupset is deliberately not reseeded: each of its tvs already
+	carries the origins it was built with, and its groups may span several mutation types,
+	which the single origin selector here -- bound to the mutation type radio -- cannot
+	describe. */
+	mayApplyOrigins(q: any): boolean {
+		q.origins = this.getSelectedOrigins()
+		q.originLabel = getOriginLabel(q.origins, this.getByOrigin())
+		if (this.originSelect && !q.origins?.length) {
 			// selector rendered, but no origins selected
 			return this.abortSubmit()
 		}
@@ -546,17 +556,6 @@ export class SearchHandler {
 		const selectedOrigins = getSelectedCheckboxValues(this.originSelect)
 		if (!selectedOrigins?.length) window.alert('Please select at least one origin.')
 		return selectedOrigins
-	}
-
-	/** no label when there are no origins to assign; empty when the one available origin, or
-	 * all available origins, is assigned; otherwise the assigned origins' labels */
-	getOriginLabel(): string | undefined {
-		const origins = this.term.origins
-		if (!origins?.length) return undefined
-		if (origins.length == this.queryOrigins?.length) return ''
-		const dt = this.getSelectedMutationType()?.dt
-		const byOrigin = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]?.byOrigin
-		return origins.map(origin => byOrigin?.[origin]?.label || origin).join(', ')
 	}
 
 	/** re-enables the gene set edit UI's submit button, which is disabled on click to prevent

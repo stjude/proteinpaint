@@ -2,6 +2,7 @@ import { escapeHtml } from '#dom'
 import { handler as _handler } from './tvs.categorical.js'
 import { renderVariantConfig, breakpointRangeLabel } from '#dom'
 import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
+import { getOriginLabel } from '#shared/terms.js'
 import { FrontendVocab } from '#termdb/FrontendVocab'
 import { dofetch3 } from '#common/dofetch'
 
@@ -17,7 +18,8 @@ async function fillMenu(self, div, tvs) {
 	// get mutations from dataset. the variant config lists the amino acid changes,
 	// so this is one of the few callers that needs the mname tally
 	const term = structuredClone(tvs.term)
-	await getDtTermValues(term, self.filter, self.opts.vocabApi, { withMnames: true })
+	const origins = getTvsOrigins(self, tvs)
+	await getDtTermValues(term, self.filter, self.opts.vocabApi, { withMnames: true, origins })
 	// render variant config
 	const arg = {
 		holder: div,
@@ -28,6 +30,8 @@ async function fillMenu(self, div, tvs) {
 		genotype: tvs.genotype,
 		dt: term.dt,
 		mcount: tvs.mcount,
+		byOrigin: getTvsByOrigin(self, tvs),
+		selectedOrigins: origins,
 		callback: config => {
 			const new_tvs = structuredClone(tvs)
 			Object.assign(new_tvs, config)
@@ -75,7 +79,7 @@ function term_name_gen(d) {
 		: '<label title="' + escapeHtml(name) + '">' + escapeHtml(name.substring(0, 28)) + '...' + '</label>'
 }
 
-function get_pill_label(tvs) {
+function get_pill_label(tvs, self) {
 	let txt
 	// the pill's tag slot, rendered small and uppercase by updatePill() in tvs.js
 	let grade_type = ''
@@ -111,11 +115,20 @@ function get_pill_label(tvs) {
 	} else {
 		throw 'tvs.genotype not recognized'
 	}
+	const originLabel = getOriginLabel(tvs.origins, getTvsByOrigin(self, tvs))
+	if (originLabel) txt += ` (${originLabel})`
 	return { txt: escapeHtml(txt), grade_type }
 }
 
 /*
 get mutation classes of dt term, stored in dtTerm.values{}
+
+opts.origins: the origins to merge classes and mnames across, for a dt that is split by
+origin. Passed in by the caller rather than read off the term, since the selection lives on
+the tvs that is being built or edited (see tvs.origins[] in #types), and a legacy tvs has
+already been migrated to that shape by the time its term reaches here (see
+migrateLegacyTvsOrigins()). Defaults to every origin of the dt, which is what an ungrouped
+term queries.
 
 opts.withMnames: also store the amino acid changes (when present) in dtTerm.mnames[],
 and the sample count of each class on dtTerm.values[k].samplecount.
@@ -152,13 +165,7 @@ export async function getDtTermValues(dtTerm, filter, vocabApi, opts = {}) {
 	const data = categories?.lst.find(x => x.dt == dtTerm.dt)
 	if (!data) return
 	const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[dtTerm.dt]?.byOrigin
-	const origins = byOrigin
-		? dtTerm.origin // legacy term structure
-			? [dtTerm.origin]
-			: dtTerm.parentTerm?.origins?.length
-			? dtTerm.parentTerm.origins
-			: Object.keys(byOrigin)
-		: undefined
+	const origins = byOrigin ? (opts.origins?.length ? opts.origins : Object.keys(byOrigin)) : undefined
 	if (origins) {
 		const unknown = origins.find(origin => !(origin in byOrigin))
 		if (unknown) throw new Error(`unknown origin '${unknown}' for dt ${dtTerm.dt}`)
@@ -227,4 +234,15 @@ function mergeMnames(entries) {
 		}
 	}
 	return [...merged.values()].sort((a, b) => b.samplecount - a.samplecount)
+}
+
+export function getTvsByOrigin(self, tvs) {
+	return self?.opts.vocabApi.termdbConfig?.assayAvailability?.byDt?.[tvs.term.dt]?.byOrigin
+}
+
+export function getTvsOrigins(self, tvs) {
+	const byOrigin = getTvsByOrigin(self, tvs)
+	if (!byOrigin) return
+	if (tvs.origins?.length) return [...tvs.origins]
+	return Object.keys(byOrigin)
 }

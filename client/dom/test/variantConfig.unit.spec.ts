@@ -53,6 +53,8 @@ test sections:
 	- class checklist is hidden for a sv term
 	- class checklist is kept for a snvindel
 	- class checklist is kept for a sv term of several classes
+	- origin checkboxes
+	- origin checkboxes: single origin
 */
 
 tape('\n', test => {
@@ -2142,6 +2144,71 @@ tape('class checklist is kept for a sv term of several classes', test => {
 	})
 	const classDiv = holder.select('[data-testid="sjpp-variantConfig-class"]')
 	test.equal(classDiv.select('tbody').selectAll('input[type=checkbox]').nodes().length, 2, 'both classes are rendered')
+	holder.remove()
+	test.end()
+})
+
+tape('origin checkboxes', test => {
+	const holder = select(document.body).append('div')
+	let config: any
+
+	renderVariantConfig({
+		holder,
+		values,
+		dt: 1,
+		byOrigin: { somatic: { label: 'Tumor acquired' }, germline: {} },
+		selectedOrigins: ['germline'],
+		callback: c => (config = c)
+	})
+
+	const originDiv = holder.select('[data-testid="sjpp-variantConfig-origin"]')
+	test.ok(originDiv.node(), 'should render the origin checkboxes')
+	test.deepEqual(
+		originDiv
+			.selectAll<HTMLSpanElement, unknown>('span')
+			.nodes()
+			.map(node => node.textContent),
+		['Tumor acquired', 'germline'],
+		'should label each origin, falling back to its key'
+	)
+	const checkboxes: any[] = originDiv.selectAll('input[type="checkbox"]').nodes()
+	test.deepEqual(
+		checkboxes.map(c => c.checked),
+		[false, true],
+		'should check only the already matched origin'
+	)
+
+	// the checkboxes qualify which samples match, so nothing rendered reacts to them
+	checkboxes[0].click()
+	const applyBtn: any = holder.select('[data-testid="sjpp-variantConfig-apply"]').node()
+	applyBtn.click()
+	test.deepEqual(config.origins, ['somatic', 'germline'], 'should report the checked origins on apply')
+
+	holder.remove()
+	test.end()
+})
+
+tape('origin checkboxes: single origin', test => {
+	const holder = select(document.body).append('div')
+	let config: any
+
+	renderVariantConfig({
+		holder,
+		values,
+		dt: 1,
+		byOrigin: { somatic: { label: 'Tumor acquired' } },
+		callback: c => (config = c)
+	})
+
+	test.notOk(
+		holder.select('[data-testid="sjpp-variantConfig-origin"]').node(),
+		'should not render a checkbox for a lone origin'
+	)
+	const applyBtn: any = holder.select('[data-testid="sjpp-variantConfig-apply"]').node()
+	applyBtn.click()
+	// absent origins[] must mean "this dt is not origin-split", never "every origin"
+	test.deepEqual(config.origins, ['somatic'], 'should still report the lone origin as matched')
+
 	holder.remove()
 	test.end()
 })

@@ -117,9 +117,9 @@ tape('Matrix search handler only shows gene search', async test => {
 	test.deepEqual(Object.keys(tw.q), ['type'], 'matrix q should not include mutation selector properties')
 	test.equal(tw.term.genes[0].gene, 'TP53', 'should submit the selected gene')
 	test.equal(tw.term.childTerms, undefined, 'should not initialize mutation type terms')
-	test.equal(tw.term.origins, undefined, 'should not set origin selector values')
+	test.equal(tw.q.origins, undefined, 'should not set origin selector values')
 	test.equal(tw.term.sampleTypes, undefined, 'should not set sample type selector values')
-	test.equal(tw.term.label, undefined, 'should not set selector-derived term label')
+	test.equal(tw.term.sampleTypeLabel, undefined, 'should not set sample type label')
 
 	if (test['_ok']) holder.remove()
 	test.end()
@@ -355,7 +355,8 @@ tape('Origins are selected separately from mutation type', async test => {
 	)
 
 	await pickGene(holder)
-	test.equal(tw.term.originLabel, '', 'should use an empty label when all origins are selected')
+	test.deepEqual(tw.q.origins, ['somatic', 'germline'], 'should seed every origin when all are selected')
+	test.equal(tw.q.originLabel, '', 'should use an empty label when all origins are selected')
 
 	originCheckboxes.nodes()[0].click()
 	test.deepEqual(handler.getSelectedOrigins(), ['germline'], 'should retain the checked origin')
@@ -375,11 +376,15 @@ tape('Origins are selected separately from mutation type', async test => {
 
 	holder.selectAll<HTMLInputElement, unknown>('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].click()
 	await pickGene(holder)
-	test.deepEqual(tw.term.origins, ['germline'], 'should submit selected origins on the term')
-	test.equal(tw.term.originLabel, 'Inherited', 'should name the selected origin subset')
+	test.deepEqual(tw.q.origins, ['germline'], 'should seed the selected origins on the q')
+	test.equal(tw.q.originLabel, 'Inherited', 'should name the selected origin subset')
+	test.deepEqual(
+		tw.term.groupsetting.lst[tw.q.predefined_groupset_idx].groups[0].filter.lst[0].tvs.origins,
+		['germline'],
+		'should stamp the seeded origins onto the groupset tvs'
+	)
 	test.deepEqual(tw.term.sampleTypes, [3], 'should submit selected sample types available to the selected origin')
 	test.equal(tw.term.sampleTypeLabel, 'Normals', 'should name the selected sample type subset')
-	test.equal(tw.term.label, 'Inherited, Normals', 'should combine origin and sample type labels')
 	test.equal(tw.term.name, 'TP53', 'should not append labels to the term name')
 
 	const cnvMutationTypeIdx = handler.mutationTypeTerms.findIndex((term: any) => term.dt == dtcnv)
@@ -394,8 +399,13 @@ tape('Origins are selected separately from mutation type', async test => {
 		'should hide origins for a dt without origin availability'
 	)
 	await pickGene(holder, 'KRAS')
-	test.equal(tw.term.origins, undefined, 'should clear stale origins before submission')
-	test.equal(tw.term.originLabel, undefined, 'should clear the origin label when origins are not available')
+	test.equal(tw.q.origins, undefined, 'should clear a stale origin seed before submission')
+	test.equal(tw.q.originLabel, undefined, 'should clear the origin label when origins are not available')
+	test.equal(
+		tw.term.groupsetting.lst[tw.q.predefined_groupset_idx].groups[0].filter.lst[0].tvs.origins,
+		undefined,
+		'should leave origins off the tvs of a dt that is not origin-split'
+	)
 
 	if (test['_ok']) holder.remove()
 	test.end()
@@ -475,7 +485,6 @@ tape('Sample type label is empty for all types and names a selected subset', asy
 	holder.selectAll<HTMLInputElement, unknown>('.sjpp-genesearch-sampletype-checkboxes input').nodes()[0].click()
 	await pickGene(holder)
 	test.equal(tw.term.sampleTypeLabel, 'Relapses', 'should name the selected sample type subset')
-	test.equal(tw.term.label, 'Relapses', 'should set the term label to the selected sample type')
 	test.equal(tw.term.name, 'TP53', 'should not append the sample type label to the term name')
 
 	if (test['_ok']) holder.remove()

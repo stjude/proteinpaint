@@ -113,15 +113,15 @@ tape('NumRegularBin.getStatus()', async test => {
 	test.end()
 })
 
-tape('NumericBase.getTitleText() includes a gene-expression term label', async test => {
+tape('NumericBase.getTitleText() includes a gene-expression sample type label', async test => {
 	const tw: RawNumTW = {
-		term: { gene: 'TP53', name: 'TP53 log2 TPM', type: 'geneExpression', label: 'Relapses' } as any,
+		term: { gene: 'TP53', name: 'TP53 log2 TPM', type: 'geneExpression', sampleTypeLabel: 'Relapses' } as any,
 		q: { mode: 'continuous', isAtomic: true },
 		isAtomic: true
 	} as any
 
 	const fullTw = new NumericBase(await NumericBase.fill(tw, { vocabApi }), { vocabApi })
-	test.equal(fullTw.getTitleText(), 'TP53 log2 TPM (Relapses)', 'Should append the term label to the title')
+	test.equal(fullTw.getTitleText(), 'TP53 log2 TPM (Relapses)', 'Should append the sample type label to the title')
 	test.end()
 })
 

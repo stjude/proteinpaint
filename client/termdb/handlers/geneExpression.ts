@@ -76,7 +76,6 @@ export class SearchHandler {
 			querySampleTypesByTerms: this.querySampleTypesByTerms,
 			termdbConfig: this.app.vocabApi.termdbConfig
 		})
-		term.label = term.sampleTypeLabel
 		this.callback(term)
 	}
 }

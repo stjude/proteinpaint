@@ -219,7 +219,7 @@ export class NumericBase extends TwBase {
 
 	getTitleText() {
 		let text = this.term.name
-		if (this.term.type == 'geneExpression' && this.term.label) text += ` (${this.term.label})`
+		if (this.term.type == 'geneExpression' && this.term.sampleTypeLabel) text += ` (${this.term.sampleTypeLabel})`
 		return text
 	}
 }

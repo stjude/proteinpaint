@@ -550,23 +550,122 @@ function clearGroupsetParentTerms(groupset: any) {
 	return groupset
 }
 
-/* before origins became a parent-term selection, the dt term of a groupset tvs carried its
-own origin. returns the origins found on the tvs of a groupset */
-export function getLegacyGroupsetOrigins(groupset: any): string[] {
-	const origins = new Set<string>()
+/* before origins became a tvs selection (tvs.origins[]), the dt term of a groupset tvs
+carried a single origin of its own. whether any tvs of a groupset still does */
+export function hasLegacyGroupsetOrigins(groupset: any): boolean {
+	let found = false
 	walkTvs(groupset, (tvs: any) => {
-		if (tvs.term?.origin) origins.add(tvs.term.origin)
+		if (tvs.term?.origin) found = true
 	})
-	return [...origins]
+	return found
 }
 
-/* strips the legacy origin of getLegacyGroupsetOrigins() from every tvs, in place */
-export function stripLegacyGroupsetOrigins(groupset: any) {
+/*
+Bring one tvs from the legacy origin shape to the current one, in place: the single origin
+its dt term carried becomes the tvs's own origins[].
+
+The one place that knows the legacy shape, so that no reader has to check for it. A tvs is
+migrated once on the way in and every reader then works off tvs.origins[] alone -- see
+setHandler() in client/filter/tvs.js, which every tvs the filter UI shows or edits passes
+through before any handler method runs.
+
+Idempotent, and tolerates a tvs without a term, since it runs on every render of a pill.
+*/
+export function migrateLegacyTvsOrigins(tvs: any) {
+	if (!tvs?.term) return tvs
+	if (tvs.term.origin && !tvs.origins?.length) tvs.origins = [tvs.term.origin]
+	delete tvs.term.origin
+	delete tvs.term.name_noOrigin
+	return tvs
+}
+
+/* migrate every tvs of a groupset, a group, or a filter, see migrateLegacyTvsOrigins().
+
+The legacy shape was already per-tvs, so each tvs keeps exactly the origin it filtered by,
+rather than every tvs widening to the union across the groupset. That matters for a
+groupset whose groups mix origins, e.g. a germline snvindel group beside a somatic cnv one:
+collecting them into one list would make each group match both. */
+export function migrateLegacyGroupsetOrigins(groupset: any) {
+	walkTvs(groupset, migrateLegacyTvsOrigins)
+	return groupset
+}
+
+/*
+The origins a selection is restricted to, as a display label.
+
+Empty when there is nothing to tell apart: no origins to name, a data type that is not split
+by origin, or a selection covering every origin that data type has. Otherwise the dataset's
+own label for each origin, e.g. 'Inherited' for germline, falling back to the origin key.
+
+byOrigin is assayAvailability.byDt[dt].byOrigin. The one definition of this label, so that a
+filter pill and a plot title name the same selection the same way -- see getTvsOriginLabel()
+in client/filter/tvs.dt.js and getTitleText() in client/tw/geneVariant.ts.
+*/
+export function getOriginLabel(origins: string[] | undefined, byOrigin: any): string {
+	if (!origins?.length || !byOrigin) return ''
+	if (origins.length == Object.keys(byOrigin).length) return ''
+	return origins.map(origin => byOrigin[origin]?.label || origin).join(', ')
+}
+
+/*
+The qualifiers of a geneVariant selection as a parenthesized suffix, or '' when there is
+nothing to qualify: the origins of its groupset and the sample types of its term. Empty
+labels are skipped, which is what both of them use for "every option selected, so there is
+nothing to tell apart" (see getOriginLabel()).
+
+Origin first, then sample type, so the two read in the order the gene search UI selects them.
+One definition, so that a pill and a plot title describe the same selection the same way --
+see getPillStatus() in client/termsetting/handlers/geneVariant.ts and getTitleText() in
+client/tw/geneVariant.ts.
+
+q.originLabel is only set for a predefined groupset; the tvs of a custom groupset carry their
+own origins and name them in their own filter pills instead.
+*/
+export function getGvLabelSuffix(q: any, term: any): string {
+	const labels = [q?.originLabel, term?.sampleTypeLabel].filter(Boolean)
+	return labels.length ? ` (${labels.join(', ')})` : ''
+}
+
+/*
+Set origins[] on every tvs of a groupset whose dt is split by origin, in place.
+
+byDt is ds/termdbConfig assayAvailability.byDt{}, which says which dts are origin-split.
+
+A predefined groupset is rebuilt from scratch on every fill, so its tvs cannot persist an
+origin selection of their own; seed is q.origins, the selection the gene search UI made,
+and is what they are stamped from (see OriginSeedQ in shared/types/src/terms/geneVariant.ts).
+A seed that does not cover a dt falls back to every origin of that dt, so that the invariant
+holds either way: an origin-split tvs always lists its origins, and a tvs without origins[]
+is one whose dt is not split -- never one that means "match everything".
+
+Only the origins a dt actually declares are kept. A seed naming an origin of another dt
+would otherwise match no value at all and silently empty the group.
+*/
+export function setGroupsetOrigins(groupset: any, byDt: any, seed?: string[]) {
 	walkTvs(groupset, (tvs: any) => {
-		if (!tvs.term) return
-		delete tvs.term.origin
-		delete tvs.term.name_noOrigin
+		const origins = resolveDtOrigins(byDt, tvs.term?.dt, seed)
+		// a dt that is not origin-split must carry none; a leftover origins[] here would
+		// filter out every value
+		if (origins) tvs.origins = origins
+		else delete tvs.origins
 	})
+	return groupset
+}
+
+/*
+The origins a tvs of one dt matches: the seed narrowed to the origins that dt declares, or
+every origin of it when the seed names none. Undefined for a dt that is not split by origin.
+
+The fallback is what upholds the invariant that an origin-split tvs always lists its origins,
+see GeneVariantTvs in shared/types/src/filter.ts. The narrowing is belt-and-braces: a seed
+reaching a fill has already been checked against the dt by validateSeedOrigins() in
+client/tw/geneVariant.ts.
+*/
+function resolveDtOrigins(byDt: any, dt: number | undefined, seed?: string[]): string[] | undefined {
+	const byOrigin = byDt?.[dt as number]?.byOrigin
+	if (!byOrigin) return
+	const seeded = seed?.filter(origin => origin in byOrigin)
+	return seeded?.length ? seeded : Object.keys(byOrigin)
 }
 
 /* run fn on every tvs of a groupset, a group, or a filter.
@@ -576,7 +675,7 @@ descending matters, because a tvs can hold a filter of its own that is not part 
 groupset structure -- tvs.mafFilter wraps a maf term, which is a dictionary term rather
 than a dt term (see getMafFilter() in client/tw/geneVariant.ts). getDtsFromFilter() above
 reads a filter the same way. */
-function walkTvs(obj: any, fn: (tvs: any) => void) {
+export function walkTvs(obj: any, fn: (tvs: any) => void) {
 	if (!obj || typeof obj != 'object') return
 	if (obj.type == 'tvs' && obj.tvs) {
 		fn(obj.tvs)

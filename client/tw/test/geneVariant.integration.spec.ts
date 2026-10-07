@@ -2,7 +2,7 @@ import tape from 'tape'
 import type { GvTW } from '#types'
 import { vocabInit } from '#termdb/vocabulary'
 import { GvBase, GvPredefinedGS } from '../geneVariant'
-import { dtsnvindel, dtcnv } from '#shared/common.js'
+import { dtsnvindel, dtcnv, dtfusionrna } from '#shared/common.js'
 import { trimGvTermsForSave } from '#shared/terms.js'
 
 /*************************
@@ -347,7 +347,12 @@ tape('fill(): migrates a legacy origin-specific predefined groupset', async test
 	]
 
 	const fullTw: any = await GvBase.fill(tw, { vocabApi })
-	test.deepEqual(fullTw.term.origins, ['germline'], 'should preserve the selected legacy origin on the parent term')
+	test.deepEqual(fullTw.q.origins, ['germline'], 'should preserve the selected legacy origin as the groupset seed')
+	test.deepEqual(
+		fullTw.term.groupsetting.lst[0].groups[0].filter.lst[0].tvs.origins,
+		['germline'],
+		'should stamp the seeded origin onto the rebuilt tvs'
+	)
 	test.ok(
 		fullTw.term.childTerms.every(term => !term.origin),
 		'should rebuild origin-agnostic child terms'
@@ -367,7 +372,8 @@ tape('fill(): migrates a trimmed legacy origin-specific predefined groupset', as
 		dtLst: [dtsnvindel]
 	})
 	const fullTw: any = await GvBase.fill(tw, { vocabApi })
-	test.deepEqual(fullTw.term.origins, ['germline'], 'should recover the legacy origin from the groupset index')
+	test.deepEqual(fullTw.q.origins, ['germline'], 'should recover the legacy origin from the groupset index')
+	test.equal(fullTw.q.originLabel, 'Germline', 'should derive the origin label the migration does not set')
 	test.deepEqual(fullTw.q.dtLst, [dtsnvindel], 'should keep the selected data type')
 	test.equal(fullTw.term.groupsetting.lst[fullTw.q.predefined_groupset_idx].name, 'SNV/indel')
 	test.end()
@@ -381,19 +387,23 @@ tape('fill(): migrates the origin of a legacy custom groupset', async test => {
 			values: [{ key: 'M', label: 'MISSENSE', value: 'M' }]
 		}
 	})
-	const group = (name: string) => ({
+	const group = (name: string, origin: string) => ({
 		name,
 		type: 'filter',
-		filter: { type: 'tvslst', in: true, join: '', lst: [tvs('germline')] }
+		filter: { type: 'tvslst', in: true, join: '', lst: [tvs(origin)] }
 	})
+	/* the legacy shape was already per-tvs, so a groupset whose groups differ by origin
+	must keep each group's own origin rather than widen both to the union */
 	const tw: any = getGsTw({
 		isAtomic: true,
 		type: 'custom-groupset',
-		customset: { name: 'legacy', groups: [group('g1'), group('g2')] }
+		customset: { name: 'legacy', groups: [group('g1', 'germline'), group('g2', 'somatic')] }
 	})
 	const fullTw: any = await GvBase.fill(tw, { vocabApi })
-	test.deepEqual(fullTw.term.origins, ['germline'], 'should move the tvs origin to the parent term')
-	const term = fullTw.q.customset.groups[0].filter.lst[0].tvs.term
+	const groups = fullTw.q.customset.groups
+	test.deepEqual(groups[0].filter.lst[0].tvs.origins, ['germline'], 'should move the first tvs origin onto that tvs')
+	test.deepEqual(groups[1].filter.lst[0].tvs.origins, ['somatic'], 'should keep the second tvs on its own origin')
+	const term = groups[0].filter.lst[0].tvs.term
 	test.notOk('origin' in term || 'name_noOrigin' in term, 'should strip the legacy origin from the tvs term')
 	test.end()
 })
@@ -401,10 +411,22 @@ tape('fill(): migrates the origin of a legacy custom groupset', async test => {
 tape('trimGvTermsForSave(): a trimmed tw refills to the same tw', async test => {
 	/* a session is serialized without the derived properties of a geneVariant term, so
 	whatever is dropped there has to be rebuilt by fill() when the session is opened */
+	/* looked up rather than hardcoded, the way the stale q.dtLst test does it. Only this
+	groupset needs a seed: a trimmed tw with no origins is read as a legacy tw, whose index
+	for the origin-split dt points at an origin-specific child term. The indexes of the other
+	groupsets are left alone, since their q.dtLst does not match the dt that index had */
+	const probeTw: any = getGsTw({
+		isAtomic: true,
+		type: 'predefined-groupset',
+		dtLst: [dtsnvindel],
+		origins: ['somatic', 'germline']
+	})
+	const probe: any = await GvBase.fill(probeTw, { vocabApi })
+	const snvindelIdx = probe.q.predefined_groupset_idx
+
 	for (const idx of [0, 1, 2, 3, 4]) {
 		const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', predefined_groupset_idx: idx })
-		// a tw without selected origins would be read as a legacy tw once trimmed
-		tw.term.origins = ['somatic', 'germline']
+		if (idx == snvindelIdx) tw.q.origins = ['somatic', 'germline']
 		const fullTw: any = await GvBase.fill(tw, { vocabApi })
 
 		// what sessionBtn.getSavableState() writes, then what opening the session reads
@@ -465,14 +487,15 @@ tape('fill(): q.type=predefined-groupset, stale q.dtLst', async test => {
 	const probeTw: any = await GvBase.fill(probeQTw, { vocabApi })
 	const cnvIdx = probeTw.q.predefined_groupset_idx
 
+	/* the stale dt is deliberately not the origin-split one: a legacy index for that dt
+	points at an origin-specific child term, so this tw would be migrated rather than read
+	as the current shape it is testing */
 	const tw: any = getGsTw({
 		isAtomic: true,
 		type: 'predefined-groupset',
 		predefined_groupset_idx: cnvIdx,
-		dtLst: [dtsnvindel]
+		dtLst: [dtfusionrna]
 	})
-	// a tw without selected origins would be read as a legacy tw, where this index is germline snvindel
-	tw.term.origins = ['somatic', 'germline']
 	const fullTw: any = await GvBase.fill(tw, { vocabApi })
 	test.equal(fullTw.term.groupsetting.lst[cnvIdx].name, 'CNV', 'should keep the selected groupset')
 	test.equal(fullTw.q.predefined_groupset_idx, cnvIdx, 'should keep q.predefined_groupset_idx')
@@ -878,5 +901,123 @@ tape('fill(): selects and builds the allelic groupset by dtLst', async test => {
 		lst.slice(0, idx).every(gs => !gs.groups),
 		'should leave the single-dt groupsets unbuilt'
 	)
+	test.end()
+})
+
+tape('GvPredefinedGS.getTitleText(): names the selected origins', async test => {
+	const vocabApi = await getVocabApi()
+
+	const getXtw = async (q: any) => {
+		const tw: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', dtLst: [dtsnvindel], ...q })
+		const fullTw: any = await GvBase.fill(tw, { vocabApi })
+		return new GvPredefinedGS(fullTw, { vocabApi })
+	}
+
+	// the label is derived by fill() from the seed, so a q carrying no label still gets one
+	const oneOrigin = await getXtw({ origins: ['germline'] })
+	test.equal(oneOrigin.getTitleText(), 'TP53 SNV/indel (Germline)', 'should use the dataset label of the origin')
+
+	// empty when every origin is selected, so there is nothing to tell apart
+	const allOrigins = await getXtw({ origins: ['germline', 'somatic'] })
+	test.equal(allOrigins.getTitleText(), 'TP53 SNV/indel', 'should omit the label when every origin is selected')
+
+	// no seed means every origin is queried, which is likewise nothing to tell apart
+	const noOrigins = await getXtw({})
+	test.equal(noOrigins.getTitleText(), 'TP53 SNV/indel', 'should omit the label without an origin seed')
+
+	// a label left over from another selection must not survive
+	const staleLabel = await getXtw({ origins: ['germline'], originLabel: 'Somatic' })
+	test.equal(staleLabel.getTitleText(), 'TP53 SNV/indel (Germline)', 'should re-derive a stale origin label')
+
+	// both qualifiers read in the order the gene search UI selects them
+	const withSampleType = await getXtw({ origins: ['germline'] })
+	withSampleType.term.sampleTypeLabel = 'Normals'
+	test.equal(
+		withSampleType.getTitleText(),
+		'TP53 SNV/indel (Germline, Normals)',
+		'should combine the origin and sample type labels'
+	)
+
+	test.end()
+})
+
+/* a custom groupset of one group, filtering one dt by the given origins. Uses the current
+tvs.origins[] shape, so migrateLegacyOrigins() leaves it alone */
+function getOriginCustomsetTw(dt: number, origins: string[]) {
+	return getGsTw({
+		isAtomic: true,
+		type: 'custom-groupset',
+		customset: {
+			name: 'grps',
+			groups: [
+				{
+					name: 'g1',
+					type: 'filter',
+					filter: {
+						type: 'tvslst',
+						in: true,
+						join: '',
+						lst: [
+							{
+								type: 'tvs',
+								tvs: {
+									term: { id: 'snvindel', type: dt == dtsnvindel ? 'dtsnvindel' : 'dtcnv', dt },
+									origins,
+									values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+									genotype: 'variant'
+								}
+							}
+						]
+					}
+				}
+			]
+		}
+	})
+}
+
+tape('fill(): rejects an unknown origin', async test => {
+	const vocabApi = await getVocabApi()
+
+	/* an unknown origin matches no value, so it would quietly empty a group rather than
+	fail -- filterByItem() on the server applies the origin but cannot check it */
+	const badSeed: any = getGsTw({
+		isAtomic: true,
+		type: 'predefined-groupset',
+		dtLst: [dtsnvindel],
+		origins: ['relapse']
+	})
+	try {
+		await GvBase.fill(badSeed, { vocabApi })
+		test.fail('should throw on an unknown origin seed')
+	} catch (e) {
+		test.equal(String(e), `unknown origin 'relapse' for dt ${dtsnvindel}`, 'should reject an unknown seed origin')
+	}
+
+	const badTvs: any = getOriginCustomsetTw(dtsnvindel, ['relapse'])
+	try {
+		await GvBase.fill(badTvs, { vocabApi })
+		test.fail('should throw on an unknown tvs origin')
+	} catch (e) {
+		test.equal(String(e), `unknown origin 'relapse' for dt ${dtsnvindel}`, 'should reject an unknown customset origin')
+	}
+
+	// cnv is not origin-split, so its values carry no origin for a tvs to filter by
+	const unsplitTvs: any = getOriginCustomsetTw(dtcnv, ['germline'])
+	try {
+		await GvBase.fill(unsplitTvs, { vocabApi })
+		test.fail('should throw for origins on a dt that is not origin-split')
+	} catch (e) {
+		test.equal(String(e), `dt ${dtcnv} is not split by origin`, 'should reject origins on an unsplit dt')
+	}
+
+	// a seed must name origins of the groupset's own dt, so this one is an error too
+	const staleSeed: any = getGsTw({ isAtomic: true, type: 'predefined-groupset', dtLst: [dtcnv], origins: ['germline'] })
+	try {
+		await GvBase.fill(staleSeed, { vocabApi })
+		test.fail('should throw for a seed on a dt that is not origin-split')
+	} catch (e) {
+		test.equal(String(e), `dt ${dtcnv} is not split by origin`, 'should reject a seed on an unsplit dt')
+	}
+
 	test.end()
 })

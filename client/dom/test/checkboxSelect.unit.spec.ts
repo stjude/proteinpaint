@@ -66,6 +66,66 @@ tape('renderCheckboxSelect(): prevents deselecting the final option', test => {
 	test.end()
 })
 
+tape('renderCheckboxSelect(): initializes only selected options', test => {
+	const holder = d3s.select('body').append('div')
+	let changes = 0
+	const checkboxes = renderCheckboxSelect(
+		holder,
+		[
+			{ value: 1, label: 'Primary' },
+			{ value: 2, label: 'Relapse' }
+		],
+		{
+			className: 'sample-type-checkboxes',
+			lastCheckedTitle: 'At least one sample type must be selected',
+			selected: ['2'],
+			onChange: () => changes++
+		}
+	)!
+
+	test.deepEqual(getSelectedCheckboxValues(checkboxes), ['2'], 'matches numeric option values as strings')
+	test.equal(checkboxes[0].node().parentNode.title, '', 'does not mark the unchecked option')
+	test.equal(
+		checkboxes[1].node().parentNode.title,
+		'At least one sample type must be selected',
+		'marks the initially selected final option'
+	)
+	test.equal(checkboxes[1].node().parentNode.style.cursor, 'not-allowed', 'marks the final option cursor')
+	test.equal(changes, 0, 'does not call onChange during initialization')
+	checkboxes[1].node().click()
+	test.deepEqual(getSelectedCheckboxValues(checkboxes), ['2'], 'keeps the initially selected final option checked')
+	test.equal(changes, 0, 'does not call onChange for a rejected change')
+	checkboxes[0].node().click()
+	test.deepEqual(getSelectedCheckboxValues(checkboxes), ['1', '2'], 'allows selecting additional options')
+	test.equal(checkboxes[1].node().parentNode.title, '', 'clears the final option title when both are checked')
+	test.equal(checkboxes[1].node().parentNode.style.cursor, '', 'clears the final option cursor')
+	test.equal(changes, 1, 'calls onChange for an accepted change')
+
+	holder.remove()
+	test.end()
+})
+
+tape('renderCheckboxSelect(): honors an empty selected array', test => {
+	const holder = d3s.select('body').append('div')
+	const checkboxes = renderCheckboxSelect(
+		holder,
+		[
+			{ value: 'somatic', label: 'Somatic' },
+			{ value: 'germline', label: 'Germline' }
+		],
+		{
+			className: 'origin-checkboxes',
+			lastCheckedTitle: 'At least one origin must be selected',
+			selected: []
+		}
+	)
+
+	test.deepEqual(getSelectedCheckboxValues(checkboxes), [], 'does not default an explicit empty selection to all')
+
+	holder.remove()
+	test.end()
+})
+
 tape('renderCheckboxSelect(): omits selectors with fewer than two options', test => {
 	const holder = d3s.select('body').append('div')
 	const checkboxes = renderCheckboxSelect(holder, [{ value: 'somatic', label: 'Somatic' }], {

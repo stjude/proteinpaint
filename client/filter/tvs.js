@@ -2,7 +2,7 @@ import * as rx from '../rx'
 import { select } from 'd3-selection'
 import { Menu } from '../dom/menu'
 import { renderTable } from '../dom/table'
-import { isNumericTerm, isCategoricalTerm, dtTermTypes } from '#shared/terms.js'
+import { isNumericTerm, isCategoricalTerm, dtTermTypes, migrateLegacyTvsOrigins } from '#shared/terms.js'
 
 /*
 ********************** EXPORTED
@@ -62,6 +62,11 @@ class TVS {
 	async setHandler() {
 		if (!this.tvs || !this.tvs.term) return
 		const term = this.tvs.term
+		/* the one step every tvs passes through before any handler method runs -- main() and
+		showTvsMenu() both call it, and updateUI() binds this very object as the pill's datum
+		-- so the one place to bring a legacy tvs to the current shape. Every reader in
+		tvs.dt.js can then read tvs.origins[] alone */
+		if (dtTermTypes.has(term.type)) migrateLegacyTvsOrigins(this.tvs)
 		const type = isNumericTerm(term)
 			? 'numeric'
 			: isCategoricalTerm(term)
@@ -180,7 +185,7 @@ function setRenderers(self) {
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
 			.html(self.handler.getNegateText?.(self) || (tvs.isnot && tvs.term.type !== 'geneVariant' ? 'NOT' : 'IS'))
 
-		const label = self.handler.get_pill_label(tvs)
+		const label = self.handler.get_pill_label(tvs, self)
 		if (!('grade_type' in label)) label.grade_type = ''
 
 		const value_btns = one_term_div.selectAll('.value_btn').data(label ? [label] : [], d => d.txt + d.grade_type)

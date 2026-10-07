@@ -6,11 +6,12 @@ export type CheckboxOption = {
 export type CheckboxSelectOpts = {
 	className: string
 	lastCheckedTitle: string
+	selected?: string[]
 	onChange?: () => void
 }
 
-// Renders inline checkboxes that are checked by default and prevents the final
-// checked option from being deselected.
+// Renders inline checkboxes using selected values (all checked when omitted)
+// and prevents the final checked option from being deselected.
 export function renderCheckboxSelect(holder: any, options: CheckboxOption[], opts: CheckboxSelectOpts) {
 	holder.selectAll('*').remove()
 	if (options.length < 2) return
@@ -28,7 +29,7 @@ export function renderCheckboxSelect(holder: any, options: CheckboxOption[], opt
 			.append('input')
 			.attr('type', 'checkbox')
 			.attr('value', option.value)
-			.property('checked', true)
+			.property('checked', opts.selected ? opts.selected.includes(String(option.value)) : true)
 			.on('click', event => {
 				// The click has already toggled the box; cancelling it restores the box.
 				if (!checkboxes.some(checkbox => checkbox.property('checked'))) event.preventDefault()
@@ -41,6 +42,7 @@ export function renderCheckboxSelect(holder: any, options: CheckboxOption[], opt
 		checkboxes.push(input)
 	}
 
+	markLastChecked(checkboxes, opts.lastCheckedTitle)
 	return checkboxes
 }
 

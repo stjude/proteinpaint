@@ -6,10 +6,10 @@ LEGACY TYPES
 Collected here, apart from the types that reflect the CURRENT geneVariant termwrapper
 shape below, so that "what a saved/url-embedded tw may carry for backward compatibility"
 stays easy to tell apart from "what fill() currently builds". None of these should be
-used when authoring new code; they exist only so that GvBase.fill() in
-client/tw/geneVariant.ts (see its "Support legacy term structure" comments) can migrate
-an older tw to the current shape, or a server route can still read an older standalone
-tvs (see getTermOrigins() in server/src/mds3.init.js).
+used when authoring new code; they exist only so that the client can migrate an older tw to
+the current shape before anything reads it -- see GvBase.fill() in client/tw/geneVariant.ts
+(and its "Support legacy term structure" comments) and rehydrateFilter() in
+client/filter/rehydrateFilter.js. No server route reads these fields.
 
 Each is spliced into the current type it extends below via `&`, with a comment there
 pointing back here.
@@ -22,13 +22,13 @@ pointing back here.
  * still carry them */
 type LegacyGvSingleGeneTerm = Partial<Gene> & Partial<Coord>
 
-/** before a dt split by origin (e.g. somatic/germline snvindel) became a parent-term
- * origins[] selection, each origin got its own child dt term, flagged and named this way
- * (e.g. id 'snvindel_somatic', name 'SNV/indel (somatic)'). Spliced into DtTerm below.
- * GvBase.fill() migrates a saved selection of one of these into term.origins[] (see the
- * "Support legacy term structure" block there), and server/src/mds3.init.js's
- * getTermOrigins() still reads tvs.term.origin directly for a standalone tvs filter that
- * was never attached to a tw, e.g. a hand-written mass filter url */
+/** before a dt split by origin (e.g. somatic/germline snvindel) became a per-tvs origins[]
+ * selection, each origin got its own child dt term, flagged and named this way (e.g. id
+ * 'snvindel_somatic', name 'SNV/indel (somatic)'). Spliced into DtTerm below. GvBase.fill()
+ * migrates a saved selection of one of these into q.origins[] or tvs.origins[] (see the
+ * "Support legacy term structure" block there). A tvs that no tw fill() reaches is migrated
+ * where it enters instead: rehydrateFilter() for a mass filter, GvValues.fill() for a
+ * q.variantFilter, and TVS.setHandler() for the copy the filter UI renders */
 type LegacyDtTermFields = {
 	/** the origin of this specific child term, e.g. 'somatic' */
 	origin?: string
@@ -91,6 +91,10 @@ type RawGvPredefinedGsQ = GvBaseQ & {
 	type: 'predefined-groupset'
 	predefined_groupset_idx?: number
 	dtLst?: any[] // dts to query
+	/** selected origins, will be stamped onto groupset tvs */
+	origins?: string[]
+	/** display label for the origins */
+	originLabel?: string
 }
 type RawGvCustomGsQ = GvBaseQ & {
 	type: 'custom-groupset'
@@ -104,6 +108,10 @@ export type GvPredefinedGsQ = GvBaseQ & {
 	type: 'predefined-groupset'
 	predefined_groupset_idx: number
 	dtLst: any[] // dts to query
+	/** selected origins, will be stamped onto groupset tvs */
+	origins?: string[]
+	/** display label for the origins */
+	originLabel?: string
 }
 export type GvCustomGsQ = GvBaseQ & {
 	type: 'custom-groupset'
@@ -140,12 +148,6 @@ type GvBaseTerm = BaseTerm &
 	LegacyGvSingleGeneTerm & {
 		type: 'geneVariant'
 		genes: GvGeneTerm[]
-		/** origins selected for an origin-split data type */
-		origins?: string[]
-		/** display label for the selected origin subset */
-		originLabel?: string
-		/** combined sample-type and origin display label */
-		label?: string
 	}
 
 export type RawGvTerm = GvBaseTerm & {
