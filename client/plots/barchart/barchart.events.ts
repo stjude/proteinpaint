@@ -458,7 +458,7 @@ function handle_click(event, self, chart) {
 		}
 	}
 
-	if (self.opts.bar_click_opts.includes('add_filter')) {
+	if (self.opts.bar_click_opts.includes('add_filter') && !chart.uncomputable) {
 		const item = findItemByTermId(self.state.termfilter.filter, self.config.term.term.id)
 		if (!item) {
 			options.push({
@@ -470,8 +470,7 @@ function handle_click(event, self, chart) {
 			})
 		}
 	}
-
-	if (self.opts.bar_click_opts.includes('add_group') && self.config.displaySampleIds) {
+	if (self.opts.bar_click_opts.includes('add_group') && self.config.displaySampleIds && !chart.uncomputable) {
 		options.push({
 			label: 'Add as group',
 			callback: async () => {
@@ -483,7 +482,7 @@ function handle_click(event, self, chart) {
 
 	const uiLabels = self.config.controlLabels || self.app.vocabApi.termdbConfig.uiLabels
 	//disable sample listing temporarily
-	if (self.config.displaySampleIds) {
+	if (self.config.displaySampleIds && !chart.uncomputable) {
 		options.push({
 			label: `List ${uiLabels.samples}`,
 			testId: `sjpp-barchart-list-samples-${data.seriesId}`,
