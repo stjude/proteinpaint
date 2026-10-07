@@ -281,7 +281,7 @@ export class ScatterLegend {
 
 					itemG
 						.append('path')
-						.attr('data-testid', 'sjpp-legend-shape')
+						.attr('data-testid', `sjpp-legend-shape-${name}`)
 						.attr('transform', () => `translate(${offsetX}, ${offsetY - 4}) scale(${scale + 0.1})`) //shapes are a bit smaller than the circle shape
 						.style('pointer-events', 'bounding-box')
 						.style('fill', color)
@@ -291,7 +291,7 @@ export class ScatterLegend {
 					itemG
 						.append('text')
 						.attr('name', 'sjpp-scatter-legend-label')
-						.attr('data-testid', 'sjpp-scatter-shape-legend-label')
+						.attr('data-testid', 'sjpp-scatter-shape-legend-label-' + name)
 						.attr('x', offsetX + 25)
 						.attr('y', offsetY + 4)
 						.text(`${name}, n=${count}`)
@@ -316,7 +316,9 @@ export class ScatterLegend {
 		circleG
 			.append('path')
 			.attr('d', shapes[0])
+			.attr('hex-color', category.color)
 			.attr('transform', `translate(${x - 2}, ${y - 4}) scale(${scale})`)
+			.attr('data-testid', `sjpp-legend-color-dot-${name}`)
 			.style('fill', category.color)
 			.style('stroke', rgb(category.color).darker())
 		if (!this.scatter.config.colorColumn)
@@ -325,7 +327,7 @@ export class ScatterLegend {
 		itemG
 			.append('text')
 			.attr('name', 'sjpp-scatter-legend-label')
-			.attr('data-testid', 'sjpp-scatter-color-legend-label')
+			.attr('data-testid', 'sjpp-scatter-color-legend-label-' + name)
 			.attr('x', x + 20)
 			.attr('y', y + 4)
 			.text(`${name}, n=${category.sampleCount}`)
@@ -415,7 +417,10 @@ export class ScatterLegend {
 					.attr('x', offsetX - step + 24)
 					.attr('y', offsetY + 4)
 					.attr('name', 'sjpp-scatter-legend-label')
-					.attr('data-testid', cname == 'shape' ? 'sjpp-scatter-shape-legend-label' : 'sjpp-scatter-color-legend-label')
+					.attr(
+						'data-testid',
+						(cname == 'shape' ? 'sjpp-scatter-shape-legend-label-' : 'sjpp-scatter-color-legend-label-') + key
+					)
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.text(text)
 					.on('click', event =>

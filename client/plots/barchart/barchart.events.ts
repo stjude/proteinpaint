@@ -470,7 +470,6 @@ function handle_click(event, self, chart) {
 			})
 		}
 	}
-
 	if (self.opts.bar_click_opts.includes('add_group') && self.config.displaySampleIds) {
 		options.push({
 			label: 'Add as group',
@@ -486,13 +485,15 @@ function handle_click(event, self, chart) {
 	if (self.config.displaySampleIds) {
 		options.push({
 			label: `List ${uiLabels.samples}`,
+			testId: `sjpp-barchart-list-samples-${data.seriesId}`,
 			callback: async () => {
 				const arg = getListSamplesArg(event, self, data.seriesId, data.dataId, chart.chartId)
 				try {
 					await listSamples(arg, data.seriesId, data.dataId, chart.chartId)
 				} catch (e) {
+					self.app.tip.hide()
+					window.alert(`Couldn't render samples: ${e instanceof Error ? e.message : e}`)
 					console.trace(e)
-					throw e
 				}
 			}
 		})
@@ -615,9 +616,21 @@ function getTvs(termIndex, value, self, geneVariant) {
 		if (!group) throw 'group not found'
 		tvs.tvs.values = group.values
 	} else if (isNumericTw(term)) {
-		const bins = self.bins[termIndex]
-		if (!bins?.length) return null
-		tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
+		const bin = self.bins[termIndex]?.find(bin => bin.label == value)
+		if (bin) {
+			tvs.tvs.ranges = [bin]
+		} else {
+			// uncomputable values are not in bins, and their bar id is the value label;
+			// the server reads a range with a value property as a special category
+			const entry = Object.entries<any>(term.term.values || {}).find(
+				([key, v]) => v.uncomputable && (v.label == value || key == value)
+			)
+			if (!entry) return null
+			const [key, v] = entry
+			tvs.tvs.ranges = [{ value: Number(key), label: v.label }]
+			console.log(tvs)
+		}
+		delete tvs.tvs.values // numeric tvs is filtered by ranges only
 	} else if (term.term.type == 'samplelst') {
 		const list = term.term.values?.[value]?.list || []
 		const ids = list.map(s => s.sampleId)
@@ -1018,7 +1031,9 @@ async function menuoption_add_filter(self, tvslst, arg) {
 		samplelstTW = getSamplelstTW([group])
 	}
 
-	const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
+	// self.state.termfilter may be combined with a plot-level filter that lacks the filterUiRoot tag,
+	// so look up filterUiRoot in the global filter that filter_replace will replace
+	const filterUiRoot = getFilterItemByTag(self.app.getState().termfilter.filter, 'filterUiRoot')
 	const filter = filterJoin([
 		filterUiRoot,
 		samplelstTW

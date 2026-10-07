@@ -136,7 +136,9 @@ export class ScatterInteractivity {
 	}
 
 	addToFilter(samplelstTW) {
-		const filterUiRoot = getFilterItemByTag(this.scatter.state.termfilter.filter, 'filterUiRoot')
+		// the plot state termfilter may be combined with a plot-level filter that lacks the
+		// filterUiRoot tag, so look it up in the global filter that filter_replace will replace
+		const filterUiRoot = getFilterItemByTag(this.scatter.app.getState().termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([filterUiRoot, getFilter(samplelstTW)])
 		filter.tag = 'filterUiRoot'
 		this.scatter.app.dispatch({
