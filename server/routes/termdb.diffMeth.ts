@@ -17,6 +17,7 @@ import { renderManhattanPoints } from '../src/renderManhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import {
+	anyFromFilter,
 	buildGroupValues,
 	canonicalizeSamplelst,
 	resolveDaContext,
@@ -566,7 +567,9 @@ export async function resolveDmSampleGroups(
 	const commonnames = g1.names.filter(x => g2.names.includes(x))
 	if (commonnames.length)
 		alerts.push(
-			`${commonnames.length} sample(s) appear in both groups: ${commonnames.join(', ')}. Please remove duplicates.`
+			`${commonnames.length} sample(s) appear in both groups${
+				anyFromFilter(groups) ? '' : ': ' + commonnames.join(', ')
+			}. Please remove duplicates.`
 		)
 
 	return {
