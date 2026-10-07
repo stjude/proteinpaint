@@ -235,7 +235,9 @@ class MassGroups {
 			c1.append('span').text(grp.label)
 			// gdc etc. call them cases, not samples
 			const sampleLabel = this.app.vocabApi.termdbConfig?.uiLabels?.samples || 'samples'
-			c2.html(`${grp.othersGroupSampleNum || grp.list.length} ${sampleLabel}`)
+			// a group defined by a filter lists no sample, and carries the number that its filter selected
+			const n = grp.othersGroupSampleNum || (grp.list?.length ?? tw.q.groups.find(g => g.name == grpKey)?.sampleCount)
+			if (Number.isFinite(n)) c2.text(`${n} ${sampleLabel}`)
 		}
 
 		if (this.state.currentCohortChartTypes.includes('DA') && samplelstTW.q.groups.length == 2)

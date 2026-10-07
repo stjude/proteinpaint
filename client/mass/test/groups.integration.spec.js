@@ -152,6 +152,20 @@ tape('a variable made from groups is defined by their filters', test => {
 			)
 			test.equal(confirms, 0, 'should not report an overlap for two groups that share no sample')
 
+			// the menu of the variable shows the size of each group, and is drawn to its last option
+			groups.showGroupsMenu({ target: document.body }, tw, () => {})
+			const menu = groups.tip.d.node()
+			test.deepEqual(
+				[...menu.querySelectorAll('[data-testid="sjpp-groups-menu"] tr')].map(tr => /\d+ samples/.test(tr.textContent)),
+				[true, true],
+				'should show the size of each group in the menu of the variable'
+			)
+			test.ok(
+				menu.querySelector('[data-testid="sjpp-delete-variable"]'),
+				'should draw the menu of the variable to its last option'
+			)
+			groups.tip.hide()
+
 			// the server takes the variable, and gives every group its samples
 			await fillTermWrapper(tw, vocabApi)
 			const data = await vocabApi.getAnnotatedSampleData({ terms: [tw] })
