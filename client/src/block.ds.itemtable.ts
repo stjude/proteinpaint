@@ -120,9 +120,10 @@ export function itemtable(arg: any) {
 	handle_samplecart(mlst, holder, tk, block)
 }
 
-// escape a dynamic value for use in markup; only strings can carry markup, so other types
-// (e.g. numbers, null/undefined) are returned as-is to keep numeric sorting and empty cells intact
-function escapeValue(v: any) {
+// escape a dynamic value for use in markup; strings are escaped, and so is each element of an array.
+// other types (e.g. numbers, null/undefined) are returned as-is to keep numeric sorting and empty cells intact
+function escapeValue(v: any): any {
+	if (Array.isArray(v)) return v.map(escapeValue)
 	return typeof v == 'string' ? escapeHtml(v) : v
 }
 
@@ -2153,12 +2154,12 @@ function variant2imgbutton(m: any, buttonrow: any, imgholder: any, tk: any, _blo
 		.text('Image')
 		.on('click', async () => {
 			if (loaded) return
+			loaded = true
 			// allele and chromosome names come from the data and become part of the file name
 			if ([m.chr, m.ref, m.alt].some(v => typeof v != 'string' || /[\\/]|\.\./.test(v))) {
 				imgholder.append('div').style('margin', '20px').text('Image not available')
 				return
 			}
-			loaded = true
 			const wait = imgholder.append('div').style('margin', '20px').text('Loading...')
 			try {
 				const data = await client.dofetch('img', {
