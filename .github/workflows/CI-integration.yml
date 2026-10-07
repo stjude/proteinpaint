@@ -9,6 +9,10 @@ on:
     branches: [ test-queue ]
   merge_group:
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   
   build:
@@ -102,6 +106,7 @@ jobs:
   integration-tests-complete:
     if: always()
     needs: [build, rust-build, docker-with-rust, docker-without-rust]
+    permissions: {}
     runs-on: ubuntu-22.04
     steps:
       - name: Fail if any integration tests failed
