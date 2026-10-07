@@ -120,9 +120,10 @@ export function itemtable(arg: any) {
 	handle_samplecart(mlst, holder, tk, block)
 }
 
-// escape a dynamic value for use in markup; leaves null/undefined as-is so empty cells stay empty
+// escape a dynamic value for use in markup; only strings can carry markup, so other types
+// (e.g. numbers, null/undefined) are returned as-is to keep numeric sorting and empty cells intact
 function escapeValue(v: any) {
-	return v == undefined ? v : escapeHtml(v)
+	return typeof v == 'string' ? escapeHtml(v) : v
 }
 
 function mlst2headerhtml(mlst: any[]) {
