@@ -7,6 +7,16 @@ process.removeAllListeners('warning')
 export default function setRoutes(app, basepath) {
 	const cwd = path.join(serverconfig.binpath, '..')
 	const root = path.join(serverconfig.binpath, '../..')
+	const superModuleDir = path.join(root, '.git/modules/proteinpaint')
+
+	// the root folder is only included in the readme listing when this checkout is part of a parent module
+	async function getBoundary() {
+		try {
+			return (await fs.promises.stat(superModuleDir)) ? root : cwd
+		} catch (e) {
+			return cwd
+		}
+	}
 
 	app.get(basepath + '/readme', async (req, res) => {
 		const q = req.query
@@ -14,7 +24,8 @@ export default function setRoutes(app, basepath) {
 			if (Object.keys(q).length) {
 				const file = path.resolve(cwd, String(q.file))
 				try {
-					if (!file.endsWith('.md') || !file.startsWith(root + path.sep)) throw 'unsupported file'
+					const boundary = await getBoundary()
+					if (!file.endsWith('.md') || !file.startsWith(boundary + path.sep)) throw 'unsupported file'
 					if (await fs.promises.stat(file)) {
 						const md = await fs.promises.readFile(file, { encoding: 'utf8' })
 						res.header('content-type', 'text/markdown')
@@ -32,12 +43,10 @@ export default function setRoutes(app, basepath) {
 					'node_modules'
 				]
 				const readmes = fs.globSync('**/*.md', { cwd, exclude })
-				const superModuleDir = path.join(serverconfig.binpath, '../../.git/modules/proteinpaint')
 				let parentModule = ''
 				try {
 					const stat = await fs.promises.stat(superModuleDir)
 					if (stat) {
-						const root = path.join(serverconfig.binpath, '../..')
 						const addlReadmes = fs.globSync('**/*.md', { cwd: root, exclude })
 						for (const r of addlReadmes) {
 							if (!r.includes('proteinpaint/') && !readmes.includes(r)) readmes.push(path.join('..', r))
