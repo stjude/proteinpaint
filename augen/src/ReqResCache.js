@@ -37,7 +37,9 @@ export class ReqResCache {
 
 		const filedir = path.resolve(cachedir, subdir)
 		const rootdir = path.resolve(cachedir)
-		if (filedir != rootdir && !filedir.startsWith(rootdir + path.sep))
+		// a filesystem root already ends with a separator
+		const boundary = rootdir.endsWith(path.sep) ? rootdir : rootdir + path.sep
+		if (filedir != rootdir && !filedir.startsWith(boundary))
 			throw new Error(`Cache subdir is outside of the cache dir.`)
 		if (this.opts.mode != 'test' && !fs.existsSync(filedir)) {
 			if (this.opts.mode == 'mkdir') fs.mkdirSync(filedir, { recursive: true })
