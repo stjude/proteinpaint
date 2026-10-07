@@ -28,17 +28,19 @@ export default function (genomes) {
 const maxWidth = 20000
 const maxBarHeight = 2000
 const maxPixelRatio = 5
+// upper limit of the image area in pixels, after applying the pixel ratio, since the dimensions multiply
+const maxPixels = 50000000
 
 export function validateCanvasSize(q) {
 	if (!Number.isFinite(q.barheight)) throw 'invalid barheight'
 	if (q.barheight < 0 || q.barheight > maxBarHeight) throw 'barheight out of bound'
 	if (!Number.isFinite(q.width)) throw 'invalid width'
 	if (q.width < 0 || q.width > maxWidth) throw 'width out of bound'
-	// may be missing
-	if (q.devicePixelRatio !== undefined) {
-		if (!Number.isFinite(q.devicePixelRatio)) throw 'invalid devicePixelRatio'
-		if (q.devicePixelRatio <= 0 || q.devicePixelRatio > maxPixelRatio) throw 'devicePixelRatio out of bound'
-	}
+	// may be missing, the image is then drawn at the actual size
+	if (q.devicePixelRatio === undefined) q.devicePixelRatio = 1
+	if (!Number.isFinite(q.devicePixelRatio)) throw 'invalid devicePixelRatio'
+	if (q.devicePixelRatio <= 0 || q.devicePixelRatio > maxPixelRatio) throw 'devicePixelRatio out of bound'
+	if (q.width * q.devicePixelRatio * q.barheight * q.devicePixelRatio > maxPixels) throw 'image size out of bound'
 }
 
 async function handle_tkbigwig(req, res, genomes) {
@@ -89,9 +91,7 @@ async function handle_tkbigwig(req, res, genomes) {
 	}
 
 	// check the total before reading any region
-	let totalBins = 0
-	for (const r of req.query.rglst) totalBins += getNBins(req, r)
-	if (totalBins > maxBins) throw 'too many bins requested'
+	validateBinTotal(req.query)
 
 	const t = new Date()
 	for (const r of req.query.rglst) {
@@ -396,12 +396,18 @@ function makeyscale() {
 // upper limit of the number of bins requested for all regions of a request
 const maxBins = 200000
 
-function getNBins(req, r) {
-	return Math.ceil(Math.min(r.stop - r.start, r.width) * (req.query.dotplotfactor || 1))
+function getNBins(q, r) {
+	return Math.ceil(Math.min(r.stop - r.start, r.width) * (q.dotplotfactor || 1))
+}
+
+export function validateBinTotal(q) {
+	let totalBins = 0
+	for (const r of q.rglst) totalBins += getNBins(q, r)
+	if (totalBins > maxBins) throw 'too many bins requested'
 }
 
 async function run_bigwigsummary(req, r, file) {
-	const n_bins = getNBins(req, r)
+	const n_bins = getNBins(req.query, r)
 	const input_json = {
 		bw_file: file,
 		chromosome: r.chr,

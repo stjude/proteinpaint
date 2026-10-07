@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { validateCanvasSize } from '../bw.js'
+import { validateCanvasSize, validateBinTotal } from '../bw.js'
 
 tape('\n', test => {
 	test.pass('-***- bw specs -***-')
@@ -9,7 +9,16 @@ tape('\n', test => {
 tape('validateCanvasSize()', test => {
 	const ok = { width: 800, barheight: 50, devicePixelRatio: 2 }
 	test.doesNotThrow(() => validateCanvasSize(ok), 'accepts a normal size')
-	test.doesNotThrow(() => validateCanvasSize({ width: 800, barheight: 50 }), 'accepts a missing devicePixelRatio')
+	{
+		const q = { width: 800, barheight: 50 }
+		test.doesNotThrow(() => validateCanvasSize(q), 'accepts a missing devicePixelRatio')
+		test.equal(q.devicePixelRatio, 1, 'sets a missing devicePixelRatio to 1')
+	}
+	test.throws(
+		() => validateCanvasSize({ width: 6000, barheight: 2000, devicePixelRatio: 5 }),
+		/image size out of bound/,
+		'rejects a size that is within each limit but too large in area'
+	)
 	test.throws(() => validateCanvasSize({ ...ok, width: 'a' }), /invalid width/, 'rejects a width that is not a number')
 	test.throws(() => validateCanvasSize({ ...ok, width: 20001 }), /width out of bound/, 'rejects a width over the limit')
 	test.throws(() => validateCanvasSize({ ...ok, width: -1 }), /width out of bound/, 'rejects a negative width')
@@ -37,6 +46,18 @@ tape('validateCanvasSize()', test => {
 		() => validateCanvasSize({ ...ok, devicePixelRatio: 'a' }),
 		/invalid devicePixelRatio/,
 		'rejects a devicePixelRatio that is not a number'
+	)
+	test.end()
+})
+
+tape('validateBinTotal()', test => {
+	const region = { start: 0, stop: 1000000, width: 1000 }
+	test.doesNotThrow(() => validateBinTotal({ rglst: [region], dotplotfactor: 20 }), 'accepts a normal request')
+	test.doesNotThrow(() => validateBinTotal({ rglst: [region] }), 'accepts a missing dotplotfactor')
+	test.throws(
+		() => validateBinTotal({ rglst: Array.from({ length: 11 }, () => region), dotplotfactor: 20 }),
+		/too many bins requested/,
+		'rejects regions that are within the limit alone but over it in total'
 	)
 	test.end()
 })
