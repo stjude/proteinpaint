@@ -139,6 +139,42 @@ tape('validateRglst', test => {
 		'throws with rglst[0].stop<start'
 	)
 	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: 10, width: 'a' }] }),
+		/q\.rglst\[\]\.width not number/,
+		'throws with rglst[0].width not number'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: 10, width: -1 }] }),
+		/q\.rglst\[\]\.width out of bound/,
+		'throws with rglst[0].width<0'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: 10, width: 20001 }] }),
+		/q\.rglst\[\]\.width out of bound/,
+		'throws with rglst[0].width over the limit'
+	)
+	test.throws(
+		() =>
+			utils.validateRglst({
+				rglst: [
+					{ chr: '1', start: 1, stop: 10, width: 20000 },
+					{ chr: '1', start: 1, stop: 10, width: 20000 },
+					{ chr: '1', start: 1, stop: 10, width: 20000 }
+				]
+			}),
+		/q\.rglst\[\]\.width total out of bound/,
+		'throws when the region widths add up to over the limit'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: Array.from({ length: 1001 }, () => ({ chr: '1', start: 1, stop: 10 })) }),
+		/q\.rglst\[\] too many regions/,
+		'throws with too many regions'
+	)
+	test.doesNotThrow(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: 10, width: 800.5 }] }),
+		'accepts a decimal width within the limit'
+	)
+	test.throws(
 		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: 10 }, {}] }),
 		/q\.rglst\[\]\.chr not string/,
 		'throws with 2nd region err'
