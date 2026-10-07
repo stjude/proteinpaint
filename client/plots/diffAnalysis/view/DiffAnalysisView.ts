@@ -46,13 +46,6 @@ function setRenderers(self) {
 				active: self.config.childType === 'gsea',
 				id: 'gsea',
 				label: 'Gene Set Enrichment Analysis',
-				/* Hidden for splicing: GSEA ranks GENES, but a splicing row is an intron cluster and
-				a gene usually has several. Flattening them would enter that gene once per cluster
-				and weight it accordingly, biasing the enrichment toward splicing-complex (largely
-				long) genes. Turning this on needs a cluster->gene rollup rule -- most significant
-				cluster per gene, or a Simes combination -- which is a statistical decision, not
-				wiring. The volcano already attaches response.daRequest for splicing, so the cacheId
-				contract GSEA needs is in place when that rule is chosen. */
 				isVisible: () => self.config.termType !== PROTEOME_DAP && self.config.termType !== JUNCTION,
 				// isVisible: () => self.config.termType === TermTypes.GENE_EXPRESSION,
 				getPlotConfig: () => {
