@@ -6,6 +6,7 @@ import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { getGroupColors, toHex } from '../colors'
 import { DMRCATE_DEFAULTS } from '../settings/defaults'
+import { getOthersGroup } from '#mass/groups'
 // import type { Volcano } from '../Volcano'
 
 export class VolcanoModel {
@@ -35,7 +36,10 @@ export class VolcanoModel {
 			// Surface the DE request so downstream plots (GSEA) can snapshot
 			// it and later ask the server to recompute the DA cache if the
 			// file is missing on a peer node or after TTL eviction.
-			if (response && !response.error) response.daRequest = body
+			if (response && !response.error) {
+				response.daRequest = body
+				this.setGroupSizes(response)
+			}
 			return response
 		}
 		if (this.termType === tt.DNA_METHYLATION) {
@@ -44,7 +48,10 @@ export class VolcanoModel {
 			// Surface the DM request the same way the GE branch above does so
 			// the GSEA tab can snapshot it and the server can recompute the DM
 			// cache if the file is missing on a peer node or after TTL.
-			if (response && !response.error) response.daRequest = body
+			if (response && !response.error) {
+				response.daRequest = body
+				this.setGroupSizes(response)
+			}
 			return response
 		}
 		if (this.termType === tt.JUNCTION) {
@@ -69,7 +76,7 @@ export class VolcanoModel {
 
 	//Gene expression
 	async getGERequestBody() {
-		await this.getOtherSamples(this.config.samplelst)
+		this.setOthersGroup(this.config.samplelst)
 		const state = this.app.getState()
 		const body = {
 			kind: 'DE',
@@ -94,7 +101,7 @@ export class VolcanoModel {
 
 	//DNA methylation
 	async getDMRequestBody() {
-		await this.getOtherSamples(this.config.samplelst)
+		this.setOthersGroup(this.config.samplelst)
 		const state = this.app.getState()
 		const body = {
 			kind: 'DM',
@@ -255,25 +262,25 @@ export class VolcanoModel {
 		}
 	}
 
-	/** retrieve the sampleId/sampleName for samples in
-	 * the "others" group instead of using {in: false} */
-	async getOtherSamples(samplelst) {
-		const othersSamplesGroup = samplelst.groups.find(g => !g.in)
-		if (!othersSamplesGroup) return
-
-		const state = this.app.getState()
+	/** The "others" group arrives as a placeholder with {in: false}. Replace it with the group that
+	 * it stands for: the filter of the app without the samples of the other group, which the server
+	 * resolves. */
+	setOthersGroup(samplelst) {
+		const i = samplelst.groups.findIndex(g => !g.in)
+		if (i == -1) return
 		const samplesGroup = samplelst.groups.find(g => g.in)
-		othersSamplesGroup.values = []
-		// retrieve full list of samples based on current filter. put samples not in samplesGroup in "others" group.
-		// the plot-scoped vocabApi from PlotBase is used, so that an unrelated app dispatch does not cancel this request
-		for (const s of await this.plot.vocabApi.getFilteredSampleList(state.termfilter.filter)) {
-			// s={id,name}, samplelst.groups[].values[]={sampleId,sample}
-			// NOTE: must not use indexOf() here, it compares by strict equality and not by predicate,
-			// which would never match and would put every sample in the "others" group
-			if (!samplesGroup.values.some(i => i.sampleId == s.id)) {
-				othersSamplesGroup.values.push({ sampleId: s.id, sample: s.name })
-			}
+		samplelst.groups[i] = getOthersGroup(
+			{ name: samplelst.groups[i].name, values: samplesGroup.values },
+			this.app.getState().termfilter
+		)
+	}
+
+	/** A group that the server resolved from a filter lists no sample here. Keep the number of its
+	 * samples that the analysis ran on, where the group does not carry one, for getSampleNum(). */
+	setGroupSizes(response) {
+		for (const [i, g] of this.config.samplelst.groups.entries()) {
+			const n = response[`sample_size${i + 1}`]
+			if (!Array.isArray(g.values) && g.sampleCount === undefined && Number.isFinite(n)) g.sampleCount = n
 		}
-		othersSamplesGroup.in = true
 	}
 }
