@@ -23,8 +23,19 @@ import { set_hiddenvalues } from '#termsetting'
 import { getWrappedTvslst } from '#filter/filter'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getChildTerms, addParentTerm } from '../termdb/handlers/geneVariant'
-import { getColors, dtcnv, dtsnvindel, mclass } from '#shared/common.js'
-import { trimGvTermCopy, clearDtTermMnames, getDtsFromGroups, setGroupsetParentTerms } from '#shared/terms.js'
+import { getColors, dtcnv, dtsnvindel, dtTerms, mclass } from '#shared/common.js'
+import {
+	trimGvTermCopy,
+	clearDtTermMnames,
+	getDtsFromGroups,
+	setGroupsetParentTerms,
+	setGroupsetOrigins,
+	walkTvs,
+	getOriginLabel,
+	getGvLabelSuffix,
+	hasLegacyGroupsetOrigins,
+	migrateLegacyGroupsetOrigins
+} from '#shared/terms.js'
 import { validateVariantFilter } from '#shared/geneVariantFilter.js'
 import { rgb } from 'd3-color'
 
@@ -65,8 +76,10 @@ export class GvBase extends TwBase {
 		}
 
 		if (!tw.term.genes?.length) {
-			// support legacy term structure that lacks term.genes[]
-			const gene = structuredClone(tw.term)
+			// support legacy term structure that lacks term.genes[]. .kind is not
+			// guaranteed yet at this point (see LegacyGvSingleGeneTerm in #types), so cast
+			// rather than assert a shape the loop below is what actually normalizes
+			const gene: any = structuredClone(tw.term)
 			tw.term.genes = [gene]
 		}
 
@@ -98,6 +111,8 @@ export class GvBase extends TwBase {
 		if (!tw.term.name) tw.term.name = tw.term.genes.map(gene => gene.name).join(', ')
 
 		if (!Object.keys(tw.q).includes('type')) tw.q.type = 'values'
+
+		migrateLegacyOrigins(tw, opts.vocabApi)
 
 		// fill term.groupsetting
 		if (!tw.term.groupsetting) tw.term.groupsetting = { disabled: false }
@@ -164,7 +179,7 @@ export class GvBase extends TwBase {
 				return await GvPredefinedGS.fill(tw, opts)
 
 			case 'GvCustomGsTW':
-				return await GvCustomGS.fill(tw)
+				return await GvCustomGS.fill(tw, opts)
 
 			default:
 				throw `tw.type='${tw.type}' is not supported by GvBase.fill()`
@@ -204,6 +219,17 @@ export class GvValues extends GvBase {
 		// only where a groupset is cleared, so that a tw of a session saved with
 		// the stale property is also corrected
 		delete (q as any).dtLst
+		// origins are carried by the tvs of a groupset, and q.origins is only the seed
+		// they are stamped from (see OriginSeedQ in #types). an ungrouped term has no
+		// tvs, and so queries every origin; a seed left behind would be dead state that
+		// silently came back into effect when a groupset is selected again
+		delete (q as any).origins
+		delete (q as any).originLabel
+		/* a variantFilter is authored by a dataset or an embedder rather than by a ui, so
+		this is the only place one is brought to the current origin shape -- the equivalent
+		of what rehydrateFilter() does for a mass filter and migrateLegacyOrigins() does for
+		a groupset. walkTvs() no-ops on an absent filter */
+		migrateLegacyGroupsetOrigins((q as any).variantFilter)
 		// throws on a filter that cannot be honored one variant at a time, so that
 		// a bad filter fails here rather than quietly showing the wrong variants
 		validateVariantFilter((q as any).variantFilter, term)
@@ -258,13 +284,16 @@ export class GvPredefinedGS extends GvBase {
 		if (!term.groupsetting?.lst?.length) throw 'term.groupsetting.lst[] is empty'
 		if (!hasIdx && q.dtLst?.length) {
 			/* query dts specified without an index, by an entry point that knows a dt but not
-			a groupset index (see launchGeneVariantPlot() in client/mass/search.ts). select the
-			groupset that has the query dts.
+			a groupset index, e.g. launchGeneVariantPlot() in client/mass/search.ts, or a legacy
+			origin-specific groupset that GvBase.fill() has just migrated (see
+			migrateLegacyOrigins(), which deletes q.predefined_groupset_idx for this reason).
+			each groupset now declares a distinct dt (or dt set, for the bi-/mono-allelic
+			groupset), so q.dtLst identifies exactly one groupset.
 
-			only done when no index was supplied: q.dtLst does not identify a groupset uniquely,
-			since the somatic and germline SNV/indel groupsets both report dt=1, so resolving a
-			filled-in tw this way would reselect the first groupset of the dt and silently turn
-			a saved germline tw into a somatic one */
+			only done when no index was supplied: q.dtLst does not identify a groupset uniquely
+			when an index is also given, and trusting it over a given index would silently
+			reselect a different groupset whenever q.dtLst is stale, e.g. left over from a
+			previously selected groupset (see the test title below) */
 			const groupsetIdx = term.groupsetting.lst.findIndex(groupset => {
 				const dts = getGroupsetDts(groupset)
 				if (!dts?.length) return false
@@ -274,19 +303,24 @@ export class GvPredefinedGS extends GvBase {
 			})
 			if (groupsetIdx == -1) throw new Error('groupset with query dt(s) not found')
 			q.predefined_groupset_idx = groupsetIdx
-			q.dtLst = getGroupsetDts(term.groupsetting.lst[groupsetIdx])
 		} else {
-			/* the index is the selection, so always re-derive the query dts from it, rather
-			than trusting a q.dtLst that may be left over from a previously selected groupset
-			and would otherwise limit the dts queried (see getDtsToQuery() in mds3.init.js) */
-			// TODO: remove these type assertions
-			const idx = q.predefined_groupset_idx as number
-			const lst = term.groupsetting.lst as any[]
-			if (!lst[idx]) throw 'q.predefined_groupset_idx out of bound'
-			q.dtLst = getGroupsetDts(lst[idx])
+			// an index was given (or defaulted above), so always trust it over a q.dtLst
+			// that may be stale, e.g. left over from a previously selected groupset
+			if (!term.groupsetting.lst[q.predefined_groupset_idx as number]) throw 'q.predefined_groupset_idx out of bound'
 		}
-		// only the selected groupset needs its groups[], see fillGroupsetGroups()
-		await fillGroupsetGroups(term, q.predefined_groupset_idx as number, opts.vocabApi)
+		// always (re)derive q.dtLst from the selected groupset, rather than trusting a q.dtLst that
+		// may be left over from a previously selected groupset and would otherwise limit the
+		// dts queried (see getDtsToQuery() in mds3.init.js)
+		const groupset = (term.groupsetting.lst as any[])[q.predefined_groupset_idx as number]
+		q.dtLst = getGroupsetDts(groupset)
+		validateSeedOrigins(q.origins, groupset, opts.vocabApi)
+		await fillGroupsetGroups(term, q.predefined_groupset_idx as number, opts.vocabApi, q.origins)
+		/* always re-derive origin label from the selected origins for the same reason as q.dtLst above
+		is: a legacy tw that migrateLegacyOrigins() just migrated carries q.origins with no
+		label at all, and a stored label left over from a previously selected groupset would
+		name origins these tvs do not filter by */
+		const byOrigin = opts.vocabApi.termdbConfig.assayAvailability?.byDt?.[groupset.dt as number]?.byOrigin
+		q.originLabel = getOriginLabel(q.origins, byOrigin)
 		set_hiddenvalues(q, term)
 		return tw as GvPredefinedGsTW
 	}
@@ -295,8 +329,7 @@ export class GvPredefinedGS extends GvBase {
 		let text = this.term.name
 		const gsname = this.term?.groupsetting?.lst?.[this.q.predefined_groupset_idx].name
 		if (gsname) text += ` ${gsname}`
-		const sampleTypeLabel = this.term.sampleTypeLabel
-		if (sampleTypeLabel) text += ` (${sampleTypeLabel})`
+		text += getGvLabelSuffix(this.q, this.term)
 		return text
 	}
 }
@@ -321,7 +354,7 @@ export class GvCustomGS extends GvBase {
 	}
 
 	// See the relevant comments in the GvBase.fill() function above
-	static async fill(tw: RawGvCustomGsTW): Promise<GvCustomGsTW> {
+	static async fill(tw: RawGvCustomGsTW, opts: TwOpts = {}): Promise<GvCustomGsTW> {
 		if (!tw.type) tw.type = 'GvCustomGsTW'
 		else if (tw.type != 'GvCustomGsTW') throw `expecting tw.type='GvCustomGsTW', got '${tw.type}'`
 
@@ -330,6 +363,13 @@ export class GvCustomGS extends GvBase {
 
 		// see the same deletion in GvPredefinedGS.fill()
 		delete (tw.q as any).variantFilter
+		/* q.customset is user-authored and no fill() rebuilds it, so each of its tvs keeps
+		its own origins[] -- which is the whole point of a custom groupset here, since its
+		groups may filter different mutation types by different origins. A seed left over
+		from the predefined groupset this was built from would be a second, term-wide
+		answer to the same question (see OriginSeedQ in #types) */
+		delete (tw.q as any).origins
+		delete (tw.q as any).originLabel
 
 		const { term, q } = tw
 		if (!q.customset) throw 'missing tw.q.customset'
@@ -345,6 +385,8 @@ export class GvCustomGS extends GvBase {
 		that each tvs filters by a dt. also throws on a customset whose tvs terms are not
 		dt terms, which the server would otherwise reject deep in filterByItem() */
 		setGroupsetParentTerms(q.customset, term)
+		// run after the parent terms are attached, which validates that each tvs filters by a dt
+		validateCustomsetOrigins(q.customset, opts.vocabApi)
 		/* always re-derived, never trusted: a dtLst that disagrees with the groups silently
 		limits the dts queried for the term, dropping a group's data (see getDtsToQuery() in
 		server/src/mds3.init.js). same reason GvPredefinedGS.fill() re-derives it from the
@@ -355,8 +397,88 @@ export class GvCustomGS extends GvBase {
 	}
 
 	getTitleText() {
-		return `${this.term.name} Custom Groups`
+		let text = `${this.term.name} Custom Groups`
+		text += getGvLabelSuffix(this.q, this.term)
+		return text
 	}
+}
+
+/* Support legacy term structure:
+Before origins became a per-tvs selection (tvs.origins[]), each origin of a dt had its own
+child term (term.childTerms[].origin) and a predefined groupset was selected by its index in
+those child terms, while a custom groupset kept the origin on the dt term of each tvs.
+Moves the selected origin to q.origins[] (the seed a rebuilt predefined groupset stamps onto
+its tvs) or onto the tvs of a custom groupset directly, and the selected dt to q.dtLst, so
+that the current child terms and groupsets are rebuilt from them. */
+function migrateLegacyOrigins(tw: RawGvTW, vocabApi: VocabApi) {
+	const legacyChildTerms = getLegacyChildTerms(tw, vocabApi)
+	const hasLegacyCustom = tw.q.type == 'custom-groupset' && hasLegacyGroupsetOrigins(tw.q.customset)
+	if (!legacyChildTerms.length && !hasLegacyCustom) return // not legacy
+
+	if (tw.q.type == 'predefined-groupset') migrateLegacyPredefinedGroupset(tw, legacyChildTerms)
+	else if (tw.q.type == 'custom-groupset') migrateLegacyGroupsetOrigins(tw.q.customset)
+	// rebuilt in their current one-per-dt shape
+	delete tw.term.childTerms
+	delete tw.term.groupsetting
+}
+
+/* the origin-specific child terms that a legacy predefined_groupset_idx points into, or an
+empty array for a term that is not legacy. A saved session drops term.childTerms (see
+trimGvTermsForSave()), so they are rebuilt from the dataset in their legacy order, which is
+the order of dtTerms with each origin-split dt expanded into somatic then germline. */
+function getLegacyChildTerms(tw: RawGvTW, vocabApi: VocabApi): { dt: number; origin?: string }[] {
+	const { term, q } = tw
+	if (term.childTerms) return term.childTerms.some(t => t.origin) ? term.childTerms : []
+	/* a seeded origin selection is one this version wrote, so the groupset index beside it
+	points into the current one-per-dt groupsets and must not be read as a legacy index into
+	the origin-split child terms rebuilt below */
+	if ((q as any).origins?.length) return []
+	const { queries, assayAvailability } = vocabApi.termdbConfig
+	const lst: { dt: number; origin?: string }[] = []
+	for (const t of dtTerms) {
+		const query = queries?.[t.query]
+		if (!query || (query.dtLst?.length && !query.dtLst.includes(t.dt))) continue
+		const byOrigin = assayAvailability?.byDt?.[t.dt]?.byOrigin
+		if (!byOrigin) lst.push({ dt: t.dt })
+		else for (const origin of ['somatic', 'germline']) if (origin in byOrigin) lst.push({ dt: t.dt, origin })
+	}
+	return lst.some(t => t.origin) ? lst : []
+}
+
+function migrateLegacyPredefinedGroupset(tw: RawGvTW, legacyChildTerms: { dt: number; origin?: string }[]) {
+	const { q } = tw
+	if (q.type != 'predefined-groupset' || !Number.isInteger(q.predefined_groupset_idx)) return
+	const selected = legacyChildTerms[q.predefined_groupset_idx as number]
+	// no match for an index past the child terms, or a q.dtLst of another groupset
+	if (!selected || !q.dtLst?.includes(selected.dt)) return
+	if (selected.origin && !q.origins?.length) q.origins = [selected.origin]
+	q.dtLst = [selected.dt]
+	// resolved from q.dtLst by GvPredefinedGS.fill(), against the current groupsets
+	delete q.predefined_groupset_idx
+}
+
+// validates that every origin in origins[] is present in byOrigin of dt
+function assertKnownOrigins(origins: string[], dt: number | undefined, vocabApi: VocabApi) {
+	if (!origins?.length) throw 'origins[] is empty'
+	const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt?.[dt as number]?.byOrigin
+	if (!byOrigin) throw `dt ${dt} is not split by origin`
+	const known = new Set(Object.keys(byOrigin))
+	const unknown = origins.find(origin => !known.has(origin))
+	if (unknown) throw `unknown origin '${unknown}' for dt ${dt}`
+}
+
+// validate seed origins
+function validateSeedOrigins(origins: any, groupset: GvGroupset, vocabApi: VocabApi) {
+	if (!origins?.length) return
+	assertKnownOrigins(origins, groupset.dt, vocabApi)
+}
+
+// validate the origins of every tvs of a custom groupset.
+function validateCustomsetOrigins(customset: any, vocabApi: VocabApi) {
+	walkTvs(customset, (tvs: any) => {
+		if (!tvs.origins?.length) return
+		assertKnownOrigins(tvs.origins, tvs.term?.dt, vocabApi)
+	})
 }
 
 const allelicGroupsetName = 'Bi-/mono-allelic'
@@ -368,16 +490,14 @@ fillGroupsetGroups().
 
 Keeping the two apart matters: building a groupset requires querying the mutation
 classes of its dt term in the dataset, so building all of them cost one request per
-child dt term on every fill (6 for a dataset with all dts), for groupsets that are
-then never read. Only lst[q.predefined_groupset_idx] is consumed, by the client
-legend/edit code and by get_active_groupset() on the server.
+child dt term on every fill for groupsets that are then never read. Only
+lst[q.predefined_groupset_idx] is consumed, by the client legend/edit code and by
+get_active_groupset() on the server.
 */
 function listPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 	if (!term.childTerms?.length) throw 'term.childTerms[] is missing'
 	const lst: GvGroupset[] = term.childTerms.map((dtTerm: any) => {
-		const groupset: GvGroupset = { name: dtTerm.name, dt: dtTerm.dt }
-		if (dtTerm.origin) groupset.origin = dtTerm.origin
-		return groupset
+		return { name: dtTerm.name, dt: dtTerm.dt }
 	})
 	// this groupset spans two dts, so it declares them instead of carrying a single .dt
 	if (isEligibleForAllelicGroupset(term, vocabApi)) {
@@ -401,25 +521,27 @@ function getGroupsetDts(groupset: GvGroupset): any[] {
 /* build the groups[] of one groupset, in place. requires querying the mutation classes
 of the gene for the dt term(s) of that groupset, so it is only done for the groupset
 that is actually in use. see listPredefinedGroupsets() */
-export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi: VocabApi) {
+export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi: VocabApi, origins?: string[]) {
 	const groupset: GvGroupset | undefined = term.groupsetting?.lst?.[idx]
 	if (!groupset) throw 'q.predefined_groupset_idx out of bound'
 	if (groupset.groups) return // already built
 	if (!term.childTerms?.length) throw 'term.childTerms[] is missing'
 	const filter = vocabApi.state.termfilter?.filter
+	const byDt = vocabApi.termdbConfig.assayAvailability?.byDt
 
 	if (groupset.name == allelicGroupsetName) {
 		await getAllelicGroupset(groupset)
 	} else {
-		const dtTerm: any = term.childTerms.find(
-			(t: any) => t.dt == groupset.dt && (groupset.origin ? t.origin == groupset.origin : !t.origin)
-		)
+		const dtTerm: any = term.childTerms.find((t: any) => t.dt == groupset.dt)
 		if (!dtTerm) throw 'child dt term of the selected groupset not found'
 		// fill dt term values with mutation classes of gene in dataset
-		await getDtTermValues(dtTerm, filter, vocabApi)
+		await getDtTermValues(dtTerm, filter, vocabApi, { origins })
 		if (dtTerm.dt == dtcnv) getCnvGroupset(groupset, dtTerm, term.name, vocabApi)
 		else getNonCnvGroupset(groupset, dtTerm, term.name)
 	}
+	// the groups[] just built are the only copy of this groupset's tvs, and are rebuilt on
+	// every fill, so the origin selection has to be stamped back onto them from the seed
+	setGroupsetOrigins(groupset, byDt, origins)
 
 	// function to get cnv groupset
 	// will route to appropriate function depending on mode of cnv data
@@ -442,7 +564,7 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 		}
 		// gain group
 		const gainGroup = {
-			name: `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Gain (${dtTerm.origin})` : 'Gain'}`,
+			name: `${geneName} ${dtTerm.name} Gain`,
 			type: 'filter',
 			filter: getWrappedTvslst([
 				{
@@ -462,7 +584,7 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 		}
 		// loss group
 		const lossGroup = {
-			name: `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Loss (${dtTerm.origin})` : 'Loss'}`,
+			name: `${geneName} ${dtTerm.name} Loss`,
 			type: 'filter',
 			filter: getWrappedTvslst([
 				{
@@ -482,7 +604,7 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 		}
 		// neutral group
 		const wtGroup = {
-			name: `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Neutral (${dtTerm.origin})` : 'Neutral'}`,
+			name: `${geneName} ${dtTerm.name} Neutral`,
 			type: 'filter',
 			filter: getWrappedTvslst([
 				{
@@ -529,13 +651,13 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 					}
 				}
 			])
-			const name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `${v.label} (${dtTerm.origin})` : v.label}`
+			const name = `${geneName} ${dtTerm.name} ${v.label}`
 			const color = typeof v.key === 'string' ? mclass[v.key].color : undefined
 			groupset.groups.push({ name, type: 'filter', filter, color })
 		}
 		// wildtype value
 		groupset.groups.push({
-			name: `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`,
+			name: `${geneName} ${dtTerm.name} Wildtype`,
 			type: 'filter',
 			filter: getWrappedTvslst([
 				{
@@ -557,7 +679,7 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 	function getNonCnvGroupset(groupset, dtTerm, geneName) {
 		groupset.groups = []
 		// group 1: mutant
-		const grp1Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Mutated (${dtTerm.origin})` : 'Mutated'}`
+		const grp1Name = `${geneName} ${dtTerm.name} Mutated`
 		const values = dtTerm.values as TermValues
 		const grp1Tvs: any = {
 			term: dtTerm,
@@ -580,7 +702,7 @@ export async function fillGroupsetGroups(term: RawGvTerm, idx: number, vocabApi:
 			color: '#e75480'
 		})
 		// group 2: wildtype
-		const grp2Name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `Wildtype (${dtTerm.origin})` : 'Wildtype'}`
+		const grp2Name = `${geneName} ${dtTerm.name} Wildtype`
 		const grp2Tvs = {
 			term: dtTerm,
 			values: [],
@@ -709,7 +831,11 @@ export function isEligibleForAllelicGroupset(term: RawGvTerm, vocabApi: VocabApi
 	const snvIndelTerm = term.childTerms.find(t => t.dt == dtsnvindel)
 	const cnvTerm = term.childTerms.find(t => t.dt == dtcnv)
 	if (!snvIndelTerm || !cnvTerm) return false
-	if (snvIndelTerm.origin || cnvTerm.origin) return false // different origins not supported (may support later)
+	if (
+		vocabApi.termdbConfig.assayAvailability?.byDt?.[dtsnvindel]?.byOrigin ||
+		vocabApi.termdbConfig.assayAvailability?.byDt?.[dtcnv]?.byOrigin
+	)
+		return false // different origins across data types are not supported
 	return true
 }
 

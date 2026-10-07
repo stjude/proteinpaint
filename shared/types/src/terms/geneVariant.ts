@@ -1,5 +1,46 @@
 import type { MinBaseQ, BaseTerm, BaseTW, TermValues, BaseGroupSet, GroupEntry } from '../index.ts'
 
+/* ================================================================================
+LEGACY TYPES
+
+Collected here, apart from the types that reflect the CURRENT geneVariant termwrapper
+shape below, so that "what a saved/url-embedded tw may carry for backward compatibility"
+stays easy to tell apart from "what fill() currently builds". None of these should be
+used when authoring new code; they exist only so that the client can migrate an older tw to
+the current shape before anything reads it -- see GvBase.fill() in client/tw/geneVariant.ts
+(and its "Support legacy term structure" comments) and rehydrateFilter() in
+client/filter/rehydrateFilter.js. No server route reads these fields.
+
+Each is spliced into the current type it extends below via `&`, with a comment there
+pointing back here.
+================================================================================ */
+
+/** before term.genes[] existed, a geneVariant term over a single gene/region carried the
+ * gene/coord fields directly on the term itself, rather than nested under genes[]. Spliced
+ * into GvBaseTerm below. GvBase.fill() copies these onto genes[0] the first time it sees a
+ * term without genes[], but does not strip them off the term, so even a filled term may
+ * still carry them */
+type LegacyGvSingleGeneTerm = Partial<Gene> & Partial<Coord>
+
+/** before a dt split by origin (e.g. somatic/germline snvindel) became a per-tvs origins[]
+ * selection, each origin got its own child dt term, flagged and named this way (e.g. id
+ * 'snvindel_somatic', name 'SNV/indel (somatic)'). Spliced into DtTerm below. GvBase.fill()
+ * migrates a saved selection of one of these into q.origins[] or tvs.origins[] (see the
+ * "Support legacy term structure" block there). A tvs that no tw fill() reaches is migrated
+ * where it enters instead: rehydrateFilter() for a mass filter, GvValues.fill() for a
+ * q.variantFilter, and TVS.setHandler() for the copy the filter UI renders */
+type LegacyDtTermFields = {
+	/** the origin of this specific child term, e.g. 'somatic' */
+	origin?: string
+	/** the dt term's name without its origin suffix, e.g. 'SNV/indel' rather than
+	 * 'SNV/indel (somatic)' */
+	name_noOrigin?: string
+}
+
+/* ================================================================================
+CURRENT TYPES
+================================================================================ */
+
 /* A predefined groupset of a geneVariant term.
 
 Unlike the groupsets of other term types, these are built lazily: groups[] is only
@@ -15,7 +56,6 @@ export type GvGroupset = {
 	dt?: number
 	/** dts of a groupset that spans more than one, e.g. bi-/mono-allelic */
 	dts?: number[]
-	origin?: string
 	/** absent until this groupset is the selected one */
 	groups?: GroupEntry[]
 }
@@ -42,10 +82,19 @@ export type GvBaseQ = MinBaseQ & {
 type VariantFilterQ = { variantFilter?: any }
 
 type RawGvValuesQ = GvBaseQ & VariantFilterQ & { type?: 'values' }
+/** a raw q may also carry a stray top-level .dt/.origin from an even older, pre-childTerms
+ * groupset selection, predating q.predefined_groupset_idx/q.dtLst entirely. Not modeled as a
+ * field here because nothing reads it anymore: GvPredefinedGS.fill() in
+ * client/tw/geneVariant.ts resolves the groupset from predefined_groupset_idx/dtLst alone, so
+ * the extra keys are simply ignored rather than migrated */
 type RawGvPredefinedGsQ = GvBaseQ & {
 	type: 'predefined-groupset'
 	predefined_groupset_idx?: number
 	dtLst?: any[] // dts to query
+	/** selected origins, will be stamped onto groupset tvs */
+	origins?: string[]
+	/** display label for the origins */
+	originLabel?: string
 }
 type RawGvCustomGsQ = GvBaseQ & {
 	type: 'custom-groupset'
@@ -59,6 +108,10 @@ export type GvPredefinedGsQ = GvBaseQ & {
 	type: 'predefined-groupset'
 	predefined_groupset_idx: number
 	dtLst: any[] // dts to query
+	/** selected origins, will be stamped onto groupset tvs */
+	origins?: string[]
+	/** display label for the origins */
+	originLabel?: string
 }
 export type GvCustomGsQ = GvBaseQ & {
 	type: 'custom-groupset'
@@ -89,10 +142,10 @@ type Coord = {
 
 type GvGeneTerm = BaseTerm & (Gene | Coord)
 
-// including (Gene | Coord) for backwards compatibility
-// with older geneVariant term structure
 type GvBaseTerm = BaseTerm &
-	(Gene | Coord) & {
+	// see LegacyGvSingleGeneTerm above: kept only for a term saved/url-embedded before
+	// term.genes[] existed
+	LegacyGvSingleGeneTerm & {
 		type: 'geneVariant'
 		genes: GvGeneTerm[]
 	}
@@ -148,16 +201,14 @@ export type RawGvTW = RawGvValuesTW | RawGvPredefinedGsTW | RawGvCustomGsTW
 export type GvTW = GvValuesTW | GvPredefinedGsTW | GvCustomGsTW
 
 // miscellaneous types
-export type DtTerm = {
+export type DtTerm = LegacyDtTermFields & {
 	id: string
 	query: string
 	name: string
-	name_noOrigin: string
 	parentTerm?: RawGvTerm
 	parent_id: any
 	isleaf: boolean
 	type: string
 	dt: number
-	origin?: string
 	values: TermValues
 }

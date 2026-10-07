@@ -21,6 +21,7 @@ class TdbSubmenu {
 		return {
 			type: appState.submenu.type,
 			term: appState.submenu.term,
+			origins: appState.submenu.origins,
 			termfilter: appState.termfilter
 		}
 	}
@@ -63,6 +64,7 @@ function setRenderers(self) {
 
 		showTvsMenu({
 			term,
+			origins: self.state.origins,
 			filter: self.state.termfilter.filter,
 			holder: self.dom.holder.append('div'),
 			vocabApi: self.app.vocabApi,

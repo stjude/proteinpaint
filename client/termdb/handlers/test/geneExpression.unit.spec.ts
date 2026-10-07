@@ -57,6 +57,37 @@ tape('selectGene() should call callback with configured unit from termdbConfig',
 	test.end()
 })
 
+tape('selectGene() should label a selected sample-type subset', async test => {
+	const handler = new SearchHandler()
+	let selected: any
+
+	handler.callback = t => {
+		selected = t
+	}
+	handler.app = {
+		vocabApi: {
+			termdbConfig: {
+				queries: { geneExpression: { sampleTypes: [1, 2] } },
+				sampleTypes: {
+					1: { plural_name: 'Primary tumors' },
+					2: { plural_name: 'Relapses' }
+				}
+			}
+		}
+	} as any
+	handler.querySampleTypes = [1, 2]
+	handler.sampleTypeSelect = [
+		{ property: key => (key == 'checked' ? false : 1) },
+		{ property: key => (key == 'checked' ? true : 2) }
+	] as any
+
+	await handler.selectGene({ geneSymbol: 'TP53' })
+
+	test.equal(selected?.sampleTypeLabel, 'Relapses', 'Should label the selected sample-type subset')
+	test.equal(selected?.name, 'TP53 Gene Expression', 'Should preserve the gene expression term name')
+	test.end()
+})
+
 tape('selectGene() should use default unit when not configured', async test => {
 	const handler = new SearchHandler()
 	let selected: any

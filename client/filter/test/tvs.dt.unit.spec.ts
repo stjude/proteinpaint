@@ -29,7 +29,7 @@ tape('\n', test => {
 Helpers
 *********/
 
-function getDtTerm(origin?: string) {
+function getDtTerm() {
 	const term: any = {
 		id: 'snvindel',
 		type: 'dtsnvindel',
@@ -37,7 +37,6 @@ function getDtTerm(origin?: string) {
 		dt: 1,
 		parentTerm: { type: 'geneVariant', name: 'KRAS' }
 	}
-	if (origin) term.origin = origin
 	return term
 }
 
@@ -92,8 +91,11 @@ Tests
 *********/
 
 tape('getDtTermValues: classes and mnames, byOrigin', async test => {
-	const dtTerm = getDtTerm('somatic')
-	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesByOrigin, true), { withMnames: true })
+	const dtTerm = getDtTerm()
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesByOrigin, true), {
+		withMnames: true,
+		origins: ['somatic']
+	})
 
 	test.deepEqual(
 		dtTerm.values,
@@ -110,6 +112,69 @@ tape('getDtTermValues: classes and mnames, byOrigin', async test => {
 			{ mname: 'K100fs', class: 'F', samplecount: 1 }
 		],
 		'mnames should be the somatic list'
+	)
+	test.end()
+})
+
+tape('getDtTermValues: merges selected origins', async test => {
+	const dtTerm = getDtTerm()
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesByOrigin, true), {
+		withMnames: true,
+		origins: ['germline', 'somatic']
+	})
+
+	test.deepEqual(
+		dtTerm.values,
+		{
+			M: { key: 'M', label: mclass.M.label, samplecount: 3 },
+			F: { key: 'F', label: mclass.F.label, samplecount: 1 }
+		},
+		'should merge classes and counts across selected origins'
+	)
+	test.deepEqual(
+		dtTerm.mnames,
+		[
+			{ mname: 'G12D', class: 'M', samplecount: 2 },
+			{ mname: 'P34R', class: 'M', samplecount: 1 },
+			{ mname: 'K100fs', class: 'F', samplecount: 1 }
+		],
+		'should merge and sort mnames across selected origins'
+	)
+	test.end()
+})
+
+tape('getDtTermValues: limits values to the origins passed in', async test => {
+	const dtTerm = getDtTerm()
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesByOrigin, true), {
+		withMnames: true,
+		origins: ['germline']
+	})
+
+	test.deepEqual(
+		dtTerm.values,
+		{ M: { key: 'M', label: mclass.M.label, samplecount: 1 } },
+		'should use classes from the selected origin'
+	)
+	test.deepEqual(
+		dtTerm.mnames,
+		[{ mname: 'P34R', class: 'M', samplecount: 1 }],
+		'should use mnames from the selected origin'
+	)
+	test.end()
+})
+
+tape('getDtTermValues: defaults to every origin of the dt', async test => {
+	const dtTerm = getDtTerm()
+	// an ungrouped term selects no origins and so queries them all
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categoriesByOrigin, true), { withMnames: true })
+
+	test.deepEqual(
+		dtTerm.values,
+		{
+			M: { key: 'M', label: mclass.M.label, samplecount: 3 },
+			F: { key: 'F', label: mclass.F.label, samplecount: 1 }
+		},
+		'should merge classes across every origin'
 	)
 	test.end()
 })
@@ -151,8 +216,11 @@ tape('getDtTermValues: response without mnames', async test => {
 tape('getDtTermValues: empty mname list for origin', async test => {
 	const categories = structuredClone(categoriesByOrigin)
 	categories.lst[0].mnames.byOrigin.germline = []
-	const dtTerm = getDtTerm('germline')
-	await getDtTermValues(dtTerm, undefined, getVocabApi(categories, true), { withMnames: true })
+	const dtTerm = getDtTerm()
+	await getDtTermValues(dtTerm, undefined, getVocabApi(categories, true), {
+		withMnames: true,
+		origins: ['germline']
+	})
 
 	test.equal(dtTerm.mnames, undefined, 'mnames should be undefined when origin list is empty')
 	test.end()

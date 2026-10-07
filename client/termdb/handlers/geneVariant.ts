@@ -7,16 +7,15 @@ import {
 	renderSampleTypeSelect,
 	renderSampleTypesByTermsSelect,
 	getSelectedSampleTypes,
-	getSelectedSampleTypesByTerms,
-	getSampleTypeLabelByTerms
+	mayGetSampleTypeLabel,
+	renderCheckboxSelect,
+	getSelectedCheckboxValues
 } from '#dom'
 import type { VocabApi, DtAssayAvailabilityTerm } from '#types'
-import { getQuerySampleTypesByTerms } from '#shared/terms.js'
-import { dtTerms, dtcnv, dtsnvindel } from '#shared/common.js'
+import { getQuerySampleTypesByTerms, getOriginLabel } from '#shared/terms.js'
+import { dtTerms, dtcnv, dtsnvindel, morigin } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
 import { mayShowRememberedGvQ } from './rememberedGvQ.ts'
-
-// TODO: output of this handler should not be q.predefined_groupset_idx, instead should be q.dt and q.origin. Then, in client/tw/geneVariant.ts, should fill in q.predefined_groupset_idx based on q.dt and q.origin. This will also allow easy specification of desired dt/origin in url. Will need to make separate radio buttons for dt and origin to support the different q properties.
 
 type Opts = {
 	holder: any
@@ -24,6 +23,7 @@ type Opts = {
 	genomeObj: any
 	dt?: number // dt to search, if missing will use first available dt in ds
 	msg?: string // message to be displayed below search bar
+	usecase?: { target?: string }
 	/** true when the consumer keeps the q of the selected term, see SearchHandlerOpts in
 	 * client/termdb/TermTypeSearch.ts. Remembered settings are only offered when it does */
 	keepsQ?: boolean
@@ -38,6 +38,8 @@ export class SearchHandler {
 	mutationTypeRadio: any
 	mutationTypeTerms!: any[]
 	inputTypeRadio: any
+	originSelect?: any[]
+	queryOrigins?: string[]
 	sampleTypeSelect?: any
 	querySampleTypes?: any
 	querySampleTypesByTerms?: any
@@ -50,8 +52,21 @@ export class SearchHandler {
 		this.opts = opts
 		this.dom = {}
 		this.term = { type: 'geneVariant' }
-		this.q = { type: 'predefined-groupset' }
+		// for matrix, only display gene search box and not other
+		// selectors (e.g. mutation type/origin/etc.) because matrix will
+		// ignore properties set by these selectors in tw.q{}
+		// TODO: support full geneVariant termwrapper in matrix
+		this.q = { type: opts.usecase?.target == 'matrix' ? 'values' : 'predefined-groupset' }
 		this.callback = opts.callback
+		if (opts.usecase?.target == 'matrix') {
+			opts.holder.style('padding', '5px 10px 10px 25px')
+			this.dom.searchDiv = opts.holder
+				.append('div')
+				.attr('data-testid', 'sjpp-genevariant-geneSearchDiv')
+				.style('padding-left', '3px')
+			this.searchGene()
+			return
+		}
 		this.maxNumGenes = this.opts.app.vocabApi.termdbConfig?.maxGeneVariantGeneSetSize || 200 // max # genes allowed
 		opts.holder.style('padding', '5px 10px 10px 25px')
 		this.dom.typeSettingDiv = opts.holder.append('div')
@@ -72,14 +87,22 @@ export class SearchHandler {
 		// get child dt terms
 		getChildTerms(this.term, this.opts.app.vocabApi)
 
-		// collect mutation type terms
-		const mutationTypeTerms = structuredClone(this.term.childTerms)
+		// child terms and mutation types are both origin-agnostic and ordered by data type
+		const mutationTypeTerms: any[] = this.term.childTerms.map((childTerm, childTermIdx) => ({
+			...structuredClone(childTerm),
+			childTermIdx
+		}))
+
 		// add in bi/mono-allelic mutation type, if applicable
 		if (isEligibleForAllelicGroupset(this.term, this.opts.app.vocabApi))
 			/* unlike the child dt terms above, this one spans two dts, so it declares them rather
 			than carrying a single .dt -- the same way its groupset does, see
 			listPredefinedGroupsets() in client/tw/geneVariant.ts. Read by mayShowRememberedQ() */
-			mutationTypeTerms.push({ name: 'Bi/mono-allelic', dts: [dtsnvindel, dtcnv] })
+			mutationTypeTerms.push({
+				name: 'Bi/mono-allelic',
+				dts: [dtsnvindel, dtcnv],
+				childTermIdx: this.term.childTerms.length
+			})
 
 		// kept to name and match the selected mutation type in mayShowRememberedQ()
 		this.mutationTypeTerms = mutationTypeTerms
@@ -108,7 +131,7 @@ export class SearchHandler {
 					}),
 					callback: v => {
 						this.toggleGeneSetRadioDisplay(v)
-						this.updateSampleTypeSelect()
+						this.updateOriginSelect()
 						/* any remembered settings still waiting for a choice were offered against the
 						mutation type selected when the gene was picked -- both their order and their
 						"Continue with ..." option, see mayShowRememberedQ() -- so a changed radio leaves
@@ -145,12 +168,61 @@ export class SearchHandler {
 				})
 			}
 			{
+				this.dom.originSelectRow = table.addRow()
 				this.dom.sampleTypeSelectRow = table.addRow()
-				this.updateSampleTypeSelect()
+				this.updateOriginSelect()
 			}
 		}
 		this.toggleGeneSetRadioDisplay(mutationTypeTermIdx)
 		this.searchGene()
+	}
+
+	updateOriginSelect() {
+		const [td1, td2] = this.dom.originSelectRow
+		td2.selectAll('*').remove()
+		this.queryOrigins = this.getQueryOrigins()
+		this.originSelect = this.renderOriginSelect()
+		if (this.originSelect) {
+			td1.style('display', null).text('Origin')
+			td2.style('display', null).style('padding-left', '10px')
+		} else {
+			td1.style('display', 'none')
+			td2.style('display', 'none')
+		}
+		this.updateSampleTypeSelect()
+	}
+
+	/* the byOrigin{} of the selected mutation type's dt, present only when the dataset
+	splits that dt by origin */
+	getByOrigin() {
+		const mutationType = this.getSelectedMutationType()
+		if (!Number.isInteger(mutationType?.dt)) return
+		return this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[mutationType.dt]?.byOrigin
+	}
+
+	getQueryOrigins(): string[] | undefined {
+		const byOrigin = this.getByOrigin()
+		if (!byOrigin) return
+		const origins = Object.keys(byOrigin)
+		for (const origin of origins) {
+			if (!morigin[origin]) throw new Error(`unknown origin '${origin}'`)
+		}
+		return origins.sort((a, b) => (morigin[a].order ?? Infinity) - (morigin[b].order ?? Infinity))
+	}
+
+	renderOriginSelect() {
+		if (!this.queryOrigins || this.queryOrigins.length <= 1) return
+		const [, td2] = this.dom.originSelectRow
+		const byOrigin = this.getByOrigin()
+		return renderCheckboxSelect(
+			td2,
+			this.queryOrigins.map(origin => ({ value: origin, label: byOrigin[origin].label || origin })),
+			{
+				className: 'sjpp-genesearch-origin-checkboxes',
+				lastCheckedTitle: 'At least one origin must be selected',
+				onChange: () => this.updateSampleTypeSelect()
+			}
+		)
 	}
 
 	updateSampleTypeSelect() {
@@ -181,23 +253,17 @@ export class SearchHandler {
 
 	// get sample types that are present in the selected data type
 	getQuerySampleTypes(): number[] | undefined {
-		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
-		if (!selectedMutationType) return
-		const mutationTypeIdx = Number(selectedMutationType.value)
-		if (!Number.isInteger(mutationTypeIdx)) return
-		const mutationType = this.mutationTypeTerms[mutationTypeIdx]
+		const mutationType = this.getSelectedMutationType()
 		if (!mutationType) return
 		const querySampleTypes: number[] = []
 		if (mutationType.dt) {
-			// mutation type has single dt, and an origin when the dt is split by origin
-			// get available sample types for that dt (and origin)
-			const sampleTypes = this.getDtSampleTypes(mutationType.dt, mutationType.origin)
+			const sampleTypes = this.getDtSampleTypes(mutationType.dt, this.getSelectedOrigins())
 			if (!sampleTypes) return
 			querySampleTypes.push(...sampleTypes)
 		} else if (mutationType.dts) {
 			// mutation type has multiple dts
 			// get intersection of sample types available for those dts
-			const sampleTypeSets = mutationType.dts.map(dt => this.getDtSampleTypes(dt, mutationType.origin))
+			const sampleTypeSets = mutationType.dts.map(dt => this.getDtSampleTypes(dt))
 			if (!sampleTypeSets.length) throw new Error('no sample types available')
 			// a dt that declares no sample types leaves nothing to intersect, so return
 			// undefined for the mutation type, as the single-dt branch above does. an
@@ -219,27 +285,26 @@ export class SearchHandler {
 
 	/* sample types that have samples for one dt. they may be declared directly on the dt,
 	or nested under one or more origins (e.g. somatic and germline each assayed on primary
-	and PDX samples). when the dt is split by origin, only the given origin's sample types
-	are read, as origins may be assayed on different sample types. a sample type is included
-	when its entry has samples. returns undefined when the dt declares no sample types */
-	getDtSampleTypes(dt: number, origin?: string): Set<number> | undefined {
+	and PDX samples). for an origin-split dt, return the union across selected origins.
+	returns undefined when the dt declares no sample types */
+	getDtSampleTypes(dt: number, origins?: string[]): Set<number> | undefined {
 		const dtConfig = this.opts.app.vocabApi.termdbConfig?.assayAvailability?.byDt?.[dt]
 		if (!dtConfig) return
-		let bySampleType: BySampleType | undefined
-		if (dtConfig.bySampleType) bySampleType = dtConfig.bySampleType
+		const bySampleTypes: BySampleType[] = []
+		if (dtConfig.bySampleType) bySampleTypes.push(dtConfig.bySampleType)
 		else if (dtConfig.byOrigin) {
-			/* an origin-split dt is only reached with an origin: a single-dt mutation type carries
-			one (see getChildTerms()), and the multi-dt allelic type is not offered when its dts are
-			split by origin (see isEligibleForAllelicGroupset() in client/tw/geneVariant.ts) */
-			if (!origin) throw new Error(`origin is required for dt ${dt} split by origin`)
-			const o: { bySampleType?: BySampleType } | undefined = dtConfig.byOrigin[origin]
-			if (!o) throw new Error(`unknown origin '${origin}' for dt ${dt}`)
-			bySampleType = o.bySampleType
+			for (const origin of origins || Object.keys(dtConfig.byOrigin)) {
+				const o: { bySampleType?: BySampleType } | undefined = dtConfig.byOrigin[origin]
+				if (!o) throw new Error(`unknown origin '${origin}' for dt ${dt}`)
+				if (o.bySampleType) bySampleTypes.push(o.bySampleType)
+			}
 		}
-		if (!bySampleType) return
+		if (!bySampleTypes.length) return
 		const sampleTypes = new Set<number>()
-		for (const [k, v] of Object.entries(bySampleType)) {
-			if (v.hasSamples) sampleTypes.add(Number(k))
+		for (const bySampleType of bySampleTypes) {
+			for (const [k, v] of Object.entries(bySampleType)) {
+				if (v.hasSamples) sampleTypes.add(Number(k))
+			}
 		}
 		return sampleTypes
 	}
@@ -249,8 +314,8 @@ export class SearchHandler {
 	// example: if sample has cnv amplification in geneA and
 	// cnv deletion in geneB, classification of the sample will
 	// be ambiguous
-	toggleGeneSetRadioDisplay(childTermIdx) {
-		const childTerm = this.term.childTerms[childTermIdx]
+	toggleGeneSetRadioDisplay(mutationTypeIdx) {
+		const childTerm = this.mutationTypeTerms[mutationTypeIdx]
 		const geneSetDiv = this.inputTypeRadio.divs.filter(d => {
 			if (d.value != 'single' && d.value != 'geneset') throw new Error('unexpected input type radio value')
 			return d.value == 'geneset'
@@ -297,6 +362,22 @@ export class SearchHandler {
 		this.dom.searchbox?.node()?.focus()
 	}
 
+	// TODO: support sample type selection here too
+	searchGeneSet() {
+		this.dom.searchDiv.selectAll('*').remove()
+		this.dom.searchDiv.style('margin-top', '0px')
+		this.dom.geneSetEditUI = new GeneSetEditUI({
+			holder: this.dom.searchDiv.append('div'),
+			genome: this.opts.genomeObj,
+			vocabApi: this.opts.app.vocabApi,
+			nameInput: true,
+			maxNumGenes: this.maxNumGenes,
+			callback: async result => await this.selectGeneSet(result)
+		})
+		this.dom.searchbox = this.dom.geneSetEditUI.geneSearch?.searchbox
+		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px').style('margin-top', '-10px')
+	}
+
 	async selectGene(geneSearch) {
 		if (geneSearch.geneSymbol) {
 			const name = geneSearch.geneSymbol
@@ -339,22 +420,6 @@ export class SearchHandler {
 		await this.runCallback()
 	}
 
-	// TODO: support sample type selection here too
-	searchGeneSet() {
-		this.dom.searchDiv.selectAll('*').remove()
-		this.dom.searchDiv.style('margin-top', '0px')
-		this.dom.geneSetEditUI = new GeneSetEditUI({
-			holder: this.dom.searchDiv.append('div'),
-			genome: this.opts.genomeObj,
-			vocabApi: this.opts.app.vocabApi,
-			nameInput: true,
-			maxNumGenes: this.maxNumGenes,
-			callback: async result => await this.selectGeneSet(result)
-		})
-		this.dom.searchbox = this.dom.geneSetEditUI.geneSearch?.searchbox
-		this.dom.searchDiv.select('.sja_genesetinput').style('padding', '0px').style('margin-top', '-10px')
-	}
-
 	async selectGeneSet(result) {
 		const genes = result.geneList.map(v => {
 			if (!v.gene) throw 'gene name not found'
@@ -380,6 +445,10 @@ export class SearchHandler {
 	}
 
 	async runCallback() {
+		if (this.opts.usecase?.target == 'matrix') {
+			await this.callback({ term: this.term, q: this.q })
+			return
+		}
 		// a setting the user built for this gene before is worth offering, and is only known
 		// once the gene is picked, so the selected mutation type is not applied until the user
 		// either picks one of those settings or skips them
@@ -417,11 +486,9 @@ export class SearchHandler {
 		return shown
 	}
 
-	/** clear the remembered settings offered for the gene last picked, and put back any caller
-	message that mayShowRememberedQ() hid while they waited for a choice */
-	clearRememberedQ() {
-		this.dom.reuseDiv.style('display', 'none').selectAll('*').remove()
-		if (this.opts.msg) this.dom.msgDiv.style('display', 'block').text(this.opts.msg)
+	async applyRememberedQ(q) {
+		// copied, since the same entry may be picked again for another plot
+		await this.submit({ ...structuredClone(q), isAtomic: true })
 	}
 
 	/** apply the mutation type that the radios select, which is the default for a new term */
@@ -429,44 +496,88 @@ export class SearchHandler {
 	// function and evaluate whether the submission process can be
 	// more streamlined/centralized
 	async applyMutationType() {
-		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
-		this.q.predefined_groupset_idx = Number(selectedMutationType.value)
+		const mutationType = this.getSelectedMutationType()
+		if (!mutationType) throw new Error('no mutation type selected')
+		this.q.predefined_groupset_idx = mutationType.childTermIdx
 		await this.submit(this.q)
 	}
 
-	mayApplySampleType() {
-		this.term.sampleTypes = this.querySampleTypesByTerms
-			? getSelectedSampleTypesByTerms(this.sampleTypeSelect, this.querySampleTypesByTerms)
-			: getSelectedSampleTypes(this.sampleTypeSelect) || this.querySampleTypes
-		if (this.sampleTypeSelect && !this.term.sampleTypes?.length) {
-			const geneSetEditUI = this.dom.geneSetEditUI
-			if (geneSetEditUI) {
-				// the gene set edit UI's submit button was disabled on
-				// click to prevent repeated submissions, so it must be
-				// re-enabled here since the submission was aborted
-				geneSetEditUI.api.dom.submitBtn.property('disabled', false).text('Submit')
-			}
-			return false
-		}
-		if (this.querySampleTypesByTerms) {
-			this.term.sampleTypeLabel = getSampleTypeLabelByTerms(this.sampleTypeSelect)
-		}
-		return true
-	}
-
-	async applyRememberedQ(q) {
-		// copied, since the same entry may be picked again for another plot
-		await this.submit({ ...structuredClone(q), isAtomic: true })
-	}
-
 	async submit(q) {
-		if (!this.mayApplySampleType()) return
+		if (!this.mayApplyOrigins(q) || !this.mayApplySampleType()) return
 		this.dom.msgDiv.style('display', 'block').text('LOADING ...')
 		// add geneVariant term to each child term
 		addParentTerm(this.term)
 		await this.callback({ term: this.term, q })
 		this.clearRememberedQ()
 		this.dom.msgDiv.style('display', 'none')
+	}
+
+	/* the origin selection seeds the predefined groupset that applyMutationType() picks, and
+	fillGroupsetGroups() stamps it onto that groupset's tvs (see OriginSeedQ in #types).
+	A remembered custom groupset is deliberately not reseeded: each of its tvs already
+	carries the origins it was built with, and its groups may span several mutation types,
+	which the single origin selector here -- bound to the mutation type radio -- cannot
+	describe. */
+	mayApplyOrigins(q: any): boolean {
+		q.origins = this.getSelectedOrigins()
+		q.originLabel = getOriginLabel(q.origins, this.getByOrigin())
+		if (this.originSelect && !q.origins?.length) {
+			// selector rendered, but no origins selected
+			return this.abortSubmit()
+		}
+		return true
+	}
+
+	mayApplySampleType(): boolean {
+		this.term.sampleTypes = getSelectedSampleTypes({
+			sampleTypeSelect: this.sampleTypeSelect,
+			querySampleTypes: this.querySampleTypes,
+			querySampleTypesByTerms: this.querySampleTypesByTerms
+		})
+		this.term.sampleTypeLabel = mayGetSampleTypeLabel({
+			sampleTypeSelect: this.sampleTypeSelect,
+			querySampleTypes: this.querySampleTypes,
+			querySampleTypesByTerms: this.querySampleTypesByTerms,
+			termdbConfig: this.opts.app.vocabApi.termdbConfig
+		})
+		if (this.sampleTypeSelect && !this.term.sampleTypes?.length) {
+			// selector rendered, but no sample types selected
+			return this.abortSubmit()
+		}
+		return true
+	}
+
+	getSelectedOrigins(): string[] | undefined {
+		// a mutation type with no origins has nothing to select
+		if (!this.queryOrigins?.length) return
+		// a single configured origin has no checkboxes to select from (see renderOriginSelect()),
+		// so that one origin is implicitly selected
+		if (!this.originSelect) return this.queryOrigins
+		const selectedOrigins = getSelectedCheckboxValues(this.originSelect)
+		if (!selectedOrigins?.length) window.alert('Please select at least one origin.')
+		return selectedOrigins
+	}
+
+	/** re-enables the gene set edit UI's submit button, which is disabled on click to prevent
+	 * repeated submissions, since the submission is now aborted */
+	abortSubmit(): false {
+		this.dom.geneSetEditUI?.api.dom.submitBtn.property('disabled', false).text('Submit')
+		return false
+	}
+
+	getSelectedMutationType() {
+		const selectedMutationType = this.mutationTypeRadio.inputs.nodes().find(r => r.checked)
+		if (!selectedMutationType) return
+		const mutationTypeIdx = Number(selectedMutationType.value)
+		if (!Number.isInteger(mutationTypeIdx)) return
+		return this.mutationTypeTerms[mutationTypeIdx]
+	}
+
+	/** clear the remembered settings offered for the gene last picked, and put back any caller
+	message that mayShowRememberedQ() hid while they waited for a choice */
+	clearRememberedQ() {
+		this.dom.reuseDiv.style('display', 'none').selectAll('*').remove()
+		if (this.opts.msg) this.dom.msgDiv.style('display', 'block').text(this.opts.msg)
 	}
 }
 
@@ -479,15 +590,6 @@ export function getChildTerms(term, vocabApi: VocabApi) {
 		const query = vocabApi.termdbConfig.queries[t.query]
 		if (!query) continue // dt is not in dataset
 		if (query.dtLst?.length && !query.dtLst.includes(t.dt)) continue
-		const byOrigin = vocabApi.termdbConfig.assayAvailability?.byDt[t.dt]?.byOrigin
-		if (byOrigin) {
-			// dt has origins in dataset
-			if (!t.origin) continue // dt term does not have origin, so skip
-			if (!Object.keys(byOrigin).includes(t.origin)) throw 'unexpected origin of dt term'
-		} else {
-			// dt does not have origins in dataset
-			if (t.origin) continue // dt term has origin, so skip
-		}
 		term.childTerms.push(t)
 	}
 }

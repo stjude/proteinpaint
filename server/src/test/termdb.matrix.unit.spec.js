@@ -1008,34 +1008,44 @@ tape('getData: a request of only a negated samplelst group is rejected', async t
 
 tape('getData: uses generic sample labels for non-root sample types', async t => {
 	await ensureOpenAuth()
-	const data = await getData(
-		{ terms: [geneTw()], filter: emptyFilter(), sampleTypes: [2, 3] },
-		makeNoDbDs({
-			sampleTypes: {
-				2: {
-					name: 'Baseline Bone Marrow CD138pos sample',
-					plural_name: 'Baseline Bone Marrow CD138pos samples',
-					parent_id: 1
-				},
-				3: {
-					name: 'Baseline Peripheral Blood CD138pos sample',
-					plural_name: 'Baseline Peripheral Blood CD138pos samples',
-					parent_id: 1
-				}
+	const ds = makeNoDbDs({
+		sampleTypes: {
+			2: {
+				name: 'Baseline Bone Marrow CD138pos sample',
+				plural_name: 'Baseline Bone Marrow CD138pos samples',
+				parent_id: 1
 			},
-			sampleTypesByTerms: {
-				'samples.collection_event': { Baseline: [2, 3] },
-				'samples.specimen_type': { 'Bone Marrow': [2], 'Peripheral Blood': [3] },
-				'samples.sample_type': { CD138pos: [2, 3] }
+			3: {
+				name: 'Baseline Peripheral Blood CD138pos sample',
+				plural_name: 'Baseline Peripheral Blood CD138pos samples',
+				parent_id: 1
 			}
-		})
-	)
+		},
+		sampleTypesByTerms: {
+			'samples.collection_event': { Baseline: [2, 3] },
+			'samples.specimen_type': { 'Bone Marrow': [2], 'Peripheral Blood': [3] },
+			'samples.sample_type': { CD138pos: [2, 3] }
+		}
+	})
+	const tw = geneTw()
+	tw.term.sampleTypeLabel = ''
+	const data = await getData({ terms: [tw], filter: emptyFilter(), sampleTypes: [2, 3] }, ds)
 
 	t.equal(data.error, undefined, 'no error')
 	t.deepEqual(
 		data.sampleType,
 		{ name: 'sample', plural_name: 'samples' },
-		'non-root sample type labels are already displayed elsewhere'
+		'a term sample type label makes generic labels sufficient for non-root types'
+	)
+
+	const unlabeledData = await getData({ terms: [geneTw()], filter: emptyFilter(), sampleTypes: [2, 3] }, ds)
+	t.deepEqual(
+		unlabeledData.sampleType,
+		{
+			name: 'Baseline Bone Marrow CD138pos sample / Baseline Peripheral Blood CD138pos sample',
+			plural_name: 'Baseline Bone Marrow CD138pos samples / Baseline Peripheral Blood CD138pos samples'
+		},
+		'sample type metadata alone does not replace labels when the term has no sample type label'
 	)
 	t.end()
 })

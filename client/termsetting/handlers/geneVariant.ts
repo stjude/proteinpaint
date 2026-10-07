@@ -5,7 +5,7 @@ import type { TermSetting } from '../TermSetting.ts'
 import { vocabInit } from '#termdb/vocabulary'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getColors } from '#shared/common.js'
-import { getDtsFromGroups } from '#shared/terms.js'
+import { getDtsFromGroups, getGvLabelSuffix } from '#shared/terms.js'
 import { fillGroupsetGroups } from '../../tw/geneVariant'
 import { rgb } from 'd3-color'
 
@@ -38,9 +38,7 @@ export function getHandler(self: TermSetting) {
 			} else {
 				text = 'any variant class'
 			}
-			if (self.term.sampleTypeLabel) {
-				text += ` (${self.term.sampleTypeLabel})`
-			}
+			text += getGvLabelSuffix(q, self.term)
 			return { text }
 		},
 
@@ -161,7 +159,7 @@ async function makeGroupUI(self: TermSetting, div) {
 			/* a groupset only carries groups[] once it has been selected, and this UI can be
 			opened on a q whose index was not the one the term was last filled for, so build
 			on demand rather than assume (see listPredefinedGroupsets() in tw/geneVariant.ts) */
-			await fillGroupsetGroups(self.term, q.predefined_groupset_idx, self.vocabApi as any)
+			await fillGroupsetGroups(self.term, q.predefined_groupset_idx, self.vocabApi as any, q.origins)
 			groupset = groupsetting.lst[q.predefined_groupset_idx]
 		} else {
 			groupset = q.customset
@@ -185,10 +183,16 @@ async function makeGroupUI(self: TermSetting, div) {
 	// (see getDtTermValues() in filter/tvs.dt.js)
 	const vocabApi: any = vocabInit({ vocab: { terms: dtTerms } })
 	// need termdbConfig.queries for cnv tvs (see getDtCnvType() in filter/tvs.js and
-	// fillMenu() in filter/tvs.dtcnv.continuous.js)
+	// fillMenu() in filter/tvs.dtcnv.continuous.js), and .assayAvailability so that a tvs
+	// over an origin-split dt offers its origin selector here (see getTvsByOrigin() in
+	// filter/tvs.dt.js) -- this menu is where mutation types of differing origins are
+	// combined, so it is the one place that selector matters most
 	// not passing complete termdbConfig as presence of .allowedTermTypes will
 	// trigger term type toggles (see init() in termdb/TermTypeSearch.ts)
-	vocabApi.termdbConfig = { queries: self.vocabApi.termdbConfig.queries }
+	vocabApi.termdbConfig = {
+		queries: self.vocabApi.termdbConfig.queries,
+		assayAvailability: self.vocabApi.termdbConfig.assayAvailability
+	}
 	// genome is needed to look up the isoform models of a gene, to chart the breakpoints
 	// of a sv/fusion over (see fillMenu() in filter/tvs.dt.js)
 	vocabApi.vocab.genome = self.vocabApi.vocab?.genome
@@ -340,6 +344,11 @@ function clearGroupset(self) {
 	// the dts of the groupset that was just cleared (see getDtsToQuery() in
 	// server/src/mds3.init.js)
 	delete self.q.dtLst
+	// the seed a predefined groupset stamps onto its tvs (see OriginSeedQ in #types). an
+	// ungrouped term has no tvs and queries every origin, so a seed left behind is dead
+	// state that would come back into effect when a groupset is selected again
+	delete self.q.origins
+	delete self.q.originLabel
 	// hiddenValues of a groupset are keyed by group name, which is meaningless
 	// once the term is back to mutation classes. reset rather than delete, as
 	// consumers may read it without a guard

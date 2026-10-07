@@ -1,10 +1,11 @@
 import { make_radios, renderTable } from '#dom'
 import { Menu } from './menu'
 import { isoformRangeSelect, isoformPairRangeSelect } from './isoformSelect'
+import { renderCheckboxSelect, getSelectedCheckboxValues } from './checkboxSelect'
 import type { GeneModel, BreakpointMarker, ScaleMode } from './types/isoformSelect'
 import type { BaseValue, BreakpointRange, BreakpointEntry, GvQueryRegion } from '#types'
 import { filterInit } from '#filter'
-import { dt2label, dtsnvindel, dtsv, dtfusionrna, mclass } from '#shared/common.js'
+import { dt2label, dtsnvindel, dtsv, dtfusionrna, mclass, morigin } from '#shared/common.js'
 import { matchesGvQueryEntry } from '#shared/terms.js'
 
 // a selectable value: either a mutation class (no .mname) or a
@@ -55,6 +56,8 @@ type Config = {
 	 * for a sv/fusion, and undefined when cleared, so that the caller can tell a cleared
 	 * range from an untouched one */
 	selfBreakpointRange?: BreakpointRange
+	/** the checked origins, present only when arg.byOrigin was supplied */
+	origins?: string[]
 }
 
 type Arg = {
@@ -75,7 +78,38 @@ type Arg = {
 	getGeneModels?: (gene: string) => Promise<GeneModel[]>
 	/** breakpoint range already registered on the term's own gene */
 	selfBreakpointRange?: BreakpointRange
+	/** the origins of the term's dt, when the dataset splits that dt by origin. Rendered
+	 * as checkboxes under the genotype radios and reported back on config.origins */
+	byOrigin?: ByOrigin
+	/** the origins already matched; defaults to all of them */
+	selectedOrigins?: string[]
 	callback: (config: Config) => void
+}
+
+/** the origins a data type is split into, keyed by origin, e.g. somatic/germline. The
+ * dataset's assayAvailability.byDt[dt].byOrigin; only the display label is read off it */
+export type ByOrigin = { [origin: string]: { label?: string } }
+
+// render origin checkboxes of a data type that is split by origin
+export function renderOriginCheckboxes(holder: any, byOrigin: ByOrigin, selected?: string[]) {
+	if (!byOrigin) return
+	const origins = Object.keys(byOrigin).sort((a, b) => (morigin[a].order ?? Infinity) - (morigin[b].order ?? Infinity))
+	if (origins.length < 2) return
+	const div = holder.append('div').attr('data-testid', 'sjpp-variantConfig-origin').style('margin-top', '10px')
+	div.append('div').style('display', 'inline-block').style('margin-right', '5px').style('opacity', 0.7).text('Origin')
+	const options = origins.map(origin => ({ value: origin, label: byOrigin[origin].label || origin }))
+	return renderCheckboxSelect(div.append('div').style('display', 'inline-block'), options, {
+		className: 'sjpp-variantconfig-origin-checkboxes',
+		lastCheckedTitle: 'At least one origin must be selected',
+		selected
+	})
+}
+
+// get selected origins from checkboxes rendered by renderOriginCheckboxes()
+export function getSelectedOrigins(byOrigin?: ByOrigin, originSelect?: any[]): string[] | undefined {
+	if (!byOrigin) return
+	if (!originSelect) return Object.keys(byOrigin)
+	return getSelectedCheckboxValues(originSelect)
 }
 
 /** format a range the way it is shown on the controls and in a pill */
@@ -194,6 +228,9 @@ export function renderVariantConfig(arg: Arg) {
 			applyBtn.property('disabled', value == 'variant' && !values.length)
 		}
 	})
+
+	// origin checkboxes
+	const originSelect = arg.byOrigin ? renderOriginCheckboxes(holder, arg.byOrigin, arg.selectedOrigins) : undefined
 
 	// variants
 	const variantsDiv = holder
@@ -586,6 +623,8 @@ export function renderVariantConfig(arg: Arg) {
 			const selectedGenotype: any = genotypeRadio.inputs.nodes().find(r => r.checked)
 			if (!selectedGenotype) throw 'no genotype selected'
 			const config: Config = { values: [], genotype: selectedGenotype.value }
+			const origins = getSelectedOrigins(arg.byOrigin, originSelect)
+			if (origins) config.origins = origins
 			if (config.genotype == 'variant') {
 				// variant genotype
 				// get selected specific variants (amino acid changes)

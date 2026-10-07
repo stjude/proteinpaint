@@ -351,29 +351,27 @@ test('filterByItem: mname with maf filter', t => {
 	}
 })
 
-test('filterByItem: mname with origin', t => {
+test('filterByItem: mname with tvs origins', t => {
 	t.plan(4)
 	const filter = {
 		type: 'tvs',
 		tvs: {
-			term: { dt: 1, type: 'dtsnvindel', origin: 'somatic' },
+			term: { dt: 1, type: 'dtsnvindel' },
+			origins: ['germline'],
 			values: [{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }],
 			genotype: 'variant',
 			mcount: 'any'
 		}
 	}
 	{
-		const mlst = [{ dt: 1, class: 'M', mname: 'G12D', origin: 'somatic' }]
-		const [pass, tested] = filterByItem(filter, mlst)
-		t.equal(pass, true, 'somatic G12D matches somatic tvs')
-		t.equal(tested, true, 'Sample is tested')
+		const [pass, tested] = filterByItem(filter, [{ dt: 1, class: 'M', mname: 'G12D', origin: 'germline' }])
+		t.equal(pass, true, 'selected germline G12D matches')
+		t.equal(tested, true, 'sample is tested for the selected origin')
 	}
 	{
-		// same mname, but only in germline; sample has no somatic data
-		const mlst = [{ dt: 1, class: 'M', mname: 'G12D', origin: 'germline' }]
-		const [pass, tested] = filterByItem(filter, mlst)
-		t.equal(pass, false, 'germline G12D does not match somatic tvs')
-		t.equal(tested, false, 'Sample is not tested for somatic')
+		const [pass, tested] = filterByItem(filter, [{ dt: 1, class: 'M', mname: 'G12D', origin: 'somatic' }])
+		t.equal(pass, false, 'unselected somatic G12D does not match')
+		t.equal(tested, false, 'sample is not tested for the selected origin')
 	}
 })
 
@@ -1210,7 +1208,8 @@ test('filterByItem: mutation, origin', t => {
 	const filter = {
 		type: 'tvs',
 		tvs: {
-			term: { dt: 1, type: 'dtsnvindel', origin: 'somatic' },
+			term: { dt: 1, type: 'dtsnvindel' },
+			origins: ['somatic'],
 			values: [
 				{ key: 'M', label: 'MISSENSE', value: 'M' },
 				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
@@ -1273,7 +1272,8 @@ test('filterByItem: wildtype, origin', t => {
 	const filter = {
 		type: 'tvs',
 		tvs: {
-			term: { dt: 1, type: 'dtsnvindel', origin: 'somatic' },
+			term: { dt: 1, type: 'dtsnvindel' },
+			origins: ['somatic'],
 			values: [],
 			genotype: 'wt'
 		}
@@ -1713,7 +1713,8 @@ test('filterByTvsLst: nested tvslst', t => {
 			{
 				type: 'tvs',
 				tvs: {
-					term: { dt: 1, type: 'dtsnvindel', origin: 'somatic' },
+					term: { dt: 1, type: 'dtsnvindel' },
+					origins: ['somatic'],
 					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
 					genotype: 'variant',
 					mcount: 'any'
@@ -1722,7 +1723,8 @@ test('filterByTvsLst: nested tvslst', t => {
 			{
 				type: 'tvs',
 				tvs: {
-					term: { dt: 1, type: 'dtsnvindel', origin: 'germline' },
+					term: { dt: 1, type: 'dtsnvindel' },
+					origins: ['germline'],
 					values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
 					genotype: 'variant',
 					mcount: 'any'
@@ -3130,3 +3132,244 @@ test('mayGetGeneVariantData: requests read depth from the snvindel getter only w
 	data = await ds.mayGetGeneVariantData({ $id, term, q: { type: 'values' } }, { addReadDepth: true })
 	t.equal(calls.at(-1), true, 'q.addReadDepth requests read depth without a groupset')
 })
+
+test('mayGetGeneVariantData: ungrouped term returns every origin', async t => {
+	t.plan(3)
+	const ds = {
+		genomename: 'hg38',
+		cohort: { termdb: {} },
+		assayAvailability: {
+			byDt: {
+				1: {
+					byOrigin: {
+						somatic: { yesSamples: new Set(), noSamples: new Set() },
+						germline: { yesSamples: new Set(), noSamples: new Set() }
+					}
+				}
+			}
+		},
+		queries: {
+			snvindel: {
+				byisoform: {
+					get: async arg => [
+						{
+							dt: 1,
+							class: 'M',
+							mname: 'G12D',
+							isoform: arg.isoform,
+							pos: 25245350,
+							samples: [
+								{ sample_id: 'somatic-case', formatK2v: { origin: 'somatic' } },
+								{ sample_id: 'germline-case', formatK2v: { origin: 'germline' } }
+							]
+						}
+					]
+				}
+			}
+		}
+	}
+	mayAdd_mayGetGeneVariantData(ds, null)
+
+	const gene = {
+		kind: 'gene',
+		id: 'KRAS',
+		gene: 'KRAS',
+		name: 'KRAS',
+		type: 'geneVariant',
+		isoform: 'ENST00000256078'
+	}
+	const term = {
+		type: 'geneVariant',
+		name: 'KRAS',
+		genes: [gene],
+		groupsetting: { disabled: false }
+	}
+	/* an ungrouped term has no tvs to carry an origin selection, so it is not narrowed by
+	origin at all. A groupset narrows per tvs instead, see filterByItem() */
+	const data = await ds.mayGetGeneVariantData({ $id: 'kras', term, q: { type: 'values' } }, {})
+
+	t.equal(data.has('somatic-case'), true, 'should keep somatic values')
+	t.equal(data.has('germline-case'), true, 'should keep germline values')
+	t.equal(data.get('germline-case').kras.values[0].origin, 'germline', 'should preserve the origin annotation')
+})
+
+/* one groupset whose groups differ by origin, which is what per-tvs origins exist for: the
+selection cannot be a single term-wide list, since each group needs its own */
+test('mayGetGeneVariantData: groupset groups filter by their own tvs origins', async t => {
+	t.plan(4)
+	const ds = getOriginSplitDs()
+	mayAdd_mayGetGeneVariantData(ds, null)
+
+	const dtTerm = { id: 'snvindel', type: 'dtsnvindel', dt: 1, name: 'SNV/indel' }
+	const group = (name, origins) => ({
+		name,
+		type: 'filter',
+		filter: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: dtTerm,
+						origins,
+						values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+						genotype: 'variant',
+						mcount: 'any'
+					}
+				}
+			]
+		}
+	})
+	const term = { type: 'geneVariant', name: 'KRAS', genes: [getKrasGene()], groupsetting: { disabled: false } }
+	const q = {
+		type: 'custom-groupset',
+		customset: { groups: [group('germline grp', ['germline']), group('somatic grp', ['somatic'])] }
+	}
+	const data = await ds.mayGetGeneVariantData({ $id: 'kras', term, q }, {})
+
+	t.equal(data.get('germline-case').kras.key, 'germline grp', 'germline sample lands in the germline group')
+	t.equal(data.get('somatic-case').kras.key, 'somatic grp', 'somatic sample lands in the somatic group')
+	t.equal(
+		data.get('germline-case').kras.values.every(v => v.origin == 'germline'),
+		true,
+		'germline group keeps only germline values'
+	)
+	t.equal(
+		data.get('somatic-case').kras.values.every(v => v.origin == 'somatic'),
+		true,
+		'somatic group keeps only somatic values'
+	)
+})
+
+/* an unknown origin is not rejected: it simply matches no value, so the group comes back
+empty. The dataset config is not reachable where the origin is applied, see filterByItem() */
+test('mayGetGeneVariantData: an unknown tvs origin matches no sample', async t => {
+	t.plan(1)
+	const ds = getOriginSplitDs()
+	mayAdd_mayGetGeneVariantData(ds, null)
+
+	const term = { type: 'geneVariant', name: 'KRAS', genes: [getKrasGene()], groupsetting: { disabled: false } }
+	const data = await ds.mayGetGeneVariantData({ $id: 'kras', term, q: getOriginGroupsetQ(['relapse']) }, {})
+	t.equal(data.size, 0, 'should assign no sample to the group')
+})
+
+/* filtering by origin on a dt whose values carry none would silently drop every value, so
+it fails where the origin is applied instead */
+test('filterByItem: rejects a tvs origin on a dt that is not origin-split', t => {
+	t.plan(9)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			origins: ['germline'],
+			values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+			genotype: 'variant',
+			mcount: 'any'
+		}
+	}
+	for (const value of [
+		{ dt: 1, class: 'M', mname: 'G12D' },
+		{ dt: 1, class: 'M', origin: null },
+		{ dt: 1, class: 'M', origin: '' },
+		{ dt: 1, class: 'WT' },
+		{ dt: 1, class: 'Blank' }
+	]) {
+		t.throws(
+			() => filterByItem(filter, [value]),
+			/dt 1 values carry no origin to filter by/,
+			'should name the dt when a value has no origin'
+		)
+	}
+	t.deepEqual(filterByItem(filter, []), [false, false], 'an empty sample remains untested')
+	t.deepEqual(
+		filterByItem(filter, [{ dt: 4, class: 'CNV_amp' }]),
+		[false, false],
+		'values of another dt do not require an origin'
+	)
+	const value = { dt: 1, class: 'M', mname: 'G12D' }
+	t.deepEqual(
+		filterByItem({ ...filter, tvs: { ...filter.tvs, origins: [] } }, [value]),
+		[true, true],
+		'an empty origin selection does not require an origin'
+	)
+	const { origins, ...tvs } = filter.tvs
+	t.deepEqual(
+		filterByItem({ ...filter, tvs }, [value]),
+		[true, true],
+		'an unrestricted filter does not require an origin'
+	)
+})
+
+// a custom groupset of one group, filtering the snvindel dt by the given origins
+function getOriginGroupsetQ(origins) {
+	return {
+		type: 'custom-groupset',
+		customset: {
+			groups: [
+				{
+					name: 'grp',
+					type: 'filter',
+					filter: {
+						type: 'tvslst',
+						in: true,
+						join: '',
+						lst: [
+							{
+								type: 'tvs',
+								tvs: {
+									term: { id: 'snvindel', type: 'dtsnvindel', dt: 1, name: 'SNV/indel' },
+									origins,
+									values: [{ key: 'M', label: 'MISSENSE', value: 'M' }],
+									genotype: 'variant'
+								}
+							}
+						]
+					}
+				}
+			]
+		}
+	}
+}
+
+function getKrasGene() {
+	return { kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant', isoform: 'ENST00000256078' }
+}
+
+// a ds whose snvindel dt is split into somatic and germline, with one sample of each
+function getOriginSplitDs() {
+	return {
+		genomename: 'hg38',
+		cohort: { termdb: {} },
+		assayAvailability: {
+			byDt: {
+				1: {
+					byOrigin: {
+						somatic: { yesSamples: new Set(), noSamples: new Set() },
+						germline: { yesSamples: new Set(), noSamples: new Set() }
+					}
+				}
+			}
+		},
+		queries: {
+			snvindel: {
+				byisoform: {
+					get: async arg => [
+						{
+							dt: 1,
+							class: 'M',
+							mname: 'G12D',
+							isoform: arg.isoform,
+							pos: 25245350,
+							samples: [
+								{ sample_id: 'somatic-case', formatK2v: { origin: 'somatic' } },
+								{ sample_id: 'germline-case', formatK2v: { origin: 'germline' } }
+							]
+						}
+					]
+				}
+			}
+		}
+	}
+}

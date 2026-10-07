@@ -118,7 +118,7 @@ export class NumericBase extends TwBase {
 				PseudobulkBase.fill(tw.term)
 				if (!tw.q.mode) tw.q.mode = 'continuous'
 				break
-			
+
 			case tt.SINGLECELL_NUMERIC_VALUE:
 				SingleCellNumericValueBase.fill(tw.term)
 				if (!tw.q.mode) tw.q.mode = 'continuous'
@@ -218,7 +218,9 @@ export class NumericBase extends TwBase {
 	}
 
 	getTitleText() {
-		return this.term.name
+		let text = this.term.name
+		if (this.term.type == 'geneExpression' && this.term.sampleTypeLabel) text += ` (${this.term.sampleTypeLabel})`
+		return text
 	}
 }
 

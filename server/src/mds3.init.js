@@ -3582,8 +3582,11 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) 
 
 	const dts = []
 	if (_dt.byOrigin) {
+		/* every origin of the dt is annotated, rather than only a selected subset: the
+		selection is per tvs now, and each status entry records the origin it is for, so
+		filterByItem() narrows to the origins of the tvs it is evaluating. Annotating only
+		some would hide the "not tested" status a tvs of another origin needs to see */
 		for (const o in _dt.byOrigin) {
-			if (tw.term.origin && tw.term.origin != o) continue
 			const dt = _dt.byOrigin[o]
 			if (dt.bySampleType) {
 				// this origin is further split by sample type; each leaf carries its own yes/no sample sets
@@ -3693,7 +3696,10 @@ export function filterByItem(filter, mlst, values) {
 	// get all tested mutations for the dt (and origin) of the filter
 	const mlst_tested = mlst.filter(m => {
 		if (tvs.term.dt != m.dt) return false
-		if (tvs.term.origin && tvs.term.origin != m.origin) return false
+		if (tvs.origins?.length) {
+			if (!m.origin) throw `dt ${tvs.term.dt} values carry no origin to filter by`
+			if (!tvs.origins.includes(m.origin)) return false
+		}
 		if (m.class == mclass['Blank'].key && !tvs.includeNotTested) return false
 		return true
 	})
