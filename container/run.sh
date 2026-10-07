@@ -71,11 +71,35 @@ CONTAPP=/home/root/pp/app/active
 # such as serverconfig.json and dataset/, are accessible even when not readable by others.
 # Docker does not support this option; there, the bind-mounted files must be readable by others.
 USERNS=""
+# the tmpfs option that gives the mount to the container app user: podman 4 rejects the uid= and gid= options
+APPUSER_TMPFS_OPT="uid=1000,gid=1000"
+# with --read-only, podman otherwise adds a writable /var/tmp and /run without noexec
+READ_ONLY_TMPFS=""
 if docker --version 2>/dev/null | grep -qi podman; then
 	USERNS="--userns=keep-id:uid=1000,gid=1000"
+	APPUSER_TMPFS_OPT="U"
+	READ_ONLY_TMPFS="--read-only-tmpfs=false"
 fi
 
-docker run -d $USERNS \
+# The container options that the image's runtime settings check expects, otherwise envHelpers.mjs exits before it
+# starts the server, see envHelpers.mjs in the image. These match the releaseRollout .container units, so that a local
+# run has the same restrictions as the test and prod deployments:
+# - a read-only root filesystem, no capabilities, and no privilege gain through setuid binaries
+# - tmpfs mounts where files cannot be executed, for the writable dirs: /tmp, the app user HOME for the python and
+#   R caches, /dev/shm for python multiprocessing, and the server cache dir, which a local run does not need to keep
+# - the cache dir is owned by root with mode 1733, like in the image, so that the app user may create and use the
+#   server's cache subdir with a known name but may not list the entries; a tmpfs owned by the app user, as with the
+#   uid/gid or U options, could always be listed by that user
+CONTAINER_OPTS="--read-only $READ_ONLY_TMPFS \
+	--cap-drop=all \
+	--security-opt=no-new-privileges \
+	--tmpfs=/tmp:rw,noexec,nosuid,nodev \
+	--tmpfs=/home/app:rw,noexec,nosuid,nodev,mode=0700,$APPUSER_TMPFS_OPT \
+	--tmpfs=/dev/shm:rw,noexec,nosuid,nodev,size=64m \
+	--tmpfs=/home/root/pp/cache:rw,noexec,nosuid,nodev,mode=1733 \
+	-e PP_RUNTIME_CHECK=strict"
+
+docker run -d $USERNS $CONTAINER_OPTS \
 	--name $CONTAINER_NAME \
 	--network pp_network \
 	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
