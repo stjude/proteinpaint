@@ -10,6 +10,7 @@ import { parentCorsMessage, childCorsMessage } from '#common/embedder-helpers'
 import { sayerror } from '#dom'
 import { copyMerge } from '#rx'
 import { mayLaunchGdcPlotFromUrlparam } from '../gdc/launch.ts'
+import { getSavedStateRefusal } from '../mass/sessionForm.ts'
 /*
 ********************** EXPORTED
 parse()
@@ -209,6 +210,8 @@ upon error, throw err message as a string
 		if (d.error) throw d.error
 		if (!d.text) throw 'data.text missing'
 		const state = JSON.parse(d.text)
+		const refusal = getSavedStateRefusal(state)
+		if (refusal) throw refusal
 
 		if (features.overrideEmbedderHostInMassSession) {
 			// on local dev, set this to override "embedder{}" setting in session file
@@ -258,6 +261,8 @@ upon error, throw err message as a string
 			res = await client.dofetch3(`/massSession`, fetchOpts)
 			if (res.error) throw res.error
 		}
+		const refusal = getSavedStateRefusal(res.state)
+		if (refusal) throw refusal
 		const embedder = res.state?.embedder
 		if (embedder?.origin && embedder.origin != window.location.origin) {
 			parentCorsMessage(res)
