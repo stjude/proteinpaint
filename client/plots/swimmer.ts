@@ -894,6 +894,8 @@ export class SwimmerRenderer {
 		const holder = this.dom.plotDiv
 			.append('div')
 			.attr('data-testid', 'sjpp-swimmer-time-references')
+			.attr('role', 'radiogroup')
+			.attr('aria-label', 'Time from')
 			.style('margin-bottom', '8px')
 		holder.append('span').style('margin-right', '8px').style('opacity', 0.8).text('Time from:')
 		make_radios({
