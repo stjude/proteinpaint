@@ -1581,6 +1581,32 @@ export function getSamplelstTWFromFilters(groups, name = 'groups') {
 	}
 }
 
+/* The filter of a new group of the Groups tab that is defined by conditions, as the filter prompt
+of that tab gives it: the part of the group's filter that is its own and can be edited, which
+rebaseGroupFilter() joins to the filter of the app. `filters` are joined with "and". */
+export function getGroupFilterOfConditions(filters) {
+	const filter = filterJoin(filters.filter(f => f?.lst?.length))
+	filter.tag = 'filterUiRoot'
+	return filter
+}
+
+/* The entry, for the lst[] of a filter, that selects the samples of one group of a geneVariant tw
+with a group setting. A sample is in the first group whose filter it passes, so the entry is the
+filter of the group without the samples that pass the filter of a group before it. Undefined when
+the tw has no such group. */
+export function getGvGroupFilterEntry(tw, key) {
+	const groups = (
+		tw.q?.type == 'custom-groupset'
+			? tw.q.customset
+			: tw.q?.type == 'predefined-groupset'
+			? tw.term.groupsetting?.lst?.[tw.q.predefined_groupset_idx]
+			: undefined
+	)?.groups
+	const i = groups?.findIndex(g => g.name == key) ?? -1
+	if (i == -1 || !groups[i].filter) return
+	return filterJoin([groups[i].filter, ...groups.slice(0, i).map(g => negateFilter(g.filter))])
+}
+
 /* The entry, for the lst[] of a filter, that selects the samples of one category of a samplelst tw:
 the filter of its group when the group is defined by one, else a tvs that lists its samples. */
 export function getGroupFilterEntry(tw, key) {
