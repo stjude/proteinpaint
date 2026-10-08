@@ -331,6 +331,9 @@ export async function validate_query_swimmer(ds: any) {
 			const size = (v as any).size
 			if (size !== undefined && !(typeof size == 'number' && size > 0))
 				throw `swimmer.${key}['${k}'].size must be a positive number`
+			const clipBeforeOrigin = (v as any).clipBeforeOrigin
+			if (clipBeforeOrigin !== undefined && typeof clipBeforeOrigin != 'boolean')
+				throw `swimmer.${key}['${k}'].clipBeforeOrigin must be true or false`
 			const st = (v as any).sampleTerms
 			if (st !== undefined) {
 				if (!Array.isArray(st) || st.some(id => typeof id != 'string'))
