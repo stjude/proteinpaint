@@ -525,6 +525,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		q2.swimmer = JSON.parse(
 			JSON.stringify({
 				timeLabel: q.swimmer.timeLabel,
+				timeReferences: q.swimmer.timeReferences,
 				categories: q.swimmer.categories,
 				events: q.swimmer.events,
 				terminalEvent: q.swimmer.terminalEvent,
