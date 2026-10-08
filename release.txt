@@ -1,1 +1,2 @@
-
+Features:
+- dnaMethylation excludeSampleNamesMatching accepts a list of substrings, to withhold individual samples from differential methylation

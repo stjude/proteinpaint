@@ -2183,9 +2183,9 @@ export async function validate_query_dnaMethylation(ds, genome) {
 			single gate every DM path already filters through (buildGroupValues, the preAnalysis
 			counts, and the sample list handed to diffMeth.R), so shrinking it here covers them
 			all without a per-route check. Loud on purpose: a pattern that matches nothing would
-			otherwise be a silent no-op, which is the failure this exists to prevent. */
-			const excludePattern = qe.excludeSampleNamesMatching
-			if (excludePattern) {
+			otherwise be a silent no-op, which is the failure this exists to prevent. One pattern
+			or a list of them, each reported on its own. */
+			for (const excludePattern of [qe.excludeSampleNamesMatching || []].flat()) {
 				const excluded = withholdSampleNames(qe.allSampleSet, excludePattern)
 				if (excluded) {
 					console.log(

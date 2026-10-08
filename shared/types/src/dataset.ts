@@ -1613,7 +1613,12 @@ type Mds3Queries = {
 		 * probe sets, so a sample is missing whole probes for reasons unrelated to its biology,
 		 * and imputing is the standard remedy. Under WGBS a missing value only means that
 		 * sample-region fell below the depth threshold, which is much rarer and closer to
-		 * random; imputing there adds no information and is slightly anticonservative. */
+		 * random; imputing there adds no information and is slightly anticonservative.
+		 *
+		 * 'wgbs' means per-CpG methylated and unmethylated read counts from whole-genome
+		 * sequencing, whatever chemistry converted the DNA. Enzymatic conversion (EM-seq)
+		 * gives the same readout as bisulfite, an unmethylated C read as T, so an EM-seq
+		 * dataset sets 'wgbs' too and nothing downstream tells the two apart. */
 		platform?: 'array' | 'wgbs'
 		/** promoter-by-sample matrix, values are average M-value.
 		 * Required for differential methylation (termdb/diffMeth). */
@@ -1632,8 +1637,11 @@ type Mds3Queries = {
 			 * not comparable (e.g. a different tissue compartment), since silently pooling
 			 * them makes the compartment difference show up as the contrast. The h5 itself
 			 * is untouched; only the set DM draws from shrinks. The startup log reports how
-			 * many samples matched, and warns if none did. */
-			excludeSampleNamesMatching?: string
+			 * many samples matched, and warns if none did.
+			 *
+			 * A list withholds every sample matching any of its substrings, each reported on
+			 * its own. Use it to name individual samples, e.g. libraries that failed QC. */
+			excludeSampleNamesMatching?: string | string[]
 		}
 		/** Element-class map: one matrix per regulatory-element class. Each entry is a
 		 * matrix built by build_element_matrix.py and converted by
@@ -1660,7 +1668,7 @@ type Mds3Queries = {
 				/** label for the element-type picker (e.g. 'eQTM blocks (55,336)') */
 				label?: string
 				/** see promoter.excludeSampleNamesMatching */
-				excludeSampleNamesMatching?: string
+				excludeSampleNamesMatching?: string | string[]
 				/** Restrict a mixed-class matrix to one element class, so several entries can be
 				 * served from ONE h5 rather than one file each. That is what makes cCRE
 				 * promoter-like (PLS) and the enhancer classes free to offer: their rows already

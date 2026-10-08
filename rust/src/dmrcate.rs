@@ -247,6 +247,8 @@ the value is a log ratio of the methylated and unmethylated read counts with hal
 each side. The half read is what removes the clamp. A cell with 0 of 5 methylated reads and one
 with 0 of 200 are both "beta = 0" and collapsed to a single M-value before; they are now -3.46 and
 -8.65, which is the difference between weak and strong evidence that the site is unmethylated.
+Nothing here depends on bisulfite: counts from enzymatic conversion (EM-seq) are the same readout
+and take the same path.
 
 The second return is that observation's TECHNICAL variance -- how much the read sampling alone
 could have moved it -- which is (d+1)/((m+1/2)(u+1/2)) by the delta method, converted to the log2
