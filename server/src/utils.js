@@ -998,6 +998,12 @@ export function spawnTool(bin, args, opts) {
 	return spawn(bin, args, opts)
 }
 
+// upper limits of a region's pixel width, the sum of the widths and the number of regions, which size
+// arrays and bins on the server; the regions of one request share a screen, so their widths add up to about its width
+const maxRglstWidth = 20000
+const maxRglstTotalWidth = 50000
+const maxRglstLength = 1000
+
 export function validateRglst(q, genome) {
 	if (typeof q.rglst == 'string') {
 		try {
@@ -1008,6 +1014,8 @@ export function validateRglst(q, genome) {
 	}
 	if (!Array.isArray(q.rglst)) throw 'q.rglst[] not array'
 	if (q.rglst.length == 0) throw 'q.rglst[] blank array'
+	if (q.rglst.length > maxRglstLength) throw 'q.rglst[] too many regions'
+	let totalWidth = 0
 	for (const r of q.rglst) {
 		if (typeof r != 'object') throw 'element of q.rglst[] not object'
 		if (typeof r.chr != 'string') throw 'q.rglst[].chr not string'
@@ -1023,6 +1031,12 @@ export function validateRglst(q, genome) {
 		if (r.stop < 0) throw 'q.rglst[].stop<0'
 		if (c && r.stop > c.len) throw 'q.rglst[].stop out of bound'
 		if (r.stop <= r.start) throw 'q.rglst[].stop < start'
+		if (r.width != null) {
+			if (!Number.isFinite(r.width)) throw 'q.rglst[].width not number'
+			if (r.width < 0 || r.width > maxRglstWidth) throw 'q.rglst[].width out of bound'
+			totalWidth += r.width
+			if (totalWidth > maxRglstTotalWidth) throw 'q.rglst[].width total out of bound'
+		}
 	}
 }
 

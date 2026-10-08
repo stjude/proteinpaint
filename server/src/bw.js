@@ -24,6 +24,25 @@ export default function (genomes) {
 	}
 }
 
+// upper limits of the size of the image, which is allocated in memory
+const maxWidth = 20000
+const maxBarHeight = 2000
+const maxPixelRatio = 5
+// upper limit of the image area in pixels, after applying the pixel ratio, since the dimensions multiply
+const maxPixels = 50000000
+
+export function validateCanvasSize(q) {
+	if (!Number.isFinite(q.barheight)) throw 'invalid barheight'
+	if (q.barheight < 0 || q.barheight > maxBarHeight) throw 'barheight out of bound'
+	if (!Number.isFinite(q.width)) throw 'invalid width'
+	if (q.width < 0 || q.width > maxWidth) throw 'width out of bound'
+	// may be missing, the image is then drawn at the actual size
+	if (q.devicePixelRatio === undefined) q.devicePixelRatio = 1
+	if (!Number.isFinite(q.devicePixelRatio)) throw 'invalid devicePixelRatio'
+	if (q.devicePixelRatio <= 0 || q.devicePixelRatio > maxPixelRatio) throw 'devicePixelRatio out of bound'
+	if (q.width * q.devicePixelRatio * q.barheight * q.devicePixelRatio > maxPixels) throw 'image size out of bound'
+}
+
 async function handle_tkbigwig(req, res, genomes) {
 	const gn = genomes[req.query.genome]
 	if (!gn) throw 'invalid genome'
@@ -60,16 +79,19 @@ async function handle_tkbigwig(req, res, genomes) {
 		if (!Number.isFinite(pa.fixminv)) throw 'invalid minv'
 		if (!Number.isFinite(pa.fixmaxv)) throw 'invalid maxv'
 	}
-	if (!Number.isFinite(req.query.barheight)) throw 'invalid barheight'
+	validateCanvasSize(req.query)
 	if (!Number.isFinite(req.query.regionspace)) throw 'invalid regionspace'
-	if (!Number.isFinite(req.query.width)) throw 'invalid width'
 	if (req.query.dotplotfactor) {
-		if (!Number.isInteger(req.query.dotplotfactor)) throw 'dotplotfactor value should be positive integer'
+		const f = req.query.dotplotfactor
+		if (!Number.isInteger(f) || f < 1 || f > 100) throw 'dotplotfactor value should be an integer from 1 to 100'
 	}
 
 	if (pa.isbedgraph) {
 		return await getBedgraph(req, res, file, pa)
 	}
+
+	// check the total before reading any region
+	validateBinTotal(req.query)
 
 	const t = new Date()
 	for (const r of req.query.rglst) {
@@ -371,13 +393,32 @@ function makeyscale() {
 	return yscale
 }
 
+// upper limit of the number of bins requested for all regions of a request
+const maxBins = 200000
+
+function getNBins(q, r) {
+	return Math.ceil(Math.min(r.stop - r.start, r.width) * (q.dotplotfactor || 1))
+}
+
+export function validateBinTotal(q) {
+	let totalBins = 0
+	for (const r of q.rglst) {
+		const n = getNBins(q, r)
+		// the summary worker requires a positive integer
+		if (!Number.isInteger(n) || n < 1) throw 'invalid number of bins for a region'
+		totalBins += n
+	}
+	if (totalBins > maxBins) throw 'too many bins requested'
+}
+
 async function run_bigwigsummary(req, r, file) {
+	const n_bins = getNBins(req.query, r)
 	const input_json = {
 		bw_file: file,
 		chromosome: r.chr,
 		start: r.start,
 		end: r.stop,
-		n_bins: Math.ceil(Math.min(r.stop - r.start, r.width) * (req.query.dotplotfactor || 1))
+		n_bins
 	}
 	const python_output = await run_python('bigWigSummary.py', JSON.stringify(input_json))
 	const bins = typeof python_output === 'string' ? JSON.parse(python_output) : []
