@@ -857,10 +857,16 @@ async function do_query(req, genomeobj) {
 	return result
 }
 
+// upper limit of the length of the client-supplied req.query.bedItems list
+const maxBedItems = 1000
+
 async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 	if (req.query.bedItems) {
 		// client supplies list of "bed" items to render. no file to read
 		if (!Array.isArray(req.query.bedItems)) throw 'bedItems not array'
+		// reject a very long list, instead of processing only part of it
+		if (req.query.bedItems.length > maxBedItems)
+			throw `bedItems has ${req.query.bedItems.length} items, it must have ${maxBedItems} or fewer`
 		const lst = []
 		for (const j of req.query.bedItems) {
 			if (!j) continue
