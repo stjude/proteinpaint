@@ -535,39 +535,36 @@ tape('/dslogout: rejects a request matching only a disabled configuration entry'
 	test.end()
 })
 
-tape(
-	'/dslogout: rejects any origin for a dataset with only a generic wildcard configuration entry',
-	async function (test) {
-		test.timeoutAfter(500)
-		test.plan(1)
+tape('credential matching regression case 1', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(1)
 
-		const creds: any = {
-			[dslabel]: {
-				'/**': {
-					'*': makeBasicCred()
-				}
+	const creds: any = {
+		[dslabel]: {
+			'/**': {
+				'*': makeBasicCred()
 			}
 		}
-		const auth = new Auth(creds, {}, {}, { port: 3000 })
-		const sessionId = 'test-logout-wildcard-only-session-id'
-		auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
-
-		const app = makeApp(auth)
-		const req = {
-			query: { dslabel, embedder: 'anything' },
-			path: '/dslogout',
-			headers: { origin: 'https://some-other-origin.example' },
-			cookies: { 'x-ds-access-token': sessionId }
-		}
-		const res = makeMockRes()
-
-		await app.routes['/dslogout'].post(req, res)
-		test.equal(res.statusCode, 401, 'should set 401')
-		test.end()
 	}
-)
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	const sessionId = 'test-logout-wildcard-only-session-id'
+	auth.sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
 
-tape('/dslogout: rejects a literal wildcard value sent as the origin', async function (test) {
+	const app = makeApp(auth)
+	const req = {
+		query: { dslabel, embedder: 'anything' },
+		path: '/dslogout',
+		headers: { origin: 'https://some-other-origin.example' },
+		cookies: { 'x-ds-access-token': sessionId }
+	}
+	const res = makeMockRes()
+
+	await app.routes['/dslogout'].post(req, res)
+	test.equal(res.statusCode, 401, 'should set 401')
+	test.end()
+})
+
+tape('credential matching regression case 2', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
 
