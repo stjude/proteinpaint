@@ -720,14 +720,19 @@ class SampleView extends PlotBase implements RxComponent {
 		if (!samples.length) return
 		const { fetchSwimmerLanes, SwimmerRenderer, getDefaultSwimmerSettings } = await import('./swimmer.ts')
 		let lanes: any[] = []
+		// the time reference of the lanes, for the axis label
+		let timeReference: string | undefined
 		try {
 			// no user filter: the samples are already chosen; the route still applies access control
 			const result = await fetchSwimmerLanes({
 				genome: state.vocab.genome,
 				dslabel: state.vocab.dslabel,
-				samples: samples.map(s => s.sampleName)
+				samples: samples.map(s => s.sampleName),
+				// set when opened from a swimmer plot, to show the same time reference; unset: the ds default
+				timeReference: state.config.swimmerTimeReference
 			})
 			lanes = result.lanes
+			timeReference = result.timeReference
 		} catch (e) {
 			console.error('swimmer request failed:', e)
 		}
@@ -743,7 +748,12 @@ class SampleView extends PlotBase implements RxComponent {
 			tip: new Menu({ padding: '5px' })
 		})
 		this.swimmerRenderer = renderer
-		renderer.update({ swimmer: state.termdbConfig.queries.swimmer, settings: getDefaultSwimmerSettings(), lanes })
+		renderer.update({
+			swimmer: state.termdbConfig.queries.swimmer,
+			settings: getDefaultSwimmerSettings(),
+			lanes,
+			timeReference
+		})
 	}
 
 	destroy() {
