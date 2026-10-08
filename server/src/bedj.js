@@ -859,8 +859,7 @@ async function do_query(req, genomeobj) {
 
 const maxBedItems = 1000
 
-// exported for testing
-export async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
+async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 	if (req.query.bedItems) {
 		// client supplies list of "bed" items to render. no file to read
 		if (!Array.isArray(req.query.bedItems)) throw 'bedItems not array'
