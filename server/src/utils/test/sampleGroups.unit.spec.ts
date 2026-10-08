@@ -50,7 +50,7 @@ resolveGroups returns groups that list their samples as they are
 resolveGroups lists the samples that the filter of a group selects
 resolveGroups resolves the filter groups of a call one at a time
 resolveGroups refuses more filter groups than its limit
-resolveGroups takes a filter with a non-dictionary term only from a method that applies the whole filter
+resolveGroups gives a filter with a non-dictionary term to the method of the dataset
 getData holds the samplelst terms of a request to the limit of filter groups together
 withResolvedGroups gives a request the samples of its groups, for a cache key by samples
 resolveGroupPair takes each group as a list or as a filter
@@ -620,48 +620,23 @@ tape('resolveGroups refuses more filter groups than its limit', async t => {
 	t.end()
 })
 
-tape(
-	'resolveGroups takes a filter with a non-dictionary term only from a method that applies the whole filter',
-	async t => {
-		const group = () => [
-			{
-				name: 'a',
-				filter: {
-					type: 'tvslst',
-					in: true,
-					join: '',
-					lst: [{ type: 'tvs', tvs: { term: { type: 'geneExpression', gene: 'TP53' }, ranges: [{ start: 1 }] } }]
-				}
+tape('resolveGroups gives a filter with a non-dictionary term to the method of the dataset', async t => {
+	const group = [
+		{
+			name: 'a',
+			filter: {
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [{ type: 'tvs', tvs: { term: { type: 'geneExpression', gene: 'TP53' }, ranges: [{ start: 1 }] } }]
 			}
-		]
-		const { ds, calls } = countingDs()
-		try {
-			await resolveGroups(group(), {}, ds)
-			t.fail('expected a throw for a filter that the method may not apply in whole')
-		} catch (e: any) {
-			t.match(
-				e.message,
-				/does not resolve a sample group/,
-				'refused for a method that does not say it applies the whole filter'
-			)
 		}
-		t.equal(calls.total, 0, 'and the method is not called')
-		t.equal(
-			(await resolveGroups(filterGroups(1), {}, ds))[0].values.length,
-			2,
-			'a filter of dictionary terms is resolved'
-		)
-
-		const declared = countingDs()
-		;(declared.ds.cohort.termdb.filterSamples as any).appliesWholeFilter = true
-		t.equal(
-			(await resolveGroups(group(), {}, declared.ds))[0].values.length,
-			2,
-			'resolved by a method that says it applies the whole filter'
-		)
-		t.end()
-	}
-)
+	]
+	const { ds, calls } = countingDs()
+	t.equal((await resolveGroups(group, {}, ds))[0].values.length, 2, 'the group gets the samples that the method gives')
+	t.equal(calls.total, 1, 'from one call of the method')
+	t.end()
+})
 
 tape('getData holds the samplelst terms of a request to the limit of filter groups together', async t => {
 	const tdb = await ensureSharedTdb()

@@ -1,5 +1,5 @@
 import type { DERequest, DiffMethRequest, DiffSpliceRequest } from '#types'
-import { getData, maySetMapParent2Children, hasFilterTermsUnsupportedByFilterSamples } from '#src/termdb.matrix.js'
+import { getData, maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { filterSampleNamesByAccess, get_samples } from '#src/termdb.sql.js'
 import { authApi } from '#src/auth.js'
@@ -221,13 +221,8 @@ async function filterToSampleIds(fq: any, ds: any, mapParent2Children?: boolean)
 	}
 	const filterSamples = ds.cohort?.termdb?.filterSamples
 	if (typeof filterSamples == 'function') {
-		/* the dataset's own method. it may leave some kinds of term out of what it resolves (see
-		hasFilterTermsUnsupportedByFilterSamples()), and the samples of a filter with such a term
-		would then be more than the filter selects. a method that resolves every term of a filter, or
-		refuses the filter, says so with appliesWholeFilter: a group may then be defined by gene
-		expression or by a mutation */
-		if (!filterSamples.appliesWholeFilter && hasFilterTermsUnsupportedByFilterSamples(fq.filter))
-			throw new Error('this dataset does not resolve a sample group that is defined with this kind of variable')
+		/* the dataset's own method, as the getsamplelist query uses it. a method may leave some kinds
+		of term out of what it resolves, see hasFilterTermsUnsupportedByFilterSamples() in termdb.matrix.ts */
 		return [...((await filterSamples(fq, ds, true)) ?? [])]
 	}
 	throw new Error('no method available to get the samples of a group')

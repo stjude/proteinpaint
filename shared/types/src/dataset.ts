@@ -2139,12 +2139,7 @@ export type Termdb = {
 	/** filter samples by supplied filter(s). When no filter is supplied, returns undefined
 	 * unless returnAllSamples is true, in which case it returns the full set
 	 * of cohort sample ids (for callers like grin2 that must enumerate the cohort explicitly). */
-	filterSamples?: ((q: any, ds: any, returnAllSamples?: boolean) => Promise<Set<any> | undefined>) & {
-		/** set to true on a method that resolves every term of a filter, or refuses the filter. Without
-		 * it, a filter with a term type that such a method may leave out (gene variant, gene expression
-		 * and other non-dictionary types, survival) is not used to resolve the samples of a group */
-		appliesWholeFilter?: boolean
-	}
+	filterSamples?: (q: any, ds: any, returnAllSamples?: boolean) => Promise<Set<any> | undefined>
 	converSampleIds?: boolean
 	alwaysShowBranchTerms?: boolean
 	minimumSampleAllowed4filter?: number
