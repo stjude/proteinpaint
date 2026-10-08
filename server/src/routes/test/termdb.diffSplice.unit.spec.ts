@@ -98,7 +98,7 @@ tape('resolveDsSampleGroups lists the samples of a group that is defined by a fi
 	)
 	t.deepEqual(
 		out.alerts,
-		['Common samples found between both groups: 1 samples'],
+		['Common samples found between both groups: 1 sample'],
 		'the number of shared samples, for filter groups'
 	)
 
@@ -114,8 +114,24 @@ tape('resolveDsSampleGroups lists the samples of a group that is defined by a fi
 	)
 	t.deepEqual(
 		out.alerts,
-		['Common samples found between both groups: 1 samples'],
+		['Common samples found between both groups: 1 sample'],
 		'and for groups that list their samples'
+	)
+
+	out = await resolveDsSampleGroups(
+		req([
+			{ name: 'a', in: true, values: [{ sampleId: 1 }, { sampleId: 2 }, { sampleId: 3 }] },
+			{ name: 'c', in: true, values: [{ sampleId: 2 }, { sampleId: 3 }] }
+		]),
+		all,
+		ds,
+		[],
+		[]
+	)
+	t.deepEqual(
+		out.alerts,
+		['Common samples found between both groups: 2 samples'],
+		'and in the plural for more than one shared sample'
 	)
 	t.end()
 })
