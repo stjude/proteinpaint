@@ -1,2 +1,2 @@
 Feature:
-- support switching among different time origin on swimmer plot
+- support switching among different time origins on the swimmer plot
