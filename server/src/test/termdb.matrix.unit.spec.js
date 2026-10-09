@@ -1343,3 +1343,42 @@ tape('mayMapChildren2Root: keeps one object of member values for a numeric termC
 	t.ok(Math.abs(data.samples[1].frac.value - 0.3) < 1e-9, 'a fraction mode collection is averaged as a number')
 	t.end()
 })
+
+tape('getData: mapChildren2Root averages each member of a custom numeric termCollection', async t => {
+	await ensureOpenAuth()
+	const tdb = await init('termdb.test.ts')
+	server_init_db_queries(tdb.ds)
+	// samples 10 and 14 are the children of root 102
+	const values = { ISO1: { 10: 1, 14: 3 }, ISO2: { 10: 4 } }
+	const origQueries = tdb.ds.queries
+	tdb.ds.queries = {
+		...origQueries,
+		isoformExpression: {
+			// a custom collection is queried as one expanded member term at a time, keyed by its $id
+			get: async args => ({ term2sample2value: new Map([[args.terms[0].$id, values[args.terms[0].term.id]]]) })
+		}
+	}
+	const tw = {
+		$id: 'customTc',
+		type: 'TermCollectionTWCont',
+		term: {
+			type: 'termCollection',
+			name: 'custom',
+			memberType: 'numeric',
+			isCustom: true,
+			termlst: ['ISO1', 'ISO2'].map(id => ({ id, name: id, type: 'isoformExpression', isoform: id }))
+		},
+		q: { mode: 'continuous', type: 'values', lst: [] }
+	}
+	try {
+		const data = await getData({ terms: [tw], mapChildren2Root: true }, tdb.ds)
+		t.notOk(data.error, 'no error')
+		t.deepEqual(Object.keys(data.samples), ['102'], 'the children are mapped onto their root')
+		const d = data.samples[102].customTc
+		t.equal(d.key, 102, 'the key is the root id')
+		t.deepEqual({ ...d.value }, { ISO1: 2, ISO2: 4 }, 'each member is the mean over the children that have a value')
+	} finally {
+		tdb.ds.queries = origQueries
+	}
+	t.end()
+})

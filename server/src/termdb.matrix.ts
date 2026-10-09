@@ -123,7 +123,7 @@ export async function getData(q, ds, mapParent2Children?: boolean): Promise<any>
 		const data = await getSampleData(q, ds)
 		reconstituteCustomTermCollection(data, tcMappings)
 		resolveTermCollectionFractions(data, originalTerms)
-		mayMapChildren2Root(data, q, ds)
+		mayMapChildren2Root(data, { ...q, terms: originalTerms }, ds)
 
 		checkAccessToSampleData(data, ds, q)
 
