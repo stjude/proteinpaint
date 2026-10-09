@@ -5,7 +5,7 @@ import {
 	getCategoryGroupsetting,
 	getGeneVariantTw,
 	getGenesetMutTw,
-	getCategoricalTermcollectionTw, 
+	getCategoricalTermcollectionTw,
 	getScctTw,
 	getAgeCollectionFractionTw,
 	getIsoformExpCollectionFractionTw
@@ -2345,6 +2345,102 @@ tape('minimum sample size', test => {
 		test.equal(errDiv.style('display'), 'none', 'should have a hidden red error div')
 		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
+	}
+})
+
+tape('minimum sample size: logged-in user with access to all configured datasets', async test => {
+	test.timeoutAfter(5000)
+	const dslabel = 'ProtectedTest'
+
+	// same request as getJwt() in public/static/js/login.js, which cannot be imported since it is a
+	// classic script that uses relative urls and would require mutating the shared window.fetch;
+	// the /demoToken route only issues a token to a request with a matching referer, see
+	// serverconfig.dsCredentials.ProtectedTest.termdb['*'].demoToken.referers, which includes
+	// the test page origin since a cross-origin request only has the origin in its referer header
+	const role = 'user'
+	const host = window['testHost'] || 'http://localhost:3000'
+	const res = await fetch(`${host}/demoToken`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ genome: 'hg38-test', dslabel, role })
+	}).then(r => r.json())
+	const jwt = res.fakeTokensByRole?.[role]
+	test.ok(jwt, 'should get a demo jwt for the user role')
+
+	// an async tape callback ends the test when its promise resolves, so wait for the barchart callback
+	let resolveDone
+	const done = new Promise(resolve => (resolveDone = resolve))
+
+	// not using helpers.getRunPp(), since it JSON-copies the argument which would drop the
+	// getDatasetAccessToken() function, and launchmass() only uses the root-level argument option
+	helpers.runproteinpaint({
+		host,
+		noheader: 1,
+		nobox: true,
+		norecover: true,
+		debug: 1,
+		getDatasetAccessToken: () => jwt,
+		mass: {
+			debounceInterval: 0,
+			// same filter as in the 'minimum sample size' test, which has less than minSize (10) samples
+			state: {
+				vocab: { dslabel, genome: 'hg38-test' },
+				termfilter: {
+					filter: {
+						type: 'tvslst',
+						join: 'and',
+						lst: [
+							{
+								type: 'tvs',
+								tvs: {
+									term: termjson.agedx,
+									ranges: [{ start: 1, startinclusive: true, stop: 3, stopinclusive: true }]
+								}
+							},
+							{
+								type: 'tvs',
+								tvs: {
+									term: termjson.sex,
+									values: [{ key: '1' }]
+								}
+							}
+						]
+					}
+				},
+				nav: {
+					activeTab: 1
+				},
+				plots: [
+					{
+						chartType: 'barchart',
+						term: {
+							term: termjson['diaggrp']
+						}
+					}
+				]
+			},
+			barchart: {
+				callbacks: {
+					'postRender.test': runTests,
+					error: runTests
+				}
+			},
+			debug: 1
+		}
+	})
+	await done
+
+	async function runTests(barchart) {
+		barchart.on('postRender.test', null).on('error', null)
+		const barDiv = barchart.Inner.dom.barDiv
+		const errDiv = barchart.Inner.dom.errdiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.true(numBars > 0, 'should show bars for a logged-in user, despite having less than minSize samples')
+		test.equal(errDiv.text(), '', 'should not display a minimum sample size error message')
+		test.equal(errDiv.style('display'), 'none', 'should have a hidden red error div')
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+		resolveDone()
 	}
 })
 

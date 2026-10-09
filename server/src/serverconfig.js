@@ -672,7 +672,7 @@ function mayUpdateTestDatasets(datasets, serverconfig) {
 				demoToken: {
 					secret: '...', // pragma: allowlist secret
 					roles: ['user'],
-					referers: ['/demo-login.html']
+					referers: ['/demo-login.html', '/testrun.html', '/puppet.html', 'localhost:6789']
 				}
 			}
 		}
