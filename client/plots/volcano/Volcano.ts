@@ -13,7 +13,7 @@ import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
 import { GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION, DMR_SCAN_ELEMENT_TYPE } from '#types'
-import { uiLabel } from '#shared'
+import { uiLabel, formatElapsedTime } from '#shared'
 
 /* Below this many samples in the smaller group, the wilcoxon p-values are worth a caveat.
 rust/src/stats_functions.rs only runs the exact test when both groups are under 50 AND no value is
@@ -133,18 +133,27 @@ export class Volcano extends PlotBase implements RxComponent {
 		if (config.chartType != this.type && config.childType != this.type) return
 
 		const settings = config.settings.volcano
+		let showWait, waitTimer
 		try {
-			/* A genome scan is ~45 seconds of server work with nothing on the wire until it finishes;
+			/* A genome scan is about a minute of server work with nothing on the wire until it finishes;
 			a bare "Loading..." is indistinguishable from a hung request. */
-			this.dom.wait.text(
-				settings.elementType == DMR_SCAN_ELEMENT_TYPE
-					? 'Scanning for DMRs... a whole-genome scan takes about 45 seconds the first time, and is cached after that.'
-					: 'Loading...'
-			)
+			const isScan = settings.elementType == DMR_SCAN_ELEMENT_TYPE
+			const waitText = isScan
+				? 'Scanning for DMRs... a whole-genome scan takes about 1 minute the first time, and is cached after that.'
+				: 'Loading...'
+			this.dom.wait.text(waitText)
 			//Only show Loading for data requests that take longer than 500ms
-			const showWait = setTimeout(() => {
+			showWait = setTimeout(() => {
 				this.dom.wait.style('display', 'block')
 			}, 500)
+			//a methylation analysis counts the time in its message, so a long wait is seen to be still running
+			const start = Date.now()
+			if (this.termType == DNA_METHYLATION)
+				waitTimer = setInterval(() => {
+					//whole seconds, so that the minutes form never reads "1m 60s"
+					const ms = Math.round((Date.now() - start) / 1000) * 1000
+					this.dom.wait.text(`${waitText} ${formatElapsedTime(ms, 0)} elapsed.`)
+				}, 1000)
 
 			/** Fetch data */
 			const response = await this.model.getData(config, settings)
@@ -154,8 +163,6 @@ export class Volcano extends PlotBase implements RxComponent {
 				if (response?.code === 'CACHE_BUSY') {
 					if (window.confirm(msg)) this.main()
 				} else sayerror(this.dom.error, msg)
-				clearTimeout(showWait)
-				this.dom.wait.style('display', 'none')
 				return
 			}
 
@@ -201,13 +208,14 @@ export class Volcano extends PlotBase implements RxComponent {
 				)
 			}
 			if (notes.length) this.dom.error.text(notes.join(' ')).style('color', '#555')
-
-			clearTimeout(showWait)
-			this.dom.wait.style('display', 'none')
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)
 			throw e
+		} finally {
+			clearTimeout(showWait)
+			clearInterval(waitTimer)
+			this.dom.wait.style('display', 'none')
 		}
 	}
 }
