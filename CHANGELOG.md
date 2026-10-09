@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- support switching among different time origins on the swimmer plot
+
 
 ## 2.218.0
 
