@@ -232,19 +232,16 @@ if (process.env.PP_CREDS_HANDOFF_FILE) {
 	for (const [name, value] of Object.entries(creds)) process.env[name] = value
 }
 
-if (serverconfig.dsCredentials) {
+if ('dsCredentials' in serverconfig) {
 	// also detects a dsCredentials entry in PP_SERVERCONFIG_OVERRIDES, which is applied above as if in serverconfig.json
-	// TODO: throw instead of warning, after deployed serverconfig.json files have been migrated
-	console.warn(
-		`WARNING: serverconfig.dsCredentials is deprecated and will not be supported in a future release. ` +
-			`Set process.env.PP_CREDS to the credentials JSON instead, or set PP_CREDS_FILE to a credentials file path ` +
-			`and start the server with container/envHelpers.mjs` +
-			(process.env.PP_CREDS ? `. This serverconfig.dsCredentials is ignored, since PP_CREDS is set.` : '')
+	throw (
+		`serverconfig.dsCredentials is not supported. Set process.env.PP_CREDS to the credentials JSON instead, ` +
+		`or set PP_CREDS_FILE to a credentials file path and start the server with container/envHelpers.mjs.`
 	)
 }
 
 if (process.env.PP_CREDS) {
-	// used instead of a dsCredentials file path, so that the server process does not need
+	// the only way to set dsCredentials, so that the server process does not need
 	// read access to a credentials file that a path traversal bug could expose;
 	// see container/envHelpers.mjs for how to set this env variable from a file
 	try {
@@ -255,13 +252,6 @@ if (process.env.PP_CREDS) {
 	}
 	// not inherited by spawned child processes, and not exposed by any code that reads process.env later
 	delete process.env.PP_CREDS
-} else if (typeof serverconfig.dsCredentials == 'string') {
-	// a credentials file path is no longer read here, see container/envHelpers.mjs for how to use PP_CREDS_FILE instead
-	throw (
-		`serverconfig.dsCredentials as a file path is no longer supported. ` +
-		`Set PP_CREDS_FILE to the file path and start the server with container/envHelpers.mjs, ` +
-		`or set process.env.PP_CREDS to the credentials JSON.`
-	)
 }
 
 if (serverconfig.debugmode) {
