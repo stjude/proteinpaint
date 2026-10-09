@@ -98,7 +98,7 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials, ge
 	mayReshapeDsCredentials(creds)
 	const key = 'secrets' // to prevent a detect-secrets hook issue
 	if (typeof creds[key] == 'string') {
-		throw `serverconfig {dsCredentials: {${key}: <string>}} has been deprecated. Use {dsCredentials: <abs filepath string>} instead.`
+		throw `serverconfig {dsCredentials: {${key}: <string>}} has been deprecated. Use a PP_CREDS_FILE credentials json file, or a PP_CREDS json string, instead.`
 	}
 
 	// track which domains are allowed to embed proteinpaint with credentials,
@@ -146,7 +146,7 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials, ge
 				if (typeof cred == 'string')
 					throw (
 						`serverconfig {dsCredentials[dslabel][serverRoute][embedderHost]: <string>} has been deprecated. ` +
-						`Instead, use {dsCredentials: <abs filepath string>} where the filepath points to a pre-built json file.`
+						`Instead, use a PP_CREDS_FILE credentials json file, or a PP_CREDS json string.`
 					)
 				// copy the server route pattern to easily obtain it from within the cred
 				if (cred.type == 'basic') {
