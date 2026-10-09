@@ -8,6 +8,8 @@
 	Each server runs in a child process, with its own generated serverconfig.json in a temporary working
 	directory, so that:
 	- the test-specific config (for example, dsCredentials and basepath) is isolated from the dev/CI serverconfig
+	- a dsCredentials option is passed to the child as process.env.PP_CREDS, not in the generated serverconfig.json,
+	  the same as a deployed server, since serverconfig.dsCredentials is deprecated
 	- the shared authApi, that is assigned once per process by app.ts, is not shared with other tests
 
 	Usage:
@@ -63,7 +65,8 @@ function getBaseConfig() {
 	}
 }
 
-export async function startTestServer(overrides: any = {}, opts: { timeout?: number } = {}): Promise<TestServer> {
+export async function startTestServer(_overrides: any = {}, opts: { timeout?: number } = {}): Promise<TestServer> {
+	const { dsCredentials, ...overrides } = _overrides
 	const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-test-server-'))
 	const port = await getFreePort()
 	const cachedir = path.join(workdir, 'cache')
@@ -74,7 +77,7 @@ export async function startTestServer(overrides: any = {}, opts: { timeout?: num
 	// reuse the tsx loader flags of the current process, if any, so that the child can import .ts files
 	const child = spawn(process.execPath, [...process.execArgv, path.join(serverDir, 'test/testServer.launch.ts')], {
 		cwd: workdir,
-		env: getChildEnv(),
+		env: getChildEnv(dsCredentials),
 		stdio: ['ignore', 'pipe', 'pipe']
 	})
 
@@ -122,12 +125,14 @@ export async function startTestServer(overrides: any = {}, opts: { timeout?: num
 
 // the caller's PP_* env values must not reach the child: for example, PP_MODE=container* always
 // replaces the port and data paths in serverconfig.js, and PP_PORT may replace a missing port,
-// so that the child would not listen on the generated port that this helper waits for
-function getChildEnv() {
+// so that the child would not listen on the generated port that this helper waits for;
+// PP_CREDS is then set only from the dsCredentials option
+function getChildEnv(dsCredentials?: any) {
 	const env = { ...process.env }
 	for (const key of Object.keys(env)) {
 		if (key.startsWith('PP_')) delete env[key]
 	}
+	if (dsCredentials) env.PP_CREDS = JSON.stringify(dsCredentials)
 	return env
 }
 

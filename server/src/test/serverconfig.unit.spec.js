@@ -47,6 +47,70 @@ tape('process.env.PP_CREDS: invalid JSON throws a message without the credential
 })
 
 /*
+	serverconfig.dsCredentials is set with PP_SERVERCONFIG_OVERRIDES, which is applied as if in serverconfig.json,
+	so that these tests do not need to modify the test serverconfig.json
+*/
+tape('serverconfig.dsCredentials: logs a deprecation warning, and is still used', async test => {
+	const creds = { zzCredsTest: { '*': { '*': { type: 'basic', password: 'test-only' } } } } // pragma: allowlist secret
+	const { warnings, restore } = captureWarnings()
+	process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({ dsCredentials: creds })
+	try {
+		const { default: config } = await import('../serverconfig.js?ds_credentials=deprecated')
+		test.deepEqual(config.dsCredentials.zzCredsTest, creds.zzCredsTest, 'should still set dsCredentials')
+		const deprecations = warnings.filter(w => w.includes('serverconfig.dsCredentials is deprecated'))
+		test.equal(deprecations.length, 1, 'should log a deprecation warning')
+		test.equal(deprecations[0].includes('is ignored'), false, 'should not say it is ignored when PP_CREDS is not set')
+		test.equal(deprecations[0].includes('test-only'), false, 'should not include any of the credentials content')
+	} finally {
+		restore()
+		delete process.env.PP_SERVERCONFIG_OVERRIDES
+	}
+	test.end()
+})
+
+tape('serverconfig.dsCredentials: the deprecation warning says it is ignored when PP_CREDS is set', async test => {
+	const creds = { zzCredsTest: { '*': { '*': { type: 'basic', password: 'test-only' } } } } // pragma: allowlist secret
+	const envCreds = { zzEnvCredsTest: creds.zzCredsTest }
+	const { warnings, restore } = captureWarnings()
+	process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({ dsCredentials: creds })
+	process.env.PP_CREDS = JSON.stringify(envCreds)
+	try {
+		const { default: config } = await import('../serverconfig.js?ds_credentials=ignored')
+		test.equal(config.dsCredentials.zzCredsTest, undefined, 'should not use serverconfig.dsCredentials')
+		test.deepEqual(config.dsCredentials.zzEnvCredsTest, envCreds.zzEnvCredsTest, 'should use PP_CREDS')
+		const deprecations = warnings.filter(w => w.includes('serverconfig.dsCredentials is deprecated'))
+		test.equal(deprecations.length, 1, 'should log a deprecation warning')
+		test.equal(deprecations[0].includes('is ignored, since PP_CREDS is set'), true, 'should say it is ignored')
+	} finally {
+		restore()
+		delete process.env.PP_SERVERCONFIG_OVERRIDES
+		delete process.env.PP_CREDS
+	}
+	test.end()
+})
+
+tape('serverconfig.dsCredentials: no deprecation warning when only PP_CREDS is set', async test => {
+	const { warnings, restore } = captureWarnings()
+	process.env.PP_CREDS = JSON.stringify({ zzCredsTest: { '*': { '*': { type: 'forbidden' } } } })
+	try {
+		await import('../serverconfig.js?ds_credentials=env-only')
+		const deprecations = warnings.filter(w => w.includes('serverconfig.dsCredentials is deprecated'))
+		test.equal(deprecations.length, 0, 'should not log a deprecation warning')
+	} finally {
+		restore()
+		delete process.env.PP_CREDS
+	}
+	test.end()
+})
+
+function captureWarnings() {
+	const warnings = []
+	const warn = console.warn
+	console.warn = (...args) => warnings.push(args.join(' '))
+	return { warnings, restore: () => (console.warn = warn) }
+}
+
+/*
 	process.env.PP_CREDS_HANDOFF_FILE is a private temp file from container/envHelpers.mjs
 */
 function writeHandoffFile(content) {

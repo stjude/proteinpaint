@@ -1,1 +1,2 @@
-
+General:
+- serverconfig.dsCredentials, as an object or as a credentials file path in serverconfig.json, is deprecated and logs a warning at server startup

@@ -232,6 +232,17 @@ if (process.env.PP_CREDS_HANDOFF_FILE) {
 	for (const [name, value] of Object.entries(creds)) process.env[name] = value
 }
 
+if (serverconfig.dsCredentials) {
+	// also detects a dsCredentials entry in PP_SERVERCONFIG_OVERRIDES, which is applied above as if in serverconfig.json
+	// TODO: throw instead of warning, after deployed serverconfig.json files have been migrated
+	console.warn(
+		`WARNING: serverconfig.dsCredentials is deprecated and will not be supported in a future release. ` +
+			`Set process.env.PP_CREDS to the credentials JSON instead, or set PP_CREDS_FILE to a credentials file path ` +
+			`and start the server with container/envHelpers.mjs` +
+			(process.env.PP_CREDS ? `. This serverconfig.dsCredentials is ignored, since PP_CREDS is set.` : '')
+	)
+}
+
 if (process.env.PP_CREDS) {
 	// preferred over a dsCredentials file path, so that the server process does not need
 	// read access to a credentials file that a path traversal bug could expose;
