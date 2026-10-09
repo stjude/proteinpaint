@@ -25,7 +25,8 @@ import {
 	SSGSEA,
 	PROTEOME_ABUNDANCE,
 	PSEUDOBULK,
-	JUNCTION
+	JUNCTION,
+	TERM_COLLECTION
 } from '#types'
 import { annotateSingleCellTerm, hydrateMetaResultCellRows } from './singleCell/matrixData.ts'
 import { get_bin_label, compute_bins, assignBinColors } from '#shared/termdb.bins.js'
@@ -1494,6 +1495,7 @@ when q.mapChildren2Root is true, move the annotations of each sample onto its ro
 when several children of a root are annotated for the same term:
 - geneVariant: values[] of the children are combined
 - numeric: the mean of the children's values is used
+- numeric termCollection: the mean of each member's values is used
 - otherwise: distinct values are kept as .values[]
 */
 export function mayMapChildren2Root(data, q, ds) {
@@ -1522,7 +1524,7 @@ export function mayMapChildren2Root(data, q, ds) {
 		for (const [k, lst] of annos) {
 			// defineProperty for the same reason as in getSampleData(): k may be a dataset-supplied key
 			Object.defineProperty(sampleEntry, k, {
-				value: mergeChildAnnotations(lst, twBy$id.get(k), data.refs.byTermId[k]),
+				value: mergeChildAnnotations(lst, twBy$id.get(k), data.refs.byTermId[k], rootId),
 				enumerable: true,
 				configurable: true,
 				writable: true
@@ -1537,10 +1539,12 @@ export function mayMapChildren2Root(data, q, ds) {
 	if (rootSampleType) data.sampleType = rootSampleType
 }
 
-function mergeChildAnnotations(lst: any[], tw: any, termRef: any) {
+function mergeChildAnnotations(lst: any[], tw: any, termRef: any, rootId: number) {
+	// test the collection before the lst.length == 1 return below, which would keep the sample id as key instead of the root id
+	if (isMemberValuesCollection(tw)) return mergeTermCollectionValues(lst, rootId)
 	if (lst.length == 1) return lst[0]
 	if (tw?.term?.type == GENE_VARIANT) return mergeGeneVariantAnnotations(lst, tw)
-	// a key without a tw, e.g. a gene of a pseudobulk term, is numeric when all its values are
+	// some data keys have no matching tw, e.g. each gene of a pseudobulk term; treat such a key as numeric if all its values are numbers
 	if (tw ? isNumericTw(tw) : lst.every(a => typeof a.value == 'number')) {
 		const values = tw?.term?.values
 		const computable = lst.filter(
@@ -1559,6 +1563,32 @@ function mergeChildAnnotations(lst: any[], tw: any, termRef: any) {
 		if (!distinct.some(d => d.key === v.key && d.value === v.value)) distinct.push(v)
 	}
 	return distinct.length == 1 ? distinct[0] : { values: distinct }
+}
+
+/* numeric termCollection whose value is {memberId: number} rather than a number (not fraction mode) */
+function isMemberValuesCollection(tw: any) {
+	return tw?.term?.type == TERM_COLLECTION && tw.term.memberType == 'numeric' && tw.type != 'TermCollectionTWFraction'
+}
+
+/* merge the member values of all children into one {memberId: number} object.
+each member gets the average of its values in the children that have one;
+a member that no child has a value for is left out */
+function mergeTermCollectionValues(lst: any[], rootId: number) {
+	// null-prototype: member ids may come from a client-supplied termlst, see reconstituteCustomTermCollection()
+	const sums = Object.create(null)
+	const counts = Object.create(null)
+	for (const a of lst) {
+		if (!a.value || typeof a.value != 'object') continue
+		for (const [id, v] of Object.entries(a.value)) {
+			// not Number(v), which would count a null as 0
+			if (typeof v != 'number' || !Number.isFinite(v)) continue
+			sums[id] = (sums[id] || 0) + v
+			counts[id] = (counts[id] || 0) + 1
+		}
+	}
+	const value = Object.create(null)
+	for (const id in sums) value[id] = sums[id] / counts[id]
+	return { key: rootId, value }
 }
 
 function mergeGeneVariantAnnotations(lst: any[], tw: any) {

@@ -1303,3 +1303,43 @@ tape('getData: mapChildren2Root returns one entry per root sample', async t => {
 	t.equal(byRoot.sampleType.name, 'patient', 'the sample type is the root type')
 	t.end()
 })
+
+tape('mayMapChildren2Root: keeps one object of member values for a numeric termCollection', t => {
+	// samples 11 and 12 are children of root 1, sample 21 of root 2
+	const root = { 11: 1, 12: 1, 21: 2 }
+	const ds = {
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: {
+					1: { name: 'patient', plural_name: 'patients', parent_id: null },
+					2: { name: 'sample', plural_name: 'samples', parent_id: 1 }
+				},
+				q: { id2rootSampleId: id => root[id] ?? Number(id), id2sampleRefs: id => ({ label: 'p' + id }) }
+			}
+		}
+	}
+	const term = { id: 'sigs', type: 'termCollection', memberType: 'numeric' }
+	const tws = [
+		{ $id: 'cont', type: 'TermCollectionTWCont', term, q: { mode: 'continuous' } },
+		{ $id: 'frac', type: 'TermCollectionTWFraction', term, q: { mode: 'continuous' } }
+	]
+	const data = {
+		samples: {
+			11: { sample: 11, cont: { key: 11, value: { A: 1, B: 2, C: null } }, frac: { key: 0.2, value: 0.2 } },
+			12: { sample: 12, cont: { key: 12, value: { A: 3 } }, frac: { key: 0.4, value: 0.4 } },
+			21: { sample: 21, cont: { key: 21, value: { A: 5 } } }
+		},
+		refs: { byTermId: {}, bySampleId: {} }
+	}
+	mayMapChildren2Root(data, { terms: tws, mapChildren2Root: true }, ds)
+	t.deepEqual(
+		{ ...data.samples[1].cont, value: { ...data.samples[1].cont.value } },
+		{ key: 1, value: { A: 2, B: 2 } },
+		'each member is the mean over the children that have a value for it, a null value is left out'
+	)
+	t.equal(data.samples[2].cont.key, 2, 'a root with one child is keyed by the root id')
+	t.deepEqual({ ...data.samples[2].cont.value }, { A: 5 }, 'a root with one child keeps its member values')
+	t.ok(Math.abs(data.samples[1].frac.value - 0.3) < 1e-9, 'a fraction mode collection is averaged as a number')
+	t.end()
+})
