@@ -9,7 +9,7 @@
 	directory, so that:
 	- the test-specific config (for example, dsCredentials and basepath) is isolated from the dev/CI serverconfig
 	- a dsCredentials option is passed to the child as process.env.PP_CREDS, not in the generated serverconfig.json,
-	  the same as a deployed server, since serverconfig.dsCredentials is deprecated
+	  the same as a deployed server, since serverconfig.dsCredentials is not supported
 	- the shared authApi, that is assigned once per process by app.ts, is not shared with other tests
 
 	Usage:

@@ -15,14 +15,11 @@ The supported ways to set them are:
    The server process itself does not need read access to the file. See the comments at the top of
    `container/envHelpers.mjs`.
 
-**Deprecated:** setting `dsCredentials` as an object in `serverconfig.json` still works but logs a warning at
-startup, and will not be supported in a future release. This also applies to a `dsCredentials` entry in
-`PP_SERVERCONFIG_OVERRIDES`. When `PP_CREDS` is set, a `serverconfig.json` value is ignored.
+**Not supported:** a `dsCredentials` entry in `serverconfig.json`, as an object or as a credentials file path,
+stops the server at startup, even when `PP_CREDS` is set. This also applies to a `dsCredentials` entry in
+`PP_SERVERCONFIG_OVERRIDES`.
 
-**No longer supported:** setting `dsCredentials` to a credentials file path in `serverconfig.json` throws at
-startup, unless `PP_CREDS` is set. Use `PP_CREDS_FILE` instead.
-
-These are not deployment options, and are not deprecated:
+These are not deployment options, and are still supported:
 
 - In `debugmode`, a `ProtectedTest` entry is added for test datasets, see `mayUpdateTestDatasets()` in
   `../serverconfig.js`.
