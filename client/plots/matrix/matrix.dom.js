@@ -3,6 +3,7 @@ import { select } from 'd3-selection'
 
 export function setMatrixDom(opts) {
 	const holder = opts.controls ? opts.holder : opts.holder.append('div')
+	holder.attr('data-testid', 'sjpp-matrix-holder')
 	holder.style('position', 'relative')
 	const controls = this.opts.controls || holder.append('div')
 	const errorDiv = holder.append('div')
