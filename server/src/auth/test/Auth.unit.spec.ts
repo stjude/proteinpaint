@@ -667,7 +667,14 @@ tape('getJwtPayload: without dsnames, requires the dslabel in a non-empty payloa
 	}
 	for (const [datasets, label] of [
 		[['other'], 'datasets that do not list the dslabel'],
-		[dslabel, 'a non-array datasets value']
+		[[{ id: dslabel }], 'non-string datasets entries'],
+		[dslabel, 'a non-array datasets value'],
+		['', 'an empty string datasets value'],
+		[{}, 'an object datasets value'],
+		[{ id: dslabel }, 'an object datasets value with the dslabel'],
+		[5, 'a number datasets value'],
+		[true, 'a boolean datasets value'],
+		[null, 'a null datasets value']
 	] as [any, string][]) {
 		test.deepEqual(
 			getResult(datasets),

@@ -394,8 +394,13 @@ export class Auth {
 		} else {
 			// some dslabels do not specify dsnames[] array in the serverconfig.dsCredentials[dslabel],
 			// and in that case the jwt payload access is applied to the full dataset cohort instead of a subset/subcohort,
-			// where a non-empty payload.datasets[] must list the dslabel
-			if (payload.datasets?.length && !getStringArray(payload.datasets).includes(q.dslabel)) {
+			// where a non-empty payload.datasets[] must list the dslabel, and a payload.datasets that is
+			// present (including null) but not an array is rejected instead of being treated as absent
+			const { datasets } = payload
+			if (
+				datasets !== undefined &&
+				(!Array.isArray(datasets) || (datasets.length && !getStringArray(datasets).includes(q.dslabel)))
+			) {
 				throw { error: 'Missing access', linkKey: q.dslabel }
 			}
 		}
