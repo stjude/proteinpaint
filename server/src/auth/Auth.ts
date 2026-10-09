@@ -150,20 +150,21 @@ export function getMatchedEntry(obj, value) {
 	return obj['*']
 }
 
-// Same precedence as getMatchedEntry() (exact, then glob, then '*'), but tests two forms of a
-// single value -- such as an origin's hostname and its host, which includes a non-default port
-// -- together at each precedence tier, so a resolution using one form alone cannot select a less
-// specific entry than the other form would have matched at a higher tier. The first form is
-// tried ahead of the second at each tier when the two differ.
+// Same precedence as getMatchedEntry() (exact, then glob), but tests two forms of a single
+// value -- such as an origin's hostname and its host, which includes a non-default port --
+// together at each precedence tier, so a resolution using one form alone cannot select a
+// less specific entry than the other form would have matched at a higher tier. The first
+// form is tried ahead of the second at each tier when the two differ. Unlike getMatchedEntry(),
+// a bare '*' entry is not matched, since every caller of this function uses it to resolve a
+// specific value rather than to decide whether any value at all is acceptable.
 export function getMatchedEntryForEither(obj, value1, value2) {
 	if (!obj) return
-	if (typeof value1 == 'string' && Object.hasOwn(obj, value1)) return obj[value1]
-	if (typeof value2 == 'string' && value2 !== value1 && Object.hasOwn(obj, value2)) return obj[value2]
+	if (typeof value1 == 'string' && value1 != '*' && Object.hasOwn(obj, value1)) return obj[value1]
+	if (typeof value2 == 'string' && value2 != '*' && value2 !== value1 && Object.hasOwn(obj, value2)) return obj[value2]
 	for (const pattern in obj) {
 		if (pattern == '*') continue
 		if (patternMatches(value1, pattern) || (value2 !== value1 && patternMatches(value2, pattern))) return obj[pattern]
 	}
-	return obj['*']
 }
 
 // This is the "inner" private auth that's wrapped by AuthApi.
