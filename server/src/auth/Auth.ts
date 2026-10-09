@@ -404,8 +404,9 @@ export class Auth {
 			email: payload.email,
 			ip: payload.ip,
 			clientAuthResult: payload.clientAuthResult,
-			// the dataset names in the login jwt, to be tracked in the session for dataset code
-			userDatasets: getStringArray(payload.datasets),
+			// the dataset names in the login jwt, to be tracked in the session for dataset code;
+			// a session jwt (with dslabel) carries these in userDatasets[], while its datasets[] lists the dsCredentials dsnames
+			userDatasets: getStringArray(payload.dslabel ? payload.userDatasets : payload.datasets),
 			rawToken
 		}
 	}
