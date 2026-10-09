@@ -859,7 +859,9 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 		ds.queries?.rnaseqGeneCount ||
 		ds.queries?.dnaMethylation?.promoter ||
 		(ds.queries?.dnaMethylation?.elements && Object.keys(ds.queries.dnaMethylation.elements).length) ||
-		ds.queries?.singleCell?.pseudobulk,
+		Object.values(ds.queries?.singleCell?.pseudobulk || {}).some((assay: any) =>
+			Object.values(assay).some((member: any) => member.enabledMethods?.has('total'))
+		),
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
 	swimmer: ({ ds }) => ds.queries?.swimmer,
 	wsi: ({ ds }) => ds.queries?.w2,
