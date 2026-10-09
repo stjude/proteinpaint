@@ -8,6 +8,7 @@ import { chatInit } from './chat.ts'
 import { dofetch3 } from '#common/dofetch'
 import { Menu, icons as icon_functions } from '#dom'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
+import type { NavTab, NavTabCell } from './types/nav'
 
 /*
 todo: steps to add a new tab
@@ -26,7 +27,7 @@ let instanceNum = 0
 
 // to distinguish from IDs assigned by other code or users
 const idPrefix = '_MASS_AUTOID_' + Math.random().toString().slice(-6)
-let id = (+new Date()).toString().slice(-8)
+let id = Number((+new Date()).toString().slice(-8))
 
 const headtip = new Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
 headtip.d.style('z-index', 5555)
@@ -37,16 +38,32 @@ const aboutTab = { top: 'ABOUT', mid: '', btm: '', subheader: 'about' }
 const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
-const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
+// const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
 
-export function getId() {
+export function getId(): string {
 	return idPrefix + '_' + id++
 }
 
 class TdbNav {
 	static type = 'nav'
+	type: string
+	instanceNum: number
+	tabs: NavTab[]
+	activeTab: number
+	activeCohort: number
+	samplecounts: Record<string, any>
+	searching: boolean
+	massSessionDuration: any
+	sessionDaysLeft: any
+	sessionId: any
+	pkgver: any
+	opts: any
+	app: any
+	state: any
+	dom: any;
+	[key: string]: any
 
-	constructor(opts) {
+	constructor(opts: any) {
 		this.type = TdbNav.type
 		this.instanceNum = instanceNum++
 		this.tabs = [] // array of tab objects corresponding to what's shown on header, based on ds customization. hidden tabs are not in this array. filled in initUI()
@@ -62,72 +79,72 @@ class TdbNav {
 		setRenderers(this)
 	}
 
-	async init(appState) {
-		try {
-			this.cohortFilter = getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
-			this.initUI(appState)
-			if (appState?.termdbConfig?.selectCohort) {
-				this.dom.tds.filter(d => d.colNum === 0).style('display', '')
-				this.cohortNames = appState.termdbConfig.selectCohort.values.map(d => d.keys.slice().sort().join(','))
-			}
-
-			this.components = await multiInit({
-				filter: filterRxCompInit({
-					app: this.app,
-					vocabApi: this.app.vocabApi,
-					holder: this.dom.subheader.filter.append('div').style('margin', '5px'),
-					hideLabel: this.opts.header_mode === 'with_tabs',
-					emptyLabel: '+Add new filter',
-					callback: filter => {
-						this.app.dispatch({
-							type: 'filter_replace',
-							filter
-						})
-					}
-				}),
-				charts: chartsInit({
-					app: this.app,
-					holder: this.dom.subheader.charts,
-					vocab: this.opts.vocab
-				}),
-				groups: groupsInit({
-					app: this.app,
-					holder: this.dom.subheader.groups,
-					vocab: this.opts.vocab
-				}),
-				recover: recoverInit({
-					app: this.app,
-					holder: this.dom.recoverDiv,
-					// TODO: ???? may limit the tracked state to only the filter, activeCohort ???
-					getState: appState => appState,
-					reactsTo: action => action.type != 'plot_edit',
-					maxHistoryLen: 5
-				}),
-				sessionBtn: sessionBtnInit({
-					app: this.app,
-					button: this.dom.saveBtn,
-					massSessionDuration: this.opts.massSessionDuration,
-					sessionDaysLeft: this.app.opts.sessionDaysLeft || null
-				}),
-				about: aboutInit({
-					app: this.app,
-					subheader: this.dom.subheader.about,
-					instanceNum: this.instanceNum,
-					aboutOverrides: appState?.termdbConfig?.massNav?.tabs?.about || null,
-					selectCohort: appState?.termdbConfig?.selectCohort || null
-				}),
-				chat: chatInit({
-					app: this.app,
-					subheader: this.dom.subheader.chat
-				})
-			})
-			this.mayShowMessage_sessionDaysLeft()
-		} catch (e) {
-			throw e
+	async init(appState: any): Promise<void> {
+		// try {
+		this.cohortFilter = getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
+		this.initUI(appState)
+		if (appState?.termdbConfig?.selectCohort) {
+			this.dom.tds.filter(d => d.colNum === 0).style('display', '')
+			this.cohortNames = appState.termdbConfig.selectCohort.values.map(d => d.keys.slice().sort().join(','))
 		}
+
+		this.components = await multiInit({
+			filter: filterRxCompInit({
+				app: this.app,
+				vocabApi: this.app.vocabApi,
+				holder: this.dom.subheader.filter.append('div').style('margin', '5px'),
+				hideLabel: this.opts.header_mode === 'with_tabs',
+				emptyLabel: '+Add new filter',
+				callback: (filter: any) => {
+					this.app.dispatch({
+						type: 'filter_replace',
+						filter
+					})
+				}
+			}),
+			charts: chartsInit({
+				app: this.app,
+				holder: this.dom.subheader.charts,
+				vocab: this.opts.vocab
+			}),
+			groups: groupsInit({
+				app: this.app,
+				holder: this.dom.subheader.groups,
+				vocab: this.opts.vocab
+			}),
+			recover: recoverInit({
+				app: this.app,
+				holder: this.dom.recoverDiv,
+				// TODO: ???? may limit the tracked state to only the filter, activeCohort ???
+				getState: (appState: any) => appState,
+				reactsTo: (action: any) => action.type != 'plot_edit',
+				maxHistoryLen: 5
+			}),
+			sessionBtn: sessionBtnInit({
+				app: this.app,
+				button: this.dom.saveBtn,
+				massSessionDuration: this.opts.massSessionDuration,
+				sessionDaysLeft: this.app.opts.sessionDaysLeft || null
+			}),
+			about: aboutInit({
+				app: this.app,
+				subheader: this.dom.subheader.about,
+				instanceNum: this.instanceNum,
+				aboutOverrides: appState?.termdbConfig?.massNav?.tabs?.about || null,
+				selectCohort: appState?.termdbConfig?.selectCohort || null
+			}),
+			chat: chatInit({
+				app: this.app,
+				subheader: this.dom.subheader.chat
+			})
+		})
+		this.mayShowMessage_sessionDaysLeft()
+		// } catch (e) {
+		// 	throw e
+		// }
 	}
 
-	reactsTo(action) {
+	reactsTo(action: any): boolean | undefined {
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type.startsWith('tab')) return true
@@ -142,7 +159,7 @@ class TdbNav {
 		if (action.type.endsWith('_group')) return true
 	}
 
-	getState(appState) {
+	getState(appState: any): any {
 		return {
 			searching: this.searching, // for detection of internal state change
 			nav: appState.nav,
@@ -154,7 +171,7 @@ class TdbNav {
 		}
 	}
 
-	async main() {
+	async main(): Promise<void> {
 		this.dom.tabDiv.style('display', this.state.nav.header_mode === 'with_tabs' ? 'inline-block' : 'none')
 		this.dom.tip.hide()
 		this.activeTab = this.state.nav.activeTab
@@ -190,8 +207,8 @@ class TdbNav {
 
 export const navInit = getCompInit(TdbNav)
 
-function setRenderers(self) {
-	self.initUI = appState => {
+function setRenderers(self: any): void {
+	self.initUI = (appState: any) => {
 		const verifiedToken = self.app.vocabApi.verifiedToken
 		const invalidTokenErrorHandling = appState.termdbConfig.invalidTokenErrorHandling
 		//Show error message if login failed and all charts require login. If the dataset does not require login verifiedToken is true
@@ -201,7 +218,7 @@ function setRenderers(self) {
 			throw new Error(appState.termdbConfig.invalidTokenErrorHandling.errorMessage)
 		const header = self.opts.holder.append('div').style('white-space', 'nowrap')
 		const massNav = appState.termdbConfig?.massNav || {}
-		let titleDiv = header
+		const titleDiv = header
 			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
@@ -270,7 +287,7 @@ function setRenderers(self) {
 				.style('vertical-align', 'top')
 
 			self.dom.cohortStandaloneDiv.append('label').html('Cohort: ')
-			self.dom.cohortSelect = self.dom.cohortStandaloneDiv.append('select').on('change', async function () {
+			self.dom.cohortSelect = self.dom.cohortStandaloneDiv.append('select').on('change', async function (this: any) {
 				self.app.dispatch({ type: 'cohort_set', activeCohort: +this.value })
 			})
 
@@ -375,7 +392,7 @@ function setRenderers(self) {
 			.attr('class', (d, i) => `sjpp-nav-tabs-row-${i}`)
 			.style('font-size', (d, i) => (i == 1 ? '20px' : '12px'))
 			.selectAll('td')
-			.data((key, i) =>
+			.data((key: 'top' | 'mid' | 'btm', i: number) =>
 				self.tabs.map((row, colNum) => {
 					return {
 						rowNum: i,
@@ -440,7 +457,7 @@ function setRenderers(self) {
 
 	self.deletePlots = () => {
 		const state = self.app.getState()
-		const subactions = []
+		const subactions: any[] = []
 		for (const plot of state.plots) subactions.push({ type: 'plot_delete', id: plot.id })
 
 		self.app.dispatch({ type: 'app_refresh', subactions })
@@ -486,7 +503,7 @@ function setRenderers(self) {
 					? self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 					: 'transparent'
 			)
-			.html(function (d, i) {
+			.html(function (this: any, d: NavTabCell /*, i: number */) {
 				if (d.key == 'top') return this.innerHTML
 
 				if (d.subheader == 'groups') {
@@ -545,8 +562,8 @@ function setRenderers(self) {
 	}
 }
 
-function setInteractivity(self) {
-	self.setTab = async (event, d) => {
+function setInteractivity(self: any): void {
+	self.setTab = async (event: any, d: NavTabCell): Promise<void> => {
 		// a disabled tab is shown to advertise the capability but cannot be activated
 		if (d.disabled) return
 		if (d.colNum === self.activeTab && !self.searching) {
@@ -575,7 +592,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.mouseover = (event, d) => {
+	self.mouseover = (event: any, d: NavTabCell): void => {
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 		self.dom.tds.style('background-color', t => {
 			//light yellow for inactive tabs and grey-yellow for this active tab
@@ -592,7 +609,7 @@ function setInteractivity(self) {
 		self.dom.tds.style('background-color', t => (self.activeTab == t.colNum ? defaultActiveColor : 'transparent'))
 	}
 
-	self.getSessionFile = async event => {
+	self.getSessionFile = async (/* event: any */): Promise<void> => {
 		//Download mass-session-id file
 		const res = await dofetch3(`/massSession?id=${self.sessionId}`)
 		const a = document.createElement('a')
@@ -603,7 +620,7 @@ function setInteractivity(self) {
 		a.remove()
 	}
 
-	self.pickDatasetLabel = appState => {
+	self.pickDatasetLabel = (appState: any): string => {
 		const dslabel = appState.vocab.dslabel.toUpperCase()
 		return dslabel.length > 10 ? `${dslabel.slice(0, 10)}...` : dslabel
 	}
