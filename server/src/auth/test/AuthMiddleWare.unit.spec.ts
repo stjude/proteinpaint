@@ -573,13 +573,18 @@ tape('mayUpdate__protected__: freezes __protected__ after update', function (tes
 
 tape('mayUpdate__protected__: sets isUserLoggedIn flag when genome and dslabel are valid', function (test) {
 	test.timeoutAfter(500)
-	test.plan(2)
+	test.plan(5)
 
 	const auth = makeAuth()
+	const requireTermdbCredArgs: any[] = []
 	const mockAuthApi = {
 		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
 		mayAdjustFilter: () => {},
-		isUserLoggedIn: () => true
+		isUserLoggedIn: (_req, _ds, requireTermdbCred) => {
+			requireTermdbCredArgs.push(requireTermdbCred)
+			return true
+		},
+		getUserDatasets: () => ['dsA', 'dsB']
 	}
 	// Valid genome and dataset
 	const genomes = { hg38: { datasets: { [dslabel]: { cohort: { termdb: {} }, label: dslabel } } } }
@@ -601,7 +606,41 @@ tape('mayUpdate__protected__: sets isUserLoggedIn flag when genome and dslabel a
 
 	// isUserLoggedIn should have been set on __protected__
 	test.equal(req.query.__protected__?.isUserLoggedIn, true, 'should set isUserLoggedIn on __protected__')
+	test.deepEqual(requireTermdbCredArgs, [true], 'should require the termdb cred regardless of the request path')
+	test.deepEqual(req.query.__protected__?.datasets, ['dsA', 'dsB'], 'should set datasets on __protected__')
+	test.ok(Object.isFrozen(req.query.__protected__?.datasets), 'should freeze the datasets array')
 	test.equal(nextCalled, true, `next() should be called within the middleware`)
+	test.end()
+})
+
+tape('mayUpdate__protected__: sets no login or datasets when the login check throws', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth()
+	const mockAuthApi = {
+		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+		mayAdjustFilter: () => {},
+		isUserLoggedIn: () => {
+			throw 'unverifiable credential'
+		},
+		getUserDatasets: () => {
+			throw 'unverifiable credential'
+		}
+	}
+	const genomes = { hg38: { datasets: { [dslabel]: { cohort: { termdb: {} }, label: dslabel } } } }
+	const middleware = registerMiddleware(auth, mockAuthApi, genomes)
+	const req: any = {
+		query: { dslabel, embedder, genome: 'hg38' },
+		path: '/termdb',
+		cookies: {}
+	}
+	let nextCalled = false
+	middleware(req, makeMockRes(), () => {
+		nextCalled = true
+	})
+	test.equal(req.query.__protected__?.isUserLoggedIn, false, 'should set isUserLoggedIn to false')
+	test.deepEqual(req.query.__protected__?.datasets, [], 'should set datasets to an empty array')
+	test.equal(nextCalled, true, 'should still call next()')
 	test.end()
 })
 
