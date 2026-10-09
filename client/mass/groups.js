@@ -15,10 +15,15 @@ import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { isNumericTerm, termType2label } from '#shared/terms.js'
 import { uiLabel } from '#shared'
-import { TermTypes } from '#types'
+import { TermTypes, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { dofetch3 } from '#common/dofetch'
 import { getBrainImagingSampleSet } from '#plots/getBrainImagingSampleSet.ts'
-import { maxSampleCutoff, maxGESampleCutoff, scaleDsFilters } from '../plots/volcano/settings/defaults.ts'
+import {
+	maxSampleCutoff,
+	maxGESampleCutoff,
+	scaleDsFilters,
+	BACKGROUND_CORRECTION_TITLE
+} from '../plots/volcano/settings/defaults.ts'
 import { getGEunit } from '#tw/geneExpression'
 
 /*
@@ -928,6 +933,77 @@ export function renderPreAnalysisData(arg) {
 			})
 		}
 
+		/* methylation: which elements to test and, for the de novo scan, how much of the genome, so
+		that the first run is the wanted one. These are the volcano's own choices, labels and
+		defaults, and stay changeable there afterwards. A class is offered only where the dataset
+		has more than one, and the scan's extent and correction only while the scan is the selected
+		class. */
+		const dm =
+			termType == TermTypes.DNA_METHYLATION ? self?.app?.vocabApi?.termdbConfig?.queries?.dnaMethylation : undefined
+		const elementTypes = dm?.elementTypes || []
+		let elementType = dm?.defaultElementType || 'promoter'
+		let scanChromosome = ''
+		let backgroundCorrection = false
+		const addSelectRow = (label, testid, options, value, callback) => {
+			const row = launchDEDiv.append('tr')
+			row.append('td').attr('class', 'sja-termdb-config-row-label').style('padding', '5px').text(label)
+			const select = row
+				.append('td')
+				.append('select')
+				.attr('aria-label', label)
+				.attr('data-testid', testid)
+				.on('change', () => callback(select.property('value')))
+			// a class label comes from the dataset, so it is set as text
+			for (const o of options) select.append('option').attr('value', o.value).text(o.label)
+			select.property('value', value)
+			return row
+		}
+		if (elementTypes.some(e => e.key == DMR_SCAN_ELEMENT_TYPE)) {
+			const showScanRows = () => {
+				for (const row of [scanRow, backgroundRow])
+					row.style('display', elementType == DMR_SCAN_ELEMENT_TYPE ? '' : 'none')
+			}
+			if (elementTypes.length > 1)
+				addSelectRow(
+					'Element class',
+					'sjpp-da-element-select',
+					elementTypes.map(e => ({ value: e.key, label: e.label })),
+					elementType,
+					v => {
+						elementType = v
+						showScanRows()
+					}
+				)
+			const scanRow = addSelectRow(
+				'Scan',
+				'sjpp-da-scan-select',
+				[
+					{ value: '', label: 'Whole genome' },
+					// as in the volcano's control: the mitochondrion cannot carry a domain
+					...(self.app.opts.genome?.majorchrorder || [])
+						.filter(c => c != 'chrM' && c != 'chrMT')
+						.map(c => ({ value: c, label: c }))
+				],
+				scanChromosome,
+				v => (scanChromosome = v)
+			)
+			const backgroundLabel = 'Correct for background drift'
+			const backgroundRow = launchDEDiv.append('tr').attr('title', BACKGROUND_CORRECTION_TITLE)
+			backgroundRow
+				.append('td')
+				.attr('class', 'sja-termdb-config-row-label')
+				.style('padding', '5px')
+				.text(backgroundLabel)
+			backgroundRow
+				.append('td')
+				.append('input')
+				.attr('type', 'checkbox')
+				.attr('aria-label', backgroundLabel)
+				.attr('data-testid', 'sjpp-da-background-checkbox')
+				.on('change', event => (backgroundCorrection = event.target.checked))
+			showScanRows()
+		}
+
 		launchDEDiv
 			.append('button')
 			.style('border', 'none')
@@ -945,6 +1021,12 @@ export function renderPreAnalysisData(arg) {
 				// a group defined by a filter lists no sample: the plot counts it by its samples with data
 				for (const g of groups) {
 					if (g.filter && !Array.isArray(g.values)) g.sampleCount = preAnalysisData.data[g.name]
+				}
+				// only what a dropdown above offered; anything else is left to the volcano's defaults
+				if (elementTypes.length > 1) volcano.elementType = elementType
+				if (elementType == DMR_SCAN_ELEMENT_TYPE) {
+					if (scanChromosome) volcano.scanChromosome = scanChromosome
+					if (backgroundCorrection) volcano.backgroundCorrection = true
 				}
 				const config = {
 					chartType: 'differentialAnalysis',

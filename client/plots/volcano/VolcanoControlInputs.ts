@@ -1,6 +1,6 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
-import { getSampleNum } from './settings/defaults'
+import { getSampleNum, BACKGROUND_CORRECTION_TITLE } from './settings/defaults'
 import {
 	PROTEOME_DAP,
 	DNA_METHYLATION,
@@ -284,8 +284,7 @@ export class VolcanoControlInputs {
 				settingsKey: 'backgroundCorrection',
 				boxLabel: '',
 				getDisplayStyle: scanOnly,
-				title:
-					'Score each DMR against width- and CpG-density-matched intergenic background instead of against zero, so the y axis asks "did this region move MORE than a region like it drifts" rather than "did it move". On a cohort whose whole genome shifts, the two questions have different answers -- on MMRF NSD2-high the hyper:hypo direction inverts. DMRs whose stratum holds too little background to score are counted in Statistics but not plotted. Makes the scan take 1.5 to 2 times as long.'
+				title: BACKGROUND_CORRECTION_TITLE
 			},
 			{
 				label: 'Min CpGs per DMR',

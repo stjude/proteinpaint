@@ -138,14 +138,16 @@ export class Volcano extends PlotBase implements RxComponent {
 			/* A genome scan is about a minute of server work with nothing on the wire until it finishes;
 			a bare "Loading..." is indistinguishable from a hung request. */
 			const isScan = settings.elementType == DMR_SCAN_ELEMENT_TYPE
-			//the background drift correction makes a scan 1.5 to 2 times as long
-			const waitText = isScan
-				? `Scanning for DMRs... a whole-genome scan ${
+			//the times are a whole-genome scan's, and the background drift correction makes it 1.5 to 2 times as long
+			const waitText = !isScan
+				? 'Loading...'
+				: settings.scanChromosome
+				? `Scanning ${settings.scanChromosome} for DMRs...`
+				: `Scanning for DMRs... a whole-genome scan ${
 						settings.backgroundCorrection
 							? 'with the background drift correction takes about 1.5 to 2 minutes'
 							: 'takes about 1 minute'
 				  } the first time, and is cached after that.`
-				: 'Loading...'
 			this.dom.wait.text(waitText)
 			//Only show Loading for data requests that take longer than 500ms
 			showWait = setTimeout(() => {

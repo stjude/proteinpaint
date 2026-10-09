@@ -12,6 +12,10 @@ import type {
 /** DMRcate's own defaults (Peters 2015/2021), which the dmrcate binary also falls back to. The model
  * sends a knob only when it differs from these, so an untouched scan keeps its cache entry. */
 export const DMRCATE_DEFAULTS = { lambda: 1000, C: 2, fdrCutoff: 0.05 }
+/** Tooltip of the scan's background correction, shown by the volcano's control and by the
+ * pre-analysis panel (mass/groups.js). */
+export const BACKGROUND_CORRECTION_TITLE =
+	'Score each DMR against width- and CpG-density-matched intergenic background instead of against zero, so the y axis asks "did this region move MORE than a region like it drifts" rather than "did it move". On a cohort whose whole genome shifts, the two questions have different answers -- on MMRF NSD2-high the hyper:hypo direction inverts. DMRs whose stratum holds too little background to score are counted in Statistics but not plotted. Makes the scan take 1.5 to 2 times as long.'
 
 // The max sample cutoff for volcano rendering
 export const maxSampleCutoff = 4000
