@@ -1,2 +1,3 @@
 General:
-- serverconfig.dsCredentials, as an object or as a credentials file path in serverconfig.json, is deprecated and logs a warning at server startup
+- serverconfig.dsCredentials as an object in serverconfig.json is deprecated and logs a warning at server startup
+- serverconfig.dsCredentials as a credentials file path is no longer supported, use PP_CREDS_FILE with container/envHelpers.mjs instead

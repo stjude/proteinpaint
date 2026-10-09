@@ -89,6 +89,42 @@ tape('serverconfig.dsCredentials: the deprecation warning says it is ignored whe
 	test.end()
 })
 
+tape('serverconfig.dsCredentials: a file path is not read, and throws', async test => {
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-test-creds-'))
+	const file = path.join(dir, 'creds.json')
+	fs.writeFileSync(file, JSON.stringify({ zzCredsTest: { '*': { '*': { type: 'forbidden' } } } }))
+	const { restore } = captureWarnings()
+	process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({ dsCredentials: file })
+	try {
+		await import('../serverconfig.js?ds_credentials=filepath')
+		test.fail('should throw for a file path')
+	} catch (e) {
+		const message = String(e.message || e)
+		test.equal(message.includes('as a file path is no longer supported'), true, 'should throw the expected message')
+	} finally {
+		restore()
+		delete process.env.PP_SERVERCONFIG_OVERRIDES
+		fs.rmSync(dir, { recursive: true, force: true })
+	}
+	test.end()
+})
+
+tape('serverconfig.dsCredentials: a file path is ignored when PP_CREDS is set', async test => {
+	const envCreds = { zzEnvCredsTest: { '*': { '*': { type: 'forbidden' } } } }
+	const { restore } = captureWarnings()
+	process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({ dsCredentials: '/nonexistent/creds.json' })
+	process.env.PP_CREDS = JSON.stringify(envCreds)
+	try {
+		const { default: config } = await import('../serverconfig.js?ds_credentials=filepath-ignored')
+		test.deepEqual(config.dsCredentials.zzEnvCredsTest, envCreds.zzEnvCredsTest, 'should use PP_CREDS')
+	} finally {
+		restore()
+		delete process.env.PP_SERVERCONFIG_OVERRIDES
+		delete process.env.PP_CREDS
+	}
+	test.end()
+})
+
 tape('serverconfig.dsCredentials: no deprecation warning when only PP_CREDS is set', async test => {
 	const { warnings, restore } = captureWarnings()
 	process.env.PP_CREDS = JSON.stringify({ zzCredsTest: { '*': { '*': { type: 'forbidden' } } } })
