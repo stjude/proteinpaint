@@ -1502,11 +1502,18 @@ export function mayMapChildren2Root(data, q, ds) {
 	if (!q.mapChildren2Root || !ds.cohort?.termdb?.hasSampleAncestry) return
 	const id2rootSampleId = ds.cohort.termdb.q?.id2rootSampleId
 	if (!id2rootSampleId) return
+	// a single cell term has one row per cell, which cannot be mapped to a root sample
+	if (q.terms.some(tw => isSingleCellTerm(tw.term)))
+		throw 'one column per root sample(patient) is not supported with single cell data'
 
 	// root sample id -> annotation key -> annotations of the root's children
 	const root2annos = new Map<number, Map<string, any[]>>()
 	for (const [sid, sample] of Object.entries(data.samples) as [string, any][]) {
 		const rootId = id2rootSampleId(sample.sample ?? sid)
+		// not a known sample id; mapping it would merge unrelated rows under the same undefined key
+		if (rootId === undefined) {
+			throw 'cannot find the root sample of a sample'
+		}
 		if (!root2annos.has(rootId)) root2annos.set(rootId, new Map())
 		const annos = root2annos.get(rootId)!
 		for (const [k, v] of Object.entries(sample)) {

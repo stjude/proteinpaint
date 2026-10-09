@@ -1382,3 +1382,34 @@ tape('getData: mapChildren2Root averages each member of a custom numeric termCol
 	}
 	t.end()
 })
+
+tape('mayMapChildren2Root: rejects rows that are not samples', t => {
+	const ds = {
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: { 1: { name: 'patient', plural_name: 'patients', parent_id: null } },
+				// like the native lookup, an id that is not a sample, e.g. a cell id, has no root
+				q: { id2rootSampleId: id => ({ 11: 1 }[id]), id2sampleRefs: id => ({ label: 'p' + id }) }
+			}
+		}
+	}
+	const scTw = { $id: 'sc', term: { type: 'singleCellGeneExpression', gene: 'TP53' }, q: {} }
+	const cells = { samples: { AAACCTG: { sample: 'AAACCTG', sc: { key: 1, value: 1 } } }, refs: { byTermId: {} } }
+	t.throws(
+		() => mayMapChildren2Root(cells, { terms: [scTw], mapChildren2Root: true }, ds),
+		/not supported with single cell data/,
+		'a single cell term is rejected, as its rows are cells'
+	)
+	const tw = { $id: 'age', term: { id: 'age', type: 'float' }, q: {} }
+	const unknown = {
+		samples: { 11: { sample: 11, age: { key: 1, value: 1 } }, 99: { sample: 99, age: { key: 2, value: 2 } } },
+		refs: { byTermId: {} }
+	}
+	t.throws(
+		() => mayMapChildren2Root(unknown, { terms: [tw], mapChildren2Root: true }, ds),
+		/cannot find the root sample/,
+		'an id without a root is rejected, rather than merged with other such ids'
+	)
+	t.end()
+})

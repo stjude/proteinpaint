@@ -166,8 +166,10 @@ export function server_init_db_queries(ds) {
 		/** descendant ids of a sample, [] when none or without sample ancestry. the array is shared, do not modify */
 		const noDescendants: number[] = []
 		q.id2descendantIds = (id: number): number[] => i2descendants.get(Number(id)) || noDescendants
-		/** id of the root ancestor of a sample (e.g. its patient), or its own id when it has no ancestor */
-		q.id2rootSampleId = (id: number): number => {
+		/** id of the root ancestor of a sample (e.g. its patient), 
+		or undefined when the id is not a sample (e.g. a single cell id) */
+		q.id2rootSampleId = (id: number): number | undefined => {
+			if (!i2s.has(Number(id))) return undefined
 			const ancestors = i2ancestors.get(Number(id))
 			// sorted by distance, the farthest ancestor is the root
 			return ancestors?.length ? ancestors[ancestors.length - 1].ancestor_id : Number(id)
