@@ -48,6 +48,8 @@ export function getMatrixRequestOpts(state, config) {
 		termsPerRequest: this.app.vocabApi.termdbConfig.queries?.snvindel?.byisoform?.processTwsInOneQuery ? 1000 : 1
 	}
 
+	if (this.chartType != 'hierCluster' && config.settings.matrix.mapChildren2Root) opts.mapChildren2Root = true
+
 	if (this.chartType == 'hierCluster') {
 		/* quick fix, only needed for gdc
 			so backend case query will know this context and pull cases with gene exp data

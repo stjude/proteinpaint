@@ -12,6 +12,8 @@ export type TermdbMatrixRequest = {
 	isSummary?: boolean
 	currentGeneNames?: string[] | null
 	getPlotDataByName?: string
+	/** for a dataset with sample ancestry, move the annotations of each sample onto its root ancestor (e.g. patient) */
+	mapChildren2Root?: boolean
 	[k: string]: any
 }
 

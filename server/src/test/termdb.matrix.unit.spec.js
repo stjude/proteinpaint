@@ -10,7 +10,8 @@ import {
 	isNegatedSampleLstOnlyRequest,
 	hasFilterTermsUnsupportedByFilterSamples,
 	maySetMapParent2Children,
-	shouldMapParent2Children
+	shouldMapParent2Children,
+	mayMapChildren2Root
 } from '../termdb.matrix.js'
 import { getAuthApi, authApi } from '../auth.js'
 import { init } from './load.testds.js'
@@ -1178,5 +1179,127 @@ tape('getData: a categorical groupset with filter groups is assigned by each gro
 		.all('sex'))
 		sexCounts[r.value] = r.n
 	t.deepEqual(counts, { males: sexCounts['1'], females: sexCounts['2'] }, 'assigns samples by each group filter')
+	t.end()
+})
+
+tape('mayMapChildren2Root: moves sample annotations onto root samples', t => {
+	// samples 11 and 12 are children of root 1, sample 21 of root 2
+	const root = { 11: 1, 12: 1, 21: 2 }
+	const ds = {
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: {
+					1: { name: 'patient', plural_name: 'patients', parent_id: null },
+					2: { name: 'sample', plural_name: 'samples', parent_id: 1 }
+				},
+				q: {
+					id2rootSampleId: id => root[id] ?? Number(id),
+					id2sampleRefs: id => ({ label: 'p' + id, sample: Number(id) })
+				}
+			}
+		}
+	}
+	const gene = { gene: 'TP53' }
+	const tws = [
+		{ $id: 'sex', term: { id: 'sex', type: 'categorical' }, q: {} },
+		{ $id: 'site', term: { id: 'site', type: 'categorical' }, q: {} },
+		{ $id: 'exp', term: { id: 'exp', type: 'float' }, q: {} },
+		{ $id: 'agebin', term: { id: 'agebin', type: 'float' }, q: { mode: 'discrete' } },
+		{ $id: 'tp53', term: { type: 'geneVariant', name: 'TP53' }, q: {} }
+	]
+	const bins = [
+		{ startunbounded: true, stop: 10, label: '<10' },
+		{ start: 10, stopunbounded: true, label: '>=10' }
+	]
+	const data = {
+		samples: {
+			11: {
+				sample: 11,
+				sex: { key: 'M', value: 'M' },
+				site: { key: 'bone', value: 'bone' },
+				exp: { key: 2, value: 2 },
+				agebin: { key: '<10', value: 8 },
+				tp53: {
+					key: 'TP53',
+					values: [
+						{ ...gene, dt: 1, class: 'M' },
+						{ ...gene, dt: 4, class: 'WT' }
+					]
+				}
+			},
+			12: {
+				sample: 12,
+				sex: { key: 'M', value: 'M' },
+				site: { key: 'blood', value: 'blood' },
+				exp: { key: 4, value: 4 },
+				agebin: { key: '>=10', value: 14 },
+				tp53: {
+					key: 'TP53',
+					values: [
+						{ ...gene, dt: 1, class: 'WT' },
+						{ ...gene, dt: 4, class: 'CNV_amp' }
+					]
+				}
+			},
+			21: { sample: 21, sex: { key: 'F', value: 'F' } }
+		},
+		refs: { byTermId: { agebin: { bins } }, bySampleId: {} }
+	}
+
+	mayMapChildren2Root(data, { terms: tws, mapChildren2Root: true }, ds)
+	t.deepEqual(Object.keys(data.samples).sort(), ['1', '2'], 'one entry per root sample')
+	const p = data.samples[1]
+	t.equal(p.sample, 1, 'the entry is keyed by the root sample id')
+	t.deepEqual(p.sex, { key: 'M', value: 'M' }, 'an identical value of the children is kept once')
+	t.deepEqual(
+		p.site,
+		{
+			values: [
+				{ key: 'bone', value: 'bone' },
+				{ key: 'blood', value: 'blood' }
+			]
+		},
+		'distinct categorical values are kept as values[]'
+	)
+	t.deepEqual(p.exp, { key: 3, value: 3 }, 'numeric values are averaged')
+	t.deepEqual(p.agebin, { key: '>=10', value: 11 }, 'the mean of a binned term is assigned to its bin')
+	t.deepEqual(
+		p.tp53.values.map(v => `${v.dt}:${v.class}`).sort(),
+		['1:M', '4:CNV_amp'],
+		'mutations are combined and a WT status is dropped where a child has a mutation'
+	)
+	t.deepEqual(data.samples[2].sex, { key: 'F', value: 'F' }, 'a root with one child keeps its value')
+	t.equal(data.refs.bySampleId[1].label, 'p1', 'sample refs are of the root samples')
+	t.equal(data.sampleType.name, 'patient', 'the sample type is the root type')
+
+	const unchanged = { samples: { 11: { sample: 11 } }, refs: { byTermId: {}, bySampleId: {} } }
+	mayMapChildren2Root(unchanged, { terms: [] }, ds)
+	t.deepEqual(Object.keys(unchanged.samples), ['11'], 'samples are not moved when the flag is not set')
+	t.end()
+})
+
+tape('getData: mapChildren2Root returns one entry per root sample', async t => {
+	await ensureOpenAuth()
+	const tdb = await init('termdb.test.ts')
+	server_init_db_queries(tdb.ds)
+	const termjson = id => structuredClone(tdb.ds.cohort.termdb.q.termjsonByOneid(id))
+	const terms = () => [
+		{ $id: 'sex', term: termjson('sex'), q: { type: 'values' } },
+		{ $id: 'agedx', term: termjson('agedx'), q: { mode: 'continuous' } }
+	]
+	const bySample = await getData({ terms: terms() }, tdb.ds)
+	const byRoot = await getData({ terms: terms(), mapChildren2Root: true }, tdb.ds)
+	t.notOk(byRoot.error, 'no error')
+	const id2root = tdb.ds.cohort.termdb.q.id2rootSampleId
+	const rootIds = new Set(Object.keys(bySample.samples).map(id => String(id2root(id))))
+	t.deepEqual(Object.keys(byRoot.samples).sort(), [...rootIds].sort(), 'the entries are the root samples')
+	const childAges = Object.keys(bySample.samples)
+		.filter(id => id2root(id) == 102)
+		.map(id => bySample.samples[id].agedx.value)
+	t.ok(childAges.length > 1, 'the tested root has several children')
+	const mean = childAges.reduce((a, b) => a + b) / childAges.length
+	t.equal(byRoot.samples[102].agedx.value, mean, 'a numeric value is the mean of the children values')
+	t.equal(byRoot.sampleType.name, 'patient', 'the sample type is the root type')
 	t.end()
 })
