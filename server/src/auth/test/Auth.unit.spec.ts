@@ -641,6 +641,43 @@ tape('getJwtPayload: requires every dsnames id in the payload datasets', functio
 	test.end()
 })
 
+tape('getJwtPayload: without dsnames, requires the dslabel in a non-empty payload datasets', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth()
+	const cred = auth.creds[dslabel].termdb[embedder]
+	const getResult = (datasets?: any): any => {
+		const payload: any = { iat: time, exp: time + 300, email: 'user@test.com', ip: '127.0.0.1' }
+		if (datasets !== undefined) payload.datasets = datasets
+		const headers = { [cred.headerKey]: jsonwebtoken.sign(payload, secret) }
+		try {
+			return auth.getJwtPayload({ embedder, dslabel }, headers, cred)
+		} catch (e) {
+			return e
+		}
+	}
+
+	for (const [datasets, label] of [
+		[[dslabel], 'only the dslabel'],
+		[['other', dslabel], 'the dslabel among other entries'],
+		[[], 'an empty datasets array'],
+		[undefined, 'no datasets']
+	] as [any, string][]) {
+		test.equal(getResult(datasets)?.email, 'user@test.com', `should accept a jwt with ${label}`)
+	}
+	for (const [datasets, label] of [
+		[['other'], 'datasets that do not list the dslabel'],
+		[dslabel, 'a non-array datasets value']
+	] as [any, string][]) {
+		test.deepEqual(
+			getResult(datasets),
+			{ error: 'Missing access', linkKey: dslabel },
+			`should reject a jwt with ${label}, with the dslabel as linkKey`
+		)
+	}
+	test.end()
+})
+
 tape('checkIPaddress: passes when ipCheck is none', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)

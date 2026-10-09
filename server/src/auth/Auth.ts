@@ -392,13 +392,11 @@ export class Auth {
 				throw { error: 'Missing access', linkKey: missingAccess.join(',') }
 			}
 		} else {
-			const dsnames = cred.dsnames || [q.dslabel]
-			// some dslabels do not specify datasets[] array in the serverconfig.dsCredentials[dslabel],
-			// and in that case the jwt payload access is applied to the full dataset cohort instead of a subset/subcohort
-			const missingAccess =
-				payload.datasets?.length && dsnames.filter(d => !payload.datasets?.includes(d.id)).map(d => d.id)
-			if (missingAccess?.length) {
-				throw { error: 'Missing access', linkKey: missingAccess.join(',') }
+			// some dslabels do not specify dsnames[] array in the serverconfig.dsCredentials[dslabel],
+			// and in that case the jwt payload access is applied to the full dataset cohort instead of a subset/subcohort,
+			// where a non-empty payload.datasets[] must list the dslabel
+			if (payload.datasets?.length && !getStringArray(payload.datasets).includes(q.dslabel)) {
+				throw { error: 'Missing access', linkKey: q.dslabel }
 			}
 		}
 		return {
