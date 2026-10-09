@@ -907,52 +907,72 @@ tape('AuthApi.getUserDatasets: returns the login jwt datasets of an active sessi
 	const loggedOutReq = { query: { embedder, dslabel }, headers: {}, path: '/termdb/violinBox', cookies: {} }
 	test.deepEqual(authApi.getUserDatasets(loggedOutReq, ds), [], 'should return an empty array without a session')
 
-	let sessionCookie = ['', '']
-	const response: any = await new Promise(resolve => {
-		const req = {
+	const postJwtStatus = async (token: string) => {
+		let sessionCookie = ['', '']
+		const response: any = await new Promise(resolve => {
+			const req = {
+				query: { embedder, dslabel },
+				headers: { [headerKey]: token },
+				path: '/jwt-status',
+				ip: '127.0.0.1',
+				cookies: {}
+			}
+			const res = {
+				send: resolve,
+				header(key: string, val: string) {
+					if (key === 'Set-Cookie') sessionCookie = val.split(';')[0].split('=')
+				},
+				status() {}
+			}
+			app.routes['/jwt-status'].post(req, res)
+		})
+		const cookieReq = {
 			query: { embedder, dslabel },
-			headers: { [headerKey]: loginToken },
-			path: '/jwt-status',
+			headers: {},
+			path: '/termdb/violinBox',
+			cookies: { [sessionCookie[0]]: sessionCookie[1] }
+		}
+		const bearerReq = {
+			query: { embedder, dslabel },
+			headers: { authorization: `Bearer ${Buffer.from(response.jwt).toString('base64')}` },
+			path: '/termdb/violinBox',
 			ip: '127.0.0.1',
 			cookies: {}
 		}
-		const res = {
-			send: resolve,
-			header(key: string, val: string) {
-				if (key === 'Set-Cookie') sessionCookie = val.split(';')[0].split('=')
-			},
-			status() {}
-		}
-		app.routes['/jwt-status'].post(req, res)
-	})
-	test.equal(response.status, 'ok', 'should establish a session')
+		return { response, cookieReq, bearerReq }
+	}
+
+	const login = await postJwtStatus(loginToken)
+	test.equal(login.response.status, 'ok', 'should establish a session')
 
 	const expected = ['dsA', 'dsB', 'dsC']
-	const cookieReq = {
-		query: { embedder, dslabel },
-		headers: {},
-		path: '/termdb/violinBox',
-		cookies: { [sessionCookie[0]]: sessionCookie[1] }
-	}
 	test.deepEqual(
-		authApi.getUserDatasets(cookieReq, ds),
+		authApi.getUserDatasets(login.cookieReq, ds),
 		expected,
 		'should return the string entries of the login jwt datasets for a session cookie'
 	)
 
 	// simulate another server process, which tracks the session from the signed session jwt
 	const { authApi: authApi2 } = await makeAuthApiWithRoutes({ dsnames }, genomes)
-	const bearerReq = {
-		query: { embedder, dslabel },
-		headers: { authorization: `Bearer ${Buffer.from(response.jwt).toString('base64')}` },
-		path: '/termdb/violinBox',
-		ip: '127.0.0.1',
-		cookies: {}
-	}
 	test.deepEqual(
-		authApi2.getUserDatasets(bearerReq, ds),
+		authApi2.getUserDatasets(login.bearerReq, ds),
 		expected,
 		'should return the same datasets from the signed session jwt on another server process'
+	)
+
+	// a page reload submits the session jwt to /jwt-status, which signs another session jwt
+	const refresh = await postJwtStatus(login.response.jwt)
+	test.equal(refresh.response.status, 'ok', 'should accept the session jwt')
+	test.deepEqual(
+		authApi.getUserDatasets(refresh.cookieReq, ds),
+		expected,
+		'should keep the login jwt datasets for a session cookie after a refresh'
+	)
+	const { authApi: authApi3 } = await makeAuthApiWithRoutes({ dsnames }, genomes)
+	test.deepEqual(
+		authApi3.getUserDatasets(refresh.bearerReq, ds),
+		expected,
+		'should keep the login jwt datasets in the refreshed session jwt on another server process'
 	)
 
 	const { authApi: openApi } = makeAuthApi({}, genomes)
