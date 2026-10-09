@@ -2,21 +2,29 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { PlotBase } from '#plots/PlotBase.ts'
 import { controlsInit } from './controls'
 import { dofetch3 } from '#common/dofetch'
-import { Menu, DownloadMenu, axisstyle, shapes, shapeSelector } from '#dom'
+import { Menu, DownloadMenu, axisstyle, shapes, shapeSelector, make_radios } from '#dom'
 import { rgb } from 'd3-color'
 import { getCombinedTermFilter } from '#filter'
 import { getColors } from '#shared/common.js'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
-import type { SwimmerLane, SwimmerLegendItem, SwimmerPoint, SwimmerRequest, SwimmerResponse } from '#types'
+import type {
+	SwimmerLane,
+	SwimmerLegendItem,
+	SwimmerPoint,
+	SwimmerRequest,
+	SwimmerResponse,
+	SwimmerTimeReference
+} from '#types'
 import { getTermValue } from './sampleView.ts'
 import { getT0T2defaultQ } from './summaryQ.ts'
 import { fillTermWrapper } from '#termsetting'
 
 /*
-swimmer plot: one horizontal lane per patient. the light base bar spans from
+swimmer plot: one horizontal lane per patient. the thin grey base bar spans from
 time 0 to the lane end (the terminal event, e.g. death, else the latest event or interval end);
-colored segments mark treatment intervals; dots mark clinical events.
+colored segments mark treatment intervals; dots mark clinical events. when the ds has time references
+(e.g. birth, diagnosis, treatment start), radio buttons above the plot switch time 0 between them.
 */
 
 type LegendEntry = {
@@ -24,6 +32,8 @@ type LegendEntry = {
 	label: string
 	color: string
 	shape: string
+	/** marker height relative to the other events */
+	size: number
 	sampleTerms?: string[]
 	/** hidden by the user in the legend: its segments or markers are not drawn */
 	hidden: boolean
@@ -43,6 +53,9 @@ type LegendOverrides = {
 
 /** linked points (with a point sample) that have no value for the "mark by" term */
 const noValueCategory = 'No value'
+
+/** pixel gap between a lane name and the lane area */
+const labelGap = 14
 
 /** pixel width of the legend column, right of the lanes */
 const legendWidth = 190
@@ -76,9 +89,10 @@ function drawMarker(holder, shapeKey: string, cx: number, cy: number, height: nu
 		}
 	}
 	const bb = box || { x: 0, y: 0, width: 16, height: 16 }
-	// solid shapes get a thin white halo; line shapes (cross, outlines) are thin filled paths, so a
-	// same-colored stroke thickens them to stay legible. the stroke (px) is subtracted from the height
-	const strokePx = shape.isFilled ? 0.5 : Math.max(1, height * 0.08)
+	// solid shapes get a thin white halo, to stand out on segments and on each other; line shapes (cross,
+	// outlines) are thin filled paths, so a same-colored stroke thickens them to stay legible. the stroke (px)
+	// is subtracted from the height
+	const strokePx = shape.isFilled ? Math.min(1, height * 0.1) : Math.max(1, height * 0.08)
 	const scale = Math.max(0.1, height - strokePx) / bb.height
 	path
 		.attr('transform', `scale(${scale}) translate(${-(bb.x + bb.width / 2)},${-(bb.y + bb.height / 2)})`)
@@ -97,6 +111,8 @@ type SwimmerSettings = {
 	sortBy: 'end' | 'sample'
 	showSampleNames: boolean
 	legend: LegendOverrides
+	/** key of a ds time reference (swimmer.timeReferences); unset: the ds default */
+	timeReference?: string
 }
 
 class Swimmer extends PlotBase implements RxComponent {
@@ -254,7 +270,8 @@ class Swimmer extends PlotBase implements RxComponent {
 				divideByOrder: result.divideByOrder,
 				term0: this.state.config.term0,
 				pointTerm: this.state.config.pointTerm,
-				pointCategoryOrder: result.pointCategoryOrder
+				pointCategoryOrder: result.pointCategoryOrder,
+				timeReference: result.timeReference
 			})
 		} catch (e: any) {
 			this.toggleLoadingDiv('none')
@@ -274,6 +291,8 @@ class Swimmer extends PlotBase implements RxComponent {
 		}
 		if (this.state.config.term0) body.term0 = this.state.config.term0
 		if (this.state.config.pointTerm) body.pointTerm = this.state.config.pointTerm
+		const timeReference = this.state.config.settings.swimmer.timeReference
+		if (timeReference) body.timeReference = timeReference
 		return await fetchSwimmerLanes(body)
 	}
 }
@@ -282,8 +301,8 @@ class Swimmer extends PlotBase implements RxComponent {
 the swimmer chart and by sample view, which shows the lane of the viewed patient */
 export class SwimmerRenderer {
 	app: any
-	/** client copy of ds.queries.swimmer: timeLabel, categories, events, terminalEvent, pointSampleTypes,
-	pointSampleEvents */
+	/** client copy of ds.queries.swimmer: timeLabel, timeReferences, categories, events, terminalEvent,
+	pointSampleTypes, pointSampleEvents */
 	swimmer: any = {}
 	settings!: SwimmerSettings
 	/** divide-by tw, lanes are then split into one panel per category */
@@ -295,6 +314,8 @@ export class SwimmerRenderer {
 	pointTerm?: any
 	/** point category order from the server, only with pointTerm */
 	pointCategoryOrder: string[] = []
+	/** key of the time reference of the lanes, from the server; unset when the ds has none */
+	timeReference?: string
 	dom: { plotDiv: any; noteDiv: any; tip: Menu; svg?: any }
 	/** sample type of the lanes, which are patients: the root sample type when the db has exactly one, e.g.
 	{name:'patient', plural_name:'patients'}, to name lanes in messages and controls. */
@@ -304,8 +325,8 @@ export class SwimmerRenderer {
 	/** menu to edit a legend entry, reused across legend clicks */
 	legendMenu?: Menu
 
-	/** called with changed settings (e.g. legend edits); without it the renderer keeps the change itself and
-	redraws, as in sample view where the lane has no plot config to save it to */
+	/** called with changed settings (e.g. legend edits, time reference); without it the renderer keeps legend
+	changes itself and redraws, and offers no time reference radio buttons since switching needs new lanes */
 	onSettingsChange?: (settings: Partial<SwimmerSettings>) => void
 
 	constructor(
@@ -328,6 +349,7 @@ export class SwimmerRenderer {
 		term0?: any
 		pointTerm?: any
 		pointCategoryOrder?: string[]
+		timeReference?: string
 	}) {
 		this.swimmer = d.swimmer || {}
 		this.settings = d.settings
@@ -336,6 +358,7 @@ export class SwimmerRenderer {
 		this.term0 = d.term0
 		this.pointTerm = d.pointTerm
 		this.pointCategoryOrder = d.pointCategoryOrder || []
+		this.timeReference = d.timeReference
 		this.render()
 	}
 
@@ -415,8 +438,9 @@ export class SwimmerRenderer {
 	}
 
 	/** legend entries for interval categories or events: configured items first (in config order,
-	merged by label), then any key found in the data that the ds did not configure, with a default color.
-	user overrides (by label) take precedence over the ds config */
+	merged by label), then any key found in the data that the ds did not configure, with a default color. a
+	clipBeforeOrigin event with no drawn marker (e.g. birth in a treatment-referenced view) is left out. user
+	overrides (by label) take precedence over the ds config */
 	getLegend(
 		configured: { [key: string]: SwimmerLegendItem } | undefined,
 		dataKeys: Set<string>,
@@ -435,6 +459,7 @@ export class SwimmerRenderer {
 				label,
 				color: o.color || item.color || fallback(key),
 				shape: o.shape || item.shape || 'filledCircle',
+				size: item.size || 1,
 				sampleTerms: item.sampleTerms,
 				hidden: !!o.hidden
 			}
@@ -444,7 +469,10 @@ export class SwimmerRenderer {
 				entries.push(e)
 			}
 		}
-		for (const [key, item] of Object.entries(configured || {})) add(key, item)
+		for (const [key, item] of Object.entries(configured || {})) {
+			if (item.clipBeforeOrigin && !dataKeys.has(key)) continue
+			add(key, item)
+		}
 		for (const key of unconfigured) add(key, {})
 		return { byKey, entries }
 	}
@@ -455,6 +483,11 @@ export class SwimmerRenderer {
 		plotDiv.selectAll('*').remove()
 		this.dom.noteDiv.selectAll('*').remove()
 		delete this.dom.svg
+
+		const ref: SwimmerTimeReference | undefined = this.swimmer.timeReferences?.find(
+			(r: SwimmerTimeReference) => r.key == this.timeReference
+		)
+		this.renderTimeReferences()
 
 		if (!this.lanes.length) {
 			plotDiv
@@ -472,7 +505,8 @@ export class SwimmerRenderer {
 		const eventKeys = new Set<string>()
 		for (const { lane } of lanes) {
 			for (const r of lane.ranges) categoryKeys.add(r.category)
-			for (const p of lane.points) eventKeys.add(p.event)
+			// a clipped event (e.g. birth in a treatment-referenced view) is not drawn
+			for (const p of lane.points) if (!this.isClipped(p)) eventKeys.add(p.event)
 		}
 		const categories = this.getLegend(this.swimmer.categories, categoryKeys, s.legend?.categories)
 		const events = this.getLegend(this.swimmer.events, eventKeys, s.legend?.events)
@@ -487,26 +521,27 @@ export class SwimmerRenderer {
 		const laneGap = Math.max(1, Math.round(s.rowHeight * 0.1))
 		const barH = Math.max(2, s.rowHeight - laneGap)
 		const segH = Math.max(1, barH * 0.6)
-		// event markers are 70% of the bar height, all shapes the same height
+		// the base bar is a thin line under the segments
+		const baseH = Math.max(1, barH * 0.25)
+		// event markers are 70% of the bar height, all shapes the same height unless an event sets a relative size
 		const markerH = Math.max(4, barH * 0.7)
 
 		const svg = plotDiv.append('svg').attr('data-testid', 'sjpp-swimmer-svg')
 		this.dom.svg = svg
-		const labelWidth = s.showSampleNames
-			? getMaxTextWidth(
-					svg,
-					lanes.map(l => l.lane.sample),
-					fontSize
-			  ) + 12
-			: 10
+		const names = lanes.map(l => l.lane.sample)
+		const labelWidth = s.showSampleNames ? getMaxTextWidth(svg, names, fontSize) + labelGap + 6 : 10
 
 		// one shared time scale for all divide-by panels, so they can be compared
 		const maxEnd = Math.max(...lanes.map(l => l.end), 1)
 		// events before the time origin (e.g. a CSF sample collected before treatment start) have
-		// negative times; extend the axis left so they do not overlap the sample names
+		// negative times; extend the axis left so they do not overlap the sample names. events with
+		// clipBeforeOrigin (e.g. birth in a treatment-referenced view) do not; their markers before time 0 are
+		// not drawn
 		let minTime = 0
 		for (const { lane } of lanes) {
-			for (const p of lane.points) minTime = Math.min(minTime, p.time)
+			for (const p of lane.points) {
+				if (!this.isClipped(p)) minTime = Math.min(minTime, p.time)
+			}
 			for (const r of lane.ranges) minTime = Math.min(minTime, r.start)
 		}
 		const x = scaleLinear()
@@ -515,7 +550,7 @@ export class SwimmerRenderer {
 		const ticks = x.ticks(Math.max(2, Math.floor(s.plotWidth / 90)))
 
 		const tip = this.dom.tip
-		const timeLabel = this.swimmer.timeLabel || 'Time'
+		const timeLabel = ref?.timeLabel || this.swimmer.timeLabel || 'Time'
 		const fmt = (d: number) => (Number.isInteger(d) ? String(d) : d.toFixed(1))
 
 		const groups = this.getGroups(lanes)
@@ -565,16 +600,25 @@ export class SwimmerRenderer {
 				const y = i * s.rowHeight
 				const g = mainG.append('g').attr('transform', `translate(0,${y})`)
 
-				// base bar
-				g.append('rect')
+				// base bar: a thin line, hovered through a transparent rect of the bar height
+				const baseG = g.append('g')
+				baseG
+					.append('rect')
+					.attr('x', x(0))
+					.attr('y', (s.rowHeight - baseH) / 2)
+					.attr('width', Math.max(0, x(end) - x(0)))
+					.attr('height', baseH)
+					.attr('fill', '#999')
+					.attr('fill-opacity', 0.5)
+					.attr('shape-rendering', 'crispEdges')
+				baseG
+					.append('rect')
 					.attr('x', x(0))
 					.attr('y', (s.rowHeight - barH) / 2)
 					.attr('width', Math.max(0, x(end) - x(0)))
 					.attr('height', barH)
-					.attr('fill', '#f7f7f7')
-					.attr('stroke', '#999')
-					.attr('stroke-width', 0.5)
-					.attr('shape-rendering', 'crispEdges')
+					.attr('fill', 'transparent')
+				baseG
 					.on('mouseover', event => {
 						tip.clear().show(event.clientX, event.clientY)
 						tip.d.append('div').style('font-weight', 'bold').text(lane.sample)
@@ -590,6 +634,8 @@ export class SwimmerRenderer {
 					const segEnd = r.end ?? Math.max(end, r.start)
 					const segTop = (s.rowHeight - segH) / 2
 					const seg = g.append('g').on('mouseout', () => tip.hide())
+					// translucent, so overlapping intervals and the base bar show through
+					seg.attr('fill-opacity', 0.75)
 					seg
 						.append('rect')
 						.attr('x', x(r.start))
@@ -624,6 +670,7 @@ export class SwimmerRenderer {
 
 				// events
 				for (const p of lane.points) {
+					if (this.isClipped(p)) continue
 					const entry = events.byKey.get(p.event)!
 					if (entry.hidden) continue
 					// a marked point is drawn by its "mark by" category
@@ -634,7 +681,7 @@ export class SwimmerRenderer {
 						mark?.shape || entry.shape,
 						x(p.time),
 						s.rowHeight / 2,
-						markerH,
+						markerH * entry.size,
 						mark?.color || entry.color
 					)
 						.attr('data-event', p.event)
@@ -674,7 +721,7 @@ export class SwimmerRenderer {
 
 				if (s.showSampleNames) {
 					g.append('text')
-						.attr('x', -6)
+						.attr('x', -labelGap)
 						.attr('y', s.rowHeight / 2)
 						.attr('text-anchor', 'end')
 						.attr('dominant-baseline', 'central')
@@ -800,7 +847,7 @@ export class SwimmerRenderer {
 		}
 		const rect = (row, e: LegendEntry) =>
 			row.append('rect').attr('x', 0).attr('y', 3).attr('width', 14).attr('height', 8).attr('fill', e.color)
-		const marker = (row, e: LegendEntry) => drawMarker(row, e.shape, 7, 7, 12, e.color)
+		const marker = (row, e: LegendEntry) => drawMarker(row, e.shape, 7, 7, Math.max(6, 12 * e.size), e.color)
 
 		if (categories.length) {
 			title('Intervals')
@@ -831,6 +878,38 @@ export class SwimmerRenderer {
 			y += 8
 		}
 		return y
+	}
+
+	/** a clipBeforeOrigin event before time 0 (e.g. birth in a treatment-referenced view), not drawn */
+	isClipped(p: SwimmerPoint) {
+		return p.time < 0 && !!this.swimmer.events?.[p.event]?.clipBeforeOrigin
+	}
+
+	/** radio buttons to switch the time reference (e.g. birth, diagnosis, treatment start), above the plot. only
+	with two or more ds time references and onSettingsChange, which refetches the lanes */
+	renderTimeReferences() {
+		const refs: SwimmerTimeReference[] = this.swimmer.timeReferences || []
+		if (refs.length < 2 || !this.onSettingsChange) return
+		const current = this.timeReference
+		const holder = this.dom.plotDiv
+			.append('div')
+			.attr('data-testid', 'sjpp-swimmer-time-references')
+			.attr('role', 'radiogroup')
+			.attr('aria-label', 'Time from')
+			.style('margin-bottom', '8px')
+		holder.append('span').style('margin-right', '8px').style('opacity', 0.8).text('Time from:')
+		make_radios({
+			holder: holder.append('div').style('display', 'inline-block'),
+			options: refs.map(r => ({
+				label: r.label || r.key,
+				value: r.key,
+				checked: r.key == current,
+				testid: `sjpp-swimmer-time-reference-${r.key}`
+			})),
+			styles: { display: 'inline-block', padding: '3px 10px 3px 0' },
+			// the lanes are refetched and the plot redrawn, these radios included
+			callback: key => this.onSettingsChange!({ timeReference: key })
+		})
 	}
 
 	/** legend item menu, as in the scatter plot legend: hide/show, show only, show all, color, and shape for
@@ -961,12 +1040,11 @@ export class SwimmerRenderer {
 
 	/** withRelated: open the sample with its related samples (e.g. a patient lane shows the patient and
 	its primary/PDX/CSF samples as columns), as when the sample is picked in the sample view search box;
-	otherwise only this sample (e.g. a CSF dot) */
+	otherwise only this sample (e.g. a CSF dot). the sample view's swimmer lane uses the same time reference */
 	openSampleView(sample: { sampleId: number; sampleName: string }, withRelated = false) {
-		this.app.dispatch({
-			type: 'plot_create',
-			config: { chartType: 'sampleView', ...(withRelated ? { sample } : { samples: [sample] }) }
-		})
+		const config: any = { chartType: 'sampleView', ...(withRelated ? { sample } : { samples: [sample] }) }
+		if (this.timeReference) config.swimmerTimeReference = this.timeReference
+		this.app.dispatch({ type: 'plot_create', config })
 	}
 }
 

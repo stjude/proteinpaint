@@ -520,8 +520,12 @@ export type SwimmerQuery = {
 	rangeFile?: string
 	/** tp-relative path to the event file */
 	pointFile?: string
-	/** x axis label, e.g. "Days after treatment started" */
+	/** x axis label, e.g. "Days after treatment started". a time reference's own timeLabel takes precedence */
 	timeLabel?: string
+	/** optional time origins the user can switch between (radio buttons above the plot). each moves time 0 to the time of
+	a pointFile event of the patient (e.g. diagnosis or treatment start); a patient without that event is left out
+	of that view. without it, the file times are shown as they are */
+	timeReferences?: SwimmerTimeReference[]
 	/** interval categories keyed by the raw value in rangeFile column 2. categories sharing a label are
 	merged in the legend (e.g. RT and CSI both labeled "CSI/RT"). unlisted categories get a default color */
 	categories?: { [category: string]: SwimmerLegendItem }
@@ -556,6 +560,26 @@ export type SwimmerLegendItem = {
 	/** events only: set true to offer a "Mark <event label> by" control, coloring this event's markers by a
 	variable of their own samples (pointFile 4th column). needs linked samples; off by default */
 	markBy?: boolean
+	/** events only: marker height relative to the other events, e.g. 0.6 for frequent minor events such as
+	follow-up visits. default 1 */
+	size?: number
+	/** events only: markers before time 0 are not drawn and do not extend the axis left (e.g. birth is hidden in a
+	diagnosis- or treatment-referenced view). other events and the intervals extend the axis to show times before 0 */
+	clipBeforeOrigin?: boolean
+}
+
+export type SwimmerTimeReference = {
+	/** id of the reference, saved in the plot settings, e.g. "Diagnosis" */
+	key: string
+	/** radio button label; default key */
+	label?: string
+	/** x axis label, e.g. "Days after diagnosis" */
+	timeLabel: string
+	/** pointFile event key (column 2, e.g. "Dx") whose time becomes time 0 of each patient. omit for the file's own
+	time origin (e.g. birth) */
+	event?: string
+	/** the reference shown by default; else the first one */
+	isDefault?: boolean
 }
 
 type NIdataQueryRefParams = {
