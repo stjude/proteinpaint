@@ -1,5 +1,16 @@
 import tape from 'tape'
-import { getFilter, getSampleFilter, getSamplelstTW, getSamplelstTW2, getSamplelstTWFromIds } from '../groups'
+import {
+	getFilter,
+	getSampleFilter,
+	getSamplelstTW,
+	getSamplelstTWFromIds,
+	getSamplelstTWFromFilters,
+	getGroupFilterEntry,
+	getGroupFilterOfConditions,
+	getGvGroupFilterEntry,
+	getGroupForRegion,
+	getOthersGroup
+} from '../groups'
 
 /**
  * Tests:
@@ -331,22 +342,173 @@ tape('groups getSamplelstTW()', test => {
 	test.end()
 })
 
-tape('groups getSamplelstTW2()', test => {
+tape('groups getSamplelstTWFromFilters()', test => {
 	test.timeoutAfter(100)
 
-	const input = [
+	const filter = (key: string) => ({
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [{ type: 'tvs', tvs: { term: { id: 'sex', type: 'categorical' }, values: [{ key }] } }]
+	})
+	const tw: any = getSamplelstTWFromFilters([
+		{ name: mockGrp1Name, color: 'blue', filter: filter('1'), sampleCount: 3 },
+		{ name: mockGrp2Name, color: 'green', filter: filter('2'), mapParent2Children: true }
+	])
+	test.deepEqual(
+		tw,
 		{
-			color: 'blue',
-			items: mockGrp1Values,
-			name: mockGrp1Name
+			isAtomic: true,
+			term: {
+				name: 'groups',
+				type: 'samplelst',
+				values: {
+					[mockGrp1Name]: { key: mockGrp1Name, label: mockGrp1Name, color: 'blue' },
+					[mockGrp2Name]: { key: mockGrp2Name, label: mockGrp2Name, color: 'green' }
+				}
+			},
+			q: {
+				groups: [
+					{ name: mockGrp1Name, in: true, filter: filter('1'), sampleCount: 3 },
+					{ name: mockGrp2Name, in: true, filter: filter('2'), mapParent2Children: true }
+				]
+			}
 		},
-		{
-			color: 'green',
-			items: mockGrp2Values,
-			name: mockGrp2Name
-		}
+		'should carry the filter of each group, and list no sample'
+	)
+
+	test.deepEqual(
+		getGroupFilterEntry(tw, mockGrp2Name),
+		filter('2'),
+		'getGroupFilterEntry should give the filter of a group that is defined by one'
+	)
+	test.notEqual(getGroupFilterEntry(tw, mockGrp2Name), tw.q.groups[1].filter, 'as a copy')
+
+	const listed: any = getSamplelstTW([{ name: mockGrp1Name, items: mockGrp1Values }])
+	const entry = getGroupFilterEntry(listed, mockGrp1Name)
+	test.equal(entry.type, 'tvs', 'getGroupFilterEntry should give a tvs for a group that lists its samples')
+	test.deepEqual(
+		entry.tvs.term.values.group.list,
+		mockGrp1Values.map((v: any) => ({ sampleId: v.sampleId })),
+		'that lists the samples of the category'
+	)
+	test.end()
+})
+
+tape('groups getGroupForRegion()', test => {
+	test.timeoutAfter(100)
+
+	const values = [{ sampleId: 1 }, { sampleId: 2 }]
+	test.equal(getGroupForRegion({ name: 'a', values }), values, 'a group that lists its samples is its list')
+	const filter = { type: 'tvslst', in: true, join: '', lst: [] }
+	const filter0 = { op: 'and', content: [] }
+	test.deepEqual(
+		getGroupForRegion({ name: 'a', color: 'red', sampleCount: 3, filter, filter0, mapParent2Children: true }),
+		{ filter, filter0, mapParent2Children: true },
+		'a group defined by a filter is its filter, with its cohort filter and sample level'
+	)
+	test.deepEqual(getGroupForRegion({ name: 'a' }), [], 'a group with neither has no samples')
+	test.end()
+})
+
+tape('groups getOthersGroup()', test => {
+	test.timeoutAfter(100)
+
+	const placeholder = { name: 'Not in a', in: false, values: [{ sampleId: 1, sample: 's1' }, { sampleId: 2 }] }
+	const cohort = { type: 'tvs', tvs: { term: { id: 'sex', type: 'categorical' }, values: [{ key: '1' }] } }
+	const group: any = getOthersGroup(placeholder, {
+		filter: { type: 'tvslst', in: true, join: '', lst: [cohort] },
+		filter0: null
+	})
+	test.equal(group.values, undefined, 'the group lists no sample')
+	test.equal(group.in, true, 'the group is not a placeholder')
+	test.equal(group.filter0, null, 'the group carries the cohort filter that it was made with')
+	test.equal(group.filter.join, 'and', 'its filter joins two entries')
+	const [notListed, inCohort] = group.filter.lst
+	test.equal(notListed.tvs.isnot, true, 'the first entry excludes')
+	test.deepEqual(
+		Object.values(notListed.tvs.term.values).flatMap((v: any) => v.list.map(i => i.sampleId)),
+		[1, 2],
+		'the samples that the placeholder lists'
+	)
+	test.deepEqual(inCohort, cohort, 'the second entry is the filter of the app')
+	test.deepEqual(
+		getGroupForRegion(group),
+		{ filter: group.filter, filter0: null, mapParent2Children: undefined },
+		'a region request takes it as a filter'
+	)
+
+	const alone: any = getOthersGroup(placeholder, { filter: { type: 'tvslst', in: true, join: '', lst: [] } })
+	test.equal(alone.filter.lst.length, 1, 'without a filter of the app, the filter only excludes the listed samples')
+	test.notOk('filter0' in alone, 'and the group carries no cohort filter')
+	test.end()
+})
+
+tape('groups getGroupFilterOfConditions()', test => {
+	const tvs = (id, key) => ({ type: 'tvs', tvs: { term: { id, type: 'categorical' }, values: [{ key }] } })
+	const one = { type: 'tvslst', in: true, join: '', lst: [tvs('sex', '1')] }
+	const two = { type: 'tvslst', in: true, join: 'and', lst: [tvs('diaggrp', 'a'), tvs('race', 'b')] }
+	const either = { type: 'tvslst', in: true, join: 'or', lst: [tvs('diaggrp', 'a'), tvs('diaggrp', 'b')] }
+
+	const single: any = getGroupFilterOfConditions([undefined, one])
+	test.equal(single.tag, 'filterUiRoot', 'the filter is the part of a group that is its own')
+	test.deepEqual(single.lst, one.lst, 'a filter that is not given is left out')
+
+	const joined: any = getGroupFilterOfConditions([one, { type: 'tvslst', in: true, join: '', lst: [] }, two])
+	test.equal(joined.join, 'and', 'filters are joined with "and"')
+	test.deepEqual(joined.lst, [...one.lst, ...two.lst], 'with the conditions of each, and an empty filter is left out')
+
+	const nested: any = getGroupFilterOfConditions([one, either])
+	test.deepEqual(
+		[nested.join, nested.lst.length, nested.lst[1].join],
+		['and', 2, 'or'],
+		'a filter of alternatives stays one entry'
+	)
+	test.notOk(JSON.stringify(nested).includes('sampleId'), 'no sample is listed')
+	test.end()
+})
+
+tape('groups getGvGroupFilterEntry()', test => {
+	const dt = (type, key) => ({
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [{ type: 'tvs', tvs: { term: { id: type, type }, values: [{ key }] } }]
+	})
+	const groups = [
+		{ name: 'Mutated', type: 'filter', filter: dt('dtsnvindel', 'M') },
+		{ name: 'Loss', type: 'filter', filter: dt('dtcnv', 'CNV_loss') },
+		{ name: 'Wildtype', type: 'filter', filter: dt('dtsnvindel', 'WT') }
 	]
-	const result = getSamplelstTW2(input)
-	test.deepEqual(result, mockSamplelstTW, 'getSamplelstTW2 should return the correct sample list for two groups.')
+	const tw = { term: { type: 'geneVariant', name: 'TP53' }, q: { type: 'custom-groupset', customset: { groups } } }
+
+	test.deepEqual(getGvGroupFilterEntry(tw, 'Mutated'), groups[0].filter, 'the first group is its filter')
+	const third: any = getGvGroupFilterEntry(tw, 'Wildtype')
+	test.deepEqual(
+		third.lst.map(i => [i.tvs.term.id, i.tvs.values[0].key, !!i.tvs.isnot]),
+		[
+			['dtsnvindel', 'WT', false],
+			['dtsnvindel', 'M', true],
+			['dtcnv', 'CNV_loss', true]
+		],
+		'a later group is its filter, without the samples of the groups before it'
+	)
+	test.deepEqual(groups[2].filter, dt('dtsnvindel', 'WT'), 'the filters of the tw are not modified')
+
+	const predefined = {
+		term: { type: 'geneVariant', name: 'TP53', groupsetting: { lst: [{ groups: [] }, { groups }] } },
+		q: { type: 'predefined-groupset', predefined_groupset_idx: 1 }
+	}
+	test.deepEqual(
+		getGvGroupFilterEntry(predefined, 'Mutated'),
+		groups[0].filter,
+		'the groups of a predefined set are used'
+	)
+	test.equal(getGvGroupFilterEntry(tw, 'Other'), undefined, 'undefined for a group that the tw does not have')
+	test.equal(
+		getGvGroupFilterEntry({ term: tw.term, q: { type: 'values' } }, 'Mutated'),
+		undefined,
+		'undefined without a group setting'
+	)
 	test.end()
 })

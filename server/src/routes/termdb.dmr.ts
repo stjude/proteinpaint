@@ -4,6 +4,7 @@ import { run_R } from '@sjcrh/proteinpaint-r'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
 import { resolveMethylationMatrix, resolveGroupNames } from '#src/utils/methylationMatrix.ts'
+import { resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import serverconfig from '#src/serverconfig.js'
 import { formatElapsedTime } from '#shared'
 import { genomes } from '#src/initGenomesDs.js'
@@ -47,9 +48,11 @@ function init({ genomes }) {
 
 			const { matrixFile, mvalues, useElement, eligible } = resolveMethylationMatrix(ds, q.chr, q.element_type)
 
-			if (!Array.isArray(q.group1) || q.group1.length == 0)
+			// a group may be defined by a filter
+			const [list1, list2] = await resolveGroupPair(q, ds)
+			if (!Array.isArray(list1) || list1.length == 0)
 				throw new Error('Group 1 has no samples. Please select at least one sample.')
-			if (!Array.isArray(q.group2) || q.group2.length == 0)
+			if (!Array.isArray(list2) || list2.length == 0)
 				throw new Error('Group 2 has no samples. Please select at least one sample.')
 			if (invalidcoord(genome, q.chr, q.start, q.stop))
 				throw new Error(`Invalid genomic coordinates: ${q.chr}:${q.start}-${q.stop}`)
@@ -64,7 +67,7 @@ function init({ genomes }) {
 					`Region too large (${(span / 1e6).toFixed(1)} Mb). Server maximum is ${SERVER_MAX_REGION_BP / 1e6} Mb.`
 				)
 
-			const { group1, group2 } = await resolveGroupNames(q.group1, q.group2, eligible, ds, q.__protected__)
+			const { group1, group2 } = await resolveGroupNames(list1, list2, eligible, ds, q.__protected__)
 			/* Checked after id-to-name resolution, which is where a group actually shrinks: the R
 			backend does not check and, handed fewer than three, filters every probe and reports "too
 			few probes genome-wide", which misdiagnoses a sample problem as a data problem. */

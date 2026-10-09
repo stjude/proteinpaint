@@ -7,7 +7,8 @@ export type DERequest = {
 	genome: string
 	/** dataset label */
 	dslabel: string
-	/* Object containing two arrays of RNA seq count for DE analysis */
+	/* Object containing two arrays of RNA seq count for DE analysis.
+	`matchMethylation: true` on it keeps each group to its samples that have methylation data */
 	samplelst: any //{number[]; number[];}
 	/** Minimum count per sample for edgeR's filterByExpr */
 	min_count: number

@@ -11,10 +11,13 @@ import {
 	buildGroupValues,
 	canonicalizeSamplelst,
 	resolveDaContext,
+	resolveGroups,
+	withResolvedGroups,
 	sampleFilterScope,
 	type SampleGroups
 } from '#src/utils/sampleGroups.ts'
 import type { DeCacheResult } from '../../routes/types.ts'
+import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
 import { genomes } from '#src/initGenomesDs.js'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
@@ -169,10 +172,23 @@ export async function getDeCacheResult(
 	req: DERequest,
 	genomes: any
 ): Promise<{ result: DeCacheResult; cacheId: string }> {
+	const ds = genomes?.[req.genome]?.datasets?.[req.dslabel]
+	// the cache key holds the samples of the groups, also for a group that is defined by a filter
+	req = await withResolvedGroups(req, ds)
+	// a contrast that follows a methylation analysis keeps to the samples that have methylation data
+	if (ds && req.samplelst?.matchMethylation) {
+		const samplelst = await matchedSamplelst(
+			req.samplelst,
+			eligibleMethylationSamples(ds, undefined),
+			ds,
+			req.__protected__
+		)
+		req = { ...req, samplelst }
+	}
 	// ─── cache lookup or recompute ─── //
 	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof deKeyInputs>, DeCacheResult>({
 		computeArgument: deKeyInputs(req),
-		cacheScope: sampleFilterScope(req, genomes?.[req.genome]?.datasets?.[req.dslabel]),
+		cacheScope: sampleFilterScope(req, ds),
 		cacheSubdir: 'de',
 		computeFresh: async () => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
@@ -368,11 +384,13 @@ export async function resolveSampleGroups(
 	term_results2: any
 ): Promise<SampleGroups> {
 	if (param.samplelst?.groups?.length != 2) throw new Error('.samplelst.groups.length!=2')
-	if (param.samplelst.groups[0].values?.length < 1) throw new Error('samplelst.groups[0].values.length<1')
-	if (param.samplelst.groups[1].values?.length < 1) throw new Error('samplelst.groups[1].values.length<1')
+	// a group may be defined by a filter
+	const groups = await resolveGroups(param.samplelst.groups, param, ds)
+	if (groups[0].values?.length < 1) throw new Error('samplelst.groups[0].values.length<1')
+	if (groups[1].values?.length < 1) throw new Error('samplelst.groups[1].values.length<1')
 
 	const g1 = await buildGroupValues(
-		param.samplelst.groups[0].values,
+		groups[0].values,
 		allSampleSet,
 		ds,
 		param.tw,
@@ -382,7 +400,7 @@ export async function resolveSampleGroups(
 		param.__protected__
 	)
 	const g2 = await buildGroupValues(
-		param.samplelst.groups[1].values,
+		groups[1].values,
 		allSampleSet,
 		ds,
 		param.tw,
@@ -396,7 +414,10 @@ export async function resolveSampleGroups(
 	if (g1.names.length < 1) alerts.push('sample size of group1 < 1')
 	if (g2.names.length < 1) alerts.push('sample size of group2 < 1')
 	const commonnames = g1.names.filter(x => g2.names.includes(x))
-	if (commonnames.length) alerts.push(`Common elements found between both groups: ${commonnames.join(', ')}`)
+	if (commonnames.length)
+		alerts.push(
+			`Common samples found between both groups: ${commonnames.length} sample${commonnames.length == 1 ? '' : 's'}`
+		)
 
 	return {
 		group1names: g1.names,

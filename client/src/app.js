@@ -19,6 +19,7 @@ import urlmap from '#common/urlmap'
 import { Menu, renderSandboxFormDiv, sayerror } from '#dom'
 import { mayLaunchGdcPlotFromRunpp } from '../gdc/launch.ts'
 import { childCorsMessage } from '#common/embedder-helpers'
+import { getSavedStateRefusal } from '../mass/sessionForm.ts'
 import { observeElem } from './app.observer.js'
 import { bundleCheck, checkBundleVersion, notifyChunkLoadError } from './bundleVersion.ts'
 
@@ -692,6 +693,8 @@ async function parseEmbedThenUrl(arg, app) {
 	if (arg.massSessionId) {
 		const res = await client.dofetch3(`/massSession?id=${arg.massSessionId}`)
 		if (res.error) throw res.error
+		const refusal = getSavedStateRefusal(res.state)
+		if (refusal) throw refusal
 		const opts = {
 			debug: app.debugmode,
 			holder: app.holder0,
@@ -714,6 +717,8 @@ async function parseEmbedThenUrl(arg, app) {
 		})
 		if (jsonFile.error) throw jsonFile.error
 		const state = JSON.parse(jsonFile.text)
+		const refusal = getSavedStateRefusal(state)
+		if (refusal) throw refusal
 		const opts = {
 			debug: app.debugmode,
 			holder: app.holder0,

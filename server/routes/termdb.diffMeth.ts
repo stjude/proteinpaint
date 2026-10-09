@@ -3,7 +3,12 @@ import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { runDmrBatch } from '#src/routes/termdb.dmrBatch.ts'
 import { dmrScanToRows, summarizeProfile, coarsenProfile, dmrBedjLines } from '#src/utils/dmrScanRows.ts'
 import { writeBedjFile } from '#src/utils/bedjCache.ts'
-import { resolveGroupNames, matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
+import {
+	resolveGroupNames,
+	matchedSamplelst,
+	matchedSamplelstForResponse,
+	eligibleMethylationSamples
+} from '#src/utils/methylationMatrix.ts'
 import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { formatElapsedTime } from '#shared'
@@ -15,6 +20,8 @@ import {
 	buildGroupValues,
 	canonicalizeSamplelst,
 	resolveDaContext,
+	resolveGroups,
+	withResolvedGroups,
 	sampleFilterScope,
 	type SampleGroups
 } from '#src/utils/sampleGroups.ts'
@@ -190,6 +197,8 @@ export async function getDmCacheResult(
 	dataset on the imputing path it was validated under. */
 	const ds = genomes?.[req.genome]?.datasets?.[req.dslabel]
 	const imputeMissing = ds?.queries?.dnaMethylation?.platform != 'wgbs'
+	// the cache key holds the samples of the groups, also for a group that is defined by a filter
+	req = await withResolvedGroups(req, ds)
 
 	// ─── cache lookup or recompute ─── //
 	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof dmKeyInputs>, DmCacheResult>({
@@ -234,9 +243,10 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	if (!genome) throw new Error('unknown genome')
 	const ds = genome.datasets?.[req.dslabel]
 	if (!ds) throw new Error('unknown dataset')
-	const groups = req.samplelst?.groups
-	if (groups?.length != 2)
+	if (req.samplelst?.groups?.length != 2)
 		throw new Error('Exactly 2 sample groups are required for differential methylation analysis.')
+	// a group may be defined by a filter
+	const groups = await resolveGroups(req.samplelst.groups, req, ds)
 
 	/* Every major chromosome except the mitochondrion: 16.5 kb of circular DNA that is not CpG-island
 	methylated cannot carry a domain, and on a map scaled to chr1 its track is 0.06 px wide. chrY
@@ -275,7 +285,10 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 		minCpgs: req.scan?.minCpgs,
 		backgroundCorrection: !!req.scan?.backgroundCorrection
 	})
-	scan.matchedSamplelst = await matchedSamplelst(req.samplelst, eligible, ds, req.__protected__)
+	scan.matchedSamplelst = matchedSamplelstForResponse(
+		req.samplelst.groups,
+		await matchedSamplelst({ groups }, eligible, ds, req.__protected__)
+	)
 	scan.cacheId = cacheId
 	/* The DMRs as a track file, so a genome browser opened on the scan is a plain bedj tk. The
 	track is optional -- the browser opens without it -- so a failed write (no bgzip, unwritable
@@ -512,10 +525,10 @@ export async function resolveDmSampleGroups(
 ): Promise<SampleGroups> {
 	if (param.samplelst?.groups?.length != 2)
 		throw new Error('Exactly 2 sample groups are required for differential methylation analysis.')
-	if (param.samplelst.groups[0].values?.length < 1)
-		throw new Error('Group 1 has no samples. Please select at least one sample.')
-	if (param.samplelst.groups[1].values?.length < 1)
-		throw new Error('Group 2 has no samples. Please select at least one sample.')
+	// a group may be defined by a filter
+	const groups = await resolveGroups(param.samplelst.groups, param, ds)
+	if (groups[0].values?.length < 1) throw new Error('Group 1 has no samples. Please select at least one sample.')
+	if (groups[1].values?.length < 1) throw new Error('Group 2 has no samples. Please select at least one sample.')
 
 	/* Same resolver the cache key and the fresh run use, so the sample set a group is
 	built against always comes from the matrix that will actually be tested. Each element
@@ -527,7 +540,7 @@ export async function resolveDmSampleGroups(
 	const allSampleSet = eligibleMethylationSamples(ds, param.element_type)
 
 	const g1 = await buildGroupValues(
-		param.samplelst.groups[0].values,
+		groups[0].values,
 		allSampleSet,
 		ds,
 		param.tw,
@@ -537,7 +550,7 @@ export async function resolveDmSampleGroups(
 		param.__protected__
 	)
 	const g2 = await buildGroupValues(
-		param.samplelst.groups[1].values,
+		groups[1].values,
 		allSampleSet,
 		ds,
 		param.tw,
@@ -552,9 +565,7 @@ export async function resolveDmSampleGroups(
 	if (g2.names.length < 1) alerts.push('No samples in group 2 have methylation data available.')
 	const commonnames = g1.names.filter(x => g2.names.includes(x))
 	if (commonnames.length)
-		alerts.push(
-			`${commonnames.length} sample(s) appear in both groups: ${commonnames.join(', ')}. Please remove duplicates.`
-		)
+		alerts.push(`${commonnames.length} sample(s) appear in both groups. Please remove duplicates.`)
 
 	return {
 		group1names: g1.names,

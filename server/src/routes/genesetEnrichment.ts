@@ -412,8 +412,10 @@ async function resolveGseaGenesAndFoldChange({
 				{
 					genome: dm.genome,
 					dslabel: dm.dslabel,
-					group1: groups[0].values,
-					group2: groups[1].values,
+					// a group that lists no samples is defined by a filter, and is resolved there
+					group1: groups[0].values ?? groups[0],
+					group2: groups[1].values ?? groups[1],
+					filter0: (dm as any).filter0,
 					corrected: !!dm.scan?.backgroundCorrection,
 					__protected__: dm.__protected__,
 					/* The chromosomes the scan itself ran on. Without this the ranking covered the

@@ -1,11 +1,13 @@
 import type { Filter } from '../filter.ts'
+import type { SampleFilterGroup } from '../terms/samplelst.ts'
 
 export type TermdbDmrRequest = {
 	genome: string
 	dslabel: string
-	/** list of samples from each group */
-	group1: Sample[]
-	group2: Sample[]
+	/** each group as the list of its samples, or defined by a filter that the server resolves */
+	group1: Sample[] | SampleFilterGroup
+	group2: Sample[] | SampleFilterGroup
+	filter0?: any
 	/** query region */
 	chr: string
 	start: number

@@ -2,7 +2,7 @@ import type { RouteApi, RoutePayload } from '#types'
 import { cacheFilePath } from '#src/utils/cacheOrRecompute.ts'
 import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
-import { sampleFilterScope } from '#src/utils/sampleGroups.ts'
+import { sampleFilterScope, resolveGroups } from '#src/utils/sampleGroups.ts'
 import { buildTssIndex, linkDmrsToGenes, classifyLink, type GeneModel, type TssIndex } from '#src/utils/dmrGeneLink.ts'
 import fs from 'fs'
 import { genomes } from '#src/initGenomesDs.js'
@@ -79,7 +79,13 @@ function init({ genomes }) {
 			)
 
 			const eligible = eligibleMethylationSamples(ds, undefined)
-			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds, q.__protected__)
+			// a group may be defined by a filter
+			const samplelst = await matchedSamplelst(
+				{ groups: await resolveGroups(q.samplelst.groups, q, ds) },
+				eligible,
+				ds,
+				q.__protected__
+			)
 			const { result } = await getDeCacheResult(
 				{
 					genome: q.genome,

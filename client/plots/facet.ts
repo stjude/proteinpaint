@@ -4,8 +4,9 @@ import { controlsInit } from './controls'
 import { getT0T2defaultQ } from './summaryQ.ts'
 import { Menu, select2Terms } from '#dom'
 import { isNumericTerm } from '#shared/terms.js'
-import { addNewGroup, getFilter, getSamplelstTW } from '#mass/groups'
-import { getCombinedTermFilter } from '#filter'
+import { addNewGroup, getGroupFilterOfConditions, getGvGroupFilterEntry } from '#mass/groups'
+import { getCombinedTermFilter, filterJoin } from '#filter'
+import { ListSamples } from '#dom/summary/ListSamples'
 import { PlotBase } from '#plots/PlotBase.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 
@@ -282,7 +283,7 @@ class Facet extends PlotBase implements RxComponent {
 			{
 				text: 'Create group',
 				callback: () => {
-					this.addGroup(categories, categories2, cells)
+					this.addGroup(categories, categories2, cells, result)
 				}
 			}
 			// {
@@ -327,14 +328,57 @@ class Facet extends PlotBase implements RxComponent {
 			.on('click', btn.callback)
 	}
 
-	addGroup(categories, categories2, cells) {
-		const group = {
-			name: 'Group',
-			items: this.getSelectedSamples(categories, categories2, cells)
+	/* The group is defined by the conditions of the selected cells, and by the filter of the plot
+	when it has one. The cells are taken by the category of one term: each category is stated once,
+	with the categories of the other term that are selected with it, and the categories of the group
+	are joined with "or". */
+	addGroup(categories, categories2, cells, result) {
+		// the filter of a category of each term, for the categories of the selected cells
+		const columns = new Map<any, any>()
+		const rows = new Map<any, any>()
+		for (const row of categories2) {
+			for (const column of categories) {
+				if (!cells[row][column].selected) continue
+				if (!rows.has(row)) rows.set(row, this.getCategoryFilter(this.config.rowTw, row, result))
+				if (!columns.has(column)) columns.set(column, this.getCategoryFilter(this.config.columnTw, column, result))
+			}
 		}
-		const filter = getFilter(getSamplelstTW([group]))
+		/* a category whose filter is a single tvs is joined to others of its term in that tvs. a
+		category with any other filter, such as a group of a gene variant term, is the one to state once */
+		const byColumn = [...rows.values()].every(isOneTvs) && ![...columns.values()].every(isOneTvs)
+		const [outer, inner] = byColumn ? [columns, rows] : [rows, columns]
+		const lst: any[] = []
+		for (const [o, outerFilter] of outer) {
+			const selected = [...inner.keys()].filter(i => (byColumn ? cells[i][o] : cells[o][i]).selected)
+			lst.push(filterJoin([outerFilter, getEither(selected.map(i => inner.get(i)))]))
+		}
+		const selected = lst.length == 1 ? lst[0] : { type: 'tvslst', in: true, join: 'or', lst }
+		const plotFilter =
+			this.config.filter || (this.parentId && this.app.getState().plots.find(p => p.id === this.parentId)?.filter)
+		const filter = getGroupFilterOfConditions([plotFilter, selected])
 		addNewGroup(this.app, filter, this.state.groups)
 		return filter
+	}
+
+	// the filter that selects the samples of one category of a term of the table
+	getCategoryFilter(tw, category, result) {
+		const key = String(category)
+		if (tw.term.type == 'geneVariant') {
+			const filter = getGvGroupFilterEntry(tw, key)
+			if (!filter) throw `no filter for '${key}' of ${tw.term.name}`
+			return filter
+		}
+		const bins = Object.fromEntries((result.refs?.byTermId?.[tw.$id]?.bins || []).map(b => [b.label, b]))
+		const { tvslst } = new ListSamples({
+			app: this.app,
+			termfilter: this.state.termfilter,
+			term: tw,
+			plot: { seriesId: key, key },
+			bins: { term1: bins }
+		})
+		const entry = tvslst.lst[0]
+		if (entry.tvs?.ranges?.length) delete entry.tvs.values // a numeric tvs is filtered by its ranges only
+		return { type: 'tvslst', in: true, join: '', lst: [entry] }
 	}
 
 	getSelectedSamples(categories, categories2, cells) {
@@ -648,4 +692,23 @@ function getTermCollectionData(s, tw, termid) {
 		const data = value[termid]
 		return data
 	}
+}
+
+// a filter of one tvs that is not negated
+function isOneTvs(f) {
+	return f.lst.length == 1 && f.lst[0].type == 'tvs' && !f.lst[0].tvs.isnot
+}
+
+/* The filter that selects the samples of any of the filters, each of one category of the same
+term: a tvs of every value or range when each is a single tvs, else the filters joined with "or". */
+function getEither(filters) {
+	if (filters.length == 1) return filters[0]
+	if (!filters.every(isOneTvs)) return { type: 'tvslst', in: true, join: 'or', lst: filters }
+	const entry = structuredClone(filters[0].lst[0])
+	for (const f of filters.slice(1)) {
+		const { values, ranges } = f.lst[0].tvs
+		if (values) (entry.tvs.values ||= []).push(...values)
+		if (ranges) (entry.tvs.ranges ||= []).push(...ranges)
+	}
+	return { type: 'tvslst', in: true, join: '', lst: [entry] }
 }

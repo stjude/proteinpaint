@@ -37,6 +37,7 @@ import {
 	resolveTermId
 } from './termdb.termCollection.ts'
 import { mayLimitSamples } from './mds3.filter.js'
+import { resolveGroups, isFilterGroup, maxFilterGroups } from './utils/sampleGroups.ts'
 
 /* centralized resolution of a sample id -> display refs ({ label, ... }) for refs.bySampleId{}.
 each dataset implements ds.cohort.termdb.q.id2sampleRefs() (native/gdc/mmrf); it owns any id
@@ -107,6 +108,7 @@ export async function getData(q, ds, mapParent2Children?: boolean): Promise<any>
 		// must always call authApi.mayAdjustFilter(), dataset-specific logic exceptions
 		// must be coded inside a ds.cohort.termdb.getAdditionalFilter() option
 		authApi.mayAdjustFilter(q, ds, q.terms)
+		await mayListSamplelstGroups(q, ds)
 
 		const originalTerms = q.terms
 		const { expandedTerms, tcMappings } = expandCustomTermCollection(originalTerms)
@@ -140,6 +142,34 @@ export async function getData(q, ds, mapParent2Children?: boolean): Promise<any>
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e, code: e.code } // ok for e.code to be undefined
 	}
+}
+
+/* A group of a samplelst term either lists its samples or is defined by a filter (see
+resolveGroups()). Give each group of the request's samplelst terms its list, which is what the
+rest of this file reads, on tw.q.groups[].values and on the term's copy at tw.term.values[].list.
+
+The lists go on a copy of the term wrapper, in a new q.terms[]: the caller's term wrapper keeps its
+filters. A route may return the term wrappers that it was sent in its response, and the samples of a
+group that came as a filter are not for a response. */
+async function mayListSamplelstGroups(q, ds) {
+	// the limit of resolveGroups() holds for the samplelst terms of the request together
+	let filterGroupCount = 0
+	for (const tw of q.terms) {
+		if (tw.term?.type == 'samplelst' && Array.isArray(tw.q?.groups))
+			filterGroupCount += tw.q.groups.filter(isFilterGroup).length
+	}
+	if (filterGroupCount > maxFilterGroups) throw new Error('too many sample groups defined by a filter')
+	let terms
+	for (const [i, tw] of q.terms.entries()) {
+		if (tw.term?.type != 'samplelst' || !Array.isArray(tw.q?.groups)) continue
+		const groups = await resolveGroups(tw.q.groups, q, ds)
+		if (groups === tw.q.groups) continue // every group lists its samples
+		const values = { ...tw.term.values }
+		for (const g of groups) values[g.name] = { key: g.name, label: g.name, ...values[g.name], list: g.values }
+		if (!terms) terms = [...q.terms]
+		terms[i] = { ...tw, q: { ...tw.q, groups }, term: { ...tw.term, values } }
+	}
+	if (terms) q.terms = terms
 }
 
 function validateArg(q, ds) {

@@ -1,6 +1,6 @@
 import { resolveElementQuery } from '../../routes/termdb.diffMeth.ts'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
-import { buildGroupValues } from '#src/utils/sampleGroups.ts'
+import { buildGroupValues, isFilterGroup } from '#src/utils/sampleGroups.ts'
 import serverconfig from '#src/serverconfig.js'
 
 /* Which methylation matrix a region (DMR) request runs on, and which samples are eligible for it.
@@ -217,6 +217,26 @@ export async function matchedSamplelst(
 		groups.push({ ...g, values: names.map(n => ({ sampleId: ds.cohort?.termdb?.q?.sampleName2id?.(n) ?? n })) })
 	}
 	return { groups }
+}
+
+/* The matched groups as a response gives them. The samples of a group that the request defined by a
+filter are not for a response: such a group goes back as it came, with the number of its samples
+that have methylation data, and `matchMethylation` asks the differential expression that follows
+to keep to those samples itself (see getDeCacheResult() in routes/termdb.DE.ts). A group that the
+request listed goes back as its matched list.
+
+requestGroups[]: the groups of the request; matched: matchedSamplelst() of those groups, resolved */
+export function matchedSamplelstForResponse(
+	requestGroups: any[],
+	matched: { groups: { name: string; values: { sampleId: number | string }[]; [k: string]: any }[] }
+): { groups: any[]; matchMethylation?: boolean } {
+	if (!requestGroups.some(isFilterGroup)) return matched
+	return {
+		matchMethylation: true,
+		groups: requestGroups.map((g, i) =>
+			isFilterGroup(g) ? { ...g, sampleCount: matched.groups[i].values.length } : matched.groups[i]
+		)
+	}
 }
 
 export async function resolveGroupNames(

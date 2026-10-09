@@ -1,14 +1,15 @@
 import type { Elem } from '../../types/d3'
 import type { DMRSettings } from './settings/Settings'
-import type { DmrDiagnostic } from '#types'
+import type { DmrDiagnostic, SampleFilterGroup } from '#types'
 
 /** Config shape passed via plot_create from VolcanoInteractions */
 export type DmrConfig = {
 	chartType: 'dmr'
 	id: string
 	headerText: string
-	group1: { sample: string }[]
-	group2: { sample: string }[]
+	/** each group as the list of its samples, or as the filter that defines it */
+	group1: { sampleId: number | string; sample?: string }[] | SampleFilterGroup
+	group2: { sampleId: number | string; sample?: string }[] | SampleFilterGroup
 	group1Name?: string
 	group2Name?: string
 	settings: { dmr: DMRSettings }

@@ -9,7 +9,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { isNumericTw } from '#shared/terms.js'
 import { isFractionTw, getFractionTvsTerm } from '#shared/termCollection.js'
 import { negateTermLabel } from './barchart'
-import { getSamplelstFilter, getSamplelstTW, getFilter, addNewGroup } from '#mass/groups'
+import { getGroupFilterEntry, getGvGroupFilterEntry, getGroupFilterOfConditions, addNewGroup } from '#mass/groups'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -631,10 +631,8 @@ function getTvs(termIndex, value, self, geneVariant) {
 		}
 		delete tvs.tvs.values // numeric tvs is filtered by ranges only
 	} else if (term.term.type == 'samplelst') {
-		const list = term.term.values?.[value]?.list || []
-		const ids = list.map(s => s.sampleId)
-		const tvslst = getSamplelstFilter(ids)
-		tvs = tvslst.lst[0] // tvslst only has the tvs for the samplelst term
+		// a tvs that lists the samples of the category, or the filter that defines its group
+		tvs = getGroupFilterEntry(term, value)
 	} else if (term.term.type == 'geneVariant' && term.q.type == 'values') {
 		throw 'no longer supported in barchart'
 	}
@@ -886,27 +884,33 @@ async function getSamples(arg) {
 	return samples
 }
 
-async function getSampleGrp(arg) {
-	const samples = await getSamples(arg)
-	const group = {
-		name: 'Group',
-		items: samples.map((s: any) => {
-			return { sampleId: s.sample }
-		})
+/* The conditions that select the samples of a clicked bar, as filters to join: those of
+getListSamplesArg(), and those of a gene variant term, which getSamples() checks on each listed
+sample instead. */
+function getBarConditions(arg) {
+	const { self, tvslst, geneVariant } = arg
+	const conditions: any[] = [{ ...tvslst, join: tvslst.lst.length > 1 ? 'and' : '' }]
+	for (const [i, tw] of [self.config.term0, self.config.term, self.config.term2].entries()) {
+		const value = geneVariant[`t${i}value`]
+		if (!value) continue
+		const entry = getGvGroupFilterEntry(tw, value)
+		if (!entry) throw `no filter for '${value}' of ${tw.term.name}`
+		conditions.push(entry)
 	}
-	return group
+	return conditions
 }
 
+// the group is defined by the conditions of the bar, and by the filter of the plot when it has one
 export async function addAsGroup(arg) {
 	// validate arg
 	for (const k of Object.keys(arg)) {
 		const param = arg[k]
 		if (!param) throw `parameter '${k}' is undefined`
 	}
-	const group = await getSampleGrp(arg)
-	const tw = getSamplelstTW([group])
-	const filter = getFilter(tw)
-	addNewGroup(arg.self.app, filter, arg.self.state.groups)
+	const { self } = arg
+	const plotFilter =
+		self.config.filter || (self.parentId && self.app.getState().plots.find(p => p.id === self.parentId)?.filter)
+	addNewGroup(self.app, getGroupFilterOfConditions([plotFilter, ...getBarConditions(arg)]), self.state.groups)
 }
 
 // if geneVariant term is present, filter sample by its geneVariant group assignment
@@ -1009,7 +1013,7 @@ async function menuoption_add_filter(self, tvslst, arg) {
 		this is to be added to the obj.termfilter.filter[]
 		if barchart is single-term, tvslst will have only one element
 		if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
-	arg: object of parameters used by getSampleGrp to get sample group
+	arg: object of parameters of getListSamplesArg()
 		*/
 	if (!tvslst) return
 	if (!self.state.termfilter || self.state.nav?.header_mode !== 'with_tabs') {
@@ -1022,27 +1026,24 @@ async function menuoption_add_filter(self, tvslst, arg) {
 		if (!param) throw `parameter '${k}' is undefined`
 	}
 
+	// if any term has group setting, the filter is the conditions of the bar
 	const hasGrpSetting = arg.terms.find(t => t.q?.type == 'predefined-groupset' || t.q?.type == 'custom-groupset')
-	let samplelstTW
-	if (hasGrpSetting) {
-		// if any term has group setting, add filter as samplelst
-		const group = await getSampleGrp(arg)
-		samplelstTW = getSamplelstTW([group])
-	}
 
 	// self.state.termfilter may be combined with a plot-level filter that lacks the filterUiRoot tag,
 	// so look up filterUiRoot in the global filter that filter_replace will replace
 	const filterUiRoot = getFilterItemByTag(self.app.getState().termfilter.filter, 'filterUiRoot')
 	const filter = filterJoin([
 		filterUiRoot,
-		samplelstTW
-			? getFilter(samplelstTW)
-			: {
-					type: 'tvslst',
-					in: true,
-					join: tvslst.length > 1 ? 'and' : '',
-					lst: [...tvslst.map(wrapTvs)]
-			  }
+		...(hasGrpSetting
+			? getBarConditions(arg)
+			: [
+					{
+						type: 'tvslst',
+						in: true,
+						join: tvslst.length > 1 ? 'and' : '',
+						lst: [...tvslst.map(wrapTvs)]
+					}
+			  ])
 	])
 	filter.tag = 'filterUiRoot'
 	self.app.dispatch({

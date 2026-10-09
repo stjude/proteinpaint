@@ -27,7 +27,7 @@ import {
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import { sampleFilterScope } from '#src/utils/sampleGroups.ts'
+import { sampleFilterScope, resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import fs from 'fs'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
@@ -189,9 +189,11 @@ export async function runDmrBatch(
 			throw new Error(`Too many regions (${q.regions.length}). Maximum is ${MAX_REGIONS}.`)
 		regions = q.regions
 	}
-	if (!Array.isArray(q.group1) || q.group1.length == 0)
+	// a group may be defined by a filter
+	const [list1, list2] = await resolveGroupPair(q, ds)
+	if (!Array.isArray(list1) || list1.length == 0)
 		throw new Error('Group 1 has no samples. Please select at least one sample.')
-	if (!Array.isArray(q.group2) || q.group2.length == 0)
+	if (!Array.isArray(list2) || list2.length == 0)
 		throw new Error('Group 2 has no samples. Please select at least one sample.')
 	for (const r of regions) {
 		if (invalidcoord(genome, r.chr, r.start, r.stop))
@@ -260,8 +262,8 @@ export async function runDmrBatch(
 		v: CACHE_VERSION,
 		genome: q.genome,
 		dslabel: q.dslabel,
-		group1: q.group1.map(x => x.sampleId).sort(),
-		group2: q.group2.map(x => x.sampleId).sort(),
+		group1: list1.map(x => x.sampleId).sort(),
+		group2: list2.map(x => x.sampleId).sort(),
 		/* members included: the cached payload returns them, and two requests that merge to the same
 		windows from different region lists ([100,200]+[150,300] against [100,300]) need different
 		mappings back to their own inputs. */
@@ -323,8 +325,8 @@ export async function runDmrBatch(
 			n per group -- and the matched cohort handed to the expression follow-ups was whichever
 			one the first chromosome produced. */
 			const { group1, group2 } = await resolveGroupNames(
-				q.group1,
-				q.group2,
+				list1,
+				list2,
 				eligibleMethylationSamples(ds, q.element_type),
 				ds,
 				q.__protected__

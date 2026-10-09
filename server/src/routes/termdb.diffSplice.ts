@@ -15,6 +15,9 @@ import {
 	buildGroupValues,
 	canonicalizeSamplelst,
 	resolveDaContext,
+	resolveGroups,
+	withResolvedGroups,
+	sampleFilterScope,
 	type SampleGroups
 } from '#src/utils/sampleGroups.ts'
 import type { DsCacheResult } from '../../routes/types.ts'
@@ -172,8 +175,12 @@ export async function getDsCacheResult(
 	genomes: any
 ): Promise<{ result: DsCacheResult; cacheId: string }> {
 	validateDsFilters(req)
+	const ds = genomes?.[req.genome]?.datasets?.[req.dslabel]
+	// the cache key holds the samples of the groups, also for a group that is defined by a filter
+	req = await withResolvedGroups(req, ds)
 	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof dsKeyInputs>, DsCacheResult>({
 		computeArgument: dsKeyInputs(req),
+		cacheScope: sampleFilterScope(req, ds),
 		cacheSubdir: 'ds',
 		computeFresh: async () => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
@@ -342,33 +349,40 @@ export async function resolveDsSampleGroups(
 	term_results2: any
 ): Promise<SampleGroups> {
 	if (req.samplelst?.groups?.length != 2) throw new Error('.samplelst.groups.length!=2')
-	if (req.samplelst.groups[0].values?.length < 1) throw new Error('samplelst.groups[0].values.length<1')
-	if (req.samplelst.groups[1].values?.length < 1) throw new Error('samplelst.groups[1].values.length<1')
+	// a group may be defined by a filter
+	const groups = await resolveGroups(req.samplelst.groups, req, ds)
+	if (groups[0].values?.length < 1) throw new Error('samplelst.groups[0].values.length<1')
+	if (groups[1].values?.length < 1) throw new Error('samplelst.groups[1].values.length<1')
 
 	const g1 = await buildGroupValues(
-		req.samplelst.groups[0].values,
+		groups[0].values,
 		allSampleSet,
 		ds,
 		req.tw,
 		req.tw2,
 		term_results,
-		term_results2
+		term_results2,
+		req.__protected__
 	)
 	const g2 = await buildGroupValues(
-		req.samplelst.groups[1].values,
+		groups[1].values,
 		allSampleSet,
 		ds,
 		req.tw,
 		req.tw2,
 		term_results,
-		term_results2
+		term_results2,
+		req.__protected__
 	)
 
 	const alerts: string[] = []
 	if (g1.names.length < 1) alerts.push('sample size of group1 < 1')
 	if (g2.names.length < 1) alerts.push('sample size of group2 < 1')
 	const commonnames = g1.names.filter(x => g2.names.includes(x))
-	if (commonnames.length) alerts.push(`Common samples found between both groups: ${commonnames.join(', ')}`)
+	if (commonnames.length)
+		alerts.push(
+			`Common samples found between both groups: ${commonnames.length} sample${commonnames.length == 1 ? '' : 's'}`
+		)
 
 	return {
 		group1names: g1.names,

@@ -1,5 +1,5 @@
 import { mayLog } from '#src/helpers.ts'
-import { get_samples } from '#src/termdb.sql.js'
+import { resolveGroups } from '#src/utils/sampleGroups.ts'
 import { isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { generate_group_name_from_tvslst } from './utils.ts'
@@ -65,7 +65,14 @@ function isValidSubplot(subplotType: string, input: any): boolean {
  * input: is Tw or TVS object
  * output: a plot state object that can be used to generate the appropriate plot
  */
-export async function resolveToPlotState(input: any, plotType: string, ds: any, subplotType?: string) {
+export async function resolveToPlotState(
+	input: any,
+	plotType: string,
+	ds: any,
+	subplotType?: string,
+	/** the q.__protected__ of the request, which a dataset with a sample filter requires */
+	__protected__?: any
+) {
 	// }, llm: LlmConfig) {
 	const plotState: any = { type: 'plot', plot: { chartType: plotType } }
 
@@ -102,29 +109,17 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 		// default method for differential gene expression analysis
 		const name1 = generate_group_name_from_tvslst(input.filter1)
 		const name2 = generate_group_name_from_tvslst(input.filter2)
-		const samples1 = await get_samples({ filter: input.filter1 }, ds, true) // true is to bypass permission check
-		const samples2 = await get_samples({ filter: input.filter2 }, ds, true) // true is to bypass permission check
-
-		// Get unique sample ids for each group and format them as required for the plot state
-		const sampleIds1 = Array.from(new Set(samples1.map((item: any) => item.id)))
-		const sampleIds2 = Array.from(new Set(samples2.map((item: any) => item.id)))
-		const samples1lst = sampleIds1.map(sampleId => ({ sampleId }))
-		const samples2lst = sampleIds2.map(sampleId => ({ sampleId }))
+		/* The two groups are defined by their filters, which the server resolves to their samples
+		when the analysis runs. Only the size of each group is needed here, for the plot's choice of
+		settings: resolve them the same way, and keep the counts. */
+		const [g1, g2] = await resolveGroups([{ filter: input.filter1 }, { filter: input.filter2 }], { __protected__ }, ds)
 
 		plotState.plot.chartType = 'differentialAnalysis'
 		plotState.plot.childType = 'volcano'
 		plotState.plot.termType = TermTypes.GENE_EXPRESSION // placeholder(can this be something else as well?)
 		const groups = [
-			{
-				name: name1,
-				in: true,
-				values: samples1lst
-			},
-			{
-				name: name2,
-				in: true,
-				values: samples2lst
-			}
+			{ name: name1, in: true, filter: input.filter1, sampleCount: g1.values.length },
+			{ name: name2, in: true, filter: input.filter2, sampleCount: g2.values.length }
 		]
 		plotState.plot.samplelst = { groups }
 		const tw = {
@@ -135,18 +130,8 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 				name: name1 + ' vs ' + name2,
 				type: 'samplelst',
 				values: {
-					[name1]: {
-						color: 'purple',
-						key: name1,
-						label: name1,
-						list: samples1lst
-					},
-					[name2]: {
-						color: 'blue',
-						key: name2,
-						label: name2,
-						list: samples2lst
-					}
+					[name1]: { color: 'purple', key: name1, label: name1 },
+					[name2]: { color: 'blue', key: name2, label: name2 }
 				}
 			}
 		}
