@@ -129,6 +129,11 @@ export function getNonStringAuthParam(q) {
 	return authQueryParams.find(key => q?.[key] !== undefined && typeof q[key] != 'string')
 }
 
+// returns the string entries of an array value, or an empty array for any other value
+export function getStringArray(value): string[] {
+	return Array.isArray(value) ? value.filter(v => typeof v == 'string') : []
+}
+
 // fail closed: throw instead of resolving a non-string value as matching no credential
 export function assertStringOrUndefined(value, name) {
 	if (value !== undefined && typeof value != 'string')
@@ -378,19 +383,31 @@ export class Auth {
 
 		if (time > payload.exp) throw `Please login again to access this feature. (expired token)`
 
-		const dsnames = cred.dsnames || [q.dslabel]
-		// some dslabels do not specify datasets[] array in the serverconfig.dsCredentials[dslabel],
-		// and in that case the jwt payload access is applied to the full dataset cohort instead of a subset/subcohort
-		const missingAccess =
-			payload.datasets?.length && dsnames.filter(d => !payload.datasets?.includes(d.id)).map(d => d.id)
-		if (missingAccess?.length) {
-			throw { error: 'Missing access', linkKey: missingAccess.join(',') }
+		if (cred.dsnames?.length) {
+			// the jwt payload.datasets[] must list every dsnames[].id of the dsCredentials entry,
+			// where a missing or empty payload.datasets[] lists none of them
+			const userDatasets = getStringArray(payload.datasets)
+			const missingAccess = cred.dsnames.map(d => d.id).filter(id => !userDatasets.includes(id))
+			if (missingAccess.length) {
+				throw { error: 'Missing access', linkKey: missingAccess.join(',') }
+			}
+		} else {
+			const dsnames = cred.dsnames || [q.dslabel]
+			// some dslabels do not specify datasets[] array in the serverconfig.dsCredentials[dslabel],
+			// and in that case the jwt payload access is applied to the full dataset cohort instead of a subset/subcohort
+			const missingAccess =
+				payload.datasets?.length && dsnames.filter(d => !payload.datasets?.includes(d.id)).map(d => d.id)
+			if (missingAccess?.length) {
+				throw { error: 'Missing access', linkKey: missingAccess.join(',') }
+			}
 		}
 		return {
 			iat: payload.iat,
 			email: payload.email,
 			ip: payload.ip,
 			clientAuthResult: payload.clientAuthResult,
+			// the dataset names in the login jwt, to be tracked in the session for dataset code
+			userDatasets: getStringArray(payload.datasets),
 			rawToken
 		}
 	}
@@ -434,7 +451,17 @@ export class Auth {
 	}
 
 	// proteinpaint-issued JWT
-	getSignedJwt(req, res, q, cred, clientAuthResult, maxSessionAge, email = '', sessions: SessionsMap) {
+	getSignedJwt(
+		req,
+		res,
+		q,
+		cred,
+		clientAuthResult,
+		maxSessionAge,
+		email = '',
+		sessions: SessionsMap,
+		userDatasets: string[] = []
+	) {
 		if (!cred.secret) return
 		try {
 			const time = Date.now()
@@ -453,6 +480,10 @@ export class Auth {
 				email
 			}
 			if (cred.dsnames) payload.datasets = cred.dsnames.map(d => d.id)
+			// unlike payload.datasets above which is from the dsCredentials entry, these are the
+			// dataset names from the login jwt; included in the signed session jwt, so that
+			// mayAddSessionFromJwt() on another server process will track the same value
+			payload.userDatasets = userDatasets
 			const { secret } = getApplicableSecret(req.headers, cred, payload)
 			const jwt = jsonwebtoken.sign(payload, secret)
 			const id = this.getSessionIdFromJwt(jwt)

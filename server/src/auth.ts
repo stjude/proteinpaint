@@ -14,6 +14,7 @@ export interface AuthInterface {
 	getDsAuth: (req) => any[]
 	getNonsensitiveInfo: (_) => { forbiddenRoutes: string[] }
 	isUserLoggedIn: (req, ds, requireTermdbCred?: boolean) => boolean
+	getUserDatasets: (req, ds) => string[]
 	getRequiredCredForDsEmbedder: (dslabel: string, embedder: string) => any
 	getPayloadFromHeaderAuth: (req, res) => any
 	getHealth: () => any | Promise<any>

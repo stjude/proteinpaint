@@ -129,14 +129,24 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 			// 	throw `Incorrect authorization route, use ${cred.authRoute}'`
 			// }
 
-			const { email, ip, clientAuthResult, dslabel, rawToken } = auth.getJwtPayload(q, req.headers, cred)
+			const { email, ip, clientAuthResult, dslabel, rawToken, userDatasets } = auth.getJwtPayload(q, req.headers, cred)
 			auth.checkIPaddress(req, ip, cred)
 			let jwt = rawToken
 			if (!dslabel) {
 				// NOTE: A login jwt payload is expected to not have dslabel, while session jwt is expected to have it
 				// No need to get another session jwt if the current jwt is already a session jwt (not from initial login)
 				code = 401 // in case of jwt processing error
-				jwt = await auth.getSignedJwt(req, res, q, cred, clientAuthResult, auth.maxSessionAge, email, auth.sessions)
+				jwt = await auth.getSignedJwt(
+					req,
+					res,
+					q,
+					cred,
+					clientAuthResult,
+					auth.maxSessionAge,
+					email,
+					auth.sessions,
+					userDatasets
+				)
 			}
 			// difficult to setup CORS cookie, will deprecate support
 			res.send({ status: 'ok', jwt, route: cred.route, clientAuthResult })

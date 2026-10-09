@@ -62,6 +62,10 @@ export const AuthApiOpen: AuthInterface = {
 		return true
 	},
 
+	getUserDatasets() {
+		return []
+	},
+
 	getRequiredCredForDsEmbedder() {
 		return undefined
 	},

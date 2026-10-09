@@ -890,6 +890,81 @@ tape('AuthApi.isUserLoggedIn: returns false when session is expired (no active s
 	test.end()
 })
 
+tape('AuthApi.getUserDatasets: returns the login jwt datasets of an active session', async function (test) {
+	test.timeoutAfter(1000)
+
+	const genomes = { hg38: { datasets: { [dslabel]: {} } } }
+	const dsnames = [
+		{ id: 'dsA', label: 'A' },
+		{ id: 'dsB', label: 'B' }
+	]
+	const loginToken = jsonwebtoken.sign(
+		{ iat: time, exp: time + 300, ip: '127.0.0.1', email: 'user@test.com', datasets: ['dsA', 'dsB', 'dsC', 1] },
+		secret
+	)
+	const { authApi, app } = await makeAuthApiWithRoutes({ dsnames }, genomes)
+	const ds = { label: dslabel }
+	const loggedOutReq = { query: { embedder, dslabel }, headers: {}, path: '/termdb/violinBox', cookies: {} }
+	test.deepEqual(authApi.getUserDatasets(loggedOutReq, ds), [], 'should return an empty array without a session')
+
+	let sessionCookie = ['', '']
+	const response: any = await new Promise(resolve => {
+		const req = {
+			query: { embedder, dslabel },
+			headers: { [headerKey]: loginToken },
+			path: '/jwt-status',
+			ip: '127.0.0.1',
+			cookies: {}
+		}
+		const res = {
+			send: resolve,
+			header(key: string, val: string) {
+				if (key === 'Set-Cookie') sessionCookie = val.split(';')[0].split('=')
+			},
+			status() {}
+		}
+		app.routes['/jwt-status'].post(req, res)
+	})
+	test.equal(response.status, 'ok', 'should establish a session')
+
+	const expected = ['dsA', 'dsB', 'dsC']
+	const cookieReq = {
+		query: { embedder, dslabel },
+		headers: {},
+		path: '/termdb/violinBox',
+		cookies: { [sessionCookie[0]]: sessionCookie[1] }
+	}
+	test.deepEqual(
+		authApi.getUserDatasets(cookieReq, ds),
+		expected,
+		'should return the string entries of the login jwt datasets for a session cookie'
+	)
+
+	// simulate another server process, which tracks the session from the signed session jwt
+	const { authApi: authApi2 } = await makeAuthApiWithRoutes({ dsnames }, genomes)
+	const bearerReq = {
+		query: { embedder, dslabel },
+		headers: { authorization: `Bearer ${Buffer.from(response.jwt).toString('base64')}` },
+		path: '/termdb/violinBox',
+		ip: '127.0.0.1',
+		cookies: {}
+	}
+	test.deepEqual(
+		authApi2.getUserDatasets(bearerReq, ds),
+		expected,
+		'should return the same datasets from the signed session jwt on another server process'
+	)
+
+	const { authApi: openApi } = makeAuthApi({}, genomes)
+	const openReq = { query: { embedder, dslabel: 'unknown-ds' }, headers: {}, path: '/termdb/violinBox', cookies: {} }
+	test.deepEqual(
+		openApi.getUserDatasets(openReq, { label: 'unknown-ds' }),
+		[],
+		'should return an empty array when the dataset does not require a login'
+	)
+	test.end()
+})
+
 tape('AuthApi: an inherited-name session id resolves to no session at every read path', async function (test) {
 	test.timeoutAfter(1000)
 	// getSessionId resolves the request-controlled id from req.query['x-sjppds-sessionid'], so a
