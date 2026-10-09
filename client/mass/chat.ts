@@ -55,7 +55,7 @@ class MassAiChatBot implements RxComponent {
 	initDom() {
 		//const cohortStr = this.getState(appState).cohortStr
 		let text = 'Search an item'
-		let height = '1px' // No white space needed for search only
+		let height = 'auto' // No white space needed for search only; grows to fit the selected gene's action buttons
 		if (this.isChat) {
 			text = 'Ask a question'
 			height = '200px'
@@ -69,6 +69,7 @@ class MassAiChatBot implements RxComponent {
 				.attr('class', 'sjpp_show_scrollbar')
 				.style('margin', '5px 20px 0px 20px')
 				.style('height', height)
+				.style('max-height', '200px')
 				.style('overflow', 'auto')
 				.style('scroll-behavior', 'smooth')
 		}
