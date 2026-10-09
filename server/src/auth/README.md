@@ -15,10 +15,12 @@ The supported ways to set them are:
    The server process itself does not need read access to the file. See the comments at the top of
    `container/envHelpers.mjs`.
 
-**Deprecated:** setting `dsCredentials` in `serverconfig.json`, as an object or as a credentials file path,
-still works but logs a warning at startup, and will not be supported in a future release. This also applies to
-a `dsCredentials` entry in `PP_SERVERCONFIG_OVERRIDES`. When `PP_CREDS` is set, a `serverconfig.json` value is
-ignored.
+**Deprecated:** setting `dsCredentials` as an object in `serverconfig.json` still works but logs a warning at
+startup, and will not be supported in a future release. This also applies to a `dsCredentials` entry in
+`PP_SERVERCONFIG_OVERRIDES`. When `PP_CREDS` is set, a `serverconfig.json` value is ignored.
+
+**No longer supported:** setting `dsCredentials` to a credentials file path in `serverconfig.json` throws at
+startup, unless `PP_CREDS` is set. Use `PP_CREDS_FILE` instead.
 
 These are not deployment options, and are not deprecated:
 

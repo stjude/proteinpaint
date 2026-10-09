@@ -244,7 +244,7 @@ if (serverconfig.dsCredentials) {
 }
 
 if (process.env.PP_CREDS) {
-	// preferred over a dsCredentials file path, so that the server process does not need
+	// used instead of a dsCredentials file path, so that the server process does not need
 	// read access to a credentials file that a path traversal bug could expose;
 	// see container/envHelpers.mjs for how to set this env variable from a file
 	try {
@@ -256,13 +256,12 @@ if (process.env.PP_CREDS) {
 	// not inherited by spawned child processes, and not exposed by any code that reads process.env later
 	delete process.env.PP_CREDS
 } else if (typeof serverconfig.dsCredentials == 'string') {
-	const dsCredentialsFile = serverconfig.dsCredentials
-	try {
-		const json = fs.readFileSync(dsCredentialsFile, { encoding: 'utf8' })
-		serverconfig.dsCredentials = JSON.parse(json)
-	} catch (e) {
-		throw `invalid json file, serverconfig.dsCredentials='${dsCredentialsFile}': ${e}`
-	}
+	// a credentials file path is no longer read here, see container/envHelpers.mjs for how to use PP_CREDS_FILE instead
+	throw (
+		`serverconfig.dsCredentials as a file path is no longer supported. ` +
+		`Set PP_CREDS_FILE to the file path and start the server with container/envHelpers.mjs, ` +
+		`or set process.env.PP_CREDS to the credentials JSON.`
+	)
 }
 
 if (serverconfig.debugmode) {
