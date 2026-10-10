@@ -11,6 +11,23 @@ export function setSamplesBtn(self: MatrixControls, s: any) {
 	const parent = self.parent
 	const rows: any[] = [
 		{
+			label: `Show One Column Per`,
+			title: `Show one column per ${l.sample}, or per root ${l.sample} (e.g. patient) with the data of its ${l.samples} combined`,
+			type: 'radio',
+			chartType: 'matrix',
+			settingsKey: 'mapChildren2Root',
+			styles: { display: 'inline-block' },
+			options: [
+				{ label: l.Sample, value: false },
+				{ label: getRootSampleTypeName(self.opts.app.vocabApi.termdbConfig), value: true }
+			],
+			getDisplayStyle(plot: any) {
+				return plot.chartType == 'matrix' && self.opts.app.vocabApi.termdbConfig.hasSampleAncestry
+					? 'table-row'
+					: 'none'
+			}
+		},
+		{
 			label: `Maximum # ${l.Samples}`,
 			title: `Limit the number of displayed ${l.samples}`,
 			type: 'number',
@@ -335,4 +352,11 @@ export function updateSamplesControls(self: MatrixControls, app: any, parent: an
 		)
 		sortingControl.style('display', 'none')
 	}
+}
+
+/** return the root sample type name of a dataset with sample ancestry */
+function getRootSampleTypeName(termdbConfig: any) {
+	const root: any = Object.values(termdbConfig.sampleTypes || {}).find((st: any) => st.parent_id === null)
+	const name = root?.name || 'root sample'
+	return name.charAt(0).toUpperCase() + name.slice(1)
 }

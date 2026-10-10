@@ -9,7 +9,9 @@ import {
 	isDictionaryType,
 	isNonDictionaryType,
 	isSingleCellTerm,
+	isNumericTw,
 	getBin,
+	getGvQueryKey,
 	getTwSampleTypes,
 	type TwSampleTypes,
 	getDefaultSampleTypes
@@ -23,7 +25,8 @@ import {
 	SSGSEA,
 	PROTEOME_ABUNDANCE,
 	PSEUDOBULK,
-	JUNCTION
+	JUNCTION,
+	TERM_COLLECTION
 } from '#types'
 import { annotateSingleCellTerm, hydrateMetaResultCellRows } from './singleCell/matrixData.ts'
 import { get_bin_label, compute_bins, assignBinColors } from '#shared/termdb.bins.js'
@@ -120,6 +123,7 @@ export async function getData(q, ds, mapParent2Children?: boolean): Promise<any>
 		const data = await getSampleData(q, ds)
 		reconstituteCustomTermCollection(data, tcMappings)
 		resolveTermCollectionFractions(data, originalTerms)
+		mayMapChildren2Root(data, { ...q, terms: originalTerms }, ds)
 
 		checkAccessToSampleData(data, ds, q)
 
@@ -194,6 +198,8 @@ function validateArg(q, ds) {
 	if (q.currentGeneNames) {
 		if (!Array.isArray(q.currentGeneNames)) throw 'currentGeneNames[] is not array'
 	}
+	if (q.mapChildren2Root !== undefined && typeof q.mapChildren2Root != 'boolean')
+		throw 'mapChildren2Root is not boolean'
 	if (q.filter0) {
 		if (typeof q.filter0 == 'string') q.filter0 = JSON.parse(q.filter0)
 	}
@@ -1480,6 +1486,142 @@ function mayGetCategories(data, q, ds) {
 
 function hasValues(term) {
 	return term.values && Object.keys(term.values).length
+}
+
+/*
+when q.mapChildren2Root is true, move the annotations of each sample onto its root ancestor
+(e.g. the patient of a sample), so that a plot shows one entry per root sample.
+
+when several children of a root are annotated for the same term:
+- geneVariant: values[] of the children are combined
+- numeric: the mean of the children's values is used
+- numeric termCollection: the mean of each member's values is used
+- otherwise: distinct values are kept as .values[]
+*/
+export function mayMapChildren2Root(data, q, ds) {
+	if (!q.mapChildren2Root || !ds.cohort?.termdb?.hasSampleAncestry) return
+	const id2rootSampleId = ds.cohort.termdb.q?.id2rootSampleId
+	if (!id2rootSampleId) return
+	// a single cell term has one row per cell, which cannot be mapped to a root sample
+	if (q.terms.some(tw => isSingleCellTerm(tw.term)))
+		throw 'one column per root sample(patient) is not supported with single cell data'
+
+	// root sample id -> annotation key -> annotations of the root's children
+	const root2annos = new Map<number, Map<string, any[]>>()
+	for (const [sid, sample] of Object.entries(data.samples) as [string, any][]) {
+		const rootId = id2rootSampleId(sample.sample ?? sid)
+		// not a known sample id; mapping it would merge unrelated rows under the same undefined key
+		if (rootId === undefined) {
+			throw 'cannot find the root sample of a sample'
+		}
+		if (!root2annos.has(rootId)) root2annos.set(rootId, new Map())
+		const annos = root2annos.get(rootId)!
+		for (const [k, v] of Object.entries(sample)) {
+			if (!v || typeof v != 'object') continue // not an annotation, e.g. .sample
+			if (!annos.has(k)) annos.set(k, [])
+			annos.get(k)!.push(v)
+		}
+	}
+
+	const twBy$id = new Map(q.terms.map(tw => [tw.$id, tw]))
+	const samples = Object.create(null)
+	const bySampleId = Object.create(null)
+	for (const [rootId, annos] of root2annos) {
+		const sampleEntry = getOrCreateSampleEntry(samples, String(rootId), { sample: rootId })
+		for (const [k, lst] of annos) {
+			// defineProperty for the same reason as in getSampleData(): k may be a dataset-supplied key
+			Object.defineProperty(sampleEntry, k, {
+				value: mergeChildAnnotations(lst, twBy$id.get(k), data.refs.byTermId[k], rootId),
+				enumerable: true,
+				configurable: true,
+				writable: true
+			})
+		}
+		const ref = id2sampleRef(rootId, ds)
+		if (ref) bySampleId[rootId] = ref
+	}
+	data.samples = samples
+	data.refs.bySampleId = bySampleId
+	const rootSampleType = Object.values(ds.cohort.termdb.sampleTypes).find((st: any) => st.parent_id === null)
+	if (rootSampleType) data.sampleType = rootSampleType
+}
+
+function mergeChildAnnotations(lst: any[], tw: any, termRef: any, rootId: number) {
+	// test the collection before the lst.length == 1 return below, which would keep the sample id as key instead of the root id
+	if (isMemberValuesCollection(tw)) return mergeTermCollectionValues(lst, rootId)
+	if (lst.length == 1) return lst[0]
+	if (tw?.term?.type == GENE_VARIANT) return mergeGeneVariantAnnotations(lst, tw)
+	// some data keys have no matching tw, e.g. each gene of a pseudobulk term; treat such a key as numeric if all its values are numbers
+	if (tw ? isNumericTw(tw) : lst.every(a => typeof a.value == 'number')) {
+		const values = tw?.term?.values
+		const computable = lst.filter(
+			a => Number.isFinite(a.value) && !values?.[a.value]?.uncomputable && !values?.[a.key]?.uncomputable
+		)
+		if (computable.length) {
+			const value = computable.reduce((sum, a) => sum + a.value, 0) / computable.length
+			const bins = termRef?.bins
+			const key = bins ? get_bin_label(bins[getBin(bins, value)], tw.q) : value
+			return { key, value }
+		}
+	}
+	// keep distinct values
+	const distinct: any[] = []
+	for (const v of lst.flatMap(a => a.values || [a])) {
+		if (!distinct.some(d => d.key === v.key && d.value === v.value)) distinct.push(v)
+	}
+	return distinct.length == 1 ? distinct[0] : { values: distinct }
+}
+
+/* numeric termCollection whose value is {memberId: number} rather than a number (not fraction mode) */
+function isMemberValuesCollection(tw: any) {
+	return tw?.term?.type == TERM_COLLECTION && tw.term.memberType == 'numeric' && tw.type != 'TermCollectionTWFraction'
+}
+
+/* merge the member values of all children into one {memberId: number} object.
+each member gets the average of its values in the children that have one;
+a member that no child has a value for is left out */
+function mergeTermCollectionValues(lst: any[], rootId: number) {
+	// null-prototype: member ids may come from a client-supplied termlst, see reconstituteCustomTermCollection()
+	const sums = Object.create(null)
+	const counts = Object.create(null)
+	for (const a of lst) {
+		if (!a.value || typeof a.value != 'object') continue
+		for (const [id, v] of Object.entries(a.value)) {
+			// not Number(v), which would count a null as 0
+			if (typeof v != 'number' || !Number.isFinite(v)) continue
+			sums[id] = (sums[id] || 0) + v
+			counts[id] = (counts[id] || 0) + 1
+		}
+	}
+	const value = Object.create(null)
+	for (const id in sums) value[id] = sums[id] / counts[id]
+	return { key: rootId, value }
+}
+
+function mergeGeneVariantAnnotations(lst: any[], tw: any) {
+	const groupset = get_active_groupset(tw.term, tw.q)
+	if (groupset) {
+		// assign the root to the first group that any of its children is assigned to,
+		// as ds.mayGetGeneVariantData() assigns a sample to the first group it matches
+		const groupIdx = a => groupset.groups.findIndex(g => g.name == a.key)
+		const first = lst.reduce((a, b) => (groupIdx(b) < groupIdx(a) ? b : a))
+		lst = lst.filter(a => a.key == first.key)
+	}
+	return { ...lst[0], values: mergeGeneVariantValues(lst.flatMap(a => a.values || [])) }
+}
+
+function mergeGeneVariantValues(values: any[]) {
+	const statusKey = v => `${getGvQueryKey(v)}\t${v.dt}\t${v.origin || ''}`
+	const isStatus = v => v.class == 'WT' || v.class == 'Blank'
+	const mutated = new Set(values.filter(v => !isStatus(v)).map(statusKey))
+	const statuses = new Map()
+	for (const v of values) {
+		if (!isStatus(v)) continue
+		const k = statusKey(v)
+		if (mutated.has(k)) continue
+		if (!statuses.has(k) || v.class == 'WT') statuses.set(k, v)
+	}
+	return [...values.filter(v => !isStatus(v)), ...statuses.values()]
 }
 
 /*
