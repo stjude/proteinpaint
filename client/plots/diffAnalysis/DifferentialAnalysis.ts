@@ -166,10 +166,11 @@ export function getPlotConfig(opts: any, app?: any) {
 	}
 
 	config.settings.volcano = getDefaultVolcanoSettings(opts.overrides, { ...opts, app: opts.app || app })
-	// the volcano's element class is known here, before GSEA has a daRequest to read it from
+	/* the volcano's element class is known here, before GSEA has a daRequest to read it from. A
+	launcher may set it in opts.settings.volcano, which is merged in only at the end. */
 	config.settings.gsea = getDefaultGseaSettings(opts.overrides, {
 		...opts,
-		elementType: config.settings.volcano.elementType
+		elementType: opts.settings?.volcano?.elementType || config.settings.volcano.elementType
 	})
 
 	validateVolcanoSettings(config, opts)

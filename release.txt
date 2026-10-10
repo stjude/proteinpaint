@@ -1,1 +1,4 @@
-
+Features:
+- dnaMethylation excludeSampleNamesMatching accepts a list of substrings, to withhold individual samples from differential methylation
+- The volcano's wait message counts the elapsed time while a DNA methylation analysis runs
+- Differential DNA methylation: the element class, the scan's chromosome and its background correction can be chosen before the first run

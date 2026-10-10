@@ -1,6 +1,6 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
-import { getSampleNum } from './settings/defaults'
+import { getSampleNum, BACKGROUND_CORRECTION_TITLE } from './settings/defaults'
 import {
 	PROTEOME_DAP,
 	DNA_METHYLATION,
@@ -275,7 +275,7 @@ export class VolcanoControlInputs {
 					...this.chromosomes.filter(c => c != 'chrM' && c != 'chrMT').map(c => ({ value: c, label: c }))
 				],
 				title:
-					'Call DMRs de novo across the whole genome, or across one chromosome. A whole-genome scan takes about 45 seconds the first time and is cached after that.'
+					'Call DMRs de novo across the whole genome, or across one chromosome. A whole-genome scan takes about 1 minute the first time, or about 1.5 to 2 minutes with the background drift correction, and is cached after that.'
 			},
 			{
 				label: 'Correct for background drift',
@@ -284,8 +284,7 @@ export class VolcanoControlInputs {
 				settingsKey: 'backgroundCorrection',
 				boxLabel: '',
 				getDisplayStyle: scanOnly,
-				title:
-					'Score each DMR against width- and CpG-density-matched intergenic background instead of against zero, so the y axis asks "did this region move MORE than a region like it drifts" rather than "did it move". On a cohort whose whole genome shifts, the two questions have different answers -- on MMRF NSD2-high the hyper:hypo direction inverts. DMRs whose stratum holds too little background to score are counted in Statistics but not plotted. Roughly doubles the scan time.'
+				title: BACKGROUND_CORRECTION_TITLE
 			},
 			{
 				label: 'Min CpGs per DMR',
@@ -310,7 +309,7 @@ export class VolcanoControlInputs {
 				max: 100_000,
 				step: 50,
 				title:
-					'DMRcate lambda. Two things at once: the width of the Gaussian kernel that smooths per-CpG statistics along the genome, and the largest gap allowed between significant CpGs chained into one DMR. Larger values merge nearby signal into fewer, wider DMRs and recover broad domains; smaller values split them into narrow, focal regions. DMRcate recommends 1000 bp for CpG-resolution data. Changing it refits the scan (about 45 seconds genome-wide).'
+					'DMRcate lambda. Two things at once: the width of the Gaussian kernel that smooths per-CpG statistics along the genome, and the largest gap allowed between significant CpGs chained into one DMR. Larger values merge nearby signal into fewer, wider DMRs and recover broad domains; smaller values split them into narrow, focal regions. DMRcate recommends 1000 bp for CpG-resolution data. Changing it refits the scan (about 1 minute genome-wide, or about 1.5 to 2 with the background drift correction).'
 			},
 			{
 				label: 'DMR kernel scaling C',
