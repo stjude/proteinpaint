@@ -286,19 +286,6 @@ class Facet extends PlotBase implements RxComponent {
 					this.addGroup(categories, categories2, cells, result)
 				}
 			}
-			// {
-			// 	text: 'Add group and filter',
-			// 	callback: () => {
-			// 		const groupFilter = this.addGroup(categories, categories2, cells)
-			// 		const filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
-			// 		const filter = filterJoin([filterUiRoot, groupFilter])
-			// 		filter.tag = 'filterUiRoot'
-			// 		this.app.dispatch({
-			// 			type: 'filter_replace',
-			// 			filter
-			// 		})
-			// 	}
-			// }
 		]
 
 		for (const btn of btns) {

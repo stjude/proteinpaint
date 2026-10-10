@@ -1,4 +1,4 @@
-import { filterJoin, getFilterItemByTag } from '#filter'
+import { joinToFilterUiRoot } from '#filter'
 import { getFilter } from '../../../mass/groups.js'
 import { Menu, newSandboxDiv } from '#dom'
 import { getId } from '#mass/nav'
@@ -136,11 +136,7 @@ export class ScatterInteractivity {
 	}
 
 	addToFilter(samplelstTW) {
-		// the plot state termfilter may be combined with a plot-level filter that lacks the
-		// filterUiRoot tag, so look it up in the global filter that filter_replace will replace
-		const filterUiRoot = getFilterItemByTag(this.scatter.app.getState().termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, getFilter(samplelstTW)])
-		filter.tag = 'filterUiRoot'
+		const filter = joinToFilterUiRoot(this.scatter.app.getState().termfilter.filter, [getFilter(samplelstTW)])
 		this.scatter.app.dispatch({
 			type: 'filter_replace',
 			filter

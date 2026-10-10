@@ -1,4 +1,4 @@
-import { filterJoin, getFilterItemByTag } from '#filter'
+import { joinToFilterUiRoot } from '#filter'
 import {
 	niceNumLabels,
 	ListSamples,
@@ -315,11 +315,7 @@ function getAddFilterCallback(self: any, plot: any, rangeStart?: number, rangeSt
 	const ls = self.getSampleList(plot, rangeStart, rangeStop)
 
 	return () => {
-		// the plot state termfilter may be combined with a plot-level filter that lacks the
-		// filterUiRoot tag, so look it up in the global filter that filter_replace will replace
-		const filterUiRoot = getFilterItemByTag(self.app.getState().termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, ls.tvslst])
-		filter.tag = 'filterUiRoot'
+		const filter = joinToFilterUiRoot(self.app.getState().termfilter.filter, [ls.tvslst])
 		self.app.dispatch({
 			type: 'filter_replace',
 			filter
