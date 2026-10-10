@@ -205,6 +205,23 @@ export function filterJoin(lst) {
 	return getNormalRoot(f) // TODO: are there cases where non-normalize shape is needed from filterJoin()?
 }
 
+/* join a list of filters to the filterUiRoot of a global filter under "and", return joined filter
+to be used as the filter of a filter_replace action, such as when adding plot samples to the global filter
+
+globalFilter{}
+  the app state termfilter.filter, which has the filterUiRoot tag in it;
+  a plot state termfilter may be combined with a plot-level filter that lacks the tag, so do not use it
+filters:[]
+  a list of filters to join to the filterUiRoot, will not be modified
+*/
+export function joinToFilterUiRoot(globalFilter, filters) {
+	const filterUiRoot = getFilterItemByTag(globalFilter, 'filterUiRoot')
+	if (!filterUiRoot) throw 'missing filterUiRoot in global filter'
+	const filter = filterJoin([filterUiRoot, ...filters])
+	filter.tag = 'filterUiRoot'
+	return filter
+}
+
 /* make copy of input filter, return negated copy
 if tag=filterUiRoot is found, negate that;
 else, assume is tvslst of single tvs an negate at tvs level

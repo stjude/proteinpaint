@@ -10,7 +10,7 @@ import {
 	getScctTw
 } from '../../../test/testdata/data.ts'
 import { fillTermWrapper } from '#termsetting'
-import { getFilterItemByTag, filterJoin } from '#filter'
+import { getFilterItemByTag } from '#filter'
 import { sleep, detectOne, detectGte, detectLst, whenVisible } from '../../../test/test.helpers.js'
 import { testViolinByCount } from '../../test/helpers.spec'
 import { SINGLECELL_CELLTYPE } from '#types'
@@ -424,76 +424,30 @@ tape('test label clicking, filtering and hovering', function (test) {
 		// before filtering there are two violins, one for each sex
 		await testLabelHoverClick(test, violin, violinDiv, 2)
 		// filter to just one sex
-		await testFiltering(violin)
+		await testFiltering(violin, violinDiv)
 		// after filtering, just one sex is left
 		await testLabelHoverClick(test, violin, violinDiv, 1)
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 
-	//This function tests filtering based on range provided.
-	async function testFiltering(violin) {
-		const tvslst = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: [
-				{
-					tvs: {
-						term: {
-							groupsetting: { disabled: true },
-							id: 'sex',
-							isleaf: true,
-							name: 'Sex',
-							type: 'categorical',
-							values: {
-								1: { label: 'Male' },
-								2: { label: 'Female' }
-							}
-						},
-						values: [{ key: '2' }]
-					},
-					type: 'tvs'
-				},
-				{
-					type: 'tvs',
-					tvs: {
-						ranges: [
-							{
-								start: 12.289737495475805,
-								stop: 16.794964344698805
-							}
-						],
-						term: {
-							id: 'agedx',
-							isleaf: true,
-							name: 'Age (years) at Cancer Diagnosis',
-							type: 'float',
-							bins: {
-								default: {
-									type: 'regular-bin',
-									bin_size: 5,
-									startinclusive: true,
-									first_bin: {
-										startunbounded: true,
-										stop: 5
-									}
-								},
-								label_offset: 1
-							}
-						}
-					}
-				}
-			]
-		}
-		const filterUiRoot = getFilterItemByTag(violin.Inner.state.termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, tvslst])
-		filter.tag = 'filterUiRoot'
-		await violin.Inner.app.dispatch({
-			type: 'filter_replace',
-			filter
-		})
-		test.ok(true, 'Filtering works as expected upon given range(start, stop) of values')
+	// click the "Add filter" option in the label menu of the first violin
+	async function testFiltering(violin, violinDiv) {
+		// the labels are already rendered, and detectOne() would wait for there to be only one of them
+		const lab = violinDiv.node().querySelector(`[data-testid^="${seriesLabelPrefixTestId}"]`)
+		lab.dispatchEvent(new Event('click'), { bubbles: true })
+		const tip = violin.Inner.dom.clicktip
+		await whenVisible(tip.dnode)
+		const addf = await detectOne({ elem: tip.dnode, selector: '[data-testid="sjpp-violinLabOpt-addf"]' })
+		const rendered = new Promise(resolve => violin.on('postRender.test', resolve))
+		addf.dispatchEvent(new Event('click'))
+		await rendered
+		violin.on('postRender.test', null)
+		const filterUiRoot = getFilterItemByTag(violin.Inner.app.getState().termfilter.filter, 'filterUiRoot')
+		test.ok(
+			filterUiRoot?.lst.find(item => item.tvs?.term?.id == 'sex'),
+			'should add the sex category of the clicked violin to the global filter'
+		)
 	}
 })
 

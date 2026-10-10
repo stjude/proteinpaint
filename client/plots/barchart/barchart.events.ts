@@ -2,7 +2,12 @@ import { Menu, renderTable, type TableRow, getChartTitle, escapeHtml } from '#do
 // import { dofetch3 } from '#common/dofetch'
 import { mclass, dt2label } from '#shared/common.js'
 // import { /*newpane,*/ export_data } from '#src/client'
-import { filterJoin, getFilterItemByTag, /*getNormalRoot,*/ findItemByTermId /*normalizeProps*/ } from '#filter'
+import {
+	filterJoin,
+	getFilterItemByTag,
+	joinToFilterUiRoot,
+	/*getNormalRoot,*/ findItemByTermId /*normalizeProps*/
+} from '#filter'
 import { rgb } from 'd3-color'
 import { create } from 'd3-selection'
 import { roundValueAuto } from '#shared/roundValue.js'
@@ -1029,12 +1034,9 @@ async function menuoption_add_filter(self, tvslst, arg) {
 	// if any term has group setting, the filter is the conditions of the bar
 	const hasGrpSetting = arg.terms.find(t => t.q?.type == 'predefined-groupset' || t.q?.type == 'custom-groupset')
 
-	// self.state.termfilter may be combined with a plot-level filter that lacks the filterUiRoot tag,
-	// so look up filterUiRoot in the global filter that filter_replace will replace
-	const filterUiRoot = getFilterItemByTag(self.app.getState().termfilter.filter, 'filterUiRoot')
-	const filter = filterJoin([
-		filterUiRoot,
-		...(hasGrpSetting
+	const filter = joinToFilterUiRoot(
+		self.app.getState().termfilter.filter,
+		hasGrpSetting
 			? getBarConditions(arg)
 			: [
 					{
@@ -1043,9 +1045,8 @@ async function menuoption_add_filter(self, tvslst, arg) {
 						join: tvslst.length > 1 ? 'and' : '',
 						lst: [...tvslst.map(wrapTvs)]
 					}
-			  ])
-	])
-	filter.tag = 'filterUiRoot'
+			  ]
+	)
 	self.app.dispatch({
 		type: 'filter_replace',
 		filter

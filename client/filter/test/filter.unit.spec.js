@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { negateFilter, getCategoricalTermFilter, Filter } from '../filter.js'
+import { negateFilter, joinToFilterUiRoot, getCategoricalTermFilter, Filter } from '../filter.js'
 import { termjson } from '../../test/testdata/termjson.js'
 import * as d3s from 'd3-selection'
 
@@ -8,6 +8,7 @@ import * as d3s from 'd3-selection'
 **************
 
 negateFilter
+joinToFilterUiRoot
 
 */
 
@@ -61,6 +62,61 @@ tape('negateFilter', test => {
 	}
 
 	test.throws(() => negateFilter({}), /cannot negate filter/, 'throws')
+
+	test.end()
+})
+
+tape('joinToFilterUiRoot', test => {
+	const sexTvs = { type: 'tvs', tvs: { term: { id: 'sex', type: 'categorical' }, values: [{ key: '1' }] } }
+	const diaggrpTvs = { type: 'tvs', tvs: { term: { id: 'diaggrp', type: 'categorical' }, values: [{ key: 'ALL' }] } }
+	const agedxTvs = { type: 'tvs', tvs: { term: { id: 'agedx', type: 'float' }, ranges: [{ start: 1, stop: 5 }] } }
+
+	{
+		const globalFilter = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [
+				{ type: 'tvslst', in: true, join: '', tag: 'cohortFilter', lst: [diaggrpTvs] },
+				{ type: 'tvslst', in: true, join: '', tag: 'filterUiRoot', lst: [] }
+			]
+		}
+		const globalFilterCopy = structuredClone(globalFilter)
+		const filters = [{ type: 'tvslst', in: true, join: '', lst: [sexTvs] }]
+		const filtersCopy = structuredClone(filters)
+		test.deepEqual(
+			joinToFilterUiRoot(globalFilter, filters),
+			{ type: 'tvslst', in: true, join: '', tag: 'filterUiRoot', lst: [sexTvs] },
+			'should join a filter to an empty filterUiRoot that is nested in the global filter, without the cohort filter'
+		)
+		test.deepEqual(globalFilter, globalFilterCopy, 'should not modify the global filter')
+		test.deepEqual(filters, filtersCopy, 'should not modify the joined filters')
+	}
+
+	{
+		const globalFilter = { type: 'tvslst', in: true, join: '', tag: 'filterUiRoot', lst: [sexTvs] }
+		const filters = [
+			{ type: 'tvslst', in: true, join: '', lst: [agedxTvs] },
+			{ type: 'tvslst', in: true, join: 'or', lst: [diaggrpTvs, agedxTvs] }
+		]
+		test.deepEqual(
+			joinToFilterUiRoot(globalFilter, filters),
+			{
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				tag: 'filterUiRoot',
+				lst: [sexTvs, agedxTvs, { type: 'tvslst', in: true, join: 'or', lst: [diaggrpTvs, agedxTvs] }]
+			},
+			'should join multiple filters to a non-empty filterUiRoot under "and"'
+		)
+	}
+
+	test.throws(
+		() => joinToFilterUiRoot({ type: 'tvslst', in: true, join: '', lst: [] }, []),
+		/missing filterUiRoot/,
+		'should throw if the global filter does not have the filterUiRoot tag'
+	)
 
 	test.end()
 })

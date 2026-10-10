@@ -3,7 +3,7 @@ import type { MassAppApi } from '#mass/types/mass'
 import type { RenderedPlot } from '../view/RenderedPlot'
 import type { TdbBoxplot } from '../BoxPlot.ts'
 import { ListSamples } from '#dom/summary/ListSamples'
-import { filterJoin, getFilterItemByTag } from '#filter'
+import { joinToFilterUiRoot } from '#filter'
 
 export class BoxPlotInteractions {
 	app: MassAppApi
@@ -27,11 +27,8 @@ export class BoxPlotInteractions {
 
 	/** Option to add a global filter from the box plot label menu. */
 	addFilter(plot: any) {
-		const state = this.app.getState()
 		const sampleList = this.initListSamples(plot)
-		const filterUiRoot = getFilterItemByTag(state.termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, sampleList.tvslst])
-		filter.tag = 'filterUiRoot'
+		const filter = joinToFilterUiRoot(this.app.getState().termfilter.filter, [sampleList.tvslst])
 		this.app.dispatch({
 			type: 'filter_replace',
 			filter
