@@ -11,6 +11,11 @@ General:
 - a saved session is marked with the form of its sample groups; a session saved before this version that lists the samples of a group is not opened, and its groups and plots have to be made again
 - serverconfig.dsCredentials, as an object or as a credentials file path in serverconfig.json, is no longer supported and stops the server at startup; set process.env.PP_CREDS to the credentials JSON instead, or set PP_CREDS_FILE to a credentials file path and start the server with container/envHelpers.mjs
 
+Features:
+- dnaMethylation excludeSampleNamesMatching accepts a list of substrings, to withhold individual samples from differential methylation
+- The volcano's wait message counts the elapsed time while a DNA methylation analysis runs
+- Differential DNA methylation: the element class, the scan's chromosome and its background correction can be chosen before the first run
+
 
 ## 2.218.0
 
