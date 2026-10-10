@@ -197,6 +197,18 @@ for (const route of routes) {
 	})
 }
 
+for (const route of routes) {
+	tape(`${route.path} group sizes with another term, by role`, async test => {
+		test.timeoutAfter(30000)
+		for (const role of ['admin', 'user']) {
+			const sizes = await getGroupSizes(test, { ...route, body: { ...route.body, tw2: sexTw } }, role)
+			if (!sizes) return test.end()
+			test.ok(sizes.group1 > 0, `should resolve samples in group 1 for role='${role}'`)
+		}
+		test.end()
+	})
+}
+
 tape('stop server', async test => {
 	test.timeoutAfter(10000)
 	await server?.stop()
