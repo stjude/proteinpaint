@@ -181,6 +181,22 @@ tape('termdb/categories of a samplelst term with groups given as filters, by rol
 	test.end()
 })
 
+/* A confounder is read with getData() for the request, see resolveDaContext() in utils/sampleGroups.ts,
+which applies the dataset's sample filter for the session as for the groups. */
+const sexTw = { $id: 'sex', term: { id: 'sex', type: 'categorical', name: 'Sex' }, q: { type: 'values' } }
+
+for (const route of routes) {
+	tape(`${route.path} group sizes with a confounder, by role`, async test => {
+		test.timeoutAfter(30000)
+		for (const role of ['admin', 'user']) {
+			const sizes = await getGroupSizes(test, { ...route, body: { ...route.body, tw: sexTw } }, role)
+			if (!sizes) return test.end()
+			test.ok(sizes.group1 > 0, `should resolve samples in group 1 with a confounder for role='${role}'`)
+		}
+		test.end()
+	})
+}
+
 tape('stop server', async test => {
 	test.timeoutAfter(10000)
 	await server?.stop()
@@ -190,7 +206,7 @@ tape('stop server', async test => {
 
 /* logs in with the given role, then requests the group sizes of the route;
 returns {group1, group2}, or undefined after a failed assertion */
-async function getGroupSizes(test, route: (typeof routes)[number], role: string, groups: any = samplelst) {
+async function getGroupSizes(test, route: { path: string; body: any }, role: string, groups: any = samplelst) {
 	const jwt = await getSessionJwt(test, role)
 	if (!jwt) return
 	const body = { genome, dslabel, embedder, samplelst: groups, preAnalysis: true, ...route.body }
