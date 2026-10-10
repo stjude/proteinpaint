@@ -43,7 +43,8 @@ export async function resolveDaContext(
 			{
 				filter: (req as any).filter,
 				filter0: (req as any).filter0,
-				terms: [req.tw]
+				terms: [req.tw],
+				__protected__: req.__protected__
 			},
 			ds,
 			true // always map parent annotations to child samples for DA analysis
@@ -57,7 +58,8 @@ export async function resolveDaContext(
 			{
 				filter: (req as any).filter,
 				filter0: (req as any).filter0,
-				terms: [req.tw2]
+				terms: [req.tw2],
+				__protected__: req.__protected__
 			},
 			ds,
 			true // always map parent annotations to child samples for DA analysis
