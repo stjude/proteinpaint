@@ -265,6 +265,9 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 			return uses
 
 		case 'filter': {
+			/* a filter on a samplelst term selects the samples that its groups list. a group defined by a
+			filter, as a variable made in the Groups tab, lists no sample, and such a term is not offered */
+			if (term.type == 'samplelst' && !samplelstListsSamples(term)) return uses
 			// apply "exlst" to other targets as needed
 			const exlst = termdbConfig?.excludedTermtypeByTarget?.filter
 			if (exlst) {
@@ -368,4 +371,10 @@ function hasChildTypes(child_types: string[], expected_types: string[]) {
 	for (const a of expected_types) {
 		if (child_types.includes(a)) return true
 	}
+}
+
+// every group of a samplelst term lists its samples in term.values[].list[]
+function samplelstListsSamples(term: any) {
+	const groups = Object.values(term.values || {})
+	return groups.length > 0 && groups.every((g: any) => Array.isArray(g.list))
 }
