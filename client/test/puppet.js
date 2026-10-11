@@ -84,6 +84,17 @@ async function runTest(patternsStr) {
 			if (byDir.length > 1) groups = byDir
 		}
 
+		// Spec dirs whose tests are CPU-heavy (server-side python spawns, canvas rendering) and slow down
+		// other groups that run at the same time, causing timeouts. These groups run alone, after the pool.
+		// May override with PUPPET_EXCLUSIVE='w2,otherDir', or PUPPET_EXCLUSIVE='' to disable.
+		const exclusiveDirs = (process.env.PUPPET_EXCLUSIVE ?? 'w2')
+			.split(',')
+			.map(s => s.trim())
+			.filter(Boolean)
+		const isExclusive = g => exclusiveDirs.some(d => g.split('#')[0].split('&').includes(`dir=${d}`))
+		const sharedGroups = CONCURRENCY > 1 ? groups.filter(g => !isExclusive(g)) : groups
+		const exclusiveGroups = CONCURRENCY > 1 ? groups.filter(isExclusive) : []
+
 		browser = await puppeteer.launch({
 			// headless: false, // uncomment to see puppeteer chrome instance
 			headless: fs.existsSync(path.join(__dirname, '../../../../sjpp')) ? true : 'shell',
@@ -92,9 +103,12 @@ async function runTest(patternsStr) {
 
 		const errors = {}
 		// results[i] = { pattern, testedFiles, passed, coverageList, lastLines }
-		const results = await runPool(groups, Math.min(CONCURRENCY, groups.length), g =>
-			runOnePattern(browser, g, startTime, errors, CONCURRENCY > 1)
-		)
+		const run = g => runOnePattern(browser, g, startTime, errors, CONCURRENCY > 1)
+		const results = [
+			...(await runPool(sharedGroups, Math.min(CONCURRENCY, sharedGroups.length), run)),
+			// one at a time, with no other group in flight
+			...(await runPool(exclusiveGroups, 1, run))
+		]
 
 		// the time taken by the tests, not including the coverage report generation below
 		console.log(`\ntest run time: ${formatDuration(Date.now() - startTime)}\n`)
