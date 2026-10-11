@@ -279,8 +279,9 @@ function addSummarizeOptions(menuDiv, self, samplelstTW, id) {
 		showTree(
 			d,
 			term => {
-				const tw = { term }
-				if (isNumericTerm(term)) tw.q = { mode: 'continuous' }
+				// a samplelst custom variable is given as its tw
+				const tw = term.term ? term : { term }
+				if (isNumericTerm(tw.term)) tw.q = { mode: 'continuous' }
 				openSummaryPlot(tw, samplelstTW, self.app, id, () => self.newId)
 			},
 			self.app,

@@ -227,6 +227,10 @@ class TdbTree {
 	async mayGetCustomTerms() {
 		const tws = await this.app.vocabApi.getCustomTerms()
 		for (const tw of tws) tw.term.isleaf = true
+		// a samplelst term made in the Groups tab may define its groups by filters, which only its tw.q
+		// carries; a click on it gives the tw so that its groups are not rebuilt from the term
+		this.samplelstTwByKey = new Map()
+		for (const tw of tws) if (tw.term.type == 'samplelst') this.samplelstTwByKey.set(this.bindKey(tw.term), tw)
 		// the folder is not shown when none of the custom terms can be used here
 		const terms = tws
 			.map(tw => tw.term)
@@ -536,7 +540,8 @@ function setInteractivity(self) {
 		}
 
 		if (self.opts.click_term_wrapper) {
-			self.opts.click_term_wrapper(term)
+			const tw = term.type == 'samplelst' && self.samplelstTwByKey?.get(self.bindKey(term))
+			self.opts.click_term_wrapper(tw ? structuredClone(tw) : term)
 			return
 		}
 
