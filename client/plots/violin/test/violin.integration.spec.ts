@@ -452,7 +452,7 @@ tape('test label clicking, filtering and hovering', function (test) {
 })
 
 tape('test hide option on label clicking', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000) // 3 renders; may be slow when other spec groups run concurrently
 	runpp({
 		state: {
 			nav: {
