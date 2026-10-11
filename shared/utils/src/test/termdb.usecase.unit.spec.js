@@ -276,6 +276,34 @@ tape('swimmer pointTerm', test => {
 	test.end()
 })
 
+tape('samplelst term in the filter use case', test => {
+	const usecase = { target: 'filter' }
+	const listed = {
+		type: 'samplelst',
+		isleaf: true,
+		values: { A: { key: 'A', list: [{ sample: 's1' }] }, B: { key: 'B', list: [{ sample: 's2' }] } }
+	}
+	test.deepEqual(isUsableTerm(listed, usecase), new Set(['plot']), 'allows a samplelst term whose groups list samples')
+	const byFilter = { type: 'samplelst', isleaf: true, values: { A: { key: 'A' }, B: { key: 'B' } } }
+	test.deepEqual(
+		isUsableTerm(byFilter, usecase),
+		new Set(),
+		'does not allow a samplelst term whose groups list no sample'
+	)
+	const mixed = { type: 'samplelst', isleaf: true, values: { A: listed.values.A, B: { key: 'B' } } }
+	test.deepEqual(
+		isUsableTerm(mixed, usecase),
+		new Set(),
+		'does not allow a samplelst term with a group that lists no sample'
+	)
+	test.deepEqual(
+		isUsableTerm(byFilter, { target: 'barchart', detail: 'term' }),
+		new Set(['plot']),
+		'still allows a samplelst term whose groups list no sample in a plot'
+	)
+	test.end()
+})
+
 /*************************
  reusable helper functions
 **************************/

@@ -13,6 +13,7 @@ Construction and default behavior
 	- requestTermRecursive() returns a list of child terms
 Opts and callbacks
 	- state.customTerms adds custom variables to tree
+	- Custom Variables is not shown when no custom term can be used in a filter
 	- opts.expandedTermIds displays expanded branches in the tree
 	- Trigger click_term with opts.disable_terms
 	- Trigger opts.click_term2select_tvs callback
@@ -376,6 +377,48 @@ tape('state.customTerms adds custom variables to tree', function (test) {
 		const labels = [...childDiv.querySelectorAll('.termlabel')].map(elem => elem.textContent)
 		test.true(labels.includes('Custom Diagnosis Group'), 'Should include Custom Diagnosis Group label')
 		test.true(labels.includes('Custom Sex'), 'Should include Custom Sex label')
+
+		if (test['_ok']) tree.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Custom Variables is not shown when no custom term can be used in a filter', function (test) {
+	test.timeoutAfter(1000)
+
+	// a variable made in the Groups tab: each group is defined by a filter and lists no sample
+	const customTerms = [
+		{
+			name: 'Group 1 vs others',
+			tw: {
+				term: {
+					id: 'custom_groups',
+					name: 'Group 1 vs others',
+					type: 'samplelst',
+					values: { 'Group 1': { key: 'Group 1', label: 'Group 1' }, Others: { key: 'Others', label: 'Others' } }
+				}
+			}
+		}
+	]
+
+	runpp({
+		state: {
+			customTerms,
+			tree: { usecase: { target: 'filter' } }
+		},
+		tree: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(tree) {
+		tree.on('postRender.test', null)
+		const termdivs = tree.Inner.dom.holder.node().querySelectorAll('.termdiv')
+		const customTermDiv = [...termdivs].find(elem => elem.__data__?.name === 'Custom Variables')
+		test.notOk(customTermDiv, 'Should not render Custom Variables')
+		test.notOk(tree.Inner.termsById[custom_variables_ID], 'Should not register custom variables in termsById')
 
 		if (test['_ok']) tree.Inner.app.destroy()
 		test.end()

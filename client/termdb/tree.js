@@ -226,7 +226,12 @@ class TdbTree {
 
 	async mayGetCustomTerms() {
 		const tws = await this.app.vocabApi.getCustomTerms()
-		if (!tws.length) return []
+		for (const tw of tws) tw.term.isleaf = true
+		// the folder is not shown when none of the custom terms can be used here
+		const terms = tws
+			.map(tw => tw.term)
+			.filter(t => !this.state.usecase || isUsableTerm(t, this.state.usecase, this.app.vocabApi.termdbConfig).size)
+		if (!terms.length) return []
 
 		const id = custom_variables_ID
 		const parentTerm = {
@@ -235,10 +240,9 @@ class TdbTree {
 			isleaf: false,
 			included_types: ['categorical'],
 			child_types: ['categorical'],
-			terms: tws.map(tw => {
-				this.termsById[tw.term.id || tw.term.name] = tw.term
-				tw.term.isleaf = true
-				return tw.term
+			terms: terms.map(t => {
+				this.termsById[t.id || t.name] = t
+				return t
 			})
 		}
 		this.termsById[id] = parentTerm
