@@ -98,7 +98,7 @@ jobs:
           fetch-depth: 10
           
       - name: Run integration tests
-        uses: stjude/proteinpaint/.github/actions/run-integration-tests@test-mq
+        uses: stjude/proteinpaint/.github/actions/run-integration-tests@master
         with:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
