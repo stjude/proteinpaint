@@ -201,6 +201,13 @@ function validateArg(q, ds) {
 	}
 	if (q.mapChildren2Root !== undefined && typeof q.mapChildren2Root != 'boolean')
 		throw 'mapChildren2Root is not boolean'
+	// a single cell term has no parent level id
+	if (q.mapChildren2Root && ds.cohort.termdb?.hasSampleAncestry && q.terms.some(tw => isSingleCellTerm(tw.term))) {
+		const rootSampleType: any = Object.values(ds.cohort.termdb.sampleTypes || {}).find(
+			(st: any) => st.parent_id === null
+		)
+		throw `${rootSampleType?.name || 'root sample'} level is not supported with single cell data`
+	}
 	if (q.filter0) {
 		if (typeof q.filter0 == 'string') q.filter0 = JSON.parse(q.filter0)
 	}
@@ -1503,11 +1510,8 @@ when several children of a root are annotated for the same term:
 export function mayMapChildren2Root(data, q, ds) {
 	if (!q.mapChildren2Root || !ds.cohort?.termdb?.hasSampleAncestry) return
 	const rootSampleType: any = Object.values(ds.cohort.termdb.sampleTypes || {}).find((st: any) => st.parent_id === null)
-	const rootName = rootSampleType?.name || 'root sample'
 	const id2rootSampleId = ds.cohort.termdb.q?.id2rootSampleId
-	if (!id2rootSampleId) throw `${rootName} level is not supported for this dataset`
-	// a single cell term has one row per cell, which cannot be mapped to a root sample
-	if (q.terms.some(tw => isSingleCellTerm(tw.term))) throw `${rootName} level is not supported with single cell data`
+	if (!id2rootSampleId) throw `${rootSampleType?.name || 'root sample'} level is not supported for this dataset`
 
 	// root sample id -> annotation key -> annotations of the root's children
 	const root2annos = new Map<number, Map<string, any[]>>()

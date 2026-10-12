@@ -1374,6 +1374,14 @@ tape('getData: mapChildren2Root returns one entry per root sample', async t => {
 	const mean = childAges.reduce((a, b) => a + b) / childAges.length
 	t.equal(byRoot.samples[102].agedx.value, mean, 'a numeric value is the mean of the children values')
 	t.equal(byRoot.sampleType.name, 'patient', 'the sample type is the root type')
+
+	const scTw = { $id: 'sc', term: { type: 'singleCellGeneExpression', gene: 'TP53' }, q: {} }
+	const sc = await getData({ terms: [...terms(), scTw], mapChildren2Root: true }, tdb.ds)
+	t.equal(
+		sc.error,
+		'patient level is not supported with single cell data',
+		'a patient level request with a single cell term fails at argument validation, before any data is queried'
+	)
 	t.end()
 })
 
@@ -1467,13 +1475,6 @@ tape('mayMapChildren2Root: rejects rows that are not samples', t => {
 			}
 		}
 	}
-	const scTw = { $id: 'sc', term: { type: 'singleCellGeneExpression', gene: 'TP53' }, q: {} }
-	const cells = { samples: { AAACCTG: { sample: 'AAACCTG', sc: { key: 1, value: 1 } } }, refs: { byTermId: {} } }
-	t.throws(
-		() => mayMapChildren2Root(cells, { terms: [scTw], mapChildren2Root: true }, ds),
-		/not supported with single cell data/,
-		'a single cell term is rejected, as its rows are cells'
-	)
 	const tw = { $id: 'age', term: { id: 'age', type: 'float' }, q: {} }
 	const unknown = {
 		samples: { 11: { sample: 11, age: { key: 1, value: 1 } }, 99: { sample: 99, age: { key: 2, value: 2 } } },
