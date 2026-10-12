@@ -1,1 +1,2 @@
-
+Fixes:
+- The /healthcheck and /genomes responses read public/rev.txt and public/host-image.txt when they are requested, instead of once at server startup, so that pkgver and hostImage match the files that a host rollout copies into a mounted public dir after the server has started
