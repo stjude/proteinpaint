@@ -405,9 +405,10 @@ test('smoke: node --watch restarts the command with the credentials', async () =
 	// resolved, since node resolves the script path, which the permission model denies through a symlinked dir,
 	// such as /var/folders/... in macOS
 	const dir = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'envHelpers-smoke-'))
-	// the watched script edits itself to be restarted once, so it must be under an allowed write path
+	// the watched script writes a marker file on its first run, so it must be under an allowed write path
 	const tmpdir = path.join(dir, 'tmp')
 	const script = path.join(tmpdir, 'watched.cjs')
+	let touch
 	try {
 		fs.mkdirSync(tmpdir)
 		fs.writeFileSync(
@@ -415,10 +416,7 @@ test('smoke: node --watch restarts the command with the credentials', async () =
 			`const fs = require('fs')
 			const restarted = fs.existsSync(__filename + '.started')
 			console.log(JSON.stringify({ restarted, creds: process.env.PP_CREDS ?? null }))
-			if (!restarted) {
-				fs.writeFileSync(__filename + '.started', '')
-				fs.appendFileSync(__filename, '\\n')
-			}`
+			if (!restarted) fs.writeFileSync(__filename + '.started', '')`
 		)
 		const child = spawn(process.execPath, [SCRIPT, 'node', '--watch', script], {
 			cwd: dir,
@@ -444,13 +442,19 @@ test('smoke: node --watch restarts the command with the credentials', async () =
 				}
 				if (runs.length >= 2) {
 					clearTimeout(timeout)
+					clearInterval(touch)
 					resolve()
+				} else if (runs.length == 1 && !touch) {
+					// the script is edited after its first run, and again until it restarts, since
+					// the watcher may not be ready yet, such as in Linux, where an earlier edit can be missed
+					touch = setInterval(() => fs.appendFileSync(script, '\n'), 500)
 				}
 			})
 		})
 		try {
 			await done
 		} finally {
+			clearInterval(touch)
 			child.kill()
 		}
 		assert.deepEqual(runs.map(JSON.parse), [
