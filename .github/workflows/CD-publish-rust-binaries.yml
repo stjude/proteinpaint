@@ -21,7 +21,10 @@ jobs:
       contents: write
     runs-on: ubuntu-22.04
     steps:
+      # a local action is read from the checked-out workspace
+      - uses: actions/checkout@v7
+
       - name: Upload rust assets
-        uses: stjude/proteinpaint/.github/actions/upload-rust-assets@master
+        uses: ./.github/actions/upload-rust-assets
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

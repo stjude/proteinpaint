@@ -92,7 +92,7 @@ jobs:
           path: rust-binaries
 
       - name: Publish docker image
-        uses: stjude/proteinpaint/.github/actions/publish-deps-image@master
+        uses: ./.github/actions/publish-deps-image
         with:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
@@ -111,7 +111,7 @@ jobs:
           fetch-depth: 10
 
       - name: Publish docker image
-        uses: stjude/proteinpaint/.github/actions/publish-deps-image@master
+        uses: ./.github/actions/publish-deps-image
         with:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
