@@ -1,1 +1,2 @@
-
+DevOps:
+- Only the client package is published to the npm registry. The other workspace packages are private: the release workflow packs them as tarballs, which the ppserver and ppfull images install instead of the published packages. A host that installs @sjcrh/proteinpaint-server or @sjcrh/proteinpaint-front from npm will not get newer versions; use the ppserver or ppfull image.

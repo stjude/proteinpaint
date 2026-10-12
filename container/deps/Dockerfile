@@ -274,13 +274,18 @@ CMD ["sh", "-c", "node --enable-source-maps app-server.mjs && @sjcrh/proteinpain
 FROM ppbase AS ppfulldeps
 
 WORKDIR /home/root/pp
+COPY ./tmppack ./tmppack
 
 WORKDIR /home/root/pp/app
 COPY --from=ppserver /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 ARG FRONTPKGVER
-RUN npm install @sjcrh/proteinpaint-front@${FRONTPKGVER}
+RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
+      npm install /home/root/pp/tmppack/sjcrh-proteinpaint-front-${FRONTPKGVER}.tgz; \
+    else \
+      npm install @sjcrh/proteinpaint-front@${FRONTPKGVER}; \
+    fi
 # a tar extraction run by root, such as for the rust binaries in the proteinpaint-rust postinstall, keeps the file owner
 # and modes from the archive, which are changed to root and go-w
 RUN find . \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \

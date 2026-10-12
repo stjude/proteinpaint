@@ -31,5 +31,6 @@
 		"type": "git",
 		"url": "https://github.com/stjude/proteinpaint",
 		"directory": "front"
-	}
+	},
+	"private": true
 }
