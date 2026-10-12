@@ -154,8 +154,11 @@ jobs:
       contents: write
     runs-on: ubuntu-22.04
     steps:
+      # a local action is read from the checked-out workspace
+      - uses: actions/checkout@v7
+
       - name: Upload rust assets
-        uses: stjude/proteinpaint/.github/actions/upload-rust-assets@master
+        uses: ./.github/actions/upload-rust-assets
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
        
@@ -167,8 +170,11 @@ jobs:
       contents: write
       packages: write
     steps:
+      # a local action is read from the checked-out workspace
+      - uses: actions/checkout@v7
+
       - name: Publish docker image
-        uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@master
+        uses: ./.github/actions/publish-ppfull-ppserver-image
         with:
           PAT: ${{ secrets.PAT }}
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -197,7 +203,7 @@ jobs:
 
       # Publish Docker image with the Rust binaries included
       - name: Publish docker image with Rust binaries
-        uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@master
+        uses: ./.github/actions/publish-ppfull-ppserver-image
         with:
           PAT: ${{ secrets.PAT }}
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
