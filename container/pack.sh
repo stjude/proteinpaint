@@ -153,17 +153,18 @@ if [[ -d "$RUST_BINARIES_DIR" ]]; then
   echo "Making all files in target/release executable..."
   chmod +x target/release/*
 
-  echo "Ensuring target/* is included in package.json files array..."
+  # only the release binaries, not other build output under target/ such as target/debug in a dev environment
+  echo "Ensuring target/release/* is included in package.json files array..."
 
     node -e '
       const fs = require("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-      if (!pkg.files.includes("target/*")) {
-        pkg.files.push("target/*");
+      if (!pkg.files.includes("target/release/*")) {
+        pkg.files.push("target/release/*");
         fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-        console.log("\"target/*\" added to package.json files array.");
+        console.log("\"target/release/*\" added to package.json files array.");
       } else {
-        console.log("\"target/*\" already present in package.json files array.");
+        console.log("\"target/release/*\" already present in package.json files array.");
       }
     '
 else
