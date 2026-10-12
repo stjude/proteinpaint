@@ -1500,11 +1500,12 @@ when several children of a root are annotated for the same term:
 */
 export function mayMapChildren2Root(data, q, ds) {
 	if (!q.mapChildren2Root || !ds.cohort?.termdb?.hasSampleAncestry) return
+	const rootSampleType: any = Object.values(ds.cohort.termdb.sampleTypes || {}).find((st: any) => st.parent_id === null)
+	const rootName = rootSampleType?.name || 'root sample'
 	const id2rootSampleId = ds.cohort.termdb.q?.id2rootSampleId
-	if (!id2rootSampleId) return
+	if (!id2rootSampleId) throw `${rootName} level is not supported for this dataset`
 	// a single cell term has one row per cell, which cannot be mapped to a root sample
-	if (q.terms.some(tw => isSingleCellTerm(tw.term)))
-		throw 'one column per root sample(patient) is not supported with single cell data'
+	if (q.terms.some(tw => isSingleCellTerm(tw.term))) throw `${rootName} level is not supported with single cell data`
 
 	// root sample id -> annotation key -> annotations of the root's children
 	const root2annos = new Map<number, Map<string, any[]>>()
@@ -1542,7 +1543,6 @@ export function mayMapChildren2Root(data, q, ds) {
 	}
 	data.samples = samples
 	data.refs.bySampleId = bySampleId
-	const rootSampleType = Object.values(ds.cohort.termdb.sampleTypes).find((st: any) => st.parent_id === null)
 	if (rootSampleType) data.sampleType = rootSampleType
 }
 

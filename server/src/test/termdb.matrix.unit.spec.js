@@ -1411,5 +1411,11 @@ tape('mayMapChildren2Root: rejects rows that are not samples', t => {
 		/cannot find the root sample/,
 		'an id without a root is rejected, rather than merged with other such ids'
 	)
+	const noMapper = { cohort: { termdb: { ...ds.cohort.termdb, q: {} } } }
+	t.throws(
+		() => mayMapChildren2Root(unknown, { terms: [tw], mapChildren2Root: true }, noMapper),
+		/not supported for this dataset/,
+		'a ds with sample ancestry but without id2rootSampleId() is rejected, rather than returning per-sample data'
+	)
 	t.end()
 })
