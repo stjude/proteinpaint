@@ -20,6 +20,10 @@ runs:
     - uses: actions/checkout@v7
       with:
         fetch-depth: 10
+        # keep the rust-binaries dir that the calling job may have downloaded, for pack.sh to
+        # include in the rust tarball; otherwise the rust postinstall downloads the binaries from
+        # the GitHub release, which fails for a draft release
+        clean: false
 
     # the workspace tarballs are packed in this job, since the workspace packages
     # other than the client are private and not published to the npm registry
