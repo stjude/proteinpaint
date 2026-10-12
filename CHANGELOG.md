@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- The /healthcheck response reads public/rev.txt and public/host-image.txt, and the /genomes response reads public/rev.txt, when requested instead of once at server startup, so pkgver and /healthcheck's hostImage match the files that a host rollout copies into a mounted public dir after the server has started
+
 DevOps:
 - Only the client package is published to the npm registry. The other workspace packages are private: the release workflow packs them as tarballs, which the ppserver and ppfull images install instead of the published packages. A host that installs @sjcrh/proteinpaint-server or @sjcrh/proteinpaint-front from npm will not get newer versions; use the ppserver or ppfull image.
 
