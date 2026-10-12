@@ -11,6 +11,9 @@ set -euxo pipefail
 # so every workspace that the server and full images install is packed, whether or not it has changed.
 #
 # call from the proteinpaint/container dir
+#
+# Usage: ./pack.sh [-s] [PKGPATH] [TMPDIR] [RUST_BINARIES_DIR]
+#   -s: server-only, to not pack the client and front workspaces, that only the full image installs
 
 # defaults
 PKGPATH=/home/root/pp/tmppack
@@ -19,6 +22,20 @@ RUST_BINARIES_DIR=../rust-binaries
 
 # this script should test packing and bundling, should not set up dev aliased exports
 # export NODE_OPTIONS='--conditions=sjpp/dev'
+
+SERVERONLY=""
+while getopts "s" opt; do
+	case "${opt}" in
+	s)
+		SERVERONLY=1
+		;;
+	*)
+		echo "Unrecognized parameter"
+		exit 1
+		;;
+	esac
+done
+shift $(($OPTIND-1))
 
 if (( $# == 1 )); then
   PKGPATH="$1"
@@ -56,10 +73,14 @@ do
 	SHAREDTGZ=sjcrh-proteinpaint-$sharedws-$SHAREDPKGVER.tgz
 	mv $SHAREDTGZ ../../container/tmppack/
 	SHAREDDEPNAME="@sjcrh/proteinpaint-$sharedws"
-	cd ../../client
-	# may reset the dep new version temporarily, for package testing
-	npm pkg set "devDependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
-	cd ../server
+	if [[ "$SERVERONLY" == "" ]]; then
+		cd ../../client
+		# may reset the dep new version temporarily, for package testing
+		npm pkg set "devDependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
+		cd ../server
+	else
+		cd ../../server
+	fi
 	# may reset the dep new version temporarily, for package testing
 	npm pkg set "dependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
 	cd ../container
@@ -73,34 +94,36 @@ do
 	fi
 done
 
-cd ../client
-echo "packing client ..."
-npm pack --loglevel error
-CLIENTPKGVER=$(node -p "require('./package.json').version")
-CLIENTTGZ=sjcrh-proteinpaint-client-$CLIENTPKGVER.tgz
-mv $CLIENTTGZ ../container/tmppack/
-git restore package.json
-cd ../front
-CLIENTDEPNAME="@sjcrh/proteinpaint-client"
-# may reset the dep new version temporarily, for package testing
-npm pkg set "devDependencies.$CLIENTDEPNAME"=$PKGPATH/$CLIENTTGZ
-cd ../container
+if [[ "$SERVERONLY" == "" ]]; then
+	cd ../client
+	echo "packing client ..."
+	npm pack --loglevel error
+	CLIENTPKGVER=$(node -p "require('./package.json').version")
+	CLIENTTGZ=sjcrh-proteinpaint-client-$CLIENTPKGVER.tgz
+	mv $CLIENTTGZ ../container/tmppack/
+	git restore package.json
+	cd ../front
+	CLIENTDEPNAME="@sjcrh/proteinpaint-client"
+	# may reset the dep new version temporarily, for package testing
+	npm pkg set "devDependencies.$CLIENTDEPNAME"=$PKGPATH/$CLIENTTGZ
+	cd ../container
 
-# Since the front workspace bundles the client code, the client/dist must be present,
-# as packed above or else by the client-dist script that is called by the prepack script
-# in the front/package.json.
-cd ../front
-echo "packing front ..."
-npm pack --loglevel error
-FRONTPKGVER=$(node -p "require('./package.json').version")
-FRONTTGZ=sjcrh-proteinpaint-front-$FRONTPKGVER.tgz
-mv $FRONTTGZ ../container/tmppack/
-git restore package.json
+	# Since the front workspace bundles the client code, the client/dist must be present,
+	# as packed above or else by the client-dist script that is called by the prepack script
+	# in the front/package.json.
+	cd ../front
+	echo "packing front ..."
+	npm pack --loglevel error
+	FRONTPKGVER=$(node -p "require('./package.json').version")
+	FRONTTGZ=sjcrh-proteinpaint-front-$FRONTPKGVER.tgz
+	mv $FRONTTGZ ../container/tmppack/
+	git restore package.json
 
-cd ../container/full
-echo "update the dependency in container/full/package.json to point to the front tarball inside of tmppack dir ..."
-npm pkg set "dependencies.$FRONTDEPNAME"=$PKGPATH/$FRONTTGZ
-cd ..
+	cd ../container/full
+	echo "update the dependency in container/full/package.json to point to the front tarball inside of tmppack dir ..."
+	npm pkg set "dependencies.$FRONTDEPNAME"=$PKGPATH/$FRONTTGZ
+	cd ..
+fi
 
 cd ../augen
 echo "packing augen ..."

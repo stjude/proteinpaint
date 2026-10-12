@@ -72,10 +72,10 @@ jobs:
         with:
           driver: docker
 
-      - name: Pack updated workspaces
+      - name: Pack tarballs for the server image
         run: |
           cd ./container
-          ./pack.sh
+          ./pack.sh -s
 
       - name: Build ppserver image
         uses: docker/build-push-action@v7

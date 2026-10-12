@@ -29,7 +29,7 @@ runs:
       shell: bash
       run: |
         cd ./container
-        ./pack.sh
+        ./pack.sh -s
 
     - name: Copy serverconfig.json to root
       shell: bash
