@@ -31,6 +31,11 @@ RUN chown 0:0 . && \
     npm install --omit=dev --cache=/tmp/npm-cache && rm -rf /tmp/npm-cache && \
     find . \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
     find . ! -type l -perm /022 -exec chmod go-w {} +
+# The rust postinstall does not fail the npm install when it cannot download or compile the binaries,
+# such as from a draft GitHub release, so fail the build here instead of at server startup.
+RUN if [ -z "$(ls node_modules/@sjcrh/proteinpaint-rust/target/release 2>/dev/null)" ]; then \
+      echo "ERROR: missing the rust binaries in node_modules/@sjcrh/proteinpaint-rust/target/release"; exit 1; \
+    fi
 COPY ./server/app-server.mjs ./envHelpers.mjs ./runtimePosture.mjs ./
 
 # Nothing under the app dir is written at runtime: fail the build for an app file that the app user, or another UID
