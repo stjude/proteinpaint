@@ -1,6 +1,6 @@
 import { getPillNameDefault } from '#termsetting'
 import { renderTable } from '#dom'
-import type { PillData, SampleLstTW } from '#types'
+import type { PillData, SampleLstTW, VocabApi } from '#types'
 import type { TermSetting } from '../TermSetting.ts'
 
 export function getHandler(self: TermSetting) {
@@ -91,10 +91,20 @@ function addTable(div: any, name: any, group: any, noButtonCallback: any) {
 	})
 }
 
-export function fillTW(tw: SampleLstTW) {
+export async function fillTW(tw: SampleLstTW, vocabApi?: VocabApi) {
 	/* type = custom-samplelst is not used anywhere else.
 	Code still under development. Delete if never used. */
 	if (!tw.q.groups) tw.q.groups = []
+	if (tw.q.groups.length == 0 && Object.values(tw.term.values || {}).some(v => !Array.isArray(v.list))) {
+		/* a samplelst term made in the Groups tab may define its groups by filters, which only the tw
+		of the custom variable carries, so a tree that gives just the term (as submit_lst does) loses
+		them; get the groups from that tw */
+		const customTws = (await vocabApi?.getCustomTerms?.()) || []
+		const customTw = customTws.find(t => t.term.type == 'samplelst' && t.term.name == tw.term.name) as
+			| SampleLstTW
+			| undefined
+		if (customTw?.q?.groups?.length) tw.q.groups = structuredClone(customTw.q.groups)
+	}
 	if (tw.q.groups.length == 0) {
 		for (const k in tw.term.values) {
 			const v = tw.term.values[k]
