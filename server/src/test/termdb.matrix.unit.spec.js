@@ -1203,7 +1203,11 @@ tape('mayMapChildren2Root: moves sample annotations onto root samples', t => {
 	const gene = { gene: 'TP53' }
 	const tws = [
 		{ $id: 'sex', term: { id: 'sex', type: 'categorical' }, q: {} },
-		{ $id: 'site', term: { id: 'site', type: 'categorical' }, q: {} },
+		{
+			$id: 'site',
+			term: { id: 'site', type: 'categorical', values: { blood: { label: 'Blood' }, bone: { label: 'Bone' } } },
+			q: {}
+		},
 		{ $id: 'exp', term: { id: 'exp', type: 'float' }, q: {} },
 		{ $id: 'agebin', term: { id: 'agebin', type: 'float' }, q: { mode: 'discrete' } },
 		{ $id: 'tp53', term: { type: 'geneVariant', name: 'TP53' }, q: {} }
@@ -1254,13 +1258,8 @@ tape('mayMapChildren2Root: moves sample annotations onto root samples', t => {
 	t.deepEqual(p.sex, { key: 'M', value: 'M' }, 'an identical value of the children is kept once')
 	t.deepEqual(
 		p.site,
-		{
-			values: [
-				{ key: 'bone', value: 'bone' },
-				{ key: 'blood', value: 'blood' }
-			]
-		},
-		'distinct categorical values are kept as values[]'
+		{ key: 'Blood, Bone', value: 'Blood, Bone' },
+		'distinct categorical values are combined into one key of their labels, in the order of term.values'
 	)
 	t.deepEqual(p.exp, { key: 3, value: 3 }, 'numeric values are averaged')
 	t.deepEqual(p.agebin, { key: '>=10', value: 11 }, 'the mean of a binned term is assigned to its bin')
@@ -1276,6 +1275,80 @@ tape('mayMapChildren2Root: moves sample annotations onto root samples', t => {
 	const unchanged = { samples: { 11: { sample: 11 } }, refs: { byTermId: {}, bySampleId: {} } }
 	mayMapChildren2Root(unchanged, { terms: [] }, ds)
 	t.deepEqual(Object.keys(unchanged.samples), ['11'], 'samples are not moved when the flag is not set')
+	t.end()
+})
+
+tape('mayMapChildren2Root: combines distinct groupset values in the order of the groups', t => {
+	// samples 11, 12 are children of root 1, and 21, 22 of root 2
+	const root = { 11: 1, 12: 1, 21: 2, 22: 2 }
+	const ds = {
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: { 1: { name: 'patient', plural_name: 'patients', parent_id: null } },
+				q: { id2rootSampleId: id => root[id], id2sampleRefs: id => ({ label: 'p' + id }) }
+			}
+		}
+	}
+	const groups = [{ name: 'Late' }, { name: 'Early' }]
+	const tw = {
+		$id: 'stage',
+		// a value key that is also a group name must not be shown by its value label
+		term: { id: 'stage', type: 'categorical', values: { Early: { label: 'Stage I' } }, groupsetting: {} },
+		q: { type: 'custom-groupset', customset: { groups } }
+	}
+	const anno = key => ({ key, value: key })
+	const data = {
+		samples: {
+			11: { sample: 11, stage: anno('Early') },
+			12: { sample: 12, stage: anno('Late') },
+			21: { sample: 21, stage: anno('Late') },
+			22: { sample: 22, stage: anno('Early') }
+		},
+		refs: { byTermId: {}, bySampleId: {} }
+	}
+	mayMapChildren2Root(data, { terms: [tw], mapChildren2Root: true }, ds)
+	t.deepEqual(data.samples[1].stage, anno('Late, Early'), 'group names are listed in the order of the groups')
+	t.deepEqual(
+		data.samples[2].stage,
+		data.samples[1].stage,
+		'the same groups give the same key, whatever the order of the children'
+	)
+	t.end()
+})
+
+tape('mayMapChildren2Root: keeps the distinct values of a multivalue term as values[]', t => {
+	const ds = {
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: { 1: { name: 'patient', plural_name: 'patients', parent_id: null } },
+				q: { id2rootSampleId: () => 1, id2sampleRefs: id => ({ label: 'p' + id }) }
+			}
+		}
+	}
+	const tw = { $id: 'race', term: { id: 'race', type: 'multivalue' }, q: {} }
+	const data = {
+		samples: {
+			11: { sample: 11, race: { key: 'A', value: 'A' } },
+			12: {
+				sample: 12,
+				race: {
+					values: [
+						{ key: 'A', value: 'A' },
+						{ key: 'B', value: 'B' }
+					]
+				}
+			}
+		},
+		refs: { byTermId: {}, bySampleId: {} }
+	}
+	mayMapChildren2Root(data, { terms: [tw], mapChildren2Root: true }, ds)
+	t.deepEqual(
+		data.samples[1].race.values.map(v => v.key),
+		['A', 'B'],
+		'a multivalue cell keeps one entry per distinct value, as the client reads its values[]'
+	)
 	t.end()
 })
 
@@ -1409,7 +1482,7 @@ tape('mayMapChildren2Root: rejects rows that are not samples', t => {
 	t.throws(
 		() => mayMapChildren2Root(unknown, { terms: [tw], mapChildren2Root: true }, ds),
 		/cannot find the root sample/,
-		'an id without a root is rejected, rather than merged with other such ids'
+		'an id without a parent id  is rejected, rather than merged with other such ids'
 	)
 	const noMapper = { cohort: { termdb: { ...ds.cohort.termdb, q: {} } } }
 	t.throws(

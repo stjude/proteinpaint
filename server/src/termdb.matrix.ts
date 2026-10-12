@@ -26,7 +26,8 @@ import {
 	PROTEOME_ABUNDANCE,
 	PSEUDOBULK,
 	JUNCTION,
-	TERM_COLLECTION
+	TERM_COLLECTION,
+	MULTIVALUE
 } from '#types'
 import { annotateSingleCellTerm, hydrateMetaResultCellRows } from './singleCell/matrixData.ts'
 import { get_bin_label, compute_bins, assignBinColors } from '#shared/termdb.bins.js'
@@ -1496,7 +1497,8 @@ when several children of a root are annotated for the same term:
 - geneVariant: values[] of the children are combined
 - numeric: the mean of the children's values is used
 - numeric termCollection: the mean of each member's values is used
-- otherwise: distinct values are kept as .values[]
+- multivalue: distinct values are kept as .values[]
+- otherwise: distinct values are combined into one key, e.g. "Diagnosis, Relapse"
 */
 export function mayMapChildren2Root(data, q, ds) {
 	if (!q.mapChildren2Root || !ds.cohort?.termdb?.hasSampleAncestry) return
@@ -1569,7 +1571,29 @@ function mergeChildAnnotations(lst: any[], tw: any, termRef: any, rootId: number
 	for (const v of lst.flatMap(a => a.values || [a])) {
 		if (!distinct.some(d => d.key === v.key && d.value === v.value)) distinct.push(v)
 	}
-	return distinct.length == 1 ? distinct[0] : { values: distinct }
+	if (distinct.length == 1) return distinct[0]
+	// a multivalue cell carries values[]; other cells are grouped, sorted and colored by .key on the client
+	if (tw?.term?.type == MULTIVALUE) return { values: distinct }
+	return combineDistinctValues(distinct, tw)
+}
+
+/* combine the distinct values of a root's children into one value, e.g. "Diagnosis, Relapse",
+which is shown as its own category. Use the active groupset's group order and names when available;
+otherwise, use the order in term.values */
+function combineDistinctValues(distinct: any[], tw: any) {
+	const groupset = tw ? get_active_groupset(tw.term, tw.q) : undefined
+	const termValues = groupset ? {} : tw?.term?.values || {}
+	const order: string[] = groupset ? groupset.groups.map(g => String(g.name)) : Object.keys(termValues)
+	const rank = v => {
+		const i = order.indexOf(String(v.key))
+		return i == -1 ? order.length : i
+	}
+	const key = distinct
+		// a key that is not in order[] is sorted by itself, rather than left in the order of the children
+		.sort((a, b) => rank(a) - rank(b) || String(a.key).localeCompare(String(b.key)))
+		.map(v => termValues[v.key]?.label ?? v.key)
+		.join(', ')
+	return { key, value: key }
 }
 
 /* numeric termCollection whose value is {memberId: number} rather than a number (not fraction mode) */
