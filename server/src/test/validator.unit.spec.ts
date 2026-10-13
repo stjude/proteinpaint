@@ -7,7 +7,7 @@ or run the whole unit suite (as CI does):
   cd proteinpaint/server && npm run test:unit
 *********************************************/
 import tape from 'tape'
-import { floodCatch, getFloodKey, sweepFloodTracker } from '../validator.ts'
+import { floodCatch, getFloodKey, sweepFloodTracker, maxTrackedClients } from '../validator.ts'
 
 function getReq(ip: string, headers: { [k: string]: string } = {}) {
 	return { ip, get: (name: string) => headers[name.toLowerCase()] }
@@ -74,5 +74,17 @@ tape('sweepFloodTracker()', test => {
 	}
 	test.equal(sweepFloodTracker(now), before + 1, 'should keep an entry that has not expired')
 	test.equal(sweepFloodTracker(now + 31000), 0, 'should delete the entries that have expired')
+	test.end()
+})
+
+tape('floodCatch() does not track more than maxTrackedClients', test => {
+	for (let i = 0; i < maxTrackedClients + 100; i++) {
+		try {
+			floodCatch(getReq('192.0.2.13', { 'cf-connecting-ip': `client-${i}` }), getRes(), 'invalid')
+		} catch (_) {
+			// expected
+		}
+	}
+	test.equal(sweepFloodTracker(0), maxTrackedClients, 'should not add a new client when the tracker is full')
 	test.end()
 })
