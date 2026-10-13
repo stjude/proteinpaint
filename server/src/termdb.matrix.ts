@@ -1,5 +1,5 @@
 import path from 'path'
-import { string2pos } from '#shared/common.js'
+import { string2pos, dtsnvindel, dtfusionrna, dtsv, dtcnv } from '#shared/common.js'
 import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
@@ -1643,10 +1643,51 @@ function mergeGeneVariantAnnotations(lst: any[], tw: any) {
 	return { ...lst[0], values: mergeGeneVariantValues(lst.flatMap(a => a.values || [])) }
 }
 
+/*
+Merge the gene variants from all children of a root sample into one list, keeping each variant only once.
+* If multiple children have the same variant, keep the entry from the first child and use its sample-specific
+values (e.g. VAF, read counts, genotype, copy number, and the fusion breakpoint on the partner gene).
+*Two variants are considered the same if they have the same gene (or queried region), dt, origin, and class,
+and meet the following criteria:
+
+- SNV/indel (dt=1): the same chromosome, position, mutation name and isoform
+- fusion RNA and SV (dt=2, 5): the same chromosome and breakpoint position on this gene, the same partner gene
+  (mname), and this gene at the same end of the fusion (pairlstIdx, the 5' or 3' end)
+- CNV (dt=4): same chromosome and overlapping segments.
+  two segments overlap when they share any part of the chromosome:
+      one segment partly covers the other, lies inside it, or contains it.
+  a CNV without start/stop (e.g. a gene-level CNV) is considered the same as any other CNV for that gene.
+- Other dt values: same chromosome, position, start, stop, mutation name, isoform, and value.
+
+* a WT or Blank status of a dt is dropped when a child has a variant of that dt;
+otherwise one status is kept per dt, WT rather than Blank
+*/
 function mergeGeneVariantValues(values: any[]) {
 	const statusKey = v => `${getGvQueryKey(v)}\t${v.dt}\t${v.origin || ''}`
 	const isStatus = v => v.class == 'WT' || v.class == 'Blank'
-	const mutated = new Set(values.filter(v => !isStatus(v)).map(statusKey))
+	const joinFields = (...fields) => fields.map(f => f ?? '').join('\t')
+	const variantKey = v => {
+		const k = joinFields(statusKey(v), v.class)
+		if (v.dt == dtsnvindel) return joinFields(k, v.chr, v.pos, v.mname, v.isoform)
+		if (v.dt == dtfusionrna || v.dt == dtsv) return joinFields(k, v.chr, v.pos, v.mname, v.pairlstIdx)
+		if (v.dt == dtcnv) return joinFields(k, v.chr) // positions are compared by cnvOverlaps()
+		return joinFields(k, v.chr, v.pos, v.start, v.stop, v.mname, v.isoform, v.value)
+	}
+	const cnvOverlaps = (a, b) =>
+		[a.start, a.stop, b.start, b.stop].some(n => !Number.isFinite(n)) || (a.start < b.stop && a.stop > b.start)
+
+	// variant key -> kept variants; more than one only for CNV segments that do not overlap each other
+	const variants = new Map<string, any[]>()
+	for (const v of values) {
+		if (isStatus(v)) continue
+		const k = variantKey(v)
+		const kept = variants.get(k)
+		if (!kept) variants.set(k, [v])
+		else if (v.dt == dtcnv && !kept.some(c => cnvOverlaps(v, c))) kept.push(v)
+	}
+	const keptVariants = [...variants.values()].flat()
+
+	const mutated = new Set(keptVariants.map(statusKey))
 	const statuses = new Map()
 	for (const v of values) {
 		if (!isStatus(v)) continue
@@ -1654,7 +1695,7 @@ function mergeGeneVariantValues(values: any[]) {
 		if (mutated.has(k)) continue
 		if (!statuses.has(k) || v.class == 'WT') statuses.set(k, v)
 	}
-	return [...values.filter(v => !isStatus(v)), ...statuses.values()]
+	return [...keptVariants, ...statuses.values()]
 }
 
 /*

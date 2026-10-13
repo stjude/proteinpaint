@@ -1317,6 +1317,94 @@ tape('mayMapChildren2Root: combines distinct groupset values in the order of the
 	t.end()
 })
 
+tape('mayMapChildren2Root: keeps a variant found in several children once', t => {
+	const ds = {
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: { 1: { name: 'patient', plural_name: 'patients', parent_id: null } },
+				q: { id2rootSampleId: () => 1, id2sampleRefs: id => ({ label: 'p' + id }) }
+			}
+		}
+	}
+	const tw = { $id: 'tp53', term: { type: 'geneVariant', name: 'TP53' }, q: {} }
+	// merge the values of children 11, 12, ... of root 1, and return the values of the root
+	const merge = (...childValues) => {
+		const samples = {}
+		childValues.forEach((values, i) => (samples[11 + i] = { sample: 11 + i, tp53: { key: 'TP53', values } }))
+		const data = { samples, refs: { byTermId: {}, bySampleId: {} } }
+		mayMapChildren2Root(data, { terms: [tw], mapChildren2Root: true }, ds)
+		return data.samples[1].tp53.values
+	}
+	const gene = { gene: 'TP53', chr: 'chr17' }
+
+	// SNV/indel
+	const snv = { ...gene, dt: 1, class: 'M', pos: 7674220, mname: 'R248Q', isoform: 'NM_000546' }
+	let values = merge([{ ...snv, vaf: 0.45, value: '0/1' }], [{ ...snv, vaf: 0.8, value: '1/1' }])
+	t.equal(values.length, 1, 'the same SNV of two children is kept once, though its vaf and genotype differ')
+	t.equal(values[0].vaf, 0.45, 'the kept SNV has the sample-specific fields of the first child')
+	t.equal(merge([snv], [{ ...snv, pos: 7674221, mname: 'R248W' }]).length, 2, 'different SNVs are both kept')
+
+	// fusion
+	const fusion = { ...gene, dt: 2, class: 'Fuserna', pos: 7670000, mname: 'BCR', pairlstIdx: 0 }
+	values = merge([{ ...fusion, pairlst: [{ b: { pos: 1 } }] }], [{ ...fusion, pairlst: [{ b: { pos: 2 } }] }])
+	t.equal(values.length, 1, 'the same fusion is kept once, though its breakpoint on the partner gene differs')
+	t.equal(values[0].pairlst[0].b.pos, 1, 'the kept fusion has the partner breakpoint of the first child')
+	t.equal(
+		merge([fusion], [{ ...fusion, pairlstIdx: 1 }]).length,
+		2,
+		"fusions at this gene's 5' and 3' ends are both kept"
+	)
+
+	// CNV, compared with a kept segment of 100-200
+	const amp = { ...gene, dt: 4, class: 'CNV_amp' }
+	const seg = (start, stop) => ({ ...amp, start, stop })
+	for (const [start, stop, how] of [
+		[150, 300, 'overlapping its end'],
+		[50, 150, 'overlapping its start'],
+		[120, 180, 'inside it'],
+		[50, 300, 'around it'],
+		[100, 200, 'the same as it']
+	]) {
+		t.equal(merge([seg(100, 200)], [seg(start, stop)]).length, 1, `a CNV segment ${how} is dropped`)
+	}
+	for (const [start, stop, how] of [
+		[300, 400, 'after it'],
+		[0, 50, 'before it'],
+		[200, 300, 'only touching its end']
+	]) {
+		t.equal(merge([seg(100, 200)], [seg(start, stop)]).length, 2, `a CNV segment ${how} is kept`)
+	}
+	values = merge([{ ...seg(100, 200), value: 1.2 }], [{ ...seg(150, 300), value: 1.5 }])
+	t.deepEqual([values[0].start, values[0].value], [100, 1.2], 'the kept segment is that of the first child')
+	t.equal(
+		merge([seg(100, 200), seg(300, 400)], [seg(150, 350)]).length,
+		2,
+		'a segment overlapping either of two kept segments is dropped'
+	)
+	t.equal(
+		merge([seg(100, 200)], [{ ...seg(150, 300), class: 'CNV_loss' }]).length,
+		2,
+		'an amp and a loss are both kept'
+	)
+	t.equal(merge([amp], [amp]).length, 1, 'gene-level CNVs without start/stop are kept once')
+
+	// WT and Blank statuses
+	values = merge(
+		[
+			{ ...gene, dt: 1, class: 'WT' },
+			{ ...gene, dt: 2, class: 'Blank' }
+		],
+		[snv, { ...gene, dt: 2, class: 'WT' }]
+	)
+	t.deepEqual(
+		values.map(v => `${v.dt}:${v.class}`).sort(),
+		['1:M', '2:WT'],
+		'a status is dropped where a child has a variant of the dt, and WT is kept rather than Blank'
+	)
+	t.end()
+})
+
 tape('mayMapChildren2Root: keeps the distinct values of a multivalue term as values[]', t => {
 	const ds = {
 		cohort: {
