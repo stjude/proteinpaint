@@ -7,7 +7,8 @@ export type DERequest = {
 	genome: string
 	/** dataset label */
 	dslabel: string
-	/* Object containing two arrays of RNA seq count for DE analysis */
+	/* Object containing two arrays of RNA seq count for DE analysis.
+	`matchMethylation: true` on it keeps each group to its samples that have methylation data */
 	samplelst: any //{number[]; number[];}
 	/** Minimum count per sample for edgeR's filterByExpr */
 	min_count: number
@@ -35,6 +36,7 @@ export type DERequest = {
 		category: string
 	}
 	signal?: any
+	__protected__?: any
 }
 
 /** Thresholds used to classify a data point as "significant" on the volcano plot.
@@ -60,7 +62,7 @@ export type VolcanoRenderRequest = {
 	 * Whichever field is chosen, significanceThresholds.foldChangeCutoff is interpreted in THAT
 	 * field's units -- the caller sends the cutoff matching the axis it asked for. Otherwise the
 	 * threshold lines would sit at coordinates unrelated to what is classified significant. */
-	xField?: 'fold_change' | 'delta_beta'
+	xField?: 'fold_change' | 'delta_beta' | 'delta_psi'
 	/** Recentre the x axis on the median effect size across all tested rows, so the origin is the
 	 * typical row rather than zero. Off by default.
 	 *

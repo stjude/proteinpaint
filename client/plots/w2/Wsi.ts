@@ -449,6 +449,7 @@ export function getDefaultWsiSettings(overrides = {}): Settings {
 
 		geneExpression: null, // null = seed from the data on first spatial render
 		annotationLevel: null, // null = dataset default
+		cellCountLimit: null, // null = wsi.direct.ts's own default
 		spatialMode: 'gene_expression' // per-gene overlays by default
 	}
 	return Object.assign(defaults, overrides) // dataset overrides win

@@ -103,6 +103,7 @@ tape(`initialization, empty credentials`, async test => {
 			'getNonsensitiveInfo',
 			'getPayloadFromHeaderAuth',
 			'getRequiredCredForDsEmbedder',
+			'getUserDatasets',
 			'isUserLoggedIn',
 			'mayAdjustFilter',
 			'maySetAuthRoutes',
@@ -234,6 +235,7 @@ tape(`initialization, non-empty credentials`, async test => {
 				'getNonsensitiveInfo',
 				'getPayloadFromHeaderAuth',
 				'getRequiredCredForDsEmbedder',
+				'getUserDatasets',
 				'isUserLoggedIn',
 				'mayAdjustFilter',
 				'maySetAuthRoutes',
@@ -1548,7 +1550,8 @@ tape(`req.query.filter, __protected__`, async test => {
 				ignoredTermIds: [],
 				sessionid: 'xyz',
 				clientAuthResult: {},
-				isUserLoggedIn: false
+				isUserLoggedIn: false,
+				datasets: []
 			},
 			'should set up req.query.__protected__'
 		)

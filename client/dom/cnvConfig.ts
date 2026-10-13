@@ -1,4 +1,5 @@
 import { Menu, make_radios } from '#dom'
+import { renderOriginCheckboxes, getSelectedOrigins, type ByOrigin } from './variantConfig'
 
 /*
 Renderer for CNV config UI
@@ -18,8 +19,14 @@ type Arg = {
 		cnvLossCutoff?: number
 		cnvMaxLength?: number | null
 		cnvWT?: boolean
+		origins?: string[]
 	}) => void // called upon clicking apply
 	cnvWT?: boolean // wildtype for CNV specified by cutoffs
+	/** the origins of the cnv dt, when the dataset splits it by origin. Rendered as
+	 * checkboxes under the genotype radios, see renderOriginCheckboxes() */
+	byOrigin?: ByOrigin
+	/** the origins already matched; defaults to all of them */
+	selectedOrigins?: string[]
 	genotypeToggle?: boolean // display altered vs. wildtype genotype toggle
 	showOverlap?: boolean // display percent overlap input
 }
@@ -60,6 +67,9 @@ export function renderCnvConfig(arg: Arg) {
 			callback: () => {}
 		})
 	}
+
+	// origin checkboxes
+	const originSelect = arg.byOrigin ? renderOriginCheckboxes(genotypeDiv, arg.byOrigin, arg.selectedOrigins) : undefined
 
 	const cutoffsDiv = div.append('div')
 	cutoffsDiv.append('div').style('opacity', 0.7).style('margin-bottom', '10px').text('CNV cutoffs:')
@@ -206,6 +216,8 @@ export function renderCnvConfig(arg: Arg) {
 				if (!selected) throw 'no selected radio found'
 				config.cnvWT = selected.value == 'wildtype'
 			}
+			const origins = getSelectedOrigins(arg.byOrigin, originSelect)
+			if (origins) config.origins = origins
 			arg.callback(config)
 		})
 }

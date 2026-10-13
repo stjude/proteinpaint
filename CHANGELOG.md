@@ -4,6 +4,49 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- The /healthcheck response reads public/rev.txt and public/host-image.txt, and the /genomes response reads public/rev.txt, when requested instead of once at server startup, so pkgver and /healthcheck's hostImage match the files that a host rollout copies into a mounted public dir after the server has started
+
+DevOps:
+- Only the client package is published to the npm registry. The other workspace packages are private: the release workflow packs them as tarballs, which the ppserver and ppfull images install instead of the published packages. A host that installs @sjcrh/proteinpaint-server or @sjcrh/proteinpaint-front from npm will not get newer versions; use the ppserver or ppfull image.
+
+
+## 2.219.0
+
+General:
+- support switching among different time origins on the swimmer plot
+- a custom variable made from groups in the Groups tab, and the groups of the differential analysis input form, are defined by the filters of the groups; the server resolves the samples of each group and caches them
+- a group made from a bar of a barchart or from cells of a facet table, and a filter added from a bar of grouped categories, are defined by the conditions of the bar or cells; no sample list is requested for them
+- a saved session is marked with the form of its sample groups; a session saved before this version that lists the samples of a group is not opened, and its groups and plots have to be made again
+- serverconfig.dsCredentials, as an object or as a credentials file path in serverconfig.json, is no longer supported and stops the server at startup; set process.env.PP_CREDS to the credentials JSON instead, or set PP_CREDS_FILE to a credentials file path and start the server with container/envHelpers.mjs
+
+Features:
+- dnaMethylation excludeSampleNamesMatching accepts a list of substrings, to withhold individual samples from differential methylation
+- The volcano's wait message counts the elapsed time while a DNA methylation analysis runs
+- Differential DNA methylation: the element class, the scan's chromosome and its background correction can be chosen before the first run
+
+
+## 2.218.0
+
+Features:
+- add TableBase, an extendable table with sort, filter, paging, row selection and cell editing; the SC sample table is now built on it
+- all server cache subdirs are declared in one cacheRegistry in CacheManager.ts, each with a type that sets its eviction defaults; every subdir is created at server launch, even when the feature that uses it is disabled
+- serverconfig.features.cacheMonitor.subdirs is validated at launch: a subdir that is not in the registry, a subdir set to undefined, or an option other than maxAge, maxSize, skipMs, moveTo or fileExtensions now fails the launch instead of being used or ignored
+- the daAnalysis cache subdir is no longer created or swept; a leftover daAnalysis dir may be deleted
+- the extApiResponse cache subdir is declared in cacheRegistry and evicted by CacheManager after 365 days, which serverconfig.features.cacheMonitor.subdirs.extApiResponse may override; cached responses are now written directly under extApiResponse/, and the serverconfig.features.extApiCache values are no longer used as subdir names, so previously cached responses are not reused and the old subdirs may be deleted
+- the snpgt cache subdir is declared in cacheRegistry and evicted by CacheManager after 30 days, which serverconfig.features.cacheMonitor.subdirs.snpgt may override
+
+Fixes:
+- the DMR plot shows the R backend toggle only in debugmode, and the server accepts the R backend only in debugmode
+- differential methylation: a violin plot opened from a volcano hit shows the element that was tested, instead of the elements of another matrix that overlap it
+- gene set enrichment on a differential methylation result ranks each gene by the mean of its promoters, instead of by its highest one
+- differential methylation: a violin plot opened from a volcano hit is labelled with the unit of the values it shows, on a dataset whose promoter matrix and methylation terms use different units
+- differential methylation runs on an element matrix that gives its chromosomes as a chrom_lengths attribute, as a CpG-level matrix does, instead of a chromosome per row
+- serverconfig.cache_snpgt is no longer used, and may be removed from a serverconfig.json; snp genotype cache files are always written under [cachedir]/snpgt
+
+
+## 2.217.0
+
 Features:
 - more dirs in the server startup check
 - Add support for swimmer plot

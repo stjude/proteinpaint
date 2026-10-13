@@ -76,8 +76,10 @@ async function get_q(req, genomes) {
 			dsquery.dir = await utils.cache_index(q.url, q.indexURL)
 		} else {
 			if (q.file) {
+				utils.checkTrackFile(q.file)
 				dsquery.file = path.join(serverconfig.tpmasterdir, q.file)
 			} else if (q.file2) {
+				utils.checkTrackFile(q.file2)
 				dsquery.file2 = path.join(serverconfig.tpmasterdir, q.file2)
 			} else {
 				throw 'no file or url given'

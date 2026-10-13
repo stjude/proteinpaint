@@ -638,7 +638,9 @@ tape('flattenCaseByFields(): unsupported dotted diagnosis descendant does not fo
 			{ op: '>=', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 18263 } },
 			{ op: '<', content: { field: 'cases.diagnoses.age_at_diagnosis', value: 21915 } },
 			// dotted descendant under the diagnosis' treatments[] array -- unsupported, compiles to UNKNOWN
-			{ op: 'in', content: { field: 'cases.diagnoses.treatments.treatment_type', value: ['Chemotherapy'] } }
+			{ op: 'in', content: { field: 'cases.diagnoses.treatments.treatment_type', value: ['Chemotherapy'] } },
+			// repeated diagnoses segment still belongs to the first diagnoses path and stays unsupported
+			{ op: 'in', content: { field: 'cases.diagnoses.treatments.diagnoses.age_at_diagnosis', value: [21939] } }
 		]
 	}
 

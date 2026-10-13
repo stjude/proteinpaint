@@ -2,14 +2,14 @@
 import * as augen from './src/augen.js'
 import fs from 'fs'
 import path from 'path'
-import { exec } from 'child_process'
+import { execFile } from 'child_process'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { promisify } from 'util'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const existsProm = promisify(fs.exists)
-const execProm = promisify(exec)
+const execFileProm = promisify(execFile)
 
 const cmd = process.argv[2]
 if (!['typeCheckers', 'apiJson', 'build'].includes(cmd)) throw `cmd='${cmd}' not supported`
@@ -25,13 +25,9 @@ if (!fs.existsSync(dir)) throw `Not found: dir='${dir}'`
 			const { routesDir, typesDir, checkersDir, docsDir } = config.default
 			const cwd = process.cwd()
 			// console.log(`${path.join(__dirname, 'build.sh')} ${routesDir} ${typesDir} ${checkersDir} ${docsDir}`)
-			const out = await execProm(
-				`${path.join(__dirname, 'build.sh')} ${routesDir} ${typesDir} ${checkersDir} ${docsDir}`,
-				{
-					encoding: 'utf-8',
-					stdio: 'inherit'
-				}
-			)
+			const out = await execFileProm(path.join(__dirname, 'build.sh'), [routesDir, typesDir, checkersDir, docsDir], {
+				encoding: 'utf-8'
+			})
 			// if (out) {
 			// 	if (out.stderr) throw out.stderr
 			// 	if (out.error) throw out.error

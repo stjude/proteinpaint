@@ -649,13 +649,15 @@ export const moriginsomatic = 'S'
 morigin[moriginsomatic] = {
 	label: 'Somatic',
 	desc: 'A variant found only in a tumor sample. The proportion is indicated by lack of any arc.',
-	legend: '<circle cx="7" cy="12" r="7" fill="#b1b1b1"></circle>'
+	legend: '<circle cx="7" cy="12" r="7" fill="#b1b1b1"></circle>',
+	order: 1
 }
 export const morigingermline = 'G'
 morigin[morigingermline] = {
 	label: 'Germline',
 	desc: 'A constitutional variant found in a normal sample. The proportion is indicated by the span of the solid arc within the whole circle.',
-	legend: germlinelegend
+	legend: germlinelegend,
+	order: 2
 }
 
 morigin.germline = morigin[morigingermline]
@@ -1342,7 +1344,7 @@ export const CNVClasses = Object.values(mclass)
 	.map(m => m.key)
 
 // dt terms used for filtering variants for geneVariant term
-const dtTerms_temp = [
+export const dtTerms = [
 	{
 		id: 'snvindel',
 		query: 'snvindel',
@@ -1394,22 +1396,6 @@ const dtTerms_temp = [
 		values: {}
 	}
 ]
-// add origin annotations to dt terms
-const dtTerms_temp2: any[] = []
-for (const dtTerm of dtTerms_temp as any[]) {
-	dtTerm.name_noOrigin = dtTerm.name // for labeling groups in groupsetting
-	dtTerms_temp2.push(dtTerm) // no origin
-	for (const origin of ['somatic', 'germline']) {
-		// add origins
-		const addOrigin = {
-			id: `${dtTerm.id}_${origin}`,
-			name: `${dtTerm.name} (${origin})`,
-			origin
-		}
-		dtTerms_temp2.push(Object.assign({}, dtTerm, addOrigin))
-	}
-}
-export const dtTerms = dtTerms_temp2
 
 export const colorScaleMap = {
 	blueWhiteRed: { domain: [0, 0.5, 1], range: ['blue', 'white', 'red'] },

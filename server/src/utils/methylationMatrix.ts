@@ -1,6 +1,6 @@
 import { resolveElementQuery } from '../../routes/termdb.diffMeth.ts'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
-import { buildGroupValues } from '#src/utils/sampleGroups.ts'
+import { buildGroupValues, isFilterGroup } from '#src/utils/sampleGroups.ts'
 import serverconfig from '#src/serverconfig.js'
 
 /* Which methylation matrix a region (DMR) request runs on, and which samples are eligible for it.
@@ -206,11 +206,12 @@ so ancestry mapping and the dataset's specimen exclusions apply identically. */
 export async function matchedSamplelst(
 	samplelst: { groups: { name: string; values: any[]; [k: string]: any }[] },
 	eligible: Set<string>,
-	ds: any
+	ds: any,
+	__protected__?: any
 ): Promise<{ groups: { name: string; values: { sampleId: number | string }[]; [k: string]: any }[] }> {
 	const groups: { name: string; values: { sampleId: number | string }[] }[] = []
 	for (const g of samplelst.groups) {
-		const { names } = await buildGroupValues(g.values, eligible, ds, undefined, undefined, undefined, undefined)
+		const { names } = await buildGroupValues(g.values, eligible, ds, null, null, null, null, __protected__)
 		/* Everything but the values is kept as it came, `in: true` included: the volcano treats a
 		group without `in` as the "all other samples" group and rebuilds its membership. */
 		groups.push({ ...g, values: names.map(n => ({ sampleId: ds.cohort?.termdb?.q?.sampleName2id?.(n) ?? n })) })
@@ -218,15 +219,36 @@ export async function matchedSamplelst(
 	return { groups }
 }
 
+/* The matched groups as a response gives them. The samples of a group that the request defined by a
+filter are not for a response: such a group goes back as it came, with the number of its samples
+that have methylation data, and `matchMethylation` asks the differential expression that follows
+to keep to those samples itself (see getDeCacheResult() in routes/termdb.DE.ts). A group that the
+request listed goes back as its matched list.
+
+requestGroups[]: the groups of the request; matched: matchedSamplelst() of those groups, resolved */
+export function matchedSamplelstForResponse(
+	requestGroups: any[],
+	matched: { groups: { name: string; values: { sampleId: number | string }[]; [k: string]: any }[] }
+): { groups: any[]; matchMethylation?: boolean } {
+	if (!requestGroups.some(isFilterGroup)) return matched
+	return {
+		matchMethylation: true,
+		groups: requestGroups.map((g, i) =>
+			isFilterGroup(g) ? { ...g, sampleCount: matched.groups[i].values.length } : matched.groups[i]
+		)
+	}
+}
+
 export async function resolveGroupNames(
 	group1: any[],
 	group2: any[],
 	eligible: Set<string>,
-	ds: any
+	ds: any,
+	__protected__?: any
 ): Promise<{ group1: string[]; group2: string[] }> {
 	const [g1, g2] = await Promise.all([
-		buildGroupValues(group1, eligible, ds, undefined, undefined, undefined, undefined),
-		buildGroupValues(group2, eligible, ds, undefined, undefined, undefined, undefined)
+		buildGroupValues(group1, eligible, ds, null, null, null, null, __protected__),
+		buildGroupValues(group2, eligible, ds, null, null, null, null, __protected__)
 	])
 	return { group1: g1.names, group2: g2.names }
 }

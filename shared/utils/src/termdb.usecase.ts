@@ -265,6 +265,9 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 			return uses
 
 		case 'filter': {
+			/* a filter on a samplelst term selects the samples that its groups list. a group defined by a
+			filter, as a variable made in the Groups tab, lists no sample, and such a term is not offered */
+			if (term.type == 'samplelst' && !samplelstListsSamples(term)) return uses
 			// apply "exlst" to other targets as needed
 			const exlst = termdbConfig?.excludedTermtypeByTarget?.filter
 			if (exlst) {
@@ -326,6 +329,19 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 			return uses
 		}
 
+		case 'sunburst': {
+			/* a ring is the categories of a categorical term or the bins of a numeric one. one sample sits in
+			one wedge per ring, so multivalue is excluded; other types have no plain categories.
+			usecase.sampleTypes, when given, limits the terms to those sample types (the rings' line of
+			descent, e.g. patient and primary sample): no value maps between sibling sample types */
+			const allowed = ['categorical', 'integer', 'float']
+			const types: string[] | undefined = usecase.sampleTypes
+			if (types && term.sample_type != null && !types.includes(String(term.sample_type))) return uses
+			if (allowed.includes(term.type)) uses.add('plot')
+			if (hasChildTypes(child_types, allowed)) uses.add('branch')
+			return uses
+		}
+
 		case 'dictionary':
 			// dictionary browsing must show every graphable term, including multivalue
 			if (graphableTypes.has(term.type)) uses.add('plot')
@@ -368,4 +384,10 @@ function hasChildTypes(child_types: string[], expected_types: string[]) {
 	for (const a of expected_types) {
 		if (child_types.includes(a)) return true
 	}
+}
+
+// every group of a samplelst term lists its samples in term.values[].list[]
+function samplelstListsSamples(term: any) {
+	const groups = Object.values(term.values || {})
+	return groups.length > 0 && groups.every((g: any) => Array.isArray(g.list))
 }

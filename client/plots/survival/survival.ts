@@ -1227,6 +1227,7 @@ function setInteractivity(self) {
 		const options: any[] = []
 		options.push({
 			label: 'Hide',
+			testId: 'sjpp-atrisk-hide-btn-' + d.seriesId,
 			callback: () => {
 				menu.hide()
 				self.app.dispatch({
@@ -1300,6 +1301,7 @@ function setInteractivity(self) {
 
 			.each(function (this: HTMLElement, d) {
 				const div = select(this)
+				if (d.testId) div.attr('data-testid', d.testId)
 				if (d.label) div.append('div').style('display', 'inline-block').html(d.label)
 				if (d.setInput)
 					d.setInput(

@@ -61,16 +61,17 @@ if [[ "$MODE" == "push" ]]; then
 		# skip the deletion of a remote ref
 		if [[ ! "$LOCALSHA" =~ [1-9a-f] ]]; then continue; fi
 		echo "${REMOTEREF#refs/*/}" | "$0" text "pushed ref name" || STATUS=1
-		if [[ "$REMOTESHA" =~ [1-9a-f] ]] && git cat-file -e "$REMOTESHA" 2>/dev/null; then
-			RANGE=("$REMOTESHA..$LOCALSHA")
+		# only check the commits that are not on the destination remote yet, or on any remote when the
+		# destination is a url instead of a configured remote. This excludes the commits that are already
+		# in the remote master, such as after the branch is rebased onto a newer master, which the range
+		# $REMOTESHA..$LOCALSHA would include
+		if [[ "$REMOTE" != "" ]] && git remote get-url "$REMOTE" > /dev/null 2>&1; then
+			RANGE=("$LOCALSHA" --not "--remotes=$REMOTE")
 		else
-			# a new remote ref: only check the commits that are not on the destination remote yet,
-			# or on any remote when the destination is a url instead of a configured remote
-			if [[ "$REMOTE" != "" ]] && git remote get-url "$REMOTE" > /dev/null 2>&1; then
-				RANGE=("$LOCALSHA" --not "--remotes=$REMOTE")
-			else
-				RANGE=("$LOCALSHA" --not --remotes)
-			fi
+			RANGE=("$LOCALSHA" --not --remotes)
+		fi
+		if [[ "$REMOTESHA" =~ [1-9a-f] ]] && git cat-file -e "$REMOTESHA" 2>/dev/null; then
+			RANGE+=(--not "$REMOTESHA")
 		fi
 		git log --format=%B "${RANGE[@]}" | "$0" text "commit messages to push" || STATUS=1
 		# --remerge-diff shows the lines that a merge commit adds, such as when resolving a conflict

@@ -110,13 +110,13 @@ tape('orders the settings by the selected mutation type', test => {
 			holder,
 			vocabApi: getVocabApi(remembered),
 			term,
-			mutationType: { dt: dtsnvindel, origin: 'somatic' },
-			skipLabel: 'Continue with SNV/indel (somatic)',
+			mutationType: { dt: dtsnvindel },
+			skipLabel: 'Continue with SNV/indel',
 			callback: () => {}
 		})
 		test.deepEqual(
 			getLabels(holder),
-			['Somatic SNV/indel groups', 'CNV groups', 'Bi-allelic / Mono-allelic', 'Continue with SNV/indel (somatic)'],
+			['Somatic SNV/indel groups', 'CNV groups', 'Bi-allelic / Mono-allelic', 'Continue with SNV/indel'],
 			'should lead with the setting built for the selected mutation type, keeping the rest in order'
 		)
 		test.equal(

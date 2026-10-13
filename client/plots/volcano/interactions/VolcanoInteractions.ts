@@ -1,5 +1,6 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { groupColors } from '../groupColors'
+import { getGroupForRegion } from '#mass/groups'
 import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
@@ -292,8 +293,9 @@ export class VolcanoInteractions {
 			chartType: 'dmr',
 			headerText: `DMR: ${label}`,
 			coordinateOverride: { chr: d.chr, start: d.start, stop: d.stop },
-			group1: config.samplelst.groups[0].values || [],
-			group2: config.samplelst.groups[1].values || [],
+			// the samples of each group, or the filter of a group that is defined by one
+			group1: getGroupForRegion(config.samplelst.groups[0]),
+			group2: getGroupForRegion(config.samplelst.groups[1]),
 			group1Name: config.samplelst.groups[0].name,
 			group2Name: config.samplelst.groups[1].name,
 			/* Which element matrix to drill into, for a dataset whose methylation is element-level
@@ -366,6 +368,9 @@ export class VolcanoInteractions {
 			start: d.start,
 			stop: d.stop
 		}
+		/* Which matrix the hit was tested in, so the server plots that row instead of whatever the
+		dataset's default matrix holds at these coordinates. */
+		if (genomicFeatureType === 'promoter' && elementType) term.elementType = elementType
 		/* Name the term after the element class actually tested. Every class carries its id in
 		promoter_id, so genomicFeatureType is 'promoter' for a distal enhancer too and the sandbox
 		header read "Promoter Average M-value (chr9:...)" for something that is not a promoter.
@@ -373,7 +378,11 @@ export class VolcanoInteractions {
 		only sees the term. */
 		if (genomicFeatureType !== 'gene') {
 			const noun = elementNoun(elementType).one
-			const unit = getDNAMethUnit(genomicFeatureType, this.app.vocabApi)
+			/* A term naming its element type is returned on the unit the dataset advertises for its
+			methylation terms, whichever matrix it reads, and the tested matrix may store another. */
+			const unit =
+				(term.elementType && this.app.vocabApi.termdbConfig.queries?.dnaMethylation?.unit) ||
+				getDNAMethUnit(genomicFeatureType, this.app.vocabApi)
 			term.unit = unit
 			term.name = getDNAMethTermName(term, unit, noun)
 		}

@@ -1,10 +1,10 @@
 /********************************************
-Unit Test for parse_align_output (server/src/bam.js)
+Unit Test for parse_align_output, get_partstack and may_trimstacks (server/src/bam.js)
 Run with:  node server/src/test/bam.unit.spec.ts
 *********************************************/
 
 import tape from 'tape'
-import { parse_align_output } from '../bam.js'
+import { parse_align_output, get_partstack, may_trimstacks } from '../bam.js'
 
 tape('bam.js - parse_align_output', async t => {
 	const multiSeqClustal =
@@ -42,6 +42,74 @@ tape('bam.js - parse_align_output', async t => {
 		t.equal(result.read_count, 5, 'read_count should be 5')
 	} catch (err: any) {
 		t.fail(`Failed to parse the output of alignment: ${err.message}`)
+	}
+	t.end()
+})
+
+tape('bam.js - get_partstack', t => {
+	t.equal(get_partstack({}), undefined, 'should return undefined without a stack range')
+	t.deepEqual(get_partstack({ stackstart: 0, stackstop: 0 }), { start: 0, stop: 0 }, 'should accept a stop of 0')
+	t.deepEqual(get_partstack({ stackstart: '30', stackstop: '90' }), { start: 30, stop: 90 }, 'should convert strings')
+	const invalid = [
+		[{ stackstart: 'abc', stackstop: 60 }, '.stackstart not integer'],
+		[{ stackstart: 0, stackstop: 'abc' }, '.stackstop not integer'],
+		[{ stackstart: 0.5, stackstop: 60 }, '.stackstart not integer'],
+		[{ stackstart: 0, stackstop: Infinity }, '.stackstop not integer'],
+		[{ stackstart: 0 }, '.stackstop missing'],
+		[{ stackstop: 60 }, '.stackstart missing'],
+		[{ stackstart: 60, stackstop: 0 }, '.stackstart greater than .stackstop']
+	]
+	for (const [query, message] of invalid) {
+		let thrown
+		try {
+			get_partstack(query)
+		} catch (e) {
+			thrown = e
+		}
+		t.equal(thrown, message, `should throw ${message} for ${JSON.stringify(query)}`)
+	}
+	t.end()
+})
+
+function getStackedGroup(stackcount: number, partstack: { start: number; stop: number }) {
+	const group: any = { stacks: new Array(stackcount).fill(1), partstack }
+	const templates = Array.from({ length: stackcount }, (_, y) => ({ y }))
+	return { group, templates }
+}
+
+tape('bam.js - may_trimstacks', t => {
+	{
+		const { group, templates } = getStackedGroup(100, { start: 20, stop: 80 })
+		const lst = may_trimstacks(group, templates, {})
+		t.equal(group.stacks.length, 61, 'should keep the stacks from start to stop')
+		t.deepEqual(
+			lst.map(i => i.y),
+			Array.from({ length: 61 }, (_, i) => i),
+			'should shift the kept templates to start from 0'
+		)
+	}
+	{
+		const { group, templates } = getStackedGroup(100, { start: 40, stop: 100 })
+		const lst = may_trimstacks(group, templates, {})
+		t.equal(group.stacks.length, 60, 'should end at the last existing stack')
+		t.equal(lst.length, 60, 'should keep the templates up to the last existing stack')
+	}
+	{
+		const { group, templates } = getStackedGroup(100, { start: 0, stop: 1e9 })
+		may_trimstacks(group, templates, {})
+		t.equal(group.stacks.length, 100, 'should not add stacks beyond the existing stack count')
+	}
+	{
+		const { group, templates } = getStackedGroup(40, { start: -1e9, stop: 20 })
+		const lst = may_trimstacks(group, templates, {})
+		t.equal(group.stacks.length, 21, 'should start at the first existing stack')
+		t.equal(lst[0].y, 0, 'should keep the first template at y=0')
+	}
+	{
+		const { group, templates } = getStackedGroup(10, { start: 50, stop: 60 })
+		const lst = may_trimstacks(group, templates, {})
+		t.equal(group.stacks.length, 0, 'should have no stacks for a range after the last stack')
+		t.equal(lst.length, 0, 'should have no templates for a range after the last stack')
 	}
 	t.end()
 })

@@ -1,7 +1,8 @@
 import { Menu, table2col } from '#dom'
-import { axisstyle, newpane } from '#src/client'
+import { axisstyle } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
-import type { DapConcordance } from '#types'
+import { cohortMatches } from './proteome.catalog'
+import type { DapConcordance, ProteomeCohortMatch } from '#types'
 import {
 	loadBrainAssets,
 	renderBrainSvg,
@@ -37,19 +38,12 @@ import { roundValue } from '#shared/roundValue.js'
 
 /************ dataset config accessors ************/
 
-type CohortMatch = {
-	organism?: string
-	assay?: string
-	catalog?: { [k: string]: string }
-	with?: string[]
-	without?: string[]
-}
-type PairSide = CohortMatch & { label: string; ageVaries?: boolean }
+type PairSide = ProteomeCohortMatch & { label: string; ageVaries?: boolean }
 export type TileCfg = {
 	key: string
 	title: string
 	subtitle: string
-	cohortMatch?: CohortMatch
+	cohortMatch?: ProteomeCohortMatch
 	xLabel?: string
 	yLabel?: string
 	pairs?: { key: string; label: string; x: PairSide; y: PairSide }[]
@@ -89,18 +83,6 @@ export function orderBy(keys: string[], order: string[]) {
 	return [...keys].sort((a, b) => rank(a) - rank(b))
 }
 
-// does a cohort (by organism/assay + catalog) satisfy a cohortMatch rule
-export function cohortMatches(m: CohortMatch | undefined, organism: string, assay: string, catalog: any): boolean {
-	if (!m) return false
-	if (m.organism && m.organism !== organism) return false
-	if (m.assay && m.assay !== assay) return false
-	const c = catalog || {}
-	for (const k in m.catalog || {}) if (c[k] !== m.catalog![k]) return false
-	for (const k of m.with || []) if (!c[k]) return false
-	for (const k of m.without || []) if (c[k]) return false
-	return true
-}
-
 const SIG_P = 0.05
 
 // leading integer of an age-group label ("6 months" → 6); null when absent
@@ -110,7 +92,7 @@ export function parseAge(ageGroup: string | undefined): number | null {
 }
 const byAge = (a: string, b: string) => (parseAge(a) ?? 0) - (parseAge(b) ?? 0)
 
-// memoized fetch shared by the tile faces and their expanded panes: one
+// memoized fetch shared by the tile faces and their expanded views: one
 // in-flight promise per key; a rejection is not cached so a retry refetches
 const fetchCache = new Map<string, Promise<any>>()
 function cachedFetch<T>(key: string, load: () => Promise<T>): Promise<T> {
@@ -123,7 +105,7 @@ function cachedFetch<T>(key: string, load: () => Promise<T>): Promise<T> {
 }
 const vocabKey = (self: any) => `${self.app.opts.state.vocab.genome}|${self.app.opts.state.vocab.dslabel}`
 
-// geometry scaling: tile faces render compact, the expanded pane large.
+// geometry scaling: tile faces render compact, the expanded view large.
 // scaleX compresses widths further than heights so charts fit narrow cards;
 // it defaults to scale when unset.
 export type TileRenderOpts = { scale?: number; scaleX?: number; expanded?: boolean }
@@ -286,17 +268,53 @@ export function prepareTileData(data: any, self: any): TileData {
 
 /************ card + interaction scaffolding ************/
 
+// outer card width (content CARD_W + 2×12px padding + 2×1px border); the
+// grid column track, so cards line up in even columns
+const CARD_OUTER_W = CARD_W + 26
+
 export function makeTileGrid(holder: any) {
-	// default align-items (stretch) equalizes card heights within each row.
+	// CSS grid with fixed column tracks: an expanded card spans every column
+	// (grid-column 1 / -1) and `dense` packing lets the cards after it back-fill
+	// the gap it leaves in the row above, so the rest of the grid shifts around
+	// it. Default align-items (stretch) equalizes card heights within a row.
 	// white-space is reset because the mass plot holder sets nowrap (for
 	// horizontally-scrolling plots), which would keep card text from wrapping.
 	return holder
 		.append('div')
-		.style('display', 'flex')
-		.style('flex-wrap', 'wrap')
+		.style('display', 'grid')
+		.style('grid-template-columns', `repeat(auto-fill, ${CARD_OUTER_W}px)`)
+		.style('grid-auto-flow', 'row dense')
 		.style('gap', '14px')
 		.style('margin-top', '10px')
 		.style('white-space', 'normal')
+}
+
+/** in-place expansion of a tile card: render() fills the expanded body each
+ *  time the card opens (so it reflects the current data); `open` starts the
+ *  card expanded (to keep a tile open across re-renders) and onToggle reports
+ *  every open/close so the caller can remember which tile is open */
+export type TileExpand = {
+	render: (holder: any) => void | Promise<void>
+	open?: boolean
+	onToggle?: (open: boolean) => void
+}
+
+// the one expanded card per grid, as its collapse function
+const expandedInGrid = new WeakMap<Element, () => void>()
+
+// clicks on these never expand a card: they belong to controls on the face
+const NO_EXPAND_SELECTOR = 'button,select,input,textarea,label,a,[role="button"],[role="tab"],[data-no-expand]'
+
+/** remember which tile of a plot instance is expanded, so a re-render (new
+ *  filter, refetch, cutoff change) reopens it; one expanded tile per plot */
+export function tileExpandState(self: any, key: string): Pick<TileExpand, 'open' | 'onToggle'> {
+	return {
+		open: self.expandedTileKey === key,
+		onToggle: open => {
+			if (open) self.expandedTileKey = key
+			else if (self.expandedTileKey === key) self.expandedTileKey = null
+		}
+	}
 }
 
 export function makeTileCard(
@@ -309,8 +327,9 @@ export function makeTileCard(
 		uniform?: boolean
 		// greyed placeholder card (tile exists in the atlas but has no data here)
 		disabled?: boolean
-		// when set, an expand button in the card header opens the larger view
-		onExpand?: () => void
+		// when set, clicking the card (or its ⤢ button) expands it in place to the
+		// full grid width; ⤡ collapses it back to the face
+		expand?: TileExpand
 	}
 ) {
 	const card = grid
@@ -319,7 +338,8 @@ export function makeTileCard(
 		.style('border-radius', '8px')
 		.style('padding', '10px 12px')
 		.style('background', opts.disabled ? '#f9fafb' : '#fff')
-	if (opts.fullWidth) card.style('flex', '1 1 100%')
+		.style('min-width', '0')
+	if (opts.fullWidth) card.style('grid-column', '1 / -1')
 	if (opts.uniform) {
 		card
 			.style('width', `${CARD_W}px`)
@@ -341,33 +361,6 @@ export function makeTileCard(
 		.style('min-width', '0') // let long titles wrap instead of overflowing the card
 		.style('color', opts.disabled ? '#9ca3af' : '#111827')
 		.text(opts.title)
-	if (opts.onExpand) {
-		header
-			.append('span')
-			.attr('title', 'Expand')
-			.attr('role', 'button')
-			.attr('tabindex', '0')
-			.attr('aria-label', `Expand ${opts.title}`)
-			.style('margin-left', 'auto')
-			.style('cursor', 'pointer')
-			.style('color', '#9ca3af')
-			.style('font-size', '1em')
-			.style('line-height', '1')
-			.text('⤢')
-			.on('mouseover', function (this: any) {
-				select(this).style('color', '#374151')
-			})
-			.on('mouseout', function (this: any) {
-				select(this).style('color', '#9ca3af')
-			})
-			.on('click', opts.onExpand)
-			.on('keydown', (event: KeyboardEvent) => {
-				if (event.key === 'Enter' || event.key === ' ') {
-					event.preventDefault()
-					opts.onExpand?.()
-				}
-			})
-	}
 	if (opts.subtitle) {
 		card
 			.append('div')
@@ -376,29 +369,104 @@ export function makeTileCard(
 			.style('margin', '2px 0 4px 0')
 			.text(opts.subtitle)
 	}
-	return card.append('div')
+	const face = card.append('div')
+	const expand = opts.expand
+	if (!expand) return face
+
+	const expandedBody = card.append('div').style('display', 'none').style('overflow-x', 'auto')
+	const gridNode = grid.node() as Element
+	let isOpen = false
+
+	const toggleBtn = header
+		.append('span')
+		.attr('role', 'button')
+		.attr('tabindex', '0')
+		.style('margin-left', 'auto')
+		.style('cursor', 'pointer')
+		.style('color', '#9ca3af')
+		.style('font-size', '1em')
+		.style('line-height', '1')
+		.on('mouseover', function (this: any) {
+			select(this).style('color', '#374151')
+		})
+		.on('mouseout', function (this: any) {
+			select(this).style('color', '#9ca3af')
+		})
+	const setToggleBtn = () =>
+		toggleBtn
+			.text(isOpen ? '⤡' : '⤢')
+			.attr('title', isOpen ? 'Collapse' : 'Expand')
+			.attr('aria-label', `${isOpen ? 'Collapse' : 'Expand'} ${opts.title}`)
+			.attr('aria-expanded', String(isOpen))
+	setToggleBtn()
+
+	const collapse = () => {
+		if (!isOpen) return
+		isOpen = false
+		if (expandedInGrid.get(gridNode) === collapse) expandedInGrid.delete(gridNode)
+		const bodyNode = expandedBody.node() as HTMLElement
+		// detach only the direct children: an expanded view may re-attach a kept-alive
+		// subtree on the next open (selectAll('*') would also take apart its descendants)
+		bodyNode.replaceChildren()
+		expandedBody.style('display', 'none')
+		face.style('display', null)
+		card.style('grid-column', opts.fullWidth ? '1 / -1' : null).style('cursor', 'pointer')
+		if (opts.uniform) card.style('width', `${CARD_W}px`).style('min-height', `${CARD_MIN_H}px`)
+		setToggleBtn()
+		expand.onToggle?.(false)
+	}
+	const open = (scroll: boolean) => {
+		if (isOpen) return
+		expandedInGrid.get(gridNode)?.()
+		isOpen = true
+		expandedInGrid.set(gridNode, collapse)
+		face.style('display', 'none')
+		card.style('grid-column', '1 / -1').style('width', null).style('min-height', null).style('cursor', null)
+		expandedBody.style('display', null)
+		;(expandedBody.node() as HTMLElement).replaceChildren()
+		setToggleBtn()
+		expand.onToggle?.(true)
+		const holder = expandedBody.append('div').style('padding', '4px 4px 0 4px')
+		try {
+			const p = expand.render(holder)
+			if (p instanceof Promise) {
+				const wait = holder.append('div').style('color', '#6b7280').style('font-size', '.85em').text('Loading…')
+				p.catch(err => renderTileError(holder, err, null)).finally(() => wait.remove())
+			}
+		} catch (err: any) {
+			renderTileError(holder, err, null)
+		}
+		if (scroll) (card.node() as HTMLElement).scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+	}
+
+	toggleBtn
+		.on('click', (event: MouseEvent) => {
+			event.stopPropagation()
+			if (isOpen) collapse()
+			else open(true)
+		})
+		.on('keydown', (event: KeyboardEvent) => {
+			if (event.key === 'Enter' || event.key === ' ') {
+				event.preventDefault()
+				if (isOpen) collapse()
+				else open(true)
+			}
+		})
+	// clicking anywhere on a collapsed card expands it, except on face controls
+	// (tabs, selects, search boxes) and data marks that stop propagation
+	card.style('cursor', 'pointer').on('click', (event: MouseEvent) => {
+		if (isOpen) return
+		const t = event.target as Element | null
+		if (t?.closest?.(NO_EXPAND_SELECTOR)) return
+		open(true)
+	})
+	// start expanded once the caller has drawn the face (faces measure their own
+	// layout, which needs them visible)
+	if (expand.open) queueMicrotask(() => open(false))
+	return face
 }
 
 const tileClickMenu = new Menu({ padding: '0px' })
-
-// Expanded-tile panes need an explicit z-index: app chrome such as the
-// sandbox header carries z-index 99, which would paint over a z-auto pane's
-// top edge. Shared menus go one higher so tooltips stay above panes. When
-// the embedder configures base_zindex, newpane/Menu already set their own
-// inline z-index and these defaults stay out of the way.
-export const TILE_PANE_ZINDEX = 100
-
-// Re-append the shared menus so tooltips stay above an expanded-tile pane in
-// DOM order too (also after the pane is dragged, which re-appends the pane),
-// and give them a z-index above the pane's.
-export function raiseSharedMenus(self: any) {
-	for (const m of [self?.dom?.tip, tileClickMenu]) {
-		const n = m?.d?.node?.()
-		if (!n) continue
-		if (!n.style.zIndex) n.style.zIndex = String(TILE_PANE_ZINDEX + 1)
-		if (n.parentNode === document.body && n !== document.body.lastChild) document.body.appendChild(n)
-	}
-}
 
 function entryTipTable(entry: TileEntry, holder: any) {
 	const tbl = table2col({ holder: holder.append('table') })
@@ -408,7 +476,7 @@ function entryTipTable(entry: TileEntry, holder: any) {
 	if (c.model) tbl.addRow('Model', c.model)
 	if (c.cellType) tbl.addRow('Cell type', c.cellType)
 	if (c.ageGroup) tbl.addRow('Age group', c.ageGroup)
-	if (c.brainRegion) tbl.addRow('Brain region', c.brainRegion)
+	if (c.sampleSource) tbl.addRow('Sample source', c.sampleSource)
 	if (entry.ptmType) tbl.addRow('PTM type', entry.ptmType)
 	if (entry.modSites) tbl.addRow('Modified site', entry.modSites)
 	tbl.addRow('Assay', entry.assayName)
@@ -425,14 +493,14 @@ function attachEntryBehavior(shape: any, entry: TileEntry, self: any) {
 	shape
 		.style('cursor', 'pointer')
 		.on('mouseover', (event: MouseEvent) => {
-			raiseSharedMenus(self)
 			self.dom.tip.clear()
 			entryTipTable(entry, self.dom.tip.d)
 			self.dom.tip.show(event.clientX, event.clientY)
 		})
 		.on('mouseout', () => self.dom.tip.hide())
 		.on('click', (event: MouseEvent) => {
-			raiseSharedMenus(self)
+			// a data point opens its own menu; it must not also expand the card
+			event.stopPropagation()
 			self.dom.tip.hide()
 			tileClickMenu.clear()
 			const div = tileClickMenu.d.append('div')
@@ -1705,7 +1773,7 @@ function configuredTiles(self: any): TileDef[] {
 	return out
 }
 
-// inline error box used by every tile face and pane
+// inline error box used by every tile face and expanded view
 export function renderTileError(holder: any, err: any, self: any) {
 	holder
 		.append('div')
@@ -1715,89 +1783,13 @@ export function renderTileError(holder: any, err: any, self: any) {
 	if (self?.app?.opts?.debug) console.error(err)
 }
 
-// Open expanded-tile panes, keyed per plot instance + tile so the ⤢ button
-// toggles (second click closes) instead of stacking duplicate panes.
-const openTilePanes = new Map<string, any>()
-const tilePaneKey = (self: any, key: string) => `${self?.id ?? ''}|${key}`
-
-// close all panes belonging to this plot instance; called on re-render so
-// panes never outlive the data they were drawn from
-export function closeTilePanes(self: any) {
-	const prefix = `${self?.id ?? ''}|`
-	for (const [k, pane] of openTilePanes) {
-		if (!k.startsWith(prefix)) continue
-		pane.pane.remove()
-		openTilePanes.delete(k)
+// expanded view: the same renderer at a larger scale with extra detail
+function renderExpandedTile(holder: any, tile: TileDef, td: TileData, self: any) {
+	try {
+		tile.render(holder.append('div'), td, self, tile, { scale: EXPANDED_SCALE, expanded: true })
+	} catch (err: any) {
+		renderTileError(holder, err, self)
 	}
-}
-
-// close one tile's pane if open; returns whether one was closed
-export function closeTilePane(self: any, key: string): boolean {
-	const k = tilePaneKey(self, key)
-	const existing = openTilePanes.get(k)
-	if (!existing) return false
-	existing.pane.remove()
-	openTilePanes.delete(k)
-	return true
-}
-
-// toggle a draggable pane (the app's standard floating panel) for one tile;
-// make() fills the pane body. Returns the newly opened pane, or null when the
-// call closed an existing one. onClose fires whenever the pane goes away
-// (toggle, ✕ button, or closeTilePane[s]) so callers can drop their own refs.
-export function toggleTilePane(
-	self: any,
-	key: string,
-	title: string,
-	make: (body: any) => void,
-	onClose?: () => void
-): any {
-	const k = tilePaneKey(self, key)
-	if (closeTilePane(self, key)) return null
-	// newpane offsets by the page scroll itself, so y is viewport-relative
-	const pane: any = newpane({
-		x: Math.max(16, (window.innerWidth - 760) / 2),
-		y: 60,
-		close: () => {
-			pane.pane.remove()
-			openTilePanes.delete(k)
-		}
-	})
-	if (onClose) {
-		const remove = pane.pane.remove.bind(pane.pane)
-		pane.pane.remove = () => {
-			remove()
-			onClose()
-		}
-	}
-	openTilePanes.set(k, pane)
-	// lift the pane above app chrome (sandbox header z-index 99) unless the
-	// embedder's base_zindex already set one
-	if (!pane.pane.node().style.zIndex) pane.pane.style('z-index', TILE_PANE_ZINDEX)
-	pane.header.text(title)
-	make(pane.body)
-	// keep hover tooltips above this newly-appended pane
-	raiseSharedMenus(self)
-	return pane
-}
-
-// click-to-expand: the same renderer at a larger scale with extra detail
-function openExpandedTile(tile: TileDef, td: TileData, self: any) {
-	const protein = self.state?.config?.tw?.term?.name || ''
-	toggleTilePane(self, tile.key, `${protein ? protein + ' — ' : ''}${tile.title}`, paneBody => {
-		const body = paneBody.append('div').style('padding', '12px 16px')
-		body
-			.append('div')
-			.style('font-size', '.8em')
-			.style('color', '#6b7280')
-			.style('margin-bottom', '6px')
-			.text(tile.subtitle)
-		try {
-			tile.render(body.append('div'), td, self, tile, { scale: EXPANDED_SCALE, expanded: true })
-		} catch (err: any) {
-			renderTileError(body, err, self)
-		}
-	})
 }
 
 // renders a chart card for every tile whose data requirement is met (in
@@ -1814,7 +1806,7 @@ export function renderStudyTiles(grid: any, td: TileData, self: any): { missing:
 			title: tile.title,
 			subtitle: tile.subtitle,
 			uniform: true,
-			onExpand: () => openExpandedTile(tile, td, self)
+			expand: { render: holder => renderExpandedTile(holder, tile, td, self), ...tileExpandState(self, tile.key) }
 		})
 		try {
 			tile.render(body, td, self, tile, { scale: TILE_FACE_SCALE, scaleX: TILE_FACE_SCALE_X })
@@ -1874,15 +1866,11 @@ export function renderOverviewVolcanoCard(
 		if (log2fc === null || !Number.isFinite(p) || p <= 0) continue
 		pts.push({ x: log2fc, y: -Math.log10(Math.max(p, 1e-300)), sig: p < SIG_P })
 	}
-	const protein = self.state?.config?.tw?.term?.name || ''
 	const body = makeTileCard(grid, {
 		title: 'All sample sets',
 		subtitle: 'log2FC vs significance, every cohort',
 		uniform: true,
-		onExpand: () =>
-			toggleTilePane(self, 'volcano', `${protein ? protein + ' — ' : ''}All sample sets`, (paneBody: any) => {
-				opts.onExpandRender(paneBody.append('div').style('padding', '12px 16px'))
-			})
+		expand: { render: opts.onExpandRender, ...tileExpandState(self, 'volcano') }
 	})
 	if (!pts.length) {
 		body.append('div').style('font-size', '.75em').style('color', '#9ca3af').text('No protein-level data.')
@@ -1949,24 +1937,13 @@ export function renderPTMSummaryCard(
 	opts: { onExpandRender: (holder: any) => void | Promise<void> }
 ) {
 	if (!ptmEntries?.length) return
-	const protein = self.state?.config?.tw?.term?.name || ''
 	const cfg = getTileConfig(self, 'ptm')
 	const title = cfg?.title || 'PTM sites'
 	const body = makeTileCard(grid, {
 		title,
 		subtitle: cfg?.subtitle || 'Site-level log2FC along the protein',
 		uniform: true,
-		onExpand: () =>
-			toggleTilePane(self, 'ptm', `${protein ? protein + ' — ' : ''}${title}`, async (paneBody: any) => {
-				const holder = paneBody.append('div').style('padding', '12px 16px')
-				const wait = holder.append('div').style('color', '#6b7280').style('font-size', '.85em').text('Loading…')
-				try {
-					await opts.onExpandRender(holder)
-				} catch (err: any) {
-					renderTileError(holder, err, self)
-				}
-				wait.remove()
-			})
+		expand: { render: opts.onExpandRender, ...tileExpandState(self, 'ptm') }
 	})
 
 	type SitePoint = { pos: number; log2fc: number; color: string; entry: TileEntry }

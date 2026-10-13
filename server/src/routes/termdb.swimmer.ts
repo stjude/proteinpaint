@@ -8,7 +8,8 @@ import type {
 	SwimmerResponse,
 	SwimmerLane,
 	SwimmerRange,
-	SwimmerPoint
+	SwimmerPoint,
+	SwimmerTimeReference
 } from '#types'
 import { filterSampleNamesByAccess } from '#src/termdb.sql.js'
 import { getData } from '#src/termdb.matrix.js'
@@ -52,8 +53,8 @@ export function init({ genomes }) {
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			validateSwimmerRequest(q)
-			const lanes = await getSwimmerLanes(q, ds)
-			const result: SwimmerResponse = { lanes }
+			const result: SwimmerResponse = await getSwimmerLanes(q, ds)
+			const lanes = result.lanes
 			if (q.term0) result.divideByOrder = await mayDivideLanes(q, ds, lanes)
 			if (q.pointTerm) result.pointCategoryOrder = await markPoints(q, ds, lanes)
 			res.send(result)
@@ -68,6 +69,7 @@ export function init({ genomes }) {
 function validateSwimmerRequest(q: SwimmerRequest) {
 	if (q.samples !== undefined && (!Array.isArray(q.samples) || q.samples.some(s => typeof s != 'string')))
 		throw 'samples must be an array of sample names'
+	if (q.timeReference !== undefined && typeof q.timeReference != 'string') throw 'timeReference must be a string'
 	for (const key of ['term0', 'pointTerm']) {
 		const tw = q[key]
 		if (tw === undefined) continue
@@ -76,10 +78,11 @@ function validateSwimmerRequest(q: SwimmerRequest) {
 	}
 }
 
-async function getSwimmerLanes(q: SwimmerRequest, ds: any): Promise<SwimmerLane[]> {
+async function getSwimmerLanes(q: SwimmerRequest, ds: any): Promise<SwimmerResponse> {
 	const sq = ds.queries?.swimmer
 	if (!sq?.data) throw 'swimmer plot not supported by this dataset'
 	if (sq.checkDataAccess && !sq.checkDataAccess(q)) throw 'no access'
+	const ref = getTimeReference(sq.timeReferences, q.timeReference)
 	// restrict to patients passing the termdb filter (global + local) and the ds access rule.
 	// the filter resolves to leaf samples, so a patient lane passes when the patient or any of its samples does
 	const { id2sampleName: id2name, id2descendantIds } = ds.cohort.termdb.q
@@ -99,7 +102,10 @@ async function getSwimmerLanes(q: SwimmerRequest, ds: any): Promise<SwimmerLane[
 		const descendantIds: number[] = id2descendantIds(d.sampleId)
 		if (!allowed.has(sample) && !descendantIds.some(id => allowed.has(id2name(id)))) continue
 		if (requested && !isLaneRequested(requested, sample, descendantIds.map(id2name))) continue
-		lanes.push({ sample, sampleId: d.sampleId, ranges: d.ranges, points: d.points })
+		// a patient without the event of the time reference is left out
+		const timeline = shiftTimeline(d, ref?.event)
+		if (!timeline) continue
+		lanes.push({ sample, sampleId: d.sampleId, ...timeline })
 		for (const p of d.points) {
 			if (p.sample) linked.add(p.sample)
 		}
@@ -117,7 +123,38 @@ async function getSwimmerLanes(q: SwimmerRequest, ds: any): Promise<SwimmerLane[
 			})
 		}
 	}
-	return lanes
+	return ref ? { lanes, timeReference: ref.key } : { lanes }
+}
+
+/** the time reference of the given key, else the default one (isDefault, else the first). undefined when the
+ds has none */
+export function getTimeReference(
+	refs: SwimmerTimeReference[] | undefined,
+	key?: string
+): SwimmerTimeReference | undefined {
+	if (!refs?.length) return undefined
+	if (key !== undefined) {
+		const ref = refs.find(r => r.key == key)
+		if (!ref) throw `unknown timeReference '${key}'`
+		return ref
+	}
+	return refs.find(r => r.isDefault) || refs[0]
+}
+
+/** ranges and points of a lane with time 0 moved to the time of its first `event` point (the time reference),
+or as they are without event. null when the lane has no such point. new objects are returned, as the parsed
+data is kept for the server lifetime */
+export function shiftTimeline(
+	d: { ranges: SwimmerRange[]; points: SwimmerPoint[] },
+	event?: string
+): { ranges: SwimmerRange[]; points: SwimmerPoint[] } | null {
+	if (!event) return { ranges: d.ranges, points: d.points }
+	const origin = d.points.find(p => p.event == event)?.time
+	if (origin === undefined) return null
+	return {
+		ranges: d.ranges.map(r => ({ ...r, start: r.start - origin, end: r.end == null ? null : r.end - origin })),
+		points: d.points.map(p => ({ ...p, time: p.time - origin }))
+	}
 }
 
 /** whether a lane is asked for: its patient or one of the patient's samples is in the list */
@@ -262,7 +299,7 @@ function splitLines(text: string): string[] {
 }
 
 /** keys of SwimmerLegendItem in shared/types dataset.ts */
-const legendItemKeys = new Set(['label', 'color', 'shape', 'sampleTerms', 'markBy'])
+const legendItemKeys = new Set(['label', 'color', 'shape', 'sampleTerms', 'markBy', 'size', 'clipBeforeOrigin'])
 
 /** called at server launch from mds3.init.js. reads and parses the tsv file(s), drops lane samples absent
 from the db or not of a root sample type (lanes are patients), and keeps the result in q.data for the route */
@@ -291,6 +328,12 @@ export async function validate_query_swimmer(ds: any) {
 				throw `swimmer.${key}['${k}'].shape must be a string`
 			if ((v as any).markBy !== undefined && typeof (v as any).markBy != 'boolean')
 				throw `swimmer.${key}['${k}'].markBy must be true or false`
+			const size = (v as any).size
+			if (size !== undefined && !(typeof size == 'number' && size > 0))
+				throw `swimmer.${key}['${k}'].size must be a positive number`
+			const clipBeforeOrigin = (v as any).clipBeforeOrigin
+			if (clipBeforeOrigin !== undefined && typeof clipBeforeOrigin != 'boolean')
+				throw `swimmer.${key}['${k}'].clipBeforeOrigin must be true or false`
 			const st = (v as any).sampleTerms
 			if (st !== undefined) {
 				if (!Array.isArray(st) || st.some(id => typeof id != 'string'))
@@ -305,6 +348,7 @@ export async function validate_query_swimmer(ds: any) {
 			}
 		}
 	}
+	validateTimeReferences(q.timeReferences)
 	const [rangeText, pointText] = await Promise.all(
 		[q.rangeFile, q.pointFile].map(f => (f ? fs.promises.readFile(path.join(serverconfig.tpmasterdir, f), 'utf8') : ''))
 	)
@@ -363,6 +407,37 @@ export async function validate_query_swimmer(ds: any) {
 				list(notPatient)
 		)
 	if (!q.data.size) throw 'swimmer: no patients with data found in db'
+	for (const ref of q.timeReferences || []) {
+		if (!ref.event) continue
+		let missing = 0
+		for (const d of q.data.values()) if (!d.points.some(p => p.event == ref.event)) missing++
+		// e.g. a misspelled event, which would leave the view empty
+		if (missing == q.data.size) throw `swimmer.timeReferences['${ref.key}']: no patient has a '${ref.event}' point`
+		if (missing)
+			console.warn(
+				`${ds.label} swimmer: ${missing} patients have no '${ref.event}' point, not shown with time reference '${ref.key}'`
+			)
+	}
 	if (pointSampleTypes.size) q.pointSampleTypes = [...pointSampleTypes]
 	if (pointSampleEvents.size) q.pointSampleEvents = [...pointSampleEvents]
+}
+
+function validateTimeReferences(refs: any) {
+	if (refs === undefined) return
+	if (!Array.isArray(refs) || !refs.length) throw 'swimmer.timeReferences must be a non-empty array'
+	const keys = new Set<string>()
+	for (const r of refs) {
+		if (!r || typeof r != 'object') throw 'swimmer.timeReferences[] must be objects'
+		if (typeof r.key != 'string' || !r.key) throw 'swimmer.timeReferences[].key must be a non-empty string'
+		if (keys.has(r.key)) throw `swimmer.timeReferences: duplicate key '${r.key}'`
+		keys.add(r.key)
+		if (typeof r.timeLabel != 'string') throw `swimmer.timeReferences['${r.key}'].timeLabel must be a string`
+		if (r.event !== undefined && (typeof r.event != 'string' || !r.event))
+			throw `swimmer.timeReferences['${r.key}'].event must be a non-empty string`
+		if (r.label !== undefined && typeof r.label != 'string')
+			throw `swimmer.timeReferences['${r.key}'].label must be a string`
+		if (r.isDefault !== undefined && typeof r.isDefault != 'boolean')
+			throw `swimmer.timeReferences['${r.key}'].isDefault must be a boolean`
+	}
+	if (refs.filter(r => r.isDefault).length > 1) throw 'swimmer.timeReferences: more than one isDefault'
 }

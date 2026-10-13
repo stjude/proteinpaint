@@ -4,10 +4,14 @@ import { run_R } from '@sjcrh/proteinpaint-r'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
 import { resolveMethylationMatrix, resolveGroupNames } from '#src/utils/methylationMatrix.ts'
+import { resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import serverconfig from '#src/serverconfig.js'
 import { formatElapsedTime } from '#shared'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
+
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
 
 export const payload: RoutePayload = {
 	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
@@ -30,6 +34,11 @@ function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const q: TermdbDmrRequest = req.query
+			const useR = q.backend === 'r'
+			/* The R backend is a validation path for comparing against the Rust implementation, not a
+			production feature: its DMRcate and GenomicRanges dependencies are not in R/utils/*.pkgs.txt,
+			so the published images do not have them. Gated on debugmode, like the client toggle. */
+			if (useR && !serverconfig.debugmode) throw new Error('The R backend is not available.')
 			const genome = genomes[q.genome]
 			if (!genome) throw 'unknown genome'
 			const ds = genome.datasets?.[q.dslabel]
@@ -39,9 +48,11 @@ function init({ genomes }) {
 
 			const { matrixFile, mvalues, useElement, eligible } = resolveMethylationMatrix(ds, q.chr, q.element_type)
 
-			if (!Array.isArray(q.group1) || q.group1.length == 0)
+			// a group may be defined by a filter
+			const [list1, list2] = await resolveGroupPair(q, ds)
+			if (!Array.isArray(list1) || list1.length == 0)
 				throw new Error('Group 1 has no samples. Please select at least one sample.')
-			if (!Array.isArray(q.group2) || q.group2.length == 0)
+			if (!Array.isArray(list2) || list2.length == 0)
 				throw new Error('Group 2 has no samples. Please select at least one sample.')
 			if (invalidcoord(genome, q.chr, q.start, q.stop))
 				throw new Error(`Invalid genomic coordinates: ${q.chr}:${q.start}-${q.stop}`)
@@ -56,7 +67,7 @@ function init({ genomes }) {
 					`Region too large (${(span / 1e6).toFixed(1)} Mb). Server maximum is ${SERVER_MAX_REGION_BP / 1e6} Mb.`
 				)
 
-			const { group1, group2 } = await resolveGroupNames(q.group1, q.group2, eligible, ds)
+			const { group1, group2 } = await resolveGroupNames(list1, list2, eligible, ds, q.__protected__)
 			/* Checked after id-to-name resolution, which is where a group actually shrinks: the R
 			backend does not check and, handed fewer than three, filters every probe and reports "too
 			few probes genome-wide", which misdiagnoses a sample problem as a data problem. */
@@ -65,14 +76,13 @@ function init({ genomes }) {
 					`Each group needs at least 3 samples with methylation data (got ${group1.length} and ${group2.length}).`
 				)
 
-			const useR = q.backend === 'r'
 			// dmrcate_full.R reads the CpG layout only (chrom_lengths attribute, meta/probe/probeID)
 			if (useR && useElement)
 				throw new Error('The R backend does not read element-level methylation matrices. Use the Rust backend.')
 			const dmrInput = {
 				probe_h5_file: matrixFile,
 				mvalues,
-				cachedir: serverconfig.cachedir,
+				cachedir,
 				genome: q.genome,
 				chr: q.chr,
 				start: q.start,

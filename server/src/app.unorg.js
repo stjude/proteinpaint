@@ -2037,6 +2037,7 @@ function handle_mdsexpressionrank(req, res) {
 				gn = genomes[req.query.genome]
 				if (!gn) throw 'invalid genome'
 				if (!req.query.file && !req.query.url) throw 'no file or url for expression data'
+				utils.checkTrackFile(req.query.file)
 				ds = {}
 				dsquery = {
 					file: req.query.file,
@@ -2521,6 +2522,7 @@ async function handle_mdsgenevalueonesample(req, res) {
 			gn = genomes[q.genome]
 			if (!gn) throw 'invalid genome'
 			if (!q.file && !q.url) throw 'no file or url for expression data'
+			utils.checkTrackFile(q.file)
 			ds = {}
 			dsquery = {
 				file: q.file,
@@ -2950,6 +2952,7 @@ function handle_samplematrix(req, res) {
 					const tk = req.query.querykey2tracks[key]
 
 					if (!tk.type) throw 'missing "type" for a data track'
+					utils.checkTrackFile(tk.file)
 
 					if (tk.type == common.tkt.mdsvcf) {
 						// special treatment for vcf

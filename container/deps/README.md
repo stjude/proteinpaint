@@ -50,9 +50,11 @@ Mac, the images are built for `linux/amd64` under emulation, which makes the R p
 ```bash
 cd proteinpaint/container
 
-# optional: use the local server code instead of the published server package version,
-# the tarball name must match the server/package.json version
-mkdir -p tmppack && (cd ../server && npm pack --pack-destination ../container/tmppack)
+# pack the workspace tarballs that the images install, since the workspace packages other than
+# the client are not published to the npm registry
+./pack.sh
+# pack.sh points the dependencies in these tracked files to the tarballs, restore them
+git restore server/package.json full/package.json
 
 ./deps/build.sh
 ```
@@ -65,10 +67,13 @@ so local leftovers there are not included in the image.
 
 The versions are read from `deps/package.json` when `deps/version.sh` has set them, as in CI, and are
 otherwise the same versions that `version.sh` would set: the root `package.json` version for the image,
-and the `server` and `front` package versions to install. A `sjcrh-proteinpaint-server-<version>.tgz`
-tarball in `deps/tmppack` or `container/tmppack` is installed instead of the published server package.
-Note that `container/pack.sh` also creates these tarballs, but it only packs the workspaces that changed
-since the last publish, and it modifies tracked `package.json` files that must be restored afterwards.
+and the `server` and `front` package versions to install. The `sjcrh-proteinpaint-server-<version>.tgz`
+and `sjcrh-proteinpaint-front-<version>.tgz` tarballs in `deps/tmppack` or `container/tmppack` are installed
+instead of the published packages. A version that is newer than the last published one is only available
+as a tarball, so run `container/pack.sh` first, as above. It packs every workspace that the images install,
+whether or not it has changed. Do not use its server-only `-s` option here, since it skips the front
+tarball that the `ppfull` image installs. It modifies tracked `package.json` files that must be restored
+afterwards.
 
 The built images are tagged `ppbase:latest`, `ppserver:latest`, and `ppfull:latest`. To verify:
 

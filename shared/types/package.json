@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-types",
-  "version": "2.216.0",
+  "version": "2.219.0",
   "type": "module",
   "description": "Shared type definitions between ProteinPaint server and client code",
   "main": "dist/index.js",
@@ -29,5 +29,6 @@
     "type": "git",
     "url": "https://github.com/stjude/proteinpaint",
     "directory": "server"
-  }
+  },
+  "private": true
 }

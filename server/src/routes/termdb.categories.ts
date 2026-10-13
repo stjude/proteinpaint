@@ -101,9 +101,10 @@ export function getCategories(data, q, ds, $id, opts: { withMnames?: boolean } =
 		if (ds.assayAvailability?.byDt) {
 			for (const [dtType, _dtValue] of Object.entries(ds.assayAvailability.byDt)) {
 				const dtValue: any = _dtValue
-				if (dtValue.byOrigin) {
-					dtClassMap.set(parseInt(dtType), { byOrigin: { germline: {}, somatic: {} } })
-				}
+				if (!dtValue.byOrigin) continue
+				dtClassMap.set(parseInt(dtType), {
+					byOrigin: Object.fromEntries(Object.keys(dtValue.byOrigin).map(origin => [origin, {}]))
+				})
 			}
 		}
 		const sampleCountedFor = new Set() // if the sample is counted

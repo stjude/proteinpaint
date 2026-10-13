@@ -1,7 +1,7 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import { type AuthInterface, type ProtectedRouteMiddlewares } from '../auth.ts'
-import { Auth, patternMatches, assertStringOrUndefined, getSessionEntry } from './Auth.ts'
+import { Auth, patternMatches, assertStringOrUndefined, getSessionEntry, getStringArray } from './Auth.ts'
 import { setAuthMiddleware, getProtectedRouteMiddlewares, getSampleLogin } from './AuthMiddleWare.ts'
 import { setAuthRoutes } from './AuthRoutes.ts'
 import { sleep } from '../utils.js'
@@ -185,16 +185,34 @@ export class AuthApi implements AuthInterface {
 	// - if true, require a session when the dataset has any termdb credential for the request's embedder,
 	//   regardless of the request path or q.for; this is used for the protected route groups in ./protectedRoutes.ts
 	isUserLoggedIn(req, ds, requireTermdbCred = false) {
-		const cred = requireTermdbCred
+		const cred = this.#getLoginCred(req, requireTermdbCred)
+		if (!cred) return true
+		return !!this.#getActiveSession(req, ds, cred)
+	}
+
+	// returns the dataset names from the login jwt of an active session, using the same termdb
+	// cred check as isUserLoggedIn(req, ds, true), or an empty array if there is no active session
+	// or the dataset does not require a login
+	getUserDatasets(req, ds): string[] {
+		const cred = this.#getLoginCred(req, true)
+		if (!cred) return []
+		return getStringArray(this.#getActiveSession(req, ds, cred)?.userDatasets)
+	}
+
+	#getLoginCred(req, requireTermdbCred: boolean) {
+		return requireTermdbCred
 			? this.#auth.getTermdbCred(req.query) || this.#auth.getRequiredCred(req.query, req.path)
 			: this.#auth.getRequiredCred(req.query, req.path)
-		if (!cred) return true
+	}
+
+	// returns the tracked session for the request and dataset, if it has not exceeded the max session age
+	#getActiveSession(req, ds, cred) {
 		// NOTE: Basic (password) credentials are converted to session token upon log-in,
 		// so that a user does not have to login again for each runproteinpaint() call.
 		const id = this.#auth.getSessionId(req, cred)
 		const activeSession = getSessionEntry(this.#auth.sessions, ds.label, id)
 		const sessionStart = activeSession?.time || 0
-		return Date.now() - sessionStart < this.#auth.maxSessionAge
+		if (Date.now() - sessionStart < this.#auth.maxSessionAge) return activeSession
 	}
 
 	getPayloadFromHeaderAuth(req, route) {

@@ -12,11 +12,17 @@ const pkg = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../packag
 const deps = getDeps()
 const codedate = computeCodeDate(deps)
 
-// versionInfo is created once at module load
+// versionInfo is created once at module load, except for pkgver and hostImage: their files in public/ may be
+// updated after the server has started, such as by a host rollout that copies the release's public files into
+// a mounted public dir only after the new container is healthy, so they are read on each access
 export const versionInfo: VersionInfo = {
-	pkgver: getPkgVer(codedate),
+	get pkgver() {
+		return getPkgVer(codedate)
+	},
 	codedate,
-	hostImage: getHostImage(),
+	get hostImage() {
+		return getHostImage()
+	},
 	deps,
 	// launchdate captured at module load so it is the actual process start, outside of any function call
 	launchdate: new Date().toString().split(' ').slice(0, 5).join(' ')
@@ -60,16 +66,16 @@ function copyInit(ds) {
 	}
 }
 
-function getPkgVer(codedate) {
-	const revFile = path.join(process.cwd(), 'public/rev.txt')
+export function getPkgVer(codedate, dir = process.cwd()) {
+	const revFile = path.join(dir, 'public/rev.txt')
 	const hash = fs.existsSync(revFile) && fs.readFileSync(revFile, { encoding: 'utf8' }).split(' ')[1]
 	return pkg.version + '-' + (hash || codedate)
 }
 
-function getHostImage() {
+export function getHostImage(dir = process.cwd()) {
 	// host-specific image name, e.g. "pp-irt:v2.204.0-92b3ab96", from public/host-image.txt (written as
 	// "<host>:<version> <date>" when a host image is built with a version); only such images carry it.
-	const hostImageFile = path.join(process.cwd(), 'public/host-image.txt')
+	const hostImageFile = path.join(dir, 'public/host-image.txt')
 	const hostImage =
 		(fs.existsSync(hostImageFile) && fs.readFileSync(hostImageFile, { encoding: 'utf8' }).trim().split(/\s+/)[0]) ||
 		undefined

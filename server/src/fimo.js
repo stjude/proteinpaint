@@ -4,6 +4,9 @@ import * as utils from './utils.js'
 import serverconfig from './serverconfig.js'
 import { spawn } from 'child_process'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 const fimo = serverconfig.fimo || 'fimo'
 
 export function handle_closure(genomes) {
@@ -203,7 +206,7 @@ async function run_fimo(q, gn, fasta) {
 	 * v: []
 	 */
 
-	const fastafile = path.join(serverconfig.cachedir, Math.random().toString())
+	const fastafile = path.join(cachedir, Math.random().toString())
 	await utils.write_file(fastafile, fasta)
 
 	return new Promise((resolve, reject) => {

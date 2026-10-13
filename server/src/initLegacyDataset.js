@@ -1,7 +1,7 @@
 import * as common from '#shared/common.js'
 import * as utils from './utils.js'
 import * as vcf from '#shared/vcf.js'
-import child_process from 'child_process'
+import { spawnSync } from 'child_process'
 import serverconfig from './serverconfig.js'
 import path from 'path'
 
@@ -102,6 +102,18 @@ export function initLegacyDataset(ds, genome, serverconfig) {
 	}
 }
 
+/*
+	args[]: tabix arguments
+
+	runs tabix and returns its stdout; throws on failure
+*/
+function tabixSync(args) {
+	const ps = spawnSync(serverconfig.tabix, args, { encoding: 'utf8' })
+	if (ps.error) throw ps.error
+	if (ps.status !== 0) throw new Error(`tabix ${args.join(' ')} failed: ${ps.stderr}`)
+	return ps.stdout
+}
+
 function legacyds_init_one_query(q, ds, genome) {
 	/* parse a query from legacy ds.queries[]
 	 */
@@ -124,9 +136,7 @@ function legacyds_init_one_query(q, ds, genome) {
 
 	if (q.vcffile) {
 		// single vcf
-		const meta = child_process
-			.execSync(serverconfig.tabix + ' -H ' + path.join(serverconfig.tpmasterdir, q.vcffile), { encoding: 'utf8' })
-			.trim()
+		const meta = tabixSync(['-H', path.join(serverconfig.tpmasterdir, q.vcffile)]).trim()
 		if (meta == '') return 'no meta lines in VCF file ' + q.vcffile + ' of query ' + q.name
 		const [info, format, samples, errs] = vcf.vcfparsemeta(meta.split('\n'))
 		if (errs) return 'error parsing VCF meta lines of ' + q.vcffile + ': ' + errs.join('; ')
@@ -144,9 +154,7 @@ function legacyds_init_one_query(q, ds, genome) {
 			q.vcf.infopipejoin = q.infopipejoin
 			delete q.infopipejoin
 		}
-		const tmp = child_process
-			.execSync(serverconfig.tabix + ' -l ' + path.join(serverconfig.tpmasterdir, q.vcffile), { encoding: 'utf8' })
-			.trim()
+		const tmp = tabixSync(['-l', path.join(serverconfig.tpmasterdir, q.vcffile)]).trim()
 		if (tmp == '') return 'tabix -l found no chromosomes/contigs in ' + q.vcffile + ' of query ' + q.name
 		q.vcf.nochr = common.contigNameNoChr(genome, tmp.split('\n'))
 		let infoc = 0

@@ -1,4 +1,4 @@
-import { normalizeReqPath, getNonStringAuthParam, getSessionEntry } from './Auth.ts'
+import { normalizeReqPath, getNonStringAuthParam, getSessionEntry, getStringArray } from './Auth.ts'
 
 // these server routes should not be protected by default,
 // since a user that is not logged should be able to have a way to login,
@@ -131,13 +131,36 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 					delete daRequest.__protected__
 				}
 
-				// this flag may be used by downstream code that does not have access to req argument or ds object
-				// only considers the serverconfig.dsCredentials route patterns here, a data route that requires
-				// a stricter check will have a protectedRoutes.minSampleSize middleware to override this flag
-				__protected__.isUserLoggedIn = authApi.isUserLoggedIn(req, ds)
+				// this flag may be used by downstream code that does not have access to req argument or ds object,
+				// such as ds.cohort.termdb.checkAccessToSampleData() which may be called from any data route;
+				// requires a session for any termdb cred of the dataset, regardless of the request path,
+				// same as the protectedRoutes.minSampleSize middleware, and defaults to false if the check fails
+				__protected__.isUserLoggedIn = mayGetTermdbLogin(authApi, req, ds)
+				// the dataset names from the login jwt of the same session, for dataset code to determine access
+				__protected__.datasets = mayGetUserDatasets(authApi, req, ds)
 			}
 		}
 		Object.freeze(__protected__)
+	}
+}
+
+// the login status for any termdb cred of a dataset, where an error from a malformed
+// or unverifiable request credential is treated as not logged in
+function mayGetTermdbLogin(authApi, req, ds): boolean {
+	try {
+		return authApi.isUserLoggedIn(req, ds, true) === true
+	} catch (_) {
+		return false
+	}
+}
+
+// the frozen list of dataset names from the login jwt of an active session, where an error
+// is treated as having no dataset access
+function mayGetUserDatasets(authApi, req, ds): readonly string[] {
+	try {
+		return Object.freeze(getStringArray(authApi.getUserDatasets(req, ds)))
+	} catch (_) {
+		return Object.freeze([])
 	}
 }
 

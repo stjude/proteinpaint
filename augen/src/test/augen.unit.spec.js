@@ -164,8 +164,8 @@ tape('setRoutes(): skips a method with init: null, but not a missing init', test
 	)
 	test.deepEqual(
 		logged,
-		['!! Skipped setting up route: GET /api/partial', '!! Skipped setting up route: GET /api/disabled'],
-		'should log each skipped method and endpoint'
+		['!! Skipped setting up route: /api/partial GET ', '!! Skipped setting up route: /api/disabled GET '],
+		'should log one line per endpoint with a skipped method'
 	)
 
 	const { app: app2, registered: registered2 } = getMockApp()

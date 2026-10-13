@@ -6,6 +6,9 @@ import { read_file, write_tmpfile } from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import { genomes } from '#src/initGenomesDs.js'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 const payload: RoutePayload = {
 	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
 	// is evaluated; the route is only set up when at least one genome has a blat server
@@ -102,8 +105,8 @@ async function do_blat(genome, seq): Promise<BlatResponse> {
 
 // returns the gfClient psl output of aligning seq against the genome; the temporary files are always deleted
 async function run_blat(genome, seq): Promise<string> {
-	const infile = path.join(serverconfig.cachedir, await write_tmpfile('>query\n' + seq + '\n'))
-	const outfile = path.join(serverconfig.cachedir, Math.random().toString())
+	const infile = path.join(cachedir, await write_tmpfile('>query\n' + seq + '\n'))
+	const outfile = path.join(cachedir, Math.random().toString())
 	try {
 		await run_gfClient(genome, infile, outfile)
 		return await read_file(outfile)

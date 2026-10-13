@@ -833,6 +833,7 @@ export class TermdbVocab extends Vocab {
 
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
+			if (opts.mapChildren2Root) init.body.mapChildren2Root = true
 			if (
 				this.opts.app.vocabApi.termdbConfig?.limitDictTermSamplesToMutated &&
 				copies.find(tw => tw.term.id && (!tw.term?.type || isDictionaryType(tw.term.type))) &&

@@ -4,9 +4,14 @@ import { getData } from '#src/termdb.matrix.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { mayLog } from '#src/helpers.ts'
 import { getStdDev } from './termdb.descrstats.ts'
+import { genomes } from '#src/initGenomesDs.js'
 
 export const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has ds.cohort.correlationVolcano
+	get init() {
+		return hasCorrelationVolcanoDs(genomes) ? init : null
+	},
 	request: { typeId: 'CorrelationVolcanoRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'CorrelationVolcanoResponse' }
 }
@@ -17,6 +22,12 @@ export const api: RouteApi = {
 		get: payload,
 		post: payload
 	}
+}
+
+export function hasCorrelationVolcanoDs(genomes) {
+	return Object.values(genomes).some((g: any) =>
+		Object.values(g.datasets || {}).some((ds: any) => ds.cohort?.correlationVolcano)
+	)
 }
 
 // to avoid crashing r, an array must meet below; otherwise the variable is skipped
@@ -40,6 +51,7 @@ export function init({ genomes }) {
 }
 
 async function compute(q: CorrelationVolcanoRequest, ds: any) {
+	if (!ds.cohort?.correlationVolcano) throw 'correlationVolcano not supported by this dataset'
 	if (!q.featureTw.$id) throw 'featureTw.$id missing'
 	if (!ds.cohort.correlationVolcano.feature.termTypes.includes(q.featureTw?.term.type))
 		throw 'unsupported featureTw.term.type'

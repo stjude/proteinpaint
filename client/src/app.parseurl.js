@@ -10,6 +10,7 @@ import { parentCorsMessage, childCorsMessage } from '#common/embedder-helpers'
 import { sayerror } from '#dom'
 import { copyMerge } from '#rx'
 import { mayLaunchGdcPlotFromUrlparam } from '../gdc/launch.ts'
+import { getSavedStateRefusal } from '../mass/sessionForm.ts'
 /*
 ********************** EXPORTED
 parse()
@@ -64,7 +65,11 @@ upon error, throw err message as a string
 				geneGroups: urlp.get('gene_groups'),
 				// optional: fill cells by their annotated type (list built above)
 				showCellTypes: urlp.has('cell_types'),
-				cellTypeFilter
+				cellTypeFilter,
+				// optional: cells-in-view above this count show the server-rendered
+				// raster overlay instead of per-cell vector data; default
+				// DEFAULT_CELL_COUNT_LIMIT (wsi.direct.ts) when omitted
+				cellCountLimit: urlp.get('cell_count_limit')
 			},
 			arg.holder
 		)
@@ -195,64 +200,39 @@ upon error, throw err message as a string
 		return subapp
 	}
 
-	if (urlp.has('mass-session-file') || urlp.has('mass-session-url')) {
-		let opts
-		if (urlp.has('mass-session-file')) {
-			const file = urlp.get('mass-session-file')
-			const d = await client.dofetch3(`/textfile`, {
-				method: 'POST',
-				body: JSON.stringify({ file })
-			})
-			if (typeof d != 'object') throw 'data not object'
-			if (d.error) throw d.error
-			if (!d.text) throw 'data.text missing'
-			const state = JSON.parse(d.text)
+	if (urlp.has('mass-session-file')) {
+		const file = urlp.get('mass-session-file')
+		const d = await client.dofetch3(`/textfile`, {
+			method: 'POST',
+			body: JSON.stringify({ file })
+		})
+		if (typeof d != 'object') throw 'data not object'
+		if (d.error) throw d.error
+		if (!d.text) throw 'data.text missing'
+		const state = JSON.parse(d.text)
+		const refusal = getSavedStateRefusal(state)
+		if (refusal) throw refusal
 
-			if (features.overrideEmbedderHostInMassSession) {
-				// on local dev, set this to override "embedder{}" setting in session file
-				// to prevent redirecting to portal site and test the session with local pp
-				state.embedder.host = features.overrideEmbedderHostInMassSession
-				state.embedder.origin = 'http://' + features.overrideEmbedderHostInMassSession
-				state.embedder.href = `http://${features.overrideEmbedderHostInMassSession}/`
-			}
+		if (features.overrideEmbedderHostInMassSession) {
+			// on local dev, set this to override "embedder{}" setting in session file
+			// to prevent redirecting to portal site and test the session with local pp
+			state.embedder.host = features.overrideEmbedderHostInMassSession
+			state.embedder.origin = 'http://' + features.overrideEmbedderHostInMassSession
+			state.embedder.href = `http://${features.overrideEmbedderHostInMassSession}/`
+		}
 
-			if (state.embedder?.origin && state.embedder.origin != window.location.origin) {
-				parentCorsMessage({ state })
-				return
-			}
+		if (state.embedder?.origin && state.embedder.origin != window.location.origin) {
+			parentCorsMessage({ state })
+			return
+		}
 
-			opts = {
-				debug: arg.app.debugmode,
-				holder: arg.holder,
-				state,
-				genome: arg.genomes[state.vocab.genome],
-				pkgver: arg.app.pkgver,
-				launchDate: arg.app.launchDate
-			}
-		} else if (urlp.has('mass-session-url')) {
-			const url = urlp.get('mass-session-url')
-			const d = await client.dofetch3('/urltextfile', {
-				method: 'POST',
-				body: JSON.stringify({ url })
-			})
-			if (typeof d != 'object') throw 'data not object'
-			if (d.error) throw d.error
-			if (!d.text) throw 'data.text missing'
-			const state = JSON.parse(d.text)
-
-			if (state.embedder?.origin && state.embedder.origin != window.location.origin) {
-				parentCorsMessage({ state })
-				return
-			}
-
-			opts = {
-				debug: arg.app.debugmode,
-				holder: arg.holder,
-				state: copyMerge(state, arg.state || {}),
-				genome: arg.genomes[state.vocab.genome],
-				pkgver: arg.app.pkgver,
-				launchDate: arg.app.launchDate
-			}
+		const opts = {
+			debug: arg.app.debugmode,
+			holder: arg.holder,
+			state,
+			genome: arg.genomes[state.vocab.genome],
+			pkgver: arg.app.pkgver,
+			launchDate: arg.app.launchDate
 		}
 		const _ = await import('../mass/app')
 		const subapp = _.appInit(opts)
@@ -281,6 +261,8 @@ upon error, throw err message as a string
 			res = await client.dofetch3(`/massSession`, fetchOpts)
 			if (res.error) throw res.error
 		}
+		const refusal = getSavedStateRefusal(res.state)
+		if (refusal) throw refusal
 		const embedder = res.state?.embedder
 		if (embedder?.origin && embedder.origin != window.location.origin) {
 			parentCorsMessage(res)

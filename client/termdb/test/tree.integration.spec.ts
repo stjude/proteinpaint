@@ -13,10 +13,12 @@ Construction and default behavior
 	- requestTermRecursive() returns a list of child terms
 Opts and callbacks
 	- state.customTerms adds custom variables to tree
+	- Custom Variables is not shown when no custom term can be used in a filter
 	- opts.expandedTermIds displays expanded branches in the tree
 	- Trigger click_term with opts.disable_terms
 	- Trigger opts.click_term2select_tvs callback
 	- Trigger opts.click_term_wrapper callback
+	- click_term gives the tw of a samplelst custom term
 	- Set usecase, target == survival, with expandedTermIds
  */
 
@@ -382,6 +384,48 @@ tape('state.customTerms adds custom variables to tree', function (test) {
 	}
 })
 
+tape('Custom Variables is not shown when no custom term can be used in a filter', function (test) {
+	test.timeoutAfter(1000)
+
+	// a variable made in the Groups tab: each group is defined by a filter and lists no sample
+	const customTerms = [
+		{
+			name: 'Group 1 vs others',
+			tw: {
+				term: {
+					id: 'custom_groups',
+					name: 'Group 1 vs others',
+					type: 'samplelst',
+					values: { 'Group 1': { key: 'Group 1', label: 'Group 1' }, Others: { key: 'Others', label: 'Others' } }
+				}
+			}
+		}
+	]
+
+	runpp({
+		state: {
+			customTerms,
+			tree: { usecase: { target: 'filter' } }
+		},
+		tree: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(tree) {
+		tree.on('postRender.test', null)
+		const termdivs = tree.Inner.dom.holder.node().querySelectorAll('.termdiv')
+		const customTermDiv = [...termdivs].find(elem => elem.__data__?.name === 'Custom Variables')
+		test.notOk(customTermDiv, 'Should not render Custom Variables')
+		test.notOk(tree.Inner.termsById[custom_variables_ID], 'Should not register custom variables in termsById')
+
+		if (test['_ok']) tree.Inner.app.destroy()
+		test.end()
+	}
+})
+
 tape('opts.expandedTermIds displays expanded branches in the tree', function (test) {
 	test.timeoutAfter(1000)
 
@@ -577,6 +621,58 @@ tape('Trigger opts.click_term_wrapper callback', test => {
 		await helpers.sleep(200) //Mimics the wait from rideInit()
 		const buttons = childdiv_child1.getElementsByClassName('sja_filter_tag_btn sja_tree_click_term termlabel')
 		buttons[0].click()
+	}
+})
+
+tape('click_term gives the tw of a samplelst custom term', test => {
+	test.timeoutAfter(2000)
+
+	// a variable made in the Groups tab: each group is defined by a filter and lists no sample
+	const filter = {
+		type: 'tvslst',
+		join: '',
+		in: true,
+		lst: [{ type: 'tvs', tvs: { term: termjson.sex, values: [{ key: '1' }] } }]
+	}
+	const customTerms = [
+		{
+			name: 'Group 1',
+			tw: {
+				isAtomic: true,
+				term: {
+					name: 'Group 1',
+					type: 'samplelst',
+					values: { 'Group 1': { key: 'Group 1', label: 'Group 1' } }
+				},
+				q: { groups: [{ name: 'Group 1', in: true, filter }] }
+			}
+		}
+	]
+
+	let t
+	runpp({
+		state: { customTerms },
+		tree: {
+			click_term: tw => {
+				test.equal(tw.term?.type, 'samplelst', 'Should give a term wrapper')
+				test.deepEqual(tw.q?.groups?.[0]?.filter, filter, 'Should give the filter of the group')
+				if (test['_ok']) t.Inner.app.destroy()
+				test.end()
+			},
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(tree) {
+		t = tree
+		tree.on('postRender.test', null)
+		const termdivs = tree.Inner.dom.holder.node().querySelectorAll('.termdiv')
+		const customTermDiv = [...termdivs].find(elem => elem.__data__?.name === 'Custom Variables')
+		customTermDiv.querySelector('.termbtn').click()
+		await helpers.sleep(200)
+		customTermDiv.querySelector('.sja_tree_click_term').click()
 	}
 })
 

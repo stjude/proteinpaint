@@ -1,7 +1,14 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
-import { getSampleNum } from './settings/defaults'
-import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, DMR_SCAN_ELEMENT_TYPE } from '#types'
+import { getSampleNum, BACKGROUND_CORRECTION_TITLE } from './settings/defaults'
+import {
+	PROTEOME_DAP,
+	DNA_METHYLATION,
+	GENE_EXPRESSION,
+	SINGLECELL_CELLTYPE,
+	DMR_SCAN_ELEMENT_TYPE,
+	JUNCTION
+} from '#types'
 
 /** Handles settings the controls in the menu based on the app
  * termType.
@@ -83,8 +90,10 @@ export class VolcanoControlInputs {
 			},
 			/* Hidden for differential methylation: a DM run plots and thresholds on delta-beta,
 			so a log2 cutoff would set a limit in units the plot never shows. Every other term
-			type still gets it. */
-			...(this.termType === DNA_METHYLATION
+			type still gets it.
+			Splicing is hidden for the same reason -- it plots and thresholds on delta-PSI, and
+			supplies its own |dPSI| control in addSplicingControlInputs(). */
+			...(this.termType === DNA_METHYLATION || this.termType === JUNCTION
 				? []
 				: [
 						{
@@ -165,6 +174,7 @@ export class VolcanoControlInputs {
 	setVolcanoControlInputs() {
 		this.addGeneExpControlInputs()
 		this.addDNAMethControlInputs()
+		this.addSplicingControlInputs()
 		this.addSingleCellCTControlInputs()
 	}
 
@@ -265,7 +275,7 @@ export class VolcanoControlInputs {
 					...this.chromosomes.filter(c => c != 'chrM' && c != 'chrMT').map(c => ({ value: c, label: c }))
 				],
 				title:
-					'Call DMRs de novo across the whole genome, or across one chromosome. A whole-genome scan takes about 45 seconds the first time and is cached after that.'
+					'Call DMRs de novo across the whole genome, or across one chromosome. A whole-genome scan takes about 1 minute the first time, or about 1.5 to 2 minutes with the background drift correction, and is cached after that.'
 			},
 			{
 				label: 'Correct for background drift',
@@ -274,8 +284,7 @@ export class VolcanoControlInputs {
 				settingsKey: 'backgroundCorrection',
 				boxLabel: '',
 				getDisplayStyle: scanOnly,
-				title:
-					'Score each DMR against width- and CpG-density-matched intergenic background instead of against zero, so the y axis asks "did this region move MORE than a region like it drifts" rather than "did it move". On a cohort whose whole genome shifts, the two questions have different answers -- on MMRF NSD2-high the hyper:hypo direction inverts. DMRs whose stratum holds too little background to score are counted in Statistics but not plotted. Roughly doubles the scan time.'
+				title: BACKGROUND_CORRECTION_TITLE
 			},
 			{
 				label: 'Min CpGs per DMR',
@@ -300,7 +309,7 @@ export class VolcanoControlInputs {
 				max: 100_000,
 				step: 50,
 				title:
-					'DMRcate lambda. Two things at once: the width of the Gaussian kernel that smooths per-CpG statistics along the genome, and the largest gap allowed between significant CpGs chained into one DMR. Larger values merge nearby signal into fewer, wider DMRs and recover broad domains; smaller values split them into narrow, focal regions. DMRcate recommends 1000 bp for CpG-resolution data. Changing it refits the scan (about 45 seconds genome-wide).'
+					'DMRcate lambda. Two things at once: the width of the Gaussian kernel that smooths per-CpG statistics along the genome, and the largest gap allowed between significant CpGs chained into one DMR. Larger values merge nearby signal into fewer, wider DMRs and recover broad domains; smaller values split them into narrow, focal regions. DMRcate recommends 1000 bp for CpG-resolution data. Changing it refits the scan (about 1 minute genome-wide, or about 1.5 to 2 with the background drift correction).'
 			},
 			{
 				label: 'DMR kernel scaling C',
@@ -399,6 +408,76 @@ export class VolcanoControlInputs {
 		const scctInputs = []
 
 		this.inputs.splice(0, 0, ...scctInputs)
+	}
+
+	addSplicingControlInputs() {
+		if (this.termType !== JUNCTION) return
+		const dsInputs = [
+			{
+				label: 'Method',
+				type: 'radio',
+				chartType: 'volcano',
+				settingsKey: 'method',
+				title: 'Which engine computes the test',
+				options: this.getSpliceMethodOptions()
+			},
+			{
+				label: 'Minimum counts per cluster',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'minCountsPerCluster',
+				title: "Threshold on each sample's total read count in the cluster",
+				min: 0,
+				max: 10000
+			},
+			{
+				/* leafcutter's -i: an intron must be seen in at least this many samples. Defaulted by
+				validateDSSettings to a fraction of cohort size rather than a fixed count, because a
+				fixed one silently loosens as N grows -- 5 samples is a third of a 15-sample run and
+				0.2% of a 2,500-sample one. Editable here so a user can override that default. */
+				label: 'Minimum samples per intron',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'minSamplesPerIntron',
+				title:
+					'An intron must be observed in at least this many samples to be kept. Defaults to 2% of the cohort, floor 5.',
+				min: 1,
+				max: 10000
+			},
+			{
+				// leafcutter's -g: the same floor, applied within each of the two groups
+				label: 'Minimum samples per group',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'minSamplesPerGroup',
+				title:
+					'A cluster must have sufficient coverage in at least this many samples in EACH group. Defaults to 1% of the cohort, floor 3.',
+				min: 1,
+				max: 10000
+			},
+			{
+				/* The cutoff that actually matters for this term type. At large cohorts the p-value
+				stops discriminating -- at ~1000 per group most "significant" clusters shift under a
+				percentage point of PSI -- so the effect size is the filter, not the p. The unit is
+				named in the title because 0.05 here is 5 percentage points, not a p-value. */
+				label: 'Minimum |ΔPSI|',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'deltaPsiCutoff',
+				title: 'Clusters must shift at least this much in PSI to count as significant. 0.05 = 5 percentage points.',
+				min: 0,
+				max: 1,
+				step: 0.01
+			}
+		]
+
+		this.inputs.splice(0, 0, ...dsInputs)
+	}
+
+	// only edgeR is wired; add leafcutter here later
+	getSpliceMethodOptions() {
+		if (this.termType !== JUNCTION) return
+		return [{ label: 'edgeR (diffSplice)', value: 'edgeR' }]
 	}
 
 	getMethodOptions() {

@@ -1,7 +1,7 @@
 # Default to Docker Hub, but enable the base image to be pulled from a
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
-ARG VERSION=2.215.0
+ARG VERSION=2.217.0
 
 #########################
 # Server-only app update
@@ -31,6 +31,11 @@ RUN chown 0:0 . && \
     npm install --omit=dev --cache=/tmp/npm-cache && rm -rf /tmp/npm-cache && \
     find . \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
     find . ! -type l -perm /022 -exec chmod go-w {} +
+# The rust postinstall does not fail the npm install when it cannot download or compile the binaries,
+# such as from a draft GitHub release, so fail the build here instead of at server startup.
+RUN if [ -z "$(ls node_modules/@sjcrh/proteinpaint-rust/target/release 2>/dev/null)" ]; then \
+      echo "ERROR: missing the rust binaries in node_modules/@sjcrh/proteinpaint-rust/target/release"; exit 1; \
+    fi
 COPY ./server/app-server.mjs ./envHelpers.mjs ./runtimePosture.mjs ./
 
 # Nothing under the app dir is written at runtime: fail the build for an app file that the app user, or another UID
@@ -41,6 +46,12 @@ RUN if find . ! -type l \( ! -user 0 -o -perm /022 \) | grep .; then \
     if su -s /bin/sh app -c "find /home/root/pp/app/active -writable" | grep .; then \
       echo "ERROR: the app files above are writable by the app user"; exit 1; \
     fi
+
+# The cache dir is owned by root with mode 1733, the same as in deps/Dockerfile, so that the app user may create and use
+# a subdir with a known name but may not list the entries, see hideCachedir in server/src/serverconfig.js. Also set
+# here, so that it applies with a base image from before that deps/Dockerfile change. A mounted cache dir needs the
+# same owner and mode on the host.
+RUN chown root:0 /home/root/pp/cache && chmod 1733 /home/root/pp/cache
 
 # numeric ids, the same as in the base image
 USER 1000:1000

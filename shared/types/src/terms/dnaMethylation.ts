@@ -11,6 +11,10 @@ export type DnaMethylationTerm = NumericBaseTerm & {
 	stop: number
 	/** Type used to categorize the genomic feature */
 	genomicFeatureType: 'gene' | 'promoter' | 'region' | 'enhancer'
+	/** Key of the element matrix the term's element was tested in, one of
+	 * termdbConfig.queries.dnaMethylation.elementTypes[].key. Set on a term opened from a
+	 * differential methylation hit; when absent the dataset's default matrix answers the term. */
+	elementType?: string
 	bins?: PresetNumericBins
 }
 

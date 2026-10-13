@@ -28,7 +28,6 @@ import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
 
 export class Barchart extends PlotBase implements RxComponent {
 	static type = 'barchart'
-
 	type: string
 	configTermKeys = ['term', 'term0', 'term2']
 	download!: any
@@ -647,7 +646,6 @@ export class Barchart extends PlotBase implements RxComponent {
 		}
 
 		const rows = chartsData.refs.rows
-
 		this.barSorter = (a, b) => this.seriesOrder.indexOf(a) - this.seriesOrder.indexOf(b)
 		this.overlaySorter = chartsData.refs.useRowOrder
 			? (a, b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
@@ -659,7 +657,6 @@ export class Barchart extends PlotBase implements RxComponent {
 						: a.dataId < b.dataId
 						? -1
 						: 1
-
 		this.visibleCharts = chartsData.charts.filter(chart => chart.visibleSerieses.length)
 
 		const t1 = this.config.term
@@ -1333,9 +1330,9 @@ function setInteractivity(self) {
 						"Fisher's exact test",
 						['Row 1', 'Row 2', 'Column 1', 'Column 2', 'P-value'],
 						testCharts.map(chart => ({
- 							chartLabel: self.handlers.chart.title(chart),
- 							rows: self.getPvalueRows(chart).rows
- 						}))
+							chartLabel: self.handlers.chart.title(chart),
+							rows: self.getPvalueRows(chart).rows
+						}))
 					)
 			})
 		}

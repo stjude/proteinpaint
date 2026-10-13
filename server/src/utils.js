@@ -1,9 +1,5 @@
 import fs from 'fs'
 import net from 'net'
-import dns from 'dns'
-import http from 'http'
-import https from 'https'
-import zlib from 'zlib'
 import path from 'path'
 import { spawn } from 'child_process'
 import readline from 'readline'
@@ -11,10 +7,13 @@ import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import ky from 'ky'
 import serverconfig from './serverconfig.js'
+import { cacheUrlProtocols } from './CacheManager.ts'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
-import { text as streamText } from 'stream/consumers'
 import { minimatch } from 'minimatch'
+
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
 export * from './cachedFetch.js'
 export * from './xfetch.js'
 export { connect_db } from './sql.ts'
@@ -45,6 +44,7 @@ get_header_txt
 get_fasta
 connect_db
 snpgtCacheFile
+snpgtSampleColumn
 bam_ifnochr
 testIfFileIsBigbed
 spawnTool
@@ -54,7 +54,7 @@ validateRglst
 
 // reading a file from a url makes the server fetch a caller-supplied url and may save the downloaded index
 // under cachedir, so it is off by default; enable with serverconfig.features.ALLOW_remotefilefromurl=true
-// on environments that support remote files, e.g. custom tracks by url; the /urltextfile route is also only set with it
+// on environments that support remote files, e.g. custom tracks by url
 const remoteFileNotAllowed = 'Remote file not supported on this server.'
 
 /*
@@ -83,22 +83,15 @@ export async function cache_index(gzurl, indexurl) {
 	// build cache directory using gz file url and do not include index portion
 	// e.g. cache/https/domain/path/to/file.gz/
 	// resolve and check inline so the returned dir, which becomes the cwd of spawned tools, is confined to the cache dir
-	const protocolDir = path.resolve(serverconfig.cachedir, protocol)
+	const protocolDir = path.resolve(cachedir, protocol)
 	const dir = path.resolve(protocolDir, body)
 	if (!dir.startsWith(protocolDir + path.sep)) throw '.gz file URL escapes cache dir'
+	// mkdir on every call, which is a no-op for an existing dir, rather than only when a stat finds it missing,
+	// so that an empty dir that CacheManager removes between the two calls is still recreated
 	try {
-		await fs.promises.stat(dir)
+		await fs.promises.mkdir(dir, { recursive: true })
 	} catch (e) {
-		if (e.code == 'ENOENT') {
-			// make dir
-			try {
-				await fs.promises.mkdir(dir, { recursive: true })
-			} catch (e) {
-				throw 'url dir: cannot mkdir'
-			}
-		} else {
-			throw 'stating gz url dir: ' + e.code
-		}
+		throw 'url dir: cannot mkdir'
 	}
 	// dir is ready
 	if (indexurl) {
@@ -113,6 +106,7 @@ export async function cache_index(gzurl, indexurl) {
 		try {
 			await fs.promises.stat(path2file)
 			// index file exists
+			await touchCacheFiles([path2file])
 			return dir
 		} catch (e) {
 			if (e.code == 'ENOENT') {
@@ -127,8 +121,21 @@ export async function cache_index(gzurl, indexurl) {
 		// no url specified for index
 		// assume the appropriate index exists under dir
 		// let tabix 1.11 do the work of getting the tbi/csi file if missing
+		// the index that tabix downloaded into dir is not known by name, so every file in dir is touched;
+		// a nested dir is the cache dir of another url, and a partial download is not a usable index
+		const entries = await fs.promises.readdir(dir, { withFileTypes: true }).catch(() => [])
+		const files = entries.filter(e => e.isFile() && !e.name.endsWith('.tmp')).map(e => path.join(dir, e.name))
+		await touchCacheFiles(files)
 		return dir
 	}
+}
+
+/* CacheManager evicts a cached index by its mtime, so the mtime is set on each use: a track that is in use
+keeps its index, and only an index that has not been used for maxAge is evicted. A failure, such as a file
+evicted since it was found, is ignored, since the caller or tabix downloads a missing index again. */
+async function touchCacheFiles(files) {
+	const now = new Date()
+	await Promise.all(files.map(f => fs.promises.utimes(f, now, now).catch(() => {})))
 }
 
 export function fileurl(req, checkWhiteList = true) {
@@ -166,6 +173,15 @@ export function fileurl(req, checkWhiteList = true) {
 }
 
 const fileExtensionBlackList = Object.freeze(['.bam', '.bai', '.gz', '.tbi', '.csi', '.bw', '.bb'])
+
+/*
+	file: a request track file path, relative to tpmasterdir
+	throws unless file is a legal path; an empty value is allowed, for a track that uses a url instead
+*/
+export function checkTrackFile(file) {
+	if (file === undefined || file === null || file === '') return
+	if (illegalpath(file, false, false)) throw 'illegal file path'
+}
 
 export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
 	// a non-string, such as an array from a repeated query parameter, could bypass the substring checks below
@@ -223,9 +239,8 @@ export function illegalPathSegment(s) {
 }
 
 // protocol and body of a url become path segments of a cache dir (see cache_index), so only
-// allow protocols that are real remote track sources: any other name could be a feature dir under
-// cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
-const cacheUrlProtocols = new Set(['http', 'https', 'ftp'])
+// allow the protocols that are declared as 'url' subdirs in cacheRegistry: any other name could be a
+// feature dir under cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
 
 function test_url(u) {
 	const tmp = u.split('://')
@@ -337,108 +352,6 @@ function parseUrlHost(u) {
 function isNonPublicIp(ip) {
 	const ipType = net.isIP(ip)
 	return ipType != 0 && nonPublicIps.check(ip, ipType == 4 ? 'ipv4' : 'ipv6')
-}
-
-/*
-	u: a url that the server will fetch itself, such as for the /urltextfile route; fetch it with
-	  requestRemoteUrl(), which also checks the addresses that a hostname resolves to
-	skipHostCheck: true only for a url of this server (under serverconfig.URL), whose host may be
-	  localhost or not listed in serverconfig.urlHosts; the url syntax is still checked
-
-	returns an error message if the url is not an http(s) url with an allowed host, see test_url() and illegalUrlHost(),
-	or undefined if allowed
-*/
-export function checkRemoteUrl(u, skipHostCheck = false) {
-	if (typeof u != 'string') return 'url must be a string'
-	const [e, protocol] = test_url(u)
-	if (e) return e
-	if (protocol != 'http' && protocol != 'https') return 'protocol must be http or https'
-	if (skipHostCheck) return parseUrlHost(u)[0] || undefined
-	return illegalUrlHost(u)
-}
-
-/*
-	resolve: a dns.lookup()-like function, only replaced in tests
-
-	returns a lookup function for http(s) requests that fails when a hostname resolves to any address that is
-	not globally reachable, see nonPublicIps. As the check runs on the addresses that the request connects to,
-	a hostname that is changed to resolve to an internal address after checkRemoteUrl() (dns rebinding) is
-	rejected as well. When serverconfig.urlHosts is set, a listed host is allowed even if it is not public, as in
-	illegalUrlHost(), so the addresses are not checked. A literal ip address is not looked up, and is checked
-	by illegalUrlHost() instead.
-*/
-export function makePublicAddressLookup(resolve = dns.lookup) {
-	return function (hostname, options, callback) {
-		if (typeof options == 'function') {
-			callback = options
-			options = {}
-		}
-		resolve(hostname, { ...options, all: true }, (err, addresses) => {
-			if (err) return callback(err)
-			if (!serverconfig.urlHosts) {
-				for (const a of addresses) {
-					if (isNonPublicIp(a.address)) {
-						const e = new Error('url host resolves to an address that is not allowed')
-						e.code = 'ENOTPUBLIC'
-						return callback(e)
-					}
-				}
-			}
-			if (options.all) return callback(null, addresses)
-			if (!addresses.length) return callback(Object.assign(new Error('no address'), { code: 'ENOTFOUND' }))
-			callback(null, addresses[0].address, addresses[0].family)
-		})
-	}
-}
-export const publicAddressLookup = makePublicAddressLookup()
-
-// same as the ky default, since requestRemoteUrl() replaced ky for urls fetched on behalf of a request
-const remoteUrlTimeout = 10000
-
-/*
-	url: a url that passed checkRemoteUrl()
-	opts{}
-	.lookup: see makePublicAddressLookup(), only replaced in tests
-	.timeout: ms, only replaced in tests
-
-	returns a promise of the http.IncomingMessage of a GET request, without following a redirect. The request is
-	rejected if it connects to a hostname that resolves to a non-public address, or if the response headers have
-	not all arrived within the timeout, as ky would do, since a server could otherwise keep the request pending by
-	sending a header byte at a time. After the headers, the response is destroyed if it is idle for the timeout.
-	Read the body with readResponseText(), or call res.destroy() to discard it.
-*/
-export function requestRemoteUrl(url, opts = {}) {
-	const { lookup = publicAddressLookup, timeout = remoteUrlTimeout } = opts
-	return new Promise((resolve, reject) => {
-		const u = new URL(url)
-		const client = u.protocol == 'https:' ? https : http
-		const req = client.get(u, { lookup, timeout, headers: { 'accept-encoding': 'gzip, deflate, br' } }, res => {
-			clearTimeout(headersTimer)
-			resolve(res)
-		})
-		const headersTimer = setTimeout(() => req.destroy(new Error('response headers timed out')), timeout)
-		req.on('timeout', () => req.destroy(new Error('request timed out')))
-		req.on('error', e => {
-			clearTimeout(headersTimer)
-			reject(e)
-		})
-	})
-}
-
-// returns the utf8 text of a response from requestRemoteUrl(), decompressed as ky would do
-export async function readResponseText(res) {
-	const encoding = (res.headers['content-encoding'] || '').trim().toLowerCase()
-	const decoder =
-		encoding == 'gzip' || encoding == 'x-gzip'
-			? zlib.createGunzip()
-			: encoding == 'deflate'
-			? zlib.createInflate()
-			: encoding == 'br'
-			? zlib.createBrotliDecompress()
-			: null
-	if (!decoder) return await streamText(res)
-	const [text] = await Promise.all([streamText(decoder), pipeline(res, decoder)])
-	return text
 }
 
 // true if file resolves strictly inside dir
@@ -809,7 +722,7 @@ export function write_file(file, text) {
 
 export async function write_tmpfile(text) {
 	const tmp = Math.random().toString()
-	await write_file(path.join(serverconfig.cachedir, tmp), text)
+	await write_file(path.join(cachedir, tmp), text)
 	return tmp
 }
 
@@ -856,16 +769,37 @@ export const genotype_types = {
 	het: 'Heterozygous'
 }
 
-// a client-provided snp genotype cache id, such as tw.q.cacheid, must name a file directly under
-// cache_snpgt.dir; the callers that also apply cache_snpgt.fileNameRegexp keep that stricter check
-export function snpgtCacheFile(cacheid) {
-	if (illegalPathSegment(cacheid)) throw 'invalid cacheid'
-	return path.join(serverconfig.cache_snpgt.dir, cacheid)
+// in a snp genotype cache file written by termdb.snp.js, the sample columns start from the 7th column
+export const snpgtSampleColumn = 6
+
+/* a snp genotype cache id starts with this prefix of the dataset that made the cache file;
+a cache id is a file name, so a genome or dslabel that has a non-\w character has it replaced with _.
+as that replacement may give the same prefix to another dataset of the same genome, such as
+a-b and a.b, neither of those datasets can use the snp genotype cache */
+export function snpgtCacheidPrefix(ds) {
+	if (!ds?.genomename || !ds.label) throw 'dataset does not support snp genotype cache'
+	const normalize = label => (ds.genomename + '_' + label).replace(/[^\w]/g, '_') + '_'
+	const prefix = normalize(ds.label)
+	for (const label in ds.genomeObj?.datasets || {}) {
+		if (label != ds.label && normalize(label) == prefix)
+			throw `dataset label '${ds.label}' is not distinct from '${label}' for snp genotype cache`
+	}
+	return prefix
+}
+
+/* a snp genotype cache id, such as the client-provided tw.q.cacheid, must name a file directly under the
+snpgt cache subdir, and must have been made by termdb.snp.js makeCacheid() for the same ds:
+<prefix of ds><time>_<random number> */
+export function snpgtCacheFile(cacheid, ds) {
+	if (typeof cacheid != 'string' || illegalPathSegment(cacheid) || /[^\w]/.test(cacheid)) throw 'invalid cacheid'
+	const prefix = snpgtCacheidPrefix(ds)
+	if (!cacheid.startsWith(prefix) || !/^\d+_\d+$/.test(cacheid.slice(prefix.length))) throw 'invalid cacheid'
+	return path.join(cachedir, 'snpgt', cacheid)
 }
 
 export async function run_fdr(plst) {
 	// list of pvalues
-	const infile = path.join(serverconfig.cachedir, Math.random().toString())
+	const infile = path.join(cachedir, Math.random().toString())
 	const outfile = infile + '.out'
 	try {
 		await write_file(infile, plst.join('\t'))
@@ -1036,7 +970,7 @@ export async function testIfFileIsBigbed(file) {
 			// TODO also test extraIndexCount. return object but not true/false
 		})
 		ps.on('error', e => {
-			if (e.code === 'ENOENT') throw `cannot find bigBedInfo binary='${bigBedInfo}'`
+			if (e.code === 'ENOENT') return reject(`cannot find bigBedInfo binary='${bigBedInfo}'`)
 			// reject('Error detecting if file is bigbed')
 			console.log('\n--- testIfFileIsBigbed() error ---\n', e, '\n')
 			resolve(false)
@@ -1064,6 +998,12 @@ export function spawnTool(bin, args, opts) {
 	return spawn(bin, args, opts)
 }
 
+// upper limits of a region's pixel width, the sum of the widths and the number of regions, which size
+// arrays and bins on the server; the regions of one request share a screen, so their widths add up to about its width
+const maxRglstWidth = 20000
+const maxRglstTotalWidth = 50000
+const maxRglstLength = 1000
+
 export function validateRglst(q, genome) {
 	if (typeof q.rglst == 'string') {
 		try {
@@ -1074,6 +1014,8 @@ export function validateRglst(q, genome) {
 	}
 	if (!Array.isArray(q.rglst)) throw 'q.rglst[] not array'
 	if (q.rglst.length == 0) throw 'q.rglst[] blank array'
+	if (q.rglst.length > maxRglstLength) throw 'q.rglst[] too many regions'
+	let totalWidth = 0
 	for (const r of q.rglst) {
 		if (typeof r != 'object') throw 'element of q.rglst[] not object'
 		if (typeof r.chr != 'string') throw 'q.rglst[].chr not string'
@@ -1089,6 +1031,12 @@ export function validateRglst(q, genome) {
 		if (r.stop < 0) throw 'q.rglst[].stop<0'
 		if (c && r.stop > c.len) throw 'q.rglst[].stop out of bound'
 		if (r.stop <= r.start) throw 'q.rglst[].stop < start'
+		if (r.width != null) {
+			if (!Number.isFinite(r.width)) throw 'q.rglst[].width not number'
+			if (r.width < 0 || r.width > maxRglstWidth) throw 'q.rglst[].width out of bound'
+			totalWidth += r.width
+			if (totalWidth > maxRglstTotalWidth) throw 'q.rglst[].width total out of bound'
+		}
 	}
 }
 

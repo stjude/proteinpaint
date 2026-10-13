@@ -1,6 +1,6 @@
 import { getPillNameDefault } from '#termsetting'
 import { renderTable } from '#dom'
-import type { PillData, SampleLstTW } from '#types'
+import type { PillData, SampleLstTW, VocabApi } from '#types'
 import type { TermSetting } from '../TermSetting.ts'
 
 export function getHandler(self: TermSetting) {
@@ -8,8 +8,17 @@ export function getHandler(self: TermSetting) {
 		showEditMenu(div: any) {
 			div.selectAll('*').remove()
 			const q = self.q as any // TODO: migrate this handler to use client/tw code
+			// a group either lists its samples, which can be edited here, or is defined by a filter
+			const groups = q.groups.filter((g: any) => Array.isArray(g.values))
+			for (const group of q.groups) {
+				if (groups.includes(group)) continue
+				// a group defined by a filter lists no sample: show its name and size
+				const row = div.append('div').style('padding', '6px 10px').style('font-size', '0.8rem')
+				row.append('b').text(group.name)
+				if (Number.isFinite(group.sampleCount)) row.append('span').text(`, n=${group.sampleCount}`)
+			}
+			if (!groups.length) return
 			if (self.vocabApi.termdbConfig?.displaySampleIds && self.vocabApi.hasVerifiedToken()) {
-				const groups = q.groups
 				for (const group of groups) {
 					const groupDiv = div.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 					const noButtonCallback = (i: number, node: any) => {
@@ -82,10 +91,20 @@ function addTable(div: any, name: any, group: any, noButtonCallback: any) {
 	})
 }
 
-export function fillTW(tw: SampleLstTW) {
+export async function fillTW(tw: SampleLstTW, vocabApi?: VocabApi) {
 	/* type = custom-samplelst is not used anywhere else.
 	Code still under development. Delete if never used. */
 	if (!tw.q.groups) tw.q.groups = []
+	if (tw.q.groups.length == 0 && Object.values(tw.term.values || {}).some(v => !Array.isArray(v.list))) {
+		/* a samplelst term made in the Groups tab may define its groups by filters, which only the tw
+		of the custom variable carries, so a tree that gives just the term (as submit_lst does) loses
+		them; get the groups from that tw */
+		const customTws = (await vocabApi?.getCustomTerms?.()) || []
+		const customTw = customTws.find(t => t.term.type == 'samplelst' && t.term.name == tw.term.name) as
+			| SampleLstTW
+			| undefined
+		if (customTw?.q?.groups?.length) tw.q.groups = structuredClone(customTw.q.groups)
+	}
 	if (tw.q.groups.length == 0) {
 		for (const k in tw.term.values) {
 			const v = tw.term.values[k]

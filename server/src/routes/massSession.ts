@@ -34,7 +34,7 @@ export const api: RouteApi = {
 	}
 }
 
-const cachedir_massSession = serverconfig.cachedir_massSession || path.join(serverconfig.cachedir, 'massSession')
+const cachedir_massSession = path.join(serverconfig.cachedir, 'massSession')
 if (!isDisabled && !fs.existsSync(cachedir_massSession)) fs.mkdirSync(cachedir_massSession)
 
 // the maximum size of a saved session file, in bytes; an explicit 0 rejects every save

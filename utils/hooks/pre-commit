@@ -61,6 +61,26 @@ fi
 
 # check the added lines, such as code comments and test names, after the steps above that can stage changes
 cd "$(git rev-parse --show-toplevel)"
-git diff --cached -U0 --no-color --no-ext-diff | ./utils/hooks/check-text.sh diff "staged changes"
+if git rev-parse -q --verify MERGE_HEAD > /dev/null; then
+  # a merge commit: skip the lines that come from the merged branch, such as master, which are
+  # already checked or public. The added lines of the diff from HEAD that are not also added in
+  # the diff from MERGE_HEAD are turned into context lines, which keeps the line numbers
+  ADDED=$(mktemp)
+  trap 'rm -f "$ADDED"' EXIT
+  git diff --cached -U0 --no-color --no-ext-diff MERGE_HEAD | awk '
+    /^diff --git / { header = 1; next }
+    header && /^\+\+\+ / { header = 0; file = substr($0, 7); next }
+    /^\+/ { print file "\037" substr($0, 2) }
+  ' > "$ADDED"
+  git diff --cached -U0 --no-color --no-ext-diff HEAD | awk '
+    FNR == NR { keep[$0] = 1; next }
+    /^diff --git / { header = 1; print; next }
+    header && /^\+\+\+ / { header = 0; file = substr($0, 7); print; next }
+    /^\+/ && !((file "\037" substr($0, 2)) in keep) { print " " substr($0, 2); next }
+    { print }
+  ' "$ADDED" - | ./utils/hooks/check-text.sh diff "staged changes"
+else
+  git diff --cached -U0 --no-color --no-ext-diff | ./utils/hooks/check-text.sh diff "staged changes"
+fi
 
 exit 0

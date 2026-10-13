@@ -8,6 +8,7 @@ Tests:
 	getAllowedTabs() - basic tab creation for allowed term types
 	getAllowedTabs() - SNP_LIST and SNP_LOCUS exclusion
 	getAllowedTabs() - usecase filtering for survival with detail=term
+	getAllowedTabs() - usecase filtering for sunburst
 	getAllowedTabs() - usecase filtering for regression with detail=independent
 	getAllowedTabs() - regression should only allow non-dictionary term types as independent variables
 	getAllowedTabs() - usecase filtering for dataDownload
@@ -144,6 +145,28 @@ tape('getAllowedTabs() - usecase filtering for cuminc with detail=term', test =>
 	const tabs = getAllowedTabs(state, self)
 
 	test.equal(tabs.length, 1, 'Should only allow DICTIONARY_VARIABLES for cuminc with detail=term')
+	test.equal(tabs[0].termTypeGroup, TermTypeGroups.DICTIONARY_VARIABLES, 'Should exclude non-dictionary term types')
+
+	test.end()
+})
+
+tape('getAllowedTabs() - usecase filtering for sunburst', test => {
+	const { self, state } = mockSelfAndState(
+		{
+			allowedTermTypes: [
+				TermTypes.CATEGORICAL,
+				TermTypes.GENE_VARIANT,
+				TermTypes.GENE_EXPRESSION,
+				TermTypes.METABOLITE_INTENSITY
+			],
+			queries: { snvindel: { dt: 1 }, cnv: {}, svfusion: {} }
+		},
+		{ tree: { usecase: { target: 'sunburst' } } }
+	)
+
+	const tabs = getAllowedTabs(state, self)
+
+	test.equal(tabs.length, 1, 'Should only allow DICTIONARY_VARIABLES for sunburst')
 	test.equal(tabs[0].termTypeGroup, TermTypeGroups.DICTIONARY_VARIABLES, 'Should exclude non-dictionary term types')
 
 	test.end()

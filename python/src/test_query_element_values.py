@@ -9,11 +9,14 @@ Covers the logic that is not obvious by reading:
   - element-ID lookup, including an unknown ID being skipped rather than fatal
   - element_class restriction
   - the promoter-only ID fallback (meta/promoter/promoterID, no meta/element group)
+  - chromosomes given as a chrom_lengths attribute in place of meta/chr
   - a requested sample absent from the matrix yielding a null column in the right position
   - NaN in the matrix surfacing as null
 """
 
+import json
 import os
+import shutil
 import tempfile
 
 import h5py
@@ -92,6 +95,33 @@ def main():
 
         # No match is an empty answer, not an exception.
         assert query(p, ['s1'], 'chr1:1-2') == {'rows': [], 'values': []}
+
+        # The same matrix with its chromosomes as a chrom_lengths attribute, and no meta/chr:
+        # every range query answers as it does on the per-row layout.
+        p3 = os.path.join(d, 'el_chrom_lengths.h5')
+        shutil.copy(p, p3)
+        with h5py.File(p3, 'a') as h:
+            del h['meta/chr']
+            h.attrs['chrom_lengths'] = json.dumps({'chr1': 2, 'chr2': 1})
+        for q in ('chr1:150-301', 'chr2:100-200', 'chr1:1-2', 'E2'):
+            assert query(p3, ['s1', 's2'], q) == query(p, ['s1', 's2'], q), q
+
+        # An attribute that does not cover every row would shift chromosomes; a matrix with
+        # neither layout cannot be located by range. Both are refused.
+        with h5py.File(p3, 'a') as h:
+            h.attrs['chrom_lengths'] = json.dumps({'chr1': 1, 'chr2': 1})
+        try:
+            query(p3, ['s1'], 'chr1:150-301')
+            raise AssertionError('a chrom_lengths that does not add up must be refused')
+        except ValueError:
+            pass
+        with h5py.File(p3, 'a') as h:
+            del h.attrs['chrom_lengths']
+        try:
+            query(p3, ['s1'], 'chr1:150-301')
+            raise AssertionError('a matrix with no chromosome layout must be refused')
+        except KeyError:
+            pass
 
         # Promoter-only layout: IDs resolve through the fallback path, and class is null.
         p2 = os.path.join(d, 'prom.h5')

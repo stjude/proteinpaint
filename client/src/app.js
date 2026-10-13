@@ -19,6 +19,7 @@ import urlmap from '#common/urlmap'
 import { Menu, renderSandboxFormDiv, sayerror } from '#dom'
 import { mayLaunchGdcPlotFromRunpp } from '../gdc/launch.ts'
 import { childCorsMessage } from '#common/embedder-helpers'
+import { getSavedStateRefusal } from '../mass/sessionForm.ts'
 import { observeElem } from './app.observer.js'
 import { bundleCheck, checkBundleVersion, notifyChunkLoadError } from './bundleVersion.ts'
 
@@ -257,7 +258,6 @@ export function runproteinpaint(arg) {
 				!window.location.search.includes('noheader') &&
 				!window.location.search.includes('mass-session-id') &&
 				!window.location.search.includes('mass-session-file') &&
-				!window.location.search.includes('mass-session-url') &&
 				!window.location.search.includes('massnative') &&
 				!window.location.search.includes('mass')
 			) {
@@ -693,6 +693,8 @@ async function parseEmbedThenUrl(arg, app) {
 	if (arg.massSessionId) {
 		const res = await client.dofetch3(`/massSession?id=${arg.massSessionId}`)
 		if (res.error) throw res.error
+		const refusal = getSavedStateRefusal(res.state)
+		if (refusal) throw refusal
 		const opts = {
 			debug: app.debugmode,
 			holder: app.holder0,
@@ -707,25 +709,16 @@ async function parseEmbedThenUrl(arg, app) {
 		return
 	}
 
-	if (arg.massSessionFile || arg.massSessionURL) {
-		let state
-		if (arg.massSessionFile) {
-			const file = arg.massSessionFile
-			const jsonFile = await client.dofetch3(`/textfile`, {
-				method: 'POST',
-				body: JSON.stringify({ file })
-			})
-			if (jsonFile.error) throw jsonFile.error
-			state = JSON.parse(jsonFile.text)
-		} else {
-			const url = arg.massSessionURL
-			const jsonURL = await client.dofetch3(`/urltextfile`, {
-				method: 'POST',
-				body: JSON.stringify({ url })
-			})
-			if (jsonURL.error) throw jsonURL.error
-			state = JSON.parse(jsonURL.text)
-		}
+	if (arg.massSessionFile) {
+		const file = arg.massSessionFile
+		const jsonFile = await client.dofetch3(`/textfile`, {
+			method: 'POST',
+			body: JSON.stringify({ file })
+		})
+		if (jsonFile.error) throw jsonFile.error
+		const state = JSON.parse(jsonFile.text)
+		const refusal = getSavedStateRefusal(state)
+		if (refusal) throw refusal
 		const opts = {
 			debug: app.debugmode,
 			holder: app.holder0,

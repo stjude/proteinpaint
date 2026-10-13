@@ -19,6 +19,9 @@ on:
 
   workflow_call: {}
 
+permissions:
+  contents: read
+
 jobs:
 
   test:
@@ -98,11 +101,11 @@ jobs:
             mkdir cache
           fi
 
-      - name: Pack tarballs for updated workspaces
+      - name: Pack tarballs for the server image
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')
         run: |
           cd ./container
-          ./pack.sh
+          ./pack.sh -s
 
       - name: Build Docker Image
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')

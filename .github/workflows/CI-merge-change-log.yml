@@ -8,6 +8,9 @@ on:
       - master
       - release-*
 
+permissions:
+  contents: read
+
 jobs:
   merge:
     if: github.event.pull_request.merged

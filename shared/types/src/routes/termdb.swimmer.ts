@@ -49,6 +49,9 @@ export type SwimmerRequest = {
 	samples?: string[]
 	/** optional term wrapper of a point-sample term (e.g. a CSF term) to mark the linked points by */
 	pointTerm?: any
+	/** optional key of a ds time reference (queries.swimmer.timeReferences); all times are then relative to it.
+	default: the ds default reference */
+	timeReference?: string
 	/** injected by server middleware for access control */
 	__protected__?: any
 }
@@ -60,4 +63,6 @@ export type SwimmerResponse = {
 	divideByOrder?: string[]
 	/** only with pointTerm: point category labels in display order, ordered as divideByOrder */
 	pointCategoryOrder?: string[]
+	/** only when the ds has time references: key of the reference used */
+	timeReference?: string
 }

@@ -1266,10 +1266,10 @@ function setInteractivity(self: any) {
 			return
 		}
 		if (!d.seriesId) return
-
 		menu.d
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', 'sjpp-atrisk-hide-btn-' + d.seriesId)
 			.text(`Hide`)
 			.on('click', async () => {
 				menu.hide()

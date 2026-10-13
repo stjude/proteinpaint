@@ -28,6 +28,8 @@ const statusClasses = new Set(['WT', 'Blank'])
 type VariantTvs = {
 	term: { dt: number; origin?: string; [k: string]: any }
 	values: { key: string; mname?: string; gene?: string; [k: string]: any }[]
+	/** the origins this leaf matches, see GeneVariantTvs in shared/types/src/filter.ts */
+	origins?: string[]
 	isnot?: boolean
 	[k: string]: any
 }
@@ -100,13 +102,26 @@ export function validateVariantFilter(filter: any, term?: any): void {
 	}
 }
 
+/** the origins a leaf matches, or undefined for one that is not restricted by origin. A
+ * legacy leaf carrying a single origin on its dt term is migrated to this shape client-side,
+ * by GvValues.fill() in client/tw/geneVariant.ts */
+function getTvsOrigins(tvs: VariantTvs): string[] | undefined {
+	return tvs.origins?.length ? tvs.origins : undefined
+}
+
 /** the dts, and origins when a leaf is origin-specific, that a filter covers.
  * a row shows only what its filter names, so a value of an uncovered dt is not
  * rendered by that row at all */
 function getFilterScope(filter: any, scope = new Set<string>()): Set<string> {
 	for (const item of filter.lst) {
-		if (item.type == 'tvslst') getFilterScope(item, scope)
-		else scope.add(`${item.tvs.term.dt}:${item.tvs.term.origin || '*'}`)
+		if (item.type == 'tvslst') {
+			getFilterScope(item, scope)
+			continue
+		}
+		const origins = getTvsOrigins(item.tvs)
+		// a leaf covering several origins puts each of them in scope
+		if (origins) for (const origin of origins) scope.add(`${item.tvs.term.dt}:${origin}`)
+		else scope.add(`${item.tvs.term.dt}:*`)
 	}
 	return scope
 }
@@ -117,7 +132,8 @@ function isInScope(v: VariantValue, scope: Set<string>): boolean {
 
 function matchTvs(v: VariantValue, tvs: VariantTvs): boolean {
 	let match = false
-	if (v.dt == tvs.term.dt && (!tvs.term.origin || v.origin == tvs.term.origin)) {
+	const origins = getTvsOrigins(tvs)
+	if (v.dt == tvs.term.dt && (!origins || origins.includes(v.origin as string))) {
 		/* an entry without .mname matches any variant of its class; with .mname
 		(e.g. "G12D") it matches only that amino acid change, further restricted to the
 		gene or region it names, see matchesGvQueryEntry(). mirrors filterByItem() in

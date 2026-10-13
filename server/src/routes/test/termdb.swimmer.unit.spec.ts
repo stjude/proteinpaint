@@ -4,7 +4,9 @@ import {
 	getDivideCategories,
 	orderDivideCategories,
 	getLaneValues,
-	isLaneRequested
+	isLaneRequested,
+	getTimeReference,
+	shiftTimeline
 } from '../termdb.swimmer.ts'
 
 /**
@@ -28,6 +30,12 @@ import {
  *
  * isLaneRequested()
  *   • matches the patient or any of its samples
+ *
+ * getTimeReference()
+ *   • the requested key, else the default, else the first; none without references
+ *
+ * shiftTimeline()
+ *   • moves time 0 to the reference event, null without that event
  */
 
 tape('\n', function (test) {
@@ -166,5 +174,54 @@ tape('isLaneRequested() matches the patient or any of its samples', function (te
 	const requested = new Set(['S1', 'S1_csf'])
 	test.equal(isLaneRequested(requested, 'S1_patient', ['S1', 'S1_X1']), true, 'a sample of the patient')
 	test.equal(isLaneRequested(requested, 'S2_patient', ['S2']), false, 'unrelated lane')
+	test.end()
+})
+
+tape('getTimeReference() returns the requested key, else the default, else the first', function (test) {
+	const refs = [
+		{ key: 'Birth', timeLabel: 'Days after birth' },
+		{ key: 'Treatment', event: 'Treatment', timeLabel: 'Days after treatment started', isDefault: true }
+	]
+	test.equal(getTimeReference(refs, 'Birth'), refs[0], 'requested key')
+	test.equal(getTimeReference(refs), refs[1], 'isDefault')
+	test.equal(getTimeReference([refs[0], { ...refs[1], isDefault: false }]), refs[0], 'first without isDefault')
+	test.equal(getTimeReference(undefined, 'Birth'), undefined, 'no references')
+	test.throws(() => getTimeReference(refs, 'Dx'), /unknown timeReference/, 'unknown key')
+	test.end()
+})
+
+tape('shiftTimeline() moves time 0 to the reference event, null without that event', function (test) {
+	const d = {
+		ranges: [
+			{ category: 'Induction', start: 140, end: 298 },
+			{ category: 'RT', start: 300, end: null }
+		],
+		points: [
+			{ event: 'Dx', time: 118 },
+			{ event: 'Treatment', time: 140 },
+			{ event: 'CSF', time: 130, sample: 'S1_N1' }
+		]
+	}
+	test.equal(shiftTimeline(d)?.points, d.points, 'no event: as is')
+	const t = shiftTimeline(d, 'Treatment')!
+	test.deepEqual(
+		t.ranges,
+		[
+			{ category: 'Induction', start: 0, end: 158 },
+			{ category: 'RT', start: 160, end: null }
+		],
+		'ranges shifted, ongoing end kept null'
+	)
+	test.deepEqual(
+		t.points,
+		[
+			{ event: 'Dx', time: -22 },
+			{ event: 'Treatment', time: 0 },
+			{ event: 'CSF', time: -10, sample: 'S1_N1' }
+		],
+		'points shifted, sample kept'
+	)
+	test.equal(d.points[1].time, 140, 'source data unchanged')
+	test.equal(shiftTimeline(d, 'Death'), null, 'lane without the event')
 	test.end()
 })

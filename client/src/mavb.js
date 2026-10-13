@@ -67,12 +67,14 @@ export function mavbparseinput(mavb, sayerror, holder, jwt) {
 	if (mavb.url) {
 		request = new Request(mavb.hostURL + '/urltextfile', {
 			method: 'POST',
+			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ url: mavb.url, jwt: jwt })
 		})
 		delete mavb.url
 	} else if (mavb.file) {
 		request = new Request(mavb.hostURL + '/textfile', {
 			method: 'POST',
+			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ file: mavb.file, jwt: jwt })
 		})
 		delete mavb.file
@@ -1003,6 +1005,7 @@ function showTracks(mavb, gene, holder) {
 	fetch(
 		new Request(mavb.hostURL + '/genelookup', {
 			method: 'POST',
+			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ deep: 1, input: gene, genome: mavb.genome.name, jwt: mavb.jwt })
 		})
 	)

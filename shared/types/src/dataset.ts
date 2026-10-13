@@ -520,8 +520,12 @@ export type SwimmerQuery = {
 	rangeFile?: string
 	/** tp-relative path to the event file */
 	pointFile?: string
-	/** x axis label, e.g. "Days after treatment started" */
+	/** x axis label, e.g. "Days after treatment started". a time reference's own timeLabel takes precedence */
 	timeLabel?: string
+	/** optional time origins the user can switch between (radio buttons above the plot). each moves time 0 to the time of
+	a pointFile event of the patient (e.g. diagnosis or treatment start); a patient without that event is left out
+	of that view. without it, the file times are shown as they are */
+	timeReferences?: SwimmerTimeReference[]
 	/** interval categories keyed by the raw value in rangeFile column 2. categories sharing a label are
 	merged in the legend (e.g. RT and CSI both labeled "CSI/RT"). unlisted categories get a default color */
 	categories?: { [category: string]: SwimmerLegendItem }
@@ -556,6 +560,26 @@ export type SwimmerLegendItem = {
 	/** events only: set true to offer a "Mark <event label> by" control, coloring this event's markers by a
 	variable of their own samples (pointFile 4th column). needs linked samples; off by default */
 	markBy?: boolean
+	/** events only: marker height relative to the other events, e.g. 0.6 for frequent minor events such as
+	follow-up visits. default 1 */
+	size?: number
+	/** events only: markers before time 0 are not drawn and do not extend the axis left (e.g. birth is hidden in a
+	diagnosis- or treatment-referenced view). other events and the intervals extend the axis to show times before 0 */
+	clipBeforeOrigin?: boolean
+}
+
+export type SwimmerTimeReference = {
+	/** id of the reference, saved in the plot settings, e.g. "Diagnosis" */
+	key: string
+	/** radio button label; default key */
+	label?: string
+	/** x axis label, e.g. "Days after diagnosis" */
+	timeLabel: string
+	/** pointFile event key (column 2, e.g. "Dx") whose time becomes time 0 of each patient. omit for the file's own
+	time origin (e.g. birth) */
+	event?: string
+	/** the reference shown by default; else the first one */
+	isDefault?: boolean
 }
 
 type NIdataQueryRefParams = {
@@ -831,6 +855,8 @@ type JunctionQuery = {
 	hiddentypes?: string
 	/** default min read count to filter samples */
 	readcountCutoff?: number
+	/** intron clusters of these junctions, for differential splicing analysis */
+	cluster?: JunctionClusterQuery
 }
 
 type RnaseqGeneCount = {
@@ -857,6 +883,19 @@ type RnaseqGeneCount = {
 	defaultMethod?: 'wilcoxon' | 'edgeR' | 'limma'
 	/** sample names present in the counts matrix. may be a getter on api-backed datasets whose
 	 * sample list is populated asynchronously after launch */
+	allSampleSet?: Set<string>
+}
+
+type JunctionClusterQuery = {
+	/** HDF5 file: X[n_samples, n_introns], one sample per row,
+	 * introns pre-sorted by cluster with cluster_starts boundaries alongside. */
+	file: string
+	/** which engine the method radio preselects. only reorders — both stay selectable. */
+	defaultMethod?: 'edgeR' | 'leafcutter'
+	/** max samples ONE GROUP may contribute to a run, counted after filtering to samples that
+	 * actually have splicing data. Defaults to MAX_SAMPLES_PER_GROUP (250) in the route. */
+	maxSamplesPerGroup?: number
+	/** filled at init from the h5 */
 	allSampleSet?: Set<string>
 }
 
@@ -893,10 +932,22 @@ type ProteomeCohortConfig = {
 	/** precomputed differential-abundance file (acc, identifier, gene, log2FC, FDR[, pValue]),
 	 *  the single source of every fold change and significance */
 	DAPfile: string
-	catalog?: { [columnKey: string]: string }
+	/** display attributes for the sample-set catalog and plots; `placeholder: true` marks a
+	 *  stand-in sample set (not real data), drawn distinctly until the real data arrives */
+	catalog?: { [columnKey: string]: string | number | boolean }
 	/** age/progression trajectory membership. Cohorts sharing `series` form one ordered series;
 	 *  `value` is the numeric x-axis position (e.g. months) giving true spacing; `label` is the tick text. */
 	trajectory?: { series: string; value: number; label: string }
+	/** static QC figures shown in the Data quality views, in display order (needs
+	 *  queries.proteome.dataQuality) */
+	qcFigures?: DataQualityFigure[]
+}
+
+export type DataQualityFigure = {
+	/** tp-relative image path, fetched through the img route */
+	file: string
+	/** caption shown above the figure */
+	title: string
 }
 
 type ProteomeAssayConfig = {
@@ -946,7 +997,7 @@ export type ProteinViewTileConfig = {
 		y: ProteomeCohortMatch & { label: string; ageVaries?: boolean }
 	}[]
 	defaultAge?: string
-	/** footnote shown in the expanded pane */
+	/** footnote shown in the expanded tile */
 	note?: string
 }
 
@@ -961,6 +1012,34 @@ export type ProteinViewConfig = {
 	/** cell type → optional footnote; key order is the row order */
 	cellTypes?: { [cellType: string]: { note?: string } }
 	tiles: ProteinViewTileConfig[]
+}
+
+/** one candidate value for a sunburst ring: a catalog key or a constant, optionally gated by a
+ *  cohortMatch rule. The first candidate that matches and yields a value wins. */
+export type ProteomeSunburstLevelValue = { key?: string; const?: string; when?: ProteomeCohortMatch }
+
+/** one sunburst stat box. count: number of sample sets; sum: total of a numeric catalog field
+ *  (null when no sample set carries it); distinct: number of distinct values of a catalog
+ *  field. `where` limits which sample sets are counted. */
+export type ProteomeSunburstStat = {
+	label: string
+	kind: 'count' | 'sum' | 'distinct'
+	key?: string
+	where?: ProteomeCohortMatch
+}
+
+export type ProteomeCohortSunburstConfig = {
+	/** rings, inside out; a ring with no value for a cohort is skipped for that cohort */
+	levels: { name: string; values: ProteomeSunburstLevelValue[] }[]
+	/** leaf label: the non-empty values of `keys` joined; if none, `fallbackKeys`; if none, the cohort key */
+	leafLabel: { keys: string[]; fallbackKeys?: string[] }
+	/** base colour per first-ring value; others get a default palette */
+	colors?: { [value: string]: string }
+	/** stat boxes above the selection panel, computed over the sample sets under the centre */
+	stats?: ProteomeSunburstStat[]
+	/** catalog keys whose values must agree across a selection (e.g. species + data type):
+	 *  once one sample set is selected, only those of the same kind can be added */
+	selectionKind?: { keys: string[] }
 }
 
 export type ProteomeAbundanceQuery = {
@@ -1033,6 +1112,20 @@ export type ProteomeAbundanceQuery = {
 		 *  active at all times (defaulting to the facet's first value), so the catalog table
 		 *  never shows rows of two values at once, e.g. human and mouse cohorts */
 		singleSelectFacets?: string[]
+		/** facets whose values render grouped under the values of a parent catalog key, e.g.
+		 *  sampleSource values under their sampleType. A parent checkbox toggles all of its
+		 *  child values; `labels` renames parent values for display (e.g. plural headings) */
+		nestedFacets?: { [facet: string]: { parent: string; labels?: { [parentValue: string]: string } } }
+		/** value display order per facet (or nested-facet parent) key; unlisted values sort
+		 *  after the listed ones, alphabetically */
+		facetValueOrder?: { [key: string]: string[] }
+	}
+	/** zoomable sunburst of the sample sets (cohortSunburst plot) */
+	cohortSunburst?: ProteomeCohortSunburstConfig
+	/** Data quality: enables the QC views; the figures are listed per cohort (qcFigures) */
+	dataQuality?: {
+		/** intro text above the figures */
+		description?: string
 	}
 	/** organism-keyed structure (new format) */
 	organisms?: {
@@ -1520,7 +1613,12 @@ type Mds3Queries = {
 		 * probe sets, so a sample is missing whole probes for reasons unrelated to its biology,
 		 * and imputing is the standard remedy. Under WGBS a missing value only means that
 		 * sample-region fell below the depth threshold, which is much rarer and closer to
-		 * random; imputing there adds no information and is slightly anticonservative. */
+		 * random; imputing there adds no information and is slightly anticonservative.
+		 *
+		 * 'wgbs' means per-CpG methylated and unmethylated read counts from whole-genome
+		 * sequencing, whatever chemistry converted the DNA. Enzymatic conversion (EM-seq)
+		 * gives the same readout as bisulfite, an unmethylated C read as T, so an EM-seq
+		 * dataset sets 'wgbs' too and nothing downstream tells the two apart. */
 		platform?: 'array' | 'wgbs'
 		/** promoter-by-sample matrix, values are average M-value.
 		 * Required for differential methylation (termdb/diffMeth). */
@@ -1539,8 +1637,11 @@ type Mds3Queries = {
 			 * not comparable (e.g. a different tissue compartment), since silently pooling
 			 * them makes the compartment difference show up as the contrast. The h5 itself
 			 * is untouched; only the set DM draws from shrinks. The startup log reports how
-			 * many samples matched, and warns if none did. */
-			excludeSampleNamesMatching?: string
+			 * many samples matched, and warns if none did.
+			 *
+			 * A list withholds every sample matching any of its substrings, each reported on
+			 * its own. Use it to name individual samples, e.g. libraries that failed QC. */
+			excludeSampleNamesMatching?: string | string[]
 		}
 		/** Element-class map: one matrix per regulatory-element class. Each entry is a
 		 * matrix built by build_element_matrix.py and converted by
@@ -1567,7 +1668,7 @@ type Mds3Queries = {
 				/** label for the element-type picker (e.g. 'eQTM blocks (55,336)') */
 				label?: string
 				/** see promoter.excludeSampleNamesMatching */
-				excludeSampleNamesMatching?: string
+				excludeSampleNamesMatching?: string | string[]
 				/** Restrict a mixed-class matrix to one element class, so several entries can be
 				 * served from ONE h5 rather than one file each. That is what makes cCRE
 				 * promoter-like (PLS) and the enhancer classes free to offer: their rows already
@@ -2007,6 +2108,14 @@ if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsi
 }
 
 /*** type of ds.cohort.termdb{} ***/
+export type SunburstConfig = {
+	/** default rings, inside out: categorical terms, or numeric terms binned by their default or
+	 *  given q. Users can add, replace, edit and remove rings in the chart's Rings box */
+	twLst: { id: string; q?: any }[]
+	/** base colour per first-ring category key, ahead of the term's own colours and the palette */
+	colors?: { [key: string]: string }
+}
+
 export type Termdb = {
 	/** Terms */
 	termIds?: TermIds
@@ -2231,6 +2340,12 @@ keep this setting here for reason of:
 	limitDictTermSamplesToMutated?: boolean
 	/** (client-side) if true, plots omit the Documentation button. for a ds with no applicable user guide */
 	hidePlotDocumentation?: boolean
+	/** (client-side) hide: true omits the per-plot sample filter in every plot header. for a ds whose
+	plots are driven by sample sets rather than user-defined sample groups */
+	plotFilter?: { hide?: boolean; disabledMessage?: string }
+	/** (client-side) enables the sunburst chart: zoomable rings of nested sample counts, one dictionary
+	term per ring */
+	sunburst?: SunburstConfig
 	/** (client-side) if true, the genome browser recreates its block on track change rather than
 	updating tracks in the existing block instance */
 	gbRecreateBlock?: boolean
@@ -2518,14 +2633,16 @@ export type Cohort = {
 type MassNav = {
 	/** Customization for the tabs*/
 	tabs?: {
-		/** supported keys: about, charts, groups, filter
+		/** supported keys: about, charts, groups, filter, chat
 		invalid key is ignored
-		when dslabel is too long to show in about tab middle row or to define alternative label, 
+		when dslabel is too long to show in about tab middle row or to define alternative label,
 		do .tabs:{about:{mid:'alt label'}} */
 		about?: MassNavAboutTabEntry
 		charts?: MassNavTabEntry
 		groups?: MassNavTabEntry
 		filter?: MassNavTabEntry
+		/** shown as CHAT when the ds has queries.chat, otherwise as SEARCH */
+		chat?: MassNavTabEntry
 	}
 	/** customize background color of active navigation tab */
 	activeColor?: string
@@ -2561,8 +2678,8 @@ type MassNavAboutTabEntry = MassNavTabEntry & {
 		/** link to data release page */
 		link: string
 	}
-	/** "active" items shown in the about tab. clicking an item either launches a plot
-	 * or opens a chart-specific menu (item.openChartMenu) */
+	/** "active" items shown in the about tab. clicking an item launches a plot, opens a
+	 * chart-specific menu (item.openChartMenu), or opens a menu of launch items (item.menu) */
 	activeItems?: {
 		/** how to render the items. 'buttons' (default) = compact inline buttons.
 		 * 'cards' = large square tiles that lift on hover */
@@ -2591,6 +2708,9 @@ type ActiveItem = {
 	/** instead of directly launching a plot, open a chart-specific menu (e.g. a gene
 	 * search) for chart types that require user input before a plot can be created.*/
 	openChartMenu?: string
+	/** instead of launching one plot, open a menu of launch items under the item, in
+	 *  labelled groups; each entry launches like an item (plot or openChartMenu) */
+	menu?: { label?: string; items: ActiveItem[] }[]
 }
 
 type Title = {

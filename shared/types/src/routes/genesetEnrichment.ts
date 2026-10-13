@@ -40,6 +40,7 @@ export type GenesetEnrichmentRequest = {
 	method: 'blitzgsea' | 'cerno'
 	/** DAP-specific parameters: organism/assay/cohort identify the DAP file */
 	dapParams?: { organism: string; assay: string; cohort: string }
+	__protected__?: any
 }
 
 /** blitzgsea's own column names, passed straight through by python/src/gsea.py (result.to_json()),

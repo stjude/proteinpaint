@@ -411,6 +411,7 @@ for(const i of atlst) {
 		fetch(
 			new Request(this.hostURL + '/isoformlst', {
 				method: 'POST',
+				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ genome: this.genome.name, lst: newisoform, jwt: this.jwt })
 			})
 		)

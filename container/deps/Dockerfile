@@ -130,15 +130,22 @@ RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir
 # Another UID may also run the image, such as to match the owner of the bind-mounted files, with
 # `docker run --user <uid>:0` or a Kubernetes runAsUser with runAsGroup 0: a runtime assigns group 0 to
 # a UID that has no account in the image, so the dirs that the app writes at runtime are also owned by,
-# and writable for, group 0. The app files under /home/root/pp/app/active are owned by root and are not
+# and writable for, group 0, or else writable for any UID, like the cache dir below. The app files under /home/root/pp/app/active are owned by root and are not
 # written at runtime, see the ppserver and ppfull stages.
 # the app user does not need the r-base 'staff' group
+#
+# The cache dir is owned by root with mode 1733, so that the app user, or another UID, may create and use a subdir
+# with a known name, but may not list the entries, change the mode, or rename or remove the entries of another user:
+# the server uses a subdir whose name is derived from a key, see hideCachedir in server/src/serverconfig.js.
+# A new mounted cache dir needs the same owner and mode on the host. For an existing mount, keep it listable for
+# the first upgraded start so legacy entries can be migrated, then apply this owner and mode.
 RUN groupmod -n app docker && \
     usermod -l app -d /home/app -m docker && \
     gpasswd -d app staff && \
-    chown app:app /home/root/pp/cache && \
-    chgrp -R 0 /home/root/pp/cache /home/app && \
-    chmod -R g=u /home/root/pp/cache /home/app
+    chown root:0 /home/root/pp/cache && \
+    chmod 1733 /home/root/pp/cache && \
+    chgrp -R 0 /home/app && \
+    chmod -R g=u /home/app
 
 RUN if [ "$ARCH" = "x86_64" ]; then \
         wget https://proteinpaint.stjude.org/ppdemo/tools/linux/straw -P /home/root/pp/tools/ && \
@@ -267,13 +274,18 @@ CMD ["sh", "-c", "node --enable-source-maps app-server.mjs && @sjcrh/proteinpain
 FROM ppbase AS ppfulldeps
 
 WORKDIR /home/root/pp
+COPY ./tmppack ./tmppack
 
 WORKDIR /home/root/pp/app
 COPY --from=ppserver /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 ARG FRONTPKGVER
-RUN npm install @sjcrh/proteinpaint-front@${FRONTPKGVER}
+RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
+      npm install /home/root/pp/tmppack/sjcrh-proteinpaint-front-${FRONTPKGVER}.tgz; \
+    else \
+      npm install @sjcrh/proteinpaint-front@${FRONTPKGVER}; \
+    fi
 # a tar extraction run by root, such as for the rust binaries in the proteinpaint-rust postinstall, keeps the file owner
 # and modes from the archive, which are changed to root and go-w
 RUN find . \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \

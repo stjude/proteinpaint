@@ -7,6 +7,7 @@ import { parentCorsMessage } from '#common/embedder-helpers'
 import { select } from 'd3-selection'
 import { importPlot } from '#plots/importPlot.js'
 import { trimGvTermsForSave } from '#shared/terms.js'
+import { markSavedState, getSavedStateRefusal } from './sessionForm.ts'
 
 class MassSessionBtn {
 	static type = 'sessionBtn'
@@ -97,6 +98,7 @@ class MassSessionBtn {
 				if (loc.includes('browser')) {
 					this.sessionName = id
 					const state = structuredClone(this.savedSessions[id])
+					if (this.refuses(state)) return
 					await preprocessState(state, this.app)
 					const targetWindow = this.dom.tip.d.node().querySelector(`[name="${radioName}"]:checked`).value
 					if (targetWindow == 'current') {
@@ -117,6 +119,7 @@ class MassSessionBtn {
 					const body = { id, route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
 					const res = await dofetch3(`/massSession?`, { headers, body })
 					if (!res.state) throw res.error || 'unable to get the cached session from the server'
+					if (this.refuses(res.state)) return
 					await preprocessState(res.state, this.app)
 					this.savedSessions[id] = res.state
 
@@ -166,6 +169,7 @@ class MassSessionBtn {
 				}
 				this.sessionName = sessionName
 				const state = JSON.parse(json)
+				if (this.refuses(state)) return
 				await preprocessState(state, this.app)
 				this.savedSessions[sessionName] = state
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
@@ -358,7 +362,16 @@ class MassSessionBtn {
 		delete state.termdbConfig
 		// the derived properties of a geneVariant term, which every path that opens a
 		// session re-fills, see trimGvTermsForSave()
-		return trimGvTermsForSave(state)
+		return markSavedState(trimGvTermsForSave(state))
+	}
+
+	// true when a saved state is not opened, see sessionForm.ts. the reason is shown
+	refuses(state) {
+		const reason = getSavedStateRefusal(state)
+		if (!reason) return false
+		this.dom.tip.hide()
+		this.app.printError(reason)
+		return true
 	}
 
 	download(name = '') {

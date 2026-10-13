@@ -1,6 +1,8 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
 import { detectGte } from '../../test/test.helpers.js'
+import { getFilterItemByTag } from '#filter/filter'
+import { rebaseGroupFilter } from '../../mass/groups.js'
 
 /* 
 Tests:
@@ -10,6 +12,7 @@ Tests:
 	- termCollection (row), categorical (col)
 	- categorical (row), termCollection (col)
 	- static count table when displaySampleIds is disabled
+	- create a group from selected cells
 */
 
 /*************************
@@ -403,3 +406,85 @@ function getTermCollection() {
 		q: { isAtomic: true, mode: 'continuous', lst: [] }
 	}
 }
+
+tape('create a group from selected cells', async test => {
+	test.timeoutAfter(20000)
+	const cases = [
+		{ name: 'bins by categories', columnTw: { id: 'agedx' }, rowTw: { id: 'diaggrp' } },
+		{
+			name: 'categories by groups of a gene variant term',
+			columnTw: { id: 'diaggrp' },
+			rowTw: { term: { type: 'geneVariant', gene: 'TP53' } }
+		}
+	]
+	const wait = (fn, ms = 5000) =>
+		new Promise<void>((resolve, reject) => {
+			const start = Date.now()
+			const i = setInterval(() => {
+				const done = fn()
+				if (!done && Date.now() - start <= ms) return
+				clearInterval(i)
+				if (done) resolve()
+				else reject('timed out waiting')
+			}, 50)
+		})
+
+	for (const c of cases) {
+		await new Promise<void>(resolve => {
+			runpp({
+				state: { plots: [{ chartType: 'facet', columnTw: c.columnTw, rowTw: c.rowTw }] },
+				facet: { callbacks: { 'postRender.test': runTests } }
+			})
+
+			let started
+			async function runTests(facet) {
+				if (started) return
+				started = true
+				facet.on('postRender.test', null)
+				const app = facet.Inner.app
+				const main = facet.Inner.dom.mainDiv.node()
+				try {
+					// one cell as a group, then two cells, then every cell. the table is drawn again after each
+					const expected: number[] = []
+					let numRows = 0
+					for (const pick of [cells => [cells[0]], cells => [cells[1], cells.at(-1)], cells => cells]) {
+						const cells: any[] = [...main.querySelectorAll('td.sja_menuoption')]
+						if (cells.length < 3) throw 'the table has fewer than 3 cells with samples'
+						numRows = new Set(cells.map(td => td.parentNode)).size
+						const n = app.getState().groups.length
+						const selection = pick(cells)
+						for (const td of selection) td.dispatchEvent(new Event('click'))
+						expected.push(selection.reduce((sum, td) => sum + Number.parseInt(td.textContent), 0))
+						const button: any = [...main.querySelectorAll('button')].find((b: any) => b.textContent == 'Create group')
+						button.dispatchEvent(new Event('click'))
+						await wait(() => app.getState().groups.length == n + 1)
+						await wait(() => main.querySelector('td.sja_menuoption') && !main.querySelector('td[style*="blue"]'))
+					}
+					const groups = rebaseGroupFilter(app.getState())
+					test.ok(
+						groups.every(g => getFilterItemByTag(g.filter, 'filterUiRoot') && !JSON.stringify(g).includes('sampleId')),
+						`${c.name}: should define each group by conditions, and list no sample`
+					)
+					test.equal(
+						getFilterItemByTag(groups[1].filter, 'filterUiRoot').join,
+						'or',
+						`${c.name}: should join the conditions of several cells with "or"`
+					)
+					test.equal(
+						getFilterItemByTag(groups[2].filter, 'filterUiRoot').lst.length,
+						numRows,
+						`${c.name}: should state the condition of a row once, for all of its selected cells`
+					)
+					const sizes: number[] = []
+					for (const g of groups) sizes.push((await app.vocabApi.getFilteredSampleList(g.filter)).length)
+					test.deepEqual(sizes, expected, `${c.name}: should select as many samples in each group as its cells have`)
+				} catch (e: any) {
+					test.fail(`${c.name}: ${e?.message || e}`)
+				}
+				if (test['_ok']) app.destroy()
+				resolve()
+			}
+		})
+	}
+	test.end()
+})

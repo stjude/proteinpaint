@@ -13,7 +13,7 @@ import { getColors } from '#shared/common.js'
 import { color as d3color, rgb } from 'd3-color'
 import { make_radios, renderTable, Tabs } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { renderPreAnalysisData } from '#mass/groups'
+import { renderPreAnalysisData, getSamplelstTWFromFilters } from '#mass/groups'
 import { TermTypeGroups, termType2label } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { uiLabel } from '#shared'
@@ -461,39 +461,22 @@ class DEinputPlot extends PlotBase implements RxComponent {
 
 	async clickSubmit(groups) {
 		this.dom.loading.style('display', 'block')
-		const samplelstTW: any = {
-			q: { groups: [] },
-			term: {
-				name: groups.map(g => g.name).join(' vs '),
-				type: 'samplelst',
-				values: {}
-			}
-		}
-		if (this.expressionSource === 'pseudobulk') samplelstTW.pseudobulk = this.pseudobulk
 		// ignore filter0 when cohort0 is used
 		const filter0 = this.hasCohort0 ? null : this.state.termfilter.filter0
-		const mapParent2Children = true // DE/DM data assumed to be at sample-level so map parent samples to child samples
-		for (const g of groups) {
-			const samples = await this.vocabApi!.getFilteredSampleList(
-				filterJoin([g.filter, this.state.termfilter.filter]),
-				filter0,
-				mapParent2Children
-			)
-			const sampleIds = samples.map(s => {
-				return { sampleId: s.id }
-			})
-			samplelstTW.q.groups.push({
+		/* each group is defined by its filter, which the server resolves to its samples. the tw
+		lists no sample */
+		const samplelstTW: any = getSamplelstTWFromFilters(
+			groups.map(g => ({
 				name: g.name,
-				in: true,
-				values: sampleIds
-			})
-			samplelstTW.term.values[g.name] = {
 				color: g.color,
-				key: g.name,
-				label: g.name,
-				list: sampleIds //samples need to be passed for the samplelst filter to work
-			}
-		}
+				filter: filterJoin([g.filter, this.state.termfilter.filter]),
+				filter0,
+				mapParent2Children: true // DE/DM data assumed to be at sample-level so map parent samples to child samples
+			})),
+			groups.map(g => g.name).join(' vs ')
+		)
+		delete samplelstTW.isAtomic
+		if (this.expressionSource === 'pseudobulk') samplelstTW.pseudobulk = this.pseudobulk
 
 		// get actual numbers of samples with data for this assay
 		const body: any = {

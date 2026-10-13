@@ -1,5 +1,5 @@
 import type { Elem, Div, Button } from '../../types/d3'
-import type { TableRow, TableColumn } from '#dom'
+import type { TableBaseRow, TableBaseColumn } from '#dom'
 import type { Settings } from './settings/Settings'
 import type { Filter } from '#types'
 
@@ -96,8 +96,8 @@ export type SCSampleSandbox = {
 }
 
 export type SCTableData = {
-	rows: TableRow[]
-	columns: TableColumn[]
+	rows: TableBaseRow[]
+	columns: TableBaseColumn[]
 	selectedRows: number[]
 	/** Column idx with sample IDs */
 	sampleColIdx: number

@@ -3,6 +3,7 @@ import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { lengthStratifiedDE, type GeneFC } from '#src/utils/dmrGeneDE.ts'
 import { mayLog } from '#src/helpers.ts'
 import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
+import { resolveGroups } from '#src/utils/sampleGroups.ts'
 import { formatElapsedTime } from '#shared'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
@@ -69,7 +70,13 @@ function init({ genomes }) {
 			if (!ds) throw new Error('unknown dataset')
 			// analysis-wide, so this cohort is the one the scan ran on whatever chr1 resolves to
 			const eligible = eligibleMethylationSamples(ds, undefined)
-			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds)
+			// a group may be defined by a filter
+			const samplelst = await matchedSamplelst(
+				{ groups: await resolveGroups(q.samplelst.groups, q, ds) },
+				eligible,
+				ds,
+				q.__protected__
+			)
 			const { result } = await getDeCacheResult(
 				{
 					genome: q.genome,
@@ -81,7 +88,8 @@ function init({ genomes }) {
 					method: q.method,
 					// part of the DE cache key: sent so this run and the volcano's are one entry
 					filter: q.filter,
-					filter0: q.filter0
+					filter0: q.filter0,
+					__protected__: q.__protected__
 				} as any,
 				genomes
 			)

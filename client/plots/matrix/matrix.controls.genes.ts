@@ -29,6 +29,7 @@ export function setGenesBtn(self: MatrixControls, s: any) {
 		})
 	self.opts.holder
 		.append('button')
+		.attr('data-testid', 'sjpp-matrix-genes-button')
 		//.property('disabled', d => d.disabled)
 		.datum({
 			label: 'Genes',
@@ -267,6 +268,7 @@ export function addGenesetInput(self: MatrixControls, app: any, parent: any, tr:
 
 		editGrpDiv
 			.append('button')
+			.attr('data-testid', 'sjpp-matrix-gene-edit-button')
 			.html(
 				numOfEditableGrps > 1 && geneInputType !== 'hierCluster'
 					? 'Edit Selected Group'

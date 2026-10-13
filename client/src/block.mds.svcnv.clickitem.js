@@ -2,6 +2,7 @@ import { select as d3select } from 'd3-selection'
 import { axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
+import { escapeHtml } from '#dom'
 import * as common from '#shared/common.js'
 import {
 	loadTk,
@@ -459,7 +460,8 @@ export function tooltip_samplegroup(g, tk) {
 		// official only
 		for (const a of g.attributes) {
 			d.append('div').html(
-				a.kvalue + (a.fullvalue ? ' <span style="opacity:.5;font-size:.8em;">' + a.fullvalue + '</span>' : '')
+				escapeHtml(a.kvalue) +
+					(a.fullvalue ? ' <span style="opacity:.5;font-size:.8em;">' + escapeHtml(a.fullvalue) + '</span>' : '')
 			)
 		}
 	} else if (g.name) {
@@ -488,7 +490,7 @@ export function click_samplegroup_showtable(samplegroup, tk, block) {
 	only for native track: no group for custom track for lack of annotation
 	*/
 	const pane = client.newpane({ x: event.clientX + 100, y: Math.max(100, event.clientY - 100) })
-	pane.header.html(samplegroup.name + ' <span style="font-size:.7em">' + tk.name + '</span>')
+	pane.header.html(escapeHtml(samplegroup.name) + ' <span style="font-size:.7em">' + escapeHtml(tk.name) + '</span>')
 
 	if (samplegroup.samples.length == 1) {
 		// one sample
@@ -933,7 +935,7 @@ export function click_multi_svdense(g, tk, block) {
 	}
 
 	const pane = client.newpane({ x: event.clientX, y: event.clientY })
-	pane.header.html(g.name + ' <span style="font-size:.8em">' + tk.name + '</span>')
+	pane.header.html(escapeHtml(g.name) + ' <span style="font-size:.8em">' + escapeHtml(tk.name) + '</span>')
 
 	const sample2lst = new Map()
 	for (const i of g.items) {
@@ -974,7 +976,9 @@ export function click_multi_svdense(g, tk, block) {
 				.append('div')
 				.attr('class', 'sja_clbtext')
 				.html(
-					i.cytogeneticname ? i.cytogeneticname + ' <span style="font-size:.7em">' + breakpoint + '</span>' : breakpoint
+					i.cytogeneticname
+						? escapeHtml(i.cytogeneticname) + ' <span style="font-size:.7em">' + breakpoint + '</span>'
+						: breakpoint
 				)
 				.on('mouseover', () => {
 					tooltip_singleitem({
@@ -1004,7 +1008,7 @@ export function click_multi_svdense(g, tk, block) {
 			td2
 				.append('div')
 				.attr('class', 'sja_clbtext')
-				.html(itemname_svfusion(i) + ' <span style="font-size:.7em">' + svcoord2html(i, tk) + '</span>')
+				.html(escapeHtml(itemname_svfusion(i)) + ' <span style="font-size:.7em">' + svcoord2html(i, tk) + '</span>')
 				.on('mouseover', () => {
 					tooltip_singleitem({
 						item: i,
@@ -1470,7 +1474,7 @@ export function detailtable_singlesample(p) {
 		{
 			lst.push({
 				k: m.dt == common.dtsv ? 'SV' : 'RNA fusion',
-				v: itemname_svfusion(m) + ' <span style="font-size:.7em">' + svcoord2html(m, p.tk) + '</span>'
+				v: escapeHtml(itemname_svfusion(m)) + ' <span style="font-size:.7em">' + svcoord2html(m, p.tk) + '</span>'
 			})
 		}
 
@@ -1645,7 +1649,9 @@ export function detailtable_singlesample(p) {
 					if (vv) {
 						lst.push({
 							k: attr.label,
-							v: vv.name + (vv.label ? ' <span style="font-size:.7em;opacity:.5">' + vv.label + '</span>' : '')
+							v:
+								escapeHtml(vv.name) +
+								(vv.label ? ' <span style="font-size:.7em;opacity:.5">' + escapeHtml(vv.label) + '</span>' : '')
 						})
 						continue
 					}
@@ -1925,24 +1931,24 @@ export function svchr2html(chr, tk) {
 			'<span style="background:' +
 			tk.legend_svchrcolor.colorfunc(chr) +
 			';font-weight:bold;padding:0px 5px;color:white">' +
-			chr +
+			escapeHtml(chr) +
 			'</span>'
 		)
 	}
-	return chr
+	return escapeHtml(chr)
 }
 
 export function svcoord2html(i, tk) {
 	return (
 		svchr2html(i.chrA, tk) +
 		':' +
-		i.posA +
-		(i.strandA ? ':' + i.strandA : '') +
+		escapeHtml(i.posA) +
+		(i.strandA ? ':' + escapeHtml(i.strandA) : '') +
 		' &raquo; ' +
 		svchr2html(i.chrB, tk) +
 		':' +
-		i.posB +
-		(i.strandB ? ':' + i.strandB : '')
+		escapeHtml(i.posB) +
+		(i.strandB ? ':' + escapeHtml(i.strandB) : '')
 	)
 }
 
@@ -1971,7 +1977,7 @@ function sortitemsbytype_onesample(samplename, lst, tk) {
 		for (const i of deduped) {
 			svlst.push(
 				'<div style="white-space:nowrap">' +
-					itemname_svfusion(i) +
+					escapeHtml(itemname_svfusion(i)) +
 					' <span style="font-size:.7em">' +
 					svcoord2html(i, tk) +
 					'</span>' +
@@ -1988,7 +1994,7 @@ function sortitemsbytype_onesample(samplename, lst, tk) {
 		if (i.dt == common.dtloh) {
 			lohlst.push(
 				'<div style="white-space:nowrap">' +
-					i.chr +
+					escapeHtml(i.chr) +
 					':' +
 					(i.start + 1) +
 					'-' +
@@ -1996,14 +2002,14 @@ function sortitemsbytype_onesample(samplename, lst, tk) {
 					' <span style="font-size:.8em">' +
 					common.bplen(i.stop - i.start) +
 					' seg.mean: ' +
-					i.segmean +
+					escapeHtml(i.segmean) +
 					'</span>'
 			)
 			lohlst0.push(i)
 		} else if (i.dt == common.dtcnv) {
 			cnvlst.push(
 				'<div style="white-space:nowrap">' +
-					i.chr +
+					escapeHtml(i.chr) +
 					':' +
 					(i.start + 1) +
 					'-' +
@@ -2014,7 +2020,7 @@ function sortitemsbytype_onesample(samplename, lst, tk) {
 					' <span style="background:' +
 					(i.value > 0 ? tk.cnvcolor.gain.str : tk.cnvcolor.loss.str) +
 					';font-size:.8em;color:white">&nbsp;' +
-					i.value +
+					escapeHtml(i.value) +
 					'&nbsp;</span>' +
 					'</div>'
 			)
@@ -2022,13 +2028,13 @@ function sortitemsbytype_onesample(samplename, lst, tk) {
 		} else if (i.dt == common.dtitd) {
 			itdlst.push(
 				'<div style="white-space:nowrap">' +
-					i.chr +
+					escapeHtml(i.chr) +
 					':' +
 					(i.start + 1) +
 					'-' +
 					(i.stop + 1) +
-					(i.rnaduplength ? ', ' + i.rnaduplength + ' bp duplicated in RNA' : '') +
-					(i.aaduplength ? ', ' + i.aaduplength + ' AA duplicated' : '') +
+					(i.rnaduplength ? ', ' + escapeHtml(i.rnaduplength) + ' bp duplicated in RNA' : '') +
+					(i.aaduplength ? ', ' + escapeHtml(i.aaduplength) + ' AA duplicated' : '') +
 					'</div>'
 			)
 			itdlst0.push(i)
@@ -2047,7 +2053,7 @@ function sortitemsbytype_onesample(samplename, lst, tk) {
 							'<span style="color:' +
 							c.color +
 							';font-weight:bold">' +
-							m.mname +
+							escapeHtml(m.mname) +
 							'</span> ' +
 							'<span style="font-size:.7em">' +
 							c.label +
@@ -2088,7 +2094,7 @@ function may_show_matrixbutton(samplegroup, tk, block) {
 
 		tk.tip2.d
 			.append('div')
-			.html(group.name + ' <span style="font-size:.8em;opacity:.5">SUMMARY</span>')
+			.html(escapeHtml(group.name) + ' <span style="font-size:.8em;opacity:.5">SUMMARY</span>')
 			.attr('class', 'sja_menuoption')
 			.on('click', () => {
 				tk.tip2.hide()
@@ -3110,7 +3116,7 @@ function plot_partition(plot, data) {
 									.clear()
 									.showunder(event.target)
 									.d.append('div')
-									.html(b.samplecount + ' <span style="font-size:.7em">' + term.name + '</span>')
+									.html(b.samplecount + ' <span style="font-size:.7em">' + escapeHtml(term.name) + '</span>')
 							})
 							.on('mouseout', () => {
 								box.attr('fill', b.color)
