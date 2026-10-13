@@ -7,7 +7,7 @@ or run the whole unit suite (as CI does):
   cd proteinpaint/server && npm run test:unit
 *********************************************/
 import tape from 'tape'
-import { floodCatch, getFloodKey } from '../validator.ts'
+import { floodCatch, getFloodKey, sweepFloodTracker } from '../validator.ts'
 
 function getReq(ip: string, headers: { [k: string]: string } = {}) {
 	return { ip, get: (name: string) => headers[name.toLowerCase()] }
@@ -61,5 +61,18 @@ tape('floodCatch() tracks each cf-connecting-ip separately', test => {
 		'should still throw for another client with the same req.ip'
 	)
 	test.deepEqual(otherRes.sent, [{ error: 'invalid' }], 'should send the error to another client with the same req.ip')
+	test.end()
+})
+
+tape('sweepFloodTracker()', test => {
+	const now = +new Date()
+	const before = sweepFloodTracker(now)
+	try {
+		floodCatch(getReq('192.0.2.12', { 'cf-connecting-ip': '198.51.100.9' }), getRes(), 'invalid')
+	} catch (_) {
+		// expected
+	}
+	test.equal(sweepFloodTracker(now), before + 1, 'should keep an entry that has not expired')
+	test.equal(sweepFloodTracker(now + 31000), 0, 'should delete the entries that have expired')
 	test.end()
 })
