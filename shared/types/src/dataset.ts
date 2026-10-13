@@ -2643,6 +2643,7 @@ type MassNav = {
 		filter?: MassNavTabEntry
 		/** shown as CHAT when the ds has queries.chat, otherwise as SEARCH */
 		chat?: MassNavTabEntry
+		user?: MassNavTabEntry
 	}
 	/** customize background color of active navigation tab */
 	activeColor?: string
