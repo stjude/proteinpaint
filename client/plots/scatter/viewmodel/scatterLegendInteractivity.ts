@@ -12,13 +12,25 @@ export class ScatterLegendInteractivity {
 		this.scatter = scatter
 	}
 
-	onLegendClick(chart, name, key, e, category) {
+	onLegendClick(_chart, name, key, e, category) {
 		const tw = this.scatter.config[name]
 		const isColorTW = name == 'colorTW'
+		// Get the set of legend keys that are currently rendered across all charts
+		const getLegendKeys = () => {
+			const keys = new Set<string>()
+			for (const scatterChart of this.scatter.model.charts) {
+				const legend = isColorTW ? scatterChart.colorLegend : scatterChart.shapeLegend
+				// Only include legends that are rendered
+				for (const [legendKey, info] of legend.entries()) if (info.sampleCount > 0) keys.add(legendKey)
+			}
+			return keys
+		}
+		const allKeys = getLegendKeys()
 		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 		// Only consider values that are not hidden by default (uncomputable values)
 		const userHidden = Object.keys(tw.q?.hiddenValues ?? {}).filter(k => !tw.term.values?.[k]?.uncomputable)
 		const hiddenCount = userHidden.length
+		const remainingVisible = [...allKeys].filter(key => !userHidden.includes(key))
 		if (hidden && hiddenCount == 1 && userHidden[0] == key) {
 			//show hidden category and skip menu
 			this.hideCategory(tw, key, false)
@@ -36,31 +48,32 @@ export class ScatterLegendInteractivity {
 				menu.hide()
 				this.dispatchConfig(name, tw)
 			})
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Show only')
-			.on('click', () => {
-				const map = name == 'colorTW' ? chart.colorLegend : chart.shapeLegend
-				for (const mapKey of map.keys())
-					this.hideCategory(
-						tw,
-						mapKey,
-						tw.term.type == 'geneVariant' && tw.q.type == 'values' ? !mapKey.startsWith(key) : mapKey != key
-					)
+		console.log(remainingVisible, key)
+		if (!(remainingVisible.length === 1 && remainingVisible[0] === key)) {
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Show only')
+				.on('click', () => {
+					for (const mapKey of allKeys)
+						this.hideCategory(
+							tw,
+							mapKey,
+							tw.term.type == 'geneVariant' && tw.q.type == 'values' ? !mapKey.startsWith(key) : mapKey != key
+						)
 
-				menu.hide()
-				this.dispatchConfig(name, tw)
-			})
-		if (hiddenCount > 1)
+					menu.hide()
+					this.dispatchConfig(name, tw)
+				})
+		}
+		if (hiddenCount >= 1)
 			div
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Show all')
 				.on('click', () => {
 					menu.hide()
-					const map = isColorTW ? chart.colorLegend : chart.shapeLegend
-					for (const mapKey of map.keys()) this.hideCategory(tw, mapKey, false)
+					for (const mapKey of allKeys) this.hideCategory(tw, mapKey, false)
 					this.dispatchConfig(name, tw)
 				})
 		if (isColorTW) {
