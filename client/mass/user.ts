@@ -137,7 +137,11 @@ export class MassUser {
 			.data(options)
 			.enter()
 			.append('button')
-			.style('margin-right', '10px')
+			// same style as the chart buttons in charts.ts
+			.style('margin', '10px')
+			.style('padding', '10px 15px')
+			.style('border-radius', '20px')
+			.style('border-color', '#ededed')
 			.attr('data-testid', (d: SessionOption) => `sjpp-session-btn-${d.label.toLowerCase().replace(/\s/g, '-')}`)
 			.attr('aria-label', (d: SessionOption) => d.title)
 			.attr('title', (d: SessionOption) => d.title)
