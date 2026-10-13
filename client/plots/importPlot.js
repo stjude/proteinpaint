@@ -156,6 +156,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'summary':
 			return await import(`./summary.ts`)
 
+		case 'sunburst':
+			return await import('./sunburst/sunburst.ts')
+
 		case 'swimmer':
 			return await import('./swimmer.ts')
 
