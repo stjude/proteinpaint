@@ -5,6 +5,7 @@ import * as helpers from '../../../test/front.helpers.js'
 Tests:
 	- Render rings of a sample-level and a patient-level term
 	- Select wedges and create a group
+	- Create a group with the plot filter
 	- Edit rings in the Rings box
 	- Pass a changed filter to the Rings box pills
 	- Select the wedge at the centre
@@ -120,11 +121,47 @@ tape('Select wedges and create a group', test => {
 		test.equal(groups[0].name, `${ALL} or Hodgkin lymphoma`, 'Should name the group after the selected wedges')
 		test.equal(groups[0].filter.join, 'or', 'Should join the wedges by "or"')
 		test.deepEqual(
-			groups[0].filter.lst.map(f => f.lst[0].tvs.values.map(v => v.key)),
+			groups[0].filter.lst.map(f => f.tvs.values.map(v => v.key)),
 			[[ALL], ['Hodgkin lymphoma']],
 			'Should select each wedge by its diagnosis group'
 		)
 		test.equal(inner.selected.size, 0, 'Should clear the selection once the group is created')
+		if (test['_ok']) inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Create a group with the plot filter', test => {
+	test.timeoutAfter(10000)
+	const sexTvs = { type: 'tvs', tvs: { term: { id: 'sex', type: 'categorical', name: 'Sex' }, values: [{ key: '1' }] } }
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'sunburst',
+					twLst: [{ id: 'diaggrp' }],
+					filter: { type: 'tvslst', join: '', in: true, lst: [sexTvs] }
+				}
+			]
+		},
+		sunburst: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(sunburst) {
+		sunburst.on('postRender.test', null)
+		const inner = sunburst.Inner
+		const all = getWedge(sunburst, ALL)
+		all.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+		test.equal(inner.selected.size, 1, 'Should select an outermost wedge on click')
+		inner.dom.sel.body.select('[data-testid=sjpp-sunburst-create-group]').node().click()
+		const groups = await waitFor(() => inner.app.getState().groups?.length && inner.app.getState().groups)
+		const f = groups[0].filter
+		test.equal(f.join, 'and', 'Should join the plot filter and the wedge by "and"')
+		test.deepEqual(
+			f.lst.map(item => item.tvs.term.id).sort(),
+			['diaggrp', 'sex'],
+			'Should select the group by the plot filter and the wedge category'
+		)
 		if (test['_ok']) inner.app.destroy()
 		test.end()
 	}

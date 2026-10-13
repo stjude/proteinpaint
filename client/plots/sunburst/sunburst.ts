@@ -5,7 +5,7 @@ import { select } from 'd3-selection'
 import { escapeHtml, capitalizeFirstLetter } from '#dom'
 import { getCombinedTermFilter, getNormalRoot } from '#filter'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
-import { addNewGroup } from '#mass/groups'
+import { addNewGroup, getGroupFilterOfConditions } from '#mass/groups'
 import type { SunburstRequest, SunburstResponse } from '#types'
 import {
 	SunburstRenderer,
@@ -438,14 +438,16 @@ class Sunburst extends PlotBase implements RxComponent {
 		}
 	}
 
-	/** one group of the union of the selected wedges, added to the GROUPS tab */
+	/** one group of the union of the selected wedges, added to the GROUPS tab; the group also has the
+	 *  plot's own filter, which the counts are of. The global filter is joined where the group is used */
 	createGroup() {
 		const paths = this.selectedPaths()
 		if (!paths.length) return
 		try {
 			const name = selectionName(paths)
 			const groups = this.app.getState().groups || []
-			addNewGroup(this.app, selectionFilter(paths, this.twLst), groups, name)
+			const filter = getGroupFilterOfConditions([this.state.config.filter, selectionFilter(paths, this.twLst)])
+			addNewGroup(this.app, filter, groups, name)
 			this.selected.clear()
 			this.createdNote = `Group "${name}" added; find it in the GROUPS tab.`
 			this.refreshSelection()
