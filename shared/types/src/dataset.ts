@@ -2633,14 +2633,16 @@ export type Cohort = {
 type MassNav = {
 	/** Customization for the tabs*/
 	tabs?: {
-		/** supported keys: about, charts, groups, filter
+		/** supported keys: about, charts, groups, filter, chat
 		invalid key is ignored
-		when dslabel is too long to show in about tab middle row or to define alternative label, 
+		when dslabel is too long to show in about tab middle row or to define alternative label,
 		do .tabs:{about:{mid:'alt label'}} */
 		about?: MassNavAboutTabEntry
 		charts?: MassNavTabEntry
 		groups?: MassNavTabEntry
 		filter?: MassNavTabEntry
+		/** shown as CHAT when the ds has queries.chat, otherwise as SEARCH */
+		chat?: MassNavTabEntry
 	}
 	/** customize background color of active navigation tab */
 	activeColor?: string
