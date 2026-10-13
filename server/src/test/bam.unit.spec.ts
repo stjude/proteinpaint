@@ -1,10 +1,10 @@
 /********************************************
-Unit Test for parse_align_output and may_trimstacks (server/src/bam.js)
+Unit Test for parse_align_output, get_partstack and may_trimstacks (server/src/bam.js)
 Run with:  node server/src/test/bam.unit.spec.ts
 *********************************************/
 
 import tape from 'tape'
-import { parse_align_output, may_trimstacks } from '../bam.js'
+import { parse_align_output, get_partstack, may_trimstacks } from '../bam.js'
 
 tape('bam.js - parse_align_output', async t => {
 	const multiSeqClustal =
@@ -42,6 +42,29 @@ tape('bam.js - parse_align_output', async t => {
 		t.equal(result.read_count, 5, 'read_count should be 5')
 	} catch (err: any) {
 		t.fail(`Failed to parse the output of alignment: ${err.message}`)
+	}
+	t.end()
+})
+
+tape('bam.js - get_partstack', t => {
+	t.equal(get_partstack({}), undefined, 'should return undefined without a stack range')
+	t.deepEqual(get_partstack({ stackstart: 0, stackstop: 0 }), { start: 0, stop: 0 }, 'should accept a stop of 0')
+	t.deepEqual(get_partstack({ stackstart: '30', stackstop: '90' }), { start: 30, stop: 90 }, 'should convert strings')
+	const invalid = [
+		[{ stackstart: 'abc', stackstop: 60 }, '.stackstart not integer'],
+		[{ stackstart: 0, stackstop: 'abc' }, '.stackstop not integer'],
+		[{ stackstart: 0.5, stackstop: 60 }, '.stackstart not integer'],
+		[{ stackstart: 0, stackstop: Infinity }, '.stackstop not integer'],
+		[{ stackstart: 0 }, '.stackstop missing'],
+		[{ stackstop: 60 }, '.stackstart missing'],
+		[{ stackstart: 60, stackstop: 0 }, '.stackstart greater than .stackstop']
+	]
+	for (const [query, message] of invalid) {
+		t.throws(
+			() => get_partstack(query),
+			new RegExp(message.replace(/\./g, '\\.')),
+			`should throw ${message} for ${JSON.stringify(query)}`
+		)
 	}
 	t.end()
 })

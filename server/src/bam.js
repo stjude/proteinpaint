@@ -748,6 +748,19 @@ async function getFilefullpathOrUrl(req) {
 	return [_file, dir]
 }
 
+export function get_partstack(query) {
+	// returns the requested stack range, or undefined when not in partstack mode
+	if (query.stackstart == null && query.stackstop == null) return
+	if (query.stackstart == null) throw '.stackstart missing'
+	if (query.stackstop == null) throw '.stackstop missing'
+	const start = Number(query.stackstart),
+		stop = Number(query.stackstop)
+	if (!Number.isInteger(start)) throw '.stackstart not integer'
+	if (!Number.isInteger(stop)) throw '.stackstop not integer'
+	if (start > stop) throw '.stackstart greater than .stackstop'
+	return { start, stop }
+}
+
 async function get_q(genome, req) {
 	// validate regions before any samtools process is launched (quickcheck below)
 	utils.validateRglst({ rglst: req.query.regions }, genome)
@@ -830,17 +843,9 @@ async function get_q(genome, req) {
 		if (Number.isNaN(q.sv.startB)) throw 'sv.startB not integer'
 	}
 
-	if (Number.isFinite(Number(req.query.stackstart))) {
+	q.partstack = get_partstack(req.query)
+	if (q.partstack) {
 		// to be assigned to the read group being modified
-		if (!req.query.stackstop) throw '.stackstop missing'
-		q.partstack = {
-			start: Number(req.query.stackstart),
-			stop: Number(req.query.stackstop)
-		}
-
-		if (!Number.isInteger(q.partstack.start)) throw '.stackstart not integer'
-		if (!Number.isInteger(q.partstack.stop)) throw '.stackstop not integer'
-		if (q.partstack.start > q.partstack.stop) throw '.stackstart greater than .stackstop'
 		if (!req.query.grouptype) throw '.grouptype required for partstack'
 		q.grouptype = req.query.grouptype
 	}
