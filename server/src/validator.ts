@@ -30,8 +30,8 @@ function defaultValidator(query) {
 
 const byIpAddr = new Map()
 const floodWindow = 30000
-// sweep the tracker when it has more entries than this, at most once per floodWindow
-const maxTrackedClients = 1000
+// the tracker has at most this many entries; when it is full, it is swept at most once per floodWindow
+export const maxTrackedClients = 1000
 let lastSweepTime = 0
 
 // an entry is otherwise deleted only when the same client has another error after floodWindow,
@@ -52,12 +52,13 @@ export function getFloodKey(req) {
 
 export function floodCatch(req, res, error) {
 	const time = +new Date()
-	if (byIpAddr.size > maxTrackedClients && time - lastSweepTime > floodWindow) sweepFloodTracker(time)
+	if (byIpAddr.size >= maxTrackedClients && time - lastSweepTime > floodWindow) sweepFloodTracker(time)
 	const key = getFloodKey(req)
 	let entry = byIpAddr.get(key)
 	if (!entry) {
 		entry = { time, count: 0 }
-		byIpAddr.set(key, entry)
+		// when the tracker is full, a new client is not tracked, and is handled like one with no recent errors
+		if (byIpAddr.size < maxTrackedClients) byIpAddr.set(key, entry)
 	}
 	if (time - entry.time > floodWindow) {
 		// purge this remote IP address from the tracker
