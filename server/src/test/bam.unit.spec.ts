@@ -60,11 +60,13 @@ tape('bam.js - get_partstack', t => {
 		[{ stackstart: 60, stackstop: 0 }, '.stackstart greater than .stackstop']
 	]
 	for (const [query, message] of invalid) {
-		t.throws(
-			() => get_partstack(query),
-			new RegExp(message.replace(/\./g, '\\.')),
-			`should throw ${message} for ${JSON.stringify(query)}`
-		)
+		let thrown
+		try {
+			get_partstack(query)
+		} catch (e) {
+			thrown = e
+		}
+		t.equal(thrown, message, `should throw ${message} for ${JSON.stringify(query)}`)
 	}
 	t.end()
 })
