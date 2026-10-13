@@ -838,8 +838,9 @@ async function get_q(genome, req) {
 			stop: Number(req.query.stackstop)
 		}
 
-		if (Number.isNaN(q.partstack.start)) throw '.stackstart not integer'
-		if (Number.isNaN(q.partstack.stop)) throw '.stackstop not integer'
+		if (!Number.isInteger(q.partstack.start)) throw '.stackstart not integer'
+		if (!Number.isInteger(q.partstack.stop)) throw '.stackstop not integer'
+		if (q.partstack.start > q.partstack.stop) throw '.stackstart greater than .stackstop'
 		if (!req.query.grouptype) throw '.grouptype required for partstack'
 		q.grouptype = req.query.grouptype
 	}
@@ -2315,16 +2316,18 @@ function stack_templates(group, q, templates) {
 	return templates
 }
 
-function may_trimstacks(group, templates, q) {
+export function may_trimstacks(group, templates, q) {
 	if (!group.partstack) return templates
-	// should be a positive integer
-	const lst = templates.filter(i => i.y >= group.partstack.start && i.y <= group.partstack.stop) //group.
-	lst.forEach(i => (i.y -= group.partstack.start))
+	// keep the range within the stacks that exist
+	const start = Math.max(0, group.partstack.start)
+	const stop = Math.min(group.partstack.stop, group.stacks.length - 1)
+	const lst = templates.filter(i => i.y >= start && i.y <= stop) //group.
+	lst.forEach(i => (i.y -= start))
 	//group.templates = lst
 	templates = lst
 	group.stacks = []
 	//console.log('templates:', templates)
-	for (let i = group.partstack.start; i <= group.partstack.stop; i++) {
+	for (let i = start; i <= stop; i++) {
 		group.stacks.push(0)
 	}
 	group.returntemplatebox = [] // always set this
