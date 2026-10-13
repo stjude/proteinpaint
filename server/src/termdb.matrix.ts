@@ -201,12 +201,16 @@ function validateArg(q, ds) {
 	}
 	if (q.mapChildren2Root !== undefined && typeof q.mapChildren2Root != 'boolean')
 		throw 'mapChildren2Root is not boolean'
-	// a single cell term has no parent level id
-	if (q.mapChildren2Root && ds.cohort.termdb?.hasSampleAncestry && q.terms.some(tw => isSingleCellTerm(tw.term))) {
+	if (q.mapChildren2Root && ds.cohort.termdb?.hasSampleAncestry) {
 		const rootSampleType: any = Object.values(ds.cohort.termdb.sampleTypes || {}).find(
 			(st: any) => st.parent_id === null
 		)
-		throw `${rootSampleType?.name || 'root sample'} level is not supported with single cell data`
+		const rootName = rootSampleType?.name || 'root sample'
+		// a single cell term has no parent level id
+		if (q.terms.some(tw => isSingleCellTerm(tw.term))) throw `${rootName} level is not supported with single cell data`
+		// a snplst/snplocus value is {snpid: genotype}, which mayMapChildren2Root() cannot merge
+		if (q.terms.some(tw => tw.term?.type == 'snplst' || tw.term?.type == 'snplocus'))
+			throw `${rootName} level is not supported with snplst/snplocus data`
 	}
 	if (q.filter0) {
 		if (typeof q.filter0 == 'string') q.filter0 = JSON.parse(q.filter0)

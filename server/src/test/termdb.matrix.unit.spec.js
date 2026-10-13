@@ -1382,6 +1382,13 @@ tape('getData: mapChildren2Root returns one entry per root sample', async t => {
 		'patient level is not supported with single cell data',
 		'a patient level request with a single cell term fails at argument validation, before any data is queried'
 	)
+	const snpTw = { $id: 'snps', term: { type: 'snplst', snps: [] }, q: {} }
+	const snp = await getData({ terms: [...terms(), snpTw], mapChildren2Root: true }, tdb.ds)
+	t.equal(
+		snp.error,
+		'patient level is not supported with snplst/snplocus data',
+		'a patient level request with a snplst term fails at argument validation, before any data is queried'
+	)
 	t.end()
 })
 
