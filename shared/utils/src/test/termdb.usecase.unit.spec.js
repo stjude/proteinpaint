@@ -2,6 +2,7 @@ import tape from 'tape'
 import { isUsableTerm } from '../termdb.usecase.js'
 
 /* Tests
+- sunburst ring
 - barchart term
 - barchart overlay
 - barchart term0
@@ -300,6 +301,41 @@ tape('samplelst term in the filter use case', test => {
 		isUsableTerm(byFilter, { target: 'barchart', detail: 'term' }),
 		new Set(['plot']),
 		'still allows a samplelst term whose groups list no sample in a plot'
+	)
+	test.end()
+})
+
+tape('sunburst', function (test) {
+	const usecase = { target: 'sunburst' }
+	for (const type of ['categorical', 'integer', 'float'])
+		test.deepEqual(isUsableTerm({ type, isleaf: true }, usecase), new Set(['plot']), `should allow a ${type} ring`)
+	for (const type of ['multivalue', 'condition', 'survival', 'geneVariant', 'samplelst'])
+		test.deepEqual(isUsableTerm({ type, isleaf: true }, usecase), new Set(), `should not allow a ${type} ring`)
+	test.deepEqual(
+		isUsableTerm({ isleaf: false, child_types: ['survival', 'float'] }, usecase),
+		new Set(['branch']),
+		'should allow a branch with a categorical or numeric child'
+	)
+	test.deepEqual(
+		isUsableTerm({ isleaf: false, child_types: ['survival', 'condition'] }, usecase),
+		new Set(),
+		'should not allow a branch without a categorical or numeric child'
+	)
+	const limited = { target: 'sunburst', sampleTypes: ['1', '2'] }
+	test.deepEqual(
+		isUsableTerm({ type: 'categorical', isleaf: true, sample_type: 2 }, limited),
+		new Set(['plot']),
+		'should allow a term of a given sample type'
+	)
+	test.deepEqual(
+		isUsableTerm({ type: 'categorical', isleaf: true, sample_type: 3 }, limited),
+		new Set(),
+		'should not allow a term of another sample type'
+	)
+	test.deepEqual(
+		isUsableTerm({ type: 'categorical', isleaf: true }, limited),
+		new Set(['plot']),
+		'should allow a term without a sample type'
 	)
 	test.end()
 })
