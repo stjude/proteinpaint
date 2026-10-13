@@ -7,7 +7,7 @@ or run the whole unit suite (as CI does):
   cd proteinpaint/server && npm run test:unit
 *********************************************/
 import tape from 'tape'
-import { floodCatch, getFloodKey, sweepFloodTracker, maxTrackedClients } from '../validator.ts'
+import { floodCatch, getFloodKey, sweepFloodTracker, getFloodTrackerSize, maxTrackedClients } from '../validator.ts'
 
 function getReq(ip: string, headers: { [k: string]: string } = {}) {
 	return { ip, get: (name: string) => headers[name.toLowerCase()] }
@@ -86,5 +86,42 @@ tape('floodCatch() does not track more than maxTrackedClients', test => {
 		}
 	}
 	test.equal(sweepFloodTracker(0), maxTrackedClients, 'should not add a new client when the tracker is full')
+	test.end()
+})
+
+tape('floodCatch() sweeps a full tracker at most once per window', test => {
+	const realNow = Date.now
+	// start after any entry from the tests above has expired
+	const start = realNow() + 60000
+	let time = start
+	Date.now = () => time
+	const addClients = (prefix: string, n: number) => {
+		for (let i = 0; i < n; i++) {
+			try {
+				floodCatch(getReq('192.0.2.14', { 'cf-connecting-ip': `${prefix}-${i}` }), getRes(), 'invalid')
+			} catch (_) {
+				// expected
+			}
+		}
+	}
+	try {
+		test.equal(sweepFloodTracker(start), 0, 'should start with an empty tracker')
+		addClients('a', maxTrackedClients)
+		test.equal(getFloodTrackerSize(), maxTrackedClients, 'should fill the tracker')
+
+		// the entries have expired, but the last sweep was within the window
+		sweepFloodTracker(start + 20000)
+		time = start + 31000
+		addClients('b', 1)
+		test.equal(getFloodTrackerSize(), maxTrackedClients, 'should not sweep again within the window')
+
+		// the last sweep was more than a window ago
+		time = start + 51000
+		addClients('c', 1)
+		test.equal(getFloodTrackerSize(), 1, 'should delete the expired entries and track the new client')
+	} finally {
+		Date.now = realNow
+	}
+	sweepFloodTracker(start + 120000)
 	test.end()
 })

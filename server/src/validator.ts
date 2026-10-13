@@ -36,11 +36,15 @@ let lastSweepTime = 0
 
 // an entry is otherwise deleted only when the same client has another error after floodWindow,
 // so delete the expired entries of clients that did not; returns the number of tracked clients
-export function sweepFloodTracker(time = +new Date()) {
+export function sweepFloodTracker(time = Date.now()) {
 	for (const [key, entry] of byIpAddr) {
 		if (time - entry.time > floodWindow) byIpAddr.delete(key)
 	}
 	lastSweepTime = time
+	return byIpAddr.size
+}
+
+export function getFloodTrackerSize() {
 	return byIpAddr.size
 }
 
@@ -51,7 +55,7 @@ export function getFloodKey(req) {
 }
 
 export function floodCatch(req, res, error) {
-	const time = +new Date()
+	const time = Date.now()
 	if (byIpAddr.size >= maxTrackedClients && time - lastSweepTime > floodWindow) sweepFloodTracker(time)
 	const key = getFloodKey(req)
 	let entry = byIpAddr.get(key)
