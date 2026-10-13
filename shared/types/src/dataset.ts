@@ -2108,6 +2108,14 @@ if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsi
 }
 
 /*** type of ds.cohort.termdb{} ***/
+export type SunburstConfig = {
+	/** default rings, inside out: categorical terms, or numeric terms binned by their default or
+	 *  given q. Users can add, replace, edit and remove rings in the chart's Rings box */
+	twLst: { id: string; q?: any }[]
+	/** base colour per first-ring category key, ahead of the term's own colours and the palette */
+	colors?: { [key: string]: string }
+}
+
 export type Termdb = {
 	/** Terms */
 	termIds?: TermIds
@@ -2335,6 +2343,9 @@ keep this setting here for reason of:
 	/** (client-side) hide: true omits the per-plot sample filter in every plot header. for a ds whose
 	plots are driven by sample sets rather than user-defined sample groups */
 	plotFilter?: { hide?: boolean; disabledMessage?: string }
+	/** (client-side) enables the sunburst chart: zoomable rings of nested sample counts, one dictionary
+	term per ring */
+	sunburst?: SunburstConfig
 	/** (client-side) if true, the genome browser recreates its block on track change rather than
 	updating tracks in the existing block instance */
 	gbRecreateBlock?: boolean

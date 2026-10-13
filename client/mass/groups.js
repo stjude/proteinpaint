@@ -1547,9 +1547,9 @@ function mayAddMatrixMenuItems(div, text, tip, samplelstTW, id, parent, state, o
 	itemDiv.insert('div').html('›').style('float', 'right')
 }
 
-export function addNewGroup(app, filter, groups) {
+export function addNewGroup(app, filter, groups, baseName = 'New group') {
 	groups = JSON.parse(JSON.stringify(groups))
-	let name = 'New group'
+	let name = baseName
 	let i = 0
 	while (1) {
 		const name2 = name + (i == 0 ? '' : ' ' + i)

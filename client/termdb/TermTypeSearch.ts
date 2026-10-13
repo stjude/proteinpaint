@@ -709,6 +709,9 @@ export function getAllowedTermTypesForUseCase(state, app) {
 			if (detail == 'term') continue
 		}
 
+		// a ring is the categories or bins of a dictionary term, which termdb/sunburst gets from the db
+		if (target == 'sunburst' && termTypeGroup != DICTIONARY_VARIABLES) continue
+
 		if (target == 'dataDownload') {
 			if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
 		}

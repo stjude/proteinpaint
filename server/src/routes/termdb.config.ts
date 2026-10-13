@@ -150,6 +150,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.limitDictTermSamplesToMutated) c.limitDictTermSamplesToMutated = tdb.limitDictTermSamplesToMutated
 	if (tdb.hidePlotDocumentation) c.hidePlotDocumentation = tdb.hidePlotDocumentation
 	if (tdb.plotFilter) c.plotFilter = tdb.plotFilter
+	if (tdb.sunburst) c.sunburst = tdb.sunburst
 	if (tdb.gbRecreateBlock) c.gbRecreateBlock = tdb.gbRecreateBlock
 	if (tdb.sampleTypeTerms) c.sampleTypeTerms = tdb.sampleTypeTerms
 	if (tdb.sampleTypesByTerms) c.sampleTypesByTerms = tdb.sampleTypesByTerms

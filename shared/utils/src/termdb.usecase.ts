@@ -329,6 +329,19 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 			return uses
 		}
 
+		case 'sunburst': {
+			/* a ring is the categories of a categorical term or the bins of a numeric one. one sample sits in
+			one wedge per ring, so multivalue is excluded; other types have no plain categories.
+			usecase.sampleTypes, when given, limits the terms to those sample types (the rings' line of
+			descent, e.g. patient and primary sample): no value maps between sibling sample types */
+			const allowed = ['categorical', 'integer', 'float']
+			const types: string[] | undefined = usecase.sampleTypes
+			if (types && term.sample_type != null && !types.includes(String(term.sample_type))) return uses
+			if (allowed.includes(term.type)) uses.add('plot')
+			if (hasChildTypes(child_types, allowed)) uses.add('branch')
+			return uses
+		}
+
 		case 'dictionary':
 			// dictionary browsing must show every graphable term, including multivalue
 			if (graphableTypes.has(term.type)) uses.add('plot')

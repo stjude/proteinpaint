@@ -337,6 +337,14 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
+			label: 'Sunburst',
+			clickTo: self.prepPlot,
+			chartType: 'sunburst',
+			config: {
+				chartType: 'sunburst'
+			}
+		},
+		{
 			label: 'Swimmer Plot',
 			clickTo: self.prepPlot,
 			chartType: 'swimmer',
