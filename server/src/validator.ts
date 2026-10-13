@@ -30,16 +30,23 @@ function defaultValidator(query) {
 
 const byIpAddr = new Map()
 
+// use the client address from the cf-connecting-ip request header when present, otherwise req.ip
+export function getFloodKey(req) {
+	const cfIp = req.get?.('cf-connecting-ip')
+	return (typeof cfIp == 'string' && cfIp.trim()) || req.ip
+}
+
 export function floodCatch(req, res, error) {
 	const time = +new Date()
-	let entry = byIpAddr.get(req.ip)
+	const key = getFloodKey(req)
+	let entry = byIpAddr.get(key)
 	if (!entry) {
 		entry = { time, count: 0 }
-		byIpAddr.set(req.ip, entry)
+		byIpAddr.set(key, entry)
 	}
 	if (time - entry.time > 30000) {
 		// purge this remote IP address from the tracker
-		byIpAddr.delete(req.ip)
+		byIpAddr.delete(key)
 	} else if (entry.count > 10) {
 		res.send({ error: 'busy' })
 		// no need to throw and clutter the err log
