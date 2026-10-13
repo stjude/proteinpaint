@@ -61,6 +61,7 @@ class MassAiChatBot implements RxComponent {
 			text = 'Ask a question'
 			height = '200px'
 		}
+		const maxBubbleHeight = window.innerHeight * 0.8 // A cap so the chat box can never grow past 80% of the visible screen, always leaving at least 20% of the viewport for everything else.
 		this.dom = {
 			tip: new Menu({ padding: '5px' }),
 			div: this.opts.subheader,
@@ -70,13 +71,12 @@ class MassAiChatBot implements RxComponent {
 				.attr('class', 'sjpp_show_scrollbar')
 				.style('margin', '5px 20px 0px 20px')
 				.style('height', height)
-				.style('max-height', '200px')
+				.style('max-height', `${maxBubbleHeight}px`)
 				.style('overflow', 'auto')
 				.style('scroll-behavior', 'smooth')
 		}
 		this.dom.bubbleContent = this.dom.bubbleDiv.append('div')
 		let manualFloor = 200 // starts at the default; becomes the user's own height once they drag
-		const maxBubbleHeight = window.innerHeight * 0.8 // A cap so the chat box can never grow past 80% of the visible screen, always leaving at least 20% of the viewport for everything else.
 
 		new ResizeObserver(() => {
 			const contentHeight = this.dom.bubbleContent.node().scrollHeight
