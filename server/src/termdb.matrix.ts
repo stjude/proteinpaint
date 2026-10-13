@@ -453,9 +453,13 @@ async function getSampleData(q, ds) {
 	// plain bySampleId[sid] = ref assignment with an object ref would reassign bySampleId's own
 	// prototype instead of creating a real entry
 	const bySampleId = Object.create(null)
-	for (const sid in samples) {
-		const ref = id2sampleRef(samples[sid]?.sampleId ?? sid, q.ds)
-		if (ref) bySampleId[sid] = ref
+	// skipped when mayMapChildren2Root() will replace them with the refs of the root samples;
+	// the same condition as it uses to map the samples in mayMapChildren2Root
+	if (!(q.mapChildren2Root && ds.cohort.termdb?.hasSampleAncestry)) {
+		for (const sid in samples) {
+			const ref = id2sampleRef(samples[sid]?.sampleId ?? sid, q.ds)
+			if (ref) bySampleId[sid] = ref
+		}
 	}
 
 	// determine the sample type

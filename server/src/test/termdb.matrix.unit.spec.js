@@ -1450,11 +1450,34 @@ tape('getData: mapChildren2Root returns one entry per root sample', async t => {
 		{ $id: 'agedx', term: termjson('agedx'), q: { mode: 'continuous' } }
 	]
 	const bySample = await getData({ terms: terms() }, tdb.ds)
-	const byRoot = await getData({ terms: terms(), mapChildren2Root: true }, tdb.ds)
+	// record the ids that refs are made for
+	const tq = tdb.ds.cohort.termdb.q
+	const id2sampleRefs = tq.id2sampleRefs
+	const refIds = new Set()
+	tq.id2sampleRefs = id => {
+		refIds.add(String(id))
+		return id2sampleRefs(id)
+	}
+	let byRoot
+	try {
+		byRoot = await getData({ terms: terms(), mapChildren2Root: true }, tdb.ds)
+	} finally {
+		tq.id2sampleRefs = id2sampleRefs
+	}
 	t.notOk(byRoot.error, 'no error')
 	const id2root = tdb.ds.cohort.termdb.q.id2rootSampleId
 	const rootIds = new Set(Object.keys(bySample.samples).map(id => String(id2root(id))))
 	t.deepEqual(Object.keys(byRoot.samples).sort(), [...rootIds].sort(), 'the entries are the root samples')
+	t.deepEqual(
+		Object.keys(byRoot.refs.bySampleId).sort(),
+		[...rootIds].sort(),
+		'the sample refs are of the root samples'
+	)
+	t.deepEqual(
+		[...refIds].sort(),
+		[...rootIds].sort(),
+		'no refs are made for the child samples, which would be replaced'
+	)
 	const childAges = Object.keys(bySample.samples)
 		.filter(id => id2root(id) == 102)
 		.map(id => bySample.samples[id].agedx.value)
