@@ -129,8 +129,8 @@ export class ColorScaleMenu {
 				}
 				if (this.setColorsCallback) {
 					const colorRow = table.append('tr').style('text-align', 'center')
-					this.appendColorInput(colorRow.append('td').style('padding-right', '10px'), 0)
-					this.appendColorInput(colorRow.append('td'), this.colors.length - 1)
+					this.appendColorInput(colorRow.append('td').style('padding-right', '10px'), 0, 'sjpp-color-input-min')
+					this.appendColorInput(colorRow.append('td'), this.colors.length - 1, 'sjpp-color-input-max')
 				}
 				showTooltip = false
 			})
@@ -149,9 +149,10 @@ export class ColorScaleMenu {
 			})
 	}
 
-	appendColorInput = (td: Td, idx: number) => {
+	appendColorInput = (td: Td, idx: number, testId = 'sjpp-color-input') => {
 		const colorInput = td
 			.append('input')
+			.attr('data-testid', testId)
 			.style('width', '60px')
 			.attr('type', 'color')
 			//Rm default color input styles
