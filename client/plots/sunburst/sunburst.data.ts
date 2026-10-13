@@ -6,8 +6,9 @@ Data helpers of the term-based sunburst, without any DOM code: the termdb/sunbur
 tree, and selected wedges as a group filter. Kept apart from sunburst.ts so they can be unit-tested directly.
 */
 
-/** a wedge of the term sunburst. `id` names it by its path of ring $id=key pairs, so a selection can
- *  survive a re-fetch; `ring`, `key` and `category` say which ring category it is */
+/** a wedge of the term sunburst. `id` names it by its path of [ring $id, key] pairs, as JSON so that no
+ *  category key can make two paths alike, and a selection can survive a re-fetch; `ring`, `key` and
+ *  `category` say which ring category it is */
 export type TermSunNode = SunNode & {
 	id: string
 	ring: number
@@ -28,18 +29,18 @@ export function buildTermTree(
 	rootName: string,
 	colors?: { [key: string]: string }
 ): TermSunRoot {
-	const convert = (n: SunburstNode, ring: number, parentId: string): TermSunNode => {
+	const convert = (n: SunburstNode, ring: number, parentPath: string[][]): TermSunNode => {
 		const tw = twLst[ring]
 		const category = res.rings[ring].categories[n.key] || { label: n.key }
-		const id = `${parentId}${parentId ? '|' : ''}${tw.$id}=${n.key}`
-		const children = (n.children || []).map(c => convert(c, ring + 1, id))
+		const path = [...parentPath, [tw.$id, n.key]]
+		const children = (n.children || []).map(c => convert(c, ring + 1, path))
 		const node: TermSunNode = {
 			name: category.label,
 			level: tw.term.name,
 			// d3 adds the children to a node's own value, so it holds only the samples that end here
 			value: n.count - children.reduce((s, c) => s + c.count, 0),
 			count: n.count,
-			id,
+			id: JSON.stringify(path),
 			ring,
 			key: n.key,
 			category
@@ -49,7 +50,7 @@ export function buildTermTree(
 		if (children.length) node.children = children
 		return node
 	}
-	return { name: rootName, value: 0, count: res.total, children: res.nodes.map(n => convert(n, 0, '')) }
+	return { name: rootName, value: 0, count: res.total, children: res.nodes.map(n => convert(n, 0, [])) }
 }
 
 /** one ring category as a filter entry: the tvs of the ring's term, or a filter group's own filter */

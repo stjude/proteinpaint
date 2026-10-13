@@ -66,10 +66,21 @@ tape('buildTermTree()', function (test) {
 	test.equal(b.count, 7, 'should keep the wedge sample count')
 	test.equal(b.value, 2, 'should give a wedge only the samples ending there as its own value')
 	test.equal(b.children![0].value, 5, 'should give a leaf all its samples')
-	test.equal(b.children![0].id, 'dx=B|age=<10', 'should id a wedge by its path of $id=key pairs')
+	test.equal(b.children![0].id, '[["dx","B"],["age","<10"]]', 'should id a wedge by its path of [$id, key] pairs')
 	test.equal(b.color, '#00f', "should use the term's own category colour")
 	test.equal(t.color, '#f00', 'should let a dataset first-ring colour win')
 	test.equal(t.children, undefined, 'should not add children to a wedge without any')
+
+	// a first-ring key that reads like a path of two rings
+	const res = getResponse()
+	const key = 'B|age=<10'
+	res.rings[0].categories[key] = { label: key, tvs: { values: [{ key }] } }
+	res.nodes.push({ key, count: 1 })
+	const ids = buildTermTree(res, twLst, 'All samples').children.flatMap(n => [
+		n.id,
+		...(n.children || []).map(c => c.id)
+	])
+	test.equal(new Set(ids).size, ids.length, 'should give a distinct id to a wedge whose key contains | and =')
 	test.end()
 })
 
