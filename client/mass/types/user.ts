@@ -15,6 +15,21 @@ export type MassUserOpts = {
 export type MassUserDom = {
 	/** Shows the user authorization info. Only rendered when the dataset requires authorization */
 	authDiv: Div
-	/** Holds the session save/open/download controls */
+	/** Holds the session open/save/share/delete controls */
 	sessionDiv: Div
+	/** Holds the session option buttons */
+	optionsDiv: Div
+	/** Where the selected session option renders. Replaces the popup menu of the former session button */
+	contentDiv: Div
+	/** Confirmation tip for the copied session link */
+	copytip: any
+}
+
+/** Where a session is cached: in this browser's localStorage or on the server */
+export type SessionLocation = 'browser' | 'server'
+
+export type SessionOption = {
+	label: string
+	title: string
+	callback: () => void | Promise<any>
 }

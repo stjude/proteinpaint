@@ -2,7 +2,6 @@ import { getCompInit, multiInit } from '#rx'
 import { recoverInit } from '../rx/src/recover'
 import { chartsInit } from './charts'
 import { groupsInit } from './groups'
-import { sessionBtnInit } from './sessionBtn'
 import { aboutInit } from './about.ts'
 import { chatInit } from './chat.ts'
 import { userInit } from './user'
@@ -121,12 +120,6 @@ class TdbNav {
 				getState: (appState: any) => appState,
 				reactsTo: (action: any) => action.type != 'plot_edit',
 				maxHistoryLen: 5
-			}),
-			sessionBtn: sessionBtnInit({
-				app: this.app,
-				button: this.dom.saveBtn,
-				massSessionDuration: this.opts.massSessionDuration,
-				sessionDaysLeft: this.app.opts.sessionDaysLeft || null
 			}),
 			about: aboutInit({
 				app: this.app,
@@ -455,14 +448,6 @@ function setRenderers(self: any): void {
 		self.dom.tds = table.selectAll('td')
 		self.subheaderKeys = self.tabs.map(d => d.subheader)
 
-		self.dom.saveBtn = self.dom.sessionDiv
-			.append('button')
-			.attr('data-testid', 'sjpp-nav-session-btn')
-			.style('margin', '10px')
-			.text('Session ▼')
-
-		//.on('click', self.getSessionUrl)
-
 		if (self.sessionDaysLeft != null) {
 			//Only show if called from `mass-session-id` URL
 			self.dom.fileBtn = self.dom.sessionDiv
@@ -495,7 +480,7 @@ function setRenderers(self: any): void {
 			.style('display', 'block')
 			.style('opacity', '0.65')
 			.html(
-				`<u>${self.sessionDaysLeft} days</u> left until this session is removed. Click the "Session ▼" button and select "Save" option to create a new one.`
+				`<u>${self.sessionDaysLeft} days</u> left until this session is removed. Open the user tab and select the "Save" option to create a new one.`
 			)
 	}
 

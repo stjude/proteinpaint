@@ -52,9 +52,9 @@ using annotation terms.
 
 The `chat` component is exposed as a tab by `nav`. Within its subheader, a user may interact with the chat bot to search for terms, create plots, and ask dataset-specific questions.
 
-### sessionBtn.js
+### user.ts
 
-This code handles saving, sharing, and recovery of MASS UI sessions.
+The `user` component is exposed as a tab by `nav`. The tab reads `USER` when the dataset requires authorization (`termdbConfig.requiredAuth`), otherwise `SESSION`. Within its subheader, it shows the sign-in status and handles saving, sharing, recovery, and deletion of MASS UI sessions.
 
 ## plot.js
 
