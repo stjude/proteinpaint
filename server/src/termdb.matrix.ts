@@ -124,9 +124,10 @@ export async function getData(q, ds, mapParent2Children?: boolean): Promise<any>
 		const data = await getSampleData(q, ds)
 		reconstituteCustomTermCollection(data, tcMappings)
 		resolveTermCollectionFractions(data, originalTerms)
+		const unmappedSampleIds = Object.keys(data.samples)
 		mayMapChildren2Root(data, { ...q, terms: originalTerms }, ds)
 
-		checkAccessToSampleData(data, ds, q)
+		checkAccessToSampleData(data, ds, q, unmappedSampleIds)
 
 		// get categories within same data request to avoid a separate
 		// getCategories() request, which can be time-consuming for
@@ -1660,8 +1661,9 @@ function mergeGeneVariantValues(values: any[]) {
 	data: return value of getSampleData()
 	ds: dataset object
 	q: req.query
+	unmappedSampleIds: sample ids before mayMapChildren2Root(), same as Object.keys(data.samples) when not mapped
 */
-function checkAccessToSampleData(data, ds, q) {
+function checkAccessToSampleData(data, ds, q, unmappedSampleIds: string[]) {
 	// handle the option to require a minimum sample size for data
 	if (!ds.cohort.termdb.checkAccessToSampleData) return
 	// quick check
@@ -1671,11 +1673,13 @@ function checkAccessToSampleData(data, ds, q) {
 	const hiddenIds = ds.cohort.termdb.hiddenIds
 	let rows
 	if (hiddenIds?.length) {
+		// Check both original and root sample IDs because hidden terms can be attached to either.
+		const lookupIds = [...new Set([...sampleIds, ...unmappedSampleIds])]
 		rows = ds.cohort.db.connection
 			.prepare(
 				sql`SELECT distinct value as name FROM anno_categorical WHERE term_id in (${sql.list(
 					hiddenIds
-				)}) and sample in (${sql.list(sampleIds)})`
+				)}) and sample in (${sql.list(lookupIds)})`
 			)
 			.all()
 	} else {

@@ -1392,6 +1392,45 @@ tape('getData: mapChildren2Root returns one entry per root sample', async t => {
 	t.end()
 })
 
+tape('getData: mapChildren2Root finds the values of a hidden term that annotates child samples', async t => {
+	await ensureOpenAuth()
+	const tdb = await init('termdb.test.ts')
+	server_init_db_queries(tdb.ds)
+	const termdb = tdb.ds.cohort.termdb
+	const termjson = id => structuredClone(termdb.q.termjsonByOneid(id))
+	const terms = () => [{ $id: 'agedx', term: termjson('agedx'), q: { mode: 'continuous' } }]
+	// in the test db, diaggrp annotates child samples and sex annotates patients
+	const childValues = new Set(
+		tdb.ds.cohort.db.connection
+			.prepare('SELECT distinct value FROM anno_categorical WHERE term_id=?')
+			.all('diaggrp')
+			.map(r => r.value)
+	)
+	const saved = { hiddenIds: termdb.hiddenIds, checkAccessToSampleData: termdb.checkAccessToSampleData }
+	let names
+	termdb.checkAccessToSampleData = (q, data) => {
+		if (data.names) names = data.names // the quick check, the detailed check has no names
+		return { canAccess: true }
+	}
+	try {
+		termdb.hiddenIds = ['diaggrp']
+		await getData({ terms: terms(), mapChildren2Root: true }, tdb.ds)
+		t.ok(names.length, 'the hidden term values of the child samples are found')
+		t.ok(
+			names.every(n => childValues.has(n)),
+			'the found names are values of the hidden term'
+		)
+
+		termdb.hiddenIds = ['sex']
+		names = undefined
+		await getData({ terms: terms(), mapChildren2Root: true }, tdb.ds)
+		t.ok(names.length, 'the hidden term values of the patients are still found')
+	} finally {
+		Object.assign(termdb, saved)
+	}
+	t.end()
+})
+
 tape('mayMapChildren2Root: keeps one object of member values for a numeric termCollection', t => {
 	// samples 11 and 12 are children of root 1, sample 21 of root 2
 	const root = { 11: 1, 12: 1, 21: 2 }
