@@ -22,6 +22,7 @@ export function getGeneDataTypes(ds: any): GeneDataTypeAvailability {
 		snvindel,
 		cnv,
 		svfusion,
+		pseudobulk: Boolean(ds.queries?.singleCell?.pseudobulk?.geneExpression),
 		// genome browser is offered whenever any genomic-alteration data type is available
 		genomeBrowser: snvindel || cnv || svfusion
 	}
@@ -61,7 +62,8 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 		datasetDataTypes.dnaMethylation ||
 		datasetDataTypes.snvindel ||
 		datasetDataTypes.cnv ||
-		datasetDataTypes.svfusion
+		datasetDataTypes.svfusion ||
+		datasetDataTypes.pseudobulk
 	const allGeneNames = prompt && hasGeneData ? searchGeneNames(genome, prompt) : []
 	const genesTotal = allGeneNames.length
 	const geneNames = allGeneNames.slice(0, MAX_GENE_MATCHES) // cap displayed genes; genesTotal reports the full count
