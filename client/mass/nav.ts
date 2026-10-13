@@ -5,6 +5,7 @@ import { groupsInit } from './groups'
 import { sessionBtnInit } from './sessionBtn'
 import { aboutInit } from './about.ts'
 import { chatInit } from './chat.ts'
+import { userInit } from './user'
 import { dofetch3 } from '#common/dofetch'
 import { Menu, icons as icon_functions } from '#dom'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
@@ -39,6 +40,7 @@ const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
 // const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
+const userTab = { top: 'USER', mid: '', btm: '', subheader: 'user' }
 
 export function getId(): string {
 	return idPrefix + '_' + id++
@@ -136,6 +138,12 @@ class TdbNav {
 			chat: chatInit({
 				app: this.app,
 				subheader: this.dom.subheader.chat
+			}),
+			user: userInit({
+				app: this.app,
+				subheader: this.dom.subheader.user,
+				massSessionDuration: this.opts.massSessionDuration,
+				sessionDaysLeft: this.app.opts.sessionDaysLeft || null
 			})
 		})
 		this.mayShowMessage_sessionDaysLeft()
@@ -326,6 +334,10 @@ function setRenderers(self: any): void {
 			chat: self.dom.subheaderDiv
 				.append('div')
 				.attr('data-testid', 'sjpp-mass-nav-subheader-chat')
+				.style('display', 'none'),
+			user: self.dom.subheaderDiv
+				.append('div')
+				.attr('data-testid', 'sjpp-mass-nav-subheader-user')
 				.style('display', 'none')
 			// cart: self.dom.subheaderDiv.append('div').style('display', 'none').html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>'),
 		})
@@ -375,6 +387,15 @@ function setRenderers(self: any): void {
 				searchTab.top = 'SEARCH' // Copilot mentioned that Object.assign may overwrite {chat/search}.top. Therefore this line has been added.
 				self.tabs.push(searchTab)
 			}
+		}
+		if (!massNav.tabs?.user?.hide) {
+			//User tab is not hidden
+			const override = Object.assign({}, massNav.tabs?.user)
+			if (!appState.termdbConfig?.requiredAuth?.length) {
+				if (!override.top) override.top = 'SESSION'
+			}
+			self.tabs.push(userTab)
+			Object.assign(userTab, override)
 		}
 
 		const table = self.dom.tabDiv
