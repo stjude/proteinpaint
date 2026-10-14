@@ -1000,8 +1000,11 @@ export class SwimmerRenderer {
 				}
 			})
 		// main() adds .tw to its argument and may fill its nested q in place (e.g. q.type of custom bins), so
-		// clone the frozen state wrapper
-		await this.pointTermPill.main(structuredClone(this.pointTerm))
+		// clone the frozen state wrapper. a .tw in the state (the controls' pill adds one to the tw it dispatches)
+		// is a plain copy, not the TwBase instance main() expects there, so it is dropped for main() to rebuild
+		const pointTerm = structuredClone(this.pointTerm)
+		delete pointTerm.tw
+		await this.pointTermPill.main(pointTerm)
 		// clears the menu, adds the term options and shows the menu under node
 		this.pointTermPill.showMenu(null, node)
 		this.addLegendOptions(menu, menu.d.append('div'), 'events', e, entries, { allowColor: false, allowShape: false })
@@ -1182,10 +1185,7 @@ export class SwimmerRenderer {
 				const arrowStart = sg.x1 - o.segH * 0.8
 				if (mx < arrowStart) return dy <= o.segH / 2
 				const fraction = (sg.x1 - mx) / (o.segH * 0.8)
-				return (
-					my >= cy - (o.segH / 2 + o.segH / 3) * fraction &&
-					my <= cy + (o.segH * 1.33 - o.segH / 2) * fraction
-				)
+				return my >= cy - (o.segH / 2 + o.segH / 3) * fraction && my <= cy + (o.segH * 1.33 - o.segH / 2) * fraction
 			})
 			const onBase = dy <= o.barH / 2 && mx >= o.x(0) && mx <= o.x(row.end)
 			if (!segments.length && !onBase) return tip.hide()
