@@ -470,7 +470,7 @@ tape('Render color groups', function (test) {
 	async function testColorLegend(scatter) {
 		const legendLabels = await detectGte({
 			elem: scatter.Inner.model.charts[0].chartDiv.node(),
-			selector: 'text[data-testid="sjpp-scatter-color-legend-label"]'
+			selector: 'text[data-testid^="sjpp-scatter-color-legend-label"]'
 		})
 
 		const groups: { label: string; samples: string[] }[] = []

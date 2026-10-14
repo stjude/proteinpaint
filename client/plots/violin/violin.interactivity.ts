@@ -1,6 +1,15 @@
-import { filterJoin, getFilterItemByTag } from '#filter'
-import { DownloadMenu, niceNumLabels, ListSamples, renderTable } from '#dom'
+import { joinToFilterUiRoot } from '#filter'
+import {
+	niceNumLabels,
+	ListSamples,
+	renderTable,
+	CustomDownloadMenu,
+	type DownloadMenuOption,
+	descrStatsToTSV,
+	testRowsToTSV
+} from '#dom'
 import { isSingleCellTerm } from '#shared'
+import { getVisiblePvalues } from './violin.renderer'
 
 type MenuOption = {
 	label: string
@@ -24,7 +33,49 @@ export function setInteractivity(self: any) {
 	self.download = function (event: MouseEvent) {
 		if (!self.state) return
 		const name2svg = self.getChartImages()
-		const dm = new DownloadMenu(name2svg, self.config.term.term.name)
+		const filename = self.config.term.term.name
+		const extraOptions: DownloadMenuOption[] = []
+
+		const statTerms = [self.config.term, self.config.term2].filter(tw => tw?.q?.descrStats)
+		if (self.settings.showStats && statTerms.length) {
+			extraOptions.push({
+				label: 'Descriptive statistics',
+				testid: 'sjpp-download-descrstats',
+				filename: `${filename}_descriptive_stats`,
+				callback: () => descrStatsToTSV(statTerms.map(tw => ({ name: tw.term.name, stats: tw.q.descrStats })))
+			})
+		}
+
+		const charts = Object.values(self.data?.charts || {}) as any[]
+		if (
+			self.settings.showAssociationTests &&
+			self.config.term2 &&
+			charts.some(chart => getVisiblePvalues(chart, self.config.term, self.config.term2).length)
+		) {
+			extraOptions.push({
+				label: 'Group comparisons',
+				testid: 'sjpp-download-pvalues',
+				filename: `${filename}_wilcoxon_group_comparisons`,
+				callback: () =>
+					testRowsToTSV(
+						"Wilcoxon's rank sum test",
+						['Group 1', 'Group 2', 'P-value'],
+						charts
+							.map(chart => ({
+								chartLabel: self.getChartTitle(chart.chartId),
+								rows: getVisiblePvalues(chart, self.config.term, self.config.term2)
+							}))
+							.filter(chart => chart.rows.length)
+					)
+			})
+		}
+		const menuOpts = {
+			chartImages: name2svg,
+			filename,
+			extraOptions
+		}
+
+		const dm = new CustomDownloadMenu(menuOpts)
 		dm.show(event.clientX, event.clientY, undefined)
 	}
 
@@ -219,12 +270,12 @@ export function setInteractivity(self: any) {
 	}
 
 	self.labelHideLegendClicking = function (t2: any) {
-		// whoever wrote this tangled mess needs to be fired
 		self.dom.legendDiv
-			.selectAll('.sjpp-htmlLegend')
-			.on('click', event => {
+			.on('click.violinHideLegend', event => {
+				const target = (event.target as HTMLElement).closest('.sjpp-htmlLegend') as HTMLElement & { __data__?: any }
+				const d = target?.__data__
+				if (d?.isHidden !== true || d?.isClickable !== true) return
 				event.stopPropagation()
-				const d = (event.target as HTMLElement & { __data__?: any }).__data__
 				const termNum =
 					t2?.term.type === 'condition' ||
 					t2?.term.type === 'samplelst' ||
@@ -234,27 +285,27 @@ export function setInteractivity(self: any) {
 						: 'term'
 				const config = structuredClone(self.config)
 				const term = config[termNum]
-				if (t2) {
-					for (const key of Object.keys(term.q.hiddenValues || {})) {
-						if (d.text === key) {
-							delete term.q.hiddenValues[key]
-						}
+				if (!t2 || !term) return
+				for (const key of Object.keys(term.q.hiddenValues || {})) {
+					if (d.text === key) {
+						delete term.q.hiddenValues[key]
 					}
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config
-					})
 				}
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config
+				})
 			})
-			.on('mouseover', event => {
-				const q = (event.target as HTMLElement & { __data__?: any }).__data__
+			.on('mouseover.violinHideLegend', event => {
+				const target = (event.target as HTMLElement).closest('.sjpp-htmlLegend') as HTMLElement & { __data__?: any }
+				const q = target?.__data__
 				if (q === undefined) return
 				if (q.isHidden === true && q.isClickable === true) {
 					self.dom.hovertip.clear().show(event.clientX, event.clientY).d.append('span').text('Click to unhide plot')
 				}
 			})
-			.on('mouseout', function () {
+			.on('mouseout.violinHideLegend', function () {
 				self.dom.hovertip.hide()
 			})
 	}
@@ -264,13 +315,10 @@ function getAddFilterCallback(self: any, plot: any, rangeStart?: number, rangeSt
 	const ls = self.getSampleList(plot, rangeStart, rangeStop)
 
 	return () => {
-		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, ls.tvslst])
-		filter.tag = 'filterUiRoot'
+		const filter = joinToFilterUiRoot(self.app.getState().termfilter.filter, [ls.tvslst])
 		self.app.dispatch({
 			type: 'filter_replace',
 			filter
 		})
 	}
 }
-

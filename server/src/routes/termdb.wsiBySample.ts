@@ -10,6 +10,7 @@ import type {
 import { readdir, stat } from 'fs/promises' // directory listing + slide mtime (cache version)
 import path from 'path' // root/sample/image path assembly
 import serverconfig from '#src/serverconfig.js' // tpmasterdir, the root of all data paths
+import { genomes } from '#src/initGenomesDs.js' // checked when augen sets up the route
 
 /*
  termdb/wsiBySample — whole-slide images for the w2 plot.
@@ -30,9 +31,17 @@ import serverconfig from '#src/serverconfig.js' // tpmasterdir, the root of all 
 */
 
 export const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has ds.queries.w2
+	get init() {
+		return hasW2Ds(genomes) ? init : null
+	},
 	request: { typeId: 'WsiBySampleRequest' },
 	response: { typeId: 'WsiBySampleResponse' }
+}
+
+export function hasW2Ds(genomes) {
+	return Object.values(genomes).some((g: any) => Object.values(g.datasets || {}).some((ds: any) => ds.queries?.w2))
 }
 
 export const api: RouteApi = {
@@ -42,6 +51,9 @@ export const api: RouteApi = {
 		post: payload
 	}
 }
+
+/** an input error, answered with 400 instead of 500 */
+const badRequest = (message: string) => Object.assign(new Error(message), { status: 400 })
 
 /** plain slide formats: .svs plus pyramidal OME-TIFF (.ome.tif/.ome.tiff) */
 const SLIDE_EXT = /\.(svs|ome\.tiff?)$/i
@@ -105,7 +117,7 @@ function init({ genomes }) {
 				// spatial: one image per subfolder of the sample's directory
 				if (spatialBase && kind != 'wsi') {
 					const spSampleDir = path.resolve(spatialBase, sampleId) // folder/<sample>/
-					if (!spSampleDir.startsWith(spatialBase + path.sep)) throw new Error('invalid sample_id') // traversal guard
+					if (!spSampleDir.startsWith(spatialBase + path.sep)) throw badRequest('invalid sample_id') // traversal guard
 					for (const img of await subdirs(spSampleDir)) {
 						// files inside one image folder (slide + its annotation companions)
 						const files = await readdir(path.join(spSampleDir, img)).catch(() => [] as string[])
@@ -134,7 +146,7 @@ function init({ genomes }) {
 				// plain wsi: one image per subfolder of the sample's directory
 				if (wsiBase && kind != 'spatial') {
 					const wsiSampleDir = path.resolve(wsiBase, sampleId) // wsiFolder/<sample>/
-					if (!wsiSampleDir.startsWith(wsiBase + path.sep)) throw new Error('invalid sample_id') // traversal guard
+					if (!wsiSampleDir.startsWith(wsiBase + path.sep)) throw badRequest('invalid sample_id') // traversal guard
 					for (const img of await subdirs(wsiSampleDir)) {
 						const files = await readdir(path.join(wsiSampleDir, img)).catch(() => [] as string[]) // image folder contents
 						const slide = files.find(f => SLIDE_EXT.test(f)) // first file with a slide extension
@@ -148,17 +160,23 @@ function init({ genomes }) {
 			}
 
 			if (!q.sample_id) {
-				// no sample given: list samples for the standalone Whole Slide
-				// Images plot — PLAIN slides on disk only (spatial images are
-				// viewed through the single-cell app, which asks per sample_id)
-				const ids = wsiBase ? await subdirs(wsiBase) : [] // each subfolder = one sample
+				// no sample given: by default, samples for the standalone Whole
+				// Slide Images plot — PLAIN slides on disk only (spatial images are
+				// normally viewed through the single-cell app, which asks per
+				// sample_id). imageType=spatial opts into listing SPATIAL samples
+				// instead — the w2 viewer's similar-region search uses this to
+				// offer the dataset's other spatial samples
+				if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw badRequest('invalid imageType')
+				const spatial = q.imageType == 'spatial'
+				const base = spatial ? spatialBase : wsiBase
+				const ids = base ? await subdirs(base) : [] // each subfolder = one sample
 				const samples: WsiSampleSummary[] = []
 				for (const name of ids.sort()) {
-					// count each sample's plain slides by enumerating only the wsi
-					// root — the spatial tree is never touched here, so listing
-					// cost and failures can't depend on unrelated spatial data
-					const count = (await getImages(name, 'wsi')).length
-					if (count) samples.push({ sampleId: name, count }) // a folder without slides isn't listed
+					// count each sample's images by enumerating only the requested
+					// root — the other tree is never touched here, so listing cost
+					// and failures can't depend on unrelated data
+					const count = (await getImages(name, spatial ? 'spatial' : 'wsi')).length
+					if (count) samples.push({ sampleId: name, count }) // a folder without images isn't listed
 				}
 				res.status(200).json({ samples } satisfies WsiBySampleResponse)
 				return
@@ -166,13 +184,14 @@ function init({ genomes }) {
 
 			// optional root restriction (the standalone plot asks for 'wsi', the
 			// sc app for 'spatial'); absent = both kinds
-			if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw new Error('invalid imageType')
+			if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw badRequest('invalid imageType')
 			// String(): numeric-looking sample names arrive as numbers from query parsing
 			const images = await getImages(String(q.sample_id), q.imageType)
 			res.status(200).json({ images } satisfies WsiBySampleResponse)
 		} catch (e: any) {
 			console.warn(e)
-			res.status(500).send({ status: 'error', error: e.message || e })
+			// invalid input is the client's error; anything else is the server's
+			res.status(e.status || 500).send({ status: 'error', error: e.message || e })
 		}
 	}
 }

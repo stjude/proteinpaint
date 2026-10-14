@@ -41,7 +41,10 @@ export async function dmrGeneLinkPanel(
 					groups: (scan.matchedSamplelst || config.samplelst).groups.map((g: any) => ({
 						name: g.name,
 						in: g.in,
-						values: g.values
+						values: g.values,
+						filter: g.filter,
+						filter0: g.filter0,
+						mapParent2Children: g.mapParent2Children
 					}))
 				},
 				method: de.method,

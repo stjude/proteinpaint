@@ -4,6 +4,8 @@ import type { RouteApi, RoutePayload } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import serverconfig from '#src/serverconfig.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasProteomeDs } from './termdb.proteome.ts'
 
 /*
 Cross-cohort proteome comparison via standardized fold change (log2FC-z).
@@ -25,11 +27,21 @@ and a clustered heatmap, a shared-vs-specific DAP overlap (UpSet), and an
 age/progression trajectory (per-series k-means clusters of protein trajectories).
 */
 
+export const payload: RoutePayload = {
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has ds.queries.proteome
+	get init() {
+		return hasProteomeDs(genomes) ? init : null
+	},
+	request: { typeId: 'any' },
+	response: { typeId: 'any' }
+}
+
 export const api: RouteApi = {
 	endpoint: 'termdb/proteomeCohortCompare',
 	methods: {
-		get: { init, request: { typeId: 'any' }, response: { typeId: 'any' } } as RoutePayload,
-		post: { init, request: { typeId: 'any' }, response: { typeId: 'any' } } as RoutePayload
+		get: payload,
+		post: payload
 	}
 }
 

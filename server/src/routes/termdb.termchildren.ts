@@ -43,9 +43,7 @@ async function trigger_children(
 		}
 	}
 ): Promise<TermChildrenResponse> {
-	/* get children terms of q.tid, or the root terms when q.tid is missing
-may apply ssid: a premade sample set
-*/
+	/* get children terms of q.tid, or the root terms when q.tid is missing */
 	const cohortValues = q.cohortValues || ''
 	const treeFilter = q.treeFilter || ''
 	const terms = q.tid

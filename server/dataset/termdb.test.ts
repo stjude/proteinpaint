@@ -102,6 +102,8 @@ export default function (): Mds3 {
 			termdb: {
 				allowedTermTypes: ['geneVariant'],
 				displaySampleIds: () => true, // allow to display sample-level data
+				// enables the sunburst chart and its route; default rings, inside out
+				sunburst: { twLst: [{ id: 'diaggrp' }, { id: 'sex' }] },
 
 				/* the hg38-test gene db is a stub of ~11 genes, while the expression matrix of this
 				ds carries the real gene universe (topVariablyExpressedGenes answers ISG15, MXRA8, ...).

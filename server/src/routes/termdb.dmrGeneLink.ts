@@ -2,19 +2,31 @@ import type { RouteApi, RoutePayload } from '#types'
 import { cacheFilePath } from '#src/utils/cacheOrRecompute.ts'
 import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
+import { sampleFilterScope, resolveGroups } from '#src/utils/sampleGroups.ts'
 import { buildTssIndex, linkDmrsToGenes, classifyLink, type GeneModel, type TssIndex } from '#src/utils/dmrGeneLink.ts'
 import fs from 'fs'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
 /* Every gene a scan's DMRs touch, where they touch it, and whether its expression moved the way
 that position predicts. The scan comes from its cache, expression
 from the same DE run the volcano and termdb/dmrGeneDE use, on the patients with methylation. See
 utils/dmrGeneLink.ts for the promoter/body rules. */
 
+const payload = {
+	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
+	get init() {
+		return hasDnaMethylationDs(genomes) ? init : null
+	},
+	request: { typeId: undefined },
+	response: { typeId: undefined }
+} as any as RoutePayload
+
 export const api: RouteApi = {
 	endpoint: 'termdb/dmrGeneLink',
 	methods: {
-		get: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload,
-		post: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload
+		get: payload,
+		post: payload
 	}
 }
 
@@ -55,9 +67,9 @@ function init({ genomes }) {
 			const file = cacheFilePath('dmr', q.cacheId)
 			if (!fs.existsSync(file)) throw new Error('This scan is no longer cached; rerun it first.')
 			const scan = JSON.parse(await fs.promises.readFile(file, 'utf8'))
-			/* The auth gate ran for q.dslabel, but the cacheId names a result computed for some dataset:
-			refuse one computed for another. */
-			if (scan.genome !== q.genome || scan.dslabel !== q.dslabel)
+			/* The auth gate ran for q.dslabel, but the cacheId names a result computed for some dataset
+			and with some sample filter: refuse one computed for another. */
+			if (scan.genome !== q.genome || scan.dslabel !== q.dslabel || (scan.scope || '') !== sampleFilterScope(q, ds))
 				throw new Error('This scan does not belong to the requested dataset; rerun it first.')
 			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
 			const links = linkDmrsToGenes(
@@ -66,7 +78,14 @@ function init({ genomes }) {
 				minCpgs
 			)
 
-			const samplelst = await matchedSamplelst(q.samplelst, eligibleMethylationSamples(ds, undefined), ds)
+			const eligible = eligibleMethylationSamples(ds, undefined)
+			// a group may be defined by a filter
+			const samplelst = await matchedSamplelst(
+				{ groups: await resolveGroups(q.samplelst.groups, q, ds) },
+				eligible,
+				ds,
+				q.__protected__
+			)
 			const { result } = await getDeCacheResult(
 				{
 					genome: q.genome,
@@ -77,7 +96,8 @@ function init({ genomes }) {
 					cpm_cutoff: q.cpm_cutoff,
 					method: q.method,
 					filter: q.filter,
-					filter0: q.filter0
+					filter0: q.filter0,
+					__protected__: q.__protected__
 				} as any,
 				genomes
 			)

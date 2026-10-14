@@ -3,7 +3,10 @@ import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { lengthStratifiedDE, type GeneFC } from '#src/utils/dmrGeneDE.ts'
 import { mayLog } from '#src/helpers.ts'
 import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
+import { resolveGroups } from '#src/utils/sampleGroups.ts'
 import { formatElapsedTime } from '#shared'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
 /* Do the genes losing gene-body methylation also lose expression?
 
@@ -20,11 +23,20 @@ ZBTB20, CNTNAP2 -- are all 1-2Mb, because a long gene collects more DMRs simply 
 length also predicts expression level and variance. Comparing hits to all other genes would
 recover gene length. See utils/dmrGeneDE.ts for the stratification and its permutation null. */
 
+const payload = {
+	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
+	get init() {
+		return hasDnaMethylationDs(genomes) ? init : null
+	},
+	request: { typeId: undefined },
+	response: { typeId: undefined }
+} as any as RoutePayload
+
 export const api: RouteApi = {
 	endpoint: 'termdb/dmrGeneDE',
 	methods: {
-		get: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload,
-		post: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload
+		get: payload,
+		post: payload
 	}
 }
 
@@ -58,7 +70,13 @@ function init({ genomes }) {
 			if (!ds) throw new Error('unknown dataset')
 			// analysis-wide, so this cohort is the one the scan ran on whatever chr1 resolves to
 			const eligible = eligibleMethylationSamples(ds, undefined)
-			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds)
+			// a group may be defined by a filter
+			const samplelst = await matchedSamplelst(
+				{ groups: await resolveGroups(q.samplelst.groups, q, ds) },
+				eligible,
+				ds,
+				q.__protected__
+			)
 			const { result } = await getDeCacheResult(
 				{
 					genome: q.genome,
@@ -70,7 +88,8 @@ function init({ genomes }) {
 					method: q.method,
 					// part of the DE cache key: sent so this run and the volcano's are one entry
 					filter: q.filter,
-					filter0: q.filter0
+					filter0: q.filter0,
+					__protected__: q.__protected__
 				} as any,
 				genomes
 			)

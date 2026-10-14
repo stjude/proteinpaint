@@ -2,10 +2,11 @@ import type { RoutePayload, RouteApi } from '#types'
 import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
 import type { GdcMafBuildRequest } from '#types'
-import { maxTotalSizeCompressed } from './gdc.maf.ts'
+import { maxTotalSizeCompressed, hasGdcDs } from './gdc.maf.ts'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime, fileSize } from '#shared'
 import serverconfig from '#src/serverconfig.js'
+import { genomes } from '#src/initGenomesDs.js'
 import { mapConcurrent } from '#src/utils/concurrencyLimiter.ts'
 import { createGzip, createGunzip } from 'zlib'
 import { Readable } from 'stream'
@@ -26,7 +27,10 @@ const timeoutErrorMsg = 'MAF build stopped: it exceeded the server time limit. P
 const writeFlushBytes = 256 * 1024
 
 export const GdcMafPayload: RoutePayload = {
-	init,
+	// only set up when the GDC ds is loaded, see gdc.maf.ts
+	get init() {
+		return hasGdcDs(genomes) ? init : null
+	},
 	request: { typeId: 'GdcMafBuildRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'GdcMafBuildResponse' }
 }

@@ -5,7 +5,7 @@ import {
 	getCategoryGroupsetting,
 	getGeneVariantTw,
 	getGenesetMutTw,
-	getCategoricalTermcollectionTw, 
+	getCategoricalTermcollectionTw,
 	getScctTw,
 	getAgeCollectionFractionTw,
 	getIsoformExpCollectionFractionTw
@@ -15,6 +15,7 @@ import { /*sleep,*/ detectLst, detectGte, detectOne, Locator } from '../../../te
 import { getFilterItemByTag } from '#filter/filter'
 // import * as vocabData from '../../../termdb/test/vocabData'
 import { hideCategory } from '../barchart.events.js'
+import { rebaseGroupFilter } from '../../../mass/groups.js'
 
 /*
 test sections
@@ -61,6 +62,7 @@ single barchart, TP53 mutation dtTerm filter
 click non-group bar to add filter
 click custom subcondition group bar to add filter SKIPPED NO LONGER SUPPORTED
 click custom categorical group bar to add filter
+click bar to add as group
 numeric exclude range
 numeric filter - only special value
 custom vocab: categorical terms with numeric filter
@@ -1809,8 +1811,7 @@ tape('click custom categorical group bar to add filter', function (test) {
 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
 			.run(triggerBarClick, 600)
 			.use(triggerMenuClick, 500)
-			.to(testTermValues, 100)
-			.done(test)
+			.to(testTermValues, 100) // ends the test
 	}
 
 	// let clickedData
@@ -1828,7 +1829,7 @@ tape('click custom categorical group bar to add filter', function (test) {
 			.click() //dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function testTermValues(barchart) {
+	async function testTermValues(barchart) {
 		// const config = barchart.Inner.state.config
 		// const currData = barchart.Inner.currServerData
 		const termfilter = barchart.Inner.app.Inner.state.termfilter
@@ -1838,115 +1839,116 @@ tape('click custom categorical group bar to add filter', function (test) {
 			1,
 			'should create one tvslst filters when a numeric term overlay is clicked'
 		)
+		test.equal(filter.lst[0].tvs?.term.id, 'diaggrp', 'should filter by the term of the bar')
 		test.deepEqual(
-			filter.lst[0],
-			{
-				type: 'tvs',
-				tvs: {
-					term: {
-						name: 'group',
-						type: 'samplelst',
-						values: {
-							Group: {
-								key: 'Group',
-								label: 'Group',
-								list: [
-									{ sampleId: '41' },
-									{ sampleId: '42' },
-									{ sampleId: '43' },
-									{ sampleId: '44' },
-									{ sampleId: '45' },
-									{ sampleId: '46' },
-									{ sampleId: '47' },
-									{ sampleId: '48' },
-									{ sampleId: '49' },
-									{ sampleId: '50' },
-									{ sampleId: '51' },
-									{ sampleId: '52' },
-									{ sampleId: '53' },
-									{ sampleId: '54' },
-									{ sampleId: '55' },
-									{ sampleId: '56' },
-									{ sampleId: '57' },
-									{ sampleId: '58' },
-									{ sampleId: '59' },
-									{ sampleId: '60' },
-									{ sampleId: '61' },
-									{ sampleId: '63' },
-									{ sampleId: '64' },
-									{ sampleId: '65' },
-									{ sampleId: '66' },
-									{ sampleId: '67' },
-									{ sampleId: '68' },
-									{ sampleId: '69' },
-									{ sampleId: '70' },
-									{ sampleId: '71' },
-									{ sampleId: '72' },
-									{ sampleId: '73' },
-									{ sampleId: '74' },
-									{ sampleId: '75' },
-									{ sampleId: '76' },
-									{ sampleId: '77' },
-									{ sampleId: '78' },
-									{ sampleId: '80' },
-									{ sampleId: '93' }
-								]
-							},
-							'Not in Group': {
-								key: 'Not in Group',
-								label: 'Not in Group',
-								color: '#aaa',
-								list: [
-									{ sampleId: '41' },
-									{ sampleId: '42' },
-									{ sampleId: '43' },
-									{ sampleId: '44' },
-									{ sampleId: '45' },
-									{ sampleId: '46' },
-									{ sampleId: '47' },
-									{ sampleId: '48' },
-									{ sampleId: '49' },
-									{ sampleId: '50' },
-									{ sampleId: '51' },
-									{ sampleId: '52' },
-									{ sampleId: '53' },
-									{ sampleId: '54' },
-									{ sampleId: '55' },
-									{ sampleId: '56' },
-									{ sampleId: '57' },
-									{ sampleId: '58' },
-									{ sampleId: '59' },
-									{ sampleId: '60' },
-									{ sampleId: '61' },
-									{ sampleId: '63' },
-									{ sampleId: '64' },
-									{ sampleId: '65' },
-									{ sampleId: '66' },
-									{ sampleId: '67' },
-									{ sampleId: '68' },
-									{ sampleId: '69' },
-									{ sampleId: '70' },
-									{ sampleId: '71' },
-									{ sampleId: '72' },
-									{ sampleId: '73' },
-									{ sampleId: '74' },
-									{ sampleId: '75' },
-									{ sampleId: '76' },
-									{ sampleId: '77' },
-									{ sampleId: '78' },
-									{ sampleId: '80' },
-									{ sampleId: '93' }
-								],
-								in: false
-							}
-						}
-					}
-				},
-				noEdit: true
-			},
+			filter.lst[0].tvs.values,
+			tw.q.customset.groups[0].values,
 			'should create a customset filter with the clicked group.values array'
 		)
+		test.notOk(JSON.stringify(filter).includes('sampleId'), 'should not list the samples of the bar in the filter')
+		const samples = await barchart.Inner.app.vocabApi.getFilteredSampleList(termfilter.filter)
+		test.deepEqual(
+			samples.map(s => s.id).sort((a, b) => a - b),
+			// prettier-ignore
+			[41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 80, 93],
+			'should select the samples of the bar'
+		)
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
 	}
+})
+
+tape('click bar to add as group', async function (test) {
+	test.timeoutAfter(30000)
+	const cases = [
+		{
+			name: 'bins with a categorical overlay',
+			plot: {
+				chartType: 'barchart',
+				term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.less },
+				term2: { id: 'diaggrp' }
+			}
+		},
+		{ name: 'custom groups of categories', plot: { chartType: 'barchart', term: getCategoryGroupsetting() } },
+		{
+			name: 'groups of a gene variant term',
+			plot: { chartType: 'summary', childType: 'barchart', term: getGeneVariantTw() }
+		},
+		{
+			name: 'a plot with a filter',
+			plot: {
+				chartType: 'barchart',
+				term: { id: 'diaggrp' },
+				filter: {
+					type: 'tvslst',
+					in: true,
+					join: '',
+					lst: [{ type: 'tvs', tvs: { term: termjson['agedx'], ranges: [{ start: 10, stopunbounded: true }] } }]
+				}
+			}
+		}
+	]
+	const wait = (fn, ms = 5000) =>
+		new Promise<void>((resolve, reject) => {
+			const start = Date.now()
+			const i = setInterval(() => {
+				const done = fn()
+				if (!done && Date.now() - start <= ms) return
+				clearInterval(i)
+				if (done) resolve()
+				else reject('timed out waiting')
+			}, 50)
+		})
+
+	for (const c of cases) {
+		await new Promise<void>(resolve => {
+			runpp({ state: { plots: [c.plot] }, barchart: { callbacks: { 'postRender.test': runTests } } })
+
+			let started
+			let renders = 0
+			async function runTests(barchart) {
+				renders++
+				if (started) return
+				started = true
+				const app = barchart.Inner.app
+				try {
+					// every bar of the chart, each as a group. the chart is drawn again after each
+					const totals: number[] = []
+					const getRects = () => [...barchart.Inner.dom.barDiv.node().querySelectorAll('.bars-cell rect')]
+					const numRects = getRects().length
+					for (let i = 0; i < numRects; i++) {
+						const rect = getRects()[i]
+						const n = app.getState().groups.length
+						const drawn = renders
+						rect.dispatchEvent(new Event('click', { bubbles: true }))
+						const option = app.tip.d
+							.selectAll('.sja_menuoption')
+							.filter(d => d.label == 'Add as group')
+							.node()
+						if (!option) throw 'no option to add the bar as a group'
+						option.dispatchEvent(new Event('click', { bubbles: true }))
+						await wait(() => app.getState().groups.length == n + 1 && renders > drawn)
+						totals.push(rect.__data__.total)
+					}
+					barchart.on('postRender.test', null)
+					test.ok(totals.length > 1, `${c.name}: should add a group for each of the ${totals.length} bars`)
+					const groups = rebaseGroupFilter(app.getState())
+					test.ok(
+						groups.every(g => getFilterItemByTag(g.filter, 'filterUiRoot') && !JSON.stringify(g).includes('sampleId')),
+						`${c.name}: should define each group by conditions, and list no sample`
+					)
+					const sizes: number[] = []
+					for (const g of groups) sizes.push((await app.vocabApi.getFilteredSampleList(g.filter)).length)
+					test.deepEqual(sizes, totals, `${c.name}: should select as many samples in each group as its bar has`)
+				} catch (e: any) {
+					test.fail(`${c.name}: ${e?.message || e}`)
+				}
+				if (test['_ok']) app.destroy()
+				resolve()
+			}
+		})
+	}
+	test.end()
 })
 
 /* bar_by_children handling has been inactivated
@@ -2345,6 +2347,102 @@ tape('minimum sample size', test => {
 		test.equal(errDiv.style('display'), 'none', 'should have a hidden red error div')
 		if (test['_ok']) barchart.Inner.app.destroy()
 		test.end()
+	}
+})
+
+tape('minimum sample size: logged-in user with access to all configured datasets', async test => {
+	test.timeoutAfter(5000)
+	const dslabel = 'ProtectedTest'
+
+	// same request as getJwt() in public/static/js/login.js, which cannot be imported since it is a
+	// classic script that uses relative urls and would require mutating the shared window.fetch;
+	// the /demoToken route only issues a token to a request with a matching referer, see
+	// serverconfig.dsCredentials.ProtectedTest.termdb['*'].demoToken.referers, which includes
+	// the test page origin since a cross-origin request only has the origin in its referer header
+	const role = 'user'
+	const host = window['testHost'] || 'http://localhost:3000'
+	const res = await fetch(`${host}/demoToken`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ genome: 'hg38-test', dslabel, role })
+	}).then(r => r.json())
+	const jwt = res.fakeTokensByRole?.[role]
+	test.ok(jwt, 'should get a demo jwt for the user role')
+
+	// an async tape callback ends the test when its promise resolves, so wait for the barchart callback
+	let resolveDone
+	const done = new Promise(resolve => (resolveDone = resolve))
+
+	// not using helpers.getRunPp(), since it JSON-copies the argument which would drop the
+	// getDatasetAccessToken() function, and launchmass() only uses the root-level argument option
+	helpers.runproteinpaint({
+		host,
+		noheader: 1,
+		nobox: true,
+		norecover: true,
+		debug: 1,
+		getDatasetAccessToken: () => jwt,
+		mass: {
+			debounceInterval: 0,
+			// same filter as in the 'minimum sample size' test, which has less than minSize (10) samples
+			state: {
+				vocab: { dslabel, genome: 'hg38-test' },
+				termfilter: {
+					filter: {
+						type: 'tvslst',
+						join: 'and',
+						lst: [
+							{
+								type: 'tvs',
+								tvs: {
+									term: termjson.agedx,
+									ranges: [{ start: 1, startinclusive: true, stop: 3, stopinclusive: true }]
+								}
+							},
+							{
+								type: 'tvs',
+								tvs: {
+									term: termjson.sex,
+									values: [{ key: '1' }]
+								}
+							}
+						]
+					}
+				},
+				nav: {
+					activeTab: 1
+				},
+				plots: [
+					{
+						chartType: 'barchart',
+						term: {
+							term: termjson['diaggrp']
+						}
+					}
+				]
+			},
+			barchart: {
+				callbacks: {
+					'postRender.test': runTests,
+					error: runTests
+				}
+			},
+			debug: 1
+		}
+	})
+	await done
+
+	async function runTests(barchart) {
+		barchart.on('postRender.test', null).on('error', null)
+		const barDiv = barchart.Inner.dom.barDiv
+		const errDiv = barchart.Inner.dom.errdiv
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		test.true(numBars > 0, 'should show bars for a logged-in user, despite having less than minSize samples')
+		test.equal(errDiv.text(), '', 'should not display a minimum sample size error message')
+		test.equal(errDiv.style('display'), 'none', 'should have a hidden red error div')
+		if (test['_ok']) barchart.Inner.app.destroy()
+		test.end()
+		resolveDone()
 	}
 })
 

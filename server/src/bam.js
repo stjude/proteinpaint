@@ -1,31 +1,20 @@
 import fs from 'fs'
 import path from 'path'
 import * as utils from './utils.js'
-import serverconfig from './serverconfig.js'
-import { spawn } from 'child_process'
+import serverconfig, { generateHash } from './serverconfig.js'
 import { Readable, Transform } from 'stream'
 import { pipeline } from 'node:stream/promises'
 import { createCanvas } from 'canvas'
 import * as bamcommon from './bam.common.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import crypto from 'crypto'
 import ky from 'ky'
 import { interpolateRgb } from 'd3-interpolate'
-import { match_complexvariant_rust } from './bam.kmer.indel.js'
+import { match_complexvariant_rust } from './bam.indel.js'
 import { basecolor, bplen } from '#shared/common.js'
 import { gdcCheckPermission } from './bam.gdc.js'
-import { fileSize } from '#shared/fileSize.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 
 /*
-TODO
-separate into new routes
-/bam - tk rendering/read/align etc. for both gdc and non-gdc files
-/bam/read - get one read
-/bam/gdc/list - querying and listing files from gdc
-/bam/gdc/cache - query gdc slicing api and cache on pp
-
-
 XXX quick fix to be removed/disabled later
 -- __tempscore 
 
@@ -255,8 +244,6 @@ const max_read_alignment = 200 // Max number of reads that can be aligned to ref
 const readpanel_DN_maxlength = 20 // Variable to define whether a deletion is rendered showing the reference or simply shown how big the deletion is. If greater, only the size of deletion is shown. If lower, the reference sequence is shown
 
 const bases = new Set(['A', 'T', 'C', 'G'])
-const gdcHashSecret = Math.random.toString()
-
 /**************************
       gdc security
 ***************************
@@ -361,8 +348,20 @@ async function clientdownloadgdcsliceFromCache_withDenial(req, res) {
 		throw 'clientdownloadgdcslice: unauthorized access'
 	}
 	// read the cached bam slice for client to download
-	const file = path.join(cachedir_bam, req.query.file)
-	const data = await fs.promises.readFile(file)
+	const cacheRoot = path.resolve(cachedir_bam)
+	const file = path.resolve(cacheRoot, String(req.query.file))
+	if (file !== cacheRoot && !file.startsWith(cacheRoot + path.sep)) {
+		throw 'clientdownloadgdcslice: unauthorized access'
+	}
+	let data
+	try {
+		data = await fs.promises.readFile(file)
+	} catch (e) {
+		// the slice may have been evicted from cache; do not reveal the cache file path in the ENOENT message.
+		// client/src/block.js detects this exact message to replace the download button
+		if (e.code == 'ENOENT') throw 'BAM slice no longer available'
+		throw e
+	}
 	res.writeHead(200, {
 		'Content-Type': 'application/octet-stream',
 		'Content-Disposition': 'attachment; filename=gdc.bam',
@@ -749,10 +748,22 @@ async function getFilefullpathOrUrl(req) {
 	return [_file, dir]
 }
 
+export function get_partstack(query) {
+	// returns the requested stack range, or undefined when not in partstack mode
+	if (query.stackstart == null && query.stackstop == null) return
+	if (query.stackstart == null) throw '.stackstart missing'
+	if (query.stackstop == null) throw '.stackstop missing'
+	const start = Number(query.stackstart),
+		stop = Number(query.stackstop)
+	if (!Number.isInteger(start)) throw '.stackstart not integer'
+	if (!Number.isInteger(stop)) throw '.stackstop not integer'
+	if (start > stop) throw '.stackstart greater than .stackstop'
+	return { start, stop }
+}
+
 async function get_q(genome, req) {
-	// validate region chr before any samtools process is launched (quickcheck below)
-	if (!Array.isArray(req.query.regions) || req.query.regions.length == 0) throw 'q.regions[] not non-empty array'
-	for (const r of req.query.regions) utils.checkChr(genome, r.chr)
+	// validate regions before any samtools process is launched (quickcheck below)
+	utils.validateRglst({ rglst: req.query.regions }, genome)
 
 	const [filefullpath, dir] = await getFilefullpathOrUrl(req)
 	const q = {
@@ -785,9 +796,18 @@ async function get_q(genome, req) {
 		}
 		const t = req.query.variant.split('.')
 		q.strictness = req.query.strictness
-		if (!Number.isInteger(t.length % 4)) throw 'invalid variant, not chr.pos.ref.alt'
+		if (t.length == 0 || t.length % 4 != 0) throw 'invalid variant, not chr.pos.ref.alt'
+		const num_variants = t.length / 4
 		q.alleleAlreadyUpdated = req.query.alleleAlreadyUpdated
 		if (q.alleleAlreadyUpdated) {
+			// must be arrays with one element per variant, as they are used as loop bounds
+			bamcommon.validateAlleleArrays(
+				req.query,
+				['altseqs', 'refseqs', 'altalleles', 'refalleles', 'leftflankseqs', 'rightflankseqs'],
+				num_variants,
+				'string'
+			)
+			bamcommon.validateAlleleArrays(req.query, ['ref_positions'], num_variants, 'integer')
 			q.altseqs = req.query.altseqs
 			q.refseqs = req.query.refseqs
 			q.altalleles = req.query.altalleles
@@ -797,17 +817,17 @@ async function get_q(genome, req) {
 			q.ref_positions = req.query.ref_positions
 		}
 
-		const num_variants = t.length / 4
 		const variants = []
 		for (let i = 0; i < num_variants; i++) {
-			variants.push({ chr: t[i * 4], pos: Number(t[i * 4 + 1]), ref: t[i * 4 + 2], alt: t[i * 4 + 3] })
+			const pos = Number(t[i * 4 + 1])
+			if (!Number.isInteger(pos)) throw 'variant pos not integer'
+			variants.push({ chr: t[i * 4], pos, ref: t[i * 4 + 2], alt: t[i * 4 + 3] })
 		}
 		q.variant = variants
 		if (req.query.alignOneGroup) {
 			// value is group name to be realigned
 			q.alignOneGroup = req.query.alignOneGroup
 		}
-		if (Number.isNaN(q.variant.pos)) throw 'variant pos not integer'
 	} else if (req.query.sv) {
 		const t = req.query.sv.split('.')
 		if (t.length < 6) throw 'invalid sv, not chrA.posA.chrB.posB'
@@ -823,16 +843,9 @@ async function get_q(genome, req) {
 		if (Number.isNaN(q.sv.startB)) throw 'sv.startB not integer'
 	}
 
-	if (Number.isFinite(Number(req.query.stackstart))) {
+	q.partstack = get_partstack(req.query)
+	if (q.partstack) {
 		// to be assigned to the read group being modified
-		if (!req.query.stackstop) throw '.stackstop missing'
-		q.partstack = {
-			start: Number(req.query.stackstart),
-			stop: Number(req.query.stackstop)
-		}
-
-		if (Number.isNaN(q.partstack.start)) throw '.stackstart not integer'
-		if (Number.isNaN(q.partstack.stop)) throw '.stackstop not integer'
 		if (!req.query.grouptype) throw '.grouptype required for partstack'
 		q.grouptype = req.query.grouptype
 	}
@@ -879,12 +892,13 @@ async function mayReSliceFile(req, cachefile) {
 	await fs.promises.unlink(cachefile+'.bai')
 	*/
 	try {
-		if (!(await utils.file_not_exist(cachefile))) {
-			// bam file exists
+		if (!(await utils.file_not_exist(cachefile)) && !(await utils.file_not_exist(cachefile + '.bai'))) {
+			// bam and index files exist
 			return
 		}
 
-		// slice file not found; force to download slice here
+		// slice file not found, or its index is missing since cache eviction deletes .bam and .bai separately;
+		// force to download slice here. if the slice still exists, get_gdc_bam() only re-indexes it (unless truncated)
 
 		const bakRegions = req.query.regions
 		const tmp = req.query.gdcFilePosition.split(/[.:-]/)
@@ -2307,16 +2321,18 @@ function stack_templates(group, q, templates) {
 	return templates
 }
 
-function may_trimstacks(group, templates, q) {
+export function may_trimstacks(group, templates, q) {
 	if (!group.partstack) return templates
-	// should be a positive integer
-	const lst = templates.filter(i => i.y >= group.partstack.start && i.y <= group.partstack.stop) //group.
-	lst.forEach(i => (i.y -= group.partstack.start))
+	// keep the range within the stacks that exist
+	const start = Math.max(0, group.partstack.start)
+	const stop = Math.min(group.partstack.stop, group.stacks.length - 1)
+	const lst = templates.filter(i => i.y >= start && i.y <= stop) //group.
+	lst.forEach(i => (i.y -= start))
 	//group.templates = lst
 	templates = lst
 	group.stacks = []
 	//console.log('templates:', templates)
-	for (let i = group.partstack.start; i <= group.partstack.stop; i++) {
+	for (let i = start; i <= stop; i++) {
 		group.stacks.push(0)
 	}
 	group.returntemplatebox = [] // always set this
@@ -3088,11 +3104,9 @@ Insertion  BBBBBBBBBBBBBBBBB
 
 async function route_getread(genome, req) {
 	// cannot use the point position under cursor to query, as if clicking on softclip
-	utils.checkChr(genome, req.query.chr)
 	if (!req.query.qname) throw '.qname missing'
 	req.query.qname = decodeURIComponent(req.query.qname) // convert %2B to +
-	if (!Number.isInteger(req.query.start)) throw '.start is not integer'
-	if (!Number.isInteger(req.query.stop)) throw '.stop is not integer'
+	utils.validateRglst({ rglst: [req.query] }, genome) // req.query={chr,start,stop}
 	const r = {
 		chr: req.query.chr,
 		start: req.query.start,
@@ -3216,6 +3230,10 @@ async function query_oneread(req, r) {
 	if (lst) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
 		if (req.query.altseqs) {
+			if (!Array.isArray(req.query.refseqs)) throw 'refseqs is not an array'
+			const n = req.query.refseqs.length
+			bamcommon.validateAlleleArrays(req.query, ['refseqs', 'altseqs', 'refalleles', 'altalleles'], n, 'string')
+			bamcommon.validateAlleleArrays(req.query, ['ref_positions'], n, 'integer')
 			const input_data = {
 				query_seq: lst[0].seq,
 				refseqs: req.query.refseqs,
@@ -3520,13 +3538,12 @@ async function convertread2html(seg, genome, query) {
 /////////////////////// gdc slicing ///////////////////////
 
 function getGDCcacheFileName(req) {
-	const md5Hasher = crypto.createHmac('md5', gdcHashSecret)
 	const lst = [
 		req.get('X-Auth-Token') || req.cookies.sessionid, // use token or session, whichever is given
 		req.query.gdcFileUUID,
 		req.query.gdcFilePosition
 	]
-	return md5Hasher.update(lst.join('')).digest('hex') + '.bam'
+	return generateHash(lst, 'gdc-bam') + '.bam'
 }
 
 /*
@@ -3590,8 +3607,9 @@ async function streamGdcBam2response(req, res) {
 */
 
 /*
-	BAM deletion is prioritized by last modified time, not access time (to avoid relatime issues),
-	although they will be equal due to using utimes() to reset both in get_gdc_bam(). From
+	cached bam slices and their .bai files are evicted by CacheManager (see the "bam" subdir in CacheManager.ts and app.ts),
+	by last modified time, not access time (to avoid relatime issues). get_gdc_bam() uses utimes() to reset
+	the modified time of both files on every access. From
 	https://manpages.ubuntu.com/manpages/bionic/en/man8/mount.8.html:
     
     relatime (default mount used in GDC hosts for PP container)
@@ -3599,129 +3617,13 @@ async function streamGdcBam2response(req, res) {
       updated if the previous access time was earlier than the current modify or change
       time.
 
-	Each call to get_gdc_bam() will trigger mayDeleteCacheFiles() if 
-	there is no pending timeout for it already, to avoid multiples of that 
-	function running at the same time unnecessarily. 
-
-	Another setTimeout() may also be triggered at the end of mayDeleteCacheFiles(),
-	if there are remaining files, with the wait time set to the oldest mtime.
-
-	must not move features.bamCache{} into gdc ds serverconfigFeatures{}! that prevents bamtk to work in an instance without gdc ds
+	eviction is configured with serverconfig.features.cacheMonitor.subdirs.bam{maxAge, maxSize}
 */
 
-const bamCache = serverconfig.features.bamCache || {}
-// the max age for the modified time, will delete files whose modified time exceeds this "aged" access
-const maxAge = bamCache.maxAge || 2 * 60 * 60 * 1000 // in milliseconds
-// maximum allowed cache size in bytes
-const maxSize = bamCache.maxSize || 5e9
-// checkWait:
-// time to wait before triggering another call to mayDeleteCacheFiles(),
-// this is used to debounce/prevent multiple active calls to mayDeleteCacheFiles()
-// also assumed to be roughly equivalent to the minimum required time for a bam file read
-// to complete, otherwise deleting sooner than this may cause a bam file read error;
-// this last assumption only applies to file deletion when the maxSize is exceeded
-const checkWait = bamCache.checkWait || 1 * 60 * 1000
-
-const cachedir_bam = serverconfig.cachedir_bam || path.join(serverconfig.cachedir, 'bam')
-if (!fs.existsSync(cachedir_bam)) fs.mkdirSync(cachedir_bam, { recursive: true })
-
-// a pending timeout reference from setTimeout that calls mayDeleteCacheFiles
-let cacheCheckTimeout,
-	nextCheckTime = 0
-// only run this loop if configured, otherwise will only rely on
-// cleanup as new bam requests come in
-if (serverconfig.features.bamCache) mayResetCacheCheckTimeout(checkWait)
-
-function mayResetCacheCheckTimeout(wait = 0) {
-	// do not trigger the cache check when only validating the server
-	if (process.argv.includes('validate')) return
-
-	const checkTime = Date.now() + wait
-	if (cacheCheckTimeout) {
-		if (nextCheckTime && nextCheckTime <= checkTime + 5) return
-		else {
-			clearTimeout(cacheCheckTimeout)
-			cacheCheckTimeout = undefined
-		}
-	}
-	nextCheckTime = checkTime
-	console.log(`will trigger mayDeleteCacheFiles() in ${wait} ms`)
-	cacheCheckTimeout = setTimeout(mayDeleteCacheFiles, wait)
-}
-
-async function mayDeleteCacheFiles() {
-	console.log(`checking for cached bam files to delete ...`)
-	try {
-		const minTime = Date.now() - maxAge
-		const filenames = await fs.promises.readdir(cachedir_bam)
-		const files = [] // keep list of undeleted bam files. may need to rank them and delete old ones ranked by age
-		let totalSize = 0,
-			deletedSize = 0,
-			totalCount = 0,
-			deletedCount = 0
-		for (const filename of filenames) {
-			if (!filename.endsWith('.bam') && !filename.endsWith('.bai')) continue
-			totalCount++
-			const fp = path.join(cachedir_bam, filename)
-			const s = await fs.promises.stat(fp)
-			if (!s.isFile()) continue
-			const time = s.mtimeMs
-			if (time < minTime) {
-				await fs.promises.unlink(fp)
-				deletedCount++
-				deletedSize += s.size
-				continue
-			}
-			files.push({
-				path: fp,
-				time,
-				size: s.size
-			})
-			totalSize += s.size
-		}
-		files.sort((i, j) => j.time - i.time) // descending
-		if (totalSize >= maxSize) {
-			/*
-			storage use is still above limit, deleting files just older than cutoff is not enough
-			a lot of recent requests may have deposited lots of cache files
-			must delete more old files ranked by age
-			*/
-			const minMtime = Date.now() - checkWait
-			for (const f of files) {
-				// do not delete files too soon that it may affect a current file read
-				if (f.time > minMtime) break
-				await fs.promises.unlink(f.path)
-				f.deleted = true
-				deletedCount++
-				deletedSize += f.size
-				totalSize -= f.size
-				if (totalSize < maxSize) break
-			}
-		}
-		console.log(
-			`deleted ${deletedCount} of ${totalCount} cached bam files (${deletedSize} bytes deleted, ${totalSize} remaining)`
-		)
-		// empty out the following tracking variables
-		cacheCheckTimeout = undefined
-		nextCheckTime = 0
-		const nextFile = totalSize && files.find(f => !f.deleted)
-		if (nextFile) {
-			// trigger another mayDeleteCachefile() call with setTimeout,
-			// using the oldest file mtime + checkWait as the wait time,
-			// or much sooner if the max cache size is currently exceeded
-			const wait = checkWait + Math.round(totalSize >= maxSize ? 0 : Math.max(0, nextFile.time + maxAge - Date.now()))
-			mayResetCacheCheckTimeout(wait)
-		}
-	} catch (e) {
-		console.error('Error in mayDeleteCacheFiles(): ' + e)
-	}
-}
+// created by CacheManager at server launch
+const cachedir_bam = path.join(serverconfig.cachedir, 'bam')
 
 async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
-	// before creating new cache file, check if possible to delete cache files
-	// only trigger a new check if a pending timeout doesn't already exist
-	mayResetCacheCheckTimeout(checkWait)
-
 	// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
 	// which may not be handled properly by the GDC API in qa-uat
 	// per Phil, should only be used as a temporary workaround
@@ -3776,23 +3678,6 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 
 			// not using sourceStream.pipe() so no need to deal with those callbacks as on(close) and on(error)
 			await pipeline(sourceStream, transformStream, writeStream)
-
-			/* no longer aborts when streaming is killed
-			if (tooBigTerminated) {
-				//await appendEOF2truncatedFile2(fullpath)
-				try {
-					await fs.promises.stat(fullpath)
-					await fs.promises.unlink(fullpath) // do it after successful stat to be safe
-				} catch (e) {
-					// ignore case e.g. file is not found or error deleting it
-				}
-
-				// message client
-				throw `slice file size exceeds ${fileSize(
-					serverconfig.features.gdcBam.cacheMaxSize
-				)}. Please reduce query region size and try again.`
-			}
-			*/
 
 			if (await utils.file_not_exist(fullpath)) throw 'BAM file slice is not found after downloading' // unknown error
 

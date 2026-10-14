@@ -1,3 +1,4 @@
+import { escapeHtml } from '#dom'
 import { getCompInit, type RxComponent } from '#rx'
 import type { MassAppApi } from './types/mass'
 import { Menu } from '#dom'
@@ -54,7 +55,7 @@ class MassAiChatBot implements RxComponent {
 	initDom() {
 		//const cohortStr = this.getState(appState).cohortStr
 		let text = 'Search an item'
-		let height = '1px' // No white space needed for search only
+		let height = 'auto' // No white space needed for search only; grows to fit the selected gene's action buttons
 		if (this.isChat) {
 			text = 'Ask a question'
 			height = '200px'
@@ -68,6 +69,7 @@ class MassAiChatBot implements RxComponent {
 				.attr('class', 'sjpp_show_scrollbar')
 				.style('margin', '5px 20px 0px 20px')
 				.style('height', height)
+				.style('max-height', '200px')
 				.style('overflow', 'auto')
 				.style('scroll-behavior', 'smooth')
 		}
@@ -224,14 +226,6 @@ return the created bubble and allow to be modified
 export const chatInit = getCompInit(MassAiChatBot)
 
 // Prevents HTML/script injection in the chat UI (XSS) by entering markup in the prompt (Proposed fix by copilot)
-export function escapeHtml(s: string): string {
-	return s
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-		.replace(/'/g, '&#39;')
-}
 
 // Scan a plot state for a field whose value carries a `possible_options` array, indicating the
 // server could not resolve that term and is offering the user a list of choices. Returns the field

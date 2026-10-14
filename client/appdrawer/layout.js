@@ -5,6 +5,7 @@ import { cardInit } from './card'
 import { buttonInit } from './dsButton'
 import { select } from 'd3-selection'
 import { dofetch3, sayerror } from '#src/client'
+import { isFeatureEnabled } from './utils.js'
 
 /*
 .opts{}
@@ -78,8 +79,7 @@ class AppDrawerLayoutComp {
 	}
 
 	validateElements() {
-		const features = JSON.parse(sessionStorage.getItem('optionalFeatures')) || {}
-		this.elements = this.index.elements.filter(e => !e.hidden && (!e.configFeature || features[e.configFeature]))
+		this.elements = this.index.elements.filter(e => !e.hidden && isFeatureEnabled(e.configFeature))
 	}
 
 	async init() {

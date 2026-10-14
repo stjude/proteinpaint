@@ -2,9 +2,15 @@ import type { RoutePayload, Image, TermdbSampleImagesRequest, TermdbSampleImages
 import path from 'path'
 import fs from 'fs'
 import serverconfig from '#src/serverconfig.js'
+import { genomes } from '#src/initGenomesDs.js'
 
 export const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated (this module is also imported by mds3.init.js, which is imported by initGenomesDs.js);
+	// the route is only set up when at least one ds has ds.queries.images
+	get init() {
+		return hasImagesDs(genomes) ? init : null
+	},
 	request: { typeId: 'TermdbSampleImagesRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'TermdbSampleImagesResponse' }
 }
@@ -17,6 +23,10 @@ export const api: RouteApi = {
 	}
 }
 
+export function hasImagesDs(genomes) {
+	return Object.values(genomes).some((g: any) => Object.values(g.datasets || {}).some((ds: any) => ds.queries?.images))
+}
+
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -26,7 +36,9 @@ function init({ genomes }) {
 			if (!genome) throw 'invalid genome'
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
-			const images = await ds.queries.images.getSampleImages({ sampleId })
+			const getSampleImages = ds.queries?.images?.getSampleImages
+			if (!getSampleImages) throw 'images not supported on this dataset'
+			const images = await getSampleImages({ sampleId })
 			res.send({ images } satisfies TermdbSampleImagesResponse)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })

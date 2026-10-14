@@ -2,6 +2,22 @@ import fs from 'fs'
 import { spawnSync } from 'child_process'
 import path from 'path'
 
+// When container/envHelpers.mjs replaces itself with this script, it runs as PID 1, which ignores a termination
+// signal that it does not handle, so that stopping the container would wait for its timeout and then kill it.
+// Exit with the same code as a process that is terminated by the signal, also before the server is launched.
+if (process.pid == 1) {
+	for (const [signal, code] of [
+		['SIGTERM', 143],
+		['SIGINT', 130],
+		['SIGHUP', 129]
+	]) {
+		process.once(signal, () => {
+			console.log(`exiting on ${signal}`)
+			process.exit(code)
+		})
+	}
+}
+
 const serverconfigFile = path.join(import.meta.dirname, './serverconfig.json')
 
 if (!fs.existsSync(serverconfigFile)) {

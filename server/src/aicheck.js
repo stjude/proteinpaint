@@ -22,7 +22,6 @@ async function do_query(req, genomes) {
 	*/
 	const gn = genomes[req.query.genome]
 	if (!gn) throw 'invalid genome'
-	utils.validateRglst(req.query, gn)
 
 	const [e, file, isurl] = utils.fileurl(req)
 	if (e) throw e

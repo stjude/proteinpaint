@@ -1,3 +1,5 @@
+import { dtTermTypes, migrateLegacyTvsOrigins } from '#shared/terms.js'
+
 /*
 hydrate filter by filling tvs term obj.
 only works for dictionary terms e.g. term:{id:'xx'} with id but lacks type etc.
@@ -18,6 +20,11 @@ export function rehydrateFilter(filter, vocabApi, proms = []) {
 		for (const f of filter.lst) rehydrateFilter(f, vocabApi, proms)
 	} else if (filter.type == 'tvs') {
 		if (typeof filter.tvs?.term != 'object') throw 'a tvs lacks structure of .tvs.term{}'
+		/* a dt tvs of a mass filter stands alone, so no tw fill() ever reaches it. This is
+		the one place the filter that the server receives is brought to the current origin
+		shape: TVS.setHandler() migrates only the copy the filter UI renders, since
+		FilterClass works on a JSON.parse() of the filter rather than the filter itself */
+		if (dtTermTypes.has(filter.tvs.term.type)) migrateLegacyTvsOrigins(filter.tvs)
 		if (filter.tvs.term.id && !filter.tvs.term.name) {
 			// has term.id. allows term obj to be like {id:'xx'} and assumes it must be dict term
 			proms.push(

@@ -35,7 +35,12 @@ export class ReqResCache {
 		let subdir = this.reqPath.slice(1).replaceAll('/', '.')
 		if (this.customSubroute) subdir += `~${this.customSubroute}`
 
-		const filedir = path.join(cachedir, subdir)
+		const filedir = path.resolve(cachedir, subdir)
+		const rootdir = path.resolve(cachedir)
+		// a filesystem root already ends with a separator
+		const boundary = rootdir.endsWith(path.sep) ? rootdir : rootdir + path.sep
+		if (filedir != rootdir && !filedir.startsWith(boundary))
+			throw new Error(`Cache subdir is outside of the cache dir.`)
 		if (this.opts.mode != 'test' && !fs.existsSync(filedir)) {
 			if (this.opts.mode == 'mkdir') fs.mkdirSync(filedir, { recursive: true })
 			// else return {subdir} // throw `missing cacheSubdir='$subdir'`
@@ -43,7 +48,7 @@ export class ReqResCache {
 
 		const id = crypto.createHash('sha1').update(this.reqJson).digest('hex')
 		const dirId = path.join(subdir, id.slice(0, 20))
-		const filepath = path.join(cachedir, dirId)
+		const filepath = path.join(rootdir, dirId)
 		this.loc = { route: this.reqPath, dirId, id, file: `${filepath}.json` }
 		return this.loc
 	}

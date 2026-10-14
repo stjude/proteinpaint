@@ -149,6 +149,8 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.maxAnnoTermsPerClientRequest) c.maxAnnoTermsPerClientRequest = tdb.maxAnnoTermsPerClientRequest
 	if (tdb.limitDictTermSamplesToMutated) c.limitDictTermSamplesToMutated = tdb.limitDictTermSamplesToMutated
 	if (tdb.hidePlotDocumentation) c.hidePlotDocumentation = tdb.hidePlotDocumentation
+	if (tdb.plotFilter) c.plotFilter = tdb.plotFilter
+	if (tdb.sunburst) c.sunburst = tdb.sunburst
 	if (tdb.gbRecreateBlock) c.gbRecreateBlock = tdb.gbRecreateBlock
 	if (tdb.sampleTypeTerms) c.sampleTypeTerms = tdb.sampleTypeTerms
 	if (tdb.sampleTypesByTerms) c.sampleTypesByTerms = tdb.sampleTypesByTerms
@@ -323,6 +325,14 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			// self-contained table config; pass through as-is for the client studyCatalog plot
 			q2.proteome.studyCatalog = JSON.parse(JSON.stringify(q.proteome.studyCatalog))
 		}
+		if (q.proteome.cohortSunburst) {
+			// self-contained ring config for the client cohortSunburst plot
+			q2.proteome.cohortSunburst = JSON.parse(JSON.stringify(q.proteome.cohortSunburst))
+		}
+		if (q.proteome.dataQuality) {
+			// intro text for the Data quality views; the figures are per cohort (qcFigures)
+			q2.proteome.dataQuality = { description: q.proteome.dataQuality.description }
+		}
 		if (q.proteome.cellTypeBubbleHeatmap) {
 			// presence-only: lets the studyCatalog gate its "Cell-type Bubble Heatmap" button
 			q2.proteome.cellTypeBubbleHeatmap = JSON.parse(JSON.stringify(q.proteome.cellTypeBubbleHeatmap))
@@ -367,6 +377,12 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 								}
 								if (src.DAPfile) {
 									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].DAPfile = true
+								}
+								if (src.qcFigures) {
+									// static QC figures, loaded through the img route
+									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].qcFigures = JSON.parse(
+										JSON.stringify(src.qcFigures)
+									)
 								}
 								if (src.catalog) {
 									// per-cohort display fields for the studyCatalog table row
@@ -506,6 +522,19 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			)
 		}
 	}
+	if (q.swimmer) {
+		q2.swimmer = JSON.parse(
+			JSON.stringify({
+				timeLabel: q.swimmer.timeLabel,
+				timeReferences: q.swimmer.timeReferences,
+				categories: q.swimmer.categories,
+				events: q.swimmer.events,
+				terminalEvent: q.swimmer.terminalEvent,
+				pointSampleTypes: q.swimmer.pointSampleTypes,
+				pointSampleEvents: q.swimmer.pointSampleEvents
+			})
+		)
+	}
 	if (q.singleSampleGbtk) {
 		q2.singleSampleGbtk = {}
 		for (const k in q.singleSampleGbtk) {
@@ -575,14 +604,25 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	}
 	if (q.junction) {
 		q2.junction = {}
+		if (q.junction.cluster) {
+			/* Defaults to true unless overridden by ds. The cap is enforced server-side 
+			on eligible samples; h5 and maxSamplesPerGroup are not forwarded.*/
+			const c = q.junction.cluster
+			const so: any = {}
+			if (c.defaultMethod) so.defaultMethod = c.defaultMethod
+			q2.junction.cluster = Object.keys(so).length ? so : true
+		}
 	}
 }
 
 // allowedTermTypes[] is an unique list of term types from this dataset. allows plot to determine if term type specific feature is applicable for a ds
 export function getDsAllowedTermTypes(ds) {
 	const typeSet = new Set()
-	for (const r of ds.cohort.termdb.termtypeByCohort) {
-		if (r.termType) typeSet.add(r.termType)
+	for (const typeCounts of Object.values<any>(ds.cohort.termdb.termtypeByCohort || {})) {
+		for (const [termType, termCount] of Object.entries(typeCounts)) {
+			// .numeric is a precomputed total of numeric types, not a term type
+			if (termType != 'numeric' && termCount) typeSet.add(termType)
+		}
 	}
 	if (ds.cohort.termdb.allowedTermTypes) {
 		// optional predefined term types, append to set

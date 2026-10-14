@@ -1,3 +1,4 @@
+import { escapeHtml } from '#dom'
 import { mayRunSnplstTask } from './snplst.sampleSum'
 import type { SnpsQ, SnpsTW, SnpsVocabApi, SnpsTerm } from '#types'
 
@@ -47,7 +48,7 @@ Exports following functions shared with snplocus term
 export function getHandler(self) {
 	return {
 		getPillName() {
-			return self.term.name
+			return escapeHtml(self.term.name)
 		},
 
 		getPillStatus() {

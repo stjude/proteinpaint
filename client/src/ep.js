@@ -895,6 +895,7 @@ function showgene(ep, name) {
 		fetch(
 			new Request(ep.hostURL + '/dbdata', {
 				method: 'POST',
+				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify(par)
 			})
 		)
@@ -934,6 +935,7 @@ function showgene(ep, name) {
 	fetch(
 		new Request(ep.hostURL + '/dsdata', {
 			method: 'POST',
+			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ genome: ep.genome.name, dsname: ep.dsname, expressiononly: 1, genename: name })
 		})
 	)

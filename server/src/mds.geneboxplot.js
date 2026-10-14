@@ -486,11 +486,12 @@ function get_param(genomes, req) {
 
 	const gn = genomes[req.query.genome]
 	if (!gn) throw 'invalid genome'
-	utils.checkChr(gn, req.query.chr)
+	utils.validateRglst({ rglst: [req.query] }, gn) // req.query={chr,start,stop}
 
 	let ds, dsquery
 	if (req.query.iscustom) {
 		if (!req.query.file && !req.query.url) throw 'no file or url for expression data'
+		utils.checkTrackFile(req.query.file)
 		ds = {}
 		dsquery = {
 			file: req.query.file,
@@ -512,6 +513,7 @@ function get_param(genomes, req) {
 	if (req.query.svcnv) {
 		svcnv = {}
 		if (req.query.iscustom) {
+			utils.checkTrackFile(req.query.svcnv.file)
 			svcnv.dsquery = {
 				file: req.query.svcnv.file,
 				url: req.query.svcnv.url,

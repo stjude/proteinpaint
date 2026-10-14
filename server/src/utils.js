@@ -7,9 +7,13 @@ import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import ky from 'ky'
 import serverconfig from './serverconfig.js'
+import { cacheUrlProtocols } from './CacheManager.ts'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import { minimatch } from 'minimatch'
+
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
 export * from './cachedFetch.js'
 export * from './xfetch.js'
 export { connect_db } from './sql.ts'
@@ -40,10 +44,9 @@ get_header_txt
 get_fasta
 connect_db
 snpgtCacheFile
-loadfile_ssid
+snpgtSampleColumn
 bam_ifnochr
 testIfFileIsBigbed
-checkChr
 spawnTool
 validateRglst
 ********************** INTERNAL
@@ -79,21 +82,16 @@ export async function cache_index(gzurl, indexurl) {
 	if (gzHostErr) throw '.gz file URL error: ' + gzHostErr
 	// build cache directory using gz file url and do not include index portion
 	// e.g. cache/https/domain/path/to/file.gz/
-	const dir = path.join(serverconfig.cachedir, protocol, body)
-	if (!isUnderDir(dir, path.join(serverconfig.cachedir, protocol))) throw '.gz file URL escapes cache dir'
+	// resolve and check inline so the returned dir, which becomes the cwd of spawned tools, is confined to the cache dir
+	const protocolDir = path.resolve(cachedir, protocol)
+	const dir = path.resolve(protocolDir, body)
+	if (!dir.startsWith(protocolDir + path.sep)) throw '.gz file URL escapes cache dir'
+	// mkdir on every call, which is a no-op for an existing dir, rather than only when a stat finds it missing,
+	// so that an empty dir that CacheManager removes between the two calls is still recreated
 	try {
-		await fs.promises.stat(dir)
+		await fs.promises.mkdir(dir, { recursive: true })
 	} catch (e) {
-		if (e.code == 'ENOENT') {
-			// make dir
-			try {
-				await fs.promises.mkdir(dir, { recursive: true })
-			} catch (e) {
-				throw 'url dir: cannot mkdir'
-			}
-		} else {
-			throw 'stating gz url dir: ' + e.code
-		}
+		throw 'url dir: cannot mkdir'
 	}
 	// dir is ready
 	if (indexurl) {
@@ -108,6 +106,7 @@ export async function cache_index(gzurl, indexurl) {
 		try {
 			await fs.promises.stat(path2file)
 			// index file exists
+			await touchCacheFiles([path2file])
 			return dir
 		} catch (e) {
 			if (e.code == 'ENOENT') {
@@ -122,8 +121,21 @@ export async function cache_index(gzurl, indexurl) {
 		// no url specified for index
 		// assume the appropriate index exists under dir
 		// let tabix 1.11 do the work of getting the tbi/csi file if missing
+		// the index that tabix downloaded into dir is not known by name, so every file in dir is touched;
+		// a nested dir is the cache dir of another url, and a partial download is not a usable index
+		const entries = await fs.promises.readdir(dir, { withFileTypes: true }).catch(() => [])
+		const files = entries.filter(e => e.isFile() && !e.name.endsWith('.tmp')).map(e => path.join(dir, e.name))
+		await touchCacheFiles(files)
 		return dir
 	}
+}
+
+/* CacheManager evicts a cached index by its mtime, so the mtime is set on each use: a track that is in use
+keeps its index, and only an index that has not been used for maxAge is evicted. A failure, such as a file
+evicted since it was found, is ignored, since the caller or tabix downloads a missing index again. */
+async function touchCacheFiles(files) {
+	const now = new Date()
+	await Promise.all(files.map(f => fs.promises.utimes(f, now, now).catch(() => {})))
 }
 
 export function fileurl(req, checkWhiteList = true) {
@@ -161,6 +173,15 @@ export function fileurl(req, checkWhiteList = true) {
 }
 
 const fileExtensionBlackList = Object.freeze(['.bam', '.bai', '.gz', '.tbi', '.csi', '.bw', '.bb'])
+
+/*
+	file: a request track file path, relative to tpmasterdir
+	throws unless file is a legal path; an empty value is allowed, for a track that uses a url instead
+*/
+export function checkTrackFile(file) {
+	if (file === undefined || file === null || file === '') return
+	if (illegalpath(file, false, false)) throw 'illegal file path'
+}
 
 export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
 	// a non-string, such as an array from a repeated query parameter, could bypass the substring checks below
@@ -210,6 +231,7 @@ export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
 	such as when it may traverse to a parent dir or has path separators
 */
 export function illegalPathSegment(s) {
+	if (typeof s != 'string') return true
 	if (illegalpath(s, false, false)) return true
 	if (s.includes('/') || s.includes('\\')) return true // must not add a dir level
 	if (s == '.') return true
@@ -217,9 +239,8 @@ export function illegalPathSegment(s) {
 }
 
 // protocol and body of a url become path segments of a cache dir (see cache_index), so only
-// allow protocols that are real remote track sources: any other name could be a feature dir under
-// cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
-const cacheUrlProtocols = new Set(['http', 'https', 'ftp'])
+// allow the protocols that are declared as 'url' subdirs in cacheRegistry: any other name could be a
+// feature dir under cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
 
 function test_url(u) {
 	const tmp = u.split('://')
@@ -289,22 +310,8 @@ for (const [ip, prefix] of [
 	  restrict the outbound network access of the server to fully prevent that.
 */
 export function illegalUrlHost(u) {
-	// the WHATWG parser below treats a backslash as a path separator, but a spawned tool with another url
-	// parser may not, e.g. it may read http://a.org\@127.0.0.1/x as user a.org\ at host 127.0.0.1,
-	// so a url with a backslash, whitespace, or control character is not allowed
-	if (typeof u != 'string' || /[\\\s\x00-\x1f\x7f]/.test(u))
-		return 'url must not contain a backslash, whitespace, or control character'
-	let host
-	try {
-		// the WHATWG parser normalizes ip address forms, such as http://2130706433/ to 127.0.0.1
-		host = new URL(u).hostname.toLowerCase()
-	} catch (_) {
-		return 'invalid url'
-	}
-	if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1) // ipv6
-	// a fully qualified name may end with a dot, such as localhost. or a.org., which resolves the same as without it
-	if (host.endsWith('.')) host = host.slice(0, -1)
-	if (!host) return 'url must have a host'
+	const [e, host] = parseUrlHost(u)
+	if (e) return e
 	if (serverconfig.urlHosts) {
 		for (const h of serverconfig.urlHosts) {
 			if (h[0] == '.' ? host.endsWith(h) : host == h) return
@@ -312,8 +319,39 @@ export function illegalUrlHost(u) {
 		return 'url host is not allowed'
 	}
 	if (host == 'localhost' || host.endsWith('.localhost')) return 'url host is not allowed'
-	const ipType = net.isIP(host)
-	if (ipType && nonPublicIps.check(host, ipType == 4 ? 'ipv4' : 'ipv6')) return 'url host is not allowed'
+	if (isNonPublicIp(host)) return 'url host is not allowed'
+}
+
+/*
+	u: a url
+
+	returns [error] if the url is not safe to parse or has no host, or [null, host] with the host lowercased,
+	without the brackets of an ipv6 address and without a trailing dot
+*/
+function parseUrlHost(u) {
+	// the WHATWG parser below treats a backslash as a path separator, but a spawned tool with another url
+	// parser may not, e.g. it may read http://a.org\@127.0.0.1/x as user a.org\ at host 127.0.0.1,
+	// so a url with a backslash, whitespace, or control character is not allowed
+	if (typeof u != 'string' || /[\\\s\x00-\x1f\x7f]/.test(u))
+		return ['url must not contain a backslash, whitespace, or control character']
+	let host
+	try {
+		// the WHATWG parser normalizes ip address forms, such as http://2130706433/ to 127.0.0.1
+		host = new URL(u).hostname.toLowerCase()
+	} catch (_) {
+		return ['invalid url']
+	}
+	if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1) // ipv6
+	// a fully qualified name may end with a dot, such as localhost. or a.org., which resolves the same as without it
+	if (host.endsWith('.')) host = host.slice(0, -1)
+	if (!host) return ['url must have a host']
+	return [null, host]
+}
+
+// true if ip is a literal ip address that is not globally reachable, see nonPublicIps
+function isNonPublicIp(ip) {
+	const ipType = net.isIP(ip)
+	return ipType != 0 && nonPublicIps.check(ip, ipType == 4 ? 'ipv4' : 'ipv6')
 }
 
 // true if file resolves strictly inside dir
@@ -579,6 +617,8 @@ export async function get_header_txt(file, dir) {
 		const ps = spawn('head', ['-1', file], { cwd: dir })
 		const out = []
 		ps.stdout.on('data', i => out.push(i))
+		// e.g. a missing cwd; without a listener, the 'error' event would crash the process
+		ps.on('error', reject)
 		ps.on('close', () => {
 			resolve(out.join('').trim())
 		})
@@ -590,6 +630,7 @@ export function get_header_bcf(file, dir) {
 		const ps = spawnTool(bcftools, ['view', '-h', file], { cwd: dir })
 		const out = []
 		ps.stdout.on('data', i => out.push(i))
+		ps.on('error', reject)
 		ps.on('close', () => {
 			resolve(vcf.vcfparsemeta(out.join('').trim().split('\n')))
 		})
@@ -635,6 +676,8 @@ export function get_lines_bigfile({ args, callback, dir = null, isbcf = false, i
 		const em = []
 		rl.on('line', line => callback(line, ps))
 		ps.stderr.on('data', d => em.push(d))
+		// e.g. a missing cwd; without a listener, the 'error' event would crash the process
+		ps.on('error', reject)
 		ps.on('close', () => {
 			const e = em.join('').trim()
 			if (e && !tabixnoterror(e)) {
@@ -657,6 +700,7 @@ export function get_lines_txtfile({ args, dir, callback }) {
 		const em = []
 		rl.on('line', line => callback(line, ps))
 		ps.stderr.on('data', d => em.push(d))
+		ps.on('error', reject)
 		ps.on('close', () => {
 			const e = em.join('').trim()
 			if (e) {
@@ -678,7 +722,7 @@ export function write_file(file, text) {
 
 export async function write_tmpfile(text) {
 	const tmp = Math.random().toString()
-	await write_file(path.join(serverconfig.cachedir, tmp), text)
+	await write_file(path.join(cachedir, tmp), text)
 	return tmp
 }
 
@@ -698,17 +742,14 @@ export function read_file(file) {
 
 export async function get_fasta(gn, coord) {
 	// coord may come from a request; rebuild it from validated parts so it can never be read as a samtools option
-	const m = typeof coord == 'string' && coord.match(/^(.+):(\d+)-(\d+)$/)
-	const c = m && gn.chrlookup?.[m[1].toUpperCase()]
-	if (!c) throw 'invalid coordinate'
-	const pos = `${c.name}:${m[2]}-${m[3]}`
+	// donotextend=true keeps the given range as is; a missing actualposition means only a chr name was given
+	const p = typeof coord == 'string' && gn.chrlookup ? common.string2pos(coord, gn, true) : null
+	if (!p?.actualposition) throw 'invalid coordinate'
+	const pos = `${p.chr}:${p.start}-${p.stop}`
 
 	if (gn.genomefile == 'NA') {
 		// not using a real fasta file, return Ns by the length of region
-		const tmp = pos.split(/[:-]/)
-		const fakent = []
-		for (let i = Number(tmp[1]); i <= Number(tmp[2]); i++) fakent.push('N')
-		return `>${pos}\n${fakent.join('')}` // must include fasta header line
+		return `>${pos}\n${'N'.repeat(p.stop - p.start + 1)}` // must include fasta header line
 	}
 
 	// chr:start-stop, positions are 1-based
@@ -728,60 +769,56 @@ export const genotype_types = {
 	het: 'Heterozygous'
 }
 
-export const cachedir_ssid = serverconfig.cachedir_ssid || path.join(serverconfig.cachedir, 'ssid')
-if (!fs.existsSync(cachedir_ssid)) fs.mkdirSync(cachedir_ssid)
+// in a snp genotype cache file written by termdb.snp.js, the sample columns start from the 7th column
+export const snpgtSampleColumn = 6
 
-// a client-provided snp genotype cache id, such as tw.q.cacheid, must name a file directly under
-// cache_snpgt.dir; the callers that also apply cache_snpgt.fileNameRegexp keep that stricter check
-export function snpgtCacheFile(cacheid) {
-	if (illegalPathSegment(cacheid)) throw 'invalid cacheid'
-	return path.join(serverconfig.cache_snpgt.dir, cacheid)
+/* a snp genotype cache id starts with this prefix of the dataset that made the cache file;
+a cache id is a file name, so a genome or dslabel that has a non-\w character has it replaced with _.
+as that replacement may give the same prefix to another dataset of the same genome, such as
+a-b and a.b, neither of those datasets can use the snp genotype cache */
+export function snpgtCacheidPrefix(ds) {
+	if (!ds?.genomename || !ds.label) throw 'dataset does not support snp genotype cache'
+	const normalize = label => (ds.genomename + '_' + label).replace(/[^\w]/g, '_') + '_'
+	const prefix = normalize(ds.label)
+	for (const label in ds.genomeObj?.datasets || {}) {
+		if (label != ds.label && normalize(label) == prefix)
+			throw `dataset label '${ds.label}' is not distinct from '${label}' for snp genotype cache`
+	}
+	return prefix
 }
 
-export async function loadfile_ssid(id, samplefilterset) {
-	/*
-samplefilterset:
-	optional Set of samples to restrict to
-*/
-	// the id is client-provided, such as q.ssid of /termdb/barsql, and must name a file directly under cachedir_ssid
-	if (illegalPathSegment(id)) throw 'invalid ssid'
-	const text = await read_file(path.join(cachedir_ssid, id))
-	const sample2gt = new Map()
-	// k: sample, v: genotype str
-	const genotype2sample = new Map()
-	// k: genotype str, v: Set of samples
-	for (const line of text.trim().split('\n')) {
-		if (!line) continue
-		const [genotype, samplesStr] = line.split('\t')
-		if (!samplesStr) continue
-		if (!genotype_type_set.has(genotype)) throw 'unknown hardcoded genotype label: ' + genotype
-		const samples_original = samplesStr.split(',').map(d => Number(d))
-		const samplelst = samplefilterset ? samples_original.filter(i => samplefilterset.has(i)) : samples_original
-		for (const sample of samplelst) {
-			sample2gt.set(sample, genotype)
-		}
-		genotype2sample.set(genotype, new Set(samplelst))
-	}
-	return [sample2gt, genotype2sample]
+/* a snp genotype cache id, such as the client-provided tw.q.cacheid, must name a file directly under the
+snpgt cache subdir, and must have been made by termdb.snp.js makeCacheid() for the same ds:
+<prefix of ds><time>_<random number> */
+export function snpgtCacheFile(cacheid, ds) {
+	if (typeof cacheid != 'string' || illegalPathSegment(cacheid) || /[^\w]/.test(cacheid)) throw 'invalid cacheid'
+	const prefix = snpgtCacheidPrefix(ds)
+	if (!cacheid.startsWith(prefix) || !/^\d+_\d+$/.test(cacheid.slice(prefix.length))) throw 'invalid cacheid'
+	return path.join(cachedir, 'snpgt', cacheid)
 }
 
 export async function run_fdr(plst) {
 	// list of pvalues
-	const infile = path.join(serverconfig.cachedir, Math.random().toString())
+	const infile = path.join(cachedir, Math.random().toString())
 	const outfile = infile + '.out'
-	await write_file(infile, plst.join('\t'))
-	await run_fdr_2(infile, outfile)
-	const text = await read_file(outfile)
-	fs.unlink(infile, () => {})
-	fs.unlink(outfile, () => {})
-	return text.trim().split('\n').map(Number)
+	try {
+		await write_file(infile, plst.join('\t'))
+		await run_fdr_2(infile, outfile)
+		const text = await read_file(outfile)
+		return text.trim().split('\n').map(Number)
+	} finally {
+		// also when Rscript fails, so that the temporary files do not accumulate in cachedir
+		fs.unlink(infile, () => {})
+		fs.unlink(outfile, () => {})
+	}
 }
 
 function run_fdr_2(infile, outfile) {
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', [path.join(serverconfig.binpath, 'utils/fdr.R'), infile, outfile])
+		// --vanilla, same as run_R()
+		const sp = spawn('Rscript', ['--vanilla', path.join(serverconfig.binpath, 'utils/fdr.R'), infile, outfile])
 		sp.on('close', () => resolve())
-		sp.on('error', () => reject(e))
+		sp.on('error', reject)
 	})
 }
 
@@ -820,7 +857,7 @@ export async function bam_ifnochr(file, genome, dir, fileIsTruncated) {
 		if fileIsTruncated=true, samtools view -H will print one line to stderr while continue to output all header lines
 		in such case must ignore the err, for truncated gdc slice to work
 		*/
-		if (fileIsTruncated && e.endsWith(SAMTOOLS_ERR_MSG.view)) {
+		if (fileIsTruncated && typeof e == 'string' && e.endsWith(SAMTOOLS_ERR_MSG.view)) {
 			// expected. ignore this err and continue to parse header lines
 		} else {
 			// unexpected err
@@ -833,10 +870,10 @@ export async function bam_ifnochr(file, genome, dir, fileIsTruncated) {
 	for (const line of lines) {
 		if (!line.startsWith('@SQ')) continue
 		const tmp = line.split('\t')[1]
-		if (!tmp) reject('2nd field missing from @SQ line')
+		if (!tmp) throw '2nd field missing from @SQ line'
 		const l = tmp.split(':')
-		if (l[0] != 'SN') reject('@SQ line 2nd field is not "SN" but ' + l[0])
-		if (!l[1]) reject('@SQ line no value for SN')
+		if (l[0] != 'SN') throw '@SQ line 2nd field is not "SN" but ' + l[0]
+		if (!l[1]) throw '@SQ line no value for SN'
 		chrlst.push(l[1])
 	}
 	return common.contigNameNoChr(genome, chrlst)
@@ -933,7 +970,7 @@ export async function testIfFileIsBigbed(file) {
 			// TODO also test extraIndexCount. return object but not true/false
 		})
 		ps.on('error', e => {
-			if (e.code === 'ENOENT') throw `cannot find bigBedInfo binary='${bigBedInfo}'`
+			if (e.code === 'ENOENT') return reject(`cannot find bigBedInfo binary='${bigBedInfo}'`)
 			// reject('Error detecting if file is bigbed')
 			console.log('\n--- testIfFileIsBigbed() error ---\n', e, '\n')
 			resolve(false)
@@ -951,12 +988,6 @@ genome is used for validating chr names. when routes are fixed, genome should be
 
 throws on any err. makes no return. may update q
 */
-// a request-supplied chr must be a known chromosome before it goes into a samtools/tabix/bcftools argv,
-// otherwise a value like "-o/path" is parsed as an option
-export function checkChr(genome, chr) {
-	if (typeof chr != 'string' || !genome?.chrlookup?.[chr.toUpperCase()]) throw 'invalid chr'
-}
-
 // every samtools/tabix/bcftools spawn goes through here: an argument that starts with "-" and contains ":" is a
 // region built from a request chr (e.g. "-o/path:1-2"), which the tool would parse as an option
 // ponytail: catches region-shaped injection only; request values used as a whole argument must still be validated at the route
@@ -966,6 +997,12 @@ export function spawnTool(bin, args, opts) {
 	}
 	return spawn(bin, args, opts)
 }
+
+// upper limits of a region's pixel width, the sum of the widths and the number of regions, which size
+// arrays and bins on the server; the regions of one request share a screen, so their widths add up to about its width
+const maxRglstWidth = 20000
+const maxRglstTotalWidth = 50000
+const maxRglstLength = 1000
 
 export function validateRglst(q, genome) {
 	if (typeof q.rglst == 'string') {
@@ -977,6 +1014,8 @@ export function validateRglst(q, genome) {
 	}
 	if (!Array.isArray(q.rglst)) throw 'q.rglst[] not array'
 	if (q.rglst.length == 0) throw 'q.rglst[] blank array'
+	if (q.rglst.length > maxRglstLength) throw 'q.rglst[] too many regions'
+	let totalWidth = 0
 	for (const r of q.rglst) {
 		if (typeof r != 'object') throw 'element of q.rglst[] not object'
 		if (typeof r.chr != 'string') throw 'q.rglst[].chr not string'
@@ -992,6 +1031,12 @@ export function validateRglst(q, genome) {
 		if (r.stop < 0) throw 'q.rglst[].stop<0'
 		if (c && r.stop > c.len) throw 'q.rglst[].stop out of bound'
 		if (r.stop <= r.start) throw 'q.rglst[].stop < start'
+		if (r.width != null) {
+			if (!Number.isFinite(r.width)) throw 'q.rglst[].width not number'
+			if (r.width < 0 || r.width > maxRglstWidth) throw 'q.rglst[].width out of bound'
+			totalWidth += r.width
+			if (totalWidth > maxRglstTotalWidth) throw 'q.rglst[].width total out of bound'
+		}
 	}
 }
 

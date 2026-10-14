@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { vocabInit } from '#termdb/vocabulary'
+import { vocabInit, getVocabFromSamplesArray } from '#termdb/vocabulary'
 import { getExample } from '#termdb/test/vocabData'
 import { termjson } from '../../test/testdata/termjson'
 
@@ -7,9 +7,7 @@ import { termjson } from '../../test/testdata/termjson'
 Tests:
 	getPercentile()
 	q_to_param()
-	** Comments
-		Not testing
-			getVocabFromSamplesArray() - only appears in old mds.scatterplot code which will be obsolete
+	getVocabFromSamplesArray()
 
  */
 
@@ -154,4 +152,34 @@ tape('q_to_param()', async test => {
 		if (!result.includes(key)) test.fail(`Missing q.${key} in URL string for term = ${testTerm}`)
 	}
 	test.equal(checkEncoding(result), true, `Should return url for term = ${testTerm}`)
+})
+
+tape('getVocabFromSamplesArray() does not pollute Object.prototype', test => {
+	test.timeoutAfter(100)
+	test.plan(4)
+
+	// simulates a mdsjsonurl-supplied analysisdata.samples entry with sample name "__proto__"
+	// (code-scanning #146); JSON.parse (not an object literal) so "__proto__" lands as a
+	// regular own key, matching what a real attacker JSON payload produces
+	const samplesWithProtoName = JSON.parse('[{"sample":"__proto__","s":{"a":"payload"}}]')
+	const attributesA = { a: { label: 'a' } }
+	const resultFromName = getVocabFromSamplesArray({ samples: samplesWithProtoName, sample_attributes: attributesA })
+
+	test.equal(Object.prototype.a, undefined, 'a "__proto__" sample name must not set Object.prototype.a')
+	test.equal(
+		resultFromName.sampleannotation['__proto__'].a,
+		'payload',
+		'the attribute is still recorded under sampleannotation["__proto__"]'
+	)
+
+	// same attack via the sample attribute key instead of the sample name
+	const samplesWithProtoKey = JSON.parse('[{"sample":"s1","s":{"__proto__":"payload"}}]')
+	const attributesProto = JSON.parse('{"__proto__":{"label":"a"}}')
+	const resultFromKey = getVocabFromSamplesArray({ samples: samplesWithProtoKey, sample_attributes: attributesProto })
+
+	test.equal(Object.prototype.id, undefined, 'a "__proto__" attribute key must not set Object.prototype.id')
+	test.ok(
+		resultFromKey.terms.find(t => t.id === '__proto__'),
+		'a term definition for "__proto__" is still created'
+	)
 })

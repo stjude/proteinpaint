@@ -4,6 +4,7 @@ import {
 	Auth,
 	getMatchedEntry,
 	getNonStringAuthParam,
+	getOriginFromHeaders,
 	getSessionEntry,
 	normalizeReqPath,
 	stripBasepath
@@ -509,7 +510,7 @@ tape('getJwtPayload: throws when header key is missing from headers', function (
 
 tape('getJwtPayload: returns payload for valid token with datasets', function (test) {
 	test.timeoutAfter(500)
-	test.plan(2)
+	test.plan(3)
 
 	const auth = makeAuth({ dsnames: [{ id: dslabel, label: 'Test Dataset' }] })
 	const cred = auth.creds[dslabel].termdb[embedder]
@@ -528,6 +529,7 @@ tape('getJwtPayload: returns payload for valid token with datasets', function (t
 	const result = auth.getJwtPayload({ embedder, dslabel }, headers, cred)
 	test.ok(result, 'should return a payload for a valid token')
 	test.equal(result?.email, 'user@test.com', 'should include the email from the payload')
+	test.deepEqual(result?.userDatasets, [dslabel], 'should include the datasets from the payload as userDatasets')
 	test.end()
 })
 
@@ -593,6 +595,92 @@ tape('getJwtPayload: throws for missing dataset access', function (test) {
 		test.fail('should have thrown for missing dataset access')
 	} catch (e: any) {
 		test.ok(e.error === 'Missing access', 'should throw an error about missing access')
+	}
+	test.end()
+})
+
+tape('getJwtPayload: requires every dsnames id in the payload datasets', function (test) {
+	test.timeoutAfter(500)
+
+	const dsnames = [
+		{ id: 'dsA', label: 'A' },
+		{ id: 'dsB', label: 'B' }
+	]
+	const auth = makeAuth({ dsnames })
+	const cred = auth.creds[dslabel].termdb[embedder]
+	const getResult = (datasets?: any): any => {
+		const payload: any = { iat: time, exp: time + 300, email: 'user@test.com', ip: '127.0.0.1' }
+		if (datasets !== undefined) payload.datasets = datasets
+		const headers = { [cred.headerKey]: jsonwebtoken.sign(payload, secret) }
+		try {
+			return auth.getJwtPayload({ embedder, dslabel }, headers, cred)
+		} catch (e) {
+			return e
+		}
+	}
+
+	test.deepEqual(getResult(['dsA', 'dsB'])?.userDatasets, ['dsA', 'dsB'], 'should accept a jwt that lists every dsname')
+	test.deepEqual(
+		getResult(['dsB', 'dsA', 'dsC', 1])?.userDatasets,
+		['dsB', 'dsA', 'dsC'],
+		'should accept a jwt that lists every dsname among other entries'
+	)
+	for (const [datasets, linkKey, label] of [
+		[['dsA'], 'dsB', 'only one of the dsnames'],
+		[[], 'dsA,dsB', 'an empty datasets array'],
+		[undefined, 'dsA,dsB', 'no datasets'],
+		['dsA,dsB', 'dsA,dsB', 'a non-array datasets value'],
+		[[{ id: 'dsA' }, { id: 'dsB' }], 'dsA,dsB', 'non-string datasets entries']
+	] as [any, string, string][]) {
+		test.deepEqual(
+			getResult(datasets),
+			{ error: 'Missing access', linkKey },
+			`should reject a jwt with ${label}, with the missing dsnames as linkKey`
+		)
+	}
+	test.end()
+})
+
+tape('getJwtPayload: without dsnames, requires the dslabel in a non-empty payload datasets', function (test) {
+	test.timeoutAfter(500)
+
+	const auth = makeAuth()
+	const cred = auth.creds[dslabel].termdb[embedder]
+	const getResult = (datasets?: any): any => {
+		const payload: any = { iat: time, exp: time + 300, email: 'user@test.com', ip: '127.0.0.1' }
+		if (datasets !== undefined) payload.datasets = datasets
+		const headers = { [cred.headerKey]: jsonwebtoken.sign(payload, secret) }
+		try {
+			return auth.getJwtPayload({ embedder, dslabel }, headers, cred)
+		} catch (e) {
+			return e
+		}
+	}
+
+	for (const [datasets, label] of [
+		[[dslabel], 'only the dslabel'],
+		[['other', dslabel], 'the dslabel among other entries'],
+		[[], 'an empty datasets array'],
+		[undefined, 'no datasets']
+	] as [any, string][]) {
+		test.equal(getResult(datasets)?.email, 'user@test.com', `should accept a jwt with ${label}`)
+	}
+	for (const [datasets, label] of [
+		[['other'], 'datasets that do not list the dslabel'],
+		[[{ id: dslabel }], 'non-string datasets entries'],
+		[dslabel, 'a non-array datasets value'],
+		['', 'an empty string datasets value'],
+		[{}, 'an object datasets value'],
+		[{ id: dslabel }, 'an object datasets value with the dslabel'],
+		[5, 'a number datasets value'],
+		[true, 'a boolean datasets value'],
+		[null, 'a null datasets value']
+	] as [any, string][]) {
+		test.deepEqual(
+			getResult(datasets),
+			{ error: 'Missing access', linkKey: dslabel },
+			`should reject a jwt with ${label}, with the dslabel as linkKey`
+		)
 	}
 	test.end()
 })
@@ -770,6 +858,25 @@ tape('getSignedJwt: creates a valid jwt and stores session', function (test) {
 	test.end()
 })
 
+tape('getSignedJwt: tracks userDatasets in the session and the signed session jwt', function (test) {
+	test.timeoutAfter(500)
+	test.plan(3)
+
+	const auth = makeAuth({ dsnames: [{ id: dslabel, label: 'Test Dataset' }] })
+	const cred = auth.creds[dslabel].termdb[embedder]
+	const req = { ip: '127.0.0.1', headers: {} }
+	const res = { header() {} }
+	const sessions = new Map()
+	const userDatasets = ['dsA', 'dsB']
+	const jwt = auth.getSignedJwt(req, res, { dslabel, embedder }, cred, {}, 60000, '', sessions, userDatasets)
+	const session = sessions.get(dslabel).get(auth.getSessionIdFromJwt(jwt))
+	test.deepEqual(session.userDatasets, userDatasets, 'should track userDatasets in the session')
+	const payload: any = jsonwebtoken.verify(jwt!, secret)
+	test.deepEqual(payload.userDatasets, userDatasets, 'should include userDatasets in the signed session jwt')
+	test.deepEqual(payload.datasets, [dslabel], 'should keep the dsCredentials dsnames as payload.datasets')
+	test.end()
+})
+
 tape('getSignedJwt: a dslabel of __proto__ does not pollute Object.prototype', function (test) {
 	test.timeoutAfter(500)
 	test.plan(3)
@@ -809,17 +916,33 @@ tape('mayAddSessionFromJwt: throws for unsupported authorization type', function
 	const auth = makeAuth()
 	const cred = auth.creds[dslabel].termdb[embedder]
 	const req = {
-		headers: { authorization: 'Basic abc123' },
+		headers: { authorization: '<script>alert(1)</script> abc123' },
 		query: { dslabel, embedder }
 	}
 	try {
 		auth.mayAddSessionFromJwt(new Map(), req, cred)
 		test.fail('should have thrown for unsupported authorization type')
 	} catch (e) {
-		test.ok(
-			String(e).includes('unsupported authorization type'),
-			'should throw mentioning unsupported authorization type'
-		)
+		test.equal(e, `unsupported authorization type, allowed: 'Bearer'`, 'should throw the expected error')
+	}
+	test.end()
+})
+
+tape('mayAddSessionFromJwt: throws a fixed error when no secret is configured', function (test) {
+	test.timeoutAfter(500)
+	test.plan(1)
+
+	const auth = makeAuth({ secret: undefined })
+	const cred = auth.creds[dslabel].termdb[embedder]
+	const req = {
+		headers: { authorization: 'Bearer abc123' },
+		query: { dslabel, embedder: '<script>alert(1)</script>' }
+	}
+	try {
+		auth.mayAddSessionFromJwt(new Map(), req, cred)
+		test.fail('should have thrown when no secret is configured')
+	} catch (e: any) {
+		test.equal(e.error, 'no credentials set up for this embedder', 'should throw the expected error')
 	}
 	test.end()
 })
@@ -1039,5 +1162,25 @@ tape('getSessionEntry: resolves only real stored entries', function (test) {
 			`returns undefined for inherited id '${id}' on an existing dslabel entry`
 		)
 	}
+	test.end()
+})
+
+tape('getOriginFromHeaders: resolves from Origin or Referer, with no Host fallback', function (test) {
+	test.plan(3)
+	test.equal(
+		getOriginFromHeaders({ headers: { origin: 'https://trusted.org' } })?.origin,
+		'https://trusted.org',
+		'resolves from the Origin header'
+	)
+	test.equal(
+		getOriginFromHeaders({ headers: { referer: 'https://trusted.org/x' } })?.origin,
+		'https://trusted.org',
+		'resolves from the Referer header'
+	)
+	test.equal(
+		getOriginFromHeaders({ headers: { host: 'example.com' } }),
+		undefined,
+		'does not resolve from the Host header alone'
+	)
 	test.end()
 })

@@ -6,7 +6,7 @@ function getDs() {
 		cohort: {
 			termdb: {
 				allowedTermTypes: [],
-				termtypeByCohort: { nested: {} }
+				termtypeByCohort: {}
 			}
 		},
 		queries: {
@@ -39,9 +39,9 @@ tape('aggregate method availability follows dataset data and term kind', test =>
 		'Should expose only methods backed by this numeric dataset'
 	)
 	test.deepEqual(
-		ds.getAvailableAggregateMethods([
-			{ type: 'pseudobulk', assay: 'geneExpression', memberId: 'cellType', id: 'B' }
-		]).map(method => method.id),
+		ds
+			.getAvailableAggregateMethods([{ type: 'pseudobulk', assay: 'geneExpression', memberId: 'cellType', id: 'B' }])
+			.map(method => method.id),
 		['mean', 'percent'],
 		'Should expose file-backed methods for pseudobulk terms'
 	)
@@ -56,7 +56,7 @@ tape('aggregate method availability follows dataset data and term kind', test =>
 		'Should expose intersection methods for selected nonnumeric terms'
 	)
 
-	ds.cohort.termdb.termtypeByCohort.nested = { all: { categorical: 2 } }
+	ds.cohort.termdb.termtypeByCohort = { all: { categorical: 2, numeric: 0 } }
 	initAggregateMethods(ds)
 	test.deepEqual(
 		ds.getAvailableAggregateMethods().map(method => method.id),
@@ -73,9 +73,17 @@ tape('sample-based aggregate methods share one set of counts', test => {
 		three: { sample: 'three', rowA: { key: 'x', value: 'x' } }
 	}
 	const result = calculateSampleBasedMethods(['count', 'mean', 'percent'], samples, ['rowA', 'rowB'], 'column')
-	test.deepEqual(result.get('count'), { rowA: 1, rowB: 1 }, 'Should return the matching observation "count" for each row.')
+	test.deepEqual(
+		result.get('count'),
+		{ rowA: 1, rowB: 1 },
+		'Should return the matching observation "count" for each row.'
+	)
 	test.deepEqual(result.get('mean'), { rowA: 10, rowB: 20 }, 'Should calculate mean for non-numeric rows.')
-	test.deepEqual(result.get('percent'), { rowA: (1 / 3) * 100, rowB: (1 / 3) * 100 }, 'Should calculate "percent" of the full cohort.')
+	test.deepEqual(
+		result.get('percent'),
+		{ rowA: (1 / 3) * 100, rowB: (1 / 3) * 100 },
+		'Should calculate "percent" of the full cohort.'
+	)
 	test.end()
 })
 

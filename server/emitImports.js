@@ -27,9 +27,6 @@ if (mode == 'dev') {
 	const imports = [comment]
 	if (hasServerConfig) {
 		imports.push(`import './serverconfig.json'`)
-		const { default: serverconfig } = await import(`${cwd}/serverconfig.json`, { with: { type: 'json' } }) //; console.log(30, __dirname, path.relative(__dirname, serverconfig.dsCredentials))
-		if (typeof serverconfig.dsCredentials == 'string')
-			imports.push(`import '${path.relative(cwd, serverconfig.dsCredentials)}' with { type: "json" }`)
 	}
 
 	for (const dir of ['genome', 'dataset']) {

@@ -214,64 +214,10 @@ export function showsingleitem_table(v, cfg, table) {
 			.text('No info on allele-specific expression')
 	}
 
-	/*
-	in rnabam mode, snps[] may be available
-	despite there may not be a ase call
-	*/
-	if (v.snps && v.snps.length > 0) {
-		const hetsnp = v.snps.filter(i => i.dnacount && i.dnacount.ishet)
-		if (hetsnp.length > 0) {
-			// in rna bam mode; v is one gene obj, print snps
-			const lst = []
-			for (const m of hetsnp) {
-				lst.push(
-					'<tr>' +
-						'<td>' +
-						m.chr +
-						':' +
-						(m.pos + 1) +
-						' ' +
-						m.ref +
-						'>' +
-						m.alt +
-						'</td>' +
-						'<td>' +
-						client.fillbar(null, { f: m.dnacount.f }) +
-						' ' +
-						m.dnacount.ref +
-						'/' +
-						m.dnacount.alt +
-						'</td>' +
-						'<td>' +
-						(m.rnacount.nocoverage
-							? '<span style="font-size:.8em;opacity:.5">No coverage</span>'
-							: client.fillbar(null, { f: m.rnacount.f }) + ' ' + m.rnacount.ref + '/' + m.rnacount.alt) +
-						'</td>' +
-						'<td>' +
-						(m.rnacount.pvalue || '-') +
-						'</td>' +
-						'</tr>'
-				)
-			}
-			table
-				.append('tr')
-				.append('td')
-				.attr('colspan', 3)
-				.html(
-					'<table style="margin-top:10px;border:solid 1px #ededed;border-spacing:5px;">' +
-						'<tr style="opacity:.5"><td>SNP</td><td>DNA</td><td>RNA</td><td>Binomial test P-value</td></tr>' +
-						lst.join('') +
-						'</table>'
-				)
-		}
-	}
-
 	if (v.outlier) {
 		if (v.outlier.test_whitelist) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.attr('colspan', 2)
-				.text('Outlier (white list)')
+			tr.append('td').attr('colspan', 2).text('Outlier (white list)')
 			const lst = []
 			for (const k in v.outlier.test_whitelist) {
 				lst.push({ k: k, v: v.outlier.test_whitelist[k] })
@@ -290,9 +236,7 @@ export function showsingleitem_table(v, cfg, table) {
 		}
 		if (v.outlier.test_biallelic) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.attr('colspan', 2)
-				.text('Outlier (biallelic)')
+			tr.append('td').attr('colspan', 2).text('Outlier (biallelic)')
 			const lst = []
 			for (const k in v.outlier.test_biallelic) {
 				lst.push({ k: k, v: v.outlier.test_biallelic[k] })
@@ -310,9 +254,7 @@ export function showsingleitem_table(v, cfg, table) {
 		}
 		if (v.outlier.test_entirecohort) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.attr('colspan', 2)
-				.text('Outlier (all samples)')
+			tr.append('td').attr('colspan', 2).text('Outlier (all samples)')
 			const lst = []
 			for (const k in v.outlier.test_entirecohort) {
 				lst.push({ k: k, v: v.outlier.test_entirecohort[k] })
@@ -347,7 +289,7 @@ export function ui_config(holder, cfg, tk, call) {
 	const indent = 30
 	{
 		const row = holder.append('div').style('margin-bottom', '5px')
-		row.append('span').html('If ' + (tk.checkrnabam ? 'p-value geometric mean' : 'Q-VALUE') + ' &le;&nbsp;')
+		row.append('span').html('If Q-VALUE &le;&nbsp;')
 		row
 			.append('input')
 			.attr('type', 'number')
@@ -411,10 +353,7 @@ export function ui_config(holder, cfg, tk, call) {
 		.html(
 			'Is <span style="background:' + cfg.ase.color_uncertain + ';padding:1px 5px;color:white;">ASE uncertain</span>'
 		)
-	holder
-		.append('div')
-		.style('margin', '0px 5px 5px 0px')
-		.html('Else:')
+	holder.append('div').style('margin', '0px 5px 5px 0px').html('Else:')
 	{
 		const row = holder.append('div').style('margin', '0px 5px 5px ' + indent + 'px')
 		row.append('span').html('If number of ASE markers &le;&nbsp;')

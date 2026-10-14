@@ -24,8 +24,9 @@ test sections:
 - cache_index() rejects non-remote protocols
 - cache_index() rejects a primary url host that is not allowed
 - cache_index() still caches valid urls
+- cache_index() sets the mtime of a cached index on each use
 - fileurl() url branch
-- /tkbedj, /tabixheader, /bamnochr via the real route table
+- /tkbedj, /tabixheader via the real route table
 - cache_index() index download is atomic
 - cache_index() checks the host of each index url redirect
 */
@@ -201,6 +202,36 @@ tape('cache_index() still caches valid urls', async test => {
 	test.end()
 })
 
+tape('cache_index() sets the mtime of a cached index on each use', async test => {
+	const url = `http://${H}/touch/t.gz`
+	const dir = await utils.cache_index(url, `${url}.tbi`)
+	const index = path.join(dir, 't.gz.tbi')
+	// replace the downloaded content, so a second download would be detected
+	fs.writeFileSync(index, 'cached')
+	// an index that tabix downloaded into dir, when no index url is given
+	const tabixIndex = path.join(dir, 't.gz.csi')
+	const partial = path.join(dir, 't.gz.csi.1.2.tmp')
+	const old = new Date(Date.now() - 10 * 24 * 3600 * 1000)
+	for (const f of [tabixIndex, partial]) fs.writeFileSync(f, 'x')
+	for (const f of [index, tabixIndex, partial]) fs.utimesSync(f, old, old)
+
+	await utils.cache_index(url, `${url}.tbi`)
+	test.ok(fs.statSync(index).mtimeMs > old.getTime(), 'should set the mtime of the index of the index url')
+	test.equal(fs.readFileSync(index, 'utf8'), 'cached', 'should not download the index again')
+
+	fs.utimesSync(index, old, old)
+	await utils.cache_index(url)
+	test.ok(fs.statSync(index).mtimeMs > old.getTime(), 'should set the mtime of each index in dir without an index url')
+	test.ok(fs.statSync(tabixIndex).mtimeMs > old.getTime(), 'should set the mtime of an index downloaded by tabix')
+	test.ok(
+		Math.abs(fs.statSync(partial).mtimeMs - old.getTime()) < 1000,
+		'should not set the mtime of a partial download'
+	)
+
+	fs.rmSync(path.join(serverconfig.cachedir, 'http', H), { recursive: true, force: true })
+	test.end()
+})
+
 tape('fileurl() url branch', test => {
 	test.deepEqual(
 		utils.fileurl({ query: { url: `http://${H}${up}/etc/x.gz` } }),
@@ -216,7 +247,7 @@ tape('fileurl() url branch', test => {
 	test.end()
 })
 
-tape('/tkbedj, /tabixheader, /bamnochr via the real route table', async test => {
+tape('/tkbedj, /tabixheader via the real route table', async test => {
 	const routes = {}
 	const record = (p, h) => (routes[p] = h)
 	const genome = { name: 'hg38', chrlookup: { CHR1: { name: 'chr1', len: 248956422 } }, datasets: {} }
@@ -229,14 +260,12 @@ tape('/tkbedj, /tabixheader, /bamnochr via the real route table', async test => 
 	const url = `http://${H}${up}${escape}/a`
 	const indexURL = `http://${H}/payload.so`
 
-	for (const route of ['/tkbedj', '/tabixheader', '/bamnochr']) {
+	for (const route of ['/tkbedj', '/tabixheader']) {
 		const r = await send(routes[route], { genome: 'hg38', url, indexURL, rglst: [{ chr: 'chr1', start: 1, stop: 2 }] })
 		test.ok(r?.error, `${route} should return an error for a traversal url`)
 		test.notOk(fs.existsSync(escape), `${route} should not write outside cachedir`)
 	}
 
-	const r = await send(routes['/bamnochr'], { genome: 'hg38', file: '../../../etc/x.bam' })
-	test.equal(r?.error, 'illegal file path', '/bamnochr should reject ".." in file')
 	test.end()
 })
 

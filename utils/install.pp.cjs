@@ -96,9 +96,6 @@ if (validateurlmode) {
 	if (!UC.CACHE) abort('CACHE directory is undefined')
 	mkdir(UC.CACHE)
 
-	// create folder CACHE/ssid/
-	mkdir(path.join(UC.CACHE, 'ssid'))
-
 	if (UC.BINPATH) mkdir(UC.BINPATH)
 	if (!UC.PYTHON3) abort('PYTHON3 command is undefined')
 	if (!UC.GENOMES) abort('GENOMES is undefined')

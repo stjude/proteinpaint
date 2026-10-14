@@ -134,6 +134,9 @@ function stageTarballs {
 	if [[ ! -f "$CTX/tmppack/sjcrh-proteinpaint-server-$SERVERPKGVER.tgz" ]]; then
 		echo "NOTE: no sjcrh-proteinpaint-server-$SERVERPKGVER.tgz tarball, the published server package will be installed"
 	fi
+	if [[ ! -f "$CTX/tmppack/sjcrh-proteinpaint-front-$FRONTPKGVER.tgz" ]]; then
+		echo "NOTE: no sjcrh-proteinpaint-front-$FRONTPKGVER.tgz tarball, the published front package will be installed"
+	fi
 }
 
 # NOTE: important to supply the same ARCH, IMGVER, and IMGREV arguments for all 3 build jobs

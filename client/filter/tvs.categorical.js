@@ -1,3 +1,4 @@
+import { escapeHtml } from '#dom'
 /*
 ********************** EXPORTED
 handler:
@@ -50,24 +51,26 @@ async function fillMenu(self, div, tvs) {
 
 function term_name_gen(d) {
 	const name = d.term.name
-	return name.length < 21 ? name : '<label title="' + name + '">' + name.substring(0, 18) + '...' + '</label>'
+	return name.length < 21
+		? escapeHtml(name)
+		: '<label title="' + escapeHtml(name) + '">' + escapeHtml(name.substring(0, 18)) + '...' + '</label>'
 }
 
 function get_pill_label(tvs) {
 	if (tvs.values.length == 1) {
 		// single
 		const v = tvs.values[0]
-		if (v.label) return { txt: v.label }
+		if (v.label) return { txt: escapeHtml(v.label) }
 		const value = tvs.term.values?.[v.key]
 		if (value) {
-			return { txt: value.key || value.label }
+			return { txt: escapeHtml(value.key || value.label) }
 			console.log(tvs.term, v.key)
 		}
 		//console.error(`key "${v.key}" not found in values{} of ${tvs.term.name}`) // gdc terms always lacks list of categories since they are expensive to retrieve from api for every term, thus suppress this error
-		return { txt: v.key }
+		return { txt: escapeHtml(v.key) }
 	}
 	// multiple
-	if (tvs.groupset_label) return { txt: tvs.groupset_label }
+	if (tvs.groupset_label) return { txt: escapeHtml(tvs.groupset_label) }
 	return { txt: tvs.values.length + ' groups' }
 }
 

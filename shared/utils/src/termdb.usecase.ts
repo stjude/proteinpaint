@@ -265,6 +265,9 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 			return uses
 
 		case 'filter': {
+			/* a filter on a samplelst term selects the samples that its groups list. a group defined by a
+			filter, as a variable made in the Groups tab, lists no sample, and such a term is not offered */
+			if (term.type == 'samplelst' && !samplelstListsSamples(term)) return uses
 			// apply "exlst" to other targets as needed
 			const exlst = termdbConfig?.excludedTermtypeByTarget?.filter
 			if (exlst) {
@@ -303,6 +306,39 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 			const allowMultivalue = usecase.detail == 'term0'
 			if (graphableTypes.has(term.type) && (allowMultivalue || term.type != 'multivalue')) uses.add('plot')
 			if (!term.isleaf) uses.add('branch')
+			return uses
+		}
+
+		case 'swimmer': {
+			if (usecase.detail == 'pointTerm') {
+				/* term to mark the linked points by (e.g. CSF dots): only terms and branches of the point
+				samples' types (usecase.sampleTypes, from ds.queries.swimmer.pointSampleTypes). one marker has
+				one color, so multivalue is excluded; survival has no categories */
+				const types: string[] = usecase.sampleTypes || []
+				if (term.sample_type == null || !types.includes(String(term.sample_type))) return uses
+				const excluded = ['survival', 'multivalue']
+				if (graphableTypes.has(term.type) && !excluded.includes(term.type)) uses.add('plot')
+				if (hasAllowedChildTypes(child_types, excluded)) uses.add('branch')
+				return uses
+			}
+			/* divide-by (term0). multivalue is allowed: a lane is drawn in each
+			of its patient's groups. survival is excluded, as it has no categories to divide by */
+			const excluded = ['survival']
+			if (graphableTypes.has(term.type) && !excluded.includes(term.type)) uses.add('plot')
+			if (hasAllowedChildTypes(child_types, excluded)) uses.add('branch')
+			return uses
+		}
+
+		case 'sunburst': {
+			/* a ring is the categories of a categorical term or the bins of a numeric one. one sample sits in
+			one wedge per ring, so multivalue is excluded; other types have no plain categories.
+			usecase.sampleTypes, when given, limits the terms to those sample types (the rings' line of
+			descent, e.g. patient and primary sample): no value maps between sibling sample types */
+			const allowed = ['categorical', 'integer', 'float']
+			const types: string[] | undefined = usecase.sampleTypes
+			if (types && term.sample_type != null && !types.includes(String(term.sample_type))) return uses
+			if (allowed.includes(term.type)) uses.add('plot')
+			if (hasChildTypes(child_types, allowed)) uses.add('branch')
 			return uses
 		}
 
@@ -348,4 +384,10 @@ function hasChildTypes(child_types: string[], expected_types: string[]) {
 	for (const a of expected_types) {
 		if (child_types.includes(a)) return true
 	}
+}
+
+// every group of a samplelst term lists its samples in term.values[].list[]
+function samplelstListsSamples(term: any) {
+	const groups = Object.values(term.values || {})
+	return groups.length > 0 && groups.every((g: any) => Array.isArray(g.list))
 }

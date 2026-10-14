@@ -10,10 +10,11 @@ import {
 	getScctTw
 } from '../../../test/testdata/data.ts'
 import { fillTermWrapper } from '#termsetting'
-import { getFilterItemByTag, filterJoin } from '#filter'
+import { getFilterItemByTag } from '#filter'
 import { sleep, detectOne, detectGte, detectLst, whenVisible } from '../../../test/test.helpers.js'
 import { testViolinByCount } from '../../test/helpers.spec'
 import { SINGLECELL_CELLTYPE } from '#types'
+import { getVisiblePvalues } from '../violin.renderer'
 
 /**************
  test sections
@@ -51,9 +52,30 @@ term1=singleCellExpression, term2=singleCellCellType
 term1=dnameth, term2=geneExp
 
 ***************/
+const seriesLabelPrefixTestId = 'sjpp-violin-series-label-'
 
 tape('\n', function (test) {
 	test.comment('-***- plots/violin -***-')
+	test.end()
+})
+
+tape('violin p-values exclude hidden categories', function (test) {
+	const term = { term: { type: 'categorical' }, q: { hiddenValues: { Hidden: 1 } } }
+	const numericTerm = { term: { type: 'integer' }, q: { mode: 'continuous' } }
+	const visibleRow = [{ value: 'Visible' }, { value: 'Other' }, { value: 0.25 }]
+	const hiddenRow = [{ value: 'Hidden' }, { value: 'Other' }, { value: 0.5 }]
+	const chart = { pvalues: [visibleRow, hiddenRow] }
+
+	test.deepEqual(
+		getVisiblePvalues(chart, numericTerm, term),
+		[visibleRow],
+		'Filters comparisons with a hidden category'
+	)
+	test.deepEqual(
+		getVisiblePvalues({ pvalues: [hiddenRow] }, numericTerm, term),
+		[],
+		'No visible comparisons remain when every category is hidden'
+	)
 	test.end()
 })
 
@@ -402,81 +424,35 @@ tape('test label clicking, filtering and hovering', function (test) {
 		// before filtering there are two violins, one for each sex
 		await testLabelHoverClick(test, violin, violinDiv, 2)
 		// filter to just one sex
-		await testFiltering(violin)
+		await testFiltering(violin, violinDiv)
 		// after filtering, just one sex is left
 		await testLabelHoverClick(test, violin, violinDiv, 1)
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
 	}
 
-	//This function tests filtering based on range provided.
-	async function testFiltering(violin) {
-		const tvslst = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: [
-				{
-					tvs: {
-						term: {
-							groupsetting: { disabled: true },
-							id: 'sex',
-							isleaf: true,
-							name: 'Sex',
-							type: 'categorical',
-							values: {
-								1: { label: 'Male' },
-								2: { label: 'Female' }
-							}
-						},
-						values: [{ key: '2' }]
-					},
-					type: 'tvs'
-				},
-				{
-					type: 'tvs',
-					tvs: {
-						ranges: [
-							{
-								start: 12.289737495475805,
-								stop: 16.794964344698805
-							}
-						],
-						term: {
-							id: 'agedx',
-							isleaf: true,
-							name: 'Age (years) at Cancer Diagnosis',
-							type: 'float',
-							bins: {
-								default: {
-									type: 'regular-bin',
-									bin_size: 5,
-									startinclusive: true,
-									first_bin: {
-										startunbounded: true,
-										stop: 5
-									}
-								},
-								label_offset: 1
-							}
-						}
-					}
-				}
-			]
-		}
-		const filterUiRoot = getFilterItemByTag(violin.Inner.state.termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, tvslst])
-		filter.tag = 'filterUiRoot'
-		await violin.Inner.app.dispatch({
-			type: 'filter_replace',
-			filter
-		})
-		test.ok(true, 'Filtering works as expected upon given range(start, stop) of values')
+	// click the "Add filter" option in the label menu of the first violin
+	async function testFiltering(violin, violinDiv) {
+		// the labels are already rendered, and detectOne() would wait for there to be only one of them
+		const lab = violinDiv.node().querySelector(`[data-testid^="${seriesLabelPrefixTestId}"]`)
+		lab.dispatchEvent(new Event('click'), { bubbles: true })
+		const tip = violin.Inner.dom.clicktip
+		await whenVisible(tip.dnode)
+		const addf = await detectOne({ elem: tip.dnode, selector: '[data-testid="sjpp-violinLabOpt-addf"]' })
+		const rendered = new Promise(resolve => violin.on('postRender.test', resolve))
+		addf.dispatchEvent(new Event('click'))
+		await rendered
+		violin.on('postRender.test', null)
+		const filterUiRoot = getFilterItemByTag(violin.Inner.app.getState().termfilter.filter, 'filterUiRoot')
+		test.ok(
+			filterUiRoot?.lst.find(item => item.tvs?.term?.id == 'sex'),
+			'should add the sex category of the clicked violin to the global filter'
+		)
 	}
 })
 
 tape('test hide option on label clicking', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000) // 3 renders; may be slow when other spec groups run concurrently
 	runpp({
 		state: {
 			nav: {
@@ -506,7 +482,7 @@ tape('test hide option on label clicking', function (test) {
 		const hiddenPlot = violin.Inner.data.charts[''].plots[0]
 		const labels = await detectLst({
 			elem: violinDiv.node(),
-			selector: '[data-testid="sjpp-violin-label"]',
+			selector: `[data-testid^="${seriesLabelPrefixTestId}"]`,
 			count: 2
 		})
 		labels[0].dispatchEvent(new Event('click', { bubbles: true }))
@@ -516,7 +492,7 @@ tape('test hide option on label clicking', function (test) {
 		})
 		hideOption.dispatchEvent(new Event('click', { bubbles: true }))
 
-		await detectLst({ elem: violinDiv.node(), selector: '[data-testid="sjpp-violin-label"]', count: 1 })
+		await detectLst({ elem: violinDiv.node(), selector: `[data-testid^="${seriesLabelPrefixTestId}"]`, count: 1 })
 		test.equal(
 			violin.Inner.config.term2.q.hiddenValues[hiddenPlot.label],
 			1,
@@ -535,10 +511,10 @@ tape('test hide option on label clicking', function (test) {
 			'q.hiddenValues match legend'
 		)
 		const unhideLegendValue = htmlLegends.filter(c => hiddenKeys.find(k => c.__data__.text === k))
-		unhideLegendValue[0].dispatchEvent(new Event('click'), { bubbles: true })
+		unhideLegendValue[0].dispatchEvent(new Event('click', { bubbles: true }))
 		const hiddenValueRendered = await detectGte({
 			elem: violinDiv.node(),
-			selector: '[data-testid="sjpp-violin-label"]',
+			selector: `[data-testid^="${seriesLabelPrefixTestId}"]`,
 			count: 2
 		})
 		test.ok(hiddenValueRendered, 'hidden value rendered')
@@ -681,7 +657,7 @@ tape('term1=numeric, term2=geneVariant geneset', function (test) {
 	})
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
-		await testViolinByCount(test, violinDiv, 1)
+		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
@@ -834,7 +810,7 @@ tape('term1=geneExp, term2=geneVariant geneset', function (test) {
 	})
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
-		await testViolinByCount(test, violinDiv, 1)
+		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
@@ -944,7 +920,7 @@ tape('term1=ssgsea, term2=geneVariant geneset', function (test) {
 	})
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.violinDiv
-		await testViolinByCount(test, violinDiv, 1)
+		await testViolinByCount(test, violinDiv, 2)
 		await testLabelHoverClick(test, violin, violinDiv, 2)
 		if (test['_ok']) violin.Inner.app.destroy()
 		test.end()
@@ -1436,7 +1412,7 @@ const open_state = {
 async function testLabelHoverClick(test, violin, violinDiv, labelcount) {
 	const labs = await detectLst({
 		elem: violinDiv.node(),
-		selector: '[data-testid="sjpp-violin-label"]',
+		selector: `[data-testid^="${seriesLabelPrefixTestId}"]`,
 		count: labelcount
 	})
 	test.ok(labs, `Detected ${labelcount} violin labels`)

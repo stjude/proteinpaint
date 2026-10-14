@@ -103,7 +103,10 @@ export function dofetch2(path, init = {}, opts = {}) {
 		init.headers = {}
 	}
 
-	if (!init.headers['content-type'] && init.body) {
+	// header names are case-insensitive in HTTP but not as object keys, a caller may supply 'Content-Type';
+	// adding a lowercase duplicate would make fetch() send the combined value 'application/json, application/json'
+	const hasContentType = Object.keys(init.headers).some(k => k.toLowerCase() == 'content-type')
+	if (!hasContentType && init.body) {
 		init.headers['content-type'] = 'application/json'
 	}
 

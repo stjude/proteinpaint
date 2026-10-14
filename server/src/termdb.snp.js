@@ -6,6 +6,9 @@ import readline from 'readline'
 import serverconfig from './serverconfig.js'
 import { compute_mclass } from './vcf.mclass.js'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 /*
 cache file has a header line, with one line per valid snp. columns: 
 1. snpid
@@ -97,7 +100,7 @@ export async function validate(q, tdb, ds, genome) {
 
 async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 	if (!q.cacheid) throw 'cacheid missing'
-	if (serverconfig.cache_snpgt.fileNameRegexp.test(q.cacheid)) throw 'invalid cacheid'
+	const cacheFile = utils.snpgtCacheFile(q.cacheid, ds) // validates the cacheid before querying the samples
 
 	const tk = ds.queries?.snvindel?.byrange?._tk
 	if (!tk) throw 'ds.queries.snvindel.byrange._tk missing'
@@ -117,7 +120,7 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 		})
 	}
 
-	const lines = (await utils.read_file(utils.snpgtCacheFile(q.cacheid))).split('\n')
+	const lines = (await utils.read_file(cacheFile)).split('\n')
 	const samplewithgt = new Set() // collect samples with valid gt for any snp
 	const snps = []
 	for (let i = 1; i < lines.length; i++) {
@@ -128,12 +131,12 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 		// count per allele count from this snp
 		const allele2count = {} // k: allele, v: number of appearances
 		const gt2count = {} // k: gt string, v: number of samples
-		for (let j = serverconfig.cache_snpgt.sampleColumn; j < l.length; j++) {
+		for (let j = utils.snpgtSampleColumn; j < l.length; j++) {
 			const gt = l[j]
 			if (!gt) continue // no gt call for this sample
-			if (!sampleinfilter[j - serverconfig.cache_snpgt.sampleColumn]) continue //sample not in use
+			if (!sampleinfilter[j - utils.snpgtSampleColumn]) continue //sample not in use
 			// this sample has valid gt
-			samplewithgt.add(tk.samples[j - serverconfig.cache_snpgt.sampleColumn].name)
+			samplewithgt.add(tk.samples[j - utils.snpgtSampleColumn].name)
 			gt2count[gt] = 1 + (gt2count[gt] || 0)
 			const alleles = gt.split('/')
 			for (const a of alleles) {
@@ -295,8 +298,8 @@ async function queryBcf(q, snps, ds) {
 	}
 
 	// write coordinates, and bcf file paths to temp files for bcf query
-	const coordsfile = path.join(serverconfig.cachedir, await utils.write_tmpfile(coords.join('\n')))
-	const bcffiles = path.join(serverconfig.cachedir, await utils.write_tmpfile([...bcfs].join('\n')))
+	const coordsfile = path.join(cachedir, await utils.write_tmpfile(coords.join('\n')))
+	const bcffiles = path.join(cachedir, await utils.write_tmpfile([...bcfs].join('\n')))
 
 	// query bcf files for snp coordinates and sample genotypes
 	await utils.get_lines_bigfile({
@@ -361,10 +364,8 @@ async function queryBcf(q, snps, ds) {
 		delete snp.gtlst // do not return to client
 	}
 
-	// cache id is a file name and its characters are covered by \w
-	// will apply /[^\w]/ to check against attack
-	const cacheid = q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
-	await utils.write_file(path.join(serverconfig.cache_snpgt.dir, cacheid), lines.join('\n'))
+	const cacheid = makeCacheid(ds)
+	await utils.write_file(utils.snpgtCacheFile(cacheid, ds), lines.join('\n'))
 	return cacheid
 }
 
@@ -455,9 +456,14 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 			lines.push(lst.join('\t'))
 		}
 	})
-	result.cacheid = q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
-	await utils.write_file(path.join(serverconfig.cache_snpgt.dir, result.cacheid), lines.join('\n'))
+	result.cacheid = makeCacheid(ds)
+	await utils.write_file(utils.snpgtCacheFile(result.cacheid, ds), lines.join('\n'))
 	return result
+}
+
+// cache id is a file name, in the format that snpgtCacheFile() accepts for this ds
+export function makeCacheid(ds) {
+	return utils.snpgtCacheidPrefix(ds) + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
 }
 
 export function add_bcf_variant_filter(variant_filter, bcfargs) {

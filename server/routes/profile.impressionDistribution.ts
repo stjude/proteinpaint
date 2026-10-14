@@ -1,5 +1,7 @@
-import type { RouteApi } from '#types'
+import type { RouteApi, RoutePayload } from '#types'
 import { getData } from '../src/termdb.matrix.js'
+import { genomes } from '../src/initGenomesDs.js'
+import { hasProfileDs } from '../src/routes/profile.barchart2.ts'
 
 /*
 Route for the per-module impression thermometer rendered inside profileForms
@@ -17,19 +19,20 @@ Returns:
 Mirrors the auth/site-eligibility pattern from profile.polar2.ts.
 */
 
+const payload: RoutePayload = {
+	// only set up when the profile ds is loaded, see profile.barchart2.ts
+	get init() {
+		return hasProfileDs(genomes) ? init : null
+	},
+	request: { typeId: 'ProfileImpressionDistributionRequest' },
+	response: { typeId: 'ProfileImpressionDistributionResponse' }
+}
+
 export const api: RouteApi = {
 	endpoint: 'termdb/profileImpressionDistribution',
 	methods: {
-		get: {
-			init,
-			request: { typeId: 'ProfileImpressionDistributionRequest' },
-			response: { typeId: 'ProfileImpressionDistributionResponse' }
-		},
-		post: {
-			init,
-			request: { typeId: 'ProfileImpressionDistributionRequest' },
-			response: { typeId: 'ProfileImpressionDistributionResponse' }
-		}
+		get: payload,
+		post: payload
 	}
 }
 

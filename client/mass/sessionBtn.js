@@ -7,6 +7,7 @@ import { parentCorsMessage } from '#common/embedder-helpers'
 import { select } from 'd3-selection'
 import { importPlot } from '#plots/importPlot.js'
 import { trimGvTermsForSave } from '#shared/terms.js'
+import { markSavedState, getSavedStateRefusal } from './sessionForm.ts'
 
 class MassSessionBtn {
 	static type = 'sessionBtn'
@@ -97,6 +98,7 @@ class MassSessionBtn {
 				if (loc.includes('browser')) {
 					this.sessionName = id
 					const state = structuredClone(this.savedSessions[id])
+					if (this.refuses(state)) return
 					await preprocessState(state, this.app)
 					const targetWindow = this.dom.tip.d.node().querySelector(`[name="${radioName}"]:checked`).value
 					if (targetWindow == 'current') {
@@ -117,6 +119,7 @@ class MassSessionBtn {
 					const body = { id, route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
 					const res = await dofetch3(`/massSession?`, { headers, body })
 					if (!res.state) throw res.error || 'unable to get the cached session from the server'
+					if (this.refuses(res.state)) return
 					await preprocessState(res.state, this.app)
 					this.savedSessions[id] = res.state
 
@@ -166,6 +169,7 @@ class MassSessionBtn {
 				}
 				this.sessionName = sessionName
 				const state = JSON.parse(json)
+				if (this.refuses(state)) return
 				await preprocessState(state, this.app)
 				this.savedSessions[sessionName] = state
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
@@ -336,7 +340,10 @@ class MassSessionBtn {
 					const name = input.property('value') || placeholder
 					this.savedSessions[name] = this.getSavableState()
 					const res = await this.getSessionUrl(name)
-					if (res.id != name) throw `error saving ${name}`
+					if (res.error || res.id != name) {
+						sayerror(submitDiv, `Unable to save '${name}' on the server: ${res.error || 'unexpected session id'}`)
+						return
+					}
 					// this.download(name)
 					this.confirmAction(`Saved '<b>${name}</b>' on the server`)
 				})
@@ -355,7 +362,16 @@ class MassSessionBtn {
 		delete state.termdbConfig
 		// the derived properties of a geneVariant term, which every path that opens a
 		// session re-fills, see trimGvTermsForSave()
-		return trimGvTermsForSave(state)
+		return markSavedState(trimGvTermsForSave(state))
+	}
+
+	// true when a saved state is not opened, see sessionForm.ts. the reason is shown
+	refuses(state) {
+		const reason = getSavedStateRefusal(state)
+		if (!reason) return false
+		this.dom.tip.hide()
+		this.app.printError(reason)
+		return true
 	}
 
 	download(name = '') {
@@ -389,8 +405,13 @@ class MassSessionBtn {
 		if (filename) {
 			return res
 		} else {
-			const url = `${this.hostURL}/?mass-session-id=${res.id}&noheader=1`
 			this.dom.tip.showunder(this.dom.button.node())
+			if (res.error || !res.id) {
+				// for example, a session state that is too large, or a server that does not enable saved sessions
+				sayerror(this.dom.tip.d.append('div'), `Unable to create a session link: ${res.error || 'missing session id'}`)
+				return
+			}
+			const url = `${this.hostURL}/?mass-session-id=${res.id}&noheader=1`
 			const linkDiv = this.dom.tip.d.append('div').style('margin', '10px')
 			linkDiv
 				.append('div')

@@ -1,7 +1,7 @@
 # DMR Analysis Pipeline
 
 Differential Methylation Region (DMR) analysis for probe-level methylation array data.
-Two backends are available: **Rust** (default, ~3s) and **R/DMRCate** (validation, ~30-60s).
+Two backends are available: **Rust** (default, ~3s) and **R/DMRCate** (validation in debugmode only, ~30-60s).
 
 ## Which matrix a request runs on
 
@@ -206,6 +206,19 @@ Peak memory: ~130-170 MB (dominated by the collected ProbeStats vectors for ~450
 
 `R/src/dmrcate_full.R` implements the same pipeline using R/limma/DMRCate for validation.
 It runs synchronously (~30-60s) and produces identical output format.
+
+This backend is for development only. The server accepts `backend: 'r'` only when
+`serverconfig.debugmode` is true, and the DMR plot shows the backend toggle button only in
+debugmode. Outside debugmode the plot requests the Rust backend, also for a session that was saved
+with `backend: 'r'`. The R packages it needs, DMRcate and GenomicRanges, are not in
+`R/utils/bioconductor.pkgs.txt`, so the published ppbase/ppserver/ppfull images do not have
+them. To use it locally, install them in the R library the server uses:
+
+```
+Rscript -e 'BiocManager::install(c("DMRcate", "GenomicRanges"))'
+```
+
+If they are missing or do not load, `dmrcate_full.R` returns an error that names them.
 
 To compare backends, use the toggle button in the DMR plot UI. The server logs
 per-probe logFC and FDR values for both backends via `mayLog()`.

@@ -114,6 +114,13 @@ export type GeneVariantValue = {
 export type GeneVariantTvs = BaseTvs & {
 	term: DtTerm
 	values: GeneVariantValue[]
+	/** the origins this tvs matches, e.g. ['germline']. Always present for an
+	 * origin-split dt, listing every matched origin even when that is all of them, and
+	 * absent only for a dt that is not split by origin -- so an empty/missing origins on
+	 * a split dt is a bug rather than "match everything". Held per tvs rather than on the
+	 * parent term so that two groups of one groupset can filter different mutation types
+	 * by different origins */
+	origins?: string[]
 	/** boolean for including not tested classes (excluded by default) */
 	includeNotTested?: boolean
 	/** boolean for excluding gene name from pill name (included by default)

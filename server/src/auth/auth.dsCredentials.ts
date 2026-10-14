@@ -1,7 +1,7 @@
 import { addDemoTokenCred } from './auth.demoToken.ts'
-import mm from 'micromatch'
+import pm from 'picomatch'
 
-const { isMatch } = mm
+const { isMatch } = pm
 
 // NOTES:
 // 1. list keys in the desired matching order, for example, the catch-all '*' pattern should be entered last
@@ -98,7 +98,10 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials, ge
 	mayReshapeDsCredentials(creds)
 	const key = 'secrets' // to prevent a detect-secrets hook issue
 	if (typeof creds[key] == 'string') {
-		throw `serverconfig {dsCredentials: {${key}: <string>}} has been deprecated. Use {dsCredentials: <abs filepath string>} instead.`
+		throw (
+			`dsCredentials {${key}: <string>} has been deprecated. The credentials json must instead have ` +
+			`{[dslabel]: {[route]: {[embedder]: {type, ...}}}} entries, see server/src/auth/README.md.`
+		)
 	}
 
 	// track which domains are allowed to embed proteinpaint with credentials,
@@ -145,8 +148,8 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials, ge
 				const cred = route[embedderHost]
 				if (typeof cred == 'string')
 					throw (
-						`serverconfig {dsCredentials[dslabel][serverRoute][embedderHost]: <string>} has been deprecated. ` +
-						`Instead, use {dsCredentials: <abs filepath string>} where the filepath points to a pre-built json file.`
+						`dsCredentials[dslabel][serverRoute][embedderHost] as a <string> has been deprecated. ` +
+						`It must instead be an object such as {type: 'jwt', secret}, see server/src/auth/README.md.`
 					)
 				// copy the server route pattern to easily obtain it from within the cred
 				if (cred.type == 'basic') {

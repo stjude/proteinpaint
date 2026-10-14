@@ -1,7 +1,7 @@
 import fs from 'fs'
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
-import { versionInfo } from '#src/health.ts'
+import { versionInfo, CLIENT_PKG } from '#src/health.ts'
 import type { RoutePayload, RouteApi } from '#types'
 
 const payload: RoutePayload = {
@@ -63,6 +63,8 @@ return error message as the service is out
 			pkgver: versionInfo.pkgver,
 			codedate: versionInfo.codedate, // still useful to know the package build/publish date in the response payload, even if it's not displayed
 			launchdate: versionInfo.launchdate,
+			// an already loaded page compares this against its own client version
+			clientVersion: versionInfo.deps[CLIENT_PKG]?.bundled,
 			hasblat,
 			features: serverconfig.features,
 			dsAuth: authApi.getDsAuth(req),

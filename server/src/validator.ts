@@ -29,17 +29,44 @@ function defaultValidator(query) {
 }
 
 const byIpAddr = new Map()
+const floodWindow = 30000
+// the tracker has at most this many entries; when it is full, it is swept at most once per floodWindow
+export const maxTrackedClients = 1000
+let lastSweepTime = 0
+
+// an entry is otherwise deleted only when the same client has another error after floodWindow,
+// so delete the expired entries of clients that did not; returns the number of tracked clients
+export function sweepFloodTracker(time = Date.now()) {
+	for (const [key, entry] of byIpAddr) {
+		if (time - entry.time > floodWindow) byIpAddr.delete(key)
+	}
+	lastSweepTime = time
+	return byIpAddr.size
+}
+
+export function getFloodTrackerSize() {
+	return byIpAddr.size
+}
+
+// use the client address from the cf-connecting-ip request header when present, otherwise req.ip
+export function getFloodKey(req) {
+	const cfIp = req.get?.('cf-connecting-ip')
+	return (typeof cfIp == 'string' && cfIp.trim()) || req.ip
+}
 
 export function floodCatch(req, res, error) {
-	const time = +new Date()
-	let entry = byIpAddr.get(req.ip)
+	const time = Date.now()
+	if (byIpAddr.size >= maxTrackedClients && time - lastSweepTime > floodWindow) sweepFloodTracker(time)
+	const key = getFloodKey(req)
+	let entry = byIpAddr.get(key)
 	if (!entry) {
 		entry = { time, count: 0 }
-		byIpAddr.set(req.ip, entry)
+		// when the tracker is full, a new client is not tracked, and is handled like one with no recent errors
+		if (byIpAddr.size < maxTrackedClients) byIpAddr.set(key, entry)
 	}
-	if (time - entry.time > 30000) {
+	if (time - entry.time > floodWindow) {
 		// purge this remote IP address from the tracker
-		byIpAddr.delete(req.ip)
+		byIpAddr.delete(key)
 	} else if (entry.count > 10) {
 		res.send({ error: 'busy' })
 		// no need to throw and clutter the err log

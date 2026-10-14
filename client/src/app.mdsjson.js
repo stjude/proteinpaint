@@ -62,9 +62,6 @@ export function validate_mdsjson(obj) {
 	if (Object.keys(obj).filter(x => x.includes('expression')).length) {
 		if (!obj.expressionfile && !obj.expressionurl) throw 'expression file/url is missing'
 	}
-	if (Object.keys(obj).filter(x => x.includes('rnabam')).length) {
-		if (!obj.rnabamfile && !obj.rnabamurl) throw 'rnabam file/url is missing'
-	}
 	if (obj.sampleset) {
 		for (const sample of obj.sampleset) {
 			if (obj.sampleset.length != 1 && !sample.name) throw 'sampleset name is missing'
@@ -145,14 +142,6 @@ export function get_json_tk(tkobj) {
 		if (tkobj.vcf.hiddenclass) {
 			track.vcf = []
 			track.vcf.hiddenclass = tkobj.vcf.hiddenclass
-		}
-	}
-
-	// rna bam
-	if (Object.keys(tkobj).filter(x => x.includes('rnabam')).length) {
-		track.checkrnabam = {
-			file: tkobj.rnabamfile,
-			url: tkobj.rnabamurl
 		}
 	}
 

@@ -2,6 +2,7 @@
 // the client does not know about them, so do not put this in shared/types
 
 import type { DEImage, DiffMethEntry, DmrScanSummary, GeneDEEntry, GenesetEnrichmentResponse } from '#types'
+import type { DiffSpliceEntry, DiffSpliceMethod } from '#types'
 
 // these req.query key-values are not submitted from the client
 export type ReqQueryAddons = {
@@ -43,6 +44,18 @@ export type DmCacheResult = {
 	/** only when the "element type" was a de novo DMR scan, which is served from the dmr/ cache
 	 * rather than written here */
 	scan?: DmrScanSummary
+}
+
+/** ds/{cacheid}.json. Carries the intron-cluster rows and sample sizes —
+ * enough for the volcano response on either a fresh run or a cache hit
+ * without reopening the cohort h5. */
+export type DsCacheResult = {
+	clusterRows: DiffSpliceEntry[]
+	sample_size1: number
+	sample_size2: number
+	method: DiffSpliceMethod
+	// clusters dropped before testing, keyed by reason, as the engine reported them
+	skipped?: { [reason: string]: number }
 }
 
 /** gsea/{cacheid}.json. Self-contained: the blitzgsea result is pickled

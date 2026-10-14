@@ -7,6 +7,10 @@ on:
   workflow_dispatch:
   workflow_call: {}
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   unit-docker:
     runs-on: ubuntu-22.04

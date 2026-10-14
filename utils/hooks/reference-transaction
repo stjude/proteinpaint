@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# checks the name of a new branch before it's created, such as by
+# `git checkout -b`, `git switch -c`, `git branch`, or `git worktree add -b`
+
+if [ "$1" != "prepared" ]; then
+	cat > /dev/null
+	exit 0
+fi
+
+CHECK="$(git rev-parse --show-toplevel 2>/dev/null)/utils/hooks/check-text.sh"
+STATUS=0
+while read -r OLDSHA NEWSHA REF; do
+	if [ ! -x "$CHECK" ]; then continue; fi
+	case "$REF" in refs/heads/*) ;; *) continue ;; esac
+	# only check a branch that does not exist yet
+	case "$OLDSHA" in *[1-9a-f]*) continue ;; esac
+	case "$NEWSHA" in *[1-9a-f]*) ;; *) continue ;; esac
+	if git show-ref --verify --quiet "$REF"; then continue; fi
+	echo "${REF#refs/heads/}" | "$CHECK" text "new branch name" || STATUS=1
+done
+exit $STATUS

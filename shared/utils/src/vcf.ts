@@ -12,7 +12,8 @@ shared between client-server
 */
 
 // for telling symbolic alleles e.g. <*:DEL>
-const getallelename = new RegExp(/<(.+)>/)
+// anchored to the start (alt is known to begin with "<") so the match cannot backtrack polynomially
+const getallelename = /^<(.+)>/
 
 const mclasslabel2key = {}
 for (const k in mclass) {

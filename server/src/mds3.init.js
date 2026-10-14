@@ -40,7 +40,7 @@ import { add_bcf_variant_filter } from './termdb.snp.js'
 import { validate_correlationVolcano } from './routes/correlationVolcano.ts'
 import { validate_query_singleCell } from './singleCell/samplesRoute.ts'
 import { initAggregateMethods } from './aggregateMatrix/aggregateMethods.ts'
-import { validate_query_proteome } from '../routes/termdb.proteome.ts'
+import { validate_query_proteome } from './routes/termdb.proteome.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
 import { validate_query_geneExpression, validateQueryIsoformExpression } from './routes/termdb.cluster.ts'
@@ -50,6 +50,7 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getTopMutatedGenes } from '#routes/termdb.topMutatedGenes.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
+import { validate_query_swimmer } from '#routes/termdb.swimmer.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import { dtTermTypes, getGvQueryRegion, getGvQueryKey, matchesGvQueryEntry } from '#shared/terms.js'
 import { TermTypes } from '#types'
@@ -169,6 +170,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_TopVariablyExpressedGenes(ds)
 			await validate_query_trackLst(ds, genome)
 			await validate_query_NIdata(ds)
+			await validate_query_swimmer(ds)
 
 			await validate_variant2samples(ds)
 			await validate_ssm2canonicalisoform(ds)
@@ -304,7 +306,7 @@ export async function validate_termdb(ds) {
 	}
 	// ds.cohort.termdb.q={} ready
 	setSupportedChartTypes(ds) // centralized: runs for every dataset regardless of the init path above
-	findLoneTermByType(ds) // requires termtypeByCohort.nested, computed by the call above
+	findLoneTermByType(ds) // requires termtypeByCohort{}, computed by the call above
 
 	// blocking launch-time case-sample caching, for datasets whose preInit.cacheSamples must
 	// run before queries (e.g. mmrf: it sets q.id2sampleName/convertSampleId, needed by the
@@ -608,7 +610,7 @@ export async function validate_cumburden(ds) {
 			throw `'..' path segment is not allowed in ds.cohort.cumburden.files.${name}`
 		const f = path.join(serverconfig.tpmasterdir, dir, fname)
 		if (!fs.existsSync(f)) throw `ds.cohort.burden.files.${name}='${fname}' not found`
-		const out = spawnSync(serverconfig.Rscript, ['-e', `load('${f}')`], {
+		const out = spawnSync(serverconfig.Rscript, ['--vanilla', '-e', `load('${f}')`], {
 			encoding: 'utf-8'
 		})
 		if (out?.status || out?.stderr) {
@@ -2075,7 +2077,7 @@ async function validate_query_ssGSEA(ds, genome) {
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }
-async function validate_query_dnaMethylation(ds, genome) {
+export async function validate_query_dnaMethylation(ds, genome) {
 	const q = ds.queries.dnaMethylation
 	if (!q) return
 	try {
@@ -2115,13 +2117,24 @@ async function validate_query_dnaMethylation(ds, genome) {
 			q.cpgByChr = path.join(serverconfig.tpmasterdir, q.cpgByChr)
 			const [prefix, suffix] = path.basename(q.cpgByChr).split('{chr}')
 			const dir = path.dirname(q.cpgByChr)
-			const files = fs.readdirSync(dir)
+			const files = fs.existsSync(dir) ? fs.readdirSync(dir) : []
 			q.cpgChroms = new Set(
 				files
 					.filter(f => f.startsWith(prefix) && f.endsWith(suffix) && f.length > prefix.length + suffix.length)
 					.map(f => f.slice(prefix.length, f.length - suffix.length))
 			)
-			if (!q.cpgChroms.size) throw `dnaMethylation.cpgByChr matched no file under ${dir}`
+			/* No shard built yet is the far end of a partial build, not a broken config: drop the
+			setting so every path (term getter, region view, genome-wide scans) takes the element
+			fallback it already takes for a chromosome without a shard. */
+			if (!q.cpgChroms.size) {
+				console.warn(
+					`${ds.label}: WARNING dnaMethylation.cpgByChr matched no file under ${dir}; using element matrices`
+				)
+				delete q.cpgByChr
+				delete q.cpgChroms
+			}
+		}
+		if (q.cpgByChr) {
 			/* Sample gate on one shard, since all shards come out of the same build. A CpG matrix
 			written from the raw count files carries the sequencing sample names, which are not the
 			portal's until the build appends its suffix -- catching that here rather than at request
@@ -2170,9 +2183,9 @@ async function validate_query_dnaMethylation(ds, genome) {
 			single gate every DM path already filters through (buildGroupValues, the preAnalysis
 			counts, and the sample list handed to diffMeth.R), so shrinking it here covers them
 			all without a per-route check. Loud on purpose: a pattern that matches nothing would
-			otherwise be a silent no-op, which is the failure this exists to prevent. */
-			const excludePattern = qe.excludeSampleNamesMatching
-			if (excludePattern) {
+			otherwise be a silent no-op, which is the failure this exists to prevent. One pattern
+			or a list of them, each reported on its own. */
+			for (const excludePattern of [qe.excludeSampleNamesMatching || []].flat()) {
 				const excluded = withholdSampleNames(qe.allSampleSet, excludePattern)
 				if (excluded) {
 					console.log(
@@ -2310,8 +2323,8 @@ async function validate_query_dnaMethylation(ds, genome) {
 /* Pick which element matrix answers dnaMethylation term queries on a dataset that has no
 CpG-level .file.
 
-A term carries coordinates but not an element class, so the choice cannot come from the
-request -- one matrix has to be nominated. Order: an explicit .elementForTerms wins;
+A term carries coordinates, and an element type only when it was opened from a differential
+methylation hit (resolveElementEntryForTerm), so one matrix has to be nominated for the rest. Order: an explicit .elementForTerms wins;
 otherwise the first configured non-promoter entry is used (declaration order), falling
 back to elements.promoter and finally the legacy .promoter entry so promoter-only
 datasets keep working. */
@@ -2331,6 +2344,21 @@ export function resolveElementEntryForTerms(q) {
 	return undefined
 }
 
+/* The matrix ONE term reads. A term opened from a differential methylation hit names the element
+type it was tested in (term.elementType, a key the DM route also takes), and is answered from that
+matrix: the nominated one holds different elements, so a promoter the volcano tested was plotted as
+the average of whichever cCREs overlap it, over fewer samples, or as nothing where none does. A term
+naming no type keeps the nominated matrix. An unknown type throws rather than falling back, for the
+reason elementForTerms does: the wrong matrix still returns numbers. */
+export function resolveElementEntryForTerm(q, term, nominated) {
+	const key = term?.elementType
+	if (key == undefined) return nominated
+	// own keys only: the key arrives in a request
+	const e = Object.hasOwn(q.elements || {}, key) ? q.elements[key] : key === 'promoter' ? q.promoter : undefined
+	if (!e?.file) throw 'dnaMethylation term names an element type this dataset does not have'
+	return e
+}
+
 /* Serve dnaMethylation terms out of a pre-aggregated element matrix.
 
 Contract matches the CpG-level getter above (term2sample2value / byTermId / bySampleId) so
@@ -2342,45 +2370,86 @@ getData() and every caller downstream are unchanged. Two deliberate differences:
   - Averaging happens across ELEMENTS overlapping the term, not across CpGs. For a term
     that names one element this is a no-op; for a pasted gene span it is a mean over the
     elements in that span, which is the same semantics the CpG path gives for a span. */
-function makeElementMethylationGetter(q, entry, ds) {
-	// Sample ids for this matrix, resolved once. Unknown names are skipped rather than
+/* Only 'region' terms (a scan DMR or typed coordinates) read a CpG shard. A promoter/gene/enhancer
+term IS an element and must read an element matrix (the one its elementType names, else the one
+elementForTerms nominates); letting the shard take it too made that setting dead on every sharded
+chromosome. */
+export function readsCpgShard(q, term) {
+	return term.genomicFeatureType == 'region' && !!q.cpgChroms?.has(term.chr)
+}
+
+/* The rows of an element query that one term reads. A term naming its element type IS one element,
+whose coordinates are the term's, so only that row counts: TSS windows of neighbouring promoters
+overlap, and averaging them in plotted a blend of the tested promoter and the one beside it. When
+no row has those coordinates the term reads no row, and so has no data, rather than its neighbours.
+Any other term is a span and keeps every overlapping row. */
+export function testedElementValues(term, out) {
+	if (term.elementType == undefined) return out.values
+	return out.values.filter((_, i) => out.rows[i].start === term.start && out.rows[i].stop === term.stop)
+}
+
+/* A methylation value on the unit the getter returns, from the unit it is stored in: beta to
+M-value (logit, clamped away from 0 and 1), or M-value to beta. */
+export function toReturnedUnit(v, storedBeta, returnsBeta) {
+	if (storedBeta == returnsBeta) return v
+	if (!storedBeta) return 1 / (1 + 2 ** -v)
+	const clamped = Math.min(Math.max(v, 1e-6), 1 - 1e-6)
+	return Math.log2(clamped / (1 - clamped))
+}
+
+function makeElementMethylationGetter(q, nominated, ds) {
+	// Sample ids per matrix, resolved once each. Unknown names are skipped rather than
 	// fatal: a methylation cohort is routinely a subset of the dataset's samples.
-	const sampleIds = []
-	const sampleNames = []
-	for (const sn of entry.allSampleNames || []) {
-		const si = ds.cohort.termdb.q.sampleName2id(sn)
-		if (si === undefined || si === null) continue
-		sampleIds.push(si)
-		sampleNames.push(sn)
+	const samplesByEntry = new Map()
+	const samplesOf = entry => {
+		if (!samplesByEntry.has(entry)) {
+			const ids = []
+			const names = []
+			for (const sn of entry.allSampleNames || []) {
+				const si = ds.cohort.termdb.q.sampleName2id(sn)
+				if (si === undefined || si === null) continue
+				ids.push(si)
+				names.push(sn)
+			}
+			samplesByEntry.set(entry, { ids, names })
+		}
+		return samplesByEntry.get(entry)
 	}
 
-	// Stored values are already M-values unless the entry says otherwise.
-	const storesBeta = /beta/i.test(entry.unit || '')
+	/* The unit the getter returns is the one q.unit advertises: the nominated entry's, unless the
+	dataset sets its own. M-values unless it says beta. */
+	const returnsBeta = /beta/i.test(q.unit || '')
 
 	return async param => {
-		const limitSamples = await mayLimitSamples(param, sampleIds, ds)
-		if (limitSamples?.size == 0) return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
-
-		const bySampleId = {}
-		const queryNames = []
-		for (const [i, sid] of sampleIds.entries()) {
-			if (limitSamples && !limitSamples.has(sid)) continue
-			bySampleId[sid] = { label: sampleNames[i] }
-			queryNames.push(sampleNames[i])
-		}
-
 		const term2sample2value = new Map()
 		const byTermId = {}
+		const bySampleId = {}
 		const tws = param.terms.filter(tw => tw.term.type == TermTypes.DNA_METHYLATION)
-		if (!tws.length || !queryNames.length) return { term2sample2value, byTermId, bySampleId }
 
+		// the names to query in each matrix this request reads, after the request's sample filter
+		const namesByEntry = new Map()
 		for (const tw of tws) {
+			const entry = resolveElementEntryForTerm(q, tw.term, nominated)
+			if (!namesByEntry.has(entry)) {
+				const { ids, names } = samplesOf(entry)
+				const limitSamples = await mayLimitSamples(param, ids, ds)
+				const kept = []
+				for (const [i, sid] of ids.entries()) {
+					if (limitSamples && !limitSamples.has(sid)) continue
+					bySampleId[sid] = { label: names[i] }
+					kept.push(names[i])
+				}
+				namesByEntry.set(entry, kept)
+			}
+			const queryNames = namesByEntry.get(entry)
+			if (!queryNames.length) continue
+
 			/* A region on a chromosome that has a CpG shard is read from the CpGs themselves. The
 			element average is what a promoter or cCRE term wants, but a region a scan called is not
 			an element: a DMR overlapping no cCRE would have no value at all, and one overlapping half
 			of a cCRE would get that element's whole-span average. The shard gives the region's own
 			CpGs, averaged per sample, on the unit the entry advertises. */
-			if (q.cpgByChr && q.cpgChroms?.has(tw.term.chr)) {
+			if (readsCpgShard(q, tw.term)) {
 				const shardNames = queryNames.filter(n => !q.regionSampleSet || q.regionSampleSet.has(n))
 				if (!shardNames.length) continue
 				const input = {
@@ -2410,15 +2479,8 @@ function makeElementMethylationGetter(q, entry, ds) {
 						n++
 					}
 					if (!n) continue
-					const avg = sum / n
-					/* A CpG shard always stores betas, so here the source scale is known and the
-					conversion is TO the advertised unit -- the same invariant as the element branch
-					above, where source and target are already the same. */
-					if (storesBeta) s2v[sid] = avg
-					else {
-						const clamped = Math.min(Math.max(avg, 1e-6), 1 - 1e-6)
-						s2v[sid] = Math.log2(clamped / (1 - clamped))
-					}
+					// a CpG shard always stores betas
+					s2v[sid] = toReturnedUnit(sum / n, true, returnsBeta)
 				}
 				if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v)
 				continue
@@ -2431,6 +2493,7 @@ function makeElementMethylationGetter(q, entry, ds) {
 			const out = JSON.parse(await run_python('query_element_values.py', JSON.stringify(input)))
 			if (!Array.isArray(out?.values)) throw new Error('element methylation query returned unexpected format')
 			if (!out.values.length) continue // term matched no element in this matrix; other terms may still resolve
+			const values = testedElementValues(tw.term, out)
 
 			const s2v = {}
 			for (const [i, sname] of queryNames.entries()) {
@@ -2440,24 +2503,25 @@ function makeElementMethylationGetter(q, entry, ds) {
 				// does not void a sample that the others do cover.
 				let sum = 0,
 					n = 0
-				for (const row of out.values) {
+				for (const row of values) {
 					const v = row[i]
 					if (!Number.isFinite(v)) continue
 					sum += v
 					n++
 				}
 				if (!n) continue
-				/* No conversion: an element matrix stores what its entry's unit says, and that unit
-				is what q.unit advertises, so the stored scale IS the returned scale. Converting a
-				beta entry to an M-value here returned M under a label saying beta -- unreachable
-				today (every configured element entry declares M-values) but the CpG-shard branch
-				below converts TO the advertised unit, and two branches of one getter must not
-				disagree about what the number they return is. */
-				s2v[sid] = sum / n
+				/* An element matrix stores what its entry's unit says. That is usually the returned
+				unit, so there is nothing to convert. A term naming its own element type may read an
+				entry with another unit, and a dataset may set a q.unit other than the nominated
+				entry's; such a value is converted like a CpG shard value is, so that every value of
+				the getter is on the unit that q.unit advertises. */
+				s2v[sid] = toReturnedUnit(sum / n, /beta/i.test(entry.unit || ''), returnsBeta)
 			}
 			if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v)
 		}
 
+		// no methylation term, or no sample left by the filter: the expected structure with no data
+		if (!Object.keys(bySampleId).length) return { term2sample2value, byTermId, bySampleId }
 		if (term2sample2value.size == 0) throw 'No data available for the input'
 		return { term2sample2value, byTermId, bySampleId }
 	}
@@ -3518,8 +3582,11 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) 
 
 	const dts = []
 	if (_dt.byOrigin) {
+		/* every origin of the dt is annotated, rather than only a selected subset: the
+		selection is per tvs now, and each status entry records the origin it is for, so
+		filterByItem() narrows to the origins of the tvs it is evaluating. Annotating only
+		some would hide the "not tested" status a tvs of another origin needs to see */
 		for (const o in _dt.byOrigin) {
-			if (tw.term.origin && tw.term.origin != o) continue
 			const dt = _dt.byOrigin[o]
 			if (dt.bySampleType) {
 				// this origin is further split by sample type; each leaf carries its own yes/no sample sets
@@ -3629,7 +3696,10 @@ export function filterByItem(filter, mlst, values) {
 	// get all tested mutations for the dt (and origin) of the filter
 	const mlst_tested = mlst.filter(m => {
 		if (tvs.term.dt != m.dt) return false
-		if (tvs.term.origin && tvs.term.origin != m.origin) return false
+		if (tvs.origins?.length) {
+			if (!m.origin) throw `dt ${tvs.term.dt} values carry no origin to filter by`
+			if (!tvs.origins.includes(m.origin)) return false
+		}
 		if (m.class == mclass['Blank'].key && !tvs.includeNotTested) return false
 		return true
 	})

@@ -6,6 +6,8 @@ export const sampleLstSql = {
 		const selects = tw.q.groups.map(group => {
 			// default group.in=true, TODO: put this in fillTW?
 			if (!('in' in group)) group.in = true
+			// getData() has listed the samples of a group that is defined by a filter
+			if (!Array.isArray(group.values)) throw new Error('a samplelst group lists no samples and has no filter')
 			const samples = group.values.map(value => value.sampleId || value.sample)
 			const type = samples[0] ? ds.sampleId2Type.get(samples[0]) : ''
 			return sql`SELECT id as sample, ${group.name} as key, ${group.name} as value

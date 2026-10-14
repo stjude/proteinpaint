@@ -93,8 +93,11 @@ class MassPlot {
 			})
 		}
 
-		if (!this.state.config.hidePlotFilter) {
-			const filterDisabledMsg = this.app.vocabApi.termdbConfig?.plotFilter?.disabledMessage
+		// the per-plot local sample filter; skipped per plot (config.hidePlotFilter) or for the whole
+		// dataset (termdbConfig.plotFilter.hide, e.g. when plots are cohort-driven, not sample-driven)
+		const plotFilterCfg = this.app.vocabApi.termdbConfig?.plotFilter
+		if (!this.state.config.hidePlotFilter && !plotFilterCfg?.hide) {
+			const filterDisabledMsg = plotFilterCfg?.disabledMessage
 			/*
 			When the local filter is disabled (e.g. for the public/unauthenticated view), render it
 			into an inner greyed, non-interactive div while the outer filterDiv keeps pointer events

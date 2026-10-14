@@ -175,11 +175,18 @@ function renderContent(ppcalls, div, card, pageArgs) {
 	addButtons(ppcalls.buttons, buttonsDiv)
 	//Proteinpaint app drawer specific rendering
 	makeDataDownload(ppcalls.download, buttonsDiv, card.section)
-	showURLLaunch(ppcalls.urlparam, buttonsDiv, card.section)
+	// the example cannot run on this server, but its description and data download may still be useful
+	const enabled = utils.isFeatureEnabled(ppcalls.configFeature)
+	if (enabled) showURLLaunch(ppcalls.urlparam, buttonsDiv, card.section)
 	addArrowBtns(ppcalls, 'call', buttonsDiv, buttonsContentDiv, pageArgs)
 
 	if (!card.disableTopTabs) {
 		div.append('hr').style('border', '0').style('border-top', '1px dashed #e3e3e6').style('width', '100%')
+	}
+
+	if (!enabled) {
+		div.append('p').style('margin', '20px').style('color', '#858585').text(getDisabledMessage(ppcalls.configFeature))
+		return
 	}
 
 	const runpp_arg = {
@@ -283,7 +290,7 @@ async function makeLeftsideTabMenu(card, contentHolder, examplesOnly, sandboxDiv
 			link: `${sessionStorage.getItem('hostURL')}/?appcard=${card.sandboxJson || card.sandboxHtml}&example=${
 				ppcalls.label
 			}`,
-			label: ppcalls.label,
+			label: ppcalls.label + (utils.isFeatureEnabled(ppcalls.configFeature) ? '' : ' (disabled)'),
 			callback: async (event, tab) => {
 				const wait = tab_wait(tab.contentHolder)
 				try {
@@ -326,6 +333,12 @@ async function makeLeftsideTabMenu(card, contentHolder, examplesOnly, sandboxDiv
 }
 
 // ******* Helper Functions *********
+
+// explains why a ppcall with a disabled .configFeature is not rendered
+function getDisabledMessage(configFeature) {
+	if (configFeature == 'ALLOW_remotefilefromurl') return 'Remote file not supported on this server.'
+	return 'This example is not enabled on this server.'
+}
 
 function addHtmlText(text, div, ribbon) {
 	//Tie together ribbons and sandbox messages

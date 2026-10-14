@@ -315,7 +315,9 @@ export class Menu {
 				}, renderWait) // wait for rendered elements to include enforced tabindex, before any triggered click()
 		}
 
-		let lastTabbedTime = Date.now()
+		// only an actual shift-tab keydown should arm the blur handler below; a programmatic
+		// focus shift while the menu content is still rendering must not hide the menu
+		let lastTabbedTime = 0
 		function setLastTabbedTime(event) {
 			// navigating away from the first clickable element, if this triggers
 			// the blur of the first element then the 'onblur' timing should be very quick
@@ -388,6 +390,9 @@ export class Menu {
 	// the MASS nav header, whereas the menu div that's attached to the body will scroll freely past the
 	// 'stuck' clicked element
 	stickyPosition(elem, _opts = {}) {
+		// disconnect any observer from a prior show() call before deciding whether this one needs it
+		this.stopObserver()
+
 		// only setup an observer on click event, not other transient mouse events such as mousemove,
 		// to limit the performance penalty to known static button/label interactions
 		if (!window.event || window.event.type != 'click' || !elem.__data__?.stickyAncestor) return

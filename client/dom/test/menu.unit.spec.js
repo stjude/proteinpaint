@@ -2,6 +2,7 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import 'd3-transition' // so that selection.transition would be defined
 import { Menu } from '#dom/menu'
+import { renderWait } from '#src/app.observer'
 import { detectStyle } from '../../test/test.helpers.js'
 /**
 Tests:
@@ -9,8 +10,10 @@ Tests:
 	show(), clear(), and hide(), no args
 	clear() with arg
 	show() with args
+	stickyPosition() disconnects a prior stickyObserver on repeated show()
 	onHide() callback
 	showunder()
+	setTabNavigation(), blur of the first menu item
 	showunderoffset()
 	fadeout()
 	toggle()
@@ -216,6 +219,61 @@ tape('show() with args', async test => {
 	test.end()
 })
 
+// async callback so that tape can end the test on uncaught error
+tape('stickyPosition() disconnects a prior stickyObserver on repeated show()', async test => {
+	test.timeoutAfter(500)
+	// only stickyPosition() when the click's target element has a stickyAncestor set
+	const holder = getHolder({ position: 'fixed' })
+	const elem = holder.append('div').style('width', '10px').style('height', '10px').node()
+	elem.__data__ = { stickyAncestor: holder.node() }
+	const nonStickyElem = holder.append('div').node()
+	const testMenu = getTestMenu()
+
+	// stickyPosition() only runs when window.event.type == 'click', so show() must be
+	// called synchronously from within a real dispatched click event's handler
+	function showViaClick(x, y, launcher = elem) {
+		return new Promise(resolve => {
+			function handler() {
+				testMenu.show(x, y, true, true, true, launcher)
+				launcher.removeEventListener('click', handler)
+				resolve()
+			}
+			launcher.addEventListener('click', handler)
+			launcher.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+		})
+	}
+
+	await showViaClick(50, 50)
+	const firstObserver = testMenu.stickyObserver
+	test.ok(firstObserver, 'Should create a stickyObserver when shown via a click on an element with a stickyAncestor')
+
+	let disconnected = false
+	const origDisconnect = firstObserver.disconnect.bind(firstObserver)
+	firstObserver.disconnect = () => {
+		disconnected = true
+		origDisconnect()
+	}
+
+	await showViaClick(80, 80)
+	test.ok(disconnected, 'Should disconnect the previous stickyObserver before creating a new one on a repeated show()')
+	test.notEqual(testMenu.stickyObserver, firstObserver, 'Should replace the stickyObserver with a new instance')
+	const secondObserver = testMenu.stickyObserver
+	let secondDisconnected = false
+	const secondDisconnect = secondObserver.disconnect.bind(secondObserver)
+	secondObserver.disconnect = () => {
+		secondDisconnected = true
+		secondDisconnect()
+	}
+
+	await showViaClick(100, 100, nonStickyElem)
+	test.ok(secondDisconnected, 'Should disconnect the stickyObserver when reused with a non-sticky launcher')
+	test.equal(testMenu.stickyObserver, undefined, 'Should not create a new observer for a non-sticky launcher')
+
+	testMenu.destroy()
+	holder.remove()
+	test.end()
+})
+
 tape.skip('onHide() callback', test => {
 	test.timeoutAfter(500)
 
@@ -253,6 +311,43 @@ tape('showunder()', async test => {
 		Math.round(menuP.y),
 		`Should show menu with the shifted style.top value relative to test element.`
 	)
+
+	if (test._ok) {
+		testMenu.destroy()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('setTabNavigation(), blur of the first menu item', async test => {
+	test.timeoutAfter(2000)
+	const holder = getHolder({ position: 'fixed' })
+	const btn = holder.append('button').text('Launcher')
+	const testMenu = new Menu()
+	const first = testMenu.d.append('button').text('Item 1').node()
+	testMenu.d.append('button').text('Item 2')
+
+	testMenu.showunder(btn.node())
+	// a programmatic focus shift right after showing the menu, before any shift-tab keydown
+	first.focus()
+	first.blur()
+	test.notEqual(
+		testMenu.d.style('display'),
+		'none',
+		'Should keep the menu open on a blur that is not preceded by shift-tab'
+	)
+
+	// let the menu's own delayed autofocus run first
+	await new Promise(resolve => setTimeout(resolve, renderWait + 50))
+	first.focus()
+	first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }))
+	first.blur()
+	test.equal(
+		testMenu.d.style('display'),
+		'none',
+		'Should hide the menu when shift-tabbing away from the first menu item'
+	)
+	test.equal(document.activeElement, btn.node(), 'Should move the focus back to the launcher element')
 
 	if (test._ok) {
 		testMenu.destroy()

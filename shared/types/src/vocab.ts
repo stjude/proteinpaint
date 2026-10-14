@@ -27,6 +27,8 @@ export type VocabApi = {
 	getDefaultBins: (args: any) => any
 	setTermBins(tw: TermWrapper): any
 	getTwMinCopy(tw: TermWrapper): any
+	/** the tw of each custom variable of a mass app */
+	getCustomTerms?: () => Promise<TermWrapper[]>
 	hasVerifiedToken: () => boolean
 	tokenVerificationMessage: string
 	tokenVerificationPayload?: {

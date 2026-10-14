@@ -19,7 +19,6 @@ The larger code files that remain in this directory should be moved under `serve
 The following are suggested destinations:
 
 - `routes/aiProject*.ts` -> `src/aiProject/`
-- `routes/brainImaging*.ts` -> `src/brainImaging/` or maybe use `src/imaging` for all image/slide related route code
 - `routes/chat/*` -> `src/chat`
 - `routes/gdc.*, grin*` -> `src/grin/*`
 - `routes/gene*` -> `src/geneLookup/`

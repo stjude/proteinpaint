@@ -10,9 +10,16 @@ export function setRoutes(app, routes, _opts = {}) {
 			const api = route.api
 			if (api.middlewares && !Array.isArray(api.middlewares))
 				throw new Error(`${api.endpoint}: middlewares must be an array`)
+			const endpoint = `${opts.basepath}/${api.endpoint}`
+			const skippedMethods = []
 			for (const [method, handler] of Object.entries(api.methods)) {
+				// a route may opt out of setting up a method with init: null, such as when disabled by serverconfig;
+				// an undefined or other non-function init is still an error
+				if (handler.init === null) {
+					skippedMethods.push(method)
+					continue
+				}
 				try {
-					const endpoint = `${opts.basepath}/${api.endpoint}`
 					// a method-specific middleware, such as a request validator, is called first so that
 					// the route-level middlewares that apply to all methods will use the validated request
 					const middlewares = handler.middleware ? [handler.middleware] : []
@@ -22,6 +29,8 @@ export function setRoutes(app, routes, _opts = {}) {
 					throw new Error(`${api.endpoint} ${method}: ${e}`)
 				}
 			}
+			if (skippedMethods.length)
+				console.log(`!! Skipped setting up route: ${endpoint} ${skippedMethods.join(', ').toUpperCase()} `)
 		}
 		if (opts.debugmode && opts.protectedRoutesJson) emitProtectedRoutes(routes, opts.protectedRoutesJson)
 		//emitFiles(routes, opts)

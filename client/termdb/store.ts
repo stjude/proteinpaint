@@ -18,6 +18,7 @@ const defaultState = {
 	submenu: {
 		// type: 'tvs', may add other types later
 		// term: {} or undefined
+		// origins: selected geneVariant origins to seed the tvs menu, or undefined
 	},
 	search: { isVisible: true },
 	selectedTerms: [],

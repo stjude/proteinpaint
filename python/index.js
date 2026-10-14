@@ -23,7 +23,9 @@ export function run_python(pyfile, input_data, { signal } = {}) {
 			return
 		}
 
-		const ps = spawn(python, [pypath])
+		// -E -s: use only the interpreter defaults, not PYTHON* env variables or the user site dir;
+		// not -I, which also removes the script dir from sys.path that the sibling-module imports need
+		const ps = spawn(python, ['-E', '-s', pypath])
 		const stdout = []
 		const stderr = []
 

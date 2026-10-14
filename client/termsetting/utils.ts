@@ -1,6 +1,7 @@
 import type { QualQ, Q, RawValuesQ, RawGvQ, TermWrapper, RawTW, NumericQ, SnpsQ, Term } from '#types'
 import type { VocabApi } from './types'
 import { TwRouter, routedTermTypes, type TwBase } from '#tw'
+import { escapeHtml } from '#dom'
 
 /*
 ********************* EXPORTED
@@ -44,11 +45,13 @@ function hexToBase64(hexStr) {
 	)
 }
 
+/** the pill renders this with .html(); the name is truncated before escaping so an entity is never cut */
 export function getPillNameDefault(self, d: any) {
-	if (!self.opts.abbrCutoff) return d.name
-	return d.name.length <= self.opts.abbrCutoff + 2
-		? d.name
-		: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+	const name = String(d.name)
+	if (!self.opts.abbrCutoff || name.length <= self.opts.abbrCutoff + 2) return escapeHtml(name)
+	return (
+		'<label title="' + escapeHtml(name) + '">' + escapeHtml(name.substring(0, self.opts.abbrCutoff)) + '...</label>'
+	)
 }
 
 /* For some plots that can have multiple terms of the same ID,

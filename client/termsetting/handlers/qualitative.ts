@@ -63,6 +63,7 @@ export class GroupSet extends HandlerBase implements Handler {
 	}
 
 	getPillStatus() {
+		this.tw = this.termsetting.tw as QualValues | QualPredefinedGS | QualCustomGS
 		return this.tw.getStatus(this.termsetting.usecase)
 	}
 
@@ -82,6 +83,9 @@ export class GroupSet extends HandlerBase implements Handler {
 		 * in other client side code. The data shape may differ until all the code is refactored.
 		 */
 		this.category2samplecount = data.lst
+		// termsetting.tw may have been replaced (e.g., by runCallback() or main())
+		// since this handler was constructed, so use the latest tw to avoid a stale tw.q
+		this.tw = this.termsetting.tw as QualValues | QualPredefinedGS | QualCustomGS
 		this.data = this.tw.getGroups(this.category2samplecount)
 		await this.initGrpSetUI()
 	}

@@ -12,7 +12,6 @@ import {
 	renderCoverageLine,
 	renderPTMSummaryCard,
 	renderOverviewVolcanoCard,
-	closeTilePanes,
 	getTileConfig,
 	launchViolinPlot,
 	getLog2Ratio
@@ -91,9 +90,6 @@ class ProteinView extends PlotBase implements RxComponent {
 		}
 
 		this.maySetSandboxHeader()
-		// expanded-tile panes drawn from the previous data must not outlive it —
-		// close them before the fetch so a failed request can't leave them behind
-		closeTilePanes(this)
 		const data = await dofetch3('termdb/proteome', { body })
 		if (data.error) throw data.error
 		this.dom.body.selectAll('*').remove()
@@ -104,7 +100,7 @@ class ProteinView extends PlotBase implements RxComponent {
 		renderCoverageLine(this.dom.body, tileData)
 		const grid = makeTileGrid(this.dom.body)
 
-		// overview volcano leads the grid; its expand pane hosts the full
+		// overview volcano leads the grid; its expanded view hosts the full
 		// interactive volcano
 		renderOverviewVolcanoCard(grid, data, this, {
 			onExpandRender: (holder: any) => {
@@ -161,7 +157,7 @@ class ProteinView extends PlotBase implements RxComponent {
 		}
 
 		// full lollipop UI (single track, or isoform sidebar with compare mode),
-		// rendered on demand into the PTM card's expanded pane
+		// rendered on demand into the PTM card's expanded view
 		const renderPTMSectionsInto = async (holder: any) => {
 			if (sections.length === 1) {
 				const s = sections[0]
@@ -358,12 +354,6 @@ class ProteinView extends PlotBase implements RxComponent {
 		const placeholders: { title: string; note?: string }[] = missingTiles.map(t => ({ title: t.title }))
 		if (!sections.length && ptmCfg && ptmAssaysConfigured(this)) placeholders.push({ title: ptmCfg.title })
 		renderPlaceholderTiles(grid, placeholders)
-	}
-
-	/** rx calls this when the plot is deleted: expanded-tile panes live on document.body
-	 *  and would otherwise outlive the plot with handlers bound to a dead instance */
-	destroy() {
-		closeTilePanes(this)
 	}
 }
 

@@ -40,7 +40,7 @@ export class ScatterView {
 	constructor(scatter: Scatter) {
 		this.opts = scatter.opts
 		this.scatter = scatter
-
+		this.opts.holder.attr('data-testid', 'sjpp-scatter-holder')
 		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		const rightDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const controlsHolder = leftDiv

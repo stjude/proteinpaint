@@ -4,7 +4,12 @@ import { isNumericTerm } from '#shared/terms.js'
 type AggregateMethodDefinition = AggregateMethodOption & {
 	isAvailable: (ds: any, terms: any[]) => boolean
 	/** Server-only hook. Sufficient statistics are computed once for all requested methods. */
-	calculateFromStats?: (stats: { matches: number; numericMatches: number; cohortCount: number; sum: number }) => number | null
+	calculateFromStats?: (stats: {
+		matches: number
+		numericMatches: number
+		cohortCount: number
+		sum: number
+	}) => number | null
 }
 
 const definitions: AggregateMethodDefinition[] = [
@@ -39,7 +44,7 @@ export function calculateAggregateMethod(
 	return calculate(stats)
 }
 
-/** Attach the server-only aggregation capability resolver after dataset queries are validated. 
+/** Attach the server-only aggregation capability resolver after dataset queries are validated.
  * This runs after sample validation in mds3.init. */
 export function initAggregateMethods(ds: any) {
 	ds.getAvailableAggregateMethods = (terms: any[] = []): AggregateMethodOption[] =>
@@ -92,7 +97,7 @@ export function calculateSampleBasedMethods(
 							numericMatches: numericMatches[rowIndex],
 							cohortCount,
 							sum: sums[rowIndex]
-						})
+					  })
 		}
 		result.set(methodIds[methodIndex], values)
 	}
@@ -102,21 +107,23 @@ export function calculateSampleBasedMethods(
 function isComputableNumeric(annotation: any, term: any, value: unknown): value is number {
 	if (typeof value != 'number' || !Number.isFinite(value)) return false
 	const keys = annotation?.values?.length ? annotation.values.map(item => item.key) : [annotation?.key]
-	return !keys.some(key => term?.values?.[key]?.uncomputable || Object.entries<any>(term?.values || {}).some(([_, item]) => item?.uncomputable && item.label === key))
+	return !keys.some(
+		key =>
+			term?.values?.[key]?.uncomputable ||
+			Object.entries<any>(term?.values || {}).some(([_, item]) => item?.uncomputable && item.label === key)
+	)
 }
 
 function hasNumericMethod(ds: any, terms: any[], method: 'mean') {
 	if (terms.length) {
-		return terms.every(term =>
-			term.type == PSEUDOBULK ? hasPseudobulkMethod(ds, method, term) : isNumericTerm(term)
-		)
+		return terms.every(term => (term.type == PSEUDOBULK ? hasPseudobulkMethod(ds, method, term) : isNumericTerm(term)))
 	}
 	return hasStandardNumericTerms(ds) || hasPseudobulkMethod(ds, method)
 }
 
 function hasPercentMethod(ds: any, terms: any[]) {
 	if (terms.length) {
-		return terms.every(term => term.type == PSEUDOBULK ? hasPseudobulkMethod(ds, 'percent', term) : true)
+		return terms.every(term => (term.type == PSEUDOBULK ? hasPseudobulkMethod(ds, 'percent', term) : true))
 	}
 	return hasStandardNumericTerms(ds) || hasNonNumericTerms(ds) || hasPseudobulkMethod(ds, 'percent')
 }
@@ -178,9 +185,10 @@ function hasNonNumericTerms(ds: any) {
 
 function getDatasetTermTypes(ds: any) {
 	const types = new Set<string>(ds.cohort?.termdb?.allowedTermTypes || [])
-	for (const cohortTypes of Object.values<any>(ds.cohort?.termdb?.termtypeByCohort?.nested || {})) {
+	for (const cohortTypes of Object.values<any>(ds.cohort?.termdb?.termtypeByCohort || {})) {
 		for (const [type, count] of Object.entries(cohortTypes)) {
-			if (count) types.add(type)
+			// .numeric is a precomputed total of numeric types, not a term type
+			if (type != 'numeric' && count) types.add(type)
 		}
 	}
 	return types

@@ -1,5 +1,5 @@
 import type { SCDom, SCSampleSandbox, SCTableData } from '../SCTypes'
-import type { TableCell } from '#dom'
+import type { TableBaseCell } from '#dom'
 import type { SCInteractions } from '../interactions/SCInteractions'
 import { SCSampleTable } from './SCSampleTable'
 
@@ -26,7 +26,10 @@ export class SampleTableRenderer {
 	 * to init() plots in the dashboard.*/
 	renderSamplesTable(tableData: SCTableData) {
 		this.tableData = tableData
-		this.table = new SCSampleTable(this.dom, tableData, {
+		this.table?.remove()
+		this.table = new SCSampleTable(this.dom.tableDiv, tableData, {
+			// a sort redraws the rows, which replaces the cells the plot buttons live in
+			onBodyRendered: () => this.reapplyAllPlotButtons(),
 			onRowClick: sampleId => {
 				const data = this.tableData
 				const sampleColIdx = data.sampleColIdx ?? 0
@@ -35,6 +38,7 @@ export class SampleTableRenderer {
 				const item = this.buildItemFromRow(data, rowIndex)
 				this.interactions.updateItem(item)
 				this.dom.plotsBtnsDiv.style('display', 'block')
+				this.dom.selectBtn!.toggle()
 			}
 		})
 		this.reapplyAllPlotButtons()
@@ -42,10 +46,10 @@ export class SampleTableRenderer {
 
 	/** Builds an item object from a table row, mapping column labels to keys.
 	 * Converts 'sample' -> 'sID' and 'experiment' -> 'eID'.
-	 * Extracted out from noButtonCallback for testing.  */
+	 * Extracted out from the onRowClick handler for testing.  */
 	buildItemFromRow(tableData: SCTableData, index: number) {
 		const item = {} as { sID: string; eID: string; [key: string]: any }
-		tableData.rows[index].forEach((r: TableCell, idx: number) => {
+		tableData.rows[index].forEach((r: TableBaseCell, idx: number) => {
 			if (!r.value) return
 			let key = tableData.columns[idx].label.toLowerCase()
 			/** Convert the column labels into the required sample structure keys.
@@ -60,7 +64,7 @@ export class SampleTableRenderer {
 
 	updateTable(tableData: SCTableData) {
 		this.tableData = tableData
-		if (!this.table) {
+		if (!this.table || !this.table.isSameShape(tableData)) {
 			this.renderSamplesTable(tableData)
 			return
 		}

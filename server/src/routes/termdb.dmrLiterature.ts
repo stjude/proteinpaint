@@ -1,5 +1,7 @@
 import type { RouteApi, RoutePayload } from '#types'
 import { xfetch } from '#src/xfetch.js'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
 /* PubMed articles on a gene's methylation and expression, with DOIs, for the DMR-gene links table.
 
@@ -9,11 +11,20 @@ expression, so a hit is about the relationship rather than any mention of the ge
 a time, on the reader's click: E-utilities allows 3 requests a second without an API key, which a
 table-wide lookup would exceed at once. */
 
+const payload = {
+	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
+	get init() {
+		return hasDnaMethylationDs(genomes) ? init : null
+	},
+	request: { typeId: undefined },
+	response: { typeId: undefined }
+} as any as RoutePayload
+
 export const api: RouteApi = {
 	endpoint: 'termdb/dmrLiterature',
 	methods: {
-		get: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload,
-		post: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload
+		get: payload,
+		post: payload
 	}
 }
 

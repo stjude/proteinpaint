@@ -47,17 +47,19 @@ export function q_to_param(q) {
 // class Mds3Vocab {}
 
 export function getVocabFromSamplesArray({ samples, sample_attributes }) {
-	const terms = {
-		__root: {
-			id: 'root',
-			name: 'root',
-			__tree_isroot: true
-		}
+	// sample names and attribute keys below come from attacker-reachable data
+	// (mdsjsonurl, tabular_data, embedder args); use null-prototype objects so a
+	// name/key of "__proto__"/"constructor" cannot pollute Object.prototype
+	const terms = Object.create(null)
+	terms.__root = {
+		id: 'root',
+		name: 'root',
+		__tree_isroot: true
 	}
-	const sanno = {}
+	const sanno = Object.create(null)
 	for (const a of samples) {
 		const s = a.sample
-		if (!sanno[s]) sanno[s] = {}
+		if (!sanno[s]) sanno[s] = Object.create(null)
 		// in case a sample has more than one annotation object in the array
 		Object.assign(sanno[s], a.s)
 

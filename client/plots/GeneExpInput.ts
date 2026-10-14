@@ -206,7 +206,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				//Only enabling for gene expression for now
 				chartType: 'DEinput',
 				//TODO: add whether or not a total file is available for pseudobulk to enable DA
-				isVisible: () => chartTypes.has('DA') && this.termType === GENE_EXPRESSION /*|| this.termType === PSEUDOBULK*/,
+				isVisible: () => chartTypes.has('DA') && (this.termType === GENE_EXPRESSION || this.termType === PSEUDOBULK),
 				callback: async (event, tab) => {
 					await this.app.dispatch({
 						type: 'plot_create',

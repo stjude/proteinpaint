@@ -18,12 +18,6 @@ export type TermdbBarSqlRequest = {
 
 	/** hidden term1 and term2 labels excluded from association-test calculations */
 	hiddenValues?: { term1: string[]; term2: string[] }
-
-	/** identifies a genotype-by-sample file previously loaded via loadfile_ssid(), for VCF-genotype overlay bars */
-	ssid?: string
-	chr?: string
-	pos?: number | string
-	term2_is_genotype?: boolean
 }
 
 export type BarBoxplotStat = {
@@ -52,8 +46,6 @@ export type BarSeries = {
 	data: BarDataEntry[]
 	total: number
 	boxplot?: BarBoxplotStat
-	/** allele frequency, only computed when ds.track.vcf.termdb_bygenotype.getAF is configured and term2_is_genotype is set */
-	AF?: unknown
 }
 
 export type BarChart = {

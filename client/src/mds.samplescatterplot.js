@@ -1002,7 +1002,7 @@ hardcoded 2 levels
 level 1 is not colored
 level 2 is colored and based on sample_attributes[L2key].values{}
 */
-function legend_attr_levels(obj) {
+export function legend_attr_levels(obj) {
 	const staydiv = obj.legendtable.append('tr').append('td').append('div').style('position', 'relative')
 	const scrolldiv = staydiv.append('div')
 	const L1 = obj.attr_levels[0]
@@ -1025,10 +1025,12 @@ function legend_attr_levels(obj) {
 	for (const L1value of get_itemOrderList(L1, obj)) {
 		const L1o = L1.v2c.get(L1value)
 		const L1div = scrolldiv.append('div').style('margin-top', '20px').attr('class', 'sja_lb_div')
-		L1div.append('div')
-			.attr('class', 'sja_l1lb')
-			.html((L1o.label || L1value) + ' &nbsp;<span style="font-size:.8em">n=' + L1o.dots.length + '</span>')
-			.style('margin-top', '15px')
+		const L1lb = L1div.append('div').attr('class', 'sja_l1lb').style('margin-top', '15px')
+		L1lb.append('span').text(L1o.label || L1value)
+		L1lb.append('span')
+			.style('font-size', '.8em')
+			.style('margin-left', '5px')
+			.text('  n=' + L1o.dots.length)
 
 		const L2 = obj.attr_levels[1]
 		if (L2) {
@@ -1128,7 +1130,7 @@ function legend_attr_levels(obj) {
 	}
 	if (L1.unannotated) {
 		const d = scrolldiv.append('div').style('margin-top', '20px')
-		d.append('div').html('Unannotated for "' + L1.key + '": ' + L1.unannotated)
+		d.append('div').text('Unannotated for "' + L1.key + '": ' + L1.unannotated)
 	}
 	if (L1.v2c.size > 10) {
 		scrolldiv.style('overflow-y', 'scroll').style('height', '800px').style('resize', 'vertical')
@@ -1260,7 +1262,7 @@ function legend_flatlist(obj) {
 	}
 }
 
-function update_dotcolor_legend(obj) {
+export function update_dotcolor_legend(obj) {
 	// update legend table by filter
 	const filterd_dots = obj.dots.filter(d => obj.filteredSamples.has(d.sample))
 	const attrs_list = Array.from(filterd_dots, d => d.s)

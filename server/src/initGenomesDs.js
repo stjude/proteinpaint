@@ -24,6 +24,9 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 import { cacheOrRecompute, cacheFilePath, generateHash } from './utils/cacheOrRecompute.ts'
 import { shouldMapParent2Children } from './termdb.matrix.js'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 const dsHelpers = {
 	isUsableTerm,
 	joinUrl,
@@ -665,7 +668,7 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 					sendMessageToSlack(
 						serverconfig.slackWebhookUrl,
 						`\n${serverconfig.URL}: ${msg}`,
-						path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
+						path.join(cachedir, '/slack/last_message_hash.txt')
 					).catch(console.log)
 				}
 				// NOTE: the server is not crashed here, even when this is the only configured dataset,
@@ -690,7 +693,7 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 						sendMessageToSlack(
 							serverconfig.slackWebhookUrl,
 							`\n${serverconfig.URL}: ${msg}`,
-							path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
+							path.join(cachedir, '/slack/last_message_hash.txt')
 						).catch(console.log)
 					}
 					// retries are exhausted and cancelled, so this must not be reported as an active

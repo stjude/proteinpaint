@@ -1,6 +1,6 @@
 import { makeSnpSelect, mayRestrictAncestry } from './snplst'
 import { filterInit, getNormalRoot } from '#filter'
-import { addGeneSearchbox } from '#dom'
+import { addGeneSearchbox, escapeHtml } from '#dom'
 import type { SnpsTW, SnpsQ, SnpsVocabApi, SnpsTerm } from '#types'
 
 /* 
@@ -32,7 +32,7 @@ const term_name = 'Variants in a locus'
 export function getHandler(self) {
 	return {
 		getPillName() {
-			return self.term.name
+			return escapeHtml(self.term.name)
 		},
 
 		getPillStatus() {

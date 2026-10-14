@@ -3,7 +3,16 @@ import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getCombinedTermFilter } from '#filter'
 import { controlsInit } from '#plots/controls.js'
-import { Menu, getMaxLabelWidth, DownloadMenu, getChartTitle, setDescrStatsByTerm } from '#dom'
+import {
+	Menu,
+	getMaxLabelWidth,
+	CustomDownloadMenu,
+	type DownloadMenuOption,
+	getChartTitle,
+	setDescrStatsByTerm,
+	descrStatsToTSV,
+	testRowsToTSV
+} from '#dom'
 import type { Elem } from '../../types/d3'
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { TdbBoxPlotOpts, BoxPlotDom, BoxPlotConfigOpts } from './BoxPlotTypes'
@@ -219,8 +228,46 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 
 	download(event) {
 		if (!this.state) return
+		const config = this.state.config
 		const name2svg = this.getChartImages()
-		const dm = new DownloadMenu(name2svg, this.state.config.term.term.name)
+		const filename = config.term.term.name
+		const extraOptions: DownloadMenuOption[] = []
+
+		// descrStats live on the mutable config copy in main(), so read them from the response instead
+		const descrStatsByTerm = this.data?.descrStats || {}
+		const statTerms = [config.term, config.term2].filter(
+			tw => tw?.$id && descrStatsByTerm[tw.$id] && tw.term.type != 'termCollection'
+		)
+		if (statTerms.length) {
+			extraOptions.push({
+				label: 'Descriptive statistics',
+				testid: 'sjpp-download-descrstats',
+				filename: `${filename}_descriptive_stats`,
+				callback: () =>
+					descrStatsToTSV(statTerms.map(tw => ({ name: tw.term.name, stats: descrStatsByTerm[tw.$id] })))
+			})
+		}
+
+		// server only returns wilcoxon results when showAssocTests is on and term2 is present
+		const charts = Object.entries(this.data?.charts || {}) as [string, any][]
+		if (charts.some(([, chart]) => chart.wilcoxon?.length)) {
+			extraOptions.push({
+				label: 'Group comparisons',
+				testid: 'sjpp-download-comparison',
+				filename: `${filename}_wilcoxon_group_comparisons`,
+				callback: () =>
+					testRowsToTSV(
+						"Wilcoxon's rank sum test",
+						['Group 1', 'Group 2', 'P-value'],
+						charts
+							.filter(([, chart]) => chart.wilcoxon)
+							.map(([chartId, chart]) => ({ chartLabel: getChartTitle(config, chartId), rows: chart.wilcoxon }))
+					)
+			})
+		}
+
+		const dm = new CustomDownloadMenu({ chartImages: name2svg, filename, extraOptions })
+
 		dm.show(event.clientX, event.clientY, event.target)
 	}
 }

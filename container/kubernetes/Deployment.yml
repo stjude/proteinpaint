@@ -32,6 +32,8 @@ spec:
               name: tp
             - mountPath: /home/root/pp/app/active/serverconfig.json
               name: config
+              # the server does not change serverconfig.json, from v2.213.0
+              readOnly: true
       volumes:
         - name: tp
           hostPath:

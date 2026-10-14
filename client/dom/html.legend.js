@@ -67,7 +67,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 		const s = viz.settings
 		const div = select(this)
 			.style('display', s.legendOrientation == 'vertical' || s.legendOrientation == 'grid' ? 'block' : 'inline-block')
-			.attr('data-testid', 'sjpp-oneLegend-row-container-' + (d.testID ?? ''))
+			.attr('data-testid', 'sjpp-oneLegend-row-container-' + (d.testIdSuffix ?? ''))
 
 		if (d.name) {
 			if (s.legendChartSide == 'right') {
@@ -172,7 +172,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 		div
 			.append('div')
 			.classed('sjpp-htmlLegend', true)
-			.attr('data-testid', 'sjpp-htmlLegend-' + (d?.testID ?? ''))
+			.attr('data-testid', 'sjpp-htmlLegend-' + (d?.testIdSuffix ?? ''))
 			.style('display', 'inline-block')
 			.style('margin-left', d.svg ? '1px' : '3px')
 			.style('cursor', handleCursor(d))
@@ -180,7 +180,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 			.style('line-height', s.legendFontSize)
 			.style('vertical-align', d.svg ? 'top' : null)
 			.style('text-decoration', d.isHidden ? 'line-through' : 'none')
-			.html(d.text)
+			.text(d.text)
 			.on('click', viz.handlers.legend?.click)
 
 		if (Object.keys(viz.handlers).length) {

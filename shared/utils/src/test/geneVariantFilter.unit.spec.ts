@@ -120,9 +120,7 @@ tape('filterVariantValues() matches classes, origins and negation', test => {
 
 	const germline = { ...G12D, origin: 'germline' }
 	const somatic = { ...G12D, origin: 'somatic' }
-	const byOrigin = getFilter([{ key: 'M', mname: 'G12D' }], dtsnvindel, {
-		term: { dt: dtsnvindel, origin: 'germline' }
-	})
+	const byOrigin = getFilter([{ key: 'M', mname: 'G12D' }], dtsnvindel, { origins: ['germline'] })
 	test.deepEqual(
 		filterVariantValues([germline, somatic], byOrigin).map(v => v.origin),
 		['germline'],

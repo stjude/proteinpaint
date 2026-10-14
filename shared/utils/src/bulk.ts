@@ -20,9 +20,11 @@ export function init_bulk_flag(genome) {
 		genome: genome,
 		mclasslabel2key: mclasslabel2key,
 		data: {},
-		sample2disease: {}, // (proof) k: sample, v: disease
+		// m.sample/m.patient come from parsed file lines; use null-prototype objects so a
+		// value of "__proto__"/"constructor" cannot pollute Object.prototype
+		sample2disease: Object.create(null), // (proof) k: sample, v: disease
 		// will only record this when origin is used
-		patient2st: {},
+		patient2st: Object.create(null),
 		// k: patient, v: { k: sampletype, v: sample }
 		// new sample names always override old
 		good: 0,
@@ -162,12 +164,12 @@ export function parsesample(m, flag, i, lst) {
 
 	if (m.patient) {
 		if (!flag.patient2st[m.patient]) {
-			flag.patient2st[m.patient] = {}
+			flag.patient2st[m.patient] = Object.create(null)
 		}
 		flag.patient2st[m.patient][m.sampletype] = m.sample
 	} else {
 		if (!flag.patient2st[nopatientname]) {
-			flag.patient2st[nopatientname] = {}
+			flag.patient2st[nopatientname] = Object.create(null)
 		}
 		flag.patient2st[nopatientname][m.sampletype] = m.sample
 	}

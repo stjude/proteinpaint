@@ -44,6 +44,7 @@ function getApp({ api }) {
 	}
 	for (const method in api.methods) {
 		const m = api.methods[method]
+		if (m.init === null) continue
 		app[method](api.endpoint, m.init({ app, genomes }))
 	}
 	return app
@@ -87,6 +88,7 @@ async function testApi(f) {
 
 	for (const method in api.methods) {
 		const m = api.methods[method]
+		if (m.init === null) continue
 		const METHOD = method.toUpperCase()
 		if (!m.examples) m.examples = [{ request: {}, response: {} }]
 

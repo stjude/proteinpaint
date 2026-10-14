@@ -7,10 +7,9 @@ import { spawnSync } from 'child_process'
 import serverconfig from '../serverconfig.js'
 import * as utils from '../utils.js'
 import { api as ntseqApi } from '../routes/ntseq.ts'
-import { api as dsdataApi } from '../routes/dsdata.ts'
+import { init as dsdataInit } from '../routes/dsdata.ts'
 import bamRequestClosure from '../bam.js'
 import { mdsjunction_request_closure } from '../mds.junction.js'
-import { handle_singlecell_closure } from '../singlecell.js'
 import { handle_mdssurvivalplot } from '../km.js'
 import { handle_request_closure as termdbClosure } from '../termdb.js'
 import { setRoutes } from '../app.unorg.js'
@@ -31,7 +30,6 @@ test sections:
 - /tkbam
 - /mdsjunction
 - /dsdata
-- /singlecell
 - /mdssurvivalplot
 - /termdb?getLDdata
 - spawnTool() central guard
@@ -140,7 +138,7 @@ tape('/tkbam', async test => {
 			stop: 2,
 			file: 'files/hg38/TermdbTest/trackLst/bam.bam'
 		})
-		test.equal(r?.error, 'invalid chr', `getread should reject chr=${chr}`)
+		test.equal(r?.error, 'q.rglst[].chr invalid chr name', `getread should reject chr=${chr}`)
 	}
 
 	const urlAttack = await send(handler, {
@@ -158,7 +156,7 @@ tape('/tkbam', async test => {
 			nochr: false,
 			regions: [{ chr, start: 1, stop: 100, width: 100 }]
 		})
-		test.equal(r?.error, 'invalid chr', `regions[] should reject chr=${chr}`)
+		test.equal(r?.error, 'q.rglst[].chr invalid chr name', `regions[] should reject chr=${chr}`)
 	}
 	if (hasSamtools) test.notOk(fs.existsSync(outFile), 'samtools view should not write to a requested path')
 	test.end()
@@ -178,7 +176,7 @@ tape('/mdsjunction', async test => {
 			file,
 			junction: { chr, start: 1, stop: 2 }
 		})
-		test.equal(j?.error, 'invalid chr', `junction should reject chr=${chr}`)
+		test.equal(j?.error, 'q.rglst[].chr invalid chr name', `junction should reject chr=${chr}`)
 		const jB = await send(handler, {
 			genome: 'hg38',
 			iscustom: 1,
@@ -187,9 +185,13 @@ tape('/mdsjunction', async test => {
 			junctionB: { chr, start: 1, stop: 2 },
 			junctionAposlst: []
 		})
-		test.equal(jB?.error, 'invalid chr', `junctionB should reject chr=${chr}`)
-		const rg = await send(handler, { genome: 'hg38', iscustom: 1, file, rglst: [{ chr, start: 1, stop: 2 }] })
-		test.ok(rg?.error, `rglst should reject chr=${chr}`)
+		test.equal(jB?.error, 'q.rglst[].chr invalid chr name', `junctionB should reject chr=${chr}`)
+		// rglst is validated by the app middleware (app.middlewares.js) before the handler runs, not by the handler itself
+		test.throws(
+			() => utils.validateRglst({ rglst: [{ chr, start: 1, stop: 2 }] }, getGenome()),
+			/invalid chr name/,
+			`middleware rglst validation should reject chr=${chr}`
+		)
 	}
 
 	const urlAttack = await send(handler, {
@@ -212,65 +214,13 @@ tape('/dsdata', async test => {
 	genome.datasets.testds = {
 		queries: [{ vcffile: 'files/hg38/TermdbTest/TermdbTest_ITD.gz', vcf: {} }]
 	}
-	const handler = dsdataApi.methods.get.init({ genomes: { hg38: genome } })
+	const handler = dsdataInit({ genomes: { hg38: genome } })
 	for (const chr of chrAttacks) {
 		const r = await send(handler, { genome: 'hg38', dsname: 'testds', range: { chr, start: 1, stop: 2 } })
-		test.equal(r?.error, 'invalid chr', `range should reject chr=${chr}`)
+		test.equal(r?.error, 'q.rglst[].chr invalid chr name', `range should reject chr=${chr}`)
 	}
 	const noRange = await send(handler, { genome: 'hg38', dsname: 'testds' })
-	test.equal(noRange?.error, 'invalid chr', 'should reject a missing range')
-	test.end()
-})
-
-tape('/singlecell', async test => {
-	const handler = handle_singlecell_closure({ hg38: getGenome() })
-	const expfile = 'files/hg38/TermdbTest/TermdbTest_ITD.gz'
-	for (const chr of chrAttacks) {
-		const box = await send(handler, {
-			genome: 'hg38',
-			getgeneboxplot: { expfile, chr, start: 1, stop: 2, genename: 'TP53' }
-		})
-		test.equal(box?.error, 'invalid chr', `getgeneboxplot should reject chr=${chr}`)
-		const heat = await send(handler, {
-			genome: 'hg38',
-			getheatmap: { expfile, gene_list: [{ chr, start: 1, stop: 2, gene: 'TP53' }] }
-		})
-		test.equal(heat?.error, 'invalid chr', `getheatmap should reject chr=${chr}`)
-	}
-
-	const getpcd = chr => ({
-		genome: 'hg38',
-		textfile: 'files/hg38/TermdbTest/tsne.txt',
-		getpcd: {
-			coord: [],
-			gene_expression: {
-				file: expfile,
-				barcodecolumnidx: 4,
-				chr,
-				start: 1,
-				stop: 2,
-				genename: 'TP53',
-				autoscale: true,
-				color_min: '#000',
-				color_max: '#fff'
-			}
-		}
-	})
-	for (const chr of chrAttacks) {
-		const pcd = await send(handler, getpcd(chr))
-		test.equal(pcd?.error, 'invalid chr', `getpcd.gene_expression should reject chr=${chr}`)
-	}
-	// a valid chr must get past the check, not fail with a ReferenceError from an out-of-scope genome;
-	// a valid request runs tabix, so this needs the binary
-	if (hasTabix) {
-		const validPcd = await send(handler, getpcd('chr17'))
-		test.notOk(
-			/invalid chr|is not defined/.test(String(validPcd?.error)),
-			'getpcd.gene_expression should accept a valid chr'
-		)
-	} else {
-		test.comment('tabix not found, skipped the valid getpcd request')
-	}
+	test.equal(noRange?.error, 'element of q.rglst[] not object', 'should reject a missing range')
 	test.end()
 })
 
@@ -291,7 +241,7 @@ tape('/mdssurvivalplot', async test => {
 				type: 'os',
 				samplerule: { full: { useall: 1 }, set: { [kind]: 1, gene: 'TP53', chr, start: 1, stop: 2 } }
 			})
-			test.equal(r?.error, 'invalid chr', `samplerule.set.${kind} should reject chr=${chr}`)
+			test.equal(r?.error, 'q.rglst[].chr invalid chr name', `samplerule.set.${kind} should reject chr=${chr}`)
 		}
 	}
 	test.end()
@@ -312,7 +262,7 @@ tape('/termdb?getLDdata', async test => {
 			ldtkname: 'ld',
 			m: { chr, pos: 1, ref: 'A', alt: 'T' }
 		})
-		test.equal(r?.error, 'invalid chr', `m.chr should reject chr=${chr}`)
+		test.equal(r?.error, 'invalid q.m.chr/pos', `m.chr should reject chr=${chr}`)
 	}
 	test.end()
 })
@@ -335,7 +285,7 @@ tape('spawnTool() central guard', async test => {
 		test.doesNotThrow(() => utils.spawnTool('true', args).kill(), `should allow ${JSON.stringify(args)}`)
 	}
 
-	// get_lines_bigfile() goes through the guard, so a route that forgot checkChr is still covered
+	// get_lines_bigfile() goes through the guard, so a route that forgot to validate its chr is still covered
 	const file = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest/TermdbTest_ITD.gz')
 	const tbiHash = sha(file + '.tbi')
 	try {
@@ -351,9 +301,12 @@ tape('spawnTool() central guard', async test => {
 tape('/mdsgeneboxplot and /isoformbycoord, via the real route table', async test => {
 	const routes = {}
 	const record = (p, h) => (routes[p] = h)
+	const genome = getGenome()
+	// legacy mds routes are only mounted when there is at least one mds dataset
+	genome.datasets.FakeMds = { isMds: true }
 	setRoutes(
 		{ get: record, post: record, all: record, put: record, delete: record, use: () => {} },
-		{ hg38: getGenome() },
+		{ hg38: genome },
 		{}
 	)
 	for (const chr of chrAttacks) {
@@ -366,9 +319,9 @@ tape('/mdsgeneboxplot and /isoformbycoord, via the real route table', async test
 			start: 1,
 			stop: 2
 		})
-		test.equal(box?.error, 'invalid chr', `/mdsgeneboxplot should reject chr=${chr}`)
+		test.equal(box?.error, 'q.rglst[].chr invalid chr name', `/mdsgeneboxplot should reject chr=${chr}`)
 		const iso = await send(routes['/isoformbycoord'], { genome: 'hg38', chr, pos: 1 })
-		test.equal(iso?.error, 'invalid chr', `/isoformbycoord should reject chr=${chr}`)
+		test.equal(iso?.error, 'invalid chr/pos', `/isoformbycoord should reject chr=${chr}`)
 	}
 	test.end()
 })

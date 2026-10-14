@@ -28,6 +28,7 @@ tape('AuthApiOpen: has expected interface properties', function (test) {
 			'getNonsensitiveInfo',
 			'getPayloadFromHeaderAuth',
 			'getRequiredCredForDsEmbedder',
+			'getUserDatasets',
 			'isUserLoggedIn',
 			'mayAdjustFilter',
 			'maySetAuthRoutes',
@@ -79,6 +80,14 @@ tape('AuthApiOpen.isUserLoggedIn: always returns true', function (test) {
 		true,
 		'should always return true regardless of arguments'
 	)
+	test.end()
+})
+
+tape('AuthApiOpen.getUserDatasets: returns an empty array', function (test) {
+	test.timeoutAfter(500)
+	test.plan(1)
+
+	test.deepEqual(AuthApiOpen.getUserDatasets({} as any, {} as any), [], 'should return an empty array')
 	test.end()
 })
 

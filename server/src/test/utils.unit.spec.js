@@ -11,11 +11,9 @@ validateRglst
 illegalpath()
 doUpdateAttr
 get_fasta
-checkChr
 fileurl() argv safety
 fileurl() url protocol and host
 snpgtCacheFile()
-loadfile_ssid()
 */
 
 // the fileurl() specs exercise url handling, which only runs when remote files are allowed
@@ -139,6 +137,42 @@ tape('validateRglst', test => {
 		() => utils.validateRglst({ rglst: [{ chr: '1', start: 10, stop: 1 }] }),
 		/q\.rglst\[\]\.stop < start/,
 		'throws with rglst[0].stop<start'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: 10, width: 'a' }] }),
+		/q\.rglst\[\]\.width not number/,
+		'throws with rglst[0].width not number'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: 10, width: -1 }] }),
+		/q\.rglst\[\]\.width out of bound/,
+		'throws with rglst[0].width<0'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: 10, width: 20001 }] }),
+		/q\.rglst\[\]\.width out of bound/,
+		'throws with rglst[0].width over the limit'
+	)
+	test.throws(
+		() =>
+			utils.validateRglst({
+				rglst: [
+					{ chr: '1', start: 1, stop: 10, width: 20000 },
+					{ chr: '1', start: 1, stop: 10, width: 20000 },
+					{ chr: '1', start: 1, stop: 10, width: 20000 }
+				]
+			}),
+		/q\.rglst\[\]\.width total out of bound/,
+		'throws when the region widths add up to over the limit'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: Array.from({ length: 1001 }, () => ({ chr: '1', start: 1, stop: 10 })) }),
+		/q\.rglst\[\] too many regions/,
+		'throws with too many regions'
+	)
+	test.doesNotThrow(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: 10, width: 800.5 }] }),
+		'accepts a decimal width within the limit'
 	)
 	test.throws(
 		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: 10 }, {}] }),
@@ -304,7 +338,11 @@ tape('get_fasta', async test => {
 		'-cr/etc/passwd',
 		'--fai-idx=/tmp/x',
 		'chrX:1-2',
+		'chr1',
 		'chr1:-5-10',
+		'chr1:5--10',
+		'chr1:5-2000',
+		'chr1:10-5',
 		'chr1:1-2 -o/tmp/x',
 		undefined
 	]) {
@@ -314,16 +352,6 @@ tape('get_fasta', async test => {
 		} catch (e) {
 			test.equal(e, 'invalid coordinate', `should reject coord=${coord}`)
 		}
-	}
-	test.end()
-})
-
-tape('checkChr', test => {
-	const g = { chrlookup: { CHR1: { name: 'chr1', len: 1000 } } }
-	test.doesNotThrow(() => utils.checkChr(g, 'chr1'), 'should accept a known chr')
-	test.doesNotThrow(() => utils.checkChr(g, 'Chr1'), 'should accept a known chr case-insensitively')
-	for (const chr of ['-o/tmp/x', '-fc', 'chrX', '', undefined, { a: 1 }]) {
-		test.throws(() => utils.checkChr(g, chr), /invalid chr/, `should reject chr=${JSON.stringify(chr)}`)
 	}
 	test.end()
 })
@@ -432,15 +460,52 @@ tape('fileurl() url protocol and host', test => {
 })
 
 tape('snpgtCacheFile()', test => {
+	const ds = { genomename: 'hg38', label: 'SJLife' }
 	const cacheid = 'hg38_SJLife_1760000000000_1234'
 	test.equal(
-		utils.snpgtCacheFile(cacheid),
-		`${serverconfig.cache_snpgt.dir}/${cacheid}`,
-		'should return the file path directly under cache_snpgt.dir'
+		utils.snpgtCacheFile(cacheid, ds),
+		`${serverconfig.cachedir}/snpgt/${cacheid}`,
+		'should return the file path directly under the snpgt cache subdir'
 	)
-	for (const cacheid of ['../../etc/passwd', 'a/b', '..', '.', '/etc/passwd', 'a\\b', '', undefined, ['a']]) {
+	test.equal(
+		utils.snpgtCacheFile('hg38_test_a_b_c_1_2', { genomename: 'hg38-test', label: 'a.b-c' }),
+		`${serverconfig.cachedir}/snpgt/hg38_test_a_b_c_1_2`,
+		'should accept a cacheid with . and - in the genome and dslabel replaced with _'
+	)
+	for (const [id, _ds] of [
+		['hg19_SJLife_1760000000000_1234', ds],
+		['hg38_Other_1760000000000_1234', ds],
+		['hg38_SJLife_x_1760000000000_1234', ds],
+		['hg38_SJLife_1760000000000', ds],
+		['hg38_SJLife_1760000000000_1234_5', ds],
+		['hg38_SJLife', ds],
+		[cacheid, { genomename: 'hg38', label: 'SJLife_x' }],
+		[cacheid, { genomename: 'hg38', label: 'SJ' }],
+		[cacheid, {}],
+		[cacheid, undefined]
+	]) {
 		test.throws(
-			() => utils.snpgtCacheFile(cacheid),
+			() => utils.snpgtCacheFile(id, _ds),
+			/invalid cacheid|does not support/,
+			`should reject cacheid=${id} for ds=${JSON.stringify(_ds)}`
+		)
+	}
+	for (const cacheid of [
+		'../../etc/passwd',
+		'a/b',
+		'..',
+		'.',
+		'/etc/passwd',
+		'a\\b',
+		'',
+		undefined,
+		['a'],
+		['hg38_SJLife_1760000000000_1234'],
+		'hg38-test_ds_1_2',
+		'a.b'
+	]) {
+		test.throws(
+			() => utils.snpgtCacheFile(cacheid, ds),
 			/invalid cacheid/,
 			`should reject cacheid=${JSON.stringify(cacheid)}`
 		)
@@ -448,26 +513,72 @@ tape('snpgtCacheFile()', test => {
 	test.end()
 })
 
-tape('loadfile_ssid()', async test => {
-	for (const id of ['../../etc/passwd', 'a/b', '..', '/etc/passwd', undefined]) {
+tape('snpgtCacheidPrefix()', test => {
+	const genomeObj = { datasets: {} }
+	const addDs = label => (genomeObj.datasets[label] = { genomename: 'hg38', label, genomeObj })
+	const ds = addDs('a-b')
+	addDs('SJLife')
+	test.equal(utils.snpgtCacheidPrefix(ds), 'hg38_a_b_', 'should accept a dslabel with a distinct prefix in the genome')
+
+	const ds2 = addDs('a.b')
+	for (const _ds of [ds, ds2]) {
+		test.throws(
+			() => utils.snpgtCacheidPrefix(_ds),
+			/is not distinct/,
+			`should reject dslabel='${_ds.label}' that has the same prefix as another dataset of the genome`
+		)
+	}
+	test.throws(
+		() => utils.snpgtCacheFile('hg38_a_b_1760000000000_1234', ds2),
+		/is not distinct/,
+		'should reject a cacheid for a dataset whose prefix is not distinct'
+	)
+	test.equal(
+		utils.snpgtCacheidPrefix(genomeObj.datasets.SJLife),
+		'hg38_SJLife_',
+		'should accept another dataset of the same genome'
+	)
+	test.end()
+})
+
+tape('spawn helpers reject when the process cannot be spawned', async test => {
+	// a nonexistent cwd makes spawn() emit 'error', which crashes the process if nothing listens for it
+	const dir = `/nonexistent-${Date.now()}`
+	const helpers = {
+		get_lines_bigfile: () => utils.get_lines_bigfile({ args: ['-H', 'x.gz'], dir, callback: () => {} }),
+		get_lines_txtfile: () => utils.get_lines_txtfile({ args: ['x.txt'], dir, callback: () => {} }),
+		get_header_txt: () => utils.get_header_txt('x.txt', dir),
+		get_header_bcf: () => utils.get_header_bcf('x.bcf', dir),
+		bam_ifnochr: () => utils.bam_ifnochr('x.bam', {}, dir)
+	}
+	for (const [name, fn] of Object.entries(helpers)) {
 		try {
-			await utils.loadfile_ssid(id)
-			test.fail(`should reject ssid=${JSON.stringify(id)}`)
+			await fn()
+			test.fail(`${name}() should reject`)
 		} catch (e) {
-			test.equal(e, 'invalid ssid', `should reject ssid=${JSON.stringify(id)} before reading a file`)
+			test.equal(e?.code, 'ENOENT', `${name}() should reject with the spawn error`)
 		}
 	}
+	test.end()
+})
 
-	const id = 'test_' + Math.random().toString().slice(2)
-	const file = `${utils.cachedir_ssid}/${id}`
-	fs.writeFileSync(file, 'Heterozygous\t1,2\nHomozygous reference\t3\n')
+tape('run_fdr() rejects and removes its temporary files when Rscript cannot be spawned', async test => {
+	const before = new Set(fs.readdirSync(serverconfig.cachedir))
+	const PATH = process.env.PATH
+	// Rscript is looked up in PATH, so an empty PATH makes the spawn fail
+	process.env.PATH = ''
 	try {
-		const [sample2gt, genotype2sample] = await utils.loadfile_ssid(id)
-		test.equal(sample2gt.get(3), 'Homozygous reference', 'should load a valid ssid file')
-		test.deepEqual([...genotype2sample.get('Heterozygous')], [1, 2], 'should group samples by genotype')
+		await utils.run_fdr([0.01, 0.02])
+		test.fail('run_fdr() should reject')
+	} catch (e) {
+		test.equal(e?.code, 'ENOENT', 'run_fdr() should reject with the spawn error')
 	} finally {
-		fs.unlinkSync(file)
+		process.env.PATH = PATH
 	}
+	// unlink() is asynchronous, give it a moment
+	await new Promise(r => setTimeout(r, 100))
+	const added = fs.readdirSync(serverconfig.cachedir).filter(f => !before.has(f))
+	test.deepEqual(added, [], 'run_fdr() should not leave temporary files in cachedir')
 	test.end()
 })
 

@@ -42,7 +42,7 @@ const schemaSql: string = new Database(path.join(import.meta.dirname, '../../tes
 /* build a ds on an empty copy of the termdb schema holding only the given terms, so that the real
 q.getTermsByTermType() built by server_init_db_queries() is exercised rather than a copy of it.
 connect_db() only accepts a relative path under tpmasterdir or an absolute one, hence the tmp dir */
-function mkDs(terms: any[], subcohortTerms: string[][], nested?: any) {
+function mkDs(terms: any[], subcohortTerms: string[][], counts?: any) {
 	const dbfile = path.join(tmpdir, `db${dbfiles.length}`)
 	dbfiles.push(dbfile)
 	const cn = new Database(dbfile)
@@ -57,12 +57,8 @@ function mkDs(terms: any[], subcohortTerms: string[][], nested?: any) {
 	// sampleTypes{} is set by mds3.init.js before server_init_db_queries() runs
 	const ds: any = { label: 'loneTermTest', cohort: { db: { file_fullpath: dbfile }, termdb: { sampleTypes: {} } } }
 	server_init_db_queries(ds)
-	if (nested) {
-		// termtypeByCohort[] is an array with an extra .nested{} of per-cohort term type counts
-		const t: any = []
-		t.nested = nested
-		ds.cohort.termdb.termtypeByCohort = t
-	}
+	// termtypeByCohort{} has per-cohort term type counts
+	if (counts) ds.cohort.termdb.termtypeByCohort = counts
 	return ds
 }
 
@@ -145,12 +141,10 @@ tape('findLoneTermByType() uses the q.getTermsByTermType() of a hook-based ds', 
 		['case.disease_type', { id: 'case.disease_type', type: 'categorical' }],
 		['Overall Survival', { id: 'Overall Survival', name: 'Overall Survival', type: 'survival' }]
 	])
-	const nested: any = []
-	nested.nested = { '': { categorical: 1, survival: 1 } }
 	const ds: any = {
 		cohort: {
 			termdb: {
-				termtypeByCohort: nested,
+				termtypeByCohort: { '': { categorical: 1, survival: 1 } },
 				q: {
 					getTermsByTermType: (termType: string) =>
 						[...id2term.values()].filter(t => t.type == termType).map(t => structuredClone(t))
@@ -182,9 +176,7 @@ tape('findLoneTermByType() is a no-op without termtypeByCohort or the q helper',
 	t.equal(ds1.cohort.termdb.loneTermByType, undefined, 'ds without termtypeByCohort is skipped')
 
 	// ds does not supply the helper, so the term cannot be retrieved
-	const nested: any = []
-	nested.nested = { '': { survival: 1 } }
-	const ds2: any = { cohort: { termdb: { termtypeByCohort: nested, q: {} } } }
+	const ds2: any = { cohort: { termdb: { termtypeByCohort: { '': { survival: 1 } }, q: {} } } }
 	findLoneTermByType(ds2)
 	t.equal(ds2.cohort.termdb.loneTermByType, undefined, 'ds without q.getTermsByTermType() is skipped')
 	t.end()

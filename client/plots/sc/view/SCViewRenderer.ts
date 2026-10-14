@@ -12,9 +12,7 @@ import { make_radios } from '#dom'
  * rendering of the plot buttons and sections based on the selected sample and plots.
  * .update() from sc.main() updates the plot buttons and sections. */
 export class SCViewRenderer {
-	//On load, show table
-	//Eventually maybe an app dispatch and not a flag
-	static inUse: boolean = true
+	private tableVisible = true
 
 	sc: SCViewer
 	dom: SCDom
@@ -50,16 +48,21 @@ export class SCViewRenderer {
 			.style('padding', '5px 10px')
 			.style('background-color', 'transparent')
 			//Will need to use ds specific keys/logic here
-			.text('Select sample and plots')
+			.text('Select sample') as SCDom['selectBtn']
 
-		const arrowSpan = btn.append('span').style('font-size', '0.8em').style('padding-left', '3px').text('▼')
+		const arrowSpan = btn!.append('span').style('font-size', '0.8em').style('padding-left', '3px').text('▼')
 
-		btn.on('click', () => {
-			SCViewRenderer.inUse = !SCViewRenderer.inUse
-			arrowSpan.text(SCViewRenderer.inUse ? '▼' : '▲')
-			this.dom.tableDiv.style('display', SCViewRenderer.inUse ? 'block' : 'none')
-			this.dom.plotsBtnsDiv.style('display', SCViewRenderer.inUse ? 'block' : 'none')
+		btn!.toggle = () => {
+			this.tableVisible = !this.tableVisible
+			arrowSpan.text(this.tableVisible ? '▼' : '▲')
+			this.dom.tableDiv.style('display', this.tableVisible ? 'block' : 'none')
+		}
+
+		btn!.on('click', () => {
+			btn!.toggle()
 		})
+
+		this.dom.selectBtn = btn
 	}
 
 	renderGroupByOptions(settings: SCSettings) {

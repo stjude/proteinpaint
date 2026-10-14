@@ -1,8 +1,13 @@
 import type { RoutePayload, TermdbSingleCellDEgenesRequest, TermdbSingleCellDEgenesResponse, RouteApi } from '#types'
 import { validGenomeDs, validString } from '#routes/common.ts'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasSingleCellDs } from './dataRoute.ts'
 
 export const payload: RoutePayload = {
-	init,
+	// only set up when at least one ds has ds.queries.singleCell, see dataRoute.ts
+	get init() {
+		return hasSingleCellDs(genomes) ? init : null
+	},
 	request: {
 		typeId: 'TermdbSingleCellDEgenesRequest',
 		checker: validTermdbSingleCellDEgenesRequest

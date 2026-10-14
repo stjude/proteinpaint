@@ -424,6 +424,10 @@ export function get_bin_range_equation(bin: any, binconfig: any, valueConversion
 	// should always use computed (not user-customized) bin label to determine bin range text
 	const copy = structuredClone(bin)
 	copy.label = '' // mutate only the copy, and not the original bin argument
+	// state the bounds as numbers, also for a bin whose start/stop were saved as strings
+	for (const k of ['start', 'stop']) {
+		if (k in copy && typeof copy[k] != 'number') copy[k] = isNumeric(copy[k]) ? Number(copy[k]) : NaN
+	}
 	const bin_label = get_bin_label(copy, binconfig, valueConversion)
 	if (bin.startunbounded || bin.stopunbounded) {
 		// first or last bins, e.g. x ≤ 14 and x > 16

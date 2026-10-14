@@ -43,6 +43,7 @@ export function svmrparseinput(arg, sayerror, genome, holder, hostURL, jwt) {
 			fetch(
 				new Request(hostURL + '/urltextfile', {
 					method: 'POST',
+					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({ url: url, jwt: jwt })
 				})
 			)

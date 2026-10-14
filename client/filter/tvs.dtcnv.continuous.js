@@ -1,5 +1,6 @@
-import { handler as _handler } from './tvs.dt.js'
-import { renderCnvConfig } from '#dom'
+import { handler as _handler, getTvsByOrigin, getTvsOrigins } from './tvs.dt.js'
+import { getOriginLabel } from '#shared/terms.js'
+import { renderCnvConfig, escapeHtml } from '#dom'
 
 /*
 TVS handler for dtcnv term (continuous cnv data)
@@ -28,6 +29,8 @@ function fillMenu(self, div, tvs) {
 		genotypeToggle: true,
 		fractionOverlap: cnv.fractionOverlap,
 		showOverlap: true,
+		byOrigin: getTvsByOrigin(self, tvs),
+		selectedOrigins: getTvsOrigins(self, tvs),
 		callback: config => {
 			const new_tvs = structuredClone(tvs)
 			Object.assign(new_tvs, config)
@@ -41,6 +44,10 @@ function fillMenu(self, div, tvs) {
 	renderCnvConfig(arg)
 }
 
-function get_pill_label(tvs) {
-	return { txt: tvs.cnvWT ? 'Wildtype' : 'Altered' }
+function get_pill_label(tvs, self) {
+	const txt = tvs.cnvWT ? 'Wildtype' : 'Altered'
+	// see the same note in get_pill_label() of tvs.dt.js. escaped because the label comes
+	// from the dataset and the pill renders it as html, see updatePill() in tvs.js
+	const originLabel = getOriginLabel(tvs.origins, self && getTvsByOrigin(self, tvs))
+	return { txt: originLabel ? escapeHtml(`${txt} (${originLabel})`) : txt }
 }

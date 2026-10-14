@@ -8,6 +8,7 @@ import { URL } from 'url'
 import serverconfig from './serverconfig.js'
 import * as validator from './validator.js'
 import { authApi } from './auth.js'
+import { normalizeReqPath, getRequestOrigin, isCredEmbedder } from './auth/Auth.ts'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
 import jsonwebtoken from 'jsonwebtoken'
 import sjson from 'secure-json-parse'
@@ -16,6 +17,7 @@ import crypto from 'crypto'
 import { ReqResCache } from '@sjcrh/augen'
 import { abortCtrlBy } from './xfetch.js'
 import { mayLog } from './helpers.ts'
+import { validateRglst } from './utils.js'
 import { mayValidateRequestGeneRefs } from './geneRefValidation.ts'
 import { findForbiddenName } from './routes/common.ts'
 import { formatElapsedTime } from '#shared'
@@ -46,6 +48,8 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 		// because it's already set at the beginning of this function
 		app.use(express.static(serverconfig.publicDir))
 	}
+	// after the public static, so that a file in public/ takes priority over its proteinpaint-front package copy
+	if (serverconfig.frontPublicDir) app.use(getFrontPublicFallback(serverconfig.frontPublicDir))
 	const testDataCacheDir = maySetTestDataCacheDir(doneLoading)
 
 	app.use(
@@ -60,11 +64,8 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 	)
 
 	app.use((req, res, next) => {
-		if (req.method.toUpperCase() == 'POST') {
-			// assume all post requests have json-encoded content
-			// TODO: change all client-side fetch(new Request(...)) to use dofetch*() to preset the content-type
-			req.headers['content-type'] = 'application/json'
-		}
+		// every client-side POST caller (dofetch*() or a direct fetch(new Request(...))) sets
+		// content-type: application/json itself; a POST that does not is rejected further down
 
 		// detect URL parameter values with matching JSON start-stop encoding characters
 		try {
@@ -84,7 +85,9 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 	// replace the prototype of req.query
 	app.use(bodyParser.text({ type: 'application/json', limit: '5mb' }))
 	app.use((req, res, next) => {
-		if (req.headers['content-type'] != 'application/json' || typeof req.body != 'string') return next()
+		// req.is() matches the media type and ignores parameters such as charset, the same way
+		// bodyParser.text({type: 'application/json'}) above decided whether to read this body
+		if (!req.is('application/json') || typeof req.body != 'string') return next()
 		try {
 			// bodyParser.json() sets an empty body to {}, keep that behavior
 			req.body = req.body ? sjson.parse(req.body) : {}
@@ -136,11 +139,15 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 	}
 
 	app.use((req, res, next) => {
-		if (req.method.toUpperCase() == 'POST' && req.body && req.headers['content-type'] != 'application/json') {
+		if (req.method.toUpperCase() == 'POST' && req.body && !req.is('application/json')) {
 			res.send({ error: `invalid HTTP request.header['content-type'], must be 'application/json'` })
 			return
 		}
-		if (req.headers['content-type'] == 'application/json') {
+		// a POST /massSession body is the mass app state to save, which may have keys such as an embedder{}
+		// object that the auth middleware rejects as a query parameter, so do not merge it into req.query
+		const isMassSessionSave =
+			req.method.toUpperCase() == 'POST' && normalizeReqPath(req.path) == normalizeReqPath(basepath + '/massSession')
+		if (req.is('application/json') && !isMassSessionSave) {
 			if (!req.query) req.query = {}
 			// TODO: in the future, may have to combine req.query + req.params + req.body
 			// if using req.params based on expressjs server route /:paramName interpolation
@@ -152,7 +159,7 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 		// NOTE: this intentionally scans values everywhere, not just known lookup fields, and accepts the
 		// rare false positive of a value that equals one of these reserved names; see findForbiddenName()
 		// in routes/common.ts for the full rationale before narrowing it.
-		const forbiddenName = findForbiddenName(req.query)
+		const forbiddenName = findForbiddenName(req.query) || (isMassSessionSave && findForbiddenName(req.body))
 		if (forbiddenName) {
 			res.status(400).send({ error: `forbidden request payload name at ${forbiddenName}` })
 			return
@@ -175,12 +182,12 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 			genome = 'hg38'
 			dslabel = 'GDC'
 		}
-		if (genome && dslabel) {
+		if (genome) {
 			// Object.hasOwn guards below so that a dslabel or genome that names an inherited property
 			// (e.g. 'toString', 'constructor') selects nothing instead of an Object.prototype member;
 			// findForbiddenName() above already rejects such values, this is defense in depth
 			const altByDs = serverconfig.features?.altGenomeByDslabel
-			const altGenome = altByDs && Object.hasOwn(altByDs, dslabel) ? altByDs[dslabel] : undefined
+			const altGenome = dslabel && altByDs && Object.hasOwn(altByDs, dslabel) ? altByDs[dslabel] : undefined
 			if (altGenome) {
 				req.query.genome = altGenome
 				genome = altGenome
@@ -194,26 +201,42 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 				res.send({ error: 'invalid genome' })
 				return
 			}
-			ds = g.datasets && Object.hasOwn(g.datasets, dslabel) ? g.datasets[dslabel] : undefined
-			// do not check genome-level termdb, not dataset-level termdb
-			if (!ds && !(g.termdbs && Object.hasOwn(g.termdbs, dslabel))) {
-				const paramName = mds3 ? 'mds3' : dsname ? 'dsname' : 'dslabel'
-				res.send({ error: `invalid ${paramName}` })
-				return
-			}
-			// a ds that caches at launch reports its own not-ready state; no dslabel check needed
-			const notReady = ds?.init?.notReadyMessage?.()
-			if (notReady) {
-				res.send({ error: notReady })
-				return
+
+			// genome is validated
+
+			if (Object.hasOwn(req.query, 'rglst')) {
+				// only validate if present; not every query has rglst param
+				// may replace a stringified req.query.rglst with the parsed array
+				try {
+					validateRglst(req.query, g)
+				} catch (e) {
+					res.send({ error: e.message || e })
+					return
+				}
 			}
 
-			/* reject a gene/isoform name the genome does not know, before any route handler
-			can query data with it, locally or against a remote api */
-			const geneRefError = mayValidateRequestGeneRefs(req, g, ds)
-			if (geneRefError) {
-				res.send({ error: geneRefError })
-				return
+			if (dslabel) {
+				ds = g.datasets && Object.hasOwn(g.datasets, dslabel) ? g.datasets[dslabel] : undefined
+				// do not check genome-level termdb, not dataset-level termdb
+				if (!ds && !(g.termdbs && Object.hasOwn(g.termdbs, dslabel))) {
+					const paramName = mds3 ? 'mds3' : dsname ? 'dsname' : 'dslabel'
+					res.send({ error: `invalid ${paramName}` })
+					return
+				}
+				// a ds that caches at launch reports its own not-ready state; no dslabel check needed
+				const notReady = ds?.init?.notReadyMessage?.()
+				if (notReady) {
+					res.send({ error: notReady })
+					return
+				}
+
+				/* reject a gene/isoform name the genome does not know, before any route handler
+				can query data with it, locally or against a remote api */
+				const geneRefError = mayValidateRequestGeneRefs(req, g, ds)
+				if (geneRefError) {
+					res.send({ error: geneRefError })
+					return
+				}
 			}
 		}
 
@@ -245,6 +268,39 @@ function log(req) {
 	)
 }
 
+// serves only index.html, for / and /index.html, and the cards/ files from dir, see serverconfig.frontPublicDir;
+// the dir static handler is reached only by the exact / and /index.html routes, and the cards static handler is
+// rooted at dir/cards, so that the other files in dir, if any, are not published
+export function getFrontPublicFallback(dir) {
+	const router = express.Router()
+	router.get(['/', '/index.html'], express.static(dir))
+	router.use('/cards', express.static(path.join(dir, 'cards'), { index: false }))
+	return router
+}
+
+/*
+	The final error handler. An error passed to next(), such as an unreadable or oversized request
+	body, would otherwise get Express's default HTML error page, which includes the stack trace when
+	NODE_ENV is not 'production'. Reply with JSON instead, and only expose client-error messages.
+	A missing or invalid status (not 400-599) is answered as 500.
+*/
+export function jsonErrorHandler(err, req, res, next) {
+	if (res.headersSent) return next(err)
+	const s = err?.status || err?.statusCode
+	const status = Number.isInteger(s) && s >= 400 && s < 600 ? s : 500
+	res.status(status).send({ error: status < 500 && err.expose ? err.message : 'request failed' })
+}
+
+// Shared request-origin helpers are implemented in ./auth/Auth.ts and re-exported here
+// for compatibility with existing imports.
+export { getRequestOrigin, isCredEmbedder }
+
+// an allowedEmbedders[] entry must be '*' or exactly equal the origin hostname (or hostname:port);
+// a substring match would let an origin like 'https://trusted.org.evil.com' match 'trusted.org'
+export function isAllowedEmbedder(origin, host) {
+	return host == '*' || (!!origin && (host == origin.hostname || host == origin.host))
+}
+
 function setHeaders(req, res, next) {
 	// indicates that caching should be unique to each request origin, i.e., include the origin when computing the cache key
 	res.header('Vary', 'Origin')
@@ -254,18 +310,19 @@ function setHeaders(req, res, next) {
 
 	const debugtest =
 		serverconfig.debugmode || serverconfig.defaultgenome == 'hg38-test' || serverconfig.features?.loosenCORS
-	const origin = req.get('origin') || req.get('referrer') || req.protocol + '://' + (req.get('host') || '*')
-	const getMatchingHost = hostname => hostname == '*' || origin.includes(`://${hostname}`)
+	const origin = getRequestOrigin(req)
 	// detect if the request origin has a matching entry in serverconfig.dsCredentials
-	const credEmbedder = authApi.credEmbedders.find(getMatchingHost)
+	const credEmbedder = authApi.credEmbedders.find(pattern => isCredEmbedder(origin, pattern))
 	// detect if the request origin is allowed as an embedders
 	// note that serverconfig.js sets [*] as default serverconfig.allowedEmbedders, if not present
-	const matchedHost = serverconfig.allowedEmbedders.find(getMatchingHost)
+	const matchedHost = serverconfig.allowedEmbedders.find(host => isAllowedEmbedder(origin, host))
 
-	if (credEmbedder || matchedHost || debugtest) {
-		// only set these CORS-related headers for credentialed or allowed embedders
-		const host = matchedHost || credEmbedder
-		res.header('Access-Control-Allow-Origin', host === '*' ? origin : `${req.protocol}://${host}`)
+	// only set CORS-related headers for a valid request origin that is a credentialed or allowed embedder,
+	// otherwise a missing or 'null' origin could be echoed back along with Access-Control-Allow-Credentials
+	const isAllowedOrigin = origin && (credEmbedder || matchedHost || debugtest)
+	if (isAllowedOrigin) {
+		// the origin is only echoed after it has been parsed and matched above
+		res.header('Access-Control-Allow-Origin', origin.origin)
 		// embedder sites may use HTTP 2.0 which requires lowercased header key names
 		// must support mixed casing and all lowercased for compatibility
 		res.header(
@@ -277,8 +334,10 @@ function setHeaders(req, res, next) {
 		)
 	}
 
-	if (credEmbedder || debugtest) {
-		// allow credentialed embedders to submit authorization header
+	if (isAllowedOrigin && (credEmbedder || debugtest)) {
+		// allow credentialed embedders to submit authorization header;
+		// TODO: require a wildcard dsCredentials embedder key to be a domain-limited glob,
+		// such as '*.<domain>.<tld>', instead of a bare '*'
 		res.header('Access-Control-Allow-Credentials', true)
 	}
 
@@ -287,11 +346,11 @@ function setHeaders(req, res, next) {
 		res.header('Document-Policy', 'js-profiling')
 	}
 
-	if (req.method == 'GET' && (!req.path.includes('.') || req.path.endsWith('proteinpaint.js'))) {
-		// immutable response before expiration, client must revalidate after max-age;
-		// by convention, any path that has a dot will be treated as
-		// a static file and not handled here with cache-control
-		res.header('Cache-control', `immutable,max-age=${serverconfig.responseMaxAge || 1}`)
+	if (req.method == 'GET') {
+		// with basic auth, a shared cache must not reuse an authenticated response for other requests
+		const cacheControl = getCacheControl(req.path, serverconfig.responseMaxAge, !!serverconfig.users)
+		// express.static() does not override an already set cache-control header
+		if (cacheControl) res.header('Cache-control', cacheControl)
 	}
 
 	if (req.method == 'OPTIONS') {
@@ -302,12 +361,33 @@ function setHeaders(req, res, next) {
 	}
 }
 
+/*
+	path: a GET request path
+	responseMaxAge: optional serverconfig.responseMaxAge, in seconds
+	isPrivate: true to only allow a browser cache and not a shared cache to store a static bundle file
+*/
+export function getCacheControl(path, responseMaxAge, isPrivate = false) {
+	const filename = path.split('/').pop()
+	// a webpack chunk filename with a content hash, e.g. 123.abcd1234.proteinpaint.js(.map),
+	// has a new URL whenever its content changes, see front/webpack.config.js
+	if (/^[^.]+\.[0-9a-f]{8}\.proteinpaint\.js(\.map)?$/.test(filename))
+		return `${isPrivate ? 'private' : 'public'}, max-age=31536000, immutable`
+	// the bundle entry has a stable URL and embeds the hashed chunk filenames,
+	// so any cache (browser or proxy) must revalidate it to detect a new deployment
+	if (filename == 'proteinpaint.js') return 'no-cache'
+	// immutable response before expiration, client must revalidate after max-age;
+	// by convention, any path that has a dot will be treated as
+	// a static file and not handled here with cache-control
+	if (!path.includes('.')) return `immutable,max-age=${responseMaxAge || 1}`
+}
+
 function maySetTestDataCacheDir(doneLoading) {
 	if (!serverconfig.features?.cacheTestData || !serverconfig.publicDir || !serverconfig.debugmode) return
 	if (!doneLoading.includes('hg38-test/TermdbTest') || !fs.existsSync(`${serverconfig.publicDir}/testrun.html`)) return
 
-	const testDataCacheDir = path.join(serverconfig.binpath, '../public/testrunData')
-	if (!fs.existsSync(testDataCacheDir)) fs.mkdirSync(testDataCacheDir)
+	// client/test/puppet.js reads the cached data from this dir, so it does not need to be under the public dir
+	const testDataCacheDir = path.join(serverconfig.binpath, '../client/test/testrunData')
+	if (!fs.existsSync(testDataCacheDir)) fs.mkdirSync(testDataCacheDir, { recursive: true })
 	console.log(`mayCacheReqRes at ${testDataCacheDir}`)
 	return testDataCacheDir
 }
@@ -323,7 +403,14 @@ function mayWrapResponseSend(cachedir, req, res) {
 	const send = res.send
 	res.send = async function (body) {
 		// TODO: will need to also set the actual status
-		if (!fs.existsSync(cache.loc.file)) await cache.write({ header: { status: 200 }, body }) // no need to await
+		if (!fs.existsSync(cache.loc.file)) {
+			// the response must still be sent when it could not be cached
+			try {
+				await cache.write({ header: { status: 200 }, body })
+			} catch (e) {
+				console.log('could not cache the %s response:', req.path, e.message || e)
+			}
+		}
 		send.call(this, body)
 	}
 }

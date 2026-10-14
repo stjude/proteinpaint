@@ -36,23 +36,27 @@ const BIN_READY = `${BIN_DIR}/.pp-bundle-ready`
 
 console.log('CWD', CWD)
 try {
-	if (!fs.existsSync(PUBLIC_DIR)) {
-		console.log(`making a public directory at ${CWD}`)
-		fs.mkdirSync(PUBLIC_DIR)
-	}
+	// The public dir and its index.html and cards are optional: when they cannot be added, such as to a public/ mount
+	// that this process cannot write to, the server serves the copies in this package instead (see the server's
+	// serverconfig frontPublicDir and app.middlewares.js), so a failure is a warning, not an error.
+	mayAddToPublic(`make a public directory at ${CWD}`, () => {
+		if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR)
+	})
 	// index.html / cards are ensured independently of the bundle below (idempotent, and needed even when
 	// the bundle is reused), so a skipped regeneration still leaves the public scaffolding in place.
 	if (!publicBinOnly) {
-		if (!fs.existsSync(`${PUBLIC_DIR}/index.html`)) {
+		mayAddToPublic('create a public/index.html file', () => {
+			if (fs.existsSync(`${PUBLIC_DIR}/index.html`)) return
 			console.log(`creating a public/index.html file`)
 			fs.copyFileSync(path.join(__dirname, './public/index.html'), `${PUBLIC_DIR}/index.html`)
-		}
-		if (!fs.existsSync(`${PUBLIC_DIR}/cards`)) {
+		})
+		mayAddToPublic('copy cards into the public/cards folder', () => {
+			if (fs.existsSync(`${PUBLIC_DIR}/cards`)) return
 			console.log(`Copying cards into public/cards folder`)
 			execSync(`cp -r ${CWD}/node_modules/@sjcrh/proteinpaint-front/public/cards ${PUBLIC_DIR}/cards`, {
 				stdio: 'inherit'
 			})
-		}
+		})
 	}
 
 	// Generate the bundle into CWD/bin only if it isn't already there. CWD/bin is in the container's
@@ -91,4 +95,14 @@ try {
 } catch (e) {
 	console.error(e)
 	throw e
+}
+
+function mayAddToPublic(action, fn) {
+	try {
+		fn()
+	} catch (e) {
+		console.warn(
+			`unable to ${action}, the server serves the proteinpaint-front package copy: ${e.code || e.message || e}`
+		)
+	}
 }

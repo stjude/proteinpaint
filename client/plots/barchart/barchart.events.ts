@@ -1,15 +1,20 @@
-import { Menu, renderTable, type TableRow, getChartTitle } from '#dom'
+import { Menu, renderTable, type TableRow, getChartTitle, escapeHtml } from '#dom'
 // import { dofetch3 } from '#common/dofetch'
 import { mclass, dt2label } from '#shared/common.js'
 // import { /*newpane,*/ export_data } from '#src/client'
-import { filterJoin, getFilterItemByTag, /*getNormalRoot,*/ findItemByTermId /*normalizeProps*/ } from '#filter'
+import {
+	filterJoin,
+	getFilterItemByTag,
+	joinToFilterUiRoot,
+	/*getNormalRoot,*/ findItemByTermId /*normalizeProps*/
+} from '#filter'
 import { rgb } from 'd3-color'
 import { create } from 'd3-selection'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { isNumericTw } from '#shared/terms.js'
 import { isFractionTw, getFractionTvsTerm } from '#shared/termCollection.js'
 import { negateTermLabel } from './barchart'
-import { getSamplelstFilter, getSamplelstTW, getFilter, addNewGroup } from '#mass/groups'
+import { getGroupFilterEntry, getGvGroupFilterEntry, getGroupFilterOfConditions, addNewGroup } from '#mass/groups'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -48,15 +53,13 @@ export default function getHandlers(self) {
 				} else {
 					dataLabel = d.dataId
 				}
-				const icon = !hasOverlay
-					? ''
-					: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
-					  d.color +
-					  "'>&nbsp;</div>"
-				const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${seriesLabel}</td></tr>`]
+				const icon = !hasOverlay ? '' : swatchHtml(d.color)
+				const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${escapeHtml(seriesLabel)}</td></tr>`]
 				if (hasOverlay) {
 					rows.push(
-						`<tr><td colspan=2 style='padding:3px; text-align:center'>${icon} <span>${dataLabel}</span></td></tr>`
+						`<tr><td colspan=2 style='padding:3px; text-align:center'>${icon} <span>${escapeHtml(
+							dataLabel
+						)}</span></td></tr>`
 					)
 				}
 
@@ -111,16 +114,16 @@ export default function getHandlers(self) {
 						<table style="margin: 5px; text-align:left; font-size: 0.8em; border-spacing: 5px; border-collapse: separate;"
 							<tr>
 								<td style='color:#aaa'></td>
-								<td style='color:#aaa'>${term2Label}</td>
-								<td style='color:#aaa'>${negateTerm2Label}</td>
+								<td style='color:#aaa'>${escapeHtml(term2Label)}</td>
+								<td style='color:#aaa'>${escapeHtml(negateTerm2Label)}</td>
 							</tr>
 							<tr>
-								<td style='color:#aaa'>${term1Label}</td>
+								<td style='color:#aaa'>${escapeHtml(term1Label)}</td>
 								<td>${tableValues.R1C1}</td>
 								<td>${tableValues.R1C2}</td>
 							</tr>
 							<tr>
-								<td style='color:#aaa'>${negateTerm1Label}</td>
+								<td style='color:#aaa'>${escapeHtml(negateTerm1Label)}</td>
 								<td>${tableValues.R2C1}</td>
 								<td>${tableValues.R2C2}</td>
 							</tr>
@@ -399,14 +402,12 @@ function handle_click(event, self, chart) {
 	const dataLabel =
 		(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
 		term2unit
-	const icon = !term2
-		? ''
-		: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
-		  d.color +
-		  "'>&nbsp;</div>"
+	const icon = !term2 ? '' : swatchHtml(d.color)
 	const header =
-		`<div style='padding:2px'><b>${term1.name}</b>: ${seriesLabel}</div>` +
-		(d.seriesId && term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel} ${icon}</div>` : '')
+		`<div style='padding:2px'><b>${escapeHtml(term1.name)}</b>: ${escapeHtml(seriesLabel)}</div>` +
+		(d.seriesId && term2
+			? `<div style='padding:2px'><b>${escapeHtml(term2.name)}</b>: ${escapeHtml(dataLabel)} ${icon}</div>`
+			: '')
 
 	const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
 
@@ -416,8 +417,8 @@ function handle_click(event, self, chart) {
 		const visibleSerieses = chart.visibleSerieses || self.charts.find(c => c.chartId === chartId)?.visibleSerieses || []
 		if (visibleSerieses.length > 1) {
 			options.push({
-				label: data.seriesId ? 'Hide "' + seriesLabel + '"' : 'Hide',
-				testID: `sjpp-barchart-hide-series-${data.seriesId}`,
+				label: data.seriesId ? 'Hide "' + escapeHtml(seriesLabel) + '"' : 'Hide',
+				testId: `sjpp-barchart-hide-series-${data.seriesId}`,
 				callback: () => {
 					const term = self.config.term
 					self.app.dispatch({
@@ -442,7 +443,7 @@ function handle_click(event, self, chart) {
 		// present without a term2, e.g. membership multivalue) cannot offer it
 		if (self.config.term2 && hasMultipleCells && (data.dataId || data.dataId === 0)) {
 			options.push({
-				label: 'Hide "' + dataLabel + '" ' + icon,
+				label: 'Hide "' + escapeHtml(dataLabel) + '" ' + icon,
 				callback: () => {
 					const term2 = self.config.term2
 					self.app.dispatch({
@@ -474,7 +475,6 @@ function handle_click(event, self, chart) {
 			})
 		}
 	}
-
 	if (self.opts.bar_click_opts.includes('add_group') && self.config.displaySampleIds) {
 		options.push({
 			label: 'Add as group',
@@ -490,13 +490,15 @@ function handle_click(event, self, chart) {
 	if (self.config.displaySampleIds) {
 		options.push({
 			label: `List ${uiLabels.samples}`,
+			testId: `sjpp-barchart-list-samples-${data.seriesId}`,
 			callback: async () => {
 				const arg = getListSamplesArg(event, self, data.seriesId, data.dataId, chart.chartId)
 				try {
 					await listSamples(arg, data.seriesId, data.dataId, chart.chartId)
 				} catch (e) {
+					self.app.tip.hide()
+					window.alert(`Couldn't render samples: ${e instanceof Error ? e.message : e}`)
 					console.trace(e)
-					throw e
 				}
 			}
 		})
@@ -539,7 +541,7 @@ function handle_click(event, self, chart) {
 		.enter()
 		.append('div')
 		.attr('class', 'sja_menuoption')
-		.attr('data-testid', d => d.testID || null)
+		.attr('data-testid', d => d.testId || null)
 		.html(d => d.label)
 		.on('click', async (event, d) => {
 			if (event.target._clicked) return
@@ -619,14 +621,23 @@ function getTvs(termIndex, value, self, geneVariant) {
 		if (!group) throw 'group not found'
 		tvs.tvs.values = group.values
 	} else if (isNumericTw(term)) {
-		const bins = self.bins[termIndex]
-		if (!bins?.length) return null
-		tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
+		const bin = self.bins[termIndex]?.find(bin => bin.label == value)
+		if (bin) {
+			tvs.tvs.ranges = [bin]
+		} else {
+			// uncomputable values are not in bins, and their bar id is the value label;
+			// the server reads a range with a value property as a special category
+			const entry = Object.entries<any>(term.term.values || {}).find(
+				([key, v]) => v.uncomputable && (v.label == value || key == value)
+			)
+			if (!entry) return null
+			const [key, v] = entry
+			tvs.tvs.ranges = [{ value: Number(key), label: v.label }]
+		}
+		delete tvs.tvs.values // numeric tvs is filtered by ranges only
 	} else if (term.term.type == 'samplelst') {
-		const list = term.term.values?.[value]?.list || []
-		const ids = list.map(s => s.sampleId)
-		const tvslst = getSamplelstFilter(ids)
-		tvs = tvslst.lst[0] // tvslst only has the tvs for the samplelst term
+		// a tvs that lists the samples of the category, or the filter that defines its group
+		tvs = getGroupFilterEntry(term, value)
 	} else if (term.term.type == 'geneVariant' && term.q.type == 'values') {
 		throw 'no longer supported in barchart'
 	}
@@ -878,27 +889,33 @@ async function getSamples(arg) {
 	return samples
 }
 
-async function getSampleGrp(arg) {
-	const samples = await getSamples(arg)
-	const group = {
-		name: 'Group',
-		items: samples.map((s: any) => {
-			return { sampleId: s.sample }
-		})
+/* The conditions that select the samples of a clicked bar, as filters to join: those of
+getListSamplesArg(), and those of a gene variant term, which getSamples() checks on each listed
+sample instead. */
+function getBarConditions(arg) {
+	const { self, tvslst, geneVariant } = arg
+	const conditions: any[] = [{ ...tvslst, join: tvslst.lst.length > 1 ? 'and' : '' }]
+	for (const [i, tw] of [self.config.term0, self.config.term, self.config.term2].entries()) {
+		const value = geneVariant[`t${i}value`]
+		if (!value) continue
+		const entry = getGvGroupFilterEntry(tw, value)
+		if (!entry) throw `no filter for '${value}' of ${tw.term.name}`
+		conditions.push(entry)
 	}
-	return group
+	return conditions
 }
 
+// the group is defined by the conditions of the bar, and by the filter of the plot when it has one
 export async function addAsGroup(arg) {
 	// validate arg
 	for (const k of Object.keys(arg)) {
 		const param = arg[k]
 		if (!param) throw `parameter '${k}' is undefined`
 	}
-	const group = await getSampleGrp(arg)
-	const tw = getSamplelstTW([group])
-	const filter = getFilter(tw)
-	addNewGroup(arg.self.app, filter, arg.self.state.groups)
+	const { self } = arg
+	const plotFilter =
+		self.config.filter || (self.parentId && self.app.getState().plots.find(p => p.id === self.parentId)?.filter)
+	addNewGroup(self.app, getGroupFilterOfConditions([plotFilter, ...getBarConditions(arg)]), self.state.groups)
 }
 
 // if geneVariant term is present, filter sample by its geneVariant group assignment
@@ -1001,7 +1018,7 @@ async function menuoption_add_filter(self, tvslst, arg) {
 		this is to be added to the obj.termfilter.filter[]
 		if barchart is single-term, tvslst will have only one element
 		if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
-	arg: object of parameters used by getSampleGrp to get sample group
+	arg: object of parameters of getListSamplesArg()
 		*/
 	if (!tvslst) return
 	if (!self.state.termfilter || self.state.nav?.header_mode !== 'with_tabs') {
@@ -1014,27 +1031,22 @@ async function menuoption_add_filter(self, tvslst, arg) {
 		if (!param) throw `parameter '${k}' is undefined`
 	}
 
+	// if any term has group setting, the filter is the conditions of the bar
 	const hasGrpSetting = arg.terms.find(t => t.q?.type == 'predefined-groupset' || t.q?.type == 'custom-groupset')
-	let samplelstTW
-	if (hasGrpSetting) {
-		// if any term has group setting, add filter as samplelst
-		const group = await getSampleGrp(arg)
-		samplelstTW = getSamplelstTW([group])
-	}
 
-	const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-	const filter = filterJoin([
-		filterUiRoot,
-		samplelstTW
-			? getFilter(samplelstTW)
-			: {
-					type: 'tvslst',
-					in: true,
-					join: tvslst.length > 1 ? 'and' : '',
-					lst: [...tvslst.map(wrapTvs)]
-			  }
-	])
-	filter.tag = 'filterUiRoot'
+	const filter = joinToFilterUiRoot(
+		self.app.getState().termfilter.filter,
+		hasGrpSetting
+			? getBarConditions(arg)
+			: [
+					{
+						type: 'tvslst',
+						in: true,
+						join: tvslst.length > 1 ? 'and' : '',
+						lst: [...tvslst.map(wrapTvs)]
+					}
+			  ]
+	)
 	self.app.dispatch({
 		type: 'filter_replace',
 		filter
@@ -1191,4 +1203,17 @@ function getTermValues(d, self) {
 		}
 	}
 	return termValues.map(f => wrapTvs(f))
+}
+
+// a color square as HTML: the color is set through the element style, which drops any value that is not a valid color
+function swatchHtml(color: string) {
+	return create('div')
+		.style('display', 'inline-block')
+		.style('width', '14px')
+		.style('height', '14px')
+		.style('margin', '2px 3px')
+		.style('vertical-align', 'top')
+		.style('background', color)
+		.html('&nbsp;')
+		.node()!.outerHTML
 }

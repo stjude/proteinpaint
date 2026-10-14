@@ -61,6 +61,7 @@ public/docs/*/*
 public/docs/readme.json
 public/docs/server-api.json
 public/testrunData/*
+client/test/testrunData/*
 public/coverage/**/*
 !public/coverage/*.*
 !public/coverage/commitRef
@@ -99,6 +100,7 @@ client/test/branch-coverage.json
 client/.nyc_output*/*
 client/.coverage*/*
 client/passedTests.txt
+client/failedTests.txt
 
 cairo-*/*
 canvas/*

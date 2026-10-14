@@ -11,7 +11,7 @@ import { line, area, curveStepAfter } from 'd3-shape'
 import { rgb } from 'd3-color'
 import Partjson from 'partjson'
 import { fillTermWrapper } from '#termsetting'
-import { DownloadMenu, getSeriesTip, htmlLegend, Menu, renderAtRiskG, renderPvalues } from '#dom'
+import { DownloadMenu, escapeHtml, getSeriesTip, htmlLegend, Menu, renderAtRiskG, renderPvalues } from '#dom'
 import { downloadChart } from '#common/svg.download'
 import { getCombinedTermFilter } from '#filter'
 import { isNumericTerm } from '#shared/terms.js'
@@ -344,9 +344,9 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		const { term, term2 } = this.state.config
 		const mainTerm = term.term.name
 		if (term2?.type) {
-			this.dom.header.html(`${term2.getTitleText?.() || term2.term.name}  vs ${mainTerm}`)
+			this.dom.header.text(`${term2.getTitleText?.() || term2.term.name}  vs ${mainTerm}`)
 		} else {
-			this.dom.header.html(`${mainTerm} plot`)
+			this.dom.header.text(`${mainTerm} plot`)
 		}
 	}
 
@@ -504,7 +504,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 					legendItems.push({
 						key: series.seriesId,
 						seriesId: series.seriesId,
-						testID: series.seriesId,
+						testIdSuffix: series.seriesId,
 						text: series.seriesLabel,
 						color: this.term2toColor[series.seriesId].adjusted,
 						isHidden: this.settings.hidden.includes(series.seriesId)
@@ -539,7 +539,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 			const termNum = config.term.term.type == 'survival' && config.term2 ? 'term2' : 'term'
 			this.legendData = [
 				{
-					name: config[termNum].term.name,
+					name: escapeHtml(config[termNum].term.name),
 					items: legendItems.filter(s => !s.isHidden)
 				}
 			]
@@ -642,7 +642,7 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('width', 'fit-content')
 			.datum(chart)
-			.html(chart => chart.chartId)
+			.text(chart => chart.chartId)
 
 		if (chart.serieses) {
 			const svg = div.append('svg').attr('class', 'pp-survival-svg')
@@ -734,7 +734,7 @@ function setRenderers(self) {
 			.style('width', s.svgw + 50)
 			.style('height', s.chartTitleDivHt + 'px')
 			.datum(chart.chartId)
-			.html(chart.chartId)
+			.text(chart.chartId)
 
 		div.selectAll('.sjpp-lock-icon').style('display', s.scale == 'byChart' ? 'block' : 'none')
 
@@ -1209,7 +1209,7 @@ function setInteractivity(self) {
 		const term2 = self.state.config.term2?.term || null
 		const seriesLabel = term2?.values?.[d.seriesId]?.label || d.seriesId
 
-		const header = `<div style='padding-bottom:8px'><b>${seriesLabel}</b></div>`
+		const header = `<div style='padding-bottom:8px'><b>${escapeHtml(seriesLabel)}</b></div>`
 		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
 		if (!data.seriesId && !data.dataId) {
 			if (!term2) {
@@ -1227,6 +1227,7 @@ function setInteractivity(self) {
 		const options: any[] = []
 		options.push({
 			label: 'Hide',
+			testId: 'sjpp-atrisk-hide-btn-' + d.seriesId,
 			callback: () => {
 				menu.hide()
 				self.app.dispatch({
@@ -1300,6 +1301,7 @@ function setInteractivity(self) {
 
 			.each(function (this: HTMLElement, d) {
 				const div = select(this)
+				if (d.testId) div.attr('data-testid', d.testId)
 				if (d.label) div.append('div').style('display', 'inline-block').html(d.label)
 				if (d.setInput)
 					d.setInput(

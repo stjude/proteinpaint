@@ -1,3 +1,13 @@
+/* returns true if the serverconfig.features{} flag is enabled, or if no flag is required;
+used by the optional .configFeature of index.json elements and card ppcalls[],
+e.g. "configFeature": "ALLOW_remotefilefromurl" for examples that load a remote file by url
+*/
+export function isFeatureEnabled(configFeature) {
+	if (!configFeature) return true
+	const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')
+	return !!features[configFeature]
+}
+
 export function makeButton(arg) {
 	const button = arg.div
 		.append('button')

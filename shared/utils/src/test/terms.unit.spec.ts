@@ -1,10 +1,13 @@
 import tape from 'tape'
 import { DTCNV, DTFUSION, DTITD, DTSNVINDEL, DTSV, TermTypes } from '#types'
+import { dtTerms } from '../common.js'
 import {
 	dtTermTypes,
 	getGvGeneKey,
 	getGvQCacheKey,
 	getGvQueryKey,
+	getOriginLabel,
+	getGvLabelSuffix,
 	matchesGvQueryEntry,
 	internGvQueryEntry,
 	isSingleCellTerm,
@@ -17,6 +20,7 @@ import {
 /* test sections
 
 dt term types are declared in TermTypes
+dt terms are origin agnostic
 trimGvTermsForSave()
 setGroupsetParentTerms()
 getGvGeneKey()
@@ -102,6 +106,20 @@ tape('dt term types are declared in TermTypes', t => {
 	for (const dtTermType of dtTermTypes) {
 		t.ok(termTypeValues.has(dtTermType), `TermTypes has an entry for '${dtTermType}'`)
 	}
+	t.end()
+})
+
+tape('dt terms are origin agnostic', t => {
+	t.equal(dtTerms.length, 5, 'declares one term per data type')
+	t.deepEqual(
+		dtTerms.map(term => term.id),
+		['snvindel', 'cnv', 'fusion', 'sv', 'itd'],
+		'declares only the base data type terms'
+	)
+	t.ok(
+		dtTerms.every(term => !('origin' in term) && !('name_noOrigin' in term)),
+		'does not carry origin annotations'
+	)
 	t.end()
 })
 
@@ -490,7 +508,11 @@ tape('matchesGvQueryEntry()', t => {
 })
 
 tape('isSingleCellTerm() should throw for an invalid term object', t => {
-	t.throws(() => isSingleCellTerm(TermTypes.SINGLECELL_CELLTYPE), /Term is not an object/, 'Should throw when term is not an object')
+	t.throws(
+		() => isSingleCellTerm(TermTypes.SINGLECELL_CELLTYPE),
+		/Term is not an object/,
+		'Should throw when term is not an object'
+	)
 	t.end()
 })
 
@@ -509,8 +531,74 @@ tape('isSingleCellTerm() should return correct boolean based on term.type', t =>
 	t.equal(isSingleCellTerm({ type: TermTypes.PSEUDOBULK }), false, 'Should return false for a PSEUDOBULK term')
 
 	/** True for single cell terms */
-	t.equal(isSingleCellTerm({ type: TermTypes.SINGLECELL_CELLTYPE }), true, 'Should return true for a SINGLECELL_CELLTYPE term')
-	t.equal(isSingleCellTerm({ type: TermTypes.SINGLECELL_GENE_EXPRESSION }), true, 'Should return true for a SINGLECELL_GENE_EXPRESSION term')
-	t.equal(isSingleCellTerm({ type: TermTypes.SINGLECELL_NUMERIC_VALUE }), true, 'Should return true for a SINGLECELL_NUMERIC_VALUE term')
+	t.equal(
+		isSingleCellTerm({ type: TermTypes.SINGLECELL_CELLTYPE }),
+		true,
+		'Should return true for a SINGLECELL_CELLTYPE term'
+	)
+	t.equal(
+		isSingleCellTerm({ type: TermTypes.SINGLECELL_GENE_EXPRESSION }),
+		true,
+		'Should return true for a SINGLECELL_GENE_EXPRESSION term'
+	)
+	t.equal(
+		isSingleCellTerm({ type: TermTypes.SINGLECELL_NUMERIC_VALUE }),
+		true,
+		'Should return true for a SINGLECELL_NUMERIC_VALUE term'
+	)
+	t.end()
+})
+
+tape('getOriginLabel()', t => {
+	const byOrigin = { germline: { label: 'Inherited' }, somatic: { label: 'Tumor acquired' } }
+
+	t.equal(getOriginLabel(['germline'], byOrigin), 'Inherited', "Should use the dataset's label for the origin")
+	t.equal(
+		getOriginLabel(['germline', 'somatic'], byOrigin),
+		'',
+		'Should be empty when every origin of the data type is selected'
+	)
+	t.equal(getOriginLabel([], byOrigin), '', 'Should be empty when no origin is selected')
+	t.equal(getOriginLabel(undefined, byOrigin), '', 'Should be empty when there are no origins to name')
+	t.equal(getOriginLabel(['germline'], undefined), '', 'Should be empty for a data type that is not split by origin')
+	t.equal(
+		getOriginLabel(['germline'], { germline: {}, somatic: {} }),
+		'germline',
+		'Should fall back to the origin key when the dataset gives no label'
+	)
+	t.equal(
+		getOriginLabel(['germline', 'somatic'], { germline: {}, somatic: {}, relapse: {} }),
+		'germline, somatic',
+		'Should join a multi-origin subset'
+	)
+	t.end()
+})
+
+tape('getGvLabelSuffix()', t => {
+	t.equal(
+		getGvLabelSuffix({ originLabel: 'Inherited' }, { sampleTypeLabel: 'Normals' }),
+		' (Inherited, Normals)',
+		'Should list the origin before the sample type'
+	)
+	t.equal(getGvLabelSuffix({ originLabel: 'Inherited' }, {}), ' (Inherited)', 'Should use the origin label alone')
+	t.equal(getGvLabelSuffix({}, { sampleTypeLabel: 'Normals' }), ' (Normals)', 'Should use the sample type label alone')
+	t.equal(getGvLabelSuffix({}, {}), '', 'Should be empty when there is nothing to qualify')
+	// '' is what both labels use for "every option selected", so it must not render as "()"
+	t.equal(
+		getGvLabelSuffix({ originLabel: '' }, { sampleTypeLabel: '' }),
+		'',
+		'Should skip the empty label both selectors use for a full selection'
+	)
+	t.equal(
+		getGvLabelSuffix({ originLabel: '' }, { sampleTypeLabel: 'Normals' }),
+		' (Normals)',
+		'Should skip only the empty label'
+	)
+	// a custom groupset has no q.originLabel; its tvs name their own origins
+	t.equal(
+		getGvLabelSuffix({ type: 'custom-groupset' }, { sampleTypeLabel: 'Normals' }),
+		' (Normals)',
+		'Should tolerate a q that carries no origin label'
+	)
 	t.end()
 })

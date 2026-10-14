@@ -9,7 +9,7 @@ import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter, type Line } from 'd3-shape'
 import { rgb } from 'd3-color'
-import { getSeriesTip, htmlLegend, Menu, renderAtRiskG, renderPvalues, sayerror } from '#dom'
+import { escapeHtml, getSeriesTip, htmlLegend, Menu, renderAtRiskG, renderPvalues, sayerror } from '#dom'
 import Partjson from 'partjson'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
@@ -174,7 +174,7 @@ export class Cuminc extends PlotBase implements RxComponent {
 		if (this.config.term2 && legendItems.length) {
 			this.legendData = [
 				{
-					name: this.config.term2.term.name,
+					name: escapeHtml(this.config.term2.term.name),
 					items: legendItems
 				}
 			]
@@ -464,7 +464,7 @@ class MassCumInc extends PlotBase implements RxComponent {
 			this.dom.errorDiv.html('')
 			if (this.dom.header)
 				this.dom.header.html(
-					this.state.config.term.term.name +
+					escapeHtml(this.state.config.term.term.name) +
 						' <span style="opacity:.6;font-size:.7em;margin-left:10px;">CUMULATIVE INCIDENCE</span>'
 				)
 
@@ -670,7 +670,7 @@ class MassCumInc extends PlotBase implements RxComponent {
 					legendItems.push({
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
-						testID: series.seriesId,
+						testIdSuffix: series.seriesId,
 						color: this.term2toColor[series.seriesId].adjusted,
 						isHidden: this.settings.hidden.includes(series.seriesId)
 					})
@@ -680,7 +680,7 @@ class MassCumInc extends PlotBase implements RxComponent {
 		if (this.config.term2 && legendItems.length) {
 			this.legendData = [
 				{
-					name: this.config.term2.term.name,
+					name: escapeHtml(this.config.term2.term.name),
 					items: legendItems.filter(s => !s.isHidden)
 				}
 			]
@@ -801,7 +801,7 @@ function setRenderers(self: any) {
 			.style('font-weight', '600')
 			.style('margin', '5px')
 			.datum(chart.chartId)
-			.html(chart.chartTitle)
+			.text(chart.chartTitle)
 
 		if (self.hidePlotTitle) div.select('.sjpcb-cuminc-title').style('display', 'none')
 
@@ -894,7 +894,7 @@ function setRenderers(self: any) {
 			.style('width', `${s.svgw + 50}px`)
 			.style('height', s.chartTitleDivHt + 'px')
 			.datum(chart.chartId)
-			.html(chart.chartTitle)
+			.text(chart.chartTitle)
 
 		if (self.hidePlotTitle) div.select('.sjpcb-cuminc-title').style('display', 'none')
 
@@ -1266,10 +1266,10 @@ function setInteractivity(self: any) {
 			return
 		}
 		if (!d.seriesId) return
-
 		menu.d
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
+			.attr('data-testid', 'sjpp-atrisk-hide-btn-' + d.seriesId)
 			.text(`Hide`)
 			.on('click', async () => {
 				menu.hide()

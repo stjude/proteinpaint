@@ -7,7 +7,13 @@ set -euxo pipefail
 # - replace each workspace package.json's dependency versions
 #   with the tarball location as copied into the Docker build
 #
+# The workspace packages, except the client, are private and not published to the npm registry,
+# so every workspace that the server and full images install is packed, whether or not it has changed.
+#
 # call from the proteinpaint/container dir
+#
+# Usage: ./pack.sh [-s] [PKGPATH] [TMPDIR] [RUST_BINARIES_DIR]
+#   -s: server-only, to not pack the client and front workspaces, that only the full image installs
 
 # defaults
 PKGPATH=/home/root/pp/tmppack
@@ -16,6 +22,20 @@ RUST_BINARIES_DIR=../rust-binaries
 
 # this script should test packing and bundling, should not set up dev aliased exports
 # export NODE_OPTIONS='--conditions=sjpp/dev'
+
+SERVERONLY=""
+while getopts "s" opt; do
+	case "${opt}" in
+	s)
+		SERVERONLY=1
+		;;
+	*)
+		echo "Unrecognized parameter"
+		exit 1
+		;;
+	esac
+done
+shift $(($OPTIND-1))
 
 if (( $# == 1 )); then
   PKGPATH="$1"
@@ -38,12 +58,6 @@ mkdir tmppack
 FRONTDEPNAME="@sjcrh/proteinpaint-front"
 SERVERDEPNAME="@sjcrh/proteinpaint-server"
 
-# no -w argument to bump.cjs, just get the changed workspace since the last publish
-cd ..
-CHANGEDWS=$(./build/bump.cjs prerelease)
-cd container
-echo "$CHANGEDWS"
-
 for shareddir in types utils
 do
 	if [[ "$shareddir" == "utils" ]]; then
@@ -52,29 +66,35 @@ do
 		sharedws=$shareddir
 	fi
 
-	# client will require these for bundling even if the shared workspace has not changed
 	cd ../shared/$shareddir
 	echo "packing shared/$sharedws ..."
 	npm pack --loglevel error
-
-	if [[ "$CHANGEDWS" == *"shared/$shareddir"* ]]; then
-		SHAREDPKGVER=$(node -p "require('./package.json').version")
-		SHAREDTGZ=sjcrh-proteinpaint-$sharedws-$SHAREDPKGVER.tgz
-		mv $SHAREDTGZ ../../container/tmppack/
-		SHAREDDEPNAME="@sjcrh/proteinpaint-$sharedws"
+	SHAREDPKGVER=$(node -p "require('./package.json').version")
+	SHAREDTGZ=sjcrh-proteinpaint-$sharedws-$SHAREDPKGVER.tgz
+	mv $SHAREDTGZ ../../container/tmppack/
+	SHAREDDEPNAME="@sjcrh/proteinpaint-$sharedws"
+	if [[ "$SERVERONLY" == "" ]]; then
 		cd ../../client
 		# may reset the dep new version temporarily, for package testing
 		npm pkg set "devDependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
 		cd ../server
-		# may reset the dep new version temporarily, for package testing
-		npm pkg set "dependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
-		cd ../container
 	else
-		cd ../../container
+		cd ../../server
+	fi
+	# may reset the dep new version temporarily, for package testing
+	npm pkg set "dependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
+	cd ../container
+	if [[ "$sharedws" == "shared" ]]; then
+		# the container apps also depend on shared/utils, for dataset files to use at runtime
+		for appdir in server full; do
+			cd $appdir
+			npm pkg set "dependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
+			cd ..
+		done
 	fi
 done
 
-if [[ "$CHANGEDWS" == *"client"* ]]; then
+if [[ "$SERVERONLY" == "" ]]; then
 	cd ../client
 	echo "packing client ..."
 	npm pack --loglevel error
@@ -87,13 +107,10 @@ if [[ "$CHANGEDWS" == *"client"* ]]; then
 	# may reset the dep new version temporarily, for package testing
 	npm pkg set "devDependencies.$CLIENTDEPNAME"=$PKGPATH/$CLIENTTGZ
 	cd ../container
-fi
 
-# Since the front workspace bundles the client code, the client/dist must be 
-# present if there is a front version bump, even if there is no client version bump.
-# This is done in the client-dist script as called by the prepack script in the
-# front/package.json.
-if [[ "$CHANGEDWS" == *"front"* ]]; then
+	# Since the front workspace bundles the client code, the client/dist must be present,
+	# as packed above or else by the client-dist script that is called by the prepack script
+	# in the front/package.json.
 	cd ../front
 	echo "packing front ..."
 	npm pack --loglevel error
@@ -108,113 +125,104 @@ if [[ "$CHANGEDWS" == *"front"* ]]; then
 	cd ..
 fi
 
-if [[ "$CHANGEDWS" == *"augen"* ]]; then
-	cd ../augen
-	echo "packing augen ..."
-	npm pack --loglevel error
-	AUGENPKGVER=$(node -p "require('./package.json').version")
-	AUGENTGZ=sjcrh-augen-$AUGENPKGVER.tgz
-	mv $AUGENTGZ ../container/tmppack/
+cd ../augen
+echo "packing augen ..."
+npm pack --loglevel error
+AUGENPKGVER=$(node -p "require('./package.json').version")
+AUGENTGZ=sjcrh-augen-$AUGENPKGVER.tgz
+mv $AUGENTGZ ../container/tmppack/
 
-	cd ../server
-	AUGENDEPNAME="@sjcrh/augen"
-	# may reset the dep new version temporarily, for package testing
-	npm pkg set "dependencies.$AUGENDEPNAME"=$PKGPATH/$AUGENTGZ
-	cd ../container
+cd ../server
+AUGENDEPNAME="@sjcrh/augen"
+# may reset the dep new version temporarily, for package testing
+npm pkg set "dependencies.$AUGENDEPNAME"=$PKGPATH/$AUGENTGZ
+cd ../container
+
+cd ../rust
+
+# Only copy binaries if RUST_BINARIES_DIR exists
+if [[ -d "$RUST_BINARIES_DIR" ]]; then
+  echo "RUST_BINARIES_DIR found at $RUST_BINARIES_DIR"
+  echo "Cleaning previous rust build..."
+  rm -rf target/release
+  mkdir -p target/release
+
+  echo "Copying compiled rust binaries to target/release ..."
+  cp "$RUST_BINARIES_DIR"/* target/release/
+
+  echo "Making all files in target/release executable..."
+  chmod +x target/release/*
+
+  # only the release binaries, not other build output under target/ such as target/debug in a dev environment
+  echo "Ensuring target/release/* is included in package.json files array..."
+
+    node -e '
+      const fs = require("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+      if (!pkg.files.includes("target/release/*")) {
+        pkg.files.push("target/release/*");
+        fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
+        console.log("\"target/release/*\" added to package.json files array.");
+      } else {
+        console.log("\"target/release/*\" already present in package.json files array.");
+      }
+    '
+else
+  echo "RUST_BINARIES_DIR not found at $RUST_BINARIES_DIR — skipping binary copy."
 fi
 
-if [[ "$CHANGEDWS" == *"rust"* ]]; then
-  cd ../rust
+echo "Packing rust module with npm ..."
+RUSTTGZ=$(npm pack --loglevel error)
+RUSTPKGVER=$(node -p "require('./package.json').version")
 
-  # Only copy binaries if RUST_BINARIES_DIR exists
-  if [[ -d "$RUST_BINARIES_DIR" ]]; then
-    echo "RUST_BINARIES_DIR found at $RUST_BINARIES_DIR"
-    echo "Cleaning previous rust build..."
-    rm -rf target/release
-    mkdir -p target/release
+mv "$RUSTTGZ" ../container/tmppack/
 
-    echo "Copying compiled rust binaries to target/release ..."
-    cp "$RUST_BINARIES_DIR"/* target/release/
+cd ../server
+RUSTDEPNAME="@sjcrh/proteinpaint-rust"
+npm pkg set "dependencies.$RUSTDEPNAME"="file:$PKGPATH/$RUSTTGZ"
 
-    echo "Making all files in target/release executable..."
-    chmod +x target/release/*
+cd ../container
 
-    echo "Ensuring target/* is included in package.json files array..."
+cd ../python
+echo "packing python ..."
+npm pack --loglevel error
+PYPKGVER=$(node -p "require('./package.json').version")
+PYTGZ=sjcrh-proteinpaint-python-$PYPKGVER.tgz
+mv $PYTGZ ../container/tmppack/
 
-      node -e '
-        const fs = require("fs");
-        const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-        if (!pkg.files.includes("target/*")) {
-          pkg.files.push("target/*");
-          fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-          console.log("\"target/*\" added to package.json files array.");
-        } else {
-          console.log("\"target/*\" already present in package.json files array.");
-        }
-      '
-  else
-    echo "RUST_BINARIES_DIR not found at $RUST_BINARIES_DIR — skipping binary copy."
-  fi
+cd ../server
+PYDEPNAME="@sjcrh/proteinpaint-python"
+# may reset the dep new version temporarily, for package testing
+npm pkg set "dependencies.$PYDEPNAME"=$PKGPATH/$PYTGZ
+cd ../container
 
-  echo "Packing rust module with npm ..."
-  RUSTTGZ=$(npm pack --loglevel error)
-  RUSTPKGVER=$(node -p "require('./package.json').version")
+cd ../R
+echo "packing R ..."
+npm pack --loglevel error
+RPKGVER=$(node -p "require('./package.json').version")
+RTGZ=sjcrh-proteinpaint-r-$RPKGVER.tgz
+mv $RTGZ ../container/tmppack/
 
-  mv "$RUSTTGZ" ../container/tmppack/
+cd ../server
+RDEPNAME="@sjcrh/proteinpaint-r"
+# may reset the dep new version temporarily, for package testing
+npm pkg set "dependencies.$RDEPNAME"=$PKGPATH/$RTGZ
+cd ../container
 
-  cd ../server
-  RUSTDEPNAME="@sjcrh/proteinpaint-rust"
-  npm pkg set "dependencies.$RUSTDEPNAME"="file:$PKGPATH/$RUSTTGZ"
+cd ../server
+echo "packing server ..."
+npm pack --loglevel error
+SERVERTPKGVER=$(node -p "require('./package.json').version")
+SERVERTGZ=sjcrh-proteinpaint-server-$SERVERTPKGVER.tgz
+mv $SERVERTGZ ../container/tmppack/
+git restore package.json
 
-  cd ../container
-fi
+cd ../container/full
+echo "update the dependency in container/full/package.json to point to the front tarball inside of tmppack dir ..."
+npm pkg set "dependencies.$SERVERDEPNAME"=$PKGPATH/$SERVERTGZ
 
-if [[ "$CHANGEDWS" == *"python"* ]]; then
-	cd ../python
-	echo "packing python ..."
-	npm pack --loglevel error
-	PYPKGVER=$(node -p "require('./package.json').version")
-	PYTGZ=sjcrh-proteinpaint-python-$PYPKGVER.tgz
-	mv $PYTGZ ../container/tmppack/
+cd ../server
+echo "update dependencies in container/server/package.json to point to server tarball inside of tmppack dir ..."
+npm pkg set "dependencies.$SERVERDEPNAME"=$PKGPATH/$SERVERTGZ
 
-	cd ../server
-	PYDEPNAME="@sjcrh/proteinpaint-python"
-	# may reset the dep new version temporarily, for package testing
-	npm pkg set "dependencies.$PYDEPNAME"=$PKGPATH/$PYTGZ
-	cd ../container
-fi
-
-if [[ "$CHANGEDWS" == *"R"* ]]; then
-	cd ../R
-	echo "packing R ..."
-	npm pack --loglevel error
-	RPKGVER=$(node -p "require('./package.json').version")
-	RTGZ=sjcrh-proteinpaint-r-$RPKGVER.tgz
-	mv $RTGZ ../container/tmppack/
-
-	cd ../server
-	RDEPNAME="@sjcrh/proteinpaint-r"
-	# may reset the dep new version temporarily, for package testing
-	npm pkg set "dependencies.$RDEPNAME"=$PKGPATH/$RTGZ
-	cd ../container
-fi
-
-if [[ "$CHANGEDWS" == *"server"* ]]; then
-	cd ../server
-	echo "packing server ..."
-	npm pack --loglevel error
-	SERVERTPKGVER=$(node -p "require('./package.json').version")
-	SERVERTGZ=sjcrh-proteinpaint-server-$SERVERTPKGVER.tgz
-	mv $SERVERTGZ ../container/tmppack/
-	git restore package.json
-
-	cd ../container/full
-	echo "update the dependency in container/full/package.json to point to the front tarball inside of tmppack dir ..."
-	npm pkg set "dependencies.$SERVERDEPNAME"=$PKGPATH/$SERVERTGZ
-
-	cd ../server
-	echo "update dependencies in container/server/package.json to point to server tarball inside of tmppack dir ..."
-	npm pkg set "dependencies.$SERVERDEPNAME"=$PKGPATH/$SERVERTGZ
-
-	cd ..
-fi
+cd ..

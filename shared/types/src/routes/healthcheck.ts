@@ -19,6 +19,8 @@ export type VersionInfo = {
 			installed?: string
 			/** the version as entered in the project's package.dependencies */
 			entry?: string
+			/** the version that was bundled into another package, such as the client in proteinpaint-front's /bin bundle */
+			bundled?: string
 			buildTime?: string
 		}
 	}

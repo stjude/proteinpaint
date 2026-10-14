@@ -67,6 +67,7 @@
         },
         {
             "label": "Remote File",
+            "configFeature": "ALLOW_remotefilefromurl",
             "urlparam": "?block=on&genome=hg19&bigwigurl=BigWig%20remote%20file,https://hgdownload.soe.ucsc.edu/goldenPath/hg19/phyloP100way/hg19.100way.phyloP100way.bw",
             "runargs":{
                 "parseurl": true,

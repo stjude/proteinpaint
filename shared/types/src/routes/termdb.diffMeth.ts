@@ -67,6 +67,7 @@ export type DiffMethRequest = {
 	/** Parameters for the server-side `da` Rust renderer. Always required — the
 	 * server always returns a rendered PNG plus the threshold-passing rows. */
 	volcanoRender: VolcanoRenderRequest
+	__protected__?: any
 }
 
 /** Response when DiffMethRequest.preAnalysis === true. Returns per-group
@@ -120,8 +121,14 @@ export type DmrScanSummary = {
 	 * only one. Absent when no DMR qualifies. */
 	geneBodyLoss?: { regions: number; genes: string[] }
 	/** The two groups cut to the samples with methylation data, as sample ids: the cohort any
-	 * expression step after a scan should run on, so both readings come from the same patients. */
-	matchedSamplelst?: { groups: { name: string; values: { sampleId: number | string }[]; [k: string]: any }[] }
+	 * expression step after a scan should run on, so both readings come from the same patients.
+	 * A group that the request defined by a filter comes back as that filter, with `sampleCount`
+	 * for the number of its samples with methylation data and no sample listed; `matchMethylation`
+	 * then asks the differential expression route to keep to those samples. */
+	matchedSamplelst?: {
+		groups: { name: string; values?: { sampleId: number | string }[]; [k: string]: any }[]
+		matchMethylation?: boolean
+	}
 	/** what the scan cost when it was computed; see DmrRunResources */
 	resources?: DmrRunResources
 	/** Mean methylation per group in fixed-width bins along the genome: the profile methylome

@@ -1,4 +1,4 @@
-import type { CacheSubdir } from '#src/utils/cacheOrRecompute.ts'
+import type { CacheSubdir } from '#src/CacheManager.ts'
 
 export type CacheOrRecomputeOpts<TArgs, TResult> = {
 	/** Hashed to derive the cacheId. Pass the subset of the request whose
@@ -6,6 +6,11 @@ export type CacheOrRecomputeOpts<TArgs, TResult> = {
 	 * change the result, with rendering/view-only params excluded so
 	 * changing them still hits cache. */
 	computeArgument: TArgs
+
+	/** Optional, separates the cacheIds of identical computeArguments, e.g. a user or session
+	 * identifier when the result depends on what the requester may access. Omit it for results
+	 * that are the same for every requester, so that they share one cache file. */
+	cacheScope?: string
 
 	/** Subdir under serverconfig.cachedir. Must match a CacheManager-known
 	 * subdir so eviction applies. */

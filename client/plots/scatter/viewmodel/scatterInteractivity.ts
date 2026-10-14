@@ -1,4 +1,4 @@
-import { filterJoin, getFilterItemByTag } from '#filter'
+import { joinToFilterUiRoot } from '#filter'
 import { getFilter } from '../../../mass/groups.js'
 import { Menu, newSandboxDiv } from '#dom'
 import { getId } from '#mass/nav'
@@ -136,9 +136,7 @@ export class ScatterInteractivity {
 	}
 
 	addToFilter(samplelstTW) {
-		const filterUiRoot = getFilterItemByTag(this.scatter.state.termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, getFilter(samplelstTW)])
-		filter.tag = 'filterUiRoot'
+		const filter = joinToFilterUiRoot(this.scatter.app.getState().termfilter.filter, [getFilter(samplelstTW)])
 		this.scatter.app.dispatch({
 			type: 'filter_replace',
 			filter

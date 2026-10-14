@@ -79,6 +79,6 @@ export function getDNAMethTermName(term: RawDnaMethylationTerm, termUnit?: strin
 		case 'gene':
 			return `${featureName} - Promoter ${unit} (${id})`
 		default:
-			return `${id} ${unit}`
+			return noun ? `${noun} ${unit} (${id})` : `${id} ${unit}`
 	}
 }

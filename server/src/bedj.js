@@ -6,6 +6,9 @@ import serverconfig from './serverconfig.js'
 import { nt2aa } from '#shared/common.js'
 import { parseBedLine } from './bedj.parseBed.js'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 /*
 should guard against file content error e.g. two tabs separating columns
 
@@ -167,7 +170,6 @@ async function do_query(req, genomeobj) {
 		if (Number.isNaN(req.query.bplengthUpperLimit)) throw 'bplengthUpperLimit not number'
 	}
 
-	utils.validateRglst(req.query, genomeobj)
 	for (const r of req.query.rglst) {
 		if (r.reverse) {
 			r.scale = p => Math.ceil((r.width * (r.stop - p)) / (r.stop - r.start))
@@ -855,10 +857,15 @@ async function do_query(req, genomeobj) {
 	return result
 }
 
+const maxBedItems = 1000
+
 async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 	if (req.query.bedItems) {
 		// client supplies list of "bed" items to render. no file to read
 		if (!Array.isArray(req.query.bedItems)) throw 'bedItems not array'
+		// reject a very long list, instead of processing only part of it
+		if (req.query.bedItems.length > maxBedItems)
+			throw `bedItems has ${req.query.bedItems.length} items, it must have ${maxBedItems} or fewer`
 		const lst = []
 		for (const j of req.query.bedItems) {
 			if (!j) continue
@@ -877,12 +884,6 @@ async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 			}
 			if (j.rglst.length == 0) continue
 			lst.push(j)
-			if (lst.length > 1000) {
-				console.error(
-					'will not process over 1000 items from req.query.bedItems to guard against arbitrarily large array from client'
-				)
-				break
-			}
 		}
 		return lst
 	}
@@ -893,9 +894,9 @@ async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 		// file is under the "bedj" cache subdir (created and swept by CacheManager.ts) rather than tpmasterdir.
 		// checkBlackList must be false: the default blacklist rejects .gz/.bb etc, which are the expected track file types
 		if (utils.illegalpath(req.query.file, false, false)) throw 'illegal file path'
-		// the cache folder is flat: the CacheManager sweep is non-recursive, so a file in a subfolder would be readable but never evicted
+		// the cache folder is flat, so a file name must not add a dir level
 		if (req.query.file.includes('/')) throw 'cache file name must not contain "/"'
-		tkfile = path.join(serverconfig.cachedir, 'bedj', req.query.file)
+		tkfile = path.join(cachedir, 'bedj', req.query.file)
 	} else {
 		;[e, tkfile, isurl] = utils.fileurl(req)
 		if (e) throw e

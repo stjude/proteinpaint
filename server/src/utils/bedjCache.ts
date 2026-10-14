@@ -5,6 +5,9 @@ import { execFile } from 'child_process'
 import { randomUUID } from 'crypto'
 import serverconfig from '#src/serverconfig.js'
 
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
 const run = promisify(execFile)
 
 /* Bgzip + tabix a BED file into the "bedj" cache subdir that block tracks read with isCache:true.
@@ -28,7 +31,7 @@ export async function writeBedjFile(
 	if (!name.endsWith('.gz') || name.includes('/') || name.includes('\\') || name.startsWith('.')) {
 		throw new Error(`invalid bedj cache file name: ${name}`)
 	}
-	const dir = path.join(serverconfig.cachedir, 'bedj')
+	const dir = path.join(cachedir, 'bedj')
 	const gz = path.join(dir, name)
 	// both must be there: the .gz is the commit point, so a lone .tbi is an unfinished publish
 	if (fs.existsSync(gz) && fs.existsSync(gz + '.tbi')) {

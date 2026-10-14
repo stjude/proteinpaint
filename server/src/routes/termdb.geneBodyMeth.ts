@@ -15,6 +15,7 @@ import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { median, chrSeed } from '#src/utils/dmrStats.ts'
 import { GENE_BODY_PAD } from '#src/utils/dmrGenes.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { sampleFilterScope, resolveGroups, resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import { fingerprint } from '#src/routes/termdb.dmrBatch.ts'
 import { buildGeneIndex } from '#src/utils/dmrGenes.ts'
 import {
@@ -23,6 +24,11 @@ import {
 	scoreAgainstBackground,
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
+import { genomes } from '#src/initGenomesDs.js'
+import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
+
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
 
 /* Is gene-body methylation loss a cause of reduced transcription, or a footprint of it?
 
@@ -42,11 +48,20 @@ at fold change zero.
 Cheap because the fit already carries both group means per probe: gene bodies go in as
 background_regions, which returns a plain delta and skips smoothing and segmentation entirely. */
 
+const payload = {
+	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
+	get init() {
+		return hasDnaMethylationDs(genomes) ? init : null
+	},
+	request: { typeId: undefined },
+	response: { typeId: undefined }
+} as any as RoutePayload
+
 export const api: RouteApi = {
 	endpoint: 'termdb/geneBodyMeth',
 	methods: {
-		get: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload,
-		post: { init, request: { typeId: undefined }, response: { typeId: undefined } } as any as RoutePayload
+		get: payload,
+		post: payload
 	}
 }
 
@@ -65,7 +80,6 @@ function init({ genomes }) {
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'unknown ds'
 			if (!q.samplelst?.groups?.length) throw new Error('Two sample groups are required.')
-			if (!Array.isArray(q.group1) || !Array.isArray(q.group2)) throw new Error('group1 and group2 are required.')
 			const t0 = Date.now()
 
 			const deltaOf = new Map(Object.entries(await getGeneBodyDeltas(q, genomes)))
@@ -73,7 +87,12 @@ function init({ genomes }) {
 			// expression on the same patients the methylation was measured on; see matchedSamplelst
 			// analysis-wide, so this cohort is the one the scan ran on whatever chr1 resolves to
 			const eligible = eligibleMethylationSamples(ds, q.element_type)
-			const samplelst = await matchedSamplelst(q.samplelst, eligible, ds)
+			const samplelst = await matchedSamplelst(
+				{ groups: await resolveGroups(q.samplelst.groups, q, ds) },
+				eligible,
+				ds,
+				q.__protected__
+			)
 			const { result } = await getDeCacheResult(
 				{
 					genome: q.genome,
@@ -81,7 +100,8 @@ function init({ genomes }) {
 					samplelst,
 					min_count: q.min_count ?? 10,
 					min_total_count: q.min_total_count ?? 15,
-					method: q.method
+					method: q.method,
+					__protected__: q.__protected__
 				} as any,
 				genomes
 			)
@@ -151,11 +171,14 @@ export async function getGeneBodyDeltas(
 	q: {
 		genome: string
 		dslabel: string
-		group1: any[]
-		group2: any[]
+		/** each an array of {sampleId}, or a group defined by a filter, see resolveGroups() */
+		group1: any
+		group2: any
+		filter0?: any
 		chromosomes?: string[]
 		element_type?: string
 		corrected?: boolean
+		__protected__?: any
 	},
 	genomes: any
 ): Promise<Record<string, number>> {
@@ -163,6 +186,7 @@ export async function getGeneBodyDeltas(
 	if (!genome) throw new Error('unknown genome')
 	const ds = genome.datasets?.[q.dslabel]
 	if (!ds) throw new Error('unknown ds')
+	;[q.group1, q.group2] = await resolveGroupPair(q, ds)
 	if (!Array.isArray(q.group1) || !Array.isArray(q.group2)) throw new Error('group1 and group2 are required.')
 	/* Validated and deduplicated HERE, before the cache key is built and before anything fans out:
 	the raw list was filtered only by a membership test, which keeps duplicates, so one chromosome
@@ -191,6 +215,7 @@ export async function getGeneBodyDeltas(
 			corrected: !!q.corrected,
 			files: fingerprint([...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile))
 		},
+		cacheScope: sampleFilterScope(q, ds),
 		cacheSubdir: 'geneBodyMeth',
 		// the validated list, so the compute cannot see the raw one
 		computeFresh: async () => computeGeneBodyDeltas({ ...q, chromosomes }, genome, ds)
@@ -234,7 +259,8 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 		q.group1,
 		q.group2,
 		eligibleMethylationSamples(ds, q.element_type),
-		ds
+		ds,
+		q.__protected__
 	)
 	if (group1.length < 3 || group2.length < 3) throw new Error('Each group needs at least 3 samples.')
 	const deltaOf: Record<string, number> = {}
@@ -292,7 +318,7 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 						JSON.stringify({
 							probe_h5_file: matrixFile,
 							mvalues,
-							cachedir: serverconfig.cachedir,
+							cachedir,
 							genome: q.genome,
 							chr: jobChrs[0],
 							start: 0,
