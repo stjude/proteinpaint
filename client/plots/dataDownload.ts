@@ -6,13 +6,12 @@ import { sayerror } from '../dom/sayerror.ts'
 import { termsettingInit, fillTermWrapper } from '#termsetting'
 import type { ClientGenome } from '../types/clientGenome.ts'
 
-
-class DataDownload extends PlotBase implements RxComponent{
+class DataDownload extends PlotBase implements RxComponent {
 	static type = 'dataDownload'
 
 	type: string
 	config: any
-	activeSamples!: { sample: number, sampleName:string, [index/*<$tid>*/:string]: any}[]
+	activeSamples!: { sample: number; sampleName: string; [index: /*<$tid>*/ string]: any }[]
 	genomeObj: ClientGenome
 	pillBy$id: { [tw$id: string]: any } // pill component for each term wrapper
 	state: any
@@ -33,7 +32,7 @@ class DataDownload extends PlotBase implements RxComponent{
 	async init(/*appState*/) {
 		setInteractivity(this) // in cases of static viz, you don't use interactivity code
 		setRenderers(this)
-
+		this.opts.holder.attr('data-testid', 'sjpp-dataDownload-holder')
 		this.dom = {
 			header: this.opts.header, // header is optional
 			errordiv: this.opts.holder.append('div'),
@@ -45,7 +44,11 @@ class DataDownload extends PlotBase implements RxComponent{
 
 		this.dom.submitBtn = this.dom.submitDiv.append('button').html('Download').on('click', this.download)
 
-		this.dom.submitNote = this.dom.submitDiv.append('span').style('margin-left', '5px').style('font-style', 'italic')
+		this.dom.submitNote = this.dom.submitDiv
+			.append('span')
+			.style('margin-left', '5px')
+			.style('font-style', 'italic')
+			.attr('data-testid', 'sjpp-dataDownload-submit-note')
 	}
 
 	getState(appState: MassState) {
