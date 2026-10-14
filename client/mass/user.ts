@@ -131,6 +131,14 @@ export class MassUser {
 		if (Object.keys(this.savedSessions).length || this.serverCachedSessions?.length) {
 			options.push({ label: `Delete`, title: 'Delete a saved session', callback: () => this.delete() })
 		}
+		// only for a session opened from a `mass-session-id` URL
+		if (this.opts.sessionDaysLeft != null && this.opts.sessionId) {
+			options.push({
+				label: `Export Session`,
+				title: 'Download this session as a file',
+				callback: () => this.exportSession()
+			})
+		}
 		this.dom.optionsDiv.selectAll('*').remove()
 		this.dom.optionsDiv
 			.selectAll('button')
@@ -151,6 +159,17 @@ export class MassUser {
 				this.clearContent()
 				await d.callback()
 			})
+	}
+
+	/** Download the opened `mass-session-id` session as a json file */
+	async exportSession() {
+		const res = await dofetch3(`/massSession?id=${this.opts.sessionId}`)
+		const a = document.createElement('a')
+		const dataStr = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(res.state))
+		a.setAttribute('href', dataStr)
+		a.download = `${this.opts.sessionId}.json`
+		a.click()
+		a.remove()
 	}
 
 	clearContent() {
@@ -554,7 +573,7 @@ export class MassUser {
 
 		linkDiv.append('div').html(`
 							<br>
-							<div style="max-width: 400px; font-size: 1em; opacity:.6">
+							<div style="font-size: 1em; opacity:.6">
 							<span>NOTES</span>
 							<ul>
 							<li>A recovered session may hide data or views to users that are not authorized to access the saved datasets or features.</li>

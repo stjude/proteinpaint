@@ -10,6 +10,8 @@ export type MassUserOpts = {
 	massSessionDuration?: number
 	/** Optional. Only set when launched from a `mass-session-id` URL */
 	sessionDaysLeft?: number | null
+	/** Optional. Only set when launched from a `mass-session-id` URL. Enables exporting that session */
+	sessionId?: string | null
 }
 
 export type MassUserDom = {

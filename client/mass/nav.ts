@@ -5,7 +5,6 @@ import { groupsInit } from './groups'
 import { aboutInit } from './about.ts'
 import { chatInit } from './chat.ts'
 import { userInit } from './user'
-import { dofetch3 } from '#common/dofetch'
 import { Menu, icons as icon_functions } from '#dom'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
 import type { NavTab, NavTabCell } from './types/nav'
@@ -56,7 +55,6 @@ class TdbNav {
 	searching: boolean
 	massSessionDuration: any
 	sessionDaysLeft: any
-	sessionId: any
 	pkgver: any
 	opts: any
 	app: any
@@ -74,7 +72,6 @@ class TdbNav {
 		this.searching = false
 		this.massSessionDuration = opts.massSessionDuration
 		this.sessionDaysLeft = opts.app.opts.sessionDaysLeft || null
-		this.sessionId = opts.app.opts.sessionId || null
 		this.pkgver = opts.pkgver || null //Release version
 		setInteractivity(this)
 		setRenderers(this)
@@ -136,7 +133,8 @@ class TdbNav {
 				app: this.app,
 				subheader: this.dom.subheader.user,
 				massSessionDuration: this.opts.massSessionDuration,
-				sessionDaysLeft: this.app.opts.sessionDaysLeft || null
+				sessionDaysLeft: this.app.opts.sessionDaysLeft || null,
+				sessionId: this.app.opts.sessionId || null
 			})
 		})
 		this.mayShowMessage_sessionDaysLeft()
@@ -217,12 +215,18 @@ function setRenderers(self: any): void {
 		// Note that if the user did not login the public token was used. So only if the user did login and the token passed was invalid this error is shown
 		if (!verifiedToken && invalidTokenErrorHandling?.affectedCharts?.includes('*'))
 			throw new Error(appState.termdbConfig.invalidTokenErrorHandling.errorMessage)
-		const header = self.opts.holder.append('div').style('white-space', 'nowrap')
+		// a flex row, so that the tabs stretch to the height of the controls, which may be taller than the tabs
+		// when the session message wraps. the active tab then reaches the border at the bottom of the header
+		const header = self.opts.holder
+			.append('div')
+			.style('white-space', 'nowrap')
+			.style('display', 'flex')
+			.style('align-items', 'stretch')
 		const massNav = appState.termdbConfig?.massNav || {}
 		const titleDiv = header
 			.append('div')
-			.style('display', 'inline-block')
-			.style('float', 'right')
+			.style('order', '2') // rightmost
+			.style('align-self', 'flex-start')
 			.style('font-size', '1.1em')
 			.style('margin', '50px 10px 0 0')
 			.text(massNav?.title?.text) //this line will be executed in update UI to reflect cohort changes
@@ -231,10 +235,10 @@ function setRenderers(self: any): void {
 		const controlsDiv = header
 			//Fix for adding message underneath the search bar and buttons
 			.append('div')
-			.style('vertical-align', 'top')
-			.style('margin', '10px')
-			.style('display', 'inline-block')
-			.style('float', 'right')
+			.style('order', '1') // right of the tabs, left of the title
+			.style('margin', '10px 10px 10px auto')
+			// the icons are at the right edge, beside the title, even when the wrapped message is wider
+			.style('text-align', 'right')
 
 		if (self.opts.header_mode === 'only_buttons') {
 			// if header_mode is only_buttons, show only buttons
@@ -249,7 +253,6 @@ function setRenderers(self: any): void {
 			tabDiv,
 			controlsDiv,
 			searchDiv: controlsDiv.append('div').style('margin', '10px'),
-			sessionDiv: controlsDiv.append('div').style('display', 'inline-block'),
 			recoverDiv: controlsDiv.append('div').style('display', 'inline-block'),
 			pdfDiv: controlsDiv
 				.append('div')
@@ -263,7 +266,16 @@ function setRenderers(self: any): void {
 				.style('vertical-align', 'middle'),
 
 			helpDiv: controlsDiv.append('div').style('display', 'none'),
-			sessionElapsedMessageDiv: controlsDiv.append('div').style('display', 'none'),
+			// stays in the floated controlsDiv, under the buttons. the message wraps at a width relative to the window
+			// instead of widening the controls, which would drop them below the tabs
+			sessionElapsedMessageDiv: controlsDiv
+				.append('div')
+				.style('display', 'none')
+				.style('font-size', '0.8em')
+				.style('line-height', '1.2')
+				.style('text-align', 'left')
+				.style('max-width', '30vw')
+				.style('white-space', 'normal'),
 			subheaderDiv: self.opts.holder.append('div').style('display', 'block').style('border-bottom', '1px solid #000'),
 			messageDiv: self.opts.holder.append('div').style('margin', '30px').style('display', 'none'),
 			titleDiv,
@@ -395,6 +407,7 @@ function setRenderers(self: any): void {
 			.append('table')
 			.attr('data-testid', 'sjpp-nav-tabs-table')
 			.style('border-collapse', 'collapse')
+			.style('height', '100%')
 
 		// using a table layout for tabs, iterate through each tab
 		// once for each of [top, mid, btm] row
@@ -447,18 +460,6 @@ function setRenderers(self: any): void {
 		self.dom.trs = table.selectAll('tr')
 		self.dom.tds = table.selectAll('td')
 		self.subheaderKeys = self.tabs.map(d => d.subheader)
-
-		if (self.sessionDaysLeft != null) {
-			//Only show if called from `mass-session-id` URL
-			self.dom.fileBtn = self.dom.sessionDiv
-				.append('button')
-				.attr('data-testid', 'sjpp-nav-file-btn')
-				.style('margin', '10px')
-				.text('Export Session')
-				.on('click', event => {
-					self.getSessionFile(event)
-				})
-		}
 	}
 
 	self.deletePlots = () => {
@@ -613,17 +614,6 @@ function setInteractivity(self: any): void {
 	self.mouseout = () => {
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 		self.dom.tds.style('background-color', t => (self.activeTab == t.colNum ? defaultActiveColor : 'transparent'))
-	}
-
-	self.getSessionFile = async (/* event: any */): Promise<void> => {
-		//Download mass-session-id file
-		const res = await dofetch3(`/massSession?id=${self.sessionId}`)
-		const a = document.createElement('a')
-		const dataStr = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(res.state))
-		a.setAttribute('href', dataStr)
-		a.download = `${self.sessionId}.json`
-		a.click()
-		a.remove()
 	}
 
 	self.pickDatasetLabel = (appState: any): string => {
