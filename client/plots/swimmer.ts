@@ -1109,10 +1109,13 @@ export class SwimmerRenderer {
 		const tip = this.dom.tip
 		const time = `(${o.timeLabel.toLowerCase()})`
 		const hoverLayer = mainG.append('g').style('pointer-events', 'none')
+		const minX = markers.reduce((v, d) => Math.min(v, d.x - d.halfWidth), 0)
+		const maxX = markers.reduce((v, d) => Math.max(v, d.x + d.halfWidth), o.plotWidth)
 		const cover = mainG
 			.append('rect')
 			.attr('data-testid', 'sjpp-swimmer-cover')
-			.attr('width', o.plotWidth)
+			.attr('x', minX)
+			.attr('width', maxX - minX)
 			.attr('height', rows.length * o.rowHeight)
 			.attr('fill', 'transparent')
 			.style('pointer-events', 'all')
