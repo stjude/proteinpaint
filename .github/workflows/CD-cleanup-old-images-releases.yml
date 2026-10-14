@@ -1,4 +1,4 @@
-name: "Cleanup old images"
+name: "Cleanup old images and releases"
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
         default: true
 
 jobs:
-  cleanup:
+  cleanup-images:
     environment: release
     runs-on: ubuntu-22.04
     permissions:
@@ -50,22 +50,22 @@ jobs:
           Filtered="[]"
           NOW=$(date +%s)
 
-          while read -r version; do
-            tags=$(echo "$version" | jq -c '.tags')
-            tag_count=$(echo "$tags" | jq 'length')
+          while read -r version; do #pulls one json object every iteration from the IMAGE_VERSIONS in the previous step
+            tags=$(echo "$version" | jq -c '.tags') #pulls the tags array out
+            tag_count=$(echo "$tags" | jq 'length') #pulls how many tags the image has
             keep=false
             
             if [ "$tag_count" -eq 0 ]; then
               : #digest-only, no branch check possible - falls through to age check
-            elif echo "$tags" | jq -e 'index("latest") != null' > /dev/null; then
+            elif echo "$tags" | jq -e 'index("latest") != null' > /dev/null; then #if any tag is "latest", mark it true
               keep=true
-            elif echo "$tags" | jq -e 'any(. == "protected" or startswith("paper-"))' > /dev/null; then
+            elif echo "$tags" | jq -e 'any(. == "protected" or startswith("paper-"))' > /dev/null; then #if tag is either protected or startswith paper-, mark it true
               keep=true
-            else
+            else #check if this is a version image whose release is still active
               for tag in $(echo "$tags" | jq -r '.[]'); do
-                if [[" $tag" =~ ^v([0-9]+\.[0-9]+)\.[0-9]+-.+$ ]]; then
-                  prefix="release-${BASH_REMATCH[1]}"
-                  if echo "$RELEASE_BRANCHES" | jq -e --arg p "$prefix" 'any(.[]; startswith($p))' > /dev/null; then
+                if [[ "$tag" =~ ^v([0-9]+\.[0-9]+)\.[0-9]+-.+$ ]]; then #Tests this tag against the pattern to capture its major.minor prefix
+                  prefix="release-${BASH_REMATCH[1]}" #Get the capture version from the above comparision using BASH_REMATCH[1] and concatenate it with 'release-'                  
+                  if echo "$RELEASE_BRANCHES" | jq -e --arg p "$prefix" 'any(.[]; . == $p or startswith($p + ".") or startswith($p + "-"))' > /dev/null; then #If any of the RELEASE_BRANCHES has the prefix we retrieved in the previous step, we keep it
                     keep=true
                     break
                   fi
@@ -73,18 +73,18 @@ jobs:
               done
             fi
 
-            if [ "$keep" = false ]; then
+            if [ "$keep" = false ]; then #If we decided to not keep the image, we extract the date it was created on and image age
               created_at=$(echo "$version" | jq -r '.created_at')
               age_days=$(( (NOW - $(date -d "$created_at" +%s)) / 86400 ))
-              [ "$age_days" -lt "$MAX_AGE_DAYS" ] && keep=true
+              [ "$age_days" -lt "$MAX_AGE_DAYS" ] && keep=true #if age<MAX_AGE_DAYS, we keep it
             fi
             
-            if [ "$keep" = false ]; then
-              Filtered=$(jq -c -n --argjson a "$Filtered" --argjson b "$version" '$a + [$b]')
+            if [ "$keep" = false ]; then #If it is still not marked to keep, 
+              Filtered=$(jq -c -n --argjson a "$Filtered" --argjson b "$version" '$a + [$b]') #using --argjson we are taking the entire $Filtered array as argument a and version as argument b and assigning it to Filtered
             fi
           done < <(echo "$IMAGE_VERSIONS" | jq -c '.[]')
 
-          echo "ELIGIBLE=$Filtered" >> "$GITHUB_ENV"
+          echo "ELIGIBLE=$Filtered" >> "$GITHUB_ENV" #Save images eligible for deletion in GITHUB_ENV
         
       - name: Throttle and Delete
         env:
@@ -107,8 +107,78 @@ jobs:
             fi
           done < <(echo "$BATCH" | jq -c '.[]')
 
+  cleanup-releases:
+    environment: release
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          token: ${{secrets.PAT}}
           
+      - name: Read Config     
+        run: |
+         CONFIG=.github/cleanup-config.json
+         echo "MAX_AGE_DAYS=$(jq -r '.maxAgeDays' "$CONFIG")" >> "$GITHUB_ENV"
+         echo "MAX_DELETIONS=$(jq -r '.maxDeletionsPerRun' "$CONFIG")" >> "$GITHUB_ENV"
 
+      - name: List release branches
+        run: |
+          echo "RELEASE_BRANCHES=$(gh api repos/stjude/proteinpaint/branches --paginate --jq '[.[].name] | map(select(startswith("release-")))' -c)" >> "$GITHUB_ENV"
+        env:
+          GH_TOKEN: ${{secrets.PAT}}
+ 
+      - name: List releases
+        run: |
+          RELEASES=$(gh api "repos/stjude/proteinpaint/releases" --paginate --jq '[.[] | {tag: .tag_name, created_at}]')
+          echo "RELEASES=$RELEASES" >> "$GITHUB_ENV"
+
+      - name: Filter Releases
+        run: |
+          Filtered="[]"
+          NOW=$(date +%s)
+
+          while read -r release; do
+            tag=$(echo "$release" | jq -r '.tag') #pulls the tag
+            keep=false
+            if [[ "$tag" =~ ^v([0-9]+\.[0-9]+)\.[0-9]+-.+$ ]]; then #Tests the release's tag against the pattern to capture its major.minor prefix
+              prefix="release-${BASH_REMATCH[1]}" #concatenate the captured major.minor with 'release-'                  
+              if echo "$RELEASE_BRANCHES" | jq -e --arg p "$prefix" 'any(.[]; . == $p or startswith($p + ".") or startswith($p + "-"))' > /dev/null; then #If any of the RELEASE_BRANCHES has the prefix we retrieved in the previous step, we keep it
+                keep=true
+              fi
+            fi
+            
+            if [ "$keep" = false ]; then #If we decided to not keep the image, we extract the date it was created on and image age
+              created_at=$(echo "$release" | jq -r '.created_at')
+              age_days=$(( (NOW - $(date -d "$created_at" +%s)) / 86400 ))
+              [ "$age_days" -lt "$MAX_AGE_DAYS" ] && keep=true #if age<MAX_AGE_DAYS, we keep it
+            fi  
+            
+            if [ "$keep" = false ]; then
+              Filtered=$(jq -c -n --argjson a "$Filtered" --argjson b "$release" '$a + [$b]')
+            fi
+          done < <(echo "$RELEASES" | jq -c '.[]')
+          echo "ELIGIBLE=$Filtered" >> "$GITHUB_ENV"
+
+      - name: Throttle and Delete
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
+          GH_TOKEN: ${{ secrets.PAT }}
+        run: |
+          BATCH=$(echo "$ELIGIBLE" | jq -c "sort_by(.created_at)[0:$MAX_DELETIONS]")
+
+          while read -r item; do
+            tag=$(echo "$item" | jq -r '.tag')
+            created_at=$(echo "$item" | jq -r '.created_at')
+
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "[dry-run] would delete: tag=$tag created_at=$created_at"
+            else
+              echo "deleting: tag=$tag created_at=$created_at"
+              gh release delete "$tag" --yes
+            fi
+          done < <(echo "$BATCH" | jq -c '.[]')
 
 
 
