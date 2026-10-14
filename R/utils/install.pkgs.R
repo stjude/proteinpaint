@@ -17,7 +17,8 @@ BIOCpkgs <- scan(file = file.path(dirpath, "bioconductor.pkgs.txt"), what = "cha
 if (length(CRANpkgs) == 0) stop("no cran packages specified")
 if (length(BIOCpkgs) == 0) stop("no bioconductor packages specified")
 
-repo <- "https://cloud.r-project.org"
+# the deps image build sets PP_CRAN_REPO to a mirror with binary packages, see container/deps/Dockerfile
+repo <- Sys.getenv("PP_CRAN_REPO", "https://cloud.r-project.org")
 
 # update and install CRAN packages
 cat("\nUPDATING CRAN PACKAGES...\n\n")

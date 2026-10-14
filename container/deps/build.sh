@@ -139,12 +139,24 @@ function stageTarballs {
 	fi
 }
 
-# NOTE: important to supply the same ARCH, IMGVER, and IMGREV arguments for all 3 build jobs
-# to ensure that the ppbase stage of the build is cached for the ppserver and ppfull stages
+# NOTE: important to supply the same ARCH, IMGVER, IMGREV, and OS_UPDATES arguments for all 3 build jobs
+# to ensure that the ppbase stage of the build is cached for the ppserver and ppfull stages.
+# OS_UPDATES is the current date, so that the ppbase step that applies the Debian security updates
+# runs once a day, without invalidating the cached R and python stages.
+#
+# PPDEPS_CACHE_REF, when set to an image ref such as ghcr.io/stjude/ppbase:buildcache, imports and exports
+# the cache of every stage from/to that registry ref, so that a CI runner without a local cache reuses the
+# lower layers of the last build. It requires a buildx builder with the docker-container driver.
 function buildImages {
-	local common=(--file "$CTX/Dockerfile" --build-arg ARCH="$ARCH" --build-arg IMGVER="$IMGVER" --build-arg IMGREV="$IMGREV")
+	local osupdates="${OS_UPDATES:-$(date -u +%Y-%m-%d)}"
+	local common=(--file "$CTX/Dockerfile" --build-arg ARCH="$ARCH" --build-arg IMGVER="$IMGVER" --build-arg IMGREV="$IMGREV"
+		--build-arg OS_UPDATES="$osupdates")
+	local cache=()
+	if [[ "${PPDEPS_CACHE_REF:-}" != "" ]]; then
+		cache=(--cache-from "type=registry,ref=$PPDEPS_CACHE_REF" --cache-to "type=registry,ref=$PPDEPS_CACHE_REF,mode=max")
+	fi
 	set -x
-	docker buildx build "$CTX" "${common[@]}" --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM $BUILDARGS --output type=docker
+	docker buildx build "$CTX" "${common[@]}" ${cache[@]+"${cache[@]}"} --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM $BUILDARGS --output type=docker
 
 	docker buildx build "$CTX" "${common[@]}" --target ppserver --tag "${MODE}ppserver:latest" $PLATFORM \
 		--build-arg SERVERPKGVER="$SERVERPKGVER" --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker

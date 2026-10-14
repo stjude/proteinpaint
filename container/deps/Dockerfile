@@ -2,13 +2,30 @@
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
 
-# Start with R image as base image
-FROM r-base:4.5.0 AS ppbase
+# The base images are Debian stable (trixie), which the Debian security team supports, and are pinned by digest,
+# so that the cached lower layers stay valid between builds: a tag such as trixie-slim moves to a new digest every
+# few weeks, which would invalidate every layer and rebuild R and python from scratch. The Debian security updates
+# are applied on top of the cached layers instead, in the ppbase `apt-get upgrade` step. Bump the digests
+# deliberately, which rebuilds every stage, see "Updating the base images" in deps/README.md.
+ARG DEBIAN_IMAGE=debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
+ARG NODE_IMAGE=node:24.10.0-trixie-slim@sha256:4fd2d8b0c63882882529a56bcc977732c059e0d03a977eb20d504d9a1d6591a0
 
-ARG ARCH='x86_64'
-ENV ARCH=$ARCH
+# the node install is copied from the official image into ppbase, which must be on the same Debian release
+FROM ${registry}/${NODE_IMAGE} AS node
 
-RUN apt-get update && apt-get install --allow-downgrades -y \
+##########
+# OS libs
+##########
+
+# The system libraries and build toolchain that every other stage builds on. This is the slowest-changing layer,
+# and is ordered first so that a change to the R, python, or node deps does not reinstall it.
+FROM ${registry}/${DEBIAN_IMAGE} AS os
+
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
+
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
     curl \
     wget \
     git \
@@ -16,46 +33,41 @@ RUN apt-get update && apt-get install --allow-downgrades -y \
     librsvg2-dev \
 	libbz2-dev \
 	libcurl4-openssl-dev \
-	libgsl0-dev \
+	libgsl-dev \
 	libhdf5-dev \
 	hdf5-tools \
-	# Runtime HDF5 for the rust binaries, which are compiled elsewhere (container/rust/Dockerfile)
-	# and copied in by pack.sh. They link libhdf5_serial.so.310, but this image is based on r-base,
-	# which tracks Debian sid/testing -- so libhdf5-dev above now resolves to HDF5 2.x and provides
-	# only .320. Nothing then loads DEanalysis or dmrcate, and the failure surfaces as a dead child
-	# process on a live request. The package name IS the soname, so this pins what actually matters.
-	# The two versions co-install; -dev stays for anything needing headers. Must move in lockstep
-	# with the HDF5 the rust builder compiles against (hdf5-metno 0.9 accepts only 1.x).
+	# Runtime HDF5 for the rust binaries, which are compiled in container/rust/Dockerfile and copied in by
+	# pack.sh. That builder is also on trixie, so this is the same libhdf5_serial.so.310 that they link,
+	# and is installed with libhdf5-dev anyway; it is listed so that a drift fails here, by name.
 	libhdf5-310 \
 	liblzma-dev \
-    libdatrie1=0.2.14-2 \
-	libncurses5-dev \
+	libncurses-dev \
 	libperl-dev \
 	libssl-dev \
 	zlib1g-dev \
-    libcairo-dev \
 	libjpeg-dev \
 	libgif-dev \
     libcairo2-dev \
     libpango1.0-dev \
     libpangocairo-1.0-0 \
+    fontconfig \
+    fonts-dejavu-core \
+    fonts-texgyre \
 	sqlite3 libsqlite3-dev \
 	g++ \
     pkg-config \
     cmake \
-    # r-base tracks debian testing/sid, so an unpinned python3 floats. it floated from
-    # 3.13 to 3.14 and broke matplotlib's savefig at runtime (see python/requirements.txt),
-    # after floating once before and breaking the hdf5 soname the rust binaries link against.
-    # pinned so that drift fails the build here instead of surfacing in production.
-    # python3-dev must match python3 exactly or apt refuses to resolve the pair.
-    # these versions rotate out of the archive: when the build fails on a missing version,
-    # read the new ones and re-pin, do NOT drop the pins --
-    #   docker run --rm --platform linux/amd64 r-base:4.5.0 bash -c \
-    #     'apt-get update -qq >/dev/null 2>&1; apt-cache policy python3 python3-dev python3-venv python3-pip'
-    python3=3.14.7-3 \
-    python3-dev=3.14.7-3 \
-    python3-venv=3.14.7-3 \
-    python3-pip=26.1.2+dfsg-1 \
+    # Debian stable does not move python3 to another minor version during a release, only to a patched
+    # 3.13.x, so it is not pinned: a pin would fail the build at each Debian security update.
+    python3 \
+    python3-dev \
+    python3-venv \
+    python3-pip \
+    # R from Debian stable, which the Debian security team supports, instead of from r-base, which tracks
+    # Debian testing/sid. The R packages are installed in the rlib stage.
+    r-base-core \
+    r-base-dev \
+    r-recommended \
     x11-common \
     libx11-dev \
     libx11-data \
@@ -64,94 +76,70 @@ RUN apt-get update && apt-get install --allow-downgrades -y \
     libxt-dev \
     libreadline-dev \
     gfortran \
-    software-properties-common \
     libargtable2-dev \
 	## clean up
   && apt-get clean \
-  && rm -rf /var/lib/apt/lists/ \
-  && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
-
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Install R packages
-COPY ./R/utils ./R/utils
-RUN Rscript R/utils/install.pkgs.R
-
-# Install NVM and Node.js
-# NVM_DIR must not be under /root, which is not readable by the unprivileged app user
-ENV NVM_DIR=/opt/nvm
-ARG NODE_VERSION=24.10.0
-RUN mkdir -p "$NVM_DIR" && \
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
-    . "$NVM_DIR/nvm.sh" && \
-    nvm install $NODE_VERSION && \
-    nvm alias default $NODE_VERSION && \
-    nvm use $NODE_VERSION && \
-    echo 'export NVM_DIR="$NVM_DIR"' >> /etc/bash.bashrc && \
-    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /etc/bash.bashrc && \
-    # the node release tarball files are owned by UID 1000, which nvm keeps when extracting as root,
-    # but that is the app user's UID, which then could modify its own node install
-    chown -R root:root "$NVM_DIR"
-
-ENV PATH="/opt/nvm/versions/node/v${NODE_VERSION}/bin:$PATH"
-
-# Verify node installation
-RUN node -v && npm -v
-
-# Install python dependencies
-COPY ./python/requirements.txt ./python/requirements.txt
-RUN python3 -m venv /opt/venv && \
-    pip install --upgrade pip && \
-    pip install -r ./python/requirements.txt && \
-    ## clean up
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/downloaded_packages/ /tmp/*.rds
-
+  && rm -rf /var/lib/apt/lists/*
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
+#############################
+# Independently cached deps
+#############################
+
+# Each of the stages below only depends on the os stage, so BuildKit builds them in parallel, and a change to one,
+# such as to python/requirements.txt, rebuilds only that stage. ppbase copies their outputs.
+
+FROM os AS hts
+
 ARG htsversion=1.24
-
-RUN curl -L https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \
-    (cd htslib-${htsversion} && ./configure --enable-plugins --with-plugin-path='$(libexecdir)/htslib:/usr/libexec/htslib' && make install) && \
+WORKDIR /tmp/hts
+# installed into / for the samtools and bcftools builds, and into /staging for ppbase to copy
+RUN curl -fL https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \
+    cd htslib-${htsversion} && \
+    ./configure --enable-plugins --with-plugin-path='$(libexecdir)/htslib:/usr/libexec/htslib' && \
+    make -j"$(nproc)" && make install && make install DESTDIR=/staging && \
     ldconfig
-RUN curl -L https://github.com/samtools/samtools/releases/download/${htsversion}/samtools-${htsversion}.tar.bz2 | tar xj && \
-    (cd samtools-${htsversion} && ./configure --with-htslib=system && make install)
-RUN curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
-    (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
+RUN curl -fL https://github.com/samtools/samtools/releases/download/${htsversion}/samtools-${htsversion}.tar.bz2 | tar xj && \
+    cd samtools-${htsversion} && \
+    ./configure --with-htslib=system && \
+    make -j"$(nproc)" && make install DESTDIR=/staging
+RUN curl -fL https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
+    cd bcftools-${htsversion} && \
+    ./configure --enable-libgsl --with-htslib=system && \
+    make -j"$(nproc)" && make install DESTDIR=/staging
 
-RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
+FROM os AS rlib
 
-# The app runs as an unprivileged user. The r-base image already has a 'docker' user
-# with UID/GID 1000, rename it to 'app' instead of creating another user. The UID must
-# stay 1000: container/run.sh maps the rootless podman host account to it, and
-# check_base_user.sh expects a non-root user in the published ppserver/ppfull images.
-#
-# Another UID may also run the image, such as to match the owner of the bind-mounted files, with
-# `docker run --user <uid>:0` or a Kubernetes runAsUser with runAsGroup 0: a runtime assigns group 0 to
-# a UID that has no account in the image, so the dirs that the app writes at runtime are also owned by,
-# and writable for, group 0, or else writable for any UID, like the cache dir below. The app files under /home/root/pp/app/active are owned by root and are not
-# written at runtime, see the ppserver and ppfull stages.
-# the app user does not need the r-base 'staff' group
-#
-# The cache dir is owned by root with mode 1733, so that the app user, or another UID, may create and use a subdir
-# with a known name, but may not list the entries, change the mode, or rename or remove the entries of another user:
-# the server uses a subdir whose name is derived from a key, see hideCachedir in server/src/serverconfig.js.
-# A new mounted cache dir needs the same owner and mode on the host. For an existing mount, keep it listable for
-# the first upgraded start so legacy entries can be migrated, then apply this owner and mode.
-RUN groupmod -n app docker && \
-    usermod -l app -d /home/app -m docker && \
-    gpasswd -d app staff && \
-    chown root:0 /home/root/pp/cache && \
-    chmod 1733 /home/root/pp/cache && \
-    chgrp -R 0 /home/app && \
-    chmod -R g=u /home/app
+# The CRAN packages are installed from the Posit Package Manager binaries for trixie, instead of compiled from
+# source, which was most of the build time before the base image was r-base. P3M serves the binaries only to a
+# client that sends the R version and platform in its user agent. The Bioconductor packages are still compiled.
+# This Rprofile.site change stays in this stage, since ppbase copies only the R library dirs.
+ARG CRAN_REPO=https://p3m.dev/cran/__linux__/trixie/latest
+ENV PP_CRAN_REPO=$CRAN_REPO
+RUN echo 'options(repos = c(CRAN = Sys.getenv("PP_CRAN_REPO")), Ncpus = parallel::detectCores(), \
+    HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))' \
+    >> /etc/R/Rprofile.site
+COPY ./R/utils ./R/utils
+RUN MAKEFLAGS="-j$(nproc)" Rscript R/utils/install.pkgs.R && \
+    rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
-RUN if [ "$ARCH" = "x86_64" ]; then \
+FROM os AS py
+
+COPY ./python/requirements.txt /tmp/requirements.txt
+RUN python3 -m venv /opt/venv && \
+    /opt/venv/bin/pip install --no-cache-dir --upgrade pip && \
+    /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
+
+FROM os AS tools
+
+ARG ARCH='x86_64'
+RUN mkdir -p /home/root/pp/tools && \
+    if [ "$ARCH" = "x86_64" ]; then \
         wget https://proteinpaint.stjude.org/ppdemo/tools/linux/straw -P /home/root/pp/tools/ && \
-        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedToBed -P /home/root/pp/tools/ && \
-        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedNamedItems -P /home/root/pp/tools/ && \
-        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedInfo -P /home/root/pp/tools/ && \
+        wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedToBed -P /home/root/pp/tools/ && \
+        wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedNamedItems -P /home/root/pp/tools/ && \
+        wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedInfo -P /home/root/pp/tools/ && \
         wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/blat/gfClient -P /home/root/pp/tools/ && \
         chmod -R 755 /home/root/pp/tools; \
     else \
@@ -159,9 +147,73 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
         exit 1; \
     fi
 
+#########
+# ppbase
+#########
+
+FROM os AS ppbase
+
+ARG ARCH='x86_64'
+ENV ARCH=$ARCH
+
+# ordered from the least to the most often changed, since a changed COPY invalidates the cache of the later steps
+COPY --from=hts /staging/usr/local/ /usr/local/
+# update.packages() in install.pkgs.R may update the r-recommended packages in /usr/lib/R/library
+COPY --from=rlib /usr/lib/R/library/ /usr/lib/R/library/
+COPY --from=rlib /usr/local/lib/R/site-library/ /usr/local/lib/R/site-library/
+COPY --from=tools /home/root/pp/tools/ /home/root/pp/tools/
+# the official node image files are owned by root; the headers are for a native addon build by node-gyp
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules/ /usr/local/lib/node_modules/
+COPY --from=node /usr/local/include/node/ /usr/local/include/node/
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
+    ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
+    ln -s ../lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack && \
+    ldconfig && \
+    node -v && npm -v
+COPY --from=py /opt/venv/ /opt/venv/
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN mkdir -p /home/root/pp/app /home/root/pp/tp /home/root/pp/cache
+
+# The app runs as an unprivileged user 'app', with UID/GID 1000. The UID must stay 1000: container/run.sh maps
+# the rootless podman host account to it, and check_base_user.sh expects a non-root user in the published
+# ppserver/ppfull images.
+#
+# Another UID may also run the image, such as to match the owner of the bind-mounted files, with
+# `docker run --user <uid>:0` or a Kubernetes runAsUser with runAsGroup 0: a runtime assigns group 0 to
+# a UID that has no account in the image, so the dirs that the app writes at runtime are also owned by,
+# and writable for, group 0, or else writable for any UID, like the cache dir below. The app files under /home/root/pp/app/active are owned by root and are not
+# written at runtime, see the ppserver and ppfull stages.
+#
+# The cache dir is owned by root with mode 1733, so that the app user, or another UID, may create and use a subdir
+# with a known name, but may not list the entries, change the mode, or rename or remove the entries of another user:
+# the server uses a subdir whose name is derived from a key, see hideCachedir in server/src/serverconfig.js.
+# A new mounted cache dir needs the same owner and mode on the host. For an existing mount, keep it listable for
+# the first upgraded start so legacy entries can be migrated, then apply this owner and mode.
+RUN groupadd -g 1000 app && \
+    useradd -m -u 1000 -g app -d /home/app -s /bin/bash app && \
+    chown root:0 /home/root/pp/cache && \
+    chmod 1733 /home/root/pp/cache && \
+    chgrp -R 0 /home/app && \
+    chmod -R g=u /home/app
+
+# The Debian security updates since the pinned base image, applied on top of the cached layers so that they do not
+# require rebuilding R or python. build.sh sets OS_UPDATES to the current date, so this step runs at most once a day;
+# a stable-release update keeps the library ABIs, which the compiled R and python packages link against.
+ARG OS_UPDATES=""
+RUN echo "OS_UPDATES=$OS_UPDATES" && \
+    apt-get update && apt-get upgrade -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# the R packages must load against the libraries in this image, after the updates above
+COPY ./R/utils ./R/utils
+RUN Rscript R/utils/validate.pkgs.R
+
 # the interpreter and tool dirs are installed by root and are only read by the app user
 RUN for d in /opt/venv /opt/venv/lib/python3*/site-packages /usr/local/lib/R/site-library /usr/lib/R/site-library \
-        /usr/local/bin /home/root/pp/tools "$NVM_DIR"; do \
+        /usr/lib/R/library /usr/local/bin /usr/local/lib/node_modules /home/root/pp/tools; do \
         if [ -e "$d" ] && su -s /bin/sh app -c "test -w '$d'"; then echo "ERROR: $d is writable by the app user"; exit 1; fi; \
     done
 
@@ -200,14 +252,13 @@ RUN find . \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
 
 # The rust binaries are compiled in a different image (container/rust/Dockerfile, Debian trixie) and
 # arrive here inside the npm package, so this is the first point where they meet the libraries they
-# will actually run against. This image is based on r-base, which tracks Debian sid, so an apt bump
-# can silently withdraw a soname they link -- exactly how a build once shipped binaries that could
-# not load and 502'd every wilcoxon DE request. An unloadable binary must not reach a published
-# image, so fail the build here rather than at request time.
+# will actually run against. Both images are now on trixie, but they are built and pinned separately,
+# and a build once shipped binaries that could not load and 502'd every wilcoxon DE request, when this
+# image was on a base that tracked Debian sid. An unloadable binary must not reach a published image,
+# so fail the build here rather than at request time.
 #
 # Note the equivalent check in rust/extract_binaries.sh only proves the BUILDER is self-consistent;
-# because the builder deliberately does NOT share this base (hdf5-metno 0.9 cannot compile against
-# the HDF5 2.x that r-base provides), this is the check that actually catches drift.
+# this is the check that catches a drift between the builder and this image.
 RUN bindir=node_modules/@sjcrh/proteinpaint-rust/target/release; \
     if [ ! -d "$bindir" ]; then \
       echo "WARNING: $bindir not found, skipping shared library check" >&2; \
