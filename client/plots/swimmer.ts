@@ -2,12 +2,13 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { PlotBase } from '#plots/PlotBase.ts'
 import { controlsInit } from './controls'
 import { dofetch3 } from '#common/dofetch'
-import { Menu, DownloadMenu, axisstyle, shapes, shapeSelector, make_radios } from '#dom'
+import { Menu, DownloadMenu, axisstyle, shapes, shapeSelector, make_radios, DataPointInteractions } from '#dom'
 import { rgb } from 'd3-color'
 import { getCombinedTermFilter } from '#filter'
 import { getColors } from '#shared/common.js'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
+import { create, pointer } from 'd3-selection'
 import type {
 	SwimmerLane,
 	SwimmerLegendItem,
@@ -18,7 +19,7 @@ import type {
 } from '#types'
 import { getTermValue } from './sampleView.ts'
 import { getT0T2defaultQ } from './summaryQ.ts'
-import { fillTermWrapper } from '#termsetting'
+import { fillTermWrapper, termsettingInit } from '#termsetting'
 
 /*
 swimmer plot: one horizontal lane per patient. the thin grey base bar spans from
@@ -60,46 +61,81 @@ const labelGap = 14
 /** pixel width of the legend column, right of the lanes */
 const legendWidth = 190
 
+/** a drawn event marker, in the pixel space of its panel, for the hover and click hit test */
+type MarkerHit = {
+	p: SwimmerPoint
+	lane: SwimmerLane
+	entry: LegendEntry
+	/** legend entry of the "mark by" category of a marked point */
+	mark?: LegendEntry
+	shape: string
+	color: string
+	/** marker center */
+	x: number
+	y: number
+	height: number
+	/** half the drawn width of the shape */
+	halfWidth: number
+}
+
+/** one lane of a panel, for hovering its interval segments and base bar */
+type LaneRow = {
+	lane: SwimmerLane
+	end: number
+	/** drawn segments, with their pixel extent incl. the arrowhead of an ongoing interval */
+	segments: { r: SwimmerLane['ranges'][number]; entry: LegendEntry; x0: number; x1: number }[]
+}
+
 /** bounding box of each shape path within its 16x16 icon box, measured once per shape. the icons fill
 that box unevenly (e.g. the cross spans 12px, the circle 16px), so sizing by the box would give markers
 of different heights */
 const shapeBBox = new Map<string, { x: number; y: number; width: number; height: number }>()
 
-/** draw an event marker centered at (cx, cy) inside holder, scaled so the visible shape is `height` px tall.
-the shape is a key of the shared #dom shapes. a transparent
-rect keeps thin shapes (e.g. a cross) easy to hover */
-function drawMarker(holder, shapeKey: string, cx: number, cy: number, height: number, color: string) {
+/** the #dom shape of a marker `height` px tall: its path transform, centering the shape at 0,0, and its drawn
+half width. uses the measured bbox of the shape, else its 16x16 icon box */
+function getMarkerGeometry(shapeKey: string, height: number) {
 	const key = shapes[shapeKey] ? shapeKey : 'filledCircle'
 	const shape = shapes[key]
-	const g = holder.append('g').attr('transform', `translate(${cx},${cy})`)
-	g.append('rect')
-		.attr('x', -height / 2)
-		.attr('y', -height / 2)
-		.attr('width', height)
-		.attr('height', height)
-		.attr('fill', 'transparent')
-	const path = g.append('path').attr('d', shape.path).attr('fill', color)
-	let box = shapeBBox.get(key)
-	if (!box) {
-		const b = path.node().getBBox()
-		// getBBox() is all zeros while the svg is hidden; fall back to the icon box without caching
-		if (b.width && b.height) {
-			box = { x: b.x, y: b.y, width: b.width, height: b.height }
-			shapeBBox.set(key, box)
-		}
-	}
-	const bb = box || { x: 0, y: 0, width: 16, height: 16 }
+	const bb = shapeBBox.get(key) || { x: 0, y: 0, width: 16, height: 16 }
 	// solid shapes get a thin white halo, to stand out on segments and on each other; line shapes (cross,
 	// outlines) are thin filled paths, so a same-colored stroke thickens them to stay legible. the stroke (px)
 	// is subtracted from the height
 	const strokePx = shape.isFilled ? Math.min(1, height * 0.1) : Math.max(1, height * 0.08)
 	const scale = Math.max(0.1, height - strokePx) / bb.height
+	return {
+		shape,
+		strokePx,
+		scale,
+		transform: `scale(${scale}) translate(${-(bb.x + bb.width / 2)},${-(bb.y + bb.height / 2)})`,
+		halfWidth: (bb.width * scale + strokePx) / 2
+	}
+}
+
+/** draw an event marker centered at (cx, cy) inside holder, scaled so the visible shape is `height` px tall.
+the shape is a key of the shared #dom shapes */
+function drawMarker(holder, shapeKey: string, cx: number, cy: number, height: number, color: string) {
+	const key = shapes[shapeKey] ? shapeKey : 'filledCircle'
+	const g = holder.append('g').attr('transform', `translate(${cx},${cy})`)
+	const path = g.append('path').attr('d', shapes[key].path).attr('fill', color)
+	if (!shapeBBox.has(key)) {
+		const b = path.node().getBBox()
+		// getBBox() is all zeros while the svg is hidden or detached; the icon box is used then, without caching
+		if (b.width && b.height) shapeBBox.set(key, { x: b.x, y: b.y, width: b.width, height: b.height })
+	}
+	const m = getMarkerGeometry(key, height)
 	path
-		.attr('transform', `scale(${scale}) translate(${-(bb.x + bb.width / 2)},${-(bb.y + bb.height / 2)})`)
-		.attr('stroke', shape.isFilled ? 'white' : color)
-		.attr('stroke-width', strokePx / scale)
+		.attr('transform', m.transform)
+		.attr('stroke', m.shape.isFilled ? 'white' : color)
+		.attr('stroke-width', m.strokePx / m.scale)
 		.attr('stroke-linejoin', 'round')
 	return g
+}
+
+/** a 14px marker icon as svg markup, for html table cells */
+function getMarkerIconHtml(shapeKey: string, color: string): string {
+	const svg = create('svg').attr('width', 14).attr('height', 14).style('vertical-align', 'middle')
+	drawMarker(svg, shapeKey, 7, 7, 12, color)
+	return svg.node()!.outerHTML
 }
 
 type SwimmerSettings = {
@@ -170,8 +206,11 @@ class Swimmer extends PlotBase implements RxComponent {
 				.style('opacity', 0.7),
 			tip: new Menu({ padding: '5px' })
 		}
-		this.renderer = new SwimmerRenderer(this.app, this.dom, settings =>
-			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { swimmer: settings } } })
+		this.renderer = new SwimmerRenderer(
+			this.app,
+			this.dom,
+			settings => this.app.dispatch({ type: 'plot_edit', id: this.id, config: { settings: { swimmer: settings } } }),
+			pointTerm => this.app.dispatch({ type: 'plot_edit', id: this.id, config: { pointTerm } })
 		)
 		const laneName = this.renderer.laneType?.name || 'sample'
 		this.components = {
@@ -324,19 +363,30 @@ export class SwimmerRenderer {
 	pointSampleAnno = new Map<string, Promise<{ label: string; value: string }[]>>()
 	/** menu to edit a legend entry, reused across legend clicks */
 	legendMenu?: Menu
+	/** menu of the "mark by" term pill in the legend, shared with pointTermPill */
+	pointTermMenu?: Menu
+	/** termsetting behind the legend's "mark by" pill, for the same edit, replace and remove options as the
+	controls */
+	pointTermPill?: any
+	/** hover and click handling of each divide-by panel, replaced on every render */
+	interactions: DataPointInteractions<MarkerHit>[] = []
 
 	/** called with changed settings (e.g. legend edits, time reference); without it the renderer keeps legend
 	changes itself and redraws, and offers no time reference radio buttons since switching needs new lanes */
 	onSettingsChange?: (settings: Partial<SwimmerSettings>) => void
+	/** called with the new "mark by" tw, or null when removed, from the legend pill of that term */
+	onPointTermChange?: (tw: any) => void
 
 	constructor(
 		app: any,
 		dom: { plotDiv: any; noteDiv: any; tip: Menu },
-		onSettingsChange?: (settings: Partial<SwimmerSettings>) => void
+		onSettingsChange?: (settings: Partial<SwimmerSettings>) => void,
+		onPointTermChange?: (tw: any) => void
 	) {
 		this.app = app
 		this.dom = dom
 		this.onSettingsChange = onSettingsChange
+		this.onPointTermChange = onPointTermChange
 		const roots = Object.values(app.vocabApi?.termdbConfig?.sampleTypes || {}).filter((t: any) => t.parent_id == null)
 		if (roots.length == 1) this.laneType = roots[0] as { name: string; plural_name: string }
 	}
@@ -483,6 +533,8 @@ export class SwimmerRenderer {
 		plotDiv.selectAll('*').remove()
 		this.dom.noteDiv.selectAll('*').remove()
 		delete this.dom.svg
+		for (const i of this.interactions) i.destroy()
+		this.interactions = []
 
 		const ref: SwimmerTimeReference | undefined = this.swimmer.timeReferences?.find(
 			(r: SwimmerTimeReference) => r.key == this.timeReference
@@ -581,6 +633,8 @@ export class SwimmerRenderer {
 			}
 			const plotHeight = group.lanes.length * s.rowHeight
 			const mainG = svg.append('g').attr('transform', `translate(${labelWidth},${yOffset})`)
+			const markers: MarkerHit[] = []
+			const rows: LaneRow[] = []
 
 			// vertical grid lines behind the lanes
 			mainG
@@ -599,11 +653,11 @@ export class SwimmerRenderer {
 			for (const [i, { lane, end }] of group.lanes.entries()) {
 				const y = i * s.rowHeight
 				const g = mainG.append('g').attr('transform', `translate(0,${y})`)
+				const row: LaneRow = { lane, end, segments: [] }
+				rows.push(row)
 
-				// base bar: a thin line, hovered through a transparent rect of the bar height
-				const baseG = g.append('g')
-				baseG
-					.append('rect')
+				// base bar: a thin line
+				g.append('rect')
 					.attr('x', x(0))
 					.attr('y', (s.rowHeight - baseH) / 2)
 					.attr('width', Math.max(0, x(end) - x(0)))
@@ -611,20 +665,6 @@ export class SwimmerRenderer {
 					.attr('fill', '#999')
 					.attr('fill-opacity', 0.5)
 					.attr('shape-rendering', 'crispEdges')
-				baseG
-					.append('rect')
-					.attr('x', x(0))
-					.attr('y', (s.rowHeight - barH) / 2)
-					.attr('width', Math.max(0, x(end) - x(0)))
-					.attr('height', barH)
-					.attr('fill', 'transparent')
-				baseG
-					.on('mouseover', event => {
-						tip.clear().show(event.clientX, event.clientY)
-						tip.d.append('div').style('font-weight', 'bold').text(lane.sample)
-						tip.d.append('div').text(`Lane end: ${fmt(end)} (${timeLabel.toLowerCase()})`)
-					})
-					.on('mouseout', () => tip.hide())
 
 				// interval segments. one without an end (blank or NA in the file) is ongoing: drawn up to the lane
 				// end, with an arrowhead
@@ -633,7 +673,7 @@ export class SwimmerRenderer {
 					if (entry.hidden) continue
 					const segEnd = r.end ?? Math.max(end, r.start)
 					const segTop = (s.rowHeight - segH) / 2
-					const seg = g.append('g').on('mouseout', () => tip.hide())
+					const seg = g.append('g')
 					// translucent, so overlapping intervals and the base bar show through
 					seg.attr('fill-opacity', 0.75)
 					seg
@@ -644,8 +684,9 @@ export class SwimmerRenderer {
 						.attr('height', segH)
 						.attr('fill', entry.color)
 						.attr('shape-rendering', 'crispEdges')
+					const xe = x(r.start) + Math.max(1, x(segEnd) - x(r.start))
+					row.segments.push({ r, entry, x0: x(r.start), x1: r.end == null ? xe + segH * 0.8 : xe })
 					if (r.end == null) {
-						const xe = x(r.start) + Math.max(1, x(segEnd) - x(r.start))
 						seg
 							.append('path')
 							.attr(
@@ -654,18 +695,6 @@ export class SwimmerRenderer {
 							)
 							.attr('fill', entry.color)
 					}
-					seg.on('mouseover', event => {
-						tip.clear().show(event.clientX, event.clientY)
-						tip.d.append('div').style('font-weight', 'bold').text(lane.sample)
-						tip.d.append('div').text(`${entry.label}${entry.label != r.category ? ` (${r.category})` : ''}`)
-						tip.d
-							.append('div')
-							.text(
-								r.end == null
-									? `From ${fmt(r.start)}, ongoing (${timeLabel.toLowerCase()})`
-									: `${fmt(r.start)} to ${fmt(r.end)} (${timeLabel.toLowerCase()})`
-							)
-					})
 				}
 
 				// events
@@ -676,28 +705,15 @@ export class SwimmerRenderer {
 					// a marked point is drawn by its "mark by" category
 					const mark = this.isMarkedPoint(p) ? pointCategories.byKey.get(p.category || noValueCategory) : undefined
 					if (mark?.hidden) continue
-					const dot = drawMarker(
-						g,
-						mark?.shape || entry.shape,
-						x(p.time),
-						s.rowHeight / 2,
-						markerH * entry.size,
-						mark?.color || entry.color
-					)
-						.attr('data-event', p.event)
-						.on('mouseover', event => {
-							tip.clear().show(event.clientX, event.clientY)
-							tip.d.append('div').style('font-weight', 'bold').text(lane.sample)
-							tip.d.append('div').text(`${entry.label}: ${fmt(p.time)} (${timeLabel.toLowerCase()})`)
-							if (mark) tip.d.append('div').text(`${this.pointTerm.term?.name}: ${mark.label}`)
-							if (p.sample) {
-								tip.d.append('div').text(`Sample: ${p.sample}`)
-								if (p.sampleId !== undefined && entry.sampleTerms?.length)
-									this.showPointSampleAnno(tip, p.sampleId, entry.sampleTerms)
-								tip.d.append('div').style('font-size', '0.8em').style('opacity', 0.7).text('Click to open sample view')
-							}
-						})
-						.on('mouseout', () => tip.hide())
+					const shape = mark?.shape || entry.shape
+					const color = mark?.color || entry.color
+					const height = markerH * entry.size
+					const cx = x(p.time)
+					// hover and click go through the panel cover, see attachInteractions()
+					const dot = drawMarker(g, shape, cx, s.rowHeight / 2, height, color).attr('data-event', p.event)
+					// after drawMarker(), which measures the shape on its first use
+					const { halfWidth } = getMarkerGeometry(shape, height)
+					markers.push({ p, lane, entry, mark, shape, color, x: cx, y: y + s.rowHeight / 2, height, halfWidth })
 					if (p.sample && p.sampleId !== undefined) {
 						const sample = { sampleId: p.sampleId, sampleName: p.sample }
 						dot
@@ -705,11 +721,6 @@ export class SwimmerRenderer {
 							.attr('role', 'button')
 							.attr('tabindex', 0)
 							.attr('aria-label', `Open sample view of ${p.sample}`)
-							.style('cursor', 'pointer')
-							.on('click', () => {
-								tip.hide()
-								this.openSampleView(sample)
-							})
 							.on('keydown', (event: KeyboardEvent) => {
 								if (event.key === 'Enter' || event.key === ' ') {
 									event.preventDefault()
@@ -747,6 +758,16 @@ export class SwimmerRenderer {
 				}
 			}
 
+			this.attachInteractions(mainG, markers, rows, {
+				plotWidth: s.plotWidth,
+				rowHeight: s.rowHeight,
+				segH,
+				barH,
+				x,
+				timeLabel,
+				fmt
+			})
+
 			// x axis
 			const axisG = mainG.append('g').attr('transform', `translate(0,${plotHeight + 2})`)
 			axisG.call(axisBottom(x).tickValues(ticks))
@@ -774,11 +795,12 @@ export class SwimmerRenderer {
 	}
 
 	/** returns the legend height. events linked to samples (e.g. "CSF sample") are listed last. with a "mark
-	by" term their markers take the term's category colors and shapes, so the event row has no icon and names
-	the term, and the term's categories follow, indented:
+	by" term their markers take the term's category colors and shapes, so the event row has no icon and is
+	followed by the term as a pill, as in the controls, then the term's categories, indented:
 	  Events
 	    Follow-up
-	    CSF sample by <term name>
+	    Mark CSF sample by
+	      [term name]
 	      category1
 	      category2 */
 	renderLegend(g, categories: LegendEntry[], events: LegendEntry[], pointCategories: LegendEntry[] = []): number {
@@ -865,12 +887,39 @@ export class SwimmerRenderer {
 					item('events', e, ordered, marker)
 					continue
 				}
-				// markers take the mark-by term's category colors and shapes: no icon, no color or shape option
-				item('events', e, ordered, () => {}, {
-					allowColor: false,
-					allowShape: false,
-					label: `${e.label} by ${this.pointTerm.term?.name || ''}`
+				// markers take the mark-by term's category colors and shapes: no icon. the event's legend options are
+				// in the menu of the term pill
+				g.append('text')
+					.attr('x', 20)
+					.attr('y', y + 10)
+					.attr('font-size', 12)
+					.attr('fill', '#333')
+					.style('opacity', e.hidden ? 0.4 : 1)
+					.style('text-decoration', e.hidden ? 'line-through' : 'none')
+					.text(`Mark ${e.label} by`)
+				y += lineH
+				const name = this.pointTerm.term?.name || ''
+				const pill = g
+					.append('g')
+					.attr('transform', `translate(${indent},${y})`)
+					.attr('data-testid', 'sjpp-swimmer-legend-pointterm')
+					.attr('role', 'button')
+					.attr('tabindex', 0)
+					.attr('aria-label', `Edit ${name}`)
+					.style('cursor', 'pointer')
+				const pillRect = pill.append('rect').attr('rx', 6).attr('height', 20).attr('fill', '#cfe2f3')
+				const max = Math.floor((26 * (legendWidth - indent - 12)) / legendWidth)
+				const pillText = pill.append('text').attr('x', 6).attr('y', 14).attr('font-size', 12).text(fit(name, max))
+				if (name.length > max) pill.append('title').text(name)
+				pillRect.attr('width', (pillText.node().getComputedTextLength() || name.length * 7) + 12)
+				const showMenu = () => this.showPointTermMenu(pill.node(), e, ordered)
+				pill.on('click', showMenu).on('keydown', (event: KeyboardEvent) => {
+					if (event.key === 'Enter' || event.key === ' ') {
+						event.preventDefault()
+						showMenu()
+					}
 				})
+				y += 24
 			}
 			if (marked) {
 				for (const e of pointCategories) item('pointCategories', e, pointCategories, marker, { x: indent })
@@ -925,7 +974,47 @@ export class SwimmerRenderer {
 		this.dom.tip.hide()
 		if (!this.legendMenu) this.legendMenu = new Menu({ padding: '0px' })
 		const menu = this.legendMenu
-		const div = menu.clear().d.append('div')
+		this.addLegendOptions(menu, menu.clear().d.append('div'), type, e, entries, opts)
+		menu.showunder(event.target)
+	}
+
+	/** menu of the "mark by" term pill in the legend: the edit, replace and remove options of the controls'
+	"Mark ... by" pill, then the legend options of the marked event (e), without color or shape */
+	async showPointTermMenu(node: Element, e: LegendEntry, entries: LegendEntry[]) {
+		this.dom.tip.hide()
+		this.legendMenu?.hide()
+		if (!this.pointTermMenu) this.pointTermMenu = new Menu({ padding: '0px' })
+		const menu = this.pointTermMenu
+		if (!this.pointTermPill)
+			this.pointTermPill = termsettingInit({
+				vocabApi: this.app.vocabApi,
+				renderAs: 'none',
+				tip: menu,
+				menuOptions: '*',
+				usecase: { target: 'swimmer', detail: 'pointTerm', sampleTypes: this.swimmer.pointSampleTypes },
+				numericEditMenuVersion: ['discrete'],
+				defaultQ4fillTW: getT0T2defaultQ(),
+				callback: tw => {
+					menu.hide()
+					this.onPointTermChange?.(tw)
+				}
+			})
+		// a copy, since main() adds .tw to its argument and the state is frozen
+		await this.pointTermPill.main({ ...this.pointTerm })
+		// clears the menu, adds the term options and shows the menu under node
+		this.pointTermPill.showMenu(null, node)
+		this.addLegendOptions(menu, menu.d.append('div'), 'events', e, entries, { allowColor: false, allowShape: false })
+	}
+
+	/** legend options of entry e, appended to div inside menu */
+	addLegendOptions(
+		menu: Menu,
+		div,
+		type: keyof LegendOverrides,
+		e: LegendEntry,
+		entries: LegendEntry[],
+		opts: { allowColor: boolean; allowShape: boolean }
+	) {
 		const option = (text: string, edit: () => { [label: string]: LegendOverride }) =>
 			div
 				.append('div')
@@ -967,13 +1056,15 @@ export class SwimmerRenderer {
 					})
 				})
 		}
-		menu.showunder(event.target)
 	}
 
 	/** remove the body-mounted menus and their body listeners */
 	destroy() {
+		for (const i of this.interactions) i.destroy()
 		this.dom.tip.destroy()
 		this.legendMenu?.destroy()
+		// also destroys pointTermMenu, its tip
+		this.pointTermPill?.destroy()
 	}
 
 	/** merge changes into the legend overrides, then save them through onSettingsChange or redraw locally */
@@ -990,12 +1081,200 @@ export class SwimmerRenderer {
 		}
 	}
 
-	/** list annotations of a point's own sample (e.g. a CSF sample) in the open tooltip, using the same
-	single-sample query and value formatting as sample view. termIds comes from the event's sampleTerms in
+	/** whether a marker opens a sample view on click: a point linked to its own sample (e.g. a CSF dot) */
+	isLinked(d: MarkerHit) {
+		return !!d.p.sample && d.p.sampleId !== undefined
+	}
+
+	/** hover and click of a panel, through a transparent cover over its lanes. the shared DataPointInteractions
+	hit-tests the markers; when none is under the cursor, a hover shows the interval segments or the base bar
+	under it. a marker is hit when the cursor is within its drawn left and right edges, anywhere in its lane's
+	row, so only markers whose shapes overlap at the cursor are listed together. a click on several
+	linked markers opens a menu to pick the sample to view */
+	attachInteractions(
+		mainG,
+		markers: MarkerHit[],
+		rows: LaneRow[],
+		o: {
+			plotWidth: number
+			rowHeight: number
+			segH: number
+			barH: number
+			x: (t: number) => number
+			timeLabel: string
+			fmt: (d: number) => string
+		}
+	) {
+		const tip = this.dom.tip
+		const time = `(${o.timeLabel.toLowerCase()})`
+		const hoverLayer = mainG.append('g').style('pointer-events', 'none')
+		const cover = mainG
+			.append('rect')
+			.attr('data-testid', 'sjpp-swimmer-cover')
+			.attr('width', o.plotWidth)
+			.attr('height', rows.length * o.rowHeight)
+			.attr('fill', 'transparent')
+			.style('pointer-events', 'all')
+		// cursor in panel pixels; the row number of the cursor, and y snapped to the center of that row, where its
+		// markers are, so the hit distance is the horizontal one
+		const getCursor = (event: MouseEvent) => {
+			const [mx, my] = pointer(event, mainG.node())
+			const i = Math.floor(my / o.rowHeight)
+			return { mx, my, i, cy: (i + 0.5) * o.rowHeight }
+		}
+		let hovered: MarkerHit[] = []
+		const dpi = new DataPointInteractions<MarkerHit>({
+			cover,
+			hoverLayer,
+			hoverTip: tip,
+			points: markers,
+			getX: d => d.x,
+			getY: d => d.y,
+			toLocalCoords: event => {
+				const { mx, cy } = getCursor(event)
+				return [mx, cy]
+			},
+			hitRadius: Math.max(0, ...markers.map(d => d.halfWidth)),
+			perDotRadius: d => d.halfWidth,
+			// outline of the marker's shape, 2px larger on each side
+			toHoverSpec: d => {
+				const m = getMarkerGeometry(d.shape, d.height + 4)
+				return {
+					path: m.shape.path,
+					transform: `translate(${d.x},${d.y}) ${m.transform}`,
+					stroke: 'black',
+					fill: 'none'
+				}
+			},
+			itemNoun: 'event',
+			renderSingleHoverTooltip: (d, container) => this.renderMarkerTip(d, container, time, o.fmt),
+			buildMultiHitTableData: dots => this.buildMarkersTable(dots, o.timeLabel, o.fmt),
+			onHover: dots => {
+				hovered = dots
+				cover.style('cursor', dots.some(d => this.isLinked(d)) ? 'pointer' : 'default')
+			},
+			onSingleClick: (d, event, ctx) => this.openMarkerSamples([d], event, ctx, time, o.fmt),
+			onMultiClick: (dots, event, ctx) => this.openMarkerSamples(dots, event, ctx, time, o.fmt)
+		})
+		dpi.attach()
+		this.interactions.push(dpi)
+
+		// runs after the DataPointInteractions mousemove handler, which sets `hovered`
+		cover.on('mousemove.lane', (event: MouseEvent) => {
+			if (hovered.length || dpi.clickMenu.d.style('display') != 'none') return
+			const { mx, my, i, cy } = getCursor(event)
+			const row = rows[i]
+			if (!row) return tip.hide()
+			const dy = Math.abs(my - cy)
+			const segments = dy <= o.segH / 2 ? row.segments.filter(sg => mx >= sg.x0 && mx <= sg.x1) : []
+			const onBase = dy <= o.barH / 2 && mx >= o.x(0) && mx <= o.x(row.end)
+			if (!segments.length && !onBase) return tip.hide()
+			tip.clear()
+			tip.d.append('div').style('font-weight', 'bold').text(row.lane.sample)
+			for (const { r, entry } of segments) {
+				const div = tip.d.append('div').attr('data-testid', 'sjpp-swimmer-tip-interval')
+				div
+					.append('svg')
+					.attr('width', 14)
+					.attr('height', 10)
+					.style('margin-right', '5px')
+					.append('rect')
+					.attr('y', 1)
+					.attr('width', 14)
+					.attr('height', 8)
+					.attr('fill', entry.color)
+				div.append('span').text(`${entry.label}${entry.label != r.category ? ` (${r.category})` : ''}`)
+				tip.d
+					.append('div')
+					.style('margin-left', '19px')
+					.text(
+						r.end == null ? `From ${o.fmt(r.start)}, ongoing ${time}` : `${o.fmt(r.start)} to ${o.fmt(r.end)} ${time}`
+					)
+			}
+			if (!segments.length) tip.d.append('div').text(`Lane end: ${o.fmt(row.end)} ${time}`)
+			tip.show(event.clientX, event.clientY)
+		})
+	}
+
+	/** hover tooltip of one marker: the lane name, the event with its legend icon, and a linked point's sample
+	with its annotations */
+	renderMarkerTip(d: MarkerHit, container, time: string, fmt: (d: number) => string) {
+		const { p, lane, entry, mark } = d
+		container.append('div').style('font-weight', 'bold').text(lane.sample)
+		const row = container.append('div').attr('data-testid', 'sjpp-swimmer-tip-event')
+		row.append('span').style('margin-right', '5px').html(getMarkerIconHtml(d.shape, d.color))
+		row.append('span').text(`${entry.label}: ${fmt(p.time)} ${time}`)
+		if (mark) container.append('div').text(`${this.pointTerm.term?.name}: ${mark.label}`)
+		if (!p.sample) return
+		container.append('div').text(`Sample: ${p.sample}`)
+		if (p.sampleId === undefined) return
+		if (entry.sampleTerms?.length) this.showPointSampleAnno(container, p.sampleId, entry.sampleTerms)
+		container.append('div').style('font-size', '0.8em').style('opacity', 0.7).text('Click to open sample view')
+	}
+
+	/** multi-hit hover table of overlapping markers, one row per marker with its legend icon */
+	buildMarkersTable(dots: MarkerHit[], timeLabel: string, fmt: (d: number) => string) {
+		const hasSample = dots.some(d => d.p.sample)
+		const hasMark = dots.some(d => d.mark)
+		const columns: any[] = [
+			{ label: '' },
+			{ label: 'Event' },
+			{ label: timeLabel, sortable: true },
+			...(hasMark ? [{ label: this.pointTerm.term?.name || '' }] : []),
+			...(hasSample ? [{ label: 'Sample' }] : [])
+		]
+		const rows = dots.map(d => [
+			{ html: getMarkerIconHtml(d.shape, d.color) },
+			{ value: d.entry.label },
+			{ value: fmt(d.p.time) },
+			...(hasMark ? [{ value: d.mark?.label || '' }] : []),
+			...(hasSample ? [{ value: d.p.sample || '' }] : [])
+		])
+		return { columns, rows }
+	}
+
+	/** click on markers: opens the sample view of the one linked marker, or a menu to pick one of several */
+	openMarkerSamples(dots: MarkerHit[], event: MouseEvent, ctx, time: string, fmt: (d: number) => string) {
+		const linked = dots.filter(d => this.isLinked(d))
+		if (linked.length < 2) {
+			ctx.dismiss()
+			if (linked.length) this.openSampleView({ sampleId: linked[0].p.sampleId!, sampleName: linked[0].p.sample! })
+			return
+		}
+		const menu: Menu = ctx.clickMenu
+		menu.clear()
+		menu.d.append('div').style('padding', '5px 10px').style('opacity', 0.7).text('Open sample view of')
+		for (const d of linked) {
+			const sample = { sampleId: d.p.sampleId!, sampleName: d.p.sample! }
+			const option = menu.d
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('data-testid', 'sjpp-swimmer-sample-choice')
+				.attr('role', 'button')
+				.attr('tabindex', 0)
+				.on('click', () => {
+					menu.hide()
+					this.openSampleView(sample)
+				})
+				.on('keydown', (e: KeyboardEvent) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault()
+						menu.hide()
+						this.openSampleView(sample)
+					}
+				})
+			option.append('span').style('margin-right', '5px').html(getMarkerIconHtml(d.shape, d.color))
+			option.append('span').text(`${d.p.sample} (${d.entry.label}: ${fmt(d.p.time)} ${time})`)
+		}
+		menu.show(event.clientX, event.clientY)
+	}
+
+	/** list annotations of a point's own sample (e.g. a CSF sample) in container of the open tooltip, using the
+	same single-sample query and value formatting as sample view. termIds comes from the event's sampleTerms in
 	the dataset config and sets which terms are shown and in what order. the table fills in only if the
 	tooltip still shows this point */
-	async showPointSampleAnno(tip, sampleId: number, termIds: string[]) {
-		const holder = tip.d.append('div').attr('data-sampleid', sampleId).style('margin', '4px 0')
+	async showPointSampleAnno(container, sampleId: number, termIds: string[]) {
+		const holder = container.append('div').attr('data-sampleid', sampleId).style('margin', '4px 0')
 		holder.append('div').style('opacity', 0.6).text('Loading annotations ...')
 		let rows: { label: string; value: string }[]
 		try {
