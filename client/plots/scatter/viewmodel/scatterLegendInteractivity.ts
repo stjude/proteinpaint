@@ -48,7 +48,6 @@ export class ScatterLegendInteractivity {
 				menu.hide()
 				this.dispatchConfig(name, tw)
 			})
-		console.log(remainingVisible, key)
 		if (!(remainingVisible.length === 1 && remainingVisible[0] === key)) {
 			div
 				.append('div')
