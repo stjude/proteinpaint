@@ -999,8 +999,9 @@ export class SwimmerRenderer {
 					this.onPointTermChange?.(tw)
 				}
 			})
-		// a copy, since main() adds .tw to its argument and the state is frozen
-		await this.pointTermPill.main({ ...this.pointTerm })
+		// main() adds .tw to its argument and may fill its nested q in place (e.g. q.type of custom bins), so
+		// clone the frozen state wrapper
+		await this.pointTermPill.main(structuredClone(this.pointTerm))
 		// clears the menu, adds the term options and shows the menu under node
 		this.pointTermPill.showMenu(null, node)
 		this.addLegendOptions(menu, menu.d.append('div'), 'events', e, entries, { allowColor: false, allowShape: false })
