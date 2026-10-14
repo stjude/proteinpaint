@@ -28,9 +28,10 @@ export class ScatterLegendInteractivity {
 		const allKeys = getLegendKeys()
 		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 		// Only consider values that are not hidden by default (uncomputable values)
+		const allHidden = Object.keys(tw.q?.hiddenValues ?? {})
 		const userHidden = Object.keys(tw.q?.hiddenValues ?? {}).filter(k => !tw.term.values?.[k]?.uncomputable)
 		const hiddenCount = userHidden.length
-		const remainingVisible = [...allKeys].filter(key => !userHidden.includes(key))
+		const remainingVisible = [...allKeys].filter(key => !allHidden.includes(key))
 		if (hidden && hiddenCount == 1 && userHidden[0] == key) {
 			//show hidden category and skip menu
 			this.hideCategory(tw, key, false)
