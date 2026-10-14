@@ -25,6 +25,18 @@ export function datasetRequiresAuth(termdbConfig: any): boolean {
 	return !!termdbConfig?.requiredAuth?.length
 }
 
+/**
+ * The sign-in status line.
+ * role: clientAuthResult.userTab.role, the role of the user as named by the dataset. 'public' is a
+ * login without a user, which reads 'Public access'.
+ */
+export function getAuthStatus(signedIn: boolean, role?: string): string {
+	if (!signedIn) return 'Requires sign-in'
+	if (!role || typeof role != 'string') return 'Signed in'
+	if (role.toLowerCase() == 'public') return 'Public access'
+	return `${role.charAt(0).toUpperCase()}${role.slice(1)} signed in`
+}
+
 export class MassUser {
 	static type = 'user'
 
@@ -109,15 +121,26 @@ export class MassUser {
 		div.style('display', 'block')
 		const vocabApi: any = this.app.vocabApi
 		const signedIn = vocabApi.hasVerifiedToken()
+		// clientAuthResult.userTab is set by the dataset, from the jwt payload of the role
+		const userTab = this.state.termdbConfig.clientAuthResult?.userTab
 		div
 			.append('div')
 			.attr('data-testid', 'sjpp-user-auth-status')
 			.style('font-weight', 'bold')
-			.text(signedIn ? 'Signed in' : 'Requires sign-in')
+			.style('font-size', '1.2em')
+			.text(getAuthStatus(signedIn, userTab?.role))
 		// reason for a failed sign-in, if any
 		const msg = vocabApi.tokenVerificationMessage
 		if (!signedIn && msg) div.append('div').style('opacity', 0.65).text(msg)
-		// TODO: show user details from termdbConfig.clientAuthResult, which has a dataset-specific shape
+		// the introduction for the role, under the status. text, not html
+		if (userTab?.intro)
+			div
+				.append('div')
+				.attr('data-testid', 'sjpp-user-auth-info')
+				.style('margin', '5px 0 0 8px')
+				.style('font-size', '0.95em')
+				.style('opacity', 0.75)
+				.text(userTab.intro)
 	}
 
 	async initSessionOptions() {

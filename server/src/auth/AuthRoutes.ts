@@ -243,7 +243,7 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 				email: 'username@test.tld',
 				ip: req.ip || null
 			}
-			const fullPayload = Object.assign({}, defaultToken, ds.demoJwtInput[q.role])
+			const fullPayload = Object.assign({}, defaultToken, getDemoJwtInput(ds.demoJwtInput[q.role], q.role))
 			const credCopy = { ...cred, secret: cred.demoToken.secret }
 			const jwt = cred.processor // also test any applicable cred.processor in demo mode
 				? cred.processor.generatePayload(fullPayload, credCopy)
@@ -257,4 +257,18 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 			res.send(typeof e == 'object' ? e : { error: e })
 		}
 	})
+}
+
+/*
+	input: ds.demoJwtInput[role], the payload to sign for a demo token
+	role: the key of the input in ds.demoJwtInput
+
+	If the payload has clientAuthResult.userTab, the role is added to it so that the client can name the role
+	in the user tab. A real embedder would have to set userTab.role in its own jwt payload.
+	Returns a copy, and never changes the dataset's input.
+*/
+export function getDemoJwtInput(input: any, role: string) {
+	const userTab = input?.clientAuthResult?.userTab
+	if (!userTab || typeof userTab != 'object') return input
+	return { ...input, clientAuthResult: { ...input.clientAuthResult, userTab: { ...userTab, role } } }
 }

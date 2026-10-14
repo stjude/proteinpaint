@@ -1,14 +1,16 @@
 import tape from 'tape'
 import { select } from 'd3-selection'
-import { MassUser, datasetRequiresAuth, getDeletionBatches } from '../user.ts'
+import { MassUser, datasetRequiresAuth, getDeletionBatches, getAuthStatus } from '../user.ts'
 
 /**
  * Tests
  *  - datasetRequiresAuth()
  *  - getDeletionBatches()
+ *  - getAuthStatus()
  *  - MassUser constructor
  *  - MassUser setRequiredAuth()
  *  - MassUser renderAuthInfo()
+ *  - MassUser renderAuthInfo() role info
  *  - MassUser renderSessionOptions()
  *  - MassUser init() with sessions saved in the browser
  *  - MassUser getSavableState()
@@ -143,6 +145,19 @@ tape('getDeletionBatches()', test => {
 	test.end()
 })
 
+tape('getAuthStatus()', test => {
+	test.equal(getAuthStatus(false), 'Requires sign-in', 'should require sign-in when not signed in')
+	test.equal(getAuthStatus(false, 'user'), 'Requires sign-in', 'should not use the role when not signed in')
+	test.equal(getAuthStatus(true), 'Signed in', 'should read Signed in without a role')
+	test.equal(getAuthStatus(true, ''), 'Signed in', 'should read Signed in for an empty role')
+	test.equal(getAuthStatus(true, 'user'), 'User signed in', 'should capitalize the role')
+	test.equal(getAuthStatus(true, 'Admin'), 'Admin signed in', 'should keep a capitalized role')
+	test.equal(getAuthStatus(true, 'public'), 'Public access', 'should read Public access for the public role')
+	test.equal(getAuthStatus(true, 'Public'), 'Public access', 'should ignore the case of the public role')
+	test.equal(getAuthStatus(true, 7 as any), 'Signed in', 'should ignore a role that is not a string')
+	test.end()
+})
+
 tape('MassUser constructor', test => {
 	const { user, holder } = getUser()
 	test.equal(user.type, 'user', 'should set the component type')
@@ -251,6 +266,109 @@ tape('MassUser renderAuthInfo()', test => {
 		user.renderAuthInfo()
 		user.renderAuthInfo()
 		test.equal(holder.selectAll('[data-testid="sjpp-user-auth-status"]').size(), 1, 'should render the status once')
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('MassUser renderAuthInfo() role info', test => {
+	const infoTestId = '[data-testid="sjpp-user-auth-info"]'
+
+	// the status names the role, and the text is under it
+	for (const [role, status] of [
+		['user', 'User signed in'],
+		['public', 'Public access']
+	]) {
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.clientAuthResult = { userTab: { role, intro: `intro for ${role}` } }
+		user.renderAuthInfo()
+		const children = Array.from(
+			(holder.select('[data-testid="sjpp-user-auth"]').node() as HTMLElement).children
+		) as HTMLElement[]
+		test.equal(
+			children[0].getAttribute('data-testid'),
+			'sjpp-user-auth-status',
+			`should show the status first, ${role}`
+		)
+		test.equal(children[0].textContent, status, `should show '${status}'`)
+		test.equal(children[1].getAttribute('data-testid'), 'sjpp-user-auth-info', `should show the text under it, ${role}`)
+		test.equal(children[1].textContent, `intro for ${role}`, `should show the text of the ${role} role`)
+		holder.remove()
+	}
+
+	// text without a role
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.clientAuthResult = { userTab: { intro: 'intro' } }
+		user.renderAuthInfo()
+		test.equal(holder.select('[data-testid="sjpp-user-auth-status"]').text(), 'Signed in', 'should read Signed in')
+		test.equal(holder.select(infoTestId).text(), 'intro', 'should still show the text')
+		holder.remove()
+	}
+
+	// role without text, and not signed in
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.clientAuthResult = { userTab: { role: 'user' } }
+		user.renderAuthInfo()
+		test.equal(holder.select('[data-testid="sjpp-user-auth-status"]').text(), 'User signed in', 'should show the role')
+		test.equal(holder.select(infoTestId).size(), 0, 'should not show text when there is none')
+		holder.remove()
+	}
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: false })
+		state.termdbConfig.clientAuthResult = { userTab: { role: 'user', intro: 'intro' } }
+		user.renderAuthInfo()
+		test.equal(
+			holder.select('[data-testid="sjpp-user-auth-status"]').text(),
+			'Requires sign-in',
+			'should not show the role when not signed in'
+		)
+		holder.remove()
+	}
+
+	// text is not interpreted as html
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.clientAuthResult = { userTab: { intro: '<b>bold</b>' } }
+		user.renderAuthInfo()
+		test.equal(holder.select(infoTestId).text(), '<b>bold</b>', 'should show the text as it is')
+		test.equal(holder.select(`${infoTestId} b`).size(), 0, 'should not render html from the text')
+		holder.remove()
+	}
+
+	// no info
+	for (const clientAuthResult of [undefined, {}, { userTab: {} }, { userTab: { intro: '' } }]) {
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.clientAuthResult = clientAuthResult
+		user.renderAuthInfo()
+		test.equal(
+			holder.select(infoTestId).size(),
+			0,
+			`should not show info for clientAuthResult=${JSON.stringify(clientAuthResult)}`
+		)
+		test.equal(holder.select('[data-testid="sjpp-user-auth-status"]').size(), 1, 'should still show the status')
+		holder.remove()
+	}
+
+	// replaced on re-render, for a different role
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.clientAuthResult = { userTab: { intro: 'public' } }
+		user.renderAuthInfo()
+		state.termdbConfig.clientAuthResult = { userTab: { intro: 'user' } }
+		user.renderAuthInfo()
+		test.equal(holder.selectAll(infoTestId).size(), 1, 'should render the info once')
+		test.equal(holder.select(infoTestId).text(), 'user', 'should show the latest info')
+		holder.remove()
+	}
+
+	// a public dataset has no auth info, even if the payload has info
+	{
+		const { user, holder, state } = getUser()
+		state.termdbConfig.clientAuthResult = { userTab: { intro: 'x' } }
+		user.renderAuthInfo()
+		test.equal(holder.select(infoTestId).size(), 0, 'should not show info when authorization is not required')
 		holder.remove()
 	}
 	test.end()
