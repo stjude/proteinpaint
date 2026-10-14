@@ -1116,13 +1116,15 @@ export class SwimmerRenderer {
 			.attr('fill', 'transparent')
 			.style('pointer-events', 'all')
 		// cursor in panel pixels; the row number of the cursor, and y snapped to the center of that row, where its
-		// markers are, so the hit distance is the horizontal one
+		// markers are
 		const getCursor = (event: MouseEvent) => {
 			const [mx, my] = pointer(event, mainG.node())
 			const i = Math.floor(my / o.rowHeight)
 			return { mx, my, i, cy: (i + 0.5) * o.rowHeight }
 		}
 		let hovered: MarkerHit[] = []
+		// row of the cursor, set by toLocalCoords() before isHidden() runs on the candidates
+		let cursorRow = -1
 		const dpi = new DataPointInteractions<MarkerHit>({
 			cover,
 			hoverLayer,
@@ -1131,11 +1133,15 @@ export class SwimmerRenderer {
 			getX: d => d.x,
 			getY: d => d.y,
 			toLocalCoords: event => {
-				const { mx, cy } = getCursor(event)
+				const { mx, cy, i } = getCursor(event)
+				cursorRow = i
 				return [mx, cy]
 			},
 			hitRadius: Math.max(0, ...markers.map(d => d.halfWidth)),
 			perDotRadius: d => d.halfWidth,
+			// only markers of the cursor's row: a large marker (event size of about 3 or more) would otherwise be
+			// within reach from the neighboring lanes. so the hit distance is the horizontal one
+			isHidden: d => Math.floor(d.y / o.rowHeight) !== cursorRow,
 			// outline of the marker's shape, 2px larger on each side
 			toHoverSpec: d => {
 				const m = getMarkerGeometry(d.shape, d.height + 4)
