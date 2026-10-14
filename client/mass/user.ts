@@ -690,7 +690,7 @@ export class MassUser {
 	stays below the length limit that dofetch3() allows for a non-GET request,
 	since the ids[] are URL-encoded as a request parameter
 */
-function getDeletionBatches(ids: string[]): string[][] {
+export function getDeletionBatches(ids: string[]): string[][] {
 	// leave room in the URL for the host, path, and the other request parameters
 	const maxEncodedIdsLength = 1000
 	const batches: string[][] = []

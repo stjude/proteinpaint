@@ -399,8 +399,8 @@ function setRenderers(self: any): void {
 			if (!appState.termdbConfig?.requiredAuth?.length) {
 				if (!override.top) override.top = 'SESSION'
 			}
-			self.tabs.push(userTab)
-			Object.assign(userTab, override)
+			// a copy, since userTab is shared by all nav instances
+			self.tabs.push(Object.assign({}, userTab, override))
 		}
 
 		const table = self.dom.tabDiv
