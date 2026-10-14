@@ -5,7 +5,7 @@
 FROM ppserver:latest
 
 # The ppserver image runs as the unprivileged app user (UID 1000), but this image links packages into
-# the root-owned npm global prefix under /opt/nvm, and only generates the combined coverage report,
+# the root-owned npm global prefix under /usr/local, and only generates the combined coverage report,
 # so it runs as root.
 USER root
 

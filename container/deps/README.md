@@ -5,7 +5,7 @@ of ProteinPaint, which the release images in `container/server` and `container/f
 
 | Target (image) | Contents |
 |---|---|
-| `ppbase` | the OS, R, Python, Node, htslib/samtools/bcftools, and tools such as `straw` and `gfClient` |
+| `ppbase` | the OS (Debian trixie), R, Python, Node, htslib/samtools/bcftools, and tools such as `straw` and `gfClient` |
 | `ppserver` | `ppbase` + the `@sjcrh/proteinpaint-server` package and `app-server.mjs` |
 | `ppfull` | `ppserver` + the `@sjcrh/proteinpaint-front` package, `app-full.mjs`, and `container/public` |
 
@@ -107,26 +107,52 @@ cp -r dataset/cjs/gdc proteinpaint/container/dataset/
 Then add the dataset to the `serverconfig.json` in `proteinpaint/container`, and start `./run.sh ppfull:latest`.
 
 
-## Updating pinned dependencies
+## Base image and build cache
 
-The base image, `r-base`, tracks Debian testing/sid, so some packages are pinned in the `Dockerfile`
-to fail the build on a version drift, instead of at runtime. See the comments next to each pin.
+The images are based on Debian stable (`debian:trixie-slim`), which the Debian security team supports,
+with R from the trixie packages. Before, the base image was `r-base`, which tracks Debian testing/sid, where
+an apt update could move python3 or the HDF5 soname under the image. The rust binaries are also compiled on trixie, in `container/rust/Dockerfile`.
 
-- **Python** (`python3`, `python3-dev`, `python3-venv`, `python3-pip`): the pinned versions rotate out
-  of the Debian archive, which fails the `apt-get install` step with `Version '...' was not found`.
-  Read the available versions, and re-pin them instead of removing the pins:
-  ```bash
-  docker run --rm --platform linux/amd64 r-base:4.5.0 bash -c \
-    'apt-get update -qq >/dev/null 2>&1; apt-cache policy python3 python3-dev python3-venv python3-pip'
-  ```
-  A change of the Python minor version, such as 3.14 to 3.15, may also require updating
-  `python/requirements.txt`.
+The `Dockerfile` stages are ordered and split so that the slow steps are rebuilt only when their inputs change:
+
+| Stage | Contents | Rebuilt when |
+|---|---|---|
+| `os` | the apt system libs, build toolchain, R, and python3 | the pinned base image or the apt package list changes |
+| `hts` | htslib, samtools, bcftools | `htsversion` changes |
+| `rlib` | the R packages, CRAN binaries from the Posit Package Manager, and the compiled Bioconductor packages | `R/utils` changes |
+| `py` | the python venv | `python/requirements.txt` changes |
+| `tools` | `straw`, `gfClient`, and the UCSC binaries | the download list changes |
+| `ppbase` | copies the above, the node install from the official `node` image, and applies the Debian security updates | every day, which is a fast step |
+
+The `hts`, `rlib`, `py`, and `tools` stages only depend on `os`, so they are built in parallel. In CI, the cache
+of every stage is saved to `ghcr.io/stjude/ppbase:buildcache` (`PPDEPS_CACHE_REF` in `deps/build.sh`), so that
+a runner without a local cache reuses the last build's layers.
+
+### Updating the base images
+
+The `debian` and `node` base images are pinned by digest, as `DEBIAN_IMAGE` and `NODE_IMAGE` at the top of
+the `Dockerfile`, so that the tag moving to a new digest does not invalidate every cached layer. The
+security updates since the pinned digest are applied in the `ppbase` `apt-get upgrade` step. Bump the
+digests periodically, such as monthly, or for a node version change, which rebuilds every stage:
+
+```bash
+docker buildx imagetools inspect debian:trixie-slim --format '{{json .Manifest.Digest}}'
+docker buildx imagetools inspect node:24.10.0-trixie-slim --format '{{json .Manifest.Digest}}'
+```
+
+The `node` image must be on the same Debian release as the `debian` image. A move to the next Debian
+release must also update `container/rust/Dockerfile`, so that the rust binaries link the same HDF5 soname.
+
+### Pinned dependencies
+
+- **Python**: not pinned, since Debian stable keeps python3 at 3.13 for the life of trixie, and a version pin
+  would fail the build at each security update. The python packages are pinned in `python/requirements.txt`.
 - **HDF5** (`libhdf5-310`): must match the HDF5 soname that the rust binaries link against, which are
   compiled in `container/rust/Dockerfile`. The `ppserverdeps` stage fails the build when a rust binary
   cannot load its shared libraries.
-- **libdatrie1** (with `--allow-downgrades`): pinned for a package conflict in the base image.
 - **R packages**: listed in `R/utils/cran.pkgs.txt` and `R/utils/bioconductor.pkgs.txt`, and installed
-  by `R/utils/install.pkgs.R`.
+  by `R/utils/install.pkgs.R`. To use another CRAN mirror, such as a dated P3M snapshot for a reproducible
+  build, set the `CRAN_REPO` build arg, for example `-b "--build-arg CRAN_REPO=https://p3m.dev/cran/__linux__/trixie/2026-10-01"`.
 
 After a deps image is published, `container/update_deps_version.sh <version> <Dockerfile>` sets its
 version in the `server` and `full` Dockerfiles, which CI does automatically.
@@ -136,7 +162,6 @@ version in the `server` and `full` Dockerfiles, which CI does automatically.
 
 - **Network errors during `apt-get`, `pip`, or `npm` steps**: disable a VPN or proxy that intercepts
   TLS, such as Cloudflare WARP, and retry.
-- **`Version '...' was not found` in the `apt-get install` step**: re-pin the version, see above.
 - **Out of disk space**: remove unused images and build cache with `docker system prune` (and
   `docker builder prune`), after checking what would be removed.
 - **Debugging a failed step**: temporarily add `CMD ["sleep", "3600"]` after the last successful step,

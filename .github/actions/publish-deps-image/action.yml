@@ -18,6 +18,9 @@ runs:
         username: ${{ inputs.GITHUB_ACTOR }}
         password: ${{ inputs.TOKEN }}
 
+    # the docker-container driver supports the registry build cache that deps/build.sh uses with PPDEPS_CACHE_REF
+    - uses: docker/setup-buildx-action@v3
+
     - uses: actions/setup-node@v6
       with:
         cache: 'npm'
@@ -58,7 +61,7 @@ runs:
 
         cd deps
         ./version.sh deps
-        ./build.sh -m "ghcr.io/stjude/"
+        PPDEPS_CACHE_REF=ghcr.io/stjude/ppbase:buildcache ./build.sh -m "ghcr.io/stjude/"
         TAG="$(node -p "require('./package.json').version")"
         cd ..
 
