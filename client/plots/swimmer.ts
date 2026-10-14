@@ -1176,7 +1176,17 @@ export class SwimmerRenderer {
 			const row = rows[i]
 			if (!row) return tip.hide()
 			const dy = Math.abs(my - cy)
-			const segments = dy <= o.segH / 2 ? row.segments.filter(sg => mx >= sg.x0 && mx <= sg.x1) : []
+			const segments = row.segments.filter(sg => {
+				if (mx < sg.x0 || mx > sg.x1) return false
+				if (sg.r.end != null) return dy <= o.segH / 2
+				const arrowStart = sg.x1 - o.segH * 0.8
+				if (mx < arrowStart) return dy <= o.segH / 2
+				const fraction = (sg.x1 - mx) / (o.segH * 0.8)
+				return (
+					my >= cy - (o.segH / 2 + o.segH / 3) * fraction &&
+					my <= cy + (o.segH * 1.33 - o.segH / 2) * fraction
+				)
+			})
 			const onBase = dy <= o.barH / 2 && mx >= o.x(0) && mx <= o.x(row.end)
 			if (!segments.length && !onBase) return tip.hide()
 			tip.clear()
