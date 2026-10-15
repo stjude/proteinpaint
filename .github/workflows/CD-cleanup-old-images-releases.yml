@@ -29,7 +29,9 @@ jobs:
 
       - name: List release branches
         run: |
-          echo "RELEASE_BRANCHES=$(gh api repos/stjude/proteinpaint/branches --paginate --jq '[.[].name] | map(select(startswith("release-")))' -c)" >> "$GITHUB_ENV"
+          BRANCH_PAGES=$(gh api repos/stjude/proteinpaint/branches --paginate)
+          RELEASE_BRANCHES=$(printf '%s\n' "$BRANCH_PAGES" | jq -sc '[.[][] | .name | select(startswith("release-"))]')
+          echo "RELEASE_BRANCHES=$RELEASE_BRANCHES" >> "$GITHUB_ENV" 
         env:
           GH_TOKEN: ${{secrets.PAT}}
         
@@ -39,6 +41,7 @@ jobs:
           for pkg in $(echo "$PACKAGES" | jq -r '.[]'); do
             v=$(gh api "orgs/stjude/packages/container/${pkg}/versions" --paginate \
               --jq '[.[] | {package: "'"$pkg"'", id, created_at, tags: .metadata.container.tags}]')
+            v=$(printf '%s\n' "$v" | jq -sc 'add // []') #the // [] at the end is a fallback for the case where a package has zero versions — then v would be empty, slurping nothing gives [], and add on an empty array returns null rather than [].The // [] catches that null and substitutes an empty array instead. so --argjson b "$v" in the next line always gets a valid array to work with, never null.
             ALL=$(jq -c -n --argjson a "$ALL" --argjson b "$v" '$a + $b')
           done
           echo "IMAGE_VERSIONS=$ALL" >> "$GITHUB_ENV"
@@ -63,7 +66,7 @@ jobs:
               keep=true
             else #check if this is a version image whose release is still active
               for tag in $(echo "$tags" | jq -r '.[]'); do
-                if [[ "$tag" =~ ^v([0-9]+\.[0-9]+)\.[0-9]+-.+$ ]]; then #Tests this tag against the pattern to capture its major.minor prefix
+                if [[ "$tag" =~ ^v?([0-9]+\.[0-9]+)\.[0-9]+(-.+)?$ ]]; then #Tests this tag against the pattern to capture its major.minor prefix
                   prefix="release-${BASH_REMATCH[1]}" #Get the capture version from the above comparision using BASH_REMATCH[1] and concatenate it with 'release-'                  
                   if echo "$RELEASE_BRANCHES" | jq -e --arg p "$prefix" 'any(.[]; . == $p or startswith($p + ".") or startswith($p + "-"))' > /dev/null; then #If any of the RELEASE_BRANCHES has the prefix we retrieved in the previous step, we keep it
                     keep=true
@@ -125,13 +128,18 @@ jobs:
 
       - name: List release branches
         run: |
-          echo "RELEASE_BRANCHES=$(gh api repos/stjude/proteinpaint/branches --paginate --jq '[.[].name] | map(select(startswith("release-")))' -c)" >> "$GITHUB_ENV"
+          BRANCH_PAGES=$(gh api repos/stjude/proteinpaint/branches --paginate)
+          RELEASE_BRANCHES=$(printf '%s\n' "$BRANCH_PAGES" | jq -sc '[.[][] | .name | select(startswith("release-"))]')
+          echo "RELEASE_BRANCHES=$RELEASE_BRANCHES" >> "$GITHUB_ENV" 
         env:
           GH_TOKEN: ${{secrets.PAT}}
  
       - name: List releases
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
         run: |
           RELEASES=$(gh api "repos/stjude/proteinpaint/releases" --paginate --jq '[.[] | {tag: .tag_name, created_at}]')
+          RELEASES=$(printf '%s\n' "$RELEASES" | jq -sc 'add // []')
           echo "RELEASES=$RELEASES" >> "$GITHUB_ENV"
 
       - name: Filter Releases
@@ -142,7 +150,10 @@ jobs:
           while read -r release; do
             tag=$(echo "$release" | jq -r '.tag') #pulls the tag
             keep=false
-            if [[ "$tag" =~ ^v([0-9]+\.[0-9]+)\.[0-9]+-.+$ ]]; then #Tests the release's tag against the pattern to capture its major.minor prefix
+            if [[ "$tag" == "latest" || "$tag" == "protected" || "$tag" == paper-* ]]; then
+               keep=true
+            fi
+            if [[ "$tag" =~ ^v([0-9]+\.[0-9]+)\.[0-9]+(-.+)?$ ]]; then #Tests the release's tag against the pattern to capture its major.minor prefix
               prefix="release-${BASH_REMATCH[1]}" #concatenate the captured major.minor with 'release-'                  
               if echo "$RELEASE_BRANCHES" | jq -e --arg p "$prefix" 'any(.[]; . == $p or startswith($p + ".") or startswith($p + "-"))' > /dev/null; then #If any of the RELEASE_BRANCHES has the prefix we retrieved in the previous step, we keep it
                 keep=true
