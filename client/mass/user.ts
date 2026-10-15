@@ -64,6 +64,8 @@ export class MassUser {
 	/** Whether the user was signed in at the last check, to detect a sign-in after the launch */
 	signedIn = false
 	confirmationTimer?: ReturnType<typeof setTimeout>
+	/** Hides the tip that confirms a copied link */
+	copyTipTimer?: ReturnType<typeof setTimeout>
 
 	constructor(opts: MassUserOpts) {
 		this.type = MassUser.type
@@ -176,6 +178,8 @@ export class MassUser {
 
 	/** Render the Open, Save, Share, and Delete buttons. Delete is only available if there is something to delete */
 	renderSessionOptions() {
+		// a lookup of the sessions on the server may finish after the component is destroyed, which removes this.dom
+		if (!this.dom?.optionsDiv) return
 		const options = this.sessionOptions.slice()
 		if (Object.keys(this.savedSessions).length || this.serverCachedSessions?.length) {
 			options.push({ label: `Delete`, title: 'Delete a saved session', callback: () => this.delete() })
@@ -229,8 +233,14 @@ export class MassUser {
 		this.dom.contentDiv.style('opacity', 1)
 	}
 
+	/**
+	 * Removes what is not under this.dom of the component, which ComponentApi.destroy() removes. The copytip
+	 * Menu is in the document body, with a listener on the body, so it must be destroyed here.
+	 */
 	destroy() {
+		clearTimeout(this.copyTipTimer)
 		this.clearContent()
+		this.dom.copytip.destroy()
 	}
 
 	async open() {
@@ -646,11 +656,12 @@ export class MassUser {
 			.text('Copy link')
 			.on('click', async (event: MouseEvent) => {
 				await navigator.clipboard.writeText(url)
+				// the component may have been destroyed while the clipboard was written
+				if (!this.dom?.copytip) return
 				this.dom.copytip.clear().showunder(event.target)
 				this.dom.copytip.d.append('div').html('&#10003;')
-				setTimeout(() => {
-					this.dom.copytip.hide()
-				}, 1000)
+				clearTimeout(this.copyTipTimer)
+				this.copyTipTimer = setTimeout(() => this.dom?.copytip?.hide(), 1000)
 			})
 
 		if (this.hostURL != window.location.origin) {

@@ -18,6 +18,7 @@ import { MassUser, datasetRequiresAuth, getDeletionBatches, getAuthStatus } from
  *  - MassUser setServerCachedSessions(): only successful results are kept
  *  - MassUser main() after the user signs in
  *  - MassUser Delete is shown only when there are sessions to delete
+ *  - MassUser destroy()
  *  - MassUser getSavableState()
  *  - MassUser refuses()
  *  - MassUser open()
@@ -850,6 +851,72 @@ tape('MassUser Delete is shown only when there are sessions to delete', async te
 			holder.remove()
 		}
 	})
+	test.end()
+})
+
+/** What ComponentApi.destroy() does to a component */
+function destroyLikeRx(user: any, holder: any) {
+	user.destroy()
+	for (const key in user.dom) {
+		if (typeof user.dom[key]?.remove == 'function') user.dom[key].remove()
+		delete user.dom[key]
+	}
+	holder.remove()
+}
+
+tape('MassUser destroy()', async test => {
+	const countMenus = () => document.querySelectorAll('.sja_menu_div').length
+
+	// the copytip menu is removed from the document body
+	{
+		const before = countMenus()
+		const { user, holder } = getUser()
+		test.equal(countMenus(), before + 1, 'should have a menu in the document body while the component exists')
+		destroyLikeRx(user, holder)
+		test.equal(countMenus(), before, 'should remove the copytip menu from the document body')
+	}
+
+	// a lookup of the server sessions that is done after destroy does not throw
+	await withoutWarnings(async () => {
+		const { user, holder, state, app } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		user.serverCachedSessions = undefined
+		let release: () => void = () => {}
+		app.vocabApi.mayGetAuthHeaders = () => new Promise(resolve => (release = () => resolve({})))
+		const restore = mockSessionIds(['server1'])
+		const rejections: string[] = []
+		const onRejection = (e: PromiseRejectionEvent) => rejections.push(String(e.reason))
+		window.addEventListener('unhandledrejection', onRejection)
+
+		user.init(state)
+		destroyLikeRx(user, holder)
+		release()
+		await new Promise(resolve => setTimeout(resolve, 150))
+		window.removeEventListener('unhandledrejection', onRejection)
+		restore()
+		test.deepEqual(rejections, [], 'should not have an unhandled rejection from a lookup that is done after destroy')
+		test.equal(user.serverCachedSessions?.[0], 'server1', 'should still finish the lookup')
+		let error
+		try {
+			user.renderSessionOptions()
+		} catch (e) {
+			error = e
+		}
+		test.equal(error, undefined, 'should not throw when the options are rendered after destroy')
+	})
+
+	// the timers are cleared
+	{
+		const { user, holder } = getUser()
+		user.confirmAction('saved')
+		test.true(user.confirmationTimer, 'should have a timer that clears the confirmation')
+		let copyTipHidden = false
+		user.dom.copytip.hide = () => (copyTipHidden = true)
+		user.copyTipTimer = setTimeout(() => user.dom?.copytip?.hide(), 20)
+		destroyLikeRx(user, holder)
+		test.equal(user.confirmationTimer, undefined, 'should clear the timer of the confirmation')
+		await new Promise(resolve => setTimeout(resolve, 80))
+		test.equal(copyTipHidden, false, 'should clear the timer that hides the copy tip')
+	}
 	test.end()
 })
 
