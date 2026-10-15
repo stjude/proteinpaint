@@ -40,7 +40,7 @@ async function waitFor(get: () => any, maxTime = 5000) {
 
 /** the visible wedge of a category */
 function getWedge(sunburst, name: string) {
-	return sunburst.Inner.renderer.dom.paths
+	return sunburst.Inner.chart.renderer.dom.paths
 		.filter((d: any, i: number, els: any[]) => d.data.name == name && els[i].getAttribute('fill-opacity') == '1')
 		.node()
 }
@@ -63,7 +63,7 @@ tape('Render rings of a sample-level and a patient-level term', test => {
 
 	function runTests(sunburst) {
 		sunburst.on('postRender.test', null)
-		const root = sunburst.Inner.renderer.root
+		const root = sunburst.Inner.chart.renderer.root
 		// counts are of the default active cohort
 		test.equal(root.value, 60, 'Should count the 60 cohort samples with a diagnosis group')
 		test.equal(root.children.length, 7, 'Should render 7 diagnosis group wedges')
@@ -99,21 +99,21 @@ tape('Select wedges and create a group', test => {
 		const all = getWedge(sunburst, ALL)
 		all.dispatchEvent(new MouseEvent('click', { shiftKey: true, bubbles: true }))
 		test.deepEqual(
-			[...inner.selected.values()].map(d => d.data.name),
+			[...inner.chart.selected.values()].map(d => d.data.name),
 			[ALL],
 			'Should select an inner wedge on shift-click'
 		)
 
 		const female = all.__data__.children.find(d => d.data.name == 'Female')
-		inner.toggle(female)
-		test.equal(inner.selected.size, 1, 'Should not add a wedge already contained in a selected wedge')
+		inner.chart.toggle(female)
+		test.equal(inner.chart.selected.size, 1, 'Should not add a wedge already contained in a selected wedge')
 
 		const hodgkin = getWedge(sunburst, 'Hodgkin lymphoma')
 		hodgkin.dispatchEvent(new MouseEvent('click', { shiftKey: true, bubbles: true }))
-		test.equal(inner.selected.size, 2, 'Should select a second wedge')
-		test.equal(inner.selectedCount(), 41, 'Should count the samples of both wedges')
+		test.equal(inner.chart.selected.size, 2, 'Should select a second wedge')
+		test.equal(inner.chart.selectedCount(), 41, 'Should count the samples of both wedges')
 
-		const btn = inner.dom.sel.body.select('[data-testid=sjpp-sunburst-create-group]')
+		const btn = inner.chart.dom.sel.body.select('[data-testid=sjpp-sunburst-create-group]')
 		test.equal(btn.text(), 'Create group of 41 samples', 'Should label the action with the sample count')
 		btn.node().click()
 		const groups = await waitFor(() => inner.app.getState().groups?.length && inner.app.getState().groups)
@@ -125,7 +125,7 @@ tape('Select wedges and create a group', test => {
 			[[ALL], ['Hodgkin lymphoma']],
 			'Should select each wedge by its diagnosis group'
 		)
-		test.equal(inner.selected.size, 0, 'Should clear the selection once the group is created')
+		test.equal(inner.chart.selected.size, 0, 'Should clear the selection once the group is created')
 		if (test['_ok']) inner.app.destroy()
 		test.end()
 	}
@@ -152,8 +152,8 @@ tape('Create a group with the plot filter', test => {
 		const inner = sunburst.Inner
 		const all = getWedge(sunburst, ALL)
 		all.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-		test.equal(inner.selected.size, 1, 'Should select an outermost wedge on click')
-		inner.dom.sel.body.select('[data-testid=sjpp-sunburst-create-group]').node().click()
+		test.equal(inner.chart.selected.size, 1, 'Should select an outermost wedge on click')
+		inner.chart.dom.sel.body.select('[data-testid=sjpp-sunburst-create-group]').node().click()
 		const groups = await waitFor(() => inner.app.getState().groups?.length && inner.app.getState().groups)
 		const f = groups[0].filter
 		test.equal(f.join, 'and', 'Should join the plot filter and the wedge by "and"')
@@ -177,7 +177,7 @@ tape('Edit rings in the Rings box', test => {
 	async function runTests(sunburst) {
 		sunburst.on('postRender.test', null)
 		const inner = sunburst.Inner
-		const rings = inner.dom.rings.body
+		const rings = inner.chart.dom.rings.body
 		test.equal(rings.selectAll('.sjpp-sunburst-ring').size(), 2, 'Should show one line per ring')
 		const infoBtn = rings.select('.sjpp-sunburst-ringpill > div:nth-child(4)').node()
 		test.equal(getComputedStyle(infoBtn).display, 'none', 'Should hide the info button')
@@ -202,7 +202,7 @@ tape('Edit rings in the Rings box', test => {
 				'Should remove the ring from the plot config'
 			)
 			test.equal(rings.selectAll('.sjpp-sunburst-ring').size(), 1, 'Should show one line after removing a ring')
-			test.equal(inner.renderer.root.height, 1, 'Should redraw the chart with one ring')
+			test.equal(inner.chart.renderer.root.height, 1, 'Should redraw the chart with one ring')
 			if (test['_ok']) inner.app.destroy()
 			test.end()
 		}
@@ -219,7 +219,7 @@ tape('Pass a changed filter to the Rings box pills', test => {
 	async function runTests(sunburst) {
 		sunburst.on('postRender.test', null)
 		const inner = sunburst.Inner
-		const pills = inner.dom.rings.body.selectAll('.ts_pill').nodes()
+		const pills = inner.chart.dom.rings.body.selectAll('.ts_pill').nodes()
 		sunburst.on('postRender.test', testFilter)
 		await inner.app.dispatch({
 			type: 'filter_replace',
@@ -234,7 +234,7 @@ tape('Pass a changed filter to the Rings box pills', test => {
 		async function testFilter() {
 			sunburst.on('postRender.test', null)
 			test.deepEqual(
-				inner.dom.rings.body.selectAll('.ts_pill').nodes(),
+				inner.chart.dom.rings.body.selectAll('.ts_pill').nodes(),
 				pills,
 				'Should keep the pills when only the filter changes'
 			)
@@ -258,27 +258,31 @@ tape('Select the wedge at the centre', test => {
 	function runTests(sunburst) {
 		sunburst.on('postRender.test', null)
 		const inner = sunburst.Inner
-		const btn = inner.dom.selectFocus
+		const btn = inner.chart.dom.selectFocus
 		test.equal(btn.style('display'), 'none', 'Should hide SELECT at the root')
 		// zoomTo() sets the centre, the path and SELECT at once; only the arcs are animated
 		getWedge(sunburst, ALL).dispatchEvent(new MouseEvent('click', { bubbles: true }))
-		test.equal(inner.renderer.focus.data.name, ALL, 'Should zoom into the clicked wedge')
-		test.equal(inner.renderer.dom.crumbs.text(), `All samples›${ALL}`, 'Should show the zoom path above the chart')
+		test.equal(inner.chart.renderer.focus.data.name, ALL, 'Should zoom into the clicked wedge')
+		test.equal(
+			inner.chart.renderer.dom.crumbs.text(),
+			`All samples›${ALL}`,
+			'Should show the zoom path above the chart'
+		)
 		test.notEqual(btn.style('display'), 'none', 'Should show SELECT when zoomed in')
 		btn.node().dispatchEvent(new MouseEvent('click', { bubbles: true }))
 		test.deepEqual(
-			[...inner.selected.values()].map(d => d.data.name),
+			[...inner.chart.selected.values()].map(d => d.data.name),
 			[ALL],
 			'Should select the wedge at the centre'
 		)
 		test.ok(btn.text().startsWith('SELECTED'), 'Should mark the centre as selected')
-		const bold = inner.dom.rings.body
+		const bold = inner.chart.dom.rings.body
 			.selectAll('.sjpp-sunburst-ringnum')
 			.nodes()
 			.map((n: any) => n.style.fontWeight)
 		test.deepEqual(bold, ['normal', 'bold'], 'Should mark only the ring shown around the centre')
-		inner.renderer.dom.crumbs.select('.sjpp-sunburst-crumb').node().dispatchEvent(new MouseEvent('click'))
-		test.equal(inner.renderer.focus.depth, 0, 'Should zoom out from the path')
+		inner.chart.renderer.dom.crumbs.select('.sjpp-sunburst-crumb').node().dispatchEvent(new MouseEvent('click'))
+		test.equal(inner.chart.renderer.focus.depth, 0, 'Should zoom out from the path')
 		if (test['_ok']) inner.app.destroy()
 		test.end()
 	}
