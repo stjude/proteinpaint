@@ -9,6 +9,7 @@ import { dofetch, dofetch3, clearServerDataCache } from '#common/dofetch'
  *  - Share creates a session on the server
  *  - Save to the browser, Open, and Delete a session
  *  - user tab for a dataset that requires authorization
+ *  - launch when the lookup of the sessions on the server fails
  *  - Export Session and days left message for a session opened from a url
  */
 
@@ -79,13 +80,14 @@ const jwtAuth = { route: 'termdb', type: 'jwt', headerKey: 'x-ds-access-token' }
  * request for the server sessions of the user, with no request to the server.
  * Returns a function that restores fetch().
  */
-function mockRequiredAuth(serverSessionIds: string[] = []) {
+function mockRequiredAuth(serverSessionIds: string[] = [], failSessionIds = false) {
 	// the responses are cached across tests, so that the mocked one is not reused by other tests
 	const clearCache = () => clearServerDataCache({ serverData: (dofetch as any).serverData })
 	clearCache()
 	const origFetch = window.fetch
 	window.fetch = async function (url: any, init?: any) {
 		const path = typeof url == 'string' ? url : url?.url || String(url)
+		if (path.includes('sessionIds') && failSessionIds) throw new TypeError('Failed to fetch') // network failure
 		if (path.includes('sessionIds')) {
 			return new Response(JSON.stringify({ sessionIds: serverSessionIds }), {
 				status: 200,
@@ -403,6 +405,38 @@ tape('user tab for a dataset that requires authorization', test => {
 		test.true(serverBtn.disabled, 'should disable saving to the server when not signed in')
 
 		restoreFetch()
+		if ((test as any)._ok) nav.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('launch when the lookup of the sessions on the server fails', test => {
+	test.timeoutAfter(8000)
+	const restoreFetch = mockRequiredAuth(['unused'], true)
+	const warn = console.warn
+	console.warn = () => {}
+	runpp({
+		nav: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(nav: any) {
+		nav.on('postRender.test', null)
+		console.warn = warn
+		restoreFetch()
+		test.true(nav.Inner.dom.subheader.user, 'should launch the nav, since the sessions on the server are optional')
+		test.true(getTabLabels(nav).includes('USER'), 'should show the user tab')
+		for (const label of ['Open', 'Save', 'Share']) {
+			test.true(await detectOptionBtn(nav, label), `should show the ${label} button`)
+		}
+		test.equal(
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-user-auth-status"]').text(),
+			'Requires sign-in',
+			'should show the sign-in status'
+		)
 		if ((test as any)._ok) nav.Inner.app.destroy()
 		test.end()
 	}

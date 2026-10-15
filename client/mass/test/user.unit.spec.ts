@@ -1,5 +1,6 @@
 import tape from 'tape'
 import { select } from 'd3-selection'
+import { clearServerDataCache } from '#common/dofetch'
 import { MassUser, datasetRequiresAuth, getDeletionBatches, getAuthStatus } from '../user.ts'
 
 /**
@@ -13,6 +14,7 @@ import { MassUser, datasetRequiresAuth, getDeletionBatches, getAuthStatus } from
  *  - MassUser renderAuthInfo() role info
  *  - MassUser renderSessionOptions()
  *  - MassUser init() with sessions saved in the browser
+ *  - MassUser init() with an optional lookup of the sessions on the server
  *  - MassUser getSavableState()
  *  - MassUser refuses()
  *  - MassUser open()
@@ -467,6 +469,142 @@ tape('MassUser init() with sessions saved in the browser', async test => {
 		await user.init(state)
 		test.deepEqual(user.savedSessions, {}, 'should have no saved sessions when there is nothing in localStorage')
 		test.deepEqual(getOptionLabels(holder), ['Open', 'Save', 'Share'], 'should not show Delete')
+		holder.remove()
+	})
+	test.end()
+})
+
+/** Replaces fetch() to answer the /sessionIds request with the ids. Returns a function to restore fetch(). */
+function mockSessionIds(ids: string[]) {
+	const origFetch = window.fetch
+	clearServerDataCache()
+	window.fetch = async () =>
+		new Response(JSON.stringify({ status: 'ok', sessionIds: ids }), {
+			status: 200,
+			headers: { 'content-type': 'application/json' }
+		})
+	return () => {
+		window.fetch = origFetch
+		clearServerDataCache()
+	}
+}
+
+/** Silences the warning of a failed lookup while running fn */
+async function withoutWarnings(fn: (warnings: string[]) => any) {
+	const warn = console.warn
+	const warnings: string[] = []
+	console.warn = (...args: any[]) => warnings.push(args.join(' '))
+	try {
+		return await fn(warnings)
+	} finally {
+		console.warn = warn
+	}
+}
+
+tape('MassUser init() with an optional lookup of the sessions on the server', async test => {
+	await withStoredSessions({ saved1: {} }, async () => {
+		// a failed lookup does not throw, and the options are shown
+		await withoutWarnings(async warnings => {
+			const { user, holder, state, app } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+			user.serverCachedSessions = undefined
+			app.vocabApi.mayGetAuthHeaders = async () => {
+				throw new Error('token callback failed')
+			}
+			let error
+			try {
+				await user.init(state)
+				await new Promise(resolve => setTimeout(resolve, 50))
+			} catch (e) {
+				error = e
+			}
+			test.equal(error, undefined, 'should not throw when the lookup of the server sessions fails')
+			test.deepEqual(getOptionLabels(holder), ['Open', 'Save', 'Share', 'Delete'], 'should show the options')
+			test.equal(user.serverCachedSessions, undefined, 'should not cache a failed lookup')
+			test.true(
+				warnings.some(w => w.includes('token callback failed')),
+				'should warn with the reason'
+			)
+			holder.remove()
+		})
+
+		// init() does not wait for the lookup
+		{
+			const { user, holder, state, app } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+			localStorage.removeItem(storageKey) // init() reads the saved sessions of the browser, the wrapper restores them
+			user.serverCachedSessions = undefined
+			let release: () => void = () => {}
+			app.vocabApi.mayGetAuthHeaders = () => new Promise(resolve => (release = () => resolve({})))
+			const restore = mockSessionIds(['server1'])
+			await user.init(state) // would never return if it waited for the headers
+			test.deepEqual(
+				getOptionLabels(holder),
+				['Open', 'Save', 'Share'],
+				'should show the options before the lookup is done'
+			)
+
+			// the options are rendered again when the lookup is done
+			release()
+			await new Promise(resolve => setTimeout(resolve, 100))
+			test.deepEqual(user.serverCachedSessions, ['server1'], 'should keep the sessions of the server')
+			test.deepEqual(
+				getOptionLabels(holder),
+				['Open', 'Save', 'Share', 'Delete'],
+				'should add Delete when the lookup finds sessions'
+			)
+			restore()
+			holder.remove()
+		}
+	})
+
+	// an earlier failure is tried again when Open is used
+	await withoutWarnings(async () => {
+		const { user, holder, app } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		user.serverCachedSessions = undefined
+		user.savedSessions = {}
+		let fail = true
+		app.vocabApi.mayGetAuthHeaders = async () => {
+			if (fail) throw new Error('offline')
+			return {}
+		}
+		await user.setServerCachedSessions()
+		test.equal(user.serverCachedSessions, undefined, 'should leave the sessions undefined after a failure')
+
+		fail = false
+		const restore = mockSessionIds(['server1'])
+		user.renderSessionOptions()
+		getOptionBtn(holder, 'Open').click()
+		await new Promise(resolve => setTimeout(resolve, 100))
+		const text = holder.select('[data-testid="sjpp-user-session-content"]').text()
+		test.true(text.includes('server1'), 'should list the server session once the lookup works')
+		restore()
+		holder.remove()
+	})
+
+	// the sessions are used when the lookup failed
+	await withoutWarnings(async () => {
+		const { user, holder, app } = getUser({
+			termdbConfig: { requiredAuth: [jwtAuth] },
+			verified: true,
+			savedSessions: { local1: {} }
+		})
+		user.serverCachedSessions = undefined
+		app.vocabApi.mayGetAuthHeaders = async () => {
+			throw new Error('offline')
+		}
+		user.renderSessionOptions()
+		getOptionBtn(holder, 'Open').click()
+		await new Promise(resolve => setTimeout(resolve, 50))
+		test.true(
+			holder.select('[data-testid="sjpp-user-session-content"]').text().includes('local1'),
+			'should still list the sessions of the browser in Open'
+		)
+		getOptionBtn(holder, 'Save').click()
+		await new Promise(resolve => setTimeout(resolve, 50))
+		test.equal(
+			holder.selectAll('[data-testid="sjpp-user-session-content"] button').size(),
+			3,
+			'should still show the Save options'
+		)
 		holder.remove()
 	})
 	test.end()

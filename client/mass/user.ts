@@ -95,11 +95,11 @@ export class MassUser {
 	}
 
 	/** Render static contents once on launching mass ui */
-	async init(appState: any) {
+	init(appState: any) {
 		this.dslabel = appState.vocab.dslabel
 		this.savedSessions = JSON.parse(localStorage.getItem('savedMassSessions') || `{}`)
 		this.setRequiredAuth(appState.termdbConfig)
-		await this.initSessionOptions()
+		this.initSessionOptions()
 	}
 
 	async main() {
@@ -144,9 +144,14 @@ export class MassUser {
 				.text(userTab.intro)
 	}
 
-	async initSessionOptions() {
-		if (!this.serverCachedSessions) await this.setServerCachedSessions()
+	/**
+	 * Renders the session options right away. The lookup of the sessions on the server is optional, so it
+	 * is not awaited, since it must not delay or block the launch of the mass ui. The options are
+	 * rendered again when it is done, in case it adds Delete.
+	 */
+	initSessionOptions() {
 		this.renderSessionOptions()
+		if (!this.serverCachedSessions) this.setServerCachedSessions().then(() => this.renderSessionOptions())
 	}
 
 	/** Render the Open, Save, Share, and Delete buttons. Delete is only available if there is something to delete */
@@ -346,7 +351,7 @@ export class MassUser {
 			id
 		}))
 		if (!this.serverCachedSessions) await this.setServerCachedSessions()
-		sessionIds.push(...this.serverCachedSessions!.map(id => ({ loc: 'server' as SessionLocation, id })))
+		sessionIds.push(...(this.serverCachedSessions || []).map(id => ({ loc: 'server' as SessionLocation, id })))
 
 		const tbody = table.append('tbody')
 		const trs = tbody
@@ -366,7 +371,7 @@ export class MassUser {
 			.style('cursor', 'pointer')
 			.text((d: any, i: number) => (i === 0 ? d.loc : d.id))
 
-		if (!this.serverCachedSessions!.length && this.requiredAuth && !this.app.vocabApi.hasVerifiedToken()) {
+		if (!this.serverCachedSessions?.length && this.requiredAuth && !this.app.vocabApi.hasVerifiedToken()) {
 			table
 				.append('tbody')
 				.append('tr')
@@ -381,17 +386,27 @@ export class MassUser {
 		return { table, headtr, tbody, trs }
 	}
 
+	/**
+	 * Looks up the ids of the sessions that the user saved on the server. This never throws, since the
+	 * sessions on the server are optional: the sessions of the browser, and everything else in the mass ui,
+	 * must work when the lookup fails, for example from a network error or a failure to get a token.
+	 * When it fails, serverCachedSessions stays undefined, so that the lookup is tried again on the next use.
+	 */
 	async setServerCachedSessions() {
-		const state: any = this.app.getState()
-		this.requiredAuth = state.termdbConfig?.requiredAuth?.find((a: any) => a.route == this.route && a.type == 'jwt')
-		if (!this.requiredAuth) {
-			this.serverCachedSessions = []
-			return
+		try {
+			const state: any = this.app.getState()
+			this.requiredAuth = state.termdbConfig?.requiredAuth?.find((a: any) => a.route == this.route && a.type == 'jwt')
+			if (!this.requiredAuth) {
+				this.serverCachedSessions = []
+				return
+			}
+			const headers = await this.app.vocabApi.mayGetAuthHeaders(this.route)
+			const body = { route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
+			const res = await dofetch3('/sessionIds', { headers, body })
+			this.serverCachedSessions = res.sessionIds || []
+		} catch (e: any) {
+			console.warn(`unable to get the sessions saved on the server: ${e?.message || e}`)
 		}
-		const headers = await this.app.vocabApi.mayGetAuthHeaders(this.route)
-		const body = { route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
-		const res = await dofetch3('/sessionIds', { headers, body })
-		this.serverCachedSessions = res.sessionIds || []
 	}
 
 	async save() {
@@ -400,7 +415,7 @@ export class MassUser {
 		inputDiv.append('span').text('Save as')
 		const sessionNames = Object.keys(this.savedSessions)
 		if (!this.serverCachedSessions) await this.setServerCachedSessions()
-		sessionNames.push(...this.serverCachedSessions!.filter(d => !sessionNames.includes(d)))
+		sessionNames.push(...(this.serverCachedSessions || []).filter(d => !sessionNames.includes(d)))
 		const placeholder = this.sessionName || 'unnamed-session'
 		const input = inputDiv
 			.append('input')
@@ -486,7 +501,9 @@ export class MassUser {
 						sayerror(submitDiv, `Unable to save '${name}' on the server: ${res.error || 'unexpected session id'}`)
 						return
 					}
-					if (!this.serverCachedSessions!.includes(name)) this.serverCachedSessions!.push(name)
+					// if the lookup failed, the saved session is found by the next lookup
+					if (this.serverCachedSessions && !this.serverCachedSessions.includes(name))
+						this.serverCachedSessions.push(name)
 					this.renderSessionOptions()
 					this.confirmAction(`Saved '${name}' on the server`)
 				})
@@ -683,7 +700,7 @@ export class MassUser {
 						failedIds = sessionIdsDeletedFromServer
 					}
 					const deletedIds = sessionIdsDeletedFromServer.filter(id => !failedIds?.includes(id))
-					this.serverCachedSessions = this.serverCachedSessions!.filter(id => !deletedIds.includes(id))
+					this.serverCachedSessions = this.serverCachedSessions?.filter(id => !deletedIds.includes(id))
 					if (error) {
 						// keep the content open so that the error is visible, and allow a retry of only the failed ids,
 						// by removing the rows of deleted sessions while the failed rows remain checked
