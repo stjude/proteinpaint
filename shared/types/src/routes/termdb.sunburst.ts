@@ -38,7 +38,7 @@ export type SunburstCategory = {
 export type SunburstResponse = {
 	/** samples with a value for the first ring, i.e. the samples in the chart */
 	total: number
-	/** samples passing the filter that have no value for the first ring and are not shown */
+	/** samples passing the filter that have no value, or a hidden one (tw.q.hiddenValues), for the first ring and are not shown */
 	noFirstRingValue: number
 	/** per ring, in twLst order */
 	rings: { categories: { [key: string]: SunburstCategory } }[]
