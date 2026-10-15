@@ -108,6 +108,8 @@ export type SunburstRendererOpts = {
 	/** false: show the path as a breadcrumb above the chart, and leave the left column (dom.left)
 	 *  to the caller; default true */
 	pathCard?: boolean
+	/** px between the chart and the columns beside it, default 24; the chart has 6px of its own */
+	gap?: number
 	hooks: SunburstHooks
 }
 
@@ -149,7 +151,7 @@ export class SunburstRenderer {
 		const layout = opts.holder
 			.append('div')
 			.style('display', 'flex')
-			.style('gap', '24px')
+			.style('gap', `${opts.gap ?? 24}px`)
 			.style('align-items', 'flex-start')
 		// path box, or the caller's column, to the left of the chart
 		const withPathCard = opts.pathCard !== false
