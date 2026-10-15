@@ -4,7 +4,7 @@
 # Debian sid/testing and installs HDF5 2.x, which this crate cannot compile against at all.
 # The two images are matched at the *soname* instead -- deps installs libhdf5-310 so the runtime
 # carries the .310 these binaries link. See the comment there before changing either.
-FROM debian:trixie
+FROM debian:13.7
 
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.version="latest"
