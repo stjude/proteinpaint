@@ -82,7 +82,14 @@ export class AboutSunburst {
 			.style('color', LINK)
 			.style('cursor', 'pointer')
 			.text('Edit rings in the full chart ›')
+			.attr('tabindex', 0)
 			.on('click', this.onOpen)
+			.on('keydown', (event: KeyboardEvent) => {
+				if (event.key == 'Enter' || event.key == ' ') {
+					event.preventDefault()
+					this.onOpen()
+				}
+			})
 		this.chart.markShownRings()
 	}
 }
