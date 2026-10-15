@@ -703,9 +703,10 @@ export class MassUser {
 				.attr('value', d.id)
 		})
 
+		// left aligned with the table, the content is as wide as the tab
 		const submitBtn = this.dom.contentDiv
 			.append('div')
-			.style('text-align', 'center')
+			.style('margin-top', '10px')
 			.append('button')
 			.text('Delete selected sessions')
 			.property('disabled', true)

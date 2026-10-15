@@ -1128,6 +1128,16 @@ tape('MassUser delete()', async test => {
 		test.equal(submit.size(), 1, 'should show the delete button')
 		test.true((submit.node() as HTMLButtonElement).disabled, 'should disable it until a session is selected')
 
+		// the button is left aligned with the table, and is not centered in the width of the tab
+		const btnLeft = (submit.node() as HTMLElement).getBoundingClientRect().left
+		const tableLeft = (content.select('table').node() as HTMLElement).getBoundingClientRect().left
+		test.true(Math.abs(btnLeft - tableLeft) < 2, 'should align the delete button with the left edge of the table')
+		test.notEqual(
+			getComputedStyle((submit.node() as HTMLElement).parentElement as HTMLElement).textAlign,
+			'center',
+			'should not center the delete button'
+		)
+
 		const checkboxes = content.selectAll('input[type="checkbox"]').nodes() as HTMLInputElement[]
 		test.deepEqual(
 			checkboxes.map(c => c.value),
