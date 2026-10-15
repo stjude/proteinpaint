@@ -15,6 +15,8 @@ import { MassUser, datasetRequiresAuth, getDeletionBatches, getAuthStatus } from
  *  - MassUser renderSessionOptions()
  *  - MassUser init() with sessions saved in the browser
  *  - MassUser init() with an optional lookup of the sessions on the server
+ *  - MassUser setServerCachedSessions(): only successful results are kept
+ *  - MassUser main() after the user signs in
  *  - MassUser getSavableState()
  *  - MassUser refuses()
  *  - MassUser open()
@@ -606,6 +608,166 @@ tape('MassUser init() with an optional lookup of the sessions on the server', as
 			'should still show the Save options'
 		)
 		holder.remove()
+	})
+	test.end()
+})
+
+/**
+ * Replaces fetch() to answer each request with respond(), which returns {status, body}.
+ * Returns the number of requests, and a function to restore fetch().
+ */
+function mockFetch(respond: (n: number) => { status?: number; body: any }) {
+	const origFetch = window.fetch
+	const counter = { requests: 0, restore: () => {} }
+	clearServerDataCache()
+	window.fetch = async () => {
+		const { status = 200, body } = respond(++counter.requests)
+		return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
+	}
+	counter.restore = () => {
+		window.fetch = origFetch
+		clearServerDataCache()
+	}
+	return counter
+}
+
+tape('MassUser setServerCachedSessions(): only successful results are kept', async test => {
+	await withoutWarnings(async warnings => {
+		// not signed in: no request, nothing is kept, and no side effect on the sign-in message
+		{
+			const { user, holder, app } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: false })
+			user.serverCachedSessions = undefined
+			let headerRequests = 0
+			app.vocabApi.mayGetAuthHeaders = async () => {
+				headerRequests++
+				return {}
+			}
+			const counter = mockFetch(() => ({ body: { status: 'ok', sessionIds: ['a'] } }))
+			await user.setServerCachedSessions()
+			test.equal(counter.requests, 0, 'should not send a request when the user is not signed in')
+			test.equal(headerRequests, 0, 'should not ask for the auth headers when the user is not signed in')
+			test.equal(user.serverCachedSessions, undefined, 'should not keep anything when the user is not signed in')
+			test.equal(warnings.length, 0, 'should not warn when the lookup is skipped')
+
+			// signed in later
+			app.vocabApi.hasVerifiedToken = () => true
+			await user.setServerCachedSessions()
+			test.equal(counter.requests, 1, 'should send the request once the user is signed in')
+			test.deepEqual(user.serverCachedSessions, ['a'], 'should keep the sessions once the user is signed in')
+			counter.restore()
+			holder.remove()
+		}
+
+		// a public dataset has no sessions on the server, and needs no request
+		{
+			const { user, holder } = getUser()
+			user.serverCachedSessions = undefined
+			const counter = mockFetch(() => ({ body: { sessionIds: ['a'] } }))
+			await user.setServerCachedSessions()
+			test.equal(counter.requests, 0, 'should not send a request for a dataset that has no jwt credential')
+			test.deepEqual(
+				user.serverCachedSessions,
+				[],
+				'should keep an empty list for a dataset that has no jwt credential'
+			)
+			counter.restore()
+			holder.remove()
+		}
+
+		// an error response is not kept as an empty list
+		{
+			const { user, holder } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+			user.serverCachedSessions = undefined
+			warnings.length = 0
+			let counter = mockFetch(() => ({ status: 401, body: { error: 'invalid credentials: no jwt.email' } }))
+			await user.setServerCachedSessions()
+			test.equal(user.serverCachedSessions, undefined, 'should not keep an error response as the sessions')
+			test.true(
+				warnings.some(w => w.includes('invalid credentials')),
+				'should warn with the error of the response'
+			)
+			counter.restore()
+
+			counter = mockFetch(() => ({ body: { status: 'ok' } })) // not a list
+			await user.setServerCachedSessions()
+			test.equal(user.serverCachedSessions, undefined, 'should not keep a response without a list of ids')
+			counter.restore()
+
+			// a list that is empty is kept, and is not looked up again
+			counter = mockFetch(() => ({ body: { status: 'ok', sessionIds: [] } }))
+			await user.setServerCachedSessions()
+			test.deepEqual(user.serverCachedSessions, [], 'should keep a list of ids that is empty')
+			test.equal(counter.requests, 1, 'should send one request')
+			counter.restore()
+			holder.remove()
+		}
+
+		// callers that arrive during a lookup share it
+		{
+			const { user, holder } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+			user.serverCachedSessions = undefined
+			const counter = mockFetch(() => ({ body: { status: 'ok', sessionIds: ['a', 'b'] } }))
+			const requests = [user.setServerCachedSessions(), user.setServerCachedSessions(), user.setServerCachedSessions()]
+			test.equal(requests[0], requests[1], 'should return the lookup that is in progress')
+			await Promise.all(requests)
+			test.equal(counter.requests, 1, 'should send one request for callers that arrive during the lookup')
+			test.deepEqual(user.serverCachedSessions, ['a', 'b'], 'should keep the sessions')
+			test.equal(user.serverSessionsRequest, undefined, 'should clear the lookup when it is done')
+			counter.restore()
+			holder.remove()
+		}
+	})
+	test.end()
+})
+
+tape('MassUser main() after the user signs in', async test => {
+	await withStoredSessions(undefined, async () => {
+		await withoutWarnings(async () => {
+			const { user, holder, state, app } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: false })
+			user.serverCachedSessions = undefined
+			let signedIn = false
+			app.vocabApi.hasVerifiedToken = () => signedIn
+			const counter = mockFetch(() => ({ body: { status: 'ok', sessionIds: ['server1'] } }))
+
+			user.init(state)
+			await user.main()
+			await new Promise(resolve => setTimeout(resolve, 50))
+			test.equal(counter.requests, 0, 'should not look up the sessions on the server before the user signs in')
+			test.equal(getOptionLabels(holder).includes('Delete'), false, 'should not show Delete before the user signs in')
+
+			// the user signs in after the launch
+			signedIn = true
+			await user.main()
+			await new Promise(resolve => setTimeout(resolve, 100))
+			test.equal(counter.requests, 1, 'should look up the sessions on the server when the user signs in')
+			test.deepEqual(user.serverCachedSessions, ['server1'], 'should keep the sessions')
+			test.true(getOptionLabels(holder).includes('Delete'), 'should add Delete for the sessions on the server')
+
+			// later updates do not look them up again
+			await user.main()
+			await user.main()
+			await new Promise(resolve => setTimeout(resolve, 50))
+			test.equal(counter.requests, 1, 'should not look up the sessions again on later updates')
+			counter.restore()
+			holder.remove()
+		})
+
+		// a lookup that fails after the user signs in is not repeated on every update
+		await withoutWarnings(async () => {
+			const { user, holder, state, app } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: false })
+			user.serverCachedSessions = undefined
+			let signedIn = false
+			app.vocabApi.hasVerifiedToken = () => signedIn
+			const counter = mockFetch(() => ({ status: 500, body: { error: 'server error' } }))
+			user.init(state)
+			signedIn = true
+			for (let i = 0; i < 4; i++) await user.main()
+			await new Promise(resolve => setTimeout(resolve, 100))
+			test.equal(counter.requests, 1, 'should not repeat a failed lookup on every update of the app')
+			test.equal(user.serverCachedSessions, undefined, 'should not keep the failed lookup')
+			counter.restore()
+			holder.remove()
+		})
 	})
 	test.end()
 })

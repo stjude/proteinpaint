@@ -72,21 +72,27 @@ function clickUserTab(nav: any) {
 // 	}
 // }
 
+/** The number of /sessionIds requests that mockRequiredAuth() received, since it was last called */
+let sessionIdRequests = 0
+
 const jwtAuth = { route: 'termdb', type: 'jwt', headerKey: 'x-ds-access-token' }
 
 /**
  * The test server does not require authorization for the TermdbTest dataset. To test the tab of
  * a dataset that does, this adds a jwt credential to the termdb/config response, and replies to the
  * request for the server sessions of the user, with no request to the server.
+ * signedIn: also reports an active session for the dataset, so that the user is signed in.
  * Returns a function that restores fetch().
  */
-function mockRequiredAuth(serverSessionIds: string[] = [], failSessionIds = false) {
+function mockRequiredAuth(serverSessionIds: string[] = [], failSessionIds = false, signedIn = false) {
 	// the responses are cached across tests, so that the mocked one is not reused by other tests
 	const clearCache = () => clearServerDataCache({ serverData: (dofetch as any).serverData })
 	clearCache()
+	sessionIdRequests = 0
 	const origFetch = window.fetch
 	window.fetch = async function (url: any, init?: any) {
 		const path = typeof url == 'string' ? url : url?.url || String(url)
+		if (path.includes('sessionIds')) sessionIdRequests++
 		if (path.includes('sessionIds') && failSessionIds) throw new TypeError('Failed to fetch') // network failure
 		if (path.includes('sessionIds')) {
 			return new Response(JSON.stringify({ sessionIds: serverSessionIds }), {
@@ -95,6 +101,12 @@ function mockRequiredAuth(serverSessionIds: string[] = [], failSessionIds = fals
 			})
 		}
 		const res = await origFetch.call(window, url, init)
+		if (signedIn && /\/genomes(\?|$)/.test(path)) {
+			// the server reports an active session for the dataset
+			const data = await res.clone().json()
+			data.dsAuth = [...(data.dsAuth || []), { dslabel: 'TermdbTest', ...jwtAuth, insession: true }]
+			return new Response(JSON.stringify(data), { status: 200, headers: { 'content-type': 'application/json' } })
+		}
 		if (path.includes('termdb/config')) {
 			const data = await res.clone().json()
 			data.termdbConfig.requiredAuth = [jwtAuth]
@@ -377,23 +389,23 @@ tape('user tab for a dataset that requires authorization', test => {
 			'should prompt to sign in when there is no token'
 		)
 
-		// the sessions of the server are listed, and the server cannot be saved to
-		user.savedSessions['browser-session-1'] = { plots: [] }
+		// the sessions on the server are not looked up before the user is signed in, the request would be rejected
+		await sleep(100)
+		test.equal(sessionIdRequests, 0, 'should not request the sessions on the server when not signed in')
 		const openBtn = await detectOptionBtn(nav, 'Open')
-		test.true(await detectOptionBtn(nav, 'Delete'), 'should show Delete for the sessions on the server')
-		openBtn.click()
-		await detectOne({ elem: getContent(nav).node(), selector: 'tbody tr:nth-child(2)' })
-		const serverRow = getContent(nav)
-			.selectAll('tbody tr')
-			.filter((d: any) => d?.loc === 'server' && d.id === 'server-session-1')
-		test.deepEqual(
-			serverRow
-				.selectAll('td')
-				.nodes()
-				.map((node: HTMLElement) => node.textContent),
-			['server', 'server-session-1'],
-			'should list the session from the server'
+		test.equal(
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-session-btn-delete"]').size(),
+			0,
+			'should not show Delete, since there are no sessions to delete'
 		)
+		openBtn.click()
+		await sleep(100)
+		test.true(
+			getContent(nav).text().includes('requires sign-in'),
+			'should say that the sessions on the server require sign-in'
+		)
+		test.equal(sessionIdRequests, 0, 'should still not request the sessions on the server')
+		test.equal(getUser(nav).serverCachedSessions, undefined, 'should not keep an empty list as the sessions')
 
 		const saveBtn = await detectOptionBtn(nav, 'Save')
 		saveBtn.click()
@@ -412,7 +424,7 @@ tape('user tab for a dataset that requires authorization', test => {
 
 tape('launch when the lookup of the sessions on the server fails', test => {
 	test.timeoutAfter(8000)
-	const restoreFetch = mockRequiredAuth(['unused'], true)
+	const restoreFetch = mockRequiredAuth(['unused'], true, true)
 	const warn = console.warn
 	console.warn = () => {}
 	runpp({
@@ -434,9 +446,54 @@ tape('launch when the lookup of the sessions on the server fails', test => {
 		}
 		test.equal(
 			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-user-auth-status"]').text(),
-			'Requires sign-in',
-			'should show the sign-in status'
+			'Signed in',
+			'should show that the user is signed in'
 		)
+		test.equal(sessionIdRequests, 1, 'should have tried the lookup of the sessions on the server')
+		test.equal(getUser(nav).serverCachedSessions, undefined, 'should not keep a failed lookup')
+		if ((test as any)._ok) nav.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('sessions on the server for a signed in user', test => {
+	test.timeoutAfter(8000)
+	const restoreFetch = mockRequiredAuth(['server-session-1'], false, true)
+	runpp({
+		nav: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(nav: any) {
+		nav.on('postRender.test', null)
+		test.equal(
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-user-auth-status"]').text(),
+			'Signed in',
+			'should show that the user is signed in'
+		)
+		// Delete is added when the lookup is done
+		test.true(await detectOptionBtn(nav, 'Delete'), 'should show Delete for the sessions on the server')
+		test.equal(sessionIdRequests, 1, 'should look up the sessions on the server once')
+		test.deepEqual(getUser(nav).serverCachedSessions, ['server-session-1'], 'should keep the sessions of the server')
+
+		const openBtn = await detectOptionBtn(nav, 'Open')
+		openBtn.click()
+		const rows = await detectOne({ elem: getContent(nav).node(), selector: 'tbody tr:nth-child(2)' })
+		test.true((rows as HTMLElement).textContent!.includes('server-session-1'), 'should list the session on the server')
+		test.equal(sessionIdRequests, 1, 'should reuse the sessions that were looked up')
+
+		const saveBtn = await detectOptionBtn(nav, 'Save')
+		saveBtn.click()
+		const serverBtn = (await detectOne({
+			elem: getContent(nav).node(),
+			selector: 'button[title^="Save the session into a remote server"]'
+		})) as HTMLButtonElement
+		test.false(serverBtn.disabled, 'should enable saving to the server when signed in')
+
+		restoreFetch()
 		if ((test as any)._ok) nav.Inner.app.destroy()
 		test.end()
 	}

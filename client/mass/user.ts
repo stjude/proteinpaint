@@ -59,6 +59,10 @@ export class MassUser {
 	savedSessions: { [name: string]: any } = {}
 	/** Ids of the sessions saved on the server. Undefined until first requested */
 	serverCachedSessions?: string[]
+	/** The lookup of serverCachedSessions that is in progress, shared by everything that needs the result */
+	serverSessionsRequest?: Promise<void>
+	/** Whether the user was signed in at the last check, to detect a sign-in after the launch */
+	signedIn = false
 	confirmationTimer?: ReturnType<typeof setTimeout>
 
 	constructor(opts: MassUserOpts) {
@@ -105,6 +109,21 @@ export class MassUser {
 	async main() {
 		this.setRequiredAuth(this.state.termdbConfig)
 		this.renderAuthInfo()
+		this.mayLookupAfterSignIn()
+	}
+
+	/**
+	 * The sessions on the server are not looked up while the user is not signed in. So when the user signs in
+	 * after the launch, look them up then. Only a change to signed in triggers this, so that a lookup that keeps
+	 * failing is not repeated on every update of the app.
+	 */
+	mayLookupAfterSignIn() {
+		const signedIn = !!this.app.vocabApi.hasVerifiedToken()
+		const justSignedIn = signedIn && !this.signedIn
+		this.signedIn = signedIn
+		if (justSignedIn && this.requiredAuth && !this.serverCachedSessions) {
+			this.setServerCachedSessions().then(() => this.renderSessionOptions())
+		}
 	}
 
 	setRequiredAuth(termdbConfig: any) {
@@ -150,6 +169,7 @@ export class MassUser {
 	 * rendered again when it is done, in case it adds Delete.
 	 */
 	initSessionOptions() {
+		this.signedIn = !!this.app.vocabApi.hasVerifiedToken()
 		this.renderSessionOptions()
 		if (!this.serverCachedSessions) this.setServerCachedSessions().then(() => this.renderSessionOptions())
 	}
@@ -390,20 +410,49 @@ export class MassUser {
 	 * Looks up the ids of the sessions that the user saved on the server. This never throws, since the
 	 * sessions on the server are optional: the sessions of the browser, and everything else in the mass ui,
 	 * must work when the lookup fails, for example from a network error or a failure to get a token.
-	 * When it fails, serverCachedSessions stays undefined, so that the lookup is tried again on the next use.
+	 *
+	 * Only a successful lookup is kept in serverCachedSessions. It stays undefined when the lookup is not made
+	 * because the user is not signed in, or when it fails, so that it is tried again on the next use.
+	 * Callers that arrive while a lookup is in progress share it instead of sending another request.
 	 */
-	async setServerCachedSessions() {
+	setServerCachedSessions(): Promise<void> {
+		if (this.serverSessionsRequest) return this.serverSessionsRequest
+		// a lookup that is skipped is not shared, since a user that signs in right after it must not reuse it
+		if (!this.mayLookupSessions()) return Promise.resolve()
+		this.serverSessionsRequest = this.lookupServerSessions().finally(() => {
+			this.serverSessionsRequest = undefined
+		})
+		return this.serverSessionsRequest
+	}
+
+	/**
+	 * Returns true when the sessions on the server should be looked up now. A dataset without a jwt
+	 * credential has none, and the lookup is not made, so serverCachedSessions is an empty list.
+	 * It is also not made before the user is signed in, when the server would reject the request.
+	 */
+	mayLookupSessions(): boolean {
 		try {
 			const state: any = this.app.getState()
 			this.requiredAuth = state.termdbConfig?.requiredAuth?.find((a: any) => a.route == this.route && a.type == 'jwt')
 			if (!this.requiredAuth) {
 				this.serverCachedSessions = []
-				return
+				return false
 			}
+			return !!this.app.vocabApi.hasVerifiedToken()
+		} catch (e: any) {
+			console.warn(`unable to get the sessions saved on the server: ${e?.message || e}`)
+			return false
+		}
+	}
+
+	async lookupServerSessions() {
+		try {
 			const headers = await this.app.vocabApi.mayGetAuthHeaders(this.route)
 			const body = { route: this.route, dslabel: this.dslabel, embedder: window.location.hostname }
 			const res = await dofetch3('/sessionIds', { headers, body })
-			this.serverCachedSessions = res.sessionIds || []
+			// an error response is not a list that is empty
+			if (!Array.isArray(res?.sessionIds)) throw res?.error || 'unexpected response'
+			this.serverCachedSessions = res.sessionIds
 		} catch (e: any) {
 			console.warn(`unable to get the sessions saved on the server: ${e?.message || e}`)
 		}
