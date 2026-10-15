@@ -10,6 +10,8 @@ import { dofetch, dofetch3, clearServerDataCache } from '#common/dofetch'
  *  - Save to the browser, Open, and Delete a session
  *  - user tab for a dataset that requires authorization
  *  - launch when the lookup of the sessions on the server fails
+ *  - user tab when no cohort is selected
+ *  - days left message when there is no user tab
  *  - Export Session and days left message for a session opened from a url
  */
 
@@ -499,6 +501,96 @@ tape('sessions on the server for a signed in user', test => {
 	}
 })
 
+tape('user tab when no cohort is selected', test => {
+	test.timeoutAfter(8000)
+	runpp({
+		nav: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	/*
+	A dataset with a cohort selection and no selected cohort does not launch yet, since charts.ts throws for
+	activeCohort=-1, so the state is set on the nav and its updateUI() is called.
+	*/
+	async function runTests(nav: any) {
+		nav.on('postRender.test', null)
+		const self = nav.Inner
+		test.true(self.state.termdbConfig.selectCohort, 'should be a dataset that has a cohort selection')
+		self.activeCohort = -1
+		const filterIdx = self.subheaderKeys.indexOf('filter')
+		const userIdx = self.subheaderKeys.indexOf('user')
+
+		// the tabs that need a cohort are hidden, with a message
+		self.activeTab = filterIdx
+		await self.updateUI()
+		test.equal(self.dom.subheaderDiv.style('display'), 'none', 'should hide the subheader of the filter tab')
+		test.notEqual(self.dom.messageDiv.style('display'), 'none', 'should show the message to select a cohort')
+		test.true(self.dom.messageDiv.text().includes('No cohort selected'), 'should tell the user to select a cohort')
+
+		// the user tab is not
+		self.activeTab = userIdx
+		await self.updateUI()
+		test.notEqual(self.dom.subheaderDiv.style('display'), 'none', 'should show the subheader of the user tab')
+		test.equal(self.dom.messageDiv.style('display'), 'none', 'should not show the message to select a cohort')
+		const td = self.dom.tabDiv.selectAll('td').filter((d: any) => d.colNum === userIdx && d.key === 'top')
+		test.equal(td.style('background-color'), 'rgb(236, 236, 236)', 'should show the user tab as the active tab')
+
+		// the session controls are available
+		for (const label of ['Open', 'Save', 'Share']) {
+			const btn = await detectOptionBtn(nav, label)
+			test.true(btn.offsetParent !== null, `should show the ${label} button`)
+		}
+		const saveBtn = await detectOptionBtn(nav, 'Save')
+		saveBtn.click()
+		test.true(
+			await detectOne({ elem: getContent(nav).node(), selector: 'input[type="text"]' }),
+			'should show the options to save the session'
+		)
+
+		// the other tabs are still hidden, including the first tab of the cohort selection
+		self.activeTab = filterIdx
+		await self.updateUI()
+		test.equal(self.dom.subheaderDiv.style('display'), 'none', 'should hide the filter tab again')
+		self.activeTab = 0
+		await self.updateUI()
+		test.notEqual(
+			self.dom.subheaderDiv.style('display'),
+			'none',
+			'should show the cohort tab, where a cohort is selected'
+		)
+
+		if ((test as any)._ok) self.app.destroy()
+		test.end()
+	}
+})
+
+tape('days left message when there is no user tab', test => {
+	test.timeoutAfter(5000)
+	runpp({
+		sessionDaysLeft: 12,
+		sessionId: 'test-session-id',
+		state: { nav: { header_mode: 'search_only' } },
+		nav: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(nav: any) {
+		nav.on('postRender.test', null)
+		const msg = nav.Inner.dom.sessionElapsedMessageDiv
+		test.true(msg.text().includes('12 days'), 'should show the number of days left')
+		test.false(msg.text().includes('user tab'), 'should not refer to a user tab that is not shown')
+		test.false(msg.text().includes('Save'), 'should not tell the user to save in a tab that is not shown')
+		if ((test as any)._ok) nav.Inner.app.destroy()
+		test.end()
+	}
+})
+
 tape('Export Session and days left message for a session opened from a url', test => {
 	test.timeoutAfter(5000)
 	runpp({
@@ -524,6 +616,7 @@ tape('Export Session and days left message for a session opened from a url', tes
 		const msg = nav.Inner.dom.sessionElapsedMessageDiv
 		test.notEqual(msg.style('display'), 'none', 'should show the days left message')
 		test.true(msg.text().includes('12 days'), 'should show the number of days left')
+		test.true(msg.text().includes('user tab'), 'should tell the user to save in the user tab')
 		test.true(
 			parseFloat(msg.style('font-size')) < parseFloat(nav.Inner.dom.controlsDiv.style('font-size')),
 			'should show the message in a smaller font than the controls'

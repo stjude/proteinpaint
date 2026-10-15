@@ -122,7 +122,7 @@ export class MassUser {
 		const justSignedIn = signedIn && !this.signedIn
 		this.signedIn = signedIn
 		if (justSignedIn && this.requiredAuth && !this.serverCachedSessions) {
-			this.setServerCachedSessions().then(() => this.renderSessionOptions())
+			this.setServerCachedSessions()
 		}
 	}
 
@@ -166,12 +166,12 @@ export class MassUser {
 	/**
 	 * Renders the session options right away. The lookup of the sessions on the server is optional, so it
 	 * is not awaited, since it must not delay or block the launch of the mass ui. The options are
-	 * rendered again when it is done, in case it adds Delete.
+	 * rendered again when any lookup is done, since Delete is only shown when there is a session to delete.
 	 */
 	initSessionOptions() {
 		this.signedIn = !!this.app.vocabApi.hasVerifiedToken()
 		this.renderSessionOptions()
-		if (!this.serverCachedSessions) this.setServerCachedSessions().then(() => this.renderSessionOptions())
+		if (!this.serverCachedSessions) this.setServerCachedSessions()
 	}
 
 	/** Render the Open, Save, Share, and Delete buttons. Delete is only available if there is something to delete */
@@ -421,6 +421,8 @@ export class MassUser {
 		if (!this.mayLookupSessions()) return Promise.resolve()
 		this.serverSessionsRequest = this.lookupServerSessions().finally(() => {
 			this.serverSessionsRequest = undefined
+			// Delete is only shown when there is a session to delete, which the lookup may have changed
+			this.renderSessionOptions()
 		})
 		return this.serverSessionsRequest
 	}

@@ -17,6 +17,7 @@ import { MassUser, datasetRequiresAuth, getDeletionBatches, getAuthStatus } from
  *  - MassUser init() with an optional lookup of the sessions on the server
  *  - MassUser setServerCachedSessions(): only successful results are kept
  *  - MassUser main() after the user signs in
+ *  - MassUser Delete is shown only when there are sessions to delete
  *  - MassUser getSavableState()
  *  - MassUser refuses()
  *  - MassUser open()
@@ -768,6 +769,86 @@ tape('MassUser main() after the user signs in', async test => {
 			counter.restore()
 			holder.remove()
 		})
+	})
+	test.end()
+})
+
+tape('MassUser Delete is shown only when there are sessions to delete', async test => {
+	await withoutWarnings(async () => {
+		// after a lookup, Delete is shown for the sessions of the browser or the server
+		for (const [browser, server, expected] of [
+			[false, false, false],
+			[true, false, true],
+			[false, true, true],
+			[true, true, true]
+		]) {
+			const { user, holder } = getUser({
+				termdbConfig: { requiredAuth: [jwtAuth] },
+				verified: true,
+				savedSessions: browser ? { local1: {} } : {}
+			})
+			user.serverCachedSessions = undefined
+			user.renderSessionOptions()
+			const counter = mockFetch(() => ({ body: { status: 'ok', sessionIds: server ? ['server1'] : [] } }))
+			await user.setServerCachedSessions()
+			test.equal(
+				getOptionLabels(holder).includes('Delete'),
+				expected,
+				`should ${expected ? 'show' : 'hide'} Delete after the lookup, browser=${browser}, server=${server}`
+			)
+			counter.restore()
+			holder.remove()
+		}
+
+		// a lookup that fails does not show Delete, and the sessions of the browser still do
+		for (const [browser, expected] of [
+			[false, false],
+			[true, true]
+		]) {
+			const { user, holder, app } = getUser({
+				termdbConfig: { requiredAuth: [jwtAuth] },
+				verified: true,
+				savedSessions: browser ? { local1: {} } : {}
+			})
+			user.serverCachedSessions = undefined
+			app.vocabApi.mayGetAuthHeaders = async () => {
+				throw new Error('offline')
+			}
+			user.renderSessionOptions()
+			await user.setServerCachedSessions()
+			test.equal(
+				getOptionLabels(holder).includes('Delete'),
+				expected,
+				`should ${expected ? 'show' : 'hide'} Delete after a failed lookup, browser=${browser}`
+			)
+			holder.remove()
+		}
+
+		// a lookup that is made when Open is clicked also updates the options, not only the lookup at the launch
+		{
+			const { user, holder } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+			user.serverCachedSessions = undefined
+			user.renderSessionOptions()
+			test.false(getOptionLabels(holder).includes('Delete'), 'should not show Delete before the lookup')
+			const counter = mockFetch(() => ({ body: { status: 'ok', sessionIds: ['server1'] } }))
+			getOptionBtn(holder, 'Open').click()
+			await new Promise(resolve => setTimeout(resolve, 100))
+			test.true(getOptionLabels(holder).includes('Delete'), 'should show Delete when the lookup of Open finds sessions')
+			counter.restore()
+			holder.remove()
+		}
+
+		// Delete is hidden after the last session is deleted
+		{
+			const { user, holder } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+			user.serverCachedSessions = ['server1']
+			user.renderSessionOptions()
+			test.true(getOptionLabels(holder).includes('Delete'), 'should show Delete for the session of the server')
+			user.serverCachedSessions = []
+			user.renderSessionOptions()
+			test.false(getOptionLabels(holder).includes('Delete'), 'should hide Delete when no session is left')
+			holder.remove()
+		}
 	})
 	test.end()
 })

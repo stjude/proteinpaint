@@ -476,18 +476,24 @@ function setRenderers(self: any): void {
 			return
 		}
 		self.dom.sessionElapsedMessageDiv.style('display', 'block')
+		// the Save option is in the user tab, which is only shown when there are tabs
+		const hasUserTab = self.opts.header_mode === 'with_tabs' && self.tabs.some((t: NavTab) => t.subheader === 'user')
 		self.dom.remainingDaysMessage = self.dom.sessionElapsedMessageDiv
 			.append('div')
 			.style('display', 'block')
 			.style('opacity', '0.65')
 			.html(
-				`<u>${self.sessionDaysLeft} days</u> left until this session is removed. Open the user tab and select the "Save" option to create a new one.`
+				`<u>${self.sessionDaysLeft} days</u> left until this session is removed.` +
+					(hasUserTab ? ` Open the user tab and select the "Save" option to create a new one.` : '')
 			)
 	}
 
 	self.updateUI = async () => {
 		if (!self.dom.subheaderDiv) return
-		if (self.activeTab && self.state.termdbConfig.selectCohort && self.activeCohort == -1) {
+		// the session controls of the user tab do not depend on a cohort, for example to open a saved session
+		// that selects one, so that tab is shown even when no cohort is selected
+		const isUserTab = self.tabs[self.activeTab]?.subheader === 'user'
+		if (self.activeTab && !isUserTab && self.state.termdbConfig.selectCohort && self.activeCohort == -1) {
 			// showing charts or filter tab; cohort selection is enabled but no cohort is selected
 			self.dom.subheaderDiv.style('display', 'none')
 			self.dom.messageDiv.selectAll('text').remove()
