@@ -376,12 +376,20 @@ tape('user tab for a dataset that requires authorization', test => {
 		)
 
 		// the sessions of the server are listed, and the server cannot be saved to
+		user.savedSessions['browser-session-1'] = { plots: [] }
 		const openBtn = await detectOptionBtn(nav, 'Open')
 		test.true(await detectOptionBtn(nav, 'Delete'), 'should show Delete for the sessions on the server')
 		openBtn.click()
-		const rows = await detectOne({ elem: getContent(nav).node(), selector: 'tbody tr:nth-child(2)' })
-		test.true(
-			(rows as HTMLElement).textContent!.includes('server-session-1'),
+		await detectOne({ elem: getContent(nav).node(), selector: 'tbody tr:nth-child(2)' })
+		const serverRow = getContent(nav)
+			.selectAll('tbody tr')
+			.filter((d: any) => d?.loc === 'server' && d.id === 'server-session-1')
+		test.deepEqual(
+			serverRow
+				.selectAll('td')
+				.nodes()
+				.map((node: HTMLElement) => node.textContent),
+			['server', 'server-session-1'],
 			'should list the session from the server'
 		)
 

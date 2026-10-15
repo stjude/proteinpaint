@@ -511,11 +511,52 @@ tape('MassUser refuses()', test => {
 tape('MassUser clearContent() and confirmAction()', test => {
 	const { user, holder } = getUser()
 	const content = holder.select('[data-testid="sjpp-user-session-content"]')
-	user.confirmAction(`Cached '<b>mysession</b>' in browser`)
-	test.equal(content.select('b').text(), 'mysession', 'should show the confirmation message')
+	user.confirmAction(`Cached 'mysession' in browser`)
+	test.equal(content.text(), `Cached 'mysession' in browser`, 'should show the confirmation message')
+	test.equal(content.select('div').selectAll('*').size(), 0, 'should keep the message as text')
 	user.clearContent()
+	test.equal(user.confirmationTimer, undefined, 'should reset the pending confirmation timer')
 	test.equal(content.selectAll('*').size(), 0, 'should clear the content')
 	test.equal(content.style('opacity'), '1', 'should reset the opacity that the confirmation fades')
+	holder.remove()
+	test.end()
+})
+
+tape('MassUser destroy() cancels pending cleanup', async test => {
+	test.timeoutAfter(6000)
+	const { user, holder } = getUser()
+	user.confirmAction('Saved')
+	user.destroy()
+	let cleanupCalls = 0
+	user.clearContent = () => {
+		cleanupCalls++
+	}
+	await new Promise(resolve => setTimeout(resolve, 4100))
+	test.equal(cleanupCalls, 0, 'should not run delayed cleanup after destruction')
+	holder.remove()
+	test.end()
+})
+
+tape('Literal display values', async test => {
+	const name = 'example <b>one</b> &amp; two'
+	const { user, holder } = getUser({ savedSessions: { [name]: {} }, serverCachedSessions: [name] })
+	const { tbody } = await user.listSessions()
+	const names = tbody
+		.selectAll('tr')
+		.nodes()
+		.map((row: any) => row.lastChild.textContent)
+	test.deepEqual(names, [name, name], 'should display both stored values verbatim')
+	test.equal(tbody.selectAll('b').size(), 0, 'should keep cell contents as text')
+
+	user.clearContent()
+	await user.save()
+	const content = user.dom.contentDiv
+	content.select('input[type="text"]').property('value', 'example').dispatch('input')
+	const option = content.select('[data-testid="sjpp-save-session-option"]')
+	test.equal(option.text(), name, 'should display the suggested value verbatim')
+	test.equal(option.selectAll('*').size(), 0, 'should keep the suggested value as text')
+	option.dispatch('click')
+	test.equal(content.select('input[type="text"]').property('value'), name, 'should select the original value')
 	holder.remove()
 	test.end()
 })

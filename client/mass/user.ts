@@ -59,6 +59,7 @@ export class MassUser {
 	savedSessions: { [name: string]: any } = {}
 	/** Ids of the sessions saved on the server. Undefined until first requested */
 	serverCachedSessions?: string[]
+	confirmationTimer?: ReturnType<typeof setTimeout>
 
 	constructor(opts: MassUserOpts) {
 		this.type = MassUser.type
@@ -196,9 +197,15 @@ export class MassUser {
 	}
 
 	clearContent() {
+		clearTimeout(this.confirmationTimer)
+		this.confirmationTimer = undefined
 		this.dom.contentDiv.interrupt()
 		this.dom.contentDiv.selectAll('*').remove()
 		this.dom.contentDiv.style('opacity', 1)
+	}
+
+	destroy() {
+		this.clearContent()
 	}
 
 	async open() {
@@ -266,18 +273,18 @@ export class MassUser {
 			}
 		})
 
-		t.headtr.select('th').html('Open from')
+		t.headtr.select('th').text('Open from')
 
 		// open session from a local file
 		const tr1 = t.tbody.insert('tr', 'tr')
-		tr1.append('td').style('text-align', 'center').style('padding', '3px 9px').html('Local file')
+		tr1.append('td').style('text-align', 'center').style('padding', '3px 9px').text('Local file')
 		const label = tr1.append('td').style('text-align', 'left').append('label')
 		label
 			.append('span')
 			.style('padding', '3px 9px')
 			.style('text-decoration', 'underline')
 			.style('cursor', 'pointer')
-			.html('Choose File')
+			.text('Choose File')
 		label
 			.append('input')
 			.attr('type', 'file')
@@ -332,7 +339,7 @@ export class MassUser {
 			.append('th')
 			.style('text-align', (_: string, i: number) => (i === 0 ? 'center' : 'left'))
 			.style('padding', '3px 9px')
-			.html((d: string) => d)
+			.text((d: string) => d)
 
 		const sessionIds: { loc: SessionLocation; id: string }[] = Object.keys(this.savedSessions).map(id => ({
 			loc: 'browser',
@@ -357,7 +364,7 @@ export class MassUser {
 			.style('text-align', (_: any, i: number) => (i === 0 ? 'center' : 'left'))
 			.style('padding', '3px 9px')
 			.style('cursor', 'pointer')
-			.html((d: any, i: number) => (i === 0 ? d.loc : d.id))
+			.text((d: any, i: number) => (i === 0 ? d.loc : d.id))
 
 		if (!this.serverCachedSessions!.length && this.requiredAuth && !this.app.vocabApi.hasVerifiedToken()) {
 			table
@@ -369,7 +376,7 @@ export class MassUser {
 				.append('td')
 				.style('text-align', (_: string, i: number) => (i === 0 ? 'center' : 'left'))
 				.style('padding', '3px 9px')
-				.html((d: string) => d)
+				.text((d: string) => d)
 		}
 		return { table, headtr, tbody, trs }
 	}
@@ -390,7 +397,7 @@ export class MassUser {
 	async save() {
 		const div = this.dom.contentDiv
 		const inputDiv = div.append('div')
-		inputDiv.append('span').html('Save as')
+		inputDiv.append('span').text('Save as')
 		const sessionNames = Object.keys(this.savedSessions)
 		if (!this.serverCachedSessions) await this.setServerCachedSessions()
 		sessionNames.push(...this.serverCachedSessions!.filter(d => !sessionNames.includes(d)))
@@ -413,7 +420,7 @@ export class MassUser {
 					.append('div')
 					.attr('class', 'sja_menuoption')
 					.attr('data-testid', `sjpp-save-session-option`)
-					.html((d: string) => d)
+					.text((d: string) => d)
 					.on('click', (_: MouseEvent, d: string) => {
 						input.property('value', d)
 						searchResultDiv.selectAll('*').remove()
@@ -426,7 +433,7 @@ export class MassUser {
 		submitDiv
 			.append('button')
 			.style('min-width', '80px')
-			.html('Browser')
+			.text('Browser')
 			.attr(
 				'title',
 				`Save the session in your current browser's cache. The session can be easily recovered, but not shared among your other devices`
@@ -436,13 +443,13 @@ export class MassUser {
 				this.savedSessions[this.sessionName] = this.getSavableState()
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
 				this.renderSessionOptions()
-				this.confirmAction(`Cached '<b>${this.sessionName}</b>' in browser`)
+				this.confirmAction(`Cached '${this.sessionName}' in browser`)
 			})
 
 		submitDiv
 			.append('button')
 			.style('min-width', '80px')
-			.html('File')
+			.text('File')
 			.attr(
 				'title',
 				`Save the session into a local file. The session can be easily recoved using the 'Open from local file' option.`
@@ -451,7 +458,7 @@ export class MassUser {
 				const name = input.property('value') || placeholder
 				this.savedSessions[name] = this.getSavableState()
 				this.download(name)
-				this.confirmAction(`Downloaded '<b>${name}</b>'`)
+				this.confirmAction(`Downloaded '${name}'`)
 			})
 
 		// assume that a jwt-type credential will include the user email in the jwt payload,
@@ -461,7 +468,7 @@ export class MassUser {
 			submitDiv
 				.append('button')
 				.style('min-width', '80px')
-				.html('Server')
+				.text('Server')
 				.attr(
 					'title',
 					`${requiresSignIn}Save the session into a remote server. The session can be easily shared across your different devices and recovered using the 'Open from server' option.`
@@ -481,7 +488,7 @@ export class MassUser {
 					}
 					if (!this.serverCachedSessions!.includes(name)) this.serverCachedSessions!.push(name)
 					this.renderSessionOptions()
-					this.confirmAction(`Saved '<b>${name}</b>' on the server`)
+					this.confirmAction(`Saved '${name}' on the server`)
 				})
 		}
 	}
@@ -550,9 +557,9 @@ export class MassUser {
 		}
 		const url = `${this.hostURL}/?mass-session-id=${res.id}&noheader=1`
 		const linkDiv = div.append('div').style('margin', '10px')
-		linkDiv.append('div').style('display', 'flex').style('margin-bottom', '12px').html(`Open or copy the session link.`)
+		linkDiv.append('div').style('display', 'flex').style('margin-bottom', '12px').text(`Open or copy the session link.`)
 
-		const a = linkDiv.append('a').style('display', 'none').attr('href', url).attr('target', '_blank').html(res.id)
+		const a = linkDiv.append('a').style('display', 'none').attr('href', url).attr('target', '_blank').text(res.id)
 
 		// open button
 		linkDiv
@@ -618,7 +625,7 @@ export class MassUser {
 		})
 
 		// add a 3rd column for the checkboxes
-		t.headtr.append('th').html('Delete')
+		t.headtr.append('th').text('Delete')
 		t.trs.each(function (this: any, d: any) {
 			select(this)
 				.append('td')
@@ -632,7 +639,7 @@ export class MassUser {
 			.append('div')
 			.style('text-align', 'center')
 			.append('button')
-			.html('Delete selected sessions')
+			.text('Delete selected sessions')
 			.property('disabled', true)
 			.on('click', async () => {
 				errorDiv.selectAll('*').remove()
@@ -698,11 +705,11 @@ export class MassUser {
 	}
 
 	/** Show a message that fades out, then clear the content */
-	confirmAction(html: string) {
+	confirmAction(message: string) {
 		this.clearContent()
-		this.dom.contentDiv.append('div').html(html)
+		this.dom.contentDiv.append('div').text(message)
 		this.dom.contentDiv.transition().delay(3000).duration(1000).style('opacity', 0)
-		setTimeout(() => this.clearContent(), 4000)
+		this.confirmationTimer = setTimeout(() => this.clearContent(), 4000)
 	}
 }
 
@@ -747,7 +754,7 @@ async function preprocessState(state: any, app: AppApi) {
 		try {
 			await Promise.all(promises)
 		} catch (e: any) {
-			console.log(e)
+			console.error(e)
 			app.printError(e)
 		}
 	}
