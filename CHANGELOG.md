@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.219.1
 
 Fixes:
 - The /healthcheck response reads public/rev.txt and public/host-image.txt, and the /genomes response reads public/rev.txt, when requested instead of once at server startup, so pkgver and /healthcheck's hostImage match the files that a host rollout copies into a mounted public dir after the server has started
