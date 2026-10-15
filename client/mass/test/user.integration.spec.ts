@@ -11,7 +11,7 @@ import { dofetch, dofetch3, clearServerDataCache } from '#common/dofetch'
  *  - user tab for a dataset that requires authorization
  *  - launch when the lookup of the sessions on the server fails
  *  - user tab when no cohort is selected
- *  - days left message when there is no user tab
+ *  - days left message names the tab
  *  - Export Session and days left message for a session opened from a url
  */
 
@@ -567,27 +567,54 @@ tape('user tab when no cohort is selected', test => {
 	}
 })
 
-tape('days left message when there is no user tab', test => {
-	test.timeoutAfter(5000)
+tape('days left message names the tab', test => {
+	test.timeoutAfter(10000)
+	const sentence = (tab: string) =>
+		`left until this session is removed. Open the ${tab} tab and select the "Save" option to create a new one.`
+
+	// a public dataset has a SESSION tab
 	runpp({
 		sessionDaysLeft: 12,
 		sessionId: 'test-session-id',
-		state: { nav: { header_mode: 'search_only' } },
 		nav: {
 			callbacks: {
-				'postRender.test': runTests
+				'postRender.test': testPublic
 			}
 		}
 	})
 
-	function runTests(nav: any) {
+	async function testPublic(nav: any) {
 		nav.on('postRender.test', null)
-		const msg = nav.Inner.dom.sessionElapsedMessageDiv
-		test.true(msg.text().includes('12 days'), 'should show the number of days left')
-		test.false(msg.text().includes('user tab'), 'should not refer to a user tab that is not shown')
-		test.false(msg.text().includes('Save'), 'should not tell the user to save in a tab that is not shown')
+		test.true(getTabLabels(nav).includes('SESSION'), 'should label the tab SESSION for a public dataset')
+		test.true(
+			nav.Inner.dom.sessionElapsedMessageDiv.text().includes(sentence('session')),
+			'should tell the user to open the session tab for a public dataset'
+		)
 		if ((test as any)._ok) nav.Inner.app.destroy()
-		test.end()
+
+		// a dataset that requires authorization has a USER tab
+		const restoreFetch = mockRequiredAuth()
+		runpp({
+			sessionDaysLeft: 12,
+			sessionId: 'test-session-id',
+			nav: {
+				callbacks: {
+					'postRender.test': testAuth
+				}
+			}
+		})
+
+		function testAuth(nav: any) {
+			nav.on('postRender.test', null)
+			restoreFetch()
+			test.true(getTabLabels(nav).includes('USER'), 'should label the tab USER when authorization is required')
+			test.true(
+				nav.Inner.dom.sessionElapsedMessageDiv.text().includes(sentence('user')),
+				'should tell the user to open the user tab when authorization is required'
+			)
+			if ((test as any)._ok) nav.Inner.app.destroy()
+			test.end()
+		}
 	}
 })
 
@@ -616,7 +643,7 @@ tape('Export Session and days left message for a session opened from a url', tes
 		const msg = nav.Inner.dom.sessionElapsedMessageDiv
 		test.notEqual(msg.style('display'), 'none', 'should show the days left message')
 		test.true(msg.text().includes('12 days'), 'should show the number of days left')
-		test.true(msg.text().includes('user tab'), 'should tell the user to save in the user tab')
+		test.true(msg.text().includes('session tab'), 'should tell the user to save in the session tab')
 		test.true(
 			parseFloat(msg.style('font-size')) < parseFloat(nav.Inner.dom.controlsDiv.style('font-size')),
 			'should show the message in a smaller font than the controls'

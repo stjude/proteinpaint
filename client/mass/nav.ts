@@ -5,7 +5,7 @@ import { groupsInit } from './groups'
 import { aboutInit } from './about.ts'
 import { chatInit } from './chat.ts'
 import { userInit } from './user'
-import { Menu, icons as icon_functions } from '#dom'
+import { Menu, icons as icon_functions, escapeHtml } from '#dom'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
 import type { NavTab, NavTabCell } from './types/nav'
 
@@ -476,15 +476,16 @@ function setRenderers(self: any): void {
 			return
 		}
 		self.dom.sessionElapsedMessageDiv.style('display', 'block')
-		// the Save option is in the user tab, which is only shown when there are tabs
-		const hasUserTab = self.opts.header_mode === 'with_tabs' && self.tabs.some((t: NavTab) => t.subheader === 'user')
+		// the Save option is in the user tab, which is labeled SESSION or USER
+		const tabName = (self.tabs.find((t: NavTab) => t.subheader === 'user')?.top || 'session').toLowerCase()
 		self.dom.remainingDaysMessage = self.dom.sessionElapsedMessageDiv
 			.append('div')
 			.style('display', 'block')
 			.style('opacity', '0.65')
 			.html(
-				`<u>${self.sessionDaysLeft} days</u> left until this session is removed.` +
-					(hasUserTab ? ` Open the user tab and select the "Save" option to create a new one.` : '')
+				`<u>${self.sessionDaysLeft} days</u> left until this session is removed. Open the ${escapeHtml(
+					tabName
+				)} tab and select the "Save" option to create a new one.`
 			)
 	}
 
