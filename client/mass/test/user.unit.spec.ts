@@ -22,6 +22,8 @@ import { MassUser, datasetRequiresAuth, getDeletionBatches, getAuthStatus } from
  *  - MassUser getState()
  *  - MassUser getState() for a session
  *  - MassUser Server save
+ *  - MassUser File save
+ *  - MassUser ids in urls
  *  - MassUser refuses()
  *  - MassUser open()
  *  - MassUser save()
@@ -622,9 +624,10 @@ tape('MassUser init() with an optional lookup of the sessions on the server', as
  */
 function mockFetch(respond: (n: number) => { status?: number; body: any }) {
 	const origFetch = window.fetch
-	const counter = { requests: 0, restore: () => {} }
+	const counter = { requests: 0, urls: [] as string[], restore: () => {} }
 	clearServerDataCache()
-	window.fetch = async () => {
+	window.fetch = async (url: any) => {
+		counter.urls.push(typeof url == 'string' ? url : url?.url || String(url))
 		const { status = 200, body } = respond(++counter.requests)
 		return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 	}
@@ -1066,6 +1069,157 @@ tape('MassUser getState()', test => {
 	test.equal(holder2.select('[data-testid="sjpp-user-auth-info"]').text(), 'hi', 'should render the intro')
 	holder.remove()
 	holder2.remove()
+	test.end()
+})
+
+/** Replaces the click of a link, which would download a file, to record the downloads. Returns a function to restore it. */
+function stubDownloads() {
+	const downloads: { filename: string | null; text: string }[] = []
+	const click = HTMLAnchorElement.prototype.click
+	HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+		const href = this.getAttribute('href') || ''
+		downloads.push({
+			filename: this.getAttribute('download'),
+			text: decodeURIComponent(href.slice(href.indexOf(',') + 1))
+		})
+	}
+	return {
+		downloads,
+		restore: () => {
+			HTMLAnchorElement.prototype.click = click
+		}
+	}
+}
+
+/** Replaces window.open() to record the urls. Returns a function to restore it. */
+function stubWindowOpen() {
+	const urls: string[] = []
+	const open = window.open
+	window.open = ((url: string) => {
+		urls.push(url)
+		return null
+	}) as any
+	return {
+		urls,
+		restore: () => {
+			window.open = open
+		}
+	}
+}
+
+tape('MassUser File save', async test => {
+	await withStoredSessions(undefined, async () => {
+		const { user, holder, state } = getUser({ savedSessions: { existing: {} } })
+		state.plots = [{ id: 'p1', chartType: 'summary' }]
+		const stub = stubDownloads()
+		user.renderSessionOptions()
+		const content = holder.select('[data-testid="sjpp-user-session-content"]')
+		// the options to save are shown again after each save, which shows a confirmation instead
+		const clickFile = async (name: string) => {
+			getOptionBtn(holder, 'Save').click()
+			await new Promise(resolve => setTimeout(resolve, 50))
+			content.select('input[type="text"]').property('value', name)
+			const buttons = Array.from((content.node() as HTMLElement).querySelectorAll('button'))
+			;(buttons.find((b: HTMLButtonElement) => b.textContent == 'File') as HTMLButtonElement).click()
+		}
+
+		await clickFile('my-file')
+		test.equal(stub.downloads.length, 1, 'should download one file')
+		test.equal(stub.downloads[0].filename, 'my-file.txt', 'should name the file with the extension')
+		const saved = JSON.parse(stub.downloads[0].text)
+		test.deepEqual(saved.plots, state.plots, 'should have the session in the file')
+		test.false('termdbConfig' in saved, 'should not have the dataset config in the file')
+		test.true(saved.sampleGroupsForm >= 2, 'should have the session marked as saved by this version')
+
+		await clickFile('named.txt')
+		test.equal(stub.downloads[1].filename, 'named.txt', 'should not add the extension twice')
+
+		test.deepEqual(Object.keys(user.savedSessions), ['existing'], 'should not keep the session of a file in memory')
+		test.equal(localStorage.getItem(storageKey), null, 'should not save the session of a file in the browser storage')
+		test.false(
+			holder.select('[data-testid="sjpp-user-session-content"]').text().includes('Cache Location'),
+			'should not list the session of a file as a session of the browser'
+		)
+		stub.restore()
+		holder.remove()
+	})
+	test.end()
+})
+
+tape('MassUser ids in urls', async test => {
+	const id = 'a&b=c #d%e'
+	const encoded = 'a%26b%3Dc%20%23d%25e'
+
+	// Export Session
+	{
+		const { user, holder } = getUser({ sessionDaysLeft: 12, sessionId: id })
+		const stub = stubDownloads()
+		const counter = mockFetch(() => ({ body: { state: { plots: [] } } }))
+		await user.exportSession()
+		test.equal(counter.requests, 1, 'should request the session once')
+		test.true(counter.urls[0].includes(`id=${encoded}`), 'should encode the id in the request of Export Session')
+		test.false(counter.urls[0].includes('&b=c'), 'should not add parameters from the id to the request')
+		test.equal(stub.downloads[0].filename, `${id}.json`, 'should name the file with the id')
+		counter.restore()
+		stub.restore()
+		holder.remove()
+	}
+
+	// opening a session of the browser in a new tab, and a session on the server in a new tab
+	for (const loc of ['browser', 'server']) {
+		const { user, holder } = getUser({
+			termdbConfig: { requiredAuth: [jwtAuth] },
+			verified: true,
+			savedSessions: loc == 'browser' ? { [id]: { plots: [], sampleGroupsForm: 2 } } : {},
+			serverCachedSessions: loc == 'server' ? [id] : []
+		})
+		user.dslabel = 'ds&x=1'
+		user.hostURL = window.location.origin // the session is opened in a new tab of this host, not through the embedder
+		const open = stubWindowOpen()
+		const counter = mockFetch(() => ({ body: { state: { plots: [], sampleGroupsForm: 2 } } }))
+		user.renderSessionOptions()
+		getOptionBtn(holder, 'Open').click()
+		await new Promise(resolve => setTimeout(resolve, 100))
+		const content = holder.select('[data-testid="sjpp-user-session-content"]')
+		// the option to open in a new tab is not shown, the current tab is its default
+		content.select('input[value="new"]').property('checked', true)
+		const row = content
+			.selectAll('tbody tr')
+			.filter((_: any, i: number, nodes: any) => nodes[i].textContent.includes(id))
+			.node() as HTMLElement
+		row.click()
+		await new Promise(resolve => setTimeout(resolve, 100))
+
+		test.equal(open.urls.length, 1, `should open one window for a session in the ${loc}`)
+		const params = new URL(open.urls[0], window.location.origin).searchParams
+		test.equal(params.get('mass-session-id'), id, `should open the session id as it is, ${loc}`)
+		test.equal([...params.keys()].length, loc == 'browser' ? 2 : 4, `should not add parameters from the id, ${loc}`)
+		if (loc == 'server') {
+			test.equal(params.get('dslabel'), 'ds&x=1', 'should encode the dslabel')
+			test.equal(params.get('route'), 'termdb', 'should have the route')
+		}
+		test.true(open.urls[0].includes(`mass-session-id=${encoded}`), `should encode the id in the url, ${loc}`)
+		open.restore()
+		counter.restore()
+		holder.remove()
+	}
+
+	// the link to share a session
+	{
+		const { user, holder } = getUser()
+		const counter = mockFetch(() => ({ body: { id } }))
+		user.renderSessionOptions()
+		getOptionBtn(holder, 'Share').click()
+		await new Promise(resolve => setTimeout(resolve, 100))
+		const link = holder.select('[data-testid="sjpp-user-session-content"] a')
+		test.true(
+			link.attr('href').includes(`mass-session-id=${encoded}&noheader=1`),
+			'should encode the id of a shared session'
+		)
+		test.equal(link.text(), id, 'should show the id as it is')
+		counter.restore()
+		holder.remove()
+	}
 	test.end()
 })
 

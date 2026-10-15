@@ -234,7 +234,7 @@ export class MassUser implements RxComponent {
 
 	/** Download the opened `mass-session-id` session as a json file */
 	async exportSession() {
-		const res = await dofetch3(`/massSession?id=${this.opts.sessionId}`)
+		const res = await dofetch3(`/massSession?id=${encodeURIComponent(this.opts.sessionId!)}`)
 		const a = document.createElement('a')
 		const dataStr = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(res.state))
 		a.setAttribute('href', dataStr)
@@ -293,7 +293,7 @@ export class MassUser implements RxComponent {
 					if (targetWindow == 'current') {
 						this.app.dispatch({ type: 'app_refresh', state })
 					} else if (window.location.origin == this.hostURL) {
-						window.open(`/?mass-session-id=${id}&src=browser`)
+						window.open(`/?mass-session-id=${encodeURIComponent(id)}&src=browser`)
 					} else {
 						if (state.embedder) parentCorsMessage({ state })
 						else {
@@ -316,7 +316,11 @@ export class MassUser implements RxComponent {
 					if (targetWindow == 'current') {
 						this.app.dispatch({ type: 'app_refresh', state: res.state })
 					} else if (window.location.origin == this.hostURL) {
-						window.open(`/?mass-session-id=${id}&src=cred&dslabel=${this.dslabel}&route=${this.route}`)
+						window.open(
+							`/?mass-session-id=${encodeURIComponent(id)}&src=cred&dslabel=${encodeURIComponent(
+								this.dslabel
+							)}&route=${encodeURIComponent(this.route)}`
+						)
 					} else {
 						// server-cached sessions should have an state.embedder object, no need to check
 						parentCorsMessage(res)
@@ -368,7 +372,7 @@ export class MassUser implements RxComponent {
 				if (targetWindow == 'current') {
 					this.app.dispatch({ type: 'app_refresh', state })
 				} else if (window.location.origin == this.hostURL) {
-					window.open(`/?mass-session-id=${sessionName}&src=browser`)
+					window.open(`/?mass-session-id=${encodeURIComponent(sessionName)}&src=browser`)
 				} else {
 					if (state.embedder) parentCorsMessage({ state })
 					else {
@@ -550,8 +554,8 @@ export class MassUser implements RxComponent {
 			)
 			.on('click', () => {
 				const name = input.property('value') || placeholder
-				this.savedSessions[name] = this.getState(this.app.getState(), true)
-				this.download(name)
+				// the file is the copy of the session, which is not kept in this.savedSessions, for the browser
+				this.download(name, this.getState(this.app.getState(), true))
 				this.confirmAction(`Downloaded '${name}'`)
 			})
 
@@ -598,11 +602,9 @@ export class MassUser implements RxComponent {
 		return true
 	}
 
-	download(name = '') {
-		const sessionName = name || this.sessionName
-		const ext = sessionName?.endsWith('.txt') ? '' : '.txt'
-		const filename = `${sessionName}${ext}`
-		to_textfile(filename, JSON.stringify(this.savedSessions[sessionName]))
+	download(name: string, state: any) {
+		const ext = name.endsWith('.txt') ? '' : '.txt'
+		to_textfile(`${name}${ext}`, JSON.stringify(state))
 	}
 
 	/** With a filename, saves the session on the server under that name and returns the response.
@@ -636,7 +638,7 @@ export class MassUser implements RxComponent {
 			sayerror(div.append('div'), `Unable to create a session link: ${res.error || 'missing session id'}`)
 			return
 		}
-		const url = `${this.hostURL}/?mass-session-id=${res.id}&noheader=1`
+		const url = `${this.hostURL}/?mass-session-id=${encodeURIComponent(res.id)}&noheader=1`
 		const linkDiv = div.append('div').style('margin', '10px')
 		linkDiv.append('div').style('display', 'flex').style('margin-bottom', '12px').text(`Open or copy the session link.`)
 
