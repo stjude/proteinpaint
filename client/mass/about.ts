@@ -13,7 +13,9 @@ import { select } from 'd3-selection'
 	- description
 	- radio button options
 - custom html via massNav.about.html (todo images and cartoon)
-- active items to launch demo plots
+- sunburst of the dataset's default rings, if massNav.about.showSunburst; in the custom html element
+  that showSunburst.holderSelector selects, if given
+- active items to launch demo plots; in the custom html element that activeItems.holderSelector selects, if given
 - server info
 */
 
@@ -22,10 +24,19 @@ const cohortTableActiveColor = 'yellow'
 // this type is fully defined in MassNav def in dataset.ts but not in a form that can extract "about" config to share. thus need to repeat here to avoid tsc err
 type AboutObj = {
 	html: string
-	activeItems?: { layout?: 'buttons' | 'cards'; items: any }
+	activeItems?: {
+		layout?: 'buttons' | 'cards'
+		holderSelector?: string
+		title?: string
+		description?: string
+		items: any
+	}
 	disclaimer?: any
 	/** when true, render the world map from termdbConfig.geomap directly on the landing tab */
 	showGeomap?: boolean
+	/** render the sunburst of termdbConfig.sunburst.twLst on the landing tab; an object gives it a heading and
+	 *  a holderSelector */
+	showSunburst?: boolean | { holderSelector?: string; title?: string; description?: string }
 }
 
 type MassAboutOpts = {
@@ -70,6 +81,8 @@ export class MassAbout {
 	state: any
 	/** reused menu for openChartMenu() so repeated card clicks don't accumulate menu divs in the DOM */
 	chartMenu?: Menu
+	/** the sunburst on this tab, once its module is loaded (initSunburst) */
+	sunburst?: Promise<any>
 
 	constructor(opts: MassAboutOpts) {
 		this.opts = opts
@@ -120,6 +133,7 @@ export class MassAbout {
 		this.initCohort(appState)
 		this.initCustomHtml()
 		this.initGeomap(appState)
+		this.initSunburst(appState)
 		this.initActiveItems()
 		this.initDisclaimer()
 		//Always show the release version and server launch date at the bottom
@@ -130,6 +144,8 @@ export class MassAbout {
 		// do not render unless the cohort tab is active
 		if (this.state.nav.activeTab !== 0) return
 		await this.renderCohortsTable()
+		// the sunburst counts follow the global filter
+		if (this.sunburst) await (await this.sunburst)?.update(this.state)
 		if (this.opts.selectCohort) {
 			if (this.opts.selectCohort.description) {
 				this.dom.cohortDescription.html(this.opts.selectCohort.description)
@@ -349,18 +365,85 @@ export class MassAbout {
 		renderGeomap(holder, geomap)
 	}
 
+	// render the sunburst of the dataset's default rings when the dataset opts in. like the geomap,
+	// its module is dynamically imported so it only loads for datasets that show it; main() draws it
+	initSunburst = appState => {
+		if (!this.aboutOverrides?.showSunburst) return
+		if (!appState.termdbConfig?.sunburst?.twLst?.length) return
+		const s = this.aboutOverrides.showSunburst
+		const placed = typeof s == 'object' ? this.getSectionHolder(s.holderSelector, 'showSunburst') : undefined
+		const section = (placed || this.subheader.append('div')).style('padding', '10px')
+		if (typeof s == 'object') this.sectionHeading(section, s.title, s.description)
+		// the chart is as wide as its columns, centered, with some space before the next section
+		const holder = section
+			.append('div')
+			.style('display', 'flex')
+			.style('justify-content', 'center')
+			.style('margin-bottom', '32px')
+		const onOpen = () => this.launchActiveItem({ plot: { chartType: 'sunburst' } }, holder.node())
+		this.sunburst = import('#plots/sunburst/aboutSunburst.ts')
+			.then(_ => new _.AboutSunburst(holder, this.app, onOpen))
+			.catch(e => {
+				holder
+					.append('div')
+					.attr('class', 'sja_errorbar')
+					.text(e?.message || String(e))
+				console.error(e)
+			})
+	}
+
+	// the element of the custom html that a section's holderSelector (a css selector from the dataset)
+	// selects; undefined without one, or when it selects nothing, and then the section follows the content above
+	getSectionHolder = (selector: string | undefined, section: string) => {
+		if (!selector) return
+		let el
+		try {
+			el = this.subheader.select(selector)
+		} catch (_) {
+			// not a valid selector
+		}
+		if (el && !el.empty()) return el
+		console.error(`about tab: ${section}.holderSelector '${selector}' selects no element of the html; shown at the end`)
+	}
+
+	// a section's centered heading and text, from the dataset; nothing if neither is given
+	sectionHeading = (holder, title?: string, description?: string) => {
+		if (!title && !description) return
+		const div = holder.append('div').style('text-align', 'center').style('margin', '24px 0 12px 0')
+		if (title)
+			div
+				.append('div')
+				.attr('data-testid', 'sjpp-about-section-title')
+				.style('font-size', '1.4em')
+				.style('font-weight', '600')
+				.style('color', '#243b53')
+				.html(title)
+		if (description)
+			div
+				.append('div')
+				.style('margin-top', '6px')
+				.style('font-size', '.95em')
+				.style('color', '#4b5563')
+				.html(description)
+	}
+
 	initActiveItems = () => {
 		if (!this.aboutOverrides?.activeItems) return
+		const placed = this.getSectionHolder(this.aboutOverrides.activeItems.holderSelector, 'activeItems')
+		const holder = placed || this.subheader
+		const { title, description } = this.aboutOverrides.activeItems
+		this.sectionHeading(holder, title, description)
 		if (this.aboutOverrides.activeItems.layout == 'cards') {
-			this.initActiveItemCards()
+			this.initActiveItemCards(holder)
 			return
 		}
 
 		// todo: customize general holder by activeItems.holderStyle{}
-		const div = this.subheader
+		const div = holder
 			.append('div')
 			.attr('data-testid', 'sjpp-custom-about-activeItems')
-			.style('padding', '0px 0px 10px 20px')
+			// placed by the custom html, the buttons are not indented
+			.style('padding', placed ? '0px 0px 10px 0px' : '0px 0px 10px 20px')
 
 		for (const item of this.aboutOverrides.activeItems.items) {
 			// todo: by item.type, item.divStyle{}
@@ -376,9 +459,9 @@ export class MassAbout {
 	}
 
 	// render activeItems as large square tiles (homepage style) that lift on hover
-	initActiveItemCards = () => {
+	initActiveItemCards = parent => {
 		const items = this.aboutOverrides!.activeItems!.items
-		const holder = this.subheader
+		const holder = parent
 			.append('div')
 			.attr('data-testid', 'sjpp-custom-about-activeItems')
 			.style('display', 'flex')
