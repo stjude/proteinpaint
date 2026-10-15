@@ -19,7 +19,9 @@ import { MassUser, datasetRequiresAuth, getDeletionBatches, getAuthStatus } from
  *  - MassUser main() after the user signs in
  *  - MassUser Delete is shown only when there are sessions to delete
  *  - MassUser destroy()
- *  - MassUser getSavableState()
+ *  - MassUser getState()
+ *  - MassUser getState() for a session
+ *  - MassUser Server save
  *  - MassUser refuses()
  *  - MassUser open()
  *  - MassUser save()
@@ -920,12 +922,12 @@ tape('MassUser destroy()', async test => {
 	test.end()
 })
 
-tape('MassUser getSavableState()', test => {
+tape('MassUser getState() for a session', test => {
 	const { user, state, holder } = getUser()
 	state.termdbConfig = { massSessionDuration: 30, requiredAuth: [jwtAuth] }
 	state.plots = [{ id: 'p1', chartType: 'summary' }]
 
-	const saved = user.getSavableState()
+	const saved = user.getState(state, true)
 	test.false('termdbConfig' in saved, 'should not include the dataset config')
 	test.ok(state.termdbConfig, 'should not delete termdbConfig from the app state')
 	test.equal(saved.vocab.dslabel, 'TermdbTest', 'should keep the rest of the state')
@@ -933,7 +935,173 @@ tape('MassUser getSavableState()', test => {
 	test.notEqual(saved.plots, state.plots, 'should be a detached copy of the app state')
 	test.true(saved.sampleGroupsForm >= 2, 'should mark the state as saved by this version')
 	test.equal(user.refuses(saved), false, 'should be a state that is opened')
+
+	// the dataset config is not cloned: a value that cannot be cloned in it would throw
+	state.termdbConfig = { notCloneable: () => {} }
+	let error
+	let saved2: any
+	try {
+		saved2 = user.getState(state, true)
+	} catch (e) {
+		error = e
+	}
+	test.equal(error, undefined, 'should not clone the dataset config only to discard it')
+	test.false('termdbConfig' in saved2, 'should still not include the dataset config')
 	holder.remove()
+	test.end()
+})
+
+tape('MassUser getState() for a session saves the parts that make up a session', test => {
+	const { user, holder, state } = getUser()
+	Object.assign(state, {
+		activeCohort: 1,
+		termfilter: { filter: { type: 'tvslst', in: true, join: '', lst: [] } },
+		plots: [{ id: 'p1', chartType: 'summary' }],
+		groups: [{ name: 'g1' }],
+		customTerms: [{ name: 'c1' }],
+		reuse: { gvQByGene: {} },
+		nav: { header_mode: 'with_tabs', activeTab: 2 },
+		// not saved
+		termdbConfig: { massSessionDuration: 30 },
+		search: { isVisible: true },
+		autoSave: true,
+		somethingElse: { big: 'x'.repeat(100) }
+	})
+	const saved = user.getState(state, true)
+	test.deepEqual(
+		Object.keys(saved).sort(),
+		['activeCohort', 'customTerms', 'groups', 'nav', 'plots', 'reuse', 'sampleGroupsForm', 'termfilter', 'vocab'],
+		'should save the parts of the state that make up a session, marked as saved by this version'
+	)
+	test.deepEqual(saved.vocab, state.vocab, 'should save the vocab, to open the session in the right dataset')
+	test.equal(saved.activeCohort, 1, 'should save the cohort')
+	test.deepEqual(saved.termfilter, state.termfilter, 'should save the filter')
+	test.deepEqual(saved.plots, state.plots, 'should save the plots')
+	test.deepEqual(saved.groups, state.groups, 'should save the groups')
+	test.deepEqual(saved.customTerms, state.customTerms, 'should save the custom terms')
+	test.deepEqual(saved.reuse, state.reuse, 'should save the settings that are reused')
+	test.deepEqual(saved.nav, state.nav, 'should save the nav')
+	for (const key of ['termdbConfig', 'search', 'autoSave', 'somethingElse']) {
+		test.false(key in saved, `should not save ${key}`)
+	}
+	test.notEqual(saved.plots, state.plots, 'should be a copy')
+	test.notEqual(saved.plots[0], state.plots[0], 'should be a deep copy')
+	holder.remove()
+	test.end()
+})
+
+tape('MassUser getState() for a session does not change the app state', test => {
+	const { user, holder, state } = getUser()
+	const termdbConfig = { requiredAuth: [jwtAuth], massSessionDuration: 30, queries: { a: 1 } }
+	state.termdbConfig = termdbConfig
+	state.plots = [{ id: 'p1', chartType: 'summary' }]
+	const deepFreeze = (o: any) => {
+		if (o && typeof o == 'object' && !Object.isFrozen(o)) {
+			Object.freeze(o)
+			Object.values(o).forEach(deepFreeze)
+		}
+		return o
+	}
+	deepFreeze(state) // as the state of the app is
+	const before = JSON.stringify(state)
+	let error
+	let saved: any
+	try {
+		saved = user.getState(state, true)
+		user.getState(state, true)
+	} catch (e) {
+		error = e
+	}
+	test.equal(error, undefined, 'should save a state that is deeply frozen')
+	test.equal(state.termdbConfig, termdbConfig, 'should keep the same termdbConfig in the app state')
+	test.deepEqual(
+		Object.keys(state.termdbConfig),
+		['requiredAuth', 'massSessionDuration', 'queries'],
+		'should not change it'
+	)
+	test.equal(JSON.stringify(state), before, 'should not change anything in the app state')
+	test.false('termdbConfig' in saved, 'should leave the dataset config out of the saved copy only')
+	test.deepEqual(saved.plots, state.plots, 'should keep the other parts in the saved copy')
+	holder.remove()
+	test.end()
+})
+
+tape('MassUser getState()', test => {
+	const { user, holder } = getUser()
+	const big = { terms: Array.from({ length: 1000 }, (_, i) => ({ id: i })), queries: { a: 1 }, massNav: {} }
+	const appState: any = {
+		vocab: { dslabel: 'x' },
+		plots: [{ id: 'p1' }],
+		nav: { activeTab: 3 },
+		termdbConfig: { ...big, requiredAuth: [jwtAuth], clientAuthResult: { userTab: { intro: 'hi' } } }
+	}
+	test.deepEqual(
+		user.getState(appState),
+		{ termdbConfig: { requiredAuth: [jwtAuth], clientAuthResult: { userTab: { intro: 'hi' } } } },
+		'should only have the requiredAuth and clientAuthResult that the component renders from'
+	)
+	test.deepEqual(
+		user.getState({ vocab: {}, nav: {} }),
+		{ termdbConfig: { requiredAuth: undefined, clientAuthResult: undefined } },
+		'should handle a missing termdbConfig'
+	)
+
+	// a change to anything else in the app state is not a change to the state of the component
+	const a = user.getState(appState)
+	const b = user.getState({
+		...appState,
+		plots: [],
+		nav: { activeTab: 0 },
+		termdbConfig: { ...appState.termdbConfig, terms: [], queries: {} }
+	})
+	test.deepEqual(a, b, 'should not change when other parts of the app state change')
+
+	// and what the component renders is rendered from this state
+	const { user: user2, holder: holder2 } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+	user2.state = user2.getState({
+		termdbConfig: { ...big, requiredAuth: [jwtAuth], clientAuthResult: { userTab: { role: 'user', intro: 'hi' } } }
+	})
+	user2.renderAuthInfo()
+	test.equal(holder2.select('[data-testid="sjpp-user-auth-status"]').text(), 'User signed in', 'should render the role')
+	test.equal(holder2.select('[data-testid="sjpp-user-auth-info"]').text(), 'hi', 'should render the intro')
+	holder.remove()
+	holder2.remove()
+	test.end()
+})
+
+tape('MassUser Server save', async test => {
+	await withStoredSessions(undefined, async () => {
+		const { user, holder, app } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		app.getState().plots = [{ id: 'p1' }]
+		let calls = 0
+		const getState = user.getState.bind(user)
+		user.getState = (appState: any, forSession = false) => {
+			if (forSession) calls++
+			return getState(appState, forSession)
+		}
+		const counter = mockFetch(() => ({ body: { status: 'ok', id: 'on-server' } }))
+		user.renderSessionOptions()
+		getOptionBtn(holder, 'Save').click()
+		await new Promise(resolve => setTimeout(resolve, 50))
+		const content = holder.select('[data-testid="sjpp-user-session-content"]')
+		content.select('input[type="text"]').property('value', 'on-server')
+		const buttons = Array.from((content.node() as HTMLElement).querySelectorAll('button'))
+		const serverBtn = buttons.find((b: HTMLButtonElement) => b.textContent == 'Server') as HTMLButtonElement
+		serverBtn.click()
+		await new Promise(resolve => setTimeout(resolve, 100))
+
+		test.equal(calls, 1, 'should build the state of the session once')
+		test.equal(counter.requests, 1, 'should send the session to the server once')
+		test.equal(user.savedSessions['on-server'], undefined, 'should not keep a copy of a session that is on the server')
+		test.deepEqual(user.serverCachedSessions, ['on-server'], 'should list the session as on the server')
+		test.equal(
+			localStorage.getItem(storageKey),
+			null,
+			'should not save a session that is on the server in the browser storage'
+		)
+		counter.restore()
+		holder.remove()
+	})
 	test.end()
 })
 

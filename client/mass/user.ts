@@ -1,4 +1,4 @@
-import { getCompInit, type AppApi } from '#rx'
+import { getCompInit, type AppApi, type RxComponent } from '#rx'
 import { Menu } from '#dom/menu'
 import { sayerror } from '#dom/sayerror'
 import { to_textfile } from '#dom/downloadTextfile'
@@ -37,11 +37,12 @@ export function getAuthStatus(signedIn: boolean, role?: string): string {
 	return `${role.charAt(0).toUpperCase()}${role.slice(1)} signed in`
 }
 
-export class MassUser {
+export class MassUser implements RxComponent {
 	static type = 'user'
 
 	type: string
 	app: AppApi
+	id!: string
 	opts: MassUserOpts
 	dom: MassUserDom
 	state: any
@@ -93,15 +94,32 @@ export class MassUser {
 		this.hostURL = sessionStorage.getItem('hostURL') || this.embedderOrigin
 	}
 
-	getState(appState: any) {
+	/**
+	 * By default, only what this component renders from. rx compares the returned object with the previous state
+	 * on every dispatch, so it must not include the whole termdbConfig, which can be very large.
+	 *
+	 * forSession=true: the parts of the app state that make up a saved session instead, copied so that the app
+	 * state, which is deeply frozen and shared, is not changed. app_refresh merges a reopened session into the
+	 * current state, so what is not saved, such as the dataset config that init() in mass/store.ts fetches
+	 * again, keeps its current value. The derived properties of a geneVariant term are re-filled by every path
+	 * that opens a session, see trimGvTermsForSave().
+	 */
+	getState(appState: any, forSession = false) {
+		if (forSession) {
+			const { vocab, activeCohort, termfilter, plots, groups, customTerms, reuse, nav } = appState
+			const state = structuredClone({ vocab, activeCohort, termfilter, plots, groups, customTerms, reuse, nav })
+			return markSavedState(trimGvTermsForSave(state))
+		}
 		return {
-			termdbConfig: appState.termdbConfig,
-			nav: appState.nav
+			termdbConfig: {
+				requiredAuth: appState.termdbConfig?.requiredAuth,
+				clientAuthResult: appState.termdbConfig?.clientAuthResult
+			}
 		}
 	}
 
 	/** Render static contents once on launching mass ui */
-	init(appState: any) {
+	async init(appState: any) {
 		this.dslabel = appState.vocab.dslabel
 		this.savedSessions = JSON.parse(localStorage.getItem('savedMassSessions') || `{}`)
 		this.setRequiredAuth(appState.termdbConfig)
@@ -516,7 +534,7 @@ export class MassUser {
 			)
 			.on('click', () => {
 				this.sessionName = input.property('value') || placeholder
-				this.savedSessions[this.sessionName] = this.getSavableState()
+				this.savedSessions[this.sessionName] = this.getState(this.app.getState(), true)
 				localStorage.setItem('savedMassSessions', JSON.stringify(this.savedSessions))
 				this.renderSessionOptions()
 				this.confirmAction(`Cached '${this.sessionName}' in browser`)
@@ -532,7 +550,7 @@ export class MassUser {
 			)
 			.on('click', () => {
 				const name = input.property('value') || placeholder
-				this.savedSessions[name] = this.getSavableState()
+				this.savedSessions[name] = this.getState(this.app.getState(), true)
 				this.download(name)
 				this.confirmAction(`Downloaded '${name}'`)
 			})
@@ -556,7 +574,7 @@ export class MassUser {
 						return
 					}
 					const name = input.property('value') || placeholder
-					this.savedSessions[name] = this.getSavableState()
+					// the state is sent to the server, and is not kept in this.savedSessions, which is for the browser
 					const res = await this.getSessionUrl(name)
 					if (res.error || res.id != name) {
 						sayerror(submitDiv, `Unable to save '${name}' on the server: ${res.error || 'unexpected session id'}`)
@@ -569,21 +587,6 @@ export class MassUser {
 					this.confirmAction(`Saved '${name}' on the server`)
 				})
 		}
-	}
-
-	/* the state to serialize into a saved session: a detached copy of the app state, since
-	getState() returns a deeply frozen one, minus everything that opening the session
-	rebuilds anyway */
-	getSavableState() {
-		const state: any = structuredClone(this.app.getState())
-		/* the dataset config, not session data, and the largest thing in a saved session by
-		far. a saved copy is never read back: init() in mass/store.ts re-fetches it before
-		any consumer runs, and preprocessState() below deletes it outright. keeping it would
-		also pin a session to the ds config of the day it was saved */
-		delete state.termdbConfig
-		// the derived properties of a geneVariant term, which every path that opens a
-		// session re-fills, see trimGvTermsForSave()
-		return markSavedState(trimGvTermsForSave(state))
 	}
 
 	// true when a saved state is not opened, see sessionForm.ts. the reason is shown
@@ -606,7 +609,7 @@ export class MassUser {
 	Without one, creates a shareable link and renders it. */
 	async getSessionUrl(filename = ''): Promise<any> {
 		const headers = await this.app.vocabApi.mayGetAuthHeaders(this.route)
-		const state = this.getSavableState()
+		const state = this.getState(this.app.getState(), true)
 		const { protocol, host, search, origin, href } = window.location
 		state.embedder = { protocol, host, search, origin, href }
 		if (filename) {
