@@ -1,5 +1,5 @@
 // In-process tests for runtimePosture.mjs, using a fake fs with fake /proc files.
-// run: node --test container/test/
+// run: node --test container/test/*.test.mjs
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
@@ -78,11 +78,11 @@ test('a lib dir is unchecked when the permission model denies access to it', () 
 
 test('a venv package dir is checked on its own, since its access can differ from the venv dir', () => {
 	// the venv dir itself is not writable, but its package dir is
-	const result = checkRuntimePosture(fakeDeps({ writable: ['/opt/venv/lib/python3.14/site-packages'] }))
+	const result = checkRuntimePosture(fakeDeps({ writable: ['/opt/venv/lib/python3.13/site-packages'] }))
 	assert.deepEqual(result.findings, [
 		{
 			check: 'lib-dirs',
-			message: '/opt/venv/lib/python3.14/site-packages is writable by the process, it should be read-only'
+			message: '/opt/venv/lib/python3.13/site-packages is writable by the process, it should be read-only'
 		}
 	])
 	// a lib dir that is not a venv has no lib/ dir to list, which is not a finding
@@ -451,8 +451,8 @@ function fakeDeps({
 	realpaths = {},
 	writableDirs = ['/home/root/pp/cache'],
 	// dir -> entries, for readdirSync(), and the paths that exist besides libDirs
-	dirs = { '/opt/venv/lib': ['python3.14'], ...appDirs },
-	exists = ['/opt/venv/lib/python3.14/site-packages', ...appPaths],
+	dirs = { '/opt/venv/lib': ['python3.13'], ...appDirs },
+	exists = ['/opt/venv/lib/python3.13/site-packages', ...appPaths],
 	// dir -> error code, for readdirSync()
 	listErrors = {},
 	// dir -> error code, for accessSync(), instead of EACCES for a dir that is not writable

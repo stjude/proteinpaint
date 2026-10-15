@@ -1,6 +1,6 @@
 // In-process tests for envHelpers.mjs, using a fake fs and spawn injected via createContext(),
 // plus a couple of subprocess smoke tests for the CLI entry wiring and exit code propagation.
-// run: node --test container/test/
+// run: node --test container/test/*.test.mjs
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'

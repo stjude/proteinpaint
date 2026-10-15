@@ -28,7 +28,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 // dirs of the interpreters that the server spawns, in the deps/Dockerfile image; the package dirs of a python
-// venv, such as /opt/venv/lib/python3.14/site-packages, and any mount under these dirs are found at check time
+// venv, such as /opt/venv/lib/python3.13/site-packages, and any mount under these dirs are found at check time
 export const IMAGE_LIB_DIRS = Object.freeze(['/opt/venv', '/usr/local/lib/R/site-library', '/usr/lib/R/site-library'])
 
 // the dir with the server code, node_modules, and in the full image the client bundle in bin and public
