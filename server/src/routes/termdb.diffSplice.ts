@@ -1,6 +1,8 @@
 import type {
 	DiffSpliceEntry,
 	DiffSpliceFullResponse,
+	DiffSpliceJunction,
+	DiffSpliceJunctionsResponse,
 	DiffSpliceMethod,
 	DiffSpliceRequest,
 	RoutePayload,
@@ -110,6 +112,11 @@ export function init({ genomes }) {
 			}
 
 			const { result, cacheId } = await getDsCacheResult(q, genomes)
+
+			if (q.clusterId) {
+				res.send({ junctions: getClusterJunctions(result, q.clusterId) } satisfies DiffSpliceJunctionsResponse)
+				return
+			}
 
 			const rendered = await renderVolcano<DiffSpliceEntry>(result.clusterRows, q.volcanoRender)
 			rendered.cacheId = cacheId
@@ -292,11 +299,30 @@ async function runDsFresh(
 		sample_size1: result.num_controls ?? groups.group1names.length,
 		sample_size2: result.num_cases ?? groups.group2names.length,
 		method: label,
-		...(result.skipped ? { skipped: result.skipped } : {})
+		...(result.skipped ? { skipped: result.skipped } : {}),
+		junctionsByCluster: result.junctions_by_cluster
 	}
 }
 
 // ─── helpers ─── //
+
+/** Returns the junctions for a single cluster from the cached data.
+ *  Raises an error instead of returning an empty list if the cache contains no junction data
+ *  or if the cluster was not tested. */
+export function getClusterJunctions(result: DsCacheResult, clusterId: string): DiffSpliceJunction[] {
+	const lst = result.junctionsByCluster
+	if (!lst || !Object.hasOwn(lst, clusterId)) throw new Error(`No junction data for cluster ${clusterId}`)
+	// a cluster id is chr:clu_*, see diffSpliceScreen.py
+	const chr = clusterId.split(':')[0]
+	return lst[clusterId].map(([start, stop, p, psi_control, psi_case]) => ({
+		chr,
+		start,
+		stop,
+		p,
+		psi_control,
+		psi_case
+	}))
+}
 
 /** The three leafcutter filters are absolute counts, and diffSpliceScreen.py casts them with
  * int(): a fraction such as 0.02 would become 0, which disables the filter without any error.

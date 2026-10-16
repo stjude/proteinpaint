@@ -178,6 +178,8 @@ export class Volcano extends PlotBase implements RxComponent {
 			//Pass table data for downloading
 			this.interactions.pValueTableData = viewModel.viewData.pValueTableData
 			this.interactions.data = response.data.dots
+			//the analysis request, re-sent with a cluster id to fetch that cluster's junctions
+			this.interactions.daRequest = response.daRequest
 			//pre-cap count, so the download knows whether the on-screen rows are a subset
 			this.interactions.totalSignificantRows = response.data.totalSignificantRows
 			//groups, sample sizes and settings, so a downloaded table records how it was produced

@@ -56,6 +56,8 @@ export type DsCacheResult = {
 	method: DiffSpliceMethod
 	// clusters dropped before testing, keyed by reason, as the engine reported them
 	skipped?: { [reason: string]: number }
+	// every tested junction of each cluster, as [start, stop, p, psi_control, psi_case]
+	junctionsByCluster: { [clusterId: string]: [number, number, number, number | null, number | null][] }
 }
 
 /** gsea/{cacheid}.json. Self-contained: the blitzgsea result is pickled

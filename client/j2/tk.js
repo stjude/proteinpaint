@@ -102,8 +102,28 @@ async function getTkData(tk, block) {
 	return data
 }
 
+/*
+tk.custom_data[] are junctions supplied on the client, e.g. those of a differential splicing cluster
+each junction requires chr, start and stop, and may have:
+	strand
+	p: y is -log10 p when every junction has it
+	medianReadCount, sampleCount: y is read count when every junction has medianReadCount, as junctions from the server
+	psi_control, psi_case: shown in tooltip; with tk.deltaPsiGroups, colored by the group with higher PSI
+	types[], info{}
+see tk.yKey in renderTk()
+they are cloned since rendering adds attributes to each junction
+*/
 async function dataFromCustomData(tk, block) {
-	const data = []
-	// todo
+	const junctions = tk.custom_data.map(j => {
+		if (typeof j.chr != 'string' || !Number.isInteger(j.start) || !Number.isInteger(j.stop))
+			throw new Error('custom junction requires chr, start and stop')
+		const j2 = { types: [], info: {}, ...j }
+		// a p of 0 has underflowed, keep it finite on the axis
+		if (Number.isFinite(j.p)) j2.negLog10p = -Math.log10(Math.max(j.p, Number.MIN_VALUE))
+		return j2
+	})
+	const data = { junctions }
+	if (junctions.every(j => Number.isFinite(j.medianReadCount)))
+		data.maxReadCount = Math.max(...junctions.map(j => j.medianReadCount))
 	return data
 }
