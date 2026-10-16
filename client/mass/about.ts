@@ -392,6 +392,10 @@ export class MassAbout {
 			})
 	}
 
+	destroy() {
+		void this.sunburst?.then(sunburst => sunburst?.chart.destroy())
+	}
+
 	// the element of the custom html that a section's holderSelector (a css selector from the dataset)
 	// selects; undefined without one, or when it selects nothing, and then the section follows the content above
 	getSectionHolder = (selector: string | undefined, section: string) => {
