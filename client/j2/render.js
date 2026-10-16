@@ -489,7 +489,7 @@ function setColor(tk) {
 		j.higherPsiIn = d > 0 ? 'case' : d < 0 ? 'control' : undefined
 		if (j.higherPsiIn) {
 			j.color = tk.deltaPsiGroups[j.higherPsiIn].color
-		} else if (tk.custom_data && !j.types.length) {
+		} else if (tk.deltaPsiGroups || (tk.custom_data && !j.types.length)) {
 			j.color = '#858585'
 		} else {
 			j.color = JTypes[j.types[0]]?.color
