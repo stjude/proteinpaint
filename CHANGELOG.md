@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- GRIN2 sizes its lesion cap from the memory limit of the container it runs in, instead of the host memory
+
+
 ## 2.219.1
 
 Fixes:
