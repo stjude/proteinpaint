@@ -47,11 +47,14 @@ async function getAvailableMemoryMB(): Promise<number> {
 	// On a host, process.availableMemory() is MemAvailable, the same as the "available" column of free -m. In a
 	// memory-limited container, where free and os.freemem() report the host's memory, it is the container's limit
 	// minus its usage. That usage includes reclaimable file cache, which the kernel drops before an OOM kill, so it
-	// is added back.
+	// is added back. Other workloads can leave the host with less than that, so the estimate is also bounded by the
+	// host's MemAvailable, which os.freemem() reads on Linux and which counts reclaimable cache as available too.
 	const limit = process.constrainedMemory()
 	let available = process.availableMemory()
 	// with no limit, constrainedMemory() is 0 on some platforms and 2^64 on Linux
-	if (limit && limit < os.totalmem()) available = Math.min(limit, available + getCgroupInactiveFileBytes())
+	if (limit && limit < os.totalmem()) {
+		available = Math.min(limit, os.freemem(), available + getCgroupInactiveFileBytes())
+	}
 	return available / (1024 * 1024)
 }
 
