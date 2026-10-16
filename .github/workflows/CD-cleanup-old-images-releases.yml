@@ -78,13 +78,13 @@ jobs:
             id=$(echo "$version" | jq -r '.id')
             keep=false
             
-            if [ "$tag_count" -eq 0 ]; then
+            if echo "$PROTECTED_IDS" | jq -e --argjson id "$id" 'index($id) != null' > /dev/null; then #check if this version's id is in the list of PROTECTED_IDS
+              keep=true
+            elif [ "$tag_count" -eq 0 ]; then
               : #digest-only, no branch check possible - falls through to age check
             elif echo "$tags" | jq -e 'index("latest") != null' > /dev/null; then #if any tag is "latest", mark it true
               keep=true
             elif echo "$tags" | jq -e 'any(. == "protected" or startswith("paper-"))' > /dev/null; then #if tag is either protected or startswith paper-, mark it true
-              keep=true
-            elif echo "$PROTECTED_IDS" | jq -e --argjson id "$id" 'index($id) != null' > /dev/null; then #check if this version's id is in the list of PROTECTED_IDS
               keep=true
             else #check if this is a version image whose release is still active
               for tag in $(echo "$tags" | jq -r '.[]'); do
@@ -161,7 +161,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
-          RELEASES=$(gh api "repos/stjude/proteinpaint/releases" --paginate --jq '[.[] | {tag: .tag_name, created_at}]')
+          RELEASES=$(gh api "repos/stjude/proteinpaint/releases" --paginate --jq '[.[] | select(.draft == false) | {tag: .tag_name, created_at: .published_at}]')
           RELEASES=$(printf '%s\n' "$RELEASES" | jq -sc 'add // []')
           echo "RELEASES=$RELEASES" >> "$GITHUB_ENV"
 
