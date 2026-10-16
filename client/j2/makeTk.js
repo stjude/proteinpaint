@@ -5,7 +5,7 @@ import { renderTk } from './render'
 import { getFilterName } from '../mds3/filterName'
 import { fillTermWrapper } from '#termsetting'
 import { rehydrateFilter } from '../filter/rehydrateFilter'
-import { makelabel } from '../mds3/leftlabel'
+import { makelabel, setLeftlabelsMaxWidth } from '../mds3/leftlabel'
 
 /*
  */
@@ -91,7 +91,7 @@ export async function makeTk(tk, block) {
 
 	tk.load = _load(tk, block) // shorthand
 
-	await initTermdb(tk, block)
+	if (!tk.custom_data) await initTermdb(tk, block)
 
 	if (tk.filter) await Promise.all(rehydrateFilter(tk.filter, tk.vocabApi))
 
@@ -127,7 +127,7 @@ function loadTk_finish_closure(tk, block) {
 	return data => {
 		// update legend name in case filter has changed
 		// tk.legend{} is missing if tk is not initiated (wrong ds name)
-		tk.legend?.headTd.text(tk.dslabel + (tk.filter ? ' - ' + getFilterName(tk.filter) : ''))
+		tk.legend?.headTd.text(tk.custom_data ? tk.name : tk.dslabel + (tk.filter ? ' - ' + getFilterName(tk.filter) : ''))
 
 		if (data) {
 			// centralized place on indicating if tk has error or simply no data
@@ -164,6 +164,8 @@ function loadTk_finish_closure(tk, block) {
 			updateLegend(data, tk, block)
 		}
 
+		// measure tk label and left labels, as the tk name may be long
+		setLeftlabelsMaxWidth(tk)
 		;(tk.leftLabelMaxwidth = tk.leftlabels.maxwidth + tk.leftlabels.xoff),
 			block.tkcloakoff(tk, { error: data ? data.error : null })
 		block.block_setheight()
@@ -209,8 +211,8 @@ function configPanel(tk, block) {
 	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
 	const holder = tk.tkconfigtip.d
 
-	// read count cutoff
-	{
+	// read count cutoff, not for custom data junctions, as the server applies it
+	if (!tk.custom_data) {
 		const row = holder.append('div').style('margin-bottom', '15px')
 		row.append('span').html('Read count cutoff&nbsp;')
 		row
@@ -286,8 +288,8 @@ function configPanel(tk, block) {
 			})
 	}
 
-	// log scale
-	{
+	// log scale of read count
+	if (tk.yKey == 'medianReadCount') {
 		const row = holder.append('div').style('margin-bottom', '1px')
 		const id = Math.random()
 		const input = row

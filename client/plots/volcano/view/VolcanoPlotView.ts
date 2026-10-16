@@ -916,6 +916,13 @@ export class VolcanoPlotView {
 				}
 			},
 			{
+				label: 'Genome browser',
+				isVisible: () => termType === tt.JUNCTION,
+				onClick: async () => {
+					await interactions.launchSpliceGenomeBrowser(d as any)
+				}
+			},
+			{
 				label: 'DMR analysis',
 				isVisible: () => termType === tt.DNA_METHYLATION && !this.viewData.scan,
 				onClick: async () => {
