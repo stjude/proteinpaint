@@ -43,6 +43,8 @@ test('dev: allowed paths are computed from cwd, node install, tmpdir, and server
 		'/home/root/pp',
 		'/node/v24',
 		'/private/tmp/user',
+		'/proc/self/cgroup',
+		'/sys/fs/cgroup',
 		'/tmp/user'
 	])
 	assert.deepEqual(opts['allow-fs-write'].toSorted(), ['/home/dev/cache', '/private/tmp/user', '/tmp/user'])
