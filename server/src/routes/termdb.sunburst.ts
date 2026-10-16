@@ -15,10 +15,10 @@ import { genomes } from '#src/initGenomesDs.js'
 
 /*
 nested sample counts for the sunburst chart: one ring per term wrapper, each wedge a category (or bin)
-of its ring's term under its parent wedge's category. A sample with no value for a ring ends at the
-previous ring, so a wedge can be larger than the sum of its children. Only counts are returned, with
-the tvs fields that select each category, so the client can turn a wedge path into a group filter
-without seeing any sample.
+of its ring's term under its parent wedge's category. A sample with no value for a ring, or a value
+hidden by the ring's tw.q.hiddenValues, ends at the previous ring, so a wedge can be larger than the sum
+of its children. Only counts are returned, with the tvs fields that select each category, so the client
+can turn a wedge path into a group filter without seeing any sample.
 
 In a dataset with a sample hierarchy (e.g. patient > primary, PDX and CSF samples), values map only from a
 parent sample to its children, so the rings' terms must lie on one line of descent: patient terms with
@@ -167,7 +167,9 @@ export function nestSamples(samples: any[], twLst: any[], rings: Ring[]): Sunbur
 		let node = root
 		for (const [i, tw] of twLst.entries()) {
 			const key = rings[i].keyOf(s[tw.$id])
-			if (key === undefined) {
+			// a hidden category (tw.q.hiddenValues, keyed by the ring key: value, group name or bin label)
+			// is not drawn, like a missing value: the sample ends at the previous ring
+			if (key === undefined || tw.q?.hiddenValues?.[key]) {
 				if (i == 0) noFirstRingValue++
 				break
 			}
