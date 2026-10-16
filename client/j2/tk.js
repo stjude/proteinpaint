@@ -109,18 +109,26 @@ each junction requires chr, start and stop, and may have:
 	p: y is -log10 p when every junction has it
 	medianReadCount, sampleCount: y is read count when every junction has medianReadCount, as junctions from the server
 	psi_control, psi_case: shown in tooltip; with tk.deltaPsiGroups, colored by the group with higher PSI
-	types[], info{}
+	types[], info{}: types hidden in the legend are removed, as computeTypes() does on the server
 see tk.yKey in renderTk()
-they are cloned since rendering adds attributes to each junction
+they are cloned since rendering adds attributes to each junction; tk.custom_data is not modified, so hidden types can be shown again
 */
 async function dataFromCustomData(tk, block) {
-	const junctions = tk.custom_data.map(j => {
+	const hidden = tk.legend?.type?.hiddenvalues
+	const junctions = tk.custom_data.flatMap(j => {
 		if (typeof j.chr != 'string' || !Number.isInteger(j.start) || !Number.isInteger(j.stop))
 			throw new Error('custom junction requires chr, start and stop')
-		const j2 = { types: [], info: {}, ...j }
+		const types = (j.types || []).filter(t => !hidden?.has(t))
+		if (j.types?.length && !types.length) return []
+		const info = { ...j.info }
+		if (info.events) {
+			info.events = info.events.filter(e => !hidden?.has(e.type))
+			if (!info.events.length) delete info.events
+		}
+		const j2 = { ...j, types, info }
 		// a p of 0 has underflowed, keep it finite on the axis
 		if (Number.isFinite(j.p)) j2.negLog10p = -Math.log10(Math.max(j.p, Number.MIN_VALUE))
-		return j2
+		return [j2]
 	})
 	const data = { junctions }
 	if (junctions.every(j => Number.isFinite(j.medianReadCount)))
