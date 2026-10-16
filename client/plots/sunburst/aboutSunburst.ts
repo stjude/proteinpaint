@@ -50,13 +50,15 @@ export class AboutSunburst {
 			this.chart.dom.errdiv.style('display', '').text(e?.message || String(e))
 			return
 		}
-		await this.chart.update({
+		const drawn = await this.chart.update({
 			genome: appState.vocab.genome,
 			dslabel: appState.vocab.dslabel,
 			twLst,
 			termfilter,
 			colors: appState.termdbConfig?.sunburst?.colors
 		})
+		// a failed request is retried on the next update, unless a newer update has recorded its own filter
+		if (drawn === false && this.filterShown == sig) this.filterShown = undefined
 	}
 
 	/** one line per ring with its term name, then the link to the full chart */
