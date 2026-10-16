@@ -1,6 +1,7 @@
 {
     "maxAgeDays":365,
-    "maxDeletionsPerRun":3,
+    "maxImageDeletionsPerRun":3,
+    "maxReleaseDeletionsPerRun":1,
     "VersionsToRetain":5,
     "ReleasesToRetain":5,
     "packages":["ppfull","ppserver","rust","ppbase","pp-irt","proteinpaint%2Fppserver","ppgdc","blat","ppclingen","ppfilesync"]
