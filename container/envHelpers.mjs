@@ -168,6 +168,10 @@ export function getNodeConfig(ctx) {
 	if (serverconfig.python?.includes(path.sep)) allow(read, serverconfig.python)
 	// server/genome/copyDataFilesFromRepo2Tp.js checks if this container dir exists
 	read.add('/home/root/pp')
+	// the GRIN2 lesion cap reads the reclaimable file cache of the server's cgroup (server/src/grin2/memory.ts);
+	// only this one /proc/self file, since /proc/self/environ holds the env that a tsx dev server gets credentials in
+	read.add('/proc/self/cgroup')
+	read.add('/sys/fs/cgroup')
 
 	for (const p of getEnvValue('PP_ALLOW_FS_READ', ctx).split(':')) allow(read, p)
 	for (const p of getEnvValue('PP_ALLOW_FS_WRITE', ctx).split(':')) allow(write, p)

@@ -1,1 +1,2 @@
-
+Fixes:
+- GRIN2 sizes its lesion cap from the memory limit of the container it runs in, instead of the host memory

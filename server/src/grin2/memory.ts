@@ -1,14 +1,16 @@
-/** Memory-aware lesion cap for GRIN2. Reads available system memory and derives how many lesions a run
+/** Memory-aware lesion cap for GRIN2. Reads available memory and derives how many lesions a run
  * may hold, so a busy server scales the cap down instead of OOMing. Split out of main.ts as a self-contained
- * concern; getMaxLesions() is the only export (processSampleData calls it). */
+ * concern; processSampleData calls getMaxLesions(). */
 
 import serverconfig from '../serverconfig.js'
+import fs from 'fs'
 import os from 'os'
+import path from 'path'
 import { mayLog } from '../helpers.ts'
 import { promisify } from 'node:util'
-import { exec as execCallback } from 'node:child_process'
+import { execFile as execFileCallback } from 'node:child_process'
 
-const exec = promisify(execCallback)
+const execFile = promisify(execFileCallback)
 
 // Constants
 const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
@@ -18,13 +20,14 @@ const MEMORY_PER_1K_LESIONS = 2.4
 const MIN_LESIONS = 50000
 
 async function getAvailableMemoryMB(): Promise<number> {
-	try {
-		if (process.platform === 'darwin') {
-			// macOS: use vm_stat
-			const { stdout } = await exec('vm_stat')
+	if (process.platform === 'darwin') {
+		// macOS keeps few pages free and fills the rest with reclaimable cache, which process.availableMemory()
+		// and os.freemem() count as used, so free + inactive pages are read from vm_stat
+		try {
+			const { stdout } = await execFile('vm_stat')
 			const output = stdout.toString()
 
-			// Parse page size from vm_stat header: "page size of 4096 bytes for Apple silicon, 16384 bytes for Intel macs"
+			// Parse page size from vm_stat header: "page size of 16384 bytes" on Apple silicon, 4096 on Intel macs
 			const headerLine = output.split('\n')[0] || ''
 			const pageSizeMatch = headerLine.match(/page size of\s+(\d+)\s+bytes/i)
 			const pageSize = pageSizeMatch ? parseInt(pageSizeMatch[1], 10) : 16384
@@ -35,26 +38,36 @@ async function getAvailableMemoryMB(): Promise<number> {
 
 			// Available ≈ free + inactive
 			return ((freePages + inactivePages) * pageSize) / (1024 * 1024)
-		} else {
-			// Linux: use free command
-			const { stdout } = await exec('free -m')
-			const output = stdout.toString()
-			const lines = output.split('\n')
-			const memLine = lines.find(l => l.trim().startsWith('Mem:'))
-			if (memLine) {
-				const parts = memLine.trim().split(/\s+/)
-				const available = parseInt(parts[6], 10) // "available" column
-				// if free's output format shifts (or the column is absent), fall through to os.freemem below
-				// rather than returning NaN, which would poison the cap math and logs
-				if (Number.isFinite(available)) return available
-			}
+		} catch (e) {
+			mayLog(`[GRIN2] Memory check failed, using fallback: ${e}`)
+			return os.freemem() / (1024 * 1024)
 		}
-	} catch (e) {
-		mayLog(`[GRIN2] Memory check failed, using fallback: ${e}`)
 	}
 
-	// Fallback: os.freemem (less accurate but always works)
-	return os.freemem() / (1024 * 1024)
+	// On a host, process.availableMemory() is MemAvailable, the same as the "available" column of free -m. In a
+	// memory-limited container, where free and os.freemem() report the host's memory, it is the container's limit
+	// minus its usage. That usage includes reclaimable file cache, which the kernel drops before an OOM kill, so it
+	// is added back.
+	const limit = process.constrainedMemory()
+	let available = process.availableMemory()
+	// with no limit, constrainedMemory() is 0 on some platforms and 2^64 on Linux
+	if (limit && limit < os.totalmem()) available = Math.min(limit, available + getCgroupInactiveFileBytes())
+	return available / (1024 * 1024)
+}
+
+/** Reclaimable file cache of this process's cgroup v2, from inactive_file in its memory.stat; 0 if it cannot be read,
+ * such as under cgroup v1, which only makes the estimate low.
+ * ponytail: cgroup v2 only; read memory/memory.stat total_inactive_file if cgroup v1 hosts need it */
+export function getCgroupInactiveFileBytes(readFile = (file: string) => fs.readFileSync(file, 'utf8')): number {
+	try {
+		// cgroup v2 has a single "0::<path>" line, where the path is / inside a container's cgroup namespace
+		const cgroup = /^0::(\/\S*)$/m.exec(readFile('/proc/self/cgroup'))?.[1]
+		if (!cgroup) return 0
+		const stat = readFile(path.join('/sys/fs/cgroup', cgroup, 'memory.stat'))
+		return Number(/^inactive_file (\d+)$/m.exec(stat)?.[1]) || 0
+	} catch {
+		return 0
+	}
 }
 
 export async function getMaxLesions(): Promise<number> {
