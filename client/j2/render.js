@@ -45,7 +45,13 @@ export function renderTk(data, tk, block) {
 				: undefined
 		if (tk.yKey == 'medianReadCount' && !Number.isFinite(data.maxReadCount))
 			throw new Error('data.maxReadCount is not number')
-		rawdata2track(data.junctions, tk, block)
+		if (rawdata2track(data.junctions, tk, block)) {
+			// none in view range, e.g. custom junctions after navigating away from them
+			tk.data = []
+			data.junctions = [] // for tk._finish() to show "No splice junctions"
+			tk.leftlabels.doms.jug.text('0 junctions')
+			return
+		}
 		// tk.data[] set
 	} else {
 		// this is called from config menu. server data is already parsed at tk.data[]
