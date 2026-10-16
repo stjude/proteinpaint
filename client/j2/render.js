@@ -45,6 +45,8 @@ export function renderTk(data, tk, block) {
 				: undefined
 		if (tk.yKey == 'medianReadCount' && !Number.isFinite(data.maxReadCount))
 			throw new Error('data.maxReadCount is not number')
+		// kept for redraws without data, e.g. changing track height or log scale in the config menu
+		tk.maxReadCount = data.maxReadCount
 		if (rawdata2track(data.junctions, tk, block)) {
 			// none in view range, e.g. custom junctions after navigating away from them
 			tk.data = []
@@ -131,14 +133,14 @@ export function renderTk(data, tk, block) {
 	const maxmedian = tk.data.reduce((c, j) => Math.max(c, j.medianReadCount), 0)
 
 	/*
-	essential to use data.maxReadCount as yscale max
+	essential to use tk.maxReadCount as yscale max
 	this may leave some white space above the disks (median positioned)
 	but will allow the hover boxplot to fully show
 	*/
 	tk.sections.jug.yscale =
 		tk.yKey == 'medianReadCount'
 			? (tk.yscaleUseLog ? scaleLog() : scaleLinear())
-					.domain([tk.readcountCutoff || 1, data.maxReadCount])
+					.domain([tk.readcountCutoff || 1, tk.maxReadCount])
 					.range([tk.sections.jug.axisheight, 0])
 			: scaleLinear()
 					.domain([0, tk.yKey ? Math.max(1, ...tk.data.map(j => j[tk.yKey])) : 1])
@@ -180,7 +182,7 @@ export function renderTk(data, tk, block) {
 			.attr('stroke-opacity', 0.2)
 			.attr('shape-rendering', 'crispEdges')
 		let v = 10
-		while (tk.yKey == 'medianReadCount' && v <= data.maxReadCount) {
+		while (tk.yKey == 'medianReadCount' && v <= tk.maxReadCount) {
 			// order of magnitude line
 			mg.append('line')
 				.attr('x1', 0)
