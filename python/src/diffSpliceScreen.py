@@ -25,6 +25,7 @@ REQUEST
 
 RESPONSE
     { "ok": true, "cluster_data": [DiffSpliceEntry...],
+      "junctions_by_cluster": {cluster_id: [[start, stop, p, psi_control, psi_case]...]},
       "num_controls": N, "num_cases": M, "skipped": {},
       "n_clusters_tested": 20906, "n_significant_fdr05": 7508, "truncated": false }
 
@@ -285,7 +286,7 @@ suppressMessages(library(edgeR))
 a <- commandArgs(trailingOnly=TRUE)
 bin_file <- a[1]; meta_file <- a[2]; design_file <- a[3]; out_file <- a[4]
 n_introns <- as.integer(a[5]); n_samples <- as.integer(a[6])
-n_threads <- as.integer(a[7])
+n_threads <- as.integer(a[7]); intron_out_file <- a[8]
 
 v <- readBin(bin_file, what="integer", n=n_introns*n_samples, size=4L)
 # Python writes its [samples x introns] buffer C-contiguous, which is byte-for-byte R's
@@ -327,8 +328,12 @@ fit_block <- function(rows) {
   }
   ds <- diffSpliceDGE(f, coef=ncol(design), geneid="GeneID", exonid="ExonID", verbose=FALSE)
   t <- topSpliceDGE(ds, test="Simes", n=Inf)
-  data.frame(cluster=t$GeneID, chr=t$chr, n_junc=t$NExons, p=t$P.Value,
-             stringsAsFactors=FALSE)
+  # the per-intron test the Simes p is combined from: each intron against the rest of its
+  # cluster. Its raw p is the junction's y in the genome browser.
+  e <- topSpliceDGE(ds, test="exon", n=Inf)
+  list(cluster=data.frame(cluster=t$GeneID, chr=t$chr, n_junc=t$NExons, p=t$P.Value,
+                          stringsAsFactors=FALSE),
+       intron=data.frame(intron=e$ExonID, p=e$P.Value, stringsAsFactors=FALSE))
 }
 
 # Splitting the fit across cores is worth doing (11.6s -> 3.2s on 4 cores for a
@@ -345,12 +350,16 @@ if (n_threads > 1) {
   cuts <- unique(c(0L, ends[pmin(findInterval(targets, ends) + 1L, length(ends))], n_introns))
   blocks <- lapply(seq_len(length(cuts) - 1L), function(k) (cuts[k] + 1L):cuts[k + 1L])
   parts <- parallel::mclapply(blocks, fit_block, mc.cores=min(n_threads, length(blocks)))
-  bad <- !vapply(parts, is.data.frame, logical(1))
+  bad <- !vapply(parts, function(x) is.list(x) && is.data.frame(x$cluster), logical(1))
   if (any(bad)) stop("block ", which(bad)[1], " failed: ", parts[[which(bad)[1]]])
-  res <- do.call(rbind, parts)
+  res <- do.call(rbind, lapply(parts, `[[`, "cluster"))
+  intron_res <- do.call(rbind, lapply(parts, `[[`, "intron"))
 } else {
-  res <- fit_block(seq_len(n_introns))
+  part <- fit_block(seq_len(n_introns))
+  res <- part$cluster
+  intron_res <- part$intron
 }
+write.table(intron_res, intron_out_file, sep="\t", quote=FALSE, row.names=FALSE)
 
 # BH over every cluster, not per block -- this is what topSpliceDGE does internally, so
 # the single- and multi-block paths adjust identically.
@@ -503,6 +512,7 @@ def cmd_screen(args, return_data=False):
         with open(rfile, "w") as fh:
             fh.write(_EDGER_R)
         outf = os.path.join(tmp, "out.tsv")
+        intron_outf = os.path.join(tmp, "intron_out.tsv")
 
         nthr = max(1, int(args.num_threads))
         avail = _available_cpus()
@@ -529,12 +539,13 @@ def cmd_screen(args, return_data=False):
         res = subprocess.run(
             [rscript, "--vanilla", rfile, binf, os.path.join(tmp, "meta.tsv"),
              os.path.join(tmp, "design.tsv"), outf, str(sub.shape[1]), str(sub.shape[0]),
-             str(nthr)],
+             str(nthr), intron_outf],
             capture_output=True, text=True, env=env)
         if res.returncode != 0:
             raise RuntimeError("edgeR failed:\n" + (res.stderr or res.stdout)[-2000:])
         print("  " + res.stdout.strip().replace("\n", "\n  ") + f"  [{timer()-t_r:.1f}s]")
         out = pd.read_table(outf)
+        intron_p = pd.read_table(intron_outf)
     finally:
         import shutil as _sh
         _sh.rmtree(tmp, ignore_errors=True)
@@ -573,12 +584,22 @@ def cmd_screen(args, return_data=False):
     out = out.merge(eff, on="cluster", how="left")
     print(f"  effect sizes from counts [{timer()-t_ps:.1f}s]")
 
+    # Every tested junction, for showing a cluster's junctions in the genome browser.
+    # intron ids hold 1-based coordinates of the last base of the left exon and the first
+    # base of the right exon.
+    junctions = pd.DataFrame({"intron": intron_ids[keep],
+                              "cluster": km["chr"].to_numpy() + ":" + clu_of_intron[keep],
+                              "start": km["start"].astype(np.int64).to_numpy() - 1,
+                              "stop": km["end"].astype(np.int64).to_numpy() - 1,
+                              "psi_control": psi1,
+                              "psi_case": psi2}).merge(intron_p, on="intron", how="inner")
+
     gene_of = dict(zip(cluster_ids, cluster_genes))
     out.insert(1, "genes", [gene_of.get(c, "") or np.nan for c in out.cluster])
     out["cluster"] = out["chr"] + ":" + out["cluster"]
     out = out.drop(columns=["chr"]).rename(columns={"chr_": "chr"})
     if return_data:
-        return out
+        return out, junctions
     out.to_csv(args.output_prefix + "_screen.txt", sep="\t", index=False, na_rep="NA")
     print(f"Done in {timer()-t0:.1f}s -> {args.output_prefix}_screen.txt")
     print("  Ranked screen. Use the ranking, not an FDR cutoff, to decide what to show:\n"
@@ -696,6 +717,25 @@ def cluster_rows(df, name1, name2, extras=None):
     return rows
 
 
+def junctions_by_cluster(junctions, cluster_ids):
+    """Junction table -> {cluster id: [[start, stop, p, psi_control, psi_case], ...]}.
+
+    Arrays rather than objects, and rounded (p to 4 significant digits, PSI to 4 decimals),
+    since a screen carries ~100k junctions: this halves them to ~4.4 MB on a 100v100 AML run.
+    Coordinates are already in the junction track's convention, see cmd_screen().
+    """
+    def psi(v):
+        return round(float(v), 4) if np.isfinite(v) else None
+
+    out = {}
+    for r in junctions.itertuples(index=False):
+        if r.cluster not in cluster_ids or not np.isfinite(r.p):
+            continue
+        out.setdefault(r.cluster, []).append(
+            [int(r.start), int(r.stop), float(f"{r.p:.4g}"), psi(r.psi_control), psi(r.psi_case)])
+    return out
+
+
 def main(handler):
     """Read one JSON object from stdin, write one JSON object to stdout, nothing else.
 
@@ -765,11 +805,12 @@ def handle(req):
     if args.num_threads < 1:
         raise ValueError("threads must be >= 1")
 
-    out = cmd_screen(args, return_data=True)
-    if out is None:
+    res = cmd_screen(args, return_data=True)
+    if res is None:
         return {
             "status": "no_clusters",
             "cluster_data": [],
+            "junctions_by_cluster": {},
             "num_controls": len(_read_sample_list(group1)),
             "num_cases": len(_read_sample_list(group2)),
             "skipped": {},
@@ -777,6 +818,7 @@ def handle(req):
             "n_significant_fdr05": 0,
             "truncated": False,
         }
+    out, junctions = res
     n_tested = len(out)
     n_sig = int((out["fdr"] < 0.05).sum())
 
@@ -787,6 +829,7 @@ def handle(req):
 
     return {
         "cluster_data": cluster_rows(out, "control", "case"),
+        "junctions_by_cluster": junctions_by_cluster(junctions, set(out["cluster"])),
         "num_controls": len(_read_sample_list(group1)),
         "num_cases": len(_read_sample_list(group2)),
         "skipped": {},

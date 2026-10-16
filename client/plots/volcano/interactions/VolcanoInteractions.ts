@@ -1,7 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { groupColors } from '../groupColors'
 import { getGroupForRegion } from '#mass/groups'
-import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
+import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI, sayerror } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION, DMR_SCAN_ELEMENT_TYPE } from '#types'
@@ -11,6 +11,8 @@ import { getGEunit } from '#tw/geneExpression'
 import { getDNAMethUnit, getDNAMethTermName } from '#tw/dnaMethylation'
 import { elementNoun } from '../promoterLabel'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
+import { dofetch3 } from '#common/dofetch'
+import { getGroupColors } from '../colors'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -23,6 +25,8 @@ export class VolcanoInteractions {
 	totalSignificantRows: number
 	/** Groups, sample sizes and result-affecting settings, written into downloads. */
 	provenance: string
+	/** The request of the current analysis, as VolcanoModel sent it */
+	daRequest?: any
 	/** Re-requests the current contrast with the maxInteractiveDots cap lifted and returns the
 	 * full significance table, formatted by the same view model the on-screen table uses.
 	 * Set by Volcano.main() after each fetch; absent until the first response arrives. */
@@ -346,6 +350,42 @@ export class VolcanoInteractions {
 				chartType: 'genomeBrowser',
 				geneSearchResult: { chr: d.chr, start: Math.max(0, d.start - pad), stop: d.stop + pad },
 				tracks
+			}
+		})
+	}
+
+	/* Open a genome browser on an intron cluster, with its junctions as a track whose y is the
+	-log10 p of each junction and whose color tells the group with higher PSI.
+	The junctions come from the cached data, by re-sending the analysis request with the cluster id. */
+	async launchSpliceGenomeBrowser(d: { cluster_id: string; genes?: string; chr: string; start: number; stop: number }) {
+		const data = await dofetch3('termdb/diffSplice', { body: { ...this.daRequest, clusterId: d.cluster_id } })
+		if (data.error) {
+			sayerror(this.dom.error, data.error)
+			return
+		}
+		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		const { caseColor, controlColor } = getGroupColors(config)
+		// a cluster id is chr:clu_<n>_<strand>; the chr is already shown by the genome browser
+		const cluster = d.cluster_id.slice(d.cluster_id.indexOf(':') + 1)
+		const strand = cluster.split('_').pop()
+		const pad = Math.max(500, Math.round((d.stop - d.start) * 0.2))
+		this.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'genomeBrowser',
+				// cluster start/stop are the 1-based exon boundaries; the junctions are already 0-based
+				geneSearchResult: { chr: d.chr, start: Math.max(0, d.start - 1 - pad), stop: d.stop + pad },
+				tracks: [
+					{
+						type: 'j2',
+						name: d.genes ? `${d.genes} ${cluster}` : cluster,
+						custom_data: data.junctions.map(j => ({ ...j, strand })),
+						deltaPsiGroups: {
+							control: { name: config.samplelst.groups[0].name, color: controlColor },
+							case: { name: config.samplelst.groups[1].name, color: caseColor }
+						}
+					}
+				]
 			}
 		})
 	}

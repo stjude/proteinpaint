@@ -19,6 +19,7 @@ export type DiffSpliceRequest = {
 	tw?: any
 	tw2?: any
 	preAnalysis?: boolean
+	clusterId?: string
 	volcanoRender: VolcanoRenderRequest
 	signal?: any
 	__protected__?: any
@@ -59,4 +60,21 @@ export type DiffSpliceFullResponse = {
 	skipped?: { [reason: string]: number }
 }
 
-export type DiffSpliceResponse = DiffSplicePreAnalysisResponse | DiffSpliceFullResponse
+/** One tested junction of a cluster. start/stop follow the junction track: the 0-based
+ * positions of the last base of the left exon and the first base of the right exon. */
+export type DiffSpliceJunction = {
+	chr: string
+	start: number
+	stop: number
+	/** raw p of the junction's own test, against the rest of its cluster */
+	p: number
+	/** group-mean PSI; null when no sample of the group covers the cluster */
+	psi_control: number | null
+	psi_case: number | null
+}
+
+export type DiffSpliceJunctionsResponse = {
+	junctions: DiffSpliceJunction[]
+}
+
+export type DiffSpliceResponse = DiffSplicePreAnalysisResponse | DiffSpliceFullResponse | DiffSpliceJunctionsResponse

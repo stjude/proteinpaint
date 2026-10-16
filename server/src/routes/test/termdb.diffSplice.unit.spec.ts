@@ -1,11 +1,13 @@
 import tape from 'tape'
-import { resolveDsSampleGroups } from '../termdb.diffSplice.ts'
+import { getClusterJunctions, resolveDsSampleGroups } from '../termdb.diffSplice.ts'
 import { getAuthApi, authApi } from '#src/auth.js'
 
 /*
 test sections:
 
 resolveDsSampleGroups lists the samples of a group that is defined by a filter
+getClusterJunctions returns the junctions of one cluster
+getClusterJunctions throws for a cluster without junction data
 */
 
 const names: Record<number, string> = { 1: 's1', 2: 's2', 3: 's3', 4: 's4' }
@@ -132,6 +134,47 @@ tape('resolveDsSampleGroups lists the samples of a group that is defined by a fi
 		out.alerts,
 		['Common samples found between both groups: 2 samples'],
 		'and in the plural for more than one shared sample'
+	)
+	t.end()
+})
+
+tape('getClusterJunctions returns the junctions of one cluster', t => {
+	const result: any = {
+		junctionsByCluster: {
+			'chr1:clu_4_-': [
+				[1390864, 1393395, 1.2e-8, 0.95, 0.88],
+				[1390864, 1393500, 0.06, 0.05, null]
+			],
+			'chr2:clu_9_+': [[100, 200, 0.5, 0.5, 0.5]]
+		}
+	}
+	t.deepEqual(
+		getClusterJunctions(result, 'chr1:clu_4_-'),
+		[
+			{ chr: 'chr1', start: 1390864, stop: 1393395, p: 1.2e-8, psi_control: 0.95, psi_case: 0.88 },
+			{ chr: 'chr1', start: 1390864, stop: 1393500, p: 0.06, psi_control: 0.05, psi_case: null }
+		],
+		'should return only that cluster, with the chr of its id'
+	)
+	t.end()
+})
+
+tape('getClusterJunctions throws for a cluster without junction data', t => {
+	const result: any = { junctionsByCluster: { 'chr1:clu_4_-': [[1, 2, 0.1, 0.5, 0.5]] } }
+	t.throws(
+		() => getClusterJunctions(result, 'chr1:clu_5_-'),
+		/No junction data for cluster chr1:clu_5_-/,
+		'should throw for a cluster that is not in the screen'
+	)
+	t.throws(
+		() => getClusterJunctions(result, '__proto__'),
+		/No junction data for cluster __proto__/,
+		'should throw for an inherited property name'
+	)
+	t.throws(
+		() => getClusterJunctions({} as any, 'chr1:clu_4_-'),
+		/No junction data for cluster chr1:clu_4_-/,
+		'should throw for a cache result written without junction data'
 	)
 	t.end()
 })
