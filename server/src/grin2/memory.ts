@@ -52,7 +52,7 @@ async function getAvailableMemoryMB(): Promise<number> {
 	const limit = process.constrainedMemory()
 	let available = process.availableMemory()
 	// with no limit, constrainedMemory() is 0 on some platforms and 2^64 on Linux
-	if (limit && limit < os.totalmem()) {
+	if (limit && limit <= os.totalmem()) {
 		available = Math.min(limit, os.freemem(), available + getCgroupInactiveFileBytes())
 	}
 	return available / (1024 * 1024)
