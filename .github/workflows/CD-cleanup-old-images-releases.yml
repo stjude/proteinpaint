@@ -25,6 +25,7 @@ jobs:
           CONFIG=.github/cleanup-config.json
           echo "MAX_AGE_DAYS=$(jq -r '.maxAgeDays' "$CONFIG")" >> "$GITHUB_ENV"
           echo "MAX_DELETIONS=$(jq -r '.maxDeletionsPerRun' "$CONFIG")" >> "$GITHUB_ENV"
+          echo "VERSIONS_TO_RETAIN=$(jq -r '.VersionsToRetain' "$CONFIG")" >> "$GITHUB_ENV"
           echo "PACKAGES=$(jq -c '.packages' "$CONFIG")" >> "$GITHUB_ENV"
 
       - name: List release branches
@@ -39,12 +40,22 @@ jobs:
         run: |
           ALL="[]"
           for pkg in $(echo "$PACKAGES" | jq -r '.[]'); do
-            v=$(gh api "orgs/stjude/packages/container/${pkg}/versions" --paginate \
-              --jq '[.[] | {package: "'"$pkg"'", id, created_at, tags: .metadata.container.tags}]')
+            if ! v=$(gh api "orgs/stjude/packages/container/${pkg}/versions" --paginate \
+              --jq '[.[] | {package: "'"$pkg"'", id, created_at, tags: .metadata.container.tags}]'); \
+              then echo "::warning::package '$pkg' not found or API call failed - skipping"
+              continue
+            fi
             v=$(printf '%s\n' "$v" | jq -sc 'add // []') #the // [] at the end is a fallback for the case where a package has zero versions — then v would be empty, slurping nothing gives [], and add on an empty array returns null rather than [].The // [] catches that null and substitutes an empty array instead. so --argjson b "$v" in the next line always gets a valid array to work with, never null.
             ALL=$(jq -c -n --argjson a "$ALL" --argjson b "$v" '$a + $b')
           done
           echo "IMAGE_VERSIONS=$ALL" >> "$GITHUB_ENV"
+        env:
+          GH_TOKEN: ${{secrets.PAT}}
+      
+      - name: Compute images to be retained
+        run: |
+          PROTECTED_IDS=$(echo "$IMAGE_VERSIONS" | jq -c --argjson n "$VERSIONS_TO_RETAIN" '[group_by(.package)[] | sort_by(.created_at) | reverse | .[0:$n] | .[].id]')
+          echo "PROTECTED_IDS=$PROTECTED_IDS" >> "$GITHUB_ENV"
         env:
           GH_TOKEN: ${{secrets.PAT}}
 
@@ -56,6 +67,7 @@ jobs:
           while read -r version; do #pulls one json object every iteration from the IMAGE_VERSIONS in the previous step
             tags=$(echo "$version" | jq -c '.tags') #pulls the tags array out
             tag_count=$(echo "$tags" | jq 'length') #pulls how many tags the image has
+            id=$(echo "$version" | jq -r '.id')
             keep=false
             
             if [ "$tag_count" -eq 0 ]; then
@@ -63,6 +75,8 @@ jobs:
             elif echo "$tags" | jq -e 'index("latest") != null' > /dev/null; then #if any tag is "latest", mark it true
               keep=true
             elif echo "$tags" | jq -e 'any(. == "protected" or startswith("paper-"))' > /dev/null; then #if tag is either protected or startswith paper-, mark it true
+              keep=true
+            elif echo "$PROTECTED_IDS" | jq -e --argjson id "$id" 'index($id) != null' > /dev/null; then #check if this version's id is in the list of PROTECTED_IDS
               keep=true
             else #check if this is a version image whose release is still active
               for tag in $(echo "$tags" | jq -r '.[]'); do
@@ -125,6 +139,7 @@ jobs:
          CONFIG=.github/cleanup-config.json
          echo "MAX_AGE_DAYS=$(jq -r '.maxAgeDays' "$CONFIG")" >> "$GITHUB_ENV"
          echo "MAX_DELETIONS=$(jq -r '.maxDeletionsPerRun' "$CONFIG")" >> "$GITHUB_ENV"
+         echo "RELEASES_TO_RETAIN=$(jq -r '.ReleasesToRetain' "$CONFIG")" >> "$GITHUB_ENV"
 
       - name: List release branches
         run: |
@@ -142,6 +157,11 @@ jobs:
           RELEASES=$(printf '%s\n' "$RELEASES" | jq -sc 'add // []')
           echo "RELEASES=$RELEASES" >> "$GITHUB_ENV"
 
+      - name: Compute releases to be retained
+        run: |
+          PROTECTED_IDS=$(echo "$RELEASES" | jq -c --argjson n "$RELEASES_TO_RETAIN" '[sort_by(.created_at) | reverse | .[0:$n] | .[].tag]')
+          echo "PROTECTED_IDS=$PROTECTED_IDS" >> "$GITHUB_ENV"
+
       - name: Filter Releases
         run: |
           Filtered="[]"
@@ -152,8 +172,9 @@ jobs:
             keep=false
             if [[ "$tag" == "latest" || "$tag" == "protected" || "$tag" == paper-* ]]; then
                keep=true
-            fi
-            if [[ "$tag" =~ ^v([0-9]+\.[0-9]+)\.[0-9]+(-.+)?$ ]]; then #Tests the release's tag against the pattern to capture its major.minor prefix
+            elif echo "$PROTECTED_IDS" | jq -e --arg t "$tag" 'index($t) != null' > /dev/null; then #check if this tag is in the list of PROTECTED_IDS
+              keep=true
+            elif [[ "$tag" =~ ^v([0-9]+\.[0-9]+)\.[0-9]+(-.+)?$ ]]; then #Tests the release's tag against the pattern to capture its major.minor prefix
               prefix="release-${BASH_REMATCH[1]}" #concatenate the captured major.minor with 'release-'                  
               if echo "$RELEASE_BRANCHES" | jq -e --arg p "$prefix" 'any(.[]; . == $p or startswith($p + ".") or startswith($p + "-"))' > /dev/null; then #If any of the RELEASE_BRANCHES has the prefix we retrieved in the previous step, we keep it
                 keep=true
