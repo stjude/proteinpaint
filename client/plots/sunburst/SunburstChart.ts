@@ -140,8 +140,10 @@ export class SunburstChart {
 		}
 	}
 
-	/** fetch and draw the counts of the rings; with no rings, an empty chart and `emptyNote` */
-	async update(arg: SunburstUpdateArg, emptyNote = '') {
+	/** fetch and draw the counts of the rings; with no rings, an empty chart and `emptyNote`. Resolves true
+	 *  when drawn, false when the request failed (the error is shown), and undefined when a later update
+	 *  replaced this one, which then has its own outcome */
+	async update(arg: SunburstUpdateArg, emptyNote = ''): Promise<boolean | undefined> {
 		const id = ++this.updateId
 		this.twLst = arg.twLst
 		this.groupFilter = arg.groupFilter
@@ -153,7 +155,7 @@ export class SunburstChart {
 			this.selected.clear()
 			this.renderer.setTree({ name: this.renderer.opts.rootName, children: [] })
 			this.dom.noteDiv.text(emptyNote)
-			return
+			return true
 		}
 		try {
 			this.dom.loadingDiv.style('display', '')
@@ -167,11 +169,13 @@ export class SunburstChart {
 			if (id != this.updateId) return
 			this.dom.loadingDiv.style('display', 'none')
 			this.render(res, arg.colors)
+			return true
 		} catch (e: any) {
 			if (id != this.updateId) return
 			this.dom.loadingDiv.style('display', 'none')
 			this.dom.errdiv.style('display', '').text(e?.message || String(e))
 			if (e instanceof Error) console.error(e)
+			return false
 		}
 	}
 
