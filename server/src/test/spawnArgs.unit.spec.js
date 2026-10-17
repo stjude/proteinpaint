@@ -9,6 +9,7 @@ import serverconfig from '../serverconfig.js'
 import * as utils from '../utils.js'
 import { api as ntseqApi } from '../routes/ntseq.ts'
 import { setRoutes } from '../app.unorg.js'
+import { setMovedRoutes } from './movedRoutes.js'
 import { init as onesampletkInit } from '../j2/onesampletk.ts'
 
 /*
@@ -161,7 +162,9 @@ tape('\n', async function (test) {
 	routes = {}
 	const record = (p, h) => (routes[p] = h)
 	const genomes = { hg38: getGenome() }
-	setRoutes({ get: record, post: record, all: record, put: record, delete: record, use: () => {} }, genomes, {})
+	const app = { get: record, post: record, all: record, put: record, delete: record, use: () => {} }
+	setRoutes(app, genomes, {})
+	setMovedRoutes(app, genomes)
 	routes.onesampletk = onesampletkInit({ genomes })
 	test.end()
 })

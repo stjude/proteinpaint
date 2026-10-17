@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url'
 import serverconfig from '../serverconfig.js'
 import * as common from '#shared/common.js'
 import { setRoutes } from '../app.unorg.js'
+import { setMovedRoutes } from './movedRoutes.js'
 import { init as onesampletkInit } from '../j2/onesampletk.ts'
 
 /*
@@ -194,13 +195,13 @@ const routeCases = [
 	{
 		name: 'mdssvcnv',
 		route: '/mdssvcnv',
-		file: 'app.unorg.js',
+		file: 'mds.svcnv.js',
 		query: (url, indexURL) => ({ genome: 'hg38', iscustom: 1, url, indexURL, rglst: rglst() })
 	},
 	{
 		name: 'mdssvcnv-checkvcf',
 		route: '/mdssvcnv',
-		file: 'app.unorg.js',
+		file: 'mds.svcnv.js',
 		query: (url, indexURL) => ({
 			genome: 'hg38',
 			iscustom: 1,
@@ -224,13 +225,13 @@ const routeCases = [
 	{
 		name: 'mdsexpressionrank',
 		route: '/mdsexpressionrank',
-		file: 'app.unorg.js',
+		file: 'mds.expressionrank.js',
 		query: (url, indexURL) => ({ genome: 'hg38', iscustom: 1, sample: 's1', url, indexURL, rglst: rglst() })
 	},
 	{
 		name: 'mdsgenevalueonesample',
 		route: '/mdsgenevalueonesample',
-		file: 'app.unorg.js',
+		file: 'mds.genevalueonesample.js',
 		query: (url, indexURL) => ({
 			genome: 'hg38',
 			iscustom: 1,
@@ -243,7 +244,7 @@ const routeCases = [
 	...['isgenevalue', 'iscnv', 'isloh', 'isitd', 'issvfusion', 'issvcnv', 'isvcf', 'ismutation'].map(flag => ({
 		name: 'samplematrix-' + flag,
 		route: '/samplematrix',
-		file: 'app.unorg.js',
+		file: 'mds.samplematrix.js',
 		query: (url, indexURL) => samplematrixQuery(flag, url, indexURL)
 	})),
 	{
@@ -309,7 +310,9 @@ tape('\n', async function (test) {
 	routes = {}
 	const record = (p, h) => (routes[p] = h)
 	const genomes = { hg38: getGenome() }
-	setRoutes({ get: record, post: record, all: record, put: record, delete: record, use: () => {} }, genomes, {})
+	const app = { get: record, post: record, all: record, put: record, delete: record, use: () => {} }
+	setRoutes(app, genomes, {})
+	setMovedRoutes(app, genomes)
 	routes.onesampletk = onesampletkInit({ genomes })
 	test.end()
 })

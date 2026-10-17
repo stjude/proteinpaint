@@ -1,0 +1,62 @@
+/*
+The /cardsjson route handler, moved from app.unorg.js, see routes/cardsjson.ts
+*/
+
+import serverconfig from './serverconfig.js'
+import * as utils from './utils.js'
+import * as common from '#shared/common.js'
+
+// set by the route init, so that the moved code can use genomes as in app.unorg.js
+let genomes
+
+export { handle_cards }
+
+export function setGenomes(_genomes) {
+	genomes = _genomes
+}
+
+/****
+	- validate and start the server
+	This enables the correct monitoring by the forever module. 
+	Whereas before 'forever' will endlessly restart the server
+	even if it cannot be initialized in a full working state,
+	the usage in a bash script should now be: 
+	```
+	set -e
+	node server validate 
+	# only proceed to using forever on successful validation
+	forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
+	
+	# - OR -
+	# use the serverconfig.preListenScript option to stop the previous process
+	# after all configurations, genomes, and datasets have been loaded in the current process, 
+	# so that the validation happens from within the same monitored process (see startServer())
+	```
+***/
+
+async function handle_cards(req, res) {
+	try {
+		if (req.query.datafile && req.query.tabixCoord) {
+			const gn = genomes[req.query.genome]
+			if (!gn) throw 'invalid genome'
+
+			const c = common.string2pos(req.query.tabixCoord, gn, true)
+			if (!c) throw 'invalid tabixCoord'
+
+			const [e, file] = utils.fileurl({ query: { file: req.query.datafile } })
+			if (e) throw e
+			await utils.file_is_readable(file)
+
+			const lines = []
+			await utils.get_lines_bigfile({
+				args: [file, `${c.chr}:${c.start}-${c.stop}`],
+				callback: line => lines.push(line)
+			})
+			res.send({ file: lines })
+		} else {
+			throw `invalid cards request`
+		}
+	} catch (e) {
+		res.send({ error: e.message || e })
+	}
+}

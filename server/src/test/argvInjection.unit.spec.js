@@ -13,6 +13,7 @@ import { mdsjunction_request_closure } from '../mds.junction.js'
 import { handle_mdssurvivalplot } from '../km.js'
 import { handle_request_closure as termdbClosure } from '../termdb.js'
 import { setRoutes } from '../app.unorg.js'
+import { setMovedRoutes } from './movedRoutes.js'
 
 /*
 Regression specs for argument injection (CWE-88) into samtools/tabix argv.
@@ -304,11 +305,9 @@ tape('/mdsgeneboxplot and /isoformbycoord, via the real route table', async test
 	const genome = getGenome()
 	// legacy mds routes are only mounted when there is at least one mds dataset
 	genome.datasets.FakeMds = { isMds: true }
-	setRoutes(
-		{ get: record, post: record, all: record, put: record, delete: record, use: () => {} },
-		{ hg38: genome },
-		{}
-	)
+	const app = { get: record, post: record, all: record, put: record, delete: record, use: () => {} }
+	setRoutes(app, { hg38: genome }, {})
+	setMovedRoutes(app, { hg38: genome })
 	for (const chr of chrAttacks) {
 		const box = await send(routes['/mdsgeneboxplot'], {
 			genome: 'hg38',
