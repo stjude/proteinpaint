@@ -1,14 +1,11 @@
 import path from 'path'
 import fs from 'fs'
-import { promisify } from 'util'
-import { execFile } from 'child_process'
 import { randomUUID } from 'crypto'
 import serverconfig from '#src/serverconfig.js'
+import { runToolOutput } from '#src/tools/index.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
-
-const run = promisify(execFile)
 
 /* Bgzip + tabix a BED file into the "bedj" cache subdir that block tracks read with isCache:true.
 
@@ -55,8 +52,8 @@ export async function writeBedjFile(
 	try {
 		if ('file' in content) await fs.promises.copyFile(content.file, tmpBed)
 		else await fs.promises.writeFile(tmpBed, content.text)
-		await run(serverconfig.bgzip, ['-f', tmpBed]) // writes tmpBed + '.gz'
-		await run(serverconfig.tabix, ['-f', '-p', 'bed', tmpBed + '.gz'])
+		await run('bgzip.compress', tmpBed) // writes tmpBed + '.gz'
+		await run('tabix.indexBed', tmpBed + '.gz')
 		/* Publish the index first and let the .gz rename be the commit point, since that is what
 		the reuse check and any reader key off. Publishing the data first leaves a window where a
 		concurrent read finds a .gz whose index is absent.
@@ -73,4 +70,10 @@ export async function writeBedjFile(
 		for (const f of [tmpBed, tmpBed + '.gz', tmpBed + '.gz.tbi']) await fs.promises.rm(f, { force: true })
 	}
 	return name
+}
+
+// rejects if the tool exits with an error, like the execFile() that this replaced
+async function run(op: string, file: string) {
+	const { code, stderr } = await runToolOutput(op, { file })
+	if (code !== 0) throw new Error(`${op} exited with code ${code}: ${stderr.trim()}`)
 }

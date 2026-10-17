@@ -60,11 +60,9 @@ async function handle_mdsgenevalueonesample(req, res) {
 		let nodata = true
 		for (const gene of q.genes) {
 			let v
-			await utils.get_lines_bigfile({
-				args: [
-					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-					gene.chr + ':' + gene.start + '-' + gene.stop
-				],
+			await utils.readTabixLines({
+				file: dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+				regions: [{ chr: gene.chr, start: gene.start, stop: gene.stop }],
 				dir,
 				callback: line => {
 					const l = line.split('\t')

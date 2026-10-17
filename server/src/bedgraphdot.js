@@ -46,9 +46,10 @@ async function run_request(q, dir, nochr) {
 	if (q.autoscale) {
 		// figure out the hard way
 		for (const r of q.rglst) {
-			const coord = (nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-			await utils.get_lines_bigfile({
-				args: [q.file, coord],
+			const region = { chr: nochr ? r.chr.replace('chr', '') : r.chr, start: r.start, stop: r.stop }
+			await utils.readTabixLines({
+				file: q.file,
+				regions: [region],
 				dir,
 				callback: line => {
 					const [chr, s1, s2, s3] = line.split('\t')
@@ -83,9 +84,10 @@ async function run_request(q, dir, nochr) {
 		const ctx = canvas.getContext('2d')
 
 		// query for this variant
-		const coord = (nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-		await utils.get_lines_bigfile({
-			args: [q.file, coord],
+		const region = { chr: nochr ? r.chr.replace('chr', '') : r.chr, start: r.start, stop: r.stop }
+		await utils.readTabixLines({
+			file: q.file,
+			regions: [region],
 			dir,
 			callback: line => {
 				const [chr, s1, s2, s3] = line.split('\t')

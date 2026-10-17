@@ -63,9 +63,10 @@ async function loadTk(req, genome) {
 		const coordset = new Set()
 
 		// query for this variant
-		const coord = (nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-		await utils.get_lines_bigfile({
-			args: [tkfile, coord],
+		const region = { chr: nochr ? r.chr.replace('chr', '') : r.chr, start: r.start, stop: r.stop }
+		await utils.readTabixLines({
+			file: tkfile,
+			regions: [region],
 			dir,
 			callback: line => {
 				const l = line.split('\t')
@@ -184,10 +185,11 @@ export async function overlay(q, ds, res) {
 	if (!tk) throw 'ld tk not found by name: ' + q.ldtkname
 
 	const thisalleles = q.m.ref + '.' + q.m.alt
-	const coord = (tk.nochr ? q.m.chr.replace('chr', '') : q.m.chr) + ':' + q.m.pos + '-' + (q.m.pos + 1)
+	const region = { chr: tk.nochr ? q.m.chr.replace('chr', '') : q.m.chr, start: q.m.pos, stop: q.m.pos + 1 }
 	const lst = []
-	await utils.get_lines_bigfile({
-		args: [tk.file, coord],
+	await utils.readTabixLines({
+		file: tk.file,
+		regions: [region],
 		dir: tk.dir,
 		callback: line => {
 			const l = line.split('\t')

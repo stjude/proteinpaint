@@ -3,12 +3,15 @@ import type { ChildProcessWithoutNullStreams } from 'child_process'
 import path from 'path'
 import serverconfig from '../serverconfig.js'
 import { illegalUrlHost } from '../utils.js'
+import { specs as bigbedSpecs } from './bigbed.ts'
 import { specs as fimoSpecs } from './fimo.ts'
 import { specs as gfClientSpecs } from './gfClient.ts'
 import { specs as h5dumpSpecs } from './h5dump.ts'
 import { specs as hicstrawSpecs } from './hicstraw.ts'
 import { specs as rscriptSpecs } from './rscript.ts'
+import { specs as samtoolsSpecs } from './samtools.ts'
 import { specs as systemSpecs } from './system.ts'
+import { specs as tabixSpecs } from './tabix.ts'
 import { specs as versionSpecs } from './versions.ts'
 
 /*
@@ -18,10 +21,14 @@ Each operation has a spec, in a file of this dir, with its input fields and an a
 - requires the input to be a plain object with exactly the fields of the spec
 - checks each field value by the field type: an enum, an integer or number range, a string pattern, a file path
   under an allowed root dir, or a file path or url
-- builds argv from the template, so that a field value can only be in the argv slot that the spec gives it
+- builds argv from the template, so that a field value can only be in the argv slot that the spec gives it; a slot
+  may have a literal prefix, such as -chrom=$chr, and a list field fills consecutive slots, as ...$name
 - checks every value slot again: a non-empty string of bounded length, with no control character, that does
   not start with "-"
 - throws before the tool is started if any check fails
+
+A spec may also give the working dir of the tool, as a file field under cachedir, such as the dir where tabix keeps the
+index that it downloads for a url. That is the only field that may be optional.
 
 runToolOutput() does the same and resolves with the exit code and output of the tool.
 
@@ -45,16 +52,27 @@ export type Field =
 	/** a path under one of the roots; with debugmodeAnyRoot, any absolute path is allowed when serverconfig.debugmode
 	 * is true, for a dataset file that a dev environment may keep outside tp */
 	| { type: 'file'; roots: readonly FileRoot[]; debugmodeAnyRoot?: boolean }
-	/** a path under serverconfig.tpmasterdir, or an http or https url with an allowed host */
-	| { type: 'fileOrUrl' }
+	/** a path under one of the roots, by default only tp, or an http or https url with an allowed host */
+	| { type: 'fileOrUrl'; roots?: readonly FileRoot[] }
+	/** an array of 1 to maxItems values of the item field, which fill consecutive argv slots */
+	| { type: 'list'; item: Field; maxItems: number }
+
+/** optional: the field may be undefined or null, which is only allowed for the cwd field */
+export type FieldSpec = Field & { optional?: boolean }
 
 export type ToolSpec = {
 	/** the binary, from serverconfig, which is read when the tool is started */
 	bin: () => string
-	fields: Readonly<Record<string, Field>>
-	/** each item is a literal argument, or "$name" for the value of the field name */
+	fields: Readonly<Record<string, FieldSpec>>
+	/** each item is a literal argument; "$name" for the value of the field name, after an optional literal prefix such
+	 * as -chrom=; or "...$name" for the values of the list field name */
 	argv: readonly string[]
+	/** "$name" of a file field under cachedir that is the working dir of the tool */
+	cwd?: string
 }
+
+/** an argv item that is a field slot */
+type Slot = { prefix: string; name: string; spread: boolean }
 
 export type ToolOutput = { code: number | null; stdout: string; stderr: string }
 
@@ -70,7 +88,18 @@ const fileRoots: Readonly<Record<FileRoot, () => string>> = Object.freeze({
 })
 
 export const specs: Readonly<Record<string, ToolSpec>> = deepFreeze(
-	mergeSpecs([fimoSpecs, gfClientSpecs, h5dumpSpecs, hicstrawSpecs, rscriptSpecs, systemSpecs, versionSpecs])
+	mergeSpecs([
+		bigbedSpecs,
+		fimoSpecs,
+		gfClientSpecs,
+		h5dumpSpecs,
+		hicstrawSpecs,
+		rscriptSpecs,
+		samtoolsSpecs,
+		systemSpecs,
+		tabixSpecs,
+		versionSpecs
+	])
 )
 for (const [op, spec] of Object.entries(specs)) checkSpec(op, spec)
 
@@ -78,11 +107,11 @@ for (const [op, spec] of Object.entries(specs)) checkSpec(op, spec)
 export function runTool(op: string, input: Record<string, unknown>): ChildProcessWithoutNullStreams {
 	const spec = Object.hasOwn(specs, op) ? specs[op] : undefined
 	if (!spec) throw `unknown tool operation: ${op}`
-	const argv = getArgv(op, spec, input)
+	const { argv, cwd } = getCall(op, spec, input)
 	const bin = spec.bin()
 	if (typeof bin != 'string' || !bin) throw `${op}: tool binary is not configured`
-	// no options: the default of no shell, so that each argument reaches the tool as one literal string
-	return spawn(bin, argv)
+	// no shell option, so that the default of no shell is used and each argument reaches the tool as one literal string
+	return cwd ? spawn(bin, argv, { cwd }) : spawn(bin, argv)
 }
 
 /** same as runTool(), and resolves with the exit code and output; rejects with the error if the tool cannot be started */
@@ -103,22 +132,54 @@ export function runToolOutput(op: string, input: Record<string, unknown>): Promi
 
 /** returns the argv of an op from its input, or throws */
 export function getArgv(op: string, spec: ToolSpec, input: Record<string, unknown>): string[] {
+	return getCall(op, spec, input).argv
+}
+
+/** returns the argv and working dir of an op from its input, or throws */
+export function getCall(op: string, spec: ToolSpec, input: Record<string, unknown>): { argv: string[]; cwd?: string } {
 	if (!input || typeof input != 'object' || Object.getPrototypeOf(input) !== Object.prototype)
 		throw `${op}: input must be a plain object`
-	const names = Object.keys(spec.fields)
 	for (const k of Object.keys(input)) {
 		if (!Object.hasOwn(spec.fields, k)) throw `${op}: unexpected input field ${k}`
 	}
-	const values = new Map<string, string>()
-	for (const name of names) {
+	const values = new Map<string, string | string[]>()
+	for (const [name, field] of Object.entries(spec.fields)) {
+		const msg = `${op}: invalid ${name}`
+		if (field.optional && (input[name] === undefined || input[name] === null)) continue
 		if (!Object.hasOwn(input, name)) throw `${op}: missing input field ${name}`
-		values.set(name, checkField(spec.fields[name], input[name], `${op}: invalid ${name}`))
+		values.set(name, field.type == 'list' ? checkList(field, input[name], msg) : checkField(field, input[name], msg))
 	}
-	const argv = spec.argv.map(a => (a[0] == '$' ? values.get(a.slice(1))! : a))
-	for (const [i, a] of spec.argv.entries()) {
-		if (a[0] == '$' && !isSafeValueArg(argv[i])) throw `${op}: invalid ${a.slice(1)}`
+	const argv: string[] = []
+	for (const a of spec.argv) {
+		const slot = parseSlot(a)
+		if (!slot) {
+			argv.push(a)
+			continue
+		}
+		const v = values.get(slot.name)!
+		// every value is checked again here, whatever its field type, before it is put in its slot
+		for (const s of Array.isArray(v) ? v : [v]) {
+			if (!isSafeValueArg(s)) throw `${op}: invalid ${slot.name}`
+			argv.push(slot.prefix + s)
+		}
 	}
-	return argv
+	const cwdName = spec.cwd ? parseSlot(spec.cwd)!.name : undefined
+	const cwd = cwdName ? (values.get(cwdName) as string | undefined) : undefined
+	if (cwd !== undefined && !isSafeValueArg(cwd)) throw `${op}: invalid ${cwdName}`
+	return { argv, cwd }
+}
+
+/** returns the argument strings of a list field value, or throws msg */
+function checkList(field: Extract<Field, { type: 'list' }>, v: unknown, msg: string): string[] {
+	if (!Array.isArray(v) || v.length == 0 || v.length > field.maxItems) throw msg
+	return v.map(i => checkField(field.item, i, msg))
+}
+
+/** returns the slot of an argv item, or undefined for a literal argument */
+function parseSlot(a: string): Slot | undefined {
+	const m = /^(\.\.\.)?([^$]*)\$([A-Za-z_][A-Za-z0-9_]*)$/.exec(a)
+	if (!m) return
+	return { spread: !!m[1], prefix: m[2], name: m[3] }
 }
 
 /** returns the argument string of a field value, or throws msg */
@@ -142,7 +203,7 @@ function checkField(field: Field, v: unknown, msg: string): string {
 			return checkFile(v, field.roots, msg)
 		case 'fileOrUrl':
 			if (typeof v == 'string' && v.includes('://')) return checkUrl(v, msg)
-			return checkFile(v, ['tp'], msg)
+			return checkFile(v, field.roots || ['tp'], msg)
 		default:
 			throw msg
 	}
@@ -201,38 +262,69 @@ function isSafeValueArg(s: unknown) {
 export function checkSpec(op: string, spec: ToolSpec) {
 	if (typeof spec.bin != 'function') throw `tool spec ${op}: bin must be a function`
 	const used = new Set<string>()
+	const use = (name: string, item: string) => {
+		if (!Object.hasOwn(spec.fields, name)) throw `tool spec ${op}: ${item} is not a field`
+		if (used.has(name)) throw `tool spec ${op}: field ${name} is used more than once`
+		used.add(name)
+	}
 	for (const a of spec.argv) {
 		if (typeof a != 'string' || !a) throw `tool spec ${op}: argv item must be a non-empty string`
-		if (a[0] != '$') continue
-		const name = a.slice(1)
-		if (!Object.hasOwn(spec.fields, name)) throw `tool spec ${op}: argv ${a} is not a field`
-		if (used.has(name)) throw `tool spec ${op}: field ${name} is used more than once in argv`
-		used.add(name)
+		const slot = parseSlot(a)
+		if (!slot) {
+			if (a.includes('$'))
+				throw `tool spec ${op}: argv ${a} must be a literal without $, $name, prefix$name, or ...$name`
+			continue
+		}
+		use(slot.name, `argv ${a}`)
+		const field = spec.fields[slot.name]
+		if (slot.spread != (field.type == 'list'))
+			throw `tool spec ${op}: only a list field is used as ...$name, and always so`
+		if (slot.spread && slot.prefix) throw `tool spec ${op}: argv ${a} must not have a prefix`
+		if (field.optional) throw `tool spec ${op}: field ${slot.name} in argv must not be optional`
+	}
+	if (spec.cwd !== undefined) {
+		const slot = parseSlot(spec.cwd)
+		if (!slot || slot.prefix || slot.spread) throw `tool spec ${op}: cwd must be $name`
+		use(slot.name, `cwd ${spec.cwd}`)
+		const field = spec.fields[slot.name]
+		if (field.type != 'file' || field.roots.join() != 'cache' || field.debugmodeAnyRoot)
+			throw `tool spec ${op}: cwd must be a file field with only the cache root`
 	}
 	for (const [name, field] of Object.entries(spec.fields)) {
 		if (!used.has(name)) throw `tool spec ${op}: field ${name} is not used in argv`
-		if (field.type == 'string') {
-			const { source, flags } = field.pattern
-			// an unanchored pattern would accept any string that contains a match; a g or y flag makes test() stateful
-			if (source[0] != '^' || !source.endsWith('$')) throw `tool spec ${op}: pattern of ${name} must be anchored`
-			if (/[gy]/.test(flags)) throw `tool spec ${op}: pattern of ${name} must not have the g or y flag`
-			if (!Number.isInteger(field.maxLength) || field.maxLength < 1 || field.maxLength > maxArgLength)
-				throw `tool spec ${op}: maxLength of ${name} must be from 1 to ${maxArgLength}`
-		} else if (field.type == 'int' || field.type == 'number') {
-			// a negative value would start with "-", which every value slot rejects
-			const isNum = field.type == 'int' ? Number.isSafeInteger : Number.isFinite
-			if (!isNum(field.min) || !isNum(field.max) || field.min < 0 || field.min > field.max)
-				throw `tool spec ${op}: min and max of ${name} must be ${
-					field.type == 'int' ? 'integers' : 'numbers'
-				}, with 0 <= min <= max`
-		} else if (field.type == 'enum') {
-			if (!field.values.length || !field.values.every(isSafeValueArg))
-				throw `tool spec ${op}: values of ${name} must be safe arguments`
-		} else if (field.type == 'file') {
-			if (!field.roots.length || !field.roots.every(r => Object.hasOwn(fileRoots, r)))
-				throw `tool spec ${op}: roots of ${name} must be one or more of ${Object.keys(fileRoots)}`
-		} else if (field.type != 'fileOrUrl') throw `tool spec ${op}: unknown type of ${name}`
+		if (field.type == 'list') {
+			if (!Number.isInteger(field.maxItems) || field.maxItems < 1 || field.maxItems > 10000)
+				throw `tool spec ${op}: maxItems of ${name} must be from 1 to 10000`
+			if (field.item.type == 'list') throw `tool spec ${op}: item of ${name} must not be a list`
+			checkField_spec(op, `${name} item`, field.item)
+		} else checkField_spec(op, name, field)
 	}
+}
+
+/** throws if the type options of a field that is not a list are malformed */
+function checkField_spec(op: string, name: string, field: Field) {
+	if (field.type == 'string') {
+		const { source, flags } = field.pattern
+		// an unanchored pattern would accept any string that contains a match; a g or y flag makes test() stateful
+		if (source[0] != '^' || !source.endsWith('$')) throw `tool spec ${op}: pattern of ${name} must be anchored`
+		if (/[gy]/.test(flags)) throw `tool spec ${op}: pattern of ${name} must not have the g or y flag`
+		if (!Number.isInteger(field.maxLength) || field.maxLength < 1 || field.maxLength > maxArgLength)
+			throw `tool spec ${op}: maxLength of ${name} must be from 1 to ${maxArgLength}`
+	} else if (field.type == 'int' || field.type == 'number') {
+		// a negative value would start with "-", which every value slot rejects
+		const isNum = field.type == 'int' ? Number.isSafeInteger : Number.isFinite
+		if (!isNum(field.min) || !isNum(field.max) || field.min < 0 || field.min > field.max)
+			throw `tool spec ${op}: min and max of ${name} must be ${
+				field.type == 'int' ? 'integers' : 'numbers'
+			}, with 0 <= min <= max`
+	} else if (field.type == 'enum') {
+		if (!field.values.length || !field.values.every(isSafeValueArg))
+			throw `tool spec ${op}: values of ${name} must be safe arguments`
+	} else if (field.type == 'file' || field.type == 'fileOrUrl') {
+		const roots = field.type == 'file' ? field.roots : field.roots || ['tp']
+		if (!roots.length || !roots.every(r => Object.hasOwn(fileRoots, r)))
+			throw `tool spec ${op}: roots of ${name} must be one or more of ${Object.keys(fileRoots)}`
+	} else throw `tool spec ${op}: unknown type of ${name}`
 }
 
 /** throws if an op is in more than one spec file, which a plain object spread would silently overwrite */

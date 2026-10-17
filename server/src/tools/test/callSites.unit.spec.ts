@@ -10,6 +10,8 @@ import { getH5samples } from '#src/utils/h5samples.ts'
 import { validate_cumburden } from '#src/mds3.init.js'
 import { getMaxLesions } from '#src/grin2/memory.ts'
 import { checkDependenciesAndVersions } from '#src/checkDependenciesAndVersions.js'
+import fs from 'fs'
+import * as utils from '#src/utils.js'
 import { StandIns } from './standIns.ts'
 
 /*
@@ -30,6 +32,9 @@ getH5samples()
 validate_cumburden()
 getMaxLesions()
 checkDependenciesAndVersions()
+readTabixLines(), readTabixHeader(), listTabixChrs()
+get_fasta()
+query_bigbed_by_coord(), query_bigbed_by_name(), testIfFileIsBigbed()
 */
 
 const tp = path.resolve(serverconfig.tpmasterdir)
@@ -361,6 +366,182 @@ tape('checkDependenciesAndVersions()', async test => {
 		standIns.restorePath()
 		if (skip !== undefined) features.skip_checkDependenciesAndVersions = skip
 	}
+	standIns.reset()
+	test.end()
+})
+
+tape('readTabixLines(), readTabixHeader(), listTabixChrs()', async test => {
+	// the real tool, with a test file that has 2 lines on chr17
+	const file = path.join(tp, 'files/hg38/TermdbTest/TermdbTest_ITD.gz')
+	const region = { chr: 'chr17', start: 1, stop: 100000000 }
+	const lines: string[] = []
+	await utils.readTabixLines({ file, regions: [region], callback: line => lines.push(line) })
+	test.equal(lines.length, 2, 'should read the lines of a region')
+	test.deepEqual(await utils.listTabixChrs(file), ['chr17'], 'should list the chromosomes')
+	test.ok((await utils.readTabixHeader(file))[0]?.startsWith('#sample'), 'should read the header lines')
+	const first: string[] = []
+	await utils.readTabixLines({ file, regions: [region], callback: (line, stop) => (first.push(line), stop()) })
+	test.equal(first.length, 1, 'should stop reading when the callback calls stop()')
+	try {
+		await utils.readTabixLines({
+			file,
+			regions: [region],
+			callback: () => {
+				throw 'bad line'
+			}
+		})
+		test.fail('should reject when the callback throws')
+	} catch (e) {
+		test.equal(e, 'bad line', 'should reject with the error of the callback')
+	}
+
+	// a stand-in, to check the argv and the working dir
+	const tabix = standIns.add('tabix', 'pwd -P')
+	const dir = fs.mkdtempSync(path.join(cache, 'pp-callsites-'))
+	await withConfig('tabix', tabix, async () => {
+		const out: string[] = []
+		await utils.readTabixLines({
+			file: 'files/x.gz',
+			dir,
+			regions: [
+				{ chr: 'chr1', start: -5, stop: '10.5' },
+				{ chr: 'chr2', start: 1.5, stop: 2 }
+			],
+			callback: line => out.push(line)
+		})
+		test.deepEqual(
+			standIns.calls('tabix'),
+			[[path.join(tp, 'files/x.gz'), 'chr1:0-11', 'chr2:1-2']],
+			'should pass each region as an argument, with integer coordinates from 0'
+		)
+		test.deepEqual(out, [fs.realpathSync(dir)], 'should run tabix in the cache dir of a url file')
+		standIns.reset()
+		await utils.readTabixHeader('files/x.gz')
+		await utils.listTabixChrs('files/x.gz')
+		test.deepEqual(
+			standIns.calls('tabix'),
+			[
+				['-H', path.join(tp, 'files/x.gz')],
+				['-l', path.join(tp, 'files/x.gz')]
+			],
+			'should pass -H and -l'
+		)
+		standIns.reset()
+		for (const [label, input] of [
+			['a chr that is an option', { regions: [{ chr: '-o', start: 1, stop: 2 }] }],
+			['a chr with shell syntax', { regions: [{ chr: 'chr1;ls', start: 1, stop: 2 }] }],
+			['a coordinate that is not a number', { regions: [{ chr: 'chr1', start: '1;ls', stop: 2 }] }],
+			['no region', { regions: [] }],
+			['a file outside tp', { file: '/etc/passwd' }],
+			['a dir outside cachedir', { dir: '/tmp' }]
+		] as const) {
+			try {
+				const base = { file: 'files/x.gz', regions: [{ chr: 'chr1', start: 1, stop: 2 }], callback: () => {} }
+				await utils.readTabixLines(Object.assign(base, input) as any)
+				test.fail(`should reject ${label}`)
+			} catch (_) {
+				test.pass(`should reject ${label}`)
+			}
+		}
+		test.deepEqual(standIns.calls('tabix'), [], 'should not start tabix for a rejected call')
+	})
+	fs.rmSync(dir, { recursive: true, force: true })
+	standIns.reset()
+	test.end()
+})
+
+tape('get_fasta()', async test => {
+	const samtools = standIns.add('samtools', `printf '>chr1:100-200\\nACGT\\n'`)
+	const gn = { genomefile: path.join(tp, 'genomes/x.fa.gz'), chrlookup: genome.chrlookup }
+	await withConfig('samtools', samtools, async () => {
+		test.equal(
+			await utils.get_fasta(gn, 'chr1:100-200'),
+			'>chr1:100-200\nACGT',
+			'should return the fasta of the region'
+		)
+		test.deepEqual(
+			standIns.calls('samtools'),
+			[['faidx', gn.genomefile, '--', 'chr1:100-200']],
+			'should pass the region after --'
+		)
+		standIns.reset()
+		for (const [label, g, coord] of [
+			['a coordinate that is an option, which only get_fasta() checks', gn, '-o'],
+			['a chromosome without a range, which only get_fasta() checks', gn, 'chr1'],
+			['a coordinate outside the chromosome, which only get_fasta() checks', gn, 'chr1:100-99999999'],
+			['a genome fasta outside tp', { ...gn, genomefile: '/etc/passwd' }, 'chr1:100-200']
+		] as const) {
+			try {
+				await utils.get_fasta(g, coord)
+				test.fail(`should reject ${label}`)
+			} catch (_) {
+				test.pass(`should reject ${label}`)
+			}
+		}
+		test.deepEqual(standIns.calls('samtools'), [], 'should not start samtools for a rejected call')
+	})
+	standIns.reset()
+	test.end()
+})
+
+tape('query_bigbed_by_coord(), query_bigbed_by_name(), testIfFileIsBigbed()', async test => {
+	const toBed = standIns.add('bigBedToBed', `printf 'chr1\\t1\\t2\\tx\\n'`)
+	const named = standIns.add('bigBedNamedItems', `printf 'chr1\\t1\\t2\\trs1\\n'`)
+	const info = standIns.add('bigBedInfo', `echo 'version: 4'`)
+	const file = path.join(tp, 'anno/a.bb')
+	await withConfig('bigBedToBed', toBed, async () => {
+		await withConfig('bigBedNamedItems', named, async () => {
+			await withConfig('bigBedInfo', info, async () => {
+				test.deepEqual(
+					await utils.query_bigbed_by_coord(file, 'chr1', 0, 1000),
+					['chr1\t1\t2\tx'],
+					'should return the lines of a region'
+				)
+				test.deepEqual(
+					standIns.calls('bigBedToBed'),
+					[['-chrom=chr1', '-start=0', '-end=1000', file, 'stdout']],
+					'should pass the region as options'
+				)
+				test.deepEqual(
+					await utils.query_bigbed_by_name(file, 'rs1'),
+					['chr1\t1\t2\trs1'],
+					'should return the lines of a name'
+				)
+				test.deepEqual(standIns.calls('bigBedNamedItems'), [[file, 'rs1', 'stdout']], 'should pass the name')
+				test.equal(await utils.testIfFileIsBigbed(file), true, 'should detect a bigBed file from its info')
+				test.deepEqual(standIns.calls('bigBedInfo'), [[file]], 'should pass the file')
+				standIns.reset()
+				for (const [label, fn] of [
+					['a chr that is an option', () => utils.query_bigbed_by_coord(file, '-o', 0, 1)],
+					['a start that is not an integer', () => utils.query_bigbed_by_coord(file, 'chr1', '0;ls', 1)],
+					['a name with shell syntax', () => utils.query_bigbed_by_name(file, 'rs1;ls')],
+					['a file outside tp', () => utils.query_bigbed_by_name('/etc/passwd', 'rs1')]
+				] as const) {
+					try {
+						await fn()
+						test.fail(`should reject ${label}`)
+					} catch (_) {
+						test.pass(`should reject ${label}`)
+					}
+				}
+				test.equal(
+					await utils.testIfFileIsBigbed('/etc/passwd'),
+					false,
+					'should not detect a file outside tp as bigBed'
+				)
+				test.deepEqual(
+					[...standIns.calls('bigBedToBed'), ...standIns.calls('bigBedNamedItems'), ...standIns.calls('bigBedInfo')],
+					[],
+					'should not start a bigBed tool for a rejected call'
+				)
+			})
+		})
+	})
+	standIns.reset()
+	test.end()
+})
+
+tape('cleanup', test => {
 	standIns.remove()
 	test.end()
 })

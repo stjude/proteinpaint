@@ -31,11 +31,8 @@ const allowed = new Map([
 	['rust/index.js', 'rust binaries for run_rust()'],
 	['server/genome/copyDataFilesFromRepo2Tp.js', 'test genome data setup'],
 	['server/src/app.ts', 'preListenScript'],
-	['server/src/initLegacyDataset.js', 'tabix at dataset init'],
-	['server/src/mds.init.js', 'tabix at dataset init'],
 	['server/src/tools/index.ts', 'the tools of the specs in server/src/tools, see runTool()'],
-	['server/src/utils.js', 'samtools, tabix, bcftools, bigBed tools'],
-	['server/src/utils/bedjCache.ts', 'bgzip and tabix for the bedj cache']
+	['server/src/utils.js', 'samtools and bcftools reads, see spawnTool() and get_lines_bigfile()']
 ])
 
 tape('child_process imports', test => {

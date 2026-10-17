@@ -1,7 +1,7 @@
 import type { RoutePayload, RouteApi } from '#types'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import { validateRglst, spawnTool } from '#src/utils.js'
+import { validateRglst, readTabixLines } from '#src/utils.js'
 import * as common from '#shared/common.js'
 import type { DsDataRequest, DsDataResponse } from '#types'
 import { genomes } from '#src/initGenomesDs.js'
@@ -149,29 +149,19 @@ function handle_dsdata_makequery(ds, query, req, genomes) {
 	return result
 }
 
-function handle_dsdata_vcf(query, req) {
-	const par = [
-		path.join(serverconfig.tpmasterdir, query.vcffile),
-		(query.vcf.nochr ? req.query.range.chr.replace('chr', '') : req.query.range.chr) +
-			':' +
-			req.query.range.start +
-			'-' +
-			req.query.range.stop
-	]
-	return new Promise((resolve, reject) => {
-		const ps = spawnTool(serverconfig.tabix, par)
-		const out: any[] = [],
-			out2: any[] = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.stderr.on('data', i => out2.push(i))
-		ps.on('close', (/*code*/) => {
-			const e = out2.join('').trim()
-			if (e != '') reject('error querying vcf file')
-			const tmp = out.join('').trim()
-			resolve({
-				lines: tmp == '' ? [] : tmp.split('\n'),
-				vcfid: query.vcf.vcfid
-			})
+async function handle_dsdata_vcf(query, req) {
+	const range = req.query.range
+	const lines: string[] = []
+	try {
+		await readTabixLines({
+			file: path.join(serverconfig.tpmasterdir, query.vcffile),
+			regions: [
+				{ chr: query.vcf.nochr ? range.chr.replace('chr', '') : range.chr, start: range.start, stop: range.stop }
+			],
+			callback: line => lines.push(line)
 		})
-	})
+	} catch (_) {
+		throw 'error querying vcf file'
+	}
+	return { lines, vcfid: query.vcf.vcfid }
 }

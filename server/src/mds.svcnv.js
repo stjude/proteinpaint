@@ -6,15 +6,12 @@ import { mdssvcnv_do_copyneutralloh, get_rank_from_sortedarray, setGenomes as se
 import serverconfig from './serverconfig.js'
 import fs from 'fs'
 import path from 'path'
-import readline from 'readline'
 import * as utils from './utils.js'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import { handle_mdssvcnv_expression } from './handle_mdssvcnv_expression.js'
 import { draw_partition } from './partitionmatrix.js'
-import { tabixnoterror } from './utils.js'
 
-const tabix = serverconfig.tabix
 // set by the route init, so that the moved code can use genomes as in app.unorg.js
 let genomes
 
@@ -747,275 +744,263 @@ async function handle_mdssvcnv_vcf(
 				// rglst was already validated by the app middleware (app.middlewares.js)
 				for (const r of req.query.rglst) {
 					const task = new Promise((resolve, reject) => {
-						const ps = utils.spawnTool(
-							tabix,
-							[
-								vcftk.file ? path.join(serverconfig.tpmasterdir, vcftk.file) : vcftk.url,
-								(vcftk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-							],
-							{ cwd: dir }
-						)
-						const rl = readline.createInterface({
-							input: ps.stdout
-						})
-						rl.on('line', line => {
-							if (vcftk.type == common.mdsvcftype.vcf) {
-								// bgzip vcf file
+						utils
+							.readTabixLines({
+								file: vcftk.file ? path.join(serverconfig.tpmasterdir, vcftk.file) : vcftk.url,
+								regions: [{ chr: vcftk.nochr ? r.chr.replace('chr', '') : r.chr, start: r.start, stop: r.stop }],
+								dir: dir,
+								callback: line => {
+									if (vcftk.type == common.mdsvcftype.vcf) {
+										// bgzip vcf file
 
-								const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, {
-									nochr: vcftk.nochr,
-									samples: vcftk.samples,
-									info: vcfquery.info,
-									format: vcftk.format
-								})
+										const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, {
+											nochr: vcftk.nochr,
+											samples: vcftk.samples,
+											info: vcfquery.info,
+											format: vcftk.format
+										})
 
-								for (const m of mlst) {
-									if (!m.sampledata) {
-										// do not allow
-										continue
-									}
-
-									if (filteralleleattr) {
-										// filter using allele INFO
-
-										let todrop = false
-
-										for (const key in filteralleleattr) {
-											const value = m.altinfo[key]
-											if (value == undefined) {
-												// no value
-												todrop = true
-												break
-											}
-
-											const attr = filteralleleattr[key]
-											if (attr.cutoffvalue != undefined) {
-												// is a numeric cutoff
-
-												if (!Number.isFinite(value)) {
-													// value of this mutation is not a number
-													todrop = true
-													break
-												}
-
-												if (attr.keeplowerthan) {
-													if (value > attr.cutoffvalue) {
-														todrop = true
-														break
-													}
-												} else {
-													if (value < attr.cutoffvalue) {
-														todrop = true
-														break
-													}
-												}
-											} else {
-												// categorical
-												if (attr.includes(value)) {
-													todrop = true
-													break
-												}
-											}
-										}
-										if (todrop) {
-											// drop this variant
-											continue
-										}
-									}
-									if (filterlocusattr) {
-										// filter using allele INFO
-
-										let todrop = false
-
-										for (const key in filterlocusattr) {
-											const _value = m.info[key]
-											if (_value == undefined) {
-												// no value
-												todrop = true
-												break
-											}
-											let value = _value
-											if (Array.isArray(_value)) {
-												value = _value[0]
-												if (value == '.') {
-													// no value
-													todrop = true
-													break
-												}
-											}
-
-											const attr = filterlocusattr[key]
-											if (attr.cutoffvalue != undefined) {
-												// is a numeric cutoff
-
-												if (!Number.isFinite(value)) {
-													// value of this mutation is not a number
-													todrop = true
-													break
-												}
-
-												if (attr.keeplowerthan) {
-													if (value > attr.cutoffvalue) {
-														todrop = true
-														break
-													}
-												} else {
-													if (value < attr.cutoffvalue) {
-														todrop = true
-														break
-													}
-												}
-											} else {
-												// categorical
-												if (attr.includes(value)) {
-													todrop = true
-													break
-												}
-											}
-										}
-										if (todrop) {
-											// drop this variant
-											continue
-										}
-									}
-
-									{
-										// for germline track:
-										const lst = []
-										for (const s of m.sampledata) {
-											if (s.gtallref) {
-												// drop ref/ref sample, should only happen for germline vcf
+										for (const m of mlst) {
+											if (!m.sampledata) {
+												// do not allow
 												continue
 											}
 
-											if (s.__gtalleles) {
-												// germline - m.sampledata[] always have all the samples due to the old vcf processing
-												// even if the sample does not carry m's alt allele
-												if (s.__gtalleles.indexOf(m.alt) == -1) {
+											if (filteralleleattr) {
+												// filter using allele INFO
+
+												let todrop = false
+
+												for (const key in filteralleleattr) {
+													const value = m.altinfo[key]
+													if (value == undefined) {
+														// no value
+														todrop = true
+														break
+													}
+
+													const attr = filteralleleattr[key]
+													if (attr.cutoffvalue != undefined) {
+														// is a numeric cutoff
+
+														if (!Number.isFinite(value)) {
+															// value of this mutation is not a number
+															todrop = true
+															break
+														}
+
+														if (attr.keeplowerthan) {
+															if (value > attr.cutoffvalue) {
+																todrop = true
+																break
+															}
+														} else {
+															if (value < attr.cutoffvalue) {
+																todrop = true
+																break
+															}
+														}
+													} else {
+														// categorical
+														if (attr.includes(value)) {
+															todrop = true
+															break
+														}
+													}
+												}
+												if (todrop) {
+													// drop this variant
 													continue
 												}
-												delete s.__gtalleles
 											}
+											if (filterlocusattr) {
+												// filter using allele INFO
 
-											lst.push(s)
-										}
-										if (lst.length == 0) {
-											continue
-										}
-										m.sampledata = lst
-									}
+												let todrop = false
 
-									// filters on samples
+												for (const key in filterlocusattr) {
+													const _value = m.info[key]
+													if (_value == undefined) {
+														// no value
+														todrop = true
+														break
+													}
+													let value = _value
+													if (Array.isArray(_value)) {
+														value = _value[0]
+														if (value == '.') {
+															// no value
+															todrop = true
+															break
+														}
+													}
 
-									if (req.query.singlesample) {
-										let thissampleobj = null
-										for (const s of m.sampledata) {
-											if (s.sampleobj.name == req.query.singlesample) {
-												thissampleobj = s
-												break
-											}
-										}
-										if (!thissampleobj) {
-											// this variant is not in this sample
-											continue
-										}
-										// alter
-										m.sampledata = [thissampleobj]
-									} else if (filter_sampleset) {
-										const lst = m.sampledata.filter(s => filter_sampleset.set.has(s.sampleobj.name))
-										if (lst.length) {
-											m.sampledata = lst
-										} else {
-											continue
-										}
-									}
+													const attr = filterlocusattr[key]
+													if (attr.cutoffvalue != undefined) {
+														// is a numeric cutoff
 
-									if (hiddenmattr) {
-										const samplesnothidden = []
-										for (const s of m.sampledata) {
-											let nothidden = true
-											for (const key in hiddenmattr) {
-												// attribute keys are FORMAT fields
-												let value = s[key]
-												if (value == undefined) {
-													value = common.not_annotated
+														if (!Number.isFinite(value)) {
+															// value of this mutation is not a number
+															todrop = true
+															break
+														}
+
+														if (attr.keeplowerthan) {
+															if (value > attr.cutoffvalue) {
+																todrop = true
+																break
+															}
+														} else {
+															if (value < attr.cutoffvalue) {
+																todrop = true
+																break
+															}
+														}
+													} else {
+														// categorical
+														if (attr.includes(value)) {
+															todrop = true
+															break
+														}
+													}
 												}
-												if (hiddenmattr[key].has(value)) {
-													nothidden = false
-													break
+												if (todrop) {
+													// drop this variant
+													continue
 												}
 											}
-											if (nothidden) {
-												samplesnothidden.push(s)
-											}
-										}
-										if (samplesnothidden.length == 0) {
-											// skip this variant
-											continue
-										}
-										m.sampledata = samplesnothidden
-									}
 
-									if (hiddensampleattr && ds.cohort && ds.cohort.annotation) {
-										/*
+											{
+												// for germline track:
+												const lst = []
+												for (const s of m.sampledata) {
+													if (s.gtallref) {
+														// drop ref/ref sample, should only happen for germline vcf
+														continue
+													}
+
+													if (s.__gtalleles) {
+														// germline - m.sampledata[] always have all the samples due to the old vcf processing
+														// even if the sample does not carry m's alt allele
+														if (s.__gtalleles.indexOf(m.alt) == -1) {
+															continue
+														}
+														delete s.__gtalleles
+													}
+
+													lst.push(s)
+												}
+												if (lst.length == 0) {
+													continue
+												}
+												m.sampledata = lst
+											}
+
+											// filters on samples
+
+											if (req.query.singlesample) {
+												let thissampleobj = null
+												for (const s of m.sampledata) {
+													if (s.sampleobj.name == req.query.singlesample) {
+														thissampleobj = s
+														break
+													}
+												}
+												if (!thissampleobj) {
+													// this variant is not in this sample
+													continue
+												}
+												// alter
+												m.sampledata = [thissampleobj]
+											} else if (filter_sampleset) {
+												const lst = m.sampledata.filter(s => filter_sampleset.set.has(s.sampleobj.name))
+												if (lst.length) {
+													m.sampledata = lst
+												} else {
+													continue
+												}
+											}
+
+											if (hiddenmattr) {
+												const samplesnothidden = []
+												for (const s of m.sampledata) {
+													let nothidden = true
+													for (const key in hiddenmattr) {
+														// attribute keys are FORMAT fields
+														let value = s[key]
+														if (value == undefined) {
+															value = common.not_annotated
+														}
+														if (hiddenmattr[key].has(value)) {
+															nothidden = false
+															break
+														}
+													}
+													if (nothidden) {
+														samplesnothidden.push(s)
+													}
+												}
+												if (samplesnothidden.length == 0) {
+													// skip this variant
+													continue
+												}
+												m.sampledata = samplesnothidden
+											}
+
+											if (hiddensampleattr && ds.cohort && ds.cohort.annotation) {
+												/*
 									drop sample by annotation
 									FIXME this is not efficient
 									ideally should identify samples from this vcf file to be dropped, the column # of them
 									after querying the vcf file, cut these columns away
 									*/
-										const samplesnothidden = []
-										for (const s of m.sampledata) {
-											const sanno = ds.cohort.annotation[s.sampleobj.name]
-											if (!sanno) {
-												// sample has no annotation?
-												continue
-											}
-											let nothidden = true
-											for (const key in hiddensampleattr) {
-												const value = sanno[key]
-												if (hiddensampleattr[key].has(value)) {
-													nothidden = false
-													break
+												const samplesnothidden = []
+												for (const s of m.sampledata) {
+													const sanno = ds.cohort.annotation[s.sampleobj.name]
+													if (!sanno) {
+														// sample has no annotation?
+														continue
+													}
+													let nothidden = true
+													for (const key in hiddensampleattr) {
+														const value = sanno[key]
+														if (hiddensampleattr[key].has(value)) {
+															nothidden = false
+															break
+														}
+													}
+													if (nothidden) {
+														samplesnothidden.push(s)
+													}
 												}
+												if (samplesnothidden.length == 0) {
+													// skip this variant
+													continue
+												}
+												m.sampledata = samplesnothidden
 											}
-											if (nothidden) {
-												samplesnothidden.push(s)
+
+											// delete the obsolete attr
+											for (const sb of m.sampledata) {
+												delete sb.allele2readcount
 											}
+
+											delete m._m
+											delete m.vcf_ID
+											delete m.name
+
+											m.dt = common.dtsnvindel
+											variants.push(m)
+											// mclass and rest will be determined at client, according to whether in gmmode and such
 										}
-										if (samplesnothidden.length == 0) {
-											// skip this variant
-											continue
-										}
-										m.sampledata = samplesnothidden
+									} else {
+										console.error('unknown "type" from a vcf file')
 									}
-
-									// delete the obsolete attr
-									for (const sb of m.sampledata) {
-										delete sb.allele2readcount
-									}
-
-									delete m._m
-									delete m.vcf_ID
-									delete m.name
-
-									m.dt = common.dtsnvindel
-									variants.push(m)
-									// mclass and rest will be determined at client, according to whether in gmmode and such
 								}
-							} else {
-								console.error('unknown "type" from a vcf file')
-							}
-						})
-						const errout = []
-						ps.stderr.on('data', i => errout.push(i))
-						ps.on('close', code => {
-							const e = errout.join('')
-							if (e && !tabixnoterror(e)) {
-								reject(e)
-								return
-							}
-							resolve()
-						})
+							})
+							.then(() => {
+								resolve()
+							}, reject)
 					})
 					tasks.push(task)
 				}
@@ -1080,166 +1065,159 @@ bad repetition
 	// rglst was already validated by the app middleware (app.middlewares.js)
 	for (const r of req.query.rglst) {
 		const task = new Promise((resolve, reject) => {
-			const ps = utils.spawnTool(tabix, [
-				thisvcf.file,
-				(thisvcf.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-			])
-			const rl = readline.createInterface({ input: ps.stdout })
-			rl.on('line', line => {
-				const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, thisvcf)
+			utils
+				.readTabixLines({
+					file: thisvcf.file,
+					regions: [{ chr: thisvcf.nochr ? r.chr.replace('chr', '') : r.chr, start: r.start, stop: r.stop }],
+					callback: line => {
+						const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, thisvcf)
 
-				for (const m of mlst) {
-					if (!m.sampledata) {
-						// do not allow
-						continue
-					}
-
-					// restrict to queried sample
-					const thissampleobj = m.sampledata.find(i => i.sampleobj.name == req.query.singlesample)
-					if (!thissampleobj) {
-						// this variant is not in this sample
-						continue
-					}
-					// delete the obsolete attr
-					delete thissampleobj.allele2readcount
-					// alter
-					m.sampledata = [thissampleobj]
-
-					if (filteralleleattr) {
-						// filter using allele INFO
-
-						let todrop = false
-
-						for (const key in filteralleleattr) {
-							const value = m.altinfo[key]
-							if (value == undefined) {
-								// no value
-								todrop = true
-								break
+						for (const m of mlst) {
+							if (!m.sampledata) {
+								// do not allow
+								continue
 							}
 
-							const attr = filteralleleattr[key]
-							if (attr.cutoffvalue != undefined) {
-								// is a numeric cutoff
+							// restrict to queried sample
+							const thissampleobj = m.sampledata.find(i => i.sampleobj.name == req.query.singlesample)
+							if (!thissampleobj) {
+								// this variant is not in this sample
+								continue
+							}
+							// delete the obsolete attr
+							delete thissampleobj.allele2readcount
+							// alter
+							m.sampledata = [thissampleobj]
 
-								if (!Number.isFinite(value)) {
-									// value of this mutation is not a number
-									todrop = true
-									break
-								}
+							if (filteralleleattr) {
+								// filter using allele INFO
 
-								if (attr.keeplowerthan) {
-									if (value > attr.cutoffvalue) {
+								let todrop = false
+
+								for (const key in filteralleleattr) {
+									const value = m.altinfo[key]
+									if (value == undefined) {
+										// no value
 										todrop = true
 										break
 									}
-								} else {
-									if (value < attr.cutoffvalue) {
-										todrop = true
-										break
+
+									const attr = filteralleleattr[key]
+									if (attr.cutoffvalue != undefined) {
+										// is a numeric cutoff
+
+										if (!Number.isFinite(value)) {
+											// value of this mutation is not a number
+											todrop = true
+											break
+										}
+
+										if (attr.keeplowerthan) {
+											if (value > attr.cutoffvalue) {
+												todrop = true
+												break
+											}
+										} else {
+											if (value < attr.cutoffvalue) {
+												todrop = true
+												break
+											}
+										}
 									}
 								}
-							}
-						}
-						if (todrop) {
-							// drop this variant
-							continue
-						}
-					}
-
-					// TODO filter with locus INFO
-
-					// for germline track:
-					if (thissampleobj.gtallref) {
-						// drop ref/ref sample, should only happen for germline vcf
-						continue
-					}
-					if (thissampleobj.__gtalleles) {
-						// germline - m.sampledata[] always have all the samples due to the old vcf processing
-						// even if the sample does not carry m's alt allele
-						if (thissampleobj.__gtalleles.indexOf(m.alt) == -1) {
-							continue
-						}
-						delete thissampleobj.__gtalleles
-					}
-
-					if (hiddenmattr) {
-						const samplesnothidden = []
-						for (const s of m.sampledata) {
-							let nothidden = true
-							for (const key in hiddenmattr) {
-								// attribute keys are FORMAT fields
-								let value = s[key]
-								if (value == undefined) {
-									value = common.not_annotated
-								}
-								if (hiddenmattr[key].has(value)) {
-									nothidden = false
-									break
+								if (todrop) {
+									// drop this variant
+									continue
 								}
 							}
-							if (nothidden) {
-								samplesnothidden.push(s)
-							}
-						}
-						if (samplesnothidden.length == 0) {
-							// skip this variant
-							continue
-						}
-						m.sampledata = samplesnothidden
-					}
 
-					if (hiddensampleattr && ds.cohort && ds.cohort.annotation) {
-						/*
+							// TODO filter with locus INFO
+
+							// for germline track:
+							if (thissampleobj.gtallref) {
+								// drop ref/ref sample, should only happen for germline vcf
+								continue
+							}
+							if (thissampleobj.__gtalleles) {
+								// germline - m.sampledata[] always have all the samples due to the old vcf processing
+								// even if the sample does not carry m's alt allele
+								if (thissampleobj.__gtalleles.indexOf(m.alt) == -1) {
+									continue
+								}
+								delete thissampleobj.__gtalleles
+							}
+
+							if (hiddenmattr) {
+								const samplesnothidden = []
+								for (const s of m.sampledata) {
+									let nothidden = true
+									for (const key in hiddenmattr) {
+										// attribute keys are FORMAT fields
+										let value = s[key]
+										if (value == undefined) {
+											value = common.not_annotated
+										}
+										if (hiddenmattr[key].has(value)) {
+											nothidden = false
+											break
+										}
+									}
+									if (nothidden) {
+										samplesnothidden.push(s)
+									}
+								}
+								if (samplesnothidden.length == 0) {
+									// skip this variant
+									continue
+								}
+								m.sampledata = samplesnothidden
+							}
+
+							if (hiddensampleattr && ds.cohort && ds.cohort.annotation) {
+								/*
                         drop sample by annotation
                         FIXME this is not efficient
                         ideally should identify samples from this vcf file to be dropped, the column # of them
                         after querying the vcf file, cut these columns away
                         */
-						const samplesnothidden = []
-						for (const s of m.sampledata) {
-							const sanno = ds.cohort.annotation[s.sampleobj.name]
-							if (!sanno) {
-								// sample has no annotation?
-								continue
-							}
-							let nothidden = true
-							for (const key in hiddensampleattr) {
-								const value = sanno[key]
-								if (hiddensampleattr[key].has(value)) {
-									nothidden = false
-									break
+								const samplesnothidden = []
+								for (const s of m.sampledata) {
+									const sanno = ds.cohort.annotation[s.sampleobj.name]
+									if (!sanno) {
+										// sample has no annotation?
+										continue
+									}
+									let nothidden = true
+									for (const key in hiddensampleattr) {
+										const value = sanno[key]
+										if (hiddensampleattr[key].has(value)) {
+											nothidden = false
+											break
+										}
+									}
+									if (nothidden) {
+										samplesnothidden.push(s)
+									}
 								}
+								if (samplesnothidden.length == 0) {
+									// skip this variant
+									continue
+								}
+								m.sampledata = samplesnothidden
 							}
-							if (nothidden) {
-								samplesnothidden.push(s)
-							}
+
+							delete m._m
+							delete m.vcf_ID
+							delete m.name
+
+							m.dt = common.dtsnvindel
+							variants.push(m)
 						}
-						if (samplesnothidden.length == 0) {
-							// skip this variant
-							continue
-						}
-						m.sampledata = samplesnothidden
 					}
-
-					delete m._m
-					delete m.vcf_ID
-					delete m.name
-
-					m.dt = common.dtsnvindel
-					variants.push(m)
-				}
-			})
-			const errout = []
-			ps.stderr.on('data', i => errout.push(i))
-			ps.on('close', code => {
-				const e = errout.join('')
-				if (e && !tabixnoterror(e)) {
-					reject(e)
-					return
-				}
-				resolve()
-			})
+				})
+				.then(() => {
+					resolve()
+				}, reject)
 		})
 		tasks.push(task)
 	}
@@ -1261,152 +1239,138 @@ function handle_mdssvcnv_cnv(ds, dsquery, req, hiddendt, hiddensampleattr, hidde
 	for (const r of req.query.rglst) {
 		const task = new Promise((resolve, reject) => {
 			const data = []
-			const ps = utils.spawnTool(
-				tabix,
-				[
-					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-					r.chr + ':' + r.start + '-' + r.stop
-				],
-				{ cwd: dsquery.dir }
-			)
-			const rl = readline.createInterface({
-				input: ps.stdout
-			})
+			utils
+				.readTabixLines({
+					file: dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+					regions: [{ chr: r.chr, start: r.start, stop: r.stop }],
+					dir: dsquery.dir,
+					callback: line => {
+						const l = line.split('\t')
+						const start0 = Number.parseInt(l[1])
+						const stop0 = Number.parseInt(l[2])
 
-			rl.on('line', line => {
-				const l = line.split('\t')
-				const start0 = Number.parseInt(l[1])
-				const stop0 = Number.parseInt(l[2])
-
-				let j
-				try {
-					j = JSON.parse(l[3])
-				} catch (e) {
-					// invalid json, todo: report error
-					return
-				}
-
-				if (j.dt == undefined) {
-					// todo: report bad lines
-					return
-				}
-
-				if (hiddendt && hiddendt.has(j.dt)) {
-					return
-				}
-
-				///// data-type specific handling and filtering
-
-				if (j.dt == common.dtloh) {
-					// loh
-					if (j.segmean && req.query.segmeanValueCutoff && j.segmean < req.query.segmeanValueCutoff) {
-						return
-					}
-					if (req.query.lohLengthUpperLimit) {
-						if (stop0 - start0 > req.query.lohLengthUpperLimit) {
+						let j
+						try {
+							j = JSON.parse(l[3])
+						} catch (e) {
+							// invalid json, todo: report error
 							return
 						}
-					}
-					j.chr = l[0]
-					j.start = start0
-					j.stop = stop0
-				} else if (j.dt == common.dtfusionrna || j.dt == common.dtsv) {
-					// sv
-					j._chr = l[0]
-					j._pos = start0
-					if (j.chrA) {
-						j.chrB = l[0]
-						j.posB = start0
-					} else {
-						j.chrA = l[0]
-						j.posA = start0
-					}
-				} else if (j.dt == common.dtcnv) {
-					// cnv
-					if (req.query.hide_cnvloss && j.value < 0) return
-					if (req.query.hide_cnvgain && j.value > 0) return
 
-					if (req.query.valueCutoff) {
-						if (Math.abs(j.value) < req.query.valueCutoff) {
+						if (j.dt == undefined) {
+							// todo: report bad lines
 							return
 						}
-					}
-					if (req.query.bplengthUpperLimit) {
-						if (stop0 - start0 > req.query.bplengthUpperLimit) {
+
+						if (hiddendt && hiddendt.has(j.dt)) {
 							return
 						}
-					}
-					j.chr = l[0]
-					j.start = start0
-					j.stop = stop0
-				} else if (j.dt == common.dtitd) {
-					j.chr = l[0]
-					j.start = start0
-					j.stop = stop0
-				} else {
-					console.error('unknown dt from svcnv file: ' + j.dt)
-					return
-				}
 
-				if (req.query.singlesample) {
-					// in single-sample mode
-					if (j.sample != req.query.singlesample) {
-						return
-					}
-				} else if (filter_sampleset) {
-					if (!filter_sampleset.set.has(j.sample)) return
-				} else if (j.sample && ds.cohort && ds.cohort.annotation) {
-					// not single-sample
-					// only for official ds
+						///// data-type specific handling and filtering
 
-					// may apply sample annotation filtering
-					const anno = ds.cohort.annotation[j.sample]
-					if (!anno) {
-						// this sample has no annotation at all, since it's doing filtering, will drop it
-						return
-					}
-
-					// only check this here, because it requires sample annotation
-					if (hiddensampleattr) {
-						for (const key in hiddensampleattr) {
-							const samplevalue = anno[key]
-							if (hiddensampleattr[key].has(samplevalue)) {
-								// this sample has hidden annotation
+						if (j.dt == common.dtloh) {
+							// loh
+							if (j.segmean && req.query.segmeanValueCutoff && j.segmean < req.query.segmeanValueCutoff) {
 								return
 							}
-						}
-					}
-				}
+							if (req.query.lohLengthUpperLimit) {
+								if (stop0 - start0 > req.query.lohLengthUpperLimit) {
+									return
+								}
+							}
+							j.chr = l[0]
+							j.start = start0
+							j.stop = stop0
+						} else if (j.dt == common.dtfusionrna || j.dt == common.dtsv) {
+							// sv
+							j._chr = l[0]
+							j._pos = start0
+							if (j.chrA) {
+								j.chrB = l[0]
+								j.posB = start0
+							} else {
+								j.chrA = l[0]
+								j.posA = start0
+							}
+						} else if (j.dt == common.dtcnv) {
+							// cnv
+							if (req.query.hide_cnvloss && j.value < 0) return
+							if (req.query.hide_cnvgain && j.value > 0) return
 
-				if (hiddenmattr) {
-					// check mutation-level annotation
-					for (const key in hiddenmattr) {
-						let itemvalue = j.mattr ? j.mattr[key] : undefined
-						if (itemvalue == undefined) {
-							itemvalue = common.not_annotated
-						}
-
-						if (hiddenmattr[key].has(itemvalue)) {
-							// this item has hidden annotation
+							if (req.query.valueCutoff) {
+								if (Math.abs(j.value) < req.query.valueCutoff) {
+									return
+								}
+							}
+							if (req.query.bplengthUpperLimit) {
+								if (stop0 - start0 > req.query.bplengthUpperLimit) {
+									return
+								}
+							}
+							j.chr = l[0]
+							j.start = start0
+							j.stop = stop0
+						} else if (j.dt == common.dtitd) {
+							j.chr = l[0]
+							j.start = start0
+							j.stop = stop0
+						} else {
+							console.error('unknown dt from svcnv file: ' + j.dt)
 							return
 						}
+
+						if (req.query.singlesample) {
+							// in single-sample mode
+							if (j.sample != req.query.singlesample) {
+								return
+							}
+						} else if (filter_sampleset) {
+							if (!filter_sampleset.set.has(j.sample)) return
+						} else if (j.sample && ds.cohort && ds.cohort.annotation) {
+							// not single-sample
+							// only for official ds
+
+							// may apply sample annotation filtering
+							const anno = ds.cohort.annotation[j.sample]
+							if (!anno) {
+								// this sample has no annotation at all, since it's doing filtering, will drop it
+								return
+							}
+
+							// only check this here, because it requires sample annotation
+							if (hiddensampleattr) {
+								for (const key in hiddensampleattr) {
+									const samplevalue = anno[key]
+									if (hiddensampleattr[key].has(samplevalue)) {
+										// this sample has hidden annotation
+										return
+									}
+								}
+							}
+						}
+
+						if (hiddenmattr) {
+							// check mutation-level annotation
+							for (const key in hiddenmattr) {
+								let itemvalue = j.mattr ? j.mattr[key] : undefined
+								if (itemvalue == undefined) {
+									itemvalue = common.not_annotated
+								}
+
+								if (hiddenmattr[key].has(itemvalue)) {
+									// this item has hidden annotation
+									return
+								}
+							}
+						}
+
+						// this item is acceptable
+						data.push(j)
 					}
-				}
-
-				// this item is acceptable
-				data.push(j)
-			})
-
-			const errout = []
-			ps.stderr.on('data', i => errout.push(i))
-			ps.on('close', code => {
-				const e = errout.join('')
-				if (e && !tabixnoterror(e)) {
-					reject(e)
-					return
-				}
-				resolve(data)
-			})
+				})
+				.then(() => {
+					resolve(data)
+				}, reject)
 		})
 		tasks.push(task)
 	}
@@ -1615,19 +1579,9 @@ function mdssvcnv_grouper(samplename, items, key2group, headlesssamples, ds, dsq
 }
 
 function tabix_getvcfmeta(file, dir) {
-	return new Promise((resolve, reject) => {
-		const sp = utils.spawnTool(tabix, ['-H', file], { cwd: dir })
-		const out = [],
-			out2 = []
-		sp.stdout.on('data', i => out.push(i))
-		sp.stderr.on('data', i => out2.push(i))
-		sp.on('close', () => {
-			const err = out2.join('')
-			if (err) reject(err)
-			const str = out.join('').trim()
-			if (!str) reject('cannot list vcf meta lines')
-			resolve(str.split('\n'))
-		})
+	return utils.readTabixHeader(file, dir).then(lines => {
+		if (!lines.length) throw 'cannot list vcf meta lines'
+		return lines
 	})
 }
 
@@ -1709,8 +1663,9 @@ async function mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery) {
 		const dir = _c.file ? null : await utils.cache_index(_c.url, _c.indexURL)
 
 		const values = []
-		await utils.get_lines_bigfile({
-			args: [_c.file ? path.join(serverconfig.tpmasterdir, _c.file) : _c.url, q.chr + ':' + q.start + '-' + q.stop],
+		await utils.readTabixLines({
+			file: _c.file ? path.join(serverconfig.tpmasterdir, _c.file) : _c.url,
+			regions: [{ chr: q.chr, start: q.start, stop: q.stop }],
 			dir,
 			callback: line => {
 				const l = line.split('\t')

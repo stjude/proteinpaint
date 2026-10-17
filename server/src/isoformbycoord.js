@@ -29,8 +29,9 @@ async function handle_isoformbycoord(req, res) {
 		const genetk = genome.tracks.find(i => i.__isgene)
 		if (!genetk) throw 'no gene track'
 		const isoforms = []
-		await utils.get_lines_bigfile({
-			args: [path.join(serverconfig.tpmasterdir, genetk.file), chr + ':' + pos + '-' + pos],
+		await utils.readTabixLines({
+			file: path.join(serverconfig.tpmasterdir, genetk.file),
+			regions: [{ chr: chr, start: pos, stop: pos }],
 			callback: line => {
 				const str = line.split('\t')[3]
 				if (!str) return

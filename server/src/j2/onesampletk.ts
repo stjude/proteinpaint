@@ -10,7 +10,7 @@ import type {
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 
-const get_lines_bigfile: any = utils.get_lines_bigfile
+const readTabixLines: any = utils.readTabixLines
 
 const payload: RoutePayload = {
 	init,
@@ -62,8 +62,9 @@ async function do_query(q: TermdbJunctionOneSampleTkRequest, genomes): Promise<T
 async function get_tabix(q: TermdbJunctionOneSampleTkRequest, file: string, dir: string | null) {
 	const items: TermdbJunctionOneSampleTkItem[] = []
 	for (const r of q.rglst) {
-		await get_lines_bigfile({
-			args: [file, r.chr + ':' + r.start + '-' + r.stop],
+		await readTabixLines({
+			file: file,
+			regions: [{ chr: r.chr, start: r.start, stop: r.stop }],
 			dir,
 			callback: (line: string) => {
 				const l = line.split('\t')

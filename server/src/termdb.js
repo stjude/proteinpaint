@@ -4,7 +4,7 @@ import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { trigger_getLowessCurve } from '#routes/termdb.sampleScatter.ts'
 import { get_mds3variantData } from './mds3.variant.js'
-import { get_lines_bigfile } from './utils.js'
+import { readTabixLines } from './utils.js'
 import { string2pos } from '#shared/common.js'
 import { authApi } from './auth.js'
 import { searchSNP } from '#routes/snp.ts'
@@ -381,10 +381,11 @@ async function LDoverlay(q, ds, res, genome) {
 		pos = p.actualposition.position
 	if (!q.m.ref || !q.m.alt) throw 'q.m{} invalid alleles'
 	const thisalleles = q.m.ref + '.' + q.m.alt
-	const coord = (tk.nochr ? chr.replace('chr', '') : chr) + ':' + pos + '-' + (pos + 1)
+	const region = { chr: tk.nochr ? chr.replace('chr', '') : chr, start: pos, stop: pos + 1 }
 	const lst = []
-	await get_lines_bigfile({
-		args: [path.join(serverconfig.tpmasterdir, tk.file), coord],
+	await readTabixLines({
+		file: path.join(serverconfig.tpmasterdir, tk.file),
+		regions: [region],
 		callback: line => {
 			const l = line.split('\t')
 			const start = Number.parseInt(l[1])

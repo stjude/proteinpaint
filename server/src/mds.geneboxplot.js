@@ -94,11 +94,9 @@ async function do_query(gn, ds, dsquery, svcnv, req) {
 	// collect data from .getgroup
 	const getgroupdata = []
 
-	await utils.get_lines_bigfile({
-		args: [
-			dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-			req.query.chr + ':' + req.query.start + '-' + req.query.stop
-		],
+	await utils.readTabixLines({
+		file: dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+		regions: [{ chr: req.query.chr, start: req.query.start, stop: req.query.stop }],
 		dir: dsquery.dir,
 		callback: line => {
 			const l = line.split('\t')
@@ -429,11 +427,9 @@ async function may_get_sample2event(req, svcnv) {
 	// TODO cnv flanking
 
 	const sample2event = new Map()
-	await utils.get_lines_bigfile({
-		args: [
-			svcnv.dsquery.file ? path.join(serverconfig.tpmasterdir, svcnv.dsquery.file) : svcnv.dsquery.url,
-			req.query.chr + ':' + start + '-' + stop
-		],
+	await utils.readTabixLines({
+		file: svcnv.dsquery.file ? path.join(serverconfig.tpmasterdir, svcnv.dsquery.file) : svcnv.dsquery.url,
+		regions: [{ chr: req.query.chr, start: start, stop: stop }],
 		dir: svcnv.dsquery.dir,
 		callback: line => {
 			const l = line.split('\t')

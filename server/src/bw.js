@@ -319,8 +319,9 @@ async function bedgraphRegion(req, r, xoff, file, ctx, pa) {
 	const hscale = makeyscale().height(req.query.barheight).min(pa.fixminv).max(pa.fixmaxv)
 	const sf = r.width / (r.stop - r.start)
 
-	await utils.get_lines_bigfile({
-		args: [file, r.chr + ':' + r.start + '-' + r.stop],
+	await utils.readTabixLines({
+		file: file,
+		regions: [{ chr: r.chr, start: r.start, stop: r.stop }],
 		dir: pa.bedgraphdir,
 		callback: line => {
 			const l = line.split('\t')

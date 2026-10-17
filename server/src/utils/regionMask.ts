@@ -1,4 +1,4 @@
-import { get_lines_bigfile } from '#src/utils.js'
+import { readTabixLines } from '#src/utils.js'
 
 /* Artifact-region masking against the genome's declared blacklist BEDs (Genome.blacklists,
 declared in server/genome/hg38.base.ts and path-absolutized at genome init).
@@ -51,8 +51,9 @@ export async function loadMaskIntervals(files: string[], chr: string, chrLen: nu
 	if (!files.length) return []
 	const raw: MaskInterval[] = []
 	for (const file of files) {
-		await get_lines_bigfile({
-			args: [file, `${chr}:1-${chrLen}`],
+		await readTabixLines({
+			file: file,
+			regions: [{ chr: chr, start: 1, stop: chrLen }],
 			callback: (line: string) => {
 				const l = line.split('\t')
 				const start = Number(l[1])

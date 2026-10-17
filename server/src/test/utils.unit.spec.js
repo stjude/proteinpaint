@@ -1,5 +1,6 @@
 import tape from 'tape'
 import fs from 'fs'
+import path from 'path'
 import serverconfig from '../serverconfig.js'
 import * as utils from '../utils.js'
 
@@ -544,8 +545,21 @@ tape('snpgtCacheidPrefix()', test => {
 tape('spawn helpers reject when the process cannot be spawned', async test => {
 	// a nonexistent cwd makes spawn() emit 'error', which crashes the process if nothing listens for it
 	const dir = `/nonexistent-${Date.now()}`
+	const cacheDir = path.join(serverconfig.cachedir, `nonexistent-${Date.now()}`)
+	const x_gz = path.join(serverconfig.tpmasterdir, 'x.gz')
 	const helpers = {
-		get_lines_bigfile: () => utils.get_lines_bigfile({ args: ['-H', 'x.gz'], dir, callback: () => {} }),
+		get_lines_bigfile: () =>
+			utils.get_lines_bigfile({ args: ['view', '-h', 'x.bcf'], isbcf: true, dir, callback: () => {} }),
+		// a cwd must be under cachedir, so a dir that does not exist there is used
+		readTabixLines: () =>
+			utils.readTabixLines({
+				file: x_gz,
+				dir: cacheDir,
+				regions: [{ chr: 'chr1', start: 1, stop: 2 }],
+				callback: () => {}
+			}),
+		readTabixHeader: () => utils.readTabixHeader(x_gz, cacheDir),
+		listTabixChrs: () => utils.listTabixChrs(x_gz, cacheDir),
 		get_lines_txtfile: () => utils.get_lines_txtfile({ args: ['x.txt'], dir, callback: () => {} }),
 		get_header_txt: () => utils.get_header_txt('x.txt', dir),
 		get_header_bcf: () => utils.get_header_bcf('x.bcf', dir),

@@ -48,8 +48,9 @@ async function handle_cards(req, res) {
 			await utils.file_is_readable(file)
 
 			const lines = []
-			await utils.get_lines_bigfile({
-				args: [file, `${c.chr}:${c.start}-${c.stop}`],
+			await utils.readTabixLines({
+				file: file,
+				regions: [{ chr: c.chr, start: c.start, stop: c.stop }],
 				callback: line => lines.push(line)
 			})
 			res.send({ file: lines })

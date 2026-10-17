@@ -11,6 +11,7 @@ import { cacheUrlProtocols } from './CacheManager.ts'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import { minimatch } from 'minimatch'
+import { runTool, runToolOutput } from './tools/index.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -18,7 +19,7 @@ export * from './cachedFetch.js'
 export * from './xfetch.js'
 export { connect_db } from './sql.ts'
 
-const { tabix, samtools, bcftools, bigBedToBed, bigBedNamedItems, bigBedInfo } = serverconfig
+const { samtools, bcftools, bigBedInfo } = serverconfig
 
 /*********************** EXPORTED
 cache_index
@@ -507,24 +508,18 @@ export async function init_one_vcfMaf(tk, genome, isbcf) {
 		tk.nochr = true
 	}
 	// obtain the index of samples and format field
-	const idxArgs = ['-H', maffilelocation]
-	await get_lines_bigfile({
-		args: idxArgs,
-		dir: tk.dir,
-		callback: line => {
-			if (line.startsWith('#chr')) {
-				const l = line.split('\t')
-				for (const [i, colName] of l.entries()) {
-					// hardcoded sample column name as 'sample'
-					if (colName == 'sample') {
-						sampleIdx = i
-					} else if (tk.format.hasOwnProperty(colName)) {
-						formatIdx.set(colName, i)
-					}
-				}
+	for (const line of await readTabixHeader(maffilelocation, tk.dir)) {
+		if (!line.startsWith('#chr')) continue
+		const l = line.split('\t')
+		for (const [i, colName] of l.entries()) {
+			// hardcoded sample column name as 'sample'
+			if (colName == 'sample') {
+				sampleIdx = i
+			} else if (tk.format.hasOwnProperty(colName)) {
+				formatIdx.set(colName, i)
 			}
 		}
-	})
+	}
 	if (!sampleIdx) throw 'sample column missing from maf file'
 	tk.sampleIdx = sampleIdx
 	tk.formatIdx = formatIdx
@@ -552,14 +547,7 @@ export async function validate_tabixfile(file) {
 	}
 
 	// test to list chrs on the file, to detect the "index file is older than .gz file" issue early, and abort server launch
-	try {
-		await get_lines_bigfile({
-			args: ['-l', file],
-			callback: () => {}
-		})
-	} catch (e) {
-		throw e
-	}
+	await listTabixChrs(file)
 }
 
 export async function validate_txtfile(file) {
@@ -569,15 +557,7 @@ export async function validate_txtfile(file) {
 
 export async function tabix_is_nochr(file, dir, genome) {
 	// also works for bcf file!
-	const lines = []
-	await get_lines_bigfile({
-		args: ['-l', file],
-		dir,
-		callback: line => {
-			lines.push(line)
-		}
-	})
-	return common.contigNameNoChr(genome, lines)
+	return common.contigNameNoChr(genome, await listTabixChrs(file, dir))
 }
 
 export function file_not_exist(file) {
@@ -600,15 +580,7 @@ export function file_not_readable(file) {
 
 export async function get_header_tabix(file, dir) {
 	// file is full path file or url
-	const lines = []
-	await get_lines_bigfile({
-		args: ['-H', file],
-		dir,
-		callback: line => {
-			lines.push(line)
-		}
-	})
-	return lines
+	return await readTabixHeader(file, dir)
 }
 
 // file is full path file, or relative to dir; return one string of header line, trimmed
@@ -638,17 +610,14 @@ export async function get_header_vcf(file, dir) {
 .isbam: true
 	big file is bam and will use "samtools" command
 
-** if neither isbcf or isbam is true, the file should be bgzip/tabix file and will use "tabix"
-** "tabix -l" can also work on bcf files
+** one of isbcf or isbam must be true; a bgzip/tabix file is read with readTabixLines(), readTabixHeader(), or
+** listTabixChrs(), and listTabixChrs() also works on bcf files
 
 .args: []
 	argument array for spawn, includes file path or url, and coordinate position
-	supports arbitrary use of tabix/bcftools/samtools command
 	e.g.
-	- tabix -l (list chrs for tabix/bcf files)
-	- samtools density
+	- bcftools query
 	- samtools view -c (counts only)
-	- samtools index
 
 .dir: cache dir for custom file, undefined for native file
 
@@ -662,8 +631,10 @@ export function get_lines_bigfile({ args, callback, dir = null, isbcf = false, i
 	if (args.length == 0) throw 'args[] empty array'
 	if (!callback) throw 'callback is missing'
 	if (typeof callback != 'function') throw 'callback() not a function'
+	// a tabix file is read with readTabixLines(), readTabixHeader(), or listTabixChrs(), which check each argument
+	if (!isbcf && !isbam) throw 'get_lines_bigfile() is only for bcf and bam files'
 	return new Promise((resolve, reject) => {
-		const ps = spawnTool(isbcf ? bcftools : isbam ? samtools : tabix, args, { cwd: dir })
+		const ps = spawnTool(isbcf ? bcftools : samtools, args, { cwd: dir })
 		const rl = readline.createInterface({ input: ps.stdout })
 		const em = []
 		rl.on('line', line => callback(line, ps))
@@ -675,6 +646,90 @@ export function get_lines_bigfile({ args, callback, dir = null, isbcf = false, i
 			if (e && !tabixnoterror(e)) {
 				reject(e)
 			}
+			resolve()
+		})
+	})
+}
+
+/*
+The reads of a bgzipped, tabix-indexed file, without the caller knowing which tool or library reads it.
+
+file: the full path of a local file, or a url
+dir: the cache dir of a url file, from cache_index(), where its index is kept; none for a local file
+regions: [{chr, start, stop}], with the coordinates that tabix reads, where a start before 0 is read as 0
+callback(line, stop): called with each line; stop() ends the read early, such as when too many lines are read
+	A callback that throws rejects the read.
+
+The read rejects with the tool's error output, unless it is a known warning, see tabixnoterror().
+*/
+/**
+ * @param {{ file: string, dir?: string | null, regions: { chr: string, start: number | string, stop: number | string }[],
+ * 	callback: (line: string, stop: () => void) => void }} arg
+ */
+export async function readTabixLines({ file, dir = null, regions, callback }) {
+	if (!Array.isArray(regions) || !regions.length) throw 'regions[] missing'
+	if (typeof callback != 'function') throw 'callback() not a function'
+	await readToolLines('tabix.query', { file, regions: regions.map(tabixRegion), dir: dir || null }, callback)
+}
+
+/** returns the header lines of a tabix file */
+export async function readTabixHeader(file, dir) {
+	const lines = []
+	await readToolLines('tabix.header', { file, dir: dir || null }, line => lines.push(line))
+	return lines
+}
+
+/** returns the chromosome names of a tabix file, which also works for a bcf file */
+export async function listTabixChrs(file, dir) {
+	const lines = []
+	await readToolLines('tabix.listChrs', { file, dir: dir || null }, line => lines.push(line))
+	return lines
+}
+
+/** returns chr:start-stop of a region; a coordinate may be a numeric string, or fractional when computed from a view */
+function tabixRegion(r) {
+	const coord = v => {
+		if (typeof v == 'string' && /^-?\d+(\.\d+)?$/.test(v)) v = Number(v)
+		if (typeof v != 'number' || !Number.isFinite(v)) throw 'invalid region coordinate'
+		return v
+	}
+	if (!r || typeof r.chr != 'string') throw 'invalid region chr'
+	return `${r.chr}:${Math.max(0, Math.floor(coord(r.start)))}-${Math.max(0, Math.ceil(coord(r.stop)))}`
+}
+
+/** reads the stdout lines of a tool op, see readTabixLines() for the callback and the rejections */
+function readToolLines(op, input, callback) {
+	return new Promise((resolve, reject) => {
+		// throws on an invalid input, which rejects this promise
+		const ps = runTool(op, input)
+		const rl = readline.createInterface({ input: ps.stdout })
+		const em = []
+		let stopped = false,
+			failed = false,
+			failure
+		const stop = () => {
+			stopped = true
+			rl.close()
+			ps.kill()
+		}
+		rl.on('line', line => {
+			if (stopped) return
+			try {
+				callback(line, stop)
+			} catch (e) {
+				failed = true
+				failure = e
+				stop()
+			}
+		})
+		ps.stderr.on('data', d => em.push(d))
+		// e.g. a missing cwd; without a listener, the 'error' event would crash the process
+		ps.on('error', reject)
+		ps.on('close', () => {
+			if (failed) return reject(failure)
+			const e = em.join('').trim()
+			// a stopped read is killed, so its error output, if any, is not about the lines that were read
+			if (e && !stopped && !tabixnoterror(e)) return reject(e)
 			resolve()
 		})
 	})
@@ -747,13 +802,12 @@ export async function get_fasta(gn, coord) {
 	}
 
 	// chr:start-stop, positions are 1-based
-	const lines = []
-	await get_lines_bigfile({
-		isbam: true, // so that samtools will be used for querying
-		args: ['faidx', gn.genomefile, '--', pos], // '--' so a region is never parsed as an option
-		callback: line => lines.push(line)
-	})
-	return lines.join('\n')
+	const { code, stdout, stderr } = await runToolOutput('samtools.faidx', { fasta: gn.genomefile, region: pos })
+	// get_lines_bigfile(), which this replaced, rejected on stderr output that is not a known warning
+	const e = stderr.trim()
+	if (e && !tabixnoterror(e)) throw e
+	if (code !== 0) throw `samtools faidx exited with code ${code}`
+	return stdout.trim()
 }
 
 export const genotype_type_set = new Set(['Homozygous reference', 'Homozygous alternative', 'Heterozygous'])
@@ -852,7 +906,8 @@ export function query_bigbed_by_coord(bigbed, chr, start, end) {
 	// input coordinates need to be 0-based
 	// output data is in bed format and output lines are split into an array
 	return new Promise((resolve, reject) => {
-		const ps = spawn(bigBedToBed, [`-chrom=${chr}`, `-start=${start}`, `-end=${end}`, bigbed, 'stdout'])
+		// throws on an invalid input, which rejects this promise
+		const ps = runTool('bigBed.query', { chr, start, end, file: bigbed })
 		const out = []
 		const err = []
 		ps.stdout.on('data', i => out.push(i))
@@ -872,7 +927,8 @@ export function query_bigbed_by_name(bigbed, name) {
 	// query bigbed by name field
 	// output data is in bed format and output lines are split into an array
 	return new Promise((resolve, reject) => {
-		const ps = spawn(bigBedNamedItems, [bigbed, name, 'stdout'])
+		// throws on an invalid input, which rejects this promise
+		const ps = runTool('bigBed.byName', { file: bigbed, name })
 		const out = []
 		const err = []
 		ps.stdout.on('data', i => out.push(i))
@@ -912,7 +968,13 @@ output:
 */
 export async function testIfFileIsBigbed(file) {
 	return new Promise((resolve, reject) => {
-		const ps = spawn(bigBedInfo, [file])
+		let ps
+		try {
+			ps = runTool('bigBed.info', { file })
+		} catch (_) {
+			// a file that the tools module rejects is not a usable bigBed file
+			return resolve(false)
+		}
 		const out = []
 		const err = []
 		ps.stdout.on('data', i => out.push(i))

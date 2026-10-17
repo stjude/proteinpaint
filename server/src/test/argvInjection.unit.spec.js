@@ -90,6 +90,10 @@ tape('get_fasta() defense in depth with "--"', async test => {
 	const fa = path.join(tmpdir, 'ref.fa')
 	fs.writeFileSync(fa, '>chr1\nACGTACGTAC\n')
 	const g = getGenome(fa)
+	// a genome fasta must be under tpmasterdir, see the samtools.faidx spec of server/src/tools
+	const tp = serverconfig.tpmasterdir
+	serverconfig.tpmasterdir = tmpdir
+	test.teardown(() => (serverconfig.tpmasterdir = tp))
 	test.equal(await utils.get_fasta(g, 'chr1:2-5'), '>chr1:2-5\nCGTA', 'should return sequence from a real fasta')
 
 	// even if a genome declared a chr that looks like an option, '--' keeps samtools from parsing it as one
@@ -286,14 +290,14 @@ tape('spawnTool() central guard', async test => {
 		test.doesNotThrow(() => utils.spawnTool('true', args).kill(), `should allow ${JSON.stringify(args)}`)
 	}
 
-	// get_lines_bigfile() goes through the guard, so a route that forgot to validate its chr is still covered
+	// readTabixLines() checks each region by the tabix.query spec, so a route that forgot to validate its chr is still covered
 	const file = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest/TermdbTest_ITD.gz')
 	const tbiHash = sha(file + '.tbi')
 	try {
-		await utils.get_lines_bigfile({ args: [file, '-fc:1-2'], callback: () => {} })
-		test.fail('get_lines_bigfile should reject a region-shaped option')
+		await utils.readTabixLines({ file, regions: [{ chr: '-fc', start: 1, stop: 2 }], callback: () => {} })
+		test.fail('readTabixLines should reject a region-shaped option')
 	} catch (e) {
-		test.equal(e, 'invalid region argument', 'get_lines_bigfile should reject a region-shaped option')
+		test.equal(e, 'tabix.query: invalid regions', 'readTabixLines should reject a region-shaped option')
 	}
 	test.equal(sha(file + '.tbi'), tbiHash, 'should not rebuild the track .tbi')
 	test.end()

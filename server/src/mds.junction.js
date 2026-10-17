@@ -148,8 +148,9 @@ async function do_query(q, ds, dsquery, gn) {
 	const allsampleidxset = new Set()
 
 	for (const r of q.rglst) {
-		await utils.get_lines_bigfile({
-			args: [getfile(dsquery), r.chr + ':' + r.start + '-' + r.stop],
+		await utils.readTabixLines({
+			file: getfile(dsquery),
+			regions: [{ chr: r.chr, start: r.start, stop: r.stop }],
 			dir: dsquery.dir,
 			callback: line => {
 				const l = line.split('\t')
@@ -395,8 +396,9 @@ async function get_singlejunction(q, ds, dsquery) {
 
 	let samples // list of samples with this junction
 
-	await utils.get_lines_bigfile({
-		args: [getfile(dsquery), j.chr + ':' + j.start + '-' + j.stop],
+	await utils.readTabixLines({
+		file: getfile(dsquery),
+		regions: [{ chr: j.chr, start: j.start, stop: j.stop }],
 		dir: dsquery.dir,
 		callback: line => {
 			const l = line.split('\t')
@@ -515,8 +517,9 @@ async function get_readcountByjBsamples(q, ds, dsquery) {
 
 	let jB // data of junctionB
 	let jAlst = []
-	await utils.get_lines_bigfile({
-		args: [dsquery.file || dsquery.url, q.junctionB.chr + ':' + start + '-' + stop],
+	await utils.readTabixLines({
+		file: dsquery.file || dsquery.url,
+		regions: [{ chr: q.junctionB.chr, start: start, stop: stop }],
 		dir: dsquery.dir,
 		callback: line => {
 			const l = line.split('\t')

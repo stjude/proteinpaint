@@ -515,7 +515,7 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 				// initial attempt is awaited, so that the server startup logs/CI can summarize status
 				if (ds.isMds3) await mds3_init.init(ds, g, totalRawDsLst)
 				else if (ds.isMds) await mds_init(ds, g, d)
-				else initLegacyDataset(ds, g, serverconfig)
+				else await initLegacyDataset(ds, g, serverconfig)
 				// no error bubbled up to be caught, and there are no nonblocking step being performed, init is done
 				if (ds.init.status == 'started') ds.init.status = 'done'
 			} catch (e) {
@@ -650,7 +650,7 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 			console.log(`Retrying ${gdlabel} init(), attempt #${currentRetry} ...`)
 			if (ds.isMds3) await mds3_init.init(ds, g, totalRawDsLst)
 			else if (ds.isMds) await mds_init(ds, g, d)
-			else initLegacyDataset(ds, g, serverconfig)
+			else await initLegacyDataset(ds, g, serverconfig)
 			// as long as no error bubbles up to here, the retry is considered successful
 			clearInterval(interval)
 			if (!ds.init.status) ds.init.status = 'done'

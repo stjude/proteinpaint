@@ -5,12 +5,9 @@ The /mdsexpressionrank route handler of legacy mds datasets, moved from app.unor
 import { mds_query_arg_check, get_rank_from_sortedarray, setGenomes as setSharedGenomes } from './mds.shared.js'
 import serverconfig from './serverconfig.js'
 import path from 'path'
-import readline from 'readline'
 import * as utils from './utils.js'
 import * as common from '#shared/common.js'
-import { tabixnoterror } from './utils.js'
 
-const tabix = serverconfig.tabix
 // set by the route init, so that the moved code can use genomes as in app.unorg.js
 let genomes
 
@@ -93,101 +90,90 @@ function handle_mdsexpressionrank(req, res) {
 			for (const r of req.query.rglst) {
 				tasks.push(
 					new Promise((resolve, reject) => {
-						const ps = utils.spawnTool(
-							tabix,
-							[
-								dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-								r.chr + ':' + r.start + '-' + r.stop
-							],
-							{ cwd: dir }
-						)
-
-						const rl = readline.createInterface({
-							input: ps.stdout
-						})
-
 						const gene2value = new Map()
 
-						rl.on('line', line => {
-							const l = line.split('\t')
-							const j = JSON.parse(l[3])
+						utils
+							.readTabixLines({
+								file: dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+								regions: [{ chr: r.chr, start: r.start, stop: r.stop }],
+								dir,
+								callback: line => {
+									const l = line.split('\t')
+									const j = JSON.parse(l[3])
 
-							if (!j.gene) return
+									if (!j.gene) return
 
-							if (!j.sample) return
+									if (!j.sample) return
 
-							if (!Number.isFinite(j.value)) return
+									if (!Number.isFinite(j.value)) return
 
-							const chr = l[0]
-							const start = Number.parseInt(l[1])
-							const stop = Number.parseInt(l[2])
+									const chr = l[0]
+									const start = Number.parseInt(l[1])
+									const stop = Number.parseInt(l[2])
 
-							if (j.sample == req.query.sample) {
-								// a gene for the current sample
-								if (!gene2value.has(j.gene)) {
-									gene2value.set(j.gene, {
-										chr: chr,
-										start: start,
-										stop: stop,
-										allvalues: []
-									})
-								}
-								gene2value.get(j.gene).thisvalue = j.value
+									if (j.sample == req.query.sample) {
+										// a gene for the current sample
+										if (!gene2value.has(j.gene)) {
+											gene2value.set(j.gene, {
+												chr: chr,
+												start: start,
+												stop: stop,
+												allvalues: []
+											})
+										}
+										gene2value.get(j.gene).thisvalue = j.value
 
-								// additional stats about gene expression
-								/* XXX OHE!!
+										// additional stats about gene expression
+										/* XXX OHE!!
                                 if (j.outlier) {
                                 	gene2value.get(j.gene).outlier = j.outlier
                                 }
                                 */
-								if (j.ase) {
-									gene2value.get(j.gene).ase = j.ase
-								}
-								return
-							}
+										if (j.ase) {
+											gene2value.get(j.gene).ase = j.ase
+										}
+										return
+									}
 
-							if (req.query.attributes) {
-								// official only,
-								// filter for samples of the same cohort
-								const sanno = ds.cohort.annotation[j.sample]
-								if (!sanno) {
-									// sample has no annotation
-									return
-								}
-								for (const attr of req.query.attributes) {
-									if (attr.k && attr.kvalue) {
-										if (attr.kvalue != sanno[attr.k]) {
-											// not a sample for this cohort
+									if (req.query.attributes) {
+										// official only,
+										// filter for samples of the same cohort
+										const sanno = ds.cohort.annotation[j.sample]
+										if (!sanno) {
+											// sample has no annotation
 											return
 										}
+										for (const attr of req.query.attributes) {
+											if (attr.k && attr.kvalue) {
+												if (attr.kvalue != sanno[attr.k]) {
+													// not a sample for this cohort
+													return
+												}
+											}
+										}
 									}
+
+									// now it is a sample for the group
+
+									samples.add(j.sample)
+
+									if (!gene2value.has(j.gene)) {
+										gene2value.set(j.gene, {
+											chr: chr,
+											start: start,
+											stop: stop,
+											allvalues: []
+										})
+									}
+									gene2value.get(j.gene).allvalues.push({
+										value: j.value
+									})
 								}
-							}
-
-							// now it is a sample for the group
-
-							samples.add(j.sample)
-
-							if (!gene2value.has(j.gene)) {
-								gene2value.set(j.gene, {
-									chr: chr,
-									start: start,
-									stop: stop,
-									allvalues: []
-								})
-							}
-							gene2value.get(j.gene).allvalues.push({
-								value: j.value
 							})
-						})
-
-						const errout = []
-						ps.stderr.on('data', i => errout.push(i))
-						ps.on('close', code => {
-							const e = errout.join('')
-							if (e && !tabixnoterror(e)) reject({ message: e })
-							resolve(gene2value)
-						})
+							.then(
+								() => resolve(gene2value),
+								e => reject({ message: e })
+							)
 					})
 				)
 			}

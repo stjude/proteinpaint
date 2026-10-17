@@ -5,13 +5,10 @@ The /samplematrix route handler of legacy mds datasets, moved from app.unorg.js,
 import { mdssvcnv_do_copyneutralloh, setGenomes as setSharedGenomes } from './mds.shared.js'
 import serverconfig from './serverconfig.js'
 import path from 'path'
-import readline from 'readline'
 import * as utils from './utils.js'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
-import { tabixnoterror } from './utils.js'
 
-const tabix = serverconfig.tabix
 // set by the route init, so that the moved code can use genomes as in app.unorg.js
 let genomes
 
@@ -225,45 +222,31 @@ function samplematrix_task_isgenevalue(feature, ds, dsquery, usesampleset) {
 		.then(dir => {
 			return new Promise((resolve, reject) => {
 				const data = []
-				const ps = utils.spawnTool(
-					tabix,
-					[
-						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-						feature.chr + ':' + feature.start + '-' + feature.stop
-					],
-					{ cwd: dir }
-				)
-				const rl = readline.createInterface({
-					input: ps.stdout
-				})
+				utils
+					.readTabixLines({
+						file: dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+						regions: [{ chr: feature.chr, start: feature.start, stop: feature.stop }],
+						dir: dir,
+						callback: line => {
+							const l = line.split('\t')
 
-				rl.on('line', line => {
-					const l = line.split('\t')
+							const j = JSON.parse(l[3])
 
-					const j = JSON.parse(l[3])
+							if (!j.gene) return
+							if (j.gene.toLowerCase() != genename) return
 
-					if (!j.gene) return
-					if (j.gene.toLowerCase() != genename) return
+							if (!j.sample) return
+							if (usesampleset && !usesampleset.has(j.sample)) return
 
-					if (!j.sample) return
-					if (usesampleset && !usesampleset.has(j.sample)) return
-
-					data.push(j)
-				})
-
-				const errout = []
-				ps.stderr.on('data', i => errout.push(i))
-				ps.on('close', code => {
-					const e = errout.join('')
-					if (e && !tabixnoterror(e)) {
-						reject(e)
-						return
-					}
-					resolve({
-						id: feature.id,
-						items: data
+							data.push(j)
+						}
 					})
-				})
+					.then(() => {
+						resolve({
+							id: feature.id,
+							items: data
+						})
+					}, reject)
 			})
 		})
 	return [null, q]
@@ -288,52 +271,39 @@ function samplematrix_task_iscnv(feature, ds, dsquery, usesampleset) {
 		.then(dir => {
 			return new Promise((resolve, reject) => {
 				const data = []
-				const ps = utils.spawnTool(
-					tabix,
-					[
-						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-						feature.chr + ':' + feature.start + '-' + feature.stop
-					],
-					{ cwd: dir }
-				)
-				const rl = readline.createInterface({
-					input: ps.stdout
-				})
-				rl.on('line', line => {
-					const l = line.split('\t')
+				utils
+					.readTabixLines({
+						file: dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+						regions: [{ chr: feature.chr, start: feature.start, stop: feature.stop }],
+						dir: dir,
+						callback: line => {
+							const l = line.split('\t')
 
-					const j = JSON.parse(l[3])
+							const j = JSON.parse(l[3])
 
-					// loh and sv data could be present in same file
-					if (j.dt != common.dtcnv) return
+							// loh and sv data could be present in same file
+							if (j.dt != common.dtcnv) return
 
-					if (feature.valuecutoff && Math.abs(j.value) < feature.valuecutoff) return
+							if (feature.valuecutoff && Math.abs(j.value) < feature.valuecutoff) return
 
-					j.chr = l[0]
-					j.start = Number.parseInt(l[1])
-					j.stop = Number.parseInt(l[2])
+							j.chr = l[0]
+							j.start = Number.parseInt(l[1])
+							j.stop = Number.parseInt(l[2])
 
-					if (feature.focalsizelimit && j.stop - j.start >= feature.focalsizelimit) return
+							if (feature.focalsizelimit && j.stop - j.start >= feature.focalsizelimit) return
 
-					if (!j.sample) return
-					if (usesampleset && !usesampleset.has(j.sample)) return
+							if (!j.sample) return
+							if (usesampleset && !usesampleset.has(j.sample)) return
 
-					data.push(j)
-				})
-
-				const errout = []
-				ps.stderr.on('data', i => errout.push(i))
-				ps.on('close', code => {
-					const e = errout.join('')
-					if (e && !tabixnoterror(e)) {
-						reject(e)
-						return
-					}
-					resolve({
-						id: feature.id,
-						items: data
+							data.push(j)
+						}
 					})
-				})
+					.then(() => {
+						resolve({
+							id: feature.id,
+							items: data
+						})
+					}, reject)
 			})
 		})
 	return [null, q]
@@ -358,51 +328,38 @@ function samplematrix_task_isloh(feature, ds, dsquery, usesampleset) {
 		.then(dir => {
 			return new Promise((resolve, reject) => {
 				const data = []
-				const ps = utils.spawnTool(
-					tabix,
-					[
-						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-						feature.chr + ':' + feature.start + '-' + feature.stop
-					],
-					{ cwd: dir }
-				)
-				const rl = readline.createInterface({
-					input: ps.stdout
-				})
-				rl.on('line', line => {
-					const l = line.split('\t')
+				utils
+					.readTabixLines({
+						file: dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+						regions: [{ chr: feature.chr, start: feature.start, stop: feature.stop }],
+						dir: dir,
+						callback: line => {
+							const l = line.split('\t')
 
-					const j = JSON.parse(l[3])
+							const j = JSON.parse(l[3])
 
-					if (j.dt != common.dtloh) return
+							if (j.dt != common.dtloh) return
 
-					if (feature.valuecutoff && j.segmean < feature.valuecutoff) return
+							if (feature.valuecutoff && j.segmean < feature.valuecutoff) return
 
-					j.chr = l[0]
-					j.start = Number.parseInt(l[1])
-					j.stop = Number.parseInt(l[2])
+							j.chr = l[0]
+							j.start = Number.parseInt(l[1])
+							j.stop = Number.parseInt(l[2])
 
-					if (feature.focalsizelimit && j.stop - j.start >= feature.focalsizelimit) return
+							if (feature.focalsizelimit && j.stop - j.start >= feature.focalsizelimit) return
 
-					if (!j.sample) return
-					if (usesampleset && !usesampleset.has(j.sample)) return
+							if (!j.sample) return
+							if (usesampleset && !usesampleset.has(j.sample)) return
 
-					data.push(j)
-				})
-
-				const errout = []
-				ps.stderr.on('data', i => errout.push(i))
-				ps.on('close', code => {
-					const e = errout.join('')
-					if (e && !tabixnoterror(e)) {
-						reject(e)
-						return
-					}
-					resolve({
-						id: feature.id,
-						items: data
+							data.push(j)
+						}
 					})
-				})
+					.then(() => {
+						resolve({
+							id: feature.id,
+							items: data
+						})
+					}, reject)
 			})
 		})
 	return [null, q]
@@ -421,47 +378,34 @@ function samplematrix_task_isitd(feature, ds, dsquery, usesampleset) {
 		.then(dir => {
 			return new Promise((resolve, reject) => {
 				const data = []
-				const ps = utils.spawnTool(
-					tabix,
-					[
-						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-						feature.chr + ':' + feature.start + '-' + feature.stop
-					],
-					{ cwd: dir }
-				)
-				const rl = readline.createInterface({
-					input: ps.stdout
-				})
-				rl.on('line', line => {
-					const l = line.split('\t')
+				utils
+					.readTabixLines({
+						file: dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+						regions: [{ chr: feature.chr, start: feature.start, stop: feature.stop }],
+						dir: dir,
+						callback: line => {
+							const l = line.split('\t')
 
-					const j = JSON.parse(l[3])
+							const j = JSON.parse(l[3])
 
-					if (j.dt != common.dtitd) return
+							if (j.dt != common.dtitd) return
 
-					j.chr = l[0]
-					j.start = Number.parseInt(l[1])
-					j.stop = Number.parseInt(l[2])
+							j.chr = l[0]
+							j.start = Number.parseInt(l[1])
+							j.stop = Number.parseInt(l[2])
 
-					if (!j.sample) return
-					if (usesampleset && !usesampleset.has(j.sample)) return
+							if (!j.sample) return
+							if (usesampleset && !usesampleset.has(j.sample)) return
 
-					data.push(j)
-				})
-
-				const errout = []
-				ps.stderr.on('data', i => errout.push(i))
-				ps.on('close', code => {
-					const e = errout.join('')
-					if (e && !tabixnoterror(e)) {
-						reject(e)
-						return
-					}
-					resolve({
-						id: feature.id,
-						items: data
+							data.push(j)
+						}
 					})
-				})
+					.then(() => {
+						resolve({
+							id: feature.id,
+							items: data
+						})
+					}, reject)
 			})
 		})
 	return [null, q]
@@ -480,53 +424,40 @@ function samplematrix_task_issvfusion(feature, ds, dsquery, usesampleset) {
 		.then(dir => {
 			return new Promise((resolve, reject) => {
 				const data = []
-				const ps = utils.spawnTool(
-					tabix,
-					[
-						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-						feature.chr + ':' + feature.start + '-' + feature.stop
-					],
-					{ cwd: dir }
-				)
-				const rl = readline.createInterface({
-					input: ps.stdout
-				})
-				rl.on('line', line => {
-					const l = line.split('\t')
+				utils
+					.readTabixLines({
+						file: dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+						regions: [{ chr: feature.chr, start: feature.start, stop: feature.stop }],
+						dir: dir,
+						callback: line => {
+							const l = line.split('\t')
 
-					const j = JSON.parse(l[3])
+							const j = JSON.parse(l[3])
 
-					if (j.dt != common.dtsv && j.dt != common.dtfusionrna) return
+							if (j.dt != common.dtsv && j.dt != common.dtfusionrna) return
 
-					if (!j.sample) return
-					if (usesampleset && !usesampleset.has(j.sample)) return
+							if (!j.sample) return
+							if (usesampleset && !usesampleset.has(j.sample)) return
 
-					j._chr = l[0]
-					j._pos = Number.parseInt(l[1])
-					if (j.chrA) {
-						j.chrB = j._chr
-						j.posB = j._pos
-					} else {
-						j.chrA = j._chr
-						j.posA = j._pos
-					}
+							j._chr = l[0]
+							j._pos = Number.parseInt(l[1])
+							if (j.chrA) {
+								j.chrB = j._chr
+								j.posB = j._pos
+							} else {
+								j.chrA = j._chr
+								j.posA = j._pos
+							}
 
-					data.push(j)
-				})
-
-				const errout = []
-				ps.stderr.on('data', i => errout.push(i))
-				ps.on('close', code => {
-					const e = errout.join('')
-					if (e && !tabixnoterror(e)) {
-						reject(e)
-						return
-					}
-					resolve({
-						id: feature.id,
-						items: data
+							data.push(j)
+						}
 					})
-				})
+					.then(() => {
+						resolve({
+							id: feature.id,
+							items: data
+						})
+					}, reject)
 			})
 		})
 	return [null, q]
@@ -545,102 +476,88 @@ function samplematrix_task_issvcnv(feature, ds, dsquery, usesampleset) {
 		.then(dir => {
 			return new Promise((resolve, reject) => {
 				const data = []
-				const ps = utils.spawnTool(
-					tabix,
-					[
-						dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
-						feature.chr + ':' + feature.start + '-' + feature.stop
-					],
-					{ cwd: dir }
-				)
-				const rl = readline.createInterface({
-					input: ps.stdout
-				})
-				rl.on('line', line => {
-					const l = line.split('\t')
+				utils
+					.readTabixLines({
+						file: dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
+						regions: [{ chr: feature.chr, start: feature.start, stop: feature.stop }],
+						dir: dir,
+						callback: line => {
+							const l = line.split('\t')
 
-					const j = JSON.parse(l[3])
+							const j = JSON.parse(l[3])
 
-					if (!j.sample) return
-					if (usesampleset && !usesampleset.has(j.sample)) return
+							if (!j.sample) return
+							if (usesampleset && !usesampleset.has(j.sample)) return
 
-					// keep all data and return
+							// keep all data and return
 
-					if (j.dt == common.dtsv || j.dt == common.dtfusionrna) {
-						if (j.dt == common.dtsv && feature.sv && feature.sv.hidden) return
+							if (j.dt == common.dtsv || j.dt == common.dtfusionrna) {
+								if (j.dt == common.dtsv && feature.sv && feature.sv.hidden) return
 
-						if (j.dt == common.dtfusionrna && feature.fusion && feature.fusion.hidden) return
+								if (j.dt == common.dtfusionrna && feature.fusion && feature.fusion.hidden) return
 
-						j._chr = l[0]
-						j._pos = Number.parseInt(l[1])
-						if (j.chrA) {
-							j.chrB = j._chr
-							j.posB = j._pos
-						} else {
-							j.chrA = j._chr
-							j.posA = j._pos
+								j._chr = l[0]
+								j._pos = Number.parseInt(l[1])
+								if (j.chrA) {
+									j.chrB = j._chr
+									j.posB = j._pos
+								} else {
+									j.chrA = j._chr
+									j.posA = j._pos
+								}
+							} else if (j.dt == common.dtcnv) {
+								if (feature.cnv && feature.cnv.hidden) return
+
+								if (feature.cnv && feature.cnv.valuecutoff && Math.abs(j.value) < feature.cnv.valuecutoff) return
+								j.chr = l[0]
+								j.start = Number.parseInt(l[1])
+								j.stop = Number.parseInt(l[2])
+								if (feature.cnv && feature.cnv.focalsizelimit && j.stop - j.start >= feature.cnv.focalsizelimit) return
+							} else if (j.dt == common.dtloh) {
+								if (feature.loh && feature.loh.hidden) return
+
+								if (feature.loh && feature.loh.valuecutoff && j.segmean < feature.loh.valuecutoff) return
+								j.chr = l[0]
+								j.start = Number.parseInt(l[1])
+								j.stop = Number.parseInt(l[2])
+								if (feature.loh && feature.loh.focalsizelimit && j.stop - j.start >= feature.loh.focalsizelimit) return
+							} else if (j.dt == common.dtitd) {
+								if (feature.itd && feature.itd.hidden) return
+
+								j.chr = l[0]
+								j.start = Number.parseInt(l[1])
+								j.stop = Number.parseInt(l[2])
+							} else {
+								console.error('unknown datatype', j.dt)
+								return
+							}
+
+							data.push(j)
 						}
-					} else if (j.dt == common.dtcnv) {
-						if (feature.cnv && feature.cnv.hidden) return
-
-						if (feature.cnv && feature.cnv.valuecutoff && Math.abs(j.value) < feature.cnv.valuecutoff) return
-						j.chr = l[0]
-						j.start = Number.parseInt(l[1])
-						j.stop = Number.parseInt(l[2])
-						if (feature.cnv && feature.cnv.focalsizelimit && j.stop - j.start >= feature.cnv.focalsizelimit) return
-					} else if (j.dt == common.dtloh) {
-						if (feature.loh && feature.loh.hidden) return
-
-						if (feature.loh && feature.loh.valuecutoff && j.segmean < feature.loh.valuecutoff) return
-						j.chr = l[0]
-						j.start = Number.parseInt(l[1])
-						j.stop = Number.parseInt(l[2])
-						if (feature.loh && feature.loh.focalsizelimit && j.stop - j.start >= feature.loh.focalsizelimit) return
-					} else if (j.dt == common.dtitd) {
-						if (feature.itd && feature.itd.hidden) return
-
-						j.chr = l[0]
-						j.start = Number.parseInt(l[1])
-						j.stop = Number.parseInt(l[2])
-					} else {
-						console.error('unknown datatype', j.dt)
-						return
-					}
-
-					data.push(j)
-				})
-
-				const errout = []
-				ps.stderr.on('data', i => errout.push(i))
-				ps.on('close', code => {
-					const e = errout.join('')
-					if (e && !tabixnoterror(e)) {
-						reject(e)
-						return
-					}
-
-					const sample2item = new Map()
-					for (const i of data) {
-						if (!sample2item.has(i.sample)) sample2item.set(i.sample, [])
-						sample2item.get(i.sample).push(i)
-					}
-
-					if (dsquery.hideLOHwithCNVoverlap) {
-						mdssvcnv_do_copyneutralloh(sample2item)
-					}
-
-					const newlst = []
-					for (const [n, lst] of sample2item) {
-						for (const i of lst) {
-							newlst.push(i)
-						}
-					}
-
-					resolve({
-						id: feature.id,
-						items: newlst
 					})
-				})
+					.then(() => {
+						const sample2item = new Map()
+						for (const i of data) {
+							if (!sample2item.has(i.sample)) sample2item.set(i.sample, [])
+							sample2item.get(i.sample).push(i)
+						}
+
+						if (dsquery.hideLOHwithCNVoverlap) {
+							mdssvcnv_do_copyneutralloh(sample2item)
+						}
+
+						const newlst = []
+						for (const [n, lst] of sample2item) {
+							for (const i of lst) {
+								newlst.push(i)
+							}
+						}
+
+						resolve({
+							id: feature.id,
+							items: newlst
+						})
+					}, reject)
 			})
 		})
 	return [null, q]
@@ -712,94 +629,86 @@ function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 			.then(dir => {
 				return new Promise((resolve, reject) => {
 					const data = []
-					const ps = utils.spawnTool(
-						tabix,
-						[
-							tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
-							(tk.nochr ? feature.chr.replace('chr', '') : feature.chr) + ':' + feature.start + '-' + (feature.stop + 1)
-							// must add 1 to stop so to get snv data
-						],
-						{ cwd: dir }
-					)
-					const rl = readline.createInterface({
-						input: ps.stdout
-					})
-					rl.on('line', line => {
-						if (dsquery.iscustom) {
-							// info/format are at client, pass them over
-							data.push(line)
-							return
-						}
-
-						if (tk.type == common.mdsvcftype.vcf) {
-							// snv/indel
-
-							const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, {
-								nochr: tk.nochr,
-								samples: tk.samples,
-								info: dsquery.info,
-								format: tk.format
-							})
-
-							for (const m of mlst) {
-								if (!m.sampledata) {
-									// do not allow
-									continue
+					utils
+						.readTabixLines({
+							file: tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
+							regions: [
+								{
+									chr: tk.nochr ? feature.chr.replace('chr', '') : feature.chr,
+									start: feature.start,
+									stop: feature.stop + 1
+								}
+							],
+							dir: dir,
+							callback: line => {
+								if (dsquery.iscustom) {
+									// info/format are at client, pass them over
+									data.push(line)
+									return
 								}
 
-								// extract class/mname from vep csq etc, must be done here but not on client
-								common.vcfcopymclass(m, {})
+								if (tk.type == common.mdsvcftype.vcf) {
+									// snv/indel
 
-								if (feature.snvindel) {
-									if (feature.snvindel.excludeclasses && feature.snvindel.excludeclasses[m.class]) {
-										// m class is one of excluded
-										continue
-									}
-								}
+									const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, {
+										nochr: tk.nochr,
+										samples: tk.samples,
+										info: dsquery.info,
+										format: tk.format
+									})
 
-								// filters on samples
-
-								if (usesampleset) {
-									const samplesnothidden = []
-									for (const s of m.sampledata) {
-										if (usesampleset.has(s.sampleobj.name)) {
-											samplesnothidden.push(s)
+									for (const m of mlst) {
+										if (!m.sampledata) {
+											// do not allow
+											continue
 										}
+
+										// extract class/mname from vep csq etc, must be done here but not on client
+										common.vcfcopymclass(m, {})
+
+										if (feature.snvindel) {
+											if (feature.snvindel.excludeclasses && feature.snvindel.excludeclasses[m.class]) {
+												// m class is one of excluded
+												continue
+											}
+										}
+
+										// filters on samples
+
+										if (usesampleset) {
+											const samplesnothidden = []
+											for (const s of m.sampledata) {
+												if (usesampleset.has(s.sampleobj.name)) {
+													samplesnothidden.push(s)
+												}
+											}
+											if (samplesnothidden.length == 0) {
+												continue
+											}
+											m.sampledata = samplesnothidden
+										}
+
+										// delete the obsolete attr
+										for (const sb of m.sampledata) {
+											delete sb.allele2readcount
+										}
+
+										delete m._m
+										delete m.vcf_ID
+										delete m.name
+
+										m.dt = common.dtsnvindel
+
+										data.push(m)
 									}
-									if (samplesnothidden.length == 0) {
-										continue
-									}
-									m.sampledata = samplesnothidden
+								} else {
+									console.error('type not one of mdsvcftype: ' + tk.type)
 								}
-
-								// delete the obsolete attr
-								for (const sb of m.sampledata) {
-									delete sb.allele2readcount
-								}
-
-								delete m._m
-								delete m.vcf_ID
-								delete m.name
-
-								m.dt = common.dtsnvindel
-
-								data.push(m)
 							}
-						} else {
-							console.error('type not one of mdsvcftype: ' + tk.type)
-						}
-					})
-
-					const errout = []
-					ps.stderr.on('data', i => errout.push(i))
-					ps.on('close', code => {
-						const e = errout.join('')
-						if (e && !tabixnoterror(e)) {
-							reject(e)
-							return
-						}
-						resolve(data)
-					})
+						})
+						.then(() => {
+							resolve(data)
+						}, reject)
 				})
 			})
 		tasks.push(q)

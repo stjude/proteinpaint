@@ -1,28 +1,20 @@
 import fs from 'fs'
 import path from 'path'
-import { spawnSync } from 'child_process'
 import * as utils from './utils.js'
 import serverconfig from './serverconfig.js'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 
-const tabix = serverconfig.tabix
 // const samtools = serverconfig.samtools
 // const bcftools = serverconfig.bcftools
 // const hicstraw = serverconfig.hicstraw
 
-/*
-	args[]: tabix arguments
-	opts{}: spawnSync() options, such as cwd and encoding
-
-	runs tabix and returns its stdout; throws on failure
-*/
-function tabixSync(args, opts) {
-	const ps = spawnSync(tabix, args, opts)
-	if (ps.error) throw ps.error
-	if (ps.status !== 0) throw new Error(`tabix ${args.join(' ')} failed: ${ps.stderr}`)
-	return ps.stdout
+/* returns the header lines (-H) or chromosome names (-l) of a tabix file as one string, like the tabix output that
+the callers parse; cwd is the cache dir of a url file */
+async function tabixText(option, file, cwd) {
+	const lines = option == '-H' ? await utils.readTabixHeader(file, cwd) : await utils.listTabixChrs(file, cwd)
+	return lines.join('\n')
 }
 
 export async function mds_init(ds, genome, rawds) {
@@ -501,17 +493,17 @@ export async function mds_init(ds, genome, rawds) {
 				}
 
 				if (query.type == common.tkt.mdsjunction) {
-					const err = mds_init_mdsjunction(query, ds, genome)
+					const err = await mds_init_mdsjunction(query, ds, genome)
 					if (err) throw querykey + ' (mdsjunction) error: ' + err
 				} else if (query.type == common.tkt.mdscnv) {
 					// obsolete
 
-					const err = mds_init_mdscnv(query, ds, genome)
+					const err = await mds_init_mdscnv(query, ds, genome)
 					if (err) throw querykey + ' (mdscnv) error: ' + err
 				} else if (query.type == common.tkt.mdssvcnv) {
 					// replaces mdscnv
 
-					const err = mds_init_mdssvcnv(query, ds, genome)
+					const err = await mds_init_mdssvcnv(query, ds, genome)
 					if (err) throw querykey + ' (svcnv) error: ' + err
 				} else if (query.type == common.tkt.mdsvcf) {
 					// snvindel
@@ -524,7 +516,7 @@ export async function mds_init(ds, genome, rawds) {
 
 				mds_mayPrecompute_grouptotal(query, ds)
 			} else if (query.isgenenumeric) {
-				const err = mds_init_genenumeric(query, ds, genome)
+				const err = await mds_init_genenumeric(query, ds, genome)
 				if (err) throw querykey + ' (genenumeric) error: ' + err
 			} else {
 				throw 'unknown type of query from ' + querykey
@@ -602,7 +594,7 @@ function mds_mayPrecompute_grouptotal(query, ds) {
 	}
 }
 
-function mds_init_mdsjunction(query, ds, genome) {
+async function mds_init_mdsjunction(query, ds, genome) {
 	// mdsjunction only allows single track
 
 	if (query.readcountCutoff) {
@@ -631,7 +623,7 @@ function mds_init_mdsjunction(query, ds, genome) {
 		arg.cwd = cwd
 	}
 
-	const header = tabixSync(['-H', _file], arg).trim()
+	const header = (await tabixText('-H', _file, arg.cwd)).trim()
 	if (header) {
 		// has header, get samples
 		const lines = header.split('\n')
@@ -651,7 +643,7 @@ function mds_init_mdsjunction(query, ds, genome) {
 	}
 
 	{
-		const tmp = tabixSync(['-l', _file], arg).trim()
+		const tmp = (await tabixText('-l', _file, arg.cwd)).trim()
 		if (!tmp) return 'no chromosomes found'
 		query.nochr = common.contigNameNoChr(genome, tmp.split('\n'))
 	}
@@ -770,7 +762,7 @@ function mds_query_hierarchy4samples(samples, ds) {
 	return results
 }
 
-function mds_init_mdscnv(query, ds, genome) {
+async function mds_init_mdscnv(query, ds, genome) {
 	// mdscnv only allows single track
 
 	let cwd = null
@@ -793,7 +785,7 @@ function mds_init_mdscnv(query, ds, genome) {
 		arg.cwd = cwd
 	}
 
-	const header = tabixSync(['-H', _file], arg).trim()
+	const header = (await tabixText('-H', _file, arg.cwd)).trim()
 	if (header) {
 		// has header, get samples
 		const lines = header.split('\n')
@@ -810,7 +802,7 @@ function mds_init_mdscnv(query, ds, genome) {
 	}
 
 	{
-		const tmp = tabixSync(['-l', _file], arg).trim()
+		const tmp = (await tabixText('-l', _file, arg.cwd)).trim()
 		if (!tmp) return 'no chromosomes found'
 		query.nochr = common.contigNameNoChr(genome, tmp.split('\n'))
 	}
@@ -827,7 +819,7 @@ function mds_init_mdscnv(query, ds, genome) {
 	)
 }
 
-function mds_init_mdssvcnv(query, ds, genome) {
+async function mds_init_mdssvcnv(query, ds, genome) {
 	// only allows single track, since there is no challenge merging multiple into one
 
 	let cwd = null
@@ -850,7 +842,7 @@ function mds_init_mdssvcnv(query, ds, genome) {
 		arg.cwd = cwd
 	}
 
-	const header = tabixSync(['-H', _file], arg).trim()
+	const header = (await tabixText('-H', _file, arg.cwd)).trim()
 	if (header) {
 		// has header, get samples
 		const set = new Set()
@@ -890,7 +882,7 @@ function mds_init_mdssvcnv(query, ds, genome) {
 	}
 
 	{
-		const tmp = tabixSync(['-l', _file], arg).trim()
+		const tmp = (await tabixText('-l', _file, arg.cwd)).trim()
 		if (!tmp) return 'no chromosomes found'
 		query.nochr = common.contigNameNoChr(genome, tmp.split('\n'))
 	}
@@ -950,7 +942,7 @@ function mds_init_mdssvcnv(query, ds, genome) {
 	)
 }
 
-function mds_init_genenumeric(query, ds, genome) {
+async function mds_init_genenumeric(query, ds, genome) {
 	if (!query.datatype) return 'datatype missing'
 	if (query.viewrangeupperlimit) {
 		if (Number.isNaN(query.viewrangeupperlimit)) return 'invalid value for viewrangeupperlimit'
@@ -970,7 +962,7 @@ function mds_init_genenumeric(query, ds, genome) {
 	const arg = { cwd: cwd, encoding: 'utf8' }
 
 	{
-		const tmp = tabixSync(['-H', _file], arg).trim()
+		const tmp = (await tabixText('-H', _file, arg.cwd)).trim()
 		if (!tmp) return 'no header line (#sample <sample1> ...)'
 		// allow multiple # lines
 		const set = new Set()
@@ -1062,14 +1054,7 @@ async function mds_init_mdsvcf(query, ds, genome) {
 		}
 
 		{
-			const tmp = []
-			await utils.get_lines_bigfile({
-				args: ['-l', _file],
-				dir: tk.cwd,
-				callback: line => {
-					tmp.push(line)
-				}
-			})
+			const tmp = await utils.listTabixChrs(_file, tk.cwd)
 			if (tmp.length == 0) return 'no chr from ' + _file
 			tk.nochr = common.contigNameNoChr(genome, tmp)
 		}
