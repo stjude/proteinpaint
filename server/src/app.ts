@@ -3,10 +3,11 @@
 //
 import express from 'express'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import http from 'http'
 import https from 'https'
-import { spawn, spawnSync } from 'child_process'
+import { spawn } from 'child_process'
 import * as augen from '@sjcrh/augen'
 import serverconfig, { lockServerconfig } from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
@@ -344,8 +345,7 @@ function processTrackedDs(trackedDatasets) {
 		if (serverconfig.slackWebhookUrl) {
 			// not a fatal error for the server and will not trigger a deployment rollback notification,
 			// so must trigger a notification here
-			const hostname =
-				serverconfig.hostname || spawnSync('hostname', ['-s'], { encoding: 'utf-8' })?.stdout?.trim() || ''
+			const hostname = serverconfig.hostname || os.hostname().split('.')[0] // the short name, like `hostname -s`
 			pendingNotification = sendMessageToSlack(
 				serverconfig.slackWebhookUrl,
 				`\n${serverconfig.URL} ${hostname}: ${msg}`,
