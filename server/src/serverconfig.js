@@ -240,6 +240,11 @@ if ('dsCredentials' in serverconfig) {
 	)
 }
 
+if ('preListenScript' in serverconfig) {
+	// a deployment keeps another container serving while a new one starts, see the releaseRollout repo
+	throw 'serverconfig.preListenScript is not supported. Remove it from serverconfig.json.'
+}
+
 if (process.env.PP_CREDS) {
 	// the only way to set dsCredentials, so that the server process does not need
 	// read access to a credentials file that a path traversal bug could expose;

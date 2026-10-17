@@ -134,7 +134,7 @@ function writeConfigFile(config, ctx) {
 	return dir ? `--experimental-config-file=${file}` : '--experimental-default-config-file'
 }
 
-// to stderr, so that the stdout of the command, such as a message that a preListenScript detects, is unchanged
+// to stderr, so that the stdout of the command, such as the startup messages that container/verify.sh detects, is unchanged
 function logAllowedPaths(config) {
 	for (const key of ['allow-fs-read', 'allow-fs-write'])
 		console.error(`envHelpers.mjs: ${key} ${config.nodeOptions[key].join(' ')}`)

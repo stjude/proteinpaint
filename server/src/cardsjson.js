@@ -26,11 +26,6 @@ export function setGenomes(_genomes) {
 	node server validate 
 	# only proceed to using forever on successful validation
 	forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
-	
-	# - OR -
-	# use the serverconfig.preListenScript option to stop the previous process
-	# after all configurations, genomes, and datasets have been loaded in the current process, 
-	# so that the validation happens from within the same monitored process (see startServer())
 	```
 ***/
 

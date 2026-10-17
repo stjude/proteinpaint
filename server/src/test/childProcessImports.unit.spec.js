@@ -30,7 +30,6 @@ const allowed = new Map([
 	['python/index.js', 'python for run_python()'],
 	['rust/index.js', 'rust binaries for run_rust()'],
 	['server/genome/copyDataFilesFromRepo2Tp.js', 'test genome data setup'],
-	['server/src/app.ts', 'preListenScript'],
 	['server/src/tools/index.ts', 'the tools of the specs in server/src/tools, see runTool()'],
 	['server/src/utils.js', 'samtools and bcftools reads, see spawnTool() and get_lines_bigfile()']
 ])

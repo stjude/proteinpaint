@@ -80,6 +80,26 @@ tape('serverconfig.dsCredentials: an object or a file path throws, even when PP_
 })
 
 /*
+	serverconfig.preListenScript is set with PP_SERVERCONFIG_OVERRIDES, which is applied as if in serverconfig.json
+*/
+tape('serverconfig.preListenScript throws', async test => {
+	process.env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({ preListenScript: { cmd: 'true', args: [] } })
+	try {
+		await import(`../serverconfig.js?pre_listen_script=unsupported`)
+		test.fail('should throw')
+	} catch (e) {
+		test.equal(
+			String(e.message || e),
+			'serverconfig.preListenScript is not supported. Remove it from serverconfig.json.',
+			'should throw the expected message'
+		)
+	} finally {
+		delete process.env.PP_SERVERCONFIG_OVERRIDES
+	}
+	test.end()
+})
+
+/*
 	process.env.PP_CREDS_HANDOFF_FILE is a private temp file from container/envHelpers.mjs
 */
 function writeHandoffFile(content) {
