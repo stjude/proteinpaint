@@ -1,8 +1,7 @@
 import type { RouteApi, RoutePayload, HicdataRequest, HicdataResponse, XYZCoord } from '#types'
 import { fileurl } from '#src/utils.js'
-import { spawn } from 'child_process'
 import readline from 'readline'
-import serverconfig from '#src/serverconfig.js'
+import { runTool } from '#src/tools/index.ts'
 import { getStrawArgs, validHicPos } from '#src/utils/hicStraw.ts'
 
 export const payload: RoutePayload = {
@@ -41,24 +40,23 @@ function handle_hicdata(q: HicdataRequest): Promise<HicdataResponse> {
 		Must convert to straw parameter and apply the corresponding maths to the result.
 		Use 'observed' as default if not provided.
 		*/
-		let par: string[]
+		let ps: ReturnType<typeof runTool>
 		try {
 			const { strawMatrixType, nmeth, resolution } = getStrawArgs(q)
-			par = [
-				strawMatrixType,
-				nmeth,
+			ps = runTool('hicstraw.query', {
+				matrixType: strawMatrixType,
+				normalization: nmeth,
 				file,
-				validHicPos(q.pos1),
-				validHicPos(q.pos2),
-				q.isfrag ? 'FRAG' : 'BP',
-				resolution
-			]
+				pos1: validHicPos(q.pos1),
+				pos2: validHicPos(q.pos2),
+				unit: q.isfrag ? 'FRAG' : 'BP',
+				resolution: Number(resolution)
+			})
 		} catch (e) {
 			// the client reads the error message from data.error.error
 			return reject({ error: e })
 		}
 
-		const ps = spawn(serverconfig.hicstraw, par)
 		const rl = readline.createInterface({ input: ps.stdout })
 
 		const items: XYZCoord[] = []

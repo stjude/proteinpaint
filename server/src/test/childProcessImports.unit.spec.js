@@ -38,8 +38,7 @@ const allowed = new Map([
 	['server/src/mds.init.js', 'tabix at dataset init'],
 	['server/src/mds3.init.js', 'Rscript to check an RData file at dataset init'],
 	['server/src/routes/blat.ts', 'gfClient'],
-	['server/src/routes/hicdata.ts', 'hicstraw'],
-	['server/src/routes/hicgenome.ts', 'hicstraw'],
+	['server/src/tools/index.ts', 'the tools of the specs in server/src/tools, see runTool()'],
 	['server/src/utils.js', 'samtools, tabix, bcftools, bigBed tools, Rscript'],
 	['server/src/utils/bedjCache.ts', 'bgzip and tabix for the bedj cache'],
 	['server/src/utils/h5samples.ts', 'h5dump']
