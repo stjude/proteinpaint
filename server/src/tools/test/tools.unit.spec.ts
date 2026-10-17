@@ -4,7 +4,7 @@ import os from 'os'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { runTool, runToolOutput, getArgv, checkSpec, mergeSpecs, specs } from '#src/tools/index.ts'
-import type { ToolSpec } from '#src/tools/index.ts'
+import type { Field, ToolSpec } from '#src/tools/index.ts'
 
 /*
 test sections:
@@ -12,6 +12,8 @@ test sections:
 hicstraw.query: argv of valid inputs
 hicstraw.query: rejected inputs
 other ops: argv of valid inputs, and rejected values
+every field has rejected values
+every field rejects the hostile values of its type
 file fields: roots and debugmodeAnyRoot
 runTool(): does not start the tool for a rejected input
 runTool(): passes the argv of a valid input
@@ -92,6 +94,7 @@ const badValues: Record<string, unknown[]> = {
 		5,
 		['chr1']
 	],
+	pos2: ['-o', 'chr2:1', 'chr2:a:b', 'chr2 ', 'chr2;ls', '', 5, ['chr2']],
 	unit: ['bp', 'FRAG ', '-o', true],
 	resolution: ['5000', '1e5', 0, -1, 1.5, NaN, Infinity, 100_000_001, 2 ** 60, [5000], null]
 }
@@ -271,6 +274,102 @@ tape('other ops: argv of valid inputs, and rejected values', test => {
 		}
 	}
 	serverconfig.debugmode = prev
+	test.end()
+})
+
+/** the input and rejected values of every op, for the sections below */
+const allOps = { [op]: { input: valid(), bad: badValues }, ...otherOps }
+
+tape('every field has rejected values', test => {
+	// so that a field cannot be added, or its check loosened, without a test of the values it must reject
+	for (const [o, spec] of Object.entries(specs)) {
+		test.ok(Object.hasOwn(allOps, o), `${o} should have test cases`)
+		for (const name of Object.keys(spec.fields)) {
+			test.ok(allOps[o]?.bad[name]?.length > 0, `${o}: ${name} should have rejected values`)
+		}
+	}
+	test.end()
+})
+
+/** strings that no field of any type may accept: options, shell syntax, control and non-ascii characters, and an oversize value */
+const hostileStrings = [
+	'',
+	'-o',
+	'--x=1',
+	'a;ls',
+	'a&&ls',
+	'a|ls',
+	'$(ls)',
+	'${IFS}',
+	'`ls`',
+	"a'b",
+	'a"b',
+	'a>b',
+	'a<b',
+	'a*',
+	'a?b',
+	'a\\b',
+	'a\nb',
+	'a\tb',
+	'a\0b',
+	'‮abc', // right-to-left override
+	'аbc', // cyrillic a
+	'x'.repeat(5000)
+]
+/** values of other types, which a string, enum, or file field must reject */
+const nonStrings = [5, true, null, undefined, ['a'], {}]
+
+/** the hostile values of a field, from its type, so that a loosened check is detected without a case per field */
+function hostileValues(field: Field): unknown[] {
+	switch (field.type) {
+		case 'enum':
+		case 'string':
+			return [...hostileStrings, ...nonStrings]
+		case 'file':
+		case 'fileOrUrl':
+			return [
+				...hostileStrings,
+				...nonStrings,
+				'../x',
+				'a/../../x',
+				'/etc/passwd',
+				'/',
+				'file:///etc/passwd',
+				'http://127.0.0.1/x',
+				'http://169.254.169.254/x'
+			]
+		case 'int':
+			return ['1', '-1', -1, 1.5, NaN, Infinity, -Infinity, field.min - 1, field.max + 1, 2 ** 53, null, [1], true]
+		case 'number':
+			return ['0.1', '-1', field.min - 1, NaN, Infinity, -Infinity, field.max * 2 + 1, null, [0.1], true]
+	}
+}
+
+tape('every field rejects the hostile values of its type', test => {
+	// debugmode allows a dataset file outside tp, which is tested in the file fields section
+	const prev = serverconfig.debugmode
+	serverconfig.debugmode = false
+	try {
+		withRemoteFile(true, () => {
+			for (const [o, spec] of Object.entries(specs)) {
+				for (const [name, field] of Object.entries(spec.fields)) {
+					let missed = 0
+					for (const v of hostileValues(field)) {
+						try {
+							getArgv(o, spec, { ...allOps[o].input, [name]: v })
+							missed++
+							test.fail(`${o}: ${name} should reject ${JSON.stringify(v)?.slice(0, 40)}`)
+						} catch (e) {
+							if (!String(e).includes(`invalid ${name}`)) test.fail(`${o}: ${name}: unexpected error ${e}`)
+						}
+					}
+					if (!missed) test.pass(`${o}: ${name} should reject the hostile values of type ${field.type}`)
+				}
+			}
+		})
+	} finally {
+		serverconfig.debugmode = prev
+	}
 	test.end()
 })
 
