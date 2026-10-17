@@ -35,7 +35,7 @@ library(jsonlite)
 library(survival)
 
 # stream in json input
-con <- file("stdin", "r")
+con <- file("stdin", "r", encoding="UTF-8")
 json <- readLines(con)
 close(con)
 dat <- fromJSON(json)
