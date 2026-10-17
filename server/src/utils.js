@@ -611,18 +611,10 @@ export async function get_header_tabix(file, dir) {
 	return lines
 }
 
-// file is full path file; return one string of header line, trimmed
+// file is full path file, or relative to dir; return one string of header line, trimmed
 export async function get_header_txt(file, dir) {
-	return new Promise((resolve, reject) => {
-		const ps = spawn('head', ['-1', file], { cwd: dir })
-		const out = []
-		ps.stdout.on('data', i => out.push(i))
-		// e.g. a missing cwd; without a listener, the 'error' event would crash the process
-		ps.on('error', reject)
-		ps.on('close', () => {
-			resolve(out.join('').trim())
-		})
-	})
+	for await (const line of readLines(file, dir)) return line.trim() // the loop closes the file on return
+	return ''
 }
 export function get_header_bcf(file, dir) {
 	// file is full path or url
@@ -688,27 +680,29 @@ export function get_lines_bigfile({ args, callback, dir = null, isbcf = false, i
 	})
 }
 
-export function get_lines_txtfile({ args, dir, callback }) {
+/*
+.args: []
+	file paths, each a full path or relative to dir; the lines of each file are passed to callback(line) in order
+*/
+export async function get_lines_txtfile({ args, dir, callback }) {
 	if (!args) throw 'args is missing'
 	if (!Array.isArray(args)) throw 'args[] is not array'
 	if (args.length == 0) throw 'args[] empty array'
 	if (!callback) throw 'callback is missing'
 	if (typeof callback != 'function') throw 'callback() not a function'
-	return new Promise((resolve, reject) => {
-		const ps = spawn('cat', args, { cwd: dir })
-		const rl = readline.createInterface({ input: ps.stdout })
-		const em = []
-		rl.on('line', line => callback(line, ps))
-		ps.stderr.on('data', d => em.push(d))
-		ps.on('error', reject)
-		ps.on('close', () => {
-			const e = em.join('').trim()
-			if (e) {
-				reject(e)
-			}
-			resolve()
-		})
-	})
+	for (const file of args) {
+		for await (const line of readLines(file, dir)) callback(line)
+	}
+}
+
+// a missing file rejects with the ENOENT error, and the file is closed when the caller's loop exits early
+async function* readLines(file, dir) {
+	const input = fs.createReadStream(path.resolve(dir || '', file))
+	try {
+		yield* readline.createInterface({ input, crlfDelay: Infinity })
+	} finally {
+		input.destroy()
+	}
 }
 
 export function write_file(file, text) {
